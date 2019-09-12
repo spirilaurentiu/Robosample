@@ -28,7 +28,7 @@ LINK_DIRECTORIES( ${Simbody_LIB_DIR} )
 #this is a patch for the current structure of the project, it will be refactor after redesign of the gmodmodel integrator is done
 set( Integrators_PATH
 #     "${CMAKE_CURRENT_LIST_DIR}/../simbody/SimTKmath/Integrators/src"
-     "${CMAKE_CURRENT_LIST_DIR}/../molmodel_legacy/simbody/SimTKmath/Integrators/src"
+     "${CMAKE_CURRENT_LIST_DIR}/../Molmodel/Simbody01/SimTKmath/Integrators/src"
      CACHE FILEPATH "Path to Integrator.h from Simbody..." )
 INCLUDE_DIRECTORIES( ${Integrators_PATH} )
 
