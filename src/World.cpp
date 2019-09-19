@@ -496,7 +496,7 @@ std::vector < std::vector < std::pair <bSpecificAtom *, SimTK::Vec3> > >
 /** Put coordinates into bAtomLists of Topologies.
  * When provided with a State, calcAtomLocationInGroundFrame
  * realizes Position and uses matter to calculate locations **/
-void World::updateAtomLists(const SimTK::State & state)
+void World::updateAtomListsFromCompound(const SimTK::State &state)
 {
     // Iterate through topologies
     for ( unsigned int i = 0; i < this->topologies.size(); i++){
@@ -619,6 +619,7 @@ SimTK::State& World::setAtomsLocationsInGround(
             invG_X_T = ~G_X_T;
             SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // Moves rotation from X to Z
             SimTK::Transform P_X_F[matter->getNumBodies()]; // related to X_PFs
+            SimTK::Transform B_X_M[matter->getNumBodies()]; // related to X_BMs
             // SimTK::Transform T_X_root[matter->getNumBodies()]; // related to CompoundAtom.frameInMobilizedBodyFrame s
             SimTK::Transform T_X_Proot; // NEW
             SimTK::Transform root_X_M0[matter->getNumBodies()];
@@ -649,29 +650,33 @@ SimTK::State& World::setAtomsLocationsInGround(
                     if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
                         SimTK::Compound::AtomIndex parentAIx = (topologies[i]->getMbx2aIx()).at(parentMbx);
 
-                        // rename parentAIx to parentMbxOriginAIx
-                        // find chemParentAIx
-                        SimTK::Compound::AtomIndex chemParentAIx(0);
-                        Transform X_parentBC_childBC = (*topologies[i]).getDefaultBondCenterFrameInOtherBondCenterFrame(aIx, chemParentAIx);
+                        // Find the true CHEMICAL parent
+                        bSpecificAtom *originSpecAtom = nullptr;
+                        originSpecAtom = (*(topologies[i])).updAtomByAtomIx(aIx);
+                        //std::cout << "CHEM origin " << originSpecAtom->inName << std::endl;
 
-/*                        const AtomInfo& originAtomInfo = compoundRep.getAtomInfo(originAtomId);
-                        const AtomInfo& parentAtomInfo = compoundRep.getAtomInfo(parentAtomId);
+                        SimTK::Compound::AtomIndex chemParentAIx;
+                        for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
+                            //std::cout << "CHEM neighbours " << originSpecAtom->neighbors[k]->inName << std::endl;
 
-                        const BondInfo& bondInfo = compoundRep.getBondInfo(originAtomInfo, parentAtomInfo);
-                        //const Bond BMBond = bondInfo.getBond();
+                            for(std::vector<bBond *>::iterator bondsInvolvedIter = (originSpecAtom->bondsInvolved).begin();
+                                bondsInvolvedIter != (originSpecAtom->bondsInvolved).end(); ++bondsInvolvedIter){
+                                if((*bondsInvolvedIter)->isThisMe(originSpecAtom->getNumber(),
+                                                                  originSpecAtom->neighbors[k]->getNumber())){
+                                    Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
+                                    if(topologies[i]->getAtomMobilizedBodyIndex(candidateChemParentAIx) == parentMbx){
+                                        if(!(*bondsInvolvedIter)->isRingClosing()){
+                                            chemParentAIx = candidateChemParentAIx;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                        Transform X_parentBC_childBC = bondInfo.getBond().getDefaultBondCenterFrameInOtherBondCenterFrame();
-                        Transform X_childBC_parentBC = ~X_parentBC_childBC;
-
-                        Transform oldX_PF = P_X_M * M_X_pin;
-                        Transform oldX_BM = M_X_pin;
-                        Transform oldX_MB = ~oldX_BM;
-                        Transform oldX_FM = Rotation(bond.getDefaultDihedral(), ZAxis);
-
-                        Transform newX_BM = X_childBC_parentBC * M_X_pin;
-                        Transform newX_PF = oldX_PF * oldX_FM * oldX_MB * newX_BM;*/
-                        ///////////////
-
+                        Transform X_parentBC_childBC =
+                                (*topologies[i]).getDefaultBondCenterFrameInOtherBondCenterFrame(aIx, chemParentAIx);
+                        /////////////////////////////
 
                         T_X_Proot = T_X_root[parentMbx];
 
@@ -687,7 +692,17 @@ SimTK::State& World::setAtomsLocationsInGround(
                         SimTK::Transform T_X_M0 = T_X_root[int(mbx)] * root_X_M0[int(mbx)];
                         SimTK::Transform Proot_X_T = ~T_X_Proot;
                         SimTK::Transform Proot_X_M0 = Proot_X_T * T_X_M0;
-                        P_X_F[int(mbx)] = Proot_X_M0 * M_X_pin;
+                        //P_X_F[int(mbx)] = Proot_X_M0 * M_X_pin;
+
+                        // Get X_PF, X_BM and X_FM with CHEMICAL joint placement
+                        Transform oldX_PF = Proot_X_M0 * M_X_pin;
+                        Transform oldX_BM = M_X_pin;
+                        Transform oldX_MB = ~oldX_BM;
+                        Transform oldX_FM = Rotation(inboardBondDihedralAngles[int(mbx)], ZAxis);
+
+                        B_X_M[int(mbx)] = X_parentBC_childBC * M_X_pin;
+                        P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)];
+                        /////////////////////////////////
 
                     } //END if parent not Ground
                 }
@@ -734,17 +749,24 @@ SimTK::State& World::setAtomsLocationsInGround(
 
                 if(mobod.getNumU(someState) == 6){ // Free mobilizer
                     ((SimTK::MobilizedBody::Free&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+
                 }else if(mobod.getNumU(someState) == 0){ // Weld mobilizer
                     ((SimTK::MobilizedBody::Weld&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                    ((SimTK::MobilizedBody::Weld&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]);
                 }else if(mobod.getNumU(someState) == 1){ // Pin mobilizer
                     ((SimTK::MobilizedBody::Pin &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]);
+                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]);
+                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(0);
+                    //((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]);
                 } else if(mobod.getNumU(someState) == 3){ // Ball mobilizer
                     ((SimTK::MobilizedBody::Ball&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                    ((SimTK::MobilizedBody::Ball&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]);
+
                     SimTK::Rotation R_FM;
                     R_FM.setRotationFromAngleAboutX(0.0);
                     R_FM.setRotationFromAngleAboutY(0.0);
-                    R_FM.setRotationFromAngleAboutZ(inboardBondDihedralAngles[int(mbx)]);
+                    //R_FM.setRotationFromAngleAboutZ(inboardBondDihedralAngles[int(mbx)]);
+                    R_FM.setRotationFromAngleAboutZ(0);
                     ((SimTK::MobilizedBody::Ball&)mobod).setDefaultRotation(R_FM);
                 }
             }
@@ -766,7 +788,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
     this->compoundSystem->realize(someState, SimTK::Stage::Position);
 
-    updateAtomLists(someState);
+    updateAtomListsFromCompound(someState);
 
     return someState;
 

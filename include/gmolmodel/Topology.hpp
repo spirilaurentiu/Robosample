@@ -158,7 +158,7 @@ public:
 
     /** Get a pointer to an atom object in the atom list inquiring
     by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
-    bSpecificAtom * getAtomByAtomIx(int aIx) const;
+    bSpecificAtom * updAtomByAtomIx(int aIx);
 
     /** Get a pointer to an atom object in the atom list inquiring
     by atom name **/

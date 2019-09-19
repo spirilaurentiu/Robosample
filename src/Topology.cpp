@@ -580,8 +580,12 @@ bSpecificAtom * Topology::getAtomByNumber(int number) const{
 
 /** Get a pointer to an atom object in the atom list inquiring
 by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
-bSpecificAtom * Topology::getAtomByAtomIx(int aIx) const{
-    assert(!"Not implemented.");
+bSpecificAtom * Topology::updAtomByAtomIx(int aIx) {
+    for (unsigned int i = 0; i < natoms; i++){
+        if(bAtomList[i].getCompoundAtomIndex() == aIx){
+            return &bAtomList[i];
+        }
+    }
 }
 
 /** Get a pointer to an atom object in the atom list inquiring

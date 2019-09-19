@@ -306,7 +306,7 @@ int main(int argc, char **argv)
         );
 
     if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
-        (context->updWorld(currentWorldIx))->updateAtomLists(advancedState);
+        (context->updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
         std::cout << "Writing pdb  sb" << mc_step << ".pdb" << std::endl;
         for(unsigned int mol_i = 0; mol_i < setupReader.get("MOLECULES").size(); mol_i++){
             ((context->updWorld(currentWorldIx))->getTopology(mol_i)).writeAtomListPdb(context->getOutputDir(),

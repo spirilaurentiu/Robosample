@@ -410,10 +410,6 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 
             //std::cout << "round " << round << std::endl;
 
-// TIME START -----------------
-//std::chrono::steady_clock::time_point start0 = std::chrono::steady_clock::now();
-// TIME START
-
             for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){ // Iterate worlds
 
                 // Rotate worlds indeces (translate from right to left)
@@ -426,95 +422,59 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 lastWorldIx = worldIndexes.back();
 
                 // Transfer coordinates from last world to current
-                SimTK::State& lastAdvancedState = (updWorld(worldIndexes.back()))->integ->updAdvancedState();
+                SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
                 SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
 
-// TIME STOP
-//std::chrono::steady_clock::time_point end0 = std::chrono::steady_clock::now();
-//std::cout << "Context::Run end0 - start0 "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(end0 - start0).count()
-//              << " us.\n";
-// TIME STOP ===================
                 if(worldIndexes.size() > 1) {
                     currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
                             currentAdvancedState,
-                            (updWorld(worldIndexes.back()))->getAtomsLocationsInGround(lastAdvancedState));
+                            (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
                 }
 
-                double backSetE = pMC(updWorld(worldIndexes.back())->updSampler(0))->getSetPE();
-                double backCalcE = updWorld(worldIndexes.back())->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
                         lastAdvancedState);
                 double currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
                 double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
                         currentAdvancedState);
 
                 // Check if reconstructions is done correctly
-                //assert(std::abs(backCalcE - currCalcE) < 0.00001);
-                //assert((backCalcE - currCalcE) > SimTK::SignificantReal);
-                TRACE("Energy after reconstruction "); TRACE(std::to_string(std::abs(backCalcE - currCalcE)).c_str());
 
-  // TIME STOP
-//std::chrono::steady_clock::time_point end1_0 = std::chrono::steady_clock::now();
-//std::cout << "Context::Run end1_0 - start0 "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(end1_0 - start0).count()
-//              << " us.\n";
-// TIME STOP ===================
 
                 // Set old potential energy of the new world
                 pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
                     pMC((updWorld(worldIndexes.back()))
                     ->updSampler(0))->getSetPE() );
 
-
-/*                std::cout << "RunPe backSet backCalc currCalc currOld "
-                          << backSetE << " " << backCalcE << " "
-                          << currCalcE << " " << currOldE
-                          << std::endl;*/
                 if(std::abs(backCalcE - currCalcE) > 100.0) {
+                    std::cout << "RunPe backSet backCalc currCalc currOld "
+                              << backSetE << " " << backCalcE << " "
+                              << currCalcE << " " << currOldE
+                              << std::endl;
+
                     std::cout << "Writing Compound pdbs for round " << round << std::endl;
-                    (updWorld(worldIndexes.back()))->updateAtomLists(lastAdvancedState);
-                    ((updWorld(worldIndexes.back()))->getTopology(0)).writeAtomListPdb(
+                    (updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
+                    ((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
                             getOutputDir(), std::string("/pdbs/sb.")
                                             + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
 
-                    (updWorld(currentWorldIx))->updateAtomLists(currentAdvancedState);
+                    (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
                     ((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
                             getOutputDir(), std::string("/pdbs/sb.")
                                             + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
 
-                    exit(1);
+                    //exit(1);
                 }
 
-// TIME STOP
-//std::chrono::steady_clock::time_point end1_1 = std::chrono::steady_clock::now();
-//std::cout << "Context::Run end1_1 - start0 "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(end1_1 - start0).count()
-//              << " us.\n";
-// TIME STOP ===================
 
-    
                 // Reinitialize current sampler
                 updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
-// TIME STOP
-//std::chrono::steady_clock::time_point end1_2 = std::chrono::steady_clock::now();
-//std::cout << "Context::Run end1_2 - start0 "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(end1_2 - start0).count()
-//              << " us.\n";
-// TIME STOP ===================
 
-    
                 // Update
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
                     updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
                     updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState);
                             // , getNofMDStepsPerSample(currentWorldIx, 0)); RE
-
-// TIME STOP
-//std::chrono::steady_clock::time_point end1_3 = std::chrono::steady_clock::now();
-//std::cout << "Context::Run end1_3 - start0 "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(end1_3 - start0).count()
-//              << " us.\n";
-// TIME STOP ===================
 
                 } // END for samples
     
@@ -528,18 +488,11 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 fprintf(logFile, "\n");
             }
     
-// TIME STOP
-//std::chrono::steady_clock::time_point end3 = std::chrono::steady_clock::now();
-//std::cout << "Context::Run end3 - start0 "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(end3 - start0).count()
-//              << " us.\n";
-// TIME STOP ===================
-
             // Write pdb
             SimTK::State& pdbState = (updWorld(worldIndexes.front()))->integ->updAdvancedState();
             if( getPdbRestartFreq() != 0){
                 if(((round) % getPdbRestartFreq()) == 0){
-                    (updWorld(worldIndexes.front()))->updateAtomLists(pdbState);
+                    (updWorld(worldIndexes.front()))->updateAtomListsFromCompound(pdbState);
                     for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
                         ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
                                                                                                 "/pdbs/sb." +
@@ -549,13 +502,6 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 }
             } // if write pdbs
     
-// TIME STOP
-//std::chrono::steady_clock::time_point end4 = std::chrono::steady_clock::now();
-//std::cout << "Context::Run end4 - start0 "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(end4 - start0).count()
-//              << " us.\n";
-// TIME STOP ===================
-
         } // for i in rounds
 
     }else{// if Ti != Tf heating protocol
@@ -623,7 +569,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
             SimTK::State& pdbState = (updWorld(worldIndexes.front()))->integ->updAdvancedState();
             if( getPdbRestartFreq() != 0){
                 if(((round) % getPdbRestartFreq()) == 0){
-                    (updWorld(worldIndexes.front()))->updateAtomLists(pdbState);
+                    (updWorld(worldIndexes.front()))->updateAtomListsFromCompound(pdbState);
                     for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
                         ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
                                                                                                 "/pdbs/sb." +

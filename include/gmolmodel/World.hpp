@@ -106,7 +106,7 @@ public:
     /** Update Gmolmodel bSpecificAtom Cartesian coordinates according to
     Molmodel Compound which in turn relizes Position and uses matter
      to calculate locations. **/
-    void updateAtomLists(const SimTK::State&);
+    void updateAtomListsFromCompound(const SimTK::State &state);
 
     /** To be called before use of getXs, getYs or getZs **/
     void updateCoordBuffers(void);
