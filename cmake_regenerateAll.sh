@@ -3,14 +3,14 @@
 cd ../Molmodel/Simbody01
 mkdir build-debug
 cd build-debug
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Debug  ..
 make -j4
 sudo make install
 
 cd ../../
 mkdir build-debug
 cd build-debug
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j4
 sudo make install
 
