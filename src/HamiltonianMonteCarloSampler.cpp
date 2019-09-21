@@ -352,6 +352,18 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // Integrate (propagate trajectory)
     this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
+
+    // REC BUG
+    std::cout << "HMC nbodies " << matter->getNumBodies() << std::endl;
+    for (SimTK::Compound::AtomIndex aIx(1); aIx < residue->getNumAtoms(); ++aIx) {
+        SimTK::MobilizedBodyIndex mbx = residue->getAtomMobilizedBodyIndex(aIx);
+        SimTK::DuMM::AtomIndex dAIx = residue->getDuMMAtomIndex(aIx);
+
+        // Check station_B
+        std::cout << "setAtomsLoc aIx dAIx dumm.station_B gmol.locs" << aIx
+                  << " " << dAIx << " " << dumm->getAtomStationOnBody(dAIx) << std::endl;
+    }
+
 }
 
 /** Main function that contains all the 3 steps of HMC.

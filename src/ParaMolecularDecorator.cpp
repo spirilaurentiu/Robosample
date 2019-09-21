@@ -90,13 +90,13 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 
         if( mbx1 == mbx2 ){
-/*            geometry.push_back(DecorativeLine( p_GS1, p_GS2 ));
+            geometry.push_back(DecorativeLine( p_GS1, p_GS2 ));
             (geometry.back()).setLineThickness(3);
-            (geometry.back()).setColor( Vec3(0.5, 0.5, 0.5) );*/
+            (geometry.back()).setColor( SimTK::Gray );
         }else{
-/*            geometry.push_back(DecorativeLine( p_GS1, p_GS2 ));
-            (geometry.back()).setLineThickness(3);
-            (geometry.back()).setColor( Vec3(0.5, 0.5, 0.5) );*/
+            geometry.push_back(DecorativeLine( p_GS1, p_GS2 ));
+            (geometry.back()).setLineThickness(5);
+            (geometry.back()).setColor( SimTK::Orange );
         }
     }
 //    */
@@ -457,7 +457,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
  
  // */
 
- /*
+ ///*
     // Draw Compound transforms for periferic atoms NEW WAY
     // Set transforms inside the bodies = root_X_atom.p; Set locations for everyone
 
@@ -478,16 +478,16 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             SimTK::Transform G_X_child = G_X_root * root_X_child;
 
             // Draw F (Proot_X_Mr in this case) in Ground recovered from P_X_F
-            std::ostringstream streamObj_c;
-            streamObj_c << std::string("c") + std::to_string(int(aIx));
-            std::string text_c = streamObj_c.str();
-            DecorativeText decorativeText_c(text_c);
-            SimTK::Transform textOffset_c(SimTK::Rotation(), SimTK::Vec3(0.0, 0.01, 0.0));
-            //decorativeText_c.setTransform(G_X_child * textOffset_c);
-            decorativeText_c.setTransform(G_X_child);
-            decorativeText_c.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
-            decorativeText_c.setColor(SimTK::Vec3(1, 0, 1));
-            geometry.push_back(decorativeText_c);
+            //std::ostringstream streamObj_c;
+            //streamObj_c << std::string("c") + std::to_string(int(aIx));
+            //std::string text_c = streamObj_c.str();
+            //DecorativeText decorativeText_c(text_c);
+            //SimTK::Transform textOffset_c(SimTK::Rotation(), SimTK::Vec3(0.0, 0.01, 0.0));
+            ////decorativeText_c.setTransform(G_X_child * textOffset_c);
+            //decorativeText_c.setTransform(G_X_child);
+            //decorativeText_c.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
+            //decorativeText_c.setColor(SimTK::Vec3(1, 0, 1));
+            //geometry.push_back(decorativeText_c);
 
             // Text
             //std::ostringstream streamObj;
@@ -506,12 +506,11 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             decorativeFrame_c.setTransform(G_X_child);
             decorativeFrame_c.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
             decorativeFrame_c.setLineThickness(4);
-            decorativeFrame_c.setColor(SimTK::Vec3(1, 0, 1));
+            decorativeFrame_c.setColor( SimTK::Gray );
             geometry.push_back( decorativeFrame_c );
 
             // Line between root and child in Ground
-            //DecorativeLine decorativeLine_rc2(G_vroot + textOffset_c.p(), G_vchild + textOffset_c.p());
-            //DecorativeLine decorativeLine_rc2(G_vroot , G_vchild);
+            //DecorativeLine decorativeLine_rc2(G_vroot, G_vchild);
             //decorativeLine_rc2.setLineThickness(2);
             //decorativeLine_rc2.setColor(SimTK::Vec3(0, 1, 1));
             //geometry.push_back(decorativeLine_rc2);
@@ -661,7 +660,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             geometry.push_back(decorativeTextM);*/
 
             // X_PF, X_BM lines
-            //DecorativeLine decorativeLineFM(G_X_F.p(), G_X_M.p());
+/*            //DecorativeLine decorativeLineFM(G_X_F.p(), G_X_M.p());
             DecorativeLine decorativeLineBM(G_X_B.p(), G_X_M.p());
             decorativeLineBM.setLineThickness(4);
             if(mobod.getNumU(someState) == 3){
@@ -671,7 +670,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             }else{
                 decorativeLineBM.setColor(SimTK::Vec3(1, 0, 1));
             }
-            geometry.push_back(decorativeLineBM);
+            geometry.push_back(decorativeLineBM);*/
 
 /*            DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
             decorativeLinePF.setLineThickness(4);

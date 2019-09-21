@@ -425,11 +425,11 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
                 SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
 
-                if(worldIndexes.size() > 1) {
+                //if(worldIndexes.size() > 1) {
                     currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
                             currentAdvancedState,
                             (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
-                }
+                //}
 
                 double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
                 double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(

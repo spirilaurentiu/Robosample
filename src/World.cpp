@@ -636,7 +636,7 @@ SimTK::State& World::setAtomsLocationsInGround(
                 }
             }
 
-            P_X_F[1] = G_X_T * T_X_root[1]; // TODO: doesn't work on multiple molecules
+            P_X_F[1] = G_X_T * T_X_root[1]; // TODO: this doesn't work on multiple molecules
             // Iterate through atoms - get P_X_F for all the bodies
             for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i]->getNumAtoms(); ++aIx){
                 if(topologies[i]->getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
@@ -692,7 +692,7 @@ SimTK::State& World::setAtomsLocationsInGround(
                         SimTK::Transform T_X_M0 = T_X_root[int(mbx)] * root_X_M0[int(mbx)];
                         SimTK::Transform Proot_X_T = ~T_X_Proot;
                         SimTK::Transform Proot_X_M0 = Proot_X_T * T_X_M0;
-                        //P_X_F[int(mbx)] = Proot_X_M0 * M_X_pin;
+                        //P_X_F[int(mbx)] = Proot_X_M0 * M_X_pin; // Get X_PF no chem
 
                         // Get X_PF, X_BM and X_FM with CHEMICAL joint placement
                         Transform oldX_PF = Proot_X_M0 * M_X_pin;
@@ -752,21 +752,21 @@ SimTK::State& World::setAtomsLocationsInGround(
 
                 }else if(mobod.getNumU(someState) == 0){ // Weld mobilizer
                     ((SimTK::MobilizedBody::Weld&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Weld&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]);
+                    ((SimTK::MobilizedBody::Weld&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
                 }else if(mobod.getNumU(someState) == 1){ // Pin mobilizer
                     ((SimTK::MobilizedBody::Pin &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]);
-                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(0);
-                    //((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]);
+                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(0); // CHEM
+                    //((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]); // no chem
                 } else if(mobod.getNumU(someState) == 3){ // Ball mobilizer
                     ((SimTK::MobilizedBody::Ball&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Ball&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]);
+                    ((SimTK::MobilizedBody::Ball&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
 
                     SimTK::Rotation R_FM;
                     R_FM.setRotationFromAngleAboutX(0.0);
                     R_FM.setRotationFromAngleAboutY(0.0);
-                    //R_FM.setRotationFromAngleAboutZ(inboardBondDihedralAngles[int(mbx)]);
-                    R_FM.setRotationFromAngleAboutZ(0);
+                    //R_FM.setRotationFromAngleAboutZ(inboardBondDihedralAngles[int(mbx)]); // no chem
+                    R_FM.setRotationFromAngleAboutZ(0); // CHEM
                     ((SimTK::MobilizedBody::Ball&)mobod).setDefaultRotation(R_FM);
                 }
             }
@@ -781,6 +781,28 @@ SimTK::State& World::setAtomsLocationsInGround(
 
             this->compoundSystem->realizeTopology();
             someState = compoundSystem->updDefaultState();
+
+            // CHECK
+            // Set stations and AtomPLacements for atoms in DuMM
+            for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i]->getNumAtoms(); ++aIx){
+                SimTK::MobilizedBodyIndex mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx);
+                SimTK::DuMM::AtomIndex dAIx = topologies[i]->getDuMMAtomIndex(aIx);
+
+                // Check station_B
+                std::cout << "setAtomsLoc aIx dumm.station_B gmol.locs" << aIx
+                    << " " << forceField->getAtomStationOnBody(dAIx)
+                    << " " << locs[int(aIx)] << std::endl;
+
+                // Set included atom
+                //std::cout << "World setAtomLocations: updIncludedAtomStation(" << dAIx << ")" << std::endl;
+                //forceField->updIncludedAtomStation(dAIx) = (locs[int(aIx)]);
+                //forceField->updAllAtomStation(dAIx) = (locs[int(aIx)]); // full
+
+                // Atom placements in clusters
+                //forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
+            }
+
+
 
         } // END TD regimen and all regimens
 
