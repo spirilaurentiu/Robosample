@@ -783,15 +783,21 @@ SimTK::State& World::setAtomsLocationsInGround(
             someState = compoundSystem->updDefaultState();
 
             // CHECK
-            // Set stations and AtomPLacements for atoms in DuMM
+            for(unsigned int j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
+                SimTK::Compound::AtomIndex aIx = ((otherWorldsAtomsLocations[i][j]).first)->atomIndex;
+                SimTK::Vec3 location = ((otherWorldsAtomsLocations[i][j]).second);
+                std::cout << "setAtomsLoc atomTargets from previous World i aIx "
+                    << j << " " << aIx << " " << location << std::endl;
+            }
+
             for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i]->getNumAtoms(); ++aIx){
                 SimTK::MobilizedBodyIndex mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx);
                 SimTK::DuMM::AtomIndex dAIx = topologies[i]->getDuMMAtomIndex(aIx);
 
                 // Check station_B
-                std::cout << "setAtomsLoc aIx dumm.station_B gmol.locs" << aIx
-                    << " " << forceField->getAtomStationOnBody(dAIx)
-                    << " " << locs[int(aIx)] << std::endl;
+                //std::cout << "setAtomsLoc aIx dumm.station_B gmol.locs " << aIx
+                //   << " " << forceField->getAtomStationOnBody(dAIx)
+                //    << " " << locs[int(aIx)] << std::endl;
 
                 // Set included atom
                 //std::cout << "World setAtomLocations: updIncludedAtomStation(" << dAIx << ")" << std::endl;
@@ -801,6 +807,7 @@ SimTK::State& World::setAtomsLocationsInGround(
                 // Atom placements in clusters
                 //forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
             }
+            // CHECK END
 
 
 

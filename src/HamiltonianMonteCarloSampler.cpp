@@ -343,26 +343,21 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
 
 
-    //for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
-    //    const SimTK::MobilizedBody &mobod = matter->getMobilizedBody(mbx);
-    //    SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
-    //    std::cout << "BALLBUG 1 MassProperties propose mbx " << int(mbx) << " isNaN " << mp.isNaN() << std::endl;
-    //}
+    // REC BUG
+    std::cout << "HMC nbodies " << matter->getNumBodies() << std::endl;
+    std::cout << "DuMM station_Bs before stepTo " << matter->getNumBodies() << std::endl;
+    for (unsigned int i = 0; i < residue->getNumAtoms(); i++) {
+        SimTK::Compound::AtomIndex aIx = (((Topology *)residue)->bAtomList[i]).getCompoundAtomIndex();
+        SimTK::MobilizedBodyIndex mbx = residue->getAtomMobilizedBodyIndex(aIx);
+        SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+        SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+        SimTK::DuMM::AtomIndex dAIx = residue->getDuMMAtomIndex(aIx);
+        std::cout << "setAtomsLoc i aIx dAIx dumm.station_B gmol.locs " << i << " " << aIx
+                  << " " << dAIx << " " << X_GB * dumm->getAtomStationOnBody(dAIx) << std::endl;
+    } // REC BUG
 
     // Integrate (propagate trajectory)
     this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-
-
-    // REC BUG
-    std::cout << "HMC nbodies " << matter->getNumBodies() << std::endl;
-    for (SimTK::Compound::AtomIndex aIx(1); aIx < residue->getNumAtoms(); ++aIx) {
-        SimTK::MobilizedBodyIndex mbx = residue->getAtomMobilizedBodyIndex(aIx);
-        SimTK::DuMM::AtomIndex dAIx = residue->getDuMMAtomIndex(aIx);
-
-        // Check station_B
-        std::cout << "setAtomsLoc aIx dAIx dumm.station_B gmol.locs" << aIx
-                  << " " << dAIx << " " << dumm->getAtomStationOnBody(dAIx) << std::endl;
-    }
 
 }
 
