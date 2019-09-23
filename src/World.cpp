@@ -783,7 +783,7 @@ SimTK::State& World::setAtomsLocationsInGround(
             someState = compoundSystem->updDefaultState();
 
             // CHECK
-            for(unsigned int j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
+/*            for(unsigned int j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
                 SimTK::Compound::AtomIndex aIx = ((otherWorldsAtomsLocations[i][j]).first)->atomIndex;
                 SimTK::Vec3 location = ((otherWorldsAtomsLocations[i][j]).second);
                 std::cout << "setAtomsLoc atomTargets from previous World i aIx "
@@ -806,7 +806,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
                 // Atom placements in clusters
                 //forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
-            }
+            }*/
             // CHECK END
 
 

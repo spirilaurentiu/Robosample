@@ -343,7 +343,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
 
 
-    // REC BUG
+/*    // REC BUG
     std::cout << "HMC nbodies " << matter->getNumBodies() << std::endl;
     std::cout << "DuMM station_Bs before stepTo " << matter->getNumBodies() << std::endl;
     for (unsigned int i = 0; i < residue->getNumAtoms(); i++) {
@@ -354,7 +354,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
         SimTK::DuMM::AtomIndex dAIx = residue->getDuMMAtomIndex(aIx);
         std::cout << "setAtomsLoc i aIx dAIx dumm.station_B gmol.locs " << i << " " << aIx
                   << " " << dAIx << " " << X_GB * dumm->getAtomStationOnBody(dAIx) << std::endl;
-    } // REC BUG
+    } // REC BUG*/
 
     // Integrate (propagate trajectory)
     this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
