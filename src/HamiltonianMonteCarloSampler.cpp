@@ -403,7 +403,8 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
         ++acceptedSteps;
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             (rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept
+             //(rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
+             (rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
             setSetTVector(someState);
             pe_set = pe_n;
             fix_set = fix_n;
