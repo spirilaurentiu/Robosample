@@ -799,11 +799,11 @@ void Context::PrintDihedralsQs(int whichWorld)
 {
     for ( unsigned int i = 0; i < dihedralIxs.size(); i++){
         if( dihedralIxs[i][0] == whichWorld){
-            //fprintf(logFile, "%.3f ", this->Dihedral(dihedralIxs[i][0], dihedralIxs[i][1], 0,
-            //    dihedralIxs[i][2], dihedralIxs[i][3], 
-            //    dihedralIxs[i][4], dihedralIxs[i][5]) );
+            fprintf(logFile, "%.3f ", this->Dihedral(dihedralIxs[i][0], dihedralIxs[i][1], 0,
+                dihedralIxs[i][2], dihedralIxs[i][3],
+                dihedralIxs[i][4], dihedralIxs[i][5]) );
 
-            const Topology& topology = worlds[whichWorld]->getTopology(dihedralIxs[i][1]);
+/*            const Topology& topology = worlds[whichWorld]->getTopology(dihedralIxs[i][1]);
             SimTK::State& currentAdvancedState = worlds[whichWorld]->integ->updAdvancedState();
 
             SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndex(
@@ -813,7 +813,7 @@ void Context::PrintDihedralsQs(int whichWorld)
             //std::cout << mbx3 << std::endl ;
             //std::cout << currentAdvancedState.getQ() << std::endl; 
             //fprintf(logFile, "%.3f ", currentAdvancedState.getQ()[mbx3] );
-            fprintf(logFile, "%.3f ", mobod3.getQ(currentAdvancedState) );
+            fprintf(logFile, "%.3f ", mobod3.getQ(currentAdvancedState) );*/
 
         }
     }
