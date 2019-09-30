@@ -903,11 +903,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
         std::ifstream F(flexFN);
 
         //printMaps();
-/*        std::cout << "GmolBond2bondIx " << GmolBond2bondIx.size() << std::endl;
+        std::cout << "GmolBond2bondIx " << GmolBond2bondIx.size() << std::endl;
         std::cout << "GmolBond2bondIx:" << std::endl;
         for(unsigned int i = 0; i < nbonds; i++){
             std::cout << i << ' ' << GmolBond2bondIx.at(i) << std::endl;
-        }*/
+        }
 
         while(F.good()){
             std::getline(F, line);
@@ -942,6 +942,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                                     setBondMobility(BondMobility::Torsion,
                                                     GmolBond2bondIx.at(i));
                                     break;
+                                }else if(lineWords[2] == "Cylinder") {
+                                    bonds[i].setBondMobility(BondMobility::Cylinder);
+                                    setBondMobility(BondMobility::Cylinder,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
                                 }else if(lineWords[2] == "Ball") {
                                     bonds[i].setBondMobility(BondMobility::Ball);
                                     setBondMobility(BondMobility::Ball,
@@ -964,10 +969,10 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
             }
         }
 
-/*        std::cout << "Assigned mobilities:" << std::endl;
+        std::cout << "Assigned mobilities:" << std::endl;
         for(unsigned int i = 0; i < nbonds; i++){
             std::cout << i << ' ' << GmolBond2bondIx.at(i) << " " << bonds[i].getBondMobility() << std::endl;
-        }*/
+        }
 
 
     } // RB

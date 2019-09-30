@@ -124,6 +124,7 @@ set(TESTS_SRCS
         TestSetupReader.cpp
         TestBallLongPendulum.cpp
         TestMatrix.cpp
+        TestWorldReconstruction.cpp
 	)
 
 foreach(TEST_SRC ${TESTS_SRCS})

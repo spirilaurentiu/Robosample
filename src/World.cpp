@@ -758,6 +758,12 @@ SimTK::State& World::setAtomsLocationsInGround(
                     ((SimTK::MobilizedBody::Pin &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
                     ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(0); // CHEM
                     //((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]); // no chem
+                }else if(mobod.getNumU(someState) == 2){ // Pin mobilizer
+                    ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                    ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+                    ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ(Vec2(0, 0)); // CHEM
+                    //((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ( // no chem
+                    // inboardBondDihedralAngles[int(mbx)], inboardBondLengths[int(mbx)]); // no chem
                 } else if(mobod.getNumU(someState) == 3){ // Ball mobilizer
                     ((SimTK::MobilizedBody::Ball&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
                     ((SimTK::MobilizedBody::Ball&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
@@ -795,17 +801,9 @@ SimTK::State& World::setAtomsLocationsInGround(
                 SimTK::DuMM::AtomIndex dAIx = topologies[i]->getDuMMAtomIndex(aIx);
 
                 // Check station_B
-                //std::cout << "setAtomsLoc aIx dumm.station_B gmol.locs " << aIx
-                //   << " " << forceField->getAtomStationOnBody(dAIx)
-                //    << " " << locs[int(aIx)] << std::endl;
+                std::cout << "setAtomsLoc aIx dumm.station_B " << aIx
+                    << " " << forceField->getAtomStationOnBody(dAIx) << std::endl;
 
-                // Set included atom
-                //std::cout << "World setAtomLocations: updIncludedAtomStation(" << dAIx << ")" << std::endl;
-                //forceField->updIncludedAtomStation(dAIx) = (locs[int(aIx)]);
-                //forceField->updAllAtomStation(dAIx) = (locs[int(aIx)]); // full
-
-                // Atom placements in clusters
-                //forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
             }*/
             // CHECK END
 
