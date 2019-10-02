@@ -94,9 +94,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             (geometry.back()).setLineThickness(3);
             (geometry.back()).setColor( SimTK::Gray );
         }else{
-            //geometry.push_back(DecorativeLine( p_GS1, p_GS2 ));
-            //(geometry.back()).setLineThickness(3);
-            //(geometry.back()).setColor( SimTK::Orange );
+            geometry.push_back(DecorativeLine( p_GS1, p_GS2 ));
+            (geometry.back()).setLineThickness(2);
+            (geometry.back()).setColor( SimTK::Black );
         }
     }
 //    */

@@ -405,6 +405,7 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
              //(rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
+            std::cout << " acc" << std::endl;
             setSetTVector(someState);
             pe_set = pe_n;
             fix_set = fix_n;
@@ -412,6 +413,7 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
             etot_set = pe_set + fix_set + ke_proposed;
             ++acceptedSteps;
         } else { // Reject
+            std::cout << " nacc" << std::endl;
             assignConfFromSetTVector(someState);
         }
     }
@@ -438,7 +440,8 @@ void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someSta
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
         << " RT " << RT << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
         << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
-        << std::endl;
+        //<< std::endl
+        ;
 }
 
 
