@@ -354,8 +354,8 @@ void World::setAmberForceFieldScaleFactors()
     forceField->setCoulomb13ScaleFactor(0.0);
     forceField->setCoulomb14ScaleFactor(0.8333333333);
     forceField->setCoulomb15ScaleFactor(1.0);
-    forceField->setVdwMixingRule(
-            SimTK::DuMMForceFieldSubsystem::LorentzBerthelot);
+    //forceField->setVdwMixingRule(
+    //       SimTK::DuMMForceFieldSubsystem::LorentzBerthelot);
 }
 
 /** Set a global scaling factor for all the terms in the forcefield **/

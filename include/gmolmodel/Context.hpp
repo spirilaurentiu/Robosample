@@ -49,6 +49,9 @@ public:
     //------------
 
     // --- Thermodynamics ---a
+    // Set mixing rule for Lennard-Jones
+    void setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mixingRule);
+
     // Get/set the main temperature (acc/rej temperature for MC)
     float getTemperature(int whichWorld);
     void  setTemperature(int whichWorld, float someTemperature);

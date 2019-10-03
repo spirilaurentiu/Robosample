@@ -125,6 +125,14 @@ int main(int argc, char **argv)
     // Add molecules to Worlds based on just read filenames
     context->AddMolecules(setupReader.get("ROOTS"));
 
+    // Use OpenMM if possible
+    if(setupReader.get("OPENMM")[0] == "TRUE"){
+        context->setUseOpenMMAcceleration(true);
+    }
+
+    // Set Lennard-Jones mixing rule
+    context->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
+
     // Link the Compounds to Simbody System for all Worlds
     context->modelTopologies();
 
@@ -159,10 +167,6 @@ int main(int argc, char **argv)
     // Print the number of threads we got back
     context->PrintNumThreads();
 
-    // Use OpenMM if possible
-    if(setupReader.get("OPENMM")[0] == "TRUE"){
-        context->setUseOpenMMAcceleration(true);
-    }
 
     // Realize topology for all the Worlds
     context->realizeTopology();

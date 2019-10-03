@@ -215,6 +215,13 @@ int Context::getNofMolecules(void)
     return worlds[0]->getNofMolecules();
 }
 
+// Set mixing rule for Lennard-Jones
+void Context::setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mixingRule){
+    for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+        (updWorld(worldIx))->updForceField()->setVdwMixingRule(mixingRule);
+    }
+}
+
 
 // Use a SetupReader Object to read worlds information from a file
 void Context::LoadWorldsFromSetup(SetupReader& setupReader)
