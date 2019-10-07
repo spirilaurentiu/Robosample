@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 
             context->loadFlexibleBondsSpecs( worldIx, molIx,
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
-                    + setupReader.get("FLEXFILE")[molIx]
+                    + setupReader.get("FLEXFILE")[worldIx]
             );
 
             context->setRegimen( worldIx, molIx,

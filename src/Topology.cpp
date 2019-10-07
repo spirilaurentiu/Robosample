@@ -347,6 +347,7 @@ void Topology::bAddBiotypes(
         std:string temp(bAtomList[i].name);
         temp += bAtomList[i].fftype;
         bAtomList[i].setBiotype(temp);
+        std::cout << "Added Biotype " << temp << std::endl;
     }
 }
 
@@ -888,7 +889,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 
         }
 
-    }else if(argRegimen == "RB"){
+    }else if(argRegimen.at(0) == 'R'){
 
         // Set all Compound and Topology bonds to rigid
         for (unsigned int r=0 ; r<getNumBonds(); r++){
@@ -903,11 +904,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
         std::ifstream F(flexFN);
 
         //printMaps();
-        std::cout << "GmolBond2bondIx " << GmolBond2bondIx.size() << std::endl;
+/*        std::cout << "GmolBond2bondIx " << GmolBond2bondIx.size() << std::endl;
         std::cout << "GmolBond2bondIx:" << std::endl;
         for(unsigned int i = 0; i < nbonds; i++){
             std::cout << i << ' ' << GmolBond2bondIx.at(i) << std::endl;
-        }
+        }*/
 
         while(F.good()){
             std::getline(F, line);
@@ -969,10 +970,10 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
             }
         }
 
-        std::cout << "Assigned mobilities:" << std::endl;
+/*        std::cout << "Assigned mobilities:" << std::endl;
         for(unsigned int i = 0; i < nbonds; i++){
             std::cout << i << ' ' << GmolBond2bondIx.at(i) << " " << bonds[i].getBondMobility() << std::endl;
-        }
+        }*/
 
 
     } // RB

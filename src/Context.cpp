@@ -490,8 +490,12 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
             // Print energy and geometric features
             if( !(round % getPrintFreq()) ){
                 PrintSamplerData(worldIndexes.back());
-                PrintDistances(worldIndexes.front());
+                PrintDistances(worldIndexes.back());
                 PrintDihedralsQs(worldIndexes.back());
+                fprintf(logFile, "\n");
+                PrintSamplerData(worldIndexes.front());
+                PrintDistances(worldIndexes.front());
+                PrintDihedralsQs(worldIndexes.front());
                 fprintf(logFile, "\n");
             }
     
