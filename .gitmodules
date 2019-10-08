@@ -1,3 +1,6 @@
 [submodule "Molmodel"]
 	path = Molmodel
 	url = https://github.com/spirilaurentiu/Molmodel.git
+[submodule "openmm"]
+	path = openmm
+	url = https://github.com/spirilaurentiu/openmm.git
