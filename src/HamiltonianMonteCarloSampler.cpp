@@ -297,8 +297,18 @@ SimTK::Real HamiltonianMonteCarloSampler::getBoostTemperature(void)
 void HamiltonianMonteCarloSampler::setBoostTemperature(SimTK::Real argT)
 {
     this->boostT = argT;
+    this->boostFactor = std::sqrt(this->boostT / this->temperature);
+    this->unboostFactor = 1 / boostFactor;
+    std::cout << "HMC: boost temperature: " << this->boostT << std::endl;
+    std::cout << "HMC: boost velocity scale factor: " << this->boostFactor << std::endl;
 }
 
+void HamiltonianMonteCarloSampler::setBoostMDSteps(int argMDSteps)
+{
+    this->boostMDSteps = argMDSteps;
+    std::cout << "HMC: boost MD steps: " << this->boostMDSteps << std::endl;
+
+}
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
@@ -335,6 +345,8 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 
     // Raise the temperature
     someState.updU() = SqrtMInvV;
+
+    // Realize velocity
     system->realize(someState, SimTK::Stage::Velocity);
 
     // Store the proposed energies
@@ -357,22 +369,35 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     } // REC BUG*/
 
     // Integrate (propagate trajectory)
-    this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+    //this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
-    // TEMPORARY
-/*    for(int k = 0; k < MDStepsPerSample; k++){
-        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+    // TODO: SCALE VELOCITIES
+    int halfMDSteps = int(MDStepsPerSample / 2);
+    int halfBoostMDSteps = int(this->boostMDSteps / 2);
+    int MDStepsPerT = halfMDSteps - halfBoostMDSteps;
+    int nofStairs = 10;
+    int MDStepsPerStair = halfMDSteps / nofStairs;
+    SimTK::Real stairBoost = 1.2;
+    SimTK::Real stairUnboost = 1 / stairBoost;
+    //std::cout << "stairBoost = " << stairBoost << std::endl;
+    //std::cout << "stairUnboost = " << stairUnboost << std::endl;
+
+
+    system->realize(someState, SimTK::Stage::Velocity);
+    this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
+    for(int i = 1; i < nofStairs; i++){
+        someState.updU() *= stairBoost;
+        system->realize(someState, SimTK::Stage::Velocity);
+        this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
     }
-    std::cout << std::setprecision(5) << std::fixed;
-    std::cout << "pe_o " << pe_o << " pe_n " << pe_n
-              << " pe_nB " << getPEFromEvaluator(someState)
-              << " ke_prop " << ke_proposed << " ke_n " << ke_n
-              << " fix_o " << fix_o << " fix_n " << fix_n << " "
-              << " RT " << RT << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-              << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
-        << std::endl;*/
-    // TEMPORARY END
 
+    for(int i = nofStairs; i >= 0; i--){
+        someState.updU() *= stairUnboost;
+        system->realize(someState, SimTK::Stage::Velocity);
+        this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
+    }
+
+    // SCALE VELS END
 
 }
 
@@ -419,8 +444,8 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
         ++acceptedSteps;
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             (rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
-             //(rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
+             //(rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
+             (rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
             std::cout << " acc" << std::endl;
             setSetTVector(someState);
             pe_set = pe_n;

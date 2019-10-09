@@ -186,6 +186,8 @@ int main(int argc, char **argv)
             pMC(context->updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
             pHMC(context->updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
                 std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
+            pHMC(context->updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
+                    std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 
             // Activate Fixman potential if needed
             if(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"){

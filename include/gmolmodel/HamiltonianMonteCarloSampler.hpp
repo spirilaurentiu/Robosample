@@ -81,6 +81,7 @@ public:
     /** Get/Set boost temperature **/
     SimTK::Real getBoostTemperature(void);
     void setBoostTemperature(SimTK::Real);
+    void setBoostMDSteps(int);
 
     /** It implements the proposal move in the Hamiltonian Monte Carlo
     algorithm. It essentially propagates the trajectory after it stores
@@ -132,6 +133,8 @@ protected:
 
     SimTK::Real boostT;
     SimTK::Real boostFactor;
+    SimTK::Real unboostFactor;
+    int boostMDSteps;
 
     int MDStepsPerSample;
 
