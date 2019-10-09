@@ -359,6 +359,21 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // Integrate (propagate trajectory)
     this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
+    // TEMPORARY
+/*    for(int k = 0; k < MDStepsPerSample; k++){
+        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+    }
+    std::cout << std::setprecision(5) << std::fixed;
+    std::cout << "pe_o " << pe_o << " pe_n " << pe_n
+              << " pe_nB " << getPEFromEvaluator(someState)
+              << " ke_prop " << ke_proposed << " ke_n " << ke_n
+              << " fix_o " << fix_o << " fix_n " << fix_n << " "
+              << " RT " << RT << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
+              << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
+        << std::endl;*/
+    // TEMPORARY END
+
+
 }
 
 /** Main function that contains all the 3 steps of HMC.
@@ -395,6 +410,7 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
 
     // Decide and get a new sample
     if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
+        std::cout << " acc" << std::endl;
         setSetTVector(someState);
         pe_set = pe_n;
         fix_set = fix_n;
