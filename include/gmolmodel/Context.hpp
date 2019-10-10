@@ -114,6 +114,7 @@ public:
     // --- Main ---
     void Run(SetupReader&);
     void Run(int howManyRounds, float Ti, float Tf);
+    void RunSimulatedTempering(int howManyRounds, float Ti, float Tf);
     void setNumThreadsRequested(int which, int howMany);
     void setUseOpenMMAcceleration(bool arg);
 

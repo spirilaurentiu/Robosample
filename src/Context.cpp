@@ -388,7 +388,115 @@ void Context::RotateWorlds(void){assert(!"Not implemented");}
 void Context::Run(SetupReader& setupReader)
 {
     assert(!"Not implemented");
-} 
+}
+
+// Simulated Tempering
+void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
+    int currentWorldIx = worldIndexes.front();
+    int lastWorldIx = 0;
+
+    // Write the initial Default Configuration of the first Compound of the first World
+    PdbStructure  pdb(worlds[0]->getTopology(0));
+    std::ostringstream sstream;
+    sstream << "pdbs/sb_" << ((updWorld(worldIndexes.back()))->getTopology(0)).getName() <<"_ini"<<".pdb";
+    std::string ofilename = sstream.str();
+    std::filebuf fb;
+    std::cout<<"Writing pdb file: "<<ofilename<<std::endl;
+    fb.open(ofilename.c_str(), std::ios::out);
+    std::ostream os(&fb);
+    pdb.write(os); // automatically multiplies by ten (nm to A)
+    fb.close();
+
+    for(int round = 0; round < nofRounds; round++){ // Iterate rounds
+        for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){ // Iterate worlds
+
+            // Rotate worlds indeces (translate from right to left)
+            std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
+
+            //std::cout << "world " << worldIndexes.front() << std::endl;
+
+            // Get indeces
+            currentWorldIx = worldIndexes.front();
+            lastWorldIx = worldIndexes.back();
+
+            // Transfer coordinates from last world to current
+            SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
+            SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
+
+            if(worldIndexes.size() > 1) {
+                currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
+                        currentAdvancedState,
+                        (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
+            }
+
+            double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+            double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                    lastAdvancedState);
+            double currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+            double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                    currentAdvancedState);
+
+            // Set old potential energy of the new world
+            pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
+                    pMC((updWorld(worldIndexes.back()))
+                                ->updSampler(0))->getSetPE() );
+
+            // Check if reconstructions is done correctly
+            if(std::abs(backCalcE - currCalcE) > 0.1) {
+                std::cout << "RunPe backSet backCalc currCalc currOld "
+                          << backSetE << " " << backCalcE << " "
+                          << currCalcE << " " << currOldE
+                          << std::endl;
+
+                std::cout << "Writing Compound pdbs for round " << round << std::endl;
+                (updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
+                ((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
+                        getOutputDir(), std::string("/pdbs/sb.")
+                                        + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
+
+                (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
+                ((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
+                        getOutputDir(), std::string("/pdbs/sb.")
+                                        + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
+            }
+
+            // Reinitialize current sampler
+            updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
+
+            // Update
+            for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
+                updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
+                updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState);
+                // , getNofMDStepsPerSample(currentWorldIx, 0)); RE
+
+            } // END for samples
+
+        } // for i in worlds
+
+        // Print energy and geometric features
+        if( !(round % getPrintFreq()) ){
+            PrintSamplerData(worldIndexes.back());
+            PrintDistances(worldIndexes.back());
+            PrintDihedralsQs(worldIndexes.back());
+            fprintf(logFile, "\n");
+        }
+
+        // Write pdb
+        SimTK::State& pdbState = (updWorld(worldIndexes.front()))->integ->updAdvancedState();
+        if( getPdbRestartFreq() != 0){
+            if(((round) % getPdbRestartFreq()) == 0){
+                (updWorld(worldIndexes.front()))->updateAtomListsFromCompound(pdbState);
+                for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
+                    ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
+                                                                                            "/pdbs/sb." +
+                                                                                            getPdbPrefix() + ".",
+                                                                                            ".pdb", 10, round);
+                }
+            }
+        } // if write pdbs
+
+    } // for i in rounds
+}
 
 // Main
 void Context::Run(int howManyRounds, float Ti, float Tf)
@@ -445,14 +553,12 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
                         currentAdvancedState);
 
-                // Check if reconstructions is done correctly
-
-
                 // Set old potential energy of the new world
                 pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
                     pMC((updWorld(worldIndexes.back()))
                     ->updSampler(0))->getSetPE() );
 
+                // Check if reconstructions is done correctly
                 if(std::abs(backCalcE - currCalcE) > 0.1) {
                     std::cout << "RunPe backSet backCalc currCalc currOld "
                               << backSetE << " " << backCalcE << " "
@@ -984,6 +1090,8 @@ void Context::PrintNumThreads(void) {
             << std::endl;
     }
 }
+
+
 
 
 

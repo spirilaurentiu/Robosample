@@ -369,19 +369,15 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     } // REC BUG*/
 
     // Integrate (propagate trajectory)
-    //this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+    this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
     // TODO: SCALE VELOCITIES
-    int halfMDSteps = int(MDStepsPerSample / 2);
-    int halfBoostMDSteps = int(this->boostMDSteps / 2);
-    int MDStepsPerT = halfMDSteps - halfBoostMDSteps;
-    int nofStairs = 10;
-    int MDStepsPerStair = halfMDSteps / nofStairs;
+/*    int nofStairs = 10;
+    int MDStepsPerStair = int(MDStepsPerSample / (2*nofStairs));
     SimTK::Real stairBoost = 1.2;
     SimTK::Real stairUnboost = 1 / stairBoost;
     //std::cout << "stairBoost = " << stairBoost << std::endl;
     //std::cout << "stairUnboost = " << stairUnboost << std::endl;
-
 
     system->realize(someState, SimTK::Stage::Velocity);
     this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
@@ -395,8 +391,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
         someState.updU() *= stairUnboost;
         system->realize(someState, SimTK::Stage::Velocity);
         this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
-    }
-
+    }*/
     // SCALE VELS END
 
 }
@@ -444,8 +439,8 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
         ++acceptedSteps;
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             //(rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
-             (rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
+             (rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
+             //(rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
             std::cout << " acc" << std::endl;
             setSetTVector(someState);
             pe_set = pe_n;
