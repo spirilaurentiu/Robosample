@@ -60,10 +60,18 @@ void SetupReader::ReadSetup(const std::string& FN)
 }
 
 // Print all the arguments
-void SetupReader::dump() const
+void SetupReader::dump(bool PrettyPrint) const
 {
+	if(PrettyPrint) {
+		std::cout << "Dumping input file:\n";
+	}
+
 	// TODO replace cout with other streams (as param)
 	for (const auto& Arg : Args) {
+		if(PrettyPrint) {
+			std::cout << "\t";
+		}
+
 		std::cout << Arg.first << " : ";
 		for (const auto& Val : Arg.second) {
 			std::cout << Val << " ";

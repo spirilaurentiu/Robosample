@@ -22,7 +22,7 @@ public:
 	void ReadSetup(const std::string& FN);
 
 	// Print all the arguments
-	void dump() const;
+	void dump(bool PrettyPrint) const;
 
 	// Access values by key
 	bool find(const char *argKey) const;
@@ -32,10 +32,9 @@ public:
 	const std::vector<std::string>& get(const std::string& argKey) const;
 
 private:
-	std::map<std::string, std::vector<std::string>> Args; // arguments
+	std::map<std::string, std::vector<std::string>> Args;
+	std::vector<std::string> KeyNotFound = { "ERROR_KEY_NOT_FOUND" };
 
 	bool IsPrintable(const std::string& s) const;
-
-	std::vector<std::string> KeyNotFound = { "ERROR_KEY_NOT_FOUND" };
 };
 

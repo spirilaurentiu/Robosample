@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include <numeric>
-#include <utility>
 #include "Sampler.hpp"
 
 #define ASSERT(cond) {SimTK_ASSERT_ALWAYS(cond, "Assertion failed");}

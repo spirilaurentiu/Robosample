@@ -75,3 +75,6 @@ make -j4
 The tests are located in `Robosample/build_debug/tests`.
 
 From `build_debug` (this is where you should be if you have just compiled the project), type `./tests/Robosample inp` to run the test called `Robosample`.
+
+# Troubleshooting
+`freeglut (simbody-visualizer_d): failed to open display ':0'`: make sure Xming is running.
