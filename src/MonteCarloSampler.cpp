@@ -16,20 +16,13 @@ MonteCarloSampler::MonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem,
                                      SimTK::TimeStepper *argTimeStepper)
     : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
 {
-    TRACE("NEW ALLOC\n");
-    TVector = new SimTK::Transform[matter->getNumBodies()];
-    TRACE("NEW ALLOC\n");
-    SetTVector = new SimTK::Transform[matter->getNumBodies()];
-    this->residualEmbeddedPotential = 0.0;
-    this->alwaysAccept = false;
-    acceptedSteps = 0;
+    TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+    SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 }
 
 // Destructor
 MonteCarloSampler::~MonteCarloSampler()
 {
-    delete [] TVector;
-    delete [] SetTVector;
 }
 
 // Seed the random number generator. Set simulation temperature,
@@ -42,12 +35,13 @@ void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTempe
     // Set the simulation temperature
     setTemperature(argTemperature); // Needed for Fixman
 
+
     // Store the configuration
     system->realize(someState, SimTK::Stage::Position);
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
+        //const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState); // unused variable
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -81,7 +75,7 @@ void MonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real argTem
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
+        // const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState); // unused variable
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -107,13 +101,13 @@ void MonteCarloSampler::useFixmanPotential(void)
 
 
 // Return true if use Fixman potential
-bool MonteCarloSampler::isUsingFixmanPotential(void)
+bool MonteCarloSampler::isUsingFixmanPotential(void) const
 {
     return useFixman;
 }
 
 // Is the sampler always accepting the proposed moves
-bool MonteCarloSampler::getAlwaysAccept(void)
+bool MonteCarloSampler::getAlwaysAccept(void) const
 {
     return alwaysAccept;
 }
@@ -141,14 +135,12 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //matter->calcM(someState, M);
 
     // Get detM
-    SimTK::Real detM = 1.0;
     SimTK::Vector DetV(nu);
-    TRACE("NEW ALLOC\n");
-    SimTK::Real* D0 = new SimTK::Real(1.0);
+    SimTK::Real D0 = 1.0;
 
     // TODO: remove the request for Dynamics stage cache in SImbody files
     //std::cout << "MonteCarloSampler::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
-    matter->calcDetM(someState, V, DetV, D0);
+    matter->calcDetM(someState, V, DetV, &D0);
 
     //std::cout << "FixmanTorque: " << "MonteCarloSampler::calcFixman logdetM: " << std::setprecision(10) << std::log(*D0) << std::setprecision(2) << std::endl;
     //std::cout << "MonteCarloSampler::calcFixman RT: " << RT << std::endl;
@@ -163,8 +155,8 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //SimTK::Real EiDetM = EiM.determinant();
     //std::cout << "EiDetM= " << EiDetM << std::endl;
     assert(RT > SimTK::TinyReal);
-    SimTK::Real result = 0.5 * RT * std::log(*D0);
-    delete D0;
+    SimTK::Real result = 0.5 * RT * std::log(D0);
+    
     return result;
 }
 
@@ -215,13 +207,13 @@ SimTK::Real MonteCarloSampler::calcNumDetM(SimTK::State& someState){
 }
 
 // Get the set potential energy
-SimTK::Real MonteCarloSampler::getSetPE(void)
+SimTK::Real MonteCarloSampler::getSetPE(void) const
 {
     return this->pe_set;
 }
 
 // Get the stored potential energy
-SimTK::Real MonteCarloSampler::getOldPE(void)
+SimTK::Real MonteCarloSampler::getOldPE(void) const
 {
     return this->pe_o;
 }
@@ -257,19 +249,19 @@ void MonteCarloSampler::setProposedFixman(SimTK::Real argFixman)
 }
 
 // Get set Fixman potential
-SimTK::Real MonteCarloSampler::getSetFixman(void)
+SimTK::Real MonteCarloSampler::getSetFixman(void) const
 {
     return this->fix_set;
 }
 
 // Get Fixman potential
-SimTK::Real MonteCarloSampler::getOldFixman(void)
+SimTK::Real MonteCarloSampler::getOldFixman(void) const
 {
     return this->fix_o;
 }
 
 // Get Fixman potential
-SimTK::Real MonteCarloSampler::getProposedFixman(void)
+SimTK::Real MonteCarloSampler::getProposedFixman(void) const
 {
     return this->fix_n;
 }
@@ -280,7 +272,7 @@ void MonteCarloSampler::setREP(SimTK::Real inp)
     this->residualEmbeddedPotential = inp;
 }
 
-SimTK::Real MonteCarloSampler::getREP(void)
+SimTK::Real MonteCarloSampler::getREP(void) const
 {
     return this->residualEmbeddedPotential;
 }
@@ -299,6 +291,7 @@ void MonteCarloSampler::setTVector(const SimTK::State& someState)
 // Stores the configuration into an internal vector of transforms TVector
 void MonteCarloSampler::setTVector(SimTK::Transform *inpTVector)
 {
+    // TODO pointer parameter is bad
   int i = 0;
   for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
     TVector[i] = inpTVector[i];
@@ -321,14 +314,14 @@ void MonteCarloSampler::setSetTVector(const SimTK::State& someState)
 // Get the stored configuration
 SimTK::Transform * MonteCarloSampler::getTVector(void)
 {
-    return this->TVector;
+    return &TVector[0];
 }
 
 // Stores the configuration into an internal vector of transforms TVector
 // Get the stored configuration
 SimTK::Transform * MonteCarloSampler::getSetTVector(void)
 {
-    return this->SetTVector;
+    return &SetTVector[0];
 }
 
 // Restores configuration from the internal set vector of transforms TVector
@@ -382,16 +375,14 @@ void MonteCarloSampler::assignConfFromTVector(SimTK::State& someState)
 // [qw, qx, qy, qz, x1, x2, x3]
 void MonteCarloSampler::propose(SimTK::State& someState)
 {
-    int i = 1;
-    for (SimTK::MobilizedBodyIndex mbx(i); mbx < matter->getNumBodies(); ++mbx){
-        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        SimTK::Real rand_no = uniformRealDistribution_0_2pi(randomEngine);
+    for (int i = 1; i < matter->getNumBodies(); ++i){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(i));
+        const SimTK::Real rand_no = uniformRealDistribution_0_2pi(randomEngine);
 
         for(int j=0; j<mobod.getNumQ(someState); j++){
             mobod.setOneQ(someState, j, rand_no);
             //someState.updQ()[i] = rand_no;
         }
-        i++;
     }
 
     system->realize(someState, SimTK::Stage::Position); // NECESSARY
@@ -405,28 +396,26 @@ void MonteCarloSampler::update(SimTK::State& someState){
     SimTK::Real RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
 
     // Get old energy
-    SimTK::Real pe_o = getOldPE();
+    pe_o = getOldPE();
 
     // Assign random configuration
-
     propose(someState);
 
     // Send configuration to evaluator  
-
     sendConfToEvaluator(); // OPENMM
 
     // Get current potential energy from evaluator
-
-    SimTK::Real pe_n = getPEFromEvaluator(someState); // OPENMM
+    pe_n = getPEFromEvaluator(someState); // OPENMM
 
     // Apply Metropolis criterion
-
     assert(!std::isnan(pe_n));
-    if ((pe_n < pe_o) or (rand_no < exp(-(pe_n - pe_o)/RT))){ // Accept
+    if (pe_n < pe_o || rand_no < exp(-(pe_n - pe_o)/RT)){
+        // Accept
         setTVector(someState);
         setOldPE(pe_n);
         ++acceptedSteps;
-    }else{ // Reject
+    }else{
+        // Reject
         assignConfFromTVector(someState);
     }
 }
@@ -463,67 +452,32 @@ void MonteCarloSampler::setThermostat(ThermostatName argThermostat){
     this->thermostat = argThermostat;
 }
 // Set a thermostat
-void MonteCarloSampler::setThermostat(std::string argThermostat){
-    std::string _thermostat;
-    _thermostat.resize(argThermostat.size());
-    std::transform(argThermostat.begin(), argThermostat.end(),
-        _thermostat.begin(), ::tolower);
+void MonteCarloSampler::setThermostat(std::string thermoName){
+    thermoName.resize(thermoName.size());
+    std::transform(thermoName.begin(), thermoName.end(), thermoName.begin(), ::tolower);
 
-    try{
-
-        if(_thermostat == "none"){
-            this->thermostat = NONE;
-        }else if(_thermostat == "andersen"){
-            this->thermostat = ANDERSEN;
-        }else if(_thermostat == "berendsen"){
-            this->thermostat = BERENDSEN;
-        }else if(_thermostat == "langevin"){
-            this->thermostat = LANGEVIN;
-        }else if(_thermostat == "nose_hoover"){
-            this->thermostat = NOSE_HOOVER;
-        }else{
-            throw std::invalid_argument("Thermostat");
-        }
-
-    }catch(std::invalid_argument& ia){
-        std::cerr << "Invalid argument: " << ia.what() << '\n';
+    if(thermoName == "none"){
+        this->thermostat = NONE;
+    }else if(thermoName == "andersen"){
+        this->thermostat = ANDERSEN;
+    }else if(thermoName == "berendsen"){
+        this->thermostat = BERENDSEN;
+    }else if(thermoName == "langevin"){
+        this->thermostat = LANGEVIN;
+    }else if(thermoName == "nose_hoover"){
+        this->thermostat = NOSE_HOOVER;
+    }else{
+        std::cerr << "Invalid argument: " << thermoName << '\n';
     }
-
 }
 
 // Set a thermostat
 void MonteCarloSampler::setThermostat(const char *argThermostat){
-    std::string _sthermostat = argThermostat;
-    std::string _thermostat;
-    _thermostat.resize(_sthermostat.size());
-    std::transform(_sthermostat.begin(), _sthermostat.end(),
-        _thermostat.begin(), ::tolower);
-
-
-    try{
-
-        if(_thermostat == "none"){
-            this->thermostat = NONE;
-        }else if(_thermostat == "andersen"){
-            this->thermostat = ANDERSEN;
-        }else if(_thermostat == "berendsen"){
-            this->thermostat = BERENDSEN;
-        }else if(_thermostat == "langevin"){
-            this->thermostat = LANGEVIN;
-        }else if(_thermostat == "nose_hoover"){
-            this->thermostat = NOSE_HOOVER;
-        }else{
-            throw std::invalid_argument("Thermostat");
-        }
-
-    }catch(std::invalid_argument& ia){
-        std::cerr << "Invalid argument: " << ia.what() << '\n';
-    }
-
+    setThermostat(std::string(argThermostat));
 }
 
 // Get the name of the thermostat
-ThermostatName MonteCarloSampler::getThermostat(void){
+ThermostatName MonteCarloSampler::getThermostat(void) const{
     return thermostat;
 }
 
@@ -537,7 +491,7 @@ void MonteCarloSampler::sendConfToEvaluator(void){
 }
 
 // Get the number of accpted conformations
-int MonteCarloSampler::getAcceptedSteps(void)
+int MonteCarloSampler::getAcceptedSteps(void) const
 {
     return acceptedSteps;
 }

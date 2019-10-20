@@ -45,7 +45,7 @@ public:
     void setThermostat(const char *);
 
     // Get the name of the thermostat
-    virtual ThermostatName getThermostat(void);
+    virtual ThermostatName getThermostat(void) const;
     /** Seed the random number generator. Set simulation temperature,
     variables that store the configuration
     and variables that store the energies, both needed for the
@@ -77,35 +77,35 @@ public:
     void update(SimTK::State&);
 
     // Get/set set potential energy
-    SimTK::Real getSetPE(void);
+    SimTK::Real getSetPE(void) const;
     void setSetPE(SimTK::Real argPE);
 
     // Get/set current potential energy
-    SimTK::Real getOldPE(void);
+    SimTK::Real getOldPE(void) const;
     void setOldPE(SimTK::Real argPE);
 
     // Set/get Fixman potential
     void setSetFixman(SimTK::Real);
-    SimTK::Real getSetFixman(void);
+    SimTK::Real getSetFixman(void) const;
 
     // Set/get Fixman potential
     void setREP(SimTK::Real);
-    SimTK::Real getREP(void);
+    SimTK::Real getREP(void) const;
 
     // Set/get Fixman potential
     void setOldFixman(SimTK::Real);
-    SimTK::Real getOldFixman(void);
+    SimTK::Real getOldFixman(void) const;
 
     // Set/get Fixman potential
     void setProposedFixman(SimTK::Real);
-    SimTK::Real getProposedFixman(void);
+    SimTK::Real getProposedFixman(void) const;
 
     // Evaluate the potential energy at current state
     SimTK::Real getPEFromEvaluator(SimTK::State& someState); 
 
     // Return true if use Fixman potential
     void useFixmanPotential(void);
-    bool isUsingFixmanPotential(void);
+    bool isUsingFixmanPotential(void) const;
 
     // Compute Fixman potential
     SimTK::Real calcFixman(SimTK::State& someState);
@@ -121,25 +121,30 @@ public:
     void sendConfToEvaluator(void);
     
     // Is the sampler always accepting the proposed moves
-    bool getAlwaysAccept(void);
+    bool getAlwaysAccept(void) const;
 
     // Is the sampler always accepting the proposed moves
     void setAlwaysAccept(bool);
 
     // Get the number of accpted conformations
-    int getAcceptedSteps(void);
+    int getAcceptedSteps(void) const;
 
 protected:
-    SimTK::Transform *SetTVector; // Transform matrices
-    SimTK::Transform *TVector; // Transform matrices
-    SimTK::Real pe_set, pe_o, pe_n;
+    std::vector<SimTK::Transform> SetTVector; // Transform matrices
+    std::vector<SimTK::Transform> TVector; // Transform matrices
+    SimTK::Real pe_set = 0.0,
+        pe_o = 0.0,
+        pe_n = 0.0;
 
-    bool useFixman;
-    bool alwaysAccept;
-    SimTK::Real fix_set, fix_o, fix_n;
-    SimTK::Real residualEmbeddedPotential; // inside rigid bodies if weren't rigid
+    SimTK::Real fix_set = 0.0,
+        fix_o = 0.0,
+        fix_n = 0.0;
+    SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
 
-    int acceptedSteps;
+    bool useFixman = false;
+    bool alwaysAccept = false;
+
+    int acceptedSteps = 0;
  
 };
 
