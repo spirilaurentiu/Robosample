@@ -6,7 +6,9 @@
 #include "Sampler.hpp"
 
 // Default constructor
-Context::Context(std::string logFilename){
+Context::Context(const SetupReader& setupReader, std::string logFilename){
+    ValidateSetupReader(setupReader);
+
     BUFSIZE = 1048576;
     buffer = new char[BUFSIZE];
     logFile = fopen(logFilename.c_str(), "w+");
@@ -16,7 +18,9 @@ Context::Context(std::string logFilename){
 }
 
 // Constructor
-Context::Context(World *inp_p_world, std::string logFilename){
+Context::Context(const SetupReader& setupReader, World *inp_p_world, std::string logFilename){
+    ValidateSetupReader(setupReader);
+    
     //total_mcsteps = 0;
     worlds.push_back(inp_p_world);
     worldIndexes.push_back(0);
@@ -1094,6 +1098,30 @@ void Context::PrintNumThreads(void) {
             << worlds[worldIx]->updForceField()->getNumThreadsInUse()
             << std::endl;
     }
+}
+
+bool Context::ValidateSetupReader(const SetupReader& setupReader) {
+    const unsigned int nofWorlds = setupReader.get("WORLDS").size();
+
+    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+        for(unsigned int molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
+            assert(SimTK::Pathname::fileExists(
+                    setupReader.get("MOLECULES")[molIx] + std::string("/")
+                + setupReader.get("PRMTOP")[molIx]) );
+            assert(SimTK::Pathname::fileExists(
+                    setupReader.get("MOLECULES")[molIx] + std::string("/")
+                + setupReader.get("INPCRD")[molIx]) );
+            assert(SimTK::Pathname::fileExists(
+                    setupReader.get("MOLECULES")[molIx] + std::string("/")
+                + setupReader.get("RBFILE")[molIx]) );
+            assert(SimTK::Pathname::fileExists(
+                    setupReader.get("MOLECULES")[molIx] + std::string("/")
+                + setupReader.get("FLEXFILE")[molIx]) );
+
+        }
+    }
+
+    assert(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0]));
 }
 
 

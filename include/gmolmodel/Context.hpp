@@ -3,6 +3,7 @@
 
 #include "Robo.hpp"
 #include "Sampler.hpp"
+#include "SetupReader.hpp"
 
 class Sampler;
 class World;
@@ -10,8 +11,8 @@ class World;
 class Context{
 
 public:
-    Context(World *, std::string logFilenameArg);
-    Context(std::string logFilenameArg);
+    Context(const SetupReader& setupReader, World *, std::string logFilenameArg);
+    Context(const SetupReader& setupReader, std::string logFilenameArg);
     ~Context();
 
     World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
@@ -160,6 +161,8 @@ public:
     std::vector<int> worldIndexes;
 
 private:
+    bool ValidateSetupReader(const SetupReader& setupReader);
+
     std::vector<World *> worlds;
 
     // Molecules files

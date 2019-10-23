@@ -28,6 +28,31 @@ public:
     bool update(SimTK::State& someState){}
 };
 
+void CalcAverageAndVariance(const std::vector<SimTK::Real>& v, SimTK::Real& average, SimTK::Real& variance) {
+    // Average
+    average = static_cast<SimTK::Real>(std::accumulate(v.begin(), v.end(), 0.0)) / (v.size());
+
+    // Variance
+    variance = 0.0;
+    for(const auto it : v) {
+        variance += ((it - average) * (it - average));
+    }
+    
+    variance /= v.size();
+}
+
+SimTK::Real KolmogorovSmirnov(const std::vector<SimTK::Real>& v) {
+    SimTK::Real res = std::numeric_limits<SimTK::Real>::min();
+    for(size_t i = 0; i < v.size(); i++) {
+        auto DPlus = (i + 1) / static_cast<SimTK::Real>(v.size()) - v[i],
+            DMinus = v[i] - (i - 1) / static_cast<SimTK::Real>(v.size());
+
+        res = std::max({DPlus, DMinus, res});
+    }
+
+    return res;
+}
+
 void testSampler(){
 
     // Molmodel System derived from Simbody System
@@ -54,69 +79,40 @@ void testSampler(){
     sampler.setTemperature(10);
     ASSERT_EQUAL(sampler.getRT(), 83.14472e-3L);
 
-    // TODO Kolmogorov-Smirnov test
     // Check random number generator
     sampler.setSeed(std::time(0));
-    std::vector<SimTK::Real> X;
-    std::vector<SimTK::Real>::iterator XIt;
-    unsigned int sizeOfSample = 0;
-    SimTK::Real variance;
-    SimTK::Real average;
-    SimTK::Real skew;
+    std::vector<SimTK::Real> v;
 
-    for (unsigned int experiment = 0; experiment < 5; experiment++){
-
-        ///////////////////////////
+    for (unsigned int experiment = 0; experiment < 5; experiment++) {
         // Check uniform distribution
-        sizeOfSample = 10000;
-        for(unsigned int i = 0; i < sizeOfSample; i++){
-            X.emplace_back(sampler.generateRandomNumber(UNIFORM));
+        for(unsigned int i = 0; i < 10000; i++) {
+            v.emplace_back(sampler.generateRandomNumber(UNIFORM));
         }
 
-        // Average
-        average = 0;
-        SimTK::Real average = static_cast<SimTK::Real>(std::accumulate
-                (X.begin(), X.end(), 0.0)) / (X.size());
-
-        // Variance
-        SimTK::Real variance = 0.0;
-        for(XIt = X.begin(); XIt != X.end(); ++XIt){
-            //std::cout << *XIt << std::endl;
-            variance += ((*XIt - average) * (*XIt - average));
-        }
-        variance /= X.size();
+        SimTK::Real average, variance;
+        CalcAverageAndVariance(v, average, variance);
 
         ASSERT( std::abs(average - 0.5) < 0.01 );
         ASSERT( std::abs(variance - 0.0833) < 0.01 );
+        ASSERT( KolmogorovSmirnov(v) > 0.95 );
 
-        ///////////////////////////
         // Check normal distribution
-        sizeOfSample = 100000;
-        X.clear();
-
-        // Average
-        average = 0;
-        for(unsigned int i = 0; i < sizeOfSample; i++){
-            X.emplace_back(sampler.generateRandomNumber(NORMAL));
+        v.clear();
+        for(unsigned int i = 0; i < 100000; i++){
+            v.emplace_back(sampler.generateRandomNumber(NORMAL));
         }
 
-        average = static_cast<SimTK::Real>(std::accumulate
-                (X.begin(), X.end(), 0.0)) / (X.size());
+        CalcAverageAndVariance(v, average, variance);
 
-        // Variance
-        variance = 0.0;
-        for(XIt = X.begin(); XIt != X.end(); ++XIt){
-            variance += ((*XIt - average) * (*XIt - average));
-        }
-        variance /= X.size();
+        // Standard deviation
         SimTK::Real stdev = std::sqrt(variance);
 
         // Skewness
-        skew = 0;
-        for(XIt = X.begin(); XIt != X.end(); ++XIt){
-            skew += (*XIt * *XIt * *XIt);
+        SimTK::Real skew = 0;
+        for(const auto it : v ) {
+            skew += (it * it * it);
         }
-        skew /= X.size();
+        skew /= v.size();
 
         skew = skew - (3 * average * variance) - (average * average * average);
         skew /= variance * stdev;
@@ -129,8 +125,7 @@ void testSampler(){
         ASSERT( std::abs(variance - 1.0) < 0.05 );
         ASSERT( std::abs(skew - 0.0) < 0.05 );
 
-        X.clear();
-
+        v.clear();
     }
 }
 
