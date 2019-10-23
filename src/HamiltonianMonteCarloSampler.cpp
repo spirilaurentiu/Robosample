@@ -399,8 +399,9 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 /** Main function that contains all the 3 steps of HMC.
 Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
-void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
+bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 {
+    bool acc;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 
     // Get new Fixman potential
@@ -430,31 +431,42 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
 
     // Decide and get a new sample
     if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
+        acc = true;
         std::cout << " acc" << std::endl;
         setSetTVector(someState);
         pe_set = pe_n;
         fix_set = fix_n;
         ke_lastAccepted = ke_n;
         etot_set = pe_set + fix_set + ke_proposed;
+
+        //setBeta(newBeta);
+
         ++acceptedSteps;
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             (rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
-             //(rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
-            std::cout << " acc" << std::endl;
-            setSetTVector(someState);
-            pe_set = pe_n;
-            fix_set = fix_n;
-            ke_lastAccepted = ke_n;
-            etot_set = pe_set + fix_set + ke_proposed;
-            ++acceptedSteps;
+             (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
+             //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
+             //(rand_no < exp(-(etot_n - etot_proposed) * (newBeta - this->beta))))) {
+             acc = true;
+             std::cout << " acc" << std::endl;
+             setSetTVector(someState);
+             pe_set = pe_n;
+             fix_set = fix_n;
+             ke_lastAccepted = ke_n;
+             etot_set = pe_set + fix_set + ke_proposed;
+
+             //setBeta(newBeta);
+
+             ++acceptedSteps;
         } else { // Reject
-            std::cout << " nacc" << std::endl;
-            assignConfFromSetTVector(someState);
+             acc = false;
+             std::cout << " nacc" << std::endl;
+             assignConfFromSetTVector(someState);
         }
     }
 
     ++nofSamples;
+    return acc;
 
 }
 

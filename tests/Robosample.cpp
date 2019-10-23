@@ -19,8 +19,7 @@
 //#define ROBO_DEBUG_LEVEL01
 //#endif
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     // Initialize setup reader
     SetupReader setupReader(argv[1]);
     unsigned int nofWorlds = setupReader.get("WORLDS").size();
@@ -29,33 +28,33 @@ int main(int argc, char **argv)
 
     // Assert minimal requirements
     // TODO Move asserts in Context
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        for(unsigned int molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        for (unsigned int molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++) {
             assert(SimTK::Pathname::fileExists(
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("PRMTOP")[molIx]) );
+                    + setupReader.get("PRMTOP")[molIx]));
             assert(SimTK::Pathname::fileExists(
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("INPCRD")[molIx]) );
+                    + setupReader.get("INPCRD")[molIx]));
             assert(SimTK::Pathname::fileExists(
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("RBFILE")[molIx]) );
+                    + setupReader.get("RBFILE")[molIx]));
             assert(SimTK::Pathname::fileExists(
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("FLEXFILE")[molIx]) );
+                    + setupReader.get("FLEXFILE")[molIx]));
 
         }
     }
     assert(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0]));
 
     // Create pdbs directory if necessary
-    if( !(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0] + "/pdbs")) ){
+    if (!(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0] + "/pdbs"))) {
 
         const int dir_err = mkdir(
-            (setupReader.get("OUTPUT_DIR")[0] + "/pdbs").c_str(),
-            S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                (setupReader.get("OUTPUT_DIR")[0] + "/pdbs").c_str(),
+                S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-        if (-1 == dir_err){
+        if (-1 == dir_err) {
             std::cout << "Error creating " << setupReader.get("OUTPUT_DIR")[0] + "/pdbs" << std::endl;
             exit(1);
         }
@@ -71,11 +70,11 @@ int main(int argc, char **argv)
 
     // Create context
     std::string logFilename;
-    if( setupReader.find("SEED") ){
-        if( !(setupReader.get("SEED").empty()) ){
+    if (setupReader.find("SEED")) {
+        if (!(setupReader.get("SEED").empty())) {
             logFilename = setupReader.get("OUTPUT_DIR")[0] + std::string("/log.") + setupReader.get("SEED")[0];
         }
-    }else{
+    } else {
         logFilename = "x";
     }
 
@@ -83,42 +82,42 @@ int main(int argc, char **argv)
     Context *context = new Context(logFilename);
 
     // Add empty Worlds to the Context
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        if(setupReader.get("VISUAL")[worldIx] == "TRUE"){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        if (setupReader.get("VISUAL")[worldIx] == "TRUE") {
             context->AddWorld(true, std::stod(setupReader.get("TIMESTEPS")[worldIx]));
-        }else{
+        } else {
             context->AddWorld(false);
         }
     }
 
     // Add filenames to Context filenames vectors
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        for(unsigned int molIx = 0;
-            molIx < setupReader.get("MOLECULES").size();
-            molIx++){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        for (unsigned int molIx = 0;
+             molIx < setupReader.get("MOLECULES").size();
+             molIx++) {
 
-            context->loadTopologyFile( worldIx, molIx,
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                    + setupReader.get("PRMTOP")[molIx]
+            context->loadTopologyFile(worldIx, molIx,
+                                      setupReader.get("MOLECULES")[molIx] + std::string("/")
+                                      + setupReader.get("PRMTOP")[molIx]
             );
 
-            context->loadCoordinatesFile( worldIx, molIx,
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                    + setupReader.get("INPCRD")[molIx]
+            context->loadCoordinatesFile(worldIx, molIx,
+                                         setupReader.get("MOLECULES")[molIx] + std::string("/")
+                                         + setupReader.get("INPCRD")[molIx]
             );
 
-            context->loadRigidBodiesSpecs( worldIx, molIx,
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                    + setupReader.get("RBFILE")[molIx]
+            context->loadRigidBodiesSpecs(worldIx, molIx,
+                                          setupReader.get("MOLECULES")[molIx] + std::string("/")
+                                          + setupReader.get("RBFILE")[molIx]
             );
 
-            context->loadFlexibleBondsSpecs( worldIx, molIx,
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                    + setupReader.get("FLEXFILE")[worldIx]
+            context->loadFlexibleBondsSpecs(worldIx, molIx,
+                                            setupReader.get("MOLECULES")[molIx] + std::string("/")
+                                            + setupReader.get("FLEXFILE")[worldIx]
             );
 
-            context->setRegimen( worldIx, molIx,
-                    setupReader.get("WORLDS")[worldIx] );
+            context->setRegimen(worldIx, molIx,
+                                setupReader.get("WORLDS")[worldIx]);
         }
     }
 
@@ -126,7 +125,7 @@ int main(int argc, char **argv)
     context->AddMolecules(setupReader.get("ROOTS"));
 
     // Use OpenMM if possible
-    if(setupReader.get("OPENMM")[0] == "TRUE"){
+    if (setupReader.get("OPENMM")[0] == "TRUE") {
         context->setUseOpenMMAcceleration(true);
     }
 
@@ -137,31 +136,31 @@ int main(int argc, char **argv)
     context->modelTopologies();
 
     // Add Fixman torque (Additional ForceSubsystem) if required
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        if (setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE") {
             context->addFixmanTorque(worldIx);
         }
     }
 
     // Set worlds force field scale factors
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         // Set force field scale factors.
-        if(setupReader.get("FFSCALE")[worldIx] == "AMBER"){
+        if (setupReader.get("FFSCALE")[worldIx] == "AMBER") {
             context->setAmberForceFieldScaleFactors(worldIx);
-        }else{
+        } else {
             context->setGlobalForceFieldScaleFactor(worldIx,
-                    std::stod(setupReader.get("FFSCALE")[worldIx]));
+                                                    std::stod(setupReader.get("FFSCALE")[worldIx]));
         }
         // Set world GBSA scale factor
         context->setGbsaGlobalScaleFactor(worldIx,
-                std::stod(setupReader.get("GBSA")[worldIx]));
+                                          std::stod(setupReader.get("GBSA")[worldIx]));
     }
 
 
     // Request threads
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         context->setNumThreadsRequested(worldIx,
-                std::stod(setupReader.get("THREADS")[worldIx]));
+                                        std::stod(setupReader.get("THREADS")[worldIx]));
     }
 
     // Print the number of threads we got back
@@ -172,77 +171,81 @@ int main(int argc, char **argv)
     context->realizeTopology();
 
     // Add samplers to the worlds
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         context->addSampler(worldIx, HMC);
     }
 
     // Set sampler parameters and initialize
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++) {
             // Set timesteps
-            context->setTimestep(worldIx, samplerIx, std::stod(setupReader.get("TIMESTEPS")[worldIx]) );
+            context->setTimestep(worldIx, samplerIx, std::stod(setupReader.get("TIMESTEPS")[worldIx]));
 
             // Set thermostats
-            pMC(context->updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
+            pMC(context->updWorld(worldIx)->updSampler(samplerIx))->setThermostat(
+                    setupReader.get("THERMOSTAT")[worldIx]);
             pHMC(context->updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
-                std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
+                    std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
             pHMC(context->updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
                     std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 
             // Activate Fixman potential if needed
-            if(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"){
-                 context->useFixmanPotential(worldIx, samplerIx);
+            if (setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE") {
+                context->useFixmanPotential(worldIx, samplerIx);
             }
         }
     }
 
     // This loop is just for check purposes (should be removed)
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++){
-            std::cout << "After setThermo world " << worldIx << " sampler " << samplerIx << "getThermostat: " ;
-            std::cout << pMC(context->updWorld(worldIx)->updSampler(samplerIx))->getThermostat() ;
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+            std::cout << "After setThermo world " << worldIx << " sampler " << samplerIx << "getThermostat: ";
+            std::cout << pMC(context->updWorld(worldIx)->updSampler(samplerIx))->getThermostat();
             std::cout << std::endl;
         }
     }
 
 
     // Set thermodynamics
-    for(int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
+    for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
         context->setTemperature(worldIx, std::stof(setupReader.get("TEMPERATURE_INI")[worldIx]));
         context->setNofSamplesPerRound(worldIx, std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
         context->setNofMDStepsPerSample(worldIx, 0, std::stoi(setupReader.get("MDSTEPS")[worldIx]));
     }
 
     // Set the seeds for reproducibility
-    if( setupReader.find("SEED") ){
-        if( !(setupReader.get("SEED").empty()) ){
-            for(unsigned int worldIx = 0; worldIx < context->getNofWorlds(); worldIx++){
-                context->setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[worldIx] ));
+    if (setupReader.find("SEED")) {
+        if (!(setupReader.get("SEED").empty())) {
+            for (unsigned int worldIx = 0; worldIx < context->getNofWorlds(); worldIx++) {
+                context->setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[worldIx]));
             }
         }
     }
 
     // Initialize samplers
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++) {
             context->initializeSampler(worldIx, samplerIx);
         }
     }
 
     // Print thermodynamics
-    for(unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
-        std::cout << "MAIN World " << worldIx << " temperature = " << context->getWorld(worldIx)->getTemperature() << std::endl;
-        if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
-            std::cout << "MAIN World " << worldIx << " FixmanTorque temperature = " << context->updWorld(worldIx)->updFixmanTorque()->getTemperature() << std::endl;
+    for (unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
+        std::cout << "MAIN World " << worldIx << " temperature = " << context->getWorld(worldIx)->getTemperature()
+                  << std::endl;
+        if (setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE") {
+            std::cout << "MAIN World " << worldIx << " FixmanTorque temperature = "
+                      << context->updWorld(worldIx)->updFixmanTorque()->getTemperature() << std::endl;
         }
-        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++){
-            std::cout << "MAIN World " << worldIx << " Sampler " << samplerIx 
-                << " temperature = " << context->updWorld(worldIx)->updSampler(samplerIx)->getTemperature()
-                << " initial const state PE: " << std::setprecision(20)
-                //<< (context->updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
-                //<< (context->updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(context->updAdvancedState(worldIx, samplerIx))
-                << " useFixmanPotential = " << pMC(context->updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
-                << std::endl;
+        for (unsigned int samplerIx = 0; samplerIx < context->getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+            std::cout << "MAIN World " << worldIx << " Sampler " << samplerIx
+                      << " temperature = " << context->updWorld(worldIx)->updSampler(samplerIx)->getTemperature()
+                      << " initial const state PE: " << std::setprecision(20)
+                      //<< (context->updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
+                      //<< (context->updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(context->updAdvancedState(worldIx, samplerIx))
+                      << " useFixmanPotential = "
+                      << pMC(context->updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
+                      << std::endl;
         }
 
     }
@@ -253,6 +256,12 @@ int main(int argc, char **argv)
     round_mcsteps = 0;
 
     context->setNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
+
+    if (setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+        for (unsigned int worldIx = 0; worldIx < context->getNofWorlds(); worldIx++) {
+            context->setNofBoostStairs(worldIx, std::stoi(setupReader.get("BOOST_STAIRS")[worldIx]));
+        }
+    }
 
     for(unsigned int worldIx = 0; worldIx < context->getNofWorlds(); worldIx++){    
         round_mcsteps += context->getNofSamplesPerRound(worldIx);
@@ -322,6 +331,7 @@ int main(int argc, char **argv)
         }
     }
 
+    // Alert user of CUDA environment variables
     if(SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
         std::cout << "CUDA_ROOT not set." << std::endl;
     }else{
@@ -336,9 +346,15 @@ int main(int argc, char **argv)
     context->realizeTopology();
 
     // -- Run --
-    context->Run(context->getNofRounds(), 
-        std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-        std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+    if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+        context->RunSimulatedTempering(context->getNofRounds(),
+                     std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+                     std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+    }else{
+        context->Run(context->getNofRounds(),
+                     std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+                     std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+    }
 
     // Write final pdbs
     for(unsigned int mol_i = 0; mol_i < setupReader.get("MOLECULES").size(); mol_i++){
@@ -346,8 +362,8 @@ int main(int argc, char **argv)
                 context->getOutputDir(), "/pdbs/final." + context->getPdbPrefix() + ".", ".pdb", 10,
                 context->getNofRounds());
     }
-    //
 
+    // Clean up
     delete context;
 
 } // END MAIN ////////////

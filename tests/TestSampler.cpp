@@ -25,7 +25,7 @@ public:
 
     ~DerivedSampler(){}
     void propose(SimTK::State& someState){}
-    void update(SimTK::State& someState){}
+    bool update(SimTK::State& someState){}
 };
 
 void testSampler(){

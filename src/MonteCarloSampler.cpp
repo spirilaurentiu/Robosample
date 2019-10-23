@@ -400,7 +400,7 @@ void MonteCarloSampler::propose(SimTK::State& someState)
 
 // The update step in Monte Carlo methods consists in:
 // Acception - rejection step
-void MonteCarloSampler::update(SimTK::State& someState){
+bool MonteCarloSampler::update(SimTK::State& someState){
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
     SimTK::Real RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
 
@@ -426,8 +426,10 @@ void MonteCarloSampler::update(SimTK::State& someState){
         setTVector(someState);
         setOldPE(pe_n);
         ++acceptedSteps;
+        return true;
     }else{ // Reject
         assignConfFromTVector(someState);
+        return false;
     }
 }
 

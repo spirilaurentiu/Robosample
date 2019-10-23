@@ -30,6 +30,7 @@ Context::Context(World *inp_p_world, std::string logFilename){
     nofSamplesPerRound.push_back(1);
     nofMDStepsPerSample.push_back(1);
     timesteps.push_back(0.002); // ps
+    nofBoostStairs.push_back(0);
 
     pdbRestartFreq = 0;
     outputDir = "pdbs";
@@ -60,6 +61,7 @@ World * Context::AddWorld(bool visual, SimTK::Real visualizerFrequency){
     nofSamplesPerRound.push_back(1);
     nofMDStepsPerSample.push_back(1);
     timesteps.push_back(0.002); // ps
+    nofBoostStairs.push_back(0);
 
     return worlds.back();
 }
@@ -89,6 +91,7 @@ Context::~Context(){
     nofSamplesPerRound.clear();
     nofMDStepsPerSample.clear();
     timesteps.clear();
+    nofBoostStairs.clear();
 
     fclose(logFile);
     delete buffer;
@@ -390,6 +393,17 @@ void Context::Run(SetupReader& setupReader)
     assert(!"Not implemented");
 }
 
+// SImulate Tempering
+void Context::setNofBoostStairs(int whichWorld, int howManyStairs)
+{
+    nofBoostStairs[whichWorld] = howManyStairs;
+}
+
+int Context::getNofBoostStairs(int whichWorld)
+{
+    return nofBoostStairs[whichWorld];
+}
+
 // Simulated Tempering
 void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
     int currentWorldIx = worldIndexes.front();
@@ -407,13 +421,20 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
     pdb.write(os); // automatically multiplies by ten (nm to A)
     fb.close();
 
+    // Simulated Tempering specifics
+    SimTK::Real iniBoostBeta = updWorld(worldIndexes.front())->updSampler(0)->getBeta(); // Intial beta
+    SimTK::Real finBoostBeta = 1.0 / (updWorld(worldIndexes.front())->updSampler(0)->getBoostTemperature()
+            * SimTK_BOLTZMANN_CONSTANT_MD);
+    SimTK::Real iniBoostT = updWorld(worldIndexes.front())->updSampler(0)->getTemperature();
+    SimTK::Real finBoostT = updWorld(worldIndexes.front())->updSampler(0)->getBoostTemperature();
+    SimTK::Real dBoostT = (finBoostT - iniBoostT) / this->nofBoostStairs[0];
+
+    // Main
     for(int round = 0; round < nofRounds; round++){ // Iterate rounds
         for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){ // Iterate worlds
 
             // Rotate worlds indeces (translate from right to left)
             std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
-
-            //std::cout << "world " << worldIndexes.front() << std::endl;
 
             // Get indeces
             currentWorldIx = worldIndexes.front();
@@ -429,6 +450,7 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
                         (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
             }
 
+            // Check if reconstructions is done correctly
             double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
             double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
                     lastAdvancedState);
@@ -438,27 +460,7 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
 
             // Set old potential energy of the new world
             pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
-                    pMC((updWorld(worldIndexes.back()))
-                                ->updSampler(0))->getSetPE() );
-
-            // Check if reconstructions is done correctly
-            if(std::abs(backCalcE - currCalcE) > 0.1) {
-                std::cout << "RunPe backSet backCalc currCalc currOld "
-                          << backSetE << " " << backCalcE << " "
-                          << currCalcE << " " << currOldE
-                          << std::endl;
-
-                std::cout << "Writing Compound pdbs for round " << round << std::endl;
-                (updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
-                ((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
-                        getOutputDir(), std::string("/pdbs/sb.")
-                                        + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
-
-                (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
-                ((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
-                        getOutputDir(), std::string("/pdbs/sb.")
-                                        + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
-            }
+                    pMC((updWorld(lastWorldIx))->updSampler(0))->getSetPE() );
 
             // Reinitialize current sampler
             updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
@@ -466,9 +468,8 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
             // Update
             for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
                 updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState);
-                // , getNofMDStepsPerSample(currentWorldIx, 0)); RE
-
+                updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
+                        , updWorld(currentWorldIx)->updSampler(0)->getBeta());
             } // END for samples
 
         } // for i in worlds
@@ -586,8 +587,10 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 // Update
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
                     updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState);
-                            // , getNofMDStepsPerSample(currentWorldIx, 0)); RE
+                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
+                            , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+
+                    // , getNofMDStepsPerSample(currentWorldIx, 0)); RE
 
                 } // END for samples
     
@@ -669,7 +672,9 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 // Update
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
                     updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState);
+                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
+                            , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+
                 } // END for samples
     
             } // for i in worlds

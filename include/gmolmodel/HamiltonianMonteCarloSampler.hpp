@@ -92,7 +92,7 @@ public:
     /** Main function that contains all the 3 steps of HMC.
     Implements the acception-rejection step and sets the state of the 
     compound to the appropriate conformation wether it accepted or not. **/
-    void update(SimTK::State& someState);
+    bool update(SimTK::State& someState, SimTK::Real newBeta);
 
     /** Modifies Q randomly
      **/

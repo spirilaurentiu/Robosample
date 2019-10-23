@@ -39,9 +39,11 @@ public:
     // Getter / setter for macroscopic temperature and RT
     // virtual void setTemperature(SimTK::Real) = 0; // RE
     SimTK::Real getTemperature() const;
-    void setTemperature(SimTK::Real temperature);
+    void setTemperature(SimTK::Real temperature); // Also sets RT and beta
 
     SimTK::Real getRT() const;
+    void setBeta(SimTK::Real argBeta);
+    SimTK::Real getBeta() const;
 
     /** Returns the number of samples extracted so far. **/
     int getNofSamples(void);
@@ -56,7 +58,7 @@ public:
     /** Propose a move **/
     virtual void propose(SimTK::State& someState) = 0;
     //virtual eval() = 0;
-    virtual void update(SimTK::State& someState) = 0;
+    virtual bool update(SimTK::State& someState) = 0;
 
     // For debugging purposes
     void PrintSimbodyStateCache(SimTK::State& someState);
@@ -74,6 +76,7 @@ public:
     ThermostatName thermostat;
     SimTK::Real temperature;
     SimTK::Real RT;
+    SimTK::Real beta;
 
     // Sampling
     int nofSamples;

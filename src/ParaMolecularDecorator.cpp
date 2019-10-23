@@ -296,9 +296,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                         decorativeFrame_r.setColor(SimTK::Vec3(0, 1, 0));
                         geometry.push_back( decorativeFrame_r );*/
 
-//                        // Draw F (Proot_X_Mr in this case) in Ground recovered from P_X_F
-//                        SimTK::Transform G_X_Proot = G_X_T * T_X_Proot;
-//                        SimTK::Transform G_X_F = G_X_Proot * P_X_F[int(mbx)];
+                        // Draw F (Proot_X_Mr in this case) in Ground recovered from P_X_F
+                        SimTK::Transform G_X_Proot = G_X_T * T_X_Proot;
+                        SimTK::Transform G_X_F = G_X_Proot * P_X_F[int(mbx)];
 //
 //                        std::ostringstream streamObjf;
 //                        streamObjf << std::string("f") + std::to_string(int(mbx));
@@ -310,14 +310,14 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 //                        decorativeTextf.setColor(SimTK::Vec3(0, 0, 1));
 //                        geometry.push_back(decorativeTextf);
 //            
-//                        DecorativeFrame decorativeFramef;
-//                        //decorativeFramef.setTransform(G_X_F * textOffsetf);
-//                        decorativeFramef.setTransform(G_X_F);
-//                        decorativeFramef.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
-//                        decorativeFramef.setLineThickness(4);
-//                        decorativeFramef.setColor(SimTK::Vec3(0, 0, 1));
-//                        geometry.push_back( decorativeFramef );
-//            
+/*                        DecorativeFrame decorativeFramef;
+                        //decorativeFramef.setTransform(G_X_F * textOffsetf);
+                        decorativeFramef.setTransform(G_X_F);
+                        decorativeFramef.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
+                        decorativeFramef.setLineThickness(4);
+                        decorativeFramef.setColor(SimTK::Vec3(0, 0, 1));
+                        geometry.push_back( decorativeFramef );*/
+
                         // Line between P and F in Ground
                         //DecorativeLine decorativeLinepf(G_X_Proot.p() + textOffsetf.p(), G_X_F.p() + textOffsetf.p());
 //                        DecorativeLine decorativeLinepf(G_X_Proot.p(), G_X_F.p());

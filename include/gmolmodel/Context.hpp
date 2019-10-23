@@ -115,6 +115,8 @@ public:
     void Run(SetupReader&);
     void Run(int howManyRounds, float Ti, float Tf);
     void RunSimulatedTempering(int howManyRounds, float Ti, float Tf);
+    void setNofBoostStairs(int whichWorld, int howManyStairs);
+    int getNofBoostStairs(int whichWorld);
     void setNumThreadsRequested(int which, int howMany);
     void setUseOpenMMAcceleration(bool arg);
 
@@ -173,6 +175,8 @@ private:
     std::vector<int> nofSamplesPerRound;
     std::vector<int> nofMDStepsPerSample;
     std::vector<float> timesteps;
+
+    std::vector<int> nofBoostStairs;
 
     //
     bool reproducible;
