@@ -86,7 +86,7 @@ void testSampler(){
     for (unsigned int experiment = 0; experiment < 5; experiment++) {
         // Check uniform distribution
         for(unsigned int i = 0; i < 10000; i++) {
-            v.emplace_back(sampler.generateRandomNumber(UNIFORM));
+            v.emplace_back(sampler.generateRandomNumber(GmolRandDistributionType::UNIFORM));
         }
 
         SimTK::Real average, variance;
@@ -99,7 +99,7 @@ void testSampler(){
         // Check normal distribution
         v.clear();
         for(unsigned int i = 0; i < 100000; i++){
-            v.emplace_back(sampler.generateRandomNumber(NORMAL));
+            v.emplace_back(sampler.generateRandomNumber(GmolRandDistributionType::NORMAL));
         }
 
         CalcAverageAndVariance(v, average, variance);
