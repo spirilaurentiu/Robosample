@@ -74,7 +74,7 @@ public:
 
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation
-    void update(SimTK::State&);
+    bool update(SimTK::State&);
 
     // Get/set set potential energy
     SimTK::Real getSetPE(void) const;

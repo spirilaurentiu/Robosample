@@ -15,8 +15,8 @@ HamiltonianMonteCarloSampler::HamiltonianMonteCarloSampler(SimTK::CompoundSystem
                                      ,SimTK::GeneralForceSubsystem *argForces
                                      ,SimTK::TimeStepper *argTimeStepper
                                      )
-    : MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    , Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  
     this->fix_n = this->fix_o = 0.0;
@@ -168,7 +168,6 @@ void HamiltonianMonteCarloSampler::initialize(SimTK::State& someState )
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -230,7 +229,6 @@ void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState)
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -399,8 +397,9 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 /** Main function that contains all the 3 steps of HMC.
 Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
-void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
+bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 {
+    bool acc;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 
     // Get new Fixman potential
@@ -430,31 +429,42 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
 
     // Decide and get a new sample
     if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
+        acc = true;
         std::cout << " acc" << std::endl;
         setSetTVector(someState);
         pe_set = pe_n;
         fix_set = fix_n;
         ke_lastAccepted = ke_n;
         etot_set = pe_set + fix_set + ke_proposed;
+
+        //setBeta(newBeta);
+
         ++acceptedSteps;
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             (rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
-             //(rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
-            std::cout << " acc" << std::endl;
-            setSetTVector(someState);
-            pe_set = pe_n;
-            fix_set = fix_n;
-            ke_lastAccepted = ke_n;
-            etot_set = pe_set + fix_set + ke_proposed;
-            ++acceptedSteps;
+             (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
+             //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
+             //(rand_no < exp(-(etot_n - etot_proposed) * (newBeta - this->beta))))) {
+             acc = true;
+             std::cout << " acc" << std::endl;
+             setSetTVector(someState);
+             pe_set = pe_n;
+             fix_set = fix_n;
+             ke_lastAccepted = ke_n;
+             etot_set = pe_set + fix_set + ke_proposed;
+
+             //setBeta(newBeta);
+
+             ++acceptedSteps;
         } else { // Reject
-            std::cout << " nacc" << std::endl;
-            assignConfFromSetTVector(someState);
+             acc = false;
+             std::cout << " nacc" << std::endl;
+             assignConfFromSetTVector(someState);
         }
     }
 
     ++nofSamples;
+    return acc;
 
 }
 
@@ -498,9 +508,9 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
     system->realize(someState, SimTK::Stage::Position);
 
     // Get needed energies
-    SimTK::Real pe_o  = getOldPE();
+    pe_o  = getOldPE();
     if(useFixman){
-        SimTK::Real fix_o = getOldFixman();
+        fix_o = getOldFixman();
     }
     if(useFixman){
         fix_n = calcFixman(someState);
@@ -512,9 +522,6 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
     //std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
     pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
 
-    int accepted = 0;
-
-    accepted = 1;
     setSetTVector(someState);
     setSetPE(pe_n);
     setSetFixman(fix_n);

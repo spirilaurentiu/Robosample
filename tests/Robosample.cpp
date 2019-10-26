@@ -49,11 +49,11 @@ int main(int argc, char **argv)
 
     // Create context
     std::string logFilename;
-    if( setupReader.find("SEED") ){
-        if( !(setupReader.get("SEED").empty()) ){
+    if (setupReader.find("SEED")) {
+        if (!(setupReader.get("SEED").empty())) {
             logFilename = setupReader.get("OUTPUT_DIR")[0] + std::string("/log.") + setupReader.get("SEED")[0];
         }
-    }else{
+    } else {
         logFilename = "x";
     }
 
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
     }
 
     // Set worlds force field scale factors
-    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         // Set force field scale factors.
         if(setupReader.get("FFSCALE")[worldIx] == "AMBER"){
             context.setAmberForceFieldScaleFactors(worldIx);
@@ -229,6 +229,12 @@ int main(int argc, char **argv)
 
     context.setNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
 
+    if (setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+        for (unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
+            context.setNofBoostStairs(worldIx, std::stoi(setupReader.get("BOOST_STAIRS")[worldIx]));
+        }
+    }
+
     for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){    
         round_mcsteps += context.getNofSamplesPerRound(worldIx);
     }
@@ -297,6 +303,7 @@ int main(int argc, char **argv)
         }
     }
 
+    // Alert user of CUDA environment variables
     if(SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
         std::cout << "CUDA_ROOT not set." << std::endl;
     }else{
@@ -311,9 +318,15 @@ int main(int argc, char **argv)
     context.realizeTopology();
 
     // -- Run --
-    context.Run(context.getNofRounds(), 
-        std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-        std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+    if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+        context.RunSimulatedTempering(context.getNofRounds(),
+                     std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+                     std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+    }else{
+        context.Run(context.getNofRounds(),
+                     std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+                     std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+    }
 
     // Write final pdbs
     for(unsigned int mol_i = 0; mol_i < setupReader.get("MOLECULES").size(); mol_i++){

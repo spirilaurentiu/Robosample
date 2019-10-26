@@ -233,8 +233,8 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             SimTK::Transform T_X_Proot; // NEW
             SimTK::Transform root_X_M0[matter->getNumBodies()];
             SimTK::Angle inboardBondDihedralAngles[matter->getNumBodies()]; // related to X_FMs
-            SimTK::Real inboardBondLengths[matter->getNumBodies()]; // related to X_FMs
-            SimTK::Vec3 locs[molecules[0]->getNumAtoms()];
+            //SimTK::Real inboardBondLengths[matter->getNumBodies()]; // related to X_FMs
+            //SimTK::Vec3 locs[molecules[0]->getNumAtoms()];
 
  ///*
 
@@ -259,13 +259,11 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                     SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
                     if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
-                        SimTK::Compound::AtomIndex parentAIx = (molecules[0]->getMbx2aIx()).at(parentMbx);
-
                         T_X_Proot = T_X_root[parentMbx]; // NEW
 
                         // Get inboard dihedral angle and put in root_X_M0 !!!!!!!
                         inboardBondDihedralAngles[int(mbx)] = molecules[0]->bgetDefaultInboardDihedralAngle(aIx);
-                        inboardBondLengths[int(mbx)] = molecules[0]->bgetDefaultInboardBondLength(aIx);
+                        //inboardBondLengths[int(mbx)] = molecules[0]->bgetDefaultInboardBondLength(aIx);
                         root_X_M0[int(mbx)] = SimTK::Transform(
                             SimTK::Rotation(inboardBondDihedralAngles[int(mbx)], SimTK::XAxis)
                         );
@@ -277,7 +275,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                         P_X_F[int(mbx)] = Proot_X_M0 * M_X_pin; // NEW
 
                         // Draw root 
-                        SimTK::Transform G_X_root = G_X_T * T_X_root[int(mbx)];
+                        //SimTK::Transform G_X_root = G_X_T * T_X_root[int(mbx)];
                         //std::ostringstream streamObj_r;
                         //streamObj_r << std::string("r") + std::to_string(int(mbx));
                         //std::string text_r = streamObj_r.str();
@@ -296,9 +294,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                         decorativeFrame_r.setColor(SimTK::Vec3(0, 1, 0));
                         geometry.push_back( decorativeFrame_r );*/
 
-//                        // Draw F (Proot_X_Mr in this case) in Ground recovered from P_X_F
-//                        SimTK::Transform G_X_Proot = G_X_T * T_X_Proot;
-//                        SimTK::Transform G_X_F = G_X_Proot * P_X_F[int(mbx)];
+                        // Draw F (Proot_X_Mr in this case) in Ground recovered from P_X_F
+                        //SimTK::Transform G_X_Proot = G_X_T * T_X_Proot;
+                        //SimTK::Transform G_X_F = G_X_Proot * P_X_F[int(mbx)];
 //
 //                        std::ostringstream streamObjf;
 //                        streamObjf << std::string("f") + std::to_string(int(mbx));
@@ -310,14 +308,14 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 //                        decorativeTextf.setColor(SimTK::Vec3(0, 0, 1));
 //                        geometry.push_back(decorativeTextf);
 //            
-//                        DecorativeFrame decorativeFramef;
-//                        //decorativeFramef.setTransform(G_X_F * textOffsetf);
-//                        decorativeFramef.setTransform(G_X_F);
-//                        decorativeFramef.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
-//                        decorativeFramef.setLineThickness(4);
-//                        decorativeFramef.setColor(SimTK::Vec3(0, 0, 1));
-//                        geometry.push_back( decorativeFramef );
-//            
+/*                        DecorativeFrame decorativeFramef;
+                        //decorativeFramef.setTransform(G_X_F * textOffsetf);
+                        decorativeFramef.setTransform(G_X_F);
+                        decorativeFramef.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
+                        decorativeFramef.setLineThickness(4);
+                        decorativeFramef.setColor(SimTK::Vec3(0, 0, 1));
+                        geometry.push_back( decorativeFramef );*/
+
                         // Line between P and F in Ground
                         //DecorativeLine decorativeLinepf(G_X_Proot.p() + textOffsetf.p(), G_X_F.p() + textOffsetf.p());
 //                        DecorativeLine decorativeLinepf(G_X_Proot.p(), G_X_F.p());
@@ -559,10 +557,10 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
  ///*
     // Draw Rigid bodies
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+        //const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        //const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 
-        SimTK::Transform G_X_B = mobod.getBodyTransform(someState);
+        //SimTK::Transform G_X_B = mobod.getBodyTransform(someState);
         
         // Bricks
 /*        DecorativeBrick decorativeBrick(SimTK::Vec3(0.03, 0.03, 0.03));
@@ -590,18 +588,17 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
         geometry.push_back( decorativeFrame );*/
 
         if(mbx > 0){
-            SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
             SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
             // Get all possible transforms
             SimTK::Transform B_X_M = mobod.getOutboardFrame(someState);
-            SimTK::Transform G_X_P = parentMobod.getBodyTransform(someState);
+            //SimTK::Transform G_X_P = parentMobod.getBodyTransform(someState);
             SimTK::Transform G_X_B = mobod.getBodyTransform(someState);
             SimTK::Transform G_X_M = G_X_B * B_X_M;
 
-            SimTK::Transform P_X_F = mobod.getInboardFrame(someState);
-            SimTK::Transform G_X_F = G_X_P * P_X_F;
-            SimTK::Transform F_X_M = mobod.getMobilizerTransform(someState);
+            //SimTK::Transform P_X_F = mobod.getInboardFrame(someState);
+            //SimTK::Transform G_X_F = G_X_P * P_X_F;
+            //SimTK::Transform F_X_M = mobod.getMobilizerTransform(someState);
             //SimTK::Transform G_X_M = G_X_F * F_X_M; // = G_X_B * B_X_M;
 
             // F
