@@ -543,7 +543,7 @@ SimTK::State& World::setAtomsLocationsInGround(
         SimTK::Transform G_X_T = topologies[i]->getTopLevelTransform();
 
         // Fully flexible regimen. realizeTopology is not needed
-        if(topologies[i]->getRegimen() == "IC"){
+        if(topologies[i]->getRegimen().at(0) == 'I'){
             //std::cout << "setAtomsLoc World IC" << std::endl << std::flush;
 
             // Create atomTargets
