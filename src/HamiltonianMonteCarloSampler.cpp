@@ -15,8 +15,8 @@ HamiltonianMonteCarloSampler::HamiltonianMonteCarloSampler(SimTK::CompoundSystem
                                      ,SimTK::GeneralForceSubsystem *argForces
                                      ,SimTK::TimeStepper *argTimeStepper
                                      )
-    : MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    , Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  
     this->fix_n = this->fix_o = 0.0;
@@ -168,7 +168,6 @@ void HamiltonianMonteCarloSampler::initialize(SimTK::State& someState )
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -230,7 +229,6 @@ void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState)
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -510,9 +508,9 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
     system->realize(someState, SimTK::Stage::Position);
 
     // Get needed energies
-    SimTK::Real pe_o  = getOldPE();
+    pe_o  = getOldPE();
     if(useFixman){
-        SimTK::Real fix_o = getOldFixman();
+        fix_o = getOldFixman();
     }
     if(useFixman){
         fix_n = calcFixman(someState);
@@ -524,9 +522,6 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
     //std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
     pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
 
-    int accepted = 0;
-
-    accepted = 1;
     setSetTVector(someState);
     setSetPE(pe_n);
     setSetFixman(fix_n);

@@ -37,7 +37,7 @@ public:
     void update(SimTK::State& someState, SimTK::Real timestep, int nosteps);
 
 protected:
-    bool useFixmanTorque;
+    bool useFixmanTorque = true;
 
 };
 

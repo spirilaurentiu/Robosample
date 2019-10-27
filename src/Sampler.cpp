@@ -106,12 +106,12 @@ void Sampler::PrintSimbodyStateCache(SimTK::State& someState){
 
 void Sampler::initialize(SimTK::State& someState) {
     // Sampling
-    int nofSamples = 0;
+    nofSamples = 0;
 }
 
 void Sampler::reinitialize(SimTK::State& someState) {
     // Sampling
-    int nofSamples = 0;
+    nofSamples = 0;
 }
 
 // Getter for macroscopic temperature
@@ -142,9 +142,9 @@ SimTK::Real Sampler::getBeta() const {
 }
 
 SimTK::Real Sampler::generateRandomNumber(GmolRandDistributionType distributionType) {
-    if(distributionType == UNIFORM){
+    if(distributionType == GmolRandDistributionType::UNIFORM){
         return uniformRealDistribution(randomEngine);
-    }else if(distributionType == NORMAL){
+    }else{
         return gaurand(randomEngine);
     }
 }

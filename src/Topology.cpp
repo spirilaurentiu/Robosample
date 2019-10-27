@@ -23,7 +23,7 @@ Topology::Topology(std::string nameOfThisMolecule){
 because we want to allow the valence to change during the simulation 
 e.g. semi-grand canonical ensemble. **/
 Topology::~Topology(){
-    for(int i = 0; i < bAtomList.size(); i++){
+    for(size_t i = 0; i < bAtomList.size(); i++){
           delete bAtomList[i].bAtomType;
     }
 }
@@ -344,7 +344,7 @@ void Topology::bAddBiotypes(
         bAtomList[i].setBiotypeIndex(biotypeIndex);
 
         // Assign atom's biotype as a composed name: name + force field type
-        std:string temp(bAtomList[i].name);
+        std::string temp(bAtomList[i].name);
         temp += bAtomList[i].fftype;
         bAtomList[i].setBiotype(temp);
         std::cout << "Added Biotype " << temp << std::endl;
@@ -425,7 +425,7 @@ void Topology::bAddAtomClasses(
 void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm)
 {
     std::cout << "Print Molmodel And DuMM Types:" << std::endl;
-    for(int i = 0; i < bAtomList.size(); i++){
+    for(size_t i = 0; i < bAtomList.size(); i++){
         std::cout << " list ix " << i
             << " biotypename " << bAtomList[i].biotype
             << " name " << bAtomList[i].name
@@ -582,11 +582,13 @@ bSpecificAtom * Topology::getAtomByNumber(int number) const{
 /** Get a pointer to an atom object in the atom list inquiring
 by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
 bSpecificAtom * Topology::updAtomByAtomIx(int aIx) {
-    for (unsigned int i = 0; i < natoms; i++){
+    for (int i = 0; i < natoms; i++){
         if(bAtomList[i].getCompoundAtomIndex() == aIx){
             return &bAtomList[i];
         }
     }
+
+    return nullptr;
 }
 
 /** Get a pointer to an atom object in the atom list inquiring
@@ -808,8 +810,8 @@ void Topology::buildGraphAndMatchCoords(
     }
 
     // Find an atom to be the root. It has to have more than one bond
-    bSpecificAtom *root;
-    if ((argRoot > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
+    bSpecificAtom *root = nullptr;
+    if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
         baseAtomNumber = argRoot;
         root = &(bAtomList[argRoot]);
     }else {
@@ -925,7 +927,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                     lineWords.push_back(std::move(word));
                 }
                 if(lineWords.size() >= 2 ){
-                    for(unsigned int i = 0; i < nbonds; i++){
+                    for(int i = 0; i < nbonds; i++){
                         if(bonds[i].isThisMe(
                             std::stoi(lineWords[0]), std::stoi(lineWords[1])) ){
                             if(lineWords.size() == 2) {
@@ -1085,9 +1087,9 @@ void Topology::getCoordinates(
         std::vector<SimTK::Real> Ys,
         std::vector<SimTK::Real> Zs)
 {
-    assert(Xs.size() == getNumAtoms());
-    assert(Ys.size() == getNumAtoms());
-    assert(Zs.size() == getNumAtoms());
+    assert(Xs.size() == static_cast<size_t>(getNumAtoms()));
+    assert(Ys.size() == static_cast<size_t>(getNumAtoms()));
+    assert(Zs.size() == static_cast<size_t>(getNumAtoms()));
     for(int ix = 0; ix < getNumAtoms(); ++ix){
         Xs[ix] = bAtomList[ix].getX();
         Ys[ix] = bAtomList[ix].getY();

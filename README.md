@@ -47,11 +47,12 @@ cd ../../
 ```
 mkdir build_debug
 cd build_debug
-bash ../cmake_regenerateAll.sh - build_debug will remain empty
+bash ../cmake_regenerateAll.sh
 cmake ..
 make -j4
 sudo /sbin/ldconfig
 ```
+Keep in mind that after running `bash ../cmake_regenerateAll.sh`, `build_debug` will remain empty.
 
 ## Set up tests' environment
 ```

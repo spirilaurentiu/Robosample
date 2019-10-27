@@ -404,7 +404,7 @@ int World::getNofSamples(void)
     nofSamples = 0;
  
     // Gather samples from all the samplers
-    for( int i = 0; i < samplers.size(); i++){
+    for(size_t i = 0; i < samplers.size(); i++){
         nofSamples += (samplers[i])->getNofSamples();
     }
 
@@ -571,8 +571,7 @@ SimTK::State& World::setAtomsLocationsInGround(
             // Iterate through atoms - get P_X_M for all the bodies
             for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i]->getNumAtoms(); ++aIx){
                 // Get body
-                SimTK::MobilizedBodyIndex mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx);
-                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+                const auto mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx);
 
                 // Get P_X_M
                 P_X_M[int(mbx)] = Transform(Rotation(), atomTargets[aIx]); // NEW
@@ -624,7 +623,7 @@ SimTK::State& World::setAtomsLocationsInGround(
             SimTK::Transform T_X_Proot; // NEW
             SimTK::Transform root_X_M0[matter->getNumBodies()];
             SimTK::Angle inboardBondDihedralAngles[matter->getNumBodies()]; // related to X_FMs
-            SimTK::Real inboardBondLengths[matter->getNumBodies()]; // related to X_FMs
+            //SimTK::Real inboardBondLengths[matter->getNumBodies()]; // related to X_FMs
             SimTK::Vec3 locs[topologies[i]->getNumAtoms()];
 
             // Iterate through atoms - get T_X_roots for all the bodies
@@ -648,8 +647,6 @@ SimTK::State& World::setAtomsLocationsInGround(
                     SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
                     if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
-                        SimTK::Compound::AtomIndex parentAIx = (topologies[i]->getMbx2aIx()).at(parentMbx);
-
                         // Find the true CHEMICAL parent
                         bSpecificAtom *originSpecAtom = nullptr;
                         originSpecAtom = (*(topologies[i])).updAtomByAtomIx(aIx);
@@ -682,7 +679,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
                         // Get inboard dihedral angle and put in root_X_M0 !!!!!!!
                         inboardBondDihedralAngles[int(mbx)] = topologies[i]->bgetDefaultInboardDihedralAngle(aIx);
-                        inboardBondLengths[int(mbx)] = topologies[i]->bgetDefaultInboardBondLength(aIx);
+                        //inboardBondLengths[int(mbx)] = topologies[i]->bgetDefaultInboardBondLength(aIx);
                         root_X_M0[int(mbx)] = SimTK::Transform(
                             SimTK::Rotation(inboardBondDihedralAngles[int(mbx)], SimTK::XAxis)
                             // , SimTK::Vec3(0, 0, 0) // Constructor takes care of this
@@ -838,7 +835,7 @@ void World::updateCoordBuffers(void)
 {
     int allAtIx = -1;
     for(unsigned int tIx = 0; tIx < topologies.size(); tIx++){
-        for(unsigned int aIx = 0; aIx < topologies[tIx]->getNAtoms(); aIx++){
+        for(int aIx = 0; aIx < topologies[tIx]->getNAtoms(); aIx++){
             allAtIx++;
             Xs[allAtIx] = (topologies[tIx]->bAtomList[aIx]).getX();
             Ys[allAtIx] = (topologies[tIx]->bAtomList[aIx]).getY();

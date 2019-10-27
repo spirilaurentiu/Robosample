@@ -16,20 +16,13 @@ ConformationalSearch::ConformationalSearch(SimTK::CompoundSystem *argCompoundSys
                                      SimTK::TimeStepper *argTimeStepper)
     : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
 {
-    TRACE("NEW ALLOC\n");
-    TVector = new SimTK::Transform[matter->getNumBodies()];
-    TRACE("NEW ALLOC\n");
-    SetTVector = new SimTK::Transform[matter->getNumBodies()];
-    this->residualEmbeddedPotential = 0.0;
-    this->alwaysAccept = false;
-    acceptedSteps = 0;
+    TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+    SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 }
 
 // Destructor
 ConformationalSearch::~ConformationalSearch()
 {
-    delete [] TVector;
-    delete [] SetTVector;
 }
 
 // Seed the random number generator. Set simulation temperature,
@@ -50,7 +43,6 @@ void ConformationalSearch::initialize(SimTK::State& someState, SimTK::Real argTe
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -84,7 +76,6 @@ void ConformationalSearch::reinitialize(SimTK::State& someState, SimTK::Real arg
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -144,14 +135,12 @@ SimTK::Real ConformationalSearch::calcFixman(SimTK::State& someState){
     //matter->calcM(someState, M);
 
     // Get detM
-    SimTK::Real detM = 1.0;
     SimTK::Vector DetV(nu);
-    TRACE("NEW ALLOC\n");
-    SimTK::Real* D0 = new SimTK::Real(1.0);
+    SimTK::Real D0 = 1.0;
 
     // TODO: remove the request for Dynamics stage cache in SImbody files
     //std::cout << "ConformationalSearch::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
-    matter->calcDetM(someState, V, DetV, D0);
+    matter->calcDetM(someState, V, DetV, &D0);
 
     //std::cout << "FixmanTorque: " << "ConformationalSearch::calcFixman logdetM: " << std::setprecision(10) << std::log(*D0) << std::setprecision(2) << std::endl;
     //std::cout << "ConformationalSearch::calcFixman RT: " << RT << std::endl;
@@ -166,8 +155,8 @@ SimTK::Real ConformationalSearch::calcFixman(SimTK::State& someState){
     //SimTK::Real EiDetM = EiM.determinant();
     //std::cout << "EiDetM= " << EiDetM << std::endl;
     assert(RT > SimTK::TinyReal);
-    SimTK::Real result = 0.5 * RT * std::log(*D0);
-    delete D0;
+    SimTK::Real result = 0.5 * RT * std::log(D0);
+    
     return result;
 }
 
@@ -312,14 +301,14 @@ void ConformationalSearch::setSetTVector(const SimTK::State& someState)
 // Get the stored configuration
 SimTK::Transform * ConformationalSearch::getTVector(void)
 {
-    return this->TVector;
+    return &TVector[0];
 }
 
 // Stores the configuration into an internal vector of transforms TVector
 // Get the stored configuration
 SimTK::Transform * ConformationalSearch::getSetTVector(void)
 {
-    return this->SetTVector;
+    return &SetTVector[0];
 }
 
 // Restores configuration from the internal set vector of transforms TVector
@@ -415,7 +404,7 @@ bool ConformationalSearch::update(SimTK::State& someState){
     SimTK::Real RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
 
     // Get old energy
-    SimTK::Real pe_o = getOldPE();
+    pe_o = getOldPE();
 
     // Assign random configuration
 
@@ -427,7 +416,7 @@ bool ConformationalSearch::update(SimTK::State& someState){
 
     // Get current potential energy from evaluator
 
-    SimTK::Real pe_n = getPEFromEvaluator(someState); // OPENMM
+    auto pe_n = getPEFromEvaluator(someState); // OPENMM
 
     // Apply Metropolis criterion
 
