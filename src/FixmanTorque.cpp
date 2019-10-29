@@ -21,9 +21,8 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
     int nu = state.getNU();
     SimTK::Vector V3(nu);
     SimTK::Vector V4(nu);
-    SimTK::Real* D0 = new SimTK::Real(1.0);
-    matter.calcFixmanTorque(state, V3, V4, D0);
-    delete D0;
+    SimTK::Real D0 = 1.0;
+    matter.calcFixmanTorque(state, V3, V4, &D0);
     // end - Compute Fixman torque
 
     // Calculate geometric features fast

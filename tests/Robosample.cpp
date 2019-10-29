@@ -19,14 +19,31 @@
 //#define ROBO_DEBUG_LEVEL01
 //#endif
 
+void PrintHelp() {
+    std::cout <<
+        "Usage: Robsample [options]\n" <<
+        "Options:\n" <<
+        "  -h, --help for help\n" <<
+        "Usage: Robsample file\n";
+}
+
 int main(int argc, char **argv)
 {
-    if(argv[1] == nullptr) {
-        std::cout << "Error: input file is null.\n";
+    if(argc < 2) {
+        std::cout << "Error: not enough parameters to run. See help below.\n";
+        PrintHelp();
+
         return 1;
     }
+    else {
+        auto arg = std::string(argv[1]);
+        if("-h" == arg || "--help" == arg) {
+            PrintHelp();
+            return 1;
+        }
+    }
 
-    std::cout << "SETUP" << std::endl;
+    std::cout << "Setting Robosample up..." << std::endl;
 
     // Initialize setup reader
     SetupReader setupReader(argv[1]);

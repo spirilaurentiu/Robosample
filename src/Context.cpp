@@ -194,16 +194,13 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
         // Iterate through topology filenames vector
         for(unsigned int molIx = 0; molIx < topFNs[worldIx].size(); molIx++){
             // Initialize an input reader
-            readAmberInput *amberReader = new readAmberInput();
-            amberReader->readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
+            readAmberInput amberReader;
+            amberReader.readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
 
             // Add the molecule to the World
-            (updWorld(worldIx))->AddMolecule(amberReader,
+            (updWorld(worldIx))->AddMolecule(&amberReader,
                     rbSpecsFNs[worldIx][molIx], flexSpecsFNs[worldIx][molIx],
                     regimens[worldIx][molIx], argRoots[worldIx]);
-
-            // Delete the reader
-            delete amberReader; 
         }
     }
 }
