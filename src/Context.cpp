@@ -719,7 +719,11 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 // Set number of threads
 void Context::setNumThreadsRequested(int which, int howMany)
 {
-    worlds[which]->updForceField()->setNumThreadsRequested(howMany);
+    if (howMany == 1){
+        worlds[which]->updForceField()->setUseMultithreadedComputation(false);
+    }else{
+        worlds[which]->updForceField()->setNumThreadsRequested(howMany);
+    }
 }
 
 void Context::setUseOpenMMAcceleration(bool arg)
