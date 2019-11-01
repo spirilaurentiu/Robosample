@@ -545,12 +545,22 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                             (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
                 }
 
-                double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                double backSetE, backCalcE, currOldE, currCalcE;
+                if(pMC(updWorld(lastWorldIx)->updSampler(0))->getThermostat() == ANDERSEN){
+                    backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                    backCalcE = updWorld(lastWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
                         lastAdvancedState);
-                double currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                    currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                    currCalcE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
                         currentAdvancedState);
+                }else{
+                    backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                    backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                        lastAdvancedState);
+                    currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                    currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                        currentAdvancedState);
+                }
 
                 // Set old potential energy of the new world
                 pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(

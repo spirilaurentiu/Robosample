@@ -414,7 +414,12 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
     ke_n = matter->calcKineticEnergy(someState);
 
     // Get new potential energy
-    pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    if ( getThermostat() == ANDERSEN ){
+        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+    }
+    else{
+        pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    }
 
     // Calculate total energy
     if(useFixman){

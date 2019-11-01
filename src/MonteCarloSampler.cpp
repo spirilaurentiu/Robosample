@@ -424,8 +424,11 @@ bool MonteCarloSampler::update(SimTK::State& someState){
 // Get the potential energy from an external source as far as the sampler
 // is concerned - OPENMM has to be inserted here
 SimTK::Real MonteCarloSampler::getPEFromEvaluator(SimTK::State& someState){
-    //return forces->getMultibodySystem().calcPotentialEnergy(someState);
-    return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+    if ( getThermostat() == ANDERSEN ){
+        return forces->getMultibodySystem().calcPotentialEnergy(someState);
+    }else{
+        return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+    }
 }
 
 /*
