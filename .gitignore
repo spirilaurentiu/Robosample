@@ -1,3 +1,7 @@
 build-debug
 cmake-build-debug
 .idea
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*
