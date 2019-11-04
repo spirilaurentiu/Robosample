@@ -194,16 +194,13 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
         // Iterate through topology filenames vector
         for(unsigned int molIx = 0; molIx < topFNs[worldIx].size(); molIx++){
             // Initialize an input reader
-            readAmberInput *amberReader = new readAmberInput();
-            amberReader->readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
+            readAmberInput amberReader;
+            amberReader.readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
 
             // Add the molecule to the World
-            (updWorld(worldIx))->AddMolecule(amberReader,
+            (updWorld(worldIx))->AddMolecule(&amberReader,
                     rbSpecsFNs[worldIx][molIx], flexSpecsFNs[worldIx][molIx],
                     regimens[worldIx][molIx], argRoots[worldIx]);
-
-            // Delete the reader
-            delete amberReader; 
         }
     }
 }
@@ -548,12 +545,22 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                             (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
                 }
 
-                double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                double backSetE, backCalcE, currOldE, currCalcE;
+                if(pMC(updWorld(lastWorldIx)->updSampler(0))->getThermostat() == ANDERSEN){
+                    backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                    backCalcE = updWorld(lastWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
                         lastAdvancedState);
-                double currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                    currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                    currCalcE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
                         currentAdvancedState);
+                }else{
+                    backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                    backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                        lastAdvancedState);
+                    currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                    currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                        currentAdvancedState);
+                }
 
                 // Set old potential energy of the new world
                 pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
@@ -712,7 +719,12 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 // Set number of threads
 void Context::setNumThreadsRequested(int which, int howMany)
 {
-    worlds[which]->updForceField()->setNumThreadsRequested(howMany);
+    std::cout << "Robosample requested " << howMany << " threads " << std::endl;
+    if (howMany == 1){
+        worlds[which]->updForceField()->setUseMultithreadedComputation(false);
+    }else{
+        worlds[which]->updForceField()->setNumThreadsRequested(howMany);
+    }
 }
 
 void Context::setUseOpenMMAcceleration(bool arg)
