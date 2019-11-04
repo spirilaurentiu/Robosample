@@ -525,9 +525,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
     //topDecorativeBrick.setScaleFactors(SimTK::Vec3(0.03, 0.03, 0.03));
     //topDecorativeBrick.setColor(SimTK::Vec3(0, 0, 0));
     //geometry.push_back( topDecorativeBrick );
-    for (SimTK::Compound::AtomIndex aIx(0); aIx < molecules[0]->getNumAtoms(); ++aIx){
-        SimTK::Transform T_X_atom =  molecules[0]->calcDefaultAtomFrameInCompoundFrame(SimTK::Compound::AtomIndex(aIx));
-        SimTK::Transform G_X_atom = G_X_T * T_X_atom;
+    //for (SimTK::Compound::AtomIndex aIx(0); aIx < molecules[0]->getNumAtoms(); ++aIx){
+    //    SimTK::Transform T_X_atom =  molecules[0]->calcDefaultAtomFrameInCompoundFrame(SimTK::Compound::AtomIndex(aIx));
+    //    SimTK::Transform G_X_atom = G_X_T * T_X_atom;
         // Bricks
         //DecorativeBrick decorativeBrick(SimTK::Vec3(0.03, 0.03, 0.03));
         //decorativeBrick.setTransform(G_X_atom);
@@ -536,23 +536,23 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
         
         // Text
-        std::ostringstream streamObj;
-        streamObj << std::fixed;
-        streamObj << std::setprecision(3);
-        streamObj << int(aIx)
+        //std::ostringstream streamObj;
+        //streamObj << std::fixed;
+        //streamObj << std::setprecision(3);
+        //streamObj << int(aIx)
             //<< G_X_atom.p()[0] << ' ' << G_X_atom.p()[1] << ' ' 
             //<< G_X_atom.p()[2]
-	;
+	//;
 
-        std::string text1 = streamObj.str();
-        DecorativeText decorativeText1(text1);
-        decorativeText1.setTransform(G_X_atom);
-        decorativeText1.setScaleFactors(SimTK::Vec3(0.02, 0.02, 0.02));
-        decorativeText1.setColor(SimTK::Vec3(0, 0, 0));
-        geometry.push_back(decorativeText1);
+        //std::string text1 = streamObj.str();
+        //DecorativeText decorativeText1(text1);
+        //decorativeText1.setTransform(G_X_atom);
+        //decorativeText1.setScaleFactors(SimTK::Vec3(0.02, 0.02, 0.02));
+        //decorativeText1.setColor(SimTK::Vec3(0, 0, 0));
+        //geometry.push_back(decorativeText1);
         
 
-    }
+    //}
 // */
 
  ///*

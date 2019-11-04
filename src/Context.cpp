@@ -719,6 +719,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 // Set number of threads
 void Context::setNumThreadsRequested(int which, int howMany)
 {
+    std::cout << "Robosample requested " << howMany << " threads " << std::endl;
     if (howMany == 1){
         worlds[which]->updForceField()->setUseMultithreadedComputation(false);
     }else{

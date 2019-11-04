@@ -12,8 +12,10 @@ int main(int argc, char **argv)
 	}
 
 	Real timestep = 0.002;
-	bool wantVisual = true;
+	bool wantVisual = std::stoi(argv[4]);
 	Real visualFreq = timestep;
+	int nofRounds = std::stoi(argv[1]);
+	int noMDStepsPerSample = 20;
 	World *world = new World(0, wantVisual, visualFreq);
 	bool useFixmanPotential = false;
 	bool useFixmanTorque = false;
@@ -87,7 +89,7 @@ int main(int argc, char **argv)
 
 	// Set thermodynamics
         world->setTemperature(3000);
-	pHMC(pSampler)->setMDStepsPerSample(20);
+	pHMC(pSampler)->setMDStepsPerSample(noMDStepsPerSample);
 
 	// Set the seeds for reproducibility
 	pSampler->setSeed(0);
@@ -107,15 +109,18 @@ int main(int argc, char **argv)
 	SimTK::Compound::AtomIndex AIx, BIx, CIx, DIx;
 	SimTK::Vec3 Apos, Bpos, Cpos, Dpos;
 	// Lin4
-	//AIx = SimTK::Compound::AtomIndex(1);
-	//BIx = SimTK::Compound::AtomIndex(0);
-	//CIx = SimTK::Compound::AtomIndex(2);
-	//DIx = SimTK::Compound::AtomIndex(3);
+/*	AIx = SimTK::Compound::AtomIndex(1);
+	BIx = SimTK::Compound::AtomIndex(0);
+	CIx = SimTK::Compound::AtomIndex(2);
+	DIx = SimTK::Compound::AtomIndex(3);
+// */
 	// Ethane
+///*
 	AIx = SimTK::Compound::AtomIndex(1);
 	BIx = SimTK::Compound::AtomIndex(0);
 	CIx = SimTK::Compound::AtomIndex(4);
 	DIx = SimTK::Compound::AtomIndex(5);
+// */
 
 	// Thermodynamics
     Real RT = world->getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
@@ -138,7 +143,7 @@ int main(int argc, char **argv)
 	Real ke_proposed, ke_lastAccepted, ke_n, etot_proposed, etot_o, etot_n, etot_set;
 	bool acc = false;
         // Update
-        for(int k = 0; k < std::stoi(argv[1]); k++){ // Iterate through samples
+        for(int k = 0; k < nofRounds; k++){ // Iterate through samples
 		// Propose
 		system->realize(advancedState, SimTK::Stage::Position);
 
@@ -156,6 +161,7 @@ int main(int argc, char **argv)
 		double sqrtRT = std::sqrt(RT);
 		Vector V(nu);
 		Vector SqrtMInvV(nu);
+		
 		for (int i=0; i < nu; ++i){
 		    V[i] = gaurand(randomEngine);
 		}
@@ -165,6 +171,9 @@ int main(int argc, char **argv)
 
 		// Raise the temperature
 		advancedState.updU() = SqrtMInvV;
+		
+		//advancedState.updU() = 0.0;
+		//advancedState.updU()[6] = 50.0; // Arbitrary
 
 		// Realize velocity
 		system->realize(advancedState, SimTK::Stage::Velocity);
@@ -174,7 +183,16 @@ int main(int argc, char **argv)
 		ke_proposed = matter->calcKineticEnergy(advancedState);
 		etot_proposed = pe_o + fix_o + ke_proposed;
 
-		timeStepper->stepTo(advancedState.getTime() + (timestep * pHMC(pSampler)->getMDStepsPerSample()));
+		for(int MDstep = 0; MDstep < pHMC(pSampler)->getMDStepsPerSample(); MDstep++){
+			timeStepper->stepTo(advancedState.getTime() + (timestep * MDstep));
+			// Calculate geometric features
+			//Apos = topology.calcAtomLocationInGroundFrame(advancedState, AIx);
+			//Bpos = topology.calcAtomLocationInGroundFrame(advancedState, BIx);
+			//Cpos = topology.calcAtomLocationInGroundFrame(advancedState, CIx);
+			//Dpos = topology.calcAtomLocationInGroundFrame(advancedState, DIx);
+			//std::cout << bDihedral(Apos, Bpos, Cpos, Dpos) << std::endl;
+			//std::cout << advancedState.updU() << std::endl;
+		}
 		// END proposing move
 
 		// Update
@@ -235,7 +253,7 @@ int main(int argc, char **argv)
 //             assignConfFromSetTVector(advancedState);
 //        }
 //    }
-
+/*
     std::cout << std::setprecision(5) << std::fixed;
     std::cout << "pe_o " << pe_o << " pe_n " << pe_n
         << " pe_nB " << generalForceSubsystem->getMultibodySystem().calcPotentialEnergy(advancedState)
@@ -244,12 +262,12 @@ int main(int argc, char **argv)
         << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
         << ' '
         ;
+*/
 		// Calculate geometric features
 		Apos = topology.calcAtomLocationInGroundFrame(advancedState, AIx);
 		Bpos = topology.calcAtomLocationInGroundFrame(advancedState, BIx);
 		Cpos = topology.calcAtomLocationInGroundFrame(advancedState, CIx);
 		Dpos = topology.calcAtomLocationInGroundFrame(advancedState, DIx);
-
 		std::cout << bDihedral(Apos, Bpos, Cpos, Dpos) 
 			//<< ' ' << advancedState.getQ() 
 			//<< std::endl
