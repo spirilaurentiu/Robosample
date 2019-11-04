@@ -86,6 +86,15 @@ int main(int argc, char **argv)
         }
     }
 
+//@    // Request threads
+    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        context.setNumThreadsRequested(worldIx,
+                std::stod(setupReader.get("THREADS")[worldIx]));
+    }
+
+    // Print the number of threads we got back
+    context.PrintNumThreads();
+//@
     // Add filenames to Context filenames vectors
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
         for(unsigned int molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
@@ -150,7 +159,7 @@ int main(int argc, char **argv)
                 std::stod(setupReader.get("GBSA")[worldIx]));
     }
 
-
+/*
     // Request threads
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         context.setNumThreadsRequested(worldIx,
@@ -159,7 +168,7 @@ int main(int argc, char **argv)
 
     // Print the number of threads we got back
     context.PrintNumThreads();
-
+*/
 
     // Realize topology for all the Worlds
     context.realizeTopology();
