@@ -574,16 +574,16 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                               << currCalcE << " " << currOldE
                               << std::endl;
 
-                    std::cout << "Writing Compound pdbs for round " << round << std::endl;
-                    (updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
-                    ((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
-                            getOutputDir(), std::string("/pdbs/sb.")
-                                            + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
+                    //std::cout << "Writing Compound pdbs for round " << round << std::endl;
+                    //(updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
+                    //((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
+                    //        getOutputDir(), std::string("/pdbs/sb.")
+                    //                        + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
 
-                    (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
-                    ((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
-                            getOutputDir(), std::string("/pdbs/sb.")
-                                            + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
+                    //(updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
+                    //((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
+                    //        getOutputDir(), std::string("/pdbs/sb.")
+                    //                        + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
 
                     //exit(1);
                 }

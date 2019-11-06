@@ -348,11 +348,14 @@ void World::setAmberForceFieldScaleFactors()
 {
     forceField->setVdw12ScaleFactor(0.0);
     forceField->setVdw13ScaleFactor(0.0);
-    forceField->setVdw14ScaleFactor(0.5);
+    //forceField->setVdw14ScaleFactor(0.5); // RESTORE from OpenMM
+    forceField->setVdw14ScaleFactor(0.0); // for OpenMM
     forceField->setVdw15ScaleFactor(1.0);
+
     forceField->setCoulomb12ScaleFactor(0.0);
     forceField->setCoulomb13ScaleFactor(0.0);
-    forceField->setCoulomb14ScaleFactor(0.8333333333);
+    //forceField->setCoulomb14ScaleFactor(0.8333333333); // RESTORE from OpenMM
+    forceField->setCoulomb14ScaleFactor(0.0); // for OpenMM
     forceField->setCoulomb15ScaleFactor(1.0);
     //forceField->setVdwMixingRule(
     //       SimTK::DuMMForceFieldSubsystem::LorentzBerthelot);

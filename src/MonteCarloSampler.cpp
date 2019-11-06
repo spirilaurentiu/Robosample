@@ -142,7 +142,7 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //std::cout << "MonteCarloSampler::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
     matter->calcDetM(someState, V, DetV, &D0);
 
-    //std::cout << "FixmanTorque: " << "MonteCarloSampler::calcFixman logdetM: " << std::setprecision(10) << std::log(*D0) << std::setprecision(2) << std::endl;
+    //std::cout << "FixmanTorque: " << "MonteCarloSampler::calcFixman logdetM: " << std::setprecision(10) << std::log(D0) << std::setprecision(2) << std::endl;
     //std::cout << "MonteCarloSampler::calcFixman RT: " << RT << std::endl;
     // ---- Verify with Eigen ----------
     // Eigen M determinant
@@ -156,6 +156,10 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //std::cout << "EiDetM= " << EiDetM << std::endl;
     assert(RT > SimTK::TinyReal);
     SimTK::Real result = 0.5 * RT * std::log(D0);
+
+    if(SimTK::isInf(result)){
+        result = 0.0;
+    }
     
     return result;
 }
