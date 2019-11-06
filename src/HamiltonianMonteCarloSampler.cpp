@@ -415,11 +415,12 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
 
     // Get new potential energy
     if ( getThermostat() == ANDERSEN ){
-        //pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-        pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
     }
     else{
-        pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
     }
 
     // Calculate total energy
@@ -524,9 +525,9 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
         fix_n = 0.0;
     }
 
-    //SimTK::Real pe_n = getPEFromEvaluator(someState); // OPENMM
+    pe_n = getPEFromEvaluator(someState); // OPENMM
     //std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
-    pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
 
     setSetTVector(someState);
     setSetPE(pe_n);

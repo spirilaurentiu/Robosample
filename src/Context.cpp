@@ -570,7 +570,8 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 
 		// NEW @    
 		pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
-			updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
+			updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState)); // OpenMM
+			//updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
                 // Check if reconstructions is done correctly
                 if(std::abs(lastWorldCalcPE - currentWorldCalcPE) > 0.1) {

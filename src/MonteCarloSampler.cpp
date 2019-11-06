@@ -429,10 +429,11 @@ bool MonteCarloSampler::update(SimTK::State& someState){
 // is concerned - OPENMM has to be inserted here
 SimTK::Real MonteCarloSampler::getPEFromEvaluator(SimTK::State& someState){
     if ( getThermostat() == ANDERSEN ){
-        //return forces->getMultibodySystem().calcPotentialEnergy(someState);
-        return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+        return forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
     }else{
-        return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+        return forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
     }
 }
 
