@@ -1,7 +1,5 @@
 build-debug
 cmake-build-debug
 .idea
-*_BACKUP_*
-*_BASE_*
-*_LOCAL_*
-*_REMOTE_*
+cmake_regenerateAll.sh
+src/CMakeLists.txt
