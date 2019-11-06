@@ -415,7 +415,8 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
 
     // Get new potential energy
     if ( getThermostat() == ANDERSEN ){
-        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
     }
     else{
         pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL

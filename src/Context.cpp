@@ -539,39 +539,44 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
                 SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
 
-                if(worldIndexes.size() > 1) {
-                    currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
-                            currentAdvancedState,
-                            (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
-                }
+                //if(worldIndexes.size() > 1) { RESTORE @
+                currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
+                        currentAdvancedState,
+                        (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
+                //} // RESTORE @
 
-                double backSetE, backCalcE, currOldE, currCalcE;
-                if(pMC(updWorld(lastWorldIx)->updSampler(0))->getThermostat() == ANDERSEN){
-                    backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                    backCalcE = updWorld(lastWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
+                double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
+		// RESTORE @ :
+                //if(pMC(updWorld(lastWorldIx)->updSampler(0))->getThermostat() == ANDERSEN){
+                //    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                //    lastWorldCalcPE = updWorld(lastWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
+                //        lastAdvancedState);
+                //    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                //    currentWorldCalcPE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
+                //        currentAdvancedState);
+                //}else{
+                    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                    lastWorldCalcPE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
                         lastAdvancedState);
-                    currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                    currCalcE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
+                    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                    currentWorldCalcPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
                         currentAdvancedState);
-                }else{
-                    backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                    backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                        lastAdvancedState);
-                    currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                    currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                        currentAdvancedState);
-                }
+                //} // RESTORE @
 
-                // Set old potential energy of the new world
-                pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
-                    pMC((updWorld(worldIndexes.back()))
-                    ->updSampler(0))->getSetPE() );
+                // Set old potential energy of the new world : RESTORE @
+                //pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
+                //    pMC((updWorld(lastWorldIx))
+                //    ->updSampler(0))->getSetPE() );
+
+		// NEW @    
+		pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
+			updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
                 // Check if reconstructions is done correctly
-                if(std::abs(backCalcE - currCalcE) > 0.1) {
-                    std::cout << "RunPe backSet backCalc currCalc currOld "
-                              << backSetE << " " << backCalcE << " "
-                              << currCalcE << " " << currOldE
+                if(std::abs(lastWorldCalcPE - currentWorldCalcPE) > 0.1) {
+                    std::cout << "lastWorldSetPE lastWorldCalcPE currentWorldCalcPE currentWorldOldPE "
+                              << lastWorldSetPE << " " << lastWorldCalcPE << " "
+                              << currentWorldCalcPE << " " << currentWorldOldPE
                               << std::endl;
 
                     //std::cout << "Writing Compound pdbs for round " << round << std::endl;
