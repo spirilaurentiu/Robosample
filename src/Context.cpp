@@ -544,6 +544,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                         currentAdvancedState,
                         (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
                 //} // RESTORE @
+		std::cout << "w" << currentAdvancedState.getNU();
 
                 double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
 		// RESTORE @ :
@@ -555,12 +556,12 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 //    currentWorldCalcPE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
                 //        currentAdvancedState);
                 //}else{
-                    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                    lastWorldCalcPE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                        lastAdvancedState);
-                    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                    currentWorldCalcPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                        currentAdvancedState);
+                //    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                //    lastWorldCalcPE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                //        lastAdvancedState);
+                //    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                //    currentWorldCalcPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                //        currentAdvancedState);
                 //} // RESTORE @
 
                 // Set old potential energy of the new world : RESTORE @
@@ -574,25 +575,25 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 			//updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
                 // Check if reconstructions is done correctly
-                if(std::abs(lastWorldCalcPE - currentWorldCalcPE) > 0.1) {
-                    std::cout << "lastWorldSetPE lastWorldCalcPE currentWorldCalcPE currentWorldOldPE "
-                              << lastWorldSetPE << " " << lastWorldCalcPE << " "
-                              << currentWorldCalcPE << " " << currentWorldOldPE
-                              << std::endl;
-
-                    //std::cout << "Writing Compound pdbs for round " << round << std::endl;
-                    //(updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
-                    //((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
-                    //        getOutputDir(), std::string("/pdbs/sb.")
-                    //                        + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
-
-                    //(updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
-                    //((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
-                    //        getOutputDir(), std::string("/pdbs/sb.")
-                    //                        + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
-
-                    //exit(1);
-                }
+//                if(std::abs(lastWorldCalcPE - currentWorldCalcPE) > 0.1) {
+//                    std::cout << "lastWorldSetPE lastWorldCalcPE currentWorldCalcPE currentWorldOldPE "
+//                              << lastWorldSetPE << " " << lastWorldCalcPE << " "
+//                              << currentWorldCalcPE << " " << currentWorldOldPE
+//                              << std::endl;
+//
+//                    //std::cout << "Writing Compound pdbs for round " << round << std::endl;
+//                    //(updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
+//                    //((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
+//                    //        getOutputDir(), std::string("/pdbs/sb.")
+//                    //                        + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
+//
+//                    //(updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
+//                    //((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
+//                    //        getOutputDir(), std::string("/pdbs/sb.")
+//                    //                        + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
+//
+//                    //exit(1);
+//                }
 
 
                 // Reinitialize current sampler
