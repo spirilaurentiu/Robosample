@@ -19,14 +19,31 @@
 //#define ROBO_DEBUG_LEVEL01
 //#endif
 
+void PrintHelp() {
+    std::cout <<
+        "Usage: Robsample [options]\n" <<
+        "Options:\n" <<
+        "  -h, --help for help\n" <<
+        "Usage: Robsample file\n";
+}
+
 int main(int argc, char **argv)
 {
-    if(argv[1] == nullptr) {
-        std::cout << "Error: input file is null.\n";
+    if(argc < 2) {
+        std::cout << "Error: not enough parameters to run. See help below.\n";
+        PrintHelp();
+
         return 1;
     }
+    else {
+        auto arg = std::string(argv[1]);
+        if("-h" == arg || "--help" == arg) {
+            PrintHelp();
+            return 1;
+        }
+    }
 
-    std::cout << "SETUP" << std::endl;
+    std::cout << "Setting Robosample up..." << std::endl;
 
     // Initialize setup reader
     SetupReader setupReader(argv[1]);
@@ -69,6 +86,29 @@ int main(int argc, char **argv)
         }
     }
 
+//@    // Request threads
+    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        context.setNumThreadsRequested(worldIx,
+                std::stod(setupReader.get("THREADS")[worldIx]));
+    }
+
+    // Print the number of threads we got back
+    context.PrintNumThreads();
+
+    // Set worlds force field scale factors
+    for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+        // Set force field scale factors.
+        if(setupReader.get("FFSCALE")[worldIx] == "AMBER"){
+            context.setAmberForceFieldScaleFactors(worldIx);
+        }else{
+            context.setGlobalForceFieldScaleFactor(worldIx,
+                    std::stod(setupReader.get("FFSCALE")[worldIx]));
+        }
+        // Set world GBSA scale factor
+        context.setGbsaGlobalScaleFactor(worldIx,
+                std::stod(setupReader.get("GBSA")[worldIx]));
+    }
+//@
     // Add filenames to Context filenames vectors
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
         for(unsigned int molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
@@ -118,7 +158,7 @@ int main(int argc, char **argv)
             context.addFixmanTorque(worldIx);
         }
     }
-
+/*
     // Set worlds force field scale factors
     for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         // Set force field scale factors.
@@ -132,8 +172,8 @@ int main(int argc, char **argv)
         context.setGbsaGlobalScaleFactor(worldIx,
                 std::stod(setupReader.get("GBSA")[worldIx]));
     }
-
-
+*/
+/*
     // Request threads
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         context.setNumThreadsRequested(worldIx,
@@ -142,7 +182,7 @@ int main(int argc, char **argv)
 
     // Print the number of threads we got back
     context.PrintNumThreads();
-
+*/
 
     // Realize topology for all the Worlds
     context.realizeTopology();

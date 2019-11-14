@@ -2,3 +2,4 @@ build-debug
 cmake-build-debug
 .idea
 cmake_regenerateAll.sh
+src/CMakeLists.txt

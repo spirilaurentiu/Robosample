@@ -69,7 +69,7 @@ void SetupReader::dump(bool PrettyPrint) const
 	// TODO replace cout with other streams (as param)
 	for (const auto& Arg : Args) {
 		if(PrettyPrint) {
-			std::cout << "\t";
+			std::cout << "  ";
 		}
 
 		std::cout << Arg.first << " : ";

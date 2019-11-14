@@ -350,6 +350,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // Store the proposed energies
     // setProposedKE(matter->calcKineticEnergy(someState));
     this->ke_proposed = matter->calcKineticEnergy(someState);
+    //std::cout << " ke before timestepping " << this->ke_proposed << std::endl;
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
 
 
@@ -412,9 +413,17 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
     // Get new kinetic energy
     system->realize(someState, SimTK::Stage::Velocity);
     ke_n = matter->calcKineticEnergy(someState);
+    //std::cout << " ke after timestepping " << this->ke_n << std::endl;
 
     // Get new potential energy
-    pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    if ( getThermostat() == ANDERSEN ){
+        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    }
+    else{
+        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    }
 
     // Calculate total energy
     if(useFixman){
@@ -444,6 +453,7 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
              //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
+             //(rand_no < exp(-((pe_n + fix_n) - (pe_o + fix_o)) * this->beta)))) { // Accept based on potential energy
              //(rand_no < exp(-(etot_n - etot_proposed) * (newBeta - this->beta))))) {
              acc = true;
              std::cout << " acc" << std::endl;
@@ -518,9 +528,9 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
         fix_n = 0.0;
     }
 
-    //SimTK::Real pe_n = getPEFromEvaluator(someState); // OPENMM
+    pe_n = getPEFromEvaluator(someState); // OPENMM
     //std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
-    pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
 
     setSetTVector(someState);
     setSetPE(pe_n);

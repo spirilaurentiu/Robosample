@@ -348,11 +348,14 @@ void World::setAmberForceFieldScaleFactors()
 {
     forceField->setVdw12ScaleFactor(0.0);
     forceField->setVdw13ScaleFactor(0.0);
-    forceField->setVdw14ScaleFactor(0.5);
+    //forceField->setVdw14ScaleFactor(0.5); // RESTORE from OpenMM
+    forceField->setVdw14ScaleFactor(0.0); // for OpenMM
     forceField->setVdw15ScaleFactor(1.0);
+
     forceField->setCoulomb12ScaleFactor(0.0);
     forceField->setCoulomb13ScaleFactor(0.0);
-    forceField->setCoulomb14ScaleFactor(0.8333333333);
+    //forceField->setCoulomb14ScaleFactor(0.8333333333); // RESTORE from OpenMM
+    forceField->setCoulomb14ScaleFactor(0.0); // for OpenMM
     forceField->setCoulomb15ScaleFactor(1.0);
     //forceField->setVdwMixingRule(
     //       SimTK::DuMMForceFieldSubsystem::LorentzBerthelot);
@@ -543,7 +546,7 @@ SimTK::State& World::setAtomsLocationsInGround(
         SimTK::Transform G_X_T = topologies[i]->getTopLevelTransform();
 
         // Fully flexible regimen. realizeTopology is not needed
-        if(topologies[i]->getRegimen() == "IC"){
+        if(topologies[i]->getRegimen().at(0) == 'I'){
             //std::cout << "setAtomsLoc World IC" << std::endl << std::flush;
 
             // Create atomTargets
@@ -762,15 +765,21 @@ SimTK::State& World::setAtomsLocationsInGround(
                     //((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ( // no chem
                     // inboardBondDihedralAngles[int(mbx)], inboardBondLengths[int(mbx)]); // no chem
                 } else if(mobod.getNumU(someState) == 3){ // Ball mobilizer
-                    ((SimTK::MobilizedBody::Ball&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Ball&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
-
-                    SimTK::Rotation R_FM;
-                    R_FM.setRotationFromAngleAboutX(0.0);
-                    R_FM.setRotationFromAngleAboutY(0.0);
-                    //R_FM.setRotationFromAngleAboutZ(inboardBondDihedralAngles[int(mbx)]); // no chem
-                    R_FM.setRotationFromAngleAboutZ(0); // CHEM
-                    ((SimTK::MobilizedBody::Ball&)mobod).setDefaultRotation(R_FM);
+                    //std::cout << "mass props" << mobod.getBodyMassProperties(someState) << std::endl;
+                    //if(mobod.getBodyMassProperties(someState).getUnitInertia().getMoments() == 0){ // Cartesian
+		    //	std::cout << "atom in mobod " << (topologies[i]->getMbx2aIx())[mbx] << std::endl;;
+                    //    //mobod.setQ();
+                    //}else{
+                        ((SimTK::MobilizedBody::Ball&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Ball&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+    
+                        SimTK::Rotation R_FM;
+                        R_FM.setRotationFromAngleAboutX(0.0);
+                        R_FM.setRotationFromAngleAboutY(0.0);
+                        //R_FM.setRotationFromAngleAboutZ(inboardBondDihedralAngles[int(mbx)]); // no chem
+                        R_FM.setRotationFromAngleAboutZ(0); // CHEM
+                        ((SimTK::MobilizedBody::Ball&)mobod).setDefaultRotation(R_FM);
+                    //}
                 }
             }
 

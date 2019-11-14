@@ -194,16 +194,13 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
         // Iterate through topology filenames vector
         for(unsigned int molIx = 0; molIx < topFNs[worldIx].size(); molIx++){
             // Initialize an input reader
-            readAmberInput *amberReader = new readAmberInput();
-            amberReader->readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
+            readAmberInput amberReader;
+            amberReader.readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
 
             // Add the molecule to the World
-            (updWorld(worldIx))->AddMolecule(amberReader,
+            (updWorld(worldIx))->AddMolecule(&amberReader,
                     rbSpecsFNs[worldIx][molIx], flexSpecsFNs[worldIx][molIx],
                     regimens[worldIx][molIx], argRoots[worldIx]);
-
-            // Delete the reader
-            delete amberReader; 
         }
     }
 }
@@ -542,44 +539,61 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
                 SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
 
-                if(worldIndexes.size() > 1) {
-                    currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
-                            currentAdvancedState,
-                            (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
-                }
+                //if(worldIndexes.size() > 1) { RESTORE @
+                currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
+                        currentAdvancedState,
+                        (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
+                //} // RESTORE @
+		std::cout << "w" << currentAdvancedState.getNU();
 
-                double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                        lastAdvancedState);
-                double currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                        currentAdvancedState);
+                double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
+		// RESTORE @ :
+                //if(pMC(updWorld(lastWorldIx)->updSampler(0))->getThermostat() == ANDERSEN){
+                //    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                //    lastWorldCalcPE = updWorld(lastWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
+                //        lastAdvancedState);
+                //    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                //    currentWorldCalcPE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
+                //        currentAdvancedState);
+                //}else{
+                //    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+                //    lastWorldCalcPE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                //        lastAdvancedState);
+                //    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+                //    currentWorldCalcPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+                //        currentAdvancedState);
+                //} // RESTORE @
 
-                // Set old potential energy of the new world
-                pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
-                    pMC((updWorld(worldIndexes.back()))
-                    ->updSampler(0))->getSetPE() );
+                // Set old potential energy of the new world : RESTORE @
+                //pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
+                //    pMC((updWorld(lastWorldIx))
+                //    ->updSampler(0))->getSetPE() );
+
+		// NEW @    
+		pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
+			updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState)); // OpenMM
+			//updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
                 // Check if reconstructions is done correctly
-                if(std::abs(backCalcE - currCalcE) > 0.1) {
-                    std::cout << "RunPe backSet backCalc currCalc currOld "
-                              << backSetE << " " << backCalcE << " "
-                              << currCalcE << " " << currOldE
-                              << std::endl;
-
-                    std::cout << "Writing Compound pdbs for round " << round << std::endl;
-                    (updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
-                    ((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
-                            getOutputDir(), std::string("/pdbs/sb.")
-                                            + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
-
-                    (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
-                    ((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
-                            getOutputDir(), std::string("/pdbs/sb.")
-                                            + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
-
-                    //exit(1);
-                }
+//                if(std::abs(lastWorldCalcPE - currentWorldCalcPE) > 0.1) {
+//                    std::cout << "lastWorldSetPE lastWorldCalcPE currentWorldCalcPE currentWorldOldPE "
+//                              << lastWorldSetPE << " " << lastWorldCalcPE << " "
+//                              << currentWorldCalcPE << " " << currentWorldOldPE
+//                              << std::endl;
+//
+//                    //std::cout << "Writing Compound pdbs for round " << round << std::endl;
+//                    //(updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
+//                    //((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
+//                    //        getOutputDir(), std::string("/pdbs/sb.")
+//                    //                        + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
+//
+//                    //(updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
+//                    //((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
+//                    //        getOutputDir(), std::string("/pdbs/sb.")
+//                    //                        + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
+//
+//                    //exit(1);
+//                }
 
 
                 // Reinitialize current sampler
@@ -712,7 +726,12 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 // Set number of threads
 void Context::setNumThreadsRequested(int which, int howMany)
 {
-    worlds[which]->updForceField()->setNumThreadsRequested(howMany);
+    std::cout << "Robosample requested " << howMany << " threads " << std::endl;
+    if (howMany == 1){
+        worlds[which]->updForceField()->setUseMultithreadedComputation(false);
+    }else{
+        worlds[which]->updForceField()->setNumThreadsRequested(howMany);
+    }
 }
 
 void Context::setUseOpenMMAcceleration(bool arg)
