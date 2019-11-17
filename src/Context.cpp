@@ -556,12 +556,12 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 //    currentWorldCalcPE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
                 //        currentAdvancedState);
                 //}else{
-                //    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                //    lastWorldCalcPE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                //        lastAdvancedState);
-                //    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                //    currentWorldCalcPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-                //        currentAdvancedState);
+//                    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
+//                    lastWorldCalcPE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+//                        lastAdvancedState);
+//                    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
+//                    currentWorldCalcPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
+//                        currentAdvancedState);
                 //} // RESTORE @
 
                 // Set old potential energy of the new world : RESTORE @
