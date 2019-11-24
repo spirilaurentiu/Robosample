@@ -186,6 +186,7 @@ void World::AddMolecule(
         std::string regimenSpec,
         std::string argRoot)
 {
+    std::cout<<"World::AddMolecule"<<std::endl;
     // Statistics
     moleculeCount++; // Used for unique names of molecules
  

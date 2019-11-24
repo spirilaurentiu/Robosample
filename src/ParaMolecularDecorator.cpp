@@ -458,7 +458,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
  ///*
     // Draw Compound transforms for periferic atoms NEW WAY
     // Set transforms inside the bodies = root_X_atom.p; Set locations for everyone
-///*
+/*
     for (SimTK::Compound::AtomIndex aIx(1); aIx < molecules[0]->getNumAtoms(); ++aIx){
         SimTK::MobilizedBodyIndex mbx = molecules[0]->getAtomMobilizedBodyIndex(aIx);
         if(molecules[0]->getAtomLocationInMobilizedBodyFrame(aIx) != 0){ // atom is not at body's origin

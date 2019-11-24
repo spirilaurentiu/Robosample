@@ -50,6 +50,7 @@ int main(int argc, char **argv)
     setupReader.dump(true);
 
     const unsigned int nofWorlds = setupReader.get("WORLDS").size();
+    std::cout << "Robosample nofWorlds " << nofWorlds << std::endl;
 
     // Create pdbs directory if necessary
     if( !SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0] + "/pdbs") ){
@@ -135,9 +136,17 @@ int main(int argc, char **argv)
 
             context.setRegimen( worldIx, molIx,
                     setupReader.get("WORLDS")[worldIx] );
+
+
         }
     }
 
+    //for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+            // @ DELETE FOR SINGLE MOLECULE
+            // Add molecules to Worlds based on just read filenames
+            //context.AddMolecules(setupReader.get("ROOTS")); // @
+    //}
+    // @ RESTORE FOR SINGLE MOLECULE
     // Add molecules to Worlds based on just read filenames
     context.AddMolecules(setupReader.get("ROOTS"));
 

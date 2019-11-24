@@ -191,8 +191,11 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
     // TODO assert that the filenames vectors are not empty
     // Iterate through Worlds
     for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+    	std::cout << " Context::AddMolecule for world "<< worldIx << " " << std::endl;
         // Iterate through topology filenames vector
         for(unsigned int molIx = 0; molIx < topFNs[worldIx].size(); molIx++){
+    	    std::cout << " Context::AddMolecule molIx "<< molIx << " " << std::endl;
+    	    std::cout << " Context::AddMolecule topFNs[worldIx][molIx] "<< topFNs[worldIx][molIx] << " " << std::endl;
             // Initialize an input reader
             readAmberInput amberReader;
             amberReader.readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
@@ -539,11 +542,11 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
                 SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
 
-                //if(worldIndexes.size() > 1) { RESTORE @
-                currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
-                        currentAdvancedState,
-                        (updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
-                //} // RESTORE @
+                if(worldIndexes.size() > 1) { // RESTORE @
+                	currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
+                        	currentAdvancedState,
+                        	(updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
+                } // RESTORE @
 		std::cout << "w" << currentAdvancedState.getNU();
 
                 double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
