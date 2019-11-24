@@ -213,6 +213,8 @@ void World::AddMolecule(
     // Build the graph representing molecule's topology
     (topologies.back())->buildGraphAndMatchCoords(*forceField, std::stoi(argRoot));
 
+    (topologies.back())->loadTriples();
+
     // Set flexibility according to the flexibility file
     (topologies.back())->setFlexibility(regimenSpec, flexFN);
 

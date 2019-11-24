@@ -108,6 +108,8 @@ public:
     /** Build the molecular tree without the cycle closing bonds **/
     void buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode);
 
+    void loadTriples(void);
+
     /** After building the acyclic molecular tree close the remaining bonds **/
     void addRingClosingBonds();
 
@@ -145,6 +147,10 @@ public:
     /** Set the compoundIndex which is the position in the vector of Compounds
  * of the CompoundSystem **/
     void setCompoundIndex(const SimTK::CompoundSystem::CompoundIndex &compoundIndex);
+
+    /** Compute BAT determinant
+    **/
+    SimTK::Real calcDetMBAT(void);
 
     /** Get the number of atoms. **/
     int getNAtoms() const;
@@ -219,6 +225,9 @@ public:
 
     int nbonds;
     std::vector<bBond > bonds;
+
+    int nTriples;
+    std::vector< std::vector<Compound::AtomIndex> > triples;
 
 private:
 

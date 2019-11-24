@@ -139,6 +139,9 @@ protected:
     SimTK::Real fix_set = 0.0,
         fix_o = 0.0,
         fix_n = 0.0;
+    SimTK::Real detmbat_set = 0.0,
+        detmbat_o = 0.0,
+        detmbat_n = 0.0;
     SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
 
     bool useFixman = false;

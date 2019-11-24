@@ -419,10 +419,12 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
     if ( getThermostat() == ANDERSEN ){
         pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
         //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+	detmbat_n = ((Topology *)residue)->calcDetMBAT();
     }
     else{
         pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
         //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+	detmbat_n = ((Topology *)residue)->calcDetMBAT();
     }
 
     // Calculate total energy
@@ -494,6 +496,7 @@ void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someSta
         << " pe_nB " << getPEFromEvaluator(someState)
         << " ke_prop " << ke_proposed << " ke_n " << ke_n
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
+        << " detmbat_n " << detmbat_n //<< " detmbat_n " << detmbat_n << " "
         << " RT " << RT << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
         << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
         //<< std::endl

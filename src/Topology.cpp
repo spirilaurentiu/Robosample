@@ -556,6 +556,38 @@ void Topology::bAddAllParams(
     bAddTorsionParams(resName, amberReader, dumm); 
 }
 
+void Topology::loadTriples(void)
+{
+	// Assign Compound coordinates by matching bAtomList coordinates
+	std::map<AtomIndex, Vec3> atomTargets;
+	for(int ix = 0; ix < getNumAtoms(); ++ix){
+		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+	}
+	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
+	getBondedAtomRuns(3, atomTargets);	
+
+	int bIx = -1;
+	for(auto bAR: bondedAtomRuns){
+		bIx++;
+
+		if(bAR[0] < bAR[2]){
+			//std::cout << "bondedAtomRun " << bIx ;
+			triples.push_back(bAR);
+			for(auto aIx: triples.back()){
+				std::cout << " " << aIx;
+			}
+			std::cout << std::endl;
+		}
+	}
+}
+
+
+SimTK::Real Topology::calcDetMBAT(void)
+{
+	return 0;
+}
+
 
 
 
