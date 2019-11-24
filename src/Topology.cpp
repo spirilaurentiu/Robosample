@@ -592,15 +592,25 @@ SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatS
 	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
 	SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
 	SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
-	std::cout << "calcLogDetMBATGamma2Contribution quaternion " << quat << std::endl;
+	//std::cout << "calcLogDetMBATGamma2Contribution quaternion " << quat << std::endl;
 
 	SimTK::Real w = quat[0];
 	SimTK::Real x = quat[1];
 	SimTK::Real y = quat[2];
 	SimTK::Real z = quat[3];
-	SimTK::Real pitch = std::asin(2 * (w * y - z * x));
+	SimTK::Real sinPitch = 2 * (w * y - z * x);
+	//std::cout << "sin pitch " << sinPitch << std::endl;
 
-	return pitch;
+	//SimTK::Real pitch = std::asin(sinPitch);
+	//std::cout << "pitch " << pitch << std::endl;
+	//if(pitch < 0){
+	//	pitch = pitch + (2*SimTK_PI);
+	//	std::cout << "sin converted pitch " << std::sin(pitch) << std::endl;
+	//}
+
+	SimTK::Real result = std::log(sinPitch * sinPitch);
+
+	return result;
 }
 
 SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& someState){
@@ -689,11 +699,11 @@ SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
 	SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
 	//SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
 
-	std::cout << std::setprecision(20) << std::fixed;
-	std::cout << " gamma distsMasses angles contributions: " 
-		<< gamma2Contribution << " " 
-		<< distsMassesContribution << " " 
-		<< anglesContribution << std::endl;
+	//std::cout << std::setprecision(20) << std::fixed;
+	//std::cout << " gamma distsMasses angles contributions: " 
+	//	<< gamma2Contribution << " " 
+	//	<< distsMassesContribution << " " 
+	//	<< anglesContribution << std::endl;
 
 	return gamma2Contribution + distsMassesContribution + anglesContribution;
 }
