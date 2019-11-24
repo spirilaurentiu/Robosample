@@ -567,12 +567,12 @@ void Topology::loadTriples(void)
 	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
 	getBondedAtomRuns(3, atomTargets);	
 
+	std::cout << "Topology triples: " << std::endl ;
 	int bIx = -1;
 	for(auto bAR: bondedAtomRuns){
 		bIx++;
 
 		if(bAR[0] < bAR[2]){
-			//std::cout << "bondedAtomRun " << bIx ;
 			triples.push_back(bAR);
 			for(auto aIx: triples.back()){
 				std::cout << " " << aIx;
@@ -582,10 +582,120 @@ void Topology::loadTriples(void)
 	}
 }
 
+SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatState){
+	//State& eulerState;
+	//matter.convertToEulerAngles(quatState, eulerState);
+	//std::cout << "calcLogDetMBATGamma2Contribution quaternionState " << quatState << std::endl;
+	//std::cout << "calcLogDetMBATGamma2Contribution      eulerState " << eulerState << std::endl;
 
-SimTK::Real Topology::calcDetMBAT(void)
+        bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
+	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
+	SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
+	SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
+	std::cout << "calcLogDetMBATGamma2Contribution quaternion " << quat << std::endl;
+
+	SimTK::Real w = quat[0];
+	SimTK::Real x = quat[1];
+	SimTK::Real y = quat[2];
+	SimTK::Real z = quat[3];
+	SimTK::Real pitch = std::asin(2 * (w * y - z * x));
+
+	return pitch;
+}
+
+SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& someState){
+        // Assign Compound coordinates by matching bAtomList coordinates
+        std::map<AtomIndex, Vec3> atomTargets;
+        for(int ix = 0; ix < getNumAtoms(); ++ix){
+                Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+                atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+        }
+
+	//std::cout << "Topology::calcLogDetMBATDistsContribution dists squared: " ;
+	SimTK::Real result = std::log(bAtomList[bonds[0].i].mass);
+	for(auto bond: bonds){
+		//SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
+		//SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
+		//SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);
+
+		SimTK::Vec3 atom1pos = SimTK::Vec3(bAtomList[bond.i].getX(), bAtomList[bond.i].getY(), bAtomList[bond.i].getZ());
+		SimTK::Vec3 atom2pos = SimTK::Vec3(bAtomList[bond.j].getX(), bAtomList[bond.j].getY(), bAtomList[bond.j].getZ());
+		SimTK::Real distSqr = (atom2pos - atom1pos).normSqr();
+
+		//std::cout << "atom " << bond.j << " c " << std::log(distSqr) + std::log(distSqr) + std::log(bAtomList[bond.j].mass) << " " ;
+
+		result = result + std::log(distSqr) + std::log(distSqr) + std::log(bAtomList[bond.j].mass);
+
+	}
+	//std::cout << std::endl;
+
+	return result;
+}
+
+/* Calculate angle contribution at the MBAT determinant: 
+TODO: calculate atomTargets only once: getAtomLocationsInGround
+*/
+SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State& someState){
+        // Assign Compound coordinates by matching bAtomList coordinates
+        std::map<AtomIndex, Vec3> atomTargets;
+        for(int ix = 0; ix < getNumAtoms(); ++ix){
+                Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+                atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+        }
+
+	//std::cout << "Topology::calcLogDetMBATAnglesContribution angles: " ;
+	SimTK::Real result = 0.0;
+	for(auto triple: triples){
+		//SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
+		//SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
+		//SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);
+
+		SimTK::UnitVec3 v1(atomTargets.find(triple[0])->second - atomTargets.find(triple[1])->second);
+		SimTK::UnitVec3 v2(atomTargets.find(triple[2])->second - atomTargets.find(triple[1])->second);
+
+		SimTK::Real dotProduct = dot(v1, v2);
+		assert(dotProduct < 1.1);
+		assert(dotProduct > -1.1);
+		if (dotProduct > 1.0) dotProduct = 1.0;
+		if (dotProduct < -1.0) dotProduct = -1.0;
+		SimTK::Real angle = std::acos(dotProduct);
+		//std::cout << angle << " " ;
+
+		SimTK::Real sinSqAngle = 1 - (dotProduct * dotProduct);
+
+		result = result + std::log(sinSqAngle);
+
+	}
+	//std::cout << std::endl;
+
+	return result;
+}
+
+SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State& someState)
 {
-	return 0;
+	std::cout << "Topology::calcLogDetMBATMassesContribution masses: " ;
+	SimTK::Real result = 1.0;
+	for(auto atom: bAtomList){
+		std::cout << atom.mass << " " ;
+		result = result * (atom.mass * atom.mass * atom.mass);
+	}
+	std::cout << std::endl;
+}
+
+SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
+{
+	SimTK::Real gamma2Contribution = calcLogDetMBATGamma2Contribution(someState);
+	SimTK::Real distsMassesContribution = calcLogDetMBATDistsMassesContribution(someState);
+	SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
+	//SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
+
+	std::cout << std::setprecision(20) << std::fixed;
+	std::cout << " gamma distsMasses angles contributions: " 
+		<< gamma2Contribution << " " 
+		<< distsMassesContribution << " " 
+		<< anglesContribution << std::endl;
+
+	return gamma2Contribution + distsMassesContribution + anglesContribution;
 }
 
 
@@ -846,6 +956,7 @@ void Topology::buildGraphAndMatchCoords(
     if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
         baseAtomNumber = argRoot;
         root = &(bAtomList[argRoot]);
+	bSpecificAtomRootIndex = argRoot;
     }else {
         std::cout << "Root atom will be chosen by Gmolmodel." << std::endl;
         int baseAtomListIndex = 0;
@@ -856,6 +967,7 @@ void Topology::buildGraphAndMatchCoords(
             }
         }
         root = &(bAtomList[baseAtomListIndex]);
+	bSpecificAtomRootIndex = baseAtomListIndex;
         baseAtomNumber = root->number;
     }
 
