@@ -344,10 +344,11 @@ void Topology::bAddBiotypes(
         bAtomList[i].setBiotypeIndex(biotypeIndex);
 
         // Assign atom's biotype as a composed name: name + force field type
-        std::string temp(bAtomList[i].name);
+        //std::string temp(bAtomList[i].name); // @ Restore MULMOL
+        std::string temp(name + bAtomList[i].name); // DEL MULMOL
         temp += bAtomList[i].fftype;
         bAtomList[i].setBiotype(temp);
-        std::cout << "Added Biotype " << temp << std::endl;
+        //std::cout << "Added Biotype " << temp << " with BiotypeIndex " << biotypeIndex << std::endl;
     }
 }
 
@@ -361,17 +362,18 @@ void Topology::bAddAtomClasses(
 )
 {
     // Define AtomClasses
-    SimTK::DuMM::AtomClassIndex aIx;
+    SimTK::DuMM::AtomClassIndex aCIx;
 
     // Iterate through amberReader atoms and define AtomClasses
     for(int i = 0; i < amberReader->getNumberAtoms(); i++){
         // Get an AtomClass index
-        aIx = dumm.getNextUnusedAtomClassIndex();
-        bAtomList[i].setAtomClassIndex(aIx);
+        aCIx = dumm.getNextUnusedAtomClassIndex();
+        bAtomList[i].setAtomClassIndex(aCIx);
 
         // Define an AtomClass name
         const char* atomClassName = (
-                std::string("top")
+                //std::string("top") // restore MULMOL
+                name // del MULMOL 
                 + resName
                 + bAtomList[i].getFftype()
                 + std::string("_")
@@ -379,7 +381,7 @@ void Topology::bAddAtomClasses(
 
         // Define an AtomClass (has info about van der Waals)
         dumm.defineAtomClass(
-            aIx,
+            aCIx,
             atomClassName,
             bAtomList[i].getAtomicNumber(), // int atomicNumber
             bAtomList[i].getNBonds(), // expected valence
@@ -387,6 +389,7 @@ void Topology::bAddAtomClasses(
             bAtomList[i].getLJWellDepth() * 4.184 // kcal to kJ
         );
 
+        //std::cout << "Defined AtomClass " << atomClassName << " with atomClassIndex " << aCIx << std::endl;
     }
 
     // Define ChargedAtomTypeIndeces
@@ -410,6 +413,7 @@ void Topology::bAddAtomClasses(
           bAtomList[k].getAtomClassIndex(),
           bAtomList[k].charge
         );
+        //std::cout << "Defined chargedAtomType " << chargedAtomTypeName << " with chargedAtomTypeIndex " << chargedAtomTypeIndex << std::endl;
 
         // Associate a ChargedAtomTypeIndex with a Biotype index
         dumm.setBiotypeChargedAtomType(
@@ -459,6 +463,12 @@ void Topology::bAddBondParams(
             amberReader->getBondsForceK(t),  //k1
             amberReader->getBondsEqval(t)   //equil1
         );
+
+	//std::cout << "Defined bond stretch between aCIx1 aCIx2 k b0 " 
+	//	<< (bAtomList[bonds[t].i]).getAtomClassIndex() << " "
+	//	<< (bAtomList[bonds[t].j]).getAtomClassIndex() << " "
+	//	<< amberReader->getBondsForceK(t) << " "
+	//	<< amberReader->getBondsEqval(t) << std::endl;
 
     }
 }
@@ -567,7 +577,7 @@ void Topology::loadTriples(void)
 	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
 	getBondedAtomRuns(3, atomTargets);	
 
-	std::cout << "Topology triples: " << std::endl ;
+	//std::cout << "Topology triples: " << std::endl ;
 	int bIx = -1;
 	for(auto bAR: bondedAtomRuns){
 		bIx++;
@@ -575,9 +585,9 @@ void Topology::loadTriples(void)
 		if(bAR[0] < bAR[2]){
 			triples.push_back(bAR);
 			for(auto aIx: triples.back()){
-				std::cout << " " << aIx;
+				//std::cout << " " << aIx;
 			}
-			std::cout << std::endl;
+			//std::cout << std::endl;
 		}
 	}
 }
@@ -1141,7 +1151,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 void Topology::loadMobodsRelatedMaps(void){
 
     // Iterate through atoms and get their MobilizedBodyIndeces
-    for (SimTK::Compound::AtomIndex aIx(0); aIx < getNumAtoms(); ++aIx){
+    //for (SimTK::Compound::AtomIndex aIx(bAtomList[0].atomIdex); aIx < getNumAtoms(); ++aIx){
+    for (unsigned int i = 0; i < getNumAtoms(); ++i){
+	SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+        std::cout << "Topology::loadMobodsRelatedMaps atomIndex for atom " << i << " = " << (bAtomList[i]).atomIndex << std::endl;
+	
         // Map mbx2aIx contains only atoms at the origin of mobods
         SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
         //std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >

@@ -121,6 +121,8 @@ public:
     void setNumThreadsRequested(int which, int howMany);
     void setUseOpenMMAcceleration(bool arg);
 
+    SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector, int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
+
     /** Print the number of threads each World got **/
     void PrintNumThreads();
 
@@ -204,6 +206,10 @@ private:
     unsigned int BUFSIZE;
     char *buffer;
     FILE *logFile;
+
+    // Adaptive Gibbs blocking variables
+    int roundsTillReblock;
+    std::vector<std::vector<std::vector<SimTK::Real>>> QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
 
 };
 

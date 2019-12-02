@@ -186,7 +186,6 @@ void World::AddMolecule(
         std::string regimenSpec,
         std::string argRoot)
 {
-    std::cout<<"World::AddMolecule"<<std::endl;
     // Statistics
     moleculeCount++; // Used for unique names of molecules
  
@@ -220,7 +219,7 @@ void World::AddMolecule(
     (topologies.back())->setFlexibility(regimenSpec, flexFN);
 
     // Print Molmodel types
-    //(topologies.back())->PrintMolmodelAndDuMMTypes(*forceField);
+    (topologies.back())->PrintMolmodelAndDuMMTypes(*forceField);
 
     // Allocate the vector of coordinates (DCD)
     Xs.resize(Xs.size() + topologies.back()->getNAtoms());
@@ -229,6 +228,7 @@ void World::AddMolecule(
   
     // Add Topology to CompoundSystem and realize topology
     compoundSystem->adoptCompound( *(topologies.back()) );
+    std::cout<<"World::AddMolecule CompoundSystem adoptCompound "<< std::endl;
     (topologies.back())->setCompoundIndex(
             SimTK::CompoundSystem::CompoundIndex(
              compoundSystem->getNumCompounds() - 1));
@@ -261,16 +261,35 @@ void World::ModelTopologies(bool useFixmanTorqueOpt)
                 SimTK::CompoundSystem::CompoundIndex(i),
                 GroundToCompoundMobilizerType);
 
+    	std::cout<<"World::ModelTopologies CompoundSystem modelCompound " << i <<std::endl;
         // Realize Topology
-        compoundSystem->realizeTopology();
+        //compoundSystem->realizeTopology(); // restore MULMOL
 
-        ((this->topologies)[i])->loadMobodsRelatedMaps();
+        //((this->topologies)[i])->loadMobodsRelatedMaps(); // restore MULMOL
 
     }
 
     // Realize Topology
     //compoundSystem->realizeTopology();
 }
+
+
+const SimTK::State& World::realizeTopology(void)
+{
+        const SimTK::State& returnState = compoundSystem->realizeTopology();
+	//for ( unsigned int i = 0; i < this->topologies.size(); i++){
+        //	((this->topologies)[i])->loadMobodsRelatedMaps();
+	//}
+	return returnState;
+}
+
+void World::loadMobodsRelatedMaps(void)
+{
+	for ( unsigned int i = 0; i < this->topologies.size(); i++){
+        	((this->topologies)[i])->loadMobodsRelatedMaps();
+	}
+}
+
 
 /** Set up Fixman torque **/
 void World::addFixmanTorque()

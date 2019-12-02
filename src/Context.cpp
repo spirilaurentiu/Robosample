@@ -15,6 +15,10 @@ Context::Context(const SetupReader& setupReader, std::string logFilename){
     if ( setvbuf(logFile, buffer, _IOFBF, BUFSIZE) != 0){
        perror("setvbuf()");
     }
+
+    // Adaptive Gibbs blocki
+    roundsTillReblock = std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]);
+
 }
 
 // Constructor
@@ -66,6 +70,10 @@ World * Context::AddWorld(bool visual, SimTK::Real visualizerFrequency){
     nofMDStepsPerSample.push_back(1);
     timesteps.push_back(0.002); // ps
     nofBoostStairs.push_back(0);
+
+    // Adaptive Gibbs blocking
+    QsCache.push_back(std::vector<std::vector<SimTK::Real>>(roundsTillReblock));
+    //std::cout << "Context::AddWorld QsCache size " << QsCache.size() << std::endl;
 
     return worlds.back();
 }
@@ -491,7 +499,7 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
                 for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
                     ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
                                                                                             "/pdbs/sb." +
-                                                                                            getPdbPrefix() + ".",
+                                                                                            getPdbPrefix() + "." + std::to_string(mol_i) + ".",
                                                                                             ".pdb", 10, round);
                 }
             }
@@ -499,6 +507,65 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
 
     } // for i in rounds
 }
+
+// 2D roundsTillReblock; 3D nofQs
+SimTK::Real Context::Pearson(std::vector<std::vector<SimTK::Real>> inputVector, int QIx1, int QIx2)
+{
+    if(inputVector.size() < 1){
+        std::cout << "Context::Pearson: Too few entries in the input vector" << std::endl;
+    	return -9999999;
+    }
+
+    int index0, index1;
+    SimTK::Real miu0 = 0, miu1 = 0;
+    SimTK::Real sqMiu0 = 0, sqMiu1 = 0;
+    SimTK::Real crossMiu = 0;
+    SimTK::Real var0 = 0, var1 = 0;
+    SimTK::Real stdev0 = 0, stdev1 = 0;
+    SimTK::Real result;
+
+    // Get averages
+    //std::cout << "Context::Pearson: inputVector " << std::endl;
+    for(unsigned int i = 0; i < inputVector.size(); i++){
+        if(inputVector[i].size() < 2){
+            std::cout << std::setprecision(1) << std::fixed;
+            std::cout << "Context::Pearson: Too few Qs" << std::endl;
+    	    return -9999999;
+        }
+ 
+        //for(unsigned int j = 0; j < inputVector[i].size(); j++){
+            //std::cout << inputVector[i][j] << " ";
+        //}
+        //std::cout << std::endl;
+
+        miu0 += inputVector[i][QIx1];
+        miu1 += inputVector[i][QIx2];
+
+        sqMiu0 += (inputVector[i][QIx1] * inputVector[i][QIx1]);
+        sqMiu1 += (inputVector[i][QIx2] * inputVector[i][QIx2]);
+
+        crossMiu += (inputVector[i][QIx1] * inputVector[i][QIx2]);
+    }
+
+    miu0 /= inputVector.size();
+    miu1 /= inputVector.size();
+
+    sqMiu0 /= inputVector.size();
+    sqMiu1 /= inputVector.size();
+    
+    crossMiu /= inputVector.size();
+
+    var0 = sqMiu0 - (miu0 * miu0);
+    var1 = sqMiu1 - (miu1 * miu1);
+
+    stdev0 = std::sqrt(var0);
+    stdev1 = std::sqrt(var1);
+
+    result = (crossMiu - (miu0 * miu1)) / (stdev0 * stdev1);
+
+    return result;
+}
+
 
 // Main
 void Context::Run(int howManyRounds, float Ti, float Tf)
@@ -522,8 +589,34 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
     fb.close();
     //
 
+    // Adaptive Gibbs blocking
+    int tau = -1;
+
     if( std::abs(Tf - Ti) < SimTK::TinyReal){
         for(int round = 0; round < nofRounds; round++){ // Iterate rounds
+
+            // Adaptive Gibbs blocking
+            tau++;
+            //std::cout << "Run tau = " << tau << std::endl;
+            if(((tau % roundsTillReblock) == 0) && (tau > 0)){
+
+                for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){ 
+                    //for(unsigned int t = 0; t < roundsTillReblock; t++){
+                    //    for(unsigned int i = 0; i < 2; i++){
+                    //        std::cout << "QsCahr[" << worldIx << "][" << t << "][" << i << "] = " << QsCache[worldIx][t][i] << " " ;
+                    //    }
+                    //}
+                    //std::cout << std::endl;
+
+                     if(QsCache[worldIx][0].size() >= 9){
+                         //std::cout << "world " << worldIx << " Pearson = " << Pearson(QsCache[worldIx], 7, 8) << " ";
+                     }
+
+                } ///////////
+                //std::cout << std::endl;
+
+                tau = 0;
+            }
 
             //std::cout << "round " << round << std::endl;
 
@@ -541,6 +634,15 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 // Transfer coordinates from last world to current
                 SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
                 SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
+
+                // Adaptive Gibbs blocking
+                //std::cout << "state " << currentAdvancedState.getQ() << std::endl;
+                //std::cout << "QsCache[currentWorldIx][" << tau << "]  size " << (QsCache[currentWorldIx][tau]).size() << std::endl;
+                for(unsigned int i = 0; i < currentAdvancedState.getNQ(); i++){
+                    //std::cout << " " << currentAdvancedState.getQ()[i] << std::endl;
+                    QsCache[currentWorldIx][tau][i] = currentAdvancedState.getQ()[i];
+                }
+		//
 
                 if(worldIndexes.size() > 1) { // RESTORE @
                 	currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
@@ -634,7 +736,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                     for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
                         ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
                                                                                                 "/pdbs/sb." +
-                                                                                                getPdbPrefix() + ".",
+                                                                                                getPdbPrefix() + "." + std::to_string(mol_i) + ".",
                                                                                                 ".pdb", 10, round);
                     }
                 }
@@ -713,7 +815,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                     for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
                         ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
                                                                                                 "/pdbs/sb." +
-                                                                                                getPdbPrefix() + ".",
+                                                                                                getPdbPrefix() + "." + std::to_string(mol_i) + ".",
                                                                                                 ".pdb", 10, round);
                     }
                 }
@@ -1105,6 +1207,21 @@ SimTK::State& Context::updAdvancedState(int whichWorld, int whichSampler)
 void Context::realizeTopology() {
     for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++) {
         (worlds[worldIx]->getCompoundSystem())->realizeTopology();
+    }
+
+    // Adaptive Gibbs blocking: // TODO generalized coord may not always be Real
+    if(QsCache[0][0].size() == 0){
+        for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+            int nQs = (worlds[worldIx]->getCompoundSystem()->getMatterSubsystem()).getSystem().getDefaultState().getNQ();
+            //std::cout << "World " << worldIx  << " has " << nQs << " Qs" << std::endl;
+            //std::cout << "Context::realizeTopology QsCache[" << worldIx << "] size " << QsCache[worldIx].size() << std::endl;
+            for(unsigned int t = 0; t < roundsTillReblock; t++){ // TODO use insert
+                for(unsigned int qi = 0; qi < nQs; qi++){
+                    QsCache[worldIx][t].push_back(0);
+                }
+                //std::cout << "Context::realizeTopology QsCache[" << worldIx << "]["<< t << "] size " << QsCache[worldIx][t].size() << std::endl;
+            }
+        }
     }
 }
 

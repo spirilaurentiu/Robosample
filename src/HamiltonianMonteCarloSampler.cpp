@@ -370,27 +370,39 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // Integrate (propagate trajectory)
     this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
-    // TODO: SCALE VELOCITIES
-/*    int nofStairs = 10;
+    // TODO: Simulated tempering
+/*    
+    int nofStairs = 20;
     int MDStepsPerStair = int(MDStepsPerSample / (2*nofStairs));
-    SimTK::Real stairBoost = 1.2;
+    SimTK::Real stairBoost = 1.05;
+
+    SimTK::Real T = getTemperature();
+
     SimTK::Real stairUnboost = 1 / stairBoost;
-    //std::cout << "stairBoost = " << stairBoost << std::endl;
-    //std::cout << "stairUnboost = " << stairUnboost << std::endl;
+    std::cout << "stairBoost = " << stairBoost << std::endl;
+    std::cout << "stairUnboost = " << stairUnboost << std::endl;
 
     system->realize(someState, SimTK::Stage::Velocity);
     this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
     for(int i = 1; i < nofStairs; i++){
         someState.updU() *= stairBoost;
         system->realize(someState, SimTK::Stage::Velocity);
+
+        T = T * std::sqrt(stairBoost);
+        std::cout << "T = " << T << std::endl;
+
         this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
     }
 
     for(int i = nofStairs; i >= 0; i--){
         someState.updU() *= stairUnboost;
         system->realize(someState, SimTK::Stage::Velocity);
+
+        T = T * std::sqrt(stairUnboost);
+        std::cout << "T = " << T << std::endl;
+
         this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
-    }*/
+    }// */
     // SCALE VELS END
 
 }
@@ -454,9 +466,6 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
-             //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
-             //(rand_no < exp(-((pe_n + fix_n) - (pe_o + fix_o)) * this->beta)))) { // Accept based on potential energy
-             //(rand_no < exp(-(etot_n - etot_proposed) * (newBeta - this->beta))))) {
              acc = true;
              std::cout << " acc" << std::endl;
              setSetTVector(someState);

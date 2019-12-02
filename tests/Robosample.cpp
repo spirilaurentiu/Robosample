@@ -150,6 +150,17 @@ int main(int argc, char **argv)
     // Add molecules to Worlds based on just read filenames
     context.AddMolecules(setupReader.get("ROOTS"));
 
+    // BEGIN MULMOL
+    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+        (context.updWorld(worldIx))->realizeTopology();
+    }
+
+//TODO    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+//        (context.updWorld(worldIx))->loadMobodsRelatedMaps();
+//    }
+    // END MULMOL
+    
+
     // Use OpenMM if possible
     if(setupReader.get("OPENMM")[0] == "TRUE"){
         context.setUseOpenMMAcceleration(true);
