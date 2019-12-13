@@ -155,7 +155,8 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //SimTK::Real EiDetM = EiM.determinant();
     //std::cout << "EiDetM= " << EiDetM << std::endl;
     assert(RT > SimTK::TinyReal);
-    SimTK::Real result = 0.5 * RT * (((Topology *)residue)->calcLogDetMBAT(someState) - std::log(D0));
+    //SimTK::Real result = 0.5 * RT * (((Topology *)residue)->calcLogDetMBAT(someState) - std::log(D0));
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBAT(someState) );
     //SimTK::Real result = 0.5 * RT * std::log(D0);
 
     if(SimTK::isInf(result)){
