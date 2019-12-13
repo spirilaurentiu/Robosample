@@ -328,6 +328,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // setOldFixman(getSetFixman()); // RE
     pe_o = pe_set; // NEW
     fix_o = fix_set; // NEW
+    //detmbat_o = ((Topology *)residue)->calcLogDetMBAT(someState);
 
     // Initialize velocities according to the Maxwell-Boltzmann distribution
     int nu = someState.getNU();
@@ -505,7 +506,7 @@ void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someSta
         << " pe_nB " << getPEFromEvaluator(someState)
         << " ke_prop " << ke_proposed << " ke_n " << ke_n
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
-        << " detmbat_n " << detmbat_n //<< " detmbat_n " << detmbat_n << " "
+        //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
         << " RT " << RT << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
         << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
         //<< std::endl
