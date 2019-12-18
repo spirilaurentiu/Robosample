@@ -150,10 +150,13 @@ public:
 
     /** Compute BAT determinant
     **/
+    SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
     SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
+    SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
     SimTK::Real calcLogDetMBATDistsMassesContribution(const SimTK::State&);
     SimTK::Real calcLogDetMBATAnglesContribution(const SimTK::State&);
     SimTK::Real calcLogDetMBATMassesContribution(const SimTK::State&);
+    SimTK::Real calcLogDetMBATInternal(const SimTK::State& someState);
     SimTK::Real calcLogDetMBAT(const SimTK::State&);
 
     /** Get the number of atoms. **/

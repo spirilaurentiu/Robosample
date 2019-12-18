@@ -96,6 +96,22 @@ public:
     void setOldFixman(SimTK::Real);
     SimTK::Real getOldFixman(void) const;
 
+
+
+    // Set/get External MBAT contribution potential
+    void setSetLogSineSqrGamma2(SimTK::Real);
+    SimTK::Real getSetLogSineSqrGamma2(void) const;
+
+    // Set/get External MBAT contribution potential
+    void setOldLogSineSqrGamma2(SimTK::Real);
+    SimTK::Real getOldLogSineSqrGamma2(void) const;
+
+    //
+    void setProposedLogSineSqrGamma2(SimTK::Real argFixman);
+    SimTK::Real getProposedLogSineSqrGamma2(void) const;
+
+
+
     // Set/get Fixman potential
     void setProposedFixman(SimTK::Real);
     SimTK::Real getProposedFixman(void) const;
@@ -143,6 +159,8 @@ protected:
         detmbat_o = 0.0,
         detmbat_n = 0.0;
     SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
+
+    SimTK::Real logSineSqrGamma2_o = 0.0, logSineSqrGamma2_n = 0.0, logSineSqrGamma2_set = 0.0;
 
     bool useFixman = false;
     bool alwaysAccept = false;

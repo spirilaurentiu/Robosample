@@ -592,13 +592,44 @@ void Topology::loadTriples(void)
 	}
 }
 
+
+SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState) {
+    bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
+    SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
+    SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
+    SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
+
+    SimTK::Real w = quat[0];
+    SimTK::Real x = quat[1];
+    SimTK::Real y = quat[2];
+    SimTK::Real z = quat[3];
+    SimTK::Real sinPitch = 2 * (w * y - z * x);
+
+    std::cout << std::setprecision(20) << std::fixed;
+    std::cout << "sinpitch " << sinPitch << std::endl;
+    SimTK::Real pitch = std::asin(sinPitch);
+
+    SimTK::Real result = std::log(sinPitch * sinPitch);
+
+    // Quick and dirty
+    if(result < -14.0){ // Around double precision log(0)
+        result = -14.0;
+    }
+
+    // More elaborate fix
+    //TODO: Given a difference compute the limit of this log
+
+    return result;
+}
+
+
 SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatState){
 	//State& eulerState;
 	//matter.convertToEulerAngles(quatState, eulerState);
 	//std::cout << "calcLogDetMBATGamma2Contribution quaternionState " << quatState << std::endl;
 	//std::cout << "calcLogDetMBATGamma2Contribution      eulerState " << eulerState << std::endl;
 
-        bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
+	bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
 	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
 	SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
 	SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
@@ -609,19 +640,61 @@ SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatS
 	SimTK::Real y = quat[2];
 	SimTK::Real z = quat[3];
 	SimTK::Real sinPitch = 2 * (w * y - z * x);
-	//std::cout << "sin pitch " << sinPitch << std::endl;
 
-	//SimTK::Real pitch = std::asin(sinPitch);
-	//std::cout << "pitch " << pitch << std::endl;
+    std::cout << std::setprecision(20) << std::fixed;
+    std::cout << "sinpitch " << sinPitch << std::endl;
+    std::cout << "sinpitchsq" << sinPitch * sinPitch << std::endl;
+
+    SimTK::Real pitch = std::asin(sinPitch);
+	std::cout << "pitch " << pitch << std::endl;
 	//if(pitch < 0){
 	//	pitch = pitch + (2*SimTK_PI);
 	//	std::cout << "sin converted pitch " << std::sin(pitch) << std::endl;
 	//}
 
+    if(sinPitch < SimTK::Eps){ // consider using SimTK::Eps
+        return -SimTK::Infinity;
+    }
 	SimTK::Real result = std::log(sinPitch * sinPitch);
-
 	return result;
 }
+
+
+SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State& someState){
+    // Assign Compound coordinates by matching bAtomList coordinates
+    std::map<AtomIndex, Vec3> atomTargets;
+    for(int ix = 0; ix < getNumAtoms(); ++ix){
+        Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+        atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+    }
+
+    //std::cout << "Topology::calcLogDetMBATDistsContribution dists: " ;
+    SimTK::Real result = 0.0;
+
+    for(auto bond: bonds){
+        //SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
+        //SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
+        //SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);
+
+        SimTK::Vec3 atom1pos = SimTK::Vec3(bAtomList[bond.i].getX(), bAtomList[bond.i].getY(), bAtomList[bond.i].getZ());
+        SimTK::Vec3 atom2pos = SimTK::Vec3(bAtomList[bond.j].getX(), bAtomList[bond.j].getY(), bAtomList[bond.j].getZ());
+        //SimTK::Real distSqr = (atom2pos - atom1pos).normSqr(); // funny results ?
+        SimTK::Real dist = std::sqrt(
+                std::pow(atom2pos[0] - atom1pos[0], 2) +
+                std::pow(atom2pos[1] - atom1pos[1], 2) +
+                std::pow(atom2pos[2] - atom1pos[2], 2));
+
+        //std::cout << "atom " << bond.j << " 2*logDistSqr " << std::log(distSqr) + std::log(distSqr) << " " ;
+        //std::cout << "dist " << bond.j << " = " << dist << " " ;
+
+        result = result + (4.0 * std::log(dist));
+
+    }
+    //std::cout << std::endl;
+
+    return result;
+}
+
 
 SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& someState){
         // Assign Compound coordinates by matching bAtomList coordinates
@@ -631,9 +704,10 @@ SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& 
                 atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
         }
 
-	//std::cout << "Topology::calcLogDetMBATDistsContribution dists squared: " ;
-	SimTK::Real result = std::log(bAtomList[bonds[0].i].mass);
-	for(auto bond: bonds){
+	//std::cout << "Topology::calcLogDetMBATDistsMassesContribution dists squared: " ;
+	SimTK::Real result = 3.0*std::log(bAtomList[bonds[0].i].mass);
+    //std::cout << "atom " << bonds[0].i << " 1stlogmass " << std::log(bAtomList[bonds[0].i].mass) << " " ;
+    for(auto bond: bonds){
 		//SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
 		//SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
 		//SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);
@@ -642,9 +716,9 @@ SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& 
 		SimTK::Vec3 atom2pos = SimTK::Vec3(bAtomList[bond.j].getX(), bAtomList[bond.j].getY(), bAtomList[bond.j].getZ());
 		SimTK::Real distSqr = (atom2pos - atom1pos).normSqr();
 
-		//std::cout << "atom " << bond.j << " c " << std::log(distSqr) + std::log(distSqr) + std::log(bAtomList[bond.j].mass) << " " ;
+		//std::cout << "atom " << bond.j << " 2*logDistSqr+mass " << std::log(distSqr) + std::log(distSqr) + std::log(bAtomList[bond.j].mass) << " " ;
 
-		result = result + std::log(distSqr) + std::log(distSqr) + std::log(bAtomList[bond.j].mass);
+		result = result + std::log(distSqr) + std::log(distSqr) + (3.0*std::log(bAtomList[bond.j].mass));
 
 	}
 	//std::cout << std::endl;
@@ -654,6 +728,7 @@ SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& 
 
 /* Calculate angle contribution at the MBAT determinant: 
 TODO: calculate atomTargets only once: getAtomLocationsInGround
+TODO: realize position
 */
 SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State& someState){
         // Assign Compound coordinates by matching bAtomList coordinates
@@ -679,7 +754,7 @@ SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State& someS
 		if (dotProduct > 1.0) dotProduct = 1.0;
 		if (dotProduct < -1.0) dotProduct = -1.0;
 		SimTK::Real angle = std::acos(dotProduct);
-		//std::cout << angle << " " ;
+		//std::cout << SimTK_RADIAN_TO_DEGREE * angle << " " ;
 
 		SimTK::Real sinSqAngle = 1 - (dotProduct * dotProduct);
 
@@ -691,34 +766,52 @@ SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State& someS
 	return result;
 }
 
+
 SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State& someState)
 {
-	std::cout << "Topology::calcLogDetMBATMassesContribution masses: " ;
-	SimTK::Real result = 1.0;
+	//std::cout << "Topology::calcLogDetMBATMassesContribution masses: " ;
+	SimTK::Real result = 0.0;
 	for(auto atom: bAtomList){
-		std::cout << atom.mass << " " ;
-		result = result * (atom.mass * atom.mass * atom.mass);
+		//std::cout << 3.0 * std::log(atom.mass) << " " ;
+        //std::cout << atom.mass << " " ;
+        result = result + (3.0 * std::log(atom.mass));
 	}
-	std::cout << std::endl;
+	//std::cout << std::endl;
 }
 
 SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
 {
 	SimTK::Real gamma2Contribution = calcLogDetMBATGamma2Contribution(someState);
-	SimTK::Real distsMassesContribution = calcLogDetMBATDistsMassesContribution(someState);
+	SimTK::Real distsContribution = calcLogDetMBATDistsContribution(someState);
+    //SimTK::Real distsMassesContribution = calcLogDetMBATDistsMassesContribution(someState);
 	SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
-	//SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
+	SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
 
-	//std::cout << std::setprecision(20) << std::fixed;
-	//std::cout << " gamma distsMasses angles contributions: " 
-	//	<< gamma2Contribution << " " 
-	//	<< distsMassesContribution << " " 
-	//	<< anglesContribution << std::endl;
+	std::cout << std::setprecision(20) << std::fixed;
+	std::cout << " gamma dists masses angles contributions: "
+		<< gamma2Contribution << " "
+            << distsContribution << " "
+            << massesContribution << " "
+            //<< distsMassesContribution << " "
+		<< anglesContribution << std::endl;
 
-	return gamma2Contribution + distsMassesContribution + anglesContribution;
+	return gamma2Contribution + distsContribution + anglesContribution + massesContribution;
 }
 
+SimTK::Real Topology::calcLogDetMBATInternal(const SimTK::State& someState)
+{
+    SimTK::Real distsContribution = calcLogDetMBATDistsContribution(someState);
+    SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
+    SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
 
+    std::cout << std::setprecision(20) << std::fixed;
+    std::cout << "dists masses angles contributions: "
+              << distsContribution << " "
+              << massesContribution << " "
+              << anglesContribution << std::endl;
+
+    return distsContribution + anglesContribution + massesContribution;
+}
 
 
 /**

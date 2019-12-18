@@ -57,9 +57,15 @@ void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTempe
         std::cout << "Monte Carlo sampler: using Fixman potential." << std::endl;
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2(0.0);
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }
 
 }
@@ -88,9 +94,15 @@ void MonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real argTem
     if(useFixman){
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2(0.0);
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }
 }
 
@@ -156,8 +168,10 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //std::cout << "EiDetM= " << EiDetM << std::endl;
     assert(RT > SimTK::TinyReal);
     //SimTK::Real result = 0.5 * RT * (((Topology *)residue)->calcLogDetMBAT(someState) - std::log(D0));
-    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBAT(someState) );
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBATInternal(someState) );
     //SimTK::Real result = 0.5 * RT * std::log(D0);
+    std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman 05kT logdetM: " << 0.5 * RT * std::log(D0) << std::endl;
+    std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)residue)->calcLogDetMBATInternal(someState) << std::endl;
 
     if(SimTK::isInf(result)){
         result = 0.0;
@@ -271,6 +285,41 @@ SimTK::Real MonteCarloSampler::getProposedFixman(void) const
 {
     return this->fix_n;
 }
+
+
+
+
+// Set/get External MBAT contribution potential
+void MonteCarloSampler::setSetLogSineSqrGamma2(SimTK::Real argX){
+    this->logSineSqrGamma2_set = argX;
+}
+
+SimTK::Real MonteCarloSampler::getSetLogSineSqrGamma2(void) const
+{
+    return this->logSineSqrGamma2_set;
+}
+
+// Set/get External MBAT contribution potential
+void MonteCarloSampler::setOldLogSineSqrGamma2(SimTK::Real argX){
+    this->logSineSqrGamma2_o = argX;
+}
+
+SimTK::Real MonteCarloSampler::getOldLogSineSqrGamma2(void) const
+{
+    return this->logSineSqrGamma2_o;
+}
+
+void MonteCarloSampler::setProposedLogSineSqrGamma2(SimTK::Real argFixman)
+{
+    this->logSineSqrGamma2_n = argFixman;
+}
+
+SimTK::Real MonteCarloSampler::getProposedLogSineSqrGamma2(void) const
+{
+    return this->logSineSqrGamma2_n;
+}
+
+
 
 // Set/get Residual Embedded Potential
 void MonteCarloSampler::setREP(SimTK::Real inp)
