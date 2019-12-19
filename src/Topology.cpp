@@ -605,8 +605,8 @@ SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState) {
     SimTK::Real z = quat[3];
     SimTK::Real sinPitch = 2 * (w * y - z * x);
 
-    std::cout << std::setprecision(20) << std::fixed;
-    std::cout << "sinpitch " << sinPitch << std::endl;
+    //std::cout << std::setprecision(20) << std::fixed;
+    //std::cout << "sinpitch " << sinPitch << std::endl;
     SimTK::Real pitch = std::asin(sinPitch);
 
     SimTK::Real result = std::log(sinPitch * sinPitch);
@@ -790,9 +790,9 @@ SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
 	std::cout << std::setprecision(20) << std::fixed;
 	std::cout << " gamma dists masses angles contributions: "
 		<< gamma2Contribution << " "
-            << distsContribution << " "
-            << massesContribution << " "
-            //<< distsMassesContribution << " "
+		<< distsContribution << " "
+		<< massesContribution << " "
+		//<< distsMassesContribution << " "
 		<< anglesContribution << std::endl;
 
 	return gamma2Contribution + distsContribution + anglesContribution + massesContribution;
@@ -804,11 +804,11 @@ SimTK::Real Topology::calcLogDetMBATInternal(const SimTK::State& someState)
     SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
     SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
 
-    std::cout << std::setprecision(20) << std::fixed;
-    std::cout << "dists masses angles contributions: "
-              << distsContribution << " "
-              << massesContribution << " "
-              << anglesContribution << std::endl;
+    //std::cout << std::setprecision(20) << std::fixed;
+    //std::cout << "dists masses angles contributions: "
+    //          << distsContribution << " "
+    //          << massesContribution << " "
+    //          << anglesContribution << std::endl;
 
     return distsContribution + anglesContribution + massesContribution;
 }
