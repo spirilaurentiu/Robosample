@@ -431,6 +431,7 @@ void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm)
     std::cout << "Print Molmodel And DuMM Types:" << std::endl;
     for(size_t i = 0; i < bAtomList.size(); i++){
         std::cout << " list ix " << i
+            << " CompoundAtomIndex " << bAtomList[i].getCompoundAtomIndex()
             << " biotypename " << bAtomList[i].biotype
             << " name " << bAtomList[i].name
             << " BiotypeIndex " << bAtomList[i].getBiotypeIndex()
@@ -566,9 +567,30 @@ void Topology::bAddAllParams(
     bAddTorsionParams(resName, amberReader, dumm); 
 }
 
+bool Topology::checkIfTripleUnorderedAreEqual(
+        std::vector<SimTK::Compound::AtomIndex> &first,
+        std::vector<SimTK::Compound::AtomIndex> &second)
+{
+    if(first == second){
+        return true;
+    }
+    else if(
+            (first[0] == second[2]) &&
+            (first[1] == second[1]) &&
+            (first[2] == second[0])
+            ){
+        return true;
+    }
+    else{
+        return false;
+    }
+
+}
+
 void Topology::loadTriples(void)
 {
 	// Assign Compound coordinates by matching bAtomList coordinates
+    std::cout << "Topology triples: " << std::endl ;
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
@@ -577,19 +599,54 @@ void Topology::loadTriples(void)
 	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
 	getBondedAtomRuns(3, atomTargets);	
 
-	//std::cout << "Topology triples: " << std::endl ;
-	int bIx = -1;
-	for(auto bAR: bondedAtomRuns){
-		bIx++;
-
-		if(bAR[0] < bAR[2]){
-			triples.push_back(bAR);
-			for(auto aIx: triples.back()){
-				//std::cout << " " << aIx;
-			}
-			//std::cout << std::endl;
-		}
+	// Find root bAtomList index
+	int rootIx;
+	int ix = -1;
+	for(auto atom: bAtomList){
+	    ix++;
+	    if(atom.getCompoundAtomIndex() == 0){
+	        rootIx = ix;
+	        break;
+        }
 	}
+
+	// Find neighbour with maximum atomIndex
+	int maxAIx = -1;
+	Compound::AtomIndex aIx;
+	for(auto atom: bAtomList[ix].neighbors){
+	    aIx = atom->getCompoundAtomIndex();
+	    if(aIx > maxAIx){
+	        maxAIx = aIx;
+	    }
+	}
+
+    //std::cout << "==========================" << std::endl;
+
+	int flag;
+	int bIx = -1;
+	for(auto bAR: bondedAtomRuns){ // Iterate bondedAtomRuns
+	    //std::cout << "checking " ;
+        //for(auto aIx: bAR){std::cout << " " << aIx;}; std::cout << std::endl;
+
+		bIx++;
+		flag = 0;
+        for(auto tripleEntry: triples){ // Iterate triples gathered so far
+            if(checkIfTripleUnorderedAreEqual(bAR, tripleEntry)){
+                flag = 1;
+                break;
+            }
+        } // END Iterate triples gathered so far
+
+        if(!flag){ // Not found in gathered triples
+            if((bAR[0] < bAR[1]) || (bAR[2] < bAR[1]) // Only level changing branches
+            || ((bAR[1] == 0) && (bAR[2] == maxAIx)) // except for the root atom
+            ){
+                triples.push_back(bAR);
+                //for(auto aIx: triples.back()){std::cout << " " << aIx;}; std::cout << std::endl;
+            }
+        }
+
+	} // END Iterate bondedAtomRuns
 }
 
 

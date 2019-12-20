@@ -108,8 +108,6 @@ public:
     /** Build the molecular tree without the cycle closing bonds **/
     void buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode);
 
-    void loadTriples(void);
-
     /** After building the acyclic molecular tree close the remaining bonds **/
     void addRingClosingBonds();
 
@@ -150,6 +148,11 @@ public:
 
     /** Compute BAT determinant
     **/
+    bool checkIfTripleUnorderedAreEqual(
+            std::vector<Compound::AtomIndex> &first,
+            std::vector<Compound::AtomIndex> &second);
+
+    void loadTriples(void);
     SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
     SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
     SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);

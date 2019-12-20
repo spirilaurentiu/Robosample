@@ -648,7 +648,10 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 	currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
                         	currentAdvancedState,
                         	(updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
-                } // RESTORE @
+                }else{ // Load bAtomList though
+                    (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
+                }
+                // RESTORE @
 		std::cout << "w" << currentAdvancedState.getNU();
 
                 double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
@@ -779,6 +782,8 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                     currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
                             currentAdvancedState,
                             (updWorld(worldIndexes.back()))->getAtomsLocationsInGround(lastAdvancedState));
+                }else{ // Load bAtomList though
+                    (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
                 }
     
                 // Set old potential energy of the new world
