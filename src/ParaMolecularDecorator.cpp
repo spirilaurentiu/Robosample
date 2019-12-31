@@ -590,16 +590,17 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
         if(mbx > 0){
             SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+            const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 
             // Get all possible transforms
             SimTK::Transform B_X_M = mobod.getOutboardFrame(someState);
-            //SimTK::Transform G_X_P = parentMobod.getBodyTransform(someState);
+            SimTK::Transform G_X_P = parentMobod.getBodyTransform(someState);
             SimTK::Transform G_X_B = mobod.getBodyTransform(someState);
             SimTK::Transform G_X_M = G_X_B * B_X_M;
 
-            //SimTK::Transform P_X_F = mobod.getInboardFrame(someState);
-            //SimTK::Transform G_X_F = G_X_P * P_X_F;
-            //SimTK::Transform F_X_M = mobod.getMobilizerTransform(someState);
+            SimTK::Transform P_X_F = mobod.getInboardFrame(someState);
+            SimTK::Transform G_X_F = G_X_P * P_X_F;
+            SimTK::Transform F_X_M = mobod.getMobilizerTransform(someState);
             //SimTK::Transform G_X_M = G_X_F * F_X_M; // = G_X_B * B_X_M;
 
             // F
@@ -658,7 +659,32 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             geometry.push_back(decorativeTextM);*/
 
             // X_PF, X_BM lines
-            //DecorativeLine decorativeLineFM(G_X_F.p(), G_X_M.p());
+	    /*
+            DecorativeLine decorativeLineFM(G_X_F.p(), G_X_M.p());
+            decorativeLineFM.setLineThickness(4);
+            if(mobod.getNumU(someState) == 3){
+                decorativeLineFM.setColor(SimTK::Vec3(SimTK::Red));
+            }else if (mobod.getNumU(someState) == 2){
+                decorativeLineFM.setColor(SimTK::Vec3(SimTK::Cyan));
+            }else if (mobod.getNumU(someState) == 1){
+                decorativeLineFM.setColor(SimTK::Vec3(SimTK::Green));
+            }else{
+                decorativeLineFM.setColor(SimTK::Vec3(SimTK::Magenta));
+            }
+            geometry.push_back(decorativeLineFM);
+
+            DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
+            decorativeLinePF.setLineThickness(4);
+            if(mobod.getNumU(someState) == 3){
+                decorativeLinePF.setColor(SimTK::Vec3(SimTK::Blue));
+            }else if (mobod.getNumU(someState) == 1){
+                decorativeLinePF.setColor(SimTK::Vec3(SimTK::Blue));
+            }else{
+                decorativeLinePF.setColor(SimTK::Vec3(SimTK::Blue));
+            }
+            geometry.push_back(decorativeLinePF);
+
+            */
             DecorativeLine decorativeLineBM(G_X_B.p(), G_X_M.p());
             decorativeLineBM.setLineThickness(4);
             if(mobod.getNumU(someState) == 3){
@@ -671,17 +697,6 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 decorativeLineBM.setColor(SimTK::Vec3(SimTK::Magenta));
             }
             geometry.push_back(decorativeLineBM);
-
-/*            DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
-            decorativeLinePF.setLineThickness(4);
-            if(mobod.getNumU(someState) == 3){
-                decorativeLinePF.setColor(SimTK::Vec3(SimTK::Blue));
-            }else if (mobod.getNumU(someState) == 1){
-                decorativeLinePF.setColor(SimTK::Vec3(SimTK::Blue));
-            }else{
-                decorativeLinePF.setColor(SimTK::Vec3(SimTK::Blue));
-            }
-            geometry.push_back(decorativeLinePF);*/
 
 
         }

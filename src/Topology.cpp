@@ -1166,9 +1166,12 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
     
     if(argRegimen.at(0) == 'I'){
         for (unsigned int r=0 ; r<getNumBonds(); r++){
-            setBondMobility(BondMobility::Free, Compound::BondIndex(r));
+            /*setBondMobility(BondMobility::Free, Compound::BondIndex(r));
             bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
-                    BondMobility::Free);
+                    BondMobility::Free);*/ //OLDMOB
+            setBondMobility(BondMobility::Translation, Compound::BondIndex(r));
+            bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+                    BondMobility::Translation); //NEWMOB
         }
     }else if(argRegimen == "TD") {
         for (unsigned int r = 0; r < getNumBonds(); r++) {
@@ -1254,6 +1257,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                                     bonds[i].setBondMobility(BondMobility::Free);
                                     setBondMobility(BondMobility::Free,
                                                     GmolBond2bondIx.at(i));
+                                }else if((lineWords[2] == "Translation") || (lineWords[2] == "Cartesian")) {
+                                    bonds[i].setBondMobility(BondMobility::Translation);
+                                    setBondMobility(BondMobility::Translation,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
                                 }else if((lineWords[2] == "Pin") || (lineWords[2] == "Torsion")) {
                                     bonds[i].setBondMobility(BondMobility::Torsion);
                                     setBondMobility(BondMobility::Torsion,
