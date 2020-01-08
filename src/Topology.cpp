@@ -1257,6 +1257,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                                     bonds[i].setBondMobility(BondMobility::Free);
                                     setBondMobility(BondMobility::Free,
                                                     GmolBond2bondIx.at(i));
+                                }else if(lineWords[2] == "FreeLine") {
+                                    bonds[i].setBondMobility(BondMobility::FreeLine);
+                                    setBondMobility(BondMobility::FreeLine,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
                                 }else if((lineWords[2] == "Translation") || (lineWords[2] == "Cartesian")) {
                                     bonds[i].setBondMobility(BondMobility::Translation);
                                     setBondMobility(BondMobility::Translation,
