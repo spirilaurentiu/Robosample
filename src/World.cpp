@@ -585,6 +585,7 @@ SimTK::State& World::setAtomsLocationsInGround(
             topologies[i]->matchDefaultAtomChirality(atomTargets, 0.01, false);
             topologies[i]->matchDefaultBondLengths(atomTargets);
             topologies[i]->matchDefaultBondAngles(atomTargets);
+            topologies[i]->matchDefaultDirections(atomTargets);
             topologies[i]->matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
             topologies[i]->matchDefaultTopLevelTransform(atomTargets);
             // Seems to be redundant:
@@ -633,6 +634,7 @@ SimTK::State& World::setAtomsLocationsInGround(
             topologies[i]->matchDefaultAtomChirality(atomTargets, 0.01, false);
             topologies[i]->matchDefaultBondLengths(atomTargets);
             topologies[i]->matchDefaultBondAngles(atomTargets);
+            topologies[i]->matchDefaultDirections(atomTargets);
             topologies[i]->matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
             topologies[i]->matchDefaultTopLevelTransform(atomTargets);
             topologies[i]->matchDefaultConfiguration(atomTargets, SimTK::Compound::Match_Exact, true, 150.0);
