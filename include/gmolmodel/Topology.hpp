@@ -48,6 +48,8 @@ public:
     /** Set atoms Molmodel types (Compound::SingleAtom derived) based on
      * their valence **/
      void SetGmolAtomsMolmodelTypes();
+    void SetGmolAtomsMolmodelTypesTrial();
+
 
     /** Reads data from a specific reader (readAmberInput for now) object **/
     void loadAtomAndBondInfoFromReader(readAmberInput *amberReader);

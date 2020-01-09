@@ -138,6 +138,70 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 
 /** Set atoms Molmodel types (Compound::SingleAtom derived) based on
  * their valence **/
+void Topology::SetGmolAtomsMolmodelTypesTrial(){
+
+    // Set Gmolmodel name and element and inboard length
+    for(int i = 0; i < (natoms); i++) {
+        if(toupper(bAtomList[i].elem) == 'H'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom( bAtomList[i].name, Element( 1, "Hydrogen", "H", bAtomList[i].getMass()) );
+            bAtomList[i].setAtomicNumber(1);
+        }else if(toupper(bAtomList[i].elem) == 'O'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom(bAtomList[i].name, Element(8, "Oxygen", "O", bAtomList[i].getMass()));
+            bAtomList[i].setAtomicNumber(8);
+        }else if(toupper(bAtomList[i].elem) == 'F'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
+            bAtomList[i].setAtomicNumber(9);
+        }else if(toupper(bAtomList[i].elem) == 'I'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
+            bAtomList[i].setAtomicNumber(53);
+        }else if(toupper(bAtomList[i].elem) == 'N'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
+            bAtomList[i].setAtomicNumber(7);
+        }else if(toupper(bAtomList[i].elem) == 'C'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
+            bAtomList[i].setAtomicNumber(6);
+        }else if(toupper(bAtomList[i].elem) == 'S'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
+            bAtomList[i].setAtomicNumber(16);
+        }else if(toupper(bAtomList[i].elem) == 'P'){
+            bAtomList[i].bAtomType = new
+                    Compound::SingleAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
+            bAtomList[i].setAtomicNumber(15);
+        }
+
+    }
+
+    Angle TetrahedralAngle = 109.47 * Deg2Rad;
+    for(int i = 0; i < (natoms); i++) {
+        (bAtomList[i].bAtomType)->setCompoundName("SingleAtom");
+        // Add BondCenters
+        //(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond1", bAtomList[i].name, 0, 0);
+        (bAtomList[i].bAtomType)->addFirstBondCenter("bond1", bAtomList[i].name);
+
+        if(bAtomList[i].nbonds > 1){
+            //(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond2", bAtomList[i].name, TetrahedralAngle, 0);
+            (bAtomList[i].bAtomType)->addSecondBondCenter("bond2", bAtomList[i].name, TetrahedralAngle);
+        }
+        if(bAtomList[i].nbonds > 2){
+            (bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond3", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
+        }
+        if(bAtomList[i].nbonds > 3){
+            (bAtomList[i].bAtomType)->addRightHandedBondCenter("bond4", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
+        }
+
+        // Set the inboard BondCenter
+        (bAtomList[i].bAtomType)->setInboardBondCenter("bond1");
+        (bAtomList[i].bAtomType)->setDefaultInboardBondLength(0.19);
+    }
+}
+
 void Topology::SetGmolAtomsMolmodelTypes()
 {
     // ---------------------------------------------

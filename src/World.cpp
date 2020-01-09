@@ -205,7 +205,8 @@ void World::AddMolecule(
 
     // Set atoms Molmodel types (Compound::SingleAtom derived) based on
     // their valence
-    (topologies.back())->SetGmolAtomsMolmodelTypes();
+    //(topologies.back())->SetGmolAtomsMolmodelTypes();
+    (topologies.back())->SetGmolAtomsMolmodelTypesTrial();
 
     // Add parameters from amberReader
     (topologies.back())->bAddAllParams(amberReader, *forceField);
