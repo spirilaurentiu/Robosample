@@ -182,19 +182,23 @@ void Topology::SetGmolAtomsMolmodelTypesTrial(){
     for(int i = 0; i < (natoms); i++) {
         (bAtomList[i].bAtomType)->setCompoundName("SingleAtom");
         // Add BondCenters
-        //(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond1", bAtomList[i].name, 0, 0);
-        (bAtomList[i].bAtomType)->addFirstBondCenter("bond1", bAtomList[i].name);
+        if(bAtomList[i].nbonds == 1){
+            (bAtomList[i].bAtomType)->addFirstBondCenter("bond1", bAtomList[i].name);
+        }else{
+            //(bAtomList[i].bAtomType)->addFirstTwoBondCenters("bond1", "bond2", bAtomList[i].name, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
+            (bAtomList[i].bAtomType)->addFirstTwoBondCenters("bond1", "bond2", bAtomList[i].name, UnitVec3(0.866025, 0.0, -0.5), UnitVec3(0.0, 0.0, 1.0));
+            if(bAtomList[i].nbonds > 2){
+                (bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond3", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
+            }
+            if(bAtomList[i].nbonds > 3){
+                (bAtomList[i].bAtomType)->addRightHandedBondCenter("bond4", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
+            }
+        }
 
-        if(bAtomList[i].nbonds > 1){
+/*        if(bAtomList[i].nbonds > 1){
             //(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond2", bAtomList[i].name, TetrahedralAngle, 0);
             (bAtomList[i].bAtomType)->addSecondBondCenter("bond2", bAtomList[i].name, TetrahedralAngle);
-        }
-        if(bAtomList[i].nbonds > 2){
-            (bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond3", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
-        }
-        if(bAtomList[i].nbonds > 3){
-            (bAtomList[i].bAtomType)->addRightHandedBondCenter("bond4", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
-        }
+        }*/
 
         // Set the inboard BondCenter
         (bAtomList[i].bAtomType)->setInboardBondCenter("bond1");
