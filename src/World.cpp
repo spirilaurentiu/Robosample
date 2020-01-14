@@ -570,7 +570,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
         // Fully flexible regimen. realizeTopology is not needed
         if(topologies[i]->getRegimen().at(0) == 'I'){
-            //std::cout << "setAtomsLoc World IC" << std::endl << std::flush;
+            std::cout << "setAtomsLoc World IC" << std::endl << std::flush;
 
             // Create atomTargets
             std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
@@ -620,7 +620,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
         //}else if((topologies[i]->getRegimen() == "TD") || (topologies[i]->getRegimen() == "RB")){
         }else{
-            //std::cout << "setAtomsLoc World TD" << std::endl << std::flush;
+            std::cout << "setAtomsLoc World TD" << std::endl << std::flush;
             // Create atomTargets
             std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
             std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > currentTopology = otherWorldsAtomsLocations[i];
