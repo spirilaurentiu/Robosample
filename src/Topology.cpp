@@ -1422,9 +1422,9 @@ void Topology::loadMobodsRelatedMaps(void){
         // Map mbx2aIx contains only atoms at the origin of mobods
         SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
 
-        std::cout << "Topology::loadMobodsRelatedMaps atom_number atomIndex mbx loc "
-            << i << " " << (bAtomList[i]).atomIndex << " " << mbx
-            << " " << getAtomLocationInMobilizedBodyFrame(aIx) << std::endl;
+        //std::cout << "Topology::loadMobodsRelatedMaps atom_number atomIndex mbx loc "
+         //   << i << " " << (bAtomList[i]).atomIndex << " " << mbx
+         //   << " " << getAtomLocationInMobilizedBodyFrame(aIx) << std::endl;
 
         //std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
         //        pairToBeInserted(mbx, aIx);

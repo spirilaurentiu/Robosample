@@ -587,7 +587,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
         // Fully flexible regimen. realizeTopology is not needed
         if(topologies[i]->getRegimen().at(0) == 'I'){
-            std::cout << "setAtomsLoc World IC" << std::endl << std::flush;
+            //std::cout << "setAtomsLoc World IC" << std::endl << std::flush;
 
             // Create atomTargets
             std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
@@ -637,7 +637,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
         //}else if((topologies[i]->getRegimen() == "TD") || (topologies[i]->getRegimen() == "RB")){
         }else{
-            std::cout << "setAtomsLoc World TD" << std::endl << std::flush;
+            //std::cout << "setAtomsLoc World TD" << std::endl << std::flush;
             // Create atomTargets
             std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
             std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > currentTopology = otherWorldsAtomsLocations[i];
@@ -788,7 +788,6 @@ SimTK::State& World::setAtomsLocationsInGround(
             }
 
             // Set X_PF and Q
-            (topologies[i])->printMaps();
             for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
                 SimTK::MobilizedBody &mobod = matter->updMobilizedBody(mbx);
 
@@ -797,7 +796,7 @@ SimTK::State& World::setAtomsLocationsInGround(
                 SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
                 SimTK::Compound::AtomIndex parentAIx = topologies[i]->getMbx2aIx()[parentMbx];
                 SimTK::Compound::AtomIndex aIx = topologies[i]->getMbx2aIx()[mbx];
-                std::cout << "mbx aIx parentAIx " << mbx << " " << aIx << " " << parentAIx << std::endl;
+                //std::cout << "mbx aIx parentAIx " << mbx << " " << aIx << " " << parentAIx << std::endl;
 
                 if((!aIx.isValid()) && (!parentAIx.isValid())){
                     ;
