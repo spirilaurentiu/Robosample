@@ -40,7 +40,7 @@ public:
 
     /** Load molecules based on loaded filenames **/
     void AddMolecules(std::vector<std::string> argRoots);
-    void modelTopologies();
+    void modelTopologies(std::string GroundToCompoundMobilizerType = "Cartesian");
 
     void realizeTopology();
 
@@ -173,6 +173,7 @@ private:
     std::vector<std::vector<std::string>> rbSpecsFNs;
     std::vector<std::vector<std::string>> flexSpecsFNs;
     std::vector<std::vector<std::string>> regimens;
+    std::string rootMobility;
 
     // Simulation parameters
     int nofRounds;

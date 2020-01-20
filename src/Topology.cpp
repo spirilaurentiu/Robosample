@@ -979,7 +979,14 @@ bSpecificAtom * Topology::getAtomByName(std::string name) const{assert(!"Not imp
 std::vector<bSpecificAtom *> Topology::getNeighbours(int) const{assert(!"Not implemented.");}
 
 /** **/
-bBond * Topology::getBond(int, int) const{assert(!"Not implemented.");}
+const bBond& Topology::getBond(int a1, int a2) const
+{
+    for(int i = 0; i < nbonds; i++){
+        if( (bonds[i]).isThisMe(a1, a2) ){
+            return bonds[i];
+        }
+    }
+}
 
 /** Get bond order. **/
 int Topology::getBondOrder(int, int) const{assert(!"Not implemented.");}
@@ -1375,7 +1382,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                                     setBondMobility(BondMobility::BallM,
                                                     GmolBond2bondIx.at(i));
                                     break;
-                                }else if(lineWords[2] == "Rigid"){
+                                }else if((lineWords[2] == "Rigid") || (lineWords[2] == "Weld")){
                                     bonds[i].setBondMobility(BondMobility::Rigid);
                                     setBondMobility(BondMobility::Rigid,
                                                     GmolBond2bondIx.at(i));
@@ -1408,17 +1415,25 @@ void Topology::loadMobodsRelatedMaps(void){
 
     // Iterate through atoms and get their MobilizedBodyIndeces
     //for (SimTK::Compound::AtomIndex aIx(bAtomList[0].atomIdex); aIx < getNumAtoms(); ++aIx){
-    for (unsigned int i = 0; i < getNumAtoms(); ++i){
-	SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
-        std::cout << "Topology::loadMobodsRelatedMaps atomIndex for atom " << i << " = " << (bAtomList[i]).atomIndex << std::endl;
-	
+    for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+        SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+
+
         // Map mbx2aIx contains only atoms at the origin of mobods
         SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
+
+        std::cout << "Topology::loadMobodsRelatedMaps atom_number atomIndex mbx loc "
+            << i << " " << (bAtomList[i]).atomIndex << " " << mbx
+            << " " << getAtomLocationInMobilizedBodyFrame(aIx) << std::endl;
+
         //std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
         //        pairToBeInserted(mbx, aIx);
-        mbx2aIx.insert(
+        if (getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
+            mbx2aIx.insert(
                 std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex>
                 (mbx, aIx));
+            std::cout << "inserted" << std::endl;
+        }
 
         // Map aIx is redundant in MobilizedBodyIndeces
         aIx2mbx.insert(

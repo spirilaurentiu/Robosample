@@ -113,8 +113,7 @@ bool bBond::isRigid(void){
 }
 */
 
-SimTK::BondMobility::Mobility bBond::getBondMobility(void)
-{
+const SimTK::BondMobility::Mobility bBond::getBondMobility() const {
     return mobility;
 }
 
@@ -174,7 +173,7 @@ void bBond::setAsFirst(void)
 }
 
 // Check if this bond contains the arguments. If they are swapped return -1
-int bBond::isThisMe(int argFirst, int argSecond)
+int bBond::isThisMe(int argFirst, int argSecond) const
 {
     if( (argFirst == this->i) && (argSecond == this->j) ){
         return 1;

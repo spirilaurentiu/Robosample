@@ -155,9 +155,9 @@ int main(int argc, char **argv)
         (context.updWorld(worldIx))->realizeTopology();
     }
 
-//TODO    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-//        (context.updWorld(worldIx))->loadMobodsRelatedMaps();
-//    }
+/*    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+        (context.updWorld(worldIx))->loadMobodsRelatedMaps();
+    }*/
     // END MULMOL
     
 
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
     context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
     // Link the Compounds to Simbody System for all Worlds
-    context.modelTopologies();
+    context.modelTopologies(setupReader.get("ROOT_MOBILITY")[0]);
 
     // Add Fixman torque (Additional ForceSubsystem) if required
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
@@ -178,6 +178,9 @@ int main(int argc, char **argv)
             context.addFixmanTorque(worldIx);
         }
     }
+
+
+
 /*
     // Set worlds force field scale factors
     for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
@@ -207,7 +210,7 @@ int main(int argc, char **argv)
     // Realize topology for all the Worlds
     context.realizeTopology();
 
-    // AddAdd samplers to the worlds
+   // AddAdd samplers to the worlds
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
         context.addSampler(worldIx, HMC);
     }
@@ -376,6 +379,11 @@ int main(int argc, char **argv)
 
     // Realize topology for all the Worlds
     context.realizeTopology();
+
+    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+        (context.updWorld(worldIx))->loadMobodsRelatedMaps();
+    }
+
 
     // -- Run --
     if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {

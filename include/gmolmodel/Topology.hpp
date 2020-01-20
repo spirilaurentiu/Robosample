@@ -186,7 +186,7 @@ public:
     std::vector<bSpecificAtom *> getNeighbours(int) const;
 
     /** **/
-    bBond * getBond(int, int) const;
+    const bBond& getBond(int, int) const;
 
     /** Get bond order. **/
     int getBondOrder(int, int) const;

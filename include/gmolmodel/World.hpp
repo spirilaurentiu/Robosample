@@ -85,7 +85,7 @@ public:
  
     /** Calls CompoundSystem.modelCompounds and realizes Topology 
     To be called after loading all Compounds. **/
-    void ModelTopologies(bool useFixmanTorque = false);
+    void modelTopologies(std::string GroundToCompoundMobilizerType);
 
     const SimTK::State& realizeTopology(void);
 
@@ -237,6 +237,7 @@ public:
     /** Molecules (topologies<-Compounds) objects **/
     //std::vector<bMoleculeReader *> moleculeReaders;
     std::vector<Topology *> topologies;
+    std::string rootMobility;
 
     /** Vectors of Cartesian coordinates **/
     std::vector<SimTK::Real> Xs;

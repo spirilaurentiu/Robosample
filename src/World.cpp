@@ -251,21 +251,28 @@ int World::getNofMolecules(void)
 /** Calls CompoundSystem.modelOneCompound which links the Compounds to the
  * Simbody subsystems and realizes Topology. To be called after setting all
  * Compounds properties. **/
-void World::ModelTopologies(bool useFixmanTorqueOpt)
+void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 {
     // Model the Compounds one by one in case we want to attach different types
     // of Mobilizers to the Ground in the feature.
     for ( unsigned int i = 0; i < this->topologies.size(); i++){
-        SimTK::String GroundToCompoundMobilizerType = "Free";
+        //SimTK::String GroundToCompoundMobilizerType = "Free";
         //SimTK::String GroundToCompoundMobilizerType = "Weld";
+        //SimTK::String GroundToCompoundMobilizerType = "Cartesian";
+
+
+        this->rootMobility = GroundToCompoundMobilizerType;
+
+        std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
+                 << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
+
         compoundSystem->modelOneCompound(
                 SimTK::CompoundSystem::CompoundIndex(i),
                 GroundToCompoundMobilizerType);
 
-    	std::cout<<"World::ModelTopologies CompoundSystem modelCompound " << i <<std::endl;
+
         // Realize Topology
         //compoundSystem->realizeTopology(); // restore MULMOL
-
         //((this->topologies)[i])->loadMobodsRelatedMaps(); // restore MULMOL
 
     }
@@ -278,16 +285,19 @@ void World::ModelTopologies(bool useFixmanTorqueOpt)
 const SimTK::State& World::realizeTopology(void)
 {
         const SimTK::State& returnState = compoundSystem->realizeTopology();
-	//for ( unsigned int i = 0; i < this->topologies.size(); i++){
-        //	((this->topologies)[i])->loadMobodsRelatedMaps();
-	//}
+
+	    //for ( unsigned int i = 0; i < this->topologies.size(); i++){
+	    //    ((this->topologies)[i])->loadMobodsRelatedMaps();
+	    //}
+
 	return returnState;
 }
 
 void World::loadMobodsRelatedMaps(void)
 {
 	for ( unsigned int i = 0; i < this->topologies.size(); i++){
-        	((this->topologies)[i])->loadMobodsRelatedMaps();
+	    ((this->topologies)[i])->loadMobodsRelatedMaps();
+        ((this->topologies)[i])->printMaps();
 	}
 }
 
@@ -681,6 +691,8 @@ SimTK::State& World::setAtomsLocationsInGround(
                     const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
                     SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+                    SimTK::Compound::AtomIndex parentAIx = topologies[i]->getMbx2aIx()[parentMbx];
+
                     if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
                         // Find the true CHEMICAL parent
                         bSpecificAtom *originSpecAtom = nullptr;
@@ -776,42 +788,88 @@ SimTK::State& World::setAtomsLocationsInGround(
             }
 
             // Set X_PF and Q
-            for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-                SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+            (topologies[i])->printMaps();
+            for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
+                SimTK::MobilizedBody &mobod = matter->updMobilizedBody(mbx);
 
-                if(mobod.getNumU(someState) == 6){ // Free mobilizer
-                    ((SimTK::MobilizedBody::Free&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                // Get body, parentBody, parentAtom
+                const SimTK::MobilizedBody &parentMobod = mobod.getParentMobilizedBody();
+                SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+                SimTK::Compound::AtomIndex parentAIx = topologies[i]->getMbx2aIx()[parentMbx];
+                SimTK::Compound::AtomIndex aIx = topologies[i]->getMbx2aIx()[mbx];
+                std::cout << "mbx aIx parentAIx " << mbx << " " << aIx << " " << parentAIx << std::endl;
 
-                }else if(mobod.getNumU(someState) == 0){ // Weld mobilizer
-                    ((SimTK::MobilizedBody::Weld&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Weld&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
-                }else if(mobod.getNumU(someState) == 1){ // Pin mobilizer
-                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
-                    ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(0); // CHEM
-                    //((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]); // no chem
-                }else if(mobod.getNumU(someState) == 2){ // Pin mobilizer
-                    ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
-                    ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ(Vec2(0, 0)); // CHEM
-                    //((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ( // no chem
-                    // inboardBondDihedralAngles[int(mbx)], inboardBondLengths[int(mbx)]); // no chem
-                } else if(mobod.getNumU(someState) == 3){ // Ball mobilizer
-                    //std::cout << "mass props" << mobod.getBodyMassProperties(someState) << std::endl;
-                    //if(mobod.getBodyMassProperties(someState).getUnitInertia().getMoments() == 0){ // Cartesian
-		    //	std::cout << "atom in mobod " << (topologies[i]->getMbx2aIx())[mbx] << std::endl;;
-                    //    //mobod.setQ();
-                    //}else{
-                        ((SimTK::MobilizedBody::Ball&)mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
-                        ((SimTK::MobilizedBody::Ball&)mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
-    
+                if((!aIx.isValid()) && (!parentAIx.isValid())){
+                    ;
+                }else if((aIx.isValid()) && (!parentAIx.isValid())){ // Root atom
+                    ((SimTK::MobilizedBody::Translation &) mobod).setDefaultInboardFrame(P_X_F[1]);
+                    ((SimTK::MobilizedBody::Translation &) mobod).setDefaultOutboardFrame(Transform()); // NEWMOB
+                }else{
+
+                    int aNumber, parentNumber;
+                    aNumber = (topologies[i]->updAtomByAtomIx(aIx))->getNumber();
+                    parentNumber = (topologies[i]->updAtomByAtomIx(parentAIx))->getNumber();
+
+                    SimTK::BondMobility::Mobility mobility;
+                    mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();
+
+                    //if(mobod.getNumU(someState) == 6){ // Free mobilizer
+                    if (mobility == SimTK::BondMobility::Free) {
+                        ((SimTK::MobilizedBody::Free &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Free &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // NEWMOB
+
+                        //}else if(mobod.getNumU(someState) == 0){ // Weld mobilizer
+                    } else if (mobility == SimTK::BondMobility::Rigid) {
+                        ((SimTK::MobilizedBody::Weld &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Weld &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+
+                        //}else if(mobod.getNumU(someState) == 1){ // Pin mobilizer
+                    } else if (mobility == SimTK::BondMobility::Torsion) {
+                        ((SimTK::MobilizedBody::Pin &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Pin &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+                        ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(0); // CHEM
+                        //((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]); // no chem
+
+                        //}else if(mobod.getNumU(someState) == 2) { // Pin mobilizer
+                    } else if (mobility == SimTK::BondMobility::Translation) {
+                        ((SimTK::MobilizedBody::Translation &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Translation &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+                        ((SimTK::MobilizedBody::Translation &) mobod).setDefaultQ(SimTK::Vec3(0)); // CHEM
+
+                    } else if (mobility == SimTK::BondMobility::Cylinder) {
+                        ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+                        ((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ(Vec2(0, 0)); // CHEM
+                        //((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ( // no chem
+                        // inboardBondDihedralAngles[int(mbx)], inboardBondLengths[int(mbx)]); // no chem
+
+                        //} else if(mobod.getNumU(someState) == 3) { // Ball mobilizer
+                    } else if (mobility == SimTK::BondMobility::UniversalM) {
+                        ((SimTK::MobilizedBody::Universal &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Universal &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+
+                    } else if (mobility == SimTK::BondMobility::BallM) {
+                        //std::cout << "mass props" << mobod.getBodyMassProperties(someState) << std::endl;
+                        //if(mobod.getBodyMassProperties(someState).getUnitInertia().getMoments() == 0){ // Cartesian
+                        //	std::cout << "atom in mobod " << (topologies[i]->getMbx2aIx())[mbx] << std::endl;;
+                        //    //mobod.setQ();
+                        //}else{
+                        ((SimTK::MobilizedBody::Ball &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::Ball &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
+
                         SimTK::Rotation R_FM;
                         R_FM.setRotationFromAngleAboutX(0.0);
                         R_FM.setRotationFromAngleAboutY(0.0);
                         //R_FM.setRotationFromAngleAboutZ(inboardBondDihedralAngles[int(mbx)]); // no chem
                         R_FM.setRotationFromAngleAboutZ(0); // CHEM
-                        ((SimTK::MobilizedBody::Ball&)mobod).setDefaultRotation(R_FM);
-                    //}
+                        ((SimTK::MobilizedBody::Ball &) mobod).setDefaultRotation(R_FM);
+                        //}
+                    } else if (mobility == SimTK::BondMobility::Spherical) {
+                        ((SimTK::MobilizedBody::SphericalCoords &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        ((SimTK::MobilizedBody::SphericalCoords &) mobod).setDefaultOutboardFrame(
+                                B_X_M[int(mbx)]); // CHEM
+                        ((SimTK::MobilizedBody::SphericalCoords &) mobod).setDefaultQ(SimTK::Vec3(0, 0, 0));
+                    }
                 }
             }
 
