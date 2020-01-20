@@ -419,7 +419,8 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 
 		std::cout << "deta" << someState.getNU() << " ";
     		PrintDetailedEnergyInfo(someState);
-
+	} // */ 
+            //  /*
 		    SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
 		    int a1, a2, a3, a4, a5;
 		    //DIHEDRAL 4 6 8 14 6 8 14 16
@@ -438,8 +439,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 		    std::cout << " "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
 		    std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
 		std::cout << std::endl;
-
-	}*/ 
+	    // */
 	// END PRINT EVERY STEP
 
 
@@ -544,6 +544,7 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
+             //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
              acc = true;
              std::cout << " acc" << std::endl;
              setSetTVector(someState);

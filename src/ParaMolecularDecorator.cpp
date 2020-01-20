@@ -111,7 +111,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
         SimTK::Vec3 p_GS = X_GB * p_BS;
         SimTK::Transform X_BD(Rotation(), p_GS);
 
-        Real shrink = 0.25;
+        Real shrink = 0.3;
         //Real opacity = dumm->getAtomElement(daIx)==1?0.5:1;
         Real opacity = 0.5;
         Real r = dumm->getAtomRadius(daIx);
@@ -127,18 +127,18 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 
         // Text
-        std::ostringstream streamObj;
-        streamObj << std::fixed;
-        streamObj << std::setprecision(3);
-        streamObj //<< X_BD.p()[0] << ' ' << X_BD.p()[1] << ' ' 
-            << X_BD.p()[2];
+        //std::ostringstream streamObj;
+        //streamObj << std::fixed;
+        //streamObj << std::setprecision(3);
+        //streamObj //<< X_BD.p()[0] << ' ' << X_BD.p()[1] << ' ' 
+        //    << X_BD.p()[2];
 
-        std::string text1 = streamObj.str();
-        DecorativeText decorativeText1(text1);
-        decorativeText1.setTransform(X_BD);
-        decorativeText1.setScaleFactors(SimTK::Vec3(0.02, 0.02, 0.02));
-        decorativeText1.setColor(SimTK::Vec3(1, 0, 1));
-        geometry.push_back(decorativeText1);
+        //std::string text1 = streamObj.str();
+        //DecorativeText decorativeText1(text1);
+        //decorativeText1.setTransform(X_BD);
+        //decorativeText1.setScaleFactors(SimTK::Vec3(0.02, 0.02, 0.02));
+        //decorativeText1.setColor(SimTK::Vec3(1, 0, 1));
+        //geometry.push_back(decorativeText1);
 
     }
 // */

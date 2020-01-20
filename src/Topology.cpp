@@ -1234,12 +1234,12 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
     
     if(argRegimen.at(0) == 'I'){
         for (unsigned int r=0 ; r<getNumBonds(); r++){
-            /*setBondMobility(BondMobility::Free, Compound::BondIndex(r));
+            setBondMobility(BondMobility::Free, Compound::BondIndex(r));
             bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
-                    BondMobility::Free);*/ //OLDMOB
-            setBondMobility(BondMobility::Translation, Compound::BondIndex(r));
+                    BondMobility::Free); //OLDMOB
+            /*setBondMobility(BondMobility::Translation, Compound::BondIndex(r));
             bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
-                    BondMobility::Translation); //NEWMOB
+                    BondMobility::Translation); //NEWMOB*/
         }
     }else if(argRegimen == "TD") {
         for (unsigned int r = 0; r < getNumBonds(); r++) {
@@ -1264,9 +1264,9 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                 bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
                         BondMobility::Torsion);
             }else{
-                setBondMobility(BondMobility::Ball, Compound::BondIndex(r));
+                setBondMobility(BondMobility::BallF, Compound::BondIndex(r));
                 bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
-                        BondMobility::Ball);
+                        BondMobility::BallF);
             }
 
             if(bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].isRingClosing()){
@@ -1330,6 +1330,16 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                                     setBondMobility(BondMobility::FreeLine,
                                                     GmolBond2bondIx.at(i));
                                     break;
+                                }else if(lineWords[2] == "LineOrientationF") {
+                                    bonds[i].setBondMobility(BondMobility::LineOrientationF);
+                                    setBondMobility(BondMobility::LineOrientationF,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
+                                }else if(lineWords[2] == "LineOrientationM") {
+                                    bonds[i].setBondMobility(BondMobility::LineOrientationM);
+                                    setBondMobility(BondMobility::LineOrientationM,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
                                 }else if((lineWords[2] == "Translation") || (lineWords[2] == "Cartesian")) {
                                     bonds[i].setBondMobility(BondMobility::Translation);
                                     setBondMobility(BondMobility::Translation,
@@ -1345,9 +1355,24 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                                     setBondMobility(BondMobility::Cylinder,
                                                     GmolBond2bondIx.at(i));
                                     break;
-                                }else if(lineWords[2] == "Ball") {
-                                    bonds[i].setBondMobility(BondMobility::Ball);
-                                    setBondMobility(BondMobility::Ball,
+                                }else if(lineWords[2] == "UniversalM") {
+                                    bonds[i].setBondMobility(BondMobility::UniversalM);
+                                    setBondMobility(BondMobility::UniversalM,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
+                                }else if(lineWords[2] == "Spherical") {
+                                    bonds[i].setBondMobility(BondMobility::Spherical);
+                                    setBondMobility(BondMobility::Spherical,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
+                                }else if(lineWords[2] == "BallF") {
+                                    bonds[i].setBondMobility(BondMobility::BallF);
+                                    setBondMobility(BondMobility::BallF,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
+                                }else if(lineWords[2] == "BallM") {
+                                    bonds[i].setBondMobility(BondMobility::BallM);
+                                    setBondMobility(BondMobility::BallM,
                                                     GmolBond2bondIx.at(i));
                                     break;
                                 }else if(lineWords[2] == "Rigid"){
