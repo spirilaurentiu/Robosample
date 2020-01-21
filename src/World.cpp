@@ -664,6 +664,10 @@ SimTK::State& World::setAtomsLocationsInGround(
             SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // Moves rotation from X to Z
             SimTK::Transform P_X_F[matter->getNumBodies()]; // related to X_PFs
             SimTK::Transform B_X_M[matter->getNumBodies()]; // related to X_BMs
+
+            SimTK::Transform univP_X_F[matter->getNumBodies()]; // related to X_PFs
+            SimTK::Transform univB_X_M[matter->getNumBodies()]; // related to X_BMs
+
             // SimTK::Transform T_X_root[matter->getNumBodies()]; // related to CompoundAtom.frameInMobilizedBodyFrame s
             SimTK::Transform T_X_Proot; // NEW
             SimTK::Transform root_X_M0[matter->getNumBodies()];
@@ -746,6 +750,11 @@ SimTK::State& World::setAtomsLocationsInGround(
 
                         B_X_M[int(mbx)] = X_parentBC_childBC * M_X_pin;
                         P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)];
+
+                        Transform universalPin = Rotation(-90*Deg2Rad, XAxis); // Move rotation axis Y to Z
+                        univB_X_M[int(mbx)] = X_parentBC_childBC * universalPin;
+                        univP_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)];
+
                         /////////////////////////////////
 
                     } //END if parent not Ground
@@ -797,18 +806,38 @@ SimTK::State& World::setAtomsLocationsInGround(
                 SimTK::Compound::AtomIndex parentAIx = topologies[i]->getMbx2aIx()[parentMbx];
                 SimTK::Compound::AtomIndex aIx = topologies[i]->getMbx2aIx()[mbx];
                 //std::cout << "mbx aIx parentAIx " << mbx << " " << aIx << " " << parentAIx << std::endl;
+                //std::cout << "joint type name " << mobod.set << std::endl;
+
+                // Search parentMobod for atoms linked to atoms in mobod
+
+                //Search bonds for mobod parentMobod link
+                //for(std::vector<bBond *>::iterator bondsInvolvedIter = (topologies[i]->bonds).begin();
+                //    bondsInvolvedIter != (topologies[i]->bonds).end(); ++bondsInvolvedIter) {
+                //
+                //}
+
+                // Search neighbors attached
+                //std::vector<bSpecificAtom *> neighbors = (topologies[i]->updAtomByAtomIx(aIx))->neighbors; //getAtomMobilizedBodyIndex()
+                //for(std::vector<bSpecificAtom *>::iterator nI = neighbors.begin(); nI != neighbors.end(); ++nI){
+                //    SimTK::Compound::AtomIndex nIx = (*nI)->getCompoundAtomIndex();
+                //}
+
 
                 if((!aIx.isValid()) && (!parentAIx.isValid())){
                     ;
                 }else if((aIx.isValid()) && (!parentAIx.isValid())){ // Root atom
-                    ((SimTK::MobilizedBody::Translation &) mobod).setDefaultInboardFrame(P_X_F[1]);
-                    ((SimTK::MobilizedBody::Translation &) mobod).setDefaultOutboardFrame(Transform()); // NEWMOB
+/*                    ((SimTK::MobilizedBody::Translation &) mobod).setDefaultInboardFrame(P_X_F[1]);
+                    ((SimTK::MobilizedBody::Translation &) mobod).setDefaultOutboardFrame(Transform()); // NEWMOB*/
+                    mobod.setDefaultInboardFrame(P_X_F[1]);
+                    mobod.setDefaultOutboardFrame(Transform());
                 }else{
+                    mobod.setDefaultInboardFrame(P_X_F[int(mbx)]);
+                    mobod.setDefaultOutboardFrame(B_X_M[int(mbx)]);
 
                     int aNumber, parentNumber;
                     aNumber = (topologies[i]->updAtomByAtomIx(aIx))->getNumber();
                     parentNumber = (topologies[i]->updAtomByAtomIx(parentAIx))->getNumber();
-
+/*
                     SimTK::BondMobility::Mobility mobility;
                     mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();
 
@@ -842,7 +871,7 @@ SimTK::State& World::setAtomsLocationsInGround(
                         //((SimTK::MobilizedBody::Cylinder &) mobod).setDefaultQ( // no chem
                         // inboardBondDihedralAngles[int(mbx)], inboardBondLengths[int(mbx)]); // no chem
 
-                        //} else if(mobod.getNumU(someState) == 3) { // Ball mobilizer
+                        //} else if(mobod.getNumU(someState) == 3) { // Universal mobilizer
                     } else if (mobility == SimTK::BondMobility::UniversalM) {
                         ((SimTK::MobilizedBody::Universal &) mobod).setDefaultInboardFrame(P_X_F[int(mbx)]);
                         ((SimTK::MobilizedBody::Universal &) mobod).setDefaultOutboardFrame(B_X_M[int(mbx)]); // CHEM
@@ -868,7 +897,7 @@ SimTK::State& World::setAtomsLocationsInGround(
                         ((SimTK::MobilizedBody::SphericalCoords &) mobod).setDefaultOutboardFrame(
                                 B_X_M[int(mbx)]); // CHEM
                         ((SimTK::MobilizedBody::SphericalCoords &) mobod).setDefaultQ(SimTK::Vec3(0, 0, 0));
-                    }
+                    }*/
                 }
             }
 
