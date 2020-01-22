@@ -442,21 +442,20 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
     //}
 // */
 
- ///*
     // Draw Rigid bodies
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-        //const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        //const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 
-        //SimTK::Transform G_X_B = mobod.getBodyTransform(someState);
+        SimTK::Transform G_X_B = mobod.getBodyTransform(someState);
         
-        // Bricks
-/*        DecorativeBrick decorativeBrick(SimTK::Vec3(0.03, 0.03, 0.03));
-        decorativeBrick.setTransform(G_X_B);
-        //decorativeBrick.setColor(SimTK::Vec3(10, 0, 0));
-        decorativeBrick.setOpacity(0.5);
-        geometry.push_back( decorativeBrick );
-
+//        // Bricks
+//        DecorativeBrick decorativeBrick(SimTK::Vec3(0.03, 0.03, 0.03));
+//        decorativeBrick.setTransform(G_X_B);
+//        //decorativeBrick.setColor(SimTK::Vec3(10, 0, 0));
+//        decorativeBrick.setOpacity(0.5);
+//        geometry.push_back( decorativeBrick );
+//
         std::ostringstream streamObjB;
         streamObjB << std::string("B") + std::to_string(int(mbx)); 
         std::string textB = streamObjB.str();
@@ -473,7 +472,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
         decorativeFrame.setLineThickness(4); 
         decorativeFrame.setColor(SimTK::Vec3(0, 0, 0));
         decorativeFrame.setRepresentation(SimTK::DecorativeGeometry::Representation::DrawPoints); 
-        geometry.push_back( decorativeFrame );*/
+        geometry.push_back( decorativeFrame );
 
         if((mbx > 0)){
             SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
@@ -515,10 +514,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             //decorativeSphereM.setTransform(G_X_M);
             //geometry.push_back(decorativeSphereM);
 
-	    ///*
 	        if(mbx > 1) {
-                ///*
-                DecorativeFrame decorativeFrameF;
+                
+/*                DecorativeFrame decorativeFrameF;
                 decorativeFrameF.setTransform(G_X_F);
                 decorativeFrameF.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
                 decorativeFrameF.setLineThickness(4);
@@ -534,7 +532,6 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 decorativeTextF.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
                 decorativeTextF.setColor(SimTK::Vec3(0, 0, 1));
                 geometry.push_back(decorativeTextF);
-                //*/
 
                 DecorativeFrame decorativeFrameB;
                 decorativeFrameB.setTransform(G_X_B);
@@ -558,13 +555,11 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 decorativeTextM.setTransform(G_X_M * textOffsetM);
                 decorativeTextM.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
                 decorativeTextM.setColor(SimTK::Vec3(1, 0, 0));
-                geometry.push_back(decorativeTextM);
+                geometry.push_back(decorativeTextM);*/
             }
-	    //*/
 
-            ///*
             // X_PF, X_BM lines
-            DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
+/*            DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
             decorativeLinePF.setLineThickness(5);
             if(mobod.getNumU(someState) == 3){
                 decorativeLinePF.setColor(SimTK::Vec3(SimTK::Blue));
@@ -607,8 +602,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             }else{
                 decorativeLineBM.setColor(SimTK::Vec3(SimTK::Black));
             }
-            geometry.push_back(decorativeLineBM);
-            // */
+            geometry.push_back(decorativeLineBM);*/
 
 
         }

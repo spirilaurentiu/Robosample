@@ -668,6 +668,9 @@ SimTK::State& World::setAtomsLocationsInGround(
             SimTK::Transform univP_X_F[matter->getNumBodies()]; // related to X_PFs
             SimTK::Transform univB_X_M[matter->getNumBodies()]; // related to X_BMs
 
+            SimTK::Transform anglePinP_X_F[matter->getNumBodies()]; // related to X_PFs
+            SimTK::Transform anglePinB_X_M[matter->getNumBodies()]; // related to X_BMs
+
             // SimTK::Transform T_X_root[matter->getNumBodies()]; // related to CompoundAtom.frameInMobilizedBodyFrame s
             SimTK::Transform T_X_Proot; // NEW
             SimTK::Transform root_X_M0[matter->getNumBodies()];
@@ -751,6 +754,9 @@ SimTK::State& World::setAtomsLocationsInGround(
                         B_X_M[int(mbx)] = X_parentBC_childBC * M_X_pin;
                         P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)];
 
+                        anglePinB_X_M[int(mbx)] = X_parentBC_childBC;
+                        anglePinP_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * anglePinB_X_M[int(mbx)];
+
                         Transform universalPin = Rotation(-90*Deg2Rad, XAxis); // Move rotation axis Y to Z
                         univB_X_M[int(mbx)] = X_parentBC_childBC * universalPin;
                         univP_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)];
@@ -817,10 +823,12 @@ SimTK::State& World::setAtomsLocationsInGround(
                 //}
 
                 // Search neighbors attached
+                bSpecificAtom *atom = topologies[i]->updAtomByAtomIx(aIx);
                 //std::vector<bSpecificAtom *> neighbors = (topologies[i]->updAtomByAtomIx(aIx))->neighbors; //getAtomMobilizedBodyIndex()
                 //for(std::vector<bSpecificAtom *>::iterator nI = neighbors.begin(); nI != neighbors.end(); ++nI){
                 //    SimTK::Compound::AtomIndex nIx = (*nI)->getCompoundAtomIndex();
                 //}
+
 
 
                 if((!aIx.isValid()) && (!parentAIx.isValid())){
@@ -831,12 +839,23 @@ SimTK::State& World::setAtomsLocationsInGround(
                     mobod.setDefaultInboardFrame(P_X_F[1]);
                     mobod.setDefaultOutboardFrame(Transform());
                 }else{
-                    mobod.setDefaultInboardFrame(P_X_F[int(mbx)]);
-                    mobod.setDefaultOutboardFrame(B_X_M[int(mbx)]);
+                    //int aNumber, parentNumber;
+                    //aNumber = (topologies[i]->updAtomByAtomIx(aIx))->getNumber();
+                    //parentNumber = (topologies[i]->updAtomByAtomIx(parentAIx))->getNumber();
+                    //SimTK::BondMobility::Mobility mobility;
+                    //mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();
+                    //if(mobility == SimTK::BondMobility::AnglePin) {
 
-                    int aNumber, parentNumber;
-                    aNumber = (topologies[i]->updAtomByAtomIx(aIx))->getNumber();
-                    parentNumber = (topologies[i]->updAtomByAtomIx(parentAIx))->getNumber();
+                    if((mobod.getNumU(someState) == 1) // Slider, AnglePin or Pin
+                    && ((atom->neighbors).size() == 1)){ // Slider or AnglePin
+                        //std::cout << "mbx aIx " << mbx << " " << aIx << std::endl;
+                        // TODO: doesn't work for slider
+                        mobod.setDefaultInboardFrame(anglePinP_X_F[int(mbx)]);
+                        mobod.setDefaultOutboardFrame(anglePinB_X_M[int(mbx)]);
+                    }else{
+                        mobod.setDefaultInboardFrame(P_X_F[int(mbx)]);
+                        mobod.setDefaultOutboardFrame(B_X_M[int(mbx)]);
+                    }
 /*
                     SimTK::BondMobility::Mobility mobility;
                     mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();

@@ -1357,6 +1357,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
                                     setBondMobility(BondMobility::Torsion,
                                                     GmolBond2bondIx.at(i));
                                     break;
+                                }else if(lineWords[2] == "AnglePin") {
+                                    bonds[i].setBondMobility(BondMobility::AnglePin);
+                                    setBondMobility(BondMobility::AnglePin,
+                                                    GmolBond2bondIx.at(i));
+                                    break;
                                 }else if(lineWords[2] == "Cylinder") {
                                     bonds[i].setBondMobility(BondMobility::Cylinder);
                                     setBondMobility(BondMobility::Cylinder,
