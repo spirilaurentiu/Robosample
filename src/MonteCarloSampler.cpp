@@ -18,6 +18,7 @@ MonteCarloSampler::MonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem,
 {
     TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
     SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+    proposeExceptionCaught = false;
 }
 
 // Destructor
@@ -67,6 +68,7 @@ void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTempe
         setOldLogSineSqrGamma2(0.0);
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }
+    proposeExceptionCaught = false;
 
 }
 
@@ -104,6 +106,7 @@ void MonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real argTem
         setOldLogSineSqrGamma2(0.0);
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }
+    proposeExceptionCaught = false;
 }
 
 void MonteCarloSampler::useFixmanPotential(void)
@@ -464,7 +467,7 @@ bool MonteCarloSampler::update(SimTK::State& someState){
 
     // Apply Metropolis criterion
     assert(!std::isnan(pe_n));
-    if (pe_n < pe_o || rand_no < exp(-(pe_n - pe_o)/RT)){
+    if ((proposeExceptionCaught == false) || (pe_n < pe_o) || (rand_no < exp(-(pe_n - pe_o)/RT))){
         // Accept
         setTVector(someState);
         setOldPE(pe_n);

@@ -166,6 +166,8 @@ protected:
     bool alwaysAccept = false;
 
     int acceptedSteps = 0;
+
+    bool proposeExceptionCaught;
  
 };
 

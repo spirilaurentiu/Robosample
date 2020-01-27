@@ -28,6 +28,7 @@ HamiltonianMonteCarloSampler::HamiltonianMonteCarloSampler(SimTK::CompoundSystem
     this->temperature = 0.0;
     this->boostT = this->temperature;
     MDStepsPerSample = 0;
+    proposeExceptionCaught = false;
 }
 
 /** Destructor **/
@@ -381,7 +382,20 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // IF NOT PRINT EVERY STEP
     // Integrate (propagate trajectory)
     this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+    try {
+        system->realize(someState, SimTK::Stage::Position);
+    }catch(const std::exception&){
+        proposeExceptionCaught = true;
+        std::cout << "Caught Position" << std::endl;
 
+        int i = 0;
+        for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            mobod.setQToFitTransform(someState, SetTVector[i]);
+            i++;
+        }
+        system->realize(someState, SimTK::Stage::Position);
+    }
 	// ELSE PRINT EVERY STEP
 	/*
 	for(int i = 0; i < MDStepsPerSample; i++){
@@ -420,26 +434,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 		std::cout << "deta" << someState.getNU() << " ";
     		PrintDetailedEnergyInfo(someState);
 	} // */ 
-              ///*
-		    SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
-		    int a1, a2, a3, a4, a5;
-		    //DIHEDRAL 4 6 8 14 6 8 14 16
-		    a1 = 16;	
-		    a2 = 14;	
-		    a3 = 0;	
-		    a4 = 6;	
-		    a5 = 8;	
-		    a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
-		    a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
-		    a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
-		    a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
-		    a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
 
-		    //std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
-		    std::cout << " "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
-		    std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
-		std::cout << std::endl;
-	    // */
 	// END PRINT EVERY STEP
 
 
@@ -527,6 +522,7 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
 
     PrintDetailedEnergyInfo(someState);
 
+
     // Decide and get a new sample
     if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
         acc = true;
@@ -542,7 +538,8 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
 
         ++acceptedSteps;
     }else { // Apply Metropolis correction
-        if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
+        if ( (proposeExceptionCaught == false) &&
+                (!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
              //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
              acc = true;
@@ -557,12 +554,50 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
              //setBeta(newBeta);
 
              ++acceptedSteps;
+
+
+
         } else { // Reject
              acc = false;
              std::cout << " nacc" << std::endl;
              assignConfFromSetTVector(someState);
+             proposeExceptionCaught = false;
         }
     }
+
+    ///* // INSTANT GEOMETRY
+    SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
+    int a1, a2, a3, a4, a5;
+    //DIHEDRAL 4 6 8 14 6 8 14 16
+    a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
+    a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
+    a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
+    a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
+    a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
+    a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
+    int distA1, distA2, distA3, distA4;
+    SimTK::Vec3 distA1pos, distA2pos;
+    SimTK::Vec3 distA3pos, distA4pos;
+    distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
+//		    distA1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
+//		    distA2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
+//		    distA3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
+//		    distA4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
+//            std::cout << " dihedral elements"
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a1))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a2))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a3))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a4))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a5))
+//              << std::endl;
+//            std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
+    std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
+    std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
+    //std::cout << " "  << 10 * (distA1pos - distA2pos).norm() ; // Ang
+    //std::cout << " "  << 10 * (distA3pos - distA4pos).norm() ; // Ang
+    std::cout << std::endl;
+    // */
+    // INSTANT GEOMETRY END
 
     ++nofSamples;
     return acc;
@@ -580,6 +615,7 @@ void HamiltonianMonteCarloSampler::setMDStepsPerSample(int mdStepsPerSample) {
 /** Print detailed energy information **/
 void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
 {
+
     std::cout << std::setprecision(5) << std::fixed;
     std::cout << "pe_o " << pe_o << " pe_n " << pe_n
         << " pe_nB " << getPEFromEvaluator(someState)
