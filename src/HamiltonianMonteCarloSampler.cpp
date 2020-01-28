@@ -381,12 +381,12 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 
     // IF NOT PRINT EVERY STEP
     // Integrate (propagate trajectory)
-    this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
     try {
+        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
         system->realize(someState, SimTK::Stage::Position);
     }catch(const std::exception&){
         proposeExceptionCaught = true;
-        std::cout << "Caught Position" << std::endl;
+        //std::cout << "HMC_stepTo_or_realizePosition_threw_exception";
 
         int i = 0;
         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -564,6 +564,8 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
              proposeExceptionCaught = false;
         }
     }
+
+    //sleep(2);
 
     ///* // INSTANT GEOMETRY
     SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
