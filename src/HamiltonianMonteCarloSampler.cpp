@@ -537,7 +537,7 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
         //setBeta(newBeta);
 
         ++acceptedSteps;
-    }else { // Apply Metropolis correction
+    }else{ // Apply Metropolis correction
         if ( (proposeExceptionCaught == false) &&
                 (!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
@@ -554,8 +554,6 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
              //setBeta(newBeta);
 
              ++acceptedSteps;
-
-
 
         } else { // Reject
              acc = false;
