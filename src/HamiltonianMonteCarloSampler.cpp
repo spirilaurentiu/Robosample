@@ -379,11 +379,65 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
                   << " " << dAIx << " " << X_GB * dumm->getAtomStationOnBody(dAIx) << std::endl;
     } // REC BUG*/
 
-    // IF NOT PRINT EVERY STEP
-    // Integrate (propagate trajectory)
     try {
+        // IF NOT PRINT EVERY STEP // Integrate (propagate trajectory)
         this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
         system->realize(someState, SimTK::Stage::Position);
+
+	/* // ELSE PRINT EVERY STEP
+	for(int i = 0; i < MDStepsPerSample; i++){
+		this->timeStepper->stepTo(someState.getTime() + (timestep));
+                system->realize(someState, SimTK::Stage::Position);
+
+                // / * // INSTANT GEOMETRY
+                SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
+                int a1, a2, a3, a4, a5;
+                a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
+                a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
+                a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
+                a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
+                a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
+                a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
+                int distA1, distA2, distA3, distA4;
+                SimTK::Vec3 distA1pos, distA2pos;
+                SimTK::Vec3 distA3pos, distA4pos;
+                distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
+                std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
+                std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
+                std::cout << std::endl;
+                // * / // INSTANT GEOMETRY END
+
+		/ *    if(useFixman){
+		        fix_n = calcFixman(someState); logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+		    }else{
+		        fix_n = 0.0; logSineSqrGamma2_n = 0.0;
+		    }
+		    // Get new kinetic energy
+		    system->realize(someState, SimTK::Stage::Velocity); ke_n = matter->calcKineticEnergy(someState);
+		    // Get new potential energy
+		    if ( getThermostat() == ANDERSEN ){
+		        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
+			    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+		    }
+		    else{
+		        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+		        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+			//detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
+		        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+		    }	
+		    // Calculate total energy
+		    if(useFixman){
+		        etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
+		        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+		    }else{
+		        etot_n = pe_n + ke_n;
+		        etot_proposed = pe_o + ke_proposed;
+		    }
+    		PrintDetailedEnergyInfo(someState); // * /
+	} // */ 
+	// END PRINT EVERY STEP
+
     }catch(const std::exception&){
         proposeExceptionCaught = true;
         //std::cout << "HMC_stepTo_or_realizePosition_threw_exception";
@@ -395,47 +449,9 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
             i++;
         }
         system->realize(someState, SimTK::Stage::Position);
+
+
     }
-	// ELSE PRINT EVERY STEP
-	/*
-	for(int i = 0; i < MDStepsPerSample; i++){
-		this->timeStepper->stepTo(someState.getTime() + (timestep));
-		    if(useFixman){
-		        fix_n = calcFixman(someState); logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-		    }else{
-		        fix_n = 0.0; logSineSqrGamma2_n = 0.0;
-		    }
-		    // Get new kinetic energy
-		    system->realize(someState, SimTK::Stage::Velocity); ke_n = matter->calcKineticEnergy(someState);
-		    //std::cout << " ke after timestepping " << this->ke_n << std::endl;
-		    // Get new potential energy
-		    if ( getThermostat() == ANDERSEN ){
-		        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-		        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-			    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-			    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-		    }
-		    else{
-		        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-		        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-			    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-		        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-		    }
-		
-		    // Calculate total energy
-		    if(useFixman){
-		        etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-		        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
-		    }else{
-		        etot_n = pe_n + ke_n;
-		        etot_proposed = pe_o + ke_proposed;
-		    }
-
-		std::cout << "deta" << someState.getNU() << " ";
-    		PrintDetailedEnergyInfo(someState);
-	} // */ 
-
-	// END PRINT EVERY STEP
 
 
     // TODO: Simulated tempering

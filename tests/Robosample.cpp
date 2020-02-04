@@ -170,7 +170,7 @@ int main(int argc, char **argv)
     context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
     // Link the Compounds to Simbody System for all Worlds
-    context.modelTopologies(setupReader.get("ROOT_MOBILITY")[0]);
+    context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
 
     // Add Fixman torque (Additional ForceSubsystem) if required
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){

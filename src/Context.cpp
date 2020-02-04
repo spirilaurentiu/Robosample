@@ -216,12 +216,12 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
     }
 }
 
-void Context::modelTopologies(std::string GroundToCompoundMobilizerType)
+void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
 {
     // Model molecules
-    this->rootMobility = GroundToCompoundMobilizerType;
     for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-        (updWorld(worldIx))->modelTopologies(GroundToCompoundMobilizerType);
+        this->rootMobilities.push_back(GroundToCompoundMobilizerTypes[worldIx]);
+        (updWorld(worldIx))->modelTopologies(GroundToCompoundMobilizerTypes[worldIx]);
     }
 
 }
