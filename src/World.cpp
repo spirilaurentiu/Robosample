@@ -218,6 +218,7 @@ void World::AddMolecule(
 
     // Set flexibility according to the flexibility file
     (topologies.back())->setFlexibility(regimenSpec, flexFN);
+    (topologies.back())->PrintAtomList();
 
     // Print Molmodel types
     (topologies.back())->PrintMolmodelAndDuMMTypes(*forceField);

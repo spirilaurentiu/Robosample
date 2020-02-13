@@ -380,7 +380,7 @@ void Topology::PrintAtomList()
     }
 
     // Bonds
-    for(unsigned int i = 0; i < bAtomList.size(); i++){
+    for(unsigned int i = 0; i < bonds.size(); i++){
         bonds[i].Print();
     }
 }

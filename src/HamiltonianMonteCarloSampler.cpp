@@ -581,7 +581,7 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
 
     //sleep(2);
 
-    ///* // INSTANT GEOMETRY
+    /* // INSTANT GEOMETRY
     SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
     int a1, a2, a3, a4, a5;
     //DIHEDRAL 4 6 8 14 6 8 14 16
