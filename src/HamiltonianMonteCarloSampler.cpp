@@ -581,11 +581,12 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
 
     //sleep(2);
 
-     // INSTANT GEOMETRY
+    // INSTANT GEOMETRY
     SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
     int a1, a2, a3, a4, a5;
     //DIHEDRAL 4 6 8 14 6 8 14 16
-    a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
+    //a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
+    a1 = 4; a2 = 6; a3 = 8; a4 = 14; a5 = 16;
     a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
     a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
     a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));

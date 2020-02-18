@@ -195,7 +195,7 @@ void Topology::SetGmolAtomsMolmodelTypesTrial(){
             }
         }
 
-/*        if(bAtomList[i].nbonds > 1){
+        /*if(bAtomList[i].nbonds > 1){
             //(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond2", bAtomList[i].name, TetrahedralAngle, 0);
             (bAtomList[i].bAtomType)->addSecondBondCenter("bond2", bAtomList[i].name, TetrahedralAngle);
         }*/

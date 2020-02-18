@@ -735,10 +735,8 @@ SimTK::State& World::setAtomsLocationsInGround(
                         // Get inboard dihedral angle and put in root_X_M0 !!!!!!!
                         inboardBondDihedralAngles[int(mbx)] = topologies[i]->bgetDefaultInboardDihedralAngle(aIx);
                         //inboardBondLengths[int(mbx)] = topologies[i]->bgetDefaultInboardBondLength(aIx);
-                        root_X_M0[int(mbx)] = SimTK::Transform(
-                            SimTK::Rotation(inboardBondDihedralAngles[int(mbx)], SimTK::XAxis)
-                            // , SimTK::Vec3(0, 0, 0) // Constructor takes care of this
-                        );
+                        //root_X_M0[int(mbx)] = SimTK::Transform(SimTK::Rotation(inboardBondDihedralAngles[int(mbx)], SimTK::XAxis)); // REFEBREM
+                        root_X_M0[int(mbx)] = SimTK::Rotation(inboardBondDihedralAngles[int(mbx)], SimTK::XAxis); // FEBREM
 
                         // Get Proot_X_M0
                         SimTK::Transform T_X_M0 = T_X_root[int(mbx)] * root_X_M0[int(mbx)];
@@ -752,8 +750,24 @@ SimTK::State& World::setAtomsLocationsInGround(
                         Transform oldX_MB = ~oldX_BM;
                         Transform oldX_FM = Rotation(inboardBondDihedralAngles[int(mbx)], ZAxis);
 
-                        B_X_M[int(mbx)] = X_parentBC_childBC * M_X_pin;
-                        P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)];
+                        //B_X_M[int(mbx)] = X_parentBC_childBC * M_X_pin; // REFEBREM
+                        //P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)]; // REFEBREM
+
+                        // FEBREM
+                        Transform X_childBC_parentBC; // FEBREM
+                        X_childBC_parentBC = ~X_parentBC_childBC; // FEBREM
+                        //B_X_M[int(mbx)] = X_childBC_parentBC * M_X_pin; // FEBREM
+                        //B_X_M[int(mbx)] = X_childBC_parentBC * M_X_pin; // FEBREM
+                        //P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)]; //FEBREM
+                        B_X_M[int(mbx)] = M_X_pin; // FEBREM
+                        P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)]; //FEBREM
+
+                        //std::cout << "X_childBC_parentBC " << int(mbx) << std::endl;
+                        //std::cout << X_childBC_parentBC << std::endl;
+                        //std::cout << "oldX_FM " << int(mbx) << std::endl;
+                        //std::cout << oldX_FM << std::endl;
+
+                        // END FEBREM
 
                         anglePinB_X_M[int(mbx)] = X_parentBC_childBC;
                         anglePinP_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * anglePinB_X_M[int(mbx)];
