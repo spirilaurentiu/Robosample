@@ -758,9 +758,15 @@ SimTK::State& World::setAtomsLocationsInGround(
                         X_childBC_parentBC = ~X_parentBC_childBC; // FEBREM
                         //B_X_M[int(mbx)] = X_childBC_parentBC * M_X_pin; // FEBREM
                         //B_X_M[int(mbx)] = X_childBC_parentBC * M_X_pin; // FEBREM
-                        //P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)]; //FEBREM
+
+                        Transform atomT1 = Rotation(-90*Deg2Rad, YAxis);
+                        Transform atomT2 = Rotation(270*Deg2Rad, ZAxis);
+                        Transform atomT = atomT1 *atomT2;
+
                         B_X_M[int(mbx)] = M_X_pin; // FEBREM
+                        //B_X_M[int(mbx)] = (~atomT) * M_X_pin; // FEBREM
                         P_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)]; //FEBREM
+                        //P_X_F[int(mbx)] = Proot_X_M0 * B_X_M[int(mbx)]; //FEBREM
 
                         //std::cout << "X_childBC_parentBC " << int(mbx) << std::endl;
                         //std::cout << X_childBC_parentBC << std::endl;
@@ -854,11 +860,11 @@ SimTK::State& World::setAtomsLocationsInGround(
                     mobod.setDefaultInboardFrame(P_X_F[1]);
                     mobod.setDefaultOutboardFrame(Transform());
                 }else{
-                    //int aNumber, parentNumber;
-                    //aNumber = (topologies[i]->updAtomByAtomIx(aIx))->getNumber();
-                    //parentNumber = (topologies[i]->updAtomByAtomIx(parentAIx))->getNumber();
-                    //SimTK::BondMobility::Mobility mobility;
-                    //mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();
+                    int aNumber, parentNumber;
+                    aNumber = (topologies[i]->updAtomByAtomIx(aIx))->getNumber();
+                    parentNumber = (topologies[i]->updAtomByAtomIx(parentAIx))->getNumber();
+                    SimTK::BondMobility::Mobility mobility;
+                    mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();
                     //if(mobility == SimTK::BondMobility::AnglePin) {
 
                     if((mobod.getNumU(someState) == 1) // Slider, AnglePin or Pin
@@ -867,12 +873,18 @@ SimTK::State& World::setAtomsLocationsInGround(
                         // TODO: doesn't work for slider
                         mobod.setDefaultInboardFrame(anglePinP_X_F[int(mbx)]);
                         mobod.setDefaultOutboardFrame(anglePinB_X_M[int(mbx)]);
+
                     }else{
                         mobod.setDefaultInboardFrame(P_X_F[int(mbx)]);
                         mobod.setDefaultOutboardFrame(B_X_M[int(mbx)]);
+                        // BEGIN FEBREM
+/*                        if(mobility == SimTK::BondMobility::Torsion) {
+                            ((SimTK::MobilizedBody::Pin &) mobod).setDefaultQ(inboardBondDihedralAngles[int(mbx)]);
+                        }*/
+                        // END FEBREM
                     }
-/*
-                    SimTK::BondMobility::Mobility mobility;
+
+/*                    SimTK::BondMobility::Mobility mobility;
                     mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();
 
                     //if(mobod.getNumU(someState) == 6){ // Free mobilizer
