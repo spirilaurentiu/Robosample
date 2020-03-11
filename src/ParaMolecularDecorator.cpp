@@ -514,6 +514,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
             //decorativeSphereM.setTransform(G_X_M);
             //geometry.push_back(decorativeSphereM);
 
+             /*
 	        if(mbx > 1) {
                 
                 DecorativeFrame decorativeFrameF;
@@ -556,9 +557,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 decorativeTextM.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
                 decorativeTextM.setColor(SimTK::Vec3(1, 0, 0));
                 geometry.push_back(decorativeTextM);
-            }
+            } // */
 
-            // X_PF, X_BM lines
+            /*// X_PF, X_BM lines
             if(mbx > 1){
                 DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
                 decorativeLinePF.setLineThickness(5);
@@ -604,7 +605,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                     decorativeLineBM.setColor(SimTK::Vec3(SimTK::Black));
                 }
                 geometry.push_back(decorativeLineBM);
-	    }
+	    } // */
 
         }
 

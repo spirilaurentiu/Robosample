@@ -981,14 +981,18 @@ std::vector<bSpecificAtom *> Topology::getNeighbours(int) const{assert(!"Not imp
 /** **/
 const bBond& Topology::getBond(int a1, int a2) const
 {
+//try{
     for(int i = 0; i < nbonds; i++){
         if( (bonds[i]).isThisMe(a1, a2) ){
             return bonds[i];
         }
     }
-}
-
+//}catch(std::exception e){
+    	std::cout << "Warning: no bond with these atom indeces found: " << a1 << " " << a2 << std::endl;
+	//std::cout << e.what() << '\n';
+//}
 /** Get bond order. **/
+}
 int Topology::getBondOrder(int, int) const{assert(!"Not implemented.");}
 
 

@@ -386,7 +386,8 @@ void World::setAmberForceFieldScaleFactors()
     //forceField->setVdw14ScaleFactor(0.0); // for OpenMM
     forceField->setVdw15ScaleFactor(1.0);
 
-///* RESTORE SAFETY  forceField->setCoulomb12ScaleFactor(0.0);
+//* RESTORE SAFETY  
+    forceField->setCoulomb12ScaleFactor(0.0);
     forceField->setCoulomb13ScaleFactor(0.0);
     forceField->setCoulomb14ScaleFactor(0.8333333333); // RESTORE from OpenMM
     //forceField->setCoulomb14ScaleFactor(0.0); // for OpenMM
@@ -859,12 +860,13 @@ SimTK::State& World::setAtomsLocationsInGround(
                     ((SimTK::MobilizedBody::Translation &) mobod).setDefaultOutboardFrame(Transform()); // NEWMOB*/
                     mobod.setDefaultInboardFrame(P_X_F[1]);
                     mobod.setDefaultOutboardFrame(Transform());
-                }else{
+                }else {
                     int aNumber, parentNumber;
                     aNumber = (topologies[i]->updAtomByAtomIx(aIx))->getNumber();
                     parentNumber = (topologies[i]->updAtomByAtomIx(parentAIx))->getNumber();
                     SimTK::BondMobility::Mobility mobility;
-                    mobility = (topologies[i]->getBond(aNumber, parentNumber)).getBondMobility();
+                    //const bBond& mybond = topologies[i]->getBond(aNumber, parentNumber);
+                    //mobility = mybond.getBondMobility();
                     //if(mobility == SimTK::BondMobility::AnglePin) {
 
                     if((mobod.getNumU(someState) == 1) // Slider, AnglePin or Pin
