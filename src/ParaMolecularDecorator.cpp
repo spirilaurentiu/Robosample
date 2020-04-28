@@ -559,8 +559,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 geometry.push_back(decorativeTextM);
             } // */
 
-            /*// X_PF, X_BM lines
+            ///*// X_PF, X_BM lines
             if(mbx > 1){
+            /*// X_PF, X_BM lines
                 DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
                 decorativeLinePF.setLineThickness(5);
                 if(mobod.getNumU(someState) == 3){
@@ -605,6 +606,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                     decorativeLineBM.setColor(SimTK::Vec3(SimTK::Black));
                 }
                 geometry.push_back(decorativeLineBM);
+		// */
 	    } // */
 
         }

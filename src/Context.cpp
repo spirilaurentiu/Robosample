@@ -953,6 +953,7 @@ void Context::PrintSamplerData(unsigned int whichWorld)
         , pMC((worlds[whichWorld]->samplers[0]))->fix_n
         , pMC((worlds[whichWorld]->samplers[0]))->fix_set
     );
+    fflush(logFile);
 
 }
 
