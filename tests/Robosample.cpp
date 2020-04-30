@@ -81,7 +81,11 @@ int main(int argc, char **argv)
     // Add empty Worlds to the Context
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
         if(setupReader.get("VISUAL")[worldIx] == "TRUE"){
-            context.AddWorld(true, std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+            if(std::stod(setupReader.get("TIMESTEPS")[worldIx]) <= 0.0000001){
+            	context.AddWorld(true, 0.001);
+            }else{
+            	context.AddWorld(true, std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+            }
         }else{
             context.AddWorld(false);
         }

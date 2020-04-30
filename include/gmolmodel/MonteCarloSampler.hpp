@@ -166,6 +166,8 @@ protected:
     bool alwaysAccept = false;
 
     int acceptedSteps = 0;
+    int acceptedStepsBufferSize = 30;
+    std::list<int> acceptedStepsBuffer;
 
     bool proposeExceptionCaught;
  

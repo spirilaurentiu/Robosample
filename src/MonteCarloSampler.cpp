@@ -19,6 +19,10 @@ MonteCarloSampler::MonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem,
     TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
     SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
     proposeExceptionCaught = false;
+
+    for(int i = 0; i < acceptedStepsBufferSize; i++){ 
+        acceptedStepsBuffer.push_back(0);
+    }
 }
 
 // Destructor

@@ -29,6 +29,7 @@ HamiltonianMonteCarloSampler::HamiltonianMonteCarloSampler(SimTK::CompoundSystem
     this->boostT = this->temperature;
     MDStepsPerSample = 0;
     proposeExceptionCaught = false;
+    adaptTimestep = false;
 }
 
 /** Destructor **/
@@ -295,8 +296,15 @@ float HamiltonianMonteCarloSampler::getTimestep(void)
 
 void HamiltonianMonteCarloSampler::setTimestep(float argTimestep)
 {
-    timeStepper->updIntegrator().setFixedStepSize(argTimestep);
-    this->timestep = argTimestep;
+    if(argTimestep <= 0){
+        adaptTimestep = true;
+        this->timestep = 0.0002;
+	this->timestepIncr = 0.0001;
+    }else{
+        adaptTimestep = false;
+    	timeStepper->updIntegrator().setFixedStepSize(argTimestep);
+    	this->timestep = argTimestep;
+    }
 }
 
 /** Get/Set boost temperature **/
@@ -381,7 +389,35 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 
     try {
         // IF NOT PRINT EVERY STEP // Integrate (propagate trajectory)
-        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+	if(adaptTimestep){
+		if( !(nofSamples % 30) ){ // Do it only so often
+			//std::cout << "adapt ts " << acceptedSteps << ' ' << nofSamples << std::endl;
+			// Compute average acceptance in the buffer
+			int sum = 0, sqSum = 0;
+			for (std::list<int>::iterator p = acceptedStepsBuffer.begin(); p != acceptedStepsBuffer.end(); ++p){
+        			sum += (int)*p;
+				sqSum += (((int)*p) * ((int)*p));
+			}
+    			float acceptance = float(sum) / float(acceptedStepsBufferSize);
+			//float sqAcceptance = sqSum / acceptedStepsBufferSize;
+			//float stdAcceptance = std::sqrt(sqAcceptance - (acceptance*acceptance));
+			float stdAcceptance = 0.03;
+
+			// Increase or decrease timestep
+			if(acceptance > (0.651 + stdAcceptance)){
+				timestep += timestepIncr;
+			}else if(acceptance < (0.651 - stdAcceptance)){
+				if(timestep > 0.0001){
+					timestep -= timestepIncr;
+				}
+			}
+			
+
+		}
+        	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+	}else{
+        	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+	}
         system->realize(someState, SimTK::Stage::Position);
 
 	/* // ELSE PRINT EVERY STEP
@@ -553,6 +589,8 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
         //setBeta(newBeta);
 
         ++acceptedSteps;
+        acceptedStepsBuffer.push_back(1);
+        acceptedStepsBuffer.pop_front();
     }else{ // Apply Metropolis correction
         if ( (proposeExceptionCaught == false) &&
                 (!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
@@ -570,12 +608,16 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
              //setBeta(newBeta);
 
              ++acceptedSteps;
+             acceptedStepsBuffer.push_back(1);
+             acceptedStepsBuffer.pop_front();
 
         } else { // Reject
              acc = false;
              std::cout << " nacc" << std::endl;
              assignConfFromSetTVector(someState);
              proposeExceptionCaught = false;
+             acceptedStepsBuffer.push_back(0);
+             acceptedStepsBuffer.pop_front();
         }
     }
 
@@ -640,7 +682,7 @@ void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someSta
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
         << " logSineSqrGamma2_o " << logSineSqrGamma2_o << " logSineSqrGamma2_n " << logSineSqrGamma2_n << " "
         //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
-        << " RT " << RT  << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
+        << " ts " << timestep  << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
         << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
         //<< std::endl
         ;
