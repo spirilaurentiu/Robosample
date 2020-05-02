@@ -47,11 +47,12 @@ cd ../../
 ```
 mkdir build_debug
 cd build_debug
-bash ../cmake_regenerateAll.sh - build_debug will remain empty
+bash ../cmake_regenerateAll.sh
 cmake ..
 make -j4
 sudo /sbin/ldconfig
 ```
+Keep in mind that after running `bash ../cmake_regenerateAll.sh`, `build_debug` will remain empty.
 
 ## Set up tests' environment
 ```
@@ -75,3 +76,6 @@ make -j4
 The tests are located in `Robosample/build_debug/tests`.
 
 From `build_debug` (this is where you should be if you have just compiled the project), type `./tests/Robosample inp` to run the test called `Robosample`.
+
+# Troubleshooting
+`freeglut (simbody-visualizer_d): failed to open display ':0'`: make sure Xming is running.

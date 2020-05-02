@@ -125,6 +125,7 @@ set(TESTS_SRCS
         TestBallLongPendulum.cpp
         TestMatrix.cpp
         TestWorldReconstruction.cpp
+	TestFixmanTorqueSim.cpp
 	)
 
 foreach(TEST_SRC ${TESTS_SRCS})

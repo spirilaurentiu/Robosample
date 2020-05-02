@@ -212,7 +212,7 @@ SimTK::Vector& SOA_SpatialVec2Vector(SimTK::SpatialVec in, SimTK::Vector& out);
 /*
  * Convert spatial matrix to Mat66
  */
-SimTK::Mat66& SOA_SpatialMat2Mat66(SimTK::SpatialMat in, SimTK::Mat66& out);
+void SOA_SpatialMat2Mat66(const SimTK::SpatialMat& in, SimTK::Mat66& out);
 
 /*
  * Print Big Matrices separated by spaces
@@ -274,7 +274,7 @@ enum IntegratorName { // Samplers
  * Statistics
  */
 /** The type of distribution to draw a random number from **/
-enum GmolRandDistributionType {
+enum class GmolRandDistributionType {
     UNIFORM,
     NORMAL
 };

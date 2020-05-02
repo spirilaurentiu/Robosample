@@ -146,6 +146,22 @@ public:
  * of the CompoundSystem **/
     void setCompoundIndex(const SimTK::CompoundSystem::CompoundIndex &compoundIndex);
 
+    /** Compute BAT determinant
+    **/
+    bool checkIfTripleUnorderedAreEqual(
+            std::vector<Compound::AtomIndex> &first,
+            std::vector<Compound::AtomIndex> &second);
+
+    void loadTriples(void);
+    SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
+    SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
+    SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
+    SimTK::Real calcLogDetMBATDistsMassesContribution(const SimTK::State&);
+    SimTK::Real calcLogDetMBATAnglesContribution(const SimTK::State&);
+    SimTK::Real calcLogDetMBATMassesContribution(const SimTK::State&);
+    SimTK::Real calcLogDetMBATInternal(const SimTK::State& someState);
+    SimTK::Real calcLogDetMBAT(const SimTK::State&);
+
     /** Get the number of atoms. **/
     int getNAtoms() const;
 
@@ -220,7 +236,12 @@ public:
     int nbonds;
     std::vector<bBond > bonds;
 
+    int nTriples;
+    std::vector< std::vector<Compound::AtomIndex> > triples;
+
 private:
+
+    int bSpecificAtomRootIndex;
 
     std::string regimen;
     std::string name;

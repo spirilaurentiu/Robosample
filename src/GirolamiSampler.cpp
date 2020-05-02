@@ -14,11 +14,10 @@ GirolamiSampler::GirolamiSampler(SimTK::CompoundSystem *argCompoundSystem,
                                      SimTK::DuMMForceFieldSubsystem *argDumm,
                                      SimTK::GeneralForceSubsystem *argForces,
                                      SimTK::TimeStepper *argTimeStepper)
-    : HamiltonianMonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    , MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    , Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    HamiltonianMonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
 {
-    this->useFixmanTorque = true;  
 }
 
 /** Destructor **/
@@ -49,7 +48,6 @@ void GirolamiSampler::initialize(SimTK::State& someState, SimTK::Real timestep, 
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -107,7 +105,6 @@ void GirolamiSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -252,23 +249,22 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
     propose(someState, timestep, nosteps);
 
     // Get needed energies
-    SimTK::Real pe_o  = getOldPE();
+    pe_o  = getOldPE();
     if(useFixman){
-        SimTK::Real fix_o = getOldFixman();
+        fix_o = getOldFixman();
     }
-    SimTK::Real ke_proposed  = getProposedKE();
+    ke_proposed  = getProposedKE();
 
     if(useFixman){
         fix_n = calcFixman(someState);
     }else{
         fix_n = 0.0;
     }
-    SimTK::Real pe_n = getPEFromEvaluator(someState); // OPENMM
+    pe_n = getPEFromEvaluator(someState); // OPENMM
 
     system->realize(someState, SimTK::Stage::Velocity);
-    SimTK::Real ke_n = matter->calcKineticEnergy(someState);
+    ke_n = matter->calcKineticEnergy(someState);
 
-    SimTK::Real etot_proposed, etot_n;
     if(useFixman){
         etot_n = pe_n + ke_n + fix_n;
         etot_proposed = pe_o + ke_proposed + fix_o;
@@ -276,10 +272,6 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
         etot_n = pe_n + ke_n;
         etot_proposed = pe_o + ke_proposed;
     }
-
-    etot_proposed;
-    etot_n;
-
 
     std::cout<<std::setprecision(5)<<std::fixed;
     std::cout << "pe_o " << pe_o + getREP() << " ke_o " << ke_proposed << " fix_o " << fix_o << " rep " << getREP()
@@ -312,8 +304,6 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
 
     // Keep track of how many MC trials have been done 
     ++nofSamples;
-
-
 }
 
 

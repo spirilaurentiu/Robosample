@@ -15,16 +15,17 @@ HamiltonianMonteCarloSampler::HamiltonianMonteCarloSampler(SimTK::CompoundSystem
                                      ,SimTK::GeneralForceSubsystem *argForces
                                      ,SimTK::TimeStepper *argTimeStepper
                                      )
-    : MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    , Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  
     this->fix_n = this->fix_o = 0.0;
+    this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
     this->residualEmbeddedPotential = 0.0;
     nofSamples = 0;
     this->alwaysAccept = false;
     this->timestep = 0.002; // ps
-    this->temperature = 300.0;
+    this->temperature = 0.0;
     this->boostT = this->temperature;
     MDStepsPerSample = 0;
 }
@@ -168,7 +169,6 @@ void HamiltonianMonteCarloSampler::initialize(SimTK::State& someState )
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -181,12 +181,17 @@ void HamiltonianMonteCarloSampler::initialize(SimTK::State& someState )
 //r    this->useFixman = argUseFixman;
     if(useFixman){
         std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential." << std::endl;
-
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2(0.0);
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }
 
     // Initialize velocities to temperature
@@ -207,7 +212,7 @@ void HamiltonianMonteCarloSampler::initialize(SimTK::State& someState )
     setLastAcceptedKE(getProposedKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
+    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
   
@@ -230,7 +235,6 @@ void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState)
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState);
         SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
         i++;
     }
@@ -246,9 +250,15 @@ void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState)
     if(useFixman){
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
         setSetFixman(getOldFixman());
+
+        setOldLogSineSqrGamma2(0.0);
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }
 
     // Initialize velocities to temperature
@@ -270,7 +280,7 @@ void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState)
     setLastAcceptedKE(getProposedKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
+    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
 }
@@ -326,10 +336,9 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     }
 
     // TODO: change the names from Old to Proposed and Set to lastAccepted
-    // setOldPE(getSetPE()); // RE
-    // setOldFixman(getSetFixman()); // RE
-    pe_o = pe_set; // NEW
-    fix_o = fix_set; // NEW
+    pe_o = pe_set;
+    fix_o = fix_set;
+    logSineSqrGamma2_o = logSineSqrGamma2_set;
 
     // Initialize velocities according to the Maxwell-Boltzmann distribution
     int nu = someState.getNU();
@@ -352,7 +361,8 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // Store the proposed energies
     // setProposedKE(matter->calcKineticEnergy(someState));
     this->ke_proposed = matter->calcKineticEnergy(someState);
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
+    //std::cout << " ke before timestepping " << this->ke_proposed << std::endl;
+    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 
 
 /*    // REC BUG
@@ -371,27 +381,39 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
     // Integrate (propagate trajectory)
     this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
-    // TODO: SCALE VELOCITIES
-/*    int nofStairs = 10;
+    // TODO: Simulated tempering
+/*    
+    int nofStairs = 20;
     int MDStepsPerStair = int(MDStepsPerSample / (2*nofStairs));
-    SimTK::Real stairBoost = 1.2;
+    SimTK::Real stairBoost = 1.05;
+
+    SimTK::Real T = getTemperature();
+
     SimTK::Real stairUnboost = 1 / stairBoost;
-    //std::cout << "stairBoost = " << stairBoost << std::endl;
-    //std::cout << "stairUnboost = " << stairUnboost << std::endl;
+    std::cout << "stairBoost = " << stairBoost << std::endl;
+    std::cout << "stairUnboost = " << stairUnboost << std::endl;
 
     system->realize(someState, SimTK::Stage::Velocity);
     this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
     for(int i = 1; i < nofStairs; i++){
         someState.updU() *= stairBoost;
         system->realize(someState, SimTK::Stage::Velocity);
+
+        T = T * std::sqrt(stairBoost);
+        std::cout << "T = " << T << std::endl;
+
         this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
     }
 
     for(int i = nofStairs; i >= 0; i--){
         someState.updU() *= stairUnboost;
         system->realize(someState, SimTK::Stage::Velocity);
+
+        T = T * std::sqrt(stairUnboost);
+        std::cout << "T = " << T << std::endl;
+
         this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
-    }*/
+    }// */
     // SCALE VELS END
 
 }
@@ -399,28 +421,43 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 /** Main function that contains all the 3 steps of HMC.
 Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
-void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
+bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 {
+    bool acc;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 
     // Get new Fixman potential
     if(useFixman){
         fix_n = calcFixman(someState);
+        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
     }else{
         fix_n = 0.0;
+        logSineSqrGamma2_n = 0.0;
     }
 
     // Get new kinetic energy
     system->realize(someState, SimTK::Stage::Velocity);
     ke_n = matter->calcKineticEnergy(someState);
+    //std::cout << " ke after timestepping " << this->ke_n << std::endl;
 
     // Get new potential energy
-    pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    if ( getThermostat() == ANDERSEN ){
+        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+	    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
+	    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+    }
+    else{
+        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+	    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
+        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+    }
 
     // Calculate total energy
     if(useFixman){
-        etot_n = pe_n + ke_n + fix_n;
-        etot_proposed = pe_o + ke_proposed + fix_o;
+        etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
+        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
     }else{
         etot_n = pe_n + ke_n;
         etot_proposed = pe_o + ke_proposed;
@@ -430,31 +467,42 @@ void HamiltonianMonteCarloSampler::update(SimTK::State& someState)
 
     // Decide and get a new sample
     if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
+        acc = true;
         std::cout << " acc" << std::endl;
         setSetTVector(someState);
         pe_set = pe_n;
         fix_set = fix_n;
+        logSineSqrGamma2_set = logSineSqrGamma2_n;
         ke_lastAccepted = ke_n;
-        etot_set = pe_set + fix_set + ke_proposed;
+        etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
+
+        //setBeta(newBeta);
+
         ++acceptedSteps;
     }else { // Apply Metropolis correction
         if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             (rand_no < exp(-(etot_n - etot_proposed) / RT)))) { // Accept based on full energy
-             //(rand_no < exp(-(pe_n - pe_o) / RT)))) { // Accept based on potential energy
-            std::cout << " acc" << std::endl;
-            setSetTVector(someState);
-            pe_set = pe_n;
-            fix_set = fix_n;
-            ke_lastAccepted = ke_n;
-            etot_set = pe_set + fix_set + ke_proposed;
-            ++acceptedSteps;
+             (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
+             acc = true;
+             std::cout << " acc" << std::endl;
+             setSetTVector(someState);
+             pe_set = pe_n;
+             fix_set = fix_n;
+             logSineSqrGamma2_set = logSineSqrGamma2_n;
+             ke_lastAccepted = ke_n;
+             etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
+
+             //setBeta(newBeta);
+
+             ++acceptedSteps;
         } else { // Reject
-            std::cout << " nacc" << std::endl;
-            assignConfFromSetTVector(someState);
+             acc = false;
+             std::cout << " nacc" << std::endl;
+             assignConfFromSetTVector(someState);
         }
     }
 
     ++nofSamples;
+    return acc;
 
 }
 
@@ -474,7 +522,9 @@ void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someSta
         << " pe_nB " << getPEFromEvaluator(someState)
         << " ke_prop " << ke_proposed << " ke_n " << ke_n
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
-        << " RT " << RT << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
+        << " logSineSqrGamma2_o " << logSineSqrGamma2_o << " logSineSqrGamma2_n " << logSineSqrGamma2_n << " "
+        //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
+        << " RT " << RT  << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
         << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
         //<< std::endl
         ;
@@ -498,9 +548,9 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
     system->realize(someState, SimTK::Stage::Position);
 
     // Get needed energies
-    SimTK::Real pe_o  = getOldPE();
+    pe_o  = getOldPE();
     if(useFixman){
-        SimTK::Real fix_o = getOldFixman();
+        fix_o = getOldFixman();
     }
     if(useFixman){
         fix_n = calcFixman(someState);
@@ -508,13 +558,10 @@ void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
         fix_n = 0.0;
     }
 
-    //SimTK::Real pe_n = getPEFromEvaluator(someState); // OPENMM
+    pe_n = getPEFromEvaluator(someState); // OPENMM
     //std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
-    pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+    //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
 
-    int accepted = 0;
-
-    accepted = 1;
     setSetTVector(someState);
     setSetPE(pe_n);
     setSetFixman(fix_n);
