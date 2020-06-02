@@ -725,7 +725,7 @@ SimTK::Real bDihedral(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, S
   SimTK::Vec3 diffs[3];
   SimTK::Vec3 normals[2];
   double dots[2];
-  double psin, pcos, dih;
+  double psin, pcos;
 
   diffs[0] = pos1 - pos0;
   diffs[1] = pos2 - pos1;

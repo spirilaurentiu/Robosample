@@ -2,7 +2,7 @@
 
 IState::~IState() {}
 
-SimTK::Vec3 IState::getCartesian(int atom_no){}
+SimTK::Vec3 IState::getCartesian(int atom_no){ return {}; }
 
 void IState::updCartesian(int atom_no, SimTK::Real x, SimTK::Real y, SimTK::Real z){}
 

@@ -86,6 +86,10 @@ public:
     /** Calls CompoundSystem.modelCompounds and realizes Topology 
     To be called after loading all Compounds. **/
     void ModelTopologies(bool useFixmanTorque = false);
+
+    const SimTK::State& realizeTopology(void);
+
+    void loadMobodsRelatedMaps(void);
     //...............
 
     // --- Mixing functions: Pass configurations among Worlds

@@ -3,6 +3,7 @@
 
 #include "Robo.hpp"
 #include "Sampler.hpp"
+#include "SetupReader.hpp"
 
 class Sampler;
 class World;
@@ -10,20 +11,20 @@ class World;
 class Context{
 
 public:
-    Context(World *, std::string logFilenameArg);
-    Context(std::string logFilenameArg);
+    Context(const SetupReader& setupReader, World *, std::string logFilenameArg);
+    Context(const SetupReader& setupReader, std::string logFilenameArg);
     ~Context();
 
     World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
     //World * AddWorld(World *, bool visual);
 
-    World * getWorld(void) const;
+    World * getWorld() const;
     World * getWorld(int which) const;
 
-    World * updWorld(void);
+    World * updWorld();
     World * updWorld(int which);
 
-    unsigned int getNofWorlds(void);
+    unsigned int getNofWorlds();
 
     SimTK::DuMMForceFieldSubsystem * updForceField(int whichWorld);
 
@@ -39,13 +40,13 @@ public:
 
     /** Load molecules based on loaded filenames **/
     void AddMolecules(std::vector<std::string> argRoots);
-    void modelTopologies(void);
+    void modelTopologies();
 
-    void realizeTopology(void);
+    void realizeTopology();
 
     void LoadWorldsFromSetup(SetupReader&);
 
-    int getNofMolecules(void);
+    int getNofMolecules();
     //------------
 
     // --- Thermodynamics ---a
@@ -95,7 +96,7 @@ public:
 
     // --- Mixing parameters ---
     // Another way to do it is setting the number of rounds
-    int getNofRounds(void);
+    int getNofRounds();
     void setNofRounds(int nofRounds);
 
     int getNofSamplesPerRound(int whichWorld);
@@ -104,22 +105,26 @@ public:
     int getWorldIndex(int which);
 
     // --- Arrange different mixing parameters ---
-    void initializeMixingParamters(void);
+    void initializeMixingParamters();
     //------------
 
     // --- Mix ---
-    void RotateWorlds(void);
+    void RotateWorlds();
     //------------
 
     // --- Main ---
     void Run(SetupReader&);
     void Run(int howManyRounds, float Ti, float Tf);
     void RunSimulatedTempering(int howManyRounds, float Ti, float Tf);
+    void setNofBoostStairs(int whichWorld, int howManyStairs);
+    int getNofBoostStairs(int whichWorld);
     void setNumThreadsRequested(int which, int howMany);
     void setUseOpenMMAcceleration(bool arg);
 
+    SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector, int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
+
     /** Print the number of threads each World got **/
-    void PrintNumThreads(void);
+    void PrintNumThreads();
 
     /** Get/Set seed for reproducibility. **/
     void setSeed(int whichWorld, int whichSampler, unsigned long long int);
@@ -143,14 +148,14 @@ public:
     SimTK::Real Dihedral(int whichWorld, int whichCompound, int whichSampler, int a1, int a2, int a3, int a4);
     SimTK::Real Distance(int whichWorld, int whichCompound, int whichSampler, int a1, int a2);
 
-    int getPdbRestartFreq(void);
+    int getPdbRestartFreq();
     void setPdbRestartFreq(int argFreq);
-    int getPrintFreq(void);
+    int getPrintFreq();
     void setPrintFreq(int argFreq);
 
-    std::string getOutputDir(void);
+    std::string getOutputDir();
     void setOutputDir(std::string arg);
-    std::string getPdbPrefix(void);
+    std::string getPdbPrefix();
     void setPdbPrefix(std::string arg);
     //------------
 
@@ -158,6 +163,8 @@ public:
     std::vector<int> worldIndexes;
 
 private:
+    void ValidateSetupReader(const SetupReader& setupReader);
+
     std::vector<World *> worlds;
 
     // Molecules files
@@ -173,6 +180,8 @@ private:
     std::vector<int> nofSamplesPerRound;
     std::vector<int> nofMDStepsPerSample;
     std::vector<float> timesteps;
+
+    std::vector<int> nofBoostStairs;
 
     //
     bool reproducible;
@@ -197,6 +206,10 @@ private:
     unsigned int BUFSIZE;
     char *buffer;
     FILE *logFile;
+
+    // Adaptive Gibbs blocking variables
+    int roundsTillReblock;
+    std::vector<std::vector<std::vector<SimTK::Real>>> QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
 
 };
 

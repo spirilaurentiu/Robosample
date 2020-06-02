@@ -16,7 +16,7 @@ MyState::~MyState(){
 
 
 SimTK::Vec3 MyState::getCartesian(int atom_no){
-
+    return {};
 }
 
 void MyState::updCartesian(int atom_no, SimTK::Real x, SimTK::Real y, SimTK::Real z){

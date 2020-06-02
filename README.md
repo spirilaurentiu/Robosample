@@ -41,7 +41,25 @@ bash build_openmm.sh
 ## Building Robosample
 Run `build_debug.sh` or `bulild_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
 ```
+<<<<<<< HEAD
 bash build_debug.sh
+=======
+mkdir build_debug
+cd build_debug
+bash ../cmake_regenerateAll.sh
+cmake ..
+make -j4
+sudo /sbin/ldconfig
+```
+Keep in mind that after running `bash ../cmake_regenerateAll.sh`, `build_debug` will remain empty.
+
+## Set up tests' environment
+```
+cp -ri ../tests_inputs/* .
+mkdir temp
+mkdir temp/pdbs
+cd ../
+>>>>>>> origin/master
 ```
 
 # Open the project using any IDE (e.g. Visual Studio Code)
@@ -53,6 +71,7 @@ After working on Robosample, it must be compiled as `Debug` or `Release` (the sa
 make -j$(nproc)
 ```
 
+<<<<<<< HEAD
 # Running Robosample
 `Robosample` is located in `build-debug/tests` or `build-release/tests`.
 ```
@@ -60,3 +79,12 @@ cd build-debug
 ./tests/Robosample inp
 ```
 To change different parameters (use visualizer, use OpenMM etc) edit `inp` which is located in `build-debug` or `build-release`.
+=======
+# Running the tests
+The tests are located in `Robosample/build_debug/tests`.
+
+From `build_debug` (this is where you should be if you have just compiled the project), type `./tests/Robosample inp` to run the test called `Robosample`.
+
+# Troubleshooting
+`freeglut (simbody-visualizer_d): failed to open display ':0'`: make sure Xming is running.
+>>>>>>> origin/master

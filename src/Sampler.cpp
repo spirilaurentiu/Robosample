@@ -106,12 +106,12 @@ void Sampler::PrintSimbodyStateCache(SimTK::State& someState){
 
 void Sampler::initialize(SimTK::State& someState) {
     // Sampling
-    int nofSamples = 0;
+    nofSamples = 0;
 }
 
 void Sampler::reinitialize(SimTK::State& someState) {
     // Sampling
-    int nofSamples = 0;
+    nofSamples = 0;
 }
 
 // Getter for macroscopic temperature
@@ -119,9 +119,17 @@ SimTK::Real Sampler::getTemperature() const {
     return temperature;
 }
 
-/** Setter for macroscopic temperature. Also sets the RT **/
+/** Setter for macroscopic temperature. Also sets the RT and beta**/
 void Sampler::setTemperature(SimTK::Real temperature) {
     Sampler::temperature = temperature;
+    RT = this->temperature * SimTK_BOLTZMANN_CONSTANT_MD;
+    beta = 1.0 / RT;
+}
+
+/** Setter for macroscopic beta. Also sets the RT and temperature**/
+void Sampler::setBeta(SimTK::Real argBeta) {
+    this->beta = argBeta;
+    Sampler::temperature = 1 / (beta * SimTK_BOLTZMANN_CONSTANT_MD);
     RT = this->temperature * SimTK_BOLTZMANN_CONSTANT_MD;
 }
 
@@ -129,10 +137,14 @@ SimTK::Real Sampler::getRT() const {
     return RT;
 }
 
+SimTK::Real Sampler::getBeta() const {
+    return beta;
+}
+
 SimTK::Real Sampler::generateRandomNumber(GmolRandDistributionType distributionType) {
-    if(distributionType == UNIFORM){
+    if(distributionType == GmolRandDistributionType::UNIFORM){
         return uniformRealDistribution(randomEngine);
-    }else if(distributionType == NORMAL){
+    }else{
         return gaurand(randomEngine);
     }
 }

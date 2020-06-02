@@ -111,24 +111,24 @@ public:
 
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation
-    void update(SimTK::State&);
+    bool update(SimTK::State&);
 
     // Get the number of accpted conformations
     int getAcceptedSteps(void);
 
 protected:
-    SimTK::Transform *SetTVector; // Transform matrices
-    SimTK::Transform *TVector; // Transform matrices
+    std::vector<SimTK::Transform> SetTVector; // Transform matrices
+    std::vector<SimTK::Transform> TVector; // Transform matrices
     SimTK::Real pe_set, pe_o;
     SimTK::Real temperature;
     SimTK::Real RT;
 
-    bool useFixman;
-    bool alwaysAccept;
+    bool useFixman = false;
+    bool alwaysAccept = false;
     SimTK::Real fix_set, fix_o, fix_n;
-    SimTK::Real residualEmbeddedPotential; // inside rigid bodies if weren't rigid
+    SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
 
-    int acceptedSteps;
+    int acceptedSteps = 0;
  
     // Random number generators - not sure if I need two
     // Needs testing

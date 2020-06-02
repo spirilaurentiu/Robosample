@@ -3,92 +3,116 @@
 // Constructor
 SetupReader::SetupReader(const char *cFN)
 {
-    ReadSetup(cFN);
+	ReadSetup(cFN);
 }
 
 // Constructor
-SetupReader::SetupReader(std::string& FN)
+SetupReader::SetupReader(const std::string& FN)
 {
-    ReadSetup(FN);
-}
-
-// Destructor
-SetupReader::~SetupReader(void)
-{
+	ReadSetup(FN);
 }
 
 // Read setup function
 void SetupReader::ReadSetup(const char *cFN)
 {
-    std::string line;
-    std::ifstream F(cFN);
-    int line_i = -1;
-    while(F.good()){
-        line_i++;
-        std::getline(F, line);
-        std::istringstream iss(line);
-        std::string word;
-        std::string key;
-        std::vector<std::string> V;
-
-        int word_i = -1;
-        while(iss >> word){
-            if(word[0] == '#'){
-                break;
-            }
-            word_i++;
-            if(word_i == 0){
-                key = word;
-            }else{
-                V.push_back(std::move(word));
-            }
-        }
-        ArgsIt = Args.begin();
-        Args.insert( ArgsIt, std::pair<std::string, std::vector<std::string>>( std::move(key), std::move(V) ) );
-    }
+	ReadSetup(std::string(cFN));
 }
 
-void SetupReader::ReadSetup(std::string& FN)
+void SetupReader::ReadSetup(const std::string& FN)
 {
-    ReadSetup(FN.c_str());
+	// TODO return errors
+
+	std::ifstream F(FN);
+	std::string line;
+
+	// read file
+	while (F) {
+		// read line
+		std::getline(F, line);
+		std::istringstream iss(line);
+
+		// read key
+		std::string key;
+		iss >> key;
+
+		// check if key has characters, all of them are printable and does not begin a comment
+		if (key.length() > 0 && IsPrintable(key) && '#' != key[0]) {
+			std::vector<std::string> V;
+			std::string word;
+
+			// read arguments of key
+			while (iss >> word) {
+				// stop on comment
+				if ('#' == word[0]) {
+					break;
+				}
+
+				// add word if printable
+				if (IsPrintable(word)) {
+					V.push_back(std::move(word));
+				}
+			}
+
+			// save key and arguments
+			Args.emplace(std::make_pair(std::move(key), std::move(V)));
+		}
+	}
 }
 
 // Print all the arguments
-void SetupReader::dump(void)
+void SetupReader::dump(bool PrettyPrint) const
 {
-    std::vector<std::string>::iterator it;
-    for (ArgsIt = Args.begin(); ArgsIt != Args.end(); ++ArgsIt){
-        std::cout << ArgsIt->first << " : " ;
-        for (it = (ArgsIt->second).begin(); it != (ArgsIt->second).end(); ++it){
-            std::cout << *it << " ";
-        }
-        std::cout << std::endl;
-    }
+	if(PrettyPrint) {
+		std::cout << "Dumping input file:\n";
+	}
+
+	// TODO replace cout with other streams (as param)
+	for (const auto& Arg : Args) {
+		if(PrettyPrint) {
+			std::cout << "  ";
+		}
+
+		std::cout << Arg.first << " : ";
+		for (const auto& Val : Arg.second) {
+			std::cout << Val << " ";
+		}
+
+		std::cout << '\n';
+	}
 }
 
 /** Check if key exists **/
-bool SetupReader::find( std::string argKey )
+bool SetupReader::find(const char *argKey) const
 {
+	return find(std::string(argKey));
+}
 
-    if( Args.find( argKey ) == Args.end() ){
-        return false;
-    }else{
-        return true;
-    }
-
+bool SetupReader::find(const std::string& argKey) const
+{
+	// TODO std::optional
+	return Args.find(argKey) != Args.end();
 }
 
 // Access values by key
-std::vector<std::string> SetupReader::get(const char *cArgKey)
+const std::vector<std::string>& SetupReader::get(const char *cArgKey) const
 {
-    return Args[std::string(cArgKey)];
+	return get(std::string(cArgKey));
 }
 
 // Access values by key
-std::vector<std::string> SetupReader::get(std::string argKey)
+const std::vector<std::string>& SetupReader::get(const std::string& argKey) const
 {
-    return Args[argKey];
+	const auto it = Args.find(argKey);
+	if (it != Args.cend()) {
+		return it->second;
+	}
+	else {
+        std::cout << "SetupReader::get() did not find '" << argKey << "'. Returning " << KeyNotFound[0] << ".\n";
+		return KeyNotFound;
+	}
 }
 
-
-
+bool SetupReader::IsPrintable(const std::string& s) const
+{
+	return std::all_of(s.begin(), s.end(), [](char c) { return c >= 0 && c <= 128; });
+}
