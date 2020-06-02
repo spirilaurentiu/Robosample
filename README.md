@@ -1,7 +1,7 @@
 # Installation
 
 ## Installing Xming
-On Windows Subsystem for Linux, download and install (Xming)[https://sourceforge.net/projects/xming/] using the default options. Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the file. `Xming` must be running when `Robosample` is started with a visualizer (a window showing the current stage of simulation). The visualizer is on by default. To change this behaviour, see (Running Robosample)[#running-robosample].
+On Windows Subsystem for Linux, download and install [Xming](https://sourceforge.net/projects/xming/) using the default options. Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the file. `Xming` must be running when `Robosample` is started with a visualizer (a window showing the current stage of simulation). The visualizer is on by default. To change this behaviour, see (Running Robosample)[#running-robosample].
 
 ## Installing dependencies
 Install the dependencies:
