@@ -33,45 +33,30 @@ cd Robosample
 ```
 
 ## Building OpenMM
+Run `build_openmm.sh`. It will ask for password after compilation.
 ```
-cd openmm
-mkdir build_debug
-cd build_debug/
-cmake ..
-make -j4
-sudo make install
-cd ../../
+bash build_openmm.sh
 ```
 
 ## Building Robosample
+Run `build_debug.sh` or `bulild_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
 ```
-mkdir build_debug
-cd build_debug
-bash ../cmake_regenerateAll.sh - build_debug will remain empty
-cmake ..
-make -j4
-sudo /sbin/ldconfig
-```
-
-## Set up tests' environment
-```
-cp -ri ../tests_inputs/* .
-mkdir temp
-mkdir temp/pdbs
-cd ../
+bash build_debug.sh
 ```
 
 # Open the project using any IDE (e.g. Visual Studio Code)
-Install `Visual Studio Code` (https://code.visualstudio.com/) on Windows. In `Robosample` run `code .`.
+Install [Visual Studio Code](https://code.visualstudio.com/) on Windows. Run `code .` in `Robosample`.
 
-# Working on the project
-To compile files:
+# Working on Robosample
+After working on Robosample, it must be compiled as `Debug` or `Release` (the same flags as in section [Building Robosample](#building-robosample)). To compile as a different configuration, full recompilation is needed (see [Building Robosample](#building-robosample)).
 ```
-cd build_debug
-make -j4
+make -j$(nproc)
 ```
 
-# Running the tests
-The tests are located in `Robosample/build_debug/tests`.
-
-From `build_debug` (this is where you should be if you have just compiled the project), type `./tests/Robosample inp` to run the test called `Robosample`.
+# Running Robosample
+`Robosample` is located in `build-debug/tests` or `build-release/tests`.
+```
+cd build-debug
+./tests/Robosample inp
+```
+To change different parameters (use visualizer, use OpenMM etc) edit `inp` which is located in `build-debug` or `build-release`.
