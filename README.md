@@ -1,13 +1,13 @@
 # Installation
 
 ## Installing Xming
-On Windows Subsystem for Linux, download and install [Xming](https://sourceforge.net/projects/xming/) using the default options. Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the file. `Xming` must be running when `Robosample` is started with a visualizer (a window showing the current stage of simulation). The visualizer is on by default. To change this behaviour, see (Running Robosample)[#running-robosample].
+On Windows Subsystem for Linux, download and install [Xming](https://sourceforge.net/projects/xming/) using the default options. Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the file. Xming must be running when Robosample is started with a visualizer (a window showing the current stage of simulation). The visualizer is on by default. To change this behaviour, see [Running Robosample](#running-robosample).
 
 ## Installing dependencies
 Install the dependencies:
 ```
 sudo apt-get update
-sudo apt-get install cmake gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2
+sudo apt-get install cmake gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev
 ```
 
 Add the following to `LD_LIBRARY_PATH`:
@@ -19,6 +19,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/plugins/libOpenMMPlugin.s
 export CUDA_INC_DIR=/usr/local/cuda
 export CUDA_ROOT=/usr/local/cuda
 ```
+**WARNING:** It is recommended to run these exports in the WSL or native Linux terminal. When running in the Visual Studio Code terminal on WSL, these exports are not saved (not even in `.bashrc`) and must be restated before executing Robosample.
 
 Also make sure that:
 1. `cmake --version` is greater than 3.1.
@@ -31,7 +32,7 @@ cd Robosample
 ```
 
 ## Building OpenMM
-Run `build_openmm.sh`. It will ask for password after compilation.
+Run `build_openmm.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
 ```
 bash build_openmm.sh
 ```
@@ -57,7 +58,10 @@ make -j$(nproc)
 cd build-debug
 ./tests/Robosample inp
 ```
+**WARNING**: To avoid dynamic library lookup failures, it is recommended to run Robosample in the WSL or native Linux terminal and not in Visual Studio Code terminal. See more details at [Installing dependencies](#installing-dependencies).  
+  
 To change different parameters (use visualizer, use OpenMM etc) edit `inp` which is located in `build-debug` or `build-release`.
 
 # Troubleshooting
 `freeglut (simbody-visualizer_d): failed to open display ':0'`: make sure [Xming](#installing-xming) is running.
+
