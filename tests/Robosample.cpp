@@ -11,7 +11,7 @@
 #include "simmain.hpp"
 #include "Robo.hpp"
 
-#include "HamiltonianMonteCarloSampler.hpp"
+#include "HMCSampler.hpp"
 #include "readAmberInput.hpp"
 #include "SetupReader.hpp"
 

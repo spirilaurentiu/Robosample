@@ -117,7 +117,8 @@ set(LIBGMOLMODEL_SRC
         #MidVVIntegrator.cpp # LAUR
         Sampler.cpp # LAUR
         MonteCarloSampler.cpp # LAUR
-        HamiltonianMonteCarloSampler.cpp # LAUR
+        HMCSampler.cpp # LAUR
+        LAHMCSampler.cpp # LAUR
         ConformationalSearch.cpp # LAUR
         GirolamiSampler.cpp # LAUR
 	      #bAddParams.cpp

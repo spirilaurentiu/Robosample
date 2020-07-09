@@ -11,7 +11,7 @@
 
 // Just to remove the long syntax requirement
 #ifndef pHMC
-//#define pHMC(pSampler) dynamic_cast<HamiltonianMonteCarloSampler *>(pSampler)
+//#define pHMC(pSampler) dynamic_cast<HMCSampler *>(pSampler)
 #define pHMC(pSampler) pSampler
 #endif
 
@@ -30,13 +30,13 @@ of the following steps:
 Step 1 and 2 are implemented in the fuction propose. Step 3 is implemented
 in the function update.
 **/
-class HamiltonianMonteCarloSampler : virtual public MonteCarloSampler
+class HMCSampler : virtual public MonteCarloSampler
 {
 friend class Context;
 public:
 
     /** Constructor **/
-    HamiltonianMonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem
+    HMCSampler(SimTK::CompoundSystem *argCompoundSystem
                                  ,SimTK::SimbodyMatterSubsystem *argMatter
                                  ,SimTK::Compound *argResidue
                                  ,SimTK::DuMMForceFieldSubsystem *argDumm
@@ -45,7 +45,7 @@ public:
                                  );
 
     /** Destructor **/
-    virtual ~HamiltonianMonteCarloSampler();
+    virtual ~HMCSampler();
 
     /** Calculate O(n2) the square root of the mass matrix inverse
     denoted by Jain l* = [I -JPsiK]*sqrt(D) (adjoint of l).

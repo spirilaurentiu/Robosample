@@ -1,5 +1,5 @@
 /**@file
-Implementation of HamiltonianMonteCarloSampler class. **/
+Implementation of HMCSampler class. **/
 
 #include "Robo.hpp"
 #include "ParaMolecularDecorator.hpp"

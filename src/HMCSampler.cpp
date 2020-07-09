@@ -1,14 +1,14 @@
 /**@file
-Implementation of HamiltonianMonteCarloSampler class. **/
+Implementation of HMCSampler class. **/
 
-#include "HamiltonianMonteCarloSampler.hpp"
+#include "HMCSampler.hpp"
 
 // Includes to get the structure of additional classes
 
 #include "Topology.hpp"
 
 //** Constructor **/
-HamiltonianMonteCarloSampler::HamiltonianMonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem
+HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::SimbodyMatterSubsystem *argMatter
                                      ,SimTK::Compound *argResidue
                                      ,SimTK::DuMMForceFieldSubsystem *argDumm
@@ -33,12 +33,12 @@ HamiltonianMonteCarloSampler::HamiltonianMonteCarloSampler(SimTK::CompoundSystem
 }
 
 /** Destructor **/
-HamiltonianMonteCarloSampler::~HamiltonianMonteCarloSampler()
+HMCSampler::~HMCSampler()
 {
 }
 
 /** Calculate sqrt(M) using Eigen. For debug purposes. **/
-void HamiltonianMonteCarloSampler::calcNumSqrtMUpper(SimTK::State& someState, SimTK::Matrix& SqrtMUpper)
+void HMCSampler::calcNumSqrtMUpper(SimTK::State& someState, SimTK::Matrix& SqrtMUpper)
 {
     assert("!Not implemented");
 }
@@ -46,7 +46,7 @@ void HamiltonianMonteCarloSampler::calcNumSqrtMUpper(SimTK::State& someState, Si
 /** Calculate O(n2) the square root of the mass matrix inverse
 denoted by Jain l = sqrt(D) * [I -JPsiK]. This is upper triangular matrix and it is computed 
 multipling a set of orthonormal vectors with the sqrt(MInv). **/
-void HamiltonianMonteCarloSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
+void HMCSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
 {
     int nu = someState.getNU();
     assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvU: passed matrix doesn't have nu x nu size.");
@@ -79,7 +79,7 @@ void HamiltonianMonteCarloSampler::calcSqrtMInvU(SimTK::State& someState, SimTK:
 denoted by Jain l* = [I -JPsiK]*sqrt(D) (adjoint of l).
 This is lower triangular matrix and it is computed by multipling a set of
  orthonormal vectors with the sqrt(MInv) and transpose it. **/
-void HamiltonianMonteCarloSampler::calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
+void HMCSampler::calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
 {
     int nu = someState.getNU();
     assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvL: passed matrix doesn't have nu x nu size.");
@@ -109,30 +109,30 @@ void HamiltonianMonteCarloSampler::calcSqrtMInvL(SimTK::State& someState, SimTK:
 
 /** Stores the accepted kinetic energy. This should be set right after a
 move is accepted. It's a component of the total energy stored. **/
-void HamiltonianMonteCarloSampler::setLastAcceptedKE(SimTK::Real inpKE)
+void HMCSampler::setLastAcceptedKE(SimTK::Real inpKE)
 {
     this->ke_lastAccepted = inpKE;
 }
 
 /** Sets the proposed kinetic energy before the proposal. This should be
 set right after the velocities are initialized. **/
-void HamiltonianMonteCarloSampler::setProposedKE(SimTK::Real inpKE)
+void HMCSampler::setProposedKE(SimTK::Real inpKE)
 {
     this->ke_proposed = inpKE;
 }
 
 /** Get/set the TimeStepper that manages the integrator **/
-const SimTK::TimeStepper * HamiltonianMonteCarloSampler::getTimeStepper(void)
+const SimTK::TimeStepper * HMCSampler::getTimeStepper(void)
 {
     return timeStepper;
 }
 
-SimTK::TimeStepper * HamiltonianMonteCarloSampler::updTimeStepper(void)
+SimTK::TimeStepper * HMCSampler::updTimeStepper(void)
 {
     return timeStepper;
 }
 
-void HamiltonianMonteCarloSampler::setTimeStepper(SimTK::TimeStepper * someTimeStepper)
+void HMCSampler::setTimeStepper(SimTK::TimeStepper * someTimeStepper)
 {
     timeStepper = someTimeStepper;
 }
@@ -142,7 +142,7 @@ velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
 acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
-void HamiltonianMonteCarloSampler::initialize(SimTK::State& someState )
+void HMCSampler::initialize(SimTK::State& someState )
 {
     // After an event handler has made a discontinuous change to the
     // Integrator's "advanced state", this method must be called to 
@@ -221,8 +221,8 @@ void HamiltonianMonteCarloSampler::initialize(SimTK::State& someState )
 }
 
 /** Same as initialize **/
-//r void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature) 
-void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState)
+//r void HMCSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature) 
+void HMCSampler::reinitialize(SimTK::State& someState)
 {
      // After an event handler has made a discontinuous change to the
     // Integrator's "advanced state", this method must be called to 
@@ -288,13 +288,13 @@ void HamiltonianMonteCarloSampler::reinitialize(SimTK::State& someState)
 }
 
 /** Get/Set the timestep for integration **/
-float HamiltonianMonteCarloSampler::getTimestep(void)
+float HMCSampler::getTimestep(void)
 {
     return timestep;
     //return timeStepper->updIntegrator().getPredictedNextStepSize();
 }
 
-void HamiltonianMonteCarloSampler::setTimestep(float argTimestep)
+void HMCSampler::setTimestep(float argTimestep)
 {
     if(argTimestep <= 0){
         adaptTimestep = true;
@@ -308,12 +308,12 @@ void HamiltonianMonteCarloSampler::setTimestep(float argTimestep)
 }
 
 /** Get/Set boost temperature **/
-SimTK::Real HamiltonianMonteCarloSampler::getBoostTemperature(void)
+SimTK::Real HMCSampler::getBoostTemperature(void)
 {
     return this->boostT;
 }
 
-void HamiltonianMonteCarloSampler::setBoostTemperature(SimTK::Real argT)
+void HMCSampler::setBoostTemperature(SimTK::Real argT)
 {
     this->boostT = argT;
     this->boostFactor = std::sqrt(this->boostT / this->temperature);
@@ -322,7 +322,7 @@ void HamiltonianMonteCarloSampler::setBoostTemperature(SimTK::Real argT)
     std::cout << "HMC: boost velocity scale factor: " << this->boostFactor << std::endl;
 }
 
-void HamiltonianMonteCarloSampler::setBoostMDSteps(int argMDSteps)
+void HMCSampler::setBoostMDSteps(int argMDSteps)
 {
     this->boostMDSteps = argMDSteps;
     std::cout << "HMC: boost MD steps: " << this->boostMDSteps << std::endl;
@@ -332,7 +332,7 @@ void HamiltonianMonteCarloSampler::setBoostMDSteps(int argMDSteps)
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
 initializeVelocities and propagate/integrate **/
-void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
+void HMCSampler::propose(SimTK::State& someState)
 {
     // Initialize configuration - not necessary unless we modify the
     // configuration in addition to velocities
@@ -530,7 +530,7 @@ void HamiltonianMonteCarloSampler::propose(SimTK::State& someState)
 /** Main function that contains all the 3 steps of HMC.
 Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
-bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real newBeta)
+bool HMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 {
     bool acc;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
@@ -663,16 +663,16 @@ bool HamiltonianMonteCarloSampler::update(SimTK::State& someState, SimTK::Real n
 
 }
 
-int HamiltonianMonteCarloSampler::getMDStepsPerSample() const {
+int HMCSampler::getMDStepsPerSample() const {
     return MDStepsPerSample;
 }
 
-void HamiltonianMonteCarloSampler::setMDStepsPerSample(int mdStepsPerSample) {
+void HMCSampler::setMDStepsPerSample(int mdStepsPerSample) {
     MDStepsPerSample = mdStepsPerSample;
 }
 
 /** Print detailed energy information **/
-void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
+void HMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
 {
 
     std::cout << std::setprecision(5) << std::fixed;
@@ -691,7 +691,7 @@ void HamiltonianMonteCarloSampler::PrintDetailedEnergyInfo(SimTK::State& someSta
 
 /** Modifies Q randomly
  **/
-void HamiltonianMonteCarloSampler::perturbQ(SimTK::State& someState)
+void HMCSampler::perturbQ(SimTK::State& someState)
 {
     // Perturb Q
     //SimTK::Real rand_no = uniformRealDistribution(randomEngine);

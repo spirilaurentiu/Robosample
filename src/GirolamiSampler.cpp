@@ -16,7 +16,7 @@ GirolamiSampler::GirolamiSampler(SimTK::CompoundSystem *argCompoundSystem,
                                      SimTK::TimeStepper *argTimeStepper)
     : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
     MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    HamiltonianMonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    HMCSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
 {
 }
 

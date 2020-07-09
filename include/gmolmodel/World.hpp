@@ -35,13 +35,13 @@
 #include <boost/timer.hpp>
 
 #ifndef BaseSampler
-#define BaseSampler HamiltonianMonteCarloSampler
+#define BaseSampler HMCSampler
 #endif
 
 #include "server.hpp"
 #include "Topology.hpp"
 #include "bArgParser.hpp"
-#include "HamiltonianMonteCarloSampler.hpp"
+#include "HMCSampler.hpp"
 #include "ConformationalSearch.hpp"
 
 // TODO write a pdb writer for all the Compounds

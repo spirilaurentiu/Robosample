@@ -468,7 +468,7 @@ int World::addSampler(SamplerName samplerName)
 {
     if(samplerName == HMC){
 
-        BaseSampler *p = new HamiltonianMonteCarloSampler(
+        BaseSampler *p = new HMCSampler(
                 compoundSystem, matter, topologies[0],
                 forceField, forces, ts
                 );

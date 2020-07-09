@@ -1,5 +1,5 @@
 #include "Robo.hpp"
-#include "HamiltonianMonteCarloSampler.hpp"
+#include "HMCSampler.hpp"
 #include "World.hpp"
 
 using namespace SimTK;
