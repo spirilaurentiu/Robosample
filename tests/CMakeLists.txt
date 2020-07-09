@@ -119,13 +119,13 @@ set(TESTS_SRCS
         TestSampler.cpp
         TestAmberInput.cpp
         TestWriteDCD.cpp
-        Robosample.cpp
         TestTopology.cpp
         TestSetupReader.cpp
         TestBallLongPendulum.cpp
         TestMatrix.cpp
         TestWorldReconstruction.cpp
 	TestFixmanTorqueSim.cpp
+        Robosample.cpp
 	)
 
 foreach(TEST_SRC ${TESTS_SRCS})
@@ -135,6 +135,24 @@ foreach(TEST_SRC ${TESTS_SRCS})
     TARGET_LINK_LIBRARIES( ${TEST_EXE}
                 ${Simbody_LIBRARIES}
                 SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                ${Boost_LIBRARIES}
+                ${BOOST_LIBS_BYHAND}
+                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense...
+		GMOLMODEL_dynamic_d
+                m )
+endforeach()
+
+set(BIN_SRCS
+        #Robosample.cpp
+	)
+
+foreach(BIN_SRC ${BIN_SRCS})
+    STRING(REGEX REPLACE ".cpp" "" BIN_EXE ${BIN_SRC})
+    MESSAGE(${BIN_EXE} ${BIN_SRC})
+    add_executable(${BIN_EXE} ${BIN_SRC})
+    TARGET_LINK_LIBRARIES( ${BIN_EXE}
+                ${Simbody_LIBRARIES}
+                SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
                 ${Boost_LIBRARIES}
                 ${BOOST_LIBS_BYHAND}
                 #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense...

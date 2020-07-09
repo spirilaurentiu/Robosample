@@ -138,6 +138,8 @@ include_directories(../include/gmolmodel)
 
 add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
 add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
+add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
+add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
 add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
 
 #simmain must be refactor since it contains mmtk data types and current version do not make use of mmtk anymore
@@ -175,6 +177,15 @@ TARGET_LINK_LIBRARIES( GMOLMODEL_test
 # link Simbody libraries
 TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic
 		${Simbody_LIBRARIES}
+		SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+		${BOOST_LIBRARIES}
+                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code...
+		${OpenMM_LIBRARIES}
+		m )
+		#${mmtk_libs} )
+# link Simbody libraries
+TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic_d
+		${Simbody_LIBRARIES}
 		SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
 		${BOOST_LIBRARIES}
                 #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code...
@@ -183,6 +194,14 @@ TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic
 		#${mmtk_libs} )
 TARGET_LINK_LIBRARIES(GMOLMODEL_static
 		${Simbody_LIBRARIES}
+		SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+		${BOOST_LIBRARIES}
+                #${PYTHON_LIBRARIES}  # same as for dynamic lib... I don't think python shoud be part of this lib...
+		${OpenMM_LIBRARIES}
+		m )
+                #${mmtk_libs} )
+TARGET_LINK_LIBRARIES(GMOLMODEL_static_d
+		${Simbody_LIBRARIES}
 		SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
 		${BOOST_LIBRARIES}
                 #${PYTHON_LIBRARIES}  # same as for dynamic lib... I don't think python shoud be part of this lib...
@@ -190,8 +209,8 @@ TARGET_LINK_LIBRARIES(GMOLMODEL_static
 		m )
                 #${mmtk_libs} )
 
-#set_target_properties(GMOLMODEL_dynamic PROPERTIES OUTPUT_NAME "gmolmodel")
-#set_target_properties(GMOLMODEL_dynamic PROPERTIES VERSION 1.2 SOVERSION 1)
+#set_target_properties(GMOLMODEL_dynamic_d PROPERTIES OUTPUT_NAME "gmolmodel")
+#set_target_properties(GMOLMODEL_dynamic_d PROPERTIES VERSION 1.2 SOVERSION 1)
 
 #set_target_properties(GMOLMODEL_static PROPERTIES OUTPUT_NAME "gmoldel")
 
