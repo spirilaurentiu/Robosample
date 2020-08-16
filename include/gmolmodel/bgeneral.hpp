@@ -220,6 +220,7 @@ void SOA_SpatialMat2Mat66(const SimTK::SpatialMat& in, SimTK::Mat66& out);
 void PrintBigMat(SimTK::Matrix M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places, std::string header);
+void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Vector M, int nrows, int decimal_places, std::string header);
 
@@ -282,7 +283,8 @@ enum class GmolRandDistributionType {
 
 enum SamplerName { // Samplers
     MC,
-    HMC
+    HMC,
+    LAHMC
 };
 
 #ifndef MONTECARLOSAMPLER
@@ -293,5 +295,8 @@ enum SamplerName { // Samplers
 #define HAMILTONIANMONTECARLOSAMPLER HMC
 #endif
 
+#ifndef LOOKAHEADHMCSAMPLER
+#define LOOKAHEADHMCSAMPLER LAHMC
+#endif
 
 #endif /*BGENERAL_H_*/

@@ -14,6 +14,7 @@ LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::DuMMForceFieldSubsystem *argDumm
                                      ,SimTK::GeneralForceSubsystem *argForces
                                      ,SimTK::TimeStepper *argTimeStepper
+				     ,unsigned int Kext
                                      )
     : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
     MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
@@ -31,6 +32,39 @@ LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
     MDStepsPerSample = 0;
     proposeExceptionCaught = false;
     adaptTimestep = false;
+
+
+    this->K = Kext;
+    for(unsigned int i = 0; i < K + 1; i++){
+    	pe_ns.push_back(SimTK::Infinity);
+    	fix_ns.push_back(SimTK::Infinity);
+    	logSineSqrGamma2_ns.push_back(SimTK::Infinity);
+    	ke_ns.push_back(SimTK::Infinity);
+    	etot_ns.push_back(SimTK::Infinity);
+    }
+
+    C.resize(this->K + 1, this->K + 1);
+    Ctau.resize(this->K + 1, this->K + 1);
+    P.resize(this->K + 1, this->K + 1); // Anti-diagonal identity
+
+    //int k = -1;for(int i=0;i<someK;i++){for(int j=0;j<someK;j++){k++;C.set(i,j,k);}}
+    int k = -1;
+    for(int i = 0; i < this->K + 1; i++){
+        for(int j = 0; j < this->K + 1; j++){
+            k++;
+            //C.set(i, j, k);
+            //C.set(i, j, -1.0);
+            C.set(i, j, SimTK::Infinity);
+            Ctau.set(i, j, SimTK::Infinity);
+            if(i == (this->K) - j){
+                P.set(i, j, 1);
+            }else{
+                P.set(i, j, 0);
+            }
+        }
+    }
+    
+    //Ctau = P * (C * P);
 }
 
 /** Destructor **/
@@ -288,55 +322,8 @@ void LAHMCSampler::reinitialize(SimTK::State& someState)
 
 }
 
-/** Get/Set the timestep for integration **/
-//float LAHMCSampler::getTimestep(void)
-//{
-//    return timestep;
-//    //return timeStepper->updIntegrator().getPredictedNextStepSize();
-//}
-
-//void LAHMCSampler::setTimestep(float argTimestep)
-//{
-//    if(argTimestep <= 0){
-//        adaptTimestep = true;
-//        this->timestep = 0.0002;
-//	this->timestepIncr = 0.0001;
-//    }else{
-//        adaptTimestep = false;
-//    	timeStepper->updIntegrator().setFixedStepSize(argTimestep);
-//    	this->timestep = argTimestep;
-//    }
-//}
-
-/** Get/Set boost temperature **/
-//SimTK::Real LAHMCSampler::getBoostTemperature(void)
-//{
-//    return this->boostT;
-//}
-//
-//void LAHMCSampler::setBoostTemperature(SimTK::Real argT)
-//{
-//    this->boostT = argT;
-//    this->boostFactor = std::sqrt(this->boostT / this->temperature);
-//    this->unboostFactor = 1 / boostFactor;
-//    std::cout << "HMC: boost temperature: " << this->boostT << std::endl;
-//    std::cout << "HMC: boost velocity scale factor: " << this->boostFactor << std::endl;
-//}
-//
-//void LAHMCSampler::setBoostMDSteps(int argMDSteps)
-//{
-//    this->boostMDSteps = argMDSteps;
-//    std::cout << "HMC: boost MD steps: " << this->boostMDSteps << std::endl;
-//
-//}
-/** It implements the proposal move in the Hamiltonian Monte Carlo
-algorithm. It essentially propagates the trajectory after it stores
-the configuration and energies. TODO: break in two functions:
-initializeVelocities and propagate/integrate **/
-void LAHMCSampler::propose(SimTK::State& someState)
-{
-    // Initialize configuration - not necessary unless we modify the
-    // configuration in addition to velocities
+/** Store configuration **/
+void LAHMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someState){ // func
     system->realize(someState, SimTK::Stage::Position);
 
     int t = 0;
@@ -349,8 +336,11 @@ void LAHMCSampler::propose(SimTK::State& someState)
     pe_o = pe_set;
     fix_o = fix_set;
     logSineSqrGamma2_o = logSineSqrGamma2_set;
-
-    // Initialize velocities according to the Maxwell-Boltzmann distribution
+} // func
+    
+/** Initialize velocities according to the Maxwell-Boltzmann
+distribution.  Coresponds to R operator in LAHMC **/
+void LAHMCSampler::initializeVelocities(SimTK::State& someState){
     int nu = someState.getNU();
     double sqrtRT = std::sqrt(RT);
     SimTK::Vector V(nu);
@@ -367,52 +357,23 @@ void LAHMCSampler::propose(SimTK::State& someState)
 
     // Realize velocity
     system->realize(someState, SimTK::Stage::Velocity);
-
-    // Store the proposed energies
+}
+    
+/** Store the proposed energies **/
+void LAHMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
     // setProposedKE(matter->calcKineticEnergy(someState));
     this->ke_proposed = matter->calcKineticEnergy(someState);
-    //std::cout << " ke before timestepping " << this->ke_proposed << std::endl;
+    
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-
-
-
+}
+    
+/** Apply the L operator **/
+void LAHMCSampler::integrateTrajectory(SimTK::State& someState){    
     try {
-        // IF NOT PRINT EVERY STEP // Integrate (propagate trajectory)
-	if(adaptTimestep){
-		if( !(nofSamples % 30) ){ // Do it only so often
-			//std::cout << "adapt ts " << acceptedSteps << ' ' << nofSamples << std::endl;
-			// Compute average acceptance in the buffer
-			int sum = 0, sqSum = 0;
-			for (std::list<int>::iterator p = acceptedStepsBuffer.begin(); p != acceptedStepsBuffer.end(); ++p){
-        			sum += (int)*p;
-				sqSum += (((int)*p) * ((int)*p));
-			}
-    			float acceptance = float(sum) / float(acceptedStepsBufferSize);
-			//float sqAcceptance = sqSum / acceptedStepsBufferSize;
-			//float stdAcceptance = std::sqrt(sqAcceptance - (acceptance*acceptance));
-			float stdAcceptance = 0.03;
-
-			// Increase or decrease timestep
-			if(acceptance > (0.651 + stdAcceptance)){
-				timestep += timestepIncr;
-			}else if(acceptance < (0.651 - stdAcceptance)){
-				if(timestep > 0.0001){
-					timestep -= timestepIncr;
-				}
-			}
-			
-
-		}
-        	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-	}else{
-        	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-	}
-        system->realize(someState, SimTK::Stage::Position);
-
+        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
     }catch(const std::exception&){
         proposeExceptionCaught = true;
         //std::cout << "HMC_stepTo_or_realizePosition_threw_exception";
-
         int i = 0;
         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -420,10 +381,188 @@ void LAHMCSampler::propose(SimTK::State& someState)
             i++;
         }
         system->realize(someState, SimTK::Stage::Position);
-
-
     }
 
+}
+
+/** Store new configuration and energy terms**/
+void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int k)
+{
+    // Get new Fixman potential
+    if(useFixman){
+        fix_ns[k] = calcFixman(someState);
+        logSineSqrGamma2_ns[k] = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+    }else{
+        fix_ns[k] = 0.0;
+        logSineSqrGamma2_ns[k] = 0.0;
+    }
+
+    // Get new kinetic energy
+    system->realize(someState, SimTK::Stage::Velocity);
+    ke_ns[k] = matter->calcKineticEnergy(someState);
+
+    // Get new potential energy
+    pe_ns[k] = forces->getMultibodySystem().calcPotentialEnergy(someState);
+    logSineSqrGamma2_ns[k] = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+
+    // Calculate total energy
+    if(useFixman){
+        etot_ns[k] = pe_ns[k] + ke_ns[k] + fix_ns[k] - (0.5 * RT * logSineSqrGamma2_ns[k]);
+        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+    }else{
+        etot_ns[k] = pe_ns[k] + ke_ns[k];
+        etot_proposed = pe_o + ke_proposed;
+    }
+
+    pe_n = pe_ns[k];
+    fix_n = fix_ns[k];
+    logSineSqrGamma2_n = logSineSqrGamma2_ns[k];
+    ke_n = ke_ns[k];
+    etot_n = etot_ns[k];
+
+    PrintDetailedEnergyInfo(someState);
+}
+
+/*** Set C matrices entry ***/
+void LAHMCSampler::setCEntry(int i, int j, SimTK::Real entry){
+	C.set(i, j, entry);
+	Ctau.set(K - i, K - j, entry);
+}
+
+/*** Set C matrices entry ***/
+void LAHMCSampler::setCtauEntry(int i, int j, SimTK::Real entry){
+	Ctau.set(i, j, entry);
+	C.set(K - i, K - j, entry);
+}
+
+/*** Metropolis-Hastings acception-rejection criterion  ***/
+SimTK::Real LAHMCSampler::leap_prob(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n)
+{
+	SimTK::Real Ediff = E_n - E_o;
+	SimTK::Real prob = exp(-1.0 * this->beta * Ediff);
+	if(prob > 1){
+		return 1;
+	}else{
+		return prob;
+	}
+}
+
+/*** Compute cumulative transition probabilities ***/
+SimTK::Real LAHMCSampler::leap_prob_recurse(SimTK::State& someState, int currSize, bool dir_fwd)
+{
+	std::cout << "\nBEGIN index gym size " << currSize << "\n";
+	SimTK::Real cumu = 0.0;
+	int firstIx, secondIx; // to be used with energies
+	SimTK::Real Ediff; 
+
+	// Set energy indeces
+	if(dir_fwd){
+		firstIx = 0;
+		secondIx = currSize - 1;
+	}
+	else{
+		firstIx = currSize - 1;
+		secondIx = 0;
+	}
+
+	// Check if already passed through this leaf
+	SimTK::Real upperCorner;
+	if(dir_fwd){
+		upperCorner = C.get(0, currSize - 1);
+	}else{
+		upperCorner = Ctau.get(0, currSize - 1);
+	}
+	if( upperCorner != SimTK::Infinity){
+		std::cout << "Passed through this leaf" << std::endl;
+		return upperCorner;
+	}
+
+	// Boltzmann probability
+	if(currSize == 2){
+		std::cout << "Boltzmann\n";
+		
+		SimTK::Real p_acc = 0.0;
+    		if(!std::isnan(pe_ns[secondIx])){
+			if(dir_fwd){
+				p_acc = leap_prob(someState, etot_ns[firstIx], etot_ns[secondIx]);
+				setCEntry(firstIx, secondIx, p_acc);
+			}else{
+				p_acc = leap_prob(someState, etot_ns[firstIx], etot_ns[secondIx]);
+				setCtauEntry(0, currSize - 1, p_acc);
+			}
+		}
+		return p_acc;
+	}
+	
+	// Forward
+	cum_forward = leap_prob_recurse(someState, currSize - 1, true);
+	// Backward
+	cum_reverse = leap_prob_recurse(someState, currSize - 1, false);
+
+	// Eq. 25
+	Ediff = etot_ns[firstIx] - etot_ns[secondIx];
+	SimTK::Real start_state_ratio = exp(this->beta * Ediff);
+
+	SimTK::Real prob;
+	prob = std::min(1 - cum_forward, start_state_ratio * (1 - cum_reverse));
+	cumu = cum_forward + prob;
+
+	if(dir_fwd){
+		setCEntry(0, currSize - 1, cumu);
+	}
+	else{
+		setCtauEntry(0, currSize - 1, cumu);
+	}
+
+	PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
+	PrintBigMat(Ctau, this->K + 1, this->K + 1, 2, std::string("Ctau"));
+	std::cout << "\nEND index gym size " << currSize << "\n";
+	return cumu;
+}
+
+
+/** It implements the proposal move in the Hamiltonian Monte Carlo
+algorithm. It essentially propagates the trajectory after it stores
+the configuration and energies. TODO: break in two functions:
+initializeVelocities and propagate/integrate **/
+void LAHMCSampler::propose(SimTK::State& someState)
+{
+
+	PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
+	std::cout << "===========\n";
+	PrintBigMat(C.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:-1,:-1]"); // 0 <= i < m, 0 <= j < n
+	std::cout << "===========\n";
+	PrintBigMat(Ctau.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:0:-1,:0:-1]");
+	std::cout << "===========\n";
+
+    storeOldConfigurationAndPotentialEnergies(someState);
+
+    initializeVelocities(someState);
+
+    calcProposedKineticAndTotalEnergy(someState);
+
+    // First set the starting point
+    calcNewConfigurationAndEnergies(someState, 0);
+
+    // Apply leap operator K times
+    for(int k = 1; k <= K; k++){
+        integrateTrajectory(someState);
+        calcNewConfigurationAndEnergies(someState, k);
+    }
+
+    leap_prob_recurse(someState, this->K + 1, true);
+
+}
+
+/** Store new configuration and energy terms**/
+void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
+{
+    setSetTVector(someState);
+    pe_set = pe_n;
+    fix_set = fix_n;
+    logSineSqrGamma2_set = logSineSqrGamma2_n;
+    ke_lastAccepted = ke_n;
+    etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 }
 
 /** Main function that contains all the 3 steps of HMC.
@@ -431,60 +570,19 @@ Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
 bool LAHMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 {
+
+    // Declare variables
     bool acc;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-
-    // Get new Fixman potential
-    if(useFixman){
-        fix_n = calcFixman(someState);
-        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-    }else{
-        fix_n = 0.0;
-        logSineSqrGamma2_n = 0.0;
-    }
-
-    // Get new kinetic energy
-    system->realize(someState, SimTK::Stage::Velocity);
-    ke_n = matter->calcKineticEnergy(someState);
-    //std::cout << " ke after timestepping " << this->ke_n << std::endl;
-
-    // Get new potential energy
-    if ( getThermostat() == ANDERSEN ){
-        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-	    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-	    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-    }
-    else{
-        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-	    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-    }
-
-    // Calculate total energy
-    if(useFixman){
-        etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
-    }else{
-        etot_n = pe_n + ke_n;
-        etot_proposed = pe_o + ke_proposed;
-    }
-
-    PrintDetailedEnergyInfo(someState);
 
 
     // Decide and get a new sample
     if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
         acc = true;
         std::cout << " acc" << std::endl;
-        setSetTVector(someState);
-        pe_set = pe_n;
-        fix_set = fix_n;
-        logSineSqrGamma2_set = logSineSqrGamma2_n;
-        ke_lastAccepted = ke_n;
-        etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 
+	setSetConfigurationAndEnergiesToNew(someState);
+	
         //setBeta(newBeta);
 
         ++acceptedSteps;
@@ -494,17 +592,10 @@ bool LAHMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
         if ( (proposeExceptionCaught == false) &&
                 (!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
-             //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
              acc = true;
              std::cout << " acc" << std::endl;
-             setSetTVector(someState);
-             pe_set = pe_n;
-             fix_set = fix_n;
-             logSineSqrGamma2_set = logSineSqrGamma2_n;
-             ke_lastAccepted = ke_n;
-             etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 
-             //setBeta(newBeta);
+	     setSetConfigurationAndEnergiesToNew(someState);
 
              ++acceptedSteps;
              acceptedStepsBuffer.push_back(1);
@@ -513,7 +604,9 @@ bool LAHMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
         } else { // Reject
              acc = false;
              std::cout << " nacc" << std::endl;
+
              assignConfFromSetTVector(someState);
+
              proposeExceptionCaught = false;
              acceptedStepsBuffer.push_back(0);
              acceptedStepsBuffer.pop_front();

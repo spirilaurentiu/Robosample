@@ -214,9 +214,15 @@ int main(int argc, char **argv)
     // Realize topology for all the Worlds
     context.realizeTopology();
 
-   // AddAdd samplers to the worlds
+   // Add samplers to the worlds
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        context.addSampler(worldIx, HMC);
+	if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
+        	context.addSampler(worldIx, HMC);
+	}else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
+        	context.addSampler(worldIx, LAHMC);
+	}else{
+        	context.addSampler(worldIx, LAHMC);
+	}
     }
 
     // Set sampler parameters and initialize
@@ -227,9 +233,9 @@ int main(int argc, char **argv)
 
             // Set thermostats
             pMC(context.updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
-            pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
+            pLAHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
                 std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
-            pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
+            pLAHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
                     std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 
             // Activate Fixman potential if needed

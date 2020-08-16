@@ -25,8 +25,14 @@ if (args.subset).lower() == "all":
 	for pi in range(len(pdata)):
 		line = pdata[pi]
 		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
-			for word in line: print word,
-			print
+			line = pdata[pi]
+			atom1Acc = float(line[-2])
+			atom2Acc = float(line[-1])
+			#print atom1Acc, args.accRange[0], args.accRange[1]
+			if( ((atom1Acc >= args.accRange[0]) and (atom1Acc <= args.accRange[1])) or 
+			    ((atom2Acc >= args.accRange[0]) and (atom2Acc <= args.accRange[1])) ):
+				for word in line: print word,
+				print
 
 # Get phi
 if (args.subset).lower() == "phi":
@@ -47,8 +53,25 @@ if (args.subset).lower() == "psi":
 				for word in line: print word,
 				print
 
+# Get Ramachandran flexibility
+if (args.subset).lower() == "rama":
+	for pi in range(len(pdata)):
+		line = pdata[pi]
+		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
+			if(line[7] != "PRO"):
+				if(((line[4] == "N") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "N"))):
+					for word in line: print word,
+					print
+	for pi in range(len(pdata)):
+		line = pdata[pi]
+		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
+			if(((line[4] == "C") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "C"))):
+				for word in line: print word,
+				print
+
+
 # Get sidechains
-if (args.subset).lower() == "sidechains":
+if (args.subset).lower() == "side":
 	for pi in range(len(pdata)):
 		line = pdata[pi]
 		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):

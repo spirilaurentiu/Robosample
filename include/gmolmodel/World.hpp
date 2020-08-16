@@ -41,7 +41,7 @@
 #include "server.hpp"
 #include "Topology.hpp"
 #include "bArgParser.hpp"
-#include "HMCSampler.hpp"
+#include "LAHMCSampler.hpp"
 #include "ConformationalSearch.hpp"
 
 // TODO write a pdb writer for all the Compounds

@@ -474,6 +474,14 @@ int World::addSampler(SamplerName samplerName)
                 );
         samplers.emplace_back(p);
 
+    }else if(samplerName == LAHMC){
+
+        BaseSampler *p = new LAHMCSampler(
+                compoundSystem, matter, topologies[0],
+                forceField, forces, ts, 4
+                );
+        samplers.emplace_back(p);
+
     }
 
     return samplers.size();
