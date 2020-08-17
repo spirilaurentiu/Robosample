@@ -103,11 +103,17 @@ public:
     /*** Set C matrices entry ***/
     void setCtauEntry(int i, int j, SimTK::Real entry);
 
+    /*** Convert C indeces to Ctau indeces ***/
+    void C_to_Ctau_Indeces(int C_i, int C_j, int &Ctau_i, int &Ctau_j, int currSize);
+
+    /*** Convert Ctau indeces to C indeces ***/
+    void Ctau_to_C_Indeces(int Ctau_i, int Ctau_j, int &C_i, int &C_j, int currSize);
+
     /*** Transition probability from state o to state n ***/
      SimTK::Real leap_prob(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n);
 
     /*** Compute cumulative transition probabilities ***/
-    SimTK::Real leap_prob_recurse(SimTK::State& someState, int currSize, bool dir_fwd);
+    SimTK::Real leap_prob_recurse(SimTK::State& someState, int firstIx, int secondIx, bool dir_fwd);
 
     /** It implements the proposal move in the Hamiltonian Monte Carlo
     algorithm. It essentially propagates the trajectory after it stores
