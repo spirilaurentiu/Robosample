@@ -1446,7 +1446,6 @@ void Topology::loadMobodsRelatedMaps(void){
             mbx2aIx.insert(
                 std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex>
                 (mbx, aIx));
-            std::cout << "inserted" << std::endl;
         }
 
         // Map aIx is redundant in MobilizedBodyIndeces

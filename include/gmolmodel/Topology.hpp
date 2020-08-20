@@ -241,6 +241,12 @@ public:
     int nTriples;
     std::vector< std::vector<Compound::AtomIndex> > triples;
 
+    // Map mbx2aIx contains only atoms at the origin of mobods
+    std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
+
+    // Map aIx is redundant in MobilizedBodyIndeces
+    std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex > aIx2mbx;
+
 private:
 
     int bSpecificAtomRootIndex;
@@ -256,12 +262,6 @@ private:
     int nofProcesses;
     int baseSetFlag;
     int baseAtomNumber;
-
-    // Map mbx2aIx contains only atoms at the origin of mobods
-    std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
-
-    // Map aIx is redundant in MobilizedBodyIndeces
-    std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex > aIx2mbx;
 
     // Gmolmodel to Molmodel (and inverse) bond mappings
     std::map< SimTK::Compound::BondIndex, int > bondIx2GmolBond;

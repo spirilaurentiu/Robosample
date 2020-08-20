@@ -547,6 +547,7 @@ SimTK::Real LAHMCSampler::leap_prob_recurse(SimTK::State& someState, int firstIx
 		cum_forward = leap_prob_recurse(someState, revFirstIx, revSecondIx - 1, false);
 	}
 	std::cout << "cum_fwd = " << cum_forward << std::endl;
+
 	// Backward
 	std::cout << "Reenter reverse." << currSize << " " << dir_fwd; 
 	if(dir_fwd){

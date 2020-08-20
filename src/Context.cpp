@@ -203,7 +203,11 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
         // Iterate through topology filenames vector
         for(unsigned int molIx = 0; molIx < topFNs[worldIx].size(); molIx++){
     	    std::cout << " Context::AddMolecule molIx "<< molIx << " " << std::endl;
-    	    std::cout << " Context::AddMolecule topFNs[worldIx][molIx] "<< topFNs[worldIx][molIx] << " " << std::endl;
+    	    std::cout << " Context::AddMolecule topFNs[worldIx][molIx] "<< topFNs[worldIx][molIx] 
+		<< " " << crdFNs[worldIx][molIx] << " " << rbSpecsFNs[worldIx][molIx] 
+		//<< " " << flexSpecsFNs[worldIx][molIx] 
+		//<< " " << regimens[worldIx][molIx] 
+		<< std::endl << std::flush;
             // Initialize an input reader
             readAmberInput amberReader;
             amberReader.readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);

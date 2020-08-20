@@ -833,8 +833,13 @@ SimTK::State& World::setAtomsLocationsInGround(
             }
 
             // Set X_PF and Q
-            for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
-                SimTK::MobilizedBody &mobod = matter->updMobilizedBody(mbx);
+            //for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
+	      for (auto const& p : (topologies[i]->mbx2aIx)){
+
+                //SimTK::MobilizedBody &mobod = matter->updMobilizedBody(mbx); // RESTO
+                SimTK::MobilizedBody &mobod = matter->updMobilizedBody(p.first); // NEWO
+		if(mobod.isGround()){ continue;}
+                SimTK::MobilizedBodyIndex mbx = mobod.getMobilizedBodyIndex(); // NEWO
 
                 // Get body, parentBody, parentAtom
                 const SimTK::MobilizedBody &parentMobod = mobod.getParentMobilizedBody();
