@@ -97,6 +97,9 @@ public:
     /** Store new configuration and energy terms**/
     void calcNewConfigurationAndEnergies(SimTK::State& someState, int k);
 
+    /*** Set C matrices entries to 0 ***/
+    void resetCMatrices(void);
+
     /*** Set C matrices entry ***/
     void setCEntry(int i, int j, SimTK::Real entry);
 
@@ -168,7 +171,6 @@ protected:
 
     // Anti-diagonal transpose Ctau as denoted by 2007 Vasily Golyshev, 
     // Jan Stienstra. The same as Python C[:0:, :0:]
-    SimTK::Real cum_forward, cum_reverse;
     SimTK::Matrix C, Ctau; // Cumulative probability matrices
     SimTK::Matrix P; // Ant-diagonal identity matrix
 

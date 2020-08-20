@@ -48,7 +48,7 @@ LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
     P.resize(this->K + 1, this->K + 1); // Anti-diagonal identity
 
     //int k = -1;for(int i=0;i<someK;i++){for(int j=0;j<someK;j++){k++;C.set(i,j,k);}}
-    int k = -1;
+    int k = 1;
     for(int i = 0; i < this->K + 1; i++){
         for(int j = 0; j < this->K + 1; j++){
             k++;
@@ -425,6 +425,16 @@ void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int 
     PrintDetailedEnergyInfo(someState);
 }
 
+/*** Set C matrices entries to 0 ***/
+void LAHMCSampler::resetCMatrices(void){
+	for(int i = 0; i < this->K + 1; i++){
+		for(int j = 0; j < this->K + 1; j++){
+			C.set(i, j, SimTK::Infinity);
+			Ctau.set(i, j, SimTK::Infinity);
+		}
+	}
+}
+
 /*** Set C matrices entry ***/
 void LAHMCSampler::setCEntry(int i, int j, SimTK::Real entry){
 	C.set(i, j, entry);
@@ -440,13 +450,15 @@ void LAHMCSampler::setCtauEntry(int i, int j, SimTK::Real entry){
 /*** Metropolis-Hastings acception-rejection criterion  ***/
 SimTK::Real LAHMCSampler::leap_prob(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n)
 {
-	SimTK::Real Ediff = E_n - E_o;
-	SimTK::Real prob = exp(-1.0 * this->beta * Ediff);
-	if(prob > 1){
-		return 1;
-	}else{
+	std::cout << "leap_prob " << E_o << " " << E_n ;
+
+	SimTK::Real Ediff = E_o - E_n;
+	SimTK::Real prob = exp(this->beta * Ediff);
+	//if(prob > 1){
+	//	return 1;
+	//}else{
 		return prob;
-	}
+	//}
 }
 
 /*** Convert C indeces to Ctau indeces ***/
@@ -469,17 +481,14 @@ SimTK::Real LAHMCSampler::leap_prob_recurse(SimTK::State& someState, int firstIx
 {
 	int currSize = secondIx - firstIx + 1;
 
-	SimTK::Real cumu = 0.0;
 	SimTK::Real Ediff;
 
 	// Indeces between the two matrices
 	int revFirstIx, revSecondIx;
-	//if(dir_fwd){
-		Ctau_to_C_Indeces(firstIx, secondIx, revFirstIx, revSecondIx, currSize);
-	//}else{
-	//	C_to_Ctau_Indeces(firstIx, secondIx, revFirstIx, revSecondIx, currSize);
-	//}
-	std::cout << "\nBEGIN Z_chain shape " << currSize << " " << dir_fwd << " " << firstIx << " " << secondIx << " " << revFirstIx << " " << revSecondIx << "\n";
+	Ctau_to_C_Indeces(firstIx, secondIx, revFirstIx, revSecondIx, currSize);
+	std::cout << "\nBEGIN Z_chain shape " << currSize << " " << dir_fwd 
+		<< " " << firstIx << " " << secondIx 
+		<< " " << revFirstIx << " " << revSecondIx << "\n";
 
 	int upperCorner_i = firstIx;
 	int upperCorner_j = secondIx;
@@ -493,11 +502,13 @@ SimTK::Real LAHMCSampler::leap_prob_recurse(SimTK::State& someState, int firstIx
 		upperCorner = Ctau.get(upperCorner_i, upperCorner_j);
 	}
 
-	if( upperCorner != SimTK::Infinity){
+	//if( upperCorner != SimTK::Infinity){
+	if( upperCorner < 1){
 		std::cout << "Already already visited this leaf" << std::endl;
-		PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
-		//PrintBigMat(Ctau, this->K + 1, this->K + 1, 2, std::string("Ctau"));
-		std::cout << "\nEND index gym size " << currSize << " " << dir_fwd << " " << firstIx << " " << secondIx << " " << revFirstIx << " " << revSecondIx << "\n";
+		PrintBigMat(C, this->K + 1, this->K + 1, 6, std::string("C"));
+		std::cout << "\nEND index gym size " << currSize << " " << dir_fwd 
+			<< " " << firstIx << " " << secondIx 
+			<< " " << revFirstIx << " " << revSecondIx << "\n";
 		return upperCorner;
 	}
 
@@ -508,42 +519,66 @@ SimTK::Real LAHMCSampler::leap_prob_recurse(SimTK::State& someState, int firstIx
 		SimTK::Real p_acc = 0.0;
     		if(!std::isnan(pe_ns[upperCorner_j])){
 			if(dir_fwd){
-				p_acc = leap_prob(someState, etot_ns[upperCorner_i], etot_ns[upperCorner_j]);
+				p_acc = leap_prob(someState, etot_ns[firstIx], etot_ns[secondIx]);
 				setCEntry(upperCorner_i, upperCorner_j, p_acc);
+				std::cout << " " << firstIx << " " << secondIx ;
 			}else{
-				p_acc = leap_prob(someState, etot_ns[upperCorner_i], etot_ns[upperCorner_j]);
+				p_acc = leap_prob(someState, etot_ns[revSecondIx], etot_ns[revFirstIx]);
 				setCtauEntry(upperCorner_i, upperCorner_j, p_acc);
+				std::cout << " " << revSecondIx << " " << revFirstIx ;
 			}
+			std::cout << " " << p_acc << std::endl;
 		}
-		PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
-		//PrintBigMat(Ctau, this->K + 1, this->K + 1, 2, std::string("Ctau"));
-		std::cout << "\nEND index gym size " << currSize << " " << dir_fwd << " " << firstIx << " " << secondIx << " " << revFirstIx << " " << revSecondIx << "\n";
+		PrintBigMat(C, this->K + 1, this->K + 1, 6, std::string("C"));
+		std::cout << "\nEND index gym size " << currSize << " " << dir_fwd 
+			<< " " << firstIx << " " << secondIx 
+			<< " " << revFirstIx << " " << revSecondIx << "\n";
 		return p_acc;
 	}
 	
 	// Forward
-	std::cout << "Reenter forward." << currSize << " " << dir_fwd << " " << firstIx << " " << secondIx << " " << revFirstIx << " " << revSecondIx << "\n";
+	std::cout << "Reenter forward" << currSize << " " << dir_fwd;
+	SimTK::Real cum_forward, cum_reverse;
 	if(dir_fwd){
+		std::cout << " ixs: " << firstIx << " " << secondIx << " to " << firstIx << " " << secondIx -1 << "\n";
 		cum_forward = leap_prob_recurse(someState, firstIx, secondIx - 1, true);
 	}else{
-		cum_forward = leap_prob_recurse(someState, firstIx, secondIx - 1, false);
+		std::cout << " ixs: " << firstIx << " " << secondIx << " to " << revFirstIx << " " << revSecondIx -1 << "\n";
+		cum_forward = leap_prob_recurse(someState, revFirstIx, revSecondIx - 1, false);
 	}
+	std::cout << "cum_fwd = " << cum_forward << std::endl;
 	// Backward
-	std::cout << "Reenter reverse." << currSize << " " << dir_fwd << " " << firstIx << " " << secondIx << " " << revFirstIx << " " << revSecondIx << "\n";
+	std::cout << "Reenter reverse." << currSize << " " << dir_fwd; 
 	if(dir_fwd){
+		std::cout << " ixs: " << firstIx << " " << secondIx << " to " << revFirstIx << " " << revSecondIx -1 << "\n";
 		cum_reverse = leap_prob_recurse(someState, revFirstIx, revSecondIx - 1, false);
 	}else{
+		std::cout << " ixs: " << firstIx << " " << secondIx << " to " << revFirstIx << " " << revSecondIx -1 << "\n";
 		cum_reverse = leap_prob_recurse(someState, revFirstIx, revSecondIx - 1, true);
 	}
 
 	// Eq. 25
-	std::cout << "Do LAHMC probability." << currSize << " " << dir_fwd << " " << firstIx << " " << secondIx << " " << revFirstIx << " " << revSecondIx << "\n";
-	Ediff = etot_ns[upperCorner_i] - etot_ns[upperCorner_j];
+	std::cout << "Do LAHMC probability." << currSize << " " << dir_fwd 
+		<< " " << firstIx << " " << secondIx 
+		<< " " << revFirstIx << " " << revSecondIx << "\n";
+	if(dir_fwd){
+		Ediff = etot_ns[firstIx] - etot_ns[secondIx];
+	}else{
+		Ediff = etot_ns[revSecondIx] - etot_ns[revFirstIx];
+	}
 	SimTK::Real start_state_ratio = exp(this->beta * Ediff);
 
 	SimTK::Real prob;
 	prob = std::min(1 - cum_forward, start_state_ratio * (1 - cum_reverse));
-	cumu = cum_forward + prob;
+	if(dir_fwd){
+		std::cout << "E0 E1 start_state_ratio cum_fwd cum_rev prob " 
+			<< etot_ns[firstIx] << " " << etot_ns[secondIx] << " " << start_state_ratio << " " << cum_forward << " " << cum_reverse << " " << prob << std::endl;
+	}else{
+		std::cout << "E0 E1 start_state_ratio cum_fwd cum_rev prob " 
+			<< etot_ns[revSecondIx] << " " << etot_ns[revFirstIx] << " " << start_state_ratio << " " << cum_forward << " " << cum_reverse << " " << prob << std::endl;
+	}
+
+	SimTK::Real cumu = cum_forward + prob;
 
 	if(dir_fwd){
 		setCEntry(upperCorner_i, upperCorner_j, cumu);
@@ -551,9 +586,10 @@ SimTK::Real LAHMCSampler::leap_prob_recurse(SimTK::State& someState, int firstIx
 		setCtauEntry(upperCorner_i, upperCorner_j, cumu);
 	}
 
-	PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
-	//PrintBigMat(Ctau, this->K + 1, this->K + 1, 2, std::string("Ctau"));
-	std::cout << "\nEND index gym size " << currSize << " " << dir_fwd << " " << firstIx << " " << secondIx << " " << revFirstIx << " " << revSecondIx << "\n";
+	PrintBigMat(C, this->K + 1, this->K + 1, 6, std::string("C"));
+	std::cout << "\nEND index gym size " << currSize << " " << dir_fwd 
+		<< " " << firstIx << " " << secondIx 
+		<< " " << revFirstIx << " " << revSecondIx << "\n";
 	return cumu;
 }
 
@@ -587,7 +623,14 @@ void LAHMCSampler::propose(SimTK::State& someState)
         calcNewConfigurationAndEnergies(someState, k);
     }
 
-    leap_prob_recurse(someState, 0, this->K, true);
+	etot_ns[0] = 2;
+	etot_ns[1] = 3;
+	etot_ns[2] = 5;
+	etot_ns[3] = 8;
+	etot_ns[4] = 12;
+
+	resetCMatrices();
+	leap_prob_recurse(someState, 0, this->K, true);
 
 }
 
