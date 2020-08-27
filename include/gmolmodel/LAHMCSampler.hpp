@@ -100,6 +100,16 @@ public:
     /*** Set C matrices entries to 0 ***/
     void resetCMatrices(void);
 
+    /*** Return a submatrix of M with lesser rows and cols from the end ***/
+    SimTK::Matrix extractFromTop(SimTK::Matrix M, int rowCut, int colCut);
+
+    /*** Copies different sizes matrices entries and avoids Simbody resize ***/
+    void injectFromTop(const std::vector<SimTK::Real>& src, std::vector<SimTK::Real>& dest);
+    void injectFromTop(const SimTK::Matrix& src, SimTK::Matrix& dest);
+
+    /*** Return the antidiagonal transpose of a matrix ***/
+    SimTK::Matrix reverseMatrix(SimTK::Matrix M);
+
     /*** Set C matrices entry ***/
     void setCEntry(int i, int j, SimTK::Real entry);
 
@@ -117,6 +127,7 @@ public:
 
     /*** Compute cumulative transition probabilities ***/
     SimTK::Real leap_prob_recurse(SimTK::State& someState, int firstIx, int secondIx, bool dir_fwd);
+    SimTK::Matrix leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> etot_ns_loc, SimTK::Matrix CC_loc);
 
     /** It implements the proposal move in the Hamiltonian Monte Carlo
     algorithm. It essentially propagates the trajectory after it stores
@@ -173,6 +184,9 @@ protected:
     // Jan Stienstra. The same as Python C[:0:, :0:]
     SimTK::Matrix C, Ctau; // Cumulative probability matrices
     SimTK::Matrix P; // Ant-diagonal identity matrix
+
+    SimTK::Matrix CC;
+
 
 };
 

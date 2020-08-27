@@ -67,6 +67,10 @@ LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
     }
     
     //Ctau = P * (C * P);
+
+    // // //
+    CC.resize(this->K + 1, this->K + 1);
+
 }
 
 /** Destructor **/
@@ -450,10 +454,10 @@ void LAHMCSampler::setCtauEntry(int i, int j, SimTK::Real entry){
 /*** Metropolis-Hastings acception-rejection criterion  ***/
 SimTK::Real LAHMCSampler::leap_prob(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n)
 {
-	std::cout << "leap_prob " << E_o << " " << E_n ;
 
 	SimTK::Real Ediff = E_o - E_n;
 	SimTK::Real prob = exp(this->beta * Ediff);
+	std::cout << "leap_prob " << E_o << " " << E_n << " " << prob << "\n" ;
 	//if(prob > 1){
 	//	return 1;
 	//}else{
@@ -594,6 +598,221 @@ SimTK::Real LAHMCSampler::leap_prob_recurse(SimTK::State& someState, int firstIx
 	return cumu;
 }
 
+/*** Return the antidiagonal transpose of a matrix ***/
+SimTK::Matrix LAHMCSampler::reverseMatrix(SimTK::Matrix CC_loc)
+{
+	int M = CC_loc.nrow();
+	int N = CC_loc.ncol();
+	SimTK_ASSERT_ALWAYS(M == N, "Robosample: reverseMatrix function is designed for square matrices.");
+	SimTK::Matrix CC_rev(M, N);
+
+	for(int i = 0; i < M; i++){
+		for(int j = 0; j < M; j++){
+			CC_rev.set(M-i-1, M-j-1, CC_loc.get(i, j));
+		}
+	}
+
+	return CC_rev;
+}
+
+/*** Return a submatrix of M with lesser rows and cols from the end ***/
+SimTK::Matrix LAHMCSampler::extractFromTop(SimTK::Matrix CC_loc, int rowCut, int colCut)
+{
+	int M = CC_loc.nrow();
+	int N = CC_loc.ncol();
+	SimTK_ASSERT_ALWAYS(M == N, "Robosample: extractFromTop function is designed for square matrices.");
+	SimTK_ASSERT_ALWAYS(rowCut <= M, "Robosample: extractFromTop: cannot cut more than the matrix size.");
+	SimTK_ASSERT_ALWAYS(colCut <= N, "Robosample: extractFromTop: cannot cut more than the matrix size.");
+	SimTK_ASSERT_ALWAYS((rowCut*colCut) >= 0, "Robosample: extractFromTop: indeces must both have the same sign.");
+
+	int subM, subN;
+	if(rowCut < 0){	
+		subM = M + rowCut;
+		subN = N + colCut;
+	}else{
+		subM = rowCut;
+		subN = colCut;
+	}
+
+	SimTK::Matrix subCC(subM, subN);
+
+	// Can't use operator= because Simbody resizes subCC
+	for(int i = 0; i < subM; i++){
+		for(int j = 0; j < subN; j++){
+			subCC.set(i, j, CC_loc.get(i, j));
+		}
+	}
+
+	return subCC;
+}
+
+/*** Copies different sizes matrices entries and avoids Simbody resize ***/
+void LAHMCSampler::injectFromTop(const std::vector<SimTK::Real>& src, std::vector<SimTK::Real>& dest)
+{
+	int srcN = src.size();
+	int destN = dest.size();
+
+	// Only go up to the smallest dimension
+	if(srcN < destN){ // Source is smaller
+		for(int i = 0; i < srcN; i++){
+			dest[i] = src[i];
+		}
+		
+	}else{ // Destination is smaller
+		for(int i = 0; i < destN; i++){
+			dest[i] = src[i];
+		}
+	}
+
+}
+
+/*** Copies different sizes matrices entries and avoids Simbody resize ***/
+void LAHMCSampler::injectFromTop(const SimTK::Matrix& src, SimTK::Matrix& dest)
+{
+	int srcM = src.nrow();
+	int srcN = src.ncol();
+	SimTK_ASSERT_ALWAYS(srcM == srcN, "Robosample: injectFromTop function is designed for square matrices.");
+	int destM = dest.nrow();
+	int destN = dest.ncol();
+	SimTK_ASSERT_ALWAYS(destM == destN, "Robosample: injectFromTop function is designed for square matrices.");
+
+	// Only go up to the smallest dimension
+	if(srcM < destM){ // Source is smaller
+		for(int i = 0; i < srcM; i++){
+			for(int j = 0; j < srcN; j++){
+				dest.set(i, j, src.get(i, j));
+			}
+		}
+		
+	}else{ // Destination is smaller
+		for(int i = 0; i < destM; i++){
+			for(int j = 0; j < destN; j++){
+				dest.set(i, j, src.get(i, j));
+			}
+		}
+	}
+
+}
+
+/*** Compute cumulative transition probabilities 
+TODO Energy indeces ***/
+SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> Es, SimTK::Matrix CC)
+{
+
+
+	// Indeces between the two matrices
+
+	int M = CC.nrow();
+	int N = CC.ncol();	
+	SimTK_ASSERT_ALWAYS(M == N, "Robosample: leap_prob_recurse is designed for square matrices.");
+	SimTK_ASSERT_ALWAYS(M == (Es.size()), "Robosample: leap_prob_recurse: energy vector does not have the same size as C matrix.");
+	std::cout << "\nBEGIN size " << M << "\n";
+
+	// Check if already passed through this leaf
+	SimTK::Real upperCorner = CC.get(M - 1, N - 1 );
+
+	//if( upperCorner != SimTK::Infinity){
+	if( upperCorner < 1){
+		std::cout << "Already already visited this leaf" << std::endl;
+		PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
+		std::cout << "\nEND size " << M << "\n";
+		return CC;
+	}
+
+	// Boltzmann probability
+	if(M == 2){
+		std::cout << "Do Metropolis Hastings.\n";
+		SimTK::Real p_acc = 0.0;
+    		if(!std::isnan(Es[M - 1])){
+				p_acc = leap_prob(someState, Es[0], Es[Es.size() - 1]);
+				CC.set(0, M - 1, p_acc);
+		}
+		PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
+		std::cout << "\nEND index size " << M << "\n";
+		return CC;
+	}
+	
+	//std::cout << "\nDEBUG Es_1 after injectFromTop \n";
+	//for(int i=0; i<Es_1.size(); i++){std::cout << Es_1[i] << " ";}
+	//std::cout << "\nDEBUG ===============\n";
+	SimTK::Real cum_forward, cum_reverse;
+	// Forward ===============================
+	std::cout << "Reenter forward";
+	// Reduce size
+	std::vector<SimTK::Real> Es_1(M - 1, SimTK::Infinity);
+	injectFromTop(Es, Es_1);
+	SimTK::Matrix CC_1 = extractFromTop(CC, -1, -1);
+
+	// Reentry
+	CC_1 = leap_prob_recurse_hard(someState, Es_1, CC_1);
+
+	// Recover data
+	//injectFromTop(Es_1, Es); // don't need recover
+	injectFromTop(CC_1, CC);
+
+	cum_forward = CC_1.get(0, CC_1.ncol() - 1);
+	std::cout << " cum_fwd = " << cum_forward << std::endl;
+
+	// Backward =============================
+	std::cout << "Reenter reverse.";
+
+	// Reverse
+	SimTK::Matrix CC_rev(CC.nrow(), CC.ncol());
+	CC_rev = reverseMatrix(CC);
+	std::vector<SimTK::Real> Es_rev = Es; // deep copy
+	std::reverse(Es_rev.begin(), Es_rev.end());
+
+	// Reduce
+	std::vector<SimTK::Real> Es_rev_1(M - 1, SimTK::Infinity);
+	injectFromTop(Es_rev, Es_rev_1);
+	SimTK::Matrix CC_rev_1 = extractFromTop(CC_rev, -1, -1);
+
+	// Reentry
+	CC_rev_1 = leap_prob_recurse_hard(someState, Es_rev_1, CC_rev_1);
+	cum_reverse = CC_rev_1.get(0, M - 2);
+
+        // Recover reversed
+        //0000000000000000000000 Cl_rev[:-1,:-1,:] = Cl_rev_1 000000000000000000
+	//injectFromTop(Es_rev_1, Es_rev); // don't need recover
+	injectFromTop(CC_rev_1, CC_rev);
+
+        // Recover = reverse the reversed
+        //0000000000000000000000 C = Cl_rev[::-1,::-1,:] 000000000000000000000000
+	//std::vector<SimTK::Real> Es_rev_rev = Es; // deep copy // don't need recover
+	//std::reverse(Es_rev_rev.begin(), Es_rev_rev.end()); // don't need recover
+
+	SimTK::Matrix CC_rev_rev(CC.nrow(), CC.ncol());
+	CC_rev_rev = reverseMatrix(CC_rev);
+
+	//injectFromTop(Es_rev_rev, Es); // don't need recover
+	injectFromTop(CC_rev_rev, CC);
+
+	PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
+	std::cout << " cum_rev = " << cum_reverse << std::endl;
+
+	// Eq. 25
+	std::cout << "Do LAHMC probability." << "\n";
+	SimTK::Real Ediff;
+	Ediff = Es[0] - Es[M - 1];
+	SimTK::Real start_state_ratio = exp(this->beta * Ediff);
+
+	SimTK::Real prob;
+	prob = std::min(1 - cum_forward, start_state_ratio * (1 - cum_reverse));
+	std::cout << "E0 E1 start_state_ratio cum_fwd cum_rev prob " 
+		<< Es[0] << " " << Es[Es.size() - 1] 
+		<< " " << start_state_ratio << " " << cum_forward << " " << cum_reverse << " " 
+		<< prob << std::endl;
+
+	SimTK::Real cumu = cum_forward + prob;
+	CC.set(0, M - 1, cumu);
+
+	PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
+	std::cout << "\nEND index size " << "\n";
+	return CC;
+}
+
+// Good pieces of code
+//Es_1.insert(Es_1.begin(), Es.begin(), Es.begin() + M - 1);
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
@@ -631,7 +850,8 @@ void LAHMCSampler::propose(SimTK::State& someState)
 	etot_ns[4] = 12;
 
 	resetCMatrices();
-	leap_prob_recurse(someState, 0, this->K, true);
+	//leap_prob_recurse(someState, 0, this->K, true);
+	leap_prob_recurse_hard(someState, this->etot_ns, this->C);
 
 }
 
