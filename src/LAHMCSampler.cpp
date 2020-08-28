@@ -456,13 +456,12 @@ SimTK::Real LAHMCSampler::leap_prob(SimTK::State& someState, SimTK::Real E_o, Si
 {
 
 	SimTK::Real Ediff = E_o - E_n;
-	SimTK::Real prob = exp(this->beta * Ediff);
+	SimTK::Real prob = 1;
+	if(Ediff < 0){
+		prob = exp(this->beta * Ediff);
+	}
 	std::cout << "leap_prob " << E_o << " " << E_n << " " << prob << "\n" ;
-	//if(prob > 1){
-	//	return 1;
-	//}else{
-		return prob;
-	//}
+	return prob;
 }
 
 /*** Convert C indeces to Ctau indeces ***/
@@ -837,21 +836,39 @@ void LAHMCSampler::propose(SimTK::State& someState)
     // First set the starting point
     calcNewConfigurationAndEnergies(someState, 0);
 
-    // Apply leap operator K times
+    // Apply leap operator K times TODO check dimensions of CCk
+    resetCMatrices();
+    SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+    bool acc;
     for(int k = 1; k <= K; k++){
+	// Apply L
         integrateTrajectory(someState);
         calcNewConfigurationAndEnergies(someState, k);
+
+	// Compute cumulative probability of doing this many leaps
+	std::vector<SimTK::Real> subEs(&etot_ns[0], &etot_ns[this->K+1]);
+	SimTK::Matrix CCk = extractFromTop(CC, k+2, k+2);
+	leap_prob_recurse_hard(someState, subEs, CCk);
+
+	if(CCk.get(k, k) >= rand_no){
+		update(someState, this->beta);
+		break;
+	}
     }
 
-	etot_ns[0] = 2;
-	etot_ns[1] = 3;
-	etot_ns[2] = 5;
-	etot_ns[3] = 8;
-	etot_ns[4] = 12;
+    // Anything left flip the momentum
+    if(acc == false){
+    	someState.updU() = -1.0 * someState.getU();
+    }
+    
 
-	resetCMatrices();
-	//leap_prob_recurse(someState, 0, this->K, true);
-	leap_prob_recurse_hard(someState, this->etot_ns, this->C);
+	//etot_ns[0] = 2;
+	//etot_ns[1] = 3;
+	//etot_ns[2] = 5;
+	//etot_ns[3] = 8;
+	//etot_ns[4] = 12;
+	//resetCMatrices();
+	//leap_prob_recurse_hard(someState, this->etot_ns, this->C);
 
 }
 
