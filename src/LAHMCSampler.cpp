@@ -460,7 +460,7 @@ SimTK::Real LAHMCSampler::leap_prob(SimTK::State& someState, SimTK::Real E_o, Si
 	if(Ediff < 0){
 		prob = exp(this->beta * Ediff);
 	}
-	std::cout << "leap_prob " << E_o << " " << E_n << " " << prob << "\n" ;
+	//std::cout << "leap_prob " << E_o << " " << E_n << " " << prob << "\n" ;
 	return prob;
 }
 
@@ -695,7 +695,7 @@ void LAHMCSampler::injectFromTop(const SimTK::Matrix& src, SimTK::Matrix& dest)
 
 /*** Compute cumulative transition probabilities 
 TODO Energy indeces ***/
-SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> Es, SimTK::Matrix CC)
+SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> Es, SimTK::Matrix& CC)
 {
 
 
@@ -705,7 +705,7 @@ SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std:
 	int N = CC.ncol();	
 	SimTK_ASSERT_ALWAYS(M == N, "Robosample: leap_prob_recurse is designed for square matrices.");
 	SimTK_ASSERT_ALWAYS(M == (Es.size()), "Robosample: leap_prob_recurse: energy vector does not have the same size as C matrix.");
-	std::cout << "\nBEGIN size " << M << "\n";
+	//std::cout << "\nBEGIN size " << M << "\n";
 
 	// Check if already passed through this leaf
 	SimTK::Real upperCorner = CC.get(M - 1, N - 1 );
@@ -714,7 +714,7 @@ SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std:
 	if( upperCorner < 1){
 		std::cout << "Already already visited this leaf" << std::endl;
 		PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
-		std::cout << "\nEND size " << M << "\n";
+		//std::cout << "\nEND size " << M << "\n";
 		return CC;
 	}
 
@@ -727,7 +727,7 @@ SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std:
 				CC.set(0, M - 1, p_acc);
 		}
 		PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
-		std::cout << "\nEND index size " << M << "\n";
+		//std::cout << "\nEND index size " << M << "\n";
 		return CC;
 	}
 	
@@ -736,7 +736,7 @@ SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std:
 	//std::cout << "\nDEBUG ===============\n";
 	SimTK::Real cum_forward, cum_reverse;
 	// Forward ===============================
-	std::cout << "Reenter forward";
+	//std::cout << "Reenter forward";
 	// Reduce size
 	std::vector<SimTK::Real> Es_1(M - 1, SimTK::Infinity);
 	injectFromTop(Es, Es_1);
@@ -750,10 +750,10 @@ SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std:
 	injectFromTop(CC_1, CC);
 
 	cum_forward = CC_1.get(0, CC_1.ncol() - 1);
-	std::cout << " cum_fwd = " << cum_forward << std::endl;
+	//std::cout << " cum_fwd = " << cum_forward << std::endl;
 
 	// Backward =============================
-	std::cout << "Reenter reverse.";
+	//std::cout << "Reenter reverse.";
 
 	// Reverse
 	SimTK::Matrix CC_rev(CC.nrow(), CC.ncol());
@@ -786,8 +786,8 @@ SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std:
 	//injectFromTop(Es_rev_rev, Es); // don't need recover
 	injectFromTop(CC_rev_rev, CC);
 
-	PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
-	std::cout << " cum_rev = " << cum_reverse << std::endl;
+	//PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
+	//std::cout << " cum_rev = " << cum_reverse << std::endl;
 
 	// Eq. 25
 	std::cout << "Do LAHMC probability." << "\n";
@@ -797,16 +797,16 @@ SimTK::Matrix LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std:
 
 	SimTK::Real prob;
 	prob = std::min(1 - cum_forward, start_state_ratio * (1 - cum_reverse));
-	std::cout << "E0 E1 start_state_ratio cum_fwd cum_rev prob " 
-		<< Es[0] << " " << Es[Es.size() - 1] 
-		<< " " << start_state_ratio << " " << cum_forward << " " << cum_reverse << " " 
-		<< prob << std::endl;
+	//std::cout << "E0 E1 start_state_ratio cum_fwd cum_rev prob " 
+	//	<< Es[0] << " " << Es[Es.size() - 1] 
+	//	<< " " << start_state_ratio << " " << cum_forward << " " << cum_reverse << " " 
+	//	<< prob << std::endl;
 
 	SimTK::Real cumu = cum_forward + prob;
 	CC.set(0, M - 1, cumu);
 
 	PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
-	std::cout << "\nEND index size " << "\n";
+	//std::cout << "\nEND index size " << "\n";
 	return CC;
 }
 
@@ -820,12 +820,13 @@ initializeVelocities and propagate/integrate **/
 void LAHMCSampler::propose(SimTK::State& someState)
 {
 
-	PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
-	std::cout << "===========\n";
-	PrintBigMat(C.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:-1,:-1]"); // 0 <= i < m, 0 <= j < n
-	std::cout << "===========\n";
-	PrintBigMat(Ctau.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:0:-1,:0:-1]");
-	std::cout << "===========\n";
+	//PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
+	//std::cout << "===========\n";
+	//PrintBigMat(C.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:-1,:-1]"); // 0 <= i < m, 0 <= j < n
+	//std::cout << "===========\n";
+	//PrintBigMat(Ctau.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:0:-1,:0:-1]");
+	//std::cout << "===========\n";
+
 
     storeOldConfigurationAndPotentialEnergies(someState);
 
@@ -836,30 +837,47 @@ void LAHMCSampler::propose(SimTK::State& someState)
     // First set the starting point
     calcNewConfigurationAndEnergies(someState, 0);
 
-    // Apply leap operator K times TODO check dimensions of CCk
-    resetCMatrices();
+    //
+    resetCMatrices(); // (K+1) dimension
+    this->acc = false;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-    bool acc;
-    for(int k = 1; k <= K; k++){
+    for(int kk = 0; kk < K; kk++){ // range(K)
 	// Apply L
         integrateTrajectory(someState);
-        calcNewConfigurationAndEnergies(someState, k);
+        calcNewConfigurationAndEnergies(someState, kk+1); // etot_ns[kk+1] set
 
 	// Compute cumulative probability of doing this many leaps
-	std::vector<SimTK::Real> subEs(&etot_ns[0], &etot_ns[this->K+1]);
-	SimTK::Matrix CCk = extractFromTop(CC, k+2, k+2);
+	std::vector<SimTK::Real> subEs(&etot_ns[0], &etot_ns[kk+2]); // etot_ns[0 ... kk+1]
+	std::cout << "subEs[" << kk+1 << "] = " <<  etot_ns[kk+1] << std::endl;
+	SimTK::Matrix CCk = extractFromTop(CC, kk+2, kk+2); // CC[:kk+2, :kk+2] 
+	PrintBigMat(CCk, kk+2, kk+2, 6, std::string(" CCk ") + std::to_string(kk+2));
+	
 	leap_prob_recurse_hard(someState, subEs, CCk);
 
-	if(CCk.get(k, k) >= rand_no){
-		update(someState, this->beta);
+	std::cout << "rand_no " << rand_no << "; upper corner = " << CCk.get(0, kk+1) << std::endl;
+	if(CCk.get(0, kk+1) >= rand_no){
+
+		// Intermiediate steo - not necessary
+		pe_n = pe_ns[kk+1];
+    		fix_n = fix_ns[kk+1];
+    		logSineSqrGamma2_n = logSineSqrGamma2_ns[kk+1];
+    		ke_n = ke_ns[kk+1];
+    		etot_n = etot_ns[kk+1];
+
+		update(someState);
+		injectFromTop(CCk, CC);
+		this->acc = true;
 		break;
 	}
+	PrintBigMat(CCk, kk+2, kk+2, 6, std::string(" CCk ") + std::to_string(kk+2));
     }
 
     // Anything left flip the momentum
     if(acc == false){
     	someState.updU() = -1.0 * someState.getU();
     }
+
+    ++nofSamples;
     
 
 	//etot_ns[0] = 2;
@@ -883,12 +901,17 @@ void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
     etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 }
 
-/** Main function that contains all the 3 steps of HMC.
-Implements the acception-rejection step and sets the state of the
-compound to the appropriate conformation wether it accepted or not. **/
-bool LAHMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
+/** Update. **/
+void LAHMCSampler::update(SimTK::State& someState)
 {
 
+	std::cout << " acc" << std::endl;
+	setSetConfigurationAndEnergiesToNew(someState);
+	++acceptedSteps;
+	acceptedStepsBuffer.push_back(1);
+	acceptedStepsBuffer.pop_front();
+
+/*
     // Declare variables
     bool acc;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
@@ -901,7 +924,6 @@ bool LAHMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 
 	setSetConfigurationAndEnergiesToNew(someState);
 	
-        //setBeta(newBeta);
 
         ++acceptedSteps;
         acceptedStepsBuffer.push_back(1);
@@ -933,7 +955,13 @@ bool LAHMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 
     ++nofSamples;
     return acc;
+*/
+}
 
+bool LAHMCSampler::sample_iteration(SimTK::State& someState)
+{
+	propose(someState);
+	return this->acc;
 }
 
 int LAHMCSampler::getMDStepsPerSample() const {

@@ -58,7 +58,7 @@ public:
     /** Propose a move **/
     virtual void propose(SimTK::State& someState) = 0;
     //virtual eval() = 0;
-    virtual bool update(SimTK::State& someState) = 0;
+    virtual void update(SimTK::State& someState) = 0;
 
     // For debugging purposes
     void PrintSimbodyStateCache(SimTK::State& someState);
@@ -81,6 +81,7 @@ public:
     // Sampling
     int nofSamples;
     unsigned long long int seed;
+    bool acc;
 
     // Random number generators - not sure if I need two
     boost::random::mt19937 randomEngine = boost::random::mt19937();

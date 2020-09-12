@@ -530,9 +530,8 @@ void HMCSampler::propose(SimTK::State& someState)
 /** Main function that contains all the 3 steps of HMC.
 Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
-bool HMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
+void HMCSampler::update(SimTK::State& someState)
 {
-    bool acc;
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 
     // Get new Fixman potential
@@ -577,7 +576,7 @@ bool HMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
 
     // Decide and get a new sample
     if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
-        acc = true;
+        this->acc = true;
         std::cout << " acc" << std::endl;
         setSetTVector(someState);
         pe_set = pe_n;
@@ -586,7 +585,6 @@ bool HMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
         ke_lastAccepted = ke_n;
         etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 
-        //setBeta(newBeta);
 
         ++acceptedSteps;
         acceptedStepsBuffer.push_back(1);
@@ -596,7 +594,7 @@ bool HMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
                 (!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
              (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
              //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
-             acc = true;
+             this->acc = true;
              std::cout << " acc" << std::endl;
              setSetTVector(someState);
              pe_set = pe_n;
@@ -605,14 +603,13 @@ bool HMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
              ke_lastAccepted = ke_n;
              etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 
-             //setBeta(newBeta);
 
              ++acceptedSteps;
              acceptedStepsBuffer.push_back(1);
              acceptedStepsBuffer.pop_front();
 
         } else { // Reject
-             acc = false;
+             this->acc = false;
              std::cout << " nacc" << std::endl;
              assignConfFromSetTVector(someState);
              proposeExceptionCaught = false;
@@ -658,10 +655,18 @@ bool HMCSampler::update(SimTK::State& someState, SimTK::Real newBeta)
     // */
     // INSTANT GEOMETRY END
 
-    ++nofSamples;
-    return acc;
+    //++nofSamples;
 
 }
+
+bool HMCSampler::sample_iteration(SimTK::State& someState)
+{
+	propose(someState);
+	update(someState);
+	++nofSamples;
+	return this->acc;
+}
+
 
 int HMCSampler::getMDStepsPerSample() const {
     return MDStepsPerSample;

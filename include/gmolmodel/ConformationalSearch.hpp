@@ -111,7 +111,7 @@ public:
 
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation
-    bool update(SimTK::State&);
+    void update(SimTK::State&);
 
     // Get the number of accpted conformations
     int getAcceptedSteps(void);

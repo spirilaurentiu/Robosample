@@ -127,7 +127,9 @@ public:
 
     /*** Compute cumulative transition probabilities ***/
     SimTK::Real leap_prob_recurse(SimTK::State& someState, int firstIx, int secondIx, bool dir_fwd);
-    SimTK::Matrix leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> etot_ns_loc, SimTK::Matrix CC_loc);
+    SimTK::Matrix& leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> etot_ns_loc, SimTK::Matrix& CC_loc);
+
+    void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
 
     /** It implements the proposal move in the Hamiltonian Monte Carlo
     algorithm. It essentially propagates the trajectory after it stores
@@ -135,12 +137,12 @@ public:
     initializeVelocities and propagate/integrate **/
     void propose(SimTK::State& someState);
 
-    void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
-
     /** Main function that contains all the 3 steps of HMC.
     Implements the acception-rejection step and sets the state of the 
     compound to the appropriate conformation wether it accepted or not. **/
-    bool update(SimTK::State& someState, SimTK::Real newBeta);
+    void update(SimTK::State& someState);
+
+    bool sample_iteration(SimTK::State& someState);
 
     /** Modifies Q randomly
      **/

@@ -481,9 +481,7 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
 
             // Update
             for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-                updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
-                        , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+                updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
             } // END for samples
 
         } // for i in worlds
@@ -714,9 +712,8 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
 
                 // Update
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-                    updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
-                            , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+                    //updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
+                    updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
 
                     // , getNofMDStepsPerSample(currentWorldIx, 0)); RE
 
@@ -801,9 +798,8 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
     
                 // Update
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-                    updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
-                            , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+                    //updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
+                    updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
 
                 } // END for samples
     

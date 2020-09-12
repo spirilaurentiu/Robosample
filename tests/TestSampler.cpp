@@ -25,7 +25,7 @@ public:
 
     ~DerivedSampler(){}
     void propose(SimTK::State& someState){}
-    bool update(SimTK::State& someState){ return false; }
+    void update(SimTK::State& someState){}
 };
 
 void CalcAverageAndVariance(const std::vector<SimTK::Real>& v, SimTK::Real& average, SimTK::Real& variance) {
