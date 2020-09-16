@@ -115,8 +115,9 @@ int main(int argc, char **argv)
     }
 //@
     // Add filenames to Context filenames vectors
+    unsigned int nofMols = setupReader.get("MOLECULES").size();
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-        for(unsigned int molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
+        for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
             context.loadTopologyFile( worldIx, molIx,
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
@@ -130,12 +131,12 @@ int main(int argc, char **argv)
 
             context.loadRigidBodiesSpecs( worldIx, molIx,
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
-                    + setupReader.get("RBFILE")[molIx]
+                    + setupReader.get("RBFILE")[(nofMols * worldIx) + molIx]
             );
 
             context.loadFlexibleBondsSpecs( worldIx, molIx,
                     setupReader.get("MOLECULES")[molIx] + std::string("/")
-                    + setupReader.get("FLEXFILE")[molIx]
+                    + setupReader.get("FLEXFILE")[(nofMols * worldIx) + molIx]
             );
 
             context.setRegimen( worldIx, molIx,

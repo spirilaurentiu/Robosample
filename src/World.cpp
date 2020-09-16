@@ -267,10 +267,15 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
         std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
                  << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
 
-        compoundSystem->modelOneCompound(
-                SimTK::CompoundSystem::CompoundIndex(i),
-                GroundToCompoundMobilizerType);
-
+	if(i == 0){ // First compound
+        	compoundSystem->modelOneCompound(
+                	SimTK::CompoundSystem::CompoundIndex(i),
+                	GroundToCompoundMobilizerType);
+	}else{
+        	compoundSystem->modelOneCompound(
+                	SimTK::CompoundSystem::CompoundIndex(i),
+                	"Free");
+	}
 
         // Realize Topology
         //compoundSystem->realizeTopology(); // restore MULMOL
