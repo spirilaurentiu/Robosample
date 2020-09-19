@@ -25,6 +25,10 @@ HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
     nofSamples = 0;
     this->alwaysAccept = false;
     this->timestep = 0.002; // ps
+
+    this->prevTimestep = 0.00; // ps
+    this->prevAcceptance = 1;
+
     this->temperature = 0.0;
     this->boostT = this->temperature;
     MDStepsPerSample = 0;
@@ -217,6 +221,8 @@ void HMCSampler::initialize(SimTK::State& someState )
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    this->prevTimestep = 0.00; // ps
+    this->prevAcceptance = 1;
   
 }
 
@@ -285,6 +291,8 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    this->prevTimestep = 0.00; // ps
+    this->prevAcceptance = 1;
 }
 
 /** Get/Set the timestep for integration **/
@@ -298,8 +306,7 @@ void HMCSampler::setTimestep(float argTimestep)
 {
     if(argTimestep <= 0){
         adaptTimestep = true;
-        this->timestep = 0.0002;
-	this->timestepIncr = 0.0001;
+        this->timestep = -argTimestep;
     }else{
         adaptTimestep = false;
     	timeStepper->updIntegrator().setFixedStepSize(argTimestep);
@@ -391,32 +398,52 @@ void HMCSampler::propose(SimTK::State& someState)
         // IF NOT PRINT EVERY STEP // Integrate (propagate trajectory)
 	if(adaptTimestep){
 		if( !(nofSamples % 30) ){ // Do it only so often
-			//std::cout << "adapt ts " << acceptedSteps << ' ' << nofSamples << std::endl;
-			// Compute average acceptance in the buffer
+			float stdAcceptance = 0.03;
+			float idealAcceptance = 0.651;
+			float smallestAcceptance = 0.0001;
+			float timestepIncr = 0.001;
+
+			// Compute acceptance in the buffer
 			int sum = 0, sqSum = 0;
 			for (std::list<int>::iterator p = acceptedStepsBuffer.begin(); p != acceptedStepsBuffer.end(); ++p){
         			sum += (int)*p;
 				sqSum += (((int)*p) * ((int)*p));
 			}
     			float acceptance = float(sum) / float(acceptedStepsBufferSize);
-			//float sqAcceptance = sqSum / acceptedStepsBufferSize;
-			//float stdAcceptance = std::sqrt(sqAcceptance - (acceptance*acceptance));
-			float stdAcceptance = 0.03;
+
+			// Compute derivatives
+			SimTK::Real dtsda = (acceptance - prevAcceptance) / (timestep - prevTimestep);
+			std::cout << "Adapt: ts= " << timestep << " acc= " << acceptance << " dtda= " << dtsda << std::endl;
+			
 
 			// Increase or decrease timestep
-			if(acceptance > (0.651 + stdAcceptance)){
+			if(acceptance > (idealAcceptance + stdAcceptance)){
 				timestep += timestepIncr;
-			}else if(acceptance < (0.651 - stdAcceptance)){
-				if(timestep > 0.0001){
+			}else if(acceptance < (idealAcceptance - stdAcceptance)){
+				if(timestep > smallestAcceptance){
 					timestep -= timestepIncr;
 				}
 			}
-			
+
+			prevTimestep = timestep;
+			prevAcceptance = acceptance;
 
 		}
         	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 	}else{
         	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+
+		//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(someState, SimTK::MobilizedBodyIndex(2));
+            	//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
+		//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
+		//const SimTK::Inertia i2 = mp2.calcInertia();
+		//SimTK::Mat33 mi2 = i2.toMat33();
+		//std::cout << std::endl;
+		//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
+		//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
+		//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
+		//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
+
 	}
         system->realize(someState, SimTK::Stage::Position);
 

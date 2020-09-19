@@ -168,6 +168,8 @@ protected:
     int acceptedSteps = 0;
     int acceptedStepsBufferSize = 30;
     std::list<int> acceptedStepsBuffer;
+    float prevTimestep;
+    float prevAcceptance;
 
     bool proposeExceptionCaught;
  

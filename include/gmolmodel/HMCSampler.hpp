@@ -127,7 +127,6 @@ protected:
 
     float timestep;
     bool adaptTimestep;
-    float timestepIncr = 0.0001;
     SimTK::Real ke_lastAccepted; // last accepted kinetic energy
     SimTK::Real ke_proposed; // proposed kinetic energy
     SimTK::Real ke_n; // new kinetic energy
