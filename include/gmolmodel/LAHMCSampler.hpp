@@ -126,7 +126,6 @@ public:
      SimTK::Real leap_prob(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n);
 
     /*** Compute cumulative transition probabilities ***/
-    SimTK::Real leap_prob_recurse(SimTK::State& someState, int firstIx, int secondIx, bool dir_fwd);
     SimTK::Matrix& leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> etot_ns_loc, SimTK::Matrix& CC_loc);
 
     void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);

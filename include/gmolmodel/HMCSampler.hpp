@@ -94,7 +94,7 @@ public:
     compound to the appropriate conformation wether it accepted or not. **/
     void update(SimTK::State& someState);
 
-    bool sample_iteration(SimTK::State& someState);
+    virtual bool sample_iteration(SimTK::State& someState);
 
     /** Modifies Q randomly
      **/
