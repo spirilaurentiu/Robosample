@@ -348,6 +348,7 @@ void HMCSampler::setBoostMDSteps(int argMDSteps)
     std::cout << "HMC: boost MD steps: " << this->boostMDSteps << std::endl;
 
 }
+
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
@@ -390,7 +391,6 @@ void HMCSampler::propose(SimTK::State& someState)
     // Store the proposed energies
     // setProposedKE(matter->calcKineticEnergy(someState));
     this->ke_proposed = matter->calcKineticEnergy(someState);
-    //std::cout << " ke before timestepping " << this->ke_proposed << std::endl;
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 
 
@@ -433,7 +433,7 @@ void HMCSampler::propose(SimTK::State& someState)
 
 			std::cout << " ppAcc= " << prevPrevAcceptance << " pAcc= " << prevAcceptance << " acc= " << acceptance << std::endl;
 
-			if( !SimTK::isNaN(prevPrevAcceptance) ){
+			if( !SimTK::isNaN(prevPrevAcceptance) ){ // Passed first two initial evaluations
 				// Calculate gradients
 				SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2;
 				a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
@@ -460,9 +460,6 @@ void HMCSampler::propose(SimTK::State& someState)
 				denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
 				gamma = num / denom;
 	
-				//prevPrevTimestep = prevTimestep;
-				//prevTimestep = timestep;
-	
 				// Increase or decrease timestep
 				SimTK::Real newTimestep = t_n - (gamma * gradF_n);
 				std::cout << "Adapt data: "
@@ -472,20 +469,16 @@ void HMCSampler::propose(SimTK::State& someState)
 					<< std::endl;
 				if( (std::abs(prevTimestep - timestep) > 0.0001) || (newTimestep < 0.00089) || (SimTK::isNaN(newTimestep)) || ((acceptance - prevAcceptance) < 0.001)){
 					std::cout << "newTimestep rejected" << std::endl; 
-					//if(std::abs(prevTimestep - timestep) > 0.0001){ // small real
-					//}else{
-						//timestep = (prevTimestep + timestep) / 2;
-    						SimTK::Real r = uniformRealDistribution(randomEngine);
-						if(acceptance < idealAcceptance){
-							timestep = timestep - (0.3*r * timestep);
-						}else{
-							timestep = timestep + (0.3*r * timestep);
-						}
-					//}
+    					SimTK::Real r = uniformRealDistribution(randomEngine);
+					if(acceptance < idealAcceptance){
+						timestep = timestep - (0.3*r * timestep);
+					}else{
+						timestep = timestep + (0.3*r * timestep);
+					}
+
 					acceptance = prevAcceptance;
 					prevAcceptance = prevPrevAcceptance;
 					prevPrevAcceptance = prevPrevPrevAcceptance;
-					//std::cout << "" << std::endl;
 				}else{ // Reset acceptances
 					std::cout << "newTimestep accepted" << std::endl; 
 					prevPrevTimestep = prevTimestep;
@@ -495,9 +488,7 @@ void HMCSampler::propose(SimTK::State& someState)
 
     				timeStepper->updIntegrator().setFixedStepSize(timestep);
 				std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
-			}else{ // Alter the timestep to get a valid dF_n next time
-    				//SimTK::Real r = uniformRealDistribution(randomEngine);
-				//timestep = timestep + (r * timestep);
+			}else{ // Alter the intial timesteps to get a valid dF_n next time
 
 				prevPrevTimestep = prevTimestep;
 				prevTimestep = timestep;
@@ -728,7 +719,36 @@ void HMCSampler::update(SimTK::State& someState)
         }
     }
 
-    //sleep(2);
+
+	// MSD
+	unsigned int natoms = ((Topology *)residue)->bAtomList.size();
+	SimTK::Vec3 R;
+	SimTK::Compound::AtomIndex aIx; 
+	SimTK::Compound c = *((Topology *)residue);
+
+	// Load new coordinates
+	for(unsigned int j = 0; j < natoms; j++){
+		aIx = (((Topology *)residue)->bAtomList[j]).getCompoundAtomIndex();
+		R = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, aIx);
+		Rs.push_back(R);
+	}
+
+	// Calculate MSD
+	SimTK::Real MSD(0);
+	for(unsigned int j = natoms; j < Rs.size(); j++){
+		//std::cout << Rs[j + natoms] - Rs[j] << std::endl;
+		MSD += (Rs[j + natoms] - Rs[j]).normSqr();
+	}
+	MSD /= natoms;
+	std::cout << "MSD= " << MSD << std::endl;
+
+	// Delete new coordinates
+	if(Rs.size() == (2*natoms)){ // Don't delete initial coordinates
+		for(unsigned int j = 0; j < natoms; j++){
+			Rs.pop_back();
+		}
+	}
+
 
     /* // INSTANT GEOMETRY
     SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;

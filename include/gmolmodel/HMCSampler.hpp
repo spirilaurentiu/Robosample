@@ -144,6 +144,8 @@ protected:
 
     int MDStepsPerSample;
 
+    std::vector<SimTK::Vec3> Rs;
+
 };
 
 #endif // __HAMMONTECARLOSAMPLER_HPP__
