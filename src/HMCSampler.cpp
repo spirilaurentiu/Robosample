@@ -699,33 +699,62 @@ void HMCSampler::update(SimTK::State& someState)
 	// MSD
 	unsigned int natoms = ((Topology *)residue)->bAtomList.size();
 	SimTK::Vec3 R;
+	SimTK::Vec3 Rdot;
 	SimTK::Compound::AtomIndex aIx; 
 	SimTK::Compound c = *((Topology *)residue);
 
 	// Load new coordinates
 	for(unsigned int j = 0; j < natoms; j++){
 		aIx = (((Topology *)residue)->bAtomList[j]).getCompoundAtomIndex();
+
 		R = c.calcAtomLocationInGroundFrame(someState, aIx);
 		Rs.push_back(R);
+
+		Rdot = c.calcAtomVelocityInGroundFrame(someState, aIx);
+		Rdots.push_back(Rdot);
 	}
-	//for(unsigned int j = 0; j < Rs.size(); j++){std::cout << Rs[j] << std::endl;}
+	//for(unsigned int j = 0; j < Rdots.size(); j++){std::cout << Rdots[j] << " " << (Rdots[j]).normalize() << std::endl;}
 
 	// Calculate MSD
-	SimTK::Real MSD(0);
-	for(unsigned int j = natoms; j < Rs.size(); j++){
-		//std::cout << Rs[j + natoms] - Rs[j] << std::endl;
-		MSD += (Rs[j + natoms] - Rs[j]).normSqr();
-	}
-	MSD /= natoms;
-	std::cout << "MSD= " << MSD << std::endl;
+	SimTK::Real MSD = 0;
+	SimTK::Real RRdot = 0;
+	SimTK::Vec3 dR;
 
-	// Delete new coordinates
 	if(Rs.size() == (2*natoms)){ // Don't delete initial coordinates
 		for(unsigned int j = 0; j < natoms; j++){
+			//std::cout << Rs[j + natoms] - Rs[j] << std::endl;
+			//std::cout << "size= " << Rs.size() << " a= " << j + natoms << " b= " << j << std::endl;
+			dR = Rs[j + natoms] - Rs[j];
+			MSD += dR.normSqr();
+		}
+	
+		MSD /= natoms;
+		std::cout << "MSD= " << MSD << std::endl;
+
+		// Compute RRdot
+		for(unsigned int j = 0; j < natoms; j++){
+			dR = Rs[j + natoms] - Rs[j];
+			if(((Rdots[j]).norm() != 0) && (dR.norm() != 0)){
+				//std::cout << "dR= " << dR << " " << dR.normalize() << std::endl;
+				//std::cout << "Rdot" << Rdots[j] << " " << (Rdots[j]).normalize() << std::endl;
+				RRdot += SimTK::dot(dR.normalize(), (Rdots[j]).normalize());
+			}
+		}
+		std::cout << "RRdot= " << RRdot << std::endl;
+
+		// Transfer upper to lower half and cleanup the upper half
+		for(int j = (natoms - 1); j >= 0; --j){
+			//std::cout << "size= " << Rs.size() << " a= " << j << " b= " << j  + natoms << std::endl;
+			Rs[j] = Rs[j + natoms];
 			Rs.pop_back();
 		}
 	}
 
+
+	// Cleanup Rdots
+	for(unsigned int j = 0; j < natoms; j++){
+		Rdots.pop_back();
+	}
 
     /* // INSTANT GEOMETRY
     SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;

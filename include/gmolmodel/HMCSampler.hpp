@@ -145,6 +145,7 @@ protected:
     int MDStepsPerSample;
 
     std::vector<SimTK::Vec3> Rs;
+    std::vector<SimTK::Vec3> Rdots;
 
 };
 
