@@ -158,9 +158,6 @@ void HMCSampler::initialize(SimTK::State& someState )
     // reinitialize the Integrator.
     timeStepper->initialize(compoundSystem->getDefaultState());
 
-    // Set the simulation temperature
-//r    setTemperature(argTemperature); // Needed for Fixman
-
     int nu = someState.getNU();
 
     // Randomize configuration
@@ -189,7 +186,6 @@ void HMCSampler::initialize(SimTK::State& someState )
     setSetPE(getOldPE());
 
     // Store Fixman potential
-//r    this->useFixman = argUseFixman;
     if(useFixman){
         std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential." << std::endl;
         setOldFixman(calcFixman(someState));
@@ -226,12 +222,6 @@ void HMCSampler::initialize(SimTK::State& someState )
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
-    //this->prevPrevTimestep = SimTK::NaN; // ps
-    //this->prevTimestep = SimTK::NaN; // ps
-  
-    //this->prevPrevAcceptance = SimTK::NaN;
-    //this->prevAcceptance = SimTK::NaN;
-    //this->acceptance = SimTK::NaN;
 }
 
 /** Same as initialize **/
@@ -243,9 +233,6 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     // reinitialize the Integrator.
     //(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
-    // Set the simulation temperature
-//r    setTemperature(argTemperature); // Needed for Fixman
-
     // Store the configuration
     system->realize(someState, SimTK::Stage::Position);
     int i = 0;
@@ -255,11 +242,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
         i++;
     }
 
-//std::cout << "reinitialize "
-//<< dumm->CalcFullPotEnergyIncludingRigidBodies(someState) << std::endl;
-
     // Store potential energies
-    //setOldPE(getPEFromEvaluator(someState));
     setSetPE(getOldPE());
 
     // Store Fixman potential
@@ -299,19 +282,12 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
-    //this->prevPrevTimestep = SimTK::NaN; // ps
-    //this->prevTimestep = SimTK::NaN; // ps
-
-    //this->prevPrevAcceptance = SimTK::NaN;
-    //this->prevAcceptance = SimTK::NaN;
-    //this->acceptance = SimTK::NaN;
 }
 
 /** Get/Set the timestep for integration **/
 float HMCSampler::getTimestep(void)
 {
     return timestep;
-    //return timeStepper->updIntegrator().getPredictedNextStepSize();
 }
 
 void HMCSampler::setTimestep(float argTimestep)
@@ -729,9 +705,10 @@ void HMCSampler::update(SimTK::State& someState)
 	// Load new coordinates
 	for(unsigned int j = 0; j < natoms; j++){
 		aIx = (((Topology *)residue)->bAtomList[j]).getCompoundAtomIndex();
-		R = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, aIx);
+		R = c.calcAtomLocationInGroundFrame(someState, aIx);
 		Rs.push_back(R);
 	}
+	//for(unsigned int j = 0; j < Rs.size(); j++){std::cout << Rs[j] << std::endl;}
 
 	// Calculate MSD
 	SimTK::Real MSD(0);
