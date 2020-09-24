@@ -1287,7 +1287,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 
         }
 
-    }else if(argRegimen.at(0) == 'R'){
+    }else if((argRegimen.at(0) == 'R') || (argRegimen.at(0) == 'S')){
 
         // Set all Compound and Topology bonds to rigid
         for (unsigned int r=0 ; r<getNumBonds(); r++){
