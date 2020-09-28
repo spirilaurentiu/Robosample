@@ -57,9 +57,9 @@ table, bonds = topology.to_dataframe()
 
 # Compute accesibility: shape (n_frames,n_atoms)
 sasa = md.shrake_rupley(molecule, probe_radius = args.probesize, mode = 'residue') # nm
-for i in range(sasa.shape[1]):
-	print(i+1, sasa[0][i])
-exit(0)
+#for i in range(sasa.shape[1]):
+#	print(i+1, sasa[0][i])
+#exit(0)
 
 print("#i1 i2 Joint # name1 elem1 resid1 resname1 name2 elem2 resid2 resname2 sasa1 sasa2")
 if(args.TD):
