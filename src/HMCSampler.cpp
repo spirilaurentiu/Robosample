@@ -566,42 +566,6 @@ void HMCSampler::propose(SimTK::State& someState)
 
     }
 
-
-    // TODO: Simulated tempering
-/*    
-    int nofStairs = 20;
-    int MDStepsPerStair = int(MDStepsPerSample / (2*nofStairs));
-    SimTK::Real stairBoost = 1.05;
-
-    SimTK::Real T = getTemperature();
-
-    SimTK::Real stairUnboost = 1 / stairBoost;
-    std::cout << "stairBoost = " << stairBoost << std::endl;
-    std::cout << "stairUnboost = " << stairUnboost << std::endl;
-
-    system->realize(someState, SimTK::Stage::Velocity);
-    this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
-    for(int i = 1; i < nofStairs; i++){
-        someState.updU() *= stairBoost;
-        system->realize(someState, SimTK::Stage::Velocity);
-
-        T = T * std::sqrt(stairBoost);
-        std::cout << "T = " << T << std::endl;
-
-        this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
-    }
-
-    for(int i = nofStairs; i >= 0; i--){
-        someState.updU() *= stairUnboost;
-        system->realize(someState, SimTK::Stage::Velocity);
-
-        T = T * std::sqrt(stairUnboost);
-        std::cout << "T = " << T << std::endl;
-
-        this->timeStepper->stepTo(someState.getTime() + (timestep * MDStepsPerStair));
-    }// */
-    // SCALE VELS END
-
 }
 
 /** Main function that contains all the 3 steps of HMC.
