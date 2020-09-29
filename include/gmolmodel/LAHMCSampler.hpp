@@ -123,7 +123,7 @@ public:
     void Ctau_to_C_Indeces(int Ctau_i, int Ctau_j, int &C_i, int &C_j, int currSize);
 
     /*** Transition probability from state o to state n ***/
-     SimTK::Real leap_prob(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n);
+     SimTK::Real MHAcceptProbability(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n);
 
     /*** Compute cumulative transition probabilities ***/
     SimTK::Matrix& leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> etot_ns_loc, SimTK::Matrix& CC_loc);
@@ -140,6 +140,9 @@ public:
     Implements the acception-rejection step and sets the state of the 
     compound to the appropriate conformation wether it accepted or not. **/
     void update(SimTK::State& someState);
+
+    /** Accetion rejection step **/
+    virtual bool accRejStep(SimTK::State& someState);
 
     bool sample_iteration(SimTK::State& someState);
 

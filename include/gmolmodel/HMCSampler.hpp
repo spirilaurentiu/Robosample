@@ -83,6 +83,41 @@ public:
     void setBoostTemperature(SimTK::Real);
     void setBoostMDSteps(int);
 
+    /** Store configuration and PE, Fixman potential and logsin gamma squared **/
+    virtual void storeOldConfigurationAndPotentialEnergies(SimTK::State& someState);
+
+    /** Initialize velocities according to the Maxwell-Boltzmann
+    distribution.  Coresponds to R operator in LAHMC **/
+    virtual void initializeVelocities(SimTK::State& someState);
+
+    /** Store the proposed energies **/
+    virtual void calcProposedKineticAndTotalEnergy(SimTK::State& someState);
+
+    /** Apply the L operator **/
+    virtual void integrateTrajectory(SimTK::State& someState);
+
+    /** Integrate trajectory one step at a time to compute quantities instantly **/
+    virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
+
+    /** Use stochastic optimization to adapt timestep **/
+    virtual void adaptTimestep(SimTK::State& someState);
+
+    /** Store new configuration and energy terms**/
+    virtual void calcNewConfigurationAndEnergies(SimTK::State& someState);
+
+    /**  Restore old configuration and energies**/
+    virtual void setSetConfigurationAndEnergiesToOld(SimTK::State& someState);
+
+    /** Update new configuration and energiees **/
+    virtual void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
+
+    /** Metropolis-Hastings acceptance probability **/
+    virtual SimTK::Real MHAcceptProbability(SimTK::State& someState, 
+	SimTK::Real argEtot_proposed, SimTK::Real argEtot_n);
+
+    /** Accetion rejection step **/
+    virtual bool accRejStep(SimTK::State& someState);
+
     /** It implements the proposal move in the Hamiltonian Monte Carlo
     algorithm. It essentially propagates the trajectory after it stores
     the configuration and energies. TODO: break in two functions:
@@ -128,7 +163,7 @@ protected:
     float timestep;
     float prevTimestep;
     float prevPrevTimestep;
-    bool adaptTimestep;
+    bool shouldAdaptTimestep;
 
     SimTK::Real ke_lastAccepted; // last accepted kinetic energy
     SimTK::Real ke_proposed; // proposed kinetic energy

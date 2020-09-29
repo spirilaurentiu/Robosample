@@ -38,7 +38,7 @@ HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
     this->boostT = this->temperature;
     MDStepsPerSample = 0;
     proposeExceptionCaught = false;
-    adaptTimestep = false;
+    shouldAdaptTimestep = false;
 }
 
 /** Destructor **/
@@ -293,11 +293,11 @@ float HMCSampler::getTimestep(void)
 void HMCSampler::setTimestep(float argTimestep)
 {
     if(argTimestep <= 0){
-        adaptTimestep = true;
+        shouldAdaptTimestep = true;
     	timeStepper->updIntegrator().setFixedStepSize(-argTimestep);
         this->timestep = -argTimestep;
     }else{
-        adaptTimestep = false;
+        shouldAdaptTimestep = false;
     	timeStepper->updIntegrator().setFixedStepSize(argTimestep);
     	this->timestep = argTimestep;
     }
@@ -325,14 +325,8 @@ void HMCSampler::setBoostMDSteps(int argMDSteps)
 
 }
 
-/** It implements the proposal move in the Hamiltonian Monte Carlo
-algorithm. It essentially propagates the trajectory after it stores
-the configuration and energies. TODO: break in two functions:
-initializeVelocities and propagate/integrate **/
-void HMCSampler::propose(SimTK::State& someState)
-{
-    // Initialize configuration - not necessary unless we modify the
-    // configuration in addition to velocities
+/** Store configuration **/
+void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someState){ // func
     system->realize(someState, SimTK::Stage::Position);
 
     int t = 0;
@@ -345,8 +339,11 @@ void HMCSampler::propose(SimTK::State& someState)
     pe_o = pe_set;
     fix_o = fix_set;
     logSineSqrGamma2_o = logSineSqrGamma2_set;
+} // func
 
-    // Initialize velocities according to the Maxwell-Boltzmann distribution
+/** Initialize velocities according to the Maxwell-Boltzmann
+distribution.  Coresponds to R operator in LAHMC **/
+void HMCSampler::initializeVelocities(SimTK::State& someState){
     int nu = someState.getNU();
     double sqrtRT = std::sqrt(RT);
     SimTK::Vector V(nu);
@@ -363,29 +360,21 @@ void HMCSampler::propose(SimTK::State& someState)
 
     // Realize velocity
     system->realize(someState, SimTK::Stage::Velocity);
+}
 
-    // Store the proposed energies
+/** Store the proposed energies **/
+void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
+
+    // Store proposed kinetic energy
     // setProposedKE(matter->calcKineticEnergy(someState));
     this->ke_proposed = matter->calcKineticEnergy(someState);
+
+    // Store proposed total energy
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+}
 
-
-/*    // REC BUG
-    std::cout << "HMC nbodies " << matter->getNumBodies() << std::endl;
-    std::cout << "DuMM station_Bs before stepTo " << matter->getNumBodies() << std::endl;
-    for (unsigned int i = 0; i < residue->getNumAtoms(); i++) {
-        SimTK::Compound::AtomIndex aIx = (((Topology *)residue)->bAtomList[i]).getCompoundAtomIndex();
-        SimTK::MobilizedBodyIndex mbx = residue->getAtomMobilizedBodyIndex(aIx);
-        SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-        SimTK::Transform X_GB = mobod.getBodyTransform(someState);
-        SimTK::DuMM::AtomIndex dAIx = residue->getDuMMAtomIndex(aIx);
-        std::cout << "setAtomsLoc i aIx dAIx dumm.station_B gmol.locs " << i << " " << aIx
-                  << " " << dAIx << " " << X_GB * dumm->getAtomStationOnBody(dAIx) << std::endl;
-    } // REC BUG*/
-
-    try {
-        // IF NOT PRINT EVERY STEP // Integrate (propagate trajectory)
-	if(adaptTimestep){
+void HMCSampler::adaptTimestep(SimTK::State& someState)
+{
 		std::cout << std::endl;
 		//std::cout << "Adapt: nofSamples= " << nofSamples << std::endl;
 		if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){ // Do it only so often
@@ -415,9 +404,6 @@ void HMCSampler::propose(SimTK::State& someState)
 				a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
 				t_n = timestep; t_n_1 = prevTimestep; t_n_2 = prevPrevTimestep;
 	
-				//SimTK::Real F_n =   (a_n   - idealAcceptance) * (a_n   - idealAcceptance);
-				//SimTK::Real F_n_1 = (a_n_1 - idealAcceptance) * (a_n_1 - idealAcceptance);
-				//SimTK::Real F_n_2 = (a_n_2 - idealAcceptance) * (a_n_2 - idealAcceptance);
 				SimTK::Real F_n =   std::abs(a_n   - idealAcceptance);
 				SimTK::Real F_n_1 = std::abs(a_n_1 - idealAcceptance);
 				SimTK::Real F_n_2 = std::abs(a_n_2 - idealAcceptance);
@@ -466,6 +452,17 @@ void HMCSampler::propose(SimTK::State& someState)
 				std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
 			}else{ // Alter the intial timesteps to get a valid dF_n next time
 
+			//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(someState, SimTK::MobilizedBodyIndex(2));
+		    	//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
+			//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
+			//const SimTK::Inertia i2 = mp2.calcInertia();
+			//SimTK::Mat33 mi2 = i2.toMat33();
+			//std::cout << std::endl;
+			//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
+			//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
+			//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
+			//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
+
 				prevPrevTimestep = prevTimestep;
 				prevTimestep = timestep;
 				if( SimTK::isNaN(prevPrevTimestep) ){
@@ -478,83 +475,16 @@ void HMCSampler::propose(SimTK::State& someState)
 				std::cout << "Adapt END: ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
 			}
 
-		}
-        	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-	}else{
-        	this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+		} // is time to adapt 
+}
 
-		//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(someState, SimTK::MobilizedBodyIndex(2));
-            	//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
-		//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
-		//const SimTK::Inertia i2 = mp2.calcInertia();
-		//SimTK::Mat33 mi2 = i2.toMat33();
-		//std::cout << std::endl;
-		//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
-		//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
-		//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
-		//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
-
-	}
+/** Apply the L operator **/
+void HMCSampler::integrateTrajectory(SimTK::State& someState){
+    try {
+        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
         system->realize(someState, SimTK::Stage::Position);
-
-	/* // ELSE PRINT EVERY STEP
-	for(int i = 0; i < MDStepsPerSample; i++){
-		this->timeStepper->stepTo(someState.getTime() + (timestep));
-                system->realize(someState, SimTK::Stage::Position);
-
-                // / * // INSTANT GEOMETRY
-                SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
-                int a1, a2, a3, a4, a5;
-                a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
-                a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
-                a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
-                a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
-                a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
-                a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
-                int distA1, distA2, distA3, distA4;
-                SimTK::Vec3 distA1pos, distA2pos;
-                SimTK::Vec3 distA3pos, distA4pos;
-                distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
-                std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
-                std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
-                std::cout << std::endl;
-                // * / // INSTANT GEOMETRY END
-
-		/ *    if(useFixman){
-		        fix_n = calcFixman(someState); logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-		    }else{
-		        fix_n = 0.0; logSineSqrGamma2_n = 0.0;
-		    }
-		    // Get new kinetic energy
-		    system->realize(someState, SimTK::Stage::Velocity); ke_n = matter->calcKineticEnergy(someState);
-		    // Get new potential energy
-		    if ( getThermostat() == ANDERSEN ){
-		        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-			    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-		    }
-		    else{
-		        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-		        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-			//detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-		        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-		    }	
-		    // Calculate total energy
-		    if(useFixman){
-		        etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-		        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
-		    }else{
-		        etot_n = pe_n + ke_n;
-		        etot_proposed = pe_o + ke_proposed;
-		    }
-    		PrintDetailedEnergyInfo(someState); // * /
-	} // */ 
-	// END PRINT EVERY STEP
-
     }catch(const std::exception&){
         proposeExceptionCaught = true;
-        //std::cout << "HMC_stepTo_or_realizePosition_threw_exception";
-
         int i = 0;
         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -562,19 +492,56 @@ void HMCSampler::propose(SimTK::State& someState)
             i++;
         }
         system->realize(someState, SimTK::Stage::Position);
-
-
     }
 
 }
 
-/** Main function that contains all the 3 steps of HMC.
-Implements the acception-rejection step and sets the state of the
-compound to the appropriate conformation wether it accepted or not. **/
-void HMCSampler::update(SimTK::State& someState)
-{
-    SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState){
+	for(int i = 0; i < MDStepsPerSample; i++){
+		this->timeStepper->stepTo(someState.getTime() + (timestep));
+                system->realize(someState, SimTK::Stage::Position);
 
+    /* // INSTANT GEOMETRY
+    SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
+    int a1, a2, a3, a4, a5;
+    //DIHEDRAL 4 6 8 14 6 8 14 16
+    //a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
+    a1 = 4; a2 = 6; a3 = 8; a4 = 14; a5 = 16;
+    a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
+    a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
+    a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
+    a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
+    a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
+    int distA1, distA2, distA3, distA4;
+    SimTK::Vec3 distA1pos, distA2pos;
+    SimTK::Vec3 distA3pos, distA4pos;
+    distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
+//		    distA1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
+//		    distA2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
+//		    distA3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
+//		    distA4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
+//            std::cout << " dihedral elements"
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a1))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a2))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a3))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a4))
+//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a5))
+//              << std::endl;
+//            std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
+    std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
+    std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
+    //std::cout << " "  << 10 * (distA1pos - distA2pos).norm() ; // Ang
+    //std::cout << " "  << 10 * (distA3pos - distA4pos).norm() ; // Ang
+    std::cout << std::endl;
+    // */
+    // INSTANT GEOMETRY END
+	}  
+}
+
+
+/** Store new configuration and energy terms**/
+void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
+{
     // Get new Fixman potential
     if(useFixman){
         fix_n = calcFixman(someState);
@@ -587,21 +554,10 @@ void HMCSampler::update(SimTK::State& someState)
     // Get new kinetic energy
     system->realize(someState, SimTK::Stage::Velocity);
     ke_n = matter->calcKineticEnergy(someState);
-    //std::cout << " ke after timestepping " << this->ke_n << std::endl;
 
     // Get new potential energy
-    if ( getThermostat() == ANDERSEN ){
-        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-	    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-	    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-    }
-    else{
-        pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-        //pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-	    //detmbat_n = ((Topology *)residue)->calcLogDetMBAT(someState);
-        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
-    }
+    pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
 
     // Calculate total energy
     if(useFixman){
@@ -611,56 +567,113 @@ void HMCSampler::update(SimTK::State& someState)
         etot_n = pe_n + ke_n;
         etot_proposed = pe_o + ke_proposed;
     }
+}
 
-    PrintDetailedEnergyInfo(someState);
+/** Set energies and configuration to new state **/
+void HMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
+{
+    setSetTVector(someState);
+    pe_set = pe_n;
+    fix_set = fix_n;
+    logSineSqrGamma2_set = logSineSqrGamma2_n;
+    ke_lastAccepted = ke_n;
+    etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
+}
+
+void HMCSampler::setSetConfigurationAndEnergiesToOld(SimTK::State& someState)
+{
+	assignConfFromSetTVector(someState);
+	proposeExceptionCaught = false;
+	acceptedStepsBuffer.push_back(0);
+	acceptedStepsBuffer.pop_front();
+}
+
+SimTK::Real HMCSampler::MHAcceptProbability(SimTK::State& someState, 
+	SimTK::Real argEtot_proposed, SimTK::Real argEtot_n){
+
+	if(argEtot_n < argEtot_proposed){
+		return 1;
+	}else{
+		return exp(-(argEtot_n - argEtot_proposed) * this->beta);
+	}
+}
+
+/** Acception rejection step **/
+bool HMCSampler::accRejStep(SimTK::State& someState){
+
+	SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+
+	// Decide and get a new sample
+	if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
+		this->acc = true;
+		std::cout << " acc" << std::endl;
+		update(someState);
+	}else{ // Apply Metropolis-Hastings correction
+		if ( (proposeExceptionCaught == false) && (!std::isnan(pe_n)) ){ 
+			if(rand_no < MHAcceptProbability(someState, etot_proposed, etot_n)){ 
+				this->acc = true;
+				std::cout << " acc" << std::endl;
+				update(someState);
+			}else{ // Reject
+				this->acc = false;
+				std::cout << " nacc" << std::endl;
+				setSetConfigurationAndEnergiesToOld(someState);
+			}
+		}
+	}
+
+}
+
+/** It implements the proposal move in the Hamiltonian Monte Carlo
+algorithm. It essentially propagates the trajectory after it stores
+the configuration and energies. **/
+void HMCSampler::propose(SimTK::State& someState)
+{
+	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);
+
+	// Initialize velocities according to the Maxwell-Boltzmann distribution
+	initializeVelocities(someState);
+
+	// Store the proposed energies 
+	calcProposedKineticAndTotalEnergy(someState);
+
+	// Adapt timestep
+	if(shouldAdaptTimestep){
+		adaptTimestep(someState);
+	}
+	
+	// Apply the L operator 
+	integrateTrajectory(someState);
+
+	calcNewConfigurationAndEnergies(someState);
+
+	PrintDetailedEnergyInfo(someState);
 
 
-    // Decide and get a new sample
-    if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
-        this->acc = true;
-        std::cout << " acc" << std::endl;
-        setSetTVector(someState);
-        pe_set = pe_n;
-        fix_set = fix_n;
-        logSineSqrGamma2_set = logSineSqrGamma2_n;
-        ke_lastAccepted = ke_n;
-        etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 
+}
 
+/** Main function that contains all the 3 steps of HMC.
+Implements the acception-rejection step and sets the state of the
+compound to the appropriate conformation wether it accepted or not. **/
+void HMCSampler::update(SimTK::State& someState)
+{
+	setSetConfigurationAndEnergiesToNew(someState); 
         ++acceptedSteps;
         acceptedStepsBuffer.push_back(1);
         acceptedStepsBuffer.pop_front();
-    }else{ // Apply Metropolis correction
-        if ( (proposeExceptionCaught == false) &&
-                (!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
-             //(rand_no < exp(-(pe_n - pe_o) * this->beta)))) { // Accept based on potential energy
-             this->acc = true;
-             std::cout << " acc" << std::endl;
-             setSetTVector(someState);
-             pe_set = pe_n;
-             fix_set = fix_n;
-             logSineSqrGamma2_set = logSineSqrGamma2_n;
-             ke_lastAccepted = ke_n;
-             etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
+}
 
+bool HMCSampler::sample_iteration(SimTK::State& someState)
+{
+	propose(someState);
 
-             ++acceptedSteps;
-             acceptedStepsBuffer.push_back(1);
-             acceptedStepsBuffer.pop_front();
+	accRejStep(someState);
 
-        } else { // Reject
-             this->acc = false;
-             std::cout << " nacc" << std::endl;
-             assignConfFromSetTVector(someState);
-             proposeExceptionCaught = false;
-             acceptedStepsBuffer.push_back(0);
-             acceptedStepsBuffer.pop_front();
-        }
-    }
+	++nofSamples;
 
-
-	// MSD
+	// MSD BEGIN
 	unsigned int natoms = ((Topology *)residue)->bAtomList.size();
 	SimTK::Vec3 R;
 	SimTK::Vec3 Rdot;
@@ -719,51 +732,10 @@ void HMCSampler::update(SimTK::State& someState)
 	for(unsigned int j = 0; j < natoms; j++){
 		Rdots.pop_back();
 	}
+	/////// END MSD
 
-    /* // INSTANT GEOMETRY
-    SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
-    int a1, a2, a3, a4, a5;
-    //DIHEDRAL 4 6 8 14 6 8 14 16
-    //a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
-    a1 = 4; a2 = 6; a3 = 8; a4 = 14; a5 = 16;
-    a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
-    a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
-    a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
-    a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
-    a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
-    int distA1, distA2, distA3, distA4;
-    SimTK::Vec3 distA1pos, distA2pos;
-    SimTK::Vec3 distA3pos, distA4pos;
-    distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
-//		    distA1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
-//		    distA2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
-//		    distA3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
-//		    distA4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
-//            std::cout << " dihedral elements"
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a1))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a2))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a3))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a4))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a5))
-//              << std::endl;
-//            std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
-    std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
-    std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
-    //std::cout << " "  << 10 * (distA1pos - distA2pos).norm() ; // Ang
-    //std::cout << " "  << 10 * (distA3pos - distA4pos).norm() ; // Ang
-    std::cout << std::endl;
-    // */
-    // INSTANT GEOMETRY END
 
-    //++nofSamples;
 
-}
-
-bool HMCSampler::sample_iteration(SimTK::State& someState)
-{
-	propose(someState);
-	update(someState);
-	++nofSamples;
 	return this->acc;
 }
 

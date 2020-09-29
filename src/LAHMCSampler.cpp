@@ -31,7 +31,7 @@ LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
     this->boostT = this->temperature;
     MDStepsPerSample = 0;
     proposeExceptionCaught = false;
-    adaptTimestep = false;
+    shouldAdaptTimestep = false;
 
 
     this->K = Kext;
@@ -377,6 +377,7 @@ void LAHMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 void LAHMCSampler::integrateTrajectory(SimTK::State& someState){    
     try {
         this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+        system->realize(someState, SimTK::Stage::Position);
     }catch(const std::exception&){
         proposeExceptionCaught = true;
         //std::cout << "HMC_stepTo_or_realizePosition_threw_exception";
@@ -453,7 +454,7 @@ void LAHMCSampler::setCtauEntry(int i, int j, SimTK::Real entry){
 }
 
 /*** Metropolis-Hastings acception-rejection criterion  ***/
-SimTK::Real LAHMCSampler::leap_prob(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n)
+SimTK::Real LAHMCSampler::MHAcceptProbability(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n)
 {
 
 	SimTK::Real Ediff = E_o - E_n;
@@ -604,7 +605,7 @@ SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std
 		//std::cout << "Do Metropolis Hastings.\n";
 		SimTK::Real p_acc = 0.0;
     		if(!std::isnan(Es[M - 1])){
-				p_acc = leap_prob(someState, Es[0], Es[Es.size() - 1]);
+				p_acc = MHAcceptProbability(someState, Es[0], Es[Es.size() - 1]);
 				CC.set(0, M - 1, p_acc);
 		}
 		//PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
@@ -689,32 +690,8 @@ SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std
 	return CC;
 }
 
-// Good pieces of code
-//Es_1.insert(Es_1.begin(), Es.begin(), Es.begin() + M - 1);
-
-/** It implements the proposal move in the Hamiltonian Monte Carlo
-algorithm. It essentially propagates the trajectory after it stores
-the configuration and energies. TODO: break in two functions:
-initializeVelocities and propagate/integrate **/
-void LAHMCSampler::propose(SimTK::State& someState)
-{
-
-	//PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
-	//std::cout << "===========\n";
-	//PrintBigMat(C.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:-1,:-1]"); // 0 <= i < m, 0 <= j < n
-	//std::cout << "===========\n";
-	//PrintBigMat(Ctau.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:0:-1,:0:-1]");
-	//std::cout << "===========\n";
-
-    storeOldConfigurationAndPotentialEnergies(someState);
-
-    initializeVelocities(someState);
-
-    calcProposedKineticAndTotalEnergy(someState);
-
-    // First set the starting point
-    calcNewConfigurationAndEnergies(someState, 0);
-
+/** Acception rejection step **/
+bool LAHMCSampler::accRejStep(SimTK::State& someState){
     //
     resetCMatrices(); // (K+1) dimension
 
@@ -760,7 +737,32 @@ void LAHMCSampler::propose(SimTK::State& someState)
 	//std::cout << "momentum flipped " << std::endl;
     }
 
-    ++nofSamples;
+}
+
+/** It implements the proposal move in the Hamiltonian Monte Carlo
+algorithm. It essentially propagates the trajectory after it stores
+the configuration and energies. TODO: break in two functions:
+initializeVelocities and propagate/integrate **/
+void LAHMCSampler::propose(SimTK::State& someState)
+{
+
+	//PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
+	//std::cout << "===========\n";
+	//PrintBigMat(C.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:-1,:-1]"); // 0 <= i < m, 0 <= j < n
+	//std::cout << "===========\n";
+	//PrintBigMat(Ctau.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:0:-1,:0:-1]");
+	//std::cout << "===========\n";
+
+    storeOldConfigurationAndPotentialEnergies(someState);
+
+    initializeVelocities(someState);
+
+    calcProposedKineticAndTotalEnergy(someState);
+
+    // First set the starting point
+    calcNewConfigurationAndEnergies(someState, 0);
+
+
     
 	//etot_ns[0] = 2;
 	//etot_ns[1] = 3;
@@ -785,63 +787,20 @@ void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
 /** Update. **/
 void LAHMCSampler::update(SimTK::State& someState)
 {
-
-	//std::cout << " update: acc" << std::endl;
 	setSetConfigurationAndEnergiesToNew(someState);
 	++acceptedSteps;
 	acceptedStepsBuffer.push_back(1);
 	acceptedStepsBuffer.pop_front();
-
-/*
-    // Declare variables
-    bool acc;
-    SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-
-
-    // Decide and get a new sample
-    if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
-        acc = true;
-        std::cout << " acc" << std::endl;
-
-	setSetConfigurationAndEnergiesToNew(someState);
-	
-
-        ++acceptedSteps;
-        acceptedStepsBuffer.push_back(1);
-        acceptedStepsBuffer.pop_front();
-    }else{ // Apply Metropolis correction
-        if ( (proposeExceptionCaught == false) &&
-                (!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
-             (rand_no < exp(-(etot_n - etot_proposed) * this->beta)))) { // Accept based on full energy
-             acc = true;
-             std::cout << " acc" << std::endl;
-
-	     setSetConfigurationAndEnergiesToNew(someState);
-
-             ++acceptedSteps;
-             acceptedStepsBuffer.push_back(1);
-             acceptedStepsBuffer.pop_front();
-
-        } else { // Reject
-             acc = false;
-             std::cout << " nacc" << std::endl;
-
-             assignConfFromSetTVector(someState);
-
-             proposeExceptionCaught = false;
-             acceptedStepsBuffer.push_back(0);
-             acceptedStepsBuffer.pop_front();
-        }
-    }
-
-    ++nofSamples;
-    return acc;
-*/
 }
 
 bool LAHMCSampler::sample_iteration(SimTK::State& someState)
 {
 	propose(someState);
+
+	accRejStep(someState);
+    
+	++nofSamples;
+
 	return this->acc;
 }
 
