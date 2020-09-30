@@ -427,8 +427,6 @@ void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int 
     ke_n = ke_ns[k];
     etot_n = etot_ns[k];
 
-    PrintDetailedEnergyInfo(someState);
-    std::cout << std::endl;
 }
 
 /*** Set C matrices entries to 0 ***/
@@ -696,6 +694,7 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
     resetCMatrices(); // (K+1) dimension
 
     this->acc = false;
+
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
     for(int kk = 0; kk < K; kk++){ // range(K)
 	// Apply L
@@ -709,7 +708,6 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
 	SimTK::Matrix CCk = extractFromTop(CC, kk+2, kk+2); // CC[:kk+2, :kk+2] 
 	//PrintBigMat(CCk, kk+2, kk+2, 6, std::string(" CCk ") + std::to_string(kk+2));
 	
-
 	leap_prob_recurse_hard(someState, subEs, CCk);
 
 	//std::cout << "rand_no " << rand_no << "; upper corner = " << CCk.get(0, kk+1) << std::endl;
@@ -722,19 +720,19 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
     		ke_n = ke_ns[kk+1];
     		etot_n = etot_ns[kk+1];
 
-		//std::cout << "propose: update" << std::endl;
-		update(someState);
-		injectFromTop(CCk, CC);
 		this->acc = true;
+		std::cout << " acc" << std::endl;
+		update(someState);
+
+		injectFromTop(CCk, CC);
 		break;
 	}
-	//PrintBigMat(CCk, kk+2, kk+2, 6, std::string(" CCk ") + std::to_string(kk+2));
     }
 
     // Anything left flip the momentum
     if(acc == false){
+	std::cout << " nacc" << std::endl;
     	someState.updU() = -1.0 * someState.getU();
-	//std::cout << "momentum flipped " << std::endl;
     }
 
 }
@@ -746,13 +744,6 @@ initializeVelocities and propagate/integrate **/
 void LAHMCSampler::propose(SimTK::State& someState)
 {
 
-	//PrintBigMat(C, this->K + 1, this->K + 1, 2, std::string("C"));
-	//std::cout << "===========\n";
-	//PrintBigMat(C.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:-1,:-1]"); // 0 <= i < m, 0 <= j < n
-	//std::cout << "===========\n";
-	//PrintBigMat(Ctau.updBlock(0, 0, this->K + 1-1, this->K + 1-1), this->K + 1-1, this->K + 1-1, 2, "C[:0:-1,:0:-1]");
-	//std::cout << "===========\n";
-
     storeOldConfigurationAndPotentialEnergies(someState);
 
     initializeVelocities(someState);
@@ -762,15 +753,7 @@ void LAHMCSampler::propose(SimTK::State& someState)
     // First set the starting point
     calcNewConfigurationAndEnergies(someState, 0);
 
-
-    
-	//etot_ns[0] = 2;
-	//etot_ns[1] = 3;
-	//etot_ns[2] = 5;
-	//etot_ns[3] = 8;
-	//etot_ns[4] = 12;
-	//resetCMatrices();
-	//leap_prob_recurse_hard(someState, this->etot_ns, this->C);
+    PrintDetailedEnergyInfo(someState);
 }
 
 /** Store new configuration and energy terms**/

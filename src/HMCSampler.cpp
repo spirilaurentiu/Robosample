@@ -650,8 +650,6 @@ void HMCSampler::propose(SimTK::State& someState)
 
 	PrintDetailedEnergyInfo(someState);
 
-
-
 }
 
 /** Main function that contains all the 3 steps of HMC.
