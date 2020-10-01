@@ -397,6 +397,7 @@ int main(int argc, char **argv)
 
 
     // -- Run --
+    bool isWorldsOrderRandom = ((setupReader.get("RANDOM_WORLD_ORDER")[0] == "TRUE") ? true : false);
     if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
         context.RunSimulatedTempering(context.getNofRounds(),
                      std::stof(setupReader.get("TEMPERATURE_INI")[0]),
@@ -404,7 +405,7 @@ int main(int argc, char **argv)
     }else{
         context.Run(context.getNofRounds(),
                      std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-                     std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+                     std::stof(setupReader.get("TEMPERATURE_FIN")[0]), isWorldsOrderRandom);
     }
 
     // Write final pdbs

@@ -114,7 +114,7 @@ public:
 
     // --- Main ---
     void Run(SetupReader&);
-    void Run(int howManyRounds, float Ti, float Tf);
+    void Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom);
     void RunSimulatedTempering(int howManyRounds, float Ti, float Tf);
     void setNofBoostStairs(int whichWorld, int howManyStairs);
     int getNofBoostStairs(int whichWorld);
