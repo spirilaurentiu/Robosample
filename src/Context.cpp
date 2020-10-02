@@ -621,7 +621,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
                 }else{ // Just load bAtomList
                     (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
                 }
-		std::cout << "w" << currentAdvancedState.getNU();
+		std::cout << "w" << currentWorldIx << '_' << currentAdvancedState.getNU();
 
                 // Set old potential energy of the new world 
                 double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
@@ -972,6 +972,15 @@ void Context::PrintDihedralsQs(int whichWorld)
 {
     for ( unsigned int i = 0; i < dihedralIxs.size(); i++){
         if( dihedralIxs[i][0] == whichWorld){
+
+//std::cout << "Context::PrintDihedralsQs w c s a1 a2 a3 a4 ="
+//	<< " " << dihedralIxs[i][0] << " " << dihedralIxs[i][1] << " " << 0
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][2])) 
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][3])) 
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][4])) 
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][5])) 
+//	<< std::endl;
+
             fprintf(logFile, "%.3f ", this->Dihedral(dihedralIxs[i][0], dihedralIxs[i][1], 0,
                 dihedralIxs[i][2], dihedralIxs[i][3],
                 dihedralIxs[i][4], dihedralIxs[i][5]) );
