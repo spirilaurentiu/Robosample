@@ -77,15 +77,17 @@ def CestGrossfield(argM, series):
 #
 
 # Functions from https://stackoverflow.com/users/2005415/jason
-def autocorr1(x,lags):
+def autocorr1(argM, x):
     '''numpy.corrcoef, partial'''
 
+    lags = np.arange(0, argM)
     corr=[1. if l==0 else numpy.corrcoef(x[l:],x[:-l])[0][1] for l in lags]
     return numpy.array(corr)
 
-def autocorr2(x,lags):
+def autocorr2(argM, x):
     '''manualy compute, non partial'''
 
+    lags = np.arange(0, argM)
     mean=numpy.mean(x)
     var=numpy.var(x)
     xp=x-mean
@@ -93,9 +95,10 @@ def autocorr2(x,lags):
 
     return numpy.array(corr)
 
-def autocorr3(x,lags):
+def autocorr3(argM, x):
     '''fft, pad 0s, non partial'''
 
+    lags = np.arange(0, argM)
     n=len(x)
     # pad 0s to 2n-1
     ext_size=2*n-1
@@ -113,8 +116,9 @@ def autocorr3(x,lags):
 
     return corr[:len(lags)]
 
-def autocorr4(x,lags):
+def autocorr4(argM, x):
     '''fft, don't pad 0s, non partial'''
+    lags = np.arange(0, argM)
     mean=x.mean()
     var=numpy.var(x)
     xp=x-mean
@@ -125,8 +129,9 @@ def autocorr4(x,lags):
 
     return corr[:len(lags)]
 
-def autocorr5(x,lags):
+def autocorr5(argM, x):
     '''numpy.correlate, non partial'''
+    lags = np.arange(0, argM)
     mean=x.mean()
     var=numpy.var(x)
     xp=x-mean
