@@ -4,3 +4,4 @@ cmake-build-debug
 cmake_regenerateAll.sh
 src/CMakeLists.txt
 tools/*.pyc
+tools/.*.swp

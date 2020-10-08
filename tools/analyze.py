@@ -8,25 +8,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from autocorFuncs import *
 
-def is_odd(num):
-	return num % 2 != 0
-#
-
-def print2D(M):
-	for i in range(M.shape[0]):
-		for j in range(M.shape[1]):
-			print M[i, j],
-		print
-#
-	
-def print2DAndExit(M):
-	for i in range(M.shape[0]):
-		for j in range(M.shape[1]):
-			print M[i, j],
-		print
-	exit(0)
-#
-	
 parser = argparse.ArgumentParser()
 parser.add_argument('--simDirs', default=None, nargs='+',
 	help='Directory with input data files')
@@ -59,18 +40,36 @@ parser.add_argument('--savefig', action='store_true', default=False,
 args = parser.parse_args()
 
 # General plot parameters
-colors = ['black', 'red', 'orange', 'blue', 'magenta', 'cyan', 'green', 'pink', 'black', 'black']
+colors = ['red', 'orange', 'magenta', 'cyan', 'green', 'pink']
 if args.makeplots:
 	fignum = 0
 
 
 # Main loop: iterates through seeds = simulation reps
 tiny = 0.0000001
-for ri in range(len(args.FNSeeds)):
+
+#figs = [None] * len(args.FNSeeds)
+#axes = [None] * len(args.FNSeeds)
+
+logData = [None] * len(args.FNSeeds)
+trimLogData = [None] * len(args.FNSeeds)
+means = [None] * len(args.FNSeeds)
+variances = [None] * len(args.FNSeeds)
+stds = [None] * len(args.FNSeeds)
+mvAvgs = [None] * len(args.FNSeeds)
+avgAcc = [None] * len(args.FNSeeds)
+eqPoints = [None] * len(args.FNSeeds)
+corrFull = [None] * len(args.FNSeeds)
+trimCorr = [None] * len(args.FNSeeds)
+
+nofDataCols = len(args.datacols)
+dataCols = args.datacols
+
+for seedi in range(len(args.FNSeeds)):
 	# Get file names
 	FNList = []
 	for di in range(len(args.simDirs)):
-		FNList.append(glob.glob(os.path.join(args.simDirs[di] + "log." + args.FNSeeds[ri]))[0])
+		FNList.append(glob.glob(os.path.join(args.simDirs[di] + "log." + args.FNSeeds[seedi]))[0])
 	nfiles = len(FNList)
 
 	# Get raw data
@@ -84,171 +83,172 @@ for ri in range(len(args.FNSeeds)):
 	rawdata = np.concatenate(rawdataChunks)
 
 	# Transpose data and add another column for acceptance
-	logData = np.concatenate((rawdata.transpose(), np.zeros((1, rawdata.shape[0]))), axis=0)
-	ncols = logData.shape[0]
+	logData[seedi] = np.concatenate((rawdata.transpose(), np.zeros((1, rawdata.shape[0]))), axis=0)
+	ncols = logData[seedi].shape[0]
 	print "Done."
 
 	# Attach acceptance indicator on the last column
 	print "Attaching acceptance indicator based on difference of eolumns", 2, 3,
 	for i in range(rawdata.shape[0]):
 		if rawdata[i][2] != rawdata[i][3]:
-			logData[-1][i] = 1
-	avgAcc = np.mean(logData[-1])
+			logData[seedi][-1][i] = 1
+	avgAcc[seedi] = np.mean(logData[seedi][-1])
 	print "Done."
 
 	# Save moments for entire chosen timeseries
-	nofDataCols = len(args.datacols)
-	dataCols = args.datacols
-
-	variances = np.zeros((nofDataCols))
-	stds = np.zeros((nofDataCols))
-	means = np.zeros((nofDataCols))
-
+	variances[seedi] = np.zeros((nofDataCols))
+	stds[seedi] = np.zeros((nofDataCols))
+	means[seedi] = np.zeros((nofDataCols))
 	dataColi = -1
 	for coli in dataCols:
 		dataColi += 1
 		print "Column", coli,
-		means[dataColi] = np.mean(logData[coli])
-		variances[dataColi] = np.var(logData[coli])
-		stds[dataColi] = np.std(logData[coli])
-		print "mean stdev skew kurt ", means[dataColi], stds[dataColi], scipy.stats.skew(logData[coli]), scipy.stats.kurtosis(logData[coli])
+		means[seedi][dataColi] = np.mean(logData[seedi][coli])
+		variances[seedi][dataColi] = np.var(logData[seedi][coli])
+		stds[seedi][dataColi] = np.std(logData[seedi][coli])
+		print "mean stdev skew kurt ", means[seedi][dataColi], stds[seedi][dataColi], \
+			scipy.stats.skew(logData[seedi][coli]), scipy.stats.kurtosis(logData[seedi][coli])
 
 	# Autocorrelation functions for data columns
+	print "Calculating autocorrelation functions..."
+	corrFull[seedi] = np.empty((nofDataCols, (logData[seedi][0]).size))
 	maxAcor = 0
 	dataColi = -1
 	for coli in dataCols:
 		dataColi += 1
 		if args.acf:
 			# Autocorrelation time estimate (2009 Grossfield)
-			# Compute correlation function for M values or until it reaches 0
-			M = args.Ms[dataColi] # Calculate up to point M
-			N = logData[coli].size # Sample size
+			M = args.Ms[dataColi] # Calculate up to point M or until it reaches 0
+			N = logData[seedi][coli].size # Sample size
 			if M == 0: M = N
 
 			# Autocorrelation functions calculated with different methods
-			corrFull, cut = CestGrossfield(M, logData[coli]) # Beyond the cut point it becomes noisy
-			
-			# Integrated autocorrelation time
-			IAcFull = np.sum(corrFull)
-			print "Integrated autocorrelation time full", IAcFull
+			corrFull[seedi][dataColi], cut, IAcFull, ESSfull = CestGrossfield(M, logData[seedi][coli]) 
+			print "Full autocorrelation time for col ", coli, "=", IAcFull
 			
 			if maxAcor < IAcFull: maxAcor = int(IAcFull)
+	print "Done."
 	print "Max full autocorr time", maxAcor
 
 	# Get moving averages
-	maCols = np.zeros((nofDataCols, (logData[0]).size ))
-	logDataMeanLines = np.ones((nofDataCols, (logData[0]).size ))
+	mvAvgs[seedi] = np.zeros((nofDataCols, (logData[seedi][0]).size ))
+	logDataMeanLines = np.ones((nofDataCols, (logData[seedi][0]).size ))
 	dataColi = -1
 	for coli in dataCols:
 		dataColi += 1
-		logDataMeanLines[dataColi] = means[dataColi]
+		logDataMeanLines[dataColi] = means[seedi][dataColi]
 		if is_odd(maxAcor):
-			maCols[dataColi] = moving_average(logData[coli], maxAcor)
+			mvAvgs[seedi][dataColi] = moving_average(logData[seedi][coli], maxAcor)
 		else:
-			maCols[dataColi] = moving_average(logData[coli], maxAcor + 1)
+			mvAvgs[seedi][dataColi] = moving_average(logData[seedi][coli], maxAcor + 1)
 
-	# Get moving average vs mean intersection
-	firstIntersect = 0
-	diff = prevDiff = 0.0
+	# Get equilibration point (moving average vs mean intersection)
 	dataColi = -1
 	for coli in dataCols:
 		dataColi += 1
-		for i in range((logData[0]).size):
-			if not np.isnan(maCols[dataColi][i]):
-				diff = maCols[dataColi][i] - logDataMeanLines[dataColi][i]
-				if (diff * prevDiff) < 0:
-					firstIntersect = i
-					break
-				prevDiff = diff
+		mvAvgs_Means_Xs = intersections(mvAvgs[seedi][dataColi], logDataMeanLines[dataColi])
+	mvAvgs_Means_1stX = mvAvgs_Means_Xs[0]
+	eqPoints[seedi] = mvAvgs_Means_1stX
+	print "Equilibration point", eqPoints[seedi]
 
-	# Get equilibration point
-	eqPoint = firstIntersect
-	print "Equilibration point", eqPoint
+	# Discard equilibration period
+	trimLogData[seedi] = logData[seedi][:, eqPoints[seedi]:]
 
-	# Get production run (Trim the series)
-	trimCols = np.zeros((ncols, (logData[0][eqPoint:]).size ))
-	for coli in range(ncols):
-		trimCols[coli] = logData[coli][eqPoint:]
-
-
-	# Get autocorrelation funtions on production runs
+	# Get autocorrelation funtions on production period
+	print "Recalculating autocorrelation functions for production period..."
+	trimCorr[seedi] = np.empty((nofDataCols, 7, (logData[seedi][0]).size)) # new
 	dataColi = -1
 	for coli in dataCols:
 		dataColi += 1
 		if args.acf:
 			# Autocorrelation time estimate (2009 Grossfield)
-			# Compute correlation function for M values or until it reaches 0
-			M = args.Ms[dataColi] # Calculate up to point M
-			trimN = trimCols[coli].size # Sample size
+			M = args.Ms[dataColi] # Calculate up to point M or until it reaches 0
+			trimN = trimLogData[seedi][coli].size
 			if M == 0: M = trimN
 
-			# Autocorrelation functions calculated with different methods
-			corr = np.zeros((7, M)) # (# of autocor functions, X size)
-			corr[0], cut = CestGrossfield(M, trimCols[coli]) # Beyond the cut point it becomes noisy
-			
-			# Integrated autocorrelation time
-			Iac = np.sum(corr[0])
-			ESS = N / Iac
-			print "Integrated autocorrelation time", Iac 
-			print "Grossfield independent samples", ESS
+			# Autocorrelation function calculated with Crossfield method
+			#trimCorr[seedi][dataColi] = np.zeros((7, trimN)) # (# of autocor functions, X size)
+			x, cut, Iac, ESS = CestGrossfield(M, trimLogData[seedi][coli]) # Beyond the cut point it becomes noisy
+			trimCorr[seedi][dataColi][0][:x.size] = x
+			print "Autocorrelation time and ESS", Iac, ESS
 
-			# Additional methods
-			#add_funcs = [autocorr1, autocorr2, autocorr3, autocorr4, autocorr5]
-			add_funcs = [autocorr2]
-			for i in range(2, args.nofAddMethods):
-				corr[i] = add_funcs[i](M, trimCols[coli])
-
-			# Standard error based on autocorrelation time fitting
-			SE = stds[dataColi] * np.sqrt(Iac / float(N))
+			# Standard error based on autocorrelation time
+			SE = stds[seedi][dataColi] * np.sqrt(Iac / float(trimN))
 			print "Standard error", SE
 
-			# Plots
-			if(('acf' in args.makeplots) or ('all' in args.makeplots)):
-				fignum += 1
-				fig = plt.figure(fignum)
-				fig.suptitle("Autocorrelation time function") 
-				ax = plt.subplot(nofDataCols, 1, dataColi + 1)
-				line, = ax.plot(corr[1], label='Col ' +  str(coli) + ' ' + ' f1', color='gray')
+			# Additional methods if required
+			add_funcs = [autocorr1, autocorr2, autocorr3, autocorr4, autocorr5]
+			for i in range(0, args.nofAddMethods):
+				x = add_funcs[i](M, trimLogData[seedi][coli])
+				trimCorr[seedi][dataColi][i][:x.size] = x
 
-				line.set_dashes([2,2,10,2])
-				ax.plot(corrFull[0], label='Col ' +  str(coli), color='black')
-				ax.plot(corr[0], label='Col ' +  str(coli), color='red')
 
-				ax.legend()
+# Make plots
+if args.makeplots:
+	figs = [None] * len(args.FNSeeds)
+	axes = [None] * len(args.FNSeeds)
+
+	# Plot data series
+	for seedi in range(len(args.FNSeeds)):
+		figs[seedi], axes[seedi] = plt.subplots(nofDataCols, 2)
+		plt.suptitle('Seed ' + str(args.FNSeeds[seedi]))
+
+		if(('data' in args.makeplots) or ('all' in args.makeplots)):
+			dataColi = -1
+			for coli in args.datacols:
+				dataColi += 1
+
+				# Plot initial data
+				axes[seedi][dataColi, 0].plot(logData[seedi][coli], label='Col ' +  str(coli) + ' real', color='gray')
+				# Plot moving averages
+				axes[seedi][dataColi, 0].plot(mvAvgs[seedi][dataColi], label='Col ' +  str(coli) + ' real', color='green')
 	
-				ax.set_xlabel(r'$\mathrm{\tau}$', fontsize=8)
-				ax.set_ylabel(r'$\mathrm{C(\tau)}$', fontsize=8)
+				logDataMeanLine = np.ones(((logData[seedi][coli]).size )) * means[seedi][dataColi]
+				axes[seedi][dataColi, 0].plot(logDataMeanLine, label='Col ' +  str(coli) + ' real', color='cyan')
+	
+				# Plot trimmed data
+				axes[seedi][dataColi, 0].plot( np.concatenate((np.zeros((eqPoints[seedi])), trimLogData[seedi][coli])), label='Col ' +  str(coli) + ' real', color='black')
+				# Plot acceptance scaled
+				scaleFactor = (1/avgAcc[seedi]) * means[seedi][dataColi]
+				acc2bPlotted = moving_average(scaleFactor * logData[seedi][-1], maxAcor)
+				axes[seedi][dataColi, 0].plot(acc2bPlotted, color='blue')
+	
+				# Format plots
+				axes[seedi][dataColi, 0].set_xlabel(r'$\mathrm{t}$', fontsize=8)
+				axes[seedi][dataColi, 0].set_ylabel(r'$\mathrm{f(t)}$', fontsize=8)
+	
+				# Save plots
+				if args.savefig:
+					  figFN = 'temp.data.pdf'
+					  plt.savefig(figFN, dpi=600, format='pdf')
+	
+		# Plot autocorrelation functions
+		if(('acf' in args.makeplots) or ('all' in args.makeplots)):
+			dataColi = -1
+			for coli in args.datacols:
+				dataColi += 1
+
+				# Plot autocor f on the whole series
+				axes[seedi][dataColi, 0].plot(corrFull[seedi][dataColi], label='Col ' +  str(coli) + str(' Grossfield Full'), color='black')
+				# Plot autocor f on the production series
+				axes[seedi][dataColi, 0].plot(trimCorr[seedi][dataColi][0], label='Col ' +  str(coli) + ' ' + ' Grossfield', color='blue')
+				# Plot other autocorrelation functions
+				for i in range(0, args.nofAddMethods):
+					line, = axes[seedi][dataColi, 0].plot(trimCorr[seedi][dataColi][i], \
+						label='Col ' +  str(coli) + ' ' + str(autocorrLabels[i]), color = colors[i])
+					line.set_dashes([2,2,10,2])
+				
+				# Format plots
+				axes[seedi][dataColi, 0].legend()
+				axes[seedi][dataColi, 0].set_xlabel(r'$\mathrm{\tau}$', fontsize=8)
+				axes[seedi][dataColi, 0].set_ylabel(r'$\mathrm{C(\tau)}$', fontsize=8)
+				plt.setp(axes[seedi][dataColi, 0].get_xticklabels(), rotation='vertical', fontsize=8)
+				plt.setp(axes[seedi][dataColi, 0].get_yticklabels(), rotation='horizontal', fontsize=8)
 		  
-				plt.setp(ax.get_xticklabels(), rotation='vertical', fontsize=8)
-				plt.setp(ax.get_yticklabels(), rotation='horizontal', fontsize=8)
-		  
+				# Save plots
 				if args.savefig:
 					  figFN = 'temp.acf.pdf'
 					  plt.savefig(figFN, dpi=600, format='pdf')
-	
-		if(('data' in args.makeplots) or ('all' in args.makeplots)):
-			fignum += 1
-			fig = plt.figure(fignum)
-			fig.suptitle(FNList[li])
-			ax = plt.subplot(nofDataCols, 1, dataColi+1)
-
-			# Initial data
-			ax.plot(logData[coli], label='Col ' +  str(coli) + ' real', color='gray')
-			# Moving average
-			ax.plot(maCols[dataColi], label='Col ' +  str(coli) + ' real', color='green')
-			ax.plot(logDataMeanLines[dataColi], label='Col ' +  str(coli) + ' real', color='cyan')
-			# Trimmed data
-			ax.plot( np.concatenate((np.zeros((eqPoint)), trimCols[coli])), label='Col ' +  str(coli) + ' real', color='black')
-
-			ax.plot(moving_average((1/avgAcc) * means[dataColi] *  logData[-1], maxAcor), color='blue')
-
-			ax.set_xlabel(r'$\mathrm{t}$', fontsize=8)
-			ax.set_ylabel(r'$\mathrm{f(t)}$', fontsize=8)
-
-			if args.savefig:
-				  figFN = 'temp.data.pdf'
-				  plt.savefig(figFN, dpi=600, format='pdf')
-
 if args.makeplots:
 	plt.show()
 
