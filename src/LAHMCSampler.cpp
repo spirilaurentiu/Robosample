@@ -10,15 +10,21 @@ Implementation of LAHMCSampler class. **/
 //** Constructor **/
 LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::SimbodyMatterSubsystem *argMatter
-                                     ,SimTK::Compound *argResidue
+
+                                     //,SimTK::Compound *argResidue
+				     ,std::vector<Topology *>& topologies
+
                                      ,SimTK::DuMMForceFieldSubsystem *argDumm
                                      ,SimTK::GeneralForceSubsystem *argForces
                                      ,SimTK::TimeStepper *argTimeStepper
 				     ,unsigned int Kext
                                      )
-    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    HMCSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    : Sampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
+    //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    //HMCSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    MonteCarloSampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
+    HMCSampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  
     this->fix_n = this->fix_o = 0.0;
@@ -783,6 +789,10 @@ bool LAHMCSampler::sample_iteration(SimTK::State& someState)
 	accRejStep(someState);
     
 	++nofSamples;
+
+	pushCoordinatesInR(someState);
+
+	pushVelocitiesInRdot(someState);
 
 	return this->acc;
 }

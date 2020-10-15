@@ -10,35 +10,43 @@ Implementation of HMCSampler class. **/
 //** Constructor **/
 HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::SimbodyMatterSubsystem *argMatter
-                                     ,SimTK::Compound *argResidue
+
+                                     //,SimTK::Compound *argResidue
+				     ,std::vector<Topology *>& argTopologies
+
                                      ,SimTK::DuMMForceFieldSubsystem *argDumm
                                      ,SimTK::GeneralForceSubsystem *argForces
                                      ,SimTK::TimeStepper *argTimeStepper
                                      )
-    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
+    : Sampler(argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+    //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    MonteCarloSampler(argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
-    this->useFixman = false;  
-    this->fix_n = this->fix_o = 0.0;
-    this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
-    this->residualEmbeddedPotential = 0.0;
-    nofSamples = 0;
-    this->alwaysAccept = false;
+	this->useFixman = false;  
+	this->fix_n = this->fix_o = 0.0;
+	this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
+	this->residualEmbeddedPotential = 0.0;
+	nofSamples = 0;
+	this->alwaysAccept = false;
 
-    this->prevPrevAcceptance = SimTK::NaN;
-    this->prevAcceptance = SimTK::NaN;
-    this->acceptance = SimTK::NaN;
+	this->prevPrevAcceptance = SimTK::NaN;
+	this->prevAcceptance = SimTK::NaN;
+	this->acceptance = SimTK::NaN;
 
-    
-    this->prevPrevTimestep = SimTK::NaN; // ps
-    this->prevTimestep = SimTK::NaN; // ps
-    this->timestep = 0;
+	
+	this->prevPrevTimestep = SimTK::NaN; // ps
+	this->prevTimestep = SimTK::NaN; // ps
+	this->timestep = 0;
 
-    this->temperature = 0.0;
-    this->boostT = this->temperature;
-    MDStepsPerSample = 0;
-    proposeExceptionCaught = false;
-    shouldAdaptTimestep = false;
+	this->temperature = 0.0;
+	this->boostT = this->temperature;
+	MDStepsPerSample = 0;
+	proposeExceptionCaught = false;
+	shouldAdaptTimestep = false;
+
+	dR.resize(ndofs, 0);
+	dRdot.resize(ndofs, 0);
 }
 
 /** Destructor **/
@@ -325,7 +333,7 @@ void HMCSampler::setBoostMDSteps(int argMDSteps)
 
 }
 
-/** Store configuration **/
+/** Store configuration as a set of Transforms **/
 void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someState){ // func
     system->realize(someState, SimTK::Stage::Position);
 
@@ -535,6 +543,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState){
     std::cout << std::endl;
     // */
     // INSTANT GEOMETRY END
+
 	}  
 }
 
@@ -663,6 +672,69 @@ void HMCSampler::update(SimTK::State& someState)
         acceptedStepsBuffer.pop_front();
 }
 
+/** Push Cartesian coordinates into R vector stored in Sampler.
+Return the size of R **/
+int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
+{
+	SimTK::Vec3 atomR;
+	SimTK::Compound::AtomIndex aIx; 
+	for(int i = 0; i < topologies.size(); i++){
+		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
+			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
+			atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
+			R.push_back(atomR[0]);
+			R.push_back(atomR[1]);
+			R.push_back(atomR[2]);
+		}
+	}
+
+	// Calculate dR		
+	if(R.size() >= (2 * (ndofs))){
+		for(unsigned int j = 0; j < (ndofs); j++){
+			dR[j] = R[j + (ndofs)] - R[j];
+		}
+
+		// Transfer upper to lower half and cleanup the upper half of R
+		for(int j = ((ndofs) - 1); j >= 0; --j){
+			//std::cout << "R size= " << R.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+			R[j] = R[j + ndofs];
+			R.pop_back();
+		}
+	}
+
+}
+
+/** Push velocities into Rdot vector stored in Sampler.
+Return the size of Rdot **/
+int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
+{
+	SimTK::Vec3 atomRdot;
+	SimTK::Compound::AtomIndex aIx; 
+	for(int i = 0; i < topologies.size(); i++){
+		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
+			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
+			atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
+			Rdot.push_back(atomRdot[0]);
+			Rdot.push_back(atomRdot[1]);
+			Rdot.push_back(atomRdot[2]);
+		}
+	}
+
+	// Calculate dRdot		
+	if(Rdot.size() >= (2 * (ndofs))){
+		for(unsigned int j = 0; j < (ndofs); j++){
+			dRdot[j] = Rdot[j + (ndofs)] - Rdot[j];
+		}
+
+		// Transfer upper to lower half and cleanup the upper half of Rdot
+		for(int j = ((ndofs) - 1); j >= 0; --j){
+			//std::cout << "Rdotdot size= " << Rdot.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+			Rdot[j] = Rdot[j + ndofs];
+			Rdot.pop_back();
+		}
+	}
+}
+
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
 	propose(someState);
@@ -671,71 +743,47 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 	++nofSamples;
 
-	// MSD BEGIN
-	unsigned int natoms = ((Topology *)residue)->bAtomList.size();
-	SimTK::Vec3 R;
-	SimTK::Vec3 Rdot;
-	SimTK::Compound::AtomIndex aIx; 
-	SimTK::Compound c = *((Topology *)residue);
+	pushCoordinatesInR(someState);
 
-	// Load new coordinates
-	for(unsigned int j = 0; j < natoms; j++){
-		aIx = (((Topology *)residue)->bAtomList[j]).getCompoundAtomIndex();
+	pushVelocitiesInRdot(someState);
 
-		R = c.calcAtomLocationInGroundFrame(someState, aIx);
-		Rs.push_back(R);
-
-		Rdot = c.calcAtomVelocityInGroundFrame(someState, aIx);
-		Rdots.push_back(Rdot);
-	}
-	//for(unsigned int j = 0; j < Rdots.size(); j++){std::cout << Rdots[j] << " " << (Rdots[j]).normalize() << std::endl;}
-
-	// Calculate MSD
-	SimTK::Real MSD = 0;
-	SimTK::Real RRdot = 0;
-	SimTK::Vec3 dR;
-
-	if(Rs.size() == (2*natoms)){ // Don't delete initial coordinates
-		for(unsigned int j = 0; j < natoms; j++){
-			//std::cout << Rs[j + natoms] - Rs[j] << std::endl;
-			//std::cout << "size= " << Rs.size() << " a= " << j + natoms << " b= " << j << std::endl;
-			dR = Rs[j + natoms] - Rs[j];
-			MSD += dR.normSqr();
-		}
-	
-		MSD /= natoms;
-		std::cout << "MSD= " << MSD << std::endl;
-
-		// Compute RRdot
-		for(unsigned int j = 0; j < natoms; j++){
-			dR = Rs[j + natoms] - Rs[j];
-			if(((Rdots[j]).norm() != 0) && (dR.norm() != 0)){
-				//std::cout << "dR= " << dR << " " << dR.normalize() << std::endl;
-				//std::cout << "Rdot" << Rdots[j] << " " << (Rdots[j]).normalize() << std::endl;
-				RRdot += SimTK::dot(dR.normalize(), (Rdots[j]).normalize());
-			}
-		}
-		std::cout << "RRdot= " << RRdot << std::endl;
-
-		// Transfer upper to lower half and cleanup the upper half
-		for(int j = (natoms - 1); j >= 0; --j){
-			//std::cout << "size= " << Rs.size() << " a= " << j << " b= " << j  + natoms << std::endl;
-			Rs[j] = Rs[j + natoms];
-			Rs.pop_back();
-		}
-	}
-
-
-	// Cleanup Rdots
-	for(unsigned int j = 0; j < natoms; j++){
-		Rdots.pop_back();
-	}
-	/////// END MSD
-
-
+	// Calculate MSD and RRdot to adapt the integration length
+    	std::cout << std::setprecision(10) << std::fixed;
+	std::cout << "MSD= " << calculateMSD() << std::endl;
+	std::cout << "RRdot= " << calculateRRdot() << std::endl;
 
 	return this->acc;
 }
+
+
+/** Calculate Mean Square Displacement based on stored R vectors **/
+SimTK::Real HMCSampler::calculateMSD(void)
+{
+	SimTK::Real MSD = 0;
+	if(dR.size() >= (ndofs)){
+		MSD += magSq(dR);
+		MSD /= (ndofs);
+	}
+	return MSD;
+}
+
+/** Calculate RRdot based on stored R and Rdot vectors **/
+SimTK::Real HMCSampler::calculateRRdot(void)
+{
+	SimTK::Real RRdot = 0;
+	if(dR.size() >= (ndofs)){
+		std::vector<SimTK::Real> tempDR = dR;
+		std::vector<SimTK::Real> tempRdot = Rdot;
+		normalize(tempDR);
+		normalize(tempRdot);
+
+		for(unsigned int j = 0; j < ndofs; j++){
+			RRdot += tempDR[j] * tempRdot[j];
+		}
+	}
+	return RRdot;
+}
+
 
 
 int HMCSampler::getMDStepsPerSample() const {

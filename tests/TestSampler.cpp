@@ -12,6 +12,8 @@
 
 #define ASSERT_EQUAL(val1, val2) {ASSERT(std::abs(val1-val2) < 1e-10);}
 
+/*
+
 class DerivedSampler : virtual public Sampler{
 public:
     // Constructor
@@ -129,7 +131,10 @@ void testSampler(){
     }
 }
 
+*/
+
 int main() {
+/*
     try {
         testSampler();
     }
@@ -138,5 +143,8 @@ int main() {
         return 1;
     }
     std::cout << "Done" << std::endl;
+*/
+
+    assert(!"Not implemented.");
     return 0;
 }

@@ -7,6 +7,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from logAnalyzer import LogAnalyzer
+from trajAnalyzer import TrajectoryAnalyzer
 from autocorFuncs import *
 
 parser = argparse.ArgumentParser()
@@ -40,6 +41,15 @@ parser.add_argument('--savefigs', action='store_true', default=False,
 	help='Save the plot into a file')
 args = parser.parse_args()
 
+# Analyze trajectory
+TA = TrajectoryAnalyzer('ala71/ligand.prmtop', 'ala71', args.FNSeeds, args.simDirs)
+#TA.ReadPdbs(verbose = False)
+TA.ReadDcds(verbose = True)
+TA.RMSD()
+TA.RG()
+TA.SASA()
+TA.Helicity()
+
 # General plot parameters
 colors = ['red', 'orange', 'magenta', 'cyan', 'green', 'pink']
 
@@ -50,34 +60,34 @@ LA = LogAnalyzer(args.FNSeeds, args.simDirs, args.datacols, args.skip_header, ar
 LA.Read(verbose = True)
 
 # Find equilibration points
-print "Finding equilibration points..."
+print ("Finding equilibration points...")
 LA.FindEquilibrationPoints( lagMaxima = ([0] * len(args.datacols)) )
-print "Done."
+print ("Done.")
 
 # Compute autocorrelation related quantities
-print "Recalculating autocorrelation functions for production period..."
+print ("Recalculating autocorrelation functions for production period...")
 LA.Autocorrelation(args.nofAddMethods, lagMaxima = ([0] * len(args.datacols)) )
-print "Done."
+print ("Done.")
 
 # Print
 for seedi in range(len(args.FNSeeds)):
 	dataColi = -1
 	for coli in args.datacols:
 		dataColi += 1
-		print "Seed column", args.FNSeeds[seedi], coli, 
-		#print "mean stdev skew kurt ",
-		#print LA.means[seedi][dataColi], LA.stds[seedi][dataColi], \
+		print ("Seed column", args.FNSeeds[seedi], coli),
+		#print ("mean stdev skew kurt "),
+		#print (LA.means[seedi][dataColi], LA.stds[seedi][dataColi], \
 		#	scipy.stats.skew(LA.logData[seedi][coli]), \
-		#	scipy.stats.kurtosis(LA.logData[seedi][coli]),
+		#	scipy.stats.kurtosis(LA.logData[seedi][coli])),
 
-		print "eqPoint", LA.eqPoints[seedi][dataColi],
-		print "Iac and ESS", LA.Iacs[seedi][dataColi], LA.ESSs[seedi][dataColi]
-	print "Seed general eqPoint", LA.eqPoint[seedi]
+		print ("eqPoint", LA.eqPoints[seedi][dataColi]),
+		print ("Iac and ESS", LA.Iacs[seedi][dataColi], LA.ESSs[seedi][dataColi])
+	print ("Seed general eqPoint", LA.eqPoint[seedi])
 
 # Make plots
 if args.makeplots:
-	print "Plotting..."
-	figsPerSeed = 2
+	print ("Plotting...")
+	figsPerSeed = 3
 	figs = [None] * len(args.FNSeeds) * figsPerSeed
 	axes = [None] * len(args.FNSeeds) * figsPerSeed
 
@@ -159,6 +169,29 @@ if args.makeplots:
 				if args.savefigs:
 					  figFN = 'temp.acf.pdf'
 					  plt.savefig(figFN, dpi=600, format='pdf')
+
+		# Plot trajectory based geometric functions
+		if(('helicity' in args.makeplots) or ('all' in args.makeplots)):
+			fignum += 1
+			figIx = (seedi * figsPerSeed) + fignum
+			figs[figIx], axes[figIx] = plt.subplots(2, 2)
+			plt.suptitle('Seed ' + str(args.FNSeeds[seedi]))
+
+			axes[figIx][0, 0].plot( TA.rmsds[seedi], \
+				label='RMSD', color='black')
+			axes[figIx][0, 0].legend()
+
+			axes[figIx][0, 1].plot( TA.RGs[seedi], \
+				label='RGs', color='black')
+			axes[figIx][0, 1].legend()
+
+			axes[figIx][1, 0].plot( TA.helicities1[seedi], \
+				label='Helicity', color='black')
+			axes[figIx][1, 0].legend()
+
+			axes[figIx][1, 1].scatter( TA.totSASAs[seedi], TA.RGs, \
+				label='SASA vs RG', color='black', s = 1**2)
+			axes[figIx][1, 1].legend()
 if args.makeplots:
 	plt.show()
 #

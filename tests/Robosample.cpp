@@ -226,6 +226,11 @@ int main(int argc, char **argv)
 	}
     }
 
+////////// DEBUG BEGIN
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {}}
+////////// DEBUG END
+
     // Set sampler parameters and initialize
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
         for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {

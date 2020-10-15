@@ -243,6 +243,13 @@ SimTK::Real bDihedral(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, S
 /**  Get a unique name based on number **/
 std::string GetUniqueName(int key);
 
+/** Magnitude (norm) of a vector of reals **/
+SimTK::Real magnitude(std::vector<SimTK::Real>& V);
+SimTK::Real magSq(std::vector<SimTK::Real>& V);
+
+/** Normalize a std vector of double **/
+std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V);
+
 
 /*
  * Thermodynamics

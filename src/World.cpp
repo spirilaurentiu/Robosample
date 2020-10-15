@@ -474,7 +474,7 @@ int World::addSampler(SamplerName samplerName)
     if(samplerName == HMC){
 
         BaseSampler *p = new HMCSampler(
-                compoundSystem, matter, topologies[0],
+                compoundSystem, matter, topologies,
                 forceField, forces, ts
                 );
         samplers.emplace_back(p);
@@ -482,7 +482,7 @@ int World::addSampler(SamplerName samplerName)
     }else if(samplerName == LAHMC){
 
         BaseSampler *p = new LAHMCSampler(
-                compoundSystem, matter, topologies[0],
+                compoundSystem, matter, topologies,
                 forceField, forces, ts, 4
                 );
         samplers.emplace_back(p);

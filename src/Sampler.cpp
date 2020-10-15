@@ -12,19 +12,34 @@ Implementation of Sampler class. **/
 Sampler::Sampler(SimTK::CompoundSystem *argCompoundSystem,
                  SimTK::SimbodyMatterSubsystem *argMatter,
                  //Topology *argResidue,
-                 SimTK::Compound *argResidue,
+
+                 //SimTK::Compound *argResidue,
+		 std::vector<Topology *>& argTopologies,
+
                  SimTK::DuMMForceFieldSubsystem *argDumm,
                  SimTK::GeneralForceSubsystem *argForces,
                  SimTK::TimeStepper *argTimeStepper)
 {
-    this->compoundSystem = argCompoundSystem;
-    this->matter = argMatter;
-    this->residue = argResidue;
-    this->dumm = argDumm;
-    this->forces = argForces;
-    this->timeStepper = argTimeStepper;
-    this->system = &(matter->getSystem());
+	this->compoundSystem = argCompoundSystem;
+	this->matter = argMatter;
 
+	//this->residue = argResidue;
+	this->topologies = argTopologies;
+	assert(topologies.size());
+	this->residue = topologies[0];
+
+	// Set total number of atoms and dofs
+	natoms = 0;
+	for ( unsigned int i = 0; i < topologies.size(); i++){
+		natoms += (topologies[i])->getNumAtoms();
+	}
+	int ThreeFrom3D = 3;
+	ndofs = natoms * ThreeFrom3D;
+
+	this->dumm = argDumm;
+	this->forces = argForces;
+	this->timeStepper = argTimeStepper;
+	this->system = &(matter->getSystem());
 }
 
 // Destructor

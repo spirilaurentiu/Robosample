@@ -18,7 +18,10 @@ public:
     // Constructor
     ConformationalSearch(SimTK::CompoundSystem *argCompoundSystem,
                       SimTK::SimbodyMatterSubsystem *argMatter,
-                      SimTK::Compound *argResidue,
+
+                      //SimTK::Compound *argResidue,
+			std::vector<Topology *>& topologies,
+
                       SimTK::DuMMForceFieldSubsystem *argDumm,
                       SimTK::GeneralForceSubsystem *forces,
                       SimTK::TimeStepper *argTimeStepper) ;

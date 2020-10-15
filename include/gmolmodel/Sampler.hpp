@@ -18,7 +18,10 @@ public:
     // Constructor
     Sampler(SimTK::CompoundSystem *argCompoundSystem,
             SimTK::SimbodyMatterSubsystem *argMatter,
-            SimTK::Compound *argResidue,
+
+            //SimTK::Compound *argResidue,
+            std::vector<Topology *> &argTopologies,
+
             SimTK::DuMMForceFieldSubsystem *argDumm,
             SimTK::GeneralForceSubsystem *forces,
             SimTK::TimeStepper *argTimeStepper);
@@ -67,7 +70,14 @@ public:
     const SimTK::System *system;
     SimTK::CompoundSystem *compoundSystem;
     SimTK::SimbodyMatterSubsystem *matter;
-    SimTK::Compound *residue;
+
+    //SimTK::Compound *residue;
+    Topology *residue;
+
+    std::vector<Topology *> topologies;
+    int natoms;
+    int ndofs;
+
     SimTK::DuMMForceFieldSubsystem *dumm;
     SimTK::GeneralForceSubsystem *forces;
     SimTK::TimeStepper *timeStepper;

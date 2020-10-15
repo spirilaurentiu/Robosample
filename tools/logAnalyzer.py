@@ -52,7 +52,7 @@ class LogAnalyzer:
 		
 			# Get raw data
 			if verbose:
-				print "Gathering data from", FNList
+				print ("Gathering data from", FNList)
 			rawdataChunks = []	
 			for li in range(nfiles):
 				with open(FNList[li], 'r') as in_FN1:
