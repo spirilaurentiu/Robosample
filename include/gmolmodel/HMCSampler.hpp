@@ -175,6 +175,9 @@ public:
 	/** Calculate RRdot based on stored R and Rdot vectors **/
 	SimTK::Real calculateRRdot(void);
 
+	/** **/
+	void geomDihedral(void);
+
 protected:
 
 	float timestep;
