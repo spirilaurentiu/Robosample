@@ -553,6 +553,13 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 		//		dR[j] = R[j + (ndofs)] - R[j];
 		//	}
 		//
+		//	// Calculate MSD
+		//	SimTK::Real MSD = 0;
+		//	if(dR.size() >= (ndofs)){
+		//		MSD += magSq(dR);
+		//		MSD /= (ndofs);
+		//	}
+		//
 		//	// Calculate RRdot	
 		//	SimTK::Real RRdot = 0;
 		//	if(dR.size() >= (ndofs)){
@@ -566,9 +573,9 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 		//			RRdot += tempDR[j] * tempRdot[j];
 		//		}
 		//	}
-	    	//	std::cout << std::setprecision(10) << std::fixed;
-		//	std::cout << "k= " << k << " RRdot= " << RRdot 
-		//		<< std::endl;
+		//	std::cout << std::setprecision(10) << std::fixed;
+		//	std::cout << "k= " << k << " RRdot= " << RRdot
+		//		<< " MSD= " << MSD << std::endl;
 		//
 		//	// Pop current R and Rdot
 		//	for(int j = ((ndofs) - 1); j >= 0; --j){
@@ -827,8 +834,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 	// Calculate MSD and RRdot to adapt the integration length
     	std::cout << std::setprecision(10) << std::fixed;
-	std::cout << "MSD= " << calculateMSD() << std::endl;
-	std::cout << "RRdot= " << calculateRRdot() << std::endl;
+	std::cout << " MSD= " << calculateMSD()
+		<< " RRdot= " << calculateRRdot() << std::endl;
 
 	return this->acc;
 }
