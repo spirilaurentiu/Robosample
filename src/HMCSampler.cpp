@@ -518,53 +518,62 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState){
 			R.push_back(atomR[0]);
 			R.push_back(atomR[1]);
 			R.push_back(atomR[2]);
-			atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
-			Rdot.push_back(atomRdot[0]);
-			Rdot.push_back(atomRdot[1]);
-			Rdot.push_back(atomRdot[2]);
 		}
 	}
 
-	for(int i = 0; i < MDStepsPerSample; i++){
+	for(int k = 0; k < MDStepsPerSample; k++){
 		this->timeStepper->stepTo(someState.getTime() + (timestep));
                 system->realize(someState, SimTK::Stage::Position);
 
-
-		// Push present R and Rdots
-		for(int i = 0; i < topologies.size(); i++){
-			for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
-				aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
-				atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
-				R.push_back(atomR[0]);
-				R.push_back(atomR[1]);
-				R.push_back(atomR[2]);
-				atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
-				Rdot.push_back(atomRdot[0]);
-				Rdot.push_back(atomRdot[1]);
-				Rdot.push_back(atomRdot[2]);
+			// Push current R and Rdot
+			for(int i = 0; i < topologies.size(); i++){
+				for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
+					aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
+					atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
+					R.push_back(atomR[0]);
+					R.push_back(atomR[1]);
+					R.push_back(atomR[2]);
+					atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
+					Rdot.push_back(atomRdot[0]);
+					Rdot.push_back(atomRdot[1]);
+					Rdot.push_back(atomRdot[2]);
+				}
 			}
-		}
 
-		// Calculate dR		
-		for(unsigned int j = 0; j < (ndofs); j++){
-			dR[j] = R[j + (ndofs)] - R[j];
-		}
+			// Calculate dR		
+			for(unsigned int j = 0; j < (ndofs); j++){
+				dR[j] = R[j + (ndofs)] - R[j];
+			}
 
-		// Calculate MSD and RRdot to adapt the integration length
-    		std::cout << std::setprecision(10) << std::fixed;
-		std::cout << "MSD= " << calculateMSD() << std::endl;
-		std::cout << "RRdot= " << calculateRRdot() << std::endl;
+			// Calculate RRdot	
+			SimTK::Real RRdot = 0;
+			if(dR.size() >= (ndofs)){
+				std::vector<SimTK::Real> tempDR = dR;
+				std::vector<SimTK::Real> tempRdot = Rdot;
+		
+				normalize(tempDR);
+				normalize(tempRdot);
+		
+				for(unsigned int j = 0; j < ndofs; j++){
+					RRdot += tempDR[j] * tempRdot[j];
+				}
+			}
+	    		std::cout << std::setprecision(10) << std::fixed;
+			std::cout << "k= " << k << " RRdot= " << RRdot 
+				<< std::endl;
+		
+			// Pop current R and Rdot
+			for(int j = ((ndofs) - 1); j >= 0; --j){
+				R.pop_back();
+				Rdot.pop_back();
+			}
 
-		// Transfer upper to lower half and cleanup the upper half of R
-		for(int j = ((ndofs) - 1); j >= 0; --j){
-			R[j] = R[j + ndofs];
-			R.pop_back();
+	} // END for each step
 
-			Rdot[j] = Rdot[j + ndofs];
-			Rdot.pop_back();
-		}
-
-	} 
+	// Pop initial R
+	for(int j = ((ndofs) - 1); j >= 0; --j){
+		R.pop_back();
+	}
 
 }
 
@@ -801,9 +810,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 	++nofSamples;
 
-	pushCoordinatesInR(someState);
+	//pushCoordinatesInR(someState);
 
-	pushVelocitiesInRdot(someState);
+	//pushVelocitiesInRdot(someState);
 
 	// Calculate MSD and RRdot to adapt the integration length
     	//std::cout << std::setprecision(10) << std::fixed;

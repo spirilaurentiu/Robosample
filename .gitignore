@@ -3,6 +3,7 @@ cmake-build-debug
 .idea
 cmake_regenerateAll.sh
 src/CMakeLists.txt
+*/.*.swp
 .*.swp
 tools/__pycache__/*
 tools/*.pyc
