@@ -189,6 +189,15 @@ void HMCSampler::initialize(SimTK::State& someState )
         i++;
     }
 
+	// Initialize QsBuffer with zeros
+	int nq = matter->getNQ(someState);
+	int totSize = QsBufferSize * nq;
+	for(int i = 0; i < totSize; i++){ 
+		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
+		QsBuffer.push_back(SimTK::Real(0));
+	}
+
+
     // Store potential energies
     setOldPE(getPEFromEvaluator(someState));
     setSetPE(getOldPE());
@@ -486,6 +495,82 @@ void HMCSampler::adaptTimestep(SimTK::State& someState)
 		} // is time to adapt 
 }
 
+/**  **/
+void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
+
+    	std::cout << std::setprecision(10) << std::fixed;
+	int nq = someState.getNQ();
+	int totSize = QsBufferSize * nq;
+	if( (nofSamples % QsBufferSize) == (QsBufferSize-1) ){
+		std::cout << "Adapt blocks BEGIN: " << std::endl;
+		//std::cout << "Print by row: " << std::endl;
+		//for(int confi = 0; confi < QsBufferSize; confi++){
+		//	for(int qi = 0; qi < nq; qi++){
+		//		SimTK::Real x;
+		//		int pos;
+		//
+		//		std::list<SimTK::Real>::iterator it = QsBuffer.begin();
+		//		pos = (confi * nq) + qi;
+		//		std::advance(it, pos);
+		//		std::cout << *it << ' ';
+		//	}
+		//	std::cout << std::endl;
+		//}
+
+		std::cout << "Print by column: " << std::endl;
+		std::vector<std::vector<SimTK::Real>> QsBufferVec(nq, vector<SimTK::Real>(QsBufferSize));
+		for(int qi = 0; qi < nq; qi++){
+
+			std::vector<SimTK::Real> thisQ(QsBufferSize);
+
+			//std::cout << "QsBuffer= " << std::endl;
+			for(int confi = 0; confi < QsBufferSize; confi++){
+				SimTK::Real x;
+				int pos;
+
+				std::list<SimTK::Real>::iterator it = QsBuffer.begin();
+				pos = (confi * nq) + qi;
+				std::advance(it, pos);
+				thisQ[confi] = *it;
+				//std::cout << *it << ' ';
+			}
+			//std::cout << std::endl;
+
+			//std::cout << "thisQ= " << std::endl;
+			//for(int confi = 0; confi < QsBufferSize; confi++){
+			//	std::cout << thisQ[confi] << ' ';
+			//}
+			//std::cout << std::endl;
+
+			QsBufferVec[qi] = thisQ;
+
+		}
+
+		std::cout << "QsBufferVec= " << std::endl;
+		for(int qi = 0; qi < nq; qi++){
+			for(int confi = 0; confi < QsBufferSize; confi++){
+				std::cout << QsBufferVec[qi][confi] << ' ';
+			}
+			std::cout << std::endl;
+		}
+
+		
+		std::cout << "Compute correlation matrix: " << std::endl;
+		SimTK::Real corr;
+		for(int qi = 0; qi < nq; qi++){
+			for(int qj = 0; qj < nq; qj++){
+				corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
+				std::cout << corr << ' ';
+			}
+			std::cout << std::endl;
+		}
+
+		std::cout << "Adapt blocks END: " << std::endl;
+	}
+
+}
+
+
 /** Apply the L operator **/
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
     try {
@@ -531,6 +616,23 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 	for(int k = 0; k < MDStepsPerSample; k++){
 		this->timeStepper->stepTo(someState.getTime() + (timestep));
                 system->realize(someState, SimTK::Stage::Position);
+
+		//// Calculate generalized quantities
+    		//int nu = someState.getNU();
+    		//SimTK::Vector MU(nu);
+    		//for (int i=0; i < nu; ++i){
+        	//	MU[i] = 1;
+		//}
+		//matter->multiplyByM(someState, someState.getU(), MU);
+		//std::cout << "MU= " << MU << std::endl;
+		
+    		//int nu = someState.getNU();
+    		//SimTK::Vector U(nu);
+		//U = someState.getU();
+		//std::cout << "U= " << U << std::endl;
+
+		/////////////////////////
+
 
 		//// TODO:Loop function BEGIN ////
 		//	// Push current R and Rdot
@@ -736,6 +838,12 @@ void HMCSampler::propose(SimTK::State& someState)
 		adaptTimestep(someState);
 	}
 	
+	// Adapt timestep
+	bool shouldAdaptWorldBlocks = true;
+	if(shouldAdaptWorldBlocks){
+		adaptWorldBlocks(someState);
+	}
+	
 	// Apply the L operator 
 	integrateTrajectory(someState);
 	//integrateTrajectoryOneStepAtATime(someState);
@@ -822,21 +930,35 @@ int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
+    	std::cout << std::setprecision(10) << std::fixed;
+
 	propose(someState);
 
 	accRejStep(someState);
 
 	++nofSamples;
 
+	// Add generalized coordinates to a buffer
+	int nq = someState.getNQ();
+	SimTK::Vector Q = someState.getQ();
+	std::cout << "Qs= " << Q << std::endl;
+	for(int i = 0; i < nq; i++){
+		QsBuffer.push_back(Q[i]);
+		QsBuffer.pop_front();
+	}
+	//QsBuffer.push_back( SimTK::Vector(someState.getNQ(), SimTK::Real(0)) );
+	//QsBuffer.back() = Q; 
+	//QsBuffer.pop_front();
+	/////////
+	
 	pushCoordinatesInR(someState);
-
 	pushVelocitiesInRdot(someState);
 
 	// Calculate MSD and RRdot to adapt the integration length
     	std::cout << std::setprecision(10) << std::fixed;
 	std::cout << " MSD= " << calculateMSD()
 		<< " RRdot= " << calculateRRdot() << std::endl;
-
+	
 	return this->acc;
 }
 

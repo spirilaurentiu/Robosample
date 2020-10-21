@@ -13,6 +13,10 @@ from autocorFuncs import *
 parser = argparse.ArgumentParser()
 parser.add_argument('--simDirs', default=None, nargs='+',
 	help='Directory with input data files')
+parser.add_argument('--logDirs', default=None, nargs='+',
+	help='Directory with input data files')
+parser.add_argument('--molName', default=None, 
+	help='Molecule name also the name of the directory of the prmtop file.')
 parser.add_argument('--FNSeeds', default=None, nargs='+',
 	help='Name root for first input data files')
 parser.add_argument('--skip_header', default=0, type=int,
@@ -42,7 +46,7 @@ parser.add_argument('--savefigs', action='store_true', default=False,
 args = parser.parse_args()
 
 # Analyze trajectory
-TA = TrajectoryAnalyzer('ala71/ligand.prmtop', 'ala71', args.FNSeeds, args.simDirs)
+TA = TrajectoryAnalyzer( (args.molName + '/ligand.prmtop'), args.molName, args.FNSeeds, args.simDirs)
 #TA.ReadPdbs(verbose = False)
 TA.ReadDcds(verbose = True)
 TA.RMSD()
@@ -54,7 +58,7 @@ TA.Helicity()
 colors = ['red', 'orange', 'magenta', 'cyan', 'green', 'pink']
 
 # Analyze log data	
-LA = LogAnalyzer(args.FNSeeds, args.simDirs, args.datacols, args.skip_header, args.skip_footer, args.stride)
+LA = LogAnalyzer(args.FNSeeds, args.logDirs, args.datacols, args.skip_header, args.skip_footer, args.stride)
 
 # Read files and do basic statistics
 LA.Read(verbose = True)

@@ -105,6 +105,9 @@ public:
 	/** Use stochastic optimization to adapt timestep **/
 	virtual void adaptTimestep(SimTK::State& someState);
 
+	/** Adapt Gibbs blocks definitions **/
+	void adaptWorldBlocks(SimTK::State& someState);
+
 	/** Store new configuration and energy terms**/
 	virtual void calcNewConfigurationAndEnergies(SimTK::State& someState);
 
@@ -138,9 +141,21 @@ public:
 	Return the size of R **/
 	int pushCoordinatesInR(SimTK::State& someState);
 
-	/** Push velocities into Rdot vector stored in Sampler.
+	/** Push Cartesian velocities into Rdot vector stored in Sampler.
 	Return the size of Rdot **/
 	int pushVelocitiesInRdot(SimTK::State& someState);
+
+	/** Push generalized coordinates into R vector stored in Sampler.
+	Return the size of R **/
+	int pushCoordinatesInQ(SimTK::State& someState);
+
+	/** Push generalizedvelocities into Rdot vector stored in Sampler.
+	Return the size of Rdot **/
+	int pushVelocitiesInQdot(SimTK::State& someState);
+
+	/** Push generalizedvelocities into Rdot vector stored in Sampler.
+	Return the size of Rdot **/
+	int pushVelocitiesInU(SimTK::State& someState);
 
 	/** Modifies Q randomly
 	 **/
@@ -200,7 +215,9 @@ protected:
 	int MDStepsPerSample;
 
 	std::vector<SimTK::Real> R;
+
 	std::vector<SimTK::Real> Rdot;
+
 	std::vector<SimTK::Real> dR;
 	std::vector<SimTK::Real> dRdot;
 

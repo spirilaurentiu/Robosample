@@ -222,6 +222,14 @@ void LAHMCSampler::initialize(SimTK::State& someState )
         i++;
     }
 
+	// Initialize QsBuffer with zeros
+	int nq = matter->getNQ(someState);
+	int totSize = QsBufferSize * nq;
+	for(int i = 0; i < totSize; i++){ 
+		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
+		QsBuffer.push_back(SimTK::Real(0));
+	}
+
     // Store potential energies
     setOldPE(getPEFromEvaluator(someState));
     setSetPE(getOldPE());

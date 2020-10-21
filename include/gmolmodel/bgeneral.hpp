@@ -294,6 +294,34 @@ enum SamplerName { // Samplers
     LAHMC
 };
 
+
+
+/*
+ * k-means clustering
+ * http://www.goldsborough.me/c++/python/cuda/2017/09/10/20-32-46-exploring_k-means_in_python,_c++_and_cuda/
+ */
+struct Point {
+  double x{0}, y{0};
+};
+
+using DataFrame = std::vector<Point>;
+
+//double square(double value); 
+SimTK::Real circMean(std::vector<SimTK::Real> phi);
+SimTK::Real circCorr(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
+SimTK::Real circDist(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
+
+double squared_l2_distance(Point first, Point second);
+
+DataFrame k_means(const DataFrame& data,
+                  size_t k,
+                  size_t number_of_iterations);
+
+
+
+
+
+
 #ifndef MONTECARLOSAMPLER
 #define MONTECARLOSAMPLER MC
 #endif

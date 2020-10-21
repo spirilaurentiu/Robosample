@@ -172,6 +172,10 @@ protected:
     int acceptedStepsBufferSize = 30;
     std::list<int> acceptedStepsBuffer;
 
+    int QsBufferSize = 60;
+    //std::list<SimTK::Vector> QsBuffer;
+    std::list<SimTK::Real> QsBuffer;
+
     float acceptance;
     float prevAcceptance;
     float prevPrevAcceptance;
