@@ -517,7 +517,7 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 		//	std::cout << std::endl;
 		//}
 
-		std::cout << "Print by column: " << std::endl;
+		//std::cout << "Print by column: " << std::endl;
 		std::vector<std::vector<SimTK::Real>> QsBufferVec(nq, vector<SimTK::Real>(QsBufferSize));
 		for(int qi = 0; qi < nq; qi++){
 
@@ -546,19 +546,19 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 
 		}
 
-		std::cout << "QsBufferVec= " << std::endl;
-		for(int qi = 0; qi < nq; qi++){
-			for(int confi = 0; confi < QsBufferSize; confi++){
-				std::cout << QsBufferVec[qi][confi] << ' ';
-			}
-			std::cout << std::endl;
-		}
+		//std::cout << "QsBufferVec= " << std::endl;
+		//for(int qi = 0; qi < nq; qi++){
+		//	for(int confi = 0; confi < QsBufferSize; confi++){
+		//		std::cout << QsBufferVec[qi][confi] << ' ';
+		//	}
+		//	std::cout << std::endl;
+		//}
 
 		
 		std::cout << "Compute correlation matrix: " << std::endl;
 		SimTK::Real corr;
 		for(int qi = 0; qi < nq; qi++){
-			for(int qj = 0; qj < nq; qj++){
+			for(int qj = 0; (qj < nq) && (qj < qi); qj++){
 				corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
 				std::cout << corr << ' ';
 			}
@@ -941,11 +941,42 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	// Add generalized coordinates to a buffer
 	int nq = someState.getNQ();
 	SimTK::Vector Q = someState.getQ();
-	std::cout << "Qs= " << Q << std::endl;
+	//std::cout << "Qs= " << Q << std::endl;
 	for(int i = 0; i < nq; i++){
 		QsBuffer.push_back(Q[i]);
 		QsBuffer.pop_front();
 	}
+
+	for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
+		int mobodNQ = mobod.getNumQ(someState);
+		int mobodNU = mobod.getNumU(someState);
+		
+		//const SimTK::Transform T = mobod.getMobilizerTransform(someState);
+		//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
+		//const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
+		//std::cout << "Qs study:" << std::endl 
+		//	<< "mbx= " << mbx 
+		//	<< "mobodNQ" << mobodNQ
+		//	<< " T " << T
+		//	<< " unitInertia " << unitInertia
+		//	<< std::endl;
+
+		// Loop through body's Qs
+		int internQIx = -1;
+		for(int qi = qIx; qi < (mobodNQ + qIx); qi++){
+			internQIx++;
+		}
+			
+		// Loop through body's Us
+		for(int ui = 0; ui < mobodNU; ui++){
+			SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
+			//std::cout << "H_FMCol= " << H_FMCol << std::endl; 
+		}
+		
+	}
+
 	//QsBuffer.push_back( SimTK::Vector(someState.getNQ(), SimTK::Real(0)) );
 	//QsBuffer.back() = Q; 
 	//QsBuffer.pop_front();
