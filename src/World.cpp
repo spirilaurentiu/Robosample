@@ -655,7 +655,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 		/////////////////
 		// NON-CARTESIAN JOINT TYPE WORLDs
-		// Bodies are linked in a tree
+		// Bodies are linked in a tree with P-F-M-B links
 		/////////////////
 		}else{
 
@@ -674,7 +674,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 			SimTK::Transform anglePinP_X_F[matter->getNumBodies()]; // related to X_PFs
 			SimTK::Transform anglePinB_X_M[matter->getNumBodies()]; // related to X_BMs
 
-			// SimTK::Transform T_X_root[matter->getNumBodies()]; // related to CompoundAtom.frameInMobilizedBodyFrame s
 			SimTK::Transform T_X_Proot; // NEW
 			SimTK::Transform root_X_M0[matter->getNumBodies()];
 			SimTK::Angle inboardBondDihedralAngles[matter->getNumBodies()]; // related to X_FMs
@@ -690,8 +689,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 				}
 			}
 
-			P_X_F[1] = G_X_T * T_X_root[1]; // TODO: this doesn't work on multiple molecules
 			// Loop through atoms - get P_X_F for all the bodies
+			P_X_F[1] = G_X_T * T_X_root[1]; // TODO: this doesn't work on multiple molecules
 			for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i]->getNumAtoms(); ++aIx){
 				if(topologies[i]->getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
 
@@ -704,7 +703,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 					SimTK::Compound::AtomIndex parentAIx = topologies[i]->getMbx2aIx()[parentMbx];
 
 					if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
-						// Find the true CHEMICAL parent
+						// Find the true bSpecificAtom (CHEMICAL) parent
 						bSpecificAtom *originSpecAtom = nullptr;
 						originSpecAtom = (*(topologies[i])).updAtomByAtomIx(aIx);
 						//std::cout << "CHEM origin " << originSpecAtom->inName << std::endl;
@@ -770,15 +769,19 @@ SimTK::State& World::setAtomsLocationsInGround(
 						univP_X_F[int(mbx)] = oldX_PF * oldX_FM * oldX_MB * B_X_M[int(mbx)];
 
 						/////////////////////////////////
+					locs[int(aIx)] = SimTK::Vec3(0); ///// VERY NEW
 
 					} //END if parent not Ground
-				}
-			}
-
-			// Set transforms inside the bodies = root_X_atom.p; Set locations for everyone
-			for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i]->getNumAtoms(); ++aIx){
-				SimTK::MobilizedBodyIndex mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx);
-				if(topologies[i]->getAtomLocationInMobilizedBodyFrame(aIx) != 0){ // atom is not at body's origin
+				} // END atom is at body's origin
+/////			} // END loop through atoms
+/////
+/////			// Set transforms inside the bodies = root_X_atom.p; Set locations for everyone
+/////			// Loop through atoms
+/////			for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i]->getNumAtoms(); ++aIx){
+/////				SimTK::MobilizedBodyIndex mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx);
+/////				if(topologies[i]->getAtomLocationInMobilizedBodyFrame(aIx) != 0){ // atom is not at body's origin
+				else{ // atom is not at body's origin
+					SimTK::MobilizedBodyIndex mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx); ///// VERY NEW
 					SimTK::Transform G_X_root = G_X_T * T_X_root[int(mbx)];
 					SimTK::Vec3 G_vchild = atomTargets[aIx];
 
@@ -787,12 +790,13 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 					locs[int(aIx)] = root_X_child.p();
 				}
-				else{
-					locs[int(aIx)] = SimTK::Vec3(0);
-				}
+/////				else{
+/////					locs[int(aIx)] = SimTK::Vec3(0);
+/////				}
 			}
 
 			// Set stations and AtomPLacements for atoms in DuMM
+			// Loop through atoms
 			for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i]->getNumAtoms(); ++aIx){
 				SimTK::MobilizedBodyIndex mbx = topologies[i]->getAtomMobilizedBodyIndex(aIx);
 					SimTK::DuMM::AtomIndex dAIx = topologies[i]->getDuMMAtomIndex(aIx);
@@ -811,10 +815,10 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 			// Set X_PF and Q
 			//for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
-		  for (auto const& p : (topologies[i]->mbx2aIx)){
+		  	for (auto const& p : (topologies[i]->mbx2aIx)){
 
 				SimTK::MobilizedBody &mobod = matter->updMobilizedBody(p.first); // NEWO
-		if(mobod.isGround()){ continue;}
+				if(mobod.isGround()){ continue;}
 				SimTK::MobilizedBodyIndex mbx = mobod.getMobilizedBodyIndex(); // NEWO
 
 				// Get body, parentBody, parentAtom
