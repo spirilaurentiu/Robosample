@@ -978,10 +978,12 @@ bSpecificAtom * Topology::getAtomByName(std::string name) const{assert(!"Not imp
 /** Get the neighbours in the graph. **/
 std::vector<bSpecificAtom *> Topology::getNeighbours(int) const{assert(!"Not implemented.");}
 
-/**  **/
+/** Get the neighbor atom in the parent mobilized body.
+TODO: No chemical parent for satelite atoms or first atom. **/
 SimTK::Compound::AtomIndex Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx){
 
-	SimTK::Compound::AtomIndex chemParentAIx = SimTK::Compound::AtomIndex(-1);
+	SimTK::Compound::AtomIndex chemParentAIx;
+
 	if(getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
 	
 		// Get body, parentBody, parentAtom
@@ -990,14 +992,10 @@ SimTK::Compound::AtomIndex Topology::getChemicalParent(SimTK::SimbodyMatterSubsy
 		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 	
-		SimTK::Compound::AtomIndex parentAIx = getMbx2aIx()[parentMbx];
-	
-
 		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 			// Find the true bSpecificAtom (CHEMICAL) parent
 			bSpecificAtom *originSpecAtom = nullptr;
 			originSpecAtom = updAtomByAtomIx(aIx);
-			//std::cout << "CHEM origin " << originSpecAtom->inName << std::endl;
 
 
 			// TODO: Check is neighbors and bondsInvolved are redundant
@@ -1283,9 +1281,13 @@ void Topology::buildGraphAndMatchCoords(
 	// Build the conformation
 	matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
 
-	// Implement flexibility/rigidity specifications
-	//setRegimen(regimenSpec, flexFN);
-
+	// Now that everything is built, initialize aIx2TopTransforms map
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		aIx2TopTransform.insert(
+			std::pair<SimTK::Compound::AtomIndex, SimTK::Transform>
+			((bAtomList[i]).atomIndex, SimTK::Transform()));
+	}
+	
 }
 
 /** Get regimen **/
@@ -1509,6 +1511,31 @@ void Topology::loadMobodsRelatedMaps(void){
 
 }
 
+/** Calculate all atom frames in top frame. It avoids calling
+calcDefaultAtomFrameInCompoundFrame multiple times. This has
+to be called every time the coordinates change though. **/
+void Topology::calcTopTransforms(void)
+{
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
+	}
+}
+
+/**  **/
+void Topology::printTopTransforms(void)
+{
+	std::cout << "Topology TopTransforms " << std::endl;
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+		std::cout << aIx << " " << aIx2TopTransform[aIx] << std::endl;
+	}
+}
+
+SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
+{
+	return aIx2TopTransform[aIx];
+}
 
 /** Print maps **/
 void Topology::printMaps(void)

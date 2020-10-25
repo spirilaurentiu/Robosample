@@ -185,9 +185,20 @@ public:
 	/** Get the neighbours in the graph **/
 	std::vector<bSpecificAtom *> getNeighbours(int) const;
 
-	/**  **/
+	/** Get the bonded neighbor atom in the parent mobilized body **/
 	SimTK::Compound::AtomIndex getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex);
 
+	/** Calculate all atom frames in top frame. It avoids calling 
+	calcDefaultAtomFrameInCompoundFrame multiple times. This has 
+	to be called every time the coordinates change though. **/
+	void calcTopTransforms(void);
+	
+	/**  **/
+	void printTopTransforms(void);
+
+	/**  **/
+	SimTK::Transform getTopTransform(SimTK::Compound::AtomIndex);
+	
 	/** **/
 	const bBond& getBond(int, int) const;
 
@@ -249,6 +260,9 @@ public:
 
 	// Map aIx is redundant in MobilizedBodyIndeces
 	std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex > aIx2mbx;
+
+	// Map aIx to its Transform Default top transform
+	std::map< SimTK::Compound::AtomIndex, SimTK::Transform > aIx2TopTransform;
 
 private:
 
