@@ -186,8 +186,14 @@ public:
 	std::vector<bSpecificAtom *> getNeighbours(int) const;
 
 	/** Get the bonded neighbor atom in the parent mobilized body **/
-	SimTK::Compound::AtomIndex getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex);
+	SimTK::Compound::AtomIndex
+	getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex);
 
+	/**  **/
+	std::vector<SimTK::Transform>
+	calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, 
+		SimTK::Compound::AtomIndex rootAtom, const SimTK::State& someState);
+	
 	/** Calculate all atom frames in top frame. It avoids calling 
 	calcDefaultAtomFrameInCompoundFrame multiple times. This has 
 	to be called every time the coordinates change though. **/
@@ -198,7 +204,7 @@ public:
 
 	/**  **/
 	SimTK::Transform getTopTransform(SimTK::Compound::AtomIndex);
-	
+
 	/** **/
 	const bBond& getBond(int, int) const;
 
@@ -233,6 +239,12 @@ public:
 	 * maps. **/
 	void loadMobodsRelatedMaps();
 
+        /** Compound AtomIndex to bAtomList number **/
+	void loadCompoundAtomIx2GmolAtomIx(void);
+	
+	/**  **/
+	int getNumber(SimTK::Compound::AtomIndex);
+        
 	/** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
 	 * maps **/
 	void printMaps();
@@ -263,6 +275,9 @@ public:
 
 	// Map aIx to its Transform Default top transform
 	std::map< SimTK::Compound::AtomIndex, SimTK::Transform > aIx2TopTransform;
+
+	// Map bSpecificAtom number to aIx
+	std::map< SimTK::Compound::AtomIndex, int > CompoundAtomIx2GmolAtomIx;
 
 private:
 

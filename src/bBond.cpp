@@ -199,7 +199,8 @@ void bBond::setVisited(int argVisited)
 // Return the number of times this bond was visited
 int bBond::isVisited(void)
 {
-    return this->visited;
+	int ret = this->visited;
+	return ret;
 }
 
 // Gmolmodel indices (prmtop)

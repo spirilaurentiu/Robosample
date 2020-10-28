@@ -573,10 +573,10 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 	}else if (mobod.getNumU(someState) == 1){
                 	    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Green));
                 	}else{
-                	    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Black));
+                	    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Red));
                 	}
                 	geometry.push_back(decorativeLinePF);
-/*
+
                 DecorativeLine decorativeLineFM(G_X_F.p(), G_X_M.p());
                 decorativeLineFM.setLineThickness(3);
                 if(mobod.getNumU(someState) == 3){
@@ -588,14 +588,15 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 }else if (mobod.getNumU(someState) == 1){
                     decorativeLineFM.setColor(SimTK::Vec3(SimTK::Green));
                 }else{
-                    decorativeLineFM.setColor(SimTK::Vec3(SimTK::Magenta));
+                    decorativeLineFM.setColor(SimTK::Vec3(SimTK::Red));
                 }
                 geometry.push_back(decorativeLineFM);
+
 
                 DecorativeLine decorativeLineBM(G_X_B.p(), G_X_M.p());
                 decorativeLineBM.setLineThickness(4);
                 if(mobod.getNumU(someState) == 3){
-                    decorativeLineBM.setColor(SimTK::Vec3(SimTK::Red));
+                    decorativeLineBM.setColor(SimTK::Vec3(SimTK::Orange));
     	        }else if(mobod.getNumU(someState) == 5){
                     decorativeLineBM.setColor(SimTK::Vec3(SimTK::Magenta));
                 }else if (mobod.getNumU(someState) == 2){
@@ -603,7 +604,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 }else if (mobod.getNumU(someState) == 1){
                     decorativeLineBM.setColor(SimTK::Vec3(SimTK::Green));
                 }else{
-                    decorativeLineBM.setColor(SimTK::Vec3(SimTK::Black));
+                    decorativeLineBM.setColor(SimTK::Vec3(SimTK::Red));
                 }
                 geometry.push_back(decorativeLineBM);
 		// */

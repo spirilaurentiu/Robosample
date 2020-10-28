@@ -961,6 +961,7 @@ bSpecificAtom * Topology::getAtomByNumber(int number) const{
 
 /** Get a pointer to an atom object in the atom list inquiring
 by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
+// TODO: Optimize use CompoundAtomIx2GmolAtomIx instead
 bSpecificAtom * Topology::updAtomByAtomIx(int aIx) {
 	for (int i = 0; i < natoms; i++){
 		if(bAtomList[i].getCompoundAtomIndex() == aIx){
@@ -978,72 +979,21 @@ bSpecificAtom * Topology::getAtomByName(std::string name) const{assert(!"Not imp
 /** Get the neighbours in the graph. **/
 std::vector<bSpecificAtom *> Topology::getNeighbours(int) const{assert(!"Not implemented.");}
 
-/** Get the neighbor atom in the parent mobilized body.
-TODO: No chemical parent for satelite atoms or first atom. **/
-SimTK::Compound::AtomIndex Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx){
-
-	SimTK::Compound::AtomIndex chemParentAIx;
-
-	if(getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
-	
-		// Get body, parentBody, parentAtom
-		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-	
-		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
-			// Find the true bSpecificAtom (CHEMICAL) parent
-			bSpecificAtom *originSpecAtom = nullptr;
-			originSpecAtom = updAtomByAtomIx(aIx);
-
-
-			// TODO: Check is neighbors and bondsInvolved are redundant
-			// Loop through neighbor atoms (bSpecificAtom)
-			for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
-
-				// Loop through bonds that this atom is involved in (bBond);
-				for(std::vector<bBond *>::iterator bondsInvolvedIter = (originSpecAtom->bondsInvolved).begin();
-					bondsInvolvedIter != (originSpecAtom->bondsInvolved).end(); ++bondsInvolvedIter){
-
-					// Check if this neighbor is involved in this bond
-					if((*bondsInvolvedIter)->isThisMe(originSpecAtom->getNumber(), originSpecAtom->neighbors[k]->getNumber())){
-
-						Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
-
-						// Check if neighbor atom's mobod is a parent mobod
-						if(getAtomMobilizedBodyIndex(candidateChemParentAIx) == parentMbx){
-
-							if(!(*bondsInvolvedIter)->isRingClosing()){ // No ring atoms are allowed
-								chemParentAIx = candidateChemParentAIx;
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return chemParentAIx;
-}
-
-
 /** **/
 const bBond& Topology::getBond(int a1, int a2) const
 {
-//try{
 	for(int i = 0; i < nbonds; i++){
 		if( (bonds[i]).isThisMe(a1, a2) ){
 			return bonds[i];
 		}
 	}
-//}catch(std::exception e){
-		std::cout << "Warning: no bond with these atom indeces found: " << a1 << " " << a2 << std::endl;
-	//std::cout << e.what() << '\n';
-//}
-/** Get bond order. **/
+
+	std::string assert_string("No bond with these atom indeces found: " + to_string(a1) + " " + to_string(a2) + ". Exiting.");
+	std::cout << assert_string << std::endl;
+	assert(0);
 }
+
+/** Get bond order. **/
 int Topology::getBondOrder(int, int) const{assert(!"Not implemented.");}
 
 
@@ -1511,6 +1461,27 @@ void Topology::loadMobodsRelatedMaps(void){
 
 }
 
+
+/** Compound AtomIndex to bAtomList number **/
+void Topology::loadCompoundAtomIx2GmolAtomIx(void)
+{
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
+		int gmolIx = (bAtomList[i]).getNumber();
+
+		CompoundAtomIx2GmolAtomIx.insert(
+			std::pair<SimTK::Compound::AtomIndex, int> 
+			(aIx, gmolIx));
+	}
+}
+
+/**  **/
+int Topology::getNumber(SimTK::Compound::AtomIndex aIx)
+{
+	return CompoundAtomIx2GmolAtomIx[aIx];
+}
+
+
 /** Calculate all atom frames in top frame. It avoids calling
 calcDefaultAtomFrameInCompoundFrame multiple times. This has
 to be called every time the coordinates change though. **/
@@ -1639,5 +1610,152 @@ const CompoundSystem::CompoundIndex &Topology::getCompoundIndex() const {
 void Topology::setCompoundIndex(const CompoundSystem::CompoundIndex &compoundIndex) {
 	Topology::compoundIndex = compoundIndex;
 }
+
+
+/** Get the neighbor atom in the parent mobilized body.
+TODO: No chemical parent for satelite atoms or first atom. **/
+SimTK::Compound::AtomIndex
+Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx){
+
+	SimTK::Compound::AtomIndex chemParentAIx;
+	int gmolAtomIndex = -111111;
+
+	if(getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
+	
+		// Get body, parentBody, parentAtom
+		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+	
+		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
+			// Find the true bSpecificAtom (CHEMICAL) parent
+			bSpecificAtom *originSpecAtom = nullptr;
+			originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
+
+			// TODO: Check is neighbors and bondsInvolved are redundant
+			// Loop through neighbor atoms (bSpecificAtom)
+			for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
+
+				// Loop through bonds that this atom is involved in (bBond);
+				for(std::vector<bBond *>::iterator bondsInvolvedIter = (originSpecAtom->bondsInvolved).begin();
+					bondsInvolvedIter != (originSpecAtom->bondsInvolved).end(); ++bondsInvolvedIter){
+
+					// Check if this neighbor is involved in this bond
+					if((*bondsInvolvedIter)->isThisMe(originSpecAtom->getNumber(), originSpecAtom->neighbors[k]->getNumber())){
+
+						Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
+
+						// Check if neighbor atom's mobod is a parent mobod
+						if(getAtomMobilizedBodyIndex(candidateChemParentAIx) == parentMbx){
+
+							if(!(*bondsInvolvedIter)->isRingClosing()){ // No ring atoms are allowed
+								chemParentAIx = candidateChemParentAIx;
+								gmolAtomIndex = originSpecAtom->neighbors[k]->getNumber();
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return chemParentAIx;
+}
+
+std::vector<SimTK::Transform>
+Topology::calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx, const SimTK::State& someState)
+{
+	// Get body, parentBody
+	SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
+	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+	
+	// Get the neighbor atom in the parent mobilized body
+	SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx);
+
+	// Get parent-child BondCenters relationship
+	SimTK::Transform X_parentBC_childBC =
+			getDefaultBondCenterFrameInOtherBondCenterFrame(aIx, chemParentAIx);
+
+	// Get Top to parent frame
+	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
+	SimTK::Transform T_X_Proot = getTopTransform(parentRootAIx);
+	SimTK::Transform Proot_X_T = ~T_X_Proot;
+
+	// Get inboard dihedral angle
+	SimTK::Angle inboardBondDihedralAngle = bgetDefaultInboardDihedralAngle(aIx);
+	SimTK::Transform InboardDihedral_XAxis 
+		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
+	SimTK::Transform InboardDihedral_ZAxis 
+		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
+
+	// Get the old PxFxMxB transform
+	SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
+	SimTK::Transform Z_to_X = ~X_to_Z;
+	SimTK::Transform oldX_PB = 
+		(~T_X_Proot) * getTopTransform(aIx)
+		* InboardDihedral_XAxis * X_to_Z 
+		* InboardDihedral_ZAxis * Z_to_X;
+
+	// B_X_Ms
+	SimTK::Transform B_X_M = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
+	SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
+	SimTK::Transform B_X_M_univ = X_parentBC_childBC 
+		* SimTK::Transform(Rotation(-90*Deg2Rad, XAxis)); // Move rotation axis Y to Z
+
+	// P_X_Fs = old P_X_B * B_X_M
+	SimTK::Transform P_X_F = oldX_PB * B_X_M;
+	SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
+	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
+
+	// Get mobility (joint type)
+	bSpecificAtom *atom = updAtomByAtomIx(aIx);
+	SimTK::BondMobility::Mobility mobility;
+	bBond bond = getBond(getNumber(aIx), getNumber(chemParentAIx));
+	mobility = bond.getBondMobility();
+
+	bool pinORslider =
+		(mobility == SimTK::BondMobility::Mobility::Torsion)
+		|| (mobility == SimTK::BondMobility::Mobility::AnglePin)
+		|| (mobility == SimTK::BondMobility::Mobility::Slider);
+
+	if( (pinORslider) && ((atom->neighbors).size() == 1)){
+
+		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
+
+	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
+
+		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
+
+	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
+	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
+	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
+	){
+
+		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
+
+	}else{
+
+		std::cout << "Warning: unknown mobility." << std::endl;
+		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
+	}
+
+	//// The Molmodel notation
+	// M0 and Mr are actually used for F
+	//SimTK::Transform root_X_M0 = InboardDihedral_XAxis; // name used in Molmodel
+	//SimTK::Transform T_X_M0 = T_X_root[int(mbx)] * root_X_M0;
+	//SimTK::Transform Proot_X_M0 = Proot_X_T * T_X_M0;
+	//Transform oldX_PF = Proot_X_M0 * M_X_pin;
+	//Transform oldX_BM = M_X_pin;
+	//Transform oldX_MB = ~oldX_BM;
+	//Transform oldX_FM = InboardDihedral_ZAxis;
+	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
+
+
+}
+
 
 

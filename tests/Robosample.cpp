@@ -397,6 +397,7 @@ int main(int argc, char **argv)
     context.realizeTopology();
 
     for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+        (context.updWorld(worldIx))->loadCompoundRelatedMaps();
         (context.updWorld(worldIx))->loadMobodsRelatedMaps();
     }
 

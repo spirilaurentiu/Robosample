@@ -89,6 +89,8 @@ public:
 
     const SimTK::State& realizeTopology(void);
 
+    void loadCompoundRelatedMaps(void);
+
     void loadMobodsRelatedMaps(void);
     //...............
 
