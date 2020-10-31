@@ -614,6 +614,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 		/////////////////
 		// 1. COMPOUND
 		/////////////////
+
 		// Use Molmodel's Compound match functions to set the new 
 		// Compound transforms
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;

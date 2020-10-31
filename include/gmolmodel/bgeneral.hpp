@@ -147,23 +147,23 @@ int bSubstr (char *dest, const char *src, int start, int no_chars);
  * Left trim
  */
 static inline std::string &ltrim(std::string &s) {
-        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-        return s;
+		s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+		return s;
 }
 
 /*
  * Right trim
  */
 static inline std::string &rtrim(std::string &s) {
-        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-        return s;
+		s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+		return s;
 }
 
 /*
  * Trim from both ends
  */
 static inline std::string &trim(std::string &s) {
-        return ltrim(rtrim(s));
+		return ltrim(rtrim(s));
 }
 
 /*
@@ -256,11 +256,11 @@ std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V);
  */
 
 enum ThermostatName { // Thermostats
-    NONE,
-    ANDERSEN,
-    BERENDSEN,
-    LANGEVIN,
-    NOSE_HOOVER
+	NONE,
+	ANDERSEN,
+	BERENDSEN,
+	LANGEVIN,
+	NOSE_HOOVER
 };
 
 /*
@@ -268,14 +268,14 @@ enum ThermostatName { // Thermostats
  */
 
 enum IntegratorName { // Samplers
-    VERLET,
-    EULER,
-    EULER2,
-    CPODES,
-    RUNGEKUTTA,
-    RUNGEKUTTA2,
-    RUNGEKUTTA3,
-    RUNGEKUTTAFELDBERG
+	VERLET,
+	EULER,
+	EULER2,
+	CPODES,
+	RUNGEKUTTA,
+	RUNGEKUTTA2,
+	RUNGEKUTTA3,
+	RUNGEKUTTAFELDBERG
 };
 
 /*
@@ -283,18 +283,26 @@ enum IntegratorName { // Samplers
  */
 /** The type of distribution to draw a random number from **/
 enum class GmolRandDistributionType {
-    UNIFORM,
-    NORMAL
+	UNIFORM,
+	NORMAL
 };
 
 
 enum SamplerName { // Samplers
-    MC,
-    HMC,
-    LAHMC
+	MC,
+	HMC,
+	LAHMC
 };
 
-
+enum JointType {
+	LINEAR,
+	ANGULAR180,
+	ANGULAR360,
+	QUATERNION_a,
+	QUATERNION_b,
+	QUATERNION_c,
+	QUATERNION_d
+};
 
 /*
  * k-means clustering
@@ -306,16 +314,26 @@ struct Point {
 
 using DataFrame = std::vector<Point>;
 
-//double square(double value); 
+// Gmolmodel version of mean
+SimTK::Real bMean(std::vector<SimTK::Real> v);
+
+/** Gmolmodel version of correlation coefficient */
+SimTK::Real bCorr(std::vector<SimTK::Real> V, std::vector<SimTK::Real> W);
+
+/** Circular mean as in 2014 Fenwick **/
 SimTK::Real circMean(std::vector<SimTK::Real> phi);
+
+/** Circular correlation coefficient as in 2014 Fenwick **/
 SimTK::Real circCorr(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
+
+/** 1 - circCorr **/
 SimTK::Real circDist(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
 
 double squared_l2_distance(Point first, Point second);
 
 DataFrame k_means(const DataFrame& data,
-                  size_t k,
-                  size_t number_of_iterations);
+				  size_t k,
+				  size_t number_of_iterations);
 
 
 

@@ -859,8 +859,37 @@ std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V) {
 
 using SimTK::square;
 
+SimTK::Real bMean(std::vector<SimTK::Real> v)
+{
+	SimTK::Real sum = std::accumulate(std::begin(v), std::end(v), 0.0);
+	return (sum / v.size());
+}
+
+SimTK::Real bCorr(std::vector<SimTK::Real> V, std::vector<SimTK::Real> W)
+{
+	assert(V.size() == W.size());
+	SimTK::Real V_mean, W_mean;
+	SimTK::Real num = 0;
+	SimTK::Real sum_Sq_V = 0;
+	SimTK::Real sum_Sq_W = 0;
+	SimTK::Real denom = 0;
+
+	V_mean = bMean(V);
+	W_mean = bMean(W);
+	
+	for(int i = 0; i < V.size(); i++){
+		num += (V[i] - V_mean) * (W[i] - W_mean);
+		sum_Sq_V += SimTK::square(V[i] - V_mean);
+		sum_Sq_W += SimTK::square(W[i] - W_mean);
+	}
+	denom = std::sqrt(sum_Sq_V * sum_Sq_W);
+
+	return num / denom;
+}
+
 // Circular mean or mean direction as defined in Jammalamadaka and Sengupta
-SimTK::Real circMean(std::vector<SimTK::Real> phi){
+SimTK::Real circMean(std::vector<SimTK::Real> phi)
+{
 	SimTK::Real sum_sin = 0;
 	SimTK::Real sum_cos = 0;
 	for(int i = 0; i < phi.size(); i++){
@@ -870,7 +899,8 @@ SimTK::Real circMean(std::vector<SimTK::Real> phi){
 	return std::atan2(sum_sin, sum_cos);
 }
 
-SimTK::Real circCorr(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi){
+SimTK::Real circCorr(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi)
+{
 	assert(phi.size() == psi.size());
 	SimTK::Real phi_mean, psi_mean;
 	SimTK::Real num = 0;

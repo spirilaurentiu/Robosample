@@ -193,6 +193,9 @@ public:
 	/** **/
 	void geomDihedral(void);
 
+	/** Load the map of mobods to joint types **/
+        //void loadMbx2mobility(SimTK::State& someState);
+
 protected:
 
 	float timestep;

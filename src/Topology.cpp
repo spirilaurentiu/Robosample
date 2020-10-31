@@ -1753,8 +1753,6 @@ Topology::calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, SimTK::Comp
 	//Transform oldX_MB = ~oldX_BM;
 	//Transform oldX_FM = InboardDihedral_ZAxis;
 	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
-
-
 }
 
 

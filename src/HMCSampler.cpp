@@ -189,14 +189,13 @@ void HMCSampler::initialize(SimTK::State& someState )
         i++;
     }
 
-	// Initialize QsBuffer with zeros
-	int nq = matter->getNQ(someState);
-	int totSize = QsBufferSize * nq;
-	for(int i = 0; i < totSize; i++){ 
-		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
-		QsBuffer.push_back(SimTK::Real(0));
-	}
-
+    // Initialize QsBuffer with zeros
+    int nq = matter->getNQ(someState);
+    int totSize = QsBufferSize * nq;
+    for(int i = 0; i < totSize; i++){ 
+        //QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
+        QsBuffer.push_back(SimTK::Real(0));
+    }
 
     // Store potential energies
     setOldPE(getPEFromEvaluator(someState));
@@ -558,7 +557,8 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 		std::cout << "Compute correlation matrix: " << std::endl;
 		SimTK::Real corr;
 		for(int qi = 0; qi < nq; qi++){
-			for(int qj = 0; (qj < nq) && (qj < qi); qj++){
+			//for(int qj = 0; (qj < nq) && (qj < qi); qj++){
+			for(int qj = 0; (qj < nq); qj++){
 				corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
 				std::cout << corr << ' ';
 			}
@@ -947,36 +947,6 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		QsBuffer.pop_front();
 	}
 
-	for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
-		int mobodNQ = mobod.getNumQ(someState);
-		int mobodNU = mobod.getNumU(someState);
-		
-		//const SimTK::Transform T = mobod.getMobilizerTransform(someState);
-		//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
-		//const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
-		//std::cout << "Qs study:" << std::endl 
-		//	<< "mbx= " << mbx 
-		//	<< "mobodNQ" << mobodNQ
-		//	<< " T " << T
-		//	<< " unitInertia " << unitInertia
-		//	<< std::endl;
-
-		// Loop through body's Qs
-		int internQIx = -1;
-		for(int qi = qIx; qi < (mobodNQ + qIx); qi++){
-			internQIx++;
-		}
-			
-		// Loop through body's Us
-		for(int ui = 0; ui < mobodNU; ui++){
-			SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
-			//std::cout << "H_FMCol= " << H_FMCol << std::endl; 
-		}
-		
-	}
-
 	//QsBuffer.push_back( SimTK::Vector(someState.getNQ(), SimTK::Real(0)) );
 	//QsBuffer.back() = Q; 
 	//QsBuffer.pop_front();
@@ -1097,4 +1067,80 @@ void HMCSampler::perturbQ(SimTK::State& someState)
 }
 
 
+/** Load the map of mobods to joint types **/
+/*
+void HMCSampler::loadMbx2mobility(SimTK::State& someState)
+{
+	// Lop through topologies
+	for(int i = 0; i < topologies.size(); i++){
 
+		// Loop through atoms
+		for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i]->getNumAtoms(); ++aIx){
+	
+			// Get body, parentBody
+			SimTK::MobilizedBodyIndex mbx = (topologies[i])->getAtomMobilizedBodyIndex(aIx);
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+			if(parentMbx != 0){
+				// Get the neighbor atom in the parent mobilized body
+				SimTK::Compound::AtomIndex chemParentAIx = (topologies[i])->getChemicalParent(matter, aIx);
+			
+				//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
+				//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
+				//	<< std::endl;
+
+				// Get Top to parent frame
+				SimTK::Compound::AtomIndex parentRootAIx = (topologies[i])->mbx2aIx[parentMbx];
+			
+				// Get mobility (joint type)
+				bSpecificAtom *atom = (topologies[i])->updAtomByAtomIx(aIx);
+				SimTK::BondMobility::Mobility mobility;
+				bBond bond = (topologies[i])->getBond(
+					(topologies[i])->getNumber(aIx), (topologies[i])->getNumber(chemParentAIx));
+				mobility = bond.getBondMobility();
+
+				mbx2mobility.insert(std::pair<SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility>
+                        		(mbx, mobility));
+			
+				(mobility == SimTK::BondMobility::Mobility::Torsion);
+			
+			} // Parent is not Ground
+		
+		} // END loop through atoms
+	
+	} // END loop through topologies
+
+        for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+                SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
+                int mobodNQ = mobod.getNumQ(someState);
+                int mobodNU = mobod.getNumU(someState);
+
+                //const SimTK::Transform T = mobod.getMobilizerTransform(someState);
+                //const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
+                //const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
+                std::cout << "mbx= " << mbx << " mobility= " 
+                //      << std::endl
+                ;
+
+                // Loop through body's Qs
+                int internQIx = -1;
+                for(int qi = qIx; qi < (mobodNQ + qIx); qi++){
+                        internQIx++;
+                        std::cout << " " << qi ;
+                }
+                std::cout << std::endl;
+
+                // Loop through body's Us
+                for(int ui = 0; ui < mobodNU; ui++){
+                        //SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
+                        //std::cout << "H_FMCol= " << H_FMCol << std::endl;
+                }
+
+        }
+
+}
+
+*/
