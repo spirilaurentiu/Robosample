@@ -552,15 +552,38 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 		//	}
 		//	std::cout << std::endl;
 		//}
-
 		
 		std::cout << "Compute correlation matrix: " << std::endl;
 		SimTK::Real corr;
 		for(int qi = 0; qi < nq; qi++){
 			//for(int qj = 0; (qj < nq) && (qj < qi); qj++){
 			for(int qj = 0; (qj < nq); qj++){
-				corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
-				std::cout << corr << ' ';
+				if(qIndex2jointType[SimTK::QIndex(qi)] == ANGULAR360){
+					if(qIndex2jointType[SimTK::QIndex(qj)] == ANGULAR360){
+						corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
+						std::cout << corr << ' ';
+					}else if(qIndex2jointType[SimTK::QIndex(qj)] == LINEAR){
+						corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
+						std::cout << corr << ' ';
+					}else{
+						corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
+						std::cout << corr << ' ';
+					}
+				}else if(qIndex2jointType[SimTK::QIndex(qi)] == LINEAR){
+					if(qIndex2jointType[SimTK::QIndex(qj)] == LINEAR){
+						corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
+						std::cout << corr << ' ';
+					}else if(qIndex2jointType[SimTK::QIndex(qj)] == ANGULAR360){
+						corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
+						std::cout << corr << ' ';
+					}else{
+						corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
+						std::cout << corr << ' ';
+					}
+				}else{
+					corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
+					std::cout << corr << ' ';
+				}
 			}
 			std::cout << std::endl;
 		}
@@ -946,10 +969,6 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		QsBuffer.push_back(Q[i]);
 		QsBuffer.pop_front();
 	}
-
-	//QsBuffer.push_back( SimTK::Vector(someState.getNQ(), SimTK::Real(0)) );
-	//QsBuffer.back() = Q; 
-	//QsBuffer.pop_front();
 	/////////
 	
 	pushCoordinatesInR(someState);

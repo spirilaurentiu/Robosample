@@ -40,7 +40,7 @@ def moving_average(series, window_size):
 
 	shift = int((window_size - 1) / 2)
 	#retSeries = np.ones((series.shape[0] - (2*shift)))
-	retSeries = np.zeros((series.shape[0])) * np.nan
+	retSeries = np.zeros((series.shape[0])) 
 	for i in range(shift, (retSeries.shape[0] - shift)):
 		retSeries[i] = np.mean(series[i - shift: i + shift + 1])
 	return retSeries
@@ -57,17 +57,31 @@ def cumulative_average(series):
 	return retSeries
 #
 
+def difference_quotient(series, window_size):
+	if np.size(series.shape) > 1:
+		print("Difference quotient function error: Implemented only for 1D data.")
+		return 1
+	if (window_size % 2 != 1):
+		window_size = window_size + 1
+		print("Difference quotient function warning: Window size increse by 1.")
+	shift = int((window_size - 1) / 2)
+	retSeries = np.zeros((series.shape[0]))
+	for i in range(shift, (retSeries.shape[0] - shift)):
+		retSeries[i] = (series[i + shift] - series[i - shift]) / window_size
+	return retSeries
+#
+
 def moving_difference(series, window_size):
 	if np.size(series.shape) > 1:
 		print("Moving difference function error: Implemented only for 1D data.")
 		return 1
 	if (window_size % 2 != 1):
-		print("Moving difference function error: Implemented only for odd window sizes.")
-		return 1
-	shift = (window_size - 1) / 2
+		window_size = window_size + 1
+		print("Moving difference function warning: Window size increse by 1.")
+	shift = int((window_size - 1) / 2)
 	retSeries = np.zeros((series.shape[0]))
 	for i in range(shift, (retSeries.shape[0] - shift)):
-		retSeries[i] = (series[i + shift] - series[i - shift]) / window_size
+		retSeries[i] = (series[i + shift] - series[i - shift]) 
 	return retSeries
 #
 
@@ -83,7 +97,7 @@ def intersections(series1, series2):
 				intersections.append(i)
 				#break
 			prevDiff = diff
-	return intersections
+	return np.array(intersections)
 #
 
 
@@ -126,66 +140,88 @@ def CestGrossfield(argM, series):
 autocorrLabels = ['FFT Partial', 'FFT Nonpartial', 'NumPy Correlate Nonpartial', 'NumPy Correlate Partial', 'Manual']
 
 # Functions from https://stackoverflow.com/users/2005415/jason
-def autocorr1(argM, x):
-    '''fft, don't pad 0s, non partial'''
-    lags = np.arange(0, argM)
-    mean=x.mean()
-    var=np.var(x)
-    xp=x-mean
+def autocorr1(argM, series):
+	'''fft, don't pad 0s, non partial'''
 
-    cf=np.fft.fft(xp)
-    sf=cf.conjugate()*cf
-    corr=np.fft.ifft(sf).real/var/len(x)
+	# Define a zero
+	tiny = 0.0000001
 
-    return corr[:len(lags)]
+	n = series.size
+
+	lags = np.arange(0, argM)
+	mean = series.mean()
+	var = np.var(series)
+	seriesp = series - mean
+
+	cf = np.fft.fft(seriesp)
+	sf = cf.conjugate()*cf
+	resultF = np.fft.ifft(sf).real/var/len(series)
+
+	cut = 0
+	for i in range(resultF.shape[0]):
+		if resultF[i] < tiny:
+			cut = i
+			break
+	resultF[cut:] = 0
+
+
+	#print(resultF)
+	#return resultF[:len(lags)]
+
+	# Integrated autocorrelation time and effective sample size
+	integratedAC = np.sum(resultF)
+	effSampleSize = n / integratedAC	
+
+	return resultF, cut, integratedAC, effSampleSize
+#
 
 def autocorr2(argM, x):
-    '''fft, pad 0s, non partial'''
+	'''fft, pad 0s, non partial'''
 
-    lags = np.arange(0, argM)
-    n=len(x)
-    # pad 0s to 2n-1
-    ext_size=2*n-1
-    # nearest power of 2
-    fsize=2**np.ceil(np.log2(ext_size)).astype('int')
+	lags = np.arange(0, argM)
+	n=len(x)
+	# pad 0s to 2n-1
+	ext_size=2*n-1
+	# nearest power of 2
+	fsize=2**np.ceil(np.log2(ext_size)).astype('int')
 
-    xp=x-np.mean(x)
-    var=np.var(x)
+	xp=x-np.mean(x)
+	var=np.var(x)
 
-    # do fft and ifft
-    cf=np.fft.fft(xp,fsize)
-    sf=cf.conjugate()*cf
-    corr=np.fft.ifft(sf).real
-    corr=corr/var/n
+	# do fft and ifft
+	cf=np.fft.fft(xp,fsize)
+	sf=cf.conjugate()*cf
+	corr=np.fft.ifft(sf).real
+	corr=corr/var/n
 
-    return corr[:len(lags)]
+	return corr[:len(lags)]
 
 def autocorr3(argM, x):
-    '''numpy.corrcoef, partial'''
+	'''numpy.corrcoef, partial'''
 
-    lags = np.arange(0, argM)
-    corr=[1. if l==0 else np.corrcoef(x[l:],x[:-l])[0][1] for l in lags]
-    return np.array(corr)
+	lags = np.arange(0, argM)
+	corr=[1. if l==0 else np.corrcoef(x[l:],x[:-l])[0][1] for l in lags]
+	return np.array(corr)
 
 def autocorr4(argM, x):
-    '''numpy.correlate, non partial'''
-    lags = np.arange(0, argM)
-    mean=x.mean()
-    var=np.var(x)
-    xp=x-mean
-    corr=np.correlate(xp,xp,'full')[len(x)-1:]/var/len(x)
+	'''numpy.correlate, non partial'''
+	lags = np.arange(0, argM)
+	mean=x.mean()
+	var=np.var(x)
+	xp=x-mean
+	corr=np.correlate(xp,xp,'full')[len(x)-1:]/var/len(x)
 
-    return corr[:len(lags)]
+	return corr[:len(lags)]
 #
 
 def autocorr5(argM, x):
-    '''manualy compute, non partial'''
+	'''manualy compute, non partial'''
 
-    lags = np.arange(0, argM)
-    mean=np.mean(x)
-    var=np.var(x)
-    xp=x-mean
-    corr=[1. if l==0 else np.sum(xp[l:]*xp[:-l])/len(x)/var for l in lags]
+	lags = np.arange(0, argM)
+	mean=np.mean(x)
+	var=np.var(x)
+	xp=x-mean
+	corr=[1. if l==0 else np.sum(xp[l:]*xp[:-l])/len(x)/var for l in lags]
 
-    return np.array(corr)
+	return np.array(corr)
 

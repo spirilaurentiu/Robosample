@@ -174,36 +174,39 @@ void Sampler::loadMbx2mobility(SimTK::State& someState)
 		// Loop through atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i]->getNumAtoms(); ++aIx){
 	
-			// Get body, parentBody
-			SimTK::MobilizedBodyIndex mbx = (topologies[i])->getAtomMobilizedBodyIndex(aIx);
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+			if(topologies[i]->getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
 
-			if(parentMbx != 0){
-				// Get the neighbor atom in the parent mobilized body
-				SimTK::Compound::AtomIndex chemParentAIx = (topologies[i])->getChemicalParent(matter, aIx);
-			
-				//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
-				//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
-				//	<< std::endl;
+				// Get body, parentBody
+				SimTK::MobilizedBodyIndex mbx = (topologies[i])->getAtomMobilizedBodyIndex(aIx);
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+	
+				if(parentMbx != 0){
+					// Get the neighbor atom in the parent mobilized body
+					SimTK::Compound::AtomIndex chemParentAIx = (topologies[i])->getChemicalParent(matter, aIx);
+				
+					// Get Top to parent frame
+					SimTK::Compound::AtomIndex parentRootAIx = (topologies[i])->mbx2aIx[parentMbx];
+				
+					// Get mobility (joint type)
+					bSpecificAtom *atom = (topologies[i])->updAtomByAtomIx(aIx);
+					SimTK::BondMobility::Mobility mobility;
+					bBond bond = (topologies[i])->getBond(
+						(topologies[i])->getNumber(aIx), (topologies[i])->getNumber(chemParentAIx));
+					mobility = bond.getBondMobility();
+	
+					mbx2mobility.insert(std::pair<SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility>
+	                        		(mbx, mobility));
+				
+					//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
+					//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
+					//	<< " mobility " << mobility
+					//	<< std::endl;
+	
+				} // Parent is not Ground
 
-				// Get Top to parent frame
-				SimTK::Compound::AtomIndex parentRootAIx = (topologies[i])->mbx2aIx[parentMbx];
-			
-				// Get mobility (joint type)
-				bSpecificAtom *atom = (topologies[i])->updAtomByAtomIx(aIx);
-				SimTK::BondMobility::Mobility mobility;
-				bBond bond = (topologies[i])->getBond(
-					(topologies[i])->getNumber(aIx), (topologies[i])->getNumber(chemParentAIx));
-				mobility = bond.getBondMobility();
-
-				mbx2mobility.insert(std::pair<SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility>
-                        		(mbx, mobility));
-			
-				(mobility == SimTK::BondMobility::Mobility::Torsion);
-			
-			} // Parent is not Ground
+			} // if is a root atom
 		
 		} // END loop through atoms
 	
@@ -219,26 +222,23 @@ void Sampler::loadMbx2mobility(SimTK::State& someState)
                 //const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
                 //const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
                 std::cout << "mbx= " << mbx << " mobility= " << mbx2mobility[mbx]
-                //      << std::endl
+                      << std::endl
                 ;
 
 		JointType jointType;
-		SimTK::BondMobility::Mobility mobility;
+		SimTK::BondMobility::Mobility mobility = mbx2mobility[mbx];
 		int qi, internQIx;
 		switch(mobility) {
 			case SimTK::BondMobility::Mobility::Free: ///< Unrestricted bond, permitting changes in stretch, bend, and torsion modes
                 		//internQIx = -1;
-                		//for(qi = qIx; qi < (mobodNQ + qIx); qi++){
-                        	//	internQIx++;
-				//	mobility = mbx2mobility[mbx];
-                        	//	std::cout << " qi= " << qi << std::endl;
-				//	qIndex2jointType.insert( std::pair<SimTK::QIndex, JointType> (SimTK::QIndex(qi), jointType) );
-                		//}
-				jointType = ANGULAR360;
+                		//for(qi = qIx; qi < (mobodNQ + qIx); qi++){internQIx++;}
+				jointType = QUATERNION_a;
 				qIndex2jointType.insert( std::pair<SimTK::QIndex, JointType> (SimTK::QIndex(qi), jointType) );
-				jointType = ANGULAR360;
+				jointType = QUATERNION_b;
 				qIndex2jointType.insert( std::pair<SimTK::QIndex, JointType> (SimTK::QIndex(qi), jointType) );
-				jointType = ANGULAR360;
+				jointType = QUATERNION_c;
+				qIndex2jointType.insert( std::pair<SimTK::QIndex, JointType> (SimTK::QIndex(qi), jointType) );
+				jointType = QUATERNION_d;
 				qIndex2jointType.insert( std::pair<SimTK::QIndex, JointType> (SimTK::QIndex(qi), jointType) );
 				jointType = LINEAR;
 				qIndex2jointType.insert( std::pair<SimTK::QIndex, JointType> (SimTK::QIndex(qi), jointType) );

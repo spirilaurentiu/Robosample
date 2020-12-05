@@ -114,8 +114,12 @@ if (args.subset).lower() == "side":
 					if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
 						printFlexLine(line, args.joint)
 
-					if(((line[4] == "CG") and (line[8] == "SD")) or ((line[4] == "SD") and (line[8] == "CG"))):
-						printFlexLine(line, args.joint)
+					if args.joint in ["BallM", "BallF"] :
+						if(((line[4] == "CG") and (line[8] == "SD")) or ((line[4] == "SD") and (line[8] == "CG"))):
+							printFlexLine(line, "Pin")
+					else:
+						if(((line[4] == "CG") and (line[8] == "SD")) or ((line[4] == "SD") and (line[8] == "CG"))):
+							printFlexLine(line, args.joint)
 
 					if args.joint in ["BallM", "BallF"] :
 						if(((line[4] == "SD") and (line[8] == "CE")) or ((line[4] == "CE") and (line[8] == "SD"))):

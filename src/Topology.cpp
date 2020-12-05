@@ -1659,6 +1659,18 @@ Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compou
 				}
 			}
 		}
+	}else{
+		std::cout << "Warning: requiring chemical parent for non-root atom\n";
+		bSpecificAtom *originSpecAtom = nullptr;
+		originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
+		for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
+			Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
+			if(getAtomLocationInMobilizedBodyFrame(candidateChemParentAIx) == 0){ // atom is at body's origin
+				chemParentAIx = candidateChemParentAIx;
+				gmolAtomIndex = originSpecAtom->neighbors[k]->getNumber();
+				break;
+			}
+		}
 	}
 
 	return chemParentAIx;
@@ -1667,6 +1679,10 @@ Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compou
 std::vector<SimTK::Transform>
 Topology::calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx, const SimTK::State& someState)
 {
+	// This function is only intended for root atoms!!
+	// There is no P_X_F and B_X_M inside a body.
+	assert(getAtomLocationInMobilizedBodyFrame(aIx) == 0);
+
 	// Get body, parentBody
 	SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);

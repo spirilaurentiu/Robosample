@@ -4,6 +4,8 @@ import scipy
 import scipy.stats
 import argparse
 from autocorFuncs import *
+import Autocorrelation
+
 
 class LogAnalyzer:
 	def __init__(self, FNSeeds, simDirs, datacols, skip_header, skip_footer, stride):
@@ -31,11 +33,14 @@ class LogAnalyzer:
 		self.eqPoint = [None] * len(FNSeeds)
 
 		# Variables that store autocorrelation data
-		self.corrFull = [None] * len(FNSeeds)
-		self.trimCorr = [None] * len(FNSeeds)
+		self.fullAutocorrFunc = [None] * len(FNSeeds)
+		self.trimAutocorrFunc = [None] * len(FNSeeds)
 		self.cuts = [None] * len(FNSeeds)
 		self.Iacs = [None] * len(FNSeeds)
 		self.ESSs = [None] * len(FNSeeds)
+
+		# PyMBAR based autocorrelation
+		self.t_g_Neff = [None] * len(FNSeeds)
 	#
 
 	def Read(self, verbose = True):
@@ -47,7 +52,7 @@ class LogAnalyzer:
 			# Get file names
 			FNList = []
 			for di in range(len(self.simDirs)):
-				FNList.append(glob.glob(os.path.join(self.simDirs[di] + "log." + self.FNSeeds[seedi]))[0])
+				FNList.append(glob.glob(os.path.join(self.simDirs[di] + "trim.log." + self.FNSeeds[seedi]))[0])
 			nfiles = len(FNList)
 		
 			# Get raw data
@@ -91,7 +96,7 @@ class LogAnalyzer:
 		'''
 		for seedi in range(len(self.FNSeeds)):
 			# Autocorrelation functions for data columns
-			self.corrFull[seedi] = np.empty((self.nofDataCols, (self.logData[seedi][0]).size))
+			self.fullAutocorrFunc[seedi] = np.empty((self.nofDataCols, (self.logData[seedi][0]).size))
 			maxAcor = 0
 			dataColi = -1
 			for coli in self.dataCols:
@@ -102,7 +107,8 @@ class LogAnalyzer:
 				if M == 0: M = N
 		
 				# Autocorrelation functions calculated with different methods
-				self.corrFull[seedi][dataColi], cut, IAcFull, ESSfull = CestGrossfield(M, self.logData[seedi][coli]) 
+				#self.fullAutocorrFunc[seedi][dataColi], cut, IAcFull, ESSfull = CestGrossfield(M, self.logData[seedi][coli]) 
+				self.fullAutocorrFunc[seedi][dataColi], cut, IAcFull, ESSfull = autocorr1(M, self.logData[seedi][coli]) 
 				#print "Full autocorrelation time for col ", coli, "=", IAcFull
 					
 				if maxAcor < IAcFull: maxAcor = int(IAcFull)
@@ -134,7 +140,7 @@ class LogAnalyzer:
 			self.trimLogData[seedi] = self.logData[seedi][:, self.eqPoint[seedi] :]
 		#
 
-	def Autocorrelation(self, nofAddMethods, lagMaxima):	
+	def AnalyzeAutocorrelation(self, nofAddMethods, lagMaxima):	
 		'''
 		Get autocorrelation funtions on production period for
 		every data series.
@@ -143,7 +149,7 @@ class LogAnalyzer:
 			self.cuts[seedi] = np.zeros((self.nofDataCols))
 			self.Iacs[seedi] = np.zeros((self.nofDataCols))
 			self.ESSs[seedi] = np.zeros((self.nofDataCols))
-			self.trimCorr[seedi] = np.empty((self.nofDataCols, 7, (self.logData[seedi][0]).size)) # new
+			self.trimAutocorrFunc[seedi] = np.empty((self.nofDataCols, 7, (self.logData[seedi][0]).size)) # new
 			dataColi = -1
 			for coli in self.dataCols:
 				dataColi += 1
@@ -153,9 +159,9 @@ class LogAnalyzer:
 				trimN = self.trimLogData[seedi][coli].size
 				if M == 0: M = trimN
 	
-				x, self.cuts[seedi][dataColi], self.Iacs[seedi][dataColi], self.ESSs[seedi][dataColi] \
-					= CestGrossfield(M, self.trimLogData[seedi][coli])
-				self.trimCorr[seedi][dataColi][0][:x.size] = x
+				autocorrFunc, self.cuts[seedi][dataColi], self.Iacs[seedi][dataColi], self.ESSs[seedi][dataColi] \
+					= autocorr1(M, self.trimLogData[seedi][coli])
+				self.trimAutocorrFunc[seedi][dataColi][0][:autocorrFunc.size] = autocorrFunc
 	
 				# Standard error based on autocorrelation time
 				#SE = self.stds[seedi][dataColi] * np.sqrt(self.Iacs[seedi][dataColi] / float(trimN))
@@ -164,9 +170,31 @@ class LogAnalyzer:
 				# Additional methods if required
 				add_funcs = [autocorr1, autocorr2, autocorr3, autocorr4, autocorr5]
 				for i in range(0, nofAddMethods):
-					x = add_funcs[i](M, self.trimLogData[seedi][coli])
-					self.trimCorr[seedi][dataColi][i][:x.size] = x
-		#
-#
-#
-#
+					autocorrFunc = add_funcs[i](M, self.trimLogData[seedi][coli])
+					self.trimAutocorrFunc[seedi][dataColi][i][:autocorrFunc.size] = autocorrFunc
+	#
+
+	def PyMBARAutocorrelation(self):
+		autocor = Autocorrelation.Autocorrelation()
+		for seedi in range(len(self.FNSeeds)):
+
+			autocor.getData( (self.logData[seedi][[self.dataCols], :])[0] )
+			self.t_g_Neff[seedi] = autocor.pymbarDetectEquilibration_fft()
+
+			dataColi = -1
+			for coli in self.dataCols:
+				dataColi += 1
+			
+				IAc = (self.t_g_Neff[seedi][dataColi][1] - 1.0) / 2.0
+				print("FFT PyMBAREqPnt statIneff IAc maxESS:")
+				print ("eqPointMax(" + str(coli) + ")= " + str(self.t_g_Neff[seedi][dataColi][0]) \
+					+ " g= " + str(self.t_g_Neff[seedi][dataColi][1]) \
+					+ " IAc= " + str(IAc) \
+					+ " Neffmax= " + str(self.t_g_Neff[seedi][dataColi][2]))
+	#
+
+
+
+
+
+

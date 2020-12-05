@@ -77,7 +77,7 @@ class TrajectoryAnalyzer:
 			# Get file names
 			FNList = []
 			for di in range(len(self.simDirs)):
-				FNList.append(glob.glob(self.simDirs[di] + "traj." + self.molName + str(self.FNSeeds[seedi]) + '.dcd')[0])
+				FNList.append(glob.glob(self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')[0])
 			FNList = list(np.array(FNList).flat)
 			if verbose == True:
 				print(FNList)
