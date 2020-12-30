@@ -107,7 +107,7 @@ class LogAnalyzer:
 				if M == 0: M = N
 		
 				# Autocorrelation functions calculated with different methods
-				#self.fullAutocorrFunc[seedi][dataColi], cut, IAcFull, ESSfull = CestGrossfield(M, self.logData[seedi][coli]) 
+				#self.fullAutocorrFunc[seedi][dataColi], cut, IAcFull, ESSfull = CestGrossfield(M, self.logData[seedi][coli])
 				self.fullAutocorrFunc[seedi][dataColi], cut, IAcFull, ESSfull = autocorr1(M, self.logData[seedi][coli]) 
 				#print "Full autocorrelation time for col ", coli, "=", IAcFull
 					

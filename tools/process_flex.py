@@ -28,7 +28,7 @@ float(line[13]))
 #
 
 aa = ["ALA", "ARG", "ASN", "ASP", "CYS", "GLU", "GLN", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"]
-
+sugars = ['UYB', '4YB', 'VMB', '2MA', '3LB', '0fA', '0SA']
 # Get all
 if (args.subset).lower() == "all":
 	for pi in range(len(pdata)):
@@ -238,5 +238,47 @@ if (args.subset).lower() == "side":
 						printFlexLine(line, args.joint)
 						
 	
+# Glycan part	
+if (args.subset).lower() == "sugnln":
+	for pi in range(len(pdata)):
+		line = pdata[pi]
+		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
+			if(line[7] == "NLN") and (line[11] == "NLN"):
+					if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+						printFlexLine(line, args.joint)
+					if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+						printFlexLine(line, args.joint)
+					if(((line[4] == "CG") and (line[8] == "ND2")) or ((line[4] == "ND2") and (line[8] == "CG"))):
+						printFlexLine(line, args.joint)
+			if(line[7] == "NLN") and (line[11] in sugars):
+				if((line[4] == "ND2") or (line[8] == "ND2")):
+					printFlexLine(line, args.joint)
 	
-	
+if (args.subset).lower() == "suginter":
+	for pi in range(len(pdata)):
+		line = pdata[pi]
+		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
+			if(line[7] in sugars) and (line[11] in sugars) and (line[7] != line[11]):
+				printFlexLine(line, args.joint)
+
+if (args.subset).lower() == "sugout":
+	for pi in range(len(pdata)):
+		line = pdata[pi]
+		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
+			if(line[7] in sugars) and (line[7] == line[11]): # within the same sugar
+				if(line[7] not in ['0SA']):
+					if(((line[4] in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5']) and (line[8] not in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5'])) or \
+					   ((line[8] in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5']) and (line[4] not in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5']))):
+						if((line[5] != 'H') and (line[9] != 'H')):
+							printFlexLine(line, args.joint)
+				elif(line[7] in ['0SA']):
+					if(((line[4] in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']) and (line[8] not in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6'])) or \
+					   ((line[8] in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']) and (line[4] not in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']))):
+						if((line[5] != 'H') and (line[9] != 'H')):
+							printFlexLine(line, args.joint)
+
+
+
+
+
+

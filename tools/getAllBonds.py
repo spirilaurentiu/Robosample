@@ -52,6 +52,8 @@ dihIxs = np.array(dihIxs)
 
 # Get molecule
 molecule = md.load(args.traj, top=args.top)
+
+# Get topology
 topology = molecule.topology
 table, bonds = topology.to_dataframe()
 
@@ -61,7 +63,7 @@ sasa = md.shrake_rupley(molecule, probe_radius = args.probesize, mode = 'residue
 #	print(i+1, sasa[0][i])
 #exit(0)
 
-#print("#i1 i2 Joint # name1 elem1 resid1 resname1 name2 elem2 resid2 resname2 sasa1 sasa2")
+print("#i1 i2 Joint # name1 elem1 resid1 resname1 name2 elem2 resid2 resname2 sasa1 sasa2")
 if(args.TD):
 	for i in range(dihIxs.shape[0]):
 		print("%5d %5d Pin # %4s %s %6d %3s   %4s %s %6d %3s %8.5f %8.5f" % (dihIxs[i][1], dihIxs[i][2] \
@@ -80,3 +82,16 @@ else:
 			,table.values[ int(bonds[i][1]) ][3], table.values[ int(bonds[i][1]) ][4] \
 			,sasa[0][ table.values[ int(bonds[i][0]) ][3] ], sasa[0][ table.values[ int(bonds[i][1]) ][3] ]
 		))
+
+
+# Get vicinity
+query_indices = np.array(range(171))
+radius = 0.5 # nm
+neighbors = np.array(md.compute_neighbors(molecule, radius, query_indices))
+
+for i in range(neighbors.shape[0]):
+	for j in range(neighbors.shape[1]):
+		pass
+		#print(neighbors[i][j], end=' ')
+	#print(end='\n')
+

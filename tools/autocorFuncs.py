@@ -140,6 +140,51 @@ def CestGrossfield(argM, series):
 autocorrLabels = ['FFT Partial', 'FFT Nonpartial', 'NumPy Correlate Nonpartial', 'NumPy Correlate Partial', 'Manual']
 
 # Functions from https://stackoverflow.com/users/2005415/jason
+def autocorrDetail(argM, series):
+	'''fft, don't pad 0s, non partial'''
+
+	# Define a zero
+	tiny = 0.0000001
+
+	n = series.size
+
+	if argM == 0:
+		argM = n
+	lags = np.arange(0, argM)
+	mean = series.mean()
+	var = np.var(series)
+	seriesp = series - mean
+
+	cf = np.fft.fft(seriesp)
+	freq = np.fft.fftfreq(n)
+	#return (freq, cf)
+	sf = cf.conjugate()*cf
+	#return (freq, sf)
+	invSf = np.fft.ifft(sf)
+
+	resultF = invSf.real/var/len(series)
+
+	return (freq, cf, sf, invSf, resultF)
+
+	#cut = 0
+	#for i in range(resultF.shape[0]):
+	#	if resultF[i] < tiny:
+	#		cut = i
+	#		break
+	#resultF[cut:] = 0
+
+
+	#print(resultF)
+	#return resultF[:len(lags)]
+
+	# Integrated autocorrelation time and effective sample size
+	#integratedAC = np.sum(resultF)
+	#effSampleSize = n / integratedAC	
+
+	#return resultF, cut, integratedAC, effSampleSize
+#
+
+# Functions from https://stackoverflow.com/users/2005415/jason
 def autocorr1(argM, series):
 	'''fft, don't pad 0s, non partial'''
 
