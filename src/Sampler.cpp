@@ -221,9 +221,9 @@ void Sampler::loadMbx2mobility(SimTK::State& someState)
                 //const SimTK::Transform T = mobod.getMobilizerTransform(someState);
                 //const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
                 //const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
-                std::cout << "mbx= " << mbx << " mobility= " << mbx2mobility[mbx]
-                      << std::endl
-                ;
+                //std::cout << "mbx= " << mbx << " mobility= " << mbx2mobility[mbx]
+                //      << std::endl
+                //;
 
 		JointType jointType;
 		SimTK::BondMobility::Mobility mobility = mbx2mobility[mbx];

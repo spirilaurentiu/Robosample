@@ -658,7 +658,7 @@ bool Topology::checkIfTripleUnorderedAreEqual(
 void Topology::loadTriples(void)
 {
 	// Assign Compound coordinates by matching bAtomList coordinates
-	std::cout << "Topology triples: " << std::endl ;
+	//std::cout << "Topology triples: " << std::endl ;
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
@@ -912,13 +912,13 @@ SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
 	SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
 	SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
 
-	std::cout << std::setprecision(20) << std::fixed;
-	std::cout << " gamma dists masses angles contributions: "
-		<< gamma2Contribution << " "
-		<< distsContribution << " "
-		<< massesContribution << " "
-		//<< distsMassesContribution << " "
-		<< anglesContribution << std::endl;
+	//std::cout << std::setprecision(20) << std::fixed;
+	//std::cout << " gamma dists masses angles contributions: "
+	//	<< gamma2Contribution << " "
+	//	<< distsContribution << " "
+	//	<< massesContribution << " "
+	//	//<< distsMassesContribution << " "
+	//	<< anglesContribution << std::endl;
 
 	return gamma2Contribution + distsContribution + anglesContribution + massesContribution;
 }
@@ -1561,7 +1561,9 @@ void Topology::writeAtomListPdb(std::string dirname, std::string prefix,
 	std::stringstream sstream;
 	sstream << dirname << "/" << prefix << zeros << std::to_string(index) << sufix;
 	string ofilename = sstream.str();
-	//std::cout << "Topology writePdb to " << ofilename << std::endl;
+	//std::cout << "Topology writePdb to dir " << dirname 
+	//	<< " prefix " << prefix << " zeros " << zeros 
+	//	<< " index " << std::to_string(index) << std::endl;
 
 	FILE *oF = fopen (ofilename.c_str(),"w");
 	// Pdb lines

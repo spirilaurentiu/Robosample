@@ -218,10 +218,10 @@ void World::AddMolecule(
 
     // Set flexibility according to the flexibility file
     (topologies.back())->setFlexibility(regimenSpec, flexFN);
-    (topologies.back())->PrintAtomList();
+    //(topologies.back())->PrintAtomList();
 
     // Print Molmodel types
-    (topologies.back())->PrintMolmodelAndDuMMTypes(*forceField);
+    //(topologies.back())->PrintMolmodelAndDuMMTypes(*forceField);
 
     // Allocate the vector of coordinates (DCD)
     Xs.resize(Xs.size() + topologies.back()->getNAtoms());
@@ -230,7 +230,7 @@ void World::AddMolecule(
   
     // Add Topology to CompoundSystem and realize topology
     compoundSystem->adoptCompound( *(topologies.back()) );
-    std::cout<<"World::AddMolecule CompoundSystem adoptCompound "<< std::endl;
+    //std::cout<<"World::AddMolecule CompoundSystem adoptCompound "<< std::endl;
     (topologies.back())->setCompoundIndex(
             SimTK::CompoundSystem::CompoundIndex(
              compoundSystem->getNumCompounds() - 1));
@@ -264,8 +264,8 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 
         this->rootMobility = GroundToCompoundMobilizerType;
 
-        std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
-                 << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
+        //std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
+        //         << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
 
 	if(i == 0){ // First compound
         	compoundSystem->modelOneCompound(
@@ -303,7 +303,7 @@ void World::loadCompoundRelatedMaps(void)
 {
 	for ( unsigned int i = 0; i < this->topologies.size(); i++){
 	    ((this->topologies)[i])->loadCompoundAtomIx2GmolAtomIx();
-        ((this->topologies)[i])->printMaps();
+        //((this->topologies)[i])->printMaps();
 	}
 }
 
@@ -312,7 +312,7 @@ void World::loadMobodsRelatedMaps(void)
 {
 	for ( unsigned int i = 0; i < this->topologies.size(); i++){
 	    ((this->topologies)[i])->loadMobodsRelatedMaps();
-        ((this->topologies)[i])->printMaps();
+        //((this->topologies)[i])->printMaps();
 	}
 }
 
@@ -477,11 +477,12 @@ int World::getNofSamplers(void)
 
 /** Add a sampler to this World using the specialized struct
 for samplers names. **/
-int World::addSampler(SamplerName samplerName)
+BaseSampler * World::addSampler(SamplerName samplerName)
 {
+    BaseSampler *p = NULL;
     if(samplerName == HMC){
 
-        BaseSampler *p = new HMCSampler(
+        p = new HMCSampler(
                 compoundSystem, matter, topologies,
                 forceField, forces, ts
                 );
@@ -489,7 +490,7 @@ int World::addSampler(SamplerName samplerName)
 
     }else if(samplerName == LAHMC){
 
-        BaseSampler *p = new LAHMCSampler(
+        p = new LAHMCSampler(
                 compoundSystem, matter, topologies,
                 forceField, forces, ts, 4
                 );
@@ -497,7 +498,8 @@ int World::addSampler(SamplerName samplerName)
 
     }
 
-    return samplers.size();
+    //return samplers.size();
+    return p;
 }
 
 // Get a sampler based on its position in the samplers vector

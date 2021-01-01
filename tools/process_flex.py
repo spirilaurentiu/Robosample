@@ -21,10 +21,11 @@ pars.Read(args.inFN)
 pdata = pars.parsed_data
 
 def printFlexLine(line, joint):
-	print "%d %d %s %s %s %s %d %s %s %s %d %s %.5f %.5f" % \
+	print ("%d %d %s %s %s %s %d %s %s %s %d %s %.5f %.5f" % \
 (int(line[0]), int(line[1]), joint, line[3], line[4], line[5], int(line[6]), \
 line[7], line[8], line[9], int(line[10]), line[11], float(line[12]), \
 float(line[13]))
+	)
 #
 
 aa = ["ALA", "ARG", "ASN", "ASP", "CYS", "GLU", "GLN", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"]
@@ -46,31 +47,51 @@ if (args.subset).lower() == "phi":
 	for pi in range(len(pdata)):
 		line = pdata[pi]
 		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
-			if(line[7] != "PRO"):
-				if(((line[4] == "N") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "N"))):
-					printFlexLine(line, args.joint)
+			line = pdata[pi]
+			atom1Acc = float(line[-2])
+			atom2Acc = float(line[-1])
+			if( ((atom1Acc >= args.accRange[0]) and (atom1Acc <= args.accRange[1])) or 
+			    ((atom2Acc >= args.accRange[0]) and (atom2Acc <= args.accRange[1])) ):
+				if(line[7] != "PRO"):
+					if(((line[4] == "N") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "N"))):
+						printFlexLine(line, args.joint)
 
 # Get psi
 if (args.subset).lower() == "psi":
 	for pi in range(len(pdata)):
 		line = pdata[pi]
 		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
-			if(((line[4] == "C") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "C"))):
-				printFlexLine(line, args.joint)
+			line = pdata[pi]
+			atom1Acc = float(line[-2])
+			atom2Acc = float(line[-1])
+			if( ((atom1Acc >= args.accRange[0]) and (atom1Acc <= args.accRange[1])) or 
+			    ((atom2Acc >= args.accRange[0]) and (atom2Acc <= args.accRange[1])) ):
+				if(((line[4] == "C") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "C"))):
+					printFlexLine(line, args.joint)
 
 # Get Ramachandran flexibility
 if (args.subset).lower() == "rama":
 	for pi in range(len(pdata)):
 		line = pdata[pi]
 		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
-			if(line[7] != "PRO"):
-				if(((line[4] == "N") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "N"))):
-					printFlexLine(line, args.joint)
+			line = pdata[pi]
+			atom1Acc = float(line[-2])
+			atom2Acc = float(line[-1])
+			if( ((atom1Acc >= args.accRange[0]) and (atom1Acc <= args.accRange[1])) or 
+			    ((atom2Acc >= args.accRange[0]) and (atom2Acc <= args.accRange[1])) ):
+				if(line[7] != "PRO"):
+					if(((line[4] == "N") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "N"))):
+						printFlexLine(line, args.joint)
 	for pi in range(len(pdata)):
 		line = pdata[pi]
 		if((int(line[6]) >= args.residRange[0]) and (int(line[6]) <= args.residRange[1])):
-			if(((line[4] == "C") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "C"))):
-				printFlexLine(line, args.joint)
+			line = pdata[pi]
+			atom1Acc = float(line[-2])
+			atom2Acc = float(line[-1])
+			if( ((atom1Acc >= args.accRange[0]) and (atom1Acc <= args.accRange[1])) or 
+			    ((atom2Acc >= args.accRange[0]) and (atom2Acc <= args.accRange[1])) ):
+				if(((line[4] == "C") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "C"))):
+					printFlexLine(line, args.joint)
 
 
 # Get sidechains

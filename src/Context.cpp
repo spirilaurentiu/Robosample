@@ -274,7 +274,7 @@ void Context::setGuidanceTemperature(int whichWorld, int whichSampler, float som
 
 // --- Simulation parameters ---
 
-int Context::addSampler(int whichWorld, SamplerName whichSampler)
+BaseSampler * Context::addSampler(int whichWorld, SamplerName whichSampler)
 {
     return worlds[whichWorld]->addSampler(whichSampler);
 }

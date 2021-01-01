@@ -217,13 +217,19 @@ int main(int argc, char **argv)
 
    // Add samplers to the worlds
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-	if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
-			context.addSampler(worldIx, HMC);
-	}else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
-			context.addSampler(worldIx, LAHMC);
-	}else{
-			context.addSampler(worldIx, LAHMC);
-	}
+		if(setupReader.get("SAMPLER")[worldIx] == "VV"){
+			BaseSampler *p = context.addSampler(worldIx, HMC);
+			pHMC(p)->setThermostat(ANDERSEN);
+		}else if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
+			BaseSampler *p = context.addSampler(worldIx, HMC);
+			pHMC(p)->setThermostat(NONE);
+		}else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
+			BaseSampler *p = context.addSampler(worldIx, LAHMC);
+			pLAHMC(p)->setThermostat(NONE);
+		}else{
+			BaseSampler *p = context.addSampler(worldIx, LAHMC);
+			pLAHMC(p)->setThermostat(NONE);
+		}
 	}
 
 ////////// DEBUG BEGIN
@@ -238,7 +244,7 @@ int main(int argc, char **argv)
 			context.setTimestep(worldIx, samplerIx, std::stod(setupReader.get("TIMESTEPS")[worldIx]));
 
 			// Set thermostats
-			pMC(context.updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
+			//pMC(context.updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
 			pLAHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
 				std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
 			pLAHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
@@ -362,9 +368,19 @@ int main(int argc, char **argv)
 	currentWorldIx = context.worldIndexes.front();
 	SimTK::State& advancedState = (context.updWorld(currentWorldIx))->integ->updAdvancedState();
 
+	// Find directory structure
+	std::string path = setupReader.get("MOLECULES")[0];
+	std::size_t lastSlashPos = path.find_last_of("/");
+	std::string upDir = path.substr(0, lastSlashPos);
+	std::string molDir = path.substr(lastSlashPos + 1, path.length());
+	std::cout << "Molecule directory: " << molDir << std::endl;
+
 	// Write pdb
 	context.setOutputDir(setupReader.get("OUTPUT_DIR")[0] );
-	context.setPdbPrefix(setupReader.get("MOLECULES")[0]
+	//context.setPdbPrefix(setupReader.get("MOLECULES")[0]
+	//	+ std::to_string(context.updWorld(currentWorldIx)->updSampler(0)->getSeed()) 
+	//	);
+	context.setPdbPrefix(molDir
 		+ std::to_string(context.updWorld(currentWorldIx)->updSampler(0)->getSeed()) 
 		);
 

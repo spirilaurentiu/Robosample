@@ -4,6 +4,7 @@
 #include "Robo.hpp"
 #include "Sampler.hpp"
 #include "SetupReader.hpp"
+#include "World.hpp"
 
 class Sampler;
 class World;
@@ -63,7 +64,7 @@ public:
     //------------
 
     // --- Simulation parameters ---
-    int addSampler(int whichWorld, SamplerName whichSampler);
+    BaseSampler* addSampler(int whichWorld, SamplerName whichSampler);
     void initializeSampler(int whichWorld, int whichSampler);
 
     // Amber like scale factors.

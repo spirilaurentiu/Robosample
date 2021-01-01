@@ -175,8 +175,8 @@ public:
 	int getNofSamplers(void);
 
 	/** Add a sampler to the World **/
-	int addSampler(std::string);
-	int addSampler(SamplerName);
+	BaseSampler* addSampler(std::string);
+	BaseSampler* addSampler(SamplerName);
 
 	// TODO Use Sampler polymorphism
 	/** Get a sampler based on its position in the samplers vector **/

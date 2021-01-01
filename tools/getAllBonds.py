@@ -63,7 +63,7 @@ sasa = md.shrake_rupley(molecule, probe_radius = args.probesize, mode = 'residue
 #	print(i+1, sasa[0][i])
 #exit(0)
 
-print("#i1 i2 Joint # name1 elem1 resid1 resname1 name2 elem2 resid2 resname2 sasa1 sasa2")
+#print("#i1 i2 Joint # name1 elem1 resid1 resname1 name2 elem2 resid2 resname2 sasa1 sasa2")
 if(args.TD):
 	for i in range(dihIxs.shape[0]):
 		print("%5d %5d Pin # %4s %s %6d %3s   %4s %s %6d %3s %8.5f %8.5f" % (dihIxs[i][1], dihIxs[i][2] \
