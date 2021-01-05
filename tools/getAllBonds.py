@@ -85,13 +85,13 @@ else:
 
 
 # Get vicinity
-query_indices = np.array(range(171))
-radius = 0.5 # nm
-neighbors = np.array(md.compute_neighbors(molecule, radius, query_indices))
-
-for i in range(neighbors.shape[0]):
-	for j in range(neighbors.shape[1]):
-		pass
-		#print(neighbors[i][j], end=' ')
-	#print(end='\n')
+#query_indices = np.array(range(171))
+#radius = 0.5 # nm
+#neighbors = np.array(md.compute_neighbors(molecule, radius, query_indices))
+#
+#for i in range(neighbors.shape[0]):
+#	for j in range(neighbors.shape[1]):
+#		pass
+#		#print(neighbors[i][j], end=' ')
+#	#print(end='\n')
 

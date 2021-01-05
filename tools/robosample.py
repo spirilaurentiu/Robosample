@@ -173,7 +173,7 @@ class Context:
 			else: # 1, 3, 5
 				inpTxt += ("%12.7f%12.7f%12.7f\n" % (pos[0], pos[1], pos[2]))
 		
-		inpTxt += '\n'
+		#inpTxt += '\n'
 
 
 		self.positionsFNs = path + '/bot.rst7'
@@ -223,7 +223,7 @@ class Simulation:
 				+ " --flex bot.flex --probesize 0.1 >" + os.path.join(self.path, "bot.all.flex")
 			)
 
-		# Get hinges and loops 
+		# Get hinges, loops and sugars
 		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
 				+ " --subset rama --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
 				+ " > " + os.path.join(self.path, "bot.hinges.flex")
@@ -234,7 +234,34 @@ class Simulation:
 				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
 		os.system("echo \"" + execStr + "\"")
 		os.system(execStr)
-		
+		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+				+ " --subset sugnln --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
+		os.system("echo \"" + execStr + "\"")
+		os.system(execStr)
+		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+				+ " --subset suginter --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
+		os.system("echo \"" + execStr + "\"")
+		os.system(execStr)
+		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+				+ " --subset sugout --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
+		os.system("echo \"" + execStr + "\"")
+		os.system(execStr)
+
+		# Ball world		
+		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+				+ " --subset rama --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
+				+ " > " + os.path.join(self.path, "bot.ball.flex")
+		os.system("echo \"" + execStr + "\"")
+		os.system(execStr)
+		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+				+ " --subset side --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
+				+ " >> " + os.path.join(self.path, "bot.ball.flex")
+		os.system("echo \"" + execStr + "\"")
+		os.system(execStr)
+
 		# Put input together
 		inpTxt = '''# Robosample input \n'''
 
@@ -244,53 +271,54 @@ class Simulation:
 			inpTxt += (' ' + moldir)
 
 		restOfTxt = ''' 
-PRMTOP bot.prmtop       # Parameter file
-INPCRD bot.rst7     # Coordinate / Restart file
-RBFILE bot.rb   # Rigid bodies definition file
-FLEXFILE bot.hinges.flex # Flexibility definition file
-ROOT_MOBILITY Weld # Ground to Compound mobilizer
-OUTPUT_DIR robots
+PRMTOP bot.prmtop bot.prmtop       # Parameter file
+INPCRD bot.rst7 bot.rst7     # Coordinate / Restart file
+RBFILE bot.rb bot.rb   # Rigid bodies definition file
+FLEXFILE bot.all.flex bot.hinges.flex # Flexibility definition file
+ROOT_MOBILITY Cartesian Free # Ground to Compound mobilizer
+OUTPUT_DIR robots robots
 
 # Simulation
-RUN_TYPE Normal # normal HMC or Non-Eq HMC
+RUN_TYPE Normal Normal # normal HMC or Non-Eq HMC
 ROUNDS 500                  # MC steps (Acception-rejection steps)
-ROUNDS_TILL_REBLOCK 10
-RANDOM_WORLD_ORDER FALSE
-WORLDS R0                         # Regimen (IC, TD, MIX, RB, RBMIX)
-ROOTS 0
-SAMPLER VV          # Integrator
-TIMESTEPS 0.01               # Timesteps to be used with regimens
-MDSTEPS 10  # Number of MD trial steps
-BOOST_MDSTEPS 1
-SAMPLES_PER_ROUND 1  # Number of MC trials within a mixing round
-REPRODUCIBLE FALSE
-SEED 999
+ROUNDS_TILL_REBLOCK 10 10
+RANDOM_WORLD_ORDER FALSE FALSE
+WORLDS R0 R1                        # Regimen (IC, TD, MIX, RB, RBMIX)
+ROOTS 0 0
+SAMPLER VV VV         # Integrator
+TIMESTEPS 0.001 0.009               # Timesteps to be used with regimens
+MDSTEPS 30 30  # Number of MD trial steps
+BOOST_MDSTEPS 1 1
+SAMPLES_PER_ROUND 1 3  # Number of MC trials within a mixing round
+REPRODUCIBLE FALSE FALSE 
+SEED 999 999
 
 # Thermodynamics
-THERMOSTAT Andersen    # Thermostat (HMC + Andersen = MD)
-TEMPERATURE_INI  300    # Temperature for constant temperature simulations
-TEMPERATURE_FIN  300    # Temperature for constant temperature simulations
-BOOST_TEMPERATURE  1     # Temperature for constant temperature simulations
-FFSCALE AMBER      # Force field scale factors
-GBSA 1         # GBSA scale factor
+THERMOSTAT Andersen Andersen   # Thermostat (HMC + Andersen = MD)
+TEMPERATURE_INI  ''' + str(self.integrator.T) + " " +  str(self.integrator.T) + '''
+TEMPERATURE_FIN  ''' + str(self.integrator.T) + " " +  str(self.integrator.T)
+		restOfTxt += '''
+BOOST_TEMPERATURE  1 1      # Temperature for constant temperature simulations
+FFSCALE AMBER AMBER     # Force field scale factors
+GBSA 0 0         # GBSA scale factor
 
 # Generalized coordinates related
-FIXMAN_POTENTIAL TRUE # Use Fixman potential
-FIXMAN_TORQUE TRUE   # Use Fixman torque
+FIXMAN_POTENTIAL TRUE TRUE # Use Fixman potential
+FIXMAN_TORQUE TRUE TRUE   # Use Fixman torque
 
 # Output
-VISUAL TRUE             # Use the visualizer
-VISUAL FALSE             # Use the visualizer
-PRINT_FREQ  1
-WRITEPDBS 1     # Write pdbs
-GEOMETRY FALSE          # Calculate geometric features
+VISUAL TRUE TRUE             # Use the visualizer
+VISUAL FALSE FALSE             # Use the visualizer
+PRINT_FREQ  1 1
+WRITEPDBS 1 0    # Write pdbs
+GEOMETRY FALSE FALSE         # Calculate geometric features
 
 DISTANCE 1 2
 DIHEDRAL 1 2 3 4 1 2 3 4
 
 # Software specs
-THREADS 0
-OPENMM TRUE
+THREADS 0 0
+OPENMM TRUE TRUE
 ''' 
 		inpTxt += restOfTxt
 
@@ -307,7 +335,8 @@ OPENMM TRUE
 
 class HMCIntegrator:
 	def __init__(self, T, ts):
-		pass
+		self.T = T
+		self.ts = ts
 	#		
 #
 
