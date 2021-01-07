@@ -280,12 +280,12 @@ OUTPUT_DIR robots robots
 
 # Simulation
 RUN_TYPE Normal Normal # normal HMC or Non-Eq HMC
-ROUNDS 500                  # MC steps (Acception-rejection steps)
+ROUNDS ''' + str(nofSteps) + '''
 ROUNDS_TILL_REBLOCK 10 10
 RANDOM_WORLD_ORDER FALSE FALSE
 WORLDS R0 R1                        # Regimen (IC, TD, MIX, RB, RBMIX)
 ROOTS 0 0
-SAMPLER VV VV         # Integrator
+SAMPLER ''' + self.integrator.type + " " + self.integrator.type + '''
 TIMESTEPS 0.001 0.009               # Timesteps to be used with regimens
 MDSTEPS 30 30  # Number of MD trial steps
 BOOST_MDSTEPS 1 1
@@ -295,9 +295,8 @@ SEED 999 999
 
 # Thermodynamics
 THERMOSTAT Andersen Andersen   # Thermostat (HMC + Andersen = MD)
-TEMPERATURE_INI  ''' + str(self.integrator.T) + " " +  str(self.integrator.T) + '''
-TEMPERATURE_FIN  ''' + str(self.integrator.T) + " " +  str(self.integrator.T)
-		restOfTxt += '''
+TEMPERATURE_INI  ''' + str(self.integrator.T) + " " + str(self.integrator.T) + '''
+TEMPERATURE_FIN  ''' + str(self.integrator.T) + " " + str(self.integrator.T) + '''
 BOOST_TEMPERATURE  1 1      # Temperature for constant temperature simulations
 FFSCALE AMBER AMBER     # Force field scale factors
 GBSA 0 0         # GBSA scale factor
@@ -337,24 +336,27 @@ class HMCIntegrator:
 	def __init__(self, T, ts):
 		self.T = T
 		self.ts = ts
+
+		self.type = 'HMC'
 	#		
 #
 
 class VVIntegrator:
 	def __init__(self, T, ts):
-		pass
+		
+		self.type = 'VV'
 	#		
 #
 
 class LAHMCIntegrator:
 	def __init__(self, T, ts):
-		pass
+		self.type = 'LAHMC'
 	#		
 #
 
 class NUTSIntegrator:
 	def __init__(self, T, ts):
-		pass
+		self.type = 'NUTS'
 	#		
 #
 
