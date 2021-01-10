@@ -9,4 +9,5 @@ tools/__pycache__/*
 tools/*.pyc
 tools/.*.swp
 tools/demo/robots/
-tools/demo/inp.tests
+tools/demo/inp.*
+tools/demo/out.*

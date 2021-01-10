@@ -14,6 +14,34 @@ from mdtraj.geometry import _geometry, distance, dihedral
 # Units constants
 kelvin = 1
 picoseconds = 1
+nanometer = 1
+
+class Platform:
+	"""
+	Contains information on # of threads and openmm GPU usage
+	"""
+	def __init__(self):
+		pass
+	#
+	
+	def getPlatformByName(nameOfPlatform):
+		print(nameOfPlatform)
+		if nameOfPlatform == 'GPU':
+			return True
+		else:
+			return False
+	#			
+#
+
+class PDBReporter:
+	"""
+	Reporter
+	"""
+	def __init__(self, outputDir, stride):
+		self.outputDir = outputDir
+		self.stride = stride
+	#		
+#
 
 class World:
 	""" 
@@ -46,7 +74,16 @@ class AmberPrmtopFile:
 		self.topologyFNs = FN
 	#
 
-	def createSystem(self, createDirs = True):
+	def createSystem(self, createDirs = True,
+		nonbondedMethod = "NoCutoff",
+        	nonbondedCutoff = 1.0*nanometer,
+        	constraints = None,
+        	rigidWater = True,
+        	implicitSolvent = True,
+        	soluteDielectric = 1.0,
+        	solventDielectric = 78.5,
+        	removeCMMotion = False
+	):
 		""" Create a Robosample system """
 		system = System()
 
@@ -185,10 +222,11 @@ class Context:
 #
 
 class Simulation:
-	def __init__(self, topology, system, integrator):
+	def __init__(self, topology, system, integrator, platform):
 		self.context = Context()
 		self.system = system
 		self.integrator = integrator
+		self.openmmTrue = platform
 
 		# Get last directory
 		self.topologyFNs = glob.glob("robots/bot*/*.prmtop")
@@ -203,6 +241,8 @@ class Simulation:
 			path, filename = os.path.split(f)
 		self.path = path
 		self.filename = filename
+		
+		self.reporters = []
 	#
 
 	def step(self, nofSteps):
@@ -277,9 +317,9 @@ INPCRD bot.rst7 bot.rst7     # Coordinate / Restart file
 RBFILE bot.rb bot.rb   # Rigid bodies definition file
 FLEXFILE bot.all.flex bot.hinges.flex # Flexibility definition file
 ROOT_MOBILITY Cartesian Free # Ground to Compound mobilizer
-OUTPUT_DIR robots robots
+OUTPUT_DIR ''' + self.reporters[0].outputDir + " " + self.reporters[0].outputDir + '''
 
-# Simulation
+# Simulation params
 RUN_TYPE Normal Normal # normal HMC or Non-Eq HMC
 ROUNDS ''' + str(nofSteps) + '''
 ROUNDS_TILL_REBLOCK 10 10
@@ -287,28 +327,27 @@ RANDOM_WORLD_ORDER FALSE FALSE
 WORLDS R0 R1                        # Regimen (IC, TD, MIX, RB, RBMIX)
 ROOTS 0 0
 SAMPLER ''' + self.integrator.type + " " + self.integrator.type + '''
-TIMESTEPS 0.001 0.009               # Timesteps to be used with regimens
-MDSTEPS 30 30  # Number of MD trial steps
+TIMESTEPS 0.001 ''' + str(self.integrator.ts) + ''' # Timesteps to be used with regimens
+MDSTEPS 10 200  # Number of MD trial steps
 BOOST_MDSTEPS 1 1
-SAMPLES_PER_ROUND 1 3  # Number of MC trials within a mixing round
-REPRODUCIBLE FALSE FALSE 
+SAMPLES_PER_ROUND 5 1  # Number of acc-rej steps within a mixing round
+REPRODUCIBLE FALSE FALSE
 SEED 999 999
 
 # Thermodynamics
-THERMOSTAT Andersen Andersen   # Thermostat (HMC + Andersen = MD)
+THERMOSTAT Andersen Andersen   # Thermostat
 TEMPERATURE_INI  ''' + str(self.integrator.T) + " " + str(self.integrator.T) + '''
 TEMPERATURE_FIN  ''' + str(self.integrator.T) + " " + str(self.integrator.T) + '''
-BOOST_TEMPERATURE  1 1      # Temperature for constant temperature simulations
-FFSCALE AMBER AMBER     # Force field scale factors
-GBSA 0 0         # GBSA scale factor
+BOOST_TEMPERATURE  1 1      # Boost temperature 
+FFSCALE AMBER AMBER     # Force field
+GBSA 1 1         # GBSA scale factor
 
-# Generalized coordinates related
+# Correction factors
 FIXMAN_POTENTIAL TRUE TRUE # Use Fixman potential
 FIXMAN_TORQUE TRUE TRUE   # Use Fixman torque
 
 # Output
 VISUAL TRUE TRUE             # Use the visualizer
-VISUAL FALSE FALSE             # Use the visualizer
 PRINT_FREQ  1 1
 WRITEPDBS 1 0    # Write pdbs
 GEOMETRY FALSE FALSE         # Calculate geometric features
@@ -318,7 +357,7 @@ DIHEDRAL 1 2 3 4 1 2 3 4
 
 # Software specs
 THREADS 0 0
-OPENMM TRUE TRUE
+OPENMM ''' + str(self.openmmTrue).upper() + " " + str(self.openmmTrue).upper() + '''
 ''' 
 		inpTxt += restOfTxt
 

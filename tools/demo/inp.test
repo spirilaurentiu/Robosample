@@ -5,9 +5,9 @@ INPCRD bot.rst7 bot.rst7     # Coordinate / Restart file
 RBFILE bot.rb bot.rb   # Rigid bodies definition file
 FLEXFILE bot.all.flex bot.hinges.flex # Flexibility definition file
 ROOT_MOBILITY Cartesian Free # Ground to Compound mobilizer
-OUTPUT_DIR robots robots
+OUTPUT_DIR robots/ robots/
 
-# Simulation
+# Simulation params
 RUN_TYPE Normal Normal # normal HMC or Non-Eq HMC
 ROUNDS 50
 ROUNDS_TILL_REBLOCK 10 10
@@ -15,28 +15,27 @@ RANDOM_WORLD_ORDER FALSE FALSE
 WORLDS R0 R1                        # Regimen (IC, TD, MIX, RB, RBMIX)
 ROOTS 0 0
 SAMPLER HMC HMC
-TIMESTEPS 0.001 0.009               # Timesteps to be used with regimens
-MDSTEPS 30 30  # Number of MD trial steps
+TIMESTEPS 0.001 0.006 # Timesteps to be used with regimens
+MDSTEPS 10 200  # Number of MD trial steps
 BOOST_MDSTEPS 1 1
-SAMPLES_PER_ROUND 1 3  # Number of MC trials within a mixing round
-REPRODUCIBLE FALSE FALSE 
+SAMPLES_PER_ROUND 5 1  # Number of acc-rej steps within a mixing round
+REPRODUCIBLE FALSE FALSE
 SEED 999 999
 
 # Thermodynamics
-THERMOSTAT Andersen Andersen   # Thermostat (HMC + Andersen = MD)
+THERMOSTAT Andersen Andersen   # Thermostat
 TEMPERATURE_INI  300 300
 TEMPERATURE_FIN  300 300
-BOOST_TEMPERATURE  1 1      # Temperature for constant temperature simulations
-FFSCALE AMBER AMBER     # Force field scale factors
-GBSA 0 0         # GBSA scale factor
+BOOST_TEMPERATURE  1 1      # Boost temperature 
+FFSCALE AMBER AMBER     # Force field
+GBSA 1 1         # GBSA scale factor
 
-# Generalized coordinates related
+# Correction factors
 FIXMAN_POTENTIAL TRUE TRUE # Use Fixman potential
 FIXMAN_TORQUE TRUE TRUE   # Use Fixman torque
 
 # Output
 VISUAL TRUE TRUE             # Use the visualizer
-VISUAL FALSE FALSE             # Use the visualizer
 PRINT_FREQ  1 1
 WRITEPDBS 1 0    # Write pdbs
 GEOMETRY FALSE FALSE         # Calculate geometric features
