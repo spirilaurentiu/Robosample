@@ -5,7 +5,7 @@ prmtop = AmberPrmtopFile("ala10/ligand.prmtop")
 inpcrd = AmberInpcrdFile("ala10/ligand.rst7")
 
 # Create a Robosample system by calling createSystem on prmtop
-system = prmtop.createSystem(createDirs = False)
+system = prmtop.createSystem(createDirs = True)
 integrator = HMCIntegrator(300*kelvin,   # Temperature of head bath
                            0.002*picoseconds) # Time step
 

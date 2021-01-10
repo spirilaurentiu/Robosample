@@ -8,3 +8,5 @@ src/CMakeLists.txt
 tools/__pycache__/*
 tools/*.pyc
 tools/.*.swp
+tools/demo/robots/
+tools/demo/inp.tests
