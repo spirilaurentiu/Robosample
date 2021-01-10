@@ -328,7 +328,7 @@ OPENMM TRUE TRUE
 		inpF.close()
 
 		#os.system("echo \'" + inpTxt + "\'")
-		os.system("$ROBOSAMPLEDIR/build-debug/tests/Robosample inp.test")
+		os.system("$ROBOSAMPLEDIR/build?debug/tests/Robosample inp.test")
 
 	#	
 #
