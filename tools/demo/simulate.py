@@ -4,10 +4,15 @@ from robosample import *
 prmtop = AmberPrmtopFile("ala10/ligand.prmtop")
 inpcrd = AmberInpcrdFile("ala10/ligand.rst7")
 
+# Hardware platform
+platform = Platform.getPlatformByName('CPU')
+
+properties={'nofThreads': 2}
+
 # Create a Robosample system by calling createSystem on prmtop
 system = prmtop.createSystem(createDirs = False,
-	nonbondedMethod = "NoCutoff",
- 	nonbondedCutoff = 1.0*nanometer,
+	nonbondedMethod = "CutoffPeriodic",
+ 	nonbondedCutoff = 1.44*nanometer,
  	constraints = None,
  	rigidWater = True,
  	implicitSolvent = True,
@@ -19,14 +24,11 @@ system = prmtop.createSystem(createDirs = False,
 integrator = HMCIntegrator(300*kelvin,   # Temperature of head bath
                            0.006*picoseconds) # Time step
 
-platform = Platform.getPlatformByName('GPU')
 
-simulation = Simulation(prmtop.topology, system, integrator, platform)
-
+simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
 simulation.reporters.append(PDBReporter('robots/', 10))
-
 simulation.context.setPositions(inpcrd.positions)
 
 # run simulation
-simulation.step(50)
+simulation.step(5)
 

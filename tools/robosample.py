@@ -222,11 +222,12 @@ class Context:
 #
 
 class Simulation:
-	def __init__(self, topology, system, integrator, platform):
+	def __init__(self, topology, system, integrator='HMC', platform='CPU', properties={'nofThreads': 2}):
 		self.context = Context()
 		self.system = system
 		self.integrator = integrator
 		self.openmmTrue = platform
+		self.nofThreads = properties['nofThreads']
 
 		# Get last directory
 		self.topologyFNs = glob.glob("robots/bot*/*.prmtop")
@@ -330,7 +331,7 @@ SAMPLER ''' + self.integrator.type + " " + self.integrator.type + '''
 TIMESTEPS 0.001 ''' + str(self.integrator.ts) + ''' # Timesteps to be used with regimens
 MDSTEPS 10 200  # Number of MD trial steps
 BOOST_MDSTEPS 1 1
-SAMPLES_PER_ROUND 5 1  # Number of acc-rej steps within a mixing round
+SAMPLES_PER_ROUND 3 1  # Number of acc-rej steps within a mixing round
 REPRODUCIBLE FALSE FALSE
 SEED 999 999
 
@@ -356,7 +357,7 @@ DISTANCE 1 2
 DIHEDRAL 1 2 3 4 1 2 3 4
 
 # Software specs
-THREADS 0 0
+THREADS ''' + str(self.nofThreads) + " " + str(self.nofThreads) + '''
 OPENMM ''' + str(self.openmmTrue).upper() + " " + str(self.openmmTrue).upper() + '''
 ''' 
 		inpTxt += restOfTxt
