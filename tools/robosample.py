@@ -329,7 +329,7 @@ WORLDS R0 R1                        # Regimen (IC, TD, MIX, RB, RBMIX)
 ROOTS 0 0
 SAMPLER ''' + self.integrator.type + " " + self.integrator.type + '''
 TIMESTEPS 0.001 ''' + str(self.integrator.ts) + ''' # Timesteps to be used with regimens
-MDSTEPS 10 200  # Number of MD trial steps
+MDSTEPS 50 200  # Number of MD trial steps
 BOOST_MDSTEPS 1 1
 SAMPLES_PER_ROUND 3 1  # Number of acc-rej steps within a mixing round
 REPRODUCIBLE FALSE FALSE
