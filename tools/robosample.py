@@ -227,6 +227,7 @@ class Simulation:
 		self.system = system
 		self.integrator = integrator
 		self.openmmTrue = platform
+
 		self.nofThreads = properties['nofThreads']
 
 		# Get last directory
@@ -244,6 +245,8 @@ class Simulation:
 		self.filename = filename
 		
 		self.reporters = []
+		self.inpDict = None
+
 	#
 
 	def step(self, nofSteps):
@@ -265,30 +268,30 @@ class Simulation:
 				+ " --flex bot.flex --probesize 0.1 >" + os.path.join(self.path, "bot.all.flex")
 			)
 
-		# Get hinges, loops and sugars
+		# Get acc, loops and sugars
 		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
 				+ " --subset rama --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " > " + os.path.join(self.path, "bot.hinges.flex")
+				+ " > " + os.path.join(self.path, "bot.acc.flex")
 		os.system("echo \"" + execStr + "\"")
 		os.system(execStr)
 		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
 				+ " --subset side --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
+				+ " >> " + os.path.join(self.path, "bot.acc.flex")
 		os.system("echo \"" + execStr + "\"")
 		os.system(execStr)
 		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
 				+ " --subset sugnln --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
+				+ " >> " + os.path.join(self.path, "bot.acc.flex")
 		os.system("echo \"" + execStr + "\"")
 		os.system(execStr)
 		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
 				+ " --subset suginter --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
+				+ " >> " + os.path.join(self.path, "bot.acc.flex")
 		os.system("echo \"" + execStr + "\"")
 		os.system(execStr)
 		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
 				+ " --subset sugout --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.hinges.flex")
+				+ " >> " + os.path.join(self.path, "bot.acc.flex")
 		os.system("echo \"" + execStr + "\"")
 		os.system(execStr)
 
@@ -304,71 +307,69 @@ class Simulation:
 		os.system("echo \"" + execStr + "\"")
 		os.system(execStr)
 
+		self.inpDict = {
+			'MOLECULES': ['robots/bot0'],
+			'PRMTOP': ['bot.prmtop', 'bot.prmtop'],
+			'INPCRD': ['bot.rst7', 'bot.rst7'],
+			'RBFILE': ['bot.rb', 'bot.rb'],
+			'FLEXFILE': ['bot.all.flex', 'bot.acc.flex'],
+			'ROOT_MOBILITY': ['Weld', 'Weld'],
+			'OUTPUT_DIR': [self.reporters[0].outputDir, self.reporters[0].outputDir],
+			'RUN_TYPE': ['Normal', 'Normal'],
+			'ROUNDS': [str(nofSteps)],
+			'ROUNDS_TILL_REBLOCK': [10, 10],
+			'WORLDS': ['R0', 'R1'],
+			'RANDOM_WORLD_ORDER': ['FALSE'], 
+			'ROOTS': [0, 0],
+			'SAMPLER': [self.integrator.type, self.integrator.type],
+			'TIMESTEPS': [0.001, self.integrator.ts],
+			'MDSTEPS': [10, 10],
+			'BOOST_MDSTEPS': [1, 1],
+			'SAMPLES_PER_ROUND': [1, 1],
+			'REPRODUCIBLE': ['FALSE', 'FALSE'],
+			'SEED': [999, 999],
+			'THERMOSTAT': ['Andersen', 'Andersen'],
+			'TEMPERATURE_INI': [self.integrator.T, self.integrator.T],
+			'TEMPERATURE_FIN': [self.integrator.T, self.integrator.T],
+			'BOOST_TEMPERATURE': [600, 600],
+			'FFSCALE': ['AMBER', 'AMBER'],
+			'GBSA': [1.0, 1.0],
+			'FIXMAN_POTENTIAL': ['FALSE', 'TRUE'],
+			'FIXMAN_TORQUE': ['FALSE', 'TRUE'],
+			'VISUAL': ['TRUE', 'TRUE'],
+			'PRINT_FREQ': [1, 1],
+			'WRITEPDBS': [1, 0],
+			'GEOMETRY': ['FALSE', 'FALSE'],
+			'DISTANCE': [0, 1],
+			'DIHEDRAL': [0, 1, 2, 3],
+			'THREADS': [self.nofThreads, self.nofThreads],
+			'OPENMM': [str(self.openmmTrue).upper(), str(self.openmmTrue).upper()]
+		}
+
+
+
 		# Put input together
 		inpTxt = '''# Robosample input \n'''
 
 		moldirs = self.system.moldirs
-		inpTxt += ("MOLECULES")
 		for moldir in self.system.moldirs:
-			inpTxt += (' ' + moldir)
+			#inpTxt += (' ' + moldir)
+			pass
 
-		restOfTxt = ''' 
-PRMTOP bot.prmtop bot.prmtop       # Parameter file
-INPCRD bot.rst7 bot.rst7     # Coordinate / Restart file
-RBFILE bot.rb bot.rb   # Rigid bodies definition file
-FLEXFILE bot.all.flex bot.hinges.flex # Flexibility definition file
-ROOT_MOBILITY Cartesian Free # Ground to Compound mobilizer
-OUTPUT_DIR ''' + self.reporters[0].outputDir + " " + self.reporters[0].outputDir + '''
-
-# Simulation params
-RUN_TYPE Normal Normal # normal HMC or Non-Eq HMC
-ROUNDS ''' + str(nofSteps) + '''
-ROUNDS_TILL_REBLOCK 10 10
-RANDOM_WORLD_ORDER FALSE FALSE
-WORLDS R0 R1                        # Regimen (IC, TD, MIX, RB, RBMIX)
-ROOTS 0 0
-SAMPLER ''' + self.integrator.type + " " + self.integrator.type + '''
-TIMESTEPS 0.001 ''' + str(self.integrator.ts) + ''' # Timesteps to be used with regimens
-MDSTEPS 50 200  # Number of MD trial steps
-BOOST_MDSTEPS 1 1
-SAMPLES_PER_ROUND 3 1  # Number of acc-rej steps within a mixing round
-REPRODUCIBLE FALSE FALSE
-SEED 999 999
-
-# Thermodynamics
-THERMOSTAT Andersen Andersen   # Thermostat
-TEMPERATURE_INI  ''' + str(self.integrator.T) + " " + str(self.integrator.T) + '''
-TEMPERATURE_FIN  ''' + str(self.integrator.T) + " " + str(self.integrator.T) + '''
-BOOST_TEMPERATURE  1 1      # Boost temperature 
-FFSCALE AMBER AMBER     # Force field
-GBSA 1 1         # GBSA scale factor
-
-# Correction factors
-FIXMAN_POTENTIAL TRUE TRUE # Use Fixman potential
-FIXMAN_TORQUE TRUE TRUE   # Use Fixman torque
-
-# Output
-VISUAL TRUE TRUE             # Use the visualizer
-PRINT_FREQ  1 1
-WRITEPDBS 1 0    # Write pdbs
-GEOMETRY FALSE FALSE         # Calculate geometric features
-
-DISTANCE 1 2
-DIHEDRAL 1 2 3 4 1 2 3 4
-
-# Software specs
-THREADS ''' + str(self.nofThreads) + " " + str(self.nofThreads) + '''
-OPENMM ''' + str(self.openmmTrue).upper() + " " + str(self.openmmTrue).upper() + '''
-''' 
-		inpTxt += restOfTxt
+		for key in list(self.inpDict.keys()):
+			inpTxt += key
+			for val in self.inpDict[key]:
+				inpTxt +=  " " + str(val)
+			inpTxt += '\n'
+		
 
 		inpFN = 'inp.test'
 		inpF = open(inpFN, "w+")
 		inpF.write(inpTxt)
 		inpF.close()
 
-		#os.system("echo \'" + inpTxt + "\'")
-		os.system("$ROBOSAMPLEDIR/build?debug/tests/Robosample inp.test")
+		os.system("echo \'" + inpTxt + "\'")
+		#os.system("$ROBOSAMPLEDIR/build?debug/tests/Robosample inp.test")
 
 	#	
 #

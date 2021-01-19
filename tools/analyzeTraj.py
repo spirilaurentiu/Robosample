@@ -85,10 +85,9 @@ nofParamSets = nofSeeds // 3
 
 seeds = np.array(np.array_split(np.array([int(seed) for seed in args.FNSeeds]) , nofParamSets))
 print(seeds)
-exit(0)
 
-mofm = np.empty((3990))
-sofm = np.empty((3990))
+runningMean = np.empty((3990))
+runningStd = np.empty((3990))
 TA = []
 fignum = -1
 if "traj" in args.analyze:
@@ -103,20 +102,77 @@ if "traj" in args.analyze:
 	#	TA.RG()
 	#	TA.SASA()
 	#	TA.Helicity()
-	for paramSeti in nofParamSets:	
-		for framei in range(0, 3990):
-			distances = []
-			for seedi in range(seeds[paramSeti].shape[0]):
-				for diri in range(len(args.simDirs)):
-					#print(args.simDirs[diri])
-					#print(seedi)
-					#print(TA[diri].distances[seedi].flatten()[0:framei])
-					distances.append(TA[diri].distances[seedi].flatten()[0:framei+1])
-			means = [np.mean(sim) for sim in distances]
-			mofm[framei] = np.mean(means)
-			sofm[framei] = np.std(means)
+
+	# Put data in Numpy array: dim1 is dir, dim2 is seed, dim3 is data
+	data = []
+	dim1ix = -1
+	for seedi in range(len(args.FNSeeds)):
+		for diri in range(len(args.simDirs)):
+			dim1ix += 1
+			#print("dir", diri, args.simDirs[diri])
+			#print("seedi to seed", seedi, args.FNSeeds[seedi])
+			print("append TA[", args.simDirs[diri], "].data[", args.FNSeeds[seedi], "]")
+			#print(TA[diri].data[seedi].flatten())
+			data.append(TA[diri].distances[seedi].flatten())
+	data = np.array(data)
+	print(data)
+
+	# Calculate
+	pltNofRows = 2
+	pltNofCols = 2
+
+	nofSimsPerParamSet = int(data.shape[0] / nofParamSets)
+	print("There are", nofSimsPerParamSet, "simulations per parameter set.")
+	runningMean = np.empty(data.shape)
+	runningStd = np.empty(data.shape)
+	print("nofParamSets", nofParamSets)
+	print("data.shape", data.shape)
+	mofm = np.empty((nofParamSets, data.shape[1]))
+	sofm = np.empty((nofParamSets, data.shape[1]))
+
+	fig, axs = plt.subplots(pltNofRows, pltNofCols)
+	for paramSeti in range(nofParamSets):
+		startSim = paramSeti * nofSimsPerParamSet
+		print("Parameter set ", paramSeti, "with seeds", seeds[paramSeti])
+		for framei in range(0, data.shape[1]):
+		#for framei in range(0, 1):
+			paramSetSimsRange = range(startSim, nofSimsPerParamSet + startSim)
+			#print(paramSetSimsRange)
+			for simi in paramSetSimsRange:
+				runningMean[simi, framei] = np.mean(data[simi, 0:framei+1])
+				runningStd[ simi, framei] = np.std(data[simi, 0:framei+1])
 		
-		plt.plot(mofm)
+			#print("runningMean.shape", runningMean.shape)
+			#print("runningMean", runningMean)	
+			#print("runningMean [, ]", paramSetSimsRange, framei)	
+			mofm[paramSeti, framei] = np.mean(runningMean[paramSetSimsRange, framei])
+			sofm[paramSeti, framei] = np.std(runningMean[paramSetSimsRange, framei])
+
+
+	print("Plotting running means and stds")
+	colors = ['black', 'red']
+	for paramSeti in range(nofParamSets):
+		startSim = paramSeti * nofSimsPerParamSet
+		for simi in range(startSim, nofSimsPerParamSet + startSim):
+
+			X = range(0, runningMean.shape[1])
+			Y = runningMean[simi]
+			axs[0, 0].plot(X, Y, color = colors[paramSeti])
+			axs[0, 0].set_title('Running Mean')
+
+			Y = runningStd[simi]
+			axs[0, 1].plot(X, Y, color = colors[paramSeti])
+			axs[0, 1].set_title('Running Std')
+
+			Y = mofm[paramSeti]
+			Yerr = sofm[paramSeti]
+			#axs[1, 0].set_ylim(np.min(mofm), np.max(mofm))
+			axs[1, 0].errorbar(X, Y, yerr=Yerr, color = colors[paramSeti], errorevery = 100, elinewidth = 0.5)
+			axs[1, 0].set_title('Mean of Means')
+			axs.legend()
+
+			#Yerr = 
+			#axs[1, 0].errorbar(X, Y, yerr=Yerr, label=str(paramSeti))
 
 		
 		# Plot trajectory based geometric functions
@@ -130,7 +186,7 @@ if "traj" in args.analyze:
 	#			figs[figIx], axes[figIx] = plt.subplots(2, 1)
 	#			plt.suptitle('Seed ' + str(args.FNSeeds[seedi]))
 	#	
-	#			series = [TA.distances[seedi]]
+	#			series = [TA.data[seedi]]
 	#			seriesLabels = ['Distance']
 	#			for si in range(len(series)):
 	#				axes[figIx][si].plot(series[si], label=seriesLabels[si], color='black')
@@ -168,6 +224,7 @@ if "traj" in args.analyze:
 
 
 if args.makeplots:
+	plt.legend()
 	plt.show()
 #
 #
