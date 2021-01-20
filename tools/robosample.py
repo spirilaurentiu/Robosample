@@ -1,6 +1,6 @@
 # Robosample tools
 # Imports
-import os, errno
+import os, sys, errno, subprocess
 import shutil
 import glob
 import itertools
@@ -223,6 +223,7 @@ class Context:
 
 class Simulation:
 	def __init__(self, topology, system, integrator='HMC', platform='CPU', properties={'nofThreads': 2}):
+		print("Starting Simulation init")
 		self.context = Context()
 		self.system = system
 		self.integrator = integrator
@@ -244,108 +245,193 @@ class Simulation:
 		self.path = path
 		self.filename = filename
 		
+		self.topFN = os.path.join(self.path, self.system.topologyFNs[0])
+		self.crdFN = os.path.join(self.path, "bot.rst7")
+
+		# All processing is done with MDTraj for now
+		#md.load(self.context.positionsFNs, top = self.topFN)
+
+		self.allflexFN = os.path.join(self.path, "bot.all.flex")
+		self.defaultRB = os.path.join(self.path, "bot.rb")
+		self.defaultFLEX = os.path.join(self.path, "bot.flex")
+
+		# Get all bonds
+		#if not os.path.exists(self.allflexFN):
+			
+			#execList = ['python3', '/home/pcuser/git3/Robosample/tools/getAllBonds.py', '--top', str(self.topFN), "--traj", self.crdFN, '--flex', 'bot.flex', '--probesize', '0.1']
+			#proc = None
+			#with open(os.path.join(self.path, "bot.all.flex"), "w") as outF:
+			#	print("executing getAllBondsi with", self.crdFN)
+			#	proc = subprocess.run(execList, env={**os.environ}, stdout = outF)
+			
+		execStr = "python3 $ROBOSAMPLEDIR/tools/getAllBonds.py --top " + str(self.topFN) \
+			+ " --traj " + self.crdFN \
+			+ " --flex bot.flex --probesize 0.1 >" + os.path.join(self.path, "bot.all.flex")
+		os.system("echo \"" + execStr + "\"")
+		os.system(execStr)
+
 		self.reporters = []
 		self.inpDict = None
 
+		self.inpDict = {
+			'MOLECULES': ['robots/bot0'],
+			'ROUNDS': [10],
+			'DISTANCE': [0, 1],
+			'DIHEDRAL': [0, 1, 2, 3],
+			'OUTPUT_DIR': ['robots/'],
+			'RANDOM_WORLD_ORDER': ['FALSE'], 
+
+			'PRMTOP': ['bot.prmtop'],
+			'INPCRD': ['bot.rst7'],
+			'RBFILE': ['bot.rb'],
+			'FLEXFILE': ['bot.all.flex'],
+			'ROOT_MOBILITY': ['Cartesian'],
+			'RUN_TYPE': ['Normal'],
+			'ROUNDS_TILL_REBLOCK': [10],
+			'WORLDS': ['R0'],
+			'ROOTS': [0],
+			'SAMPLER': [self.integrator.type],
+			'TIMESTEPS': [0.001],
+			'MDSTEPS': [10],
+			'BOOST_MDSTEPS': [1],
+			'SAMPLES_PER_ROUND': [3],
+			'REPRODUCIBLE': ['FALSE'],
+			'SEED': [999],
+			'THERMOSTAT': ['Andersen'],
+			'TEMPERATURE_INI': [self.integrator.T],
+			'TEMPERATURE_FIN': [self.integrator.T],
+			'BOOST_TEMPERATURE': [600],
+			'FFSCALE': ['AMBER'],
+			'GBSA': [1.0],
+			'FIXMAN_POTENTIAL': ['FALSE'],
+			'FIXMAN_TORQUE': ['FALSE'],
+			'VISUAL': ['FALSE'],
+			'PRINT_FREQ': [1],
+			'WRITEPDBS': [1],
+			'GEOMETRY': ['FALSE'],
+			'THREADS': [self.nofThreads],
+			'OPENMM': [str(self.openmmTrue).upper()]
+		}
+
+		self.nofWorlds = 1
+
+		print("Done Simulation init")
+	#
+
+	def addWorld(self, regionType='stretch', region=[[1, 2]], rootMobility='Weld', timestep=0.001, mdsteps=10):
+		print("Starting Simulation addWorld")
+		self.nofWorlds += 1
+		if regionType == 'stretch':
+			region = np.array(region)
+			if region.ndim != 2:
+				print("Error adding world. You need to specify a 2-dim array of stretches.")
+				exit(3)
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+				+ " --subset rama --accRange 0.0 10 --joint Pin --residRange " +  str(region[0][0]) + " "  + str(region[0][1]) \
+				+ " > " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+				+ " --subset side --accRange 0.0 10 --joint Pin --residRange " +  str(region[0][0]) + " "  + str(region[0][1]) \
+				+ " >> " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+			for i in range(1, region.shape[0]):
+				execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset rama --accRange 0.0 10 --joint Pin --residRange " +  str(region[i][0]) + " "  + str(region[i][1]) \
+					+ " >> " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
+				os.system("echo \"" + execStr + "\"")
+				os.system(execStr)
+				execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset side --accRange 0.0 10 --joint Pin --residRange " +  str(region[i][0]) + " "  + str(region[i][1]) \
+					+ " >> " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
+				os.system("echo \"" + execStr + "\"")
+				os.system(execStr)
+			
+			self.inpDict['FLEXFILE'].append("bot.stretch" + str(self.nofWorlds) + ".flex")
+			
+		# Get acc, loops and sugars
+		if regionType == 'accesible':
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset rama --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+					+ " > " + os.path.join(self.path, "bot.acc.flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset side --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset sugnln --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset suginter --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset sugout --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+	
+			self.inpDict['FLEXFILE'].append('bot.acc.flex')
+
+		# Ball world		
+		if regionType == 'ball':
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset rama --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
+					+ " > " + os.path.join(self.path, "bot.ball.flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+					+ " --subset side --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
+					+ " >> " + os.path.join(self.path, "bot.ball.flex")
+			os.system("echo \"" + execStr + "\"")
+			os.system(execStr)
+
+			self.inpDict['FLEXFILE'].append('bot.ball.flex')
+
+		self.inpDict['PRMTOP'].append('bot.prmtop')
+		self.inpDict['INPCRD'].append('bot.rst7')
+		self.inpDict['RBFILE'].append('bot.rb')
+		self.inpDict['ROOT_MOBILITY'].append(rootMobility)
+		self.inpDict['RUN_TYPE'].append('Normal')
+		self.inpDict['ROUNDS_TILL_REBLOCK'].append(10)
+		self.inpDict['ROOTS'].append(0)
+		self.inpDict['SAMPLER'].append(self.integrator.type)
+		self.inpDict['TIMESTEPS'].append(timestep)
+		self.inpDict['MDSTEPS'].append(mdsteps)
+		self.inpDict['BOOST_MDSTEPS'].append(1)
+		self.inpDict['SAMPLES_PER_ROUND'].append(1)
+		self.inpDict['REPRODUCIBLE'].append('FALSE')
+		self.inpDict['SEED'].append(999)
+		self.inpDict['THERMOSTAT'].append('Andersen')
+		self.inpDict['TEMPERATURE_INI'].append(self.integrator.T)
+		self.inpDict['TEMPERATURE_FIN'].append(self.integrator.T)
+		self.inpDict['BOOST_TEMPERATURE'].append(600)
+		self.inpDict['FFSCALE'].append('AMBER')
+		self.inpDict['GBSA'].append(1.0)
+		self.inpDict['FIXMAN_POTENTIAL'].append('TRUE')
+		self.inpDict['FIXMAN_TORQUE'].append('TRUE')
+		self.inpDict['VISUAL'].append('FALSE')
+		self.inpDict['PRINT_FREQ'].append(1)
+		self.inpDict['WRITEPDBS'].append(0)
+		self.inpDict['GEOMETRY'].append('FALSE')
+		self.inpDict['THREADS'].append(self.nofThreads)
+		self.inpDict['OPENMM'].append(str(self.openmmTrue).upper())
+
+		self.inpDict['WORLDS'].append('R' + str(self.nofWorlds))
+		print("Done Simulation addWorld")
 	#
 
 	def step(self, nofSteps):
-		topFN = os.path.join(self.path, self.system.topologyFNs[0])
-		crdFN = os.path.join(self.path, "bot.rst7")
-		defaultRB = os.path.join(self.path, "bot.rb")
-		defaultFLEX = os.path.join(self.path, "bot.flex")
-		os.system("touch " + defaultRB)
-		os.system("touch " + defaultFLEX)
-
-		# All processing is done with MDTraj for now
-		md.load(self.context.positionsFNs, top = topFN)
-
-		# Get all bonds
-		allflexFN = os.path.join(self.path, "bot.all.flex")
-		if not os.path.exists(allflexFN):
-			os.system("python3 $ROBOSAMPLEDIR/tools/getAllBonds.py --top " + str(topFN) 
-				+ " --traj " + crdFN
-				+ " --flex bot.flex --probesize 0.1 >" + os.path.join(self.path, "bot.all.flex")
-			)
-
-		# Get acc, loops and sugars
-		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset rama --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " > " + os.path.join(self.path, "bot.acc.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
-		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset side --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.acc.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
-		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset sugnln --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.acc.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
-		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset suginter --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.acc.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
-		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset sugout --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.acc.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
-
-		# Ball world		
-		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset rama --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " > " + os.path.join(self.path, "bot.ball.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
-		execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset side --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
-				+ " >> " + os.path.join(self.path, "bot.ball.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
-
-		self.inpDict = {
-			'MOLECULES': ['robots/bot0'],
-			'PRMTOP': ['bot.prmtop', 'bot.prmtop'],
-			'INPCRD': ['bot.rst7', 'bot.rst7'],
-			'RBFILE': ['bot.rb', 'bot.rb'],
-			'FLEXFILE': ['bot.all.flex', 'bot.acc.flex'],
-			'ROOT_MOBILITY': ['Weld', 'Weld'],
-			'OUTPUT_DIR': [self.reporters[0].outputDir, self.reporters[0].outputDir],
-			'RUN_TYPE': ['Normal', 'Normal'],
-			'ROUNDS': [str(nofSteps)],
-			'ROUNDS_TILL_REBLOCK': [10, 10],
-			'WORLDS': ['R0', 'R1'],
-			'RANDOM_WORLD_ORDER': ['FALSE'], 
-			'ROOTS': [0, 0],
-			'SAMPLER': [self.integrator.type, self.integrator.type],
-			'TIMESTEPS': [0.001, self.integrator.ts],
-			'MDSTEPS': [10, 10],
-			'BOOST_MDSTEPS': [1, 1],
-			'SAMPLES_PER_ROUND': [1, 1],
-			'REPRODUCIBLE': ['FALSE', 'FALSE'],
-			'SEED': [999, 999],
-			'THERMOSTAT': ['Andersen', 'Andersen'],
-			'TEMPERATURE_INI': [self.integrator.T, self.integrator.T],
-			'TEMPERATURE_FIN': [self.integrator.T, self.integrator.T],
-			'BOOST_TEMPERATURE': [600, 600],
-			'FFSCALE': ['AMBER', 'AMBER'],
-			'GBSA': [1.0, 1.0],
-			'FIXMAN_POTENTIAL': ['FALSE', 'TRUE'],
-			'FIXMAN_TORQUE': ['FALSE', 'TRUE'],
-			'VISUAL': ['TRUE', 'TRUE'],
-			'PRINT_FREQ': [1, 1],
-			'WRITEPDBS': [1, 0],
-			'GEOMETRY': ['FALSE', 'FALSE'],
-			'DISTANCE': [0, 1],
-			'DIHEDRAL': [0, 1, 2, 3],
-			'THREADS': [self.nofThreads, self.nofThreads],
-			'OPENMM': [str(self.openmmTrue).upper(), str(self.openmmTrue).upper()]
-		}
-
+		print("Starting Simulation step")
+		os.system("touch " + self.defaultRB)
+		os.system("touch " + self.defaultFLEX)
 
 
 		# Put input together
@@ -362,7 +448,11 @@ class Simulation:
 				inpTxt +=  " " + str(val)
 			inpTxt += '\n'
 		
+		# Modify input
+		self.inpDict['ROUNDS'] = [nofSteps]
+		self.inpDict['OUTPUT_DIR'] = [self.reporters[0].outputDir]
 
+		# Write input file
 		inpFN = 'inp.test'
 		inpF = open(inpFN, "w+")
 		inpF.write(inpTxt)
@@ -371,6 +461,7 @@ class Simulation:
 		os.system("echo \'" + inpTxt + "\'")
 		#os.system("$ROBOSAMPLEDIR/build?debug/tests/Robosample inp.test")
 
+		print("Done Simulation step")
 	#	
 #
 
@@ -386,6 +477,8 @@ class HMCIntegrator:
 
 class VVIntegrator:
 	def __init__(self, T, ts):
+		self.T = T
+		self.ts = ts
 		
 		self.type = 'VV'
 	#		

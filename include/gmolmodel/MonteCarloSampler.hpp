@@ -172,7 +172,7 @@ protected:
     int acceptedStepsBufferSize = 30;
     std::list<int> acceptedStepsBuffer;
 
-    int QsBufferSize = 300;
+    int QsBufferSize = 30000000000;
     //std::list<SimTK::Vector> QsBuffer;
     std::list<SimTK::Real> QsBuffer;
 
