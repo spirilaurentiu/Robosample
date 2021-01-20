@@ -16,6 +16,14 @@ kelvin = 1
 picoseconds = 1
 nanometer = 1
 
+def printFlexLine(line, joint):
+	return ("%d %d %s %s %s %s %d %s %s %s %d %s %.5f %.5f\n" % \
+(int(line[0]), int(line[1]), joint, line[3], line[4], line[5], int(line[6]), \
+line[7], line[8], line[9], int(line[10]), line[11], float(line[12]), \
+float(line[13]))
+	)
+#
+
 class Platform:
 	"""
 	Contains information on # of threads and openmm GPU usage
@@ -181,6 +189,8 @@ class Context:
 	def __init__(self):
 		self.positions = None
 		self.positionsFNs = None
+		self.mdtrajTraj = None
+		self.path = None
 	#
 	
 	def setPositions(self, positions):
@@ -196,10 +206,9 @@ class Context:
 			exit(2)
 
 		# Get the last directory
-		path = None
 		filename = None
 		for f in topologyFNs:
-			path, filename = os.path.split(f)
+			self.path, filename = os.path.split(f)
 		
 		inpTxt = """TITLE\n"""
 		inpTxt += str(self.positions.shape[0]) + '\n'
@@ -213,11 +222,306 @@ class Context:
 		
 		#inpTxt += '\n'
 
-
-		self.positionsFNs = path + '/bot.rst7'
+		self.positionsFNs = self.path + '/bot.rst7'
 		inpF = open(self.positionsFNs, "w+")
 		inpF.write(inpTxt)
 		inpF.close()
+	
+		self.allflexFN = os.path.join(self.path, "bot.all.flex") # duplicate in simulation
+
+		# All processing is done with MDTraj for now
+		self.mdtrajTraj = md.load(self.positionsFNs, top = topologyFNs[0])
+		self.contacts = md.compute_contacts(self.mdtrajTraj, contacts='all', scheme='ca', ignore_nonprotein=False, periodic=False)
+
+	def process_flex(self, subset='rama', residRange=[0, 1], accRange=[0.0, 10.0], jointType='Pin', worldNo=2, FN=None):
+		# Robosample tools
+		from ls_parsetxt import ParseTxt
+		
+		# Read data
+		pars = ParseTxt()
+		pars.Read(self.allflexFN)
+		pdata = pars.parsed_data
+		
+		aa = ["ALA", "ARG", "ASN", "ASP", "CYS", "GLU", "GLN", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"]
+		sugars = ['UYB', '4YB', 'VMB', '2MA', '3LB', '0fA', '0SA']
+
+		if FN == None:
+			FN = os.path.join(self.path, "bot." + str(worldNo) + ".flex")
+		f = open(FN, "a+")
+		# Get all
+		if (subset).lower() == "all":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					line = pdata[pi]
+					atom1Acc = float(line[-2])
+					atom2Acc = float(line[-1])
+					if( ((atom1Acc >= accRange[0]) and (atom1Acc <= accRange[1])) or 
+					    ((atom2Acc >= accRange[0]) and (atom2Acc <= accRange[1])) ):
+						f.write(printFlexLine(line, jointType))
+		
+		# Get phi
+		if (subset).lower() == "phi":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					line = pdata[pi]
+					atom1Acc = float(line[-2])
+					atom2Acc = float(line[-1])
+					if( ((atom1Acc >= accRange[0]) and (atom1Acc <= accRange[1])) or 
+					    ((atom2Acc >= accRange[0]) and (atom2Acc <= accRange[1])) ):
+						if(line[7] != "PRO"):
+							if(((line[4] == "N") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "N"))):
+								f.write(printFlexLine(line, jointType))
+		
+		# Get psi
+		if (subset).lower() == "psi":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					line = pdata[pi]
+					atom1Acc = float(line[-2])
+					atom2Acc = float(line[-1])
+					if( ((atom1Acc >= accRange[0]) and (atom1Acc <= accRange[1])) or 
+					    ((atom2Acc >= accRange[0]) and (atom2Acc <= accRange[1])) ):
+						if(((line[4] == "C") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "C"))):
+							f.write(printFlexLine(line, jointType))
+		
+		# Get Ramachandran flexibility
+		if (subset).lower() == "rama":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					line = pdata[pi]
+					atom1Acc = float(line[-2])
+					atom2Acc = float(line[-1])
+					if( ((atom1Acc >= accRange[0]) and (atom1Acc <= accRange[1])) or 
+					    ((atom2Acc >= accRange[0]) and (atom2Acc <= accRange[1])) ):
+						if(line[7] != "PRO"):
+							if(((line[4] == "N") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "N"))):
+								f.write(printFlexLine(line, jointType))
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					line = pdata[pi]
+					atom1Acc = float(line[-2])
+					atom2Acc = float(line[-1])
+					if( ((atom1Acc >= accRange[0]) and (atom1Acc <= accRange[1])) or 
+					    ((atom2Acc >= accRange[0]) and (atom2Acc <= accRange[1])) ):
+						if(((line[4] == "C") and (line[8] == "CA")) or ((line[4] == "CA") and (line[8] == "C"))):
+							f.write(printFlexLine(line, jointType))
+		
+		
+		# Get sidechains
+		if (subset).lower() == "side":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					line = pdata[pi]
+					atom1Acc = float(line[-2])
+					atom2Acc = float(line[-1])
+					if( ((atom1Acc >= accRange[0]) and (atom1Acc <= accRange[1])) or 
+					    ((atom2Acc >= accRange[0]) and (atom2Acc <= accRange[1])) ):
+						if(line[7] == "ALA"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "VAL"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG1")) or ((line[4] == "CG1") and (line[8] == "CB")) or 
+							   ((line[4] == "CB") and (line[8] == "CG2")) or ((line[4] == "CG2") and (line[8] == "CB"))):
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "LEU"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CG") and (line[8] == "CD1")) or ((line[4] == "CD1") and (line[8] == "CG")) or 
+							   ((line[4] == "CG") and (line[8] == "CD2")) or ((line[4] == "CD2") and (line[8] == "CG"))):
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "ILE"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG1")) or ((line[4] == "CG1") and (line[8] == "CB")) or 
+							   ((line[4] == "CB") and (line[8] == "CG2")) or ((line[4] == "CG2") and (line[8] == "CB"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CG1") and (line[8] == "CD1")) or ((line[4] == "CD1") and (line[8] == "CG1"))):
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "MET"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+		
+							if jointType in ["BallM", "BallF"] :
+								if(((line[4] == "CG") and (line[8] == "SD")) or ((line[4] == "SD") and (line[8] == "CG"))):
+									f.write(printFlexLine(line, "Pin"))
+							else:
+								if(((line[4] == "CG") and (line[8] == "SD")) or ((line[4] == "SD") and (line[8] == "CG"))):
+									f.write(printFlexLine(line, jointType))
+		
+							if jointType in ["BallM", "BallF"] :
+								if(((line[4] == "SD") and (line[8] == "CE")) or ((line[4] == "CE") and (line[8] == "SD"))):
+									f.write(printFlexLine(line, "Pin"))
+							else:
+								if(((line[4] == "SD") and (line[8] == "CE")) or ((line[4] == "CE") and (line[8] == "SD"))):
+									f.write(printFlexLine(line, jointType))
+		
+						if(line[7] == "PHE"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "TRP"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "TYR"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+		
+							if jointType in ["BallM", "BallF"] :
+								if(((line[4] == "CZ") and (line[8] == "OH")) or ((line[4] == "OH") and (line[8] == "CZ"))): 
+									f.write(printFlexLine(line, "Pin"))
+							else:
+								if(((line[4] == "CZ") and (line[8] == "OH")) or ((line[4] == "OH") and (line[8] == "CZ"))): 
+									f.write(printFlexLine(line, jointType))
+		
+						if(line[7] == "ASN"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "SER"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+		
+							if jointType in ["BallM", "BallF"] :
+								if(((line[4] == "CB") and (line[8] == "OG")) or ((line[4] == "OG") and (line[8] == "CB"))): 
+									f.write(printFlexLine(line, "Pin"))
+							else:
+								if(((line[4] == "CB") and (line[8] == "OG")) or ((line[4] == "OG") and (line[8] == "CB"))): 
+									f.write(printFlexLine(line, jointType))
+						if(line[7] == "THR"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG2")) or ((line[4] == "CG2") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+							if jointType in ["BallM", "BallF"] :
+								if(((line[4] == "CB") and (line[8] == "OG1")) or ((line[4] == "OG1") and (line[8] == "CB"))):
+									f.write(printFlexLine(line, "Pin"))
+							else:
+								if(((line[4] == "CB") and (line[8] == "OG1")) or ((line[4] == "OG1") and (line[8] == "CB"))):
+									f.write(printFlexLine(line, jointType))
+						if(line[7] == "CYS"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if jointType in ["BallM", "BallF"] :
+								if(((line[4] == "CB") and (line[8] == "SG")) or ((line[4] == "SG") and (line[8] == "CB"))): 
+									f.write(printFlexLine(line, "Pin"))
+							else:
+								if(((line[4] == "CB") and (line[8] == "SG")) or ((line[4] == "SG") and (line[8] == "CB"))): 
+									f.write(printFlexLine(line, jointType))
+						if(line[7] == "GLN"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CG") and (line[8] == "CD")) or ((line[4] == "CD") and (line[8] == "CG"))):
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "LYS"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CG") and (line[8] == "CD")) or ((line[4] == "CD") and (line[8] == "CG"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CD") and (line[8] == "CE")) or ((line[4] == "CE") and (line[8] == "CD"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CE") and (line[8] == "NZ")) or ((line[4] == "NZ") and (line[8] == "CE"))):
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "ARG"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CG") and (line[8] == "CD")) or ((line[4] == "CD") and (line[8] == "CG"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CD") and (line[8] == "NE")) or ((line[4] == "NE") and (line[8] == "CD"))):
+								f.write(printFlexLine(line, jointType))
+							#if(((line[4] == "NE") and (line[8] == "CZ")) or ((line[4] == "CZ") and (line[8] == "NE"))):
+							#	f.write(printFlexLine(line, jointType))
+							#if(((line[4] == "CZ") and (line[8] == "NH1")) or ((line[4] == "NH1") and (line[8] == "CZ"))):
+							#	f.write(printFlexLine(line, jointType))
+							#if(((line[4] == "CZ") and (line[8] == "NH2")) or ((line[4] == "NH2") and (line[8] == "CZ"))):
+							#	f.write(printFlexLine(line, jointType))
+						if((line[7][0] == "H") and (line[7][1] == "I")):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "ASP"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+						if(line[7] == "GLU"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CG") and (line[8] == "CD")) or ((line[4] == "CD") and (line[8] == "CG"))):
+								f.write(printFlexLine(line, jointType))
+								
+			
+		# Glycan part	
+		if (subset).lower() == "sugnln":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					if(line[7] == "NLN") and (line[11] == "NLN"):
+							if(((line[4] == "CA") and (line[8] == "CB")) or ((line[4] == "CB") and (line[8] == "CA"))):
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CB") and (line[8] == "CG")) or ((line[4] == "CG") and (line[8] == "CB"))): 
+								f.write(printFlexLine(line, jointType))
+							if(((line[4] == "CG") and (line[8] == "ND2")) or ((line[4] == "ND2") and (line[8] == "CG"))):
+								f.write(printFlexLine(line, jointType))
+					if(line[7] == "NLN") and (line[11] in sugars):
+						if((line[4] == "ND2") or (line[8] == "ND2")):
+							f.write(printFlexLine(line, jointType))
+			
+		if (subset).lower() == "suginter":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					if(line[7] in sugars) and (line[11] in sugars) and (line[7] != line[11]):
+						f.write(printFlexLine(line, jointType))
+		
+		if (subset).lower() == "sugout":
+			for pi in range(len(pdata)):
+				line = pdata[pi]
+				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
+					if(line[7] in sugars) and (line[7] == line[11]): # within the same sugar
+						if(line[7] not in ['0SA']):
+							if(((line[4] in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5']) and (line[8] not in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5'])) or \
+							   ((line[8] in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5']) and (line[4] not in ['C1', 'C2', 'C3', 'C4', 'C5', 'O5']))):
+								if((line[5] != 'H') and (line[9] != 'H')):
+									f.write(printFlexLine(line, jointType))
+						elif(line[7] in ['0SA']):
+							if(((line[4] in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']) and (line[8] not in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6'])) or \
+							   ((line[8] in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']) and (line[4] not in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']))):
+								if((line[5] != 'H') and (line[9] != 'H')):
+									f.write(printFlexLine(line, jointType))
+		
+		f.close()
+		
+		
+		
+
+
 	#	
 #
 
@@ -248,12 +552,10 @@ class Simulation:
 		self.topFN = os.path.join(self.path, self.system.topologyFNs[0])
 		self.crdFN = os.path.join(self.path, "bot.rst7")
 
-		# All processing is done with MDTraj for now
-		#md.load(self.context.positionsFNs, top = self.topFN)
-
 		self.allflexFN = os.path.join(self.path, "bot.all.flex")
 		self.defaultRB = os.path.join(self.path, "bot.rb")
 		self.defaultFLEX = os.path.join(self.path, "bot.flex")
+
 
 		# Get all bonds
 		#if not os.path.exists(self.allflexFN):
@@ -321,6 +623,9 @@ class Simulation:
 	def addWorld(self, regionType='stretch', region=[[1, 2]], rootMobility='Weld', timestep=0.001, mdsteps=10):
 		print("Starting Simulation addWorld")
 		self.nofWorlds += 1
+
+		print("Simulation addWorld contacts", self.context.contacts)
+
 		if regionType == 'stretch':
 			region = np.array(region)
 			if region.ndim != 2:
@@ -352,31 +657,63 @@ class Simulation:
 			
 		# Get acc, loops and sugars
 		if regionType == 'accesible':
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset rama --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-					+ " > " + os.path.join(self.path, "bot.acc.flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset side --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset sugnln --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset suginter --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset sugout --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
+
+			os.remove(os.path.join(self.path, "bot.acc.flex"))
+			self.context.process_flex(subset='rama',
+				residRange=[0, self.context.positions.shape[0]],
+				accRange=[0.5, 10.0],
+				jointType='Pin',
+				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
+
+			self.context.process_flex(subset='side',
+				residRange=[0, self.context.positions.shape[0]],
+				accRange=[0.5, 10.0],
+				jointType='Pin',
+				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
+
+			self.context.process_flex(subset='sugnln',
+				residRange=[0, self.context.positions.shape[0]],
+				accRange=[0.5, 10.0],
+				jointType='Pin',
+				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
+
+			self.context.process_flex(subset='suginter',
+				residRange=[0, self.context.positions.shape[0]],
+				accRange=[0.5, 10.0],
+				jointType='Pin',
+				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
+
+			self.context.process_flex(subset='sugout',
+				residRange=[0, self.context.positions.shape[0]],
+				accRange=[0.5, 10.0],
+				jointType='Pin',
+				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
+
+#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+#					+ " --subset rama --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+#					+ " > " + os.path.join(self.path, "bot.acc.flex")
+#			os.system("echo \"" + execStr + "\"")
+#			os.system(execStr)
+#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+#					+ " --subset side --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+#			os.system("echo \"" + execStr + "\"")
+#			os.system(execStr)
+#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+#					+ " --subset sugnln --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+#			os.system("echo \"" + execStr + "\"")
+#			os.system(execStr)
+#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+#					+ " --subset suginter --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+#			os.system("echo \"" + execStr + "\"")
+#			os.system(execStr)
+#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
+#					+ " --subset sugout --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
+#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
+#			os.system("echo \"" + execStr + "\"")
+#			os.system(execStr)
 	
 			self.inpDict['FLEXFILE'].append('bot.acc.flex')
 
