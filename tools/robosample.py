@@ -191,6 +191,7 @@ class Context:
 		self.positionsFNs = None
 		self.mdtrajTraj = None
 		self.path = None
+		self.coils = []
 	#
 	
 	def setPositions(self, positions):
@@ -231,7 +232,51 @@ class Context:
 
 		# All processing is done with MDTraj for now
 		self.mdtrajTraj = md.load(self.positionsFNs, top = topologyFNs[0])
-		self.contacts = md.compute_contacts(self.mdtrajTraj, contacts='all', scheme='ca', ignore_nonprotein=False, periodic=False)
+		print("Calculating distance matrix...")
+		self.distMat = md.compute_contacts(self.mdtrajTraj, contacts='all', scheme='ca', ignore_nonprotein=False, periodic=False)
+		print("Calculating dssp...")
+		self.dssp = md.compute_dssp(self.mdtrajTraj)
+		print('dssp', self.dssp)
+
+		self.coils = []
+		coilsLen = 0
+		currResIx = 0
+		nextResIx = 1
+		while nextResIx < len(self.dssp[0]):
+			# Coil found
+			if (self.dssp[0][currResIx] != 'C') and (self.dssp[0][nextResIx] == 'C'):
+				self.coils.append([nextResIx, nextResIx + 1])
+				coilsLen += 1
+
+				#print(''.join(self.dssp[0][0:currResIx]), self.dssp[0][currResIx], ''.join(self.dssp[0][currResIx+1:]))
+				#print('hc', self.coils)
+			# Inside a coil
+			elif (self.dssp[0][currResIx] == 'C') and (self.dssp[0][nextResIx] == 'C'):
+				if (len(self.coils) == 0):
+					self.coils.append([0, 1])
+					coilsLen += 1
+				else:
+					self.coils[coilsLen - 1][1] += 1
+
+				#print(''.join(self.dssp[0][0:currResIx]), self.dssp[0][currResIx], ''.join(self.dssp[0][currResIx+1:]))
+				#print('cc', self.coils)
+			# Coil end
+			elif (self.dssp[0][currResIx] == 'C') and (self.dssp[0][nextResIx] != 'C'):
+				#print(''.join(self.dssp[0][0:currResIx]), self.dssp[0][currResIx], ''.join(self.dssp[0][currResIx+1:]))
+				#print('ch', self.coils)
+				pass
+			else:
+				#print(''.join(self.dssp[0][0:currResIx]), self.dssp[0][currResIx], ''.join(self.dssp[0][currResIx+1:]))
+				#print('hh', self.coils)
+				pass
+
+			currResIx += 1
+			nextResIx += 1
+		self.coils = np.array(self.coils)
+		print('coils', self.coils)
+
+		#
+
 
 	def process_flex(self, subset='rama', residRange=[0, 1], accRange=[0.0, 10.0], jointType='Pin', worldNo=2, FN=None):
 		# Robosample tools
@@ -243,7 +288,7 @@ class Context:
 		pdata = pars.parsed_data
 		
 		aa = ["ALA", "ARG", "ASN", "ASP", "CYS", "GLU", "GLN", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"]
-		sugars = ['UYB', '4YB', 'VMB', '2MA', '3LB', '0fA', '0SA']
+		sugars = ['UYB', '4YB', 'VMB', '0MA', '2MA', '0LB', '3LB', '6LB', '0fA', '0SA']
 
 		if FN == None:
 			FN = os.path.join(self.path, "bot." + str(worldNo) + ".flex")
@@ -289,6 +334,7 @@ class Context:
 		
 		# Get Ramachandran flexibility
 		if (subset).lower() == "rama":
+		#if "rama" in [sub.lower() for sub in subset]:
 			for pi in range(len(pdata)):
 				line = pdata[pi]
 				if((int(line[6]) >= residRange[0]) and (int(line[6]) <= residRange[1])):
@@ -526,7 +572,7 @@ class Context:
 #
 
 class Simulation:
-	def __init__(self, topology, system, integrator='HMC', platform='CPU', properties={'nofThreads': 2}):
+	def __init__(self, topology, system, integrator='HMC', platform='CPU', properties={'nofThreads': 2}, addDefaultWorld=True):
 		print("Starting Simulation init")
 		self.context = Context()
 		self.system = system
@@ -575,160 +621,280 @@ class Simulation:
 		self.reporters = []
 		self.inpDict = None
 
-		self.inpDict = {
-			'MOLECULES': ['robots/bot0'],
-			'ROUNDS': [10],
-			'DISTANCE': [0, 1],
-			'DIHEDRAL': [0, 1, 2, 3],
-			'OUTPUT_DIR': ['robots/'],
-			'RANDOM_WORLD_ORDER': ['FALSE'], 
-
-			'PRMTOP': ['bot.prmtop'],
-			'INPCRD': ['bot.rst7'],
-			'RBFILE': ['bot.rb'],
-			'FLEXFILE': ['bot.all.flex'],
-			'ROOT_MOBILITY': ['Cartesian'],
-			'RUN_TYPE': ['Normal'],
-			'ROUNDS_TILL_REBLOCK': [10],
-			'WORLDS': ['R0'],
-			'ROOTS': [0],
-			'SAMPLER': [self.integrator.type],
-			'TIMESTEPS': [0.001],
-			'MDSTEPS': [10],
-			'BOOST_MDSTEPS': [1],
-			'SAMPLES_PER_ROUND': [3],
-			'REPRODUCIBLE': ['FALSE'],
-			'SEED': [999],
-			'THERMOSTAT': ['Andersen'],
-			'TEMPERATURE_INI': [self.integrator.T],
-			'TEMPERATURE_FIN': [self.integrator.T],
-			'BOOST_TEMPERATURE': [600],
-			'FFSCALE': ['AMBER'],
-			'GBSA': [1.0],
-			'FIXMAN_POTENTIAL': ['FALSE'],
-			'FIXMAN_TORQUE': ['FALSE'],
-			'VISUAL': ['FALSE'],
-			'PRINT_FREQ': [1],
-			'WRITEPDBS': [1],
-			'GEOMETRY': ['FALSE'],
-			'THREADS': [self.nofThreads],
-			'OPENMM': [str(self.openmmTrue).upper()]
-		}
-
-		self.nofWorlds = 1
+		if addDefaultWorld == True:
+			self.inpDict = {
+				'MOLECULES': ['robots/bot0'],
+				'ROUNDS': [10],
+				'DISTANCE': [0, 1],
+				'DIHEDRAL': [0, 1, 2, 3],
+				'OUTPUT_DIR': ['robots/'],
+				'RANDOM_WORLD_ORDER': ['FALSE'], 
+	
+				'PRMTOP': ['bot.prmtop'],
+				'INPCRD': ['bot.rst7'],
+				'RBFILE': ['bot.rb'],
+				'FLEXFILE': ['bot.all.flex'],
+				'ROOT_MOBILITY': ['Cartesian'],
+				'RUN_TYPE': ['Normal'],
+				'ROUNDS_TILL_REBLOCK': [10],
+				'WORLDS': ['R0'],
+				'ROOTS': [0],
+				'SAMPLER': [self.integrator.type],
+				'TIMESTEPS': [0.001],
+				'MDSTEPS': [10],
+				'BOOST_MDSTEPS': [1],
+				'SAMPLES_PER_ROUND': [3],
+				'REPRODUCIBLE': ['FALSE'],
+				'SEED': [999],
+				'THERMOSTAT': ['Andersen'],
+				'TEMPERATURE_INI': [self.integrator.T],
+				'TEMPERATURE_FIN': [self.integrator.T],
+				'BOOST_TEMPERATURE': [600],
+				'FFSCALE': ['AMBER'],
+				'GBSA': [1.0],
+				'FIXMAN_POTENTIAL': ['FALSE'],
+				'FIXMAN_TORQUE': ['FALSE'],
+				'VISUAL': ['TRUE'],
+				'PRINT_FREQ': [1],
+				'WRITEPDBS': [1],
+				'GEOMETRY': ['FALSE'],
+				'THREADS': [self.nofThreads],
+				'OPENMM': [str(self.openmmTrue).upper()]
+			}
+	
+			self.nofWorlds = 1
+		else:
+			self.inpDict = {
+				'MOLECULES': ['robots/bot0'],
+				'ROUNDS': [10],
+				'DISTANCE': [0, 1],
+				'DIHEDRAL': [0, 1, 2, 3],
+				'OUTPUT_DIR': ['robots/'],
+				'RANDOM_WORLD_ORDER': ['FALSE'], 
+	
+				'PRMTOP': [],
+				'INPCRD': [],
+				'RBFILE': [],
+				'FLEXFILE': [],
+				'ROOT_MOBILITY': [],
+				'RUN_TYPE': [],
+				'ROUNDS_TILL_REBLOCK': [],
+				'WORLDS': [],
+				'ROOTS': [],
+				'SAMPLER': [],
+				'TIMESTEPS': [],
+				'MDSTEPS': [],
+				'BOOST_MDSTEPS': [],
+				'SAMPLES_PER_ROUND': [],
+				'REPRODUCIBLE': [],
+				'SEED': [],
+				'THERMOSTAT': [],
+				'TEMPERATURE_INI': [],
+				'TEMPERATURE_FIN': [],
+				'BOOST_TEMPERATURE': [],
+				'FFSCALE': [],
+				'GBSA': [],
+				'FIXMAN_POTENTIAL': [],
+				'FIXMAN_TORQUE': [],
+				'VISUAL': [],
+				'PRINT_FREQ': [],
+				'WRITEPDBS': [],
+				'GEOMETRY': [],
+				'THREADS': [],
+				'OPENMM': []
+			}
+	
+			self.nofWorlds = 0
 
 		print("Done Simulation init")
 	#
 
-	def addWorld(self, regionType='stretch', region=[[1, 2]], rootMobility='Weld', timestep=0.001, mdsteps=10):
+	def addWorld(self, regionType='stretch', region=[[1, 2]], rootMobility='Weld', 
+		timestep=0.001, mdsteps=10, argJointType="Pin", subsets=['rama'], 
+		contacts=False, contactCutoff=0):
+
 		print("Starting Simulation addWorld")
 		self.nofWorlds += 1
 
-		print("Simulation addWorld contacts", self.context.contacts)
 
+		region = np.array(region)
 		if regionType == 'stretch':
-			region = np.array(region)
+			outFN = os.path.join(self.path, "bot.stretch." + str(self.nofWorlds) + ".flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
+
 			if region.ndim != 2:
 				print("Error adding world. You need to specify a 2-dim array of stretches.")
 				exit(3)
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset rama --accRange 0.0 10 --joint Pin --residRange " +  str(region[0][0]) + " "  + str(region[0][1]) \
-				+ " > " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-				+ " --subset side --accRange 0.0 10 --joint Pin --residRange " +  str(region[0][0]) + " "  + str(region[0][1]) \
-				+ " >> " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
-			for i in range(1, region.shape[0]):
-				execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset rama --accRange 0.0 10 --joint Pin --residRange " +  str(region[i][0]) + " "  + str(region[i][1]) \
-					+ " >> " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
-				os.system("echo \"" + execStr + "\"")
-				os.system(execStr)
-				execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset side --accRange 0.0 10 --joint Pin --residRange " +  str(region[i][0]) + " "  + str(region[i][1]) \
-					+ " >> " + os.path.join(self.path, "bot.stretch" + str(self.nofWorlds) + ".flex")
-				os.system("echo \"" + execStr + "\"")
-				os.system(execStr)
-			
-			self.inpDict['FLEXFILE'].append("bot.stretch" + str(self.nofWorlds) + ".flex")
+
+			# Add specified region
+			for i in range(0, region.shape[0]):
+				for subsetSpec in subsets:
+					self.context.process_flex(subset=subsetSpec,
+						residRange=region[i],
+						accRange=[0.0, 10.0],
+						jointType=argJointType,
+						worldNo=0, FN = outFN)
+
+			# Add contacts if specified
+			print("region", region)
+			flatRegion = []
+			for rangePair in region:
+				flatRegion.append(range(rangePair[0], rangePair[1]+1))
+			flatRegion = np.array(flatRegion).flatten()
+			print("flatRegion", flatRegion)
+
+			contactList = []
+			pi = -1
+			for pair in self.context.distMat[1]:
+				pi += 1
+				if pair[0] in flatRegion:
+					if self.context.distMat[0][0][pi] < contactCutoff:
+						if pair[1] not in flatRegion:
+							print(pair, self.context.distMat[0][0][pi])
+							contactList.append([pair[1], pair[1]])
+
+			contactList = np.array(contactList)
+			print("addWorld contacts:", contactList)
+			for i in range(0, contactList.shape[0]):
+				self.context.process_flex(subset='side',
+					residRange=contactList[i],
+					accRange=[0.1, 10.0],
+					jointType='Pin',
+					worldNo=0, FN = outFN)
+
+
+			# Add flex filename to Robosample input
+			dirName, fileName = os.path.split(outFN)
+			self.inpDict['FLEXFILE'].append(fileName)
+			print("Wrote to", fileName)
 			
 		# Get acc, loops and sugars
-		if regionType == 'accesible':
+		if regionType in ['coils', 'loops']:
+			outFN = os.path.join(self.path, "bot.loops.flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
 
-			os.remove(os.path.join(self.path, "bot.acc.flex"))
+			for i in range(0, self.context.coils.shape[0]):
+				print("Adding to flex region", self.context.coils[i])
+				for subsetSpec in subsets:
+					self.context.process_flex(subset=subsetSpec,
+						residRange=self.context.coils[i],
+						accRange=[0.0, 10.0],
+						jointType=argJointType,
+						worldNo=0, FN = outFN)
+
+			self.inpDict['FLEXFILE'].append('bot.loops.flex')
+
+		# Get acc, loops and sugars
+		if regionType == 'accesible':
+			outFN = os.path.join(self.path, "bot.acc.flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
+
 			self.context.process_flex(subset='rama',
 				residRange=[0, self.context.positions.shape[0]],
 				accRange=[0.5, 10.0],
-				jointType='Pin',
-				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
+				jointType=argJointType,
+				worldNo=0, FN = outFN)
 
 			self.context.process_flex(subset='side',
 				residRange=[0, self.context.positions.shape[0]],
 				accRange=[0.5, 10.0],
-				jointType='Pin',
-				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
+				jointType=argJointType,
+				worldNo=0, FN = outFN)
 
-			self.context.process_flex(subset='sugnln',
-				residRange=[0, self.context.positions.shape[0]],
-				accRange=[0.5, 10.0],
-				jointType='Pin',
-				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
-
-			self.context.process_flex(subset='suginter',
-				residRange=[0, self.context.positions.shape[0]],
-				accRange=[0.5, 10.0],
-				jointType='Pin',
-				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
-
-			self.context.process_flex(subset='sugout',
-				residRange=[0, self.context.positions.shape[0]],
-				accRange=[0.5, 10.0],
-				jointType='Pin',
-				worldNo=0, FN = os.path.join(self.path, "bot.acc.flex"))
-
-#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-#					+ " --subset rama --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-#					+ " > " + os.path.join(self.path, "bot.acc.flex")
-#			os.system("echo \"" + execStr + "\"")
-#			os.system(execStr)
-#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-#					+ " --subset side --accRange 0.5 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-#			os.system("echo \"" + execStr + "\"")
-#			os.system(execStr)
-#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-#					+ " --subset sugnln --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-#			os.system("echo \"" + execStr + "\"")
-#			os.system(execStr)
-#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-#					+ " --subset suginter --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-#			os.system("echo \"" + execStr + "\"")
-#			os.system(execStr)
-#			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-#					+ " --subset sugout --accRange 0.0 10 --joint Pin --residRange 0 " + str(self.context.positions.shape[0]) \
-#					+ " >> " + os.path.join(self.path, "bot.acc.flex")
-#			os.system("echo \"" + execStr + "\"")
-#			os.system(execStr)
-	
 			self.inpDict['FLEXFILE'].append('bot.acc.flex')
+
+		# Get acc, loops and sugars
+		if regionType == 'sugars':
+			outFN = os.path.join(self.path, "bot.sugars.flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
+
+			for i in range(0, region.shape[0]):
+				self.context.process_flex(subset='sugnln',
+					residRange=[0, self.context.positions.shape[0]],
+					accRange=[0.0, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
+
+			for i in range(0, region.shape[0]):
+				self.context.process_flex(subset='suginter',
+					residRange=[0, self.context.positions.shape[0]],
+					accRange=[0.0, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
+
+			for i in range(0, region.shape[0]):
+				self.context.process_flex(subset='sugout',
+					residRange=[0, self.context.positions.shape[0]],
+					accRange=[0.0, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
+
+			self.inpDict['FLEXFILE'].append('bot.sugars.flex')
+
+		# Get acc, loops and sugars
+		if regionType == 'sugnln':
+			outFN = os.path.join(self.path, "bot.sugnln.flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
+
+			for i in range(0, region.shape[0]):
+				self.context.process_flex(subset='sugnln',
+					residRange=region[i],
+					accRange=[0.0, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
+
+			self.inpDict['FLEXFILE'].append('bot.sugnln.flex')
+
+		if regionType == 'suginter':
+			outFN = os.path.join(self.path, "bot.suginter.flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
+
+			for i in range(0, region.shape[0]):
+				self.context.process_flex(subset='suginter',
+					residRange=region[i],
+					accRange=[0.0, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
+
+			self.inpDict['FLEXFILE'].append('bot.suginter.flex')
+
+		if regionType == 'sugout':
+			outFN = os.path.join(self.path, "bot.sugout.flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
+
+			for i in range(0, region.shape[0]):
+				self.context.process_flex(subset='sugout',
+					residRange=region[i],
+					accRange=[0.0, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
+
+			self.inpDict['FLEXFILE'].append('bot.sugout.flex')
 
 		# Ball world		
 		if regionType == 'ball':
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset rama --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
-					+ " > " + os.path.join(self.path, "bot.ball.flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
-			execStr = "python3 $ROBOSAMPLEDIR/tools/process_flex.py --inFN " + os.path.join(self.path, "bot.all.flex") \
-					+ " --subset side --accRange 0.0 10 --joint BallM --residRange 0 " + str(self.context.positions.shape[0]) \
-					+ " >> " + os.path.join(self.path, "bot.ball.flex")
-			os.system("echo \"" + execStr + "\"")
-			os.system(execStr)
+			outFN = os.path.join(self.path, "bot.ball.flex")
+			if os.path.isfile(outFN):
+				os.remove(outFN)
+
+			self.context.process_flex(subset='rama',
+				residRange=[0, self.context.positions.shape[0]],
+				accRange=[0.0, 10.0],
+				jointType=argJointType,
+				worldNo=0, FN = outFN)
+
+			self.context.process_flex(subset='side',
+				residRange=[0, self.context.positions.shape[0]],
+				accRange=[0.0, 10.0],
+				jointType=argJointType,
+				worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.ball.flex')
 
@@ -754,9 +920,12 @@ class Simulation:
 		self.inpDict['GBSA'].append(1.0)
 		self.inpDict['FIXMAN_POTENTIAL'].append('TRUE')
 		self.inpDict['FIXMAN_TORQUE'].append('TRUE')
-		self.inpDict['VISUAL'].append('FALSE')
+		self.inpDict['VISUAL'].append('TRUE')
 		self.inpDict['PRINT_FREQ'].append(1)
-		self.inpDict['WRITEPDBS'].append(0)
+		if self.inpDict['WRITEPDBS'] == []:
+			self.inpDict['WRITEPDBS'].append(1)
+		else:
+			self.inpDict['WRITEPDBS'].append(0)
 		self.inpDict['GEOMETRY'].append('FALSE')
 		self.inpDict['THREADS'].append(self.nofThreads)
 		self.inpDict['OPENMM'].append(str(self.openmmTrue).upper())

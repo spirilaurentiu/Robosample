@@ -862,7 +862,7 @@ void HMCSampler::propose(SimTK::State& someState)
 	}
 	
 	// Adapt timestep
-	bool shouldAdaptWorldBlocks = true;
+	bool shouldAdaptWorldBlocks = false;
 	if(shouldAdaptWorldBlocks){
 		adaptWorldBlocks(someState);
 	}
