@@ -1248,7 +1248,7 @@ std::string Topology::getRegimen(){
 /** Set regimen according to input file **/
 void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 	
-	if(argRegimen.at(0) == 'I'){
+	if(argRegimen == "IC"){
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
 			setBondMobility(BondMobility::Free, Compound::BondIndex(r));
 			bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
@@ -1292,7 +1292,8 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 
 		}
 
-	}else if((argRegimen.at(0) == 'R') || (argRegimen.at(0) == 'S')){
+	//}else if((argRegimen.at(0) == 'R') || (argRegimen.at(0) == 'S')){
+	}else{
 
 		// Set all Compound and Topology bonds to rigid
 		for (unsigned int r=0 ; r<getNumBonds(); r++){

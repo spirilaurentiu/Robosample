@@ -46,6 +46,10 @@ parser.add_argument('--nbins', default=50, type=int,
 	help='Number of bins for histograms. Default for 7.2 spacing')
 parser.add_argument('--analyze', default=[], nargs='+', 
 	help='Decide what to analyze')
+
+parser.add_argument('--distance', default=[0, 1], type=int, nargs='+',
+	help='Atom indeces to compute distance for.')
+
 parser.add_argument('--Ms', default=[0], type=int, nargs='+', 
 	help='Number of steps to sum the correlation function on. One M per column')
 parser.add_argument('--fitacf', action='store_true', default=False,
@@ -96,7 +100,7 @@ if "traj" in args.analyze:
 		TA.append(TrajectoryAnalyzer( (args.molName + '/ligand.prmtop'), args.molName, args.FNSeeds, [args.simDirs[diri]] ))
 		#TA.ReadPdbs(verbose = False)
 		TA[diri].ReadDcds(verbose = True)
-		TA[diri].Distance(np.array([[10, 6]]))
+		TA[diri].Distance(np.array([[args.distance[0], args.distance[1]]]))
 	
 	#	TA.RMSD()
 	#	TA.RG()
@@ -119,7 +123,7 @@ if "traj" in args.analyze:
 
 	# Calculate
 	pltNofRows = 2
-	pltNofCols = 2
+	pltNofCols = 1
 
 	nofSimsPerParamSet = int(data.shape[0] / nofParamSets)
 	print("There are", nofSimsPerParamSet, "simulations per parameter set.")
@@ -157,19 +161,20 @@ if "traj" in args.analyze:
 
 			X = range(0, runningMean.shape[1])
 			Y = runningMean[simi]
-			axs[0, 0].plot(X, Y, color = colors[paramSeti])
-			axs[0, 0].set_title('Running Mean')
+			axs[0].plot(X, Y, color = colors[paramSeti])
+			axs[0].set_title('Running Means ' + args.molName)
 
-			Y = runningStd[simi]
-			axs[0, 1].plot(X, Y, color = colors[paramSeti])
-			axs[0, 1].set_title('Running Std')
+			#Y = runningStd[simi]
+			#axs[0, 1].plot(X, Y, color = colors[paramSeti])
+			#axs[0, 1].set_title('Running Std')
 
-			Y = mofm[paramSeti]
-			Yerr = sofm[paramSeti]
+			Y = sofm[paramSeti]
+			#Yerr = sofm[paramSeti]
+			Yerr = np.zeros(sofm[paramSeti].shape)
 			#axs[1, 0].set_ylim(np.min(mofm), np.max(mofm))
-			axs[1, 0].errorbar(X, Y, yerr=Yerr, color = colors[paramSeti], errorevery = 100, elinewidth = 0.5)
-			axs[1, 0].set_title('Mean of Means')
-			axs.legend()
+			axs[1].errorbar(X, Y, yerr=Yerr, color = colors[paramSeti], errorevery = 100, elinewidth = 0.5)
+			axs[1].set_title('Std of Means ' + args.molName)
+			axs[1].legend()
 
 			#Yerr = 
 			#axs[1, 0].errorbar(X, Y, yerr=Yerr, label=str(paramSeti))

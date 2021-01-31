@@ -288,11 +288,12 @@ class Context:
 		pdata = pars.parsed_data
 		
 		aa = ["ALA", "ARG", "ASN", "ASP", "CYS", "GLU", "GLN", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"]
-		sugars = ['UYB', '4YB', 'VMB', '0MA', '2MA', '0LB', '3LB', '6LB', '0fA', '0SA']
+		sugars = ['UYB', '4YB', 'VMB', '0MA', '2MA', '0LB', '3LB', '6LB', '0fA', '0SA', 'YMA']
 
 		if FN == None:
 			FN = os.path.join(self.path, "bot." + str(worldNo) + ".flex")
 		f = open(FN, "a+")
+
 		# Get all
 		if (subset).lower() == "all":
 			for pi in range(len(pdata)):
@@ -561,8 +562,14 @@ class Context:
 							   ((line[8] in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']) and (line[4] not in ['C2', 'C3', 'C4', 'C5', 'C6', 'O6']))):
 								if((line[5] != 'H') and (line[9] != 'H')):
 									f.write(printFlexLine(line, jointType))
-		
+
+		wroteToFile = f.tell()
 		f.close()
+
+		if wroteToFile == 0:
+			return False
+		else:
+			return True
 		
 		
 		
@@ -654,7 +661,7 @@ class Simulation:
 				'GBSA': [1.0],
 				'FIXMAN_POTENTIAL': ['FALSE'],
 				'FIXMAN_TORQUE': ['FALSE'],
-				'VISUAL': ['TRUE'],
+				'VISUAL': ['FALSE'],
 				'PRINT_FREQ': [1],
 				'WRITEPDBS': [1],
 				'GEOMETRY': ['FALSE'],
@@ -709,23 +716,117 @@ class Simulation:
 		print("Done Simulation init")
 	#
 
+	def inpEverythingButFlex(self, rootMobility='Weld', timestep=0.001, mdsteps=10, contacts=False, contactCutoff=0, samples=1):
+		self.inpDict['PRMTOP'].append('bot.prmtop')
+		self.inpDict['INPCRD'].append('bot.rst7')
+		self.inpDict['RBFILE'].append('bot.rb')
+		self.inpDict['ROOT_MOBILITY'].append(rootMobility)
+		self.inpDict['RUN_TYPE'].append('Normal')
+		self.inpDict['ROUNDS_TILL_REBLOCK'].append(10)
+		self.inpDict['ROOTS'].append(0)
+		self.inpDict['SAMPLER'].append(self.integrator.type)
+		self.inpDict['TIMESTEPS'].append(timestep)
+		self.inpDict['MDSTEPS'].append(mdsteps)
+		self.inpDict['BOOST_MDSTEPS'].append(1)
+		self.inpDict['SAMPLES_PER_ROUND'].append(samples)
+		self.inpDict['REPRODUCIBLE'].append('FALSE')
+		self.inpDict['SEED'].append(999)
+		self.inpDict['THERMOSTAT'].append('Andersen')
+		self.inpDict['TEMPERATURE_INI'].append(self.integrator.T)
+		self.inpDict['TEMPERATURE_FIN'].append(self.integrator.T)
+		self.inpDict['BOOST_TEMPERATURE'].append(600)
+		self.inpDict['FFSCALE'].append('AMBER')
+		self.inpDict['GBSA'].append(1.0)
+		self.inpDict['FIXMAN_POTENTIAL'].append('TRUE')
+		self.inpDict['FIXMAN_TORQUE'].append('TRUE')
+		self.inpDict['VISUAL'].append('FALSE')
+		self.inpDict['PRINT_FREQ'].append(1)
+		if self.inpDict['WRITEPDBS'] == []:
+			self.inpDict['WRITEPDBS'].append(1)
+		else:
+			self.inpDict['WRITEPDBS'].append(0)
+		self.inpDict['GEOMETRY'].append('FALSE')
+		self.inpDict['THREADS'].append(self.nofThreads)
+		self.inpDict['OPENMM'].append(str(self.openmmTrue).upper())
+
+		self.inpDict['WORLDS'].append('R' + str(self.nofWorlds))
+
 	def addWorld(self, regionType='stretch', region=[[1, 2]], rootMobility='Weld', 
 		timestep=0.001, mdsteps=10, argJointType="Pin", subsets=['rama'], 
-		contacts=False, contactCutoff=0):
+		contacts=False, contactCutoff=0,
+		samples=1):
 
 		print("Starting Simulation addWorld")
 		self.nofWorlds += 1
 
-
 		region = np.array(region)
-		if regionType == 'stretch':
+		if region.ndim != 2:
+			print("Error adding world. You need to specify a 2-dim array of stretches.")
+			exit(3)
+
+		nofAAs = 0
+		for reg in region:
+			nofAAs += (reg[1] - reg[0])
+
+		if regionType == 'roll':
+			# Recursive call stretch like
+			for regi in range(region.shape[0]):
+				for regj in range(region[regi][0], region[regi][1] + 1):
+					# Add specified region
+					outFN = os.path.join(self.path, "bot.bb." + str(regj) + ".phi.flex")
+	
+					if os.path.isfile(outFN):
+						os.remove(outFN)
+	
+					wroteToFile = False
+					for subsetSpec in subsets:
+						process_flexReturn = self.context.process_flex(subset='phi',
+							residRange = [regj, regj],
+							accRange=[0.0, 10.0],
+							jointType=argJointType,
+							worldNo=0, FN = outFN)
+						wroteToFile = wroteToFile or process_flexReturn
+	
+					# Add flex filename to Robosample input
+					if wroteToFile == True:
+						dirName, fileName = os.path.split(outFN)
+						self.inpDict['FLEXFILE'].append(fileName)
+						self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
+						print("Wrote to", fileName)
+		
+						self.nofWorlds += 1
+	
+					# Add specified region
+					outFN = os.path.join(self.path, "bot.bb." + str(regj) + ".psi.flex")
+	
+					if os.path.isfile(outFN):
+						os.remove(outFN)
+	
+					wroteToFile = False
+					for subsetSpec in subsets:
+						process_flexReturn = self.context.process_flex(subset='psi',
+							residRange = [regj, regj],
+							accRange=[0.0, 10.0],
+							jointType=argJointType,
+							worldNo=0, FN = outFN)
+						wroteToFile = wroteToFile or process_flexReturn
+	
+					# Add flex filename to Robosample input
+					if wroteToFile == True:
+						dirName, fileName = os.path.split(outFN)
+						self.inpDict['FLEXFILE'].append(fileName)
+						self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
+						print("Wrote to", fileName)
+		
+						self.nofWorlds += 1
+
+		#
+
+		# 
+		elif regionType == 'stretch':
 			outFN = os.path.join(self.path, "bot.stretch." + str(self.nofWorlds) + ".flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
-
-			if region.ndim != 2:
-				print("Error adding world. You need to specify a 2-dim array of stretches.")
-				exit(3)
 
 			# Add specified region
 			for i in range(0, region.shape[0]):
@@ -767,10 +868,11 @@ class Simulation:
 			# Add flex filename to Robosample input
 			dirName, fileName = os.path.split(outFN)
 			self.inpDict['FLEXFILE'].append(fileName)
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 			print("Wrote to", fileName)
 			
 		# Get acc, loops and sugars
-		if regionType in ['coils', 'loops']:
+		elif regionType in ['coils', 'loops']:
 			outFN = os.path.join(self.path, "bot.loops.flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
@@ -785,29 +887,32 @@ class Simulation:
 						worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.loops.flex')
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 
 		# Get acc, loops and sugars
-		if regionType == 'accesible':
+		elif regionType == 'accesible':
 			outFN = os.path.join(self.path, "bot.acc.flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
 
-			self.context.process_flex(subset='rama',
-				residRange=[0, self.context.positions.shape[0]],
-				accRange=[0.5, 10.0],
-				jointType=argJointType,
-				worldNo=0, FN = outFN)
+			for subsetSpec in subsets:
+				self.context.process_flex(subset=subsetSpec,
+					residRange=[0, self.context.positions.shape[0]],
+					accRange=[0.5, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
 
-			self.context.process_flex(subset='side',
-				residRange=[0, self.context.positions.shape[0]],
-				accRange=[0.5, 10.0],
-				jointType=argJointType,
-				worldNo=0, FN = outFN)
+				self.context.process_flex(subset=subsetSpec,
+					residRange=[0, self.context.positions.shape[0]],
+					accRange=[0.5, 10.0],
+					jointType=argJointType,
+					worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.acc.flex')
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 
 		# Get acc, loops and sugars
-		if regionType == 'sugars':
+		elif regionType == 'sugars':
 			outFN = os.path.join(self.path, "bot.sugars.flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
@@ -834,9 +939,10 @@ class Simulation:
 					worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.sugars.flex')
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 
 		# Get acc, loops and sugars
-		if regionType == 'sugnln':
+		elif regionType == 'sugnln':
 			outFN = os.path.join(self.path, "bot.sugnln.flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
@@ -849,8 +955,9 @@ class Simulation:
 					worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.sugnln.flex')
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 
-		if regionType == 'suginter':
+		elif regionType == 'suginter':
 			outFN = os.path.join(self.path, "bot.suginter.flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
@@ -863,8 +970,9 @@ class Simulation:
 					worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.suginter.flex')
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 
-		if regionType == 'sugout':
+		elif regionType == 'sugout':
 			outFN = os.path.join(self.path, "bot.sugout.flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
@@ -877,9 +985,10 @@ class Simulation:
 					worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.sugout.flex')
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 
 		# Ball world		
-		if regionType == 'ball':
+		elif regionType == 'ball':
 			outFN = os.path.join(self.path, "bot.ball.flex")
 			if os.path.isfile(outFN):
 				os.remove(outFN)
@@ -897,40 +1006,8 @@ class Simulation:
 				worldNo=0, FN = outFN)
 
 			self.inpDict['FLEXFILE'].append('bot.ball.flex')
-
-		self.inpDict['PRMTOP'].append('bot.prmtop')
-		self.inpDict['INPCRD'].append('bot.rst7')
-		self.inpDict['RBFILE'].append('bot.rb')
-		self.inpDict['ROOT_MOBILITY'].append(rootMobility)
-		self.inpDict['RUN_TYPE'].append('Normal')
-		self.inpDict['ROUNDS_TILL_REBLOCK'].append(10)
-		self.inpDict['ROOTS'].append(0)
-		self.inpDict['SAMPLER'].append(self.integrator.type)
-		self.inpDict['TIMESTEPS'].append(timestep)
-		self.inpDict['MDSTEPS'].append(mdsteps)
-		self.inpDict['BOOST_MDSTEPS'].append(1)
-		self.inpDict['SAMPLES_PER_ROUND'].append(1)
-		self.inpDict['REPRODUCIBLE'].append('FALSE')
-		self.inpDict['SEED'].append(999)
-		self.inpDict['THERMOSTAT'].append('Andersen')
-		self.inpDict['TEMPERATURE_INI'].append(self.integrator.T)
-		self.inpDict['TEMPERATURE_FIN'].append(self.integrator.T)
-		self.inpDict['BOOST_TEMPERATURE'].append(600)
-		self.inpDict['FFSCALE'].append('AMBER')
-		self.inpDict['GBSA'].append(1.0)
-		self.inpDict['FIXMAN_POTENTIAL'].append('TRUE')
-		self.inpDict['FIXMAN_TORQUE'].append('TRUE')
-		self.inpDict['VISUAL'].append('TRUE')
-		self.inpDict['PRINT_FREQ'].append(1)
-		if self.inpDict['WRITEPDBS'] == []:
-			self.inpDict['WRITEPDBS'].append(1)
-		else:
-			self.inpDict['WRITEPDBS'].append(0)
-		self.inpDict['GEOMETRY'].append('FALSE')
-		self.inpDict['THREADS'].append(self.nofThreads)
-		self.inpDict['OPENMM'].append(str(self.openmmTrue).upper())
-
-		self.inpDict['WORLDS'].append('R' + str(self.nofWorlds))
+		
+			self.inpEverythingButFlex(rootMobility, timestep, mdsteps, contacts, contactCutoff, samples)
 		print("Done Simulation addWorld")
 	#
 
