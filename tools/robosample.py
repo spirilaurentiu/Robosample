@@ -602,6 +602,7 @@ class Simulation:
 		self.path = path
 		self.filename = filename
 		
+		print("DEBUG", self.system.topologyFNs)
 		self.topFN = os.path.join(self.path, self.system.topologyFNs[0])
 		self.crdFN = os.path.join(self.path, "bot.rst7")
 
@@ -631,7 +632,7 @@ class Simulation:
 		if addDefaultWorld == True:
 			self.inpDict = {
 				'MOLECULES': ['robots/bot0'],
-				'ROUNDS': [10],
+				'ROUNDS': [2000],
 				'DISTANCE': [0, 1],
 				'DIHEDRAL': [0, 1, 2, 3],
 				'OUTPUT_DIR': ['robots/'],
@@ -647,12 +648,12 @@ class Simulation:
 				'WORLDS': ['R0'],
 				'ROOTS': [0],
 				'SAMPLER': [self.integrator.type],
-				'TIMESTEPS': [0.001],
-				'MDSTEPS': [10],
+				'TIMESTEPS': [0.0007],
+				'MDSTEPS': [5],
 				'BOOST_MDSTEPS': [1],
-				'SAMPLES_PER_ROUND': [3],
+				'SAMPLES_PER_ROUND': [4],
 				'REPRODUCIBLE': ['FALSE'],
-				'SEED': [999],
+				'SEED': [1],
 				'THERMOSTAT': ['Andersen'],
 				'TEMPERATURE_INI': [self.integrator.T],
 				'TEMPERATURE_FIN': [self.integrator.T],
@@ -673,7 +674,7 @@ class Simulation:
 		else:
 			self.inpDict = {
 				'MOLECULES': ['robots/bot0'],
-				'ROUNDS': [10],
+				'ROUNDS': [2000],
 				'DISTANCE': [0, 1],
 				'DIHEDRAL': [0, 1, 2, 3],
 				'OUTPUT_DIR': ['robots/'],
@@ -730,7 +731,7 @@ class Simulation:
 		self.inpDict['BOOST_MDSTEPS'].append(1)
 		self.inpDict['SAMPLES_PER_ROUND'].append(samples)
 		self.inpDict['REPRODUCIBLE'].append('FALSE')
-		self.inpDict['SEED'].append(999)
+		self.inpDict['SEED'].append(1)
 		self.inpDict['THERMOSTAT'].append('Andersen')
 		self.inpDict['TEMPERATURE_INI'].append(self.integrator.T)
 		self.inpDict['TEMPERATURE_FIN'].append(self.integrator.T)
