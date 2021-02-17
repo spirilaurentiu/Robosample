@@ -598,23 +598,9 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
     try {
 
-auto tstart = std::chrono::high_resolution_clock::now(); // TIMING
-std::cout << "TIMEINTstart" << std::endl; // TIMING
-auto tnow = std::chrono::high_resolution_clock::now(); // TIMING
-auto duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEINTstart= " << duration << std::endl; // TIMING
-
         this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEINTstep= " << duration << std::endl; // TIMING
-
         system->realize(someState, SimTK::Stage::Position);
-
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEINTrp= " << duration << std::endl; // TIMING
 
     }catch(const std::exception&){
         proposeExceptionCaught = true;
@@ -865,32 +851,14 @@ the configuration and energies. **/
 void HMCSampler::propose(SimTK::State& someState)
 {
 
-auto tstart = std::chrono::high_resolution_clock::now(); // TIMING
-std::cout << "TIMEPROPstart" << std::endl; // TIMING
-auto tnow = std::chrono::high_resolution_clock::now(); // TIMING
-auto duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPstart= " << duration << std::endl; // TIMING
-
 	// Store old configuration
 	storeOldConfigurationAndPotentialEnergies(someState);
-
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPstore= " << duration << std::endl; // TIMING
 
 	// Initialize velocities according to the Maxwell-Boltzmann distribution
 	initializeVelocities(someState);
 
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPiniVels= " << duration << std::endl; // TIMING
-
 	// Store the proposed energies 
 	calcProposedKineticAndTotalEnergy(someState);
-
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPcalcKE= " << duration << std::endl; // TIMING
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){
@@ -903,29 +871,13 @@ std::cout << "TIMEPROPcalcKE= " << duration << std::endl; // TIMING
 		adaptWorldBlocks(someState);
 	}
 	
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPifif= " << duration << std::endl; // TIMING
-
 	// Apply the L operator 
 	integrateTrajectory(someState);
 	//integrateTrajectoryOneStepAtATime(someState);
 
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPinteg= " << duration << std::endl; // TIMING
-
 	calcNewConfigurationAndEnergies(someState);
 
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPcalcNewE= " << duration << std::endl; // TIMING
-
 	PrintDetailedEnergyInfo(someState);
-
-tnow = std::chrono::high_resolution_clock::now(); // TIMING
-duration = std::chrono::duration_cast<std::chrono::microseconds>( tnow - tstart ).count(); // TIMING
-std::cout << "TIMEPROPPrint= " << duration << std::endl; // TIMING
 
 }
 
