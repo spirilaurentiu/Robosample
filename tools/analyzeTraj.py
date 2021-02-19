@@ -102,12 +102,15 @@ if "traj" in args.analyze:
 		TA[diri].ReadDcds(verbose = True)
 		TA[diri].Distance(np.array([[args.distance[0], args.distance[1]]]))
 	
-	#	TA.RMSD()
-	#	TA.RG()
-	#	TA.SASA()
-	#	TA.Helicity()
+	#	TA.RMSD() TA.RG() TA.SASA() TA.Helicity()
 
 	# Put data in Numpy array: dim1 is dir, dim2 is seed, dim3 is data
+	# seed 0 dir 0 --------
+	# seed 0 dir 1 --------
+	# seed 1 dir 0 --------
+	# seed 1 dir 1 --------
+	# seed 2 dir 0 --------
+	# seed 2 dir 1 --------
 	data = []
 	dim1ix = -1
 	for seedi in range(len(args.FNSeeds)):
@@ -118,7 +121,18 @@ if "traj" in args.analyze:
 			print("append TA[", args.simDirs[diri], "].data[", args.FNSeeds[seedi], "]")
 			#print(TA[diri].data[seedi].flatten())
 			data.append(TA[diri].distances[seedi].flatten())
-	data = np.array(data)
+
+	# Get maximum length
+	lens = [len(datum) for datum in data]
+	
+	# Put data in a Numpy array with maximum dimensions
+	npdata = np.empty((len(data), max(lens))) * np.nan
+	for i in range(len(data)):
+		for j in range(len(data[i])):
+			npdata[i, j] = data[i][j]
+	data = npdata
+	print("data shape", data.shape)
+	print("data")
 	print(data)
 
 	# Calculate
@@ -139,18 +153,22 @@ if "traj" in args.analyze:
 		startSim = paramSeti * nofSimsPerParamSet
 		print("Parameter set ", paramSeti, "with seeds", seeds[paramSeti])
 		for framei in range(0, data.shape[1]):
-		#for framei in range(0, 1):
 			paramSetSimsRange = range(startSim, nofSimsPerParamSet + startSim)
-			#print(paramSetSimsRange)
 			for simi in paramSetSimsRange:
-				runningMean[simi, framei] = np.mean(data[simi, 0:framei+1])
-				runningStd[ simi, framei] = np.std(data[simi, 0:framei+1])
+				# Make sure the current frame is not empty
+				if data[simi, framei] != None:
+					runningMean[simi, framei] = np.mean(data[simi, 0:framei+1])
+					runningStd[ simi, framei] = np.std(data[simi, 0:framei+1])
 		
 			#print("runningMean.shape", runningMean.shape)
-			#print("runningMean", runningMean)	
-			#print("runningMean [, ]", paramSetSimsRange, framei)	
-			mofm[paramSeti, framei] = np.mean(runningMean[paramSetSimsRange, framei])
-			sofm[paramSeti, framei] = np.std(runningMean[paramSetSimsRange, framei])
+			# Choose includedSims
+			#includedSims = paramSetSimsRange
+			includedSims = []
+			for simi in paramSetSimsRange:
+				if data[simi, framei] != None:
+					includedSims.append(simi)
+			mofm[paramSeti, framei] = np.mean(runningMean[includedSims, framei])
+			sofm[paramSeti, framei] = np.std(runningMean[includedSims, framei])
 
 
 	print("Plotting running means and stds")

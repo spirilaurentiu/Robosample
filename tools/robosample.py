@@ -148,6 +148,8 @@ class AmberPrmtopFile:
 			system.moldirs.append(path)
 			system.topologyFNs.append(filename)
 
+
+
 		return system
 	#
 #
@@ -192,6 +194,8 @@ class Context:
 		self.mdtrajTraj = None
 		self.path = None
 		self.coils = []
+		self.dihIxs = []
+		self.sasa = None
 	#
 	
 	def setPositions(self, positions):
@@ -205,6 +209,36 @@ class Context:
 		if len(topologyFNs) > 99999:
 			print("Too many topologies. Exiting...")
 			exit(2)
+
+
+
+		# Get all flexibility
+		#lines = np.loadtxt(args.top)
+		infile = open(topologyFNs[0], 'r')
+		lines = infile.readlines()
+		infile.close()
+		
+		flag = False
+		dihlix = 0
+		for lix in range(len(lines)):
+			line = lines[lix].rstrip().split()
+			# Start recording when dihedrals are met
+			if len(line) >= 2:
+				if (line[0] == '%FLAG'):
+					flag = False
+				if line[1] == 'DIHEDRALS_INC_HYDROGEN':
+					flag = True
+			if flag == True:
+				dihlix = dihlix + 1
+				if dihlix > 2:
+					# A = N/3 + 1
+					onedihIxs = np.array(line[0:4], dtype=float)
+					if onedihIxs[2] >= 0:
+						onedihIxs = np.abs(onedihIxs)
+						onedihIxs = (onedihIxs / 3.0).astype(int)
+						self.dihIxs.append(onedihIxs)
+		self.dihIxs = np.array(self.dihIxs)
+		
 
 		# Get the last directory
 		filename = None
@@ -228,10 +262,35 @@ class Context:
 		inpF.write(inpTxt)
 		inpF.close()
 	
+		# Get molecule
+		print(self.positionsFNs, topologyFNs)
+		self.mdtrajTraj = md.load(self.positionsFNs, top = topologyFNs[0])
+		
+		# Get topology
+		topology = self.mdtrajTraj.topology
+		table, bonds = topology.to_dataframe()
+		
+		# Compute accesibility: shape (n_frames,n_atoms)
+		self.sasa = md.shrake_rupley(self.mdtrajTraj, probe_radius = 0.1, mode = 'residue') # nm
+
 		self.allflexFN = os.path.join(self.path, "bot.all.flex") # duplicate in simulation
 
+		if not os.path.exists(self.allflexFN):
+			allflexF = open(self.allflexFN, 'w')
+			#print("#i1 i2 Joint # name1 elem1 resid1 resname1 name2 elem2 resid2 resname2 sasa1 sasa2")
+			for i in range(topology.n_bonds):
+				allflexF.write("%5d %5d Cartesian # %4s %s %6d %3s   %4s %s %6d %3s %8.5f %8.5f\n" % (bonds[i][0], bonds[i][1] \
+					,table.values[ int(bonds[i][0]) ][1], table.values[ int(bonds[i][0]) ][2] \
+					,table.values[ int(bonds[i][0]) ][3], table.values[ int(bonds[i][0]) ][4] \
+					,table.values[ int(bonds[i][1]) ][1], table.values[ int(bonds[i][1]) ][2] \
+					,table.values[ int(bonds[i][1]) ][3], table.values[ int(bonds[i][1]) ][4] \
+					,self.sasa[0][ table.values[ int(bonds[i][0]) ][3] ], self.sasa[0][ table.values[ int(bonds[i][1]) ][3] ]
+				))
+			allflexF.close()
+		###
+
 		# All processing is done with MDTraj for now
-		self.mdtrajTraj = md.load(self.positionsFNs, top = topologyFNs[0])
+		#self.mdtrajTraj = md.load(self.positionsFNs, top = topologyFNs[0])
 		print("Calculating distance matrix...")
 		self.distMat = md.compute_contacts(self.mdtrajTraj, contacts='all', scheme='ca', ignore_nonprotein=False, periodic=False)
 		print("Calculating dssp...")
@@ -274,6 +333,14 @@ class Context:
 			nextResIx += 1
 		self.coils = np.array(self.coils)
 		print('coils', self.coils)
+
+		# Compute dot products
+		#for i in range(self.mdtrajTraj.topology.n_bonds):
+		#	print(int(bonds[i][0]), int(bonds[i][1])
+		#		, table.values[ int(bonds[i][0]) ][1], table.values[ int(bonds[i][0]) ][3] 
+		#		, table.values[ int(bonds[i][1]) ][1], table.values[ int(bonds[i][1]) ][3] 
+		#	)
+		####
 
 		#
 
@@ -620,14 +687,15 @@ class Simulation:
 			#	print("executing getAllBondsi with", self.crdFN)
 			#	proc = subprocess.run(execList, env={**os.environ}, stdout = outF)
 			
-		execStr = "python3 $ROBOSAMPLEDIR/tools/getAllBonds.py --top " + str(self.topFN) \
-			+ " --traj " + self.crdFN \
-			+ " --flex bot.flex --probesize 0.1 >" + os.path.join(self.path, "bot.all.flex")
-		os.system("echo \"" + execStr + "\"")
-		os.system(execStr)
+#		execStr = "python3 $ROBOSAMPLEDIR/tools/getAllBonds.py --top " + str(self.topFN) \
+#			+ " --traj " + self.crdFN \
+#			+ " --flex bot.flex --probesize 0.1 >" + os.path.join(self.path, "bot.all.flex")
+#		os.system("echo \"" + execStr + "\"")
+#		os.system(execStr)
 
 		self.reporters = []
 		self.inpDict = None
+		self.nofWorlds = 0
 
 		if addDefaultWorld == True:
 			self.inpDict = {
@@ -850,8 +918,12 @@ class Simulation:
 			pi = -1
 			for pair in self.context.distMat[1]:
 				pi += 1
-				if pair[0] in flatRegion:
+				if (pair[0] in flatRegion) or (pair[1] in flatRegion):
+					print('pair', pair)
 					if self.context.distMat[0][0][pi] < contactCutoff:
+						if pair[0] not in flatRegion:
+							print(pair, self.context.distMat[0][0][pi])
+							contactList.append([pair[0], pair[0]])
 						if pair[1] not in flatRegion:
 							print(pair, self.context.distMat[0][0][pi])
 							contactList.append([pair[1], pair[1]])
