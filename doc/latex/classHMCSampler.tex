@@ -1,0 +1,557 @@
+\hypertarget{classHMCSampler}{}\section{H\+M\+C\+Sampler Class Reference}
+\label{classHMCSampler}\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+
+
+{\ttfamily \#include $<$H\+M\+C\+Sampler.\+hpp$>$}
+
+
+
+Inheritance diagram for H\+M\+C\+Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=275pt]{classHMCSampler__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for H\+M\+C\+Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=183pt]{classHMCSampler__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classHMCSampler_abfc3165e0a559567e33bf19b8aea1a47}{H\+M\+C\+Sampler} (Sim\+T\+K\+::\+Compound\+System $\ast$arg\+Compound\+System, Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$arg\+Matter, std\+::vector$<$ \hyperlink{classTopology}{Topology} $\ast$ $>$ \&arg\+Topologies, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$arg\+Dumm, Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$forces, Sim\+T\+K\+::\+Time\+Stepper $\ast$arg\+Time\+Stepper)
+\item 
+virtual \hyperlink{classHMCSampler_a1781a161d1a712ed28c973b4b56c3c7f}{$\sim$\+H\+M\+C\+Sampler} ()
+\item 
+void \hyperlink{classHMCSampler_a1335bea08f96d449cb9bdb985b3e6b9d}{calc\+Sqrt\+M\+InvL} (Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Matrix \&Sqrt\+M\+Inv)
+\item 
+void \hyperlink{classHMCSampler_ab4f9446e1b9ecb3f47b62637e8bc6fb9}{calc\+Sqrt\+M\+InvU} (Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Matrix \&Sqrt\+M\+Inv)
+\item 
+void \hyperlink{classHMCSampler_ad47e283497806a105dac3c2b15127fbf}{calc\+Num\+Sqrt\+M\+Upper} (Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Matrix \&Sqrt\+M\+Upper)
+\item 
+virtual void \hyperlink{classHMCSampler_ad878471d3e5222758b2544f76affd79a}{initialize} (Sim\+T\+K\+::\+State \&advanced)
+\item 
+virtual void \hyperlink{classHMCSampler_a43a302d87e149bfa893a5952ec20941f}{reinitialize} (Sim\+T\+K\+::\+State \&advanced)
+\item 
+const Sim\+T\+K\+::\+Time\+Stepper $\ast$ \hyperlink{classHMCSampler_a90d64460a0b1b4e83e3c27db0b7681f0}{get\+Time\+Stepper} (void)
+\item 
+Sim\+T\+K\+::\+Time\+Stepper $\ast$ {\bfseries upd\+Time\+Stepper} (void)\hypertarget{classHMCSampler_a16ecb11f6a9943d42a63448acb4358c4}{}\label{classHMCSampler_a16ecb11f6a9943d42a63448acb4358c4}
+
+\item 
+void {\bfseries set\+Time\+Stepper} (Sim\+T\+K\+::\+Time\+Stepper $\ast$some\+Time\+Stepper)\hypertarget{classHMCSampler_a7d8cfa2e3ff72ede9e3136d3a709ad43}{}\label{classHMCSampler_a7d8cfa2e3ff72ede9e3136d3a709ad43}
+
+\item 
+virtual float \hyperlink{classHMCSampler_ab8fb503782cc7fe6951b5189802d174d}{get\+Timestep} (void)
+\item 
+virtual void {\bfseries set\+Timestep} (float)\hypertarget{classHMCSampler_a47f010ac63622ca8a1f758db5c21e37b}{}\label{classHMCSampler_a47f010ac63622ca8a1f758db5c21e37b}
+
+\item 
+Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a97914f58682cd08bacffc115e91499e1}{get\+Boost\+Temperature} (void)
+\item 
+void {\bfseries set\+Boost\+Temperature} (Sim\+T\+K\+::\+Real)\hypertarget{classHMCSampler_a121c0aa27c531b046215daeb8b4e94b4}{}\label{classHMCSampler_a121c0aa27c531b046215daeb8b4e94b4}
+
+\item 
+void {\bfseries set\+Boost\+M\+D\+Steps} (int)\hypertarget{classHMCSampler_aa2c6aec792fb63dc1ecd7d372a5867a9}{}\label{classHMCSampler_aa2c6aec792fb63dc1ecd7d372a5867a9}
+
+\item 
+virtual void \hyperlink{classHMCSampler_a8c9a03dba406c0d4bef622c42d399b19}{store\+Old\+Configuration\+And\+Potential\+Energies} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_ae38d8206113980732d4adced081c50fd}{initialize\+Velocities} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_a492f12a031effba381c409052ab734e7}{calc\+Proposed\+Kinetic\+And\+Total\+Energy} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_ab3b4de64be2a10193e274f05788b5ca5}{integrate\+Trajectory} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_a4e74ce67f749317e106a528e2791df9d}{integrate\+Trajectory\+One\+Step\+At\+A\+Time} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_aa3b0a772e2ba3ea1550ec834e887fc67}{adapt\+Timestep} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+void \hyperlink{classHMCSampler_a90ffe962e5317623389f4db7a85e0592}{adapt\+World\+Blocks} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_a4716c29b164a3f9f239266e970498201}{calc\+New\+Configuration\+And\+Energies} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_a26452f17a85fadebcf44bddb44954cc6}{set\+Set\+Configuration\+And\+Energies\+To\+Old} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual void \hyperlink{classHMCSampler_a4deb485f9bfc31d64f6ada06536f9230}{set\+Set\+Configuration\+And\+Energies\+To\+New} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a7fee5ad6d531c32235db96c4b95f1eca}{M\+H\+Accept\+Probability} (Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Real arg\+Etot\+\_\+proposed, Sim\+T\+K\+::\+Real arg\+Etot\+\_\+n)
+\item 
+virtual bool \hyperlink{classHMCSampler_af5e87c855b8888196a9f2ad87bb9f824}{acc\+Rej\+Step} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+void \hyperlink{classHMCSampler_aa36ab4482bbb6295658e8fe6a49c9e4f}{propose} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+void \hyperlink{classHMCSampler_a864175524b6023f505357b10b1a5855b}{update} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+virtual bool {\bfseries sample\+\_\+iteration} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classHMCSampler_ae27a31bb0f1e6b71c830db555ca97d2f}{}\label{classHMCSampler_ae27a31bb0f1e6b71c830db555ca97d2f}
+
+\item 
+int \hyperlink{classHMCSampler_a4c2bd08867d1a07c54587d52fd8d5fed}{push\+Coordinates\+InR} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+int \hyperlink{classHMCSampler_a8e67589e5d96c6fe11a20f7bc073af84}{push\+Velocities\+In\+Rdot} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+int \hyperlink{classHMCSampler_aa0e27f4d44328dcae4a2a38cf1b3f626}{push\+Coordinates\+InQ} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+int \hyperlink{classHMCSampler_a642722a3022575f342c9913ffbb82ce2}{push\+Velocities\+In\+Qdot} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+int \hyperlink{classHMCSampler_abcdb1f372e12dabec50d4f674c708461}{push\+Velocities\+InU} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+void \hyperlink{classHMCSampler_a4abf0550ceb1ecef10c5823581ebf515}{perturbQ} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_aea854d56098d31f7b2e2d15d231b8949}{get\+Proposed\+KE} (void)
+\item 
+Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a1e3d6ded4ceb757ab402e6ace268fc2b}{get\+Last\+Accepted\+KE} (void)
+\item 
+void \hyperlink{classHMCSampler_a5972926e31fe4f9ee7ae1498f049f9f1}{set\+Proposed\+KE} (Sim\+T\+K\+::\+Real)
+\item 
+void \hyperlink{classHMCSampler_a44b541a914af643eaca56e43d5d58a13}{set\+Last\+Accepted\+KE} (Sim\+T\+K\+::\+Real)
+\item 
+int {\bfseries get\+M\+D\+Steps\+Per\+Sample} () const \hypertarget{classHMCSampler_a8e67512f7f8f3bcfe4a736f8b871703c}{}\label{classHMCSampler_a8e67512f7f8f3bcfe4a736f8b871703c}
+
+\item 
+void {\bfseries set\+M\+D\+Steps\+Per\+Sample} (int md\+Steps\+Per\+Sample)\hypertarget{classHMCSampler_a4a65fde374fba7362ef1f3d37f3a79da}{}\label{classHMCSampler_a4a65fde374fba7362ef1f3d37f3a79da}
+
+\item 
+void \hyperlink{classHMCSampler_ab0354537f83779a468255e4c5fc2c9b6}{Print\+Detailed\+Energy\+Info} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a36bce5b70cae7391ff300b0ca834b84f}{calculate\+M\+SD} (void)
+\item 
+Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a9d64c28ce62364363fe7c1ff3baceefa}{calculate\+R\+Rdot} (void)
+\item 
+void {\bfseries geom\+Dihedral} (void)\hypertarget{classHMCSampler_a9e262ad1a8b9a9d70d6f52d8a638567b}{}\label{classHMCSampler_a9e262ad1a8b9a9d70d6f52d8a638567b}
+
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+float \hyperlink{classHMCSampler_a8cd8b25b42e94acb34aa0dea64c67b5b}{timestep}
+\item 
+float {\bfseries prev\+Timestep}\hypertarget{classHMCSampler_a8ae12739d6e0fce6e22d26e0e90d67a8}{}\label{classHMCSampler_a8ae12739d6e0fce6e22d26e0e90d67a8}
+
+\item 
+float {\bfseries prev\+Prev\+Timestep}\hypertarget{classHMCSampler_a061efabb2c1486e64b6b2cbc9cab0245}{}\label{classHMCSampler_a061efabb2c1486e64b6b2cbc9cab0245}
+
+\item 
+bool {\bfseries should\+Adapt\+Timestep}\hypertarget{classHMCSampler_ae573472509f1c59add03d72f753c4f06}{}\label{classHMCSampler_ae573472509f1c59add03d72f753c4f06}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries ke\+\_\+last\+Accepted}\hypertarget{classHMCSampler_a73f309b15007ce520f6117080975da6d}{}\label{classHMCSampler_a73f309b15007ce520f6117080975da6d}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries ke\+\_\+proposed}\hypertarget{classHMCSampler_a969e707966ce88fd12b21a86bc60f7bf}{}\label{classHMCSampler_a969e707966ce88fd12b21a86bc60f7bf}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries ke\+\_\+n}\hypertarget{classHMCSampler_aa13c23e6ba3ebe6222228285fd94c4a4}{}\label{classHMCSampler_aa13c23e6ba3ebe6222228285fd94c4a4}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries etot\+\_\+set}\hypertarget{classHMCSampler_a3dfcb5672d86f951f647068099165923}{}\label{classHMCSampler_a3dfcb5672d86f951f647068099165923}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries etot\+\_\+proposed}\hypertarget{classHMCSampler_af3693cc4c5cf76ce9dce559b702c699c}{}\label{classHMCSampler_af3693cc4c5cf76ce9dce559b702c699c}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries etot\+\_\+n}\hypertarget{classHMCSampler_ab39e667c819a1e0354d765ba5418a717}{}\label{classHMCSampler_ab39e667c819a1e0354d765ba5418a717}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries boostT}\hypertarget{classHMCSampler_a709f4760098c1ce280793e0eb0ef0dca}{}\label{classHMCSampler_a709f4760098c1ce280793e0eb0ef0dca}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries boost\+Factor}\hypertarget{classHMCSampler_af0ccf6cd8e96cbaf55ccdebbb55e4419}{}\label{classHMCSampler_af0ccf6cd8e96cbaf55ccdebbb55e4419}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries unboost\+Factor}\hypertarget{classHMCSampler_a799ed5a2c3e212576f0f11ba89a86343}{}\label{classHMCSampler_a799ed5a2c3e212576f0f11ba89a86343}
+
+\item 
+int {\bfseries boost\+M\+D\+Steps}\hypertarget{classHMCSampler_a6b9ff11f9edc77345ba2c7bdfd5887a8}{}\label{classHMCSampler_a6b9ff11f9edc77345ba2c7bdfd5887a8}
+
+\item 
+int {\bfseries M\+D\+Steps\+Per\+Sample}\hypertarget{classHMCSampler_addee9ed20989678559ed764c114fe04c}{}\label{classHMCSampler_addee9ed20989678559ed764c114fe04c}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries R}\hypertarget{classHMCSampler_a960f036573f204c55f105af554777e8f}{}\label{classHMCSampler_a960f036573f204c55f105af554777e8f}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries Rdot}\hypertarget{classHMCSampler_a5f4d839058ef10a0e6c4ecf998f5d05f}{}\label{classHMCSampler_a5f4d839058ef10a0e6c4ecf998f5d05f}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries dR}\hypertarget{classHMCSampler_a95e917dbcb8595d292add5e618ac5559}{}\label{classHMCSampler_a95e917dbcb8595d292add5e618ac5559}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries d\+Rdot}\hypertarget{classHMCSampler_a0f5b2c1ecfc84755be4da47d89ebbb68}{}\label{classHMCSampler_a0f5b2c1ecfc84755be4da47d89ebbb68}
+
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+class {\bfseries Context}\hypertarget{classHMCSampler_ac26c806e60ca4a0547680edb68f6e39b}{}\label{classHMCSampler_ac26c806e60ca4a0547680edb68f6e39b}
+
+\end{DoxyCompactItemize}
+\subsection*{Additional Inherited Members}
+
+
+\subsection{Detailed Description}
+A Generalized Coordiantes Hamiltonian Monte Carlo sampler as described in J Chem Theory Comput. 2017 Oct 10;13(10)\+:4649-\/4659. In short it consists of the following steps\+:
+\begin{DoxyEnumerate}
+\item Initialize velocities from a random normal distribution with a covariance of kT sqrt(\+M) where M is the mass matrix tensor.
+\item Propagate the trial trajectory using a symplectic integrator provided by Simbody
+\item An acception-\/rejection step which includes the Fixman potential if needed. Step 1 and 2 are implemented in the fuction propose. Step 3 is implemented in the function update. 
+\end{DoxyEnumerate}
+
+\subsection{Constructor \& Destructor Documentation}
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{H\+M\+C\+Sampler(\+Sim\+T\+K\+::\+Compound\+System $\ast$arg\+Compound\+System, Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$arg\+Matter, std\+::vector$<$ Topology $\ast$ $>$ \&arg\+Topologies, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$arg\+Dumm, Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$forces, Sim\+T\+K\+::\+Time\+Stepper $\ast$arg\+Time\+Stepper)}{HMCSampler(SimTK::CompoundSystem *argCompoundSystem, SimTK::SimbodyMatterSubsystem *argMatter, std::vector< Topology * > &argTopologies, SimTK::DuMMForceFieldSubsystem *argDumm, SimTK::GeneralForceSubsystem *forces, SimTK::TimeStepper *argTimeStepper)}}]{\setlength{\rightskip}{0pt plus 5cm}H\+M\+C\+Sampler\+::\+H\+M\+C\+Sampler (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Compound\+System $\ast$}]{arg\+Compound\+System, }
+\item[{Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$}]{arg\+Matter, }
+\item[{std\+::vector$<$ {\bf Topology} $\ast$ $>$ \&}]{arg\+Topologies, }
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$}]{arg\+Dumm, }
+\item[{Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$}]{forces, }
+\item[{Sim\+T\+K\+::\+Time\+Stepper $\ast$}]{arg\+Time\+Stepper}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_abfc3165e0a559567e33bf19b8aea1a47}{}\label{classHMCSampler_abfc3165e0a559567e33bf19b8aea1a47}
+Constructor \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!````~H\+M\+C\+Sampler@{$\sim$\+H\+M\+C\+Sampler}}
+\index{````~H\+M\+C\+Sampler@{$\sim$\+H\+M\+C\+Sampler}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{$\sim$\+H\+M\+C\+Sampler()}{~HMCSampler()}}]{\setlength{\rightskip}{0pt plus 5cm}H\+M\+C\+Sampler\+::$\sim$\+H\+M\+C\+Sampler (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a1781a161d1a712ed28c973b4b56c3c7f}{}\label{classHMCSampler_a1781a161d1a712ed28c973b4b56c3c7f}
+Destructor 
+
+\subsection{Member Function Documentation}
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!acc\+Rej\+Step@{acc\+Rej\+Step}}
+\index{acc\+Rej\+Step@{acc\+Rej\+Step}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{acc\+Rej\+Step(\+Sim\+T\+K\+::\+State \&some\+State)}{accRejStep(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}bool H\+M\+C\+Sampler\+::acc\+Rej\+Step (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_af5e87c855b8888196a9f2ad87bb9f824}{}\label{classHMCSampler_af5e87c855b8888196a9f2ad87bb9f824}
+Accetion rejection step
+
+Acception rejection step 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a0baac57ec1fe8d795a6fea65acdf86ed}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!adapt\+Timestep@{adapt\+Timestep}}
+\index{adapt\+Timestep@{adapt\+Timestep}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{adapt\+Timestep(\+Sim\+T\+K\+::\+State \&some\+State)}{adaptTimestep(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::adapt\+Timestep (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_aa3b0a772e2ba3ea1550ec834e887fc67}{}\label{classHMCSampler_aa3b0a772e2ba3ea1550ec834e887fc67}
+Use stochastic optimization to adapt timestep \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!adapt\+World\+Blocks@{adapt\+World\+Blocks}}
+\index{adapt\+World\+Blocks@{adapt\+World\+Blocks}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{adapt\+World\+Blocks(\+Sim\+T\+K\+::\+State \&some\+State)}{adaptWorldBlocks(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::adapt\+World\+Blocks (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a90ffe962e5317623389f4db7a85e0592}{}\label{classHMCSampler_a90ffe962e5317623389f4db7a85e0592}
+Adapt Gibbs blocks definitions \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!calc\+New\+Configuration\+And\+Energies@{calc\+New\+Configuration\+And\+Energies}}
+\index{calc\+New\+Configuration\+And\+Energies@{calc\+New\+Configuration\+And\+Energies}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{calc\+New\+Configuration\+And\+Energies(\+Sim\+T\+K\+::\+State \&some\+State)}{calcNewConfigurationAndEnergies(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::calc\+New\+Configuration\+And\+Energies (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a4716c29b164a3f9f239266e970498201}{}\label{classHMCSampler_a4716c29b164a3f9f239266e970498201}
+Store new configuration and energy terms \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!calc\+Num\+Sqrt\+M\+Upper@{calc\+Num\+Sqrt\+M\+Upper}}
+\index{calc\+Num\+Sqrt\+M\+Upper@{calc\+Num\+Sqrt\+M\+Upper}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{calc\+Num\+Sqrt\+M\+Upper(\+Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Matrix \&\+Sqrt\+M\+Upper)}{calcNumSqrtMUpper(SimTK::State &someState, SimTK::Matrix &SqrtMUpper)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::calc\+Num\+Sqrt\+M\+Upper (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Matrix \&}]{Sqrt\+M\+Upper}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_ad47e283497806a105dac3c2b15127fbf}{}\label{classHMCSampler_ad47e283497806a105dac3c2b15127fbf}
+Calculate sqrt(\+M) using Eigen. For debug purposes. \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!calc\+Proposed\+Kinetic\+And\+Total\+Energy@{calc\+Proposed\+Kinetic\+And\+Total\+Energy}}
+\index{calc\+Proposed\+Kinetic\+And\+Total\+Energy@{calc\+Proposed\+Kinetic\+And\+Total\+Energy}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{calc\+Proposed\+Kinetic\+And\+Total\+Energy(\+Sim\+T\+K\+::\+State \&some\+State)}{calcProposedKineticAndTotalEnergy(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::calc\+Proposed\+Kinetic\+And\+Total\+Energy (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a492f12a031effba381c409052ab734e7}{}\label{classHMCSampler_a492f12a031effba381c409052ab734e7}
+Store the proposed energies 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a230ea62c24f9873aee71b4fe50049385}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!calc\+Sqrt\+M\+InvL@{calc\+Sqrt\+M\+InvL}}
+\index{calc\+Sqrt\+M\+InvL@{calc\+Sqrt\+M\+InvL}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{calc\+Sqrt\+M\+Inv\+L(\+Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Matrix \&\+Sqrt\+M\+Inv)}{calcSqrtMInvL(SimTK::State &someState, SimTK::Matrix &SqrtMInv)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::calc\+Sqrt\+M\+InvL (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Matrix \&}]{Sqrt\+M\+Inv}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a1335bea08f96d449cb9bdb985b3e6b9d}{}\label{classHMCSampler_a1335bea08f96d449cb9bdb985b3e6b9d}
+Calculate O(n2) the square root of the mass matrix inverse denoted by Jain l$\ast$ = \mbox{[}I -\/\+J\+PsiK\mbox{]}$\ast$sqrt(D) (adjoint of l). This is lower triangular
+
+Calculate O(n2) the square root of the mass matrix inverse denoted by Jain l$\ast$ = \mbox{[}I -\/\+J\+PsiK\mbox{]}$\ast$sqrt(D) (adjoint of l). This is lower triangular matrix and it is computed by multipling a set of orthonormal vectors with the sqrt(\+M\+Inv) and transpose it. \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!calc\+Sqrt\+M\+InvU@{calc\+Sqrt\+M\+InvU}}
+\index{calc\+Sqrt\+M\+InvU@{calc\+Sqrt\+M\+InvU}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{calc\+Sqrt\+M\+Inv\+U(\+Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Matrix \&\+Sqrt\+M\+Inv)}{calcSqrtMInvU(SimTK::State &someState, SimTK::Matrix &SqrtMInv)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::calc\+Sqrt\+M\+InvU (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Matrix \&}]{Sqrt\+M\+Inv}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_ab4f9446e1b9ecb3f47b62637e8bc6fb9}{}\label{classHMCSampler_ab4f9446e1b9ecb3f47b62637e8bc6fb9}
+Calculate O(n2) the square root of the mass matrix inverse denoted by Jain l = sqrt(\+D) $\ast$ \mbox{[}I -\/\+J\+PsiK\mbox{]}. This is upper triangular
+
+Calculate O(n2) the square root of the mass matrix inverse denoted by Jain l = sqrt(\+D) $\ast$ \mbox{[}I -\/\+J\+PsiK\mbox{]}. This is upper triangular matrix and it is computed multipling a set of orthonormal vectors with the sqrt(\+M\+Inv). \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!calculate\+M\+SD@{calculate\+M\+SD}}
+\index{calculate\+M\+SD@{calculate\+M\+SD}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{calculate\+M\+S\+D(void)}{calculateMSD(void)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real H\+M\+C\+Sampler\+::calculate\+M\+SD (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a36bce5b70cae7391ff300b0ca834b84f}{}\label{classHMCSampler_a36bce5b70cae7391ff300b0ca834b84f}
+Calculate Mean Square Displacement based on stored R vectors \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!calculate\+R\+Rdot@{calculate\+R\+Rdot}}
+\index{calculate\+R\+Rdot@{calculate\+R\+Rdot}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{calculate\+R\+Rdot(void)}{calculateRRdot(void)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real H\+M\+C\+Sampler\+::calculate\+R\+Rdot (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a9d64c28ce62364363fe7c1ff3baceefa}{}\label{classHMCSampler_a9d64c28ce62364363fe7c1ff3baceefa}
+Calculate R\+Rdot based on stored R and Rdot vectors \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!get\+Boost\+Temperature@{get\+Boost\+Temperature}}
+\index{get\+Boost\+Temperature@{get\+Boost\+Temperature}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{get\+Boost\+Temperature(void)}{getBoostTemperature(void)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real H\+M\+C\+Sampler\+::get\+Boost\+Temperature (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a97914f58682cd08bacffc115e91499e1}{}\label{classHMCSampler_a97914f58682cd08bacffc115e91499e1}
+Get/\+Set boost temperature \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!get\+Last\+Accepted\+KE@{get\+Last\+Accepted\+KE}}
+\index{get\+Last\+Accepted\+KE@{get\+Last\+Accepted\+KE}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{get\+Last\+Accepted\+K\+E(void)}{getLastAcceptedKE(void)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real H\+M\+C\+Sampler\+::get\+Last\+Accepted\+KE (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classHMCSampler_a1e3d6ded4ceb757ab402e6ace268fc2b}{}\label{classHMCSampler_a1e3d6ded4ceb757ab402e6ace268fc2b}
+Get the stored kinetic energy. This is set rightafter a move is accepted. It\textquotesingle{}s a component of the total energy stored. \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!get\+Proposed\+KE@{get\+Proposed\+KE}}
+\index{get\+Proposed\+KE@{get\+Proposed\+KE}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{get\+Proposed\+K\+E(void)}{getProposedKE(void)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real H\+M\+C\+Sampler\+::get\+Proposed\+KE (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classHMCSampler_aea854d56098d31f7b2e2d15d231b8949}{}\label{classHMCSampler_aea854d56098d31f7b2e2d15d231b8949}
+Get the proposed kinetic energy. This is set right after velocities are initialized. \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!get\+Timestep@{get\+Timestep}}
+\index{get\+Timestep@{get\+Timestep}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{get\+Timestep(void)}{getTimestep(void)}}]{\setlength{\rightskip}{0pt plus 5cm}float H\+M\+C\+Sampler\+::get\+Timestep (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_ab8fb503782cc7fe6951b5189802d174d}{}\label{classHMCSampler_ab8fb503782cc7fe6951b5189802d174d}
+Get/\+Set the timestep for integration \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!get\+Time\+Stepper@{get\+Time\+Stepper}}
+\index{get\+Time\+Stepper@{get\+Time\+Stepper}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{get\+Time\+Stepper(void)}{getTimeStepper(void)}}]{\setlength{\rightskip}{0pt plus 5cm}const Sim\+T\+K\+::\+Time\+Stepper $\ast$ H\+M\+C\+Sampler\+::get\+Time\+Stepper (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a90d64460a0b1b4e83e3c27db0b7681f0}{}\label{classHMCSampler_a90d64460a0b1b4e83e3c27db0b7681f0}
+Get the Time\+Stepper that manages the integrator
+
+Get/set the Time\+Stepper that manages the integrator \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!initialize@{initialize}}
+\index{initialize@{initialize}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{initialize(\+Sim\+T\+K\+::\+State \&advanced)}{initialize(SimTK::State &advanced)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::initialize (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_ad878471d3e5222758b2544f76affd79a}{}\label{classHMCSampler_ad878471d3e5222758b2544f76affd79a}
+Seed the random number generator. Set simulation temperature, velocities to desired temperature, variables that store the configuration and variables that store the energies, both needed for the acception-\/rejection step. Also realize velocities and initialize the timestepper. 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a4cf1b6d5169675be6687b2eef7e14c61}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!initialize\+Velocities@{initialize\+Velocities}}
+\index{initialize\+Velocities@{initialize\+Velocities}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{initialize\+Velocities(\+Sim\+T\+K\+::\+State \&some\+State)}{initializeVelocities(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::initialize\+Velocities (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_ae38d8206113980732d4adced081c50fd}{}\label{classHMCSampler_ae38d8206113980732d4adced081c50fd}
+Initialize velocities according to the Maxwell-\/\+Boltzmann distribution. Coresponds to R operator in L\+A\+H\+MC 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a647e291c4044ca37a4bff16753b76416}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!integrate\+Trajectory@{integrate\+Trajectory}}
+\index{integrate\+Trajectory@{integrate\+Trajectory}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{integrate\+Trajectory(\+Sim\+T\+K\+::\+State \&some\+State)}{integrateTrajectory(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::integrate\+Trajectory (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_ab3b4de64be2a10193e274f05788b5ca5}{}\label{classHMCSampler_ab3b4de64be2a10193e274f05788b5ca5}
+Apply the L operator 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a2759e95ec5a15a447a20b59f3df28ef8}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!integrate\+Trajectory\+One\+Step\+At\+A\+Time@{integrate\+Trajectory\+One\+Step\+At\+A\+Time}}
+\index{integrate\+Trajectory\+One\+Step\+At\+A\+Time@{integrate\+Trajectory\+One\+Step\+At\+A\+Time}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{integrate\+Trajectory\+One\+Step\+At\+A\+Time(\+Sim\+T\+K\+::\+State \&some\+State)}{integrateTrajectoryOneStepAtATime(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::integrate\+Trajectory\+One\+Step\+At\+A\+Time (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a4e74ce67f749317e106a528e2791df9d}{}\label{classHMCSampler_a4e74ce67f749317e106a528e2791df9d}
+Integrate trajectory one step at a time to compute quantities instantly \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!M\+H\+Accept\+Probability@{M\+H\+Accept\+Probability}}
+\index{M\+H\+Accept\+Probability@{M\+H\+Accept\+Probability}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{M\+H\+Accept\+Probability(\+Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Real arg\+Etot\+\_\+proposed, Sim\+T\+K\+::\+Real arg\+Etot\+\_\+n)}{MHAcceptProbability(SimTK::State &someState, SimTK::Real argEtot_proposed, SimTK::Real argEtot_n)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real H\+M\+C\+Sampler\+::\+M\+H\+Accept\+Probability (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Etot\+\_\+proposed, }
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Etot\+\_\+n}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a7fee5ad6d531c32235db96c4b95f1eca}{}\label{classHMCSampler_a7fee5ad6d531c32235db96c4b95f1eca}
+Metropolis-\/\+Hastings acceptance probability 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a6a3e967f12c5c64dda41c395bf755e6b}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!perturbQ@{perturbQ}}
+\index{perturbQ@{perturbQ}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{perturb\+Q(\+Sim\+T\+K\+::\+State \&some\+State)}{perturbQ(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::perturbQ (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a4abf0550ceb1ecef10c5823581ebf515}{}\label{classHMCSampler_a4abf0550ceb1ecef10c5823581ebf515}
+Modifies Q randomly \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!Print\+Detailed\+Energy\+Info@{Print\+Detailed\+Energy\+Info}}
+\index{Print\+Detailed\+Energy\+Info@{Print\+Detailed\+Energy\+Info}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{Print\+Detailed\+Energy\+Info(\+Sim\+T\+K\+::\+State \&some\+State)}{PrintDetailedEnergyInfo(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::\+Print\+Detailed\+Energy\+Info (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_ab0354537f83779a468255e4c5fc2c9b6}{}\label{classHMCSampler_ab0354537f83779a468255e4c5fc2c9b6}
+Print detailed energy information \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!propose@{propose}}
+\index{propose@{propose}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{propose(\+Sim\+T\+K\+::\+State \&some\+State)}{propose(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::propose (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_aa36ab4482bbb6295658e8fe6a49c9e4f}{}\label{classHMCSampler_aa36ab4482bbb6295658e8fe6a49c9e4f}
+It implements the proposal move in the Hamiltonian Monte Carlo algorithm. It essentially propagates the trajectory after it stores the configuration and energies. T\+O\+DO\+: break in two functions\+: initialize\+Velocities and propagate/integrate
+
+It implements the proposal move in the Hamiltonian Monte Carlo algorithm. It essentially propagates the trajectory after it stores the configuration and energies. 
+
+Implements \hyperlink{classSampler_a3022d2efacf6107b3fba506d31e2919e}{Sampler}.
+
+
+
+Reimplemented in \hyperlink{classLAHMCSampler_aedb4b87feaaa20c036c908c9e9868b41}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!push\+Coordinates\+InQ@{push\+Coordinates\+InQ}}
+\index{push\+Coordinates\+InQ@{push\+Coordinates\+InQ}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{push\+Coordinates\+In\+Q(\+Sim\+T\+K\+::\+State \&some\+State)}{pushCoordinatesInQ(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}int H\+M\+C\+Sampler\+::push\+Coordinates\+InQ (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_aa0e27f4d44328dcae4a2a38cf1b3f626}{}\label{classHMCSampler_aa0e27f4d44328dcae4a2a38cf1b3f626}
+Push generalized coordinates into R vector stored in \hyperlink{classSampler}{Sampler}. Return the size of R \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!push\+Coordinates\+InR@{push\+Coordinates\+InR}}
+\index{push\+Coordinates\+InR@{push\+Coordinates\+InR}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{push\+Coordinates\+In\+R(\+Sim\+T\+K\+::\+State \&some\+State)}{pushCoordinatesInR(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}int H\+M\+C\+Sampler\+::push\+Coordinates\+InR (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a4c2bd08867d1a07c54587d52fd8d5fed}{}\label{classHMCSampler_a4c2bd08867d1a07c54587d52fd8d5fed}
+Push Cartesian coordinates into R vector stored in \hyperlink{classSampler}{Sampler}. Return the size of R \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!push\+Velocities\+In\+Qdot@{push\+Velocities\+In\+Qdot}}
+\index{push\+Velocities\+In\+Qdot@{push\+Velocities\+In\+Qdot}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{push\+Velocities\+In\+Qdot(\+Sim\+T\+K\+::\+State \&some\+State)}{pushVelocitiesInQdot(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}int H\+M\+C\+Sampler\+::push\+Velocities\+In\+Qdot (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a642722a3022575f342c9913ffbb82ce2}{}\label{classHMCSampler_a642722a3022575f342c9913ffbb82ce2}
+Push generalizedvelocities into Rdot vector stored in \hyperlink{classSampler}{Sampler}. Return the size of Rdot \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!push\+Velocities\+In\+Rdot@{push\+Velocities\+In\+Rdot}}
+\index{push\+Velocities\+In\+Rdot@{push\+Velocities\+In\+Rdot}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{push\+Velocities\+In\+Rdot(\+Sim\+T\+K\+::\+State \&some\+State)}{pushVelocitiesInRdot(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}int H\+M\+C\+Sampler\+::push\+Velocities\+In\+Rdot (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a8e67589e5d96c6fe11a20f7bc073af84}{}\label{classHMCSampler_a8e67589e5d96c6fe11a20f7bc073af84}
+Push Cartesian velocities into Rdot vector stored in \hyperlink{classSampler}{Sampler}. Return the size of Rdot
+
+Push velocities into Rdot vector stored in \hyperlink{classSampler}{Sampler}. Return the size of Rdot \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!push\+Velocities\+InU@{push\+Velocities\+InU}}
+\index{push\+Velocities\+InU@{push\+Velocities\+InU}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{push\+Velocities\+In\+U(\+Sim\+T\+K\+::\+State \&some\+State)}{pushVelocitiesInU(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}int H\+M\+C\+Sampler\+::push\+Velocities\+InU (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_abcdb1f372e12dabec50d4f674c708461}{}\label{classHMCSampler_abcdb1f372e12dabec50d4f674c708461}
+Push generalizedvelocities into Rdot vector stored in \hyperlink{classSampler}{Sampler}. Return the size of Rdot \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!reinitialize@{reinitialize}}
+\index{reinitialize@{reinitialize}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{reinitialize(\+Sim\+T\+K\+::\+State \&advanced)}{reinitialize(SimTK::State &advanced)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::reinitialize (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a43a302d87e149bfa893a5952ec20941f}{}\label{classHMCSampler_a43a302d87e149bfa893a5952ec20941f}
+Same as initialize 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a11e1f9bee0627776686d546efba9d2e6}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!set\+Last\+Accepted\+KE@{set\+Last\+Accepted\+KE}}
+\index{set\+Last\+Accepted\+KE@{set\+Last\+Accepted\+KE}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{set\+Last\+Accepted\+K\+E(\+Sim\+T\+K\+::\+Real)}{setLastAcceptedKE(SimTK::Real)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::set\+Last\+Accepted\+KE (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Real}]{inp\+KE}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a44b541a914af643eaca56e43d5d58a13}{}\label{classHMCSampler_a44b541a914af643eaca56e43d5d58a13}
+Stores the accepted kinetic energy. This should be set right after a move is accepted. It\textquotesingle{}s a component of the total energy stored. \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!set\+Proposed\+KE@{set\+Proposed\+KE}}
+\index{set\+Proposed\+KE@{set\+Proposed\+KE}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{set\+Proposed\+K\+E(\+Sim\+T\+K\+::\+Real)}{setProposedKE(SimTK::Real)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::set\+Proposed\+KE (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Real}]{inp\+KE}
+\end{DoxyParamCaption}
+)}\hypertarget{classHMCSampler_a5972926e31fe4f9ee7ae1498f049f9f1}{}\label{classHMCSampler_a5972926e31fe4f9ee7ae1498f049f9f1}
+Sets the proposed kinetic energy before the proposal. This should be set right after the velocities are initialized. \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!set\+Set\+Configuration\+And\+Energies\+To\+New@{set\+Set\+Configuration\+And\+Energies\+To\+New}}
+\index{set\+Set\+Configuration\+And\+Energies\+To\+New@{set\+Set\+Configuration\+And\+Energies\+To\+New}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{set\+Set\+Configuration\+And\+Energies\+To\+New(\+Sim\+T\+K\+::\+State \&some\+State)}{setSetConfigurationAndEnergiesToNew(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::set\+Set\+Configuration\+And\+Energies\+To\+New (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a4deb485f9bfc31d64f6ada06536f9230}{}\label{classHMCSampler_a4deb485f9bfc31d64f6ada06536f9230}
+Update new configuration and energiees
+
+Set energies and configuration to new state 
+
+Reimplemented in \hyperlink{classLAHMCSampler_ae7a0d2db9791c6e6947d8273b90f95b8}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!set\+Set\+Configuration\+And\+Energies\+To\+Old@{set\+Set\+Configuration\+And\+Energies\+To\+Old}}
+\index{set\+Set\+Configuration\+And\+Energies\+To\+Old@{set\+Set\+Configuration\+And\+Energies\+To\+Old}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{set\+Set\+Configuration\+And\+Energies\+To\+Old(\+Sim\+T\+K\+::\+State \&some\+State)}{setSetConfigurationAndEnergiesToOld(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::set\+Set\+Configuration\+And\+Energies\+To\+Old (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a26452f17a85fadebcf44bddb44954cc6}{}\label{classHMCSampler_a26452f17a85fadebcf44bddb44954cc6}
+Restore old configuration and energies \index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!store\+Old\+Configuration\+And\+Potential\+Energies@{store\+Old\+Configuration\+And\+Potential\+Energies}}
+\index{store\+Old\+Configuration\+And\+Potential\+Energies@{store\+Old\+Configuration\+And\+Potential\+Energies}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{store\+Old\+Configuration\+And\+Potential\+Energies(\+Sim\+T\+K\+::\+State \&some\+State)}{storeOldConfigurationAndPotentialEnergies(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::store\+Old\+Configuration\+And\+Potential\+Energies (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a8c9a03dba406c0d4bef622c42d399b19}{}\label{classHMCSampler_a8c9a03dba406c0d4bef622c42d399b19}
+Store configuration and PE, Fixman potential and logsin gamma squared
+
+Store configuration as a set of Transforms 
+
+Reimplemented in \hyperlink{classLAHMCSampler_a95a06df36c18ea2cad5bea8a7e2b5926}{L\+A\+H\+M\+C\+Sampler}.
+
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!update@{update}}
+\index{update@{update}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{update(\+Sim\+T\+K\+::\+State \&some\+State)}{update(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void H\+M\+C\+Sampler\+::update (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classHMCSampler_a864175524b6023f505357b10b1a5855b}{}\label{classHMCSampler_a864175524b6023f505357b10b1a5855b}
+Main function that contains all the 3 steps of H\+MC. Implements the acception-\/rejection step and sets the state of the compound to the appropriate conformation wether it accepted or not. 
+
+Implements \hyperlink{classSampler}{Sampler}.
+
+
+
+Reimplemented in \hyperlink{classLAHMCSampler_ace1c39b2b136a63d4f00bb5fcd5508c9}{L\+A\+H\+M\+C\+Sampler}.
+
+
+
+\subsection{Member Data Documentation}
+\index{H\+M\+C\+Sampler@{H\+M\+C\+Sampler}!timestep@{timestep}}
+\index{timestep@{timestep}!H\+M\+C\+Sampler@{H\+M\+C\+Sampler}}
+\subsubsection[{\texorpdfstring{timestep}{timestep}}]{\setlength{\rightskip}{0pt plus 5cm}float H\+M\+C\+Sampler\+::timestep\hspace{0.3cm}{\ttfamily [protected]}}\hypertarget{classHMCSampler_a8cd8b25b42e94acb34aa0dea64c67b5b}{}\label{classHMCSampler_a8cd8b25b42e94acb34aa0dea64c67b5b}
+Load the map of mobods to joint types 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/gmolmodel/H\+M\+C\+Sampler.\+hpp\item 
+src/\hyperlink{HMCSampler_8cpp}{H\+M\+C\+Sampler.\+cpp}\end{DoxyCompactItemize}

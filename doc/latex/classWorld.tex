@@ -1,0 +1,534 @@
+\hypertarget{classWorld}{}\section{World Class Reference}
+\label{classWorld}\index{World@{World}}
+
+
+{\ttfamily \#include $<$World.\+hpp$>$}
+
+
+
+Collaboration diagram for World\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=343pt]{classWorld__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classWorld_a5ce131833831520888e5bf6e75526438}{World} (int world\+Index, bool is\+Visual=true, Sim\+T\+K\+::\+Real visualizer\+Frequency=0.\+0015)
+\item 
+\hyperlink{classWorld_a8c73fba541a5817fff65147ba47cd827}{$\sim$\+World} ()
+\item 
+void \hyperlink{classWorld_aa71c8ba6b3fa1c580163cc144decf4a0}{Add\+Molecule} (\hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader, std\+::string rb\+FN, std\+::string flex\+FN, std\+::string regimen\+Spec, std\+::string arg\+Root)
+\item 
+int \hyperlink{classWorld_a321388cc18359edab1f99573188fb973}{get\+Nof\+Molecules} ()
+\item 
+void \hyperlink{classWorld_ab197cd25a9a29e785d329e31b6c5a2c3}{model\+Topologies} (std\+::string Ground\+To\+Compound\+Mobilizer\+Type)
+\item 
+const Sim\+T\+K\+::\+State \& {\bfseries realize\+Topology} (void)\hypertarget{classWorld_a7d8f9e7e5e13a7617e9b08b41b8ef608}{}\label{classWorld_a7d8f9e7e5e13a7617e9b08b41b8ef608}
+
+\item 
+void {\bfseries load\+Compound\+Related\+Maps} (void)\hypertarget{classWorld_ae71eef1e629e38141a5d75bb08372bb1}{}\label{classWorld_ae71eef1e629e38141a5d75bb08372bb1}
+
+\item 
+void {\bfseries load\+Mobods\+Related\+Maps} (void)\hypertarget{classWorld_a82fd50ef35ef6b153916102957817a3b}{}\label{classWorld_a82fd50ef35ef6b153916102957817a3b}
+
+\item 
+std\+::vector$<$ std\+::vector$<$ std\+::pair$<$ \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$, Sim\+T\+K\+::\+Vec3 $>$ $>$ $>$ \hyperlink{classWorld_a4b642cb465b7f7e144045351eef3ff60}{get\+Atoms\+Locations\+In\+Ground} (const Sim\+T\+K\+::\+State \&)
+\item 
+Sim\+T\+K\+::\+State \& \hyperlink{classWorld_ac7f0377e169f07e614ac664f1b0937c2}{set\+Atoms\+Locations\+In\+Ground} (Sim\+T\+K\+::\+State \&, std\+::vector$<$ std\+::vector$<$ std\+::pair$<$ \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$, Sim\+T\+K\+::\+Vec3 $>$ $>$ $>$ other\+Worlds\+Atoms\+Locations)
+\item 
+Compound\+System $\ast$ \hyperlink{classWorld_a94e5791e5b951a2087bbf995bf4aeff9}{get\+Compound\+System} () const 
+\item 
+void \hyperlink{classWorld_af4eaaaf451cd2cdceb490012fd7886b4}{set\+Compound\+System} (Compound\+System $\ast$\hyperlink{classWorld_a63269bd638b21445a78de794c97ee592}{compound\+System})
+\item 
+void \hyperlink{classWorld_a6e702362f7fd93376e76fc07256bdac7}{update\+Atom\+Lists\+From\+Compound} (const Sim\+T\+K\+::\+State \&state)
+\item 
+void \hyperlink{classWorld_ad3a225d5cdbb616866557a7dfa47f5a9}{update\+Coord\+Buffers} (void)
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ \hyperlink{classWorld_aa8b3082bb20557b070fad5dff6417d07}{get\+Xs} (void)
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries get\+Ys} (void)\hypertarget{classWorld_a6bf83fa6b3343cc65671122514671a89}{}\label{classWorld_a6bf83fa6b3343cc65671122514671a89}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries get\+Zs} (void)\hypertarget{classWorld_a2969bfb385f741cd29046a310bae5df8}{}\label{classWorld_a2969bfb385f741cd29046a310bae5df8}
+
+\item 
+const \hyperlink{classTopology}{Topology} \& \hyperlink{classWorld_a32e376d68e307d97c2ecb6728b15bfc7}{get\+Topology} (int molecule\+Number) const 
+\item 
+\hyperlink{classTopology}{Topology} \& \hyperlink{classWorld_a18eded7d9547d0409f9595f2faafa16a}{upd\+Topology} (int molecule\+Number)
+\item 
+Sim\+T\+K\+::\+Real \hyperlink{classWorld_a6166532b83968e6fb2a428cecb93bc7e}{get\+Temperature} (void)
+\item 
+void \hyperlink{classWorld_a8fbd26bdd06cde3b45827ab06de4d792}{set\+Temperature} (Sim\+T\+K\+::\+Real)
+\item 
+void \hyperlink{classWorld_a2be6866ca33c4d8251d3f4421e1cd69a}{set\+Seed} (int which\+Sampler, unsigned long long int)
+\item 
+unsigned long long int {\bfseries get\+Seed} (int which\+Sampler)\hypertarget{classWorld_a138dca3b00502309aead4c2e1ce51703}{}\label{classWorld_a138dca3b00502309aead4c2e1ce51703}
+
+\item 
+void \hyperlink{classWorld_a8c3b18966e8f68d1f4e95f72229717bd}{add\+Fixman\+Torque} ()
+\item 
+void \hyperlink{classWorld_a6ec2e5a731fdedeb50066a7183d3a611}{set\+Amber\+Force\+Field\+Scale\+Factors} (void)
+\item 
+void \hyperlink{classWorld_ae6935057ff0b657b46e233e4af635b9f}{set\+Global\+Force\+Field\+Scale\+Factor} (Sim\+T\+K\+::\+Real)
+\item 
+void \hyperlink{classWorld_aa551dedf34c94145302d243b280122ab}{set\+Gbsa\+Global\+Scale\+Factor} (Sim\+T\+K\+::\+Real)
+\item 
+Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$ \hyperlink{classWorld_a280165d3e24d0178a3fcd46864149efc}{upd\+Force\+Field} (void)
+\item 
+bool \hyperlink{classWorld_a4729653287f71760ba62f1a2b2ccf1a0}{is\+Using\+Fixman\+Torque} (void)
+\item 
+int \hyperlink{classWorld_add8943809f8160896ad33c6b33b716a1}{get\+Nof\+Samples} (void)
+\item 
+int \hyperlink{classWorld_ac0feb583f91eb5b844b8e4686c03d5e1}{get\+Nof\+Samplers} (void)
+\item 
+Base\+Sampler $\ast$ \hyperlink{classWorld_a9b96dc609f0f5200fb40ab798ae3ba63}{add\+Sampler} (std\+::string)
+\item 
+Base\+Sampler $\ast$ \hyperlink{classWorld_aacce8c70433c672b9f23ebb98b150ee9}{add\+Sampler} (Sampler\+Name)
+\item 
+const Base\+Sampler $\ast$ \hyperlink{classWorld_a53f849fe16026bbc02893dc28ae9d0e8}{get\+Sampler} (int which)
+\item 
+Base\+Sampler $\ast$ \hyperlink{classWorld_a3a52497539ba32fc205a94e1d3187617}{upd\+Sampler} (int which)
+\item 
+\hyperlink{classFixmanTorque}{Fixman\+Torque} $\ast$ \hyperlink{classWorld_a6fad7a67c4975e171e675d4fe979245b}{upd\+Fixman\+Torque} (void)
+\item 
+\hyperlink{classFixmanTorque}{Fixman\+Torque} $\ast$ \hyperlink{classWorld_a64203e9d832b1fdad7eb03bbed4e8f30}{get\+Fixman\+Torque} (void) const 
+\item 
+void \hyperlink{classWorld_aa0b30ed0088bf78621cae35160285554}{Print\+Simbody\+State\+Cache} (Sim\+T\+K\+::\+State \&)
+\item 
+void \hyperlink{classWorld_a3b7eebabe8824024af70a3d1175c0b97}{print\+Poss} (const Sim\+T\+K\+::\+Compound \&c, Sim\+T\+K\+::\+State \&some\+State)
+\item 
+void \hyperlink{classWorld_a8fd55c5c3f0e92e3af0c5658063ef470}{print\+Vels} (const Sim\+T\+K\+::\+Compound \&c, Sim\+T\+K\+::\+State \&some\+State)
+\item 
+void \hyperlink{classWorld_ad38f29681e5c31a523634dd23a73f075}{print\+Poss\+Vels} (const Sim\+T\+K\+::\+Compound \&c, Sim\+T\+K\+::\+State \&some\+State)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+Sim\+T\+K\+::\+Compound\+System $\ast$ \hyperlink{classWorld_a63269bd638b21445a78de794c97ee592}{compound\+System}
+\item 
+Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$ \hyperlink{classWorld_adc0da6db32a40c1cc09e29f7044ac3e6}{matter}
+\item 
+Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$ \hyperlink{classWorld_a25f41543a35f1950cde1e7a70a01d38d}{forces}
+\item 
+\hyperlink{classFixmanTorque}{Fixman\+Torque} $\ast$ \hyperlink{classWorld_a365134a878260d3e05efc93634b697df}{Fixman\+Torque\+Impl}
+\item 
+Sim\+T\+K\+::\+Force\+::\+Custom $\ast$ {\bfseries Ext\+Force}\hypertarget{classWorld_a32035c92ef74b9e8e91fedfdd152b112}{}\label{classWorld_a32035c92ef74b9e8e91fedfdd152b112}
+
+\item 
+Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$ \hyperlink{classWorld_a49e379a00c0f908542349ee979775e8d}{force\+Field}
+\item 
+int \hyperlink{classWorld_a88ce5b19230917725b4c5656581d04e6}{molecule\+Count}
+\item 
+std\+::vector$<$ \hyperlink{classTopology}{Topology} $\ast$ $>$ \hyperlink{classWorld_aa0c16379fe096948946e73bd2a34bbb9}{topologies}
+\item 
+std\+::string {\bfseries root\+Mobility}\hypertarget{classWorld_afbe82ba1b4c10f2d034774c78fe1d36d}{}\label{classWorld_afbe82ba1b4c10f2d034774c78fe1d36d}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ \hyperlink{classWorld_a0284a9971261c375fb04561a0f4821e6}{Xs}
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries Ys}\hypertarget{classWorld_afd6148945636421af67bf0967b3a1a1e}{}\label{classWorld_afd6148945636421af67bf0967b3a1a1e}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries Zs}\hypertarget{classWorld_a34638c9fa524b941b8110d935ed79f32}{}\label{classWorld_a34638c9fa524b941b8110d935ed79f32}
+
+\item 
+Sim\+T\+K\+::\+Transform $\ast$ \hyperlink{classWorld_a615e5483cdea05073c6a9cde2a945433}{T\+Vector}
+\item 
+int $\ast$$\ast$ \hyperlink{classWorld_ae6ee20b37727cb29bbb29fa57e4b4ccc}{mbx\+Tree\+Mat}
+\item 
+Sim\+T\+K\+::\+Real $\ast$ {\bfseries branch\+Mass\+Vec}\hypertarget{classWorld_aa1e17875d970e2a5866dccbe92794408}{}\label{classWorld_aa1e17875d970e2a5866dccbe92794408}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries temperature}\hypertarget{classWorld_af6e99c28c46a3028b19bdd9eddf1e32d}{}\label{classWorld_af6e99c28c46a3028b19bdd9eddf1e32d}
+
+\item 
+Sim\+T\+K\+::\+Verlet\+Integrator $\ast$ {\bfseries integ}\hypertarget{classWorld_a0c1825a5bccd943e622667d4f2361bfb}{}\label{classWorld_a0c1825a5bccd943e622667d4f2361bfb}
+
+\item 
+Sim\+T\+K\+::\+Time\+Stepper $\ast$ {\bfseries ts}\hypertarget{classWorld_adcb1faeb373c470571e2ab170f7a324a}{}\label{classWorld_adcb1faeb373c470571e2ab170f7a324a}
+
+\item 
+std\+::vector$<$ Base\+Sampler $\ast$ $>$ {\bfseries samplers}\hypertarget{classWorld_a138dac67fc55edc3464cea3ce7efb927}{}\label{classWorld_a138dac67fc55edc3464cea3ce7efb927}
+
+\item 
+bool {\bfseries \+\_\+use\+Fixman\+Torque}\hypertarget{classWorld_a5820bfb2de987a51015b86900d55c076}{}\label{classWorld_a5820bfb2de987a51015b86900d55c076}
+
+\item 
+int {\bfseries nof\+Samples}\hypertarget{classWorld_a94879de144abf83cc275d9306eeab37f}{}\label{classWorld_a94879de144abf83cc275d9306eeab37f}
+
+\item 
+bool {\bfseries visual}\hypertarget{classWorld_a204e8ead4fb79fdbfd6b5b7738eca7d9}{}\label{classWorld_a204e8ead4fb79fdbfd6b5b7738eca7d9}
+
+\item 
+\hyperlink{classParaMolecularDecorator}{Para\+Molecular\+Decorator} $\ast$ {\bfseries para\+Molecular\+Decorator} = nullptr\hypertarget{classWorld_aa1960e6a68168fbdac28cbda7f2dbba8}{}\label{classWorld_aa1960e6a68168fbdac28cbda7f2dbba8}
+
+\item 
+Sim\+T\+K\+::\+Decoration\+Subsystem $\ast$ {\bfseries decorations}\hypertarget{classWorld_abf703a0e3e84b43b0b33dcd2de3fa2ea}{}\label{classWorld_abf703a0e3e84b43b0b33dcd2de3fa2ea}
+
+\item 
+Sim\+T\+K\+::\+Visualizer $\ast$ {\bfseries visualizer}\hypertarget{classWorld_a2174a847c16ebce5fd6aa9cca5ef4075}{}\label{classWorld_a2174a847c16ebce5fd6aa9cca5ef4075}
+
+\item 
+Sim\+T\+K\+::\+Visualizer\+::\+Reporter $\ast$ {\bfseries visualizer\+Reporter}\hypertarget{classWorld_a8fe1c13cc40f1d32ecfb97fbacf01a31}{}\label{classWorld_a8fe1c13cc40f1d32ecfb97fbacf01a31}
+
+\item 
+int {\bfseries own\+World\+Index}\hypertarget{classWorld_a01aa97e5cd329fe3b4f5cefd86ecdc07}{}\label{classWorld_a01aa97e5cd329fe3b4f5cefd86ecdc07}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains a Symbody system and additional data that define a regimen 
+
+\subsection{Constructor \& Destructor Documentation}
+\index{World@{World}!World@{World}}
+\index{World@{World}!World@{World}}
+\subsubsection[{\texorpdfstring{World(int world\+Index, bool is\+Visual=true, Sim\+T\+K\+::\+Real visualizer\+Frequency=0.\+0015)}{World(int worldIndex, bool isVisual=true, SimTK::Real visualizerFrequency=0.0015)}}]{\setlength{\rightskip}{0pt plus 5cm}World\+::\+World (
+\begin{DoxyParamCaption}
+\item[{int}]{world\+Index, }
+\item[{bool}]{is\+Visual = {\ttfamily true}, }
+\item[{Sim\+T\+K\+::\+Real}]{visualizer\+Frequency = {\ttfamily 0.0015}}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a5ce131833831520888e5bf6e75526438}{}\label{classWorld_a5ce131833831520888e5bf6e75526438}
+Constructor
+
+Constructor. Initializes the following pretty much empty objects\+:
+\begin{DoxyItemize}
+\item Compound\+System,
+\begin{DoxyItemize}
+\item Simbody\+Matter\+Subsystem, General\+Force\+Subsystem, Decoration\+Subsystem, Visualizer, Visualizer\+::\+Reporter, Du\+M\+M\+Force\+Field\+Subsystem,
+\end{DoxyItemize}
+\item Integrator with a Time\+Stepper on top 
+\end{DoxyItemize}\index{World@{World}!````~World@{$\sim$\+World}}
+\index{````~World@{$\sim$\+World}!World@{World}}
+\subsubsection[{\texorpdfstring{$\sim$\+World()}{~World()}}]{\setlength{\rightskip}{0pt plus 5cm}World\+::$\sim$\+World (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a8c73fba541a5817fff65147ba47cd827}{}\label{classWorld_a8c73fba541a5817fff65147ba47cd827}
+Destructor 
+
+\subsection{Member Function Documentation}
+\index{World@{World}!add\+Fixman\+Torque@{add\+Fixman\+Torque}}
+\index{add\+Fixman\+Torque@{add\+Fixman\+Torque}!World@{World}}
+\subsubsection[{\texorpdfstring{add\+Fixman\+Torque()}{addFixmanTorque()}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::add\+Fixman\+Torque (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a8c3b18966e8f68d1f4e95f72229717bd}{}\label{classWorld_a8c3b18966e8f68d1f4e95f72229717bd}
+Use the Fixman torque as an additional force subsystem. Careful not have different temperatures for \hyperlink{classWorld}{World} and Fixman Torque.
+
+Set up Fixman torque \index{World@{World}!Add\+Molecule@{Add\+Molecule}}
+\index{Add\+Molecule@{Add\+Molecule}!World@{World}}
+\subsubsection[{\texorpdfstring{Add\+Molecule(read\+Amber\+Input $\ast$amber\+Reader, std\+::string rb\+F\+N, std\+::string flex\+F\+N, std\+::string regimen\+Spec, std\+::string arg\+Root)}{AddMolecule(readAmberInput *amberReader, std::string rbFN, std::string flexFN, std::string regimenSpec, std::string argRoot)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::\+Add\+Molecule (
+\begin{DoxyParamCaption}
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader, }
+\item[{std\+::string}]{rb\+FN, }
+\item[{std\+::string}]{flex\+FN, }
+\item[{std\+::string}]{regimen\+Spec, }
+\item[{std\+::string}]{arg\+Root}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_aa71c8ba6b3fa1c580163cc144decf4a0}{}\label{classWorld_aa71c8ba6b3fa1c580163cc144decf4a0}
+Creates a topology object and based on amber\+Reader forcefield parameters -\/ defines Biotypes; -\/ adds B\+AT parameters to Du\+MM
+
+Creates Gmolmodel topologies objects and based on amber\+Reader forcefield adds parameters\+: defines Biotypes; -\/ adds B\+AT parameters to Du\+MM. Also creates decorations for visualizers \index{World@{World}!add\+Sampler@{add\+Sampler}}
+\index{add\+Sampler@{add\+Sampler}!World@{World}}
+\subsubsection[{\texorpdfstring{add\+Sampler(std\+::string)}{addSampler(std::string)}}]{\setlength{\rightskip}{0pt plus 5cm}Base\+Sampler$\ast$ World\+::add\+Sampler (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a9b96dc609f0f5200fb40ab798ae3ba63}{}\label{classWorld_a9b96dc609f0f5200fb40ab798ae3ba63}
+Add a sampler to the \hyperlink{classWorld}{World} \index{World@{World}!add\+Sampler@{add\+Sampler}}
+\index{add\+Sampler@{add\+Sampler}!World@{World}}
+\subsubsection[{\texorpdfstring{add\+Sampler(\+Sampler\+Name)}{addSampler(SamplerName)}}]{\setlength{\rightskip}{0pt plus 5cm}Base\+Sampler $\ast$ World\+::add\+Sampler (
+\begin{DoxyParamCaption}
+\item[{Sampler\+Name}]{sampler\+Name}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_aacce8c70433c672b9f23ebb98b150ee9}{}\label{classWorld_aacce8c70433c672b9f23ebb98b150ee9}
+Add a sampler to this \hyperlink{classWorld}{World} using the specialized struct for samplers names. \index{World@{World}!get\+Atoms\+Locations\+In\+Ground@{get\+Atoms\+Locations\+In\+Ground}}
+\index{get\+Atoms\+Locations\+In\+Ground@{get\+Atoms\+Locations\+In\+Ground}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Atoms\+Locations\+In\+Ground(const Sim\+T\+K\+::\+State \&)}{getAtomsLocationsInGround(const SimTK::State &)}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::vector$<$ std\+::vector$<$ std\+::pair$<$ {\bf b\+Specific\+Atom} $\ast$, Sim\+T\+K\+::\+Vec3 $>$ $>$ $>$ World\+::get\+Atoms\+Locations\+In\+Ground (
+\begin{DoxyParamCaption}
+\item[{const Sim\+T\+K\+::\+State \&}]{state}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a4b642cb465b7f7e144045351eef3ff60}{}\label{classWorld_a4b642cb465b7f7e144045351eef3ff60}
+Get the current Compound Cartesian coords
+
+Return a 2D vector representing all the coordinates of this \hyperlink{classWorld}{World}. The first dimension represents the molecules (topologies) and the second dimension (inner) represents the coordinates. The second inner dimension type is pair of b\+Specific\+Atom$\ast$ and a Vec3. Thus, besides coordinates, it contains all the information in \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} as well. The bottleneck here is the calc\+Atom\+Location\+In\+Ground\+Frame from Compound. \index{World@{World}!get\+Compound\+System@{get\+Compound\+System}}
+\index{get\+Compound\+System@{get\+Compound\+System}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Compound\+System() const }{getCompoundSystem() const }}]{\setlength{\rightskip}{0pt plus 5cm}Compound\+System $\ast$ World\+::get\+Compound\+System (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}\hypertarget{classWorld_a94e5791e5b951a2087bbf995bf4aeff9}{}\label{classWorld_a94e5791e5b951a2087bbf995bf4aeff9}
+Return own Compound\+System \index{World@{World}!get\+Fixman\+Torque@{get\+Fixman\+Torque}}
+\index{get\+Fixman\+Torque@{get\+Fixman\+Torque}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Fixman\+Torque(void) const }{getFixmanTorque(void) const }}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Fixman\+Torque} $\ast$ World\+::get\+Fixman\+Torque (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+) const}\hypertarget{classWorld_a64203e9d832b1fdad7eb03bbed4e8f30}{}\label{classWorld_a64203e9d832b1fdad7eb03bbed4e8f30}
+Get pointer to \hyperlink{classFixmanTorque}{Fixman\+Torque} implementation \index{World@{World}!get\+Nof\+Molecules@{get\+Nof\+Molecules}}
+\index{get\+Nof\+Molecules@{get\+Nof\+Molecules}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Nof\+Molecules()}{getNofMolecules()}}]{\setlength{\rightskip}{0pt plus 5cm}int World\+::get\+Nof\+Molecules (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a321388cc18359edab1f99573188fb973}{}\label{classWorld_a321388cc18359edab1f99573188fb973}
+Get the number of molecules \index{World@{World}!get\+Nof\+Samplers@{get\+Nof\+Samplers}}
+\index{get\+Nof\+Samplers@{get\+Nof\+Samplers}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Nof\+Samplers(void)}{getNofSamplers(void)}}]{\setlength{\rightskip}{0pt plus 5cm}int World\+::get\+Nof\+Samplers (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_ac0feb583f91eb5b844b8e4686c03d5e1}{}\label{classWorld_ac0feb583f91eb5b844b8e4686c03d5e1}
+\hyperlink{classSampler}{Sampler} manipulation functions
+
+How many Samplers does this \hyperlink{classWorld}{World} have. \index{World@{World}!get\+Nof\+Samples@{get\+Nof\+Samples}}
+\index{get\+Nof\+Samples@{get\+Nof\+Samples}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Nof\+Samples(void)}{getNofSamples(void)}}]{\setlength{\rightskip}{0pt plus 5cm}int World\+::get\+Nof\+Samples (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_add8943809f8160896ad33c6b33b716a1}{}\label{classWorld_add8943809f8160896ad33c6b33b716a1}
+How many samples did we have so far
+
+How many samples do we have so far \index{World@{World}!get\+Sampler@{get\+Sampler}}
+\index{get\+Sampler@{get\+Sampler}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Sampler(int which)}{getSampler(int which)}}]{\setlength{\rightskip}{0pt plus 5cm}const Base\+Sampler $\ast$ World\+::get\+Sampler (
+\begin{DoxyParamCaption}
+\item[{int}]{which}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a53f849fe16026bbc02893dc28ae9d0e8}{}\label{classWorld_a53f849fe16026bbc02893dc28ae9d0e8}
+Get a sampler based on its position in the samplers vector \index{World@{World}!get\+Temperature@{get\+Temperature}}
+\index{get\+Temperature@{get\+Temperature}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Temperature(void)}{getTemperature(void)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real World\+::get\+Temperature (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a6166532b83968e6fb2a428cecb93bc7e}{}\label{classWorld_a6166532b83968e6fb2a428cecb93bc7e}
+Get the \hyperlink{classWorld}{World} (macro) temperature
+
+Get the \hyperlink{classWorld}{World} temperature \index{World@{World}!get\+Topology@{get\+Topology}}
+\index{get\+Topology@{get\+Topology}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Topology(int molecule\+Number) const }{getTopology(int moleculeNumber) const }}]{\setlength{\rightskip}{0pt plus 5cm}const {\bf Topology} \& World\+::get\+Topology (
+\begin{DoxyParamCaption}
+\item[{int}]{molecule\+Number}
+\end{DoxyParamCaption}
+) const}\hypertarget{classWorld_a32e376d68e307d97c2ecb6728b15bfc7}{}\label{classWorld_a32e376d68e307d97c2ecb6728b15bfc7}
+Access to molecule (\hyperlink{classTopology}{Topology}) objects Get a readble reference of one of the molecules
+
+Get a const reference to a molecule \index{World@{World}!get\+Xs@{get\+Xs}}
+\index{get\+Xs@{get\+Xs}!World@{World}}
+\subsubsection[{\texorpdfstring{get\+Xs(void)}{getXs(void)}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ World\+::get\+Xs (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_aa8b3082bb20557b070fad5dff6417d07}{}\label{classWorld_aa8b3082bb20557b070fad5dff6417d07}
+Get the coordinates buffers
+
+Get the coordinates from buffers \index{World@{World}!is\+Using\+Fixman\+Torque@{is\+Using\+Fixman\+Torque}}
+\index{is\+Using\+Fixman\+Torque@{is\+Using\+Fixman\+Torque}!World@{World}}
+\subsubsection[{\texorpdfstring{is\+Using\+Fixman\+Torque(void)}{isUsingFixmanTorque(void)}}]{\setlength{\rightskip}{0pt plus 5cm}bool World\+::is\+Using\+Fixman\+Torque (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a4729653287f71760ba62f1a2b2ccf1a0}{}\label{classWorld_a4729653287f71760ba62f1a2b2ccf1a0}
+Return true if the Fixman torque flag is set
+
+Check if the Fixman torque flag is set \index{World@{World}!model\+Topologies@{model\+Topologies}}
+\index{model\+Topologies@{model\+Topologies}!World@{World}}
+\subsubsection[{\texorpdfstring{model\+Topologies(std\+::string Ground\+To\+Compound\+Mobilizer\+Type)}{modelTopologies(std::string GroundToCompoundMobilizerType)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::model\+Topologies (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{Ground\+To\+Compound\+Mobilizer\+Type}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_ab197cd25a9a29e785d329e31b6c5a2c3}{}\label{classWorld_ab197cd25a9a29e785d329e31b6c5a2c3}
+Calls Compound\+System.\+model\+Compounds and realizes \hyperlink{classTopology}{Topology} To be called after loading all Compounds.
+
+Calls Compound\+System.\+model\+One\+Compound which links the Compounds to the Simbody subsystems and realizes \hyperlink{classTopology}{Topology}. To be called after setting all Compounds properties. \index{World@{World}!print\+Poss@{print\+Poss}}
+\index{print\+Poss@{print\+Poss}!World@{World}}
+\subsubsection[{\texorpdfstring{print\+Poss(const Sim\+T\+K\+::\+Compound \&c, Sim\+T\+K\+::\+State \&some\+State)}{printPoss(const SimTK::Compound &c, SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::print\+Poss (
+\begin{DoxyParamCaption}
+\item[{const Sim\+T\+K\+::\+Compound \&}]{c, }
+\item[{Sim\+T\+K\+::\+State \&}]{advanced}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a3b7eebabe8824024af70a3d1175c0b97}{}\label{classWorld_a3b7eebabe8824024af70a3d1175c0b97}
+Print a Compound Cartesian coordinates as given by Compound\+::calc\+Atom\+Location\+In\+Ground\+Frame \index{World@{World}!print\+Poss\+Vels@{print\+Poss\+Vels}}
+\index{print\+Poss\+Vels@{print\+Poss\+Vels}!World@{World}}
+\subsubsection[{\texorpdfstring{print\+Poss\+Vels(const Sim\+T\+K\+::\+Compound \&c, Sim\+T\+K\+::\+State \&some\+State)}{printPossVels(const SimTK::Compound &c, SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::print\+Poss\+Vels (
+\begin{DoxyParamCaption}
+\item[{const Sim\+T\+K\+::\+Compound \&}]{c, }
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_ad38f29681e5c31a523634dd23a73f075}{}\label{classWorld_ad38f29681e5c31a523634dd23a73f075}
+Print a Compound Cartesian coordinates and velocities as given by Compound\+::calc\+Atom\+Location\+In\+Ground\+Frame and Compound\+::calc\+Atom\+Velocity\+In\+Ground\+Frame \index{World@{World}!Print\+Simbody\+State\+Cache@{Print\+Simbody\+State\+Cache}}
+\index{Print\+Simbody\+State\+Cache@{Print\+Simbody\+State\+Cache}!World@{World}}
+\subsubsection[{\texorpdfstring{Print\+Simbody\+State\+Cache(\+Sim\+T\+K\+::\+State \&)}{PrintSimbodyStateCache(SimTK::State &)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::\+Print\+Simbody\+State\+Cache (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_aa0b30ed0088bf78621cae35160285554}{}\label{classWorld_aa0b30ed0088bf78621cae35160285554}
+Print information about Simbody systems
+
+Print information about Simbody systems. For debugging purpose. \index{World@{World}!print\+Vels@{print\+Vels}}
+\index{print\+Vels@{print\+Vels}!World@{World}}
+\subsubsection[{\texorpdfstring{print\+Vels(const Sim\+T\+K\+::\+Compound \&c, Sim\+T\+K\+::\+State \&some\+State)}{printVels(const SimTK::Compound &c, SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::print\+Vels (
+\begin{DoxyParamCaption}
+\item[{const Sim\+T\+K\+::\+Compound \&}]{c, }
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a8fd55c5c3f0e92e3af0c5658063ef470}{}\label{classWorld_a8fd55c5c3f0e92e3af0c5658063ef470}
+Print a Compound Cartesian velocities as given by Compound\+::calc\+Atom\+Velocity\+In\+Ground\+Frame \index{World@{World}!set\+Amber\+Force\+Field\+Scale\+Factors@{set\+Amber\+Force\+Field\+Scale\+Factors}}
+\index{set\+Amber\+Force\+Field\+Scale\+Factors@{set\+Amber\+Force\+Field\+Scale\+Factors}!World@{World}}
+\subsubsection[{\texorpdfstring{set\+Amber\+Force\+Field\+Scale\+Factors(void)}{setAmberForceFieldScaleFactors(void)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::set\+Amber\+Force\+Field\+Scale\+Factors (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a6ec2e5a731fdedeb50066a7183d3a611}{}\label{classWorld_a6ec2e5a731fdedeb50066a7183d3a611}
+Amber like scale factors. \index{World@{World}!set\+Atoms\+Locations\+In\+Ground@{set\+Atoms\+Locations\+In\+Ground}}
+\index{set\+Atoms\+Locations\+In\+Ground@{set\+Atoms\+Locations\+In\+Ground}!World@{World}}
+\subsubsection[{\texorpdfstring{set\+Atoms\+Locations\+In\+Ground(\+Sim\+T\+K\+::\+State \&, std\+::vector$<$ std\+::vector$<$ std\+::pair$<$ b\+Specific\+Atom $\ast$, Sim\+T\+K\+::\+Vec3 $>$ $>$ $>$ other\+Worlds\+Atoms\+Locations)}{setAtomsLocationsInGround(SimTK::State &, std::vector< std::vector< std::pair< bSpecificAtom *, SimTK::Vec3 > > > otherWorldsAtomsLocations)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+State \& World\+::set\+Atoms\+Locations\+In\+Ground (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{std\+::vector$<$ std\+::vector$<$ std\+::pair$<$ {\bf b\+Specific\+Atom} $\ast$, Sim\+T\+K\+::\+Vec3 $>$ $>$ $>$}]{other\+Worlds\+Atoms\+Locations}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_ac7f0377e169f07e614ac664f1b0937c2}{}\label{classWorld_ac7f0377e169f07e614ac664f1b0937c2}
+Set Compound, Multibody\+System and Du\+MM configurations according to some other \hyperlink{classWorld}{World}\textquotesingle{}s atoms
+
+Set Compound, Multibody\+System and Du\+MM configurations according to some other \hyperlink{classWorld}{World}\textquotesingle{}s atoms. A body is composed of a root atom and other periferic atoms which have their own stations. Unles is a fully flexible Cartesian world, the function has the following steps\+:
+\begin{DoxyEnumerate}
+\item Set Compound
+\item Set Du\+MM
+\item Set Simbody bodies 3.\+1. Transforms X\+\_\+\+PF and X\+\_\+\+BM 3.\+2. Mass properties 
+\end{DoxyEnumerate}\index{World@{World}!set\+Compound\+System@{set\+Compound\+System}}
+\index{set\+Compound\+System@{set\+Compound\+System}!World@{World}}
+\subsubsection[{\texorpdfstring{set\+Compound\+System(\+Compound\+System $\ast$compound\+System)}{setCompoundSystem(CompoundSystem *compoundSystem)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::set\+Compound\+System (
+\begin{DoxyParamCaption}
+\item[{Compound\+System $\ast$}]{compound\+System}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_af4eaaaf451cd2cdceb490012fd7886b4}{}\label{classWorld_af4eaaaf451cd2cdceb490012fd7886b4}
+Set own Compound system \index{World@{World}!set\+Gbsa\+Global\+Scale\+Factor@{set\+Gbsa\+Global\+Scale\+Factor}}
+\index{set\+Gbsa\+Global\+Scale\+Factor@{set\+Gbsa\+Global\+Scale\+Factor}!World@{World}}
+\subsubsection[{\texorpdfstring{set\+Gbsa\+Global\+Scale\+Factor(\+Sim\+T\+K\+::\+Real)}{setGbsaGlobalScaleFactor(SimTK::Real)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::set\+Gbsa\+Global\+Scale\+Factor (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Real}]{scale\+Factor}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_aa551dedf34c94145302d243b280122ab}{}\label{classWorld_aa551dedf34c94145302d243b280122ab}
+Set G\+B\+SA implicit solvent scale factor
+
+Set G\+B\+SA implicit solvent scale factor. \index{World@{World}!set\+Global\+Force\+Field\+Scale\+Factor@{set\+Global\+Force\+Field\+Scale\+Factor}}
+\index{set\+Global\+Force\+Field\+Scale\+Factor@{set\+Global\+Force\+Field\+Scale\+Factor}!World@{World}}
+\subsubsection[{\texorpdfstring{set\+Global\+Force\+Field\+Scale\+Factor(\+Sim\+T\+K\+::\+Real)}{setGlobalForceFieldScaleFactor(SimTK::Real)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::set\+Global\+Force\+Field\+Scale\+Factor (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Real}]{scale\+Factor}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_ae6935057ff0b657b46e233e4af635b9f}{}\label{classWorld_ae6935057ff0b657b46e233e4af635b9f}
+Set a global scaling factor for all the terms the forcefield
+
+Set a global scaling factor for all the terms in the forcefield \index{World@{World}!set\+Seed@{set\+Seed}}
+\index{set\+Seed@{set\+Seed}!World@{World}}
+\subsubsection[{\texorpdfstring{set\+Seed(int which\+Sampler, unsigned long long int)}{setSeed(int whichSampler, unsigned long long int)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::set\+Seed (
+\begin{DoxyParamCaption}
+\item[{int}]{which\+Sampler, }
+\item[{unsigned long long int}]{arg\+Seed}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a2be6866ca33c4d8251d3f4421e1cd69a}{}\label{classWorld_a2be6866ca33c4d8251d3f4421e1cd69a}
+Get/\+Set seed for reproducibility. \index{World@{World}!set\+Temperature@{set\+Temperature}}
+\index{set\+Temperature@{set\+Temperature}!World@{World}}
+\subsubsection[{\texorpdfstring{set\+Temperature(\+Sim\+T\+K\+::\+Real)}{setTemperature(SimTK::Real)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::set\+Temperature (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Temperature}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a8fbd26bdd06cde3b45827ab06de4d792}{}\label{classWorld_a8fbd26bdd06cde3b45827ab06de4d792}
+Set the \hyperlink{classWorld}{World} (macro) temperature
+
+Set this \hyperlink{classWorld}{World} temperature but also ths samplers and Fixman torque temperature. \index{World@{World}!update\+Atom\+Lists\+From\+Compound@{update\+Atom\+Lists\+From\+Compound}}
+\index{update\+Atom\+Lists\+From\+Compound@{update\+Atom\+Lists\+From\+Compound}!World@{World}}
+\subsubsection[{\texorpdfstring{update\+Atom\+Lists\+From\+Compound(const Sim\+T\+K\+::\+State \&state)}{updateAtomListsFromCompound(const SimTK::State &state)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::update\+Atom\+Lists\+From\+Compound (
+\begin{DoxyParamCaption}
+\item[{const Sim\+T\+K\+::\+State \&}]{state}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a6e702362f7fd93376e76fc07256bdac7}{}\label{classWorld_a6e702362f7fd93376e76fc07256bdac7}
+Update Gmolmodel \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} Cartesian coordinates according to Molmodel Compound which in turn relizes Position and uses matter to calculate locations.
+
+Put coordinates into b\+Atom\+Lists of Topologies. When provided with a State, calc\+Atom\+Location\+In\+Ground\+Frame realizes Position and uses matter to calculate locations \index{World@{World}!update\+Coord\+Buffers@{update\+Coord\+Buffers}}
+\index{update\+Coord\+Buffers@{update\+Coord\+Buffers}!World@{World}}
+\subsubsection[{\texorpdfstring{update\+Coord\+Buffers(void)}{updateCoordBuffers(void)}}]{\setlength{\rightskip}{0pt plus 5cm}void World\+::update\+Coord\+Buffers (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_ad3a225d5cdbb616866557a7dfa47f5a9}{}\label{classWorld_ad3a225d5cdbb616866557a7dfa47f5a9}
+To be called before use of get\+Xs, get\+Ys or get\+Zs
+
+Fill Worlds Cartesian coordinates buffers. To be called before use of get\+Xs, get\+Ys or get\+Zs \index{World@{World}!upd\+Fixman\+Torque@{upd\+Fixman\+Torque}}
+\index{upd\+Fixman\+Torque@{upd\+Fixman\+Torque}!World@{World}}
+\subsubsection[{\texorpdfstring{upd\+Fixman\+Torque(void)}{updFixmanTorque(void)}}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Fixman\+Torque} $\ast$ World\+::upd\+Fixman\+Torque (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a6fad7a67c4975e171e675d4fe979245b}{}\label{classWorld_a6fad7a67c4975e171e675d4fe979245b}
+Get writble pointer to \hyperlink{classFixmanTorque}{Fixman\+Torque} implementation \index{World@{World}!upd\+Force\+Field@{upd\+Force\+Field}}
+\index{upd\+Force\+Field@{upd\+Force\+Field}!World@{World}}
+\subsubsection[{\texorpdfstring{upd\+Force\+Field(void)}{updForceField(void)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$ World\+::upd\+Force\+Field (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a280165d3e24d0178a3fcd46864149efc}{}\label{classWorld_a280165d3e24d0178a3fcd46864149efc}
+Get a writeble pointer to the Du\+MM force field \index{World@{World}!upd\+Sampler@{upd\+Sampler}}
+\index{upd\+Sampler@{upd\+Sampler}!World@{World}}
+\subsubsection[{\texorpdfstring{upd\+Sampler(int which)}{updSampler(int which)}}]{\setlength{\rightskip}{0pt plus 5cm}Base\+Sampler $\ast$ World\+::upd\+Sampler (
+\begin{DoxyParamCaption}
+\item[{int}]{which}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a3a52497539ba32fc205a94e1d3187617}{}\label{classWorld_a3a52497539ba32fc205a94e1d3187617}
+Get a writable sampler based on its position in the samplers vector \index{World@{World}!upd\+Topology@{upd\+Topology}}
+\index{upd\+Topology@{upd\+Topology}!World@{World}}
+\subsubsection[{\texorpdfstring{upd\+Topology(int molecule\+Number)}{updTopology(int moleculeNumber)}}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Topology} \& World\+::upd\+Topology (
+\begin{DoxyParamCaption}
+\item[{int}]{molecule\+Number}
+\end{DoxyParamCaption}
+)}\hypertarget{classWorld_a18eded7d9547d0409f9595f2faafa16a}{}\label{classWorld_a18eded7d9547d0409f9595f2faafa16a}
+Get a writeble reference of one of the molecules
+
+Get a writble reference to the last molecule. 
+
+\subsection{Member Data Documentation}
+\index{World@{World}!compound\+System@{compound\+System}}
+\index{compound\+System@{compound\+System}!World@{World}}
+\subsubsection[{\texorpdfstring{compound\+System}{compoundSystem}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Compound\+System$\ast$ World\+::compound\+System}\hypertarget{classWorld_a63269bd638b21445a78de794c97ee592}{}\label{classWorld_a63269bd638b21445a78de794c97ee592}
+System-\/$>$Multibody\+System-\/$>$Molecular\+Mechanics\+Systems-\/$>$Compound\+System \index{World@{World}!Fixman\+Torque\+Impl@{Fixman\+Torque\+Impl}}
+\index{Fixman\+Torque\+Impl@{Fixman\+Torque\+Impl}!World@{World}}
+\subsubsection[{\texorpdfstring{Fixman\+Torque\+Impl}{FixmanTorqueImpl}}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Fixman\+Torque}$\ast$ World\+::\+Fixman\+Torque\+Impl}\hypertarget{classWorld_a365134a878260d3e05efc93634b697df}{}\label{classWorld_a365134a878260d3e05efc93634b697df}
+Get writble pointer to Fixman Torque and other forces \index{World@{World}!force\+Field@{force\+Field}}
+\index{force\+Field@{force\+Field}!World@{World}}
+\subsubsection[{\texorpdfstring{force\+Field}{forceField}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem$\ast$ World\+::force\+Field}\hypertarget{classWorld_a49e379a00c0f908542349ee979775e8d}{}\label{classWorld_a49e379a00c0f908542349ee979775e8d}
+Subsystem-\/$>$Force\+Subsystem-\/$>$Du\+M\+M\+Force\+Field\+Subsystem \index{World@{World}!forces@{forces}}
+\index{forces@{forces}!World@{World}}
+\subsubsection[{\texorpdfstring{forces}{forces}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+General\+Force\+Subsystem$\ast$ World\+::forces}\hypertarget{classWorld_a25f41543a35f1950cde1e7a70a01d38d}{}\label{classWorld_a25f41543a35f1950cde1e7a70a01d38d}
+Subsystem-\/$>$Force\+Subsystem-\/$>$General\+Force\+Subsystem \index{World@{World}!matter@{matter}}
+\index{matter@{matter}!World@{World}}
+\subsubsection[{\texorpdfstring{matter}{matter}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem$\ast$ World\+::matter}\hypertarget{classWorld_adc0da6db32a40c1cc09e29f7044ac3e6}{}\label{classWorld_adc0da6db32a40c1cc09e29f7044ac3e6}
+Subsystem-\/$>$Simbody\+Matter\+Subsystem \index{World@{World}!mbx\+Tree\+Mat@{mbx\+Tree\+Mat}}
+\index{mbx\+Tree\+Mat@{mbx\+Tree\+Mat}!World@{World}}
+\subsubsection[{\texorpdfstring{mbx\+Tree\+Mat}{mbxTreeMat}}]{\setlength{\rightskip}{0pt plus 5cm}int$\ast$$\ast$ World\+::mbx\+Tree\+Mat}\hypertarget{classWorld_ae6ee20b37727cb29bbb29fa57e4b4ccc}{}\label{classWorld_ae6ee20b37727cb29bbb29fa57e4b4ccc}
+Topologies graphs as tables -\/ to be removed \index{World@{World}!molecule\+Count@{molecule\+Count}}
+\index{molecule\+Count@{molecule\+Count}!World@{World}}
+\subsubsection[{\texorpdfstring{molecule\+Count}{moleculeCount}}]{\setlength{\rightskip}{0pt plus 5cm}int World\+::molecule\+Count}\hypertarget{classWorld_a88ce5b19230917725b4c5656581d04e6}{}\label{classWorld_a88ce5b19230917725b4c5656581d04e6}
+Nof molecules \index{World@{World}!topologies@{topologies}}
+\index{topologies@{topologies}!World@{World}}
+\subsubsection[{\texorpdfstring{topologies}{topologies}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::vector$<${\bf Topology} $\ast$$>$ World\+::topologies}\hypertarget{classWorld_aa0c16379fe096948946e73bd2a34bbb9}{}\label{classWorld_aa0c16379fe096948946e73bd2a34bbb9}
+Molecules (topologies$<$-\/\+Compounds) objects \index{World@{World}!T\+Vector@{T\+Vector}}
+\index{T\+Vector@{T\+Vector}!World@{World}}
+\subsubsection[{\texorpdfstring{T\+Vector}{TVector}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Transform$\ast$ World\+::\+T\+Vector}\hypertarget{classWorld_a615e5483cdea05073c6a9cde2a945433}{}\label{classWorld_a615e5483cdea05073c6a9cde2a945433}
+This vector stores a configuration if is needed for later use \index{World@{World}!Xs@{Xs}}
+\index{Xs@{Xs}!World@{World}}
+\subsubsection[{\texorpdfstring{Xs}{Xs}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::vector$<$Sim\+T\+K\+::\+Real$>$ World\+::\+Xs}\hypertarget{classWorld_a0284a9971261c375fb04561a0f4821e6}{}\label{classWorld_a0284a9971261c375fb04561a0f4821e6}
+Joint types Vectors of Cartesian coordinates 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/gmolmodel/World.\+hpp\item 
+src/World.\+cpp\end{DoxyCompactItemize}

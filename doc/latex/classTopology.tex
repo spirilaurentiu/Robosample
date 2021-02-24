@@ -1,0 +1,578 @@
+\hypertarget{classTopology}{}\section{Topology Class Reference}
+\label{classTopology}\index{Topology@{Topology}}
+
+
+{\ttfamily \#include $<$Topology.\+hpp$>$}
+
+
+
+Inheritance diagram for Topology\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=180pt]{classTopology__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Topology\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=180pt]{classTopology__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classTopology_aa3336e10118cd76ab4b4c2ebc5062a9a}{Topology} ()
+\item 
+\hyperlink{classTopology_a6e001dfecb9782637eb17fc907f881cb}{Topology} (std\+::string name\+Of\+This\+Molecule)
+\item 
+virtual \hyperlink{classTopology_a3e447669757c8311c7f6f8edc705abf2}{$\sim$\+Topology} ()
+\item 
+void \hyperlink{classTopology_af73c991af8591ce8adaff56bcac66494}{Set\+Gmol\+Atom\+Properties\+From\+Reader} (\hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader)
+\item 
+void \hyperlink{classTopology_a84be38eb9b1dd5a689588dac50085947}{Set\+Gmol\+Bonding\+Properties\+From\+Reader} (\hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader)
+\item 
+void \hyperlink{classTopology_a84ca6201376207b20f1a6bc006f76bc8}{Set\+Gmol\+Atoms\+Molmodel\+Types} ()
+\item 
+void \hyperlink{classTopology_a0f0fa7fb6323767bb6db03fb1b74058c}{Set\+Gmol\+Atoms\+Molmodel\+Types\+Trial} ()
+\item 
+void \hyperlink{classTopology_a2127fe5e3df9f24bee960d15d4001ac4}{load\+Atom\+And\+Bond\+Info\+From\+Reader} (\hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader)
+\item 
+void \hyperlink{classTopology_a7083e732de18012caa11f9e5ea68c071}{Print\+Atom\+List} ()
+\item 
+void \hyperlink{classTopology_a6cd69af97ef2cadbfc66b12791821494}{b\+Add\+Biotypes} (std\+::string res\+Name, \hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)
+\item 
+void \hyperlink{classTopology_a4c6e17966e730dbc7972b1d060ae32aa}{b\+Add\+Atom\+Classes} (std\+::string res\+Name, \hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)
+\item 
+void \hyperlink{classTopology_adfe0053006ef2dfca18377d2c3726e3b}{b\+Add\+Bond\+Params} (std\+::string res\+Name, \hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)
+\item 
+void \hyperlink{classTopology_ac8b71a6aa2d8841cf2ad5f477eca2c70}{b\+Add\+Angle\+Params} (std\+::string res\+Name, \hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)
+\item 
+void \hyperlink{classTopology_ac082c73c8c91fa0f2c1d495f9e25f367}{b\+Add\+Torsion\+Params} (std\+::string res\+Name, \hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)
+\item 
+void \hyperlink{classTopology_a86ba17c55f8e311e0c0bcdba0c773da4}{b\+Add\+All\+Params} (\hyperlink{classreadAmberInput}{read\+Amber\+Input} $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)
+\item 
+void \hyperlink{classTopology_a006cabf04e985e41f99b542904873ea0}{Print\+Molmodel\+And\+Du\+M\+M\+Types} (Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)
+\item 
+void \hyperlink{classTopology_a5a1fc33dd5965dd88f4e1b2d3f05b4dd}{build\+Acyclic\+Graph} (\hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$node, \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$previous\+Node)
+\item 
+void \hyperlink{classTopology_a320ba4dbab67b1f1b810af4a23295143}{add\+Ring\+Closing\+Bonds} ()
+\item 
+void \hyperlink{classTopology_af493c145670b5362e58a17c87578fdb4}{match\+Default\+Configuration\+With\+Atom\+List} (Sim\+T\+K\+::\+Compound\+::\+Match\+Stratagem match\+Stratagem)
+\item 
+void \hyperlink{classTopology_a6185bfb169312e23495c94d54a06112e}{build\+Graph\+And\+Match\+Coords} (Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm, int arg\+Root)
+\item 
+void \hyperlink{classTopology_a182953ce5f2024dc7a14cc68d4be8597}{set\+Flexibility} (std\+::string arg\+Regimen, std\+::string flex\+FN)
+\item 
+std\+::string \hyperlink{classTopology_a46d0c376fc14d523702db4e6c20d4311}{get\+Regimen} ()
+\item 
+const std\+::string \hyperlink{classTopology_a2c011e0bf248dd9329320e00fac4dcaa}{get\+Name} () const 
+\item 
+void \hyperlink{classTopology_ab94527095d261a020eec893e45c133fe}{set\+Name} (std\+::string name\+Of\+This\+Molecule)
+\item 
+const Sim\+T\+K\+::\+Compound\+System\+::\+Compound\+Index \& \hyperlink{classTopology_a8da806d0cc5d7e3c5debe6d48bd10d06}{get\+Compound\+Index} () const 
+\item 
+void \hyperlink{classTopology_a1a1124e3554ff2315926a54a0315fdbe}{set\+Compound\+Index} (const Sim\+T\+K\+::\+Compound\+System\+::\+Compound\+Index \&compound\+Index)
+\item 
+bool \hyperlink{classTopology_abf5a2669d0e20677eaadd6d87b2f8795}{check\+If\+Triple\+Unordered\+Are\+Equal} (std\+::vector$<$ Compound\+::\+Atom\+Index $>$ \&first, std\+::vector$<$ Compound\+::\+Atom\+Index $>$ \&second)
+\item 
+void {\bfseries load\+Triples} (void)\hypertarget{classTopology_a4b4022faf8d873713322e502821e9443}{}\label{classTopology_a4b4022faf8d873713322e502821e9443}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Sine\+Sqr\+Gamma2} (const Sim\+T\+K\+::\+State \&quat\+State)\hypertarget{classTopology_a35525d2a7aef61553490398165cbbfb8}{}\label{classTopology_a35525d2a7aef61553490398165cbbfb8}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Det\+M\+B\+A\+T\+Gamma2\+Contribution} (const Sim\+T\+K\+::\+State \&)\hypertarget{classTopology_aa6ce96a0e7660584b72f64d132f5a611}{}\label{classTopology_aa6ce96a0e7660584b72f64d132f5a611}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Det\+M\+B\+A\+T\+Dists\+Contribution} (const Sim\+T\+K\+::\+State \&)\hypertarget{classTopology_a50900405ea47b713fea6d12d046585db}{}\label{classTopology_a50900405ea47b713fea6d12d046585db}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Det\+M\+B\+A\+T\+Dists\+Masses\+Contribution} (const Sim\+T\+K\+::\+State \&)\hypertarget{classTopology_a20dbb8725aff8575fe6c889d714fb480}{}\label{classTopology_a20dbb8725aff8575fe6c889d714fb480}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Det\+M\+B\+A\+T\+Angles\+Contribution} (const Sim\+T\+K\+::\+State \&)\hypertarget{classTopology_a8a9060bb644aa335e2cbbb1e491388be}{}\label{classTopology_a8a9060bb644aa335e2cbbb1e491388be}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Det\+M\+B\+A\+T\+Masses\+Contribution} (const Sim\+T\+K\+::\+State \&)\hypertarget{classTopology_a466dfbf5b7c76d21f8c1261db415a445}{}\label{classTopology_a466dfbf5b7c76d21f8c1261db415a445}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Det\+M\+B\+A\+T\+Internal} (const Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classTopology_ade491b23d6e41abbc84e809be14cd543}{}\label{classTopology_ade491b23d6e41abbc84e809be14cd543}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Log\+Det\+M\+B\+AT} (const Sim\+T\+K\+::\+State \&)\hypertarget{classTopology_a975172cc0f81baad15f67900b6fc517d}{}\label{classTopology_a975172cc0f81baad15f67900b6fc517d}
+
+\item 
+int \hyperlink{classTopology_a1725652fdbf27bcbda7e16c07bddc7b1}{get\+N\+Atoms} () const 
+\item 
+int \hyperlink{classTopology_aae1c39ba234dfa5df80a46f8009cd164}{get\+N\+Bonds} () const 
+\item 
+\hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$ \hyperlink{classTopology_a5733e1f7ab0c145a05fdb9650d0d015a}{get\+Atom\+By\+Number} (int number) const 
+\item 
+\hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$ \hyperlink{classTopology_a85f201c9fbb2164e57a13b2500b3a166}{upd\+Atom\+By\+Atom\+Ix} (int a\+Ix)
+\item 
+\hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$ \hyperlink{classTopology_a87a161d4a1260c148eecc46682a1c664}{get\+Atom\+By\+Name} (std\+::string name) const 
+\item 
+std\+::vector$<$ \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $\ast$ $>$ \hyperlink{classTopology_ae1e1834b0011f578fc98a82fb544054b}{get\+Neighbours} (int) const 
+\item 
+Sim\+T\+K\+::\+Compound\+::\+Atom\+Index \hyperlink{classTopology_a0ce3bb644b6420d011b34b77ecb8567f}{get\+Chemical\+Parent} (Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$matter, Sim\+T\+K\+::\+Compound\+::\+Atom\+Index)
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Transform $>$ {\bfseries calc\+Mobod\+Transforms} (Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$matter, Sim\+T\+K\+::\+Compound\+::\+Atom\+Index root\+Atom, const Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classTopology_a685282e19f5f256a01edfbd295ea4e4b}{}\label{classTopology_a685282e19f5f256a01edfbd295ea4e4b}
+
+\item 
+void \hyperlink{classTopology_a4ed164b1fe5ece6e00a841bffe1861fa}{calc\+Top\+Transforms} (void)
+\item 
+void {\bfseries print\+Top\+Transforms} (void)\hypertarget{classTopology_a7108a6b3cdf56149fe38e1069f3e335c}{}\label{classTopology_a7108a6b3cdf56149fe38e1069f3e335c}
+
+\item 
+Sim\+T\+K\+::\+Transform {\bfseries get\+Top\+Transform} (Sim\+T\+K\+::\+Compound\+::\+Atom\+Index)\hypertarget{classTopology_a435cc596dae34536a0077c2ccb8c3827}{}\label{classTopology_a435cc596dae34536a0077c2ccb8c3827}
+
+\item 
+const \hyperlink{classbBond}{b\+Bond} \& {\bfseries get\+Bond} (int, int) const \hypertarget{classTopology_a98848edae3b427c123c2670b56084756}{}\label{classTopology_a98848edae3b427c123c2670b56084756}
+
+\item 
+int \hyperlink{classTopology_ac3cd9ae97a9ff8067de8486a1de6496d}{get\+Bond\+Order} (int, int) const 
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Mobilized\+Body\+Index, Sim\+T\+K\+::\+Compound\+::\+Atom\+Index $>$ \hyperlink{classTopology_a235216eef91888bb91491d0d40101e47}{get\+Mbx2a\+Ix} ()
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Compound\+::\+Atom\+Index, Sim\+T\+K\+::\+Mobilized\+Body\+Index $>$ \hyperlink{classTopology_a9e74d153cd138a14a21f94c449fc2319}{get\+A\+Ix2mbx} ()
+\item 
+unsigned int \hyperlink{classTopology_afdd58989b6c82c30b9bacaa9d697b513}{get\+Nof\+Mobilized\+Bodies} ()
+\item 
+void \hyperlink{classTopology_aff039c90beda2dc6f6437251ae5b67cd}{write\+Atom\+List\+Pdb} (std\+::string dirname, std\+::string prefix, std\+::string sufix, int max\+Nof\+Digits, int index) const 
+\item 
+void \hyperlink{classTopology_a182b8885b2e1fdda870e564d4b1d6abe}{load\+Mobods\+Related\+Maps} ()
+\item 
+void \hyperlink{classTopology_aea00ed376f65fb204651b35883a3573d}{load\+Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix} (void)
+\item 
+int {\bfseries get\+Number} (Sim\+T\+K\+::\+Compound\+::\+Atom\+Index)\hypertarget{classTopology_a17db78e48fd9adcf78fa5a9fd0a3b62b}{}\label{classTopology_a17db78e48fd9adcf78fa5a9fd0a3b62b}
+
+\item 
+void \hyperlink{classTopology_af21777f1399571c3a13e91969a33b740}{print\+Maps} ()
+\item 
+void \hyperlink{classTopology_a6b97df7d3c33275e2a5008f3155c2242}{get\+Coordinates} (std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ Xs, std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ Ys, std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ Zs)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+int {\bfseries natoms}\hypertarget{classTopology_ab37d7bfd8071b37fadcab2240a09a70f}{}\label{classTopology_ab37d7bfd8071b37fadcab2240a09a70f}
+
+\item 
+std\+::vector$<$ \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} $>$ {\bfseries b\+Atom\+List}\hypertarget{classTopology_a0dc44c74b9b1b34969a0dbdfcba01c5c}{}\label{classTopology_a0dc44c74b9b1b34969a0dbdfcba01c5c}
+
+\item 
+int {\bfseries nbonds}\hypertarget{classTopology_ac820bfb62c44bed210c25f3f5de1f249}{}\label{classTopology_ac820bfb62c44bed210c25f3f5de1f249}
+
+\item 
+std\+::vector$<$ \hyperlink{classbBond}{b\+Bond} $>$ {\bfseries bonds}\hypertarget{classTopology_a50b082ce708c2649e8565c78dcc5fb26}{}\label{classTopology_a50b082ce708c2649e8565c78dcc5fb26}
+
+\item 
+int {\bfseries n\+Triples}\hypertarget{classTopology_ac6249044e82bec9fe7fb4e3231be890c}{}\label{classTopology_ac6249044e82bec9fe7fb4e3231be890c}
+
+\item 
+std\+::vector$<$ std\+::vector$<$ Compound\+::\+Atom\+Index $>$ $>$ {\bfseries triples}\hypertarget{classTopology_a36327556d21652f41d8909d4600cbd22}{}\label{classTopology_a36327556d21652f41d8909d4600cbd22}
+
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Mobilized\+Body\+Index, Sim\+T\+K\+::\+Compound\+::\+Atom\+Index $>$ {\bfseries mbx2a\+Ix}\hypertarget{classTopology_aa8d85a909e7c1b6a4d5873c338fcf471}{}\label{classTopology_aa8d85a909e7c1b6a4d5873c338fcf471}
+
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Compound\+::\+Atom\+Index, Sim\+T\+K\+::\+Mobilized\+Body\+Index $>$ {\bfseries a\+Ix2mbx}\hypertarget{classTopology_a4a5d3182210d2dbd78e5653044ceafee}{}\label{classTopology_a4a5d3182210d2dbd78e5653044ceafee}
+
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Compound\+::\+Atom\+Index, Sim\+T\+K\+::\+Transform $>$ {\bfseries a\+Ix2\+Top\+Transform}\hypertarget{classTopology_a6049ad3ebf58010d60371b79d2b4bff7}{}\label{classTopology_a6049ad3ebf58010d60371b79d2b4bff7}
+
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Compound\+::\+Atom\+Index, int $>$ {\bfseries Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix}\hypertarget{classTopology_adfc3264e9a0ec7b0f3b6c72202569d0e}{}\label{classTopology_adfc3264e9a0ec7b0f3b6c72202569d0e}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Topological information (bonds graph) for one molecule. It maps to one compound in Molmodel thus it is derived from Molmodel Compound class. It does the following things\+:
+\begin{DoxyItemize}
+\item loads information from input files such as Amber input prmtop / inpcrd
+\item adds parameters to a Du\+MM force field which belongs to the \hyperlink{classWorld}{World} class because one Du\+MM class should be used for multiple molecules
+\item contructs the graph based on a list of \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} objects each of which already contains bonding information from the input files
+\item defines the rigid bodies based on imput files provided by the users. Contains a list of atoms b\+Atom\+List which consists of \hyperlink{classbSpecificAtom}{b\+Specific\+Atom} objects 
+\end{DoxyItemize}
+
+\subsection{Constructor \& Destructor Documentation}
+\index{Topology@{Topology}!Topology@{Topology}}
+\index{Topology@{Topology}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Topology()}{Topology()}}]{\setlength{\rightskip}{0pt plus 5cm}Topology\+::\+Topology (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_aa3336e10118cd76ab4b4c2ebc5062a9a}{}\label{classTopology_aa3336e10118cd76ab4b4c2ebc5062a9a}
+Default Constructor. Sets the name of this molecule to \textquotesingle{}no\+\_\+name \textquotesingle{}. The name has no particular function and is not guaranteed to be unique.
+
+Default constructor.\+Sets the name of this molecule to \textquotesingle{}no\+\_\+name \textquotesingle{}. The name has no particular function and is not guaranteed to be unique \index{Topology@{Topology}!Topology@{Topology}}
+\index{Topology@{Topology}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Topology(std\+::string name\+Of\+This\+Molecule)}{Topology(std::string nameOfThisMolecule)}}]{\setlength{\rightskip}{0pt plus 5cm}Topology\+::\+Topology (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{name\+Of\+This\+Molecule}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [explicit]}}\hypertarget{classTopology_a6e001dfecb9782637eb17fc907f881cb}{}\label{classTopology_a6e001dfecb9782637eb17fc907f881cb}
+Constructor that sets the name of the molecule. The name has no particular function and is not guaranteed to be unique.
+
+Constructor that sets the name of the molecule. The name has no particular function and is not guaranteed to be unique \index{Topology@{Topology}!````~Topology@{$\sim$\+Topology}}
+\index{````~Topology@{$\sim$\+Topology}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{$\sim$\+Topology()}{~Topology()}}]{\setlength{\rightskip}{0pt plus 5cm}Topology\+::$\sim$\+Topology (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classTopology_a3e447669757c8311c7f6f8edc705abf2}{}\label{classTopology_a3e447669757c8311c7f6f8edc705abf2}
+Default Destructor.
+
+Default destructor. It deallocates b\+Atom\+Type of every atom in the b\+Atom\+List because we want to allow the valence to change during the simulation e.\+g. semi-\/grand canonical ensemble. 
+
+\subsection{Member Function Documentation}
+\index{Topology@{Topology}!add\+Ring\+Closing\+Bonds@{add\+Ring\+Closing\+Bonds}}
+\index{add\+Ring\+Closing\+Bonds@{add\+Ring\+Closing\+Bonds}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{add\+Ring\+Closing\+Bonds()}{addRingClosingBonds()}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::add\+Ring\+Closing\+Bonds (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a320ba4dbab67b1f1b810af4a23295143}{}\label{classTopology_a320ba4dbab67b1f1b810af4a23295143}
+After building the acyclic molecular tree close the remaining bonds \index{Topology@{Topology}!b\+Add\+All\+Params@{b\+Add\+All\+Params}}
+\index{b\+Add\+All\+Params@{b\+Add\+All\+Params}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{b\+Add\+All\+Params(read\+Amber\+Input $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)}{bAddAllParams(readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem &dumm)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::b\+Add\+All\+Params (
+\begin{DoxyParamCaption}
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader, }
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a86ba17c55f8e311e0c0bcdba0c773da4}{}\label{classTopology_a86ba17c55f8e311e0c0bcdba0c773da4}
+Adds force field parameters read by the input\+Reader to Du\+MM
+
+Adds force field parameters read by the input\+Reader \index{Topology@{Topology}!b\+Add\+Angle\+Params@{b\+Add\+Angle\+Params}}
+\index{b\+Add\+Angle\+Params@{b\+Add\+Angle\+Params}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{b\+Add\+Angle\+Params(std\+::string res\+Name, read\+Amber\+Input $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)}{bAddAngleParams(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem &dumm)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::b\+Add\+Angle\+Params (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{res\+Name, }
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader, }
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_ac8b71a6aa2d8841cf2ad5f477eca2c70}{}\label{classTopology_ac8b71a6aa2d8841cf2ad5f477eca2c70}
+Calls Du\+MM define\+Bond\+Bend.
+
+Calls Du\+MM define\+Bond\+Bend to define angle parameters. \index{Topology@{Topology}!b\+Add\+Atom\+Classes@{b\+Add\+Atom\+Classes}}
+\index{b\+Add\+Atom\+Classes@{b\+Add\+Atom\+Classes}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{b\+Add\+Atom\+Classes(std\+::string res\+Name, read\+Amber\+Input $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)}{bAddAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem &dumm)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::b\+Add\+Atom\+Classes (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{res\+Name, }
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader, }
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a4c6e17966e730dbc7972b1d060ae32aa}{}\label{classTopology_a4c6e17966e730dbc7972b1d060ae32aa}
+It calls Du\+M\+Ms define\+Atom\+Class, define\+Charged\+Atom\+Tye and set\+Biotype\+Charged\+Atom\+Type for every atom. These Molmodel functions contain information regarding the force field parameters. \index{Topology@{Topology}!b\+Add\+Biotypes@{b\+Add\+Biotypes}}
+\index{b\+Add\+Biotypes@{b\+Add\+Biotypes}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{b\+Add\+Biotypes(std\+::string res\+Name, read\+Amber\+Input $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)}{bAddBiotypes(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem &dumm)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::b\+Add\+Biotypes (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{res\+Name, }
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader, }
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a6cd69af97ef2cadbfc66b12791821494}{}\label{classTopology_a6cd69af97ef2cadbfc66b12791821494}
+Biotype is a Molmodel hook that is usually used to look up molecular force field specific parameters for an atom type. Gmolmodel defines a new Biotype for each atom. The only thing that is specified is the element with info about name, atomic number, valence and mass. \index{Topology@{Topology}!b\+Add\+Bond\+Params@{b\+Add\+Bond\+Params}}
+\index{b\+Add\+Bond\+Params@{b\+Add\+Bond\+Params}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{b\+Add\+Bond\+Params(std\+::string res\+Name, read\+Amber\+Input $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)}{bAddBondParams(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem &dumm)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::b\+Add\+Bond\+Params (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{res\+Name, }
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader, }
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_adfe0053006ef2dfca18377d2c3726e3b}{}\label{classTopology_adfe0053006ef2dfca18377d2c3726e3b}
+Calls Du\+MM define\+Bond\+Stretch.
+
+Calls Du\+MM define\+Bond\+Stretch to define bonds parameters. \index{Topology@{Topology}!b\+Add\+Torsion\+Params@{b\+Add\+Torsion\+Params}}
+\index{b\+Add\+Torsion\+Params@{b\+Add\+Torsion\+Params}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{b\+Add\+Torsion\+Params(std\+::string res\+Name, read\+Amber\+Input $\ast$amber\+Reader, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)}{bAddTorsionParams(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem &dumm)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::b\+Add\+Torsion\+Params (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{res\+Name, }
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader, }
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_ac082c73c8c91fa0f2c1d495f9e25f367}{}\label{classTopology_ac082c73c8c91fa0f2c1d495f9e25f367}
+Calls Du\+MM define\+Bond\+Torsion for 1, 2 and 3 periodicities \index{Topology@{Topology}!build\+Acyclic\+Graph@{build\+Acyclic\+Graph}}
+\index{build\+Acyclic\+Graph@{build\+Acyclic\+Graph}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{build\+Acyclic\+Graph(b\+Specific\+Atom $\ast$node, b\+Specific\+Atom $\ast$previous\+Node)}{buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::build\+Acyclic\+Graph (
+\begin{DoxyParamCaption}
+\item[{{\bf b\+Specific\+Atom} $\ast$}]{node, }
+\item[{{\bf b\+Specific\+Atom} $\ast$}]{previous\+Node}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a5a1fc33dd5965dd88f4e1b2d3f05b4dd}{}\label{classTopology_a5a1fc33dd5965dd88f4e1b2d3f05b4dd}
+Build the molecular tree without the cycle closing bonds
+
+The following functions are used to build the molecular graph using bonding information from bonds list and bonds\+Involved list of each atom in b\+Atom\+List.\+The actual recursive function that builds the graph \index{Topology@{Topology}!build\+Graph\+And\+Match\+Coords@{build\+Graph\+And\+Match\+Coords}}
+\index{build\+Graph\+And\+Match\+Coords@{build\+Graph\+And\+Match\+Coords}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{build\+Graph\+And\+Match\+Coords(\+Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm, int arg\+Root)}{buildGraphAndMatchCoords(SimTK::DuMMForceFieldSubsystem &dumm, int argRoot)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::build\+Graph\+And\+Match\+Coords (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm, }
+\item[{int}]{arg\+Root}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a6185bfb169312e23495c94d54a06112e}{}\label{classTopology_a6185bfb169312e23495c94d54a06112e}
+Builds the Compound\textquotesingle{}s tree, closes the rings, matches the configuration on the graph using using Molmodels match\+Default\+Configuration and sets the general flexibility of the molecule.
+
+Builds the molecular tree, closes the rings, matches the configuration on the graph using using Molmodels match\+Default\+Configuration and sets the general flexibility of the molecule. \index{Topology@{Topology}!calc\+Top\+Transforms@{calc\+Top\+Transforms}}
+\index{calc\+Top\+Transforms@{calc\+Top\+Transforms}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{calc\+Top\+Transforms(void)}{calcTopTransforms(void)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::calc\+Top\+Transforms (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a4ed164b1fe5ece6e00a841bffe1861fa}{}\label{classTopology_a4ed164b1fe5ece6e00a841bffe1861fa}
+Calculate all atom frames in top frame. It avoids calling calc\+Default\+Atom\+Frame\+In\+Compound\+Frame multiple times. This has to be called every time the coordinates change though. \index{Topology@{Topology}!check\+If\+Triple\+Unordered\+Are\+Equal@{check\+If\+Triple\+Unordered\+Are\+Equal}}
+\index{check\+If\+Triple\+Unordered\+Are\+Equal@{check\+If\+Triple\+Unordered\+Are\+Equal}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{check\+If\+Triple\+Unordered\+Are\+Equal(std\+::vector$<$ Compound\+::\+Atom\+Index $>$ \&first, std\+::vector$<$ Compound\+::\+Atom\+Index $>$ \&second)}{checkIfTripleUnorderedAreEqual(std::vector< Compound::AtomIndex > &first, std::vector< Compound::AtomIndex > &second)}}]{\setlength{\rightskip}{0pt plus 5cm}bool Topology\+::check\+If\+Triple\+Unordered\+Are\+Equal (
+\begin{DoxyParamCaption}
+\item[{std\+::vector$<$ Compound\+::\+Atom\+Index $>$ \&}]{first, }
+\item[{std\+::vector$<$ Compound\+::\+Atom\+Index $>$ \&}]{second}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_abf5a2669d0e20677eaadd6d87b2f8795}{}\label{classTopology_abf5a2669d0e20677eaadd6d87b2f8795}
+Compute B\+AT determinant \index{Topology@{Topology}!get\+A\+Ix2mbx@{get\+A\+Ix2mbx}}
+\index{get\+A\+Ix2mbx@{get\+A\+Ix2mbx}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+A\+Ix2mbx()}{getAIx2mbx()}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::map$<$ Sim\+T\+K\+::\+Compound\+::\+Atom\+Index, Sim\+T\+K\+::\+Mobilized\+Body\+Index $>$ Topology\+::get\+A\+Ix2mbx (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classTopology_a9e74d153cd138a14a21f94c449fc2319}{}\label{classTopology_a9e74d153cd138a14a21f94c449fc2319}
+Get Atom\+Index to Mobilized\+Body\+Index map \index{Topology@{Topology}!get\+Atom\+By\+Name@{get\+Atom\+By\+Name}}
+\index{get\+Atom\+By\+Name@{get\+Atom\+By\+Name}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Atom\+By\+Name(std\+::string name) const }{getAtomByName(std::string name) const }}]{\setlength{\rightskip}{0pt plus 5cm}{\bf b\+Specific\+Atom} $\ast$ Topology\+::get\+Atom\+By\+Name (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{name}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_a87a161d4a1260c148eecc46682a1c664}{}\label{classTopology_a87a161d4a1260c148eecc46682a1c664}
+Get a pointer to an atom object in the atom list inquiring by atom name
+
+Get a pointer to an atom object in the atom list inquiring by atom name. \index{Topology@{Topology}!get\+Atom\+By\+Number@{get\+Atom\+By\+Number}}
+\index{get\+Atom\+By\+Number@{get\+Atom\+By\+Number}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Atom\+By\+Number(int number) const }{getAtomByNumber(int number) const }}]{\setlength{\rightskip}{0pt plus 5cm}{\bf b\+Specific\+Atom} $\ast$ Topology\+::get\+Atom\+By\+Number (
+\begin{DoxyParamCaption}
+\item[{int}]{number}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_a5733e1f7ab0c145a05fdb9650d0d015a}{}\label{classTopology_a5733e1f7ab0c145a05fdb9650d0d015a}
+Get a pointer to an atom object in the atom list inquiring by number \index{Topology@{Topology}!get\+Bond\+Order@{get\+Bond\+Order}}
+\index{get\+Bond\+Order@{get\+Bond\+Order}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Bond\+Order(int, int) const }{getBondOrder(int, int) const }}]{\setlength{\rightskip}{0pt plus 5cm}int Topology\+::get\+Bond\+Order (
+\begin{DoxyParamCaption}
+\item[{int}]{, }
+\item[{int}]{}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_ac3cd9ae97a9ff8067de8486a1de6496d}{}\label{classTopology_ac3cd9ae97a9ff8067de8486a1de6496d}
+Get bond order. \index{Topology@{Topology}!get\+Chemical\+Parent@{get\+Chemical\+Parent}}
+\index{get\+Chemical\+Parent@{get\+Chemical\+Parent}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Chemical\+Parent(\+Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$matter, Sim\+T\+K\+::\+Compound\+::\+Atom\+Index)}{getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Compound\+::\+Atom\+Index Topology\+::get\+Chemical\+Parent (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$}]{matter, }
+\item[{Sim\+T\+K\+::\+Compound\+::\+Atom\+Index}]{a\+Ix}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a0ce3bb644b6420d011b34b77ecb8567f}{}\label{classTopology_a0ce3bb644b6420d011b34b77ecb8567f}
+Get the bonded neighbor atom in the parent mobilized body
+
+Get the neighbor atom in the parent mobilized body. T\+O\+DO\+: No chemical parent for satelite atoms or first atom. \index{Topology@{Topology}!get\+Compound\+Index@{get\+Compound\+Index}}
+\index{get\+Compound\+Index@{get\+Compound\+Index}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Compound\+Index() const }{getCompoundIndex() const }}]{\setlength{\rightskip}{0pt plus 5cm}const Compound\+System\+::\+Compound\+Index \& Topology\+::get\+Compound\+Index (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_a8da806d0cc5d7e3c5debe6d48bd10d06}{}\label{classTopology_a8da806d0cc5d7e3c5debe6d48bd10d06}
+Get own Compound\+Index in Compound\+System \index{Topology@{Topology}!get\+Coordinates@{get\+Coordinates}}
+\index{get\+Coordinates@{get\+Coordinates}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Coordinates(std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ Xs, std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ Ys, std\+::vector$<$ Sim\+T\+K\+::\+Real $>$ Zs)}{getCoordinates(std::vector< SimTK::Real > Xs, std::vector< SimTK::Real > Ys, std::vector< SimTK::Real > Zs)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::get\+Coordinates (
+\begin{DoxyParamCaption}
+\item[{std\+::vector$<$ Sim\+T\+K\+::\+Real $>$}]{Xs, }
+\item[{std\+::vector$<$ Sim\+T\+K\+::\+Real $>$}]{Ys, }
+\item[{std\+::vector$<$ Sim\+T\+K\+::\+Real $>$}]{Zs}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a6b97df7d3c33275e2a5008f3155c2242}{}\label{classTopology_a6b97df7d3c33275e2a5008f3155c2242}
+Get coordinates
+
+Get b\+Atom\+List coordinates coordinates \index{Topology@{Topology}!get\+Mbx2a\+Ix@{get\+Mbx2a\+Ix}}
+\index{get\+Mbx2a\+Ix@{get\+Mbx2a\+Ix}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Mbx2a\+Ix()}{getMbx2aIx()}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::map$<$ Sim\+T\+K\+::\+Mobilized\+Body\+Index, Sim\+T\+K\+::\+Compound\+::\+Atom\+Index $>$ Topology\+::get\+Mbx2a\+Ix (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classTopology_a235216eef91888bb91491d0d40101e47}{}\label{classTopology_a235216eef91888bb91491d0d40101e47}
+Get Mobilized\+Body to Atom\+Index map \index{Topology@{Topology}!get\+Name@{get\+Name}}
+\index{get\+Name@{get\+Name}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Name() const }{getName() const }}]{\setlength{\rightskip}{0pt plus 5cm}const std\+::string Topology\+::get\+Name (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+) const\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classTopology_a2c011e0bf248dd9329320e00fac4dcaa}{}\label{classTopology_a2c011e0bf248dd9329320e00fac4dcaa}
+Get the name of this molecule \index{Topology@{Topology}!get\+N\+Atoms@{get\+N\+Atoms}}
+\index{get\+N\+Atoms@{get\+N\+Atoms}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+N\+Atoms() const }{getNAtoms() const }}]{\setlength{\rightskip}{0pt plus 5cm}int Topology\+::get\+N\+Atoms (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_a1725652fdbf27bcbda7e16c07bddc7b1}{}\label{classTopology_a1725652fdbf27bcbda7e16c07bddc7b1}
+Get the number of atoms.
+
+Interface $\ast$$\ast$\+Get the number of atoms in the molecule \index{Topology@{Topology}!get\+N\+Bonds@{get\+N\+Bonds}}
+\index{get\+N\+Bonds@{get\+N\+Bonds}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+N\+Bonds() const }{getNBonds() const }}]{\setlength{\rightskip}{0pt plus 5cm}int Topology\+::get\+N\+Bonds (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_aae1c39ba234dfa5df80a46f8009cd164}{}\label{classTopology_aae1c39ba234dfa5df80a46f8009cd164}
+Get the number of bonds.
+
+Get the number of bonds in the molecule \index{Topology@{Topology}!get\+Neighbours@{get\+Neighbours}}
+\index{get\+Neighbours@{get\+Neighbours}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Neighbours(int) const }{getNeighbours(int) const }}]{\setlength{\rightskip}{0pt plus 5cm}std\+::vector$<$ {\bf b\+Specific\+Atom} $\ast$ $>$ Topology\+::get\+Neighbours (
+\begin{DoxyParamCaption}
+\item[{int}]{}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_ae1e1834b0011f578fc98a82fb544054b}{}\label{classTopology_ae1e1834b0011f578fc98a82fb544054b}
+Get the neighbours in the graph
+
+Get the neighbours in the graph. \index{Topology@{Topology}!get\+Nof\+Mobilized\+Bodies@{get\+Nof\+Mobilized\+Bodies}}
+\index{get\+Nof\+Mobilized\+Bodies@{get\+Nof\+Mobilized\+Bodies}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Nof\+Mobilized\+Bodies()}{getNofMobilizedBodies()}}]{\setlength{\rightskip}{0pt plus 5cm}unsigned int Topology\+::get\+Nof\+Mobilized\+Bodies (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classTopology_afdd58989b6c82c30b9bacaa9d697b513}{}\label{classTopology_afdd58989b6c82c30b9bacaa9d697b513}
+Get the number of Mobilized\+Bodies in this Compound \index{Topology@{Topology}!get\+Regimen@{get\+Regimen}}
+\index{get\+Regimen@{get\+Regimen}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{get\+Regimen()}{getRegimen()}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::string Topology\+::get\+Regimen (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a46d0c376fc14d523702db4e6c20d4311}{}\label{classTopology_a46d0c376fc14d523702db4e6c20d4311}
+Get regimen \index{Topology@{Topology}!load\+Atom\+And\+Bond\+Info\+From\+Reader@{load\+Atom\+And\+Bond\+Info\+From\+Reader}}
+\index{load\+Atom\+And\+Bond\+Info\+From\+Reader@{load\+Atom\+And\+Bond\+Info\+From\+Reader}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{load\+Atom\+And\+Bond\+Info\+From\+Reader(read\+Amber\+Input $\ast$amber\+Reader)}{loadAtomAndBondInfoFromReader(readAmberInput *amberReader)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::load\+Atom\+And\+Bond\+Info\+From\+Reader (
+\begin{DoxyParamCaption}
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a2127fe5e3df9f24bee960d15d4001ac4}{}\label{classTopology_a2127fe5e3df9f24bee960d15d4001ac4}
+Reads data from a specific reader (\hyperlink{classreadAmberInput}{read\+Amber\+Input} for now) object
+
+Reads information from a \hyperlink{classreadAmberInput}{read\+Amber\+Input} object and put it in b\+Atom\+List and bonds lists \index{Topology@{Topology}!load\+Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix@{load\+Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix}}
+\index{load\+Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix@{load\+Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{load\+Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix(void)}{loadCompoundAtomIx2GmolAtomIx(void)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::load\+Compound\+Atom\+Ix2\+Gmol\+Atom\+Ix (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_aea00ed376f65fb204651b35883a3573d}{}\label{classTopology_aea00ed376f65fb204651b35883a3573d}
+Compound Atom\+Index to b\+Atom\+List number \index{Topology@{Topology}!load\+Mobods\+Related\+Maps@{load\+Mobods\+Related\+Maps}}
+\index{load\+Mobods\+Related\+Maps@{load\+Mobods\+Related\+Maps}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{load\+Mobods\+Related\+Maps()}{loadMobodsRelatedMaps()}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::load\+Mobods\+Related\+Maps (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a182b8885b2e1fdda870e564d4b1d6abe}{}\label{classTopology_a182b8885b2e1fdda870e564d4b1d6abe}
+To be removed. $\ast$\+Create Mobilized\+Body\+Index vs Compound\+::\+Atom\+Index maps.
+
+Create Mobilized\+Body\+Index vs Compound\+::\+Atom\+Index maps \index{Topology@{Topology}!match\+Default\+Configuration\+With\+Atom\+List@{match\+Default\+Configuration\+With\+Atom\+List}}
+\index{match\+Default\+Configuration\+With\+Atom\+List@{match\+Default\+Configuration\+With\+Atom\+List}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{match\+Default\+Configuration\+With\+Atom\+List(\+Sim\+T\+K\+::\+Compound\+::\+Match\+Stratagem match\+Stratagem)}{matchDefaultConfigurationWithAtomList(SimTK::Compound::MatchStratagem matchStratagem)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::match\+Default\+Configuration\+With\+Atom\+List (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Compound\+::\+Match\+Stratagem}]{match\+Stratagem}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_af493c145670b5362e58a17c87578fdb4}{}\label{classTopology_af493c145670b5362e58a17c87578fdb4}
+Match Default configuration with the coordinates loaded from the input reader \index{Topology@{Topology}!Print\+Atom\+List@{Print\+Atom\+List}}
+\index{Print\+Atom\+List@{Print\+Atom\+List}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Print\+Atom\+List()}{PrintAtomList()}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::\+Print\+Atom\+List (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a7083e732de18012caa11f9e5ea68c071}{}\label{classTopology_a7083e732de18012caa11f9e5ea68c071}
+Print atom list
+
+Print atom and bonds list with details \index{Topology@{Topology}!print\+Maps@{print\+Maps}}
+\index{print\+Maps@{print\+Maps}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{print\+Maps()}{printMaps()}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::print\+Maps (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_af21777f1399571c3a13e91969a33b740}{}\label{classTopology_af21777f1399571c3a13e91969a33b740}
+Print atom to Mobilized\+Body\+Index and bond to Compound\+::\+Bond index maps
+
+Print maps \index{Topology@{Topology}!Print\+Molmodel\+And\+Du\+M\+M\+Types@{Print\+Molmodel\+And\+Du\+M\+M\+Types}}
+\index{Print\+Molmodel\+And\+Du\+M\+M\+Types@{Print\+Molmodel\+And\+Du\+M\+M\+Types}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Print\+Molmodel\+And\+Du\+M\+M\+Types(\+Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&dumm)}{PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem &dumm)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::\+Print\+Molmodel\+And\+Du\+M\+M\+Types (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem \&}]{dumm}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a006cabf04e985e41f99b542904873ea0}{}\label{classTopology_a006cabf04e985e41f99b542904873ea0}
+Print Molmodel specific types as introduced in Gmolmodel \index{Topology@{Topology}!set\+Compound\+Index@{set\+Compound\+Index}}
+\index{set\+Compound\+Index@{set\+Compound\+Index}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{set\+Compound\+Index(const Sim\+T\+K\+::\+Compound\+System\+::\+Compound\+Index \&compound\+Index)}{setCompoundIndex(const SimTK::CompoundSystem::CompoundIndex &compoundIndex)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::set\+Compound\+Index (
+\begin{DoxyParamCaption}
+\item[{const Sim\+T\+K\+::\+Compound\+System\+::\+Compound\+Index \&}]{compound\+Index}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a1a1124e3554ff2315926a54a0315fdbe}{}\label{classTopology_a1a1124e3554ff2315926a54a0315fdbe}
+Set the compound\+Index which is the position in the vector of Compounds of the Compound\+System \index{Topology@{Topology}!set\+Flexibility@{set\+Flexibility}}
+\index{set\+Flexibility@{set\+Flexibility}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{set\+Flexibility(std\+::string arg\+Regimen, std\+::string flex\+F\+N)}{setFlexibility(std::string argRegimen, std::string flexFN)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::set\+Flexibility (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{arg\+Regimen, }
+\item[{std\+::string}]{flex\+FN}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a182953ce5f2024dc7a14cc68d4be8597}{}\label{classTopology_a182953ce5f2024dc7a14cc68d4be8597}
+Set regimen according to input file \index{Topology@{Topology}!Set\+Gmol\+Atom\+Properties\+From\+Reader@{Set\+Gmol\+Atom\+Properties\+From\+Reader}}
+\index{Set\+Gmol\+Atom\+Properties\+From\+Reader@{Set\+Gmol\+Atom\+Properties\+From\+Reader}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Set\+Gmol\+Atom\+Properties\+From\+Reader(read\+Amber\+Input $\ast$amber\+Reader)}{SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::\+Set\+Gmol\+Atom\+Properties\+From\+Reader (
+\begin{DoxyParamCaption}
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_af73c991af8591ce8adaff56bcac66494}{}\label{classTopology_af73c991af8591ce8adaff56bcac66494}
+Set atoms properties from a reader\+: number, name, element, initial name, force field type, charge, coordinates, mass, LJ parameters \index{Topology@{Topology}!Set\+Gmol\+Atoms\+Molmodel\+Types@{Set\+Gmol\+Atoms\+Molmodel\+Types}}
+\index{Set\+Gmol\+Atoms\+Molmodel\+Types@{Set\+Gmol\+Atoms\+Molmodel\+Types}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Set\+Gmol\+Atoms\+Molmodel\+Types()}{SetGmolAtomsMolmodelTypes()}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::\+Set\+Gmol\+Atoms\+Molmodel\+Types (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a84ca6201376207b20f1a6bc006f76bc8}{}\label{classTopology_a84ca6201376207b20f1a6bc006f76bc8}
+Set atoms Molmodel types (Compound\+::\+Single\+Atom derived) based on their valence \index{Topology@{Topology}!Set\+Gmol\+Atoms\+Molmodel\+Types\+Trial@{Set\+Gmol\+Atoms\+Molmodel\+Types\+Trial}}
+\index{Set\+Gmol\+Atoms\+Molmodel\+Types\+Trial@{Set\+Gmol\+Atoms\+Molmodel\+Types\+Trial}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Set\+Gmol\+Atoms\+Molmodel\+Types\+Trial()}{SetGmolAtomsMolmodelTypesTrial()}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::\+Set\+Gmol\+Atoms\+Molmodel\+Types\+Trial (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a0f0fa7fb6323767bb6db03fb1b74058c}{}\label{classTopology_a0f0fa7fb6323767bb6db03fb1b74058c}
+Set atoms Molmodel types (Compound\+::\+Single\+Atom derived) based on their valence \index{Topology@{Topology}!Set\+Gmol\+Bonding\+Properties\+From\+Reader@{Set\+Gmol\+Bonding\+Properties\+From\+Reader}}
+\index{Set\+Gmol\+Bonding\+Properties\+From\+Reader@{Set\+Gmol\+Bonding\+Properties\+From\+Reader}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{Set\+Gmol\+Bonding\+Properties\+From\+Reader(read\+Amber\+Input $\ast$amber\+Reader)}{SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::\+Set\+Gmol\+Bonding\+Properties\+From\+Reader (
+\begin{DoxyParamCaption}
+\item[{{\bf read\+Amber\+Input} $\ast$}]{amber\+Reader}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a84be38eb9b1dd5a689588dac50085947}{}\label{classTopology_a84be38eb9b1dd5a689588dac50085947}
+Set bonds properties from reader\+: bond indeces, atom neighbours \index{Topology@{Topology}!set\+Name@{set\+Name}}
+\index{set\+Name@{set\+Name}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{set\+Name(std\+::string name\+Of\+This\+Molecule)}{setName(std::string nameOfThisMolecule)}}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::set\+Name (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{name\+Of\+This\+Molecule}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classTopology_ab94527095d261a020eec893e45c133fe}{}\label{classTopology_ab94527095d261a020eec893e45c133fe}
+Set the name of this molecule \index{Topology@{Topology}!upd\+Atom\+By\+Atom\+Ix@{upd\+Atom\+By\+Atom\+Ix}}
+\index{upd\+Atom\+By\+Atom\+Ix@{upd\+Atom\+By\+Atom\+Ix}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{upd\+Atom\+By\+Atom\+Ix(int a\+Ix)}{updAtomByAtomIx(int aIx)}}]{\setlength{\rightskip}{0pt plus 5cm}{\bf b\+Specific\+Atom} $\ast$ Topology\+::upd\+Atom\+By\+Atom\+Ix (
+\begin{DoxyParamCaption}
+\item[{int}]{a\+Ix}
+\end{DoxyParamCaption}
+)}\hypertarget{classTopology_a85f201c9fbb2164e57a13b2500b3a166}{}\label{classTopology_a85f201c9fbb2164e57a13b2500b3a166}
+Get a pointer to an atom object in the atom list inquiring by its Molmodel assigned atom index (Sim\+T\+K\+::\+Compound\+::\+Atom\+Index) . \index{Topology@{Topology}!write\+Atom\+List\+Pdb@{write\+Atom\+List\+Pdb}}
+\index{write\+Atom\+List\+Pdb@{write\+Atom\+List\+Pdb}!Topology@{Topology}}
+\subsubsection[{\texorpdfstring{write\+Atom\+List\+Pdb(std\+::string dirname, std\+::string prefix, std\+::string sufix, int max\+Nof\+Digits, int index) const }{writeAtomListPdb(std::string dirname, std::string prefix, std::string sufix, int maxNofDigits, int index) const }}]{\setlength{\rightskip}{0pt plus 5cm}void Topology\+::write\+Atom\+List\+Pdb (
+\begin{DoxyParamCaption}
+\item[{std\+::string}]{dirname, }
+\item[{std\+::string}]{prefix, }
+\item[{std\+::string}]{sufix, }
+\item[{int}]{max\+Nof\+Digits, }
+\item[{int}]{index}
+\end{DoxyParamCaption}
+) const}\hypertarget{classTopology_aff039c90beda2dc6f6437251ae5b67cd}{}\label{classTopology_aff039c90beda2dc6f6437251ae5b67cd}
+Write a pdb with b\+Atom\+List coordinates and in\+Names 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/gmolmodel/Topology.\+hpp\item 
+src/\hyperlink{Topology_8cpp}{Topology.\+cpp}\end{DoxyCompactItemize}

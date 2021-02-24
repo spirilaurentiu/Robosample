@@ -1,0 +1,8 @@
+<map id="Sampler" name="Sampler">
+<area shape="rect" id="node2" href="$classConformationalSearch.html" title="ConformationalSearch" alt="" coords="5,80,156,107"/>
+<area shape="rect" id="node3" href="$classMonteCarloSampler.html" title="MonteCarloSampler" alt="" coords="180,80,317,107"/>
+<area shape="rect" id="node4" href="$classHMCSampler.html" title="HMCSampler" alt="" coords="134,155,235,181"/>
+<area shape="rect" id="node7" href="$classTestHMCSOA.html" title="TestHMCSOA" alt="" coords="259,155,366,181"/>
+<area shape="rect" id="node5" href="$classGirolamiSampler.html" title="GirolamiSampler" alt="" coords="55,229,173,256"/>
+<area shape="rect" id="node6" href="$classLAHMCSampler.html" title="LAHMCSampler" alt="" coords="197,229,314,256"/>
+</map>

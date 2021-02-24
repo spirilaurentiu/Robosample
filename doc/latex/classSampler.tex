@@ -1,0 +1,269 @@
+\hypertarget{classSampler}{}\section{Sampler Class Reference}
+\label{classSampler}\index{Sampler@{Sampler}}
+
+
+Inheritance diagram for Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSampler__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=180pt]{classSampler__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\bfseries Sampler} (Sim\+T\+K\+::\+Compound\+System $\ast$arg\+Compound\+System, Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$arg\+Matter, std\+::vector$<$ \hyperlink{classTopology}{Topology} $\ast$ $>$ \&arg\+Topologies, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$arg\+Dumm, Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$forces, Sim\+T\+K\+::\+Time\+Stepper $\ast$arg\+Time\+Stepper)\hypertarget{classSampler_a1ff6da3170a6c479e3f61adcee82ae66}{}\label{classSampler_a1ff6da3170a6c479e3f61adcee82ae66}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Mass\+Determinant} (const Sim\+T\+K\+::\+State \&)\hypertarget{classSampler_a26ca57993693da9033b38474cc94a656}{}\label{classSampler_a26ca57993693da9033b38474cc94a656}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Mass\+Determinant} (Sim\+T\+K\+::\+State \&)\hypertarget{classSampler_ab5d6291d8839ac6b3a8da456377e7226}{}\label{classSampler_ab5d6291d8839ac6b3a8da456377e7226}
+
+\item 
+void {\bfseries initialize} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classSampler_a8dc03cad5d5ed1ad6e8308ed449fbb3c}{}\label{classSampler_a8dc03cad5d5ed1ad6e8308ed449fbb3c}
+
+\item 
+void {\bfseries reinitialize} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classSampler_a2370ac1b2d92f333451ace593f658ce0}{}\label{classSampler_a2370ac1b2d92f333451ace593f658ce0}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Temperature} () const \hypertarget{classSampler_a32e49d15db5f08ad4ab3ee7dfa75ed51}{}\label{classSampler_a32e49d15db5f08ad4ab3ee7dfa75ed51}
+
+\item 
+void \hyperlink{classSampler_a74cb9a03076df1c093806acd3178ba4f}{set\+Temperature} (Sim\+T\+K\+::\+Real temperature)
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+RT} () const \hypertarget{classSampler_a3ebad4cf7047e90a7f826c2c4b8e01e2}{}\label{classSampler_a3ebad4cf7047e90a7f826c2c4b8e01e2}
+
+\item 
+void \hyperlink{classSampler_a3c0cbd43a89ee644ac462e3609c1d578}{set\+Beta} (Sim\+T\+K\+::\+Real arg\+Beta)
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Beta} () const \hypertarget{classSampler_aa811d3879623dfd9c855a8777b026a08}{}\label{classSampler_aa811d3879623dfd9c855a8777b026a08}
+
+\item 
+void \hyperlink{classSampler_a1e71eaf9562ef25a8dc27c53ca5e93f4}{load\+Mbx2mobility} (Sim\+T\+K\+::\+State \&some\+State)
+\item 
+int \hyperlink{classSampler_af3dfbb0921f97da86d0b0c3e51d58a47}{get\+Nof\+Samples} (void)
+\item 
+unsigned long long int {\bfseries get\+Seed} (void)\hypertarget{classSampler_a5ba75a69456c27778dcdb999169a0c0f}{}\label{classSampler_a5ba75a69456c27778dcdb999169a0c0f}
+
+\item 
+void \hyperlink{classSampler_ac9292ab10f2c4dd3a3626bab9819c923}{set\+Seed} (unsigned long long int)
+\item 
+Sim\+T\+K\+::\+Real \hyperlink{classSampler_a9d4455f6786a507dc856dd16117122d9}{generate\+Random\+Number} (Gmol\+Rand\+Distribution\+Type)
+\item 
+virtual void \hyperlink{classSampler_a3022d2efacf6107b3fba506d31e2919e}{propose} (Sim\+T\+K\+::\+State \&some\+State)=0
+\item 
+virtual void {\bfseries update} (Sim\+T\+K\+::\+State \&some\+State)=0\hypertarget{classSampler_a4887b45db93b240608a90712f856df69}{}\label{classSampler_a4887b45db93b240608a90712f856df69}
+
+\item 
+void {\bfseries Print\+Simbody\+State\+Cache} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classSampler_abe095828aebb30121068fc338d0b43e0}{}\label{classSampler_abe095828aebb30121068fc338d0b43e0}
+
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+const Sim\+T\+K\+::\+System $\ast$ {\bfseries system}\hypertarget{classSampler_a25c66070f64d79e8b94c678b78d0e277}{}\label{classSampler_a25c66070f64d79e8b94c678b78d0e277}
+
+\item 
+Sim\+T\+K\+::\+Compound\+System $\ast$ {\bfseries compound\+System}\hypertarget{classSampler_aa9d5f0914ab6868559980ae0a7c3bd62}{}\label{classSampler_aa9d5f0914ab6868559980ae0a7c3bd62}
+
+\item 
+Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$ {\bfseries matter}\hypertarget{classSampler_a88113c1bcf12b6a11c6274697f6c186b}{}\label{classSampler_a88113c1bcf12b6a11c6274697f6c186b}
+
+\item 
+\hyperlink{classTopology}{Topology} $\ast$ {\bfseries residue}\hypertarget{classSampler_ad4577776a8e351803ccdceeeb9cc8f53}{}\label{classSampler_ad4577776a8e351803ccdceeeb9cc8f53}
+
+\item 
+std\+::vector$<$ \hyperlink{classTopology}{Topology} $\ast$ $>$ {\bfseries topologies}\hypertarget{classSampler_ac00c89482575d83ad879436effeddebc}{}\label{classSampler_ac00c89482575d83ad879436effeddebc}
+
+\item 
+int {\bfseries natoms}\hypertarget{classSampler_adfb71a546356d6e8f65aacb40aa98cfe}{}\label{classSampler_adfb71a546356d6e8f65aacb40aa98cfe}
+
+\item 
+int {\bfseries ndofs}\hypertarget{classSampler_ac261eb04d288ae674e9da7fa69e5af54}{}\label{classSampler_ac261eb04d288ae674e9da7fa69e5af54}
+
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Mobilized\+Body\+Index, Sim\+T\+K\+::\+Bond\+Mobility\+::\+Mobility $>$ \hyperlink{classSampler_a795db0c66f3527f447f899f552c30a8b}{mbx2mobility}
+\item 
+std\+::map$<$ Sim\+T\+K\+::\+Q\+Index, Joint\+Type $>$ {\bfseries q\+Index2joint\+Type}\hypertarget{classSampler_ad6bdd42c05c63d7f1ac17b170fb0745b}{}\label{classSampler_ad6bdd42c05c63d7f1ac17b170fb0745b}
+
+\item 
+Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$ {\bfseries dumm}\hypertarget{classSampler_a87dbe61f06ba47644bd77d397fc505a2}{}\label{classSampler_a87dbe61f06ba47644bd77d397fc505a2}
+
+\item 
+Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$ {\bfseries forces}\hypertarget{classSampler_ac6fd8324ef573b7fd765ae572ee06343}{}\label{classSampler_ac6fd8324ef573b7fd765ae572ee06343}
+
+\item 
+Sim\+T\+K\+::\+Time\+Stepper $\ast$ {\bfseries time\+Stepper}\hypertarget{classSampler_a25ad4e02e2fcb4c8aaf914a678dee128}{}\label{classSampler_a25ad4e02e2fcb4c8aaf914a678dee128}
+
+\item 
+Thermostat\+Name {\bfseries thermostat}\hypertarget{classSampler_a464e1c642da90803d760265d2904c765}{}\label{classSampler_a464e1c642da90803d760265d2904c765}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries temperature}\hypertarget{classSampler_a5bdd4b90cf4dec04e4dc8cd900cc9857}{}\label{classSampler_a5bdd4b90cf4dec04e4dc8cd900cc9857}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries RT}\hypertarget{classSampler_a6ec4ff10320afbba1db255f691bcdbbd}{}\label{classSampler_a6ec4ff10320afbba1db255f691bcdbbd}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries beta}\hypertarget{classSampler_a67faf89e26a9f4ed809c2ccf49023ad5}{}\label{classSampler_a67faf89e26a9f4ed809c2ccf49023ad5}
+
+\item 
+int {\bfseries nof\+Samples}\hypertarget{classSampler_aea870fef79a9d102e3da843b1455fbc3}{}\label{classSampler_aea870fef79a9d102e3da843b1455fbc3}
+
+\item 
+unsigned long long int {\bfseries seed}\hypertarget{classSampler_aaa55f25f620ba200654c52d1a50d27de}{}\label{classSampler_aaa55f25f620ba200654c52d1a50d27de}
+
+\item 
+bool {\bfseries acc}\hypertarget{classSampler_a97d8bc64196e61c2b86ed0d4fc8c669c}{}\label{classSampler_a97d8bc64196e61c2b86ed0d4fc8c669c}
+
+\item 
+boost\+::random\+::mt19937 {\bfseries random\+Engine} = boost\+::random\+::mt19937()\hypertarget{classSampler_a3abf6a00b9395c28ec428d9ca89794e0}{}\label{classSampler_a3abf6a00b9395c28ec428d9ca89794e0}
+
+\item 
+boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$ double $>$ {\bfseries uniform\+Real\+Distribution\+\_\+0\+\_\+2pi}
+\item 
+boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$ double $>$ {\bfseries uniform\+Real\+Distribution\+\_\+mpi\+\_\+pi}
+\item 
+boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$ double $>$ {\bfseries uniform\+Real\+Distribution}
+\item 
+boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$ double $>$ {\bfseries uniform\+Real\+Distribution\+\_\+m1\+\_\+1}
+\item 
+boost\+::normal\+\_\+distribution {\bfseries gaurand} = boost\+::normal\+\_\+distribution$<$$>$(0.\+0, 1.\+0)\hypertarget{classSampler_adc634e05a08e7937b1976c0b5ddb844d}{}\label{classSampler_adc634e05a08e7937b1976c0b5ddb844d}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\index{Sampler@{Sampler}!generate\+Random\+Number@{generate\+Random\+Number}}
+\index{generate\+Random\+Number@{generate\+Random\+Number}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{generate\+Random\+Number(\+Gmol\+Rand\+Distribution\+Type)}{generateRandomNumber(GmolRandDistributionType)}}]{\setlength{\rightskip}{0pt plus 5cm}Sim\+T\+K\+::\+Real Sampler\+::generate\+Random\+Number (
+\begin{DoxyParamCaption}
+\item[{Gmol\+Rand\+Distribution\+Type}]{distribution\+Type}
+\end{DoxyParamCaption}
+)}\hypertarget{classSampler_a9d4455f6786a507dc856dd16117122d9}{}\label{classSampler_a9d4455f6786a507dc856dd16117122d9}
+Generate a random number. \index{Sampler@{Sampler}!get\+Nof\+Samples@{get\+Nof\+Samples}}
+\index{get\+Nof\+Samples@{get\+Nof\+Samples}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{get\+Nof\+Samples(void)}{getNofSamples(void)}}]{\setlength{\rightskip}{0pt plus 5cm}int Sampler\+::get\+Nof\+Samples (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}\hypertarget{classSampler_af3dfbb0921f97da86d0b0c3e51d58a47}{}\label{classSampler_af3dfbb0921f97da86d0b0c3e51d58a47}
+Returns the number of samples extracted so far.
+
+Returns the number of MC trials done by this integrator. \index{Sampler@{Sampler}!load\+Mbx2mobility@{load\+Mbx2mobility}}
+\index{load\+Mbx2mobility@{load\+Mbx2mobility}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{load\+Mbx2mobility(\+Sim\+T\+K\+::\+State \&some\+State)}{loadMbx2mobility(SimTK::State &someState)}}]{\setlength{\rightskip}{0pt plus 5cm}void Sampler\+::load\+Mbx2mobility (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)}\hypertarget{classSampler_a1e71eaf9562ef25a8dc27c53ca5e93f4}{}\label{classSampler_a1e71eaf9562ef25a8dc27c53ca5e93f4}
+Load the map of mobods to joint types $<$ Unrestricted bond, permitting changes in stretch, bend, and torsion modes
+
+$<$ Bond has fixed length and angles, but permits rotation about the bond axis
+
+$<$ Bond links both atoms to the same rigid unit
+
+$<$ Three rotational dofs. It allows angle flexibility besides torsion.
+
+$<$ Three rotational dofs. It allows angle flexibility besides torsion.
+
+$<$ Torsion plus translation along the bond
+
+$<$ Three translational mobilities (Cartesian). // N\+E\+W\+M\+OB
+
+$<$ Three translational mobilities (Cartesian). // N\+E\+W\+M\+OB
+
+$<$ Two rotational mobilities // N\+E\+W\+M\+OB
+
+$<$ Two rotational mobilities // N\+E\+W\+M\+OB
+
+$<$ Cap de bara
+
+$<$ B\+AT coordinates
+
+$<$ Translation along bond \index{Sampler@{Sampler}!propose@{propose}}
+\index{propose@{propose}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{propose(\+Sim\+T\+K\+::\+State \&some\+State)=0}{propose(SimTK::State &someState)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Sampler\+::propose (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{classSampler_a3022d2efacf6107b3fba506d31e2919e}{}\label{classSampler_a3022d2efacf6107b3fba506d31e2919e}
+Propose a move 
+
+Implemented in \hyperlink{classLAHMCSampler_aedb4b87feaaa20c036c908c9e9868b41}{L\+A\+H\+M\+C\+Sampler}, \hyperlink{classHMCSampler_aa36ab4482bbb6295658e8fe6a49c9e4f}{H\+M\+C\+Sampler}, \hyperlink{classMonteCarloSampler_af35ad7b12d462b867b968e3ec8194c05}{Monte\+Carlo\+Sampler}, and \hyperlink{classConformationalSearch_a1656b70ede0f43765c9379737d6e6697}{Conformational\+Search}.
+
+\index{Sampler@{Sampler}!set\+Beta@{set\+Beta}}
+\index{set\+Beta@{set\+Beta}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{set\+Beta(\+Sim\+T\+K\+::\+Real arg\+Beta)}{setBeta(SimTK::Real argBeta)}}]{\setlength{\rightskip}{0pt plus 5cm}void Sampler\+::set\+Beta (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Beta}
+\end{DoxyParamCaption}
+)}\hypertarget{classSampler_a3c0cbd43a89ee644ac462e3609c1d578}{}\label{classSampler_a3c0cbd43a89ee644ac462e3609c1d578}
+Setter for macroscopic beta. Also sets the RT and temperature \index{Sampler@{Sampler}!set\+Seed@{set\+Seed}}
+\index{set\+Seed@{set\+Seed}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{set\+Seed(unsigned long long int)}{setSeed(unsigned long long int)}}]{\setlength{\rightskip}{0pt plus 5cm}void Sampler\+::set\+Seed (
+\begin{DoxyParamCaption}
+\item[{unsigned long long int}]{arg\+Seed}
+\end{DoxyParamCaption}
+)}\hypertarget{classSampler_ac9292ab10f2c4dd3a3626bab9819c923}{}\label{classSampler_ac9292ab10f2c4dd3a3626bab9819c923}
+Store the value of the seed internally and also feed it to the random number generator \index{Sampler@{Sampler}!set\+Temperature@{set\+Temperature}}
+\index{set\+Temperature@{set\+Temperature}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{set\+Temperature(\+Sim\+T\+K\+::\+Real temperature)}{setTemperature(SimTK::Real temperature)}}]{\setlength{\rightskip}{0pt plus 5cm}void Sampler\+::set\+Temperature (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+Real}]{temperature}
+\end{DoxyParamCaption}
+)}\hypertarget{classSampler_a74cb9a03076df1c093806acd3178ba4f}{}\label{classSampler_a74cb9a03076df1c093806acd3178ba4f}
+Setter for macroscopic temperature. Also sets the RT and beta 
+
+\subsection{Member Data Documentation}
+\index{Sampler@{Sampler}!mbx2mobility@{mbx2mobility}}
+\index{mbx2mobility@{mbx2mobility}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{mbx2mobility}{mbx2mobility}}]{\setlength{\rightskip}{0pt plus 5cm}std\+::map$<$ Sim\+T\+K\+::\+Mobilized\+Body\+Index, Sim\+T\+K\+::\+Bond\+Mobility\+::\+Mobility$>$ Sampler\+::mbx2mobility}\hypertarget{classSampler_a795db0c66f3527f447f899f552c30a8b}{}\label{classSampler_a795db0c66f3527f447f899f552c30a8b}
+Joint types \index{Sampler@{Sampler}!uniform\+Real\+Distribution@{uniform\+Real\+Distribution}}
+\index{uniform\+Real\+Distribution@{uniform\+Real\+Distribution}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{uniform\+Real\+Distribution}{uniformRealDistribution}}]{\setlength{\rightskip}{0pt plus 5cm}boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$double$>$ Sampler\+::uniform\+Real\+Distribution}\hypertarget{classSampler_a8f26cbe054715a164a8a0e0cc5226690}{}\label{classSampler_a8f26cbe054715a164a8a0e0cc5226690}
+{\bfseries Initial value\+:}
+\begin{DoxyCode}
+=
+            boost::random::uniform\_real\_distribution<double>(SimTK::Zero, SimTK::One)
+\end{DoxyCode}
+\index{Sampler@{Sampler}!uniform\+Real\+Distribution\+\_\+0\+\_\+2pi@{uniform\+Real\+Distribution\+\_\+0\+\_\+2pi}}
+\index{uniform\+Real\+Distribution\+\_\+0\+\_\+2pi@{uniform\+Real\+Distribution\+\_\+0\+\_\+2pi}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{uniform\+Real\+Distribution\+\_\+0\+\_\+2pi}{uniformRealDistribution_0_2pi}}]{\setlength{\rightskip}{0pt plus 5cm}boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$double$>$ Sampler\+::uniform\+Real\+Distribution\+\_\+0\+\_\+2pi}\hypertarget{classSampler_acf6ddd3830ce3ea8ac991f0d6c42325b}{}\label{classSampler_acf6ddd3830ce3ea8ac991f0d6c42325b}
+{\bfseries Initial value\+:}
+\begin{DoxyCode}
+=
+            boost::random::uniform\_real\_distribution<double>(SimTK::Zero, 2*SimTK::Pi)
+\end{DoxyCode}
+\index{Sampler@{Sampler}!uniform\+Real\+Distribution\+\_\+m1\+\_\+1@{uniform\+Real\+Distribution\+\_\+m1\+\_\+1}}
+\index{uniform\+Real\+Distribution\+\_\+m1\+\_\+1@{uniform\+Real\+Distribution\+\_\+m1\+\_\+1}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{uniform\+Real\+Distribution\+\_\+m1\+\_\+1}{uniformRealDistribution_m1_1}}]{\setlength{\rightskip}{0pt plus 5cm}boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$double$>$ Sampler\+::uniform\+Real\+Distribution\+\_\+m1\+\_\+1}\hypertarget{classSampler_aa05d95f8667613e9d802081ab343bc72}{}\label{classSampler_aa05d95f8667613e9d802081ab343bc72}
+{\bfseries Initial value\+:}
+\begin{DoxyCode}
+=
+            boost::random::uniform\_real\_distribution<double>((-1)*SimTK::One, SimTK::One)
+\end{DoxyCode}
+\index{Sampler@{Sampler}!uniform\+Real\+Distribution\+\_\+mpi\+\_\+pi@{uniform\+Real\+Distribution\+\_\+mpi\+\_\+pi}}
+\index{uniform\+Real\+Distribution\+\_\+mpi\+\_\+pi@{uniform\+Real\+Distribution\+\_\+mpi\+\_\+pi}!Sampler@{Sampler}}
+\subsubsection[{\texorpdfstring{uniform\+Real\+Distribution\+\_\+mpi\+\_\+pi}{uniformRealDistribution_mpi_pi}}]{\setlength{\rightskip}{0pt plus 5cm}boost\+::random\+::uniform\+\_\+real\+\_\+distribution$<$double$>$ Sampler\+::uniform\+Real\+Distribution\+\_\+mpi\+\_\+pi}\hypertarget{classSampler_a514a239abb55e5b7fb56d30fb2d1e695}{}\label{classSampler_a514a239abb55e5b7fb56d30fb2d1e695}
+{\bfseries Initial value\+:}
+\begin{DoxyCode}
+=
+            boost::random::uniform\_real\_distribution<double>((-1)*SimTK::Pi, SimTK::Pi)
+\end{DoxyCode}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/gmolmodel/Sampler.\+hpp\item 
+src/\hyperlink{Sampler_8cpp}{Sampler.\+cpp}\end{DoxyCompactItemize}

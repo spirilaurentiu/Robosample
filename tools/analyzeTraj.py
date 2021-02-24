@@ -186,9 +186,9 @@ if "traj" in args.analyze:
 			#axs[0, 1].plot(X, Y, color = colors[paramSeti])
 			#axs[0, 1].set_title('Running Std')
 
-			Y = sofm[paramSeti]
-			#Yerr = sofm[paramSeti]
-			Yerr = np.zeros(sofm[paramSeti].shape)
+			Y = mofm[paramSeti]
+			Yerr = sofm[paramSeti]
+			#Yerr = np.zeros(sofm[paramSeti].shape)
 			#axs[1, 0].set_ylim(np.min(mofm), np.max(mofm))
 			axs[1].errorbar(X, Y, yerr=Yerr, color = colors[paramSeti], errorevery = 100, elinewidth = 0.5)
 			axs[1].set_title('Std of Means ' + args.molName)

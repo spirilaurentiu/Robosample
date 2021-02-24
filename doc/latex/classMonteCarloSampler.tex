@@ -1,0 +1,277 @@
+\hypertarget{classMonteCarloSampler}{}\section{Monte\+Carlo\+Sampler Class Reference}
+\label{classMonteCarloSampler}\index{Monte\+Carlo\+Sampler@{Monte\+Carlo\+Sampler}}
+
+
+Inheritance diagram for Monte\+Carlo\+Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=314pt]{classMonteCarloSampler__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Monte\+Carlo\+Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=183pt]{classMonteCarloSampler__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\bfseries Monte\+Carlo\+Sampler} (Sim\+T\+K\+::\+Compound\+System $\ast$arg\+Compound\+System, Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$arg\+Matter, std\+::vector$<$ \hyperlink{classTopology}{Topology} $\ast$ $>$ \&arg\+Topologies, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$arg\+Dumm, Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$forces, Sim\+T\+K\+::\+Time\+Stepper $\ast$arg\+Time\+Stepper)\hypertarget{classMonteCarloSampler_a07b24155322212a06eaee8e945e349ee}{}\label{classMonteCarloSampler_a07b24155322212a06eaee8e945e349ee}
+
+\item 
+void {\bfseries set\+Thermostat} (Thermostat\+Name)\hypertarget{classMonteCarloSampler_a1ead7846108a3fc20f01c97442c39c17}{}\label{classMonteCarloSampler_a1ead7846108a3fc20f01c97442c39c17}
+
+\item 
+void {\bfseries set\+Thermostat} (std\+::string)\hypertarget{classMonteCarloSampler_aefbf81422671bbf30387e1d710f81147}{}\label{classMonteCarloSampler_aefbf81422671bbf30387e1d710f81147}
+
+\item 
+void {\bfseries set\+Thermostat} (const char $\ast$)\hypertarget{classMonteCarloSampler_a405e4793d80178a19cd46664ba3b2ad2}{}\label{classMonteCarloSampler_a405e4793d80178a19cd46664ba3b2ad2}
+
+\item 
+virtual Thermostat\+Name {\bfseries get\+Thermostat} (void) const \hypertarget{classMonteCarloSampler_a058662609fcf2d35bb4c1d68754c73e1}{}\label{classMonteCarloSampler_a058662609fcf2d35bb4c1d68754c73e1}
+
+\item 
+virtual void \hyperlink{classMonteCarloSampler_a1063f1111e793d942f35481a4d7346d7}{initialize} (Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real arg\+Temperature, bool arg\+Use\+Fixman=true)
+\item 
+virtual void \hyperlink{classMonteCarloSampler_a4e085e821dffa919cc385a2b052603cc}{reinitialize} (Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real arg\+Temperature)
+\item 
+void {\bfseries set\+Set\+T\+Vector} (const Sim\+T\+K\+::\+State \&advanced)\hypertarget{classMonteCarloSampler_a49ddb4d4f1d48b9fd3d6f9b1bc9762be}{}\label{classMonteCarloSampler_a49ddb4d4f1d48b9fd3d6f9b1bc9762be}
+
+\item 
+Sim\+T\+K\+::\+Transform $\ast$ {\bfseries get\+Set\+T\+Vector} (void)\hypertarget{classMonteCarloSampler_a381114ca6245e61809691a5b8efec354}{}\label{classMonteCarloSampler_a381114ca6245e61809691a5b8efec354}
+
+\item 
+void {\bfseries assign\+Conf\+From\+Set\+T\+Vector} (Sim\+T\+K\+::\+State \&advanced)\hypertarget{classMonteCarloSampler_aff4c58f725a9b1b5cafe1e6afe70272a}{}\label{classMonteCarloSampler_aff4c58f725a9b1b5cafe1e6afe70272a}
+
+\item 
+void {\bfseries set\+T\+Vector} (const Sim\+T\+K\+::\+State \&advanced)\hypertarget{classMonteCarloSampler_af8cbc49beae7f81cc0d560953424b049}{}\label{classMonteCarloSampler_af8cbc49beae7f81cc0d560953424b049}
+
+\item 
+void {\bfseries set\+T\+Vector} (Sim\+T\+K\+::\+Transform $\ast$)\hypertarget{classMonteCarloSampler_a42c51f9eb62489ebb715a945742556b2}{}\label{classMonteCarloSampler_a42c51f9eb62489ebb715a945742556b2}
+
+\item 
+Sim\+T\+K\+::\+Transform $\ast$ {\bfseries get\+T\+Vector} (void)\hypertarget{classMonteCarloSampler_a010b453ab1e2cf910370c2a983ac9459}{}\label{classMonteCarloSampler_a010b453ab1e2cf910370c2a983ac9459}
+
+\item 
+void {\bfseries assign\+Conf\+From\+T\+Vector} (Sim\+T\+K\+::\+State \&advanced)\hypertarget{classMonteCarloSampler_ab72a7be6ee6960ed6695276d1ae7f81e}{}\label{classMonteCarloSampler_ab72a7be6ee6960ed6695276d1ae7f81e}
+
+\item 
+void \hyperlink{classMonteCarloSampler_af35ad7b12d462b867b968e3ec8194c05}{propose} (Sim\+T\+K\+::\+State \&advanced)
+\item 
+void {\bfseries update} (Sim\+T\+K\+::\+State \&)\hypertarget{classMonteCarloSampler_aea26d5e94570b2c3ba27e4b8c75de3ac}{}\label{classMonteCarloSampler_aea26d5e94570b2c3ba27e4b8c75de3ac}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Set\+PE} (void) const \hypertarget{classMonteCarloSampler_a574c8cc51d4d4a77dff0094a8bf7ab94}{}\label{classMonteCarloSampler_a574c8cc51d4d4a77dff0094a8bf7ab94}
+
+\item 
+void {\bfseries set\+Set\+PE} (Sim\+T\+K\+::\+Real arg\+PE)\hypertarget{classMonteCarloSampler_aee20844deef1624d0e49133b5da7267d}{}\label{classMonteCarloSampler_aee20844deef1624d0e49133b5da7267d}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Old\+PE} (void) const \hypertarget{classMonteCarloSampler_ad1248e740d46b90e0f2cfcdeaa94fc92}{}\label{classMonteCarloSampler_ad1248e740d46b90e0f2cfcdeaa94fc92}
+
+\item 
+void {\bfseries set\+Old\+PE} (Sim\+T\+K\+::\+Real arg\+PE)\hypertarget{classMonteCarloSampler_a541f5de0ef4ee9ec8963d11750be4b9b}{}\label{classMonteCarloSampler_a541f5de0ef4ee9ec8963d11750be4b9b}
+
+\item 
+void {\bfseries set\+Set\+Fixman} (Sim\+T\+K\+::\+Real)\hypertarget{classMonteCarloSampler_a5bc8474546ba1a04a7dc9c37069963b2}{}\label{classMonteCarloSampler_a5bc8474546ba1a04a7dc9c37069963b2}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Set\+Fixman} (void) const \hypertarget{classMonteCarloSampler_ad0f7f3e1554620e467e1f519a7600736}{}\label{classMonteCarloSampler_ad0f7f3e1554620e467e1f519a7600736}
+
+\item 
+void {\bfseries set\+R\+EP} (Sim\+T\+K\+::\+Real)\hypertarget{classMonteCarloSampler_a8dc6b458ce92bb91396e92d172fc94fc}{}\label{classMonteCarloSampler_a8dc6b458ce92bb91396e92d172fc94fc}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+R\+EP} (void) const \hypertarget{classMonteCarloSampler_a9b525f238f6290d2b74680ca96425db7}{}\label{classMonteCarloSampler_a9b525f238f6290d2b74680ca96425db7}
+
+\item 
+void {\bfseries set\+Old\+Fixman} (Sim\+T\+K\+::\+Real)\hypertarget{classMonteCarloSampler_a45c88aa68467e55b253f4d38aa044663}{}\label{classMonteCarloSampler_a45c88aa68467e55b253f4d38aa044663}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Old\+Fixman} (void) const \hypertarget{classMonteCarloSampler_a14aa5d89fd3832ebb63b2cff48d76fd2}{}\label{classMonteCarloSampler_a14aa5d89fd3832ebb63b2cff48d76fd2}
+
+\item 
+void {\bfseries set\+Set\+Log\+Sine\+Sqr\+Gamma2} (Sim\+T\+K\+::\+Real)\hypertarget{classMonteCarloSampler_a569d624b7c74ebffecb31153231c7314}{}\label{classMonteCarloSampler_a569d624b7c74ebffecb31153231c7314}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Set\+Log\+Sine\+Sqr\+Gamma2} (void) const \hypertarget{classMonteCarloSampler_a091f14ccd03de6141b247a4f0c4775b7}{}\label{classMonteCarloSampler_a091f14ccd03de6141b247a4f0c4775b7}
+
+\item 
+void {\bfseries set\+Old\+Log\+Sine\+Sqr\+Gamma2} (Sim\+T\+K\+::\+Real)\hypertarget{classMonteCarloSampler_a78930927d4a5b5d201f38cdd5e438f88}{}\label{classMonteCarloSampler_a78930927d4a5b5d201f38cdd5e438f88}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Old\+Log\+Sine\+Sqr\+Gamma2} (void) const \hypertarget{classMonteCarloSampler_a3120cbf9c30baff5a64f02f38767472b}{}\label{classMonteCarloSampler_a3120cbf9c30baff5a64f02f38767472b}
+
+\item 
+void {\bfseries set\+Proposed\+Log\+Sine\+Sqr\+Gamma2} (Sim\+T\+K\+::\+Real arg\+Fixman)\hypertarget{classMonteCarloSampler_aee0045dca052c0a485c36175a1818e77}{}\label{classMonteCarloSampler_aee0045dca052c0a485c36175a1818e77}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Proposed\+Log\+Sine\+Sqr\+Gamma2} (void) const \hypertarget{classMonteCarloSampler_af3dc14be70f4a1fc565e557633932db1}{}\label{classMonteCarloSampler_af3dc14be70f4a1fc565e557633932db1}
+
+\item 
+void {\bfseries set\+Proposed\+Fixman} (Sim\+T\+K\+::\+Real)\hypertarget{classMonteCarloSampler_a8b36193b2d296fc2f3b3dd2c56e41aa9}{}\label{classMonteCarloSampler_a8b36193b2d296fc2f3b3dd2c56e41aa9}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+Proposed\+Fixman} (void) const \hypertarget{classMonteCarloSampler_aa2e8b879e996bd6f9b226657d3ed3a63}{}\label{classMonteCarloSampler_aa2e8b879e996bd6f9b226657d3ed3a63}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries get\+P\+E\+From\+Evaluator} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classMonteCarloSampler_af535395968c8aedfcb98836f61a0594f}{}\label{classMonteCarloSampler_af535395968c8aedfcb98836f61a0594f}
+
+\item 
+void {\bfseries use\+Fixman\+Potential} (void)\hypertarget{classMonteCarloSampler_a8f47fe7010dd8c087e386af08e6b17bf}{}\label{classMonteCarloSampler_a8f47fe7010dd8c087e386af08e6b17bf}
+
+\item 
+bool {\bfseries is\+Using\+Fixman\+Potential} (void) const \hypertarget{classMonteCarloSampler_a16b691acfbbb0489b79949053610adea}{}\label{classMonteCarloSampler_a16b691acfbbb0489b79949053610adea}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Fixman} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classMonteCarloSampler_a7865bdccd1f6d03efa08978b2fd943fe}{}\label{classMonteCarloSampler_a7865bdccd1f6d03efa08978b2fd943fe}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Num\+Fixman} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classMonteCarloSampler_a9b94172a710aebf05d4ddbb889991f46}{}\label{classMonteCarloSampler_a9b94172a710aebf05d4ddbb889991f46}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries calc\+Num\+DetM} (Sim\+T\+K\+::\+State \&some\+State)\hypertarget{classMonteCarloSampler_acf6a189a1c0d4c19b51d768341a4efe0}{}\label{classMonteCarloSampler_acf6a189a1c0d4c19b51d768341a4efe0}
+
+\item 
+void {\bfseries send\+Conf\+To\+Evaluator} (void)\hypertarget{classMonteCarloSampler_ad82ab3bef1e3fd97c6abf697738792a6}{}\label{classMonteCarloSampler_ad82ab3bef1e3fd97c6abf697738792a6}
+
+\item 
+bool {\bfseries get\+Always\+Accept} (void) const \hypertarget{classMonteCarloSampler_a6eab6650da5aab47299128f806228e8f}{}\label{classMonteCarloSampler_a6eab6650da5aab47299128f806228e8f}
+
+\item 
+void {\bfseries set\+Always\+Accept} (bool)\hypertarget{classMonteCarloSampler_a93d9574f30822b76ca34ee916c4eb5fa}{}\label{classMonteCarloSampler_a93d9574f30822b76ca34ee916c4eb5fa}
+
+\item 
+int {\bfseries get\+Accepted\+Steps} (void) const \hypertarget{classMonteCarloSampler_a2bb387a9068adf5861c7ca63b2c65641}{}\label{classMonteCarloSampler_a2bb387a9068adf5861c7ca63b2c65641}
+
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Transform $>$ {\bfseries Set\+T\+Vector}\hypertarget{classMonteCarloSampler_a4c863be2e5ebefe4e923caf007c7fde9}{}\label{classMonteCarloSampler_a4c863be2e5ebefe4e923caf007c7fde9}
+
+\item 
+std\+::vector$<$ Sim\+T\+K\+::\+Transform $>$ {\bfseries T\+Vector}\hypertarget{classMonteCarloSampler_af5fea1471133f61f5f5f05ab302f4562}{}\label{classMonteCarloSampler_af5fea1471133f61f5f5f05ab302f4562}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries pe\+\_\+set} = 0.\+0\hypertarget{classMonteCarloSampler_a08775705779aed062ed86216b538f03b}{}\label{classMonteCarloSampler_a08775705779aed062ed86216b538f03b}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries pe\+\_\+o} = 0.\+0\hypertarget{classMonteCarloSampler_a07f4e95e16aa27c6fd424d900c45e94d}{}\label{classMonteCarloSampler_a07f4e95e16aa27c6fd424d900c45e94d}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries pe\+\_\+n} = 0.\+0\hypertarget{classMonteCarloSampler_a7c5b417b17d79468129b03fe5398c482}{}\label{classMonteCarloSampler_a7c5b417b17d79468129b03fe5398c482}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries fix\+\_\+set} = 0.\+0\hypertarget{classMonteCarloSampler_a9f27d9e958e6911fa3b8fb13cb1d2481}{}\label{classMonteCarloSampler_a9f27d9e958e6911fa3b8fb13cb1d2481}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries fix\+\_\+o} = 0.\+0\hypertarget{classMonteCarloSampler_ae6919d5694b0417b337f768d3a62aded}{}\label{classMonteCarloSampler_ae6919d5694b0417b337f768d3a62aded}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries fix\+\_\+n} = 0.\+0\hypertarget{classMonteCarloSampler_a672a0893caefef6136ed20e125f47275}{}\label{classMonteCarloSampler_a672a0893caefef6136ed20e125f47275}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries detmbat\+\_\+set} = 0.\+0\hypertarget{classMonteCarloSampler_a258169bc588eb202b488a7a7941c446e}{}\label{classMonteCarloSampler_a258169bc588eb202b488a7a7941c446e}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries detmbat\+\_\+o} = 0.\+0\hypertarget{classMonteCarloSampler_aa6ab3bf81da9dd54c0df1afbb92c94d5}{}\label{classMonteCarloSampler_aa6ab3bf81da9dd54c0df1afbb92c94d5}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries detmbat\+\_\+n} = 0.\+0\hypertarget{classMonteCarloSampler_a1c11d5fd863c257f32ab142b7e65648b}{}\label{classMonteCarloSampler_a1c11d5fd863c257f32ab142b7e65648b}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries residual\+Embedded\+Potential} = 0.\+0\hypertarget{classMonteCarloSampler_a1c6167653e0d2fa65057a6a4793faea1}{}\label{classMonteCarloSampler_a1c6167653e0d2fa65057a6a4793faea1}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries log\+Sine\+Sqr\+Gamma2\+\_\+o} = 0.\+0\hypertarget{classMonteCarloSampler_a451404c5869285d32047cd8070f31dc3}{}\label{classMonteCarloSampler_a451404c5869285d32047cd8070f31dc3}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries log\+Sine\+Sqr\+Gamma2\+\_\+n} = 0.\+0\hypertarget{classMonteCarloSampler_aad0a503a222d06dafd504bbd6c4c2d4a}{}\label{classMonteCarloSampler_aad0a503a222d06dafd504bbd6c4c2d4a}
+
+\item 
+Sim\+T\+K\+::\+Real {\bfseries log\+Sine\+Sqr\+Gamma2\+\_\+set} = 0.\+0\hypertarget{classMonteCarloSampler_a2c9848636e1842bbeb0a5e86dd039007}{}\label{classMonteCarloSampler_a2c9848636e1842bbeb0a5e86dd039007}
+
+\item 
+bool {\bfseries use\+Fixman} = false\hypertarget{classMonteCarloSampler_a202a86fee8c6c766d68d4a6d44918ebf}{}\label{classMonteCarloSampler_a202a86fee8c6c766d68d4a6d44918ebf}
+
+\item 
+bool {\bfseries always\+Accept} = false\hypertarget{classMonteCarloSampler_a1deab6aec5c368a516afced6dc87b001}{}\label{classMonteCarloSampler_a1deab6aec5c368a516afced6dc87b001}
+
+\item 
+int {\bfseries accepted\+Steps} = 0\hypertarget{classMonteCarloSampler_ac2b9df435ba70cedd43406dc66d691b7}{}\label{classMonteCarloSampler_ac2b9df435ba70cedd43406dc66d691b7}
+
+\item 
+int {\bfseries accepted\+Steps\+Buffer\+Size} = 30\hypertarget{classMonteCarloSampler_a25ebd711aad3d3be594978679a292805}{}\label{classMonteCarloSampler_a25ebd711aad3d3be594978679a292805}
+
+\item 
+std\+::list$<$ int $>$ {\bfseries accepted\+Steps\+Buffer}\hypertarget{classMonteCarloSampler_adf63689df579ac22e76d47380a0b6341}{}\label{classMonteCarloSampler_adf63689df579ac22e76d47380a0b6341}
+
+\item 
+int {\bfseries Qs\+Buffer\+Size} = 300\hypertarget{classMonteCarloSampler_a0720d9d5e4543b23006a5c7616269756}{}\label{classMonteCarloSampler_a0720d9d5e4543b23006a5c7616269756}
+
+\item 
+std\+::list$<$ Sim\+T\+K\+::\+Real $>$ {\bfseries Qs\+Buffer}\hypertarget{classMonteCarloSampler_aa1f3656e46752f5fe9f4868d2658d18a}{}\label{classMonteCarloSampler_aa1f3656e46752f5fe9f4868d2658d18a}
+
+\item 
+float {\bfseries acceptance}\hypertarget{classMonteCarloSampler_a1006f1adddf4666a094e6eb19c3065b7}{}\label{classMonteCarloSampler_a1006f1adddf4666a094e6eb19c3065b7}
+
+\item 
+float {\bfseries prev\+Acceptance}\hypertarget{classMonteCarloSampler_a8b725ad99341adf348645390311089e7}{}\label{classMonteCarloSampler_a8b725ad99341adf348645390311089e7}
+
+\item 
+float {\bfseries prev\+Prev\+Acceptance}\hypertarget{classMonteCarloSampler_ae59ce9e6f6d0fd91da053fecdba7b7ba}{}\label{classMonteCarloSampler_ae59ce9e6f6d0fd91da053fecdba7b7ba}
+
+\item 
+bool {\bfseries propose\+Exception\+Caught}\hypertarget{classMonteCarloSampler_af6b5f8a5682111329963b546b3f3de65}{}\label{classMonteCarloSampler_af6b5f8a5682111329963b546b3f3de65}
+
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+class {\bfseries Context}\hypertarget{classMonteCarloSampler_ac26c806e60ca4a0547680edb68f6e39b}{}\label{classMonteCarloSampler_ac26c806e60ca4a0547680edb68f6e39b}
+
+\end{DoxyCompactItemize}
+\subsection*{Additional Inherited Members}
+
+
+\subsection{Member Function Documentation}
+\index{Monte\+Carlo\+Sampler@{Monte\+Carlo\+Sampler}!initialize@{initialize}}
+\index{initialize@{initialize}!Monte\+Carlo\+Sampler@{Monte\+Carlo\+Sampler}}
+\subsubsection[{\texorpdfstring{initialize(\+Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real arg\+Temperature, bool arg\+Use\+Fixman=true)}{initialize(SimTK::State &advanced, SimTK::Real argTemperature, bool argUseFixman=true)}}]{\setlength{\rightskip}{0pt plus 5cm}void Monte\+Carlo\+Sampler\+::initialize (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{advanced, }
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Temperature, }
+\item[{bool}]{arg\+Use\+Fixman = {\ttfamily true}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classMonteCarloSampler_a1063f1111e793d942f35481a4d7346d7}{}\label{classMonteCarloSampler_a1063f1111e793d942f35481a4d7346d7}
+Seed the random number generator. Set simulation temperature, variables that store the configuration and variables that store the energies, both needed for the acception-\/rejection step. Also realize velocities and initialize the timestepper. \index{Monte\+Carlo\+Sampler@{Monte\+Carlo\+Sampler}!propose@{propose}}
+\index{propose@{propose}!Monte\+Carlo\+Sampler@{Monte\+Carlo\+Sampler}}
+\subsubsection[{\texorpdfstring{propose(\+Sim\+T\+K\+::\+State \&advanced)}{propose(SimTK::State &advanced)}}]{\setlength{\rightskip}{0pt plus 5cm}void Monte\+Carlo\+Sampler\+::propose (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classMonteCarloSampler_af35ad7b12d462b867b968e3ec8194c05}{}\label{classMonteCarloSampler_af35ad7b12d462b867b968e3ec8194c05}
+Propose a move 
+
+Implements \hyperlink{classSampler_a3022d2efacf6107b3fba506d31e2919e}{Sampler}.
+
+\index{Monte\+Carlo\+Sampler@{Monte\+Carlo\+Sampler}!reinitialize@{reinitialize}}
+\index{reinitialize@{reinitialize}!Monte\+Carlo\+Sampler@{Monte\+Carlo\+Sampler}}
+\subsubsection[{\texorpdfstring{reinitialize(\+Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real arg\+Temperature)}{reinitialize(SimTK::State &advanced, SimTK::Real argTemperature)}}]{\setlength{\rightskip}{0pt plus 5cm}void Monte\+Carlo\+Sampler\+::reinitialize (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{advanced, }
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Temperature}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classMonteCarloSampler_a4e085e821dffa919cc385a2b052603cc}{}\label{classMonteCarloSampler_a4e085e821dffa919cc385a2b052603cc}
+Same as initialize 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/gmolmodel/Monte\+Carlo\+Sampler.\+hpp\item 
+src/\hyperlink{MonteCarloSampler_8cpp}{Monte\+Carlo\+Sampler.\+cpp}\end{DoxyCompactItemize}

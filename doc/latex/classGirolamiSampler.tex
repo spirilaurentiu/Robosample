@@ -1,0 +1,101 @@
+\hypertarget{classGirolamiSampler}{}\section{Girolami\+Sampler Class Reference}
+\label{classGirolamiSampler}\index{Girolami\+Sampler@{Girolami\+Sampler}}
+
+
+Inheritance diagram for Girolami\+Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=183pt]{classGirolamiSampler__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Girolami\+Sampler\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=183pt]{classGirolamiSampler__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\bfseries Girolami\+Sampler} (Sim\+T\+K\+::\+Compound\+System $\ast$arg\+Compound\+System, Sim\+T\+K\+::\+Simbody\+Matter\+Subsystem $\ast$arg\+Matter, std\+::vector$<$ \hyperlink{classTopology}{Topology} $\ast$ $>$ \&topologies, Sim\+T\+K\+::\+Du\+M\+M\+Force\+Field\+Subsystem $\ast$arg\+Dumm, Sim\+T\+K\+::\+General\+Force\+Subsystem $\ast$forces, Sim\+T\+K\+::\+Time\+Stepper $\ast$arg\+Time\+Stepper)\hypertarget{classGirolamiSampler_a45a3f2334ac7cf244bab902304be9e3b}{}\label{classGirolamiSampler_a45a3f2334ac7cf244bab902304be9e3b}
+
+\item 
+virtual \hyperlink{classGirolamiSampler_afdf9a9d83f383611cdfc4226e76f70f7}{$\sim$\+Girolami\+Sampler} ()
+\item 
+virtual void \hyperlink{classGirolamiSampler_a1e48f38fa966f7063f190bba32193b42}{initialize} (Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a8cd8b25b42e94acb34aa0dea64c67b5b}{timestep}, int nosteps, Sim\+T\+K\+::\+Real arg\+Temperature, bool arg\+Use\+Fixman=true)
+\item 
+virtual void \hyperlink{classGirolamiSampler_a60a0994ea481381dd2596a711d839f5d}{reinitialize} (Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a8cd8b25b42e94acb34aa0dea64c67b5b}{timestep}, int nosteps, Sim\+T\+K\+::\+Real arg\+Temperature)
+\item 
+void \hyperlink{classGirolamiSampler_ad5b07ddfcab269774723a8156670ee28}{propose} (Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a8cd8b25b42e94acb34aa0dea64c67b5b}{timestep}, int nosteps)
+\item 
+void \hyperlink{classGirolamiSampler_aef18692e13adaa564a9106e94a801893}{update} (Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Real \hyperlink{classHMCSampler_a8cd8b25b42e94acb34aa0dea64c67b5b}{timestep}, int nosteps)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+bool {\bfseries use\+Fixman\+Torque} = true\hypertarget{classGirolamiSampler_a6f81b5defa538906e80690464b7102b6}{}\label{classGirolamiSampler_a6f81b5defa538906e80690464b7102b6}
+
+\end{DoxyCompactItemize}
+\subsection*{Additional Inherited Members}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\index{Girolami\+Sampler@{Girolami\+Sampler}!````~Girolami\+Sampler@{$\sim$\+Girolami\+Sampler}}
+\index{````~Girolami\+Sampler@{$\sim$\+Girolami\+Sampler}!Girolami\+Sampler@{Girolami\+Sampler}}
+\subsubsection[{\texorpdfstring{$\sim$\+Girolami\+Sampler()}{~GirolamiSampler()}}]{\setlength{\rightskip}{0pt plus 5cm}Girolami\+Sampler\+::$\sim$\+Girolami\+Sampler (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classGirolamiSampler_afdf9a9d83f383611cdfc4226e76f70f7}{}\label{classGirolamiSampler_afdf9a9d83f383611cdfc4226e76f70f7}
+Destructor 
+
+\subsection{Member Function Documentation}
+\index{Girolami\+Sampler@{Girolami\+Sampler}!initialize@{initialize}}
+\index{initialize@{initialize}!Girolami\+Sampler@{Girolami\+Sampler}}
+\subsubsection[{\texorpdfstring{initialize(\+Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real timestep, int nosteps, Sim\+T\+K\+::\+Real arg\+Temperature, bool arg\+Use\+Fixman=true)}{initialize(SimTK::State &advanced, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature, bool argUseFixman=true)}}]{\setlength{\rightskip}{0pt plus 5cm}void Girolami\+Sampler\+::initialize (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Real}]{timestep, }
+\item[{int}]{nosteps, }
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Temperature, }
+\item[{bool}]{arg\+Use\+Fixman = {\ttfamily true}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classGirolamiSampler_a1e48f38fa966f7063f190bba32193b42}{}\label{classGirolamiSampler_a1e48f38fa966f7063f190bba32193b42}
+Seed the random number generator. Set simulation temperature, velocities to desired temperature, variables that store the configuration and variables that store the energies, both needed for the acception-\/rejection step. Also realize velocities and initialize the timestepper. \index{Girolami\+Sampler@{Girolami\+Sampler}!propose@{propose}}
+\index{propose@{propose}!Girolami\+Sampler@{Girolami\+Sampler}}
+\subsubsection[{\texorpdfstring{propose(\+Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Real timestep, int nosteps)}{propose(SimTK::State &someState, SimTK::Real timestep, int nosteps)}}]{\setlength{\rightskip}{0pt plus 5cm}void Girolami\+Sampler\+::propose (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Real}]{timestep, }
+\item[{int}]{nosteps}
+\end{DoxyParamCaption}
+)}\hypertarget{classGirolamiSampler_ad5b07ddfcab269774723a8156670ee28}{}\label{classGirolamiSampler_ad5b07ddfcab269774723a8156670ee28}
+It implements the proposal move in the Hamiltonian Monte Carlo algorithm. It essentially propagates the trajectory after it stores the configuration and energies. T\+O\+DO\+: break in two functions\+: initialize\+Velocities and propagate/integrate \index{Girolami\+Sampler@{Girolami\+Sampler}!reinitialize@{reinitialize}}
+\index{reinitialize@{reinitialize}!Girolami\+Sampler@{Girolami\+Sampler}}
+\subsubsection[{\texorpdfstring{reinitialize(\+Sim\+T\+K\+::\+State \&advanced, Sim\+T\+K\+::\+Real timestep, int nosteps, Sim\+T\+K\+::\+Real arg\+Temperature)}{reinitialize(SimTK::State &advanced, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature)}}]{\setlength{\rightskip}{0pt plus 5cm}void Girolami\+Sampler\+::reinitialize (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Real}]{timestep, }
+\item[{int}]{nosteps, }
+\item[{Sim\+T\+K\+::\+Real}]{arg\+Temperature}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [virtual]}}\hypertarget{classGirolamiSampler_a60a0994ea481381dd2596a711d839f5d}{}\label{classGirolamiSampler_a60a0994ea481381dd2596a711d839f5d}
+Same as initialize \index{Girolami\+Sampler@{Girolami\+Sampler}!update@{update}}
+\index{update@{update}!Girolami\+Sampler@{Girolami\+Sampler}}
+\subsubsection[{\texorpdfstring{update(\+Sim\+T\+K\+::\+State \&some\+State, Sim\+T\+K\+::\+Real timestep, int nosteps)}{update(SimTK::State &someState, SimTK::Real timestep, int nosteps)}}]{\setlength{\rightskip}{0pt plus 5cm}void Girolami\+Sampler\+::update (
+\begin{DoxyParamCaption}
+\item[{Sim\+T\+K\+::\+State \&}]{some\+State, }
+\item[{Sim\+T\+K\+::\+Real}]{timestep, }
+\item[{int}]{nosteps}
+\end{DoxyParamCaption}
+)}\hypertarget{classGirolamiSampler_aef18692e13adaa564a9106e94a801893}{}\label{classGirolamiSampler_aef18692e13adaa564a9106e94a801893}
+Main function that contains all the 3 steps of H\+MC. Implements the acception-\/rejection step and sets the state of the compound to the appropriate conformation wether it accepted or not. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/gmolmodel/Girolami\+Sampler.\+hpp\item 
+src/\hyperlink{GirolamiSampler_8cpp}{Girolami\+Sampler.\+cpp}\end{DoxyCompactItemize}

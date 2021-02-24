@@ -1,0 +1,134 @@
+\hypertarget{classreadAmberInput}{}\section{read\+Amber\+Input Class Reference}
+\label{classreadAmberInput}\index{read\+Amber\+Input@{read\+Amber\+Input}}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void {\bfseries read\+Amber\+Files} (std\+::string inpcrdfile, std\+::string prmtopfile)\hypertarget{classreadAmberInput_aa600d563dfa61766e1a68735865e6876}{}\label{classreadAmberInput_aa600d563dfa61766e1a68735865e6876}
+
+\item 
+int {\bfseries get\+Number\+Atoms} ()\hypertarget{classreadAmberInput_aa2f5f3bba0f03423fee96ffac552b931}{}\label{classreadAmberInput_aa2f5f3bba0f03423fee96ffac552b931}
+
+\item 
+int {\bfseries get\+Number\+Bonds} ()\hypertarget{classreadAmberInput_a12bc2be5dc11de2a60c2c61ed7f5a3a3}{}\label{classreadAmberInput_a12bc2be5dc11de2a60c2c61ed7f5a3a3}
+
+\item 
+int {\bfseries get\+Number\+Angles} ()\hypertarget{classreadAmberInput_ac1ea3b73555c2ed23e9b74a00a978b87}{}\label{classreadAmberInput_ac1ea3b73555c2ed23e9b74a00a978b87}
+
+\item 
+int {\bfseries get\+Number\+Dihedrals} ()\hypertarget{classreadAmberInput_aa316d2196327c29f6fb98ab219e16c5b}{}\label{classreadAmberInput_aa316d2196327c29f6fb98ab219e16c5b}
+
+\item 
+std\+::string {\bfseries get\+Atoms\+Name} (int p)\hypertarget{classreadAmberInput_ae7c1b171d9612fd2566f187f055fef6b}{}\label{classreadAmberInput_ae7c1b171d9612fd2566f187f055fef6b}
+
+\item 
+std\+::string {\bfseries get\+Atoms\+Name\+Alias} (int p)\hypertarget{classreadAmberInput_ac9a860f480e27f8e7dbb9df29f3d64cf}{}\label{classreadAmberInput_ac9a860f480e27f8e7dbb9df29f3d64cf}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+Xcoord} (int p)\hypertarget{classreadAmberInput_af863c7bc9285c530688203ec32b28a51}{}\label{classreadAmberInput_af863c7bc9285c530688203ec32b28a51}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+Ycoord} (int p)\hypertarget{classreadAmberInput_a2f7bd84dfdfce9c419d443b0b0796a33}{}\label{classreadAmberInput_a2f7bd84dfdfce9c419d443b0b0796a33}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+Zcoord} (int p)\hypertarget{classreadAmberInput_aba1ed33217d18f3bf7df292df5941e11}{}\label{classreadAmberInput_aba1ed33217d18f3bf7df292df5941e11}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+Mass} (int p)\hypertarget{classreadAmberInput_ad124d3f6ff1919be96e09179fb97bad9}{}\label{classreadAmberInput_ad124d3f6ff1919be96e09179fb97bad9}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+Radii} (int p)\hypertarget{classreadAmberInput_ae2125d3679c4a385072a056584edfde7}{}\label{classreadAmberInput_ae2125d3679c4a385072a056584edfde7}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+R\+VdW} (int p)\hypertarget{classreadAmberInput_a2080064a2806b17c737e8c8334beb918}{}\label{classreadAmberInput_a2080064a2806b17c737e8c8334beb918}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+Epsilon} (int p)\hypertarget{classreadAmberInput_ab50ffd9dd523e10dbbad92a028498142}{}\label{classreadAmberInput_ab50ffd9dd523e10dbbad92a028498142}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Atoms\+Charge} (int p)\hypertarget{classreadAmberInput_abda9d4525de7f41ad001b1b8da398a17}{}\label{classreadAmberInput_abda9d4525de7f41ad001b1b8da398a17}
+
+\item 
+bool {\bfseries get\+Non\+Bonded\+Atoms\+Matrix} (int at1, int at2)\hypertarget{classreadAmberInput_a6c40081a166f09d75b6ba423354c3d1e}{}\label{classreadAmberInput_a6c40081a166f09d75b6ba423354c3d1e}
+
+\item 
+int {\bfseries get\+Bonds\+Atoms\+Index1} (int bond)\hypertarget{classreadAmberInput_acf8975d56b34343eeb5dd2f82be01044}{}\label{classreadAmberInput_acf8975d56b34343eeb5dd2f82be01044}
+
+\item 
+int {\bfseries get\+Bonds\+Atoms\+Index2} (int bond)\hypertarget{classreadAmberInput_a14d6aa21bc9b39f991462a325cc72b08}{}\label{classreadAmberInput_a14d6aa21bc9b39f991462a325cc72b08}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Bonds\+ForceK} (int bond)\hypertarget{classreadAmberInput_a70b006eac9188bb3a582c2ee178e6141}{}\label{classreadAmberInput_a70b006eac9188bb3a582c2ee178e6141}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Bonds\+Eqval} (int bond)\hypertarget{classreadAmberInput_ab4aa3e248a000003cf50df307adf0e6e}{}\label{classreadAmberInput_ab4aa3e248a000003cf50df307adf0e6e}
+
+\item 
+int {\bfseries get\+Angles\+Atoms\+Index1} (int angle)\hypertarget{classreadAmberInput_aa51692a97b0b9fe3e51ba535ae3d6d98}{}\label{classreadAmberInput_aa51692a97b0b9fe3e51ba535ae3d6d98}
+
+\item 
+int {\bfseries get\+Angles\+Atoms\+Index2} (int angle)\hypertarget{classreadAmberInput_a87d34bedff17249730cd3772d35c2e63}{}\label{classreadAmberInput_a87d34bedff17249730cd3772d35c2e63}
+
+\item 
+int {\bfseries get\+Angles\+Atoms\+Index3} (int angle)\hypertarget{classreadAmberInput_a8832c335a0ed0fbef22f4e03d1ffb552}{}\label{classreadAmberInput_a8832c335a0ed0fbef22f4e03d1ffb552}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Angles\+ForceK} (int angle)\hypertarget{classreadAmberInput_a746693251bc88cfa17d73293c4bcf7fb}{}\label{classreadAmberInput_a746693251bc88cfa17d73293c4bcf7fb}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Angles\+Eqval} (int angle)\hypertarget{classreadAmberInput_a35a96637ffe5ac7666e94be0511b8ef9}{}\label{classreadAmberInput_a35a96637ffe5ac7666e94be0511b8ef9}
+
+\item 
+int {\bfseries get\+Dihedrals\+Atoms\+Index1} (int dih)\hypertarget{classreadAmberInput_ace35d40ecd1abd049d5478861abd8060}{}\label{classreadAmberInput_ace35d40ecd1abd049d5478861abd8060}
+
+\item 
+int {\bfseries get\+Dihedrals\+Atoms\+Index2} (int dih)\hypertarget{classreadAmberInput_aad99a355ec177236fa072226e5c900aa}{}\label{classreadAmberInput_aad99a355ec177236fa072226e5c900aa}
+
+\item 
+int {\bfseries get\+Dihedrals\+Atoms\+Index3} (int dih)\hypertarget{classreadAmberInput_a2f5cbba39c088f43b33b82aa5c0621c8}{}\label{classreadAmberInput_a2f5cbba39c088f43b33b82aa5c0621c8}
+
+\item 
+int {\bfseries get\+Dihedrals\+Atoms\+Index4} (int dih)\hypertarget{classreadAmberInput_a0cc3bb8223f08dce1d0d0114c073ab80}{}\label{classreadAmberInput_a0cc3bb8223f08dce1d0d0114c073ab80}
+
+\item 
+int {\bfseries get\+Dihedrals\+Atoms\+Index} (int dih\+Index, int atom\+Indx)\hypertarget{classreadAmberInput_ad5e64bdc08945ea5b905c598d868997f}{}\label{classreadAmberInput_ad5e64bdc08945ea5b905c598d868997f}
+
+\item 
+void {\bfseries Generate\+Pair\+Start\+And\+Len} ()\hypertarget{classreadAmberInput_a7abab590512380f6df301a34acffb753}{}\label{classreadAmberInput_a7abab590512380f6df301a34acffb753}
+
+\item 
+std\+::vector$<$ std\+::pair$<$ int, int $>$ $>$ {\bfseries get\+Pair\+Start\+And\+Len} ()\hypertarget{classreadAmberInput_a5fbf47808885d4027d8c392406f713fc}{}\label{classreadAmberInput_a5fbf47808885d4027d8c392406f713fc}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Dihedrals\+ForceK} (int dih)\hypertarget{classreadAmberInput_acde7f8a3ca269e2bdeb5152d0bfc6a5f}{}\label{classreadAmberInput_acde7f8a3ca269e2bdeb5152d0bfc6a5f}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Dihedrals\+Eqval} (int dih)\hypertarget{classreadAmberInput_a980ebfa7365aaee0abdeead9a71bc593}{}\label{classreadAmberInput_a980ebfa7365aaee0abdeead9a71bc593}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Dihedrals\+Period} (int dih)\hypertarget{classreadAmberInput_a36159576736b92635d48cbf3387c967a}{}\label{classreadAmberInput_a36159576736b92635d48cbf3387c967a}
+
+\item 
+T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries get\+Dihedrals\+Phase} (int dih)\hypertarget{classreadAmberInput_a8382ab0b090b4860363a1c9428de61ad}{}\label{classreadAmberInput_a8382ab0b090b4860363a1c9428de61ad}
+
+\end{DoxyCompactItemize}
+\subsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+static int {\bfseries Atom\+Name\+Size} = 4\hypertarget{classreadAmberInput_a7f06918a270a5457fcc96244e82185b6}{}\label{classreadAmberInput_a7f06918a270a5457fcc96244e82185b6}
+
+\item 
+static T\+A\+R\+G\+E\+T\+\_\+\+T\+Y\+PE {\bfseries chargem\+Multiplier} = 18.\+2223\hypertarget{classreadAmberInput_afbcfd68c2eb24417da83099d143a8b54}{}\label{classreadAmberInput_afbcfd68c2eb24417da83099d143a8b54}
+
+\item 
+static int {\bfseries Amber\+Index\+Multiplier} = 3\hypertarget{classreadAmberInput_a22afe0bb5cdc791dde1f3b8b921ddcdf}{}\label{classreadAmberInput_a22afe0bb5cdc791dde1f3b8b921ddcdf}
+
+\item 
+static int {\bfseries Amber\+Index\+Diff} = 1\hypertarget{classreadAmberInput_abf3123b985955d176e97893c83b72258}{}\label{classreadAmberInput_abf3123b985955d176e97893c83b72258}
+
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/gmolmodel/read\+Amber\+Input.\+hpp\item 
+src/read\+Amber\+Input.\+cpp\end{DoxyCompactItemize}

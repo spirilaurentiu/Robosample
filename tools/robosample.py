@@ -196,6 +196,8 @@ class Context:
 		self.coils = []
 		self.dihIxs = []
 		self.sasa = None
+		self.bondsReformat = []
+		self.bondsBB = []
 	#
 	
 	def setPositions(self, positions):
@@ -334,12 +336,58 @@ class Context:
 		self.coils = np.array(self.coils)
 		print('coils', self.coils)
 
-		# Compute dot products
-		#for i in range(self.mdtrajTraj.topology.n_bonds):
-		#	print(int(bonds[i][0]), int(bonds[i][1])
-		#		, table.values[ int(bonds[i][0]) ][1], table.values[ int(bonds[i][0]) ][3] 
-		#		, table.values[ int(bonds[i][1]) ][1], table.values[ int(bonds[i][1]) ][3] 
-		#	)
+		# Compute dot products between bonds
+		for i in range(self.mdtrajTraj.topology.n_bonds):
+			self.bondsReformat.append([int(bonds[i][0]), int(bonds[i][1])
+				, table.values[ int(bonds[i][0]) ][1], table.values[ int(bonds[i][0]) ][3] 
+				, table.values[ int(bonds[i][1]) ][1], table.values[ int(bonds[i][1]) ][3]
+				, np.array(positions[int(bonds[i][0])] - positions[int(bonds[i][1])]) ]
+			)
+		#print('bondsReformat', self.bondsReformat)
+	
+		# Extract backbone
+		for bvi in range(len(self.bondsReformat)):
+			if (((self.bondsReformat[bvi][2] == 'N') and (self.bondsReformat[bvi][4] == 'CA')) or
+			    ((self.bondsReformat[bvi][2] == 'CA') and (self.bondsReformat[bvi][4] == 'N')) or
+			    ((self.bondsReformat[bvi][2] == 'CA') and (self.bondsReformat[bvi][4] == 'C')) or
+			    ((self.bondsReformat[bvi][2] == 'C') and (self.bondsReformat[bvi][4] == 'CA'))):
+				self.bondsBB.append(self.bondsReformat[bvi])
+		
+		# Actual calculation
+		bondDots = np.empty((len(self.bondsBB), len(self.bondsBB))) * np.nan
+		for bvi in range(len(self.bondsBB)):
+			#print(self.bondsBB[bvi], end = ' ')
+			for bvj in range(len(self.bondsBB)):
+				#if bvj < bvi:
+				if True:
+					#print(bvj, end = ' ')
+					v1 = self.bondsBB[bvi][6]
+					v2 = self.bondsBB[bvj][6]
+					n1 = np.linalg.norm(v1)
+					n2 = np.linalg.norm(v2)
+					bondDots[bvi, bvj] = bondDots[bvj, bvi] = np.abs(np.dot(v1, v2) / (n1*n2))
+					print(bondDots[bvi, bvj], end = ' ')
+			print()
+		
+		# Perform clustering on dot products
+		import scipy.cluster.hierarchy as sch
+		from scipy.spatial.distance import squareform
+		from sklearn.cluster import AgglomerativeClustering
+
+		reduced_distances = squareform(bondDots, checks=False) # Memory error
+		Z = sch.linkage(reduced_distances, method='ward') # 'single', 'complete', 'weighted', and 'average'
+		flatClusts = sch.fcluster(Z, 0.999, criterion='distance')
+		flatClusts = np.array(flatClusts)
+		print('flatClusts', flatClusts)
+		#for clustNo in range(np.max(flatClusts)):
+		for clustNo in range(1,2):
+			for doti in range(flatClusts.shape[0]):
+				if flatClusts[doti] == clustNo:
+					#print(self.bondsBB[doti][0], self.bondsBB[doti][1], "Pin")
+					print(doti, self.bondsBB[doti], self.bondsBB[doti])
+		
+		
+
 		####
 
 		#
@@ -919,17 +967,14 @@ class Simulation:
 			for pair in self.context.distMat[1]:
 				pi += 1
 				if (pair[0] in flatRegion) or (pair[1] in flatRegion):
-					print('pair', pair)
 					if self.context.distMat[0][0][pi] < contactCutoff:
 						if pair[0] not in flatRegion:
-							print(pair, self.context.distMat[0][0][pi])
 							contactList.append([pair[0], pair[0]])
 						if pair[1] not in flatRegion:
-							print(pair, self.context.distMat[0][0][pi])
 							contactList.append([pair[1], pair[1]])
 
 			contactList = np.array(contactList)
-			print("addWorld contacts:", contactList)
+			#print("addWorld contacts:", contactList)
 			for i in range(0, contactList.shape[0]):
 				self.context.process_flex(subset='side',
 					residRange=contactList[i],
@@ -1114,7 +1159,7 @@ class Simulation:
 		inpF.write(inpTxt)
 		inpF.close()
 
-		os.system("echo \'" + inpTxt + "\'")
+		#os.system("echo \'" + inpTxt + "\'")
 		#os.system("$ROBOSAMPLEDIR/build?debug/tests/Robosample inp.test")
 
 		print("Done Simulation step")
