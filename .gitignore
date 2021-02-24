@@ -12,3 +12,4 @@ tools/demo/robots/
 tools/demo/inp.*
 tools/demo/out.*
 doc/html
+doc/html/*

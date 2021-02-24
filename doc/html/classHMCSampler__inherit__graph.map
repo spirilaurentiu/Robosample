@@ -1,6 +1,0 @@
-<map id="HMCSampler" name="HMCSampler">
-<area shape="rect" id="node4" href="$classGirolamiSampler.html" title="GirolamiSampler" alt="" coords="5,229,124,256"/>
-<area shape="rect" id="node5" href="$classLAHMCSampler.html" title="LAHMCSampler" alt="" coords="147,229,265,256"/>
-<area shape="rect" id="node2" href="$classMonteCarloSampler.html" title="MonteCarloSampler" alt="" coords="67,80,204,107"/>
-<area shape="rect" id="node3" href="$classSampler.html" title="Sampler" alt="" coords="100,5,171,32"/>
-</map>
