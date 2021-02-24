@@ -11,3 +11,4 @@ tools/.*.swp
 tools/demo/robots/
 tools/demo/inp.*
 tools/demo/out.*
+doc/html
