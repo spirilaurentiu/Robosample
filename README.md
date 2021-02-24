@@ -9,7 +9,7 @@ Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the
 Install the dependencies:
 ```
 sudo apt-get update
-sudo apt-get install cmake gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2
+sudo apt-get install cmake gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen graphviz subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2
 ```
 
 Add the following to `LD_LIBRARY_PATH`:
