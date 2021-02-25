@@ -17,8 +17,3 @@ set( CMAKE_CXX_FLAGS "-std=c++11 -Wall -fPIC -g" )
 add_subdirectory(src)
 add_subdirectory(tests) # Laur
 
-# These are used in Doxyfile.in and SimbodyConfig.cmake.in.
-set(ROBOSAMPLE_INSTALL_DOXYGENDIR   "${CMAKE_INSTALL_DOCDIR}/api")
-set(ROBOSAMPLE_DOXYGEN_TAGFILE_NAME "RobosampleDoxygenTagfile")
-add_subdirectory(doc)
-

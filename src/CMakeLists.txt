@@ -114,7 +114,6 @@ set(LIBGMOLMODEL_SRC
         Context.cpp # LAUR
         IState.cpp # LAUR
         MyState.cpp # LAUR
-        #MidVVIntegrator.cpp # LAUR
         Sampler.cpp # LAUR
         MonteCarloSampler.cpp # LAUR
         HMCSampler.cpp # LAUR
@@ -142,29 +141,6 @@ add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
 add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
 add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
 add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
-
-#simmain must be refactor since it contains mmtk data types and current version do not make use of mmtk anymore
-#PYTHON_ADD_MODULE(
-#		GCHMC
-#		#${LIBGMOLMODEL_SRC}
-#		simmain.cpp
-#		bArgParser.cpp
-#		)
-
-#add_library( GCHMC SHARED ${LIBGMOLMODEL_SRC} simmain.cpp )
-
-#since simmain.cpp contains mmtk data type this target it's not available until it's refactor
-#TARGET_LINK_LIBRARIES( GCHMC
-#		boost_python
-#		GMOLMODEL_static
-#                ${Simbody_LIBRARIES}
-#                SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-#                ${BOOST_LIBRARIES}
-#                ${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
-#		${OpenMM_LIBRARIES}
-#                m )
-#                #${mmtk_libs} )
-#
 
 TARGET_LINK_LIBRARIES( GMOLMODEL_test
                 ${Simbody_LIBRARIES}
