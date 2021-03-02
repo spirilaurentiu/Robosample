@@ -147,23 +147,23 @@ int bSubstr (char *dest, const char *src, int start, int no_chars);
  * Left trim
  */
 static inline std::string &ltrim(std::string &s) {
-        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-        return s;
+		s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+		return s;
 }
 
 /*
  * Right trim
  */
 static inline std::string &rtrim(std::string &s) {
-        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-        return s;
+		s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+		return s;
 }
 
 /*
  * Trim from both ends
  */
 static inline std::string &trim(std::string &s) {
-        return ltrim(rtrim(s));
+		return ltrim(rtrim(s));
 }
 
 /*
@@ -220,6 +220,7 @@ void SOA_SpatialMat2Mat66(const SimTK::SpatialMat& in, SimTK::Mat66& out);
 void PrintBigMat(SimTK::Matrix M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places, std::string header);
+void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Vector M, int nrows, int decimal_places, std::string header);
 
@@ -242,17 +243,24 @@ SimTK::Real bDihedral(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, S
 /**  Get a unique name based on number **/
 std::string GetUniqueName(int key);
 
+/** Magnitude (norm) of a vector of reals **/
+SimTK::Real magnitude(std::vector<SimTK::Real>& V);
+SimTK::Real magSq(std::vector<SimTK::Real>& V);
+
+/** Normalize a std vector of double **/
+std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V);
+
 
 /*
  * Thermodynamics
  */
 
 enum ThermostatName { // Thermostats
-    NONE,
-    ANDERSEN,
-    BERENDSEN,
-    LANGEVIN,
-    NOSE_HOOVER
+	NONE,
+	ANDERSEN,
+	BERENDSEN,
+	LANGEVIN,
+	NOSE_HOOVER
 };
 
 /*
@@ -260,14 +268,14 @@ enum ThermostatName { // Thermostats
  */
 
 enum IntegratorName { // Samplers
-    VERLET,
-    EULER,
-    EULER2,
-    CPODES,
-    RUNGEKUTTA,
-    RUNGEKUTTA2,
-    RUNGEKUTTA3,
-    RUNGEKUTTAFELDBERG
+	VERLET,
+	EULER,
+	EULER2,
+	CPODES,
+	RUNGEKUTTA,
+	RUNGEKUTTA2,
+	RUNGEKUTTA3,
+	RUNGEKUTTAFELDBERG
 };
 
 /*
@@ -275,15 +283,62 @@ enum IntegratorName { // Samplers
  */
 /** The type of distribution to draw a random number from **/
 enum class GmolRandDistributionType {
-    UNIFORM,
-    NORMAL
+	UNIFORM,
+	NORMAL
 };
 
 
 enum SamplerName { // Samplers
-    MC,
-    HMC
+	MC,
+	HMC,
+	LAHMC
 };
+
+enum JointType {
+	LINEAR,
+	ANGULAR180,
+	ANGULAR360,
+	QUATERNION_a,
+	QUATERNION_b,
+	QUATERNION_c,
+	QUATERNION_d
+};
+
+/*
+ * k-means clustering
+ * http://www.goldsborough.me/c++/python/cuda/2017/09/10/20-32-46-exploring_k-means_in_python,_c++_and_cuda/
+ */
+struct Point {
+  double x{0}, y{0};
+};
+
+using DataFrame = std::vector<Point>;
+
+// Gmolmodel version of mean
+SimTK::Real bMean(std::vector<SimTK::Real> v);
+
+/** Gmolmodel version of correlation coefficient */
+SimTK::Real bCorr(std::vector<SimTK::Real> V, std::vector<SimTK::Real> W);
+
+/** Circular mean as in 2014 Fenwick **/
+SimTK::Real circMean(std::vector<SimTK::Real> phi);
+
+/** Circular correlation coefficient as in 2014 Fenwick **/
+SimTK::Real circCorr(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
+
+/** 1 - circCorr **/
+SimTK::Real circDist(std::vector<SimTK::Real> phi, std::vector<SimTK::Real> psi);
+
+double squared_l2_distance(Point first, Point second);
+
+DataFrame k_means(const DataFrame& data,
+				  size_t k,
+				  size_t number_of_iterations);
+
+
+
+
+
 
 #ifndef MONTECARLOSAMPLER
 #define MONTECARLOSAMPLER MC
@@ -293,5 +348,8 @@ enum SamplerName { // Samplers
 #define HAMILTONIANMONTECARLOSAMPLER HMC
 #endif
 
+#ifndef LOOKAHEADHMCSAMPLER
+#define LOOKAHEADHMCSAMPLER LAHMC
+#endif
 
 #endif /*BGENERAL_H_*/

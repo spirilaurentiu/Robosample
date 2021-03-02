@@ -62,7 +62,7 @@ class bBond : public intpair{
   bool isInRing(void);
   bool isRingClosing(void);
   //bool isRigid(void);
-  SimTK::BondMobility::Mobility getBondMobility(void);
+  const SimTK::BondMobility::Mobility getBondMobility() const;
   int ringNo(void);
 
   void setInRing(void);
@@ -83,7 +83,7 @@ class bBond : public intpair{
   bool isFirst(void);
   void setAsFirst(void);
 
-  int isThisMe(int argFirst, int argSecond);
+  int isThisMe(int argFirst, int argSecond) const ;
   void setVisited(int);
   int isVisited(void);
 };

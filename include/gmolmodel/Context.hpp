@@ -4,6 +4,7 @@
 #include "Robo.hpp"
 #include "Sampler.hpp"
 #include "SetupReader.hpp"
+#include "World.hpp"
 
 class Sampler;
 class World;
@@ -40,7 +41,7 @@ public:
 
     /** Load molecules based on loaded filenames **/
     void AddMolecules(std::vector<std::string> argRoots);
-    void modelTopologies();
+    void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
     void realizeTopology();
 
@@ -63,7 +64,7 @@ public:
     //------------
 
     // --- Simulation parameters ---
-    int addSampler(int whichWorld, SamplerName whichSampler);
+    BaseSampler* addSampler(int whichWorld, SamplerName whichSampler);
     void initializeSampler(int whichWorld, int whichSampler);
 
     // Amber like scale factors.
@@ -114,7 +115,7 @@ public:
 
     // --- Main ---
     void Run(SetupReader&);
-    void Run(int howManyRounds, float Ti, float Tf);
+    void Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom);
     void RunSimulatedTempering(int howManyRounds, float Ti, float Tf);
     void setNofBoostStairs(int whichWorld, int howManyStairs);
     int getNofBoostStairs(int whichWorld);
@@ -173,6 +174,7 @@ private:
     std::vector<std::vector<std::string>> rbSpecsFNs;
     std::vector<std::vector<std::string>> flexSpecsFNs;
     std::vector<std::vector<std::string>> regimens;
+    std::vector<std::string> rootMobilities;
 
     // Simulation parameters
     int nofRounds;

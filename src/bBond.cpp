@@ -113,9 +113,11 @@ bool bBond::isRigid(void){
 }
 */
 
-SimTK::BondMobility::Mobility bBond::getBondMobility(void)
-{
-    return mobility;
+const SimTK::BondMobility::Mobility bBond::getBondMobility() const {
+
+
+        return mobility;
+
 }
 
 void bBond::setBondMobility(SimTK::BondMobility::Mobility argmobility)
@@ -174,7 +176,7 @@ void bBond::setAsFirst(void)
 }
 
 // Check if this bond contains the arguments. If they are swapped return -1
-int bBond::isThisMe(int argFirst, int argSecond)
+int bBond::isThisMe(int argFirst, int argSecond) const
 {
     if( (argFirst == this->i) && (argSecond == this->j) ){
         return 1;
@@ -197,7 +199,8 @@ void bBond::setVisited(int argVisited)
 // Return the number of times this bond was visited
 int bBond::isVisited(void)
 {
-    return this->visited;
+	int ret = this->visited;
+	return ret;
 }
 
 // Gmolmodel indices (prmtop)

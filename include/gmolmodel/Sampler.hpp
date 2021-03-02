@@ -15,89 +15,107 @@ class Topology;
 class Sampler
 {
 public:
-    // Constructor
-    Sampler(SimTK::CompoundSystem *argCompoundSystem,
-            SimTK::SimbodyMatterSubsystem *argMatter,
-            SimTK::Compound *argResidue,
-            SimTK::DuMMForceFieldSubsystem *argDumm,
-            SimTK::GeneralForceSubsystem *forces,
-            SimTK::TimeStepper *argTimeStepper);
+	// Constructor
+	Sampler(SimTK::CompoundSystem *argCompoundSystem,
+		    SimTK::SimbodyMatterSubsystem *argMatter,
+
+		    //SimTK::Compound *argResidue,
+		    std::vector<Topology *> &argTopologies,
+
+		    SimTK::DuMMForceFieldSubsystem *argDumm,
+		    SimTK::GeneralForceSubsystem *forces,
+		    SimTK::TimeStepper *argTimeStepper);
 
 
-    // Destructor
-    virtual ~Sampler();
+	// Destructor
+	virtual ~Sampler();
 
-    // Compute mass matrix determinant (O(n))
-    // TODO Move
-    SimTK::Real calcMassDeterminant(const SimTK::State&);
-    SimTK::Real calcMassDeterminant(SimTK::State&);
+	// Compute mass matrix determinant (O(n))
+	// TODO Move
+	SimTK::Real calcMassDeterminant(const SimTK::State&);
+	SimTK::Real calcMassDeterminant(SimTK::State&);
 
-    // Set / reset variables needed at the beginning of a simulation
-    void initialize(SimTK::State& someState);
-    void reinitialize(SimTK::State& someState);
+	// Set / reset variables needed at the beginning of a simulation
+	void initialize(SimTK::State& someState);
+	void reinitialize(SimTK::State& someState);
 
-    // Getter / setter for macroscopic temperature and RT
-    // virtual void setTemperature(SimTK::Real) = 0; // RE
-    SimTK::Real getTemperature() const;
-    void setTemperature(SimTK::Real temperature); // Also sets RT and beta
+	// Getter / setter for macroscopic temperature and RT
+	// virtual void setTemperature(SimTK::Real) = 0; // RE
+	SimTK::Real getTemperature() const;
+	void setTemperature(SimTK::Real temperature); // Also sets RT and beta
 
-    SimTK::Real getRT() const;
-    void setBeta(SimTK::Real argBeta);
-    SimTK::Real getBeta() const;
+	SimTK::Real getRT() const;
+	void setBeta(SimTK::Real argBeta);
+	SimTK::Real getBeta() const;
 
-    /** Returns the number of samples extracted so far. **/
-    int getNofSamples(void);
+	/** Load the map of mobods to joint types **/
+	void loadMbx2mobility(SimTK::State& someState);
 
-    // Get set the seed
-    unsigned long long int getSeed(void);
-    void setSeed(unsigned long long int);
+	/** Returns the number of samples extracted so far. **/
+	int getNofSamples(void);
 
-    /** Generate a random number. **/
-    SimTK::Real generateRandomNumber(GmolRandDistributionType);
+	// Get set the seed
+	unsigned long long int getSeed(void);
+	void setSeed(unsigned long long int);
 
-    /** Propose a move **/
-    virtual void propose(SimTK::State& someState) = 0;
-    //virtual eval() = 0;
-    virtual bool update(SimTK::State& someState) = 0;
+	/** Generate a random number. **/
+	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 
-    // For debugging purposes
-    void PrintSimbodyStateCache(SimTK::State& someState);
+	/** Propose a move **/
+	virtual void propose(SimTK::State& someState) = 0;
+	//virtual eval() = 0;
+	virtual void update(SimTK::State& someState) = 0;
+
+	// For debugging purposes
+	void PrintSimbodyStateCache(SimTK::State& someState);
 
 public:
-    const SimTK::System *system;
-    SimTK::CompoundSystem *compoundSystem;
-    SimTK::SimbodyMatterSubsystem *matter;
-    SimTK::Compound *residue;
-    SimTK::DuMMForceFieldSubsystem *dumm;
-    SimTK::GeneralForceSubsystem *forces;
-    SimTK::TimeStepper *timeStepper;
+	const SimTK::System *system;
+	SimTK::CompoundSystem *compoundSystem;
+	SimTK::SimbodyMatterSubsystem *matter;
 
-    // Thermodynamics
-    ThermostatName thermostat;
-    SimTK::Real temperature;
-    SimTK::Real RT;
-    SimTK::Real beta;
+	//SimTK::Compound *residue;
+	Topology *residue;
 
-    // Sampling
-    int nofSamples;
-    unsigned long long int seed;
+	std::vector<Topology *> topologies;
+	int natoms;
+	int ndofs;
 
-    // Random number generators - not sure if I need two
-    boost::random::mt19937 randomEngine = boost::random::mt19937();
+	/** Joint types **/
+	std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
+	std::map< SimTK::QIndex, JointType> qIndex2jointType;
 
-    boost::random::uniform_real_distribution<double> uniformRealDistribution_0_2pi =
-            boost::random::uniform_real_distribution<double>(SimTK::Zero, 2*SimTK::Pi);
+	SimTK::DuMMForceFieldSubsystem *dumm;
+	SimTK::GeneralForceSubsystem *forces;
+	SimTK::TimeStepper *timeStepper;
 
-    boost::random::uniform_real_distribution<double> uniformRealDistribution_mpi_pi =
-            boost::random::uniform_real_distribution<double>((-1)*SimTK::Pi, SimTK::Pi);
+	// Thermodynamics
+	ThermostatName thermostat;
+	SimTK::Real temperature;
+	SimTK::Real RT;
+	SimTK::Real beta;
 
-    boost::random::uniform_real_distribution<double> uniformRealDistribution =
-            boost::random::uniform_real_distribution<double>(SimTK::Zero, SimTK::One);
+	// Sampling
+	int nofSamples;
+	unsigned long long int seed;
+	bool acc;
 
-    boost::random::uniform_real_distribution<double> uniformRealDistribution_m1_1 =
-            boost::random::uniform_real_distribution<double>((-1)*SimTK::One, SimTK::One);
+	// Random number generators - not sure if I need two
+	boost::random::mt19937 randomEngine = boost::random::mt19937();
 
-    boost::normal_distribution<> gaurand = boost::normal_distribution<>(0.0, 1.0);
+	boost::random::uniform_real_distribution<double> uniformRealDistribution_0_2pi =
+		    boost::random::uniform_real_distribution<double>(SimTK::Zero, 2*SimTK::Pi);
+
+	boost::random::uniform_real_distribution<double> uniformRealDistribution_mpi_pi =
+		    boost::random::uniform_real_distribution<double>((-1)*SimTK::Pi, SimTK::Pi);
+
+	boost::random::uniform_real_distribution<double> uniformRealDistribution =
+		    boost::random::uniform_real_distribution<double>(SimTK::Zero, SimTK::One);
+
+	boost::random::uniform_real_distribution<double> uniformRealDistribution_m1_1 =
+		    boost::random::uniform_real_distribution<double>((-1)*SimTK::One, SimTK::One);
+
+	boost::normal_distribution<> gaurand = boost::normal_distribution<>(0.0, 1.0);
 
  };
 

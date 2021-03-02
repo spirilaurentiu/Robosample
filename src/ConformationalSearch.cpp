@@ -10,11 +10,15 @@ Implementation of ConformationalSearch class. **/
 // Constructor
 ConformationalSearch::ConformationalSearch(SimTK::CompoundSystem *argCompoundSystem,
                                      SimTK::SimbodyMatterSubsystem *argMatter,
-                                     SimTK::Compound *argResidue,
+
+                                     //SimTK::Compound *argResidue,
+				     std::vector<Topology *>& topologies,
+
                                      SimTK::DuMMForceFieldSubsystem *argDumm,
                                      SimTK::GeneralForceSubsystem *argForces,
                                      SimTK::TimeStepper *argTimeStepper)
-    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    : Sampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
 {
     TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
     SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
@@ -399,7 +403,7 @@ void ConformationalSearch::propose(SimTK::State& someState)
 
 // The update step in Monte Carlo methods consists in:
 // Acception - rejection step
-bool ConformationalSearch::update(SimTK::State& someState){
+void ConformationalSearch::update(SimTK::State& someState){
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
     SimTK::Real RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
 
@@ -425,10 +429,10 @@ bool ConformationalSearch::update(SimTK::State& someState){
         setTVector(someState);
         setOldPE(pe_n);
         ++acceptedSteps;
-        return true;
+        this->acc = true;
     }else{ // Reject
         assignConfFromTVector(someState);
-        return false;
+        this->acc = false;
     }
 }
 

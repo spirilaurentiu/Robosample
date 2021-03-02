@@ -18,6 +18,9 @@
 #include <sstream>
 #include <cctype>
 
+#include <random> // FOR RANDOM BLOCKS
+#include<bits/stdc++.h> // FOR RANDOM bLOCKS
+#include <functional>
 #include <boost/math/distributions/normal.hpp>
 
 #include "bgeneral.hpp"

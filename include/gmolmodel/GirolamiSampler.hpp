@@ -1,21 +1,24 @@
 #ifndef __GIROLAMISAMPLER_HPP__
 #define __GIROLAMISAMPLER_HPP__
 
-#include "HamiltonianMonteCarloSampler.hpp"
+#include "HMCSampler.hpp"
 
 class Topology;
 class IState;
 void writePdb(      SimTK::Compound& c, SimTK::State& advanced,
          const char *dirname, const char *prefix, int midlength, const char *sufix, double aTime);
 
-class GirolamiSampler : public HamiltonianMonteCarloSampler
+class GirolamiSampler : public HMCSampler
 {
 public:
 
     // Constructor
     GirolamiSampler(SimTK::CompoundSystem *argCompoundSystem,
                                  SimTK::SimbodyMatterSubsystem *argMatter,
-                                 SimTK::Compound *argResidue,
+
+                                 //SimTK::Compound *argResidue,
+				 std::vector<Topology *>& topologies,
+
                                  SimTK::DuMMForceFieldSubsystem *argDumm,
                                  SimTK::GeneralForceSubsystem *forces,
                                  SimTK::TimeStepper *argTimeStepper);

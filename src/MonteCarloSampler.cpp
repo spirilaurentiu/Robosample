@@ -10,14 +10,24 @@ Implementation of MonteCarloSampler class. **/
 // Constructor
 MonteCarloSampler::MonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem,
                                      SimTK::SimbodyMatterSubsystem *argMatter,
-                                     SimTK::Compound *argResidue,
+
+                                     //SimTK::Compound *argResidue,
+				     std::vector<Topology *>& argTopologies,
+
                                      SimTK::DuMMForceFieldSubsystem *argDumm,
                                      SimTK::GeneralForceSubsystem *argForces,
                                      SimTK::TimeStepper *argTimeStepper)
-    : Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
+    : Sampler(argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
-    TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
-    SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+	proposeExceptionCaught = false;
+
+	for(int i = 0; i < acceptedStepsBufferSize; i++){ 
+		acceptedStepsBuffer.push_back(0);
+	}
+
 }
 
 // Destructor
@@ -32,78 +42,89 @@ MonteCarloSampler::~MonteCarloSampler()
 // the timestepper.
 void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTemperature, bool argUseFixman) 
 {
-    // Set the simulation temperature
-    setTemperature(argTemperature); // Needed for Fixman
+	// Set the simulation temperature
+	setTemperature(argTemperature); // Needed for Fixman
 
 
-    // Store the configuration
-    system->realize(someState, SimTK::Stage::Position);
-    int i = 0;
-    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        //const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState); // unused variable
-        SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
-        i++;
-    }
+	// Store the configuration
+	system->realize(someState, SimTK::Stage::Position);
+	int i = 0;
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		//const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState); // unused variable
+		SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
+		i++;
+	}
 
-    // Store potential energies
-    setOldPE(getPEFromEvaluator(someState));
-    setSetPE(getOldPE());
+	// Initialize QsBuffer with zeros
+	int nq = matter->getNQ(someState);
+	int totSize = QsBufferSize * nq;
+	for(int i = 0; i < totSize; i++){ 
+		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
+		QsBuffer.push_back(SimTK::Real(0));
+	}
 
-    // Store Fixman potential
-    this->useFixman = argUseFixman;
 
-    if(useFixman){
-        std::cout << "Monte Carlo sampler: using Fixman potential." << std::endl;
-        setOldFixman(calcFixman(someState));
-        setSetFixman(getOldFixman());
+	// Store potential energies
+	setOldPE(getPEFromEvaluator(someState));
+	setSetPE(getOldPE());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }else{
-        setOldFixman(0.0);
-        setSetFixman(getOldFixman());
+	// Store Fixman potential
+	this->useFixman = argUseFixman;
 
-        setOldLogSineSqrGamma2(0.0);
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }
+	if(useFixman){
+		std::cout << "Monte Carlo sampler: using Fixman potential." << std::endl;
+		setOldFixman(calcFixman(someState));
+		setSetFixman(getOldFixman());
+
+		setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+	}else{
+		setOldFixman(0.0);
+		setSetFixman(getOldFixman());
+
+		setOldLogSineSqrGamma2(0.0);
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+	}
+	proposeExceptionCaught = false;
 
 }
 
 // Same as initialize 
 void MonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real argTemperature) 
 {
-    // Set the simulation temperature
-    setTemperature(argTemperature); // Needed for Fixman
+	// Set the simulation temperature
+	setTemperature(argTemperature); // Needed for Fixman
 
-    // Store the configuration
-    system->realize(someState, SimTK::Stage::Position);
-    int i = 0;
-    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        // const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState); // unused variable
-        SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
-        i++;
-    }
+	// Store the configuration
+	system->realize(someState, SimTK::Stage::Position);
+	int i = 0;
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		// const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState); // unused variable
+		SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
+		i++;
+	}
 
-    // Store potential energies
-    //setOldPE(getPEFromEvaluator(someState));
-    setSetPE(getOldPE());
+	// Store potential energies
+	//setOldPE(getPEFromEvaluator(someState));
+	setSetPE(getOldPE());
 
-    // Store Fixman potential
-    if(useFixman){
-        setOldFixman(calcFixman(someState));
-        setSetFixman(getOldFixman());
+	// Store Fixman potential
+	if(useFixman){
+		setOldFixman(calcFixman(someState));
+		setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }else{
-        setOldFixman(0.0);
-        setSetFixman(getOldFixman());
+		setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+	}else{
+		setOldFixman(0.0);
+		setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2(0.0);
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }
+		setOldLogSineSqrGamma2(0.0);
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+	}
+	proposeExceptionCaught = false;
 }
 
 void MonteCarloSampler::useFixmanPotential(void)
@@ -446,7 +467,7 @@ void MonteCarloSampler::propose(SimTK::State& someState)
 
 // The update step in Monte Carlo methods consists in:
 // Acception - rejection step
-bool MonteCarloSampler::update(SimTK::State& someState){
+void MonteCarloSampler::update(SimTK::State& someState){
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
     SimTK::Real RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
 
@@ -464,15 +485,15 @@ bool MonteCarloSampler::update(SimTK::State& someState){
 
     // Apply Metropolis criterion
     assert(!std::isnan(pe_n));
-    if (pe_n < pe_o || rand_no < exp(-(pe_n - pe_o)/RT)){
+    if ((proposeExceptionCaught == false) || (pe_n < pe_o) || (rand_no < exp(-(pe_n - pe_o)/RT))){
         // Accept
         setTVector(someState);
         setOldPE(pe_n);
         ++acceptedSteps;
-        return true;
+        this->acc = true;
     }else{ // Reject
         assignConfFromTVector(someState);
-        return false;
+        this->acc = false;
     }
 }
 

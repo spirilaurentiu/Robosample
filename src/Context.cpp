@@ -203,7 +203,11 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
         // Iterate through topology filenames vector
         for(unsigned int molIx = 0; molIx < topFNs[worldIx].size(); molIx++){
     	    std::cout << " Context::AddMolecule molIx "<< molIx << " " << std::endl;
-    	    std::cout << " Context::AddMolecule topFNs[worldIx][molIx] "<< topFNs[worldIx][molIx] << " " << std::endl;
+    	    std::cout << " Context::AddMolecule topFNs[worldIx][molIx] "<< topFNs[worldIx][molIx] 
+		<< " " << crdFNs[worldIx][molIx] << " " << rbSpecsFNs[worldIx][molIx] 
+		//<< " " << flexSpecsFNs[worldIx][molIx] 
+		//<< " " << regimens[worldIx][molIx] 
+		<< std::endl << std::flush;
             // Initialize an input reader
             readAmberInput amberReader;
             amberReader.readAmberFiles(crdFNs[worldIx][molIx], topFNs[worldIx][molIx]);
@@ -216,11 +220,12 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
     }
 }
 
-void Context::modelTopologies()
+void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
 {
     // Model molecules
     for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-        (updWorld(worldIx))->ModelTopologies();
+        this->rootMobilities.push_back(GroundToCompoundMobilizerTypes[worldIx]);
+        (updWorld(worldIx))->modelTopologies(GroundToCompoundMobilizerTypes[worldIx]);
     }
 
 }
@@ -269,7 +274,7 @@ void Context::setGuidanceTemperature(int whichWorld, int whichSampler, float som
 
 // --- Simulation parameters ---
 
-int Context::addSampler(int whichWorld, SamplerName whichSampler)
+BaseSampler * Context::addSampler(int whichWorld, SamplerName whichSampler)
 {
     return worlds[whichWorld]->addSampler(whichSampler);
 }
@@ -476,9 +481,7 @@ void Context::RunSimulatedTempering(int howManyRounds, float Ti, float Tf) {
 
             // Update
             for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-                updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
-                        , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+                updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
             } // END for samples
 
         } // for i in worlds
@@ -568,64 +571,40 @@ SimTK::Real Context::Pearson(std::vector<std::vector<SimTK::Real>> inputVector, 
 
 
 // Main
-void Context::Run(int howManyRounds, float Ti, float Tf)
+void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom)
 {
 
+    // Initialize world indeces
     int currentWorldIx = worldIndexes.front();
     int lastWorldIx = 0;
 
-    // TODO move or delete
-    // Write the initial Default Configuration of the first Compound
-    // of the first World
-    PdbStructure  pdb(worlds[0]->getTopology(0));
-    std::ostringstream sstream;
-    sstream << "pdbs/sb_" << ((updWorld(worldIndexes.back()))->getTopology(0)).getName() <<"_ini"<<".pdb";
-    std::string ofilename = sstream.str();
-    std::filebuf fb;
-    std::cout<<"Writing pdb file: "<<ofilename<<std::endl;
-    fb.open(ofilename.c_str(), std::ios::out);
-    std::ostream os(&fb);
-    pdb.write(os); // automatically multiplies by ten (nm to A)
-    fb.close();
-    //
+    // Random int for random world order
+    std::random_device rd; // obtain a random number from hardware
+    std::mt19937 gen(rd()); // seed the generator
+    std::uniform_int_distribution<> randWorldDistrib(1, getNofWorlds()-1);
 
-    // Adaptive Gibbs blocking
-    int tau = -1;
+    // Main loop: iterate through rounds
+    if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
+        for(int round = 0; round < nofRounds; round++){
 
-    if( std::abs(Tf - Ti) < SimTK::TinyReal){
-        for(int round = 0; round < nofRounds; round++){ // Iterate rounds
-
-            // Adaptive Gibbs blocking
-            tau++;
-            //std::cout << "Run tau = " << tau << std::endl;
-            if(((tau % roundsTillReblock) == 0) && (tau > 0)){
-
-                for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){ 
-                    //for(unsigned int t = 0; t < roundsTillReblock; t++){
-                    //    for(unsigned int i = 0; i < 2; i++){
-                    //        std::cout << "QsCahr[" << worldIx << "][" << t << "][" << i << "] = " << QsCache[worldIx][t][i] << " " ;
-                    //    }
-                    //}
-                    //std::cout << std::endl;
-
-                     if(QsCache[worldIx][0].size() >= 9){
-                         //std::cout << "world " << worldIx << " Pearson = " << Pearson(QsCache[worldIx], 7, 8) << " ";
-                     }
-
-                } ///////////
-                //std::cout << std::endl;
-
-                tau = 0;
-            }
-
-            //std::cout << "round " << round << std::endl;
-
-            for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){ // Iterate worlds
+            // Iterate through worlds
+            for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 
                 // Rotate worlds indeces (translate from right to left)
-                std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
+    		if(isWorldOrderRandom){
+			if(getNofWorlds() >= 3){
+				// Swap world indeces between vector position 2 and random
+				int randVecPos = randWorldDistrib(gen);
+				//std::cout << "Swapping position 1 with " << randVecPos << std::endl;
+				int secondWorldIx = worldIndexes[1];
+				int randWorldIx = worldIndexes[randVecPos];
 
-                //std::cout << "world " << worldIndexes.front() << std::endl;
+				worldIndexes[1] = randWorldIx;
+				worldIndexes[randVecPos] = secondWorldIx;
+
+			}
+		}
+               	std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
 
                 // Get indeces
                 currentWorldIx = worldIndexes.front();
@@ -635,89 +614,31 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                 SimTK::State& lastAdvancedState = (updWorld(lastWorldIx))->integ->updAdvancedState();
                 SimTK::State& currentAdvancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
 
-                // Adaptive Gibbs blocking
-                //std::cout << "state " << currentAdvancedState.getQ() << std::endl;
-                //std::cout << "QsCache[currentWorldIx][" << tau << "]  size " << (QsCache[currentWorldIx][tau]).size() << std::endl;
-                for(unsigned int i = 0; i < currentAdvancedState.getNQ(); i++){
-                    //std::cout << " " << currentAdvancedState.getQ()[i] << std::endl;
-                    QsCache[currentWorldIx][tau][i] = currentAdvancedState.getQ()[i];
-                }
-		//
-
-                if(worldIndexes.size() > 1) { // RESTORE @
+                if(worldIndexes.size() > 1) { // It also loads bAtomList
                 	currentAdvancedState = (updWorld(currentWorldIx))->setAtomsLocationsInGround(
                         	currentAdvancedState,
                         	(updWorld(lastWorldIx))->getAtomsLocationsInGround(lastAdvancedState));
-                }else{ // Load bAtomList though
+                }else{ // Just load bAtomList
                     (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
                 }
-                // RESTORE @
-		std::cout << "w" << currentAdvancedState.getNU();
+		std::cout << "w" << currentWorldIx << '_' << currentAdvancedState.getNU();
 
+                // Set old potential energy of the new world 
                 double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
-		// RESTORE @ :
-                //if(pMC(updWorld(lastWorldIx)->updSampler(0))->getThermostat() == ANDERSEN){
-                //    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-                //    lastWorldCalcPE = updWorld(lastWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
-                //        lastAdvancedState);
-                //    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-                //    currentWorldCalcPE = updWorld(currentWorldIx)->forces->getMultibodySystem().calcPotentialEnergy(
-                //        currentAdvancedState);
-                //}else{
-//                    lastWorldSetPE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-//                    lastWorldCalcPE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-//                        lastAdvancedState);
-//                    currentWorldOldPE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-//                    currentWorldCalcPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(
-//                        currentAdvancedState);
-                //} // RESTORE @
-
-                // Set old potential energy of the new world : RESTORE @
-                //pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
-                //    pMC((updWorld(lastWorldIx))
-                //    ->updSampler(0))->getSetPE() );
-
-		// NEW @    
 		pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
 			updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState)); // OpenMM
 			//updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
-                // Check if reconstructions is done correctly
-//                if(std::abs(lastWorldCalcPE - currentWorldCalcPE) > 0.1) {
-//                    std::cout << "lastWorldSetPE lastWorldCalcPE currentWorldCalcPE currentWorldOldPE "
-//                              << lastWorldSetPE << " " << lastWorldCalcPE << " "
-//                              << currentWorldCalcPE << " " << currentWorldOldPE
-//                              << std::endl;
-//
-//                    //std::cout << "Writing Compound pdbs for round " << round << std::endl;
-//                    //(updWorld(lastWorldIx))->updateAtomListsFromCompound(lastAdvancedState);
-//                    //((updWorld(lastWorldIx))->getTopology(0)).writeAtomListPdb(
-//                    //        getOutputDir(), std::string("/pdbs/sb.")
-//                    //                        + std::to_string(worldIx) + std::string("."), ".0.pdb", 10, round);
-//
-//                    //(updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
-//                    //((updWorld(currentWorldIx))->getTopology(0)).writeAtomListPdb(
-//                    //        getOutputDir(), std::string("/pdbs/sb.")
-//                    //                        + std::to_string(worldIx) + std::string("."), ".1.pdb", 10, round);
-//
-//                    //exit(1);
-//                }
-
-
                 // Reinitialize current sampler
                 updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
-                // Update
+                // Sample
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-                    updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
-                            , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+                    updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
 
-                    // , getNofMDStepsPerSample(currentWorldIx, 0)); RE
-
-                } // END for samples
+                }
     
-            } // for i in worlds
+            } // END iteration through worlds
 
             // Print energy and geometric features
             if( !(round % getPrintFreq()) ){
@@ -743,9 +664,9 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
                                                                                                 ".pdb", 10, round);
                     }
                 }
-            } // if write pdbs
+            }
     
-        } // for i in rounds
+        } // END main loop
 
     }else{// if Ti != Tf heating protocol
         SimTK::Real Tincr = (Tf - Ti) / nofRounds;
@@ -796,9 +717,8 @@ void Context::Run(int howManyRounds, float Ti, float Tf)
     
                 // Update
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-                    updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-                    updWorld(currentWorldIx)->updSampler(0)->update(currentAdvancedState
-                            , updWorld(currentWorldIx)->updSampler(0)->getBeta());
+                    //updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
+                    updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
 
                 } // END for samples
     
@@ -952,6 +872,7 @@ void Context::PrintSamplerData(unsigned int whichWorld)
         , pMC((worlds[whichWorld]->samplers[0]))->fix_n
         , pMC((worlds[whichWorld]->samplers[0]))->fix_set
     );
+    fflush(logFile);
 
 }
 
@@ -1051,6 +972,15 @@ void Context::PrintDihedralsQs(int whichWorld)
 {
     for ( unsigned int i = 0; i < dihedralIxs.size(); i++){
         if( dihedralIxs[i][0] == whichWorld){
+
+//std::cout << "Context::PrintDihedralsQs w c s a1 a2 a3 a4 ="
+//	<< " " << dihedralIxs[i][0] << " " << dihedralIxs[i][1] << " " << 0
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][2])) 
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][3])) 
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][4])) 
+//	<< " " << (worlds[whichWorld]->getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIxs[i][5])) 
+//	<< std::endl;
+
             fprintf(logFile, "%.3f ", this->Dihedral(dihedralIxs[i][0], dihedralIxs[i][1], 0,
                 dihedralIxs[i][2], dihedralIxs[i][3],
                 dihedralIxs[i][4], dihedralIxs[i][5]) );

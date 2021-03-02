@@ -119,13 +119,13 @@ set(TESTS_SRCS
         TestSampler.cpp
         TestAmberInput.cpp
         TestWriteDCD.cpp
-        Robosample.cpp
         TestTopology.cpp
         TestSetupReader.cpp
         TestBallLongPendulum.cpp
         TestMatrix.cpp
         TestWorldReconstruction.cpp
 	TestFixmanTorqueSim.cpp
+        Robosample.cpp
 	)
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)

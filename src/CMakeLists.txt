@@ -114,10 +114,10 @@ set(LIBGMOLMODEL_SRC
         Context.cpp # LAUR
         IState.cpp # LAUR
         MyState.cpp # LAUR
-        #MidVVIntegrator.cpp # LAUR
         Sampler.cpp # LAUR
         MonteCarloSampler.cpp # LAUR
-        HamiltonianMonteCarloSampler.cpp # LAUR
+        HMCSampler.cpp # LAUR
+        LAHMCSampler.cpp # LAUR
         ConformationalSearch.cpp # LAUR
         GirolamiSampler.cpp # LAUR
 	      #bAddParams.cpp
@@ -138,6 +138,8 @@ include_directories(../include/gmolmodel)
 
 add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
 add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
+add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
+add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
 add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
 
 #simmain must be refactor since it contains mmtk data types and current version do not make use of mmtk anymore
@@ -221,8 +223,8 @@ ELSE()
                 #${mmtk_libs} )
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
-#set_target_properties(GMOLMODEL_dynamic PROPERTIES OUTPUT_NAME "gmolmodel")
-#set_target_properties(GMOLMODEL_dynamic PROPERTIES VERSION 1.2 SOVERSION 1)
+#set_target_properties(GMOLMODEL_dynamic_d PROPERTIES OUTPUT_NAME "gmolmodel")
+#set_target_properties(GMOLMODEL_dynamic_d PROPERTIES VERSION 1.2 SOVERSION 1)
 
 #set_target_properties(GMOLMODEL_static PROPERTIES OUTPUT_NAME "gmoldel")
 

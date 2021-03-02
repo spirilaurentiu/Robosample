@@ -1,5 +1,5 @@
 #include "Robo.hpp"
-#include "HamiltonianMonteCarloSampler.hpp"
+#include "HMCSampler.hpp"
 #include "World.hpp"
 
 using namespace SimTK;
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	world->updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
 	// Link the Compounds to Simbody System for all Worlds
-	world->ModelTopologies();
+    world->modelTopologies("Cartesian");
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
 	if(std::string(argv[3]) == "FT"){

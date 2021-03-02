@@ -27,7 +27,10 @@ public:
     // Constructor
     MonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem,
                       SimTK::SimbodyMatterSubsystem *argMatter,
-                      SimTK::Compound *argResidue,
+
+                      //SimTK::Compound *argResidue,
+                      std::vector<Topology *>& argTopologies,
+
                       SimTK::DuMMForceFieldSubsystem *argDumm,
                       SimTK::GeneralForceSubsystem *forces,
                       SimTK::TimeStepper *argTimeStepper) ;
@@ -74,7 +77,7 @@ public:
 
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation
-    bool update(SimTK::State&);
+    void update(SimTK::State&);
 
     // Get/set set potential energy
     SimTK::Real getSetPE(void) const;
@@ -166,6 +169,18 @@ protected:
     bool alwaysAccept = false;
 
     int acceptedSteps = 0;
+    int acceptedStepsBufferSize = 30;
+    std::list<int> acceptedStepsBuffer;
+
+    int QsBufferSize = 300;
+    //std::list<SimTK::Vector> QsBuffer;
+    std::list<SimTK::Real> QsBuffer;
+
+    float acceptance;
+    float prevAcceptance;
+    float prevPrevAcceptance;
+
+    bool proposeExceptionCaught;
  
 };
 
