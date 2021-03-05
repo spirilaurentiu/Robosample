@@ -32,12 +32,6 @@ git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
 ```
 
-## Building OpenMM
-Run `build_openmm.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
-```
-bash build_openmm.sh
-```
-
 ## Building Robosample
 Run `build_debug.sh` or `bulild_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
 ```
