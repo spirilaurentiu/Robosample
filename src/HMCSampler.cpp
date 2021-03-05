@@ -250,6 +250,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     //(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
     // Store the configuration
+	// In our case, a MobilizedBody is an atom
     system->realize(someState, SimTK::Stage::Position);
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -396,21 +397,18 @@ void HMCSampler::adaptTimestep(SimTK::State& someState)
 		if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){ // Do it only so often
 			std::cout << "Adapt BEGIN: ts= " << timestep;
 
-			float stdAcceptance = 0.03;
+			// float stdAcceptance = 0.03;
 			float idealAcceptance = 0.651;
-			float smallestAcceptance = 0.0001;
-			float timestepIncr = 0.001;
+			// float smallestAcceptance = 0.0001;
+			// float timestepIncr = 0.001;
 
 			// Compute acceptance in the buffer
-			int sum = 0, sqSum = 0;
-			for (std::list<int>::iterator p = acceptedStepsBuffer.begin(); p != acceptedStepsBuffer.end(); ++p){
-        			sum += (int)*p;
-				sqSum += (((int)*p) * ((int)*p));
-			}
+			int sum = std::accumulate(acceptedStepsBuffer.begin(), acceptedStepsBuffer.end(), 0);
+
 			SimTK::Real prevPrevPrevAcceptance = prevPrevAcceptance; // to reset
 			prevPrevAcceptance = prevAcceptance;
 			prevAcceptance = acceptance;
-    			acceptance = float(sum) / float(acceptedStepsBufferSize);
+    		acceptance = float(sum) / float(acceptedStepsBufferSize);
 
 			std::cout << " ppAcc= " << prevPrevAcceptance << " pAcc= " << prevAcceptance << " acc= " << acceptance << std::endl;
 
@@ -497,9 +495,9 @@ void HMCSampler::adaptTimestep(SimTK::State& someState)
 /**  **/
 void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 
-    	std::cout << std::setprecision(10) << std::fixed;
+    std::cout << std::setprecision(10) << std::fixed;
 	int nq = someState.getNQ();
-	int totSize = QsBufferSize * nq;
+	// int totSize = QsBufferSize * nq;
 	if( (nofSamples % QsBufferSize) == (QsBufferSize-1) ){
 		std::cout << "Adapt blocks BEGIN: " << std::endl;
 		//std::cout << "Print by row: " << std::endl;
@@ -524,14 +522,8 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 
 			//std::cout << "QsBuffer= " << std::endl;
 			for(int confi = 0; confi < QsBufferSize; confi++){
-				SimTK::Real x;
-				int pos;
-
-				std::list<SimTK::Real>::iterator it = QsBuffer.begin();
-				pos = (confi * nq) + qi;
-				std::advance(it, pos);
-				thisQ[confi] = *it;
-				//std::cout << *it << ' ';
+				thisQ[confi] = QsBuffer[(confi * nq) + qi];
+				//std::cout << QsBuffer[(confi * nq) + qi] << ' ';
 			}
 			//std::cout << std::endl;
 
@@ -827,17 +819,17 @@ bool HMCSampler::accRejStep(SimTK::State& someState){
 	// Decide and get a new sample
 	if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
 		this->acc = true;
-		std::cout << " acc" << std::endl;
+		std::cout << "\tsample accepted (always with andersen thermostat)" << std::endl;
 		update(someState);
 	}else{ // Apply Metropolis-Hastings correction
 		if ( (proposeExceptionCaught == false) && (!std::isnan(pe_n)) ){ 
 			if(rand_no < MHAcceptProbability(someState, etot_proposed, etot_n)){ 
 				this->acc = true;
-				std::cout << " acc" << std::endl;
+				std::cout << "\tsample accepted" << std::endl;
 				update(someState);
 			}else{ // Reject
 				this->acc = false;
-				std::cout << " nacc" << std::endl;
+				std::cout << "\tsample rejected" << std::endl;
 				setSetConfigurationAndEnergiesToOld(someState);
 			}
 		}
@@ -896,30 +888,30 @@ void HMCSampler::update(SimTK::State& someState)
 Return the size of R **/
 int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 {
-	SimTK::Vec3 atomR;
-	SimTK::Compound::AtomIndex aIx; 
-	for(int i = 0; i < topologies.size(); i++){
-		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
-			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
-			atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
-			R.push_back(atomR[0]);
-			R.push_back(atomR[1]);
-			R.push_back(atomR[2]);
+	for(const auto& Topology : topologies){
+		for(const auto& AtomList : Topology->bAtomList){
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto& atomR = Topology->calcAtomLocationInGroundFrame(someState, aIx);
+			R.insert(R.end(), { atomR[0], atomR[1], atomR[2] });
 		}
 	}
 
 	// Calculate dR		
-	if(R.size() >= (2 * (ndofs))){
-		for(unsigned int j = 0; j < (ndofs); j++){
-			dR[j] = R[j + (ndofs)] - R[j];
+	if(R.size() >= 2 * ndofs) {
+		for(unsigned int j = 0; j < ndofs; j++){
+			dR[j] = R[j + ndofs] - R[j];
 		}
 
-		// Transfer upper to lower half and cleanup the upper half of R
-		for(int j = ((ndofs) - 1); j >= 0; --j){
-			//std::cout << "R size= " << R.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
-			R[j] = R[j + ndofs];
-			R.pop_back();
-		}
+		// // Transfer upper to lower half and cleanup the upper half of R
+		// for(int j = ((ndofs) - 1); j >= 0; --j){
+		// 	//std::cout << "R size= " << R.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+		// 	R[j] = R[j + ndofs];
+		// 	R.pop_back();
+		// }
+
+		// If stuff breaks, look up for the original code. This also compacts memory
+		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
+		std::vector<decltype(R)::value_type>(R.begin()+ndofs, R.end()).swap(R);
 	}
 
 }
@@ -928,36 +920,36 @@ int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 Return the size of Rdot **/
 int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 {
-	SimTK::Vec3 atomRdot;
-	SimTK::Compound::AtomIndex aIx; 
-	for(int i = 0; i < topologies.size(); i++){
-		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
-			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
-			atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
-			Rdot.push_back(atomRdot[0]);
-			Rdot.push_back(atomRdot[1]);
-			Rdot.push_back(atomRdot[2]);
+	for(const auto& Topology : topologies){
+		for(const auto& AtomList : Topology->bAtomList){
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto& atomRdot = Topology->calcAtomVelocityInGroundFrame(someState, aIx);
+			Rdot.insert(Rdot.end(), { atomRdot[0], atomRdot[1], atomRdot[2] });
 		}
 	}
 
 	// Calculate dRdot		
-	if(Rdot.size() >= (2 * (ndofs))){
-		for(unsigned int j = 0; j < (ndofs); j++){
-			dRdot[j] = Rdot[j + (ndofs)] - Rdot[j];
+	if(Rdot.size() >= static_cast<size_t>(2 * ndofs)) {
+		for(int j = 0; j < ndofs; j++){
+			dRdot[j] = Rdot[j + ndofs] - Rdot[j];
 		}
 
-		// Transfer upper to lower half and cleanup the upper half of Rdot
-		for(int j = ((ndofs) - 1); j >= 0; --j){
-			//std::cout << "Rdotdot size= " << Rdot.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
-			Rdot[j] = Rdot[j + ndofs];
-			Rdot.pop_back();
-		}
+		// // Transfer upper to lower half and cleanup the upper half of Rdot
+		// for(int j = ((ndofs) - 1); j >= 0; --j){
+		// 	std::cout << "Rdotdot size= " << Rdot.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+		// 	Rdot[j] = Rdot[j + ndofs];
+		// 	Rdot.pop_back();
+		// }
+
+		// If stuff breaks, look up for the original code. This also compacts memory
+		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
+		std::vector<decltype(Rdot)::value_type>(Rdot.begin()+ndofs, Rdot.end()).swap(Rdot);
 	}
 }
 
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-    	std::cout << std::setprecision(10) << std::fixed;
+    std::cout << std::setprecision(10) << std::fixed;
 
 	propose(someState);
 
@@ -966,22 +958,16 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	++nofSamples;
 
 	// Add generalized coordinates to a buffer
-	int nq = someState.getNQ();
-	SimTK::Vector Q = someState.getQ();
-	//std::cout << "Qs= " << Q << std::endl;
-	for(int i = 0; i < nq; i++){
-		QsBuffer.push_back(Q[i]);
-		QsBuffer.pop_front();
-	}
-	/////////
+	auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
+	QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
+	QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
 	
 	pushCoordinatesInR(someState);
 	pushVelocitiesInRdot(someState);
 
 	// Calculate MSD and RRdot to adapt the integration length
-    	std::cout << std::setprecision(10) << std::fixed;
-	std::cout << " MSD= " << calculateMSD()
-		<< " RRdot= " << calculateRRdot() << std::endl;
+    std::cout << std::setprecision(10) << std::fixed;
+	std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
 	
 	return this->acc;
 }
@@ -991,7 +977,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 SimTK::Real HMCSampler::calculateMSD(void)
 {
 	SimTK::Real MSD = 0;
-	if(dR.size() >= (ndofs)){
+	if(dR.size() >= static_cast<size_t>(ndofs)){
 		MSD += magSq(dR);
 		MSD /= (ndofs);
 	}
@@ -1002,13 +988,13 @@ SimTK::Real HMCSampler::calculateMSD(void)
 SimTK::Real HMCSampler::calculateRRdot(void)
 {
 	SimTK::Real RRdot = 0;
-	if(dR.size() >= (ndofs)){
+	if(dR.size() >= static_cast<size_t>(ndofs)){
 		std::vector<SimTK::Real> tempDR = dR;
 		std::vector<SimTK::Real> tempRdot = Rdot;
 		normalize(tempDR);
 		normalize(tempRdot);
 
-		for(unsigned int j = 0; j < ndofs; j++){
+		for(int j = 0; j < ndofs; j++){
 			RRdot += tempDR[j] * tempRdot[j];
 		}
 	}
@@ -1028,18 +1014,16 @@ void HMCSampler::setMDStepsPerSample(int mdStepsPerSample) {
 /** Print detailed energy information **/
 void HMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
 {
-
     std::cout << std::setprecision(5) << std::fixed;
-    std::cout << "pe_o " << pe_o << " pe_n " << pe_n
-        << " pe_nB " << getPEFromEvaluator(someState)
-        << " ke_prop " << ke_proposed << " ke_n " << ke_n
-        << " fix_o " << fix_o << " fix_n " << fix_n << " "
-        << " logSineSqrGamma2_o " << logSineSqrGamma2_o << " logSineSqrGamma2_n " << logSineSqrGamma2_n << " "
+    std::cout
+		<< "\tpe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB " << getPEFromEvaluator(someState)
+        << "\n\tke_prop " << ke_proposed << ", ke_n " << ke_n
+        << "\n\tfix_o " << fix_o << ", fix_n " << fix_n
+        << "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o << ", logSineSqrGamma2_n " << logSineSqrGamma2_n
         //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
-        << " ts " << timestep  << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-        << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
-        //<< std::endl
-        ;
+        << "\n\tts " << timestep  << ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
+        << "\n\tetot_n " << etot_n  << ", etot_proposed " << etot_proposed
+        << std::endl;
 }
 
 
@@ -1096,7 +1080,6 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 {
 	// Lop through topologies
 	for(int i = 0; i < topologies.size(); i++){
-
 		// Loop through atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i]->getNumAtoms(); ++aIx){
 	
@@ -1105,7 +1088,6 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-
 			if(parentMbx != 0){
 				// Get the neighbor atom in the parent mobilized body
 				SimTK::Compound::AtomIndex chemParentAIx = (topologies[i])->getChemicalParent(matter, aIx);
@@ -1113,7 +1095,6 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 				//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
 				//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
 				//	<< std::endl;
-
 				// Get Top to parent frame
 				SimTK::Compound::AtomIndex parentRootAIx = (topologies[i])->mbx2aIx[parentMbx];
 			
@@ -1123,7 +1104,6 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 				bBond bond = (topologies[i])->getBond(
 					(topologies[i])->getNumber(aIx), (topologies[i])->getNumber(chemParentAIx));
 				mobility = bond.getBondMobility();
-
 				mbx2mobility.insert(std::pair<SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility>
                         		(mbx, mobility));
 			
@@ -1134,20 +1114,17 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 		} // END loop through atoms
 	
 	} // END loop through topologies
-
         for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
                 const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
                 SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
                 int mobodNQ = mobod.getNumQ(someState);
                 int mobodNU = mobod.getNumU(someState);
-
                 //const SimTK::Transform T = mobod.getMobilizerTransform(someState);
                 //const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
                 //const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
                 std::cout << "mbx= " << mbx << " mobility= " 
                 //      << std::endl
                 ;
-
                 // Loop through body's Qs
                 int internQIx = -1;
                 for(int qi = qIx; qi < (mobodNQ + qIx); qi++){
@@ -1155,15 +1132,11 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
                         std::cout << " " << qi ;
                 }
                 std::cout << std::endl;
-
                 // Loop through body's Us
                 for(int ui = 0; ui < mobodNU; ui++){
                         //SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
                         //std::cout << "H_FMCol= " << H_FMCol << std::endl;
                 }
-
         }
-
 }
-
 */
