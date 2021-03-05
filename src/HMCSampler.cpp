@@ -280,7 +280,6 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     // Initialize velocities to temperature
     // TODO Shouldn't be here
     int nu = someState.getNU();
-	std::cout << "				nu=" << nu << '\n';
     double sqrtRT = std::sqrt(RT);
     SimTK::Vector V(nu);
     SimTK::Vector SqrtMInvV(nu);
@@ -398,21 +397,18 @@ void HMCSampler::adaptTimestep(SimTK::State& someState)
 		if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){ // Do it only so often
 			std::cout << "Adapt BEGIN: ts= " << timestep;
 
-			float stdAcceptance = 0.03;
+			// float stdAcceptance = 0.03;
 			float idealAcceptance = 0.651;
-			float smallestAcceptance = 0.0001;
-			float timestepIncr = 0.001;
+			// float smallestAcceptance = 0.0001;
+			// float timestepIncr = 0.001;
 
 			// Compute acceptance in the buffer
-			int sum = 0, sqSum = 0;
-			for (std::list<int>::iterator p = acceptedStepsBuffer.begin(); p != acceptedStepsBuffer.end(); ++p){
-        			sum += (int)*p;
-				sqSum += (((int)*p) * ((int)*p));
-			}
+			int sum = std::accumulate(acceptedStepsBuffer.begin(), acceptedStepsBuffer.end(), 0);
+
 			SimTK::Real prevPrevPrevAcceptance = prevPrevAcceptance; // to reset
 			prevPrevAcceptance = prevAcceptance;
 			prevAcceptance = acceptance;
-    			acceptance = float(sum) / float(acceptedStepsBufferSize);
+    		acceptance = float(sum) / float(acceptedStepsBufferSize);
 
 			std::cout << " ppAcc= " << prevPrevAcceptance << " pAcc= " << prevAcceptance << " acc= " << acceptance << std::endl;
 
@@ -499,9 +495,9 @@ void HMCSampler::adaptTimestep(SimTK::State& someState)
 /**  **/
 void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 
-    	std::cout << std::setprecision(10) << std::fixed;
+    std::cout << std::setprecision(10) << std::fixed;
 	int nq = someState.getNQ();
-	int totSize = QsBufferSize * nq;
+	// int totSize = QsBufferSize * nq;
 	if( (nofSamples % QsBufferSize) == (QsBufferSize-1) ){
 		std::cout << "Adapt blocks BEGIN: " << std::endl;
 		//std::cout << "Print by row: " << std::endl;
@@ -526,14 +522,8 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 
 			//std::cout << "QsBuffer= " << std::endl;
 			for(int confi = 0; confi < QsBufferSize; confi++){
-				SimTK::Real x;
-				int pos;
-
-				std::list<SimTK::Real>::iterator it = QsBuffer.begin();
-				pos = (confi * nq) + qi;
-				std::advance(it, pos);
-				thisQ[confi] = *it;
-				//std::cout << *it << ' ';
+				thisQ[confi] = QsBuffer[(confi * nq) + qi];
+				//std::cout << QsBuffer[(confi * nq) + qi] << ' ';
 			}
 			//std::cout << std::endl;
 
@@ -939,8 +929,8 @@ int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 	}
 
 	// Calculate dRdot		
-	if(Rdot.size() >= 2 * ndofs) {
-		for(unsigned int j = 0; j < ndofs; j++){
+	if(Rdot.size() >= static_cast<size_t>(2 * ndofs)) {
+		for(int j = 0; j < ndofs; j++){
 			dRdot[j] = Rdot[j + ndofs] - Rdot[j];
 		}
 
@@ -968,21 +958,16 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	++nofSamples;
 
 	// Add generalized coordinates to a buffer
-	int nq = someState.getNQ();
-	SimTK::Vector Q = someState.getQ();
-	//std::cout << "Qs= " << Q << std::endl;
-	for(int i = 0; i < nq; i++){
-		QsBuffer.push_back(Q[i]);
-		QsBuffer.pop_front();
-	}
-	/////////
+	auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
+	QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
+	QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
 	
 	pushCoordinatesInR(someState);
 	pushVelocitiesInRdot(someState);
 
 	// Calculate MSD and RRdot to adapt the integration length
     std::cout << std::setprecision(10) << std::fixed;
-	std::cout << " MSD= " << calculateMSD() << " RRdot= " << calculateRRdot() << std::endl;
+	std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
 	
 	return this->acc;
 }
@@ -992,7 +977,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 SimTK::Real HMCSampler::calculateMSD(void)
 {
 	SimTK::Real MSD = 0;
-	if(dR.size() >= (ndofs)){
+	if(dR.size() >= static_cast<size_t>(ndofs)){
 		MSD += magSq(dR);
 		MSD /= (ndofs);
 	}
@@ -1003,13 +988,13 @@ SimTK::Real HMCSampler::calculateMSD(void)
 SimTK::Real HMCSampler::calculateRRdot(void)
 {
 	SimTK::Real RRdot = 0;
-	if(dR.size() >= (ndofs)){
+	if(dR.size() >= static_cast<size_t>(ndofs)){
 		std::vector<SimTK::Real> tempDR = dR;
 		std::vector<SimTK::Real> tempRdot = Rdot;
 		normalize(tempDR);
 		normalize(tempRdot);
 
-		for(unsigned int j = 0; j < ndofs; j++){
+		for(int j = 0; j < ndofs; j++){
 			RRdot += tempDR[j] * tempRdot[j];
 		}
 	}
@@ -1029,18 +1014,16 @@ void HMCSampler::setMDStepsPerSample(int mdStepsPerSample) {
 /** Print detailed energy information **/
 void HMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
 {
-
     std::cout << std::setprecision(5) << std::fixed;
-    std::cout << "pe_o " << pe_o << " pe_n " << pe_n
-        << " pe_nB " << getPEFromEvaluator(someState)
-        << " ke_prop " << ke_proposed << " ke_n " << ke_n
-        << " fix_o " << fix_o << " fix_n " << fix_n << " "
-        << " logSineSqrGamma2_o " << logSineSqrGamma2_o << " logSineSqrGamma2_n " << logSineSqrGamma2_n << " "
+    std::cout
+		<< "\tpe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB " << getPEFromEvaluator(someState)
+        << "\n\tke_prop " << ke_proposed << ", ke_n " << ke_n
+        << "\n\tfix_o " << fix_o << ", fix_n " << fix_n
+        << "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o << ", logSineSqrGamma2_n " << logSineSqrGamma2_n
         //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
-        << " ts " << timestep  << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-        << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
-        //<< std::endl
-        ;
+        << "\n\tts " << timestep  << ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
+        << "\n\tetot_n " << etot_n  << ", etot_proposed " << etot_proposed
+        << std::endl;
 }
 
 

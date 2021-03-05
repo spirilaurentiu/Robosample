@@ -622,7 +622,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
                     (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
                 }
 
-		        std::cout << "w" << currentWorldIx << '_' << currentAdvancedState.getNU();
+		        std::cout << "World " << currentWorldIx << ', NU ' << currentAdvancedState.getNU() << ":\n";
 
                 // Set old potential energy of the new world via OpenMM
                 auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
