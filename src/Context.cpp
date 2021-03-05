@@ -573,7 +573,6 @@ SimTK::Real Context::Pearson(std::vector<std::vector<SimTK::Real>> inputVector, 
 // Main
 void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom)
 {
-
     // Initialize world indeces
     int currentWorldIx = worldIndexes.front();
     int lastWorldIx = 0;
@@ -591,19 +590,20 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
             for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 
                 // Rotate worlds indeces (translate from right to left)
-    		if(isWorldOrderRandom){
-			if(getNofWorlds() >= 3){
-				// Swap world indeces between vector position 2 and random
-				int randVecPos = randWorldDistrib(gen);
-				//std::cout << "Swapping position 1 with " << randVecPos << std::endl;
-				int secondWorldIx = worldIndexes[1];
-				int randWorldIx = worldIndexes[randVecPos];
+                if(isWorldOrderRandom){
+                    if(getNofWorlds() >= 3){
+                        // Swap world indeces between vector position 2 and random
+                        int randVecPos = randWorldDistrib(gen);
+                        //std::cout << "Swapping position 1 with " << randVecPos << std::endl;
+                        int secondWorldIx = worldIndexes[1];
+                        int randWorldIx = worldIndexes[randVecPos];
 
-				worldIndexes[1] = randWorldIx;
-				worldIndexes[randVecPos] = secondWorldIx;
+                        worldIndexes[1] = randWorldIx;
+                        worldIndexes[randVecPos] = secondWorldIx;
 
-			}
-		}
+                    }
+                }
+
                	std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
 
                 // Get indeces
@@ -621,13 +621,13 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
                 }else{ // Just load bAtomList
                     (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
                 }
-		std::cout << "w" << currentWorldIx << '_' << currentAdvancedState.getNU();
 
-                // Set old potential energy of the new world 
-                double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
-		pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
-			updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState)); // OpenMM
-			//updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
+		        std::cout << "w" << currentWorldIx << '_' << currentAdvancedState.getNU();
+
+                // Set old potential energy of the new world via OpenMM
+                auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
+		        pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(OldPE);
+			    //updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
                 // Reinitialize current sampler
                 updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
@@ -635,7 +635,6 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
                 // Sample
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
                     updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
-
                 }
     
             } // END iteration through worlds

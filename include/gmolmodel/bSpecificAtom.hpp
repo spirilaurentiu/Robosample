@@ -91,7 +91,7 @@ public:
     void setAtomClassIndex(SimTK::DuMM::AtomClassIndex);
     std::string getBiotype(void);
     SimTK::Compound::SingleAtom * getBAtomType(void);
-    SimTK::Compound::AtomIndex getCompoundAtomIndex(void);
+    SimTK::Compound::AtomIndex getCompoundAtomIndex() const;
     SimTK::Real getCharge(void);
     int getIsMobile(void);
     int getIsVisited(void);

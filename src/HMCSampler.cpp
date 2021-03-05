@@ -250,6 +250,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     //(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
     // Store the configuration
+	// In our case, a MobilizedBody is an atom
     system->realize(someState, SimTK::Stage::Position);
     int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -279,6 +280,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     // Initialize velocities to temperature
     // TODO Shouldn't be here
     int nu = someState.getNU();
+	std::cout << "				nu=" << nu << '\n';
     double sqrtRT = std::sqrt(RT);
     SimTK::Vector V(nu);
     SimTK::Vector SqrtMInvV(nu);
@@ -896,30 +898,30 @@ void HMCSampler::update(SimTK::State& someState)
 Return the size of R **/
 int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 {
-	SimTK::Vec3 atomR;
-	SimTK::Compound::AtomIndex aIx; 
-	for(int i = 0; i < topologies.size(); i++){
-		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
-			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
-			atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
-			R.push_back(atomR[0]);
-			R.push_back(atomR[1]);
-			R.push_back(atomR[2]);
+	for(const auto& Topology : topologies){
+		for(const auto& AtomList : Topology->bAtomList){
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto& atomR = Topology->calcAtomLocationInGroundFrame(someState, aIx);
+			R.insert(R.end(), { atomR[0], atomR[1], atomR[2] });
 		}
 	}
 
 	// Calculate dR		
-	if(R.size() >= (2 * (ndofs))){
-		for(unsigned int j = 0; j < (ndofs); j++){
-			dR[j] = R[j + (ndofs)] - R[j];
+	if(R.size() >= 2 * ndofs) {
+		for(unsigned int j = 0; j < ndofs; j++){
+			dR[j] = R[j + ndofs] - R[j];
 		}
 
-		// Transfer upper to lower half and cleanup the upper half of R
-		for(int j = ((ndofs) - 1); j >= 0; --j){
-			//std::cout << "R size= " << R.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
-			R[j] = R[j + ndofs];
-			R.pop_back();
-		}
+		// // Transfer upper to lower half and cleanup the upper half of R
+		// for(int j = ((ndofs) - 1); j >= 0; --j){
+		// 	//std::cout << "R size= " << R.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+		// 	R[j] = R[j + ndofs];
+		// 	R.pop_back();
+		// }
+
+		// If stuff breaks, look up for the original code. This also compacts memory
+		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
+		std::vector<decltype(R)::value_type>(R.begin()+ndofs, R.end()).swap(R);
 	}
 
 }
@@ -928,36 +930,36 @@ int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 Return the size of Rdot **/
 int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 {
-	SimTK::Vec3 atomRdot;
-	SimTK::Compound::AtomIndex aIx; 
-	for(int i = 0; i < topologies.size(); i++){
-		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
-			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
-			atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
-			Rdot.push_back(atomRdot[0]);
-			Rdot.push_back(atomRdot[1]);
-			Rdot.push_back(atomRdot[2]);
+	for(const auto& Topology : topologies){
+		for(const auto& AtomList : Topology->bAtomList){
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto& atomRdot = Topology->calcAtomVelocityInGroundFrame(someState, aIx);
+			Rdot.insert(Rdot.end(), { atomRdot[0], atomRdot[1], atomRdot[2] });
 		}
 	}
 
 	// Calculate dRdot		
-	if(Rdot.size() >= (2 * (ndofs))){
-		for(unsigned int j = 0; j < (ndofs); j++){
-			dRdot[j] = Rdot[j + (ndofs)] - Rdot[j];
+	if(Rdot.size() >= 2 * ndofs) {
+		for(unsigned int j = 0; j < ndofs; j++){
+			dRdot[j] = Rdot[j + ndofs] - Rdot[j];
 		}
 
-		// Transfer upper to lower half and cleanup the upper half of Rdot
-		for(int j = ((ndofs) - 1); j >= 0; --j){
-			//std::cout << "Rdotdot size= " << Rdot.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
-			Rdot[j] = Rdot[j + ndofs];
-			Rdot.pop_back();
-		}
+		// // Transfer upper to lower half and cleanup the upper half of Rdot
+		// for(int j = ((ndofs) - 1); j >= 0; --j){
+		// 	std::cout << "Rdotdot size= " << Rdot.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+		// 	Rdot[j] = Rdot[j + ndofs];
+		// 	Rdot.pop_back();
+		// }
+
+		// If stuff breaks, look up for the original code. This also compacts memory
+		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
+		std::vector<decltype(Rdot)::value_type>(Rdot.begin()+ndofs, Rdot.end()).swap(Rdot);
 	}
 }
 
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-    	std::cout << std::setprecision(10) << std::fixed;
+    std::cout << std::setprecision(10) << std::fixed;
 
 	propose(someState);
 
@@ -979,9 +981,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	pushVelocitiesInRdot(someState);
 
 	// Calculate MSD and RRdot to adapt the integration length
-    	std::cout << std::setprecision(10) << std::fixed;
-	std::cout << " MSD= " << calculateMSD()
-		<< " RRdot= " << calculateRRdot() << std::endl;
+    std::cout << std::setprecision(10) << std::fixed;
+	std::cout << " MSD= " << calculateMSD() << " RRdot= " << calculateRRdot() << std::endl;
 	
 	return this->acc;
 }
