@@ -801,39 +801,22 @@ std::string GetUniqueName(int nameCounter) {
 
 /** Magnitude (norm) of a vector of reals **/
 SimTK::Real magnitude(std::vector<SimTK::Real>& V) {
-	SimTK::Real mag = 0;
-	for(int i = 0; i < V.size(); i++){
-		mag += (V[i] * V[i]);
-	}
-
-	return std::sqrt(mag);
+	return sqrt(magSq(V));
 }
 
 /** Magnitude (norm) of a vector of reals **/
 SimTK::Real magSq(std::vector<SimTK::Real>& V) {
-	SimTK::Real mag = 0;
-	for(int i = 0; i < V.size(); i++){
-		mag += (V[i] * V[i]);
-	}
-
-	return mag;
+	return std::inner_product(V.begin(), V.end(), V.begin(), SimTK::Real(0.0));
 }
 
 /** Normalize a std vector of double. If the magnitude is 0 it returns 
 the vector back.**/
-// TODO: optimize
 std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V) {
+	SimTK::Real norm = magnitude(V);
 
-	SimTK::Real mag = 0;
-	for(int i = 0; i < V.size(); i++){
-		mag += (V[i] * V[i]);
-	}
-	mag = std::sqrt(mag);
-
-	if(mag != 0){
-		for(int i = 0; i < V.size(); i++){
-			V[i] /= mag;
-		}
+	if(norm != 0.0) {
+        norm = 1.0 / norm;
+        std::transform(V.begin(), V.end(), V.begin(), [norm] (auto c) { return c * norm; });
 	}
 
 	return V;
