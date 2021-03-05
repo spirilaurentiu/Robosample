@@ -1,8 +1,5 @@
 # Installation
 
-## Installing Xming
-On Windows Subsystem for Linux, download and install [Xming](https://sourceforge.net/projects/xming/) using the default options. Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the file. Xming must be running when Robosample is started with a visualizer (a window showing the current stage of simulation). The visualizer is on by default. To change this behaviour, see [Running Robosample](#running-robosample).
-
 ## Installing dependencies
 Install the dependencies:
 ```
@@ -33,7 +30,7 @@ cd Robosample
 ```
 
 ## Building Robosample
-Run `build_debug.sh` or `bulild_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
+Run `build_debug.sh` or `build_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
 ```
 bash build_debug.sh
 ```
@@ -57,6 +54,10 @@ cd build-debug
   
 To change different parameters (use visualizer, use OpenMM etc) edit `inp` which is located in `build-debug` or `build-release`.
 
-# Troubleshooting
-`freeglut (simbody-visualizer_d): failed to open display ':0'`: make sure [Xming](#installing-xming) is running.
+# Using the visualizer
+Robosample can show in real time the progress of the simulation. To do so, change `VISUAL FALSE` to `VISUAL TRUE` in `inp`.
 
+When running in WSL, an X server such as Xming is needed in order for the program to draw to screen. In Windows, download and install [Xming](https://sourceforge.net/projects/xming/) using the default options. Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the file. Xming must be running when Robosample is started with a visualizer\.
+
+## Troubleshooting the visualizer
+`freeglut (simbody-visualizer_d): failed to open display ':0'`: make sure [Xming](#installing-xming) is running. If it does not work, change `VISUAL TRUE` to `VISUAL FALSE`.
