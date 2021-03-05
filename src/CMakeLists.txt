@@ -9,6 +9,9 @@ set(OpenMM_ON OFF)
 find_package(OpenMM)
 if(OpenMM_FOUND)
     	set(OpenMM_ON ON)
+        message("OpenMM found")
+else()
+        message("OpenMM not found")
 endif()
 
 if ( OpenMM_ON )
@@ -166,6 +169,8 @@ add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
 #
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
+        message("Linking with debug libraries")
+
         TARGET_LINK_LIBRARIES( GMOLMODEL_test
                 debug ${Simbody_LIBRARIES}
                 SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
@@ -194,6 +199,8 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
 		m )
                 #${mmtk_libs} )
 ELSE()
+        message("Linking with release libraries")
+
         TARGET_LINK_LIBRARIES( GMOLMODEL_test
                 optimized ${Simbody_LIBRARIES}
                 SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
