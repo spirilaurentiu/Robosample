@@ -26,6 +26,8 @@ Also make sure that:
 1. `gcc` version can compile C++11.
 
 ##  Cloning the project
+**WARNING:** According to [Microsoft](https://docs.microsoft.com/en-us/windows/wsl/compare-versions#performance-across-os-file-systems), maximum performance is obtained if the folder project folder is installed in `/home/user/`.
+**WARNING:** An antivirus program might interfere with WSL and cause performace drops. When running WSL, the user may opt to shut the running antivirus.
 ```
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
