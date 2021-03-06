@@ -177,6 +177,11 @@ int main(int argc, char **argv)
 	// Link the Compounds to Simbody System for all Worlds
 	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
 
+	// CONTACTS
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(context.updWorld(worldIx))->addContacts();
+	}
+
 	// Add Fixman torque (Additional ForceSubsystem) if required
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){

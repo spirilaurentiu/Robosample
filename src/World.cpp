@@ -223,7 +223,7 @@ void World::AddMolecule(
     // Print Molmodel types
     //(topologies.back())->PrintMolmodelAndDuMMTypes(*forceField);
 
-    // Allocate the vector of coordinates (DCD)
+    // All ocate the vector of coordinates (DCD)
     Xs.resize(Xs.size() + topologies.back()->getNAtoms());
     Ys.resize(Ys.size() + topologies.back()->getNAtoms());
     Zs.resize(Zs.size() + topologies.back()->getNAtoms());
@@ -234,6 +234,31 @@ void World::AddMolecule(
     (topologies.back())->setCompoundIndex(
             SimTK::CompoundSystem::CompoundIndex(
              compoundSystem->getNumCompounds() - 1));
+
+    // BEGIN Try contact membrane
+    const Real fFac = 0.3;       // to turn off friction
+    const Real fDis = 0.1;    // to turn off dissipation
+    const Real fVis = 0.01;    // to turn off viscous friction
+    const Real fK = 1e+8; // pascals
+    Vec3 halfSize2(10, 1, 10);
+    ContactGeometry::TriangleMesh box2(PolygonalMesh::createBrickMesh(halfSize2, 20));
+    DecorativeMesh showBox2(box2.createPolygonalMesh());
+    const Real boxMass2 = halfSize2[0] * halfSize2[1] * halfSize2[2] * 8;
+    Body::Rigid boxBody2(MassProperties(boxMass2, Vec3(0), 
+                        boxMass2 * UnitInertia::brick(halfSize2)));
+    boxBody2.addDecoration(Transform(), 
+                            showBox2.setColor(Cyan).setOpacity(.6));
+    boxBody2.addDecoration(Transform(), 
+                            showBox2.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
+    boxBody2.addContactSurface(Transform(),
+                                ContactSurface(box2,
+                                                ContactMaterial(fK, fDis, fFac, fFac, fVis),
+                                                .5 /*thickness*/)
+                                                );
+    MobilizedBody::Weld boxMBody2(matter->Ground(), Transform(Vec3(0)), boxBody2, Transform(Vec3(0)));
+
+
+    // END Try contact membrane
 
     // Add the new molecule to Decorators's vector of molecules
     if(visual){
@@ -296,6 +321,34 @@ const SimTK::State& World::realizeTopology(void)
 	    //    ((this->topologies)[i])->loadMobodsRelatedMaps();
 	    //}
 
+	return returnState;
+}
+
+const SimTK::State& World::addContacts(void)
+{
+    // BEGIN Try contact membrane
+    // Add contact to the first atom 
+    const Real fFac = 0.3;       // to turn off friction
+    const Real fDis = 0.1;    // to turn off dissipation
+    const Real fVis = 0.01;    // to turn off viscous friction
+    const Real fK = 1e+8; // pascals
+    SimTK::MobilizedBodyIndex mbx = (topologies.back())->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(0));
+    SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+    Vec3 halfSize(1, 1, 1);
+    ContactGeometry::TriangleMesh box(PolygonalMesh::createBrickMesh(halfSize, 5));
+    DecorativeMesh showBox(box.createPolygonalMesh());
+
+    mobod.updBody().addDecoration(Transform(), 
+                            showBox.setColor(Cyan).setOpacity(.6));
+    mobod.updBody().addDecoration(Transform(), 
+                            showBox.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
+    mobod.updBody().addContactSurface(Transform(),
+                                ContactSurface(box,
+                                                ContactMaterial(fK, fDis, fFac, fFac, fVis),
+                                                .5 /*thickness*/)
+                                                );
+    // END Try contact membrane
+        const SimTK::State& returnState = compoundSystem->realizeTopology();
 	return returnState;
 }
 
