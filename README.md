@@ -38,9 +38,9 @@ To switch branches, go to `Robosample` and execute:
 ```
 git checkout experimental_cpp_latest
 
-cd Molmodel/Simbody01/Simbody/
+cd Molmodel/Simbody01/
 git checkout experimental_cpp_latest
-cd ../../../
+cd ../../
 ```
 
 ## Building Robosample
