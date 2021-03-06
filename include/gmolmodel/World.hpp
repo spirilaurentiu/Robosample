@@ -79,6 +79,9 @@ public:
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecule(readAmberInput *amberReader, std::string rbFN, std::string flexFN, std::string regimenSpec, std::string argRoot);
 
+	/** Add a membrane represented by a contact surface **/
+	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth);
+
 	/** Get the number of molecules **/
 	int getNofMolecules();
  

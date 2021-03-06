@@ -155,6 +155,17 @@ int main(int argc, char **argv)
 	// Add molecules to Worlds based on just read filenames
 	context.AddMolecules(setupReader.get("ROOTS"));
 
+	// Membrane
+	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
+	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
+	float memZWidth = std::stof(setupReader.get("MEMBRANE")[2]);
+	bool haveMembrane = (memXWidth > SimTK::TinyReal) && (memYWidth > SimTK::TinyReal) && (memZWidth > SimTK::TinyReal);
+	if(haveMembrane){
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth);
+		}
+	}
+
 	// BEGIN MULMOL
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		(context.updWorld(worldIx))->realizeTopology();
@@ -177,9 +188,11 @@ int main(int argc, char **argv)
 	// Link the Compounds to Simbody System for all Worlds
 	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
 
-	// CONTACTS
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		(context.updWorld(worldIx))->addContacts();
+	// Membrane contacts
+	if(haveMembrane){
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+			(context.updWorld(worldIx))->addContacts();
+		}
 	}
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
