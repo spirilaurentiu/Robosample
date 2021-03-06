@@ -1552,39 +1552,43 @@ void Topology::printMaps(void)
 void Topology::writeAtomListPdb(std::string dirname, std::string prefix,
 						        std::string sufix, int maxNofDigits, int index) const
 {
-	int nofDigits = (int) floor(log10(index));
+	// Using floor here is no buneo because the index can be zero
 	std::string zeros("");
-	if(maxNofDigits > nofDigits){
-		for(int i = 0; i < (maxNofDigits - nofDigits); i++){
-			zeros += std::string("0");
-		}
+	if(int nofDigits = static_cast<int>(std::to_string(index).size()); maxNofDigits > nofDigits){
+		zeros = std::string('0', maxNofDigits - nofDigits);
 	}
+
 	std::stringstream sstream;
 	sstream << dirname << "/" << prefix << zeros << std::to_string(index) << sufix;
 	string ofilename = sstream.str();
-	//std::cout << "Topology writePdb to dir " << dirname 
-	//	<< " prefix " << prefix << " zeros " << zeros 
-	//	<< " index " << std::to_string(index) << std::endl;
+
+	// std::cout << "Topology writePdb to dir '" << dirname 
+	// 	<< " prefix " << prefix << " zeros " << zeros 
+	// 	<< " index " << std::to_string(index) << std::endl;
 
 	FILE *oF = fopen (ofilename.c_str(),"w");
-	// Pdb lines
-	for(int i = 0; i < getNumAtoms(); i++){
-		fprintf(oF, "%-6s%5d %4s %3s %c%4d    %8.3f%8.3f%8.3f  %4.2f%6.2f          %2s\n"
-			, "ATOM"                 // record
-			, i                      // index
-			, bAtomList[i].inName  // name
-			, "UNK"                  // residue name
-			, 'A'                    // chain
-			, 1                      // residue index
-			, 10.0*bAtomList[i].getX()    // x in A
-			, 10.0*bAtomList[i].getY()    // y in A
-			, 10.0*bAtomList[i].getZ()    // z in A
-			, 1.0                    // occupancy
-			, 0.0                    // beta factor
-			, "  ");                 // element
-	}
+	if (oF) {
+		// Pdb lines
+		for(int i = 0; i < getNumAtoms(); i++){
+			fprintf(oF, "%-6s%5d %4s %3s %c%4d    %8.3f%8.3f%8.3f  %4.2f%6.2f          %2s\n"
+				, "ATOM"                 // record
+				, i                      // index
+				, bAtomList[i].inName  // name
+				, "UNK"                  // residue name
+				, 'A'                    // chain
+				, 1                      // residue index
+				, 10.0*bAtomList[i].getX()    // x in A
+				, 10.0*bAtomList[i].getY()    // y in A
+				, 10.0*bAtomList[i].getZ()    // z in A
+				, 1.0                    // occupancy
+				, 0.0                    // beta factor
+				, "  ");                 // element
+		}
 
-	fclose(oF);
+		fclose(oF);
+	} else {
+		std::cout << "FAILED TO OPEN '" << ofilename << "' TO WRIE!\n";
+	}
 }
 
 /** Get bAtomList coordinates coordinates **/
