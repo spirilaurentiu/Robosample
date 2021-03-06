@@ -1555,16 +1555,14 @@ void Topology::writeAtomListPdb(std::string dirname, std::string prefix,
 	// Using floor here is no buneo because the index can be zero
 	std::string zeros("");
 	if(int nofDigits = static_cast<int>(std::to_string(index).size()); maxNofDigits > nofDigits){
-		zeros = std::string('0', maxNofDigits - nofDigits);
+		zeros = std::string(maxNofDigits - nofDigits, '0');
 	}
 
 	std::stringstream sstream;
 	sstream << dirname << "/" << prefix << zeros << std::to_string(index) << sufix;
 	string ofilename = sstream.str();
 
-	// std::cout << "Topology writePdb to dir '" << dirname 
-	// 	<< " prefix " << prefix << " zeros " << zeros 
-	// 	<< " index " << std::to_string(index) << std::endl;
+	std::cout << "\tTopology written to '" << ofilename << "'\n";
 
 	FILE *oF = fopen (ofilename.c_str(),"w");
 	if (oF) {
