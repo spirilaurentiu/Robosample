@@ -29,6 +29,20 @@ git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
 ```
 
+## Robosample branches
+* `master` Stable version. Installed by default.
+* `cpp_latest` Stable version with latest C++ standard. Faster than `master`.
+* `experimental_cpp_latest` Unstable version with latest C++ version. This is the fastest branch.
+
+To switch to a branch, go to `Robosample` and execute:
+```
+git checkout experimental_cpp_latest
+
+cd Molmodel/Simbody01/Simbody/
+git checkout experimental_cpp_latest
+cd ../../../
+```
+
 ## Building Robosample
 Run `build_debug.sh` or `build_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
 ```
