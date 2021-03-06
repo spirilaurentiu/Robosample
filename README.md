@@ -20,7 +20,7 @@ export CUDA_ROOT=/usr/local/cuda
 
 Also make sure that:
 1. `cmake --version` is greater than 3.1.
-1. `gcc` version can compile C++11.
+1. `gcc` version can compile C++17.
 
 ##  Cloning the project
 **WARNING:** Maximum performance is obtained if the folder project folder is installed in `/home/<user name>/` (see [this](https://docs.microsoft.com/en-us/windows/wsl/compare-versions#performance-across-os-file-systems) for more details). An antivirus program might interfere with WSL and cause performace drops. When running WSL, the user may opt to shut the running antivirus.
@@ -34,7 +34,7 @@ cd Robosample
 * `cpp_latest` Stable version with latest C++ standard. Faster than `master`.
 * `experimental_cpp_latest` Unstable version with latest C++ version. This is the fastest branch.
 
-To switch to a branch, go to `Robosample` and execute:
+To switch branches, go to `Robosample` and execute:
 ```
 git checkout experimental_cpp_latest
 
@@ -55,7 +55,7 @@ Install [Visual Studio Code](https://code.visualstudio.com/) on Windows. Run `co
 # Working on Robosample
 After working on Robosample, it must be compiled as `Debug` or `Release` (the same flags as in section [Building Robosample](#building-robosample)). To compile as a different configuration, full recompilation is needed (see [Building Robosample](#building-robosample)).
 ```
-make -j$(nproc)
+make -j$((`nproc`*2))
 ```
 
 # Running Robosample
