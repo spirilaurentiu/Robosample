@@ -14,7 +14,7 @@ cd openmm
 mkdir build-debug
 cd build-debug/
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo make install
 cd ../../
 
@@ -42,21 +42,21 @@ cd Molmodel/Simbody01
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo make install
 
 cd ../../
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo make install
 
 cd ../../
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo /sbin/ldconfig
 
 # add test input files

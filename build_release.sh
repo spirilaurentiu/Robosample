@@ -14,7 +14,7 @@ cd openmm
 mkdir build-release
 cd build-release/
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo make install
 cd ../../
 
@@ -42,21 +42,21 @@ cd Molmodel/Simbody01
 mkdir build-release
 cd build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo make install
 
 cd ../../
 mkdir build-release
 cd build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo make install
 
 cd ../../
 mkdir build-release
 cd build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
+make -j$((`nproc`*2))
 sudo /sbin/ldconfig
 
 # add test input files
