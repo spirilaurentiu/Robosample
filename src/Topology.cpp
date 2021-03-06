@@ -1426,7 +1426,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 
 
 	} // RB
-
+	PrintAtomList();
 	this->regimen = argRegimen;
 }
 
