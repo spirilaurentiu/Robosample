@@ -272,6 +272,11 @@ public:
 	SimTK::TimeStepper *ts;
 	std::vector<BaseSampler *> samplers;
 
+	// Contact related
+	ContactTrackerSubsystem  *tracker;
+	CompliantContactSubsystem *contactForces;
+        ContactCliqueId clique1;
+
 	bool _useFixmanTorque;
 	//...............
 
