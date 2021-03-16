@@ -12,7 +12,11 @@ set(ROBOSAMPLE_COPYRIGHT_YEARS "2021-01")
 # underbar separated list of dotted authors, no spaces or commas
 set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 
-set( CMAKE_CXX_FLAGS "-std=c++17 -Wall -fPIC -g" )
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+    set( CMAKE_CXX_FLAGS "-std=c++17 -Wall -fPIC -g" )
+ELSE()
+    set( CMAKE_CXX_FLAGS "-std=c++17 -Wall -fPIC -g -O2" )
+ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 add_subdirectory(src)
 add_subdirectory(tests) # Laur
