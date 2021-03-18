@@ -6,8 +6,8 @@
 # remove openmm previous openmm compilation
 sudo rm /usr/local/openmm -rf
 sudo find /usr/local/lib -iname '*openmm*' -delete
-rm openmm/build-release -rf
 rm openmm/build-debug -rf
+rm openmm/build-release -rf
 
 # delete previous simbody compilation from /usr/
 sudo rm /usr/local/lib/cmake/simbody -rf
@@ -54,6 +54,7 @@ sudo make install
 
 # ensure this is correctly installed
 sudo mkdir -p /usr/local/lib/plugins/ && sudo cp -f libOpenMMPlugin.so $_
+rm /usr/local/lib/plugins/libOpenMMPlugin_d.so
 
 cd ../../
 mkdir build-release
