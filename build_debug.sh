@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# used to have
-# cmake -Wno-dev -DCMAKE_BUILD_TYPE=Debug ..
-
 # remove openmm previous openmm compilation
 sudo rm /usr/local/openmm -rf
 sudo find /usr/local/lib -iname '*openmm*' -delete

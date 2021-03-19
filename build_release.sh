@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# used to have
-# cmake -Wno-dev -DCMAKE_BUILD_TYPE=Debug ..
-
 # remove openmm previous openmm compilation
 sudo rm /usr/local/openmm -rf
 sudo find /usr/local/lib -iname '*openmm*' -delete
@@ -59,9 +56,17 @@ rm /usr/local/lib/plugins/libOpenMMPlugin_d.so
 cd ../../
 mkdir build-release
 cd build-release
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_BUILD_TYPE=Release .. 
 make -j$((`nproc`*2))
 sudo /sbin/ldconfig
+
+# cmake -DCMAKE_BUILD_TYPE=Release -DROBO_PGO=Generate ..
+# make -j$((`nproc`*2))
+# sudo /sbin/ldconfig
+# ./tests/Robosample inp
+# cmake -DCMAKE_BUILD_TYPE=Release -DROBO_PGO=Profile ..
+# make -j$((`nproc`*2))
+# sudo /sbin/ldconfig
 
 # add test input files
 cp -ri ../tests_inputs/* .
