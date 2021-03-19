@@ -36,17 +36,20 @@ cd Robosample
 
 To switch branches, go to `Robosample` and execute:
 ```
-git checkout experimental_cpp_latest
-
 cd Molmodel/Simbody01/
 git checkout experimental_cpp_latest
-cd ../../
+
+cd ../
+git checkout experimental_cpp_latest
+
+cd ../
+git checkout experimental_cpp_latest
 ```
 
 ## Building Robosample
 Run `build_debug.sh` or `build_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
 ```
-bash build_debug.sh
+bash build_release.sh
 ```
 
 # Open the project using any IDE (e.g. Visual Studio Code)
