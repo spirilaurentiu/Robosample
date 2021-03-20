@@ -255,7 +255,7 @@ void World::AddMolecule(
 void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
 {
 
-	SimTK::Real stiffness = 1e3;
+	SimTK::Real stiffness = 1e9;
 	SimTK::Real dissipation = 0.0;
 	SimTK::Real staticFriction = 0.0;
 	SimTK::Real dynamicFriction = 0.0;
@@ -285,7 +285,7 @@ void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWid
 
 	//DecorativeMesh contactGeometryDeco(mesh);
 	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
-	matter->Ground().updBody().addDecoration(Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(.6));
+	matter->Ground().updBody().addDecoration(Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(1.0));
 
 }
 
@@ -352,10 +352,10 @@ const SimTK::State& World::addContacts(void)
 //		SimTK::MobilizedBodyIndex mbx = ((this->topologies)[i])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(0));
 //		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 //	}
-	const Real fK = 1e+3; // stiffness in pascals
-	const Real fDis = 0.1;    // to turn off dissipation
-	const Real fFac = 0.3;       // to turn off friction
-	const Real fVis = 0.01;    // to turn off viscous friction
+	const Real fK = 1e+9; // stiffness in pascals
+	const Real fDis = 0.0;    // to turn off dissipation
+	const Real fFac = 0.0;       // to turn off friction
+	const Real fVis = 0.0;    // to turn off viscous friction
 
 	int nofContactAtomIxs = 7;
 	int contAIxs[nofContactAtomIxs] = {0, 405, 3099, 1545, 3927, 5047, 2282};
