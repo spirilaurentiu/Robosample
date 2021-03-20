@@ -25,24 +25,24 @@ public:
     void initialize() {
         //TRACE("NonbondedForceTask::initialize BEGIN\n");
         //TRACE("NonbondedForceTask::initialize END\n");
-	//TRACE("NonbondedForceTask::initialize\n");
+	TRACE("NonbondedForceTask::initialize\n");
 
 	sum = 0;
 
     }
 
     void finish() {
-        //TRACE("NonbondedForceTask::finish\n");
+        TRACE("NonbondedForceTask::finish\n");
         //TRACE("NonbondedForceTask::finish END\n");
-	//printf("sum = %i \n", sum );
+	printf("sum = %i \n", sum );
 	total += sum;
     }
 
     void execute(int body1, int body2) {
-        //TRACE("NonbondedForceTask::execute\n");
+        TRACE("NonbondedForceTask::execute\n");
         //TRACE("NonbondedForceTask::execute END\n");
 	
-	//printf("body1, body2, sum before : %i %i %i \n", body1, body2, sum );
+	printf("body1, body2, sum before : %i %i %i \n", body1, body2, sum );
 
 	sum += mat4x4[ body1 ][ body2 ];
     }
@@ -88,7 +88,8 @@ int main (int argc, char **argv)
     	nonbondedExecutor->execute(task, SimTK::Parallel2DExecutor::HalfMatrix);
     }
     
-    //printf("Before finish: %d\n",total);
+    printf("Before finish: %d\n",total);
+    printf("Should be: %d\n", 600);
 
     return 0;
 }

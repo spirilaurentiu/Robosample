@@ -58,6 +58,9 @@ void ParaMolecularDecorator::setAtomTargets(std::vector<std::pair<bSpecificAtom 
 void ParaMolecularDecorator::generateDecorations(const State& someState,
         Array_<DecorativeGeometry>& geometry) 
 {
+
+	
+
     /*
     for (auto p = points.begin(); p != points.end(); p++) {
         geometry.push_back(DecorativePoint(*p));
@@ -635,6 +638,15 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
                 }
                 geometry.push_back(decorativeLineBM);
 		// */
+	    }else if(mbx == 1){
+            	//SimTK::MobilizedBody& memBody = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(1));
+		//Vec3 halfSize2(4, 4, 0.3);
+		//ContactGeometry::TriangleMesh box2(PolygonalMesh::createBrickMesh(halfSize2, 60));
+		//DecorativeMesh showBox2(box2.createPolygonalMesh());
+		//memBody.updBody().addDecoration(Transform(), showBox2.setColor(Cyan).setOpacity(.6));
+		//memBody.updBody().addDecoration(Transform(), showBox2.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
+		//compoundSystem->realizeTopology();
+		
 	    } // */
 
         }

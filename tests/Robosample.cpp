@@ -146,29 +146,24 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-			// @ DELETE FOR SINGLE MOLECULE
-			// Add molecules to Worlds based on just read filenames
-			//context.AddMolecules(setupReader.get("ROOTS")); // @
-	//}
-	// @ RESTORE FOR SINGLE MOLECULE
 	// Add molecules to Worlds based on just read filenames
 	context.AddMolecules(setupReader.get("ROOTS"));
+
+	// BEGIN MULMOL
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(context.updWorld(worldIx))->realizeTopology();
+	}
 
 	// Membrane
 	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
 	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
 	float memZWidth = std::stof(setupReader.get("MEMBRANE")[2]);
+	int memResolution = std::stof(setupReader.get("MEMBRANE")[3]);
 	bool haveMembrane = (memXWidth > SimTK::TinyReal) && (memYWidth > SimTK::TinyReal) && (memZWidth > SimTK::TinyReal);
 	if(haveMembrane){
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth);
+			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
 		}
-	}
-
-	// BEGIN MULMOL
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		(context.updWorld(worldIx))->realizeTopology();
 	}
 
 /*    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){

@@ -92,7 +92,7 @@ seeds = np.array(np.array_split(np.array([int(seed) for seed in args.FNSeeds]) ,
 print(seeds)
 
 runningMean = np.empty((3990))
-runningStd = np.empty((3990))
+runningVar = np.empty((3990))
 TA = []
 fignum = -1
 if "traj" in args.analyze:
@@ -144,14 +144,18 @@ if "traj" in args.analyze:
 	print("There are", nofSimsPerParamSet, "simulations per parameter set.")
 	runningBias = np.empty(data.shape)
 	runningMean = np.empty(data.shape)
-	runningStd = np.empty(data.shape)
+	runningVar = np.empty(data.shape)
 	print("nofParamSets", nofParamSets)
 	print("data.shape", data.shape)
 	bias = np.empty((nofParamSets, data.shape[1]))
 	mofm = np.empty((nofParamSets, data.shape[1]))
+	vofm = np.empty((nofParamSets, data.shape[1]))
 	sofm = np.empty((nofParamSets, data.shape[1]))
+	MSE = np.empty((nofParamSets, data.shape[1]))
 
 	# Get the true value estimate (last average of the longest simulations)
+
+	# Get the latest of each type
 	lastValues = []
 	for datumi in range(data.shape[0]):
 		if not np.isnan(data[datumi][-1]):
@@ -171,7 +175,7 @@ if "traj" in args.analyze:
 				if data[simi, framei] != None:
 					runningMean[simi, framei] = np.mean(data[simi, 0:framei+1])
 					runningBias[simi, framei] = (runningMean[simi, framei] - trueValueEst)
-					runningStd[ simi, framei] = np.std(data[simi, 0:framei+1])
+					runningVar[ simi, framei] = np.var(data[simi, 0:framei+1])
 		
 			#print("runningMean.shape", runningMean.shape)
 			# Choose includedSims
@@ -181,8 +185,10 @@ if "traj" in args.analyze:
 				if data[simi, framei] != None:
 					includedSims.append(simi)
 			mofm[paramSeti, framei] = np.mean(runningMean[includedSims, framei])
+			vofm[paramSeti, framei] = np.var(runningMean[includedSims, framei])
 			bias[paramSeti, framei] = mofm[paramSeti, framei] - trueValueEst
 			sofm[paramSeti, framei] = np.std(runningMean[includedSims, framei])
+			MSE[paramSeti, framei] = vofm[paramSeti, framei] + (bias[paramSeti, framei])**2
 
 
 	print("Plotting running means and stds")
@@ -196,10 +202,10 @@ if "traj" in args.analyze:
 			axs[0].plot(X, Y, color = colors[paramSeti])
 			axs[0].set_title('Running Means ' + args.molName)
 
-			#Y = runningBias[simi]
-			Y = bias[paramSeti]
+			#Y = data[simi]
+			Y = MSE[paramSeti]
 			axs[1].plot(X, Y, color = colors[paramSeti])
-			axs[1].set_title('Running Bias')
+			axs[1].set_title('MSE')
 
 			#Y = mofm[paramSeti]
 			#Yerr = sofm[paramSeti]

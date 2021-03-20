@@ -80,7 +80,7 @@ public:
 	void AddMolecule(readAmberInput *amberReader, std::string rbFN, std::string flexFN, std::string regimenSpec, std::string argRoot);
 
 	/** Add a membrane represented by a contact surface **/
-	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth);
+	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution);
 
 	/** Get the number of molecules **/
 	int getNofMolecules();
@@ -276,6 +276,8 @@ public:
 	ContactTrackerSubsystem  *tracker;
 	CompliantContactSubsystem *contactForces;
         ContactCliqueId clique1;
+	MobilizedBody::Weld *membrane;
+	Body::Rigid *memBody;
 
 	bool _useFixmanTorque;
 	//...............

@@ -624,6 +624,7 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
 		std::cout << "w" << currentWorldIx << '_' << currentAdvancedState.getNU();
 
                 // Set old potential energy of the new world 
+		// TODO: Should use already calculated potential energy in sampler
                 double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
 		pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
 			updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState)); // OpenMM
@@ -635,6 +636,27 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
                 // Sample
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
                     updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
+
+			// CONTACT DEBUG
+			int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
+			SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->getDissipatedEnergy(currentAdvancedState);
+			bool hasDefaultForceGenerator = updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
+
+			const MultibodySystem & mbs = updWorld(currentWorldIx)->contactForces->getMultibodySystem();
+			int nofMobods = mbs.getMatterSubsystem().getNumBodies();
+
+			const ContactTrackerSubsystem & cts = updWorld(currentWorldIx)->contactForces->getContactTrackerSubsystem();
+			int ctsNofSurfaces = cts.getNumSurfaces();
+			
+
+			std::cout << "CONTACT INFO:"
+				<< " #forces= " << numForces
+				<< " dissEnergy= " << dissEnergy
+				<< " hasDefaultForceGenerator= " << hasDefaultForceGenerator
+				<< " #mobods= " << nofMobods 
+				<< " ctsNofSurfaces= " << ctsNofSurfaces
+			<< std::endl;
+			// CONTACT DEBUG enD
 
                 }
     
