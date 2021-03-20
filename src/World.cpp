@@ -413,6 +413,13 @@ const SimTK::State& World::addContacts(void)
 		mobod6.updBody().addDecoration(Transform(), deco6.setColor(Cyan).setOpacity(.6));
 		mobod6.updBody().addContactSurface(Transform(), ContactSurface(mesh6, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
 
+		mbx = ((this->topologies)[1])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(0));
+		SimTK::MobilizedBody& mobod7 = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh7(PolygonalMesh::createSphereMesh(0.3, 2));
+		DecorativeMesh deco7(mesh7.createPolygonalMesh());
+		mobod7.updBody().addDecoration(Transform(), deco7.setColor(Cyan).setOpacity(.6));
+		mobod7.updBody().addContactSurface(Transform(), ContactSurface(mesh7, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
+
 
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
 	return returnState;
