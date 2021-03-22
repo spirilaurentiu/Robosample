@@ -622,21 +622,18 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
                     (updWorld(currentWorldIx))->updateAtomListsFromCompound(currentAdvancedState);
                 }
 
-<<<<<<< HEAD
                 // Set old potential energy of the new world 
 		// TODO: Should use already calculated potential energy in sampler
                 double lastWorldSetPE, lastWorldCalcPE, currentWorldOldPE, currentWorldCalcPE;
 		pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(
 			updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState)); // OpenMM
 			//updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
-=======
 		        std::cout << "World " << currentWorldIx << ", NU " << currentAdvancedState.getNU() << ":\n";
 
                 // Set old potential energy of the new world via OpenMM
                 auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
 		        pMC((updWorld(currentWorldIx))->updSampler(0))->setOldPE(OldPE);
 			    //updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
->>>>>>> experimental_cpp_latest
 
                 // Reinitialize current sampler
                 updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
@@ -644,7 +641,6 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
                 // Sample
                 for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
                     updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
-<<<<<<< HEAD
 
 			// CONTACT DEBUG
 			int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
@@ -666,9 +662,6 @@ void Context::Run(int howManyRounds, float Ti, float Tf, bool isWorldOrderRandom
 				<< " ctsNofSurfaces= " << ctsNofSurfaces
 			<< std::endl;
 			// CONTACT DEBUG enD
-
-=======
->>>>>>> experimental_cpp_latest
                 }
     
             } // END iteration through worlds
