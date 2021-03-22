@@ -112,7 +112,7 @@ MESSAGE("Gmolmodel libs dir: ${CMAKE_CURRENT_LIST_DIR}/../build-debug/lib")
 
 set(TESTS_SRCS
         TestSimbodyBasic.cpp
-	#TestMassSqrtAndDet.cpp
+	TestMassSqrtAndDet.cpp
         TestMolmodelBasic.cpp
         TestOpenMMBasic.cpp
         TestParallelExecutor.cpp
@@ -128,37 +128,35 @@ set(TESTS_SRCS
         Robosample.cpp
 	)
 
-foreach(TEST_SRC ${TESTS_SRCS})
-    STRING(REGEX REPLACE ".cpp" "" TEST_EXE ${TEST_SRC})
-    MESSAGE(${TEST_EXE} ${TEST_SRC})
-    add_executable(${TEST_EXE} ${TEST_SRC})
-    TARGET_LINK_LIBRARIES( ${TEST_EXE}
-                ${Simbody_LIBRARIES}
-                SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-                ${Boost_LIBRARIES}
-                ${BOOST_LIBS_BYHAND}
-                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense...
-		GMOLMODEL_dynamic_d
-                m )
-endforeach()
-
-set(BIN_SRCS
-        #Robosample.cpp
-	)
-
-foreach(BIN_SRC ${BIN_SRCS})
-    STRING(REGEX REPLACE ".cpp" "" BIN_EXE ${BIN_SRC})
-    MESSAGE(${BIN_EXE} ${BIN_SRC})
-    add_executable(${BIN_EXE} ${BIN_SRC})
-    TARGET_LINK_LIBRARIES( ${BIN_EXE}
-                ${Simbody_LIBRARIES}
-                SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-                ${Boost_LIBRARIES}
-                ${BOOST_LIBS_BYHAND}
-                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense...
-		GMOLMODEL_dynamic
-                m )
-endforeach()
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+        foreach(TEST_SRC ${TESTS_SRCS})
+                STRING(REGEX REPLACE ".cpp" "" TEST_EXE ${TEST_SRC})
+                MESSAGE(${TEST_EXE} ${TEST_SRC})
+                add_executable(${TEST_EXE} ${TEST_SRC})
+                TARGET_LINK_LIBRARIES( ${TEST_EXE}
+                        debug ${Simbody_LIBRARIES}
+                        SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                        ${Boost_LIBRARIES}
+                        ${BOOST_LIBS_BYHAND}
+                        #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense...
+                        GMOLMODEL_dynamic
+                        m )
+        endforeach()
+ELSE()
+        foreach(TEST_SRC ${TESTS_SRCS})
+                STRING(REGEX REPLACE ".cpp" "" TEST_EXE ${TEST_SRC})
+                MESSAGE(${TEST_EXE} ${TEST_SRC})
+                add_executable(${TEST_EXE} ${TEST_SRC})
+                TARGET_LINK_LIBRARIES( ${TEST_EXE}
+                        optimized ${Simbody_LIBRARIES}
+                        SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                        ${Boost_LIBRARIES}
+                        ${BOOST_LIBS_BYHAND}
+                        #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense...
+                        GMOLMODEL_dynamic
+                        m )
+        endforeach()
+ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 MESSAGE("Simbody_LIBRARIES: ${Simbody_LIBRARIES}")
 MESSAGE("Boost_LIBRARIES: ${Boost_LIBRARIES}")

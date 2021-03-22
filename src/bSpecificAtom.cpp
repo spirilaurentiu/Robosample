@@ -148,7 +148,7 @@ SimTK::Compound::SingleAtom * bSpecificAtom::getBAtomType(void)
 }
 
 // Get atom's index as held in Compound
-SimTK::Compound::AtomIndex bSpecificAtom::getCompoundAtomIndex(void)
+SimTK::Compound::AtomIndex bSpecificAtom:: getCompoundAtomIndex() const
 {
     return this->atomIndex;
 }

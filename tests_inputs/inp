@@ -1,43 +1,45 @@
 # Molecule information
-MOLECULES 2but                   # Molecules to load
+MOLECULES 2but              # Molecules to load
 PRMTOP ligand.prmtop        # Parameter file
 INPCRD ligand.inpcrd        # Coordinate / Restart file
 RBFILE ligand.rb            # Rigid bodies definition file
 FLEXFILE ligand.flex        # Flexible bonds definition file
 OUTPUT_DIR temp
-
-# Simulation
-ROUNDS 10                   # MC steps (Acception-rejection steps)
-WORLDS TD                       # Regimen (IC, TD, MIX, RB, RBMIX)
 ROOTS 0
-SAMPLER HMC            # HMC or MC
-TIMESTEPS 0.007                # Timesteps to be used with regimens
-MDSTEPS  10  # Number of MD trial steps
-SAMPLES_PER_ROUND 1  # Number of MC trials within a mixing round
+ROOT_MOBILITY Free
+OUTPUT_DIR temp
+
+RUN_TYPE Normal
+ROUNDS 10                   # Usually 2000
+ROUNDS_TILL_REBLOCK 10
+WORLDS R1
+RANDOM_WORLD_ORDER FALSE
 REPRODUCIBLE FALSE
-SEED 0
+SEED 42
 
-# Thermodynamics
-THERMOSTAT Andersen        # Thermostat (HMC + Andersen = MD)
-TEMPERATURE_INI  1000      # Temperature for constant temperature simulations
-TEMPERATURE_FIN  1000      # Temperature for constant temperature simulations
-BOOST_TEMPERATURE  1000      # Temperature for constant temperature simulations
-FFSCALE AMBER        # Force field scale factors
-GBSA 1.0             # GBSA scale factor
+SAMPLER VV
+SAMPLES_PER_ROUND 1
 
-# Generalized coordinates related
-FIXMAN_POTENTIAL FALSE # Use Fixman potential
-FIXMAN_TORQUE TRUE          # Use Fixman torque
+TIMESTEPS 0.003
+MDSTEPS 10                  # Usually 40
+TEMPERATURE_FIN 300
+TEMPERATURE_INI 300
+THERMOSTAT Andersen
+FFSCALE AMBER
+GBSA 1.0
 
-# Output
-VISUAL TRUE                 # Use the visualizer
-#VISUAL FALSE                 # Use the visualizer
+FIXMAN_POTENTIAL TRUE
+FIXMAN_TORQUE TRUE
+
+BOOST_TEMPERATURE 600
+BOOST_MDSTEPS 1
+
 PRINT_FREQ 1
-WRITEPDBS 1      # Write pdbs
-GEOMETRY FALSE                # Calculate geometric features
+WRITEPDBS 1
+VISUAL FALSE
+
+GEOMETRY FALSE
 DISTANCE 0 1
 DIHEDRAL 0 1 2 3
-
-# Software specs
 THREADS 0
-OPENMM FALSE
+OPENMM TRUE
