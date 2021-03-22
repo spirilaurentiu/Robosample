@@ -145,6 +145,7 @@ World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
 	// Contact system
 	tracker = new ContactTrackerSubsystem(*compoundSystem);
 	contactForces = new CompliantContactSubsystem(*compoundSystem, *tracker);
+	//contactForces = new HuntCrossleyContact();
 	contactForces->setTrackDissipatedEnergy(true);
 	contactForces->setTransitionVelocity(1e-2);
 
@@ -255,7 +256,7 @@ void World::AddMolecule(
 void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
 {
 
-	SimTK::Real stiffness = 1e9;
+	SimTK::Real stiffness = 10000.0;
 	SimTK::Real dissipation = 0.0;
 	SimTK::Real staticFriction = 0.0;
 	SimTK::Real dynamicFriction = 0.0;
@@ -273,7 +274,7 @@ void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWid
 		//Transform()
 		, ContactSurface(
 			contactGeometry
-			, ContactMaterial( stiffness,  dissipation,  staticFriction,  dynamicFriction,  viscousFriction)
+			, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction)
 			, 1.0)
 	);
 
@@ -285,7 +286,7 @@ void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWid
 
 	//DecorativeMesh contactGeometryDeco(mesh);
 	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
-	matter->Ground().updBody().addDecoration(Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(1.0));
+	matter->Ground().updBody().addDecoration(Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5));
 
 }
 
@@ -352,10 +353,11 @@ const SimTK::State& World::addContacts(void)
 //		SimTK::MobilizedBodyIndex mbx = ((this->topologies)[i])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(0));
 //		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 //	}
-	const Real fK = 1e+9; // stiffness in pascals
-	const Real fDis = 0.0;    // to turn off dissipation
-	const Real fFac = 0.0;       // to turn off friction
-	const Real fVis = 0.0;    // to turn off viscous friction
+	const Real stiffness = 10000.0; // stiffness in pascals
+	const Real dissipation = 0.0;    // to turn off dissipation
+	SimTK::Real staticFriction = 0.0;
+	SimTK::Real dynamicFriction = 0.0;
+	SimTK::Real viscousFriction = 0.0;
 
 	int nofContactAtomIxs = 7;
 	int contAIxs[nofContactAtomIxs] = {0, 405, 3099, 1545, 3927, 5047, 2282};
@@ -369,56 +371,57 @@ const SimTK::State& World::addContacts(void)
 		ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 2));
 		DecorativeMesh deco(mesh.createPolygonalMesh());
 		mobod.updBody().addDecoration(Transform(), deco.setColor(Cyan).setOpacity(.6));
-		mobod.updBody().addContactSurface(Transform(), ContactSurface(mesh, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
-
-		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[1]));
-		SimTK::MobilizedBody& mobod1 = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh1(PolygonalMesh::createSphereMesh(0.3, 2));
-		DecorativeMesh deco1(mesh1.createPolygonalMesh());
-		mobod1.updBody().addDecoration(Transform(), deco1.setColor(Cyan).setOpacity(.6));
-		mobod1.updBody().addContactSurface(Transform(), ContactSurface(mesh1, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
-
-		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[2]));
-		SimTK::MobilizedBody& mobod2 = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh2(PolygonalMesh::createSphereMesh(0.3, 2));
-		DecorativeMesh deco2(mesh2.createPolygonalMesh());
-		mobod2.updBody().addDecoration(Transform(), deco2.setColor(Cyan).setOpacity(.6));
-		mobod2.updBody().addContactSurface(Transform(), ContactSurface(mesh2, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
-
-		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[3]));
-		SimTK::MobilizedBody& mobod3 = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh3(PolygonalMesh::createSphereMesh(0.3, 2));
-		DecorativeMesh deco3(mesh3.createPolygonalMesh());
-		mobod3.updBody().addDecoration(Transform(), deco3.setColor(Cyan).setOpacity(.6));
-		mobod3.updBody().addContactSurface(Transform(), ContactSurface(mesh3, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
-
-		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[4]));
-		SimTK::MobilizedBody& mobod4 = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh4(PolygonalMesh::createSphereMesh(0.3, 2));
-		DecorativeMesh deco4(mesh4.createPolygonalMesh());
-		mobod4.updBody().addDecoration(Transform(), deco4.setColor(Cyan).setOpacity(.6));
-		mobod4.updBody().addContactSurface(Transform(), ContactSurface(mesh4, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
-
-		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[5]));
-		SimTK::MobilizedBody& mobod5 = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh5(PolygonalMesh::createSphereMesh(0.3, 2));
-		DecorativeMesh deco5(mesh5.createPolygonalMesh());
-		mobod5.updBody().addDecoration(Transform(), deco5.setColor(Cyan).setOpacity(.6));
-		mobod5.updBody().addContactSurface(Transform(), ContactSurface(mesh5, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
-
-		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[6]));
-		SimTK::MobilizedBody& mobod6 = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh6(PolygonalMesh::createSphereMesh(0.3, 2));
-		DecorativeMesh deco6(mesh6.createPolygonalMesh());
-		mobod6.updBody().addDecoration(Transform(), deco6.setColor(Cyan).setOpacity(.6));
-		mobod6.updBody().addContactSurface(Transform(), ContactSurface(mesh6, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
+		mobod.updBody().addContactSurface(Transform(), ContactSurface(mesh, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
 
 		mbx = ((this->topologies)[1])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(0));
 		SimTK::MobilizedBody& mobod7 = matter->updMobilizedBody(mbx);
 		ContactGeometry::TriangleMesh mesh7(PolygonalMesh::createSphereMesh(0.3, 2));
 		DecorativeMesh deco7(mesh7.createPolygonalMesh());
 		mobod7.updBody().addDecoration(Transform(), deco7.setColor(Cyan).setOpacity(.6));
-		mobod7.updBody().addContactSurface(Transform(), ContactSurface(mesh7, ContactMaterial(fK, fDis, fFac, fFac, fVis), .2));
+		mobod7.updBody().addContactSurface(Transform(), ContactSurface(mesh7, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
+/*
+		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[1]));
+		SimTK::MobilizedBody& mobod1 = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh1(PolygonalMesh::createSphereMesh(0.3, 2));
+		DecorativeMesh deco1(mesh1.createPolygonalMesh());
+		mobod1.updBody().addDecoration(Transform(), deco1.setColor(Cyan).setOpacity(.6));
+		mobod1.updBody().addContactSurface(Transform(), ContactSurface(mesh1, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
+
+		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[2]));
+		SimTK::MobilizedBody& mobod2 = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh2(PolygonalMesh::createSphereMesh(0.3, 2));
+		DecorativeMesh deco2(mesh2.createPolygonalMesh());
+		mobod2.updBody().addDecoration(Transform(), deco2.setColor(Cyan).setOpacity(.6));
+		mobod2.updBody().addContactSurface(Transform(), ContactSurface(mesh2, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
+
+		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[3]));
+		SimTK::MobilizedBody& mobod3 = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh3(PolygonalMesh::createSphereMesh(0.3, 2));
+		DecorativeMesh deco3(mesh3.createPolygonalMesh());
+		mobod3.updBody().addDecoration(Transform(), deco3.setColor(Cyan).setOpacity(.6));
+		mobod3.updBody().addContactSurface(Transform(), ContactSurface(mesh3, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
+
+		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[4]));
+		SimTK::MobilizedBody& mobod4 = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh4(PolygonalMesh::createSphereMesh(0.3, 2));
+		DecorativeMesh deco4(mesh4.createPolygonalMesh());
+		mobod4.updBody().addDecoration(Transform(), deco4.setColor(Cyan).setOpacity(.6));
+		mobod4.updBody().addContactSurface(Transform(), ContactSurface(mesh4, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
+
+		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[5]));
+		SimTK::MobilizedBody& mobod5 = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh5(PolygonalMesh::createSphereMesh(0.3, 2));
+		DecorativeMesh deco5(mesh5.createPolygonalMesh());
+		mobod5.updBody().addDecoration(Transform(), deco5.setColor(Cyan).setOpacity(.6));
+		mobod5.updBody().addContactSurface(Transform(), ContactSurface(mesh5, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
+
+		mbx = ((this->topologies)[0])->getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(contAIxs[6]));
+		SimTK::MobilizedBody& mobod6 = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh6(PolygonalMesh::createSphereMesh(0.3, 2));
+		DecorativeMesh deco6(mesh6.createPolygonalMesh());
+		mobod6.updBody().addDecoration(Transform(), deco6.setColor(Cyan).setOpacity(.6));
+		mobod6.updBody().addContactSurface(Transform(), ContactSurface(mesh6, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
+*/
 
 
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
