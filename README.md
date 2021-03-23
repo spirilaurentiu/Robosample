@@ -4,7 +4,7 @@
 Install the dependencies:
 ```
 sudo apt-get update
-sudo apt-get install cmake gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev
+sudo apt-get install g++ cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev
 ```
 
 Add the following to `LD_LIBRARY_PATH`:
@@ -47,7 +47,7 @@ git checkout experimental_cpp_latest
 ```
 
 ## Building Robosample
-Run `build_debug.sh` or `build_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`.
+Run `build_debug.sh` or `build_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`. **Do not run as sudo.**
 ```
 bash build_release.sh
 ```

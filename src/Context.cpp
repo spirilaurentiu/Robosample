@@ -83,6 +83,7 @@ Context::~Context(){
     // Delete each world
     for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
          delete worlds[worldIx];
+         worlds[worldIx] = nullptr;
     }
     worlds.clear();
     worldIndexes.clear();
@@ -107,6 +108,7 @@ Context::~Context(){
 
     fclose(logFile);
     delete buffer;
+    buffer = nullptr;
  
 }
 
