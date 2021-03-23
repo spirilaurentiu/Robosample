@@ -139,10 +139,14 @@ set(LIBGMOLMODEL_SRC
 
 include_directories(../include/gmolmodel)
 
-add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
-add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
-add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
-add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+        add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
+        add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
+ELSE()
+        add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
+        add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
+ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
+
 add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
 
 #simmain must be refactor since it contains mmtk data types and current version do not make use of mmtk anymore
