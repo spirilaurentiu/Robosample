@@ -40,6 +40,8 @@ Sampler::Sampler(SimTK::CompoundSystem *argCompoundSystem,
 	this->forces = argForces;
 	this->timeStepper = argTimeStepper;
 	this->system = &(matter->getSystem());
+
+	this->thermostat = ThermostatName::NONE;
 }
 
 // Destructor

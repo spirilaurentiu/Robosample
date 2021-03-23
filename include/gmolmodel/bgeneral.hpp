@@ -255,7 +255,7 @@ std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V);
  * Thermodynamics
  */
 
-enum ThermostatName { // Thermostats
+enum class ThermostatName : int { // Thermostats
 	NONE,
 	ANDERSEN,
 	BERENDSEN,

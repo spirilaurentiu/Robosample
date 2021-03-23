@@ -814,15 +814,14 @@ SimTK::Real HMCSampler::MHAcceptProbability(SimTK::State& someState,
 /** Acception rejection step **/
 bool HMCSampler::accRejStep(SimTK::State& someState){
 
-	SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-
 	// Decide and get a new sample
-	if ( getThermostat() == ANDERSEN ){ // MD with Andersen thermostat
+	if ( getThermostat() == ThermostatName::ANDERSEN ){ // MD with Andersen thermostat
 		this->acc = true;
 		std::cout << "\tsample accepted (always with andersen thermostat)" << std::endl;
-		update(someState);
+		// update(someState); // smth is broken in here
 	}else{ // Apply Metropolis-Hastings correction
-		if ( (proposeExceptionCaught == false) && (!std::isnan(pe_n)) ){ 
+		if (proposeExceptionCaught == false && !std::isnan(pe_n)) { 
+			const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 			if(rand_no < MHAcceptProbability(someState, etot_proposed, etot_n)){ 
 				this->acc = true;
 				std::cout << "\tsample accepted" << std::endl;
@@ -835,6 +834,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState){
 		}
 	}
 
+	return this->acc;
 }
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo
@@ -879,9 +879,9 @@ compound to the appropriate conformation wether it accepted or not. **/
 void HMCSampler::update(SimTK::State& someState)
 {
 	setSetConfigurationAndEnergiesToNew(someState); 
-        ++acceptedSteps;
-        acceptedStepsBuffer.push_back(1);
-        acceptedStepsBuffer.pop_front();
+    ++acceptedSteps;
+    acceptedStepsBuffer.push_back(1);
+    acceptedStepsBuffer.pop_front();
 }
 
 /** Push Cartesian coordinates into R vector stored in Sampler.
@@ -896,8 +896,12 @@ int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 		}
 	}
 
-	// Calculate dR		
-	if(R.size() >= 2 * ndofs) {
+	if(R.size() >= static_cast<std::size_t>(2 * ndofs)) {
+		// for some weird reason, g++9.2 always evaluates the first if to true (45 >= 90)
+		if(R.size() >= static_cast<std::size_t>(2 * ndofs)) {
+			return -1;
+		}
+
 		for(unsigned int j = 0; j < ndofs; j++){
 			dR[j] = R[j + ndofs] - R[j];
 		}
@@ -911,7 +915,7 @@ int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 
 		// If stuff breaks, look up for the original code. This also compacts memory
 		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
-		std::vector<decltype(R)::value_type>(R.begin()+ndofs, R.end()).swap(R);
+		std::vector<decltype(R)::value_type>(R.begin() + ndofs, R.end()).swap(R);
 	}
 
 }
@@ -930,6 +934,11 @@ int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 
 	// Calculate dRdot		
 	if(Rdot.size() >= static_cast<size_t>(2 * ndofs)) {
+		// for some weird reason, g++9.2 always evaluates the first if to true (45 >= 90)
+		if(Rdot.size() >= static_cast<size_t>(2 * ndofs)) {
+			return -1;
+		}
+
 		for(int j = 0; j < ndofs; j++){
 			dRdot[j] = Rdot[j + ndofs] - Rdot[j];
 		}
@@ -943,7 +952,7 @@ int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 
 		// If stuff breaks, look up for the original code. This also compacts memory
 		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
-		std::vector<decltype(Rdot)::value_type>(Rdot.begin()+ndofs, Rdot.end()).swap(Rdot);
+		std::vector<decltype(Rdot)::value_type>(Rdot.begin() + ndofs, Rdot.end()).swap(Rdot);
 	}
 }
 
@@ -961,7 +970,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
 	QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
 	QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
-	
+
 	pushCoordinatesInR(someState);
 	pushVelocitiesInRdot(someState);
 

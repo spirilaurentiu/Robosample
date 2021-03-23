@@ -486,7 +486,7 @@ BaseSampler * World::addSampler(SamplerName samplerName)
                 compoundSystem, matter, topologies,
                 forceField, forces, ts
                 );
-        samplers.emplace_back(p);
+        samplers.push_back(p);
 
     }else if(samplerName == LAHMC){
 
@@ -494,7 +494,7 @@ BaseSampler * World::addSampler(SamplerName samplerName)
                 compoundSystem, matter, topologies,
                 forceField, forces, ts, 4
                 );
-        samplers.emplace_back(p);
+        samplers.push_back(p);
 
     }
 
@@ -854,6 +854,7 @@ World::~World(){
     }
     for(unsigned int i = 0; i < samplers.size(); i++){
         delete samplers[i];
+        samplers[i] = nullptr;
     }
 
     Xs.clear();

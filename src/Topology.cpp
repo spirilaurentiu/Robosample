@@ -896,12 +896,14 @@ SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State& someS
 {
 	//std::cout << "Topology::calcLogDetMBATMassesContribution masses: " ;
 	SimTK::Real result = 0.0;
-	for(auto atom: bAtomList){
+	for(const auto& atom: bAtomList){
 		//std::cout << 3.0 * std::log(atom.mass) << " " ;
 		//std::cout << atom.mass << " " ;
-		result = result + (3.0 * std::log(atom.mass));
+		result += 3.0 * std::log(atom.mass);
 	}
 	//std::cout << std::endl;
+
+	return result;
 }
 
 SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)

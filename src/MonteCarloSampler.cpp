@@ -500,7 +500,7 @@ void MonteCarloSampler::update(SimTK::State& someState){
 // Get the potential energy from an external source as far as the sampler
 // is concerned - OPENMM has to be inserted here
 SimTK::Real MonteCarloSampler::getPEFromEvaluator(SimTK::State& someState){
-    if ( getThermostat() == ANDERSEN ){
+    if ( getThermostat() == ThermostatName::ANDERSEN ){
         return forces->getMultibodySystem().calcPotentialEnergy(someState);
         //return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
     }else{
@@ -539,15 +539,15 @@ void MonteCarloSampler::setThermostat(std::string thermoName){
     std::transform(thermoName.begin(), thermoName.end(), thermoName.begin(), ::tolower);
 
     if(thermoName == "none"){
-        this->thermostat = NONE;
+        this->thermostat = ThermostatName::NONE;
     }else if(thermoName == "andersen"){
-        this->thermostat = ANDERSEN;
+        this->thermostat = ThermostatName::ANDERSEN;
     }else if(thermoName == "berendsen"){
-        this->thermostat = BERENDSEN;
+        this->thermostat = ThermostatName::BERENDSEN;
     }else if(thermoName == "langevin"){
-        this->thermostat = LANGEVIN;
+        this->thermostat = ThermostatName::LANGEVIN;
     }else if(thermoName == "nose_hoover"){
-        this->thermostat = NOSE_HOOVER;
+        this->thermostat = ThermostatName::NOSE_HOOVER;
     }else{
         std::cerr << "Invalid argument: " << thermoName << '\n';
     }

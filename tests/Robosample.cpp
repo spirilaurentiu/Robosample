@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 	SetupReader setupReader(argv[1]);
 	setupReader.dump(true);
 
-	const unsigned int nofWorlds = setupReader.get("WORLDS").size();
+	const std::size_t nofWorlds = setupReader.get("WORLDS").size();
 	std::cout << "Robosample nofWorlds " << nofWorlds << std::endl;
 
 	// Create pdbs directory if necessary
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 //@    // Request threads
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		context.setNumThreadsRequested(worldIx,
-				std::stod(setupReader.get("THREADS")[worldIx]));
+				std::stoi(setupReader.get("THREADS")[worldIx]));
 	}
 
 	// Print the number of threads we got back
@@ -115,9 +115,9 @@ int main(int argc, char **argv)
 	}
 //@
 	// Add filenames to Context filenames vectors
-	unsigned int nofMols = setupReader.get("MOLECULES").size();
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	std::size_t nofMols = setupReader.get("MOLECULES").size();
+	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for(std::size_t molIx = 0; molIx < nofMols; molIx++){
 
 			context.loadTopologyFile( worldIx, molIx,
 					setupReader.get("MOLECULES")[molIx] + std::string("/")
@@ -219,16 +219,16 @@ int main(int argc, char **argv)
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		if(setupReader.get("SAMPLER")[worldIx] == "VV"){
 			BaseSampler *p = context.addSampler(worldIx, HMC);
-			pHMC(p)->setThermostat(ANDERSEN);
+			pHMC(p)->setThermostat(ThermostatName::ANDERSEN);
 		}else if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
 			BaseSampler *p = context.addSampler(worldIx, HMC);
-			pHMC(p)->setThermostat(NONE);
+			pHMC(p)->setThermostat(ThermostatName::NONE);
 		}else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
 			BaseSampler *p = context.addSampler(worldIx, LAHMC);
-			pLAHMC(p)->setThermostat(NONE);
+			pLAHMC(p)->setThermostat(ThermostatName::NONE);
 		}else{
 			BaseSampler *p = context.addSampler(worldIx, LAHMC);
-			pLAHMC(p)->setThermostat(NONE);
+			pLAHMC(p)->setThermostat(ThermostatName::NONE);
 		}
 	}
 
@@ -241,7 +241,7 @@ int main(int argc, char **argv)
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
 			// Set timesteps
-			context.setTimestep(worldIx, samplerIx, std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+			context.setTimestep(worldIx, samplerIx, std::stof(setupReader.get("TIMESTEPS")[worldIx]));
 
 			// Set thermostats
 			//pMC(context.updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			std::cout << "After setThermo world " << worldIx << " sampler " << samplerIx << "getThermostat: " ;
-			std::cout << pMC(context.updWorld(worldIx)->updSampler(samplerIx))->getThermostat() ;
+			std::cout << static_cast<int>(pMC(context.updWorld(worldIx)->updSampler(samplerIx))->getThermostat()) ;
 			std::cout << std::endl;
 		}
 	}
@@ -418,9 +418,9 @@ int main(int argc, char **argv)
 	// Load/store Mobilized bodies joint types
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-			SimTK::State& advancedState = (context.updWorld(worldIx))->integ->updAdvancedState();
+			SimTK::State& curAvancedState = (context.updWorld(worldIx))->integ->updAdvancedState();
 			std::cout << "Loading mbx2mobility" << std::endl;
-			(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(advancedState);
+			(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(curAvancedState);
 		}
 	}
 

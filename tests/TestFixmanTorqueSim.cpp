@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 	(pHMC(pSampler))->setTimestep(timestep);
 
 	// Set thermostats
-	pMC(pSampler)->setThermostat(ANDERSEN);
+	pMC(pSampler)->setThermostat(ThermostatName::ANDERSEN);
 	pHMC(pSampler)->setBoostTemperature(1);
 	pHMC(pSampler)->setBoostMDSteps(1);
 

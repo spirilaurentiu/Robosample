@@ -474,15 +474,15 @@ void ConformationalSearch::setThermostat(std::string argThermostat){
     try{
 
         if(_thermostat == "none"){
-            this->thermostat = NONE;
+            this->thermostat = ThermostatName::NONE;
         }else if(_thermostat == "andersen"){
-            this->thermostat = ANDERSEN;
+            this->thermostat = ThermostatName::ANDERSEN;
         }else if(_thermostat == "berendsen"){
-            this->thermostat = BERENDSEN;
+            this->thermostat = ThermostatName::BERENDSEN;
         }else if(_thermostat == "langevin"){
-            this->thermostat = LANGEVIN;
+            this->thermostat = ThermostatName::LANGEVIN;
         }else if(_thermostat == "nose_hoover"){
-            this->thermostat = NOSE_HOOVER;
+            this->thermostat = ThermostatName::NOSE_HOOVER;
         }else{
             throw std::invalid_argument("Thermostat");
         }
@@ -505,15 +505,15 @@ void ConformationalSearch::setThermostat(const char *argThermostat){
     try{
 
         if(_thermostat == "none"){
-            this->thermostat = NONE;
+            this->thermostat = ThermostatName::NONE;
         }else if(_thermostat == "andersen"){
-            this->thermostat = ANDERSEN;
+            this->thermostat = ThermostatName::ANDERSEN;
         }else if(_thermostat == "berendsen"){
-            this->thermostat = BERENDSEN;
+            this->thermostat = ThermostatName::BERENDSEN;
         }else if(_thermostat == "langevin"){
-            this->thermostat = LANGEVIN;
+            this->thermostat = ThermostatName::LANGEVIN;
         }else if(_thermostat == "nose_hoover"){
-            this->thermostat = NOSE_HOOVER;
+            this->thermostat = ThermostatName::NOSE_HOOVER;
         }else{
             throw std::invalid_argument("Thermostat");
         }
