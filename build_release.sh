@@ -72,3 +72,6 @@ sudo /sbin/ldconfig
 cp -ri ../tests_inputs/* .
 mkdir temp
 mkdir temp/pdbs
+
+# add tests
+cp ../tests/test-memory.sh test-memory.sh
