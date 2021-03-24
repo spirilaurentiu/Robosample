@@ -91,8 +91,8 @@ nofParamSets = nofSeeds // 3
 seeds = np.array(np.array_split(np.array([int(seed) for seed in args.FNSeeds]) , nofParamSets))
 print(seeds)
 
-runningMean = np.empty((3990))
-runningVar = np.empty((3990))
+runningData = np.empty((3990))
+runningStd = np.empty((3990))
 TA = []
 fignum = -1
 if "traj" in args.analyze:
@@ -143,19 +143,15 @@ if "traj" in args.analyze:
 	nofSimsPerParamSet = int(data.shape[0] / nofParamSets)
 	print("There are", nofSimsPerParamSet, "simulations per parameter set.")
 	runningBias = np.empty(data.shape)
-	runningMean = np.empty(data.shape)
-	runningVar = np.empty(data.shape)
+	runningData = np.empty(data.shape)
+	runningStd = np.empty(data.shape)
 	print("nofParamSets", nofParamSets)
 	print("data.shape", data.shape)
 	bias = np.empty((nofParamSets, data.shape[1]))
 	mofm = np.empty((nofParamSets, data.shape[1]))
-	vofm = np.empty((nofParamSets, data.shape[1]))
 	sofm = np.empty((nofParamSets, data.shape[1]))
-	MSE = np.empty((nofParamSets, data.shape[1]))
 
 	# Get the true value estimate (last average of the longest simulations)
-
-	# Get the latest of each type
 	lastValues = []
 	for datumi in range(data.shape[0]):
 		if not np.isnan(data[datumi][-1]):
@@ -173,22 +169,20 @@ if "traj" in args.analyze:
 			for simi in paramSetSimsRange:
 				# Make sure the current frame is not empty
 				if data[simi, framei] != None:
-					runningMean[simi, framei] = np.mean(data[simi, 0:framei+1])
-					runningBias[simi, framei] = (runningMean[simi, framei] - trueValueEst)
-					runningVar[ simi, framei] = np.var(data[simi, 0:framei+1])
+					runningData[simi, framei] = data[simi, framei]
+					runningBias[simi, framei] = (data[simi, framei] - trueValueEst)**2
+					runningStd[ simi, framei] = np.std(data[simi, 0:framei+1])
 		
-			#print("runningMean.shape", runningMean.shape)
+			#print("runningData.shape", runningData.shape)
 			# Choose includedSims
 			#includedSims = paramSetSimsRange
 			includedSims = []
 			for simi in paramSetSimsRange:
 				if data[simi, framei] != None:
 					includedSims.append(simi)
-			mofm[paramSeti, framei] = np.mean(runningMean[includedSims, framei])
-			vofm[paramSeti, framei] = np.var(runningMean[includedSims, framei])
-			bias[paramSeti, framei] = mofm[paramSeti, framei] - trueValueEst
-			sofm[paramSeti, framei] = np.std(runningMean[includedSims, framei])
-			MSE[paramSeti, framei] = vofm[paramSeti, framei] + (bias[paramSeti, framei])**2
+			bias[paramSeti, framei] = np.mean(runningBias[includedSims, framei])
+			mofm[paramSeti, framei] = np.mean(runningData[includedSims, framei])
+			sofm[paramSeti, framei] = np.std(runningData[includedSims, framei])
 
 
 	print("Plotting running means and stds")
@@ -197,22 +191,22 @@ if "traj" in args.analyze:
 		startSim = paramSeti * nofSimsPerParamSet
 		for simi in range(startSim, nofSimsPerParamSet + startSim):
 
-			X = range(0, runningMean.shape[1])
-			Y = runningMean[simi]
+			X = range(0, runningData.shape[1])
+			Y = runningData[simi]
 			axs[0].plot(X, Y, color = colors[paramSeti])
 			axs[0].set_title('Running Means ' + args.molName)
 
-			#Y = data[simi]
-			Y = MSE[paramSeti]
-			axs[1].plot(X, Y, color = colors[paramSeti])
-			axs[1].set_title('MSE')
+			#Y = runningBias[simi]
+			#Y = bias[paramSeti]
+			#axs[1].plot(X, Y, color = colors[paramSeti])
+			#axs[1].set_title('Running Error')
 
-			#Y = mofm[paramSeti]
-			#Yerr = sofm[paramSeti]
-			##Yerr = (sofm[paramSeti])**2 + (bias[paramSeti])**2
-			#axs[1].errorbar(X, Y, yerr=Yerr, color = colors[paramSeti], errorevery = 100, elinewidth = 0.5)
-			#axs[1].set_title('Std of Means ' + args.molName)
-			#axs[1].legend()
+			Y = mofm[paramSeti]
+			Yerr = sofm[paramSeti]
+			#Yerr = (sofm[paramSeti])**2 + (bias[paramSeti])**2
+			axs[1].errorbar(X, Y, yerr=Yerr, color = colors[paramSeti], errorevery = 100, elinewidth = 0.5)
+			axs[1].set_title('Std of Means ' + args.molName)
+			axs[1].legend()
 
 			#Yerr = 
 			#axs[1, 0].errorbar(X, Y, yerr=Yerr, label=str(paramSeti))

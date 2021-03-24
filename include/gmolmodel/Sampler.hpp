@@ -12,6 +12,7 @@
 
 class Topology;
 
+// TODO: implement getCompoundSystem
 class Sampler
 {
 public:

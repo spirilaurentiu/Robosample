@@ -770,6 +770,9 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 
     // Get new potential energy
     pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+    // TODO: replace with the following after checking is the same thing
+    //pe_n = compoundSystem->calcPotentialEnergy(someState);
+
     logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
 
     // Calculate total energy

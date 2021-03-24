@@ -79,12 +79,19 @@ public:
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecule(readAmberInput *amberReader, std::string rbFN, std::string flexFN, std::string regimenSpec, std::string argRoot);
 
+	/** Add a membrane represented by a contact surface **/
+	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution);
+
 	/** Get the number of molecules **/
 	int getNofMolecules();
  
 	/** Calls CompoundSystem.modelCompounds and realizes Topology 
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
+
+	// BEGIN Try contacts
+	const SimTK::State& addContacts(void);
+	// END Try contacts
 
 	const SimTK::State& realizeTopology(void);
 
@@ -264,6 +271,13 @@ public:
 	SimTK::VerletIntegrator *integ;
 	SimTK::TimeStepper *ts;
 	std::vector<BaseSampler *> samplers;
+
+	// Contact related
+	ContactTrackerSubsystem  *tracker;
+	CompliantContactSubsystem *contactForces;
+        ContactCliqueId clique1;
+	MobilizedBody::Weld *membrane;
+	Body::Rigid *memBody;
 
 	bool _useFixmanTorque;
 	//...............
