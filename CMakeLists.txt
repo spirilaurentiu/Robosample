@@ -25,12 +25,13 @@ ENDIF(ROBO_PGO MATCHES Profile)
 
 
 # set up compilation flags
-set( CMAKE_CXX_FLAGS "-std=c++17 -Wall -Wextra -Wshadow -Wdouble-promotion -Wformat=2 -Wformat-truncation -Wundef -Wconversion -Wunused-parameter -fPIC -g" )
+set( ROBO_WARNINGS "-Wall -Wextra -Wpedantic -Wshadow -Wdouble-promotion -Wformat=2 -Wformat-truncation -Wundef -Wconversion -Wunused-parameter" )
+set( CMAKE_CXX_FLAGS "-std=c++17 -fPIC -g ${ROBO_WARNINGS}" )
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )
 ELSE()
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3 -flto -march=native ${PGO}" )
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3 -march=native -flto  ${PGO}" )
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 add_subdirectory(src)

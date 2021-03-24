@@ -130,13 +130,13 @@ int main(int argc, char **argv)
     boost::random::mt19937 randomEngine = boost::random::mt19937();
     boost::random::uniform_real_distribution<double> uniformRealDistribution_0_2pi =
             boost::random::uniform_real_distribution<double>(SimTK::Zero, 2*SimTK::Pi);
-    // boost::random::uniform_real_distribution<double> uniformRealDistribution_mpi_pi =
-    //         boost::random::uniform_real_distribution<double>((-1)*SimTK::Pi, SimTK::Pi);
-    // boost::random::uniform_real_distribution<double> uniformRealDistribution =
-    //         boost::random::uniform_real_distribution<double>(SimTK::Zero, SimTK::One);
-    // boost::random::uniform_real_distribution<double> uniformRealDistribution_m1_1 =
-    //         boost::random::uniform_real_distribution<double>((-1)*SimTK::One, SimTK::One);
-    // boost::normal_distribution<> gaurand = boost::normal_distribution<>(0.0, 1.0);
+    boost::random::uniform_real_distribution<double> uniformRealDistribution_mpi_pi =
+            boost::random::uniform_real_distribution<double>((-1)*SimTK::Pi, SimTK::Pi);
+    boost::random::uniform_real_distribution<double> uniformRealDistribution =
+            boost::random::uniform_real_distribution<double>(SimTK::Zero, SimTK::One);
+    boost::random::uniform_real_distribution<double> uniformRealDistribution_m1_1 =
+            boost::random::uniform_real_distribution<double>((-1)*SimTK::One, SimTK::One);
+    boost::normal_distribution<> gaurand = boost::normal_distribution<>(0.0, 1.0);
 
 	// Sampler variables
 	Real pe_o, pe_set, pe_n, fix_o, fix_n, fix_set;
