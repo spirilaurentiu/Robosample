@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 	SetupReader setupReader(argv[1]);
 	setupReader.dump(true);
 
-	const std::size_t nofWorlds = setupReader.get("WORLDS").size();
+	const int nofWorlds = static_cast<int>(setupReader.get("WORLDS").size());
 	std::cout << "Robosample nofWorlds " << nofWorlds << std::endl;
 
 	// Create pdbs directory if necessary
@@ -115,9 +115,9 @@ int main(int argc, char **argv)
 	}
 //@
 	// Add filenames to Context filenames vectors
-	std::size_t nofMols = setupReader.get("MOLECULES").size();
-	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for(std::size_t molIx = 0; molIx < nofMols; molIx++){
+	int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
+	for(int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for(int molIx = 0; molIx < nofMols; molIx++){
 
 			context.loadTopologyFile( worldIx, molIx,
 					setupReader.get("MOLECULES")[molIx] + std::string("/")
@@ -332,9 +332,9 @@ int main(int argc, char **argv)
 	// Get atom indeces for geometry calculations
 	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
 		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-			int distanceIx[setupReader.get("DISTANCE").size()];
+			std::vector<int> distanceIx;
 			for(unsigned int i = 0; i < setupReader.get("DISTANCE").size(); i++){
-				distanceIx[i] = atoi(setupReader.get("DISTANCE")[i].c_str());
+				distanceIx.push_back(atoi(setupReader.get("DISTANCE")[i].c_str()));
 			}
 			// Get distances
 			for(unsigned int ai = 0; ai < setupReader.get("DISTANCE").size() / 2; ai++){
@@ -342,9 +342,9 @@ int main(int argc, char **argv)
 			}
 	
 			// Get dihedrals indeces
-			int dihedralIx[setupReader.get("DIHEDRAL").size()];
+			std::vector<int> dihedralIx;
 			for(unsigned int i = 0; i < setupReader.get("DIHEDRAL").size(); i++){
-				dihedralIx[i] = atoi(setupReader.get("DIHEDRAL")[i].c_str());
+				dihedralIx.push_back(atoi(setupReader.get("DIHEDRAL")[i].c_str()));
 			}
 			// Get dihedrals
 			for(unsigned int ai = 0; ai < setupReader.get("DIHEDRAL").size() / 4; ai++){

@@ -81,7 +81,7 @@ public:
     void setNofMDStepsPerSample(int whichWorld, int whichSampler, int MDStepsPerSample);
 
     // If HMC, get/set timestep forMD
-    const float getTimestep(int whichWorld, int whichSampler);
+    float getTimestep(int whichWorld, int whichSampler);
     void setTimestep(int whichWorld, int whichSampler, float timeStep);
 
     // Use Fixman torque as an additional force subsystem

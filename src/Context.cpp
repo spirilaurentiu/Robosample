@@ -316,7 +316,7 @@ void Context::setNofMDStepsPerSample(int whichWorld, int whichSampler, int MDSte
 }
 
 // If HMC, get/set timestep forMD
-const float Context::getTimestep(int whichWorld, int whichSampler)
+float Context::getTimestep(int whichWorld, int whichSampler)
 {
     return pHMC(worlds[whichWorld]->updSampler(whichSampler))->getTimeStepper()->getIntegrator().getPredictedNextStepSize();
 
