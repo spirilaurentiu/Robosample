@@ -142,12 +142,12 @@ include_directories(../include/gmolmodel)
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
         add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
         add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
-        add_executable(GMOLMODEL_test_d ${LIBGMOLMODEL_SRC} testMain.cpp )
 ELSE()
         add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
         add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
-        add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
+
+add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
 
 #simmain must be refactor since it contains mmtk data types and current version do not make use of mmtk anymore
 #PYTHON_ADD_MODULE(
@@ -175,7 +175,7 @@ ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
         message("Linking with debug libraries")
 
-        TARGET_LINK_LIBRARIES( GMOLMODEL_test_d
+        TARGET_LINK_LIBRARIES( GMOLMODEL_test
                 debug ${Simbody_LIBRARIES}
                 SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
                 ${BOOST_LIBRARIES}

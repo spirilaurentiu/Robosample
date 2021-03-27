@@ -439,18 +439,18 @@ void Topology::bAddAtomClasses(
 		bAtomList[i].setAtomClassIndex(aCIx);
 
 		// Define an AtomClass name
-		const char* atomClassName = (
+		std::string atomClassName =
 				//std::string("top") // restore MULMOL
 				name // del MULMOL 
 				+ resName
 				+ bAtomList[i].getFftype()
 				+ std::string("_")
-				+ std::to_string(bAtomList[i].getNumber()) ).c_str();
+				+ std::to_string(bAtomList[i].getNumber());
 
 		// Define an AtomClass (has info about van der Waals)
 		dumm.defineAtomClass(
 			aCIx,
-			atomClassName,
+			atomClassName.c_str(),
 			bAtomList[i].getAtomicNumber(), // int atomicNumber
 			bAtomList[i].getNBonds(), // expected valence
 			bAtomList[i].getVdwRadius() / 10.0, // nm

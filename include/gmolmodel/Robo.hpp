@@ -18,6 +18,7 @@
 #include <sstream>
 #include <cctype>
 #include <deque>
+#include <memory>
 
 #include <random> // FOR RANDOM BLOCKS
 #include<bits/stdc++.h> // FOR RANDOM bLOCKS
