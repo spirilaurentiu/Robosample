@@ -1,0 +1,15 @@
+
+source leaprc.protein.ff14SB
+set default PBRadii mbondi2
+
+system = loadpdb /home/eliza/namd/CCdomains/MLAmono/mlaA.pdb
+
+saveAmberParm system /home/eliza/namd/CCdomains/MLAmono/mlaA.prmtop /home/eliza/namd/CCdomains/MLAmono/mlaA.inpcrd
+
+saveMol2 system /home/eliza/namd/CCdomains/MLAmono/mlaA.mol2 0
+saveMol2 system /home/eliza/namd/CCdomains/MLAmono/mlaA.mol2.v1 1
+
+savepdb system /home/eliza/namd/CCdomains/MLAmono/mlaA_amber.pdb
+
+
+quit
