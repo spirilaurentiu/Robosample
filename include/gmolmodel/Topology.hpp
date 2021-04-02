@@ -126,8 +126,11 @@ public:
 			int argRoot
 	);
 
-	// Set flexibility according to an input file
+	// Set flexibility according to flexibility file
 	void setFlexibility(std::string argRegimen, std::string flexFN);
+
+	// Set scale factors for U entries according to flexibility file
+	void setUScaleFactorsToBonds(std::string flexFN);
 
 	// Get regimen keyword
 	std::string getRegimen();

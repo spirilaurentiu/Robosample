@@ -53,6 +53,7 @@ class bBond : public intpair{
   SimTK::Compound::BondIndex bondIndex;
   bool _isFirst;
   int myindex;
+  float uScaleFactor;
 
  public:
   bBond(void);
@@ -86,6 +87,11 @@ class bBond : public intpair{
   int isThisMe(int argFirst, int argSecond) const ;
   void setVisited(int);
   int isVisited(void);
+
+  float getUScaleFactor(void) const;
+  void setUScaleFactor(float);
+  void updUScaleFactor(float);
+
 };
 
 

@@ -160,7 +160,9 @@ void bBond::Print(void)
     std::cout << "i " << i << " j " << j << " mobility " << SimTK::BondMobility::Rigid
         << " inring " << inring << " ring_no " << ring_no
         << " ring_closing " << ring_closing 
-        << " visited " << visited << std::endl;
+        << " visited " << visited 
+        << " uScaleFactor " << uScaleFactor
+	<< std::endl;
 }
 
 // Return true if this is set as the first bond in Compound
@@ -213,4 +215,24 @@ int bBond::getIndex(void)
 {
     return myindex;
 }
+
+float bBond::getUScaleFactor(void) const
+{
+	return uScaleFactor;
+}
+
+void bBond::setUScaleFactor(float argUScaleFactor)
+{
+	uScaleFactor = argUScaleFactor;
+}
+
+void bBond::updUScaleFactor(float argUScaleFactor)
+{
+	uScaleFactor = argUScaleFactor;
+}
+
+
+
+
+
 

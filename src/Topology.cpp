@@ -1247,6 +1247,42 @@ std::string Topology::getRegimen(){
 	return this->regimen;
 }
 
+/** Set scale factors for U entries according to flexibility file **/
+void Topology::setUScaleFactorsToBonds(std::string flexFN)
+{
+	// 
+	std::string line;
+	std::ifstream F(flexFN);
+
+	while(F.good()){
+		std::getline(F, line);
+		//std::cout << "setUScaleFactors line " << line << std::endl;
+		if(!line.empty()){
+			if(line.at(0) == '#'){
+				continue;
+			}
+
+			std::istringstream iss(line);
+			std::string word;
+			std::vector<std::string> lineWords;
+
+			while(iss >> word){
+				lineWords.push_back(std::move(word));
+			}
+			if(lineWords.size() >= 4 ){
+				for(int i = 0; i < nbonds; i++){
+					if(bonds[i].isThisMe(std::stoi(lineWords[0]), std::stoi(lineWords[1])) ){
+						bonds[i].setUScaleFactor(std::stof(lineWords[3]));
+					}
+				}
+				
+			}
+		}
+	}
+
+}
+
+
 /** Set regimen according to input file **/
 void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 	
@@ -1330,7 +1366,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 				while(iss >> word){
 					lineWords.push_back(std::move(word));
 				}
-				if(lineWords.size() >= 2 ){
+				if(lineWords.size() >= 2 ){ // TODO: Check if it should be 3
 					for(int i = 0; i < nbonds; i++){
 						if(bonds[i].isThisMe(
 						    std::stoi(lineWords[0]), std::stoi(lineWords[1])) ){

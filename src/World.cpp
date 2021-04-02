@@ -230,6 +230,8 @@ void World::AddMolecule(
 	(topologies.back())->setFlexibility(regimenSpec, flexFN);
 	//(topologies.back())->PrintAtomList();
 
+	// Set generalized velocities scale factors 
+	(topologies.back())->setUScaleFactorsToBonds(flexFN);
 	// Print Molmodel types
 	//(topologies.back())->PrintMolmodelAndDuMMTypes(*forceField);
 
@@ -253,6 +255,76 @@ void World::AddMolecule(
 
 }
 
+/**  **/
+void World::setUScaleFactorsToMobods(void)
+{
+
+	for(const auto& Topology : topologies){
+		// Iterate bonds
+		std::vector<bSpecificAtom>&  Atoms = Topology->bAtomList;
+		//for(const auto& AtomList : Topology->bAtomList){
+		for(const auto& Bond : Topology->bonds){
+			SimTK::Compound::AtomIndex aIx1 = Atoms[Bond.i].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx2 = Atoms[Bond.j].getCompoundAtomIndex();
+
+			SimTK::MobilizedBodyIndex mbx1 = Topology->getAtomMobilizedBodyIndex(aIx1);
+			SimTK::MobilizedBodyIndex mbx2 = Topology->getAtomMobilizedBodyIndex(aIx2);
+
+			const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(mbx1);
+			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(mbx2);
+
+			int level1 = mobod1.getLevelInMultibodyTree();
+			int level2 = mobod2.getLevelInMultibodyTree();
+
+			if(level1 > level2){
+				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx1, Bond.getUScaleFactor()));
+			}else if(level2 > level1){
+				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx2, Bond.getUScaleFactor()));
+			}else{
+				if(Bond.getUScaleFactor() != 0){
+					std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n"; 
+				}
+			}
+
+
+		}
+	}
+/*
+	for ( unsigned int i = 0; i < this->topologies.size(); i++){
+		Topology * molecule = topologies[i];
+		bSpecificAtom *Atoms = molecule->bAtomList;
+		bBond *Bonds = molecule->bonds;
+
+		// Iterate bonds
+		for(int j = 0; j < molecule->nbonds; j++){
+			SimTK::Compound::AtomIndex aIx1 = Atoms[ Bonds[j].i ].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx2 = Atoms[ Bonds[j].j ].getCompoundAtomIndex();
+
+			SimTK::MobilizedBodyIndex mbx = molecule->getAtomMobilizedBodyIndex(aIx1);
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			Bonds[j].getUScaleFactor();
+		}
+
+		// Get parentship - use aIx2Mbx 
+		// Add entry to mbx2uScale
+	}
+*/
+}
+
+/** Get U scale factor for the mobilized body **/
+const float World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
+{
+	if(mbx2uScale.find(mbx) != mbx2uScale.end()){
+		return mbx2uScale.at(mbx);
+	}else{
+		std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
+		return 1;
+	}
+}
+//...............
+
+
+/**  **/
 void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
 {
 
@@ -611,7 +683,7 @@ BaseSampler * World::addSampler(SamplerName samplerName)
 	BaseSampler *p = NULL;
 	if(samplerName == HMC){
 
-        p = new HMCSampler(
+        p = new HMCSampler(this,
                 compoundSystem, matter, topologies,
                 forceField, forces, ts
                 );
@@ -619,7 +691,7 @@ BaseSampler * World::addSampler(SamplerName samplerName)
 
 	}else if(samplerName == LAHMC){
 
-        p = new LAHMCSampler(
+        p = new LAHMCSampler(this,
                 compoundSystem, matter, topologies,
                 forceField, forces, ts, 4
                 );

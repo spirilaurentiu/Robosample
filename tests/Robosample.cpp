@@ -154,6 +154,8 @@ int main(int argc, char **argv)
 		(context.updWorld(worldIx))->realizeTopology();
 	}
 
+	
+
 	// Membrane
 	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
 	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
@@ -188,6 +190,11 @@ int main(int argc, char **argv)
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 			(context.updWorld(worldIx))->addContacts();
 		}
+	}
+
+	// U Scale Factors
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(context.updWorld(worldIx))->setUScaleFactorsToMobods();
 	}
 
 	// Add Fixman torque (Additional ForceSubsystem) if required

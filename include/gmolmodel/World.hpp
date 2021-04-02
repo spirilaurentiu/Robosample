@@ -79,6 +79,9 @@ public:
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecule(readAmberInput *amberReader, std::string rbFN, std::string flexFN, std::string regimenSpec, std::string argRoot);
 
+	/** **/
+	void setUScaleFactorsToMobods(void);
+
 	/** Add a membrane represented by a contact surface **/
 	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution);
 
@@ -169,6 +172,10 @@ public:
 
 	/** Return true if the Fixman torque flag is set **/
 	bool isUsingFixmanTorque(void);
+	//...............
+
+	/** Get U scale factor for the mobilized body **/
+	const float getMobodUScaleFactor(SimTK::MobilizedBodyIndex& ) const;
 	//...............
 
 	//...................
@@ -305,6 +312,12 @@ public:
 	// --- Mixing data ---
 	int ownWorldIndex;
 	//...............
+
+private:
+	
+	// Maps a generalized velocity scale factor for every mobod
+	std::map< SimTK::MobilizedBodyIndex, float > mbx2uScale;
+
 
 };
 

@@ -9,7 +9,7 @@ Implementation of Sampler class. **/
 
 // Constructor
 
-Sampler::Sampler(SimTK::CompoundSystem *argCompoundSystem,
+Sampler::Sampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
                  SimTK::SimbodyMatterSubsystem *argMatter,
                  //Topology *argResidue,
 
@@ -20,6 +20,7 @@ Sampler::Sampler(SimTK::CompoundSystem *argCompoundSystem,
                  SimTK::GeneralForceSubsystem *argForces,
                  SimTK::TimeStepper *argTimeStepper)
 {
+	this->world = argWorld;
 	this->compoundSystem = argCompoundSystem;
 	this->matter = argMatter;
 

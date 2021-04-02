@@ -6,9 +6,10 @@ Implementation of HMCSampler class. **/
 // Includes to get the structure of additional classes
 
 #include "Topology.hpp"
+#include "World.hpp"
 
 //** Constructor **/
-HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
+HMCSampler::HMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::SimbodyMatterSubsystem *argMatter
 
                                      //,SimTK::Compound *argResidue
@@ -19,9 +20,9 @@ HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::TimeStepper *argTimeStepper
                                      )
     //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    : Sampler(argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+    : Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
     //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    MonteCarloSampler(argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+    MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 	this->useFixman = false;  
 	this->fix_n = this->fix_o = 0.0;
@@ -368,6 +369,45 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
     for (int i=0; i < nu; ++i){
         V[i] = gaurand(randomEngine);
     }
+
+    // RED ZONE
+    ////////
+    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        const int mnu = mobod.getNumU(someState);
+	const float scaleFactor = world->getMobodUScaleFactor(mbx);
+        std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
+	for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+        	std::cout << ' ' << int(uIx) ;
+		V[int(uIx)] *= scaleFactor;
+		
+        }
+        std::cout << '\n';
+    }
+
+/*
+    SimTK::Vector One(nu, 1.0);
+    float dotProduct = 0.0;
+    for (int i=0; i < nu; ++i){
+        dotProduct += (One[i] * V[i]);
+    }
+    float phi = std::acos(dotProduct  / (V.norm() * One.norm()) );
+
+    SimTK::Vector UScaleFactors(nu, 0.0);
+    for (int i=0; i < nu; ++i){
+        UScaleFactors[i] = i ;
+    }
+
+    dotProduct = 0.0;
+    for (int i=0; i < nu; ++i){
+        dotProduct += (UScaleFactors[i] * V[i]);
+    }
+    float psi = std::acos(dotProduct  / (V.norm() * UScaleFactors.norm()) );
+    std::cout << "RED ZONE " << phi << ' ' << psi << '\n';
+*/
+    // RED ZONE END
+
+
     matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
 
     SqrtMInvV *= (sqrtRT); // Set stddev according to temperature

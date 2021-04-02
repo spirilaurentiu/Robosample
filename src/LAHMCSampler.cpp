@@ -8,7 +8,7 @@ Implementation of LAHMCSampler class. **/
 #include "Topology.hpp"
 
 //** Constructor **/
-LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
+LAHMCSampler::LAHMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::SimbodyMatterSubsystem *argMatter
 
                                      //,SimTK::Compound *argResidue
@@ -20,11 +20,11 @@ LAHMCSampler::LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
 				     ,unsigned int Kext
                                      )
     //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    : Sampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
+    : Sampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
     //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
     //HMCSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    MonteCarloSampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
-    HMCSampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
+    MonteCarloSampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
+    HMCSampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  
     this->fix_n = this->fix_o = 0.0;

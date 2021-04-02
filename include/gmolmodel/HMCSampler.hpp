@@ -36,7 +36,7 @@ friend class Context;
 public:
 
 	/** Constructor **/
-	HMCSampler(SimTK::CompoundSystem *argCompoundSystem
+	HMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
 			,SimTK::SimbodyMatterSubsystem *argMatter
 
 			//,SimTK::Compound *argResidue

@@ -13,7 +13,7 @@ class GirolamiSampler : public HMCSampler
 public:
 
     // Constructor
-    GirolamiSampler(SimTK::CompoundSystem *argCompoundSystem,
+    GirolamiSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
                                  SimTK::SimbodyMatterSubsystem *argMatter,
 
                                  //SimTK::Compound *argResidue,

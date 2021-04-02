@@ -33,7 +33,7 @@ friend class Context;
 public:
 
     /** Constructor **/
-    LAHMCSampler(SimTK::CompoundSystem *argCompoundSystem
+    LAHMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
                                  ,SimTK::SimbodyMatterSubsystem *argMatter
 
                                  //,SimTK::Compound *argResidue
