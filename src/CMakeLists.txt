@@ -135,19 +135,21 @@ set(LIBGMOLMODEL_SRC
         format/dcdplugin.c
         format/PDBObject.cpp
         format/TrajectoryObject.cpp
+        Robosample.cpp
 	)
 
 include_directories(../include/gmolmodel)
 
-IF(CMAKE_BUILD_TYPE MATCHES Debug)
-        add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
-        add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
-ELSE()
-        add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
-        add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
-ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
+# IF(CMAKE_BUILD_TYPE MATCHES Debug)
+#         add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
+#         add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
+# ELSE()
+#         add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
+#         add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
+# ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
-add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
+# add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
+add_executable(GMOLMODEL_robo ${LIBGMOLMODEL_SRC} Robosample.cpp )
 
 #simmain must be refactor since it contains mmtk data types and current version do not make use of mmtk anymore
 #PYTHON_ADD_MODULE(
@@ -173,65 +175,73 @@ add_executable(GMOLMODEL_test ${LIBGMOLMODEL_SRC} testMain.cpp )
 #
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
-        message("Linking with debug libraries")
+        # message("Linking with debug libraries")
 
-        TARGET_LINK_LIBRARIES( GMOLMODEL_test
-                debug ${Simbody_LIBRARIES}
-                SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-                ${BOOST_LIBRARIES}
-                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
-		${OpenMM_LIBRARIES}
-                m )
-                #${mmtk_libs} )
+        # TARGET_LINK_LIBRARIES( GMOLMODEL_test
+        #         debug ${Simbody_LIBRARIES}
+        #         SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+        #         ${BOOST_LIBRARIES}
+        #         #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
+	# 	${OpenMM_LIBRARIES}
+        #         m )
+        #         #${mmtk_libs} )
 
-        # link Simbody libraries
-        TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic_d
-		debug ${Simbody_LIBRARIES}
-		SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-		${BOOST_LIBRARIES}
-                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code...
-		${OpenMM_LIBRARIES}
-		m )
-		#${mmtk_libs} )
+        # # link Simbody libraries
+        # TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic_d
+	# 	debug ${Simbody_LIBRARIES}
+	# 	SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+	# 	${BOOST_LIBRARIES}
+        #         #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code...
+	# 	${OpenMM_LIBRARIES}
+	# 	m )
+	# 	#${mmtk_libs} )
                 
-        TARGET_LINK_LIBRARIES(GMOLMODEL_static_d
-		debug ${Simbody_LIBRARIES}
-		SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-		${BOOST_LIBRARIES}
-                #${PYTHON_LIBRARIES}  # same as for dynamic lib... I don't think python shoud be part of this lib...
-		${OpenMM_LIBRARIES}
-		m )
-                #${mmtk_libs} )
+        # TARGET_LINK_LIBRARIES(GMOLMODEL_static_d
+	# 	debug ${Simbody_LIBRARIES}
+	# 	SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+	# 	${BOOST_LIBRARIES}
+        #         #${PYTHON_LIBRARIES}  # same as for dynamic lib... I don't think python shoud be part of this lib...
+	# 	${OpenMM_LIBRARIES}
+	# 	m )
+        #         #${mmtk_libs} )
 ELSE()
         message("Linking with release libraries")
 
-        TARGET_LINK_LIBRARIES( GMOLMODEL_test
+        # TARGET_LINK_LIBRARIES( GMOLMODEL_test
+        #         optimized ${Simbody_LIBRARIES}
+        #         SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+        #         ${BOOST_LIBRARIES}
+        #         #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
+	# 	${OpenMM_LIBRARIES}
+        #         m )
+        #         #${mmtk_libs} )
+
+        TARGET_LINK_LIBRARIES( GMOLMODEL_robo
                 optimized ${Simbody_LIBRARIES}
                 SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
                 ${BOOST_LIBRARIES}
                 #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
 		${OpenMM_LIBRARIES}
                 m )
-                #${mmtk_libs} )
+                
+        # # link Simbody libraries
+        # TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic
+	# 	optimized ${Simbody_LIBRARIES}
+	# 	SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+	# 	${BOOST_LIBRARIES}
+        #         #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code...
+	# 	${OpenMM_LIBRARIES}
+	# 	m )
+	# 	#${mmtk_libs} )
 
-        # link Simbody libraries
-        TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic
-		optimized ${Simbody_LIBRARIES}
-		SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-		${BOOST_LIBRARIES}
-                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code...
-		${OpenMM_LIBRARIES}
-		m )
-		#${mmtk_libs} )
-
-        TARGET_LINK_LIBRARIES(GMOLMODEL_static
-		optimized ${Simbody_LIBRARIES}
-		SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-		${BOOST_LIBRARIES}
-                #${PYTHON_LIBRARIES}  # same as for dynamic lib... I don't think python shoud be part of this lib...
-		${OpenMM_LIBRARIES}
-		m )
-                #${mmtk_libs} )
+        # TARGET_LINK_LIBRARIES(GMOLMODEL_static
+	# 	optimized ${Simbody_LIBRARIES}
+	# 	SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+	# 	${BOOST_LIBRARIES}
+        #         #${PYTHON_LIBRARIES}  # same as for dynamic lib... I don't think python shoud be part of this lib...
+	# 	${OpenMM_LIBRARIES}
+	# 	m )
+        #         #${mmtk_libs} )
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 #set_target_properties(GMOLMODEL_dynamic_d PROPERTIES OUTPUT_NAME "gmolmodel")

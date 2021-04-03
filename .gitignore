@@ -1,4 +1,5 @@
 build-debug
+build-release
 cmake-build-debug
 .idea
 cmake_regenerateAll.sh
