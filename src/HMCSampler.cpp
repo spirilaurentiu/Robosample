@@ -921,6 +921,7 @@ int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 		std::vector<decltype(R)::value_type>(R.begin() + ndofs, R.end()).swap(R);
 	}
 
+	return R.size();
 }
 
 /** Push velocities into Rdot vector stored in Sampler.
@@ -957,6 +958,8 @@ int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
 		std::vector<decltype(Rdot)::value_type>(Rdot.begin() + ndofs, Rdot.end()).swap(Rdot);
 	}
+
+	return Rdot.size();
 }
 
 bool HMCSampler::sample_iteration(SimTK::State& someState)

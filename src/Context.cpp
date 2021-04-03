@@ -9,10 +9,10 @@
 Context::Context(const SetupReader& setupReader, std::string logFilename){
     ValidateSetupReader(setupReader);
 
-    BUFSIZE = 1048576;
-    buffer = new char[BUFSIZE];
+    BUFSIZE = 1024 * 1048576; // 1048576
+    buffer = std::make_unique<char[]>(BUFSIZE);
     logFile = fopen(logFilename.c_str(), "w+");
-    if ( setvbuf(logFile, buffer, _IOFBF, BUFSIZE) != 0){
+    if ( setvbuf(logFile, &buffer[0], _IOFBF, BUFSIZE) != 0){
        perror("setvbuf()");
     }
 
@@ -44,10 +44,10 @@ Context::Context(const SetupReader& setupReader, World *inp_p_world, std::string
     outputDir = "pdbs";
     pdbPrefix = "x";
 
-    BUFSIZE = 1048576;
-    buffer = new char[BUFSIZE];
+    BUFSIZE = 1024 * 1048576; // 1048576
+    buffer = std::make_unique<char[]>(BUFSIZE);
     logFile = fopen(logFilename.c_str(), "w+");
-    if ( setvbuf(logFile, buffer, _IOFBF, BUFSIZE) != 0){
+    if ( setvbuf(logFile, &buffer[0], _IOFBF, BUFSIZE) != 0){
        perror("setvbuf()");
     }
 
@@ -107,9 +107,6 @@ Context::~Context(){
     nofBoostStairs.clear();
 
     fclose(logFile);
-    delete buffer;
-    buffer = nullptr;
- 
 }
 
 // Get world

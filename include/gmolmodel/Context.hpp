@@ -206,7 +206,7 @@ private:
 
     // Output
     unsigned int BUFSIZE;
-    char *buffer;
+    std::unique_ptr<char[]> buffer;
     FILE *logFile;
 
     // Adaptive Gibbs blocking variables

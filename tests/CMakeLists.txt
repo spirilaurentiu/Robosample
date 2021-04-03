@@ -139,13 +139,13 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
                         ${Boost_LIBRARIES}
                         ${BOOST_LIBS_BYHAND}
                         #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense...
-                        GMOLMODEL_dynamic
+                        GMOLMODEL_dynamic_d
                         m )
         endforeach()
 ELSE()
         foreach(TEST_SRC ${TESTS_SRCS})
                 STRING(REGEX REPLACE ".cpp" "" TEST_EXE ${TEST_SRC})
-                MESSAGE(${TEST_EXE} ${TEST_SRC})
+                MESSAGE("Building test: ${TEST_EXE} from ${TEST_SRC}")
                 add_executable(${TEST_EXE} ${TEST_SRC})
                 TARGET_LINK_LIBRARIES( ${TEST_EXE}
                         optimized ${Simbody_LIBRARIES}

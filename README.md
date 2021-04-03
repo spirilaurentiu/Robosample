@@ -61,6 +61,18 @@ After working on Robosample, it must be compiled as `Debug` or `Release` (the sa
 make -j$((`nproc`*2))
 ```
 
+# Updating OpenMM
+Run only once (if any error occurs, it means that these lines were already run). Not needed if you are a regular user.
+```
+cd openmm
+git remote add upstream https://github.com/openmm/openmm
+```
+
+Now get the updates.
+```
+git pull upstream experimental_cpp_latest
+```
+
 # Running Robosample
 `Robosample` is located in `build-debug/tests` or `build-release/tests`.
 ```
