@@ -17,7 +17,7 @@ set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -g" )
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
     set( ROBO_WARNINGS "-Wall -Wextra -Wpedantic -Wshadow -Wdouble-promotion -Wformat=2 -Wformat-truncation -Wundef -Wconversion -Wunused-parameter" )
-    # set( ROBO_SANITIZER "-fsanitize=undefined -fsanitize=address -fsanitize-recover=address")
+    set( ROBO_SANITIZER "-fsanitize=undefined -fsanitize=address -fsanitize-recover=address")
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ROBO_WARNINGS} -O0 ${ROBO_SANITIZER}" )
 ELSE()
     # set up profile guided optimization
@@ -43,7 +43,7 @@ ELSE()
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 add_subdirectory(src)
-add_subdirectory(tests) # Laur
+#add_subdirectory(tests) # Laur
 
 
 
