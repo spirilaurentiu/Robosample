@@ -77,7 +77,7 @@ git pull upstream experimental_cpp_latest
 `Robosample` is located in `build-debug/tests` or `build-release/tests`.
 ```
 cd build-debug
-./tests/Robosample inp
+./src/GMOLMODEL_robo inp
 ```
 **WARNING**: To avoid dynamic library lookup failures, it is recommended to run Robosample in the WSL or native Linux terminal and not in Visual Studio Code terminal. See more details at [Installing dependencies](#installing-dependencies).  
   
