@@ -155,6 +155,27 @@ void HMCSampler::setTimeStepper(SimTK::TimeStepper * someTimeStepper)
     timeStepper = someTimeStepper;
 }
 
+/** Put generalized velocities scale factors into a fixed size array to avoid
+ searching for them into a map every time the velocities are intialized **/
+void HMCSampler::loadUScaleFactors(SimTK::State& someState)
+{
+    int nu = someState.getNU();
+    UScaleFactors.resize(nu, 1);
+
+    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        const int mnu = mobod.getNumU(someState);
+	const float scaleFactor = world->getMobodUScaleFactor(mbx);
+        //std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
+	for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+        	//std::cout << ' ' << int(uIx) ;
+		UScaleFactors[int(uIx)] = scaleFactor;
+		
+        }
+        //std::cout << '\n';
+    }
+}
+
 /** Seed the random number generator. Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
@@ -239,6 +260,7 @@ void HMCSampler::initialize(SimTK::State& someState )
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    loadUScaleFactors(someState);
 }
 
 /** Same as initialize **/
@@ -300,6 +322,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    loadUScaleFactors(someState);
 }
 
 /** Get/Set the timestep for integration **/
@@ -370,44 +393,12 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
         V[i] = gaurand(randomEngine);
     }
 
-    // RED ZONE
-    ////////
-    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const int mnu = mobod.getNumU(someState);
-	const float scaleFactor = world->getMobodUScaleFactor(mbx);
-        std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
-	for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
-        	std::cout << ' ' << int(uIx) ;
-		V[int(uIx)] *= scaleFactor;
-		
-        }
-        std::cout << '\n';
-    }
-
-/*
-    SimTK::Vector One(nu, 1.0);
-    float dotProduct = 0.0;
+    // Scale by user defined factors
     for (int i=0; i < nu; ++i){
-        dotProduct += (One[i] * V[i]);
-    }
-    float phi = std::acos(dotProduct  / (V.norm() * One.norm()) );
-
-    SimTK::Vector UScaleFactors(nu, 0.0);
-    for (int i=0; i < nu; ++i){
-        UScaleFactors[i] = i ;
+        V[i] = V[i] * UScaleFactors[i];
     }
 
-    dotProduct = 0.0;
-    for (int i=0; i < nu; ++i){
-        dotProduct += (UScaleFactors[i] * V[i]);
-    }
-    float psi = std::acos(dotProduct  / (V.norm() * UScaleFactors.norm()) );
-    std::cout << "RED ZONE " << phi << ' ' << psi << '\n';
-*/
-    // RED ZONE END
-
-
+    // Scale by square root of the inverse mass matrix
     matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
 
     SqrtMInvV *= (sqrtRT); // Set stddev according to temperature

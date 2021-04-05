@@ -62,6 +62,11 @@ public:
 	/** Calculate sqrt(M) using Eigen. For debug purposes. **/
 	void calcNumSqrtMUpper(SimTK::State& someState, SimTK::Matrix& SqrtMUpper);
 
+	/** Helper function for initialize velocities. Put generalized velocities
+	scale factors into a fixed size array to avoid searching for them into a 
+	map every time the velocities are intialized **/
+	void loadUScaleFactors(SimTK::State& someState);
+
 	/** Seed the random number generator. Set simulation temperature, 
 	velocities to desired temperature, variables that store the configuration
 	and variables that store the energies, both needed for the 
@@ -224,6 +229,7 @@ protected:
 	std::vector<SimTK::Real> dR;
 	std::vector<SimTK::Real> dRdot;
 
+	std::vector<float> UScaleFactors;
 };
 
 #endif // __HAMMONTECARLOSAMPLER_HPP__

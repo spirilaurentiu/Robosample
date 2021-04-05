@@ -79,7 +79,8 @@ public:
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecule(readAmberInput *amberReader, std::string rbFN, std::string flexFN, std::string regimenSpec, std::string argRoot);
 
-	/** **/
+	/** Assign a scale factor for generalized velocities to every mobilized 
+	body **/
 	void setUScaleFactorsToMobods(void);
 
 	/** Add a membrane represented by a contact surface **/
