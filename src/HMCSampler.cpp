@@ -595,7 +595,9 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
         system->realize(someState, SimTK::Stage::Position);
 
     }catch(const std::exception&){
+		std::cout << "\t[WARNING] propose exception caught!\n";
         proposeExceptionCaught = true;
+
         int i = 0;
         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -821,7 +823,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState){
 	if ( getThermostat() == ThermostatName::ANDERSEN ){ // MD with Andersen thermostat
 		this->acc = true;
 		std::cout << "\tsample accepted (always with andersen thermostat)" << std::endl;
-		// update(someState); // smth is broken in here
+		update(someState); // smth is broken in here
 	}else{ // Apply Metropolis-Hastings correction
 		if (proposeExceptionCaught == false && !std::isnan(pe_n)) { 
 			const SimTK::Real rand_no = uniformRealDistribution(randomEngine);

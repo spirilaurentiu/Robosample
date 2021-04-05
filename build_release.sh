@@ -2,6 +2,7 @@
 
 # notes for the future
 # make -j$((`nproc`*2)+1) -> c++: fatal error: Killed signal terminated program cc1plus (i.e too much memory consumed)
+# make -j$(`nproc`) is too slow on my machine
 
 # remove openmm previous openmm compilation
 sudo rm /usr/local/openmm -rf
@@ -64,7 +65,7 @@ cd ../../
 mkdir build-release
 cd build-release
 mkdir pgo
-cmake -DCMAKE_BUILD_TYPE=Release -DROBO_PGO=Generate -DROBO_PGO_PATH="$(pwd)/pgo/" ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j$((`nproc`*2))
 sudo /sbin/ldconfig
 
@@ -73,11 +74,23 @@ cp -ri ../tests_inputs/* .
 mkdir temp
 mkdir temp/pdbs
 
-# run PGO on Robosample and recompile
-./tests/Robosample inp.dock.test
-cmake -DCMAKE_BUILD_TYPE=Release -DROBO_PGO=Use -DROBO_PGO_PATH="$(pwd)/pgo/" ..
-make -j$((`nproc`*2))
-sudo /sbin/ldconfig
+# # compile Robosample
+# cd ../../
+# mkdir build-release
+# cd build-release
+# mkdir pgo
+# cmake -DCMAKE_BUILD_TYPE=Release -DROBO_PGO=Generate -DROBO_PGO_PATH="$(pwd)/pgo/" ..
+# make -j$((`nproc`*2))
+# sudo /sbin/ldconfig
+# # add test input files
+# cp -ri ../tests_inputs/* .
+# mkdir temp
+# mkdir temp/pdbs
+# # run PGO on Robosample and recompile
+# ./tests/Robosample inp.dock.test
+# cmake -DCMAKE_BUILD_TYPE=Release -DROBO_PGO=Use -DROBO_PGO_PATH="$(pwd)/pgo/" ..
+# make -j$((`nproc`*2))
+# sudo /sbin/ldconfig
 
 # add tests
 cp ../tests/test-memory.sh test-memory.sh
