@@ -225,7 +225,7 @@ public:
 	}
 
 	/** Get the number of MobilizedBodies in this Compound **/
-	unsigned int getNofMobilizedBodies(){
+	std::size_t getNofMobilizedBodies() const {
 		return mbx2aIx.size();
 	}
 

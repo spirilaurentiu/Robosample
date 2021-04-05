@@ -31,9 +31,9 @@ class intpair{
   bool operator==(const intpair *other);
   bool operator!=(const intpair *other);
   bool isTheSameAs(const intpair *other);
-  void swap(void);
-  void dump(void);
-  std::string getString(void);
+  void swap();
+  void dump();
+  std::string getString();
 };
 
 //==============================================================================
@@ -55,37 +55,37 @@ class bBond : public intpair{
   int myindex;
 
  public:
-  bBond(void);
+  bBond();
   bBond(int a, int b);
-  ~bBond(void);
+  ~bBond();
 
-  bool isInRing(void);
-  bool isRingClosing(void);
-  //bool isRigid(void);
-  const SimTK::BondMobility::Mobility getBondMobility() const;
-  int ringNo(void);
+  bool isInRing();
+  bool isRingClosing();
+  //bool isRigid();
+  SimTK::BondMobility::Mobility getBondMobility() const;
+  int ringNo();
 
-  void setInRing(void);
-  void setAsRingClosing(void);
-  //void setAsRigid(void);
+  void setInRing();
+  void setAsRingClosing();
+  //void setAsRigid();
   void setBondMobility(SimTK::BondMobility::Mobility someMobility);
   void setRingNo(int rn);
 
-  SimTK::Compound::BondIndex getBondIndex(void);
+  SimTK::Compound::BondIndex getBondIndex();
   void setBondIndex(SimTK::Compound::BondIndex otherIx);
 
   // Gmolmodel indices (prmtop)
   void setIndex(int);
-  int getIndex(void);
+  int getIndex();
 
-  void Print(void);
+  void Print();
 
-  bool isFirst(void);
-  void setAsFirst(void);
+  bool isFirst();
+  void setAsFirst();
 
   int isThisMe(int argFirst, int argSecond) const ;
   void setVisited(int);
-  int isVisited(void);
+  int isVisited();
 };
 
 

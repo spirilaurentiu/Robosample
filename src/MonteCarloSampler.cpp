@@ -48,12 +48,10 @@ void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTempe
 
 	// Store the configuration
 	system->realize(someState, SimTK::Stage::Position);
-	int i = 0;
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		//const SimTK::Vec3& vertex = mobod.getBodyOriginLocation(someState); // unused variable
-		SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
-		i++;
+		SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
 	}
 
 	// Initialize QsBuffer with zeros
@@ -202,7 +200,8 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
 }
 
 // Compute Fixman potential numerically
-SimTK::Real MonteCarloSampler::calcNumFixman(SimTK::State& someState){
+SimTK::Real MonteCarloSampler::calcNumFixman(SimTK::State&){
+    // args were SimTK::State& someState
     assert(!"Not implemented.");
     return 0;
     /*
@@ -227,7 +226,8 @@ SimTK::Real MonteCarloSampler::calcNumFixman(SimTK::State& someState){
 
 // Compute mass matrix determinant numerically
 // Not to be confused with the Fixman potential
-SimTK::Real MonteCarloSampler::calcNumDetM(SimTK::State& someState){
+SimTK::Real MonteCarloSampler::calcNumDetM(SimTK::State&){
+    // args were SimTK::State& someState
     assert(!"Not implemented.");
     /*
     // Get M
@@ -468,8 +468,7 @@ void MonteCarloSampler::propose(SimTK::State& someState)
 // The update step in Monte Carlo methods consists in:
 // Acception - rejection step
 void MonteCarloSampler::update(SimTK::State& someState){
-    SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-    SimTK::Real RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
+    RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
 
     // Get old energy
     pe_o = getOldPE();
@@ -485,6 +484,7 @@ void MonteCarloSampler::update(SimTK::State& someState){
 
     // Apply Metropolis criterion
     assert(!std::isnan(pe_n));
+    SimTK::Real rand_no = uniformRealDistribution(randomEngine);
     if ((proposeExceptionCaught == false) || (pe_n < pe_o) || (rand_no < exp(-(pe_n - pe_o)/RT))){
         // Accept
         setTVector(someState);

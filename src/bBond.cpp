@@ -113,7 +113,7 @@ bool bBond::isRigid(void){
 }
 */
 
-const SimTK::BondMobility::Mobility bBond::getBondMobility() const {
+SimTK::BondMobility::Mobility bBond::getBondMobility() const {
 
 
         return mobility;
