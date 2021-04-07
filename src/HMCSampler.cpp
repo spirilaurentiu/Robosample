@@ -6,9 +6,10 @@ Implementation of HMCSampler class. **/
 // Includes to get the structure of additional classes
 
 #include "Topology.hpp"
+#include "World.hpp"
 
 //** Constructor **/
-HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
+HMCSampler::HMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::SimbodyMatterSubsystem *argMatter
 
                                      //,SimTK::Compound *argResidue
@@ -19,9 +20,9 @@ HMCSampler::HMCSampler(SimTK::CompoundSystem *argCompoundSystem
                                      ,SimTK::TimeStepper *argTimeStepper
                                      )
     //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    : Sampler(argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+    : Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
     //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    MonteCarloSampler(argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+    MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 	this->useFixman = false;  
 	this->fix_n = this->fix_o = 0.0;
@@ -154,6 +155,27 @@ void HMCSampler::setTimeStepper(SimTK::TimeStepper * someTimeStepper)
     timeStepper = someTimeStepper;
 }
 
+/** Put generalized velocities scale factors into a fixed size array to avoid
+ searching for them into a map every time the velocities are intialized **/
+void HMCSampler::loadUScaleFactors(SimTK::State& someState)
+{
+    int nu = someState.getNU();
+    UScaleFactors.resize(nu, 1);
+
+    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        const int mnu = mobod.getNumU(someState);
+	const float scaleFactor = world->getMobodUScaleFactor(mbx);
+        //std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
+	for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+        	//std::cout << ' ' << int(uIx) ;
+		UScaleFactors[int(uIx)] = scaleFactor;
+		
+        }
+        //std::cout << '\n';
+    }
+}
+
 /** Seed the random number generator. Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
@@ -238,6 +260,7 @@ void HMCSampler::initialize(SimTK::State& someState )
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    loadUScaleFactors(someState);
 }
 
 /** Same as initialize **/
@@ -299,6 +322,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    loadUScaleFactors(someState);
 }
 
 /** Get/Set the timestep for integration **/
@@ -368,6 +392,13 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
     for (int i=0; i < nu; ++i){
         V[i] = gaurand(randomEngine);
     }
+
+    // Scale by user defined factors
+    for (int i=0; i < nu; ++i){
+        V[i] = V[i] * UScaleFactors[i];
+    }
+
+    // Scale by square root of the inverse mass matrix
     matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
 
     SqrtMInvV *= (sqrtRT); // Set stddev according to temperature

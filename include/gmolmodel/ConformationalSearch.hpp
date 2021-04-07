@@ -16,7 +16,7 @@ class ConformationalSearch : public Sampler
 public:
 
     // Constructor
-    ConformationalSearch(SimTK::CompoundSystem *argCompoundSystem,
+    ConformationalSearch(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
                       SimTK::SimbodyMatterSubsystem *argMatter,
 
                       //SimTK::Compound *argResidue,

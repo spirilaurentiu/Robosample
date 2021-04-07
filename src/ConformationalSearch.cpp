@@ -8,7 +8,7 @@ Implementation of ConformationalSearch class. **/
 #include "Topology.hpp"
 
 // Constructor
-ConformationalSearch::ConformationalSearch(SimTK::CompoundSystem *argCompoundSystem,
+ConformationalSearch::ConformationalSearch(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
                                      SimTK::SimbodyMatterSubsystem *argMatter,
 
                                      //SimTK::Compound *argResidue,
@@ -18,7 +18,7 @@ ConformationalSearch::ConformationalSearch(SimTK::CompoundSystem *argCompoundSys
                                      SimTK::GeneralForceSubsystem *argForces,
                                      SimTK::TimeStepper *argTimeStepper)
     //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    : Sampler(argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
+    : Sampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
 {
     TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
     SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());

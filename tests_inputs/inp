@@ -8,7 +8,10 @@ OUTPUT_DIR temp
 ROOTS 0
 ROOT_MOBILITY Free
 OUTPUT_DIR temp
-MEMBRANE 0 0 0 0
+
+MEMBRANE 0 0 0 0 # Elastic membrane parameters: xyz and resolution
+CONTACTS -1 # Contact balls attached to atoms
+CONSTRAINTS -1 # Mobilizer constraints added
 
 RUN_TYPE Normal
 ROUNDS 10                   # Usually 2000

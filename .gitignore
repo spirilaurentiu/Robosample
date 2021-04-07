@@ -1,3 +1,4 @@
+partial_build_release.sh
 build-debug
 build-release
 cmake-build-debug

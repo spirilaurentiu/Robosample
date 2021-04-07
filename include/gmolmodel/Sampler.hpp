@@ -11,13 +11,14 @@
 #endif 
 
 class Topology;
+class World;
 
 // TODO: implement getCompoundSystem
 class Sampler
 {
 public:
 	// Constructor
-	Sampler(SimTK::CompoundSystem *argCompoundSystem,
+	Sampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
 		    SimTK::SimbodyMatterSubsystem *argMatter,
 
 		    //SimTK::Compound *argResidue,
@@ -71,6 +72,7 @@ public:
 	void PrintSimbodyStateCache(SimTK::State& someState);
 
 public:
+	World *world;
 	const SimTK::System *system;
 	SimTK::CompoundSystem *compoundSystem;
 	SimTK::SimbodyMatterSubsystem *matter;

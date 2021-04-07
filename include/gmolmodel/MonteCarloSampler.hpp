@@ -25,7 +25,7 @@ class MonteCarloSampler : virtual public Sampler
 public:
 
     // Constructor
-    MonteCarloSampler(SimTK::CompoundSystem *argCompoundSystem,
+    MonteCarloSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
                       SimTK::SimbodyMatterSubsystem *argMatter,
 
                       //SimTK::Compound *argResidue,

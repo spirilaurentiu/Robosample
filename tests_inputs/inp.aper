@@ -1,0 +1,55 @@
+# Molecule information
+MOLECULES aper                   # Molecules to load
+PRMTOP ligand.prmtop       # Parameter file
+INPCRD ligand.00.rst7      # Coordinate / Restart file
+RBFILE ligand.rb ligand.rb    # Rigid bodies definition file
+FLEXFILE ligand.03.flex ligand.all.flex  # Flexible bonds definition file
+ROOT_MOBILITY Free Cartesian # Ground to Compound mobilizer
+OUTPUT_DIR temp temp
+MEMBRANE 10 10 1.4 10
+CONTACTS 0 0
+CONSTRAINTS 3291 3291
+
+# Simulation
+RUN_TYPE Normal # normal HMC or Non-Eq HMC
+ROUNDS 1000                   # MC steps (Acception-rejection steps)
+ROUNDS_TILL_REBLOCK 10 10
+RANDOM_WORLD_ORDER FALSE
+WORLDS R0 R1        # Regimen (IC, TD, MIX, RB, RBMIX)
+
+ROOTS 0 0
+SAMPLER HMC HMC      # HMC or MC
+TIMESTEPS 0.004 0.0006              # Timesteps to be used with regimens
+MDSTEPS 30 3     # Number of MD trial steps
+BOOST_MDSTEPS 1 1  
+SAMPLES_PER_ROUND 10 3  # Number of MC trials within a mixing round
+REPRODUCIBLE FALSE FALSE
+SEED 9999 9999
+
+# Thermodynamics
+THERMOSTAT Andersen Andersen     # Thermostat (HMC + Andersen = MD)
+TEMPERATURE_INI  300 300    # Temperature for constant temperature simulations
+TEMPERATURE_FIN  300 300    # Temperature for constant temperature simulations
+BOOST_TEMPERATURE  1 1     # Temperature for constant temperature simulations
+FFSCALE AMBER AMBER       # Force field scale factors
+GBSA 1.0 1.0          # GBSA scale factor
+
+# Generalized coordinates related
+FIXMAN_POTENTIAL TRUE TRUE  # Use Fixman potential
+FIXMAN_TORQUE TRUE TRUE        # Use Fixman torque
+
+# Output
+#VISUAL TRUE TRUE              # Use the visualizer
+VISUAL FALSE FALSE           # Use the visualizer
+PRINT_FREQ  1 1
+WRITEPDBS 1 0    # Write pdbs
+GEOMETRY FALSE FALSE             # Calculate geometric features
+
+#DISTANCE 1 18
+DISTANCE 2 17
+#DIHEDRAL 4 6 8 14 6 8 14 16
+DIHEDRAL 16 14 0 6 14 0 6 8
+
+# Software specs
+THREADS 0 0
+OPENMM TRUE TRUE
