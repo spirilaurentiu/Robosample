@@ -185,11 +185,16 @@ int main(int argc, char **argv)
 	// Link the Compounds to Simbody System for all Worlds
 	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
 
-	// Membrane contacts
+	// Membrane contacts. TODO: only one per world for now
 	if(haveMembrane){
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-			(context.updWorld(worldIx))->addContacts();
+			(context.updWorld(worldIx))->addContacts( std::stoi(setupReader.get("CONTACTS")[worldIx]) );
 		}
+	}
+
+	// Set ocnstraint. TODO: only one per world allowed for now
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(context.updWorld(worldIx))->addConstraints( std::stoi(setupReader.get("CONSTRAINTS")[worldIx]) );
 	}
 
 	// U Scale Factors

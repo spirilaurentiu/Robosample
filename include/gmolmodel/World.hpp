@@ -93,9 +93,11 @@ public:
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
-	// BEGIN Try contacts
-	const SimTK::State& addContacts(void);
-	// END Try contacts
+	/** Add contact surfaces to bodies **/
+	const SimTK::State& addContacts(int prmtopIndex);
+	
+	/** Add contact constraints to specific bodies **/
+	const SimTK::State& addConstraints(int prmtopIndex);
 
 	const SimTK::State& realizeTopology(void);
 
