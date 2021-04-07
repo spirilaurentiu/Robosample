@@ -17,7 +17,7 @@ cd openmm
 mkdir build-debug
 cd build-debug/
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$((`nproc`*2))
+make -j$((`nproc`*2)) 2> build-openmm.txt
 sudo make install
 cd ../../
 
@@ -39,14 +39,14 @@ cd Molmodel/Simbody01
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$((`nproc`*2))
+make -j$((`nproc`*2)) 2> build-simbody.txt
 sudo make install
 
 cd ../../
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$((`nproc`*2))
+make -j$((`nproc`*2)) 2> build-molmodel.txt
 sudo make install
 
 # ensure this is correctly installed
@@ -57,7 +57,7 @@ cd ../../
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$((`nproc`*2))
+make -j$((`nproc`*2)) 2> build-robosample.txt
 sudo /sbin/ldconfig
 
 # add test input files
@@ -67,3 +67,5 @@ mkdir temp/pdbs
 
 # add tests
 cp ../tests/test-memory.sh test-memory.sh
+
+echo "Build done. See build logs in build-debug/"

@@ -32,7 +32,7 @@
 #include "ParaMolecularDecorator.hpp"
 #include "FixmanTorque.hpp"
 
-#include <boost/timer.hpp>
+#include <boost/timer/timer.hpp>
 
 #ifndef BaseSampler
 #define BaseSampler HMCSampler
@@ -66,14 +66,11 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN);
 /**
  *  Contains a Symbody system and additional data that define a regimen
  **/
-class World{
+class World {
 public: 
 	// --- Structural functions ---
 	/** Constructor **/
-	World(int worldIndex, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
-
-	// Destructor
-	~World(); // destructor
+	explicit World(int worldIndex, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
 	/** Creates a topology object and based on amberReader forcefield 
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
@@ -87,7 +84,7 @@ public:
 	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution);
 
 	/** Get the number of molecules **/
-	int getNofMolecules();
+	int getNofMolecules() const;
  
 	/** Calls CompoundSystem.modelCompounds and realizes Topology 
 	To be called after loading all Compounds. **/
@@ -99,11 +96,11 @@ public:
 	/** Add contact constraints to specific bodies **/
 	const SimTK::State& addConstraints(int prmtopIndex);
 
-	const SimTK::State& realizeTopology(void);
+	const SimTK::State& realizeTopology();
 
-	void loadCompoundRelatedMaps(void);
+	void loadCompoundRelatedMaps();
 
-	void loadMobodsRelatedMaps(void);
+	void loadMobodsRelatedMaps();
 	//...............
 
 	// --- Mixing functions: Pass configurations among Worlds
@@ -127,26 +124,26 @@ public:
 	void updateAtomListsFromCompound(const SimTK::State &state);
 
 	/** To be called before use of getXs, getYs or getZs **/
-	void updateCoordBuffers(void);
+	void updateCoordBuffers();
 
 	/** Get the coordinates buffers **/
-	std::vector<SimTK::Real> getXs(void);
-	std::vector<SimTK::Real> getYs(void);
-	std::vector<SimTK::Real> getZs(void);
+	std::vector<SimTK::Real> getXs();
+	std::vector<SimTK::Real> getYs();
+	std::vector<SimTK::Real> getZs();
 
 	/** Access to molecule (Topology) objects 
 	Get a readble reference of one of the molecules **/
-	const Topology& getTopology(int moleculeNumber) const;
+	const Topology& getTopology(std::size_t moleculeNumber) const;
 
 	/** Get a writeble reference of one of the molecules **/
-	Topology& updTopology(int moleculeNumber);  
+	Topology& updTopology(std::size_t moleculeNumber);  
 	//...............
    
 	//.......................
 	// --- Thermodynamics ---
 	//.......................
 	/** Get the World (macro) temperature **/
-	SimTK::Real getTemperature(void);
+	SimTK::Real getTemperature();
 
 	/** Set the World (macro) temperature **/
 	void setTemperature(SimTK::Real);
@@ -154,15 +151,15 @@ public:
 
 	// --- Simulation ---
 	/** Get/Set seed for reproducibility. **/
-	void setSeed(int whichSampler, unsigned long long int);
-	unsigned long long int getSeed(int whichSampler);
+	void setSeed(int whichSampler, uint32_t argSeed);
+	uint32_t getSeed(int whichSampler) const;
 
 	/** Use the Fixman torque as an additional force subsystem.
 	Careful not have different temperatures for World and Fixman Torque. **/
 	void addFixmanTorque();
 
 	/** Amber like scale factors. **/
-	void setAmberForceFieldScaleFactors(void);
+	void setAmberForceFieldScaleFactors();
 
 	/** Set a global scaling factor for all the terms the forcefield **/
 	void setGlobalForceFieldScaleFactor(SimTK::Real);
@@ -171,10 +168,10 @@ public:
 	void setGbsaGlobalScaleFactor(SimTK::Real);
 
 	/** Get a writeble pointer to the DuMM force field **/
-	SimTK::DuMMForceFieldSubsystem * updForceField(void);
+	SimTK::DuMMForceFieldSubsystem * updForceField();
 
 	/** Return true if the Fixman torque flag is set **/
-	bool isUsingFixmanTorque(void);
+	bool isUsingFixmanTorque() const;
 	//...............
 
 	/** Get U scale factor for the mobilized body **/
@@ -185,10 +182,10 @@ public:
 	// --- Statistics ---
 	//...................
 	/** How many samples did we have so far **/
-	int getNofSamples(void);
+	std::size_t getNofSamples() const;
 
 	/** Sampler manipulation functions **/
-	int getNofSamplers(void);
+	std::size_t getNofSamplers() const;
 
 	/** Add a sampler to the World **/
 	BaseSampler* addSampler(std::string);
@@ -196,16 +193,16 @@ public:
 
 	// TODO Use Sampler polymorphism
 	/** Get a sampler based on its position in the samplers vector **/
-	const BaseSampler * getSampler(int which);
+	BaseSampler * getSampler(std::size_t which) const;
 
 	/** Get a writable sampler based on its position in the samplers vector **/
-	BaseSampler * updSampler(int which);
+	BaseSampler * updSampler(std::size_t which);
 
 	/** Get writble pointer to FixmanTorque implementation **/
-	FixmanTorque * updFixmanTorque(void);
+	FixmanTorque * updFixmanTorque();
 
 	/** Get pointer to FixmanTorque implementation **/
-	FixmanTorque * getFixmanTorque(void) const;
+	FixmanTorque * getFixmanTorque() const;
 
 	//...............
   
@@ -233,20 +230,16 @@ public:
 
 	// --- The three S: Study, System and State related ---
 	/** System->MultibodySystem->MolecularMechanicsSystems->CompoundSystem **/
-	SimTK::CompoundSystem *compoundSystem;
+	std::unique_ptr<SimTK::CompoundSystem> compoundSystem;
 
 	/** Subsystem->SimbodyMatterSubsystem **/
-	SimTK::SimbodyMatterSubsystem *matter;
+	std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter;
 
 	/** Subsystem->ForceSubsystem->GeneralForceSubsystem **/
-	SimTK::GeneralForceSubsystem *forces;
-
-	/** Get writble pointer to Fixman Torque and other forces**/
-	FixmanTorque * FixmanTorqueImpl;
-	SimTK::Force::Custom *ExtForce;
+	std::unique_ptr<SimTK::GeneralForceSubsystem> forces;
 
 	/** Subsystem->ForceSubsystem->DuMMForceFieldSubsystem **/
-	SimTK::DuMMForceFieldSubsystem *forceField;
+	std::unique_ptr<SimTK::DuMMForceFieldSubsystem> forceField;
 
 	/** Nof molecules **/
 	int moleculeCount;
@@ -254,7 +247,7 @@ public:
 
 	/** Molecules (topologies<-Compounds) objects **/
 	//std::vector<bMoleculeReader *> moleculeReaders;
-	std::vector<Topology *> topologies;
+	std::vector<Topology> topologies;
 	std::string rootMobility;
 
 	/** Joint types **/
@@ -278,43 +271,49 @@ public:
 	//...............
 
 	// --- Simulation ---
-	SimTK::VerletIntegrator *integ;
-	SimTK::TimeStepper *ts;
-	std::vector<BaseSampler *> samplers;
+	std::unique_ptr<SimTK::VerletIntegrator> integ;
+	std::unique_ptr<SimTK::TimeStepper> ts;
+	std::vector<std::unique_ptr<BaseSampler>> samplers;
 
 	// Contact related
-	ContactTrackerSubsystem  *tracker;
-	CompliantContactSubsystem *contactForces;
-        ContactCliqueId clique1;
-	MobilizedBody::Weld *membrane;
-	Body::Rigid *memBody;
+	std::unique_ptr<ContactTrackerSubsystem> tracker;
+	std::unique_ptr<CompliantContactSubsystem> contactForces;
+    ContactCliqueId clique1;
+	std::unique_ptr<MobilizedBody::Weld> membrane;
+	std::unique_ptr<Body::Rigid> memBody;
 
 	bool _useFixmanTorque;
 	//...............
 
 	// --- Statistics ---
-	int nofSamples;
 	//...............
   
 	// --- Graphics ---
 	bool visual;
 
 	// Our decorations
-	ParaMolecularDecorator *paraMolecularDecorator = nullptr;
+	std::unique_ptr<ParaMolecularDecorator> paraMolecularDecorator;
 
 	// Decoration subsystem
-	SimTK::DecorationSubsystem *decorations;
+	std::unique_ptr<SimTK::DecorationSubsystem> decorations;
 
 	// Visualizer
-	SimTK::Visualizer *visualizer;
+	std::unique_ptr<SimTK::Visualizer> visualizer;
 
 	// Visualizer reporter
-	SimTK::Visualizer::Reporter *visualizerReporter;
+	std::unique_ptr<SimTK::Visualizer::Reporter> visualizerReporter;
 	//...............
 
 	// --- Mixing data ---
 	int ownWorldIndex;
 	//...............
+
+	/** Get writble pointer to Fixman Torque and other forces**/
+	// std::unique_ptr<FixmanTorque> FixmanTorqueImpl;
+	// std::unique_ptr<SimTK::Force::Custom> ExtForce;
+
+	FixmanTorque* FixmanTorqueImpl = nullptr;
+	SimTK::Force::Custom* ExtForce = nullptr;
 
 private:
 	

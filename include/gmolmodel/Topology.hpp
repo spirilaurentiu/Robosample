@@ -262,10 +262,10 @@ public:
 
 	// TODO move to Context
 	int natoms;
-	std::vector<bSpecificAtom > bAtomList;
+	std::vector<bSpecificAtom> bAtomList;
 
 	int nbonds;
-	std::vector<bBond > bonds;
+	std::vector<bBond> bonds;
 
 	int nTriples;
 	std::vector< std::vector<Compound::AtomIndex> > triples;

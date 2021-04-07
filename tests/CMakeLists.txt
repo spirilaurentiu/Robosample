@@ -62,7 +62,6 @@ set(TESTS_SRCS
         TestMatrix.cpp
         TestWorldReconstruction.cpp
 	TestFixmanTorqueSim.cpp
-        # Robosample.cpp
 	)
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -75,7 +74,7 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
                         SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
                         ${Boost_LIBRARIES}
                         ${BOOST_LIBS_BYHAND}
-                        GMOLMODEL_dynamic
+                        GMOLMODEL_dynamic_d
                         m )
         endforeach()
 ELSE()

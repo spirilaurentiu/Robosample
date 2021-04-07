@@ -525,7 +525,7 @@ SimTK::Vector& SOA_SpatialVec2Vector(SimTK::SpatialVec in, SimTK::Vector& out)
 /*
  * Convert spatial matrix to Mat66
  */
-SimTK::Mat66& SOA_SpatialMat2Mat66(SimTK::SpatialMat in, SimTK::Mat66& out)
+void SOA_SpatialMat2Mat66(SimTK::SpatialMat in, SimTK::Mat66& out)
 {
     for(int i = 0; i < 2; i++){
         for(int j = 0; j < 2; j++){
@@ -809,17 +809,17 @@ SimTK::Real magSq(std::vector<SimTK::Real>& V) {
 	return std::inner_product(V.begin(), V.end(), V.begin(), SimTK::Real(0.0));
 }
 
-/** Normalize a std vector of double. If the magnitude is 0 it returns 
-the vector back.**/
-std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V) {
+/** Normalize a std vector of double.
+ * The result is stored in the input vector.
+ * If the magnitude is 0, the vector is left untouched.
+**/
+void normalize(std::vector<SimTK::Real>& V) {
 	SimTK::Real norm = magnitude(V);
 
 	if(norm != 0.0) {
         norm = 1.0 / norm;
         std::transform(V.begin(), V.end(), V.begin(), [norm] (auto c) { return c * norm; });
 	}
-
-	return V;
 }
 
 

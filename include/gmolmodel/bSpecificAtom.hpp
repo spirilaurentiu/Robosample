@@ -27,86 +27,96 @@
 **/
 class bSpecificAtom{ /*Information like in sdf*/
 public:
-    int nbonds;
-    int freebonds;
-    char name[5];
-    char inName[5];
-    int number;
-    char elem;
-    int atomicNumber;
-    SimTK::Real mass;
-    SimTK::Real vdwRadius;
-    SimTK::Real LJWellDepth; // Lennard-Jones well depth
-    double charge;
-    char fftype[20];
-    SimTK::DuMM::AtomClassIndex atomClassIndex;
-
-
-
-    float x;
-    float y;
-    float z;
-    //char biotype[20];
     std::string biotype; // NEW
-    SimTK::BiotypeIndex biotypeIndex;
+    std::string residueName; // Residue and chain
+    std::string chain; // Residue and chain
+
+    // Graph useful vars
+    std::vector<bSpecificAtom *> neighbors;
+    std::vector<bBond *> bondsInvolved;
+
+    //char biotype[20];
+
+    // used to be initialized with bZeroCharArray
+    // as per c++11 (https://stackoverflow.com/questions/18295302/default-initialization-of-stdarray)
+    // it should be initialized to default
+    char fftype[20] {};
 
     // We need this to be a pointer because we don't know it's size at
     // initializetion. It could be Univalent, Bivalent, TrivalentAtom.
     // The size of this variable will be known  after Topology loads info
     // from an inputReader
-    SimTK::Compound::SingleAtom *bAtomType;
-    SimTK::Compound::AtomIndex atomIndex;
-    int mobile;
-    int visited;
-    
-    // Graph useful vars
-    std::vector<bSpecificAtom *> neighbors;
-    std::vector<bBond *> bondsInvolved;
+    SimTK::Compound::SingleAtom *bAtomType = nullptr;
 
-    // Residue and chain
-    std::string residueName;
-    long int residueIndex;
-    std::string chain;
-    int moleculeIndex;
+    double charge = 0.0;
+    long int residueIndex = std::numeric_limits<long int>::min(); // Residue and chain
+
+    SimTK::Real mass = std::numeric_limits<SimTK::Real>::min();
+    SimTK::Real vdwRadius = std::numeric_limits<SimTK::Real>::min();
+    SimTK::Real LJWellDepth = std::numeric_limits<SimTK::Real>::min(); // Lennard-Jones well depth
+
+    SimTK::Real x = std::numeric_limits<SimTK::Real>::min();
+    SimTK::Real y = std::numeric_limits<SimTK::Real>::min();
+    SimTK::Real z = std::numeric_limits<SimTK::Real>::min();
+
+    char name[5] {};
+    char inName[5] {};
+
+    int nbonds = 0;
+    int freebonds = 0;
+    int number = 0;
+    int atomicNumber = 0;
+    int mobile = 0;
+    int visited = 0;
+    int moleculeIndex = std::numeric_limits<int>::min(); // Residue and chain
+    
+    SimTK::DuMM::AtomClassIndex atomClassIndex;
+    SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
+    SimTK::BiotypeIndex biotypeIndex;
+    SimTK::Compound::AtomIndex atomIndex;
+
+    char elem {};
   
-    bSpecificAtom();
-    ~bSpecificAtom();
-    void Print(void);
-    void Zero(void);
+public:
+    void Print();
+    void Zero();
 
     // Interface
-    int getNBonds(void);
-    int getFreebonds(void);
-    std::string getName(void);
-    std::string getInName(void);
-    int getNumber(void);
-    char getElem(void);
-    SimTK::mdunits::Mass getMass(void);
+    int getNBonds() const;
+    int getFreebonds() const;
+    std::string getName() const;
+    std::string getInName() const;
+    int getNumber() const;
+    char getElem() const;
+    SimTK::mdunits::Mass getMass() const;
     void setMass(SimTK::Real);
-    SimTK::Real getX(void) const;
-    SimTK::Real getY(void) const;
-    SimTK::Real getZ(void) const;
-    std::string getFftype(void);
-    SimTK::DuMM::AtomClassIndex getAtomClassIndex(void);
-    void setAtomClassIndex(SimTK::DuMM::AtomClassIndex);
-    std::string getBiotype(void);
-    SimTK::Compound::SingleAtom * getBAtomType(void);
+    SimTK::Real getX() const;
+    SimTK::Real getY() const;
+    SimTK::Real getZ() const;
+    std::string getBiotype() const;
+    SimTK::Compound::SingleAtom * getBAtomType() const;
     SimTK::Compound::AtomIndex getCompoundAtomIndex() const;
-    SimTK::Real getCharge(void);
-    int getIsMobile(void);
-    int getIsVisited(void);
+    SimTK::Real getCharge() const;
+    int getIsMobile() const;
+    int getIsVisited() const;
+    std::string getFftype() const;
 
-    int getAtomicNumber(void);
+    SimTK::DuMM::AtomClassIndex getAtomClassIndex() const;
+    void setAtomClassIndex(SimTK::DuMM::AtomClassIndex);
+
+    int getAtomicNumber() const;
     void setAtomicNumber(int);
-    SimTK::Real getVdwRadius(void);
+
+    SimTK::Real getVdwRadius() const;
     void setVdwRadius(SimTK::Real);
-    SimTK::Real getLJWellDepth(void);
+
+    SimTK::Real getLJWellDepth() const;
     void setLJWellDepth(SimTK::Real);
 
-    const SimTK::DuMM::ChargedAtomTypeIndex getChargedAtomTypeIndex() const;
+    SimTK::DuMM::ChargedAtomTypeIndex getChargedAtomTypeIndex() const;
     void setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIndex);
 
-    SimTK::BiotypeIndex getBiotypeIndex(void);
+    SimTK::BiotypeIndex getBiotypeIndex() const;
     void setBiotypeIndex(SimTK::BiotypeIndex);
 
     void setNbonds(int);
@@ -115,7 +125,6 @@ public:
     void setInName(std::string);
     void setNumber(int);
     void setElem(char);
-
 
     void setX(SimTK::Real);
     void setY(SimTK::Real);
@@ -131,10 +140,6 @@ public:
 
     void addNeighbor(bSpecificAtom *);
     void addBond(bBond *);
-
-private:
-    SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
-
 };
 
 // Update Molmodel MolAtom dest with Gmolmodel bSpecificAtom src values

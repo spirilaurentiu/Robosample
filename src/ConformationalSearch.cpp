@@ -8,17 +8,14 @@ Implementation of ConformationalSearch class. **/
 #include "Topology.hpp"
 
 // Constructor
-ConformationalSearch::ConformationalSearch(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
-                                     SimTK::SimbodyMatterSubsystem *argMatter,
-
-                                     //SimTK::Compound *argResidue,
-				     std::vector<Topology *>& topologies,
-
-                                     SimTK::DuMMForceFieldSubsystem *argDumm,
-                                     SimTK::GeneralForceSubsystem *argForces,
-                                     SimTK::TimeStepper *argTimeStepper)
-    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    : Sampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
+ConformationalSearch::ConformationalSearch(World *argWorld,
+    SimTK::CompoundSystem *argCompoundSystem,
+    SimTK::SimbodyMatterSubsystem *argMatter,
+    std::vector<Topology>& argTopologies,
+    SimTK::DuMMForceFieldSubsystem *argDumm,
+    SimTK::GeneralForceSubsystem *argForces,
+    SimTK::TimeStepper *argTimeStepper) :
+        Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
     TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
     SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
@@ -405,7 +402,7 @@ void ConformationalSearch::propose(SimTK::State& someState)
 // Acception - rejection step
 void ConformationalSearch::update(SimTK::State& someState){
     SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-    SimTK::Real RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
+    RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
 
     // Get old energy
     pe_o = getOldPE();

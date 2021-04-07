@@ -29,6 +29,12 @@ void PrintHelp() {
 
 int main(int argc, char **argv)
 {
+	{
+		std::cout << "creating world\n";
+		World w(0, false, 0.0015);
+		std::cout << "done\n";
+	}
+
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
 		PrintHelp();
@@ -243,16 +249,16 @@ int main(int argc, char **argv)
    // Add samplers to the worlds
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		if(setupReader.get("SAMPLER")[worldIx] == "VV"){
-			BaseSampler *p = context.addSampler(worldIx, HMC);
+			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
 			pHMC(p)->setThermostat(ThermostatName::ANDERSEN);
 		}else if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
-			BaseSampler *p = context.addSampler(worldIx, HMC);
+			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
 			pHMC(p)->setThermostat(ThermostatName::NONE);
 		}else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
-			BaseSampler *p = context.addSampler(worldIx, LAHMC);
+			BaseSampler *p = context.addSampler(worldIx, SamplerName::LAHMC);
 			pLAHMC(p)->setThermostat(ThermostatName::NONE);
 		}else{
-			BaseSampler *p = context.addSampler(worldIx, LAHMC);
+			BaseSampler *p = context.addSampler(worldIx, SamplerName::LAHMC);
 			pLAHMC(p)->setThermostat(ThermostatName::NONE);
 		}
 	}

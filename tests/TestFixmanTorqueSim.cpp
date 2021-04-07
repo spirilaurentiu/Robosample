@@ -21,10 +21,10 @@ int main(int argc, char **argv)
 	bool useFixmanTorque = false;
 
 	// SimTK::CompoundSystem *compoundSystem = world->compoundSystem;
-	SimTK::SimbodyMatterSubsystem *matter = world->matter;
-	SimTK::GeneralForceSubsystem *generalForceSubsystem = world->forces;
-	SimTK::DuMMForceFieldSubsystem *dumm = world->forceField;
-	SimTK::TimeStepper *timeStepper = world->ts;
+	SimTK::SimbodyMatterSubsystem *matter = world->matter.get();
+	SimTK::GeneralForceSubsystem *generalForceSubsystem = world->forces.get();
+	SimTK::DuMMForceFieldSubsystem *dumm = world->forceField.get();
+	SimTK::TimeStepper *timeStepper = world->ts.get();
 	const SimTK::System *system = &(matter->getSystem());
 
 	readAmberInput amberReader;
@@ -55,8 +55,8 @@ int main(int argc, char **argv)
 
 
 	// Request threads
-        world->updForceField()->setUseMultithreadedComputation(true);
-        world->updForceField()->setNumThreadsRequested(2);
+    world->updForceField()->setUseMultithreadedComputation(true);
+    world->updForceField()->setNumThreadsRequested(2);
 
 	// Print the number of threads we got back
 	std::cout << "World  requested "
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 	world->getCompoundSystem()->realizeTopology();
 
 	// AddAdd samplers to the worlds
-	world->addSampler(HMC);
+	world->addSampler(SamplerName::HMC);
 	BaseSampler *pSampler = world->updSampler(0);
 
 	// Set timestep

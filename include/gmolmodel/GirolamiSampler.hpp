@@ -13,15 +13,14 @@ class GirolamiSampler : public HMCSampler
 public:
 
     // Constructor
-    GirolamiSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
-                                 SimTK::SimbodyMatterSubsystem *argMatter,
-
-                                 //SimTK::Compound *argResidue,
-				 std::vector<Topology *>& topologies,
-
-                                 SimTK::DuMMForceFieldSubsystem *argDumm,
-                                 SimTK::GeneralForceSubsystem *forces,
-                                 SimTK::TimeStepper *argTimeStepper);
+    GirolamiSampler(World *argWorld,
+        SimTK::CompoundSystem *argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem *argMatter,
+		//SimTK::Compound *argResidue,
+		std::vector<Topology> &argTopologies,
+		SimTK::DuMMForceFieldSubsystem *argDumm,
+		SimTK::GeneralForceSubsystem *argForces,
+		SimTK::TimeStepper *argTimeStepper);
 
     // Destructor
     virtual ~GirolamiSampler();

@@ -159,4 +159,3 @@ mkdir temp/pdbs
 
 # add tests
 cp ../tests/test-memory.sh test-memory.sh
-

@@ -34,7 +34,8 @@ ELSE()
     # https://gcc.gnu.org/onlinedocs/gcc-4.6.4/gcc/Optimize-Options.html
     # -fopt-info-vec-all prints everything (might be worth investigating)
     # for dev only -fopt-info-vec-missed
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3 -march=native -flto ${ROBO_PGO}" )
+    # -flto
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3 -march=native ${ROBO_PGO}" )
 
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ROBO_PGO}" )
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${ROBO_PGO}" )

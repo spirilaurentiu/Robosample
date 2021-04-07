@@ -52,7 +52,7 @@ using namespace std;
 #endif
 
 // Check versus Velocity Verlet in cart coords
-enum{
+enum struct VELOCITY_VERLET : int {
   SERV_QX, SERV_QY, SERV_QZ,
   SERV_VX, SERV_VY, SERV_VZ,
   SERV_AX, SERV_AY, SERV_AZ,
@@ -247,15 +247,18 @@ std::string GetUniqueName(int key);
 SimTK::Real magnitude(std::vector<SimTK::Real>& V);
 SimTK::Real magSq(std::vector<SimTK::Real>& V);
 
-/** Normalize a std vector of double **/
-std::vector<SimTK::Real>& normalize(std::vector<SimTK::Real>& V);
+/** Normalize a std vector of double.
+ * The result is stored in the input vector.
+ * If the magnitude is 0, the vector is left untouched.
+**/
+void normalize(std::vector<SimTK::Real>& V);
 
 
 /*
  * Thermodynamics
  */
 
-enum class ThermostatName : int { // Thermostats
+enum struct ThermostatName : int { // Thermostats
 	NONE,
 	ANDERSEN,
 	BERENDSEN,
@@ -267,7 +270,7 @@ enum class ThermostatName : int { // Thermostats
  * Simulation
  */
 
-enum IntegratorName { // Samplers
+enum struct IntegratorName : int { // Samplers
 	VERLET,
 	EULER,
 	EULER2,
@@ -282,19 +285,19 @@ enum IntegratorName { // Samplers
  * Statistics
  */
 /** The type of distribution to draw a random number from **/
-enum class GmolRandDistributionType {
+enum struct GmolRandDistributionType : int {
 	UNIFORM,
 	NORMAL
 };
 
-
-enum SamplerName { // Samplers
+// Samplers
+enum struct SamplerName : int {
 	MC,
 	HMC,
 	LAHMC
 };
 
-enum JointType {
+enum struct JointType : int {
 	LINEAR,
 	ANGULAR180,
 	ANGULAR360,

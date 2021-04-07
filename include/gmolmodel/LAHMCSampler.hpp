@@ -33,17 +33,15 @@ friend class Context;
 public:
 
     /** Constructor **/
-    LAHMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
-                                 ,SimTK::SimbodyMatterSubsystem *argMatter
-
-                                 //,SimTK::Compound *argResidue
-				 ,std::vector<Topology *>& topologies
-	
-                                 ,SimTK::DuMMForceFieldSubsystem *argDumm
-                                 ,SimTK::GeneralForceSubsystem *forces
-                                 ,SimTK::TimeStepper *argTimeStepper
-			         ,unsigned int Kext
-                                 );
+    LAHMCSampler(World *argWorld,
+        SimTK::CompoundSystem *argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem *argMatter,
+		//SimTK::Compound *argResidue,
+		std::vector<Topology> &argTopologies,
+		SimTK::DuMMForceFieldSubsystem *argDumm,
+		SimTK::GeneralForceSubsystem *argForces,
+		SimTK::TimeStepper *argTimeStepper,
+      unsigned int Kext);
 
     /** Destructor **/
     virtual ~LAHMCSampler();
@@ -71,16 +69,16 @@ public:
     virtual void reinitialize(SimTK::State& advanced) ;
 
     /** Get the TimeStepper that manages the integrator **/
-    //const SimTK::TimeStepper * getTimeStepper(void);
-    //SimTK::TimeStepper * updTimeStepper(void);
+    //const SimTK::TimeStepper * getTimeStepper();
+    //SimTK::TimeStepper * updTimeStepper();
     //void setTimeStepper(SimTK::TimeStepper * someTimeStepper);
 
     /** Get/Set the timestep for integration **/
-    //virtual float getTimestep(void);
-    //virtual void setTimestep(float);
+    //virtual SimTK::Real getTimestep() const;
+    //virtual void setTimestep(SimTK::Real);
 
     /** Get/Set boost temperature **/
-    //SimTK::Real getBoostTemperature(void);
+    //SimTK::Real getBoostTemperature();
     //void setBoostTemperature(SimTK::Real);
     //void setBoostMDSteps(int);
 
@@ -101,7 +99,7 @@ public:
     void calcNewConfigurationAndEnergies(SimTK::State& someState, int k);
 
     /*** Set C matrices entries to 0 ***/
-    void resetCMatrices(void);
+    void resetCMatrices();
 
     /*** Return a submatrix of M with lesser rows and cols from the end ***/
     SimTK::Matrix extractFromTop(SimTK::Matrix M, int rowCut, int colCut);
@@ -155,11 +153,11 @@ public:
 
     /** Get the proposed kinetic energy. This is set right  after velocities
     are initialized. **/
-    SimTK::Real getProposedKE(void) { return this->ke_proposed; }
+    SimTK::Real getProposedKE() { return this->ke_proposed; }
     
     /** Get the stored kinetic energy. This is set rightafter a move is
     accepted. It's a component of the total energy stored. **/
-    SimTK::Real getLastAcceptedKE(void) { return this->ke_lastAccepted; }
+    SimTK::Real getLastAcceptedKE() { return this->ke_lastAccepted; }
     
     /** Sets the proposed kinetic energy before the proposal. This should be
     set right after the velocities are initialized. **/

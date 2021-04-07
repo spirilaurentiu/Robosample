@@ -8,21 +8,17 @@ Implementation of GirolamiSampler class. **/
 #include "Topology.hpp"
 
 //** Constructor **/
-GirolamiSampler::GirolamiSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
-                                     SimTK::SimbodyMatterSubsystem *argMatter,
-
-                                     //SimTK::Compound *argResidue,
-				     std::vector<Topology *>& topologies,
-
-                                     SimTK::DuMMForceFieldSubsystem *argDumm,
-                                     SimTK::GeneralForceSubsystem *argForces,
-                                     SimTK::TimeStepper *argTimeStepper)
-    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    : Sampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
-    //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    //HMCSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    MonteCarloSampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
-    HMCSampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
+GirolamiSampler::GirolamiSampler(World *argWorld,
+    SimTK::CompoundSystem *argCompoundSystem,
+	SimTK::SimbodyMatterSubsystem *argMatter,
+	//SimTK::Compound *argResidue,
+	std::vector<Topology> &argTopologies,
+	SimTK::DuMMForceFieldSubsystem *argDumm,
+	SimTK::GeneralForceSubsystem *argForces,
+	SimTK::TimeStepper *argTimeStepper) :
+        Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        HMCSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 }
 

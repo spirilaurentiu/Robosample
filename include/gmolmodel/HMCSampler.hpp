@@ -36,16 +36,14 @@ friend class Context;
 public:
 
 	/** Constructor **/
-	HMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
-			,SimTK::SimbodyMatterSubsystem *argMatter
-
-			//,SimTK::Compound *argResidue
-			,std::vector<Topology *>& argTopologies
-
-			,SimTK::DuMMForceFieldSubsystem *argDumm
-			,SimTK::GeneralForceSubsystem *forces
-			,SimTK::TimeStepper *argTimeStepper
-			);
+	HMCSampler(World *argWorld,
+		SimTK::CompoundSystem *argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem *argMatter,
+		//SimTK::Compound *argResidue,
+		std::vector<Topology> &argTopologies,
+		SimTK::DuMMForceFieldSubsystem *argDumm,
+		SimTK::GeneralForceSubsystem *argForces,
+		SimTK::TimeStepper *argTimeStepper);
 
 	/** Destructor **/
 	virtual ~HMCSampler();
@@ -53,14 +51,14 @@ public:
 	/** Calculate O(n2) the square root of the mass matrix inverse
 	denoted by Jain l* = [I -JPsiK]*sqrt(D) (adjoint of l).
 	This is lower triangular **/
-	void calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv);
+	void calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const;
 
 	/** Calculate O(n2) the square root of the mass matrix inverse
 	denoted by Jain l = sqrt(D) * [I -JPsiK]. This is upper triangular **/
-	void calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv);
+	void calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const;
 
 	/** Calculate sqrt(M) using Eigen. For debug purposes. **/
-	void calcNumSqrtMUpper(SimTK::State& someState, SimTK::Matrix& SqrtMUpper);
+	void calcNumSqrtMUpper(SimTK::State& someState, SimTK::Matrix& SqrtMUpper) const;
 
 	/** Helper function for initialize velocities. Put generalized velocities
 	scale factors into a fixed size array to avoid searching for them into a 
@@ -78,16 +76,16 @@ public:
 	virtual void reinitialize(SimTK::State& advanced) ;
 
 	/** Get the TimeStepper that manages the integrator **/
-	const SimTK::TimeStepper * getTimeStepper(void);
-	SimTK::TimeStepper * updTimeStepper(void);
+	const SimTK::TimeStepper * getTimeStepper();
+	SimTK::TimeStepper * updTimeStepper();
 	void setTimeStepper(SimTK::TimeStepper * someTimeStepper);
 
 	/** Get/Set the timestep for integration **/
-	virtual float getTimestep(void);
-	virtual void setTimestep(float);
+	virtual SimTK::Real getTimestep() const;
+	virtual void setTimestep(SimTK::Real);
 
 	/** Get/Set boost temperature **/
-	SimTK::Real getBoostTemperature(void);
+	SimTK::Real getBoostTemperature();
 	void setBoostTemperature(SimTK::Real);
 	void setBoostMDSteps(int);
 
@@ -123,11 +121,16 @@ public:
 	virtual void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
-	virtual SimTK::Real MHAcceptProbability(SimTK::State& someState, 
-	SimTK::Real argEtot_proposed, SimTK::Real argEtot_n);
+	SimTK::Real MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const;
 
 	/** Accetion rejection step **/
 	virtual bool accRejStep(SimTK::State& someState);
+
+	/** Checks if the proposal is valid **/
+	bool validateProposal() const;
+
+	/** Chooses whether to accept a sample or not based on a probability **/
+	bool acceptSample();
 
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
@@ -144,23 +147,23 @@ public:
 
 	/** Push Cartesian coordinates into R vector stored in Sampler.
 	Return the size of R **/
-	int pushCoordinatesInR(SimTK::State& someState);
+	std::size_t pushCoordinatesInR(SimTK::State& someState);
 
 	/** Push Cartesian velocities into Rdot vector stored in Sampler.
 	Return the size of Rdot **/
-	int pushVelocitiesInRdot(SimTK::State& someState);
+	std::size_t pushVelocitiesInRdot(SimTK::State& someState);
 
 	/** Push generalized coordinates into R vector stored in Sampler.
 	Return the size of R **/
-	int pushCoordinatesInQ(SimTK::State& someState);
+	std::size_t pushCoordinatesInQ(SimTK::State& someState);
 
 	/** Push generalizedvelocities into Rdot vector stored in Sampler.
 	Return the size of Rdot **/
-	int pushVelocitiesInQdot(SimTK::State& someState);
+	std::size_t pushVelocitiesInQdot(SimTK::State& someState);
 
 	/** Push generalizedvelocities into Rdot vector stored in Sampler.
 	Return the size of Rdot **/
-	int pushVelocitiesInU(SimTK::State& someState);
+	std::size_t pushVelocitiesInU(SimTK::State& someState);
 
 	/** Modifies Q randomly
 	 **/
@@ -168,11 +171,11 @@ public:
 
 	/** Get the proposed kinetic energy. This is set right  after velocities
 	are initialized. **/
-	SimTK::Real getProposedKE(void) { return this->ke_proposed; }
+	SimTK::Real getProposedKE() { return this->ke_proposed; }
 	
 	/** Get the stored kinetic energy. This is set rightafter a move is
 	accepted. It's a component of the total energy stored. **/
-	SimTK::Real getLastAcceptedKE(void) { return this->ke_lastAccepted; }
+	SimTK::Real getLastAcceptedKE() { return this->ke_lastAccepted; }
 	
 	/** Sets the proposed kinetic energy before the proposal. This should be
 	set right after the velocities are initialized. **/
@@ -190,22 +193,22 @@ public:
 	void PrintDetailedEnergyInfo(SimTK::State& someState);
 
 	/** Calculate Mean Square Displacement based on stored R vectors **/
-	SimTK::Real calculateMSD(void);
+	SimTK::Real calculateMSD();
 
 	/** Calculate RRdot based on stored R and Rdot vectors **/
-	SimTK::Real calculateRRdot(void);
+	SimTK::Real calculateRRdot();
 
 	/** **/
-	void geomDihedral(void);
+	void geomDihedral();
 
 	/** Load the map of mobods to joint types **/
         //void loadMbx2mobility(SimTK::State& someState);
 
 protected:
 
-	float timestep;
-	float prevTimestep;
-	float prevPrevTimestep;
+	SimTK::Real timestep;
+	SimTK::Real prevTimestep;
+	SimTK::Real prevPrevTimestep;
 	bool shouldAdaptTimestep;
 
 	SimTK::Real ke_lastAccepted; // last accepted kinetic energy

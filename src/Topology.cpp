@@ -517,12 +517,10 @@ void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm)
 }
 
 /** Calls DuMM defineBondStretch to define bonds parameters. **/
-void Topology::bAddBondParams(
-	  std::string resName
-	, readAmberInput *amberReader
-	, SimTK::DuMMForceFieldSubsystem& dumm
-)
+void Topology::bAddBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
 {
+	// function args were std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm
+
 	// Iterate through bonds and define their parameters
 	// Suppose or try to have the same order as the reader
 	for(int t = 0; t < amberReader->getNumberBonds(); t++){
@@ -543,12 +541,10 @@ void Topology::bAddBondParams(
 }
 
 /** Calls DuMM defineBondBend to define angle parameters. **/
-void Topology::bAddAngleParams(
-	  std::string resName
-	, readAmberInput *amberReader
-	, SimTK::DuMMForceFieldSubsystem& dumm
-)
+void Topology::bAddAngleParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
 {
+	// function args were std::string resName
+
 	// Iterate through angles and define their parameters
 	for(int t = 0; t < amberReader->getNumberAngles(); t++){
 		dumm.defineBondBend_KA(
@@ -556,7 +552,7 @@ void Topology::bAddAngleParams(
 			bAtomList[amberReader->getAnglesAtomsIndex2(t)].getAtomClassIndex(),
 			bAtomList[amberReader->getAnglesAtomsIndex3(t)].getAtomClassIndex(),
 			amberReader->getAnglesForceK(t),
-			ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getAnglesEqval(t))
+			static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getAnglesEqval(t))) // TODO 32 vs 64 bit
 		);
 	}
 }
@@ -582,8 +578,9 @@ void Topology::bAddTorsionParams(
 					bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getAtomClassIndex(),
 					bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getAtomClassIndex(),
 					bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getAtomClassIndex(),
-					amberReader->getDihedralsPeriod(t),   amberReader->getDihedralsForceK(t),   
-					ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))
+					static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+					amberReader->getDihedralsForceK(t),
+					static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)))
 				);
 			}
 			else if(numberOf == 2){
@@ -592,10 +589,12 @@ void Topology::bAddTorsionParams(
 					bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getAtomClassIndex(),
 					bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getAtomClassIndex(),
 					bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getAtomClassIndex(),
-					amberReader->getDihedralsPeriod(t),   amberReader->getDihedralsForceK(t), 
-					ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)),
-					amberReader->getDihedralsPeriod(t+1), amberReader->getDihedralsForceK(t+1), 
-					ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))
+					static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+					amberReader->getDihedralsForceK(t),
+					static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+					static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+					amberReader->getDihedralsForceK(t + 1),
+					static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)))
 				);
 			}
 			else if(numberOf == 3){
@@ -604,12 +603,15 @@ void Topology::bAddTorsionParams(
 					bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getAtomClassIndex(),
 					bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getAtomClassIndex(),
 					bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getAtomClassIndex(),
-					amberReader->getDihedralsPeriod(t),   amberReader->getDihedralsForceK(t),
-					ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)),
-					amberReader->getDihedralsPeriod(t+1), amberReader->getDihedralsForceK(t+1),
-					ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)),
-					amberReader->getDihedralsPeriod(t+2), amberReader->getDihedralsForceK(t+2),
-					ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2))
+					static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+					amberReader->getDihedralsForceK(t),
+					static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+					static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+					amberReader->getDihedralsForceK(t + 1),
+					static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
+					static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
+					amberReader->getDihedralsForceK(t + 2),
+					static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
 				);
 			}
 		}
@@ -655,7 +657,7 @@ bool Topology::checkIfTripleUnorderedAreEqual(
 
 }
 
-void Topology::loadTriples(void)
+void Topology::loadTriples()
 {
 	// Assign Compound coordinates by matching bAtomList coordinates
 	//std::cout << "Topology triples: " << std::endl ;
@@ -668,14 +670,14 @@ void Topology::loadTriples(void)
 	getBondedAtomRuns(3, atomTargets);	
 
 	// Find root bAtomList index
-	int rootIx;
+	// int rootIx;
 	int ix = -1;
 	for(auto atom: bAtomList){
 		ix++;
-		if(atom.getCompoundAtomIndex() == 0){
-			rootIx = ix;
-			break;
-		}
+		// if(atom.getCompoundAtomIndex() == 0){
+		// 	rootIx = ix;
+		// 	break;
+		// }
 	}
 
 	// Find neighbour with maximum atomIndex
@@ -732,7 +734,7 @@ SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState) {
 
 	//std::cout << std::setprecision(20) << std::fixed;
 	//std::cout << "sinpitch " << sinPitch << std::endl;
-	SimTK::Real pitch = std::asin(sinPitch);
+	// SimTK::Real pitch = std::asin(sinPitch);
 
 	SimTK::Real result = std::log(sinPitch * sinPitch);
 
@@ -785,7 +787,9 @@ SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatS
 }
 
 
-SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State& someState){
+SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State&){
+	// function args were const SimTK::State& someState
+	
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
@@ -821,18 +825,20 @@ SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State& someSt
 }
 
 
-SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& someState){
-		// Assign Compound coordinates by matching bAtomList coordinates
-		std::map<AtomIndex, Vec3> atomTargets;
-		for(int ix = 0; ix < getNumAtoms(); ++ix){
-				Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-				atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
-		}
+SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&){
+	// function args were const SimTK::State& someState
+
+	// Assign Compound coordinates by matching bAtomList coordinates
+	std::map<AtomIndex, Vec3> atomTargets;
+	for(int ix = 0; ix < getNumAtoms(); ++ix){
+			Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+	}
 
 	//std::cout << "Topology::calcLogDetMBATDistsMassesContribution dists squared: " ;
 	SimTK::Real result = 3.0*std::log(bAtomList[bonds[0].i].mass);
 	//std::cout << "atom " << bonds[0].i << " 1stlogmass " << std::log(bAtomList[bonds[0].i].mass) << " " ;
-	for(auto bond: bonds){
+	for(const auto& bond: bonds){
 		//SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
 		//SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
 		//SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);
@@ -855,13 +861,15 @@ SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State& 
 TODO: calculate atomTargets only once: getAtomLocationsInGround
 TODO: realize position
 */
-SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State& someState){
-		// Assign Compound coordinates by matching bAtomList coordinates
-		std::map<AtomIndex, Vec3> atomTargets;
-		for(int ix = 0; ix < getNumAtoms(); ++ix){
-				Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-				atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
-		}
+SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State&){
+	// function args were const SimTK::State& someState
+
+	// Assign Compound coordinates by matching bAtomList coordinates
+	std::map<AtomIndex, Vec3> atomTargets;
+	for(int ix = 0; ix < getNumAtoms(); ++ix){
+			Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+	}
 
 	//std::cout << "Topology::calcLogDetMBATAnglesContribution angles: " ;
 	SimTK::Real result = 0.0;
@@ -878,7 +886,7 @@ SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State& someS
 		assert(dotProduct > -1.1);
 		if (dotProduct > 1.0) dotProduct = 1.0;
 		if (dotProduct < -1.0) dotProduct = -1.0;
-		SimTK::Real angle = std::acos(dotProduct);
+		// SimTK::Real angle = std::acos(dotProduct);
 		//std::cout << SimTK_RADIAN_TO_DEGREE * angle << " " ;
 
 		SimTK::Real sinSqAngle = 1 - (dotProduct * dotProduct);
@@ -892,8 +900,9 @@ SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State& someS
 }
 
 
-SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State& someState)
-{
+SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State&){
+	// function args were const SimTK::State& someState
+
 	//std::cout << "Topology::calcLogDetMBATMassesContribution masses: " ;
 	SimTK::Real result = 0.0;
 	for(const auto& atom: bAtomList){
@@ -946,19 +955,24 @@ SimTK::Real Topology::calcLogDetMBATInternal(const SimTK::State& someState)
  **/
 
 /** Get the number of atoms in the molecule **/
-int Topology::getNAtoms(void) const{
+int Topology::getNAtoms() const{
 	return getNumAtoms();
 }
 
 /** Get the number of bonds in the molecule **/
-int Topology::getNBonds(void) const{
-	assert(!"Not implemented.");
+int Topology::getNBonds() const{
+	assert(!"Not implemented."); throw std::exception();
+
+	return std::numeric_limits<int>::max();
 }
 
 /** Get a pointer to an atom object in the atom list inquiring
 by number **/
-bSpecificAtom * Topology::getAtomByNumber(int number) const{
-	assert(!"Not implemented.");
+bSpecificAtom * Topology::getAtomByNumber(int) const {
+	// function args were int number
+	assert(!"Not implemented."); throw std::exception();
+
+	return nullptr;
 }
 
 /** Get a pointer to an atom object in the atom list inquiring
@@ -976,10 +990,19 @@ bSpecificAtom * Topology::updAtomByAtomIx(int aIx) {
 
 /** Get a pointer to an atom object in the atom list inquiring
 by atom name. **/
-bSpecificAtom * Topology::getAtomByName(std::string name) const{assert(!"Not implemented.");}
+bSpecificAtom * Topology::getAtomByName(std::string) const {
+	// function args were std::string name
+	assert(!"Not implemented."); throw std::exception();
+
+	return nullptr;
+}
 
 /** Get the neighbours in the graph. **/
-std::vector<bSpecificAtom *> Topology::getNeighbours(int) const{assert(!"Not implemented.");}
+std::vector<bSpecificAtom *> Topology::getNeighbours(int) const {
+	assert(!"Not implemented."); throw std::exception();
+	
+	return {};
+}
 
 /** **/
 const bBond& Topology::getBond(int a1, int a2) const
@@ -993,10 +1016,20 @@ const bBond& Topology::getBond(int a1, int a2) const
 	std::string assert_string("No bond with these atom indeces found: " + to_string(a1) + " " + to_string(a2) + ". Exiting.");
 	std::cout << assert_string << std::endl;
 	assert(0);
+	
+	// TODO what should we return? std::optional? this std::exception looks sketchy
+	// anyways, return {}; returns a local and it's not good
+	throw std::exception();
+	return {};
 }
 
 /** Get bond order. **/
-int Topology::getBondOrder(int, int) const{assert(!"Not implemented.");}
+int Topology::getBondOrder(int, int) const
+{
+	assert(!"Not implemented."); throw std::exception();
+	
+	return 0;
+}
 
 
 /** The following functions are used to build the molecular graph using bonding
@@ -1190,11 +1223,8 @@ void Topology::matchDefaultConfigurationWithAtomList(
 /** Builds the molecular tree, closes the rings, matches the configuration
 on the graph using using Molmodels matchDefaultConfiguration and sets the 
 general flexibility of the molecule. **/
-void Topology::buildGraphAndMatchCoords(
-		SimTK::DuMMForceFieldSubsystem &dumm,
-		int argRoot
-) {
-
+void Topology::buildGraphAndMatchCoords(SimTK::DuMMForceFieldSubsystem &dumm, int argRoot)
+{
 	// Initialize all atoms and bonds to unvisited
 	for (int i = 0; i < natoms; i++) {
 		bAtomList[i].setVisited(0);
@@ -1208,7 +1238,7 @@ void Topology::buildGraphAndMatchCoords(
 	if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
 		baseAtomNumber = argRoot;
 		root = &(bAtomList[argRoot]);
-	bSpecificAtomRootIndex = argRoot;
+		bSpecificAtomRootIndex = argRoot;
 	}else {
 		std::cout << "Root atom will be chosen by Gmolmodel." << std::endl;
 		int baseAtomListIndex = 0;
@@ -1218,8 +1248,9 @@ void Topology::buildGraphAndMatchCoords(
 				break;
 			}
 		}
+
 		root = &(bAtomList[baseAtomListIndex]);
-	bSpecificAtomRootIndex = baseAtomListIndex;
+		bSpecificAtomRootIndex = baseAtomListIndex;
 		baseAtomNumber = root->number;
 	}
 
@@ -1235,9 +1266,7 @@ void Topology::buildGraphAndMatchCoords(
 
 	// Now that everything is built, initialize aIx2TopTransforms map
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		aIx2TopTransform.insert(
-			std::pair<SimTK::Compound::AtomIndex, SimTK::Transform>
-			((bAtomList[i]).atomIndex, SimTK::Transform()));
+		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).atomIndex, SimTK::Transform()));
 	}
 	
 }
@@ -1469,7 +1498,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 }
 
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
-void Topology::loadMobodsRelatedMaps(void){
+void Topology::loadMobodsRelatedMaps(){
 
 	// Iterate through atoms and get their MobilizedBodyIndeces
 	//for (SimTK::Compound::AtomIndex aIx(bAtomList[0].atomIdex); aIx < getNumAtoms(); ++aIx){
@@ -1502,7 +1531,7 @@ void Topology::loadMobodsRelatedMaps(void){
 
 
 /** Compound AtomIndex to bAtomList number **/
-void Topology::loadCompoundAtomIx2GmolAtomIx(void)
+void Topology::loadCompoundAtomIx2GmolAtomIx()
 {
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
@@ -1524,7 +1553,7 @@ int Topology::getNumber(SimTK::Compound::AtomIndex aIx)
 /** Calculate all atom frames in top frame. It avoids calling
 calcDefaultAtomFrameInCompoundFrame multiple times. This has
 to be called every time the coordinates change though. **/
-void Topology::calcTopTransforms(void)
+void Topology::calcTopTransforms()
 {
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
@@ -1533,7 +1562,7 @@ void Topology::calcTopTransforms(void)
 }
 
 /**  **/
-void Topology::printTopTransforms(void)
+void Topology::printTopTransforms()
 {
 	std::cout << "Topology TopTransforms " << std::endl;
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
@@ -1548,7 +1577,7 @@ SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
 }
 
 /** Print maps **/
-void Topology::printMaps(void)
+void Topology::printMaps()
 {
 	std::cout << "Topology " << name << " maps " << std::endl;
 	std::cout << "mbx2aIx:" << std::endl;

@@ -18,16 +18,14 @@ class Sampler
 {
 public:
 	// Constructor
-	Sampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
-		    SimTK::SimbodyMatterSubsystem *argMatter,
-
-		    //SimTK::Compound *argResidue,
-		    std::vector<Topology *> &argTopologies,
-
-		    SimTK::DuMMForceFieldSubsystem *argDumm,
-		    SimTK::GeneralForceSubsystem *forces,
-		    SimTK::TimeStepper *argTimeStepper);
-
+	Sampler(World *argWorld,
+		SimTK::CompoundSystem *argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem *argMatter,
+		//SimTK::Compound *argResidue,
+		std::vector<Topology> &argTopologies,
+		SimTK::DuMMForceFieldSubsystem *argDumm,
+		SimTK::GeneralForceSubsystem *argForces,
+		SimTK::TimeStepper *argTimeStepper);
 
 	// Destructor
 	virtual ~Sampler();
@@ -57,8 +55,8 @@ public:
 	int getNofSamples(void);
 
 	// Get set the seed
-	unsigned long long int getSeed(void);
-	void setSeed(unsigned long long int);
+	uint32_t getSeed(void) const;
+	void setSeed(uint32_t);
 
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
@@ -80,9 +78,9 @@ public:
 	//SimTK::Compound *residue;
 	Topology *residue;
 
-	std::vector<Topology *> topologies;
-	int natoms;
-	int ndofs;
+	std::vector<Topology>& topologies;
+	std::size_t natoms;
+	std::size_t ndofs;
 
 	/** Joint types **/
 	std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
@@ -100,7 +98,7 @@ public:
 
 	// Sampling
 	int nofSamples;
-	unsigned long long int seed;
+	uint32_t seed;
 	bool acc;
 
 	// Random number generators - not sure if I need two

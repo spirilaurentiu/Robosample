@@ -25,15 +25,14 @@ class MonteCarloSampler : virtual public Sampler
 public:
 
     // Constructor
-    MonteCarloSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
-                      SimTK::SimbodyMatterSubsystem *argMatter,
-
-                      //SimTK::Compound *argResidue,
-                      std::vector<Topology *>& argTopologies,
-
-                      SimTK::DuMMForceFieldSubsystem *argDumm,
-                      SimTK::GeneralForceSubsystem *forces,
-                      SimTK::TimeStepper *argTimeStepper) ;
+    MonteCarloSampler(World *argWorld,
+        SimTK::CompoundSystem *argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem *argMatter,
+		//SimTK::Compound *argResidue,
+		std::vector<Topology> &argTopologies,
+		SimTK::DuMMForceFieldSubsystem *argDumm,
+		SimTK::GeneralForceSubsystem *argForces,
+		SimTK::TimeStepper *argTimeStepper);
 
     // Destructor
     virtual ~MonteCarloSampler();
@@ -176,9 +175,9 @@ protected:
     //std::list<SimTK::Vector> QsBuffer;
     std::deque<SimTK::Real> QsBuffer;
 
-    float acceptance;
-    float prevAcceptance;
-    float prevPrevAcceptance;
+    SimTK::Real acceptance;
+    SimTK::Real prevAcceptance;
+    SimTK::Real prevPrevAcceptance;
 
     bool proposeExceptionCaught;
  

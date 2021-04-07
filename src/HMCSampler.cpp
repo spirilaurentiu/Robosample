@@ -9,20 +9,15 @@ Implementation of HMCSampler class. **/
 #include "World.hpp"
 
 //** Constructor **/
-HMCSampler::HMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
-                                     ,SimTK::SimbodyMatterSubsystem *argMatter
-
-                                     //,SimTK::Compound *argResidue
-				     ,std::vector<Topology *>& argTopologies
-
-                                     ,SimTK::DuMMForceFieldSubsystem *argDumm
-                                     ,SimTK::GeneralForceSubsystem *argForces
-                                     ,SimTK::TimeStepper *argTimeStepper
-                                     )
-    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    : Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
-    //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem,
+	SimTK::SimbodyMatterSubsystem *argMatter,
+	//SimTK::Compound *argResidue,
+	std::vector<Topology> &argTopologies,
+	SimTK::DuMMForceFieldSubsystem *argDumm,
+	SimTK::GeneralForceSubsystem *argForces,
+	SimTK::TimeStepper *argTimeStepper) :
+		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+		MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 	this->useFixman = false;  
 	this->fix_n = this->fix_o = 0.0;
@@ -56,17 +51,18 @@ HMCSampler::~HMCSampler()
 }
 
 /** Calculate sqrt(M) using Eigen. For debug purposes. **/
-void HMCSampler::calcNumSqrtMUpper(SimTK::State& someState, SimTK::Matrix& SqrtMUpper)
+void HMCSampler::calcNumSqrtMUpper(SimTK::State&, SimTK::Matrix&) const
 {
+	// function signature was SimTK::State& someState, SimTK::Matrix& SqrtMUpper
     assert("!Not implemented");
 }
 
 /** Calculate O(n2) the square root of the mass matrix inverse
 denoted by Jain l = sqrt(D) * [I -JPsiK]. This is upper triangular matrix and it is computed 
 multipling a set of orthonormal vectors with the sqrt(MInv). **/
-void HMCSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
+void HMCSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const
 {
-    int nu = someState.getNU();
+    const int nu = someState.getNU();
     assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvU: passed matrix doesn't have nu x nu size.");
 
     SimTK::Vector V(nu);
@@ -97,9 +93,9 @@ void HMCSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
 denoted by Jain l* = [I -JPsiK]*sqrt(D) (adjoint of l).
 This is lower triangular matrix and it is computed by multipling a set of
  orthonormal vectors with the sqrt(MInv) and transpose it. **/
-void HMCSampler::calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
+void HMCSampler::calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const
 {
-    int nu = someState.getNU();
+    const int nu = someState.getNU();
     assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvL: passed matrix doesn't have nu x nu size.");
 
     SimTK::Vector V(nu);
@@ -140,12 +136,12 @@ void HMCSampler::setProposedKE(SimTK::Real inpKE)
 }
 
 /** Get/set the TimeStepper that manages the integrator **/
-const SimTK::TimeStepper * HMCSampler::getTimeStepper(void)
+const SimTK::TimeStepper * HMCSampler::getTimeStepper()
 {
     return timeStepper;
 }
 
-SimTK::TimeStepper * HMCSampler::updTimeStepper(void)
+SimTK::TimeStepper * HMCSampler::updTimeStepper()
 {
     return timeStepper;
 }
@@ -181,14 +177,14 @@ velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
 acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
-void HMCSampler::initialize(SimTK::State& someState )
+void HMCSampler::initialize(SimTK::State& someState)
 {
     // After an event handler has made a discontinuous change to the
     // Integrator's "advanced state", this method must be called to 
     // reinitialize the Integrator.
     timeStepper->initialize(compoundSystem->getDefaultState());
 
-    int nu = someState.getNU();
+    const int nu = someState.getNU();
 
     // Randomize configuration
     //if(randomizeConformation == true){
@@ -204,11 +200,9 @@ void HMCSampler::initialize(SimTK::State& someState )
 
     // Store the configuration
     system->realize(someState, SimTK::Stage::Position);
-    int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
-        i++;
+        SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
     }
 
     // Initialize QsBuffer with zeros
@@ -225,7 +219,7 @@ void HMCSampler::initialize(SimTK::State& someState )
 
     // Store Fixman potential
     if(useFixman){
-        std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential." << std::endl;
+        std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential.\n";
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
 
@@ -326,12 +320,12 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 }
 
 /** Get/Set the timestep for integration **/
-float HMCSampler::getTimestep(void)
+SimTK::Real HMCSampler::getTimestep() const
 {
     return timestep;
 }
 
-void HMCSampler::setTimestep(float argTimestep)
+void HMCSampler::setTimestep(SimTK::Real argTimestep)
 {
     if(argTimestep <= 0){
         shouldAdaptTimestep = true;
@@ -345,7 +339,7 @@ void HMCSampler::setTimestep(float argTimestep)
 }
 
 /** Get/Set boost temperature **/
-SimTK::Real HMCSampler::getBoostTemperature(void)
+SimTK::Real HMCSampler::getBoostTemperature()
 {
     return this->boostT;
 }
@@ -370,10 +364,8 @@ void HMCSampler::setBoostMDSteps(int argMDSteps)
 void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someState){ // func
     system->realize(someState, SimTK::Stage::Position);
 
-    int t = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-        TVector[t] = SetTVector[t];
-        t++;
+        TVector[mbx - 1] = SetTVector[mbx - 1];
     }
 
     // TODO: change the names from Old to Proposed and Set to lastAccepted
@@ -385,7 +377,7 @@ void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someSta
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
 void HMCSampler::initializeVelocities(SimTK::State& someState){
-    int nu = someState.getNU();
+    const int nu = someState.getNU();
     double sqrtRT = std::sqrt(RT);
     SimTK::Vector V(nu);
     SimTK::Vector SqrtMInvV(nu);
@@ -421,106 +413,108 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 }
 
-void HMCSampler::adaptTimestep(SimTK::State& someState)
+void HMCSampler::adaptTimestep(SimTK::State&)
 {
-		std::cout << std::endl;
-		//std::cout << "Adapt: nofSamples= " << nofSamples << std::endl;
-		if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){ // Do it only so often
-			std::cout << "Adapt BEGIN: ts= " << timestep;
+	// function signature was SimTK::State& someState
 
-			// float stdAcceptance = 0.03;
-			float idealAcceptance = 0.651;
-			// float smallestAcceptance = 0.0001;
-			// float timestepIncr = 0.001;
+	std::cout << std::endl;
+	//std::cout << "Adapt: nofSamples= " << nofSamples << std::endl;
+	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){ // Do it only so often
+		std::cout << "Adapt BEGIN: ts= " << timestep;
 
-			// Compute acceptance in the buffer
-			int sum = std::accumulate(acceptedStepsBuffer.begin(), acceptedStepsBuffer.end(), 0);
+		// SimTK::Real stdAcceptance = 0.03;
+		SimTK::Real idealAcceptance = 0.651;
+		// SimTK::Real smallestAcceptance = 0.0001;
+		// SimTK::Real timestepIncr = 0.001;
 
-			SimTK::Real prevPrevPrevAcceptance = prevPrevAcceptance; // to reset
-			prevPrevAcceptance = prevAcceptance;
-			prevAcceptance = acceptance;
-    		acceptance = float(sum) / float(acceptedStepsBufferSize);
+		// Compute acceptance in the buffer
+		int sum = std::accumulate(acceptedStepsBuffer.begin(), acceptedStepsBuffer.end(), 0);
 
-			std::cout << " ppAcc= " << prevPrevAcceptance << " pAcc= " << prevAcceptance << " acc= " << acceptance << std::endl;
+		SimTK::Real prevPrevPrevAcceptance = prevPrevAcceptance; // to reset
+		prevPrevAcceptance = prevAcceptance;
+		prevAcceptance = acceptance;
+    	acceptance = sum / acceptedStepsBufferSize;
 
-			if( !SimTK::isNaN(prevPrevAcceptance) ){ // Passed first two initial evaluations
-				// Calculate gradients
-				SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2;
-				a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
-				t_n = timestep; t_n_1 = prevTimestep; t_n_2 = prevPrevTimestep;
-	
-				SimTK::Real F_n =   std::abs(a_n   - idealAcceptance);
-				SimTK::Real F_n_1 = std::abs(a_n_1 - idealAcceptance);
-				SimTK::Real F_n_2 = std::abs(a_n_2 - idealAcceptance);
-	
-				SimTK::Real dF_n   = F_n     - F_n_1;
-				SimTK::Real dF_n_1 = F_n_1   - F_n_2;
-				SimTK::Real dt_n = (t_n   - t_n_1);
-				SimTK::Real dt_n_1 = (t_n_1   - t_n_2);
-				SimTK::Real gradF_n   = dF_n / dt_n;
-				SimTK::Real gradF_n_1 = dF_n_1 / dt_n_1;
-	
-				// Calculate gamma
-				SimTK::Real gamma;
-				SimTK::Real num, denom;
-				num = std::abs(dt_n * (gradF_n - gradF_n_1));
-				denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
-				gamma = num / denom;
-	
-				// Increase or decrease timestep
-				SimTK::Real newTimestep = t_n - (gamma * gradF_n);
-				std::cout << "Adapt data: "
-					<< " " << F_n  << " " << F_n_1  << " " << F_n_2 << " " << dF_n << " " << dF_n_1 
-					<< " " << dt_n << " " << dt_n_1 << " " << gradF_n << " " << gradF_n_1
-					<< " " << num << " " << denom << " " << gamma
-					<< std::endl;
-				if( (std::abs(prevTimestep - timestep) > 0.0001) || (newTimestep < 0.00089) || (SimTK::isNaN(newTimestep)) || ((acceptance - prevAcceptance) < 0.001)){
-					std::cout << "newTimestep rejected" << std::endl; 
-    					SimTK::Real r = uniformRealDistribution(randomEngine);
-					if(acceptance < idealAcceptance){
-						timestep = timestep - (0.3*r * timestep);
-					}else{
-						timestep = timestep + (0.3*r * timestep);
-					}
+		std::cout << " ppAcc= " << prevPrevAcceptance << " pAcc= " << prevAcceptance << " acc= " << acceptance << std::endl;
 
-					acceptance = prevAcceptance;
-					prevAcceptance = prevPrevAcceptance;
-					prevPrevAcceptance = prevPrevPrevAcceptance;
-				}else{ // Reset acceptances
-					std::cout << "newTimestep accepted" << std::endl; 
-					prevPrevTimestep = prevTimestep;
-					prevTimestep = timestep;
-					timestep = newTimestep;
+		if( !SimTK::isNaN(prevPrevAcceptance) ){ // Passed first two initial evaluations
+			// Calculate gradients
+			SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2;
+			a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
+			t_n = timestep; t_n_1 = prevTimestep; t_n_2 = prevPrevTimestep;
+
+			SimTK::Real F_n =   std::abs(a_n   - idealAcceptance);
+			SimTK::Real F_n_1 = std::abs(a_n_1 - idealAcceptance);
+			SimTK::Real F_n_2 = std::abs(a_n_2 - idealAcceptance);
+
+			SimTK::Real dF_n   = F_n     - F_n_1;
+			SimTK::Real dF_n_1 = F_n_1   - F_n_2;
+			SimTK::Real dt_n = (t_n   - t_n_1);
+			SimTK::Real dt_n_1 = (t_n_1   - t_n_2);
+			SimTK::Real gradF_n   = dF_n / dt_n;
+			SimTK::Real gradF_n_1 = dF_n_1 / dt_n_1;
+
+			// Calculate gamma
+			SimTK::Real gamma;
+			SimTK::Real num, denom;
+			num = std::abs(dt_n * (gradF_n - gradF_n_1));
+			denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
+			gamma = num / denom;
+
+			// Increase or decrease timestep
+			SimTK::Real newTimestep = t_n - (gamma * gradF_n);
+			std::cout << "Adapt data: "
+				<< " " << F_n  << " " << F_n_1  << " " << F_n_2 << " " << dF_n << " " << dF_n_1 
+				<< " " << dt_n << " " << dt_n_1 << " " << gradF_n << " " << gradF_n_1
+				<< " " << num << " " << denom << " " << gamma
+				<< std::endl;
+			if( (std::abs(prevTimestep - timestep) > 0.0001) || (newTimestep < 0.00089) || (SimTK::isNaN(newTimestep)) || ((acceptance - prevAcceptance) < 0.001)){
+				std::cout << "newTimestep rejected\n"; 
+    				SimTK::Real r = uniformRealDistribution(randomEngine);
+				if(acceptance < idealAcceptance){
+					timestep = timestep - (0.3*r * timestep);
+				}else{
+					timestep = timestep + (0.3*r * timestep);
 				}
 
-    				timeStepper->updIntegrator().setFixedStepSize(timestep);
-				std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
-			}else{ // Alter the intial timesteps to get a valid dF_n next time
-
-			//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(someState, SimTK::MobilizedBodyIndex(2));
-		    	//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
-			//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
-			//const SimTK::Inertia i2 = mp2.calcInertia();
-			//SimTK::Mat33 mi2 = i2.toMat33();
-			//std::cout << std::endl;
-			//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
-			//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
-			//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
-			//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
-
+				acceptance = prevAcceptance;
+				prevAcceptance = prevPrevAcceptance;
+				prevPrevAcceptance = prevPrevPrevAcceptance;
+			} else { // Reset acceptances
+				std::cout << "newTimestep accepted\n"; 
 				prevPrevTimestep = prevTimestep;
 				prevTimestep = timestep;
-				if( SimTK::isNaN(prevPrevTimestep) ){
-					timestep = 0.0009; // smaller than H vibration
-    					timeStepper->updIntegrator().setFixedStepSize(timestep);
-				}else{
-					timestep = (prevTimestep + prevPrevTimestep) / 2;
-    					timeStepper->updIntegrator().setFixedStepSize(timestep);
-				}
-				std::cout << "Adapt END: ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
+				timestep = newTimestep;
 			}
 
-		} // is time to adapt 
+    			timeStepper->updIntegrator().setFixedStepSize(timestep);
+			std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
+		} else { // Alter the intial timesteps to get a valid dF_n next time
+
+		//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(someState, SimTK::MobilizedBodyIndex(2));
+	    	//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
+		//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
+		//const SimTK::Inertia i2 = mp2.calcInertia();
+		//SimTK::Mat33 mi2 = i2.toMat33();
+		//std::cout << std::endl;
+		//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
+		//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
+		//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
+		//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
+
+			prevPrevTimestep = prevTimestep;
+			prevTimestep = timestep;
+			if( SimTK::isNaN(prevPrevTimestep) ){
+				timestep = 0.0009; // smaller than H vibration
+    				timeStepper->updIntegrator().setFixedStepSize(timestep);
+			}else{
+				timestep = (prevTimestep + prevPrevTimestep) / 2;
+    				timeStepper->updIntegrator().setFixedStepSize(timestep);
+			}
+			std::cout << "Adapt END: ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
+		}
+
+	} // is time to adapt 
 }
 
 /**  **/
@@ -530,8 +524,8 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 	int nq = someState.getNQ();
 	// int totSize = QsBufferSize * nq;
 	if( (nofSamples % QsBufferSize) == (QsBufferSize-1) ){
-		std::cout << "Adapt blocks BEGIN: " << std::endl;
-		//std::cout << "Print by row: " << std::endl;
+		std::cout << "Adapt blocks BEGIN: \n";
+		//std::cout << "Print by row: \n";
 		//for(int confi = 0; confi < QsBufferSize; confi++){
 		//	for(int qi = 0; qi < nq; qi++){
 		//		SimTK::Real x;
@@ -545,20 +539,20 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 		//	std::cout << std::endl;
 		//}
 
-		//std::cout << "Print by column: " << std::endl;
+		//std::cout << "Print by column: \n";
 		std::vector<std::vector<SimTK::Real>> QsBufferVec(nq, vector<SimTK::Real>(QsBufferSize));
 		for(int qi = 0; qi < nq; qi++){
 
 			std::vector<SimTK::Real> thisQ(QsBufferSize);
 
-			//std::cout << "QsBuffer= " << std::endl;
+			//std::cout << "QsBuffer= \n";
 			for(int confi = 0; confi < QsBufferSize; confi++){
 				thisQ[confi] = QsBuffer[(confi * nq) + qi];
 				//std::cout << QsBuffer[(confi * nq) + qi] << ' ';
 			}
 			//std::cout << std::endl;
 
-			//std::cout << "thisQ= " << std::endl;
+			//std::cout << "thisQ= \n";
 			//for(int confi = 0; confi < QsBufferSize; confi++){
 			//	std::cout << thisQ[confi] << ' ';
 			//}
@@ -568,7 +562,7 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 
 		}
 
-		//std::cout << "QsBufferVec= " << std::endl;
+		//std::cout << "QsBufferVec= \n";
 		//for(int qi = 0; qi < nq; qi++){
 		//	for(int confi = 0; confi < QsBufferSize; confi++){
 		//		std::cout << QsBufferVec[qi][confi] << ' ';
@@ -576,27 +570,27 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 		//	std::cout << std::endl;
 		//}
 		
-		std::cout << "Compute correlation matrix: " << std::endl;
+		std::cout << "Compute correlation matrix: \n";
 		SimTK::Real corr;
 		for(int qi = 0; qi < nq; qi++){
 			//for(int qj = 0; (qj < nq) && (qj < qi); qj++){
 			for(int qj = 0; (qj < nq); qj++){
-				if(qIndex2jointType[SimTK::QIndex(qi)] == ANGULAR360){
-					if(qIndex2jointType[SimTK::QIndex(qj)] == ANGULAR360){
+				if(qIndex2jointType[SimTK::QIndex(qi)] == JointType::ANGULAR360){
+					if(qIndex2jointType[SimTK::QIndex(qj)] == JointType::ANGULAR360){
 						corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
 						std::cout << corr << ' ';
-					}else if(qIndex2jointType[SimTK::QIndex(qj)] == LINEAR){
+					}else if(qIndex2jointType[SimTK::QIndex(qj)] == JointType::LINEAR){
 						corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
 						std::cout << corr << ' ';
 					}else{
 						corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
 						std::cout << corr << ' ';
 					}
-				}else if(qIndex2jointType[SimTK::QIndex(qi)] == LINEAR){
-					if(qIndex2jointType[SimTK::QIndex(qj)] == LINEAR){
+				}else if(qIndex2jointType[SimTK::QIndex(qi)] == JointType::LINEAR){
+					if(qIndex2jointType[SimTK::QIndex(qj)] == JointType::LINEAR){
 						corr = bCorr(QsBufferVec[qi], QsBufferVec[qj]);
 						std::cout << corr << ' ';
-					}else if(qIndex2jointType[SimTK::QIndex(qj)] == ANGULAR360){
+					}else if(qIndex2jointType[SimTK::QIndex(qj)] == JointType::ANGULAR360){
 						corr = circCorr(QsBufferVec[qi], QsBufferVec[qj]);
 						std::cout << corr << ' ';
 					}else{
@@ -611,7 +605,7 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 			std::cout << std::endl;
 		}
 
-		std::cout << "Adapt blocks END: " << std::endl;
+		std::cout << "Adapt blocks END: \n";
 	}
 
 }
@@ -620,7 +614,6 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 /** Apply the L operator **/
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
     try {
-
         this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
         system->realize(someState, SimTK::Stage::Position);
@@ -629,22 +622,20 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		std::cout << "\t[WARNING] propose exception caught!\n";
         proposeExceptionCaught = true;
 
-        int i = 0;
         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-            mobod.setQToFitTransform(someState, SetTVector[i]);
-            i++;
+            mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
         }
+
         system->realize(someState, SimTK::Stage::Position);
     }
-
 }
 
 /**  **/
 void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
-	//, std::function<void(void)> initialFunc
-	//, std::function<void(void)> loopFunc
-	//, std::function<void(void)> finalFunc
+	//, std::function<void()> initialFunc
+	//, std::function<void()> loopFunc
+	//, std::function<void()> finalFunc
 	){
 
 	//// TODO: Intial function BEGIN ////
@@ -748,7 +739,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 
 }
 
-void HMCSampler::geomDihedral(void){
+void HMCSampler::geomDihedral(){
     /* // INSTANT GEOMETRY
     SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
     int a1, a2, a3, a4, a5;
@@ -837,40 +828,59 @@ void HMCSampler::setSetConfigurationAndEnergiesToOld(SimTK::State& someState)
 	acceptedStepsBuffer.pop_front();
 }
 
-SimTK::Real HMCSampler::MHAcceptProbability(SimTK::State& someState, 
-	SimTK::Real argEtot_proposed, SimTK::Real argEtot_n){
-
-	if(argEtot_n < argEtot_proposed){
+SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const {
+	if(argEtot_n < argEtot_proposed) {
 		return 1;
-	}else{
+	} else {
 		return exp(-(argEtot_n - argEtot_proposed) * this->beta);
 	}
 }
 
 /** Acception rejection step **/
-bool HMCSampler::accRejStep(SimTK::State& someState){
+bool HMCSampler::accRejStep(SimTK::State& someState) {
 
 	// Decide and get a new sample
-	if ( getThermostat() == ThermostatName::ANDERSEN ){ // MD with Andersen thermostat
+	if ( getThermostat() == ThermostatName::ANDERSEN ) {
+		// MD with Andersen thermostat
 		this->acc = true;
-		std::cout << "\tsample accepted (always with andersen thermostat)" << std::endl;
-		update(someState); // smth is broken in here
-	}else{ // Apply Metropolis-Hastings correction
-		if (proposeExceptionCaught == false && !std::isnan(pe_n)) { 
-			const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-			if(rand_no < MHAcceptProbability(someState, etot_proposed, etot_n)){ 
+		std::cout << "\tsample accepted (always with andersen thermostat)\n";
+		update(someState);
+	} else {
+		if (validateProposal()) { 
+			// Apply Metropolis-Hastings correction
+			if(acceptSample()) { 
 				this->acc = true;
-				std::cout << "\tsample accepted" << std::endl;
+				std::cout << "\tsample accepted\n";
 				update(someState);
-			}else{ // Reject
+			} else {
+				// Reject
 				this->acc = false;
-				std::cout << "\tsample rejected" << std::endl;
+				std::cout << "\tsample rejected\n";
 				setSetConfigurationAndEnergiesToOld(someState);
 			}
 		}
 	}
 
 	return this->acc;
+}
+
+/** Checks if the proposal is valid **/
+bool HMCSampler::validateProposal() const {
+	const bool valid = proposeExceptionCaught == false && !std::isnan(pe_n); // check other energies?
+
+	if (!valid) {
+		std::cout << "\tproposeExceptionCaught=" << proposeExceptionCaught << ", pe_n=" << pe_n << "\n";
+	}
+
+	return valid;
+}
+
+/** Chooses whether to accept a sample or not based on a probability **/
+bool HMCSampler::acceptSample() {
+	const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+	const SimTK::Real prob = MHAcceptProbability(etot_proposed, etot_n);
+
+	return rand_no < prob;
 }
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo
@@ -922,36 +932,37 @@ void HMCSampler::update(SimTK::State& someState)
 
 /** Push Cartesian coordinates into R vector stored in Sampler.
 Return the size of R **/
-int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
+std::size_t HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 {
-	for(const auto& Topology : topologies){
-		for(const auto& AtomList : Topology->bAtomList){
+	for(const auto& topology : topologies){
+		for(const auto& AtomList : topology.bAtomList){
 			const auto aIx = AtomList.getCompoundAtomIndex();
-			const auto& atomR = Topology->calcAtomLocationInGroundFrame(someState, aIx);
+			const auto& atomR = topology.calcAtomLocationInGroundFrame(someState, aIx);
 			R.insert(R.end(), { atomR[0], atomR[1], atomR[2] });
 		}
 	}
 
-	if(R.size() >= static_cast<std::size_t>(2 * ndofs)) {
-		// for some weird reason, g++9.2 always evaluates the first if to true (45 >= 90)
-		if(R.size() >= static_cast<std::size_t>(2 * ndofs)) {
-			return -1;
+	if(ndofs < std::numeric_limits<decltype(ndofs)>::max() / 2) {
+		if(R.size() >= 2 * ndofs) {
+
+			for(size_t j = 0; j < ndofs; j++){
+				dR[j] = R[j + ndofs] - R[j];
+			}
+
+			// // Transfer upper to lower half and cleanup the upper half of R
+			// for(int j = ((ndofs) - 1); j >= 0; --j){
+			// 	//std::cout << "R size= " << R.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+			// 	R[j] = R[j + ndofs];
+			// 	R.pop_back();
+			// }
+
+			// If stuff breaks, look up for the original code. This also compacts memory
+			// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
+			std::vector<decltype(R)::value_type>(R.begin() + ndofs, R.end()).swap(R);
 		}
-
-		for(unsigned int j = 0; j < ndofs; j++){
-			dR[j] = R[j + ndofs] - R[j];
-		}
-
-		// // Transfer upper to lower half and cleanup the upper half of R
-		// for(int j = ((ndofs) - 1); j >= 0; --j){
-		// 	//std::cout << "R size= " << R.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
-		// 	R[j] = R[j + ndofs];
-		// 	R.pop_back();
-		// }
-
-		// If stuff breaks, look up for the original code. This also compacts memory
-		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
-		std::vector<decltype(R)::value_type>(R.begin() + ndofs, R.end()).swap(R);
+	} else {
+		std::cout << "integer overflow at " << __LINE__ << " in " << __FILE__ << std::endl;
+		throw exception();
 	}
 
 	return R.size();
@@ -959,37 +970,38 @@ int HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 
 /** Push velocities into Rdot vector stored in Sampler.
 Return the size of Rdot **/
-int HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
+std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 {
-	for(const auto& Topology : topologies){
-		for(const auto& AtomList : Topology->bAtomList){
+	for(const auto& topology : topologies){
+		for(const auto& AtomList : topology.bAtomList){
 			const auto aIx = AtomList.getCompoundAtomIndex();
-			const auto& atomRdot = Topology->calcAtomVelocityInGroundFrame(someState, aIx);
+			const auto& atomRdot = topology.calcAtomVelocityInGroundFrame(someState, aIx);
 			Rdot.insert(Rdot.end(), { atomRdot[0], atomRdot[1], atomRdot[2] });
 		}
 	}
 
-	// Calculate dRdot		
-	if(Rdot.size() >= static_cast<size_t>(2 * ndofs)) {
-		// for some weird reason, g++9.2 always evaluates the first if to true (45 >= 90)
+	// Calculate dRdot
+	if(ndofs < std::numeric_limits<decltype(ndofs)>::max() / 2) {	
 		if(Rdot.size() >= static_cast<size_t>(2 * ndofs)) {
-			return -1;
+
+			for(size_t j = 0; j < ndofs; j++){
+				dRdot[j] = Rdot[j + ndofs] - Rdot[j];
+			}
+
+			// // Transfer upper to lower half and cleanup the upper half of Rdot
+			// for(int j = ((ndofs) - 1); j >= 0; --j){
+			// 	std::cout << "Rdotdot size= " << Rdot.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
+			// 	Rdot[j] = Rdot[j + ndofs];
+			// 	Rdot.pop_back();
+			// }
+
+			// If stuff breaks, look up for the original code. This also compacts memory
+			// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
+			std::vector<decltype(Rdot)::value_type>(Rdot.begin() + ndofs, Rdot.end()).swap(Rdot);
 		}
-
-		for(int j = 0; j < ndofs; j++){
-			dRdot[j] = Rdot[j + ndofs] - Rdot[j];
-		}
-
-		// // Transfer upper to lower half and cleanup the upper half of Rdot
-		// for(int j = ((ndofs) - 1); j >= 0; --j){
-		// 	std::cout << "Rdotdot size= " << Rdot.size() << " j= " << j << " j+ndofs= " << j+ndofs << std::endl;
-		// 	Rdot[j] = Rdot[j + ndofs];
-		// 	Rdot.pop_back();
-		// }
-
-		// If stuff breaks, look up for the original code. This also compacts memory
-		// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
-		std::vector<decltype(Rdot)::value_type>(Rdot.begin() + ndofs, Rdot.end()).swap(Rdot);
+	} else {
+		std::cout << "integer overflow at " << __LINE__ << " in " << __FILE__ << std::endl;
+		throw exception();
 	}
 
 	return Rdot.size();
@@ -1022,27 +1034,27 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 
 /** Calculate Mean Square Displacement based on stored R vectors **/
-SimTK::Real HMCSampler::calculateMSD(void)
+SimTK::Real HMCSampler::calculateMSD()
 {
 	SimTK::Real MSD = 0;
-	if(dR.size() >= static_cast<size_t>(ndofs)){
+	if(dR.size() >= ndofs){
 		MSD += magSq(dR);
-		MSD /= (ndofs);
+		MSD /= static_cast<SimTK::Real>(ndofs); // TODO is this ok?
 	}
 	return MSD;
 }
 
 /** Calculate RRdot based on stored R and Rdot vectors **/
-SimTK::Real HMCSampler::calculateRRdot(void)
+SimTK::Real HMCSampler::calculateRRdot()
 {
 	SimTK::Real RRdot = 0;
-	if(dR.size() >= static_cast<size_t>(ndofs)){
+	if(dR.size() >= ndofs){
 		std::vector<SimTK::Real> tempDR = dR;
 		std::vector<SimTK::Real> tempRdot = Rdot;
 		normalize(tempDR);
 		normalize(tempRdot);
 
-		for(int j = 0; j < ndofs; j++){
+		for(std::size_t j = 0; j < ndofs; j++){
 			RRdot += tempDR[j] * tempRdot[j];
 		}
 	}

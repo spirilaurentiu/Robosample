@@ -8,23 +8,18 @@ Implementation of LAHMCSampler class. **/
 #include "Topology.hpp"
 
 //** Constructor **/
-LAHMCSampler::LAHMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem
-                                     ,SimTK::SimbodyMatterSubsystem *argMatter
-
-                                     //,SimTK::Compound *argResidue
-				     ,std::vector<Topology *>& topologies
-
-                                     ,SimTK::DuMMForceFieldSubsystem *argDumm
-                                     ,SimTK::GeneralForceSubsystem *argForces
-                                     ,SimTK::TimeStepper *argTimeStepper
-				     ,unsigned int Kext
-                                     )
-    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    : Sampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
-    //MonteCarloSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper),
-    //HMCSampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    MonteCarloSampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper),
-    HMCSampler(argWorld, argCompoundSystem, argMatter, topologies, argDumm, argForces, argTimeStepper)
+LAHMCSampler::LAHMCSampler(World *argWorld,
+    SimTK::CompoundSystem *argCompoundSystem,
+	SimTK::SimbodyMatterSubsystem *argMatter,
+	//SimTK::Compound *argResidue,
+	std::vector<Topology> &argTopologies,
+	SimTK::DuMMForceFieldSubsystem *argDumm,
+	SimTK::GeneralForceSubsystem *argForces,
+	SimTK::TimeStepper *argTimeStepper,
+    unsigned int Kext) :
+        Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        HMCSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  
     this->fix_n = this->fix_o = 0.0;
@@ -41,7 +36,7 @@ LAHMCSampler::LAHMCSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSy
 
 
     this->K = Kext;
-    for(unsigned int i = 0; i < K + 1; i++){
+    for(int i = 0; i < K + 1; i++){
     	pe_ns.push_back(SimTK::Infinity);
     	fix_ns.push_back(SimTK::Infinity);
     	logSineSqrGamma2_ns.push_back(SimTK::Infinity);
@@ -215,11 +210,9 @@ void LAHMCSampler::initialize(SimTK::State& someState )
 
     // Store the configuration
     system->realize(someState, SimTK::Stage::Position);
-    int i = 0;
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
-        i++;
+        SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
     }
 
 	// Initialize QsBuffer with zeros
@@ -466,8 +459,9 @@ void LAHMCSampler::setCtauEntry(int i, int j, SimTK::Real entry){
 }
 
 /*** Metropolis-Hastings acception-rejection criterion  ***/
-SimTK::Real LAHMCSampler::MHAcceptProbability(SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n)
+SimTK::Real LAHMCSampler::MHAcceptProbability(SimTK::State&, SimTK::Real E_o, SimTK::Real E_n)
 {
+    // function args were SimTK::State& someState, SimTK::Real E_o, SimTK::Real E_n
 
 	SimTK::Real Ediff = E_o - E_n;
 	SimTK::Real prob = 1;
@@ -478,7 +472,9 @@ SimTK::Real LAHMCSampler::MHAcceptProbability(SimTK::State& someState, SimTK::Re
 }
 
 /*** Convert C indeces to Ctau indeces ***/
-void LAHMCSampler::C_to_Ctau_Indeces(int C_i, int C_j, int &Ctau_i, int &Ctau_j, int currSize){
+void LAHMCSampler::C_to_Ctau_Indeces(int C_i, int C_j, int &Ctau_i, int &Ctau_j, int){
+    // function args were int C_i, int C_j, int &Ctau_i, int &Ctau_j, int currSize
+
 	Ctau_j = this->K - 1 - C_i;
 	Ctau_i = this->K - 1 - C_j;
 }
@@ -543,17 +539,17 @@ SimTK::Matrix LAHMCSampler::extractFromTop(SimTK::Matrix CC_loc, int rowCut, int
 /*** Copies different sizes matrices entries and avoids Simbody resize ***/
 void LAHMCSampler::injectFromTop(const std::vector<SimTK::Real>& src, std::vector<SimTK::Real>& dest)
 {
-	int srcN = src.size();
-	int destN = dest.size();
+	std::size_t srcN = src.size();
+	std::size_t destN = dest.size();
 
 	// Only go up to the smallest dimension
 	if(srcN < destN){ // Source is smaller
-		for(int i = 0; i < srcN; i++){
+		for(std::size_t i = 0; i < srcN; i++){
 			dest[i] = src[i];
 		}
 		
 	}else{ // Destination is smaller
-		for(int i = 0; i < destN; i++){
+		for(std::size_t i = 0; i < destN; i++){
 			dest[i] = src[i];
 		}
 	}
@@ -590,26 +586,24 @@ void LAHMCSampler::injectFromTop(const SimTK::Matrix& src, SimTK::Matrix& dest)
 
 /*** Compute cumulative transition probabilities 
 TODO Energy indeces ***/
-SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> Es, SimTK::Matrix& CC)
+SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std::vector<SimTK::Real> Es, SimTK::Matrix& argCC)
 {
+	// Indices between the two matrices
 
-
-	// Indeces between the two matrices
-
-	int M = CC.nrow();
-	int N = CC.ncol();	
+	int M = argCC.nrow();
+	int N = argCC.ncol();	
 	SimTK_ASSERT_ALWAYS(M == N, "Robosample: leap_prob_recurse is designed for square matrices.");
-	SimTK_ASSERT_ALWAYS(M == (Es.size()), "Robosample: leap_prob_recurse: energy vector does not have the same size as C matrix.");
+	SimTK_ASSERT_ALWAYS(M == static_cast<int>(Es.size()), "Robosample: leap_prob_recurse: energy vector does not have the same size as C matrix."); // TODO 32 vs 64
 	//std::cout << "\nBEGIN size " << M << "\n";
 
 	// Check if already passed through this leaf
-	SimTK::Real upperCorner = CC.get(M - 1, N - 1 );
+	SimTK::Real upperCorner = argCC.get(M - 1, N - 1 );
 
 	//if( upperCorner != SimTK::Infinity){
 	if( upperCorner < 1){
 		//std::cout << "Already already visited this leaf" << std::endl;
-		//PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
-		return CC;
+		//PrintBigMat(argCC, M, N, 6, std::string(" C ") + std::to_string(M));
+		return argCC;
 	}
 
 	// Boltzmann probability
@@ -618,10 +612,10 @@ SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std
 		SimTK::Real p_acc = 0.0;
     		if(!std::isnan(Es[M - 1])){
 				p_acc = MHAcceptProbability(someState, Es[0], Es[Es.size() - 1]);
-				CC.set(0, M - 1, p_acc);
+				argCC.set(0, M - 1, p_acc);
 		}
-		//PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
-		return CC;
+		//PrintBigMat(argCC, M, N, 6, std::string(" C ") + std::to_string(M));
+		return argCC;
 	}
 	
 	//std::cout << "\nDEBUG Es_1 after injectFromTop \n";
@@ -633,14 +627,14 @@ SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std
 	// Reduce size
 	std::vector<SimTK::Real> Es_1(M - 1, SimTK::Infinity);
 	injectFromTop(Es, Es_1);
-	SimTK::Matrix CC_1 = extractFromTop(CC, -1, -1);
+	SimTK::Matrix CC_1 = extractFromTop(argCC, -1, -1);
 
 	// Reentry
 	CC_1 = leap_prob_recurse_hard(someState, Es_1, CC_1);
 
 	// Recover data
 	//injectFromTop(Es_1, Es); // don't need recover
-	injectFromTop(CC_1, CC);
+	injectFromTop(CC_1, argCC);
 
 	cum_forward = CC_1.get(0, CC_1.ncol() - 1);
 	//std::cout << " cum_fwd = " << cum_forward << std::endl;
@@ -649,8 +643,8 @@ SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std
 	//std::cout << "Reenter reverse.";
 
 	// Reverse
-	SimTK::Matrix CC_rev(CC.nrow(), CC.ncol());
-	CC_rev = reverseMatrix(CC);
+	SimTK::Matrix CC_rev(argCC.nrow(), argCC.ncol());
+	CC_rev = reverseMatrix(argCC);
 	std::vector<SimTK::Real> Es_rev = Es; // deep copy
 	std::reverse(Es_rev.begin(), Es_rev.end());
 
@@ -673,13 +667,13 @@ SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std
 	//std::vector<SimTK::Real> Es_rev_rev = Es; // deep copy // don't need recover
 	//std::reverse(Es_rev_rev.begin(), Es_rev_rev.end()); // don't need recover
 
-	SimTK::Matrix CC_rev_rev(CC.nrow(), CC.ncol());
+	SimTK::Matrix CC_rev_rev(argCC.nrow(), argCC.ncol());
 	CC_rev_rev = reverseMatrix(CC_rev);
 
 	//injectFromTop(Es_rev_rev, Es); // don't need recover
-	injectFromTop(CC_rev_rev, CC);
+	injectFromTop(CC_rev_rev, argCC);
 
-	//PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
+	//PrintBigMat(argCC, M, N, 6, std::string(" C ") + std::to_string(M));
 	//std::cout << " cum_rev = " << cum_reverse << std::endl;
 
 	// Eq. 25
@@ -696,10 +690,10 @@ SimTK::Matrix& LAHMCSampler::leap_prob_recurse_hard(SimTK::State& someState, std
 	//	<< prob << std::endl;
 
 	SimTK::Real cumu = cum_forward + prob;
-	CC.set(0, M - 1, cumu);
+	argCC.set(0, M - 1, cumu);
 
-	//PrintBigMat(CC, M, N, 6, std::string(" C ") + std::to_string(M));
-	return CC;
+	//PrintBigMat(argCC, M, N, 6, std::string(" C ") + std::to_string(M));
+	return argCC;
 }
 
 /** Acception rejection step **/
@@ -749,6 +743,7 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
     	someState.updU() = -1.0 * someState.getU();
     }
 
+    return this->acc;
 }
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo

@@ -66,7 +66,7 @@ mkdir build-release
 cd build-release
 mkdir pgo
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$((`nproc`*2))
+make -j$((`nproc`*2)) 2> out.txt
 sudo /sbin/ldconfig
 
 # add test input files

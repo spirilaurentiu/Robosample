@@ -8,17 +8,15 @@ Implementation of MonteCarloSampler class. **/
 #include "Topology.hpp"
 
 // Constructor
-MonteCarloSampler::MonteCarloSampler(World *argWorld, SimTK::CompoundSystem *argCompoundSystem,
-                                     SimTK::SimbodyMatterSubsystem *argMatter,
-
-                                     //SimTK::Compound *argResidue,
-				     std::vector<Topology *>& argTopologies,
-
-                                     SimTK::DuMMForceFieldSubsystem *argDumm,
-                                     SimTK::GeneralForceSubsystem *argForces,
-                                     SimTK::TimeStepper *argTimeStepper)
-    //: Sampler(argCompoundSystem, argMatter, argResidue, argDumm, argForces, argTimeStepper)
-    : Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+MonteCarloSampler::MonteCarloSampler(World *argWorld,
+    SimTK::CompoundSystem *argCompoundSystem,
+	SimTK::SimbodyMatterSubsystem *argMatter,
+	//SimTK::Compound *argResidue,
+	std::vector<Topology> &argTopologies,
+	SimTK::DuMMForceFieldSubsystem *argDumm,
+	SimTK::GeneralForceSubsystem *argForces,
+	SimTK::TimeStepper *argTimeStepper) :
+        Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
@@ -468,7 +466,9 @@ void MonteCarloSampler::propose(SimTK::State& someState)
 // The update step in Monte Carlo methods consists in:
 // Acception - rejection step
 void MonteCarloSampler::update(SimTK::State& someState){
-    RT = getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
+    // SimTK_BOLTZMANN_CONSTANT_MD is long double, but it shouldn't be a problem. Should we add a higher precision constant?
+    // mind that this is not the only occurence in our code base
+    RT = getTemperature() * static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD);
 
     // Get old energy
     pe_o = getOldPE();
