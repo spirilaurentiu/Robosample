@@ -14,6 +14,7 @@ sudo find /usr/local/lib -name 'libSimTK*' -delete
 
 # compile openmm
 cd openmm
+git checkout master && git pull
 mkdir build-debug
 cd build-debug/
 cmake -DCMAKE_BUILD_TYPE=Debug ..
@@ -36,6 +37,7 @@ rm build-release -rf
 
 # compile project
 cd Molmodel/Simbody01
+git checkout master && git pull
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
@@ -43,6 +45,7 @@ make -j$((`nproc`*2)) 2> build-simbody.txt
 sudo make install
 
 cd ../../
+git checkout master && git pull
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
@@ -54,6 +57,7 @@ sudo mkdir -p /usr/local/lib/plugins/ && sudo cp -f libOpenMMPlugin_d.so $_
 rm /usr/local/lib/plugins/libOpenMMPlugin.so
 
 cd ../../
+git checkout master && git pull
 mkdir build-debug
 cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
