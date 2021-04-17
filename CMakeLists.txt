@@ -13,6 +13,7 @@ set(ROBOSAMPLE_COPYRIGHT_YEARS "2021-01")
 set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 
 # set up compilation flags
+# TODO how to set for .c? we have one such file: src/format/dcdplugin.c
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -g" )
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
