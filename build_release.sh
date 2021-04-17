@@ -18,6 +18,7 @@ sudo find /usr/local/lib -name 'libSimTK*' -delete
 
 # compile openmm
 cd openmm
+git checkout master && git pull
 mkdir build-release
 cd build-release/
 cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -42,6 +43,7 @@ rm build-release -rf
 
 # compile project (Simbody)
 cd Molmodel/Simbody01
+git checkout master && git pull
 mkdir build-release
 cd build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -50,6 +52,7 @@ sudo make install
 
 # compile Molmodel
 cd ../../
+git checkout master && git pull
 mkdir build-release
 cd build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -62,6 +65,7 @@ rm /usr/local/lib/plugins/libOpenMMPlugin_d.so
 
 # compile Robosample
 cd ../../
+git checkout master && git pull
 mkdir build-release
 cd build-release
 mkdir pgo
