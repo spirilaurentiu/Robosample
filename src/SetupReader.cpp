@@ -108,6 +108,8 @@ const std::vector<std::string>& SetupReader::get(const std::string& argKey) cons
 	}
 	else {
         std::cout << "SetupReader::get() did not find '" << argKey << "'. Returning " << KeyNotFound[0] << ".\n";
+		// throw std::exception(); // TODO do we throw here? it would be ub not to, you know...
+		
 		return KeyNotFound;
 	}
 }

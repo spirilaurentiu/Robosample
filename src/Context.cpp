@@ -573,10 +573,12 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
     if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
         for(int round = 0; round < nofRounds; round++){
 
+            // std::cout << "Entering round " << round + 1 << "/" << nofRounds << "\n";
+
             // Iterate through worlds
             for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 
-                // Rotate worlds indeces (translate from right to left)
+                // Rotate worlds indices (translate from right to left)
                 if(isWorldOrderRandom){
                     if(getNofWorlds() >= 3){
                         // Swap world indeces between vector position 2 and random
@@ -619,30 +621,32 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
                 // Reinitialize current sampler
                 updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
-                // Sample
-                for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-                    updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
+                // Make the requested number of samples
+                for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++) {
+                    auto accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
+                    if (accepted) {
 
-                // CONTACT DEBUG
-                int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
-                SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->getDissipatedEnergy(currentAdvancedState);
-                bool hasDefaultForceGenerator = updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
+                        // CONTACT DEBUG
+                        int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
+                        SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->getDissipatedEnergy(currentAdvancedState);
+                        bool hasDefaultForceGenerator = updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
 
-                const MultibodySystem & mbs = updWorld(currentWorldIx)->contactForces->getMultibodySystem();
-                int nofMobods = mbs.getMatterSubsystem().getNumBodies();
+                        const MultibodySystem & mbs = updWorld(currentWorldIx)->contactForces->getMultibodySystem();
+                        int nofMobods = mbs.getMatterSubsystem().getNumBodies();
 
-                const ContactTrackerSubsystem & cts = updWorld(currentWorldIx)->contactForces->getContactTrackerSubsystem();
-                int ctsNofSurfaces = cts.getNumSurfaces();
-                
+                        const ContactTrackerSubsystem & cts = updWorld(currentWorldIx)->contactForces->getContactTrackerSubsystem();
+                        int ctsNofSurfaces = cts.getNumSurfaces();
+                        
 
-                std::cout << "CONTACT INFO:"
-                    << " #forces= " << numForces
-                    << " dissEnergy= " << dissEnergy
-                    << " hasDefaultForceGenerator= " << hasDefaultForceGenerator
-                    << " #mobods= " << nofMobods 
-                    << " ctsNofSurfaces= " << ctsNofSurfaces
-                << std::endl;
-                // CONTACT DEBUG enD
+                        std::cout << "CONTACT INFO:"
+                            << " #forces= " << numForces
+                            << " dissEnergy= " << dissEnergy
+                            << " hasDefaultForceGenerator= " << hasDefaultForceGenerator
+                            << " #mobods= " << nofMobods 
+                            << " ctsNofSurfaces= " << ctsNofSurfaces
+                        << std::endl;
+                        // CONTACT DEBUG enD
+                    }
                 }
     
             } // END iteration through worlds
@@ -658,6 +662,8 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
                 PrintDihedralsQs(worldIndexes.front());
                 fprintf(logFile, "\n");
             }
+
+            // std::cout << "\n";
     
             // Write pdb
             SimTK::State& pdbState = (updWorld(worldIndexes.front()))->integ->updAdvancedState();

@@ -8,6 +8,12 @@ Implementation of HMCSampler class. **/
 #include "Topology.hpp"
 #include "World.hpp"
 
+#define CHECK_IF_NAN(n) \
+	if(std::isnan(n)) { \
+		std::cout << "\t[WARNING] invalid sample: " << #n << " is nan!\n"; \
+		return false; \
+	}
+
 //** Constructor **/
 HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem,
 	SimTK::SimbodyMatterSubsystem *argMatter,
@@ -160,13 +166,13 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        const int mnu = mobod.getNumU(someState);
-	const float scaleFactor = world->getMobodUScaleFactor(mbx);
+        // const int mnu = mobod.getNumU(someState);
+		const float scaleFactor = world->getMobodUScaleFactor(mbx);
+
         //std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
-	for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
         	//std::cout << ' ' << int(uIx) ;
-		UScaleFactors[int(uIx)] = scaleFactor;
-		
+			UScaleFactors[int(uIx)] = scaleFactor;
         }
         //std::cout << '\n';
     }
@@ -832,6 +838,7 @@ SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK:
 	if(argEtot_n < argEtot_proposed) {
 		return 1;
 	} else {
+		// std::cout << "\tdiff=" << argEtot_n - argEtot_proposed << ", argEtot_n=" << argEtot_n << ", argEtot_proposed=" << argEtot_proposed << ", beta=" << beta << std::endl;
 		return exp(-(argEtot_n - argEtot_proposed) * this->beta);
 	}
 }
@@ -846,18 +853,26 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 		std::cout << "\tsample accepted (always with andersen thermostat)\n";
 		update(someState);
 	} else {
-		if (validateProposal()) { 
+		// we do not consider this sample accepted until it passes all checks
+		this->acc = false;
+
+		if (validateProposal()) {
+			
 			// Apply Metropolis-Hastings correction
-			if(acceptSample()) { 
+			if(acceptSample()) {
+				// sample is accepted
 				this->acc = true;
 				std::cout << "\tsample accepted\n";
 				update(someState);
 			} else {
-				// Reject
-				this->acc = false;
+				// sample is rejected
 				std::cout << "\tsample rejected\n";
 				setSetConfigurationAndEnergiesToOld(someState);
 			}
+		}
+		else {
+			// std::cout << "\tsample not validated, reverting to previous configuration\n";
+			setSetConfigurationAndEnergiesToOld(someState);
 		}
 	}
 
@@ -866,13 +881,33 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 
 /** Checks if the proposal is valid **/
 bool HMCSampler::validateProposal() const {
-	const bool valid = proposeExceptionCaught == false && !std::isnan(pe_n); // check other energies?
+	// TODO should we check anything else?
+	// TODO do we need to check the old values?
 
-	if (!valid) {
-		std::cout << "\tproposeExceptionCaught=" << proposeExceptionCaught << ", pe_n=" << pe_n << "\n";
+	if(proposeExceptionCaught) {
+		std::cout << "\t[WARNING] invalid sample: propose exception caught!\n";
+		return false;
 	}
 
-	return valid;
+	// CHECK_IF_NAN(pe_o);
+	CHECK_IF_NAN(pe_n);
+	
+	CHECK_IF_NAN(ke_proposed);
+	CHECK_IF_NAN(ke_n);
+
+	// CHECK_IF_NAN(fix_o);
+	CHECK_IF_NAN(fix_n);
+
+	// CHECK_IF_NAN(logSineSqrGamma2_o);
+	CHECK_IF_NAN(logSineSqrGamma2_n);
+
+	CHECK_IF_NAN(timestep);
+	CHECK_IF_NAN(exp(-(etot_n - etot_proposed) / RT));
+
+	CHECK_IF_NAN(etot_n);
+	CHECK_IF_NAN(etot_proposed);
+
+	return true;
 }
 
 /** Chooses whether to accept a sample or not based on a probability **/
@@ -880,6 +915,7 @@ bool HMCSampler::acceptSample() {
 	const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 	const SimTK::Real prob = MHAcceptProbability(etot_proposed, etot_n);
 
+	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;
 	return rand_no < prob;
 }
 
@@ -1012,22 +1048,23 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
     std::cout << std::setprecision(10) << std::fixed;
 
 	propose(someState);
-
 	accRejStep(someState);
 
-	++nofSamples;
+	if(this->acc) {
+		++nofSamples;
 
-	// Add generalized coordinates to a buffer
-	auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
-	QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
-	QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
+		// Add generalized coordinates to a buffer
+		auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
+		QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
+		QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
 
-	pushCoordinatesInR(someState);
-	pushVelocitiesInRdot(someState);
+		pushCoordinatesInR(someState);
+		pushVelocitiesInRdot(someState);
 
-	// Calculate MSD and RRdot to adapt the integration length
-    std::cout << std::setprecision(10) << std::fixed;
-	std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
+		// Calculate MSD and RRdot to adapt the integration length
+		std::cout << std::setprecision(10) << std::fixed;
+		std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
+	}
 	
 	return this->acc;
 }
@@ -1076,7 +1113,7 @@ void HMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
 {
     std::cout << std::setprecision(5) << std::fixed;
     std::cout
-		<< "\tpe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB " << getPEFromEvaluator(someState)
+		<< "\tpe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB " << /*" turned off for time being"*/ getPEFromEvaluator(someState)
         << "\n\tke_prop " << ke_proposed << ", ke_n " << ke_n
         << "\n\tfix_o " << fix_o << ", fix_n " << fix_n
         << "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o << ", logSineSqrGamma2_n " << logSineSqrGamma2_n
