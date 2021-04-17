@@ -284,7 +284,7 @@ void World::setUScaleFactorsToMobods(void)
 }
 
 /** Get U scale factor for the mobilized body **/
-const float World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
+float World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
 {
 	if(mbx2uScale.find(mbx) != mbx2uScale.end()){
 		return mbx2uScale.at(mbx);

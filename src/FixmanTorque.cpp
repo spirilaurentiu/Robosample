@@ -5,18 +5,21 @@
 ////////////////////////////
 ////// GRID FORCE //////////
 ////////////////////////////
-FixmanTorque::FixmanTorque(SimTK::CompoundSystem *compoundSystem, SimTK::SimbodyMatterSubsystem& matter
-                    ) : matter(matter){
-    this->compoundSystem = compoundSystem;
+FixmanTorque::FixmanTorque(SimTK::CompoundSystem *argCompoundSystem, SimTK::SimbodyMatterSubsystem& argMatter
+                    ) : matter(argMatter){
+    this->compoundSystem = argCompoundSystem;
     scaleFactor = 1.0;
     this->temperature = 0.0;
-    this->RT = temperature * SimTK_BOLTZMANN_CONSTANT_MD;
+    this->RT = temperature * static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD); // TODO double vs long double
     
 }
 
-void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>& bodyForces,
-                           SimTK::Vector_<SimTK::Vec3>& particleForces, SimTK::Vector& mobilityForces) const  
+void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>&,
+                           SimTK::Vector_<SimTK::Vec3>&, SimTK::Vector& mobilityForces) const  
 {
+    // function args were
+    // const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>& bodyForces, SimTK::Vector_<SimTK::Vec3>& particleForces, SimTK::Vector& mobilityForces
+
     // Compute Fixman torque
     int nu = state.getNU();
     SimTK::Vector V3(nu);
@@ -65,7 +68,8 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 FixmanTorque::~FixmanTorque(){}
 
 // This should be carefully analyzed. Intended to be taken from somewhere else.
-SimTK::Real FixmanTorque::calcPotentialEnergy(const SimTK::State& state) const {
+SimTK::Real FixmanTorque::calcPotentialEnergy(const SimTK::State&) const {
+    // function args were const SimTK::State& state
     SimTK::Real energy = 0.0;
     return energy;
 }

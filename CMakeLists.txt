@@ -32,6 +32,8 @@ ELSE()
         set(ROBO_PGO "-fprofile-dir=${ROBO_PGO_PATH} -fprofile-use -fprofile-correction")
     ENDIF(ROBO_PGO MATCHES Use)
 
+    set( ROBO_WARNINGS "-Wall -Wextra -Wpedantic -Wshadow -Wdouble-promotion -Wformat=2 -Wformat-truncation -Wundef -Wconversion -Wunused-parameter" )
+
     # https://gcc.gnu.org/onlinedocs/gcc-4.6.4/gcc/Optimize-Options.html
     # -fopt-info-vec-all prints everything (might be worth investigating)
     # for dev only -fopt-info-vec-missed

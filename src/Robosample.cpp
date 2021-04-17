@@ -29,6 +29,12 @@ void PrintHelp() {
 
 int main(int argc, char **argv)
 {
+	{
+		std::cout << "creating world\n";
+		World w(0, false, 0.0015);
+		std::cout << "done\n";
+	}
+
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
 		PrintHelp();
