@@ -18,13 +18,29 @@ if ( OpenMM_ON )
 	find_package(OpenMM REQUIRED)
 	INCLUDE_DIRECTORIES(${OpenMM_INCLUDE_DIR})
 	INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/src)
+    MESSAGE("OpenMM_INCLUDE_DIR: ${OpenMM_INCLUDE_DIR}")
+    MESSAGE("OpenMM_LIB_DIR: ${OpenMM_LIB_DIR}")
+
 else( OpenMM_ON )
 
 endif( OpenMM_ON )
 
-find_package(Simbody 3.6 CONFIG REQUIRED) # you may have to set a path for config file location e.g.  modify the environment variable list specific for find_package..
+# find_package(Simbody 3.6 CONFIG REQUIRED) # you may have to set a path for config file location e.g.  modify the environment variable list specific for find_package..
+# INCLUDE_DIRECTORIES( ${Simbody_INCLUDE_DIR} )
+# LINK_DIRECTORIES( ${Simbody_LIB_DIR} )
+
+
+if(DEFINED Simbody_DIR)
+  message("Simbody_DIR: ${Simbody_DIR}")
+  find_package(Simbody PATHS ${Simbody_DIR} NO_DEFAULT_PATH)
+endif(DEFINED Simbody_DIR)
+
+find_package(Simbody 3.7 CONFIG REQUIRED)
 INCLUDE_DIRECTORIES( ${Simbody_INCLUDE_DIR} )
 LINK_DIRECTORIES( ${Simbody_LIB_DIR} )
+MESSAGE("Simbody_INCLUDE_DIR: ${Simbody_INCLUDE_DIR}")
+MESSAGE("Simbody_LIB_DIR: ${Simbody_LIB_DIR}")
+
 
 
 #INCLUDE_DIRECTORIES("/home/nash_mit/git/refactoring/gmolmodel/simbody/SimTKmath/Integrators/src")
@@ -36,13 +52,33 @@ LINK_DIRECTORIES( ${Simbody_LIB_DIR} )
 # INCLUDE_DIRECTORIES( ${Integrators_PATH} )
 
 
-set( MOL_MODEL_INCLUDE
-     "${Simbody_INCLUDE_DIR}/.."
-     CACHE FILEPATH "header include folder path for Molmodel" )
-INCLUDE_DIRECTORIES( ${MOL_MODEL_INCLUDE} )
+
+# set( MOL_MODEL_INCLUDE
+#      "${Simbody_INCLUDE_DIR}/.."
+#      CACHE FILEPATH "header include folder path for Molmodel" )
+# INCLUDE_DIRECTORIES( ${MOL_MODEL_INCLUDE} )
 #I should add link_directories for molmodel and add them to TARTGET_LINK!!!
 #or maybe not.. at the moment I'm not convince that gmolmodel dependes by molmodel lib mostly because it's an extension that it's already compiled into gmolmode. but I need to look more into the code for that
 #path for libs is the same as simbody's so, no need to add it!
+
+
+if(DEFINED Molmodel_DIR)
+  set( Molmodel_INCLUDE_DIR  "${Molmodel_DIR}/include"
+     CACHE FILEPATH "header include folder path for Molmodel" )
+  set( Molmodel_LIB_DIR  "${Molmodel_DIR}/lib")
+else()
+  set( Molmodel_INCLUDE_DIR
+     "${Simbody_INCLUDE_DIR}/.."
+     CACHE FILEPATH "header include folder path for Molmodel" )
+endif(DEFINED Molmodel_DIR)
+
+INCLUDE_DIRECTORIES( ${Molmodel_INCLUDE_DIR} )
+LINK_DIRECTORIES(${Molmodel_LIB_DIR})
+MESSAGE("Molmodel_INCLUDE_DIR: ${Molmodel_INCLUDE_DIR}")
+MESSAGE("Molmodel_LIB_DIR: ${Molmodel_LIB_DIR}")
+
+
+
 
 #find_package(Eigen3 REQUIRED)
 #find_package( PkgConfig )
@@ -73,13 +109,13 @@ set(LIBGMOLMODEL_SRC
         ConformationalSearch.cpp # LAUR
         GirolamiSampler.cpp # LAUR
 	      #bAddParams.cpp
-	      Topology.cpp
+        Topology.cpp
 	      #bMoleculeReader.cpp
-	      World.cpp
-              FixmanTorque.cpp
+        World.cpp
+        FixmanTorque.cpp
         ParaMolecularDecorator.cpp
         readAmberInput.cpp
-	      bgeneral.cpp
+        bgeneral.cpp
         SetupReader.cpp
         format/dcdplugin.c
         format/PDBObject.cpp
@@ -107,26 +143,29 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
 
          TARGET_LINK_LIBRARIES( GMOLMODEL_robo
                  debug ${Simbody_LIBRARIES}
-                 SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                 # SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                 ${Molmodel_DIR}/lib/libSimTKmolmodel_d.so
                  ${BOOST_LIBRARIES}
-	  	 ${OpenMM_LIBRARIES}
+                 ${OpenMM_LIBRARIES}
                  m )
 
          # link Simbody libraries
          TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic_d
-	 	debug ${Simbody_LIBRARIES}
-	 	SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-	 	${BOOST_LIBRARIES}
-	 	${OpenMM_LIBRARIES}
-	 	m )
+                 debug ${Simbody_LIBRARIES}
+                 # SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                 ${Molmodel_DIR}/lib/libSimTKmolmodel_d.so
+                 ${BOOST_LIBRARIES}
+                 ${OpenMM_LIBRARIES}
+                 m )
 	
                 
         TARGET_LINK_LIBRARIES(GMOLMODEL_static_d
-	 	debug ${Simbody_LIBRARIES}
-	 	SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-	 	${BOOST_LIBRARIES}
-	 	${OpenMM_LIBRARIES}
-	 	m )
+                 debug ${Simbody_LIBRARIES}
+                 # SimTKmolmodel_d #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                 ${Molmodel_DIR}/lib/libSimTKmolmodel_d.so
+                 ${BOOST_LIBRARIES}
+                 ${OpenMM_LIBRARIES}
+                 m )
         
 ELSE()
         message("Linking with release libraries")
@@ -135,34 +174,36 @@ ELSE()
         #         optimized ${Simbody_LIBRARIES}
         #         SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
         #         ${BOOST_LIBRARIES}
-        #         #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
-	# 	${OpenMM_LIBRARIES}
+        #         ${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
+        #         ${OpenMM_LIBRARIES}
         #         m )
         #         #${mmtk_libs} )
 
         TARGET_LINK_LIBRARIES( GMOLMODEL_robo
                 optimized ${Simbody_LIBRARIES}
-                SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                # SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                ${Molmodel_DIR}/lib/libSimTKmolmodel.so
                 ${BOOST_LIBRARIES}
-                #${PYTHON_LIBRARIES} # do I realy need to link python lib into gmolmodel? it make no sense... but I still don't know verry well code..
-		${OpenMM_LIBRARIES}
+                ${OpenMM_LIBRARIES}
                 m )
                 
         # link Simbody libraries
          TARGET_LINK_LIBRARIES(GMOLMODEL_dynamic
-	 	optimized ${Simbody_LIBRARIES}
-	 	SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-	 	${BOOST_LIBRARIES}
-	 	${OpenMM_LIBRARIES}
-	 	m )
+                 optimized ${Simbody_LIBRARIES}
+                 # SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                 ${Molmodel_DIR}/lib/libSimTKmolmodel.so
+                 ${BOOST_LIBRARIES}
+                 ${OpenMM_LIBRARIES}
+                 m )
 
 
          TARGET_LINK_LIBRARIES(GMOLMODEL_static
-	 	optimized ${Simbody_LIBRARIES}
-	 	SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
-	 	${BOOST_LIBRARIES}
-	 	${OpenMM_LIBRARIES}
-	 	m )
+                 optimized ${Simbody_LIBRARIES}
+                 # SimTKmolmodel #adding molmodel lib as a dependence.. this needs to be refactor since the name should be changeable
+                 ${Molmodel_DIR}/lib/libSimTKmolmodel.so
+                 ${BOOST_LIBRARIES}
+                 ${OpenMM_LIBRARIES}
+                 m )
 
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
