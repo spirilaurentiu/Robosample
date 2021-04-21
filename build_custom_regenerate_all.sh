@@ -136,6 +136,7 @@ then
     cmake \
       -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
       -DCMAKE_INSTALL_PREFIX=../${INSTALL_DIRNAME} ..
+  fi
 fi
 
 make -j$(nproc)
@@ -186,6 +187,7 @@ then
       -DOpenMM_INCLUDE_DIR=${ROBOSAMPLE_HOME}/openmm/${INSTALL_DIRNAME}/include \
       -DOpenMM_LIBRARIES=${ROBOSAMPLE_HOME}/openmm/${INSTALL_DIRNAME}/lib/libOpenMM.so \
       -DOpenMM_LIBRARY=${ROBOSAMPLE_HOME}/openmm/${INSTALL_DIRNAME}/lib/libOpenMM.so ..
+  fi
 fi
 
 make -j$(nproc)
@@ -239,6 +241,7 @@ then
       -DOpenMM_INCLUDE_DIR=${ROBOSAMPLE_HOME}/openmm/${INSTALL_DIRNAME}/include \
       -DOpenMM_LIBRARIES=${ROBOSAMPLE_HOME}/openmm/${INSTALL_DIRNAME}/lib/libOpenMM.so \
       -DOpenMM_LIBRARY=${ROBOSAMPLE_HOME}/openmm/${INSTALL_DIRNAME}/lib/libOpenMM.so ..
+  fi
 fi
 
 make -j$(nproc)
