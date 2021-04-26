@@ -200,7 +200,7 @@ if "traj" in args.analyze:
 			X = range(0, runningMean.shape[1])
 			Y = runningMean[simi]
 			axs[0].plot(X, Y, color = colors[paramSeti])
-			axs[0].set_title('Running Means ' + args.molName)
+			axs[0].set_title('Running Means ' + args.molName + ' seed ' + str(args.FNSeeds[0]))
 
 			#Y = data[simi]
 			Y = MSE[paramSeti]

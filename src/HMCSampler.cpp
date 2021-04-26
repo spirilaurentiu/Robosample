@@ -395,7 +395,8 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 
     // Scale by user defined factors
     for (int i=0; i < nu; ++i){
-        V[i] = V[i] * UScaleFactors[i];
+        //V[i] = V[i] * UScaleFactors[i];
+        V[i] = UScaleFactors[i];
     }
 
     // Scale by square root of the inverse mass matrix
