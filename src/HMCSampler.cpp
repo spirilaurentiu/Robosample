@@ -867,7 +867,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 		std::cout << "\tsample accepted (always with andersen thermostat)\n";
 		update(someState);
 	} else {
-		// we do not consider this sample accepted until it passes all checks
+		// we do not consider this sample accepted unless it passes all checks
 		this->acc = false;
 
 		if (validateProposal()) {

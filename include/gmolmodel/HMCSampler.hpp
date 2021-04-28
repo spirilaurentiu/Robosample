@@ -17,8 +17,8 @@
 #endif
 
 struct RANDOM_CACHE {
-	boost::normal_distribution<> gaurand = boost::normal_distribution<>(0.0, 1.0);
-	boost::random::mt19937 randomEngine = boost::random::mt19937();
+	std::normal_distribution<> gaurand { 0.0, 1.0 };
+	std::mt19937 randomEngine;
 
 	std::function<void()> generateRandom = [this]() mutable {
 		auto generator = [this]() mutable {
@@ -33,6 +33,14 @@ struct RANDOM_CACHE {
 	SimTK::Vector V, SqrtMInvV;
 	SimTK::Real sqrtRT;
 	int nu = -1;
+
+	RANDOM_CACHE() {
+		std::vector<uint32_t> random_data(624);
+		std::random_device source;
+		std::generate(random_data.begin(), random_data.end(), std::ref(source));
+		std::seed_seq seeds(random_data.begin(), random_data.end());
+		randomEngine = std::mt19937(seeds);
+	}
 };
 
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
