@@ -394,7 +394,7 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 		RandomCache.nu = nu;
 
 		// we don't get to use multithreading here
-		RandomCache.generateRandom();
+		RandomCache.FillWithGaussian();
 	} else {
 		// wait for random number generation to finish (should be done by this stage)
 		RandomCache.task.wait();
@@ -419,7 +419,7 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	system->realize(someState, SimTK::Stage::Velocity);
 
 	// ask for a number of random numbers and check if we are done the next time we hit this function
-	RandomCache.task = std::async(std::launch::async, RandomCache.generateRandom);
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
 /** Store the proposed energies **/

@@ -17,15 +17,15 @@
 #endif
 
 struct RANDOM_CACHE {
-	std::normal_distribution<> gaurand { 0.0, 1.0 };
-	std::mt19937 randomEngine;
+	std::normal_distribution<> Gaussian;
+	std::mt19937 RandomEngine; // mt19937_64 is faster in our case
 
-	std::function<void()> generateRandom = [this]() mutable {
-		auto generator = [this]() mutable {
-			return this->gaurand(this->randomEngine);
-		};
+	std::function<SimTK::Real()> GenerateGaussian = [this]() mutable {
+		return this->Gaussian(this->RandomEngine);
+	};
 
-		std::generate(V.begin(), V.end(), generator);
+	std::function<void()> FillWithGaussian = [this]() mutable {
+		std::generate(V.begin(), V.end(), GenerateGaussian);
 	};
 
 	std::future<void> task;
@@ -35,11 +35,15 @@ struct RANDOM_CACHE {
 	int nu = -1;
 
 	RANDOM_CACHE() {
-		std::vector<uint32_t> random_data(624);
-		std::random_device source;
-		std::generate(random_data.begin(), random_data.end(), std::ref(source));
-		std::seed_seq seeds(random_data.begin(), random_data.end());
-		randomEngine = std::mt19937(seeds);
+		// Fill all state 19k bits of Mersenne Twister
+		std::vector<uint32_t> RandomData(624);
+		std::random_device Source;
+		std::generate(RandomData.begin(), RandomData.end(), std::ref(Source));
+		std::seed_seq SeedSeq(RandomData.begin(), RandomData.end());
+		RandomEngine = std::mt19937(SeedSeq);
+
+		// We want a Gaussian distribution
+		Gaussian = std::normal_distribution<>(0.0, 1.0);
 	}
 };
 
@@ -93,7 +97,7 @@ public:
 	map every time the velocities are intialized **/
 	void loadUScaleFactors(SimTK::State& someState);
 
-	/** Seed the random number generator. Set simulation temperature, 
+	/** Seed the random number GenerateGaussian. Set simulation temperature, 
 	velocities to desired temperature, variables that store the configuration
 	and variables that store the energies, both needed for the 
 	acception-rejection step. Also realize velocities and initialize 
