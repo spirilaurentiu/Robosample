@@ -65,7 +65,16 @@ cd ../../
 mkdir build-release
 cd build-release
 mkdir pgo
-cmake -DCMAKE_BUILD_TYPE=Release ..
+
+# do we want the undefined behaviour sanitizer (ubsan) on?
+if [[ "$*" == *ubsan* ]]
+then
+    cmake -DCMAKE_BUILD_TYPE=Release -DROBO_UBSAN=Yes ..
+else
+    cmake -DCMAKE_BUILD_TYPE=Release -DROBO_UBSAN=No ..
+fi
+
+# compile
 make -j$((`nproc`*2)) 2> out.txt
 sudo /sbin/ldconfig
 
