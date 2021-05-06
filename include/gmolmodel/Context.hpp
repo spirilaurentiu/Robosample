@@ -121,6 +121,7 @@ public:
     int getNofBoostStairs(std::size_t whichWorld);
     void setNumThreadsRequested(std::size_t which, int howMany);
     void setUseOpenMMAcceleration(bool arg);
+    void setUseOpenMMCalcOnlyNonBonded(bool arg);
 
     SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector, int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
 

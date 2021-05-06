@@ -1,0 +1,57 @@
+# Molecule information
+MOLECULES e2un                   # Molecules to load
+PRMTOP ligand.prmtop       # Parameter file
+INPCRD ligand.inpcrd      # Coordinate / Restart file
+RBFILE ligand.rb    # Rigid bodies definition file
+FLEXFILE ligand.flex  # Flexible bonds definition file
+ROOT_MOBILITY Free # Ground to Compound mobilizer
+OUTPUT_DIR temp
+MEMBRANE 0 0 0 0
+CONTACTS -1
+CONSTRAINTS -1
+
+# Simulation
+RUN_TYPE Normal # normal HMC or Non-Eq HMC
+ROUNDS 1                   # MC steps (Acception-rejection steps)
+ROUNDS_TILL_REBLOCK 1
+RANDOM_WORLD_ORDER FALSE
+WORLDS R0        # Regimen (IC, TD, MIX, RB, RBMIX)
+
+ROOTS 0
+SAMPLER VV      # HMC or MC
+TIMESTEPS 0.004              # Timesteps to be used with regimens
+MDSTEPS 20000     # Number of MD trial steps
+BOOST_MDSTEPS 1  
+SAMPLES_PER_ROUND 1  # Number of MC trials within a mixing round
+REPRODUCIBLE TRUE
+SEED 9999
+
+# Thermodynamics
+THERMOSTAT Andersen     # Thermostat (HMC + Andersen = MD)
+TEMPERATURE_INI  300    # Temperature for constant temperature simulations
+TEMPERATURE_FIN  300    # Temperature for constant temperature simulations
+BOOST_TEMPERATURE  1     # Temperature for constant temperature simulations
+FFSCALE AMBER       # Force field scale factors
+GBSA 1.0         # GBSA scale factor
+
+# Generalized coordinates related
+FIXMAN_POTENTIAL TRUE  # Use Fixman potential
+FIXMAN_TORQUE TRUE        # Use Fixman torque
+
+# Output
+#VISUAL TRUE TRUE              # Use the visualizer
+VISUAL FALSE           # Use the visualizer
+PRINT_FREQ  1
+WRITEPDBS 0    # Write pdbs
+GEOMETRY FALSE             # Calculate geometric features
+
+#DISTANCE 1 18
+DISTANCE 0 1
+#DIHEDRAL 4 6 8 14 6 8 14 16
+DIHEDRAL 0 1 2 3
+
+# Software specs
+THREADS 0
+OPENMM TRUE
+OPENMM_CalcOnlyNonbonded TRUE
+

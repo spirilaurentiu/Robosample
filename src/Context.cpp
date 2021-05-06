@@ -782,6 +782,15 @@ void Context::setUseOpenMMAcceleration(bool arg)
     }
 }
 
+void Context::setUseOpenMMCalcOnlyNonBonded(bool arg)
+{
+	
+     for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+	worlds[worldIx].updForceField()->setUseOpenMMCalcOnlyNonBonded(arg);
+     }
+}
+
+
 /** Get/Set seed for reproducibility. **/
 void Context::setSeed(std::size_t whichWorld, std::size_t whichSampler, uint32_t argSeed)
 {

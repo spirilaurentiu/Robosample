@@ -179,6 +179,11 @@ int main(int argc, char **argv)
 		context.setUseOpenMMAcceleration(true);
 	}
 
+	if(setupReader.get("OPENMM_CalcOnlyNonbonded")[0] == "TRUE"){
+		context.setUseOpenMMCalcOnlyNonBonded(true);
+	}
+	else context.setUseOpenMMCalcOnlyNonBonded(false);
+
 	// Set Lennard-Jones mixing rule
 	context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
