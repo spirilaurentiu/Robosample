@@ -1,28 +1,28 @@
 # Molecule information
-MOLECULES aper                   # Molecules to load
+MOLECULES MLAmono                  # Molecules to load
 PRMTOP ligand.prmtop       # Parameter file
-INPCRD ligand.00.rst7      # Coordinate / Restart file
-RBFILE ligand.rb ligand.rb    # Rigid bodies definition file
-FLEXFILE ligand.03.flex ligand.all.flex  # Flexible bonds definition file
+INPCRD ligand.rst7      # Coordinate / Restart file
+RBFILE ligand.rb ligand.rb    # Rigid bodies definition file 
+FLEXFILE ligand.hinge.pin.flex ligand.all.flex  # Flexible bonds definition file
 ROOT_MOBILITY Free Cartesian # Ground to Compound mobilizer
 OUTPUT_DIR temp temp # Output directory
-MEMBRANE 10 10 1.4 10 # Membrane x y z width and resolution
-CONTACTS 0 0 # Membrane-atom contacts
-CONSTRAINTS 3291 3291 # Constrained atoms
+MEMBRANE 0 0 0 0 # Membrane x y z width and resolution
+CONTACTS -1 -1 # Membrane-atom contact
+CONSTRAINTS -1 -1 # Constrained atoms
 
 # Simulation
 RUN_TYPE Normal # normal HMC or Non-Eq HMC
 ROUNDS 1000                   # Gibbs sampling rounds
-ROUNDS_TILL_REBLOCK 10 10
+ROUNDS_TILL_REBLOCK 10 10 
 RANDOM_WORLD_ORDER FALSE 
-WORLDS R0 R1        # Worlds unique names 
+WORLDS R0 R1 # Worlds unique names with 2 letters 
 
-ROOTS 0 0 # Atoms representing first bodies
+ROOTS 0 0 # Atoms representing the first body
 SAMPLER HMC HMC      # Sampler
-TIMESTEPS 0.004 0.0006              # Timesteps
+TIMESTEPS 0.004 0.0006              # Timesteps 
 MDSTEPS 30 3     # Number of MD trial steps
 BOOST_MDSTEPS 1 1  
-SAMPLES_PER_ROUND 1 1  # Number of acc-rej steps per Gibbs round
+SAMPLES_PER_ROUND 1 1 # Number of acc-rej steps within a Gibbs round
 REPRODUCIBLE TRUE TRUE
 SEED 9999 9999
 
@@ -30,18 +30,19 @@ SEED 9999 9999
 THERMOSTAT Andersen Andersen     # Thermostat 
 TEMPERATURE_INI  300 300    # Initial temperature
 TEMPERATURE_FIN  300 300    # Final temperature
-BOOST_TEMPERATURE  1 1     # 
+BOOST_TEMPERATURE  1 1     # Guidance Hamiltonian temperature
 FFSCALE AMBER AMBER       # Force field scale factors
 GBSA 1.0 1.0          # GBSA scale factor
 
 # Generalized coordinates related
-FIXMAN_POTENTIAL TRUE TRUE  # Use Fixman potential
-FIXMAN_TORQUE TRUE TRUE        # Use Fixman torque
+FIXMAN_POTENTIAL TRUE FALSE  # Use Fixman potential
+FIXMAN_TORQUE TRUE FALSE        # Use Fixman torque
 
 # Output
+#VISUAL TRUE TRUE              # Use the visualizer
 VISUAL FALSE FALSE           # Use the visualizer
-PRINT_FREQ  1 1 # Output print frequency
-WRITEPDBS 0 0    # Pdb write frequency
+PRINT_FREQ  1 1 # Output frequency
+WRITEPDBS 0 0    # Write pdbs frequency
 GEOMETRY FALSE FALSE             # Calculate geometric features
 
 DISTANCE 2 17
