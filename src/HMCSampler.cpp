@@ -393,16 +393,21 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
         V[i] = gaurand(randomEngine);
     }
 
-    // Scale by user defined factors
+    // NMA BEGIN
+    SimTK::Real sign = 0;
+    SimTK::Real randWeight = uniformRealDistribution_m1_1(randomEngine);
+    if(acceptedSteps % 2){sign = -1;}else{sign=1;}
+    std::cout << "acceptedSteps acceptedSteps%2 sign " << acceptedSteps << " " << acceptedSteps%2 << " " << sign << std::endl;
     for (int i=0; i < nu; ++i){
-        //V[i] = V[i] * UScaleFactors[i];
-        V[i] = UScaleFactors[i];
+        V[i] = UScaleFactors[i] * sign;
     }
+    // NMA END
 
     // Scale by square root of the inverse mass matrix
-    matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
+    SqrtMInvV = V; // NMA
+    //matter->multiplyBySqrtMInv(someState, V, SqrtMInvV); // RETURN FROM NMA
 
-    SqrtMInvV *= (sqrtRT); // Set stddev according to temperature
+    //SqrtMInvV *= (sqrtRT); // Set stddev according to temperature // RETURN FROM NMA
 
     // Raise the temperature
     someState.updU() = SqrtMInvV;
@@ -853,7 +858,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState){
 	if ( getThermostat() == ThermostatName::ANDERSEN ){ // MD with Andersen thermostat
 		this->acc = true;
 		std::cout << "\tsample accepted (always with andersen thermostat)" << std::endl;
-		// update(someState); // smth is broken in here
+		update(someState); // smth is broken in here
 	}else{ // Apply Metropolis-Hastings correction
 		if (proposeExceptionCaught == false && !std::isnan(pe_n)) { 
 			const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
