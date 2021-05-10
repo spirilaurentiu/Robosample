@@ -18,7 +18,7 @@ LAHMCSampler::LAHMCSampler(World *argWorld,
 	SimTK::TimeStepper *argTimeStepper,
     unsigned int Kext) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
-        MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        //MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         HMCSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  

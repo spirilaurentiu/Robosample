@@ -7,7 +7,7 @@
  * This is part of Robosampling                                               *
  */
 
-#include "MonteCarloSampler.hpp"
+#include "Sampler.hpp"
 #include <thread>
 
 // Just to remove the long syntax requirement
@@ -15,6 +15,10 @@
 //#define pHMC(pSampler) dynamic_cast<HMCSampler *>(pSampler)
 #define pHMC(pSampler) pSampler
 #endif
+
+// Other classes that we need
+class Topology;
+class IState;
 
 struct RANDOM_CACHE {
 	std::normal_distribution<> Gaussian;
@@ -62,7 +66,7 @@ of the following steps:
 Step 1 and 2 are implemented in the fuction propose. Step 3 is implemented
 in the function update.
 **/
-class HMCSampler : virtual public MonteCarloSampler
+class HMCSampler : virtual public Sampler
 {
 friend class Context;
 public:
@@ -79,6 +83,82 @@ public:
 
 	/** Destructor **/
 	virtual ~HMCSampler();
+
+	// BEGIN MCSAMPLER
+	// Get/Set a thermostat (even for MCMC)
+	void setThermostat(ThermostatName);
+	void setThermostat(std::string);
+	void setThermostat(const char *);
+	virtual ThermostatName getThermostat(void) const;
+
+// FIXMAN
+
+    // Return true if use Fixman potential
+    void useFixmanPotential(void); // DONE
+    bool isUsingFixmanPotential(void) const; // DONE
+
+    // Compute Fixman potential
+    SimTK::Real calcFixman(SimTK::State& someState); // DONE
+
+    // Compute Fixman potential numerically
+    SimTK::Real calcNumFixman(SimTK::State& someState); // DONE
+
+    // Set/get Fixman potential
+    void setOldFixman(SimTK::Real); // DONE
+    SimTK::Real getOldFixman(void) const; // DONE
+
+    // Set/get Fixman potential
+    void setSetFixman(SimTK::Real); // DONE
+    SimTK::Real getSetFixman(void) const; // DONE
+
+    // Set/get External MBAT contribution potential
+    void setOldLogSineSqrGamma2(SimTK::Real); // DONE
+    SimTK::Real getOldLogSineSqrGamma2(void) const; // DONE
+
+    // Set/get External MBAT contribution potential
+    void setSetLogSineSqrGamma2(SimTK::Real); // DONE
+    SimTK::Real getSetLogSineSqrGamma2(void) const; // DONE
+
+    // 
+    void setProposedLogSineSqrGamma2(SimTK::Real argFixman); // DONE
+
+// PE
+
+    // Evaluate the potential energy at current state
+    SimTK::Real getPEFromEvaluator(SimTK::State& someState); // DONE
+
+    // Get/set current potential energy
+    SimTK::Real getOldPE(void) const; // DONE
+    void setOldPE(SimTK::Real argPE); // DONE
+
+    // Get/set set potential energy
+    SimTK::Real getSetPE(void) const; // DONE
+    void setSetPE(SimTK::Real argPE); // DONE
+
+// REP
+
+    // Set/get residual embedded potential energy: potential
+    // stored inside rigid bodies
+    void setREP(SimTK::Real); // DONE
+    SimTK::Real getREP(void) const; // DONE
+
+// CONF
+
+    // Set/get Fixman potential
+    void setSetTVector(const SimTK::State& advanced); // DONE
+    SimTK::Transform * getSetTVector(void); // DONE
+    void assignConfFromSetTVector(SimTK::State& advanced); // DONE
+
+    // Store/restore the configuration from the internal transforms vector
+    // TVector
+    void setTVector(const SimTK::State& advanced);
+    void setTVector(SimTK::Transform *);
+    SimTK::Transform * getTVector(void);
+
+
+// REP
+
+	// END MCSAMPLER
 
 	/** Calculate O(n2) the square root of the mass matrix inverse
 	denoted by Jain l* = [I -JPsiK]*sqrt(D) (adjoint of l).
@@ -239,6 +319,41 @@ public:
 protected:
 
 	RANDOM_CACHE RandomCache;
+
+	// BEGIN MCSampler
+	std::vector<SimTK::Transform> SetTVector; // Transform matrices
+	std::vector<SimTK::Transform> TVector; // Transform matrices
+	SimTK::Real pe_set = 0.0,
+	    pe_o = 0.0,
+	    pe_n = 0.0;
+
+	SimTK::Real fix_set = 0.0,
+	    fix_o = 0.0,
+	    fix_n = 0.0;
+	SimTK::Real detmbat_set = 0.0,
+	    detmbat_o = 0.0,
+	    detmbat_n = 0.0;
+	SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
+
+	SimTK::Real logSineSqrGamma2_o = 0.0, logSineSqrGamma2_n = 0.0, logSineSqrGamma2_set = 0.0;
+
+	bool useFixman = false;
+	bool alwaysAccept = false;
+
+	int acceptedSteps = 0;
+	int acceptedStepsBufferSize = 30;
+	std::deque<int> acceptedStepsBuffer;
+
+	int QsBufferSize = 300;
+	//std::list<SimTK::Vector> QsBuffer;
+	std::deque<SimTK::Real> QsBuffer;
+
+	SimTK::Real acceptance;
+	SimTK::Real prevAcceptance;
+	SimTK::Real prevPrevAcceptance;
+
+	bool proposeExceptionCaught;
+	// END MCSampler
 
 	std::vector<SimTK::Real> R;
 	std::vector<SimTK::Real> Rdot;

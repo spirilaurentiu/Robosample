@@ -40,7 +40,8 @@
 
 #include "server.hpp"
 #include "Topology.hpp"
-#include "LAHMCSampler.hpp"
+//#include "LAHMCSampler.hpp"
+#include "HMCSampler.hpp"
 #include "ConformationalSearch.hpp"
 
 // TODO write a pdb writer for all the Compounds

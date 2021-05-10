@@ -335,12 +335,12 @@ void Context::setFixmanTorqueTemperature(std::size_t whichWorld, SimTK::Real arg
 // Use Fixman potential
 void Context::useFixmanPotential(std::size_t whichWorld, std::size_t whichSampler)
 {
-    pMC(worlds[whichWorld].updSampler(whichSampler))->useFixmanPotential();
+    pHMC(worlds[whichWorld].updSampler(whichSampler))->useFixmanPotential();
 }
 
 bool Context::isUsingFixmanPotential(std::size_t whichWorld, std::size_t whichSampler)
 {
-    return pMC(worlds[whichWorld].updSampler(whichSampler))->isUsingFixmanPotential();
+    return pHMC(worlds[whichWorld].updSampler(whichSampler))->isUsingFixmanPotential();
 }
 
 
@@ -458,8 +458,8 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
             //double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
 
             // Set old potential energy of the new world
-            pMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(
-                    pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE() );
+            pHMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(
+                    pHMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE() );
 
             // Reinitialize current sampler
             updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
@@ -613,7 +613,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
 
                 // Set old potential energy of the new world via OpenMM
                 auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
-		        pMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(OldPE);
+		        pHMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(OldPE);
 			    //updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
                 std::cout << "World " << currentWorldIx << ", NU " << currentAdvancedState.getNU() << ":\n";
@@ -720,8 +720,8 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
                 }
     
                 // Set old potential energy of the new world
-                const auto oldPE = pMC(updWorld(worldIndexes.back())->updSampler(0))->getSetPE();
-                pMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(oldPE);
+                const auto oldPE = pHMC(updWorld(worldIndexes.back())->updSampler(0))->getSetPE();
+                pHMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(oldPE);
     
                 // Reinitialize current sampler
                 updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
@@ -877,13 +877,13 @@ void Context::PrintSamplerData(std::size_t whichWorld)
     fprintf(logFile, "%d %d %.2f %.2f %.2f %.2f %.2f %.2f %.2f "
         , currentAdvancedState.getNU()
         , pHMC(worlds[whichWorld].samplers[0])->acceptedSteps
-        , pMC((worlds[whichWorld].samplers[0]))->pe_o
-        , pMC((worlds[whichWorld].samplers[0]))->pe_set
+        , pHMC((worlds[whichWorld].samplers[0]))->pe_o
+        , pHMC((worlds[whichWorld].samplers[0]))->pe_set
         , pHMC((worlds[whichWorld].samplers[0]))->ke_proposed
         , pHMC((worlds[whichWorld].samplers[0]))->ke_n
-        , pMC((worlds[whichWorld].samplers[0]))->fix_o
-        , pMC((worlds[whichWorld].samplers[0]))->fix_n
-        , pMC((worlds[whichWorld].samplers[0]))->fix_set
+        , pHMC((worlds[whichWorld].samplers[0]))->fix_o
+        , pHMC((worlds[whichWorld].samplers[0]))->fix_n
+        , pHMC((worlds[whichWorld].samplers[0]))->fix_set
     );
     fflush(logFile);
 

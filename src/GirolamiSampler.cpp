@@ -17,7 +17,7 @@ GirolamiSampler::GirolamiSampler(World *argWorld,
 	SimTK::GeneralForceSubsystem *argForces,
 	SimTK::TimeStepper *argTimeStepper) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
-        MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        //MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         HMCSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 }

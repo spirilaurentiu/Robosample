@@ -76,14 +76,14 @@ int main(int argc, char **argv)
 	(pHMC(pSampler))->setTimestep(timestep);
 
 	// Set thermostats
-	pMC(pSampler)->setThermostat(ThermostatName::ANDERSEN);
+	pHMC(pSampler)->setThermostat(ThermostatName::ANDERSEN);
 	pHMC(pSampler)->setBoostTemperature(1);
 	pHMC(pSampler)->setBoostMDSteps(1);
 
 	// Activate Fixman potential if needed
 	if(std::string(argv[2]) == "FP"){
 		useFixmanPotential = true;
-		pMC(pSampler)->useFixmanPotential();
+		pHMC(pSampler)->useFixmanPotential();
 		std::cout << "Fixman potential added." << std::endl;
 	}
 

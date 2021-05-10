@@ -22,9 +22,42 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	SimTK::DuMMForceFieldSubsystem *argDumm,
 	SimTK::GeneralForceSubsystem *argForces,
 	SimTK::TimeStepper *argTimeStepper) :
-		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
-		MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+		//, MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
+	// BEGIN SAMPLER
+	assert(argCompoundSystem != nullptr);
+	assert(argMatter != nullptr);
+	assert(argDumm != nullptr);
+	assert(argForces != nullptr);
+	assert(argTimeStepper != nullptr);
+
+	this->system = &argMatter->getSystem();
+
+	//this->residue = argResidue;
+	assert(topologies.size() > 0);
+	this->residue = &topologies[0];
+
+	// Set total number of atoms and dofs
+	natoms = 0;
+	for (const auto& topology: topologies){
+		natoms += topology.getNumAtoms();
+	}
+
+	int ThreeFrom3D = 3;
+	ndofs = natoms * ThreeFrom3D;
+	// END SAMPLER
+
+	// BEGIN MCSAMPLER
+	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+	proposeExceptionCaught = false;
+
+	for(int i = 0; i < acceptedStepsBufferSize; i++){ 
+		acceptedStepsBuffer.push_back(0);
+	}
+	// END MCSAMPLER
+
 	this->useFixman = false;  
 	this->fix_n = this->fix_o = 0.0;
 	this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
@@ -55,6 +88,268 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 HMCSampler::~HMCSampler()
 {
 }
+
+// BEGIN MCSAMPLER
+
+// Use Fixman potential
+void HMCSampler::useFixmanPotential(void)
+{
+    useFixman = true;
+}
+
+// Return true if use Fixman potential
+bool HMCSampler::isUsingFixmanPotential(void) const
+{
+    return useFixman;
+}
+
+// Get Fixman potential
+SimTK::Real HMCSampler::getOldFixman(void) const
+{
+    return this->fix_o;
+}
+
+// Set set Fixman potential
+void HMCSampler::setSetFixman(SimTK::Real argFixman)
+{
+    this->fix_set = argFixman;
+}
+
+// Get set Fixman potential
+SimTK::Real HMCSampler::getSetFixman(void) const
+{
+    return this->fix_set;
+}
+
+// Get the stored potential energy
+SimTK::Real HMCSampler::getOldPE(void) const
+{
+    return this->pe_o;
+}
+
+// Set stored potential energy
+void HMCSampler::setOldPE(SimTK::Real argPE)
+{
+    this->pe_o = argPE;
+}
+
+// Get the set potential energy
+SimTK::Real HMCSampler::getSetPE(void) const
+{
+    return this->pe_set;
+}
+
+// Set set potential energy
+void HMCSampler::setSetPE(SimTK::Real argPE)
+{
+    this->pe_set = argPE;
+}
+
+// Set/get Residual Embedded Potential
+void HMCSampler::setREP(SimTK::Real inp)
+{
+    this->residualEmbeddedPotential = inp;
+}
+
+SimTK::Real HMCSampler::getREP(void) const
+{
+    return this->residualEmbeddedPotential;
+}
+
+// Set a thermostat
+void HMCSampler::setThermostat(ThermostatName argThermostat){
+    this->thermostat = argThermostat;
+}
+// Set a thermostat
+void HMCSampler::setThermostat(std::string thermoName){
+    thermoName.resize(thermoName.size());
+    std::transform(thermoName.begin(), thermoName.end(), thermoName.begin(), ::tolower);
+
+    if(thermoName == "none"){
+        this->thermostat = ThermostatName::NONE;
+    }else if(thermoName == "andersen"){
+        this->thermostat = ThermostatName::ANDERSEN;
+    }else if(thermoName == "berendsen"){
+        this->thermostat = ThermostatName::BERENDSEN;
+    }else if(thermoName == "langevin"){
+        this->thermostat = ThermostatName::LANGEVIN;
+    }else if(thermoName == "nose_hoover"){
+        this->thermostat = ThermostatName::NOSE_HOOVER;
+    }else{
+        std::cerr << "Invalid argument: " << thermoName << '\n';
+    }
+}
+
+// Set a thermostat
+void HMCSampler::setThermostat(const char *argThermostat){
+    setThermostat(std::string(argThermostat));
+}
+
+// Get the name of the thermostat
+ThermostatName HMCSampler::getThermostat(void) const{
+    return thermostat;
+}
+
+// Get the potential energy from an external source as far as the sampler
+// is concerned - OPENMM has to be inserted here
+SimTK::Real HMCSampler::getPEFromEvaluator(SimTK::State& someState){
+        return forces->getMultibodySystem().calcPotentialEnergy(someState);
+	// Eliza's potential energy's calculations including rigid bodies
+	// internal energy
+    //return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+
+}
+
+SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
+    int nu = someState.getNU();
+    SimTK::Vector V(nu);
+
+    system->realize(someState, SimTK::Stage::Position);
+    matter->realizeArticulatedBodyInertias(someState); // Move in calcDetM ?
+
+    // Get detM
+    SimTK::Vector DetV(nu);
+    SimTK::Real D0 = 1.0;
+
+    // TODO: remove the request for Dynamics stage cache in SImbody files
+    //std::cout << "MonteCarloSampler::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
+    matter->calcDetM(someState, V, DetV, &D0);
+
+    assert(RT > SimTK::TinyReal);
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBATInternal(someState) );
+
+    if(SimTK::isInf(result)){
+        result = 0.0;
+    }
+    
+    return result;
+}
+
+// Compute Fixman potential numerically
+SimTK::Real HMCSampler::calcNumFixman(SimTK::State&){
+    // args were SimTK::State& someState
+    assert(!"Not implemented.");
+    return 0;
+    /*
+    // Get M
+    int nu = someState.getNU();
+    SimTK::Matrix M(nu, nu);
+    matter->calcM(someState, M);
+
+    // Eigen M determinant
+    Eigen::MatrixXd EiM(nu, nu);
+    for(int i=0; i<nu; i++){
+        for(int j=0; j<nu; j++){
+            EiM(i, j) = M(i, j);
+        }
+    }
+    SimTK::Real EiDetM = EiM.determinant();
+    assert(RT > SimTK::TinyReal);
+    SimTK::Real result = 0.5 * RT * std::log(EiDetM);
+    return result;
+    */
+}
+
+// Set old Fixman potential
+void HMCSampler::setOldFixman(SimTK::Real argFixman)
+{
+    this->fix_o = argFixman;
+}
+
+// Set/get External MBAT contribution potential
+void HMCSampler::setOldLogSineSqrGamma2(SimTK::Real argX){
+    this->logSineSqrGamma2_o = argX;
+}
+
+SimTK::Real HMCSampler::getOldLogSineSqrGamma2(void) const
+{
+    return this->logSineSqrGamma2_o;
+}
+
+
+// Set/get External MBAT contribution potential
+SimTK::Real HMCSampler::getSetLogSineSqrGamma2(void) const
+{
+    return this->logSineSqrGamma2_set;
+}
+
+void HMCSampler::setSetLogSineSqrGamma2(SimTK::Real argX){
+    this->logSineSqrGamma2_set = argX;
+}
+
+void HMCSampler::setProposedLogSineSqrGamma2(SimTK::Real argFixman)
+{
+    this->logSineSqrGamma2_n = argFixman;
+}
+
+// Stores the configuration into an internal vector of transforms TVector
+// Get the stored configuration
+SimTK::Transform * HMCSampler::getTVector(void)
+{
+    return &TVector[0];
+}
+
+// Stores the configuration into an internal vector of transforms TVector
+void HMCSampler::setTVector(const SimTK::State& someState)
+{
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    TVector[i] = mobod.getMobilizerTransform(someState);
+    i++;
+  }
+}
+
+// Stores the configuration into an internal vector of transforms TVector
+void HMCSampler::setTVector(SimTK::Transform *inpTVector)
+{
+    // TODO pointer parameter is bad
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    TVector[i] = inpTVector[i];
+    i++;
+  }
+}
+
+// Stores the set configuration into an internal vector of transforms TVector
+void HMCSampler::setSetTVector(const SimTK::State& someState)
+{
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    SetTVector[i] = mobod.getMobilizerTransform(someState);
+    i++;
+  }
+}
+
+// Stores the configuration into an internal vector of transforms TVector
+// Get the stored configuration
+SimTK::Transform * HMCSampler::getSetTVector(void)
+{
+    return &SetTVector[0];
+}
+
+// Restores configuration from the internal set vector of transforms TVector
+void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
+{
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    system->realize(someState, SimTK::Stage::Position);
+    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    mobod.setQToFitTransform(someState, SetTVector[i]);
+
+    system->realize(someState, SimTK::Stage::Position);
+
+
+    i++;
+  }
+  system->realize(someState, SimTK::Stage::Position);
+}
+
+// END MCSAMPLER
+
+
+
 
 /** Calculate sqrt(M) using Eigen. For debug purposes. **/
 void HMCSampler::calcNumSqrtMUpper(SimTK::State&, SimTK::Matrix&) const

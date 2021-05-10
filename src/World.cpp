@@ -621,9 +621,9 @@ BaseSampler * World::addSampler(SamplerName samplerName)
 {
 	if(samplerName == SamplerName::HMC) {
         samplers.emplace_back(std::make_unique<HMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get()));
-	} else if (samplerName == SamplerName::LAHMC) {
+	} /*else if (samplerName == SamplerName::LAHMC) {
         samplers.emplace_back(std::make_unique<LAHMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get(), 4));
-	}
+	}*/
 
 	return samplers.back().get();
 }

@@ -251,13 +251,13 @@ int main(int argc, char **argv)
 		}else if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
 			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
 			pHMC(p)->setThermostat(ThermostatName::NONE);
-		}else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
+		}/*else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
 			BaseSampler *p = context.addSampler(worldIx, SamplerName::LAHMC);
 			pLAHMC(p)->setThermostat(ThermostatName::NONE);
 		}else{
 			BaseSampler *p = context.addSampler(worldIx, SamplerName::LAHMC);
 			pLAHMC(p)->setThermostat(ThermostatName::NONE);
-		}
+		}*/
 	}
 
 ////////// DEBUG BEGIN
@@ -273,9 +273,9 @@ int main(int argc, char **argv)
 
 			// Set thermostats
 			//pMC(context.updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
-			pLAHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
+			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
 				std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
-			pLAHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
+			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
 					std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 
 			// Activate Fixman potential if needed
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			std::cout << "After setThermo world " << worldIx << " sampler " << samplerIx << "getThermostat: " ;
-			std::cout << static_cast<int>(pMC(context.updWorld(worldIx)->updSampler(samplerIx))->getThermostat()) ;
+			std::cout << static_cast<int>(pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->getThermostat()) ;
 			std::cout << std::endl;
 		}
 	}
@@ -330,7 +330,7 @@ int main(int argc, char **argv)
 				<< " initial const state PE: " << std::setprecision(20)
 				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
 				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(context.updAdvancedState(worldIx, samplerIx))
-				<< " useFixmanPotential = " << pMC(context.updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
+				<< " useFixmanPotential = " << pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
 				<< std::endl;
 		}
 
