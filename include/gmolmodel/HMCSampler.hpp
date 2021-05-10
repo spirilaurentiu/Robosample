@@ -91,74 +91,61 @@ public:
 	void setThermostat(const char *);
 	virtual ThermostatName getThermostat(void) const;
 
-// FIXMAN
+	// Return true if use Fixman potential
+	void useFixmanPotential(void); // DONE
+	bool isUsingFixmanPotential(void) const; // DONE
 
-    // Return true if use Fixman potential
-    void useFixmanPotential(void); // DONE
-    bool isUsingFixmanPotential(void) const; // DONE
+	// Compute Fixman potential
+	SimTK::Real calcFixman(SimTK::State& someState); // DONE
 
-    // Compute Fixman potential
-    SimTK::Real calcFixman(SimTK::State& someState); // DONE
+	// Compute Fixman potential numerically
+	SimTK::Real calcNumFixman(SimTK::State& someState); // DONE
 
-    // Compute Fixman potential numerically
-    SimTK::Real calcNumFixman(SimTK::State& someState); // DONE
+	// Set/get Fixman potential
+	void setOldFixman(SimTK::Real); // DONE
+	SimTK::Real getOldFixman(void) const; // DONE
 
-    // Set/get Fixman potential
-    void setOldFixman(SimTK::Real); // DONE
-    SimTK::Real getOldFixman(void) const; // DONE
+	// Set/get Fixman potential
+	void setSetFixman(SimTK::Real); // DONE
+	SimTK::Real getSetFixman(void) const; // DONE
 
-    // Set/get Fixman potential
-    void setSetFixman(SimTK::Real); // DONE
-    SimTK::Real getSetFixman(void) const; // DONE
+	// Set/get External MBAT contribution potential
+	void setOldLogSineSqrGamma2(SimTK::Real); // DONE
+	SimTK::Real getOldLogSineSqrGamma2(void) const; // DONE
 
-    // Set/get External MBAT contribution potential
-    void setOldLogSineSqrGamma2(SimTK::Real); // DONE
-    SimTK::Real getOldLogSineSqrGamma2(void) const; // DONE
+	// Set/get External MBAT contribution potential
+	void setSetLogSineSqrGamma2(SimTK::Real); // DONE
+	SimTK::Real getSetLogSineSqrGamma2(void) const; // DONE
 
-    // Set/get External MBAT contribution potential
-    void setSetLogSineSqrGamma2(SimTK::Real); // DONE
-    SimTK::Real getSetLogSineSqrGamma2(void) const; // DONE
+	// 
+	void setProposedLogSineSqrGamma2(SimTK::Real argFixman); // DONE
 
-    // 
-    void setProposedLogSineSqrGamma2(SimTK::Real argFixman); // DONE
+	// Evaluate the potential energy at current state
+	SimTK::Real getPEFromEvaluator(SimTK::State& someState); // DONE
 
-// PE
+	// Get/set current potential energy
+	SimTK::Real getOldPE(void) const; // DONE
+	void setOldPE(SimTK::Real argPE); // DONE
 
-    // Evaluate the potential energy at current state
-    SimTK::Real getPEFromEvaluator(SimTK::State& someState); // DONE
+	// Get/set set potential energy
+	SimTK::Real getSetPE(void) const; // DONE
+	void setSetPE(SimTK::Real argPE); // DONE
 
-    // Get/set current potential energy
-    SimTK::Real getOldPE(void) const; // DONE
-    void setOldPE(SimTK::Real argPE); // DONE
+	// Set/get residual embedded potential energy: potential
+	// stored inside rigid bodies
+	void setREP(SimTK::Real); // DONE
+	SimTK::Real getREP(void) const; // DONE
 
-    // Get/set set potential energy
-    SimTK::Real getSetPE(void) const; // DONE
-    void setSetPE(SimTK::Real argPE); // DONE
+	// Set/get Fixman potential
+	void setSetTVector(const SimTK::State& advanced); // DONE
+	SimTK::Transform * getSetTVector(void); // DONE
+	void assignConfFromSetTVector(SimTK::State& advanced); // DONE
 
-// REP
-
-    // Set/get residual embedded potential energy: potential
-    // stored inside rigid bodies
-    void setREP(SimTK::Real); // DONE
-    SimTK::Real getREP(void) const; // DONE
-
-// CONF
-
-    // Set/get Fixman potential
-    void setSetTVector(const SimTK::State& advanced); // DONE
-    SimTK::Transform * getSetTVector(void); // DONE
-    void assignConfFromSetTVector(SimTK::State& advanced); // DONE
-
-    // Store/restore the configuration from the internal transforms vector
-    // TVector
-    void setTVector(const SimTK::State& advanced);
-    void setTVector(SimTK::Transform *);
-    SimTK::Transform * getTVector(void);
-
-
-// REP
-
-	// END MCSAMPLER
+	// Store/restore the configuration from the internal transforms vector
+	// TVector
+	void setTVector(const SimTK::State& advanced);
+	void setTVector(SimTK::Transform *);
+	SimTK::Transform * getTVector(void);
 
 	/** Calculate O(n2) the square root of the mass matrix inverse
 	denoted by Jain l* = [I -JPsiK]*sqrt(D) (adjoint of l).
@@ -314,7 +301,7 @@ public:
 	void geomDihedral();
 
 	/** Load the map of mobods to joint types **/
-        //void loadMbx2mobility(SimTK::State& someState);
+	//void loadMbx2mobility(SimTK::State& someState);
 
 protected:
 

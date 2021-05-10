@@ -48,7 +48,6 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	ndofs = natoms * ThreeFrom3D;
 	// END SAMPLER
 
-	// BEGIN MCSAMPLER
 	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 	proposeExceptionCaught = false;
@@ -56,7 +55,6 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	for(int i = 0; i < acceptedStepsBufferSize; i++){ 
 		acceptedStepsBuffer.push_back(0);
 	}
-	// END MCSAMPLER
 
 	this->useFixman = false;  
 	this->fix_n = this->fix_o = 0.0;
@@ -89,7 +87,6 @@ HMCSampler::~HMCSampler()
 {
 }
 
-// BEGIN MCSAMPLER
 
 // Use Fixman potential
 void HMCSampler::useFixmanPotential(void)
@@ -190,6 +187,11 @@ ThermostatName HMCSampler::getThermostat(void) const{
     return thermostat;
 }
 
+////////////////////////////////////
+// FIMAN POTENTIAL RELATED
+////////////////////////////////////
+
+
 // Get the potential energy from an external source as far as the sampler
 // is concerned - OPENMM has to be inserted here
 SimTK::Real HMCSampler::getPEFromEvaluator(SimTK::State& someState){
@@ -266,7 +268,6 @@ SimTK::Real HMCSampler::getOldLogSineSqrGamma2(void) const
     return this->logSineSqrGamma2_o;
 }
 
-
 // Set/get External MBAT contribution potential
 SimTK::Real HMCSampler::getSetLogSineSqrGamma2(void) const
 {
@@ -281,6 +282,10 @@ void HMCSampler::setProposedLogSineSqrGamma2(SimTK::Real argFixman)
 {
     this->logSineSqrGamma2_n = argFixman;
 }
+
+////////////////////////////////////
+// CONFIGURATION RELATED
+////////////////////////////////////
 
 // Stores the configuration into an internal vector of transforms TVector
 // Get the stored configuration
@@ -345,11 +350,6 @@ void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
   }
   system->realize(someState, SimTK::Stage::Position);
 }
-
-// END MCSAMPLER
-
-
-
 
 /** Calculate sqrt(M) using Eigen. For debug purposes. **/
 void HMCSampler::calcNumSqrtMUpper(SimTK::State&, SimTK::Matrix&) const
