@@ -1155,6 +1155,8 @@ SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK:
 /** Acception rejection step **/
 bool HMCSampler::accRejStep(SimTK::State& someState) {
 
+	bool validated;
+
 	// Decide and get a new sample
 	if ( getThermostat() == ThermostatName::ANDERSEN ) {
 		// MD with Andersen thermostat
@@ -1165,7 +1167,8 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 		// we do not consider this sample accepted unless it passes all checks
 		this->acc = false;
 
-		if (validateProposal()) {
+		validated = validateProposal(); // TODO should be returned by propose()
+		if (validated) {
 			
 			// Apply Metropolis-Hastings correction
 			if(acceptSample()) {
@@ -1178,6 +1181,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 				std::cout << "\tsample rejected\n";
 				setSetConfigurationAndEnergiesToOld(someState);
 			}
+			++nofSamples;
 		}
 		else {
 			// std::cout << "\tsample not validated, reverting to previous configuration\n";
@@ -1185,7 +1189,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 		}
 	}
 
-	return this->acc;
+	return validated; // TODO should be returned by propose()
 }
 
 /** Checks if the proposal is valid **/
@@ -1356,26 +1360,28 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
     std::cout << std::setprecision(10) << std::fixed;
 
-	propose(someState);
-	accRejStep(someState);
+	propose(someState); //TODO propose until validated
+	if(accRejStep(someState)){
 
-	if(this->acc) {
-		++nofSamples;
-
-		// Add generalized coordinates to a buffer
-		auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
-		QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
-		QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
-
-		pushCoordinatesInR(someState);
-		pushVelocitiesInRdot(someState);
-
-		// Calculate MSD and RRdot to adapt the integration length
-		std::cout << std::setprecision(10) << std::fixed;
-		std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
-	}
+		if(this->acc) {
 	
-	return this->acc;
+			// Add generalized coordinates to a buffer
+			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
+			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
+			QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
+	
+			pushCoordinatesInR(someState);
+			pushVelocitiesInRdot(someState);
+	
+			// Calculate MSD and RRdot to adapt the integration length
+			std::cout << std::setprecision(10) << std::fixed;
+			std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
+		}
+		
+		return this->acc;
+	}else{
+		return false;
+	}
 }
 
 
