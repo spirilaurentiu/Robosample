@@ -233,9 +233,10 @@ public:
 
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
-	the configuration and energies. TODO: break in two functions:
-	initializeVelocities and propagate/integrate **/
-	void propose(SimTK::State& someState);
+	the configuration and energies. Returns true if the proposal is 
+	validatedTODO: break in two functions:initializeVelocities and 
+	propagate/integrate **/
+	bool propose(SimTK::State& someState);
 
 	/** Main function that contains all the 3 steps of HMC.
 	Implements the acception-rejection step and sets the state of the 

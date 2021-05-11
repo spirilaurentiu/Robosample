@@ -1155,7 +1155,6 @@ SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK:
 /** Acception rejection step **/
 bool HMCSampler::accRejStep(SimTK::State& someState) {
 
-	bool validated;
 
 	// Decide and get a new sample
 	if ( getThermostat() == ThermostatName::ANDERSEN ) {
@@ -1167,9 +1166,6 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 		// we do not consider this sample accepted unless it passes all checks
 		this->acc = false;
 
-		validated = validateProposal(); // TODO should be returned by propose()
-		if (validated) {
-			
 			// Apply Metropolis-Hastings correction
 			if(acceptSample()) {
 				// sample is accepted
@@ -1178,18 +1174,14 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 				update(someState);
 			} else {
 				// sample is rejected
+				this->acc = false;
 				std::cout << "\tsample rejected\n";
 				setSetConfigurationAndEnergiesToOld(someState);
 			}
 			++nofSamples;
-		}
-		else {
-			// std::cout << "\tsample not validated, reverting to previous configuration\n";
-			setSetConfigurationAndEnergiesToOld(someState);
-		}
 	}
 
-	return validated; // TODO should be returned by propose()
+	return this->acc;
 }
 
 /** Checks if the proposal is valid **/
@@ -1235,7 +1227,7 @@ bool HMCSampler::acceptSample() {
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. **/
-void HMCSampler::propose(SimTK::State& someState)
+bool HMCSampler::propose(SimTK::State& someState)
 {
 
 	// Store old configuration
@@ -1264,7 +1256,8 @@ void HMCSampler::propose(SimTK::State& someState)
 
 	calcNewConfigurationAndEnergies(someState);
 
-	PrintDetailedEnergyInfo(someState);
+	return validateProposal();
+
 
 }
 
@@ -1358,13 +1351,25 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-    std::cout << std::setprecision(10) << std::fixed;
+	std::cout << std::setprecision(10) << std::fixed;
 
-	propose(someState); //TODO propose until validated
-	if(accRejStep(someState)){
+	bool validated = false;
 
-		if(this->acc) {
+	// Propose 
+	for (int i = 0; i < 10; i++){
+		validated = propose(someState);
+		if (validated){
+			break;
+		}
+	}
+
+	if(validated){
 	
+		PrintDetailedEnergyInfo(someState);
+	
+		accRejStep(someState);
+	
+		if(this->acc) { // Only in this case ???
 			// Add generalized coordinates to a buffer
 			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
 			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
@@ -1380,7 +1385,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		
 		return this->acc;
 	}else{
-		return false;
+		std::cout << "Warning: HMCSampler: Proposal was not validated after 10 tries." << std::endl;
+		setSetConfigurationAndEnergiesToOld(someState);
+		return false;	
 	}
 }
 

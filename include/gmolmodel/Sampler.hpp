@@ -62,7 +62,7 @@ public:
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 
 	/** Propose a move **/
-	virtual void propose(SimTK::State& someState) = 0;
+	virtual bool propose(SimTK::State& someState) = 0;
 	//virtual eval() = 0;
 	virtual void update(SimTK::State& someState) = 0;
 

@@ -447,7 +447,7 @@ void MonteCarloSampler::assignConfFromTVector(SimTK::State& someState)
 // In torsional dynamics the first body has 7 Q variables for 6 dofs - one
 // quaternion (q) and 3 Cartesian coordinates (x). updQ will return: 
 // [qw, qx, qy, qz, x1, x2, x3]
-void MonteCarloSampler::propose(SimTK::State& someState)
+bool MonteCarloSampler::propose(SimTK::State& someState)
 {
     for (int i = 1; i < matter->getNumBodies(); ++i){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(i));

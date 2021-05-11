@@ -72,7 +72,7 @@ public:
     void assignConfFromTVector(SimTK::State& advanced);
 
     // Assign a random conformation
-    void propose(SimTK::State& advanced);
+    bool propose(SimTK::State& advanced);
 
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation

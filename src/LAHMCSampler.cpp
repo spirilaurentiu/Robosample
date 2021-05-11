@@ -750,7 +750,7 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
 initializeVelocities and propagate/integrate **/
-void LAHMCSampler::propose(SimTK::State& someState)
+bool LAHMCSampler::propose(SimTK::State& someState)
 {
 
     storeOldConfigurationAndPotentialEnergies(someState);
