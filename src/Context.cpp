@@ -480,12 +480,12 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
         }
 
         // Write pdb
-        SimTK::State& pdbState = (updWorld(worldIndexes.front()))->integ->updAdvancedState();
         if( getPdbRestartFreq() != 0){
             if(((round) % getPdbRestartFreq()) == 0){
-                (updWorld(worldIndexes.front()))->updateAtomListsFromCompound(pdbState);
+                const SimTK::State& pdbState = updWorld(worldIndexes.front())->integ->updAdvancedState();
+                updWorld(worldIndexes.front())->updateAtomListsFromCompound(pdbState);
                 for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-                    ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
+                    updWorld(worldIndexes.front())->getTopology(mol_i).writeAtomListPdb(getOutputDir(),
                                                                                             "/pdbs/sb." +
                                                                                             getPdbPrefix() + "." + std::to_string(mol_i) + ".",
                                                                                             ".pdb", 10, round);
@@ -666,12 +666,12 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
             // std::cout << "\n";
     
             // Write pdb
-            SimTK::State& pdbState = (updWorld(worldIndexes.front()))->integ->updAdvancedState();
             if( getPdbRestartFreq() != 0){
                 if(((round) % getPdbRestartFreq()) == 0){
-                    (updWorld(worldIndexes.front()))->updateAtomListsFromCompound(pdbState);
+                    const SimTK::State& pdbState = updWorld(worldIndexes.front())->integ->updAdvancedState();
+                    updWorld(worldIndexes.front())->updateAtomListsFromCompound(pdbState);
                     for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-                        ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
+                        updWorld(worldIndexes.front())->getTopology(mol_i).writeAtomListPdb(getOutputDir(),
                                                                                                 "/pdbs/sb." +
                                                                                                 getPdbPrefix() + "." + std::to_string(mol_i) + ".",
                                                                                                 ".pdb", 10, round);
@@ -744,12 +744,12 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
             }
     
             // Write pdb
-            SimTK::State& pdbState = (updWorld(worldIndexes.front()))->integ->updAdvancedState();
             if( getPdbRestartFreq() != 0){
                 if(((round) % getPdbRestartFreq()) == 0){
-                    (updWorld(worldIndexes.front()))->updateAtomListsFromCompound(pdbState);
+                    const SimTK::State& pdbState = updWorld(worldIndexes.front())->integ->updAdvancedState();
+                    updWorld(worldIndexes.front())->updateAtomListsFromCompound(pdbState);
                     for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-                        ((updWorld(worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(getOutputDir(),
+                        updWorld(worldIndexes.front())->getTopology(mol_i).writeAtomListPdb(getOutputDir(),
                                                                                                 "/pdbs/sb." +
                                                                                                 getPdbPrefix() + "." + std::to_string(mol_i) + ".",
                                                                                                 ".pdb", 10, round);

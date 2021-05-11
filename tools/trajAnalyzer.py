@@ -23,6 +23,9 @@ class TrajectoryAnalyzer:
 		self.topFN = topFN
 		self.simDirs = simDirs
 		self.FNSeeds = FNSeeds
+		if isinstance(self.FNSeeds, list) != True:
+			self.FNSeeds = [self.FNSeeds]
+		print('TrajectoryAnalyzer init FNSeeds', self.FNSeeds)
 
 		self.trajectories = [None] * len(FNSeeds)
 
@@ -79,9 +82,12 @@ class TrajectoryAnalyzer:
 			# Get file names
 			FNList = []
 			for di in range(len(self.simDirs)):
-				print(self.simDirs[di])
-				print(self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')
-				FNList.append(glob.glob(self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')[0])
+				print('TrajectoryAnalyzer simDirs', self.simDirs[di])
+				print('TrajectoryAnalyzer ReadDcds() FNSeeds', self.FNSeeds)
+				print('TrajectoryAnalyzer simDirs get', self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')
+				fnlist = glob.glob(self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')
+				print('TrajectoryAnalyzer simDirs got', fnlist, '. Taking the first one.')
+				FNList.append(fnlist[0])
 			FNList = list(np.array(FNList).flat)
 			if verbose == True:
 				print(FNList)

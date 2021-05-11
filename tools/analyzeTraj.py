@@ -1,12 +1,14 @@
 # Robosample tools
 import sys, os, glob
 import numpy as np
+import copy
 import scipy 
 import scipy.stats
 import argparse
 
 #from scipy.signal import find_peaks
 import scipy.signal as scisig
+from scipy.optimize import curve_fit
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -16,6 +18,7 @@ from trajAnalyzer import TrajectoryAnalyzer
 from autocorFuncs import *
 from jumpDetect import *
 
+# Function to print big arrays the way I want
 def print1DNPArray(series):
 	print("\n")
 	for k in range(series.shape[0]):
@@ -25,6 +28,12 @@ def print1DNPArray(series):
 	print("\n")
 #
 
+# Fitting function
+def func(x, a, b, c):
+    return a * np.exp(-b * x) + c
+#
+
+# Arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--simDirs', default=None, nargs='+',
 	help='Directory with input data files')
@@ -50,23 +59,7 @@ parser.add_argument('--analyze', default=[], nargs='+',
 parser.add_argument('--distance', default=[0, 1], type=int, nargs='+',
 	help='Atom indeces to compute distance for.')
 
-parser.add_argument('--Ms', default=[0], type=int, nargs='+', 
-	help='Number of steps to sum the correlation function on. One M per column')
-parser.add_argument('--fitacf', action='store_true', default=False,
-	help='Fit autocorrelation function to an exponential')
-parser.add_argument('--acf', action='store_true', default=False,
-	help='Compute autocorrelation function.')
-parser.add_argument('--bse', action='store_true', default=False,
-	help='Use block averaging')
-parser.add_argument('--nofAddMethods', default=0, type=int,
-	help='Number of additional methods wrote by James on StackOverflow.')
-parser.add_argument('--logDiffWin', default=3, type=int,
-	help='Moving difference window.')
 parser.add_argument('--trajDiffWin', default=3, type=int,
-	help='Moving difference window.')
-parser.add_argument('--accMAWin', default=3, type=int,
-	help='Moving average window.')
-parser.add_argument('--accDiffWin', default=3, type=int,
 	help='Moving difference window.')
 parser.add_argument('--makeplots', default=[], nargs='+', 
 	help='Make plots')
@@ -91,8 +84,8 @@ nofParamSets = nofSeeds // 3
 seeds = np.array(np.array_split(np.array([int(seed) for seed in args.FNSeeds]) , nofParamSets))
 print(seeds)
 
-runningMean = np.empty((3990))
-runningVar = np.empty((3990))
+cumulativeMean = np.empty((3990))
+cumulativeVar = np.empty((3990))
 TA = []
 fignum = -1
 if "traj" in args.analyze:
@@ -135,6 +128,7 @@ if "traj" in args.analyze:
 	print("data shape", data.shape)
 	print("data")
 	print(data)
+	totalNofSims = int(data.shape[0])
 
 	# Calculate
 	pltNofRows = 2
@@ -142,19 +136,19 @@ if "traj" in args.analyze:
 
 	nofSimsPerParamSet = int(data.shape[0] / nofParamSets)
 	print("There are", nofSimsPerParamSet, "simulations per parameter set.")
-	runningBias = np.empty(data.shape)
-	runningMean = np.empty(data.shape)
-	runningVar = np.empty(data.shape)
+	cumulativeBias = np.empty(data.shape)
+	cumulativeMean = np.empty(data.shape)
+	cumulativeVar = np.empty(data.shape)
 	print("nofParamSets", nofParamSets)
 	print("data.shape", data.shape)
 	bias = np.empty((nofParamSets, data.shape[1]))
+	sofb = np.empty((nofParamSets, data.shape[1]))
 	mofm = np.empty((nofParamSets, data.shape[1]))
 	vofm = np.empty((nofParamSets, data.shape[1]))
 	sofm = np.empty((nofParamSets, data.shape[1]))
 	MSE = np.empty((nofParamSets, data.shape[1]))
 
 	# Get the true value estimate (last average of the longest simulations)
-
 	# Get the latest of each type
 	lastValues = []
 	for datumi in range(data.shape[0]):
@@ -163,7 +157,7 @@ if "traj" in args.analyze:
 	trueValueEst = np.mean(lastValues)
 	print("trueValueEst", trueValueEst)
 
-	# Get running means
+	# Get cumulative average bias and variance
 	fig, axs = plt.subplots(pltNofRows, pltNofCols)
 	for paramSeti in range(nofParamSets):
 		startSim = paramSeti * nofSimsPerParamSet
@@ -173,99 +167,97 @@ if "traj" in args.analyze:
 			for simi in paramSetSimsRange:
 				# Make sure the current frame is not empty
 				if data[simi, framei] != None:
-					runningMean[simi, framei] = np.mean(data[simi, 0:framei+1])
-					runningBias[simi, framei] = (runningMean[simi, framei] - trueValueEst)
-					runningVar[ simi, framei] = np.var(data[simi, 0:framei+1])
+					cumulativeMean[simi, framei] = np.mean(data[simi, 0:framei+1])
+					cumulativeBias[simi, framei] = (cumulativeMean[simi, framei] - trueValueEst)
+					cumulativeVar[ simi, framei] = np.var(data[simi, 0:framei+1])
 		
-			#print("runningMean.shape", runningMean.shape)
+			#print("cumulativeMean.shape", cumulativeMean.shape)
 			# Choose includedSims
 			#includedSims = paramSetSimsRange
 			includedSims = []
 			for simi in paramSetSimsRange:
 				if data[simi, framei] != None:
 					includedSims.append(simi)
-			mofm[paramSeti, framei] = np.mean(runningMean[includedSims, framei])
-			vofm[paramSeti, framei] = np.var(runningMean[includedSims, framei])
+			mofm[paramSeti, framei] = np.mean(cumulativeMean[includedSims, framei])
+			vofm[paramSeti, framei] = np.var(cumulativeMean[includedSims, framei])
 			bias[paramSeti, framei] = mofm[paramSeti, framei] - trueValueEst
-			sofm[paramSeti, framei] = np.std(runningMean[includedSims, framei])
-			MSE[paramSeti, framei] = vofm[paramSeti, framei] + (bias[paramSeti, framei])**2
+			sofm[paramSeti, framei] = np.std(cumulativeMean[includedSims, framei])
+			MSE[paramSeti, framei]  = vofm[paramSeti, framei] + (bias[paramSeti, framei])**2
 
+			sofb[paramSeti, framei] = np.std(cumulativeBias[:, framei])
+			
 
-	print("Plotting running means and stds")
-	colors = ['black', 'red']
+	# Compute the half life point of MSE
+	halfLifeMSE = np.zeros((nofParamSets), dtype=int)
 	for paramSeti in range(nofParamSets):
-		startSim = paramSeti * nofSimsPerParamSet
-		for simi in range(startSim, nofSimsPerParamSet + startSim):
+		hly = np.mean([np.nanmin(MSE[paramSeti]), np.nanmax(MSE[paramSeti])])
+		for framei in range(1, data.shape[1] - 1):
+			prevDelta = MSE[paramSeti, framei-1] - hly
+			nextDelta = MSE[paramSeti, framei+1] - hly 
+			if np.sign(prevDelta * nextDelta) == -1:
+				halfLifeMSE[paramSeti] = framei
+				break
 
-			X = range(0, runningMean.shape[1])
-			Y = runningMean[simi]
-			axs[0].plot(X, Y, color = colors[paramSeti])
-			axs[0].set_title('Running Means ' + args.molName)
+	# Exponential fitting
+	# First get the nans out
+	noNanMSE = MSE # shallow copy
+	for paramSeti in range(nofParamSets):
+		for framei in range(noNanMSE.shape[1] - 1):
+			if np.isnan(noNanMSE[paramSeti, framei + 1]):
+				noNanMSE[paramSeti, framei+1:] = noNanMSE[paramSeti, framei]
+				break
+	
+	# Fit a polynomial of degree 1 to the log
+	expFitFactors = np.zeros((nofParamSets, 2), dtype=float)
+	for paramSeti in range(nofParamSets):
+		expFitFactors[paramSeti] = np.polyfit( np.array(range(noNanMSE.shape[1])), np.log(noNanMSE[paramSeti]), 1)
+		#print(expFitFactors[paramSeti])
 
-			#Y = data[simi]
-			Y = MSE[paramSeti]
-			axs[1].plot(X, Y, color = colors[paramSeti])
+	# Use fitting functions
+	poptpcov = [None] * nofParamSets
+	for paramSeti in range(nofParamSets):
+		popt, pcov = curve_fit(func, np.array(range(1, noNanMSE.shape[1])), noNanMSE[paramSeti][1:])
+		poptpcov[paramSeti] = []
+		poptpcov[paramSeti].append(popt)
+		poptpcov[paramSeti].append(pcov)
+	print(args.molName, args.FNSeeds, end = ' ')
+	print("halfLifeMSE expFactors ratios second/first", halfLifeMSE[1]/halfLifeMSE[0], (-1.0 * poptpcov[1][0][1]) / (-1.0 * poptpcov[0][0][1]))
+
+	# Plots
+	if args.makeplots:
+		print("Plotting cumulative means and stds")
+		colors = ['black', 'red']
+		for paramSeti in range(nofParamSets):
+			startSim = paramSeti * nofSimsPerParamSet
+			X = range(0, cumulativeMean.shape[1])
+			for simi in range(startSim, nofSimsPerParamSet + startSim):
+	
+				#X = range(0, cumulativeMean.shape[1])
+				Y = cumulativeMean[simi]
+				axs[0].plot(X, Y, color = colors[paramSeti])
+				axs[0].set_title('Running Means ' + args.molName + ' seed ' + str(args.FNSeeds[0]))
+				#axs[0].set_xlim(0, 4000)
+				#axs[0].set_ylim(0, 24)
+	
+				#Y = data[simi]
+	
+			Y = noNanMSE[paramSeti]
+			Yerr = sofb[paramSeti] / np.sqrt(nofSimsPerParamSet)
+			#axs[1].plot(X, Y, color = colors[paramSeti])
+			axs[1].errorbar(X, Y, yerr=Yerr, errorevery=100, color = colors[paramSeti])
 			axs[1].set_title('MSE')
+			#axs[1].set_xlim(0, 4000)
+			#axs[1].set_ylim(0, 400)
 
-			#Y = mofm[paramSeti]
-			#Yerr = sofm[paramSeti]
-			##Yerr = (sofm[paramSeti])**2 + (bias[paramSeti])**2
-			#axs[1].errorbar(X, Y, yerr=Yerr, color = colors[paramSeti], errorevery = 100, elinewidth = 0.5)
-			#axs[1].set_title('Std of Means ' + args.molName)
-			#axs[1].legend()
+			# Plot the exponential decay
+			a = expFitFactors[paramSeti][0]
+			b = expFitFactors[paramSeti][1]
+			Y = np.exp(a * X) * np.exp(b)
+			#axs[1].plot(X, Y, color = colors[paramSeti], linestyle='dashed')
 
-			#Yerr = 
-			#axs[1, 0].errorbar(X, Y, yerr=Yerr, label=str(paramSeti))
-
-		
-		# Plot trajectory based geometric functions
-	#	figsPerSeed = 3
-	#	figs = [None] * len(args.FNSeeds) * figsPerSeed
-	#	axes = [None] * len(args.FNSeeds) * figsPerSeed
-	#	for seedi in range(nofSeeds):
-	#		if(('traj' in args.makeplots) or ('all' in args.makeplots)):
-	#			fignum += 1
-	#			figIx = (seedi * 2) + fignum
-	#			figs[figIx], axes[figIx] = plt.subplots(2, 1)
-	#			plt.suptitle('Seed ' + str(args.FNSeeds[seedi]))
-	#	
-	#			series = [TA.data[seedi]]
-	#			seriesLabels = ['Distance']
-	#			for si in range(len(series)):
-	#				axes[figIx][si].plot(series[si], label=seriesLabels[si], color='black')
-				
-	#			# 
-	#			fignum += 1
-	#			figIx = (seedi * figsPerSeed) + fignum
-	#			figs[figIx], axes[figIx] = plt.subplots(2, 2)
-	#			plt.suptitle('Seed ' + str(args.FNSeeds[seedi]))
-	#	
-	#			series = [TA.rmsds[seedi], TA.RGs[seedi], TA.helicities1[seedi], TA.totSASAs[seedi]]
-	#			seriesLabels = ['RMSD', 'RG', 'Helicity', 'SASA']
-	#			for si in range(len(series)):
-	#				axes[figIx][int(si/2), (si%2)].plot(series[si], label=seriesLabels[si], color='black')
-	#	
-	#				# PLot difference quotient of acceptance
-	#				toBePlotted = difference_quotient(series[si], args.trajDiffWin)
-	#				scaleFactor = np.abs(np.mean(series[si])) / np.abs(np.mean(toBePlotted)) / 30.0
-	#				toBePlotted = scaleFactor * toBePlotted
-	#				#axes[figIx][int(si/2), (si%2)].plot(toBePlotted, label=seriesLabels[si] + 'diffQuot', color='pink')
-	#	
-	#				# Plot diff quatioent X intercept
-	#				XAxisIntersections = intersections(toBePlotted, np.zeros((toBePlotted.size)))
-	#				if XAxisIntersections.size:
-	#					XAxisIntersections = XAxisIntersections - 0
-	#					print("eqPoint(" + seriesLabels[si] + ")", XAxisIntersections[0])
-	#				zeroArray = np.zeros((XAxisIntersections.size))
-	#				axes[figIx][int(si/2), (si%2)].scatter(XAxisIntersections, zeroArray, label=seriesLabels[si] + 'diffQuot0s', color='red')
-	#				axes[figIx][int(si/2), (si%2)].legend()
-	#	
-	#			#axes[figIx][1, 1].scatter( TA.totSASAs[seedi], TA.RGs, \
-	#			#	label='SASA vs RG', s = 1**2, cmap='PuBu_r')
-	#			#axes[figIx][1, 1].legend()
-
-
-
+			# Plot the fitted function
+			axs[1].plot(X, func(X, *(poptpcov[paramSeti][0])), 'r-', label="Fitted Curve", color = colors[paramSeti], linestyle='dashed')
+	
 if args.makeplots:
 	plt.legend()
 	plt.show()

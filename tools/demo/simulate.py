@@ -10,7 +10,7 @@ platform = Platform.getPlatformByName('CPU')
 properties={'nofThreads': 2}
 
 # Create a Robosample system by calling createSystem on prmtop
-system = prmtop.createSystem(createDirs = False,
+system = prmtop.createSystem(createDirs = True,
 	nonbondedMethod = "CutoffPeriodic",
  	nonbondedCutoff = 1.44*nanometer,
  	constraints = None,
@@ -28,6 +28,12 @@ integrator = HMCIntegrator(300*kelvin,   # Temperature of head bath
 simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
 simulation.reporters.append(PDBReporter('robots/', 10))
 simulation.context.setPositions(inpcrd.positions)
+
+
+## Generate NMA-Scaled Flex Files
+NMAFlex = simulation.context.NMAtoFlex(simulation.context.mdtrajTraj, "/home/teo/Laurentiu/RobosampleDev/NMA/RS_NMA/iMod/iMOD_v1.04_Linux/bin/imode_gcc", Modes=5)
+NMAFlex.GetFlexScaled()
+NMAFlex.CleanUp()
 
 # run simulation
 simulation.step(5)

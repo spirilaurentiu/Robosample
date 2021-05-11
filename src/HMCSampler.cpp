@@ -383,29 +383,43 @@ void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someSta
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
 void HMCSampler::initializeVelocities(SimTK::State& someState){
+	// Check if we can use our cache
     const int nu = someState.getNU();
-    double sqrtRT = std::sqrt(RT);
-    SimTK::Vector V(nu);
-    SimTK::Vector SqrtMInvV(nu);
-    for (int i=0; i < nu; ++i){
-        V[i] = gaurand(randomEngine);
-    }
+	if (nu != RandomCache.nu) {
+		// Rebuild the cache
+		// We also get here if the cache is not initialized
+		RandomCache.V.resize(nu);
+		RandomCache.SqrtMInvV.resize(nu);
+		RandomCache.sqrtRT = std::sqrt(RT);
+		RandomCache.nu = nu;
 
-    // Scale by user defined factors
-    for (int i=0; i < nu; ++i){
-        V[i] = V[i] * UScaleFactors[i];
-    }
+		// we don't get to use multithreading here
+		RandomCache.FillWithGaussian();
+	} else {
+		// wait for random number generation to finish (should be done by this stage)
+		RandomCache.task.wait();
+	}
 
-    // Scale by square root of the inverse mass matrix
-    matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
+	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers 
+	std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
+		UScaleFactors.begin(), // and this
+		RandomCache.V.begin(), // and store here
+		std::multiplies<SimTK::Real>()); // this is the operation
+	
+	// Scale by square root of the inverse mass matrix
+	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
 
-    SqrtMInvV *= (sqrtRT); // Set stddev according to temperature
+	// Set stddev according to temperature
+	RandomCache.SqrtMInvV *= (RandomCache.sqrtRT);
 
-    // Raise the temperature
-    someState.updU() = SqrtMInvV;
+	// Raise the temperature
+	someState.updU() = RandomCache.SqrtMInvV;
 
-    // Realize velocity
-    system->realize(someState, SimTK::Stage::Velocity);
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+
+	// ask for a number of random numbers and check if we are done the next time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
 /** Store the proposed energies **/
@@ -853,7 +867,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 		std::cout << "\tsample accepted (always with andersen thermostat)\n";
 		update(someState);
 	} else {
-		// we do not consider this sample accepted until it passes all checks
+		// we do not consider this sample accepted unless it passes all checks
 		this->acc = false;
 
 		if (validateProposal()) {

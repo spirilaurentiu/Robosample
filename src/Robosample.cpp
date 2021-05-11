@@ -29,6 +29,9 @@ void PrintHelp() {
 
 int main(int argc, char **argv)
 {
+	// ios_base::sync_with_stdio(false);
+    // std::cin.tie(nullptr);
+
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
 		PrintHelp();
