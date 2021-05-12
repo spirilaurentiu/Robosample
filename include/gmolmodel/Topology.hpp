@@ -221,6 +221,10 @@ public:
 		return mbx2aIx;
 	}
 
+	// Retunr mbx from an olresdy saved map inside Topology
+	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexFromMap(
+		SimTK::Compound::AtomIndex aIx);
+
 	/** Get AtomIndex to MobilizedBodyIndex map **/
 	std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex >
 	getAIx2mbx(){

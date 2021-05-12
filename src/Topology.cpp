@@ -1576,6 +1576,19 @@ SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
 	return aIx2TopTransform[aIx];
 }
 
+// Retunr mbx from an olresdy saved map inside Topology
+SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
+	SimTK::Compound::AtomIndex aIx) 
+{
+	if(!aIx2mbx.empty()){
+		return aIx2mbx[aIx];
+	}else{
+		std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx not yet loaded.\n";
+		throw std::exception();
+		std::exit(1);
+	}
+}
+
 /** Print maps **/
 void Topology::printMaps()
 {

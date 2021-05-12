@@ -251,16 +251,18 @@ body **/
 void World::setUScaleFactorsToMobods(void)
 {
 
-	for(const auto& topology : topologies){
+	for(auto& topology : topologies){
 		// Iterate bonds
 
 		//for(const auto& AtomList : topology.bAtomList){
-		for(const auto& Bond : topology.bonds){
+		for(auto& Bond : topology.bonds){
 			SimTK::Compound::AtomIndex aIx1 = topology.bAtomList[Bond.i].getCompoundAtomIndex();
 			SimTK::Compound::AtomIndex aIx2 = topology.bAtomList[Bond.j].getCompoundAtomIndex();
 
-			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndex(aIx1);
-			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndex(aIx2);
+			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1);
+			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2);
+
+			std::cout << "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 " << aIx1 << " " << aIx2 << " " << mbx1 << " " << mbx2 << std::endl;
 
 			const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(mbx1);
 			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(mbx2);

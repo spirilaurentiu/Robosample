@@ -158,7 +158,7 @@ int main(int argc, char **argv)
 	}
 
 	
-
+/*
 	// Membrane
 	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
 	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
@@ -170,12 +170,7 @@ int main(int argc, char **argv)
 			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
 		}
 	}
-
-/*    for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		(context.updWorld(worldIx))->loadMobodsRelatedMaps();
-	}*/
-	// END MULMOL
-	
+*/
 
 	// Use OpenMM if possible
 	if(setupReader.get("OPENMM")[0] == "TRUE"){
@@ -187,23 +182,6 @@ int main(int argc, char **argv)
 
 	// Link the Compounds to Simbody System for all Worlds
 	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
-
-	// Membrane contacts. TODO: only one per world for now
-	if(haveMembrane){
-		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-			(context.updWorld(worldIx))->addContacts( std::stoi(setupReader.get("CONTACTS")[worldIx]) );
-		}
-	}
-
-	// Set ocnstraint. TODO: only one per world allowed for now
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		(context.updWorld(worldIx))->addConstraints( std::stoi(setupReader.get("CONSTRAINTS")[worldIx]) );
-	}
-
-	// U Scale Factors
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		(context.updWorld(worldIx))->setUScaleFactorsToMobods();
-	}
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
@@ -442,6 +420,27 @@ int main(int argc, char **argv)
 		(context.updWorld(worldIx))->loadCompoundRelatedMaps();
 		(context.updWorld(worldIx))->loadMobodsRelatedMaps();
 	}
+
+/*
+	// Membrane contacts. TODO: only one per world for now
+	if(haveMembrane){
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+			(context.updWorld(worldIx))->addContacts( std::stoi(setupReader.get("CONTACTS")[worldIx]) );
+		}
+	}
+
+	// Set ocnstraint. TODO: only one per world allowed for now
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(context.updWorld(worldIx))->addConstraints( std::stoi(setupReader.get("CONSTRAINTS")[worldIx]) );
+	}
+*/
+	// U Scale Factors uses maps stored in Topology
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(context.updWorld(worldIx))->setUScaleFactorsToMobods();
+	}
+
+	// Realize topology for all the Worlds
+	context.realizeTopology();
 
 	// Load/store Mobilized bodies joint types
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
