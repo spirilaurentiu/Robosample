@@ -32,6 +32,10 @@ int main(int argc, char **argv)
 	// ios_base::sync_with_stdio(false);
     // std::cin.tie(nullptr);
 
+	/////////////////////////////////////
+	// 	STAGE EMPTY
+	/////////////////////////////////////
+
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
 		PrintHelp();
@@ -93,6 +97,10 @@ int main(int argc, char **argv)
 			context.AddWorld(false);
 		}
 	}
+
+	/////////////////////////////////////
+	// 	STAGE EMPTY
+	/////////////////////////////////////
 
 //@    // Request threads
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
