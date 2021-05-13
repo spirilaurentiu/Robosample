@@ -80,6 +80,8 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	dR.resize(ndofs, 0);
 	dRdot.resize(ndofs, 0);
+
+	UScaleFactors.resize(ndofs, 1);
 }
 
 /** Destructor **/
@@ -555,6 +557,9 @@ void HMCSampler::initialize(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    for (int j=0; j < nu; ++j){
+	UScaleFactors[j] = 1;
+    }
     loadUScaleFactors(someState);
 }
 
@@ -617,6 +622,9 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_proposed;
 
+    for (int j=0; j < nu; ++j){
+	UScaleFactors[j] = 1;
+    }
     loadUScaleFactors(someState);
 }
 
