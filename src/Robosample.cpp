@@ -27,15 +27,33 @@ void PrintHelp() {
 		"Usage: Robsample file\n";
 }
 
+// Check Status
+void checkStatus(Context& context){
+	std::size_t nofWorlds = context.getNofWorlds();
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		if ((context.updWorld(worldIx))->integ  == nullptr ){
+			std::cout << "Robosample check: integrator is null" << std::endl;
+			break;
+		}
+		SimTK::VerletIntegrator& checkIntegrator = *(context.updWorld(worldIx))->integ;
+		const SimTK::State& checkState = checkIntegrator.getState();
+		const SimTK::Stage& checkStage	= checkState.getSystemStage();
+		////const SimTK::System& checkSystem = ((context.updWorld(worldIx))->matter)->getSystem();
+		//const SimTK::Stage& checkStage = ((context.updWorld(worldIx))->matter)->getStage(checkState);
+		std::cout << "Robosample stage " << checkStage << std::endl;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	// ios_base::sync_with_stdio(false);
     // std::cin.tie(nullptr);
 
 	/////////////////////////////////////
-	// 	STAGE EMPTY
+	// 	NO SIMBODY OBJECTS YET
 	/////////////////////////////////////
 
+	// Check if there is any input
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
 		PrintHelp();
@@ -50,14 +68,16 @@ int main(int argc, char **argv)
 		}
 	}
 
-	std::cout << "Setting Robosample up..." << std::endl;
-
 	// Initialize setup reader
+	std::cout << "Got the following input:" << std::endl;
 	SetupReader setupReader(argv[1]);
 	setupReader.dump(true);
 
-	const int nofWorlds = static_cast<int>(setupReader.get("WORLDS").size());
-	std::cout << "Robosample nofWorlds " << nofWorlds << std::endl;
+	// Declare global variables
+	int currentWorldIx = 0;
+	int round_mcsteps = 0;
+
+	/////////// Create context ////////////
 
 	// Create pdbs directory if necessary
 	if( !SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0] + "/pdbs") ){
@@ -68,11 +88,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	// Variables
-	int currentWorldIx = 0;
-	int round_mcsteps = 0;
-
-	// Create context
+	// Set the log filename
 	std::string logFilename;
 	if (setupReader.find("SEED")) {
 		if (!(setupReader.get("SEED").empty())) {
@@ -82,10 +98,19 @@ int main(int argc, char **argv)
 		logFilename = "x";
 	}
 
-	// Initialize a Context
 	Context context(setupReader, logFilename);
 
-	// Add empty Worlds to the Context
+	/////////// Add Worlds to context ////////////
+
+	// Get the number of worlds // TODO NOW : get it from context
+	const int nofWorlds = static_cast<int>(setupReader.get("WORLDS").size());
+	std::cout << "Robosample nofWorlds " << nofWorlds << std::endl;
+
+	// Add Worlds to the Context. Every World instantiates a: 
+	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
+	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
+	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
+	//  ParaMolecularDecorator
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		if(setupReader.get("VISUAL")[worldIx] == "TRUE"){
 			if(std::stod(setupReader.get("TIMESTEPS")[worldIx]) <= 0.0000001){
@@ -98,6 +123,10 @@ int main(int argc, char **argv)
 		}
 	}
 
+
+	checkStatus(context);
+	//std::exit(0);
+
 	/////////////////////////////////////
 	// 	STAGE EMPTY
 	/////////////////////////////////////
@@ -107,23 +136,20 @@ int main(int argc, char **argv)
 		context.setNumThreadsRequested(worldIx,
 				std::stoi(setupReader.get("THREADS")[worldIx]));
 	}
-
-	// Print the number of threads we got back
 	context.PrintNumThreads();
 
-	// Set worlds force field scale factors
-	for (unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		// Set force field scale factors.
-		if(setupReader.get("FFSCALE")[worldIx] == "AMBER"){
-			context.setAmberForceFieldScaleFactors(worldIx);
-		}else{
-			context.setGlobalForceFieldScaleFactor(worldIx,
-					std::stod(setupReader.get("FFSCALE")[worldIx]));
-		}
-		// Set world GBSA scale factor
-		context.setGbsaGlobalScaleFactor(worldIx,
-				std::stod(setupReader.get("GBSA")[worldIx]));
+	// Set force field scale factor.
+	if(setupReader.get("FFSCALE")[0] == "AMBER"){
+		context.setAmberForceFieldScaleFactors();
+	}else{
+		context.setGlobalForceFieldScaleFactor(
+			std::stod(setupReader.get("FFSCALE")[0]));
 	}
+	// Set GBSA scale factor
+	context.setGbsaGlobalScaleFactor(
+		std::stod(setupReader.get("GBSA")[0]));
+        
+
 //@
 	// Add filenames to Context filenames vectors
 	int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
@@ -281,9 +307,9 @@ int main(int argc, char **argv)
 	}
 
 
-	// Set thermodynamics
+	// Thermodynamics
+	context.setTemperature(std::stof(setupReader.get("TEMPERATURE_INI")[0]));
 	for(unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
-		context.setTemperature(worldIx, std::stof(setupReader.get("TEMPERATURE_INI")[worldIx]));
 		context.setNofSamplesPerRound(worldIx, std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
 		context.setNofMDStepsPerSample(worldIx, 0, std::stoi(setupReader.get("MDSTEPS")[worldIx]));
 	}
@@ -441,7 +467,6 @@ int main(int argc, char **argv)
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		(context.updWorld(worldIx))->addConstraints( std::stoi(setupReader.get("CONSTRAINTS")[worldIx]) );
 	}
-*/
 	// U Scale Factors uses maps stored in Topology
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		(context.updWorld(worldIx))->setUScaleFactorsToMobods();
@@ -449,6 +474,7 @@ int main(int argc, char **argv)
 
 	// Realize topology for all the Worlds
 	context.realizeTopology();
+*/
 
 	// Load/store Mobilized bodies joint types
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){

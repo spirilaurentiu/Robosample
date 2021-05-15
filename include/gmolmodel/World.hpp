@@ -279,7 +279,7 @@ public:
 	// Contact related
 	std::unique_ptr<ContactTrackerSubsystem> tracker;
 	std::unique_ptr<CompliantContactSubsystem> contactForces;
-    ContactCliqueId clique1;
+	ContactCliqueId clique1;
 	std::unique_ptr<MobilizedBody::Weld> membrane;
 	std::unique_ptr<Body::Rigid> memBody;
 

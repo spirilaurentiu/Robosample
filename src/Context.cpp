@@ -21,6 +21,45 @@ Context::Context(const SetupReader& setupReader, std::string logFilename){
 
 }
 
+// 
+void Context::ValidateSetupReader(const SetupReader& setupReader) {
+
+	// Context specific parameters
+	assert(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0]));
+
+	assert( std::stoi((setupReader.get("ROUNDS"))[0]) > 0);
+	assert( std::stoi((setupReader.get("ROUNDS_TIL_REBLOCK"))[0]) > 0);
+	assert( std::stoi((setupReader.get("SEED"))[0]) > 0);
+
+	std::size_t nofWorlds = setupReader.get("WORLDS").size();
+
+	
+
+	// Molecule specific parameters
+	for(std::size_t molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
+		assert(SimTK::Pathname::fileExists(
+			setupReader.get("MOLECULES")[molIx] + std::string("/")
+			+ setupReader.get("PRMTOP")[molIx]) );
+		assert(SimTK::Pathname::fileExists(
+			setupReader.get("MOLECULES")[molIx] + std::string("/")
+			+ setupReader.get("INPCRD")[molIx]) );
+	}
+
+	// Topology specific paramters
+	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for(std::size_t molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
+			assert(SimTK::Pathname::fileExists(
+				setupReader.get("MOLECULES")[molIx] + std::string("/")
+				+ setupReader.get("RBFILE")[molIx]) );
+			assert(SimTK::Pathname::fileExists(
+				setupReader.get("MOLECULES")[molIx] + std::string("/")
+				+ setupReader.get("FLEXFILE")[molIx]) );
+
+		}
+	}
+
+}
+
 // // Constructor
 // Context::Context(const SetupReader& setupReader, World *inp_p_world, std::string logFilename){
 //     ValidateSetupReader(setupReader);
@@ -232,11 +271,19 @@ SimTK::Real Context::getTemperature(std::size_t whichWorld) const {
 }
 
 void  Context::setTemperature(std::size_t whichWorld, float someTemperature){
-    std::cout << " Context::setTemperature for world "<< whichWorld << " " << someTemperature << std::endl;
-    worlds[whichWorld].setTemperature(someTemperature);
+	std::cout << " Context::setTemperature for world "<< whichWorld << " " << someTemperature << std::endl;
+	worlds[whichWorld].setTemperature(someTemperature);
 }
 
-    // If HMC, get/set the guidance Hamiltonian temperature
+// Set a temperature for all the worlds
+void  Context::setTemperature(float someTemperature){
+	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+		worlds[worldIx].setTemperature(someTemperature);
+	}
+}
+
+
+// If HMC, get/set the guidance Hamiltonian temperature
 SimTK::Real Context::getGuidanceTemperature(std::size_t, std::size_t)
 {
     // function args were std::size_t whichWorld, std::size_t whichSampler
@@ -265,21 +312,39 @@ void Context::initializeSampler(std::size_t whichWorld, std::size_t whichSampler
 }
 
 // Amber like scale factors.
-void Context::setAmberForceFieldScaleFactors(std::size_t whichWorld)
-{
+void Context::setAmberForceFieldScaleFactors(std::size_t whichWorld){
     worlds[whichWorld].setAmberForceFieldScaleFactors();
 }
 
+// Amber like scale factors.
+void Context::setAmberForceFieldScaleFactors(void){
+    for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+        worlds[worldIx].setAmberForceFieldScaleFactors();
+    }
+}
+
 // Set a global scaling factor for the forcefield
-void Context::setGlobalForceFieldScaleFactor(std::size_t whichWorld, SimTK::Real globalScaleFactor)
-{
+void Context::setGlobalForceFieldScaleFactor(
+	std::size_t whichWorld, SimTK::Real globalScaleFactor){
     worlds[whichWorld].setGlobalForceFieldScaleFactor(globalScaleFactor);
+}
+
+void Context::setGlobalForceFieldScaleFactor(SimTK::Real globalScaleFactor){
+    for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+        worlds[worldIx].setGlobalForceFieldScaleFactor(globalScaleFactor);
+    }
 }
 
 // Set GBSA implicit solvent scale factor
 void Context::setGbsaGlobalScaleFactor(std::size_t whichWorld, SimTK::Real gbsaGlobalScaleFactor)
 {
     worlds[whichWorld].setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
+}
+
+void Context::setGbsaGlobalScaleFactor(SimTK::Real gbsaGlobalScaleFactor){
+    for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+        worlds[worldIx].setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
+    }
 }
 
 // If HMC, get/set the number of MD steps
@@ -627,6 +692,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
                     if (accepted) {
 
                         // CONTACT DEBUG
+			/*
                         int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
                         SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->getDissipatedEnergy(currentAdvancedState);
                         bool hasDefaultForceGenerator = updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
@@ -645,6 +711,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom)
                             << " #mobods= " << nofMobods 
                             << " ctsNofSurfaces= " << ctsNofSurfaces
                         << std::endl;
+			*/
                         // CONTACT DEBUG enD
                     }
                 }
@@ -1188,30 +1255,6 @@ void Context::PrintNumThreads() {
 
         worldIx++;
     }
-}
-
-void Context::ValidateSetupReader(const SetupReader& setupReader) {
-    const std::size_t nofWorlds = setupReader.get("WORLDS").size();
-
-    for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
-        for(std::size_t molIx = 0; molIx < setupReader.get("MOLECULES").size(); molIx++){
-            assert(SimTK::Pathname::fileExists(
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("PRMTOP")[molIx]) );
-            assert(SimTK::Pathname::fileExists(
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("INPCRD")[molIx]) );
-            assert(SimTK::Pathname::fileExists(
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("RBFILE")[molIx]) );
-            assert(SimTK::Pathname::fileExists(
-                    setupReader.get("MOLECULES")[molIx] + std::string("/")
-                + setupReader.get("FLEXFILE")[molIx]) );
-
-        }
-    }
-
-    assert(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0]));
 }
 
 

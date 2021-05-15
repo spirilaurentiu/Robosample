@@ -143,11 +143,13 @@ World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
 	forceField = std::make_unique<SimTK::DuMMForceFieldSubsystem>(*compoundSystem);
 
 	// Contact system
+	/*
 	tracker = std::make_unique<ContactTrackerSubsystem>(*compoundSystem);
 	contactForces = std::make_unique<CompliantContactSubsystem>(*compoundSystem, *tracker);
-	//contactForces = std::make_unique<HuntCrossleyContact>();
 	contactForces->setTrackDissipatedEnergy(true);
 	contactForces->setTransitionVelocity(1e-2);
+    	clique1 = ContactSurface::createNewContactClique();
+	*/
 
 	// Intialize an integrator and a TimeStepper to manage it
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
@@ -175,7 +177,6 @@ World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
 	// Thermodynamics
 	this->temperature = -1; // this leads to unusal behaviour hopefully
 
-    clique1 = ContactSurface::createNewContactClique();
 }
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
