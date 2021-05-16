@@ -494,7 +494,7 @@ void Topology::bAddAtomClasses(
 }
 
 /** Print Molmodel specific types as introduced in Gmolmodel **/
-void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm)
+const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const 
 {
 	std::cout << "Print Molmodel And DuMM Types:" << std::endl;
 	for(size_t i = 0; i < bAtomList.size(); i++){
@@ -1498,7 +1498,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 
 
 	} // RB
-	PrintAtomList();
+	//PrintAtomList();
 	this->regimen = argRegimen;
 }
 

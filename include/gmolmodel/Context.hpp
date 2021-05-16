@@ -16,6 +16,8 @@ public:
 	Context(const SetupReader& setupReader, std::string logFilenameArg);
 	~Context();
 
+	void printStatus(void);
+
 	World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
 	//World * AddWorld(World *, bool visual);
 
@@ -25,6 +27,7 @@ public:
 	World * updWorld();
 	World * updWorld(std::size_t which);
 
+	// Returns the size of the worlds vector
 	std::size_t getNofWorlds() const;
 
 	SimTK::DuMMForceFieldSubsystem * updForceField(std::size_t whichWorld);
@@ -33,8 +36,8 @@ public:
 	SimTK::State& updAdvancedState(std::size_t whichWorld, std::size_t whichSampler);
 
 	// --- Use a SetupReader Object to read worlds information from a file ---
-	bool loadTopologyFile(std::size_t whichWorld, int whichMolecule, std::string topologyFilename);
-	bool loadCoordinatesFile(std::size_t whichWorld, int whichMolecule, std::string coordinatesFilename);
+	bool loadTopologyFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string topologyFilename);
+	bool loadCoordinatesFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string coordinatesFilename);
 	bool loadRigidBodiesSpecs(std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN);
 	bool loadFlexibleBondsSpecs(std::size_t whichWorld, int whichMolecule, std::string FlexSpecsFN);
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
@@ -119,7 +122,7 @@ public:
 
 	// --- Main ---
 	void Run(SetupReader&);
-	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf, bool isWorldOrderRandom);
+	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void setNofBoostStairs(std::size_t whichWorld, int howManyStairs);
 	int getNofBoostStairs(std::size_t whichWorld);
@@ -142,6 +145,8 @@ public:
 	void addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4);
 
 	// --- Printing functions ---
+	void PrintMolmodelAndDuMMTypes(void);
+	void PrintSimbodyMobods(void);
 	void PrintSamplerData(std::size_t whichWorld);
 	void PrintGeometry(SetupReader&, std::size_t whichWorld);
 	void PrintGeometry(std::size_t whichWorld);
@@ -173,8 +178,8 @@ private:
 	std::vector<World> worlds;
 
 	// Molecules files
-	std::vector<std::vector<std::string>> topFNs;
-	std::vector<std::vector<std::string>> crdFNs;
+	std::vector<std::string> topFNs;
+	std::vector<std::string> crdFNs;
 	std::vector<std::vector<std::string>> rbSpecsFNs;
 	std::vector<std::vector<std::string>> flexSpecsFNs;
 	std::vector<std::vector<std::string>> regimens;
@@ -183,12 +188,17 @@ private:
 	// Simulation parameters
 	int nofRounds;
 	//int total_mcsteps;
+
+	std::size_t nofWorlds;
+	bool isWorldsOrderRandom;
 	std::vector<int> nofSamplesPerRound;
 	std::vector<int> nofMDStepsPerSample;
 	std::vector<SimTK::Real> timesteps;
 
 	std::vector<int> nofBoostStairs;
 
+	std::size_t nofMols;
+	std::size_t nofTopologies; // nofWorlds x nofMols
 	//
 	bool reproducible;
 	int pdbRestartFreq;

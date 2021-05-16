@@ -354,6 +354,7 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// Model the Compounds one by one in case we want to attach different types
 	// of Mobilizers to the Ground in the feature.
 	for ( std::size_t i = 0; i < this->topologies.size(); i++){
+		std::cout << "World::modelTopologies Topology " << i << "\n";
 		//SimTK::String GroundToCompoundMobilizerType = "Free";
 		//SimTK::String GroundToCompoundMobilizerType = "Weld";
 		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
@@ -370,11 +371,11 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 		} else {
 			compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(i),
-				"Free");
+				"Free"); // TODO : Doesn't work with Cartesian
 		}
 
 		// // Realize Topology
-		// compoundSystem->realizeTopology(); // restore MULMOL
+		compoundSystem->realizeTopology(); // restore MULMOL
 		// ((this->topologies)[i])->loadMobodsRelatedMaps(); // restore MULMOL
 
 	}

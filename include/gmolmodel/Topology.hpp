@@ -105,7 +105,7 @@ public:
 	);
 
 	/** Print Molmodel specific types as introduced in Gmolmodel **/
-	void PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm);
+	const void PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const;
 
 	/** Build the molecular tree without the cycle closing bonds **/
 	void buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode);
