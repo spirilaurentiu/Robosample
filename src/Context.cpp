@@ -297,7 +297,7 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
 	}
 }
 
-//
+// Print Molmodel related information
 void Context::PrintMolmodelAndDuMMTypes(void){
 	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
 		std::cout << "Context::PrintMolmodelAndDuMMTypes world " << worldIx << "\n";
@@ -310,7 +310,7 @@ void Context::PrintMolmodelAndDuMMTypes(void){
 	}
 }
 
-//
+// Print Simbody related information
 void Context::PrintSimbodyMobods(void){
 	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
 		std::cout << "Context::PrintSimbodyMobods world " << worldIx << "\n";
@@ -319,9 +319,11 @@ void Context::PrintSimbodyMobods(void){
 			const Topology& topology = worlds[worldIx].getTopology(molIx);
 			
 			for(std::size_t i = 0; i < topology.getNumAtoms(); i++){
-				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).getCompoundAtomIndex();
+				SimTK::Compound::AtomIndex aIx 
+					= (topology.bAtomList[i]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
-				std::cout << "i aIx " << i << " " << aIx << " " << mbx << std::endl << std::flush;
+				std::cout << "i aIx " << i << " " << aIx << " " 
+					<< mbx << std::endl << std::flush;
 			}
 		}
 	}
@@ -816,8 +818,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
 				// Make the requested number of samples
+				bool NMA = false;
 				for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++) {
-					auto accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
+					auto accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMA);
 					if (accepted) {
 
 						// CONTACT DEBUG

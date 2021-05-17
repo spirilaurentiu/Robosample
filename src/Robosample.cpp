@@ -103,8 +103,8 @@ int main(int argc, char **argv)
 	}
 	std::cout << "Added " << context.getNofWorlds() << " worlds" << std::endl;
 
-	std::cout << "printStatus 1 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 1 " << std::endl;
+	//context.printStatus();
 
 	/////////////////////////////////////
 	// 	STAGE EMPTY
@@ -166,17 +166,11 @@ int main(int argc, char **argv)
 	// Add molecules to Worlds based on just read filenames
 	context.AddMolecules(setupReader.get("ROOTS"));
 
-	std::cout << "printStatus 2 " << std::endl;
-	context.printStatus();
-
 	// BEGIN MULMOL
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		(context.updWorld(worldIx))->realizeTopology();
-	}
+	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	//	(context.updWorld(worldIx))->realizeTopology();
+	//}
 
-	std::cout << "printStatus 3 " << std::endl;
-	context.printStatus();
-	
 /*
 	// Membrane
 	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
@@ -202,10 +196,10 @@ int main(int argc, char **argv)
 	// Link the Compounds to Simbody System for all Worlds
 	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
 
-	std::cout << "printStatus 4 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 4 " << std::endl;
+	//context.printStatus();
 	//context.PrintMolmodelAndDuMMTypes();
-	context.PrintSimbodyMobods();
+	//context.PrintSimbodyMobods();
 	//std::exit(0);
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
@@ -216,8 +210,8 @@ int main(int argc, char **argv)
 	}
 
 
-	std::cout << "printStatus 5 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 5 " << std::endl;
+	//context.printStatus();
 
 /*
 	// Set worlds force field scale factors
@@ -265,8 +259,8 @@ int main(int argc, char **argv)
 		}*/
 	}
 
-	std::cout << "printStatus 6 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 6 " << std::endl;
+	//context.printStatus();
 ////////// DEBUG BEGIN
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {}}
@@ -318,8 +312,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	std::cout << "printStatus 6.5 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 6.5 " << std::endl;
+	//context.printStatus();
 	// Initialize samplers
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
@@ -327,8 +321,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	std::cout << "printStatus 7 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 7 " << std::endl;
+	//context.printStatus();
 	// Print thermodynamics
 	for(unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
 		std::cout << "MAIN World " << worldIx << " temperature = " << context.getWorld(worldIx)->getTemperature() << std::endl;
@@ -449,8 +443,8 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-	std::cout << "printStatus 8 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 8 " << std::endl;
+	//context.printStatus();
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		(context.updWorld(worldIx))->loadCompoundRelatedMaps();
 		(context.updWorld(worldIx))->loadMobodsRelatedMaps();
@@ -468,6 +462,7 @@ int main(int argc, char **argv)
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		(context.updWorld(worldIx))->addConstraints( std::stoi(setupReader.get("CONSTRAINTS")[worldIx]) );
 	}
+*/
 	// U Scale Factors uses maps stored in Topology
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		(context.updWorld(worldIx))->setUScaleFactorsToMobods();
@@ -475,7 +470,6 @@ int main(int argc, char **argv)
 
 	// Realize topology for all the Worlds
 	context.realizeTopology();
-*/
 
 	// Load/store Mobilized bodies joint types
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
@@ -487,8 +481,8 @@ int main(int argc, char **argv)
 	}
 
 
-	std::cout << "printStatus 9 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 9 " << std::endl;
+	//context.printStatus();
 
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
@@ -508,8 +502,8 @@ int main(int argc, char **argv)
 				context.getNofRounds());
 	}
 
-	std::cout << "printStatus 1 " << std::endl;
-	context.printStatus();
+	//std::cout << "printStatus 1 " << std::endl;
+	//context.printStatus();
 
 	return 0;
 } // END MAIN ////////////

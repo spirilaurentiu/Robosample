@@ -145,7 +145,11 @@ public:
 	void addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4);
 
 	// --- Printing functions ---
+
+	// Print Molmodel related information
 	void PrintMolmodelAndDuMMTypes(void);
+
+	// Print Simbody related information
 	void PrintSimbodyMobods(void);
 	void PrintSamplerData(std::size_t whichWorld);
 	void PrintGeometry(SetupReader&, std::size_t whichWorld);

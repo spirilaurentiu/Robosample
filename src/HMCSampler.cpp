@@ -82,6 +82,8 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	dRdot.resize(ndofs, 0);
 
 	UScaleFactors.resize(ndofs, 1);
+
+	MDStepsPerSampleStd = 0.5;
 }
 
 /** Destructor **/
@@ -89,6 +91,260 @@ HMCSampler::~HMCSampler()
 {
 }
 
+/** Initialize velocities according to the Maxwell-Boltzmann
+distribution.  Coresponds to R operator in LAHMC **/
+void HMCSampler::initializeVelocities(SimTK::State& someState){
+	// Check if we can use our cache
+    const int nu = someState.getNU();
+	if (nu != RandomCache.nu) {
+		// Rebuild the cache
+		// We also get here if the cache is not initialized
+		RandomCache.V.resize(nu);
+		RandomCache.SqrtMInvV.resize(nu);
+		RandomCache.sqrtRT = std::sqrt(RT);
+		RandomCache.nu = nu;
+
+		// we don't get to use multithreading here
+		RandomCache.FillWithGaussian();
+	} else {
+		// wait for random number generation to finish (should be done by this stage)
+		RandomCache.task.wait();
+	}
+
+	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers 
+	std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
+		UScaleFactors.begin(), // and this
+		RandomCache.V.begin(), // and store here
+		std::multiplies<SimTK::Real>()); // this is the operation
+	
+	// Scale by square root of the inverse mass matrix
+	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
+
+	// Set stddev according to temperature
+	RandomCache.SqrtMInvV *= (RandomCache.sqrtRT);
+
+	// Raise the temperature
+	someState.updU() = RandomCache.SqrtMInvV;
+
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+
+	// ask for a number of random numbers and check if we are done the next time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+}
+
+/** Initialize velocities according to the Maxwell-Boltzmann
+distribution.  Coresponds to R operator in LAHMC **/
+void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
+	int nu = someState.getNU();
+
+	SimTK::Real randWeight = uniformRealDistribution_m1_1(randomEngine);
+	SimTK::Real sign = (randWeight > 0) ? std::ceil(randWeight) : std::floor(randWeight) ;
+
+	for(std::size_t i = 0; i < nu; i++){
+		someState.updU()[i] = sign * UScaleFactors[i];
+	}
+
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+	//std::cout << "HMCSampler U " << someState.getU() << std::endl;
+
+}
+
+// Apply the L operator 
+void HMCSampler::integrateTrajectory(SimTK::State& someState){
+    try {
+        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+
+        system->realize(someState, SimTK::Stage::Position);
+
+    }catch(const std::exception&){
+		std::cout << "\t[WARNING] propose exception caught!\n";
+        proposeExceptionCaught = true;
+
+        for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+        }
+
+        system->realize(someState, SimTK::Stage::Position);
+    }
+}
+
+// Trajectory length has an average of MDStepsPerSample and a given std
+void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
+    try {
+
+        std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd); 
+        float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
+	float timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
+	
+        this->timeStepper->stepTo(someState.getTime() + timeJump);
+
+        system->realize(someState, SimTK::Stage::Position);
+
+    }catch(const std::exception&){
+		std::cout << "\t[WARNING] propose exception caught!\n";
+        proposeExceptionCaught = true;
+
+        for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+        }
+
+        system->realize(someState, SimTK::Stage::Position);
+    }
+}
+
+/** It implements the proposal move in the Hamiltonian Monte Carlo
+algorithm. It essentially propagates the trajectory after it stores
+the configuration and energies. **/
+bool HMCSampler::propose(SimTK::State& someState)
+{
+
+	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);
+
+	// Initialize velocities according to the Maxwell-Boltzmann distribution
+	initializeVelocities(someState);
+
+	// Store the proposed energies 
+	calcProposedKineticAndTotalEnergy(someState);
+
+	// Adapt timestep
+	if(shouldAdaptTimestep){
+		adaptTimestep(someState);
+	}
+	
+	// Adapt timestep
+	bool shouldAdaptWorldBlocks = false;
+	if(shouldAdaptWorldBlocks){
+		adaptWorldBlocks(someState);
+	}
+	
+	// Apply the L operator 
+	integrateTrajectory(someState);
+	//integrateTrajectoryOneStepAtATime(someState);
+
+	calcNewConfigurationAndEnergies(someState);
+
+	return validateProposal();
+
+
+}
+
+bool HMCSampler::proposeNMA(SimTK::State& someState)
+{
+
+	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);
+
+	// Initialize velocities according to the Maxwell-Boltzmann distribution
+	initializeNMAVelocities(someState);
+
+	// Store the proposed energies 
+	calcProposedKineticAndTotalEnergy(someState);
+
+	// Adapt timestep
+	if(shouldAdaptTimestep){
+		adaptTimestep(someState);
+	}
+	
+	// Adapt timestep
+	bool shouldAdaptWorldBlocks = false;
+	if(shouldAdaptWorldBlocks){
+		adaptWorldBlocks(someState);
+	}
+	
+	// Apply the L operator 
+	integrateVariableTrajectory(someState);
+
+	calcNewConfigurationAndEnergies(someState);
+
+	return validateProposal();
+
+
+}
+
+/// Acception rejection step 
+bool HMCSampler::accRejStep(SimTK::State& someState) {
+
+
+	// Decide and get a new sample
+	if ( getThermostat() == ThermostatName::ANDERSEN ) {
+		// MD with Andersen thermostat
+		this->acc = true;
+		std::cout << "\tsample accepted (always with andersen thermostat)\n";
+		update(someState);
+	} else {
+		// we do not consider this sample accepted unless it passes all checks
+		this->acc = false;
+
+			// Apply Metropolis-Hastings correction
+			if(acceptSample()) {
+				// sample is accepted
+				this->acc = true;
+				std::cout << "\tsample accepted\n";
+				update(someState);
+			} else {
+				// sample is rejected
+				this->acc = false;
+				std::cout << "\tsample rejected\n";
+				setSetConfigurationAndEnergiesToOld(someState);
+			}
+			++nofSamples;
+	}
+
+	return this->acc;
+}
+
+// The main function that generates a sample
+bool HMCSampler::sample_iteration(SimTK::State& someState, bool NMA)
+{
+	std::cout << std::setprecision(10) << std::fixed;
+
+	bool validated = false;
+
+	// Propose 
+	for (int i = 0; i < 10; i++){
+		if(NMA){
+			validated = proposeNMA(someState);
+		}else{
+			validated = propose(someState);
+		}
+
+		if (validated){
+			break;
+		}
+	}
+
+	if(validated){
+	
+		PrintDetailedEnergyInfo(someState);
+	
+		accRejStep(someState);
+	
+		if(this->acc) { // Only in this case ???
+			// Add generalized coordinates to a buffer
+			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
+			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
+			QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
+	
+			pushCoordinatesInR(someState);
+			pushVelocitiesInRdot(someState);
+	
+			// Calculate MSD and RRdot to adapt the integration length
+			std::cout << std::setprecision(10) << std::fixed;
+			std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
+		}
+		
+		return this->acc;
+	}else{
+		std::cout << "Warning: HMCSampler: Proposal was not validated after 10 tries." << std::endl;
+		setSetConfigurationAndEnergiesToOld(someState);
+		return false;	
+	}
+}
 
 // Use Fixman potential
 void HMCSampler::useFixmanPotential(void)
@@ -683,48 +939,6 @@ void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someSta
     logSineSqrGamma2_o = logSineSqrGamma2_set;
 } // func
 
-/** Initialize velocities according to the Maxwell-Boltzmann
-distribution.  Coresponds to R operator in LAHMC **/
-void HMCSampler::initializeVelocities(SimTK::State& someState){
-	// Check if we can use our cache
-    const int nu = someState.getNU();
-	if (nu != RandomCache.nu) {
-		// Rebuild the cache
-		// We also get here if the cache is not initialized
-		RandomCache.V.resize(nu);
-		RandomCache.SqrtMInvV.resize(nu);
-		RandomCache.sqrtRT = std::sqrt(RT);
-		RandomCache.nu = nu;
-
-		// we don't get to use multithreading here
-		RandomCache.FillWithGaussian();
-	} else {
-		// wait for random number generation to finish (should be done by this stage)
-		RandomCache.task.wait();
-	}
-
-	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers 
-	std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
-		UScaleFactors.begin(), // and this
-		RandomCache.V.begin(), // and store here
-		std::multiplies<SimTK::Real>()); // this is the operation
-	
-	// Scale by square root of the inverse mass matrix
-	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
-
-	// Set stddev according to temperature
-	RandomCache.SqrtMInvV *= (RandomCache.sqrtRT);
-
-	// Raise the temperature
-	someState.updU() = RandomCache.SqrtMInvV;
-
-	// Realize velocity
-	system->realize(someState, SimTK::Stage::Velocity);
-
-	// ask for a number of random numbers and check if we are done the next time we hit this function
-	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
-}
-
 /** Store the proposed energies **/
 void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 
@@ -934,26 +1148,6 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 }
 
 
-/** Apply the L operator **/
-void HMCSampler::integrateTrajectory(SimTK::State& someState){
-    try {
-        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-
-        system->realize(someState, SimTK::Stage::Position);
-
-    }catch(const std::exception&){
-		std::cout << "\t[WARNING] propose exception caught!\n";
-        proposeExceptionCaught = true;
-
-        for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-            mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
-        }
-
-        system->realize(someState, SimTK::Stage::Position);
-    }
-}
-
 /**  **/
 void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 	//, std::function<void()> initialFunc
@@ -1160,38 +1354,6 @@ SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK:
 	}
 }
 
-/** Acception rejection step **/
-bool HMCSampler::accRejStep(SimTK::State& someState) {
-
-
-	// Decide and get a new sample
-	if ( getThermostat() == ThermostatName::ANDERSEN ) {
-		// MD with Andersen thermostat
-		this->acc = true;
-		std::cout << "\tsample accepted (always with andersen thermostat)\n";
-		update(someState);
-	} else {
-		// we do not consider this sample accepted unless it passes all checks
-		this->acc = false;
-
-			// Apply Metropolis-Hastings correction
-			if(acceptSample()) {
-				// sample is accepted
-				this->acc = true;
-				std::cout << "\tsample accepted\n";
-				update(someState);
-			} else {
-				// sample is rejected
-				this->acc = false;
-				std::cout << "\tsample rejected\n";
-				setSetConfigurationAndEnergiesToOld(someState);
-			}
-			++nofSamples;
-	}
-
-	return this->acc;
-}
-
 /** Checks if the proposal is valid **/
 bool HMCSampler::validateProposal() const {
 	// TODO should we check anything else?
@@ -1230,43 +1392,6 @@ bool HMCSampler::acceptSample() {
 
 	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;
 	return rand_no < prob;
-}
-
-/** It implements the proposal move in the Hamiltonian Monte Carlo
-algorithm. It essentially propagates the trajectory after it stores
-the configuration and energies. **/
-bool HMCSampler::propose(SimTK::State& someState)
-{
-
-	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);
-
-	// Initialize velocities according to the Maxwell-Boltzmann distribution
-	initializeVelocities(someState);
-
-	// Store the proposed energies 
-	calcProposedKineticAndTotalEnergy(someState);
-
-	// Adapt timestep
-	if(shouldAdaptTimestep){
-		adaptTimestep(someState);
-	}
-	
-	// Adapt timestep
-	bool shouldAdaptWorldBlocks = false;
-	if(shouldAdaptWorldBlocks){
-		adaptWorldBlocks(someState);
-	}
-	
-	// Apply the L operator 
-	integrateTrajectory(someState);
-	//integrateTrajectoryOneStepAtATime(someState);
-
-	calcNewConfigurationAndEnergies(someState);
-
-	return validateProposal();
-
-
 }
 
 /** Main function that contains all the 3 steps of HMC.
@@ -1355,48 +1480,6 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 	}
 
 	return Rdot.size();
-}
-
-bool HMCSampler::sample_iteration(SimTK::State& someState)
-{
-	std::cout << std::setprecision(10) << std::fixed;
-
-	bool validated = false;
-
-	// Propose 
-	for (int i = 0; i < 10; i++){
-		validated = propose(someState);
-		if (validated){
-			break;
-		}
-	}
-
-	if(validated){
-	
-		PrintDetailedEnergyInfo(someState);
-	
-		accRejStep(someState);
-	
-		if(this->acc) { // Only in this case ???
-			// Add generalized coordinates to a buffer
-			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
-			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
-			QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
-	
-			pushCoordinatesInR(someState);
-			pushVelocitiesInRdot(someState);
-	
-			// Calculate MSD and RRdot to adapt the integration length
-			std::cout << std::setprecision(10) << std::fixed;
-			std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
-		}
-		
-		return this->acc;
-	}else{
-		std::cout << "Warning: HMCSampler: Proposal was not validated after 10 tries." << std::endl;
-		setSetConfigurationAndEnergiesToOld(someState);
-		return false;	
-	}
 }
 
 

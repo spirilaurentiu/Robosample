@@ -194,12 +194,14 @@ public:
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
 	virtual void initializeVelocities(SimTK::State& someState);
+	void initializeNMAVelocities(SimTK::State& someState);
 
 	/** Store the proposed energies **/
 	virtual void calcProposedKineticAndTotalEnergy(SimTK::State& someState);
 
 	/** Apply the L operator **/
 	virtual void integrateTrajectory(SimTK::State& someState);
+	void integrateVariableTrajectory(SimTK::State& someState);
 
 	/** Integrate trajectory one step at a time to compute quantities instantly **/
 	virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
@@ -237,13 +239,14 @@ public:
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
 	bool propose(SimTK::State& someState);
+	bool proposeNMA(SimTK::State& someState);
 
 	/** Main function that contains all the 3 steps of HMC.
 	Implements the acception-rejection step and sets the state of the 
 	compound to the appropriate conformation wether it accepted or not. **/
 	void update(SimTK::State& someState);
 
-	virtual bool sample_iteration(SimTK::State& someState);
+	virtual bool sample_iteration(SimTK::State& someState, bool NMA = false);
 
 	/** Push Cartesian coordinates into R vector stored in Sampler.
 	Return the size of R **/
@@ -349,7 +352,7 @@ protected:
 	std::vector<SimTK::Real> dR;
 	std::vector<SimTK::Real> dRdot;
 
-	std::vector<float> UScaleFactors;
+	std::vector<SimTK::Real> UScaleFactors;
 
 	SimTK::Real timestep;
 	SimTK::Real prevTimestep;
@@ -368,6 +371,7 @@ protected:
 	int boostMDSteps;
 
 	int MDStepsPerSample;
+	SimTK::Real MDStepsPerSampleStd;
 
 	bool shouldAdaptTimestep;
 };

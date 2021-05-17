@@ -117,7 +117,7 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
-/** Constructor. Initializes the following pretty much empty objects:
+/** Constructor. Initializes the following objects:
  *  - CompoundSystem,
  *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
  *		Visualizer, Visualizer::Reporter, DuMMForceFieldSubsystem,
@@ -234,7 +234,7 @@ void World::AddMolecule(
   
 	// Add Topology to CompoundSystem and realize topology
 	compoundSystem->adoptCompound(topologies.back());
-	//std::cout<<"World::AddMolecule CompoundSystem adoptCompound "<< std::endl;
+
 	topologies.back().setCompoundIndex(
 			SimTK::CompoundSystem::CompoundIndex(
 			 compoundSystem->getNumCompounds() - 1));
@@ -245,6 +245,52 @@ void World::AddMolecule(
 		paraMolecularDecorator->AddMolecule(&topologies.back());
 	}
 
+}
+
+/** Calls CompoundSystem.modelOneCompound which links the Compounds to the
+ * Simbody subsystems and realizes Topology. To be called after setting all
+ * Compounds properties. **/
+void World::modelTopologies(std::string GroundToCompoundMobilizerType)
+{
+	// Model the Compounds one by one in case we want to attach different types
+	// of Mobilizers to the Ground in the feature.
+	for ( std::size_t i = 0; i < this->topologies.size(); i++){
+		//SimTK::String GroundToCompoundMobilizerType = "Free";
+		//SimTK::String GroundToCompoundMobilizerType = "Weld";
+		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
+
+		this->rootMobility = GroundToCompoundMobilizerType;
+
+		if(i == 0) { // First compound
+			compoundSystem->modelOneCompound(
+				SimTK::CompoundSystem::CompoundIndex(i),
+				GroundToCompoundMobilizerType);
+		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
+		         << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
+		} else {
+			compoundSystem->modelOneCompound(
+				SimTK::CompoundSystem::CompoundIndex(i),
+				"Free"); // TODO : Doesn't work with Cartesian
+		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
+		         << " grounded with mobilizer Free" << std::endl;
+		}
+
+		Topology& topology = topologies[i];
+		//std::cout << "World::ModelTopologies " <<
+		for(std::size_t k = 0; k < topologies[i].getNumAtoms(); k++){
+			SimTK::Compound::AtomIndex aIx = (topologies[i].bAtomList[k]).getCompoundAtomIndex();
+			SimTK::MobilizedBodyIndex mbx = topologies[i].getAtomMobilizedBodyIndex(aIx);
+			std::cout << "k aIx " << k << " " << aIx << " " << mbx << std::endl << std::flush;
+		}
+
+		// // Realize Topology
+		//compoundSystem->realizeTopology(); // restore MULMOL
+		// ((this->topologies)[i])->loadMobodsRelatedMaps(); // restore MULMOL
+
+	}
+
+	// // Realize Topology
+	// compoundSystem->realizeTopology();
 }
 
 /** Assign a scale factor for generalized velocities to every mobilized 
@@ -344,44 +390,6 @@ void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWid
 int World::getNofMolecules() const
 {
 	return (this->moleculeCount + 1);
-}
-
-/** Calls CompoundSystem.modelOneCompound which links the Compounds to the
- * Simbody subsystems and realizes Topology. To be called after setting all
- * Compounds properties. **/
-void World::modelTopologies(std::string GroundToCompoundMobilizerType)
-{
-	// Model the Compounds one by one in case we want to attach different types
-	// of Mobilizers to the Ground in the feature.
-	for ( std::size_t i = 0; i < this->topologies.size(); i++){
-		std::cout << "World::modelTopologies Topology " << i << "\n";
-		//SimTK::String GroundToCompoundMobilizerType = "Free";
-		//SimTK::String GroundToCompoundMobilizerType = "Weld";
-		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
-
-		this->rootMobility = GroundToCompoundMobilizerType;
-
-		// std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
-		//         << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
-
-		if(i == 0) { // First compound
-			compoundSystem->modelOneCompound(
-				SimTK::CompoundSystem::CompoundIndex(i),
-				GroundToCompoundMobilizerType);
-		} else {
-			compoundSystem->modelOneCompound(
-				SimTK::CompoundSystem::CompoundIndex(i),
-				"Free"); // TODO : Doesn't work with Cartesian
-		}
-
-		// // Realize Topology
-		compoundSystem->realizeTopology(); // restore MULMOL
-		// ((this->topologies)[i])->loadMobodsRelatedMaps(); // restore MULMOL
-
-	}
-
-	// // Realize Topology
-	// compoundSystem->realizeTopology();
 }
 
 
