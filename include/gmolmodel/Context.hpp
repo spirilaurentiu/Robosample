@@ -231,6 +231,9 @@ private:
 	int roundsTillReblock;
 	std::vector<std::vector<std::vector<SimTK::Real>>> QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
 
+	// Normal mode analysis
+	std::vector<int> NMAOption;
+
 };
 
 #endif //__CONTEXT_HPP__

@@ -107,6 +107,20 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 		}
 	}
 
+	// Normal modes options
+	NMAOption.resize(inpNofWorlds, 0);
+	if(setupReader.find("NMA_OPTION")){
+		if(setupReader.get("RANDOM_WORLD_ORDER").size() == 0){
+			std::cerr << "The NMA_OPTION key is present. Please specify a value.\n";
+			throw std::exception();
+			std::exit(1);
+		}else{
+			for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
+				NMAOption[worldIx] = std::stoi(setupReader.get("NMA_OPTION")[worldIx]);
+			}
+		}
+	}
+
 }
 
 void Context::printStatus(void){
@@ -818,9 +832,13 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
 				// Make the requested number of samples
-				bool NMA = false;
+				bool accepted;
 				for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++) {
-					auto accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMA);
+					//if(currentAdvancedState.getNU() == 582){
+						accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMAOption[currentWorldIx]);
+					//}else{
+					//	accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, false);
+					//}
 					if (accepted) {
 
 						// CONTACT DEBUG

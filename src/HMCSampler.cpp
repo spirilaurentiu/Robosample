@@ -112,10 +112,10 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	}
 
 	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers 
-	std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
-		UScaleFactors.begin(), // and this
-		RandomCache.V.begin(), // and store here
-		std::multiplies<SimTK::Real>()); // this is the operation
+	//std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
+	//	UScaleFactors.begin(), // and this
+	//	RandomCache.V.begin(), // and store here
+	//	std::multiplies<SimTK::Real>()); // this is the operation
 	
 	// Scale by square root of the inverse mass matrix
 	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
@@ -135,14 +135,71 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
-void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
-	int nu = someState.getNU();
+void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
+	// TODO: const will not work in adaptive block scheme
+	const int nu = someState.getNU();
+	SimTK::Vector newU(nu);
 
-	SimTK::Real randWeight = uniformRealDistribution_m1_1(randomEngine);
-	SimTK::Real sign = (randWeight > 0) ? std::ceil(randWeight) : std::floor(randWeight) ;
+	// TODO: move this in constructor or variable set
+	SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+	SimTK::Real randSign = (randUni_m1_1 > 0) ? std::ceil(randUni_m1_1) : std::floor(randUni_m1_1) ;
 
+	// Start velocities. Fill with a random sign (1 or -1)
+	std::vector<SimTK::Real> V(nu, randSign);
+
+	// Scale the sign with the scaling factors
+	std::transform(V.begin(), V.end(), // apply an operation on this
+		UScaleFactors.begin(), // and this
+		V.begin(), // and store here
+		std::multiplies<SimTK::Real>()); // this is the operation
+
+	if(NMAOption == 2){
+		if (nu != RandomCache.nu) {
+			// Rebuild the cache
+			// We also get here if the cache is not initialized
+			RandomCache.V.resize(nu);
+			RandomCache.SqrtMInvV.resize(nu);
+			RandomCache.sqrtRT = std::sqrt(RT);
+			RandomCache.nu = nu;
+
+			// we don't get to use multithreading here
+			RandomCache.FillWithGaussian();
+		} else {
+			// wait for random number generation to finish (should be done by this stage)
+			RandomCache.task.wait();
+		}
+
+		// Scale the velocities so far with Gaussians
+		std::transform(V.begin(), V.end(), // apply an operation on this
+			RandomCache.V.begin(), // and this
+			V.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+
+		// Worst assignment method TODO: std::vector to SimTK::Vector
+		for(int k = 0; k < nu; k++){
+			newU[k] = V[k];
+		}
+
+		// Multipliy by inverse of the sqrt(mass matrix)
+		// This gives weights according to bodies
+		matter->multiplyBySqrtMInv(someState, newU, RandomCache.SqrtMInvV);
+
+	}else if(NMAOption == 1){
+		// Worst assignment method TODO: std::vector to SimTK::Vector
+		for(int k = 0; k < nu; k++){
+			newU[k] = V[k];
+		}
+
+	}else{
+		std::cerr << "HMCSampler: unknown NMAOption" << NMAOption << "\n";
+		throw std::exception();
+		std::exit(1);
+		
+	}
+
+	// Assign velocities
 	for(std::size_t i = 0; i < nu; i++){
-		someState.updU()[i] = sign * UScaleFactors[i];
+		someState.updU()[i] = newU[i];
 	}
 
 	// Realize velocity
@@ -175,9 +232,15 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
     try {
 
-        std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd); 
-        float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
-	float timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
+	float timeJump = 0;
+	if(MDStepsPerSampleStd != 0){
+		// TODO moe to internal variables set
+        	std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd); 
+        	float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
+		timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
+	}else{
+		timeJump = (timestep*MDStepsPerSample);
+	}
 	
         this->timeStepper->stepTo(someState.getTime() + timeJump);
 
@@ -233,14 +296,14 @@ bool HMCSampler::propose(SimTK::State& someState)
 
 }
 
-bool HMCSampler::proposeNMA(SimTK::State& someState)
+bool HMCSampler::proposeNMA(SimTK::State& someState, int NMAOption)
 {
 
 	// Store old configuration
 	storeOldConfigurationAndPotentialEnergies(someState);
 
 	// Initialize velocities according to the Maxwell-Boltzmann distribution
-	initializeNMAVelocities(someState);
+	initializeNMAVelocities(someState, NMAOption);
 
 	// Store the proposed energies 
 	calcProposedKineticAndTotalEnergy(someState);
@@ -299,7 +362,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 }
 
 // The main function that generates a sample
-bool HMCSampler::sample_iteration(SimTK::State& someState, bool NMA)
+bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOption)
 {
 	std::cout << std::setprecision(10) << std::fixed;
 
@@ -307,8 +370,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, bool NMA)
 
 	// Propose 
 	for (int i = 0; i < 10; i++){
-		if(NMA){
-			validated = proposeNMA(someState);
+		if(NMAOption > 0){
+			validated = proposeNMA(someState, NMAOption);
 		}else{
 			validated = propose(someState);
 		}

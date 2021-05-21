@@ -177,6 +177,8 @@ World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
 	// Thermodynamics
 	this->temperature = -1; // this leads to unusal behaviour hopefully
 
+	topologies.reserve(2);
+
 }
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
