@@ -811,7 +811,6 @@ class Context:
 					if (ModeArray[aIx]["Psi"] != 0):
 						ModeArray[aIx]["Psi"] = self.EvecModesScale[EvecModesScaleIx][counter]
 						counter +=1
-				print ("Counter: {}".format(counter))
 	
 				## Sort Arrays by 
 				sortFlexChi = np.sort(ModeArray, order="Chi")
