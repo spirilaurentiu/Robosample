@@ -733,6 +733,8 @@ class Context:
 				LineSplit = Line.strip("\n").split()
 				if (len(LineSplit) == 4):
 					FixArray = np.append(FixArray,np.array([(LineSplit[0], LineSplit[1], LineSplit[2], LineSplit[3])], dtype=FixArray.dtype)) 
+				if (len(LineSplit) == 2):
+					FixArray = np.append(FixArray,np.array([(LineSplit[0], 2, 0, 0)], dtype=FixArray.dtype)) 
 
 			## Parse the Evec file, generating a list of lists, one for each mode
 			EvecIn = open("{}_ic.evec".format(tempRoot), "r").readlines()
@@ -793,7 +795,7 @@ class Context:
 				os.mkdir(Output.split("/")[0])
 
 			ModeArray = self.FixArray.copy()
-		
+	
 			##Assign vectors to dihedral angles and scaling factors
 			for EvecModesScaleIx in range(len(self.EvecModes)):
 				counter = 0
@@ -801,12 +803,15 @@ class Context:
 					if (ModeArray[aIx]["Phi"] != 0):
 						ModeArray[aIx]["Phi"] = self.EvecModesScale[EvecModesScaleIx][counter]
 						counter +=1
+					if (ModeArray[aIx]["Phi"] == 2):  ## This is to account for inter-chain DoFs
+						counter +=1
 					if (ModeArray[aIx]["Chi"] != 0):
 						ModeArray[aIx]["Chi"] = self.EvecModesScale[EvecModesScaleIx][counter]
 						counter +=1
 					if (ModeArray[aIx]["Psi"] != 0):
 						ModeArray[aIx]["Psi"] = self.EvecModesScale[EvecModesScaleIx][counter]
 						counter +=1
+				print ("Counter: {}".format(counter))
 	
 				## Sort Arrays by 
 				sortFlexChi = np.sort(ModeArray, order="Chi")
