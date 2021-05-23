@@ -73,7 +73,7 @@ void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTempe
 		setOldFixman(calcFixman(someState));
 		setSetFixman(getOldFixman());
 
-		setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+		setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}else{
 		setOldFixman(0.0);
@@ -111,7 +111,7 @@ void MonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real argTem
 		setOldFixman(calcFixman(someState));
 		setSetFixman(getOldFixman());
 
-		setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+		setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}else{
 		setOldFixman(0.0);
@@ -184,11 +184,11 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //SimTK::Real EiDetM = EiM.determinant();
     //std::cout << "EiDetM= " << EiDetM << std::endl;
     assert(RT > SimTK::TinyReal);
-    //SimTK::Real result = 0.5 * RT * (((Topology *)residue)->calcLogDetMBAT(someState) - std::log(D0));
-    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBATInternal(someState) );
+    //SimTK::Real result = 0.5 * RT * (((Topology *)rootTopology)->calcLogDetMBAT(someState) - std::log(D0));
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) );
     //SimTK::Real result = 0.5 * RT * std::log(D0);
     //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman 05kT logdetM: " << 0.5 * RT * std::log(D0) << std::endl;
-    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)residue)->calcLogDetMBATInternal(someState) << std::endl;
+    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) << std::endl;
 
     if(SimTK::isInf(result)){
         result = 0.0;

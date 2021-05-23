@@ -40,9 +40,9 @@ Sampler::Sampler(World *argWorld,
 
 	this->system = &argMatter->getSystem();
 
-	//this->residue = argResidue;
+	//this->rootTopology = argResidue;
 	assert(topologies.size() > 0);
-	this->residue = &topologies[0];
+	this->rootTopology = &topologies[0];
 
 	// Set total number of atoms and dofs
 	natoms = 0;

@@ -34,9 +34,15 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	this->system = &argMatter->getSystem();
 
-	//this->residue = argResidue;
-	assert(topologies.size() > 0);
-	this->residue = &topologies[0];
+	//this->rootTopology = argResidue;
+
+	if( !(topologies.size() > 0) ){
+		std::cerr << "HMCSampler: No topologies found. Exiting...";
+		throw std::exception();
+		std::exit(1);
+	}
+
+	this->rootTopology = &topologies[0];
 
 	// Set total number of atoms and dofs
 	natoms = 0;
@@ -539,7 +545,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
     matter->calcDetM(someState, V, DetV, &D0);
 
     assert(RT > SimTK::TinyReal);
-    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBATInternal(someState) );
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) );
 
     if(SimTK::isInf(result)){
         result = 0.0;
@@ -845,7 +851,7 @@ void HMCSampler::initialize(SimTK::State& someState)
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
@@ -909,7 +915,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
@@ -1326,25 +1332,25 @@ void HMCSampler::geomDihedral(){
     //DIHEDRAL 4 6 8 14 6 8 14 16
     //a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
     a1 = 4; a2 = 6; a3 = 8; a4 = 14; a5 = 16;
-    a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
-    a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
-    a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
-    a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
-    a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
+    a1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
+    a2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
+    a3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
+    a4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
+    a5pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
     int distA1, distA2, distA3, distA4;
     SimTK::Vec3 distA1pos, distA2pos;
     SimTK::Vec3 distA3pos, distA4pos;
     distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
-//		    distA1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
-//		    distA2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
-//		    distA3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
-//		    distA4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
+//		    distA1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
+//		    distA2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
+//		    distA3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
+//		    distA4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
 //            std::cout << " dihedral elements"
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a1))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a2))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a3))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a4))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a5))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a1))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a2))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a3))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a4))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a5))
 //              << std::endl;
 //            std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
     std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
@@ -1362,7 +1368,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
     // Get new Fixman potential
     if(useFixman){
         fix_n = calcFixman(someState);
-        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+        logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
     }else{
         fix_n = 0.0;
         logSineSqrGamma2_n = 0.0;
@@ -1377,7 +1383,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
     // TODO: replace with the following after checking is the same thing
     //pe_n = compoundSystem->calcPotentialEnergy(someState);
 
-    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+    logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
 
     // Calculate total energy
     if(useFixman){

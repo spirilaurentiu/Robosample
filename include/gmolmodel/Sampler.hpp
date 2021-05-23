@@ -75,8 +75,8 @@ public:
 	SimTK::CompoundSystem *compoundSystem;
 	SimTK::SimbodyMatterSubsystem *matter;
 
-	//SimTK::Compound *residue;
-	Topology *residue;
+	//SimTK::Compound *rootTopology;
+	Topology *rootTopology;
 
 	std::vector<Topology>& topologies;
 	std::size_t natoms;
