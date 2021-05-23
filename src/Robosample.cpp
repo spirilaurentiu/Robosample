@@ -85,6 +85,11 @@ int main(int argc, char **argv)
 
 	Context context(setupReader, logFilename);
 
+	int requestedNofWorlds = context.getNofWorlds();
+	int requestedNofMols = context.getNofMolecules();
+	//std::cout << "Requested " << requestedNofMols << " molecules\n";
+	//std::exit(0);
+
 	/////////// Add Worlds to context ////////////
 	// Add Worlds to the Context. Every World instantiates a: 
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
@@ -101,16 +106,22 @@ int main(int argc, char **argv)
 			context.AddWorld(false);
 		}
 	}
-	std::cout << "Added " << context.getNofWorlds() << " worlds" << std::endl;
 
-	//std::cout << "printStatus 1 " << std::endl;
-	//context.printStatus();
+	int finalNofWorlds = context.getNofWorlds();
+	if(requestedNofWorlds != finalNofWorlds){
+		std::cerr << "Something went wrong while adding the world\n";
+		throw std::exception();
+		std::exit(1);
+	}
+
+	std::cout << "Added " << finalNofWorlds << " worlds" << std::endl;
 
 	/////////////////////////////////////
 	// 	STAGE EMPTY
 	/////////////////////////////////////
 
-//@    // Request threads
+	//////// FORCE FIELD //////////
+//@    // Request threads 
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
 		context.setNumThreadsRequested(worldIx,
 				std::stoi(setupReader.get("THREADS")[worldIx]));
@@ -128,12 +139,22 @@ int main(int argc, char **argv)
 	context.setGbsaGlobalScaleFactor(
 		std::stod(setupReader.get("GBSA")[0]));
         
+	// Use OpenMM if possible
+	if(setupReader.get("OPENMM")[0] == "TRUE"){
+		context.setUseOpenMMAcceleration(true);
+	}
+
+	// Set Lennard-Jones mixing rule
+	context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
+
 
 //@
 	// Add filenames to Context filenames vectors
-	int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
+	// This has to be called before Worlds constructors so that
+	// reserve will be called for molecules and topologies
+	//int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
 
-	for(int molIx = 0; molIx < nofMols; molIx++){
+	for(int molIx = 0; molIx < requestedNofMols; molIx++){
 		context.loadTopologyFile(
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
 			+ setupReader.get("PRMTOP")[molIx]
@@ -147,24 +168,34 @@ int main(int argc, char **argv)
 
 	for(int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 
-		for(int molIx = 0; molIx < nofMols; molIx++){
+		for(int molIx = 0; molIx < requestedNofMols; molIx++){
 			context.loadRigidBodiesSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("RBFILE")[(nofMols * worldIx) + molIx]
+				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
 			context.loadFlexibleBondsSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("FLEXFILE")[(nofMols * worldIx) + molIx]
+				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
 			context.setRegimen( worldIx, molIx,
-				setupReader.get("WORLDS")[worldIx] ); // TODO: delete
+				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
 		}
 	}
 
 	// Add molecules to Worlds based on just read filenames
-	context.AddMolecules(setupReader.get("ROOTS"));
+	context.AddMolecules(setupReader.get("ROOTS"),
+		setupReader.get("ROOT_MOBILITY"));
+
+	int finalNofMols = context.getNofMolecules();
+	if(requestedNofMols != finalNofMols){
+		std::cerr << "Something went wrong while adding the world\n";
+		throw std::exception();
+		std::exit(1);
+	}
+
+	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
 	// BEGIN MULMOL
 	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
@@ -186,15 +217,21 @@ int main(int argc, char **argv)
 */
 
 	// Use OpenMM if possible
-	if(setupReader.get("OPENMM")[0] == "TRUE"){
-		context.setUseOpenMMAcceleration(true);
-	}
+	//if(setupReader.get("OPENMM")[0] == "TRUE"){
+	//	context.setUseOpenMMAcceleration(true);
+	//}
 
 	// Set Lennard-Jones mixing rule
-	context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
+	//context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
 	// Link the Compounds to Simbody System for all Worlds
 	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
+	//context.printStatus();
+	//std::exit(0);
+
+	/////////////////////////////////////
+	// 	STAGE EMPTY
+	/////////////////////////////////////
 
 	//std::cout << "printStatus 4 " << std::endl;
 	//context.printStatus();
@@ -208,10 +245,6 @@ int main(int argc, char **argv)
 			context.addFixmanTorque(worldIx);
 		}
 	}
-
-
-	//std::cout << "printStatus 5 " << std::endl;
-	//context.printStatus();
 
 /*
 	// Set worlds force field scale factors
