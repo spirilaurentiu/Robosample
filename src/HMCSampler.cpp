@@ -212,6 +212,8 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 	system->realize(someState, SimTK::Stage::Velocity);
 	//std::cout << "HMCSampler U " << someState.getU() << std::endl;
 
+	// ask for a number of random numbers and check if we are done the next time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
 // Apply the L operator 
