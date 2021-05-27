@@ -117,12 +117,12 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
-/** Constructor. Initializes the following pretty much empty objects:
+/** Constructor. Initializes the following objects:
  *  - CompoundSystem,
  *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
  *		Visualizer, Visualizer::Reporter, DuMMForceFieldSubsystem,
  *  - Integrator with a TimeStepper on top **/
-World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
+World::World(int worldIndex, int requestedNofMols, bool isVisual, SimTK::Real visualizerFrequency)
 {
 	// Get an index from a higher caller
 	ownWorldIndex = worldIndex;
@@ -143,11 +143,13 @@ World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
 	forceField = std::make_unique<SimTK::DuMMForceFieldSubsystem>(*compoundSystem);
 
 	// Contact system
+	/*
 	tracker = std::make_unique<ContactTrackerSubsystem>(*compoundSystem);
 	contactForces = std::make_unique<CompliantContactSubsystem>(*compoundSystem, *tracker);
-	//contactForces = std::make_unique<HuntCrossleyContact>();
 	contactForces->setTrackDissipatedEnergy(true);
 	contactForces->setTransitionVelocity(1e-2);
+    	clique1 = ContactSurface::createNewContactClique();
+	*/
 
 	// Intialize an integrator and a TimeStepper to manage it
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
@@ -175,7 +177,8 @@ World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
 	// Thermodynamics
 	this->temperature = -1; // this leads to unusal behaviour hopefully
 
-    clique1 = ContactSurface::createNewContactClique();
+	topologies.reserve(requestedNofMols);
+
 }
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
@@ -186,7 +189,8 @@ void World::AddMolecule(
 		std::string rbFN,
 		std::string flexFN,
 		std::string regimenSpec,
-		std::string argRoot)
+		std::string argRoot,
+		std::string argRootMobility)
 {
 	// Statistics
 	moleculeCount++; // Used for unique names of molecules
@@ -194,7 +198,10 @@ void World::AddMolecule(
 	// Add a new molecule (Topology object which inherits Compound)
 	// to the vector of molecules.
 	// TODO: Why resName and moleculeName have to be the same?
+	// TODO store molecule name in vector maybe
 	std::string moleculeName = regimenSpec + std::to_string(moleculeCount);
+	roots.emplace_back(argRoot);
+	rootMobilities.emplace_back(argRootMobility);
 	topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
 
 	// Set atoms properties from a reader: number, name, element, initial
@@ -233,7 +240,7 @@ void World::AddMolecule(
   
 	// Add Topology to CompoundSystem and realize topology
 	compoundSystem->adoptCompound(topologies.back());
-	//std::cout<<"World::AddMolecule CompoundSystem adoptCompound "<< std::endl;
+
 	topologies.back().setCompoundIndex(
 			SimTK::CompoundSystem::CompoundIndex(
 			 compoundSystem->getNumCompounds() - 1));
@@ -246,21 +253,67 @@ void World::AddMolecule(
 
 }
 
+/** Calls CompoundSystem.modelOneCompound which links the Compounds to the
+ * Simbody subsystems and realizes Topology. To be called after setting all
+ * Compounds properties. **/
+void World::modelTopologies(std::string GroundToCompoundMobilizerType)
+{
+	// Model the Compounds one by one in case we want to attach different types
+	// of Mobilizers to the Ground in the feature.
+	for ( std::size_t i = 0; i < this->topologies.size(); i++){
+		//SimTK::String GroundToCompoundMobilizerType = "Free";
+		//SimTK::String GroundToCompoundMobilizerType = "Weld";
+		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
+
+		//rootMobilities[i] = GroundToCompoundMobilizerType;
+
+		//if(i == 0) { // First compound
+			compoundSystem->modelOneCompound(
+				SimTK::CompoundSystem::CompoundIndex(i),
+				rootMobilities[i]);
+		//} else {
+		//	compoundSystem->modelOneCompound(
+		//		SimTK::CompoundSystem::CompoundIndex(i),
+		//		rootMobilities[i]);
+		//}
+		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
+		         << " grounded with mobilizer " << rootMobilities[i] << std::endl;
+
+		Topology& topology = topologies[i];
+		//std::cout << "World::ModelTopologies " <<
+		for(std::size_t k = 0; k < topologies[i].getNumAtoms(); k++){
+			SimTK::Compound::AtomIndex aIx = (topologies[i].bAtomList[k]).getCompoundAtomIndex();
+			SimTK::MobilizedBodyIndex mbx = topologies[i].getAtomMobilizedBodyIndex(aIx);
+			std::cout << "k aIx " << k << " " << aIx << " " << mbx << std::endl << std::flush;
+		}
+
+		// // Realize Topology
+		//compoundSystem->realizeTopology(); // restore MULMOL
+		// ((this->topologies)[i])->loadMobodsRelatedMaps(); // restore MULMOL
+
+	}
+
+	// // Realize Topology
+	// compoundSystem->realizeTopology();
+}
+
 /** Assign a scale factor for generalized velocities to every mobilized 
 body **/
 void World::setUScaleFactorsToMobods(void)
 {
 
-	for(const auto& topology : topologies){
+	for(auto& topology : topologies){
 		// Iterate bonds
 
 		//for(const auto& AtomList : topology.bAtomList){
-		for(const auto& Bond : topology.bonds){
+		for(auto& Bond : topology.bonds){
 			SimTK::Compound::AtomIndex aIx1 = topology.bAtomList[Bond.i].getCompoundAtomIndex();
 			SimTK::Compound::AtomIndex aIx2 = topology.bAtomList[Bond.j].getCompoundAtomIndex();
 
-			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndex(aIx1);
-			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndex(aIx2);
+			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1);
+			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2);
+
+			std::cout << "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 " << aIx1 << " " << aIx2 << " " << mbx1 << " " << mbx2 << std::endl;
 
 			const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(mbx1);
 			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(mbx2);
@@ -286,10 +339,14 @@ void World::setUScaleFactorsToMobods(void)
 /** Get U scale factor for the mobilized body **/
 float World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
 {
-	if(mbx2uScale.find(mbx) != mbx2uScale.end()){
-		return mbx2uScale.at(mbx);
+	if(!mbx2uScale.empty()){
+		if(mbx2uScale.find(mbx) != mbx2uScale.end()){
+			return mbx2uScale.at(mbx);
+		}else{
+			std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
+			return 1;
+		}
 	}else{
-		std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
 		return 1;
 	}
 }
@@ -337,43 +394,6 @@ void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWid
 int World::getNofMolecules() const
 {
 	return (this->moleculeCount + 1);
-}
-
-/** Calls CompoundSystem.modelOneCompound which links the Compounds to the
- * Simbody subsystems and realizes Topology. To be called after setting all
- * Compounds properties. **/
-void World::modelTopologies(std::string GroundToCompoundMobilizerType)
-{
-	// Model the Compounds one by one in case we want to attach different types
-	// of Mobilizers to the Ground in the feature.
-	for ( std::size_t i = 0; i < this->topologies.size(); i++){
-		//SimTK::String GroundToCompoundMobilizerType = "Free";
-		//SimTK::String GroundToCompoundMobilizerType = "Weld";
-		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
-
-		this->rootMobility = GroundToCompoundMobilizerType;
-
-		// std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
-		//         << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
-
-		if(i == 0) { // First compound
-			compoundSystem->modelOneCompound(
-				SimTK::CompoundSystem::CompoundIndex(i),
-				GroundToCompoundMobilizerType);
-		} else {
-			compoundSystem->modelOneCompound(
-				SimTK::CompoundSystem::CompoundIndex(i),
-				"Free");
-		}
-
-		// // Realize Topology
-		// compoundSystem->realizeTopology(); // restore MULMOL
-		// ((this->topologies)[i])->loadMobodsRelatedMaps(); // restore MULMOL
-
-	}
-
-	// // Realize Topology
-	// compoundSystem->realizeTopology();
 }
 
 
@@ -621,9 +641,9 @@ BaseSampler * World::addSampler(SamplerName samplerName)
 {
 	if(samplerName == SamplerName::HMC) {
         samplers.emplace_back(std::make_unique<HMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get()));
-	} else if (samplerName == SamplerName::LAHMC) {
+	} /*else if (samplerName == SamplerName::LAHMC) {
         samplers.emplace_back(std::make_unique<LAHMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get(), 4));
-	}
+	}*/
 
 	return samplers.back().get();
 }

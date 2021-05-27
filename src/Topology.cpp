@@ -494,7 +494,7 @@ void Topology::bAddAtomClasses(
 }
 
 /** Print Molmodel specific types as introduced in Gmolmodel **/
-void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm)
+const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const 
 {
 	std::cout << "Print Molmodel And DuMM Types:" << std::endl;
 	for(size_t i = 0; i < bAtomList.size(); i++){
@@ -1299,12 +1299,17 @@ void Topology::setUScaleFactorsToBonds(std::string flexFN)
 				lineWords.push_back(std::move(word));
 			}
 			if(lineWords.size() >= 4 ){
+				// if ( (lineWords[3]).find_first_not_of (".+-0123456789") == ..... ) // slow variant
 				for(int i = 0; i < nbonds; i++){
 					if(bonds[i].isThisMe(std::stoi(lineWords[0]), std::stoi(lineWords[1])) ){
-						bonds[i].setUScaleFactor(std::stof(lineWords[3]));
+						if(lineWords[3][0] != '#'){
+							bonds[i].setUScaleFactor(std::stof(lineWords[3]));
+						}else{
+							bonds[i].setUScaleFactor(1.0);
+						}
+						break;
 					}
 				}
-				
 			}
 		}
 	}
@@ -1493,7 +1498,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 
 
 	} // RB
-	PrintAtomList();
+	//PrintAtomList();
 	this->regimen = argRegimen;
 }
 
@@ -1574,6 +1579,19 @@ void Topology::printTopTransforms()
 SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
 {
 	return aIx2TopTransform[aIx];
+}
+
+// Retunr mbx from an olresdy saved map inside Topology
+SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
+	SimTK::Compound::AtomIndex aIx) 
+{
+	if(!aIx2mbx.empty()){
+		return aIx2mbx[aIx];
+	}else{
+		std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx not yet loaded.\n";
+		throw std::exception();
+		std::exit(1);
+	}
 }
 
 /** Print maps **/

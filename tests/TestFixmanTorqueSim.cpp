@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
 	readAmberInput amberReader;
 	amberReader.readAmberFiles("etanMob/ligand.inpcrd", "etanMob/ligand.prmtop");
-	world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "TD", "0");
+	world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "TD", "0", "Free");
 
 	// Using OpenMM acceleration
 	//world->updForceField()->setUseOpenMMAcceleration(true);
@@ -76,14 +76,14 @@ int main(int argc, char **argv)
 	(pHMC(pSampler))->setTimestep(timestep);
 
 	// Set thermostats
-	pMC(pSampler)->setThermostat(ThermostatName::ANDERSEN);
+	pHMC(pSampler)->setThermostat(ThermostatName::ANDERSEN);
 	pHMC(pSampler)->setBoostTemperature(1);
 	pHMC(pSampler)->setBoostMDSteps(1);
 
 	// Activate Fixman potential if needed
 	if(std::string(argv[2]) == "FP"){
 		useFixmanPotential = true;
-		pMC(pSampler)->useFixmanPotential();
+		pHMC(pSampler)->useFixmanPotential();
 		std::cout << "Fixman potential added." << std::endl;
 	}
 

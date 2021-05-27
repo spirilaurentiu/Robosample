@@ -18,7 +18,7 @@ LAHMCSampler::LAHMCSampler(World *argWorld,
 	SimTK::TimeStepper *argTimeStepper,
     unsigned int Kext) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
-        MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        //MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         HMCSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
     this->useFixman = false;  
@@ -234,7 +234,7 @@ void LAHMCSampler::initialize(SimTK::State& someState )
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
@@ -301,7 +301,7 @@ void LAHMCSampler::reinitialize(SimTK::State& someState)
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
@@ -405,7 +405,7 @@ void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int 
     // Get new Fixman potential
     if(useFixman){
         fix_ns[k] = calcFixman(someState);
-        logSineSqrGamma2_ns[k] = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+        logSineSqrGamma2_ns[k] = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
     }else{
         fix_ns[k] = 0.0;
         logSineSqrGamma2_ns[k] = 0.0;
@@ -417,7 +417,7 @@ void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int 
 
     // Get new potential energy
     pe_ns[k] = forces->getMultibodySystem().calcPotentialEnergy(someState);
-    logSineSqrGamma2_ns[k] = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+    logSineSqrGamma2_ns[k] = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
 
     // Calculate total energy
     if(useFixman){
@@ -750,7 +750,7 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
 initializeVelocities and propagate/integrate **/
-void LAHMCSampler::propose(SimTK::State& someState)
+bool LAHMCSampler::propose(SimTK::State& someState)
 {
 
     storeOldConfigurationAndPotentialEnergies(someState);

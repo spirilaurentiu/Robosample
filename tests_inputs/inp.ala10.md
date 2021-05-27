@@ -26,6 +26,9 @@ SAMPLES_PER_ROUND 1  # Number of acc-rej steps within a Gibbs round
 REPRODUCIBLE TRUE
 SEED 9999
 
+
+ROUNDS_TIL_REBLOCK 1
+
 # Thermodynamics
 THERMOSTAT Andersen     # Thermostat 
 TEMPERATURE_INI  300    # Initial temperature
@@ -50,6 +53,6 @@ DIHEDRAL 16 14 0 6 14 0 6 8
 
 # Software specs
 THREADS 0
-OPENMM FALSE
-OPENMM_CalcOnlyNonbonded FALSE
+OPENMM TRUE
+OPENMM_CalcOnlyNonbonded TRUE
 
