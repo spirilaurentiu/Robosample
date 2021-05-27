@@ -20,7 +20,7 @@ WORLDS R0 # Worlds unique names with 2 letters
 ROOTS 0 # Atoms representing the first body
 SAMPLER VV      # Sampler
 TIMESTEPS 0.001              # Timesteps 
-MDSTEPS 1000     # Number of MD trial steps
+MDSTEPS 1     # Number of MD trial steps
 BOOST_MDSTEPS 1   
 SAMPLES_PER_ROUND 1  # Number of acc-rej steps within a Gibbs round
 REPRODUCIBLE TRUE
@@ -50,6 +50,6 @@ DIHEDRAL 16 14 0 6 14 0 6 8
 
 # Software specs
 THREADS 0
-OPENMM TRUE
-OPENMM_CalcOnlyNonbonded TRUE
+OPENMM FALSE
+OPENMM_CalcOnlyNonbonded FALSE
 

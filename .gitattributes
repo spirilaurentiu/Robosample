@@ -1,3 +1,8 @@
 # Do not count sample outputs from the following folders :
 tests_inputs/* linguist-generated
-tools/demo/ala10/*
+tools/demo/ala10/* linguist-generated
+tools/demo/out linguist-generated
+doc/* linguist-generated
+.vscode/* linguist-generated
+tests/lin4/* linguist-generated
+polyalanine.pdb linguist-generated
