@@ -1034,6 +1034,25 @@ void Context::setUseOpenMMCalcOnlyNonBonded(bool arg)
 }
 
 
+void Context::setNonbondedMethod(std::size_t which, int methodInx)
+{
+    if (methodInx >= 0 && methodInx <= 1 ){
+        worlds[which].updForceField()->setNonbondedMethod(methodInx);
+    }else{
+        std::cout<< "Invalid nonbonded method. (0 = nocutoff; 1 = cutoffNonPeriodic). Default NoCutoff method will be used." << endl;
+    }
+}
+
+void Context::setNonbondedCutoff(std::size_t which, Real cutoffNm)
+{
+    if (cutoffNm >= 0 ){
+        worlds[which].updForceField()->setNonbondedCutoff(cutoffNm);
+    }else{
+        std::cout<< "Negative cutoff requested. Default cutoff = 2.0 nm will be used instead" << endl;
+    }
+}
+
+
 /** Get/Set seed for reproducibility. **/
 void Context::setSeed(std::size_t whichWorld, std::size_t whichSampler, uint32_t argSeed)
 {

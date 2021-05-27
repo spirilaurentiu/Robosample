@@ -226,6 +226,17 @@ int main(int argc, char **argv)
 	}
 	else context.setUseOpenMMCalcOnlyNonBonded(false);
 
+    for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+        // Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
+        // OpenMM could be integrated as well.
+        if(setupReader.get("NONBONDED_METHOD")[worldIx] == "1"){
+            context.setNonbondedMethod(worldIx, 1);
+            context.setNonbondedCutoff(worldIx, std::stod( setupReader.get("NONBONDED_CUTOFF")[worldIx] ) );
+        }
+    }
+
+
+
 	// Set Lennard-Jones mixing rule
 	//context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
