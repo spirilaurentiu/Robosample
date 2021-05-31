@@ -136,7 +136,8 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	// Realize velocity
 	system->realize(someState, SimTK::Stage::Velocity);
 
-	// ask for a number of random numbers and check if we are done the next time we hit this function
+	// ask for a number of random numbers and check if we are done the next
+	//  time we hit this function
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
@@ -149,10 +150,11 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 
 	// TODO: move this in constructor or variable set
 	SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-	SimTK::Real randSign = (randUni_m1_1 > 0) ? std::ceil(randUni_m1_1) : std::floor(randUni_m1_1) ;
+	SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
 
 	// Start velocities. Fill with a random sign (1 or -1)
 	std::vector<SimTK::Real> V(nu, randSign);
+	//std::vector<SimTK::Real> V(nu, 1);
 
 	// Scale the sign with the scaling factors
 	std::transform(V.begin(), V.end(), // apply an operation on this
@@ -195,16 +197,32 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 
 	}else if(NMAOption == 1){
 
-		SimTK::Real stdev = bStdev(V);
-		for(int k = 0; k < nu; k++){
-			V[k] *= (std::sqrt(RT) / stdev);
-		}
+		//int mnu;
+		// first body excluded due to iMod for now
+        	//for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+                //	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		//	mnu = mobod.getNumU(someState);
+                //	//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
+		//	calc_NU += mnu;
+		//}
+
+		// Average of sqrt(|V[i]|)
+		//SimTK::Real avg_sqrtV = 0;
+		//for(int k = 0; k < nu; k++){
+		//	avg_sqrtV = std::sqrt(std::abs(V[k]));
+		//}
+		
+		//SimTK::Real stdev = bStdev(V);
+		//for(int k = 0; k < nu; k++){
+		//	V[k] *= (std::sqrt(RT) / avg_sqrtV);
+		//}
 
 		// Worst assignment method TODO: std::vector to SimTK::Vector
 		SimTK::Real totalMass = matter->calcSystemMass(someState);
+		//std::cout << "HMCSampler: total mass" << totalMass << "\n";
 		for(int k = 0; k < nu; k++){
 			newU[k] = V[k];
-			newU[k] *=  std::sqrt(totalMass / nu);
+			//newU[k] *=  std::sqrt(totalMass / nu);
 		}
 
 	}else{
@@ -223,7 +241,8 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 	system->realize(someState, SimTK::Stage::Velocity);
 	//std::cout << "HMCSampler U " << someState.getU() << std::endl;
 
-	// ask for a number of random numbers and check if we are done the next time we hit this function
+	// ask for a number of random numbers and check if we are done the next
+	// time we hit this function
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
