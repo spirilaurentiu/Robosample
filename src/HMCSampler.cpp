@@ -88,6 +88,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	dRdot.resize(ndofs, 0);
 
 	UScaleFactors.resize(ndofs, 1);
+	UScaleFactorsNorm = std::sqrt(ndofs);
 
 	MDStepsPerSampleStd = 0.5;
 }
@@ -159,6 +160,8 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 		V.begin(), // and store here
 		std::multiplies<SimTK::Real>()); // this is the operation
 
+	
+
 	if(NMAOption == 2){
 		if (nu != RandomCache.nu) {
 			// Rebuild the cache
@@ -191,9 +194,17 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 		matter->multiplyBySqrtMInv(someState, newU, RandomCache.SqrtMInvV);
 
 	}else if(NMAOption == 1){
+
+		SimTK::Real stdev = bStdev(V);
+		for(int k = 0; k < nu; k++){
+			V[k] *= (std::sqrt(RT) / stdev);
+		}
+
 		// Worst assignment method TODO: std::vector to SimTK::Vector
+		SimTK::Real totalMass = matter->calcSystemMass(someState);
 		for(int k = 0; k < nu; k++){
 			newU[k] = V[k];
+			newU[k] *=  std::sqrt(totalMass / nu);
 		}
 
 	}else{
@@ -800,6 +811,11 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
         }
         //std::cout << '\n';
     }
+
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
 }
 
 /** Seed the random number generator. Set simulation temperature,
@@ -888,6 +904,10 @@ void HMCSampler::initialize(SimTK::State& someState)
 	UScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
 }
 
 /** Same as initialize **/
@@ -953,6 +973,10 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	UScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
 }
 
 /** Get/Set the timestep for integration **/

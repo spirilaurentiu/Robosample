@@ -353,6 +353,7 @@ protected:
 	std::vector<SimTK::Real> dRdot;
 
 	std::vector<SimTK::Real> UScaleFactors;
+	SimTK::Real UScaleFactorsNorm = 0.0;
 
 	SimTK::Real timestep;
 	SimTK::Real prevTimestep;

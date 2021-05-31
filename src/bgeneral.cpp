@@ -848,6 +848,23 @@ SimTK::Real bMean(std::vector<SimTK::Real> v)
 	return (sum / v.size());
 }
 
+SimTK::Real bVariance(std::vector<SimTK::Real> v)
+{
+	SimTK::Real average = bMean(v);
+	SimTK::Real variance = 0.0;
+	
+	for(int i = 0; i < v.size(); i++){
+		variance += ((v[i] - average) * (v[i] - average));
+	}
+
+	return (variance / v.size());
+}
+
+SimTK::Real bStdev(std::vector<SimTK::Real> v)
+{
+	return std::sqrt(bVariance(v));
+}
+
 SimTK::Real bCorr(std::vector<SimTK::Real> V, std::vector<SimTK::Real> W)
 {
 	assert(V.size() == W.size());
