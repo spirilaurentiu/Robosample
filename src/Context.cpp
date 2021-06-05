@@ -78,6 +78,12 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 	}
 
 	// World Samplers specific parameters
+	if(setupReader.get("SAMPLER").size() != inpNofWorlds){
+		std::cerr << "Must have the same no. of samplers as the no. of worlds.\n";
+		throw std::exception();
+		std::exit(1);
+	}
+
 	if(inpNofWorlds > setupReader.get("TIMESTEPS").size()){
 		std::cerr << "Must have the at least same no. of timesteps as the no. of worlds.\n";
 		throw std::exception();

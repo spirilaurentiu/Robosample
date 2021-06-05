@@ -162,8 +162,6 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 		V.begin(), // and store here
 		std::multiplies<SimTK::Real>()); // this is the operation
 
-	
-
 	if(NMAOption == 2){
 		if (nu != RandomCache.nu) {
 			// Rebuild the cache
