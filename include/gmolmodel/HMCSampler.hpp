@@ -329,7 +329,7 @@ protected:
 	SimTK::Real logSineSqrGamma2_o = 0.0, logSineSqrGamma2_n = 0.0, logSineSqrGamma2_set = 0.0;
 
 	bool useFixman = false;
-	bool alwaysAccept = false;
+	//bool alwaysAccept = false;
 
 	int acceptedSteps = 0;
 	int acceptedStepsBufferSize = 30;

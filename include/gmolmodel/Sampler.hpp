@@ -39,6 +39,12 @@ public:
 	void initialize(SimTK::State& someState);
 	void reinitialize(SimTK::State& someState);
 
+	// Is the sampler always accepting the proposed moves
+	virtual bool getAlwaysAccept(void) const;
+
+	// Is the sampler always accepting the proposed moves
+	virtual void setAlwaysAccept(bool);
+
 	// Getter / setter for macroscopic temperature and RT
 	// virtual void setTemperature(SimTK::Real) = 0; // RE
 	SimTK::Real getTemperature() const;
@@ -91,6 +97,7 @@ public:
 	SimTK::TimeStepper *timeStepper;
 
 	// Thermodynamics
+	bool alwaysAccept = false;
 	ThermostatName thermostat;
 	SimTK::Real temperature;
 	SimTK::Real RT;

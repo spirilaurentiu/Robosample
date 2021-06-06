@@ -139,10 +139,10 @@ public:
     void sendConfToEvaluator(void);
     
     // Is the sampler always accepting the proposed moves
-    bool getAlwaysAccept(void) const;
+    //bool getAlwaysAccept(void) const;
 
     // Is the sampler always accepting the proposed moves
-    void setAlwaysAccept(bool);
+    //void setAlwaysAccept(bool);
 
     // Get the number of accpted conformations
     int getAcceptedSteps(void) const;
@@ -165,7 +165,7 @@ protected:
     SimTK::Real logSineSqrGamma2_o = 0.0, logSineSqrGamma2_n = 0.0, logSineSqrGamma2_set = 0.0;
 
     bool useFixman = false;
-    bool alwaysAccept = false;
+    //bool alwaysAccept = false;
 
     int acceptedSteps = 0;
     int acceptedStepsBufferSize = 30;

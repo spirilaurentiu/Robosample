@@ -136,16 +136,16 @@ bool MonteCarloSampler::isUsingFixmanPotential(void) const
 }
 
 // Is the sampler always accepting the proposed moves
-bool MonteCarloSampler::getAlwaysAccept(void) const
-{
-    return alwaysAccept;
-}
+//bool MonteCarloSampler::getAlwaysAccept(void) const
+//{
+//   return alwaysAccept;
+//}
 
 // Is the sampler always accepting the proposed moves
-void MonteCarloSampler::setAlwaysAccept(bool argAlwaysAccept)
-{
-    alwaysAccept = argAlwaysAccept;
-}
+//void MonteCarloSampler::setAlwaysAccept(bool argAlwaysAccept)
+//{
+//    alwaysAccept = argAlwaysAccept;
+//}
 
 
 // Compute Fixman potential (should have been calcDetMInv ??)

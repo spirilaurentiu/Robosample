@@ -279,10 +279,13 @@ int main(int argc, char **argv)
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		if(setupReader.get("SAMPLER")[worldIx] == "VV"){
 			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
+			pHMC(p)->setAlwaysAccept(true);
 			pHMC(p)->setThermostat(ThermostatName::ANDERSEN);
 		}else if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
 			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
-			pHMC(p)->setThermostat(ThermostatName::NONE);
+			pHMC(p)->setAlwaysAccept(false);
+			//pHMC(p)->setThermostat(ThermostatName::NONE);
+			pHMC(p)->setThermostat(ThermostatName::ANDERSEN);
 		}/*else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
 			BaseSampler *p = context.addSampler(worldIx, SamplerName::LAHMC);
 			pLAHMC(p)->setThermostat(ThermostatName::NONE);

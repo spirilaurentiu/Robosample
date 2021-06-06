@@ -67,7 +67,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
 	this->residualEmbeddedPotential = 0.0;
 	nofSamples = 0;
-	this->alwaysAccept = false;
+	//this->alwaysAccept = false;
 
 	this->prevPrevAcceptance = SimTK::NaN;
 	this->prevAcceptance = SimTK::NaN;
@@ -370,10 +370,11 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 
 
 	// Decide and get a new sample
-	if ( getThermostat() == ThermostatName::ANDERSEN ) {
-		// MD with Andersen thermostat
+	//if ( getThermostat() == ThermostatName::ANDERSEN ) {
+	if ( alwaysAccept == true ){
+		// Simple molecular dynamics
 		this->acc = true;
-		std::cout << "\tsample accepted (always with andersen thermostat)\n";
+		std::cout << "\tsample accepted\n";
 		update(someState);
 	} else {
 		// we do not consider this sample accepted unless it passes all checks
