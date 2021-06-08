@@ -354,6 +354,8 @@ protected:
 
 	std::vector<SimTK::Real> UScaleFactors;
 	SimTK::Real UScaleFactorsNorm = 0.0;
+	std::vector<SimTK::Real> InvUScaleFactors;
+	SimTK::Real InvUScaleFactorsNorm = 0.0;
 
 	SimTK::Real timestep;
 	SimTK::Real prevTimestep;

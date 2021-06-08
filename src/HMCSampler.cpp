@@ -89,6 +89,8 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	UScaleFactors.resize(ndofs, 1);
 	UScaleFactorsNorm = std::sqrt(ndofs);
+	InvUScaleFactors.resize(ndofs, 1);
+	InvUScaleFactorsNorm = std::sqrt(ndofs);
 
 	MDStepsPerSampleStd = 0.5;
 }
@@ -141,8 +143,88 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
+/** Initialize velocities scaled by NMA factors.
+ Coresponds to R operator in LAHMC **/
+void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
+	
+	if(NMAOption == 2){
+		// Check if we can use our cache
+		const int nu = someState.getNU();
+	
+		// Draw X from a normal distribution N(0, 1)
+		if (nu != RandomCache.nu) {
+			// Rebuild the cache
+			// We also get here if the cache is not initialized
+			RandomCache.V.resize(nu);
+			RandomCache.SqrtMInvV.resize(nu);
+			RandomCache.sqrtRT = std::sqrt(RT);
+			RandomCache.nu = nu;
+	
+			// we don't get to use multithreading here
+			RandomCache.FillWithGaussian();
+		} else {
+			// wait for random number generation to finish (should be done by this stage)
+			RandomCache.task.wait();
+		}
+
+		// Get norm of UScaleFactors (TODO BUG not calculated correctly at loadUScaleFactors ??
+		float UScaleFactorsNormRecalc = 0;
+		for(int i = 0; i < nu; i++){
+			UScaleFactorsNormRecalc += UScaleFactors[i] * UScaleFactors[i];
+		}
+		UScaleFactorsNormRecalc = std::sqrt(UScaleFactorsNormRecalc);
+		//std::cout << "UScaleFactors length " << UScaleFactorsNormRecalc << std::endl;
+
+		// Scale by NMA scale factors
+		std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			RandomCache.V.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+	
+		// Check length
+		//float norm = 0;
+		//for(int i = 0; i < nu; i++){
+		//	norm += RandomCache.V[i] * RandomCache.V[i];
+		//}
+		//norm = std::sqrt(norm);
+		//std::cout << "UScaleFactorsNorm " << UScaleFactorsNorm << std::endl;
+		//std::cout << "scaled vector length " << norm << std::endl;
+
+		// Restore vector length
+		for(int i = 0; i < nu; i++){
+			//RandomCache.V[i] = (RandomCache.V[i] / (std::sqrt(nu) / UScaleFactorsNorm));
+			RandomCache.V[i] = (RandomCache.V[i] * (std::sqrt(nu) / UScaleFactorsNormRecalc));
+		}
+
+		// Check length
+		//norm = 0;
+		//for(int i = 0; i < nu; i++){
+		//	norm += RandomCache.V[i] * RandomCache.V[i];
+		//}
+		//norm = std::sqrt(norm);
+		//std::cout << "rescaled vector length " << norm << std::endl;
+
+		// Multiply by the square root of the inverse mass matrix
+		matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
+	
+		// Multiply by the square root of kT
+		RandomCache.SqrtMInvV *= (RandomCache.sqrtRT);
+	
+		// Set state velocities
+		someState.updU() = RandomCache.SqrtMInvV;
+	}
+
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+
+	// ask for a number of random numbers and check if we are done the next
+	//  time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+}
+
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
+/*
 void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
 	// TODO: const will not work in adaptive block scheme
 	const int nu = someState.getNU();
@@ -153,7 +235,9 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 	SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
 
 	// Start velocities. Fill with a random sign (1 or -1)
-	std::vector<SimTK::Real> V(nu, randSign);
+	//std::vector<SimTK::Real> V(nu, randSign);
+
+	// Start velocities. Fill with one
 	//std::vector<SimTK::Real> V(nu, 1);
 
 	// Scale the sign with the scaling factors
@@ -178,7 +262,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 			RandomCache.task.wait();
 		}
 
-		// Scale the velocities so far with Gaussians
+		// Scale the velocities so far with Gaussians(0, 1)
 		std::transform(V.begin(), V.end(), // apply an operation on this
 			RandomCache.V.begin(), // and this
 			V.begin(), // and store here
@@ -189,7 +273,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 			newU[k] = V[k];
 		}
 
-		// Multipliy by inverse of the sqrt(mass matrix)
+		// Multiply by inverse of the sqrt(mass matrix)
 		// This gives weights according to bodies
 		matter->multiplyBySqrtMInv(someState, newU, RandomCache.SqrtMInvV);
 
@@ -243,6 +327,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 	// time we hit this function
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
+*/
 
 // Apply the L operator 
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
@@ -816,6 +901,7 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 {
     int nu = someState.getNU();
     UScaleFactors.resize(nu, 1);
+    InvUScaleFactors.resize(nu, 1);
 
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -826,14 +912,17 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
         	//std::cout << ' ' << int(uIx) ;
 			UScaleFactors[int(uIx)] = scaleFactor;
+			InvUScaleFactors[int(uIx)] = 1.0 / scaleFactor;
         }
         //std::cout << '\n';
     }
 
 	for (int i = 0; i < UScaleFactors.size(); ++i) {
 		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
 	}
 	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Seed the random number generator. Set simulation temperature,
@@ -920,12 +1009,15 @@ void HMCSampler::initialize(SimTK::State& someState)
 
     for (int j=0; j < nu; ++j){
 	UScaleFactors[j] = 1;
+	InvUScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
 	for (int i = 0; i < UScaleFactors.size(); ++i) {
 		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
 	}
 	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Same as initialize **/
@@ -989,12 +1081,15 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 
     for (int j=0; j < nu; ++j){
 	UScaleFactors[j] = 1;
+	InvUScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
 	for (int i = 0; i < UScaleFactors.size(); ++i) {
 		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
 	}
 	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Get/Set the timestep for integration **/
