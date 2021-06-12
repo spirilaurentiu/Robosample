@@ -339,6 +339,13 @@ int main(int argc, char **argv)
 		context.setNofMDStepsPerSample(worldIx, 0, std::stoi(setupReader.get("MDSTEPS")[worldIx]));
 	}
 
+	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
+		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setMDStepsPerSampleStd(
+					std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]));
+		}
+	}
+
 	// Set the seeds for reproducibility. Samplers have to be here already
 	if( setupReader.find("SEED") ){
 		if( !(setupReader.get("SEED").empty()) ){

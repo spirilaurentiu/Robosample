@@ -292,6 +292,9 @@ public:
 
 	void setMDStepsPerSample(int mdStepsPerSample);
 
+	SimTK::Real getMDStepsPerSampleStd(void);
+	void setMDStepsPerSampleStd(SimTK::Real mdstd);
+
 	/** Print detailed energy information **/
 	void PrintDetailedEnergyInfo(SimTK::State& someState);
 

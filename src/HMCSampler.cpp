@@ -100,6 +100,16 @@ HMCSampler::~HMCSampler()
 {
 }
 
+SimTK::Real HMCSampler::getMDStepsPerSampleStd(void)
+{
+	return MDStepsPerSampleStd;
+}
+
+void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
+	MDStepsPerSampleStd = mdstd;
+}
+
+
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
 void HMCSampler::initializeVelocities(SimTK::State& someState){
@@ -146,74 +156,100 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 /** Initialize velocities scaled by NMA factors.
  Coresponds to R operator in LAHMC **/
 void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
-	
-	if(NMAOption == 2){
-		// Check if we can use our cache
-		const int nu = someState.getNU();
-	
-		// Draw X from a normal distribution N(0, 1)
-		if (nu != RandomCache.nu) {
-			// Rebuild the cache
-			// We also get here if the cache is not initialized
-			RandomCache.V.resize(nu);
-			RandomCache.SqrtMInvV.resize(nu);
-			RandomCache.sqrtRT = std::sqrt(RT);
-			RandomCache.nu = nu;
-	
-			// we don't get to use multithreading here
-			RandomCache.FillWithGaussian();
-		} else {
-			// wait for random number generation to finish (should be done by this stage)
-			RandomCache.task.wait();
-		}
 
+	// Get the number of dofs
+	const int nu = someState.getNU();
+
+	// Get sqrt of kT
+    	double sqrtRT = std::sqrt(RT);
+
+	// U vector
+	SimTK::Vector Us(nu, 1);
+	
+	// Vector multiplied by the sqrt of the inverse mass matrix
+	SimTK::Vector sqrtMInvUs(nu, 1);
+
+	if(NMAOption == 1){ // For pure demonstrative purposes
+
+		// Scale by NMA scale factors
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			Us.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+
+		SimTK::Real altSign;
+
+		if((nofSamples % 2) == 0){ altSign = 1;}else{altSign = -1;} 
+	
+		Us *= altSign;
+			//std::cout << "Us" <<'\n';
+			//for(int i = 0; i < nu; i++){std::cout << Us[i] << ' ';}
+			//std::cout << '\n';
+
+		someState.updU() = temperature*Us;
+
+	}else{
+	
 		// Get norm of UScaleFactors (TODO BUG not calculated correctly at loadUScaleFactors ??
 		float UScaleFactorsNormRecalc = 0;
 		for(int i = 0; i < nu; i++){
 			UScaleFactorsNormRecalc += UScaleFactors[i] * UScaleFactors[i];
 		}
 		UScaleFactorsNormRecalc = std::sqrt(UScaleFactorsNormRecalc);
-		//std::cout << "UScaleFactors length " << UScaleFactorsNormRecalc << std::endl;
+		//std::cout << "UScaleFactorsNormRecalc " << UScaleFactorsNormRecalc << '\n';
+	
+		if(NMAOption == 2){ // Use UscaleFactors with random sign
 
+			// Get random -1 or 1
+			SimTK::Real randSign;
+			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+			Us *= randSign;
+
+		}else if(NMAOption == 3){ // Set a random sign
+	
+			// Check if we can use our cache
+			// Draw X from a normal distribution N(0, 1)
+			if (nu != RandomCache.nu) {
+				// Rebuild the cache
+				// We also get here if the cache is not initialized
+				RandomCache.V.resize(nu);
+				RandomCache.SqrtMInvV.resize(nu);
+				RandomCache.sqrtRT = std::sqrt(RT);
+				RandomCache.nu = nu;
+		
+				// we don't get to use multithreading here
+				RandomCache.FillWithGaussian();
+			} else {
+				// wait for random number generation to finish (should be done by this stage)
+				RandomCache.task.wait();
+			}
+	
+			Us = RandomCache.V;
+	
+		}
+	
 		// Scale by NMA scale factors
-		std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
 			UScaleFactors.begin(), // and this
-			RandomCache.V.begin(), // and store here
+			Us.begin(), // and store here
 			std::multiplies<SimTK::Real>()); // this is the operation
 	
-		// Check length
-		//float norm = 0;
-		//for(int i = 0; i < nu; i++){
-		//	norm += RandomCache.V[i] * RandomCache.V[i];
-		//}
-		//norm = std::sqrt(norm);
-		//std::cout << "UScaleFactorsNorm " << UScaleFactorsNorm << std::endl;
-		//std::cout << "scaled vector length " << norm << std::endl;
-
 		// Restore vector length
 		for(int i = 0; i < nu; i++){
-			//RandomCache.V[i] = (RandomCache.V[i] / (std::sqrt(nu) / UScaleFactorsNorm));
-			RandomCache.V[i] = (RandomCache.V[i] * (std::sqrt(nu) / UScaleFactorsNormRecalc));
+			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNormRecalc));
 		}
-
-		// Check length
-		//norm = 0;
-		//for(int i = 0; i < nu; i++){
-		//	norm += RandomCache.V[i] * RandomCache.V[i];
-		//}
-		//norm = std::sqrt(norm);
-		//std::cout << "rescaled vector length " << norm << std::endl;
-
+	
 		// Multiply by the square root of the inverse mass matrix
-		matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
+		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
 	
 		// Multiply by the square root of kT
-		RandomCache.SqrtMInvV *= (RandomCache.sqrtRT);
+		sqrtMInvUs *= sqrtRT;
 	
 		// Set state velocities
-		someState.updU() = RandomCache.SqrtMInvV;
-	}
+		someState.updU() = sqrtMInvUs;
 
+	}
 	// Realize velocity
 	system->realize(someState, SimTK::Stage::Velocity);
 
@@ -355,11 +391,14 @@ void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 
 	float timeJump = 0;
 	if(MDStepsPerSampleStd != 0){
+		std::cout << "Got MDSTEPS_STD " << MDStepsPerSampleStd << '\n';
+
 		// TODO moe to internal variables set
         	std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd); 
         	float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
 		timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
 	}else{
+		std::cout << "Didn't get MDSTEPS_STD" << '\n';
 		timeJump = (timestep*MDStepsPerSample);
 	}
 	
@@ -477,8 +516,8 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 				std::cout << "\tsample rejected\n";
 				setSetConfigurationAndEnergiesToOld(someState);
 			}
-			++nofSamples;
 	}
+	++nofSamples;
 
 	return this->acc;
 }
