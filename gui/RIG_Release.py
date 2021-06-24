@@ -296,18 +296,18 @@ class MainWindow:
 
 
 		self.eG6a = tk.Radiobutton(self.GeneralWin, text="True", variable=self.eG6variable, value=True)
-		self.eG6a.grid(row=8, column=1)
+		self.eG6a.grid(row=7, column=1)
 		self.eG6b = tk.Radiobutton(self.GeneralWin, text="False", variable=self.eG6variable, value=False)
-		self.eG6b.grid(row=8, column=2)
+		self.eG6b.grid(row=7, column=2)
 
 
 		self.eG7 = tk.Entry(self.GeneralWin,textvariable = self.eG7variable)
-		self.eG7.grid(row=9, column=1, columnspan=2)
+		self.eG7.grid(row=8, column=1, columnspan=2)
 		
 		self.eG8a = tk.Radiobutton(self.GeneralWin, text="True", variable=self.eG8variable, value=True)
-		self.eG8a.grid(row=10, column=1)
+		self.eG8a.grid(row=9, column=1)
 		self.eG8b = tk.Radiobutton(self.GeneralWin, text="False", variable=self.eG8variable, value=False)
-		self.eG8b.grid(row=10, column=2)
+		self.eG8b.grid(row=9, column=2)
 
 		#Make the accept/cancel button, cancel forces a reinstancing of the values, and sets them back to the default
 		#update: in the end it's just an add button
@@ -332,7 +332,7 @@ class MainWindow:
 	
 		ThermoCounter = 2	
 		for LabelObj in StatusLabelslT:
-			LabelObj = tk.Label(self.GeneralWin, text=StatusLabelsDictT[LabelObj])
+			LabelObj = tk.Label(self.ThermoWin, text=StatusLabelsDictT[LabelObj])
 			LabelObj.grid(row=ThermoCounter, column=0)
 			ThermoCounter = ThermoCounter + 1
 
@@ -429,7 +429,7 @@ class MainWindow:
 	
 			WorldCounter = 2	
 			for LabelObj in StatusLabelslW:
-				LabelObj = tk.Label(self.GeneralWin, text=StatusLabelsDictW[LabelObj])
+				LabelObj = tk.Label(self.WorldWin, text=StatusLabelsDictW[LabelObj])
 				LabelObj.grid(row=WorldCounter, column=0)
 			
 			self.setNumberofWorlds(self.eExpvariable.get()) #first time
@@ -627,12 +627,12 @@ class MainWindow:
 				for i in range(self.eExpNumber.get()):
 					offset = i*17
 					for j in range(self.eG3variableArray[i]):
-							label = tk.Label(self.WorldParams, text = "Experiment " + str(i), bd=1, relief=tk.SOLID)
-							label.grid(row=+offset,column=0)
+						label = tk.Label(self.WorldParams, text = "Experiment " + str(i), bd=1, relief=tk.SOLID)
+						label.grid(row=+offset,column=0)
 					
-						for LabelIx in range(1,len(WorldLabels):
-							label = tk.Label(self.WorldParams, text = WorldLabels[LabelIx])
-							label.grid(row=LabelIx+offset,column=0)
+					for LabelIx in range(1,len(WorldLabels)):
+						label = tk.Label(self.WorldParams, text = WorldLabels[LabelIx])
+						label.grid(row=LabelIx+offset,column=0)
 						
 						##Fields (column > 0)
 						entry   = tk.Label(self.WorldParams, text = " ")  #empty space that corresponds to the "Experiment i" row
