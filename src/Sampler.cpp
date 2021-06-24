@@ -40,9 +40,12 @@ Sampler::Sampler(World *argWorld,
 
 	this->system = &argMatter->getSystem();
 
-	//this->residue = argResidue;
+	//this->rootTopology = argResidue;
 	assert(topologies.size() > 0);
-	this->residue = &topologies[0];
+	this->rootTopology = &topologies[0];
+
+	//
+	this->alwaysAccept = false;
 
 	// Set total number of atoms and dofs
 	natoms = 0;
@@ -81,6 +84,19 @@ void Sampler::setSeed(uint32_t argSeed)
     }
 
 }
+
+// Is the sampler always accepting the proposed moves
+bool Sampler::getAlwaysAccept(void) const
+{
+    return alwaysAccept;
+}
+
+// Is the sampler always accepting the proposed moves
+void Sampler::setAlwaysAccept(bool argAlwaysAccept)
+{
+    alwaysAccept = argAlwaysAccept;
+}
+
 
 // Compute mass matrix determinant
 SimTK::Real Sampler::calcMassDeterminant(SimTK::State& state)

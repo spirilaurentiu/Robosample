@@ -5,6 +5,13 @@
 #include "World.hpp"
 #include "Sampler.hpp"
 
+void Context::throwAndExit(std::string errMsg, int errCode){
+		std::cerr << "Context: " << errMsg;
+		throw std::exception();
+		std::exit(errCode);
+}
+
+
 // Default constructor
 Context::Context(const SetupReader& setupReader, std::string logFilename){
 	nofWorlds = 0;
@@ -37,7 +44,7 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 	assert( std::stoi((setupReader.get("ROUNDS_TIL_REBLOCK"))[0]) > 0);
 
 	// TODO: if seed not provided, generate one and warn
-	assert( std::stoi((setupReader.get("SEED"))[0]) > 0); 
+	assert( std::stoi((setupReader.get("SEED"))[0]) > 0);
 
 	if(setupReader.find("RANDOM_WORLD_ORDER")){
 		if(setupReader.get("RANDOM_WORLD_ORDER").size() == 0){
@@ -53,7 +60,7 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 		std::exit(1);
 	}
 
-	// World specific parameters
+	// Set these numbers first
 	std::size_t inpNofWorlds = setupReader.get("WORLDS").size();
 	std::size_t inpNofMols = setupReader.get("MOLECULES").size();
 	std::size_t inpNofTopologies = inpNofWorlds * inpNofMols;
@@ -71,6 +78,12 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 	}
 
 	// World Samplers specific parameters
+	if(setupReader.get("SAMPLER").size() != inpNofWorlds){
+		std::cerr << "Must have the same no. of samplers as the no. of worlds.\n";
+		throw std::exception();
+		std::exit(1);
+	}
+
 	if(inpNofWorlds > setupReader.get("TIMESTEPS").size()){
 		std::cerr << "Must have the at least same no. of timesteps as the no. of worlds.\n";
 		throw std::exception();
@@ -83,26 +96,38 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 		}
 	}
 
-
 	// Molecule specific parameters
 	for(std::size_t molIx = 0; molIx < inpNofMols; molIx++){
-		assert(SimTK::Pathname::fileExists(
+		if(!SimTK::Pathname::fileExists(
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("PRMTOP")[molIx]) );
-		assert(SimTK::Pathname::fileExists(
+			+ setupReader.get("PRMTOP")[molIx]) ){
+			throwAndExit("Molecule " + std::to_string(molIx) + " prmtop not found\n", 1);	
+	
+		}
+		if(!SimTK::Pathname::fileExists(
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx]) );
+			+ setupReader.get("INPCRD")[molIx]) ){
+			throwAndExit("Molecule " + std::to_string(molIx) + " inpcrd not found\n", 1);	
+			}
 	}
 
 	// Topology specific paramters
 	for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
 		for(std::size_t molIx = 0; molIx < inpNofMols; molIx++){
-			assert(SimTK::Pathname::fileExists(
+			if(!SimTK::Pathname::fileExists(
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("RBFILE")[molIx]) );
-			assert(SimTK::Pathname::fileExists(
+				+ setupReader.get("RBFILE")[molIx]) ){
+				throwAndExit("world " + std::to_string(worldIx) + 
+					" molecule " + std::to_string(molIx) +
+					" rb not found\n", 1);	
+			}
+			if(!SimTK::Pathname::fileExists(
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("FLEXFILE")[molIx]) );
+				+ setupReader.get("FLEXFILE")[molIx]) ){
+				throwAndExit("world " + std::to_string(worldIx) + 
+					" molecule " + std::to_string(molIx) +
+					" flex not found\n", 1);	
+			}
 
 		}
 	}
@@ -121,68 +146,15 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 		}
 	}
 
-}
+	// If we got here we can set global variables
+	// Reserve memory
+	nofWorlds = inpNofWorlds;
+	nofMols = inpNofMols;
+	nofTopologies = inpNofTopologies;
 
-void Context::printStatus(void){
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		if ((updWorld(worldIx))->integ  == nullptr ){
-			std::cout << "Context: integrator is null" << std::endl;
-			break;
-		}
-		SimTK::VerletIntegrator& checkIntegrator = *(updWorld(worldIx))->integ;
-		const SimTK::State& checkState = checkIntegrator.getState();
-		const SimTK::Stage& checkStage = checkState.getSystemStage();
-		std::cout << "Context world " << worldIx << " integ state stage " 
-			<< checkStage << std::endl << std::flush;
-		std::cout << "Context world " << worldIx << " integ state nof Subsystems " 
-			<< checkState.getNumSubsystems() << ":" << std::endl << std::flush;
-		for(int i = 0; i < checkState.getNumSubsystems(); i++){
-			std::cout
-				<< " Subsystem Name: "
-				<< checkState.getSubsystemName(SimTK::SubsystemIndex(i))
-				<< " Stage: "
-				<< checkState.getSubsystemStage(SimTK::SubsystemIndex(i))
-				<< " Version: "
-				<< checkState.getSubsystemVersion(SimTK::SubsystemIndex(i))
-				<< std::endl << std::flush;
-		}
-		//SimTK::State& checkAdvState = checkIntegrator.updAdvancedState();
-		//const SimTK::Stage& checkAdvStage = checkAdvState.getSystemStage();
-		//std::cout << "Context world " << worldIx << " integ advState stage " 
-		//	<< checkAdvStage << std::endl << std::flush;
+	worlds.reserve(nofWorlds);
+	worldIndexes.reserve(nofWorlds);
 
-
-		// CompoundSystem <- MolecularMechanicsSystem <- MultibodySystem <- System
-		SimTK::CompoundSystem& compoundSystem = *((updWorld(worldIx))->getCompoundSystem());
-		std::cout << "Context world " << worldIx << " compoundSystem nof compounds " 
-			<< compoundSystem.getNumCompounds() << std::endl;
-		std::cout << "Context world " << worldIx << " System Topology realized "
-			<< compoundSystem.getNumRealizationsOfThisStage(SimTK::Stage::Topology)
-			<< " times.\n" << std::flush;
-
-		// Matter
-		////const SimTK::System& checkSystem = ((updWorld(worldIx))->matter)->getSystem();
-		SimTK::SimbodyMatterSubsystem& matter = *((updWorld(worldIx))->matter);
-		std::cout << "Context world " << worldIx 
-			<< " matter nofBodies " << matter.getNumBodies()
-			<< " nofConstraints " << matter.getNumConstraints()
-			<< "\n" << std::flush;
-
-		// GeneralForceSubsystem
-		SimTK::GeneralForceSubsystem& gfs = *((updWorld(worldIx))->forces);
-		std::cout << "Context world " << worldIx 
-			<< " gfs nofForces " << gfs.getNumForces()
-			<< "\n" << std::flush;
-
-		SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(worldIx))->forceField);
-		std::cout << "Context world " << worldIx 
-			<< " dumm nofThreads " << dumm.getNumThreadsRequested()
-			<< " useOpenMM " << dumm.getUseOpenMMAcceleration()
-			<< " " << dumm.isUsingOpenMM()
-			<< "\n" << std::flush;
-
-
-	}
 }
 
 // Add an empty world to the context
@@ -191,8 +163,8 @@ World * Context::AddWorld(bool visual, SimTK::Real visualizerFrequency){
 	// Increment worldIndexes
 	worldIndexes.push_back(worldIndexes.size());
 
-	// Call World constructur
-	worlds.emplace_back(worldIndexes.back(), visual, visualizerFrequency);
+	// Call World constructor
+	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
 
 	//topFNs.push_back(std::vector<std::string>());
 	//crdFNs.push_back(std::vector<std::string>());
@@ -285,7 +257,8 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 }
 
 /** Load molecules based on loaded filenames **/
-void Context::AddMolecules(std::vector<std::string> argRoots)
+void Context::AddMolecules(std::vector<std::string> argRoots,
+	std::vector<std::string> argRootMobilities)
 {
 	// TODO assert that the filenames vectors are not empty
 	// Iterate through Worlds
@@ -306,8 +279,70 @@ void Context::AddMolecules(std::vector<std::string> argRoots)
 			// Add the molecule to the World
 			(updWorld(worldIx))->AddMolecule(&amberReader,
 					rbSpecsFNs[worldIx][molIx], flexSpecsFNs[worldIx][molIx],
-					regimens[worldIx][molIx], argRoots[worldIx]);
+					regimens[worldIx][molIx], argRoots[worldIx], argRootMobilities[worldIx]);
 		}
+	}
+}
+
+void Context::printStatus(void){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		if ((updWorld(worldIx))->integ  == nullptr ){
+			std::cout << "Context: integrator is null" << std::endl;
+			break;
+		}
+		SimTK::VerletIntegrator& checkIntegrator = *(updWorld(worldIx))->integ;
+		const SimTK::State& checkState = checkIntegrator.getState();
+		const SimTK::Stage& checkStage = checkState.getSystemStage();
+		std::cout << "Context world " << worldIx << " integ state stage " 
+			<< checkStage << std::endl << std::flush;
+		std::cout << "Context world " << worldIx << " integ state nof Subsystems " 
+			<< checkState.getNumSubsystems() << ":" << std::endl << std::flush;
+		for(int i = 0; i < checkState.getNumSubsystems(); i++){
+			std::cout
+				<< " Subsystem Name: "
+				<< checkState.getSubsystemName(SimTK::SubsystemIndex(i))
+				<< " Stage: "
+				<< checkState.getSubsystemStage(SimTK::SubsystemIndex(i))
+				<< " Version: "
+				<< checkState.getSubsystemVersion(SimTK::SubsystemIndex(i))
+				<< std::endl << std::flush;
+		}
+		//SimTK::State& checkAdvState = checkIntegrator.updAdvancedState();
+		//const SimTK::Stage& checkAdvStage = checkAdvState.getSystemStage();
+		//std::cout << "Context world " << worldIx << " integ advState stage " 
+		//	<< checkAdvStage << std::endl << std::flush;
+
+
+		// CompoundSystem <- MolecularMechanicsSystem <- MultibodySystem <- System
+		SimTK::CompoundSystem& compoundSystem = *((updWorld(worldIx))->getCompoundSystem());
+		std::cout << "Context world " << worldIx << " compoundSystem nof compounds " 
+			<< compoundSystem.getNumCompounds() << std::endl;
+		std::cout << "Context world " << worldIx << " System Topology realized "
+			<< compoundSystem.getNumRealizationsOfThisStage(SimTK::Stage::Topology)
+			<< " times.\n" << std::flush;
+
+		// Matter
+		////const SimTK::System& checkSystem = ((updWorld(worldIx))->matter)->getSystem();
+		SimTK::SimbodyMatterSubsystem& matter = *((updWorld(worldIx))->matter);
+		std::cout << "Context world " << worldIx 
+			<< " matter nofBodies " << matter.getNumBodies()
+			<< " nofConstraints " << matter.getNumConstraints()
+			<< "\n" << std::flush;
+
+		// GeneralForceSubsystem
+		SimTK::GeneralForceSubsystem& gfs = *((updWorld(worldIx))->forces);
+		std::cout << "Context world " << worldIx 
+			<< " gfs nofForces " << gfs.getNumForces()
+			<< "\n" << std::flush;
+
+		SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(worldIx))->forceField);
+		std::cout << "Context world " << worldIx 
+			<< " dumm nofThreads " << dumm.getNumThreadsRequested()
+			<< " useOpenMM " << dumm.getUseOpenMMAcceleration()
+			<< " " << dumm.isUsingOpenMM()
+			<< "\n" << std::flush;
+
+
 	}
 }
 
@@ -392,7 +427,7 @@ void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizer
 
 int Context::getNofMolecules()
 {
-	return worlds[0].getNofMolecules();
+	return nofMols;
 }
 
 // Set mixing rule for Lennard-Jones
@@ -834,11 +869,8 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				// Make the requested number of samples
 				bool accepted;
 				for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++) {
-					//if(currentAdvancedState.getNU() == 582){
-						accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMAOption[currentWorldIx]);
-					//}else{
-					//	accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, false);
-					//}
+					accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMAOption[currentWorldIx]);
+
 					if (accepted) {
 
 						// CONTACT DEBUG

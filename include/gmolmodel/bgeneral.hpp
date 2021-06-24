@@ -319,6 +319,8 @@ using DataFrame = std::vector<Point>;
 
 // Gmolmodel version of mean
 SimTK::Real bMean(std::vector<SimTK::Real> v);
+SimTK::Real bVariance(std::vector<SimTK::Real> v);
+SimTK::Real bStdev(std::vector<SimTK::Real> v);
 
 /** Gmolmodel version of correlation coefficient */
 SimTK::Real bCorr(std::vector<SimTK::Real> V, std::vector<SimTK::Real> W);

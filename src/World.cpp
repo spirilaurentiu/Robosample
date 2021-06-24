@@ -122,7 +122,7 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
  *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
  *		Visualizer, Visualizer::Reporter, DuMMForceFieldSubsystem,
  *  - Integrator with a TimeStepper on top **/
-World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
+World::World(int worldIndex, int requestedNofMols, bool isVisual, SimTK::Real visualizerFrequency)
 {
 	// Get an index from a higher caller
 	ownWorldIndex = worldIndex;
@@ -177,7 +177,7 @@ World::World(int worldIndex, bool isVisual, SimTK::Real visualizerFrequency)
 	// Thermodynamics
 	this->temperature = -1; // this leads to unusal behaviour hopefully
 
-	topologies.reserve(2);
+	topologies.reserve(requestedNofMols);
 
 }
 
@@ -189,7 +189,8 @@ void World::AddMolecule(
 		std::string rbFN,
 		std::string flexFN,
 		std::string regimenSpec,
-		std::string argRoot)
+		std::string argRoot,
+		std::string argRootMobility)
 {
 	// Statistics
 	moleculeCount++; // Used for unique names of molecules
@@ -197,7 +198,10 @@ void World::AddMolecule(
 	// Add a new molecule (Topology object which inherits Compound)
 	// to the vector of molecules.
 	// TODO: Why resName and moleculeName have to be the same?
+	// TODO store molecule name in vector maybe
 	std::string moleculeName = regimenSpec + std::to_string(moleculeCount);
+	roots.emplace_back(argRoot);
+	rootMobilities.emplace_back(argRootMobility);
 	topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
 
 	// Set atoms properties from a reader: number, name, element, initial
@@ -261,21 +265,19 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 		//SimTK::String GroundToCompoundMobilizerType = "Weld";
 		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
 
-		this->rootMobility = GroundToCompoundMobilizerType;
+		//rootMobilities[i] = GroundToCompoundMobilizerType;
 
-		if(i == 0) { // First compound
+		//if(i == 0) { // First compound
 			compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(i),
-				GroundToCompoundMobilizerType);
+				rootMobilities[i]);
+		//} else {
+		//	compoundSystem->modelOneCompound(
+		//		SimTK::CompoundSystem::CompoundIndex(i),
+		//		rootMobilities[i]);
+		//}
 		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
-		         << " grounded with mobilizer " << GroundToCompoundMobilizerType << std::endl;
-		} else {
-			compoundSystem->modelOneCompound(
-				SimTK::CompoundSystem::CompoundIndex(i),
-				"Free"); // TODO : Doesn't work with Cartesian
-		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
-		         << " grounded with mobilizer Free" << std::endl;
-		}
+		         << " grounded with mobilizer " << rootMobilities[i] << std::endl;
 
 		Topology& topology = topologies[i];
 		//std::cout << "World::ModelTopologies " <<
@@ -638,7 +640,10 @@ for samplers names. **/
 BaseSampler * World::addSampler(SamplerName samplerName)
 {
 	if(samplerName == SamplerName::HMC) {
-        samplers.emplace_back(std::make_unique<HMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get()));
+        	samplers.emplace_back(std::make_unique<HMCSampler>(this
+			, compoundSystem.get(), matter.get(), topologies
+			, forceField.get(), forces.get()
+			, ts.get()));
 	} /*else if (samplerName == SamplerName::LAHMC) {
         samplers.emplace_back(std::make_unique<LAHMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get(), 4));
 	}*/

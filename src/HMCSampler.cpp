@@ -34,9 +34,15 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	this->system = &argMatter->getSystem();
 
-	//this->residue = argResidue;
-	assert(topologies.size() > 0);
-	this->residue = &topologies[0];
+	//this->rootTopology = argResidue;
+
+	if( !(topologies.size() > 0) ){
+		std::cerr << "HMCSampler: No topologies found. Exiting...";
+		throw std::exception();
+		std::exit(1);
+	}
+
+	this->rootTopology = &topologies[0];
 
 	// Set total number of atoms and dofs
 	natoms = 0;
@@ -61,7 +67,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
 	this->residualEmbeddedPotential = 0.0;
 	nofSamples = 0;
-	this->alwaysAccept = false;
+	//this->alwaysAccept = false;
 
 	this->prevPrevAcceptance = SimTK::NaN;
 	this->prevAcceptance = SimTK::NaN;
@@ -82,6 +88,9 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	dRdot.resize(ndofs, 0);
 
 	UScaleFactors.resize(ndofs, 1);
+	UScaleFactorsNorm = std::sqrt(ndofs);
+	InvUScaleFactors.resize(ndofs, 1);
+	InvUScaleFactorsNorm = std::sqrt(ndofs);
 
 	MDStepsPerSampleStd = 0.5;
 }
@@ -90,6 +99,16 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 HMCSampler::~HMCSampler()
 {
 }
+
+SimTK::Real HMCSampler::getMDStepsPerSampleStd(void)
+{
+	return MDStepsPerSampleStd;
+}
+
+void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
+	MDStepsPerSampleStd = mdstd;
+}
+
 
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
@@ -129,12 +148,119 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	// Realize velocity
 	system->realize(someState, SimTK::Stage::Velocity);
 
-	// ask for a number of random numbers and check if we are done the next time we hit this function
+	// ask for a number of random numbers and check if we are done the next
+	//  time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+}
+
+/** Initialize velocities scaled by NMA factors.
+ Coresponds to R operator in LAHMC **/
+void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
+
+	// Get the number of dofs
+	const int nu = someState.getNU();
+
+	// Get sqrt of kT
+    	double sqrtRT = std::sqrt(RT);
+
+	// U vector
+	SimTK::Vector Us(nu, 1);
+	
+	// Vector multiplied by the sqrt of the inverse mass matrix
+	SimTK::Vector sqrtMInvUs(nu, 1);
+
+	if(NMAOption == 1){ // For pure demonstrative purposes
+
+		// Scale by NMA scale factors
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			Us.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+
+		SimTK::Real altSign;
+
+		if((nofSamples % 2) == 0){ altSign = 1;}else{altSign = -1;} 
+	
+		Us *= altSign;
+			//std::cout << "Us" <<'\n';
+			//for(int i = 0; i < nu; i++){std::cout << Us[i] << ' ';}
+			//std::cout << '\n';
+
+		someState.updU() = temperature*Us;
+
+	}else{
+	
+		// Get norm of UScaleFactors (TODO BUG not calculated correctly at loadUScaleFactors ??
+		float UScaleFactorsNormRecalc = 0;
+		for(int i = 0; i < nu; i++){
+			UScaleFactorsNormRecalc += UScaleFactors[i] * UScaleFactors[i];
+		}
+		UScaleFactorsNormRecalc = std::sqrt(UScaleFactorsNormRecalc);
+		//std::cout << "UScaleFactorsNormRecalc " << UScaleFactorsNormRecalc << '\n';
+	
+		if(NMAOption == 2){ // Use UscaleFactors with random sign
+
+			// Get random -1 or 1
+			SimTK::Real randSign;
+			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+			Us *= randSign;
+
+		}else if(NMAOption == 3){ // Set a random sign
+	
+			// Check if we can use our cache
+			// Draw X from a normal distribution N(0, 1)
+			if (nu != RandomCache.nu) {
+				// Rebuild the cache
+				// We also get here if the cache is not initialized
+				RandomCache.V.resize(nu);
+				RandomCache.SqrtMInvV.resize(nu);
+				RandomCache.sqrtRT = std::sqrt(RT);
+				RandomCache.nu = nu;
+		
+				// we don't get to use multithreading here
+				RandomCache.FillWithGaussian();
+			} else {
+				// wait for random number generation to finish (should be done by this stage)
+				RandomCache.task.wait();
+			}
+	
+			Us = RandomCache.V;
+	
+		}
+	
+		// Scale by NMA scale factors
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			Us.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+	
+		// Restore vector length
+		for(int i = 0; i < nu; i++){
+			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNormRecalc));
+		}
+	
+		// Multiply by the square root of the inverse mass matrix
+		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
+	
+		// Multiply by the square root of kT
+		sqrtMInvUs *= sqrtRT;
+	
+		// Set state velocities
+		someState.updU() = sqrtMInvUs;
+
+	}
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+
+	// ask for a number of random numbers and check if we are done the next
+	//  time we hit this function
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
+/*
 void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
 	// TODO: const will not work in adaptive block scheme
 	const int nu = someState.getNU();
@@ -142,10 +268,13 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 
 	// TODO: move this in constructor or variable set
 	SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-	SimTK::Real randSign = (randUni_m1_1 > 0) ? std::ceil(randUni_m1_1) : std::floor(randUni_m1_1) ;
+	SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
 
 	// Start velocities. Fill with a random sign (1 or -1)
-	std::vector<SimTK::Real> V(nu, randSign);
+	//std::vector<SimTK::Real> V(nu, randSign);
+
+	// Start velocities. Fill with one
+	//std::vector<SimTK::Real> V(nu, 1);
 
 	// Scale the sign with the scaling factors
 	std::transform(V.begin(), V.end(), // apply an operation on this
@@ -169,7 +298,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 			RandomCache.task.wait();
 		}
 
-		// Scale the velocities so far with Gaussians
+		// Scale the velocities so far with Gaussians(0, 1)
 		std::transform(V.begin(), V.end(), // apply an operation on this
 			RandomCache.V.begin(), // and this
 			V.begin(), // and store here
@@ -180,14 +309,38 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 			newU[k] = V[k];
 		}
 
-		// Multipliy by inverse of the sqrt(mass matrix)
+		// Multiply by inverse of the sqrt(mass matrix)
 		// This gives weights according to bodies
 		matter->multiplyBySqrtMInv(someState, newU, RandomCache.SqrtMInvV);
 
 	}else if(NMAOption == 1){
+
+		//int mnu;
+		// first body excluded due to iMod for now
+        	//for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+                //	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		//	mnu = mobod.getNumU(someState);
+                //	//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
+		//	calc_NU += mnu;
+		//}
+
+		// Average of sqrt(|V[i]|)
+		//SimTK::Real avg_sqrtV = 0;
+		//for(int k = 0; k < nu; k++){
+		//	avg_sqrtV = std::sqrt(std::abs(V[k]));
+		//}
+		
+		//SimTK::Real stdev = bStdev(V);
+		//for(int k = 0; k < nu; k++){
+		//	V[k] *= (std::sqrt(RT) / avg_sqrtV);
+		//}
+
 		// Worst assignment method TODO: std::vector to SimTK::Vector
+		SimTK::Real totalMass = matter->calcSystemMass(someState);
+		//std::cout << "HMCSampler: total mass" << totalMass << "\n";
 		for(int k = 0; k < nu; k++){
 			newU[k] = V[k];
+			//newU[k] *=  std::sqrt(totalMass / nu);
 		}
 
 	}else{
@@ -206,7 +359,11 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 	system->realize(someState, SimTK::Stage::Velocity);
 	//std::cout << "HMCSampler U " << someState.getU() << std::endl;
 
+	// ask for a number of random numbers and check if we are done the next
+	// time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
+*/
 
 // Apply the L operator 
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
@@ -234,11 +391,14 @@ void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 
 	float timeJump = 0;
 	if(MDStepsPerSampleStd != 0){
+		std::cout << "Got MDSTEPS_STD " << MDStepsPerSampleStd << '\n';
+
 		// TODO moe to internal variables set
         	std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd); 
         	float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
 		timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
 	}else{
+		std::cout << "Didn't get MDSTEPS_STD" << '\n';
 		timeJump = (timestep*MDStepsPerSample);
 	}
 	
@@ -334,10 +494,11 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 
 
 	// Decide and get a new sample
-	if ( getThermostat() == ThermostatName::ANDERSEN ) {
-		// MD with Andersen thermostat
+	//if ( getThermostat() == ThermostatName::ANDERSEN ) {
+	if ( alwaysAccept == true ){
+		// Simple molecular dynamics
 		this->acc = true;
-		std::cout << "\tsample accepted (always with andersen thermostat)\n";
+		std::cout << "\tsample accepted\n";
 		update(someState);
 	} else {
 		// we do not consider this sample accepted unless it passes all checks
@@ -355,8 +516,8 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 				std::cout << "\tsample rejected\n";
 				setSetConfigurationAndEnergiesToOld(someState);
 			}
-			++nofSamples;
 	}
+	++nofSamples;
 
 	return this->acc;
 }
@@ -539,7 +700,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
     matter->calcDetM(someState, V, DetV, &D0);
 
     assert(RT > SimTK::TinyReal);
-    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBATInternal(someState) );
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) );
 
     if(SimTK::isInf(result)){
         result = 0.0;
@@ -779,6 +940,7 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 {
     int nu = someState.getNU();
     UScaleFactors.resize(nu, 1);
+    InvUScaleFactors.resize(nu, 1);
 
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -789,9 +951,17 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
         	//std::cout << ' ' << int(uIx) ;
 			UScaleFactors[int(uIx)] = scaleFactor;
+			InvUScaleFactors[int(uIx)] = 1.0 / scaleFactor;
         }
         //std::cout << '\n';
     }
+
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Seed the random number generator. Set simulation temperature,
@@ -845,7 +1015,7 @@ void HMCSampler::initialize(SimTK::State& someState)
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
@@ -878,8 +1048,15 @@ void HMCSampler::initialize(SimTK::State& someState)
 
     for (int j=0; j < nu; ++j){
 	UScaleFactors[j] = 1;
+	InvUScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Same as initialize **/
@@ -909,7 +1086,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
         setOldFixman(calcFixman(someState));
         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
     }else{
         setOldFixman(0.0);
@@ -943,8 +1120,15 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 
     for (int j=0; j < nu; ++j){
 	UScaleFactors[j] = 1;
+	InvUScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Get/Set the timestep for integration **/
@@ -1326,25 +1510,25 @@ void HMCSampler::geomDihedral(){
     //DIHEDRAL 4 6 8 14 6 8 14 16
     //a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
     a1 = 4; a2 = 6; a3 = 8; a4 = 14; a5 = 16;
-    a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
-    a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
-    a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
-    a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
-    a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
+    a1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
+    a2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
+    a3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
+    a4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
+    a5pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
     int distA1, distA2, distA3, distA4;
     SimTK::Vec3 distA1pos, distA2pos;
     SimTK::Vec3 distA3pos, distA4pos;
     distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
-//		    distA1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
-//		    distA2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
-//		    distA3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
-//		    distA4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
+//		    distA1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
+//		    distA2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
+//		    distA3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
+//		    distA4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
 //            std::cout << " dihedral elements"
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a1))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a2))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a3))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a4))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a5))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a1))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a2))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a3))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a4))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a5))
 //              << std::endl;
 //            std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
     std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
@@ -1362,7 +1546,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
     // Get new Fixman potential
     if(useFixman){
         fix_n = calcFixman(someState);
-        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+        logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
     }else{
         fix_n = 0.0;
         logSineSqrGamma2_n = 0.0;
@@ -1377,7 +1561,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
     // TODO: replace with the following after checking is the same thing
     //pe_n = compoundSystem->calcPotentialEnergy(someState);
 
-    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+    logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
 
     // Calculate total energy
     if(useFixman){

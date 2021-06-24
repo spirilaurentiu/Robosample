@@ -17,6 +17,7 @@ public:
 	~Context();
 
 	void printStatus(void);
+	void throwAndExit(std::string errMsg, int errCode);
 
 	World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
 	//World * AddWorld(World *, bool visual);
@@ -43,7 +44,8 @@ public:
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
 
 	/** Load molecules based on loaded filenames **/
-	void AddMolecules(std::vector<std::string> argRoots);
+	void AddMolecules(std::vector<std::string> argRoots,
+		std::vector<std::string> argRootMobilities);
 	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
 	void realizeTopology();

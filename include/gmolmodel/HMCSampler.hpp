@@ -292,6 +292,9 @@ public:
 
 	void setMDStepsPerSample(int mdStepsPerSample);
 
+	SimTK::Real getMDStepsPerSampleStd(void);
+	void setMDStepsPerSampleStd(SimTK::Real mdstd);
+
 	/** Print detailed energy information **/
 	void PrintDetailedEnergyInfo(SimTK::State& someState);
 
@@ -329,7 +332,7 @@ protected:
 	SimTK::Real logSineSqrGamma2_o = 0.0, logSineSqrGamma2_n = 0.0, logSineSqrGamma2_set = 0.0;
 
 	bool useFixman = false;
-	bool alwaysAccept = false;
+	//bool alwaysAccept = false;
 
 	int acceptedSteps = 0;
 	int acceptedStepsBufferSize = 30;
@@ -353,6 +356,9 @@ protected:
 	std::vector<SimTK::Real> dRdot;
 
 	std::vector<SimTK::Real> UScaleFactors;
+	SimTK::Real UScaleFactorsNorm = 0.0;
+	std::vector<SimTK::Real> InvUScaleFactors;
+	SimTK::Real InvUScaleFactorsNorm = 0.0;
 
 	SimTK::Real timestep;
 	SimTK::Real prevTimestep;

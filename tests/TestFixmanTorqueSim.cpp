@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
 	readAmberInput amberReader;
 	amberReader.readAmberFiles("etanMob/ligand.inpcrd", "etanMob/ligand.prmtop");
-	world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "TD", "0");
+	world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "TD", "0", "Free");
 
 	// Using OpenMM acceleration
 	//world->updForceField()->setUseOpenMMAcceleration(true);
