@@ -31,9 +31,13 @@ simulation.context.setPositions(inpcrd.positions)
 
 
 ## Generate NMA-Scaled Flex Files
-NMAFlex = simulation.context.NMAtoFlex(simulation.context.mdtrajTraj, "/home/teo/Laurentiu/RobosampleDev/NMA/RS_NMA/iMod/iMOD_v1.04_Linux/bin/imode_gcc", Modes=5)
-NMAFlex.GetFlexScaled()
-NMAFlex.CleanUp()
+s1_5 = [[1, 5]]
+#simulation.addWorld(regionType='roll', region=s1_5,  rootMobility='Free', timestep=0.003, mdsteps=10, argJointType='Pin', subsets=['rama'], samples=1)
+#simulation.addWorld(regionType='stretch', region=nter,  rootMobility='Free', timestep=0.004, mdsteps=40, argJointType='Pin', subsets=['rama', 'side'], samples=6)
+simulation.addWorld(regionType='stretch', region=s1_5,  rootMobility='Free', timestep=0.003, mdsteps=40, argJointType='BallM', subsets=['rama', 'side'], samples=10, contacts=True, contactCutoff=2)
+#simulation.addWorld(regionType='stretch', region=hairturns,  rootMobility='Free', timestep=0.002, mdsteps=50, argJointType='Pin', subsets=['rama'], samples=9)
+#simulation.addWorld(regionType='loops', rootMobility='Free', timestep=0.004, mdsteps=30, argJointType='Pin', subsets=['rama'], samples=1)
+#simulation.addWorld(regionType='accesible', rootMobility='Weld', timestep=0.004, mdsteps=30, argJointType='Pin', subsets=['side'], samples=1)
 
 # run simulation
 simulation.step(5)
