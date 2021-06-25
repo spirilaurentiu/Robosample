@@ -339,10 +339,18 @@ int main(int argc, char **argv)
 		context.setNofMDStepsPerSample(worldIx, 0, std::stoi(setupReader.get("MDSTEPS")[worldIx]));
 	}
 
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
-			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setMDStepsPerSampleStd(
-					std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]));
+	if(setupReader.find("MDSTEPS_STD")){
+		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
+			for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+				pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setMDStepsPerSampleStd(
+						std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]));
+			}
+		}
+	}else{
+		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
+			for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+				pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setMDStepsPerSampleStd(0);
+			}
 		}
 	}
 
