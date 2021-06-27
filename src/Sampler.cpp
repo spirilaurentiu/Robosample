@@ -131,6 +131,21 @@ void Sampler::setAlwaysAccept(bool argAlwaysAccept)
     alwaysAccept = argAlwaysAccept;
 }
 
+<<<<<<< HEAD
+=======
+// Is the sampler always accepting the proposed moves
+bool Sampler::getAlwaysAccept(void) const
+{
+    return alwaysAccept;
+}
+
+// Is the sampler always accepting the proposed moves
+void Sampler::setAlwaysAccept(bool argAlwaysAccept)
+{
+    alwaysAccept = argAlwaysAccept;
+}
+
+>>>>>>> d86cf6b381babd789f4c2b54a82e11b4d0cf1027
 
 // Compute mass matrix determinant
 SimTK::Real Sampler::calcMassDeterminant(SimTK::State& state)
