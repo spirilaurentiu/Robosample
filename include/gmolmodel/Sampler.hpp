@@ -36,6 +36,12 @@ public:
 	void initialize(SimTK::State& someState);
 	void reinitialize(SimTK::State& someState);
 
+	// Is the sampler always accepting the proposed moves
+	virtual bool getAlwaysAccept(void) const;
+
+	// Is the sampler always accepting the proposed moves
+	virtual void setAlwaysAccept(bool);
+
 	// Getter / setter for macroscopic temperature and RT
 	// virtual void setTemperature(SimTK::Real) = 0; // RE
 	SimTK::Real getTemperature() const;
@@ -59,7 +65,7 @@ public:
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 
 	/** Propose a move **/
-	virtual void propose(SimTK::State& someState) = 0;
+	virtual bool propose(SimTK::State& someState) = 0;
 	//virtual eval() = 0;
 	virtual void update(SimTK::State& someState) = 0;
 
@@ -72,8 +78,8 @@ public:
 	SimTK::CompoundSystem *compoundSystem;
 	SimTK::SimbodyMatterSubsystem *matter;
 
-	//SimTK::Compound *residue;
-	Topology *residue;
+	//SimTK::Compound *rootTopology;
+	Topology *rootTopology;
 
 	std::vector<Topology>& topologies;
 	std::size_t natoms;
@@ -88,6 +94,7 @@ public:
 	SimTK::TimeStepper *timeStepper;
 
 	// Thermodynamics
+	bool alwaysAccept = false;
 	ThermostatName thermostat;
 	SimTK::Real temperature;
 	SimTK::Real RT;

@@ -32,7 +32,7 @@ public:
     virtual void reinitialize(SimTK::State& advanced, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature) ; 
 
     // Assign a random conformation. Time measured in picoseconds
-    void propose(SimTK::State& someState, SimTK::Real timestep, int nosteps);
+    bool propose(SimTK::State& someState, SimTK::Real timestep, int nosteps);
 
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation

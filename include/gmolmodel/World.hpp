@@ -40,7 +40,8 @@
 
 #include "server.hpp"
 #include "Topology.hpp"
-#include "LAHMCSampler.hpp"
+//#include "LAHMCSampler.hpp"
+#include "HMCSampler.hpp"
 #include "ConformationalSearch.hpp"
 
 // TODO write a pdb writer for all the Compounds
@@ -70,11 +71,13 @@ class World {
 public: 
 	// --- Structural functions ---
 	/** Constructor **/
-	explicit World(int worldIndex, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
+	explicit World(int worldIndex, int requestedNofMols, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
 	/** Creates a topology object and based on amberReader forcefield 
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
-	void AddMolecule(readAmberInput *amberReader, std::string rbFN, std::string flexFN, std::string regimenSpec, std::string argRoot);
+	void AddMolecule(readAmberInput *amberReader, 
+		std::string rbFN, std::string flexFN, std::string regimenSpec,
+		std::string argRoot, std::string argRootMobility);
 
 	/** Assign a scale factor for generalized velocities to every mobilized 
 	body **/
@@ -248,7 +251,8 @@ public:
 	/** Molecules (topologies<-Compounds) objects **/
 	//std::vector<bMoleculeReader *> moleculeReaders;
 	std::vector<Topology> topologies;
-	std::string rootMobility;
+	std::vector<std::string> roots;
+	std::vector<std::string> rootMobilities;
 
 	/** Joint types **/
 	//std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
@@ -278,7 +282,7 @@ public:
 	// Contact related
 	std::unique_ptr<ContactTrackerSubsystem> tracker;
 	std::unique_ptr<CompliantContactSubsystem> contactForces;
-    ContactCliqueId clique1;
+	ContactCliqueId clique1;
 	std::unique_ptr<MobilizedBody::Weld> membrane;
 	std::unique_ptr<Body::Rigid> memBody;
 

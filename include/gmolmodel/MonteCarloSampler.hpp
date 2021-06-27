@@ -67,7 +67,7 @@ public:
     void assignConfFromTVector(SimTK::State& advanced);
 
     // Assign a random conformation
-    void propose(SimTK::State& advanced);
+    bool propose(SimTK::State& advanced);
 
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation
@@ -134,10 +134,10 @@ public:
     void sendConfToEvaluator(void);
     
     // Is the sampler always accepting the proposed moves
-    bool getAlwaysAccept(void) const;
+    //bool getAlwaysAccept(void) const;
 
     // Is the sampler always accepting the proposed moves
-    void setAlwaysAccept(bool);
+    //void setAlwaysAccept(bool);
 
     // Get the number of accpted conformations
     int getAcceptedSteps(void) const;
@@ -166,7 +166,7 @@ protected:
     SimTK::Real residualEmbeddedPotential = 0.0;
 
     bool useFixman = false;
-    bool alwaysAccept = false;
+    //bool alwaysAccept = false;
 
     int acceptedSteps = 0;
     int acceptedStepsBufferSize = 30;

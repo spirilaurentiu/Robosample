@@ -73,7 +73,7 @@ void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTempe
 		setOldFixman(calcFixman(someState));
 		setSetFixman(getOldFixman());
 
-		setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+		setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}else{
 		setOldFixman(0.0);
@@ -111,7 +111,7 @@ void MonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real argTem
 		setOldFixman(calcFixman(someState));
 		setSetFixman(getOldFixman());
 
-		setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
+		setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}else{
 		setOldFixman(0.0);
@@ -137,16 +137,16 @@ bool MonteCarloSampler::isUsingFixmanPotential() const
 }
 
 // Is the sampler always accepting the proposed moves
-bool MonteCarloSampler::getAlwaysAccept() const
-{
-    return alwaysAccept;
-}
+//bool MonteCarloSampler::getAlwaysAccept(void) const
+//{
+//   return alwaysAccept;
+//}
 
 // Is the sampler always accepting the proposed moves
-void MonteCarloSampler::setAlwaysAccept(bool argAlwaysAccept)
-{
-    alwaysAccept = argAlwaysAccept;
-}
+//void MonteCarloSampler::setAlwaysAccept(bool argAlwaysAccept)
+//{
+//    alwaysAccept = argAlwaysAccept;
+//}
 
 
 // Compute Fixman potential (should have been calcDetMInv ??)
@@ -185,11 +185,11 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     //SimTK::Real EiDetM = EiM.determinant();
     //std::cout << "EiDetM= " << EiDetM << std::endl;
     assert(RT > SimTK::TinyReal);
-    //SimTK::Real result = 0.5 * RT * (((Topology *)residue)->calcLogDetMBAT(someState) - std::log(D0));
-    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)residue)->calcLogDetMBATInternal(someState) );
+    //SimTK::Real result = 0.5 * RT * (((Topology *)rootTopology)->calcLogDetMBAT(someState) - std::log(D0));
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) );
     //SimTK::Real result = 0.5 * RT * std::log(D0);
     //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman 05kT logdetM: " << 0.5 * RT * std::log(D0) << std::endl;
-    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)residue)->calcLogDetMBATInternal(someState) << std::endl;
+    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) << std::endl;
 
     if(SimTK::isInf(result)){
         result = 0.0;
@@ -448,7 +448,7 @@ void MonteCarloSampler::assignConfFromTVector(SimTK::State& someState)
 // In torsional dynamics the first body has 7 Q variables for 6 dofs - one
 // quaternion (q) and 3 Cartesian coordinates (x). updQ will return: 
 // [qw, qx, qy, qz, x1, x2, x3]
-void MonteCarloSampler::propose(SimTK::State& someState)
+bool MonteCarloSampler::propose(SimTK::State& someState)
 {
     for (int i = 1; i < matter->getNumBodies(); ++i){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(i));

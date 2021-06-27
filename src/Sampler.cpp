@@ -40,9 +40,12 @@ Sampler::Sampler(World *argWorld,
 
 	this->system = &argMatter->getSystem();
 
-	//this->residue = argResidue;
+	//this->rootTopology = argResidue;
 	assert(topologies.size() > 0);
-	this->residue = &topologies[0];
+	this->rootTopology = &topologies[0];
+
+	//
+	this->alwaysAccept = false;
 
 	// Set total number of atoms and dofs
 	natoms = 0;
@@ -92,7 +95,9 @@ void Sampler::setSeed(int64_t argSeed)
 		// According to this https://stackoverflow.com/a/18262495, the lower bits are of not-so-exceptional quality.
 		// This is also stated in https://en.wikipedia.org/wiki/Linear_congruential_generator.
 		// In order to mitigate this, only keep the highest 32 bits.
-		return static_cast<RANDOM_ENGINE_INIT_RESULT_TYPE>(randomEngineInit() >> sizeof(RANDOM_ENGINE_INIT_RESULT_TYPE));
+		// return static_cast<RANDOM_ENGINE_INIT_RESULT_TYPE>(randomEngineInit() >> sizeof(RANDOM_ENGINE_INIT_RESULT_TYPE)); // result is already 32 bit
+
+		return static_cast<RANDOM_ENGINE_INIT_RESULT_TYPE>(randomEngineInit());
 	};
 
 	// Size for initial state bits
@@ -113,6 +118,19 @@ void Sampler::setSeed(int64_t argSeed)
 	// [2] https://stats.stackexchange.com/questions/436733/is-there-such-a-thing-as-a-good-bad-seed-in-pseudo-random-number-generation
 	randomEngine.discard(Size * 2);
 }
+
+// Is the sampler always accepting the proposed moves
+bool Sampler::getAlwaysAccept(void) const
+{
+    return alwaysAccept;
+}
+
+// Is the sampler always accepting the proposed moves
+void Sampler::setAlwaysAccept(bool argAlwaysAccept)
+{
+    alwaysAccept = argAlwaysAccept;
+}
+
 
 // Compute mass matrix determinant
 SimTK::Real Sampler::calcMassDeterminant(SimTK::State& state)

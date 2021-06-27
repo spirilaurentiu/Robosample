@@ -28,7 +28,7 @@ public:
         : Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper) {}
 
     ~DerivedSampler(){}
-    void propose(SimTK::State& someState){}
+    bool propose(SimTK::State& someState) { return false; }
     void update(SimTK::State& someState){}
 };
 

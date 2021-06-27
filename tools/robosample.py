@@ -63,7 +63,7 @@ class World:
 #
 
 class System:
-	""" Conteins Worlds and forces """
+	""" Contains Worlds and forces """
 	def __init__(self):
 		self.moldirs = []
 		self.topologyFNs = []
@@ -111,7 +111,7 @@ class AmberPrmtopFile:
 					moldirs += "/bot" + str(i)
 					break
 
-			# Check if the number of directories is too hugh
+			# Check if the number of directories is too huge
 			if moldirs == "robots":
 				print("Error: there are already 99999 directories in robots/. Exiting...")
 				exit(1)
@@ -687,8 +687,208 @@ class Context:
 			return True
 		
 		
-		
+	class NMAtoFlex:
+		def __init__(self, MDTrajObj, iModExec, tempRoot="./temp", Modes=1):
+			
+			"""
+			Class that takes an MDTraj Trajectory object, ideally a prmtop/inpcrd pair 
+			so the atom indices don't change, and runs iMod on the coordinates, then
+			generates a flex file compatible with the Robosample package.
+			
+			Parameters
+			----------
+			
+			MDTrajObj:  MDTrajTrajectory Object
+			            Trajectory object for which the NMA will be done.
+			iModExec:   str
+			            Path to iMod executable (imode_gcc)
+			tempRoot:   str
+			            Path where temporary iMod-generated files will be stored
 
+			Modes:		int
+							How many modes to compute. Default = 20.
+
+			"""
+			
+			## Slice any non-protein atoms from the MDTraj Trajectory Object
+			ProteinAtoms = MDTrajObj.topology.select("protein")
+			MDTrajObj = MDTrajObj.atom_slice(ProteinAtoms)
+			
+			## Generate a PDB
+			PDBName = "{}.pdb".format(tempRoot)
+			MDTrajObj.save_pdb(PDBName, force_overwrite=True)
+		
+			## Run the actual iMod command
+			iModCommand = [iModExec, PDBName, "-o {}".format(tempRoot), "-x",
+								"--save_fixfile", "-n {}".format(Modes)]
+			iMod_sub = subprocess.Popen(iModCommand, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			iMod_sub.communicate()
+       
+			## Generate Appropriate Arrays containing information
+			## Parse the fixfile, which is the same regardless of mode
+			flexfields = [("ResIx", int), ("Phi", float), ("Chi", float), ("Psi", float)]
+			FixIn = open("{}.fix".format(tempRoot), "r").readlines()
+			FixArray = np.zeros(0, dtype=flexfields)
+			for Line in FixIn:
+				LineSplit = Line.strip("\n").split()
+				if (len(LineSplit) == 4):
+					FixArray = np.append(FixArray,np.array([(LineSplit[0], LineSplit[1], LineSplit[2], LineSplit[3])], dtype=FixArray.dtype)) 
+				if (len(LineSplit) == 2):
+					FixArray = np.append(FixArray,np.array([(LineSplit[0], 2, 0, 0)], dtype=FixArray.dtype)) 
+
+			## Parse the Evec file, generating a list of lists, one for each mode
+			EvecIn = open("{}_ic.evec".format(tempRoot), "r").readlines()
+			for lineIx in range(len(EvecIn)):
+				EvecIn[lineIx] = EvecIn[lineIx].split()
+        
+			## Get the number of computed modes
+			NOfModes = int(EvecIn[1][3])
+			print ("Computed a number of {} modes".format(NOfModes))
+			EvecIn = EvecIn[2:]
+			EvecModes = []
+			Frequencies = []
+			
+			## We retrieve the SIGNED values of each evec contribution
+			CurrentMode=[]
+			for lineIx in range(len(EvecIn)):
+				if (EvecIn[lineIx][0] == "****"):
+					if (len(CurrentMode) > 0):
+						EvecModes.append(CurrentMode)
+						CurrentMode=[]
+					continue
+				if (len(EvecIn[lineIx][0]) > 2):
+					for EvecValue in EvecIn[lineIx]:
+						CurrentMode.append(float(EvecValue)) 
+				else:
+					Frequencies.append(1/float(EvecIn[lineIx][1]))
+			EvecModes.append(CurrentMode)
+
+			EvecModesScale = np.array(EvecModes)
+
+			self.EvecModes = EvecModes
+			self.EvecModesScale = EvecModesScale
+			self.MDTrajObj = MDTrajObj
+			self.PDBName = PDBName
+			self.FixArray = FixArray
+			self.tempRoot = tempRoot
+
+		def GetFlexScaled(self, Output="NMAFlexFiles/receptor", GenerateVMD=True):
+			"""
+			Function that uses the previously generated arrays to generate the
+			Robosample-compatible flex files, along with a scaling factor for velocity.
+			
+			Parameters
+			----------
+			
+			Output:     	str
+			            Root name for generated flex files.
+			
+			GenerateVMD:	bool
+							If True: generates a PDB file where the beta column is replaced by
+							the NMA-based velocity scale 
+							Default: True
+			"""
+
+			##Create Output dir if it doesn't exist:
+			if (os.path.exists(Output.split("/")[0]) == False):
+				print("{} did not exist and has been created.".format(Output))
+				os.mkdir(Output.split("/")[0])
+
+			ModeArray = self.FixArray.copy()
+	
+			##Assign vectors to dihedral angles and scaling factors
+			for EvecModesScaleIx in range(len(self.EvecModes)):
+				counter = 0
+				for aIx in range(ModeArray.shape[0]):
+					if (ModeArray[aIx]["Phi"] != 0):
+						ModeArray[aIx]["Phi"] = self.EvecModesScale[EvecModesScaleIx][counter]
+						counter +=1
+					if (ModeArray[aIx]["Phi"] == 2):  ## This is to account for inter-chain DoFs
+						counter +=1
+					if (ModeArray[aIx]["Chi"] != 0):
+						ModeArray[aIx]["Chi"] = self.EvecModesScale[EvecModesScaleIx][counter]
+						counter +=1
+					if (ModeArray[aIx]["Psi"] != 0):
+						ModeArray[aIx]["Psi"] = self.EvecModesScale[EvecModesScaleIx][counter]
+						counter +=1
+	
+				## Sort Arrays by 
+				sortFlexChi = np.sort(ModeArray, order="Chi")
+				sortFlexChi = np.flip(sortFlexChi)
+				sortFlexPhi = np.sort(ModeArray, order="Phi")
+				sortFlexPhi = np.flip(sortFlexPhi)
+				sortFlexPsi = np.sort(ModeArray, order="Psi")
+				sortFlexPsi = np.flip(sortFlexPsi)
+			
+				## Extract the associated PHI/PSI angles from the above array  
+				fixfields = [("atom1", int), ("atom2", int),("scale", float)]
+				joint="Pin" 
+				FlexOutArray = np.zeros(0, dtype=fixfields)
+				for ResIx in range(ModeArray.shape[0]):
+					if (str(self.MDTrajObj.topology.residue(sortFlexPhi[ResIx]["ResIx"]))[0:3] != "PRO"):
+						NIndex = self.MDTrajObj.topology.select("resid {} and name N".format(sortFlexPhi[ResIx]["ResIx"]))[0]
+						CAIndex = self.MDTrajObj.topology.select("resid {} and name CA".format(sortFlexPhi[ResIx]["ResIx"]))[0]
+						ScaleFactor = sortFlexPhi[ResIx]["Phi"]
+						FlexOutArray = np.append(FlexOutArray,np.array((NIndex, CAIndex, ScaleFactor), dtype=fixfields)) 
+				for ResIx in range(ModeArray.shape[0]):
+					CAIndex = self.MDTrajObj.topology.select("resid {} and name CA".format(sortFlexPsi[ResIx]["ResIx"]))[0]
+					CIndex = self.MDTrajObj.topology.select("resid {} and name C".format(sortFlexPsi[ResIx]["ResIx"]))[0]
+					ScaleFactor = sortFlexPsi[ResIx]["Psi"]
+					FlexOutArray = np.append(FlexOutArray,np.array((CAIndex, CIndex, ScaleFactor), dtype=fixfields)) 
+				for ResIx in range(ModeArray.shape[0]):
+					if (str(self.MDTrajObj.topology.residue(sortFlexChi[ResIx]["ResIx"]))[0:3] not in ["PRO", "GLY","ALA"]):
+						CAIndex = self.MDTrajObj.topology.select("resid {} and name CA".format(sortFlexChi[ResIx]["ResIx"]))[0]
+						CBIndex = self.MDTrajObj.topology.select("resid {} and name CB".format(sortFlexChi[ResIx]["ResIx"]))[0]
+						ScaleFactor = sortFlexChi[ResIx]["Chi"]
+						FlexOutArray = np.append(FlexOutArray,np.array((CAIndex, CBIndex, ScaleFactor), dtype=fixfields)) 
+	
+				## We now sort the above array by the ScaleFactor, and write a flex file
+				FlexOutArray = np.sort(FlexOutArray, order="scale")
+				FlexOutArray = np.flip(FlexOutArray)
+				
+				FlexOut = open("{}.Mode{}.Scaled.flex".format(Output, EvecModesScaleIx), "w")
+				FlexOut.write("##Scaled Flex File##\n")
+				for Ix in range(FlexOutArray.shape[0]):
+					if (FlexOutArray[Ix]["scale"] != 0):
+						FlexOut.write("{} {} {} {} #{} {} \n".format(FlexOutArray[Ix]["atom1"], FlexOutArray[Ix]["atom2"], joint, FlexOutArray[Ix]["scale"], self.MDTrajObj.topology.atom(FlexOutArray[Ix]["atom1"]), self.MDTrajObj.topology.atom(FlexOutArray[Ix]["atom2"])))
+				FlexOut.close()
+
+				## Write PDB with beta factors that reflect the scales
+				if (GenerateVMD == True):
+					BetaAtoms = list(FlexOutArray["atom1"])
+					BetaFactors = list(FlexOutArray["scale"])
+					DefaultBeta = -1 
+	
+					BetaColor = []
+					BetaColor.append(BetaAtoms)
+					BetaColor.append(BetaFactors)
+	
+					PDBFileIn = open(self.PDBName, "r")				
+					PDBLines = []
+					for line in PDBFileIn:
+						PDBLines.append(line.strip().split())
+					for line in PDBLines:
+						if (line[0] == "ATOM"):
+							if (int(line[1])-1 in BetaColor[0]):
+								line[10] = BetaColor[1][BetaColor[0].index(int(line[1])-1)]*100
+							else:
+								line[10] = DefaultBeta		
+					PDBFileIn = open(self.PDBName, "w")
+					for i in PDBLines:
+						if (len(i) == 12):
+							PDBFileIn.write("{:6s}{:5d}  {:^4s}{:3s} {:1s}{:4d}    {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}          {:>2s}\n".format(i[0], int(i[1]), i[2], i[3], i[4], int(i[5]), float(i[6]), float(i[7]), float(i[8]), float(i[9]), float(i[10]), i[11]))	##PDB Format
+					PDBFileIn.close()
+	
+					print("VMD File written!")
+
+		def CleanUp(self):
+			"""
+			Simple function that cleans up the files generated during the iMod process.
+			Does NOT remove the pdb generated, since you need that for the VMD scripts to work. 
+			"""
+			for FileExt in [".fix", ".log", "_ic.evec", "_model.pdb"]:
+				procList   = ["rm", "{}{}".format(self.tempRoot,FileExt)]
+				removeTemp = subprocess.Popen(procList, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 	#	
 #

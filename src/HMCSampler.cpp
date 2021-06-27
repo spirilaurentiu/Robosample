@@ -22,15 +22,52 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	SimTK::DuMMForceFieldSubsystem *argDumm,
 	SimTK::GeneralForceSubsystem *argForces,
 	SimTK::TimeStepper *argTimeStepper) :
-		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
-		MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
+		//, MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
+	// BEGIN SAMPLER
+	assert(argCompoundSystem != nullptr);
+	assert(argMatter != nullptr);
+	assert(argDumm != nullptr);
+	assert(argForces != nullptr);
+	assert(argTimeStepper != nullptr);
+
+	this->system = &argMatter->getSystem();
+
+	//this->rootTopology = argResidue;
+
+	if( !(topologies.size() > 0) ){
+		std::cerr << "HMCSampler: No topologies found. Exiting...";
+		throw std::exception();
+		std::exit(1);
+	}
+
+	this->rootTopology = &topologies[0];
+
+	// Set total number of atoms and dofs
+	natoms = 0;
+	for (const auto& topology: topologies){
+		natoms += topology.getNumAtoms();
+	}
+
+	int ThreeFrom3D = 3;
+	ndofs = natoms * ThreeFrom3D;
+	// END SAMPLER
+
+	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
+	proposeExceptionCaught = false;
+
+	for(int i = 0; i < acceptedStepsBufferSize; i++){ 
+		acceptedStepsBuffer.push_back(0);
+	}
+
 	this->useFixman = false;  
 	this->fix_n = this->fix_o = 0.0;
 	this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
 	this->residualEmbeddedPotential = 0.0;
 	nofSamples = 0;
-	this->alwaysAccept = false;
+	//this->alwaysAccept = false;
 
 	this->prevPrevAcceptance = SimTK::NaN;
 	this->prevAcceptance = SimTK::NaN;
@@ -49,11 +86,751 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	dR.resize(ndofs, 0);
 	dRdot.resize(ndofs, 0);
+
+	UScaleFactors.resize(ndofs, 1);
+	UScaleFactorsNorm = std::sqrt(ndofs);
+	InvUScaleFactors.resize(ndofs, 1);
+	InvUScaleFactorsNorm = std::sqrt(ndofs);
+
+	MDStepsPerSampleStd = 0.5;
 }
 
 /** Destructor **/
 HMCSampler::~HMCSampler()
 {
+}
+
+SimTK::Real HMCSampler::getMDStepsPerSampleStd(void)
+{
+	return MDStepsPerSampleStd;
+}
+
+void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
+	MDStepsPerSampleStd = mdstd;
+}
+
+
+/** Initialize velocities according to the Maxwell-Boltzmann
+distribution.  Coresponds to R operator in LAHMC **/
+void HMCSampler::initializeVelocities(SimTK::State& someState){
+	// Check if we can use our cache
+    const int nu = someState.getNU();
+	if (nu != RandomCache.nu) {
+		// Rebuild the cache
+		// We also get here if the cache is not initialized
+		RandomCache.V.resize(nu);
+		RandomCache.SqrtMInvV.resize(nu);
+		RandomCache.sqrtRT = std::sqrt(RT);
+		RandomCache.nu = nu;
+
+		// we don't get to use multithreading here
+		RandomCache.FillWithGaussian();
+	} else {
+		// wait for random number generation to finish (should be done by this stage)
+		RandomCache.task.wait();
+	}
+
+	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers 
+	//std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
+	//	UScaleFactors.begin(), // and this
+	//	RandomCache.V.begin(), // and store here
+	//	std::multiplies<SimTK::Real>()); // this is the operation
+	
+	// Scale by square root of the inverse mass matrix
+	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
+
+	// Set stddev according to temperature
+	RandomCache.SqrtMInvV *= (RandomCache.sqrtRT);
+
+	// Raise the temperature
+	someState.updU() = RandomCache.SqrtMInvV;
+
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+
+	// ask for a number of random numbers and check if we are done the next
+	//  time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+}
+
+/** Initialize velocities scaled by NMA factors.
+ Coresponds to R operator in LAHMC **/
+void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
+
+	// Get the number of dofs
+	const int nu = someState.getNU();
+
+	// Get sqrt of kT
+    	double sqrtRT = std::sqrt(RT);
+
+	// U vector
+	SimTK::Vector Us(nu, 1);
+	
+	// Vector multiplied by the sqrt of the inverse mass matrix
+	SimTK::Vector sqrtMInvUs(nu, 1);
+
+	if(NMAOption == 1){ // For pure demonstrative purposes
+
+		// Scale by NMA scale factors
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			Us.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+
+		SimTK::Real altSign;
+
+		if((nofSamples % 2) == 0){ altSign = 1;}else{altSign = -1;} 
+	
+		Us *= altSign;
+			//std::cout << "Us" <<'\n';
+			//for(int i = 0; i < nu; i++){std::cout << Us[i] << ' ';}
+			//std::cout << '\n';
+
+		someState.updU() = temperature*Us;
+
+	}else{
+	
+		// Get norm of UScaleFactors (TODO BUG not calculated correctly at loadUScaleFactors ??
+		float UScaleFactorsNormRecalc = 0;
+		for(int i = 0; i < nu; i++){
+			UScaleFactorsNormRecalc += UScaleFactors[i] * UScaleFactors[i];
+		}
+		UScaleFactorsNormRecalc = std::sqrt(UScaleFactorsNormRecalc);
+		//std::cout << "UScaleFactorsNormRecalc " << UScaleFactorsNormRecalc << '\n';
+	
+		if(NMAOption == 2){ // Use UscaleFactors with random sign
+
+			// Get random -1 or 1
+			SimTK::Real randSign;
+			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+			Us *= randSign;
+
+		}else if(NMAOption == 3){ // Set a random sign
+	
+			// Check if we can use our cache
+			// Draw X from a normal distribution N(0, 1)
+			if (nu != RandomCache.nu) {
+				// Rebuild the cache
+				// We also get here if the cache is not initialized
+				RandomCache.V.resize(nu);
+				RandomCache.SqrtMInvV.resize(nu);
+				RandomCache.sqrtRT = std::sqrt(RT);
+				RandomCache.nu = nu;
+		
+				// we don't get to use multithreading here
+				RandomCache.FillWithGaussian();
+			} else {
+				// wait for random number generation to finish (should be done by this stage)
+				RandomCache.task.wait();
+			}
+	
+			Us = RandomCache.V;
+	
+		}
+	
+		// Scale by NMA scale factors
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			Us.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+	
+		// Restore vector length
+		for(int i = 0; i < nu; i++){
+			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNormRecalc));
+		}
+	
+		// Multiply by the square root of the inverse mass matrix
+		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
+	
+		// Multiply by the square root of kT
+		sqrtMInvUs *= sqrtRT;
+	
+		// Set state velocities
+		someState.updU() = sqrtMInvUs;
+
+	}
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+
+	// ask for a number of random numbers and check if we are done the next
+	//  time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+}
+
+/** Initialize velocities according to the Maxwell-Boltzmann
+distribution.  Coresponds to R operator in LAHMC **/
+/*
+void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
+	// TODO: const will not work in adaptive block scheme
+	const int nu = someState.getNU();
+	SimTK::Vector newU(nu);
+
+	// TODO: move this in constructor or variable set
+	SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+	SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+
+	// Start velocities. Fill with a random sign (1 or -1)
+	//std::vector<SimTK::Real> V(nu, randSign);
+
+	// Start velocities. Fill with one
+	//std::vector<SimTK::Real> V(nu, 1);
+
+	// Scale the sign with the scaling factors
+	std::transform(V.begin(), V.end(), // apply an operation on this
+		UScaleFactors.begin(), // and this
+		V.begin(), // and store here
+		std::multiplies<SimTK::Real>()); // this is the operation
+
+	if(NMAOption == 2){
+		if (nu != RandomCache.nu) {
+			// Rebuild the cache
+			// We also get here if the cache is not initialized
+			RandomCache.V.resize(nu);
+			RandomCache.SqrtMInvV.resize(nu);
+			RandomCache.sqrtRT = std::sqrt(RT);
+			RandomCache.nu = nu;
+
+			// we don't get to use multithreading here
+			RandomCache.FillWithGaussian();
+		} else {
+			// wait for random number generation to finish (should be done by this stage)
+			RandomCache.task.wait();
+		}
+
+		// Scale the velocities so far with Gaussians(0, 1)
+		std::transform(V.begin(), V.end(), // apply an operation on this
+			RandomCache.V.begin(), // and this
+			V.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+
+		// Worst assignment method TODO: std::vector to SimTK::Vector
+		for(int k = 0; k < nu; k++){
+			newU[k] = V[k];
+		}
+
+		// Multiply by inverse of the sqrt(mass matrix)
+		// This gives weights according to bodies
+		matter->multiplyBySqrtMInv(someState, newU, RandomCache.SqrtMInvV);
+
+	}else if(NMAOption == 1){
+
+		//int mnu;
+		// first body excluded due to iMod for now
+        	//for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+                //	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		//	mnu = mobod.getNumU(someState);
+                //	//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
+		//	calc_NU += mnu;
+		//}
+
+		// Average of sqrt(|V[i]|)
+		//SimTK::Real avg_sqrtV = 0;
+		//for(int k = 0; k < nu; k++){
+		//	avg_sqrtV = std::sqrt(std::abs(V[k]));
+		//}
+		
+		//SimTK::Real stdev = bStdev(V);
+		//for(int k = 0; k < nu; k++){
+		//	V[k] *= (std::sqrt(RT) / avg_sqrtV);
+		//}
+
+		// Worst assignment method TODO: std::vector to SimTK::Vector
+		SimTK::Real totalMass = matter->calcSystemMass(someState);
+		//std::cout << "HMCSampler: total mass" << totalMass << "\n";
+		for(int k = 0; k < nu; k++){
+			newU[k] = V[k];
+			//newU[k] *=  std::sqrt(totalMass / nu);
+		}
+
+	}else{
+		std::cerr << "HMCSampler: unknown NMAOption" << NMAOption << "\n";
+		throw std::exception();
+		std::exit(1);
+		
+	}
+
+	// Assign velocities
+	for(std::size_t i = 0; i < nu; i++){
+		someState.updU()[i] = newU[i];
+	}
+
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+	//std::cout << "HMCSampler U " << someState.getU() << std::endl;
+
+	// ask for a number of random numbers and check if we are done the next
+	// time we hit this function
+	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+}
+*/
+
+// Apply the L operator 
+void HMCSampler::integrateTrajectory(SimTK::State& someState){
+    try {
+        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+
+        system->realize(someState, SimTK::Stage::Position);
+
+    }catch(const std::exception&){
+		std::cout << "\t[WARNING] propose exception caught!\n";
+        proposeExceptionCaught = true;
+
+        for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+        }
+
+        system->realize(someState, SimTK::Stage::Position);
+    }
+}
+
+// Trajectory length has an average of MDStepsPerSample and a given std
+void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
+    try {
+
+	float timeJump = 0;
+	if(MDStepsPerSampleStd != 0){
+		std::cout << "Got MDSTEPS_STD " << MDStepsPerSampleStd << '\n';
+
+		// TODO moe to internal variables set
+        	std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd); 
+        	float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
+		timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
+	}else{
+		std::cout << "Didn't get MDSTEPS_STD" << '\n';
+		timeJump = (timestep*MDStepsPerSample);
+	}
+	
+        this->timeStepper->stepTo(someState.getTime() + timeJump);
+
+        system->realize(someState, SimTK::Stage::Position);
+
+    }catch(const std::exception&){
+		std::cout << "\t[WARNING] propose exception caught!\n";
+        proposeExceptionCaught = true;
+
+        for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+            mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+        }
+
+        system->realize(someState, SimTK::Stage::Position);
+    }
+}
+
+/** It implements the proposal move in the Hamiltonian Monte Carlo
+algorithm. It essentially propagates the trajectory after it stores
+the configuration and energies. **/
+bool HMCSampler::propose(SimTK::State& someState)
+{
+
+	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);
+
+	// Initialize velocities according to the Maxwell-Boltzmann distribution
+	initializeVelocities(someState);
+
+	// Store the proposed energies 
+	calcProposedKineticAndTotalEnergy(someState);
+
+	// Adapt timestep
+	if(shouldAdaptTimestep){
+		adaptTimestep(someState);
+	}
+	
+	// Adapt timestep
+	bool shouldAdaptWorldBlocks = false;
+	if(shouldAdaptWorldBlocks){
+		adaptWorldBlocks(someState);
+	}
+	
+	// Apply the L operator 
+	integrateTrajectory(someState);
+	//integrateTrajectoryOneStepAtATime(someState);
+
+	calcNewConfigurationAndEnergies(someState);
+
+	return validateProposal();
+
+
+}
+
+bool HMCSampler::proposeNMA(SimTK::State& someState, int NMAOption)
+{
+
+	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);
+
+	// Initialize velocities according to the Maxwell-Boltzmann distribution
+	initializeNMAVelocities(someState, NMAOption);
+
+	// Store the proposed energies 
+	calcProposedKineticAndTotalEnergy(someState);
+
+	// Adapt timestep
+	if(shouldAdaptTimestep){
+		adaptTimestep(someState);
+	}
+	
+	// Adapt timestep
+	bool shouldAdaptWorldBlocks = false;
+	if(shouldAdaptWorldBlocks){
+		adaptWorldBlocks(someState);
+	}
+	
+	// Apply the L operator 
+	integrateVariableTrajectory(someState);
+
+	calcNewConfigurationAndEnergies(someState);
+
+	return validateProposal();
+
+
+}
+
+/// Acception rejection step 
+bool HMCSampler::accRejStep(SimTK::State& someState) {
+
+
+	// Decide and get a new sample
+	//if ( getThermostat() == ThermostatName::ANDERSEN ) {
+	if ( alwaysAccept == true ){
+		// Simple molecular dynamics
+		this->acc = true;
+		std::cout << "\tsample accepted\n";
+		update(someState);
+	} else {
+		// we do not consider this sample accepted unless it passes all checks
+		this->acc = false;
+
+			// Apply Metropolis-Hastings correction
+			if(acceptSample()) {
+				// sample is accepted
+				this->acc = true;
+				std::cout << "\tsample accepted\n";
+				update(someState);
+			} else {
+				// sample is rejected
+				this->acc = false;
+				std::cout << "\tsample rejected\n";
+				setSetConfigurationAndEnergiesToOld(someState);
+			}
+	}
+	++nofSamples;
+
+	return this->acc;
+}
+
+// The main function that generates a sample
+bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOption)
+{
+	std::cout << std::setprecision(10) << std::fixed;
+
+	bool validated = false;
+
+	// Propose 
+	for (int i = 0; i < 10; i++){
+		if(NMAOption > 0){
+			validated = proposeNMA(someState, NMAOption);
+		}else{
+			validated = propose(someState);
+		}
+
+		if (validated){
+			break;
+		}
+	}
+
+	if(validated){
+	
+		PrintDetailedEnergyInfo(someState);
+	
+		accRejStep(someState);
+	
+		if(this->acc) { // Only in this case ???
+			// Add generalized coordinates to a buffer
+			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
+			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
+			QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
+	
+			pushCoordinatesInR(someState);
+			pushVelocitiesInRdot(someState);
+	
+			// Calculate MSD and RRdot to adapt the integration length
+			std::cout << std::setprecision(10) << std::fixed;
+			std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
+		}
+		
+		return this->acc;
+	}else{
+		std::cout << "Warning: HMCSampler: Proposal was not validated after 10 tries." << std::endl;
+		setSetConfigurationAndEnergiesToOld(someState);
+		return false;	
+	}
+}
+
+// Use Fixman potential
+void HMCSampler::useFixmanPotential(void)
+{
+    useFixman = true;
+}
+
+// Return true if use Fixman potential
+bool HMCSampler::isUsingFixmanPotential(void) const
+{
+    return useFixman;
+}
+
+// Get Fixman potential
+SimTK::Real HMCSampler::getOldFixman(void) const
+{
+    return this->fix_o;
+}
+
+// Set set Fixman potential
+void HMCSampler::setSetFixman(SimTK::Real argFixman)
+{
+    this->fix_set = argFixman;
+}
+
+// Get set Fixman potential
+SimTK::Real HMCSampler::getSetFixman(void) const
+{
+    return this->fix_set;
+}
+
+// Get the stored potential energy
+SimTK::Real HMCSampler::getOldPE(void) const
+{
+    return this->pe_o;
+}
+
+// Set stored potential energy
+void HMCSampler::setOldPE(SimTK::Real argPE)
+{
+    this->pe_o = argPE;
+}
+
+// Get the set potential energy
+SimTK::Real HMCSampler::getSetPE(void) const
+{
+    return this->pe_set;
+}
+
+// Set set potential energy
+void HMCSampler::setSetPE(SimTK::Real argPE)
+{
+    this->pe_set = argPE;
+}
+
+// Set/get Residual Embedded Potential
+void HMCSampler::setREP(SimTK::Real inp)
+{
+    this->residualEmbeddedPotential = inp;
+}
+
+SimTK::Real HMCSampler::getREP(void) const
+{
+    return this->residualEmbeddedPotential;
+}
+
+// Set a thermostat
+void HMCSampler::setThermostat(ThermostatName argThermostat){
+    this->thermostat = argThermostat;
+}
+// Set a thermostat
+void HMCSampler::setThermostat(std::string thermoName){
+    thermoName.resize(thermoName.size());
+    std::transform(thermoName.begin(), thermoName.end(), thermoName.begin(), ::tolower);
+
+    if(thermoName == "none"){
+        this->thermostat = ThermostatName::NONE;
+    }else if(thermoName == "andersen"){
+        this->thermostat = ThermostatName::ANDERSEN;
+    }else if(thermoName == "berendsen"){
+        this->thermostat = ThermostatName::BERENDSEN;
+    }else if(thermoName == "langevin"){
+        this->thermostat = ThermostatName::LANGEVIN;
+    }else if(thermoName == "nose_hoover"){
+        this->thermostat = ThermostatName::NOSE_HOOVER;
+    }else{
+        std::cerr << "Invalid argument: " << thermoName << '\n';
+    }
+}
+
+// Set a thermostat
+void HMCSampler::setThermostat(const char *argThermostat){
+    setThermostat(std::string(argThermostat));
+}
+
+// Get the name of the thermostat
+ThermostatName HMCSampler::getThermostat(void) const{
+    return thermostat;
+}
+
+////////////////////////////////////
+// FIMAN POTENTIAL RELATED
+////////////////////////////////////
+
+
+// Get the potential energy from an external source as far as the sampler
+// is concerned - OPENMM has to be inserted here
+SimTK::Real HMCSampler::getPEFromEvaluator(SimTK::State& someState){
+        return forces->getMultibodySystem().calcPotentialEnergy(someState);
+	// Eliza's potential energy's calculations including rigid bodies
+	// internal energy
+    //return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+
+}
+
+SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
+    int nu = someState.getNU();
+    SimTK::Vector V(nu);
+
+    system->realize(someState, SimTK::Stage::Position);
+    matter->realizeArticulatedBodyInertias(someState); // Move in calcDetM ?
+
+    // Get detM
+    SimTK::Vector DetV(nu);
+    SimTK::Real D0 = 1.0;
+
+    // TODO: remove the request for Dynamics stage cache in SImbody files
+    //std::cout << "MonteCarloSampler::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
+    matter->calcDetM(someState, V, DetV, &D0);
+
+    assert(RT > SimTK::TinyReal);
+    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) );
+
+    if(SimTK::isInf(result)){
+        result = 0.0;
+    }
+    
+    return result;
+}
+
+// Compute Fixman potential numerically
+SimTK::Real HMCSampler::calcNumFixman(SimTK::State&){
+    // args were SimTK::State& someState
+    assert(!"Not implemented.");
+    return 0;
+    /*
+    // Get M
+    int nu = someState.getNU();
+    SimTK::Matrix M(nu, nu);
+    matter->calcM(someState, M);
+
+    // Eigen M determinant
+    Eigen::MatrixXd EiM(nu, nu);
+    for(int i=0; i<nu; i++){
+        for(int j=0; j<nu; j++){
+            EiM(i, j) = M(i, j);
+        }
+    }
+    SimTK::Real EiDetM = EiM.determinant();
+    assert(RT > SimTK::TinyReal);
+    SimTK::Real result = 0.5 * RT * std::log(EiDetM);
+    return result;
+    */
+}
+
+// Set old Fixman potential
+void HMCSampler::setOldFixman(SimTK::Real argFixman)
+{
+    this->fix_o = argFixman;
+}
+
+// Set/get External MBAT contribution potential
+void HMCSampler::setOldLogSineSqrGamma2(SimTK::Real argX){
+    this->logSineSqrGamma2_o = argX;
+}
+
+SimTK::Real HMCSampler::getOldLogSineSqrGamma2(void) const
+{
+    return this->logSineSqrGamma2_o;
+}
+
+// Set/get External MBAT contribution potential
+SimTK::Real HMCSampler::getSetLogSineSqrGamma2(void) const
+{
+    return this->logSineSqrGamma2_set;
+}
+
+void HMCSampler::setSetLogSineSqrGamma2(SimTK::Real argX){
+    this->logSineSqrGamma2_set = argX;
+}
+
+void HMCSampler::setProposedLogSineSqrGamma2(SimTK::Real argFixman)
+{
+    this->logSineSqrGamma2_n = argFixman;
+}
+
+////////////////////////////////////
+// CONFIGURATION RELATED
+////////////////////////////////////
+
+// Stores the configuration into an internal vector of transforms TVector
+// Get the stored configuration
+SimTK::Transform * HMCSampler::getTVector(void)
+{
+    return &TVector[0];
+}
+
+// Stores the configuration into an internal vector of transforms TVector
+void HMCSampler::setTVector(const SimTK::State& someState)
+{
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    TVector[i] = mobod.getMobilizerTransform(someState);
+    i++;
+  }
+}
+
+// Stores the configuration into an internal vector of transforms TVector
+void HMCSampler::setTVector(SimTK::Transform *inpTVector)
+{
+    // TODO pointer parameter is bad
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    TVector[i] = inpTVector[i];
+    i++;
+  }
+}
+
+// Stores the set configuration into an internal vector of transforms TVector
+void HMCSampler::setSetTVector(const SimTK::State& someState)
+{
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    SetTVector[i] = mobod.getMobilizerTransform(someState);
+    i++;
+  }
+}
+
+// Stores the configuration into an internal vector of transforms TVector
+// Get the stored configuration
+SimTK::Transform * HMCSampler::getSetTVector(void)
+{
+    return &SetTVector[0];
+}
+
+// Restores configuration from the internal set vector of transforms TVector
+void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
+{
+  int i = 0;
+  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+    system->realize(someState, SimTK::Stage::Position);
+    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    mobod.setQToFitTransform(someState, SetTVector[i]);
+
+    system->realize(someState, SimTK::Stage::Position);
+
+
+    i++;
+  }
+  system->realize(someState, SimTK::Stage::Position);
 }
 
 /** Calculate sqrt(M) using Eigen. For debug purposes. **/
@@ -163,19 +940,28 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 {
     int nu = someState.getNU();
     UScaleFactors.resize(nu, 1);
+    InvUScaleFactors.resize(nu, 1);
 
     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
         // const int mnu = mobod.getNumU(someState);
-		const auto scaleFactor = world->getMobodUScaleFactor(mbx);
+		const float scaleFactor = world->getMobodUScaleFactor(mbx);
 
         //std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
 		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
         	//std::cout << ' ' << int(uIx) ;
 			UScaleFactors[int(uIx)] = scaleFactor;
+			InvUScaleFactors[int(uIx)] = 1.0 / scaleFactor;
         }
         //std::cout << '\n';
     }
+
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Seed the random number generator. Set simulation temperature,
@@ -190,26 +976,26 @@ void HMCSampler::initialize(SimTK::State& someState)
     // reinitialize the Integrator.
     timeStepper->initialize(compoundSystem->getDefaultState());
 
-    // const int nu = someState.getNU();
+    const int nu = someState.getNU();
 
-    // // Randomize configuration
-    // //if(randomizeConformation == true){
-    // //    system->realize(someState, SimTK::Stage::Position);
-    // //    int nq = someState.getNQ();
-    // //    SimTK::Vector QV(nq);
-    // //    for (int j=7; j < nq; ++j){
-    // //        QV[j] = uniformRealDistribution_mpi_pi(randomEngine);
-    // //    }
-    // //    someState.updQ() = QV;
-    // //}
-    // //
+    // Randomize configuration
+    //if(randomizeConformation == true){
+    //    system->realize(someState, SimTK::Stage::Position);
+    //    int nq = someState.getNQ();
+    //    SimTK::Vector QV(nq);
+    //    for (int j=7; j < nq; ++j){
+    //        QV[j] = uniformRealDistribution_mpi_pi(randomEngine);
+    //    }
+    //    someState.updQ() = QV;
+    //}
+    //
 
-    // // Store the configuration
-    // system->realize(someState, SimTK::Stage::Position);
-    // for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-    //     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-    //     SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
-    // }
+    // Store the configuration
+    system->realize(someState, SimTK::Stage::Position);
+    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
+    }
 
     // Initialize QsBuffer with zeros
     int nq = matter->getNQ(someState);
@@ -219,48 +1005,58 @@ void HMCSampler::initialize(SimTK::State& someState)
         QsBuffer.push_back(SimTK::Real(0));
     }
 
-    // // Store potential energies
-    // setOldPE(getPEFromEvaluator(someState));
-    // setSetPE(getOldPE());
+    // Store potential energies
+    setOldPE(getPEFromEvaluator(someState));
+    setSetPE(getOldPE());
 
-    // // Store Fixman potential
-    // if(useFixman){
-    //     std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential.\n";
-    //     setOldFixman(calcFixman(someState));
-    //     setSetFixman(getOldFixman());
+    // Store Fixman potential
+    if(useFixman){
+        std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential.\n";
+        setOldFixman(calcFixman(someState));
+        setSetFixman(getOldFixman());
 
-    //     setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
-    //     setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    // }else{
-    //     setOldFixman(0.0);
-    //     setSetFixman(getOldFixman());
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+    }else{
+        setOldFixman(0.0);
+        setSetFixman(getOldFixman());
 
-    //     setOldLogSineSqrGamma2(0.0);
-    //     setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    // }
+        setOldLogSineSqrGamma2(0.0);
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+    }
 
-    // // // Initialize velocities to temperature
-    // // // TODO Shouldn't be here
-    // // double sqrtRT = std::sqrt(RT);
-    // // SimTK::Vector V(nu);
-    // // SimTK::Vector SqrtMInvV(nu);
-    // // for (int j=0; j < nu; ++j){
-    // //     V[j] = gaurand(randomEngine);
-    // // }
-    // // matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
-    // // SqrtMInvV *= sqrtRT; // Set stddev according to temperature
-    // // someState.updU() = SqrtMInvV;
-    // // system->realize(someState, SimTK::Stage::Velocity);
+    // Initialize velocities to temperature
+    // TODO Shouldn't be here
+    double sqrtRT = std::sqrt(RT);
+    SimTK::Vector V(nu);
+    SimTK::Vector SqrtMInvV(nu);
+    for (int j=0; j < nu; ++j){
+        V[j] = gaurand(randomEngine);
+    }
+    matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
+    SqrtMInvV *= sqrtRT; // Set stddev according to temperature
+    someState.updU() = SqrtMInvV;
+    system->realize(someState, SimTK::Stage::Velocity);
 
-    // // Store kinetic energies
-    // setProposedKE(matter->calcKineticEnergy(someState));
-    // setLastAcceptedKE(getProposedKE());
+    // Store kinetic energies
+    setProposedKE(matter->calcKineticEnergy(someState));
+    setLastAcceptedKE(getProposedKE());
 
-    // // Store total energies
-    // this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    // this->etot_set = this->etot_proposed;
+    // Store total energies
+    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_set = this->etot_proposed;
 
-    // loadUScaleFactors(someState);
+    for (int j=0; j < nu; ++j){
+	UScaleFactors[j] = 1;
+	InvUScaleFactors[j] = 1;
+    }
+    loadUScaleFactors(someState);
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Same as initialize **/
@@ -272,57 +1068,67 @@ void HMCSampler::reinitialize(SimTK::State& someState)
     // reinitialize the Integrator.
     //(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
-    // // Store the configuration
-	// // In our case, a MobilizedBody is an atom
-    // system->realize(someState, SimTK::Stage::Position);
-    // int i = 0;
-    // for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-    //     const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-    //     SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
-    //     i++;
-    // }
+    // Store the configuration
+	// In our case, a MobilizedBody is an atom
+    system->realize(someState, SimTK::Stage::Position);
+    int i = 0;
+    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
+        i++;
+    }
 
-    // // Store potential energies
-    // setSetPE(getOldPE());
+    // Store potential energies
+    setSetPE(getOldPE());
 
-    // // Store Fixman potential
-    // if(useFixman){
-    //     setOldFixman(calcFixman(someState));
-    //     setSetFixman(getOldFixman());
+    // Store Fixman potential
+    if(useFixman){
+        setOldFixman(calcFixman(someState));
+        setSetFixman(getOldFixman());
 
-    //     setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
-    //     setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    // }else{
-    //     setOldFixman(0.0);
-    //     setSetFixman(getOldFixman());
+        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+    }else{
+        setOldFixman(0.0);
+        setSetFixman(getOldFixman());
 
-    //     setOldLogSineSqrGamma2(0.0);
-    //     setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    // }
+        setOldLogSineSqrGamma2(0.0);
+        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+    }
 
-    // // // Initialize velocities to temperature
-    // // // TODO Shouldn't be here
-    // // int nu = someState.getNU();
-    // // double sqrtRT = std::sqrt(RT);
-    // // SimTK::Vector V(nu);
-    // // SimTK::Vector SqrtMInvV(nu);
-    // // for (int j=0; j < nu; ++j){
-    // //     V[j] = gaurand(randomEngine);
-    // // }
-    // // matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
-    // // SqrtMInvV *= sqrtRT; // Set stddev according to temperature
-    // // someState.updU() = SqrtMInvV;
-    // // system->realize(someState, SimTK::Stage::Velocity);
+    // Initialize velocities to temperature
+    // TODO Shouldn't be here
+    int nu = someState.getNU();
+    double sqrtRT = std::sqrt(RT);
+    SimTK::Vector V(nu);
+    SimTK::Vector SqrtMInvV(nu);
+    for (int j=0; j < nu; ++j){
+        V[j] = gaurand(randomEngine);
+    }
+    matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
+    SqrtMInvV *= sqrtRT; // Set stddev according to temperature
+    someState.updU() = SqrtMInvV;
+    system->realize(someState, SimTK::Stage::Velocity);
 
-    // // Store kinetic energies
-    // setProposedKE(matter->calcKineticEnergy(someState));
-    // setLastAcceptedKE(getProposedKE());
+    // Store kinetic energies
+    setProposedKE(matter->calcKineticEnergy(someState));
+    setLastAcceptedKE(getProposedKE());
 
-    // // Store total energies
-    // this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    // this->etot_set = this->etot_proposed;
+    // Store total energies
+    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_set = this->etot_proposed;
 
-    // loadUScaleFactors(someState);
+    for (int j=0; j < nu; ++j){
+	UScaleFactors[j] = 1;
+	InvUScaleFactors[j] = 1;
+    }
+    loadUScaleFactors(someState);
+	for (int i = 0; i < UScaleFactors.size(); ++i) {
+		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
+		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
+	}
+	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
+	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Get/Set the timestep for integration **/
@@ -379,57 +1185,6 @@ void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someSta
     fix_o = fix_set;
     logSineSqrGamma2_o = logSineSqrGamma2_set;
 } // func
-
-/** Initialize velocities according to the Maxwell-Boltzmann
-distribution.  Coresponds to R operator in LAHMC **/
-void HMCSampler::initializeVelocities(SimTK::State& someState){
-	// Check if we can use our cache
-    const int tempNU = someState.getNU();
-	if (nu != tempNU) {
-		// Rebuild the cache
-		// We also get here if the cache is not initialized
-		nu = tempNU;
-		V.resize(nu);
-		SqrtMInvV.resize(nu);
-		sqrtRT = std::sqrt(RT);
-	}
-
-	// Traverse all mobilized bodies (see below for more details).
-	// We do this here because they can be very numerous and we have to travese this long list for many times.
-	// Instead, we just traverse it once and do everything we need: generate Gaussian random numbers and multiply them by U scale factors.
-    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
-		// In our case, a MobilizedBody is an atom.
-        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-
-		// Store the old configuration here.
-		// This is less readable, but faster because we traverse only once.
-        SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
-    
-		const auto scaleFactor = world->getMobodUScaleFactor(mbx);
-
-		// TODO why is this a loop when we know the indices? 0, 1, 2, 3, 4 etc
-        // std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
-		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
-        	// std::cout << ' ' << int(uIx);
-
-			// We will later multiply this scale factor with a gaussian random number so we just generate it here
-			V[std::size_t(uIx)] = scaleFactor * gaurand(randomEngine);
-        }
-        // std::cout << '\n';
-	}
-	
-	// Scale by square root of the inverse mass matrix
-	matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
-
-	// Set stddev according to temperature
-	SqrtMInvV *= (sqrtRT);
-
-	// Raise the temperature
-	someState.updU() = SqrtMInvV;
-
-	// Realize velocity
-	system->realize(someState, SimTK::Stage::Velocity);
-}
 
 /** Store the proposed energies **/
 void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
@@ -640,26 +1395,6 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 }
 
 
-/** Apply the L operator **/
-void HMCSampler::integrateTrajectory(SimTK::State& someState){
-    try {
-        this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-
-        system->realize(someState, SimTK::Stage::Position);
-
-    }catch(const std::exception&){
-		std::cout << "\t[WARNING] propose exception caught!\n";
-        proposeExceptionCaught = true;
-
-        for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-            mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
-        }
-
-        system->realize(someState, SimTK::Stage::Position);
-    }
-}
-
 /**  **/
 void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 	//, std::function<void()> initialFunc
@@ -775,25 +1510,25 @@ void HMCSampler::geomDihedral(){
     //DIHEDRAL 4 6 8 14 6 8 14 16
     //a1 = 16; a2 = 14; a3 = 0; a4 = 6; a5 = 8;
     a1 = 4; a2 = 6; a3 = 8; a4 = 14; a5 = 16;
-    a1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
-    a2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
-    a3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
-    a4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
-    a5pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
+    a1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)));
+    a2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
+    a3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
+    a4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
+    a5pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
     int distA1, distA2, distA3, distA4;
     SimTK::Vec3 distA1pos, distA2pos;
     SimTK::Vec3 distA3pos, distA4pos;
     distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
-//		    distA1pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
-//		    distA2pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
-//		    distA3pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
-//		    distA4pos = ((Topology *)residue)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
+//		    distA1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
+//		    distA2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
+//		    distA3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
+//		    distA4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
 //            std::cout << " dihedral elements"
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a1))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a2))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a3))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a4))
-//              << " " << residue->getAtomElement(SimTK::Compound::AtomIndex(a5))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a1))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a2))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a3))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a4))
+//              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a5))
 //              << std::endl;
 //            std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
     std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
@@ -811,7 +1546,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
     // Get new Fixman potential
     if(useFixman){
         fix_n = calcFixman(someState);
-        logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+        logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
     }else{
         fix_n = 0.0;
         logSineSqrGamma2_n = 0.0;
@@ -826,7 +1561,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
     // TODO: replace with the following after checking is the same thing
     //pe_n = compoundSystem->calcPotentialEnergy(someState);
 
-    logSineSqrGamma2_n = ((Topology *)residue)->calcLogSineSqrGamma2(someState);
+    logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
 
     // Calculate total energy
     if(useFixman){
@@ -864,42 +1599,6 @@ SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK:
 		// std::cout << "\tdiff=" << argEtot_n - argEtot_proposed << ", argEtot_n=" << argEtot_n << ", argEtot_proposed=" << argEtot_proposed << ", beta=" << beta << std::endl;
 		return exp(-(argEtot_n - argEtot_proposed) * this->beta);
 	}
-}
-
-/** Acception rejection step **/
-bool HMCSampler::accRejStep(SimTK::State& someState) {
-
-	// Decide and get a new sample
-	if ( getThermostat() == ThermostatName::ANDERSEN ) {
-		// MD with Andersen thermostat
-		this->acc = true;
-		std::cout << "\tsample accepted (always with andersen thermostat)\n";
-		update(someState);
-	} else {
-		// we do not consider this sample accepted unless it passes all checks
-		this->acc = false;
-
-		if (validateProposal()) {
-			
-			// Apply Metropolis-Hastings correction
-			if(acceptSample()) {
-				// sample is accepted
-				this->acc = true;
-				std::cout << "\tsample accepted\n";
-				update(someState);
-			} else {
-				// sample is rejected
-				std::cout << "\tsample rejected\n";
-				setSetConfigurationAndEnergiesToOld(someState);
-			}
-		}
-		else {
-			// std::cout << "\tsample not validated, reverting to previous configuration\n";
-			setSetConfigurationAndEnergiesToOld(someState);
-		}
-	}
-
-	return this->acc;
 }
 
 /** Checks if the proposal is valid **/
@@ -940,42 +1639,6 @@ bool HMCSampler::acceptSample() {
 
 	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;
 	return rand_no < prob;
-}
-
-/** It implements the proposal move in the Hamiltonian Monte Carlo
-algorithm. It essentially propagates the trajectory after it stores
-the configuration and energies. **/
-void HMCSampler::propose(SimTK::State& someState)
-{
-
-	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);
-
-	// Initialize velocities according to the Maxwell-Boltzmann distribution
-	initializeVelocities(someState);
-
-	// Store the proposed energies 
-	calcProposedKineticAndTotalEnergy(someState);
-
-	// Adapt timestep
-	if(shouldAdaptTimestep){
-		adaptTimestep(someState);
-	}
-	
-	// Adapt timestep
-	bool shouldAdaptWorldBlocks = false;
-	if(shouldAdaptWorldBlocks){
-		adaptWorldBlocks(someState);
-	}
-	
-	// Apply the L operator 
-	integrateTrajectory(someState);
-	//integrateTrajectoryOneStepAtATime(someState);
-
-	calcNewConfigurationAndEnergies(someState);
-
-	PrintDetailedEnergyInfo(someState);
-
 }
 
 /** Main function that contains all the 3 steps of HMC.
@@ -1064,71 +1727,6 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 	}
 
 	return Rdot.size();
-}
-
-bool HMCSampler::sample_iteration(SimTK::State& someState)
-{
-	// Do changes only on a temporary state.
-	// This is because we have to integrate the proposed trajectory before applying the Metropolis criterion.
-	auto TempState = someState;
-
-	// TODO what does this do?
-    system->realize(TempState, SimTK::Stage::Position);
-
-    // Store potential energies
-    setSetPE(getOldPE());
-
-    // Store Fixman potential
-    if(useFixman){
-        setOldFixman(calcFixman(someState));
-        setSetFixman(getOldFixman());
-
-        setOldLogSineSqrGamma2( ((Topology *)residue)->calcLogSineSqrGamma2(someState));
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }else{
-        setOldFixman(0.0);
-        setSetFixman(getOldFixman());
-
-        setOldLogSineSqrGamma2(0.0);
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }
-
-    // Store kinetic energies
-    setProposedKE(matter->calcKineticEnergy(someState));
-    setLastAcceptedKE(getProposedKE());
-
-    // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    this->etot_set = this->etot_proposed;
-	
-	// Propose a new configuration.
-	// The old config gets saved here.
-	propose(TempState);
-
-	// Accept or reject it.
-	accRejStep(TempState);
-
-	// Is this sample accepted?
-	if(this->acc) {
-		++nofSamples;
-
-		// Update state.
-		someState = TempState;
-
-		// Add generalized coordinates to a buffer
-		auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
-		QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
-		QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
-
-		pushCoordinatesInR(someState);
-		pushVelocitiesInRdot(someState);
-
-		// Calculate MSD and RRdot to adapt the integration length
-		std::cout << std::setprecision(10) << std::fixed;
-		std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
-	}
-	
-	return this->acc;
 }
 
 

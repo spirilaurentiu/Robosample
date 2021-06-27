@@ -17,7 +17,7 @@ GirolamiSampler::GirolamiSampler(World *argWorld,
 	SimTK::GeneralForceSubsystem *argForces,
 	SimTK::TimeStepper *argTimeStepper) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
-        MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
+        //MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         HMCSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 }
@@ -151,7 +151,7 @@ void GirolamiSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
 initializeVelocities and propagate/integrate **/
-void GirolamiSampler::propose(SimTK::State& someState, SimTK::Real timestep, int nosteps)
+bool GirolamiSampler::propose(SimTK::State& someState, SimTK::Real timestep, int nosteps)
 {
     // Seed the random number generator every move
     //randomEngine.seed(4294653137UL); // for reproductibility

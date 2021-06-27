@@ -105,7 +105,7 @@ public:
 	);
 
 	/** Print Molmodel specific types as introduced in Gmolmodel **/
-	void PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm);
+	const void PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const;
 
 	/** Build the molecular tree without the cycle closing bonds **/
 	void buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode);
@@ -220,6 +220,10 @@ public:
 	getMbx2aIx(){
 		return mbx2aIx;
 	}
+
+	// Retunr mbx from an olresdy saved map inside Topology
+	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexFromMap(
+		SimTK::Compound::AtomIndex aIx);
 
 	/** Get AtomIndex to MobilizedBodyIndex map **/
 	std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex >
