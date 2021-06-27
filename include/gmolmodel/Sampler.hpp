@@ -2,9 +2,6 @@
 #define __SAMPLER_HPP__
 
 #include "Robo.hpp"
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_real_distribution.hpp>
-#include <boost/random/normal_distribution.hpp>
 
 #ifndef PRINT_BUFFER_SIZE
 #define PRINT_BUFFER_SIZE 4096
@@ -52,11 +49,11 @@ public:
 	void loadMbx2mobility(SimTK::State& someState);
 
 	/** Returns the number of samples extracted so far. **/
-	int getNofSamples(void);
+	int getNofSamples();
 
 	// Get set the seed
-	uint32_t getSeed(void) const;
-	void setSeed(uint32_t);
+	int64_t getSeed() const;
+	void setSeed(int64_t);
 
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
@@ -98,25 +95,33 @@ public:
 
 	// Sampling
 	int nofSamples;
-	uint32_t seed;
+	int64_t seed;
 	bool acc;
 
 	// Random number generators - not sure if I need two
-	boost::random::mt19937 randomEngine = boost::random::mt19937();
+	using RANDOM_ENGINE = std::mt19937_64; // mt19937_64
+	RANDOM_ENGINE randomEngine;
 
-	boost::random::uniform_real_distribution<double> uniformRealDistribution_0_2pi =
-		    boost::random::uniform_real_distribution<double>(SimTK::Zero, 2*SimTK::Pi);
+	// Use this to initialize randomEngine
+	using RANDOM_ENGINE_INIT = std::minstd_rand; // ranlux48
+	RANDOM_ENGINE_INIT randomEngineInit;
 
-	boost::random::uniform_real_distribution<double> uniformRealDistribution_mpi_pi =
-		    boost::random::uniform_real_distribution<double>((-1)*SimTK::Pi, SimTK::Pi);
+	using RANDOM_ENGINE_INIT_RESULT_TYPE = uint32_t; 
 
-	boost::random::uniform_real_distribution<double> uniformRealDistribution =
-		    boost::random::uniform_real_distribution<double>(SimTK::Zero, SimTK::One);
+	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution_0_2pi =
+		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, 2*SimTK::Pi);
 
-	boost::random::uniform_real_distribution<double> uniformRealDistribution_m1_1 =
-		    boost::random::uniform_real_distribution<double>((-1)*SimTK::One, SimTK::One);
+	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution_mpi_pi =
+		    std::uniform_real_distribution<SimTK::Real>((-1)*SimTK::Pi, SimTK::Pi);
 
-	boost::normal_distribution<> gaurand = boost::normal_distribution<>(0.0, 1.0);
+	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution =
+		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, SimTK::One);
+
+	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution_m1_1 =
+		    std::uniform_real_distribution<SimTK::Real>((-1)*SimTK::One, SimTK::One);
+
+	// Gaussian random number distribution
+	std::normal_distribution<> gaurand = std::normal_distribution<>(0.0, 1.0);
 
  };
 

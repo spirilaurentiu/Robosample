@@ -4,11 +4,6 @@
 #include "Robo.hpp"
 #include "Sampler.hpp"
 
-//#include <boost/random/mersenne_twister.hpp>
-//#include <boost/random/uniform_real_distribution.hpp>
-//#include <boost/random/normal_distribution.hpp>
-
-
 // Just to remove the long syntax requirement
 #ifndef pMC
 //#define pMC(pSampler) dynamic_cast<MonteCarloSampler *>(pSampler)
@@ -150,6 +145,7 @@ public:
 protected:
     std::vector<SimTK::Transform> SetTVector; // Transform matrices
     std::vector<SimTK::Transform> TVector; // Transform matrices
+
     SimTK::Real pe_set = 0.0,
         pe_o = 0.0,
         pe_n = 0.0;
@@ -157,12 +153,17 @@ protected:
     SimTK::Real fix_set = 0.0,
         fix_o = 0.0,
         fix_n = 0.0;
+
     SimTK::Real detmbat_set = 0.0,
         detmbat_o = 0.0,
         detmbat_n = 0.0;
-    SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
 
-    SimTK::Real logSineSqrGamma2_o = 0.0, logSineSqrGamma2_n = 0.0, logSineSqrGamma2_set = 0.0;
+    SimTK::Real logSineSqrGamma2_o = 0.0,
+        logSineSqrGamma2_n = 0.0,
+        logSineSqrGamma2_set = 0.0;
+
+    // Inside rigid bodies if weren't rigid.
+    SimTK::Real residualEmbeddedPotential = 0.0;
 
     bool useFixman = false;
     bool alwaysAccept = false;
@@ -172,8 +173,7 @@ protected:
     std::deque<int> acceptedStepsBuffer;
 
     int QsBufferSize = 300;
-    //std::list<SimTK::Vector> QsBuffer;
-    std::deque<SimTK::Real> QsBuffer;
+    std::deque<SimTK::Real> QsBuffer; // TODO this was std::list
 
     SimTK::Real acceptance;
     SimTK::Real prevAcceptance;

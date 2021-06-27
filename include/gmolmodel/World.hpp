@@ -175,7 +175,7 @@ public:
 	//...............
 
 	/** Get U scale factor for the mobilized body **/
-	float getMobodUScaleFactor(SimTK::MobilizedBodyIndex& ) const;
+	SimTK::Real getMobodUScaleFactor(SimTK::MobilizedBodyIndex& ) const;
 	//...............
 
 	//...................
@@ -318,7 +318,7 @@ public:
 private:
 	
 	// Maps a generalized velocity scale factor for every mobod
-	std::map< SimTK::MobilizedBodyIndex, float > mbx2uScale;
+	std::map< SimTK::MobilizedBodyIndex, SimTK::Real > mbx2uScale;
 
 
 };

@@ -82,8 +82,8 @@ void MonteCarloSampler::initialize(SimTK::State& someState, SimTK::Real argTempe
 		setOldLogSineSqrGamma2(0.0);
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}
-	proposeExceptionCaught = false;
 
+	proposeExceptionCaught = false;
 }
 
 // Same as initialize 
@@ -120,23 +120,24 @@ void MonteCarloSampler::reinitialize(SimTK::State& someState, SimTK::Real argTem
 		setOldLogSineSqrGamma2(0.0);
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}
+
 	proposeExceptionCaught = false;
 }
 
-void MonteCarloSampler::useFixmanPotential(void)
+void MonteCarloSampler::useFixmanPotential()
 {
     useFixman = true;
 }
 
 
 // Return true if use Fixman potential
-bool MonteCarloSampler::isUsingFixmanPotential(void) const
+bool MonteCarloSampler::isUsingFixmanPotential() const
 {
     return useFixman;
 }
 
 // Is the sampler always accepting the proposed moves
-bool MonteCarloSampler::getAlwaysAccept(void) const
+bool MonteCarloSampler::getAlwaysAccept() const
 {
     return alwaysAccept;
 }
@@ -246,13 +247,13 @@ SimTK::Real MonteCarloSampler::calcNumDetM(SimTK::State&){
 }
 
 // Get the set potential energy
-SimTK::Real MonteCarloSampler::getSetPE(void) const
+SimTK::Real MonteCarloSampler::getSetPE() const
 {
     return this->pe_set;
 }
 
 // Get the stored potential energy
-SimTK::Real MonteCarloSampler::getOldPE(void) const
+SimTK::Real MonteCarloSampler::getOldPE() const
 {
     return this->pe_o;
 }
@@ -288,19 +289,19 @@ void MonteCarloSampler::setProposedFixman(SimTK::Real argFixman)
 }
 
 // Get set Fixman potential
-SimTK::Real MonteCarloSampler::getSetFixman(void) const
+SimTK::Real MonteCarloSampler::getSetFixman() const
 {
     return this->fix_set;
 }
 
 // Get Fixman potential
-SimTK::Real MonteCarloSampler::getOldFixman(void) const
+SimTK::Real MonteCarloSampler::getOldFixman() const
 {
     return this->fix_o;
 }
 
 // Get Fixman potential
-SimTK::Real MonteCarloSampler::getProposedFixman(void) const
+SimTK::Real MonteCarloSampler::getProposedFixman() const
 {
     return this->fix_n;
 }
@@ -313,7 +314,7 @@ void MonteCarloSampler::setSetLogSineSqrGamma2(SimTK::Real argX){
     this->logSineSqrGamma2_set = argX;
 }
 
-SimTK::Real MonteCarloSampler::getSetLogSineSqrGamma2(void) const
+SimTK::Real MonteCarloSampler::getSetLogSineSqrGamma2() const
 {
     return this->logSineSqrGamma2_set;
 }
@@ -323,7 +324,7 @@ void MonteCarloSampler::setOldLogSineSqrGamma2(SimTK::Real argX){
     this->logSineSqrGamma2_o = argX;
 }
 
-SimTK::Real MonteCarloSampler::getOldLogSineSqrGamma2(void) const
+SimTK::Real MonteCarloSampler::getOldLogSineSqrGamma2() const
 {
     return this->logSineSqrGamma2_o;
 }
@@ -333,7 +334,7 @@ void MonteCarloSampler::setProposedLogSineSqrGamma2(SimTK::Real argFixman)
     this->logSineSqrGamma2_n = argFixman;
 }
 
-SimTK::Real MonteCarloSampler::getProposedLogSineSqrGamma2(void) const
+SimTK::Real MonteCarloSampler::getProposedLogSineSqrGamma2() const
 {
     return this->logSineSqrGamma2_n;
 }
@@ -346,7 +347,7 @@ void MonteCarloSampler::setREP(SimTK::Real inp)
     this->residualEmbeddedPotential = inp;
 }
 
-SimTK::Real MonteCarloSampler::getREP(void) const
+SimTK::Real MonteCarloSampler::getREP() const
 {
     return this->residualEmbeddedPotential;
 }
@@ -386,14 +387,14 @@ void MonteCarloSampler::setSetTVector(const SimTK::State& someState)
 
 // Stores the configuration into an internal vector of transforms TVector
 // Get the stored configuration
-SimTK::Transform * MonteCarloSampler::getTVector(void)
+SimTK::Transform * MonteCarloSampler::getTVector()
 {
     return &TVector[0];
 }
 
 // Stores the configuration into an internal vector of transforms TVector
 // Get the stored configuration
-SimTK::Transform * MonteCarloSampler::getSetTVector(void)
+SimTK::Transform * MonteCarloSampler::getSetTVector()
 {
     return &SetTVector[0];
 }
@@ -512,7 +513,7 @@ SimTK::Real MonteCarloSampler::getPEFromEvaluator(SimTK::State& someState){
 /*
 // Get the desired simulation temperature. Not to be confused with 
 // the instant temperature
-SimTK::Real MonteCarloSampler::getTemperature(void){
+SimTK::Real MonteCarloSampler::getTemperature(){
     return this->temperature;
 }
 
@@ -559,7 +560,7 @@ void MonteCarloSampler::setThermostat(const char *argThermostat){
 }
 
 // Get the name of the thermostat
-ThermostatName MonteCarloSampler::getThermostat(void) const{
+ThermostatName MonteCarloSampler::getThermostat() const{
     return thermostat;
 }
 
@@ -568,12 +569,12 @@ ThermostatName MonteCarloSampler::getThermostat(void) const{
 
 // Send configuration to an external evaluator
 
-void MonteCarloSampler::sendConfToEvaluator(void){
+void MonteCarloSampler::sendConfToEvaluator(){
     assert(!"Not implemented");
 }
 
 // Get the number of accpted conformations
-int MonteCarloSampler::getAcceptedSteps(void) const
+int MonteCarloSampler::getAcceptedSteps() const
 {
     return acceptedSteps;
 }
