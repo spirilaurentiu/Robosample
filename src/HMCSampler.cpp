@@ -92,6 +92,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	InvUScaleFactors.resize(ndofs, 1);
 	InvUScaleFactorsNorm = std::sqrt(ndofs);
 
+	NMAOption = 0;
 	MDStepsPerSampleStd = 0.5;
 }
 
@@ -155,7 +156,7 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 
 /** Initialize velocities scaled by NMA factors.
  Coresponds to R operator in LAHMC **/
-void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
+void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 	// Get the number of dofs
 	const int nu = someState.getNU();
@@ -456,14 +457,14 @@ bool HMCSampler::propose(SimTK::State& someState)
 
 }
 
-bool HMCSampler::proposeNMA(SimTK::State& someState, int NMAOption)
+bool HMCSampler::proposeNMA(SimTK::State& someState)
 {
 
 	// Store old configuration
 	storeOldConfigurationAndPotentialEnergies(someState);
 
 	// Initialize velocities according to the Maxwell-Boltzmann distribution
-	initializeNMAVelocities(someState, NMAOption);
+	initializeNMAVelocities(someState);
 
 	// Store the proposed energies 
 	calcProposedKineticAndTotalEnergy(someState);
@@ -523,16 +524,18 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 }
 
 // The main function that generates a sample
-bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOption)
+bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 {
 	std::cout << std::setprecision(10) << std::fixed;
+
+	this->NMAOption = NMAOptionArg;
 
 	bool validated = false;
 
 	// Propose 
 	for (int i = 0; i < 10; i++){
 		if(NMAOption > 0){
-			validated = proposeNMA(someState, NMAOption);
+			validated = proposeNMA(someState);
 		}else{
 			validated = propose(someState);
 		}
@@ -1635,7 +1638,12 @@ bool HMCSampler::validateProposal() const {
 /** Chooses whether to accept a sample or not based on a probability **/
 bool HMCSampler::acceptSample() {
 	const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-	const SimTK::Real prob = MHAcceptProbability(etot_proposed, etot_n);
+	SimTK::Real prob = 0.0;
+	if(NMAOption != 2){
+		prob = MHAcceptProbability(etot_proposed, etot_n);
+	}else{
+		prob = MHAcceptProbability(pe_o, pe_n);
+	}
 
 	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;
 	return rand_no < prob;

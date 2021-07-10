@@ -194,7 +194,7 @@ public:
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
 	virtual void initializeVelocities(SimTK::State& someState);
-	void initializeNMAVelocities(SimTK::State& someState, int NMAOption);
+	void initializeNMAVelocities(SimTK::State& someState);
 
 	/** Store the proposed energies **/
 	virtual void calcProposedKineticAndTotalEnergy(SimTK::State& someState);
@@ -239,7 +239,7 @@ public:
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
 	bool propose(SimTK::State& someState);
-	bool proposeNMA(SimTK::State& someState, int NMAOption);
+	bool proposeNMA(SimTK::State& someState);
 
 	/** Main function that contains all the 3 steps of HMC.
 	Implements the acception-rejection step and sets the state of the 
@@ -345,6 +345,9 @@ protected:
 	SimTK::Real acceptance;
 	SimTK::Real prevAcceptance;
 	SimTK::Real prevPrevAcceptance;
+
+	//
+	int NMAOption = 0;
 
 	bool proposeExceptionCaught;
 	// END MCSampler
