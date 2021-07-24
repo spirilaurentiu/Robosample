@@ -983,6 +983,91 @@ DataFrame k_means(const DataFrame& data,
   return means;
 }
 
+// Utilities for von Mises-Fisher distribution
+// Magnitude
+SimTK::Real bNorm(SimTK::Vector V){
+	SimTK::Real normSquared = 0.0;
+	for(int i = 0; i < V.size(); i++){
+		normSquared += (V[i] * V[i]);
+	}
+	
+	return std::sqrt(normSquared);
+}
+
+double bNorm(std::vector<double> V){
+	double normSquared = 0.0;
+	for(int i = 0; i < V.size(); i++){
+		normSquared += (V[i] * V[i]);
+	}
+	return std::sqrt(normSquared);
+}
+
+// Dot product
+SimTK::Real bDot(SimTK::Vector u, SimTK::Vector v){
+	SimTK::Real d = 0.0;
+	for(int i = 0; i < u.size(); i++){
+		d += u[i] * v[i];
+	}
+	return d;
+}
+
+double bDot(std::vector<double> u, std::vector<double> v){
+	double d = 0.0;
+	for(int i = 0; i < u.size(); i++){
+		d += u[i] * v[i];
+	}
+	return d;
+}
+
+// Project vector u onto v 
+SimTK::Vector proj(SimTK::Vector u, SimTK::Vector v){
+	SimTK::Real num = bDot(u, v);
+	SimTK::Real den = bDot(u, u);
+	return (num / den) * u;
+}
+
+void bMulByScalar(std::vector<double> V, double scalar){
+	for (auto & element : V) {
+		element *= scalar;
+	}
+}
+
+
+std::vector<double> proj(std::vector<double> u, std::vector<double> v){
+	double num = bDot(u, v);
+	double den = bDot(u, u);
+	bMulByScalar(u, (num / den));
+	return u;
+}
+
+// Gram–Schmidt
+SimTK::Matrix gram_schmidt(SimTK::Matrix M){
+        SimTK::Matrix es(M.nrow(), M.ncol());
+        SimTK::Matrix us(M.nrow(), M.ncol());
+
+        // First vector
+        //us[0] = M[0];
+        //es[0] = us[0] / bNorm(us[0]);
+//
+//        # Next vectors
+//        for i in range(1, M.shape[0]):
+//                # Start with the matrix entry v
+//                us[i] = M[i]
+//
+//                # Add all the projections from 0 to i-1
+//                for j in range(0, i):
+//                        us[i] -= proj(us[j], M[i])
+//
+//                # Normalize u
+//                es[i] = us[i] / np.linalg.norm(us[i])
+//
+//        return es
+}
+
+
+
+
+
 
 
 

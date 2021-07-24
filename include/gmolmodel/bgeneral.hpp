@@ -17,6 +17,7 @@
 #include <locale>
 #include <assert.h>
 #include <cmath>
+#include <functional>
 
 // Molmodel specific headers
 

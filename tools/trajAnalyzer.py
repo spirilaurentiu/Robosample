@@ -16,7 +16,7 @@ from mdtraj.geometry import _geometry, distance, dihedral
 import warnings
 
 class TrajectoryAnalyzer:
-	def __init__(self, topFN, molName, FNSeeds, simDirs):
+	def __init__(self, topFN, molName, FNSeeds, simDirs, pattern = None):
 		'''Initialize'''
 		# Input parameters variables
 		self.molName = molName
@@ -35,6 +35,10 @@ class TrajectoryAnalyzer:
 		self.SASAs = [None] * len(FNSeeds)
 		self.totSASAs = [None] * len(FNSeeds)
 		self.helicities1 = [None] * len(FNSeeds)
+		if pattern:
+			self.pattern = "*" + pattern + "*"
+		else:
+			self.pattern = ''
 	#
 
 	def ReadPdbs(self, verbose = True):
@@ -73,7 +77,7 @@ class TrajectoryAnalyzer:
 	#
 	
 
-	def ReadDcds(self, verbose = True):
+	def ReadDcds(self, verbose = True, stride = 1):
 		'''
 		Reads trajectories form dcd files
 		'''
@@ -85,14 +89,15 @@ class TrajectoryAnalyzer:
 				#print('TrajectoryAnalyzer simDirs', self.simDirs[di])
 				#print('TrajectoryAnalyzer ReadDcds() FNSeeds', self.FNSeeds)
 				#print('TrajectoryAnalyzer simDirs get', self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')
-				fnlist = glob.glob(self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')
+				fnlist = glob.glob(self.simDirs[di] + "traj." + self.molName + self.pattern + "*" + str(self.FNSeeds[seedi]) + '.dcd')
+				print("TrajectoryAnalyzer::ReadDcds:", fnlist)
 				#print('TrajectoryAnalyzer simDirs got', fnlist, '. Taking the first one.')
 				FNList.append(fnlist[0])
 			FNList = list(np.array(FNList).flat)
 			if verbose == True:
 				print(FNList)
 			nfiles = len(FNList)
-			self.trajectories[seedi] = md.load(FNList, top = self.topFN, stride = 1)
+			self.trajectories[seedi] = md.load(FNList, top = self.topFN, stride = stride)
 	#
 
 	def Distance(self, indeces):
