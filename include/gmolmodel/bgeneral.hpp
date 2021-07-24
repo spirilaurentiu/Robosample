@@ -342,7 +342,30 @@ DataFrame k_means(const DataFrame& data,
 				  size_t number_of_iterations);
 
 
+// STD linear algebra
 
+// Magnitude
+double bNorm(std::vector<double> V);
+// Dot product
+double bDot(std::vector<double> u, std::vector<double> v);
+// Project vector u onto v 
+void bMulByScalar(std::vector<double> V, double scalar);
+
+// Porject U on V
+std::vector<double> proj(std::vector<double> u, std::vector<double> v);
+
+// Matrix
+typedef std::vector<std::vector<double>> bMatrix;
+bMatrix& bCopyMat(bMatrix& src, bMatrix& dest);
+
+// Print
+void bPrintMat(bMatrix src);
+
+// Transpose
+bMatrix& bTranspose(bMatrix&);
+
+// Gram–Schmidt
+SimTK::Matrix gram_schmidt(SimTK::Matrix M);
 
 
 

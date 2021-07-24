@@ -984,6 +984,7 @@ DataFrame k_means(const DataFrame& data,
 }
 
 // Utilities for von Mises-Fisher distribution
+
 // Magnitude
 SimTK::Real bNorm(SimTK::Vector V){
 	SimTK::Real normSquared = 0.0;
@@ -1039,6 +1040,41 @@ std::vector<double> proj(std::vector<double> u, std::vector<double> v){
 	bMulByScalar(u, (num / den));
 	return u;
 }
+
+// Assign
+bMatrix& bCopyMat(bMatrix& src, bMatrix& dest){
+	for (int i = 0; i < src.size(); i++){
+		for(int j = 0; j< src[i].size(); j++){
+			dest[i][j] = src[i][j] ;
+		} 
+	}
+	return dest;
+}
+
+// Print
+void bPrintMat(bMatrix src){
+	for (int i = 0; i < src.size(); i++){
+		for(int j = 0; j< src[i].size(); j++){
+			std::cout << src[i][j] << " ";
+		} 
+		std::cout << std::endl;
+	}
+}
+
+// Transpose
+bMatrix& bTranspose(bMatrix& M){
+	std::vector<std::vector<double>> tM;
+	tM.resize(M.size(), std::vector<double>(M[0].size(), 0));
+	double temp = 0.0;
+	bCopyMat(M, tM);
+	for (int i = 0; i < M.size(); i++){
+		for(int j = 0; j< M[i].size(); j++){
+			M[i][j] = tM[j][i];
+		}
+	}
+	
+}
+
 
 // Gram–Schmidt
 SimTK::Matrix gram_schmidt(SimTK::Matrix M){

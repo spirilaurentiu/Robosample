@@ -228,6 +228,29 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	
 			Us = RandomCache.V;
 	
+		}else if(NMAOption == 4){
+			vector<vector<double>> M
+			{
+				{1, 2, 3},
+				{4, 5, 6},
+				{7, 8, 9}
+			};
+
+			vector<vector<double>> N
+			{
+				{0, 0, 0},
+				{0, 0, 0},
+				{0, 0, 0}
+			};
+			
+			vector<vector<double>>& Mref = M;
+			vector<vector<double>>& Nref = N;
+
+
+			bPrintMat(Mref);
+			bTranspose(Mref);
+			bPrintMat(Mref);
+				
 		}
 	
 		// Scale by NMA scale factors
