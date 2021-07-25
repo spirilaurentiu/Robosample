@@ -985,6 +985,14 @@ DataFrame k_means(const DataFrame& data,
 
 // Utilities for von Mises-Fisher distribution
 
+// Print
+void bPrintVec(std::vector<double> &src){
+	for (int i = 0; i < src.size(); i++){
+		std::cout << src[i] << " ";
+	}
+	std::cout << std::endl;
+}
+
 // Magnitude
 SimTK::Real bNorm(SimTK::Vector V){
 	SimTK::Real normSquared = 0.0;
@@ -995,7 +1003,7 @@ SimTK::Real bNorm(SimTK::Vector V){
 	return std::sqrt(normSquared);
 }
 
-double bNorm(std::vector<double> V){
+double bNorm(std::vector<double> &V){
 	double normSquared = 0.0;
 	for(int i = 0; i < V.size(); i++){
 		normSquared += (V[i] * V[i]);
@@ -1012,7 +1020,7 @@ SimTK::Real bDot(SimTK::Vector u, SimTK::Vector v){
 	return d;
 }
 
-double bDot(std::vector<double> u, std::vector<double> v){
+double bDot(std::vector<double>& u, std::vector<double>& v){
 	double d = 0.0;
 	for(int i = 0; i < u.size(); i++){
 		d += u[i] * v[i];
@@ -1020,25 +1028,62 @@ double bDot(std::vector<double> u, std::vector<double> v){
 	return d;
 }
 
-// Project vector u onto v 
 SimTK::Vector proj(SimTK::Vector u, SimTK::Vector v){
 	SimTK::Real num = bDot(u, v);
 	SimTK::Real den = bDot(u, u);
 	return (num / den) * u;
 }
 
-void bMulByScalar(std::vector<double> V, double scalar){
+std::vector<double>& bAddScalar(std::vector<double>& V, double scalar){
+	for (auto & element : V) {
+		element += scalar;
+	}
+	return V;
+}
+
+std::vector<double>& bAddVector(std::vector<double>& V, std::vector<double>& W){
+	for(int i = 0; i < V.size(); i++){
+		W[i] += V[i];
+	}
+	return V;
+}
+
+// Substract V from W and put it in W
+std::vector<double>& bSubstractVector(std::vector<double>& V, std::vector<double>& W){
+	for(int i = 0; i < V.size(); i++){
+		W[i] -= V[i];
+	}
+	return V;
+}
+
+std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar){
 	for (auto & element : V) {
 		element *= scalar;
 	}
+	return V;
 }
 
+std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W){
+	for (int i = 0; i < V.size(); i++){
+		W[i] = scalar * V[i];
+	}
+}
 
-std::vector<double> proj(std::vector<double> u, std::vector<double> v){
+// Assign
+std::vector<double>& bCopyVec(std::vector<double> &src, std::vector<double> &dest){
+	for (int i = 0; i < src.size(); i++){
+		dest[i] = src[i] ;
+	}
+	return dest;
+}
+
+// Project V on U and put it in V
+std::vector<double>& proj(std::vector<double>& u, std::vector<double>& v, std::vector<double>& p_uv){
 	double num = bDot(u, v);
 	double den = bDot(u, u);
-	bMulByScalar(u, (num / den));
-	return u;
+
+	bMulByScalar(u, (num / den), p_uv);
+	return p_uv;
 }
 
 // Assign
@@ -1077,25 +1122,43 @@ bMatrix& bTranspose(bMatrix& M){
 
 
 // Gram–Schmidt
-SimTK::Matrix gram_schmidt(SimTK::Matrix M){
-        SimTK::Matrix es(M.nrow(), M.ncol());
-        SimTK::Matrix us(M.nrow(), M.ncol());
+bMatrix& gram_schmidt(bMatrix& M){
+	std::vector<std::vector<double>> es;
+	es.resize(M.size(), std::vector<double>(M[0].size(), 0));
+
+	std::vector<std::vector<double>> us;
+	us.resize(M.size(), std::vector<double>(M[0].size(), 0));
+
+	std::vector<double> V;
+	V.resize(M[0].size(), 0.0);
 
         // First vector
-        //us[0] = M[0];
-        //es[0] = us[0] / bNorm(us[0]);
-//
-//        # Next vectors
-//        for i in range(1, M.shape[0]):
-//                # Start with the matrix entry v
-//                us[i] = M[i]
-//
-//                # Add all the projections from 0 to i-1
-//                for j in range(0, i):
-//                        us[i] -= proj(us[j], M[i])
-//
-//                # Normalize u
-//                es[i] = us[i] / np.linalg.norm(us[i])
+        us[0] = M[0];
+	double usNorm = bNorm(us[0]);
+	bCopyVec(us[0], es[0]);
+	bMulByScalar(es[0], 1.0 / usNorm);
+
+        // Next vectors
+        for(int i = 1; i < M.size(); i++){
+                // Start with the matrix entry v
+                us[i] = M[i];
+
+                // Add all the projections from 0 to i-1
+        	for(int j = 0; j < i; j++){
+			// Substract proj from us and put it in us
+			proj(us[j], M[i], V);
+			bSubstractVector(V, us[i]);
+		}
+
+                // e is normalizeed u
+		bCopyVec(us[i], V);
+		usNorm = bNorm(us[i]);
+		bMulByScalar(V, 1.0 / usNorm);
+		bCopyVec(V, es[i]);
+
+	}
+	bPrintMat(us);
+	bPrintMat(es);
 //
 //        return es
 }

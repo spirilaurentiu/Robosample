@@ -246,10 +246,21 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			vector<vector<double>>& Mref = M;
 			vector<vector<double>>& Nref = N;
 
+			// Check vector operations
+			vector<double> U = {1, 2};
+			vector<double> V = {3, 4};
+			vector<double> W = {5, 6};
+
+			//std::cout << "" << bDot(V, W) << std::endl;
+			//proj(U, V, W);
+			//bPrintVec(W);
+
+			//bPrintVec(proj(V, W));
 
 			bPrintMat(Mref);
-			bTranspose(Mref);
-			bPrintMat(Mref);
+			gram_schmidt(Mref);
+
+			
 				
 		}
 	

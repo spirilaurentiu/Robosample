@@ -344,16 +344,28 @@ DataFrame k_means(const DataFrame& data,
 
 // STD linear algebra
 
+void bPrintVec(std::vector<double> &src);
+
 // Magnitude
-double bNorm(std::vector<double> V);
+double bNorm(std::vector<double>& V);
 // Dot product
-double bDot(std::vector<double> u, std::vector<double> v);
-// Project vector u onto v 
-void bMulByScalar(std::vector<double> V, double scalar);
+double bDot(std::vector<double> &u, std::vector<double> &v);
 
-// Porject U on V
-std::vector<double> proj(std::vector<double> u, std::vector<double> v);
+// Multiply by scalar in place
+std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar);
 
+// Multiply by scalar and put in W
+std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W);
+
+// Porject U on V and put in in p_UV
+std::vector<double>& proj(std::vector<double>& u, std::vector<double>& v, std::vector<double>& p_uv);
+
+std::vector<double>& bAddScalar(std::vector<double>& V, double scalar);
+
+std::vector<double>& bAddVector(std::vector<double>& V, std::vector<double>& W);
+
+// Substract V from W and put it in W
+std::vector<double>& bSubstractVector(std::vector<double>& V, std::vector<double>& W);
 // Matrix
 typedef std::vector<std::vector<double>> bMatrix;
 bMatrix& bCopyMat(bMatrix& src, bMatrix& dest);
@@ -365,7 +377,7 @@ void bPrintMat(bMatrix src);
 bMatrix& bTranspose(bMatrix&);
 
 // Gram–Schmidt
-SimTK::Matrix gram_schmidt(SimTK::Matrix M);
+bMatrix& gram_schmidt(bMatrix& M);
 
 
 
