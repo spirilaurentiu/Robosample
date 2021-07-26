@@ -993,6 +993,14 @@ void bPrintVec(std::vector<double> &src){
 	std::cout << std::endl;
 }
 
+// Assign
+std::vector<double>& bCopyVec(std::vector<double> &src, std::vector<double> &dest){
+	for (int i = 0; i < src.size(); i++){
+		dest[i] = src[i] ;
+	}
+	return dest;
+}
+
 // Magnitude
 SimTK::Real bNorm(SimTK::Vector V){
 	SimTK::Real normSquared = 0.0;
@@ -1009,6 +1017,20 @@ double bNorm(std::vector<double> &V){
 		normSquared += (V[i] * V[i]);
 	}
 	return std::sqrt(normSquared);
+}
+
+std::vector<double>& bNormalize(std::vector<double> &U, std::vector<double> &V){
+	double normSquared = 0.0;
+	for(int i = 0; i < U.size(); i++){
+		normSquared += (U[i] * U[i]);
+	}
+	double norm = std::sqrt(normSquared);
+
+	bCopyVec(U, V);
+	for(int i = 0; i < V.size(); i++){
+		V[i] /= norm;
+	}
+	return V;	
 }
 
 // Dot product
@@ -1056,29 +1078,26 @@ std::vector<double>& bSubstractVector(std::vector<double>& V, std::vector<double
 	return V;
 }
 
-std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar){
+std::vector<double>& bMulByScalar(std::vector<double>& V,
+				  double scalar){
 	for (auto & element : V) {
 		element *= scalar;
 	}
 	return V;
 }
 
-std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W){
+std::vector<double>& bMulByScalar(std::vector<double>& V,
+				  double scalar,
+				  std::vector<double>& W){
 	for (int i = 0; i < V.size(); i++){
 		W[i] = scalar * V[i];
 	}
 }
 
-// Assign
-std::vector<double>& bCopyVec(std::vector<double> &src, std::vector<double> &dest){
-	for (int i = 0; i < src.size(); i++){
-		dest[i] = src[i] ;
-	}
-	return dest;
-}
-
 // Project V on U and put it in V
-std::vector<double>& proj(std::vector<double>& u, std::vector<double>& v, std::vector<double>& p_uv){
+std::vector<double>& proj(std::vector<double>& u,
+			  std::vector<double>& v,
+			  std::vector<double>& p_uv){
 	double num = bDot(u, v);
 	double den = bDot(u, u);
 
@@ -1132,29 +1151,54 @@ bMatrix& gram_schmidt(bMatrix& M){
 	std::vector<double> V;
 	V.resize(M[0].size(), 0.0);
 
+	//std::vector<double> X;
+	//X.resize(M[0].size(), 0.0);
+
+	//std::vector<double> Y;
+	//Y.resize(M[0].size(), 0.0);
+
         // First vector
         us[0] = M[0];
-	double usNorm = bNorm(us[0]);
-	bCopyVec(us[0], es[0]);
-	bMulByScalar(es[0], 1.0 / usNorm);
+	bNormalize(us[0], es[0]);
+
+	//std::cout << "i = " << 0 << std::endl;
+	//std::cout << "us es " << 0 << std::endl;
+	//bPrintVec(us[0]);
+	//bPrintVec(es[0]);
 
         // Next vectors
         for(int i = 1; i < M.size(); i++){
+		//std::cout << "i = " << i << std::endl;
+
                 // Start with the matrix entry v
                 us[i] = M[i];
 
+		//std::cout << "us[" << i << "]" << std::endl;
+		//bPrintVec(us[i]);
                 // Add all the projections from 0 to i-1
         	for(int j = 0; j < i; j++){
-			// Substract proj from us and put it in us
-			proj(us[j], M[i], V);
-			bSubstractVector(V, us[i]);
+			//std::cout << "      j = " << j << std::endl;
+
+			proj(us[j], M[i], V); // Project Mi on usj
+
+			//std::cout << "      proj of M[" << i 
+			//	<< "] on us[" << j << "]" << std::endl;
+			//bPrintVec(V);
+
+
+			//bNormalize(V, X);
+			//bNormalize(us[j], Y);
+			//std::cout << "This should be one: " << bDot(X, Y) << std::endl;
+
+
+			bSubstractVector(V, us[i]); // Substract proj from usi
 		}
 
                 // e is normalizeed u
-		bCopyVec(us[i], V);
-		usNorm = bNorm(us[i]);
-		bMulByScalar(V, 1.0 / usNorm);
-		bCopyVec(V, es[i]);
+		bNormalize(us[i], es[i]);
+		//std::cout << "es[" << i << "]" << std::endl;
+		//bPrintVec(es[i]);
+
 
 	}
 	bPrintMat(us);

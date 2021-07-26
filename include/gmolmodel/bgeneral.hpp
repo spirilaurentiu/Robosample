@@ -348,6 +348,10 @@ void bPrintVec(std::vector<double> &src);
 
 // Magnitude
 double bNorm(std::vector<double>& V);
+
+// Normalize U and put it in V
+std::vector<double>& bNormalize(std::vector<double> &U, std::vector<double> &V);
+
 // Dot product
 double bDot(std::vector<double> &u, std::vector<double> &v);
 

@@ -231,7 +231,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		}else if(NMAOption == 4){
 			vector<vector<double>> M
 			{
-				{1, 2, 3},
+				{1, 2, 12},
 				{4, 5, 6},
 				{7, 8, 9}
 			};
@@ -251,16 +251,18 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			vector<double> V = {3, 4};
 			vector<double> W = {5, 6};
 
-			//std::cout << "" << bDot(V, W) << std::endl;
+			//bNormalize(V, W);
+			//bPrintVec(W);
+
+			//std::cout << "UxV" << bDot(U, V) << std::endl;
+			//std::cout << "UxU" << bDot(U, U) << std::endl;
 			//proj(U, V, W);
 			//bPrintVec(W);
 
 			//bPrintVec(proj(V, W));
 
 			bPrintMat(Mref);
-			gram_schmidt(Mref);
-
-			
+			gram_schmidt(Mref);	
 				
 		}
 	
