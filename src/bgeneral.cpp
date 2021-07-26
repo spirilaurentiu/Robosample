@@ -1019,7 +1019,8 @@ double bNorm(std::vector<double> &V){
 	return std::sqrt(normSquared);
 }
 
-std::vector<double>& bNormalize(std::vector<double> &U, std::vector<double> &V){
+std::vector<double>& bNormalize(std::vector<double> &U,
+				std::vector<double> &V){
 	double normSquared = 0.0;
 	for(int i = 0; i < U.size(); i++){
 		normSquared += (U[i] * U[i]);
@@ -1031,6 +1032,19 @@ std::vector<double>& bNormalize(std::vector<double> &U, std::vector<double> &V){
 		V[i] /= norm;
 	}
 	return V;	
+}
+
+std::vector<double>& bNormalizeInPlace(std::vector<double> &U){
+	double normSquared = 0.0;
+	for(int i = 0; i < U.size(); i++){
+		normSquared += (U[i] * U[i]);
+	}
+	double norm = std::sqrt(normSquared);
+
+	for(int i = 0; i < U.size(); i++){
+		U[i] /= norm;
+	}
+	return U;	
 }
 
 // Dot product
@@ -1126,7 +1140,7 @@ void bPrintMat(bMatrix src){
 }
 
 // Transpose
-bMatrix& bTranspose(bMatrix& M){
+bMatrix& bTransposeInPlace(bMatrix& M){
 	std::vector<std::vector<double>> tM;
 	tM.resize(M.size(), std::vector<double>(M[0].size(), 0));
 	double temp = 0.0;
@@ -1139,11 +1153,29 @@ bMatrix& bTranspose(bMatrix& M){
 	
 }
 
+// Multiply U by M and put it in V
+std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
+				     bMatrix& M,
+				     std::vector<double> &V)
+{
+	
+	for (int i = 0; i < V.size(); i++){
+		V[i] = 0.0;
+	}
+	for (int i = 0; i < M.size(); i++){
+		for(int j = 0; j< M[i].size(); j++){
+			V[i] += M[i][j] * U[j];
+		}
+	}
 
-// Gram–Schmidt
-bMatrix& gram_schmidt(bMatrix& M){
-	std::vector<std::vector<double>> es;
-	es.resize(M.size(), std::vector<double>(M[0].size(), 0));
+}
+
+// Rotation matrix generation using Gram–Schmidt procedure 
+// Creates an orthogonal matrix leaving the first vector as received only 
+// normalized. 
+bMatrix& gram_schmidt(bMatrix& M, bMatrix& es){
+	//std::vector<std::vector<double>> es;
+	//es.resize(M.size(), std::vector<double>(M[0].size(), 0));
 
 	std::vector<std::vector<double>> us;
 	us.resize(M.size(), std::vector<double>(M[0].size(), 0));
@@ -1151,63 +1183,41 @@ bMatrix& gram_schmidt(bMatrix& M){
 	std::vector<double> V;
 	V.resize(M[0].size(), 0.0);
 
-	//std::vector<double> X;
-	//X.resize(M[0].size(), 0.0);
-
-	//std::vector<double> Y;
-	//Y.resize(M[0].size(), 0.0);
-
         // First vector
         us[0] = M[0];
 	bNormalize(us[0], es[0]);
 
-	//std::cout << "i = " << 0 << std::endl;
-	//std::cout << "us es " << 0 << std::endl;
-	//bPrintVec(us[0]);
-	//bPrintVec(es[0]);
-
         // Next vectors
         for(int i = 1; i < M.size(); i++){
-		//std::cout << "i = " << i << std::endl;
 
                 // Start with the matrix entry v
                 us[i] = M[i];
 
-		//std::cout << "us[" << i << "]" << std::endl;
-		//bPrintVec(us[i]);
                 // Add all the projections from 0 to i-1
         	for(int j = 0; j < i; j++){
-			//std::cout << "      j = " << j << std::endl;
 
 			proj(us[j], M[i], V); // Project Mi on usj
-
-			//std::cout << "      proj of M[" << i 
-			//	<< "] on us[" << j << "]" << std::endl;
-			//bPrintVec(V);
-
-
-			//bNormalize(V, X);
-			//bNormalize(us[j], Y);
-			//std::cout << "This should be one: " << bDot(X, Y) << std::endl;
-
 
 			bSubstractVector(V, us[i]); // Substract proj from usi
 		}
 
-                // e is normalizeed u
+                // e is normalized u
 		bNormalize(us[i], es[i]);
-		//std::cout << "es[" << i << "]" << std::endl;
-		//bPrintVec(es[i]);
-
 
 	}
-	bPrintMat(us);
-	bPrintMat(es);
-//
-//        return es
+
+	bTransposeInPlace(es);
+
+        return es;
 }
 
-
+// Draws from von Mises-Fisher distribution
+//std::vector<double>& vonMisesFisher(std::vector<double>& X,
+//					std::mt19937_64 randomEngine)
+//{
+//
+//	return X;
+//}
 
 
 

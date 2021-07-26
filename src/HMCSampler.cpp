@@ -94,6 +94,8 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	NMAOption = 0;
 	MDStepsPerSampleStd = 0.5;
+
+
 }
 
 /** Destructor **/
@@ -231,25 +233,26 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		}else if(NMAOption == 4){
 			vector<vector<double>> M
 			{
-				{1, 2, 12},
-				{4, 5, 6},
-				{7, 8, 9}
+				{10, 10, 10},
+				{0, 1, 0},
+				{0, 0, 1}
 			};
 
-			vector<vector<double>> N
+			vector<vector<double>> esM
 			{
 				{0, 0, 0},
 				{0, 0, 0},
 				{0, 0, 0}
 			};
 			
-			vector<vector<double>>& Mref = M;
-			vector<vector<double>>& Nref = N;
+			//vector<vector<double>>& Mref = M;
+			//vector<vector<double>>& esMref = esM;
 
 			// Check vector operations
-			vector<double> U = {1, 2};
-			vector<double> V = {3, 4};
-			vector<double> W = {5, 6};
+			vector<double> U = {1, 2, 3};
+			vector<double> V = {3, 4, 7};
+			vector<double> W = {5, 6, 8};
+			vector<double> X = {0, 0, 0};
 
 			//bNormalize(V, W);
 			//bPrintVec(W);
@@ -261,8 +264,19 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 			//bPrintVec(proj(V, W));
 
-			bPrintMat(Mref);
-			gram_schmidt(Mref);	
+			//bPrintMat(M);
+			gram_schmidt(M, esM);
+			bPrintMat(esM);
+			vonMisesFisher(X, 10);
+			bCopyVec(X, U);
+			//bMulVecByMatrix(X, esM, U);
+				
+			std::cout << "U:  ";
+			for(int j = 0; j < 3; j++){
+				std::cout << U[j] << " " ;
+			}
+			std::cout << std::endl;
+
 				
 		}
 	

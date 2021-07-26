@@ -61,6 +61,10 @@ public:
 	int64_t getSeed() const;
 	void setSeed(int64_t);
 
+	// Draws X from von Mises-Fisher distribution with concentration 
+	// parameter k
+	std::vector<double>& vonMisesFisher(std::vector<double>& X, double k);
+
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 
@@ -129,6 +133,8 @@ public:
 
 	// Gaussian random number distribution
 	std::normal_distribution<> gaurand = std::normal_distribution<>(0.0, 1.0);
+
+	std::gamma_distribution<double> gammarand = std::gamma_distribution<double>(1, 2);
 
  };
 

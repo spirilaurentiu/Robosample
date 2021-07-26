@@ -344,13 +344,19 @@ DataFrame k_means(const DataFrame& data,
 
 // STD linear algebra
 
+// Print
 void bPrintVec(std::vector<double> &src);
+
+// Assign
+std::vector<double>& bCopyVec(std::vector<double> &src,
+			     std::vector<double> &dest);
 
 // Magnitude
 double bNorm(std::vector<double>& V);
 
 // Normalize U and put it in V
 std::vector<double>& bNormalize(std::vector<double> &U, std::vector<double> &V);
+std::vector<double>& bNormalizeInPlace(std::vector<double> &U);
 
 // Dot product
 double bDot(std::vector<double> &u, std::vector<double> &v);
@@ -378,10 +384,14 @@ bMatrix& bCopyMat(bMatrix& src, bMatrix& dest);
 void bPrintMat(bMatrix src);
 
 // Transpose
-bMatrix& bTranspose(bMatrix&);
+bMatrix& bTransposeInPlace(bMatrix&);
 
+// Multiply U by M and put it in V
+std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
+				     bMatrix& M,
+				     std::vector<double> &V);
 // Gram–Schmidt
-bMatrix& gram_schmidt(bMatrix& M);
+bMatrix& gram_schmidt(bMatrix& M, bMatrix& es);
 
 
 

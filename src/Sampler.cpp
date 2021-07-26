@@ -55,6 +55,10 @@ Sampler::Sampler(World *argWorld,
 
 	int ThreeFrom3D = 3;
 	ndofs = natoms * ThreeFrom3D;
+
+	int test_dofs = 3;
+	gammarand = std::gamma_distribution<double>((test_dofs - 1.0) / 2.0, 1.0);
+
 }
 
 // Destructor
@@ -182,6 +186,9 @@ void Sampler::initialize(SimTK::State&) {
     // Sampling
 	// function args were SimTK::State& someState
     nofSamples = 0;
+
+	int test_dofs = 3;
+	gammarand = std::gamma_distribution<double>((test_dofs - 1.0) / 2.0, 1.0);
 }
 
 void Sampler::reinitialize(SimTK::State&) {
@@ -394,4 +401,73 @@ void Sampler::loadMbx2mobility(SimTK::State&)
     }
 
 }
+
+// Draws from von Mises-Fisher distribution
+std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
+	double lambda)
+{
+	int NDOFS = 3; // DELETE THIS
+	double NDOFS_1 = NDOFS - 1;
+
+	std::vector<double> V;
+	V.resize(NDOFS_1, 0.0);
+	std::vector<double> X_lowdim;
+	X_lowdim.resize(NDOFS_1, 0.0);
+
+	// STEP 0
+	double b = -2.0 * lambda;
+	b += std::sqrt((4 * (lambda*lambda)) + (NDOFS_1*NDOFS_1));
+	b /= NDOFS_1;
+
+	double x0 = (1 - b) / (1 + b);
+
+	double LOG = NDOFS_1 * std::log(1 - (x0*x0));
+	
+	double c = (lambda*x0) + LOG;
+
+	int nofTries = 10;
+	for(int t = 0; t < nofTries; t++){
+		// STEP 1
+		double Z1 = gammarand(randomEngine);
+		double Z2 = gammarand(randomEngine);
+		double Z = Z1 / (Z1 + Z2);
+	
+		double U = uniformRealDistribution(randomEngine);
+	
+		double W_num = 1.0 - ((1.0 + b)*Z);
+		double W_den = 1.0 - ((1.0 - b)*Z);
+		double W = W_num / W_den;
+	
+		// STEP 2
+		if( ((lambda*W) + LOG - c) >= std::log(U) ){
+			// Generate uniform random vector on sphere ndofs - 1
+			for(int j = 0; j < NDOFS_1; j++){
+				V[j] = gaurand(randomEngine);
+			}
+			bNormalizeInPlace(V);
+			
+			// Actual sample
+			bMulByScalar(V, std::sqrt(1 - (W*W)), X_lowdim);
+			for(int j = 1; j < NDOFS; j++){
+				X[j] = X_lowdim[j-1];
+			}
+			X[0] = W;
+			
+			break;
+		}
+	}
+
+	return X;
+}
+
+
+
+
+
+
+
+
+
+
+
 
