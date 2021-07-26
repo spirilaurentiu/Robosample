@@ -362,6 +362,7 @@ protected:
 	SimTK::Real UScaleFactorsNorm = 0.0;
 	std::vector<SimTK::Real> InvUScaleFactors;
 	SimTK::Real InvUScaleFactorsNorm = 0.0;
+	bMatrix NMARotation;
 
 	SimTK::Real timestep;
 	SimTK::Real prevTimestep;

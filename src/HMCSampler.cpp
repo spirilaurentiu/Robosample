@@ -92,6 +92,10 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	InvUScaleFactors.resize(ndofs, 1);
 	InvUScaleFactorsNorm = std::sqrt(ndofs);
 
+	NMARotation.resize(ndofs, std::vector<double>(ndofs, 0));
+	for(int i = 0; i < ndofs; i++){
+		NMARotation[i][i] = 1.0;
+	}
 	NMAOption = 0;
 	MDStepsPerSampleStd = 0.5;
 
@@ -249,10 +253,12 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			//vector<vector<double>>& esMref = esM;
 
 			// Check vector operations
-			vector<double> U = {1, 2, 3};
+			vector<double> U; // = {1, 2, 3};
 			vector<double> V = {3, 4, 7};
 			vector<double> W = {5, 6, 8};
-			vector<double> X = {0, 0, 0};
+			vector<double> X;
+			X.resize(ndofs, 0.0);
+			U.resize(ndofs, 0.0);
 
 			//bNormalize(V, W);
 			//bPrintVec(W);
@@ -265,14 +271,17 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			//bPrintVec(proj(V, W));
 
 			//bPrintMat(M);
-			gram_schmidt(M, esM);
-			bPrintMat(esM);
+			//bPrintMat(NMARotation);
 			vonMisesFisher(X, 10);
-			bCopyVec(X, U);
-			//bMulVecByMatrix(X, esM, U);
-				
+			//bCopyVec(X, U);
+			bMulVecByMatrix(X, NMARotation, U);
+			
+			
+			//std::cout << "NMARotation:  " << std::endl;
+			//bPrintMat(NMARotation);
+	
 			std::cout << "U:  ";
-			for(int j = 0; j < 3; j++){
+			for(int j = 0; j < ndofs; j++){
 				std::cout << U[j] << " " ;
 			}
 			std::cout << std::endl;
@@ -1015,6 +1024,17 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 	}
 	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
 	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
+
+	for(int i = 0; i < ndofs; i++){
+		NMARotation[0][i] = UScaleFactors[i];
+	}
+
+	bMatrix tempNMARotation;
+	tempNMARotation.resize(ndofs, std::vector<double>(ndofs, 0));
+	bCopyMat(NMARotation, tempNMARotation);
+
+	gram_schmidt(tempNMARotation, NMARotation);
+
 }
 
 /** Seed the random number generator. Set simulation temperature,

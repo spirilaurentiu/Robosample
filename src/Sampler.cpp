@@ -406,22 +406,22 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 	double lambda)
 {
-	int NDOFS = 3; // DELETE THIS
-	double NDOFS_1 = NDOFS - 1;
+	//int NDOFS = 3; // DELETE THIS
+	double ndofs_1 = ndofs - 1;
 
 	std::vector<double> V;
-	V.resize(NDOFS_1, 0.0);
+	V.resize(ndofs_1, 0.0);
 	std::vector<double> X_lowdim;
-	X_lowdim.resize(NDOFS_1, 0.0);
+	X_lowdim.resize(ndofs_1, 0.0);
 
 	// STEP 0
 	double b = -2.0 * lambda;
-	b += std::sqrt((4 * (lambda*lambda)) + (NDOFS_1*NDOFS_1));
-	b /= NDOFS_1;
+	b += std::sqrt((4 * (lambda*lambda)) + (ndofs_1*ndofs_1));
+	b /= ndofs_1;
 
 	double x0 = (1 - b) / (1 + b);
 
-	double LOG = NDOFS_1 * std::log(1 - (x0*x0));
+	double LOG = ndofs_1 * std::log(1 - (x0*x0));
 	
 	double c = (lambda*x0) + LOG;
 
@@ -441,14 +441,14 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 		// STEP 2
 		if( ((lambda*W) + LOG - c) >= std::log(U) ){
 			// Generate uniform random vector on sphere ndofs - 1
-			for(int j = 0; j < NDOFS_1; j++){
+			for(int j = 0; j < ndofs_1; j++){
 				V[j] = gaurand(randomEngine);
 			}
 			bNormalizeInPlace(V);
 			
 			// Actual sample
 			bMulByScalar(V, std::sqrt(1 - (W*W)), X_lowdim);
-			for(int j = 1; j < NDOFS; j++){
+			for(int j = 1; j < ndofs; j++){
 				X[j] = X_lowdim[j-1];
 			}
 			X[0] = W;
