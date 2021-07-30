@@ -1,17 +1,25 @@
-partial_build_release.sh
-build-debug
-build-release
-cmake-build-debug
-.idea
-cmake_regenerateAll.sh
-src/CMakeLists.txt
+# ide's
+.idea/
+.vscode/
+
+# compilation directories
+build/
+install/
+
+# all swap files
 */.*.swp
 .*.swp
+
+# tools folder
 tools/__pycache__/*
 tools/*.pyc
 tools/.*.swp
 tools/demo/robots/
 tools/demo/inp.*
 tools/demo/out.*
+
+# docs folder
 doc/html
 doc/html/*
+
+# src/CMakeLists.txt

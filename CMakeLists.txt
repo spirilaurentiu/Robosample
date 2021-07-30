@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
 
-set( CMAKE_C_COMPILER "gcc" )
-set( CMAKE_CXX_COMPILER "g++" )
+# set( CMAKE_C_COMPILER "gcc" )
+# set( CMAKE_CXX_COMPILER "g++" )
+
+set( CMAKE_C_COMPILER "/usr/local/clang-12/bin/clang" )
+set( CMAKE_CXX_COMPILER "/usr/local/clang-12/bin/clang++" )
 
 project(Robosample)
 set(ROBOSAMPLE_MAJOR_VERSION 2)
@@ -21,39 +24,21 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
     set( ROBO_SANITIZER "-fsanitize=undefined -fsanitize=address -fsanitize-recover=address")
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ROBO_WARNINGS} -O0 ${ROBO_SANITIZER}" )
 ELSE()
-    # set up profile guided optimization
-    set(ROBO_PGO)
-
-    IF(ROBO_PGO MATCHES Generate)
-        set(ROBO_PGO "-fprofile-dir=${ROBO_PGO_PATH} -fprofile-generate")
-    ENDIF(ROBO_PGO MATCHES Generate)
-
-    IF(ROBO_PGO MATCHES Use)
-        set(ROBO_PGO "-fprofile-dir=${ROBO_PGO_PATH} -fprofile-use -fprofile-correction")
-    ENDIF(ROBO_PGO MATCHES Use)
-
     # https://gcc.gnu.org/onlinedocs/gcc-4.6.4/gcc/Optimize-Options.html
     # -fopt-info-vec-all prints everything (might be worth investigating)
     # for dev only -fopt-info-vec-missed
     # -flto
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3 -march=native ${ROBO_PGO}" )
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3 -march=native" )
 
     IF(ROBO_UBSAN MATCHES Yes)
         SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined" )
     ENDIF(ROBO_UBSAN MATCHES Yes)
 
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ROBO_PGO}" )
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${ROBO_PGO}" )
-    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${ROBO_PGO}" )
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ROBO_PGO} -Wl,-q,-emit-relocs" )
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${ROBO_PGO} -Wl,-q,-emit-relocs" )
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${ROBO_PGO} -Wl,-q,-emit-relocs" )
 
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 add_subdirectory(src)
 add_subdirectory(tests) # Laur
-
-
-
-
-#########
-# molmodel vs gmolmodel
-# what does src/CMakeLists.txt do? why build both static and dynamic?
