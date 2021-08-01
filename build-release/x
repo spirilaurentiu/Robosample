@@ -1,0 +1,48 @@
+Scanning dependencies of target GMOLMODEL_static
+Scanning dependencies of target GMOLMODEL_robo
+Scanning dependencies of target GMOLMODEL_dynamic
+[  3%] Building CXX object src/CMakeFiles/GMOLMODEL_dynamic.dir/bgeneral.cpp.o
+[  3%] Building CXX object src/CMakeFiles/GMOLMODEL_static.dir/bgeneral.cpp.o
+[  3%] Building CXX object src/CMakeFiles/GMOLMODEL_robo.dir/bgeneral.cpp.o
+[  4%] Linking CXX static library ../lib/libGMOLMODEL_static.a
+[  5%] Linking CXX shared library ../lib/libGMOLMODEL_dynamic.so
+[  6%] Linking CXX executable GMOLMODEL_robo
+[ 28%] Built target GMOLMODEL_static
+[ 50%] Built target GMOLMODEL_dynamic
+[ 72%] Built target GMOLMODEL_robo
+[ 73%] Linking CXX executable TestAmberInput
+[ 74%] Linking CXX executable TestMolmodelBasic
+[ 75%] Linking CXX executable TestMatrix
+[ 76%] Linking CXX executable TestOpenMMBasic
+[ 78%] Linking CXX executable TestBallLongPendulum
+[ 80%] Linking CXX executable TestMassSqrtAndDet
+[ 80%] Linking CXX executable TestParallelExecutor
+[ 80%] Linking CXX executable TestSimbodyBasic
+Scanning dependencies of target TestFixmanTorqueSim
+Scanning dependencies of target TestWorldReconstruction
+Scanning dependencies of target TestTopology
+Scanning dependencies of target TestSampler
+[ 81%] Building CXX object tests/CMakeFiles/TestFixmanTorqueSim.dir/TestFixmanTorqueSim.cpp.o
+[ 82%] Building CXX object tests/CMakeFiles/TestWorldReconstruction.dir/TestWorldReconstruction.cpp.o
+[ 83%] Building CXX object tests/CMakeFiles/TestSampler.dir/TestSampler.cpp.o
+[ 84%] Building CXX object tests/CMakeFiles/TestTopology.dir/TestTopology.cpp.o
+[ 85%] Built target TestOpenMMBasic
+[ 86%] Built target TestMatrix
+[ 87%] Built target TestParallelExecutor
+[ 88%] Built target TestAmberInput
+[ 89%] Linking CXX executable TestWriteDCD
+[ 90%] Built target TestBallLongPendulum
+[ 91%] Built target TestSimbodyBasic
+[ 93%] Built target TestMolmodelBasic
+[ 93%] Built target TestMassSqrtAndDet
+[ 94%] Linking CXX executable TestSetupReader
+[ 95%] Built target TestWriteDCD
+[ 96%] Built target TestSetupReader
+[ 97%] Linking CXX executable TestTopology
+[ 98%] Linking CXX executable TestWorldReconstruction
+[ 98%] Built target TestTopology
+[ 98%] Built target TestWorldReconstruction
+[ 99%] Linking CXX executable TestFixmanTorqueSim
+[ 99%] Built target TestFixmanTorqueSim
+[100%] Linking CXX executable TestSampler
+[100%] Built target TestSampler

@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../tests/../include/gmolmodel/readAmberInput.hpp
+iostream
+-
+fstream
+-
+string
+-
+string.h
+-
+vector
+-
+stdio.h
+-
+stdlib.h
+-
+math.h
+-
+utility
+-
+
+/home/pcuser/git3/Robosample/tests/TestAmberInput.cpp
+readAmberInput.hpp
+/home/pcuser/git3/Robosample/tests/readAmberInput.hpp
+

@@ -1,0 +1,12 @@
+/home/pcuser/git3/Robosample/src/Topology.cpp: In member function ‘const bBond& Topology::getBond(int, int) const’:
+/home/pcuser/git3/Robosample/src/Topology.cpp:1023:10: warning: returning reference to temporary [-Wreturn-local-addr]
+  return {};
+          ^
+/home/pcuser/git3/Robosample/src/Topology.cpp: In member function ‘const bBond& Topology::getBond(int, int) const’:
+/home/pcuser/git3/Robosample/src/Topology.cpp:1023:10: warning: returning reference to temporary [-Wreturn-local-addr]
+  return {};
+          ^
+/home/pcuser/git3/Robosample/src/Topology.cpp: In member function ‘const bBond& Topology::getBond(int, int) const’:
+/home/pcuser/git3/Robosample/src/Topology.cpp:1023:10: warning: returning reference to temporary [-Wreturn-local-addr]
+  return {};
+          ^

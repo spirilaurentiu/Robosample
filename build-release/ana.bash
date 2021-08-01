@@ -1,0 +1,7 @@
+cat out.01 | grep 'ke_prop' | awk 'BEGIN{NU =5.0;}{a = a + $2; nr += 1.0}END{print (a/nr), (a/nr)*(2/NU)*(1/0.008314472)}'
+cat out.05 | grep 'ke_prop' | awk 'BEGIN{NU =5.0;}{a = a + $2; nr += 1.0}END{print (a/nr), (a/nr)*(2/NU)*(1/0.008314472)}'
+cat out.1 | grep 'ke_prop' | awk 'BEGIN{NU =5.0;}{a = a + $2; nr += 1.0}END{print (a/nr), (a/nr)*(2/NU)*(1/0.008314472)}'
+cat out.2 | grep 'ke_prop' | awk 'BEGIN{NU =5.0;}{a = a + $2; nr += 1.0}END{print (a/nr), (a/nr)*(2/NU)*(1/0.008314472)}'
+cat out.3 | grep 'ke_prop' | awk 'BEGIN{NU =5.0;}{a = a + $2; nr += 1.0}END{print (a/nr), (a/nr)*(2/NU)*(1/0.008314472)}'
+cat out.6 | grep 'ke_prop' | awk 'BEGIN{NU =5.0;}{a = a + $2; nr += 1.0}END{print (a/nr), (a/nr)*(2/NU)*(1/0.008314472)}'
+cat out.10 | grep 'ke_prop' | awk 'BEGIN{NU =5.0;}{a = a + $2; nr += 1.0}END{print (a/nr), (a/nr)*(2/NU)*(1/0.008314472)}'

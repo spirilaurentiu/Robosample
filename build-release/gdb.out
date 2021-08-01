@@ -1,0 +1,31 @@
+printStatus 6
+Context world 0 integ state stage Empty
+Context world 0 integ state nof Subsystems 0:
+Context world 0 compoundSystem nof compounds 2
+Context world 0 System Topology realized 2 times.
+Context world 0 matter nofBodies 45 nofConstraints 0
+Context world 0 gfs nofForces 1
+Context world 0 dumm nofThreads 0 useOpenMM 1 1
+HMC: boost temperature: 1
+HMC: boost velocity scale factor: inf
+HMC: boost MD steps: 1
+After setThermo world 0 sampler 0getThermostat: 1
+printStatus 6.5
+Context world 0 integ state stage Empty
+Context world 0 integ state nof Subsystems 0:
+Context world 0 compoundSystem nof compounds 2
+Context world 0 System Topology realized 2 times.
+Context world 0 matter nofBodies 45 nofConstraints 0
+Context world 0 gfs nofForces 1
+Context world 0 dumm nofThreads 0 useOpenMM 1 1
+Hamiltonian Monte Carlo sampler: using Fixman potential.
+
+Thread 1 "GMOLMODEL_robo" received signal SIGSEGV, Segmentation fault.
+0x00007fffff0c6c3d in SimTK::SimbodyMatterSubsystem::getMobilizedBody(SimTK::MobilizedBodyIndex) const () from /usr/local/lib/libSimTKsimbody.so.3.7
+(gdb) bt
+#0  0x00007fffff0c6c3d in SimTK::SimbodyMatterSubsystem::getMobilizedBody(SimTK::MobilizedBodyIndex) const () from /usr/local/lib/libSimTKsimbody.so.3.7
+#1  0x00007ffffe94e250 in SimTK::Compound::calcAtomFrameInGroundFrame(SimTK::State const&, SimTK::Compound::AtomIndex) const () from /usr/local/lib/libSimTKmolmodel.so
+#2  0x0000000000479535 in Topology::calcLogSineSqrGamma2 (this=0x7160a0, quatState=...) at /home/pcuser/git3/Robosample/src/Topology.cpp:726
+#3  0x0000000000456aa9 in HMCSampler::initialize (this=0x8232c0, someState=...) at /home/pcuser/git3/Robosample/src/HMCSampler.cpp:529
+#4  0x00000000004268ae in main (argc=<optimized out>, argv=<optimized out>) at /home/pcuser/git3/Robosample/src/Robosample.cpp:325
+(gdb) quit

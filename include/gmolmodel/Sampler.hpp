@@ -65,6 +65,9 @@ public:
 	// parameter k
 	std::vector<double>& vonMisesFisher(std::vector<double>& X, double k);
 
+	// Draws from chi distribution
+	double chi(void);
+
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 

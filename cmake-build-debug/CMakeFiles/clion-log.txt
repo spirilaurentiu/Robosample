@@ -1,0 +1,41 @@
+/home/pcuser/Installers/clion-2019.1.1/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/pcuser/git3/Robosample
+-- The C compiler identification is GNU 5.4.0
+-- The CXX compiler identification is GNU 5.4.0
+-- Check for working C compiler: /usr/bin/gcc
+-- Check for working C compiler: /usr/bin/gcc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/g++
+-- Check for working CXX compiler: /usr/bin/g++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenMM: /usr/local/openmm/include  
+-- Boost version: 1.58.0
+ CMAKE_SOURCE_DIR -> /home/pcuser/git3/Robosample
+Include OpenMM_INCLUDE_DIR: /usr/local/openmm/include 
+Simbody_INCLUDE_DIR: /usr/local/include/simbody
+Simbody_LIB_DIR: /usr/local/lib
+Integrators_PATH: /home/pcuser/git3/Robosample/src/../Molmodel/Simbody01/SimTKmath/Integrators/src
+MOL_MODEL_INCLUDE: /usr/local/include/simbody/..
+Gmolmodel libs dir: /home/pcuser/git3/Robosample/tests/../build-debug/lib
+TestSimbodyBasicTestSimbodyBasic.cpp
+TestMolmodelBasicTestMolmodelBasic.cpp
+TestOpenMMBasicTestOpenMMBasic.cpp
+TestParallelExecutorTestParallelExecutor.cpp
+TestSamplerTestSampler.cpp
+TestAmberInputTestAmberInput.cpp
+TestWriteDCDTestWriteDCD.cpp
+RobosampleRobosample.cpp
+TestTopologyTestTopology.cpp
+TestSetupReaderTestSetupReader.cpp
+TestBallLongPendulumTestBallLongPendulum.cpp
+TestMatrixTestMatrix.cpp
+Simbody_LIBRARIES: SimTKcommon;SimTKmath;SimTKsimbody
+Boost_LIBRARIES: 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/pcuser/git3/Robosample/cmake-build-debug

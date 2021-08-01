@@ -1,0 +1,10 @@
+[  2%] Building CXX object src/CMakeFiles/GMOLMODEL_static.dir/Robosample.cpp.o
+[  2%] Building CXX object src/CMakeFiles/GMOLMODEL_robo.dir/Robosample.cpp.o
+[  3%] Building CXX object src/CMakeFiles/GMOLMODEL_dynamic.dir/Robosample.cpp.o
+src/CMakeFiles/GMOLMODEL_dynamic.dir/build.make:590: recipe for target 'src/CMakeFiles/GMOLMODEL_dynamic.dir/Robosample.cpp.o' failed
+CMakeFiles/Makefile2:126: recipe for target 'src/CMakeFiles/GMOLMODEL_dynamic.dir/all' failed
+src/CMakeFiles/GMOLMODEL_robo.dir/build.make:590: recipe for target 'src/CMakeFiles/GMOLMODEL_robo.dir/Robosample.cpp.o' failed
+CMakeFiles/Makefile2:89: recipe for target 'src/CMakeFiles/GMOLMODEL_robo.dir/all' failed
+src/CMakeFiles/GMOLMODEL_static.dir/build.make:590: recipe for target 'src/CMakeFiles/GMOLMODEL_static.dir/Robosample.cpp.o' failed
+CMakeFiles/Makefile2:163: recipe for target 'src/CMakeFiles/GMOLMODEL_static.dir/all' failed
+Makefile:83: recipe for target 'all' failed

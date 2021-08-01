@@ -461,10 +461,12 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 }
 
 
-
-
-
-
+// Draws from von Mises-Fisher distribution
+double Sampler::chi(void)
+{
+	int NDOFS = 3;
+	
+}
 
 
 

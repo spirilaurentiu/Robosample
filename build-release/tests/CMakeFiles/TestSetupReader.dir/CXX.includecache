@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../tests/../include/gmolmodel/SetupReader.hpp
+algorithm
+-
+fstream
+-
+iostream
+-
+map
+-
+sstream
+-
+string
+-
+vector
+-
+
+/home/pcuser/git3/Robosample/tests/TestSetupReader.cpp
+iostream
+-
+SetupReader.hpp
+/home/pcuser/git3/Robosample/tests/SetupReader.hpp
+

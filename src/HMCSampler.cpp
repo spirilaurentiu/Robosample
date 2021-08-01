@@ -50,6 +50,8 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 		natoms += topology.getNumAtoms();
 	}
 
+	// This is just an assumption; We don't know if topology is realized
+	// TODO: BUG: ndofs may not be equal with NU
 	int ThreeFrom3D = 3;
 	ndofs = natoms * ThreeFrom3D;
 	// END SAMPLER
@@ -87,15 +89,16 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	dR.resize(ndofs, 0);
 	dRdot.resize(ndofs, 0);
 
-	UScaleFactors.resize(ndofs, 1);
+	// Put ridiculous values so it won't work by accident
+	UScaleFactors.resize(ndofs, 99999999);
 	UScaleFactorsNorm = std::sqrt(ndofs);
-	InvUScaleFactors.resize(ndofs, 1);
+	InvUScaleFactors.resize(ndofs, 99999999);
 	InvUScaleFactorsNorm = std::sqrt(ndofs);
 
-	NMARotation.resize(ndofs, std::vector<double>(ndofs, 0));
-	for(int i = 0; i < ndofs; i++){
-		NMARotation[i][i] = 1.0;
-	}
+	//NMARotation.resize(ndofs, std::vector<double>(ndofs, 0));
+	//for(int i = 0; i < ndofs; i++){
+	//	NMARotation[i][i] = 1.0;
+	//}
 	NMAOption = 0;
 	MDStepsPerSampleStd = 0.5;
 
@@ -197,14 +200,6 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 	}else{
 	
-		// Get norm of UScaleFactors (TODO BUG not calculated correctly at loadUScaleFactors ??
-		float UScaleFactorsNormRecalc = 0;
-		for(int i = 0; i < nu; i++){
-			UScaleFactorsNormRecalc += UScaleFactors[i] * UScaleFactors[i];
-		}
-		UScaleFactorsNormRecalc = std::sqrt(UScaleFactorsNormRecalc);
-		//std::cout << "UScaleFactorsNormRecalc " << UScaleFactorsNormRecalc << '\n';
-	
 		if(NMAOption == 2){ // Use UscaleFactors with random sign
 
 			// Get random -1 or 1
@@ -235,6 +230,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			Us = RandomCache.V;
 	
 		}else if(NMAOption == 4){
+	
 			vector<vector<double>> M
 			{
 				{10, 10, 10},
@@ -252,7 +248,6 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			//vector<vector<double>>& Mref = M;
 			//vector<vector<double>>& esMref = esM;
 
-			// Check vector operations
 			vector<double> U; // = {1, 2, 3};
 			vector<double> V = {3, 4, 7};
 			vector<double> W = {5, 6, 8};
@@ -260,31 +255,30 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			X.resize(ndofs, 0.0);
 			U.resize(ndofs, 0.0);
 
+			// Check vector operations
 			//bNormalize(V, W);
 			//bPrintVec(W);
-
 			//std::cout << "UxV" << bDot(U, V) << std::endl;
 			//std::cout << "UxU" << bDot(U, U) << std::endl;
 			//proj(U, V, W);
 			//bPrintVec(W);
-
 			//bPrintVec(proj(V, W));
-
 			//bPrintMat(M);
 			//bPrintMat(NMARotation);
-			vonMisesFisher(X, 10);
-			//bCopyVec(X, U);
-			bMulVecByMatrix(X, NMARotation, U);
+
+			//double concentration = 100;
+			//vonMisesFisher(X, concentration);
+			////bCopyVec(X, U);
+			//bMulVecByMatrix(X, NMARotation, U);
 			
-			
-			//std::cout << "NMARotation:  " << std::endl;
-			//bPrintMat(NMARotation);
+			////std::cout << "NMARotation:  " << std::endl;
+			////bPrintMat(NMARotation);
 	
-			std::cout << "U:  ";
-			for(int j = 0; j < ndofs; j++){
-				std::cout << U[j] << " " ;
-			}
-			std::cout << std::endl;
+			//std::cout << "U:  ";
+			//for(int j = 0; j < ndofs; j++){
+			//	std::cout << U[j] << " " ;
+			//}
+			//std::cout << std::endl;
 
 				
 		}
@@ -297,7 +291,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	
 		// Restore vector length
 		for(int i = 0; i < nu; i++){
-			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNormRecalc));
+			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
 		}
 	
 		// Multiply by the square root of the inverse mass matrix
@@ -1018,6 +1012,12 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
         //std::cout << '\n';
     }
 
+
+	// Compute UScalefactors norm and its inverse
+	// We don't want to normalize it though. Allow the user the liberty
+	// to enforce its own velocities
+	UScaleFactorsNorm = 0.0;
+	InvUScaleFactorsNorm = 0.0;
 	for (int i = 0; i < UScaleFactors.size(); ++i) {
 		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
 		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
@@ -1025,12 +1025,20 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
 	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 
-	for(int i = 0; i < ndofs; i++){
+
+	// Set the NMA rotation matrix to identity
+	NMARotation.resize(nu, std::vector<double>(nu, 0));
+	for(int i = 0; i < nu; i++){
+		NMARotation[i][i] = 1.0;
+	}
+
+	// Fill first vector of the NMA rotation matrix
+	for(int i = 0; i < nu; i++){
 		NMARotation[0][i] = UScaleFactors[i];
 	}
 
 	bMatrix tempNMARotation;
-	tempNMARotation.resize(ndofs, std::vector<double>(ndofs, 0));
+	tempNMARotation.resize(nu, std::vector<double>(nu, 0));
 	bCopyMat(NMARotation, tempNMARotation);
 
 	gram_schmidt(tempNMARotation, NMARotation);
@@ -1124,12 +1132,6 @@ void HMCSampler::initialize(SimTK::State& someState)
 	InvUScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
-	for (int i = 0; i < UScaleFactors.size(); ++i) {
-		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
-		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
-	}
-	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
-	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Same as initialize **/
@@ -1196,12 +1198,6 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	InvUScaleFactors[j] = 1;
     }
     loadUScaleFactors(someState);
-	for (int i = 0; i < UScaleFactors.size(); ++i) {
-		UScaleFactorsNorm += UScaleFactors[i] * UScaleFactors[i];
-		InvUScaleFactorsNorm += InvUScaleFactors[i] * InvUScaleFactors[i];
-	}
-	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
-	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 }
 
 /** Get/Set the timestep for integration **/
