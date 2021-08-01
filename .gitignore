@@ -23,3 +23,7 @@ doc/html
 doc/html/*
 
 # src/CMakeLists.txt
+
+cmake-build-debug
+cmake-build-debug/*
+cmake-build-debug/*/*
