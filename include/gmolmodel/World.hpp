@@ -314,10 +314,12 @@ public:
 
 	/** Get writble pointer to Fixman Torque and other forces**/
 	// std::unique_ptr<FixmanTorque> FixmanTorqueImpl;
-	// std::unique_ptr<SimTK::Force::Custom> ExtForce;
+	// std::unique_ptr<SimTK::Force::Custom> FixmanTorqueForce;
 
 	FixmanTorque* FixmanTorqueImpl = nullptr;
-	SimTK::Force::Custom* ExtForce = nullptr;
+	SimTK::Force::Custom* FixmanTorqueForce = nullptr;
+	FixmanTorqueExt* FixmanTorqueExtImpl = nullptr;
+	SimTK::Force::Custom* FixmanTorqueExtForce = nullptr;
 
 private:
 	

@@ -27,3 +27,10 @@ doc/html/*
 cmake-build-debug
 cmake-build-debug/*
 cmake-build-debug/*/*
+
+build-release/
+build-release/*
+build-release/*/*
+build-release/*/*/*
+build-release/*/*/*/*
+

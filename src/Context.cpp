@@ -1123,7 +1123,7 @@ void Context::PrintSamplerData(std::size_t whichWorld)
 */
 
 	// Write to a file instead of stdout
-	fprintf(logFile, "%d %d %.2f %.2f %.2f %.2f %.2f %.2f %.2f "
+	fprintf(logFile, "%d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
 		, currentAdvancedState.getNU()
 		, pHMC(worlds[whichWorld].samplers[0])->acceptedSteps
 		, pHMC((worlds[whichWorld].samplers[0]))->pe_o

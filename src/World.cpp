@@ -478,10 +478,12 @@ void World::addFixmanTorque()
 
 	// Alloc memory for FixmanTorque implementation and add to forces
 	// FixmanTorqueImpl = std::make_unique<FixmanTorque>(compoundSystem.get(), *matter);
-	// ExtForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueImpl.get());
+	// FixmanTorqueForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueImpl.get());
 
 	FixmanTorqueImpl = new FixmanTorque(compoundSystem.get(), *matter);
-	ExtForce = new Force::Custom(*forces, FixmanTorqueImpl);
+	FixmanTorqueForce = new Force::Custom(*forces, FixmanTorqueImpl);
+	FixmanTorqueExtImpl = new FixmanTorqueExt(compoundSystem.get(), *matter);
+	FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);
 }
 
 /** Check if the Fixman torque flag is set **/
@@ -531,6 +533,7 @@ void World::setTemperature(SimTK::Real argTemperature)
 	// Set the temperature for the Fixman torque also
 	if(_useFixmanTorque){
 		FixmanTorqueImpl->setTemperature(this->temperature);
+		FixmanTorqueExtImpl->setTemperature(this->temperature);
 	}
 }
 //...............

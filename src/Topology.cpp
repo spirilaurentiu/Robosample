@@ -719,7 +719,7 @@ void Topology::loadTriples()
 	} // END Iterate bondedAtomRuns
 }
 
-
+// Numerically unstable around -pi, 0 and pi due to the log(0)
 SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState) {
 	bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
 	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
