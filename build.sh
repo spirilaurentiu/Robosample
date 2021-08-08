@@ -4,10 +4,12 @@
 # The command line help #
 #########################
 display_help() {
-    echo "Usage: $0 -b [BUILD_CONFIG] [OPTIONS...]" >&2
+    echo "Usage: $0 -b [BUILD_CONFIG] [C_COMPILER] [CPP_COMPILER] [OPTIONS...]" >&2
     echo
 	echo "   -h, --help                 Show help."
     echo "   -b, --build                debug/release (case insensitive)"
+	echo "   --cc                       C compiler."
+	echo "   --cpp                      C++ compiler."
 	echo "   -n, --nproc                How many processors to use when compiling (default is \$(nproc)*2)"
 	echo "                              If not enough resources are available, compilation may fail."
 	echo "                              When this is the case, use lower numbers (\$(nproc), 1, 2, ...)"
@@ -49,6 +51,18 @@ do
 			shift 2
 			;;
 
+		--cc)
+			C_COMPILER="$2"
+
+			shift 2
+			;;
+
+		--cpp)
+			CPP_COMPILER="$2"
+
+			shift 2
+			;;
+
 		-n | --nproc)
 			CPU="$2"
 
@@ -85,8 +99,24 @@ do
 	esac
 done
 
-if [ "$BUILD_TYPE" == "" ]; then
+if [ "${BUILD_TYPE}" == "" ]; then
 	echo "Error: No build (-b/--build) configuration specified."
+	echo
+	display_help
+
+	exit 1
+fi
+
+if [ "${C_COMPILER}" == "" ]; then
+	echo "Error: No C compiler (--cc) specified."
+	echo
+	display_help
+
+	exit 1
+fi
+
+if [ "${CPP_COMPILER}" == "" ]; then
+	echo "Error: No C++ compiler (--cpp) specified."
 	echo
 	display_help
 
@@ -159,15 +189,18 @@ mkdir -p ${ROBOSAMPLE_BUILD_DIR}
 
 
 
-###############################
-# Write compilation warnings. #
-###############################
+# On release builds, write warnings and errors to a file. Also, emit relocs for PGO.
 if [ "${BUILD_TYPE}" == "debug" ]; then
 	out=/dev/stderr
 else
+	# out file for compilation errors and warnings
 	time_now=`date +"%b-%d-%Y-%H_%M_%S"`
 	out=${BUILD_DIR}/out_${time_now}.txt
 	touch ${out}
+
+	# emit relocs for PGO
+	LDFLAGS_TEMP=${LDFLAGS}
+	export LDFLAGS="-Wl,-q"
 fi
 
 
@@ -188,6 +221,8 @@ rm -rf *
 
 cmake \
 	${OPENMM_SRC} \
+	-DCMAKE_C_COMPILER=${C_COMPILER} \
+	-DCMAKE_CXX_COMPILER=${CPP_COMPILER} \
 	-DOPENMM_INSTALL_PREFIX=${OPENMM_INSTALL_DIR} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 	-DCMAKE_PREFIX_PATH=${OPENMM_INSTALL_DIR} \
@@ -216,6 +251,8 @@ rm -rf *
 
 cmake \
 	${SIMBODY_SRC} \
+	-DCMAKE_C_COMPILER=${C_COMPILER} \
+	-DCMAKE_CXX_COMPILER=${CPP_COMPILER} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 	-DCMAKE_INSTALL_LIBDIR="lib" \
 	-DCMAKE_INSTALL_FULL_LIBDIR=${SIMBODY_INSTALL_DIR}lib \
@@ -241,6 +278,8 @@ rm -rf *
 
 cmake \
 	${MOLMODEL_SRC} \
+	-DCMAKE_C_COMPILER=${C_COMPILER} \
+	-DCMAKE_CXX_COMPILER=${CPP_COMPILER} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 	-DROBO_OPENMM_SEARCH_PATH=${OPENMM_INSTALL_DIR} \
 	-DSimTK_INSTALL_PREFIX=${SIMBODY_INSTALL_DIR} \
@@ -265,6 +304,8 @@ rm * -rf
 
 cmake \
 	${ROBOSAMPLE_SRC} \
+	-DCMAKE_C_COMPILER=${C_COMPILER} \
+	-DCMAKE_CXX_COMPILER=${CPP_COMPILER} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 	-DROBO_UBSAN=${ROBOSAMPLE_UBSAN} \
 	-DROBO_OPENMM_SEARCH_PATH=${OPENMM_INSTALL_DIR} \
@@ -273,6 +314,14 @@ cmake \
 
 
 make -j${CPU} 2>> ${out}
+
+
+
+# On release builds, write warnings and errors to a file. Also, emit relocs for PGO.
+if [ "${BUILD_TYPE}" == "release" ]; then
+	LDFLAGS=${LDFLAGS_TEMP}
+fi
+
 
 
 ##############################

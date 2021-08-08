@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.0)
 # set( CMAKE_C_COMPILER "gcc" )
 # set( CMAKE_CXX_COMPILER "g++" )
 
-set( CMAKE_C_COMPILER "/usr/local/clang-12/bin/clang" )
-set( CMAKE_CXX_COMPILER "/usr/local/clang-12/bin/clang++" )
+# set( CMAKE_C_COMPILER "/usr/local/clang-12/bin/clang" )
+# set( CMAKE_CXX_COMPILER "/usr/local/clang-12/bin/clang++" )
 
 project(Robosample)
 set(ROBOSAMPLE_MAJOR_VERSION 2)
@@ -33,10 +33,6 @@ ELSE()
     IF(ROBO_UBSAN MATCHES Yes)
         SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined" )
     ENDIF(ROBO_UBSAN MATCHES Yes)
-
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ROBO_PGO} -Wl,-q,-emit-relocs" )
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${ROBO_PGO} -Wl,-q,-emit-relocs" )
-    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${ROBO_PGO} -Wl,-q,-emit-relocs" )
     
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
