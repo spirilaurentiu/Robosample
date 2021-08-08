@@ -64,21 +64,23 @@ cd Robosample
 ```
 
 ## Robosample branches
-* `master` Stable version. Installed by default.
-* `cpp_latest` Stable version with latest C++ standard. Faster than `master`.
-* `experimental_cpp_latest` Unstable version with latest C++ version. This is the fastest branch.
-
-To switch branches, go to `Robosample` and execute:
+* `master` Stable version. Install by executing (from Robosample directory):
 ```
 cd Molmodel/Simbody01/
-git checkout experimental_cpp_latest
+git checkout master
 
 cd ../
-git checkout experimental_cpp_latest
+git checkout master
 
 cd ../
-git checkout experimental_cpp_latest
+git checkout master
+
+cd openmm
+git checkout master
+cd ../
 ```
+* `cpp_latest` Stable version with latest C++ standard.
+* `experimental_cpp_latest` Unstable version with latest C++ version.
 
 ## Building Robosample
 Run `build.sh`. A mandatory parameter is `-b` (`--build`) which specifies whether to build as debug or release. Other two mandatory parameters are `--cc` (C compiler) and `--cpp` (C++ compiler). You can specify full path to the compiler (`/usr/local/clang-12/bin/clang++`) or just pass what you would normally write to the command line (`clang++`). To set the number of CPU cores involved in compilation, use `-n` (`--nproc`, default is `nproc * 2`). On release builds, if you want to have an address sanitizer, compile with `-u` (`--ubsan`). **Do not run as sudo.**
