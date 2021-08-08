@@ -34,3 +34,27 @@ build-release/*/*
 build-release/*/*/*
 build-release/*/*/*/*
 
+Molmodel/build-release/
+Molmodel/build-release/*
+Molmodel/build-release/*/*
+Molmodel/build-release/*/*/*
+Molmodel/build-release/*/*/*/*
+
+Molmodel/Simbody01/build-release/
+Molmodel/Simbody01/build-release/*
+Molmodel/Simbody01/build-release/*/*
+Molmodel/Simbody01/build-release/*/*/*
+Molmodel/Simbody01/build-release/*/*/*/*
+
+Molmodel/build-release/
+Molmodel/build-release/*
+Molmodel/build-release/*/*
+Molmodel/build-release/*/*/*
+Molmodel/build-release/*/*/*/*
+
+openmm/build-release/
+openmm/build-release/*
+openmm/build-release/*/*
+openmm/build-release/*/*/*
+openmm/build-release/*/*/*/*
+
