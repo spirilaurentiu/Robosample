@@ -5,27 +5,20 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Control volume of build output" )
 
-set(OpenMM_ON OFF)
 find_package(OpenMM)
 if(OpenMM_FOUND)
-    	set(OpenMM_ON ON)
         message("OpenMM found")
+
+        INCLUDE_DIRECTORIES(${OpenMM_INCLUDE_DIR})
+        INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/src)
 else()
         message("OpenMM not found")
 endif()
 
-if ( OpenMM_ON )
-	find_package(OpenMM REQUIRED)
-	INCLUDE_DIRECTORIES(${OpenMM_INCLUDE_DIR})
-	INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/src)
-else( OpenMM_ON )
-
-endif( OpenMM_ON )
-
-find_package(Simbody 3.6 CONFIG REQUIRED) # you may have to set a path for config file location e.g.  modify the environment variable list specific for find_package..
+# @TODO do we need 3.6 CONFIG?
+find_package(Simbody REQUIRED) # you may have to set a path for config file location e.g.  modify the environment variable list specific for find_package..
 INCLUDE_DIRECTORIES( ${Simbody_INCLUDE_DIR} )
 LINK_DIRECTORIES( ${Simbody_LIB_DIR} )
-
 
 #INCLUDE_DIRECTORIES("/home/nash_mit/git/refactoring/gmolmodel/simbody/SimTKmath/Integrators/src")
 #this is a patch for the current structure of the project, it will be refactor after redesign of the gmodmodel integrator is done

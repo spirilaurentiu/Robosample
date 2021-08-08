@@ -20,7 +20,8 @@ else( OpenMM_ON )
 	MESSAGE( FATAL_ERROR "OpenMM_ON FALSE")
 endif( OpenMM_ON )
 
-find_package(Simbody 3.6 CONFIG REQUIRED) # you may have to set a path for config file location e.g.  modify the environment variable list specific for find_package..
+# @TODO do we need 3.6 CONFIG?
+find_package(Simbody REQUIRED) # you may have to set a path for config file location e.g.  modify the environment variable list specific for find_package..
 INCLUDE_DIRECTORIES( ${Simbody_INCLUDE_DIR} )
 LINK_DIRECTORIES( ${Simbody_LIB_DIR} )
 MESSAGE("Simbody_INCLUDE_DIR: ${Simbody_INCLUDE_DIR}")

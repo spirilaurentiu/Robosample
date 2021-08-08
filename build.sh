@@ -115,60 +115,19 @@ fi
 # export ROBOSAMPLE_GIT_BRANCH="master"
 
 
+######################################################################
+
+
+
 # Robosample directories
 ROBOSAMPLE_HOME="$(pwd)"
-BUILD_DIR="$(pwd)/build/${BUILD_TYPE}"
-INSTALL_DIR="$(pwd)/install/${BUILD_TYPE}"
+BUILD_DIR="${ROBOSAMPLE_HOME}/build/${BUILD_TYPE}"
+INSTALL_DIR="${ROBOSAMPLE_HOME}/install/${BUILD_TYPE}"
 
 mkdir -p ${BUILD_DIR}
 mkdir -p ${INSTALL_DIR}
 
-###############################
-# Write compilation warnings. #
-###############################
-if [ "$BUILD_TYPE" == "debug" ]; then
-	out=/dev/stderr
-else
-	out=${BUILD_DIR}/out.txt
-fi
-
-
-######################################################################
-
-
-################
-#   SIMBODY    #
-################
-
-SIMBODY_SRC="${ROBOSAMPLE_HOME}/Molmodel/Simbody01/"
-SIMBODY_BUILD_DIR="${BUILD_DIR}/Molmodel/Simbody01/"
-SIMBODY_INSTALL_DIR="${INSTALL_DIR}/Molmodel/Simbody01/"
-
-mkdir -p ${SIMBODY_BUILD_DIR}
-mkdir -p ${SIMBODY_INSTALL_DIR}
-
-# if ${SIMBODY_GIT_PULL}; then
-# 	cd ${SIMBODY_SRC}
-# 	git checkout ${SIMBODY_GIT_BRANCH} && git pull;
-# fi;
-
-cd ${SIMBODY_BUILD_DIR}
-rm -rf *
-
-cmake \
-	${SIMBODY_SRC}
-	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-	-DCMAKE_INSTALL_PREFIX=${SIMBODY_INSTALL_DIR} ..
-
-make -j${CPU} 2> ${out}
-make install
-
-
-
-################
-#   OPENMM     #
-################
-
+# create openmm paths and directories
 OPENMM_SRC="${ROBOSAMPLE_HOME}/openmm/"
 OPENMM_BUILD_DIR="${BUILD_DIR}/openmm/"
 OPENMM_INSTALL_DIR="${INSTALL_DIR}/openmm/"
@@ -176,34 +135,101 @@ OPENMM_INSTALL_DIR="${INSTALL_DIR}/openmm/"
 mkdir -p ${OPENMM_BUILD_DIR}
 mkdir -p ${OPENMM_INSTALL_DIR}
 
+# create simbody paths and directories
+SIMBODY_SRC="${ROBOSAMPLE_HOME}/Molmodel/Simbody01/"
+SIMBODY_BUILD_DIR="${BUILD_DIR}/Simbody01/"
+SIMBODY_INSTALL_DIR="${INSTALL_DIR}/Simbody01/"
+
+mkdir -p ${SIMBODY_BUILD_DIR}
+mkdir -p ${SIMBODY_INSTALL_DIR}
+
+# create molmodel paths and directories
+# molmodel gets installed automatically in ${SIMBODY_INSTALL_DIR} 
+MOLMODEL_SRC="${ROBOSAMPLE_HOME}/Molmodel/"
+MOLMODEL_BUILD_DIR="${BUILD_DIR}/Molmodel/"
+
+mkdir -p ${MOLMODEL_BUILD_DIR}
+
+# create robosample paths and directories
+# there is nothing to install here
+ROBOSAMPLE_SRC="${ROBOSAMPLE_HOME}"
+ROBOSAMPLE_BUILD_DIR="${BUILD_DIR}/robosample/"
+
+mkdir -p ${ROBOSAMPLE_BUILD_DIR}
+
+
+
+###############################
+# Write compilation warnings. #
+###############################
+if [ "${BUILD_TYPE}" == "debug" ]; then
+	out=/dev/stderr
+else
+	time_now=`date +"%b-%d-%Y-%H_%M_%S"`
+	out=${BUILD_DIR}/out_${time_now}.txt
+	touch ${out}
+fi
+
+
+################
+#   OPENMM     #
+################
+
 # if [ ${OPENMM_GIT_PULL} -eq 1 ]; then
 # 	cd ${OPENMM_SRC}
 # 	git checkout ${OPENMM_GIT_BRANCH} && git pull;
 # fi;
 
+cd ${OPENMM_INSTALL_DIR}
+rm -rf *
+
 cd ${OPENMM_BUILD_DIR}
 rm -rf *
 
 cmake \
-	${OPENMM_SRC}
+	${OPENMM_SRC} \
+	-DOPENMM_INSTALL_PREFIX=${OPENMM_INSTALL_DIR} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+	-DCMAKE_PREFIX_PATH=${OPENMM_INSTALL_DIR} \
+	-DCMAKE_INSTALL_RPATH=${OPENMM_INSTALL_DIR}lib \
 	-DCMAKE_INSTALL_PREFIX=${OPENMM_INSTALL_DIR} ..
 
-make -j${CPU} 2> ${out}
+make -j${CPU} 2>> ${out}
 make install
 
 
 
 ################
-#   MOLMODEL   #
+#   SIMBODY    #
 ################
 
-MOLMODEL_SRC="${ROBOSAMPLE_HOME}/Molmodel/"
-MOLMODEL_BUILD_DIR="${BUILD_DIR}/Molmodel/"
-MOLMODEL_INSTALL_DIR="${INSTALL_DIR}/Molmodel/"
+# if ${SIMBODY_GIT_PULL}; then
+# 	cd ${SIMBODY_SRC}
+# 	git checkout ${SIMBODY_GIT_BRANCH} && git pull;
+# fi;
 
-mkdir -p ${MOLMODEL_BUILD_DIR}
-mkdir -p ${MOLMODEL_INSTALL_DIR}
+cd ${SIMBODY_INSTALL_DIR}
+rm -rf *
+
+cd ${SIMBODY_BUILD_DIR}
+rm -rf *
+
+cmake \
+	${SIMBODY_SRC} \
+	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+	-DCMAKE_INSTALL_LIBDIR="lib" \
+	-DCMAKE_INSTALL_FULL_LIBDIR=${SIMBODY_INSTALL_DIR}lib \
+	-DCMAKE_INSTALL_RPATH=${SIMBODY_INSTALL_DIR}lib \
+	-DCMAKE_INSTALL_PREFIX=${SIMBODY_INSTALL_DIR} ..
+
+make -j${CPU} 2>> ${out}
+make install
+
+
+
+# ################
+# #   MOLMODEL   #
+# ################
 
 # if [ ${MOLMODEL_GIT_PULL} -eq 1 ]; then
 # 	cd ${MOLMODEL_SRC}
@@ -214,15 +240,13 @@ cd ${MOLMODEL_BUILD_DIR}
 rm -rf *
 
 cmake \
-	${MOLMODEL_SRC}
+	${MOLMODEL_SRC} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-	-DSimTK_INSTALL_PREFIX=${MOLMODEL_INSTALL_DIR} \
-	-DSimbody_DIR=${SIMBODY_INSTALL_DIR}/lib/cmake/simbody/ \
-	-DOpenMM_INCLUDE_DIR=${OPENMM_INSTALL_DIR}/include \
-	-DOpenMM_LIBRARIES=${OPENMM_INSTALL_DIR}/lib/libOpenMM.so \
-	-DOpenMM_LIBRARY=${OPENMM_INSTALL_DIR}/lib/libOpenMM.so ..
-
-make -j${CPU} 2> ${out}
+	-DROBO_OPENMM_SEARCH_PATH=${OPENMM_INSTALL_DIR} \
+	-DSimTK_INSTALL_PREFIX=${SIMBODY_INSTALL_DIR} \
+	-DCMAKE_INSTALL_RPATH="${OPENMM_INSTALL_DIR}lib;${SIMBODY_INSTALL_DIR}lib" ..
+	
+make -j${CPU} 2>> ${out}
 make install
 
 
@@ -231,34 +255,24 @@ make install
 #  ROBOSAMPLE  #
 ################
 
-ROBOSAMPLE_SRC="${ROBOSAMPLE_HOME}"
-ROBOSAMPLE_BUILD_DIR="${BUILD_DIR}/robosample/"
-ROBOSAMPLE_INSTALL_DIR="${INSTALL_DIR}/robosample/"
-
-mkdir -p ${ROBOSAMPLE_BUILD_DIR}
-mkdir -p ${ROBOSAMPLE_INSTALL_DIR}
-
 # if [ ${ROBOSAMPLE_GIT_PULL} -eq 1 ]; then
 # 	cd ${ROBOSAMPLE_SRC}
 # 	git checkout ${ROBOSAMPLE_GIT_BRANCH} && git pull;
 # fi;
 
 cd ${ROBOSAMPLE_BUILD_DIR}
-echo $(pwd)
-rm -rf *
+rm * -rf
 
 cmake \
-	${ROBOSAMPLE_SRC}
+	${ROBOSAMPLE_SRC} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 	-DROBO_UBSAN=${ROBOSAMPLE_UBSAN} \
-	-DCMAKE_INSTALL_PREFIX=${ROBOSAMPLE_INSTALL_DIR} \
-	-DSimbody_PATH=${SIMBODY_INSTALL_DIR} \
-	-DMolModel_PATH=${MOLMODEL_INSTALL_DIR} \
-	-DOpenMM_PATH=${OPENMM_INSTALL_DIR} ..
+	-DROBO_OPENMM_SEARCH_PATH=${OPENMM_INSTALL_DIR} \
+	-DSimTK_INSTALL_DIR=${SIMBODY_INSTALL_DIR} \
+	-DCMAKE_INSTALL_RPATH="${OPENMM_INSTALL_DIR}lib;${SIMBODY_INSTALL_DIR}lib" ..
 
 
-make -j${CPU} 2> ${out}
-make install
+make -j${CPU} 2>> ${out}
 
 
 ##############################

@@ -26,11 +26,12 @@
 
 # Generic locations to search for OpenMM files
 set(OpenMM_SEARCH_PATHS 
-    ${SimTK_SDK} # SimTK.org nightly builds location
-    ${OpenMM_SDK}
-    "/usr/local"
-    $ENV{ProgramFiles}
-    "C:/Program Files"
+    ${ROBO_OPENMM_SEARCH_PATH}
+    # ${SimTK_SDK} # SimTK.org nightly builds location
+    # ${OpenMM_SDK}
+    # "/usr/local"
+    # $ENV{ProgramFiles}
+    # "C:/Program Files"
 )
 
 # Include files

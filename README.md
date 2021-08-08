@@ -47,41 +47,53 @@ git checkout experimental_cpp_latest
 ```
 
 ## Building Robosample
-Run `build_debug.sh` or `build_release.sh`. Password will be required as a lot of files will be deleted from `/usr/`. **Do not run as sudo.**
+Run `build.sh`. A mandatory parameter is `-b` (`--build`) which specifies whether to build as debug or release. To set the number of CPU cores involved in compilation, use `-n` (`--nproc`, default is `nproc * 2`). On release builds, if you want to have an address sanitizer, compile with `-u` (`--ubsan`). **Do not run as sudo.**
+
+Building for release:
 ```
-bash build_release.sh
+bash build.sh -b release
 ```
+
+Building for debug:
+```
+bash build.sh -b debug
+```
+
+Building with fewer cores (machines with limited resources, especially RAM, can fail if too many cores are used):
+```
+bash build.sh -b release -n 2
+```
+
+Building with address sanitizer (already on if compiling for debug):
+```
+bash build.sh -b release -u
+```
+
+To read more information, execute with the help flag (`-h` or `--help`):
+```
+bash build.sh -h
+```
+
 
 # Open the project using any IDE (e.g. Visual Studio Code)
 Install [Visual Studio Code](https://code.visualstudio.com/) on Windows. Run `code .` in `Robosample`.
 
 # Working on Robosample
-After working on Robosample, it must be compiled as `Debug` or `Release` (the same flags as in section [Building Robosample](#building-robosample)). To compile as a different configuration, full recompilation is needed (see [Building Robosample](#building-robosample)).
+After working on Robosample, it must be compiled as debug or release (the same flags as in section [Building Robosample](#building-robosample)). To compile as a different configuration, full recompilation is needed (see [Building Robosample](#building-robosample)).
 ```
+cd build/debug/robosample
 make -j$((`nproc`*2))
 ```
 
-# Updating OpenMM
-Run only once (if any error occurs, it means that these lines were already run). Not needed if you are a regular user.
-```
-cd openmm
-git remote add upstream https://github.com/openmm/openmm
-```
-
-Now get the updates.
-```
-git pull upstream experimental_cpp_latest
-```
-
 # Running Robosample
-`Robosample` is located in `build-debug/tests` or `build-release/tests`.
+`Robosample` is located in `build/debug/robosample` or `build/release/robosample`.
 ```
-cd build-debug
-./src/GMOLMODEL_robo inp
+cd build/release/robosample
+./src/GMOLMODEL_robo inp.2but
 ```
 **WARNING**: To avoid dynamic library lookup failures, it is recommended to run Robosample in the WSL or native Linux terminal and not in Visual Studio Code terminal. See more details at [Installing dependencies](#installing-dependencies).  
   
-To change different parameters (use visualizer, use OpenMM etc) edit `inp` which is located in `build-debug` or `build-release`.
+To change different parameters (use visualizer, use OpenMM etc) edit `inp.2but` which is located in `build-debug` or `build-release`.
 
 # Using the visualizer
 Robosample can show in real time the progress of the simulation. To do so, change `VISUAL FALSE` to `VISUAL TRUE` in `inp`.
