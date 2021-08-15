@@ -736,7 +736,7 @@ SimTK::Real HMCSampler::getPEFromEvaluator(SimTK::State& someState){
 }
 
 SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
-	std::cout << "DEBUG HMCSampler::calcFixman ";
+	//std::cout << "DEBUG HMCSampler::calcFixman ";
 
 	int nu = someState.getNU();
 	SimTK::Vector V(nu);
@@ -756,17 +756,17 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 	double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal(someState);
 	//SimTK::Real result = 0.5 * RT * ( std::log(D0) - detMBAT ); // original
 	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
-	std::cout << "detM detMBAT fixP " << D0 << " " << detMBAT << " " << result << std::endl;
+	//std::cout << "detM detMBAT fixP " << D0 << " " << detMBAT << " " << result << std::endl;
 
 	if(SimTK::isInf(result)){
-	std::cout << "Fixman potential is infinite!\n";
-		result = 0.0;
+		std::cout << "Fixman potential is infinite!\n";
+		//result = 0.0;
 	}
 	
 	// Get M
-	SimTK::Matrix M(nu, nu); // TODO: DELETE
-	matter->calcM(someState, M); // TODO: DELETE
-    	PrintBigMat(M, nu, nu, 12, "M");  // TODO: DELETE
+	//SimTK::Matrix M(nu, nu); // TODO: DELETE
+	//matter->calcM(someState, M); // TODO: DELETE
+    	//PrintBigMat(M, nu, nu, 12, "M");  // TODO: DELETE
 
 	return result;
 }
