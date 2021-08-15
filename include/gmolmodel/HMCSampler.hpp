@@ -305,7 +305,7 @@ public:
 	SimTK::Real calculateRRdot();
 
 	/** **/
-	void geomDihedral();
+	void geomDihedral(SimTK::State& someState);
 
 	/** Load the map of mobods to joint types **/
 	//void loadMbx2mobility(SimTK::State& someState);

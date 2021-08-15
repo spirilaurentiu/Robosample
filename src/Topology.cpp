@@ -730,11 +730,11 @@ SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState) {
 	SimTK::Real x = quat[1];
 	SimTK::Real y = quat[2];
 	SimTK::Real z = quat[3];
-	SimTK::Real sinPitch = 2 * (w * y - z * x);
+	SimTK::Real sinPitch = 2 * ((w * y) - (z * x));
 
 	//std::cout << std::setprecision(20) << std::fixed;
-	//std::cout << "sinpitch " << sinPitch << std::endl;
-	// SimTK::Real pitch = std::asin(sinPitch);
+	SimTK::Real pitch = std::asin(sinPitch);
+	std::cout << "Topology pitch " << pitch << std::endl;
 
 	SimTK::Real result = std::log(sinPitch * sinPitch);
 

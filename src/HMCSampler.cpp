@@ -414,6 +414,9 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 // Apply the L operator 
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
 	try {
+		// Instant geometry
+		//geomDihedral(someState);
+
 		this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
 		system->realize(someState, SimTK::Stage::Position);
@@ -746,13 +749,14 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 	SimTK::Real D0 = 1.0;
 
 	// TODO: remove the request for Dynamics stage cache in SImbody files
-	//std::cout << "MonteCarloSampler::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
 	matter->calcDetM(someState, V, DetV, &D0);
+	//std::cout << "HMCSampler::calcFixman D0= "<< D0 << std::endl;
 
 	assert(RT > SimTK::TinyReal);
 	double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal(someState);
-	SimTK::Real result = 0.5 * RT * ( std::log(D0) - detMBAT );
-	std::cout << "detM detMBAT " << D0 << " " << detMBAT << std::endl;
+	//SimTK::Real result = 0.5 * RT * ( std::log(D0) - detMBAT ); // original
+	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
+	std::cout << "detM detMBAT fixP " << D0 << " " << detMBAT << " " << result << std::endl;
 
 	if(SimTK::isInf(result)){
 	std::cout << "Fixman potential is infinite!\n";
@@ -1574,8 +1578,8 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 
 }
 
-void HMCSampler::geomDihedral(){
-	/* // INSTANT GEOMETRY
+void HMCSampler::geomDihedral(SimTK::State& someState){
+	 // INSTANT GEOMETRY
 	SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
 	int a1, a2, a3, a4, a5;
 	//DIHEDRAL 4 6 8 14 6 8 14 16
@@ -1585,15 +1589,15 @@ void HMCSampler::geomDihedral(){
 	a2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)));
 	a3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)));
 	a4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)));
-	a5pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
+	//a5pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a5)));
 	int distA1, distA2, distA3, distA4;
 	SimTK::Vec3 distA1pos, distA2pos;
 	SimTK::Vec3 distA3pos, distA4pos;
 	distA1 = 2; distA2 = 17; distA3 = 6; distA4 = 17;
-//		    distA1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
-//		    distA2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
-//		    distA3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
-//		    distA4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
+		    distA1pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA1)));
+		    distA2pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA2)));
+		    distA3pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA3)));
+		    distA4pos = ((Topology *)rootTopology)->calcAtomLocationInGroundFrame(someState, SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(distA4)));
 //            std::cout << " dihedral elements"
 //              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a1))
 //              << " " << rootTopology->getAtomElement(SimTK::Compound::AtomIndex(a2))
@@ -1603,7 +1607,7 @@ void HMCSampler::geomDihedral(){
 //              << std::endl;
 //            std::cout << " poss: " << a1pos << ' ' << a2pos << ' ' << a3pos << ' ' << a4pos << ' ';
 	std::cout << "geom "  << bDihedral(a1pos, a2pos, a3pos, a4pos) ;
-	std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
+//	std::cout << " "  << bDihedral(a2pos, a3pos, a4pos, a5pos) ;
 	//std::cout << " "  << 10 * (distA1pos - distA2pos).norm() ; // Ang
 	//std::cout << " "  << 10 * (distA3pos - distA4pos).norm() ; // Ang
 	std::cout << std::endl;
