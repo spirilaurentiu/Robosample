@@ -600,6 +600,25 @@ void World::setGlobalForceFieldScaleFactor(SimTK::Real scaleFactor)
 	forceField->setCoulomb15ScaleFactor(scaleFactor);
 	forceField->setCoulombGlobalScaleFactor(scaleFactor);
 
+
+//	std::cout << "GLOBAL SCALE FACTORS SET TO 0.0\n";
+//	forceField->setBondTorsionGlobalScaleFactor(0);
+//	forceField->setAmberImproperTorsionGlobalScaleFactor(0);
+//  
+//	forceField->setVdw12ScaleFactor(0);
+//	forceField->setVdw13ScaleFactor(0);
+//	forceField->setVdw14ScaleFactor(0);
+//	forceField->setVdw15ScaleFactor(0);
+//	forceField->setVdwGlobalScaleFactor(0);
+//  
+//	forceField->setCoulomb12ScaleFactor(0);
+//	forceField->setCoulomb13ScaleFactor(0);
+//	forceField->setCoulomb14ScaleFactor(0);
+//	forceField->setCoulomb15ScaleFactor(0);
+//	forceField->setCoulombGlobalScaleFactor(0);
+
+
+
 }
 
 /** Set GBSA implicit solvent scale factor. **/

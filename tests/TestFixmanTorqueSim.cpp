@@ -6,17 +6,28 @@ using namespace SimTK;
 
 int main(int argc, char **argv)
 {
-	if(argc < 4){
-		std::cout << "Error: not enough parameters to run.\n";
+	if(argc < 7){
+		std::cout << "Error: not enough parameters to run. Usage:\n";
+		std::cout << argv[0] << " nofRounds (N)FP (N)FT (no)visual VV/HMC mdsteps\n"; 
 		return 1;
 	}
 
 	Real timestep = 0.002;
-	bool wantVisual = std::stoi(argv[4]);
+
+	bool wantVisual = false;
+	if( std::string(argv[4]) == "visual"){
+		wantVisual = true;
+	}
+
 	Real visualFreq = timestep;
 	int nofRounds = std::stoi(argv[1]);
-	int noMDStepsPerSample = 20;
-	World *world = new World(0, wantVisual, visualFreq);
+	int noMDStepsPerSample = 0; 
+	std::cout << "VISUAL " << wantVisual << std::endl;
+
+	int worldIndex = 0;
+	int requestedNofMols = 1;
+	World *world = new World(worldIndex, requestedNofMols, wantVisual, visualFreq);
+
 	bool useFixmanPotential = false;
 	bool useFixmanTorque = false;
 
@@ -28,8 +39,10 @@ int main(int argc, char **argv)
 	const SimTK::System *system = &(matter->getSystem());
 
 	readAmberInput amberReader;
-	amberReader.readAmberFiles("etanMob/ligand.inpcrd", "etanMob/ligand.prmtop");
-	world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "TD", "0", "Free");
+	amberReader.readAmberFiles("lin4/ligand.rst7", "lin4/ligand.prmtop");
+	world->AddMolecule(&amberReader, "lin4/ligand.rb", "lin4/ligand.flex.middletd", "R0", "0", "Ball");
+	//amberReader.readAmberFiles("etanMob/ligand.rst7", "etanMob/ligand.prmtop");
+	//world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "R0", "0", "Free");
 
 	// Using OpenMM acceleration
 	//world->updForceField()->setUseOpenMMAcceleration(true);
@@ -38,7 +51,7 @@ int main(int argc, char **argv)
 	world->updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
 	// Link the Compounds to Simbody System for all Worlds
-    world->modelTopologies("Cartesian");
+	world->modelTopologies("Free");
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
 	if(std::string(argv[3]) == "FT"){
@@ -48,22 +61,38 @@ int main(int argc, char **argv)
 	}
 
 	// Set worlds force field scale factors
-	world->setGlobalForceFieldScaleFactor(0.0);
+	//world->setGlobalForceFieldScaleFactor(0.0);
+	world->updForceField()->setBondStretchGlobalScaleFactor(0);
+	world->updForceField()->setBondBendGlobalScaleFactor(0);
+	world->updForceField()->setBondTorsionGlobalScaleFactor(0);
+	world->updForceField()->setAmberImproperTorsionGlobalScaleFactor(0);
+  
+	world->updForceField()->setVdw12ScaleFactor(0);
+	world->updForceField()->setVdw13ScaleFactor(0);
+	world->updForceField()->setVdw14ScaleFactor(0);
+	world->updForceField()->setVdw15ScaleFactor(0);
+	world->updForceField()->setVdwGlobalScaleFactor(0);
+  
+	world->updForceField()->setCoulomb12ScaleFactor(0);
+	world->updForceField()->setCoulomb13ScaleFactor(0);
+	world->updForceField()->setCoulomb14ScaleFactor(0);
+	world->updForceField()->setCoulomb15ScaleFactor(0);
+	world->updForceField()->setCoulombGlobalScaleFactor(0);
 
-        // Set world GBSA scale factor
+	// Set world GBSA scale factor
 	world->setGbsaGlobalScaleFactor(0.0);
 
 
 	// Request threads
-    world->updForceField()->setUseMultithreadedComputation(true);
-    world->updForceField()->setNumThreadsRequested(2);
+	world->updForceField()->setUseMultithreadedComputation(true);
+	world->updForceField()->setNumThreadsRequested(2);
 
 	// Print the number of threads we got back
 	std::cout << "World  requested "
-        	<< world->updForceField()->getNumThreadsRequested()
-        	<< " and got "
-        	<< world->updForceField()->getNumThreadsInUse()
-        	<< std::endl;
+	  	<< world->updForceField()->getNumThreadsRequested()
+	  	<< " and got "
+	  	<< world->updForceField()->getNumThreadsInUse()
+	  	<< std::endl;
 
 	// Realize topology for all the Worlds
 	world->getCompoundSystem()->realizeTopology();
@@ -74,6 +103,15 @@ int main(int argc, char **argv)
 
 	// Set timestep
 	(pHMC(pSampler))->setTimestep(timestep);
+
+	if(std::string(argv[5]) == "VV"){
+		(pHMC(pSampler))->setAlwaysAccept(true);
+	}else if(std::string(argv[5]) == "HMC"){
+		(pHMC(pSampler))->setAlwaysAccept(false);
+	}else{
+		std::cout << "Unknown sampler type: " << argv[5] << "\n" ;
+		return 1;
+	}
 
 	// Set thermostats
 	pHMC(pSampler)->setThermostat(ThermostatName::ANDERSEN);
@@ -88,11 +126,14 @@ int main(int argc, char **argv)
 	}
 
 	// Set thermodynamics
-        world->setTemperature(3000);
+        world->setTemperature(625);
+
+	noMDStepsPerSample = std::stoi(argv[6]);
+	std::cout << "Using MDSTEPS " << noMDStepsPerSample << std::endl;
 	pHMC(pSampler)->setMDStepsPerSample(noMDStepsPerSample);
 
 	// Set the seeds for reproducibility
-	pSampler->setSeed(0);
+	pSampler->setSeed(1);
 
 	// Initialize samplers
 	SimTK::State& advancedState = world->integ->updAdvancedState();
@@ -108,14 +149,16 @@ int main(int argc, char **argv)
 	// Geometry
 	SimTK::Compound::AtomIndex AIx, BIx, CIx, DIx;
 	SimTK::Vec3 Apos, Bpos, Cpos, Dpos;
+
+///*
 	// Lin4
-/*	AIx = SimTK::Compound::AtomIndex(1);
+	AIx = SimTK::Compound::AtomIndex(1);
 	BIx = SimTK::Compound::AtomIndex(0);
 	CIx = SimTK::Compound::AtomIndex(2);
 	DIx = SimTK::Compound::AtomIndex(3);
 // */
 	// Ethane
-///*
+/*
 	AIx = SimTK::Compound::AtomIndex(1);
 	BIx = SimTK::Compound::AtomIndex(0);
 	CIx = SimTK::Compound::AtomIndex(4);
