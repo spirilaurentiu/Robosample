@@ -231,7 +231,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		if(extFixPot < -14.0){ // Around double precision log(0)
 			extFixPot = -14.0;
 		}
-		if(HEAFY_PRINT){
+		if(HEAVY_PRINT){
 			std::cout << "External Fixman potential= " << extFixPot << std::endl;
 		}
 		///////////////////////////////////////////
@@ -250,7 +250,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 			torqueComponent = cosAsinPitch / sinPitch; // wrong
 		}
 
-		if(HEAFY_PRINT){
+		if(HEAVY_PRINT){
 			std::cout << "before pitch sinPitch cotPitch cutcot torque " << pitch << " " << sinPitch << " " << cotPitch << " " ;
 		}
 
@@ -261,13 +261,13 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 			torqueComponent = torLowLim;
 		}
 
-		if(HEAFY_PRINT){
+		if(HEAVY_PRINT){
 			std::cout << torqueComponent << " " ;
 		}
 
 		torqueComponent *= (1.0) * RT; // internal Fixman sign reversed: Mbat is in the denominator
 		
-		if(HEAFY_PRINT){
+		if(HEAVY_PRINT){
 			std::cout << torqueComponent << std::endl;
 		}
 
