@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	Real timestep = 0.002;
+	Real timestep = 0.0002;
 
 	bool wantVisual = false;
 	if( std::string(argv[4]) == "visual"){
@@ -167,10 +167,18 @@ int main(int argc, char **argv)
 
 	// Thermodynamics
     Real RT = world->getTemperature() * SimTK_BOLTZMANN_CONSTANT_MD;
+	std::cout << "RT= " << RT << std::endl;
     // Real beta = 1.0 / RT;
 
-    // // Random number generators - not sure if I need two
     std::mt19937 randomEngine = std::mt19937();
+
+	// Random seed
+        std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+        std::chrono::system_clock::duration dtn = tp.time_since_epoch();
+        int64_t clockSeed = dtn.count();
+	randomEngine.seed(clockSeed);
+	//
+
     std::uniform_real_distribution<double> uniformRealDistribution_0_2pi =
             std::uniform_real_distribution<double>(SimTK::Zero, 2*SimTK::Pi);
     std::uniform_real_distribution<double> uniformRealDistribution_mpi_pi =
@@ -311,7 +319,7 @@ int main(int argc, char **argv)
 		Bpos = topology.calcAtomLocationInGroundFrame(advancedState, BIx);
 		Cpos = topology.calcAtomLocationInGroundFrame(advancedState, CIx);
 		Dpos = topology.calcAtomLocationInGroundFrame(advancedState, DIx);
-		std::cout << bDihedral(Apos, Bpos, Cpos, Dpos) 
+		std::cout << "dihedral " << bDihedral(Apos, Bpos, Cpos, Dpos) 
 			//<< ' ' << advancedState.getQ() 
 			//<< std::endl
 		;

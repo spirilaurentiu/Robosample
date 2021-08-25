@@ -746,7 +746,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 
 	// Get detM
 	SimTK::Vector DetV(nu);
-	SimTK::Real D0 = 1.0;
+	SimTK::Real D0 = 0.0;
 
 	// TODO: remove the request for Dynamics stage cache in SImbody files
 	matter->calcDetM(someState, V, DetV, &D0);
