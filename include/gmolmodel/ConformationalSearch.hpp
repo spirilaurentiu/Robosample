@@ -145,7 +145,6 @@ protected:
         std::uniform_real_distribution<double>((-1)*SimTK::One, SimTK::One);
 
     std::normal_distribution<> gaurand = std::normal_distribution<>(0.0, 1.0);
-    //boost::math::normal gaurand;
 
 };
 

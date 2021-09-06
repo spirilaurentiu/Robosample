@@ -32,8 +32,6 @@
 #include "ParaMolecularDecorator.hpp"
 #include "FixmanTorque.hpp"
 
-#include <boost/timer/timer.hpp>
-
 #ifndef BaseSampler
 #define BaseSampler HMCSampler
 #endif

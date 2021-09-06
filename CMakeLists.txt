@@ -1,40 +1,30 @@
-cmake_minimum_required(VERSION 3.0)
+# use 3.9.4 for cmake lto flags
+cmake_minimum_required(VERSION 3.9.4)
 
-# set( CMAKE_C_COMPILER "gcc" )
-# set( CMAKE_CXX_COMPILER "g++" )
+# define project languages here
+project(Robosample C CXX)
 
-# set( CMAKE_C_COMPILER "/usr/local/clang-12/bin/clang" )
-# set( CMAKE_CXX_COMPILER "/usr/local/clang-12/bin/clang++" )
-
-project(Robosample)
-set(ROBOSAMPLE_MAJOR_VERSION 2)
-set(ROBOSAMPLE_MINOR_VERSION 0)
-set(ROBOSAMPLE_PATCH_VERSION 0)
-set(ROBOSAMPLE_COPYRIGHT_YEARS "2021-01")
+# robosample version and date
+SET(ROBOSAMPLE_MAJOR_VERSION 2)
+SET(ROBOSAMPLE_MINOR_VERSION 0)
+SET(ROBOSAMPLE_PATCH_VERSION 0)
+SET(ROBOSAMPLE_COPYRIGHT_YEARS "2021-01")
 
 # underbar separated list of dotted authors, no spaces or commas
-set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
+SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 
-# set up compilation flags
-# TODO how to set for .c? we have one such file: src/format/dcdplugin.c
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -g" )
+# C++
+IF( ROBO_UBSAN MATCHES Yes )
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined" )
+ENDIF( ROBO_UBSAN MATCHES Yes )
 
-IF(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( ROBO_WARNINGS "-Wall -Wextra -Wpedantic -Wshadow -Wdouble-promotion -Wformat=2 -Wformat-truncation -Wundef -Wconversion -Wunused-parameter" )
-    set( ROBO_SANITIZER "-fsanitize=undefined -fsanitize=address -fsanitize-recover=address")
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ROBO_WARNINGS} -O0 ${ROBO_SANITIZER}" )
-ELSE()
-    # https://gcc.gnu.org/onlinedocs/gcc-4.6.4/gcc/Optimize-Options.html
-    # -fopt-info-vec-all prints everything (might be worth investigating)
-    # for dev only -fopt-info-vec-missed
-    # -flto
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3 -march=native" )
+# C
+IF( ROBO_UBSAN MATCHES Yes )
+    SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined" )
+ENDIF( ROBO_UBSAN MATCHES Yes )
 
-    IF(ROBO_UBSAN MATCHES Yes)
-        SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined" )
-    ENDIF(ROBO_UBSAN MATCHES Yes)
-    
-ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
+
+# add sources
 add_subdirectory(src)
-add_subdirectory(tests) # Laur
+# add_subdirectory(tests) # Laur
