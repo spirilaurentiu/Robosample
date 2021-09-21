@@ -58,3 +58,6 @@ openmm/build-release/*/*
 openmm/build-release/*/*/*
 openmm/build-release/*/*/*/*
 
+tools/__pycache__/
+tools/__pycache__/*
+

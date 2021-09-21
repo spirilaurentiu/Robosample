@@ -125,6 +125,8 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 {
 	// function args were
 
+	bool HEAVY_PRINT = false;
+
 	// Compute Fixman torque
 	int nu = state.getNU();
 
@@ -141,7 +143,6 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 
 	if((extnu == 6) || (extnu == 3)){ // Free or Ball mobilizer
 
-		bool HEAVY_PRINT = true;
 
 		const SimTK::MobilizedBody* mobod1ptr = &mobod1;
 		
@@ -252,7 +253,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		}
 
 		if(HEAVY_PRINT){
-			std::cout << "pitch FP FT " << pitch << " " << extFixPot << " "
+			std::cout << "pitch logsinsqpitch FT " << pitch << " " << extFixPot << " "
 				//<< sinPitch << " " << cotPitch << " " 
 				;
 		}
@@ -327,7 +328,12 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 	// The rest of the mobilized bodies
 	for(int i = 2; i < matter.getNumBodies(); i++){
 		const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(SimTK::MobilizedBodyIndex(i));
-		std::cout << "mobod " << i << " Q " << mobod.getQAsVector(state) << std::endl;
+		const SimTK::MobilizedBody* mobodptr = &mobod;
+
+		////std::cout << "mobod " << i << " Q " << mobod.getQAsVector(state) << std::endl;
+		if(HEAVY_PRINT){
+			std::cout << "mobod " << i << " Q " << ((SimTK::MobilizedBody::Pin *)mobodptr)->getAngle(state) << std::endl;
+		}
 	}
 
 }

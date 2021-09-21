@@ -881,13 +881,14 @@ SimTK::Transform * HMCSampler::getSetTVector(void)
 // Restores configuration from the internal set vector of transforms TVector
 void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
 {
+  system->realize(someState, SimTK::Stage::Position);
   int i = 0;
   for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-	system->realize(someState, SimTK::Stage::Position);
+	//system->realize(someState, SimTK::Stage::Position);
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	mobod.setQToFitTransform(someState, SetTVector[i]);
 
-	system->realize(someState, SimTK::Stage::Position);
+	//system->realize(someState, SimTK::Stage::Position);
 
 
 	i++;
@@ -1009,7 +1010,7 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 		// const int mnu = mobod.getNumU(someState);
 		const float scaleFactor = world->getMobodUScaleFactor(mbx);
 
-		//std::cout << "RED ZONE mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
+		//std::cout << "loadUScaleFactors mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
 		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
 			//std::cout << ' ' << int(uIx) ;
 			UScaleFactors[int(uIx)] = scaleFactor;

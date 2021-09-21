@@ -25,7 +25,6 @@ class TrajectoryAnalyzer:
 		self.FNSeeds = FNSeeds
 		if isinstance(self.FNSeeds, list) != True:
 			self.FNSeeds = [self.FNSeeds]
-		#print('TrajectoryAnalyzer init FNSeeds', self.FNSeeds)
 
 		self.trajectories = [None] * len(FNSeeds)
 
@@ -39,6 +38,7 @@ class TrajectoryAnalyzer:
 			self.pattern = "*" + pattern + "*"
 		else:
 			self.pattern = ''
+		print('TrajectoryAnalyzer init simDirs FNSeeds pattern', self.simDirs, self.FNSeeds, self.pattern)
 	#
 
 	def ReadPdbs(self, verbose = True):
@@ -82,14 +82,18 @@ class TrajectoryAnalyzer:
 		Reads trajectories form dcd files
 		'''
 		# Main loop: iterates through seeds = simulation reps
+		print('TrajectoryAnalyzer ReadDcds simDirs FNSeeds', self.simDirs, self.FNSeeds)
 		for seedi in range(len(self.FNSeeds)):
 			# Get file names
 			FNList = []
 			for di in range(len(self.simDirs)):
 				#print('TrajectoryAnalyzer simDirs', self.simDirs[di])
 				#print('TrajectoryAnalyzer ReadDcds() FNSeeds', self.FNSeeds)
-				#print('TrajectoryAnalyzer simDirs get', self.simDirs[di] + "traj." + self.molName + "." + str(self.FNSeeds[seedi]) + '.dcd')
-				fnlist = glob.glob(self.simDirs[di] + "traj." + self.molName + self.pattern + "*" + str(self.FNSeeds[seedi]) + '.dcd')
+				print('TrajectoryAnalyzer simDirs get', self.simDirs[di] + "traj." + self.molName + self.pattern + '.' + str(self.FNSeeds[seedi]) + '.dcd')
+				fnlist = glob.glob(self.simDirs[di] + "traj." + self.molName + self.pattern + '.' + str(self.FNSeeds[seedi]) + '.dcd')
+				if fnlist == []:
+					print("Warning: No DCDs found.")
+					return False
 				print("TrajectoryAnalyzer::ReadDcds:", fnlist)
 				#print('TrajectoryAnalyzer simDirs got', fnlist, '. Taking the first one.')
 				FNList.append(fnlist[0])
@@ -98,6 +102,7 @@ class TrajectoryAnalyzer:
 				print(FNList)
 			nfiles = len(FNList)
 			self.trajectories[seedi] = md.load(FNList, top = self.topFN, stride = stride)
+			return True
 	#
 
 	def Distance(self, indeces):
