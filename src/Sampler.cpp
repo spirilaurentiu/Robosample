@@ -407,6 +407,8 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 	double lambda)
 {
 	//int NDOFS = 3; // DELETE THIS
+	std::cout << "Sampler::vonMisesFisher ndofs " << ndofs << "\n";
+
 	double ndofs_1 = ndofs - 1;
 
 	std::vector<double> V;

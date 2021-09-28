@@ -179,29 +179,104 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	// Vector multiplied by the sqrt of the inverse mass matrix
 	SimTK::Vector sqrtMInvUs(nu, 1);
 
-	if(NMAOption == 1){ // For pure demonstrative purposes
+	if(NMAOption <= 3){
+
+		if(NMAOption == 1){ // For pure demonstrative purposes
+	
+			SimTK::Real altSign;
+	
+			if((nofSamples % 2) == 0){ altSign = 1;}else{altSign = -1;} 
+	
+			Us *= altSign;
+	
+		}else if(NMAOption == 2){ // Use UscaleFactors with random sign
+	
+			// Get random -1 or 1
+			SimTK::Real randSign;
+			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+			Us *= randSign;
+	
+		}else if(NMAOption == 3){ // Set a random sign
+	
+			// Check if we can use our cache
+			// Draw X from a normal distribution N(0, 1)
+			if (nu != RandomCache.nu) {
+				// Rebuild the cache
+				// We also get here if the cache is not initialized
+				RandomCache.V.resize(nu);
+				RandomCache.SqrtMInvV.resize(nu);
+				RandomCache.sqrtRT = std::sqrt(RT);
+				RandomCache.nu = nu;
+		
+				// we don't get to use multithreading here
+				RandomCache.FillWithGaussian();
+			} else {
+				// wait for random number generation to finish (should be done by this stage)
+				RandomCache.task.wait();
+			}
+	
+			Us = RandomCache.V;
+		}
 
 		// Scale by NMA scale factors
 		std::transform(Us.begin(), Us.end(), // apply an operation on this
 			UScaleFactors.begin(), // and this
 			Us.begin(), // and store here
 			std::multiplies<SimTK::Real>()); // this is the operation
+		
+		// Restore vector length
+		for(int i = 0; i < nu; i++){
+			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
+		}
+		
+		// Multiply by the square root of the inverse mass matrix
+		 
+		if((NMAOption != 2)){ // DELETE
+			matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs); // LEAVE
+		}else{ // DELETE
+			//SimTK::Real totalMass = matter->calcSystemMass(someState);// DELETE
+	
+			///* Multiply by H sqrt(Mcartesian) ????
+				
+			for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+				SimTK::Real M = mobod.getBodyMass(someState);
+				SimTK::Real sqrtMobodMInv = 1 / std::sqrt(M); 
+		
+				for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+					sqrtMInvUs[int(uIx)] = Us[int(uIx)] * sqrtMobodMInv;
+				}
+			}
+	
+			std::cout << "sqrtMInvUs 1 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+	
+			for(int i = 0; i < nu; i++){
+				sqrtMInvUs[i] = (sqrtMInvUs[i] * 2.64);
+			}
+			
+			std::cout << "sqrtMInvUs 2 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+			//*/
+		}
+	
+		// Multiply by the square root of kT
+		sqrtMInvUs *= sqrtRT;
+	
+		std::cout << "sqrtMInvUs 3 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
-		SimTK::Real altSign;
+	}else if(NMAOption == 5){ // Set a random sign
 
-		if((nofSamples % 2) == 0){ altSign = 1;}else{altSign = -1;} 
+		// Direction vector UScaleFactors
+		SimTK::Vector NormedUScaleFactors(nu, 1);
+		SimTK::Vector TemperedUScaleFactors(nu, 1);
+		for(int i = 0; i < nu; i++){
+			NormedUScaleFactors[i] = UScaleFactors[i] / UScaleFactorsNorm;
+		}
+		for(int i = 0; i < nu; i++){
+			TemperedUScaleFactors[i] = NormedUScaleFactors[i] * std::sqrt(nu);
+		}
 
-		Us *= altSign;
-
-	}else if(NMAOption == 2){ // Use UscaleFactors with random sign
-
-		// Get random -1 or 1
-		SimTK::Real randSign;
-		SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-		Us *= randSign;
-
-	}else if(NMAOption == 3){ // Set a random sign
+		std::cout << "TemperedUScaleFactors 0 "; for(int i = 0; i < nu; i++){ std::cout << TemperedUScaleFactors[i] << " " ;} std::cout << "\n";
 
 		// Check if we can use our cache
 		// Draw X from a normal distribution N(0, 1)
@@ -222,76 +297,85 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 		Us = RandomCache.V;
 
+		std::cout << "Us 1 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
+
+		// Add noise
+		std::transform(TemperedUScaleFactors.begin(), TemperedUScaleFactors.end(), // apply an operation on this
+			Us.begin(), // and this
+			TemperedUScaleFactors.begin(), // and store here
+			std::plus<SimTK::Real>()); // this is the operation
+
+		std::cout << "TemperedUScaleFactors 1 "; for(int i = 0; i < nu; i++){ std::cout << TemperedUScaleFactors[i] << " " ;} std::cout << "\n";
+
+		matter->multiplyBySqrtMInv(someState, TemperedUScaleFactors, sqrtMInvUs);
+
+		std::cout << "sqrtMInvUs 2 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+
+		// Scale by sqrt of kT
+		sqrtMInvUs *= sqrtRT;
+
+		std::cout << "sqrtMInvUs 3 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+
+		// Scale by NMA scale factors
+		//std::transform(sqrtMInvUs.begin(), sqrtMInvUs.end(), // apply an operation on this
+		//	NormedUScaleFactors.begin(), // and this
+		//	sqrtMInvUs.begin(), // and store here
+		//	std::plus<SimTK::Real>()); // this is the operation
+		
+	
+		// Restore vector length
+		//for(int i = 0; i < nu; i++){
+		//	sqrtMInvUs[i] = (sqrtMInvUs[i] * (std::sqrt(nu) / UScaleFactorsNorm));
+		//}
+		
+
+	
 	}else if(NMAOption == 4){
 
-		vector<vector<double>> M
-		{
-			{10, 10, 10},
-			{0, 1, 0},
-			{0, 0, 1}
-		};
+		//proj(U, V, W);
 
-		vector<vector<double>> esM
-		{
-			{0, 0, 0},
-			{0, 0, 0},
-			{0, 0, 0}
-		};
-		
-		//vector<vector<double>>& Mref = M;
-		//vector<vector<double>>& esMref = esM;
-
-		vector<double> U; // = {1, 2, 3};
-		vector<double> V = {3, 4, 7};
-		vector<double> W = {5, 6, 8};
+		// Generate unit Von Mises Fisher around [1, 0, 0...]
 		vector<double> X;
+		vector<double> U;
 		X.resize(ndofs, 0.0);
 		U.resize(ndofs, 0.0);
+		double concentration = 100;
 
-		// Check vector operations
-		//bNormalize(V, W);
-		//bPrintVec(W);
-		//std::cout << "UxV" << bDot(U, V) << std::endl;
-		//std::cout << "UxU" << bDot(U, U) << std::endl;
-		//proj(U, V, W);
-		//bPrintVec(W);
-		//bPrintVec(proj(V, W));
-		//bPrintMat(M);
+		vonMisesFisher(X, concentration);
+		std::cout << "X 0 "; for(int i = 0; i < nu; i++){ std::cout << X[i] << " " ;} std::cout << "\n";
+
+		// Rotate to appropiate location
+		bMulVecByMatrix(X, NMARotation, U);
+		std::cout << "U 1 "; for(int i = 0; i < nu; i++){ std::cout << U[i] << " " ;} std::cout << "\n";
 		//bPrintMat(NMARotation);
 
-		//double concentration = 100;
-		//vonMisesFisher(X, concentration);
-		////bCopyVec(X, U);
-		//bMulVecByMatrix(X, NMARotation, U);
-		
-		////std::cout << "NMARotation:  " << std::endl;
-		////bPrintMat(NMARotation);
+		// Get random -1 or 1 and generate bidirectional von Mises Fisher
+		SimTK::Real randSign;
+		SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+		Us *= randSign;
 
-		//std::cout << "U:  ";
-		//for(int j = 0; j < ndofs; j++){
-		//	std::cout << U[j] << " " ;
-		//}
-		//std::cout << std::endl;
+		// Put c++ vMF sample in Simbody Vector
+		for(int j = 0; j < ndofs; j++){Us[j] *= U[j];}
+		std::cout << "Us 2 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
 
-			
+		// Prolong vector to match temperature
+		SimTK::Real velocityMacroLength = (std::sqrt(nu) * sqrtRT);
+		for(int j = 0; j < ndofs; j++){Us[j] *= velocityMacroLength;}
+		std::cout << "Us 3 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
+
+		// Add Gaussian noise to the length
+		std::normal_distribution<double> lengthNoiser(1, 0.1);
+		double lengthNoise = lengthNoiser(RandomCache.RandomEngine);
+		std::cout << "lengthNoise " << lengthNoise << "\n";
+		for(int j = 0; j < ndofs; j++){Us[j] *= lengthNoise;}
+		std::cout << "Us 4 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
+
+		// Multiply by the square root of the mass matrix
+		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
+		std::cout << "sqrtMInvUs 5 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+
 	}
-	
-	// Scale by NMA scale factors
-	std::transform(Us.begin(), Us.end(), // apply an operation on this
-		UScaleFactors.begin(), // and this
-		Us.begin(), // and store here
-		std::multiplies<SimTK::Real>()); // this is the operation
-	
-	// Restore vector length
-	for(int i = 0; i < nu; i++){
-		Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
-	}
-	
-	// Multiply by the square root of the inverse mass matrix
-	matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
-	
-	// Multiply by the square root of kT
-	sqrtMInvUs *= sqrtRT;
 	
 	// Set state velocities
 	someState.updU() = sqrtMInvUs;
@@ -1032,7 +1116,6 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 	UScaleFactorsNorm = std::sqrt(UScaleFactorsNorm);
 	InvUScaleFactorsNorm = std::sqrt(InvUScaleFactorsNorm);
 
-
 	// Set the NMA rotation matrix to identity
 	NMARotation.resize(nu, std::vector<double>(nu, 0));
 	for(int i = 0; i < nu; i++){
@@ -1040,9 +1123,12 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 	}
 
 	// Fill first vector of the NMA rotation matrix
+	std::cout << "NMARotation 1st column filled with \n";
 	for(int i = 0; i < nu; i++){
-		NMARotation[0][i] = UScaleFactors[i];
+		std::cout << (UScaleFactors[i] / UScaleFactorsNorm) << " ";
+		NMARotation[i][0] = (UScaleFactors[i] / UScaleFactorsNorm);
 	}
+	std::cout << '\n';
 
 	bMatrix tempNMARotation;
 	tempNMARotation.resize(nu, std::vector<double>(nu, 0));
@@ -1181,6 +1267,11 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	// Initialize velocities to temperature
 	// TODO Shouldn't be here
 	int nu = someState.getNU();
+
+	// Reset ndofs which was set to natoms*3 in constructors
+	ndofs = nu;
+
+	// kT
 	double sqrtRT = std::sqrt(RT);
 	SimTK::Vector V(nu);
 	SimTK::Vector SqrtMInvV(nu);
@@ -1716,6 +1807,7 @@ bool HMCSampler::acceptSample() {
 		prob = MHAcceptProbability(etot_proposed, etot_n);
 	}else{
 		prob = MHAcceptProbability(pe_o, pe_n);
+		//prob = MHAcceptProbability(etot_proposed, etot_n);
 	}
 
 	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;
