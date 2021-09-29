@@ -362,6 +362,10 @@ protected:
 	SimTK::Real UScaleFactorsNorm = 0.0;
 	std::vector<SimTK::Real> InvUScaleFactors;
 	SimTK::Real InvUScaleFactorsNorm = 0.0;
+
+	SimTK::Vector NormedUScaleFactors;
+	SimTK::Vector DOFUScaleFactors;
+
 	bMatrix NMARotation;
 
 	SimTK::Real timestep;
@@ -374,6 +378,9 @@ protected:
 	SimTK::Real etot_set; // stored total energy
 	SimTK::Real etot_proposed; // last accepted total energ (same with stored)
 	SimTK::Real etot_n;
+
+	SimTK::Real ke_prop_nma6;
+	SimTK::Real ke_n_nma6;
 
 	SimTK::Real boostT;
 	SimTK::Real boostFactor;
