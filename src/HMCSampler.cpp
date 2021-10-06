@@ -380,7 +380,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 	}else if(NMAOption == 6){
 
-		std::cout << "DOFUs 0 "; for(int i = 0; i < nu; i++){ std::cout << DOFUScaleFactors[i] << " " ;} std::cout << "\n";
+		//std::cout << "DOFUs 0 "; for(int i = 0; i < nu; i++){ std::cout << DOFUScaleFactors[i] << " " ;} std::cout << "\n";
 
 		// Sample from N(0, 1)
 		if (nu != RandomCache.nu) {
@@ -399,7 +399,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		}
 	
 		Us = RandomCache.V;
-		std::cout << "Us 0 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
+		//std::cout << "Us 0 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
 
 		// Get random -1 or 1
 		SimTK::Real randSign;
@@ -407,16 +407,40 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
 	
 		// Shift average
-		for(int j = 0; j < ndofs; j++){Us[j] += ((randSign) * DOFUScaleFactors[j]);}
-		std::cout << "Us 1 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
+		for(int j = 0; j < ndofs; j++){Us[j] += ((randSign) * DOFUScaleFactors[j]);} 
+		//std::cout << "Us 1 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
 
 		// Multiply by the square root of the mass matrix
 		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
-		std::cout << "sqrtMInvUs 1 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+		//std::cout << "sqrtMInvUs 1 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
 		// Scale by sqrt of kT
 		sqrtMInvUs *= sqrtRT;
-		std::cout << "sqrtMInvUs 2 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+		//std::cout << "sqrtRT " << sqrtRT << std::endl;
+		//std::cout << "sqrtMInvUs 2 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+
+		/*// Probability terms
+		// Kinetic term
+		SimTK::Vector X(sqrtMInvUs);
+		SimTK::Vector XM(nu, 1);
+		SimTK::Real XMX = 0.0;
+		matter->multiplyByM(someState, X, XM);
+		for(int j = 0; j < ndofs; j++){XMX += (XM[j] * X[j]);}
+		// Bias term
+		SimTK::Vector DOFUScaleFactorsM(nu, 1);
+		SimTK::Real muMmu = 0.0;
+		matter->multiplyByM(someState, DOFUScaleFactors, DOFUScaleFactorsM);
+		for(int j = 0; j < ndofs; j++){muMmu += (DOFUScaleFactorsM[j] * DOFUScaleFactors[j]);}
+		// Correlation term
+		SimTK::Real muMX = 0.0;
+		for(int j = 0; j < ndofs; j++){muMX += (XM[j] * DOFUScaleFactors[j]);}
+		std::cout << "probability terms XMX muMmu muMX = " << XMX << " " << muMmu << " " << muMX << "\n";
+		// */
+
+		//////////////////////
+		// Regulate temperature of the guidance Hamiltonian
+		sqrtMInvUs /= 1.4142135623730950488; // sqrt(2)
+		//////////////////////
 
 		// Kinetic energy of the evaluation Hamiltonian
 		ke_prop_nma6 = 0;
@@ -429,13 +453,13 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		v_miu = (sqrtMInvUs - DOFUScaleFactors);
 		matter->multiplyByM(someState, v_miu, v_miuM);
 		for(int j = 0; j < ndofs; j++){leftExp += (v_miuM[j] * v_miu[j]);}
-		leftExp *= ((-0.5) * this->beta);
+		leftExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
 		leftExp = exp(leftExp);
 
 		v_miu = (sqrtMInvUs + DOFUScaleFactors);
 		matter->multiplyByM(someState, v_miu, v_miuM);
 		for(int j = 0; j < ndofs; j++){ke_prop_nma6 += (v_miuM[j] * v_miu[j]);}
-		rightExp *= ((-0.5) * this->beta);
+		rightExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
 		rightExp = exp(rightExp);
 
 		ke_prop_nma6 = RT * std::log(0.5 * (leftExp + rightExp));
@@ -1201,12 +1225,12 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 	}
 
 	// Fill first vector of the NMA rotation matrix
-	std::cout << "NMARotation 1st column filled with \n";
+	//std::cout << "NMARotation 1st column filled with \n";
 	for(int i = 0; i < nu; i++){
-		std::cout << (UScaleFactors[i] / UScaleFactorsNorm) << " ";
+		//std::cout << (UScaleFactors[i] / UScaleFactorsNorm) << " ";
 		NMARotation[i][0] = (UScaleFactors[i] / UScaleFactorsNorm);
 	}
-	std::cout << '\n';
+	//std::cout << '\n';
 
 	bMatrix tempNMARotation;
 	tempNMARotation.resize(nu, std::vector<double>(nu, 0));
@@ -1828,13 +1852,13 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 		v_miu = (someState.getU() - DOFUScaleFactors);
 		matter->multiplyByM(someState, v_miu, v_miuM);
 		for(int j = 0; j < ndofs; j++){leftExp += (v_miuM[j] * v_miu[j]);}
-		leftExp *= ((-0.5) * this->beta);
+		leftExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
 		leftExp = exp(leftExp);
 
 		v_miu = (someState.getU() + DOFUScaleFactors);
 		matter->multiplyByM(someState, v_miu, v_miuM);
 		for(int j = 0; j < ndofs; j++){ke_n_nma6 += (v_miuM[j] * v_miu[j]);}
-		rightExp *= ((-0.5) * this->beta);
+		rightExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
 		rightExp = exp(rightExp);
 
 		ke_n_nma6 = RT * std::log(0.5 * (leftExp + rightExp));
