@@ -81,7 +81,10 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	this->timestep = 0;
 
 	this->temperature = 0.0;
-	this->boostT = this->temperature;
+	this->boostT = 0.0;
+	this->boostRT = 0.0;
+	this->boostBeta = 0.0;
+
 	MDStepsPerSample = 0;
 	proposeExceptionCaught = false;
 	shouldAdaptTimestep = false;
@@ -165,6 +168,7 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	//  time we hit this function
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
+
 
 /** Initialize velocities scaled by NMA factors.
  Coresponds to R operator in LAHMC **/
@@ -270,16 +274,16 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	}else if(NMAOption == 5){ // Set a random sign
 
 		// Direction vector UScaleFactors
-		SimTK::Vector NormedUScaleFactors(nu, 1);
-		SimTK::Vector DOFUScaleFactors(nu, 1);
-		for(int i = 0; i < nu; i++){
-			NormedUScaleFactors[i] = UScaleFactors[i] / UScaleFactorsNorm;
-		}
-		for(int i = 0; i < nu; i++){
-			DOFUScaleFactors[i] = NormedUScaleFactors[i] * std::sqrt(nu);
-		}
+		//SimTK::Vector NormedUScaleFactors(nu, 1);
+		//SimTK::Vector DOFUScaleFactors(nu, 1);
+		//for(int i = 0; i < nu; i++){
+		//	NormedUScaleFactors[i] = UScaleFactors[i] / UScaleFactorsNorm;
+		//}
+		//for(int i = 0; i < nu; i++){
+		//	DOFUScaleFactors[i] = NormedUScaleFactors[i] * std::sqrt(nu);
+		//}
 
-		std::cout << "DOFUScaleFactors 0 "; for(int i = 0; i < nu; i++){ std::cout << DOFUScaleFactors[i] << " " ;} std::cout << "\n";
+		//std::cout << "DOFUScaleFactors 0 "; for(int i = 0; i < nu; i++){ std::cout << DOFUScaleFactors[i] << " " ;} std::cout << "\n";
 
 		// Check if we can use our cache
 		// Draw X from a normal distribution N(0, 1)
@@ -414,57 +418,117 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
 		//std::cout << "sqrtMInvUs 1 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
-		// Scale by sqrt of kT
-		sqrtMInvUs *= sqrtRT;
-		//std::cout << "sqrtRT " << sqrtRT << std::endl;
+		// Scale by sqrt of guidance kT
+		SimTK::Real sqrtBoostRT = std::sqrt(boostRT);
+		sqrtMInvUs *= sqrtBoostRT;
+		//sqrtMInvUs *= sqrtRT;
+		//std::cout << "sqrtRT " << sqrtRT 
+		//	<< " sqrtBoostRT " << sqrtBoostRT 
+		//	<< std::endl;
 		//std::cout << "sqrtMInvUs 2 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
-
-		/*// Probability terms
-		// Kinetic term
-		SimTK::Vector X(sqrtMInvUs);
-		SimTK::Vector XM(nu, 1);
-		SimTK::Real XMX = 0.0;
-		matter->multiplyByM(someState, X, XM);
-		for(int j = 0; j < ndofs; j++){XMX += (XM[j] * X[j]);}
-		// Bias term
-		SimTK::Vector DOFUScaleFactorsM(nu, 1);
-		SimTK::Real muMmu = 0.0;
-		matter->multiplyByM(someState, DOFUScaleFactors, DOFUScaleFactorsM);
-		for(int j = 0; j < ndofs; j++){muMmu += (DOFUScaleFactorsM[j] * DOFUScaleFactors[j]);}
-		// Correlation term
-		SimTK::Real muMX = 0.0;
-		for(int j = 0; j < ndofs; j++){muMX += (XM[j] * DOFUScaleFactors[j]);}
-		std::cout << "probability terms XMX muMmu muMX = " << XMX << " " << muMmu << " " << muMX << "\n";
-		// */
 
 		//////////////////////
 		// Regulate temperature of the guidance Hamiltonian
 		sqrtMInvUs /= 1.4142135623730950488; // sqrt(2)
+		//std::cout << "sqrtMInvUs 3 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 		//////////////////////
 
-		// Kinetic energy of the evaluation Hamiltonian
+		// Probability terms
+		SimTK::Real boostBetaPlus = this->boostBeta * 1.4142135623730950488;
+		SimTK::Real localBoostFactor = boostBetaPlus / this->beta;
+		//std::cout << "b+sqrt(2)/b " << localBoostFactor << std::endl; 
+
+		// Kinetic term
+		SimTK::Vector X(sqrtMInvUs);
+		SimTK::Vector XM(nu, 1);
+		SimTK::Real XMX = 0.0;
+		SimTK::Real bXMX = 0.0;
+
+		matter->multiplyByM(someState, X, XM);
+		for(int j = 0; j < ndofs; j++){XMX += (XM[j] * X[j]);}
+		bXMX = localBoostFactor * XMX;
+
+		// Bias term
+		//SimTK::Vector DOFUScaleFactorsM(nu, 1);
+		//SimTK::Real muMmu = 0.0;
+		//SimTK::Real bmuMmu = 0.0;
+		//matter->multiplyByM(someState, DOFUScaleFactors, DOFUScaleFactorsM);
+		//for(int j = 0; j < ndofs; j++){muMmu += (DOFUScaleFactorsM[j] * DOFUScaleFactors[j]);}
+		//bmuMmu = localBoostFactor * muMmu;
+
+		// Correlation term
+		SimTK::Real muMX = 0.0;
+		SimTK::Real bmuMX = 0.0;
+		SimTK::Real _bmuMX = 0.0;
+		SimTK::Real bcorr = 0.0;
+		for(int j = 0; j < ndofs; j++){muMX += (XM[j] * DOFUScaleFactors[j]);}
+		bmuMX = boostBetaPlus * muMX;
+		_bmuMX = -1.0 * bmuMX;
+		
+		if(bcorr < 16){ // safe limit to use exponentials
+			bcorr = LSE2(bmuMX, _bmuMX);
+		}else{
+			bcorr = (bmuMX >= 0 ? bmuMX : _bmuMX); // approximation to LSE
+		}
+		bcorr /= this->beta;
+
+		std::cout << "Keval terms bXMX muMmu bmuMX LSE(bmuMX) = "
+			<< 0.5*bXMX << " " // << 0.5*bmuMmu << " "
+			<< bmuMX << " " << bcorr << std::endl;
+
+		ke_prop_nma6 = // (-1.0 * RT * std::log(0.5))
+			+ (0.5*bXMX) // + (0.5* bmuMmu)
+			- bcorr;
+		// */
+
+		/*// Kinetic energy proposed for the evaluation Hamiltonian
 		ke_prop_nma6 = 0;
 		SimTK::Vector v_miu(nu, 1);
 		SimTK::Vector v_miuM(nu, 1);
-
 		SimTK::Real leftExp = 0.0;
 		SimTK::Real rightExp = 0.0;
+		
 
+		// Left exponential
 		v_miu = (sqrtMInvUs - DOFUScaleFactors);
+		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ std::cout << v_miu[i] << " " ;} std::cout << "\n";
+
 		matter->multiplyByM(someState, v_miu, v_miuM);
+		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){ std::cout << v_miuM[i] << " " ;} std::cout << "\n";
+
 		for(int j = 0; j < ndofs; j++){leftExp += (v_miuM[j] * v_miu[j]);}
-		leftExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
-		leftExp = exp(leftExp);
+		std::cout << "leftExp 0 " << leftExp << "\n";
 
+		//leftExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
+		leftExp *= ((-0.5) * 1.4142135623730950488 * this->boostBeta);
+		std::cout << "leftExp 1 " << leftExp << "\n";
+
+		leftExp = std::exp(leftExp);
+		std::cout << "leftExp 2 " << leftExp << "\n";
+
+		// Right exponential
 		v_miu = (sqrtMInvUs + DOFUScaleFactors);
-		matter->multiplyByM(someState, v_miu, v_miuM);
-		for(int j = 0; j < ndofs; j++){ke_prop_nma6 += (v_miuM[j] * v_miu[j]);}
-		rightExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
-		rightExp = exp(rightExp);
+		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ std::cout << v_miu[i] << " " ;} std::cout << "\n";
 
-		ke_prop_nma6 = RT * std::log(0.5 * (leftExp + rightExp));
+		matter->multiplyByM(someState, v_miu, v_miuM);
+		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){ std::cout << v_miuM[i] << " " ;} std::cout << "\n";
+
+		for(int j = 0; j < ndofs; j++){rightExp += (v_miuM[j] * v_miu[j]);}
+		std::cout << "rightExp 0 " << rightExp << "\n";
+
+		//rightExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
+		std::cout << "beta boostBeta " << this->beta << " " << this->boostBeta << "\n" ;
+		rightExp *= ((-0.5) * 1.4142135623730950488 * this->boostBeta);
+		std::cout << "rightExp 1 " << rightExp << "\n";
+
+		rightExp = std::exp(rightExp);
+		std::cout << "rightExp 2 " << rightExp << "\n";
+
+		ke_prop_nma6 = -1.0 * RT * std::log(0.5 * (leftExp + rightExp));
+		// */
 
 		std::cout << "ke_prop_nma6 " << ke_prop_nma6 << "\n";
+
 
 
 	}
@@ -1428,9 +1492,14 @@ SimTK::Real HMCSampler::getBoostTemperature()
 void HMCSampler::setBoostTemperature(SimTK::Real argT)
 {
 	this->boostT = argT;
+	std::cout << "HMC: boost temperature: " << this->boostT << std::endl;
+	this->boostRT = this->boostT * SimTK_BOLTZMANN_CONSTANT_MD;
+	std::cout << "HMC: boostRT: " << this->boostRT << std::endl;
+	this->boostBeta = 1.0 / boostRT;
+	std::cout << "HMC: boostBeta: " << this->boostBeta << std::endl;
+
 	this->boostFactor = std::sqrt(this->boostT / this->temperature);
 	this->unboostFactor = 1 / boostFactor;
-	std::cout << "HMC: boost temperature: " << this->boostT << std::endl;
 	std::cout << "HMC: boost velocity scale factor: " << this->boostFactor << std::endl;
 }
 
@@ -1841,27 +1910,99 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 		etot_proposed = pe_o + ke_proposed;
 	}
 
-		// Kinetic energy of the evaluation Hamiltonian
+		/*// Kinetic energy new for the evaluation Hamiltonian
+		const int nu = someState.getNU();
 		ke_n_nma6 = 0;
-		SimTK::Vector v_miu(ndofs, 1);
-		SimTK::Vector v_miuM(ndofs, 1);
+		SimTK::Vector v_miu(nu, 1);
+		SimTK::Vector v_miuM(nu, 1);
 
 		SimTK::Real leftExp = 0.0;
 		SimTK::Real rightExp = 0.0;
 
+		// Left exponential
 		v_miu = (someState.getU() - DOFUScaleFactors);
+		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ std::cout << v_miu[i] << " " ;} std::cout << "\n";
+
 		matter->multiplyByM(someState, v_miu, v_miuM);
+		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){ std::cout << v_miuM[i] << " " ;} std::cout << "\n";
+
 		for(int j = 0; j < ndofs; j++){leftExp += (v_miuM[j] * v_miu[j]);}
-		leftExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
-		leftExp = exp(leftExp);
+		std::cout << "leftExp 0 " << leftExp << "\n";
 
+		//leftExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
+		leftExp *= ((-0.5) * 1.4142135623730950488 * this->boostBeta);
+		std::cout << "leftExp 1 " << leftExp << "\n";
+
+		leftExp = std::exp(leftExp);
+		std::cout << "leftExp 2 " << leftExp << "\n";
+
+		// Right exponential
 		v_miu = (someState.getU() + DOFUScaleFactors);
-		matter->multiplyByM(someState, v_miu, v_miuM);
-		for(int j = 0; j < ndofs; j++){ke_n_nma6 += (v_miuM[j] * v_miu[j]);}
-		rightExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
-		rightExp = exp(rightExp);
+		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ std::cout << v_miu[i] << " " ;} std::cout << "\n";
 
-		ke_n_nma6 = RT * std::log(0.5 * (leftExp + rightExp));
+		matter->multiplyByM(someState, v_miu, v_miuM);
+		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){ std::cout << v_miuM[i] << " " ;} std::cout << "\n";
+
+		for(int j = 0; j < ndofs; j++){rightExp += (v_miuM[j] * v_miu[j]);}
+		std::cout << "rightExp 0 " << rightExp << "\n";
+
+		//rightExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
+		std::cout << "beta boostBeta " << this->beta << " " << this->boostBeta << "\n" ;
+		rightExp *= ((-0.5) * 1.4142135623730950488 * this->boostBeta);
+		std::cout << "rightExp 1 " << rightExp << "\n";
+
+		rightExp = std::exp(rightExp);
+		std::cout << "rightExp 2 " << rightExp << "\n";
+
+		ke_n_nma6 = -1.0 * RT * std::log(0.5 * (leftExp + rightExp));
+		// */
+
+		// Probability terms
+		const int nu = someState.getNU();
+		SimTK::Real boostBetaPlus = this->boostBeta * 1.4142135623730950488;
+		SimTK::Real localBoostFactor = boostBetaPlus / this->beta;
+
+		// Kinetic term
+		SimTK::Vector X(someState.getU());
+		SimTK::Vector XM(nu, 1);
+		SimTK::Real XMX = 0.0;
+		SimTK::Real bXMX = 0.0;
+
+		matter->multiplyByM(someState, X, XM);
+		for(int j = 0; j < ndofs; j++){XMX += (XM[j] * X[j]);}
+		bXMX = localBoostFactor * XMX;
+
+		// Bias term
+		//SimTK::Vector DOFUScaleFactorsM(nu, 1);
+		//SimTK::Real muMmu = 0.0;
+		//SimTK::Real bmuMmu = 0.0;
+		//matter->multiplyByM(someState, DOFUScaleFactors, DOFUScaleFactorsM);
+		//for(int j = 0; j < ndofs; j++){muMmu += (DOFUScaleFactorsM[j] * DOFUScaleFactors[j]);}
+		//bmuMmu = localBoostFactor * muMmu;
+
+		// Correlation term
+		SimTK::Real muMX = 0.0;
+		SimTK::Real bmuMX = 0.0;
+		SimTK::Real _bmuMX = 0.0;
+		SimTK::Real bcorr = 0.0;
+		for(int j = 0; j < ndofs; j++){muMX += (XM[j] * DOFUScaleFactors[j]);}
+		bmuMX = boostBetaPlus * muMX;
+		_bmuMX = -1.0 * bmuMX;
+		
+		if(bcorr < 16){ // safe limit to use exponentials
+			bcorr = LSE2(bmuMX, _bmuMX);
+		}else{
+			bcorr = (bmuMX >= 0 ? bmuMX : _bmuMX); // approximation to LSE
+		}
+		bcorr /= this->beta;
+
+		std::cout << "Keval terms end bXMX muMmu bmuMX LSE(bmuMX) = "
+			<< 0.5*bXMX << " " // << 0.5*bmuMmu << " "
+			<< bmuMX << " " << bcorr << std::endl;
+
+		ke_n_nma6 = // (-1.0 * RT * std::log(0.5))
+			+ (0.5*bXMX) // + (0.5* bmuMmu)
+			- bcorr;
 
 		std::cout << "ke_n_nma6 " << ke_n_nma6 << "\n";
 
@@ -1934,9 +2075,13 @@ bool HMCSampler::acceptSample() {
 		prob = MHAcceptProbability(etot_proposed, etot_n);
 	}else{
 
-		prob = MHAcceptProbability(pe_o + ke_prop_nma6, pe_n + ke_n_nma6);
-		//prob = MHAcceptProbability(pe_o, pe_n);
-		//prob = MHAcceptProbability(etot_proposed, etot_n);
+		if(useFixman){
+			prob = MHAcceptProbability(pe_o + fix_o + ke_prop_nma6, pe_n + fix_n + ke_n_nma6);
+			//prob = MHAcceptProbability(pe_o + fix_o, pe_n + fix_n);
+		}else{
+			prob = MHAcceptProbability(pe_o + ke_prop_nma6, pe_n + ke_n_nma6);
+			//prob = MHAcceptProbability(pe_o, pe_n);
+		}
 	}
 
 	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;

@@ -97,6 +97,9 @@ inline long double RandomRealRange(long double min, long double max)
 
 double round(double r);
 
+// Log-sum-exp function
+double LSE2(double, double);
+
 /*
  *  Aminoacids 3 letter notation to 1 letter notation
  */
@@ -392,6 +395,7 @@ std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
 				     std::vector<double> &V);
 // Gram–Schmidt
 bMatrix& gram_schmidt(bMatrix& M, bMatrix& es);
+
 
 
 

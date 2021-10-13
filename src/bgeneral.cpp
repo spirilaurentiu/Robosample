@@ -10,6 +10,19 @@ double round(double r) {
 }
  
 
+// Log-sum-exp function for 2 arguments
+double LSE2(double left, double right){
+	double Max = (left > right) ? left : right;
+	double Sum = std::exp(left - Max) + std::exp(right - Max);
+
+	//std::cout << "Max " << Max << " "
+	//<< left - Max << " " << right - Max << " "
+	//<< std::exp(left - Max) << " " << std::exp(right - Max) << " "
+	//<< Sum << std::endl;
+
+	return Max + log(Sum);
+}
+
 
 //
 /*

@@ -383,6 +383,8 @@ protected:
 	SimTK::Real ke_n_nma6;
 
 	SimTK::Real boostT;
+	SimTK::Real boostRT;
+	SimTK::Real boostBeta;
 	SimTK::Real boostFactor;
 	SimTK::Real unboostFactor;
 	int boostMDSteps;
