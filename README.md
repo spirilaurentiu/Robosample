@@ -7,48 +7,8 @@ sudo apt-get update
 sudo apt-get install cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev
 ```
 
-## Install a compiler
-### For GCC, execute:
+### Fill in exports exports:
 ```
-sudo apt-get install g++
-```
-
-### For Clang (recommended)
-```
-sudo apt-get install clang-12
-```
-or whatever version suits you and is C++17 capable.
-
-For older machines (<20.04), follow [this](https://solarianprogrammer.com/2017/12/13/linux-wsl-install-clang-libcpp-compile-cpp-17-programs/) guide. A truncated version follows. We prefer this method because verison 9.0 is capable of compiling C++17 and can be easilty installed on many machines (14.04 to 18.04).
-```
-sudo apt install build-essential xz-utils curl
-cd ~
-```
-
-Now download the compiler. Make sure the version suitable for yout Linux version is selected (14.04, 16.04, 18.04). You can check this verison with `cat /etc/issue`. Assuming 18.04, execute:
-```
-curl -SL http://releases.llvm.org/9.0.0/clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz | tar -xJC .
-```
-
-Continue with the installation.
-```
-sudo mv clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04 /usr/local/clang_9.0.0
-export PATH=/usr/local/clang_9.0.0/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/clang_9.0.0/lib:$LD_LIBRARY_PATH
-```
-
-By now, you should have these two commands available on the terminal:
-```
-clang
-clang++
-```
-
-### Fill in `LD_LIBRARY_PATH` exports:
-```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/openmm/lib
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/openmm/lib/plugins
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/plugins/libOpenMMPlugin.so
-
 export CUDA_INC_DIR=/usr/local/cuda
 export CUDA_ROOT=/usr/local/cuda
 ```
@@ -79,20 +39,15 @@ cd openmm
 git checkout master
 cd ../
 ```
-* `cpp_latest` Stable version with latest C++ standard.
-* `experimental_cpp_latest` Unstable version with latest C++ version.
+* `cpp_latest` - Stable version with latest C++ standard.
+* `experimental_cpp_latest` - Unstable version with latest C++ version.
 
 ## Building Robosample
-Run `build.sh`. A mandatory parameter is `-b` (`--build`) which specifies whether to build as debug or release. Other two mandatory parameters are `--cc` (C compiler) and `--cpp` (C++ compiler). You can specify full path to the compiler (`/usr/local/clang-12/bin/clang++`) or just pass what you would normally write to the command line (`clang++`). To set the number of CPU cores involved in compilation, use `-n` (`--nproc`, default is `nproc * 2`). On release builds, if you want to have an address sanitizer, compile with `-u` (`--ubsan`). **Do not run as sudo.**
+Run `build.sh`. A mandatory parameter is `-b` (`--build`) which specifies whether to build as debug or release. Other two mandatory parameters are `--cc` (C compiler) and `--cpp` (C++ compiler). To set the number of CPU cores involved in compilation, use `-n` (`--nproc`, default is `nproc * 2`). On release builds, if you want to have an address sanitizer, compile with `-u` (`--ubsan`). **Do not run as sudo.**
 
-Building for release with Clang:
+Building for production with GCC:
 ```
-bash build.sh -b release --cc clang --cpp clang++
-```
-
-Building for release with Clang:
-```
-bash build.sh -b release --cc /usr/local/clang-12/bin/clang --cpp /usr/local/clang-12/bin/clang++
+bash build.sh -b release --cc gcc --cpp g++ --pgo
 ```
 
 Building for debug with GCC:
