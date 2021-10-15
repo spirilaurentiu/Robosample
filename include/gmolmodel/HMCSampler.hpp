@@ -121,7 +121,7 @@ public:
 	void setProposedLogSineSqrGamma2(SimTK::Real argFixman); // DONE
 
 	// Evaluate the potential energy at current state
-	SimTK::Real getPEFromEvaluator(SimTK::State& someState); // DONE
+	SimTK::Real getPEFromEvaluator(const SimTK::State& someState) const; // DONE
 
 	// Get/set current potential energy
 	SimTK::Real getOldPE(void) const; // DONE
@@ -292,11 +292,11 @@ public:
 
 	void setMDStepsPerSample(int mdStepsPerSample);
 
-	SimTK::Real getMDStepsPerSampleStd(void);
+	SimTK::Real getMDStepsPerSampleStd() const;
 	void setMDStepsPerSampleStd(SimTK::Real mdstd);
 
 	/** Print detailed energy information **/
-	void PrintDetailedEnergyInfo(SimTK::State& someState);
+	void PrintDetailedEnergyInfo(const SimTK::State& someState) const;
 
 	/** Calculate Mean Square Displacement based on stored R vectors **/
 	SimTK::Real calculateMSD();

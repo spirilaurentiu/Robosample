@@ -116,7 +116,7 @@ HMCSampler::~HMCSampler()
 {
 }
 
-SimTK::Real HMCSampler::getMDStepsPerSampleStd(void)
+SimTK::Real HMCSampler::getMDStepsPerSampleStd() const
 {
 	return MDStepsPerSampleStd;
 }
@@ -707,7 +707,7 @@ void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 		system->realize(someState, SimTK::Stage::Position);
 	}
 }
-
+bool b = false;
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. **/
@@ -780,31 +780,29 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 
 /// Acception rejection step 
 bool HMCSampler::accRejStep(SimTK::State& someState) {
-
-
 	// Decide and get a new sample
 	//if ( getThermostat() == ThermostatName::ANDERSEN ) {
 	if ( alwaysAccept == true ){
 		// Simple molecular dynamics
 		this->acc = true;
-		std::cout << "\tsample accepted\n";
+		std::cout << "\tsample accepted (simple molecular dynamics)\n";
 		update(someState);
 	} else {
 		// we do not consider this sample accepted unless it passes all checks
 		this->acc = false;
 
-			// Apply Metropolis-Hastings correction
-			if(acceptSample()) {
-				// sample is accepted
-				this->acc = true;
-				std::cout << "\tsample accepted\n";
-				update(someState);
-			} else {
-				// sample is rejected
-				this->acc = false;
-				std::cout << "\tsample rejected\n";
-				setSetConfigurationAndEnergiesToOld(someState);
-			}
+		// Apply Metropolis-Hastings correction
+		if(acceptSample()) {
+			// sample is accepted
+			this->acc = true;
+			std::cout << "\tsample accepted (metropolis-hastings)\n";
+			update(someState);
+		} else {
+			// sample is rejected
+			this->acc = false;
+			std::cout << "\tsample rejected (metropolis-hastings)\n";
+			setSetConfigurationAndEnergiesToOld(someState);
+		}
 	}
 	++nofSamples;
 
@@ -967,7 +965,7 @@ ThermostatName HMCSampler::getThermostat(void) const{
 
 // Get the potential energy from an external source as far as the sampler
 // is concerned - OPENMM has to be inserted here
-SimTK::Real HMCSampler::getPEFromEvaluator(SimTK::State& someState){
+SimTK::Real HMCSampler::getPEFromEvaluator(const SimTK::State& someState) const{
 		return forces->getMultibodySystem().calcPotentialEnergy(someState);
 	// Eliza's potential energy's calculations including rigid bodies
 	// internal energy
@@ -2216,7 +2214,7 @@ void HMCSampler::setMDStepsPerSample(int mdStepsPerSample) {
 }
 
 /** Print detailed energy information **/
-void HMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
+void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 {
 	std::cout << std::setprecision(5) << std::fixed;
 	std::cout

@@ -12,7 +12,7 @@ CONSTRAINTS 3291 3291 # Constrained atoms
 
 # Simulation
 RUN_TYPE Normal # normal HMC or Non-Eq HMC
-ROUNDS 1                   # Gibbs sampling rounds
+ROUNDS 40                   # Gibbs sampling rounds
 ROUNDS_TILL_REBLOCK 10 10
 RANDOM_WORLD_ORDER FALSE 
 WORLDS R0 R1        # Worlds unique names 

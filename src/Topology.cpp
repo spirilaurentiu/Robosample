@@ -68,7 +68,7 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 
 		// Set atom type
 		str_buf = amberReader->getAtomsNameAlias(i);
-		boost::trim(str_buf);
+		ROBOSAMPLE::trim(str_buf);
 		bAtomList[i].setFftype(str_buf);
 
 		// Set charge as it is used in Amber
