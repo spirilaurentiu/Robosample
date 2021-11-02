@@ -33,6 +33,7 @@ class TrajectoryAnalyzer:
 		self.RGs = [None] * len(FNSeeds)
 		self.SASAs = [None] * len(FNSeeds)
 		self.totSASAs = [None] * len(FNSeeds)
+		self.dssps = [None] * len(FNSeeds)
 		self.helicities1 = [None] * len(FNSeeds)
 		if pattern:
 			self.pattern = "*" + pattern + "*"
@@ -139,17 +140,17 @@ class TrajectoryAnalyzer:
 
 	def Helicity(self):
 		for seedi in range(len(self.FNSeeds)):
-			dssps = md.compute_dssp(self.trajectories[seedi], simplified=True)
-			self.helicities1[seedi] = np.zeros(( len(dssps) ))
+			self.dssps[seedi] = md.compute_dssp(self.trajectories[seedi], simplified=True)
+			self.helicities1[seedi] = np.zeros(( len(self.dssps[seedi]) ))
 
-			#for i in range(len(dssps)):
-			#	print(dssps[i])
+			#for i in range(len(self.dssps)):
+			#	print(self.dssps[i])
 
-			for i in range(len(dssps)):
+			for i in range(len(self.dssps[seedi])):
 				H = 0
-				for j in range(len(dssps[i])):
-					if dssps[i][j] == "H": H += 1
-				self.helicities1[seedi][i] = H / len(dssps[i])
+				for j in range(len(self.dssps[seedi][i])):
+					if self.dssps[seedi][i][j] == "H": H += 1
+				self.helicities1[seedi][i] = H / len(self.dssps[seedi][i])
 
 			#print(self.helicities1[seedi])
 			

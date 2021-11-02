@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	Real timestep = 0.004;
+	Real timestep = 0.007;
 
 	bool wantVisual = false;
 	if( std::string(argv[4]) == "visual"){
@@ -40,7 +40,8 @@ int main(int argc, char **argv)
 	readAmberInput amberReader;
 	amberReader.readAmberFiles("lin4/ligand.rst7", "lin4/ligand.prmtop");
 	//std::string externalJointType = "Ball";
-	std::string externalJointType = "Weld";
+	//std::string externalJointType = "Weld";
+	std::string externalJointType = "Pin";
 	world->AddMolecule(&amberReader, "lin4/ligand.rb", "lin4/ligand.flex.middletd", "R0", "0", externalJointType);
 	//amberReader.readAmberFiles("etanMob/ligand.rst7", "etanMob/ligand.prmtop");
 	//world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "R0", "0", "Free");
@@ -290,7 +291,7 @@ int main(int argc, char **argv)
 			}
 	
 			// Print 
-			std::cout << "test pitch FP FT dihedral " << pitch << " " << FP << " " << FT ;
+			//std::cout << "test pitch FP FT dihedral " << pitch << " " << FP << " " << FT ;
 			
 			///////////////////////
 			///////////////////////
@@ -301,7 +302,7 @@ int main(int argc, char **argv)
 			Bpos = topology.calcAtomLocationInGroundFrame(advancedState, BIx);
 			Cpos = topology.calcAtomLocationInGroundFrame(advancedState, CIx);
 			Dpos = topology.calcAtomLocationInGroundFrame(advancedState, DIx);
-			std::cout << " " << bDihedral(Apos, Bpos, Cpos, Dpos) << std::endl;
+			//std::cout << "step dihedral " << bDihedral(Apos, Bpos, Cpos, Dpos) << std::endl;
 			//std::cout << advancedState.updU() << std::endl;
 
 		}
@@ -352,7 +353,7 @@ int main(int argc, char **argv)
 			if ((!std::isnan(pe_n)) && ((etot_n < etot_proposed) ||
 				(rand_no < exp(-(etot_n - etot_proposed) * (1 / RT))))) { // Accept based on full energy
 				acc = true;
-				std::cout << " acc" << std::endl;
+				std::cout << " acc ";
 				(pHMC(pSampler))->setSetTVector(advancedState);
 				pe_set = pe_n;
 				fix_set = fix_n;
@@ -362,10 +363,10 @@ int main(int argc, char **argv)
 	
 			} else { // Reject
 				acc = false;
-				std::cout << " nacc" << std::endl;
+				std::cout << " nacc ";
 				(pHMC(pSampler))->assignConfFromSetTVector(advancedState);
 			}
-	    	}
+	    }
 /*
 		std::cout << std::setprecision(5) << std::fixed;
 		std::cout << "pe_o " << pe_o << " pe_n " << pe_n
