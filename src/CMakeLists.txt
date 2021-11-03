@@ -62,13 +62,13 @@ set(LIBGMOLMODEL_SRC
 
 include_directories(../include/gmolmodel)
 
-# IF(CMAKE_BUILD_TYPE MATCHES Debug)
-#          add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
-#          add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
-# ELSE()
-#          add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
-#          add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
-# ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+         add_library(GMOLMODEL_dynamic_d SHARED ${LIBGMOLMODEL_SRC})
+         add_library(GMOLMODEL_static_d  STATIC ${LIBGMOLMODEL_SRC})
+ELSE()
+         add_library(GMOLMODEL_dynamic SHARED ${LIBGMOLMODEL_SRC})
+         add_library(GMOLMODEL_static  STATIC ${LIBGMOLMODEL_SRC})
+ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 
 add_executable(GMOLMODEL_robo ${LIBGMOLMODEL_SRC} Robosample.cpp )
@@ -84,17 +84,17 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
                 ${OpenMM_LIBRARIES}
                 m )
 
-        # TARGET_LINK_LIBRARIES( GMOLMODEL_dynamic_d
-	#  	debug ${Simbody_LIBRARIES}
-	#  	SimTKmolmodel_d
-	#  	${OpenMM_LIBRARIES}
-	#  	m )
+        TARGET_LINK_LIBRARIES( GMOLMODEL_dynamic_d
+	 	debug ${Simbody_LIBRARIES}
+	 	SimTKmolmodel_d
+	 	${OpenMM_LIBRARIES}
+	 	m )
 	
-        # TARGET_LINK_LIBRARIES( GMOLMODEL_static_d
-	#  	debug ${Simbody_LIBRARIES}
-	#  	SimTKmolmodel_d
-	#  	${OpenMM_LIBRARIES}
-	#  	m )
+        TARGET_LINK_LIBRARIES( GMOLMODEL_static_d
+	 	debug ${Simbody_LIBRARIES}
+	 	SimTKmolmodel_d
+	 	${OpenMM_LIBRARIES}
+	 	m )
         
 ELSE()
         message("Linking with release libraries")
@@ -105,18 +105,18 @@ ELSE()
                 ${OpenMM_LIBRARIES}
                 m )
                 
-        # TARGET_LINK_LIBRARIES( GMOLMODEL_dynamic
-        #         optimized ${Simbody_LIBRARIES}
-	#  	SimTKmolmodel
-	#  	${OpenMM_LIBRARIES}
-	#  	m )
+        TARGET_LINK_LIBRARIES( GMOLMODEL_dynamic
+                optimized ${Simbody_LIBRARIES}
+	 	SimTKmolmodel
+	 	${OpenMM_LIBRARIES}
+	 	m )
 
 
-        # TARGET_LINK_LIBRARIES( GMOLMODEL_static
-	#  	optimized ${Simbody_LIBRARIES}
-	#  	SimTKmolmodel
-	#  	${OpenMM_LIBRARIES}
-	#  	m )
+        TARGET_LINK_LIBRARIES( GMOLMODEL_static
+	 	optimized ${Simbody_LIBRARIES}
+	 	SimTKmolmodel
+	 	${OpenMM_LIBRARIES}
+	 	m )
 
 ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 

@@ -27,4 +27,4 @@ ENDIF( ROBO_UBSAN MATCHES Yes )
 
 # add sources
 add_subdirectory(src)
-# add_subdirectory(tests) # Laur
+add_subdirectory(tests) # Laur
