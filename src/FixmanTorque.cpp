@@ -49,6 +49,9 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 			mobod.applyOneMobilityForce(state, k, (-1.0) * RT * V4[uslot], mobilityForces);
 			//mobod.applyOneMobilityForce(state, k, (-1.0) * V4[uslot], mobilityForces);
 
+			    //std::cout << "FT " << std::setprecision(6) << std::fixed << (-1.0) * RT * V4[uslot] 
+			    //<< " to mbx " << std::setprecision(0) << int(mbx) << " slot " << uslot << std::endl;
+
 			//xif(int(mbx) == 2){
 			//    std::cout << std::setprecision(6) << std::fixed << (-1.0) * RT * V4[uslot] << ' '; 
 			//x}
@@ -134,7 +137,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 	const SimTK::MobilizedBody& mobod1 = matter.getMobilizedBody(SimTK::MobilizedBodyIndex(1));
 	int extnu = mobod1.getNumU(state);
 
-	if((extnu != 0) && (extnu != 3) && (extnu != 6)){
+	if((extnu != 0) && (extnu != 3) && (extnu != 6) && (extnu != 1)){
 		std::cerr << "External Fixman torque has been implemented only for 0, 3 and 6 dofs.\n";
 		std::cerr << "Others are just experimental.\n";
 		//throw std::exception();
