@@ -90,7 +90,7 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 		std::exit(1);
 	}else{
 		for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
-			if(std::stod(setupReader.get("TIMESTEPS")[worldIx]) <= 0.0000001){
+			if( std::abs(std::stod(setupReader.get("TIMESTEPS")[worldIx])) <= 0.0000001){
 				std::cout << "Warning: timestep for world " << worldIx << " is too small.\n";
 			}
 		}

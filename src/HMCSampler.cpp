@@ -108,6 +108,8 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	NMAOption = 0;
 	MDStepsPerSampleStd = 0.5;
 
+	NMAAltSign = 1.0;
+
 
 }
 
@@ -178,7 +180,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	const int nu = someState.getNU();
 
 	// Get sqrt of kT
-		double sqrtRT = std::sqrt(RT);
+	double sqrtRT = std::sqrt(RT);
 
 	// U vector
 	SimTK::Vector Us(nu, 1);
@@ -186,92 +188,115 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	// Vector multiplied by the sqrt of the inverse mass matrix
 	SimTK::Vector sqrtMInvUs(nu, 1);
 
-	if(NMAOption <= 3){
+	if(NMAOption == 1){ // For pure demonstrative purposes
 
-		if(NMAOption == 1){ // For pure demonstrative purposes
-	
-			SimTK::Real altSign;
-	
-			if((nofSamples % 2) == 0){ altSign = 1;}else{altSign = -1;} 
-	
-			Us *= altSign;
-	
-		}else if(NMAOption == 2){ // Use UscaleFactors with random sign
-	
-			// Get random -1 or 1
-			SimTK::Real randSign;
-			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-			Us *= randSign;
-	
-		}else if(NMAOption == 3){ // Set a random sign
-	
-			// Check if we can use our cache
-			// Draw X from a normal distribution N(0, 1)
-			if (nu != RandomCache.nu) {
-				// Rebuild the cache
-				// We also get here if the cache is not initialized
-				RandomCache.V.resize(nu);
-				RandomCache.SqrtMInvV.resize(nu);
-				RandomCache.sqrtRT = std::sqrt(RT);
-				RandomCache.nu = nu;
-		
-				// we don't get to use multithreading here
-				RandomCache.FillWithGaussian();
-			} else {
-				// wait for random number generation to finish (should be done by this stage)
-				RandomCache.task.wait();
-			}
-	
-			Us = RandomCache.V;
-		}
+		if((nofSamples % 2) == 0){ NMAAltSign = 1;}else{NMAAltSign = -1;} 
+		//if(((nofSamples) % 6) == 0){ NMAAltSign *= -1;}
+		//std::cout << "NMAAltSign " << NMAAltSign << std::endl;
+
+		Us *= NMAAltSign;
+
+		// Multiply by the square root of the inverse mass matrix
+		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
 
 		// Scale by NMA scale factors
 		std::transform(Us.begin(), Us.end(), // apply an operation on this
 			UScaleFactors.begin(), // and this
 			Us.begin(), // and store here
 			std::multiplies<SimTK::Real>()); // this is the operation
-		
+	
 		// Restore vector length
 		for(int i = 0; i < nu; i++){
 			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
 		}
-		
-		// Multiply by the square root of the inverse mass matrix
-		 
-		if((NMAOption != 2)){ // DELETE
-			matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs); // LEAVE
-		}else{ // DELETE
-			//SimTK::Real totalMass = matter->calcSystemMass(someState);// DELETE
-	
-			///* Multiply by H sqrt(Mcartesian) ????
-				
-			for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-				SimTK::Real M = mobod.getBodyMass(someState);
-				SimTK::Real sqrtMobodMInv = 1 / std::sqrt(M); 
-		
-				for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
-					sqrtMInvUs[int(uIx)] = Us[int(uIx)] * sqrtMobodMInv;
-				}
-			}
-	
-			std::cout << "sqrtMInvUs 1 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
-	
-			for(int i = 0; i < nu; i++){
-				sqrtMInvUs[i] = (sqrtMInvUs[i] * 2.64);
-			}
-			
-			std::cout << "sqrtMInvUs 2 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
-			//*/
-		}
-	
+	 
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
-	
-		std::cout << "sqrtMInvUs 3 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
-	}else if(NMAOption == 5){ // Set a random sign
+	}else if(NMAOption == 2){ // Use UscaleFactors with random sign
+
+		// Get random -1 or 1
+		SimTK::Real randSign;
+		SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+		Us *= randSign;
+
+		//SimTK::Real totalMass = matter->calcSystemMass(someState);// DELETE
+
+		///* Multiply by H sqrt(Mcartesian) ????
+			
+		for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			SimTK::Real M = mobod.getBodyMass(someState);
+			SimTK::Real sqrtMobodMInv = 1 / std::sqrt(M); 
+	
+			for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState);
+				uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState);
+				uIx++ ){
+				sqrtMInvUs[int(uIx)] = Us[int(uIx)] * sqrtMobodMInv;
+			}
+		}
+
+		std::cout << "sqrtMInvUs 1 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
+
+		for(int i = 0; i < nu; i++){
+			sqrtMInvUs[i] = (sqrtMInvUs[i] * 2.64);
+		}
+		
+		// Scale by NMA scale factors
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			Us.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+	
+		// Restore vector length
+		for(int i = 0; i < nu; i++){
+			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
+		}
+	 
+		// Multiply by the square root of kT
+		sqrtMInvUs *= sqrtRT;
+
+		//*/
+	}else if(NMAOption == 3){ // Set a random sign
+
+		// Check if we can use our cache
+		// Draw X from a normal distribution N(0, 1)
+		if (nu != RandomCache.nu) {
+			// Rebuild the cache
+			// We also get here if the cache is not initialized
+			RandomCache.V.resize(nu);
+			RandomCache.SqrtMInvV.resize(nu);
+			RandomCache.sqrtRT = std::sqrt(RT);
+			RandomCache.nu = nu;
+	
+			// we don't get to use multithreading here
+			RandomCache.FillWithGaussian();
+		} else {
+			// wait for random number generation to finish (should be done by this stage)
+			RandomCache.task.wait();
+		}
+
+		Us = RandomCache.V;
+
+		// Multiply by the square root of the inverse mass matrix
+		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
+
+		// Scale by NMA scale factors
+		std::transform(Us.begin(), Us.end(), // apply an operation on this
+			UScaleFactors.begin(), // and this
+			Us.begin(), // and store here
+			std::multiplies<SimTK::Real>()); // this is the operation
+	
+		// Restore vector length
+		for(int i = 0; i < nu; i++){
+			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
+		}
+	 
+		// Multiply by the square root of kT
+		sqrtMInvUs *= sqrtRT;
+
+	}else if(NMAOption == 4){ // Set a random sign
 
 		// Direction vector UScaleFactors
 		//SimTK::Vector NormedUScaleFactors(nu, 1);
@@ -337,7 +362,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		
 
 	
-	}else if(NMAOption == 4){
+	}else if(NMAOption == 5){
 
 		//proj(U, V, W);
 
@@ -834,7 +859,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 	if(validated){
 	
 		PrintDetailedEnergyInfo(someState);
-	
+
 		accRejStep(someState);
 	
 		if(this->acc) { // Only in this case ???
@@ -1533,39 +1558,179 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 	this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 }
 
+//// Stochastic optimization of the timestep using gradient descent
+//void HMCSampler::adaptTimestep(SimTK::State&)
+//{
+//	// function signature was SimTK::State& someState
+//
+//	std::cout << std::endl;
+//	//std::cout << "Adapt: nofSamples= " << nofSamples << std::endl;
+//	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){
+//		std::cout << "Adapt BEGIN: ts= " << timestep;
+//
+//		// SimTK::Real stdAcceptance = 0.03;
+//		SimTK::Real idealAcceptance = 0.651;
+//		// SimTK::Real smallestAcceptance = 0.0001;
+//		// SimTK::Real timestepIncr = 0.001;
+//
+//		//for(int i = 0; i < acceptedStepsBufferSize; i++){
+//		//	std::cout << acceptedStepsBuffer.at(i) << " ";
+//		//}
+//		//std::cout << std::endl;
+//
+//		// Compute acceptance in the buffer
+//		int sum = std::accumulate(acceptedStepsBuffer.begin(),
+//			acceptedStepsBuffer.end(), 0);
+//
+//		SimTK::Real prevPrevPrevAcceptance = prevPrevAcceptance;
+//		prevPrevAcceptance = prevAcceptance;
+//		prevAcceptance = acceptance;
+//		acceptance = float(sum) / float(acceptedStepsBufferSize);
+//
+//		std::cout << " ppAcc= " << prevPrevAcceptance 
+//			<< " pAcc= " << prevAcceptance 
+//			<< " acc= " << acceptance << std::endl;
+//
+//		// Passed first two initial evaluations
+//		if( !SimTK::isNaN(prevPrevAcceptance) ){
+//			// Calculate gradients
+//			SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2;
+//			a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
+//			t_n = timestep; t_n_1 = prevTimestep; t_n_2 = prevPrevTimestep;
+//
+//			//SimTK::Real F_n =   std::abs(a_n   - idealAcceptance);
+//			//SimTK::Real F_n_1 = std::abs(a_n_1 - idealAcceptance);
+//			//SimTK::Real F_n_2 = std::abs(a_n_2 - idealAcceptance);
+//			SimTK::Real F_n =   a_n   - idealAcceptance;
+//			SimTK::Real F_n_1 = a_n_1 - idealAcceptance;
+//			SimTK::Real F_n_2 = a_n_2 - idealAcceptance;
+//
+//			SimTK::Real dF_n   = F_n     - F_n_1;
+//			SimTK::Real dF_n_1 = F_n_1   - F_n_2;
+//			SimTK::Real dt_n = (t_n   - t_n_1);
+//			SimTK::Real dt_n_1 = (t_n_1   - t_n_2);
+//			SimTK::Real gradF_n   = dF_n / dt_n;
+//			SimTK::Real gradF_n_1 = dF_n_1 / dt_n_1;
+//
+//			// Calculate gamma
+//			SimTK::Real gamma;
+//			SimTK::Real num, denom;
+//			num = std::abs(dt_n * (gradF_n - gradF_n_1));
+//			denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
+//			gamma = num / denom;
+//
+//			// Generate a new timestep newTimestep
+//			SimTK::Real newTimestep = t_n - (gamma * gradF_n);
+//			//std::cout << "Adapt data: "
+//			//	<< " " << F_n  << " " << F_n_1  << " " << F_n_2
+//			//	<< " " << dF_n << " " << dF_n_1 
+//			//	<< " " << dt_n << " " << dt_n_1 
+//			//	<< " " << gradF_n << " " << gradF_n_1
+//			//	<< " " << num << " " << denom << " " << gamma
+//			//	<< std::endl;
+//
+//			// If acceptance is good for now
+//			//if( (std::abs(prevTimestep - timestep) > 0.0001)
+//			//  || (newTimestep < 0.00089)
+//			//  || (SimTK::isNaN(newTimestep))
+//			//  || ((acceptance - prevAcceptance) < 0.001)){
+//
+//			if(    (std::abs(F_n) < 0.0001)
+//			    || (SimTK::isNaN(newTimestep))){
+//				std::cout << "Adding noise to timestep.\n";
+//
+//				prevPrevTimestep = prevTimestep;
+//				prevTimestep = timestep;
+//
+//				SimTK::Real r = uniformRealDistribution(randomEngine);
+//				if(acceptance < idealAcceptance){
+//					timestep = timestep - (0.3*r * timestep);
+//				}else{
+//					timestep = timestep + (0.3*r * timestep);
+//				}
+//
+//				//acceptance = prevAcceptance;
+//				//prevAcceptance = prevPrevAcceptance;
+//				//prevPrevAcceptance = prevPrevPrevAcceptance;
+//
+//
+//			} else { // Take the new timestep
+//				std::cout << "Setting timestep to newTimestep.\n"; 
+//				prevPrevTimestep = prevTimestep;
+//				prevTimestep = timestep;
+//				timestep = newTimestep;
+//			}
+//
+//		} else { // Alter the intial timesteps to get a valid dF_n next time
+//
+//			//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(
+//			//	someState, SimTK::MobilizedBodyIndex(2));
+//			//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(
+//			//	SimTK::MobilizedBodyIndex(2));
+//			//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
+//			//const SimTK::Inertia i2 = mp2.calcInertia();
+//			//SimTK::Mat33 mi2 = i2.toMat33();
+//			//std::cout << std::endl;
+//			//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
+//			//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
+//			//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
+//			//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
+//
+//			prevPrevTimestep = prevTimestep;
+//			prevTimestep = timestep;
+//			if( SimTK::isNaN(prevPrevTimestep) ){
+//				timestep = 0.0009; // smaller than H vibration
+//			}else{
+//				timestep = (prevTimestep + prevPrevTimestep) / 2;
+//			}
+//		}
+//
+//		timeStepper->updIntegrator().setFixedStepSize(timestep);
+//		std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep
+//			<< " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
+//
+//	} // is time to adapt 
+//}
+//
+// Stochastic optimization of the timestep using gradient descent
 void HMCSampler::adaptTimestep(SimTK::State&)
 {
-	// function signature was SimTK::State& someState
+	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){
+		std::cout << "Adapt BEGIN: ";
 
-	std::cout << std::endl;
-	//std::cout << "Adapt: nofSamples= " << nofSamples << std::endl;
-	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){ // Do it only so often
-		std::cout << "Adapt BEGIN: ts= " << timestep;
-
-		// SimTK::Real stdAcceptance = 0.03;
 		SimTK::Real idealAcceptance = 0.651;
-		// SimTK::Real smallestAcceptance = 0.0001;
-		// SimTK::Real timestepIncr = 0.001;
+		SimTK::Real newTimestep = SimTK::NaN;
 
 		// Compute acceptance in the buffer
-		int sum = std::accumulate(acceptedStepsBuffer.begin(), acceptedStepsBuffer.end(), 0);
+		int sum = std::accumulate(acceptedStepsBuffer.begin(),
+			acceptedStepsBuffer.end(), 0);
+		SimTK::Real newAcceptance = float(sum) / float(acceptedStepsBufferSize);
 
-		SimTK::Real prevPrevPrevAcceptance = prevPrevAcceptance; // to reset
+		// Advance timestep ruler
 		prevPrevAcceptance = prevAcceptance;
 		prevAcceptance = acceptance;
-		acceptance = sum / acceptedStepsBufferSize;
+		acceptance = newAcceptance;
 
-		std::cout << " ppAcc= " << prevPrevAcceptance << " pAcc= " << prevAcceptance << " acc= " << acceptance << std::endl;
+		std::cout << " ppAcc= " << prevPrevAcceptance
+			<< " pAcc= " << prevAcceptance 
+			<< " acc= " << acceptance 
+			<< " ppTs= " << prevPrevTimestep
+			<< " pTs= " << prevTimestep 
+			<< " ts= " << timestep 
+			<< std::endl;
 
-		if( !SimTK::isNaN(prevPrevAcceptance) ){ // Passed first two initial evaluations
+		// Passed first two initial evaluations
+		if( !SimTK::isNaN(prevPrevAcceptance) ){
 			// Calculate gradients
 			SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2;
 			a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
 			t_n = timestep; t_n_1 = prevTimestep; t_n_2 = prevPrevTimestep;
 
-			SimTK::Real F_n =   std::abs(a_n   - idealAcceptance);
-			SimTK::Real F_n_1 = std::abs(a_n_1 - idealAcceptance);
-			SimTK::Real F_n_2 = std::abs(a_n_2 - idealAcceptance);
+			// f = a - aref and F = integral(f)
+			// minimize F <=> f = 0 <=> a = aref 
+			SimTK::Real F_n =   0.5 * (a_n * a_n)     - idealAcceptance;
+			SimTK::Real F_n_1 = 0.5 * (a_n_1 * a_n_1) - idealAcceptance;
+			SimTK::Real F_n_2 = 0.5 * (a_n_2 * a_n_2) - idealAcceptance;
 
 			SimTK::Real dF_n   = F_n     - F_n_1;
 			SimTK::Real dF_n_1 = F_n_1   - F_n_2;
@@ -1581,58 +1746,63 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 			denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
 			gamma = num / denom;
 
-			// Increase or decrease timestep
-			SimTK::Real newTimestep = t_n - (gamma * gradF_n);
-			std::cout << "Adapt data: "
-				<< " " << F_n  << " " << F_n_1  << " " << F_n_2 << " " << dF_n << " " << dF_n_1 
-				<< " " << dt_n << " " << dt_n_1 << " " << gradF_n << " " << gradF_n_1
-				<< " " << num << " " << denom << " " << gamma
+			// Generate a new timestep adaptedTimestep
+			SimTK::Real adaptedTimestep = t_n - (gamma * gradF_n);
+
+			if(SimTK::isNaN(adaptedTimestep)){
+				std::cout << "Adapted timestep is NAN!" << std::endl;
+			}
+
+			std::cout << "Adapt data:"
+				<< " F_n= " << F_n  << " F_n_1= " << F_n_1  << " F_n_2= " << F_n_2
+				<< " dF_n= " << dF_n << " dF_n_1= " << dF_n_1 
+				<< " dt_n= " << dt_n << " dt_n_1= " << dt_n_1 
+				<< " gradF_n= " << gradF_n << " gradF_n_1= " << gradF_n_1
+				<< " num " << num << " " << denom << " gamma= " << gamma
 				<< std::endl;
-			if( (std::abs(prevTimestep - timestep) > 0.0001) || (newTimestep < 0.00089) || (SimTK::isNaN(newTimestep)) || ((acceptance - prevAcceptance) < 0.001)){
-				std::cout << "newTimestep rejected\n"; 
-					SimTK::Real r = uniformRealDistribution(randomEngine);
+
+			// Acceptance is fine
+			if(std::abs(F_n) < 0.0001){
+				std::cout << "Acceptance is nearly ideal.\n";
+
+			// Not enough data to compute gradient
+			}else if((dF_n == 0.0) || (dF_n_1 == 0.0)){
+				std::cout << "Adding noise to newTimestep.\n";
+
+				SimTK::Real r = uniformRealDistribution(randomEngine);
 				if(acceptance < idealAcceptance){
-					timestep = timestep - (0.3*r * timestep);
+					newTimestep = timestep - (0.3*r * timestep);
 				}else{
-					timestep = timestep + (0.3*r * timestep);
+					newTimestep = timestep + (0.3*r * timestep);
 				}
 
-				acceptance = prevAcceptance;
-				prevAcceptance = prevPrevAcceptance;
-				prevPrevAcceptance = prevPrevPrevAcceptance;
-			} else { // Reset acceptances
-				std::cout << "newTimestep accepted\n"; 
-				prevPrevTimestep = prevTimestep;
-				prevTimestep = timestep;
-				timestep = newTimestep;
+			} else { // Take the new timestep
+				std::cout << "Setting newTimestep to adaptedTimestep.\n";
+				newTimestep = adaptedTimestep;
 			}
 
-				timeStepper->updIntegrator().setFixedStepSize(timestep);
-			std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
 		} else { // Alter the intial timesteps to get a valid dF_n next time
 
-		//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(someState, SimTK::MobilizedBodyIndex(2));
-			//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
-		//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
-		//const SimTK::Inertia i2 = mp2.calcInertia();
-		//SimTK::Mat33 mi2 = i2.toMat33();
-		//std::cout << std::endl;
-		//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
-		//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
-		//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
-		//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
-
-			prevPrevTimestep = prevTimestep;
-			prevTimestep = timestep;
-			if( SimTK::isNaN(prevPrevTimestep) ){
-				timestep = 0.0009; // smaller than H vibration
-					timeStepper->updIntegrator().setFixedStepSize(timestep);
+			//if( SimTK::isNaN(prevPrevTimestep) ){
+			if( SimTK::isNaN(prevAcceptance) ){
+				std::cout << "Second step\n";
+				newTimestep = 0.0009; // smaller than H vibration
 			}else{
-				timestep = (prevTimestep + prevPrevTimestep) / 2;
-					timeStepper->updIntegrator().setFixedStepSize(timestep);
+				std::cout << "Third step\n";
+				newTimestep = (timestep + prevTimestep) / 2;
 			}
-			std::cout << "Adapt END: ppTs= " << prevPrevTimestep << " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
 		}
+
+		// Advance timestep ruler
+		prevPrevTimestep = prevTimestep;
+		prevTimestep = timestep;
+		timestep = newTimestep;
+
+		// Set integrator timestep to newTimestep
+		timeStepper->updIntegrator().setFixedStepSize(timestep);
+
+		std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep
+			<< " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
 
 	} // is time to adapt 
 }

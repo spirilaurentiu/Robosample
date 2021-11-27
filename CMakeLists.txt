@@ -1,5 +1,5 @@
 # use 3.9.4 for cmake lto flags
-cmake_minimum_required(VERSION 3.9.4)
+#cmake_minimum_required(VERSION 3.9.4)
 
 # define project languages here
 project(Robosample C CXX)

@@ -335,7 +335,7 @@ protected:
 	//bool alwaysAccept = false;
 
 	int acceptedSteps = 0;
-	int acceptedStepsBufferSize = 30;
+	int acceptedStepsBufferSize = 100;
 	std::deque<int> acceptedStepsBuffer;
 
 	int QsBufferSize = 300;
@@ -393,6 +393,8 @@ protected:
 	SimTK::Real MDStepsPerSampleStd;
 
 	bool shouldAdaptTimestep;
+
+	SimTK::Real NMAAltSign;
 };
 
 #endif // __HAMMONTECARLOSAMPLER_HPP__
