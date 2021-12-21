@@ -308,12 +308,10 @@ int main(int argc, char **argv)
 			// Set timesteps
 			context.setTimestep(worldIx, samplerIx, std::stof(setupReader.get("TIMESTEPS")[worldIx]));
 
-			// Set thermostats
-			//pMC(context.updWorld(worldIx)->updSampler(samplerIx))->setThermostat(setupReader.get("THERMOSTAT")[worldIx]);
-			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
-				std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
-			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
-					std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
+			//pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
+			//	std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
+			//pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
+			//		std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 
 			// Activate Fixman potential if needed
 			if(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"){
@@ -351,6 +349,16 @@ int main(int argc, char **argv)
 			for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
 				pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setMDStepsPerSampleStd(0);
 			}
+		}
+	}
+
+	// NEW PARAMS
+	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
+		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
+				std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
+			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
+					std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 		}
 	}
 

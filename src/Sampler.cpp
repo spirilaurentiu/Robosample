@@ -402,6 +402,81 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 
 }
 
+
+// Draws from von Mises distribution with concentration kK
+SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
+
+	// Declarations
+	SimTK::Real tau = 0.0;
+	SimTK::Real rho = 0.0;
+	SimTK::Real r = 0.0;
+	SimTK::Real z = 0.0;
+	SimTK::Real f = 0.0;
+	SimTK::Real c = 0.0;
+	SimTK::Real step2Val = 0.0;
+	SimTK::Real step3Val = 0.0;
+	SimTK::Real step4Val = 0.0;
+
+	SimTK::Real u1 = uniformRealDistribution(randomEngine);
+	SimTK::Real u2 = uniformRealDistribution(randomEngine);
+	SimTK::Real u3 = uniformRealDistribution(randomEngine);
+
+	SimTK::Real theta = SimTK::NaN;
+
+	// Prereq
+	tau = 1 + std::sqrt(1 + 4*K*K);
+	rho = (tau - std::sqrt(2*tau)) / (2*K);
+	
+	// Step 0 variables
+	r = (1 + (rho*rho)) / (2 * rho);
+	
+	// Step 1 variables
+	z = std::cos(SimTK_PI * u1);
+	f = (1 + (r*z)) / (r + z);
+	c = K * (r - f);
+
+	// Step 2 variables
+	step2Val = (c * (2 - c)) - u2;
+
+	// Step 3 variables
+	step3Val = std::log(c / u2) + 1 - c;
+
+	step4Val = ((u3 - 0.5) < 0) ? -1 : 1;
+	step4Val = step4Val * std::acos(f);
+
+	for(int i = 0; i < 1000; i++){
+		if(step2Val > 0.0){
+			theta = step4Val;
+			break;
+		}else{
+			if(step3Val < 0){
+				;
+			}else{
+				theta = step4Val;
+				break;
+			}
+		}
+	}
+
+	// Translate to the mean
+	if( isnan(theta) ){
+		std::cout << "Sampler::vonMises warning did not draw after 1000 tries.\n";
+		return theta;
+	}else{
+		theta += Mean;
+		if(theta > SimTK_PI){
+			theta = theta - (2*SimTK_PI);
+		}else if(theta < (-1.0 * SimTK_PI)){
+			theta = (2*SimTK_PI) + theta;
+		}
+		
+	}
+
+	return theta;
+
+}
+
+
 // Draws from von Mises-Fisher distribution
 std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 	double lambda)

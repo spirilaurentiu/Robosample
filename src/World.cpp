@@ -162,7 +162,7 @@ World::World(int worldIndex, int requestedNofMols, bool isVisual, SimTK::Real vi
 	if(visual){
 		decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
 		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
-		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(*visualizer, visualizerFrequency);
+		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(*visualizer, std::abs(visualizerFrequency));
 		compoundSystem->addEventReporter(visualizerReporter.get());
 
 		// Initialize a DecorationGenerator

@@ -239,6 +239,7 @@ public:
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
 	bool propose(SimTK::State& someState);
+	bool proposeNEHMC(SimTK::State& someState);
 	bool proposeNMA(SimTK::State& someState);
 
 	/** Main function that contains all the 3 steps of HMC.

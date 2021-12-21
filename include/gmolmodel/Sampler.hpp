@@ -61,8 +61,13 @@ public:
 	int64_t getSeed() const;
 	void setSeed(int64_t);
 
+	// Draws one sample from vonMises distribution with concentration k
+	// The algorithm is taken from 1979 Best, page 155
+	SimTK::Real vonMises(SimTK::Real miu, SimTK::Real k);
+
 	// Draws X from von Mises-Fisher distribution with concentration 
-	// parameter k
+	// parameter k TODO: reference to the algorithm
+	// X vector has the dimensions of the ndofs
 	std::vector<double>& vonMisesFisher(std::vector<double>& X, double k);
 
 	// Draws from chi distribution

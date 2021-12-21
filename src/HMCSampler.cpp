@@ -138,7 +138,12 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 		// We also get here if the cache is not initialized
 		RandomCache.V.resize(nu);
 		RandomCache.SqrtMInvV.resize(nu);
-		RandomCache.sqrtRT = std::sqrt(RT);
+
+		// OLD RESTORE TODO BOOST
+		//RandomCache.sqrtRT = std::sqrt(RT);
+		// NEW TRY TODO BOOST
+		RandomCache.sqrtRT = std::sqrt(this->boostRT);
+
 		RandomCache.nu = nu;
 
 		// we don't get to use multithreading here
@@ -732,6 +737,137 @@ void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 		system->realize(someState, SimTK::Stage::Position);
 	}
 }
+
+/**  **/
+void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
+	//, std::function<void()> initialFunc
+	//, std::function<void()> loopFunc
+	//, std::function<void()> finalFunc
+	){
+
+	try {
+		//// TODO: Intial function BEGIN ////
+		//// Push initial R and Rdots
+		//SimTK::Vec3 atomR;
+		//SimTK::Vec3 atomRdot;
+		//SimTK::Compound::AtomIndex aIx; 
+		//for(int i = 0; i < topologies.size(); i++){
+		//	for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
+		//		aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
+		//		atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
+		//		R.push_back(atomR[0]);
+		//		R.push_back(atomR[1]);
+		//		R.push_back(atomR[2]);
+		//	}
+		//}
+		//// Initial function END ////
+	
+		//// Main loop ////
+
+		int nu = someState.getNU();
+		for(int k = 0; k < MDStepsPerSample; k++){
+			this->timeStepper->stepTo(someState.getTime() + (timestep));
+			system->realize(someState, SimTK::Stage::Position);
+
+			const auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
+			const auto U = someState.getU(); // g++17 complains if this is auto& or const auto&
+			SimTK::Vector MU(nu, 1.0);
+			matter->multiplyByM(someState, U, MU);
+			
+			std::cout << "Q" << Q  << std::endl;
+			std::cout << "P" << MU << std::endl;
+
+			//// Calculate generalized quantities
+				//int nu = someState.getNU();
+				//SimTK::Vector MU(nu);
+				//for (int i=0; i < nu; ++i){
+				//	MU[i] = 1;
+			//}
+			//matter->multiplyByM(someState, someState.getU(), MU);
+			//std::cout << "MU= " << MU << std::endl;
+			
+				//int nu = someState.getNU();
+				//SimTK::Vector U(nu);
+			//U = someState.getU();
+			//std::cout << "U= " << U << std::endl;
+	
+			/////////////////////////
+	
+	
+			//// TODO:Loop function BEGIN ////
+			//	// Push current R and Rdot
+			//	for(int i = 0; i < topologies.size(); i++){
+			//		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
+			//			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
+			//			atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
+			//			R.push_back(atomR[0]);
+			//			R.push_back(atomR[1]);
+			//			R.push_back(atomR[2]);
+			//			atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
+			//			Rdot.push_back(atomRdot[0]);
+			//			Rdot.push_back(atomRdot[1]);
+			//			Rdot.push_back(atomRdot[2]);
+			//		}
+			//	}
+			//
+			//	// Calculate dR		
+			//	for(unsigned int j = 0; j < (ndofs); j++){
+			//		dR[j] = R[j + (ndofs)] - R[j];
+			//	}
+			//
+			//	// Calculate MSD
+			//	SimTK::Real MSD = 0;
+			//	if(dR.size() >= (ndofs)){
+			//		MSD += magSq(dR);
+			//		MSD /= (ndofs);
+			//	}
+			//
+			//	// Calculate RRdot	
+			//	SimTK::Real RRdot = 0;
+			//	if(dR.size() >= (ndofs)){
+			//		std::vector<SimTK::Real> tempDR = dR;
+			//		std::vector<SimTK::Real> tempRdot = Rdot;
+			//
+			//		normalize(tempDR);
+			//		normalize(tempRdot);
+			//
+			//		for(unsigned int j = 0; j < ndofs; j++){
+			//			RRdot += tempDR[j] * tempRdot[j];
+			//		}
+			//	}
+			//	std::cout << std::setprecision(10) << std::fixed;
+			//	std::cout << "k= " << k << " RRdot= " << RRdot
+			//		<< " MSD= " << MSD << std::endl;
+			//
+			//	// Pop current R and Rdot
+			//	for(int j = ((ndofs) - 1); j >= 0; --j){
+			//		R.pop_back();
+			//		Rdot.pop_back();
+			//	}
+			//// Loop function END ////
+	
+		} // END main loop
+	
+		//// TODO: Final function BEGIN ////
+		//// Pop initial R
+		//for(int j = ((ndofs) - 1); j >= 0; --j){
+		//	R.pop_back();
+		//}
+		//// Final function END ////
+	}catch(const std::exception&){
+		std::cout << "\t[WARNING] propose exception caught!\n";
+		proposeExceptionCaught = true;
+
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+		}
+
+		system->realize(someState, SimTK::Stage::Position);
+	}
+
+}
+
 bool b = false;
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
@@ -764,6 +900,51 @@ bool HMCSampler::propose(SimTK::State& someState)
 	//integrateTrajectoryOneStepAtATime(someState);
 
 	calcNewConfigurationAndEnergies(someState);
+
+	return validateProposal();
+
+
+}
+
+bool HMCSampler::proposeNEHMC(SimTK::State& someState)
+{
+
+	// Apply Lambda protocol: T times
+	int T = 1;
+	for(int i = 0; i < 1; i++){
+
+		// Store old configuration
+		storeOldConfigurationAndPotentialEnergies(someState);
+
+		// Perturb with alpha (do work)
+//		perturbQ(someState);
+
+		// Initialize velocities according to the Maxwell-Boltzmann distribution
+		initializeVelocities(someState);
+
+		// Store the proposed energies 
+		calcProposedKineticAndTotalEnergy(someState);
+
+//		calcNewConfigurationAndEnergies(someState);
+//		std::cout << "energies after perturbQ pe_o pe_n ke_prop "
+//			<< pe_o << " " << pe_n << " " << ke_proposed << '\n';
+
+		// Adapt timestep
+		if(shouldAdaptTimestep){
+			adaptTimestep(someState);
+		}
+	
+		// Adapt timestep
+		bool shouldAdaptWorldBlocks = false;
+		if(shouldAdaptWorldBlocks){
+			adaptWorldBlocks(someState);
+		}
+	
+		// Propagate with K (no heat if integrator is deterministic)
+		integrateTrajectoryOneStepAtATime(someState);
+
+		calcNewConfigurationAndEnergies(someState);
+	}
 
 	return validateProposal();
 
@@ -829,7 +1010,6 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 			setSetConfigurationAndEnergiesToOld(someState);
 		}
 	}
-	++nofSamples;
 
 	return this->acc;
 }
@@ -847,6 +1027,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 	for (int i = 0; i < 10; i++){
 		if(NMAOption > 0){
 			validated = proposeNMA(someState);
+		}else if(NMAOption < 0){
+			validated = proposeNEHMC(someState);
 		}else{
 			validated = propose(someState);
 		}
@@ -876,12 +1058,18 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 			std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
 		}
 		
+		++nofSamples;
+
 		return this->acc;
 	}else{
 		std::cout << "Warning: HMCSampler: Proposal was not validated after 10 tries." << std::endl;
 		setSetConfigurationAndEnergiesToOld(someState);
+
+		++nofSamples;
+
 		return false;	
 	}
+
 }
 
 // Use Fixman potential
@@ -1552,7 +1740,11 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 
 	// Store proposed kinetic energy
 	// setProposedKE(matter->calcKineticEnergy(someState));
-	this->ke_proposed = matter->calcKineticEnergy(someState);
+
+	// OLD RESTORE TODO BOOST
+	// this->ke_proposed = matter->calcKineticEnergy(someState);
+	// NEW TRY TODO BOOST
+	this->ke_proposed = this->unboostFactor * matter->calcKineticEnergy(someState);
 
 	// Store proposed total energy
 	this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
@@ -1695,10 +1887,17 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 // Stochastic optimization of the timestep using gradient descent
 void HMCSampler::adaptTimestep(SimTK::State&)
 {
-	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){
-		std::cout << "Adapt BEGIN: ";
 
-		SimTK::Real idealAcceptance = 0.651;
+	static int nofTimestepAdapt = 0;	
+
+	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){
+
+		nofTimestepAdapt += 1;
+
+		std::cout << "Adapt BEGIN " << nofTimestepAdapt << ": ";
+
+		//SimTK::Real idealAcceptance = 0.651;
+		SimTK::Real idealAcceptance = 0.8;
 		SimTK::Real newTimestep = SimTK::NaN;
 
 		// Compute acceptance in the buffer
@@ -1728,9 +1927,12 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 
 			// f = a - aref and F = integral(f)
 			// minimize F <=> f = 0 <=> a = aref 
-			SimTK::Real F_n =   0.5 * (a_n * a_n)     - idealAcceptance;
-			SimTK::Real F_n_1 = 0.5 * (a_n_1 * a_n_1) - idealAcceptance;
-			SimTK::Real F_n_2 = 0.5 * (a_n_2 * a_n_2) - idealAcceptance;
+			//SimTK::Real F_n =   0.5 * (a_n * a_n)     - idealAcceptance;
+			//SimTK::Real F_n_1 = 0.5 * (a_n_1 * a_n_1) - idealAcceptance;
+			//SimTK::Real F_n_2 = 0.5 * (a_n_2 * a_n_2) - idealAcceptance;
+			SimTK::Real F_n =   (0.5 * (a_n * a_n))     - (a_n   * idealAcceptance);
+			SimTK::Real F_n_1 = (0.5 * (a_n_1 * a_n_1)) - (a_n_1 * idealAcceptance);
+			SimTK::Real F_n_2 = (0.5 * (a_n_2 * a_n_2)) - (a_n_2 * idealAcceptance);
 
 			SimTK::Real dF_n   = F_n     - F_n_1;
 			SimTK::Real dF_n_1 = F_n_1   - F_n_2;
@@ -1762,8 +1964,14 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 				<< std::endl;
 
 			// Acceptance is fine
-			if(std::abs(F_n) < 0.0001){
+			//if(std::abs(F_n) < 0.0001){
+			if(	   (std::abs(a_n   - idealAcceptance) < 0.0001) 
+				&& (std::abs(a_n_1 - idealAcceptance) < 0.0001)
+				&& (std::abs(a_n_2 - idealAcceptance) < 0.0001)
+			){
 				std::cout << "Acceptance is nearly ideal.\n";
+
+				newTimestep = timestep;
 
 			// Not enough data to compute gradient
 			}else if((dF_n == 0.0) || (dF_n_1 == 0.0)){
@@ -1901,114 +2109,6 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 }
 
 
-/**  **/
-void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
-	//, std::function<void()> initialFunc
-	//, std::function<void()> loopFunc
-	//, std::function<void()> finalFunc
-	){
-
-	//// TODO: Intial function BEGIN ////
-	//// Push initial R and Rdots
-	//SimTK::Vec3 atomR;
-	//SimTK::Vec3 atomRdot;
-	//SimTK::Compound::AtomIndex aIx; 
-	//for(int i = 0; i < topologies.size(); i++){
-	//	for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
-	//		aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
-	//		atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
-	//		R.push_back(atomR[0]);
-	//		R.push_back(atomR[1]);
-	//		R.push_back(atomR[2]);
-	//	}
-	//}
-	//// Initial function END ////
-
-	//// Main loop ////
-	for(int k = 0; k < MDStepsPerSample; k++){
-		this->timeStepper->stepTo(someState.getTime() + (timestep));
-				system->realize(someState, SimTK::Stage::Position);
-
-		//// Calculate generalized quantities
-			//int nu = someState.getNU();
-			//SimTK::Vector MU(nu);
-			//for (int i=0; i < nu; ++i){
-			//	MU[i] = 1;
-		//}
-		//matter->multiplyByM(someState, someState.getU(), MU);
-		//std::cout << "MU= " << MU << std::endl;
-		
-			//int nu = someState.getNU();
-			//SimTK::Vector U(nu);
-		//U = someState.getU();
-		//std::cout << "U= " << U << std::endl;
-
-		/////////////////////////
-
-
-		//// TODO:Loop function BEGIN ////
-		//	// Push current R and Rdot
-		//	for(int i = 0; i < topologies.size(); i++){
-		//		for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
-		//			aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
-		//			atomR = (topologies[i])->calcAtomLocationInGroundFrame(someState, aIx);
-		//			R.push_back(atomR[0]);
-		//			R.push_back(atomR[1]);
-		//			R.push_back(atomR[2]);
-		//			atomRdot = (topologies[i])->calcAtomVelocityInGroundFrame(someState, aIx);
-		//			Rdot.push_back(atomRdot[0]);
-		//			Rdot.push_back(atomRdot[1]);
-		//			Rdot.push_back(atomRdot[2]);
-		//		}
-		//	}
-		//
-		//	// Calculate dR		
-		//	for(unsigned int j = 0; j < (ndofs); j++){
-		//		dR[j] = R[j + (ndofs)] - R[j];
-		//	}
-		//
-		//	// Calculate MSD
-		//	SimTK::Real MSD = 0;
-		//	if(dR.size() >= (ndofs)){
-		//		MSD += magSq(dR);
-		//		MSD /= (ndofs);
-		//	}
-		//
-		//	// Calculate RRdot	
-		//	SimTK::Real RRdot = 0;
-		//	if(dR.size() >= (ndofs)){
-		//		std::vector<SimTK::Real> tempDR = dR;
-		//		std::vector<SimTK::Real> tempRdot = Rdot;
-		//
-		//		normalize(tempDR);
-		//		normalize(tempRdot);
-		//
-		//		for(unsigned int j = 0; j < ndofs; j++){
-		//			RRdot += tempDR[j] * tempRdot[j];
-		//		}
-		//	}
-		//	std::cout << std::setprecision(10) << std::fixed;
-		//	std::cout << "k= " << k << " RRdot= " << RRdot
-		//		<< " MSD= " << MSD << std::endl;
-		//
-		//	// Pop current R and Rdot
-		//	for(int j = ((ndofs) - 1); j >= 0; --j){
-		//		R.pop_back();
-		//		Rdot.pop_back();
-		//	}
-		//// Loop function END ////
-
-	} // END main loop
-
-	//// TODO: Final function BEGIN ////
-	//// Pop initial R
-	//for(int j = ((ndofs) - 1); j >= 0; --j){
-	//	R.pop_back();
-	//}
-	//// Final function END ////
-
-}
-
 void HMCSampler::geomDihedral(SimTK::State& someState){
 	 // INSTANT GEOMETRY
 	SimTK::Vec3 a1pos, a2pos, a3pos, a4pos, a5pos;
@@ -2060,7 +2160,11 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 
 	// Get new kinetic energy
 	system->realize(someState, SimTK::Stage::Velocity);
-	ke_n = matter->calcKineticEnergy(someState);
+
+	// OLD RESTORE TODO BOOST
+	//ke_n = matter->calcKineticEnergy(someState);
+	// NEW TRY TODO BOOST
+	ke_n = this->unboostFactor * matter->calcKineticEnergy(someState);
 
 	// Get new potential energy
 	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
@@ -2241,7 +2345,7 @@ bool HMCSampler::acceptSample() {
 	SimTK::Real prob = 0.0;
 	if(NMAOption == 0){
 		prob = MHAcceptProbability(etot_proposed, etot_n);
-	}else{
+	}else if(NMAOption > 0){
 
 		if(useFixman){
 			prob = MHAcceptProbability(pe_o + fix_o + ke_prop_nma6, pe_n + fix_n + ke_n_nma6);
@@ -2250,6 +2354,8 @@ bool HMCSampler::acceptSample() {
 			prob = MHAcceptProbability(pe_o + ke_prop_nma6, pe_n + ke_n_nma6);
 			//prob = MHAcceptProbability(pe_o, pe_n);
 		}
+	}else{
+		prob = MHAcceptProbability(etot_proposed, etot_n);
 	}
 
 	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;
@@ -2405,44 +2511,67 @@ void HMCSampler::perturbQ(SimTK::State& someState)
 {
 	// Perturb Q
 	//SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-	//SimTK::Real rand_no = uniformRealDistribution_mpi_pi(randomEngine);
+	SimTK::Real rand_no = uniformRealDistribution_mpi_pi(randomEngine);
 	int nq = someState.getNQ();
 	//SimTK::Vector V(nq);
-	for (int i=7; i < nq; ++i){
-		//V[i] = uniformRealDistribution_mpi_pi(randomEngine);
-		someState.updQ()[i] = uniformRealDistribution_mpi_pi(randomEngine);
-	}
-	std::cout << "perturbQ " << someState.getQ() << std::endl;
-	system->realize(someState, SimTK::Stage::Position);
 
-	// Get needed energies
-	pe_o  = getOldPE();
-	if(useFixman){
-		fix_o = getOldFixman();
-	}
-	if(useFixman){
-		fix_n = calcFixman(someState);
+	//
+	SimTK::Real q0_refVal, q1_refVal;
+	if(rand_no < 0){
+		q0_refVal = 2;
+		q1_refVal = -1.7;
 	}else{
-		fix_n = 0.0;
+		q0_refVal = 0;
+		q1_refVal = 0;
 	}
+	// q1_refVal = -2.3
+	SimTK::Real q0_actVal = someState.getQ()[0];
+	SimTK::Real q1_actVal = someState.getQ()[1];
 
-	pe_n = getPEFromEvaluator(someState); // OPENMM
-	//std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
-	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+	// Draw from vonMises distribution
+	SimTK::Real q0_vonMises = vonMises(q0_actVal, 5);
+	if(std::isnan(q0_vonMises)){q0_vonMises = q0_actVal;}
+	std::cout << "vonMises " << q0_vonMises << "\n";
 
-	setSetTVector(someState);
-	setSetPE(pe_n);
-	setSetFixman(fix_n);
-	++acceptedSteps;
-	assignConfFromSetTVector(someState);
+	// Add Gaussian noise
+	//std::normal_distribution<double> Noiser(q0_refVal, 1);
+	//double noise = Noiser(RandomCache.RandomEngine);
 
-	std::cout << someState.getNU() << ' ' << 1 << ' '
-			  //<< getSetPE() + getREP() << ' ' << getLastAcceptedKE()
-			  << getSetPE() << ' ' << 0
-			  << ' ' << getSetFixman() << ' ' << fix_o << ' ' << fix_n << ' ';
+	std::cout << "HMCSampler::perturbQ " << someState.getQ() << " with " << q0_vonMises << std::endl;
+	//someState.updQ()[which] = uniformRealDistribution_mpi_pi(randomEngine);
+	someState.updQ()[0] = q0_vonMises;
+	//someState.updQ()[1] = q1_vonMises;
+	system->realize(someState, SimTK::Stage::Position);
+	std::cout << "HMCSampler::perturbQ " << someState.getQ() << std::endl;
 
-	// Keep track of how many MC trials have been done
-	++nofSamples;
+//	// Get needed energies
+//	pe_o  = getOldPE();
+//	if(useFixman){
+//		fix_o = getOldFixman();
+//	}
+//	if(useFixman){
+//		fix_n = calcFixman(someState);
+//	}else{
+//		fix_n = 0.0;
+//	}
+//
+//	pe_n = getPEFromEvaluator(someState); // OPENMM
+//	//std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
+//	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
+//
+//	setSetTVector(someState);
+//	setSetPE(pe_n);
+//	setSetFixman(fix_n);
+//	++acceptedSteps;
+//	assignConfFromSetTVector(someState);
+//
+//	std::cout << someState.getNU() << ' ' << 1 << ' '
+//			  //<< getSetPE() + getREP() << ' ' << getLastAcceptedKE()
+//			  << getSetPE() << ' ' << 0
+//			  << ' ' << getSetFixman() << ' ' << fix_o << ' ' << fix_n << ' ';
+//
+//	// Keep track of how many MC trials have been done
+//	++nofSamples;
 }
 
 
