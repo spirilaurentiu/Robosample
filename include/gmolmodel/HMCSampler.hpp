@@ -336,7 +336,7 @@ protected:
 	//bool alwaysAccept = false;
 
 	int acceptedSteps = 0;
-	int acceptedStepsBufferSize = 100;
+	int acceptedStepsBufferSize = 500;
 	std::deque<int> acceptedStepsBuffer;
 
 	int QsBufferSize = 300;

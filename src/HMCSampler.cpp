@@ -1921,15 +1921,15 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 		// Passed first two initial evaluations
 		if( !SimTK::isNaN(prevPrevAcceptance) ){
 			// Calculate gradients
-			SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2;
+			SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2, f_n, f_n_1, f_n_2;
 			a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
 			t_n = timestep; t_n_1 = prevTimestep; t_n_2 = prevPrevTimestep;
+			f_n   = a_n     - idealAcceptance;
+			f_n_1 = a_n_1   - idealAcceptance;
+			f_n_2 = a_n_2   - idealAcceptance;
 
 			// f = a - aref and F = integral(f)
 			// minimize F <=> f = 0 <=> a = aref 
-			//SimTK::Real F_n =   0.5 * (a_n * a_n)     - idealAcceptance;
-			//SimTK::Real F_n_1 = 0.5 * (a_n_1 * a_n_1) - idealAcceptance;
-			//SimTK::Real F_n_2 = 0.5 * (a_n_2 * a_n_2) - idealAcceptance;
 			SimTK::Real F_n =   (0.5 * (a_n * a_n))     - (a_n   * idealAcceptance);
 			SimTK::Real F_n_1 = (0.5 * (a_n_1 * a_n_1)) - (a_n_1 * idealAcceptance);
 			SimTK::Real F_n_2 = (0.5 * (a_n_2 * a_n_2)) - (a_n_2 * idealAcceptance);
@@ -1951,10 +1951,6 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 			// Generate a new timestep adaptedTimestep
 			SimTK::Real adaptedTimestep = t_n - (gamma * gradF_n);
 
-			if(SimTK::isNaN(adaptedTimestep)){
-				std::cout << "Adapted timestep is NAN!" << std::endl;
-			}
-
 			std::cout << "Adapt data:"
 				<< " F_n= " << F_n  << " F_n_1= " << F_n_1  << " F_n_2= " << F_n_2
 				<< " dF_n= " << dF_n << " dF_n_1= " << dF_n_1 
@@ -1964,18 +1960,18 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 				<< std::endl;
 
 			// Acceptance is fine
-			//if(std::abs(F_n) < 0.0001){
-			if(	   (std::abs(a_n   - idealAcceptance) < 0.0001) 
-				&& (std::abs(a_n_1 - idealAcceptance) < 0.0001)
-				&& (std::abs(a_n_2 - idealAcceptance) < 0.0001)
+			if(	   (std::abs(f_n) < 0.1) 
+				&& (std::abs(f_n_1) < 0.1)
+				&& (std::abs(f_n_2) < 0.1)
 			){
 				std::cout << "Acceptance is nearly ideal.\n";
 
 				newTimestep = timestep;
 
 			// Not enough data to compute gradient
-			}else if((dF_n == 0.0) || (dF_n_1 == 0.0)){
-				std::cout << "Adding noise to newTimestep.\n";
+			//}else if((dF_n == 0.0) || (dF_n_1 == 0.0)){
+			}else if(SimTK::isNaN(adaptedTimestep)){
+				std::cout << "Adding noise to newTimestep to become: ";
 
 				SimTK::Real r = uniformRealDistribution(randomEngine);
 				if(acceptance < idealAcceptance){
@@ -1983,6 +1979,8 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 				}else{
 					newTimestep = timestep + (0.3*r * timestep);
 				}
+
+				std::cout << newTimestep << "\n";
 
 			} else { // Take the new timestep
 				std::cout << "Setting newTimestep to adaptedTimestep.\n";
@@ -1992,12 +1990,12 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 		} else { // Alter the intial timesteps to get a valid dF_n next time
 
 			//if( SimTK::isNaN(prevPrevTimestep) ){
-			if( SimTK::isNaN(prevAcceptance) ){
-				std::cout << "Second step\n";
-				newTimestep = 0.0009; // smaller than H vibration
-			}else{
+			if( !SimTK::isNaN(prevAcceptance) ){
 				std::cout << "Third step\n";
 				newTimestep = (timestep + prevTimestep) / 2;
+			}else{
+				std::cout << "Second step\n";
+				newTimestep = 0.0009; // smaller than H vibration
 			}
 		}
 
@@ -2005,6 +2003,10 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 		prevPrevTimestep = prevTimestep;
 		prevTimestep = timestep;
 		timestep = newTimestep;
+
+		if(timestep < 0.0001){
+			timestep = 0.0009;
+		}
 
 		// Set integrator timestep to newTimestep
 		timeStepper->updIntegrator().setFixedStepSize(timestep);
