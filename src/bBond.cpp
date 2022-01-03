@@ -75,6 +75,7 @@ bBond::bBond(void) : intpair(){
   _isFirst = false;
   visited = 0;
   bondIndex = SimTK::Compound::BondIndex(99999999);
+  uScaleFactor = 1.0;
 }
 
 bBond::bBond(int a, int b) : intpair(a, b){
@@ -86,6 +87,7 @@ bBond::bBond(int a, int b) : intpair(a, b){
   _isFirst = false;
   visited = 0;
   bondIndex = SimTK::Compound::BondIndex(99999999);
+  uScaleFactor = 1.0;
 }
 
 bBond::~bBond(void){;}

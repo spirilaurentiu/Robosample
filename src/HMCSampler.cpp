@@ -777,6 +777,10 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 			std::cout << "Q" << Q  << std::endl;
 			std::cout << "P" << MU << std::endl;
 
+			SimTK::Real KE = matter->calcKineticEnergy(someState);
+			SimTK::Real PE = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			std::cout << "KE PE " << KE << " " << PE << std::endl;
+
 			//// Calculate generalized quantities
 				//int nu = someState.getNU();
 				//SimTK::Vector MU(nu);
