@@ -197,13 +197,8 @@ int main(int argc, char **argv)
 
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
-	// BEGIN MULMOL
-	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-	//	(context.updWorld(worldIx))->realizeTopology();
-	//}
-
-/*
-	// Membrane
+	// Add membrane
+	/*
 	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
 	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
 	float memZWidth = std::stof(setupReader.get("MEMBRANE")[2]);
@@ -214,30 +209,12 @@ int main(int argc, char **argv)
 			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
 		}
 	}
-*/
-
-	// Use OpenMM if possible
-	//if(setupReader.get("OPENMM")[0] == "TRUE"){
-	//	context.setUseOpenMMAcceleration(true);
-	//}
-
-	// Set Lennard-Jones mixing rule
-	//context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
+	*/
 
 	// Link the Compounds to Simbody System for all Worlds
+	// This calls CompoundSystem::modelOneCompound function
 	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
-	//context.printStatus();
-	//std::exit(0);
 
-	/////////////////////////////////////
-	// 	STAGE EMPTY
-	/////////////////////////////////////
-
-	//std::cout << "printStatus 4 " << std::endl;
-	//context.printStatus();
-	//context.PrintMolmodelAndDuMMTypes();
-	//context.PrintSimbodyMobods();
-	//std::exit(0);
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
@@ -246,36 +223,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-/*
-	// Set worlds force field scale factors
-	for (unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-		// Set force field scale factors.
-		if(setupReader.get("FFSCALE")[worldIx] == "AMBER"){
-			context.setAmberForceFieldScaleFactors(worldIx);
-		}else{
-			context.setGlobalForceFieldScaleFactor(worldIx,
-					std::stod(setupReader.get("FFSCALE")[worldIx]));
-		}
-		// Set world GBSA scale factor
-		context.setGbsaGlobalScaleFactor(worldIx,
-				std::stod(setupReader.get("GBSA")[worldIx]));
-	}
-*/
-/*
-	// Request threads
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-		context.setNumThreadsRequested(worldIx,
-				std::stod(setupReader.get("THREADS")[worldIx]));
-	}
-
-	// Print the number of threads we got back
-	context.PrintNumThreads();
-*/
-
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-   // Add samplers to the worlds
+	// Add samplers to the worlds
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		if(setupReader.get("SAMPLER")[worldIx] == "VV"){
 			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
@@ -295,23 +246,12 @@ int main(int argc, char **argv)
 		}*/
 	}
 
-	//std::cout << "printStatus 6 " << std::endl;
-	//context.printStatus();
-////////// DEBUG BEGIN
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {}}
-////////// DEBUG END
-
 	// Set sampler parameters and initialize
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+
 			// Set timesteps
 			context.setTimestep(worldIx, samplerIx, std::stof(setupReader.get("TIMESTEPS")[worldIx]));
-
-			//pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
-			//	std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
-			//pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
-			//		std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 
 			// Activate Fixman potential if needed
 			if(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"){
@@ -371,8 +311,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//std::cout << "printStatus 6.5 " << std::endl;
-	//context.printStatus();
 	// Initialize samplers
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
@@ -380,8 +318,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	//std::cout << "printStatus 7 " << std::endl;
-	//context.printStatus();
 	// Print thermodynamics
 	for(unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
 		std::cout << "MAIN World " << worldIx << " temperature = " << context.getWorld(worldIx)->getTemperature() << std::endl;
@@ -416,8 +352,6 @@ int main(int argc, char **argv)
 		round_mcsteps += context.getNofSamplesPerRound(worldIx);
 	}
 
-	// int total_mcsteps = round_mcsteps * context.getNofRounds();
-
 	// Set pdb writing frequency
 	context.setPdbRestartFreq( std::stoi(setupReader.get("WRITEPDBS")[0]) );
 
@@ -447,37 +381,25 @@ int main(int argc, char **argv)
 		}
 	}
 
-	// // wth is this?
-	// const SimTK::Compound * p_compounds[context.getNofWorlds()];
-	// if(setupReader.get("GEOMETRY")[0] == "TRUE"){
-	//     for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-	//         p_compounds[worldIx] = &((context.updWorld(worldIx))->getTopology(0));
-	//     }
-	// }
-	// //
-
-	// Update one round for the first regimen
+	// Write initial pdb for debug purposes: TODO remove 
+	// - we need this to get compound atoms
 	currentWorldIx = context.worldIndexes.front();
 	SimTK::State& advancedState = (context.updWorld(currentWorldIx))->integ->updAdvancedState();
 
-	// Find directory structure
+	// - Get molecules directory
 	std::string path = setupReader.get("MOLECULES")[0];
 	std::size_t lastSlashPos = path.find_last_of("/");
 	std::string upDir = path.substr(0, lastSlashPos);
 	std::string molDir = path.substr(lastSlashPos + 1, path.length());
 	std::cout << "Molecule directory: " << molDir << std::endl;
 
-	// Write pdb
+	// - Get seed
 	context.setOutputDir(setupReader.get("OUTPUT_DIR")[0] );
-	//context.setPdbPrefix(setupReader.get("MOLECULES")[0]
-	//	+ std::to_string(context.updWorld(currentWorldIx)->updSampler(0)->getSeed()) 
-	//	);
 	context.setPdbPrefix(molDir
 		+ std::to_string(context.updWorld(currentWorldIx)->updSampler(0)->getSeed()) 
 		);
 
-
-	// Helper constant for step arithmetic
+	// - Write
 	constexpr int mc_step = -1;
 	if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
 		(context.updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
@@ -502,26 +424,27 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-	//std::cout << "printStatus 8 " << std::endl;
-	//context.printStatus();
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		(context.updWorld(worldIx))->loadCompoundRelatedMaps();
 		(context.updWorld(worldIx))->loadMobodsRelatedMaps();
 	}
 
-/*
 	// Membrane contacts. TODO: only one per world for now
+	/*
 	if(haveMembrane){
 		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 			(context.updWorld(worldIx))->addContacts( std::stoi(setupReader.get("CONTACTS")[worldIx]) );
 		}
 	}
+	*/
 
 	// Set ocnstraint. TODO: only one per world allowed for now
+	/*
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		(context.updWorld(worldIx))->addConstraints( std::stoi(setupReader.get("CONSTRAINTS")[worldIx]) );
 	}
-*/
+	*/
+
 	// U Scale Factors uses maps stored in Topology
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		(context.updWorld(worldIx))->setUScaleFactorsToMobods();
@@ -539,9 +462,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-
-	//std::cout << "printStatus 9 " << std::endl;
-	//context.printStatus();
 
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
