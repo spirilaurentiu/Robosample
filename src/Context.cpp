@@ -29,9 +29,80 @@ Context::Context(const SetupReader& setupReader, std::string logFilename){
 	   perror("setvbuf()");
 	}
 
-	// Adaptive Gibbs blocki
-	roundsTillReblock = std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]);
+}
 
+// Destructor
+Context::~Context(){
+	fclose(logFile);
+}
+
+// Input molecular files TODO : merge with loadCoordinatesFile
+bool Context::loadTopologyFile(/*std::size_t whichWorld, int,*/ std::string topologyFilename)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string topologyFilename
+	std::ifstream file(topologyFilename);
+	if(!file){
+		std::cout << topologyFilename << " not found." << std::endl;
+		return false;
+	}
+	//topFNs[whichWorld].push_back(topologyFilename);
+	topFNs.push_back(topologyFilename);
+
+	nofMols = topFNs.size();
+
+	return true;
+}
+
+bool Context::loadCoordinatesFile(/*std::size_t whichWorld, int,*/ std::string coordinatesFilename)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string coordinatesFilename
+	std::ifstream file(coordinatesFilename);
+	if(!file){
+		std::cout << coordinatesFilename << " not found." << std::endl;
+		return false;
+	}
+	//crdFNs[whichWorld].push_back(coordinatesFilename);
+	crdFNs.push_back(coordinatesFilename);
+	return true;
+}
+
+// TODO merge with loadFlexibleBondsSpecs
+bool Context::loadRigidBodiesSpecs(std::size_t whichWorld, int, std::string RBSpecsFN)
+{
+	// function args were :std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN
+	std::ifstream file(RBSpecsFN);
+	if(!file){
+		std::cout << RBSpecsFN << " not found." << std::endl;
+		return false;
+	}
+	rbSpecsFNs[whichWorld].push_back(RBSpecsFN);
+
+	// Update nofTopologies
+	int s = 0;
+	for(int i = 0; i < rbSpecsFNs.size(); i++){
+		s += rbSpecsFNs[i].size();
+	}
+	nofTopologies = s;
+
+	return true;
+}
+
+bool Context::loadFlexibleBondsSpecs(std::size_t whichWorld, int, std::string flexSpecsFN)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string flexSpecsFN
+	std::ifstream file(flexSpecsFN);
+	if(!file){
+		std::cout << flexSpecsFN << " not found." << std::endl;
+		return false;
+	}
+	flexSpecsFNs[whichWorld].push_back(flexSpecsFN);
+	return true;
+}
+
+void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string regimen
+	regimens[whichWorld].push_back(regimen);
 }
 
 // 
@@ -157,6 +228,31 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 
 }
 
+// Adaptive Gibbs blocking: TODO: consider moving in World
+void Context::allocateReblockQsCache(void)
+{
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		QsCache.push_back(std::vector<std::vector<SimTK::Real>>(roundsTillReblock));
+		//std::cout << "Context::AddWorld QsCache size " << QsCache.size() << std::endl;
+	}
+}
+
+// Add a number of empty worlds
+void Context::addEmptyWorlds(std::size_t argNofWorlds, double visualizerFrequency)
+{
+	for(unsigned int worldIx = 0;
+		worldIx < argNofWorlds; 
+		worldIx++){
+		if(visualizerFrequency){
+			AddWorld(true, visualizerFrequency);
+		}else{
+			AddWorld(false);
+		}
+	}
+	allocateReblockQsCache();
+
+}
+
 // Add an empty world to the context
 World * Context::AddWorld(bool visual, SimTK::Real visualizerFrequency){
 
@@ -165,9 +261,6 @@ World * Context::AddWorld(bool visual, SimTK::Real visualizerFrequency){
 
 	// Call World constructor
 	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
-
-	//topFNs.push_back(std::vector<std::string>());
-	//crdFNs.push_back(std::vector<std::string>());
 
 	rbSpecsFNs.push_back(std::vector<std::string>());
 	flexSpecsFNs.push_back(std::vector<std::string>());
@@ -178,82 +271,17 @@ World * Context::AddWorld(bool visual, SimTK::Real visualizerFrequency){
 	timesteps.push_back(0.002); // ps
 	nofBoostStairs.push_back(0);
 
-	// Adaptive Gibbs blocking
-	QsCache.push_back(std::vector<std::vector<SimTK::Real>>(roundsTillReblock));
-	//std::cout << "Context::AddWorld QsCache size " << QsCache.size() << std::endl;
-
 	nofWorlds = worlds.size();
 
 	return &worlds.back();
 }
 
-// Input molecular files TODO : merge with loadCoordinatesFile
-bool Context::loadTopologyFile(/*std::size_t whichWorld, int,*/ std::string topologyFilename)
+// Use a SetupReader Object to read worlds information from a file
+void Context::LoadWorldsFromSetup(SetupReader&)
 {
-	// function args were std::size_t whichWorld, int whichMolecule, std::string topologyFilename
-	std::ifstream file(topologyFilename);
-	if(!file){
-		std::cout << topologyFilename << " not found." << std::endl;
-		return false;
-	}
-	//topFNs[whichWorld].push_back(topologyFilename);
-	topFNs.push_back(topologyFilename);
-
-	nofMols = topFNs.size();
-
-	return true;
-}
-
-bool Context::loadCoordinatesFile(/*std::size_t whichWorld, int,*/ std::string coordinatesFilename)
-{
-	// function args were std::size_t whichWorld, int whichMolecule, std::string coordinatesFilename
-	std::ifstream file(coordinatesFilename);
-	if(!file){
-		std::cout << coordinatesFilename << " not found." << std::endl;
-		return false;
-	}
-	//crdFNs[whichWorld].push_back(coordinatesFilename);
-	crdFNs.push_back(coordinatesFilename);
-	return true;
-}
-
-// TODO merge with loadFlexibleBondsSpecs
-bool Context::loadRigidBodiesSpecs(std::size_t whichWorld, int, std::string RBSpecsFN)
-{
-	// function args were :std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN
-	std::ifstream file(RBSpecsFN);
-	if(!file){
-		std::cout << RBSpecsFN << " not found." << std::endl;
-		return false;
-	}
-	rbSpecsFNs[whichWorld].push_back(RBSpecsFN);
-
-	// Update nofTopologies
-	int s = 0;
-	for(int i = 0; i < rbSpecsFNs.size(); i++){
-		s += rbSpecsFNs[i].size();
-	}
-	nofTopologies = s;
-
-	return true;
-}
-
-bool Context::loadFlexibleBondsSpecs(std::size_t whichWorld, int, std::string flexSpecsFN)
-{
-	// function args were std::size_t whichWorld, int whichMolecule, std::string flexSpecsFN
-	std::ifstream file(flexSpecsFN);
-	if(!file){
-		std::cout << flexSpecsFN << " not found." << std::endl;
-		return false;
-	}
-	flexSpecsFNs[whichWorld].push_back(flexSpecsFN);
-	return true;
-}
-
-void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
-{
-	// function args were std::size_t whichWorld, int whichMolecule, std::string regimen
-	regimens[whichWorld].push_back(regimen);
+	// function args were SetupReader& setupReader
+	assert(!"Not implemented.");
+	throw std::exception();
 }
 
 /** Load molecules based on loaded filenames **/
@@ -378,11 +406,6 @@ void Context::PrintSimbodyMobods(void){
 	}
 }
 
-// Destructor
-Context::~Context(){
-	fclose(logFile);
-}
-
 // Get world
 World * Context::getWorld() {
 	return &worlds.back();
@@ -437,14 +460,6 @@ void Context::setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mix
 	}
 }
 
-
-// Use a SetupReader Object to read worlds information from a file
-void Context::LoadWorldsFromSetup(SetupReader&)
-{
-	// function args were SetupReader& setupReader
-	assert(!"Not implemented.");
-	throw std::exception();
-}
 
 // --- Thermodynamics ---a
 // Get/set the main temperature (acc/rej temperature for MC)
@@ -606,6 +621,21 @@ void Context::setNofRounds(int argNofRounds)
 	nofRounds = argNofRounds;
 }
 
+int Context::getNofRoundsTillReblock()
+{
+	return roundsTillReblock;
+}
+
+void Context::setNofRoundsTillReblock(int nofRoundsTillReblock)
+{
+	this->roundsTillReblock = nofRoundsTillReblock;
+}
+
+void Context::updNofRoundsTillReblock(int nofRoundsTillReblock)
+{
+	this->roundsTillReblock = nofRoundsTillReblock;
+}
+
 // Get the number of samples returned by the sampler in one round
 int Context::getNofSamplesPerRound(std::size_t whichWorld)
 {
@@ -633,9 +663,8 @@ void Context::RotateWorlds(){assert(!"Not implemented"); throw std::exception();
 //------------
 
 // -- Main ---
-void Context::Run(SetupReader&)
+void Context::Run(void)
 {
-	// function args were SetupReader& setupReader
 	assert(!"Not implemented"); throw std::exception();
 	throw std::exception();
 }
@@ -1404,6 +1433,9 @@ void Context::realizeTopology() {
 		world.getCompoundSystem()->realizeTopology();
 	}
 
+}
+
+void Context::allocateReblockQsCacheQVectors(void){
 	// Adaptive Gibbs blocking: // TODO generalized coord may not always be Real
 	if(QsCache[0][0].size() == 0){
 		std::size_t worldIx = 0;

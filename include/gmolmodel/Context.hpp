@@ -16,27 +16,7 @@ public:
 	Context(const SetupReader& setupReader, std::string logFilenameArg);
 	~Context();
 
-	void printStatus(void);
-	void throwAndExit(std::string errMsg, int errCode);
-
-	World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
-	//World * AddWorld(World *, bool visual);
-
-	World * getWorld();
-	World * getWorld(std::size_t which);
-
-	World * updWorld();
-	World * updWorld(std::size_t which);
-
-	// Returns the size of the worlds vector
-	std::size_t getNofWorlds() const;
-
-	SimTK::DuMMForceFieldSubsystem * updForceField(std::size_t whichWorld);
-
-	// Writeble reference to a samplers advanced state
-	SimTK::State& updAdvancedState(std::size_t whichWorld, std::size_t whichSampler);
-
-	// --- Use a SetupReader Object to read worlds information from a file ---
+	// Input functions
 	bool loadTopologyFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string topologyFilename);
 	bool loadCoordinatesFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string coordinatesFilename);
 	bool loadRigidBodiesSpecs(std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN);
@@ -55,7 +35,7 @@ public:
 	int getNofMolecules();
 	//------------
 
-	// --- Thermodynamics ---a
+	// --- Thermodynamics ---
 	// Set mixing rule for Lennard-Jones
 	void setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mixingRule);
 
@@ -109,21 +89,46 @@ public:
 	int getNofRounds();
 	void setNofRounds(int nofRounds);
 
+	int getNofRoundsTillReblock();
+	void setNofRoundsTillReblock(int nofRoundsTillReblock);
+	void updNofRoundsTillReblock(int nofRoundsTillReblock);
+
 	int getNofSamplesPerRound(std::size_t whichWorld);
 	void setNofSamplesPerRound(std::size_t whichWorld, int MCStepsPerRound);
 
 	std::size_t getWorldIndex(std::size_t which) const;
 
+	// Adaptive Gibbs blocking: TODO: consider moving in World
+	void allocateReblockQsCache(void);
+	void allocateReblockQsCacheQVectors(void);
+
 	// --- Arrange different mixing parameters ---
 	void initializeMixingParamters();
 	//------------
 
-	// --- Mix ---
+	void addEmptyWorlds(std::size_t NofWorlds, double visualizerFrequency = 0.0015);
+	World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
+	//World * AddWorld(World *, bool visual);
+
+	World * getWorld();
+	World * getWorld(std::size_t which);
+
+	World * updWorld();
+	World * updWorld(std::size_t which);
+
+	// Returns the size of the worlds vector
+	std::size_t getNofWorlds() const;
+
+	SimTK::DuMMForceFieldSubsystem * updForceField(std::size_t whichWorld);
+
+	// Writeble reference to a samplers advanced state
+	SimTK::State& updAdvancedState(std::size_t whichWorld, std::size_t whichSampler);
+
 	void RotateWorlds();
 	//------------
 
 	// --- Main ---
-	void Run(SetupReader&);
+	void Run(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void setNofBoostStairs(std::size_t whichWorld, int howManyStairs);
@@ -146,7 +151,9 @@ public:
 	void addDistance(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2);
 	void addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4);
 
-	// --- Printing functions ---
+	// --- Output ---
+	void printStatus(void);
+	void throwAndExit(std::string errMsg, int errCode);
 
 	// Print Molmodel related information
 	void PrintMolmodelAndDuMMTypes(void);

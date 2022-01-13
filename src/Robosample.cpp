@@ -36,7 +36,9 @@ int main(int argc, char **argv)
 	// 	NO SIMBODY OBJECTS YET
 	/////////////////////////////////////
 
+
 	// Check if there is any input
+	std::cout << "Reading input...\n" ;
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
 		PrintHelp();
@@ -52,9 +54,9 @@ int main(int argc, char **argv)
 	}
 
 	// Initialize setup reader
-	std::cout << "Got the following input:" << std::endl;
 	SetupReader setupReader(argv[1]);
 	setupReader.dump(true);
+	std::cout << "Done.\n" ;
 
 	// Declare global variables
 	int currentWorldIx = 0;
@@ -83,7 +85,11 @@ int main(int argc, char **argv)
 		logFilename = "x";
 	}
 
+	// Instantiate a context
 	Context context(setupReader, logFilename);
+	
+	// Adaptive Gibbs blocking
+	context.setNofRoundsTillReblock(std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
 
 	int requestedNofWorlds = context.getNofWorlds();
 	int requestedNofMols = context.getNofMolecules();
@@ -97,15 +103,8 @@ int main(int argc, char **argv)
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
 	//  ParaMolecularDecorator
 	// TODO Move visualizer frequencies in Context in ValidateInput
-	for(unsigned int worldIx = 0;
-		worldIx < setupReader.get("WORLDS").size(); 
-		worldIx++){
-		if(setupReader.get("VISUAL")[worldIx] == "TRUE"){
-				context.AddWorld(true, std::stod(setupReader.get("TIMESTEPS")[worldIx]));
-		}else{
-			context.AddWorld(false);
-		}
-	}
+	context.addEmptyWorlds(setupReader.get("WORLDS").size(),
+		std::stod(setupReader.get("TIMESTEPS")[0]));
 
 	int finalNofWorlds = context.getNofWorlds();
 	if(requestedNofWorlds != finalNofWorlds){
@@ -113,7 +112,6 @@ int main(int argc, char **argv)
 		throw std::exception();
 		std::exit(1);
 	}
-
 	std::cout << "Added " << finalNofWorlds << " worlds" << std::endl;
 
 	/////////////////////////////////////
@@ -121,10 +119,10 @@ int main(int argc, char **argv)
 	/////////////////////////////////////
 
 	//////// FORCE FIELD //////////
-//@    // Request threads 
+	// Request threads 
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
 		context.setNumThreadsRequested(worldIx,
-				std::stoi(setupReader.get("THREADS")[worldIx]));
+			std::stoi(setupReader.get("THREADS")[worldIx]));
 	}
 	context.PrintNumThreads();
 
@@ -147,8 +145,6 @@ int main(int argc, char **argv)
 	// Set Lennard-Jones mixing rule
 	context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
-
-//@
 	// Add filenames to Context filenames vectors
 	// This has to be called before Worlds constructors so that
 	// reserve will be called for molecules and topologies
@@ -225,6 +221,7 @@ int main(int argc, char **argv)
 
 	// Realize topology for all the Worlds
 	context.realizeTopology();
+	context.allocateReblockQsCacheQVectors();
 
 	// Add samplers to the worlds
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
