@@ -320,9 +320,14 @@ int main(int argc, char **argv)
 
 	// Print thermodynamics
 	for(unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
-		std::cout << "MAIN World " << worldIx << " temperature = " << context.getWorld(worldIx)->getTemperature() << std::endl;
+		std::cout << "MAIN World " << worldIx << " temperature = "
+			<< context.getWorld(worldIx)->getTemperature()
+			<< std::endl;
 		if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
-			std::cout << "MAIN World " << worldIx << " FixmanTorque temperature = " << context.updWorld(worldIx)->updFixmanTorque()->getTemperature() << std::endl;
+			std::cout << "MAIN World " << worldIx
+			<< " FixmanTorque temperature = "
+			<< context.updWorld(worldIx)->updFixmanTorque()->getTemperature()
+			<< std::endl;
 		}
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			std::cout << "MAIN World " << worldIx << " Sampler " << samplerIx 
@@ -330,7 +335,8 @@ int main(int argc, char **argv)
 				<< " initial const state PE: " << std::setprecision(20)
 				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
 				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(context.updAdvancedState(worldIx, samplerIx))
-				<< " useFixmanPotential = " << pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
+				<< " useFixmanPotential = "
+				<< pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
 				<< std::endl;
 		}
 
