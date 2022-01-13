@@ -1,7 +1,7 @@
 # Robosample: Generalized Coordinates Molecular Simulation Coupled with Gibbs Sampling (GCHMC)
 
 Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed robotics algorithms imlemented in Simbody and molecular modelling facilities in Molmodel to generate Markov Chain Monte Carlo moves coupled with Gibbs sampling able to reproduce the atomistic level detailed distribution of molecular systems.
-
+![](drug.gif)
 [More about the method.](https://pubmed.ncbi.nlm.nih.gov/28892630/)
 
 # Installation
