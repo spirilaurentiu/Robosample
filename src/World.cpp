@@ -186,11 +186,12 @@ World::World(int worldIndex, int requestedNofMols, bool isVisual, SimTK::Real vi
  * creates decorations for visualizers **/
 void World::AddMolecule(
 		readAmberInput *amberReader,
-		std::string rbFN,
-		std::string flexFN,
-		std::string regimenSpec,
-		std::string argRoot,
-		std::string argRootMobility)
+		//std::string rbFN,
+		//std::string flexFN,
+		//std::string regimenSpec,
+		std::string argRoot
+		//, std::string argRootMobility
+		)
 {
 	// Statistics
 	moleculeCount++; // Used for unique names of molecules
@@ -199,9 +200,14 @@ void World::AddMolecule(
 	// to the vector of molecules.
 	// TODO: Why resName and moleculeName have to be the same?
 	// TODO store molecule name in vector maybe
-	std::string moleculeName = regimenSpec + std::to_string(moleculeCount);
+	//std::string moleculeName = regimenSpec + std::to_string(moleculeCount);
+	std::string moleculeName = "MOL" + std::to_string(moleculeCount);
+
 	roots.emplace_back(argRoot);
-	rootMobilities.emplace_back(argRootMobility);
+
+	//rootMobilities.emplace_back(argRootMobility); // TODO: move to setflexibilities
+	rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+
 	topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
 
 	// Set atoms properties from a reader: number, name, element, initial
@@ -225,30 +231,76 @@ void World::AddMolecule(
 	topologies.back().loadTriples();
 
 	// Set flexibility according to the flexibility file
-	topologies.back().setFlexibility(regimenSpec, flexFN);
-	//topologies.back().PrintAtomList();
+	//topologies.back().setFlexibility(regimenSpec, flexFN);
+	////topologies.back().PrintAtomList();
 
 	// Set generalized velocities scale factors 
-	topologies.back().setUScaleFactorsToBonds(flexFN);
-	// Print Molmodel types
-	//topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
+	//topologies.back().setUScaleFactorsToBonds(flexFN);
+	//// Print Molmodel types
+	////topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
 
 	// All ocate the vector of coordinates (DCD)
+	// TODO: where is this supposed to be?
 	Xs.resize(Xs.size() + topologies.back().getNAtoms());
 	Ys.resize(Ys.size() + topologies.back().getNAtoms());
 	Zs.resize(Zs.size() + topologies.back().getNAtoms());
   
 	// Add Topology to CompoundSystem and realize topology
-	compoundSystem->adoptCompound(topologies.back());
+	//compoundSystem->adoptCompound(topologies.back());
 
-	topologies.back().setCompoundIndex(
+	//topologies.back().setCompoundIndex(
+	//		SimTK::CompoundSystem::CompoundIndex(
+	//		 compoundSystem->getNumCompounds() - 1));
+
+	// Add the new molecule to Decorators's vector of molecules
+	//if(visual){
+	//	// We need copy here.
+	//	paraMolecularDecorator->AddMolecule(&topologies.back());
+	//}
+
+}
+
+/** It sets Compound BondFlexibilities . Also
+ * creates decorations for visualizers 
+ **/
+void World::SetBondFlexibilities(
+		std::string flexFN,
+		std::string regimenSpec,
+		std::string argRootMobility,
+		int which)
+{
+	// Set flexibility according to the flexibility file
+	topologies[which].setFlexibility(regimenSpec, flexFN);
+	//topologies.back().PrintAtomList();
+
+	rootMobilities[which] = argRootMobility; // NEW
+
+	// Set generalized velocities scale factors 
+	topologies[which].setUScaleFactorsToBonds(flexFN);
+	// Print Molmodel types
+	//topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
+
+	// Allocate the vector of coordinates (DCD)
+	// TODO: where is this supposed to be?
+	//Xs.resize(Xs.size() + topologies[which].getNAtoms());
+	//Ys.resize(Ys.size() + topologies[which].getNAtoms());
+	//Zs.resize(Zs.size() + topologies[which].getNAtoms());
+}
+
+/** Adopts a topology **/
+void World::adoptTopology(int which)
+{  
+	// Add Topology to CompoundSystem and realize topology
+	compoundSystem->adoptCompound(topologies[which]);
+
+	topologies[which].setCompoundIndex(
 			SimTK::CompoundSystem::CompoundIndex(
 			 compoundSystem->getNumCompounds() - 1));
 
 	// Add the new molecule to Decorators's vector of molecules
 	if(visual){
 		// We need copy here.
-		paraMolecularDecorator->AddMolecule(&topologies.back());
+		paraMolecularDecorator->AddMolecule(&(topologies[which]));
 	}
 
 }

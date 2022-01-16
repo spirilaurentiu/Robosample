@@ -2,9 +2,9 @@
 #define TOPOLOGY_H_
 
 /* -------------------------------------------------------------------------- *
- *			                   Robosampling                                 *
+ *			         Robosampling                                 *
  * -------------------------------------------------------------------------- *
- * This is part of Robosampling			                                   *
+ * This is part of Robosampling	                                              *
  */
 
 #include "TrivalentAtomTetra.hpp"

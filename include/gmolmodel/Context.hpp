@@ -23,9 +23,22 @@ public:
 	bool loadFlexibleBondsSpecs(std::size_t whichWorld, int whichMolecule, std::string FlexSpecsFN);
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
 
+	// WORLD BEGIN
+	/** Creates a topology object and based on amberReader forcefield 
+	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
+	//void AddMolecule(readAmberInput *amberReader, 
+	//	std::string rbFN, std::string flexFN, std::string regimenSpec,
+	//	std::string argRoot, std::string argRootMobility);
+	// WORLD END
+
 	/** Load molecules based on loaded filenames **/
-	void AddMolecules(std::vector<std::string> argRoots,
-		std::vector<std::string> argRootMobilities);
+	void AddMolecules(
+		int requestedNofMols,
+		SetupReader& setupReader,
+		std::vector<std::string> argRoots,
+		std::vector<std::string> argRootMobilities
+	);
+
 	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
 	void realizeTopology();
@@ -186,7 +199,7 @@ public:
 	std::vector<std::size_t> worldIndexes;
 
 private:
-	void ValidateSetupReader(const SetupReader& setupReader);
+	void CheckInputParameters(const SetupReader& setupReader);
 
 	std::vector<World> worlds;
 
@@ -196,7 +209,18 @@ private:
 	std::vector<std::vector<std::string>> rbSpecsFNs;
 	std::vector<std::vector<std::string>> flexSpecsFNs;
 	std::vector<std::vector<std::string>> regimens;
-	std::vector<std::string> rootMobilities;
+	std::vector<std::string> rootMobilities; // WORLD CONFLICT
+
+	// WORLD BEGIN
+	//// Nof molecules
+	//int moleculeCount;
+	//
+	//// Molecules (topologies<-Compounds) objects
+	////std::vector<bMoleculeReader *> moleculeReaders;
+	//std::vector<Topology> topologies;
+	//std::vector<std::string> roots;
+	//std::vector<std::string> rootMobilities;
+	// WORLD END
 
 	// Simulation parameters
 	int nofRounds;

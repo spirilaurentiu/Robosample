@@ -73,9 +73,26 @@ public:
 
 	/** Creates a topology object and based on amberReader forcefield 
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
-	void AddMolecule(readAmberInput *amberReader, 
-		std::string rbFN, std::string flexFN, std::string regimenSpec,
-		std::string argRoot, std::string argRootMobility);
+	void AddMolecule(
+		readAmberInput *amberReader, 
+		//std::string rbFN,
+		//std::string flexFN,
+		//std::string regimenSpec,
+		std::string argRoot
+		//, std::string argRootMobility
+		);
+
+	/** It sets Compound BondFlexibilities . Also
+	 * creates decorations for visualizers 
+	 **/
+	void SetBondFlexibilities(
+		std::string flexFN,
+		std::string regimenSpec,
+		std::string argRootMobility,
+		int which);
+
+	/** Adopts a topology **/
+	void adoptTopology(int which);
 
 	/** Assign a scale factor for generalized velocities to every mobilized 
 	body **/

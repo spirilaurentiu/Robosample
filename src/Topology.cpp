@@ -1698,7 +1698,8 @@ const CompoundSystem::CompoundIndex &Topology::getCompoundIndex() const {
 /** Set the compoundIndex which is the position in the vector of Compounds
  * of the CompoundSystem **/
 void Topology::setCompoundIndex(const CompoundSystem::CompoundIndex &compoundIndex) {
-	Topology::compoundIndex = compoundIndex;
+	//Topology::compoundIndex = compoundIndex;
+	this->compoundIndex = compoundIndex;
 }
 
 

@@ -20,7 +20,7 @@ Context::Context(const SetupReader& setupReader, std::string logFilename){
 
 	isWorldsOrderRandom = false;
 
-	ValidateSetupReader(setupReader);
+	CheckInputParameters(setupReader);
 
 	BUFSIZE = 1024 * 1048576; // 1048576
 	buffer = std::make_unique<char[]>(BUFSIZE);
@@ -36,77 +36,8 @@ Context::~Context(){
 	fclose(logFile);
 }
 
-// Input molecular files TODO : merge with loadCoordinatesFile
-bool Context::loadTopologyFile(/*std::size_t whichWorld, int,*/ std::string topologyFilename)
-{
-	// function args were std::size_t whichWorld, int whichMolecule, std::string topologyFilename
-	std::ifstream file(topologyFilename);
-	if(!file){
-		std::cout << topologyFilename << " not found." << std::endl;
-		return false;
-	}
-	//topFNs[whichWorld].push_back(topologyFilename);
-	topFNs.push_back(topologyFilename);
-
-	nofMols = topFNs.size();
-
-	return true;
-}
-
-bool Context::loadCoordinatesFile(/*std::size_t whichWorld, int,*/ std::string coordinatesFilename)
-{
-	// function args were std::size_t whichWorld, int whichMolecule, std::string coordinatesFilename
-	std::ifstream file(coordinatesFilename);
-	if(!file){
-		std::cout << coordinatesFilename << " not found." << std::endl;
-		return false;
-	}
-	//crdFNs[whichWorld].push_back(coordinatesFilename);
-	crdFNs.push_back(coordinatesFilename);
-	return true;
-}
-
-// TODO merge with loadFlexibleBondsSpecs
-bool Context::loadRigidBodiesSpecs(std::size_t whichWorld, int, std::string RBSpecsFN)
-{
-	// function args were :std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN
-	std::ifstream file(RBSpecsFN);
-	if(!file){
-		std::cout << RBSpecsFN << " not found." << std::endl;
-		return false;
-	}
-	rbSpecsFNs[whichWorld].push_back(RBSpecsFN);
-
-	// Update nofTopologies
-	int s = 0;
-	for(int i = 0; i < rbSpecsFNs.size(); i++){
-		s += rbSpecsFNs[i].size();
-	}
-	nofTopologies = s;
-
-	return true;
-}
-
-bool Context::loadFlexibleBondsSpecs(std::size_t whichWorld, int, std::string flexSpecsFN)
-{
-	// function args were std::size_t whichWorld, int whichMolecule, std::string flexSpecsFN
-	std::ifstream file(flexSpecsFN);
-	if(!file){
-		std::cout << flexSpecsFN << " not found." << std::endl;
-		return false;
-	}
-	flexSpecsFNs[whichWorld].push_back(flexSpecsFN);
-	return true;
-}
-
-void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
-{
-	// function args were std::size_t whichWorld, int whichMolecule, std::string regimen
-	regimens[whichWorld].push_back(regimen);
-}
-
-// 
-void Context::ValidateSetupReader(const SetupReader& setupReader) {
+// Check input
+void Context::CheckInputParameters(const SetupReader& setupReader) {
 
 	// Context specific parameters
 	assert(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0]));
@@ -228,6 +159,75 @@ void Context::ValidateSetupReader(const SetupReader& setupReader) {
 
 }
 
+// Input molecular files TODO : merge with loadCoordinatesFile
+bool Context::loadTopologyFile(std::string topologyFilename)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string topologyFilename
+	std::ifstream file(topologyFilename);
+	if(!file){
+		std::cout << topologyFilename << " not found." << std::endl;
+		return false;
+	}
+	//topFNs[whichWorld].push_back(topologyFilename);
+	topFNs.push_back(topologyFilename);
+
+	nofMols = topFNs.size();
+
+	return true;
+}
+
+bool Context::loadCoordinatesFile(std::string coordinatesFilename)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string coordinatesFilename
+	std::ifstream file(coordinatesFilename);
+	if(!file){
+		std::cout << coordinatesFilename << " not found." << std::endl;
+		return false;
+	}
+	//crdFNs[whichWorld].push_back(coordinatesFilename);
+	crdFNs.push_back(coordinatesFilename);
+	return true;
+}
+
+// TODO merge with loadFlexibleBondsSpecs
+bool Context::loadRigidBodiesSpecs(std::size_t whichWorld, int, std::string RBSpecsFN)
+{
+	// function args were :std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN
+	std::ifstream file(RBSpecsFN);
+	if(!file){
+		std::cout << RBSpecsFN << " not found." << std::endl;
+		return false;
+	}
+	rbSpecsFNs[whichWorld].push_back(RBSpecsFN);
+
+	// Update nofTopologies
+	int s = 0;
+	for(int i = 0; i < rbSpecsFNs.size(); i++){
+		s += rbSpecsFNs[i].size();
+	}
+	nofTopologies = s;
+
+	return true;
+}
+
+bool Context::loadFlexibleBondsSpecs(std::size_t whichWorld, int, std::string flexSpecsFN)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string flexSpecsFN
+	std::ifstream file(flexSpecsFN);
+	if(!file){
+		std::cout << flexSpecsFN << " not found." << std::endl;
+		return false;
+	}
+	flexSpecsFNs[whichWorld].push_back(flexSpecsFN);
+	return true;
+}
+
+void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
+{
+	// function args were std::size_t whichWorld, int whichMolecule, std::string regimen
+	regimens[whichWorld].push_back(regimen);
+}
+
 // Adaptive Gibbs blocking: TODO: consider moving in World
 void Context::allocateReblockQsCache(void)
 {
@@ -243,7 +243,7 @@ void Context::addEmptyWorlds(std::size_t argNofWorlds, double visualizerFrequenc
 	for(unsigned int worldIx = 0;
 		worldIx < argNofWorlds; 
 		worldIx++){
-		if(visualizerFrequency){
+		if(visualizerFrequency > 0){
 			AddWorld(true, visualizerFrequency);
 		}else{
 			AddWorld(false);
@@ -285,31 +285,96 @@ void Context::LoadWorldsFromSetup(SetupReader&)
 }
 
 /** Load molecules based on loaded filenames **/
-void Context::AddMolecules(std::vector<std::string> argRoots,
-	std::vector<std::string> argRootMobilities)
-{
-	// TODO assert that the filenames vectors are not empty
-	// Iterate through Worlds
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		std::cout << " Context::AddMolecule for world "<< worldIx << " " << std::endl;
-		// Iterate through topology filenames vector
-		for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+void Context::AddMolecules(
+	int requestedNofMols,
+	SetupReader& setupReader,
+	std::vector<std::string> argRoots,
+	std::vector<std::string> argRootMobilities
+){
+	// WORLD BEGIN
+	//moleculeCount = -1;
+	//topologies.reserve(requestedNofMols);
+	//topologies.reserve(nofMols);
+	// WORLD END
+
+	// Iterate through topology filenames vector
+	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+
+		// Add filenames to Context filenames vectors
+		// This has to be called before Worlds constructors so that
+		// reserve will be called for molecules and topologies
+		//int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
+
+		std::string topFN = 
+			setupReader.get("MOLECULES")[molIx] + std::string("/")
+			+ setupReader.get("PRMTOP")[molIx];
+
+		std::string crdFN = 
+			setupReader.get("MOLECULES")[molIx] + std::string("/")
+			+ setupReader.get("INPCRD")[molIx];
+
+		loadTopologyFile( topFN );
+
+		loadCoordinatesFile( crdFN );
+
+
+
+		// Initialize an input reader
+		readAmberInput amberReader;
+		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
+
+		// TODO assert that the filenames vectors are not empty
+		// Iterate through Worlds
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+
+			loadRigidBodiesSpecs( worldIx, molIx,
+				setupReader.get("MOLECULES")[molIx] + std::string("/")
+				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
+			);
+
+			loadFlexibleBondsSpecs( worldIx, molIx,
+				setupReader.get("MOLECULES")[molIx] + std::string("/")
+				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
+			);
+
+			setRegimen( worldIx, molIx,
+				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
+
+			std::cout << " Context::AddMolecule for world "<< worldIx << " " << std::endl;
 			std::cout << " Context::AddMolecule molIx "<< molIx << " " << std::endl;
 			std::cout << " Context::AddMolecule topFNs[molIx] "<< topFNs[molIx] 
 				<< " " << crdFNs[molIx] << " " << rbSpecsFNs[worldIx][molIx] 
-				//<< " " << flexSpecsFNs[worldIx][molIx] 
-				//<< " " << regimens[worldIx][molIx] 
 				<< std::endl << std::flush;
-			// Initialize an input reader
-			readAmberInput amberReader;
-			amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 
 			// Add the molecule to the World
-			(updWorld(worldIx))->AddMolecule(&amberReader,
-					rbSpecsFNs[worldIx][molIx], flexSpecsFNs[worldIx][molIx],
-					regimens[worldIx][molIx], argRoots[worldIx], argRootMobilities[worldIx]);
+			(updWorld(worldIx))->AddMolecule(
+					&amberReader,
+					//rbSpecsFNs[worldIx][molIx],
+					//flexSpecsFNs[worldIx][molIx],
+					//regimens[worldIx][molIx],
+					argRoots[worldIx]
+					//, argRootMobilities[worldIx]
+					);
+
+			// Add the molecule to the World
+			// Should be the same as molIx because we're using
+			// emplace_back at AddMolecule
+			(updWorld(worldIx))->SetBondFlexibilities(
+					//&amberReader,
+					//rbSpecsFNs[worldIx][molIx],
+					flexSpecsFNs[worldIx][molIx],
+					regimens[worldIx][molIx],
+					//argRoots[worldIx],
+					argRootMobilities[worldIx],
+					molIx);
+
+			// Add topology which to this world
+			(updWorld(worldIx))->adoptTopology(molIx);
 		}
 	}
+
+
 }
 
 void Context::printStatus(void){
@@ -460,8 +525,10 @@ void Context::setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mix
 	}
 }
 
+/////////////////////////
+// --- Thermodynamics ---
+/////////////////////////
 
-// --- Thermodynamics ---a
 // Get/set the main temperature (acc/rej temperature for MC)
 SimTK::Real Context::getTemperature(std::size_t whichWorld) const {
 	return worlds[whichWorld].temperature;
@@ -496,7 +563,9 @@ void Context::setGuidanceTemperature(std::size_t, std::size_t, SimTK::Real)
 }
 //------------
 
+/////////////////////////
 // --- Simulation parameters ---
+/////////////////////////
 
 BaseSampler * Context::addSampler(std::size_t whichWorld, SamplerName whichSampler)
 {
@@ -608,7 +677,9 @@ bool Context::isUsingFixmanPotential(std::size_t whichWorld, std::size_t whichSa
 
 //------------
 
+/////////////////////////
 // --- Mixing parameters ---
+/////////////////////////
 
 // Another way to do it is setting the number of rounds
 int Context::getNofRounds()
@@ -1473,6 +1544,81 @@ void Context::PrintNumThreads() {
 
 
 
+
+// WORLD BEGIN
+/** Creates Gmolmodel topologies objects and based on amberReader forcefield
+ * adds parameters: defines Biotypes; - adds BAT parameters to DuMM. Also
+ * creates decorations for visualizers **/
+//void Context::AddMolecule(
+//		readAmberInput *amberReader,
+//		std::string rbFN,
+//		std::string flexFN,
+//		std::string regimenSpec,
+//		std::string argRoot,
+//		std::string argRootMobility)
+//{
+//	// Statistics
+//	moleculeCount++; // Used for unique names of molecules
+// 
+//	// Add a new molecule (Topology object which inherits Compound)
+//	// to the vector of molecules.
+//	// TODO: Why resName and moleculeName have to be the same?
+//	// TODO store molecule name in vector maybe
+//	std::string moleculeName = regimenSpec + std::to_string(moleculeCount);
+//	roots.emplace_back(argRoot);
+//	rootMobilities.emplace_back(argRootMobility);
+//	topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
+//
+//	// Set atoms properties from a reader: number, name, element, initial
+//	// name, force field type, charge, coordinates, mass, LJ parameters
+//	topologies.back().SetGmolAtomPropertiesFromReader(amberReader);
+//
+//	// Set bonds properties from reader: bond indeces, atom neighbours
+//	topologies.back().SetGmolBondingPropertiesFromReader(amberReader);
+//
+//	// Set atoms Molmodel types (Compound::SingleAtom derived) based on
+//	// their valence
+//	//topologies.back().SetGmolAtomsMolmodelTypes();
+//	topologies.back().SetGmolAtomsMolmodelTypesTrial();
+//
+//	// Add parameters from amberReader
+//	topologies.back().bAddAllParams(amberReader, *forceField);
+//
+//	// Build the graph representing molecule's topology
+//	topologies.back().buildGraphAndMatchCoords(*forceField, std::stoi(argRoot));
+//
+//	topologies.back().loadTriples();
+//
+//	// Set flexibility according to the flexibility file
+//	topologies.back().setFlexibility(regimenSpec, flexFN);
+//	//topologies.back().PrintAtomList();
+//
+//	// Set generalized velocities scale factors 
+//	topologies.back().setUScaleFactorsToBonds(flexFN);
+//	// Print Molmodel types
+//	//topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
+//
+//	// All ocate the vector of coordinates (DCD)
+//	Xs.resize(Xs.size() + topologies.back().getNAtoms());
+//	Ys.resize(Ys.size() + topologies.back().getNAtoms());
+//	Zs.resize(Zs.size() + topologies.back().getNAtoms());
+//  
+//	// Add Topology to CompoundSystem and realize topology
+//	compoundSystem->adoptCompound(topologies.back());
+//
+//	topologies.back().setCompoundIndex(
+//			SimTK::CompoundSystem::CompoundIndex(
+//			 compoundSystem->getNumCompounds() - 1));
+//
+//	// WORLD CONFLICT
+//	//// Add the new molecule to Decorators's vector of molecules
+//	//if(visual){
+//	//	// We need copy here.
+//	//	paraMolecularDecorator->AddMolecule(&topologies.back());
+//	//}
+//
+//}
+// WORLD END
 
 
 

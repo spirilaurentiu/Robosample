@@ -14,6 +14,7 @@ class SetupReader {
 public:
 
 	// Constructor
+	SetupReader() {};
 	SetupReader(const char *FN);
 	SetupReader(const std::string& FN);
 

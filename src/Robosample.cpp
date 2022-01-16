@@ -19,44 +19,67 @@
 //#define ROBO_DEBUG_LEVEL01
 //#endif
 
-void PrintHelp() {
-	std::cout <<
-		"Usage: Robsample [options]\n" <<
-		"Options:\n" <<
-		"  -h, --help for help\n" <<
-		"Usage: Robsample file\n";
-}
-
-int main(int argc, char **argv)
+bool LoadInputIntoSetupReader(int argc, char **argv,
+	SetupReader& setupReader)
 {
-	// ios_base::sync_with_stdio(false);
-    // std::cin.tie(nullptr);
 
-	/////////////////////////////////////
-	// 	NO SIMBODY OBJECTS YET
-	/////////////////////////////////////
-
-
-	// Check if there is any input
 	std::cout << "Reading input...\n" ;
+
+	std::string helpString = 
+		"Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
+
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
-		PrintHelp();
+		std::cout << helpString;
 
-		return 1;
+		return false;
 	}
 	else {
 		auto arg = std::string(argv[1]);
 		if("-h" == arg || "--help" == arg) {
-			PrintHelp();
-			return 1;
+		std::cout << helpString;
+
+			return false;
 		}
 	}
 
-	// Initialize setup reader
-	SetupReader setupReader(argv[1]);
+	// Read input
+	setupReader.ReadSetup(argv[1]);
 	setupReader.dump(true);
 	std::cout << "Done.\n" ;
+	return true;
+
+}
+
+bool CreateOutputDirectory(std::string outDir)
+{
+	if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
+		const int err = mkdir((outDir 
+			+ "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (err == -1){
+			std::cout << "Error creating " << outDir + "/pdbs" << std::endl;
+			return false;
+		}
+	}
+}
+
+std::string CreateLogfilename( std::string outDir, long long int seed )
+{
+	std::string logFilename = outDir + std::string("/log.") + std::to_string(seed);
+
+	return logFilename;
+
+}
+
+int main(int argc, char **argv)
+{
+
+	// Read input into a SetupReader object
+	SetupReader setupReader;
+	if ( !LoadInputIntoSetupReader(argc, argv, setupReader) ){
+		return 1;
+	}
+	//std::exit(0);
 
 	// Declare global variables
 	int currentWorldIx = 0;
@@ -65,36 +88,28 @@ int main(int argc, char **argv)
 	/////////// Create context ////////////
 
 	// Create pdbs directory if necessary
-	if( !SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0] + "/pdbs") ){
-		const int err = mkdir((setupReader.get("OUTPUT_DIR")[0] 
-			+ "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		if (err == -1){
-			std::cout << "Error creating " << setupReader.get("OUTPUT_DIR")[0] + "/pdbs" << std::endl;
-			return 1;
-		}
+	if ( ! CreateOutputDirectory(setupReader.get("OUTPUT_DIR")[0]) ){
+		return 1;
 	}
 
 	// Set the log filename
-	std::string logFilename;
-	if (setupReader.find("SEED")) {
-		if (!(setupReader.get("SEED").empty())) {
-			logFilename = setupReader.get("OUTPUT_DIR")[0] 
-				+ std::string("/log.") + setupReader.get("SEED")[0];
-		}
-	} else {
-		logFilename = "x";
-	}
+	std::string logFilename = CreateLogfilename(
+		setupReader.get("OUTPUT_DIR")[0],
+		std::stoi(setupReader.get("SEED")[0]));
 
-	// Instantiate a context
+
+	// Instantiate a context object
 	Context context(setupReader, logFilename);
 	
 	// Adaptive Gibbs blocking
-	context.setNofRoundsTillReblock(std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
+	context.setNofRoundsTillReblock(
+		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
 
+	// Requested nof Worlds in input. We'll try to construct them all
+	// but we're not sure if we'll going to succesed.
 	int requestedNofWorlds = context.getNofWorlds();
 	int requestedNofMols = context.getNofMolecules();
-	//std::cout << "Requested " << requestedNofMols << " molecules\n";
-	//std::exit(0);
+	std::cout << "Requested " << requestedNofMols << " molecules\n";
 
 	/////////// Add Worlds to context ////////////
 	// Add Worlds to the Context. Every World instantiates a: 
@@ -103,8 +118,17 @@ int main(int argc, char **argv)
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
 	//  ParaMolecularDecorator
 	// TODO Move visualizer frequencies in Context in ValidateInput
+
+	// Deal with visualizer. 
+	SimTK::Real visualizerFrequency = -1;
+	if ( setupReader.get("VISUAL")[0] == "FALSE" ){
+		visualizerFrequency = -1;
+	}else{
+		visualizerFrequency = std::stod(setupReader.get("TIMESTEPS")[0]);
+	}
+
 	context.addEmptyWorlds(setupReader.get("WORLDS").size(),
-		std::stod(setupReader.get("TIMESTEPS")[0]));
+		visualizerFrequency);
 
 	int finalNofWorlds = context.getNofWorlds();
 	if(requestedNofWorlds != finalNofWorlds){
@@ -150,38 +174,44 @@ int main(int argc, char **argv)
 	// reserve will be called for molecules and topologies
 	//int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
 
-	for(int molIx = 0; molIx < requestedNofMols; molIx++){
-		context.loadTopologyFile(
-			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("PRMTOP")[molIx]
-		);
+//	for(int molIx = 0; molIx < requestedNofMols; molIx++){
+//		std::string topFN = 
+//			setupReader.get("MOLECULES")[molIx] + std::string("/")
+//			+ setupReader.get("PRMTOP")[molIx];
+//
+//		std::string crdFN = 
+//			setupReader.get("MOLECULES")[molIx] + std::string("/")
+//			+ setupReader.get("INPCRD")[molIx];
+//
+//		context.loadTopologyFile( topFN );
+//
+//		context.loadCoordinatesFile( crdFN );
+//	}
+	// Set top and crd FNs in Topology
 
-		context.loadCoordinatesFile(
-			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx]
-		);
-	}
-
-	for(int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-
-		for(int molIx = 0; molIx < requestedNofMols; molIx++){
-			context.loadRigidBodiesSpecs( worldIx, molIx,
-				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
-			);
-
-			context.loadFlexibleBondsSpecs( worldIx, molIx,
-				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
-			);
-
-			context.setRegimen( worldIx, molIx,
-				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
-		}
-	}
+	// Flexibility files 
+//	for(int molIx = 0; molIx < requestedNofMols; molIx++){
+//		for(int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+//			context.loadRigidBodiesSpecs( worldIx, molIx,
+//				setupReader.get("MOLECULES")[molIx] + std::string("/")
+//				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
+//			);
+//
+//			context.loadFlexibleBondsSpecs( worldIx, molIx,
+//				setupReader.get("MOLECULES")[molIx] + std::string("/")
+//				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
+//			);
+//
+//			context.setRegimen( worldIx, molIx,
+//				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
+//		}
+//	}
 
 	// Add molecules to Worlds based on just read filenames
-	context.AddMolecules(setupReader.get("ROOTS"),
+	context.AddMolecules(
+		requestedNofMols,
+		setupReader,
+		setupReader.get("ROOTS"),
 		setupReader.get("ROOT_MOBILITY"));
 
 	int finalNofMols = context.getNofMolecules();

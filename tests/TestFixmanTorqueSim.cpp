@@ -42,7 +42,9 @@ int main(int argc, char **argv)
 	//std::string externalJointType = "Ball";
 	//std::string externalJointType = "Weld";
 	std::string externalJointType = "Pin";
-	world->AddMolecule(&amberReader, "lin4/ligand.rb", "lin4/ligand.flex.middletd", "R0", "0", externalJointType);
+	//world->AddMolecule(&amberReader, "lin4/ligand.rb", "lin4/ligand.flex.middletd", "R0", "0", externalJointType);
+	//world->AddMolecule(&amberReader, "0", externalJointType);
+	world->AddMolecule(&amberReader, "0");
 	//amberReader.readAmberFiles("etanMob/ligand.rst7", "etanMob/ligand.prmtop");
 	//world->AddMolecule(&amberReader, "etanMob/ligand.rb", "etanMob/ligand.flex", "R0", "0", "Free");
 
