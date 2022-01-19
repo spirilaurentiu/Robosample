@@ -47,7 +47,7 @@ public:
 
 	/** Set atoms Molmodel types (Compound::SingleAtom derived) based on
 	 * their valence **/
-	 void SetGmolAtomsMolmodelTypes();
+	void SetGmolAtomsMolmodelTypes();
 	void SetGmolAtomsMolmodelTypesTrial();
 
 
@@ -55,7 +55,7 @@ public:
 	void loadAtomAndBondInfoFromReader(readAmberInput *amberReader);
 
 	/** Print atom list **/
-	void PrintAtomList();
+	void PrintAtomList(int whichWorld);
 
 
 	/** Biotype is a Molmodel hook that is usually used to look up molecular
@@ -63,43 +63,43 @@ public:
 	 new Biotype for each atom. The only thing that is specified is the element
 	 with info about name, atomic number, valence and mass. **/
 	void bAddBiotypes(
-			std::string resName
-			, readAmberInput *amberReader
-			, SimTK::DuMMForceFieldSubsystem& dumm
+			//std::string resName, 
+			readAmberInput *amberReader
+			//, SimTK::DuMMForceFieldSubsystem& dumm
 	);
 
 	/** It calls DuMMs defineAtomClass, defineChargedAtomTye and
 	setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 	information regarding the force field parameters. **/
-	void bAddAtomClasses(
+	void bAddDummAtomClasses(
 			std::string resName
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
 	);
 
 	/** Calls DuMM defineBondStretch. **/
-	void bAddBondParams(
+	void bAddDummBondParams(
 			std::string resName
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
 	);
 
 	/** Calls DuMM defineBondBend. **/
-	void bAddAngleParams(
+	void bAddDummAngleParams(
 			std::string resName
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
 	);
 
 	/** Calls DuMM defineBondTorsion for 1, 2 and 3 periodicities **/
-	void bAddTorsionParams(
+	void bAddDummTorsionParams(
 			std::string resName
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
 	);
 
 	/** Adds force field parameters read by the inputReader to DuMM **/
-	void bAddAllParams(
+	void bAddDummParams(
 		readAmberInput *amberReader
 		, SimTK::DuMMForceFieldSubsystem& dumm
 	);
@@ -121,13 +121,10 @@ public:
 	/** Builds the Compound's tree, closes the rings, matches the configuration
 	on the graph using using Molmodels matchDefaultConfiguration and sets the
 	general flexibility of the molecule. **/
-	void buildGraphAndMatchCoords(
-			SimTK::DuMMForceFieldSubsystem &dumm,
-			int argRoot
-	);
+	void buildGraphAndMatchCoords(int argRoot);
 
 	// Set flexibility according to flexibility file
-	void setFlexibility(std::string argRegimen, std::string flexFN);
+	void setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld);
 
 	// Set scale factors for U entries according to flexibility file
 	void setUScaleFactorsToBonds(std::string flexFN);
@@ -190,13 +187,20 @@ public:
 
 	/** Get the bonded neighbor atom in the parent mobilized body **/
 	SimTK::Compound::AtomIndex
-	getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex);
+	getChemicalParent(
+		SimTK::SimbodyMatterSubsystem *matter,
+		SimTK::Compound::AtomIndex aIx,
+		SimTK::DuMMForceFieldSubsystem& dumm);
 
 	/**  **/
 	std::vector<SimTK::Transform>
-	calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, 
-		SimTK::Compound::AtomIndex rootAtom, const SimTK::State& someState);
-	
+	calcMobodTransforms(
+		SimTK::SimbodyMatterSubsystem *matter,
+		SimTK::Compound::AtomIndex aIx,
+		const SimTK::State& someState,
+		SimTK::DuMMForceFieldSubsystem& dumm,
+		int whichWorld);
+
 	/** Calculate all atom frames in top frame. It avoids calling 
 	calcDefaultAtomFrameInCompoundFrame multiple times. This has 
 	to be called every time the coordinates change though. **/
@@ -221,9 +225,26 @@ public:
 		return mbx2aIx;
 	}
 
+	// Retunr mbx by calling DuMM functions
+	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexThroughDumm(
+		SimTK::Compound::AtomIndex aIx,
+		SimTK::DuMMForceFieldSubsystem& dumm);
+
 	// Retunr mbx from an olresdy saved map inside Topology
 	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexFromMap(
 		SimTK::Compound::AtomIndex aIx);
+
+	// Get atom location on mobod through DuMM functions
+	SimTK::Vec3 getAtomLocationInMobilizedBodyFrameThroughDumm(
+		SimTK::Compound::AtomIndex aIx,
+		SimTK::DuMMForceFieldSubsystem& dumm);
+
+	// 
+	SimTK::Vec3 calcAtomLocationInGroundFrameThroughSimbody(
+		SimTK::Compound::AtomIndex aIx,
+		SimTK::DuMMForceFieldSubsystem& dumm,
+		SimTK::SimbodyMatterSubsystem& matter,
+		const SimTK::State& someState);
 
 	/** Get AtomIndex to MobilizedBodyIndex map **/
 	std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex >

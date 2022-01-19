@@ -69,7 +69,7 @@ std::string intpair::getString(void){
 bBond::bBond(void) : intpair(){
   inring = 0;
   //rigid = 0;
-  mobility = SimTK::BondMobility::Mobility::Free;
+  //mobility = SimTK::BondMobility::Mobility::Free;
   ring_closing = 0; // later
   ring_no = 0; // later
   _isFirst = false;
@@ -81,7 +81,7 @@ bBond::bBond(void) : intpair(){
 bBond::bBond(int a, int b) : intpair(a, b){
   inring = 0;
   //rigid = 0;
-  mobility = SimTK::BondMobility::Mobility::Free;
+  //mobility = SimTK::BondMobility::Mobility::Free;
   ring_closing = 0;
   ring_no = 0; // later
   _isFirst = false;
@@ -115,13 +115,23 @@ bool bBond::isRigid(void){
 }
 */
 
-SimTK::BondMobility::Mobility bBond::getBondMobility() const {
-  return mobility;
+SimTK::BondMobility::Mobility bBond::getBondMobility(int which) const {
+  return mobilities[which];
 }
 
-void bBond::setBondMobility(SimTK::BondMobility::Mobility argmobility)
+void bBond::addBondMobility(SimTK::BondMobility::Mobility argmobility)
 {
-    mobility = argmobility;
+	mobilities.emplace_back(argmobility);
+}
+
+void bBond::setBondMobility(SimTK::BondMobility::Mobility argmobility, int which)
+{
+    mobilities[which] = argmobility;
+}
+
+void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which)
+{
+    mobilities[which] = argmobility;
 }
 
 
@@ -154,9 +164,9 @@ void bBond::setBondIndex(SimTK::Compound::BondIndex otherIx){
 }
 
 // Print bond variables
-void bBond::Print(void)
+void bBond::Print(int whichWorld)
 {
-    std::cout << "i " << i << " j " << j << " mobility " << SimTK::BondMobility::Rigid
+    std::cout << "bBond Print: i " << i << " j " << j << " mobility " << mobilities[whichWorld]
         << " inring " << inring << " ring_no " << ring_no
         << " ring_closing " << ring_closing 
         << " visited " << visited 

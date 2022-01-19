@@ -78,7 +78,7 @@ public:
     char elem {};
   
 public:
-    void Print();
+    void Print(int whichWorld);
     void Zero();
 
     // Interface

@@ -39,11 +39,14 @@ public:
 		std::vector<std::string> argRootMobilities
 	);
 
+	void modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer);
 	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
 	void realizeTopology();
 
 	void LoadWorldsFromSetup(SetupReader&);
+
+	void passTopologiesToNewWorld(int newWorldIx);
 
 	int getNofMolecules();
 	//------------
@@ -212,14 +215,20 @@ private:
 	std::vector<std::string> rootMobilities; // WORLD CONFLICT
 
 	// WORLD BEGIN
-	//// Nof molecules
-	//int moleculeCount;
-	//
-	//// Molecules (topologies<-Compounds) objects
-	////std::vector<bMoleculeReader *> moleculeReaders;
-	//std::vector<Topology> topologies;
-	//std::vector<std::string> roots;
+	// Nof molecules
+	int moleculeCount;
+	
+	// Molecules (topologies<-Compounds) objects
+	//std::vector<bMoleculeReader *> moleculeReaders;
+	std::vector<Topology> topologies;
+	std::vector<std::string> roots;
 	//std::vector<std::string> rootMobilities;
+
+	/** Vectors of Cartesian coordinates **/
+	std::vector<SimTK::Real> Xs;
+	std::vector<SimTK::Real> Ys;
+	std::vector<SimTK::Real> Zs;
+
 	// WORLD END
 
 	// Simulation parameters
@@ -235,7 +244,7 @@ private:
 	std::vector<int> nofBoostStairs;
 
 	std::size_t nofMols;
-	std::size_t nofTopologies; // nofWorlds x nofMols
+	std::size_t nofEmbeddedTopologies; // nofWorlds x nofMols
 	//
 	bool reproducible;
 	int pdbRestartFreq;

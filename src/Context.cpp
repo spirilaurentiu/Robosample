@@ -16,7 +16,7 @@ void Context::throwAndExit(std::string errMsg, int errCode){
 Context::Context(const SetupReader& setupReader, std::string logFilename){
 	nofWorlds = 0;
 	nofMols = 0;
-	nofTopologies = 0;
+	nofEmbeddedTopologies = 0;
 
 	isWorldsOrderRandom = false;
 
@@ -65,9 +65,9 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	// Set these numbers first
 	std::size_t inpNofWorlds = setupReader.get("WORLDS").size();
 	std::size_t inpNofMols = setupReader.get("MOLECULES").size();
-	std::size_t inpNofTopologies = inpNofWorlds * inpNofMols;
+	std::size_t inpNofEmbeddedTopologies = inpNofWorlds * inpNofMols;
 
-	if(setupReader.get("ROOTS").size() != inpNofTopologies){
+	if(setupReader.get("ROOTS").size() != inpNofEmbeddedTopologies){
 		std::cerr << "Must have the same no. of root atoms as the no. of Topologies = nofWorlds x nofMolecules.\n";
 		throw std::exception();
 		std::exit(1);
@@ -152,7 +152,7 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	// Reserve memory
 	nofWorlds = inpNofWorlds;
 	nofMols = inpNofMols;
-	nofTopologies = inpNofTopologies;
+	nofEmbeddedTopologies = inpNofEmbeddedTopologies;
 
 	worlds.reserve(nofWorlds);
 	worldIndexes.reserve(nofWorlds);
@@ -200,12 +200,12 @@ bool Context::loadRigidBodiesSpecs(std::size_t whichWorld, int, std::string RBSp
 	}
 	rbSpecsFNs[whichWorld].push_back(RBSpecsFN);
 
-	// Update nofTopologies
+	// Update nofEmbeddedTopologies
 	int s = 0;
 	for(int i = 0; i < rbSpecsFNs.size(); i++){
 		s += rbSpecsFNs[i].size();
 	}
-	nofTopologies = s;
+	nofEmbeddedTopologies = s;
 
 	return true;
 }
@@ -284,6 +284,33 @@ void Context::LoadWorldsFromSetup(SetupReader&)
 	throw std::exception();
 }
 
+void Context::modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer)
+{
+		this->rootMobilities.push_back(rootMobilizer);
+
+		(updWorld(whichWorld))->compoundSystem->modelOneCompound(
+			SimTK::CompoundSystem::CompoundIndex(whichTopology),
+			rootMobilizer);
+
+		SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(whichWorld))->forceField); // DANGER
+
+		for(std::size_t k = 0; k < topologies[whichTopology].getNumAtoms(); k++){
+			SimTK::Compound::AtomIndex aIx = 
+				(topologies[whichTopology].bAtomList[k]).getCompoundAtomIndex();
+			SimTK::MobilizedBodyIndex mbx = 
+				topologies[whichTopology].getAtomMobilizedBodyIndex(aIx);
+			std::cout << "k aIx mbx " << k << " " << aIx << " " << mbx;
+
+			SimTK::MobilizedBodyIndex mbxCheck =
+				topologies[whichTopology].getAtomMobilizedBodyIndexThroughDumm(aIx, 
+				dumm); // DANGER
+
+			std::cout << " mbxCheck " << mbxCheck ; // DANGER
+			std::cout << std::endl << std::flush;
+
+		}
+}
+
 /** Load molecules based on loaded filenames **/
 void Context::AddMolecules(
 	int requestedNofMols,
@@ -292,9 +319,8 @@ void Context::AddMolecules(
 	std::vector<std::string> argRootMobilities
 ){
 	// WORLD BEGIN
-	//moleculeCount = -1;
-	//topologies.reserve(requestedNofMols);
-	//topologies.reserve(nofMols);
+	topologies.reserve(requestedNofMols);
+	moleculeCount = -1;
 	// WORLD END
 
 	// Iterate through topology filenames vector
@@ -318,14 +344,30 @@ void Context::AddMolecules(
 
 		loadCoordinatesFile( crdFN );
 
-
-
 		// Initialize an input reader
 		readAmberInput amberReader;
 		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 
+		moleculeCount++; // Used for unique names of molecules // from world
+		std::string moleculeName = "MOL" + std::to_string(moleculeCount); // from world
+		roots.emplace_back(argRoots[molIx]); // from world
+		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok? // from world
+		// Set atoms properties from a reader: number, name, element, initial
+		// name, force field type, charge, coordinates, mass, LJ parameters
+		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader); // from world
+		// Set bonds properties from reader: bond indeces, atom neighbours // from world
+		topologies[molIx].SetGmolBondingPropertiesFromReader(&amberReader); // from world
+		// Set atoms Molmodel types (Compound::SingleAtom derived) based on // from world
+		// their valence // from world
+		topologies[molIx].SetGmolAtomsMolmodelTypesTrial(); // from world
+
+		// Add Biotypes // from world
+		topologies[molIx].bAddBiotypes(&amberReader); // from world
+
 		// TODO assert that the filenames vectors are not empty
 		// Iterate through Worlds
+		// TODO: only adoptTopology should be here
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 
 			loadRigidBodiesSpecs( worldIx, molIx,
@@ -347,32 +389,158 @@ void Context::AddMolecules(
 				<< " " << crdFNs[molIx] << " " << rbSpecsFNs[worldIx][molIx] 
 				<< std::endl << std::flush;
 
+			/* SAFE ZONE
 			// Add the molecule to the World
 			(updWorld(worldIx))->AddMolecule(
 					&amberReader,
-					//rbSpecsFNs[worldIx][molIx],
-					//flexSpecsFNs[worldIx][molIx],
-					//regimens[worldIx][molIx],
 					argRoots[worldIx]
-					//, argRootMobilities[worldIx]
 					);
 
+			(updWorld(worldIx))->AddBiotypes(&amberReader);
+			*/
+			// DANGER ZONE
+			//if(molIx == 0){
+			//	(updWorld(worldIx))->topologies.clear();
+			//}
+
+			(updWorld(worldIx))->topologies = &topologies;
+
+			//(updWorld(worldIx))->topologies[0].PrintAtomList();
+			//std::exit(0);
+			// ZONE END
+
+			// We are the back of topologies
+			(updWorld(worldIx))->AddDummParams(molIx, &amberReader);
+
+			/* SAFE ZONE
+			(updWorld(worldIx))->BuildTopologyGraph(argRoots[worldIx]);
+			*/
+			// DANGER ZONE
+			if(worldIx == 0){
+				topologies[molIx].buildGraphAndMatchCoords(std::stoi(argRoots[worldIx]));
+				topologies[molIx].loadTriples();
+			}
+			// ZONE END
+
+			(updWorld(worldIx))->AllocateCoordBuffers(molIx); // TODO: remove
+
+			// SAFE ZONE
 			// Add the molecule to the World
 			// Should be the same as molIx because we're using
 			// emplace_back at AddMolecule
-			(updWorld(worldIx))->SetBondFlexibilities(
-					//&amberReader,
-					//rbSpecsFNs[worldIx][molIx],
-					flexSpecsFNs[worldIx][molIx],
-					regimens[worldIx][molIx],
-					//argRoots[worldIx],
-					argRootMobilities[worldIx],
-					molIx);
+			//(updWorld(worldIx))->SetBondFlexibilities(
+			//		flexSpecsFNs[worldIx][molIx],
+			//		regimens[worldIx][molIx],
+			//		argRootMobilities[worldIx],
+			//		molIx);
+			// DANGER ZONE
+
+			std::cout << "Context setting flexibility for mol "
+				<< molIx << " world " << worldIx
+				<< " regimenFN " << regimens[worldIx][molIx]
+				<< " flexSpecsFNs " << flexSpecsFNs[worldIx][molIx]
+				<< std::endl;
+
+			topologies[molIx].setFlexibility(regimens[worldIx][molIx], flexSpecsFNs[worldIx][molIx], worldIx);
+
+
+			if(worldIx == 0){	
+				//rootMobilities[molIx] = argRootMobilities[worldIx][molIx];
+				topologies[molIx].setUScaleFactorsToBonds(flexSpecsFNs[worldIx][molIx]);
+			}
+			// ZONE END
 
 			// Add topology which to this world
 			(updWorld(worldIx))->adoptTopology(molIx);
+
+			modelOneEmbeddedTopology(molIx, worldIx, argRootMobilities[worldIx]);
+			(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
+
+
 		}
+
+		// TODO: where is this supposed to be? // from world
+		//Xs.resize(Xs.size() + topologies[molIx].getNAtoms()); // from world
+		//Ys.resize(Ys.size() + topologies[molIx].getNAtoms()); // from world
+		//Zs.resize(Zs.size() + topologies[molIx].getNAtoms()); // from world
+
 	}
+
+
+}
+
+void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
+{
+/*
+	// Model molecules
+	std::cout << "Context::modelTopologies nof embedded Topologies "
+		<< nofEmbeddedTopologies << "\n" << std::flush;
+
+	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+		std::cout << "Context::modelTopologies world "
+			<< worldIx << "\n" << std::flush;
+
+		// SAFE ZONE
+		//this->rootMobilities.push_back(
+		//	GroundToCompoundMobilizerTypes[worldIx]);
+		//(updWorld(worldIx))->modelTopologies(
+		//	GroundToCompoundMobilizerTypes[worldIx]);
+		// DANGER ZONE
+		for ( std::size_t molIx = 0; molIx < topologies.size(); molIx++){
+			this->rootMobilities.push_back(
+				GroundToCompoundMobilizerTypes[(nofMols * worldIx) + molIx]);
+			(updWorld(worldIx))->compoundSystem->modelOneCompound(
+				SimTK::CompoundSystem::CompoundIndex(molIx),
+				rootMobilities[(nofMols * worldIx) + molIx]);
+
+			std::cout << "Modeled molecule " << molIx 
+				<< " world " << worldIx << std::endl;
+			for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
+				SimTK::Compound::AtomIndex aIx = 
+					(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
+				SimTK::MobilizedBodyIndex mbx = 
+					topologies[molIx].getAtomMobilizedBodyIndex(aIx);
+				std::cout << "k aIx " << k << " " << aIx 
+					<< " " << mbx << std::endl << std::flush;
+			}
+
+		}
+		// ZONE END
+	}
+*/
+
+// DANGER ZONE
+	// Model molecules
+	std::cout << "Context::modelTopologies nof embedded Topologies "
+		<< nofEmbeddedTopologies << "\n" << std::flush;
+
+	for ( std::size_t molIx = 0; molIx < topologies.size(); molIx++){
+
+		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+
+			std::cout << "Model molecule " << molIx 
+				<< " embedded in world " << worldIx << std::endl;
+
+			this->rootMobilities.push_back(
+				GroundToCompoundMobilizerTypes[(nofMols * worldIx) + molIx]);
+
+			(updWorld(worldIx))->compoundSystem->modelOneCompound(
+				SimTK::CompoundSystem::CompoundIndex(molIx),
+				rootMobilities[(nofMols * worldIx) + molIx]);
+
+			for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
+				SimTK::Compound::AtomIndex aIx = 
+					(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
+				SimTK::MobilizedBodyIndex mbx = 
+					topologies[molIx].getAtomMobilizedBodyIndex(aIx);
+				std::cout << "k aIx " << k << " " << aIx 
+					<< " " << mbx << std::endl << std::flush;
+			}
+		}
+
+	}
+
+// ZONE
 
 
 }
@@ -499,18 +667,6 @@ std::size_t Context::getNofWorlds() const
 SimTK::DuMMForceFieldSubsystem * Context::updForceField(std::size_t whichWorld)
 {
 	return worlds[whichWorld].updForceField();
-}
-
-void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
-{
-	// Model molecules
-	std::cout << "Context::modelTopologies nof Topologies " << nofTopologies << "\n";
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		std::cout << "Context::modelTopologies world " << worldIx << "\n";
-		this->rootMobilities.push_back(GroundToCompoundMobilizerTypes[worldIx]);
-		(updWorld(worldIx))->modelTopologies(GroundToCompoundMobilizerTypes[worldIx]);
-	}
-
 }
 
 int Context::getNofMolecules()
@@ -792,9 +948,22 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
 
 			if(worldIndexes.size() > 1) {
-				currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
-						currentAdvancedState,
-						updWorld(lastWorldIx)->getAtomsLocationsInGround(lastAdvancedState));
+				// DANGER ZONE
+				std::vector<std::vector<std::pair<
+					bSpecificAtom *, SimTK::Vec3> > >
+					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
+
+					// Pass compounds to the new world
+					passTopologiesToNewWorld(currentWorldIx);
+
+					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
+							currentAdvancedState, otherWorldsAtomsLocations);
+				// SAFE ZONE
+				//	currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
+				//			currentAdvancedState,
+				//			updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState));
+				// ZONE
+
 			}
 
 			// Check if reconstructions is done correctly
@@ -901,6 +1070,18 @@ SimTK::Real Context::Pearson(std::vector<std::vector<SimTK::Real>> inputVector, 
 }
 
 
+// Pass compounds to the new world
+void Context::passTopologiesToNewWorld(int newWorldIx)
+{
+	for(std::size_t molIx = 0; molIx < nofMols; molIx++){
+		topologies[molIx].setMultibodySystem( 
+			*((updWorld(newWorldIx))->compoundSystem) );
+
+		// TODO Restante DANGER
+        	//c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
+	}
+}
+
 // Main
 void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 {
@@ -918,7 +1099,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 		for(int round = 0; round < nofRounds; round++){
 
-			// std::cout << "Entering round " << round + 1 << "/" << nofRounds << "\n";
+			std::cout << "Entering round " << round + 1 << "/" << nofRounds << "\n" << std::flush;
 
 			// Iterate through worlds
 			for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
@@ -940,6 +1121,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			   	std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
 
+
 				// Get indeces
 				currentWorldIx = worldIndexes.front();
 				lastWorldIx = worldIndexes.back();
@@ -949,9 +1131,24 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
 
 				if(worldIndexes.size() > 1) { // It also loads bAtomList
+
+					// DANGER ZONE
+					std::vector<std::vector<std::pair<
+						bSpecificAtom *, SimTK::Vec3> > >
+						otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
+
+					// Pass compounds to the new world
+					passTopologiesToNewWorld(currentWorldIx);
+
 					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
-							currentAdvancedState,
-							updWorld(lastWorldIx)->getAtomsLocationsInGround(lastAdvancedState));
+							currentAdvancedState, otherWorldsAtomsLocations);
+
+					// SAFE ZONE
+					//currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
+					//		currentAdvancedState,
+					//		updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState));
+					// ZONE
+
 				}else{ // Just load bAtomList
 					updWorld(currentWorldIx)->updateAtomListsFromCompound(currentAdvancedState);
 				}
@@ -970,6 +1167,11 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				bool accepted;
 				for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++) {
 					accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMAOption[currentWorldIx]);
+
+					// DANGER ZONE
+					//updWorld(currentWorldIx)->updSampler(0)->checkAtomStationsThroughDumm();
+					//updWorld(lastWorldIx)->updSampler(0)->checkAtomStationsThroughDumm();
+					// ZONE
 
 					if (accepted) {
 
@@ -1061,9 +1263,23 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
 
 				if(worldIndexes.size() > 1) {
+
+				// DANGER ZONE
+				std::vector<std::vector<std::pair<
+					bSpecificAtom *, SimTK::Vec3> > >
+					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
+
+					// Pass compounds to the new world
+					passTopologiesToNewWorld(currentWorldIx);
+
 					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
-							currentAdvancedState,
-							updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState));
+							currentAdvancedState, otherWorldsAtomsLocations);
+				// SAFE ZONE
+				//	currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
+				//			currentAdvancedState,
+				//			updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState));
+				// ZONE
+
 				}else{ // Load bAtomList though
 					updWorld(currentWorldIx)->updateAtomListsFromCompound(currentAdvancedState);
 				}
@@ -1545,80 +1761,6 @@ void Context::PrintNumThreads() {
 
 
 
-// WORLD BEGIN
-/** Creates Gmolmodel topologies objects and based on amberReader forcefield
- * adds parameters: defines Biotypes; - adds BAT parameters to DuMM. Also
- * creates decorations for visualizers **/
-//void Context::AddMolecule(
-//		readAmberInput *amberReader,
-//		std::string rbFN,
-//		std::string flexFN,
-//		std::string regimenSpec,
-//		std::string argRoot,
-//		std::string argRootMobility)
-//{
-//	// Statistics
-//	moleculeCount++; // Used for unique names of molecules
-// 
-//	// Add a new molecule (Topology object which inherits Compound)
-//	// to the vector of molecules.
-//	// TODO: Why resName and moleculeName have to be the same?
-//	// TODO store molecule name in vector maybe
-//	std::string moleculeName = regimenSpec + std::to_string(moleculeCount);
-//	roots.emplace_back(argRoot);
-//	rootMobilities.emplace_back(argRootMobility);
-//	topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
-//
-//	// Set atoms properties from a reader: number, name, element, initial
-//	// name, force field type, charge, coordinates, mass, LJ parameters
-//	topologies.back().SetGmolAtomPropertiesFromReader(amberReader);
-//
-//	// Set bonds properties from reader: bond indeces, atom neighbours
-//	topologies.back().SetGmolBondingPropertiesFromReader(amberReader);
-//
-//	// Set atoms Molmodel types (Compound::SingleAtom derived) based on
-//	// their valence
-//	//topologies.back().SetGmolAtomsMolmodelTypes();
-//	topologies.back().SetGmolAtomsMolmodelTypesTrial();
-//
-//	// Add parameters from amberReader
-//	topologies.back().bAddAllParams(amberReader, *forceField);
-//
-//	// Build the graph representing molecule's topology
-//	topologies.back().buildGraphAndMatchCoords(*forceField, std::stoi(argRoot));
-//
-//	topologies.back().loadTriples();
-//
-//	// Set flexibility according to the flexibility file
-//	topologies.back().setFlexibility(regimenSpec, flexFN);
-//	//topologies.back().PrintAtomList();
-//
-//	// Set generalized velocities scale factors 
-//	topologies.back().setUScaleFactorsToBonds(flexFN);
-//	// Print Molmodel types
-//	//topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
-//
-//	// All ocate the vector of coordinates (DCD)
-//	Xs.resize(Xs.size() + topologies.back().getNAtoms());
-//	Ys.resize(Ys.size() + topologies.back().getNAtoms());
-//	Zs.resize(Zs.size() + topologies.back().getNAtoms());
-//  
-//	// Add Topology to CompoundSystem and realize topology
-//	compoundSystem->adoptCompound(topologies.back());
-//
-//	topologies.back().setCompoundIndex(
-//			SimTK::CompoundSystem::CompoundIndex(
-//			 compoundSystem->getNumCompounds() - 1));
-//
-//	// WORLD CONFLICT
-//	//// Add the new molecule to Decorators's vector of molecules
-//	//if(visual){
-//	//	// We need copy here.
-//	//	paraMolecularDecorator->AddMolecule(&topologies.back());
-//	//}
-//
-//}
-// WORLD END
 
 
 

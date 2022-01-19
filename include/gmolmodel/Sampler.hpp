@@ -51,8 +51,12 @@ public:
 	void setBeta(SimTK::Real argBeta);
 	SimTK::Real getBeta() const;
 
+	// Just for checking
+	void checkAtomStationsThroughDumm(void);
+
 	/** Load the map of mobods to joint types **/
-	void loadMbx2mobility(SimTK::State& someState);
+	//void loadMbx2mobility(SimTK::State& someState); // SAFE
+	void loadMbx2mobility(int whichWorld); // DANGER
 
 	/** Returns the number of samples extracted so far. **/
 	int getNofSamples();

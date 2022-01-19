@@ -82,6 +82,12 @@ public:
 		//, std::string argRootMobility
 		);
 
+	// 
+	void AddBiotypes(int which, readAmberInput *amberReader);
+	void AddDummParams(int which, readAmberInput *amberReader);
+	void BuildTopologyGraph(int which, std::string argRoot);
+	void AllocateCoordBuffers(int which);
+
 	/** It sets Compound BondFlexibilities . Also
 	 * creates decorations for visualizers 
 	 **/
@@ -265,7 +271,7 @@ public:
 
 	/** Molecules (topologies<-Compounds) objects **/
 	//std::vector<bMoleculeReader *> moleculeReaders;
-	std::vector<Topology> topologies;
+	std::vector<Topology> *topologies;
 	std::vector<std::string> roots;
 	std::vector<std::string> rootMobilities;
 

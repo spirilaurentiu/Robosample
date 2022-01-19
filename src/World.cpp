@@ -81,6 +81,8 @@ void World::printPoss(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<"Positions:"<<std::endl;
 	for (SimTK::Compound::AtomIndex aIx(0); aIx < c.getNumAtoms(); ++aIx){
 		vertex   = c.calcAtomLocationInGroundFrame(advanced, aIx);
+			//c.calcAtomLocationInGroundFrameThroughSimbody(
+			//	aIx, *forceField, *matter, advanced);
 		std::cout<<c.getAtomName(aIx)<<"="<<std::setprecision(8)<<std::fixed
 		  <<"["<<vertex[0]<<" "<<vertex[1]<<" "<<vertex[2]<<"]"<<std::endl;
 	}
@@ -177,7 +179,7 @@ World::World(int worldIndex, int requestedNofMols, bool isVisual, SimTK::Real vi
 	// Thermodynamics
 	this->temperature = -1; // this leads to unusal behaviour hopefully
 
-	topologies.reserve(requestedNofMols);
+	//topologies.reserve(requestedNofMols); // SAFE
 
 }
 
@@ -193,6 +195,7 @@ void World::AddMolecule(
 		//, std::string argRootMobility
 		)
 {
+/*
 	// Statistics
 	moleculeCount++; // Used for unique names of molecules
  
@@ -221,43 +224,47 @@ void World::AddMolecule(
 	// their valence
 	//topologies.back().SetGmolAtomsMolmodelTypes();
 	topologies.back().SetGmolAtomsMolmodelTypesTrial();
+*/
+}
 
-	// Add parameters from amberReader
-	topologies.back().bAddAllParams(amberReader, *forceField);
+// Add Biotypes
+void World::AddBiotypes(int which, readAmberInput *amberReader)
+{
+/*
+	//topologies.back().bAddBiotypes(amberReader); // SAFE
+	topologies[which].bAddBiotypes(amberReader); // DANGER
+*/
+}
 
+void World::AddDummParams(int which, readAmberInput *amberReader)
+{
+	// Add DuMM parameters from amberReader
+	//topologies.back().bAddDummParams(amberReader, *forceField); // SAFE
+	((*topologies)[which]).bAddDummParams(amberReader, *forceField); // DANGER
+}
+
+void World::BuildTopologyGraph(int which, std::string argRoot)
+{
+/*
 	// Build the graph representing molecule's topology
-	topologies.back().buildGraphAndMatchCoords(*forceField, std::stoi(argRoot));
+	//topologies.back().buildGraphAndMatchCoords(std::stoi(argRoot)); // SAFE
+	//topologies.back().loadTriples(); // SAFE
+	topologies[which].buildGraphAndMatchCoords(std::stoi(argRoot)); // DANGER
+	topologies[which].loadTriples(); // DANGER
+*/
+}
 
-	topologies.back().loadTriples();
-
-	// Set flexibility according to the flexibility file
-	//topologies.back().setFlexibility(regimenSpec, flexFN);
-	////topologies.back().PrintAtomList();
-
-	// Set generalized velocities scale factors 
-	//topologies.back().setUScaleFactorsToBonds(flexFN);
-	//// Print Molmodel types
-	////topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
-
+void World::AllocateCoordBuffers(int which)
+{
 	// All ocate the vector of coordinates (DCD)
 	// TODO: where is this supposed to be?
-	Xs.resize(Xs.size() + topologies.back().getNAtoms());
-	Ys.resize(Ys.size() + topologies.back().getNAtoms());
-	Zs.resize(Zs.size() + topologies.back().getNAtoms());
+	//Xs.resize(Xs.size() + topologies.back().getNAtoms()); // SAFE
+	//Ys.resize(Ys.size() + topologies.back().getNAtoms()); // SAFE
+	//Zs.resize(Zs.size() + topologies.back().getNAtoms()); // SAFE
+	Xs.resize(Xs.size() + ((*topologies)[which]).getNAtoms()); // DANGER
+	Ys.resize(Ys.size() + ((*topologies)[which]).getNAtoms()); // DANGER
+	Zs.resize(Zs.size() + ((*topologies)[which]).getNAtoms()); // DANGER
   
-	// Add Topology to CompoundSystem and realize topology
-	//compoundSystem->adoptCompound(topologies.back());
-
-	//topologies.back().setCompoundIndex(
-	//		SimTK::CompoundSystem::CompoundIndex(
-	//		 compoundSystem->getNumCompounds() - 1));
-
-	// Add the new molecule to Decorators's vector of molecules
-	//if(visual){
-	//	// We need copy here.
-	//	paraMolecularDecorator->AddMolecule(&topologies.back());
-	//}
-
 }
 
 /** It sets Compound BondFlexibilities . Also
@@ -270,13 +277,13 @@ void World::SetBondFlexibilities(
 		int which)
 {
 	// Set flexibility according to the flexibility file
-	topologies[which].setFlexibility(regimenSpec, flexFN);
-	//topologies.back().PrintAtomList();
+	//((*topologies)[which]).PrintAtomList();
+	((*topologies)[which]).setFlexibility(regimenSpec, flexFN, ownWorldIndex);
 
 	rootMobilities[which] = argRootMobility; // NEW
 
 	// Set generalized velocities scale factors 
-	topologies[which].setUScaleFactorsToBonds(flexFN);
+	((*topologies)[which]).setUScaleFactorsToBonds(flexFN);
 	// Print Molmodel types
 	//topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
 
@@ -291,16 +298,19 @@ void World::SetBondFlexibilities(
 void World::adoptTopology(int which)
 {  
 	// Add Topology to CompoundSystem and realize topology
-	compoundSystem->adoptCompound(topologies[which]);
+	compoundSystem->adoptCompound(((*topologies)[which]));
 
-	topologies[which].setCompoundIndex(
-			SimTK::CompoundSystem::CompoundIndex(
-			 compoundSystem->getNumCompounds() - 1));
+	((*topologies)[which]).setCompoundIndex(SimTK::CompoundSystem::CompoundIndex(which));
+
+	//topologies[which].setCompoundIndex(
+	//		SimTK::CompoundSystem::CompoundIndex(
+	//		 compoundSystem->getNumCompounds() - 1));
 
 	// Add the new molecule to Decorators's vector of molecules
 	if(visual){
 		// We need copy here.
-		paraMolecularDecorator->AddMolecule(&(topologies[which]));
+		//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
+		paraMolecularDecorator->AddMolecule( &((*topologies)[which]) ); // DANGER
 	}
 
 }
@@ -308,11 +318,14 @@ void World::adoptTopology(int which)
 /** Calls CompoundSystem.modelOneCompound which links the Compounds to the
  * Simbody subsystems and realizes Topology. To be called after setting all
  * Compounds properties. **/
+
+// UNUSABLE
+
 void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 {
 	// Model the Compounds one by one in case we want to attach different types
 	// of Mobilizers to the Ground in the feature.
-	for ( std::size_t i = 0; i < this->topologies.size(); i++){
+	for ( std::size_t i = 0; i < this->topologies->size(); i++){
 		//SimTK::String GroundToCompoundMobilizerType = "Free";
 		//SimTK::String GroundToCompoundMobilizerType = "Weld";
 		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
@@ -331,11 +344,10 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
 		         << " grounded with mobilizer " << rootMobilities[i] << std::endl;
 
-		Topology& topology = topologies[i];
 		//std::cout << "World::ModelTopologies " <<
-		for(std::size_t k = 0; k < topologies[i].getNumAtoms(); k++){
-			SimTK::Compound::AtomIndex aIx = (topologies[i].bAtomList[k]).getCompoundAtomIndex();
-			SimTK::MobilizedBodyIndex mbx = topologies[i].getAtomMobilizedBodyIndex(aIx);
+		for(std::size_t k = 0; k < (*topologies)[i].getNumAtoms(); k++){
+			SimTK::Compound::AtomIndex aIx = (((*topologies)[i]).bAtomList[k]).getCompoundAtomIndex();
+			SimTK::MobilizedBodyIndex mbx = ((*topologies)[i]).getAtomMobilizedBodyIndex(aIx);
 			std::cout << "k aIx " << k << " " << aIx << " " << mbx << std::endl << std::flush;
 		}
 
@@ -354,7 +366,8 @@ body **/
 void World::setUScaleFactorsToMobods(void)
 {
 
-	for(auto& topology : topologies){
+	//for(auto& topology : topologies){ // SAFE
+	for(auto& topology : (*topologies)){ // DANGER
 		// Iterate bonds
 
 		//for(const auto& AtomList : topology.bAtomList){
@@ -467,7 +480,8 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 {
 	if(prmtopIndex >= 0){
 		std::cout << "Adding constraint to atom with prmtop index " << prmtopIndex << "\n" ;
-		SimTK::MobilizedBodyIndex mbx = topologies[0].getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(prmtopIndex));
+		//SimTK::MobilizedBodyIndex mbx = topologies[0].getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(prmtopIndex)); // SAFE
+		SimTK::MobilizedBodyIndex mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex(prmtopIndex), *forceField); // DANGER
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 		SimTK::Constraint::ConstantSpeed B3291ConstraintU1(mobod, SimTK::MobilizerUIndex(0), 0);
 		if(matter->getNumBodies() > 5000){
@@ -493,7 +507,8 @@ const SimTK::State& World::addContacts(int prmtopIx)
 		SimTK::Real viscousFriction = 0.0;
 
 		SimTK::MobilizedBodyIndex 
-		mbx = topologies[0].getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(prmtopIx));
+		//mbx = topologies[0].getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(prmtopIx)); // SAFE
+		mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex(prmtopIx), *forceField); // DANGER
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 		ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 2));
 		DecorativeMesh deco(mesh.createPolygonalMesh());
@@ -507,7 +522,8 @@ const SimTK::State& World::addContacts(int prmtopIx)
 
 void World::loadCompoundRelatedMaps()
 {
-	for (auto& topology : topologies){
+	//for (auto& topology : topologies){ // SAFE
+	for (auto& topology : (*topologies)){ // DANGER
 		topology.loadCompoundAtomIx2GmolAtomIx();
 		// topology.printMaps();
 	}
@@ -515,7 +531,8 @@ void World::loadCompoundRelatedMaps()
 
 void World::loadMobodsRelatedMaps()
 {
-	for (auto& topology : topologies){
+	//for (auto& topology : topologies){ // SAFE
+	for (auto& topology : (*topologies)){ // DANGER
 		topology.loadMobodsRelatedMaps();
 		// topology.printMaps();
 	}
@@ -715,7 +732,7 @@ BaseSampler * World::addSampler(SamplerName samplerName)
 {
 	if(samplerName == SamplerName::HMC) {
         	samplers.emplace_back(std::make_unique<HMCSampler>(this
-			, compoundSystem.get(), matter.get(), topologies
+			, compoundSystem.get(), matter.get(), (*topologies)
 			, forceField.get(), forces.get()
 			, ts.get()));
 	} /*else if (samplerName == SamplerName::LAHMC) {
@@ -741,13 +758,13 @@ BaseSampler * World::updSampler(std::size_t which)
 
 /** Get a const reference to a molecule **/
 const Topology& World::getTopology(std::size_t moleculeNumber) const{
-	return topologies[moleculeNumber];
+	return (*topologies)[moleculeNumber];
 }
 
 /** Get a writble reference to the last molecule. **/
 Topology& World::updTopology(std::size_t moleculeNumber){
 	//return *topologies.back();
-	return topologies[moleculeNumber];
+	return (*topologies)[moleculeNumber];
 }
 
 /** Return a 2D vector representing all the coordinates of this World.
@@ -762,14 +779,17 @@ std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> World::getAto
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> returnVector;
 
 	// Iterate through topologies
-	for (auto& topology : topologies){
+	//for (auto& topology : topologies){ // SAFE
+	for (auto& topology : (*topologies)){ // DANGER
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
 		currentTopologyInfo.reserve(topology.bAtomList.size());
 
 		// Iterate through atoms
 		for (auto& atom : topology.bAtomList) {
 			auto compoundAtomIndex = atom.getCompoundAtomIndex();
-			SimTK::Vec3 location = topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
+			SimTK::Vec3 location = //topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
+			topology.calcAtomLocationInGroundFrameThroughSimbody(
+				compoundAtomIndex, *forceField, *matter, state);
 
 			currentTopologyInfo.emplace_back(&atom, location);
 		}
@@ -786,13 +806,16 @@ std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> World::getAto
 void World::updateAtomListsFromCompound(const SimTK::State &state)
 {
 	// Iterate through topologies
-	for (auto& topology : topologies){
+	//for (auto& topology : topologies){ // SAFE
+	for (auto& topology : (*topologies)){ // DANGER
 
 		// Iterate through atoms
 		for (auto& atom : topology.bAtomList) {
 
 			const auto compoundAtomIndex = atom.getCompoundAtomIndex();
-			SimTK::Vec3 location = topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
+			SimTK::Vec3 location = //topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
+			topology.calcAtomLocationInGroundFrameThroughSimbody(
+				compoundAtomIndex, *forceField, *matter, state);
 
 			atom.setX(location[0]);
 			atom.setY(location[1]);
@@ -819,6 +842,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 		std::pair<bSpecificAtom *, SimTK::Vec3> > > otherWorldsAtomsLocations)
 {
 
+std::cout << "AU1 " << "\n" << std::flush;
 	// Get the total no of bodies in this world (each World has its own
 	// SimbodyMatterSubsystem)
 	int totalNofBodies = matter->getNumBodies();
@@ -848,24 +872,30 @@ SimTK::State& World::setAtomsLocationsInGround(
 			atomTargets.insert(std::make_pair(atomIndex, location));
 		}
 
-		topologies[i].matchDefaultAtomChirality(atomTargets, 0.01, false);
-		topologies[i].matchDefaultBondLengths(atomTargets);
-		topologies[i].matchDefaultBondAngles(atomTargets);
-		topologies[i].matchDefaultDirections(atomTargets);
-		topologies[i].matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
-		topologies[i].matchDefaultTopLevelTransform(atomTargets);
-
+std::cout << "AU2 " << "\n" << std::flush;
+		((*topologies)[i]).matchDefaultAtomChirality(atomTargets, 0.01, false);
+std::cout << "AU2.1 " << "\n" << std::flush;
+		((*topologies)[i]).matchDefaultBondLengths(atomTargets);
+std::cout << "AU2.2 " << "\n" << std::flush;
+		((*topologies)[i]).matchDefaultBondAngles(atomTargets);
+std::cout << "AU2.3 " << "\n" << std::flush;
+		((*topologies)[i]).matchDefaultDirections(atomTargets);
+std::cout << "AU2.4 " << "\n" << std::flush;
+		((*topologies)[i]).matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
+std::cout << "AU2.5 " << "\n" << std::flush;
+		((*topologies)[i]).matchDefaultTopLevelTransform(atomTargets);
+std::cout << "AU3 " << "\n" << std::flush;
 		// Get the Ground to Top Transform
-		G_X_T = topologies[i].getTopLevelTransform();
+		G_X_T = ((*topologies)[i]).getTopLevelTransform();
 
 		// Recalculate atom frames in top compound frames
-		topologies[i].calcTopTransforms();
+		((*topologies)[i]).calcTopTransforms();
 
 		/////////////////
 		// FULLY FLEXIBLE CARTESIAN WORLD
 		// Parent body is always Ground
 		/////////////////
-		if(topologies[i].getRegimen().at(0) == 'I') {
+		if(((*topologies)[i]).getRegimen().at(0) == 'I') {
 
 			/////////////////
 			// 3. SIMBODY MATTER 
@@ -877,8 +907,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 			SimTK::Transform P_X_M[totalNofBodies]; // related to X_PFs
 
 			// P_X_Ms are set to atom positions in Ground 
-			for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i].getNumAtoms(); ++aIx){
-				const auto mbx = topologies[i].getAtomMobilizedBodyIndex(aIx);
+			for (SimTK::Compound::AtomIndex aIx(0); aIx < ((*topologies)[i]).getNumAtoms(); ++aIx){
+				const auto mbx = ((*topologies)[i]).getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				P_X_M[int(mbx)] = Transform(Rotation(), atomTargets[aIx]); 
 			}
 
@@ -903,20 +933,20 @@ SimTK::State& World::setAtomsLocationsInGround(
 			// 2. DUMM 
 			/////////////////
 			// Get locations for DuMM
-			SimTK::Vec3 locs[topologies[i].getNumAtoms()];
+			SimTK::Vec3 locs[((*topologies)[i]).getNumAtoms()];
 
 			// Loop through atoms
-			for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i].getNumAtoms(); ++aIx){
-				if(topologies[i].getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
+			for (SimTK::Compound::AtomIndex aIx(1); aIx < ((*topologies)[i]).getNumAtoms(); ++aIx){
+				if(((*topologies)[i]).getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *forceField) == 0){ // atom is at body's origin
 						locs[int(aIx)] = SimTK::Vec3(0); 
 				}else{ // atom is not at body's origin
-					SimTK::MobilizedBodyIndex mbx = topologies[i].getAtomMobilizedBodyIndex(aIx);
-					SimTK::Transform G_X_root = G_X_T * topologies[i].getTopTransform((topologies[i].mbx2aIx)[mbx]);
+					SimTK::MobilizedBodyIndex mbx = ((*topologies)[i]).getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
+					SimTK::Transform G_X_root = G_X_T * ((*topologies)[i]).getTopTransform((((*topologies)[i]).mbx2aIx)[mbx]);
 
 					SimTK::Vec3 G_vchild = atomTargets[aIx];
 
 					SimTK::Transform root_X_child = alignFlipAndTranslateFrameAlongXAxis(G_X_root, G_vchild);
-					topologies[i].bsetFrameInMobilizedBodyFrame(aIx, root_X_child);
+					((*topologies)[i]).bsetFrameInMobilizedBodyFrame(aIx, root_X_child);
 
 					locs[int(aIx)] = root_X_child.p();
 				}
@@ -924,9 +954,9 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 			// Set stations and AtomPLacements for atoms in DuMM
 			// Loop through atoms
-			for (SimTK::Compound::AtomIndex aIx(1); aIx < topologies[i].getNumAtoms(); ++aIx){
-				SimTK::MobilizedBodyIndex mbx = topologies[i].getAtomMobilizedBodyIndex(aIx);
-					SimTK::DuMM::AtomIndex dAIx = topologies[i].getDuMMAtomIndex(aIx);
+			for (SimTK::Compound::AtomIndex aIx(1); aIx < ((*topologies)[i]).getNumAtoms(); ++aIx){
+				SimTK::MobilizedBodyIndex mbx = ((*topologies)[i]).getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
+					SimTK::DuMM::AtomIndex dAIx = ((*topologies)[i]).getDuMMAtomIndex(aIx);
 
 					// Set station_B
 					forceField->bsetAtomStationOnBody( dAIx, locs[int(aIx)] );
@@ -950,14 +980,14 @@ SimTK::State& World::setAtomsLocationsInGround(
 			// Set X_PF and X_BM in Mobilized bodies
 			// First get the atom 0 transform. Works for multiple mols because
 			// every mol has Ground as parent
-			SimTK::Transform P_X_F_1 = G_X_T * topologies[i].getTopTransform(SimTK::Compound::AtomIndex(0)); // is this always true ??
+			SimTK::Transform P_X_F_1 = G_X_T * ((*topologies)[i]).getTopTransform(SimTK::Compound::AtomIndex(0)); // is this always true ??
 
 			// Loop through the rest of the atoms and get P_X_F, B_X_M from the Compound transforms
-			for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i].getNumAtoms(); ++aIx){
-				if(topologies[i].getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
+			for (SimTK::Compound::AtomIndex aIx(0); aIx < ((*topologies)[i]).getNumAtoms(); ++aIx){
+				if(((*topologies)[i]).getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *forceField) == 0){ // atom is at body's origin
 
 					// Get body, parentBody, parentAtom
-					SimTK::MobilizedBodyIndex mbx = topologies[i].getAtomMobilizedBodyIndex(aIx);
+					SimTK::MobilizedBodyIndex mbx = ((*topologies)[i]).getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 					SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 					const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 					SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
@@ -965,7 +995,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 					if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 
 						// Get mobod transforms
-						std::vector<SimTK::Transform> mobodTs = topologies[i].calcMobodTransforms(matter.get(), aIx, someState);
+						//std::vector<SimTK::Transform> mobodTs = ((*topologies)[i]).calcMobodTransforms(matter.get(), aIx, someState); // SAFE
+						std::vector<SimTK::Transform> mobodTs = ((*topologies)[i]).calcMobodTransforms(matter.get(), aIx, someState, *forceField, ownWorldIndex); // DANGER
 
 						mobod.setDefaultInboardFrame(mobodTs[0]);
 						mobod.setDefaultOutboardFrame(mobodTs[1]);
@@ -1025,12 +1056,12 @@ To be called before use of getXs, getYs or getZs **/
 void World::updateCoordBuffers()
 {
 	int allAtIx = -1;
-	for(std::size_t tIx = 0; tIx < topologies.size(); tIx++){
-		for(int aIx = 0; aIx < topologies[tIx].getNAtoms(); aIx++){
+	for(std::size_t tIx = 0; tIx < topologies->size(); tIx++){
+		for(int aIx = 0; aIx < ((*topologies)[tIx]).getNAtoms(); aIx++){
 			allAtIx++;
-			Xs[allAtIx] = (topologies[tIx].bAtomList[aIx]).getX();
-			Ys[allAtIx] = (topologies[tIx].bAtomList[aIx]).getY();
-			Zs[allAtIx] = (topologies[tIx].bAtomList[aIx]).getZ();
+			Xs[allAtIx] = (((*topologies)[tIx]).bAtomList[aIx]).getX();
+			Ys[allAtIx] = (((*topologies)[tIx]).bAtomList[aIx]).getY();
+			Zs[allAtIx] = (((*topologies)[tIx]).bAtomList[aIx]).getZ();
 		}
 	}
 

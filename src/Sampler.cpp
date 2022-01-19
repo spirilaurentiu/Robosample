@@ -235,9 +235,39 @@ SimTK::Real Sampler::generateRandomNumber(GmolRandDistributionType distributionT
     }
 }
 
-/** Load the map of mobods to joint types **/
-void Sampler::loadMbx2mobility(SimTK::State&)
+// Just for checking
+void Sampler::checkAtomStationsThroughDumm(void)
 {
+	// Lop through topologies
+	for(auto& topology : topologies){
+
+		// Loop through atoms
+		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
+			
+			std::cout << "DEBUG getAtomLocationInMobilizedBodyFrame"
+				<< " aIx " << aIx;
+			
+			//SimTK::Vec3 atomMobodStation = 
+			//	topology.getAtomLocationInMobilizedBodyFrame(aIx);
+			SimTK::Vec3 atomMobodStationThroughDumm = 
+				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
+
+			//std::cout << " through Compound " << atomMobodStation
+			//	<< std::endl;
+			std::cout << " through DuMM " << atomMobodStationThroughDumm
+				<< std::endl;
+		}
+	}
+
+}
+
+/** Load the map of mobods to joint types **/
+//void Sampler::loadMbx2mobility(SimTK::State&) // SAFE
+// The ideal way to do this would be to keep have MobilizedBody keep a Mobility name
+void Sampler::loadMbx2mobility(int whichWorld) // DANGER
+{
+	std::cout << "DEBUG Entering Sampler::loadMbx2mobility" << std::endl << std::flush;
+	
 	// function args were SimTK::State& someState
 
 	// Lop through topologies
@@ -245,29 +275,36 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 
 		// Loop through atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
-	
-			if(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
+
+			//SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex (aIx); // DANGER
+			
+			//if(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin // SAFE
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0 ){ // DANGER
+			//if(dumm->getAtomStationOnBody(dAIx) == SimTK::Vec3(0, 0, 0)){ // atom is at body's origin // DANGER
 
 				// Get body, parentBody
-				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				//const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx); // SAFE
+				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm); // DANGER
+				
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
 				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 	
 				if(parentMbx != 0){
 					// Get the neighbor atom in the parent mobilized body
-					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx);
+					//SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx); // SAFE
+					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx, *dumm); // DANGER
 				
 					// Get mobility (joint type)
 					const auto& bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
-					auto mobility = bond.getBondMobility();
+					auto mobility = bond.getBondMobility(whichWorld);
 	
 					mbx2mobility.insert(std::make_pair(mbx, mobility));
 				
-					//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
-					//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
-					//	<< " mobility " << mobility
-					//	<< std::endl;
+					std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
+						<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
+						<< " mobility " << mobility
+						<< std::endl;
 	
 				} // Parent is not Ground
 
@@ -393,7 +430,7 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 				std::cout << "Warning: unknown joint type" << std::endl;
 		}
 
-		// // Loop through body's Us
+		// Loop through body's Us
 		// for(int ui = 0; ui < mobodNU; ui++){
 		// 	SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
 		// 	std::cout << "H_FMCol= " << H_FMCol << std::endl;

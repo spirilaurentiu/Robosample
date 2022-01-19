@@ -76,7 +76,7 @@ public:
 		SimTK::CompoundSystem *argCompoundSystem,
 		SimTK::SimbodyMatterSubsystem *argMatter,
 		//SimTK::Compound *argResidue,
-		std::vector<Topology> &argTopologies,
+		std::vector<Topology> &argTopologies, 
 		SimTK::DuMMForceFieldSubsystem *argDumm,
 		SimTK::GeneralForceSubsystem *argForces,
 		SimTK::TimeStepper *argTimeStepper);

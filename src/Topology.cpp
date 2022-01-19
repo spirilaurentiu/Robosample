@@ -24,7 +24,7 @@ because we want to allow the valence to change during the simulation
 e.g. semi-grand canonical ensemble. **/
 Topology::~Topology(){
 	for(size_t i = 0; i < bAtomList.size(); i++){
-		  delete bAtomList[i].bAtomType;
+		delete bAtomList[i].bAtomType;
 	}
 }
 
@@ -371,17 +371,17 @@ void Topology::loadAtomAndBondInfoFromReader(readAmberInput *amberReader)
 }
 
 /** Print atom and bonds list with details**/
-void Topology::PrintAtomList()
+void Topology::PrintAtomList(int whichWorld)
 {
 	// Atoms
 	std::cout<<"Topology::PrintAtomList\n";
 	for(unsigned int i = 0; i < bAtomList.size(); i++){
-		bAtomList[i].Print();
+		bAtomList[i].Print(whichWorld);
 	}
 
 	// Bonds
 	for(unsigned int i = 0; i < bonds.size(); i++){
-		bonds[i].Print();
+		bonds[i].Print(whichWorld);
 	}
 }
 
@@ -390,11 +390,14 @@ force field specific parameters for an atom type. Gmolmodel defines a
 new Biotype for each atom. The only thing that is specified is the element
 with info about name, atomic number, valence and mass. **/
 void Topology::bAddBiotypes(
-	  std::string resName
-	, readAmberInput *amberReader
-	, SimTK::DuMMForceFieldSubsystem& dumm
+	  //std::string resName, 
+	readAmberInput *amberReader
+	//, SimTK::DuMMForceFieldSubsystem& dumm
 )
 {
+	// We don't have any residues. The whole molecule is one residue
+	std::string resName = this->name;
+
 	// Iterate through atoms and define Biotypes based on resname
 	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
@@ -423,7 +426,7 @@ void Topology::bAddBiotypes(
 /** It calls DuMMs defineAtomClass, defineChargedAtomTye and 
 setBiotypeChargedAtomType for every atom. These Molmodel functions contain 
 information regarding the force field parameters. **/
-void Topology::bAddAtomClasses(
+void Topology::bAddDummAtomClasses(
 				  std::string resName
 				, readAmberInput *amberReader
 				, SimTK::DuMMForceFieldSubsystem& dumm
@@ -517,7 +520,7 @@ const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& d
 }
 
 /** Calls DuMM defineBondStretch to define bonds parameters. **/
-void Topology::bAddBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
+void Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
 {
 	// function args were std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm
 
@@ -541,7 +544,7 @@ void Topology::bAddBondParams(std::string, readAmberInput *amberReader, SimTK::D
 }
 
 /** Calls DuMM defineBondBend to define angle parameters. **/
-void Topology::bAddAngleParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
+void Topology::bAddDummAngleParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
 {
 	// function args were std::string resName
 
@@ -558,7 +561,7 @@ void Topology::bAddAngleParams(std::string, readAmberInput *amberReader, SimTK::
 }
 
 /** Calls DuMM defineBondTorsion for 1, 2 and 3 periodicities **/
-void Topology::bAddTorsionParams(
+void Topology::bAddDummTorsionParams(
 	  std::string resName
 	, readAmberInput *amberReader
 	, SimTK::DuMMForceFieldSubsystem& dumm
@@ -619,7 +622,7 @@ void Topology::bAddTorsionParams(
 }
 
 /** Adds force field parameters read by the inputReader **/
-void Topology::bAddAllParams(
+void Topology::bAddDummParams(
 	readAmberInput *amberReader
 	, SimTK::DuMMForceFieldSubsystem& dumm
 )
@@ -628,13 +631,13 @@ void Topology::bAddAllParams(
 	std::string resName = this->name;
 
 	// Add types
-	bAddBiotypes(resName, amberReader, dumm); 
-	bAddAtomClasses(resName, amberReader, dumm);
+	//bAddBiotypes(resName, amberReader, dumm); 
+	bAddDummAtomClasses(resName, amberReader, dumm);
 
 	// Add parameters
-	bAddBondParams(resName, amberReader, dumm); 
-	bAddAngleParams(resName, amberReader, dumm); 
-	bAddTorsionParams(resName, amberReader, dumm); 
+	bAddDummBondParams(resName, amberReader, dumm); 
+	bAddDummAngleParams(resName, amberReader, dumm); 
+	bAddDummTorsionParams(resName, amberReader, dumm); 
 }
 
 bool Topology::checkIfTripleUnorderedAreEqual(
@@ -1117,6 +1120,8 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 						Compound::BondIndex(getNumBonds() - 1)
 				) );
 
+				//std::cout << "DEBUG inserted into GmolBond2bondIx bondIx2GmolBond  " << GmolBond2bondIx.size() << " " << bondIx2GmolBond.size() << std::endl << std::flush;
+
 				// Drop the number of available bonds
 				--previousNode->freebonds;
 				--node->freebonds;
@@ -1223,7 +1228,7 @@ void Topology::matchDefaultConfigurationWithAtomList(
 /** Builds the molecular tree, closes the rings, matches the configuration
 on the graph using using Molmodels matchDefaultConfiguration and sets the 
 general flexibility of the molecule. **/
-void Topology::buildGraphAndMatchCoords(SimTK::DuMMForceFieldSubsystem &dumm, int argRoot)
+void Topology::buildGraphAndMatchCoords(int argRoot)
 {
 	// Initialize all atoms and bonds to unvisited
 	for (int i = 0; i < natoms; i++) {
@@ -1318,21 +1323,22 @@ void Topology::setUScaleFactorsToBonds(std::string flexFN)
 
 
 /** Set regimen according to input file **/
-void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
+// Compound doesn't care about Worlds. We keep multiple Bond::Mobilities in bBond
+void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld){
 	
 	if(argRegimen == "IC"){
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
 			setBondMobility(BondMobility::Free, Compound::BondIndex(r));
-			bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+			bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].addBondMobility(
 					BondMobility::Free); //OLDMOB
 			/*setBondMobility(BondMobility::Translation, Compound::BondIndex(r));
-			bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+			bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].addBondMobility(
 					BondMobility::Translation); //NEWMOB*/
 		}
 	}else if(argRegimen == "TD") {
 		for (unsigned int r = 0; r < getNumBonds(); r++) {
 			setBondMobility(BondMobility::Torsion, Compound::BondIndex(r));
-			bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+			bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].addBondMobility(
 					BondMobility::Torsion);
 		}
 	}else if(argRegimen == "BA"){
@@ -1344,21 +1350,21 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 			if((std::string(bAtomList[ firstSpecificAtomIndex].getFftype()) == "CA") ||
 			   (std::string(bAtomList[secondSpecificAtomIndex].getFftype() )== "CA")){
 				setBondMobility(BondMobility::Torsion, Compound::BondIndex(r));
-				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].addBondMobility(
 						BondMobility::Torsion);
 			} else if( (bAtomList[ firstSpecificAtomIndex].getNBonds() < 3) ||
 				(bAtomList[secondSpecificAtomIndex].getNBonds() < 3)){
 				setBondMobility(BondMobility::Torsion, Compound::BondIndex(r));
-				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].addBondMobility(
 						BondMobility::Torsion);
 			}else{
 				setBondMobility(BondMobility::BallF, Compound::BondIndex(r));
-				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].addBondMobility(
 						BondMobility::BallF);
 			}
 
 			if(bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].isRingClosing()){
-				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].setBondMobility(
+				bonds[bondIx2GmolBond.at(Compound::BondIndex(r))].addBondMobility(
 						BondMobility::Rigid);
 			}
 
@@ -1372,7 +1378,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 			setBondMobility(BondMobility::Rigid, SimTK::Compound::BondIndex(r));
 		}
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
-			bonds[r].setBondMobility(BondMobility::Rigid); // TODO: Change to rigid
+			bonds[r].addBondMobility(BondMobility::Rigid); // TODO: Change to rigid
 		}
 
 		// Get flexible bonds from file. Numbering starts at 0 in prmtop
@@ -1380,11 +1386,12 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 		std::ifstream F(flexFN);
 
 		//printMaps();
-/*		std::cout << "GmolBond2bondIx " << GmolBond2bondIx.size() << std::endl;
-		std::cout << "GmolBond2bondIx:" << std::endl;
-		for(unsigned int i = 0; i < nbonds; i++){
-			std::cout << i << ' ' << GmolBond2bondIx.at(i) << std::endl;
-		}*/
+		//std::cout << "DEBUG GmolBond2bondIx " << std::endl << std::flush;
+		//std::cout << "GmolBond2bondIx size " << GmolBond2bondIx.size() << std::endl;
+		//std::cout << "GmolBond2bondIx:" << std::endl;
+		//for(unsigned int i = 0; i < nbonds; i++){
+		//	std::cout << i << ' ' << GmolBond2bondIx.at(i) << std::endl;
+		//}
 
 		while(F.good()){
 			std::getline(F, line);
@@ -1402,94 +1409,110 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN){
 				}
 				if(lineWords.size() >= 2 ){ // TODO: Check if it should be 3
 					for(int i = 0; i < nbonds; i++){
+
 						if(bonds[i].isThisMe(
 						    std::stoi(lineWords[0]), std::stoi(lineWords[1])) ){
+
+						    //std::cout << "DEBUG bond about to be set " << i << " ";
+
+
 						    if(lineWords.size() == 2) {
-						        bonds[i].setBondMobility(BondMobility::Torsion);
+						        bonds[i].setBondMobility(BondMobility::Torsion, whichWorld);
 						        setBondMobility(BondMobility::Torsion,
 						                        GmolBond2bondIx.at(i));
 						        break;
 						    }else{
+
+							//std::cout << " lineWords[2] " << lineWords[2] << " ";
+
 						        if(lineWords[2] == "Free"){
-						            bonds[i].setBondMobility(BondMobility::Free);
+						            bonds[i].setBondMobility(BondMobility::Free, whichWorld);
 						            setBondMobility(BondMobility::Free,
 						                            GmolBond2bondIx.at(i));
 						        }else if(lineWords[2] == "FreeLine") {
-						            bonds[i].setBondMobility(BondMobility::FreeLine);
+						            bonds[i].setBondMobility(BondMobility::FreeLine, whichWorld);
 						            setBondMobility(BondMobility::FreeLine,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "LineOrientationF") {
-						            bonds[i].setBondMobility(BondMobility::LineOrientationF);
+						            bonds[i].setBondMobility(BondMobility::LineOrientationF, whichWorld);
 						            setBondMobility(BondMobility::LineOrientationF,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "LineOrientationM") {
-						            bonds[i].setBondMobility(BondMobility::LineOrientationM);
+						            bonds[i].setBondMobility(BondMobility::LineOrientationM, whichWorld);
 						            setBondMobility(BondMobility::LineOrientationM,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if((lineWords[2] == "Translation") || (lineWords[2] == "Cartesian")) {
-						            bonds[i].setBondMobility(BondMobility::Translation);
+						            bonds[i].setBondMobility(BondMobility::Translation, whichWorld);
 						            setBondMobility(BondMobility::Translation,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if((lineWords[2] == "Pin") || (lineWords[2] == "Torsion")) {
-						            bonds[i].setBondMobility(BondMobility::Torsion);
+						            bonds[i].setBondMobility(BondMobility::Torsion, whichWorld);
 						            setBondMobility(BondMobility::Torsion,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "AnglePin") {
-						            bonds[i].setBondMobility(BondMobility::AnglePin);
+						            bonds[i].setBondMobility(BondMobility::AnglePin, whichWorld);
 						            setBondMobility(BondMobility::AnglePin,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "Slider") {
-						            bonds[i].setBondMobility(BondMobility::Slider);
+						            bonds[i].setBondMobility(BondMobility::Slider, whichWorld);
 						            setBondMobility(BondMobility::Slider,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "Cylinder") {
-						            bonds[i].setBondMobility(BondMobility::Cylinder);
+						            bonds[i].setBondMobility(BondMobility::Cylinder, whichWorld);
 						            setBondMobility(BondMobility::Cylinder,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "UniversalM") {
-						            bonds[i].setBondMobility(BondMobility::UniversalM);
+						            bonds[i].setBondMobility(BondMobility::UniversalM, whichWorld);
 						            setBondMobility(BondMobility::UniversalM,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "Spherical") {
-						            bonds[i].setBondMobility(BondMobility::Spherical);
+						            bonds[i].setBondMobility(BondMobility::Spherical, whichWorld);
 						            setBondMobility(BondMobility::Spherical,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "BallF") {
-						            bonds[i].setBondMobility(BondMobility::BallF);
+						            bonds[i].setBondMobility(BondMobility::BallF, whichWorld);
 						            setBondMobility(BondMobility::BallF,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if(lineWords[2] == "BallM") {
-						            bonds[i].setBondMobility(BondMobility::BallM);
+						            bonds[i].setBondMobility(BondMobility::BallM, whichWorld);
 						            setBondMobility(BondMobility::BallM,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }else if((lineWords[2] == "Rigid") || (lineWords[2] == "Weld")){
-						            bonds[i].setBondMobility(BondMobility::Rigid);
+						            bonds[i].setBondMobility(BondMobility::Rigid, whichWorld);
 						            setBondMobility(BondMobility::Rigid,
 						                            GmolBond2bondIx.at(i));
 						        }else{
-						            bonds[i].setBondMobility(BondMobility::Torsion);
+						            bonds[i].setBondMobility(BondMobility::Torsion, whichWorld);
 						            setBondMobility(BondMobility::Torsion,
 						                            GmolBond2bondIx.at(i));
 						            break;
 						        }
-						    }
-						}
-					}
-				}
-			}
-		}
+
+
+						    } // if nof words is different than 2
+
+						} // if bond found
+
+
+					} // end iterate bonds
+
+				} // if more than 2 words
+
+			} // if line not empty
+
+		} // end read file 
 
 /*		std::cout << "Assigned mobilities:" << std::endl;
 		for(unsigned int i = 0; i < nbonds; i++){
@@ -1581,6 +1604,15 @@ SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
 	return aIx2TopTransform[aIx];
 }
 
+// Return mbx by calling DuMM functions
+SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexThroughDumm(
+	SimTK::Compound::AtomIndex aIx,
+	SimTK::DuMMForceFieldSubsystem& dumm)
+{
+	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
+	return dumm.getAtomBody(dAIx);
+}
+
 // Retunr mbx from an olresdy saved map inside Topology
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
 	SimTK::Compound::AtomIndex aIx) 
@@ -1592,6 +1624,31 @@ SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
 		throw std::exception();
 		std::exit(1);
 	}
+}
+
+// Get atom location on mobod through DuMM functions
+SimTK::Vec3 Topology::getAtomLocationInMobilizedBodyFrameThroughDumm(
+	SimTK::Compound::AtomIndex aIx,
+	SimTK::DuMMForceFieldSubsystem& dumm)
+{
+	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
+	return dumm.getAtomStationOnBody(dAIx);
+}
+
+SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
+	SimTK::Compound::AtomIndex aIx,
+	SimTK::DuMMForceFieldSubsystem& dumm,
+	SimTK::SimbodyMatterSubsystem& matter,
+	const SimTK::State& someState)
+{
+	const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
+	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
+	const Transform& X_GB = mobod.getBodyTransform(someState);
+
+	SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
+
+	return X_GB.R() * station;
+
 }
 
 /** Print maps **/
@@ -1706,15 +1763,21 @@ void Topology::setCompoundIndex(const CompoundSystem::CompoundIndex &compoundInd
 /** Get the neighbor atom in the parent mobilized body.
 TODO: No chemical parent for satelite atoms or first atom. **/
 SimTK::Compound::AtomIndex
-Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx){
+Topology::getChemicalParent(
+	SimTK::SimbodyMatterSubsystem *matter,
+	SimTK::Compound::AtomIndex aIx,
+	SimTK::DuMMForceFieldSubsystem& dumm)
+{
 
 	SimTK::Compound::AtomIndex chemParentAIx;
 	int gmolAtomIndex = -111111;
 
-	if(getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
+	//if(getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin // SAFE
+	if(getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm) == 0){ // atom is at body's origin // DANGER
 	
 		// Get body, parentBody, parentAtom
-		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
+		//SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx); // SAFE
+		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm); // DANGER
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
@@ -1738,7 +1801,8 @@ Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compou
 						Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
 
 						// Check if neighbor atom's mobod is a parent mobod
-						if(getAtomMobilizedBodyIndex(candidateChemParentAIx) == parentMbx){
+						//if(getAtomMobilizedBodyIndex(candidateChemParentAIx) == parentMbx){ // SAFE
+						if(getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx){ // DANGER
 
 							if(!(*bondsInvolvedIter)->isRingClosing()){ // No ring atoms are allowed
 								chemParentAIx = candidateChemParentAIx;
@@ -1756,7 +1820,8 @@ Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compou
 		originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
 		for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
 			Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
-			if(getAtomLocationInMobilizedBodyFrame(candidateChemParentAIx) == 0){ // atom is at body's origin
+			//if(getAtomLocationInMobilizedBodyFrame(candidateChemParentAIx) == 0){ // atom is at body's origin // SAFE
+			if(getAtomLocationInMobilizedBodyFrameThroughDumm(candidateChemParentAIx, dumm) == 0){ // atom is at body's origin // DANGER
 				chemParentAIx = candidateChemParentAIx;
 				gmolAtomIndex = originSpecAtom->neighbors[k]->getNumber();
 				break;
@@ -1768,8 +1833,15 @@ Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compou
 }
 
 std::vector<SimTK::Transform>
-Topology::calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx, const SimTK::State& someState)
+Topology::calcMobodTransforms(
+	SimTK::SimbodyMatterSubsystem *matter,
+	SimTK::Compound::AtomIndex aIx,
+	const SimTK::State& someState,
+	SimTK::DuMMForceFieldSubsystem& dumm,
+	int whichWorld)
 {
+	std::cout << "DEBUG Entered Topology::calcMobodTransforms" << std::endl << std::flush;
+
 	// This function is only intended for root atoms!!
 	// There is no P_X_F and B_X_M inside a body.
 	assert(getAtomLocationInMobilizedBodyFrame(aIx) == 0);
@@ -1781,7 +1853,8 @@ Topology::calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, SimTK::Comp
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 	
 	// Get the neighbor atom in the parent mobilized body
-	SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx);
+	//SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx); // SAFE
+	SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx, dumm); // DANGER
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
@@ -1822,7 +1895,7 @@ Topology::calcMobodTransforms(SimTK::SimbodyMatterSubsystem *matter, SimTK::Comp
 	bSpecificAtom *atom = updAtomByAtomIx(aIx);
 	SimTK::BondMobility::Mobility mobility;
 	bBond bond = getBond(getNumber(aIx), getNumber(chemParentAIx));
-	mobility = bond.getBondMobility();
+	mobility = bond.getBondMobility(whichWorld);
 
 	bool pinORslider =
 		(mobility == SimTK::BondMobility::Mobility::Torsion)

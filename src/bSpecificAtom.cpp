@@ -39,12 +39,12 @@ void bSpecificAtom::Zero(){
     elem = '\0';
 }
 
-void bSpecificAtom::Print()
+void bSpecificAtom::Print(int whichWorld)
 {
     std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
         <<" number "<<number<<" atomIndex  "<<atomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
         <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
-        <<" atomClassIndex  "<<atomClassIndex<<" biotype (useless) "<< biotype << " biotypeIndex " << biotypeIndex 
+        <<" atomClassIndex  "<<atomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
         //<< " bAtomType "<< bAtomType 
         <<" charge "<<charge<<" mobile "<<mobile<<" visited "<<visited<<std::endl;
 
@@ -58,7 +58,7 @@ void bSpecificAtom::Print()
     std::cout << "Bonds Involved:" << std::endl;
     for(std::vector<bBond *>::iterator it = bondsInvolved.begin();
     it != bondsInvolved.end(); ++it){
-        (*it)->Print();
+        (*it)->Print(whichWorld);
     }
 
     // Residue info

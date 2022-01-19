@@ -239,19 +239,30 @@ int main(int argc, char **argv)
 
 	// Link the Compounds to Simbody System for all Worlds
 	// This calls CompoundSystem::modelOneCompound function
-	context.modelTopologies(setupReader.get("ROOT_MOBILITY"));
+	//context.modelTopologies(setupReader.get("ROOT_MOBILITY")); // SAFE
 
+	// SAFE ZONE
+	// Add Fixman torque (Additional ForceSubsystem) if required
+	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	//	if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
+	//		context.addFixmanTorque(worldIx);
+	//	}
+	//}
+	// ZONE
 
+	// Realize topology for all the Worlds
+	//context.realizeTopology(); // SAFE
+	context.allocateReblockQsCacheQVectors();
+
+	// DANGER ZONE
 	// Add Fixman torque (Additional ForceSubsystem) if required
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
 			context.addFixmanTorque(worldIx);
 		}
 	}
-
-	// Realize topology for all the Worlds
 	context.realizeTopology();
-	context.allocateReblockQsCacheQVectors();
+	// ZONE
 
 	// Add samplers to the worlds
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
@@ -435,6 +446,10 @@ int main(int argc, char **argv)
 	// - Write
 	constexpr int mc_step = -1;
 	if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
+
+		// Pass compounds to the new world
+		context.passTopologiesToNewWorld(currentWorldIx);
+
 		(context.updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
 		std::cout << "Writing pdb  sb" << mc_step << ".pdb" << std::endl;
 		for(unsigned int mol_i = 0; mol_i < setupReader.get("MOLECULES").size(); mol_i++){
@@ -486,15 +501,42 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
+	// SAFE ZONE
+	// Load/store Mobilized bodies joint types
+	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	//	for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
+	//		SimTK::State& curAvancedState = (context.updWorld(worldIx))->integ->updAdvancedState();
+	//		std::cout << "Loading mbx2mobility" << std::endl;
+	//
+	//		// Pass compounds to the new world
+	//		context.passTopologiesToNewWorld(worldIx);
+	//
+	//		//(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(curAvancedState); // SAFE
+	//		(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(); // DANGER
+	//	}
+	//}
+	// ZONE
+	// DANGER ZONE
+	
+	// Check atom stations through DuMM
+	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
+			(context.updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
+		}
+	}
+	
 	// Load/store Mobilized bodies joint types
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-			SimTK::State& curAvancedState = (context.updWorld(worldIx))->integ->updAdvancedState();
 			std::cout << "Loading mbx2mobility" << std::endl;
-			(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(curAvancedState);
+	
+			// Pass compounds to the new world
+			context.passTopologiesToNewWorld(worldIx);
+	
+			(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(worldIx); // DANGER
 		}
 	}
-
+	// ZONE
 
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
