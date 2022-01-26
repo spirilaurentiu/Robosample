@@ -223,6 +223,13 @@ int main(int argc, char **argv)
 
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
+	// DANGER ZONE
+	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+		(context.updWorld(worldIx))->loadCompoundRelatedMaps();
+		(context.updWorld(worldIx))->loadMobodsRelatedMaps();
+	}
+	// ZONE
+
 	// Add membrane
 	/*
 	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
@@ -451,7 +458,7 @@ int main(int argc, char **argv)
 		context.passTopologiesToNewWorld(currentWorldIx);
 
 		(context.updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
-		std::cout << "Writing pdb  sb" << mc_step << ".pdb" << std::endl;
+		std::cout << "Writing pdb initial" << mc_step << ".pdb" << std::endl;
 		for(unsigned int mol_i = 0; mol_i < setupReader.get("MOLECULES").size(); mol_i++){
 			((context.updWorld(currentWorldIx))->getTopology(mol_i)).writeAtomListPdb(context.getOutputDir(),
 			"/pdbs/sb." + context.getPdbPrefix() + ".", ".pdb", 10, mc_step);
@@ -472,10 +479,12 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		(context.updWorld(worldIx))->loadCompoundRelatedMaps();
-		(context.updWorld(worldIx))->loadMobodsRelatedMaps();
-	}
+	// SAFE ZONE
+	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	//	(context.updWorld(worldIx))->loadCompoundRelatedMaps();
+	//	(context.updWorld(worldIx))->loadMobodsRelatedMaps();
+	//}
+	// ZONE
 
 	// Membrane contacts. TODO: only one per world for now
 	/*
@@ -519,6 +528,13 @@ int main(int argc, char **argv)
 	// DANGER ZONE
 	
 	// Check atom stations through DuMM
+	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
+			(context.updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
+		}
+	}
+	
+	// Check atom stations through Simbody
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			(context.updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();

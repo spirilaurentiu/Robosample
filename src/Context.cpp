@@ -954,7 +954,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
 
 					// Pass compounds to the new world
-					passTopologiesToNewWorld(currentWorldIx);
+					//passTopologiesToNewWorld(currentWorldIx);
 
 					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
 							currentAdvancedState, otherWorldsAtomsLocations);
@@ -1077,6 +1077,17 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 		topologies[molIx].setMultibodySystem( 
 			*((updWorld(newWorldIx))->compoundSystem) );
 
+		// Reset mobilized body indeces in Compound
+		//for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
+		//	SimTK::Compound::AtomIndex aIx = 
+		//		(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
+		//	//SimTK::MobilizedBodyIndex mbx = 
+		//	//	worlds[newWorldIx].getMobilizedBodyIndex(aIx);
+		//	SimTK::MobilizedBodyIndex mbx = 
+		//		worlds[newWorldIx].getAtomMobilizedBodyIndexFromMap(aIx, newWorldIx);
+		//	topologies[molIx].setAtomMobilizedBodyIndex(aIx, mbx);
+		//}
+
 		// TODO Restante DANGER
         	//c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
 	}
@@ -1136,6 +1147,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 					std::vector<std::vector<std::pair<
 						bSpecificAtom *, SimTK::Vec3> > >
 						otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
+
+					std::cout << "Transfer from world " << lastWorldIx
+						<< " to " << currentWorldIx << std::endl;
 
 					// Pass compounds to the new world
 					passTopologiesToNewWorld(currentWorldIx);
@@ -1268,9 +1282,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				std::vector<std::vector<std::pair<
 					bSpecificAtom *, SimTK::Vec3> > >
 					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
-
+		
 					// Pass compounds to the new world
-					passTopologiesToNewWorld(currentWorldIx);
+					//passTopologiesToNewWorld(currentWorldIx);
 
 					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
 							currentAdvancedState, otherWorldsAtomsLocations);

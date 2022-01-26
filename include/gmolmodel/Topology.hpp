@@ -189,17 +189,18 @@ public:
 	SimTK::Compound::AtomIndex
 	getChemicalParent(
 		SimTK::SimbodyMatterSubsystem *matter,
+		//std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter,
 		SimTK::Compound::AtomIndex aIx,
 		SimTK::DuMMForceFieldSubsystem& dumm);
 
 	/**  **/
-	std::vector<SimTK::Transform>
-	calcMobodTransforms(
-		SimTK::SimbodyMatterSubsystem *matter,
-		SimTK::Compound::AtomIndex aIx,
-		const SimTK::State& someState,
-		SimTK::DuMMForceFieldSubsystem& dumm,
-		int whichWorld);
+	//std::vector<SimTK::Transform>
+	//calcMobodToMobodTransforms(
+	//	SimTK::SimbodyMatterSubsystem *matter,
+	//	SimTK::Compound::AtomIndex aIx,
+	//	const SimTK::State& someState,
+	//	SimTK::DuMMForceFieldSubsystem& dumm,
+	//	int whichWorld);
 
 	/** Calculate all atom frames in top frame. It avoids calling 
 	calcDefaultAtomFrameInCompoundFrame multiple times. This has 
@@ -220,10 +221,18 @@ public:
 
 	// Interface to access the maps
 	/** Get MobilizedBody to AtomIndex map **/
-	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
-	getMbx2aIx(){
-		return mbx2aIx;
-	}
+	//std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
+	//getMbx2aIx(){
+	//	return mbx2aIx;
+	//}
+
+	// Alternatives
+	SimTK::Transform& 
+		calcDefaultAtomFrameInCompoundFrameThroughDuMM(
+		SimTK::Compound::AtomIndex aIx,
+		SimTK::DuMMForceFieldSubsystem& dumm,
+		SimTK::SimbodyMatterSubsystem& matter,
+		const SimTK::State& someState);
 
 	// Retunr mbx by calling DuMM functions
 	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexThroughDumm(
@@ -252,11 +261,6 @@ public:
 		return aIx2mbx;
 	}
 
-	/** Get the number of MobilizedBodies in this Compound **/
-	std::size_t getNofMobilizedBodies() const {
-		return mbx2aIx.size();
-	}
-
 	void writeAtomListPdb(std::string dirname,
 			              std::string prefix,
 			              std::string sufix,
@@ -265,7 +269,8 @@ public:
 
 	/** To be removed. *Create MobilizedBodyIndex vs Compound::AtomIndex
 	 * maps. **/
-	void loadMobodsRelatedMaps();
+	void loadAIx2MbxMap();
+	//void loadMbx2AIxMap();
 
         /** Compound AtomIndex to bAtomList number **/
 	void loadCompoundAtomIx2GmolAtomIx(void);
@@ -296,7 +301,7 @@ public:
 	std::vector< std::vector<Compound::AtomIndex> > triples;
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
-	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
+	//std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
 
 	// Map aIx is redundant in MobilizedBodyIndeces
 	std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex > aIx2mbx;

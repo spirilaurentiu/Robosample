@@ -1526,36 +1526,45 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 }
 
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
-void Topology::loadMobodsRelatedMaps(){
+void Topology::loadAIx2MbxMap(){
 
 	// Iterate through atoms and get their MobilizedBodyIndeces
-	//for (SimTK::Compound::AtomIndex aIx(bAtomList[0].atomIdex); aIx < getNumAtoms(); ++aIx){
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		
+		// Get atomIndex from atomList
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
 
-
-		// Map mbx2aIx contains only atoms at the origin of mobods
+		// Get MobilizedBodyIndex from CompoundAtom
 		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
 
-		//std::cout << "Topology::loadMobodsRelatedMaps atom_number atomIndex mbx loc "
-		 //   << i << " " << (bAtomList[i]).atomIndex << " " << mbx
-		 //   << " " << getAtomLocationInMobilizedBodyFrame(aIx) << std::endl;
-
-		//std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
-		//        pairToBeInserted(mbx, aIx);
-		if (getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
-			mbx2aIx.insert(
-				std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex>
-				(mbx, aIx));
-		}
-
-		// Map aIx is redundant in MobilizedBodyIndeces
+		// Insert
 		aIx2mbx.insert(
 				std::pair<SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex>
 				(aIx, mbx));
 	}
-
 }
+
+//void Topology::loadMbx2AIxMap(){
+//	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+//		
+//		// Get atomIndex from atomList
+//		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+//
+//		// Get MobilizedBodyIndex from CompoundAtom
+//		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
+//
+//		// Map mbx2aIx contains only atoms at the origin of mobods
+//		//std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
+//		//        pairToBeInserted(mbx, aIx);
+//		if (getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
+//			mbx2aIx.insert(
+//				std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex>
+//				(mbx, aIx));
+//		}
+//
+//	}
+//
+//}
 
 
 /** Compound AtomIndex to bAtomList number **/
@@ -1604,6 +1613,30 @@ SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
 	return aIx2TopTransform[aIx];
 }
 
+SimTK::Transform& Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
+	SimTK::Compound::AtomIndex aIx,
+	SimTK::DuMMForceFieldSubsystem& dumm,
+	SimTK::SimbodyMatterSubsystem& matter,
+	const SimTK::State& someState)
+{
+	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
+	const  SimTK::MobilizedBodyIndex mbx = dumm.getAtomBody(dAIx);
+	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
+
+	// Body transforms
+	const Transform&    X_GB = mobod.getBodyTransform(someState);
+	const Rotation&     R_GB = X_GB.R();
+	const Vec3&         p_GB = X_GB.p();
+
+	// Atom
+	SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
+
+	// return
+	//const Vec3 p_BS_G = R_GB * station;
+	//return X;
+	
+}
+
 // Return mbx by calling DuMM functions
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexThroughDumm(
 	SimTK::Compound::AtomIndex aIx,
@@ -1611,19 +1644,6 @@ SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexThroughDumm(
 {
 	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
 	return dumm.getAtomBody(dAIx);
-}
-
-// Retunr mbx from an olresdy saved map inside Topology
-SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
-	SimTK::Compound::AtomIndex aIx) 
-{
-	if(!aIx2mbx.empty()){
-		return aIx2mbx[aIx];
-	}else{
-		std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx not yet loaded.\n";
-		throw std::exception();
-		std::exit(1);
-	}
 }
 
 // Get atom location on mobod through DuMM functions
@@ -1643,17 +1663,35 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 {
 	const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
 	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
-	const Transform& X_GB = mobod.getBodyTransform(someState);
+
+	const Transform&    X_GB = mobod.getBodyTransform(someState);
+	const Rotation&     R_GB = X_GB.R();
+	const Vec3&         p_GB = X_GB.p();
 
 	SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
 
-	return X_GB.R() * station;
+	const Vec3 p_BS_G = R_GB * station;
+	return p_GB + p_BS_G;
 
+}
+
+// Retunr mbx from an olresdy saved map inside Topology
+SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
+	SimTK::Compound::AtomIndex aIx) 
+{
+	if(!aIx2mbx.empty()){
+		return aIx2mbx[aIx];
+	}else{
+		std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx not yet loaded.\n";
+		throw std::exception();
+		std::exit(1);
+	}
 }
 
 /** Print maps **/
 void Topology::printMaps()
 {
+/*
 	std::cout << "Topology " << name << " maps " << std::endl;
 	std::cout << "mbx2aIx:" << std::endl;
 	map<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex>::const_iterator mbx2aIxIt;
@@ -1687,7 +1725,7 @@ void Topology::printMaps()
 		std::cout << "bBond index " << GmolBond2bondIxIt->first
 			<< " Compound index " << GmolBond2bondIxIt->second << std::endl;
 	}
-
+*/
 }
 
 /** Write a pdb with bAtomList coordinates and inNames **/
@@ -1765,6 +1803,7 @@ TODO: No chemical parent for satelite atoms or first atom. **/
 SimTK::Compound::AtomIndex
 Topology::getChemicalParent(
 	SimTK::SimbodyMatterSubsystem *matter,
+	//std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter,
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
@@ -1832,17 +1871,16 @@ Topology::getChemicalParent(
 	return chemParentAIx;
 }
 
+// This function is only intended for root atoms!!
+/*
 std::vector<SimTK::Transform>
-Topology::calcMobodTransforms(
+Topology::calcMobodToMobodTransforms(
 	SimTK::SimbodyMatterSubsystem *matter,
 	SimTK::Compound::AtomIndex aIx,
 	const SimTK::State& someState,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	int whichWorld)
 {
-	std::cout << "DEBUG Entered Topology::calcMobodTransforms" << std::endl << std::flush;
-
-	// This function is only intended for root atoms!!
 	// There is no P_X_F and B_X_M inside a body.
 	assert(getAtomLocationInMobilizedBodyFrame(aIx) == 0);
 
@@ -1934,6 +1972,6 @@ Topology::calcMobodTransforms(
 	//Transform oldX_FM = InboardDihedral_ZAxis;
 	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
 }
-
+*/
 
 

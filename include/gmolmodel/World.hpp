@@ -124,12 +124,34 @@ public:
 
 	void loadCompoundRelatedMaps();
 
+	void loadMbx2AIxMap();
+
+	// These are no longer needed TODO: delete
+	/** Get MobilizedBody to AtomIndex map **/
+	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
+	getMbx2aIx();
+
+	/** Get the number of MobilizedBodies in this Compound **/
+	std::size_t getNofMobilizedBodies() const ;
+
+	//
 	void loadMobodsRelatedMaps();
+
+	/** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
+	 * maps **/
+	void printMaps();
+
 	//...............
 
 	// --- Mixing functions: Pass configurations among Worlds
 	/** Get the current Compound Cartesian coords **/
 	std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >  getAtomsLocationsInGround(const SimTK::State&);
+
+	// Helper for setAtoms Locations This function is only intended for root atoms!!
+	std::vector<SimTK::Transform>calcMobodToMobodTransforms(
+		Topology topology,
+		SimTK::Compound::AtomIndex aIx,
+		const SimTK::State& someState);
 
 	/** Set Compound, MultibodySystem and DuMM configurations according to
 	some other World's atoms **/
@@ -344,6 +366,9 @@ public:
 
 private:
 	
+	// Map mbx2aIx contains only atoms at the origin of mobods
+	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx; // DANGER
+
 	// Maps a generalized velocity scale factor for every mobod
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Real > mbx2uScale;
 
