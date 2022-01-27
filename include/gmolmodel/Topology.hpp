@@ -241,7 +241,8 @@ public:
 
 	// Retunr mbx from an olresdy saved map inside Topology
 	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexFromMap(
-		SimTK::Compound::AtomIndex aIx);
+		SimTK::Compound::AtomIndex aIx,
+		int whichWorld);
 
 	// Get atom location on mobod through DuMM functions
 	SimTK::Vec3 getAtomLocationInMobilizedBodyFrameThroughDumm(
@@ -256,7 +257,7 @@ public:
 		const SimTK::State& someState);
 
 	/** Get AtomIndex to MobilizedBodyIndex map **/
-	std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex >
+	std::map< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> >
 	getAIx2mbx(){
 		return aIx2mbx;
 	}
@@ -304,7 +305,7 @@ public:
 	//std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
 
 	// Map aIx is redundant in MobilizedBodyIndeces
-	std::map< SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex > aIx2mbx;
+	std::map< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> > aIx2mbx;
 
 	// Map aIx to its Transform Default top transform
 	std::map< SimTK::Compound::AtomIndex, SimTK::Transform > aIx2TopTransform;

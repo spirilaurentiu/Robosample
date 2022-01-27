@@ -375,8 +375,8 @@ void World::setUScaleFactorsToMobods(void)
 			SimTK::Compound::AtomIndex aIx1 = topology.bAtomList[Bond.i].getCompoundAtomIndex();
 			SimTK::Compound::AtomIndex aIx2 = topology.bAtomList[Bond.j].getCompoundAtomIndex();
 
-			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1);
-			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2);
+			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1, ownWorldIndex);
+			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2, ownWorldIndex);
 
 			std::cout << "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 " << aIx1 << " " << aIx2 << " " << mbx1 << " " << mbx2 << std::endl;
 
@@ -881,7 +881,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 		std::pair<bSpecificAtom *, SimTK::Vec3> > > otherWorldsAtomsLocations)
 {
 
-	std::cout << "AU1 " << "\n" << std::flush;
 	std::cout << "otherWorldsAtomsLocations[0]" << std::endl;
 	for(std::size_t j = 0; j < otherWorldsAtomsLocations[0].size(); j++){
 		auto compoundAtomIndex = otherWorldsAtomsLocations[0][j].first->getCompoundAtomIndex();
@@ -1045,7 +1044,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 					forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
 			} /////////////////////////
 
-
 			/////////////////
 			// 3. SIMBODY MATTER 
 			//---------------
@@ -1079,12 +1077,15 @@ SimTK::State& World::setAtomsLocationsInGround(
 						//		*forceField,	// DANGER
 						//		ownWorldIndex);	// DANGER
 
+						std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
+
 						std::vector<SimTK::Transform> mobodTs = // DANGER
 							calcMobodToMobodTransforms( // DANGER
 								(*topologies)[i],	// DANGER
 								aIx,		// DANGER
 								someState);	// DANGER
 
+						std::cout << "calcMobodTransforms for atom " << aIx << " done\n" << std::flush;
 
 						mobod.setDefaultInboardFrame(mobodTs[0]);
 						mobod.setDefaultOutboardFrame(mobodTs[1]);
@@ -1096,7 +1097,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 					}
 				} // END atom is at body's origin
 			} // END loop through atoms
-
 
 			/////////////////
 			// 3. SIMBODY MATTER 
@@ -1114,7 +1114,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 			this->compoundSystem->realizeTopology();
 			someState = compoundSystem->updDefaultState();
-
 
 		} // END TD regimen and all regimens
 
@@ -1151,11 +1150,12 @@ SimTK::State& World::setAtomsLocationsInGround(
 // This function is only intended for root atoms!!
 std::vector<SimTK::Transform>
 World::calcMobodToMobodTransforms(
-	Topology topology,
+	Topology& topology,
 	SimTK::Compound::AtomIndex aIx,
 	const SimTK::State& someState)
 {
 
+	std::cout << "AU1 " << "\n" << std::flush;
 
 	// There is no P_X_F and B_X_M inside a body.
 	assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
@@ -1211,6 +1211,7 @@ World::calcMobodToMobodTransforms(
 	bBond bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
+	std::cout << "AUnarrow " << "\n" << std::flush;
 	bool pinORslider =
 		(mobility == SimTK::BondMobility::Mobility::Torsion)
 		|| (mobility == SimTK::BondMobility::Mobility::AnglePin)
@@ -1218,10 +1219,12 @@ World::calcMobodToMobodTransforms(
 
 	if( (pinORslider) && ((atom->neighbors).size() == 1)){
 
+	std::cout << "AUnarrow 1" << "\n" << std::flush;
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
 	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
 
+	std::cout << "AUnarrow 2" << "\n" << std::flush;
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
@@ -1229,11 +1232,11 @@ World::calcMobodToMobodTransforms(
 	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
 	){
 
+	std::cout << "AUnarrow 3" << "\n" << std::flush;
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else{
-
-		std::cout << "Warning: unknown mobility." << std::endl;
+		std::cout << "Warning: unknown mobility." << std::endl << std::flush;
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
 

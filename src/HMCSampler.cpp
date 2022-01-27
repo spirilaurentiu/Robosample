@@ -2173,7 +2173,8 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 	ke_n = this->unboostFactor * matter->calcKineticEnergy(someState);
 
 	// Get new potential energy
-	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	//pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL // DANGER
 	// TODO: replace with the following after checking is the same thing
 	//pe_n = compoundSystem->calcPotentialEnergy(someState);
 

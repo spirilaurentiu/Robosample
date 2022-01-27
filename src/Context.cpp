@@ -456,8 +456,13 @@ void Context::AddMolecules(
 			modelOneEmbeddedTopology(molIx, worldIx, argRootMobilities[worldIx]);
 			(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 
+			topologies[molIx].loadAIx2MbxMap();
+			(updWorld(worldIx))->loadMbx2AIxMap();
+
 
 		}
+		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
+		topologies[molIx].printMaps();
 
 		// TODO: where is this supposed to be? // from world
 		//Xs.resize(Xs.size() + topologies[molIx].getNAtoms()); // from world
@@ -1078,15 +1083,15 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 			*((updWorld(newWorldIx))->compoundSystem) );
 
 		// Reset mobilized body indeces in Compound
-		//for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
-		//	SimTK::Compound::AtomIndex aIx = 
-		//		(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
+		for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
+			SimTK::Compound::AtomIndex aIx = 
+				(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
 		//	//SimTK::MobilizedBodyIndex mbx = 
 		//	//	worlds[newWorldIx].getMobilizedBodyIndex(aIx);
-		//	SimTK::MobilizedBodyIndex mbx = 
-		//		worlds[newWorldIx].getAtomMobilizedBodyIndexFromMap(aIx, newWorldIx);
-		//	topologies[molIx].setAtomMobilizedBodyIndex(aIx, mbx);
-		//}
+			SimTK::MobilizedBodyIndex mbx = 
+				topologies[molIx].getAtomMobilizedBodyIndexFromMap(aIx, newWorldIx);
+			topologies[molIx].setAtomMobilizedBodyIndex(aIx, mbx);
+		}
 
 		// TODO Restante DANGER
         	//c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
@@ -1168,9 +1173,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				}
 
 				// Set old potential energy of the new world via OpenMM
-				auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
+				//auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
+				auto OldPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
 				pHMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(OldPE);
-				//updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState));
 
 				std::cout << "World " << currentWorldIx << ", NU " << currentAdvancedState.getNU() << ":\n";
 

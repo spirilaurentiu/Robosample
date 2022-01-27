@@ -226,7 +226,7 @@ int main(int argc, char **argv)
 	// DANGER ZONE
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 		(context.updWorld(worldIx))->loadCompoundRelatedMaps();
-		(context.updWorld(worldIx))->loadMobodsRelatedMaps();
+		//(context.updWorld(worldIx))->loadMobodsRelatedMaps();
 	}
 	// ZONE
 

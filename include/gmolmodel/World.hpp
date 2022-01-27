@@ -149,7 +149,7 @@ public:
 
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(
-		Topology topology,
+		Topology& topology,
 		SimTK::Compound::AtomIndex aIx,
 		const SimTK::State& someState);
 

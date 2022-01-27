@@ -1527,6 +1527,23 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 void Topology::loadAIx2MbxMap(){
+	
+	// If the map is empty fill with empty vectors first
+	if(aIx2mbx.empty()){
+		// Iterate through atoms and get their MobilizedBodyIndeces
+		for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+			
+			// Get atomIndex from atomList
+			SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+	
+			// Insert
+			aIx2mbx.insert(
+				std::pair< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> >
+					(aIx, std::vector<SimTK::MobilizedBodyIndex>())
+			);
+		}
+		
+	}
 
 	// Iterate through atoms and get their MobilizedBodyIndeces
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
@@ -1538,10 +1555,13 @@ void Topology::loadAIx2MbxMap(){
 		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
 
 		// Insert
-		aIx2mbx.insert(
-				std::pair<SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex>
-				(aIx, mbx));
+		//aIx2mbx.insert(
+		//		std::pair<SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex>
+		//		(aIx, mbx));
+		aIx2mbx[aIx].emplace_back(mbx);
 	}
+
+
 }
 
 //void Topology::loadMbx2AIxMap(){
@@ -1677,10 +1697,17 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 
 // Retunr mbx from an olresdy saved map inside Topology
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
-	SimTK::Compound::AtomIndex aIx) 
+	SimTK::Compound::AtomIndex aIx, int whichWorld) 
 {
 	if(!aIx2mbx.empty()){
-		return aIx2mbx[aIx];
+		if(!((aIx2mbx[aIx]).empty())){
+			return (aIx2mbx[aIx])[whichWorld];
+		}else{
+			std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx for "
+				<< aIx <<  "atom not yet loaded.\n";
+			throw std::exception();
+			std::exit(1);
+		}
 	}else{
 		std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx not yet loaded.\n";
 		throw std::exception();
@@ -1701,15 +1728,29 @@ void Topology::printMaps()
 		std::cout << "mbx " << mbx2aIxIt->first
 			<< " atomIndex " << mbx2aIxIt->second << std::endl;
 	}
-	std::cout << "aIx2mbx:" << std::endl;
-	map<SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex>::const_iterator aIx2mbxIt;
+*/
+	std::cout << "Topology map aIx2mbx:" << std::endl;
+	map<SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex>>::const_iterator aIx2mbxIt;
 	for(aIx2mbxIt = aIx2mbx.begin();
 	   aIx2mbxIt != aIx2mbx.end(); ++aIx2mbxIt)
 	{
-		std::cout << "atomIndex " << aIx2mbxIt->first
-			<< " mbx " << aIx2mbxIt->second << std::endl;
+		std::cout << "atomIndex " << aIx2mbxIt->first << " mbxs:";
+		for (auto val : (aIx2mbxIt->second)){
+			std::cout << " " << val ;
+		}
+		std::cout << std::endl << std::flush;
 	}
 
+	std::cout << "Topology map CompoundAtomIx2GmolAtomIx:" << std::endl;
+	std::map< SimTK::Compound::AtomIndex, int >::const_iterator aIx2gmolaIxIt;
+	for(aIx2gmolaIxIt = CompoundAtomIx2GmolAtomIx.begin();
+	   aIx2gmolaIxIt != CompoundAtomIx2GmolAtomIx.end(); ++aIx2gmolaIxIt)
+	{
+		std::cout << "atomIndex " << aIx2gmolaIxIt->first
+			<< " gmolaIx " << aIx2gmolaIxIt->second
+			<< std::endl << std::flush;
+	}
+/*
 	map<SimTK::Compound::BondIndex, int>::const_iterator bondIx2GmolBondIt;
 	for(bondIx2GmolBondIt = bondIx2GmolBond.begin();
 	   bondIx2GmolBondIt != bondIx2GmolBond.end(); ++bondIx2GmolBondIt)
