@@ -75,7 +75,7 @@ bBond::bBond(void) : intpair(){
   _isFirst = false;
   visited = 0;
   bondIndex = SimTK::Compound::BondIndex(99999999);
-  uScaleFactor = 1.0;
+  uScaleFactors = std::vector<float>(1, 1.0);
 }
 
 bBond::bBond(int a, int b) : intpair(a, b){
@@ -87,7 +87,7 @@ bBond::bBond(int a, int b) : intpair(a, b){
   _isFirst = false;
   visited = 0;
   bondIndex = SimTK::Compound::BondIndex(99999999);
-  uScaleFactor = 1.0;
+  uScaleFactors = std::vector<float>(1, 1.0);
 }
 
 bBond::~bBond(void){;}
@@ -134,6 +134,26 @@ void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which
     mobilities[which] = argmobility;
 }
 
+float bBond::getUScaleFactor(int which) const
+{
+	return uScaleFactors[which];
+}
+
+void bBond::addUScaleFactor(float argUScaleFactor)
+{
+	uScaleFactors.emplace_back(argUScaleFactor);
+}
+
+void bBond::setUScaleFactor(int which, float argUScaleFactor)
+{
+	uScaleFactors[which] = argUScaleFactor;
+}
+
+void bBond::updUScaleFactor(int which, float argUScaleFactor)
+{
+	uScaleFactors[which] = argUScaleFactor;
+}
+
 
 int bBond::ringNo(void){
   return this->ring_no;
@@ -170,7 +190,7 @@ void bBond::Print(int whichWorld)
         << " inring " << inring << " ring_no " << ring_no
         << " ring_closing " << ring_closing 
         << " visited " << visited 
-        << " uScaleFactor " << uScaleFactor
+        << " uScaleFactor[0] " << uScaleFactors[0]
 	<< std::endl;
 }
 
@@ -223,21 +243,6 @@ void bBond::setIndex(int someOtherIndex)
 int bBond::getIndex(void)
 {
     return myindex;
-}
-
-float bBond::getUScaleFactor(void) const
-{
-	return uScaleFactor;
-}
-
-void bBond::setUScaleFactor(float argUScaleFactor)
-{
-	uScaleFactor = argUScaleFactor;
-}
-
-void bBond::updUScaleFactor(float argUScaleFactor)
-{
-	uScaleFactor = argUScaleFactor;
 }
 
 

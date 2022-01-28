@@ -97,7 +97,6 @@ int main(int argc, char **argv)
 		setupReader.get("OUTPUT_DIR")[0],
 		std::stoi(setupReader.get("SEED")[0]));
 
-
 	// Instantiate a context object
 	Context context(setupReader, logFilename);
 	
@@ -117,7 +116,6 @@ int main(int argc, char **argv)
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
 	//  ParaMolecularDecorator
-	// TODO Move visualizer frequencies in Context in ValidateInput
 
 	// Deal with visualizer. 
 	std::vector<double> visualizerFrequencies;
@@ -163,50 +161,8 @@ int main(int argc, char **argv)
 	// Set Lennard-Jones mixing rule
 	context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
-	// Add filenames to Context filenames vectors
-	// This has to be called before Worlds constructors so that
-	// reserve will be called for molecules and topologies
-	//int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
-
-//	for(int molIx = 0; molIx < requestedNofMols; molIx++){
-//		std::string topFN = 
-//			setupReader.get("MOLECULES")[molIx] + std::string("/")
-//			+ setupReader.get("PRMTOP")[molIx];
-//
-//		std::string crdFN = 
-//			setupReader.get("MOLECULES")[molIx] + std::string("/")
-//			+ setupReader.get("INPCRD")[molIx];
-//
-//		context.loadTopologyFile( topFN );
-//
-//		context.loadCoordinatesFile( crdFN );
-//	}
-	// Set top and crd FNs in Topology
-
-	// Flexibility files 
-//	for(int molIx = 0; molIx < requestedNofMols; molIx++){
-//		for(int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-//			context.loadRigidBodiesSpecs( worldIx, molIx,
-//				setupReader.get("MOLECULES")[molIx] + std::string("/")
-//				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
-//			);
-//
-//			context.loadFlexibleBondsSpecs( worldIx, molIx,
-//				setupReader.get("MOLECULES")[molIx] + std::string("/")
-//				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
-//			);
-//
-//			context.setRegimen( worldIx, molIx,
-//				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
-//		}
-//	}
-
-	// Add molecules to Worlds based on just read filenames
-	context.AddMolecules(
-		requestedNofMols,
-		setupReader,
-		setupReader.get("ROOTS"),
-		setupReader.get("ROOT_MOBILITY"));
+	// Add molecules based on the setup reader
+	context.AddMolecules(requestedNofMols, setupReader);
 
 	int finalNofMols = context.getNofMolecules();
 	if(requestedNofMols != finalNofMols){
@@ -214,15 +170,12 @@ int main(int argc, char **argv)
 		throw std::exception();
 		std::exit(1);
 	}
-
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
-	// DANGER ZONE
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		//(context.updWorld(worldIx))->loadCompoundRelatedMaps();
-		//(context.updWorld(worldIx))->loadMobodsRelatedMaps();
-	}
-	// ZONE
+	// Loads parameters into DuMM, adopts compound by the CompoundSystem
+	// and loads maps of indexes
+	context.initializeWorlds(finalNofMols, setupReader);
+
 
 	// Add membrane
 	/*

@@ -53,7 +53,7 @@ class bBond : public intpair{
 	SimTK::Compound::BondIndex bondIndex;
 	bool _isFirst;
 	int myindex;
-	float uScaleFactor;
+	std::vector<float> uScaleFactors;
 
  public:
 	bBond();
@@ -92,9 +92,10 @@ class bBond : public intpair{
 	void setVisited(int);
 	int isVisited();
 
-	float getUScaleFactor(void) const;
-	void setUScaleFactor(float);
-	void updUScaleFactor(float);
+	float getUScaleFactor(int) const;
+	void addUScaleFactor(float);
+	void setUScaleFactor(int, float);
+	void updUScaleFactor(int, float);
 
 };
 

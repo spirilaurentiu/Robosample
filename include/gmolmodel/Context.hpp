@@ -34,9 +34,18 @@ public:
 	/** Load molecules based on loaded filenames **/
 	void AddMolecules(
 		int requestedNofMols,
-		SetupReader& setupReader,
-		std::vector<std::string> argRoots,
-		std::vector<std::string> argRootMobilities
+		SetupReader& setupReader
+		//std::vector<std::string> argRoots,
+		//std::vector<std::string> argRootMobilities
+	);
+
+	// Loads parameters into DuMM, adopts compound by the CompoundSystem
+	// and loads maps of indexes
+	void initializeWorlds(
+		int requestedNofMols,
+		SetupReader& setupReader
+		//std::vector<std::string> argRoots,
+		//std::vector<std::string> argRootMobilities
 	);
 
 	void modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer);

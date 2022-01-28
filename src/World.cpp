@@ -388,11 +388,11 @@ void World::setUScaleFactorsToMobods(void)
 			int level2 = mobod2.getLevelInMultibodyTree();
 
 			if(level1 > level2){
-				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx1, Bond.getUScaleFactor()));
+				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx1, Bond.getUScaleFactor(ownWorldIndex)));
 			}else if(level2 > level1){
-				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx2, Bond.getUScaleFactor()));
+				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx2, Bond.getUScaleFactor(ownWorldIndex)));
 			}else{
-				if(Bond.getUScaleFactor() != 0){
+				if(Bond.getUScaleFactor(ownWorldIndex) != 0){
 					std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n"; 
 				}
 			}

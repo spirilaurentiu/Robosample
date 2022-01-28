@@ -331,12 +331,13 @@ void Context::modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::s
 /** Load molecules based on loaded filenames **/
 void Context::AddMolecules(
 	int requestedNofMols,
-	SetupReader& setupReader,
-	std::vector<std::string> argRoots,
-	std::vector<std::string> argRootMobilities
+	SetupReader& setupReader
 ){
 	topologies.reserve(requestedNofMols);
 	moleculeCount = -1;
+
+	std::vector<std::string> argRoots = setupReader.get("ROOTS");
+	std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
 	// Iterate through topology filenames vector
 	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
@@ -380,12 +381,38 @@ void Context::AddMolecules(
 		// Add Biotypes // from world
 		topologies[molIx].bAddBiotypes(&amberReader); // from world
 
-		// Map of Compound atom indexes to Robosample atom indexes
-		//topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
+		// Build Robosample graph and Compound graph.
+		// It also asigns atom indexes in Compound
+		// This is done only once and it needs 
+		topologies[molIx].buildGraphAndMatchCoords(
+			std::stoi(argRoots[0]));
 
-		// TODO assert that the filenames vectors are not empty
-		// Iterate through Worlds
-		// TODO: only adoptTopology should be here
+		topologies[molIx].loadTriples();
+
+		// Map of Compound atom indexes to Robosample atom indexes
+		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
+
+	}
+
+
+}
+
+// Loads parameters into DuMM, adopts compound by the CompoundSystem
+// and loads maps of indexes
+void Context::initializeWorlds(
+	int requestedNofMols,
+	SetupReader& setupReader
+){
+	std::vector<std::string> argRoots = setupReader.get("ROOTS");
+	std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+
+	// Iterate through molecules
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+
+		// Initialize an input reader
+		readAmberInput amberReader;
+		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
+
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 
 			// Add entry to flexibility filenames matrix
@@ -411,20 +438,6 @@ void Context::AddMolecules(
 			// Pass current topology to the current world
 			(updWorld(worldIx))->topologies = &topologies;
 
-			// Build Robosample graph and Compound graph.
-			// It also asigns atom indexes in Compound
-			// This is done only once and it needs 
-			if(worldIx == 0){
-				topologies[molIx].buildGraphAndMatchCoords(
-					std::stoi(argRoots[worldIx]));
-
-				topologies[molIx].loadTriples();
-
-				// Map of Compound atom indexes to Robosample atom indexes
-				topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
-			}
-			// ZONE END
-
 			// Add parameters in DuMM
 			(updWorld(worldIx))->AddDummParams(molIx, &amberReader);
 			//topologies[molIx].bAddDummParams(&amberReader, 
@@ -443,10 +456,7 @@ void Context::AddMolecules(
 				flexSpecsFNs[worldIx][molIx], worldIx);
 			
 			// Set UScale factors. TODO: move in World
-			if(worldIx == 0){	
-				//rootMobilities[molIx] = argRootMobilities[worldIx][molIx];
-				topologies[molIx].setUScaleFactorsToBonds(flexSpecsFNs[worldIx][molIx]);
-			}
+			topologies[molIx].setUScaleFactorsToBonds(flexSpecsFNs[worldIx][molIx]);
 
 			// Add topology by CompoundSystem and add it to the 
 			//Visualizer's vector of molecules
@@ -464,16 +474,11 @@ void Context::AddMolecules(
 
 		}
 
-		// Map of Compound atom indexes to Robosample atom indexes
-		//topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
-
-		// Check maps
-		topologies[molIx].printMaps();
-
 	}
 
 
 }
+
 
 void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
 {

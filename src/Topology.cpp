@@ -1308,9 +1308,9 @@ void Topology::setUScaleFactorsToBonds(std::string flexFN)
 				for(int i = 0; i < nbonds; i++){
 					if(bonds[i].isThisMe(std::stoi(lineWords[0]), std::stoi(lineWords[1])) ){
 						if(lineWords[3][0] != '#'){
-							bonds[i].setUScaleFactor(std::stof(lineWords[3]));
+							bonds[i].addUScaleFactor(std::stof(lineWords[3]));
 						}else{
-							bonds[i].setUScaleFactor(1.0);
+							bonds[i].addUScaleFactor(1.0);
 						}
 						break;
 					}
