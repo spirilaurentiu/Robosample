@@ -120,15 +120,14 @@ int main(int argc, char **argv)
 	// TODO Move visualizer frequencies in Context in ValidateInput
 
 	// Deal with visualizer. 
-	SimTK::Real visualizerFrequency = -1;
-	if ( setupReader.get("VISUAL")[0] == "FALSE" ){
-		visualizerFrequency = -1;
-	}else{
-		visualizerFrequency = std::stod(setupReader.get("TIMESTEPS")[0]);
+	std::vector<double> visualizerFrequencies;
+	for(auto ts : setupReader.get("TIMESTEPS")){
+		visualizerFrequencies.push_back(std::stod(ts));
 	}
 
+	// Add Worlds
 	context.addEmptyWorlds(setupReader.get("WORLDS").size(),
-		visualizerFrequency);
+		visualizerFrequencies);
 
 	int finalNofWorlds = context.getNofWorlds();
 	if(requestedNofWorlds != finalNofWorlds){
@@ -138,11 +137,6 @@ int main(int argc, char **argv)
 	}
 	std::cout << "Added " << finalNofWorlds << " worlds" << std::endl;
 
-	/////////////////////////////////////
-	// 	STAGE EMPTY
-	/////////////////////////////////////
-
-	//////// FORCE FIELD //////////
 	// Request threads 
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
 		context.setNumThreadsRequested(worldIx,
@@ -225,7 +219,7 @@ int main(int argc, char **argv)
 
 	// DANGER ZONE
 	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		(context.updWorld(worldIx))->loadCompoundRelatedMaps();
+		//(context.updWorld(worldIx))->loadCompoundRelatedMaps();
 		//(context.updWorld(worldIx))->loadMobodsRelatedMaps();
 	}
 	// ZONE

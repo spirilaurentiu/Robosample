@@ -122,7 +122,7 @@ public:
 	void initializeMixingParamters();
 	//------------
 
-	void addEmptyWorlds(std::size_t NofWorlds, double visualizerFrequency = 0.0015);
+	void addEmptyWorlds(std::size_t NofWorlds, std::vector<double> visualizerFrequencies);
 	World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
 	//World * AddWorld(World *, bool visual);
 

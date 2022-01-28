@@ -239,7 +239,6 @@ void World::AddBiotypes(int which, readAmberInput *amberReader)
 void World::AddDummParams(int which, readAmberInput *amberReader)
 {
 	// Add DuMM parameters from amberReader
-	//topologies.back().bAddDummParams(amberReader, *forceField); // SAFE
 	((*topologies)[which]).bAddDummParams(amberReader, *forceField); // DANGER
 }
 
@@ -300,13 +299,15 @@ void World::adoptTopology(int which)
 	// Add Topology to CompoundSystem and realize topology
 	compoundSystem->adoptCompound(((*topologies)[which]));
 
-	((*topologies)[which]).setCompoundIndex(SimTK::CompoundSystem::CompoundIndex(which));
+	// Sets the 
+	((*topologies)[which]).setCompoundIndex(
+		SimTK::CompoundSystem::CompoundIndex(which));
 
 	//topologies[which].setCompoundIndex(
 	//		SimTK::CompoundSystem::CompoundIndex(
 	//		 compoundSystem->getNumCompounds() - 1));
 
-	// Add the new molecule to Decorators's vector of molecules
+	// Add the Topology object to Decorators's vector of molecules
 	if(visual){
 		// We need copy here.
 		//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
@@ -1141,7 +1142,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 	} // DEBUG
 
-	updateAtomListsFromCompound(someState);
+	//updateAtomListsFromCompound(someState);
 
 	return someState;
 
