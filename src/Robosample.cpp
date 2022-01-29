@@ -127,16 +127,10 @@ int main(int argc, char **argv)
 	context.addEmptyWorlds(setupReader.get("WORLDS").size(),
 		visualizerFrequencies);
 
-	int finalNofWorlds = context.getNofWorlds();
-	if(requestedNofWorlds != finalNofWorlds){
-		std::cerr << "Something went wrong while adding the world\n";
-		throw std::exception();
-		std::exit(1);
-	}
-	std::cout << "Added " << finalNofWorlds << " worlds" << std::endl;
+	int nofWorlds = context.getNofWorlds();
 
 	// Request threads 
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		context.setNumThreadsRequested(worldIx,
 			std::stoi(setupReader.get("THREADS")[worldIx]));
 	}
@@ -176,74 +170,69 @@ int main(int argc, char **argv)
 	// and loads maps of indexes
 	context.initializeWorlds(finalNofMols, setupReader);
 
-
-	// Add membrane
-	/*
-	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
-	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
-	float memZWidth = std::stof(setupReader.get("MEMBRANE")[2]);
-	int memResolution = std::stof(setupReader.get("MEMBRANE")[3]);
-	bool haveMembrane = (memXWidth > SimTK::TinyReal) && (memYWidth > SimTK::TinyReal) && (memZWidth > SimTK::TinyReal);
-	if(haveMembrane){
-		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
-		}
-	}
-	*/
-
-	// Link the Compounds to Simbody System for all Worlds
-	// This calls CompoundSystem::modelOneCompound function
-	//context.modelTopologies(setupReader.get("ROOT_MOBILITY")); // SAFE
-
-	// SAFE ZONE
-	// Add Fixman torque (Additional ForceSubsystem) if required
-	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-	//	if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
-	//		context.addFixmanTorque(worldIx);
-	//	}
-	//}
-	// ZONE
-
 	// Realize topology for all the Worlds
-	//context.realizeTopology(); // SAFE
 	context.allocateReblockQsCacheQVectors();
 
-	// DANGER ZONE
 	// Add Fixman torque (Additional ForceSubsystem) if required
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
 			context.addFixmanTorque(worldIx);
 		}
 	}
-	context.realizeTopology();
-	// ZONE
 
-	// Add samplers to the worlds
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		if(setupReader.get("SAMPLER")[worldIx] == "VV"){
-			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
-			pHMC(p)->setAlwaysAccept(true);
-			pHMC(p)->setThermostat(ThermostatName::ANDERSEN);
-		}else if(setupReader.get("SAMPLER")[worldIx] == "HMC"){
-			BaseSampler *p = context.addSampler(worldIx, SamplerName::HMC);
-			pHMC(p)->setAlwaysAccept(false);
-			//pHMC(p)->setThermostat(ThermostatName::NONE);
-			pHMC(p)->setThermostat(ThermostatName::ANDERSEN);
-		}/*else if(setupReader.get("SAMPLER")[worldIx] == "LAHMC"){
-			BaseSampler *p = context.addSampler(worldIx, SamplerName::LAHMC);
-			pLAHMC(p)->setThermostat(ThermostatName::NONE);
-		}else{
-			BaseSampler *p = context.addSampler(worldIx, SamplerName::LAHMC);
-			pLAHMC(p)->setThermostat(ThermostatName::NONE);
-		}*/
+	// Is this necessary?
+	context.realizeTopology();
+
+	// Add empty samplers to the worlds. 
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		BaseSampler *p = context.addSampler(
+			worldIx, setupReader.get("SAMPLER")[worldIx]);
 	}
 
-	// Set sampler parameters and initialize
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+	//////////////////////
+	// Thermodynamics
+	//////////////////////
+	// Set thermostats to the samplers
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+
+		for (int samplerIx = 0; 
+		samplerIx < context.getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setThermostat(
+				setupReader.get("THERMOSTAT")[worldIx]);
+		}
+
+		context.setTemperature(worldIx,
+			std::stof(setupReader.get("TEMPERATURE_INI")[0]));
+
+
+
+	}
+
+	// Set the guidance Hamiltonian parameters
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (int samplerIx = 0; 
+		samplerIx < context.getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setBoostTemperature(
+				std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
+		}
+	}
+
+	//////////////////////
+	// MD parameters
+	//////////////////////
+	// Set timesteps
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (int samplerIx = 0;
+		samplerIx < context.getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
 
 			// Set timesteps
-			context.setTimestep(worldIx, samplerIx, std::stof(setupReader.get("TIMESTEPS")[worldIx]));
+			context.setTimestep(worldIx, samplerIx,
+				std::stof(setupReader.get("TIMESTEPS")[worldIx]));
 
 			// Activate Fixman potential if needed
 			if(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"){
@@ -252,87 +241,72 @@ int main(int argc, char **argv)
 		}
 	}
 
-	// This loop is just for check purposes (should be removed)
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-			std::cout << "After setThermo world " << worldIx << " sampler " << samplerIx << "getThermostat: " ;
-			std::cout << static_cast<int>(pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->getThermostat()) ;
-			std::cout << std::endl;
-		}
-	}
+	// Set the nunmber of MD steps
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0;
+		samplerIx < context.getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+			context.setNofMDStepsPerSample(worldIx,
+				samplerIx,
+				std::stoi(setupReader.get("MDSTEPS")[worldIx]));
 
+			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
 
-	// Thermodynamics
-	context.setTemperature(std::stof(setupReader.get("TEMPERATURE_INI")[0]));
-	for(unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
-		context.setNofSamplesPerRound(worldIx, std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
-		context.setNofMDStepsPerSample(worldIx, 0, std::stoi(setupReader.get("MDSTEPS")[worldIx]));
-	}
-
-	if(setupReader.find("MDSTEPS_STD")){
-		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-			for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
-				pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setMDStepsPerSampleStd(
+			if(setupReader.find("MDSTEPS_STD")){
+				sampler_p->setMDStepsPerSampleStd(
 						std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]));
+			}else{
+				sampler_p->setMDStepsPerSampleStd(0);
 			}
-		}
-	}else{
-		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-			for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
-				pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setMDStepsPerSampleStd(0);
-			}
+
 		}
 	}
 
-	// NEW PARAMS
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++) {
-			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostTemperature(
-				std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
-			pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->setBoostMDSteps(
+	// Guidance Hamiltonian MD
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0;
+		samplerIx < context.getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+
+			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setBoostMDSteps(
 					std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
+
 		}
 	}
 
+	//////////////////////
+	// Simulation parameters
+	//////////////////////
 	// Set the seeds for reproducibility. Samplers have to be here already
 	if( setupReader.find("SEED") ){
 		if( !(setupReader.get("SEED").empty()) ){
-			for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+			for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 				context.setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[worldIx] ));
 			}
 		}
 	}
 
 	// Initialize samplers
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
+	/** Set simulation temperature,
+	velocities to desired temperature, variables that store the configuration
+	and variables that store the energies, both needed for the
+	acception-rejection step. Also realize velocities and initialize
+	the timestepper. **/
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0;
+		samplerIx < context.getWorld(worldIx)->getNofSamplers();
+		samplerIx++){
 			context.initializeSampler(worldIx, samplerIx);
 		}
 	}
 
-	// Print thermodynamics
-	for(unsigned int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
-		std::cout << "MAIN World " << worldIx << " temperature = "
-			<< context.getWorld(worldIx)->getTemperature()
-			<< std::endl;
-		if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
-			std::cout << "MAIN World " << worldIx
-			<< " FixmanTorque temperature = "
-			<< context.updWorld(worldIx)->updFixmanTorque()->getTemperature()
-			<< std::endl;
-		}
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-			std::cout << "MAIN World " << worldIx << " Sampler " << samplerIx 
-				<< " temperature = " << context.updWorld(worldIx)->updSampler(samplerIx)->getTemperature()
-				<< " initial const state PE: " << std::setprecision(20)
-				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
-				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(context.updAdvancedState(worldIx, samplerIx))
-				<< " useFixmanPotential = "
-				<< pHMC(context.updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
-				<< std::endl;
-		}
-
+	// Set the number of samples per round	
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		context.setNofSamplesPerRound(worldIx,
+			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
 	}
+
 
 	// Simulation parameters
 	currentWorldIx = 0;
@@ -340,13 +314,7 @@ int main(int argc, char **argv)
 
 	context.setNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
 
-	if (setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
-		for (unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++) {
-			context.setNofBoostStairs(worldIx, std::stoi(setupReader.get("BOOST_STAIRS")[worldIx]));
-		}
-	}
-
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){    
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){    
 		round_mcsteps += context.getNofSamplesPerRound(worldIx);
 	}
 
@@ -355,7 +323,7 @@ int main(int argc, char **argv)
 
 	// Get atom indeces for geometry calculations
 	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
-		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 			std::vector<int> distanceIx;
 			for(unsigned int i = 0; i < setupReader.get("DISTANCE").size(); i++){
 				distanceIx.push_back(atoi(setupReader.get("DISTANCE")[i].c_str()));
@@ -426,31 +394,8 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-	// SAFE ZONE
-	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-	//	(context.updWorld(worldIx))->loadCompoundRelatedMaps();
-	//	(context.updWorld(worldIx))->loadMobodsRelatedMaps();
-	//}
-	// ZONE
-
-	// Membrane contacts. TODO: only one per world for now
-	/*
-	if(haveMembrane){
-		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-			(context.updWorld(worldIx))->addContacts( std::stoi(setupReader.get("CONTACTS")[worldIx]) );
-		}
-	}
-	*/
-
-	// Set ocnstraint. TODO: only one per world allowed for now
-	/*
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-		(context.updWorld(worldIx))->addConstraints( std::stoi(setupReader.get("CONSTRAINTS")[worldIx]) );
-	}
-	*/
-
 	// U Scale Factors uses maps stored in Topology
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		(context.updWorld(worldIx))->setUScaleFactorsToMobods();
 	}
 
@@ -458,38 +403,24 @@ int main(int argc, char **argv)
 	context.realizeTopology();
 
 	// SAFE ZONE
-	// Load/store Mobilized bodies joint types
-	//for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-	//	for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-	//		SimTK::State& curAvancedState = (context.updWorld(worldIx))->integ->updAdvancedState();
-	//		std::cout << "Loading mbx2mobility" << std::endl;
-	//
-	//		// Pass compounds to the new world
-	//		context.passTopologiesToNewWorld(worldIx);
-	//
-	//		//(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(curAvancedState); // SAFE
-	//		(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(); // DANGER
-	//	}
-	//}
-	// ZONE
 	// DANGER ZONE
 	
 	// Check atom stations through DuMM
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			(context.updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
 		}
 	}
 	
 	// Check atom stations through Simbody
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			(context.updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
 		}
 	}
 	
 	// Load/store Mobilized bodies joint types
-	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			std::cout << "Loading mbx2mobility" << std::endl;
 	

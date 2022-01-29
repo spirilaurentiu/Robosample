@@ -75,7 +75,6 @@ public:
 	HMCSampler(World *argWorld,
 		SimTK::CompoundSystem *argCompoundSystem,
 		SimTK::SimbodyMatterSubsystem *argMatter,
-		//SimTK::Compound *argResidue,
 		std::vector<Topology> &argTopologies, 
 		SimTK::DuMMForceFieldSubsystem *argDumm,
 		SimTK::GeneralForceSubsystem *argForces,
@@ -294,7 +293,7 @@ public:
 	void setMDStepsPerSample(int mdStepsPerSample);
 
 	SimTK::Real getMDStepsPerSampleStd() const;
-	void setMDStepsPerSampleStd(SimTK::Real mdstd);
+	void setMDStepsPerSampleStd(SimTK::Real mdstd = 0);
 
 	/** Print detailed energy information **/
 	void PrintDetailedEnergyInfo(const SimTK::State& someState) const;

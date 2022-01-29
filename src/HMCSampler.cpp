@@ -1143,12 +1143,17 @@ SimTK::Real HMCSampler::getREP(void) const
 
 // Set a thermostat
 void HMCSampler::setThermostat(ThermostatName argThermostat){
+	if(argThermostat == ThermostatName::ANDERSEN){
+		std::cout << "Adding Andersen thermostat.\n";
+	}
 	this->thermostat = argThermostat;
 }
 // Set a thermostat
 void HMCSampler::setThermostat(std::string thermoName){
 	thermoName.resize(thermoName.size());
 	std::transform(thermoName.begin(), thermoName.end(), thermoName.begin(), ::tolower);
+
+	std::cout << "Adding " << thermoName << " thermostat.\n";
 
 	if(thermoName == "none"){
 		this->thermostat = ThermostatName::NONE;

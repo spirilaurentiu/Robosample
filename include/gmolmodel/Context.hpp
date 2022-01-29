@@ -75,6 +75,7 @@ public:
 	//------------
 
 	// --- Simulation parameters ---
+	BaseSampler* addSampler(std::size_t whichWorld, std::string samplerName);
 	BaseSampler* addSampler(std::size_t whichWorld, SamplerName whichSampler);
 	void initializeSampler(std::size_t whichWorld, std::size_t whichSampler);
 
@@ -177,6 +178,7 @@ public:
 	void addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4);
 
 	// --- Output ---
+	void printThermodynamics(void);
 	void printStatus(void);
 	void throwAndExit(std::string errMsg, int errCode);
 

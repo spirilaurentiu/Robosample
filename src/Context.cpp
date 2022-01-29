@@ -258,6 +258,14 @@ void Context::addEmptyWorlds(std::size_t argNofWorlds,
 		}
 	}
 
+	if(argNofWorlds != nofWorlds){
+		std::cerr << "Something went wrong while adding the world\n";
+		throw std::exception();
+		std::exit(1);
+	}
+
+	std::cout << "Added " << nofWorlds << " empty worlds" << std::endl;
+
 	// 
 	allocateReblockQsCache();
 
@@ -618,6 +626,33 @@ void Context::printStatus(void){
 	}
 }
 
+// Print thermodynamics
+void Context::printThermodynamics(void)
+{
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		std::cout << "World " << worldIx << " temperature = "
+			<< getWorld(worldIx)->getTemperature()
+			<< std::endl;
+		if(isUsingFixmanTorque(worldIx)){
+			std::cout << "World " << worldIx
+			<< " FixmanTorque temperature = "
+			<< updWorld(worldIx)->updFixmanTorque()->getTemperature()
+			<< std::endl;
+		}
+		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++){
+			std::cout << "World " << worldIx << " Sampler " << samplerIx 
+				<< " temperature = " << updWorld(worldIx)->updSampler(samplerIx)->getTemperature()
+				<< " initial const state PE: " << std::setprecision(20)
+				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
+				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(context.updAdvancedState(worldIx, samplerIx))
+				<< " useFixmanPotential = "
+				<< pHMC(updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
+				<< std::endl;
+		}
+
+	}
+}
+
 // Print Molmodel related information
 void Context::PrintMolmodelAndDuMMTypes(void){
 	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
@@ -734,9 +769,28 @@ void Context::setGuidanceTemperature(std::size_t, std::size_t, SimTK::Real)
 // --- Simulation parameters ---
 /////////////////////////
 
-BaseSampler * Context::addSampler(std::size_t whichWorld, SamplerName whichSampler)
+BaseSampler * Context::addSampler(
+	std::size_t whichWorld,
+	SamplerName whichSampler)
 {
 	return worlds[whichWorld].addSampler(whichSampler);
+}
+
+BaseSampler * Context::addSampler(
+	std::size_t whichWorld,
+	std::string samplerName)
+{
+	
+	if(samplerName == "VV"){
+		BaseSampler *p = worlds[whichWorld].addSampler(SamplerName::HMC);
+		pHMC(p)->setAlwaysAccept(true);
+		return p;
+	}else if(samplerName == "HMC"){
+		BaseSampler *p = worlds[whichWorld].addSampler(SamplerName::HMC);
+		pHMC(p)->setAlwaysAccept(false);
+		return p;
+	}
+
 }
 
 void Context::initializeSampler(std::size_t whichWorld, std::size_t whichSampler)
@@ -785,11 +839,14 @@ int Context::getNofMDStepsPerSample(std::size_t whichWorld, std::size_t whichSam
    return pHMC(worlds[whichWorld].updSampler(whichSampler))->getMDStepsPerSample();
 }
 
-void Context::setNofMDStepsPerSample(std::size_t whichWorld, std::size_t whichSampler, int MDStepsPerSample)
+void Context::setNofMDStepsPerSample(
+	std::size_t whichWorld,
+	std::size_t whichSampler,
+	int MDStepsPerSample)
 {
-   nofMDStepsPerSample[whichWorld] = MDStepsPerSample; // RE
-   pHMC(worlds[whichWorld].updSampler(whichSampler))->setMDStepsPerSample(MDStepsPerSample); // NEW
+   nofMDStepsPerSample[whichWorld] = MDStepsPerSample;
 
+   pHMC(worlds[whichWorld].updSampler(whichSampler))->setMDStepsPerSample(MDStepsPerSample);
    
 }
 
