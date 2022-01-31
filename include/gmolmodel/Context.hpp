@@ -176,6 +176,8 @@ public:
 	/** Analysis related functions **/
 	void addDistance(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2);
 	void addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4);
+	void addDistances(std::vector<int> distanceIx);
+	void addDihedrals(std::vector<int> dihedralIx);
 
 	// --- Output ---
 	void printThermodynamics(void);

@@ -1450,7 +1450,7 @@ uint32_t Context::getSeed(std::size_t whichWorld, std::size_t whichSampler) cons
 /** Analysis related functions **/
 void Context::addDistance(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2)
 {
-	// TODO some are 64 bit, some 32 bit. What do?
+	// TODO some are 64 bit, some 32 bit. What to do?
 	std::vector<int> tempV;
 	tempV.push_back(static_cast<int>(whichWorld));
 	tempV.push_back(static_cast<int>(whichCompound));
@@ -1460,9 +1460,19 @@ void Context::addDistance(std::size_t whichWorld, std::size_t whichCompound, int
 	distanceIxs.push_back(tempV);
 }
 
+// Get distances
+void Context::addDistances(std::vector<int> distanceIx)
+{
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for(unsigned int ai = 0; ai < distanceIx.size() / 2; ai++){
+			addDistance(worldIx, 0, distanceIx[2*ai + 0], distanceIx[2*ai + 1]);
+		}
+	}
+}
+
 void Context::addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4)
 {
-	// TODO some are 64 bit, some 32 bit. What do?
+	// TODO some are 64 bit, some 32 bit. What to do?
 	std::vector<int> tempV;
 	tempV.push_back(static_cast<int>(whichWorld));
 	tempV.push_back(static_cast<int>(whichCompound));
@@ -1474,6 +1484,16 @@ void Context::addDihedral(std::size_t whichWorld, std::size_t whichCompound, int
 	dihedralIxs.push_back(tempV);
 }
 
+// Get dihedrals. TODO : only adds to the first Topology
+void Context::addDihedrals(std::vector<int> dihedralIx){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for(unsigned int ai = 0; ai < dihedralIx.size() / 4; ai++){
+			addDihedral(worldIx, 0,
+				dihedralIx[4*ai + 0], dihedralIx[4*ai + 1],
+				dihedralIx[4*ai + 2], dihedralIx[4*ai + 3]);
+		}
+	}
+}
 
 // --- Printing functions --
 

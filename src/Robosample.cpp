@@ -71,6 +71,20 @@ std::string CreateLogfilename( std::string outDir, long long int seed )
 
 }
 
+std::string GetMoleculeDirectoryShort(std::string path)
+{
+	std::size_t lastSlashPos = path.find_last_of("/");
+	//std::string upDir = path.substr(0, lastSlashPos);
+	std::string molDir = path.substr(lastSlashPos + 1, path.length());
+	return molDir;
+}
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////   MAIN   ////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
 
@@ -79,13 +93,16 @@ int main(int argc, char **argv)
 	if ( !LoadInputIntoSetupReader(argc, argv, setupReader) ){
 		return 1;
 	}
-	//std::exit(0);
 
 	// Declare global variables
 	int currentWorldIx = 0;
 	int round_mcsteps = 0;
 
 	/////////// Create context ////////////
+
+	// - Get molecules directory
+	std::string molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
+	std::cout << "Molecule directory: " << molDir << std::endl;
 
 	// Create pdbs directory if necessary
 	if ( ! CreateOutputDirectory(setupReader.get("OUTPUT_DIR")[0]) ){
@@ -278,11 +295,12 @@ int main(int argc, char **argv)
 	//////////////////////
 	// Simulation parameters
 	//////////////////////
-	// Set the seeds for reproducibility. Samplers have to be here already
+	// Set the seeds for reproducibility. Samplers have to be here already.
+	// Let the user set one seed only. TODO: better algorithm (Victor).
 	if( setupReader.find("SEED") ){
 		if( !(setupReader.get("SEED").empty()) ){
 			for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-				context.setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[worldIx] ));
+				context.setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[0]) + worldIx );
 			}
 		}
 	}
@@ -307,7 +325,6 @@ int main(int argc, char **argv)
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
 	}
 
-
 	// Simulation parameters
 	currentWorldIx = 0;
 	round_mcsteps = 0;
@@ -323,41 +340,22 @@ int main(int argc, char **argv)
 
 	// Get atom indeces for geometry calculations
 	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
-		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-			std::vector<int> distanceIx;
-			for(unsigned int i = 0; i < setupReader.get("DISTANCE").size(); i++){
-				distanceIx.push_back(atoi(setupReader.get("DISTANCE")[i].c_str()));
-			}
-			// Get distances
-			for(unsigned int ai = 0; ai < setupReader.get("DISTANCE").size() / 2; ai++){
-				context.addDistance(worldIx, 0, distanceIx[2*ai + 0], distanceIx[2*ai + 1]);
-			}
-	
-			// Get dihedrals indeces
-			std::vector<int> dihedralIx;
-			for(unsigned int i = 0; i < setupReader.get("DIHEDRAL").size(); i++){
-				dihedralIx.push_back(atoi(setupReader.get("DIHEDRAL")[i].c_str()));
-			}
-			// Get dihedrals
-			for(unsigned int ai = 0; ai < setupReader.get("DIHEDRAL").size() / 4; ai++){
-				context.addDihedral(worldIx, 0,
-					dihedralIx[4*ai + 0], dihedralIx[4*ai + 1],
-					dihedralIx[4*ai + 2], dihedralIx[4*ai + 3]);
-			}
+		std::vector<int> distanceIx;
+		std::vector<int> dihedralIx;
+		for(unsigned int i = 0; i < setupReader.get("DISTANCE").size(); i++){
+			distanceIx.push_back(atoi(setupReader.get("DISTANCE")[i].c_str()));
 		}
+		for(unsigned int i = 0; i < setupReader.get("DIHEDRAL").size(); i++){
+			dihedralIx.push_back(atoi(setupReader.get("DIHEDRAL")[i].c_str()));
+		}
+		context.addDistances(distanceIx);
+		context.addDihedrals(dihedralIx);
 	}
 
 	// Write initial pdb for debug purposes: TODO remove 
 	// - we need this to get compound atoms
 	currentWorldIx = context.worldIndexes.front();
 	SimTK::State& advancedState = (context.updWorld(currentWorldIx))->integ->updAdvancedState();
-
-	// - Get molecules directory
-	std::string path = setupReader.get("MOLECULES")[0];
-	std::size_t lastSlashPos = path.find_last_of("/");
-	std::string upDir = path.substr(0, lastSlashPos);
-	std::string molDir = path.substr(lastSlashPos + 1, path.length());
-	std::cout << "Molecule directory: " << molDir << std::endl;
 
 	// - Get seed
 	context.setOutputDir(setupReader.get("OUTPUT_DIR")[0] );
@@ -402,9 +400,6 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-	// SAFE ZONE
-	// DANGER ZONE
-	
 	// Check atom stations through DuMM
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
