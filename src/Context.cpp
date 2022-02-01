@@ -487,6 +487,20 @@ void Context::initializeWorlds(
 
 }
 
+// Load/store Mobilized bodies joint types in samplers
+void Context::loadMbxsToMobilities(void)
+{
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++){
+			std::cout << "Loading mbx2mobility" << std::endl;
+	
+			// Pass compounds to the new world
+			passTopologiesToNewWorld(worldIx);
+	
+			(updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(worldIx); // DANGER
+		}
+	}
+}
 
 void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
 {
@@ -685,6 +699,18 @@ void Context::PrintSimbodyMobods(void){
 	}
 }
 
+// Print DuMM atoms stations in mobilized body frame
+void Context::checkAtomStationsThroughDumm(void)
+{
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0;
+			samplerIx < getWorld(worldIx)->getNofSamplers();
+			samplerIx++){
+			(updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
+		}
+	}
+}
+	
 // Get world
 World * Context::getWorld() {
 	return &worlds.back();
@@ -1717,6 +1743,38 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 	}
 
 
+}
+
+// Write intial pdb for reference
+// TODO: what's the deal with mc_step
+void Context::writeInitialPdb(void)
+{
+
+	// - we need this to get compound atoms
+	int currentWorldIx = worldIndexes.front();
+	SimTK::State& advancedState = (updWorld(currentWorldIx))->integ->updAdvancedState();
+
+	constexpr int mc_step = -1;
+
+	// Pass compounds to the new world
+	passTopologiesToNewWorld(currentWorldIx);
+
+	(updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
+	std::cout << "Writing pdb initial" << mc_step << ".pdb" << std::endl;
+	for(unsigned int mol_i = 0; mol_i < topologies.size(); mol_i++){
+		topologies[mol_i].writeAtomListPdb(getOutputDir(),
+		"/pdbs/sb." + getPdbPrefix() + ".", ".pdb", 10, mc_step);
+	}
+}
+
+// Write final pdb for reference
+void Context::writeFinalPdb(void)
+{
+	for(unsigned int mol_i = 0; mol_i < nofMols; mol_i++){
+		topologies[mol_i].writeAtomListPdb(
+			getOutputDir(), "/pdbs/final." + getPdbPrefix() + ".", ".pdb", 10,
+			getNofRounds());
+	}
 }
 
 // Get / set pdb files writing frequency

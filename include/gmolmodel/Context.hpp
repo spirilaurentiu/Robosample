@@ -136,6 +136,9 @@ public:
 	World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
 	//World * AddWorld(World *, bool visual);
 
+	// Load/store Mobilized bodies joint types in samplers
+	void loadMbxsToMobilities(void);
+
 	World * getWorld();
 	World * getWorld(std::size_t which);
 
@@ -187,6 +190,9 @@ public:
 	// Print Molmodel related information
 	void PrintMolmodelAndDuMMTypes(void);
 
+	// Print DuMM atoms stations in mobilized body frame
+	void checkAtomStationsThroughDumm(void);
+
 	// Print Simbody related information
 	void PrintSimbodyMobods(void);
 	void PrintSamplerData(std::size_t whichWorld);
@@ -196,6 +202,11 @@ public:
 	void PrintDihedrals(std::size_t whichWorld);
 	void PrintDihedralsQs(std::size_t whichWorld);
 	void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
+
+	// Write intial/final pdb for reference
+	void writeInitialPdb(void);
+	void writeFinalPdb(void);
+
 	void WritePdb(std::size_t whichWorld);
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2, int a3, int a4);
 	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2);
@@ -227,7 +238,6 @@ private:
 	std::vector<std::vector<std::string>> regimens;
 	std::vector<std::string> rootMobilities; // WORLD CONFLICT
 
-	// WORLD BEGIN
 	// Nof molecules
 	int moleculeCount;
 	

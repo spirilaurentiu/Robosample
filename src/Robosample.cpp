@@ -101,6 +101,7 @@ int main(int argc, char **argv)
 	/////////// Create context ////////////
 
 	// - Get molecules directory
+	// TODO: move molDir in Context
 	std::string molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
 	std::cout << "Molecule directory: " << molDir << std::endl;
 
@@ -117,9 +118,20 @@ int main(int argc, char **argv)
 	// Instantiate a context object
 	Context context(setupReader, logFilename);
 	
-	// Adaptive Gibbs blocking
-	context.setNofRoundsTillReblock(
-		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
+	// Set the directory where the logs and the trajectories are stored
+	context.setOutputDir(setupReader.get("OUTPUT_DIR")[0]);
+
+	context.setPdbPrefix(molDir
+		+ setupReader.get("SEED")[0]
+		);
+
+	// Alert user of CUDA environment variables
+	if(SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
+		std::cout << "CUDA_ROOT not set." << std::endl;
+	}else{
+		std::cout << "CUDA_ROOT set to " 
+			<< SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
+	}
 
 	// Requested nof Worlds in input. We'll try to construct them all
 	// but we're not sure if we'll going to succesed.
@@ -134,10 +146,16 @@ int main(int argc, char **argv)
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
 	//  ParaMolecularDecorator
 
-	// Deal with visualizer. 
+	// Deal with visualizer before adding worlds. 
 	std::vector<double> visualizerFrequencies;
+	int i = -1;
 	for(auto ts : setupReader.get("TIMESTEPS")){
-		visualizerFrequencies.push_back(std::stod(ts));
+		i++;
+		if (setupReader.get("VISUAL")[i] == "TRUE"){
+			visualizerFrequencies.push_back(std::stod(ts));
+		}else{
+			visualizerFrequencies.push_back(0);
+		}
 	}
 
 	// Add Worlds
@@ -187,7 +205,9 @@ int main(int argc, char **argv)
 	// and loads maps of indexes
 	context.initializeWorlds(finalNofMols, setupReader);
 
-	// Realize topology for all the Worlds
+	// Adaptive Gibbs blocking
+	context.setNofRoundsTillReblock(
+		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
 	context.allocateReblockQsCacheQVectors();
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
@@ -352,38 +372,9 @@ int main(int argc, char **argv)
 		context.addDihedrals(dihedralIx);
 	}
 
-	// Write initial pdb for debug purposes: TODO remove 
-	// - we need this to get compound atoms
-	currentWorldIx = context.worldIndexes.front();
-	SimTK::State& advancedState = (context.updWorld(currentWorldIx))->integ->updAdvancedState();
-
-	// - Get seed
-	context.setOutputDir(setupReader.get("OUTPUT_DIR")[0] );
-	context.setPdbPrefix(molDir
-		+ std::to_string(context.updWorld(currentWorldIx)->updSampler(0)->getSeed()) 
-		);
-
-	// - Write
-	constexpr int mc_step = -1;
+	// Write intial pdb for reference
 	if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
-
-		// Pass compounds to the new world
-		context.passTopologiesToNewWorld(currentWorldIx);
-
-		(context.updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
-		std::cout << "Writing pdb initial" << mc_step << ".pdb" << std::endl;
-		for(unsigned int mol_i = 0; mol_i < setupReader.get("MOLECULES").size(); mol_i++){
-			((context.updWorld(currentWorldIx))->getTopology(mol_i)).writeAtomListPdb(context.getOutputDir(),
-			"/pdbs/sb." + context.getPdbPrefix() + ".", ".pdb", 10, mc_step);
-		}
-	}
-
-	// Alert user of CUDA environment variables
-	if(SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
-		std::cout << "CUDA_ROOT not set." << std::endl;
-	}else{
-		std::cout << "CUDA_ROOT set to " 
-			<< SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
+		context.writeInitialPdb();
 	}
 
 	// Get output printing frequency
@@ -400,32 +391,11 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-	// Check atom stations through DuMM
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-			(context.updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
-		}
-	}
+	// Check atom stations for debug purposes
+	context.checkAtomStationsThroughDumm();
 	
-	// Check atom stations through Simbody
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-			(context.updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
-		}
-	}
-	
-	// Load/store Mobilized bodies joint types
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
-			std::cout << "Loading mbx2mobility" << std::endl;
-	
-			// Pass compounds to the new world
-			context.passTopologiesToNewWorld(worldIx);
-	
-			(context.updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(worldIx); // DANGER
-		}
-	}
-	// ZONE
+	// Load/store Mobilized bodies joint types in samplers
+	context.loadMbxsToMobilities();
 
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
