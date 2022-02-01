@@ -63,8 +63,14 @@ class Replica{
 	Replica();
 	~Replica();
 
+	const	std::vector<
+		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		getAtomsLocationsInGround();
+
   private:
-	std::vector<int> thermodynamicStateIx;
+	std::vector<int> worldIndexes;
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+		atomsLocations;
 };
 
 Replica::Replica()
@@ -75,6 +81,11 @@ Replica::~Replica()
 {
 }
 
+const	std::vector<
+	std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+	getAtomsLocationsInGround()
+{
+}
 
 //////////////////////////
 // CLASS CONTEXT
@@ -1298,6 +1309,24 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 
 void Context::RunREX(void)
 {
+	// Main loop: iterate through rounds
+	for(int round = 0; round < nofRounds; round++){
+			
+		RunOneRound();
+
+		// Write energy and geometric features to logfile
+		if( !(round % getPrintFreq()) ){
+			PrintToLog(worldIndexes.back());
+			PrintToLog(worldIndexes.front());
+		}
+	
+		// Write pdb
+		if( pdbRestartFreq != 0){
+			if((round % pdbRestartFreq) == 0){
+				writePdbs(round);
+			}
+		}
+	}
 }
 
 void Context::writePdbs(int someIndex)
@@ -1363,6 +1392,42 @@ void Context::transferCoordinates(int src, int dest)
 		currentAdvancedState, otherWorldsAtomsLocations);
 }
 
+
+// Go through all the worlds and generate samples
+void Context::RunOneRound(void)
+{
+	
+	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+
+		// Rotate worlds indices (translate from right to left)
+		if(isWorldsOrderRandom){
+			randomizeWorldIndexes();
+		}
+
+		// Rotate the vector of world indexes
+	   	std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
+
+		// Get indeces
+		int currentWorldIx = worldIndexes.front();
+		int lastWorldIx = worldIndexes.back();
+
+		// Transfer coordinates from last world to current
+		if(worldIndexes.size() > 1) {
+
+			std::cout << "Transfer from world " << lastWorldIx
+				<< " to " << currentWorldIx << std::endl;
+
+			transferCoordinates(lastWorldIx, currentWorldIx);
+		}
+
+		// Generate samples from the current world
+		int accepted = worlds[currentWorldIx].generateSamples(
+			nofSamplesPerRound[currentWorldIx],
+			NMAOption[currentWorldIx]);
+	
+	} // END iteration through worlds
+}
+
 // Normal run
 void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 {
@@ -1375,64 +1440,8 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 		// Main loop: iterate through rounds
 		for(int round = 0; round < nofRounds; round++){
-
-			// Iterate through worlds
-			for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-
-				// Rotate worlds indices (translate from right to left)
-				if(isWorldsOrderRandom){
-					randomizeWorldIndexes();
-				}
-
-				// Rotate the vector of world indexes
-			   	std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
-
-				// Get indeces
-				currentWorldIx = worldIndexes.front();
-				lastWorldIx = worldIndexes.back();
-
-				// Transfer coordinates from last world to current
-				//SimTK::State& lastAdvancedState = updWorld(lastWorldIx)->integ->updAdvancedState();
-				//SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
-
-				// Transfer coordinates from last world to current
-				if(worldIndexes.size() > 1) {
-
-					std::cout << "Transfer from world " << lastWorldIx
-						<< " to " << currentWorldIx << std::endl;
-
-					transferCoordinates(lastWorldIx, currentWorldIx);
-				}
-
-				// Update bAtomList from Simbody
-				/*
-				SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
-				updWorld(currentWorldIx)->updateAtomListsFromCompound(currentAdvancedState);
-
-				// Set old potential energy of the new world via OpenMM
-				//auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
-				auto OldPE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
-				pHMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(OldPE);
-
-				std::cout << "World " << currentWorldIx << ", NU " << currentAdvancedState.getNU() << ":\n";
-
-				// Reinitialize current sampler
-				updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
-
-				// Make the requested number of samples
-				// we don't print every sample to the output ?
-				bool accepted;
-				for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++) {
-					accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMAOption[currentWorldIx]);
-				}
-				*/
-
-				int accepted = worlds[currentWorldIx].generateSamples(
-					nofSamplesPerRound[currentWorldIx],
-					NMAOption[currentWorldIx]);
-
-	
-			} // END iteration through worlds
+			
+			RunOneRound();
 
 			// Write energy and geometric features to logfile
 			if( !(round % getPrintFreq()) ){
@@ -1447,7 +1456,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				}
 			}
 	
-		} // END main loop
+		}
 
 	}else{// if Ti != Tf heating protocol
 		SimTK::Real Tincr = (Tf - Ti) / static_cast<SimTK::Real>(nofRounds);
@@ -1456,96 +1465,27 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	
 			// Set current temperature
 			currT += Tincr;
+			setTemperature(currT);
 			std::cout << "T= " << currT << std::endl;
 
-			for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){ // Iterate worlds
+			RunOneRound();
 	
-				// Rotate worlds indeces (translate from right to left)
-				std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
-	
-				// Get indeces
-				currentWorldIx = worldIndexes.front();
-				lastWorldIx = worldIndexes.back();
-
-				// Set temperatures
-				updWorld(lastWorldIx)->setTemperature(currT);
-				updWorld(currentWorldIx)->setTemperature(currT);
-
-				if(isUsingFixmanTorque(worldIx)){
-					setFixmanTorqueTemperature(worldIx, currT);
-				}
-	
-				// Transfer coordinates from last world to current
-				SimTK::State& lastAdvancedState = updWorld(worldIndexes.back())->integ->updAdvancedState();
-				SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
-
-				if(worldIndexes.size() > 1) {
-
-				// DANGER ZONE
-				std::vector<std::vector<std::pair<
-					bSpecificAtom *, SimTK::Vec3> > >
-					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
-		
-					std::cout << "Transfer from world " << lastWorldIx
-						<< " to " << currentWorldIx << std::endl;
-
-					// Pass compounds to the new world
-					passTopologiesToNewWorld(currentWorldIx);
-
-
-					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
-							currentAdvancedState, otherWorldsAtomsLocations);
-				// SAFE ZONE
-				//	currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
-				//			currentAdvancedState,
-				//			updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState));
-				// ZONE
-
-				}else{ // Load bAtomList though
-					updWorld(currentWorldIx)->updateAtomListsFromCompound(currentAdvancedState);
-				}
-	
-				// Set old potential energy of the new world
-				const auto oldPE = pHMC(updWorld(worldIndexes.back())->updSampler(0))->getSetPE();
-				pHMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(oldPE);
-	
-				// Reinitialize current sampler
-				updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
-	
-				// Update
-				for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-					//updWorld(currentWorldIx)->updSampler(0)->propose(currentAdvancedState);
-					updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
-
-				} // END for samples
-	
-			} // for i in worlds
-	
-			// Print energy and geometric features
+			// Write energy and geometric features to logfile
 			if( !(round % getPrintFreq()) ){
-				PrintSamplerData(worldIndexes.back());
-				PrintDistances(worldIndexes.front());
-				PrintDihedralsQs(worldIndexes.back());
-				fprintf(logFile, "\n");
+				PrintToLog(worldIndexes.back());
+				PrintToLog(worldIndexes.front());
 			}
 	
 			// Write pdb
-			if( getPdbRestartFreq() != 0){
-				if(((round) % getPdbRestartFreq()) == 0){
-					const SimTK::State& pdbState = updWorld(worldIndexes.front())->integ->updAdvancedState();
-					updWorld(worldIndexes.front())->updateAtomListsFromCompound(pdbState);
-					for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-						updWorld(worldIndexes.front())->getTopology(mol_i).writeAtomListPdb(getOutputDir(),
-							"/pdbs/sb." +
-							getPdbPrefix() + "." + std::to_string(mol_i) + ".",
-							".pdb", 10, round);
-					}
+			if( pdbRestartFreq != 0){
+				if((round % pdbRestartFreq) == 0){
+					writePdbs(round);
 				}
-			} // if write pdbs
+			}
 	
-		} // for i in rounds
+		}
 
-	} // if heating protocol
+	}
 
 
 }

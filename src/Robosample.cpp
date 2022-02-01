@@ -209,7 +209,7 @@ int main(int argc, char **argv)
 	context.setNofRoundsTillReblock(
 		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
 
-	// Only now we can allocate memory for Q vectors
+	// Only now we can allocate memory for reblocking Q vectors
 	//context.allocateReblockQsCacheQVectors();
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
@@ -398,6 +398,19 @@ int main(int argc, char **argv)
 	
 	// Load/store Mobilized bodies joint types in samplers
 	context.loadMbxsToMobilities();
+
+	// -- Setup REX --
+	if(setupReader.get("RUN_TYPE")[0] == "REX"){
+		// Look for trex.dat
+		SetupReader rexReader;
+
+		// Read input
+		rexReader.ReadSetup("trex.dat");
+		rexReader.dump(true);
+
+		//
+	}
+	//std::exit(0);
 
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {

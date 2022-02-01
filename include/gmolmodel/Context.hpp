@@ -156,6 +156,10 @@ public:
 	// --- Main ---
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
+
+	// Go through all the worlds and generate samples
+	void RunOneRound(void);
+
 	void Run(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
