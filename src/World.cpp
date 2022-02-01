@@ -521,6 +521,29 @@ const SimTK::State& World::addContacts(int prmtopIx)
 	return returnState;
 }
 
+						// CONTACT DEBUG
+			/*
+						int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
+						SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->getDissipatedEnergy(currentAdvancedState);
+						bool hasDefaultForceGenerator = updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
+
+						const MultibodySystem & mbs = updWorld(currentWorldIx)->contactForces->getMultibodySystem();
+						int nofMobods = mbs.getMatterSubsystem().getNumBodies();
+
+						const ContactTrackerSubsystem & cts = updWorld(currentWorldIx)->contactForces->getContactTrackerSubsystem();
+						int ctsNofSurfaces = cts.getNumSurfaces();
+						
+
+						std::cout << "CONTACT INFO:"
+							<< " #forces= " << numForces
+							<< " dissEnergy= " << dissEnergy
+							<< " hasDefaultForceGenerator= " << hasDefaultForceGenerator
+							<< " #mobods= " << nofMobods 
+							<< " ctsNofSurfaces= " << ctsNofSurfaces
+						<< std::endl;
+			*/
+						// CONTACT DEBUG enD
+
 void World::loadCompoundRelatedMaps()
 {
 	//for (auto& topology : topologies){ // SAFE
@@ -1137,7 +1160,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 		//	((*topologies)[i]).getAtomName(compoundAtomIndex));
 
 		// Print VMD friendly
-		printf("graphics 0 sphere {%.10f %.10f %.10f} radius 0.05\n",
+		printf("graphics %d sphere {%.10f %.10f %.10f} radius 0.05\n",
 			compoundAtomIndex, loc[0], loc[1], loc[2]);
 
 	} // DEBUG
@@ -1253,6 +1276,34 @@ World::calcMobodToMobodTransforms(
 	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
 }
 
+// Generate a number of samples
+int World::generateSamples(int howMany, int NMAOption)
+{
+
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	updateAtomListsFromCompound(currentAdvancedState);
+
+	// Set old potential energy of the new world via OpenMM
+	//auto OldPE = updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
+	auto OldPE = forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+
+	pHMC(updSampler(0))->setOldPE(OldPE);
+
+	std::cout << "World " << ownWorldIndex << ", NU " << currentAdvancedState.getNU() << ":\n";
+
+	// Reinitialize current sampler
+	updSampler(0)->reinitialize(currentAdvancedState);
+
+	// Make the requested number of samples
+	//accepted is wrong 
+	int accepted;
+	for(int k = 0; k < howMany; k++) {
+		accepted += updSampler(0)->sample_iteration(currentAdvancedState, NMAOption);
+	}
+
+	return accepted;
+
+}
 
 /** Print information about Simbody systems. For debugging purpose. **/
 void World::PrintSimbodyStateCache(SimTK::State& someState){

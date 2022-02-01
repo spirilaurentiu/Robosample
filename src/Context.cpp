@@ -5,6 +5,82 @@
 #include "World.hpp"
 #include "Sampler.hpp"
 
+// Helper classes for REX
+
+//////////////////////////
+// CLASS THERMODYNAMICSTATE
+//////////////////////////
+
+class ThermodynamicState{
+  public:
+	ThermodynamicState();
+	ThermodynamicState(const SimTK::Real& T);
+	~ThermodynamicState(){}
+
+	void setTemperature(const SimTK::Real& T);
+	const SimTK::Real& getTemperature();
+	const SimTK::Real& getBeta();
+
+  private:
+    SimTK::Real temperature;
+    SimTK::Real beta;
+};
+
+
+ThermodynamicState::ThermodynamicState()
+{
+	temperature = 300;
+	SimTK::Real RT = temperature *
+		static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD);
+	beta = 1.0 / RT;
+}
+
+ThermodynamicState::ThermodynamicState(const SimTK::Real& T)
+{
+	temperature = T;
+	SimTK::Real RT = temperature *
+		static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD);
+	beta = 1.0 / RT;
+}
+
+const SimTK::Real& ThermodynamicState::getTemperature()
+{
+	return temperature;
+}
+
+const SimTK::Real& ThermodynamicState::getBeta()
+{
+	return beta;
+}
+
+
+//////////////////////////
+// CLASS REPLICA
+//////////////////////////
+
+class Replica{
+  public:
+	Replica();
+	~Replica();
+
+  private:
+	std::vector<int> thermodynamicStateIx;
+};
+
+Replica::Replica()
+{
+}
+
+Replica::~Replica()
+{
+}
+
+
+//////////////////////////
+// CLASS CONTEXT
+//////////////////////////
+
+//Primitive error handling
 void Context::throwAndExit(std::string errMsg, int errCode){
 		std::cerr << "Context: " << errMsg;
 		throw std::exception();
@@ -13,7 +89,10 @@ void Context::throwAndExit(std::string errMsg, int errCode){
 
 
 // Default constructor
-Context::Context(const SetupReader& setupReader, std::string logFilename){
+Context::Context(const SetupReader& setupReader, std::string logFilename)
+: thermodynamicStates()
+, replicas()
+{
 	nofWorlds = 0;
 	nofMols = 0;
 	nofEmbeddedTopologies = 0;
@@ -34,6 +113,10 @@ Context::Context(const SetupReader& setupReader, std::string logFilename){
 // Destructor
 Context::~Context(){
 	fclose(logFile);
+
+	//for(int i = 0; i < replicas.size(); i++){	
+	//	replicas[i].thermodynamicStateIx.clear();
+	//}
 }
 
 // Check input
@@ -228,15 +311,6 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 {
 	// function args were std::size_t whichWorld, int whichMolecule, std::string regimen
 	regimens[whichWorld].push_back(regimen);
-}
-
-// Adaptive Gibbs blocking: TODO: consider moving in World
-void Context::allocateReblockQsCache(void)
-{
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		QsCache.push_back(std::vector<std::vector<SimTK::Real>>(roundsTillReblock));
-		//std::cout << "Context::AddWorld QsCache size " << QsCache.size() << std::endl;
-	}
 }
 
 // Add a number of empty worlds
@@ -957,6 +1031,38 @@ void Context::updNofRoundsTillReblock(int nofRoundsTillReblock)
 	this->roundsTillReblock = nofRoundsTillReblock;
 }
 
+// Adaptive Gibbs blocking: TODO: consider moving in World
+void Context::allocateReblockQsCache(void)
+{
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		QsCache.push_back(std::vector<std::vector<SimTK::Real>>(roundsTillReblock));
+		//std::cout << "Context::AddWorld QsCache size " << QsCache.size() << std::endl;
+	}
+}
+
+// This seems wrong !!!
+void Context::allocateReblockQsCacheQVectors(void){
+	// Adaptive Gibbs blocking: // TODO generalized coord may not always be Real
+	if(QsCache[0][0].size() == 0){
+		std::size_t worldIx = 0;
+		for(auto& world : worlds) {
+			int nQs = world.getCompoundSystem()->getMatterSubsystem().getSystem().getDefaultState().getNQ();
+			//std::cout << "World " << worldIx  << " has " << nQs << " Qs" << std::endl;
+			//std::cout << "Context::realizeTopology QsCache[" << worldIx << "] size " << QsCache[worldIx].size() << std::endl;
+
+			for(int t = 0; t < roundsTillReblock; t++) { // TODO use insert (why use insert?)
+				for(int qi = 0; qi < nQs; qi++){
+					QsCache[worldIx][t].push_back(0);
+				}
+
+			//std::cout << "Context::realizeTopology QsCache[" << worldIx << "]["<< t << "] size " << QsCache[worldIx][t].size() << std::endl;
+			}
+
+			worldIx++;
+		}
+	}
+}
+
 // Get the number of samples returned by the sampler in one round
 int Context::getNofSamplesPerRound(std::size_t whichWorld)
 {
@@ -1089,10 +1195,12 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 		}
 
 		// Write pdb
-		if( getPdbRestartFreq() != 0){
-			if(((round) % getPdbRestartFreq()) == 0){
+		if( pdbRestartFreq != 0){
+			if(((round) % pdbRestartFreq) == 0){
+
 				const SimTK::State& pdbState = updWorld(worldIndexes.front())->integ->updAdvancedState();
 				updWorld(worldIndexes.front())->updateAtomListsFromCompound(pdbState);
+
 				for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
 					updWorld(worldIndexes.front())->getTopology(mol_i).writeAtomListPdb(getOutputDir(),
 						"/pdbs/sb." +
@@ -1187,7 +1295,75 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 	}
 }
 
-// Main
+
+void Context::RunREX(void)
+{
+}
+
+void Context::writePdbs(int someIndex)
+{
+
+	// Update bAtomList in Topology
+	const SimTK::State& pdbState =
+	worlds[worldIndexes.front()].integ->updAdvancedState();
+	worlds[worldIndexes.front()].updateAtomListsFromCompound(pdbState);
+
+	// Write
+	for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
+		topologies[mol_i].writeAtomListPdb(
+			outputDir,
+			"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + ".",
+			".pdb",
+			10,
+			someIndex);
+	}
+}
+
+void Context::randomizeWorldIndexes(void)
+{
+	// Random int for random world order
+	std::random_device rd; // obtain a random number from hardware
+	std::mt19937 gen(rd()); // seed the generator
+	std::uniform_int_distribution<std::size_t>
+		randWorldDistrib(1, nofWorlds-1); // TODO between 1 and nOfWorlds-1?
+
+	if(getNofWorlds() >= 3){
+
+		// Swap world indeces between vector position 2 and random
+		auto randVecPos = randWorldDistrib(gen);
+		//std::cout << "Swapping position 1 with "
+		//	<< randVecPos << std::endl;
+
+		auto secondWorldIx = worldIndexes[1];
+		auto randWorldIx = worldIndexes[randVecPos];
+
+		worldIndexes[1] = randWorldIx;
+		worldIndexes[randVecPos] = secondWorldIx;
+
+	}
+}
+
+void Context::transferCoordinates(int src, int dest)
+{
+	// Get advanced states of the integrators
+	SimTK::State& lastAdvancedState = updWorld(src)->integ->updAdvancedState();
+	SimTK::State& currentAdvancedState = updWorld(dest)->integ->updAdvancedState();
+
+	// Get coordinates from source
+	std::vector<std::vector<std::pair<
+		bSpecificAtom *, SimTK::Vec3> > >
+		otherWorldsAtomsLocations =
+	updWorld(src)->getAtomsLocationsInGround(lastAdvancedState);
+
+	// Pass compounds to the new world
+	passTopologiesToNewWorld(dest);
+
+	// Set coordinates to destination (reconstruct)
+	currentAdvancedState = updWorld(dest)->setAtomsLocationsInGround(
+		currentAdvancedState, otherWorldsAtomsLocations);
+}
+
+// Normal run
 void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 {
 
@@ -1195,72 +1371,43 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	std::size_t currentWorldIx = worldIndexes.front();
 	std::size_t lastWorldIx = 0;
 
-	// Random int for random world order
-	std::random_device rd; // obtain a random number from hardware
-	std::mt19937 gen(rd()); // seed the generator
-	std::uniform_int_distribution<std::size_t> randWorldDistrib(1, getNofWorlds()-1); // TODO between 1 and nOfWorlds-1?
-
-	// Main loop: iterate through rounds
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
-		for(int round = 0; round < nofRounds; round++){
 
-			std::cout << "Entering round " << round + 1 << "/" << nofRounds << "\n" << std::flush;
+		// Main loop: iterate through rounds
+		for(int round = 0; round < nofRounds; round++){
 
 			// Iterate through worlds
 			for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 
 				// Rotate worlds indices (translate from right to left)
 				if(isWorldsOrderRandom){
-					if(getNofWorlds() >= 3){
-						// Swap world indeces between vector position 2 and random
-						auto randVecPos = randWorldDistrib(gen);
-						//std::cout << "Swapping position 1 with " << randVecPos << std::endl;
-						auto secondWorldIx = worldIndexes[1];
-						auto randWorldIx = worldIndexes[randVecPos];
-
-						worldIndexes[1] = randWorldIx;
-						worldIndexes[randVecPos] = secondWorldIx;
-
-					}
+					randomizeWorldIndexes();
 				}
 
+				// Rotate the vector of world indexes
 			   	std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
-
 
 				// Get indeces
 				currentWorldIx = worldIndexes.front();
 				lastWorldIx = worldIndexes.back();
 
 				// Transfer coordinates from last world to current
-				SimTK::State& lastAdvancedState = updWorld(lastWorldIx)->integ->updAdvancedState();
-				SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
+				//SimTK::State& lastAdvancedState = updWorld(lastWorldIx)->integ->updAdvancedState();
+				//SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
 
-				if(worldIndexes.size() > 1) { // It also loads bAtomList
-
-					// DANGER ZONE
-					std::vector<std::vector<std::pair<
-						bSpecificAtom *, SimTK::Vec3> > >
-						otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
+				// Transfer coordinates from last world to current
+				if(worldIndexes.size() > 1) {
 
 					std::cout << "Transfer from world " << lastWorldIx
 						<< " to " << currentWorldIx << std::endl;
 
-					// Pass compounds to the new world
-					passTopologiesToNewWorld(currentWorldIx);
-
-					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
-							currentAdvancedState, otherWorldsAtomsLocations);
-
-					updWorld(currentWorldIx)->updateAtomListsFromCompound(currentAdvancedState);
-					// SAFE ZONE
-					//currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
-					//		currentAdvancedState,
-					//		updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState));
-					// ZONE
-
-				}else{ // Just load bAtomList
-					updWorld(currentWorldIx)->updateAtomListsFromCompound(currentAdvancedState);
+					transferCoordinates(lastWorldIx, currentWorldIx);
 				}
+
+				// Update bAtomList from Simbody
+				/*
+				SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
+				updWorld(currentWorldIx)->updateAtomListsFromCompound(currentAdvancedState);
 
 				// Set old potential energy of the new world via OpenMM
 				//auto OldPE = updWorld(currentWorldIx)->updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
@@ -1273,69 +1420,30 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
 				// Make the requested number of samples
+				// we don't print every sample to the output ?
 				bool accepted;
 				for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++) {
 					accepted = updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, NMAOption[currentWorldIx]);
-
-					// DANGER ZONE
-					//updWorld(currentWorldIx)->updSampler(0)->checkAtomStationsThroughDumm();
-					//updWorld(lastWorldIx)->updSampler(0)->checkAtomStationsThroughDumm();
-					// ZONE
-
-					if (accepted) {
-
-						// CONTACT DEBUG
-			/*
-						int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
-						SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->getDissipatedEnergy(currentAdvancedState);
-						bool hasDefaultForceGenerator = updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
-
-						const MultibodySystem & mbs = updWorld(currentWorldIx)->contactForces->getMultibodySystem();
-						int nofMobods = mbs.getMatterSubsystem().getNumBodies();
-
-						const ContactTrackerSubsystem & cts = updWorld(currentWorldIx)->contactForces->getContactTrackerSubsystem();
-						int ctsNofSurfaces = cts.getNumSurfaces();
-						
-
-						std::cout << "CONTACT INFO:"
-							<< " #forces= " << numForces
-							<< " dissEnergy= " << dissEnergy
-							<< " hasDefaultForceGenerator= " << hasDefaultForceGenerator
-							<< " #mobods= " << nofMobods 
-							<< " ctsNofSurfaces= " << ctsNofSurfaces
-						<< std::endl;
-			*/
-						// CONTACT DEBUG enD
-					}
 				}
+				*/
+
+				int accepted = worlds[currentWorldIx].generateSamples(
+					nofSamplesPerRound[currentWorldIx],
+					NMAOption[currentWorldIx]);
+
 	
 			} // END iteration through worlds
 
-			// Print energy and geometric features
+			// Write energy and geometric features to logfile
 			if( !(round % getPrintFreq()) ){
-				PrintSamplerData(worldIndexes.back());
-				PrintDistances(worldIndexes.back());
-				PrintDihedralsQs(worldIndexes.back());
-				fprintf(logFile, "\n");
-				PrintSamplerData(worldIndexes.front());
-				PrintDistances(worldIndexes.front());
-				PrintDihedralsQs(worldIndexes.front());
-				fprintf(logFile, "\n");
+				PrintToLog(worldIndexes.back());
+				PrintToLog(worldIndexes.front());
 			}
-
-			// std::cout << "\n";
 	
 			// Write pdb
-			if( getPdbRestartFreq() != 0){
-				if(((round) % getPdbRestartFreq()) == 0){
-					const SimTK::State& pdbState = updWorld(worldIndexes.front())->integ->updAdvancedState();
-					updWorld(worldIndexes.front())->updateAtomListsFromCompound(pdbState);
-					for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-						updWorld(worldIndexes.front())->getTopology(mol_i).writeAtomListPdb(getOutputDir(),
-							"/pdbs/sb." +
-							getPdbPrefix() + "." + std::to_string(mol_i) + ".",
-							".pdb", 10, round);
-					}
+			if( pdbRestartFreq != 0){
+				if((round % pdbRestartFreq) == 0){
+					writePdbs(round);
 				}
 			}
 	
@@ -1378,8 +1486,12 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 					bSpecificAtom *, SimTK::Vec3> > >
 					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
 		
+					std::cout << "Transfer from world " << lastWorldIx
+						<< " to " << currentWorldIx << std::endl;
+
 					// Pass compounds to the new world
-					//passTopologiesToNewWorld(currentWorldIx);
+					passTopologiesToNewWorld(currentWorldIx);
+
 
 					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
 							currentAdvancedState, otherWorldsAtomsLocations);
@@ -1745,6 +1857,14 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 
 }
 
+void Context::PrintToLog(int worldIx)
+{
+	PrintSamplerData(worldIx);
+	PrintDistances(worldIx);
+	PrintDihedralsQs(worldIx);
+	fprintf(logFile, "\n");
+}
+
 // Write intial pdb for reference
 // TODO: what's the deal with mc_step
 void Context::writeInitialPdb(void)
@@ -1881,28 +2001,6 @@ void Context::realizeTopology() {
 		world.getCompoundSystem()->realizeTopology();
 	}
 
-}
-
-void Context::allocateReblockQsCacheQVectors(void){
-	// Adaptive Gibbs blocking: // TODO generalized coord may not always be Real
-	if(QsCache[0][0].size() == 0){
-		std::size_t worldIx = 0;
-		for(auto& world : worlds) {
-			int nQs = world.getCompoundSystem()->getMatterSubsystem().getSystem().getDefaultState().getNQ();
-			//std::cout << "World " << worldIx  << " has " << nQs << " Qs" << std::endl;
-			//std::cout << "Context::realizeTopology QsCache[" << worldIx << "] size " << QsCache[worldIx].size() << std::endl;
-
-			for(int t = 0; t < roundsTillReblock; t++) { // TODO use insert (why use insert?)
-				for(int qi = 0; qi < nQs; qi++){
-					QsCache[worldIx][t].push_back(0);
-				}
-
-			//std::cout << "Context::realizeTopology QsCache[" << worldIx << "]["<< t << "] size " << QsCache[worldIx][t].size() << std::endl;
-			}
-
-			worldIx++;
-		}
-	}
 }
 
 /** Print the number of threads each World got **/

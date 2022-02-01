@@ -1770,20 +1770,23 @@ void Topology::printMaps()
 }
 
 /** Write a pdb with bAtomList coordinates and inNames **/
-void Topology::writeAtomListPdb(std::string dirname, std::string prefix,
-						        std::string sufix, int maxNofDigits, int index) const
+void Topology::writeAtomListPdb(std::string dirname,
+	std::string prefix,
+	std::string sufix,
+	int maxNofDigits,
+	int index) const
 {
 	// Using floor here is no buneo because the index can be zero
 	std::string zeros("");
-	if(int nofDigits = static_cast<int>(std::to_string(index).size()); maxNofDigits > nofDigits){
+	if(int nofDigits = static_cast<int>(std::to_string(index).size());
+	maxNofDigits > nofDigits){
 		zeros = std::string(maxNofDigits - nofDigits, '0');
 	}
 
 	std::stringstream sstream;
-	sstream << dirname << "/" << prefix << zeros << std::to_string(index) << sufix;
+	sstream << dirname << "/"
+		<< prefix << zeros << std::to_string(index) << sufix;
 	string ofilename = sstream.str();
-
-	std::cout << "\tTopology written to '" << ofilename << "'\n";
 
 	FILE *oF = fopen (ofilename.c_str(),"w");
 	if (oF) {
@@ -1805,6 +1808,7 @@ void Topology::writeAtomListPdb(std::string dirname, std::string prefix,
 		}
 
 		fclose(oF);
+		std::cout << "\tTopology written to '" << ofilename << "'\n";
 	} else {
 		std::cout << "FAILED TO OPEN '" << ofilename << "' TO WRIE!\n";
 	}

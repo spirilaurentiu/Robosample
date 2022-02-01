@@ -9,6 +9,9 @@
 class Sampler;
 class World;
 
+class ThermodynamicState;
+class Replica;
+
 class Context{
 
 public:
@@ -23,15 +26,9 @@ public:
 	bool loadFlexibleBondsSpecs(std::size_t whichWorld, int whichMolecule, std::string FlexSpecsFN);
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
 
-	// WORLD BEGIN
-	/** Creates a topology object and based on amberReader forcefield 
+	/** Load molecules based on loaded filenames. One molecule
+	creates a topology object and based on amberReader forcefield 
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
-	//void AddMolecule(readAmberInput *amberReader, 
-	//	std::string rbFN, std::string flexFN, std::string regimenSpec,
-	//	std::string argRoot, std::string argRootMobility);
-	// WORLD END
-
-	/** Load molecules based on loaded filenames **/
 	void AddMolecules(
 		int requestedNofMols,
 		SetupReader& setupReader
@@ -157,6 +154,8 @@ public:
 	//------------
 
 	// --- Main ---
+	void randomizeWorldIndexes(void);
+	void transferCoordinates(int src, int dest);
 	void Run(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
@@ -202,12 +201,18 @@ public:
 	void PrintDihedrals(std::size_t whichWorld);
 	void PrintDihedralsQs(std::size_t whichWorld);
 	void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
+	void PrintToLog(int whichWorld);
 
 	// Write intial/final pdb for reference
 	void writeInitialPdb(void);
 	void writeFinalPdb(void);
 
+	// Old
 	void WritePdb(std::size_t whichWorld);
+
+	// New
+	void writePdbs(int someIndex);
+
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2, int a3, int a4);
 	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2);
 
@@ -221,6 +226,11 @@ public:
 	std::string getPdbPrefix();
 	void setPdbPrefix(std::string arg);
 	//------------
+
+	//////////////////////////////////
+	//// REPLICA EXCHANGE FUNCTIONS //
+	//////////////////////////////////
+	void RunREX();
 
 public:
 	std::vector<std::size_t> worldIndexes;
@@ -298,6 +308,13 @@ private:
 
 	// Normal mode analysis
 	std::vector<int> NMAOption;
+
+	////////////////////////
+	//// REPLICA EXCHANGE //
+	////////////////////////
+	vector<ThermodynamicState> thermodynamicStates;
+	vector<Replica> replicas;
+
 
 };
 

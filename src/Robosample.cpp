@@ -208,7 +208,9 @@ int main(int argc, char **argv)
 	// Adaptive Gibbs blocking
 	context.setNofRoundsTillReblock(
 		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
-	context.allocateReblockQsCacheQVectors();
+
+	// Only now we can allocate memory for Q vectors
+	//context.allocateReblockQsCacheQVectors();
 
 	// Add Fixman torque (Additional ForceSubsystem) if required
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
@@ -400,20 +402,18 @@ int main(int argc, char **argv)
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 		context.RunSimulatedTempering(context.getNofRounds(),
-					 std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-					 std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+	}else if(setupReader.get("RUN_TYPE")[0] == "REX"){
+		context.RunREX();
 	}else{
 		context.Run(context.getNofRounds(),
-					 std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-					 std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 	}
 
 	// Write final pdbs
-	for(unsigned int mol_i = 0; mol_i < setupReader.get("MOLECULES").size(); mol_i++){
-		((context.updWorld(context.worldIndexes.front()))->getTopology(mol_i)).writeAtomListPdb(
-				context.getOutputDir(), "/pdbs/final." + context.getPdbPrefix() + ".", ".pdb", 10,
-				context.getNofRounds());
-	}
+	context.writeFinalPdb();
 
 	//std::cout << "printStatus 1 " << std::endl;
 	//context.printStatus();
