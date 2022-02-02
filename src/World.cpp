@@ -863,6 +863,37 @@ std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> World::getAto
 	return returnVector;
 }
 
+/** Almost the same thing as above but it takes the current integrator state
+ and returns a reference to atomsLocations
+ **/
+std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> World::getCurrentAtomsLocationsInGround(void)
+{
+	SimTK::State& state = integ->updAdvancedState();
+
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> returnVector;
+
+	// Iterate through topologies
+	//for (auto& topology : topologies){ // SAFE
+	for (auto& topology : (*topologies)){ // DANGER
+		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
+		currentTopologyInfo.reserve(topology.bAtomList.size());
+
+		// Iterate through atoms
+		for (auto& atom : topology.bAtomList) {
+			auto compoundAtomIndex = atom.getCompoundAtomIndex();
+			SimTK::Vec3 location = //topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
+			topology.calcAtomLocationInGroundFrameThroughSimbody(
+				compoundAtomIndex, *forceField, *matter, state);
+
+			currentTopologyInfo.emplace_back(&atom, location);
+		}
+
+		returnVector.emplace_back(currentTopologyInfo);
+	}
+
+	return returnVector;
+}
+
 /** Put coordinates into bAtomLists of Topologies.
  * When provided with a State, calcAtomLocationInGroundFrame
  * realizes Position and uses matter to calculate locations **/
@@ -905,13 +936,13 @@ SimTK::State& World::setAtomsLocationsInGround(
 		std::pair<bSpecificAtom *, SimTK::Vec3> > > otherWorldsAtomsLocations)
 {
 
-	std::cout << "otherWorldsAtomsLocations[0]" << std::endl;
-	for(std::size_t j = 0; j < otherWorldsAtomsLocations[0].size(); j++){
-		auto compoundAtomIndex = otherWorldsAtomsLocations[0][j].first->getCompoundAtomIndex();
-		auto loc = otherWorldsAtomsLocations[0][j].second;
-		printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
-		//std::cout << loc << std::endl;
-	}
+	//std::cout << "otherWorldsAtomsLocations[0]" << std::endl;
+	//for(std::size_t j = 0; j < otherWorldsAtomsLocations[0].size(); j++){
+	//	auto compoundAtomIndex = otherWorldsAtomsLocations[0][j].first->getCompoundAtomIndex();
+	//	auto loc = otherWorldsAtomsLocations[0][j].second;
+	//	printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
+	//	//std::cout << loc << std::endl;
+	//}
 
 	// Get the total no of bodies in this world (each World has its own
 	// SimbodyMatterSubsystem)
@@ -1101,7 +1132,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 						//		*forceField,	// DANGER
 						//		ownWorldIndex);	// DANGER
 
-						std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
+						//std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
 
 						std::vector<SimTK::Transform> mobodTs = // DANGER
 							calcMobodToMobodTransforms( // DANGER
@@ -1109,7 +1140,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 								aIx,		// DANGER
 								someState);	// DANGER
 
-						std::cout << "calcMobodTransforms for atom " << aIx << " done\n" << std::flush;
+						//std::cout << "calcMobodTransforms for atom " << aIx << " done\n" << std::flush;
 
 						mobod.setDefaultInboardFrame(mobodTs[0]);
 						mobod.setDefaultOutboardFrame(mobodTs[1]);
@@ -1146,6 +1177,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 	this->compoundSystem->realize(someState, SimTK::Stage::Position);
 
 	// DEBUG DANGER
+	/*
 	std::cout << "Locations after realizePosition\n";
 	std::cout << "mol new\n";
 	for (auto& atom : ((*topologies)[0]).bAtomList) {
@@ -1163,7 +1195,9 @@ SimTK::State& World::setAtomsLocationsInGround(
 		printf("graphics %d sphere {%.10f %.10f %.10f} radius 0.05\n",
 			compoundAtomIndex, loc[0], loc[1], loc[2]);
 
-	} // DEBUG
+	}
+	*/ 
+	// DEBUG
 
 	//updateAtomListsFromCompound(someState);
 
@@ -1178,8 +1212,6 @@ World::calcMobodToMobodTransforms(
 	SimTK::Compound::AtomIndex aIx,
 	const SimTK::State& someState)
 {
-
-	std::cout << "AU1 " << "\n" << std::flush;
 
 	// There is no P_X_F and B_X_M inside a body.
 	assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
@@ -1235,7 +1267,6 @@ World::calcMobodToMobodTransforms(
 	bBond bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
-	std::cout << "AUnarrow " << "\n" << std::flush;
 	bool pinORslider =
 		(mobility == SimTK::BondMobility::Mobility::Torsion)
 		|| (mobility == SimTK::BondMobility::Mobility::AnglePin)
@@ -1243,12 +1274,10 @@ World::calcMobodToMobodTransforms(
 
 	if( (pinORslider) && ((atom->neighbors).size() == 1)){
 
-	std::cout << "AUnarrow 1" << "\n" << std::flush;
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
 	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
 
-	std::cout << "AUnarrow 2" << "\n" << std::flush;
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
@@ -1256,7 +1285,6 @@ World::calcMobodToMobodTransforms(
 	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
 	){
 
-	std::cout << "AUnarrow 3" << "\n" << std::flush;
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else{

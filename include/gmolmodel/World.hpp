@@ -145,7 +145,14 @@ public:
 
 	// --- Mixing functions: Pass configurations among Worlds
 	/** Get the current Compound Cartesian coords **/
-	std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >  getAtomsLocationsInGround(const SimTK::State&);
+	std::vector<
+	std::vector<
+	std::pair<bSpecificAtom *, SimTK::Vec3> > > 
+		getAtomsLocationsInGround(const SimTK::State&);
+	std::vector<
+	std::vector<
+	std::pair<bSpecificAtom *, SimTK::Vec3> > >
+		getCurrentAtomsLocationsInGround(void);
 
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(

@@ -114,6 +114,12 @@ const std::vector<std::string>& SetupReader::get(const std::string& argKey) cons
 	}
 }
 
+//
+const size_t SetupReader::getNofKeys(void) const
+{
+	return Args.size();
+}
+
 bool SetupReader::IsPrintable(const std::string& s) const
 {
 	return std::all_of(s.begin(), s.end(), [](char c) { return c >= 0 && c <= 128; });

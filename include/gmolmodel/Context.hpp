@@ -12,6 +12,8 @@ class World;
 class ThermodynamicState;
 class Replica;
 
+enum ReplicaMixingScheme {all, neighboring};
+
 class Context{
 
 public:
@@ -234,6 +236,29 @@ public:
 	//////////////////////////////////
 	//// REPLICA EXCHANGE FUNCTIONS //
 	//////////////////////////////////
+
+	void setNofReplicas(const size_t& argNofReplicas);
+	const size_t& getNofReplicas(void) const;
+	void setNofThermodynamicStates(const size_t& argNofThermodynamicStates);
+	const size_t& getNofThermodynamicStates(void) const;
+
+	// Add one replica
+	void addReplica(int index);
+	void addReplica(int index, std::vector<int>& argWorldIndexes);
+	void addThermodynamicState(int index, SimTK::Real T);
+
+	// Set the intial mapping between replicas and thermoStates
+	void loadReplica2ThermoIxs(void);
+
+	void attemptSwap(int replica_i, int replica_j);
+	void mixAllReplicas(int nSwapAttempts);
+	void mixNeighboringReplicas(void);
+	// Mix replicas
+	void mixReplicas(void);
+
+	// Go through all of this replica's worlds and generate samples
+	void RunOneRoundInReplica(int whichReplica);
+
 	void RunREX();
 
 public:
@@ -316,9 +341,13 @@ private:
 	////////////////////////
 	//// REPLICA EXCHANGE //
 	////////////////////////
-	vector<ThermodynamicState> thermodynamicStates;
-	vector<Replica> replicas;
-
+	std::vector<ThermodynamicState> thermodynamicStates;
+	std::vector<Replica> replicas;
+	std::map<int, int> replica2ThermoIxs;
+	
+	size_t nofReplicas;
+	size_t nofThermodynamicStates;
+	ReplicaMixingScheme replicaMixingScheme;
 
 };
 

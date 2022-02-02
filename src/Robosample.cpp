@@ -408,7 +408,43 @@ int main(int argc, char **argv)
 		rexReader.ReadSetup("trex.dat");
 		rexReader.dump(true);
 
-		//
+		// Use setup reader for REX file. TODO: adapt reader to format 
+		size_t nofReplicas = rexReader.getNofKeys();
+		context.setNofReplicas(nofReplicas);
+		context.setNofThermodynamicStates(nofReplicas);
+
+		// Add replicas
+		for(size_t replica_k = 0; replica_k < nofReplicas; replica_k++){
+
+			std::vector<std::string> vals_k = rexReader.get(std::to_string(replica_k));
+
+			std::cout << "rexReader: "
+				<< vals_k[0]
+				<< std::endl;
+
+			// Add a thermodynamic state
+			SimTK::Real T = std::stod(rexReader.get(std::to_string(replica_k))[0]);
+				
+			context.addThermodynamicState(replica_k, T);
+
+			// Add a replica
+			std::vector<int> worldIndexes_k;
+			for(size_t i = 1; i < vals_k.size(); i++){
+				std::cout << "Add worlds " << std::stoi(vals_k[i])
+					<< " to replica " << replica_k
+					<< std::endl;
+			
+				worldIndexes_k.push_back(std::stoi(vals_k[i]));
+			}
+			worldIndexes_k.push_back(0);
+
+			std::cout << "About to add replica\n" << std::flush;
+			context.addReplica(replica_k, worldIndexes_k);
+
+		}
+
+		// Load each replica's starting coordinates
+		
 	}
 	//std::exit(0);
 

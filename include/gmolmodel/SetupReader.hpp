@@ -31,6 +31,9 @@ public:
 
 	const std::vector<std::string>& get(const char *argKey) const;
 	const std::vector<std::string>& get(const std::string& argKey) const;
+	
+	// 
+	const size_t getNofKeys(void) const;
 
 private:
 	std::map<std::string, std::vector<std::string>> Args;
