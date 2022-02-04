@@ -202,6 +202,10 @@ public:
 	void setTemperature(SimTK::Real);
 	//...............
 
+	/** Set the World (macro) temperature **/
+	void setBoostTemperature(SimTK::Real);
+	//...............
+
 	// --- Simulation ---
 	/** Get/Set seed for reproducibility. **/
 	void setSeed(int whichSampler, uint32_t argSeed);

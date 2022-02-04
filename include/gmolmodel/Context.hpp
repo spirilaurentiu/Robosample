@@ -213,11 +213,11 @@ public:
 	void writeInitialPdb(void);
 	void writeFinalPdb(void);
 
-	// Old
+	// 
 	void WritePdb(std::size_t whichWorld);
 
-	// New
-	void writePdbs(int someIndex);
+	// 
+	void writePdbs(int someIndex, int thermodynamicStateIx = 0);
 
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2, int a3, int a4);
 	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2);
@@ -256,10 +256,20 @@ public:
 	// Mix replicas
 	void mixReplicas(void);
 
+	// Load replica's atomLocations into it's front world
+	void restoreReplicaCoordinatesToFront(int whichReplica);
+
+	// Stores replica's front world's coordinates into it's atomsLocations
+	// This should always be a fully flexible world
+	void storeReplicaFrontCoordinates(int whichReplica);
+
 	// Go through all of this replica's worlds and generate samples
-	void RunOneRoundInReplica(int whichReplica);
+	void RunOneRoundOfReplica(int whichReplica);
+	void RunOneRoundOfReplicaIni(int whichReplica);
 
 	void RunREX();
+
+	void PrintReplicas(void);
 
 public:
 	std::vector<std::size_t> worldIndexes;
@@ -348,6 +358,11 @@ private:
 	size_t nofReplicas;
 	size_t nofThermodynamicStates;
 	ReplicaMixingScheme replicaMixingScheme;
+
+	std::random_device rd;
+	std::mt19937 randomEngine;
+	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution =
+		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, SimTK::One);
 
 };
 

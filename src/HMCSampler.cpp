@@ -83,6 +83,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	this->temperature = 0.0;
 	this->boostT = 0.0;
 	this->boostRT = 0.0;
+	this->sqrtBoostRT = 0.0;
 	this->boostBeta = 0.0;
 
 	MDStepsPerSample = 0;
@@ -163,7 +164,8 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
 
 	// Set stddev according to temperature
-	RandomCache.SqrtMInvV *= (RandomCache.sqrtRT);
+	std::cout << "VELOCITIES sqrtRT=sqrtBoostRT " << sqrtBoostRT << "\n";
+	RandomCache.SqrtMInvV *= sqrtBoostRT;
 
 	// Raise the temperature
 	someState.updU() = RandomCache.SqrtMInvV;
@@ -449,7 +451,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		//std::cout << "sqrtMInvUs 1 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
 		// Scale by sqrt of guidance kT
-		SimTK::Real sqrtBoostRT = std::sqrt(boostRT);
+		//SimTK::Real sqrtBoostRT = std::sqrt(boostRT); // moved into private vars
 		sqrtMInvUs *= sqrtBoostRT;
 		//sqrtMInvUs *= sqrtRT;
 		//std::cout << "sqrtRT " << sqrtRT 
@@ -1471,7 +1473,9 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 		const float scaleFactor = world->getMobodUScaleFactor(mbx);
 
 		//std::cout << "loadUScaleFactors mbx scaleFactor uIxes " << int(mbx) << ' ' << scaleFactor;
-		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+		for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState);
+		uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState);
+		uIx++ ){
 			//std::cout << ' ' << int(uIx) ;
 			UScaleFactors[int(uIx)] = scaleFactor;
 			InvUScaleFactors[int(uIx)] = 1.0 / scaleFactor;
@@ -1713,8 +1717,13 @@ void HMCSampler::setBoostTemperature(SimTK::Real argT)
 {
 	this->boostT = argT;
 	std::cout << "HMC: boost temperature: " << this->boostT << std::endl;
+
 	this->boostRT = this->boostT * SimTK_BOLTZMANN_CONSTANT_MD;
 	std::cout << "HMC: boostRT: " << this->boostRT << std::endl;
+
+	this->sqrtBoostRT = std::sqrt(this->boostRT);
+	std::cout << "HMC: sqrtBoostRT: " << this->sqrtBoostRT << std::endl;
+
 	this->boostBeta = 1.0 / boostRT;
 	std::cout << "HMC: boostBeta: " << this->boostBeta << std::endl;
 

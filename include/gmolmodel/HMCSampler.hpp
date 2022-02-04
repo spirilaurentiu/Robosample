@@ -384,6 +384,7 @@ protected:
 
 	SimTK::Real boostT;
 	SimTK::Real boostRT;
+	SimTK::Real sqrtBoostRT; // vel init
 	SimTK::Real boostBeta;
 	SimTK::Real boostFactor;
 	SimTK::Real unboostFactor;

@@ -379,7 +379,10 @@ void World::setUScaleFactorsToMobods(void)
 			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1, ownWorldIndex);
 			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2, ownWorldIndex);
 
-			std::cout << "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 " << aIx1 << " " << aIx2 << " " << mbx1 << " " << mbx2 << std::endl;
+			std::cout 
+			<< "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 "
+			<< aIx1 << " " << aIx2 << " "
+			<< mbx1 << " " << mbx2 << std::endl;
 
 			const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(mbx1);
 			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(mbx2);
@@ -670,6 +673,17 @@ void World::setTemperature(SimTK::Real argTemperature)
 }
 //...............
 
+/** Set this World temperature but also ths samplers and 
+Fixman torque temperature. **/
+void World::setBoostTemperature(SimTK::Real argTemperature)
+{
+	// Set the temperature for the samplers
+	for (auto& sampler: samplers) {
+		sampler->setBoostTemperature(argTemperature);
+	}
+}
+//...............
+
 //...................
 // --- Simulation ---
 //...................
@@ -891,6 +905,14 @@ std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> World::getCur
 		returnVector.emplace_back(currentTopologyInfo);
 	}
 
+	// DEBUG
+	/*std::cout << "myAtomsLocations[0]" << std::endl;
+	for(std::size_t j = 0; j < returnVector[0].size(); j++){
+		auto compoundAtomIndex = returnVector[0][j].first->getCompoundAtomIndex();
+		auto loc = returnVector[0][j].second;
+		printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
+	} */// END DEBUG
+
 	return returnVector;
 }
 
@@ -936,13 +958,13 @@ SimTK::State& World::setAtomsLocationsInGround(
 		std::pair<bSpecificAtom *, SimTK::Vec3> > > otherWorldsAtomsLocations)
 {
 
-	//std::cout << "otherWorldsAtomsLocations[0]" << std::endl;
-	//for(std::size_t j = 0; j < otherWorldsAtomsLocations[0].size(); j++){
-	//	auto compoundAtomIndex = otherWorldsAtomsLocations[0][j].first->getCompoundAtomIndex();
-	//	auto loc = otherWorldsAtomsLocations[0][j].second;
-	//	printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
-	//	//std::cout << loc << std::endl;
-	//}
+	/*std::cout << "otherWorldsAtomsLocations[0]" << std::endl;
+	for(std::size_t j = 0; j < otherWorldsAtomsLocations[0].size(); j++){
+		auto compoundAtomIndex = otherWorldsAtomsLocations[0][j].first->getCompoundAtomIndex();
+		auto loc = otherWorldsAtomsLocations[0][j].second;
+		printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
+		//std::cout << loc << std::endl;
+	}*/
 
 	// Get the total no of bodies in this world (each World has its own
 	// SimbodyMatterSubsystem)
@@ -973,48 +995,50 @@ SimTK::State& World::setAtomsLocationsInGround(
 			atomTargets.insert(std::make_pair(atomIndex, location));
 		}
 
-		std::cout << "Match start." << "\n" << std::flush;
+		//std::cout << "Match start." << "\n" << std::flush;
 		((*topologies)[i]).matchDefaultAtomChirality(atomTargets, 0.01, false);
-		std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
+		//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
 		((*topologies)[i]).matchDefaultBondLengths(atomTargets);
-		std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
+		//std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
 		((*topologies)[i]).matchDefaultBondAngles(atomTargets);
-		std::cout << "matchDefaultBondAngles done. " << "\n" << std::flush;
+		//std::cout << "matchDefaultBondAngles done. " << "\n" << std::flush;
 		((*topologies)[i]).matchDefaultDirections(atomTargets);
-		std::cout << "matchDefaultDirections done. " << "\n" << std::flush;
+		//std::cout << "matchDefaultDirections done. " << "\n" << std::flush;
 		((*topologies)[i]).matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
-		std::cout << "matchDefaultDefaultDihedralAngles done. " << "\n" << std::flush;
+		//std::cout << "matchDefaultDefaultDihedralAngles done. " << "\n" << std::flush;
 		((*topologies)[i]).matchDefaultTopLevelTransform(atomTargets);
-		std::cout << "matchDefaultDefaultTopLevelTransform done. " << "\n" << std::flush;
-		std::cout << "Match done. " << "\n" << std::flush;
+		//std::cout << "matchDefaultDefaultTopLevelTransform done. " << "\n" << std::flush;
+		//std::cout << "Match done. " << "\n" << std::flush;
 
 		// Get the Ground to Top Transform
 		G_X_T = ((*topologies)[i]).getTopLevelTransform();
 
 		// Recalculate atom frames in top compound frame
-		std::cout << "Calculate defaultAtomFrames start ...." << "\n" << std::flush;
+		//std::cout << "Calculate defaultAtomFrames start ...." << "\n" << std::flush;
 		((*topologies)[i]).calcTopTransforms();
-		std::cout << "defaultAtomFrames done" << "\n" << std::flush;
+		//std::cout << "defaultAtomFrames done" << "\n" << std::flush;
 
 		//// DEBUG DANGER
-		//std::cout << "Locations after match and calcDefaultAtomsFrameInCompoundFrame\n";
-		//std::cout << "mol new\n";
-		//for (auto& atom : ((*topologies)[i]).bAtomList) {
-		//	auto compoundAtomIndex = atom.getCompoundAtomIndex();
+		/*
+		std::cout << "Locations after match and calcDefaultAtomsFrameInCompoundFrame\n";
+		std::cout << "mol new\n";
+		for (auto& atom : ((*topologies)[i]).bAtomList) {
+			auto compoundAtomIndex = atom.getCompoundAtomIndex();
 
 		//	// Based on Simbody
 		//	//SimTK::Vec3 loc = ((*topologies)[i]).calcAtomLocationInGroundFrame(
 		//	//	someState, compoundAtomIndex);
 
-		//	// Based on Compound frames
-		//	SimTK::Vec3 loc = ((*topologies)[i]).calcDefaultAtomLocationInGroundFrame(
-		//		((*topologies)[i]).getAtomName(compoundAtomIndex));
+			// Based on Compound frames
+			SimTK::Vec3 loc = ((*topologies)[i]).calcDefaultAtomLocationInGroundFrame(
+				((*topologies)[i]).getAtomName(compoundAtomIndex));
 
-		//	// Print VMD friendly
-		//	printf("graphics 0 sphere {%.10f %.10f %.10f} radius 0.05\n",
-		//		compoundAtomIndex, loc[0], loc[1], loc[2]);
+			// Print VMD friendly
+			printf("graphics 0 sphere {%.10f %.10f %.10f} radius 0.05\n",
+				compoundAtomIndex, loc[0], loc[1], loc[2]);
 
-		//} // DEBUG
+		} // DEBUG
+		*/
 
 		///////////////////////////////////////////////////////////////
 		//             FULLY FLEXIBLE CARTESIAN WORLD                //
@@ -1177,8 +1201,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 	this->compoundSystem->realize(someState, SimTK::Stage::Position);
 
 	// DEBUG DANGER
-	/*
-	std::cout << "Locations after realizePosition\n";
+	/*std::cout << "Locations after realizePosition\n";
 	std::cout << "mol new\n";
 	for (auto& atom : ((*topologies)[0]).bAtomList) {
 		auto compoundAtomIndex = atom.getCompoundAtomIndex();
@@ -1195,11 +1218,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 		printf("graphics %d sphere {%.10f %.10f %.10f} radius 0.05\n",
 			compoundAtomIndex, loc[0], loc[1], loc[2]);
 
-	}
-	*/ 
+	}*/ 
 	// DEBUG
-
-	//updateAtomListsFromCompound(someState);
 
 	return someState;
 

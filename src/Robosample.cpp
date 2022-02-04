@@ -427,8 +427,13 @@ int main(int argc, char **argv)
 				
 			context.addThermodynamicState(replica_k, T);
 
-			// Add a replica
+			// Add worlds to replica
 			std::vector<int> worldIndexes_k;
+
+			// Add the first world to all the replicas
+			worldIndexes_k.push_back(0);
+
+			// Add the rest of the worlds
 			for(size_t i = 1; i < vals_k.size(); i++){
 				std::cout << "Add worlds " << std::stoi(vals_k[i])
 					<< " to replica " << replica_k
@@ -436,14 +441,15 @@ int main(int argc, char **argv)
 			
 				worldIndexes_k.push_back(std::stoi(vals_k[i]));
 			}
-			worldIndexes_k.push_back(0);
 
 			std::cout << "About to add replica\n" << std::flush;
 			context.addReplica(replica_k, worldIndexes_k);
 
 		}
 
-		// Load each replica's starting coordinates
+		context.loadReplica2ThermoIxs();
+
+		context.PrintReplicas();
 		
 	}
 	//std::exit(0);

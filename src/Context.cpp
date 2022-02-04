@@ -18,6 +18,9 @@ class ThermodynamicState{
 	ThermodynamicState(int index, const SimTK::Real& T);
 	~ThermodynamicState(){}
 
+	const int getIndex(void){return myIndex;}
+	void setIndex(const int& someIndex){myIndex = someIndex;}
+
 	void setTemperature(const SimTK::Real& T);
 	const SimTK::Real& getTemperature();
 	const SimTK::Real& getBeta();
@@ -100,8 +103,22 @@ class Replica{
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
 		getAtomsLocationsInGround();
 
+	// Reserve memory and set values
 	void setAtomsLocationsInGround(std::vector<
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&);
+
+	// This assumes allocation has been done already
+	void updAtomsLocationsInGround(std::vector<
+		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>);
+
+	// Load atomLocations coordinates into the front world
+	void restoreCoordinates(void){}
+	 
+	// Stores coordinates from front world into atomsLocations
+	void storeCoordinates(void){}
+
+	const SimTK::Real getPotentialEnergy(void){return potential;}
+	void setPotentialEnergy(const SimTK::Real& somePotential){potential = somePotential;}
 
 	void Print(void);
 	void PrintCoordinates(void);
@@ -112,6 +129,7 @@ class Replica{
 	std::vector<int> worldIndexes;
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		atomsLocations;
+	SimTK::Real potential; // TODO: turn into a vector for worlds
 };
 
 Replica::Replica()
@@ -149,6 +167,7 @@ const	std::vector<
 }
 
 // Set the coordinates of this replica
+// Also allocate memory
 void Replica::setAtomsLocationsInGround(
 	std::vector< // topologies
 	std::vector< // one topology
@@ -166,7 +185,6 @@ void Replica::setAtomsLocationsInGround(
 			SimTK::Vec3 location = otherAtom.second;
 			std::pair<bSpecificAtom*, SimTK::Vec3> atomLocationPair(batom, location);
 			currentTopologyInfo.push_back(atomLocationPair);
-			//currentTopologyInfo.push_back(std::make_pair(batom, location));
 		}
 
 		atomsLocations.emplace_back(currentTopologyInfo);
@@ -174,6 +192,37 @@ void Replica::setAtomsLocationsInGround(
 	}
 
 	//atomsLocations = otherAtomsLocations;
+}
+
+// Update the coordinates of this replica
+void Replica::updAtomsLocationsInGround(
+	std::vector< // topologies
+	std::vector< // one topology
+	std::pair <bSpecificAtom *, SimTK::Vec3>>> // atom location
+		otherAtomsLocations
+	)
+{
+	int i = -1;
+	for (auto& topology : otherAtomsLocations){
+		i += 1;
+
+		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>&
+			myTopology = atomsLocations[i];
+		
+		int j = -1;
+		for(auto& otherAtom : topology){
+			j += 1;
+
+			std::pair<bSpecificAtom *, SimTK::Vec3>&
+			myAtom = myTopology[j];
+
+			myAtom.first  = otherAtom.first;
+			myAtom.second = otherAtom.second;
+			
+		}
+
+	}
+
 }
 
 void Replica::Print(void)
@@ -189,7 +238,11 @@ void Replica::PrintCoordinates(void)
 {
 	for(auto& topology : atomsLocations){
 		for(auto& atomCoordinates : topology){
-			std::cout << (atomCoordinates.first)->inName << atomCoordinates.second << std::endl;
+			std::cout
+			//<< (atomCoordinates.first)->inName
+			<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
+			<< atomCoordinates.second
+			<< std::endl;
 		}
 	}
 }
@@ -207,8 +260,7 @@ void Context::throwAndExit(std::string errMsg, int errCode){
 
 // Default constructor
 Context::Context(const SetupReader& setupReader, std::string logFilename)
-: thermodynamicStates()
-, replicas()
+: thermodynamicStates(), replicas()
 {
 	nofWorlds = 0;
 	nofMols = 0;
@@ -228,6 +280,7 @@ Context::Context(const SetupReader& setupReader, std::string logFilename)
 	nofReplicas = 0;
 	nofThermodynamicStates = 0;
 	replicaMixingScheme = ReplicaMixingScheme::neighboring;
+
 
 }
 
@@ -1014,9 +1067,11 @@ BaseSampler * Context::addSampler(
 
 }
 
-void Context::initializeSampler(std::size_t whichWorld, std::size_t whichSampler)
+void Context::initializeSampler(std::size_t whichWorld,
+	std::size_t whichSampler)
 {
-	worlds[whichWorld].updSampler(whichSampler)->initialize( worlds[whichWorld].integ->updAdvancedState());
+	worlds[whichWorld].updSampler(whichSampler)->initialize(
+		worlds[whichWorld].integ->updAdvancedState());
 }
 
 // Amber like scale factors.
@@ -1427,34 +1482,34 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
 	nofReplicas = argNofReplicas;
 }
 
+// Adds a replica to the vector of Replica objects and
+// does not set the coordinates of the replica's atomsLocations !
 void Context::addReplica(int index)
 {
 	replicas.emplace_back(Replica(index));
 	replicas.back().Print();
 }
 
+// Adds a replica to the vector of Replica objects and sets the coordinates
+// of the replica's atomsLocations
 void Context::addReplica(int index, std::vector<int>& argWorldIndexes)
 {
 	// Add replica and the vector of worlds
 	replicas.emplace_back(Replica(index, argWorldIndexes));
 
 	// Set replicas coordinates
-	//SimTK::State& state = (worlds[0].integ)->updAdvancedState();
-
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
-	std::cout << referenceAtomsLocations.size() << std::endl << std::flush;
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+		referenceAtomsLocations =
+		worlds[0].getCurrentAtomsLocationsInGround();
 
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 
-	replicas.back().Print();
-	replicas.back().PrintCoordinates();
 }
 
 void Context::addThermodynamicState(int index, SimTK::Real T)
 {
 	thermodynamicStates.emplace_back(ThermodynamicState(index));
 	thermodynamicStates.back().setTemperature(T);
-	thermodynamicStates.back().Print();
 }
 
 // Get the number of replicas
@@ -1491,8 +1546,43 @@ void Context::loadReplica2ThermoIxs(void)
 }
 
 // Attempt swap between replicas r_i and r_j
+// Code inspired from OpenmmTools
+// Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
+// as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
+//, 135:194110, 2011. DOI:10.1063/1.3660669 
 void Context::attemptSwap(int replica_i, int replica_j)
 {
+
+	// Get replicas' thermodynamic states indexes
+	int thermoState_i = replica2ThermoIxs[replica_i];
+	int thermoState_j = replica2ThermoIxs[replica_j];
+
+	// Replica i reduced potential of state i
+	SimTK::Real Eii = thermodynamicStates[thermoState_i].getBeta()
+		* replicas[replica_i].getPotentialEnergy(); 
+
+	// Replica j reduced potential of state j
+	SimTK::Real Ejj = thermodynamicStates[thermoState_j].getBeta()
+		* replicas[replica_j].getPotentialEnergy(); 
+
+	// Replica i reduced potential of state j
+	SimTK::Real Eij = thermodynamicStates[thermoState_j].getBeta()
+		* replicas[replica_i].getPotentialEnergy(); 
+
+	// Replica j reduced potential of state i
+	SimTK::Real Eji = thermodynamicStates[thermoState_i].getBeta()
+		* replicas[replica_j].getPotentialEnergy();
+
+	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
+
+	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
+		int temp = replica2ThermoIxs[replica_i];
+		replica2ThermoIxs[replica_i] = replica2ThermoIxs[replica_j];
+		replica2ThermoIxs[replica_j] = temp;
+	}
+		
+
 }
 
 // Exhange all replicas
@@ -1548,47 +1638,123 @@ void Context::mixReplicas(void)
 	}
 }
 
-// Go through all of this replica's worlds and generate samples
-void Context::RunOneRoundInReplica(int whichReplica)
+
+// Load replica's atomLocations into it's front world
+void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 {
 
+	// Get world indexes	
+	std::vector<int> worldIndexes =
+		replicas[whichReplica].getWorldIndexes();
+
+	// Set front world atoms locations from the replica
+	// Will use worlds own integrator's advanced state
+	SimTK::State& state =
+		(worlds[worldIndexes.front()].integ)->updAdvancedState();
+
+	worlds[worldIndexes.front()].setAtomsLocationsInGround(state,
+		replicas[whichReplica].getAtomsLocationsInGround());
+
+}
+
+// Stores replica's front world's coordinates into it's atomsLocations
+// This should always be a fully flexible world
+void Context::storeReplicaFrontCoordinates(int whichReplica)
+{
+	// Get world indexes	
+	std::vector<int> worldIndexes =
+		replicas[whichReplica].getWorldIndexes();
+
+	// Update replica atomsLocations from back
+	replicas[whichReplica].updAtomsLocationsInGround(
+		worlds[worldIndexes.front()].getCurrentAtomsLocationsInGround()
+	);
+}
+
+
+
+// Go through all of this replica's worlds and generate samples
+void Context::RunOneRoundOfReplica(int whichReplica)
+{
+
+	// Convenience
 	std::vector<int> replicaWorldIxs = replicas[whichReplica].getWorldIndexes();
-	
-	for(std::size_t worldIx = 0; worldIx < replicaWorldIxs.size(); worldIx++){
-		worlds[worldIx].setTemperature( thermodynamicStates[whichReplica].getTemperature() );
+	size_t replicaNofWorlds = replicaWorldIxs.size();
+
+	// -------------	
+	// Set this replica's thermodynamic state
+	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
+		worlds[worldIx].setTemperature(
+			thermodynamicStates[whichReplica].getTemperature() );
+		worlds[worldIx].setBoostTemperature(
+			thermodynamicStates[whichReplica].getTemperature() );
 		
 	}
-	std::cout << "TEMPERATURE SET TO " << thermodynamicStates[whichReplica].getTemperature() << std::endl;
+	std::cout << "Temperature set to " 
+		<< thermodynamicStates[whichReplica].getTemperature()
+		<< std::endl;
+	// =============
 
-	for(std::size_t worldIx = 0; worldIx < replicaWorldIxs.size(); worldIx++){
+	// -------------	
+	// RESTORE coordinates	
+	// =============
+
+	//std::cout << "Replica front world coordinates:\n";
+	//replicas[whichReplica].PrintCoordinates();
+	//restoreReplicaCoordinatesToFront(whichReplica);
+
+	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
+
+		// -------------	
+		// SAMPLE from the current world
+		int front = replicaWorldIxs.front();
+		std::cout << "Sample world " << front << "\n";
+		int accepted = worlds[front].generateSamples(
+			nofSamplesPerRound[front],
+			NMAOption[front]);
+
+		// =============
+	
+		// -------------	
+		// ROTATE
+		/*print*/std::cout << "Rotate from";/*print*/
+		/*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
 
 		// Rotate worlds indices (translate from right to left)
-		if(isWorldsOrderRandom){
-			randomizeWorldIndexes();
-		}
+	   	std::rotate(replicaWorldIxs.begin(),
+			replicaWorldIxs.begin() + 1,
+			replicaWorldIxs.end());
 
-		// Rotate the vector of world indexes
-	   	std::rotate(replicaWorldIxs.begin(), replicaWorldIxs.begin() + 1, replicaWorldIxs.end());
+		/*print*/std::cout << " to";/*print*/
+		/*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
+		/*print*/std::cout << "\n";/*print*/
+		// =============
 
-		// Get indeces
+		
+		// -------------	
+		// TRANSFER coordinates from last world to current
+		// TODO: eliminate in the last iteration
 		int currentWorldIx = replicaWorldIxs.front();
 		int lastWorldIx = replicaWorldIxs.back();
 
-		// Transfer coordinates from last world to current
-		if(replicaWorldIxs.size() > 1) {
+		if(replicaNofWorlds > 1) {
 
 			std::cout << "Transfer from world " << lastWorldIx
 				<< " to " << currentWorldIx << std::endl;
 
 			transferCoordinates(lastWorldIx, currentWorldIx);
 		}
+		// =============
 
-		// Generate samples from the current world
-		int accepted = worlds[currentWorldIx].generateSamples(
-			nofSamplesPerRound[currentWorldIx],
-			NMAOption[currentWorldIx]);
-	
 	} // END iteration through worlds
+
+	// -------------	
+	// STORE coordinates	
+	// =============
+
+	// This should always be a fully flexible world
+	storeReplicaFrontCoordinates(whichReplica);
+
 }
 
 // Run replica exchange protocol
@@ -1603,9 +1769,15 @@ void Context::RunREX(void)
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
 	
+			if(round > 0){
+				//std::cout << "Replica front world coordinates:\n";
+				//replicas[replicaIx].PrintCoordinates();
+				restoreReplicaCoordinatesToFront(replicaIx);
+			}
+
 			// Iterate this replica's worlds
-			RunOneRoundInReplica(replicaIx);
-	
+			RunOneRoundOfReplica(replicaIx);
+
 			// Write energy and geometric features to logfile
 			if( !(round % getPrintFreq()) ){
 				PrintToLog(worldIndexes.back());
@@ -1615,9 +1787,16 @@ void Context::RunREX(void)
 			// Write pdb
 			if( pdbRestartFreq != 0){
 				if((round % pdbRestartFreq) == 0){
-					writePdbs(round);
+					writePdbs(round,
+					thermodynamicStates[replicaIx].getIndex());
 				}
 			}
+
+			// Set potential energy
+			replicas[replicaIx].setPotentialEnergy(
+				pHMC((worlds[ replicas[replicaIx].getWorldIndexes().back() ].samplers[0]))->pe_set
+			);
+
 		} // end replicas simulations
 
 		// Mix replicas
@@ -1627,7 +1806,23 @@ void Context::RunREX(void)
 
 }
 
-void Context::writePdbs(int someIndex)
+// Print info about all the replicas and thermo states
+void Context::PrintReplicas(void)
+{
+
+	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+		replicas[replicaIx].Print();
+	}
+
+	for(size_t thermoStateIx = 0;
+	thermoStateIx < nofThermodynamicStates;
+	thermoStateIx++){
+		thermodynamicStates[thermoStateIx].Print();
+	}
+	
+}
+
+void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 {
 
 	// Update bAtomList in Topology
@@ -1639,7 +1834,9 @@ void Context::writePdbs(int someIndex)
 	for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
 		topologies[mol_i].writeAtomListPdb(
 			outputDir,
-			"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + ".",
+			"/pdbs/sb."
+			    + pdbPrefix + "." + std::to_string(mol_i) + "."
+			    + "s" + std::to_string(thermodynamicStateIx) + ".",
 			".pdb",
 			10,
 			someIndex);
