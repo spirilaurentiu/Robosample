@@ -1861,9 +1861,10 @@ void Context::RunREX(void)
 		
 			// Write pdb
 			if( pdbRestartFreq != 0){
+				int thermoStateIx = thermo2ReplicaIxs[replicaIx];
 				if((round % pdbRestartFreq) == 0){
 					writePdbs(round,
-					thermodynamicStates[replicaIx].getIndex());
+					thermoStateIx);
 				}
 			}
 
