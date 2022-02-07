@@ -1576,10 +1576,20 @@ void Context::attemptSwap(int replica_i, int replica_j)
 	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
 
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+
+	std::cout << "Replicas energies = " 
+		<< replicas[replica_i].getPotentialEnergy() << " "
+		<< replicas[replica_j].getPotentialEnergy() << " "
+		<< std::endl;
+	std::cout << "log_p_accept = " << log_p_accept << std::endl;
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 		int temp = replica2ThermoIxs[replica_i];
 		replica2ThermoIxs[replica_i] = replica2ThermoIxs[replica_j];
 		replica2ThermoIxs[replica_j] = temp;
+
+		std::cout << "Swap done." << std::endl;
+		
+
 	}
 		
 
@@ -1622,6 +1632,9 @@ void Context::mixNeighboringReplicas(void)
 		// Get replicas corresponding to the thermodynamic states
 		int replica_i = replica2ThermoIxs[thermoState_i];
 		int replica_j = replica2ThermoIxs[thermoState_j];
+
+		std::cout << "Attempt to swap replicas " << replica_i
+			<< " and " << replica_j << std::endl;
 
 		// Attempt to swap
 		attemptSwap(replica_i, replica_j);
@@ -1792,14 +1805,20 @@ void Context::RunREX(void)
 				}
 			}
 
-			// Set potential energy
-			replicas[replicaIx].setPotentialEnergy(
-				pHMC((worlds[ replicas[replicaIx].getWorldIndexes().back() ].samplers[0]))->pe_set
-			);
+			// Store the energy of this replica
+			int backWorldIx =
+				replicas[replicaIx].getWorldIndexes().back();
+
+			SimTK::Real energy =
+				pHMC((worlds[backWorldIx].samplers[0]))->pe_set + 
+				pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
+			
+			replicas[replicaIx].setPotentialEnergy(energy);
 
 		} // end replicas simulations
 
 		// Mix replicas
+		mixNeighboringReplicas();
 
 
 	} // end rounds
