@@ -270,6 +270,9 @@ public:
 	void RunREX();
 
 	void PrintReplicas(void);
+	void PrintReplicaMaps(void);
+	void PrintNofAttemptedSwapsMatrix(void);
+	void PrintNofAcceptedSwapsMatrix(void);
 
 public:
 	std::vector<std::size_t> worldIndexes;
@@ -353,7 +356,18 @@ private:
 	////////////////////////
 	std::vector<ThermodynamicState> thermodynamicStates;
 	std::vector<Replica> replicas;
+
+	// Mapping between replicas and thermodynamic states indexes
+	// KEYWORD = replica, VALUE = thermoState
 	std::map<int, int> replica2ThermoIxs;
+
+	// Mapping between replicas and thermodynamic states indexes
+	// KEYWORD = thermoState, VALUE = replica
+	std::map<int, int> thermo2ReplicaIxs;
+
+	// Counter matrix of accepted swaps
+	std::vector<std::vector<int>> nofAttemptedSwapsMatrix;
+	std::vector<std::vector<int>> nofAcceptedSwapsMatrix;
 	
 	size_t nofReplicas;
 	size_t nofThermodynamicStates;

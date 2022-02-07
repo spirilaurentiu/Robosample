@@ -1518,10 +1518,32 @@ const size_t& Context::getNofReplicas(void) const
 	return nofReplicas;
 }
 
-// Set the number of replicas
+// Set the number of thermodynamic states
+// Also allocates the matrix of attempted and accepted swaps
 void Context::setNofThermodynamicStates(const size_t& argNofThermodynamicStates)
 {
 	nofThermodynamicStates = argNofThermodynamicStates;
+	
+	// Allocate the number of attempted swaps
+	nofAttemptedSwapsMatrix.resize(nofThermodynamicStates);
+	for(size_t i = 0; i < nofThermodynamicStates; i++){
+		nofAttemptedSwapsMatrix[i].resize(nofThermodynamicStates);
+	}
+
+	// Fill with zeros
+	std::fill(nofAttemptedSwapsMatrix.begin(), nofAttemptedSwapsMatrix.end(),
+		vector<int>(nofThermodynamicStates, 0));
+
+	// Allocate the number of accepted swaps
+	nofAcceptedSwapsMatrix.resize(nofThermodynamicStates);
+	for(size_t i = 0; i < nofThermodynamicStates; i++){
+		nofAcceptedSwapsMatrix[i].resize(nofThermodynamicStates);
+	}
+
+	// Fill with zeros
+	std::fill(nofAcceptedSwapsMatrix.begin(), nofAcceptedSwapsMatrix.end(),
+		vector<int>(nofThermodynamicStates, 0));
+
 }
 
 // Get the number of replicas
@@ -1543,6 +1565,31 @@ void Context::loadReplica2ThermoIxs(void)
 			(thermoState_k, thermoState_k));
 
 	}
+
+	for(size_t thermoState_k = 0;
+	thermoState_k < nofThermodynamicStates;
+	thermoState_k++){
+
+		thermo2ReplicaIxs.insert(
+			std::pair<int, int> 
+			(thermoState_k, thermoState_k));
+
+
+	}
+}
+
+void Context::PrintReplicaMaps(void){
+
+	std::cout << "Replica -> Thermo:\n";
+	for(const auto& elem : replica2ThermoIxs){
+		std::cout << elem.first << " " << elem.second << "\n";
+	}
+
+	std::cout << "Thermo -> Replica:\n";
+	for(const auto& elem : thermo2ReplicaIxs){
+		std::cout << elem.first << " " << elem.second << "\n";
+	}
+
 }
 
 // Attempt swap between replicas r_i and r_j
@@ -1556,6 +1603,10 @@ void Context::attemptSwap(int replica_i, int replica_j)
 	// Get replicas' thermodynamic states indexes
 	int thermoState_i = replica2ThermoIxs[replica_i];
 	int thermoState_j = replica2ThermoIxs[replica_j];
+
+	// Record this attempt
+	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
+	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
 
 	// Replica i reduced potential of state i
 	SimTK::Real Eii = thermodynamicStates[thermoState_i].getBeta()
@@ -1582,25 +1633,36 @@ void Context::attemptSwap(int replica_i, int replica_j)
 		<< replicas[replica_j].getPotentialEnergy() << " "
 		<< std::endl;
 	std::cout << "log_p_accept = " << log_p_accept << std::endl;
+
+	// Acceptance criterion
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
+
+		// Record this swap
+		nofAcceptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
+		nofAcceptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
+
+		// Swap thermodynamic states 
 		int temp = replica2ThermoIxs[replica_i];
 		replica2ThermoIxs[replica_i] = replica2ThermoIxs[replica_j];
 		replica2ThermoIxs[replica_j] = temp;
 
+		// Mirror this operation in the reverse map
+		temp = thermo2ReplicaIxs[thermoState_i];
+		thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
+		thermo2ReplicaIxs[thermoState_j] = temp;
+
 		std::cout << "Swap done." << std::endl;
-		
 
 	}
 		
-
 }
 
 // Exhange all replicas
 void Context::mixAllReplicas(int nSwapAttempts)
 {
 	// Get a random number generator
-	std::random_device rd; // obtain a random number
-	std::mt19937 gen(rd()); // seed the generator
+	//std::random_device rd; // obtain a random number
+	//std::mt19937 randomEngine(rd()); // seed the generator
 	std::uniform_int_distribution<std::size_t>
 		randReplicaDistrib(0, nofReplicas-1);
 
@@ -1608,8 +1670,8 @@ void Context::mixAllReplicas(int nSwapAttempts)
 	for(size_t swap_k = 0; swap_k < nSwapAttempts; swap_k++){
 		
 		// Get two random replicas
-		auto replica_i = randReplicaDistrib(gen);
-		auto replica_j = randReplicaDistrib(gen);
+		auto replica_i = randReplicaDistrib(randomEngine);
+		auto replica_j = randReplicaDistrib(randomEngine);
 		std::cout << "Attempt to swap replicas " << replica_i
 			<< " and " << replica_j << std::endl;
 
@@ -1630,8 +1692,8 @@ void Context::mixNeighboringReplicas(void)
 		int thermoState_j = thermoState_k + 1;
 
 		// Get replicas corresponding to the thermodynamic states
-		int replica_i = replica2ThermoIxs[thermoState_i];
-		int replica_j = replica2ThermoIxs[thermoState_j];
+		int replica_i = thermo2ReplicaIxs[thermoState_i];
+		int replica_j = thermo2ReplicaIxs[thermoState_j];
 
 		std::cout << "Attempt to swap replicas " << replica_i
 			<< " and " << replica_j << std::endl;
@@ -1818,7 +1880,11 @@ void Context::RunREX(void)
 		} // end replicas simulations
 
 		// Mix replicas
-		mixNeighboringReplicas();
+		mixReplicas();
+		
+		PrintNofAttemptedSwapsMatrix();
+		PrintNofAcceptedSwapsMatrix();
+		PrintReplicaMaps();
 
 
 	} // end rounds
@@ -1839,6 +1905,32 @@ void Context::PrintReplicas(void)
 		thermodynamicStates[thermoStateIx].Print();
 	}
 	
+}
+
+void Context::PrintNofAcceptedSwapsMatrix(void){
+
+	size_t M = nofAcceptedSwapsMatrix.size();
+
+	std::cout << "Number of accepted swaps matrix:\n";
+	for(size_t i = 0; i < M; i++){
+		for(size_t j = 0; j < M; j++){
+			std::cout << nofAcceptedSwapsMatrix[i][j] << " ";
+		}
+		std::cout << "\n";
+	}
+}
+
+void Context::PrintNofAttemptedSwapsMatrix(void){
+
+	size_t M = nofAttemptedSwapsMatrix.size();
+
+	std::cout << "Number of attempted swaps matrix:\n";
+	for(size_t i = 0; i < M; i++){
+		for(size_t j = 0; j < M; j++){
+			std::cout << nofAttemptedSwapsMatrix[i][j] << " ";
+		}
+		std::cout << "\n";
+	}
 }
 
 void Context::writePdbs(int someIndex, int thermodynamicStateIx)
