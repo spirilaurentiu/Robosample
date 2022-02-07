@@ -164,7 +164,6 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
 
 	// Set stddev according to temperature
-	std::cout << "VELOCITIES sqrtRT=sqrtBoostRT " << sqrtBoostRT << "\n";
 	RandomCache.SqrtMInvV *= sqrtBoostRT;
 
 	// Raise the temperature
@@ -1716,20 +1715,20 @@ SimTK::Real HMCSampler::getBoostTemperature()
 void HMCSampler::setBoostTemperature(SimTK::Real argT)
 {
 	this->boostT = argT;
-	std::cout << "HMC: boost temperature: " << this->boostT << std::endl;
+	//std::cout << "HMC: boost temperature: " << this->boostT << std::endl;
 
 	this->boostRT = this->boostT * SimTK_BOLTZMANN_CONSTANT_MD;
-	std::cout << "HMC: boostRT: " << this->boostRT << std::endl;
+	//std::cout << "HMC: boostRT: " << this->boostRT << std::endl;
 
 	this->sqrtBoostRT = std::sqrt(this->boostRT);
-	std::cout << "HMC: sqrtBoostRT: " << this->sqrtBoostRT << std::endl;
+	//std::cout << "HMC: sqrtBoostRT: " << this->sqrtBoostRT << std::endl;
 
 	this->boostBeta = 1.0 / boostRT;
-	std::cout << "HMC: boostBeta: " << this->boostBeta << std::endl;
+	//std::cout << "HMC: boostBeta: " << this->boostBeta << std::endl;
 
 	this->boostFactor = std::sqrt(this->boostT / this->temperature);
 	this->unboostFactor = 1 / boostFactor;
-	std::cout << "HMC: boost velocity scale factor: " << this->boostFactor << std::endl;
+	//std::cout << "HMC: boost velocity scale factor: " << this->boostFactor << std::endl;
 }
 
 void HMCSampler::setBoostMDSteps(int argMDSteps)

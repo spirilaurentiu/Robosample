@@ -1628,11 +1628,11 @@ void Context::attemptSwap(int replica_i, int replica_j)
 
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	std::cout << "Replicas energies = " 
-		<< replicas[replica_i].getPotentialEnergy() << " "
-		<< replicas[replica_j].getPotentialEnergy() << " "
-		<< std::endl;
-	std::cout << "log_p_accept = " << log_p_accept << std::endl;
+	//std::cout << "Replicas energies = " 
+	//	<< replicas[replica_i].getPotentialEnergy() << " "
+	//	<< replicas[replica_j].getPotentialEnergy() << " "
+	//	<< std::endl;
+	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
 	// Acceptance criterion
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
@@ -1651,7 +1651,7 @@ void Context::attemptSwap(int replica_i, int replica_j)
 		thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
 		thermo2ReplicaIxs[thermoState_j] = temp;
 
-		std::cout << "Swap done." << std::endl;
+		//std::cout << "Swap done." << std::endl;
 
 	}
 		
@@ -1695,8 +1695,8 @@ void Context::mixNeighboringReplicas(void)
 		int replica_i = thermo2ReplicaIxs[thermoState_i];
 		int replica_j = thermo2ReplicaIxs[thermoState_j];
 
-		std::cout << "Attempt to swap replicas " << replica_i
-			<< " and " << replica_j << std::endl;
+		//std::cout << "Attempt to swap replicas " << replica_i
+		//	<< " and " << replica_j << std::endl;
 
 		// Attempt to swap
 		attemptSwap(replica_i, replica_j);
@@ -1749,25 +1749,25 @@ void Context::storeReplicaFrontCoordinates(int whichReplica)
 
 
 // Go through all of this replica's worlds and generate samples
-void Context::RunOneRoundOfReplica(int whichReplica)
+void Context::RunOneRoundOfReplica(int thisReplica)
 {
 
 	// Convenience
-	std::vector<int> replicaWorldIxs = replicas[whichReplica].getWorldIndexes();
+	std::vector<int> replicaWorldIxs = replicas[thisReplica].getWorldIndexes();
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	// -------------	
-	// Set this replica's thermodynamic state
+	// Get thermodynamic state from map
+
+	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
+	SimTK::Real T = thermodynamicStates[thisThermoStateIx].getTemperature();
+
 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-		worlds[worldIx].setTemperature(
-			thermodynamicStates[whichReplica].getTemperature() );
-		worlds[worldIx].setBoostTemperature(
-			thermodynamicStates[whichReplica].getTemperature() );
-		
+		worlds[worldIx].setTemperature( T );
+		worlds[worldIx].setBoostTemperature( T );
 	}
-	std::cout << "Temperature set to " 
-		<< thermodynamicStates[whichReplica].getTemperature()
-		<< std::endl;
+	std::cout << "Temperature set to " << T << std::endl;
+
 	// =============
 
 	// -------------	
@@ -1775,15 +1775,15 @@ void Context::RunOneRoundOfReplica(int whichReplica)
 	// =============
 
 	//std::cout << "Replica front world coordinates:\n";
-	//replicas[whichReplica].PrintCoordinates();
-	//restoreReplicaCoordinatesToFront(whichReplica);
+	//replicas[thisReplica].PrintCoordinates();
+	//restoreReplicaCoordinatesToFront(thisReplica);
 
 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
 
 		// -------------	
 		// SAMPLE from the current world
 		int front = replicaWorldIxs.front();
-		std::cout << "Sample world " << front << "\n";
+		//std::cout << "Sample world " << front << "\n";
 		int accepted = worlds[front].generateSamples(
 			nofSamplesPerRound[front],
 			NMAOption[front]);
@@ -1792,17 +1792,17 @@ void Context::RunOneRoundOfReplica(int whichReplica)
 	
 		// -------------	
 		// ROTATE
-		/*print*/std::cout << "Rotate from";/*print*/
-		/*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
+		///*print*/std::cout << "Rotate from";/*print*/
+		///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
 
 		// Rotate worlds indices (translate from right to left)
 	   	std::rotate(replicaWorldIxs.begin(),
 			replicaWorldIxs.begin() + 1,
 			replicaWorldIxs.end());
 
-		/*print*/std::cout << " to";/*print*/
-		/*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
-		/*print*/std::cout << "\n";/*print*/
+		///*print*/std::cout << " to";/*print*/
+		///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
+		///*print*/std::cout << "\n";/*print*/
 		// =============
 
 		
@@ -1814,8 +1814,8 @@ void Context::RunOneRoundOfReplica(int whichReplica)
 
 		if(replicaNofWorlds > 1) {
 
-			std::cout << "Transfer from world " << lastWorldIx
-				<< " to " << currentWorldIx << std::endl;
+			//std::cout << "Transfer from world " << lastWorldIx
+			//	<< " to " << currentWorldIx << std::endl;
 
 			transferCoordinates(lastWorldIx, currentWorldIx);
 		}
@@ -1828,7 +1828,7 @@ void Context::RunOneRoundOfReplica(int whichReplica)
 	// =============
 
 	// This should always be a fully flexible world
-	storeReplicaFrontCoordinates(whichReplica);
+	storeReplicaFrontCoordinates(thisReplica);
 
 }
 
@@ -1882,12 +1882,12 @@ void Context::RunREX(void)
 		// Mix replicas
 		mixReplicas();
 		
-		PrintNofAttemptedSwapsMatrix();
-		PrintNofAcceptedSwapsMatrix();
-		PrintReplicaMaps();
-
-
 	} // end rounds
+
+	//PrintNofAttemptedSwapsMatrix();
+	PrintNofAcceptedSwapsMatrix();
+	//PrintReplicaMaps();
+
 
 }
 

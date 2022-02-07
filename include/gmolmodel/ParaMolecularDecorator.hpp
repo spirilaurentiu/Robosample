@@ -14,44 +14,46 @@ using namespace SimTK;
 
 class ParaMolecularDecorator : public DecorationGenerator {
 public:
-    ParaMolecularDecorator(SimTK::CompoundSystem *argCompoundSystem,
-        SimTK::SimbodyMatterSubsystem *argMatter,
-        //Topology *argResidue, // RE
-        SimTK::DuMMForceFieldSubsystem *argDumm,
-        SimTK::GeneralForceSubsystem *argForces);
+	ParaMolecularDecorator(SimTK::CompoundSystem *argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem *argMatter,
+		//Topology *argResidue, // RE
+		SimTK::DuMMForceFieldSubsystem *argDumm,
+		SimTK::GeneralForceSubsystem *argForces
+	);
 
-    void AddMolecule(Topology *argMolecule);
+	void AddMolecule(Topology *argMolecule);
 
-    void loadPoint(const Vec3 point);
 
-    void loadLine(const Vec3 p1, const Vec3 p2);
+	void loadPoint(const Vec3 point);
 
-    void clearPoints(void);
+	void loadLine(const Vec3 p1, const Vec3 p2);
 
-    void clearLines(void);
+	void clearPoints(void);
 
-    void generateDecorations(const State& state,
-        Array_<DecorativeGeometry>& geometry);
+	void clearLines(void);
 
-    ~ParaMolecularDecorator(void);
+	void generateDecorations(const State& state,
+		Array_<DecorativeGeometry>& geometry);
 
-    // Gmolmodel specific
-    void setAtomTargets(std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> residueAtomLocations);
+	~ParaMolecularDecorator(void);
+
+	// 
+	void setAtomTargets(std::vector<std::pair<bSpecificAtom *,
+		SimTK::Vec3>> residueAtomLocations);
 
 private:
-    SimTK::CompoundSystem *compoundSystem;
-    SimTK::SimbodyMatterSubsystem *matter;
-    SimTK::DuMMForceFieldSubsystem *dumm;
-    SimTK::GeneralForceSubsystem *forces;
+	SimTK::CompoundSystem *compoundSystem;
+	SimTK::SimbodyMatterSubsystem *matter;
+	SimTK::DuMMForceFieldSubsystem *dumm;
+	SimTK::GeneralForceSubsystem *forces;
 
-    // Topology *molecule; // RE
-    std::vector<Topology *> molecules; // NEW
+	std::vector<Topology *> molecules;
 
-    Array_< Vec3 >  points;
-    Array_< std::pair< Vec3, Vec3 > > lines;
+	Array_< Vec3 >  points;
+	Array_< std::pair< Vec3, Vec3 > > lines;
 
-    // Gmolmodel specific
-    std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
+	// Gmolmodel specific
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
 
 };
 

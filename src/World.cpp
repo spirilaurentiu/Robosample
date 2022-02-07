@@ -168,7 +168,12 @@ World::World(int worldIndex, int requestedNofMols, bool isVisual, SimTK::Real vi
 		compoundSystem->addEventReporter(visualizerReporter.get());
 
 		// Initialize a DecorationGenerator
-		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(compoundSystem.get(), matter.get(), forceField.get(), forces.get());
+		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
+			compoundSystem.get(),
+			matter.get(),
+			forceField.get(),
+			forces.get()
+		);
 
 		visualizer->addDecorationGenerator(paraMolecularDecorator.get());
 	}

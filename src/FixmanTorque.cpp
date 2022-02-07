@@ -361,7 +361,7 @@ SimTK::Real FixmanTorqueExt::getTemperature(void)
 
 void FixmanTorqueExt::setTemperature(SimTK::Real argTemperature)
 {
-	std::cout << "Setting T for external Fixman torque.\n";
+	//std::cout << "Setting T for external Fixman torque.\n";
 	this->temperature = argTemperature;
 	this->RT = temperature * SimTK_BOLTZMANN_CONSTANT_MD;
 }
