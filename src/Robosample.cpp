@@ -405,7 +405,8 @@ int main(int argc, char **argv)
 		SetupReader rexReader;
 
 		// Read input
-		rexReader.ReadSetup("trex.dat");
+		std::cout << "Reading " << setupReader.get("REX_FILE")[0] << "\n";
+		rexReader.ReadSetup(setupReader.get("REX_FILE")[0]);
 		rexReader.dump(true);
 
 		// Use setup reader for REX file. TODO: adapt reader to format 
