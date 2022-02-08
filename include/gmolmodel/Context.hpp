@@ -250,7 +250,7 @@ public:
 	// Set the intial mapping between replicas and thermoStates
 	void loadReplica2ThermoIxs(void);
 
-	void attemptSwap(int replica_i, int replica_j);
+	bool attemptSwap(int replica_i, int replica_j);
 	void mixAllReplicas(int nSwapAttempts);
 	void mixNeighboringReplicas(void);
 	// Mix replicas

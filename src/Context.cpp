@@ -1597,8 +1597,10 @@ void Context::PrintReplicaMaps(void){
 // Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
 // as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
 //, 135:194110, 2011. DOI:10.1063/1.3660669 
-void Context::attemptSwap(int replica_i, int replica_j)
+bool Context::attemptSwap(int replica_i, int replica_j)
 {
+
+	bool returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
 	int thermoState_i = replica2ThermoIxs[replica_i];
@@ -1653,7 +1655,11 @@ void Context::attemptSwap(int replica_i, int replica_j)
 
 		//std::cout << "Swap done." << std::endl;
 
+		returnValue = true;
+
 	}
+
+	return returnValue;
 		
 }
 
@@ -1883,6 +1889,8 @@ void Context::RunREX(void)
 		// Mix replicas
 		mixReplicas();
 		
+		PrintNofAcceptedSwapsMatrix();
+
 	} // end rounds
 
 	//PrintNofAttemptedSwapsMatrix();
