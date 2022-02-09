@@ -2516,9 +2516,13 @@ SimTK::Real Context::Dihedral(std::size_t whichWorld,
 SimTK::Real Context::Distance(std::size_t whichWorld, std::size_t whichCompound, std::size_t, int a1, int a2)
 {
 
-	SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
+	SimTK::State& state = worlds[whichWorld].integ->updAdvancedState();
 
-	Topology& topology = worlds[whichWorld].getTopology(whichCompound);
+	Topology& topology = worlds[whichWorld].updTopology(whichCompound);
+
+	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[whichWorld].forceField);
+
+	SimTK::SimbodyMatterSubsystem& matter = *(worlds[whichWorld].matter);
 
 	SimTK::Vec3 a1pos, a2pos;
 
