@@ -251,6 +251,10 @@ public:
 	void loadReplica2ThermoIxs(void);
 
 	bool attemptSwap(int replica_i, int replica_j);
+
+	const int getSwapEvery(void);
+	void setSwapEvery(const int& n);
+
 	void mixAllReplicas(int nSwapAttempts);
 	void mixNeighboringReplicas(void);
 	// Mix replicas
@@ -264,8 +268,7 @@ public:
 	void storeReplicaFrontCoordinates(int whichReplica);
 
 	// Go through all of this replica's worlds and generate samples
-	void RunOneRoundOfReplica(int whichReplica);
-	void RunOneRoundOfReplicaIni(int whichReplica);
+	void RunReplica(int whichReplica, int howManyRounds);
 
 	void RunREX();
 
@@ -346,7 +349,8 @@ private:
 
 	// Adaptive Gibbs blocking variables
 	int roundsTillReblock;
-	std::vector<std::vector<std::vector<SimTK::Real>>> QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
+	std::vector<std::vector<std::vector<SimTK::Real>>> 
+		QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
 
 	// Normal mode analysis
 	std::vector<int> NMAOption;
@@ -377,6 +381,8 @@ private:
 	std::mt19937 randomEngine;
 	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution =
 		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, SimTK::One);
+
+	int swapEvery;
 
 };
 

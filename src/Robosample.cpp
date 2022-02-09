@@ -451,6 +451,8 @@ int main(int argc, char **argv)
 		context.loadReplica2ThermoIxs();
 
 		context.PrintReplicas();
+
+		context.setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
 		
 	}
 	//std::exit(0);
