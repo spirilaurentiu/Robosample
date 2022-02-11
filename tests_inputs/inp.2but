@@ -9,9 +9,6 @@ ROOTS 0
 ROOT_MOBILITY Free
 OUTPUT_DIR temp
 
-MEMBRANE 0 0 0 0 # Elastic membrane parameters: xyz and resolution
-CONTACTS -1 # Contact balls attached to atoms
-CONSTRAINTS -1 # Mobilizer constraints added
 
 RUN_TYPE Normal
 ROUNDS 10                   # Usually 2000
@@ -22,6 +19,7 @@ REPRODUCIBLE FALSE
 SEED 42
 
 SAMPLER VV
+NMA_OPTION 0
 SAMPLES_PER_ROUND 1
 
 TIMESTEPS 0.003

@@ -1570,8 +1570,8 @@ void HMCSampler::initialize(SimTK::State& someState)
 
 	// Store potential energies
 	//setOldPE(getPEFromEvaluator(someState));
-	//setOldPE(forces->getMultibodySystem().calcPotentialEnergy(someState));
-	setOldPE(dumm->CalcFullPotEnergyIncludingRigidBodies(someState));
+	setOldPE(forces->getMultibodySystem().calcPotentialEnergy(someState));
+	//setOldPE(dumm->CalcFullPotEnergyIncludingRigidBodies(someState));
 	setSetPE(getOldPE());
 
 	// Store Fixman potential
@@ -2188,8 +2188,8 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 	ke_n = this->unboostFactor * matter->calcKineticEnergy(someState);
 
 	// Get new potential energy
-	//pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
 	// TODO: replace with the following after checking is the same thing
 	//pe_n = compoundSystem->calcPotentialEnergy(someState);
 

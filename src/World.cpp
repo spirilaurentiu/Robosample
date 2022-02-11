@@ -1329,6 +1329,16 @@ World::calcMobodToMobodTransforms(
 	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
 }
 
+// TODO: optimize to get
+SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
+{
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	updateAtomListsFromCompound(currentAdvancedState);
+
+	// Set old potential energy of the new world via OpenMM
+	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+}
+
 // Generate a number of samples
 int World::generateSamples(int howMany, int NMAOption)
 {
@@ -1337,8 +1347,8 @@ int World::generateSamples(int howMany, int NMAOption)
 	updateAtomListsFromCompound(currentAdvancedState);
 
 	// Set old potential energy of the new world via OpenMM
-	//auto OldPE = updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
-	auto OldPE = forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+	auto OldPE = updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
+	//auto OldPE = forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
 
 	pHMC(updSampler(0))->setOldPE(OldPE);
 

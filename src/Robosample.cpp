@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 	// - Get molecules directory
 	// TODO: move molDir in Context
 	std::string molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
-	std::cout << "Molecule directory: " << molDir << std::endl;
+	std::cout << "Molecule directory: " << molDir << std::endl << std::flush;
 
 	// Create pdbs directory if necessary
 	if ( ! CreateOutputDirectory(setupReader.get("OUTPUT_DIR")[0]) ){
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	// but we're not sure if we'll going to succesed.
 	int requestedNofWorlds = context.getNofWorlds();
 	int requestedNofMols = context.getNofMolecules();
-	std::cout << "Requested " << requestedNofMols << " molecules\n";
+	std::cout << "Requested " << requestedNofMols << " molecules\n" << std::flush;
 
 	/////////// Add Worlds to context ////////////
 	// Add Worlds to the Context. Every World instantiates a: 
@@ -176,6 +176,8 @@ int main(int argc, char **argv)
 			std::stoi(setupReader.get("THREADS")[worldIx]));
 	}
 	context.PrintNumThreads();
+	
+	std::cout << "AU 0" << std::endl << std::flush;
 
 	// Set force field scale factor.
 	if(setupReader.get("FFSCALE")[0] == "AMBER"){
@@ -184,20 +186,28 @@ int main(int argc, char **argv)
 		context.setGlobalForceFieldScaleFactor(
 			std::stod(setupReader.get("FFSCALE")[0]));
 	}
+
+	std::cout << "AU 1" << std::endl << std::flush;
+
 	// Set GBSA scale factor
 	context.setGbsaGlobalScaleFactor(
 		std::stod(setupReader.get("GBSA")[0]));
         
+	std::cout << "AU 2" << std::endl << std::flush;
+
 	// Use OpenMM if possible
 	if(setupReader.get("OPENMM")[0] == "TRUE"){
 		context.setUseOpenMMAcceleration(true);
 	}
 
-    if(setupReader.get("OPENMM_CalcOnlyNonbonded")[0] == "TRUE"){
-        context.setUseOpenMMCalcOnlyNonBonded(true);
-    }
-    else context.setUseOpenMMCalcOnlyNonBonded(false);
+	std::cout << "AU 3" << std::endl << std::flush;
 
+	if(setupReader.get("OPENMM_CalcOnlyNonbonded")[0] == "TRUE"){
+		context.setUseOpenMMCalcOnlyNonBonded(true);
+	}
+	else context.setUseOpenMMCalcOnlyNonBonded(false);
+
+	std::cout << "AU 4" << std::endl << std::flush;
 
     for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
         // Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
@@ -209,6 +219,7 @@ int main(int argc, char **argv)
     }
 
 
+	std::cout << "AU 5" << std::endl << std::flush;
 
 
     // Set Lennard-Jones mixing rule

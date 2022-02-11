@@ -235,6 +235,9 @@ public:
 	SimTK::Real getMobodUScaleFactor(SimTK::MobilizedBodyIndex& ) const;
 	//...............
 
+	// TODO: optimize to get
+	SimTK::Real CalcFullPotentialEnergyIncludingRigidBodies(void);
+
 	/** Generate a number of samples **/
 	int generateSamples(int howMany, int NMAOption);
 	//...............

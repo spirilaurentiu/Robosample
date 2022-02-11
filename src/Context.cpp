@@ -1736,6 +1736,21 @@ void Context::storeReplicaEnergyFromBack(int replicaIx)
 	replicas[replicaIx].setPotentialEnergy(energy);
 }
 
+// Get ennergy of the back world and store it in replica thisReplica
+void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
+{
+	// Get the index of the back world
+	int frontWorldIx =
+		replicas[replicaIx].getWorldIndexes().front();
+	
+	// Get the back world energy
+	SimTK::Real energy =
+		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
+			
+	// Set this replica's energy
+	replicas[replicaIx].setPotentialEnergy(energy);
+}
+
 
 // Go through all of this replica's worlds and generate samples
 void Context::RunReplica(int thisReplica, int howManyRounds)
@@ -1801,15 +1816,15 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 			// -------------	
 			// TRANSFER coordinates from last world to current
 			// TODO: eliminate in the last iteration
-			int currentWorldIx = replicaWorldIxs.front();
-			int lastWorldIx = replicaWorldIxs.back();
+			int frontIx = replicaWorldIxs.front();
+			int backIx = replicaWorldIxs.back();
 	
 			if(replicaNofWorlds > 1) {
 	
-				//std::cout << "Transfer from world " << lastWorldIx
-				//	<< " to " << currentWorldIx << std::endl;
+				//std::cout << "Transfer from world " << backIx
+				//	<< " to " << frontIx << std::endl;
 	
-				transferCoordinates(lastWorldIx, currentWorldIx);
+				transferCoordinates(backIx, frontIx);
 			}
 			// =============
 	
@@ -1825,7 +1840,7 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// -------------	
 	// STORE energy
 	// =============
-	storeReplicaEnergyFromBack(thisReplica);
+	storeReplicaEnergyFromFrontFull(thisReplica);
 
 }
 

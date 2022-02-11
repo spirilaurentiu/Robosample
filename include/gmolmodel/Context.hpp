@@ -274,6 +274,8 @@ public:
 	// Get ennergy of the back world and store it in replica thisReplica
 	void storeReplicaEnergyFromBack(int thisReplica);
 
+	void storeReplicaEnergyFromFrontFull(int thisReplica);
+
 	// Go through all of this replica's worlds and generate samples
 	void RunReplica(int whichReplica, int howManyRounds);
 
