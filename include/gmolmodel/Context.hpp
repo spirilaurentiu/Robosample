@@ -265,7 +265,10 @@ public:
 
 	// Stores replica's front world's coordinates into it's atomsLocations
 	// This should always be a fully flexible world
-	void storeReplicaFrontCoordinates(int whichReplica);
+	void storeReplicaCoordinatesFromFront(int whichReplica);
+
+	// Get ennergy of the back world and store it in replica thisReplica
+	void storeReplicaEnergyFromBack(int thisReplica);
 
 	// Go through all of this replica's worlds and generate samples
 	void RunReplica(int whichReplica, int howManyRounds);

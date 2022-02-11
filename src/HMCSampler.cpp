@@ -1569,7 +1569,9 @@ void HMCSampler::initialize(SimTK::State& someState)
 	}
 
 	// Store potential energies
-	setOldPE(getPEFromEvaluator(someState));
+	//setOldPE(getPEFromEvaluator(someState));
+	//setOldPE(forces->getMultibodySystem().calcPotentialEnergy(someState));
+	setOldPE(dumm->CalcFullPotEnergyIncludingRigidBodies(someState));
 	setSetPE(getOldPE());
 
 	// Store Fixman potential
@@ -2187,7 +2189,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 
 	// Get new potential energy
 	//pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL // DANGER
+	pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
 	// TODO: replace with the following after checking is the same thing
 	//pe_n = compoundSystem->calcPotentialEnergy(someState);
 
@@ -2519,8 +2521,8 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 		<< "\n\tfix_o " << fix_o << ", fix_n " << fix_n
 		<< "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o << ", logSineSqrGamma2_n " << logSineSqrGamma2_n
 		//<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
-		<< "\n\tts " << timestep  << ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-		<< "\n\tetot_n " << etot_n  << ", etot_proposed " << etot_proposed
+		<< "\n\tts " << timestep  //<< ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
+		<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_proposed
 		<< std::endl;
 }
 

@@ -1615,6 +1615,11 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 		thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
 		thermo2ReplicaIxs[thermoState_j] = temp;
 
+		// Exchange potential energies (not necessary)
+		SimTK::Real tempE = replicas[replica_i].getPotentialEnergy();
+		replicas[replica_i].setPotentialEnergy(replicas[replica_j].getPotentialEnergy());
+		replicas[replica_j].setPotentialEnergy(tempE);
+
 		//std::cout << "Swap done." << std::endl;
 
 		returnValue = true;
@@ -1702,7 +1707,7 @@ void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 
 // Stores replica's front world's coordinates into it's atomsLocations
 // This should always be a fully flexible world
-void Context::storeReplicaFrontCoordinates(int whichReplica)
+void Context::storeReplicaCoordinatesFromFront(int whichReplica)
 {
 	// Get world indexes	
 	std::vector<int> worldIndexes =
@@ -1715,6 +1720,22 @@ void Context::storeReplicaFrontCoordinates(int whichReplica)
 }
 
 
+// Get ennergy of the back world and store it in replica thisReplica
+void Context::storeReplicaEnergyFromBack(int replicaIx)
+{
+	// Get the index of the back world
+	int backWorldIx =
+		replicas[replicaIx].getWorldIndexes().back();
+	
+	// Get the back world energy
+	SimTK::Real energy =
+		pHMC((worlds[backWorldIx].samplers[0]))->pe_set + 
+		pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
+			
+	// Set this replica's energy
+	replicas[replicaIx].setPotentialEnergy(energy);
+}
+
 
 // Go through all of this replica's worlds and generate samples
 void Context::RunReplica(int thisReplica, int howManyRounds)
@@ -1724,9 +1745,10 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	std::vector<int> replicaWorldIxs = replicas[thisReplica].getWorldIndexes();
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
-	// -------------	
+	// -------------
+	// Set temperature
 	// Get thermodynamic state from map
-
+	// =============
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 	SimTK::Real T = thermodynamicStates[thisThermoStateIx].getTemperature();
 
@@ -1797,9 +1819,13 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// -------------	
 	// STORE coordinates	
 	// =============
-
 	// This should always be a fully flexible world
-	storeReplicaFrontCoordinates(thisReplica);
+	storeReplicaCoordinatesFromFront(thisReplica);
+
+	// -------------	
+	// STORE energy
+	// =============
+	storeReplicaEnergyFromBack(thisReplica);
 
 }
 
@@ -1839,16 +1865,6 @@ void Context::RunREX(void)
 					thermoStateIx);
 				}
 			}
-
-			// Store the energy of this replica
-			int backWorldIx =
-				replicas[replicaIx].getWorldIndexes().back();
-
-			SimTK::Real energy =
-				pHMC((worlds[backWorldIx].samplers[0]))->pe_set + 
-				pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
-			
-			replicas[replicaIx].setPotentialEnergy(energy);
 
 		} // end replicas simulations
 
