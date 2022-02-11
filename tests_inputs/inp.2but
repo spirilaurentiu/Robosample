@@ -3,7 +3,7 @@ MOLECULES 2but              # Molecules to load
 PRMTOP ligand.prmtop        # Parameter file
 INPCRD ligand.inpcrd        # Coordinate / Restart file
 RBFILE ligand.rb            # Rigid bodies definition file
-FLEXFILE ligand.flex        # Flexible bonds definition file
+FLEXFILE ligand.td.flex        # Flexible bonds definition file
 OUTPUT_DIR temp
 ROOTS 0
 ROOT_MOBILITY Free
@@ -45,5 +45,10 @@ VISUAL FALSE
 GEOMETRY FALSE
 DISTANCE 0 1
 DIHEDRAL 0 1 2 3
+
+
 THREADS 0
 OPENMM TRUE
+OPENMM_CalcOnlyNonbonded TRUE
+NONBONDED_METHOD    1
+NONBONDED_CUTOFF    2

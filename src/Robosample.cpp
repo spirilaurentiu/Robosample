@@ -15,6 +15,8 @@
 #include "readAmberInput.hpp"
 #include "SetupReader.hpp"
 
+#include <filesystem>
+
 //#ifndef ROBO_DEBUG_LEVEL01
 //#define ROBO_DEBUG_LEVEL01
 //#endif
@@ -53,7 +55,8 @@ bool LoadInputIntoSetupReader(int argc, char **argv,
 
 bool CreateOutputDirectory(std::string outDir)
 {
-	if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
+    if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
+//	if( ! std::filesystem::is_directory( std::filesystem::status ( outDir + "/pdbs") ) ){
 		const int err = mkdir((outDir 
 			+ "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (err == -1){
@@ -61,6 +64,9 @@ bool CreateOutputDirectory(std::string outDir)
 			return false;
 		}
 	}
+    else{
+        return true;
+    }
 }
 
 std::string CreateLogfilename( std::string outDir, long long int seed )
@@ -187,7 +193,25 @@ int main(int argc, char **argv)
 		context.setUseOpenMMAcceleration(true);
 	}
 
-	// Set Lennard-Jones mixing rule
+    if(setupReader.get("OPENMM_CalcOnlyNonbonded")[0] == "TRUE"){
+        context.setUseOpenMMCalcOnlyNonBonded(true);
+    }
+    else context.setUseOpenMMCalcOnlyNonBonded(false);
+
+
+    for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+        // Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
+        // OpenMM could be integrated as well.
+        if(setupReader.get("NONBONDED_METHOD")[worldIx] == "1"){
+            context.setNonbondedMethod(worldIx, 1);
+            context.setNonbondedCutoff(worldIx, std::stod( setupReader.get("NONBONDED_CUTOFF")[worldIx] ) );
+        }
+    }
+
+
+
+
+    // Set Lennard-Jones mixing rule
 	context.setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
 	// Add molecules based on the setup reader
