@@ -522,7 +522,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			//decorativeSphereM.setTransform(G_X_M);
 			//geometry.push_back(decorativeSphereM);
 
-			 /*
+			// /*
 			if(mbx > 1) {
 				
 				DecorativeFrame decorativeFrameP;

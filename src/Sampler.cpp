@@ -378,6 +378,12 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
 				break;
 
+			///< Torsion and translation
+			case SimTK::BondMobility::Mobility::BendStretch:
+				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+				break;
+
 			///< Three translational mobilities (Cartesian). // NEWMOB
 			case SimTK::BondMobility::Mobility::Translation:
 				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));

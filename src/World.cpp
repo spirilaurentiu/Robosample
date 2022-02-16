@@ -1308,6 +1308,7 @@ World::calcMobodToMobodTransforms(
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
 	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
+	//|| (mobility == SimTK::BondMobility::Mobility::Spherical)
 	){
 
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};

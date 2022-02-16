@@ -187,27 +187,19 @@ int main(int argc, char **argv)
 			std::stod(setupReader.get("FFSCALE")[0]));
 	}
 
-	std::cout << "AU 1" << std::endl << std::flush;
-
 	// Set GBSA scale factor
 	context.setGbsaGlobalScaleFactor(
 		std::stod(setupReader.get("GBSA")[0]));
         
-	std::cout << "AU 2" << std::endl << std::flush;
-
 	// Use OpenMM if possible
 	if(setupReader.get("OPENMM")[0] == "TRUE"){
 		context.setUseOpenMMAcceleration(true);
 	}
 
-	std::cout << "AU 3" << std::endl << std::flush;
-
 	if(setupReader.get("OPENMM_CalcOnlyNonbonded")[0] == "TRUE"){
 		context.setUseOpenMMCalcOnlyNonBonded(true);
 	}
 	else context.setUseOpenMMCalcOnlyNonBonded(false);
-
-	std::cout << "AU 4" << std::endl << std::flush;
 
     for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
         // Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
@@ -217,9 +209,6 @@ int main(int argc, char **argv)
             context.setNonbondedCutoff(worldIx, std::stod( setupReader.get("NONBONDED_CUTOFF")[worldIx] ) );
         }
     }
-
-
-	std::cout << "AU 5" << std::endl << std::flush;
 
 
     // Set Lennard-Jones mixing rule

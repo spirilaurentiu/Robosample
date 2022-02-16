@@ -1469,6 +1469,11 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 						            setBondMobility(BondMobility::Cylinder,
 						                            GmolBond2bondIx.at(i));
 						            break;
+						        }else if(lineWords[2] == "BendStretch") {
+						            bonds[i].setBondMobility(BondMobility::BendStretch, whichWorld);
+						            setBondMobility(BondMobility::BendStretch,
+						                            GmolBond2bondIx.at(i));
+						            break;
 						        }else if(lineWords[2] == "UniversalM") {
 						            bonds[i].setBondMobility(BondMobility::UniversalM, whichWorld);
 						            setBondMobility(BondMobility::UniversalM,
