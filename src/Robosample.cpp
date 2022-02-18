@@ -177,8 +177,6 @@ int main(int argc, char **argv)
 	}
 	context.PrintNumThreads();
 	
-	std::cout << "AU 0" << std::endl << std::flush;
-
 	// Set force field scale factor.
 	if(setupReader.get("FFSCALE")[0] == "AMBER"){
 		context.setAmberForceFieldScaleFactors();
@@ -434,9 +432,63 @@ int main(int argc, char **argv)
 		rexReader.dump(true);
 
 		// Use setup reader for REX file. TODO: adapt reader to format 
-		size_t nofReplicas = rexReader.getNofKeys();
-		context.setNofReplicas(nofReplicas);
-		context.setNofThermodynamicStates(nofReplicas);
+		//size_t nofReplicas = rexReader.getNofKeys() / 5;
+		//context.setNofReplicas(nofReplicas);
+		//context.setNofThermodynamicStates(nofReplicas);
+
+
+
+	// TODO return errors
+
+	std::string FN(setupReader.get("REX_FILE")[0]);
+	std::ifstream F(FN);
+	std::string line;
+/*
+	// read file
+	while (F) {
+		// read line
+		std::getline(F, line);
+		std::istringstream iss(line);
+
+		// read key
+		std::string key;
+		iss >> key;
+
+		// check if key has characters, all of them are printable and does not begin a comment
+		if (key.length() > 0 && setupReader.IsPrintable(key) && '#' != key[0]) {
+			std::vector<std::string> V;
+			std::string word;
+
+			// read arguments of key
+			while (iss >> word) {
+				// stop on comment
+				if ('#' == word[0]) {
+					break;
+				}
+
+				// add word if printable
+				if (setupReader.IsPrintable(word)) {
+					V.push_back(std::move(word));
+				}
+			}
+
+			std::cout << "REX FILE READING: ";for (const auto& lineWord: V){std::cout << lineWord << " ";}std::cout << std::endl;
+
+			for (const auto& lineWord: V){
+				;
+			}
+			std::cout << std::endl;
+			
+		}
+
+	}
+*/
+
+	// Use setup reader for REX file. TODO: adapt reader to format 
+	size_t nofReplicas = rexReader.getNofKeys();
+	context.setNofReplicas(nofReplicas);
+	context.setNofThermodynamicStates(nofReplicas);
+
 
 		// Add replicas
 		for(size_t replica_k = 0; replica_k < nofReplicas; replica_k++){
@@ -455,6 +507,9 @@ int main(int argc, char **argv)
 			// Add worlds to replica
 			std::vector<int> worldIndexes_k;
 
+			std::vector<SimTK::Real> timesteps_k;
+			std::vector<int> mdsteps_k;
+
 			// Add the first world to all the replicas
 			worldIndexes_k.push_back(0);
 
@@ -468,7 +523,7 @@ int main(int argc, char **argv)
 			}
 
 			std::cout << "About to add replica\n" << std::flush;
-			context.addReplica(replica_k, worldIndexes_k);
+			context.addReplica(replica_k, worldIndexes_k, timesteps_k, mdsteps_k);
 
 		}
 

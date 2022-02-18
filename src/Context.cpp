@@ -94,10 +94,17 @@ class Replica{
   public:
 	Replica();
 	Replica(int index);
-	Replica(int index, std::vector<int>& argWorldIndexes);
+	Replica(int index,
+		std::vector<int>& argWorldIndexes);
+	Replica(int index,
+		std::vector<int>& argWorldIndexes,
+		std::vector<SimTK::Real>& argTimesteps,
+		std::vector<int>& argMdsteps);
 	~Replica();
 
 	const std::vector<int> getWorldIndexes(void);
+	const std::vector<SimTK::Real> getTimesteps(void);
+	const std::vector<int> getMdsteps(void);
 
 	const	std::vector<
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
@@ -126,9 +133,14 @@ class Replica{
   private:
 
 	int myIndex;
+
 	std::vector<int> worldIndexes;
+	std::vector<SimTK::Real> timesteps;
+	std::vector<int> mdsteps;
+
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		atomsLocations;
+
 	SimTK::Real potential; // TODO: turn into a vector for worlds
 };
 
@@ -142,10 +154,22 @@ Replica::Replica(int index)
 	myIndex = index;
 }
 
-Replica::Replica(int index, std::vector<int>& argWorldIndexes)
+Replica::Replica(int index,
+	std::vector<int>& argWorldIndexes)
 {
 	myIndex = index;
 	worldIndexes = argWorldIndexes;
+}
+
+Replica::Replica(int index,
+	std::vector<int>& argWorldIndexes,
+	std::vector<SimTK::Real>& argTimesteps,
+	std::vector<int>& argMdsteps)
+{
+	myIndex = index;
+	worldIndexes = argWorldIndexes;
+	timesteps = argTimesteps;
+	mdsteps = argMdsteps;
 }
 
 Replica::~Replica()
@@ -156,6 +180,16 @@ Replica::~Replica()
 const std::vector<int> Replica::getWorldIndexes(void)
 {
 	return worldIndexes;
+}
+
+const std::vector<SimTK::Real> Replica::getTimesteps(void)
+{
+	return timesteps;
+}
+
+const std::vector<int> Replica::getMdsteps(void)
+{
+	return mdsteps;
 }
 
 // Get coordinates from this replica
@@ -1454,10 +1488,34 @@ void Context::addReplica(int index)
 
 // Adds a replica to the vector of Replica objects and sets the coordinates
 // of the replica's atomsLocations
-void Context::addReplica(int index, std::vector<int>& argWorldIndexes)
+void Context::addReplica(int index,
+		std::vector<int>& argWorldIndexes)
 {
 	// Add replica and the vector of worlds
 	replicas.emplace_back(Replica(index, argWorldIndexes));
+
+	// Set replicas coordinates
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+		referenceAtomsLocations =
+		worlds[0].getCurrentAtomsLocationsInGround();
+
+	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
+
+}
+
+// Adds a replica to the vector of Replica objects and sets the coordinates
+// of the replica's atomsLocations
+void Context::addReplica(int index,
+		std::vector<int>& argWorldIndexes,
+		std::vector<SimTK::Real>& timestepsInThisReplica,
+		std::vector<int>& mdstepsInThisReplica)
+{
+	// Add replica and the vector of worlds
+	replicas.emplace_back(Replica(index,
+		argWorldIndexes,
+		timestepsInThisReplica,
+		mdstepsInThisReplica
+	));
 
 	// Set replicas coordinates
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
@@ -1761,21 +1819,47 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	// -------------
-	// Set temperature
+	// Set temperature for all of this replica's worlds
 	// Get thermodynamic state from map
 	// =============
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 	SimTK::Real T = thermodynamicStates[thisThermoStateIx].getTemperature();
 
-	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-		worlds[worldIx].setTemperature( T );
-		worlds[worldIx].setBoostTemperature( T );
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		worlds[replicaWorldIxs[i]].setTemperature( T );
+		worlds[replicaWorldIxs[i]].setBoostTemperature( T );
 	}
 
 	std::cout << "Temperature set to " << T << std::endl;
 
+	// -------------
+	// Set simulation parameters for this replicas
 	// =============
+	/*
+	std::vector<SimTK::Real> replicaTimesteps = replicas[thisReplica].getTimesteps();
+	std::vector<int> replicaMdsteps = replicas[thisReplica].getMdsteps();
 
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
+			replicaTimesteps[i]);
+	}
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(
+			replicaMdsteps[i]);
+	}
+
+	std::cout << "Timesteps set to ";
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep() << " " ;
+	}
+	std::cout << std::endl;
+	std::cout << "Mdsteps set to ";
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample() << " " ;
+	}
+	std::cout << std::endl;
+	// =============
+	*/
 	// -------------	
 	// RESTORE coordinates	
 	// =============

@@ -170,11 +170,12 @@ public:
 	void setNumThreadsRequested(std::size_t which, int howMany);
 	void setUseOpenMMAcceleration(bool arg);
 
-    void setUseOpenMMCalcOnlyNonBonded(bool arg);
-    void setNonbondedMethod(std::size_t whichWorld, int methodInx);
-    void setNonbondedCutoff(std::size_t whichWorld, Real cutoffNm);
+	void setUseOpenMMCalcOnlyNonBonded(bool arg);
+	void setNonbondedMethod(std::size_t whichWorld, int methodInx);
+	void setNonbondedCutoff(std::size_t whichWorld, Real cutoffNm);
 
-	SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector, int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
+	SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector,
+		int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
 
 	/** Print the number of threads each World got **/
 	void PrintNumThreads();
@@ -186,8 +187,10 @@ public:
 	//------------
 
 	/** Analysis related functions **/
-	void addDistance(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2);
-	void addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4);
+	void addDistance(std::size_t whichWorld, std::size_t whichCompound,
+		int aIx1, int aIx2);
+	void addDihedral(std::size_t whichWorld, std::size_t whichCompound,
+		int aIx1, int aIx2, int aIx3, int aIx4);
 	void addDistances(std::vector<int> distanceIx);
 	void addDihedrals(std::vector<int> dihedralIx);
 
@@ -223,8 +226,10 @@ public:
 	// 
 	void writePdbs(int someIndex, int thermodynamicStateIx = 0);
 
-	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2, int a3, int a4);
-	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler, int a1, int a2);
+	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound,
+		std::size_t whichSampler, int a1, int a2, int a3, int a4);
+	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound, 
+		std::size_t whichSampler, int a1, int a2);
 
 	int getPdbRestartFreq();
 	void setPdbRestartFreq(int argFreq);
@@ -249,6 +254,12 @@ public:
 	// Add one replica
 	void addReplica(int index);
 	void addReplica(int index, std::vector<int>& argWorldIndexes);
+	void addReplica(int index,
+		std::vector<int>& argWorldIndexes,
+		std::vector<SimTK::Real>& timestepsInThisReplica,
+		std::vector<int>& mdstepsInThisReplica);
+
+	// Add one thermodynamic state
 	void addThermodynamicState(int index, SimTK::Real T);
 
 	// Set the intial mapping between replicas and thermoStates
@@ -286,14 +297,12 @@ public:
 	void PrintNofAttemptedSwapsMatrix(void);
 	void PrintNofAcceptedSwapsMatrix(void);
 
-public:
-	std::vector<std::size_t> worldIndexes;
-
 private:
 	void CheckInputParameters(const SetupReader& setupReader);
 
 	std::vector<World> worlds;
 
+	std::vector<std::size_t> worldIndexes;
 	// Molecules files
 	std::vector<std::string> topFNs;
 	std::vector<std::string> crdFNs;
@@ -385,6 +394,7 @@ private:
 	size_t nofReplicas;
 	size_t nofThermodynamicStates;
 	ReplicaMixingScheme replicaMixingScheme;
+
 
 	std::random_device rd;
 	std::mt19937 randomEngine;

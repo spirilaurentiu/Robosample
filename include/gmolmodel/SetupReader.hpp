@@ -35,10 +35,11 @@ public:
 	// 
 	const size_t getNofKeys(void) const;
 
+	bool IsPrintable(const std::string& s) const;
+
 private:
 	std::map<std::string, std::vector<std::string>> Args;
 	std::vector<std::string> KeyNotFound = { "ERROR_KEY_NOT_FOUND" };
 
-	bool IsPrintable(const std::string& s) const;
 };
 
