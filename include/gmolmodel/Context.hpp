@@ -253,8 +253,10 @@ public:
 
 	void setNofReplicas(const size_t& argNofReplicas);
 	const size_t& getNofReplicas(void) const;
-	void setNofThermodynamicStates(const size_t& argNofThermodynamicStates);
+	//void setNofThermodynamicStates(const size_t& argNofThermodynamicStates);
 	const size_t& getNofThermodynamicStates(void) const;
+
+	void allocateSwapMatrices(void);
 
 	// Add one replica
 	void addReplica(int index);

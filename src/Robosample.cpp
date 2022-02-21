@@ -563,10 +563,12 @@ int main(int argc, char **argv)
 		for(auto& mdsteps : rexMdsteps){for(auto& ts : mdsteps){std::cout << ts << " ";}std::cout << std::endl;}
 		std::cout << "All the samplesPerRound that I got:\n" ;
 		for(auto& samplesPerRound : rexSamplesPerRound){for(auto& ts : samplesPerRound){std::cout << ts << " ";}std::cout << std::endl;}
-	
-		context.setNofReplicas(nofReplicas);
-		context.setNofThermodynamicStates(nofReplicas);
-	
+		
+		// Checks
+		if(nofReplicas != context.getNofReplicas()){
+			std::cout << "WARNING: Number of replica requested is different from the number of replicas in trex file.\n";
+		}
+
 		for(int k = 0; k < nofReplicas; k++){
 			context.addReplica(k, rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}

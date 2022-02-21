@@ -1228,6 +1228,7 @@ void Topology::matchDefaultConfigurationWithAtomList(
 /** Builds the molecular tree, closes the rings, matches the configuration
 on the graph using using Molmodels matchDefaultConfiguration and sets the 
 general flexibility of the molecule. **/
+// TODO: break in two functions
 void Topology::buildGraphAndMatchCoords(int argRoot)
 {
 	// Initialize all atoms and bonds to unvisited

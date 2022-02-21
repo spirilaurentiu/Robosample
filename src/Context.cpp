@@ -1489,7 +1489,7 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 ////////////////////////
 
 
-// Set the number of replicas
+// Set the number of replicas. This could be dangerous
 void Context::setNofReplicas(const size_t& argNofReplicas)
 {
 	nofReplicas = argNofReplicas;
@@ -1500,6 +1500,7 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
 void Context::addReplica(int index)
 {
 	replicas.emplace_back(Replica(index));
+	nofReplicas++;
 	replicas.back().Print();
 }
 
@@ -1518,6 +1519,7 @@ void Context::addReplica(int index,
 
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 
+	nofReplicas++;
 }
 
 // Adds a replica to the vector of Replica objects and sets the coordinates
@@ -1541,12 +1543,14 @@ void Context::addReplica(int index,
 
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 
+	nofReplicas++;
 }
 
 void Context::addThermodynamicState(int index, SimTK::Real T)
 {
 	thermodynamicStates.emplace_back(ThermodynamicState(index));
 	thermodynamicStates.back().setTemperature(T);
+	nofThermodynamicStates++;
 }
 
 // Get the number of replicas
@@ -1557,10 +1561,8 @@ const size_t& Context::getNofReplicas(void) const
 
 // Set the number of thermodynamic states
 // Also allocates the matrix of attempted and accepted swaps
-void Context::setNofThermodynamicStates(const size_t& argNofThermodynamicStates)
+void Context::allocateSwapMatrices()
 {
-	nofThermodynamicStates = argNofThermodynamicStates;
-	
 	// Allocate the number of attempted swaps
 	nofAttemptedSwapsMatrix.resize(nofThermodynamicStates);
 	for(size_t i = 0; i < nofThermodynamicStates; i++){
@@ -1852,7 +1854,6 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// -------------
 	// Set simulation parameters for this replicas
 	// =============
-	/*
 	std::vector<SimTK::Real> replicaTimesteps = replicas[thisReplica].getTimesteps();
 	std::vector<int> replicaMdsteps = replicas[thisReplica].getMdsteps();
 
@@ -1876,26 +1877,23 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	}
 	std::cout << std::endl;
 	// =============
-	*/
 
-	// -------------	
-	// RESTORE coordinates	
-	// =============
 
-	//std::cout << "Replica front world coordinates:\n";
-	//replicas[thisReplica].PrintCoordinates();
-	//restoreReplicaCoordinatesToFront(thisReplica);
 	
+
 	for(size_t ri = 0; ri < howManyRounds; ri++){
 		for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
 	
+			int frontIx = -1;
+			int backIx = -1;
+
 			// -------------	
 			// SAMPLE from the current world
-			int front = replicaWorldIxs.front();
+			frontIx = replicaWorldIxs.front();
 			//std::cout << "Sample world " << front << "\n";
-			int accepted = worlds[front].generateSamples(
-				nofSamplesPerRound[front],
-				NMAOption[front]);
+			int accepted = worlds[frontIx].generateSamples(
+				nofSamplesPerRound[frontIx],
+				NMAOption[frontIx]);
 	
 			// =============
 		
@@ -1918,11 +1916,10 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 			// -------------	
 			// TRANSFER coordinates from last world to current
 			// TODO: eliminate in the last iteration
-			int frontIx = replicaWorldIxs.front();
-			int backIx = replicaWorldIxs.back();
+			frontIx = replicaWorldIxs.front();
+			backIx = replicaWorldIxs.back();
 	
 			if(replicaNofWorlds > 1) {
-	
 				//std::cout << "Transfer from world " << backIx
 				//	<< " to " << frontIx << std::endl;
 	
@@ -1937,12 +1934,12 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// STORE coordinates	
 	// =============
 	// This should always be a fully flexible world
-	storeReplicaCoordinatesFromFront(thisReplica);
+	//storeReplicaCoordinatesFromFront(thisReplica);
 
 	// -------------	
 	// STORE energy
 	// =============
-	storeReplicaEnergyFromFrontFull(thisReplica);
+	//storeReplicaEnergyFromFrontFull(thisReplica);
 
 }
 
@@ -1953,6 +1950,9 @@ void Context::RunREX(void)
 	// Is this necesary 
 	realizeTopology();
 
+	// Allocate space for swap matrices
+	allocateSwapMatrices();
+	
 	// Run each replica one time initially	
 	std::cout << " REX batch " << 0 << std::endl;
 	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
@@ -1960,6 +1960,12 @@ void Context::RunREX(void)
 
 			// Iterate this replica's worlds
 			RunReplica(replicaIx, swapEvery);
+
+			// This should always be a fully flexible world
+			storeReplicaCoordinatesFromFront(replicaIx);
+
+			// Store energy
+			storeReplicaEnergyFromFrontFull(replicaIx);
 
 			PrintToLog(worldIndexes.front());
 
@@ -1986,6 +1992,12 @@ void Context::RunREX(void)
 
 			// Iterate this replica's worlds
 			RunReplica(replicaIx, swapEvery);
+
+			// This should always be a fully flexible world
+			storeReplicaCoordinatesFromFront(replicaIx);
+
+			// STORE energy
+			storeReplicaEnergyFromFrontFull(replicaIx);
 
 			// Write energy and geometric features to logfile
 			if( !(mixi % getPrintFreq()) ){
