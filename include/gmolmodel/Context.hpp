@@ -38,19 +38,24 @@ public:
 		//std::vector<std::string> argRootMobilities
 	);
 
-	// Loads parameters into DuMM, adopts compound by the CompoundSystem
-	// and loads maps of indexes
-	void initializeWorlds(
+	// Loads parameters into DuMM
+	void addDummParams(
 		int requestedNofMols,
 		SetupReader& setupReader
-		//std::vector<std::string> argRoots,
-		//std::vector<std::string> argRootMobilities
+	);
+
+	// Adopts compound by the CompoundSystem
+	// and loads maps of indexes
+	void model(
+		int requestedNofMols,
+		SetupReader& setupReader
 	);
 
 	void modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer);
 	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
 	void realizeTopology();
+	void realizePosition();
 
 	void LoadWorldsFromSetup(SetupReader&);
 

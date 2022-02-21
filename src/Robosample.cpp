@@ -217,14 +217,17 @@ int main(int argc, char **argv)
 	}
 	else context.setUseOpenMMCalcOnlyNonBonded(false);
 
-    for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-        // Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
-        // OpenMM could be integrated as well.
-        if(setupReader.get("NONBONDED_METHOD")[worldIx] == "1"){
-            context.setNonbondedMethod(worldIx, 1);
-            context.setNonbondedCutoff(worldIx, std::stod( setupReader.get("NONBONDED_CUTOFF")[worldIx] ) );
-        }
-    }
+	for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+		// Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
+		// OpenMM could be integrated as well.
+		if(setupReader.get("NONBONDED_METHOD")[worldIx] == "1"){
+			context.setNonbondedMethod(worldIx, 1);
+			context.setNonbondedCutoff(worldIx,
+				std::stod( setupReader.get(
+					"NONBONDED_CUTOFF")[worldIx] )
+			);
+		}
+	}
 
 
     // Set Lennard-Jones mixing rule
@@ -241,9 +244,12 @@ int main(int argc, char **argv)
 	}
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
-	// Loads parameters into DuMM, adopts compound by the CompoundSystem
+	// Loads parameters into DuMM
+	context.addDummParams(finalNofMols, setupReader);
+
+	// Adopts compound by the CompoundSystem
 	// and loads maps of indexes
-	context.initializeWorlds(finalNofMols, setupReader);
+	context.model(finalNofMols, setupReader);
 
 	// Adaptive Gibbs blocking
 	context.setNofRoundsTillReblock(
@@ -496,8 +502,10 @@ int main(int argc, char **argv)
 		rexWorldIndexes.resize(nofReplicas);
 		rexMdsteps.resize(nofReplicas);
 		rexSamplesPerRound.resize(nofReplicas);
+
 		// Load simulation parameters vectors
 		while (F) {
+
 			// Read line
 			std::getline(F, line);
 	

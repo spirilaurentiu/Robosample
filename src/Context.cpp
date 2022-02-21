@@ -689,12 +689,11 @@ void Context::AddMolecules(
 
 // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes
-void Context::initializeWorlds(
+void Context::addDummParams(
 	int requestedNofMols,
 	SetupReader& setupReader
 ){
-	std::vector<std::string> argRoots = setupReader.get("ROOTS");
-	std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+	//std::vector<std::string> argRoots = setupReader.get("ROOTS");
 
 	// Iterate through molecules
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
@@ -704,6 +703,32 @@ void Context::initializeWorlds(
 		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+
+			// Pass current topology to the current world
+			(updWorld(worldIx))->topologies = &topologies;
+
+			// Add parameters in DuMM
+			(updWorld(worldIx))->AddDummParams(molIx, &amberReader);
+			//topologies[molIx].bAddDummParams(&amberReader, 
+			//	*((updWorld(worldIx))->forceField));
+		}
+	}
+
+}
+
+// Loads parameters into DuMM, adopts compound by the CompoundSystem
+// and loads maps of indexes
+void Context::model(
+	int requestedNofMols,
+	SetupReader& setupReader
+){
+	std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+
+	// Iterate through molecules
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+
 
 			// Add entry to flexibility filenames matrix
 			loadRigidBodiesSpecs( worldIx, molIx,
@@ -724,14 +749,6 @@ void Context::initializeWorlds(
 			std::cout << " Context::AddMolecule topFNs[molIx] "<< topFNs[molIx] 
 				<< " " << crdFNs[molIx] << " " << rbSpecsFNs[worldIx][molIx] 
 				<< std::endl << std::flush;
-
-			// Pass current topology to the current world
-			(updWorld(worldIx))->topologies = &topologies;
-
-			// Add parameters in DuMM
-			(updWorld(worldIx))->AddDummParams(molIx, &amberReader);
-			//topologies[molIx].bAddDummParams(&amberReader, 
-			//	*((updWorld(worldIx))->forceField));
 
 			//(updWorld(worldIx))->AllocateCoordBuffers(molIx); // TODO: remove
 
@@ -1933,27 +1950,45 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 void Context::RunREX(void)
 {
 
+	// Is this necesary 
+	realizeTopology();
+
+	// Run each replica one time initially	
+	std::cout << " REX batch " << 0 << std::endl;
+	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+		std::cout << "REX replica " << replicaIx << std::endl;
+
+			// Iterate this replica's worlds
+			RunReplica(replicaIx, swapEvery);
+
+			PrintToLog(worldIndexes.front());
+
+			writePdbs(0,	thermo2ReplicaIxs[replicaIx]);
+	}
+
+	// Mix replicas
+	mixReplicas();
+		
+	PrintNofAcceptedSwapsMatrix();
+
 	// Main loop
 	int nofMixes = int(nofRounds / swapEvery);
-	for(size_t mixi = 0; mixi < nofMixes; mixi++){
+	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 		std::cout << " REX batch " << mixi << std::endl;
 	
 		// Run each replica serially	
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
 	
-			if(mixi > 0){
-				//std::cout << "Replica front world coordinates:\n";
-				//replicas[replicaIx].PrintCoordinates();
-				restoreReplicaCoordinatesToFront(replicaIx);
-			}
+			//std::cout << "Replica front world coordinates:\n";
+			//replicas[replicaIx].PrintCoordinates();
+			restoreReplicaCoordinatesToFront(replicaIx);
 
 			// Iterate this replica's worlds
 			RunReplica(replicaIx, swapEvery);
 
 			// Write energy and geometric features to logfile
 			if( !(mixi % getPrintFreq()) ){
-				//PrintToLog(worldIndexes.back());
 				PrintToLog(worldIndexes.front());
 			}
 		
@@ -2692,6 +2727,15 @@ SimTK::State& Context::updAdvancedState(std::size_t whichWorld, std::size_t whic
 void Context::realizeTopology() {
 	for(auto& world : worlds) {
 		world.getCompoundSystem()->realizeTopology();
+	}
+
+}
+
+// Realize Topology Stage for all the Worlds
+void Context::realizePosition() {
+	for(auto& world : worlds) {
+		SimTK::State& someState = world.integ->updAdvancedState();
+		world.getCompoundSystem()->realize(someState, SimTK::Stage::Position);
 	}
 
 }
