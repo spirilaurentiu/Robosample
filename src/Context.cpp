@@ -1860,6 +1860,7 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	std::cout << std::endl;
 	// =============
 	*/
+
 	// -------------	
 	// RESTORE coordinates	
 	// =============

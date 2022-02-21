@@ -86,6 +86,24 @@ std::string GetMoleculeDirectoryShort(std::string path)
 }
 
 
+vector<string> split(const string& i_str, const string& i_delim)
+{
+    vector<string> result;
+    
+    size_t found = i_str.find(i_delim);
+    size_t startIndex = 0;
+
+    while(found != string::npos)
+    {
+        result.push_back(string(i_str.begin()+startIndex, i_str.begin()+found));
+        startIndex = found + i_delim.size();
+        found = i_str.find(i_delim, startIndex);
+    }
+    if(startIndex != i_str.size())
+        result.push_back(string(i_str.begin()+startIndex, i_str.end()));
+    return result;      
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -431,100 +449,118 @@ int main(int argc, char **argv)
 		rexReader.ReadSetup(setupReader.get("REX_FILE")[0]);
 		rexReader.dump(true);
 
-		// Use setup reader for REX file. TODO: adapt reader to format 
-		//size_t nofReplicas = rexReader.getNofKeys() / 5;
-		//context.setNofReplicas(nofReplicas);
-		//context.setNofThermodynamicStates(nofReplicas);
-
-
-
-	// TODO return errors
-
-	std::string FN(setupReader.get("REX_FILE")[0]);
-	std::ifstream F(FN);
-	std::string line;
-/*
-	// read file
-	while (F) {
-		// read line
-		std::getline(F, line);
-		std::istringstream iss(line);
-
-		// read key
-		std::string key;
-		iss >> key;
-
-		// check if key has characters, all of them are printable and does not begin a comment
-		if (key.length() > 0 && setupReader.IsPrintable(key) && '#' != key[0]) {
-			std::vector<std::string> V;
-			std::string word;
-
-			// read arguments of key
-			while (iss >> word) {
-				// stop on comment
-				if ('#' == word[0]) {
-					break;
-				}
-
-				// add word if printable
-				if (setupReader.IsPrintable(word)) {
-					V.push_back(std::move(word));
+		std::string FN(setupReader.get("REX_FILE")[0]);
+		std::ifstream F(FN);
+		std::string line;
+		size_t nofReplicas = 0;
+	
+		// Get the number of replicas
+		while (F) {
+			std::getline(F, line);
+			if(line.length() > 0){
+				std::vector<std::string> words = split(line, " ");
+				if((words[0][0] != '#') && (words.size() >= 2) && (words[0] == "NOF_REPLICAS")){
+					nofReplicas = std::stoi(words[1]);
 				}
 			}
-
-			std::cout << "REX FILE READING: ";for (const auto& lineWord: V){std::cout << lineWord << " ";}std::cout << std::endl;
-
-			for (const auto& lineWord: V){
-				;
-			}
-			std::cout << std::endl;
-			
 		}
-
-	}
-*/
-
-	// Use setup reader for REX file. TODO: adapt reader to format 
-	size_t nofReplicas = rexReader.getNofKeys();
-	context.setNofReplicas(nofReplicas);
-	context.setNofThermodynamicStates(nofReplicas);
-
-
-		// Add replicas
-		for(size_t replica_k = 0; replica_k < nofReplicas; replica_k++){
-
-			std::vector<std::string> vals_k = rexReader.get(std::to_string(replica_k));
-
-			std::cout << "rexReader: "
-				<< vals_k[0]
-				<< std::endl;
-
-			// Add a thermodynamic state
-			SimTK::Real T = std::stod(rexReader.get(std::to_string(replica_k))[0]);
-				
-			context.addThermodynamicState(replica_k, T);
-
-			// Add worlds to replica
-			std::vector<int> worldIndexes_k;
-
-			std::vector<SimTK::Real> timesteps_k;
-			std::vector<int> mdsteps_k;
-
-			// Add the first world to all the replicas
-			worldIndexes_k.push_back(0);
-
-			// Add the rest of the worlds
-			for(size_t i = 1; i < vals_k.size(); i++){
-				std::cout << "Add worlds " << std::stoi(vals_k[i])
-					<< " to replica " << replica_k
-					<< std::endl;
-			
-				worldIndexes_k.push_back(std::stoi(vals_k[i]));
-			}
-
-			std::cout << "About to add replica\n" << std::flush;
-			context.addReplica(replica_k, worldIndexes_k, timesteps_k, mdsteps_k);
-
+		std::cout << "Number of replicas requested " << nofReplicas << " \n" ;
+		
+		// Rewind the file
+		F.clear();
+		F.seekg(0);
+	
+		const static std::unordered_map<std::string, int> rexToIntKeys{
+			{"TEMPERATURE", 0},
+			{"TIMESTEPS", 1},
+			{"WORLD_INDEXES", 2},
+			{"MDSTEPS", 3},
+			{"SAMPLES_PER_ROUND", 4}
+		};
+	
+		enum RexKey{
+			TEMPERATURE,
+			TIMESTEPS,
+			WORLD_INDEXES,
+			MDSTEPS,
+			SAMPLES_PER_ROUND
+		};
+	
+		// Storage for each replica simulation parameters
+		std::vector<std::vector<SimTK::Real>> rexTimesteps;
+		std::vector<std::vector<int>> rexWorldIndexes;
+		std::vector<std::vector<int>> rexMdsteps;
+		std::vector<std::vector<int>> rexSamplesPerRound;
+	
+		rexTimesteps.resize(nofReplicas);
+		rexWorldIndexes.resize(nofReplicas);
+		rexMdsteps.resize(nofReplicas);
+		rexSamplesPerRound.resize(nofReplicas);
+		// Load simulation parameters vectors
+		while (F) {
+			// Read line
+			std::getline(F, line);
+	
+			if(line.length() > 0){
+				std::vector<std::string> words = split(line, " ");
+	
+				if((words[0][0] != '#') && (words[0] != "NOF_REPLICAS")){
+					std::cout << "REX FILE READING: "; for (const auto& word: words){std::cout << word << "|";}std::cout << std::endl;
+					
+					// Get replica index
+					int repIx = int(std::stoi(words[0]));
+	
+					// Get keyword
+					switch( rexToIntKeys.at(words[1]) ){
+						case RexKey::TEMPERATURE:
+							std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
+							context.addThermodynamicState(repIx, std::stod(words[2]));
+							break;
+						case RexKey::TIMESTEPS:
+							for(int i = 2; i < words.size(); i++){
+								rexTimesteps[repIx].push_back(std::stod(words[i]));
+							}
+							break;
+						case RexKey::WORLD_INDEXES:
+							for(int i = 2; i < words.size(); i++){
+								rexWorldIndexes[repIx].push_back(std::stod(words[i]));
+							}
+							break;
+						case RexKey::MDSTEPS:
+							for(int i = 2; i < words.size(); i++){
+								rexMdsteps[repIx].push_back(std::stod(words[i]));
+							}
+							break;
+						case RexKey::SAMPLES_PER_ROUND:
+							for(int i = 2; i < words.size(); i++){
+								rexSamplesPerRound[repIx].push_back(std::stod(words[i]));
+							}
+							break;
+						default:
+							;
+							break;
+					} // keys
+	
+				} // not a commentary
+	
+			} // line is empty
+	
+		} // file
+	
+		std::cout << "All the timesteps that I got:\n" ;
+		for(auto& timesteps : rexTimesteps){for(auto& ts : timesteps){std::cout << ts << " ";}std::cout << std::endl;}
+		std::cout << "All the worldIndexes that I got:\n" ;
+		for(auto& worldIndexes : rexWorldIndexes){for(auto& ts : worldIndexes){std::cout << ts << " ";}std::cout << std::endl;}
+		std::cout << "All the mdsteps that I got:\n" ;
+		for(auto& mdsteps : rexMdsteps){for(auto& ts : mdsteps){std::cout << ts << " ";}std::cout << std::endl;}
+		std::cout << "All the samplesPerRound that I got:\n" ;
+		for(auto& samplesPerRound : rexSamplesPerRound){for(auto& ts : samplesPerRound){std::cout << ts << " ";}std::cout << std::endl;}
+	
+		context.setNofReplicas(nofReplicas);
+		context.setNofThermodynamicStates(nofReplicas);
+	
+		for(int k = 0; k < nofReplicas; k++){
+			context.addReplica(k, rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 
 		context.loadReplica2ThermoIxs();
@@ -534,7 +570,6 @@ int main(int argc, char **argv)
 		context.setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
 		
 	}
-	//std::exit(0);
 
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
