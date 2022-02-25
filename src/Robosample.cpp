@@ -447,17 +447,8 @@ int main(int argc, char **argv)
 
 	// -- Setup REX --
 	if(setupReader.get("RUN_TYPE")[0] == "REX"){
-		// Look for trex.dat
-		SetupReader rexReader;
 
-		// Read input
-		std::cout << "Reading " << setupReader.get("REX_FILE")[0] << "\n";
-		rexReader.ReadSetup(setupReader.get("REX_FILE")[0]);
-		rexReader.dump(true);
-
-		std::string FN(setupReader.get("REX_FILE")[0]);
-		std::ifstream F(FN);
-		std::string line;
+		/*
 		size_t nofReplicas = 0;
 	
 		// Get the number of replicas
@@ -475,8 +466,12 @@ int main(int argc, char **argv)
 		// Rewind the file
 		F.clear();
 		F.seekg(0);
-	
-		const static std::unordered_map<std::string, int> rexToIntKeys{
+		*/
+
+		SetupReader rexReader;
+		//size_t nofReplicas = rexReader.getNofReplicasRequested(setupReader.get("REX_FILE")[0]);
+
+		/*const static std::unordered_map<std::string, int> rexToIntKeys{
 			{"TEMPERATURE", 0},
 			{"TIMESTEPS", 1},
 			{"WORLD_INDEXES", 2},
@@ -490,14 +485,34 @@ int main(int argc, char **argv)
 			WORLD_INDEXES,
 			MDSTEPS,
 			SAMPLES_PER_ROUND
-		};
+		};*/
 	
+		std::string FN(setupReader.get("REX_FILE")[0]);
+		std::ifstream F(FN);
+		std::string line;
+
+		// Storage for thermodynamic states
+		std::vector<SimTK::Real> temperatures;
+
 		// Storage for each replica simulation parameters
 		std::vector<std::vector<SimTK::Real>> rexTimesteps;
 		std::vector<std::vector<int>> rexWorldIndexes;
 		std::vector<std::vector<int>> rexMdsteps;
 		std::vector<std::vector<int>> rexSamplesPerRound;
 	
+		// Read REX config file
+		size_t nofReplicas = rexReader.readREXConfigFile(
+			setupReader.get("REX_FILE")[0],
+			temperatures,
+			rexTimesteps,
+			rexWorldIndexes,
+			rexMdsteps,
+			rexSamplesPerRound);
+
+
+
+/*
+		temperatures.resize(nofReplicas);
 		rexTimesteps.resize(nofReplicas);
 		rexWorldIndexes.resize(nofReplicas);
 		rexMdsteps.resize(nofReplicas);
@@ -510,7 +525,7 @@ int main(int argc, char **argv)
 			std::getline(F, line);
 	
 			if(line.length() > 0){
-				std::vector<std::string> words = split(line, " ");
+				std::vector<std::string> words = rexReader.split(line, " ");
 	
 				if((words[0][0] != '#') && (words[0] != "NOF_REPLICAS")){
 					std::cout << "REX FILE READING: "; for (const auto& word: words){std::cout << word << "|";}std::cout << std::endl;
@@ -522,7 +537,8 @@ int main(int argc, char **argv)
 					switch( rexToIntKeys.at(words[1]) ){
 						case RexKey::TEMPERATURE:
 							std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
-							context.addThermodynamicState(repIx, std::stod(words[2]));
+							temperatures[repIx] = std::stod(words[2]);
+							//context.addThermodynamicState(repIx, std::stod(words[2]));
 							break;
 						case RexKey::TIMESTEPS:
 							for(int i = 2; i < words.size(); i++){
@@ -554,7 +570,7 @@ int main(int argc, char **argv)
 			} // line is empty
 	
 		} // file
-	
+*/	
 		std::cout << "All the timesteps that I got:\n" ;
 		for(auto& timesteps : rexTimesteps){for(auto& ts : timesteps){std::cout << ts << " ";}std::cout << std::endl;}
 		std::cout << "All the worldIndexes that I got:\n" ;
@@ -565,18 +581,31 @@ int main(int argc, char **argv)
 		for(auto& samplesPerRound : rexSamplesPerRound){for(auto& ts : samplesPerRound){std::cout << ts << " ";}std::cout << std::endl;}
 		
 		// Checks
-		if(nofReplicas != context.getNofReplicas()){
-			std::cout << "WARNING: Number of replica requested is different from the number of replicas in trex file.\n";
+		/*
+		if(nofReplicas != context.getNofThermodynamicStates()){
+			std::cout << "WARNING: Number of replica requested is different from the number of temperatures.\n";
 		}
 
+		if(nofReplicas != context.getNofReplicas()){
+			std::cout << "WARNING: Number of replica requested is different from the number of replicas in trex file.\n";
+		}*/
+
+		// Add thermodynamic states
+		for(int k = 0; k < temperatures.size(); k++){
+			context.addThermodynamicState(k, temperatures[k]);
+		}
+
+		// Add replicas
 		for(int k = 0; k < nofReplicas; k++){
 			context.addReplica(k, rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 
+		// Consider renaming
 		context.loadReplica2ThermoIxs();
 
 		context.PrintReplicas();
 
+		// How many Gibbs rounds until replica swpas occurs
 		context.setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
 		
 	}

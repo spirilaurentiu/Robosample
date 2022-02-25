@@ -7,6 +7,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "Robo.hpp"
+#include <unordered_map>
 
 // This class implements the functionality for reading arguments from a setup
 // file and give back the necessary values as vectors
@@ -37,9 +39,45 @@ public:
 
 	bool IsPrintable(const std::string& s) const;
 
+	std::vector<std::string> split(const std::string& i_str, const std::string& i_delim);
+
+	/////////////////////////
+	// REX
+	/////////////////////////
+
+	// Get the number of replica requested
+	int readREXConfigFile(std::string FN,
+		std::vector<SimTK::Real>& temperatures,
+		std::vector<std::vector<SimTK::Real>>& rexTimesteps,
+		std::vector<std::vector<int>>& rexWorldIndexes,
+		std::vector<std::vector<int>>& rexMdsteps,
+		std::vector<std::vector<int>>& rexSamplesPerRound);
+
 private:
 	std::map<std::string, std::vector<std::string>> Args;
 	std::vector<std::string> KeyNotFound = { "ERROR_KEY_NOT_FOUND" };
 
+	/////////////////////////
+	// REX
+	/////////////////////////
+
+	// REX config file parameter types
+	const std::unordered_map<std::string, int> rexToIntKeys{
+		{"TEMPERATURE", 0},
+		{"TIMESTEPS", 1},
+		{"WORLD_INDEXES", 2},
+		{"MDSTEPS", 3},
+		{"SAMPLES_PER_ROUND", 4}
+	};
+
+	enum RexKey{
+		TEMPERATURE,
+		TIMESTEPS,
+		WORLD_INDEXES,
+		MDSTEPS,
+		SAMPLES_PER_ROUND
+	};
+	
+	
 };
 
