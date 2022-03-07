@@ -231,6 +231,14 @@ int SetupReader::readREXConfigFile(std::string FN,
 
 	} // file
 
+	std::cout << "All the timesteps that I got:\n" ;
+	for(auto& timesteps : rexTimesteps){for(auto& ts : timesteps){std::cout << ts << " ";}std::cout << std::endl;}
+	std::cout << "All the worldIndexes that I got:\n" ;
+	for(auto& worldIndexes : rexWorldIndexes){for(auto& ts : worldIndexes){std::cout << ts << " ";}std::cout << std::endl;}
+	std::cout << "All the mdsteps that I got:\n" ;
+	for(auto& mdsteps : rexMdsteps){for(auto& ts : mdsteps){std::cout << ts << " ";}std::cout << std::endl;}
+	std::cout << "All the samplesPerRound that I got:\n" ;
+	for(auto& samplesPerRound : rexSamplesPerRound){for(auto& ts : samplesPerRound){std::cout << ts << " ";}std::cout << std::endl;}	
 
 	return nofReplicas;
 	

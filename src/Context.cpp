@@ -2767,10 +2767,15 @@ void Context::PrintNumThreads() {
 }
 
 
+///////////////////////////
+// CTYPES
+///////////////////////////
 
-
-
-
+//
+//extern "C"
+//{
+//	Context* makeContext
+//}
 
 //------------
 

@@ -983,7 +983,10 @@ class Simulation:
 				'WRITEPDBS': [1],
 				'GEOMETRY': ['FALSE'],
 				'THREADS': [self.nofThreads],
-				'OPENMM': [str(self.openmmTrue).upper()]
+				'OPENMM': [str(self.openmmTrue).upper()],
+				'OPENMM_CalcOnlyNonbonded': ['TRUE'],
+				'NONBONDED_METHOD' : [],
+				'NONBONDED_CUTOFF' : []
 			}
 	
 			self.nofWorlds = 1
@@ -1025,7 +1028,10 @@ class Simulation:
 				'WRITEPDBS': [],
 				'GEOMETRY': [],
 				'THREADS': [],
-				'OPENMM': []
+				'OPENMM': [],
+				'OPENMM_CalcOnlyNonbonded': ['TRUE'],
+				'NONBONDED_METHOD' : [],
+				'NONBONDED_CUTOFF' : []
 			}
 	
 			self.nofWorlds = 0
@@ -1067,6 +1073,9 @@ class Simulation:
 		self.inpDict['OPENMM'].append(str(self.openmmTrue).upper())
 
 		self.inpDict['WORLDS'].append('R' + str(self.nofWorlds))
+
+		self.inpDict['NONBONDED_METHOD'].append(1)
+		self.inpDict['NONBONDED_CUTOFF'].append(1.2)
 
 	def addWorld(self, regionType='stretch', region=[[1, 2]], rootMobility='Weld', 
 		timestep=0.001, mdsteps=10, argJointType="Pin", subsets=['rama'], 

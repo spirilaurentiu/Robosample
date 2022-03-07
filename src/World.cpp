@@ -963,13 +963,18 @@ SimTK::State& World::setAtomsLocationsInGround(
 		std::pair<bSpecificAtom *, SimTK::Vec3> > > otherWorldsAtomsLocations)
 {
 
-	/*std::cout << "otherWorldsAtomsLocations[0]" << std::endl;
-	for(std::size_t j = 0; j < otherWorldsAtomsLocations[0].size(); j++){
-		auto compoundAtomIndex = otherWorldsAtomsLocations[0][j].first->getCompoundAtomIndex();
-		auto loc = otherWorldsAtomsLocations[0][j].second;
-		printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
-		//std::cout << loc << std::endl;
-	}*/
+	/*
+	for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
+		std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;
+		for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
+			auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
+			auto loc = otherWorldsAtomsLocations[i][j].second;
+			printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
+			//std::cout << loc << std::endl;
+		}
+	}
+	std::cout << std::flush;
+	*/
 
 	// Get the total no of bodies in this world (each World has its own
 	// SimbodyMatterSubsystem)
@@ -1107,26 +1112,45 @@ SimTK::State& World::setAtomsLocationsInGround(
 				}
 			}
 
+			//std::cout << "MORE COMPOUND FOR DUMM done" << "\n" << std::flush;
+
 			/////////////////
 			// 2.2 DUMM 
 			/////////////////
 			// Set stations and AtomPLacements for atoms in DuMM
 			// Loop through atoms
 			for (SimTK::Compound::AtomIndex aIx(1); aIx < ((*topologies)[i]).getNumAtoms(); ++aIx){
-				SimTK::MobilizedBodyIndex mbx = ((*topologies)[i]).getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
-					SimTK::DuMM::AtomIndex dAIx = ((*topologies)[i]).getDuMMAtomIndex(aIx);
+				SimTK::MobilizedBodyIndex mbx =
+					((*topologies)[i]).getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
-					// Set station_B
-					forceField->bsetAtomStationOnBody( dAIx, locs[int(aIx)] );
-					forceField->bsetAllAtomStationOnBody( dAIx, locs[int(aIx)] ); // full
+				//std::cout << "mbx " << mbx << "\n" << std::flush;
 
-					// Set included atom
-					forceField->updIncludedAtomStation(dAIx) = (locs[int(aIx)]);
-					forceField->updAllAtomStation(dAIx) = (locs[int(aIx)]); // full
+				SimTK::DuMM::AtomIndex dAIx = ((*topologies)[i]).getDuMMAtomIndex(aIx);
 
-					// Atom placements in clusters
-					forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
+				//std::cout << "dAIx " << dAIx << "\n" << std::flush;
+
+				// Set station_B
+				forceField->bsetAtomStationOnBody( dAIx, locs[int(aIx)] );
+				forceField->bsetAllAtomStationOnBody( dAIx, locs[int(aIx)] ); // full
+
+				//std::cout << "bset " << locs[int(aIx)] << "\n" << std::flush;
+				//std::cout << "dumm nofatoms " << forceField->getNumAtoms() << "\n" << std::flush;
+
+				// Set included atom
+				forceField->updIncludedAtomStation(dAIx) = (locs[int(aIx)]);
+				//std::cout << "updIncludedAtomStation " << "\n" << std::flush;
+				forceField->updAllAtomStation(dAIx) = (locs[int(aIx)]); // full
+				//std::cout << "updAllAtomStation " << "\n" << std::flush;
+
+
+				// Atom placements in clusters
+				forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
+
+				//std::cout << "bsetAtomPl " << "\n" << std::flush;
+
 			} /////////////////////////
+
+			//std::cout << "DUMM done" << "\n" << std::flush;
 
 			/////////////////
 			// 3. SIMBODY MATTER 
@@ -1182,6 +1206,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 				} // END atom is at body's origin
 			} // END loop through atoms
 
+			//std::cout << "mobod transforms done " << "\n" << std::flush;
+
 			/////////////////
 			// 3. SIMBODY MATTER 
 			//---------------
@@ -1199,6 +1225,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 			this->compoundSystem->realizeTopology();
 			someState = compoundSystem->updDefaultState();
 
+			//std::cout << "realizeTopology done" << "\n" << std::flush;
 		} // END TD regimen and all regimens
 
 	} // END iterating through molecules/topologies

@@ -448,48 +448,11 @@ int main(int argc, char **argv)
 	// -- Setup REX --
 	if(setupReader.get("RUN_TYPE")[0] == "REX"){
 
-		/*
-		size_t nofReplicas = 0;
-	
-		// Get the number of replicas
-		while (F) {
-			std::getline(F, line);
-			if(line.length() > 0){
-				std::vector<std::string> words = split(line, " ");
-				if((words[0][0] != '#') && (words.size() >= 2) && (words[0] == "NOF_REPLICAS")){
-					nofReplicas = std::stoi(words[1]);
-				}
-			}
-		}
-		std::cout << "Number of replicas requested " << nofReplicas << " \n" ;
-		
-		// Rewind the file
-		F.clear();
-		F.seekg(0);
-		*/
-
 		SetupReader rexReader;
-		//size_t nofReplicas = rexReader.getNofReplicasRequested(setupReader.get("REX_FILE")[0]);
-
-		/*const static std::unordered_map<std::string, int> rexToIntKeys{
-			{"TEMPERATURE", 0},
-			{"TIMESTEPS", 1},
-			{"WORLD_INDEXES", 2},
-			{"MDSTEPS", 3},
-			{"SAMPLES_PER_ROUND", 4}
-		};
 	
-		enum RexKey{
-			TEMPERATURE,
-			TIMESTEPS,
-			WORLD_INDEXES,
-			MDSTEPS,
-			SAMPLES_PER_ROUND
-		};*/
-	
-		std::string FN(setupReader.get("REX_FILE")[0]);
-		std::ifstream F(FN);
-		std::string line;
+		//std::string FN(setupReader.get("REX_FILE")[0]);
+		//std::ifstream F(FN);
+		//std::string line;
 
 		// Storage for thermodynamic states
 		std::vector<SimTK::Real> temperatures;
@@ -509,86 +472,7 @@ int main(int argc, char **argv)
 			rexMdsteps,
 			rexSamplesPerRound);
 
-
-
-/*
-		temperatures.resize(nofReplicas);
-		rexTimesteps.resize(nofReplicas);
-		rexWorldIndexes.resize(nofReplicas);
-		rexMdsteps.resize(nofReplicas);
-		rexSamplesPerRound.resize(nofReplicas);
-
-		// Load simulation parameters vectors
-		while (F) {
-
-			// Read line
-			std::getline(F, line);
-	
-			if(line.length() > 0){
-				std::vector<std::string> words = rexReader.split(line, " ");
-	
-				if((words[0][0] != '#') && (words[0] != "NOF_REPLICAS")){
-					std::cout << "REX FILE READING: "; for (const auto& word: words){std::cout << word << "|";}std::cout << std::endl;
-					
-					// Get replica index
-					int repIx = int(std::stoi(words[0]));
-	
-					// Get keyword
-					switch( rexToIntKeys.at(words[1]) ){
-						case RexKey::TEMPERATURE:
-							std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
-							temperatures[repIx] = std::stod(words[2]);
-							//context.addThermodynamicState(repIx, std::stod(words[2]));
-							break;
-						case RexKey::TIMESTEPS:
-							for(int i = 2; i < words.size(); i++){
-								rexTimesteps[repIx].push_back(std::stod(words[i]));
-							}
-							break;
-						case RexKey::WORLD_INDEXES:
-							for(int i = 2; i < words.size(); i++){
-								rexWorldIndexes[repIx].push_back(std::stod(words[i]));
-							}
-							break;
-						case RexKey::MDSTEPS:
-							for(int i = 2; i < words.size(); i++){
-								rexMdsteps[repIx].push_back(std::stod(words[i]));
-							}
-							break;
-						case RexKey::SAMPLES_PER_ROUND:
-							for(int i = 2; i < words.size(); i++){
-								rexSamplesPerRound[repIx].push_back(std::stod(words[i]));
-							}
-							break;
-						default:
-							;
-							break;
-					} // keys
-	
-				} // not a commentary
-	
-			} // line is empty
-	
-		} // file
-*/	
-		std::cout << "All the timesteps that I got:\n" ;
-		for(auto& timesteps : rexTimesteps){for(auto& ts : timesteps){std::cout << ts << " ";}std::cout << std::endl;}
-		std::cout << "All the worldIndexes that I got:\n" ;
-		for(auto& worldIndexes : rexWorldIndexes){for(auto& ts : worldIndexes){std::cout << ts << " ";}std::cout << std::endl;}
-		std::cout << "All the mdsteps that I got:\n" ;
-		for(auto& mdsteps : rexMdsteps){for(auto& ts : mdsteps){std::cout << ts << " ";}std::cout << std::endl;}
-		std::cout << "All the samplesPerRound that I got:\n" ;
-		for(auto& samplesPerRound : rexSamplesPerRound){for(auto& ts : samplesPerRound){std::cout << ts << " ";}std::cout << std::endl;}
-		
 		// Checks
-		/*
-		if(nofReplicas != context.getNofThermodynamicStates()){
-			std::cout << "WARNING: Number of replica requested is different from the number of temperatures.\n";
-		}
-
-		if(nofReplicas != context.getNofReplicas()){
-			std::cout << "WARNING: Number of replica requested is different from the number of replicas in trex file.\n";
-		}*/
 
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
@@ -633,6 +517,16 @@ int main(int argc, char **argv)
 } // END MAIN ////////////
 
 
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////   MAIN   ////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//int main(int argc, char **argv)
+//{
+//
+//	int retVal = run(argc, argv);
+//	return retVal;
+//	
+//}
 
 
 
