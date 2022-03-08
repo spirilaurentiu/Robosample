@@ -52,8 +52,8 @@ bool LoadInputIntoSetupReader(int argc, char **argv,
 }
 
 bool CreateOutputDirectory(std::string outDir)
-{
-	if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
+{	
+    if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
 		const int err = mkdir((outDir 
 			+ "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (err == -1){
@@ -61,6 +61,9 @@ bool CreateOutputDirectory(std::string outDir)
 			return false;
 		}
 	}
+    else{
+        return true;
+    }	
 }
 
 std::string CreateLogfilename( std::string outDir, long long int seed )
