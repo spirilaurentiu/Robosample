@@ -985,8 +985,8 @@ class Simulation:
 				'THREADS': [self.nofThreads],
 				'OPENMM': [str(self.openmmTrue).upper()],
 				'OPENMM_CalcOnlyNonbonded': ['TRUE'],
-				'NONBONDED_METHOD' : [],
-				'NONBONDED_CUTOFF' : []
+				'NONBONDED_METHOD' : [1],
+				'NONBONDED_CUTOFF' : [1.2]
 			}
 	
 			self.nofWorlds = 1
