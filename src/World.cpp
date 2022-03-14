@@ -384,10 +384,10 @@ void World::setUScaleFactorsToMobods(void)
 			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1, ownWorldIndex);
 			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2, ownWorldIndex);
 
-			std::cout 
-			<< "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 "
-			<< aIx1 << " " << aIx2 << " "
-			<< mbx1 << " " << mbx2 << std::endl;
+			//std::cout 
+			//<< "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 "
+			//<< aIx1 << " " << aIx2 << " "
+			//<< mbx1 << " " << mbx2 << std::endl;
 
 			const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(mbx1);
 			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(mbx2);

@@ -297,7 +297,7 @@ class Context:
 		self.distMat = md.compute_contacts(self.mdtrajTraj, contacts='all', scheme='ca', ignore_nonprotein=False, periodic=False)
 		print("Calculating dssp...")
 		self.dssp = md.compute_dssp(self.mdtrajTraj)
-		print('dssp', self.dssp)
+		#print('dssp', self.dssp)
 
 		self.coils = []
 		coilsLen = 0
@@ -366,8 +366,8 @@ class Context:
 					n1 = np.linalg.norm(v1)
 					n2 = np.linalg.norm(v2)
 					bondDots[bvi, bvj] = bondDots[bvj, bvi] = np.abs(np.dot(v1, v2) / (n1*n2))
-					print(bondDots[bvi, bvj], end = ' ')
-			print()
+					#print(bondDots[bvi, bvj], end = ' ')
+			#print()
 		
 		# Perform clustering on dot products
 		import scipy.cluster.hierarchy as sch
@@ -896,6 +896,13 @@ class Context:
 class Simulation:
 	def __init__(self, topology, system, integrator='HMC', platform='CPU', properties={'nofThreads': 2}, addDefaultWorld=True):
 		print("Starting Simulation init")
+
+		# Set Robosample directories
+		self.ROBOSAMPLEDIR = os.path.abspath(os.path.dirname(__file__) + "/../")
+		print("Robosample directory set to", self.ROBOSAMPLEDIR)
+		self.ROBOSAMPLEEXEC = os.path.abspath(self.ROBOSAMPLEDIR + "/build/release/robosample/src/GMOLMODEL_robo")
+		print("Robosample executable set to", self.ROBOSAMPLEEXEC)
+
 		self.context = Context()
 		self.system = system
 		self.integrator = integrator
@@ -948,10 +955,10 @@ class Simulation:
 		if addDefaultWorld == True:
 			self.inpDict = {
 				'MOLECULES': ['robots/bot0'],
-				'ROUNDS': [2000],
+				#'ROUNDS': [300],
 				'DISTANCE': [0, 1],
 				'DIHEDRAL': [0, 1, 2, 3],
-				'OUTPUT_DIR': ['robots/'],
+				#'OUTPUT_DIR': ['robots/'],
 				'RANDOM_WORLD_ORDER': ['FALSE'], 
 	
 				'PRMTOP': ['bot.prmtop'],
@@ -964,23 +971,23 @@ class Simulation:
 				'WORLDS': ['R0'],
 				'ROOTS': [0],
 				'SAMPLER': [self.integrator.type],
-				'TIMESTEPS': [0.0007],
+				'TIMESTEPS': [0.0005],
 				'MDSTEPS': [5],
 				'BOOST_MDSTEPS': [1],
-				'SAMPLES_PER_ROUND': [4],
+				'SAMPLES_PER_ROUND': [1],
 				'REPRODUCIBLE': ['FALSE'],
 				'SEED': [1],
 				'THERMOSTAT': ['Andersen'],
 				'TEMPERATURE_INI': [self.integrator.T],
 				'TEMPERATURE_FIN': [self.integrator.T],
-				'BOOST_TEMPERATURE': [600],
+				'BOOST_TEMPERATURE': [self.integrator.T],
 				'FFSCALE': ['AMBER'],
 				'GBSA': [1.0],
 				'FIXMAN_POTENTIAL': ['FALSE'],
 				'FIXMAN_TORQUE': ['FALSE'],
 				'VISUAL': ['FALSE'],
 				'PRINT_FREQ': [1],
-				'WRITEPDBS': [1],
+				'WRITEPDBS': [3],
 				'GEOMETRY': ['FALSE'],
 				'THREADS': [self.nofThreads],
 				'OPENMM': [str(self.openmmTrue).upper()],
@@ -993,10 +1000,10 @@ class Simulation:
 		else:
 			self.inpDict = {
 				'MOLECULES': ['robots/bot0'],
-				'ROUNDS': [2000],
+				#'ROUNDS': [300],
 				'DISTANCE': [0, 1],
 				'DIHEDRAL': [0, 1, 2, 3],
-				'OUTPUT_DIR': ['robots/'],
+				#'OUTPUT_DIR': ['robots/'],
 				'RANDOM_WORLD_ORDER': ['FALSE'], 
 	
 				'PRMTOP': [],
@@ -1057,7 +1064,7 @@ class Simulation:
 		self.inpDict['THERMOSTAT'].append('Andersen')
 		self.inpDict['TEMPERATURE_INI'].append(self.integrator.T)
 		self.inpDict['TEMPERATURE_FIN'].append(self.integrator.T)
-		self.inpDict['BOOST_TEMPERATURE'].append(600)
+		self.inpDict['BOOST_TEMPERATURE'].append(self.integrator.T)
 		self.inpDict['FFSCALE'].append('AMBER')
 		self.inpDict['GBSA'].append(1.0)
 		self.inpDict['FIXMAN_POTENTIAL'].append('TRUE')
@@ -1352,24 +1359,24 @@ class Simulation:
 			#inpTxt += (' ' + moldir)
 			pass
 
+		# Modify input
+		self.inpDict['ROUNDS'] = [nofSteps]
+		self.inpDict['OUTPUT_DIR'] = [self.reporters[0].outputDir]
+
 		for key in list(self.inpDict.keys()):
 			inpTxt += key
 			for val in self.inpDict[key]:
 				inpTxt +=  " " + str(val)
 			inpTxt += '\n'
 		
-		# Modify input
-		self.inpDict['ROUNDS'] = [nofSteps]
-		self.inpDict['OUTPUT_DIR'] = [self.reporters[0].outputDir]
-
 		# Write input file
 		inpFN = 'inp.test'
 		inpF = open(inpFN, "w+")
 		inpF.write(inpTxt)
 		inpF.close()
 
-		#os.system("echo \'" + inpTxt + "\'")
-		#os.system("$ROBOSAMPLEDIR/build?debug/tests/Robosample inp.test")
+		os.system("echo \'" + inpTxt + "\'")
+		os.system(self.ROBOSAMPLEEXEC + " inp.test")
 
 		print("Done Simulation step")
 	#	

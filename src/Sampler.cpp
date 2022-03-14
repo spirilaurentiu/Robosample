@@ -244,8 +244,8 @@ void Sampler::checkAtomStationsThroughDumm(void)
 		// Loop through atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 			
-			std::cout << "DEBUG getAtomLocationInMobilizedBodyFrame"
-				<< " aIx " << aIx;
+			//std::cout << "DEBUG getAtomLocationInMobilizedBodyFrame"
+			//	<< " aIx " << aIx;
 			
 			//SimTK::Vec3 atomMobodStation = 
 			//	topology.getAtomLocationInMobilizedBodyFrame(aIx);
@@ -254,8 +254,8 @@ void Sampler::checkAtomStationsThroughDumm(void)
 
 			//std::cout << " through Compound " << atomMobodStation
 			//	<< std::endl;
-			std::cout << " through DuMM " << atomMobodStationThroughDumm
-				<< std::endl;
+			//std::cout << " through DuMM " << atomMobodStationThroughDumm
+			//	<< std::endl;
 		}
 	}
 
@@ -266,7 +266,7 @@ void Sampler::checkAtomStationsThroughDumm(void)
 // The ideal way to do this would be to keep have MobilizedBody keep a Mobility name
 void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 {
-	std::cout << "DEBUG Entering Sampler::loadMbx2mobility" << std::endl << std::flush;
+	//std::cout << "DEBUG Entering Sampler::loadMbx2mobility" << std::endl << std::flush;
 	
 	// function args were SimTK::State& someState
 
@@ -303,10 +303,10 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 	
 					mbx2mobility.insert(std::make_pair(mbx, mobility));
 				
-					std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
-						<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
-						<< " mobility " << mobility
-						<< std::endl;
+					//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
+					//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
+					//	<< " mobility " << mobility
+					//	<< std::endl;
 	
 				} // Parent is not Ground
 
