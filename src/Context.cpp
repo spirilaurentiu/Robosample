@@ -773,7 +773,7 @@ void Context::model(
 			modelOneEmbeddedTopology(molIx, worldIx, argRootMobilities[worldIx]);
 
 			// Realize Topology Stage involvs all the SubSystems
-			(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
+			//(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 
 			topologies[molIx].loadAIx2MbxMap();
 			(updWorld(worldIx))->loadMbx2AIxMap();
@@ -781,6 +781,11 @@ void Context::model(
 
 		}
 
+	}
+
+	// Realize topology for all the worlds all subsystems
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 	}
 
 
