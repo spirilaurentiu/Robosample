@@ -260,14 +260,12 @@ public:
 
 	// Add one replica
 	void addReplica(int index);
-	void addReplica(int index, std::vector<int>& argWorldIndexes);
-	void addReplica(int index,
+
+	// Add one thermodynamic state
+	void addThermodynamicState(int index, SimTK::Real T,
 		std::vector<int>& argWorldIndexes,
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica);
-
-	// Add one thermodynamic state
-	void addThermodynamicState(int index, SimTK::Real T);
 
 	// Set the intial mapping between replicas and thermoStates
 	void loadReplica2ThermoIxs(void);

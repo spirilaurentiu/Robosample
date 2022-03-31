@@ -15,7 +15,13 @@ class ThermodynamicState{
   public:
 	ThermodynamicState();
 	ThermodynamicState(int index);
-	ThermodynamicState(int index, const SimTK::Real& T);
+
+	ThermodynamicState(int index, const SimTK::Real& T
+		,std::vector<int>& argWorldIndexes
+		,std::vector<SimTK::Real>& argTimesteps
+		,std::vector<int>& argMdsteps
+	);
+
 	~ThermodynamicState(){}
 
 	const int getIndex(void){return myIndex;}
@@ -25,12 +31,26 @@ class ThermodynamicState{
 	const SimTK::Real& getTemperature();
 	const SimTK::Real& getBeta();
 	
+	const std::vector<int> getWorldIndexes(void);
+	const std::vector<SimTK::Real> getTimesteps(void);
+	const std::vector<int> getMdsteps(void);
+
 	void Print(void);
 
   private:
+
+	// Index
 	int myIndex;
+
+	// Temperature
 	SimTK::Real temperature;
 	SimTK::Real beta;
+
+	// Worlds related parameters //R2TNEW
+	std::vector<int> worldIndexes; //R2TNEW
+	std::vector<SimTK::Real> timesteps; //R2TNEW
+	std::vector<int> mdsteps; //R2TNEW
+
 };
 
 ThermodynamicState::ThermodynamicState()
@@ -51,13 +71,25 @@ ThermodynamicState::ThermodynamicState(int index)
 	beta = 1.0 / RT;
 }
 
-ThermodynamicState::ThermodynamicState(int index, const SimTK::Real& T)
+ThermodynamicState::ThermodynamicState(int index, const SimTK::Real& T
+	,std::vector<int>& argWorldIndexes
+	,std::vector<SimTK::Real>& argTimesteps
+	,std::vector<int>& argMdsteps
+	)
 {
+	// Own index
 	myIndex = index;
+
+	// Temperature related
 	temperature = T;
 	SimTK::Real RT = temperature *
 		static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD);
 	beta = 1.0 / RT;
+
+	// Worlds related parameters
+	worldIndexes = argWorldIndexes;
+	timesteps = argTimesteps;
+	mdsteps = argMdsteps;
 }
 
 void ThermodynamicState::setTemperature(const SimTK::Real& T)
@@ -78,11 +110,33 @@ const SimTK::Real& ThermodynamicState::getBeta()
 	return beta;
 }
 
+// 
+const std::vector<int> ThermodynamicState::getWorldIndexes(void)
+{
+	return worldIndexes;
+}
+
+const std::vector<SimTK::Real> ThermodynamicState::getTimesteps(void)
+{
+	return timesteps;
+}
+
+const std::vector<int> ThermodynamicState::getMdsteps(void)
+{
+	return mdsteps;
+}
+
 void ThermodynamicState::Print(void)
 {
 	std::cout << "ThermodynamicState::Print index T "
 		<< myIndex << " " << temperature  
 		<< std::endl;
+
+	std::cout << "ThermodynamicState::Print index worldIndexes " << myIndex;
+	for(auto worldIndex : worldIndexes){
+		std::cout << " " << worldIndex;
+	}
+	std::cout << std::endl;
 }
 
 
@@ -101,10 +155,6 @@ class Replica{
 		std::vector<SimTK::Real>& argTimesteps,
 		std::vector<int>& argMdsteps);
 	~Replica();
-
-	const std::vector<int> getWorldIndexes(void);
-	const std::vector<SimTK::Real> getTimesteps(void);
-	const std::vector<int> getMdsteps(void);
 
 	const	std::vector<
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
@@ -127,20 +177,23 @@ class Replica{
 	const SimTK::Real getPotentialEnergy(void){return potential;}
 	void setPotentialEnergy(const SimTK::Real& somePotential){potential = somePotential;}
 
-	void Print(void);
+	void Print(void){}
 	void PrintCoordinates(void);
 
   private:
 
 	int myIndex;
 
-	std::vector<int> worldIndexes;
-	std::vector<SimTK::Real> timesteps;
-	std::vector<int> mdsteps;
+	//// Worlds related parameters //R2TOLD
+	//std::vector<int> worldIndexes; //R2TOLD
+	//std::vector<SimTK::Real> timesteps; //R2TOLD
+	//std::vector<int> mdsteps; //R2TOLD
 
+	// Replica configurations
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		atomsLocations;
 
+	// Replica potential energy
 	SimTK::Real potential; // TODO: turn into a vector for worlds
 };
 
@@ -149,47 +202,13 @@ Replica::Replica()
 	myIndex = 0;
 }
 
-Replica::Replica(int index)
+Replica::Replica(int argIndex)
 {
-	myIndex = index;
-}
-
-Replica::Replica(int index,
-	std::vector<int>& argWorldIndexes)
-{
-	myIndex = index;
-	worldIndexes = argWorldIndexes;
-}
-
-Replica::Replica(int index,
-	std::vector<int>& argWorldIndexes,
-	std::vector<SimTK::Real>& argTimesteps,
-	std::vector<int>& argMdsteps)
-{
-	myIndex = index;
-	worldIndexes = argWorldIndexes;
-	timesteps = argTimesteps;
-	mdsteps = argMdsteps;
+	myIndex = argIndex;
 }
 
 Replica::~Replica()
 {
-}
-
-// 
-const std::vector<int> Replica::getWorldIndexes(void)
-{
-	return worldIndexes;
-}
-
-const std::vector<SimTK::Real> Replica::getTimesteps(void)
-{
-	return timesteps;
-}
-
-const std::vector<int> Replica::getMdsteps(void)
-{
-	return mdsteps;
 }
 
 // Get coordinates from this replica
@@ -257,15 +276,6 @@ void Replica::updAtomsLocationsInGround(
 
 	}
 
-}
-
-void Replica::Print(void)
-{
-	std::cout << "Replica::Print index worldIndexes " << myIndex;
-	for(auto worldIndex : worldIndexes){
-		std::cout << " " << worldIndex;
-	}
-	std::cout << std::endl;
 }
 
 void Replica::PrintCoordinates(void)
@@ -1502,43 +1512,40 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
 
 // Adds a replica to the vector of Replica objects and
 // does not set the coordinates of the replica's atomsLocations !
+//void Context::addReplica(int index)
+//{
+//	replicas.emplace_back(Replica(index));
+//	nofReplicas++;
+//	replicas.back().Print();
+//}
+
+//// Adds a replica to the vector of Replica objects and sets the coordinates
+//// of the replica's atomsLocations
+//void Context::addReplica(int index,
+//		std::vector<int>& argWorldIndexes)
+//{
+//	// Add replica and the vector of worlds
+//	replicas.emplace_back(Replica(index, argWorldIndexes));
+//
+//	// Set replicas coordinates
+//	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+//		referenceAtomsLocations =
+//		worlds[0].getCurrentAtomsLocationsInGround();
+//
+//	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
+//
+//	nofReplicas++;
+//}
+
+// Adds a replica to the vector of Replica objects and sets the coordinates
+// of the replica's atomsLocations
 void Context::addReplica(int index)
 {
-	replicas.emplace_back(Replica(index));
-	nofReplicas++;
-	replicas.back().Print();
-}
-
-// Adds a replica to the vector of Replica objects and sets the coordinates
-// of the replica's atomsLocations
-void Context::addReplica(int index,
-		std::vector<int>& argWorldIndexes)
-{
 	// Add replica and the vector of worlds
-	replicas.emplace_back(Replica(index, argWorldIndexes));
-
-	// Set replicas coordinates
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		referenceAtomsLocations =
-		worlds[0].getCurrentAtomsLocationsInGround();
-
-	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
-
-	nofReplicas++;
-}
-
-// Adds a replica to the vector of Replica objects and sets the coordinates
-// of the replica's atomsLocations
-void Context::addReplica(int index,
-		std::vector<int>& argWorldIndexes,
-		std::vector<SimTK::Real>& timestepsInThisReplica,
-		std::vector<int>& mdstepsInThisReplica)
-{
-	// Add replica and the vector of worlds
-	replicas.emplace_back(Replica(index,
-		argWorldIndexes,
-		timestepsInThisReplica,
-		mdstepsInThisReplica
+	replicas.emplace_back(Replica(index
+		//argWorldIndexes,
+		//timestepsInThisReplica,
+		//mdstepsInThisReplica
 	));
 
 	// Set replicas coordinates
@@ -1548,13 +1555,30 @@ void Context::addReplica(int index,
 
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 
+	// Done
 	nofReplicas++;
 }
 
-void Context::addThermodynamicState(int index, SimTK::Real T)
+void Context::addThermodynamicState(int index,
+		SimTK::Real T,
+		std::vector<int>& argWorldIndexes,
+		std::vector<SimTK::Real>& timestepsInThisReplica,
+		std::vector<int>& mdstepsInThisReplica)
 {
-	thermodynamicStates.emplace_back(ThermodynamicState(index));
-	thermodynamicStates.back().setTemperature(T);
+	// Allocate and construct
+	thermodynamicStates.emplace_back(
+		ThermodynamicState(index,
+			T,
+			argWorldIndexes,
+			timestepsInThisReplica,
+			mdstepsInThisReplica
+		)
+	);
+
+	// Set temperature
+	thermodynamicStates.back().setTemperature(T); // seems redundant
+
+	// Done
 	nofThermodynamicStates++;
 }
 
@@ -1618,7 +1642,6 @@ void Context::loadReplica2ThermoIxs(void)
 			std::pair<int, int> 
 			(thermoState_k, thermoState_k));
 
-
 	}
 }
 
@@ -1674,11 +1697,11 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	//std::cout << "Replicas energies = " 
-	//	<< replicas[replica_i].getPotentialEnergy() << " "
-	//	<< replicas[replica_j].getPotentialEnergy() << " "
-	//	<< std::endl;
-	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
+	std::cout << "Replicas energies = " 
+		<< replicas[replica_i].getPotentialEnergy() << " "
+		<< replicas[replica_j].getPotentialEnergy() << " "
+		<< std::endl;
+	std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
 	// Acceptance criterion
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
@@ -1773,11 +1796,21 @@ void Context::mixReplicas(void)
 void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 {
 
-	// Get world indexes	
-	std::vector<int> worldIndexes =
-		replicas[whichReplica].getWorldIndexes();
+	//std::cout <<  "restoreReplicaCoordinatesToFront " << whichReplica << ": ";
 
-	// Set front world atoms locations from the replica
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[whichReplica];
+
+	//std::cout <<  " thermoIx " << thermoIx;
+
+	// Get worlds indexes of this thermodynamic state
+	std::vector<int> worldIndexes =
+		thermodynamicStates[thermoIx].getWorldIndexes();
+
+	//std::cout <<  " worldIndexes[1] " << worldIndexes[1];
+
+	// Set thoermoState front world from replica coordinate buffer
 	// Will use worlds own integrator's advanced state
 	SimTK::State& state =
 		(worlds[worldIndexes.front()].integ)->updAdvancedState();
@@ -1785,29 +1818,53 @@ void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 	worlds[worldIndexes.front()].setAtomsLocationsInGround(state,
 		replicas[whichReplica].getAtomsLocationsInGround());
 
+	//std::cout << " worldIndexes.front() " << worldIndexes.front();
+
+	//std::cout << std::endl;
+
 }
 
 // Stores replica's front world's coordinates into it's atomsLocations
 // This should always be a fully flexible world
 void Context::storeReplicaCoordinatesFromFront(int whichReplica)
 {
-	// Get world indexes	
+
+	//std::cout <<  "storeReplicaCoordinatesFromFront " << whichReplica << ": ";
+
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[whichReplica];
+
+	//std::cout <<  " thermoIx " << thermoIx;
+
+	// Get worlds indexes of this thermodynamic state
 	std::vector<int> worldIndexes =
-		replicas[whichReplica].getWorldIndexes();
+		thermodynamicStates[thermoIx].getWorldIndexes();
+
+	//std::cout <<  " worldIndexes[1] " << worldIndexes[1];
 
 	// Update replica atomsLocations from back
 	replicas[whichReplica].updAtomsLocationsInGround(
 		worlds[worldIndexes.front()].getCurrentAtomsLocationsInGround()
 	);
+
+	//std::cout << " worldIndexes.front() " << worldIndexes.front();
+
+	//std::cout << std::endl;
+
 }
 
 
 // Get ennergy of the back world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromBack(int replicaIx)
 {
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[replicaIx];
+
 	// Get the index of the back world
 	int backWorldIx =
-		replicas[replicaIx].getWorldIndexes().back();
+		thermodynamicStates[thermoIx].getWorldIndexes().back();
 	
 	// Get the back world energy
 	SimTK::Real energy =
@@ -1821,9 +1878,13 @@ void Context::storeReplicaEnergyFromBack(int replicaIx)
 // Get ennergy of the back world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
 {
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[replicaIx];
+
 	// Get the index of the back world
 	int frontWorldIx =
-		replicas[replicaIx].getWorldIndexes().front();
+		thermodynamicStates[thermoIx].getWorldIndexes().front();
 	
 	// Get the back world energy
 	SimTK::Real energy =
@@ -1838,15 +1899,18 @@ void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
 void Context::RunReplica(int thisReplica, int howManyRounds)
 {
 
-	// Convenience
-	std::vector<int> replicaWorldIxs = replicas[thisReplica].getWorldIndexes();
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
+
+	// Get this world indexes from the corresponding thermoState
+	std::vector<int> replicaWorldIxs = thermodynamicStates[thisThermoStateIx].getWorldIndexes();
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	// -------------
 	// Set temperature for all of this replica's worlds
 	// Get thermodynamic state from map
 	// =============
-	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 	SimTK::Real T = thermodynamicStates[thisThermoStateIx].getTemperature();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -1859,8 +1923,8 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// -------------
 	// Set simulation parameters for this replicas
 	// =============
-	std::vector<SimTK::Real> replicaTimesteps = replicas[thisReplica].getTimesteps();
-	std::vector<int> replicaMdsteps = replicas[thisReplica].getMdsteps();
+	std::vector<SimTK::Real> replicaTimesteps = thermodynamicStates[thisThermoStateIx].getTimesteps();
+	std::vector<int> replicaMdsteps = thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
@@ -1882,8 +1946,6 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	}
 	std::cout << std::endl;
 	// =============
-
-
 	
 
 	for(size_t ri = 0; ri < howManyRounds; ri++){

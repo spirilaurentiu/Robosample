@@ -684,6 +684,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 
 // Apply the L operator 
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
+	std::cout << "HMCSampler::integrateTrajectory: ts mds " << timestep << " " << MDStepsPerSample << std::endl;
 	try {
 		// Instant geometry
 		//geomDihedral(someState);

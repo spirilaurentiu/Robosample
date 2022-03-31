@@ -450,11 +450,7 @@ int main(int argc, char **argv)
 
 		SetupReader rexReader;
 	
-		//std::string FN(setupReader.get("REX_FILE")[0]);
-		//std::ifstream F(FN);
-		//std::string line;
-
-		// Storage for thermodynamic states
+		// Storage for thermodynamic state temperatures
 		std::vector<SimTK::Real> temperatures;
 
 		// Storage for each replica simulation parameters
@@ -472,16 +468,15 @@ int main(int argc, char **argv)
 			rexMdsteps,
 			rexSamplesPerRound);
 
-		// Checks
-
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
-			context.addThermodynamicState(k, temperatures[k]);
+			context.addThermodynamicState(k, temperatures[k],
+				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 
 		// Add replicas
 		for(int k = 0; k < nofReplicas; k++){
-			context.addReplica(k, rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
+			context.addReplica(k);
 		}
 
 		// Consider renaming
