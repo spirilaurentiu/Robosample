@@ -1697,11 +1697,11 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	std::cout << "Replicas energies = " 
-		<< replicas[replica_i].getPotentialEnergy() << " "
-		<< replicas[replica_j].getPotentialEnergy() << " "
-		<< std::endl;
-	std::cout << "log_p_accept = " << log_p_accept << std::endl;
+	//std::cout << "Replicas energies = " 
+	//	<< replicas[replica_i].getPotentialEnergy() << " "
+	//	<< replicas[replica_j].getPotentialEnergy() << " "
+	//	<< std::endl;
+	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
 	// Acceptance criterion
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
@@ -1728,6 +1728,8 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 		//std::cout << "Swap done." << std::endl;
 
 		returnValue = true;
+
+		//PrintReplicaMaps();
 
 	}
 
