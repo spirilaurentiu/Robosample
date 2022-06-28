@@ -27,7 +27,7 @@ bool LoadInputIntoSetupReader(int argc, char **argv,
 
 	std::cout << "Reading input...\n" ;
 
-	std::string helpString = 
+	std::string helpString =
 		"Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
 
 	if(argc < 2) {
@@ -57,7 +57,7 @@ bool CreateOutputDirectory(std::string outDir)
 {
     if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
 //	if( ! std::filesystem::is_directory( std::filesystem::status ( outDir + "/pdbs") ) ){
-		const int err = mkdir((outDir 
+		const int err = mkdir((outDir
 			+ "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (err == -1){
 			std::cout << "Error creating " << outDir + "/pdbs" << std::endl;
@@ -89,7 +89,7 @@ std::string GetMoleculeDirectoryShort(std::string path)
 vector<string> split(const string& i_str, const string& i_delim)
 {
     vector<string> result;
-    
+
     size_t found = i_str.find(i_delim);
     size_t startIndex = 0;
 
@@ -101,7 +101,7 @@ vector<string> split(const string& i_str, const string& i_delim)
     }
     if(startIndex != i_str.size())
         result.push_back(string(i_str.begin()+startIndex, i_str.end()));
-    return result;      
+    return result;
 }
 
 
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 
 	// Instantiate a context object
 	Context context(setupReader, logFilename);
-	
+
 	// Set the directory where the logs and the trajectories are stored
 	context.setOutputDir(setupReader.get("OUTPUT_DIR")[0]);
 
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 	if(SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
 		std::cout << "CUDA_ROOT not set." << std::endl;
 	}else{
-		std::cout << "CUDA_ROOT set to " 
+		std::cout << "CUDA_ROOT set to "
 			<< SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
 	}
 
@@ -164,13 +164,13 @@ int main(int argc, char **argv)
 	std::cout << "Requested " << requestedNofMols << " molecules\n" << std::flush;
 
 	/////////// Add Worlds to context ////////////
-	// Add Worlds to the Context. Every World instantiates a: 
+	// Add Worlds to the Context. Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
 	//  ParaMolecularDecorator
 
-	// Deal with visualizer before adding worlds. 
+	// Deal with visualizer before adding worlds.
 	std::vector<double> visualizerFrequencies;
 	int i = -1;
 	for(auto ts : setupReader.get("TIMESTEPS")){
@@ -188,13 +188,13 @@ int main(int argc, char **argv)
 
 	int nofWorlds = context.getNofWorlds();
 
-	// Request threads 
+	// Request threads
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		context.setNumThreadsRequested(worldIx,
 			std::stoi(setupReader.get("THREADS")[worldIx]));
 	}
 	context.PrintNumThreads();
-	
+
 	// Set force field scale factor.
 	if(setupReader.get("FFSCALE")[0] == "AMBER"){
 		context.setAmberForceFieldScaleFactors();
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
 	// Set GBSA scale factor
 	context.setGbsaGlobalScaleFactor(
 		std::stod(setupReader.get("GBSA")[0]));
-        
+
 	// Use OpenMM if possible
 	if(setupReader.get("OPENMM")[0] == "TRUE"){
 		context.setUseOpenMMAcceleration(true);
@@ -268,7 +268,7 @@ int main(int argc, char **argv)
 	// Is this necessary?
 	context.realizeTopology();
 
-	// Add empty samplers to the worlds. 
+	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		BaseSampler *p = context.addSampler(
 			worldIx, setupReader.get("SAMPLER")[worldIx]);
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
 	// Set thermostats to the samplers
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 
-		for (int samplerIx = 0; 
+		for (int samplerIx = 0;
 		samplerIx < context.getWorld(worldIx)->getNofSamplers();
 		samplerIx++) {
 			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
 
 	// Set the guidance Hamiltonian parameters
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		for (int samplerIx = 0; 
+		for (int samplerIx = 0;
 		samplerIx < context.getWorld(worldIx)->getNofSamplers();
 		samplerIx++) {
 			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
@@ -387,7 +387,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	// Set the number of samples per round	
+	// Set the number of samples per round
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		context.setNofSamplesPerRound(worldIx,
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
@@ -399,7 +399,7 @@ int main(int argc, char **argv)
 
 	context.setNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
 
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){    
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		round_mcsteps += context.getNofSamplesPerRound(worldIx);
 	}
 
@@ -441,7 +441,7 @@ int main(int argc, char **argv)
 
 	// Check atom stations for debug purposes
 	context.checkAtomStationsThroughDumm();
-	
+
 	// Load/store Mobilized bodies joint types in samplers
 	context.loadMbxsToMobilities();
 
@@ -449,7 +449,7 @@ int main(int argc, char **argv)
 	if(setupReader.get("RUN_TYPE")[0] == "REX"){
 
 		SetupReader rexReader;
-	
+
 		// Storage for thermodynamic state temperatures
 		std::vector<SimTK::Real> temperatures;
 
@@ -458,7 +458,7 @@ int main(int argc, char **argv)
 		std::vector<std::vector<int>> rexWorldIndexes;
 		std::vector<std::vector<int>> rexMdsteps;
 		std::vector<std::vector<int>> rexSamplesPerRound;
-	
+
 		// Read REX config file
 		size_t nofReplicas = rexReader.readREXConfigFile(
 			setupReader.get("REX_FILE")[0],
@@ -486,7 +486,7 @@ int main(int argc, char **argv)
 
 		// How many Gibbs rounds until replica swpas occurs
 		context.setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
-		
+
 	}
 
 	// -- Run --
@@ -520,7 +520,7 @@ int main(int argc, char **argv)
 //
 //	int retVal = run(argc, argv);
 //	return retVal;
-//	
+//
 //}
 
 

@@ -92,7 +92,7 @@ void Sampler::setSeed(int64_t argSeed)
 	// To ease reproducibility, we use one 32-bit seed to initialize a less powerful RNG.
 	// Then, we use this RNG to initialize the state of MT.
 	randomEngineInit.seed(seed); // TODO seed is 64 bit, but we cast here to 32. I guess it's alright
-	
+
 	// Initial generator function.
 	auto source = [this]() {
 		// This LCG generates 64 bits.
@@ -243,13 +243,13 @@ void Sampler::checkAtomStationsThroughDumm(void)
 
 		// Loop through atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
-			
+
 			//std::cout << "DEBUG getAtomLocationInMobilizedBodyFrame"
 			//	<< " aIx " << aIx;
-			
-			//SimTK::Vec3 atomMobodStation = 
+
+			//SimTK::Vec3 atomMobodStation =
 			//	topology.getAtomLocationInMobilizedBodyFrame(aIx);
-			SimTK::Vec3 atomMobodStationThroughDumm = 
+			SimTK::Vec3 atomMobodStationThroughDumm =
 				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
 
 			//std::cout << " through Compound " << atomMobodStation
@@ -267,7 +267,7 @@ void Sampler::checkAtomStationsThroughDumm(void)
 void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 {
 	//std::cout << "DEBUG Entering Sampler::loadMbx2mobility" << std::endl << std::flush;
-	
+
 	// function args were SimTK::State& someState
 
 	// Lop through topologies
@@ -277,7 +277,7 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 
 			//SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex (aIx); // DANGER
-			
+
 			//if(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin // SAFE
 			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0 ){ // DANGER
 			//if(dumm->getAtomStationOnBody(dAIx) == SimTK::Vec3(0, 0, 0)){ // atom is at body's origin // DANGER
@@ -285,35 +285,35 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 				// Get body, parentBody
 				//const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx); // SAFE
 				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm); // DANGER
-				
+
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
 				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-	
+
 				if(parentMbx != 0){
 					// Get the neighbor atom in the parent mobilized body
 					//SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx); // SAFE
 					//std::unique_ptr<SimTK::SimbodyMatterSubsystem> up_matter(matter);
 					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(
 						matter, aIx, *dumm); // DANGER
-				
+
 					// Get mobility (joint type)
 					const auto& bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
 					auto mobility = bond.getBondMobility(whichWorld);
-	
+
 					mbx2mobility.insert(std::make_pair(mbx, mobility));
-				
+
 					//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
 					//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
 					//	<< " mobility " << mobility
 					//	<< std::endl;
-	
+
 				} // Parent is not Ground
 
 			} // if is a root atom
-		
+
 		} // END loop through atoms
-	
+
 	} // END loop through topologies
 
     for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
@@ -471,10 +471,10 @@ SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
 	// Prereq
 	tau = 1 + std::sqrt(1 + 4*K*K);
 	rho = (tau - std::sqrt(2*tau)) / (2*K);
-	
+
 	// Step 0 variables
 	r = (1 + (rho*rho)) / (2 * rho);
-	
+
 	// Step 1 variables
 	z = std::cos(SimTK_PI * u1);
 	f = (1 + (r*z)) / (r + z);
@@ -514,7 +514,7 @@ SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
 		}else if(theta < (-1.0 * SimTK_PI)){
 			theta = (2*SimTK_PI) + theta;
 		}
-		
+
 	}
 
 	return theta;
@@ -544,7 +544,7 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 	double x0 = (1 - b) / (1 + b);
 
 	double LOG = ndofs_1 * std::log(1 - (x0*x0));
-	
+
 	double c = (lambda*x0) + LOG;
 
 	int nofTries = 10;
@@ -553,13 +553,13 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 		double Z1 = gammarand(randomEngine);
 		double Z2 = gammarand(randomEngine);
 		double Z = Z1 / (Z1 + Z2);
-	
+
 		double U = uniformRealDistribution(randomEngine);
-	
+
 		double W_num = 1.0 - ((1.0 + b)*Z);
 		double W_den = 1.0 - ((1.0 - b)*Z);
 		double W = W_num / W_den;
-	
+
 		// STEP 2
 		if( ((lambda*W) + LOG - c) >= std::log(U) ){
 			// Generate uniform random vector on sphere ndofs - 1
@@ -567,14 +567,14 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 				V[j] = gaurand(randomEngine);
 			}
 			bNormalizeInPlace(V);
-			
+
 			// Actual sample
 			bMulByScalar(V, std::sqrt(1 - (W*W)), X_lowdim);
 			for(int j = 1; j < ndofs; j++){
 				X[j] = X_lowdim[j-1];
 			}
 			X[0] = W;
-			
+
 			break;
 		}
 	}
@@ -587,7 +587,7 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 double Sampler::chi(void)
 {
 	int NDOFS = 3;
-	
+
 }
 
 

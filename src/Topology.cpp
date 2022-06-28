@@ -12,7 +12,7 @@ Topology::Topology(){
 	this->setCompoundName((this->name));
 }
 
-/** Constructor that sets the name of the molecule. The name has no particular 
+/** Constructor that sets the name of the molecule. The name has no particular
 function and is not guaranteed to be unique **/
 Topology::Topology(std::string nameOfThisMolecule){
 	this->name = nameOfThisMolecule;
@@ -20,7 +20,7 @@ Topology::Topology(std::string nameOfThisMolecule){
 }
 
 /** Default destructor. It deallocates bAtomType of every atom in the bAtomList
-because we want to allow the valence to change during the simulation 
+because we want to allow the valence to change during the simulation
 e.g. semi-grand canonical ensemble. **/
 Topology::~Topology(){
 	for(size_t i = 0; i < bAtomList.size(); i++){
@@ -390,7 +390,7 @@ force field specific parameters for an atom type. Gmolmodel defines a
 new Biotype for each atom. The only thing that is specified is the element
 with info about name, atomic number, valence and mass. **/
 void Topology::bAddBiotypes(
-	  //std::string resName, 
+	  //std::string resName,
 	readAmberInput *amberReader
 	//, SimTK::DuMMForceFieldSubsystem& dumm
 )
@@ -423,8 +423,8 @@ void Topology::bAddBiotypes(
 	}
 }
 
-/** It calls DuMMs defineAtomClass, defineChargedAtomTye and 
-setBiotypeChargedAtomType for every atom. These Molmodel functions contain 
+/** It calls DuMMs defineAtomClass, defineChargedAtomTye and
+setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 information regarding the force field parameters. **/
 void Topology::bAddDummAtomClasses(
 				  std::string resName
@@ -444,7 +444,7 @@ void Topology::bAddDummAtomClasses(
 		// Define an AtomClass name
 		std::string atomClassName =
 				//std::string("top") // restore MULMOL
-				name // del MULMOL 
+				name // del MULMOL
 				+ resName
 				+ bAtomList[i].getFftype()
 				+ std::string("_")
@@ -497,7 +497,7 @@ void Topology::bAddDummAtomClasses(
 }
 
 /** Print Molmodel specific types as introduced in Gmolmodel **/
-const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const 
+const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const
 {
 	std::cout << "Print Molmodel And DuMM Types:" << std::endl;
 	for(size_t i = 0; i < bAtomList.size(); i++){
@@ -528,13 +528,13 @@ void Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimT
 	// Suppose or try to have the same order as the reader
 	for(int t = 0; t < amberReader->getNumberBonds(); t++){
 		dumm.defineBondStretch_KA(
-			(bAtomList[bonds[t].i]).getAtomClassIndex(), 
+			(bAtomList[bonds[t].i]).getAtomClassIndex(),
 			(bAtomList[bonds[t].j]).getAtomClassIndex(),
 			amberReader->getBondsForceK(t),  //k1
 			amberReader->getBondsEqval(t)   //equil1
 		);
 
-	//std::cout << "Defined bond stretch between aCIx1 aCIx2 k b0 " 
+	//std::cout << "Defined bond stretch between aCIx1 aCIx2 k b0 "
 	//	<< (bAtomList[bonds[t].i]).getAtomClassIndex() << " "
 	//	<< (bAtomList[bonds[t].j]).getAtomClassIndex() << " "
 	//	<< amberReader->getBondsForceK(t) << " "
@@ -567,7 +567,7 @@ void Topology::bAddDummTorsionParams(
 	, SimTK::DuMMForceFieldSubsystem& dumm
 )
 {
-	std::vector<std::pair<int, int>> pairStartAndLens = amberReader->getPairStartAndLen(); 
+	std::vector<std::pair<int, int>> pairStartAndLens = amberReader->getPairStartAndLen();
 
 	for(unsigned int index=0; index<pairStartAndLens.size(); index++){
 
@@ -631,13 +631,13 @@ void Topology::bAddDummParams(
 	std::string resName = this->name;
 
 	// Add types
-	//bAddBiotypes(resName, amberReader, dumm); 
+	//bAddBiotypes(resName, amberReader, dumm);
 	bAddDummAtomClasses(resName, amberReader, dumm);
 
 	// Add parameters
-	bAddDummBondParams(resName, amberReader, dumm); 
-	bAddDummAngleParams(resName, amberReader, dumm); 
-	bAddDummTorsionParams(resName, amberReader, dumm); 
+	bAddDummBondParams(resName, amberReader, dumm);
+	bAddDummAngleParams(resName, amberReader, dumm);
+	bAddDummTorsionParams(resName, amberReader, dumm);
 }
 
 bool Topology::checkIfTripleUnorderedAreEqual(
@@ -670,7 +670,7 @@ void Topology::loadTriples()
 		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
 	}
 	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
-	getBondedAtomRuns(3, atomTargets);	
+	getBondedAtomRuns(3, atomTargets);
 
 	// Find root bAtomList index
 	// int rootIx;
@@ -792,7 +792,7 @@ SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatS
 
 SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State&){
 	// function args were const SimTK::State& someState
-	
+
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
@@ -860,7 +860,7 @@ SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&)
 	return result;
 }
 
-/* Calculate angle contribution at the MBAT determinant: 
+/* Calculate angle contribution at the MBAT determinant:
 TODO: calculate atomTargets only once: getAtomLocationsInGround
 TODO: realize position
 */
@@ -1003,7 +1003,7 @@ bSpecificAtom * Topology::getAtomByName(std::string) const {
 /** Get the neighbours in the graph. **/
 std::vector<bSpecificAtom *> Topology::getNeighbours(int) const {
 	assert(!"Not implemented."); throw std::exception();
-	
+
 	return {};
 }
 
@@ -1019,7 +1019,7 @@ const bBond& Topology::getBond(int a1, int a2) const
 	std::string assert_string("No bond with these atom indeces found: " + to_string(a1) + " " + to_string(a2) + ". Exiting.");
 	std::cout << assert_string << std::endl;
 	assert(0);
-	
+
 	// TODO what should we return? std::optional? this std::exception looks sketchy
 	// anyways, return {}; returns a local and it's not good
 	throw std::exception();
@@ -1030,7 +1030,7 @@ const bBond& Topology::getBond(int a1, int a2) const
 int Topology::getBondOrder(int, int) const
 {
 	assert(!"Not implemented."); throw std::exception();
-	
+
 	return 0;
 }
 
@@ -1086,7 +1086,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 						<< "/bond" << (previousNode->nbonds - previousNode->freebonds + 1);
 				}
 
-				// Perform the actual bonding
+				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
 				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
 				std::string debugString = parentBondCenterPathName.str();
 				this->bondAtom(*node->bAtomType,
@@ -1226,7 +1226,7 @@ void Topology::matchDefaultConfigurationWithAtomList(
 }
 
 /** Builds the molecular tree, closes the rings, matches the configuration
-on the graph using using Molmodels matchDefaultConfiguration and sets the 
+on the graph using using Molmodels matchDefaultConfiguration and sets the
 general flexibility of the molecule. **/
 // TODO: break in two functions
 void Topology::buildGraphAndMatchCoords(int argRoot)
@@ -1274,7 +1274,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).atomIndex, SimTK::Transform()));
 	}
-	
+
 }
 
 /** Get regimen **/
@@ -1285,7 +1285,7 @@ std::string Topology::getRegimen(){
 /** Set scale factors for U entries according to flexibility file **/
 void Topology::setUScaleFactorsToBonds(std::string flexFN)
 {
-	// 
+	//
 	std::string line;
 	std::ifstream F(flexFN);
 
@@ -1326,7 +1326,7 @@ void Topology::setUScaleFactorsToBonds(std::string flexFN)
 /** Set regimen according to input file **/
 // Compound doesn't care about Worlds. We keep multiple Bond::Mobilities in bBond
 void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld){
-	
+
 	if(argRegimen == "IC"){
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
 			setBondMobility(BondMobility::Free, Compound::BondIndex(r));
@@ -1518,7 +1518,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 
 			} // if line not empty
 
-		} // end read file 
+		} // end read file
 
 /*		std::cout << "Assigned mobilities:" << std::endl;
 		for(unsigned int i = 0; i < nbonds; i++){
@@ -1533,27 +1533,27 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 void Topology::loadAIx2MbxMap(){
-	
+
 	// If the map is empty fill with empty vectors first
 	if(aIx2mbx.empty()){
 		// Iterate through atoms and get their MobilizedBodyIndeces
 		for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-			
+
 			// Get atomIndex from atomList
 			SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
-	
+
 			// Insert
 			aIx2mbx.insert(
 				std::pair< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> >
 					(aIx, std::vector<SimTK::MobilizedBodyIndex>())
 			);
 		}
-		
+
 	}
 
 	// Iterate through atoms and get their MobilizedBodyIndeces
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		
+
 		// Get atomIndex from atomList
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
 
@@ -1572,7 +1572,7 @@ void Topology::loadAIx2MbxMap(){
 
 //void Topology::loadMbx2AIxMap(){
 //	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-//		
+//
 //		// Get atomIndex from atomList
 //		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
 //
@@ -1601,7 +1601,7 @@ void Topology::loadCompoundAtomIx2GmolAtomIx()
 		int gmolIx = (bAtomList[i]).getNumber();
 
 		CompoundAtomIx2GmolAtomIx.insert(
-			std::pair<SimTK::Compound::AtomIndex, int> 
+			std::pair<SimTK::Compound::AtomIndex, int>
 			(aIx, gmolIx));
 	}
 }
@@ -1660,7 +1660,7 @@ SimTK::Transform& Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
 	// return
 	//const Vec3 p_BS_G = R_GB * station;
 	//return X;
-	
+
 }
 
 // Return mbx by calling DuMM functions
@@ -1703,7 +1703,7 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 
 // Retunr mbx from an olresdy saved map inside Topology
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
-	SimTK::Compound::AtomIndex aIx, int whichWorld) 
+	SimTK::Compound::AtomIndex aIx, int whichWorld)
 {
 	if(!aIx2mbx.empty()){
 		if(!((aIx2mbx[aIx]).empty())){
@@ -1864,14 +1864,14 @@ Topology::getChemicalParent(
 
 	//if(getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin // SAFE
 	if(getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm) == 0){ // atom is at body's origin // DANGER
-	
+
 		// Get body, parentBody, parentAtom
 		//SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx); // SAFE
 		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm); // DANGER
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-	
+
 		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 			// Find the true bSpecificAtom (CHEMICAL) parent
 			bSpecificAtom *originSpecAtom = nullptr;
@@ -1940,7 +1940,7 @@ Topology::calcMobodToMobodTransforms(
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-	
+
 	// Get the neighbor atom in the parent mobilized body
 	//SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx); // SAFE
 	SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx, dumm); // DANGER
@@ -1956,23 +1956,23 @@ Topology::calcMobodToMobodTransforms(
 
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle = bgetDefaultInboardDihedralAngle(aIx);
-	SimTK::Transform InboardDihedral_XAxis 
+	SimTK::Transform InboardDihedral_XAxis
 		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
-	SimTK::Transform InboardDihedral_ZAxis 
+	SimTK::Transform InboardDihedral_ZAxis
 		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
 
 	// Get the old PxFxMxB transform
 	SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
 	SimTK::Transform Z_to_X = ~X_to_Z;
-	SimTK::Transform oldX_PB = 
+	SimTK::Transform oldX_PB =
 		(~T_X_Proot) * getTopTransform(aIx)
-		* InboardDihedral_XAxis * X_to_Z 
+		* InboardDihedral_XAxis * X_to_Z
 		* InboardDihedral_ZAxis * Z_to_X;
 
 	// B_X_Ms
 	SimTK::Transform B_X_M = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
 	SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
-	SimTK::Transform B_X_M_univ = X_parentBC_childBC 
+	SimTK::Transform B_X_M_univ = X_parentBC_childBC
 		* SimTK::Transform(Rotation(-90*Deg2Rad, XAxis)); // Move rotation axis Y to Z
 
 	// P_X_Fs = old P_X_B * B_X_M
