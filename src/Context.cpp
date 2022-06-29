@@ -409,7 +409,7 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 		}
 		if(!SimTK::Pathname::fileExists(
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx]) ){
+			+ setupReader.get("INPCRD")[molIx] + ".rst7") ){
 			throwAndExit("Molecule " + std::to_string(molIx) + " inpcrd not found\n", 1);
 			}
 	}
@@ -477,10 +477,11 @@ bool Context::loadTopologyFile(std::string topologyFilename)
 	return true;
 }
 
+// Load inpcrd / rst7 file. Input only provides a prefix
 bool Context::loadCoordinatesFile(std::string coordinatesFilename)
 {
 	// function args were std::size_t whichWorld, int whichMolecule, std::string coordinatesFilename
-	std::ifstream file(coordinatesFilename);
+	std::ifstream file(coordinatesFilename) ;
 	if(!file){
 		std::cout << coordinatesFilename << " not found." << std::endl;
 		return false;
@@ -654,7 +655,7 @@ void Context::AddMolecules(
 
 		std::string crdFN =
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx];
+			+ setupReader.get("INPCRD")[molIx] + ".rst7";
 
 		loadTopologyFile( topFN );
 
