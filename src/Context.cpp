@@ -1556,12 +1556,14 @@ void Context::addReplica(int index)
     for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
         // Coordinate file prefix
-        std::string crdPrefix = crdFNs[0].substr(0, crdFNs[0].find("."));
+        //std::string crdPrefix = crdFNs[molIx].substr(0, crdFNs[molIx].find("."));
+        std::string crdPrefix = crdFNs[molIx].substr(0, crdFNs[molIx].find_last_of('.'));
+        //std::string crdPrefix = crdFNs[molIx];
 
 		// Read files
-		//std::cout << "Context::addReplica: " << "loading " << crdFN << std::endl << std::flush;
 		readAmberInput amberReader;
 		std::string crdFN = crdPrefix + ".s" + std::to_string(index) + ".rst7";
+		std::cout << "Context::addReplica: " << "loading " << crdFN << std::endl << std::flush;
 		amberReader.readAmberFiles(crdFN,  topFNs[0]);
 
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
