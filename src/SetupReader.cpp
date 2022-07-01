@@ -148,6 +148,8 @@ std::vector<std::string> SetupReader::split(const std::string& i_str, const std:
 // Get the number of replica requested
 int SetupReader::readREXConfigFile(std::string FN,
 		std::vector<SimTK::Real>& temperatures,
+		std::vector<double>& lambdaSterics,
+		std::vector<double>& lambdaElectrostatics,
 		std::vector<std::vector<SimTK::Real>>& rexTimesteps,
 		std::vector<std::vector<int>>& rexWorldIndexes,
 		std::vector<std::vector<int>>& rexMdsteps,
@@ -174,6 +176,8 @@ int SetupReader::readREXConfigFile(std::string FN,
 	F.seekg(0);
 
 	temperatures.resize(nofReplicas);
+	lambdaSterics.resize(nofReplicas);
+	lambdaElectrostatics.resize(nofReplicas);
 	rexTimesteps.resize(nofReplicas);
 	rexWorldIndexes.resize(nofReplicas);
 	rexMdsteps.resize(nofReplicas);
@@ -197,8 +201,16 @@ int SetupReader::readREXConfigFile(std::string FN,
 				// Get keyword
 				switch( rexToIntKeys.at(words[1]) ){
 					case RexKey::TEMPERATURE:
-						std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
+						//std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
 						temperatures[repIx] = std::stod(words[2]);
+						break;
+                                        case RexKey::LAMBDA_STERICS:
+						//std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
+						lambdaSterics[repIx] = std::stod(words[2]);
+						break;
+                                        case RexKey::LAMBDA_ELECTROSTATICS:
+						std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
+						lambdaElectrostatics[repIx] = std::stod(words[2]);
 						break;
 					case RexKey::TIMESTEPS:
 						for(int i = 2; i < words.size(); i++){

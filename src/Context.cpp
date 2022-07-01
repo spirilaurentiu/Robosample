@@ -17,6 +17,8 @@ class ThermodynamicState{
 	ThermodynamicState(int index);
 
 	ThermodynamicState(int index, const SimTK::Real& T
+                ,SimTK::Real& lambdaSteric
+                ,SimTK::Real& lambdaElectrostatic
 		,std::vector<int>& argWorldIndexes
 		,std::vector<SimTK::Real>& argTimesteps
 		,std::vector<int>& argMdsteps
@@ -28,8 +30,13 @@ class ThermodynamicState{
 	void setIndex(const int& someIndex){myIndex = someIndex;}
 
 	void setTemperature(const SimTK::Real& T);
-	const SimTK::Real& getTemperature();
+	const SimTK::Real& getTemperature();     
 	const SimTK::Real& getBeta();
+
+      	//void setLambdaSteric(const SimTK::Real& lambdaSteric);
+        const SimTK::Real& getLambdaSteric();
+        //void setLambdaElectrostatic(const SimTK::Real& lambdaSteric);
+        const SimTK::Real& getLambdaElectrostatic();
 
 	const std::vector<int> getWorldIndexes(void);
 	const std::vector<SimTK::Real> getTimesteps(void);
@@ -45,6 +52,10 @@ class ThermodynamicState{
 	// Temperature
 	SimTK::Real temperature;
 	SimTK::Real beta;
+
+        // Lambdas
+        SimTK::Real lambdaSteric;
+        SimTK::Real lambdaElectrostatic;
 
 	// Worlds related parameters //R2TNEW
 	std::vector<int> worldIndexes; //R2TNEW
@@ -72,6 +83,8 @@ ThermodynamicState::ThermodynamicState(int index)
 }
 
 ThermodynamicState::ThermodynamicState(int index, const SimTK::Real& T
+        ,SimTK::Real& argLambdaSteric
+        ,SimTK::Real& argLambdaElectrostatic
 	,std::vector<int>& argWorldIndexes
 	,std::vector<SimTK::Real>& argTimesteps
 	,std::vector<int>& argMdsteps
@@ -85,6 +98,9 @@ ThermodynamicState::ThermodynamicState(int index, const SimTK::Real& T
 	SimTK::Real RT = temperature *
 		static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD);
 	beta = 1.0 / RT;
+
+        lambdaSteric = argLambdaSteric;
+        lambdaElectrostatic = argLambdaElectrostatic;
 
 	// Worlds related parameters
 	worldIndexes = argWorldIndexes;
@@ -104,6 +120,17 @@ const SimTK::Real& ThermodynamicState::getTemperature()
 {
 	return temperature;
 }
+
+const SimTK::Real& ThermodynamicState::getLambdaSteric()
+{
+	return lambdaSteric;
+}
+
+const SimTK::Real& ThermodynamicState::getLambdaElectrostatic()
+{
+	return lambdaElectrostatic;
+}
+
 
 const SimTK::Real& ThermodynamicState::getBeta()
 {
@@ -409,7 +436,7 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 		}
 		if(!SimTK::Pathname::fileExists(
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx]) ){
+			+ setupReader.get("INPCRD")[molIx] + ".rst7") ){
 			throwAndExit("Molecule " + std::to_string(molIx) + " inpcrd not found\n", 1);
 			}
 	}
@@ -477,10 +504,11 @@ bool Context::loadTopologyFile(std::string topologyFilename)
 	return true;
 }
 
+// Load inpcrd / rst7 file. Input only provides a prefix
 bool Context::loadCoordinatesFile(std::string coordinatesFilename)
 {
 	// function args were std::size_t whichWorld, int whichMolecule, std::string coordinatesFilename
-	std::ifstream file(coordinatesFilename);
+	std::ifstream file(coordinatesFilename) ;
 	if(!file){
 		std::cout << coordinatesFilename << " not found." << std::endl;
 		return false;
@@ -654,7 +682,7 @@ void Context::AddMolecules(
 
 		std::string crdFN =
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx];
+			+ setupReader.get("INPCRD")[molIx] + ".rst7";
 
 		loadTopologyFile( topFN );
 
@@ -1555,12 +1583,14 @@ void Context::addReplica(int index)
     for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
         // Coordinate file prefix
-        std::string crdPrefix = crdFNs[0].substr(0, crdFNs[0].find("."));
+        //std::string crdPrefix = crdFNs[molIx].substr(0, crdFNs[molIx].find("."));
+        std::string crdPrefix = crdFNs[molIx].substr(0, crdFNs[molIx].find_last_of('.'));
+        //std::string crdPrefix = crdFNs[molIx];
 
 		// Read files
-		//std::cout << "Context::addReplica: " << "loading " << crdFN << std::endl << std::flush;
 		readAmberInput amberReader;
 		std::string crdFN = crdPrefix + ".s" + std::to_string(index) + ".rst7";
+		std::cout << "Context::addReplica: " << "loading " << crdFN << std::endl << std::flush;
 		amberReader.readAmberFiles(crdFN,  topFNs[0]);
 
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
@@ -1608,6 +1638,8 @@ void Context::addReplica(int index)
 
 void Context::addThermodynamicState(int index,
 		SimTK::Real T,
+                SimTK::Real lambdaSteric,
+                SimTK::Real lambdaElectrostatic, 
 		std::vector<int>& argWorldIndexes,
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica)
@@ -1616,6 +1648,8 @@ void Context::addThermodynamicState(int index,
 	thermodynamicStates.emplace_back(
 		ThermodynamicState(index,
 			T,
+                        lambdaSteric,
+                        lambdaElectrostatic,
 			argWorldIndexes,
 			timestepsInThisReplica,
 			mdstepsInThisReplica
@@ -1966,6 +2000,18 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	}
 
 	std::cout << "Temperature set to " << T << std::endl << std::flush;
+
+   	// -------------
+	// Set Forcefield parameters for this replica
+	// =============
+
+        SimTK::Real globalLambda = thermodynamicStates[thisThermoStateIx].getLambdaSteric();
+        std::cout << "Global Lambda set to ";
+     	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		worlds[replicaWorldIxs[i]].updForceField()-> setLambdaGlobal(globalLambda);
+                std::cout << worlds[replicaWorldIxs[i]].updForceField()-> getLambdaGlobal() << "\n";
+	}
+
 
 	// -------------
 	// Set samplers parameters for this replica
@@ -2896,6 +2942,3 @@ void Context::PrintNumThreads() {
 //}
 
 //------------
-
-
-

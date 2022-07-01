@@ -48,6 +48,8 @@ public:
 	// Get the number of replica requested
 	int readREXConfigFile(std::string FN,
 		std::vector<SimTK::Real>& temperatures,
+                std::vector<double>& lambdaSterics,
+		std::vector<double>& lambdaElectrostatics,
 		std::vector<std::vector<SimTK::Real>>& rexTimesteps,
 		std::vector<std::vector<int>>& rexWorldIndexes,
 		std::vector<std::vector<int>>& rexMdsteps,
@@ -64,20 +66,24 @@ private:
 	// REX config file parameter types
 	const std::unordered_map<std::string, int> rexToIntKeys{
 		{"TEMPERATURE", 0},
-		{"TIMESTEPS", 1},
-		{"WORLD_INDEXES", 2},
-		{"MDSTEPS", 3},
-		{"SAMPLES_PER_ROUND", 4}
+		{"LAMBDA_STERICS", 1},
+		{"LAMBDA_ELECTROSTATICS", 2},
+		{"TIMESTEPS", 3},
+		{"WORLD_INDEXES", 4},
+		{"MDSTEPS", 5},
+		{"SAMPLES_PER_ROUND", 6}
 	};
 
 	enum RexKey{
 		TEMPERATURE,
+                LAMBDA_STERICS,
+                LAMBDA_ELECTROSTATICS,
 		TIMESTEPS,
 		WORLD_INDEXES,
 		MDSTEPS,
 		SAMPLES_PER_ROUND
 	};
-	
+
 	
 };
 

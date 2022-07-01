@@ -263,6 +263,8 @@ public:
 
 	// Add one thermodynamic state
 	void addThermodynamicState(int index, SimTK::Real T,
+                SimTK::Real lambdaSteric,
+                SimTK::Real lambdaElectrostatic,
 		std::vector<int>& argWorldIndexes,
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica);

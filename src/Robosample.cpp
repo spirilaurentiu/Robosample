@@ -452,6 +452,8 @@ int main(int argc, char **argv)
 
 		// Storage for thermodynamic state temperatures
 		std::vector<SimTK::Real> temperatures;
+		std::vector<double> lambdaSterics;
+		std::vector<double> lambdaElectrostatics;             
 
 		// Storage for each replica simulation parameters
 		std::vector<std::vector<SimTK::Real>> rexTimesteps;
@@ -463,14 +465,25 @@ int main(int argc, char **argv)
 		size_t nofReplicas = rexReader.readREXConfigFile(
 			setupReader.get("REX_FILE")[0],
 			temperatures,
+                        lambdaSterics,
+                        lambdaElectrostatics,
 			rexTimesteps,
 			rexWorldIndexes,
 			rexMdsteps,
 			rexSamplesPerRound);
 
+                // Since this is Temperature REX, we can fill the 
+                // lambda vectors with 1's
+                for (int k = 0; k < lambdaSterics.size(); k++){
+                    lambdaSterics[k] = 1;
+                    lambdaElectrostatics[k] = 1;
+                }
+                
+
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
 			context.addThermodynamicState(k, temperatures[k],
+                                lambdaSterics[k], lambdaElectrostatics[k],
 				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 
@@ -489,12 +502,76 @@ int main(int argc, char **argv)
 
 	}
 
+        // -- Setup Hamiltonian REX --
+	if(setupReader.get("RUN_TYPE")[0] == "HREX"){
+
+		SetupReader rexReader;
+
+		// Storage for thermodynamic state temperatures
+		std::vector<SimTK::Real> temperatures;
+		// Storage for thermodynamic state stericLambdas
+		std::vector<SimTK::Real> lambdaSterics;
+		// Storage for thermodynamic state electrostatic Lambdas
+		std::vector<SimTK::Real> lambdaElectrostatics;
+
+		// Storage for each replica simulation parameters
+		std::vector<std::vector<SimTK::Real>> rexTimesteps;
+		std::vector<std::vector<int>> rexWorldIndexes;
+		std::vector<std::vector<int>> rexMdsteps;
+		std::vector<std::vector<int>> rexSamplesPerRound;
+
+		// Read REX config file
+		size_t nofReplicas = rexReader.readREXConfigFile(
+			setupReader.get("REX_FILE")[0],
+			temperatures,
+                        lambdaSterics,
+                        lambdaElectrostatics,
+			rexTimesteps,
+			rexWorldIndexes,
+			rexMdsteps,
+			rexSamplesPerRound);
+
+		// Add thermodynamic states
+		for(int k = 0; k < temperatures.size(); k++){
+			context.addThermodynamicState(k, temperatures[k],
+                                lambdaSterics[k], lambdaElectrostatics[k],
+				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
+		}
+                
+                //Iterate lambdas, to check if it propagated right
+                std::cout << "######################################################\n";
+                for(int k = 0; k < lambdaSterics.size(); k++){
+                    std::cout << " Lambda Sterics: " << lambdaSterics[k] << " | ";
+                    std::cout << "Lambda Electrostatics: " << lambdaElectrostatics[k] << " \n";
+                    }
+                std::cout << "######################################################";                
+                std::cout << "\n#             HREX simulation got!                   #\n" << std::flush;
+                std::cout << "######################################################\n";
+
+		// Add replicas
+		for(int k = 0; k < nofReplicas; k++){
+			context.addReplica(k);
+		}
+
+		// Consider renaming
+		context.loadReplica2ThermoIxs();
+
+		context.PrintReplicas();
+
+		// How many Gibbs rounds until replica swpas occurs
+		context.setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
+
+	}
+
+
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 		context.RunSimulatedTempering(context.getNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 	}else if(setupReader.get("RUN_TYPE")[0] == "REX"){
+		context.RunREX();
+        }else if(setupReader.get("RUN_TYPE")[0] == "HREX"){
 		context.RunREX();
 	}else{
 		context.Run(context.getNofRounds(),
