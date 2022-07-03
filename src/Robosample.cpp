@@ -452,8 +452,8 @@ int main(int argc, char **argv)
 
 		// Storage for thermodynamic state temperatures
 		std::vector<SimTK::Real> temperatures;
-		std::vector<double> lambdaSterics;
-		std::vector<double> lambdaElectrostatics;             
+		std::vector<SimTK::Real> lambdaSterics;
+		std::vector<SimTK::Real> lambdaElectrostatics;             
 
 		// Storage for each replica simulation parameters
 		std::vector<std::vector<SimTK::Real>> rexTimesteps;

@@ -2005,11 +2005,19 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// Set Forcefield parameters for this replica
 	// =============
 
-        SimTK::Real globalLambda = thermodynamicStates[thisThermoStateIx].getLambdaSteric();
-        std::cout << "Global Lambda set to ";
+        //std::cout << "TEST 0 \n" << std::flush;
+
+        SimTK::Real lambdaSteric        = thermodynamicStates[thisThermoStateIx].getLambdaSteric();
+        SimTK::Real lambdaElectrostatic = thermodynamicStates[thisThermoStateIx].getLambdaElectrostatic();
+        std::vector<SimTK::Real> lambdaPair {lambdaSteric, lambdaElectrostatic};
+        std::cout << "TEST 1 \n" << std::flush;
+        //std::cout << "Global Lambda set to ";
      	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updForceField()-> setLambdaGlobal(globalLambda);
-                std::cout << worlds[replicaWorldIxs[i]].updForceField()-> getLambdaGlobal() << "\n";
+            worlds[replicaWorldIxs[i]].updForceField()-> updLambdaGlobal(lambdaPair);
+            //std::cout << "Lambda Steric has been updated to " << lambdaPair[0] << "\n";
+            //std::cout << "Lambda Electrostatic has been updated to " << lambdaPair[1] << "\n";
+		//worlds[replicaWorldIxs[i]].updForceField()-> setLambdaGlobal(globalLambda);
+                //std::cout << worlds[replicaWorldIxs[i]].updForceField()-> getLambdaGlobal() << "\n";
 	}
 
 
