@@ -2324,9 +2324,11 @@ void HMCSampler::setSetConfigurationAndEnergiesToOld(SimTK::State& someState)
 
 SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const {
 	if(argEtot_n < argEtot_proposed) {
+                std::cout << "\tExchange Probability: 1" << std::endl;
 		return 1;
 	} else {
-		// std::cout << "\tdiff=" << argEtot_n - argEtot_proposed << ", argEtot_n=" << argEtot_n << ", argEtot_proposed=" << argEtot_proposed << ", beta=" << beta << std::endl;
+		std::cout << "\tdiff=" << argEtot_n - argEtot_proposed << ", argEtot_n=" << argEtot_n << ", argEtot_proposed=" << argEtot_proposed << ", beta=" << beta << std::endl;
+                std::cout << "\tExchange Probability: " << exp(-(argEtot_n - argEtot_proposed) * this->beta) << std::endl;
 		return exp(-(argEtot_n - argEtot_proposed) * this->beta);
 	}
 }

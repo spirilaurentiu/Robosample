@@ -274,6 +274,8 @@ public:
 
 	bool attemptSwap(int replica_i, int replica_j);
 
+        bool attemptSwapHREX(int replica_i, int replica_j);
+
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
 

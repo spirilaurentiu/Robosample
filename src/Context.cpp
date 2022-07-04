@@ -1747,8 +1747,8 @@ void Context::PrintReplicaMaps(void){
 //, 135:194110, 2011. DOI:10.1063/1.3660669
 bool Context::attemptSwap(int replica_i, int replica_j)
 {
-
-	bool returnValue = false;
+	
+        bool returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
 	int thermoState_i = replica2ThermoIxs[replica_i];
@@ -1818,6 +1818,137 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 }
 
+bool Context::attemptSwapHREX(int replica_i, int replica_j)
+{
+
+                ///////////////////////////////////
+
+        constexpr int TOPOLOGY = 0;
+        std::vector<SimTK::DuMM::AtomIndex> mapping(topologies[TOPOLOGY].getNumAtoms());
+
+        for(std::size_t k = 0; k < topologies[TOPOLOGY].getNumAtoms(); k++) {
+            // amber indices
+            const auto aIx = (topologies[TOPOLOGY].bAtomList[k]).getCompoundAtomIndex();
+            
+            // dumm indices
+            const auto d = topologies[TOPOLOGY].getDuMMAtomIndex(aIx);
+
+            // mapping[dumm_index] = amber_index
+            //mapping.push_back(d);
+            mapping[d] = static_cast<SimTK::DuMM::AtomIndex>(k);
+
+            std::cout << "MAPPING " << d << " " << k << std::endl;
+        }
+
+        ///////////////// 
+
+
+	bool returnValue = false;
+
+	// Get replicas' thermodynamic states indexes
+	int thermoState_i = replica2ThermoIxs[replica_i];
+	int thermoState_j = replica2ThermoIxs[replica_j];
+
+	// Record this attempt
+	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
+	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
+
+	// Replica i reduced potential of state i
+	SimTK::Real Eii = replicas[replica_i].getPotentialEnergy();
+
+	// Replica j reduced potential of state j
+	SimTK::Real Ejj = replicas[replica_j].getPotentialEnergy();
+
+
+	// Replica i reduced potential of state j //
+        auto atomsLocationsInGround = replicas[replica_j].getAtomsLocationsInGround()[0];
+
+        // get atom positions based on the computed mapping between amber and dumm
+        std::vector<SimTK::Vec3> coordsI;
+        for (const auto& i : mapping) {
+            coordsI.emplace_back(atomsLocationsInGround[i].second);
+        }
+
+        // Get corresponding lambdas
+        SimTK::Real lambdaSteric        = thermodynamicStates[thermoState_j].getLambdaSteric();
+        SimTK::Real lambdaElectrostatic = thermodynamicStates[thermoState_j].getLambdaElectrostatic();
+        std::vector<SimTK::Real> lambdaPair {lambdaSteric, lambdaElectrostatic};
+
+        // Get this world indexes from the corresponding thermoState
+	//std::vector<int> replicaWorldIxs = thermodynamicStates[thermoState].getWorldIndexes();
+        
+	SimTK::Real Eij = worlds[0].updForceField()-> EvaluateHamiltonian(lambdaPair, coordsI);
+        std::cout << "&&&&&& Replica " << replica_i << " in state " << thermoState_j << ": " << Eij << std::endl;
+        for (auto i : lambdaPair)
+            std::cout << "Lambda: " << i << std::endl; 
+
+
+	// Replica j reduced potential of state i //
+        atomsLocationsInGround = replicas[replica_i].getAtomsLocationsInGround()[0];
+
+        // get atom positions based on the computed mapping between amber and dumm
+        std::vector<SimTK::Vec3> coordsJ;
+        for (const auto& i : mapping) {
+            coordsJ.emplace_back(atomsLocationsInGround[i].second);
+        }
+
+        // Get corresponding lambdas
+        lambdaSteric        = thermodynamicStates[thermoState_i].getLambdaSteric();
+        lambdaElectrostatic = thermodynamicStates[thermoState_i].getLambdaElectrostatic();
+        lambdaPair = {lambdaSteric, lambdaElectrostatic};
+
+        // Get this world indexes from the corresponding thermoState
+	//std::vector<int> replicaWorldIxs = thermodynamicStates[thermoState].getWorldIndexes();
+        
+	SimTK::Real Eji = worlds[0].updForceField()-> EvaluateHamiltonian(lambdaPair, coordsJ);
+        std::cout << "&&&&&& Replica " << replica_j << " in state " << thermoState_i << ": " << Eji << std::endl;
+        for (auto i : lambdaPair)
+            std::cout << "Lambda: " << i << std::endl; 
+
+	//SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
+        SimTK::Real log_p_accept = 0;
+	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+
+	//std::cout << "Replicas energies = "
+	//	<< replicas[replica_i].getPotentialEnergy() << " "
+	//	<< replicas[replica_j].getPotentialEnergy() << " "
+	//	<< std::endl;
+	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
+
+	// Acceptance criterion
+	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
+
+		// Record this swap
+		nofAcceptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
+		nofAcceptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
+
+		// Swap thermodynamic states
+		int temp = replica2ThermoIxs[replica_i];
+		replica2ThermoIxs[replica_i] = replica2ThermoIxs[replica_j];
+		replica2ThermoIxs[replica_j] = temp;
+
+		// Mirror this operation in the reverse map
+		temp = thermo2ReplicaIxs[thermoState_i];
+		thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
+		thermo2ReplicaIxs[thermoState_j] = temp;
+
+		// Exchange potential energies (not necessary)
+		SimTK::Real tempE = replicas[replica_i].getPotentialEnergy();
+		replicas[replica_i].setPotentialEnergy(replicas[replica_j].getPotentialEnergy());
+		replicas[replica_j].setPotentialEnergy(tempE);
+
+		//std::cout << "Swap done." << std::endl;
+
+		returnValue = true;
+
+		//PrintReplicaMaps();
+
+	}
+
+	return returnValue;
+
+}
+
 // Exhange all replicas
 void Context::mixAllReplicas(int nSwapAttempts)
 {
@@ -1837,7 +1968,8 @@ void Context::mixAllReplicas(int nSwapAttempts)
 			<< " and " << replica_j << std::endl;
 
 		// Attempt to swap
-		attemptSwap(replica_i, replica_j);
+		//attemptSwap(replica_i, replica_j);
+		attemptSwapHREX(replica_i, replica_j);
 	}
 }
 
@@ -1860,7 +1992,8 @@ void Context::mixNeighboringReplicas(void)
 		//	<< " and " << replica_j << std::endl;
 
 		// Attempt to swap
-		attemptSwap(replica_i, replica_j);
+		//attemptSwap(replica_i, replica_j);
+		attemptSwapHREX(replica_i, replica_j);
 	}
 }
 
@@ -2005,12 +2138,10 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// Set Forcefield parameters for this replica
 	// =============
 
-        //std::cout << "TEST 0 \n" << std::flush;
-
         SimTK::Real lambdaSteric        = thermodynamicStates[thisThermoStateIx].getLambdaSteric();
         SimTK::Real lambdaElectrostatic = thermodynamicStates[thisThermoStateIx].getLambdaElectrostatic();
         std::vector<SimTK::Real> lambdaPair {lambdaSteric, lambdaElectrostatic};
-        std::cout << "TEST 1 \n" << std::flush;
+        //std::cout << "TEST 1 \n" << std::flush;
         //std::cout << "Global Lambda set to ";
      	for(std::size_t i = 0; i < replicaNofWorlds; i++){
             worlds[replicaWorldIxs[i]].updForceField()-> updLambdaGlobal(lambdaPair);
@@ -2139,6 +2270,13 @@ void Context::RunREX(void)
 			// Store energy
 			storeReplicaEnergyFromFrontFull(replicaIx);
 
+                        // Print Replica Coordinates
+                        /*auto tempCoords = replicas[replicaIx].getAtomsLocationsInGround();
+                        for (std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>> tempcoord : tempCoords){
+                            for (std::pair <bSpecificAtom *, SimTK::Vec3> tempcoord2 : tempcoord) {
+                                std::cout << tempcoord2.first << " " << SimTK::String(tempcoord2.second) << std::endl;
+                            }
+                        }*/
 			PrintToLog(worldIndexes.front());
 
 			writePdbs(0,	thermo2ReplicaIxs[replicaIx]);
