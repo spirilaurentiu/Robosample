@@ -1821,7 +1821,7 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 
 // THIS FUNCTION WORKS, BUT THE ENERGY OPENMM REPORTS IS SLIGHTLY
-// LESS THAN WHAT RS REPORTS. NONBONDED ONLY?
+// LESS THAN WHAT RS REPORTS. NONBONDED ONLY? YES.
 bool Context::attemptSwapHREX(int replica_i, int replica_j)
 {
 
