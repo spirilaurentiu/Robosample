@@ -1818,6 +1818,10 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 }
 
+
+
+// THIS FUNCTION WORKS, BUT THE ENERGY OPENMM REPORTS IS SLIGHTLY
+// LESS THAN WHAT RS REPORTS. NONBONDED ONLY?
 bool Context::attemptSwapHREX(int replica_i, int replica_j)
 {
 
@@ -1826,6 +1830,7 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
         constexpr int TOPOLOGY = 0;
         std::vector<SimTK::DuMM::AtomIndex> mapping(topologies[TOPOLOGY].getNumAtoms());
 
+        //std::cout << "###MAPPINGUL VIETII###\n";
         for(std::size_t k = 0; k < topologies[TOPOLOGY].getNumAtoms(); k++) {
             // amber indices
             const auto aIx = (topologies[TOPOLOGY].bAtomList[k]).getCompoundAtomIndex();
@@ -1837,7 +1842,7 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
             //mapping.push_back(d);
             mapping[d] = static_cast<SimTK::DuMM::AtomIndex>(k);
 
-            std::cout << "MAPPING " << d << " " << k << std::endl;
+          //  std::cout << d << " -> " << k << std::endl;
         }
 
         ///////////////// 
@@ -1853,15 +1858,12 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
 	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
 	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
 
-	// Replica i reduced potential of state i
-	SimTK::Real Eii = replicas[replica_i].getPotentialEnergy();
 
-	// Replica j reduced potential of state j
-	SimTK::Real Ejj = replicas[replica_j].getPotentialEnergy();
+        ////////////////////////////////////////////////////
+	////// Replica i reduced potential of state i //////
+        ////////////////////////////////////////////////////
 
-
-	// Replica i reduced potential of state j //
-        auto atomsLocationsInGround = replicas[replica_j].getAtomsLocationsInGround()[0];
+        auto atomsLocationsInGround = replicas[replica_i].getAtomsLocationsInGround()[0];
 
         // get atom positions based on the computed mapping between amber and dumm
         std::vector<SimTK::Vec3> coordsI;
@@ -1870,21 +1872,21 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
         }
 
         // Get corresponding lambdas
-        SimTK::Real lambdaSteric        = thermodynamicStates[thermoState_j].getLambdaSteric();
-        SimTK::Real lambdaElectrostatic = thermodynamicStates[thermoState_j].getLambdaElectrostatic();
+        SimTK::Real lambdaSteric        = thermodynamicStates[thermoState_i].getLambdaSteric();
+        SimTK::Real lambdaElectrostatic = thermodynamicStates[thermoState_i].getLambdaElectrostatic();
         std::vector<SimTK::Real> lambdaPair {lambdaSteric, lambdaElectrostatic};
-
-        // Get this world indexes from the corresponding thermoState
-	//std::vector<int> replicaWorldIxs = thermodynamicStates[thermoState].getWorldIndexes();
         
-	SimTK::Real Eij = worlds[0].updForceField()-> EvaluateHamiltonian(lambdaPair, coordsI);
-        std::cout << "&&&&&& Replica " << replica_i << " in state " << thermoState_j << ": " << Eij << std::endl;
+	SimTK::Real Eii = worlds[0].updForceField()-> EvaluateHamiltonian(lambdaPair, coordsI);
+        std::cout << "&&&&&& Replica " << replica_i << " in state " << thermoState_i << ": " << Eii << std::endl;
         for (auto i : lambdaPair)
             std::cout << "Lambda: " << i << std::endl; 
 
 
-	// Replica j reduced potential of state i //
-        atomsLocationsInGround = replicas[replica_i].getAtomsLocationsInGround()[0];
+        ////////////////////////////////////////////////////
+	////// Replica j reduced potential of state j //////
+        ////////////////////////////////////////////////////
+
+        atomsLocationsInGround = replicas[replica_j].getAtomsLocationsInGround()[0];
 
         // get atom positions based on the computed mapping between amber and dumm
         std::vector<SimTK::Vec3> coordsJ;
@@ -1893,21 +1895,73 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
         }
 
         // Get corresponding lambdas
+        lambdaSteric        = thermodynamicStates[thermoState_j].getLambdaSteric();
+        lambdaElectrostatic = thermodynamicStates[thermoState_j].getLambdaElectrostatic();
+        lambdaPair = {lambdaSteric, lambdaElectrostatic};
+        
+	SimTK::Real Ejj = worlds[0].updForceField()-> EvaluateHamiltonian(lambdaPair, coordsJ);
+        std::cout << "&&&&&& Replica " << replica_j << " in state " << thermoState_j << ": " << Ejj << std::endl;
+        for (auto i : lambdaPair)
+            std::cout << "Lambda: " << i << std::endl; 
+
+
+        ////////////////////////////////////////////////////
+	////// Replica i reduced potential of state j //////
+        ////////////////////////////////////////////////////
+
+        atomsLocationsInGround = replicas[replica_i].getAtomsLocationsInGround()[0];
+
+        // get atom positions based on the computed mapping between amber and dumm
+        coordsI.clear();
+        for (const auto& i : mapping) {
+            coordsI.emplace_back(atomsLocationsInGround[i].second);
+        }
+
+        // Get corresponding lambdas
+        lambdaSteric        = thermodynamicStates[thermoState_j].getLambdaSteric();
+        lambdaElectrostatic = thermodynamicStates[thermoState_j].getLambdaElectrostatic();
+        lambdaPair = {lambdaSteric, lambdaElectrostatic};
+        
+	SimTK::Real Eij = worlds[0].updForceField()-> EvaluateHamiltonian(lambdaPair, coordsI);
+        std::cout << "&&&&&& Replica " << replica_i << " in state " << thermoState_j << ": " << Eij << std::endl;
+        for (auto i : lambdaPair)
+            std::cout << "Lambda: " << i << std::endl; 
+
+        ////////////////////////////////////////////////////
+	////// Replica j reduced potential of state i //////
+        ////////////////////////////////////////////////////
+
+        atomsLocationsInGround = replicas[replica_j].getAtomsLocationsInGround()[0];
+
+        // get atom positions based on the computed mapping between amber and dumm
+        coordsJ.clear();
+        for (const auto& i : mapping) {
+            coordsJ.emplace_back(atomsLocationsInGround[i].second);
+        }
+
+        // Get corresponding lambdas
         lambdaSteric        = thermodynamicStates[thermoState_i].getLambdaSteric();
         lambdaElectrostatic = thermodynamicStates[thermoState_i].getLambdaElectrostatic();
         lambdaPair = {lambdaSteric, lambdaElectrostatic};
-
-        // Get this world indexes from the corresponding thermoState
-	//std::vector<int> replicaWorldIxs = thermodynamicStates[thermoState].getWorldIndexes();
         
 	SimTK::Real Eji = worlds[0].updForceField()-> EvaluateHamiltonian(lambdaPair, coordsJ);
         std::cout << "&&&&&& Replica " << replica_j << " in state " << thermoState_i << ": " << Eji << std::endl;
         for (auto i : lambdaPair)
             std::cout << "Lambda: " << i << std::endl; 
 
+
+            
+
+        std::cout << "Eii: " << Eii << std::endl;
+        std::cout << "Ejj: " << Ejj << std::endl;
+        std::cout << "Eij: " << Eij << std::endl;
+        std::cout << "Eji: " << Eji << std::endl;
+
 	//SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
-        SimTK::Real log_p_accept = 0;
+        SimTK::Real p_accept = (std::exp(-Eij-Eji))/(std::exp(-Eii-Ejj));
+        std::cout << "Acceptance Probability: " << p_accept << std::endl;
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+        std::cout << "RNG Generator: " << unifSample << std::endl;
 
 	//std::cout << "Replicas energies = "
 	//	<< replicas[replica_i].getPotentialEnergy() << " "
@@ -1916,7 +1970,7 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
 	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
 	// Acceptance criterion
-	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
+	if((p_accept >= 1) || (unifSample < p_accept)){
 
 		// Record this swap
 		nofAcceptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
@@ -1937,13 +1991,14 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
 		replicas[replica_i].setPotentialEnergy(replicas[replica_j].getPotentialEnergy());
 		replicas[replica_j].setPotentialEnergy(tempE);
 
-		//std::cout << "Swap done." << std::endl;
+		
+		std::cout << "Swap done." << std::endl;
 
 		returnValue = true;
 
 		//PrintReplicaMaps();
 
-	}
+        }
 
 	return returnValue;
 
