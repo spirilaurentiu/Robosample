@@ -1957,8 +1957,11 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
         std::cout << "Eij: " << Eij << std::endl;
         std::cout << "Eji: " << Eji << std::endl;
 
+        SimTK::Real log_p_accept = (Eij + Eji) - (Eii + Ejj);
+        SimTK::Real p_accept = std::exp(-log_p_accept);
 	//SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
-        SimTK::Real p_accept = (std::exp(-Eij-Eji))/(std::exp(-Eii-Ejj));
+        //SimTK::Real p_accept = (std::exp(-Eij-Eji))/(std::exp(-Eii-Ejj));
+        std::cout << "Log Acceptance Probability: " << log_p_accept << std::endl;
         std::cout << "Acceptance Probability: " << p_accept << std::endl;
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
         std::cout << "RNG Generator: " << unifSample << std::endl;
@@ -1970,7 +1973,7 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
 	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
 	// Acceptance criterion
-	if((p_accept >= 1) || (unifSample < p_accept)){
+	if((log_p_accept <= 0) || (unifSample < p_accept)){
 
 		// Record this swap
 		nofAcceptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
