@@ -1246,11 +1246,12 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 		root = &(bAtomList[argRoot]);
 		bSpecificAtomRootIndex = argRoot;
 	}else {
-		std::cout << "Root atom will be chosen by Gmolmodel." << std::endl;
+		std::cout << "Root atom will be chosen by Gmolmodel...  ";
 		int baseAtomListIndex = 0;
 		for (int i = 0; i < natoms; i++) {
 			if (bAtomList[i].getNBonds() > 1) {
 				baseAtomListIndex = i;
+				std::cout << "done. Root chosen " << i << std::endl;
 				break;
 			}
 		}
@@ -1263,9 +1264,11 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	// Build the graph
 	nofProcesses = 0;
 	buildAcyclicGraph(root, root);
+    std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
 
 	// Close the remaining bonds
 	addRingClosingBonds();
+    std::cout << "Topology::buildGraphAndMatcoords  addRingClosingBonds done\n" << std::flush;
 
 	// Build the conformation
 	matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);

@@ -2309,6 +2309,16 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	std::size_t currentWorldIx = worldIndexes.front();
 	std::size_t lastWorldIx = 0;
 
+	// Write an initial pdb
+    topologies[0].writeAtomListPdb(
+        outputDir,
+        "/pdbs/ini.",
+        ".pdb",
+        10,
+        0);
+
+    writeInitialPdb();
+
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
 		// Main loop: iterate through rounds

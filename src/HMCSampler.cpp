@@ -60,11 +60,11 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 	proposeExceptionCaught = false;
 
-	for(int i = 0; i < acceptedStepsBufferSize; i++){ 
+	for(int i = 0; i < acceptedStepsBufferSize; i++){
 		acceptedStepsBuffer.push_back(0);
 	}
 
-	this->useFixman = false;  
+	this->useFixman = false;
 	this->fix_n = this->fix_o = 0.0;
 	this->logSineSqrGamma2_n = this->logSineSqrGamma2_o = 0.0;
 	this->residualEmbeddedPotential = 0.0;
@@ -75,7 +75,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	this->prevAcceptance = SimTK::NaN;
 	this->acceptance = SimTK::NaN;
 
-	
+
 	this->prevPrevTimestep = SimTK::NaN; // ps
 	this->prevTimestep = SimTK::NaN; // ps
 	this->timestep = 0;
@@ -154,12 +154,12 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 		RandomCache.task.wait();
 	}
 
-	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers 
+	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers
 	//std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
 	//	UScaleFactors.begin(), // and this
 	//	RandomCache.V.begin(), // and store here
 	//	std::multiplies<SimTK::Real>()); // this is the operation
-	
+
 	// Scale by square root of the inverse mass matrix
 	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
 
@@ -190,13 +190,13 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 	// U vector
 	SimTK::Vector Us(nu, 1);
-	
+
 	// Vector multiplied by the sqrt of the inverse mass matrix
 	SimTK::Vector sqrtMInvUs(nu, 1);
 
 	if(NMAOption == 1){ // For pure demonstrative purposes
 
-		if((nofSamples % 2) == 0){ NMAAltSign = 1;}else{NMAAltSign = -1;} 
+		if((nofSamples % 2) == 0){ NMAAltSign = 1;}else{NMAAltSign = -1;}
 		//if(((nofSamples) % 6) == 0){ NMAAltSign *= -1;}
 		//std::cout << "NMAAltSign " << NMAAltSign << std::endl;
 
@@ -210,12 +210,12 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			UScaleFactors.begin(), // and this
 			Us.begin(), // and store here
 			std::multiplies<SimTK::Real>()); // this is the operation
-	
+
 		// Restore vector length
 		for(int i = 0; i < nu; i++){
 			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
 		}
-	 
+
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
 
@@ -230,12 +230,12 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		//SimTK::Real totalMass = matter->calcSystemMass(someState);// DELETE
 
 		///* Multiply by H sqrt(Mcartesian) ????
-			
+
 		for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 			SimTK::Real M = mobod.getBodyMass(someState);
-			SimTK::Real sqrtMobodMInv = 1 / std::sqrt(M); 
-	
+			SimTK::Real sqrtMobodMInv = 1 / std::sqrt(M);
+
 			for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState);
 				uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState);
 				uIx++ ){
@@ -248,18 +248,18 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		for(int i = 0; i < nu; i++){
 			sqrtMInvUs[i] = (sqrtMInvUs[i] * 2.64);
 		}
-		
+
 		// Scale by NMA scale factors
 		std::transform(Us.begin(), Us.end(), // apply an operation on this
 			UScaleFactors.begin(), // and this
 			Us.begin(), // and store here
 			std::multiplies<SimTK::Real>()); // this is the operation
-	
+
 		// Restore vector length
 		for(int i = 0; i < nu; i++){
 			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
 		}
-	 
+
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
 
@@ -275,7 +275,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			RandomCache.SqrtMInvV.resize(nu);
 			RandomCache.sqrtRT = std::sqrt(RT);
 			RandomCache.nu = nu;
-	
+
 			// we don't get to use multithreading here
 			RandomCache.FillWithGaussian();
 		} else {
@@ -293,12 +293,12 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			UScaleFactors.begin(), // and this
 			Us.begin(), // and store here
 			std::multiplies<SimTK::Real>()); // this is the operation
-	
+
 		// Restore vector length
 		for(int i = 0; i < nu; i++){
 			Us[i] = (Us[i] * (std::sqrt(nu) / UScaleFactorsNorm));
 		}
-	 
+
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
 
@@ -325,7 +325,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			RandomCache.SqrtMInvV.resize(nu);
 			RandomCache.sqrtRT = std::sqrt(RT);
 			RandomCache.nu = nu;
-	
+
 			// we don't get to use multithreading here
 			RandomCache.FillWithGaussian();
 		} else {
@@ -359,16 +359,17 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		//	NormedUScaleFactors.begin(), // and this
 		//	sqrtMInvUs.begin(), // and store here
 		//	std::plus<SimTK::Real>()); // this is the operation
-		
-	
+
+
 		// Restore vector length
 		//for(int i = 0; i < nu; i++){
 		//	sqrtMInvUs[i] = (sqrtMInvUs[i] * (std::sqrt(nu) / UScaleFactorsNorm));
 		//}
-		
 
-	
+
+
 	}else if(NMAOption == 5){
+	    std::cout << "NMAOPTION 5 IS STILL UNDER DEVELOPMENT !!\n" <<std::flush;
 
 		//proj(U, V, W);
 
@@ -425,14 +426,14 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 			RandomCache.SqrtMInvV.resize(nu);
 			RandomCache.sqrtRT = std::sqrt(RT);
 			RandomCache.nu = nu;
-	
+
 			// we don't get to use multithreading here
 			RandomCache.FillWithGaussian();
 		} else {
 			// wait for random number generation to finish (should be done by this stage)
 			RandomCache.task.wait();
 		}
-	
+
 		Us = RandomCache.V;
 		//std::cout << "Us 0 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
 
@@ -440,9 +441,9 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		SimTK::Real randSign;
 		SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-	
+
 		// Shift average
-		for(int j = 0; j < ndofs; j++){Us[j] += ((randSign) * DOFUScaleFactors[j]);} 
+		for(int j = 0; j < ndofs; j++){Us[j] += ((randSign) * DOFUScaleFactors[j]);}
 		//std::cout << "Us 1 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
 
 		// Multiply by the square root of the mass matrix
@@ -453,8 +454,8 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		//SimTK::Real sqrtBoostRT = std::sqrt(boostRT); // moved into private vars
 		sqrtMInvUs *= sqrtBoostRT;
 		//sqrtMInvUs *= sqrtRT;
-		//std::cout << "sqrtRT " << sqrtRT 
-		//	<< " sqrtBoostRT " << sqrtBoostRT 
+		//std::cout << "sqrtRT " << sqrtRT
+		//	<< " sqrtBoostRT " << sqrtBoostRT
 		//	<< std::endl;
 		//std::cout << "sqrtMInvUs 2 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
@@ -467,7 +468,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		// Probability terms
 		SimTK::Real boostBetaPlus = this->boostBeta * 1.4142135623730950488;
 		SimTK::Real localBoostFactor = boostBetaPlus / this->beta;
-		//std::cout << "b+sqrt(2)/b " << localBoostFactor << std::endl; 
+		//std::cout << "b+sqrt(2)/b " << localBoostFactor << std::endl;
 
 		// Kinetic term
 		SimTK::Vector X(sqrtMInvUs);
@@ -495,7 +496,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		for(int j = 0; j < ndofs; j++){muMX += (XM[j] * DOFUScaleFactors[j]);}
 		bmuMX = boostBetaPlus * muMX;
 		_bmuMX = -1.0 * bmuMX;
-		
+
 		if(bcorr < 16){ // safe limit to use exponentials
 			bcorr = LSE2(bmuMX, _bmuMX);
 		}else{
@@ -518,7 +519,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		SimTK::Vector v_miuM(nu, 1);
 		SimTK::Real leftExp = 0.0;
 		SimTK::Real rightExp = 0.0;
-		
+
 
 		// Left exponential
 		v_miu = (sqrtMInvUs - DOFUScaleFactors);
@@ -563,7 +564,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 
 	}
-	
+
 	// Set state velocities
 	someState.updU() = sqrtMInvUs;
 
@@ -646,7 +647,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 		//for(int k = 0; k < nu; k++){
 		//	avg_sqrtV = std::sqrt(std::abs(V[k]));
 		//}
-		
+
 		//SimTK::Real stdev = bStdev(V);
 		//for(int k = 0; k < nu; k++){
 		//	V[k] *= (std::sqrt(RT) / avg_sqrtV);
@@ -664,7 +665,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 		std::cerr << "HMCSampler: unknown NMAOption" << NMAOption << "\n";
 		throw std::exception();
 		std::exit(1);
-		
+
 	}
 
 	// Assign velocities
@@ -682,7 +683,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption)
 }
 */
 
-// Apply the L operator 
+// Apply the L operator
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
 	//std::cout << "HMCSampler::integrateTrajectory: ts mds " << timestep << " " << MDStepsPerSample << std::endl;
 	try {
@@ -715,14 +716,14 @@ void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 		std::cout << "Got MDSTEPS_STD " << MDStepsPerSampleStd << '\n';
 
 		// TODO moe to internal variables set
-			std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd); 
+			std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd);
 			float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
 		timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
 	}else{
 		std::cout << "Didn't get MDSTEPS_STD" << '\n';
 		timeJump = (timestep*MDStepsPerSample);
 	}
-	
+
 		this->timeStepper->stepTo(someState.getTime() + timeJump);
 
 		system->realize(someState, SimTK::Stage::Position);
@@ -752,7 +753,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 		//// Push initial R and Rdots
 		//SimTK::Vec3 atomR;
 		//SimTK::Vec3 atomRdot;
-		//SimTK::Compound::AtomIndex aIx; 
+		//SimTK::Compound::AtomIndex aIx;
 		//for(int i = 0; i < topologies.size(); i++){
 		//	for(int j = 0; j < (topologies[i])->getNumAtoms(); j++){
 		//		aIx = ((topologies[i])->bAtomList[j]).getCompoundAtomIndex();
@@ -763,7 +764,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 		//	}
 		//}
 		//// Initial function END ////
-	
+
 		//// Main loop ////
 
 		int nu = someState.getNU();
@@ -775,7 +776,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 			const auto U = someState.getU(); // g++17 complains if this is auto& or const auto&
 			SimTK::Vector MU(nu, 1.0);
 			matter->multiplyByM(someState, U, MU);
-			
+
 			std::cout << "Q" << Q  << std::endl;
 			std::cout << "P" << MU << std::endl;
 
@@ -791,15 +792,15 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 			//}
 			//matter->multiplyByM(someState, someState.getU(), MU);
 			//std::cout << "MU= " << MU << std::endl;
-			
+
 				//int nu = someState.getNU();
 				//SimTK::Vector U(nu);
 			//U = someState.getU();
 			//std::cout << "U= " << U << std::endl;
-	
+
 			/////////////////////////
-	
-	
+
+
 			//// TODO:Loop function BEGIN ////
 			//	// Push current R and Rdot
 			//	for(int i = 0; i < topologies.size(); i++){
@@ -816,7 +817,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 			//		}
 			//	}
 			//
-			//	// Calculate dR		
+			//	// Calculate dR
 			//	for(unsigned int j = 0; j < (ndofs); j++){
 			//		dR[j] = R[j + (ndofs)] - R[j];
 			//	}
@@ -828,7 +829,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 			//		MSD /= (ndofs);
 			//	}
 			//
-			//	// Calculate RRdot	
+			//	// Calculate RRdot
 			//	SimTK::Real RRdot = 0;
 			//	if(dR.size() >= (ndofs)){
 			//		std::vector<SimTK::Real> tempDR = dR;
@@ -851,9 +852,9 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 			//		Rdot.pop_back();
 			//	}
 			//// Loop function END ////
-	
+
 		} // END main loop
-	
+
 		//// TODO: Final function BEGIN ////
 		//// Pop initial R
 		//for(int j = ((ndofs) - 1); j >= 0; --j){
@@ -887,21 +888,21 @@ bool HMCSampler::propose(SimTK::State& someState)
 	// Initialize velocities according to the Maxwell-Boltzmann distribution
 	initializeVelocities(someState);
 
-	// Store the proposed energies 
+	// Store the proposed energies
 	calcProposedKineticAndTotalEnergy(someState);
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){
 		adaptTimestep(someState);
 	}
-	
+
 	// Adapt timestep
 	bool shouldAdaptWorldBlocks = false;
 	if(shouldAdaptWorldBlocks){
 		adaptWorldBlocks(someState);
 	}
-	
-	// Apply the L operator 
+
+	// Apply the L operator
 	integrateTrajectory(someState);
 	//integrateTrajectoryOneStepAtATime(someState);
 
@@ -928,7 +929,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		// Initialize velocities according to the Maxwell-Boltzmann distribution
 		initializeVelocities(someState);
 
-		// Store the proposed energies 
+		// Store the proposed energies
 		calcProposedKineticAndTotalEnergy(someState);
 
 //		calcNewConfigurationAndEnergies(someState);
@@ -939,13 +940,13 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		if(shouldAdaptTimestep){
 			adaptTimestep(someState);
 		}
-	
+
 		// Adapt timestep
 		bool shouldAdaptWorldBlocks = false;
 		if(shouldAdaptWorldBlocks){
 			adaptWorldBlocks(someState);
 		}
-	
+
 		// Propagate with K (no heat if integrator is deterministic)
 		integrateTrajectoryOneStepAtATime(someState);
 
@@ -966,21 +967,21 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 	// Initialize velocities according to the Maxwell-Boltzmann distribution
 	initializeNMAVelocities(someState);
 
-	// Store the proposed energies 
+	// Store the proposed energies
 	calcProposedKineticAndTotalEnergy(someState);
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){
 		adaptTimestep(someState);
 	}
-	
+
 	// Adapt timestep
 	bool shouldAdaptWorldBlocks = false;
 	if(shouldAdaptWorldBlocks){
 		adaptWorldBlocks(someState);
 	}
-	
-	// Apply the L operator 
+
+	// Apply the L operator
 	integrateVariableTrajectory(someState);
 
 	calcNewConfigurationAndEnergies(someState);
@@ -990,7 +991,7 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 
 }
 
-/// Acception rejection step 
+/// Acception rejection step
 bool HMCSampler::accRejStep(SimTK::State& someState) {
 	// Decide and get a new sample
 	//if ( getThermostat() == ThermostatName::ANDERSEN ) {
@@ -1029,7 +1030,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 
 	bool validated = false;
 
-	// Propose 
+	// Propose
 	for (int i = 0; i < 10; i++){
 		if(NMAOption > 0){
 			validated = proposeNMA(someState);
@@ -1045,25 +1046,25 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 	}
 
 	if(validated){
-	
+
 		PrintDetailedEnergyInfo(someState);
 
 		accRejStep(someState);
-	
+
 		if(this->acc) { // Only in this case ???
 			// Add generalized coordinates to a buffer
 			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
 			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
 			QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
-	
+
 			pushCoordinatesInR(someState);
 			pushVelocitiesInRdot(someState);
-	
+
 			// Calculate MSD and RRdot to adapt the integration length
 			std::cout << std::setprecision(10) << std::fixed;
 			std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
 		}
-		
+
 		++nofSamples;
 
 		return this->acc;
@@ -1073,7 +1074,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 
 		++nofSamples;
 
-		return false;	
+		return false;
 	}
 
 }
@@ -1224,7 +1225,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 		std::cout << "Fixman potential is infinite!\n";
 		//result = 0.0;
 	}
-	
+
 	// Get M
 	//SimTK::Matrix M(nu, nu); // TODO: DELETE
 	//matter->calcM(someState, M); // TODO: DELETE
@@ -1366,7 +1367,7 @@ void HMCSampler::calcNumSqrtMUpper(SimTK::State&, SimTK::Matrix&) const
 }
 
 /** Calculate O(n2) the square root of the mass matrix inverse
-denoted by Jain l = sqrt(D) * [I -JPsiK]. This is upper triangular matrix and it is computed 
+denoted by Jain l = sqrt(D) * [I -JPsiK]. This is upper triangular matrix and it is computed
 multipling a set of orthonormal vectors with the sqrt(MInv). **/
 void HMCSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const
 {
@@ -1483,7 +1484,6 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 		//std::cout << '\n';
 	}
 
-
 	// Compute UScalefactors norm and its inverse
 	// We don't want to normalize it though. Allow the user the liberty
 	// to enforce its own velocities
@@ -1506,8 +1506,11 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 		DOFUScaleFactors[i] = NormedUScaleFactors[i] * std::sqrt(nu);
 	}
 
+
+/*
 	// Set the NMA rotation matrix to identity
 	NMARotation.resize(nu, std::vector<double>(nu, 0));
+
 	for(int i = 0; i < nu; i++){
 		NMARotation[i][i] = 1.0;
 	}
@@ -1525,6 +1528,7 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 	bCopyMat(NMARotation, tempNMARotation);
 
 	//gram_schmidt(tempNMARotation, NMARotation);
+*/
 
 }
 
@@ -1536,7 +1540,7 @@ the timestepper. **/
 void HMCSampler::initialize(SimTK::State& someState)
 {
 	// After an event handler has made a discontinuous change to the
-	// Integrator's "advanced state", this method must be called to 
+	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
 	timeStepper->initialize(compoundSystem->getDefaultState());
 
@@ -1564,7 +1568,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// Initialize QsBuffer with zeros
 	int nq = matter->getNQ(someState);
 	int totSize = QsBufferSize * nq;
-	for(int i = 0; i < totSize; i++){ 
+	for(int i = 0; i < totSize; i++){
 		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
 		QsBuffer.push_back(SimTK::Real(0));
 	}
@@ -1600,6 +1604,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 		V[j] = gaurand(randomEngine);
 	}
 	matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
+
 	SqrtMInvV *= sqrtRT; // Set stddev according to temperature
 	someState.updU() = SqrtMInvV;
 	system->realize(someState, SimTK::Stage::Velocity);
@@ -1616,15 +1621,17 @@ void HMCSampler::initialize(SimTK::State& someState)
 	UScaleFactors[j] = 1;
 	InvUScaleFactors[j] = 1;
 	}
+
 	loadUScaleFactors(someState);
+
 }
 
 /** Same as initialize **/
-//r void HMCSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature) 
+//r void HMCSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature)
 void HMCSampler::reinitialize(SimTK::State& someState)
 {
 	 // After an event handler has made a discontinuous change to the
-	// Integrator's "advanced state", this method must be called to 
+	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
 	//(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
@@ -1799,8 +1806,8 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 //		prevAcceptance = acceptance;
 //		acceptance = float(sum) / float(acceptedStepsBufferSize);
 //
-//		std::cout << " ppAcc= " << prevPrevAcceptance 
-//			<< " pAcc= " << prevAcceptance 
+//		std::cout << " ppAcc= " << prevPrevAcceptance
+//			<< " pAcc= " << prevAcceptance
 //			<< " acc= " << acceptance << std::endl;
 //
 //		// Passed first two initial evaluations
@@ -1835,8 +1842,8 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 //			SimTK::Real newTimestep = t_n - (gamma * gradF_n);
 //			//std::cout << "Adapt data: "
 //			//	<< " " << F_n  << " " << F_n_1  << " " << F_n_2
-//			//	<< " " << dF_n << " " << dF_n_1 
-//			//	<< " " << dt_n << " " << dt_n_1 
+//			//	<< " " << dF_n << " " << dF_n_1
+//			//	<< " " << dt_n << " " << dt_n_1
 //			//	<< " " << gradF_n << " " << gradF_n_1
 //			//	<< " " << num << " " << denom << " " << gamma
 //			//	<< std::endl;
@@ -1867,7 +1874,7 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 //
 //
 //			} else { // Take the new timestep
-//				std::cout << "Setting timestep to newTimestep.\n"; 
+//				std::cout << "Setting timestep to newTimestep.\n";
 //				prevPrevTimestep = prevTimestep;
 //				prevTimestep = timestep;
 //				timestep = newTimestep;
@@ -1901,14 +1908,14 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 //		std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep
 //			<< " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
 //
-//	} // is time to adapt 
+//	} // is time to adapt
 //}
 //
 // Stochastic optimization of the timestep using gradient descent
 void HMCSampler::adaptTimestep(SimTK::State&)
 {
 
-	static int nofTimestepAdapt = 0;	
+	static int nofTimestepAdapt = 0;
 
 	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){
 
@@ -1931,11 +1938,11 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 		acceptance = newAcceptance;
 
 		std::cout << " ppAcc= " << prevPrevAcceptance
-			<< " pAcc= " << prevAcceptance 
-			<< " acc= " << acceptance 
+			<< " pAcc= " << prevAcceptance
+			<< " acc= " << acceptance
 			<< " ppTs= " << prevPrevTimestep
-			<< " pTs= " << prevTimestep 
-			<< " ts= " << timestep 
+			<< " pTs= " << prevTimestep
+			<< " ts= " << timestep
 			<< std::endl;
 
 		// Passed first two initial evaluations
@@ -1949,7 +1956,7 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 			f_n_2 = a_n_2   - idealAcceptance;
 
 			// f = a - aref and F = integral(f)
-			// minimize F <=> f = 0 <=> a = aref 
+			// minimize F <=> f = 0 <=> a = aref
 			SimTK::Real F_n =   (0.5 * (a_n * a_n))     - (a_n   * idealAcceptance);
 			SimTK::Real F_n_1 = (0.5 * (a_n_1 * a_n_1)) - (a_n_1 * idealAcceptance);
 			SimTK::Real F_n_2 = (0.5 * (a_n_2 * a_n_2)) - (a_n_2 * idealAcceptance);
@@ -1973,14 +1980,14 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 
 			std::cout << "Adapt data:"
 				<< " F_n= " << F_n  << " F_n_1= " << F_n_1  << " F_n_2= " << F_n_2
-				<< " dF_n= " << dF_n << " dF_n_1= " << dF_n_1 
-				<< " dt_n= " << dt_n << " dt_n_1= " << dt_n_1 
+				<< " dF_n= " << dF_n << " dF_n_1= " << dF_n_1
+				<< " dt_n= " << dt_n << " dt_n_1= " << dt_n_1
 				<< " gradF_n= " << gradF_n << " gradF_n_1= " << gradF_n_1
 				<< " num " << num << " " << denom << " gamma= " << gamma
 				<< std::endl;
 
 			// Acceptance is fine
-			if(	   (std::abs(f_n) < 0.1) 
+			if(	   (std::abs(f_n) < 0.1)
 				&& (std::abs(f_n_1) < 0.1)
 				&& (std::abs(f_n_2) < 0.1)
 			){
@@ -2034,7 +2041,7 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 		std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep
 			<< " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
 
-	} // is time to adapt 
+	} // is time to adapt
 }
 
 /**  **/
@@ -2089,7 +2096,7 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 		//	}
 		//	std::cout << std::endl;
 		//}
-		
+
 		std::cout << "Compute correlation matrix: \n";
 		SimTK::Real corr;
 		for(int qi = 0; qi < nq; qi++){
@@ -2283,7 +2290,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 		for(int j = 0; j < ndofs; j++){muMX += (XM[j] * DOFUScaleFactors[j]);}
 		bmuMX = boostBetaPlus * muMX;
 		_bmuMX = -1.0 * bmuMX;
-		
+
 		if(bcorr < 16){ // safe limit to use exponentials
 			bcorr = LSE2(bmuMX, _bmuMX);
 		}else{
@@ -2343,7 +2350,7 @@ bool HMCSampler::validateProposal() const {
 
 	// CHECK_IF_NAN(pe_o);
 	CHECK_IF_NAN(pe_n);
-	
+
 	CHECK_IF_NAN(ke_proposed);
 	CHECK_IF_NAN(ke_n);
 
@@ -2390,7 +2397,7 @@ Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
 void HMCSampler::update(SimTK::State& someState)
 {
-	setSetConfigurationAndEnergiesToNew(someState); 
+	setSetConfigurationAndEnergiesToNew(someState);
 	++acceptedSteps;
 	acceptedStepsBuffer.push_back(1);
 	acceptedStepsBuffer.pop_front();
@@ -2447,7 +2454,7 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 	}
 
 	// Calculate dRdot
-	if(ndofs < std::numeric_limits<decltype(ndofs)>::max() / 2) {	
+	if(ndofs < std::numeric_limits<decltype(ndofs)>::max() / 2) {
 		if(Rdot.size() >= static_cast<size_t>(2 * ndofs)) {
 
 			for(size_t j = 0; j < ndofs; j++){
@@ -2606,7 +2613,7 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 	for(int i = 0; i < topologies.size(); i++){
 		// Loop through atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i]->getNumAtoms(); ++aIx){
-	
+
 			// Get body, parentBody
 			SimTK::MobilizedBodyIndex mbx = (topologies[i])->getAtomMobilizedBodyIndex(aIx);
 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -2615,13 +2622,13 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 			if(parentMbx != 0){
 				// Get the neighbor atom in the parent mobilized body
 				SimTK::Compound::AtomIndex chemParentAIx = (topologies[i])->getChemicalParent(matter, aIx);
-			
+
 				//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
 				//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
 				//	<< std::endl;
 				// Get Top to parent frame
 				SimTK::Compound::AtomIndex parentRootAIx = (topologies[i])->mbx2aIx[parentMbx];
-			
+
 				// Get mobility (joint type)
 				bSpecificAtom *atom = (topologies[i])->updAtomByAtomIx(aIx);
 				SimTK::BondMobility::Mobility mobility;
@@ -2630,13 +2637,13 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 				mobility = bond.getBondMobility();
 				mbx2mobility.insert(std::pair<SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility>
 								(mbx, mobility));
-			
+
 				(mobility == SimTK::BondMobility::Mobility::Torsion);
-			
+
 			} // Parent is not Ground
-		
+
 		} // END loop through atoms
-	
+
 	} // END loop through topologies
 		for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -2646,7 +2653,7 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 				//const SimTK::Transform T = mobod.getMobilizerTransform(someState);
 				//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
 				//const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
-				std::cout << "mbx= " << mbx << " mobility= " 
+				std::cout << "mbx= " << mbx << " mobility= "
 				//      << std::endl
 				;
 				// Loop through body's Qs
