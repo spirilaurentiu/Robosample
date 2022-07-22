@@ -76,6 +76,11 @@ To read more information, execute with the help flag (`-h` or `--help`):
 bash build.sh -h
 ```
 
+Building for production with GCC using other versions of GCC:
+```
+bash build.sh -b release --cc /usr/bin/gcc-8 --cpp /usr/bin/g++-8
+```
+
 # Open the project using any IDE (e.g. Visual Studio Code)
 Install [Visual Studio Code](https://code.visualstudio.com/) on Windows. Run `code .` in `Robosample`.
 
