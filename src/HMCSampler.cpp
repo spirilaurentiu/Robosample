@@ -1,4 +1,22 @@
-/**@file
+/* -------------------------------------------------------------------------- *
+ *                       Robosample: Gmolmodel                                *
+ * -------------------------------------------------------------------------- *
+ * This is part of the SimTK biosimulation toolkit originating from           *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org/home/simbody.  *
+ *                                                                            *
+ * Copyright information.                                                     *
+ * Authors: Laurentiu Spiridon                                                *
+ * Contributors: Eliza C. Martin, Victor Ungureanu, Teodor A. Sulea           *
+ *                                                                            *
+ * Licensed under ; you may                                                   *
+ * not use this file except                                                   *
+ * You may obtain a copy of the License at                                    *
+ * -------------------------------------------------------------------------- */
+
+
+/** @file
 Implementation of HMCSampler class. **/
 
 #include "HMCSampler.hpp"
@@ -15,6 +33,10 @@ Implementation of HMCSampler class. **/
 	}
 
 //** Constructor **/
+//==============================================================================
+//                           CONSTRUCTOR
+//==============================================================================
+// Description.
 HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem,
 	SimTK::SimbodyMatterSubsystem *argMatter,
 	//SimTK::Compound *argResidue,
@@ -25,7 +47,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 		//, MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
-	// BEGIN SAMPLER
+	// Ensure Sampler prerequisites
 	assert(argCompoundSystem != nullptr);
 	assert(argMatter != nullptr);
 	assert(argDumm != nullptr);
@@ -54,7 +76,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	// TODO: BUG: ndofs may not be equal with NU
 	int ThreeFrom3D = 3;
 	ndofs = natoms * ThreeFrom3D;
-	// END SAMPLER
+	// Sampler end
 
 	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
@@ -575,113 +597,6 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	//  time we hit this function
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
-
-/** Initialize velocities according to the Maxwell-Boltzmann
-distribution.  Coresponds to R operator in LAHMC **/
-/*
-void HMCSampler::initializeNMAVelocities(SimTK::State& someState, int NMAOption){
-	// TODO: const will not work in adaptive block scheme
-	const int nu = someState.getNU();
-	SimTK::Vector newU(nu);
-
-	// TODO: move this in constructor or variable set
-	SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-	SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-
-	// Start velocities. Fill with a random sign (1 or -1)
-	//std::vector<SimTK::Real> V(nu, randSign);
-
-	// Start velocities. Fill with one
-	//std::vector<SimTK::Real> V(nu, 1);
-
-	// Scale the sign with the scaling factors
-	std::transform(V.begin(), V.end(), // apply an operation on this
-		UScaleFactors.begin(), // and this
-		V.begin(), // and store here
-		std::multiplies<SimTK::Real>()); // this is the operation
-
-	if(NMAOption == 2){
-		if (nu != RandomCache.nu) {
-			// Rebuild the cache
-			// We also get here if the cache is not initialized
-			RandomCache.V.resize(nu);
-			RandomCache.SqrtMInvV.resize(nu);
-			RandomCache.sqrtRT = std::sqrt(RT);
-			RandomCache.nu = nu;
-
-			// we don't get to use multithreading here
-			RandomCache.FillWithGaussian();
-		} else {
-			// wait for random number generation to finish (should be done by this stage)
-			RandomCache.task.wait();
-		}
-
-		// Scale the velocities so far with Gaussians(0, 1)
-		std::transform(V.begin(), V.end(), // apply an operation on this
-			RandomCache.V.begin(), // and this
-			V.begin(), // and store here
-			std::multiplies<SimTK::Real>()); // this is the operation
-
-		// Worst assignment method TODO: std::vector to SimTK::Vector
-		for(int k = 0; k < nu; k++){
-			newU[k] = V[k];
-		}
-
-		// Multiply by inverse of the sqrt(mass matrix)
-		// This gives weights according to bodies
-		matter->multiplyBySqrtMInv(someState, newU, RandomCache.SqrtMInvV);
-
-	}else if(NMAOption == 1){
-
-		//int mnu;
-		// first body excluded due to iMod for now
-			//for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-				//	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		//	mnu = mobod.getNumU(someState);
-				//	//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
-		//	calc_NU += mnu;
-		//}
-
-		// Average of sqrt(|V[i]|)
-		//SimTK::Real avg_sqrtV = 0;
-		//for(int k = 0; k < nu; k++){
-		//	avg_sqrtV = std::sqrt(std::abs(V[k]));
-		//}
-
-		//SimTK::Real stdev = bStdev(V);
-		//for(int k = 0; k < nu; k++){
-		//	V[k] *= (std::sqrt(RT) / avg_sqrtV);
-		//}
-
-		// Worst assignment method TODO: std::vector to SimTK::Vector
-		SimTK::Real totalMass = matter->calcSystemMass(someState);
-		//std::cout << "HMCSampler: total mass" << totalMass << "\n";
-		for(int k = 0; k < nu; k++){
-			newU[k] = V[k];
-			//newU[k] *=  std::sqrt(totalMass / nu);
-		}
-
-	}else{
-		std::cerr << "HMCSampler: unknown NMAOption" << NMAOption << "\n";
-		throw std::exception();
-		std::exit(1);
-
-	}
-
-	// Assign velocities
-	for(std::size_t i = 0; i < nu; i++){
-		someState.updU()[i] = newU[i];
-	}
-
-	// Realize velocity
-	system->realize(someState, SimTK::Stage::Velocity);
-	//std::cout << "HMCSampler U " << someState.getU() << std::endl;
-
-	// ask for a number of random numbers and check if we are done the next
-	// time we hit this function
-	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
-}
-*/
 
 // Apply the L operator
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
@@ -1507,7 +1422,7 @@ void HMCSampler::loadUScaleFactors(SimTK::State& someState)
 	}
 
 
-/*
+/* THIS IS A HUGE MEMORY PROBLEM
 	// Set the NMA rotation matrix to identity
 	NMARotation.resize(nu, std::vector<double>(nu, 0));
 
@@ -1777,140 +1692,6 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 	this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 }
 
-//// Stochastic optimization of the timestep using gradient descent
-//void HMCSampler::adaptTimestep(SimTK::State&)
-//{
-//	// function signature was SimTK::State& someState
-//
-//	std::cout << std::endl;
-//	//std::cout << "Adapt: nofSamples= " << nofSamples << std::endl;
-//	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){
-//		std::cout << "Adapt BEGIN: ts= " << timestep;
-//
-//		// SimTK::Real stdAcceptance = 0.03;
-//		SimTK::Real idealAcceptance = 0.651;
-//		// SimTK::Real smallestAcceptance = 0.0001;
-//		// SimTK::Real timestepIncr = 0.001;
-//
-//		//for(int i = 0; i < acceptedStepsBufferSize; i++){
-//		//	std::cout << acceptedStepsBuffer.at(i) << " ";
-//		//}
-//		//std::cout << std::endl;
-//
-//		// Compute acceptance in the buffer
-//		int sum = std::accumulate(acceptedStepsBuffer.begin(),
-//			acceptedStepsBuffer.end(), 0);
-//
-//		SimTK::Real prevPrevPrevAcceptance = prevPrevAcceptance;
-//		prevPrevAcceptance = prevAcceptance;
-//		prevAcceptance = acceptance;
-//		acceptance = float(sum) / float(acceptedStepsBufferSize);
-//
-//		std::cout << " ppAcc= " << prevPrevAcceptance
-//			<< " pAcc= " << prevAcceptance
-//			<< " acc= " << acceptance << std::endl;
-//
-//		// Passed first two initial evaluations
-//		if( !SimTK::isNaN(prevPrevAcceptance) ){
-//			// Calculate gradients
-//			SimTK::Real a_n, a_n_1, a_n_2, t_n, t_n_1, t_n_2;
-//			a_n = acceptance; a_n_1 = prevAcceptance; a_n_2 = prevPrevAcceptance;
-//			t_n = timestep; t_n_1 = prevTimestep; t_n_2 = prevPrevTimestep;
-//
-//			//SimTK::Real F_n =   std::abs(a_n   - idealAcceptance);
-//			//SimTK::Real F_n_1 = std::abs(a_n_1 - idealAcceptance);
-//			//SimTK::Real F_n_2 = std::abs(a_n_2 - idealAcceptance);
-//			SimTK::Real F_n =   a_n   - idealAcceptance;
-//			SimTK::Real F_n_1 = a_n_1 - idealAcceptance;
-//			SimTK::Real F_n_2 = a_n_2 - idealAcceptance;
-//
-//			SimTK::Real dF_n   = F_n     - F_n_1;
-//			SimTK::Real dF_n_1 = F_n_1   - F_n_2;
-//			SimTK::Real dt_n = (t_n   - t_n_1);
-//			SimTK::Real dt_n_1 = (t_n_1   - t_n_2);
-//			SimTK::Real gradF_n   = dF_n / dt_n;
-//			SimTK::Real gradF_n_1 = dF_n_1 / dt_n_1;
-//
-//			// Calculate gamma
-//			SimTK::Real gamma;
-//			SimTK::Real num, denom;
-//			num = std::abs(dt_n * (gradF_n - gradF_n_1));
-//			denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
-//			gamma = num / denom;
-//
-//			// Generate a new timestep newTimestep
-//			SimTK::Real newTimestep = t_n - (gamma * gradF_n);
-//			//std::cout << "Adapt data: "
-//			//	<< " " << F_n  << " " << F_n_1  << " " << F_n_2
-//			//	<< " " << dF_n << " " << dF_n_1
-//			//	<< " " << dt_n << " " << dt_n_1
-//			//	<< " " << gradF_n << " " << gradF_n_1
-//			//	<< " " << num << " " << denom << " " << gamma
-//			//	<< std::endl;
-//
-//			// If acceptance is good for now
-//			//if( (std::abs(prevTimestep - timestep) > 0.0001)
-//			//  || (newTimestep < 0.00089)
-//			//  || (SimTK::isNaN(newTimestep))
-//			//  || ((acceptance - prevAcceptance) < 0.001)){
-//
-//			if(    (std::abs(F_n) < 0.0001)
-//			    || (SimTK::isNaN(newTimestep))){
-//				std::cout << "Adding noise to timestep.\n";
-//
-//				prevPrevTimestep = prevTimestep;
-//				prevTimestep = timestep;
-//
-//				SimTK::Real r = uniformRealDistribution(randomEngine);
-//				if(acceptance < idealAcceptance){
-//					timestep = timestep - (0.3*r * timestep);
-//				}else{
-//					timestep = timestep + (0.3*r * timestep);
-//				}
-//
-//				//acceptance = prevAcceptance;
-//				//prevAcceptance = prevPrevAcceptance;
-//				//prevPrevAcceptance = prevPrevPrevAcceptance;
-//
-//
-//			} else { // Take the new timestep
-//				std::cout << "Setting timestep to newTimestep.\n";
-//				prevPrevTimestep = prevTimestep;
-//				prevTimestep = timestep;
-//				timestep = newTimestep;
-//			}
-//
-//		} else { // Alter the intial timesteps to get a valid dF_n next time
-//
-//			//SimTK::ArticulatedInertia abi = matter->getArticulatedBodyInertia(
-//			//	someState, SimTK::MobilizedBodyIndex(2));
-//			//const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(
-//			//	SimTK::MobilizedBodyIndex(2));
-//			//const SimTK::MassProperties mp2 = mobod2.getBodyMassProperties(someState);
-//			//const SimTK::Inertia i2 = mp2.calcInertia();
-//			//SimTK::Mat33 mi2 = i2.toMat33();
-//			//std::cout << std::endl;
-//			//std::cout << mi2(0,0) << " " << mi2(0,1) << " " << mi2(0,2) << std::endl;
-//			//std::cout << mi2(1,0) << " " << mi2(1,1) << " " << mi2(1,2) << std::endl;
-//			//std::cout << mi2(2,0) << " " << mi2(2,1) << " " << mi2(2,2) << std::endl;
-//			//std::cout << "det(2)^1/5 " << std::pow(SimTK::det(mi2), 0.2) << std::endl;
-//
-//			prevPrevTimestep = prevTimestep;
-//			prevTimestep = timestep;
-//			if( SimTK::isNaN(prevPrevTimestep) ){
-//				timestep = 0.0009; // smaller than H vibration
-//			}else{
-//				timestep = (prevTimestep + prevPrevTimestep) / 2;
-//			}
-//		}
-//
-//		timeStepper->updIntegrator().setFixedStepSize(timestep);
-//		std::cout << "Adapt END: "  << " ppTs= " << prevPrevTimestep
-//			<< " pTs= " << prevTimestep << " ts= " << timestep << std::endl;
-//
-//	} // is time to adapt
-//}
-//
 // Stochastic optimization of the timestep using gradient descent
 void HMCSampler::adaptTimestep(SimTK::State&)
 {
@@ -2175,7 +1956,7 @@ void HMCSampler::geomDihedral(SimTK::State& someState){
 	// INSTANT GEOMETRY END
 }
 
-/** Store new configuration and energy terms**/
+/** Store new configuration and energy terms **/
 void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 {
 	// Get new Fixman potential
