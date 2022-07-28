@@ -119,6 +119,10 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
+//==============================================================================
+//                             1. STRUCTURAL FUNCTIONS
+//==============================================================================
+
 /** Constructor. Initializes the following objects:
  *  - CompoundSystem,
  *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
@@ -969,7 +973,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 		for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
 			auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
 			auto loc = otherWorldsAtomsLocations[i][j].second;
-			printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
+			printf("%d %.10f %.10f %.10f\n", int(compoundAtomIndex), loc[0], loc[1], loc[2]);
 			//std::cout << loc << std::endl;
 		}
 	}

@@ -29,7 +29,7 @@ public:
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
 
 	/** Load molecules based on loaded filenames. One molecule
-	creates a topology object and based on amberReader forcefield 
+	creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecules(
 		int requestedNofMols,
@@ -225,15 +225,15 @@ public:
 	void writeInitialPdb(void);
 	void writeFinalPdb(void);
 
-	// 
+	//
 	void WritePdb(std::size_t whichWorld);
 
-	// 
+	//
 	void writePdbs(int someIndex, int thermodynamicStateIx = 0);
 
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2, int a3, int a4);
-	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound, 
+	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2);
 
 	int getPdbRestartFreq();
@@ -292,6 +292,8 @@ public:
 
 	void storeReplicaEnergyFromFrontFull(int thisReplica);
 
+	void initializeReplica(int whichReplica);
+
 	// Go through all of this replica's worlds and generate samples
 	void RunReplica(int whichReplica, int howManyRounds);
 
@@ -318,7 +320,7 @@ private:
 
 	// Nof molecules
 	int moleculeCount;
-	
+
 	// Molecules (topologies<-Compounds) objects
 	//std::vector<bMoleculeReader *> moleculeReaders;
 	std::vector<Topology> topologies;
@@ -351,7 +353,7 @@ private:
 	int pdbRestartFreq;
 	int printFreq;
 
-	// 
+	//
 	std::string outputDir;
 	std::string pdbPrefix;
 
@@ -372,7 +374,7 @@ private:
 
 	// Adaptive Gibbs blocking variables
 	int roundsTillReblock;
-	std::vector<std::vector<std::vector<SimTK::Real>>> 
+	std::vector<std::vector<std::vector<SimTK::Real>>>
 		QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
 
 	// Normal mode analysis
@@ -395,7 +397,7 @@ private:
 	// Counter matrix of accepted swaps
 	std::vector<std::vector<int>> nofAttemptedSwapsMatrix;
 	std::vector<std::vector<int>> nofAcceptedSwapsMatrix;
-	
+
 	size_t nofReplicas;
 	size_t nofThermodynamicStates;
 	ReplicaMixingScheme replicaMixingScheme;

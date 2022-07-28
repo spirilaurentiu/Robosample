@@ -1553,6 +1553,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	// Store the configuration
 	// In our case, a MobilizedBody is an atom
 	system->realize(someState, SimTK::Stage::Position);
+
 	int i = 0;
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -1606,8 +1607,8 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	this->etot_set = this->etot_proposed;
 
 	for (int j=0; j < nu; ++j){
-	UScaleFactors[j] = 1;
-	InvUScaleFactors[j] = 1;
+        UScaleFactors[j] = 1;
+        InvUScaleFactors[j] = 1;
 	}
 	loadUScaleFactors(someState);
 }
