@@ -1848,13 +1848,13 @@ void Context::mixReplicas(void)
 void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 {
 
-	std::cout <<  "Context::restoreReplicaCoordinatesToFront " << whichReplica << ": " << std::flush;
+	//std::cout <<  "Context::restoreReplicaCoordinatesToFront " << whichReplica << ": " << std::flush;
 
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thermoIx = replica2ThermoIxs[whichReplica];
 
-	std::cout <<  "Context::restoreReplicaCoordinatesToFront thermoIx " << thermoIx << std::endl << std::flush;
+	//std::cout <<  "Context::restoreReplicaCoordinatesToFront thermoIx " << thermoIx << std::endl << std::flush;
 
 	// Get worlds indexes of this thermodynamic state
 	std::vector<int> worldIndexes =
@@ -1870,7 +1870,7 @@ void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 	worlds[worldIndexes.front()].setAtomsLocationsInGround(state,
 		replicas[whichReplica].getAtomsLocationsInGround());
 
-	std::cout << "Context::restoreReplicaCoordinatesToFront worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
+	//std::cout << "Context::restoreReplicaCoordinatesToFront worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
 
 }
 
@@ -1965,7 +1965,7 @@ void Context::initializeReplica(int thisReplica)
 		worlds[replicaWorldIxs[i]].setBoostTemperature( T );
 	}
 
-	std::cout << "Temperature set to " << T << std::endl << std::flush;
+	std::cout << "iniTemperature set to " << T << std::endl << std::flush;
 
 	// -------------
 	// Set samplers parameters for this replica
@@ -1983,12 +1983,12 @@ void Context::initializeReplica(int thisReplica)
 	}
 
 
-	std::cout << "Timesteps set to ";
+	std::cout << "iniTimesteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep() << " " ;
 	}
 	std::cout << std::endl;
-	std::cout << "Mdsteps set to ";
+	std::cout << "iniMdsteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample() << " " ;
 	}
