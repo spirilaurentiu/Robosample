@@ -66,15 +66,15 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN);
  *  Contains a Symbody system and additional data that define a regimen
  **/
 class World {
-public: 
+public:
 	// --- Structural functions ---
 	/** Constructor **/
 	explicit World(int worldIndex, int requestedNofMols, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
-	/** Creates a topology object and based on amberReader forcefield 
+	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecule(
-		readAmberInput *amberReader, 
+		readAmberInput *amberReader,
 		//std::string rbFN,
 		//std::string flexFN,
 		//std::string regimenSpec,
@@ -82,14 +82,14 @@ public:
 		//, std::string argRootMobility
 		);
 
-	// 
+	//
 	void AddBiotypes(int which, readAmberInput *amberReader);
 	void AddDummParams(int which, readAmberInput *amberReader);
 	void BuildTopologyGraph(int which, std::string argRoot);
 	void AllocateCoordBuffers(int which);
 
 	/** It sets Compound BondFlexibilities . Also
-	 * creates decorations for visualizers 
+	 * creates decorations for visualizers
 	 **/
 	void SetBondFlexibilities(
 		std::string flexFN,
@@ -100,7 +100,7 @@ public:
 	/** Adopts a topology **/
 	void adoptTopology(int which);
 
-	/** Assign a scale factor for generalized velocities to every mobilized 
+	/** Assign a scale factor for generalized velocities to every mobilized
 	body **/
 	void setUScaleFactorsToMobods(void);
 
@@ -109,14 +109,14 @@ public:
 
 	/** Get the number of molecules **/
 	int getNofMolecules() const;
- 
-	/** Calls CompoundSystem.modelCompounds and realizes Topology 
+
+	/** Calls CompoundSystem.modelCompounds and realizes Topology
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
 	/** Add contact surfaces to bodies **/
 	const SimTK::State& addContacts(int prmtopIndex);
-	
+
 	/** Add contact constraints to specific bodies **/
 	const SimTK::State& addConstraints(int prmtopIndex);
 
@@ -145,12 +145,11 @@ public:
 
 	// --- Mixing functions: Pass configurations among Worlds
 	/** Get the current Compound Cartesian coords **/
-	std::vector<
-	std::vector<
-	std::pair<bSpecificAtom *, SimTK::Vec3> > > 
+	std::vector<std::vector<
+	std::pair<bSpecificAtom *, SimTK::Vec3> > >
 		getAtomsLocationsInGround(const SimTK::State&);
-	std::vector<
-	std::vector<
+
+	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
 		getCurrentAtomsLocationsInGround(void);
 
@@ -162,7 +161,9 @@ public:
 
 	/** Set Compound, MultibodySystem and DuMM configurations according to
 	some other World's atoms **/
-	SimTK::State& setAtomsLocationsInGround(SimTK::State&, std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > > otherWorldsAtomsLocations);
+	SimTK::State& setAtomsLocationsInGround(SimTK::State&,
+        const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+        otherWorldsAtomsLocations);
 
 	/** Return own CompoundSystem **/
 	CompoundSystem *getCompoundSystem() const;
@@ -184,14 +185,14 @@ public:
 	std::vector<SimTK::Real> getYs();
 	std::vector<SimTK::Real> getZs();
 
-	/** Access to molecule (Topology) objects 
+	/** Access to molecule (Topology) objects
 	Get a readble reference of one of the molecules **/
 	const Topology& getTopology(std::size_t moleculeNumber) const;
 
 	/** Get a writeble reference of one of the molecules **/
-	Topology& updTopology(std::size_t moleculeNumber);  
+	Topology& updTopology(std::size_t moleculeNumber);
 	//...............
-   
+
 	//.......................
 	// --- Thermodynamics ---
 	//.......................
@@ -269,11 +270,11 @@ public:
 	FixmanTorque * getFixmanTorque() const;
 
 	//...............
-  
+
 	// -- Debugging / helper functions ---
 	/** Print information about Simbody systems **/
 	void PrintSimbodyStateCache(SimTK::State&);
-  
+
 	/** Print a Compound Cartesian coordinates as given by
 	 * Compound::calcAtomLocationInGroundFrame **/
 	void printPoss(const SimTK::Compound& c, SimTK::State& someState);
@@ -287,7 +288,7 @@ public:
 	 * Compound::calcAtomVelocityInGroundFrame**/
 	void printPossVels(const SimTK::Compound& c, SimTK::State& someState);
 	//...............
- 
+
 
 
 public:
@@ -325,7 +326,7 @@ public:
 
 	/** This vector stores a configuration if is needed for later use **/
 	SimTK::Transform *TVector;
-  
+
 	/** Topologies graphs as tables - to be removed **/
 	int **mbxTreeMat;    // tree representing the bonding
 	SimTK::Real *branchMassVec; // branch masses self body included
@@ -352,7 +353,7 @@ public:
 
 	// --- Statistics ---
 	//...............
-  
+
 	// --- Graphics ---
 	bool visual;
 
@@ -383,7 +384,7 @@ public:
 	SimTK::Force::Custom* FixmanTorqueExtForce = nullptr;
 
 private:
-	
+
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx; // DANGER
 

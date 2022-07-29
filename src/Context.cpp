@@ -212,7 +212,7 @@ Replica::~Replica()
 }
 
 // Get coordinates from this replica
-const	std::vector<
+const std::vector<
 	std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
 	Replica::getAtomsLocationsInGround()
 {
@@ -1354,8 +1354,8 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 
 			if(worldIndexes.size() > 1) {
 				// DANGER ZONE
-				std::vector<std::vector<std::pair<
-					bSpecificAtom *, SimTK::Vec3> > >
+				const std::vector<std::vector<std::pair<
+					bSpecificAtom *, SimTK::Vec3> > >&
 					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
 
 					// Pass compounds to the new world
@@ -1946,7 +1946,7 @@ void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
 
 void Context::initializeReplica(int thisReplica)
 {
-    // Get thermoState corresponding to this replica
+	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 
@@ -1982,7 +1982,6 @@ void Context::initializeReplica(int thisReplica)
 			replicaMdsteps[i]);
 	}
 
-
 	std::cout << "iniTimesteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep() << " " ;
@@ -1999,7 +1998,6 @@ void Context::initializeReplica(int thisReplica)
 	for(size_t ri = 0; ri < 1; ri++){
 		for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
 
-
 			int frontIx = -1;
 			int backIx = -1;
 
@@ -2015,19 +2013,18 @@ void Context::initializeReplica(int thisReplica)
 
 			// -------------
 			// ROTATE
-			///std::cout << "Rotate from";
-			///for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}
+			///*print*/std::cout << "Rotate from";/*print*/
+			///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
 
 			// Rotate worlds indices (translate from right to left)
 		   	std::rotate(replicaWorldIxs.begin(),
 				replicaWorldIxs.begin() + 1,
 				replicaWorldIxs.end());
 
-			std::cout << " to";
-			for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}
-			//std::cout << "\n";
+			///*print*/std::cout << " to";/*print*/
+			///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
+			///*print*/std::cout << "\n";/*print*/
 			// =============
-
 
 			// -------------
 			// TRANSFER coordinates from last world to current
@@ -2046,12 +2043,12 @@ void Context::initializeReplica(int thisReplica)
 		} // END iteration through worlds
 	} // END iteration through rounds
 
+
 }
 
 // Go through all of this replica's worlds and generate samples
 void Context::RunReplica(int thisReplica, int howManyRounds)
 {
-
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
@@ -2345,8 +2342,8 @@ void Context::transferCoordinates(int src, int dest)
 	SimTK::State& currentAdvancedState = updWorld(dest)->integ->updAdvancedState();
 
 	// Get coordinates from source
-	std::vector<std::vector<std::pair<
-		bSpecificAtom *, SimTK::Vec3> > >
+	const std::vector<std::vector<std::pair<
+		bSpecificAtom *, SimTK::Vec3> > >&
 		otherWorldsAtomsLocations =
 	updWorld(src)->getAtomsLocationsInGround(lastAdvancedState);
 

@@ -859,7 +859,8 @@ Topology& World::updTopology(std::size_t moleculeNumber){
  * contains all the information in bSpecificAtom as well. The bottleneck here
  * is the calcAtomLocationInGroundFrame from Compound.
  **/
-std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+std::vector< std::vector<
+std::pair <bSpecificAtom *, SimTK::Vec3 > > >
 World::getAtomsLocationsInGround(const SimTK::State & state)
 {
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> returnVector;
@@ -964,8 +965,8 @@ Unles is a fully flexible Cartesian world, the function has the following steps:
 **/
 SimTK::State& World::setAtomsLocationsInGround(
 		SimTK::State& someState,
-		std::vector<std::vector<
-		std::pair<bSpecificAtom *, SimTK::Vec3> > > otherWorldsAtomsLocations)
+		const std::vector<std::vector<
+		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations)
 {
 	/*
 	for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
