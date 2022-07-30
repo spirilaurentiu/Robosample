@@ -371,6 +371,135 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// compoundSystem->realizeTopology();
 }
 
+/** Add a membrane represented by a contact surface **/
+void World::addMembrane(
+	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
+{
+	SimTK::Real stiffness = 10000.0;
+	SimTK::Real dissipation = 0.0;
+	SimTK::Real staticFriction = 0.0;
+	SimTK::Real dynamicFriction = 0.0;
+	SimTK::Real viscousFriction = 0.0;
+
+	//ContactGeometry::HalfSpace contactGeometry;
+	//ContactGeometry::Sphere contactGeometry(1);
+
+	PolygonalMesh mesh = PolygonalMesh::createBrickMesh(
+		Vec3(xWidth, yWidth, zWidth), resolution);
+	ContactGeometry::TriangleMesh contactGeometry(mesh);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
+		//Transform(),
+		ContactSurface(
+		contactGeometry,
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction),
+		1.0)
+	);
+
+	DecorativeFrame contactGeometryDecoFrame;
+	matter->Ground().updBody().addDecoration(
+		Transform(), contactGeometryDecoFrame
+	);
+
+	//DecorativeMesh contactGeometryDeco(mesh);
+	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
+	matter->Ground().updBody().addDecoration(
+		Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
+	);
+
+
+}
+
+/** Add contact constraints to specific bodies.
+TODO:use number of mobilities. TODO: Solve if **/
+const SimTK::State& World::addConstraints(int prmtopIndex)
+{
+	if(prmtopIndex >= 0){
+		std::cout << "Adding constraint to atom with prmtop index "
+			<< prmtopIndex << "\n" ;
+		SimTK::MobilizedBodyIndex mbx =
+			((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(
+				SimTK::Compound::AtomIndex(prmtopIndex), *forceField
+		);
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+		SimTK::Constraint::ConstantSpeed B3291ConstraintU1(
+			mobod, SimTK::MobilizerUIndex(0), 0);
+		if(matter->getNumBodies() > 5000){
+			SimTK::Constraint::ConstantSpeed B3291ConstraintU2(
+				mobod, SimTK::MobilizerUIndex(1), 0);
+			SimTK::Constraint::ConstantSpeed B3291ConstraintU3(
+				mobod, SimTK::MobilizerUIndex(2), 0);
+		}
+	}
+
+	const SimTK::State& returnState = compoundSystem->realizeTopology();
+	return returnState;
+}
+
+
+/** Add contact surfaces to bodies **/
+const SimTK::State& World::addContacts(int prmtopIx)
+{
+	if(prmtopIx >= 0){
+		std::cout << 
+			"Adding contacts with membrane to atom with prmtop index " <<
+		 prmtopIx << "\n" ;
+
+		const Real stiffness = 10000.0; // stiffness in pascals
+		const Real dissipation = 0.0;    // to turn off dissipation
+		SimTK::Real staticFriction = 0.0;
+		SimTK::Real dynamicFriction = 0.0;
+		SimTK::Real viscousFriction = 0.0;
+
+		SimTK::MobilizedBodyIndex
+		mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(
+			SimTK::Compound::AtomIndex(prmtopIx), *forceField); 
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+		ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 2));
+
+		DecorativeMesh deco(mesh.createPolygonalMesh());
+		mobod.updBody().addDecoration(
+			Transform(), deco.setColor(Cyan).setOpacity(.6));
+		mobod.updBody().addContactSurface(
+			Transform(), ContactSurface(
+				mesh, ContactMaterial(
+					stiffness, dissipation,
+					staticFriction, dynamicFriction, viscousFriction),
+				 0.001));
+	}
+
+	const SimTK::State& returnState = compoundSystem->realizeTopology();
+	return returnState;
+}
+
+// CONTACT DEBUG
+/*
+int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(
+	currentAdvancedState);
+SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->
+	getDissipatedEnergy(currentAdvancedState);
+bool hasDefaultForceGenerator =
+	updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
+
+const MultibodySystem & mbs = 
+	updWorld(currentWorldIx)->contactForces->getMultibodySystem();
+int nofMobods = mbs.getMatterSubsystem().getNumBodies();
+
+const ContactTrackerSubsystem & cts =
+	updWorld(currentWorldIx)->contactForces->getContactTrackerSubsystem();
+int ctsNofSurfaces = cts.getNumSurfaces();
+
+std::cout << "CONTACT INFO:"
+	<< " #forces= " << numForces
+	<< " dissEnergy= " << dissEnergy
+	<< " hasDefaultForceGenerator= " << hasDefaultForceGenerator
+	<< " #mobods= " << nofMobods
+	<< " ctsNofSurfaces= " << ctsNofSurfaces
+<< std::endl;
+*/
+// CONTACT DEBUG enD
 /** Assign a scale factor for generalized velocities to every mobilized
 body **/
 void World::setUScaleFactorsToMobods(void)
@@ -431,43 +560,6 @@ SimTK::Real World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
 //...............
 
 
-/**  **/
-void World::addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
-{
-	SimTK::Real stiffness = 10000.0;
-	SimTK::Real dissipation = 0.0;
-	SimTK::Real staticFriction = 0.0;
-	SimTK::Real dynamicFriction = 0.0;
-	SimTK::Real viscousFriction = 0.0;
-
-	//ContactGeometry::HalfSpace contactGeometry;
-	//ContactGeometry::Sphere contactGeometry(1);
-
-	PolygonalMesh mesh = PolygonalMesh::createBrickMesh(Vec3(xWidth, yWidth, zWidth), resolution);
-	ContactGeometry::TriangleMesh contactGeometry(mesh);
-
-	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
-		//Transform(),
-		ContactSurface(
-		contactGeometry,
-		ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction),
-		1.0)
-	);
-
-	DecorativeFrame contactGeometryDecoFrame;
-	matter->Ground().updBody().addDecoration(Transform(), contactGeometryDecoFrame);
-
-	//DecorativeSphere contactGeometryDeco(1);
-	//matter->Ground().updBody().addDecoration(Transform(), contactGeometryDeco);
-
-	//DecorativeMesh contactGeometryDeco(mesh);
-	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
-	matter->Ground().updBody().addDecoration(Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5));
-
-
-}
-
 // Get the number of molecules
 int World::getNofMolecules() const
 {
@@ -487,74 +579,6 @@ const SimTK::State& World::realizeTopology()
 }
 
 
-/** Add contact constraints to specific bodies.
-TODO:use number of mobilities. TODO: Solve if **/
-const SimTK::State& World::addConstraints(int prmtopIndex)
-{
-	if(prmtopIndex >= 0){
-		std::cout << "Adding constraint to atom with prmtop index " << prmtopIndex << "\n" ;
-		//SimTK::MobilizedBodyIndex mbx = topologies[0].getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(prmtopIndex)); // SAFE
-		SimTK::MobilizedBodyIndex mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex(prmtopIndex), *forceField); // DANGER
-		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-		SimTK::Constraint::ConstantSpeed B3291ConstraintU1(mobod, SimTK::MobilizerUIndex(0), 0);
-		if(matter->getNumBodies() > 5000){
-			SimTK::Constraint::ConstantSpeed B3291ConstraintU2(mobod, SimTK::MobilizerUIndex(1), 0);
-			SimTK::Constraint::ConstantSpeed B3291ConstraintU3(mobod, SimTK::MobilizerUIndex(2), 0);
-		}
-	}
-
-	const SimTK::State& returnState = compoundSystem->realizeTopology();
-	return returnState;
-}
-
-
-/** Add contact surfaces to bodies **/
-const SimTK::State& World::addContacts(int prmtopIx)
-{
-	if(prmtopIx >= 0){
-		std::cout << "Adding contacts with membrane to atom with prmtop index " << prmtopIx << "\n" ;
-		const Real stiffness = 10000.0; // stiffness in pascals
-		const Real dissipation = 0.0;    // to turn off dissipation
-		SimTK::Real staticFriction = 0.0;
-		SimTK::Real dynamicFriction = 0.0;
-		SimTK::Real viscousFriction = 0.0;
-
-		SimTK::MobilizedBodyIndex
-		//mbx = topologies[0].getAtomMobilizedBodyIndex(SimTK::Compound::AtomIndex(prmtopIx)); // SAFE
-		mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex(prmtopIx), *forceField); // DANGER
-		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 2));
-		DecorativeMesh deco(mesh.createPolygonalMesh());
-		mobod.updBody().addDecoration(Transform(), deco.setColor(Cyan).setOpacity(.6));
-		mobod.updBody().addContactSurface(Transform(), ContactSurface(mesh, ContactMaterial(stiffness, dissipation, staticFriction, dynamicFriction, viscousFriction), 0.001));
-	}
-
-	const SimTK::State& returnState = compoundSystem->realizeTopology();
-	return returnState;
-}
-
-						// CONTACT DEBUG
-			/*
-						int numForces = updWorld(currentWorldIx)->contactForces->getNumContactForces(currentAdvancedState);
-						SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->getDissipatedEnergy(currentAdvancedState);
-						bool hasDefaultForceGenerator = updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
-
-						const MultibodySystem & mbs = updWorld(currentWorldIx)->contactForces->getMultibodySystem();
-						int nofMobods = mbs.getMatterSubsystem().getNumBodies();
-
-						const ContactTrackerSubsystem & cts = updWorld(currentWorldIx)->contactForces->getContactTrackerSubsystem();
-						int ctsNofSurfaces = cts.getNumSurfaces();
-
-
-						std::cout << "CONTACT INFO:"
-							<< " #forces= " << numForces
-							<< " dissEnergy= " << dissEnergy
-							<< " hasDefaultForceGenerator= " << hasDefaultForceGenerator
-							<< " #mobods= " << nofMobods
-							<< " ctsNofSurfaces= " << ctsNofSurfaces
-						<< std::endl;
-			*/
-						// CONTACT DEBUG enD
 
 void World::loadCompoundRelatedMaps()
 {

@@ -2,9 +2,9 @@
 #define WORLD_H_
 
 /* -------------------------------------------------------------------------- *
- *		                       Robosampling                                 *
+ *		                       Robosampling                           *
  * -------------------------------------------------------------------------- *
- * This is part of Robosampling		                                       *
+ * This is part of Robosampling		                                      *
  */
 
 #include <iostream>
@@ -67,7 +67,7 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN);
  **/
 class World {
 public:
-	// --- Structural functions ---
+	// --- Structural functions ---   
 	/** Constructor **/
 	explicit World(int worldIndex, int requestedNofMols, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
@@ -100,31 +100,31 @@ public:
 	/** Adopts a topology **/
 	void adoptTopology(int which);
 
-	/** Assign a scale factor for generalized velocities to every mobilized
-	body **/
-	void setUScaleFactorsToMobods(void);
-
-	/** Add a membrane represented by a contact surface **/
-	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution);
-
-	/** Get the number of molecules **/
-	int getNofMolecules() const;
-
 	/** Calls CompoundSystem.modelCompounds and realizes Topology
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
-	/** Add contact surfaces to bodies **/
-	const SimTK::State& addContacts(int prmtopIndex);
+	/** Add a membrane represented by a contact surface **/
+	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution);
 
 	/** Add contact constraints to specific bodies **/
 	const SimTK::State& addConstraints(int prmtopIndex);
 
+	/** Add contact surfaces to bodies **/
+	const SimTK::State& addContacts(int prmtopIndex);
+
 	const SimTK::State& realizeTopology();
+
+	/** Assign a scale factor for generalized velocities to every mobilized
+	body **/
+	void setUScaleFactorsToMobods(void);
 
 	void loadCompoundRelatedMaps();
 
 	void loadMbx2AIxMap();
+
+	/** Get the number of molecules **/
+	int getNofMolecules() const;
 
 	// These are no longer needed TODO: delete
 	/** Get MobilizedBody to AtomIndex map **/
@@ -143,7 +143,7 @@ public:
 
 	//...............
 
-	// --- Mixing functions: Pass configurations among Worlds
+	// --- Inter-world functions: Pass configurations among Worlds
 	/** Get the current Compound Cartesian coords **/
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
