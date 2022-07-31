@@ -113,15 +113,21 @@ public:
 	/** Add contact surfaces to bodies **/
 	const SimTK::State& addContacts(int prmtopIndex);
 
+	/** Realize Topology for this World **/
 	const SimTK::State& realizeTopology();
 
 	/** Assign a scale factor for generalized velocities to every mobilized
 	body **/
 	void setUScaleFactorsToMobods(void);
 
+	/** Load CompoundAtomIndex to Gmolmodel atom index map **/
 	void loadCompoundRelatedMaps();
 
+	/** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 	void loadMbx2AIxMap();
+
+	/**  **/
+	void loadMobodsRelatedMaps();
 
 	/** Get the number of molecules **/
 	int getNofMolecules() const;
@@ -134,8 +140,9 @@ public:
 	/** Get the number of MobilizedBodies in this Compound **/
 	std::size_t getNofMobilizedBodies() const ;
 
-	//
-	void loadMobodsRelatedMaps();
+	/** Get U scale factor for the mobilized body **/
+	SimTK::Real getMobodUScaleFactor(SimTK::MobilizedBodyIndex& ) const;
+	//...............
 
 	/** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
 	 * maps **/
@@ -143,12 +150,22 @@ public:
 
 	//...............
 
+
 	// --- Inter-world functions: Pass configurations among Worlds
-	/** Get the current Compound Cartesian coords **/
+
+	/** Get the current Compound Cartesian coords.
+	* Return a 2D vector representing all the coordinates of this World.
+ 	* The first dimension represents the molecules (topologies) and the second
+ 	* dimension (inner) represents the coordinates. The second inner dimension
+ 	* type is pair of bSpecificAtom* and a Vec3. Thus, besides coordinates, it
+ 	* contains all the information in bSpecificAtom as well. The bottleneck here
+ 	* is the calcAtomLocationInGroundFrame from Compound.
+ 	**/
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
 		getAtomsLocationsInGround(const SimTK::State&);
 
+	/** Get the current Compound Cartesian coordinates using Simbody **/
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
 		getCurrentAtomsLocationsInGround(void);
@@ -230,10 +247,6 @@ public:
 
 	/** Return true if the Fixman torque flag is set **/
 	bool isUsingFixmanTorque() const;
-	//...............
-
-	/** Get U scale factor for the mobilized body **/
-	SimTK::Real getMobodUScaleFactor(SimTK::MobilizedBodyIndex& ) const;
 	//...............
 
 	// TODO: optimize to get

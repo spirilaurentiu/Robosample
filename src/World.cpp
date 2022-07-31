@@ -492,7 +492,10 @@ const ContactTrackerSubsystem & cts =
 int ctsNofSurfaces = cts.getNumSurfaces();
 
 std::cout << "CONTACT INFO:"
-	<< " #forces= " << numForces
+	<< " #forces= " << numForces	const SimTK::State& addContacts(int prmtopIndex);
+
+	const SimTK::State& realizeTopology();
+
 	<< " dissEnergy= " << dissEnergy
 	<< " hasDefaultForceGenerator= " << hasDefaultForceGenerator
 	<< " #mobods= " << nofMobods
@@ -502,6 +505,21 @@ std::cout << "CONTACT INFO:"
 // CONTACT DEBUG enD
 /** Assign a scale factor for generalized velocities to every mobilized
 body **/
+
+/** Realize Topology for this World **/
+const SimTK::State& World::realizeTopology()
+{
+	const SimTK::State& returnState = compoundSystem->realizeTopology();
+
+	// for ( unsigned int i = 0; i < this->topologies.size(); i++){
+	//    ((this->topologies)[i])->loadMobodsRelatedMaps();
+	// }
+
+	return returnState;
+}
+
+/** Assign a scale factor for generalized velocities to every mobilized 
+ body **/
 void World::setUScaleFactorsToMobods(void)
 {
 
@@ -543,43 +561,7 @@ void World::setUScaleFactorsToMobods(void)
 	}
 }
 
-/** Get U scale factor for the mobilized body **/
-SimTK::Real World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
-{
-	if(!mbx2uScale.empty()){
-		if(mbx2uScale.find(mbx) != mbx2uScale.end()){
-			return mbx2uScale.at(mbx);
-		}else{
-			std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
-			return 1;
-		}
-	}else{
-		return 1;
-	}
-}
-//...............
-
-
-// Get the number of molecules
-int World::getNofMolecules() const
-{
-	return (this->moleculeCount + 1);
-}
-
-
-const SimTK::State& World::realizeTopology()
-{
-	const SimTK::State& returnState = compoundSystem->realizeTopology();
-
-	// for ( unsigned int i = 0; i < this->topologies.size(); i++){
-	//    ((this->topologies)[i])->loadMobodsRelatedMaps();
-	// }
-
-	return returnState;
-}
-
-
-
+/** Load CompoundAtomIndex to Gmolmodel atom index map **/
 void World::loadCompoundRelatedMaps()
 {
 	//for (auto& topology : topologies){ // SAFE
@@ -617,6 +599,25 @@ void World::loadMbx2AIxMap(){
 
 }
 
+void World::loadMobodsRelatedMaps()
+{
+	//for (auto& topology : topologies){ // SAFE
+	for (auto& topology : (*topologies)){ // DANGER
+		topology.loadAIx2MbxMap();
+		loadMbx2AIxMap();
+		// topology.printMaps();
+	}
+}
+
+
+// Get the number of molecules
+int World::getNofMolecules() const
+{
+	return (this->moleculeCount + 1);
+}
+
+
+
 /** Get MobilizedBody to AtomIndex map **/
 std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
 World::getMbx2aIx(){
@@ -627,15 +628,32 @@ std::size_t World::getNofMobilizedBodies() const{
 	return mbx2aIx.size();
 }
 
-void World::loadMobodsRelatedMaps()
+/** Get U scale factor for the mobilized body **/
+SimTK::Real World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
 {
-	//for (auto& topology : topologies){ // SAFE
-	for (auto& topology : (*topologies)){ // DANGER
-		topology.loadAIx2MbxMap();
-		loadMbx2AIxMap();
-		// topology.printMaps();
+	if(!mbx2uScale.empty()){
+		if(mbx2uScale.find(mbx) != mbx2uScale.end()){
+			return mbx2uScale.at(mbx);
+		}else{
+			std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
+			return 1;
+		}
+	}else{
+		return 1;
 	}
 }
+
+void World::printMaps(void)
+{
+	for (auto& topology : (*topologies)){
+		topology.printMaps();
+	}
+}
+
+//===============================
+//
+//===============================
+
 
 /** Set up Fixman torque **/
 void World::addFixmanTorque()
