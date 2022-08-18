@@ -163,7 +163,8 @@ public:
  	**/
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
-		getAtomsLocationsInGround(const SimTK::State&);
+		getAtomsLocationsInGround(const SimTK::State&
+	);
 
 	/** Get the current Compound Cartesian coordinates using Simbody **/
 	std::vector<std::vector<

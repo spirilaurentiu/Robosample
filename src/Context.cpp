@@ -460,6 +460,17 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 
 }
 
+void Context::reserveWorldsAndTopologies( int inpNofWorlds, int inpNofMols,
+	int inpNofEmbeddedTopologies)
+{
+	nofWorlds = inpNofWorlds;
+	nofMols = inpNofMols;
+	nofEmbeddedTopologies = inpNofEmbeddedTopologies;
+
+	worlds.reserve(nofWorlds);
+	worldIndexes.reserve(nofWorlds);
+}
+
 // Input molecular files TODO : merge with loadCoordinatesFile
 bool Context::loadTopologyFile(std::string topologyFilename)
 {
@@ -1939,6 +1950,9 @@ void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
 	// Get the back world energy
 	SimTK::Real energy =
 		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
+
+	// Add the Fixman potential
+	energy += pHMC((worlds[frontWorldIx].samplers[0]))->fix_set;
 
 	// Set this replica's energy
 	replicas[replicaIx].setPotentialEnergy(energy);

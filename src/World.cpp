@@ -643,6 +643,7 @@ SimTK::Real World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
 	}
 }
 
+/** Print atom to MobilizedBodyIndex and bond to Compound::Bond index maps **/
 void World::printMaps(void)
 {
 	for (auto& topology : (*topologies)){
@@ -650,260 +651,24 @@ void World::printMaps(void)
 	}
 }
 
-//===============================
-//
-//===============================
-
-
-/** Set up Fixman torque **/
-void World::addFixmanTorque()
-{
-	// Set flag
-	assert(!isUsingFixmanTorque());
-	_useFixmanTorque = true;
-
-	// Alloc memory for FixmanTorque implementation and add to forces
-	// FixmanTorqueImpl = std::make_unique<FixmanTorque>(compoundSystem.get(), *matter);
-	// FixmanTorqueForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueImpl.get());
-
-	FixmanTorqueImpl = new FixmanTorque(compoundSystem.get(), *matter);
-	FixmanTorqueForce = new Force::Custom(*forces, FixmanTorqueImpl);
-	FixmanTorqueExtImpl = new FixmanTorqueExt(compoundSystem.get(), *matter);
-	FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);
-}
-
-/** Check if the Fixman torque flag is set **/
-bool World::isUsingFixmanTorque() const
-{
-	return _useFixmanTorque;
-}
-
-/** Get writble pointer to FixmanTorque implementation **/
-FixmanTorque * World::updFixmanTorque()
-{
-	assert(isUsingFixmanTorque());
-	// return FixmanTorqueImpl.get();
-	return FixmanTorqueImpl;
-}
-
-/** Get pointer to FixmanTorque implementation **/
-FixmanTorque * World::getFixmanTorque() const
-{
-	assert(isUsingFixmanTorque());
-	// return FixmanTorqueImpl.get();
-	return FixmanTorqueImpl;
-}
-
-// ----------------------
-// --- Thermodynamics ---
-// ----------------------
-
-/** Get the World temperature **/
-SimTK::Real World::getTemperature()
-{
-	return this->temperature;
-}
-
-/** Set this World temperature but also ths samplers and
-Fixman torque temperature. **/
-void World::setTemperature(SimTK::Real argTemperature)
-{
-	// Set the temperature for the samplers
-	for (auto& sampler: samplers) {
-		sampler->setTemperature(argTemperature);
-	}
-	// Set the temperature for this World
-	this->temperature = argTemperature;
-
-	// Set the temperature for the Fixman torque also
-	if(_useFixmanTorque){
-		FixmanTorqueImpl->setTemperature(this->temperature);
-		FixmanTorqueExtImpl->setTemperature(this->temperature);
-	}
-}
-//...............
-
-/** Set this World temperature but also ths samplers and
-Fixman torque temperature. **/
-void World::setBoostTemperature(SimTK::Real argTemperature)
-{
-	// Set the temperature for the samplers
-	for (auto& sampler: samplers) {
-		sampler->setBoostTemperature(argTemperature);
-	}
-}
-//...............
-
-//...................
-// --- Simulation ---
-//...................
-
-/** Get/Set seed for reproducibility. **/
-void World::setSeed(int whichSampler, uint32_t argSeed)
-{
-	samplers[whichSampler]->setSeed(argSeed);
-}
-
-uint32_t World::getSeed(int whichSampler) const
-{
-	return samplers[whichSampler]->getSeed();
-}
-
-
-/** Amber like scale factors. **/
-void World::setAmberForceFieldScaleFactors()
-{
-	forceField->setVdw12ScaleFactor(0.0);
-	forceField->setVdw13ScaleFactor(0.0);
-	forceField->setVdw14ScaleFactor(0.5); // RESTORE from OpenMM
-	//forceField->setVdw14ScaleFactor(0.0); // for OpenMM
-	forceField->setVdw15ScaleFactor(1.0);
-
-	//* RESTORE SAFETY
-	forceField->setCoulomb12ScaleFactor(0.0);
-	forceField->setCoulomb13ScaleFactor(0.0);
-	forceField->setCoulomb14ScaleFactor(0.8333333333); // RESTORE from OpenMM
-	//forceField->setCoulomb14ScaleFactor(0.0); // for OpenMM
-	forceField->setCoulomb15ScaleFactor(1.0);
-	//forceField->setVdwMixingRule(
-	//       SimTK::DuMMForceFieldSubsystem::LorentzBerthelot); */
-
- 	/* DANGER ! no electrostatics
-	forceField->setCoulomb12ScaleFactor(0.0);
-	forceField->setCoulomb13ScaleFactor(0.0);
-	forceField->setCoulomb14ScaleFactor(0.0);
-	forceField->setCoulomb15ScaleFactor(0.0);
-	// */
-}
-
-/** Set a global scaling factor for all the terms in the forcefield **/
-void World::setGlobalForceFieldScaleFactor(SimTK::Real scaleFactor)
-{
-	forceField->setBondStretchGlobalScaleFactor(scaleFactor);
-	forceField->setBondBendGlobalScaleFactor(scaleFactor);
-	forceField->setBondTorsionGlobalScaleFactor(scaleFactor);
-	forceField->setAmberImproperTorsionGlobalScaleFactor(scaleFactor);
-
-	forceField->setVdw12ScaleFactor(scaleFactor);
-	forceField->setVdw13ScaleFactor(scaleFactor);
-	forceField->setVdw14ScaleFactor(scaleFactor);
-	forceField->setVdw15ScaleFactor(scaleFactor);
-	forceField->setVdwGlobalScaleFactor(scaleFactor);
-
-	forceField->setCoulomb12ScaleFactor(scaleFactor);
-	forceField->setCoulomb13ScaleFactor(scaleFactor);
-	forceField->setCoulomb14ScaleFactor(scaleFactor);
-	forceField->setCoulomb15ScaleFactor(scaleFactor);
-	forceField->setCoulombGlobalScaleFactor(scaleFactor);
-
-
-//	std::cout << "GLOBAL SCALE FACTORS SET TO 0.0\n";
-//	forceField->setBondTorsionGlobalScaleFactor(0);
-//	forceField->setAmberImproperTorsionGlobalScaleFactor(0);
-//
-//	forceField->setVdw12ScaleFactor(0);
-//	forceField->setVdw13ScaleFactor(0);
-//	forceField->setVdw14ScaleFactor(0);
-//	forceField->setVdw15ScaleFactor(0);
-//	forceField->setVdwGlobalScaleFactor(0);
-//
-//	forceField->setCoulomb12ScaleFactor(0);
-//	forceField->setCoulomb13ScaleFactor(0);
-//	forceField->setCoulomb14ScaleFactor(0);
-//	forceField->setCoulomb15ScaleFactor(0);
-//	forceField->setCoulombGlobalScaleFactor(0);
-
-
-
-}
-
-/** Set GBSA implicit solvent scale factor. **/
-void World::setGbsaGlobalScaleFactor(SimTK::Real scaleFactor)
-{
-	forceField->setGbsaGlobalScaleFactor(scaleFactor);
-}
-
-/** Get a writeble pointer to the DuMM force field **/
-SimTK::DuMMForceFieldSubsystem * World::updForceField()
-{
-	return forceField.get();
-}
-
-//...................
-// --- Statistics ---
-//...................
-
-/** How many samples do we have so far **/
-std::size_t World::getNofSamples() const
-{
-	// Zero it every time the user asks
-	std::size_t nofSamples = 0;
-
-	// Gather samples from all the samplers
-	for(size_t i = 0; i < samplers.size(); i++){
-		nofSamples += (samplers[i])->getNofSamples();
-	}
-
-	return nofSamples;
-}
-
-/** How many Samplers does this World have. **/
-std::size_t World::getNofSamplers() const
-{
-	return samplers.size();
-}
-
-/** Add a sampler to this World using the specialized struct
-for samplers names. **/
-BaseSampler * World::addSampler(SamplerName samplerName)
-{
-	if(samplerName == SamplerName::HMC) {
-        	samplers.emplace_back(std::make_unique<HMCSampler>(this
-			, compoundSystem.get(), matter.get(), (*topologies)
-			, forceField.get(), forces.get()
-			, ts.get()));
-	} /*else if (samplerName == SamplerName::LAHMC) {
-        samplers.emplace_back(std::make_unique<LAHMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get(), 4));
-	}*/
-
-	return samplers.back().get();
-}
-
-// Get a sampler based on its position in the samplers vector
-// TODO Use ampler polymorphism (was const BaseSampler *)
-BaseSampler * World::getSampler(std::size_t which) const
-{
-	return samplers[which].get();
-}
-
-// Get a writable sampler based on its position in the samplers vector
-// TODO Use Sampler polymorphism
-BaseSampler * World::updSampler(std::size_t which)
-{
-	return samplers[which].get();
-}
-
-/** Get a const reference to a molecule **/
-const Topology& World::getTopology(std::size_t moleculeNumber) const{
-	return (*topologies)[moleculeNumber];
-}
-
-/** Get a writble reference to the last molecule. **/
-Topology& World::updTopology(std::size_t moleculeNumber){
-	//return *topologies.back();
-	return (*topologies)[moleculeNumber];
-}
-
-/** Return a 2D vector representing all the coordinates of this World.
+//==============================================================================
+//                             2. Inter-world functions.
+//==============================================================================
+// Pass configurations between Worlds
+/** Get the current Compound Cartesian coords.
+* Return a 2D vector representing all the coordinates of this World.
  * The first dimension represents the molecules (topologies) and the second
  * dimension (inner) represents the coordinates. The second inner dimension
  * type is pair of bSpecificAtom* and a Vec3. Thus, besides coordinates, it
  * contains all the information in bSpecificAtom as well. The bottleneck here
  * is the calcAtomLocationInGroundFrame from Compound.
  **/
+
 std::vector< std::vector<
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
-World::getAtomsLocationsInGround(const SimTK::State & state)
+World::getAtomsLocationsInGround(
+	const SimTK::State & state
+)
 {
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> returnVector;
 
@@ -1021,7 +786,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 		}
 	}
 	std::cout << std::flush;
-	//*/
+	// */
 
 	// Get the total no of bodies in this world (each World has its own
 	// SimbodyMatterSubsystem)
@@ -1400,6 +1165,245 @@ World::calcMobodToMobodTransforms(
 	//Transform oldX_MB = ~oldX_BM;
 	//Transform oldX_FM = InboardDihedral_ZAxis;
 	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
+}
+
+/** Set up Fixman torque **/
+void World::addFixmanTorque()
+{
+	// Set flag
+	assert(!isUsingFixmanTorque());
+	_useFixmanTorque = true;
+
+	// Alloc memory for FixmanTorque implementation and add to forces
+	// FixmanTorqueImpl = std::make_unique<FixmanTorque>(compoundSystem.get(), *matter);
+	// FixmanTorqueForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueImpl.get());
+
+	FixmanTorqueImpl = new FixmanTorque(compoundSystem.get(), *matter);
+	FixmanTorqueForce = new Force::Custom(*forces, FixmanTorqueImpl);
+	FixmanTorqueExtImpl = new FixmanTorqueExt(compoundSystem.get(), *matter);
+	FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);
+}
+
+/** Check if the Fixman torque flag is set **/
+bool World::isUsingFixmanTorque() const
+{
+	return _useFixmanTorque;
+}
+
+/** Get writble pointer to FixmanTorque implementation **/
+FixmanTorque * World::updFixmanTorque()
+{
+	assert(isUsingFixmanTorque());
+	// return FixmanTorqueImpl.get();
+	return FixmanTorqueImpl;
+}
+
+/** Get pointer to FixmanTorque implementation **/
+FixmanTorque * World::getFixmanTorque() const
+{
+	assert(isUsingFixmanTorque());
+	// return FixmanTorqueImpl.get();
+	return FixmanTorqueImpl;
+}
+
+// ----------------------
+// --- Thermodynamics ---
+// ----------------------
+
+/** Get the World temperature **/
+SimTK::Real World::getTemperature()
+{
+	return this->temperature;
+}
+
+/** Set this World temperature but also ths samplers and
+Fixman torque temperature. **/
+void World::setTemperature(SimTK::Real argTemperature)
+{
+	// Set the temperature for the samplers
+	for (auto& sampler: samplers) {
+		sampler->setTemperature(argTemperature);
+	}
+	// Set the temperature for this World
+	this->temperature = argTemperature;
+
+	// Set the temperature for the Fixman torque also
+	if(_useFixmanTorque){
+		FixmanTorqueImpl->setTemperature(this->temperature);
+		FixmanTorqueExtImpl->setTemperature(this->temperature);
+	}
+}
+//...............
+
+/** Set this World temperature but also ths samplers and
+Fixman torque temperature. **/
+void World::setBoostTemperature(SimTK::Real argTemperature)
+{
+	// Set the temperature for the samplers
+	for (auto& sampler: samplers) {
+		sampler->setBoostTemperature(argTemperature);
+	}
+}
+//...............
+
+//...................
+// --- Simulation ---
+//...................
+
+/** Get/Set seed for reproducibility. **/
+void World::setSeed(int whichSampler, uint32_t argSeed)
+{
+	samplers[whichSampler]->setSeed(argSeed);
+}
+
+uint32_t World::getSeed(int whichSampler) const
+{
+	return samplers[whichSampler]->getSeed();
+}
+
+
+/** Amber like scale factors. **/
+void World::setAmberForceFieldScaleFactors()
+{
+	forceField->setVdw12ScaleFactor(0.0);
+	forceField->setVdw13ScaleFactor(0.0);
+	forceField->setVdw14ScaleFactor(0.5); // RESTORE from OpenMM
+	//forceField->setVdw14ScaleFactor(0.0); // for OpenMM
+	forceField->setVdw15ScaleFactor(1.0);
+
+	//* RESTORE SAFETY
+	forceField->setCoulomb12ScaleFactor(0.0);
+	forceField->setCoulomb13ScaleFactor(0.0);
+	forceField->setCoulomb14ScaleFactor(0.8333333333); // RESTORE from OpenMM
+	//forceField->setCoulomb14ScaleFactor(0.0); // for OpenMM
+	forceField->setCoulomb15ScaleFactor(1.0);
+	//forceField->setVdwMixingRule(
+	//       SimTK::DuMMForceFieldSubsystem::LorentzBerthelot); */
+
+ 	/* DANGER ! no electrostatics
+	forceField->setCoulomb12ScaleFactor(0.0);
+	forceField->setCoulomb13ScaleFactor(0.0);
+	forceField->setCoulomb14ScaleFactor(0.0);
+	forceField->setCoulomb15ScaleFactor(0.0);
+	// */
+}
+
+/** Set a global scaling factor for all the terms in the forcefield **/
+void World::setGlobalForceFieldScaleFactor(SimTK::Real scaleFactor)
+{
+	forceField->setBondStretchGlobalScaleFactor(scaleFactor);
+	forceField->setBondBendGlobalScaleFactor(scaleFactor);
+	forceField->setBondTorsionGlobalScaleFactor(scaleFactor);
+	forceField->setAmberImproperTorsionGlobalScaleFactor(scaleFactor);
+
+	forceField->setVdw12ScaleFactor(scaleFactor);
+	forceField->setVdw13ScaleFactor(scaleFactor);
+	forceField->setVdw14ScaleFactor(scaleFactor);
+	forceField->setVdw15ScaleFactor(scaleFactor);
+	forceField->setVdwGlobalScaleFactor(scaleFactor);
+
+	forceField->setCoulomb12ScaleFactor(scaleFactor);
+	forceField->setCoulomb13ScaleFactor(scaleFactor);
+	forceField->setCoulomb14ScaleFactor(scaleFactor);
+	forceField->setCoulomb15ScaleFactor(scaleFactor);
+	forceField->setCoulombGlobalScaleFactor(scaleFactor);
+
+
+//	std::cout << "GLOBAL SCALE FACTORS SET TO 0.0\n";
+//	forceField->setBondTorsionGlobalScaleFactor(0);
+//	forceField->setAmberImproperTorsionGlobalScaleFactor(0);
+//
+//	forceField->setVdw12ScaleFactor(0);
+//	forceField->setVdw13ScaleFactor(0);
+//	forceField->setVdw14ScaleFactor(0);
+//	forceField->setVdw15ScaleFactor(0);
+//	forceField->setVdwGlobalScaleFactor(0);
+//
+//	forceField->setCoulomb12ScaleFactor(0);
+//	forceField->setCoulomb13ScaleFactor(0);
+//	forceField->setCoulomb14ScaleFactor(0);
+//	forceField->setCoulomb15ScaleFactor(0);
+//	forceField->setCoulombGlobalScaleFactor(0);
+
+
+
+}
+
+/** Set GBSA implicit solvent scale factor. **/
+void World::setGbsaGlobalScaleFactor(SimTK::Real scaleFactor)
+{
+	forceField->setGbsaGlobalScaleFactor(scaleFactor);
+}
+
+/** Get a writeble pointer to the DuMM force field **/
+SimTK::DuMMForceFieldSubsystem * World::updForceField()
+{
+	return forceField.get();
+}
+
+//...................
+// --- Statistics ---
+//...................
+
+/** How many samples do we have so far **/
+std::size_t World::getNofSamples() const
+{
+	// Zero it every time the user asks
+	std::size_t nofSamples = 0;
+
+	// Gather samples from all the samplers
+	for(size_t i = 0; i < samplers.size(); i++){
+		nofSamples += (samplers[i])->getNofSamples();
+	}
+
+	return nofSamples;
+}
+
+/** How many Samplers does this World have. **/
+std::size_t World::getNofSamplers() const
+{
+	return samplers.size();
+}
+
+/** Add a sampler to this World using the specialized struct
+for samplers names. **/
+BaseSampler * World::addSampler(SamplerName samplerName)
+{
+	if(samplerName == SamplerName::HMC) {
+        	samplers.emplace_back(std::make_unique<HMCSampler>(this
+			, compoundSystem.get(), matter.get(), (*topologies)
+			, forceField.get(), forces.get()
+			, ts.get()));
+	} /*else if (samplerName == SamplerName::LAHMC) {
+        samplers.emplace_back(std::make_unique<LAHMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get(), 4));
+	}*/
+
+	return samplers.back().get();
+}
+
+// Get a sampler based on its position in the samplers vector
+// TODO Use ampler polymorphism (was const BaseSampler *)
+BaseSampler * World::getSampler(std::size_t which) const
+{
+	return samplers[which].get();
+}
+
+// Get a writable sampler based on its position in the samplers vector
+// TODO Use Sampler polymorphism
+BaseSampler * World::updSampler(std::size_t which)
+{
+	return samplers[which].get();
+}
+
+/** Get a const reference to a molecule **/
+const Topology& World::getTopology(std::size_t moleculeNumber) const{
+	return (*topologies)[moleculeNumber];
+}
+
+/** Get a writble reference to the last molecule. **/
+Topology& World::updTopology(std::size_t moleculeNumber){
+	//return *topologies.back();
+	return (*topologies)[moleculeNumber];
 }
 
 // TODO: optimize to get

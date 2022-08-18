@@ -306,6 +306,8 @@ public:
 
 private:
 	void CheckInputParameters(const SetupReader& setupReader);
+	void reserveWorldsAndTopologies(int inpNofWorlds, int inpNofMols,
+		int inpNofEmbeddedTopologies);
 
 	std::vector<World> worlds;
 
