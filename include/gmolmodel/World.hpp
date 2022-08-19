@@ -67,7 +67,7 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN);
  **/
 class World {
 public:
-	// --- Structural functions ---   
+	// --- Structural functions ---
 	/** Constructor **/
 	explicit World(int worldIndex, int requestedNofMols, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
@@ -252,6 +252,9 @@ public:
 
 	// TODO: optimize to get
 	SimTK::Real CalcFullPotentialEnergyIncludingRigidBodies(void);
+
+	// Calculate Fixman potential
+	SimTK::Real calcFixman();
 
 	/** Generate a number of samples **/
 	int generateSamples(int howMany, int NMAOption);

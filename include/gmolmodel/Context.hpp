@@ -270,6 +270,14 @@ public:
 	// Set the intial mapping between replicas and thermoStates
 	void loadReplica2ThermoIxs(void);
 
+	// Get Fixman potential already calculated from replica
+	SimTK::Real getFixman(int replica_i);
+
+	// Calculate Fixman potential in replica i back world for
+	// coordinates in replica j's buffer
+	SimTK::Real calcFixman(int replica_i, int replica_j);
+
+	// It actually exchanging thermodynamic states
 	bool attemptSwap(int replica_i, int replica_j);
 
 	const int getSwapEvery(void);
@@ -290,7 +298,11 @@ public:
 	// Get ennergy of the back world and store it in replica thisReplica
 	void storeReplicaEnergyFromBack(int thisReplica);
 
+    // Get ennergy of the front world and store it in replica thisReplica
 	void storeReplicaEnergyFromFrontFull(int thisReplica);
+
+	// Get Fixman of the back world and store it in replica thisReplica
+    void storeReplicaFixmanFromBack(int replicaIx);
 
 	void initializeReplica(int whichReplica);
 

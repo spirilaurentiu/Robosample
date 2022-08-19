@@ -443,7 +443,7 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 const SimTK::State& World::addContacts(int prmtopIx)
 {
 	if(prmtopIx >= 0){
-		std::cout << 
+		std::cout <<
 			"Adding contacts with membrane to atom with prmtop index " <<
 		 prmtopIx << "\n" ;
 
@@ -455,7 +455,7 @@ const SimTK::State& World::addContacts(int prmtopIx)
 
 		SimTK::MobilizedBodyIndex
 		mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(
-			SimTK::Compound::AtomIndex(prmtopIx), *forceField); 
+			SimTK::Compound::AtomIndex(prmtopIx), *forceField);
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 		ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 2));
 
@@ -483,7 +483,7 @@ SimTK::Real dissEnergy = updWorld(currentWorldIx)->contactForces->
 bool hasDefaultForceGenerator =
 	updWorld(currentWorldIx)->contactForces->hasDefaultForceGenerator();
 
-const MultibodySystem & mbs = 
+const MultibodySystem & mbs =
 	updWorld(currentWorldIx)->contactForces->getMultibodySystem();
 int nofMobods = mbs.getMatterSubsystem().getNumBodies();
 
@@ -518,7 +518,7 @@ const SimTK::State& World::realizeTopology()
 	return returnState;
 }
 
-/** Assign a scale factor for generalized velocities to every mobilized 
+/** Assign a scale factor for generalized velocities to every mobilized
  body **/
 void World::setUScaleFactorsToMobods(void)
 {
@@ -1414,6 +1414,16 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 
 	// Set old potential energy of the new world via OpenMM
 	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+}
+
+// Calculate Fixman potential
+SimTK::Real World::calcFixman(void)
+{
+    std::cout << "WORLD::calcFixman " << std::flush;
+    SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	SimTK::Real Fixman = updSampler(0)->calcFixman(currentAdvancedState);
+	std::cout << Fixman << std::endl << std::flush;
+	return Fixman;
 }
 
 // Generate a number of samples

@@ -177,6 +177,9 @@ class Replica{
 	const SimTK::Real getPotentialEnergy(void){return potential;}
 	void setPotentialEnergy(const SimTK::Real& somePotential){potential = somePotential;}
 
+    const SimTK::Real getFixman(void){return FixmanPotential;}
+	void setFixman(const SimTK::Real& somePotential){FixmanPotential = somePotential;}
+
 	void Print(void){}
 	void PrintCoordinates(void);
 
@@ -195,6 +198,7 @@ class Replica{
 
 	// Replica potential energy
 	SimTK::Real potential; // TODO: turn into a vector for worlds
+	SimTK::Real FixmanPotential;
 };
 
 Replica::Replica()
@@ -1720,6 +1724,59 @@ void Context::PrintReplicaMaps(void){
 
 }
 
+// Get Fixman potential already calculated from replica
+SimTK::Real Context::getFixman(int replica_i)
+{
+    return replicas[replica_i].getFixman();
+}
+
+// Calculate Fixman potential in replica i back world for
+// coordinates in replica j's buffer
+SimTK::Real Context::calcFixman(int replica_i, int replica_j)
+{
+	SimTK::Real Ui = replicas[replica_i].getFixman();
+
+	if (replica_i == replica_j){ // same replica
+        std::cout << "SAME REPLICAS\n" << std::endl << std::flush;
+		return Ui;
+	}else if(Ui <= 0.0000001){ // fully flexible world
+        std::cout << "FULLY FLEXIBLE REPLICA\n" << std::endl << std::flush;
+		return Ui;
+	}else{
+        std::cout << "CALC FIXMAN\n" << std::endl << std::flush;
+
+		// Get replica i thermodynamic state
+        int thermoState_i = replica2ThermoIxs[replica_i];
+
+		// Get replica j back world
+        int world_i = thermodynamicStates[thermoState_i].getWorldIndexes().back();
+        std::cout << "WORLD INDEX " << world_i << std::endl << std::flush;
+
+		// Get coordinates from replica j
+		const std::vector<std::vector<
+            std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		X_j = replicas[replica_j].getAtomsLocationsInGround();
+
+		// Transfer coordinates from j to i
+
+        SimTK::State& state = (worlds[world_i].integ)->updAdvancedState();
+        worlds[world_i].setAtomsLocationsInGround(state, X_j);
+
+		// Calculate Fixman in replica i back world
+		SimTK::Real Fixman = worlds[world_i].calcFixman();
+		std::cout << "CONTEXT FIXMAN " << Fixman << std::endl << std::flush;
+
+		// Transfer buffer coordinates of replica i
+		// back to back world
+		restoreReplicaCoordinatesToFront(replica_i);
+
+		// Return
+		return Fixman;
+	}
+
+}
+
+
 // Attempt swap between replicas r_i and r_j
 // Code inspired from OpenmmTools
 // Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
@@ -1727,7 +1784,6 @@ void Context::PrintReplicaMaps(void){
 //, 135:194110, 2011. DOI:10.1063/1.3660669
 bool Context::attemptSwap(int replica_i, int replica_j)
 {
-
 	bool returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
@@ -1754,9 +1810,43 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 	SimTK::Real Eji = thermodynamicStates[thermoState_i].getBeta()
 		* replicas[replica_j].getPotentialEnergy();
 
-	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
+	// Include the Fixman term if indicated
+	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
+	int ndofs_i = 0, ndofs_j = 0;
 
-	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+	ndofs_i = worlds[
+		thermodynamicStates[thermoState_i].getWorldIndexes().back()
+	].matter->getNumMobilities();
+	ndofs_j = worlds[
+		thermodynamicStates[thermoState_j].getWorldIndexes().back()
+	].matter->getNumMobilities();
+	std::cout << "NDOFS: " << ndofs_i << " " << ndofs_j << std::endl;
+
+	if (ndofs_i != ndofs_j){
+		// Replica i reduced Fixman potential of state i
+		Uii = thermodynamicStates[thermoState_i].getBeta()
+			* calcFixman(replica_i, replica_i);
+
+		// Replica j reduced Fixman potential of state j
+		Ujj = thermodynamicStates[thermoState_j].getBeta()
+			* calcFixman(replica_j, replica_j);
+
+		// Replica i reduced Fixman potential of state j
+		Uij = thermodynamicStates[thermoState_j].getBeta()
+			* calcFixman(replica_i, replica_j);
+
+		// Replica j reduced Fixman potential of state i
+		Uji = thermodynamicStates[thermoState_i].getBeta()
+			* calcFixman(replica_j, replica_i);
+	}else{
+		Uii = Ujj = Uij = Uji = 0;
+	}
+
+	std::cout << "Uii Ujj Uij Uji " << Uii << " " << Ujj
+        << " " << Uij << " " << Uji << std::endl;
+
+	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
+	log_p_accept            += -1.0 * (Uij + Uji) + Uii + Ujj;
 
 	//std::cout << "Replicas energies = "
 	//	<< replicas[replica_i].getPotentialEnergy() << " "
@@ -1764,7 +1854,8 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 	//	<< std::endl;
 	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
-	// Acceptance criterion
+	// Apply acceptance criterion
+	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
 		// Record this swap
@@ -1936,26 +2027,43 @@ void Context::storeReplicaEnergyFromBack(int replicaIx)
 	replicas[replicaIx].setPotentialEnergy(energy);
 }
 
-// Get ennergy of the back world and store it in replica thisReplica
+// Get ennergy of the front world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thermoIx = replica2ThermoIxs[replicaIx];
 
-	// Get the index of the back world
+	// Get the index of the front world
 	int frontWorldIx =
 		thermodynamicStates[thermoIx].getWorldIndexes().front();
 
-	// Get the back world energy
+	// Get the front world energy
 	SimTK::Real energy =
 		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
 
-	// Add the Fixman potential
-	energy += pHMC((worlds[frontWorldIx].samplers[0]))->fix_set;
+	// Add the Fixman potential to the energy (DANGEROUS)
+	//energy += pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
 
 	// Set this replica's energy
 	replicas[replicaIx].setPotentialEnergy(energy);
+
+}
+
+// Get Fixman of the back world and store it in replica thisReplica
+void Context::storeReplicaFixmanFromBack(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[replicaIx];
+
+    // Get the index of the front world
+	int backWorldIx =
+    thermodynamicStates[thermoIx].getWorldIndexes().back();
+
+    // Set this replica's Fixman potential
+    SimTK::Real U = pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
+	replicas[replicaIx].setFixman(U);
 }
 
 void Context::initializeReplica(int thisReplica)
@@ -2191,6 +2299,7 @@ void Context::RunREX(void)
 
 			// Store energy
 			storeReplicaEnergyFromFrontFull(replicaIx);
+			storeReplicaFixmanFromBack(replicaIx);
 
 			PrintToLog(worldIndexes.front());
 
@@ -2223,6 +2332,7 @@ void Context::RunREX(void)
 
 			// STORE energy
 			storeReplicaEnergyFromFrontFull(replicaIx);
+            storeReplicaFixmanFromBack(replicaIx);
 
 			// Write energy and geometric features to logfile
 			if( !(mixi % getPrintFreq()) ){
