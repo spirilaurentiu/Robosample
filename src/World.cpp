@@ -921,6 +921,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 					locs[int(aIx)] = root_X_child.p();
 				}
 			}
+std::cout << "World::setAtoms " << 5 << std::endl << std::flush;
 
 			//std::cout << "MORE COMPOUND FOR DUMM done" << "\n" << std::flush;
 
@@ -959,6 +960,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 				//std::cout << "bsetAtomPl " << "\n" << std::flush;
 
 			} /////////////////////////
+std::cout << "World::setAtoms " << 10 << std::endl << std::flush;
 
 			//std::cout << "DUMM done" << "\n" << std::flush;
 
@@ -995,7 +997,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 						//		*forceField,	// DANGER
 						//		ownWorldIndex);	// DANGER
 
-						//std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
+						std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
 
 						std::vector<SimTK::Transform> mobodTs = // DANGER
 							calcMobodToMobodTransforms( // DANGER
@@ -1003,7 +1005,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 								aIx,		// DANGER
 								someState);	// DANGER
 
-						//std::cout << "calcMobodTransforms for atom " << aIx << " done\n" << std::flush;
+						std::cout << "calcMobodTransforms for atom " << aIx << " done\n" << std::flush;
 
 						mobod.setDefaultInboardFrame(mobodTs[0]);
 						mobod.setDefaultOutboardFrame(mobodTs[1]);
@@ -1015,6 +1017,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 					}
 				} // END atom is at body's origin
 			} // END loop through atoms
+std::cout << "World::setAtoms " << 15 << std::endl << std::flush;
 
 			//std::cout << "mobod transforms done " << "\n" << std::flush;
 
@@ -1037,6 +1040,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 			//std::cout << "realizeTopology done" << "\n" << std::flush;
 		} // END TD regimen and all regimens
+std::cout << "World::setAtoms " << 20 << std::endl << std::flush;
 
 	} // END iterating through molecules/topologies
 
@@ -1077,10 +1081,14 @@ World::calcMobodToMobodTransforms(
 
 	// There is no P_X_F and B_X_M inside a body.
 	assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
+std::cout << "World::calcMobodToMobod " << 1 << std::endl << std::flush;
 
 	// Get body, parentBody
 	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+std::cout << "World::calcMobodToMobod " << 2 << " mbx " << int(mbx)<< std::endl << std::flush;
+
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+std::cout << "World::calcMobodToMobod " << 3 << " mbx mass props " << mobod.getBodyMassProperties(someState).getMass() << std::endl;
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
@@ -1419,10 +1427,10 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 // Calculate Fixman potential
 SimTK::Real World::calcFixman(void)
 {
-    std::cout << "WORLD::calcFixman " << std::flush;
     SimTK::State& currentAdvancedState = integ->updAdvancedState();
+    updateAtomListsFromCompound(currentAdvancedState);
 	SimTK::Real Fixman = updSampler(0)->calcFixman(currentAdvancedState);
-	std::cout << Fixman << std::endl << std::flush;
+	std::cout << "World::calcFixman " << Fixman << std::endl << std::flush;
 	return Fixman;
 }
 

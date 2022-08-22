@@ -1730,45 +1730,53 @@ SimTK::Real Context::getFixman(int replica_i)
     return replicas[replica_i].getFixman();
 }
 
-// Calculate Fixman potential in replica i back world for
+// Calculate Fixman potential in replica i's back world for
 // coordinates in replica j's buffer
 SimTK::Real Context::calcFixman(int replica_i, int replica_j)
 {
 	SimTK::Real Ui = replicas[replica_i].getFixman();
 
 	if (replica_i == replica_j){ // same replica
-        std::cout << "SAME REPLICAS\n" << std::endl << std::flush;
+        std::cout << "Context::calcFixman  SAME REPLICAS" << std::endl << std::flush;
 		return Ui;
 	}else if(Ui <= 0.0000001){ // fully flexible world
-        std::cout << "FULLY FLEXIBLE REPLICA\n" << std::endl << std::flush;
+        std::cout << "Context::calcFixman  FULLY FLEXIBLE REPLICA" << std::endl << std::flush;
 		return Ui;
 	}else{
-        std::cout << "CALC FIXMAN\n" << std::endl << std::flush;
+        std::cout << "Context::calcFixman  CALC FIXMAN" << std::endl << std::flush;
 
 		// Get replica i thermodynamic state
         int thermoState_i = replica2ThermoIxs[replica_i];
 
 		// Get replica j back world
         int world_i = thermodynamicStates[thermoState_i].getWorldIndexes().back();
-        std::cout << "WORLD INDEX " << world_i << std::endl << std::flush;
+        std::cout << "Context::calcFixman REPLICA " << replica_i << " BACK WORLD INDEX " << world_i << std::endl << std::flush;
 
 		// Get coordinates from replica j
 		const std::vector<std::vector<
             std::pair <bSpecificAtom *, SimTK::Vec3>>>&
 		X_j = replicas[replica_j].getAtomsLocationsInGround();
+        std::cout << "Context::calcFixman GOT REPLICA " << replica_j << " BUFFER " << std::endl << std::flush;
 
 		// Transfer coordinates from j to i
-
         SimTK::State& state = (worlds[world_i].integ)->updAdvancedState();
+        std::cout << "Context::calcFixman GOT INTEG I ADVANCED STATE " << world_i << std::endl << std::flush;
+
+        // Pass compounds to the new world
+        passTopologiesToNewWorld(world_i);
+
         worlds[world_i].setAtomsLocationsInGround(state, X_j);
+        std::cout << "Context::calcFixman SET WORLD " << world_i << " LOCS " << std::endl << std::flush;
 
 		// Calculate Fixman in replica i back world
 		SimTK::Real Fixman = worlds[world_i].calcFixman();
-		std::cout << "CONTEXT FIXMAN " << Fixman << std::endl << std::flush;
+		std::cout << "Context::calcFixman CONTEXT "  << replica_i << " FIXMAN " << Fixman << std::endl << std::flush;
 
 		// Transfer buffer coordinates of replica i
 		// back to back world
+		passTopologiesToNewWorld(thermodynamicStates[thermoState_i].getWorldIndexes().front());
 		restoreReplicaCoordinatesToFront(replica_i);
+		std::cout << "Context::calcFixman RESTORED " << replica_i << " COORDS TO FRONT \n" << std::flush;
 
 		// Return
 		return Fixman;
@@ -2307,7 +2315,7 @@ void Context::RunREX(void)
 	}
 
 	// Mix replicas
-	mixReplicas();
+	//mixReplicas();
 
 	PrintNofAcceptedSwapsMatrix();
 
