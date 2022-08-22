@@ -487,6 +487,8 @@ int main(int argc, char **argv)
 		// How many Gibbs rounds until replica swpas occurs
 		context.setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
 
+		context.setSwapFixman(std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]));
+
 	}
 
 	// -- Run --

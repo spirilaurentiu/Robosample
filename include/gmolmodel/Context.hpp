@@ -277,6 +277,9 @@ public:
 	// coordinates in replica j's buffer
 	SimTK::Real calcFixman(int replica_i, int replica_j);
 
+	const int& getSwapFixman(void){return swapFixman;}
+	void setSwapFixman(const int argSwapFixman){swapFixman = argSwapFixman;}
+
 	// It actually exchanging thermodynamic states
 	bool attemptSwap(int replica_i, int replica_j);
 
@@ -290,6 +293,9 @@ public:
 
 	// Load replica's atomLocations into it's front world
 	void restoreReplicaCoordinatesToFront(int whichReplica);
+
+	// Load replica's atomLocations into it's back world
+    void restoreReplicaCoordinatesToBack(int whichReplica);
 
 	// Stores replica's front world's coordinates into it's atomsLocations
 	// This should always be a fully flexible world
@@ -415,6 +421,8 @@ private:
 	size_t nofReplicas;
 	size_t nofThermodynamicStates;
 	ReplicaMixingScheme replicaMixingScheme;
+
+	int swapFixman;
 
 
 	std::random_device rd;
