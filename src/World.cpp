@@ -1420,7 +1420,7 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 SimTK::Real World::calcFixman(void)
 {
     SimTK::State& currentAdvancedState = integ->updAdvancedState();
-    //updateAtomListsFromCompound(currentAdvancedState);
+    updateAtomListsFromCompound(currentAdvancedState); // for det(MBAT)
 	SimTK::Real Fixman = updSampler(0)->calcFixman(currentAdvancedState);
 	return Fixman;
 }

@@ -289,8 +289,9 @@ void Replica::PrintCoordinates(void)
 			std::cout
 			//<< (atomCoordinates.first)->inName
 			<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
-			<< atomCoordinates.second
-			<< std::endl;
+			<< atomCoordinates.second[0] << " "
+			<< atomCoordinates.second[1] << " "
+			<< atomCoordinates.second[2] << std::endl;
 		}
 	}
 }
@@ -516,6 +517,22 @@ bool Context::loadCoordinatesFile(std::string coordinatesFilename)
 	//crdFNs[whichWorld].push_back(coordinatesFilename);
 	crdFNs.push_back(coordinatesFilename);
 	return true;
+}
+
+void Context::PrintCoordinates(
+    const std::vector<std::vector
+    <std::pair <bSpecificAtom *, SimTK::Vec3>>>& atomsLocations)
+{
+	for(auto& topology : atomsLocations){
+		for(auto& atomCoordinates : topology){
+			std::cout
+			//<< (atomCoordinates.first)->inName
+			<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
+			<< atomCoordinates.second[0] << " "
+			<< atomCoordinates.second[1] << " "
+			<< atomCoordinates.second[2] << std::endl;
+		}
+	}
 }
 
 // TODO merge with loadFlexibleBondsSpecs
@@ -1753,6 +1770,7 @@ SimTK::Real Context::calcFixman(int replica_i, int replica_j)
 	}else if(Ui <= 0.0000001){ // fully flexible world
 		return Ui;
 	}else{
+	    //std::cout << "CALC FIXMAN" << replica_i << " replica " << replica_j << "\n" << std::flush;
 		// Get replica i thermodynamic state
         int thermoState_i = replica2ThermoIxs[replica_i];
 
@@ -1765,13 +1783,30 @@ SimTK::Real Context::calcFixman(int replica_i, int replica_j)
             std::pair <bSpecificAtom *, SimTK::Vec3>>>&
 		X_j = replicas[replica_j].getAtomsLocationsInGround();
 
-		// Transfer coordinates from j to i
-        SimTK::State& state = (worlds[world_i_back].integ)->updAdvancedState();
+		/* TEST if replica j buffer has the same coordinates as its back world
+		int thermoState_j = replica2ThermoIxs[replica_j];
+		int world_j_back = thermodynamicStates[thermoState_j].getWorldIndexes().back();
+		int world_j_front = thermodynamicStates[thermoState_j].getWorldIndexes().front();
+		const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+        X_j_back =  worlds[world_j_back].getCurrentAtomsLocationsInGround();
+        PrintCoordinates(X_j_back);
+        //PrintCoordinates(X_j);
+        */
 
         // Pass compounds to the new world
         passTopologiesToNewWorld(world_i_back);
 
+		// Transfer coordinates from j to i
+        SimTK::State& state = (worlds[world_i_back].integ)->updAdvancedState();
         worlds[world_i_back].setAtomsLocationsInGround(state, X_j);
+
+        /* TEST if Xj is the same as world i back
+		const std::vector<std::vector<
+            std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+        X_i_back =  worlds[world_i_back].getCurrentAtomsLocationsInGround();
+        PrintCoordinates(X_j);
+        PrintCoordinates(X_i_back);
+        */
 
 		// Calculate Fixman in replica i back world
 		SimTK::Real Fixman = worlds[world_i_back].calcFixman();
@@ -1781,10 +1816,22 @@ SimTK::Real Context::calcFixman(int replica_i, int replica_j)
 		//transferCoordinates(world_i_front, world_i_back);
 		restoreReplicaCoordinatesToBack(replica_i);
 
+		/* TEST if replica i buffer is the same as replica i back world
+		const std::vector<std::vector<
+            std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		X_i = replicas[replica_i].getAtomsLocationsInGround();
+        const std::vector<std::vector<
+            std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+        X_i_back =  worlds[world_i_back].getCurrentAtomsLocationsInGround();
+        PrintCoordinates(X_i);
+        PrintCoordinates(X_i_back);
+        */
+
 		passTopologiesToNewWorld(world_i_front);
         //restoreReplicaCoordinatesToFront(replica_i);
 
 		// Return
+        //std::cout << "CALC_FIXMAN return " << Fixman << std::endl << std::flush;
 		return Fixman;
 	}
 
@@ -1835,7 +1882,6 @@ bool Context::attemptSwap(int replica_i, int replica_j)
         ndofs_j = worlds[
             thermodynamicStates[thermoState_j].getWorldIndexes().back()
         ].matter->getNumMobilities();
-        std::cout << "NDOFS: " << ndofs_i << " " << ndofs_j << std::endl;
 
         if (ndofs_i != ndofs_j){
             // Replica i reduced Fixman potential of state i
@@ -1847,11 +1893,11 @@ bool Context::attemptSwap(int replica_i, int replica_j)
                 * calcFixman(replica_j, replica_j);
 
             // Replica i reduced Fixman potential of state j
-            Uij = thermodynamicStates[thermoState_j].getBeta()
+            Uij = thermodynamicStates[thermoState_i].getBeta()
                 * calcFixman(replica_i, replica_j);
 
             // Replica j reduced Fixman potential of state i
-            Uji = thermodynamicStates[thermoState_i].getBeta()
+            Uji = thermodynamicStates[thermoState_j].getBeta()
                 * calcFixman(replica_j, replica_i);
         }else{
             Uii = Ujj = Uij = Uji = 0;
@@ -1997,19 +2043,13 @@ void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 void Context::restoreReplicaCoordinatesToBack(int whichReplica)
 {
 
-	//std::cout <<  "Context::restoreReplicaCoordinatesToFront " << whichReplica << ": " << std::flush;
-
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thermoIx = replica2ThermoIxs[whichReplica];
 
-	//std::cout <<  "Context::restoreReplicaCoordinatesToFront thermoIx " << thermoIx << std::endl << std::flush;
-
 	// Get worlds indexes of this thermodynamic state
 	std::vector<int> worldIndexes =
 		thermodynamicStates[thermoIx].getWorldIndexes();
-
-	//std::cout <<  " worldIndexes[1] " << worldIndexes[1] << std::flush;
 
 	// Set thoermoState front world from replica coordinate buffer
 	// Will use worlds own integrator's advanced state
@@ -2019,7 +2059,6 @@ void Context::restoreReplicaCoordinatesToBack(int whichReplica)
 	worlds[worldIndexes.back()].setAtomsLocationsInGround(state,
 		replicas[whichReplica].getAtomsLocationsInGround());
 
-	//std::cout << "Context::restoreReplicaCoordinatesToFront worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
 
 }
 
@@ -2107,6 +2146,18 @@ void Context::storeReplicaFixmanFromBack(int replicaIx)
     // Get the index of the front world
 	int backWorldIx =
     thermodynamicStates[thermoIx].getWorldIndexes().back();
+
+		/* TEST if replica j buffer has the same coordinates as its back world
+		int replica_j = replicaIx;
+		int thermoState_j = replica2ThermoIxs[replica_j];
+		int world_j_back = thermodynamicStates[thermoState_j].getWorldIndexes().back();
+		int world_j_front = thermodynamicStates[thermoState_j].getWorldIndexes().front();
+		const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+        X_j_back =  worlds[world_j_back].getCurrentAtomsLocationsInGround();
+        std::cout << "Replica " << replica_j << " back world" << std::endl;
+        PrintCoordinates(X_j_back);
+        //PrintCoordinates(X_j);
+        */
 
     // Set this replica's Fixman potential
     SimTK::Real U = pHMC((worlds[backWorldIx].samplers[0]))->fix_set;

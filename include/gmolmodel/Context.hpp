@@ -24,6 +24,8 @@ public:
 	// Input functions
 	bool loadTopologyFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string topologyFilename);
 	bool loadCoordinatesFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string coordinatesFilename);
+	void PrintCoordinates(const std::vector<std::vector
+        <std::pair <bSpecificAtom *, SimTK::Vec3>>>& atomsLocations);
 	bool loadRigidBodiesSpecs(std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN);
 	bool loadFlexibleBondsSpecs(std::size_t whichWorld, int whichMolecule, std::string FlexSpecsFN);
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
