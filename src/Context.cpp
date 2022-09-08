@@ -1759,8 +1759,7 @@ SimTK::Real Context::getFixman(int replica_i)
     return replicas[replica_i].getFixman();
 }
 
-// Calculate Fixman potential in replica i's back world for
-// coordinates in replica j's buffer. Ui(X_j)
+// Calculate Fixman potential of replica J in replica I's back world. Ui(X_j)
 SimTK::Real Context::calcFixman(int replica_i, int replica_j)
 {
 	SimTK::Real Ui = replicas[replica_i].getFixman();
@@ -1838,6 +1837,104 @@ SimTK::Real Context::calcFixman(int replica_i, int replica_j)
 }
 
 
+// Calculate Fixman potential of replica J in replica I's back world. Ui(X_j)
+SimTK::Real Context::calcFixman_JinI(int replica_i, int replica_j)
+{
+	SimTK::Real U_i = replicas[replica_i].getFixman();
+
+	if (replica_i == replica_j){ // same replica
+		return U_i;
+
+	}else if(U_i <= 0.0000001){ // fully flexible world
+		return U_i;
+
+	}else{
+	    //std::cout << "CALC FIXMAN" << replica_i << " replica " << replica_j << "\n" << std::flush;
+
+		// Get replica i thermodynamic state
+       	int thermoState_i = replica2ThermoIxs[replica_i];
+
+		// Get replica i back world
+		int world_i_front = thermodynamicStates[thermoState_i].getWorldIndexes().front();
+       	int world_i_back = thermodynamicStates[thermoState_i].getWorldIndexes().back();
+
+		// Get coordinates from replica j
+		const std::vector<std::vector<
+            std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		X_j = replicas[replica_j].getAtomsLocationsInGround();
+
+        // Pass compounds to the new world
+        passTopologiesToNewWorld(world_i_back);
+
+		// Transfer coordinates from j to i
+        SimTK::State& state = (worlds[world_i_back].integ)->updAdvancedState();
+        worlds[world_i_back].setAtomsLocationsInGround(state, X_j);
+
+		// Calculate Fixman in replica i back world
+		SimTK::Real Fixman = worlds[world_i_back].calcFixman();
+
+		// Transfer buffer coordinates of replica i
+		// back to back world
+		//transferCoordinates(world_i_front, world_i_back);
+		restoreReplicaCoordinatesToBack(replica_i);
+
+		passTopologiesToNewWorld(world_i_front);
+
+		// Return
+		return Fixman;
+	}
+
+}
+
+// Calculate Fixman potential of replica I in replica J's back world. Uj(X_i)
+SimTK::Real Context::calcFixman_IinJ(int replica_i, int replica_j)
+{
+	SimTK::Real U_j = replicas[replica_j].getFixman();
+
+	if (replica_j == replica_i){ // same replica
+		return U_j;
+
+	}else if(U_j <= 0.0000001){ // fully flexible world
+		return U_j;
+
+	}else{
+	    //std::cout << "CALC FIXMAN" << replica_j << " replica " << replica_i << "\n" << std::flush;
+
+		// Get replica i thermodynamic state
+       	int thermoState_j = replica2ThermoIxs[replica_j];
+
+		// Get replica i back world
+		int world_j_front = thermodynamicStates[thermoState_j].getWorldIndexes().front();
+       	int world_j_back = thermodynamicStates[thermoState_j].getWorldIndexes().back();
+
+		// Get coordinates from replica j
+		const std::vector<std::vector<
+            std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		X_i = replicas[replica_i].getAtomsLocationsInGround();
+
+        // Pass compounds to the new world
+        passTopologiesToNewWorld(world_j_back);
+
+		// Transfer coordinates from j to i
+        SimTK::State& state = (worlds[world_j_back].integ)->updAdvancedState();
+        worlds[world_j_back].setAtomsLocationsInGround(state, X_i);
+
+		// Calculate Fixman in replica i back world
+		SimTK::Real Fixman = worlds[world_j_back].calcFixman();
+
+		// Transfer buffer coordinates of replica i
+		// back to back world
+		//transferCoordinates(world_j_front, world_j_back);
+		restoreReplicaCoordinatesToBack(replica_j);
+
+		passTopologiesToNewWorld(world_j_front);
+
+		// Return
+		return Fixman;
+	}
+
+}
+
 // Attempt swap between replicas r_i and r_j
 // Code inspired from OpenmmTools
 // Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
@@ -1855,19 +1952,19 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
 	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
 
-	// Replica i reduced potential of state i
+	// Replica i reduced potential in state i
 	SimTK::Real Eii = thermodynamicStates[thermoState_i].getBeta()
 		* replicas[replica_i].getPotentialEnergy();
 
-	// Replica j reduced potential of state j
+	// Replica j reduced potential in state j
 	SimTK::Real Ejj = thermodynamicStates[thermoState_j].getBeta()
 		* replicas[replica_j].getPotentialEnergy();
 
-	// Replica i reduced potential of state j
+	// Replica i reduced potential in state j
 	SimTK::Real Eij = thermodynamicStates[thermoState_j].getBeta()
 		* replicas[replica_i].getPotentialEnergy();
 
-	// Replica j reduced potential of state i
+	// Replica j reduced potential in state i
 	SimTK::Real Eji = thermodynamicStates[thermoState_i].getBeta()
 		* replicas[replica_j].getPotentialEnergy();
 
@@ -1883,22 +1980,29 @@ bool Context::attemptSwap(int replica_i, int replica_j)
             thermodynamicStates[thermoState_j].getWorldIndexes().back()
         ].matter->getNumMobilities();
 
-        if (ndofs_i != ndofs_j){
-            // Replica i reduced Fixman potential of state i
+        if (thermoState_i == 1){
+			std::cout << "Swap between " << thermoState_i << " and "
+				<< thermoState_j << " ";
+
+            // Replica i reduced Fixman potential in state i
             Uii = thermodynamicStates[thermoState_i].getBeta()
-                * calcFixman(replica_i, replica_i);
+                * calcFixman_IinJ(replica_i, replica_i);
 
-            // Replica j reduced Fixman potential of state j
+            // Replica j reduced Fixman potential in state j
             Ujj = thermodynamicStates[thermoState_j].getBeta()
-                * calcFixman(replica_j, replica_j);
+                * calcFixman_IinJ(replica_j, replica_j);
 
-            // Replica i reduced Fixman potential of state j
-            Uij = thermodynamicStates[thermoState_i].getBeta()
-                * calcFixman(replica_i, replica_j);
+            // Replica i reduced Fixman potential in state j
+            Uij = thermodynamicStates[thermoState_j].getBeta()
+                * calcFixman_IinJ(replica_i, replica_j);
 
-            // Replica j reduced Fixman potential of state i
-            Uji = thermodynamicStates[thermoState_j].getBeta()
-                * calcFixman(replica_j, replica_i);
+            // Replica j reduced Fixman potential in state i
+            //Uji = thermodynamicStates[thermoState_i].getBeta()
+            //    * calcFixman_IinJ(replica_j, replica_i);
+			// We don't need to compute it because thermodynamic state 1
+			// is reserved to a fully flexible world for now 
+			Uji = 0.0; 
+
         }else{
             Uii = Ujj = Uij = Uji = 0;
         }

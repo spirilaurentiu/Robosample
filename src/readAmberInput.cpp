@@ -17,14 +17,14 @@ try
   inpcrd.open(inpcrdfile.c_str());
   if(!inpcrd.is_open())
   {
-          printf("Error in inpcrd file : file not opened \n");
+          printf("Error in inpcrd file : %s file not opened \n", inpcrdfile.c_str());
           exit(1);
   }
 
   prmtop.open(prmtopfile.c_str());
   if(!prmtop.is_open())
   {
-          printf("Error in prmtop file : file not opened \n");
+          printf("Error in prmtop file : %s file not opened \n", prmtopfile.c_str());
           exit(1);
   }
 

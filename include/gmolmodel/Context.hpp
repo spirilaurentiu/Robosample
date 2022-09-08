@@ -275,9 +275,12 @@ public:
 	// Get Fixman potential already calculated from replica
 	SimTK::Real getFixman(int replica_i);
 
-	// Calculate Fixman potential in replica i back world for
-	// coordinates in replica j's buffer
+	// Calculate Fixman potential of replica J in replica I's back world. Ui(X_j)
 	SimTK::Real calcFixman(int replica_i, int replica_j);
+	// Calculate Fixman potential of replica J in replica I's back world. Ui(X_j)
+	SimTK::Real calcFixman_JinI(int replica_i, int replica_j);
+	// Calculate Fixman potential of replica I in replica J's back world. Uj(X_i)
+	SimTK::Real calcFixman_IinJ(int replica_i, int replica_j);
 
 	const int& getSwapFixman(void){return swapFixman;}
 	void setSwapFixman(const int argSwapFixman){swapFixman = argSwapFixman;}
