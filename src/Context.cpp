@@ -1980,7 +1980,7 @@ bool Context::attemptSwap(int replica_i, int replica_j)
             thermodynamicStates[thermoState_j].getWorldIndexes().back()
         ].matter->getNumMobilities();
 
-        if (thermoState_i == 1){
+        if (thermoState_i == 0){
 			std::cout << "Swap between " << thermoState_i << " and "
 				<< thermoState_j << " ";
 
