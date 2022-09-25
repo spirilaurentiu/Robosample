@@ -1830,7 +1830,9 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
         constexpr int TOPOLOGY = 0;
         std::vector<SimTK::DuMM::AtomIndex> mapping(topologies[TOPOLOGY].getNumAtoms());
 
-        //std::cout << "###MAPPINGUL VIETII###\n";
+        std::cout << "###AMBER - DuMM Mapping###\n";
+        std::cout << "DuMM\t|\tAMBER\n";
+        std::cout << std::string(21,'-') << "\n";
         for(std::size_t k = 0; k < topologies[TOPOLOGY].getNumAtoms(); k++) {
             // amber indices
             const auto aIx = (topologies[TOPOLOGY].bAtomList[k]).getCompoundAtomIndex();
@@ -1839,10 +1841,10 @@ bool Context::attemptSwapHREX(int replica_i, int replica_j)
             const auto d = topologies[TOPOLOGY].getDuMMAtomIndex(aIx);
 
             // mapping[dumm_index] = amber_index
-            //mapping.push_back(d);
+            mapping.push_back(d);
             mapping[d] = static_cast<SimTK::DuMM::AtomIndex>(k);
 
-          //  std::cout << d << " -> " << k << std::endl;
+            std::cout << d << "\t|\t" << k << std::endl;
         }
 
         ///////////////// 
