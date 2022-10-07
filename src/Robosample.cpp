@@ -21,6 +21,8 @@
 //#define ROBO_DEBUG_LEVEL01
 //#endif
 
+#include <sys/sysinfo.h>
+
 bool LoadInputIntoSetupReader(int argc, char **argv,
 	SetupReader& setupReader)
 {
@@ -104,13 +106,26 @@ vector<string> split(const string& i_str, const string& i_delim)
     return result;
 }
 
-
+std::string exec(const char* cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////   MAIN   ////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
+
+	std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 
 	// Read input into a SetupReader object
 	SetupReader setupReader;
@@ -188,6 +203,7 @@ int main(int argc, char **argv)
 
 	int nofWorlds = context.getNofWorlds();
 
+	std::cout << "OS memory 1.\n" << exec("free") << std::endl;
 	// Request threads
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		context.setNumThreadsRequested(worldIx,
@@ -236,6 +252,7 @@ int main(int argc, char **argv)
 	// Add molecules based on the setup reader
 	context.AddMolecules(requestedNofMols, setupReader);
 
+	std::cout << "OS memory 2.\n" << exec("free") << std::endl;
 	int finalNofMols = context.getNofMolecules();
 	if(requestedNofMols != finalNofMols){
 		std::cerr << "Something went wrong while adding the world\n";
@@ -274,6 +291,7 @@ int main(int argc, char **argv)
 			worldIx, setupReader.get("SAMPLER")[worldIx]);
 	}
 
+	std::cout << "OS memory 3\n" << exec("free") << std::endl;
 	//////////////////////
 	// Thermodynamics
 	//////////////////////
@@ -290,9 +308,6 @@ int main(int argc, char **argv)
 
 		context.setTemperature(worldIx,
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]));
-
-
-
 	}
 
 	// Set the guidance Hamiltonian parameters
@@ -439,6 +454,7 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
+	std::cout << "OS memory 4.\n" << exec("free") << std::endl;
 	// Check atom stations for debug purposes
 	context.checkAtomStationsThroughDumm();
 
@@ -491,6 +507,7 @@ int main(int argc, char **argv)
 
 	}
 
+	std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 		context.RunSimulatedTempering(context.getNofRounds(),
@@ -507,6 +524,7 @@ int main(int argc, char **argv)
 	// Write final pdbs
 	context.writeFinalPdb();
 
+	std::cout << "OS memory 6\n" << exec("free") << std::endl;
 	//std::cout << "printStatus 1 " << std::endl;
 	//context.printStatus();
 

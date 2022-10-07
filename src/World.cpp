@@ -1008,6 +1008,9 @@ SimTK::State& World::setAtomsLocationsInGround(
 						mobod.setDefaultInboardFrame(mobodTs[0]);
 						mobod.setDefaultOutboardFrame(mobodTs[1]);
 
+						std::cout << "P_X_F " << mobodTs[0] << std::endl;
+						std::cout << "B_X_M " << mobodTs[1] << std::endl;
+
 					} // END if parent not Ground
 					else{ // parent is Ground
 						mobod.setDefaultInboardFrame(P_X_F_1);
