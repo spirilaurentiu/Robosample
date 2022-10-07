@@ -257,6 +257,7 @@ int main(int argc, char **argv)
 	// and loads maps of indexes
 	context.model(finalNofMols, setupReader);
 
+	std::cout << "OS memory 2.2.1.\n" << exec("free") << std::endl;
 	// Adaptive Gibbs blocking
 	context.setNofRoundsTillReblock(
 		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
