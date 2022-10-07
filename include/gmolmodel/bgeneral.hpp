@@ -65,6 +65,11 @@ enum struct VELOCITY_VERLET : int {
   SAYS_AX, SAYS_AY, SAYS_AZ
 };
 
+/**************************************
+ * 		Debugging Functions   *
+ **************************************/
+
+std::string exec(const char* cmd);
 
 /**************************************
  * 		General Functions             *

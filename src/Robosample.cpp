@@ -106,20 +106,6 @@ vector<string> split(const string& i_str, const string& i_delim)
     return result;
 }
 
-std::string exec(const char* cmd) {
-    std::array<char, 128> buffer;
-    std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
-    if (!pipe) {
-	printf ("No pipe with error: %s\n",strerror(errno));
-        throw std::runtime_error("popen() failed!");
-    }
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
-    }
-    return result;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////   MAIN   ////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -262,9 +248,11 @@ int main(int argc, char **argv)
 	}
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
+	std::cout << "OS memory 2.1.\n" << exec("free") << std::endl;
 	// Loads parameters into DuMM
 	context.addDummParams(finalNofMols, setupReader);
 
+	std::cout << "OS memory 2.2\n" << exec("free") << std::endl;
 	// Adopts compound by the CompoundSystem
 	// and loads maps of indexes
 	context.model(finalNofMols, setupReader);
@@ -283,8 +271,10 @@ int main(int argc, char **argv)
 		}
 	}
 
+	std::cout << "OS memory 2.3\n" << exec("free") << std::endl;
 	// Is this necessary?
 	context.realizeTopology();
+	std::cout << "OS memory 2.4\n" << exec("free") << std::endl;
 
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
