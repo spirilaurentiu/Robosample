@@ -784,18 +784,20 @@ void Context::model(
 
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 
-
+			std::cout << "OS memory 2.2.1.0.\n" << exec("free") << std::endl;
 			// Add entry to flexibility filenames matrix
 			loadRigidBodiesSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
+			std::cout << "OS memory 2.2.1.1.\n" << exec("free") << std::endl;
 			loadFlexibleBondsSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
+			std::cout << "OS memory 2.2.1.2.\n" << exec("free") << std::endl;
 			setRegimen( worldIx, molIx,
 				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
 
@@ -814,25 +816,31 @@ void Context::model(
 				<< " flexSpecsFNs " << flexSpecsFNs[worldIx][molIx]
 				<< std::endl;
 
+			std::cout << "OS memory 2.2.1.3.\n" << exec("free") << std::endl;
 			topologies[molIx].setFlexibility(regimens[worldIx][molIx],
 				flexSpecsFNs[worldIx][molIx], worldIx);
 
+			std::cout << "OS memory 2.2.1.4.\n" << exec("free") << std::endl;
 			// Set UScale factors. TODO: move in World
 			topologies[molIx].setUScaleFactorsToBonds(flexSpecsFNs[worldIx][molIx]);
 
+			std::cout << "OS memory 2.2.1.5.\n" << exec("free") << std::endl;
 			// Add topology by CompoundSystem and add it to the
 			//Visualizer's vector of molecules
 			(updWorld(worldIx))->adoptTopology(molIx);
 
+			std::cout << "OS memory 2.2.1.6.\n" << exec("free") << std::endl;
 			// Calls modelOneCompound from CompoundSystem
 			modelOneEmbeddedTopology(molIx, worldIx, argRootMobilities[worldIx]);
 
 			// Realize Topology Stage involvs all the SubSystems
 			//(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 
+			std::cout << "OS memory 2.2.1.7.\n" << exec("free") << std::endl;
 			topologies[molIx].loadAIx2MbxMap();
 			(updWorld(worldIx))->loadMbx2AIxMap();
 
+			std::cout << "OS memory 2.2.1.8.\n" << exec("free") << std::endl;
 
 		}
 
@@ -842,6 +850,7 @@ void Context::model(
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 	}
+	std::cout << "OS memory 2.2.1.9.\n" << exec("free") << std::endl;
 
 
 }
