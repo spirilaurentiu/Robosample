@@ -432,6 +432,7 @@ void Topology::bAddDummAtomClasses(
 				, SimTK::DuMMForceFieldSubsystem& dumm
 )
 {
+/*
 	// Define AtomClasses
 	SimTK::DuMM::AtomClassIndex aCIx;
 
@@ -462,6 +463,73 @@ void Topology::bAddDummAtomClasses(
 
 		//std::cout << "Defined AtomClass " << atomClassName << " with atomClassIndex " << aCIx << std::endl;
 	}
+*/
+
+	// Iterate through Gmolmodel atoms and define AtomClasses
+	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
+
+		// Get AtomClass parameters from bSpecificAtom info
+		AtomClassParams atomParams(
+			bAtomList[i].getAtomicNumber(),
+			bAtomList[i].getNBonds(),
+			bAtomList[i].getVdwRadius() / 10.0, // nm
+			bAtomList[i].getLJWellDepth() * 4.184 // kcal to kJ
+		);
+
+		SimTK::DuMM::AtomClassIndex aCIx;
+		std::string atomClassName;
+
+		// Check if we already have this Atom Class
+		bool foundit = false;
+		std::map<AtomClassParams, AtomClassId>::const_iterator it;
+		for (	it = aClassParams2aClassId.begin();
+			it != aClassParams2aClassId.end(); ++it){
+			if(it->first == atomParams){
+				foundit = true;
+				break;
+			}
+		}
+
+		if ( !foundit ) { // we don't have this AtomClass
+			// Get an AtomClass index from DuMM
+			aCIx = dumm.getNextUnusedAtomClassIndex();
+		
+			// Define an AtomClass name
+			atomClassName = bAtomList[i].getFftype();
+
+			//std::cout << "!foundit aCIx atomClassName " << aCIx << " " << atomClassName  << std::endl;
+			// Define an AtomClass
+			dumm.defineAtomClass(aCIx, atomClassName.c_str(),
+				atomParams.atomicNumber,
+				atomParams.valence,
+				atomParams.vdwRadius,
+				atomParams.LJWellDepth
+			);
+
+			std::cout << "Topology::bAddDummAtomClasses "; atomParams.dump();
+
+			// Insert an entry in our map too
+			AtomClassId atomClassId(aCIx, atomClassName);
+			aClassParams2aClassId.insert( std::make_pair(atomParams, atomClassId) );
+
+		}else{ // we already have this AtomClass
+
+			//aClassParams2aClassId.at(atomParams);
+			//AtomClassId& atomClassId = aClassParams2aClassId.at(atomParams);
+			const AtomClassId& atomClassId = it->second;
+
+			aCIx = atomClassId.index;
+			atomClassName = atomClassId.name;
+	
+			//std::cout << "foundit  aCIx atomClassName " << aCIx << " " << atomClassName << std::endl;
+		}
+
+		// Insert AtomClass index in Gmolmodel atom list too
+		bAtomList[i].setAtomClassIndex(aCIx);
+
+	} // --------------------------- DONE
+
+
 
 	// Define ChargedAtomTypeIndeces
 	SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;

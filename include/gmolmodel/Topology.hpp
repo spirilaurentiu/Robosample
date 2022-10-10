@@ -12,6 +12,92 @@
 #include "bBond.hpp"
 #include "server.hpp"
 
+class AtomClassParams {
+
+  public:
+	int atomicNumber = 0;
+	int valence = 0;
+	SimTK::Real vdwRadius = 0;
+	SimTK::Real LJWellDepth = 0;
+
+	// Constructor
+	AtomClassParams(int a, int v, SimTK::Real vdw, SimTK::Real l) :
+		atomicNumber(a), valence(v), vdwRadius(vdw), LJWellDepth(l) {}
+
+	// Dump function
+	void dump(void){ std::cout 
+		<< " atomicNumber " << atomicNumber 
+		<< " valence " << valence 
+		<< " vdwRadius " << vdwRadius 
+		<< " LJWellDepth " << LJWellDepth << std::endl;
+	}
+
+	bool operator==(const AtomClassParams& other) const {
+		//std::cout << 	( atomicNumber == other.atomicNumber ) << " "
+		//	<<	( valence == other.valence ) << " "
+		//	<<	( std::abs(vdwRadius - other.vdwRadius) < 0.0000001 ) << " "
+		//	<<	( std::abs(LJWellDepth - other.LJWellDepth) < 0.0000001) << std::endl;
+
+		if ( 	( atomicNumber == other.atomicNumber ) &&
+			( valence == other.valence ) &&
+			( std::abs(vdwRadius - other.vdwRadius) < 0.0000001 ) &&
+			( std::abs(LJWellDepth - other.LJWellDepth) < 0.0000001) ){
+			
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+	bool operator<(const AtomClassParams& other) const {
+		if ( atomicNumber < other.atomicNumber ){
+			return true;
+		}else if ( atomicNumber == other.atomicNumber ){
+		
+			if( valence < other.valence){
+				return true;
+			}else if( valence == other.valence ){
+
+
+				if( vdwRadius < other.vdwRadius ){
+					return true;
+				}else if( vdwRadius == other.vdwRadius ){
+
+
+					if( LJWellDepth < other.LJWellDepth ){
+						return true;
+					}else if( LJWellDepth == other.LJWellDepth ){
+						// Should throw an error ?
+						return true;
+					}else{
+						return false; // LJWellDepth
+					}			
+
+				}else{
+					return false; // vdwRadius
+				}			
+
+			}else{
+				return false; // valence
+			}			
+
+		}else{
+			return false; // atomicNumber
+		}
+	}
+
+};
+
+class AtomClassId {
+
+  public:
+	SimTK::DuMM::AtomClassIndex index;
+	std::string name = "noName";
+
+	AtomClassId(int i, std::string s) :
+		index(i), name(s) {}
+};
+
 /** Topological information (bonds graph) for one molecule.
 It maps to one compound in Molmodel thus it is derived 
 from Molmodel Compound class.
@@ -332,6 +418,9 @@ private:
 	// Gmolmodel to Molmodel (and inverse) bond mappings
 	std::map< SimTK::Compound::BondIndex, int > bondIx2GmolBond;
 	std::map< int,  SimTK::Compound::BondIndex> GmolBond2bondIx;
+
+	std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
+
 
 };
 
