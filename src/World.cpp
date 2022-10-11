@@ -245,10 +245,16 @@ void World::AddBiotypes(int which, readAmberInput *amberReader)
 */
 }
 
-void World::AddDummParams(int which, readAmberInput *amberReader)
+void World::generateDummParams(int which, readAmberInput *amberReader)
 {
 	// Add DuMM parameters from amberReader
-	((*topologies)[which]).bAddDummParams(amberReader, *forceField); // DANGER
+	((*topologies)[which]).generateDummParams(amberReader, *forceField);
+}
+
+void World::transferDummParams(int which, readAmberInput *amberReader)
+{
+	// Add DuMM parameters from amberReader
+	((*topologies)[which]).transferDummParams(amberReader, *forceField);
 }
 
 void World::BuildTopologyGraph(int which, std::string argRoot)

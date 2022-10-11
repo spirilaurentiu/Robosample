@@ -84,7 +84,8 @@ public:
 
 	//
 	void AddBiotypes(int which, readAmberInput *amberReader);
-	void AddDummParams(int which, readAmberInput *amberReader);
+	void generateDummParams(int which, readAmberInput *amberReader);
+	void transferDummParams(int which, readAmberInput *amberReader);
 	void BuildTopologyGraph(int which, std::string argRoot);
 	void AllocateCoordBuffers(int which);
 

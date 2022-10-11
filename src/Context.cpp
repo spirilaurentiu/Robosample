@@ -757,15 +757,20 @@ void Context::addDummParams(
 		readAmberInput amberReader;
 		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 
-		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		
+		// Pass current topology to the current world
+		(updWorld(0))->topologies = &topologies;
+
+		// Add parameters in DuMM
+		(updWorld(0))->generateDummParams(molIx, &amberReader);
+
+		for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
 
 			// Pass current topology to the current world
 			(updWorld(worldIx))->topologies = &topologies;
 
 			// Add parameters in DuMM
-			(updWorld(worldIx))->AddDummParams(molIx, &amberReader);
-			//topologies[molIx].bAddDummParams(&amberReader,
-			//	*((updWorld(worldIx))->forceField));
+			(updWorld(worldIx))->transferDummParams(molIx, &amberReader);
 		}
 	}
 

@@ -12,9 +12,13 @@
 #include "bBond.hpp"
 #include "server.hpp"
 
+
+/** Helper class for Topology class, used as a key in an AtomClass related
+map **/
 class AtomClassParams {
 
   public:
+	// Parameters
 	int atomicNumber = 0;
 	int valence = 0;
 	SimTK::Real vdwRadius = 0;
@@ -25,13 +29,14 @@ class AtomClassParams {
 		atomicNumber(a), valence(v), vdwRadius(vdw), LJWellDepth(l) {}
 
 	// Dump function
-	void dump(void){ std::cout 
+	const void dump(void) const { std::cout 
 		<< " atomicNumber " << atomicNumber 
 		<< " valence " << valence 
 		<< " vdwRadius " << vdwRadius 
 		<< " LJWellDepth " << LJWellDepth << std::endl;
 	}
 
+	// Equal operator
 	bool operator==(const AtomClassParams& other) const {
 		//std::cout << 	( atomicNumber == other.atomicNumber ) << " "
 		//	<<	( valence == other.valence ) << " "
@@ -49,6 +54,7 @@ class AtomClassParams {
 		}
 	}
 
+	// Sort operator
 	bool operator<(const AtomClassParams& other) const {
 		if ( atomicNumber < other.atomicNumber ){
 			return true;
@@ -88,6 +94,8 @@ class AtomClassParams {
 
 };
 
+/** Helper class for Topology class, used as a value in an AtomClass related
+map **/
 class AtomClassId {
 
   public:
@@ -157,7 +165,16 @@ public:
 	/** It calls DuMMs defineAtomClass, defineChargedAtomTye and
 	setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 	information regarding the force field parameters. **/
-	void bAddDummAtomClasses(
+	void generateDummAtomClasses(
+			std::string resName
+			, readAmberInput *amberReader
+			, SimTK::DuMMForceFieldSubsystem& dumm
+	);
+
+	/** It calls DuMMs defineAtomClass, defineChargedAtomTye and
+	setBiotypeChargedAtomType for every atom. These Molmodel functions contain
+	information regarding the force field parameters. **/
+	void transferDummAtomClasses(
 			std::string resName
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
@@ -185,7 +202,13 @@ public:
 	);
 
 	/** Adds force field parameters read by the inputReader to DuMM **/
-	void bAddDummParams(
+	void generateDummParams(
+		readAmberInput *amberReader
+		, SimTK::DuMMForceFieldSubsystem& dumm
+	);
+
+	/** Transfer already generated force field parameters to DuMM **/
+	void transferDummParams(
 		readAmberInput *amberReader
 		, SimTK::DuMMForceFieldSubsystem& dumm
 	);

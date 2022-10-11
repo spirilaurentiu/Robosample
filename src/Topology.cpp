@@ -426,7 +426,7 @@ void Topology::bAddBiotypes(
 /** It calls DuMMs defineAtomClass, defineChargedAtomTye and
 setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 information regarding the force field parameters. **/
-void Topology::bAddDummAtomClasses(
+void Topology::generateDummAtomClasses(
 				  std::string resName
 				, readAmberInput *amberReader
 				, SimTK::DuMMForceFieldSubsystem& dumm
@@ -564,6 +564,80 @@ void Topology::bAddDummAtomClasses(
 
 }
 
+/** It calls DuMMs defineAtomClass, defineChargedAtomTye and
+setBiotypeChargedAtomType for every atom. These Molmodel functions contain
+information regarding the force field parameters. **/
+void Topology::transferDummAtomClasses(
+				  std::string resName
+				, readAmberInput *amberReader
+				, SimTK::DuMMForceFieldSubsystem& dumm
+)
+{
+
+
+	SimTK::DuMM::AtomClassIndex aCIx;
+	std::string atomClassName;
+
+	// Iterate through AtomClasses map and put AtomClasses in Dumm
+	std::map<AtomClassParams, AtomClassId>::const_iterator it;
+	for (	it = aClassParams2aClassId.begin();
+		it != aClassParams2aClassId.end(); ++it){
+
+		const AtomClassParams& atomParams = it->first;
+		const AtomClassId& atomClassId = it->second;
+
+		aCIx = atomClassId.index;
+		atomClassName = atomClassId.name;
+
+		std::cout << "Topology::transferAtomClasses " 
+			<< aCIx << " " << atomClassName ;
+		atomParams.dump();
+
+		// Define an AtomClass
+		dumm.defineAtomClass(aCIx, atomClassName.c_str(),
+			atomParams.atomicNumber,
+			atomParams.valence,
+			atomParams.vdwRadius,
+			atomParams.LJWellDepth
+		);
+
+	}
+	// --------------------------- DONE
+
+
+	// Define ChargedAtomTypeIndeces
+	SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
+	std::string chargedAtomTypeName;
+
+	// Iterate through atoms and define DuMM charged atom types
+	for(int k = 0; k < amberReader->getNumberAtoms(); k++){
+		// Get a ChargedAtomType index
+		chargedAtomTypeIndex = dumm.getNextUnusedChargedAtomTypeIndex();
+		bAtomList[k].setChargedAtomTypeIndex(chargedAtomTypeIndex);
+
+		// Define a chargedAtomType name
+		chargedAtomTypeName =  resName;
+		chargedAtomTypeName += bAtomList[k].biotype;
+
+		// Define a ChargedAtomType (AtomClass with a charge)
+		dumm.defineChargedAtomType(
+		  chargedAtomTypeIndex,
+		  chargedAtomTypeName.c_str(),
+		  bAtomList[k].getAtomClassIndex(),
+		  bAtomList[k].charge
+		);
+		//std::cout << "Defined chargedAtomType " << chargedAtomTypeName << " with chargedAtomTypeIndex " << chargedAtomTypeIndex << std::endl;
+
+		// Associate a ChargedAtomTypeIndex with a Biotype index
+		dumm.setBiotypeChargedAtomType(
+		  bAtomList[k].getChargedAtomTypeIndex(),
+		  bAtomList[k].getBiotypeIndex()
+		);
+
+	}
+
+}
+
 /** Print Molmodel specific types as introduced in Gmolmodel **/
 const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const
 {
@@ -590,24 +664,40 @@ const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& d
 /** Calls DuMM defineBondStretch to define bonds parameters. **/
 void Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
 {
-	// function args were std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm
+
+	// Keep track of inserted AtomClass pairs
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> ixs;
 
 	// Iterate through bonds and define their parameters
 	// Suppose or try to have the same order as the reader
 	for(int t = 0; t < amberReader->getNumberBonds(); t++){
-		dumm.defineBondStretch_KA(
-			(bAtomList[bonds[t].i]).getAtomClassIndex(),
-			(bAtomList[bonds[t].j]).getAtomClassIndex(),
-			amberReader->getBondsForceK(t),  //k1
-			amberReader->getBondsEqval(t)   //equil1
-		);
+		
+		// Generate a pair of atom classes for this bond
+		std::vector<SimTK::DuMM::AtomClassIndex> bondStretchIxs;
+		bondStretchIxs.push_back( SimTK::DuMM::AtomClassIndex(
+			(bAtomList[bonds[t].i]).getAtomClassIndex()) );
+		bondStretchIxs.push_back( SimTK::DuMM::AtomClassIndex(
+			(bAtomList[bonds[t].j]).getAtomClassIndex()) );
 
-	//std::cout << "Defined bond stretch between aCIx1 aCIx2 k b0 "
-	//	<< (bAtomList[bonds[t].i]).getAtomClassIndex() << " "
-	//	<< (bAtomList[bonds[t].j]).getAtomClassIndex() << " "
-	//	<< amberReader->getBondsForceK(t) << " "
-	//	<< amberReader->getBondsEqval(t) << std::endl;
+		// Check if we already have this bond
+		bool foundit = false;
+		for(auto& row:ixs){
+			if ((bondStretchIxs[0] == row[0])
+			 && (bondStretchIxs[1] == row[1])){
+				foundit = true;	break;
+			}
+		}
 
+		if (  !foundit ){ // bond was not found
+		
+			dumm.defineBondStretch_KA(
+				(bAtomList[bonds[t].i]).getAtomClassIndex(),
+				(bAtomList[bonds[t].j]).getAtomClassIndex(),
+				amberReader->getBondsForceK(t),  //k1
+				amberReader->getBondsEqval(t)   //equil1
+			);
+
+		}
 	}
 }
 
@@ -623,7 +713,8 @@ void Topology::bAddDummAngleParams(std::string, readAmberInput *amberReader, Sim
 			bAtomList[amberReader->getAnglesAtomsIndex2(t)].getAtomClassIndex(),
 			bAtomList[amberReader->getAnglesAtomsIndex3(t)].getAtomClassIndex(),
 			amberReader->getAnglesForceK(t),
-			static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getAnglesEqval(t))) // TODO 32 vs 64 bit
+			static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
+				* amberReader->getAnglesEqval(t))) // TODO 32 vs 64 bit
 		);
 	}
 }
@@ -690,7 +781,7 @@ void Topology::bAddDummTorsionParams(
 }
 
 /** Adds force field parameters read by the inputReader **/
-void Topology::bAddDummParams(
+void Topology::generateDummParams(
 	readAmberInput *amberReader
 	, SimTK::DuMMForceFieldSubsystem& dumm
 )
@@ -699,8 +790,25 @@ void Topology::bAddDummParams(
 	std::string resName = this->name;
 
 	// Add types
-	//bAddBiotypes(resName, amberReader, dumm);
-	bAddDummAtomClasses(resName, amberReader, dumm);
+	generateDummAtomClasses(resName, amberReader, dumm);
+
+	// Add parameters
+	bAddDummBondParams(resName, amberReader, dumm);
+	bAddDummAngleParams(resName, amberReader, dumm);
+	bAddDummTorsionParams(resName, amberReader, dumm);
+}
+
+/** Transfer already generated force field parameters to DuMM **/
+void Topology::transferDummParams(
+	readAmberInput *amberReader
+	, SimTK::DuMMForceFieldSubsystem& dumm
+)
+{
+	// We don't have any residues. The whole molecule is one residue
+	std::string resName = this->name;
+
+	// Add types
+	transferDummAtomClasses(resName, amberReader, dumm);
 
 	// Add parameters
 	bAddDummBondParams(resName, amberReader, dumm);
