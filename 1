@@ -189,9 +189,9 @@ bool AreSame(double a, double b, double EPSILON);
  * Check if pair, triple or quadruple is the same irrespective of order
  * from the chemical point of view (ex.: a-b-c-d != a-c-b-d)
  */
-bool IsTheSameBond(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
-bool IsTheSameAngle(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
-bool IsTheSameTorsion(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
+bool IsTheSameBond(std::vector<int>);
+bool IsTheSameAngle(std::vector<int>);
+bool IsTheSameTorsion(std::vector<int>);
 
 /*
  * Given a frame F1 expressed in another frame G and a station v1 expressed 

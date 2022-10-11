@@ -387,6 +387,34 @@ bool AreSame(double a, double b, double EPSILON)
 }
 
 /*
+ * Check if pair, triple or quadruple is the same irrespective of order
+ * from the chemical point of view (ex.: a-b-c-d != a-c-b-d)
+ */
+bool IsTheSameBond(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref)
+{
+	return (((tar[0] == ref[0]) && (tar[1] == ref[1])) ||
+		((tar[0] == ref[1]) && (tar[1] == ref[0])));
+}
+
+bool IsTheSameAngle(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref)
+{
+	return (((tar[0] == ref[0]) &&
+	 	 (tar[1] == ref[1]) && (tar[2] == ref[2])) ||
+		((tar[0] == ref[2]) && 
+		 (tar[1] == ref[1]) && (tar[2] == ref[0])));
+}
+
+bool IsTheSameTorsion(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref)
+{
+
+	return (((tar[0] == ref[0]) && (tar[1] == ref[1]) &&
+		 (tar[2] == ref[2]) && (tar[3] == ref[3])) ||
+		((tar[0] == ref[3]) && (tar[1] == ref[2]) &&
+		 (tar[2] == ref[1]) && (tar[3] == ref[0])));
+}
+
+
+/*
  * Given a frame F1 expressed in another frame G and a station v1 expressed
  * in G return another frame F2 with origin in v1, aligne along F1 v1 vector
  * with the X axis and pointing towards F1
