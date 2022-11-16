@@ -2097,8 +2097,8 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 		int replica_i = thermo2ReplicaIxs[thermoState_i];
 		int replica_j = thermo2ReplicaIxs[thermoState_j];
 
-		std::cout << "mixNeighboringReplicas thermoStates "
-			<< thermoState_i << " " << thermoState_j << "\n";
+		//std::cout << "mixNeighboringReplicas thermoStates "
+		//	<< thermoState_i << " " << thermoState_j << "\n";
 		//std::cout << "Attempt to swap replicas " << replica_i
 		//	<< " and " << replica_j << std::endl;
 
@@ -2512,7 +2512,7 @@ void Context::RunREX(void)
 
 			PrintToLog(worldIndexes.front());
 
-			writePdbs(0,	thermo2ReplicaIxs[replicaIx]);
+			writePdbs(0,	replica2ThermoIxs[replicaIx]);
 	}
 
 	// Mix replicas
@@ -2550,7 +2550,7 @@ void Context::RunREX(void)
 
 			// Write pdb
 			if( pdbRestartFreq != 0){
-				int thermoStateIx = thermo2ReplicaIxs[replicaIx];
+				int thermoStateIx = replica2ThermoIxs[replicaIx];
 				if((mixi % pdbRestartFreq) == 0){
 					writePdbs(mixi,
 					thermoStateIx);
