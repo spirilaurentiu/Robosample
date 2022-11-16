@@ -789,20 +789,17 @@ void Context::model(
 
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 
-			//std::cout << "OS memory 2.2.1.0.\n" << exec("free") << std::endl;
 			// Add entry to flexibility filenames matrix
 			loadRigidBodiesSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
-			//std::cout << "OS memory 2.2.1.1.\n" << exec("free") << std::endl;
 			loadFlexibleBondsSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
-			//std::cout << "OS memory 2.2.1.2.\n" << exec("free") << std::endl;
 			setRegimen( worldIx, molIx,
 				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
 
@@ -821,31 +818,25 @@ void Context::model(
 				<< " flexSpecsFNs " << flexSpecsFNs[worldIx][molIx]
 				<< std::endl;
 
-			//std::cout << "OS memory 2.2.1.3.\n" << exec("free") << std::endl;
 			topologies[molIx].setFlexibility(regimens[worldIx][molIx],
 				flexSpecsFNs[worldIx][molIx], worldIx);
 
-			//std::cout << "OS memory 2.2.1.4.\n" << exec("free") << std::endl;
 			// Set UScale factors. TODO: move in World
 			topologies[molIx].setUScaleFactorsToBonds(flexSpecsFNs[worldIx][molIx]);
 
-			//std::cout << "OS memory 2.2.1.5.\n" << exec("free") << std::endl;
 			// Add topology by CompoundSystem and add it to the
 			//Visualizer's vector of molecules
 			(updWorld(worldIx))->adoptTopology(molIx);
 
-			//std::cout << "OS memory 2.2.1.6.\n" << exec("free") << std::endl;
 			// Calls modelOneCompound from CompoundSystem
 			modelOneEmbeddedTopology(molIx, worldIx, argRootMobilities[worldIx]);
 
 			// Realize Topology Stage involvs all the SubSystems
 			//(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 
-			//std::cout << "OS memory 2.2.1.7.\n" << exec("free") << std::endl;
 			topologies[molIx].loadAIx2MbxMap();
 			(updWorld(worldIx))->loadMbx2AIxMap();
 
-			std::cout << "OS memory 2.2.1.8.\n" << exec("free") << std::endl;
 
 		}
 
@@ -855,7 +846,6 @@ void Context::model(
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 	}
-	std::cout << "OS memory 2.2.1.9.\n" << exec("free") << std::endl;
 
 
 }
@@ -1827,7 +1817,7 @@ SimTK::Real Context::calcFixman(int replica_i, int replica_j)
 		// Transfer buffer coordinates of replica i
 		// back to back world
 		//transferCoordinates(world_i_front, world_i_back);
-		restoreReplicaCoordinatesToBack(replica_i);
+		restoreReplicaCoordinatesToBackWorld(replica_i);
 
 		/* TEST if replica i buffer is the same as replica i back world
 		const std::vector<std::vector<
@@ -1841,7 +1831,7 @@ SimTK::Real Context::calcFixman(int replica_i, int replica_j)
         */
 
 		passTopologiesToNewWorld(world_i_front);
-        //restoreReplicaCoordinatesToFront(replica_i);
+        //restoreReplicaCoordinatesToFrontWorld(replica_i);
 
 		// Return
         //std::cout << "CALC_FIXMAN return " << Fixman << std::endl << std::flush;
@@ -1890,7 +1880,7 @@ SimTK::Real Context::calcFixman_JinI(int replica_i, int replica_j)
 		// Transfer buffer coordinates of replica i
 		// back to back world
 		//transferCoordinates(world_i_front, world_i_back);
-		restoreReplicaCoordinatesToBack(replica_i);
+		restoreReplicaCoordinatesToBackWorld(replica_i);
 
 		passTopologiesToNewWorld(world_i_front);
 
@@ -1939,7 +1929,7 @@ SimTK::Real Context::calcFixman_IinJ(int replica_i, int replica_j)
 		// Transfer buffer coordinates of replica i
 		// back to back world
 		//transferCoordinates(world_j_front, world_j_back);
-		restoreReplicaCoordinatesToBack(replica_j);
+		restoreReplicaCoordinatesToBackWorld(replica_j);
 
 		passTopologiesToNewWorld(world_j_front);
 
@@ -2093,12 +2083,12 @@ void Context::mixAllReplicas(int nSwapAttempts)
 }
 
 // Mix neighboring replicas
-void Context::mixNeighboringReplicas(void)
+void Context::mixNeighboringReplicas(unsigned int startingFrom)
 {
 	// Go through neighboring thermodynamic states
-	for(size_t thermoState_k = 0;
-	thermoState_k < nofThermodynamicStates - 1;
-	thermoState_k++){
+	for(size_t thermoState_k = startingFrom;
+	thermoState_k < (nofThermodynamicStates - 1 + startingFrom);
+	thermoState_k += 2){
 		// Get thermodynamic states
 		int thermoState_i = thermoState_k;
 		int thermoState_j = thermoState_k + 1;
@@ -2107,6 +2097,8 @@ void Context::mixNeighboringReplicas(void)
 		int replica_i = thermo2ReplicaIxs[thermoState_i];
 		int replica_j = thermo2ReplicaIxs[thermoState_j];
 
+		std::cout << "mixNeighboringReplicas thermoStates "
+			<< thermoState_i << " " << thermoState_j << "\n";
 		//std::cout << "Attempt to swap replicas " << replica_i
 		//	<< " and " << replica_j << std::endl;
 
@@ -2115,28 +2107,29 @@ void Context::mixNeighboringReplicas(void)
 	}
 }
 
-// Mix replicas
+// Mix replicas - hold it for the moment
 void Context::mixReplicas(void)
 {
-	if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-		mixNeighboringReplicas();
-	}else{
-		mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
-	}
+	assert(!"Not implemented"); throw std::exception();
+//	if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+//		mixNeighboringReplicas();
+//	}else{
+//		mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
+//	}
 }
 
 
 // Load replica's atomLocations into it's front world
-void Context::restoreReplicaCoordinatesToFront(int whichReplica)
+void Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
 {
 
-	//std::cout <<  "Context::restoreReplicaCoordinatesToFront " << whichReplica << ": " << std::flush;
+	//std::cout <<  "Context::restoreReplicaCoordinatesToFrontWorld " << whichReplica << ": " << std::flush;
 
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thermoIx = replica2ThermoIxs[whichReplica];
 
-	//std::cout <<  "Context::restoreReplicaCoordinatesToFront thermoIx " << thermoIx << std::endl << std::flush;
+	//std::cout <<  "Context::restoreReplicaCoordinatesToFrontWorld thermoIx " << thermoIx << std::endl << std::flush;
 
 	// Get worlds indexes of this thermodynamic state
 	std::vector<int> worldIndexes =
@@ -2152,13 +2145,13 @@ void Context::restoreReplicaCoordinatesToFront(int whichReplica)
 	worlds[worldIndexes.front()].setAtomsLocationsInGround(state,
 		replicas[whichReplica].getAtomsLocationsInGround());
 
-	//std::cout << "Context::restoreReplicaCoordinatesToFront worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
+	//std::cout << "Context::restoreReplicaCoordinatesToFrontWorld worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
 
 }
 
 
 // Load replica's atomLocations into it's back world
-void Context::restoreReplicaCoordinatesToBack(int whichReplica)
+void Context::restoreReplicaCoordinatesToBackWorld(int whichReplica)
 {
 
 	// Get thermoState corresponding to this replica
@@ -2182,10 +2175,10 @@ void Context::restoreReplicaCoordinatesToBack(int whichReplica)
 
 // Stores replica's front world's coordinates into it's atomsLocations
 // This should always be a fully flexible world
-void Context::storeReplicaCoordinatesFromFront(int whichReplica)
+void Context::storeReplicaCoordinatesFromFrontWorld(int whichReplica)
 {
 
-	//std::cout <<  "storeReplicaCoordinatesFromFront " << whichReplica << ": ";
+	//std::cout <<  "storeReplicaCoordinatesFromFrontWorld " << whichReplica << ": ";
 
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -2212,7 +2205,7 @@ void Context::storeReplicaCoordinatesFromFront(int whichReplica)
 
 
 // Get ennergy of the back world and store it in replica thisReplica
-void Context::storeReplicaEnergyFromBack(int replicaIx)
+void Context::storeReplicaEnergyFromBackWorld(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -2232,7 +2225,7 @@ void Context::storeReplicaEnergyFromBack(int replicaIx)
 }
 
 // Get ennergy of the front world and store it in replica thisReplica
-void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
+void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -2255,7 +2248,7 @@ void Context::storeReplicaEnergyFromFrontFull(int replicaIx)
 }
 
 // Get Fixman of the back world and store it in replica thisReplica
-void Context::storeReplicaFixmanFromBack(int replicaIx)
+void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -2505,17 +2498,17 @@ void Context::RunREX(void)
             //std::cout << "Replica front world coordinates:\n";
 			//replicas[replicaIx].PrintCoordinates();
 			initializeReplica(replicaIx); // EXPERIMENTAL
-			restoreReplicaCoordinatesToFront(replicaIx); // EXPERIMENTAL
+			restoreReplicaCoordinatesToFrontWorld(replicaIx); // EXPERIMENTAL
 
 			// Iterate this replica's worlds
 			RunReplica(replicaIx, swapEvery);
 
 			// This should always be a fully flexible world
-			storeReplicaCoordinatesFromFront(replicaIx);
+			storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
 			// Store energy
-			storeReplicaEnergyFromFrontFull(replicaIx);
-			storeReplicaFixmanFromBack(replicaIx);
+			storeReplicaEnergyFromFrontWorldFull(replicaIx);
+			storeReplicaFixmanFromBackWorld(replicaIx);
 
 			PrintToLog(worldIndexes.front());
 
@@ -2538,17 +2531,17 @@ void Context::RunREX(void)
 
 			//std::cout << "Replica front world coordinates:\n";
 			//replicas[replicaIx].PrintCoordinates();
-			restoreReplicaCoordinatesToFront(replicaIx);
+			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Iterate this replica's worlds
 			RunReplica(replicaIx, swapEvery);
 
 			// This should always be a fully flexible world
-			storeReplicaCoordinatesFromFront(replicaIx);
+			storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
 			// STORE energy
-			storeReplicaEnergyFromFrontFull(replicaIx);
-            storeReplicaFixmanFromBack(replicaIx);
+			storeReplicaEnergyFromFrontWorldFull(replicaIx);
+            		storeReplicaFixmanFromBackWorld(replicaIx);
 
 			// Write energy and geometric features to logfile
 			if( !(mixi % getPrintFreq()) ){
@@ -2567,7 +2560,15 @@ void Context::RunREX(void)
 		} // end replicas simulations
 
 		// Mix replicas
-		mixReplicas();
+		if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+			if ((mixi % 2) == 0){
+				mixNeighboringReplicas(0);
+			}else{
+				mixNeighboringReplicas(1);
+			}
+		}else{
+			mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
+		}
 
 		PrintNofAcceptedSwapsMatrix();
 

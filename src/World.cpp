@@ -1051,6 +1051,12 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 	this->compoundSystem->realize(someState, SimTK::Stage::Position);
 
+	// Print F_X_Ms - should always be I
+	//for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	//	SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+	//	std::cout << "F_X_M " << mobod.getMobilizerTransform(someState) << std::endl;
+	//}
+
 	// DEBUG DANGER
 	/*std::cout << "Locations after realizePosition\n";
 	std::cout << "mol new\n";

@@ -38,10 +38,6 @@ class AtomClassParams {
 
 	// Equal operator
 	bool operator==(const AtomClassParams& other) const {
-		//std::cout << 	( atomicNumber == other.atomicNumber ) << " "
-		//	<<	( valence == other.valence ) << " "
-		//	<<	( std::abs(vdwRadius - other.vdwRadius) < 0.0000001 ) << " "
-		//	<<	( std::abs(LJWellDepth - other.LJWellDepth) < 0.0000001) << std::endl;
 
 		if ( 	( atomicNumber == other.atomicNumber ) &&
 			( valence == other.valence ) &&

@@ -291,29 +291,33 @@ public:
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
 
+	// We hold this for the moment 
 	void mixAllReplicas(int nSwapAttempts);
-	void mixNeighboringReplicas(void);
+
+	// startingFrom argument is for alternating odd and even neighbors
+	void mixNeighboringReplicas(unsigned int startingFrom);
+
 	// Mix replicas
 	void mixReplicas(void);
 
 	// Load replica's atomLocations into it's front world
-	void restoreReplicaCoordinatesToFront(int whichReplica);
+	void restoreReplicaCoordinatesToFrontWorld(int whichReplica);
 
 	// Load replica's atomLocations into it's back world
-    void restoreReplicaCoordinatesToBack(int whichReplica);
+    	void restoreReplicaCoordinatesToBackWorld(int whichReplica);
 
 	// Stores replica's front world's coordinates into it's atomsLocations
 	// This should always be a fully flexible world
-	void storeReplicaCoordinatesFromFront(int whichReplica);
+	void storeReplicaCoordinatesFromFrontWorld(int whichReplica);
 
 	// Get ennergy of the back world and store it in replica thisReplica
-	void storeReplicaEnergyFromBack(int thisReplica);
+	void storeReplicaEnergyFromBackWorld(int thisReplica);
 
-    // Get ennergy of the front world and store it in replica thisReplica
-	void storeReplicaEnergyFromFrontFull(int thisReplica);
+    	// Get ennergy of the front world and store it in replica thisReplica
+	void storeReplicaEnergyFromFrontWorldFull(int thisReplica);
 
 	// Get Fixman of the back world and store it in replica thisReplica
-    void storeReplicaFixmanFromBack(int replicaIx);
+    	void storeReplicaFixmanFromBackWorld(int replicaIx);
 
 	void initializeReplica(int whichReplica);
 

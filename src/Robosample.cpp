@@ -112,7 +112,7 @@ vector<string> split(const string& i_str, const string& i_delim)
 int main(int argc, char **argv)
 {
 
-	std::cout << "OS memory 0.\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 
 	// Read input into a SetupReader object
 	SetupReader setupReader;
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 
 	int nofWorlds = context.getNofWorlds();
 
-	std::cout << "OS memory 1.\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 1.\n" << exec("free") << std::endl;
 	// Request threads
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		context.setNumThreadsRequested(worldIx,
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
 	// Add molecules based on the setup reader
 	context.AddMolecules(requestedNofMols, setupReader);
 
-	std::cout << "OS memory 2.\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
 	int finalNofMols = context.getNofMolecules();
 	if(requestedNofMols != finalNofMols){
 		std::cerr << "Something went wrong while adding the world\n";
@@ -248,16 +248,13 @@ int main(int argc, char **argv)
 	}
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
-	std::cout << "OS memory 2.1.\n" << exec("free") << std::endl;
 	// Loads parameters into DuMM
 	context.addDummParams(finalNofMols, setupReader);
 
-	std::cout << "OS memory 2.2\n" << exec("free") << std::endl;
 	// Adopts compound by the CompoundSystem
 	// and loads maps of indexes
 	context.model(finalNofMols, setupReader);
 
-	std::cout << "OS memory 2.2.1.\n" << exec("free") << std::endl;
 	// Adaptive Gibbs blocking
 	context.setNofRoundsTillReblock(
 		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
@@ -272,10 +269,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	std::cout << "OS memory 2.3\n" << exec("free") << std::endl;
 	// Is this necessary?
 	context.realizeTopology();
-	std::cout << "OS memory 2.4\n" << exec("free") << std::endl;
 
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
@@ -283,7 +278,7 @@ int main(int argc, char **argv)
 			worldIx, setupReader.get("SAMPLER")[worldIx]);
 	}
 
-	std::cout << "OS memory 3\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 3\n" << exec("free") << std::endl;
 	//////////////////////
 	// Thermodynamics
 	//////////////////////
@@ -446,7 +441,7 @@ int main(int argc, char **argv)
 	// Realize topology for all the Worlds
 	context.realizeTopology();
 
-	std::cout << "OS memory 4.\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 4.\n" << exec("free") << std::endl;
 	// Check atom stations for debug purposes
 	context.checkAtomStationsThroughDumm();
 
@@ -499,7 +494,7 @@ int main(int argc, char **argv)
 
 	}
 
-	std::cout << "OS memory 5.\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 		context.RunSimulatedTempering(context.getNofRounds(),
@@ -516,7 +511,7 @@ int main(int argc, char **argv)
 	// Write final pdbs
 	context.writeFinalPdb();
 
-	std::cout << "OS memory 6\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 6\n" << exec("free") << std::endl;
 	//std::cout << "printStatus 1 " << std::endl;
 	//context.printStatus();
 
