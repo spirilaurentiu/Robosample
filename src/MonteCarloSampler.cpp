@@ -580,6 +580,45 @@ int MonteCarloSampler::getAcceptedSteps() const
 }
 
 
+/** Modifies Q randomly
+ **/
+void MonteCarloSampler::perturbQ(SimTK::State& someState)
+{
+	// Perturb Q
+	//SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+	SimTK::Real rand_no = uniformRealDistribution_mpi_pi(randomEngine);
+	int nq = someState.getNQ();
+	//SimTK::Vector V(nq);
 
+	//
+	SimTK::Real q0_refVal, q1_refVal;
+	if(rand_no < 0){
+		q0_refVal = 2;
+		q1_refVal = -1.7;
+	}else{
+		q0_refVal = 0;
+		q1_refVal = 0;
+	}
+	// q1_refVal = -2.3
+	SimTK::Real q0_actVal = someState.getQ()[0];
+	SimTK::Real q1_actVal = someState.getQ()[1];
+
+	// Draw from vonMises distribution
+	SimTK::Real q0_vonMises = vonMises(q0_actVal, 5);
+	if(std::isnan(q0_vonMises)){q0_vonMises = q0_actVal;}
+	std::cout << "vonMises " << q0_vonMises << "\n";
+
+	// Add Gaussian noise
+	//std::normal_distribution<double> Noiser(q0_refVal, 1);
+	//double noise = Noiser(RandomCache.RandomEngine);
+
+	std::cout << "HMCSampler::perturbQ " << someState.getQ() << " with " << q0_vonMises << std::endl;
+	//someState.updQ()[which] = uniformRealDistribution_mpi_pi(randomEngine);
+	someState.updQ()[0] = q0_vonMises;
+	//someState.updQ()[1] = q1_vonMises;
+	system->realize(someState, SimTK::Stage::Position);
+	std::cout << "HMCSampler::perturbQ " << someState.getQ() << std::endl;
+
+}
 
 

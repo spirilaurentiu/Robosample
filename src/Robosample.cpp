@@ -110,8 +110,7 @@ vector<string> split(const string& i_str, const string& i_delim)
 /////////////////////////////   MAIN   ////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
-{
-
+{	
 	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 
 	// Read input into a SetupReader object

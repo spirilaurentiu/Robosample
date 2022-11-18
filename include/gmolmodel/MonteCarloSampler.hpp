@@ -69,6 +69,10 @@ public:
     // Assign a random conformation
     bool propose(SimTK::State& advanced);
 
+    /** Modifies Q randomly
+     **/
+    void perturbQ(SimTK::State& someState);
+
     // Performs the acception-rejection step and sets the state of the compound
     // to the appropriate conformation
     void update(SimTK::State&);

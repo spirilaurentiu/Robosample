@@ -232,6 +232,10 @@ public:
 	/** Chooses whether to accept a sample or not based on a probability **/
 	bool acceptSample();
 
+	/** Scales Q randomly
+	 **/
+	void scaleQ(SimTK::State& someState, SimTK::Real scaleFactor);
+
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 
@@ -267,10 +271,6 @@ public:
 	/** Push generalizedvelocities into Rdot vector stored in Sampler.
 	Return the size of Rdot **/
 	std::size_t pushVelocitiesInU(SimTK::State& someState);
-
-	/** Modifies Q randomly
-	 **/
-	void perturbQ(SimTK::State& someState);
 
 	/** Get the proposed kinetic energy. This is set right  after velocities
 	are initialized. **/

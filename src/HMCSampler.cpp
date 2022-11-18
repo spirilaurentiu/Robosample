@@ -950,7 +950,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 		if(NMAOption > 0){
 			validated = proposeNMA(someState);
 		}else if(NMAOption < 0){
-			validated = proposeNEHMC(someState);
+			scaleQ(someState, 1.2);
+			calcNewConfigurationAndEnergies(someState);
+			validated = validateProposal();
 		}else{
 			validated = propose(someState);
 		}
@@ -2317,73 +2319,32 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 }
 
 
-/** Modifies Q randomly
- **/
-void HMCSampler::perturbQ(SimTK::State& someState)
+/*
+ * Scale all the generalized coordinates with a scaling factor
+ */
+void HMCSampler::scaleQ(SimTK::State& someState, SimTK::Real scaleFactor)
 {
-	// Perturb Q
-	//SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-	SimTK::Real rand_no = uniformRealDistribution_mpi_pi(randomEngine);
-	int nq = someState.getNQ();
-	//SimTK::Vector V(nq);
 
-	//
-	SimTK::Real q0_refVal, q1_refVal;
-	if(rand_no < 0){
-		q0_refVal = 2;
-		q1_refVal = -1.7;
-	}else{
-		q0_refVal = 0;
-		q1_refVal = 0;
+	//std::vector<SimTK::Real> angles(matter.getNQ(), 0);
+	std::vector<SimTK::Real> angles(matter->getNumBodies() - 2, 0);
+
+	for (SimTK::MobilizedBodyIndex mbx(3); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+
+		angles[int(mbx) - 2] = std::acos(X_PF.R()(0)(0));
+		SimTK::Real angle = angles[int(mbx) - 1];
+
+		std::cout << "Nof bodies " << matter->getNumBodies()
+			<< " angle " << angle * (180 / SimTK::Pi) << std::endl;
 	}
-	// q1_refVal = -2.3
-	SimTK::Real q0_actVal = someState.getQ()[0];
-	SimTK::Real q1_actVal = someState.getQ()[1];
 
-	// Draw from vonMises distribution
-	SimTK::Real q0_vonMises = vonMises(q0_actVal, 5);
-	if(std::isnan(q0_vonMises)){q0_vonMises = q0_actVal;}
-	std::cout << "vonMises " << q0_vonMises << "\n";
-
-	// Add Gaussian noise
-	//std::normal_distribution<double> Noiser(q0_refVal, 1);
-	//double noise = Noiser(RandomCache.RandomEngine);
-
-	std::cout << "HMCSampler::perturbQ " << someState.getQ() << " with " << q0_vonMises << std::endl;
-	//someState.updQ()[which] = uniformRealDistribution_mpi_pi(randomEngine);
-	someState.updQ()[0] = q0_vonMises;
-	//someState.updQ()[1] = q1_vonMises;
+	//someState.updQ() += (scaleFactor - 1) * X;
+	someState.updQ() += (0.19 * 1.9);
 	system->realize(someState, SimTK::Stage::Position);
-	std::cout << "HMCSampler::perturbQ " << someState.getQ() << std::endl;
+	std::cout << "Q = " << someState.updQ() << std::endl;
 
-//	// Get needed energies
-//	pe_o  = getOldPE();
-//	if(useFixman){
-//		fix_o = getOldFixman();
-//	}
-//	if(useFixman){
-//		fix_n = calcFixman(someState);
-//	}else{
-//		fix_n = 0.0;
-//	}
-//
-//	pe_n = getPEFromEvaluator(someState); // OPENMM
-//	//std::cout << "Multibody PE " << getPEFromEvaluator(someState) << std::endl; // OPENMM
-//	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // ELIZA FULL
-//
-//	setSetTVector(someState);
-//	setSetPE(pe_n);
-//	setSetFixman(fix_n);
-//	++acceptedSteps;
-//	assignConfFromSetTVector(someState);
-//
-//	std::cout << someState.getNU() << ' ' << 1 << ' '
-//			  //<< getSetPE() + getREP() << ' ' << getLastAcceptedKE()
-//			  << getSetPE() << ' ' << 0
-//			  << ' ' << getSetFixman() << ' ' << fix_o << ' ' << fix_n << ' ';
-//
-//	// Keep track of how many MC trials have been done
-//	++nofSamples;
 }
 
 
