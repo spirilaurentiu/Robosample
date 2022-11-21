@@ -80,7 +80,7 @@ public:
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 
-	virtual void scaleQ ( SimTK::State& someState, SimTK::Real scalingFactor ) = 0;
+	virtual void shiftQ ( SimTK::State& someState, SimTK::Real scalingFactor, int numIgnoredQs ) = 0;
 
 	/** Propose a move **/
 	virtual bool propose(SimTK::State& someState) = 0;

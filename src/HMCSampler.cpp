@@ -133,7 +133,6 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	NMAAltSign = 1.0;
 
-
 }
 
 /** Destructor **/
@@ -950,7 +949,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 		if(NMAOption > 0){
 			validated = proposeNMA(someState);
 		}else if(NMAOption < 0){
-			scaleQ(someState, 1.2);
+			shiftQ(someState, 1.2, 2);
 			calcNewConfigurationAndEnergies(someState);
 			validated = validateProposal();
 		}else{
@@ -1540,6 +1539,9 @@ void HMCSampler::initialize(SimTK::State& someState)
 	}
 
 	loadUScaleFactors(someState);
+
+	// Buffer to hold Q means
+	QsMeans.resize(nq), 0;
 
 }
 
@@ -2320,30 +2322,56 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 
 
 /*
- * Scale all the generalized coordinates with a scaling factor
+ * Shift all the generalized coordinates
  */
-void HMCSampler::scaleQ(SimTK::State& someState, SimTK::Real scaleFactor)
+void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
+	int numIgnoredQs)
 {
 
-	//std::vector<SimTK::Real> angles(matter.getNQ(), 0);
-	std::vector<SimTK::Real> angles(matter->getNumBodies() - 2, 0);
+	// Get generalized coordinates Q template values. These are the values that
+	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
+	// <(P_x, F_x) angle.
 
-	for (SimTK::MobilizedBodyIndex mbx(3); mbx < matter->getNumBodies(); ++mbx){
+	// First body is Ground and the second angle is not considered.
+	std::vector<SimTK::Real> angles(matter->getNumBodies() - numIgnoredQs, 0);
+
+	// Got through every Mobod
+	for (SimTK::MobilizedBodyIndex mbx(1 + numIgnoredQs); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
+		// Get mobod inboard frame X_PF
 		const Transform& X_PF = mobod.getInboardFrame(someState);
 
-		angles[int(mbx) - 2] = std::acos(X_PF.R()(0)(0));
-		SimTK::Real angle = angles[int(mbx) - 1];
+		// Get BAT coordinate "angle"
+		angles[int(mbx) - numIgnoredQs] = std::acos(X_PF.R()(0)(0));
 
+		// Print something for now
+		SimTK::Real angle = angles[int(mbx) - 1];
 		std::cout << "Nof bodies " << matter->getNumBodies()
 			<< " angle " << angle * (180 / SimTK::Pi) << std::endl;
+
+
+		// Readjust the mean Qs
+		//((nofSamples - 1) * angles + angles) / nofSamples;
 	}
 
+	
+
 	//someState.updQ() += (scaleFactor - 1) * X;
-	someState.updQ() += (0.19 * 1.9);
+	someState.updQ() += (0.1);
+	
+	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
-	std::cout << "Q = " << someState.updQ() << std::endl;
+
+	// Test
+	std::cout << "Q = " << someState.getQ() << std::endl;
+
+	// Get Jacobian
+	SimTK::Matrix J_G;
+	matter->calcSystemJacobian(someState, J_G);
+	std::cout << "J_G\n" << J_G << std::endl;
 
 }
 

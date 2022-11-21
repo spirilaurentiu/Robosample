@@ -232,9 +232,10 @@ public:
 	/** Chooses whether to accept a sample or not based on a probability **/
 	bool acceptSample();
 
-	/** Scales Q randomly
+	/** Shift all the generalized coordinates
 	 **/
-	void scaleQ(SimTK::State& someState, SimTK::Real scaleFactor);
+	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
+		int numIgnoredQs);
 
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
@@ -341,6 +342,9 @@ protected:
 	int QsBufferSize = 300;
 	//std::list<SimTK::Vector> QsBuffer;
 	std::deque<SimTK::Real> QsBuffer;
+
+	// Buffer to hold Q means
+	std::vector<SimTK::Real> QsMeans;
 
 	SimTK::Real acceptance;
 	SimTK::Real prevAcceptance;
