@@ -128,7 +128,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	//for(int i = 0; i < ndofs; i++){
 	//	NMARotation[i][i] = 1.0;
 	//}
-	NMAOption = 0;
+	NonEquilibriumOpt = 0;
 	MDStepsPerSampleStd = 0.5;
 
 	NMAAltSign = 1.0;
@@ -215,7 +215,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	// Vector multiplied by the sqrt of the inverse mass matrix
 	SimTK::Vector sqrtMInvUs(nu, 1);
 
-	if(NMAOption == 1){ // For pure demonstrative purposes
+	if(NonEquilibriumOpt == 1){ // For pure demonstrative purposes
 
 		if((nofSamples % 2) == 0){ NMAAltSign = 1;}else{NMAAltSign = -1;}
 		//if(((nofSamples) % 6) == 0){ NMAAltSign *= -1;}
@@ -240,7 +240,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
 
-	}else if(NMAOption == 2){ // Use UscaleFactors with random sign
+	}else if(NonEquilibriumOpt == 2){ // Use UscaleFactors with random sign
 
 		// Get random -1 or 1
 		SimTK::Real randSign;
@@ -285,7 +285,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		sqrtMInvUs *= sqrtRT;
 
 		//*/
-	}else if(NMAOption == 3){ // Set a random sign
+	}else if(NonEquilibriumOpt == 3){ // Set a random sign
 
 		// Check if we can use our cache
 		// Draw X from a normal distribution N(0, 1)
@@ -323,7 +323,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
 
-	}else if(NMAOption == 4){ // Set a random sign
+	}else if(NonEquilibriumOpt == 4){ // Set a random sign
 
 		// Direction vector UScaleFactors
 		//SimTK::Vector NormedUScaleFactors(nu, 1);
@@ -389,7 +389,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 
 
-	}else if(NMAOption == 5){
+	}else if(NonEquilibriumOpt == 5){
 	    std::cout << "NMAOPTION 5 IS STILL UNDER DEVELOPMENT !!\n" <<std::flush;
 
 		//proj(U, V, W);
@@ -435,7 +435,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
 		std::cout << "sqrtMInvUs 5 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
-	}else if(NMAOption == 6){
+	}else if(NonEquilibriumOpt == 6){
 
 		//std::cout << "DOFUs 0 "; for(int i = 0; i < nu; i++){ std::cout << DOFUScaleFactors[i] << " " ;} std::cout << "\n";
 
@@ -940,15 +940,15 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
 {
 	std::cout << std::setprecision(10) << std::fixed;
 
-	this->NMAOption = NMAOptionArg;
+	this->NonEquilibriumOpt = NMAOptionArg;
 
 	bool validated = false;
 
 	// Propose
 	for (int i = 0; i < 10; i++){
-		if(NMAOption > 0){
+		if(NonEquilibriumOpt > 0){
 			validated = proposeNMA(someState);
-		}else if(NMAOption < 0){
+		}else if(NonEquilibriumOpt < 0){
 			shiftQ(someState, 1.2, 2);
 			calcNewConfigurationAndEnergies(someState);
 			validated = validateProposal();
@@ -2159,9 +2159,9 @@ bool HMCSampler::validateProposal() const {
 bool HMCSampler::acceptSample() {
 	const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 	SimTK::Real prob = 0.0;
-	if(NMAOption == 0){
+	if(NonEquilibriumOpt == 0){
 		prob = MHAcceptProbability(etot_proposed, etot_n);
-	}else if(NMAOption > 0){
+	}else if(NonEquilibriumOpt > 0){
 
 		if(useFixman){
 			prob = MHAcceptProbability(pe_o + fix_o + ke_prop_nma6, pe_n + fix_n + ke_n_nma6);

@@ -237,6 +237,10 @@ public:
 	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		int numIgnoredQs);
 
+	SimTK::Real getBondLogDetJacobian(SimTK::State& somState);
+	SimTK::Real getAngleJacobianLogDeterminant(SimTK::State& somState);
+	SimTK::Real getDihedralJacobianLogDeterminant(SimTK::State& somState);
+
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 
@@ -351,7 +355,7 @@ protected:
 	SimTK::Real prevPrevAcceptance;
 
 	//
-	int NMAOption = 0;
+	int NonEquilibriumOpt = 0;
 
 	bool proposeExceptionCaught;
 	// END MCSampler

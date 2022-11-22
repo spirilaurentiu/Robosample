@@ -443,22 +443,22 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	}
 
 	// Normal modes options
-	NMAOption.resize(inpNofWorlds, 0);
-	if(setupReader.find("NMA_OPTION")){
+	NonEquilibriumOpt.resize(inpNofWorlds, 0);
+	if(setupReader.find("NONEQ_OPTION")){
 		if(setupReader.get("RANDOM_WORLD_ORDER").size() == 0){
-			std::cerr << "The NMA_OPTION key is present. Please specify a value.\n";
+			std::cerr << "The NONEQ_OPTION key is present. Please specify a value.\n";
 			throw std::exception();
 			std::exit(1);
 		}else{
 			for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
-				NMAOption[worldIx] = std::stoi(setupReader.get("NMA_OPTION")[worldIx]);
+				NonEquilibriumOpt[worldIx] = std::stoi(setupReader.get("NONEQ_OPTION")[worldIx]);
 			}
 		}
 	}
 
     if(setupReader.find("REX_SWAP_FIXMAN")){
 		if(setupReader.get("REX_SWAP_FIXMAN").size() == 0){
-			std::cerr << "The NMA_OPTION key is present. Please specify a value.\n";
+			std::cerr << "The NONEQ_OPTION key is present. Please specify a value.\n";
 			throw std::exception();
 			std::exit(1);
 		}else{
@@ -2338,7 +2338,7 @@ void Context::initializeReplica(int thisReplica)
 			//std::cout << "Sample world " << front << "\n";
 			int accepted = worlds[frontIx].generateSamples(
 				0,
-				NMAOption[frontIx]);
+				NonEquilibriumOpt[frontIx]);
 
 			// =============
 
@@ -2404,8 +2404,10 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// -------------
 	// Set samplers parameters for this replica
 	// =============
-	std::vector<SimTK::Real> replicaTimesteps = thermodynamicStates[thisThermoStateIx].getTimesteps();
-	std::vector<int> replicaMdsteps = thermodynamicStates[thisThermoStateIx].getMdsteps();
+	std::vector<SimTK::Real> replicaTimesteps =
+		thermodynamicStates[thisThermoStateIx].getTimesteps();
+	std::vector<int> replicaMdsteps =
+		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
@@ -2418,64 +2420,52 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 
 	std::cout << "Timesteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep() << " " ;
+		std::cout
+			<< worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep()
+			<< " " ;
 	}
 	std::cout << std::endl;
+
 	std::cout << "Mdsteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample() << " " ;
+		std::cout 
+			<< worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample()
+			<< " " ;
 	}
 	std::cout << std::endl;
 	// =============
 
-
+	// Go through the requested nof rounds
 	for(size_t ri = 0; ri < howManyRounds; ri++){
+
+		// Go through each world of this replica
 		for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
 
 			int frontIx = -1;
 			int backIx = -1;
 
-			// -------------
 			// SAMPLE from the current world
 			frontIx = replicaWorldIxs.front();
-			//std::cout << "Sample world " << front << "\n";
 			int accepted = worlds[frontIx].generateSamples(
 				nofSamplesPerRound[frontIx],
-				NMAOption[frontIx]);
+				NonEquilibriumOpt[frontIx]);
 
-			// =============
-
-			// -------------
-			// ROTATE
-			///*print*/std::cout << "Rotate from";/*print*/
-			///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
-
-			// Rotate worlds indices (translate from right to left)
+			// ROTATE worlds indices (translate from right to left)
 		   	std::rotate(replicaWorldIxs.begin(),
 				replicaWorldIxs.begin() + 1,
 				replicaWorldIxs.end());
 
-			///*print*/std::cout << " to";/*print*/
-			///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
-			///*print*/std::cout << "\n";/*print*/
-			// =============
-
-
-			// -------------
 			// TRANSFER coordinates from last world to current
 			// TODO: eliminate in the last iteration
 			frontIx = replicaWorldIxs.front();
 			backIx = replicaWorldIxs.back();
 
 			if(replicaNofWorlds > 1) {
-				//std::cout << "Transfer from world " << backIx
-				//	<< " to " << frontIx << std::endl;
-
 				transferCoordinates(backIx, frontIx);
 			}
-			// =============
 
 		} // END iteration through worlds
+
 	} // END iteration through rounds
 
 }
@@ -2726,7 +2716,7 @@ void Context::RunOneRound(void)
 		// Generate samples from the current world
 		int accepted = worlds[currentWorldIx].generateSamples(
 			nofSamplesPerRound[currentWorldIx],
-			NMAOption[currentWorldIx]);
+			NonEquilibriumOpt[currentWorldIx]);
 
 	} // END iteration through worlds
 }

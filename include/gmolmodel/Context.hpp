@@ -407,7 +407,7 @@ private:
 		QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
 
 	// Normal mode analysis
-	std::vector<int> NMAOption;
+	std::vector<int> NonEquilibriumOpt;
 
 	////////////////////////
 	//// REPLICA EXCHANGE //
