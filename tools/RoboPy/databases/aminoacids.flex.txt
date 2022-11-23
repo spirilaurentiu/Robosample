@@ -8,6 +8,7 @@
 "HIP": {"phi": ["N", "CA"], "psi": ["CA", "C"], "omega": ["N", "C"], "SC_pin": ["CA", "CB", "CG"], "SC_ball": ["CA", "CB", "CG"]},
 "HID": {"phi": ["N", "CA"], "psi": ["CA", "C"], "omega": ["N", "C"], "SC_pin": ["CA", "CB", "CG"], "SC_ball": ["CA", "CB", "CG"]},
 "HIE": {"phi": ["N", "CA"], "psi": ["CA", "C"], "omega": ["N", "C"], "SC_pin": ["CA", "CB", "CG"], "SC_ball": ["CA", "CB", "CG"]},
+"HIS": {"phi": ["N", "CA"], "psi": ["CA", "C"], "omega": ["N", "C"], "SC_pin": ["CA", "CB", "CG"], "SC_ball": ["CA", "CB", "CG"]},
 "ILE": {"phi": ["N", "CA"], "psi": ["CA", "C"], "omega": ["N", "C"], "SC_pin": ["CA", "CB", "CG1", "CG2", "CD1"], "SC_ball": ["CA", "CB", "CG1", "CG2", "CD1"]},
 "LYS": {"phi": ["N", "CA"], "psi": ["CA", "C"], "omega": ["N", "C"], "SC_pin": ["CA", "CB", "CG", "CD", "CE", "NZ"], "SC_ball": ["CA", "CB", "CG", "CD", "CE", "NZ"]},
 "LEU": {"phi": ["N", "CA"], "psi": ["CA", "C"], "omega": ["N", "C"], "SC_pin": ["CA", "CB", "CG", "CD1", "CD2"],  "SC_ball": ["CA", "CB", "CG", "CD1", "CD2"]},

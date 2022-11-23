@@ -24,9 +24,6 @@ class Flexor:
         self._MDTrajObject = mdtraj_obj
         self._edges = list(self._MDTrajObject.topology.to_bondgraph().edges)
         self._DB = {}
-        self.distanceMat = md.compute_contacts(self._MDTrajObject)
-        self.numberOfWorlds = 0
-        print("Distance matrix has been computed!")
 
     def loadFlexDB(self, FlexFN):
         '''
@@ -55,7 +52,7 @@ class Flexor:
             js.pop("TITLE")
             self._DB = {**self._DB, **js}
 
-    def addWorld(self, range, distanceCutoff, subset, type, jointType, FNOut):
+    def addWorld(self, range, subset, type, jointType, FNOut, distanceCutoff=0, sasa_percentile=0):
         '''
         Parameters
         ----------
@@ -87,14 +84,34 @@ class Flexor:
         FNOut: string
             Path-like string to a file where the flexibilities will be written.
 
+        sasa_percentile: float
+            If supplied, will filter atoms from range so that only atoms that are in the
+            sasa_percentile'th percentile of accesibility will be kept
+            Example: if sasa_percentile is 0.9, then only the atoms that are in the top 10%
+            accesibility-wise AND in the selected range will be kept.
+
         Returns
         ----------
         None
         '''
 
+        jointCount = 0
         fileOut = open(FNOut, "w")
         jointType = jointType.lower()
-        selIx = self._MDTrajObject.topology.select(range)
+        selIx = list(self._MDTrajObject.topology.select(range))
+        ## If sasa_percentile has been supplied, we do the filtering now.
+        if (sasa_percentile > 0):
+            ## Compute
+            sasa = md.shrake_rupley(self._MDTrajObject)[0]
+
+            ## Normalize
+            sasa = (sasa - np.min(sasa))/(np.max(sasa) - np.min(sasa))
+
+            ## Filter
+            for i,v in enumerate(selIx):
+                if sasa[v] < sasa_percentile:
+                    selIx.pop(i)
+        validJointAtoms = []
         if ("all" in subset):
             subset = ["side", "rama"]
         if ("rama" in subset):
@@ -106,14 +123,48 @@ class Flexor:
             if ((edge[0].index in selIx) and (edge[1].index in selIx)):
                 if (jointType == "cartesian"):
                     fileOut.write("{:5d} {:5d} Cartesian {} {}\n".format(edge[0].index, edge[1].index, edge[0], edge[1]))
-
+                    validJointAtoms.append(edge[0].index)
+                    validJointAtoms.append(edge[1].index)
+                    jointCount += 1
                 else:
                     for subsetType in subset:
                         if (self.check_joint(edge[0], jointType, subsetType) and
                             self.check_joint(edge[1], jointType, subsetType)):
                             fileOut.write("{:5d} {:5d} {} {} {}\n".format(edge[0].index, edge[1].index, jointType.capitalize(),
                                                           edge[0], edge[1]))
+                            validJointAtoms.append(edge[0].index)
+                            validJointAtoms.append(edge[1].index)
+                            jointCount += 1
 
+        if (distanceCutoff>0):
+            ## First we get all atoms that are within 'distanceCutoff' of atoms in joints
+            nearbyAtoms = md.compute_neighbors(self._MDTrajObject, distanceCutoff, validJointAtoms)
+            ## Then we remove the atoms that are already in the validJointAtoms selection
+            validJointAtoms = list(set(validJointAtoms))
+            for _ in validJointAtoms:
+                ix = np.argwhere(nearbyAtoms==_)
+                nearbyAtoms = np.delete(nearbyAtoms,ix)
+            ## Then we do the check we did above, but for the new selection
+            fileOut.write("### Neighboring Joints ###\n")
+            for edge in self._edges:
+                if ((edge[0].index in nearbyAtoms) and (edge[1].index in nearbyAtoms)):
+                    if (jointType == "cartesian"):
+                        fileOut.write(
+                            "{:5d} {:5d} Cartesian {} {}\n".format(edge[0].index, edge[1].index, edge[0], edge[1]))
+                        jointCount += 1
+
+                    else:
+                        for subsetType in subset:
+                            if (self.check_joint(edge[0], jointType, subsetType) and
+                                    self.check_joint(edge[1], jointType, subsetType)):
+                                fileOut.write("{:5d} {:5d} {} {} {}\n".format(edge[0].index, edge[1].index,
+                                                                              jointType.capitalize(),
+                                                                              edge[0], edge[1]))
+                                jointCount += 1
+
+            print ("Flex file {} generated! ({} joints)".format(FNOut, jointCount))
+            fileOut.close()
+            
     ## Helper functions
     def check_joint(self, atom, jointType, subset):
         '''
@@ -145,4 +196,4 @@ class Flexor:
                 return True
         if (subset == "omega"):
             if (atom.name in self._DB[str(atom.residue)[:3]]["omega"]):
-                return True 
+                return True
