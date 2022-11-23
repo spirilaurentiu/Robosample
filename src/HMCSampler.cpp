@@ -133,6 +133,9 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	NMAAltSign = 1.0;
 
+	// Set total mass of the system to non-realistic value
+	totalMass = 0;
+
 }
 
 /** Destructor **/
@@ -1543,6 +1546,9 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// Buffer to hold Q means
 	QsMeans.resize(nq), 0;
 
+	// Total mass of the system
+	this->totalMass = matter->calcSystemMass(someState);
+
 }
 
 /** Same as initialize **/
@@ -1615,6 +1621,10 @@ void HMCSampler::reinitialize(SimTK::State& someState)
         InvUScaleFactors[j] = 1;
 	}
 	loadUScaleFactors(someState);
+
+	// Total mass of the system
+	this->totalMass = matter->calcSystemMass(someState);
+
 }
 
 /** Get/Set the timestep for integration **/
@@ -2357,11 +2367,10 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		//((nofSamples - 1) * angles + angles) / nofSamples;
 	}
 
-	
-
 	//someState.updQ() += (scaleFactor - 1) * X;
 	someState.updQ() += (0.1);
 	
+	/* Some SOA 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
 
@@ -2369,9 +2378,44 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	std::cout << "Q = " << someState.getQ() << std::endl;
 
 	// Get Jacobian
-	SimTK::Matrix J_G;
+	SimTK::Matrix J_G, Jt_G, JtJ, JJt;
 	matter->calcSystemJacobian(someState, J_G);
-	std::cout << "J_G\n" << J_G << std::endl;
+
+	// Get system mass matrix
+	SimTK::Matrix M;
+	matter->calcM(someState, M);
+
+	// Calc metric tensor
+	JtJ = J_G.transpose() * J_G;
+
+	SimTK::SymMat<12> smJtJ; // BUG: this should be a constant
+	//smJtJ.setFromSymmetric(SimTK::Mat<ndofs, ndofs>(JtJ));
+	for(unsigned int i = 0; i < ndofs; i++){
+		for (unsigned int j =0; j < ndofs; j++){
+			smJtJ(i, j) = JtJ(i, j);
+			smJtJ(j, i) = JtJ(i, j);
+		}
+	}
+
+	SimTK::Real dJJ = SimTK::det(smJtJ) ;
+
+	SimTK::SymMat<12> smM; // BUG: this should be a constant
+	//smJtJ.setFromSymmetric(SimTK::Mat<ndofs, ndofs>(JtJ));
+	for(unsigned int i = 0; i < ndofs; i++){
+		for (unsigned int j =0; j < ndofs; j++){
+			smM(i, j) = M(i, j);
+			smM(j, i) = M(i, j);
+		}
+	}
+
+	SimTK::Real dM = SimTK::det(smM) ;
+
+	//std::cout << "JtJ\n" << JtJ << std::endl;
+	//std::cout << "smJtJ\n" << smJtJ << std::endl;
+	std::cout << "smM\n" << smM << std::endl;
+	std::cout << "JJ determinant\n" << dJJ << std::endl;
+	std::cout << "M determinant\n" << dM << std::endl;
+	*/
 
 }
 

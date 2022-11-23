@@ -1441,7 +1441,7 @@ SimTK::Real World::calcFixman(void)
 }
 
 // Generate a number of samples
-int World::generateSamples(int howMany, int NMAOption)
+int World::generateSamples(int howMany, int NonEquilibriumOpt)
 {
 
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
@@ -1462,7 +1462,7 @@ int World::generateSamples(int howMany, int NMAOption)
 	//accepted is wrong
 	int accepted;
 	for(int k = 0; k < howMany; k++) {
-		accepted += updSampler(0)->sample_iteration(currentAdvancedState, NMAOption);
+		accepted += updSampler(0)->sample_iteration(currentAdvancedState, NonEquilibriumOpt);
 	}
 
 	return accepted;

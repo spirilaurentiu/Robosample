@@ -1,9 +1,9 @@
 # Molecule information
 MOLECULES 2but              # Molecules to load
 PRMTOP ligand.prmtop        # Parameter file
-INPCRD ligand.inpcrd        # Coordinate / Restart file
+INPCRD ligand        # Coordinate / Restart file
 RBFILE ligand.rb            # Rigid bodies definition file
-FLEXFILE ligand.td.flex        # Flexible bonds definition file
+FLEXFILE ligand.cart.flex        # Flexible bonds definition file
 OUTPUT_DIR temp
 ROOTS 0
 ROOT_MOBILITY Free
@@ -19,7 +19,7 @@ REPRODUCIBLE FALSE
 SEED 42
 
 SAMPLER VV
-NMA_OPTION 0
+NONEQ_OPTION 0
 SAMPLES_PER_ROUND 1
 
 TIMESTEPS 0.003
@@ -28,7 +28,7 @@ TEMPERATURE_FIN 300
 TEMPERATURE_INI 300
 THERMOSTAT Andersen
 FFSCALE AMBER
-GBSA 1.0
+GBSA 0.0
 
 FIXMAN_POTENTIAL TRUE
 FIXMAN_TORQUE TRUE

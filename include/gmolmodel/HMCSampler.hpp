@@ -319,6 +319,9 @@ protected:
 
 	RANDOM_CACHE RandomCache;
 
+	// Total mass of the system
+	SimTK::Real totalMass;
+
 	// BEGIN MCSampler
 	std::vector<SimTK::Transform> SetTVector; // Transform matrices
 	std::vector<SimTK::Transform> TVector; // Transform matrices

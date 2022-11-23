@@ -53,6 +53,9 @@ Sampler::Sampler(World *argWorld,
 		natoms += topology.getNumAtoms();
 	}
 
+	// Set total mass of the system to non-realistic valaue
+	this->totalMass = 0;
+
 	int ThreeFrom3D = 3;
 	ndofs = natoms * ThreeFrom3D;
 

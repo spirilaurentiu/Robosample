@@ -90,7 +90,8 @@ public:
 	// For debugging purposes
 	void PrintSimbodyStateCache(SimTK::State& someState);
 
-public:
+public: 
+	// Classes we need to access
 	World *world;
 	const SimTK::System *system;
 	SimTK::CompoundSystem *compoundSystem;
@@ -102,6 +103,9 @@ public:
 	std::vector<Topology>& topologies;
 	std::size_t natoms;
 	std::size_t ndofs;
+
+	// Total mass of the system
+	SimTK::Real totalMass;
 
 	/** Joint types **/
 	std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
