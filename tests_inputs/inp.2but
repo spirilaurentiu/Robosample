@@ -3,29 +3,37 @@ MOLECULES 2but              # Molecules to load
 PRMTOP ligand.prmtop        # Parameter file
 INPCRD ligand        # Coordinate / Restart file
 RBFILE ligand.rb            # Rigid bodies definition file
+#FLEXFILE ligand.angpin.flex        # Flexible bonds definition file
 FLEXFILE ligand.cart.flex        # Flexible bonds definition file
 OUTPUT_DIR temp
 ROOTS 0
-ROOT_MOBILITY Free
+ROOT_MOBILITY Weld
 OUTPUT_DIR temp
 
 
+NONBONDED_METHOD 0
+NONBONDED_CUTOFF 1.2
+
 RUN_TYPE Normal
-ROUNDS 10                   # Usually 2000
+REX_SWAP_EVERY 1
+REX_FILE trex.td.dT200.dat
+
+ROUNDS 10
 ROUNDS_TILL_REBLOCK 10
 WORLDS R1
 RANDOM_WORLD_ORDER FALSE
 REPRODUCIBLE FALSE
-SEED 42
+SEED 666
 
 SAMPLER VV
 NONEQ_OPTION 0
+NONEQ_OPTION -1
 SAMPLES_PER_ROUND 1
 
-TIMESTEPS 0.003
-MDSTEPS 10                  # Usually 40
-TEMPERATURE_FIN 300
-TEMPERATURE_INI 300
+TIMESTEPS 0.0001
+MDSTEPS 1
+TEMPERATURE_FIN 1 
+TEMPERATURE_INI 1
 THERMOSTAT Andersen
 FFSCALE AMBER
 GBSA 0.0
@@ -33,7 +41,7 @@ GBSA 0.0
 FIXMAN_POTENTIAL TRUE
 FIXMAN_TORQUE TRUE
 
-BOOST_TEMPERATURE 600
+BOOST_TEMPERATURE 1
 BOOST_MDSTEPS 1
 
 PRINT_FREQ 1
