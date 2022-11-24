@@ -89,6 +89,9 @@ public:
 	void setThermostat(std::string);
 	void setThermostat(const char *);
 	virtual ThermostatName getThermostat(void) const;
+ 
+ 	//Compute mathematical, rather than robotic Jacobian 
+	void calcMathJacobian(SimTK::State& someState);
 
 	// Return true if use Fixman potential
 	void useFixmanPotential(void); // DONE
@@ -319,9 +322,6 @@ protected:
 
 	RANDOM_CACHE RandomCache;
 
-	// Total mass of the system
-	SimTK::Real totalMass;
-
 	// BEGIN MCSampler
 	std::vector<SimTK::Transform> SetTVector; // Transform matrices
 	std::vector<SimTK::Transform> TVector; // Transform matrices
@@ -392,6 +392,8 @@ protected:
 
 	SimTK::Real ke_prop_nma6;
 	SimTK::Real ke_n_nma6;
+
+	SimTK::Real work;
 
 	SimTK::Real boostT;
 	SimTK::Real boostRT;
