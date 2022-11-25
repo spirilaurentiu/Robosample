@@ -1017,34 +1017,115 @@ bool HMCSampler::propose(SimTK::State& someState)
 }
 
 /* 
-* Compute mathematical, rather than robotic Jacobian 
+* Compute mathematical, rather than robotic Jacobian.
+* It translates generalized velocities u into Cartesian velocities
+* for each atom on all topologies.
+* Computational cost is high
 */
-void HMCSampler::calcMathJacobian(SimTK::State& someState)
+void HMCSampler::calcMathJacobian(const SimTK::State& someState,
+	SimTK::Matrix& mathJ)
 {
+	// Mathematical Jacobian is 3N x nu dimensional
+	unsigned int nu = someState.getNU();
+	mathJ.resize(natoms * 3, nu);
+	mathJ = 0;
 
+	// Row number in math jacobian
+	int i = 0;
+
+	// Go through topologies
 	for(auto& topology : topologies){
+		// Go through atoms
 		for(const auto& AtomList : topology.bAtomList){
+
+			// Get atom indeces in Compound and Simbody
 			const auto aIx = AtomList.getCompoundAtomIndex();
 			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(
 				aIx, *dumm);
+
+				// Get atom station on mobod
 				SimTK::Vec3 station = 
 				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(
 				aIx, *dumm);
 				
+				// Get station Jacobian: 42*nt + 54*nb + 33*n flops
 				SimTK::Matrix stationJ;
 				matter->calcStationJacobian(someState, mbx, station, stationJ);
+				
+				// Add new three rows corresponding to this atom
+				for(unsigned int j = 0; j < nu; j++){
+					mathJ(i + 0, j) = stationJ(0, j);
+					mathJ(i + 1, j) = stationJ(1, j);
+					mathJ(i + 2, j) = stationJ(2, j);
+				}
 
-/* 				if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(
-					aIx, *dumm) == 0){ // atom is at body's origin
-						SimTK::Vec3 station = SimTK::Vec3(0);
-				}else{ // atom is not at body's origin
-					SimTK::Transform G_X_root = G_X_T * topology.getTopTransform(aIx);
-					SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(aIx);
-					dumm->getAtomStationOnBody(dAIx);
-
-				} */
+				i += 3; // increment row number - 3 rows per atom
 		}
 	}
+
+}
+
+/*
+* Get the diagonal 3Nx3N matrix containing the atoms masses
+*/
+void HMCSampler::getCartesianMassMatrix(const SimTK::State& somestate,
+	SimTK::Matrix& M)
+{
+	// Resize the matrix
+	M.resize(natoms * 3, natoms *  3);
+	M = 0;
+	
+	// Row number
+	int i = 0;
+
+	// Go through topologies
+	for(auto& topology : topologies){
+		// Go through atoms
+		for(const auto& AtomList : topology.bAtomList){
+			
+			// Get atom indeces in Compound and DuMM
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto dAIx = topology.getDuMMAtomIndex(aIx);
+
+			// Put atom mass on the diagonal
+			SimTK::Real mass = dumm->getAtomMass(dAIx);
+			M(i + 0, i + 0) = mass;
+			M(i + 1, i + 1) = mass;
+			M(i + 2, i + 2) = mass;
+
+			// Increment row number - 3 rows per atom
+			i += 3;
+		}
+	}
+
+
+}
+
+/*
+* Get Joint type by examining hinge matrix H_FM
+*/
+int HMCSampler::getJointTypeFromH(const SimTK::State& someState,
+	const SimTK::MobilizedBody& mobod)
+{
+	// Get the mobilized body
+	//const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+	// Get number of degrees of freedom
+	unsigned int nu = mobod.getNumU(someState);
+
+	if(nu == 1){ // only one degree of freedom
+		SpatialVec H_FMCol = mobod.getH_FMCol(someState,
+			SimTK::MobilizerUIndex(0));
+		std::cout << "H_FMCol " << H_FMCol << std::endl;
+
+	}else{
+		// Go through H_FM columns
+		for (SimTK::MobilizerUIndex ux(0); ux < nu; ++ux){
+			SpatialVec H_FMCol = mobod.getH_FMCol(someState, ux);
+			std::cout << "H_FMCol " << H_FMCol << std::endl;
+		}
+	}
+
 
 }
 
@@ -1060,7 +1141,8 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	// <(P_x, F_x) angle.
 
 	// First body is Ground and the second angle is not considered.
-	std::vector<SimTK::Real> angles(matter->getNumBodies() - numIgnoredQs, 0);
+	std::vector<SimTK::Real> 
+		angles(matter->getNumBodies() - numIgnoredQs, 0);
 
 	// Got through every Mobod
 	for (SimTK::MobilizedBodyIndex mbx(1 + numIgnoredQs);
@@ -1073,11 +1155,15 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		// Get mobod inboard frame X_PF
 		const Transform& X_PF = mobod.getInboardFrame(someState);
 
+		// Get joint type
+		//int jt = getJointTypeFromH(someState, mobod);
+		//std::cout << "joint type " << int(jt) << std::endl;
+
 		// Get BAT coordinate "angle"
 		angles[int(mbx) - numIgnoredQs] = std::acos(X_PF.R()(0)(0));
 
 		// Print something for now
-		SimTK::Real angle = angles[int(mbx) - 1];
+		SimTK::Real angle = angles[int(mbx) - numIgnoredQs];
 		std::cout << "Nof bodies " << matter->getNumBodies()
 			<< " angle " << angle * (180 / SimTK::Pi) << std::endl;
 
@@ -1096,14 +1182,20 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	//	someState.updQ()(0) = 1.309; // 75
 	//}
 	
-		// Save changes by advancing to Position Stage
+	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Test
 	//std::cout << "Q = " << someState.getQ() << std::endl;
-	
+}
+
+/*
+ * Test ground for SOA
+ */
+void HMCSampler::testSOA(SimTK::State& someState)
+{	
 	// Some SOA
-	for (SimTK::MobilizedBodyIndex mbx(1 + numIgnoredQs);
+	for (SimTK::MobilizedBodyIndex mbx(1);
 		mbx < matter->getNumBodies();
 		++mbx){
 		
@@ -1117,58 +1209,79 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		const SpatialInertia Mi_G = mobod.getBodySpatialInertiaInGround(someState); // about origin
 		std::cout << "Mi_G\n" << Mi_G.toSpatialMat() << std::endl;
 
-		SimTK::Matrix stationJ;
-		matter->calcStationJacobian(someState, mbx, SimTK::Vec3(0, 0, 0), stationJ);
-		std::cout << "stationJ\n" << stationJ << std::endl;
-
 	}	
 
-
-
-
-/*
-	// Get Jacobian
-
-	SimTK::Matrix J_G, Jt_G, JtJ, JJt;
+	// Get System Jacobian
+	SimTK::Matrix J_G;
 	matter->calcSystemJacobian(someState, J_G);
-	std::cout << "J_G\n" << J_G << std::endl;
+	//std::cout << "J_G\n" << J_G << std::endl;
+
+	// Get mathematical jacobian
+	SimTK::Matrix mathJ;
+	calcMathJacobian(someState, mathJ);
+	//std::cout << "mathJ\n" << mathJ << std::endl;
+
+	// Get Cartesian mass matrix
+	SimTK::Matrix cartM;
+	getCartesianMassMatrix(someState, cartM);
+	//std::cout << "cartM\n" << cartM << std::endl;
+
+	// Our mass Matrix = mathJ x cartM x mathJ
+	SimTK::Matrix myMassMatrix;
+	myMassMatrix = mathJ.transpose() * cartM * mathJ;
+	//std::cout << "myMassMatrix\n" << myMassMatrix << std::endl;	
 
  	// Get system mass matrix
 	SimTK::Matrix M;
 	matter->calcM(someState, M);
-	std::cout << "M\n" << M << std::endl;
+	std::cout << "M\n" << M << std::endl << std::flush;
 
-	// Calc metric tensor
+
+	// Compare metric tensor
+	SimTK::Matrix JtJ;
 	JtJ = J_G.transpose() * J_G;
+	//std::cout << "JtJ\n" << JtJ << std::endl;	
 
-	SimTK::SymMat<12> smJtJ; // BUG: this should be a constant
-	//smJtJ.setFromSymmetric(SimTK::Mat<ndofs, ndofs>(JtJ));
+	SimTK::Matrix mathJtJ;
+	mathJtJ = mathJ.transpose() * mathJ;
+	std::cout << "mathJtJ\n" << mathJtJ << std::endl << std::flush;
+	std::cout << "ndofs " << ndofs << std::endl << std::flush;
+
+/* 	
+	// linker problems ...
+	SimTK::Eigen mathJtJEigen(mathJtJ);
+	SimTK::Vector mathJtJEigenVals;
+	mathJtJEigen.getAllEigenValues(mathJtJEigenVals);
+	std::cout << "mathJtJEigenVals\n" << mathJtJEigenVals << std::endl; */
+
+	// Get mathematical Jacobian square determinant
+	SimTK::SymMat<12> smMathJtJ; // BUG: this should be a constant
 	for(unsigned int i = 0; i < ndofs; i++){
 		for (unsigned int j =0; j < ndofs; j++){
-			smJtJ(i, j) = JtJ(i, j);
-			smJtJ(j, i) = JtJ(i, j);
+			smMathJtJ(i, j) = mathJtJ(i, j);
+			smMathJtJ(j, i) = mathJtJ(i, j);
 		}
 	}
+	SimTK::Real detMathJtJ = SimTK::det(smMathJtJ);
+	std::cout << "mathJtJ determinant\n" << detMathJtJ << std::endl;
 
-	SimTK::Real dJJ = SimTK::det(smJtJ) ;
-
+	// Get mass matrix determinant
 	SimTK::SymMat<12> smM; // BUG: this should be a constant
-	//smJtJ.setFromSymmetric(SimTK::Mat<ndofs, ndofs>(JtJ));
 	for(unsigned int i = 0; i < ndofs; i++){
 		for (unsigned int j =0; j < ndofs; j++){
 			smM(i, j) = M(i, j);
 			smM(j, i) = M(i, j);
 		}
 	}
+	SimTK::Real detM = SimTK::det(smM) ;
+	std::cout << "M determinant\n" << detM << std::endl;
 
-	SimTK::Real dM = SimTK::det(smM) ;
+	SimTK::Real extractM = 0;
+	for(unsigned int i = 0; i < cartM.nrow(); i++){
+		extractM += std::log(cartM(i, i));
+	}
 
-	//std::cout << "JtJ\n" << JtJ << std::endl;
-	//std::cout << "smJtJ\n" << smJtJ << std::endl;
-	std::cout << "smM\n" << smM << std::endl;
-	std::cout << "JJ determinant\n" << dJJ << std::endl;
-	std::cout << "M determinant\n" << dM << std::endl; */
-	
+	std::cout << "extractM " << extractM << std::endl;
 
 }
 

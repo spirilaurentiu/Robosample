@@ -90,8 +90,19 @@ public:
 	void setThermostat(const char *);
 	virtual ThermostatName getThermostat(void) const;
  
- 	//Compute mathematical, rather than robotic Jacobian 
-	void calcMathJacobian(SimTK::State& someState);
+ 	/* 
+	* Compute mathematical, rather than robotic Jacobian.
+	* It translates generalized velocities u into Cartesian velocities
+	* for each atom on all topologies
+	*/ 
+	void calcMathJacobian(const SimTK::State& someState,
+		SimTK::Matrix& mathJ);
+
+	/*
+	* Get the diagonal 3Nx3N matrix containing the atoms masses
+	*/
+	void getCartesianMassMatrix(const SimTK::State& somestate,
+		SimTK::Matrix& M);
 
 	// Return true if use Fixman potential
 	void useFixmanPotential(void); // DONE
@@ -235,6 +246,12 @@ public:
 	/** Chooses whether to accept a sample or not based on a probability **/
 	bool acceptSample();
 
+	/*
+	* Get Joint type by examining hinge matrix H_FM
+	*/
+	int getJointTypeFromH(const SimTK::State& someState,
+		const SimTK::MobilizedBody& mobod);
+
 	/** Shift all the generalized coordinates
 	 **/
 	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
@@ -317,6 +334,11 @@ public:
 
 	/** Load the map of mobods to joint types **/
 	//void loadMbx2mobility(SimTK::State& someState);
+
+	/*
+ 	* Test ground mostly for SOA
+ 	*/
+	void testSOA(SimTK::State& someState);
 
 protected:
 
