@@ -388,7 +388,7 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	}
 
 	// World Samplers specific parameters
-	if(setupReader.get("SAMPLER").size() != inpNofWorlds){
+	if(setupReader.get("SAMPLERS").size() != inpNofWorlds){
 		std::cerr << "Must have the same no. of samplers as the no. of worlds.\n";
 		throw std::exception();
 		std::exit(1);
@@ -443,22 +443,22 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	}
 
 	// Normal modes options
-	NonEquilibriumOpt.resize(inpNofWorlds, 0);
-	if(setupReader.find("NONEQ_OPTION")){
+	NDistortOpt.resize(inpNofWorlds, 0);
+	if(setupReader.find("DISTORT_OPTION")){
 		if(setupReader.get("RANDOM_WORLD_ORDER").size() == 0){
-			std::cerr << "The NONEQ_OPTION key is present. Please specify a value.\n";
+			std::cerr << "The DISTORT_OPTION key is present. Please specify a value.\n";
 			throw std::exception();
 			std::exit(1);
 		}else{
 			for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
-				NonEquilibriumOpt[worldIx] = std::stoi(setupReader.get("NONEQ_OPTION")[worldIx]);
+				NDistortOpt[worldIx] = std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]);
 			}
 		}
 	}
 
     if(setupReader.find("REX_SWAP_FIXMAN")){
 		if(setupReader.get("REX_SWAP_FIXMAN").size() == 0){
-			std::cerr << "The NONEQ_OPTION key is present. Please specify a value.\n";
+			std::cerr << "The DISTORT_OPTION key is present. Please specify a value.\n";
 			throw std::exception();
 			std::exit(1);
 		}else{
@@ -589,9 +589,9 @@ void Context::addEmptyWorlds(std::size_t argNofWorlds,
 		worldIx < argNofWorlds;
 		worldIx++){
 		if(visualizerFrequencies[worldIx] > 0){
-			AddWorld(true, visualizerFrequencies[worldIx]);
+			addWorld(true, visualizerFrequencies[worldIx]);
 		}else{
-			AddWorld(false);
+			addWorld(false);
 		}
 	}
 
@@ -609,7 +609,7 @@ void Context::addEmptyWorlds(std::size_t argNofWorlds,
 }
 
 // Add an empty world to the context
-World * Context::AddWorld(bool visual, SimTK::Real visualizerFrequency){
+World * Context::addWorld(bool visual, SimTK::Real visualizerFrequency){
 
 	// Increment worldIndexes
 	worldIndexes.push_back(worldIndexes.size());
@@ -1127,19 +1127,27 @@ BaseSampler * Context::addSampler(
 	return worlds[whichWorld].addSampler(whichSampler);
 }
 
+/* 
+* Add a sampler
+*/
 BaseSampler * Context::addSampler(
 	std::size_t whichWorld,
 	std::string samplerName)
 {
 
-	if(samplerName == "VV"){
+	// We only use HMCSampler for now. Later we'll add LAHMC and Girolami
+	if( !samplerName.empty() ){
+		// Add HMCSampler
 		BaseSampler *p = worlds[whichWorld].addSampler(SamplerName::HMC);
-		pHMC(p)->setAlwaysAccept(true);
+		
+		// Set the chain generation method (ex. Markov Cahin Monte Carlo)
+		pHMC(p)->setGeneratorName(samplerName);
+
 		return p;
-	}else if(samplerName == "HMC"){
-		BaseSampler *p = worlds[whichWorld].addSampler(SamplerName::HMC);
-		pHMC(p)->setAlwaysAccept(false);
-		return p;
+
+	}else{
+		// Replace with a macro
+		std::cerr << "Context No sampler specified.\n";throw std::exception();std::exit(1);
 	}
 
 }
@@ -1434,7 +1442,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 
 			// Update
 			for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
-				updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
+				updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState, 0);
 			} // END for samples
 
 		} // for i in worlds
@@ -2338,7 +2346,7 @@ void Context::initializeReplica(int thisReplica)
 			//std::cout << "Sample world " << front << "\n";
 			int accepted = worlds[frontIx].generateSamples(
 				0,
-				NonEquilibriumOpt[frontIx]);
+				NDistortOpt[frontIx]);
 
 			// =============
 
@@ -2448,7 +2456,7 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 			frontIx = replicaWorldIxs.front();
 			int accepted = worlds[frontIx].generateSamples(
 				nofSamplesPerRound[frontIx],
-				NonEquilibriumOpt[frontIx]);
+				NDistortOpt[frontIx]);
 
 			// ROTATE worlds indices (translate from right to left)
 		   	std::rotate(replicaWorldIxs.begin(),
@@ -2716,7 +2724,7 @@ void Context::RunOneRound(void)
 		// Generate samples from the current world
 		int accepted = worlds[currentWorldIx].generateSamples(
 			nofSamplesPerRound[currentWorldIx],
-			NonEquilibriumOpt[currentWorldIx]);
+			NDistortOpt[currentWorldIx]);
 
 	} // END iteration through worlds
 }

@@ -204,6 +204,9 @@ public:
 	/** Store configuration and PE, Fixman potential and logsin gamma squared **/
 	virtual void storeOldConfigurationAndPotentialEnergies(SimTK::State& someState);
 
+	// Set the method of integration
+	void setGeneratorName(std::string& integratorNameArg);
+
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
 	virtual void initializeVelocities(SimTK::State& someState);
@@ -257,10 +260,6 @@ public:
 	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		int numIgnoredQs);
 
-	SimTK::Real getBondLogDetJacobian(SimTK::State& somState);
-	SimTK::Real getAngleJacobianLogDeterminant(SimTK::State& somState);
-	SimTK::Real getDihedralJacobianLogDeterminant(SimTK::State& somState);
-
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 
@@ -275,7 +274,7 @@ public:
 	compound to the appropriate conformation wether it accepted or not. **/
 	void update(SimTK::State& someState);
 
-	virtual bool sample_iteration(SimTK::State& someState, int NMAOption = 0);
+	virtual bool sample_iteration(SimTK::State& someState, int DistorOption = 0);
 
 	/** Push Cartesian coordinates into R vector stored in Sampler.
 	Return the size of R **/
@@ -380,7 +379,7 @@ protected:
 	SimTK::Real prevPrevAcceptance;
 
 	//
-	int NonEquilibriumOpt = 0;
+	int DistortOpt = 0;
 
 	bool proposeExceptionCaught;
 	// END MCSampler
@@ -390,6 +389,9 @@ protected:
 
 	std::vector<SimTK::Real> dR;
 	std::vector<SimTK::Real> dRdot;
+
+	// Integration
+	int generator = 0;
 
 	std::vector<SimTK::Real> UScaleFactors;
 	SimTK::Real UScaleFactorsNorm = 0.0;

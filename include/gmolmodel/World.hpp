@@ -258,7 +258,7 @@ public:
 	SimTK::Real calcFixman();
 
 	/** Generate a number of samples **/
-	int generateSamples(int howMany, int NonEquilibriumOpt);
+	int generateSamples(int howMany, int DistortOption);
 	//...............
 
 	//...................

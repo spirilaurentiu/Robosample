@@ -1384,13 +1384,17 @@ std::size_t World::getNofSamplers() const
 for samplers names. **/
 BaseSampler * World::addSampler(SamplerName samplerName)
 {
+	// We only use HMCSampler for now
 	if(samplerName == SamplerName::HMC) {
         	samplers.emplace_back(std::make_unique<HMCSampler>(this
 			, compoundSystem.get(), matter.get(), (*topologies)
 			, forceField.get(), forces.get()
 			, ts.get()));
 	} /*else if (samplerName == SamplerName::LAHMC) {
-        samplers.emplace_back(std::make_unique<LAHMCSampler>(this, compoundSystem.get(), matter.get(), topologies, forceField.get(), forces.get(), ts.get(), 4));
+        samplers.emplace_back(std::make_unique<LAHMCSampler>(this
+		, compoundSystem.get(), matter.get(), topologies
+		, forceField.get(), forces.get()
+		, ts.get(), 4));
 	}*/
 
 	return samplers.back().get();
@@ -1441,7 +1445,7 @@ SimTK::Real World::calcFixman(void)
 }
 
 // Generate a number of samples
-int World::generateSamples(int howMany, int NonEquilibriumOpt)
+int World::generateSamples(int howMany, int DistortOpt)
 {
 
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
@@ -1462,7 +1466,7 @@ int World::generateSamples(int howMany, int NonEquilibriumOpt)
 	//accepted is wrong
 	int accepted;
 	for(int k = 0; k < howMany; k++) {
-		accepted += updSampler(0)->sample_iteration(currentAdvancedState, NonEquilibriumOpt);
+		accepted += updSampler(0)->sample_iteration(currentAdvancedState, DistortOpt);
 	}
 
 	return accepted;

@@ -100,7 +100,7 @@ inline long double RandomRealRange(long double min, long double max)
 }
 
 
-double round(double r);
+//double round(double r);
 
 // Log-sum-exp function
 double LSE2(double, double);
@@ -287,7 +287,8 @@ enum struct ThermostatName : int { // Thermostats
  * Simulation
  */
 
-enum struct IntegratorName : int { // Samplers
+enum struct IntegratorName : int { // Integrators
+	EMPTY,
 	VERLET,
 	EULER,
 	EULER2,

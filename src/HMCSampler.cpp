@@ -128,7 +128,10 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	//for(int i = 0; i < ndofs; i++){
 	//	NMARotation[i][i] = 1.0;
 	//}
-	NonEquilibriumOpt = 0;
+
+	generator = 0;
+
+	DistortOpt = 0;
 	MDStepsPerSampleStd = 0.5;
 
 	NMAAltSign = 1.0;
@@ -338,6 +341,20 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 	MDStepsPerSampleStd = mdstd;
 }
 
+// Set the method of integration
+void HMCSampler::setGeneratorName(std::string& generatorNameNameArg)
+{
+	if (generatorNameNameArg == "EMPTY"){
+		this->generator = 0;
+		setAlwaysAccept(true);
+	}
+	else if(generatorNameNameArg == "MC"){
+		this->generator = 1;
+		setAlwaysAccept(false);
+	}else{
+		std::cerr << "Unknown sampling method.\n"; throw std::exception(); std::exit(1);
+	}
+}
 
 /** Initialize velocities according to the Maxwell-Boltzmann
 distribution.  Coresponds to R operator in LAHMC **/
@@ -404,7 +421,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	// Vector multiplied by the sqrt of the inverse mass matrix
 	SimTK::Vector sqrtMInvUs(nu, 1);
 
-	if(NonEquilibriumOpt == 1){ // For pure demonstrative purposes
+	if(DistortOpt == 1){ // For pure demonstrative purposes
 
 		if((nofSamples % 2) == 0){ NMAAltSign = 1;}else{NMAAltSign = -1;}
 		//if(((nofSamples) % 6) == 0){ NMAAltSign *= -1;}
@@ -429,7 +446,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
 
-	}else if(NonEquilibriumOpt == 2){ // Use UscaleFactors with random sign
+	}else if(DistortOpt == 2){ // Use UscaleFactors with random sign
 
 		// Get random -1 or 1
 		SimTK::Real randSign;
@@ -474,7 +491,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		sqrtMInvUs *= sqrtRT;
 
 		//*/
-	}else if(NonEquilibriumOpt == 3){ // Set a random sign
+	}else if(DistortOpt == 3){ // Set a random sign
 
 		// Check if we can use our cache
 		// Draw X from a normal distribution N(0, 1)
@@ -512,7 +529,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		// Multiply by the square root of kT
 		sqrtMInvUs *= sqrtRT;
 
-	}else if(NonEquilibriumOpt == 4){ // Set a random sign
+	}else if(DistortOpt == 4){ // Set a random sign
 
 		// Direction vector UScaleFactors
 		//SimTK::Vector NormedUScaleFactors(nu, 1);
@@ -578,7 +595,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 
 
 
-	}else if(NonEquilibriumOpt == 5){
+	}else if(DistortOpt == 5){
 	    std::cout << "NMAOPTION 5 IS STILL UNDER DEVELOPMENT !!\n" <<std::flush;
 
 		//proj(U, V, W);
@@ -624,7 +641,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
 		std::cout << "sqrtMInvUs 5 "; for(int i = 0; i < nu; i++){ std::cout << sqrtMInvUs[i] << " " ;} std::cout << "\n";
 
-	}else if(NonEquilibriumOpt == 6){
+	}else if(DistortOpt == 6){
 
 		//std::cout << "DOFUs 0 "; for(int i = 0; i < nu; i++){ std::cout << DOFUScaleFactors[i] << " " ;} std::cout << "\n";
 
@@ -786,15 +803,18 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
 }
 
-// Apply the L operator
+/*
+* Integrate trajectory: Apply the L operator for non-equlibrium processes
+*/
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
 	//std::cout << "HMCSampler::integrateTrajectory: ts mds " << timestep << " " << MDStepsPerSample << std::endl;
 	try {
 		// Instant geometry
 		//geomDihedral(someState);
 
-		this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-
+		// Call Simbody TimeStepper to advance time
+		this->world->ts->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+		//this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 		system->realize(someState, SimTK::Stage::Position);
 
 	}catch(const std::exception&){
@@ -1298,7 +1318,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	for(int i = 0; i < T; i++){
 
 		// WORK: perform work (alpha)
-		if(NonEquilibriumOpt == -1){
+		if(DistortOpt == -1){
 			shiftQ(someState, 1.2, 2);
 		}
 		calcNewConfigurationAndEnergies(someState);
@@ -1402,20 +1422,20 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 }
 
 // The main function that generates a sample
-bool HMCSampler::sample_iteration(SimTK::State& someState, int NMAOptionArg)
+bool HMCSampler::sample_iteration(SimTK::State& someState, int DistortOption)
 {
 	std::cout << std::setprecision(10) << std::fixed;
 
-	this->NonEquilibriumOpt = NMAOptionArg;
+	this->DistortOpt = DistortOption;
 
 	bool validated = false;
 
 	// Propose
-	std::cout << "NONEQ_OPTION " << NonEquilibriumOpt << std::endl;
+	std::cout << "DISTORT_OPTION " << DistortOpt << std::endl;
 	for (int i = 0; i < 10; i++){
-		if(NonEquilibriumOpt > 0){
+		if(DistortOpt > 0){
 			validated = proposeNMA(someState);
-		}else if(NonEquilibriumOpt < 0){
+		}else if(DistortOpt < 0){
 			validated = proposeNEHMC(someState);
 		}else{
 			validated = propose(someState);
@@ -2457,9 +2477,9 @@ bool HMCSampler::validateProposal() const {
 bool HMCSampler::acceptSample() {
 	const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 	SimTK::Real prob = 0.0;
-	if(NonEquilibriumOpt == 0){
+	if(DistortOpt == 0){
 		prob = MHAcceptProbability(etot_proposed, etot_n + work);
-	}else if(NonEquilibriumOpt > 0){
+	}else if(DistortOpt > 0){
 
 		if(useFixman){
 			prob = MHAcceptProbability(pe_o + ke_prop_nma6 + fix_o,

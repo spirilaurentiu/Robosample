@@ -148,6 +148,13 @@ std::vector<std::string> SetupReader::split(const std::string& i_str, const std:
 // Get the number of replica requested
 int SetupReader::readREXConfigFile(std::string FN,
 		std::vector<SimTK::Real>& temperatures,
+
+		std::vector<std::vector<std::string>>& rexSamplers,
+		std::vector<std::vector<int>>& rexDistortOptions,
+		std::vector<std::vector<int>>& rexFlowOptions,
+		std::vector<std::vector<int>>& rexWorkOptions,
+		std::vector<std::vector<std::string>>& rexIntegrators,
+
 		std::vector<std::vector<SimTK::Real>>& rexTimesteps,
 		std::vector<std::vector<int>>& rexWorldIndexes,
 		std::vector<std::vector<int>>& rexMdsteps,
@@ -174,6 +181,13 @@ int SetupReader::readREXConfigFile(std::string FN,
 	F.seekg(0);
 
 	temperatures.resize(nofReplicas);
+
+	rexSamplers.resize(nofReplicas);
+	rexDistortOptions.resize(nofReplicas);
+	rexFlowOptions.resize(nofReplicas);
+	rexWorkOptions.resize(nofReplicas);	
+
+	rexIntegrators.resize(nofReplicas);
 	rexTimesteps.resize(nofReplicas);
 	rexWorldIndexes.resize(nofReplicas);
 	rexMdsteps.resize(nofReplicas);
@@ -189,7 +203,11 @@ int SetupReader::readREXConfigFile(std::string FN,
 			std::vector<std::string> words = split(line, " ");
 
 			if((words[0][0] != '#') && (words[0] != "NOF_REPLICAS")){
-				std::cout << "REX FILE READING: "; for (const auto& word: words){std::cout << word << "|";}std::cout << std::endl;
+				std::cout << "REX FILE READING: ";
+				for (const auto& word: words){
+					std::cout << word << "|";
+				}
+				std::cout << std::endl;
 				
 				// Get replica index
 				int repIx = int(std::stoi(words[0]));
@@ -200,6 +218,33 @@ int SetupReader::readREXConfigFile(std::string FN,
 						std::cout << "Loaded thermodynamic state " << repIx << " \n" ;
 						temperatures[repIx] = std::stod(words[2]);
 						break;
+
+					case RexKey::SAMPLERS:
+						for(int i = 2; i < words.size(); i++){
+							rexSamplers[repIx].push_back(words[i]);
+						}
+						break;
+					case RexKey::DISTORT_OPTIONS:
+						for(int i = 2; i < words.size(); i++){
+							rexDistortOptions[repIx].push_back(std::stod(words[i]));
+						}
+						break;
+					case RexKey::FLOW_OPTIONS:
+						for(int i = 2; i < words.size(); i++){
+							rexFlowOptions[repIx].push_back(std::stod(words[i]));
+						}
+						break;
+					case RexKey::WORK_OPTIONS:
+						for(int i = 2; i < words.size(); i++){
+							rexWorkOptions[repIx].push_back(std::stod(words[i]));
+						}
+						break;
+					case RexKey::INTEGRATORS:
+						for(int i = 2; i < words.size(); i++){
+							rexIntegrators[repIx].push_back(words[i]);
+						}
+						break;
+
 					case RexKey::TIMESTEPS:
 						for(int i = 2; i < words.size(); i++){
 							rexTimesteps[repIx].push_back(std::stod(words[i]));
@@ -220,6 +265,7 @@ int SetupReader::readREXConfigFile(std::string FN,
 							rexSamplesPerRound[repIx].push_back(std::stod(words[i]));
 						}
 						break;
+
 					default:
 						;
 						break;

@@ -273,8 +273,8 @@ int main(int argc, char **argv)
 
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		BaseSampler *p = context.addSampler(
-			worldIx, setupReader.get("SAMPLER")[worldIx]);
+		BaseSampler *p = context.addSampler(worldIx,
+			setupReader.get("SAMPLERS")[worldIx]);
 	}
 
 	//std::cout << "OS memory 3\n" << exec("free") << std::endl;
@@ -455,7 +455,14 @@ int main(int argc, char **argv)
 		// Storage for thermodynamic state temperatures
 		std::vector<SimTK::Real> temperatures;
 
+		// Storage for sampling details
+		std::vector<std::vector<string>> rexSamplers;
+		std::vector<std::vector<int>> rexDistortOptions;
+		std::vector<std::vector<int>> rexFlowOptions;
+		std::vector<std::vector<int>> rexWorkOptions;
+
 		// Storage for each replica simulation parameters
+		std::vector<std::vector<string>> rexIntegrators;
 		std::vector<std::vector<SimTK::Real>> rexTimesteps;
 		std::vector<std::vector<int>> rexWorldIndexes;
 		std::vector<std::vector<int>> rexMdsteps;
@@ -465,6 +472,13 @@ int main(int argc, char **argv)
 		size_t nofReplicas = rexReader.readREXConfigFile(
 			setupReader.get("REX_FILE")[0],
 			temperatures,
+
+			rexSamplers,
+			rexDistortOptions,
+			rexFlowOptions,
+			rexWorkOptions,
+			rexIntegrators,
+
 			rexTimesteps,
 			rexWorldIndexes,
 			rexMdsteps,

@@ -81,8 +81,15 @@ public:
 	//------------
 
 	// --- Simulation parameters ---
-	BaseSampler* addSampler(std::size_t whichWorld, std::string samplerName);
-	BaseSampler* addSampler(std::size_t whichWorld, SamplerName whichSampler);
+
+	// Add sampler
+	BaseSampler* addSampler(std::size_t whichWorld,
+		std::string samplerName);
+
+	BaseSampler* addSampler(std::size_t whichWorld,
+		SamplerName whichSampler);
+
+	// Samplers have to set parameters after Simbody subsystems generation
 	void initializeSampler(std::size_t whichWorld, std::size_t whichSampler);
 
 	// Amber like scale factors.
@@ -139,7 +146,7 @@ public:
 	//------------
 
 	void addEmptyWorlds(std::size_t NofWorlds, std::vector<double> visualizerFrequencies);
-	World * AddWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
+	World * addWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
 	//World * AddWorld(World *, bool visual);
 
 	// Load/store Mobilized bodies joint types in samplers
@@ -407,7 +414,7 @@ private:
 		QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
 
 	// Normal mode analysis
-	std::vector<int> NonEquilibriumOpt;
+	std::vector<int> NDistortOpt;
 
 	////////////////////////
 	//// REPLICA EXCHANGE //
