@@ -16,5 +16,5 @@ flexorObj.loadFlexDB("./databases/aminoacids.flex.txt")
 
 ## Get flexibility file.
 flexorObj.addWorld(range="resid 0 to 10", distanceCutoff=1, subset=["all"],
-                 type="stretch" ,jointType="Pin", sasa_percentile=0.0,
-                 FNOut="./example.flex")
+                 jointType="Pin", sasa_percentile=0.0,
+                 FNOut="./example", rolling=False)

@@ -52,7 +52,7 @@ class Flexor:
             js.pop("TITLE")
             self._DB = {**self._DB, **js}
 
-    def addWorld(self, range, subset, type, jointType, FNOut, distanceCutoff=0, sasa_percentile=0):
+    def addWorld(self, range, subset,jointType, FNOut, distanceCutoff=0, sasa_percentile=0, rolling=False):
         '''
         Parameters
         ----------
@@ -72,10 +72,8 @@ class Flexor:
                 omega: peptide bond (N-C)
                 rama: macro for phi+psi
                 all: macro for all of the above.
-
-        type:  string
-            Generate one flexibility file with all lines ("stretch"), or each line in
-            a separate file ("roll")
+                coils: only selects coil regions of the protein, intersected with
+                       whatever range the user made
 
         jointType: string
             Type of joint to use. Currently implemented:
@@ -90,17 +88,26 @@ class Flexor:
             Example: if sasa_percentile is 0.9, then only the atoms that are in the top 10%
             accesibility-wise AND in the selected range will be kept.
 
+        rolling:  bool
+            if True, this world's flexibility will be split across multiple files (one joint
+            per file)
+
         Returns
         ----------
         None
         '''
 
         jointCount = 0
-        fileOut = open(FNOut, "w")
+        if (rolling == False):
+            fileOut = open("{}.flex".format(FNOut), "w")
+        else:
+            fileCounter = 0
+
         jointType = jointType.lower()
         selIx = list(self._MDTrajObject.topology.select(range))
         ## If sasa_percentile has been supplied, we do the filtering now.
         if (sasa_percentile > 0):
+            print ("SASA filtering enabled.")
             ## Compute
             sasa = md.shrake_rupley(self._MDTrajObject)[0]
 
@@ -112,16 +119,31 @@ class Flexor:
                 if sasa[v] < sasa_percentile:
                     selIx.pop(i)
         validJointAtoms = []
+        if ("coils" in subset):
+            if (len(subset) == 1):
+                subset = ["coils", "all"]
+            else:
+                subset.append("coils")
+            dssp = md.compute_dssp(self._MDTrajObject, simplified=True)[0]
+
         if ("all" in subset):
-            subset = ["side", "rama"]
+            subset.remove("all")
+            subset.append("side")
+            subset.append("rama")
         if ("rama" in subset):
             subset.remove("rama")
             subset.append("phi")
             subset.append("psi")
-            subset.append("omega")
+
         for edge in self._edges:
             if ((edge[0].index in selIx) and (edge[1].index in selIx)):
+                if ("coils" in subset):
+                    if (dssp[edge[0].residue.index] != "C" and dssp[edge[1].residue.index] != "C"):
+                        continue
                 if (jointType == "cartesian"):
+                    if (rolling == True):
+                        fileOut = open("{}.{}.flex".format(FNOut, fileCounter), "w")
+                        fileCounter += 1
                     fileOut.write("{:5d} {:5d} Cartesian {} {}\n".format(edge[0].index, edge[1].index, edge[0], edge[1]))
                     validJointAtoms.append(edge[0].index)
                     validJointAtoms.append(edge[1].index)
@@ -130,6 +152,9 @@ class Flexor:
                     for subsetType in subset:
                         if (self.check_joint(edge[0], jointType, subsetType) and
                             self.check_joint(edge[1], jointType, subsetType)):
+                            if (rolling == True):
+                                fileOut = open("{}.{}.flex".format(FNOut, fileCounter), "w")
+                                fileCounter += 1
                             fileOut.write("{:5d} {:5d} {} {} {}\n".format(edge[0].index, edge[1].index, jointType.capitalize(),
                                                           edge[0], edge[1]))
                             validJointAtoms.append(edge[0].index)
@@ -137,14 +162,14 @@ class Flexor:
                             jointCount += 1
 
         if (distanceCutoff>0):
-            ## First we get all atoms that are within 'distanceCutoff' of atoms in joints
+            # First we get all atoms that are within 'distanceCutoff' of atoms in joints
             nearbyAtoms = md.compute_neighbors(self._MDTrajObject, distanceCutoff, validJointAtoms)
-            ## Then we remove the atoms that are already in the validJointAtoms selection
+            # Then we remove the atoms that are already in the validJointAtoms selection
             validJointAtoms = list(set(validJointAtoms))
             for _ in validJointAtoms:
                 ix = np.argwhere(nearbyAtoms==_)
                 nearbyAtoms = np.delete(nearbyAtoms,ix)
-            ## Then we do the check we did above, but for the new selection
+            # Then we do the check we did above, but for the new selection
             fileOut.write("### Neighboring Joints ###\n")
             for edge in self._edges:
                 if ((edge[0].index in nearbyAtoms) and (edge[1].index in nearbyAtoms)):
@@ -162,10 +187,10 @@ class Flexor:
                                                                               edge[0], edge[1]))
                                 jointCount += 1
 
-            print ("Flex file {} generated! ({} joints)".format(FNOut, jointCount))
+            print ("Flex file {}.flex generated! ({} joints)".format(FNOut, jointCount))
             fileOut.close()
-            
-    ## Helper functions
+
+    # Helper functions
     def check_joint(self, atom, jointType, subset):
         '''
         Parameters
