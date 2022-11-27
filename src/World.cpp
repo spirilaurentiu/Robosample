@@ -624,19 +624,21 @@ void World::allocateStatsContainers(void)
 {
 	// Arccos of the X_PF first entry which should contain 
 	// the angle of rotation on X for the BendStretch joint
+	acosX_PF00.resize(matter->getNumBodies() - 1);
 	acosX_PF00_means.resize(matter->getNumBodies() - 1);
 
 	// The norm of the translation vector of X_BM which should
 	// contain the bond length for the BendStretch joint
+	normX_BMp.resize(matter->getNumBodies() - 1);
 	normX_BMp_means.resize(matter->getNumBodies() - 1);
+
 
 }
 
 /*
  * Shift all the generalized coordinates
  */
-void World::getTransformsStatistics(SimTK::State& someState,
-std::vector<SimTK::Real>& acosX_PF00, std::vector<SimTK::Real>& normX_BMp)
+void World::getTransformsStatistics(SimTK::State& someState)
 {
 	// Get generalized coordinates Q template values. These are the values that
 	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
@@ -664,8 +666,8 @@ std::vector<SimTK::Real>& acosX_PF00, std::vector<SimTK::Real>& normX_BMp)
 
 		// Get BAT coordinate "angle"
 		SimTK::Vec3 bondVector = X_BM.p();
-		acosX_PF00[int(mbx) - 1] = bondVector.norm();
-		normX_BMp[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
+		acosX_PF00[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
+		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
 		// Print something for now
 		SimTK::Real bond = acosX_PF00[int(mbx) - 1];
@@ -675,8 +677,6 @@ std::vector<SimTK::Real>& acosX_PF00, std::vector<SimTK::Real>& normX_BMp)
 			<< "angle " << std::acos(cosTheta) * (180 / SimTK::Pi) << " "
 			<< std::endl;
 
-		// Readjust the mean Qs
-		//((nofSamples - 1) * angles + angles) / nofSamples;
 	}
 
 }
@@ -688,7 +688,7 @@ void World::PrintX_PFMeans(void)
 	int i = -1;
 	for(const auto &xpf : acosX_PF00_means ){
 		i += 1;
-		std::cout << "X_PFMean " << i << " " << xpf * ((180 / SimTK::Pi)) << std::endl;
+		std::cout << "X_PFMean " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
 	}
 }
 
@@ -703,33 +703,32 @@ void World::PrintX_BMMeans(void)
 }
 
 // Update transforms means
-void World::updateTransformsMeans(int nofSamples, SimTK::State& someState)
+void World::updateTransformsMeans(SimTK::State& someState)
 {
+	int nofSamples = getNofSamples();
+	std::cout << "Nof samples " << nofSamples << std::endl;
 
-std::cout << "Checkpoint " << "0" << std::endl << std::flush;
-
-	// First body is Ground and the second angle is not considered.
-	std::vector<SimTK::Real> 
-		acosX_PF00(matter->getNumBodies() - 1, 0);
-	std::vector<SimTK::Real> 
-		normX_BMp(matter->getNumBodies() - 1, 0);
-	getTransformsStatistics(someState, acosX_PF00, normX_BMp);
+	getTransformsStatistics(someState);
 
 	// Useful vars
-	int N_1;
-	SimTK::Real N_1overN, NInv;
+	SimTK::Real N_1overN = 0, NInv = 0;
 
 	if(nofSamples == 0){
-		acosX_PF00_means = acosX_PF00;
-		normX_BMp_means = normX_BMp;
-	}else if(nofSamples = 1){
-		N_1overN = NInv = 1;
+		for(unsigned int k = 0; k < acosX_PF00_means.size(); k++){
+			acosX_PF00_means[k] = acosX_PF00[k];
+		}
+		for(unsigned int k = 0; k < normX_BMp_means.size(); k++){
+			normX_BMp_means[k] = normX_BMp[k];
+		}
 	}else{
-		// Update useful vars
-		N_1 = nofSamples - 1;
-		N_1overN = N_1 / nofSamples;
-		NInv = 1 / N_1;
-
+		if(nofSamples = 1){
+			N_1overN = NInv = 0.5;
+		}else{
+			// Update useful vars
+			int N_1 = nofSamples - 1;
+			N_1overN = N_1 / nofSamples;
+			NInv = 1 / N_1;
+		}
 		//std::cout << "updateX_PFMeans check " << " " << N_1 << " " <<  N_1overN << " " <<  NInv  << " " << std::flush;
 
 		// Update acosX_PF00 means
@@ -749,6 +748,17 @@ std::cout << "Checkpoint " << "0" << std::endl << std::flush;
 
 }
 
+// Get X_PF means
+std::vector<SimTK::Real>& World::getX_PFMeans(void)
+{
+	return acosX_PF00_means;
+}
+
+// Get X_BM means
+std::vector<SimTK::Real>& World::getX_BMMeans(void)
+{
+	return normX_BMp_means;
+}
 
 // Get the number of molecules
 int World::getNofMolecules() const

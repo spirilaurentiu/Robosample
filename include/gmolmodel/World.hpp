@@ -290,12 +290,16 @@ public:
 	/** Allocate space for containers that keep statistics if we're doing any **/
 	void allocateStatsContainers(void);
 
-	void getTransformsStatistics(SimTK::State& someState,
-		std::vector<SimTK::Real>& acosX_PF00,
-		std::vector<SimTK::Real>& normX_BMp);
+	void getTransformsStatistics(SimTK::State& someState);
 
 	/** Update transforms means */
-	void updateTransformsMeans(int nofSamples, SimTK::State& someState);
+	void updateTransformsMeans(SimTK::State& someState);
+
+	/** Get X_PF means */
+	std::vector<SimTK::Real>& getX_PFMeans(void);
+
+	/** Get X_BM means */
+	std::vector<SimTK::Real>& getX_BMMeans(void);
 
 	// Print X_PF means
 	void PrintX_PFMeans(void);
@@ -386,6 +390,8 @@ public:
 	//...............
 
 	// --- Statistics ---
+	std::vector<SimTK::Real> acosX_PF00;
+	std::vector<SimTK::Real> normX_BMp;
 	std::vector<SimTK::Real> acosX_PF00_means;
 	std::vector<SimTK::Real> normX_BMp_means;
 	//...............

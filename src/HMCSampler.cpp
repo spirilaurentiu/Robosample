@@ -1206,32 +1206,69 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		//((nofSamples - 1) * angles + angles) / nofSamples;
 	} */
 
+	std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
-/* 	// Update means of values before altering them
-	world->updateX_PFMeans(nofSamples, angles);
-	world->updateX_BMMeans(nofSamples, bonds); */
+	// Update means of values before altering them
+	world->updateTransformsMeans(someState);
 
-	world->updateTransformsMeans(nofSamples, someState);
-	
 	world->PrintX_PFMeans();
 	world->PrintX_BMMeans();
 
-	//someState.updQ() += (scaleFactor - 1) * X;
-	//someState.updQ()(0) = 0.05; // angles
-	//someState.updQ()(1) = -0.05;
+	// Get differences between current transforms and their means
+	std::vector<SimTK::Real> X_PFdiffs;
+	std::vector<SimTK::Real> X_BMdiffs;
+	X_PFdiffs.resize(world->acosX_PF00_means.size(), 0);
+	X_BMdiffs.resize(world->normX_BMp_means.size(), 0);
 
-	//if(nofSamples % 2 == 0){
-	//	someState.updQ()(0) = -1.69;
-	//	someState.updQ()(1) = 1.58
-	//}else{
-	//	someState.updQ()(0) = 1.309; // 75
-	//}
+	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		X_PFdiffs[k] = world->acosX_PF00[k] - world->acosX_PF00_means[k];
+	}
+
+	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
+		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
+	}
+
+	// Print the differences	
+	int k = -1;
+	for(const auto& diff : X_PFdiffs){
+		k += 1;
+		std::cout << "Diff X_PF " << k << " " << diff << std::endl;
+	}
+	k = -1;
+	for(const auto& diff : X_BMdiffs){
+		k += 1;
+		std::cout << "Diff X_BM " << k << " " << diff << std::endl;
+	}
+
+	// Scale the differences
+	k = -1;
+	for(auto& diff : X_PFdiffs){
+		k += 1;
+		diff *= scaleFactor - 1;
+	}
 	
+	k = -1;
+	for(auto& diff : X_BMdiffs){
+		k += 1;
+		diff *= scaleFactor - 1;
+	}
+
+	// is this correct ?
+	int offset = (someState.getNQ() - (X_PFdiffs.size() + X_BMdiffs.size()));
+	std::cout << "offset " << offset << std::endl;
+	for(int j = offset; j < someState.getNQ(); j += 2){
+		someState.updQ()[j + offset] += X_BMdiffs[j];
+		someState.updQ()[j + 1 + offset] += X_PFdiffs[j];
+	}
+
+	//std::vector<SimTK::Real> shiftTerms = ((scaleFactor) - 1.0) * (someState.getQ() - world->getX_PFMeans());
+	//world->shiftQ(someState, shiftTerms);
+
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Test
-	//std::cout << "Q = " << someState.getQ() << std::endl;
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
 }
 
 /*
