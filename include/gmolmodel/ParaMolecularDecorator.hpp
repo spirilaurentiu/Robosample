@@ -35,7 +35,7 @@ public:
 	void generateDecorations(const State& state,
 		Array_<DecorativeGeometry>& geometry);
 
-	~ParaMolecularDecorator(void);
+	//~ParaMolecularDecorator(void);
 
 	// 
 	void setAtomTargets(std::vector<std::pair<bSpecificAtom *,

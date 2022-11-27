@@ -847,8 +847,18 @@ void Context::model(
 		(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
 	}
 
+}
+
+// Allocate space for containers that keep statistics if we're doing any
+void Context::allocWorldsStatsContainers(void)
+{
+
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		worlds[worldIx].allocateStatsContainers();
+	}
 
 }
+
 
 // Load/store Mobilized bodies joint types in samplers
 void Context::loadMbxsToMobilities(void)

@@ -208,6 +208,9 @@ public:
 	void addDistances(std::vector<int> distanceIx);
 	void addDihedrals(std::vector<int> dihedralIx);
 
+	// Allocate space for containers that keep statistics if we're doing any
+	void allocWorldsStatsContainers(void);
+
 	// --- Output ---
 	void printThermodynamics(void);
 	void printStatus(void);

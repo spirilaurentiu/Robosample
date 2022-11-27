@@ -287,6 +287,22 @@ public:
 	/** Get pointer to FixmanTorque implementation **/
 	FixmanTorque * getFixmanTorque() const;
 
+	/** Allocate space for containers that keep statistics if we're doing any **/
+	void allocateStatsContainers(void);
+
+	void getTransformsStatistics(SimTK::State& someState,
+		std::vector<SimTK::Real>& acosX_PF00,
+		std::vector<SimTK::Real>& normX_BMp);
+
+	/** Update transforms means */
+	void updateTransformsMeans(int nofSamples, SimTK::State& someState);
+
+	// Print X_PF means
+	void PrintX_PFMeans(void);
+
+	// Print X_PF means
+	void PrintX_BMMeans(void);
+
 	//...............
 
 	// -- Debugging / helper functions ---
@@ -370,6 +386,8 @@ public:
 	//...............
 
 	// --- Statistics ---
+	std::vector<SimTK::Real> acosX_PF00_means;
+	std::vector<SimTK::Real> normX_BMp_means;
 	//...............
 
 	// --- Graphics ---

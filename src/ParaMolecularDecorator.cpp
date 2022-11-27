@@ -559,6 +559,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				decorativeTextF.setColor(SimTK::Vec3(0, 0, 1));
 				geometry.push_back(decorativeTextF);
 
+				/*
 				DecorativeFrame decorativeFrameB;
 				decorativeFrameB.setTransform(G_X_B);
 				decorativeFrameB.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
@@ -566,6 +567,8 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				decorativeFrameB.setColor(SimTK::Vec3(0, 0, 0));
 				geometry.push_back( decorativeFrameB );
 
+
+				
 				std::ostringstream streamObjB;
 				streamObjB << std::string("B") + std::to_string(int(mbx));
 				std::string textB = streamObjB.str();
@@ -575,6 +578,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				decorativeTextB.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
 				decorativeTextB.setColor(SimTK::Vec3(0, 0, 1));
 				geometry.push_back(decorativeTextB);
+				*/
 
 				DecorativeFrame decorativeFrameM;
 				decorativeFrameM.setTransform(G_X_M);
@@ -592,6 +596,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				decorativeTextM.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
 				decorativeTextM.setColor(SimTK::Vec3(1, 0, 0));
 				geometry.push_back(decorativeTextM);
+				
+
+
 			} // */
 
 			if(mbx > 1){
@@ -660,12 +667,14 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 }
 
+
+/*
 ParaMolecularDecorator::~ParaMolecularDecorator()
 {
 	points.clear();
 	lines.clear();
 }
-
+*/
 
 
 

@@ -1160,12 +1160,17 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
 	// <(P_x, F_x) angle.
 
-	// First body is Ground and the second angle is not considered.
+/* 	// First body is Ground and the second angle is not considered.
 	std::vector<SimTK::Real> 
-		angles(matter->getNumBodies() - numIgnoredQs, 0);
+		bonds(matter->getNumBodies() - 1, 0);
 
-	// Got through every Mobod
-	for (SimTK::MobilizedBodyIndex mbx(1 + numIgnoredQs);
+	std::vector<SimTK::Real> 
+		angles(matter->getNumBodies() - 1, 0);
+
+		
+
+	// Get bonds and angles values
+	for (SimTK::MobilizedBodyIndex mbx(1);
 		mbx < matter->getNumBodies();
 		++mbx){
 
@@ -1174,22 +1179,42 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 
 		// Get mobod inboard frame X_PF
 		const Transform& X_PF = mobod.getInboardFrame(someState);
+		std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
 
-		// Get joint type
-		//int jt = getJointTypeFromH(someState, mobod);
-		//std::cout << "joint type " << int(jt) << std::endl;
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
 
 		// Get BAT coordinate "angle"
-		angles[int(mbx) - numIgnoredQs] = std::acos(X_PF.R()(0)(0));
+		SimTK::Vec3 bondVector = X_BM.p();
+		bonds[int(mbx) - 1] = bondVector.norm();
+		angles[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
 
 		// Print something for now
-		SimTK::Real angle = angles[int(mbx) - numIgnoredQs];
-		std::cout << "Nof bodies " << matter->getNumBodies()
-			<< " angle " << angle * (180 / SimTK::Pi) << std::endl;
+		SimTK::Real bond = bonds[int(mbx) - 1];
+		SimTK::Real angle = angles[int(mbx) - 1];
+		SimTK::Real cosTheta = X_PF.R()(0)(0);
+		std::cout << "bond " << X_BM.p().norm() << " "
+			<< "angle " << std::acos(cosTheta) * (180 / SimTK::Pi) << " "
+			<< std::endl;
 
 		// Readjust the mean Qs
 		//((nofSamples - 1) * angles + angles) / nofSamples;
-	}
+	} */
+
+
+/* 	// Update means of values before altering them
+	world->updateX_PFMeans(nofSamples, angles);
+	world->updateX_BMMeans(nofSamples, bonds); */
+
+	world->updateTransformsMeans(nofSamples, someState);
+	
+	world->PrintX_PFMeans();
+	world->PrintX_BMMeans();
 
 	//someState.updQ() += (scaleFactor - 1) * X;
 	//someState.updQ()(0) = 0.05; // angles

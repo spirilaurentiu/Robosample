@@ -254,6 +254,9 @@ int main(int argc, char **argv)
 	// and loads maps of indexes
 	context.model(finalNofMols, setupReader);
 
+	// Allocate space for containers that keep statistics if we're doing any
+	context.allocWorldsStatsContainers();
+
 	// Adaptive Gibbs blocking
 	context.setNofRoundsTillReblock(
 		std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));

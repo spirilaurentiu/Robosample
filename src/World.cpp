@@ -128,7 +128,10 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
  *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
  *		Visualizer, Visualizer::Reporter, DuMMForceFieldSubsystem,
  *  - Integrator with a TimeStepper on top **/
-World::World(int worldIndex, int requestedNofMols, bool isVisual, SimTK::Real visualizerFrequency)
+World::World(int worldIndex,
+	int requestedNofMols,
+	bool isVisual,
+	SimTK::Real visualizerFrequency)
 {
 	// Get an index from a higher caller
 	ownWorldIndex = worldIndex;
@@ -613,6 +616,137 @@ void World::loadMobodsRelatedMaps()
 		loadMbx2AIxMap();
 		// topology.printMaps();
 	}
+}
+
+
+// Allocate space for containers that keep statistics if we're doing any
+void World::allocateStatsContainers(void)
+{
+	// Arccos of the X_PF first entry which should contain 
+	// the angle of rotation on X for the BendStretch joint
+	acosX_PF00_means.resize(matter->getNumBodies() - 1);
+
+	// The norm of the translation vector of X_BM which should
+	// contain the bond length for the BendStretch joint
+	normX_BMp_means.resize(matter->getNumBodies() - 1);
+
+}
+
+/*
+ * Shift all the generalized coordinates
+ */
+void World::getTransformsStatistics(SimTK::State& someState,
+std::vector<SimTK::Real>& acosX_PF00, std::vector<SimTK::Real>& normX_BMp)
+{
+	// Get generalized coordinates Q template values. These are the values that
+	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
+	// <(P_x, F_x) angle.
+
+	// Get bonds and angles values
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+		std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+
+		// Get BAT coordinate "angle"
+		SimTK::Vec3 bondVector = X_BM.p();
+		acosX_PF00[int(mbx) - 1] = bondVector.norm();
+		normX_BMp[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
+
+		// Print something for now
+		SimTK::Real bond = acosX_PF00[int(mbx) - 1];
+		SimTK::Real angle = normX_BMp[int(mbx) - 1];
+		SimTK::Real cosTheta = X_PF.R()(0)(0);
+		std::cout << "bond " << X_BM.p().norm() << " "
+			<< "angle " << std::acos(cosTheta) * (180 / SimTK::Pi) << " "
+			<< std::endl;
+
+		// Readjust the mean Qs
+		//((nofSamples - 1) * angles + angles) / nofSamples;
+	}
+
+}
+
+
+// Print X_PF means
+void World::PrintX_PFMeans(void)
+{
+	int i = -1;
+	for(const auto &xpf : acosX_PF00_means ){
+		i += 1;
+		std::cout << "X_PFMean " << i << " " << xpf * ((180 / SimTK::Pi)) << std::endl;
+	}
+}
+
+// Print X_PF means
+void World::PrintX_BMMeans(void)
+{
+	int i = -1;
+	for(const auto &xbm : normX_BMp_means ){
+		i += 1;
+		std::cout << "X_BMMean " << i << " " << xbm << std::endl;
+	}
+}
+
+// Update transforms means
+void World::updateTransformsMeans(int nofSamples, SimTK::State& someState)
+{
+
+std::cout << "Checkpoint " << "0" << std::endl << std::flush;
+
+	// First body is Ground and the second angle is not considered.
+	std::vector<SimTK::Real> 
+		acosX_PF00(matter->getNumBodies() - 1, 0);
+	std::vector<SimTK::Real> 
+		normX_BMp(matter->getNumBodies() - 1, 0);
+	getTransformsStatistics(someState, acosX_PF00, normX_BMp);
+
+	// Useful vars
+	int N_1;
+	SimTK::Real N_1overN, NInv;
+
+	if(nofSamples == 0){
+		acosX_PF00_means = acosX_PF00;
+		normX_BMp_means = normX_BMp;
+	}else if(nofSamples = 1){
+		N_1overN = NInv = 1;
+	}else{
+		// Update useful vars
+		N_1 = nofSamples - 1;
+		N_1overN = N_1 / nofSamples;
+		NInv = 1 / N_1;
+
+		//std::cout << "updateX_PFMeans check " << " " << N_1 << " " <<  N_1overN << " " <<  NInv  << " " << std::flush;
+
+		// Update acosX_PF00 means
+		int i = -1;
+		for(auto &xpf : acosX_PF00_means ){
+			i += 1;
+			xpf = (N_1overN * xpf) + (NInv * acosX_PF00.at(i)); 
+		}
+		
+		// Update normX_BMp means
+		i = -1;
+		for(auto &xbm : normX_BMp_means ){
+			i += 1;
+			xbm = (N_1overN * xbm) + (NInv * normX_BMp.at(i));
+		}
+	}
+
 }
 
 
