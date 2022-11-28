@@ -1,8 +1,8 @@
 # Main
-3 1  Cartesian 1
-1 2 Cartesian 1
-2 4 Cartesian 1
-1 0 Cartesian 1
+3 1  Cartesian
+1 2 Cartesian
+2 4 Cartesian
+1 0 Cartesian
 
 # Hydrogens
 3 8 Cartesian
