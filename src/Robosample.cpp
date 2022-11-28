@@ -277,7 +277,8 @@ int main(int argc, char **argv)
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		BaseSampler *p = context.addSampler(worldIx,
-			setupReader.get("SAMPLERS")[worldIx]);
+			setupReader.get("SAMPLERS")[worldIx],
+			setupReader.get("INTEGRATORS")[worldIx]);
 	}
 
 	//std::cout << "OS memory 3\n" << exec("free") << std::endl;

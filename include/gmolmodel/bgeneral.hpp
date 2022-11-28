@@ -296,7 +296,14 @@ enum struct IntegratorName : int { // Integrators
 	RUNGEKUTTA,
 	RUNGEKUTTA2,
 	RUNGEKUTTA3,
-	RUNGEKUTTAFELDBERG
+	RUNGEKUTTAFELDBERG,
+	OMMVV,
+	NOF_INTEGRATORS
+};
+
+const std::unordered_map<std::string, IntegratorName>
+IntegratorNameS{
+	{"EMPTY", IntegratorName::EMPTY}
 };
 
 /*

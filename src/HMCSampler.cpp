@@ -130,6 +130,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	//}
 
 	generator = 0;
+	integratorName = IntegratorName::EMPTY;
 
 	DistortOpt = 0;
 	MDStepsPerSampleStd = 0.5;
@@ -354,6 +355,24 @@ void HMCSampler::setGeneratorName(std::string& generatorNameNameArg)
 	}else{
 		std::cerr << "Unknown sampling method.\n"; throw std::exception(); std::exit(1);
 	}
+}
+
+void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
+{
+	this->integratorName = integratorNameArg;
+}
+
+void HMCSampler::setIntegratorName(std::string integratorNameArg)
+{
+
+ 	if(integratorNameArg == "OMMVV"){
+		this->integratorName = IntegratorName::OMMVV;
+	}else if (integratorNameArg == "VV"){
+		integratorName = IntegratorName::VERLET;
+	}else{
+		integratorName = IntegratorName::EMPTY;
+	}
+
 }
 
 /** Initialize velocities according to the Maxwell-Boltzmann
@@ -1254,12 +1273,12 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	}
 
 	// is this correct ?
-	int offset = (someState.getNQ() - (X_PFdiffs.size() + X_BMdiffs.size()));
+/* 	int offset = (someState.getNQ() - (X_PFdiffs.size() + X_BMdiffs.size()));
 	std::cout << "offset " << offset << std::endl;
 	for(int j = offset; j < someState.getNQ(); j += 2){
 		someState.updQ()[j + offset] += X_BMdiffs[j];
 		someState.updQ()[j + 1 + offset] += X_PFdiffs[j];
-	}
+	} */
 
 	//std::vector<SimTK::Real> shiftTerms = ((scaleFactor) - 1.0) * (someState.getQ() - world->getX_PFMeans());
 	//world->shiftQ(someState, shiftTerms);

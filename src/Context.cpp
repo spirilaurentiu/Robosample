@@ -1132,7 +1132,8 @@ void Context::setGuidanceTemperature(std::size_t, std::size_t, SimTK::Real)
 
 BaseSampler * Context::addSampler(
 	std::size_t whichWorld,
-	SamplerName whichSampler)
+	SamplerName whichSampler,
+	IntegratorName whichIntegrator)
 {
 	return worlds[whichWorld].addSampler(whichSampler);
 }
@@ -1142,7 +1143,8 @@ BaseSampler * Context::addSampler(
 */
 BaseSampler * Context::addSampler(
 	std::size_t whichWorld,
-	std::string samplerName)
+	std::string samplerName,
+	std::string integratorName)
 {
 
 	// We only use HMCSampler for now. Later we'll add LAHMC and Girolami
@@ -1152,6 +1154,9 @@ BaseSampler * Context::addSampler(
 		
 		// Set the chain generation method (ex. Markov Cahin Monte Carlo)
 		pHMC(p)->setGeneratorName(samplerName);
+
+		// Set the integration method
+		pHMC(p)->setIntegratorName(integratorName);
 
 		return p;
 

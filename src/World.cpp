@@ -681,7 +681,6 @@ void World::getTransformsStatistics(SimTK::State& someState)
 
 }
 
-
 // Print X_PF means
 void World::PrintX_PFMeans(void)
 {

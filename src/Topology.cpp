@@ -1359,14 +1359,14 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 
 				bondIx2GmolBond.insert(pairToBeInserted);
 
-
-
 				GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
 						(*bondsInvolvedIter)->getIndex(),
 						Compound::BondIndex(getNumBonds() - 1)
 				) );
 
-				//std::cout << "DEBUG inserted into GmolBond2bondIx bondIx2GmolBond  " << GmolBond2bondIx.size() << " " << bondIx2GmolBond.size() << std::endl << std::flush;
+				//std::cout << "DEBUG inserted into GmolBond2bondIx bondIx2GmolBond  " 
+				//<< GmolBond2bondIx.size() << " " << bondIx2GmolBond.size() 
+				//<< std::endl << std::flush;
 
 				// Drop the number of available bonds
 				--previousNode->freebonds;

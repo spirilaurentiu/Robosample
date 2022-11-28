@@ -271,7 +271,7 @@ public:
 	std::size_t getNofSamplers() const;
 
 	/** Add a sampler to the World **/
-	BaseSampler* addSampler(std::string);
+	BaseSampler* addSampler(std::string samplerName);
 	BaseSampler* addSampler(SamplerName);
 
 	// TODO Use Sampler polymorphism

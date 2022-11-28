@@ -82,6 +82,9 @@ public:
 
 	virtual void shiftQ ( SimTK::State& someState, SimTK::Real scalingFactor, int numIgnoredQs ) = 0;
 
+	//virtual void setIntegratorName(IntegratorName) = 0;
+	//virtual void setIntegratorName(std::string integratorName) = 0;
+
 	/** Propose a move **/
 	virtual bool propose(SimTK::State& someState) = 0;
 	//virtual eval() = 0;

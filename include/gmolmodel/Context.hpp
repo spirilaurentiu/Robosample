@@ -84,10 +84,10 @@ public:
 
 	// Add sampler
 	BaseSampler* addSampler(std::size_t whichWorld,
-		std::string samplerName);
+		std::string samplerName, std::string integratorName);
 
 	BaseSampler* addSampler(std::size_t whichWorld,
-		SamplerName whichSampler);
+		SamplerName whichSampler, IntegratorName whichIntegrator);
 
 	// Samplers have to set parameters after Simbody subsystems generation
 	void initializeSampler(std::size_t whichWorld, std::size_t whichSampler);

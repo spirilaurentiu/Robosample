@@ -90,6 +90,9 @@ public:
 	void setThermostat(const char *);
 	virtual ThermostatName getThermostat(void) const;
  
+	void setIntegratorName(IntegratorName);
+	void setIntegratorName(std::string integratorName);
+
  	/* 
 	* Compute mathematical, rather than robotic Jacobian.
 	* It translates generalized velocities u into Cartesian velocities
@@ -391,6 +394,7 @@ protected:
 	std::vector<SimTK::Real> dRdot;
 
 	// Integration
+	IntegratorName integratorName = IntegratorName::EMPTY;
 	int generator = 0;
 
 	std::vector<SimTK::Real> UScaleFactors;
