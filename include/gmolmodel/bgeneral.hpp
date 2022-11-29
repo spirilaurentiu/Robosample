@@ -379,6 +379,8 @@ DataFrame k_means(const DataFrame& data,
 // STD linear algebra
 
 // Print
+
+
 void bPrintVec(std::vector<double> &src);
 
 // Assign

@@ -1352,40 +1352,40 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	}
 
 	// Print the differences	
-	int k = -1;
-	for(const auto& diff : X_PFdiffs){
-		k += 1;
-		std::cout << "Diff X_PF " << k << " " << diff << std::endl;
-	}
-	k = -1;
-	for(const auto& diff : X_BMdiffs){
-		k += 1;
-		std::cout << "Diff X_BM " << k << " " << diff << std::endl;
-	}
+/* 	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		std::cout << "Diff X_PF " << k << " " << X_PFdiffs[k] << std::endl;}
+	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
+		std::cout << "Diff X_BM " << k << " " << X_BMdiffs[k] << std::endl;} */
 
 	// Scale the differences
-	k = -1;
+	int k = -1;
 	for(auto& diff : X_PFdiffs){
 		k += 1;
-		diff *= scaleFactor - 1;
+		diff *= (scaleFactor - 1);
 	}
 	
 	k = -1;
 	for(auto& diff : X_BMdiffs){
 		k += 1;
-		diff *= scaleFactor - 1;
+		diff *= (scaleFactor - 1);
 	}
 
-	// is this correct ?
-/* 	int offset = (someState.getNQ() - (X_PFdiffs.size() + X_BMdiffs.size()));
-	std::cout << "offset " << offset << std::endl;
-	for(int j = offset; j < someState.getNQ(); j += 2){
-		someState.updQ()[j + offset] += X_BMdiffs[j];
-		someState.updQ()[j + 1 + offset] += X_PFdiffs[j];
-	} */
+	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		std::cout << "Diff " << k << " " 
+			<< X_PFdiffs[k] << " " << X_BMdiffs[k] << std::endl;}
 
-	//std::vector<SimTK::Real> shiftTerms = ((scaleFactor) - 1.0) * (someState.getQ() - world->getX_PFMeans());
-	//world->shiftQ(someState, shiftTerms);
+	// Ground and first mobod don't have internal coordinates
+	int offset = 2; 
+	for (SimTK::MobilizedBodyIndex mbx(offset);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		
+		// we only allocated  X_PFs for non-Ground bodies
+		mobod.setOneQ(someState, 0, X_PFdiffs[int(mbx) - 1]);
+		mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
+	}
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);

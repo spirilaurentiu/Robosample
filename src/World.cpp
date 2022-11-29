@@ -659,11 +659,13 @@ void World::getTransformsStatistics(SimTK::State& someState)
 
 		// Get mobod inboard frame X_FM measured and expressed in P
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
-		std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
 
 		// Get mobod inboard frame X_BM
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
-		std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+
+		std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
 
 		// Get BAT coordinate "angle"
 		SimTK::Vec3 bondVector = X_BM.p();
@@ -829,13 +831,18 @@ World::getAtomsLocationsInGround(const SimTK::State & state)
 
 		// Iterate through atoms
 		for (auto& atom : topology.bAtomList) {
+
+			// Get Compound atom index
 			auto compoundAtomIndex = atom.getCompoundAtomIndex();
+
+			// Get DuMM atom index too for OpenMM
+			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
 
 			SimTK::Vec3 location;
 
 			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
 				// ELIZA
-				location = calcAtomLocationInGroundFrameThroughOMM(compoundAtomIndex);
+				location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
 			}else{
 				location = 
 				topology.calcAtomLocationInGroundFrameThroughSimbody(
@@ -872,14 +879,19 @@ World::getCurrentAtomsLocationsInGround(void)
 
 		// Iterate through atoms
 		for (auto& atom : topology.bAtomList) {
+
+			// Get Compound atom index
 			auto compoundAtomIndex = atom.getCompoundAtomIndex();
+
+			// Get DuMM atom index too for OpenMM
+			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
 
 			// Calculate atom location in Ground
 			SimTK::Vec3 location;
 
 			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
 				// ELIZA
-				location = calcAtomLocationInGroundFrameThroughOMM(compoundAtomIndex);
+				location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
 			}else{
 				location = 
 				topology.calcAtomLocationInGroundFrameThroughSimbody(
