@@ -129,7 +129,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	//	NMARotation[i][i] = 1.0;
 	//}
 
-	generator = 0;
+	sampleGenerator = 0;
 	integratorName = IntegratorName::EMPTY;
 
 	DistortOpt = 0;
@@ -343,14 +343,14 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 }
 
 // Set the method of integration
-void HMCSampler::setGeneratorName(std::string& generatorNameNameArg)
+void HMCSampler::setSampleGenerator(std::string& generatorNameNameArg)
 {
 	if (generatorNameNameArg == "EMPTY"){
-		this->generator = 0;
+		this->sampleGenerator = 0;
 		setAlwaysAccept(true);
 	}
 	else if(generatorNameNameArg == "MC"){
-		this->generator = 1;
+		this->sampleGenerator = 1;
 		setAlwaysAccept(false);
 	}else{
 		std::cerr << "Unknown sampling method.\n"; throw std::exception(); std::exit(1);
@@ -1020,40 +1020,142 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 }
 
 bool b = false;
+
+// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
+
+// ELIZA: Insert code here
+void HMCSampler::OMM_setTemperature(double HMCBoostTemperature){
+	assert(!"Not implemented");
+}
+
+// ELIZA: Insert code here
+double HMCSampler::OMM_calcKineticEnergy(void){
+	assert(!"Not implemented");
+}
+
+// ELIZA: Insert code here
+double HMCSampler::OMM_calcPotentialEnergy(void){
+	assert(!"Not implemented");
+}
+
+void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
+	assert(!"Not implemented");
+
+	try {
+
+
+		// ELIZA: Insert code here
+
+
+	}catch(const std::exception&){
+		// Send general message
+		std::cout << "\t[WARNING] propose exception caught!\n";
+		proposeExceptionCaught = true;
+
+		// Restore configuration
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+		}
+		system->realize(someState, SimTK::Stage::Position);
+	}
+
+}
+
+// ELIZA: Check the code below
+void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
+	assert(!"Not implemented");
+
+	this->ke_proposed = OMM_calcKineticEnergy();
+
+	// Leave this here 
+	this->etot_proposed = getOldPE() 
+		+ getProposedKE() 
+		+ getOldFixman() 
+		+ getOldLogSineSqrGamma2();
+}
+
+
+// ELIZA: Check the code below
+void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
+	assert(!"Not implemented");
+
+	// Get new Fixman potential
+	if(useFixman){
+		std::cerr 
+		<< "Attempting Fixman potential calculation with OpenMM integrators.";
+		throw std::exception();
+		std::exit(1);
+		//fix_n = calcFixman(someState);
+		//logSineSqrGamma2_n = 
+		//	((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
+	}else{
+		fix_n = 0.0;
+		logSineSqrGamma2_n = 0.0;
+	}
+
+	// Get new kinetic energy
+	ke_n = OMM_calcKineticEnergy();
+
+	// Get new potential energy
+	pe_n = OMM_calcPotentialEnergy();
+
+	// Calculate total energy
+	//if(useFixman){
+	//	etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
+	//	etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+	//}else{
+		etot_n = pe_n + ke_n;
+		etot_proposed = pe_o + ke_proposed;
+	//}
+
+}
+
+
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. **/
 bool HMCSampler::propose(SimTK::State& someState)
 {
 
-	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);
-
-	// Initialize velocities according to the Maxwell-Boltzmann distribution
-	initializeVelocities(someState);
-
-	// Store the proposed energies
-	calcProposedKineticAndTotalEnergy(someState);
-
 	// Adapt timestep
 	if(shouldAdaptTimestep){
 		adaptTimestep(someState);
 	}
 
-	// Adapt timestep
-	bool shouldAdaptWorldBlocks = false;
-	if(shouldAdaptWorldBlocks){
-		adaptWorldBlocks(someState);
+	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);
+
+	if(integratorName == IntegratorName::OMMVV){
+
+		// // ELIZA: Check the code below
+		OMM_setTemperature(this->boostT);
+		OMM_calcProposedKineticAndTotalEnergy();
+		OMM_integrateTrajectory(someState);
+		OMM_calcNewConfigurationAndEnergies();
+
+	}else{
+
+		// Initialize velocities according to the Maxwell-Boltzmann distribution
+		initializeVelocities(someState);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
+		// Adapt timestep
+		bool shouldAdaptWorldBlocks = false;
+		if(shouldAdaptWorldBlocks){
+			adaptWorldBlocks(someState);
+		}
+
+		// Apply the L operator
+		integrateTrajectory(someState);
+		//integrateTrajectoryOneStepAtATime(someState);
+
+		calcNewConfigurationAndEnergies(someState);
 	}
 
-	// Apply the L operator
-	integrateTrajectory(someState);
-	//integrateTrajectoryOneStepAtATime(someState);
-
-	calcNewConfigurationAndEnergies(someState);
-
 	return validateProposal();
-
 
 }
 

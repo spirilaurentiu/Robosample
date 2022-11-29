@@ -1153,7 +1153,7 @@ BaseSampler * Context::addSampler(
 		BaseSampler *p = worlds[whichWorld].addSampler(SamplerName::HMC);
 		
 		// Set the chain generation method (ex. Markov Cahin Monte Carlo)
-		pHMC(p)->setGeneratorName(samplerName);
+		pHMC(p)->setSampleGenerator(samplerName);
 
 		// Set the integration method
 		pHMC(p)->setIntegratorName(integratorName);

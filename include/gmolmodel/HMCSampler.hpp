@@ -208,7 +208,7 @@ public:
 	virtual void storeOldConfigurationAndPotentialEnergies(SimTK::State& someState);
 
 	// Set the method of integration
-	void setGeneratorName(std::string& integratorNameArg);
+	void setSampleGenerator(std::string& integratorNameArg);
 
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
@@ -262,6 +262,19 @@ public:
 	 **/
 	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		int numIgnoredQs);
+
+	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
+	void OMM_setTemperature(double HMCBoostTemperature);
+
+	double OMM_calcPotentialEnergy(void);
+
+	double OMM_calcKineticEnergy(void);
+
+	void OMM_calcProposedKineticAndTotalEnergy(void);
+
+	void OMM_integrateTrajectory(SimTK::State&);
+
+	void OMM_calcNewConfigurationAndEnergies(void);
 
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
@@ -395,7 +408,9 @@ protected:
 
 	// Integration
 	IntegratorName integratorName = IntegratorName::EMPTY;
-	int generator = 0;
+
+	// Sampling
+	int sampleGenerator = 0;
 
 	std::vector<SimTK::Real> UScaleFactors;
 	SimTK::Real UScaleFactorsNorm = 0.0;
