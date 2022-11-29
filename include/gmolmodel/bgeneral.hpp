@@ -303,7 +303,16 @@ enum struct IntegratorName : int { // Integrators
 
 const std::unordered_map<std::string, IntegratorName>
 IntegratorNameS{
-	{"EMPTY", IntegratorName::EMPTY}
+	{"EMPTY", IntegratorName::EMPTY},
+	{"VERLET", IntegratorName::VERLET},
+	{"EULER", IntegratorName::EULER},
+	{"EULER2", IntegratorName::EULER2},
+	{"CPODES", IntegratorName::CPODES},
+	{"RUNGEKUTTA", IntegratorName::RUNGEKUTTA},
+	{"RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2},
+	{"RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3},
+	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
+	{"OMMVV", IntegratorName::OMMVV}
 };
 
 /*
@@ -317,6 +326,7 @@ enum struct GmolRandDistributionType : int {
 
 // Samplers
 enum struct SamplerName : int {
+	EMPTY,
 	MC,
 	HMC,
 	LAHMC

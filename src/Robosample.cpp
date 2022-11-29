@@ -460,13 +460,13 @@ int main(int argc, char **argv)
 		std::vector<SimTK::Real> temperatures;
 
 		// Storage for sampling details
-		std::vector<std::vector<string>> rexSamplers;
+		std::vector<std::vector<std::string>> rexSamplers;
 		std::vector<std::vector<int>> rexDistortOptions;
 		std::vector<std::vector<int>> rexFlowOptions;
 		std::vector<std::vector<int>> rexWorkOptions;
 
 		// Storage for each replica simulation parameters
-		std::vector<std::vector<string>> rexIntegrators;
+		std::vector<std::vector<std::string>> rexIntegrators;
 		std::vector<std::vector<SimTK::Real>> rexTimesteps;
 		std::vector<std::vector<int>> rexWorldIndexes;
 		std::vector<std::vector<int>> rexMdsteps;
@@ -491,6 +491,13 @@ int main(int argc, char **argv)
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
 			context.addThermodynamicState(k, temperatures[k],
+
+				rexSamplers[k],
+				rexDistortOptions[k],
+				rexFlowOptions[k],
+				rexWorkOptions[k],
+				rexIntegrators[k],
+
 				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 

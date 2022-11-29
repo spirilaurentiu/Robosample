@@ -186,8 +186,8 @@ int SetupReader::readREXConfigFile(std::string FN,
 	rexDistortOptions.resize(nofReplicas);
 	rexFlowOptions.resize(nofReplicas);
 	rexWorkOptions.resize(nofReplicas);	
-
 	rexIntegrators.resize(nofReplicas);
+
 	rexTimesteps.resize(nofReplicas);
 	rexWorldIndexes.resize(nofReplicas);
 	rexMdsteps.resize(nofReplicas);

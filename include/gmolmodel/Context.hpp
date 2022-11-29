@@ -275,6 +275,13 @@ public:
 
 	// Add one thermodynamic state
 	void addThermodynamicState(int index, SimTK::Real T,
+
+		std::vector<std::string>& rexSamplers,
+		std::vector<int>& rexDistortOptions,
+		std::vector<int>& rexFlowOptions,
+		std::vector<int>& rexWorkOptions,
+		std::vector<std::string>& rexIntegrators,
+
 		std::vector<int>& argWorldIndexes,
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica);

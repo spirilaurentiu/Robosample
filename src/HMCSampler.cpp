@@ -365,6 +365,8 @@ void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
 void HMCSampler::setIntegratorName(std::string integratorNameArg)
 {
 
+	//this->integratorName = IntegratorNameS[integratorNameArg];
+
  	if(integratorNameArg == "OMMVV"){
 		this->integratorName = IntegratorName::OMMVV;
 	}else if (integratorNameArg == "VV"){
