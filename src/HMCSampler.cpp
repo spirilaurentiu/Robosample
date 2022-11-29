@@ -1371,8 +1371,11 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	}
 
 	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
-		std::cout << "Diff " << k << " " 
-			<< X_PFdiffs[k] << " " << X_BMdiffs[k] << std::endl;}
+		std::cout << "X_PFDiff " << k << " " 
+			<< X_PFdiffs[k] << std::endl;
+		std::cout << "X_BMDiff " << k << " " 
+			<< X_BMdiffs[k] << std::endl;
+	}
 
 	// Ground and first mobod don't have internal coordinates
 	int offset = 2; 
@@ -1504,7 +1507,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 		// WORK: perform work (alpha)
 		if(DistortOpt == -1){
-			shiftQ(someState, 1.2, 2);
+			shiftQ(someState, 1.2, 100);
 		}
 		calcNewConfigurationAndEnergies(someState);
 		work += (pe_n - pe_o);
