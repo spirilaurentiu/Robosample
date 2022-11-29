@@ -69,7 +69,10 @@ class World {
 public:
 	// --- Structural functions ---
 	/** Constructor **/
-	explicit World(int worldIndex, int requestedNofMols, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
+	explicit World(	int worldIndex,
+					int requestedNofMols,
+					bool isVisual=true,
+					SimTK::Real visualizerFrequency = 0.0015);
 
 	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
@@ -106,7 +109,8 @@ public:
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
 	/** Add a membrane represented by a contact surface **/
-	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution);
+	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth,
+		SimTK::Real zWidth, int resolution);
 
 	/** Add contact constraints to specific bodies **/
 	const SimTK::State& addConstraints(int prmtopIndex);
@@ -153,6 +157,8 @@ public:
 
 
 	// --- Inter-world functions: Pass configurations among Worlds
+	// ELIZA
+	SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(SimTK::Compound::AtomIndex){assert(!"Not implemented");}
 
 	/** Get the current Compound Cartesian coords.
 	* Return a 2D vector representing all the coordinates of this World.
@@ -171,6 +177,10 @@ public:
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
 		getCurrentAtomsLocationsInGround(void);
+
+	/** Nice print helper for get/setAtomsLocations */
+	void PrintAtomsLocations(const std::vector<std::vector<
+		std::pair<bSpecificAtom *, SimTK::Vec3> > >& someAtomsLocations);
 
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(

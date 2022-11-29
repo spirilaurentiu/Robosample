@@ -91,6 +91,7 @@ public:
 	virtual ThermostatName getThermostat(void) const;
  
 	void setIntegratorName(IntegratorName);
+	const IntegratorName getIntegratorName(void){return integratorName;}
 	void setIntegratorName(std::string integratorName);
 
  	/* 

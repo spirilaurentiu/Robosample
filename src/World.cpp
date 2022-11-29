@@ -171,7 +171,8 @@ World::World(int worldIndex,
 	if(visual){
 		decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
 		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
-		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(*visualizer, std::abs(visualizerFrequency));
+		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
+			*visualizer, std::abs(visualizerFrequency));
 		compoundSystem->addEventReporter(visualizerReporter.get());
 
 		// Initialize a DecorationGenerator
@@ -815,24 +816,31 @@ void World::printMaps(void)
 
 std::vector< std::vector<
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
-World::getAtomsLocationsInGround(
-	const SimTK::State & state
-)
+World::getAtomsLocationsInGround(const SimTK::State & state)
 {
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> returnVector;
+	// Return vector
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+		returnVector;
 
 	// Iterate through topologies
-	//for (auto& topology : topologies){ // SAFE
-	for (auto& topology : (*topologies)){ // DANGER
+	for (auto& topology : (*topologies)){
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
 		currentTopologyInfo.reserve(topology.bAtomList.size());
 
 		// Iterate through atoms
 		for (auto& atom : topology.bAtomList) {
 			auto compoundAtomIndex = atom.getCompoundAtomIndex();
-			SimTK::Vec3 location = //topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
-			topology.calcAtomLocationInGroundFrameThroughSimbody(
-				compoundAtomIndex, *forceField, *matter, state);
+
+			SimTK::Vec3 location;
+
+			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
+				// ELIZA
+				location = calcAtomLocationInGroundFrameThroughOMM(compoundAtomIndex);
+			}else{
+				location = 
+				topology.calcAtomLocationInGroundFrameThroughSimbody(
+					compoundAtomIndex, *forceField, *matter, state);
+			}
 
 			currentTopologyInfo.emplace_back(&atom, location);
 		}
@@ -846,25 +854,37 @@ World::getAtomsLocationsInGround(
 /** Almost the same thing as above but it takes the current integrator state
  and returns a reference to atomsLocations
  **/
-std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+std::vector< std::vector< 
+std::pair <bSpecificAtom *, SimTK::Vec3 > > >
 World::getCurrentAtomsLocationsInGround(void)
 {
+	// Get the state from the integrator
 	SimTK::State& state = integ->updAdvancedState();
 
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> returnVector;
+	// Return vector
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+		returnVector;
 
 	// Iterate through topologies
-	//for (auto& topology : topologies){ // SAFE
-	for (auto& topology : (*topologies)){ // DANGER
+	for (auto& topology : (*topologies)){ 
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
 		currentTopologyInfo.reserve(topology.bAtomList.size());
 
 		// Iterate through atoms
 		for (auto& atom : topology.bAtomList) {
 			auto compoundAtomIndex = atom.getCompoundAtomIndex();
-			SimTK::Vec3 location = //topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
-			topology.calcAtomLocationInGroundFrameThroughSimbody(
-				compoundAtomIndex, *forceField, *matter, state);
+
+			// Calculate atom location in Ground
+			SimTK::Vec3 location;
+
+			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
+				// ELIZA
+				location = calcAtomLocationInGroundFrameThroughOMM(compoundAtomIndex);
+			}else{
+				location = 
+				topology.calcAtomLocationInGroundFrameThroughSimbody(
+					compoundAtomIndex, *forceField, *matter, state);
+			}
 
 			currentTopologyInfo.emplace_back(&atom, location);
 		}
@@ -872,15 +892,22 @@ World::getCurrentAtomsLocationsInGround(void)
 		returnVector.emplace_back(currentTopologyInfo);
 	}
 
-	// DEBUG
-	/*std::cout << "myAtomsLocations[0]" << std::endl;
-	for(std::size_t j = 0; j < returnVector[0].size(); j++){
-		auto compoundAtomIndex = returnVector[0][j].first->getCompoundAtomIndex();
-		auto loc = returnVector[0][j].second;
-		printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
-	} */// END DEBUG
-
 	return returnVector;
+}
+
+/** Nice print helper for get/setAtomsLocations */
+void World::PrintAtomsLocations(const std::vector<std::vector<
+	std::pair<bSpecificAtom *, SimTK::Vec3> > >& someAtomsLocations)
+{	
+	std::cout << "myAtomsLocations[0]" << std::endl;
+	for(std::size_t j = 0; j < someAtomsLocations[0].size(); j++){
+		auto compoundAtomIndex = 
+			someAtomsLocations[0][j].first->getCompoundAtomIndex();
+		auto loc = someAtomsLocations[0][j].second;
+
+		printf("%d %.10f %.10f %.10f\n",
+			compoundAtomIndex, loc[0], loc[1], loc[2]);
+	}
 }
 
 /** Put coordinates into bAtomLists of Topologies.
@@ -889,16 +916,15 @@ World::getCurrentAtomsLocationsInGround(void)
 void World::updateAtomListsFromCompound(const SimTK::State &state)
 {
 	// Iterate through topologies
-	//for (auto& topology : topologies){ // SAFE
-	for (auto& topology : (*topologies)){ // DANGER
+	for (auto& topology : (*topologies)){
 
 		// Iterate through atoms
 		for (auto& atom : topology.bAtomList) {
 
 			const auto compoundAtomIndex = atom.getCompoundAtomIndex();
-			SimTK::Vec3 location = //topology.calcAtomLocationInGroundFrame(state, compoundAtomIndex);
-			topology.calcAtomLocationInGroundFrameThroughSimbody(
-				compoundAtomIndex, *forceField, *matter, state);
+			SimTK::Vec3 location =
+				topology.calcAtomLocationInGroundFrameThroughSimbody(
+					compoundAtomIndex, *forceField, *matter, state);
 
 			atom.setX(location[0]);
 			atom.setY(location[1]);
