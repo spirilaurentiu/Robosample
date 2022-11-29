@@ -2863,6 +2863,13 @@ void Context::setUseOpenMMAcceleration(bool arg)
 }
 
 
+void Context::setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize)
+{
+	worlds[which].updForceField()->setUseOpenMMIntegration(true);
+	worlds[which].updForceField()->setOpenMMtemperature(temperature);
+	worlds[which].updForceField()->setOpenMMtemperature(stepsize);
+}
+
 void Context::setNonbondedMethod(std::size_t which, int methodInx)
 {
     if (methodInx >= 0 && methodInx <= 1 ){

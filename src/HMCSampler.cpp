@@ -56,6 +56,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 
 	this->system = &argMatter->getSystem();
 
+
 	//this->rootTopology = argResidue;
 
 	if( !(topologies.size() > 0) ){
@@ -1030,22 +1031,21 @@ void HMCSampler::OMM_setTemperature(double HMCBoostTemperature){
 
 // ELIZA: Insert code here
 double HMCSampler::OMM_calcKineticEnergy(void){
-	assert(!"Not implemented");
+	return dumm->OMM_calcPotentialEnergy();
+	// assert(!"Not implemented");
 }
 
 // ELIZA: Insert code here
 double HMCSampler::OMM_calcPotentialEnergy(void){
-	assert(!"Not implemented");
+	return dumm->OMM_calcPotentialEnergy();
 }
 
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 	assert(!"Not implemented");
 
 	try {
-
-
 		// ELIZA: Insert code here
-
+		dumm->OMM_integrateTrajectory(this->MDStepsPerSample );
 
 	}catch(const std::exception&){
 		// Send general message

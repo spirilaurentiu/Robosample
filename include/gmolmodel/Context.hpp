@@ -183,6 +183,7 @@ public:
 	int getNofBoostStairs(std::size_t whichWorld);
 	void setNumThreadsRequested(std::size_t which, int howMany);
 	void setUseOpenMMAcceleration(bool arg);
+	void setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize);
 
 	void setUseOpenMMCalcOnlyNonBonded(bool arg);
 	void setNonbondedMethod(std::size_t whichWorld, int methodInx);

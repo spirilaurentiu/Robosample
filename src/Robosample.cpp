@@ -229,6 +229,10 @@ int main(int argc, char **argv)
 					"NONBONDED_CUTOFF")[worldIx] )
 			);
 		}
+
+		if(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"){
+			context.setUseOpenMMIntegration(worldIx, std::stod( setupReader.get("BOOST_TEMPERATURE")[worldIx]), std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+		}
 	}
 
 
