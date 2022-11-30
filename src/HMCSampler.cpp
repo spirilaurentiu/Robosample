@@ -1031,7 +1031,7 @@ void HMCSampler::OMM_setTemperature(double HMCBoostTemperature){
 
 // ELIZA: Insert code here
 double HMCSampler::OMM_calcKineticEnergy(void){
-	return dumm->OMM_calcPotentialEnergy();
+	return dumm->OMM_calcKineticEnergy();
 	// assert(!"Not implemented");
 }
 
