@@ -2867,7 +2867,7 @@ void Context::setUseOpenMMIntegration(std::size_t which, Real temperature, Real 
 {
 	worlds[which].updForceField()->setUseOpenMMIntegration(true);
 	worlds[which].updForceField()->setOpenMMtemperature(temperature);
-	worlds[which].updForceField()->setOpenMMtemperature(stepsize);
+	worlds[which].updForceField()->setOpenMMstepsize(stepsize);
 }
 
 void Context::setNonbondedMethod(std::size_t which, int methodInx)
