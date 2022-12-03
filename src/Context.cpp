@@ -2427,6 +2427,46 @@ void Context::initializeReplica(int thisReplica)
 
 }
 
+// Prepare Q, U, and tau altering function parameters
+void Context::PrepareNonEquilibriumParams(void){
+
+	// Initialize a vector of scalingFactors for scaling Qs (non-equil)
+	scaleFactorsEven.resize(nofThermodynamicStates, 1.0);
+	scaleFactorsOdd.resize(nofThermodynamicStates, 1.0);
+
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
+		scaleFactorsEven.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
+		scaleFactorsEven.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
+
+		scaleFactorsEven.at(thermoIx)     /= thermodynamicStates[thermoIx].getTemperature();
+		scaleFactorsEven.at(thermoIx + 1) /= thermodynamicStates[thermoIx + 1].getTemperature();
+
+		scaleFactorsEven.at(thermoIx) = std::sqrt(scaleFactorsEven.at(thermoIx));
+		scaleFactorsEven.at(thermoIx + 1) = std::sqrt(scaleFactorsEven.at(thermoIx + 1));
+	}
+
+	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
+		scaleFactorsOdd.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
+		scaleFactorsOdd.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
+
+		scaleFactorsOdd.at(thermoIx)     /= thermodynamicStates[thermoIx].getTemperature();
+		scaleFactorsOdd.at(thermoIx + 1) /= thermodynamicStates[thermoIx + 1].getTemperature();
+
+		scaleFactorsOdd.at(thermoIx) = std::sqrt(scaleFactorsOdd.at(thermoIx));
+		scaleFactorsOdd.at(thermoIx + 1) = std::sqrt(scaleFactorsOdd.at(thermoIx + 1));
+	}
+
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
+		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
+			<< scaleFactorsEven.at(thermoIx) << std::endl;
+	}
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
+		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
+			<< scaleFactorsOdd.at(thermoIx) << std::endl;
+	}
+
+}
+
 // Go through all of this replica's worlds and generate samples
 void Context::RunReplica(int thisReplica, int howManyRounds)
 {
@@ -2520,45 +2560,6 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 
 }
 
-// Prepare Q, U, and tau altering function parameters
-void Context::PrepareNonEquilibriumParams(void){
-
-	// Initialize a vector of scalingFactors for scaling Qs (non-equil)
-	scaleFactorsEven.resize(nofThermodynamicStates, 1.0);
-	scaleFactorsOdd.resize(nofThermodynamicStates, 1.0);
-
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
-		scaleFactorsEven.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
-		scaleFactorsEven.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
-
-		scaleFactorsEven.at(thermoIx)     /= thermodynamicStates[thermoIx].getTemperature();
-		scaleFactorsEven.at(thermoIx + 1) /= thermodynamicStates[thermoIx + 1].getTemperature();
-
-		scaleFactorsEven.at(thermoIx) = std::sqrt(scaleFactorsEven.at(thermoIx));
-		scaleFactorsEven.at(thermoIx + 1) = std::sqrt(scaleFactorsEven.at(thermoIx + 1));
-	}
-
-	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
-		scaleFactorsOdd.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
-		scaleFactorsOdd.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
-
-		scaleFactorsOdd.at(thermoIx)     /= thermodynamicStates[thermoIx].getTemperature();
-		scaleFactorsOdd.at(thermoIx + 1) /= thermodynamicStates[thermoIx + 1].getTemperature();
-
-		scaleFactorsOdd.at(thermoIx) = std::sqrt(scaleFactorsOdd.at(thermoIx));
-		scaleFactorsOdd.at(thermoIx + 1) = std::sqrt(scaleFactorsOdd.at(thermoIx + 1));
-	}
-
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx++){
-		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
-			<< scaleFactorsEven.at(thermoIx) << std::endl;
-	}
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx++){
-		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
-			<< scaleFactorsOdd.at(thermoIx) << std::endl;
-	}
-
-}
 
 // Run replica exchange protocol
 void Context::RunREX(void)
@@ -2608,15 +2609,28 @@ void Context::RunREX(void)
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 		std::cout << " REX batch " << mixi << std::endl;
 
-		// Prepare samplers for non-equilibrium if necessary
-		int offset = 0;
-		if ((mixi % 2) == 0){
-		}else{
-		}
+
 		
 		// Run each replica serially
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
+
+
+
+			// Pass scale factors to samplers - INSERT CODE HERE =============
+			// Get thermoState corresponding to this replica
+			int thermoIx = replica2ThermoIxs[replicaIx];
+
+			// Get worlds indexes of this thermodynamic state
+			int backworldIx = thermodynamicStates[thermoIx].getWorldIndexes().back();
+
+			// Set altering function parameters
+			if ((mixi % 2) == 0){
+				(worlds[backworldIx].updSampler(0))->setQScaleFactor(scaleFactorsEven.at(replicaIx));
+			}else{
+				(worlds[backworldIx].updSampler(0))->setQScaleFactor(scaleFactorsOdd.at(replicaIx));
+			}
+			// ===============================================================
 
 			//std::cout << "Replica front world coordinates:\n";
 			//replicas[replicaIx].PrintCoordinates();

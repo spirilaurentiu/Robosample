@@ -138,6 +138,9 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	FlowOpt = 0;
 	WorkOpt = 0;
 
+	// None-equilibrium params
+	QScaleFactor = 1.0;
+
 	MDStepsPerSampleStd = 0.5;
 
 	NMAAltSign = 1.0;
@@ -1281,13 +1284,18 @@ void HMCSampler::setDistortOption(const int& distortOptArg)
 	this->DistortOpt = distortOptArg;
 }
 
+void HMCSampler::setQScaleFactor(const SimTK::Real& s)
+{
+	this->QScaleFactor = s;
+}
+
 /*
  * Shift all the generalized coordinates
  */
-void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor)
+void HMCSampler::shiftQ(SimTK::State& someState)
 {
 	// Test
-	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
+	std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
 	// 1. Update means of values before altering them
 	world->updateTransformsMeans(someState);
@@ -1311,10 +1319,10 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor)
 	// 3. Scale the differences
 	int k = -1;
 	for(auto& diff : X_PFdiffs){
-		diff *= (scaleFactor - 1);
+		diff *= (QScaleFactor - 1);
 	}
 	for(auto& diff : X_BMdiffs){
-		diff *= (scaleFactor - 1);
+		diff *= (QScaleFactor - 1);
 	}
 
 	// Print the differences	
@@ -1344,7 +1352,7 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor)
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Test
-	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
 }
 
 /*
@@ -1457,7 +1465,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 		// WORK: perform work (alpha)
 		if(DistortOpt == -1){
-			shiftQ(someState, 1.0);
+			shiftQ(someState);
 		}
 		calcNewConfigurationAndEnergies(someState);
 		work += (pe_n - pe_o);

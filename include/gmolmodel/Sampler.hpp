@@ -80,7 +80,7 @@ public:
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 
-	virtual void shiftQ ( SimTK::State& someState, SimTK::Real scalingFactor) = 0;
+	virtual void shiftQ ( SimTK::State& someState) = 0;
 
 	//virtual void setIntegratorName(IntegratorName) = 0;
 	//virtual void setIntegratorName(std::string integratorName) = 0;

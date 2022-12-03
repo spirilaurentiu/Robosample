@@ -262,9 +262,11 @@ public:
 	// 
 	void setDistortOption(const int& distortOptArg);
 
+	void setQScaleFactor(const SimTK::Real& s);
+
 	/** Shift all the generalized coordinates
 	 **/
-	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor);
+	void shiftQ(SimTK::State& someState);
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setTemperature(double HMCBoostTemperature);
@@ -457,6 +459,9 @@ protected:
 	bool shouldAdaptTimestep;
 
 	SimTK::Real NMAAltSign;
+
+	SimTK::Real QScaleFactor;
+
 };
 
 #endif // __HAMMONTECARLOSAMPLER_HPP__
