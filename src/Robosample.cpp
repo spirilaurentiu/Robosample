@@ -523,6 +523,8 @@ int main(int argc, char **argv)
 
 		context.setSwapFixman(std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]));
 
+		context.PrepareNonEquilibriumParams();
+
 	}
 
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;

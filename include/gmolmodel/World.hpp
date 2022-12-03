@@ -300,9 +300,14 @@ public:
 	/** Allocate space for containers that keep statistics if we're doing any **/
 	void allocateStatsContainers(void);
 
+	// Set initial values of X_PF or X_BM
+	void setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
+		const std::vector<SimTK::Real>& givenX_BM);
+
+	// Get X_PF and X_BM related values
 	void getTransformsStatistics(SimTK::State& someState);
 
-	/** Update transforms means */
+	/** Update transforms means given a previous value */
 	void updateTransformsMeans(SimTK::State& someState);
 
 	/** Get X_PF means */

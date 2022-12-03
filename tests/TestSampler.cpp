@@ -29,7 +29,7 @@ public:
 
     ~DerivedSampler(){}
     bool propose(SimTK::State& someState) { return false; }
-    void shiftQ(SimTK::State& someState, SimTK::Real scalingFactor, int numIgnoredQs) { }
+    void shiftQ(SimTK::State& someState, SimTK::Real scalingFactor) { }
     void update(SimTK::State& someState){}
 };
 

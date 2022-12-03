@@ -655,7 +655,7 @@ void World::getTransformsStatistics(SimTK::State& someState)
 
 		// Get mobod inboard frame X_PF
 		const Transform& X_PF = mobod.getInboardFrame(someState);
-		std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
 
 		// Get mobod inboard frame X_FM measured and expressed in P
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
@@ -665,7 +665,7 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
 		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
 
-		std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
+		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
 
 		// Get BAT coordinate "angle"
 		SimTK::Vec3 bondVector = X_BM.p();
@@ -707,15 +707,15 @@ void World::PrintX_BMMeans(void)
 // Update transforms means
 void World::updateTransformsMeans(SimTK::State& someState)
 {
-	int nofSamples = getNofSamples();
-	std::cout << "Nof samples " << nofSamples << std::endl;
+	int nofSamples = getNofSamples() + 1;
+	//std::cout << "Nof samples " << nofSamples << std::endl;
 
 	getTransformsStatistics(someState);
 
 	// Useful vars
-	SimTK::Real N_1overN = 0, NInv = 0;
+	SimTK::Real N_1overN = 9999, NInv = 9999;
 
-	if(nofSamples == 0){
+	if(nofSamples == 1){
 		for(unsigned int k = 0; k < acosX_PF00_means.size(); k++){
 			acosX_PF00_means[k] = acosX_PF00[k];
 		}
@@ -723,15 +723,15 @@ void World::updateTransformsMeans(SimTK::State& someState)
 			normX_BMp_means[k] = normX_BMp[k];
 		}
 	}else{
-		if(nofSamples = 1){
+		if(nofSamples == 2){
 			N_1overN = NInv = 0.5;
 		}else{
 			// Update useful vars
-			int N_1 = nofSamples - 1;
+			SimTK::Real N_1 = nofSamples - 1.0;
 			N_1overN = N_1 / nofSamples;
-			NInv = 1 / N_1;
+			NInv = 1.0 / nofSamples;
 		}
-		//std::cout << "updateX_PFMeans check " << " " << N_1 << " " <<  N_1overN << " " <<  NInv  << " " << std::flush;
+		//std::cout << "updateX_PFMeans check " << " " <<  N_1overN << " " <<  NInv  << " " << std::flush;
 
 		// Update acosX_PF00 means
 		int i = -1;
@@ -746,6 +746,26 @@ void World::updateTransformsMeans(SimTK::State& someState)
 			i += 1;
 			xbm = (N_1overN * xbm) + (NInv * normX_BMp.at(i));
 		}
+	}
+
+}
+
+// Get X_PF means
+void World::setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
+const std::vector<SimTK::Real>& givenX_BM)
+{
+	// Update acosX_PF00 means
+	int i = -1;
+	for(auto &xpf : acosX_PF00_means ){
+		i += 1;
+		xpf = givenX_PF[i]; 
+	}
+	
+	// Update normX_BMp means
+	i = -1;
+	for(auto &xbm : normX_BMp_means ){
+		i += 1;
+		xbm = givenX_BM[i];
 	}
 
 }
@@ -1643,11 +1663,14 @@ int World::generateSamples(int howMany, int DistortOpt)
 	// Reinitialize current sampler
 	updSampler(0)->reinitialize(currentAdvancedState);
 
+	// Set q altering parameters
+	updSampler(0)->setDistortOption(DistortOpt);
+
 	// Make the requested number of samples
 	//accepted is wrong
 	int accepted;
 	for(int k = 0; k < howMany; k++) {
-		accepted += updSampler(0)->sample_iteration(currentAdvancedState, DistortOpt);
+		accepted += updSampler(0)->sample_iteration(currentAdvancedState);
 	}
 
 	return accepted;

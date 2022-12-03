@@ -287,6 +287,9 @@ public:
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica);
 
+	// Prepare Q, U, and tau altering function parameters
+	void PrepareNonEquilibriumParams(void);
+
 	// Set the intial mapping between replicas and thermoStates
 	void loadReplica2ThermoIxs(void);
 
@@ -458,6 +461,10 @@ private:
 		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, SimTK::One);
 
 	int swapEvery;
+
+	// Non-equilibrium parameters
+	std::vector<SimTK::Real> scaleFactorsEven;
+	std::vector<SimTK::Real> scaleFactorsOdd;
 
 };
 

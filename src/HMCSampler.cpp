@@ -133,7 +133,11 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	sampleGenerator = 0;
 	integratorName = IntegratorName::EMPTY;
 
+	// Non-equilibrium options
 	DistortOpt = 0;
+	FlowOpt = 0;
+	WorkOpt = 0;
+
 	MDStepsPerSampleStd = 0.5;
 
 	NMAAltSign = 1.0;
@@ -1272,72 +1276,26 @@ int HMCSampler::getJointTypeFromH(const SimTK::State& someState,
 
 }
 
+void HMCSampler::setDistortOption(const int& distortOptArg)
+{
+	this->DistortOpt = distortOptArg;
+}
+
 /*
  * Shift all the generalized coordinates
  */
-void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
-	int numIgnoredQs)
+void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor)
 {
+	// Test
+	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
-	// Get generalized coordinates Q template values. These are the values that
-	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
-	// <(P_x, F_x) angle.
-
-/* 	// First body is Ground and the second angle is not considered.
-	std::vector<SimTK::Real> 
-		bonds(matter->getNumBodies() - 1, 0);
-
-	std::vector<SimTK::Real> 
-		angles(matter->getNumBodies() - 1, 0);
-
-		
-
-	// Get bonds and angles values
-	for (SimTK::MobilizedBodyIndex mbx(1);
-		mbx < matter->getNumBodies();
-		++mbx){
-
-		// Get mobod
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-
-		// Get mobod inboard frame X_PF
-		const Transform& X_PF = mobod.getInboardFrame(someState);
-		std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
-
-		// Get mobod inboard frame X_FM measured and expressed in P
-		const Transform& X_FM = mobod.getMobilizerTransform(someState);
-		std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
-
-		// Get mobod inboard frame X_BM
-		const Transform& X_BM = mobod.getOutboardFrame(someState);
-		std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
-
-		// Get BAT coordinate "angle"
-		SimTK::Vec3 bondVector = X_BM.p();
-		bonds[int(mbx) - 1] = bondVector.norm();
-		angles[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
-
-		// Print something for now
-		SimTK::Real bond = bonds[int(mbx) - 1];
-		SimTK::Real angle = angles[int(mbx) - 1];
-		SimTK::Real cosTheta = X_PF.R()(0)(0);
-		std::cout << "bond " << X_BM.p().norm() << " "
-			<< "angle " << std::acos(cosTheta) * (180 / SimTK::Pi) << " "
-			<< std::endl;
-
-		// Readjust the mean Qs
-		//((nofSamples - 1) * angles + angles) / nofSamples;
-	} */
-
-	std::cout << "unshifted Q = " << someState.getQ() << std::endl;
-
-	// Update means of values before altering them
+	// 1. Update means of values before altering them
 	world->updateTransformsMeans(someState);
 
-	world->PrintX_PFMeans();
-	world->PrintX_BMMeans();
+	//world->PrintX_PFMeans();
+	//world->PrintX_BMMeans();
 
-	// Get differences between current transforms and their means
+	// 2. Get differences between current transforms and their means
 	std::vector<SimTK::Real> X_PFdiffs;
 	std::vector<SimTK::Real> X_BMdiffs;
 	X_PFdiffs.resize(world->acosX_PF00_means.size(), 0);
@@ -1346,36 +1304,27 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
 		X_PFdiffs[k] = world->acosX_PF00[k] - world->acosX_PF00_means[k];
 	}
-
 	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
 		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
 	}
 
-	// Print the differences	
-/* 	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
-		std::cout << "Diff X_PF " << k << " " << X_PFdiffs[k] << std::endl;}
-	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
-		std::cout << "Diff X_BM " << k << " " << X_BMdiffs[k] << std::endl;} */
-
-	// Scale the differences
+	// 3. Scale the differences
 	int k = -1;
 	for(auto& diff : X_PFdiffs){
-		k += 1;
 		diff *= (scaleFactor - 1);
 	}
-	
-	k = -1;
 	for(auto& diff : X_BMdiffs){
-		k += 1;
 		diff *= (scaleFactor - 1);
 	}
 
-	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
-		std::cout << "X_PFDiff " << k << " " 
+	// Print the differences	
+/* 	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		std::cout << "Excel X_PF " << k << " " << world->acosX_PF00[k] << " " << world->acosX_PF00_means[k] << " " 
 			<< X_PFdiffs[k] << std::endl;
-		std::cout << "X_BMDiff " << k << " " 
+		std::cout << "Excel X_BMDiff " << k << " " << world->normX_BMp[k]  << " " << world->normX_BMp_means[k] << " "
 			<< X_BMdiffs[k] << std::endl;
 	}
+	std::cout << "Excel END\n"; */
 
 	// Ground and first mobod don't have internal coordinates
 	int offset = 2; 
@@ -1383,18 +1332,19 @@ void HMCSampler::shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
 		mbx < matter->getNumBodies();
 		++mbx){
 
+		// Get mobilized body
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		
 		// we only allocated  X_PFs for non-Ground bodies
-		mobod.setOneQ(someState, 0, X_PFdiffs[int(mbx) - 1]);
-		mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
+		mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
+		mobod.setOneQ(someState, 1, -1.0 * X_BMdiffs[int(mbx) - 1]);
 	}
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Test
-	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
 }
 
 /*
@@ -1507,7 +1457,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 		// WORK: perform work (alpha)
 		if(DistortOpt == -1){
-			shiftQ(someState, 1.2, 100);
+			shiftQ(someState, 1.0);
 		}
 		calcNewConfigurationAndEnergies(someState);
 		work += (pe_n - pe_o);
@@ -1610,11 +1560,9 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 }
 
 // The main function that generates a sample
-bool HMCSampler::sample_iteration(SimTK::State& someState, int DistortOption)
+bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
 	std::cout << std::setprecision(10) << std::fixed;
-
-	this->DistortOpt = DistortOption;
 
 	bool validated = false;
 

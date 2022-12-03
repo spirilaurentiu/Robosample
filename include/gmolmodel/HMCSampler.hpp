@@ -259,10 +259,12 @@ public:
 	int getJointTypeFromH(const SimTK::State& someState,
 		const SimTK::MobilizedBody& mobod);
 
+	// 
+	void setDistortOption(const int& distortOptArg);
+
 	/** Shift all the generalized coordinates
 	 **/
-	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor,
-		int numIgnoredQs);
+	void shiftQ(SimTK::State& someState, SimTK::Real scaleFactor);
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setTemperature(double HMCBoostTemperature);
@@ -291,7 +293,7 @@ public:
 	compound to the appropriate conformation wether it accepted or not. **/
 	void update(SimTK::State& someState);
 
-	virtual bool sample_iteration(SimTK::State& someState, int DistorOption = 0);
+	virtual bool sample_iteration(SimTK::State& someState);
 
 	/** Push Cartesian coordinates into R vector stored in Sampler.
 	Return the size of R **/
@@ -397,6 +399,8 @@ protected:
 
 	//
 	int DistortOpt = 0;
+	int FlowOpt = 0;
+	int WorkOpt = 0;
 
 	bool proposeExceptionCaught;
 	// END MCSampler
