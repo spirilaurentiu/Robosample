@@ -2853,6 +2853,19 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
     writeInitialPdb();
 
+	// Non-equilibrium parameters
+	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+
+		// Q altering parameters
+		if( NDistortOpt[worldIx] == -1 ){
+			
+			// Set the Q scaling factor to 600K / 300K
+			(worlds[worldIx].updSampler(0))->setQScaleFactor( 
+				1.1 ); 
+		}
+		
+	}
+
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
 		// Main loop: iterate through rounds

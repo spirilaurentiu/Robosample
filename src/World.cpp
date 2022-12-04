@@ -673,15 +673,35 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
 		// Print something for now
-		SimTK::Real bond = acosX_PF00[int(mbx) - 1];
-		SimTK::Real angle = normX_BMp[int(mbx) - 1];
-		SimTK::Real cosTheta = X_PF.R()(0)(0);
-		std::cout << "bond " << X_BM.p().norm() << " "
-			<< "angle " << std::acos(cosTheta) * (180 / SimTK::Pi) << " "
-			<< std::endl;
+		//SimTK::Real bond = acosX_PF00[int(mbx) - 1];
+		//SimTK::Real angle = normX_BMp[int(mbx) - 1];
+		//SimTK::Real cosTheta = X_PF.R()(0)(0);
+		//std::cout << "bond " << X_BM.p().norm() << " "
+		//	<< "angle " << std::acos(cosTheta) * (180 / SimTK::Pi) << " "
+		//	<< std::endl;
 
 	}
 
+}
+
+// Print X_PF means
+void World::PrintX_PFs(void)
+{
+	int i = -1;
+	for(const auto &xpf : acosX_PF00 ){
+		i += 1;
+		std::cout << "X_PF " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+	}
+}
+
+// Print X_PF means
+void World::PrintX_BMs(void)
+{
+	int i = -1;
+	for(const auto &xbm : normX_BMp ){
+		i += 1;
+		std::cout << "X_BM " << i << " " << xbm << std::endl;
+	}
 }
 
 // Print X_PF means
@@ -703,6 +723,7 @@ void World::PrintX_BMMeans(void)
 		std::cout << "X_BMMean " << i << " " << xbm << std::endl;
 	}
 }
+
 
 // Update transforms means
 void World::updateTransformsMeans(SimTK::State& someState)
@@ -1367,7 +1388,7 @@ World::calcMobodToMobodTransforms(
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else{
-		std::cout << "Warning: unknown mobility." << std::endl << std::flush;
+		std::cout << "Warn nomob\n";
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
 

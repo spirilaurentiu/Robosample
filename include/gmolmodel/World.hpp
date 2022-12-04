@@ -316,6 +316,12 @@ public:
 	/** Get X_BM means */
 	std::vector<SimTK::Real>& getX_BMMeans(void);
 
+	// Print X_PF
+	void PrintX_PFs(void);
+
+	// Print X_PF
+	void PrintX_BMs(void);
+
 	// Print X_PF means
 	void PrintX_PFMeans(void);
 

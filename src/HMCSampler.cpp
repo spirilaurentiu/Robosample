@@ -1295,6 +1295,7 @@ void HMCSampler::setQScaleFactor(const SimTK::Real& s)
 void HMCSampler::shiftQ(SimTK::State& someState)
 {
 	// Test
+	//std::cout << "Got " << QScaleFactor << " scale factor\n";
 	std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
 	// 1. Update means of values before altering them
@@ -1349,10 +1350,11 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	}
 
 	// Save changes by advancing to Position Stage
-	system->realize(someState, SimTK::Stage::Position);
+	system->realize(someState, SimTK::Stage::Dynamics);
 
 	// Test
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	//world->getTransformsStatistics(someState);
 }
 
 /*
@@ -1599,7 +1601,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		if(this->acc) { // Only in this case ???
 			// Add generalized coordinates to a buffer
 			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
-			std::cout << "Q = " << Q << std::endl;
+			//std::cout << "Q = " << Q << std::endl;
 			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
 			QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
 
