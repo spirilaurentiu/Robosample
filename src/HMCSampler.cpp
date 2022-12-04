@@ -1345,8 +1345,8 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		
 		// we only allocated  X_PFs for non-Ground bodies
-		mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
-		mobod.setOneQ(someState, 1, -1.0 * X_BMdiffs[int(mbx) - 1]);
+		mobod.setOneQ(someState, 0, X_PFdiffs[int(mbx) - 1]);
+		mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
 	}
 
 	// Save changes by advancing to Position Stage
