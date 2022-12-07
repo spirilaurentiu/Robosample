@@ -365,10 +365,28 @@ int main(int argc, char **argv)
 		samplerIx < context.getWorld(worldIx)->getNofSamplers();
 		samplerIx++) {
 
-			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
+			HMCSampler* sampler_p =
+			pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
 			sampler_p->setBoostMDSteps(
 					std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
 
+		}
+	}
+
+	//////////////////////
+	// Non-equilibrium parameters
+	//////////////////////
+
+	// Q distortin parameters
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0;
+		samplerIx < context.getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+
+			HMCSampler* sampler_p =
+				pHMC(context.updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setDistortOption(
+					std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]));
 		}
 	}
 

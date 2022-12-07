@@ -1156,8 +1156,13 @@ bool HMCSampler::propose(SimTK::State& someState)
 		}
 
 		// Apply the L operator
-		integrateTrajectory(someState);
-		//integrateTrajectoryOneStepAtATime(someState);
+		if(this->integratorName == IntegratorName::VERLET){
+			integrateTrajectory(someState);
+			//integrateTrajectoryOneStepAtATime(someState);
+		}else{
+			std::cout << "Propose: EMPTY integrator\n";
+			system->realize(someState, SimTK::Stage::Dynamics);
+		}
 
 		calcNewConfigurationAndEnergies(someState);
 	}
@@ -1295,8 +1300,8 @@ void HMCSampler::setQScaleFactor(const SimTK::Real& s)
 void HMCSampler::shiftQ(SimTK::State& someState)
 {
 	// Test
-	//std::cout << "Got " << QScaleFactor << " scale factor\n";
-	std::cout << "unshifted Q = " << someState.getQ() << std::endl;
+	std::cout << "shiftQ Got " << QScaleFactor << " scale factor\n";
+	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
 	// 1. Update means of values before altering them
 	world->updateTransformsMeans(someState);
@@ -1320,17 +1325,19 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	// 3. Scale the differences
 	int k = -1;
 	for(auto& diff : X_PFdiffs){
-		diff *= (QScaleFactor - 1);
+		diff *= (QScaleFactor - 1.0);
 	}
 	for(auto& diff : X_BMdiffs){
-		diff *= (QScaleFactor - 1);
+		diff *= (QScaleFactor - 1.0);
 	}
 
 	// Print the differences	
 /* 	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
 		std::cout << "Excel X_PF " << k << " " << world->acosX_PF00[k] << " " << world->acosX_PF00_means[k] << " " 
 			<< X_PFdiffs[k] << std::endl;
-		std::cout << "Excel X_BMDiff " << k << " " << world->normX_BMp[k]  << " " << world->normX_BMp_means[k] << " "
+	}
+	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		std::cout << "Excel X_BM " << k << " " << world->normX_BMp[k]  << " " << world->normX_BMp_means[k] << " "
 			<< X_BMdiffs[k] << std::endl;
 	}
 	std::cout << "Excel END\n"; */
@@ -1345,7 +1352,7 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		
 		// we only allocated  X_PFs for non-Ground bodies
-		mobod.setOneQ(someState, 0, X_PFdiffs[int(mbx) - 1]);
+		mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
 		mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
 	}
 
@@ -1355,6 +1362,7 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	// Test
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
 	//world->getTransformsStatistics(someState);
+
 }
 
 /*
@@ -1577,7 +1585,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	bool validated = false;
 
 	// Propose
-	std::cout << "DISTORT_OPTION " << DistortOpt << std::endl;
+	std::cout << "DISTORT_OPTION " << this->DistortOpt << std::endl;
 	for (int i = 0; i < 10; i++){
 		if(DistortOpt > 0){
 			validated = proposeNMA(someState);

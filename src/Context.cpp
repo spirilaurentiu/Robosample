@@ -35,6 +35,19 @@ class ThermodynamicState{
 	const std::vector<SimTK::Real> getTimesteps(void);
 	const std::vector<int> getMdsteps(void);
 
+	// Set the sampling method
+	void setSamplers(std::vector<std::string>& rexSamplersArg);
+
+	// Next functions set Q, U, tau perturbing functions options
+	// for samplers
+	void setDistortOptions(std::vector<int>& rexDistortOptionsArg);
+	std::vector<int>& getDistortOptions(void);
+	void setFlowOptions(std::vector<int>& rexFlowOptionsArg);
+	void setWorkOptions(std::vector<int>& rexWorkOptionsArg);
+
+	// Set the integrating method
+	void setIntegrators(std::vector<std::string>& rexIntegratorsArg);
+
 	void Print(void);
 
   private:
@@ -46,10 +59,16 @@ class ThermodynamicState{
 	SimTK::Real temperature;
 	SimTK::Real beta;
 
-	// Worlds related parameters //R2TNEW
-	std::vector<int> worldIndexes; //R2TNEW
-	std::vector<SimTK::Real> timesteps; //R2TNEW
-	std::vector<int> mdsteps; //R2TNEW
+	// Worlds related parameters 
+	std::vector<int> worldIndexes; 
+	std::vector<SimTK::Real> timesteps; 
+	std::vector<int> mdsteps; 
+
+	std::vector<std::string> rexSamplers;
+	std::vector<int> rexDistortOptions;
+	std::vector<int> rexFlowOptions;
+	std::vector<int> rexWorkOptions;
+	std::vector<std::string> rexIntegrators;	
 
 };
 
@@ -124,6 +143,43 @@ const std::vector<SimTK::Real> ThermodynamicState::getTimesteps(void)
 const std::vector<int> ThermodynamicState::getMdsteps(void)
 {
 	return mdsteps;
+}
+
+// Set the sampling method
+void ThermodynamicState::setSamplers(
+	std::vector<std::string>& rexSamplersArg)
+{
+	this->rexSamplers = rexSamplersArg;
+}
+
+// Next functions set Q, U, tau perturbing functions options for samplers
+void ThermodynamicState::setDistortOptions(
+	std::vector<int>& rexDistortOptionsArg)
+{
+	this->rexDistortOptions = rexDistortOptionsArg;
+}
+
+std::vector<int>& ThermodynamicState::getDistortOptions(void)
+{
+	return this->rexDistortOptions;
+}
+
+void ThermodynamicState::setFlowOptions(
+	std::vector<int>& rexFlowOptionsArg)
+{
+	this->rexFlowOptions = rexFlowOptionsArg;
+}
+
+void ThermodynamicState::setWorkOptions(
+	std::vector<int>& rexWorkOptionsArg)
+{
+	this->rexWorkOptions = rexWorkOptionsArg;
+}
+
+// Set the integrating method
+void ThermodynamicState::setIntegrators(
+	std::vector<std::string>& rexIntegratorsArg){
+
 }
 
 void ThermodynamicState::Print(void)
@@ -1726,6 +1782,17 @@ void Context::addThermodynamicState(int index,
 	// Set temperature
 	thermodynamicStates.back().setTemperature(T); // seems redundant
 
+	// Set the sampling methods
+	thermodynamicStates.back().setSamplers(rexSamplers);
+
+	// Set non-equilibrium params
+	thermodynamicStates.back().setDistortOptions(rexDistortOptions);
+	thermodynamicStates.back().setFlowOptions(rexFlowOptions);
+	thermodynamicStates.back().setWorkOptions(rexWorkOptions);
+
+	// Set integrating method
+	thermodynamicStates.back().setIntegrators(rexIntegrators);
+
 	// Done
 	nofThermodynamicStates++;
 }
@@ -2560,7 +2627,6 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 
 }
 
-
 // Run replica exchange protocol
 void Context::RunREX(void)
 {
@@ -2578,8 +2644,8 @@ void Context::RunREX(void)
 
             //std::cout << "Replica front world coordinates:\n";
 			//replicas[replicaIx].PrintCoordinates();
-			initializeReplica(replicaIx); // EXPERIMENTAL
-			restoreReplicaCoordinatesToFrontWorld(replicaIx); // EXPERIMENTAL
+			initializeReplica(replicaIx);
+			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Iterate this replica's worlds
 			RunReplica(replicaIx, swapEvery);
@@ -2605,10 +2671,8 @@ void Context::RunREX(void)
 	int nofMixes = int(nofRounds / swapEvery);
 
 
-
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 		std::cout << " REX batch " << mixi << std::endl;
-
 
 		
 		// Run each replica serially
@@ -2616,21 +2680,33 @@ void Context::RunREX(void)
 			std::cout << "REX replica " << replicaIx << std::endl;
 
 
-
-			// Pass scale factors to samplers - INSERT CODE HERE =============
+			// SET SCALING FACTORS - // Non-equilibrium params change with every replica / thermoState
+			// Pass scale factors to samplers
 			// Get thermoState corresponding to this replica
 			int thermoIx = replica2ThermoIxs[replicaIx];
 
 			// Get worlds indexes of this thermodynamic state
 			int backworldIx = thermodynamicStates[thermoIx].getWorldIndexes().back();
 
+			// Set distort option
+			std::cout << "Context: setting DistortOpt for world " 
+				<< backworldIx << " to "
+				<< thermodynamicStates[thermoIx].getDistortOptions().back()
+				<< std::endl;
+
+			(worlds[backworldIx].updSampler(0))->setDistortOption(
+				thermodynamicStates[thermoIx].getDistortOptions().back());
+
 			// Set altering function parameters
 			if ((mixi % 2) == 0){
-				(worlds[backworldIx].updSampler(0))->setQScaleFactor(scaleFactorsEven.at(replicaIx));
+			
+				(worlds[backworldIx].updSampler(0))->setQScaleFactor(
+					scaleFactorsEven.at(replicaIx));
 			}else{
-				(worlds[backworldIx].updSampler(0))->setQScaleFactor(scaleFactorsOdd.at(replicaIx));
+				(worlds[backworldIx].updSampler(0))->setQScaleFactor(
+					scaleFactorsOdd.at(replicaIx));
 			}
-			// ===============================================================
+			// END ===========================================
 
 			//std::cout << "Replica front world coordinates:\n";
 			//replicas[replicaIx].PrintCoordinates();
@@ -2865,8 +2941,65 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		}
 		
 	}
+	(worlds[0].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
+	(worlds[1].updSampler(0))->setQScaleFactor( 1.1 ); //DELETE
+	(worlds[2].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
+	(worlds[3].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
+
+		// DELETE THIS CODE
+/* 		std::cout << "TEST MODE\n";
+		std::vector<SimTK::Real> givenX_PF(22, 999);
+		std::vector<SimTK::Real> givenX_BM(22, 999);
+
+		givenX_PF[0] = 0.382213052;
+		givenX_PF[1] = 1.909352531;
+		givenX_PF[2] = 1.893749726;
+		givenX_PF[3] = 1.947370624;
+		givenX_PF[4] = 0;
+		givenX_PF[5] = 1.956830795;
+		givenX_PF[6] = 2.048214246;
+		givenX_PF[7] = 2.039980631;
+		givenX_PF[8] = 2.161855757;
+		givenX_PF[9] = 1.901552048;
+		givenX_PF[10] = 1.895242261;
+		givenX_PF[11] = 1.944130783;
+		givenX_PF[12] = 1.977970389;
+		givenX_PF[13] = 1.919833798;
+		givenX_PF[14] = 1.967840235;
+		givenX_PF[15] = 2.056850251;
+		givenX_PF[16] = 2.101173327;
+		givenX_PF[17] = 2.108547254;
+		givenX_PF[18] = 2.251719968;
+		givenX_PF[19] = 1.869673523;
+		givenX_PF[20] = 1.935043108;
+		givenX_PF[21] = 1.916275746;
+		givenX_BM[0] = 0;
+		givenX_BM[1] = 0.108791084;
+		givenX_BM[2] = 0.114675602;
+		givenX_BM[3] = 0.10683655;
+		givenX_BM[4] = 0.153979978;
+		givenX_BM[5] = 0.120963202;
+		givenX_BM[6] = 0.134721103;
+		givenX_BM[7] = 0.09633632;
+		givenX_BM[8] = 0.147241057;
+		givenX_BM[9] = 0.107930417;
+		givenX_BM[10] = 0.150565067;
+		givenX_BM[11] = 0.111184402;
+		givenX_BM[12] = 0.109086027;
+		givenX_BM[13] = 0.110920344;
+		givenX_BM[14] = 0.154254133;
+		givenX_BM[15] = 0.123863943;
+		givenX_BM[16] = 0.131670032;
+		givenX_BM[17] = 0.106489035;
+		givenX_BM[18] = 0.147187697;
+		givenX_BM[19] = 0.110298069;
+		givenX_BM[20] = 0.108296974;
+		givenX_BM[21] = 0.111305194;
+
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM); */
+		// DELETE CODE ABOVE
 
 		// Main loop: iterate through rounds
 		for(int round = 0; round < nofRounds; round++){

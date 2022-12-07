@@ -664,7 +664,6 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		// Get mobod inboard frame X_BM
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
 		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
-
 		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
 
 		// Get BAT coordinate "angle"
@@ -673,12 +672,17 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
 		// Print something for now
-		//SimTK::Real bond = acosX_PF00[int(mbx) - 1];
-		//SimTK::Real angle = normX_BMp[int(mbx) - 1];
-		//SimTK::Real cosTheta = X_PF.R()(0)(0);
-		//std::cout << "bond " << X_BM.p().norm() << " "
-		//	<< "angle " << std::acos(cosTheta) * (180 / SimTK::Pi) << " "
-		//	<< std::endl;
+		SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
+		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
+		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
+
+		std::cout 
+			<< "bond " << int(mbx) - 1 << " " << bondMean << " "
+			<< "bond " << int(mbx) - 1 << " " << bond << " "
+			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
+			<< "angle " << int(mbx) - 1 << " " << angleMean * (180 / SimTK::Pi) << " "
+			<< std::endl;
 
 	}
 
@@ -1667,7 +1671,7 @@ SimTK::Real World::calcFixman(void)
 }
 
 // Generate a number of samples
-int World::generateSamples(int howMany, int DistortOpt)
+int World::generateSamples(int howMany, int DistortOptArg)
 {
 
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
@@ -1683,9 +1687,6 @@ int World::generateSamples(int howMany, int DistortOpt)
 
 	// Reinitialize current sampler
 	updSampler(0)->reinitialize(currentAdvancedState);
-
-	// Set q altering parameters
-	updSampler(0)->setDistortOption(DistortOpt);
 
 	// Make the requested number of samples
 	//accepted is wrong
