@@ -702,7 +702,9 @@ void Context::LoadWorldsFromSetup(SetupReader&)
 	throw std::exception();
 }
 
-void Context::modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer)
+void Context::modelOneEmbeddedTopology(int whichTopology,
+int whichWorld,
+std::string rootMobilizer)
 {
 		this->rootMobilities.push_back(rootMobilizer);
 
@@ -786,12 +788,14 @@ void Context::AddMolecules(
 		// It also asigns atom indexes in Compound
 		// This is done only once and it needs
 		topologies[molIx].buildGraphAndMatchCoords(
-			std::stoi(argRoots[0]));
+			std::stoi(roots.back()));
 
 		topologies[molIx].loadTriples();
 
 		// Map of Compound atom indexes to Robosample atom indexes
 		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
+		//std::cout << "Topology " << molIx << " info\n";
+		//topologies[molIx].printMaps();
 
 	}
 
@@ -885,7 +889,8 @@ void Context::model(
 			(updWorld(worldIx))->adoptTopology(molIx);
 
 			// Calls modelOneCompound from CompoundSystem
-			modelOneEmbeddedTopology(molIx, worldIx, argRootMobilities[worldIx]);
+			modelOneEmbeddedTopology(molIx, worldIx,
+				argRootMobilities[(requestedNofMols * worldIx) + molIx]);
 
 			// Realize Topology Stage involvs all the SubSystems
 			//(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
@@ -2942,9 +2947,10 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		
 	}
 	(worlds[0].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
-	(worlds[1].updSampler(0))->setQScaleFactor( 1.1 ); //DELETE
-	(worlds[2].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
-	(worlds[3].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
+	(worlds[1].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
+	(worlds[2].updSampler(0))->setQScaleFactor( 1.1 ); //DELETE
+	(worlds[3].updSampler(0))->setQScaleFactor( 0.9 ); //DELETE
+
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 

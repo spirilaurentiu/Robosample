@@ -678,10 +678,10 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
 
 		std::cout 
-			<< "bond " << int(mbx) - 1 << " " << bondMean << " "
+			<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
 			<< "bond " << int(mbx) - 1 << " " << bond << " "
+			<< "angleMean " << int(mbx) - 1 << " " << angleMean * (180 / SimTK::Pi) << " "
 			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
-			<< "angle " << int(mbx) - 1 << " " << angleMean * (180 / SimTK::Pi) << " "
 			<< std::endl;
 
 	}
