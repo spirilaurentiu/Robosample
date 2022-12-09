@@ -398,7 +398,8 @@ int main(int argc, char **argv)
 	if( setupReader.find("SEED") ){
 		if( !(setupReader.get("SEED").empty()) ){
 			for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-				context.setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[0]) + worldIx );
+				context.setSeed(worldIx, 0,
+					std::stoi(setupReader.get("SEED")[0]) + worldIx );
 			}
 		}
 	}
