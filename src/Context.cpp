@@ -31,12 +31,13 @@ class ThermodynamicState{
 	const SimTK::Real& getTemperature();
 	const SimTK::Real& getBeta();
 
-	const std::vector<int> getWorldIndexes(void);
-	const std::vector<SimTK::Real> getTimesteps(void);
-	const std::vector<int> getMdsteps(void);
+	const std::vector<int>& getWorldIndexes(void);
+	const std::vector<SimTK::Real>& getTimesteps(void);
+	const std::vector<int>& getMdsteps(void);
 
 	// Set the sampling method
 	void setSamplers(std::vector<std::string>& rexSamplersArg);
+	const std::vector<std::string>& getSamplers(void);
 
 	// Next functions set Q, U, tau perturbing functions options
 	// for samplers
@@ -47,7 +48,9 @@ class ThermodynamicState{
 
 	// Set the integrating method
 	void setIntegrators(std::vector<std::string>& rexIntegratorsArg);
+	const std::vector<std::string>& getIntegrators(void);
 
+	// Print everything about thermostate
 	void Print(void);
 
   private:
@@ -130,17 +133,17 @@ const SimTK::Real& ThermodynamicState::getBeta()
 }
 
 //
-const std::vector<int> ThermodynamicState::getWorldIndexes(void)
+const std::vector<int>& ThermodynamicState::getWorldIndexes(void)
 {
 	return worldIndexes;
 }
 
-const std::vector<SimTK::Real> ThermodynamicState::getTimesteps(void)
+const std::vector<SimTK::Real>& ThermodynamicState::getTimesteps(void)
 {
 	return timesteps;
 }
 
-const std::vector<int> ThermodynamicState::getMdsteps(void)
+const std::vector<int>& ThermodynamicState::getMdsteps(void)
 {
 	return mdsteps;
 }
@@ -150,6 +153,12 @@ void ThermodynamicState::setSamplers(
 	std::vector<std::string>& rexSamplersArg)
 {
 	this->rexSamplers = rexSamplersArg;
+}
+
+const std::vector<std::string>&
+ThermodynamicState::getSamplers(void)
+{
+	return this->rexSamplers;
 }
 
 // Next functions set Q, U, tau perturbing functions options for samplers
@@ -178,8 +187,15 @@ void ThermodynamicState::setWorkOptions(
 
 // Set the integrating method
 void ThermodynamicState::setIntegrators(
-	std::vector<std::string>& rexIntegratorsArg){
+std::vector<std::string>& rexIntegratorsArg)
+{
+	this->rexIntegrators = rexIntegratorsArg;
+}
 
+const std::vector<std::string>& 
+ThermodynamicState::getIntegrators(void)
+{
+	return rexIntegrators;
 }
 
 void ThermodynamicState::Print(void)
@@ -1158,8 +1174,11 @@ SimTK::Real Context::getTemperature(std::size_t whichWorld) const {
 	return worlds[whichWorld].temperature;
 }
 
-void  Context::setTemperature(std::size_t whichWorld, float someTemperature){
-	std::cout << " Context::setTemperature for world "<< whichWorld << " " << someTemperature << std::endl;
+void  Context::setTemperature(std::size_t whichWorld,
+	float someTemperature)
+{
+	std::cout << " Context::setTemperature for world " 
+		<< whichWorld << " " << someTemperature << std::endl;
 	worlds[whichWorld].setTemperature(someTemperature);
 }
 
@@ -1182,7 +1201,8 @@ SimTK::Real Context::getGuidanceTemperature(std::size_t, std::size_t)
 
 void Context::setGuidanceTemperature(std::size_t, std::size_t, SimTK::Real)
 {
-	// function args were std::size_t whichWorld, std::size_t whichSampler, float someTemperature
+	// function args were std::size_t whichWorld,
+	// std::size_t whichSampler, float someTemperature
 	assert(!"Not implemented"); throw std::exception();
 }
 //------------
@@ -2547,7 +2567,8 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> replicaWorldIxs = thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+	std::vector<int> replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	// -------------
@@ -2566,15 +2587,30 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	// -------------
 	// Set samplers parameters for this replica
 	// =============
-	std::vector<SimTK::Real> replicaTimesteps =
+	// Set sampler names
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		worlds[replicaWorldIxs[i]].updSampler(0)->setSampleGenerator(
+			thermodynamicStates[thisThermoStateIx].getSamplers()[i]
+		);
+	}	
+
+	// Set integrator
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		worlds[replicaWorldIxs[i]].updSampler(0)->setIntegratorName(
+			thermodynamicStates[thisThermoStateIx].getIntegrators()[i]
+		);
+	}
+
+	const std::vector<SimTK::Real>& replicaTimesteps =
 		thermodynamicStates[thisThermoStateIx].getTimesteps();
-	std::vector<int> replicaMdsteps =
+	const std::vector<int>& replicaMdsteps =
 		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
 			replicaTimesteps[i]);
 	}
+
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(
 			replicaMdsteps[i]);
@@ -2946,10 +2982,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		}
 		
 	}
-	(worlds[0].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
-	(worlds[1].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
-	(worlds[2].updSampler(0))->setQScaleFactor( 1.1 ); //DELETE
-	(worlds[3].updSampler(0))->setQScaleFactor( 0.9 ); //DELETE
+	//(worlds[0].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
 
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat

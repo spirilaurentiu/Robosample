@@ -671,7 +671,7 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		acosX_PF00[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
-		// Print something for now
+/* 		// Print something for now
 		SimTK::Real bond = normX_BMp[int(mbx) - 1];
 		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
 		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
@@ -680,9 +680,10 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		std::cout 
 			<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
 			<< "bond " << int(mbx) - 1 << " " << bond << " "
-			<< "angleMean " << int(mbx) - 1 << " " << angleMean * (180 / SimTK::Pi) << " "
+			<< "angleMean " << int(mbx) - 1 << " "
+			<< angleMean * (180 / SimTK::Pi) << " "
 			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
-			<< std::endl;
+			<< std::endl; */
 
 	}
 
@@ -1373,7 +1374,8 @@ World::calcMobodToMobodTransforms(
 	bool pinORslider =
 		(mobility == SimTK::BondMobility::Mobility::Torsion)
 		|| (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider);
+		|| (mobility == SimTK::BondMobility::Mobility::Slider)
+		|| (mobility == SimTK::BondMobility::Mobility::BendStretch);
 
 	if( (pinORslider) && ((atom->neighbors).size() == 1)){
 
@@ -1392,7 +1394,7 @@ World::calcMobodToMobodTransforms(
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else{
-		std::cout << "Warn nomob\n";
+		std::cout << "Warning: unknown mobility\n";
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
 

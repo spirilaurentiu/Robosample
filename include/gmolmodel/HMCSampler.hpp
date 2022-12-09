@@ -52,7 +52,8 @@ struct RANDOM_CACHE {
 };
 
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
-	const char *dirname, const char *prefix, int midlength, const char *sufix, double aTime);
+	const char *dirname, const char *prefix, int midlength,
+	const char *sufix, double aTime);
 
 /** A Generalized Coordiantes Hamiltonian Monte Carlo sampler as described in
 J Chem Theory Comput. 2017 Oct 10;13(10):4649-4659. In short it consists
@@ -92,7 +93,7 @@ public:
  
 	void setIntegratorName(IntegratorName);
 	const IntegratorName getIntegratorName(void){return integratorName;}
-	void setIntegratorName(std::string integratorName);
+	void setIntegratorName(const std::string integratorName);
 
  	/* 
 	* Compute mathematical, rather than robotic Jacobian.
@@ -109,54 +110,54 @@ public:
 		SimTK::Matrix& M);
 
 	// Return true if use Fixman potential
-	void useFixmanPotential(void); // DONE
-	bool isUsingFixmanPotential(void) const; // DONE
+	void useFixmanPotential(void);
+	bool isUsingFixmanPotential(void) const;
 
 	// Compute Fixman potential
-	SimTK::Real calcFixman(SimTK::State& someState); // DONE
+	SimTK::Real calcFixman(SimTK::State& someState);
 
 	// Compute Fixman potential numerically
-	SimTK::Real calcNumFixman(SimTK::State& someState); // DONE
+	SimTK::Real calcNumFixman(SimTK::State& someState);
 
 	// Set/get Fixman potential
-	void setOldFixman(SimTK::Real); // DONE
-	SimTK::Real getOldFixman(void) const; // DONE
+	void setOldFixman(SimTK::Real);
+	SimTK::Real getOldFixman(void) const;
 
 	// Set/get Fixman potential
-	void setSetFixman(SimTK::Real); // DONE
-	SimTK::Real getSetFixman(void) const; // DONE
+	void setSetFixman(SimTK::Real);
+	SimTK::Real getSetFixman(void) const;
 
 	// Set/get External MBAT contribution potential
-	void setOldLogSineSqrGamma2(SimTK::Real); // DONE
-	SimTK::Real getOldLogSineSqrGamma2(void) const; // DONE
+	void setOldLogSineSqrGamma2(SimTK::Real);
+	SimTK::Real getOldLogSineSqrGamma2(void) const;
 
 	// Set/get External MBAT contribution potential
-	void setSetLogSineSqrGamma2(SimTK::Real); // DONE
-	SimTK::Real getSetLogSineSqrGamma2(void) const; // DONE
+	void setSetLogSineSqrGamma2(SimTK::Real);
+	SimTK::Real getSetLogSineSqrGamma2(void) const;
 
 	// 
-	void setProposedLogSineSqrGamma2(SimTK::Real argFixman); // DONE
+	void setProposedLogSineSqrGamma2(SimTK::Real argFixman);
 
 	// Evaluate the potential energy at current state
-	SimTK::Real getPEFromEvaluator(const SimTK::State& someState) const; // DONE
+	SimTK::Real getPEFromEvaluator(const SimTK::State& someState) const;
 
 	// Get/set current potential energy
-	SimTK::Real getOldPE(void) const; // DONE
-	void setOldPE(SimTK::Real argPE); // DONE
+	SimTK::Real getOldPE(void) const;
+	void setOldPE(SimTK::Real argPE);
 
 	// Get/set set potential energy
-	SimTK::Real getSetPE(void) const; // DONE
-	void setSetPE(SimTK::Real argPE); // DONE
+	SimTK::Real getSetPE(void) const;
+	void setSetPE(SimTK::Real argPE); 
 
 	// Set/get residual embedded potential energy: potential
 	// stored inside rigid bodies
-	void setREP(SimTK::Real); // DONE
-	SimTK::Real getREP(void) const; // DONE
+	void setREP(SimTK::Real); 
+	SimTK::Real getREP(void) const; 
 
 	// Set/get Fixman potential
-	void setSetTVector(const SimTK::State& advanced); // DONE
-	SimTK::Transform * getSetTVector(void); // DONE
-	void assignConfFromSetTVector(SimTK::State& advanced); // DONE
+	void setSetTVector(const SimTK::State& advanced); 
+	SimTK::Transform * getSetTVector(void);
+	void assignConfFromSetTVector(SimTK::State& advanced);
 
 	// Store/restore the configuration from the internal transforms vector
 	// TVector
@@ -206,10 +207,12 @@ public:
 	void setBoostMDSteps(int);
 
 	/** Store configuration and PE, Fixman potential and logsin gamma squared **/
-	virtual void storeOldConfigurationAndPotentialEnergies(SimTK::State& someState);
+	virtual void 
+		storeOldConfigurationAndPotentialEnergies(
+			SimTK::State& someState);
 
 	// Set the method of integration
-	void setSampleGenerator(std::string& integratorNameArg);
+	void setSampleGenerator(const std::string& samplerNameArg);
 
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
@@ -242,7 +245,8 @@ public:
 	virtual void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
-	SimTK::Real MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const;
+	SimTK::Real MHAcceptProbability(SimTK::Real argEtot_proposed,
+		SimTK::Real argEtot_n) const;
 
 	/** Accetion rejection step **/
 	virtual bool accRejStep(SimTK::State& someState);

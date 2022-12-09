@@ -351,7 +351,7 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 }
 
 // Set the method of integration
-void HMCSampler::setSampleGenerator(std::string& generatorNameNameArg)
+void HMCSampler::setSampleGenerator(const std::string& generatorNameNameArg)
 {
 	if (generatorNameNameArg == "EMPTY"){
 		this->sampleGenerator = 0;
@@ -361,7 +361,8 @@ void HMCSampler::setSampleGenerator(std::string& generatorNameNameArg)
 		this->sampleGenerator = 1;
 		setAlwaysAccept(false);
 	}else{
-		std::cerr << "Unknown sampling method.\n"; throw std::exception(); std::exit(1);
+		std::cerr << "Unknown sampling method.\n";
+		throw std::exception(); std::exit(1);
 	}
 }
 
@@ -370,7 +371,7 @@ void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
 	this->integratorName = integratorNameArg;
 }
 
-void HMCSampler::setIntegratorName(std::string integratorNameArg)
+void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 {
 
 	//this->integratorName = IntegratorNameS[integratorNameArg];
@@ -2481,10 +2482,12 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 
 		// Left exponential
 		v_miu = (someState.getU() - DOFUScaleFactors);
-		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ std::cout << v_miu[i] << " " ;} std::cout << "\n";
+		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ 
+			std::cout << v_miu[i] << " " ;} std::cout << "\n";
 
 		matter->multiplyByM(someState, v_miu, v_miuM);
-		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){ std::cout << v_miuM[i] << " " ;} std::cout << "\n";
+		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){
+			std::cout << v_miuM[i] << " " ;} std::cout << "\n";
 
 		for(int j = 0; j < ndofs; j++){leftExp += (v_miuM[j] * v_miu[j]);}
 		std::cout << "leftExp 0 " << leftExp << "\n";
