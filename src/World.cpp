@@ -1672,31 +1672,74 @@ SimTK::Real World::calcFixman(void)
 	return Fixman;
 }
 
-// Generate a number of samples
-int World::generateSamples(int howMany, int DistortOptArg)
+/**
+ *  Generate a proposal
+ * */
+bool World::generateProposal(void)
 {
-
+	// Update Robosample bAtomList
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
 
-	// Set old potential energy of the new world via OpenMM
-	auto OldPE = updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
-	//auto OldPE = forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+	// Get potential energy via OpenMM
+	auto OldPE = 
+		updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(
+		currentAdvancedState);
+	//auto OldPE =
+	//	forceField->CalcFullPotEnergyIncludingRigidBodies(
+	//	currentAdvancedState);
 
+	// Set sampler's old potential energy 
 	pHMC(updSampler(0))->setOldPE(OldPE);
 
-	std::cout << "World " << ownWorldIndex << ", NU " << currentAdvancedState.getNU() << ":\n";
+	// Print message to identify this World
+	std::cout << "World " << ownWorldIndex 
+		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
 	// Reinitialize current sampler
 	updSampler(0)->reinitialize(currentAdvancedState);
 
-	// Make the requested number of samples
-	//accepted is wrong
+	// GENERATE a proposal
+	return updSampler(0)->generateProposal(currentAdvancedState);
+
+}
+
+/**
+ *  Generate a number of samples
+ * */
+int World::generateSamples(int howMany)
+{
+
+	// Update Robosample bAtomList
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	updateAtomListsFromCompound(currentAdvancedState);
+
+	// Get potential energy via OpenMM
+	auto OldPE = 
+		updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(
+		currentAdvancedState);
+	//auto OldPE =
+	//	forceField->CalcFullPotEnergyIncludingRigidBodies(
+	//	currentAdvancedState);
+
+	// Set sampler's old potential energy 
+	pHMC(updSampler(0))->setOldPE(OldPE);
+
+	// Print message to identify this World
+	std::cout << "World " << ownWorldIndex 
+		<< ", NU " << currentAdvancedState.getNU() << ":\n";
+
+	// Reinitialize current sampler
+	updSampler(0)->reinitialize(currentAdvancedState);
+
+	// GENERATE the requested number of samples
+	// is accepted wrong here?
 	int accepted;
 	for(int k = 0; k < howMany; k++) {
 		accepted += updSampler(0)->sample_iteration(currentAdvancedState);
 	}
 
+	// Return the number of accepted samples
 	return accepted;
 
 }
@@ -1705,9 +1748,11 @@ int World::generateSamples(int howMany, int DistortOptArg)
 void World::PrintSimbodyStateCache(SimTK::State& someState){
 	std::cout << " System Stage: " << someState.getSystemStage() << std::endl;
 	for(int i = 0; i < someState.getNumSubsystems(); i++){
-		std::cout << " Subsystem " << i << " Name: " << someState.getSubsystemName(SimTK::SubsystemIndex(i))
+		std::cout << " Subsystem " << i
+			<< " Name: " << someState.getSubsystemName(SimTK::SubsystemIndex(i))
 			<< " Stage: " << someState.getSubsystemStage(SimTK::SubsystemIndex(i))
-			<< " Version: " << someState.getSubsystemVersion(SimTK::SubsystemIndex(i)) << std::endl;
+			<< " Version: " << someState.getSubsystemVersion(SimTK::SubsystemIndex(i))
+			<< std::endl;
 	}
 }
 

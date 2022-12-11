@@ -28,7 +28,7 @@ public:
         : Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper) {}
 
     ~DerivedSampler(){}
-    bool propose(SimTK::State& someState) { return false; }
+    bool proposeEquilibrium(SimTK::State& someState) { return false; }
     void shiftQ(SimTK::State& someState) { }
     void update(SimTK::State& someState){}
 };

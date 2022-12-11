@@ -239,7 +239,7 @@ public:
 	virtual void calcNewConfigurationAndEnergies(SimTK::State& someState);
 
 	/**  Restore old configuration and energies**/
-	virtual void setSetConfigurationAndEnergiesToOld(SimTK::State& someState);
+	virtual void setSetConfigurationToOld(SimTK::State& someState);
 
 	/** Update new configuration and energiees **/
 	virtual void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
@@ -290,9 +290,14 @@ public:
 	the configuration and energies. Returns true if the proposal is 
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
-	bool propose(SimTK::State& someState);
+	bool proposeEquilibrium(SimTK::State& someState);
 	bool proposeNEHMC(SimTK::State& someState);
 	bool proposeNMA(SimTK::State& someState);
+
+	/**
+	 * Generate a trial move in the chain
+	*/
+	bool generateProposal(SimTK::State& someState);
 
 	/** Main function that contains all the 3 steps of HMC.
 	Implements the acception-rejection step and sets the state of the 
@@ -300,6 +305,11 @@ public:
 	void update(SimTK::State& someState);
 
 	virtual bool sample_iteration(SimTK::State& someState);
+
+	/**
+	*  Add generalized coordinates to a buffer
+	*/
+	void updateQBuffer(const SimTK::State& someState);
 
 	/** Push Cartesian coordinates into R vector stored in Sampler.
 	Return the size of R **/
@@ -320,6 +330,13 @@ public:
 	/** Push generalizedvelocities into Rdot vector stored in Sampler.
 	Return the size of Rdot **/
 	std::size_t pushVelocitiesInU(SimTK::State& someState);
+
+	void storeAdaptiveData(SimTK::State& someState);
+
+	/** 
+	 * Print adaptive data
+	*/
+	void PrintAdaptiveData(void);
 
 	/** Get the proposed kinetic energy. This is set right  after velocities
 	are initialized. **/

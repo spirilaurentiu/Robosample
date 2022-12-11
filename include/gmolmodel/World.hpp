@@ -267,8 +267,13 @@ public:
 	// Calculate Fixman potential
 	SimTK::Real calcFixman();
 
+	/**
+	 *  Generate a proposal
+	 * */
+	bool generateProposal(void);
+
 	/** Generate a number of samples **/
-	int generateSamples(int howMany, int DistortOption);
+	int generateSamples(int howMany);
 	//...............
 
 	//...................

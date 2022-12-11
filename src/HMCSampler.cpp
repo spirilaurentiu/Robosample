@@ -1123,7 +1123,7 @@ void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
 /** It implements the proposal move in the Hamiltonian Monte Carlo
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. **/
-bool HMCSampler::propose(SimTK::State& someState)
+bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 {
 
 	// Adapt timestep
@@ -1257,34 +1257,6 @@ void HMCSampler::getCartesianMassMatrix(const SimTK::State& somestate,
 
 }
 
-/*
-* Get Joint type by examining hinge matrix H_FM
-*/
-int HMCSampler::getJointTypeFromH(const SimTK::State& someState,
-	const SimTK::MobilizedBody& mobod)
-{
-	// Get the mobilized body
-	//const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-
-	// Get number of degrees of freedom
-	unsigned int nu = mobod.getNumU(someState);
-
-	if(nu == 1){ // only one degree of freedom
-		SpatialVec H_FMCol = mobod.getH_FMCol(someState,
-			SimTK::MobilizerUIndex(0));
-		std::cout << "H_FMCol " << H_FMCol << std::endl;
-
-	}else{
-		// Go through H_FM columns
-		for (SimTK::MobilizerUIndex ux(0); ux < nu; ++ux){
-			SpatialVec H_FMCol = mobod.getH_FMCol(someState, ux);
-			std::cout << "H_FMCol " << H_FMCol << std::endl;
-		}
-	}
-
-
-}
-
 void HMCSampler::setDistortOption(const int& distortOptArg)
 {
 	this->DistortOpt = distortOptArg;
@@ -1301,7 +1273,7 @@ void HMCSampler::setQScaleFactor(const SimTK::Real& s)
 void HMCSampler::shiftQ(SimTK::State& someState)
 {
 	// Test
-	std::cout << "shiftQ Got " << QScaleFactor << " scale factor\n";
+	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor\n";
 	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
 	// 1. Update means of values before altering them
@@ -1365,103 +1337,6 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	//world->getTransformsStatistics(someState);
 
 }
-
-/*
- * Test ground for SOA
- */
-void HMCSampler::testSOA(SimTK::State& someState)
-{	
-	// Some SOA
-	for (SimTK::MobilizedBodyIndex mbx(1);
-		mbx < matter->getNumBodies();
-		++mbx){
-		
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-
-		const SpatialVec HColi = mobod.getHCol(someState, SimTK::MobilizerUIndex(0));
-		//const SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(0));
-		std::cout << "HColi\n" << HColi << std::endl; // H_PB_G (V_PB_G=H*u)
-		//std::cout << "H_FMCol\n" << H_FMCol << std::endl;
-
-		const SpatialInertia Mi_G = mobod.getBodySpatialInertiaInGround(someState); // about origin
-		std::cout << "Mi_G\n" << Mi_G.toSpatialMat() << std::endl;
-
-	}	
-
-	// Get System Jacobian
-	SimTK::Matrix J_G;
-	matter->calcSystemJacobian(someState, J_G);
-	//std::cout << "J_G\n" << J_G << std::endl;
-
-	// Get mathematical jacobian
-	SimTK::Matrix mathJ;
-	calcMathJacobian(someState, mathJ);
-	//std::cout << "mathJ\n" << mathJ << std::endl;
-
-	// Get Cartesian mass matrix
-	SimTK::Matrix cartM;
-	getCartesianMassMatrix(someState, cartM);
-	//std::cout << "cartM\n" << cartM << std::endl;
-
-	// Our mass Matrix = mathJ x cartM x mathJ
-	SimTK::Matrix myMassMatrix;
-	myMassMatrix = mathJ.transpose() * cartM * mathJ;
-	//std::cout << "myMassMatrix\n" << myMassMatrix << std::endl;	
-
- 	// Get system mass matrix
-	SimTK::Matrix M;
-	matter->calcM(someState, M);
-	std::cout << "M\n" << M << std::endl << std::flush;
-
-
-	// Compare metric tensor
-	SimTK::Matrix JtJ;
-	JtJ = J_G.transpose() * J_G;
-	//std::cout << "JtJ\n" << JtJ << std::endl;	
-
-	SimTK::Matrix mathJtJ;
-	mathJtJ = mathJ.transpose() * mathJ;
-	std::cout << "mathJtJ\n" << mathJtJ << std::endl << std::flush;
-	std::cout << "ndofs " << ndofs << std::endl << std::flush;
-
-/* 	
-	// linker problems ...
-	SimTK::Eigen mathJtJEigen(mathJtJ);
-	SimTK::Vector mathJtJEigenVals;
-	mathJtJEigen.getAllEigenValues(mathJtJEigenVals);
-	std::cout << "mathJtJEigenVals\n" << mathJtJEigenVals << std::endl; */
-
-	// Get mathematical Jacobian square determinant
-	SimTK::SymMat<12> smMathJtJ; // BUG: this should be a constant
-	for(unsigned int i = 0; i < ndofs; i++){
-		for (unsigned int j =0; j < ndofs; j++){
-			smMathJtJ(i, j) = mathJtJ(i, j);
-			smMathJtJ(j, i) = mathJtJ(i, j);
-		}
-	}
-	SimTK::Real detMathJtJ = SimTK::det(smMathJtJ);
-	std::cout << "mathJtJ determinant\n" << detMathJtJ << std::endl;
-
-	// Get mass matrix determinant
-	SimTK::SymMat<12> smM; // BUG: this should be a constant
-	for(unsigned int i = 0; i < ndofs; i++){
-		for (unsigned int j =0; j < ndofs; j++){
-			smM(i, j) = M(i, j);
-			smM(j, i) = M(i, j);
-		}
-	}
-	SimTK::Real detM = SimTK::det(smM) ;
-	std::cout << "M determinant\n" << detM << std::endl;
-
-	SimTK::Real extractM = 0;
-	for(unsigned int i = 0; i < cartM.nrow(); i++){
-		extractM += std::log(cartM(i, i));
-	}
-
-	std::cout << "extractM " << extractM << std::endl;
-
-}
-
 
 
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)
@@ -1548,10 +1423,47 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 
 }
 
+/**
+ * Generate a trial move in the chain
+*/
+bool HMCSampler::generateProposal(SimTK::State& someState)
+{
+	bool validated = false;
+
+	std::cout << "DISTORT_OPTION " << this->DistortOpt << std::endl;
+
+	for (int i = 0; i < 10; i++){
+		if(DistortOpt > 0){
+			validated = proposeNMA(someState);
+		}else if(DistortOpt < 0){
+			validated = proposeNEHMC(someState);
+		}else{
+			validated = proposeEquilibrium(someState);
+		}
+
+		if (validated){
+			break;
+		}
+	}
+
+	if ( !validated ){ // The sample was not validated
+		// Warn user
+		std::cout 
+			<< "Warning: Proposal not validated after 10 tries.\n";
+
+		// Reset
+		this->acc = false;
+		setSetConfigurationToOld(someState);
+	}
+
+	return validated;
+
+}
+
 /// Acception rejection step
 bool HMCSampler::accRejStep(SimTK::State& someState) {
-	// Decide and get a new sample
-	//if ( getThermostat() == ThermostatName::ANDERSEN ) {
+
+	// Empty sample generator
 	if ( alwaysAccept == true ){
 		// Simple molecular dynamics
 		this->acc = true;
@@ -1561,7 +1473,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 		// we do not consider this sample accepted unless it passes all checks
 		this->acc = false;
 
-		// Apply Metropolis-Hastings correction
+		// Apply Metropolis-Hastings criterion
 		if(acceptSample()) {
 			// sample is accepted
 			this->acc = true;
@@ -1571,7 +1483,7 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 			// sample is rejected
 			this->acc = false;
 			std::cout << "\tsample rejected (metropolis-hastings)\n";
-			setSetConfigurationAndEnergiesToOld(someState);
+			setSetConfigurationToOld(someState);
 		}
 	}
 
@@ -1581,58 +1493,86 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 // The main function that generates a sample
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
+	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
 
-	bool validated = false;
+	// Generate a trial move in the stochastic chain
+	bool validated = generateProposal(someState);
 
-	// Propose
-	std::cout << "DISTORT_OPTION " << this->DistortOpt << std::endl;
-	for (int i = 0; i < 10; i++){
-		if(DistortOpt > 0){
-			validated = proposeNMA(someState);
-		}else if(DistortOpt < 0){
-			validated = proposeNEHMC(someState);
-		}else{
-			validated = propose(someState);
-		}
-
-		if (validated){
-			break;
-		}
-	}
-
+	// Apply the acceptance criterion
 	if(validated){
 
+		// Print all the energy terms first
 		PrintDetailedEnergyInfo(someState);
 
-		accRejStep(someState);
+		// Decide
+		if(acceptSample()){
+			// Print info
+			std::cout << "\tsample accepted";
+			if(this->alwaysAccept == true){
+				std::cout << " (simple molecular dynamics)\n";
+			}else{
+				std::cout << " (metropolis-hastings)\n";
+			}
 
-		if(this->acc) { // Only in this case ???
-			// Add generalized coordinates to a buffer
-			auto Q = someState.getQ(); // g++17 complains if this is auto& or const auto&
-			//std::cout << "Q = " << Q << std::endl;
-			QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
-			QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
+			// UPDATE
+			update(someState);
 
-			pushCoordinatesInR(someState);
-			pushVelocitiesInRdot(someState);
+			// Deal with adaptive data
+			storeAdaptiveData(someState);
+			PrintAdaptiveData();
 
-			// Calculate MSD and RRdot to adapt the integration length
-			std::cout << std::setprecision(10) << std::fixed;
-			std::cout << "\tMSD= " << calculateMSD() << ", RRdot= " << calculateRRdot() << std::endl;
+		}else{
+			//Print info
+			std::cout << "\tsample rejected (metropolis-hastings)\n";
+
+			// RESET
+			setSetConfigurationToOld(someState);
 		}
 
-		++nofSamples;
+	}/* else{ // The sample was not validated
+		// Warn user
+		std::cout 
+			<< "Warning: Proposal not validated after 10 tries.\n";
 
+		// Reset
+		this->acc = false;
+		setSetConfigurationToOld(someState);
+
+	} */
+
+		// Increase the sample counter and return
+		++nofSamples;
 		return this->acc;
-	}else{
-		std::cout << "Warning: HMCSampler: Proposal was not validated after 10 tries." << std::endl;
-		setSetConfigurationAndEnergiesToOld(someState);
 
-		++nofSamples;
+}
 
-		return false;
-	}
+/**
+*  Add generalized coordinates to a buffer
+*/
+void HMCSampler::updateQBuffer(const SimTK::State& someState)
+{
+	
+	// g++17 complains if this is auto& or const auto&
+	auto Q = someState.getQ(); 
+	//std::cout << "Q = " << Q << std::endl;
+	QsBuffer.insert(QsBuffer.end(), Q.begin(), Q.end());
+	QsBuffer.erase(QsBuffer.begin(), QsBuffer.begin() + Q.size());
+}
+
+void HMCSampler::storeAdaptiveData(SimTK::State& someState)
+{
+	updateQBuffer(someState);
+			pushCoordinatesInR(someState);
+			pushVelocitiesInRdot(someState);
+}
+
+void HMCSampler::PrintAdaptiveData(void)
+{
+	// Calculate MSD and RRdot to adapt the integration length
+	std::cout << std::setprecision(10) << std::fixed;
+	std::cout << "\tMSD= " << calculateMSD() 
+		<< ", RRdot= " << calculateRRdot() << std::endl;
 
 }
 
@@ -1910,7 +1850,6 @@ void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
 
 	//system->realize(someState, SimTK::Stage::Position);
 
-
 	i++;
   }
   system->realize(someState, SimTK::Stage::Position);
@@ -1986,6 +1925,130 @@ void HMCSampler::calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv)
 	}
 
 }
+
+/*
+* Get Joint type by examining hinge matrix H_FM
+*/
+int HMCSampler::getJointTypeFromH(const SimTK::State& someState,
+	const SimTK::MobilizedBody& mobod)
+{
+	// Get the mobilized body
+	//const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+	// Get number of degrees of freedom
+	unsigned int nu = mobod.getNumU(someState);
+
+	if(nu == 1){ // only one degree of freedom
+		SpatialVec H_FMCol = mobod.getH_FMCol(someState,
+			SimTK::MobilizerUIndex(0));
+		std::cout << "H_FMCol " << H_FMCol << std::endl;
+
+	}else{
+		// Go through H_FM columns
+		for (SimTK::MobilizerUIndex ux(0); ux < nu; ++ux){
+			SpatialVec H_FMCol = mobod.getH_FMCol(someState, ux);
+			std::cout << "H_FMCol " << H_FMCol << std::endl;
+		}
+	}
+
+}
+
+/*
+ * Test ground for SOA
+ */
+void HMCSampler::testSOA(SimTK::State& someState)
+{	
+	// Some SOA
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+		
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		const SpatialVec HColi = mobod.getHCol(someState, SimTK::MobilizerUIndex(0));
+		//const SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(0));
+		std::cout << "HColi\n" << HColi << std::endl; // H_PB_G (V_PB_G=H*u)
+		//std::cout << "H_FMCol\n" << H_FMCol << std::endl;
+
+		const SpatialInertia Mi_G = mobod.getBodySpatialInertiaInGround(someState); // about origin
+		std::cout << "Mi_G\n" << Mi_G.toSpatialMat() << std::endl;
+
+	}	
+
+	// Get System Jacobian
+	SimTK::Matrix J_G;
+	matter->calcSystemJacobian(someState, J_G);
+	//std::cout << "J_G\n" << J_G << std::endl;
+
+	// Get mathematical jacobian
+	SimTK::Matrix mathJ;
+	calcMathJacobian(someState, mathJ);
+	//std::cout << "mathJ\n" << mathJ << std::endl;
+
+	// Get Cartesian mass matrix
+	SimTK::Matrix cartM;
+	getCartesianMassMatrix(someState, cartM);
+	//std::cout << "cartM\n" << cartM << std::endl;
+
+	// Our mass Matrix = mathJ x cartM x mathJ
+	SimTK::Matrix myMassMatrix;
+	myMassMatrix = mathJ.transpose() * cartM * mathJ;
+	//std::cout << "myMassMatrix\n" << myMassMatrix << std::endl;	
+
+ 	// Get system mass matrix
+	SimTK::Matrix M;
+	matter->calcM(someState, M);
+	std::cout << "M\n" << M << std::endl << std::flush;
+
+
+	// Compare metric tensor
+	SimTK::Matrix JtJ;
+	JtJ = J_G.transpose() * J_G;
+	//std::cout << "JtJ\n" << JtJ << std::endl;	
+
+	SimTK::Matrix mathJtJ;
+	mathJtJ = mathJ.transpose() * mathJ;
+	std::cout << "mathJtJ\n" << mathJtJ << std::endl << std::flush;
+	std::cout << "ndofs " << ndofs << std::endl << std::flush;
+
+/* 	
+	// linker problems ...
+	SimTK::Eigen mathJtJEigen(mathJtJ);
+	SimTK::Vector mathJtJEigenVals;
+	mathJtJEigen.getAllEigenValues(mathJtJEigenVals);
+	std::cout << "mathJtJEigenVals\n" << mathJtJEigenVals << std::endl; */
+
+	// Get mathematical Jacobian square determinant
+	SimTK::SymMat<12> smMathJtJ; // BUG: this should be a constant
+	for(unsigned int i = 0; i < ndofs; i++){
+		for (unsigned int j =0; j < ndofs; j++){
+			smMathJtJ(i, j) = mathJtJ(i, j);
+			smMathJtJ(j, i) = mathJtJ(i, j);
+		}
+	}
+	SimTK::Real detMathJtJ = SimTK::det(smMathJtJ);
+	std::cout << "mathJtJ determinant\n" << detMathJtJ << std::endl;
+
+	// Get mass matrix determinant
+	SimTK::SymMat<12> smM; // BUG: this should be a constant
+	for(unsigned int i = 0; i < ndofs; i++){
+		for (unsigned int j =0; j < ndofs; j++){
+			smM(i, j) = M(i, j);
+			smM(j, i) = M(i, j);
+		}
+	}
+	SimTK::Real detM = SimTK::det(smM) ;
+	std::cout << "M determinant\n" << detM << std::endl;
+
+	SimTK::Real extractM = 0;
+	for(unsigned int i = 0; i < cartM.nrow(); i++){
+		extractM += std::log(cartM(i, i));
+	}
+
+	std::cout << "extractM " << extractM << std::endl;
+
+}
+
 
 /** Stores the accepted kinetic energy. This should be set right after a
 move is accepted. It's a component of the total energy stored. **/
@@ -2141,19 +2204,31 @@ void HMCSampler::setBoostMDSteps(int argMDSteps)
 
 }
 
-/** Store configuration as a set of Transforms **/
-void HMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someState){ // func
+/** 
+ * Store configuration as a set of Transforms and 
+ * potential energies
+ */
+void
+HMCSampler::storeOldConfigurationAndPotentialEnergies(
+	SimTK::State& someState)
+{ 
+	// Ensure stage Position is realized
 	system->realize(someState, SimTK::Stage::Position);
 
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	// Set old potential energy terms to the last set ones
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
 		TVector[mbx - 1] = SetTVector[mbx - 1];
 	}
 
-	// TODO: change the names from Old to Proposed and Set to lastAccepted
+	// Set old potential energy terms to the last set ones
 	pe_o = pe_set;
 	fix_o = fix_set;
 	logSineSqrGamma2_o = logSineSqrGamma2_set;
-} // func
+
+}
 
 /** Store the proposed energies **/
 void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
@@ -2572,7 +2647,8 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 }
 
 /** Set energies and configuration to new state **/
-void HMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
+void HMCSampler::setSetConfigurationAndEnergiesToNew(
+	SimTK::State& someState)
 {
 	setSetTVector(someState);
 	pe_set = pe_n;
@@ -2582,7 +2658,8 @@ void HMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
 	etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
 }
 
-void HMCSampler::setSetConfigurationAndEnergiesToOld(SimTK::State& someState)
+void HMCSampler::setSetConfigurationToOld(
+	SimTK::State& someState)
 {
 	assignConfFromSetTVector(someState);
 	proposeExceptionCaught = false;
@@ -2590,11 +2667,21 @@ void HMCSampler::setSetConfigurationAndEnergiesToOld(SimTK::State& someState)
 	acceptedStepsBuffer.pop_front();
 }
 
-SimTK::Real HMCSampler::MHAcceptProbability(SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const {
+/** 
+ * This is actually the Boltzmann factor not the probability 
+ * because we don't have the partition function
+*/
+SimTK::Real HMCSampler::MHAcceptProbability(
+	SimTK::Real argEtot_proposed,
+	SimTK::Real argEtot_n) const 
+{
 	if(argEtot_n < argEtot_proposed) {
 		return 1;
 	} else {
-		// std::cout << "\tdiff=" << argEtot_n - argEtot_proposed << ", argEtot_n=" << argEtot_n << ", argEtot_proposed=" << argEtot_proposed << ", beta=" << beta << std::endl;
+		/* std::cout << "\tdiff=" << argEtot_n - argEtot_proposed 
+			<< ", argEtot_n=" << argEtot_n 
+			<< ", argEtot_proposed=" << argEtot_proposed
+			<< ", beta=" << beta << std::endl; */
 		return exp(-(argEtot_n - argEtot_proposed) * this->beta);
 	}
 }
@@ -2632,26 +2719,36 @@ bool HMCSampler::validateProposal() const {
 
 /** Chooses whether to accept a sample or not based on a probability **/
 bool HMCSampler::acceptSample() {
-	const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
-	SimTK::Real prob = 0.0;
-	if(DistortOpt == 0){
-		prob = MHAcceptProbability(etot_proposed, etot_n + work);
-	}else if(DistortOpt > 0){
 
-		if(useFixman){
-			prob = MHAcceptProbability(pe_o + ke_prop_nma6 + fix_o,
-									   pe_n + ke_n_nma6    + fix_n + work);
-			//prob = MHAcceptProbability(pe_o + fix_o, pe_n + fix_n);
+	// The decision tree sets the value of internal variable acc
+	if(this->alwaysAccept == true){ // Empty sampler
+		this->acc = true;
+	}else{ // Markov-Chain Monte Carlo
+		const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+		SimTK::Real prob = 0.0;
+		if(DistortOpt == 0){
+			prob = MHAcceptProbability(etot_proposed, etot_n + work);
+		}else if(DistortOpt > 0){
+
+			if(useFixman){
+				prob = MHAcceptProbability(pe_o + ke_prop_nma6 + fix_o,
+										pe_n + ke_n_nma6    + fix_n + work);
+
+			}else{
+				prob = MHAcceptProbability(pe_o + ke_prop_nma6, pe_n + ke_n_nma6 + work);
+
+			}
 		}else{
-			prob = MHAcceptProbability(pe_o + ke_prop_nma6, pe_n + ke_n_nma6 + work);
-			//prob = MHAcceptProbability(pe_o, pe_n);
+			prob = MHAcceptProbability(etot_proposed, etot_n + work);
 		}
-	}else{
-		prob = MHAcceptProbability(etot_proposed, etot_n + work);
+
+		// std::cout << "\trand_no=" << rand_no << ", prob=" << prob 
+		//<< ", beta=" << beta << std::endl;
+		this->acc = (rand_no < prob);
 	}
 
-	// std::cout << "\trand_no=" << rand_no << ", prob=" << prob << ", beta=" << beta << std::endl;
-	return rand_no < prob;
+	return this->acc;
+	
 }
 
 /** Main function that contains all the 3 steps of HMC.
@@ -2771,8 +2868,6 @@ SimTK::Real HMCSampler::calculateRRdot()
 	return RRdot;
 }
 
-
-
 int HMCSampler::getMDStepsPerSample() const {
 	return MDStepsPerSample;
 }
@@ -2796,9 +2891,6 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 		<< ", work " << work
 		<< std::endl;
 }
-
-
-
 
 /** Load the map of mobods to joint types **/
 /*

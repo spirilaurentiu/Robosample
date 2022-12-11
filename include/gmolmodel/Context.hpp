@@ -463,8 +463,9 @@ private:
 	int swapEvery;
 
 	// Non-equilibrium parameters
-	std::vector<SimTK::Real> scaleFactorsEven;
-	std::vector<SimTK::Real> scaleFactorsOdd;
+	std::vector<SimTK::Real> qScaleFactorsEven;
+	std::vector<SimTK::Real> qScaleFactorsOdd;
+	std::vector<SimTK::Real> *qScaleFactors = nullptr;
 
 };
 

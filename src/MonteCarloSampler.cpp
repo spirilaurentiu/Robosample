@@ -448,7 +448,7 @@ void MonteCarloSampler::assignConfFromTVector(SimTK::State& someState)
 // In torsional dynamics the first body has 7 Q variables for 6 dofs - one
 // quaternion (q) and 3 Cartesian coordinates (x). updQ will return: 
 // [qw, qx, qy, qz, x1, x2, x3]
-bool MonteCarloSampler::propose(SimTK::State& someState)
+bool MonteCarloSampler::proposeEquilibrium(SimTK::State& someState)
 {
     for (int i = 1; i < matter->getNumBodies(); ++i){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(i));
@@ -475,7 +475,7 @@ void MonteCarloSampler::update(SimTK::State& someState){
     pe_o = getOldPE();
 
     // Assign random configuration
-    propose(someState);
+    proposeEquilibrium(someState);
 
     // Send configuration to evaluator  
     sendConfToEvaluator(); // OPENMM
