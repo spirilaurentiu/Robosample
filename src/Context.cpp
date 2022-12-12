@@ -2248,7 +2248,7 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 
 		// Attempt to swap
 		bool swapped = attemptSwap(replica_i, replica_j);
-		if( (!swapped) && (worlds[1].updSampler(0)->DistortOpt == -1)){
+/* 		if( (!swapped) && (worlds[1].updSampler(0)->DistortOpt == -1)){
 			
 			SimTK::State currentWorldState = 
 				worlds[1].integ->updAdvancedState();
@@ -2263,7 +2263,7 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 			//restoreReplicaEnergyToFrontWorldFull(replica_j);
 			//restoreReplicaFixmanToBackWorld(replica_j);
 
-		}
+		} */
 
 	}
 }
@@ -2692,7 +2692,8 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 
 			}else if(NDistortOpt[frontIx] == -1){
 
-				worlds[frontIx].generateProposal();
+				int accepted = worlds[frontIx].generateSamples(
+					nofSamplesPerRound[frontIx]);
 
 			}
 

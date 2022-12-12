@@ -1674,7 +1674,7 @@ SimTK::Real World::calcFixman(void)
 
 /**
  *  Generate a proposal
- * */
+ **/
 bool World::generateProposal(void)
 {
 	// Update Robosample bAtomList
@@ -1696,7 +1696,7 @@ bool World::generateProposal(void)
 	std::cout << "World " << ownWorldIndex 
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
-	// Reinitialize current sampler
+	// Reinitialize current sampler (configuration and energies)
 	updSampler(0)->reinitialize(currentAdvancedState);
 
 	// GENERATE a proposal
@@ -1729,7 +1729,7 @@ int World::generateSamples(int howMany)
 	std::cout << "World " << ownWorldIndex 
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
-	// Reinitialize current sampler
+	// Reinitialize current sampler (configuration and energies)
 	updSampler(0)->reinitialize(currentAdvancedState);
 
 	// GENERATE the requested number of samples

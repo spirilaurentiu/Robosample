@@ -186,9 +186,13 @@ void HMCSampler::initialize(SimTK::State& someState)
 
 	// Store the configuration
 	system->realize(someState, SimTK::Stage::Position);
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx)
+	{
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
+		SetTVector[mbx - 1] = TVector[mbx - 1] = 
+			mobod.getMobilizerTransform(someState);
 	}
 
 	// Initialize QsBuffer with zeros
@@ -222,8 +226,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 	}
 
 	// Initialize velocities to temperature
-	// TODO Shouldn't be here
-	double sqrtRT = std::sqrt(RT);
+/* 	double sqrtRT = std::sqrt(RT);
 	SimTK::Vector V(nu);
 	SimTK::Vector SqrtMInvV(nu);
 	for (int j=0; j < nu; ++j){
@@ -233,19 +236,23 @@ void HMCSampler::initialize(SimTK::State& someState)
 
 	SqrtMInvV *= sqrtRT; // Set stddev according to temperature
 	someState.updU() = SqrtMInvV;
-	system->realize(someState, SimTK::Stage::Velocity);
+	system->realize(someState, SimTK::Stage::Velocity); */
+
+	initializeVelocities(someState);
 
 	// Store kinetic energies
 	setProposedKE(matter->calcKineticEnergy(someState));
 	setLastAcceptedKE(getProposedKE());
 
 	// Store total energies
-	this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+	this->etot_proposed = getOldPE() + getProposedKE() 
+		+ getOldFixman() + getOldLogSineSqrGamma2();
 	this->etot_set = this->etot_proposed;
 
+	// Set the generalized velocities scale factors
 	for (int j=0; j < nu; ++j){
-	UScaleFactors[j] = 1;
-	InvUScaleFactors[j] = 1;
+		UScaleFactors[j] = 1;
+		InvUScaleFactors[j] = 1;
 	}
 
 	loadUScaleFactors(someState);
@@ -262,20 +269,20 @@ void HMCSampler::initialize(SimTK::State& someState)
 }
 
 /** Same as initialize **/
-//r void HMCSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature)
 void HMCSampler::reinitialize(SimTK::State& someState)
 {
-	 // After an event handler has made a discontinuous change to the
+	// After an event handler has made a discontinuous change to the
 	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
 	//(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
 	// Store the configuration
-	// In our case, a MobilizedBody is an atom
 	system->realize(someState, SimTK::Stage::Position);
 
 	int i = 0;
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	for (SimTK::MobilizedBodyIndex mbx(1);
+	mbx < matter->getNumBodies();
+	++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		SetTVector[i] = TVector[i] = mobod.getMobilizerTransform(someState);
 		i++;
@@ -300,13 +307,13 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	}
 
 	// Initialize velocities to temperature
-	// TODO Shouldn't be here
 	int nu = someState.getNU();
 
-	// Reset ndofs which was set to natoms*3 in constructors
+	// Reset ndofs
 	ndofs = nu;
 
-	// kT
+	// Initialize velocities to temperature
+	/*// kT
 	double sqrtRT = std::sqrt(RT);
 	SimTK::Vector V(nu);
 	SimTK::Vector SqrtMInvV(nu);
@@ -316,20 +323,26 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
 	SqrtMInvV *= sqrtRT; // Set stddev according to temperature
 	someState.updU() = SqrtMInvV;
-	system->realize(someState, SimTK::Stage::Velocity);
+	system->realize(someState, SimTK::Stage::Velocity); */
+
+	initializeVelocities(someState);
+
 
 	// Store kinetic energies
 	setProposedKE(matter->calcKineticEnergy(someState));
 	setLastAcceptedKE(getProposedKE());
 
 	// Store total energies
-	this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+	this->etot_proposed = getOldPE() + getProposedKE()
+		+ getOldFixman() + getOldLogSineSqrGamma2();
 	this->etot_set = this->etot_proposed;
 
 	for (int j=0; j < nu; ++j){
         UScaleFactors[j] = 1;
         InvUScaleFactors[j] = 1;
 	}
+
+	// Set the generalized velocities scale factors
 	loadUScaleFactors(someState);
 
 	// Total mass of the system
@@ -351,13 +364,13 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 }
 
 // Set the method of integration
-void HMCSampler::setSampleGenerator(const std::string& generatorNameNameArg)
+void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
 {
-	if (generatorNameNameArg == "EMPTY"){
+	if (generatorNameArg == "EMPTY"){
 		this->sampleGenerator = 0;
 		setAlwaysAccept(true);
 	}
-	else if(generatorNameNameArg == "MC"){
+	else if(generatorNameArg == "MC"){
 		this->sampleGenerator = 1;
 		setAlwaysAccept(false);
 	}else{
@@ -418,7 +431,9 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	//	std::multiplies<SimTK::Real>()); // this is the operation
 
 	// Scale by square root of the inverse mass matrix
-	matter->multiplyBySqrtMInv(someState, RandomCache.V, RandomCache.SqrtMInvV);
+	matter->multiplyBySqrtMInv(someState,
+		RandomCache.V,
+		RandomCache.SqrtMInvV);
 
 	// Set stddev according to temperature
 	RandomCache.SqrtMInvV *= sqrtBoostRT;
@@ -431,7 +446,8 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 
 	// ask for a number of random numbers and check if we are done the next
 	//  time we hit this function
-	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+	RandomCache.task = std::async(std::launch::async,
+		RandomCache.FillWithGaussian);
 }
 
 
@@ -1530,16 +1546,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 			setSetConfigurationToOld(someState);
 		}
 
-	}/* else{ // The sample was not validated
-		// Warn user
-		std::cout 
-			<< "Warning: Proposal not validated after 10 tries.\n";
-
-		// Reset
-		this->acc = false;
-		setSetConfigurationToOld(someState);
-
-	} */
+	}
 
 		// Increase the sample counter and return
 		++nofSamples;
