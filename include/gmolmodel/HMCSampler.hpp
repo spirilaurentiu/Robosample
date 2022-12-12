@@ -340,19 +340,19 @@ public:
 
 	/** Get the proposed kinetic energy. This is set right  after velocities
 	are initialized. **/
-	SimTK::Real getProposedKE() { return this->ke_proposed; }
+	SimTK::Real getProposedKE() { return this->ke_o; }
 	
 	/** Get the stored kinetic energy. This is set rightafter a move is
 	accepted. It's a component of the total energy stored. **/
-	SimTK::Real getLastAcceptedKE() { return this->ke_lastAccepted; }
+	SimTK::Real getLastAcceptedKE() { return this->ke_set; }
 	
 	/** Sets the proposed kinetic energy before the proposal. This should be
 	set right after the velocities are initialized. **/
-	void setProposedKE(SimTK::Real);
+	void setOldKE(SimTK::Real);
 
 	/** Stores the accepted kinetic energy. This should be set right after a 
 	move is accepted. It's a component of the total energy stored. **/
-	void setLastAcceptedKE(SimTK::Real);
+	void setSetKE(SimTK::Real);
 
 	int getMDStepsPerSample() const;
 
@@ -454,8 +454,8 @@ protected:
 	SimTK::Real prevTimestep;
 	SimTK::Real prevPrevTimestep;
 
-	SimTK::Real ke_lastAccepted; // last accepted kinetic energy
-	SimTK::Real ke_proposed; // proposed kinetic energy
+	SimTK::Real ke_set; // last accepted kinetic energy
+	SimTK::Real ke_o; // proposed kinetic energy
 	SimTK::Real ke_n; // new kinetic energy
 	SimTK::Real etot_set; // stored total energy
 	SimTK::Real etot_proposed; // last accepted total energ (same with stored)

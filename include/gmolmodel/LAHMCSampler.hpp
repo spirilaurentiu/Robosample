@@ -153,11 +153,11 @@ public:
 
     /** Get the proposed kinetic energy. This is set right  after velocities
     are initialized. **/
-    SimTK::Real getProposedKE() { return this->ke_proposed; }
+    SimTK::Real getProposedKE() { return this->ke_o; }
     
     /** Get the stored kinetic energy. This is set rightafter a move is
     accepted. It's a component of the total energy stored. **/
-    SimTK::Real getLastAcceptedKE() { return this->ke_lastAccepted; }
+    SimTK::Real getLastAcceptedKE() { return this->ke_set; }
     
     /** Sets the proposed kinetic energy before the proposal. This should be
     set right after the velocities are initialized. **/

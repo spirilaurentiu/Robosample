@@ -82,8 +82,8 @@ void GirolamiSampler::initialize(SimTK::State& someState, SimTK::Real timestep, 
     system->realize(someState, SimTK::Stage::Velocity);
 
     // Store kinetic energies
-    setProposedKE(matter->calcKineticEnergy(someState));
-    setLastAcceptedKE(getProposedKE());
+    setOldKE(matter->calcKineticEnergy(someState));
+    setSetKE(getProposedKE());
 
     // Store total energies
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
@@ -138,8 +138,8 @@ void GirolamiSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep
     system->realize(someState, SimTK::Stage::Velocity);
 
     // Store kinetic energies
-    setProposedKE(matter->calcKineticEnergy(someState));
-    setLastAcceptedKE(getProposedKE());
+    setOldKE(matter->calcKineticEnergy(someState));
+    setSetKE(getProposedKE());
 
     // Store total energies
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
@@ -218,7 +218,7 @@ bool GirolamiSampler::propose(SimTK::State& someState, SimTK::Real timestep, int
 
     // Store the proposed kinetic energy
     system->realize(someState, SimTK::Stage::Velocity);
-    setProposedKE(matter->calcKineticEnergy(someState));
+    setOldKE(matter->calcKineticEnergy(someState));
 
     // Store the proposed total energy
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
@@ -255,7 +255,7 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
     if(useFixman){
         fix_o = getOldFixman();
     }
-    ke_proposed  = getProposedKE();
+    ke_o  = getProposedKE();
 
     if(useFixman){
         fix_n = calcFixman(someState);
@@ -269,14 +269,14 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
 
     if(useFixman){
         etot_n = pe_n + ke_n + fix_n;
-        etot_proposed = pe_o + ke_proposed + fix_o;
+        etot_proposed = pe_o + ke_o + fix_o;
     }else{
         etot_n = pe_n + ke_n;
-        etot_proposed = pe_o + ke_proposed;
+        etot_proposed = pe_o + ke_o;
     }
 
     std::cout<<std::setprecision(5)<<std::fixed;
-    std::cout << "pe_o " << pe_o + getREP() << " ke_o " << ke_proposed << " fix_o " << fix_o << " rep " << getREP()
+    std::cout << "pe_o " << pe_o + getREP() << " ke_o " << ke_o << " fix_o " << fix_o << " rep " << getREP()
         << " pe_n " << pe_n  + getREP() << " ke_n " << ke_n << " fix_n " << fix_n
         //<< " rand_no " << rand_no << " RT " << RT << " exp(-(etot_n - etot_proposed) " << exp(-(etot_n - etot_proposed) / RT)
         //<< " etot_n " << etot_n  + getREP() << " etot_proposed " << etot_proposed + getREP()
@@ -291,7 +291,7 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
         //sendConfToEvaluator(); // OPENMM
         setSetPE(pe_n);
         setSetFixman(fix_n);
-        setLastAcceptedKE(ke_n);
+        setSetKE(ke_n);
         //this->etot_set = getSetPE() + getSetFixman() + getLastAcceptedKE(); // TODO:seems wrong
         this->etot_set = getSetPE() + getSetFixman() + getProposedKE(); // TODO
     }else{ // Reject

@@ -153,14 +153,14 @@ This is lower triangular matrix and it is computed by multipling a set of
 move is accepted. It's a component of the total energy stored. **/
 void LAHMCSampler::setLastAcceptedKE(SimTK::Real inpKE)
 {
-    this->ke_lastAccepted = inpKE;
+    this->ke_set = inpKE;
 }
 
 /** Sets the proposed kinetic energy before the proposal. This should be
 set right after the velocities are initialized. **/
 void LAHMCSampler::setProposedKE(SimTK::Real inpKE)
 {
-    this->ke_proposed = inpKE;
+    this->ke_o = inpKE;
 }
 
 /** Get/set the TimeStepper that manages the integrator **/
@@ -375,7 +375,7 @@ void LAHMCSampler::initializeVelocities(SimTK::State& someState){
 /** Store the proposed energies **/
 void LAHMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
     // setProposedKE(matter->calcKineticEnergy(someState));
-    this->ke_proposed = matter->calcKineticEnergy(someState);
+    this->ke_o = matter->calcKineticEnergy(someState);
     
     this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 }
@@ -422,10 +422,10 @@ void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int 
     // Calculate total energy
     if(useFixman){
         etot_ns[k] = pe_ns[k] + ke_ns[k] + fix_ns[k] - (0.5 * RT * logSineSqrGamma2_ns[k]);
-        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+        etot_proposed = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
     }else{
         etot_ns[k] = pe_ns[k] + ke_ns[k];
-        etot_proposed = pe_o + ke_proposed;
+        etot_proposed = pe_o + ke_o;
     }
 
     pe_n = pe_ns[k];
@@ -772,8 +772,8 @@ void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
     pe_set = pe_n;
     fix_set = fix_n;
     logSineSqrGamma2_set = logSineSqrGamma2_n;
-    ke_lastAccepted = ke_n;
-    etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
+    ke_set = ke_n;
+    etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
 }
 
 /** Update. **/
@@ -815,7 +815,7 @@ void LAHMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
     std::cout << std::setprecision(5) << std::fixed;
     std::cout << "pe_o " << pe_o << " pe_n " << pe_n
         << " pe_nB " << getPEFromEvaluator(someState)
-        << " ke_prop " << ke_proposed << " ke_n " << ke_n
+        << " ke_prop " << ke_o << " ke_n " << ke_n
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
         << " logSineSqrGamma2_o " << logSineSqrGamma2_o << " logSineSqrGamma2_n " << logSineSqrGamma2_n << " "
         //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "

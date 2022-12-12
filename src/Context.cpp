@@ -3288,7 +3288,7 @@ void Context::PrintSamplerData(std::size_t whichWorld)
 		, pHMC(worlds[whichWorld].samplers[0])->acceptedSteps
 		, pHMC((worlds[whichWorld].samplers[0]))->pe_o
 		, pHMC((worlds[whichWorld].samplers[0]))->pe_set
-		, pHMC((worlds[whichWorld].samplers[0]))->ke_proposed
+		, pHMC((worlds[whichWorld].samplers[0]))->ke_o
 		, pHMC((worlds[whichWorld].samplers[0]))->ke_n
 		, pHMC((worlds[whichWorld].samplers[0]))->fix_o
 		, pHMC((worlds[whichWorld].samplers[0]))->fix_n
