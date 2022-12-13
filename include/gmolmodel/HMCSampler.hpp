@@ -242,7 +242,12 @@ public:
 	virtual void setSetConfigurationToOld(SimTK::State& someState);
 
 	/** Update new configuration and energiees **/
-	virtual void setSetConfigurationAndEnergiesToNew(SimTK::State& someState);
+	virtual void setSetConfigurationAndEnergiesToNew(
+		SimTK::State& someState);
+
+	/** Restore configuration and set energies to old */
+	void setSetConfigurationAndEnergiesToOld(
+		SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
 	SimTK::Real MHAcceptProbability(SimTK::Real argEtot_proposed,
@@ -299,10 +304,11 @@ public:
 	*/
 	bool generateProposal(SimTK::State& someState);
 
-	/** Main function that contains all the 3 steps of HMC.
-	Implements the acception-rejection step and sets the state of the 
-	compound to the appropriate conformation wether it accepted or not. **/
+	/** Calls setSetConfigurationAndEnergiesToNew **/
 	void update(SimTK::State& someState);
+
+	/** Calls setSetConfigurationAndEnergiesToOld **/
+	void restore(SimTK::State& someState);
 
 	virtual bool sample_iteration(SimTK::State& someState);
 
@@ -340,7 +346,7 @@ public:
 
 	/** Get the proposed kinetic energy. This is set right  after velocities
 	are initialized. **/
-	SimTK::Real getProposedKE() { return this->ke_o; }
+	SimTK::Real getOldKE() { return this->ke_o; }
 	
 	/** Get the stored kinetic energy. This is set rightafter a move is
 	accepted. It's a component of the total energy stored. **/
@@ -458,7 +464,7 @@ protected:
 	SimTK::Real ke_o; // proposed kinetic energy
 	SimTK::Real ke_n; // new kinetic energy
 	SimTK::Real etot_set; // stored total energy
-	SimTK::Real etot_proposed; // last accepted total energ (same with stored)
+	SimTK::Real etot_o; // last accepted total energ (same with stored)
 	SimTK::Real etot_n;
 
 	SimTK::Real ke_prop_nma6;

@@ -1681,7 +1681,7 @@ bool World::generateProposal(void)
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
 
-	// Get potential energy via OpenMM
+/* 	// Get potential energy via OpenMM
 	auto OldPE = 
 		updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(
 		currentAdvancedState);
@@ -1690,7 +1690,7 @@ bool World::generateProposal(void)
 	//	currentAdvancedState);
 
 	// Set sampler's old potential energy 
-	pHMC(updSampler(0))->setOldPE(OldPE);
+	pHMC(updSampler(0))->setOldPE(OldPE); */
 
 	// Print message to identify this World
 	std::cout << "World " << ownWorldIndex 
@@ -1714,7 +1714,7 @@ int World::generateSamples(int howMany)
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
 
-	// Get potential energy via OpenMM
+/* 	// Get potential energy via OpenMM
 	auto OldPE = 
 		updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(
 		currentAdvancedState);
@@ -1723,7 +1723,7 @@ int World::generateSamples(int howMany)
 	//	currentAdvancedState);
 
 	// Set sampler's old potential energy 
-	pHMC(updSampler(0))->setOldPE(OldPE);
+	pHMC(updSampler(0))->setOldPE(OldPE); */
 
 	// Print message to identify this World
 	std::cout << "World " << ownWorldIndex 

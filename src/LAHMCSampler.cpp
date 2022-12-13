@@ -262,8 +262,8 @@ void LAHMCSampler::initialize(SimTK::State& someState )
     setLastAcceptedKE(getProposedKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    this->etot_set = this->etot_proposed;
+    this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_set = this->etot_o;
 
   
 }
@@ -330,8 +330,8 @@ void LAHMCSampler::reinitialize(SimTK::State& someState)
     setLastAcceptedKE(getProposedKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    this->etot_set = this->etot_proposed;
+    this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_set = this->etot_o;
 
 }
 
@@ -377,7 +377,7 @@ void LAHMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
     // setProposedKE(matter->calcKineticEnergy(someState));
     this->ke_o = matter->calcKineticEnergy(someState);
     
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 }
     
 /** Apply the L operator **/
@@ -422,10 +422,10 @@ void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int 
     // Calculate total energy
     if(useFixman){
         etot_ns[k] = pe_ns[k] + ke_ns[k] + fix_ns[k] - (0.5 * RT * logSineSqrGamma2_ns[k]);
-        etot_proposed = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+        etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
     }else{
         etot_ns[k] = pe_ns[k] + ke_ns[k];
-        etot_proposed = pe_o + ke_o;
+        etot_o = pe_o + ke_o;
     }
 
     pe_n = pe_ns[k];
@@ -819,8 +819,8 @@ void LAHMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
         << " logSineSqrGamma2_o " << logSineSqrGamma2_o << " logSineSqrGamma2_n " << logSineSqrGamma2_n << " "
         //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
-        << " ts " << timestep  << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-        << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
+        << " ts " << timestep  << " exp(bdE) " << exp(-(etot_n - etot_o) / RT)
+        << " etot_n " << etot_n  << " etot_proposed " << etot_o
         //<< std::endl
         ;
 }

@@ -2575,8 +2575,8 @@ void Context::PrepareNonEquilibriumParams(void){
 
 }
 
-// Go through all of this replica's worlds and generate samples
-void Context::RunReplica(int thisReplica, int howManyRounds)
+
+void Context::setWorldsParameters(int thisReplica)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -2601,7 +2601,7 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	std::cout << "Temperature set to " << T << std::endl << std::flush;
 
 	// -------------
-	// Set samplers parameters for this replica
+	// Set sampling parameters
 	// =============
 	// Set sampler names
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -2634,8 +2634,9 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	(worlds[backworldIx].updSampler(0))->setQScaleFactor(
 		(*qScaleFactors).at(thisThermoStateIx));
 
-	// END ===========================================
-
+	// -------------
+	// Set simulation parameters
+	// =============
 
 	// Set integrator
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -2644,6 +2645,7 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 		);
 	}
 
+	// Set timestep and nof MD steps
 	const std::vector<SimTK::Real>& replicaTimesteps =
 		thermodynamicStates[thisThermoStateIx].getTimesteps();
 	const std::vector<int>& replicaMdsteps =
@@ -2659,6 +2661,7 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 			replicaMdsteps[i]);
 	}
 
+	// Print info
 	std::cout << "Timesteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout
@@ -2675,40 +2678,96 @@ void Context::RunReplica(int thisReplica, int howManyRounds)
 	}
 	std::cout << std::endl;
 	// =============
+}
+
+// Rewind back world
+void Context::RewindBackWorld(int thisReplica)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
+
+	// Get this world indexes from the corresponding thermoState
+	std::vector<int> replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+
+	// == TRANSFER == coordinates from last world to current
+	// TODO: eliminate in the last iteration
+	int frontIx = replicaWorldIxs.front();
+	int backIx = replicaWorldIxs.back();
+	if(replicaWorldIxs.size() > 1) {
+		transferCoordinates(frontIx, backIx);
+	}
+
+	// == ROTATE == worlds indices (translate from right to left)
+	std::rotate(replicaWorldIxs.begin(),
+		replicaWorldIxs.begin() + 1,
+		replicaWorldIxs.end());
+
+}
+
+// Run front world, rotate and transfer
+void Context::RunFrontWorldAndRotate(int thisReplica)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
+
+	// Get this world indexes from the corresponding thermoState
+	std::vector<int> replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+
+	int frontIx = -1;
+	int backIx = -1;
+
+	// == SAMPLE == from the current world
+	frontIx = replicaWorldIxs.front();
+	if(NDistortOpt[frontIx] == 0){
+		int accepted = worlds[frontIx].generateSamples(
+			nofSamplesPerRound[frontIx]);
+	}else if(NDistortOpt[frontIx] == -1){
+		int accepted = worlds[frontIx].generateSamples(
+			nofSamplesPerRound[frontIx]);
+	}
+
+	// == ROTATE == worlds indices (translate from right to left)
+	std::rotate(replicaWorldIxs.begin(),
+		replicaWorldIxs.begin() + 1,
+		replicaWorldIxs.end());
+
+	// == TRANSFER == coordinates from last world to current
+	// TODO: eliminate in the last iteration
+	frontIx = replicaWorldIxs.front();
+	backIx = replicaWorldIxs.back();
+	if(replicaWorldIxs.size() > 1) {
+		transferCoordinates(backIx, frontIx);
+	}
+
+}
+
+// Go through all of this replica's worlds and generate samples
+void Context::RunReplica(int thisReplica, int howManyRounds)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
+
+	// Get this world indexes from the corresponding thermoState
+	std::vector<int> replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+
+	// Get nof worlds in this replica
+	size_t replicaNofWorlds = replicaWorldIxs.size();
+
+	// Set thermo and simulation parameters for the worlds in this replica
+	setWorldsParameters(thisReplica);
 
 	// Go through the requested nof rounds
 	for(size_t ri = 0; ri < howManyRounds; ri++){
 
 		// Go through each world of this replica
 		for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-			int frontIx = -1;
-			int backIx = -1;
-
-			// == SAMPLE == from the current world
-			frontIx = replicaWorldIxs.front();
-			if(NDistortOpt[frontIx] == 0){
-				int accepted = worlds[frontIx].generateSamples(
-					nofSamplesPerRound[frontIx]);
-
-			}else if(NDistortOpt[frontIx] == -1){
-
-				int accepted = worlds[frontIx].generateSamples(
-					nofSamplesPerRound[frontIx]);
-
-			}
-
-			// == ROTATE == worlds indices (translate from right to left)
-		   	std::rotate(replicaWorldIxs.begin(),
-				replicaWorldIxs.begin() + 1,
-				replicaWorldIxs.end());
-
-			// == TRANSFER == coordinates from last world to current
-			// TODO: eliminate in the last iteration
-			frontIx = replicaWorldIxs.front();
-			backIx = replicaWorldIxs.back();
-			if(replicaNofWorlds > 1) {
-				transferCoordinates(backIx, frontIx);
-			}
+			RunFrontWorldAndRotate(thisReplica);
 
 		} // END iteration through worlds
 

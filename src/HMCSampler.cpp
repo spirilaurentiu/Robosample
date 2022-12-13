@@ -170,22 +170,17 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// reinitialize the Integrator.
 	timeStepper->initialize(compoundSystem->getDefaultState());
 
+	// Get no of degrees of freedom
 	const int nu = someState.getNU();
 
-	// Randomize configuration
-	//if(randomizeConformation == true){
-	//    system->realize(someState, SimTK::Stage::Position);
-	//    int nq = someState.getNQ();
-	//    SimTK::Vector QV(nq);
-	//    for (int j=7; j < nq; ++j){
-	//        QV[j] = uniformRealDistribution_mpi_pi(randomEngine);
-	//    }
-	//    someState.updQ() = QV;
-	//}
-	//
+	// Potential energy and configuration need stage Position
+	system->realize(someState, SimTK::Stage::Position);
+
+	// Set old potential energy
+	this->pe_o = this->pe_set = forces->getMultibodySystem().calcPotentialEnergy(
+		someState);
 
 	// Store the configuration
-	system->realize(someState, SimTK::Stage::Position);
 	for (SimTK::MobilizedBodyIndex mbx(1);
 		mbx < matter->getNumBodies();
 		++mbx)
@@ -204,23 +199,24 @@ void HMCSampler::initialize(SimTK::State& someState)
 		QsBuffer.push_back(SimTK::Real(0));
 	}
 
-	// Store potential energies
+/* 	// Store potential energies
 	//setOldPE(getPEFromEvaluator(someState));
 	setOldPE(forces->getMultibodySystem().calcPotentialEnergy(someState));
 	//setOldPE(dumm->CalcFullPotEnergyIncludingRigidBodies(someState));
-	setSetPE(getOldPE());
+	setSetPE(getOldPE()); */
 
 	// Store Fixman potential
 	if(useFixman){
 		std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential.\n";
-		setOldFixman(calcFixman(someState));
-		setSetFixman(getOldFixman());
+		this->fix_o = calcFixman(someState);
+		this->fix_set = this->fix_o;
 
-		setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
+		setOldLogSineSqrGamma2(
+			((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}else{
-		setOldFixman(0.0);
-		setSetFixman(getOldFixman());
+		this->fix_o = 0.0;
+		this->fix_set = this->fix_o;
 
 		setOldLogSineSqrGamma2(0.0);
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
@@ -241,14 +237,14 @@ void HMCSampler::initialize(SimTK::State& someState)
 
 	initializeVelocities(someState);
 
-	// Store kinetic energies
+/* 	// Store kinetic energies
 	setOldKE(matter->calcKineticEnergy(someState));
 	setSetKE(getProposedKE());
 
 	// Store total energies
 	this->etot_proposed = getOldPE() + getProposedKE() 
 		+ getOldFixman() + getOldLogSineSqrGamma2();
-	this->etot_set = this->etot_proposed;
+	this->etot_set = this->etot_proposed; */
 
 	// Set the generalized velocities scale factors
 	for (int j=0; j < nu; ++j){
@@ -277,9 +273,14 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	// reinitialize the Integrator.
 	//(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
-	// Store the configuration
+	// Potential energy and configuration need stage Position
 	system->realize(someState, SimTK::Stage::Position);
 
+	// Set old potential energy
+	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(
+		someState);
+
+	// Store the configuration
 	int i = 0;
 	for (SimTK::MobilizedBodyIndex mbx(1);
 	mbx < matter->getNumBodies();
@@ -296,14 +297,15 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 
 	// Store Fixman potential
 	if(useFixman){
-		setOldFixman(calcFixman(someState));
-		setSetFixman(getOldFixman());
+		this->fix_o = calcFixman(someState);
+		this->fix_set = this->fix_o;
 
-		setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
+		setOldLogSineSqrGamma2( 
+			((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}else{
-		setOldFixman(0.0);
-		setSetFixman(getOldFixman());
+		this->fix_o = 0.0;
+		this->fix_set = this->fix_o;
 
 		setOldLogSineSqrGamma2(0.0);
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
@@ -453,9 +455,9 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	this->ke_set = this->ke_o;
 
 	// Update total energies
-	this->etot_proposed = getOldPE() + getProposedKE()
+	this->etot_o = getOldPE() + getOldKE()
 		+ getOldFixman() + getOldLogSineSqrGamma2();
-	this->etot_set = this->etot_proposed;
+	this->etot_set = this->etot_o;
 
 	// ask for a number of random numbers and check if we are done the next
 	//  time we hit this function
@@ -1105,8 +1107,8 @@ void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
 	this->ke_o = OMM_calcKineticEnergy();
 
 	// Leave this here 
-	this->etot_proposed = getOldPE() 
-		+ getProposedKE() 
+	this->etot_o = getOldPE() 
+		+ getOldKE() 
 		+ getOldFixman() 
 		+ getOldLogSineSqrGamma2();
 }
@@ -1142,7 +1144,7 @@ void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
 	//	etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
 	//}else{
 		etot_n = pe_n + ke_n;
-		etot_proposed = pe_o + ke_o;
+		etot_o = pe_o + ke_o;
 	//}
 
 }
@@ -1154,13 +1156,10 @@ the configuration and energies. **/
 bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 {
 
-	// Adapt timestep
-	if(shouldAdaptTimestep){
-		adaptTimestep(someState);
-	}
+/* 	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState); */
 
-	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);
+
 
 	if(integratorName == IntegratorName::OMMVV){
 
@@ -1172,7 +1171,12 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 	}else{
 
-		// Initialize velocities according to the Maxwell-Boltzmann distribution
+		// Adapt timestep
+		if(shouldAdaptTimestep){
+			adaptTimestep(someState);
+		}
+
+		// Initialize velocities from Maxwell-Boltzmann distribution
 		initializeVelocities(someState);
 
 		// Store the proposed energies
@@ -1370,8 +1374,8 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 {
 
-	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);
+/* 	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState); */
 
 	// Apply Lambda protocol: T times
 	int T = 1;
@@ -1421,8 +1425,8 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 bool HMCSampler::proposeNMA(SimTK::State& someState)
 {
 
-	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);
+/* 	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState); */
 
 	// Initialize velocities according to the Maxwell-Boltzmann distribution
 	initializeNMAVelocities(someState);
@@ -1448,7 +1452,6 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 
 	return validateProposal();
 
-
 }
 
 /**
@@ -1456,10 +1459,13 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 */
 bool HMCSampler::generateProposal(SimTK::State& someState)
 {
+	// Return value
 	bool validated = false;
 
+	// TODO: delete
 	std::cout << "DISTORT_OPTION " << this->DistortOpt << std::endl;
 
+	// Propose
 	for (int i = 0; i < 10; i++){
 		if(DistortOpt > 0){
 			validated = proposeNMA(someState);
@@ -1474,14 +1480,15 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
 		}
 	}
 
-	if ( !validated ){ // The sample was not validated
+	// The sample was not validated
+	if ( !validated ){ 
 		// Warn user
 		std::cout 
 			<< "Warning: Proposal not validated after 10 tries.\n";
 
 		// Reset
 		this->acc = false;
-		setSetConfigurationToOld(someState);
+		setSetConfigurationAndEnergiesToOld(someState);
 	}
 
 	return validated;
@@ -1524,6 +1531,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
 
+	// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);
+
 	// Generate a trial move in the stochastic chain
 	bool validated = generateProposal(someState);
 
@@ -1555,7 +1565,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 			std::cout << "\tsample rejected (metropolis-hastings)\n";
 
 			// RESET
-			setSetConfigurationToOld(someState);
+			restore(someState);
 		}
 
 	}
@@ -2261,7 +2271,7 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 	this->ke_o = this->unboostFactor * matter->calcKineticEnergy(someState);
 
 	// Store proposed total energy
-	this->etot_proposed = getOldPE() + getProposedKE() 
+	this->etot_o = getOldPE() + getOldKE() 
 		+ getOldFixman() + getOldLogSineSqrGamma2();
 }
 
@@ -2555,15 +2565,13 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 	// TODO: replace with the following after checking is the same thing
 	//pe_n = compoundSystem->calcPotentialEnergy(someState);
 
-	logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
-
 	// Calculate total energy
 	if(useFixman){
 		etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-		etot_proposed = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+		etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
 	}else{
 		etot_n = pe_n + ke_n;
-		etot_proposed = pe_o + ke_o;
+		etot_o = pe_o + ke_o;
 	}
 
 		/*// Kinetic energy new for the evaluation Hamiltonian
@@ -2670,12 +2678,17 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 void HMCSampler::setSetConfigurationAndEnergiesToNew(
 	SimTK::State& someState)
 {
+	// Store new configuration
 	setSetTVector(someState);
+
+	// Store new energies
 	pe_set = pe_n;
 	fix_set = fix_n;
 	logSineSqrGamma2_set = logSineSqrGamma2_n;
 	ke_set = ke_n;
-	etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
+
+	// Set final total energies
+	etot_set = pe_set + fix_set + ke_set + logSineSqrGamma2_set;
 }
 
 void HMCSampler::setSetConfigurationToOld(
@@ -2683,8 +2696,25 @@ void HMCSampler::setSetConfigurationToOld(
 {
 	assignConfFromSetTVector(someState);
 	proposeExceptionCaught = false;
-	acceptedStepsBuffer.push_back(0);
-	acceptedStepsBuffer.pop_front();
+}
+
+/** Restore configuration and set energies to old */
+void HMCSampler::setSetConfigurationAndEnergiesToOld(
+	SimTK::State& someState)
+{
+	// Restore old configuration
+	assignConfFromSetTVector(someState);
+	proposeExceptionCaught = false;
+
+	// Set final energies to the precalculated old ones
+	pe_set = pe_o;
+	fix_set = fix_o;
+	logSineSqrGamma2_set = logSineSqrGamma2_o;
+	ke_set = ke_o;
+
+	// Set the final total energy
+	etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
+
 }
 
 /** 
@@ -2729,10 +2759,10 @@ bool HMCSampler::validateProposal() const {
 	CHECK_IF_NAN(logSineSqrGamma2_n);
 
 	CHECK_IF_NAN(timestep);
-	CHECK_IF_NAN(exp(-(etot_n - etot_proposed) / RT));
+	CHECK_IF_NAN(exp(-(etot_n - etot_o) / RT));
 
 	CHECK_IF_NAN(etot_n);
-	CHECK_IF_NAN(etot_proposed);
+	CHECK_IF_NAN(etot_o);
 
 	return true;
 }
@@ -2747,7 +2777,7 @@ bool HMCSampler::acceptSample() {
 		const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 		SimTK::Real prob = 0.0;
 		if(DistortOpt == 0){
-			prob = MHAcceptProbability(etot_proposed, etot_n + work);
+			prob = MHAcceptProbability(etot_o, etot_n + work);
 		}else if(DistortOpt > 0){
 
 			if(useFixman){
@@ -2759,7 +2789,7 @@ bool HMCSampler::acceptSample() {
 
 			}
 		}else{
-			prob = MHAcceptProbability(etot_proposed, etot_n + work);
+			prob = MHAcceptProbability(etot_o, etot_n + work);
 		}
 
 		// std::cout << "\trand_no=" << rand_no << ", prob=" << prob 
@@ -2776,9 +2806,22 @@ Implements the acception-rejection step and sets the state of the
 compound to the appropriate conformation wether it accepted or not. **/
 void HMCSampler::update(SimTK::State& someState)
 {
+	// Store final configuration and energy
 	setSetConfigurationAndEnergiesToNew(someState);
+	
+	// Acceptance rate buffer
 	++acceptedSteps;
 	acceptedStepsBuffer.push_back(1);
+	acceptedStepsBuffer.pop_front();
+}
+
+void HMCSampler::restore(SimTK::State& someState)
+{
+	// Restore configuration and energies to old
+	setSetConfigurationAndEnergiesToOld(someState);
+
+	// Update acceptance rate buffer
+	acceptedStepsBuffer.push_back(0);
 	acceptedStepsBuffer.pop_front();
 }
 
@@ -2907,7 +2950,7 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 		<< "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o << ", logSineSqrGamma2_n " << logSineSqrGamma2_n
 		//<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
 		<< "\n\tts " << timestep  //<< ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-		<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_proposed
+		<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_o
 		<< ", work " << work
 		<< std::endl;
 }

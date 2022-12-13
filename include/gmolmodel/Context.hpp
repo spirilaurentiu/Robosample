@@ -342,6 +342,15 @@ public:
 
 	void initializeReplica(int whichReplica);
 
+	// Reset worlds parameters according to thermodynamic state
+	void setWorldsParameters(int thisReplica);
+
+	// Rewind back world
+	void RewindBackWorld(int thisReplica);
+
+	// Run front world, rotate and transfer
+	void RunFrontWorldAndRotate(int thisReplica);
+
 	// Go through all of this replica's worlds and generate samples
 	void RunReplica(int whichReplica, int howManyRounds);
 

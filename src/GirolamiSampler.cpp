@@ -83,11 +83,11 @@ void GirolamiSampler::initialize(SimTK::State& someState, SimTK::Real timestep, 
 
     // Store kinetic energies
     setOldKE(matter->calcKineticEnergy(someState));
-    setSetKE(getProposedKE());
+    setSetKE(getOldKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
-    this->etot_set = this->etot_proposed;
+    this->etot_o = getOldPE() + getOldKE() + getOldFixman();
+    this->etot_set = this->etot_o;
   
 }
 
@@ -139,11 +139,11 @@ void GirolamiSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep
 
     // Store kinetic energies
     setOldKE(matter->calcKineticEnergy(someState));
-    setSetKE(getProposedKE());
+    setSetKE(getOldKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
-    this->etot_set = this->etot_proposed;
+    this->etot_o = getOldPE() + getOldKE() + getOldFixman();
+    this->etot_set = this->etot_o;
 
 }
 
@@ -221,7 +221,7 @@ bool GirolamiSampler::propose(SimTK::State& someState, SimTK::Real timestep, int
     setOldKE(matter->calcKineticEnergy(someState));
 
     // Store the proposed total energy
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman();
+    this->etot_o = getOldPE() + getOldKE() + getOldFixman();
 
     // TODEL
 ////    std::cout << "Qs and Us before stepTo:" << std::endl;
@@ -255,7 +255,7 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
     if(useFixman){
         fix_o = getOldFixman();
     }
-    ke_o  = getProposedKE();
+    ke_o  = getOldKE();
 
     if(useFixman){
         fix_n = calcFixman(someState);
@@ -269,10 +269,10 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
 
     if(useFixman){
         etot_n = pe_n + ke_n + fix_n;
-        etot_proposed = pe_o + ke_o + fix_o;
+        etot_o = pe_o + ke_o + fix_o;
     }else{
         etot_n = pe_n + ke_n;
-        etot_proposed = pe_o + ke_o;
+        etot_o = pe_o + ke_o;
     }
 
     std::cout<<std::setprecision(5)<<std::fixed;
@@ -285,7 +285,7 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
     // Apply Metropolis criterion
 ////    if(1){ // Always accept // TODO
     //assert(!std::isnan(pe_n));
-    if ( (!std::isnan(pe_n)) || (etot_n < etot_proposed) || (rand_no < exp(-(etot_n - etot_proposed)/RT)) ){ // Accept
+    if ( (!std::isnan(pe_n)) || (etot_n < etot_o) || (rand_no < exp(-(etot_n - etot_o)/RT)) ){ // Accept
         std::cout << " acc 1 " ;
         setSetTVector(someState);
         //sendConfToEvaluator(); // OPENMM
@@ -293,7 +293,7 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
         setSetFixman(fix_n);
         setSetKE(ke_n);
         //this->etot_set = getSetPE() + getSetFixman() + getLastAcceptedKE(); // TODO:seems wrong
-        this->etot_set = getSetPE() + getSetFixman() + getProposedKE(); // TODO
+        this->etot_set = getSetPE() + getSetFixman() + getOldKE(); // TODO
     }else{ // Reject
         std::cout << " acc 0 " ;
         assignConfFromSetTVector(someState);
