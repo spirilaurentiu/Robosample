@@ -478,7 +478,8 @@ int main(int argc, char **argv)
 	context.loadMbxsToMobilities();
 
 	// -- Setup REX --
-	if(setupReader.get("RUN_TYPE")[0] == "REX"){
+	std::string runType = setupReader.get("RUN_TYPE")[0];
+	if((runType == "REX") || (runType == "RENS")){
 
 		SetupReader rexReader;
 
@@ -545,7 +546,7 @@ int main(int argc, char **argv)
 		context.PrepareNonEquilibriumParams();
 
 	}
-
+		
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
@@ -554,6 +555,9 @@ int main(int argc, char **argv)
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 	}else if(setupReader.get("RUN_TYPE")[0] == "REX"){
 		context.RunREX();
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENS"){
+		context.setThermostatesNonequilibrium();
+		context.RunRENS();
 	}else{
 		context.Run(context.getNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),

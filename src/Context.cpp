@@ -53,6 +53,7 @@ class ThermodynamicState{
 	// If any of the distort, flow or work options are active
 	const int hasNonequilibriumMoves(void){
 		return this->nonequilibrium;}
+	void setNonequilibrium(int nArg){this->nonequilibrium = nArg;}
 
 	// Print everything about thermostate
 	void Print(void);
@@ -179,12 +180,6 @@ void ThermodynamicState::setDistortOptions(
 {
 	this->rexDistortOptions = rexDistortOptionsArg;
 
-	for(const auto &x : this->rexDistortOptions){
-		if(x < 0){
-			nonequilibrium = 1;
-		}
-	}
-
 }
 
 std::vector<int>& ThermodynamicState::getDistortOptions(void)
@@ -197,24 +192,12 @@ void ThermodynamicState::setFlowOptions(
 {
 	this->rexFlowOptions = rexFlowOptionsArg;
 
-	for(const auto &x : this->rexFlowOptions){
-		if(x < 0){
-			nonequilibrium = 1;
-		}
-	}
-
 }
 
 void ThermodynamicState::setWorkOptions(
 	std::vector<int>& rexWorkOptionsArg)
 {
 	this->rexWorkOptions = rexWorkOptionsArg;
-
-	for(const auto &x : this->rexWorkOptions){
-		if(x < 0){
-			nonequilibrium = 1;
-		}
-	}	
 }
 
 // Set the integrating method
@@ -1923,6 +1906,16 @@ void Context::loadReplica2ThermoIxs(void)
 	}
 }
 
+void Context::setThermostatesNonequilibrium(void){
+
+	// Set index of replicas the same as those of the thermodynamic states
+	for(size_t thermoState_k = 0;
+	thermoState_k < nofThermodynamicStates;
+	thermoState_k++){
+		thermodynamicStates[thermoState_k].setNonequilibrium(1);
+	}
+}
+
 void Context::PrintReplicaMaps(void){
 
 	std::cout << "Replica -> Thermo:\n";
@@ -2119,6 +2112,34 @@ SimTK::Real Context::calcFixman_IinJ(int replica_i, int replica_j)
 
 }
 
+void Context::swapThermodynamicStates(int replica_i, int replica_j){
+
+	// Get replicas' thermodynamic states indexes
+	int thermoState_i = replica2ThermoIxs[replica_i];
+	int thermoState_j = replica2ThermoIxs[replica_j];
+
+	// Record this swap
+	nofAcceptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
+	nofAcceptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
+
+	// Swap thermodynamic states
+	int temp = replica2ThermoIxs[replica_i];
+	replica2ThermoIxs[replica_i] = replica2ThermoIxs[replica_j];
+	replica2ThermoIxs[replica_j] = temp;
+
+	// Mirror this operation in the reverse map
+	temp = thermo2ReplicaIxs[thermoState_i];
+	thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
+	thermo2ReplicaIxs[thermoState_j] = temp;
+
+	// Exchange potential energies (not necessary)
+	SimTK::Real tempE = replicas[replica_i].getPotentialEnergy();
+	replicas[replica_i].setPotentialEnergy(replicas[replica_j].getPotentialEnergy());
+	replicas[replica_j].setPotentialEnergy(tempE);
+
+	//std::cout << "Swap done." << std::endl;
+}
+
 // Attempt swap between replicas r_i and r_j
 // Code inspired from OpenmmTools
 // Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
@@ -2206,28 +2227,10 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 	// Apply acceptance criterion
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
-		// Record this swap
-		nofAcceptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
-		nofAcceptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
-
-		// Swap thermodynamic states
-		int temp = replica2ThermoIxs[replica_i];
-		replica2ThermoIxs[replica_i] = replica2ThermoIxs[replica_j];
-		replica2ThermoIxs[replica_j] = temp;
-
-		// Mirror this operation in the reverse map
-		temp = thermo2ReplicaIxs[thermoState_i];
-		thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
-		thermo2ReplicaIxs[thermoState_j] = temp;
-
-		// Exchange potential energies (not necessary)
-		SimTK::Real tempE = replicas[replica_i].getPotentialEnergy();
-		replicas[replica_i].setPotentialEnergy(replicas[replica_j].getPotentialEnergy());
-		replicas[replica_j].setPotentialEnergy(tempE);
-
-		//std::cout << "Swap done." << std::endl;
+		swapThermodynamicStates(replica_i, replica_j);
 
 		returnValue = true;
 
@@ -2276,6 +2279,39 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
 	int ndofs_i = 0, ndofs_j = 0;
 
+	// ============================ WORK ======================================
+	// Replica i reduced potential in state i
+	SimTK::Real Wii = thermodynamicStates[thermoState_i].getBeta()
+		* replicas[replica_i].getWork();
+
+	// Replica j reduced potential in state j
+	SimTK::Real Wjj = thermodynamicStates[thermoState_j].getBeta()
+		* replicas[replica_j].getWork();
+
+	// Replica i reduced potential in state j
+	SimTK::Real Wij = thermodynamicStates[thermoState_j].getBeta()
+		* replicas[replica_i].getWork();
+
+	// Replica j reduced potential in state i
+	SimTK::Real Wji = thermodynamicStates[thermoState_i].getBeta()
+		* replicas[replica_j].getWork();
+	// ========================================================================
+
+	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
+	log_p_accept 			+= -1.0 * (Wij + Wji) + Wii + Wjj;
+
+	// Apply acceptance criterion
+	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
+
+		swapThermodynamicStates(replica_i, replica_j);
+
+		returnValue = true;
+
+	}else{
+
+	}
+
 }
 
 
@@ -2317,10 +2353,10 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 		int replica_i = thermo2ReplicaIxs[thermoState_i];
 		int replica_j = thermo2ReplicaIxs[thermoState_j];
 
-		//std::cout << "mixNeighboringReplicas thermoStates "
-		//	<< thermoState_i << " " << thermoState_j << "\n";
-		//std::cout << "Attempt to swap replicas " << replica_i
-		//	<< " and " << replica_j << std::endl;
+		std::cout << "mixNeighboringReplicas thermoStates "
+			<< thermoState_i << " " << thermoState_j << "\n";
+		std::cout << "Attempt to swap replicas " << replica_i
+			<< " and " << replica_j << std::endl << std::flush;
 
 		// Attempt to swap
 		bool swapped = false;
@@ -2983,6 +3019,7 @@ void Context::RunREX(void)
 
 void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 {
+	std::cout << "Context::RunReplicaEquilibriumWorlds\n";
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
@@ -2998,7 +3035,8 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 	// Run the equilibrium worlds
 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-		if(NDistortOpt[worldIx] == 0){
+
+		if(NDistortOpt[replicaWorldIxs[worldIx]] == 0){
 			RunFrontWorldAndRotate(replicaIx);
 		}
 	} // END iteration through worlds
@@ -3007,6 +3045,7 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
+	std::cout << "Context::RunReplicaNonequilibriumWorlds\n";
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
@@ -3020,9 +3059,35 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	// Set thermo and simulation parameters for the worlds in this replica
 	setWorldsParameters(replicaIx);
 
+	std::cout << "Replica " << replicaIx << " worlds " ;
+	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
+	std::cout << std::endl;
+
+	std::cout << "Searching for first nonequil world\n";
+
+	int startWorldIx = 0;
+	for(std::size_t worldCnt = 0;
+	worldCnt < replicaNofWorlds;
+	worldCnt++){
+
+		std::cout << "World index: " << replicaWorldIxs[worldCnt] << std::endl;
+
+		if( NDistortOpt[replicaWorldIxs[worldCnt]] != 0){
+			startWorldIx = worldCnt;
+			break;
+		}
+	}
+
 	// Run the non-equilibrium worlds
-	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-		if(NDistortOpt[worldIx] != 0){
+	for(std::size_t worldCnt = startWorldIx;
+	worldCnt < replicaNofWorlds; 
+	worldCnt++){
+
+		std::cout << "World index: " << replicaWorldIxs[worldCnt] << std::endl;
+
+		if(NDistortOpt[replicaWorldIxs[worldCnt]] != 0){
+			std::cout << "NDistortOpt[replicaWorldIxs[worldCnt]] " 
+				<< NDistortOpt[replicaWorldIxs[worldCnt]] << std::endl;
 			RunFrontWorldAndRotate(replicaIx);
 		}
 	} // END iteration through worlds
@@ -3058,6 +3123,7 @@ SimTK::Real Context::getWork(int replicaIx)
 void Context::RunRENS(void)
 {
 
+	std::cout << "RunRENS " << nofReplicas << std::endl;
 	// Is this necesary =======================================================
 	realizeTopology();
 
@@ -3094,8 +3160,8 @@ void Context::RunRENS(void)
 	// Main loop
 	int nofMixes = int(nofRounds / swapEvery);
 
-
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
+
 		std::cout << " REX batch " << mixi << std::endl;
 
 		// Prepare non-equilibrium params
@@ -3107,7 +3173,7 @@ void Context::RunRENS(void)
 
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
-			std::cout << "REX replica " << replicaIx << " equil" << std::endl;
+			std::cout << "REX replica " << replicaIx << " equil" << std::endl << std::flush;
 
 			// ----------------------------------------------------------------
 			// EQUILIBRIUM
@@ -3138,12 +3204,9 @@ void Context::RunRENS(void)
 			RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
 			// ========================= UNLOAD =======================
-			replicas[replicaIx].setWork(
-				getWork(replicaIx)
-			);
+			replicas[replicaIx].setWork( getWork(replicaIx) );
 
 			storeReplicaFixmanFromBackWorld(replicaIx);
-
 
 		} // end replicas simulations
 

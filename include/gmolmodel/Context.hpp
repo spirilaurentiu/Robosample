@@ -290,6 +290,9 @@ public:
 	// Prepare Q, U, and tau altering function parameters
 	void PrepareNonEquilibriumParams(void);
 
+	// Set thermodynamic states nonequilibrium flag
+	void setThermostatesNonequilibrium(void);
+
 	// Set the intial mapping between replicas and thermoStates
 	void loadReplica2ThermoIxs(void);
 
@@ -307,6 +310,9 @@ public:
 	void setSwapFixman(const int argSwapFixman){swapFixman = argSwapFixman;}
 
 	SimTK::Real getWork(int replicaIx);
+
+	// SWaps replicas thermodynamic states
+	void swapThermodynamicStates(int replica_i, int replica_j);
 
 	// Exchanges thermodynamic states between replicas
 	bool attemptSwap(int replica_i, int replica_j);
