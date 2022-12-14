@@ -306,8 +306,12 @@ public:
 	const int& getSwapFixman(void){return swapFixman;}
 	void setSwapFixman(const int argSwapFixman){swapFixman = argSwapFixman;}
 
-	// It actually exchanging thermodynamic states
+	SimTK::Real getWork(int replicaIx);
+
+	// Exchanges thermodynamic states between replicas
 	bool attemptSwap(int replica_i, int replica_j);
+
+	bool attemptRENSSwap(int replica_i, int replica_j);
 
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
@@ -338,12 +342,15 @@ public:
 	void storeReplicaEnergyFromFrontWorldFull(int thisReplica);
 
 	// Get Fixman of the back world and store it in replica thisReplica
-    	void storeReplicaFixmanFromBackWorld(int replicaIx);
+    void storeReplicaFixmanFromBackWorld(int replicaIx);
 
 	void initializeReplica(int whichReplica);
 
 	// Reset worlds parameters according to thermodynamic state
 	void setWorldsParameters(int thisReplica);
+
+	// Run a particular world
+	void RunWorld(int whichWorld);
 
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);
@@ -352,9 +359,17 @@ public:
 	void RunFrontWorldAndRotate(int thisReplica);
 
 	// Go through all of this replica's worlds and generate samples
-	void RunReplica(int whichReplica, int howManyRounds);
+	void RunReplicaAllWorlds(int whichReplica, int howManyRounds);
 
 	void RunREX();
+
+	// Helper Functions for RENS
+
+	void RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
+	void RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
+
+	// RENS
+	void RunRENS(void);
 
 	void PrintReplicas(void);
 	void PrintReplicaMaps(void);
