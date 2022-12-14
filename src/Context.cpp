@@ -32,6 +32,7 @@ class ThermodynamicState{
 	const SimTK::Real& getBeta();
 
 	const std::vector<int>& getWorldIndexes(void);
+	std::vector<int>& updWorldIndexes(void);
 	const std::vector<SimTK::Real>& getTimesteps(void);
 	const std::vector<int>& getMdsteps(void);
 
@@ -147,6 +148,11 @@ const SimTK::Real& ThermodynamicState::getBeta()
 
 //
 const std::vector<int>& ThermodynamicState::getWorldIndexes(void)
+{
+	return worldIndexes;
+}
+
+std::vector<int>& ThermodynamicState::updWorldIndexes(void)
 {
 	return worldIndexes;
 }
@@ -538,15 +544,11 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	// Normal modes options
 	NDistortOpt.resize(inpNofWorlds, 0);
 	if(setupReader.find("DISTORT_OPTION")){
-		if(setupReader.get("RANDOM_WORLD_ORDER").size() == 0){
-			std::cerr << "The DISTORT_OPTION key is present. Please specify a value.\n";
-			throw std::exception();
-			std::exit(1);
-		}else{
-			for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
-				NDistortOpt[worldIx] = std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]);
-			}
+
+		for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
+			NDistortOpt[worldIx] = std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]);
 		}
+
 	}
 
     if(setupReader.find("REX_SWAP_FIXMAN")){
@@ -2843,8 +2845,8 @@ void Context::RunFrontWorldAndRotate(int thisReplica)
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+	std::vector<int> &replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
 
 	int frontIx = -1;
 	int backIx = -1;
@@ -2883,7 +2885,7 @@ void Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> replicaWorldIxs = 
+	const std::vector<int> &replicaWorldIxs = 
 		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
 
 	// Get nof worlds in this replica
@@ -3024,22 +3026,30 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+	std::vector<int> &replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
 
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	// Set thermo and simulation parameters for the worlds in this replica
 	setWorldsParameters(replicaIx);
+	
+	std::cout << "Replica " << replicaIx << " worlds before rotate " ;
+	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
+	std::cout << std::endl;
 
 	// Run the equilibrium worlds
 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-
+		std::cout << "NDistortOpt[replicaWorldIxs[worldIx]] " << NDistortOpt[replicaWorldIxs[worldIx]] << std::endl;
 		if(NDistortOpt[replicaWorldIxs[worldIx]] == 0){
 			RunFrontWorldAndRotate(replicaIx);
 		}
 	} // END iteration through worlds
+
+	std::cout << "Replica " << replicaIx << " worlds after rotate " ;
+	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
+	std::cout << std::endl;
 
 }
 
@@ -3050,8 +3060,8 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+	std::vector<int> &replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
 
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
@@ -3059,7 +3069,7 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	// Set thermo and simulation parameters for the worlds in this replica
 	setWorldsParameters(replicaIx);
 
-	std::cout << "Replica " << replicaIx << " worlds " ;
+	std::cout << "Replica " << replicaIx << " worlds before rotate " ;
 	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
 	std::cout << std::endl;
 
@@ -3091,6 +3101,11 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 			RunFrontWorldAndRotate(replicaIx);
 		}
 	} // END iteration through worlds
+
+	std::cout << "Replica " << replicaIx << " worlds after rotate " ;
+	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
+	std::cout << std::endl;
+
 }
 
 SimTK::Real Context::getWork(int replicaIx)
