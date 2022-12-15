@@ -2307,7 +2307,7 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 	// ========================================================================
 
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
-	SimTK::Real WTerm = -1.0 * (Wij + Wji);
+	SimTK::Real WTerm = -1.0 * (Wij + Wji) + Wii + Wjj;
 
 	/* std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl; */
