@@ -2338,10 +2338,10 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 		if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
 			// Swap thermodynamic states
-			swapThermodynamicStates(replica_i, replica_j);
+			//swapThermodynamicStates(replica_i, replica_j);
 
 			// Accepted the equilibrium
-			returnValue = 1;
+			returnValue = 0;
 
 		}else{
 
