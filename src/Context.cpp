@@ -2249,13 +2249,20 @@ bool Context::attemptSwap(int replica_i, int replica_j)
  * equilibrium simulations and the work done by the non-equilibrium 
  * worlds should be stored in the last energy of the last world
 */
-bool Context::attemptRENSSwap(int replica_i, int replica_j)
+int Context::attemptRENSSwap(int replica_i, int replica_j)
 {
-	bool returnValue = false;
+	int returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
 	int thermoState_i = replica2ThermoIxs[replica_i];
 	int thermoState_j = replica2ThermoIxs[replica_j];
+
+	/* std::cout << "EA, bA, EB, bB "
+		<< replicas[replica_i].getPotentialEnergy() << " "
+		<< thermodynamicStates[thermoState_i].getBeta()
+		<< replicas[replica_j].getPotentialEnergy() << " "
+		<< thermodynamicStates[thermoState_j].getBeta()
+		<< std::endl; */
 
 	// Record this attempt
 	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
@@ -2299,20 +2306,50 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		* replicas[replica_j].getWork();
 	// ========================================================================
 
-	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
-	log_p_accept 			+= -1.0 * (Wij + Wji) + Wii + Wjj;
+	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
+	SimTK::Real WTerm = -1.0 * (Wij + Wji);
 
-	// Apply acceptance criterion
+	/* std::cout << "ETerm " << ETerm << std::endl;
+	std::cout << "WTerm " << WTerm << std::endl; */
+
+
+	SimTK::Real log_p_accept = ETerm + WTerm;
+
+	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+
+	// 
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
-		swapThermodynamicStates(replica_i, replica_j);
+		// Unload first worlds coordinates into their replicas
+		storeReplicaCoordinatesFromFrontWorld(replica_i);
+		storeReplicaCoordinatesFromFrontWorld(replica_j);
 
-		returnValue = true;
+		// Calculate front world energy and deposit it into the replica
+		storeReplicaEnergyFromFrontWorldFull(replica_i);
+		storeReplicaEnergyFromFrontWorldFull(replica_j);
+		
+		// Swap thermodynamic states
+		swapThermodynamicStates(replica_i, replica_j);
+		returnValue = 2;
 
 	}else{
+		log_p_accept -= WTerm;
+		if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
+			// Swap thermodynamic states
+			swapThermodynamicStates(replica_i, replica_j);
+
+			// Accepted the equilibrium
+			returnValue = 1;
+
+		}else{
+
+			returnValue = 0;
+		}
 	}
+
+return returnValue;
 
 }
 
@@ -2355,14 +2392,14 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 		int replica_i = thermo2ReplicaIxs[thermoState_i];
 		int replica_j = thermo2ReplicaIxs[thermoState_j];
 
-		std::cout << "mixNeighboringReplicas thermoStates "
+		/* std::cout << "mixNeighboringReplicas thermoStates "
 			<< thermoState_i << " " << thermoState_j << "\n";
 		std::cout << "Attempt to swap replicas " << replica_i
-			<< " and " << replica_j << std::endl << std::flush;
+			<< " and " << replica_j << std::endl << std::flush; */
 
 		// Attempt to swap
 		bool swapped = false;
-		if(thermodynamicStates[thermoState_i].hasNonequilibriumMoves()){
+		if( ! thermodynamicStates[thermoState_i].hasNonequilibriumMoves() ){
 			swapped = attemptSwap(replica_i, replica_j);
 		}else{
 			swapped = attemptRENSSwap(replica_i, replica_j);
@@ -2464,9 +2501,7 @@ void Context::storeReplicaCoordinatesFromFrontWorld(int whichReplica)
 	//std::cout << " worldIndexes.front() " << worldIndexes.front();
 
 	//std::cout << std::endl;
-
 }
-
 
 // Get ennergy of the back world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromBackWorld(int replicaIx)
@@ -2715,12 +2750,7 @@ void Context::setWorldsParameters(int thisReplica)
 
 	// SET SCALING FACTORS ------------------------- 
 	// Non-equilibrium params change with every replica / thermoState
-
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-
-		std::cout << "Thermostate " << thisThermoStateIx << " rexDistortOptions\n";
-		PrintCppVector(thermodynamicStates[thisThermoStateIx].getDistortOptions());
-
 
 		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
@@ -3036,7 +3066,6 @@ void Context::RunREX(void)
 
 void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 {
-	std::cout << "Context::RunReplicaEquilibriumWorlds\n";
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
@@ -3047,9 +3076,8 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
-	std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs before ";
-	PrintCppVector(replicaWorldIxs, " | ", "|\n");
-
+	/* std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs before ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the equilibrium worlds
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
@@ -3059,14 +3087,14 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 		}
 	} // END iteration through worlds
 
-	std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs after ";
-	PrintCppVector(replicaWorldIxs, " | ", "|\n");
+	/* std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs after ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 }
 
 void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
-	std::cout << "Context::RunReplicaNonequilibriumWorlds\n";
+	/* std::cout << "Context::RunReplicaNonequilibriumWorlds\n"; */
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
@@ -3077,21 +3105,21 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
-	std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
-	PrintCppVector(replicaWorldIxs, " | ", "|\n");
+	/* std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the non-equilibrium worlds
 	for(std::size_t worldCnt = 0;
 	worldCnt < replicaNofWorlds; 
 	worldCnt++){
 			
-			if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]] != 0){
-				RunFrontWorldAndRotate(replicaIx);
-			}
+		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]] != 0){
+			RunFrontWorldAndRotate(replicaIx);
+		}
 	} // END iteration through worlds
 
-	std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
-	PrintCppVector(replicaWorldIxs, " | ", "|\n");
+	/* std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 }
 
@@ -3125,7 +3153,6 @@ SimTK::Real Context::getWork(int replicaIx)
 void Context::RunRENS(void)
 {
 
-	std::cout << "RunRENS " << nofReplicas << std::endl;
 	// Is this necesary =======================================================
 	realizeTopology();
 
@@ -3175,7 +3202,7 @@ void Context::RunRENS(void)
 
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
-			std::cout << "REX replica " << replicaIx << " equil" << std::endl << std::flush;
+			std::cout << "REX replica " << replicaIx << std::endl << std::flush;
 
 			// ----------------------------------------------------------------
 			// EQUILIBRIUM
@@ -3208,6 +3235,21 @@ void Context::RunRENS(void)
 			replicas[replicaIx].setWork( getWork(replicaIx) );
 
 			storeReplicaFixmanFromBackWorld(replicaIx);
+
+			// Write energy and geometric features to logfile
+			if( !(mixi % getPrintFreq()) ){
+				PrintToLog(worldIndexes.front());
+			}
+
+			// Write pdb
+			if( pdbRestartFreq != 0){
+				int thermoStateIx = replica2ThermoIxs[replicaIx];
+				if((mixi % pdbRestartFreq) == 0){
+					writePdbs(mixi,
+					thermoStateIx);
+				}
+			}
+
 
 		} // end replicas simulations
 
