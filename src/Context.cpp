@@ -2716,7 +2716,22 @@ void Context::setWorldsParameters(int thisReplica)
 	// SET SCALING FACTORS ------------------------- 
 	// Non-equilibrium params change with every replica / thermoState
 
-	// Get worlds indexes of this thermodynamic state
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+
+		std::cout << "Thermostate " << thisThermoStateIx << " rexDistortOptions\n";
+		PrintCppVector(thermodynamicStates[thisThermoStateIx].getDistortOptions());
+
+
+		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
+			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
+		);
+
+		worlds[replicaWorldIxs[i]].updSampler(0)->setQScaleFactor(
+			(*qScaleFactors).at(thisThermoStateIx));	
+	}
+
+
+/* 	// Get worlds indexes of this thermodynamic state
 	int backworldIx = 
 	thermodynamicStates[thisThermoStateIx].getWorldIndexes().back();
 
@@ -2735,7 +2750,7 @@ void Context::setWorldsParameters(int thisReplica)
 		<< (*qScaleFactors).at(thisThermoStateIx) << " at " << thisThermoStateIx
 		<< std::endl;
 	(worlds[backworldIx].updSampler(0))->setQScaleFactor(
-		(*qScaleFactors).at(thisThermoStateIx));
+		(*qScaleFactors).at(thisThermoStateIx)); */
 
 	// -------------
 	// Set simulation parameters
@@ -3026,30 +3041,26 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> &replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+	const std::vector<int>& replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
 
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
-	// Set thermo and simulation parameters for the worlds in this replica
-	setWorldsParameters(replicaIx);
-	
-	std::cout << "Replica " << replicaIx << " worlds before rotate " ;
-	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
-	std::cout << std::endl;
+	std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs before ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n");
+
 
 	// Run the equilibrium worlds
-	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-		std::cout << "NDistortOpt[replicaWorldIxs[worldIx]] " << NDistortOpt[replicaWorldIxs[worldIx]] << std::endl;
-		if(NDistortOpt[replicaWorldIxs[worldIx]] == 0){
+	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]] == 0){
 			RunFrontWorldAndRotate(replicaIx);
 		}
 	} // END iteration through worlds
 
-	std::cout << "Replica " << replicaIx << " worlds after rotate " ;
-	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
-	std::cout << std::endl;
+	std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs after ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n");
 
 }
 
@@ -3060,51 +3071,27 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> &replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+	const std::vector<int>& replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
 
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
-	// Set thermo and simulation parameters for the worlds in this replica
-	setWorldsParameters(replicaIx);
-
-	std::cout << "Replica " << replicaIx << " worlds before rotate " ;
-	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
-	std::cout << std::endl;
-
-	std::cout << "Searching for first nonequil world\n";
-
-	int startWorldIx = 0;
-	for(std::size_t worldCnt = 0;
-	worldCnt < replicaNofWorlds;
-	worldCnt++){
-
-		std::cout << "World index: " << replicaWorldIxs[worldCnt] << std::endl;
-
-		if( NDistortOpt[replicaWorldIxs[worldCnt]] != 0){
-			startWorldIx = worldCnt;
-			break;
-		}
-	}
+	std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n");
 
 	// Run the non-equilibrium worlds
-	for(std::size_t worldCnt = startWorldIx;
+	for(std::size_t worldCnt = 0;
 	worldCnt < replicaNofWorlds; 
 	worldCnt++){
-
-		std::cout << "World index: " << replicaWorldIxs[worldCnt] << std::endl;
-
-		if(NDistortOpt[replicaWorldIxs[worldCnt]] != 0){
-			std::cout << "NDistortOpt[replicaWorldIxs[worldCnt]] " 
-				<< NDistortOpt[replicaWorldIxs[worldCnt]] << std::endl;
-			RunFrontWorldAndRotate(replicaIx);
-		}
+			
+			if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]] != 0){
+				RunFrontWorldAndRotate(replicaIx);
+			}
 	} // END iteration through worlds
 
-	std::cout << "Replica " << replicaIx << " worlds after rotate " ;
-	for(const auto &ppp : replicaWorldIxs){std::cout << " " << ppp;};
-	std::cout << std::endl;
+	std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
+	PrintCppVector(replicaWorldIxs, " | ", "|\n");
 
 }
 
@@ -3195,7 +3182,10 @@ void Context::RunRENS(void)
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			
 			// ========================== LOAD ========================
+			// Load the front world
 			restoreReplicaCoordinatesToFrontWorld(replicaIx);
+
+			setWorldsParameters(replicaIx);
 
 			// ======================== SIMULATE ======================
 			RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
@@ -3210,10 +3200,6 @@ void Context::RunRENS(void)
 			// ----------------------------------------------------------------
 			// NON-EQUILIBRIUM
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-			// ========================== LOAD ========================
-			// Load the front world
-			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// ======================== SIMULATE ======================
 			RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);

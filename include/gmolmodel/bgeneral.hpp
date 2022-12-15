@@ -214,6 +214,23 @@ bool NumericalInverse(SimTK::Matrix M, SimTK::Matrix& MInv, int nrows, int ncols
 bool NumericalLeftInverse(SimTK::Matrix M, SimTK::Matrix& MLeftInv, int nrows, int ncols);
 bool NumericalRightInverse(SimTK::Matrix M, SimTK::Matrix& MRightInv, int nrows, int ncols);
 
+/**
+ * Print C++ vector
+*/
+template <typename S>
+ 
+void PrintCppVector(const vector<S>& vec,
+	std::string sep = " ",
+	std::string ending = "\n") 
+{
+    // Iterating over all elements of vector
+    for (const auto &elem : vec) {
+        std::cout << sep << elem;
+    }
+	std::cout << ending;
+
+}
+
 /*
  * Get the block corresponding to a body from an H-like matrix
  * Body index "which" starts from 0, 0 being the Ground body.
