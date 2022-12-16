@@ -1648,6 +1648,18 @@ void HMCSampler::setOldPE(SimTK::Real argPE)
 }
 
 // Get the set potential energy
+SimTK::Real HMCSampler::getNewPE(void) const
+{
+	return this->pe_n;
+}
+
+// Set set potential energy
+void HMCSampler::setNewPE(SimTK::Real argPE)
+{
+	this->pe_n = argPE;
+}
+
+// Get the set potential energy
 SimTK::Real HMCSampler::getSetPE(void) const
 {
 	return this->pe_set;

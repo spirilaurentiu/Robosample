@@ -146,6 +146,10 @@ public:
 	void setOldPE(SimTK::Real argPE);
 
 	// Get/set set potential energy
+	SimTK::Real getNewPE(void) const;
+	void setNewPE(SimTK::Real argPE); 
+
+	// Get/set set potential energy
 	SimTK::Real getSetPE(void) const;
 	void setSetPE(SimTK::Real argPE); 
 

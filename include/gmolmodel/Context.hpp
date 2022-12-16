@@ -22,10 +22,12 @@ public:
 	~Context();
 
 	// Input functions
-	bool loadTopologyFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string topologyFilename);
-	bool loadCoordinatesFile(/*std::size_t whichWorld, int whichMolecule,*/ std::string coordinatesFilename);
+	bool loadTopologyFile(std::string topologyFilename);
+	bool loadCoordinatesFile(std::string coordinatesFilename);
 	void PrintCoordinates(const std::vector<std::vector
-        <std::pair <bSpecificAtom *, SimTK::Vec3>>>& atomsLocations);
+        <std::pair <bSpecificAtom *,
+		SimTK::Vec3>>>& atomsLocations);
+
 	bool loadRigidBodiesSpecs(std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN);
 	bool loadFlexibleBondsSpecs(std::size_t whichWorld, int whichMolecule, std::string FlexSpecsFN);
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
@@ -331,15 +333,30 @@ public:
 	// Mix replicas
 	void mixReplicas(void);
 
+	// ========================================================================
+	// Configuration manipulation functions between worlds and replicas
+	// This can be quite costly since they imply transfer between worlds
+
 	// Load replica's atomLocations into it's front world
 	void restoreReplicaCoordinatesToFrontWorld(int whichReplica);
 
 	// Load replica's atomLocations into it's back world
-    	void restoreReplicaCoordinatesToBackWorld(int whichReplica);
+    void restoreReplicaCoordinatesToBackWorld(int whichReplica);
 
 	// Stores replica's front world's coordinates into it's atomsLocations
+
 	// This should always be a fully flexible world
 	void storeReplicaCoordinatesFromFrontWorld(int whichReplica);
+
+	// Store work world coordinates into the replica
+	void store_WORK_CoordinatesFromFrontWorld(int replicaIx);
+
+	// Store work world energy into the replica 
+	void store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx);
+
+	// ========================================================================
+	// Energy manipulation functions between worlds and replicas
+	// This can be quite costly - energy calculation (O^2)
 
 	// Get ennergy of the back world and store it in replica thisReplica
 	void storeReplicaEnergyFromBackWorld(int thisReplica);
@@ -349,6 +366,14 @@ public:
 
 	// Get Fixman of the back world and store it in replica thisReplica
     void storeReplicaFixmanFromBackWorld(int replicaIx);
+
+	// Update replicas coordinates from work generated coordinates
+	void set_WORK_CoordinatesAsFinal(int replicaIx);
+
+	// Update replica's energy from work last potential energy
+	void set_WORK_PotentialAsFinal(int replicaIx);
+
+	// ------------------------------------------------------------------------
 
 	void initializeReplica(int whichReplica);
 

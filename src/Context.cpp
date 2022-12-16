@@ -253,13 +253,37 @@ class Replica{
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
 		getAtomsLocationsInGround();
 
+	const	std::vector<
+		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		get_WORK_AtomsLocationsInGround();
+
 	// Reserve memory and set values
 	void setAtomsLocationsInGround(std::vector<
+		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&);
+
+	// Reserve memory and set values
+	void set_WORK_AtomsLocationsInGround(std::vector<
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&);
 
 	// This assumes allocation has been done already
 	void updAtomsLocationsInGround(std::vector<
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>);
+
+	// Transfers work coordinates into regular cooordinates
+	void updAtomsLocationsInGround_FromWORK(void);
+
+
+	void upd_WORK_AtomsLocationsInGround(std::vector<
+		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>);
+
+
+	void set_WORK_PotentialEnergy_New(
+		const SimTK::Real& somePotential)
+	{WORK_potential = somePotential;}
+
+
+	void setPotentialEnergy_FromWORK(void)
+	{this->potential = this->WORK_potential;}
 
 	// Load atomLocations coordinates into the front world
 	void restoreCoordinates(void){}
@@ -268,7 +292,8 @@ class Replica{
 	void storeCoordinates(void){}
 
 	const SimTK::Real getPotentialEnergy(void){return potential;}
-	void setPotentialEnergy(const SimTK::Real& somePotential){potential = somePotential;}
+	void setPotentialEnergy(const SimTK::Real& somePotential){
+		potential = somePotential;}
 
 	const SimTK::Real getWork(void){return work;}
 	void setWork(const SimTK::Real workArg){this->work = workArg;}
@@ -278,24 +303,27 @@ class Replica{
 
 	void Print(void){}
 	void PrintCoordinates(void);
+	void Print_WORK_Coordinates(void);
 
   private:
 
 	int myIndex;
 
-	//// Worlds related parameters //R2TOLD
-	//std::vector<int> worldIndexes; //R2TOLD
-	//std::vector<SimTK::Real> timesteps; //R2TOLD
-	//std::vector<int> mdsteps; //R2TOLD
-
 	// Replica configurations
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		atomsLocations;
 
+		// Replica configurations
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+		WORK_atomsLocations;
+
 	// Replica potential energy
 	SimTK::Real potential; // TODO: turn into a vector for worlds
+	SimTK::Real WORK_potential; // TODO: turn into a vector for worlds
+
 	SimTK::Real work; // TODO: turn into a vector for worlds
 	SimTK::Real FixmanPotential; // TODO: turn into a vector for worlds
+
 };
 
 Replica::Replica()
@@ -314,10 +342,18 @@ Replica::~Replica()
 
 // Get coordinates from this replica
 const std::vector<
-	std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
-	Replica::getAtomsLocationsInGround()
+std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+Replica::getAtomsLocationsInGround()
 {
 	return atomsLocations;
+}
+
+// Get coordinates from this replica
+const std::vector<
+std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+Replica::get_WORK_AtomsLocationsInGround()
+{
+	return WORK_atomsLocations;
 }
 
 // Set the coordinates of this replica
@@ -346,6 +382,33 @@ void Replica::setAtomsLocationsInGround(
 	}
 
 	//atomsLocations = otherAtomsLocations;
+}
+
+// Set the coordinates of this replica
+// Also allocate memory
+void Replica::set_WORK_AtomsLocationsInGround(
+	std::vector< // topologies
+	std::vector< // one topology
+	std::pair <bSpecificAtom *, SimTK::Vec3>>>& // atom location
+		otherAtomsLocations
+	)
+{
+
+	for (auto& topology : otherAtomsLocations){
+		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
+		currentTopologyInfo.reserve(topology.size());
+
+		for(auto& otherAtom : topology){
+			bSpecificAtom* batom = otherAtom.first;
+			SimTK::Vec3 location = otherAtom.second;
+			std::pair<bSpecificAtom*, SimTK::Vec3> atomLocationPair(batom, location);
+			currentTopologyInfo.push_back(atomLocationPair);
+		}
+
+		WORK_atomsLocations.emplace_back(currentTopologyInfo);
+
+	}
+
 }
 
 // Update the coordinates of this replica
@@ -379,6 +442,45 @@ void Replica::updAtomsLocationsInGround(
 
 }
 
+// Update the coordinates of this replica
+void Replica::upd_WORK_AtomsLocationsInGround(
+	std::vector< // topologies
+	std::vector< // one topology
+	std::pair <bSpecificAtom *, SimTK::Vec3>>> // atom location
+		otherAtomsLocations
+	)
+{
+	int i = -1;
+	for (auto& topology : otherAtomsLocations){
+		i += 1;
+
+		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>&
+			myTopology = WORK_atomsLocations[i];
+
+		int j = -1;
+		for(auto& otherAtom : topology){
+			j += 1;
+
+			std::pair<bSpecificAtom *, SimTK::Vec3>&
+			myAtom = myTopology[j];
+
+			myAtom.first  = otherAtom.first;
+			myAtom.second = otherAtom.second;
+
+		}
+
+	}
+
+}
+
+void Replica::updAtomsLocationsInGround_FromWORK(void)
+{
+	/* atomsLocations.insert(WORK_atomsLocations.end(),
+		WORK_atomsLocations.begin(),
+		WORK_atomsLocations.end()); */
+	atomsLocations = WORK_atomsLocations;
+}
+
 void Replica::PrintCoordinates(void)
 {
 	for(auto& topology : atomsLocations){
@@ -392,6 +494,22 @@ void Replica::PrintCoordinates(void)
 		}
 	}
 }
+
+void Replica::Print_WORK_Coordinates(void)
+{
+	for(auto& topology : WORK_atomsLocations){
+		for(auto& atomCoordinates : topology){
+			std::cout
+			//<< (atomCoordinates.first)->inName
+			<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
+			<< atomCoordinates.second[0] << " "
+			<< atomCoordinates.second[1] << " "
+			<< atomCoordinates.second[2] << std::endl;
+		}
+	}
+}
+
+
 //////////////////////////
 // CLASS CONTEXT
 //////////////////////////
@@ -1790,6 +1908,8 @@ void Context::addReplica(int index)
 
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
 
+	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
+
     /* // EXPERIMENTAL
 	replicas.back().PrintCoordinates();
     std::cout << "Context::addReplica world[0] reference coordinates\n" << std::flush;
@@ -2320,17 +2440,18 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 
 	// 
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
-
-		// Unload first worlds coordinates into their replicas
-		storeReplicaCoordinatesFromFrontWorld(replica_i);
-		storeReplicaCoordinatesFromFrontWorld(replica_j);
-
-		// Calculate front world energy and deposit it into the replica
-		storeReplicaEnergyFromFrontWorldFull(replica_i);
-		storeReplicaEnergyFromFrontWorldFull(replica_j);
 		
 		// Swap thermodynamic states
 		swapThermodynamicStates(replica_i, replica_j);
+
+		// Update replicas coordinates from work generated coordinates
+		set_WORK_CoordinatesAsFinal(replica_i);
+		set_WORK_CoordinatesAsFinal(replica_j);
+
+		// Update replica's energy from work last potential energy
+		set_WORK_PotentialAsFinal(replica_i);
+		set_WORK_PotentialAsFinal(replica_j);
+
 		returnValue = 2;
 
 	}else{
@@ -2503,7 +2624,53 @@ void Context::storeReplicaCoordinatesFromFrontWorld(int whichReplica)
 	//std::cout << std::endl;
 }
 
-// Get ennergy of the back world and store it in replica thisReplica
+// Store first world coordinates into replica's work coords buffer
+void Context::store_WORK_CoordinatesFromFrontWorld(int whichReplica)
+{
+	//std::cout <<  "storeReplicaCoordinatesFromFrontWorld " << whichReplica << ": ";
+
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[whichReplica];
+
+	//std::cout <<  " thermoIx " << thermoIx;
+
+	// Get worlds indexes of this thermodynamic state
+	std::vector<int> worldIndexes =
+		thermodynamicStates[thermoIx].getWorldIndexes();
+
+	//std::cout <<  " worldIndexes[1] " << worldIndexes[1];
+
+	// Update replica atomsLocations from back
+	replicas[whichReplica].upd_WORK_AtomsLocationsInGround(
+		worlds[worldIndexes.front()].getCurrentAtomsLocationsInGround()
+	);
+	
+}
+
+// Store front world potential energy into work last energy buffer of the
+// replica 
+void Context::store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[replicaIx];
+
+	// Get the index of the front world
+	int frontWorldIx =
+		thermodynamicStates[thermoIx].getWorldIndexes().front();
+
+	// Get the front world energy
+	SimTK::Real energy =
+		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
+
+	// Set this replica's energy
+	replicas[replicaIx].set_WORK_PotentialEnergy_New(energy);
+
+}
+
+
+// Get energy of the back world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromBackWorld(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
@@ -2546,6 +2713,7 @@ void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 
 }
 
+
 // Get Fixman of the back world and store it in replica thisReplica
 void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
 {
@@ -2573,6 +2741,21 @@ void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
     SimTK::Real U = pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
 	replicas[replicaIx].setFixman(U);
 }
+
+
+
+// Update replicas coordinates from work generated coordinates
+void Context::set_WORK_CoordinatesAsFinal(int replicaIx)
+{
+	replicas[replicaIx].updAtomsLocationsInGround_FromWORK();
+}
+
+// Update replica's energy from work last potential energy
+void Context::set_WORK_PotentialAsFinal(int replicaIx)
+{
+	replicas[replicaIx].setPotentialEnergy_FromWORK();
+}
+
 
 void Context::initializeReplica(int thisReplica)
 {
@@ -3142,7 +3325,7 @@ SimTK::Real Context::getWork(int replicaIx)
 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++)
 	{
 		if(NDistortOpt[worldIx] != 0){
-			work += ( worlds[worldIx].updSampler(0)->getSetPE()
+			work += ( worlds[worldIx].updSampler(0)->getNewPE()
 					- worlds[worldIx].updSampler(0)->getOldPE() );
 		}
 	} // END iteration through worlds
@@ -3220,7 +3403,7 @@ void Context::RunRENS(void)
 			// ========================= UNLOAD =======================
 			storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
-			// Store energy terms
+			// Deposit energy terms
 			storeReplicaEnergyFromFrontWorldFull(replicaIx);
 
 
@@ -3234,6 +3417,13 @@ void Context::RunRENS(void)
 			// ========================= UNLOAD =======================
 			replicas[replicaIx].setWork( getWork(replicaIx) );
 
+			// Deposit work coordinates into the replica
+			store_WORK_CoordinatesFromFrontWorld(replicaIx);
+
+			// Deposit energy terms
+			store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
+
+			// Store Fixman if required
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
 			// Write energy and geometric features to logfile
