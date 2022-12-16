@@ -403,49 +403,63 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 
 }
 
+void HMCSampler::setVelocitiesToZero(SimTK::State& someState){
+	
+	// Set velocities to 0
+	someState.updU() = 0.0;
+}
+
 /** Initialize velocities according to the Maxwell-Boltzmann
  * distribution.  Coresponds to R operator in LAHMC.
  * It takes the boost factor into account 
  * */
 void HMCSampler::initializeVelocities(SimTK::State& someState){
-	// Check if we can use our cache
-	const int nu = someState.getNU();
-	if (nu != RandomCache.nu) {
-		// Rebuild the cache
-		// We also get here if the cache is not initialized
-		RandomCache.V.resize(nu);
-		RandomCache.SqrtMInvV.resize(nu);
 
-		// OLD RESTORE TODO BOOST
-		//RandomCache.sqrtRT = std::sqrt(RT);
-		// NEW TRY TODO BOOST
-		RandomCache.sqrtRT = std::sqrt(this->boostRT);
+	if(this->boostRT == 0){
 
-		RandomCache.nu = nu;
+		setVelocitiesToZero(someState);
 
-		// we don't get to use multithreading here
-		RandomCache.FillWithGaussian();
-	} else {
-		// wait for random number generation to finish (should be done by this stage)
-		RandomCache.task.wait();
+	}else{
+		// Check if we can use our cache
+		const int nu = someState.getNU();
+		if (nu != RandomCache.nu) {
+			// Rebuild the cache
+			// We also get here if the cache is not initialized
+			RandomCache.V.resize(nu);
+			RandomCache.SqrtMInvV.resize(nu);
+
+			// OLD RESTORE TODO BOOST
+			//RandomCache.sqrtRT = std::sqrt(RT);
+			// NEW TRY TODO BOOST
+			RandomCache.sqrtRT = std::sqrt(this->boostRT);
+
+			RandomCache.nu = nu;
+
+			// we don't get to use multithreading here
+			RandomCache.FillWithGaussian();
+		} else {
+			// wait for random number generation to finish (should be done by this stage)
+			RandomCache.task.wait();
+		}
+
+		// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers
+		//std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
+		//	UScaleFactors.begin(), // and this
+		//	RandomCache.V.begin(), // and store here
+		//	std::multiplies<SimTK::Real>()); // this is the operation
+
+		// Scale by square root of the inverse mass matrix
+		matter->multiplyBySqrtMInv(someState,
+			RandomCache.V,
+			RandomCache.SqrtMInvV);
+
+		// Set stddev according to temperature
+		RandomCache.SqrtMInvV *= sqrtBoostRT;
+
+		// Raise the temperature
+		someState.updU() = RandomCache.SqrtMInvV;
+
 	}
-
-	// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers
-	//std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
-	//	UScaleFactors.begin(), // and this
-	//	RandomCache.V.begin(), // and store here
-	//	std::multiplies<SimTK::Real>()); // this is the operation
-
-	// Scale by square root of the inverse mass matrix
-	matter->multiplyBySqrtMInv(someState,
-		RandomCache.V,
-		RandomCache.SqrtMInvV);
-
-	// Set stddev according to temperature
-	RandomCache.SqrtMInvV *= sqrtBoostRT;
-
-	// Raise the temperature
-	someState.updU() = RandomCache.SqrtMInvV;
 
 	// Realize velocity
 	system->realize(someState, SimTK::Stage::Velocity);
@@ -1385,12 +1399,10 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		if(DistortOpt == -1){
 			shiftQ(someState);
 		}
-		calcNewConfigurationAndEnergies(someState);
-		work += (pe_n - pe_o);
+
 		//std::cout << "energies after shiftQ pe_o pe_n ke_prop "
 		//	<< pe_o << " " << pe_n << " " << ke_proposed << '\n';
 
-		/*
 		// EQUILIBRIUM SIMULATION
 		// Initialize velocities according to the Maxwell-Boltzmann distrib
 		initializeVelocities(someState);
@@ -1409,12 +1421,17 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 			adaptWorldBlocks(someState);
 		}
 
+		/*
 		// Propagate with K (no heat if integrator is deterministic)
 		//integrateTrajectoryOneStepAtATime(someState);
 		integrateTrajectory(someState);
 		*/
 
 		calcNewConfigurationAndEnergies(someState);
+
+
+		work += (pe_n - pe_o);
+
 	}
 
 	return validateProposal();

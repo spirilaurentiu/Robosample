@@ -220,6 +220,7 @@ public:
 
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
+	void setVelocitiesToZero(SimTK::State& someState);
 	virtual void initializeVelocities(SimTK::State& someState);
 	void initializeNMAVelocities(SimTK::State& someState);
 

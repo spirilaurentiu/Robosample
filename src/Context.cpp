@@ -298,6 +298,12 @@ class Replica{
 	const SimTK::Real getWork(void){return work;}
 	void setWork(const SimTK::Real workArg){this->work = workArg;}
 
+	const SimTK::Real get_WORK_PotentialEnergy_New(void)
+	{ return this->WORK_potential;}
+
+	void set_WORK_LastPotentialEnergy(SimTK::Real wpArg)
+	{ this->WORK_potential = wpArg;}
+
     const SimTK::Real getFixman(void){return FixmanPotential;}
 	void setFixman(const SimTK::Real& somePotential){FixmanPotential = somePotential;}
 
@@ -2426,14 +2432,36 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 		* replicas[replica_j].getWork();
 	// ========================================================================
 
+	// ========================== LAST PE =====================================
+	// Replica i reduced potential in state i
+	SimTK::Real Lii = thermodynamicStates[thermoState_i].getBeta()
+		* replicas[replica_i].get_WORK_PotentialEnergy_New();
+
+	// Replica j reduced potential in state j
+	SimTK::Real Ljj = thermodynamicStates[thermoState_j].getBeta()
+		* replicas[replica_j].get_WORK_PotentialEnergy_New();
+
+	// Replica i reduced potential in state j
+	SimTK::Real Lij = thermodynamicStates[thermoState_j].getBeta()
+		* replicas[replica_i].get_WORK_PotentialEnergy_New();
+
+	// Replica j reduced potential in state i
+	SimTK::Real Lji = thermodynamicStates[thermoState_i].getBeta()
+		* replicas[replica_j].get_WORK_PotentialEnergy_New();
+	// ========================================================================
+
+	/* SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
+	SimTK::Real WTerm = -1.0 * (Wij + Wji); */
+
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
-	SimTK::Real WTerm = -1.0 * (Wij + Wji) + Wii + Wjj;
+	SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
 
-	/* std::cout << "ETerm " << ETerm << std::endl;
-	std::cout << "WTerm " << WTerm << std::endl; */
+	std::cout << "ETerm " << ETerm << std::endl;
+	std::cout << "WTerm " << WTerm << std::endl;
+	std::cout << "LiiLjj " << Lii << " " << Ljj << std::endl;
 
 
-	SimTK::Real log_p_accept = ETerm + WTerm;
+	SimTK::Real log_p_accept = WTerm;
 
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
@@ -2455,19 +2483,7 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 		returnValue = 2;
 
 	}else{
-		log_p_accept -= WTerm;
-		if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
-
-			// Swap thermodynamic states
-			//swapThermodynamicStates(replica_i, replica_j);
-
-			// Accepted the equilibrium
-			returnValue = 0;
-
-		}else{
-
-			returnValue = 0;
-		}
+		returnValue = 0;
 	}
 
 return returnValue;
