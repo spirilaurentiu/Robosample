@@ -2259,13 +2259,14 @@ void Context::swapThermodynamicStates(int replica_i, int replica_j){
 	temp = thermo2ReplicaIxs[thermoState_i];
 	thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
 	thermo2ReplicaIxs[thermoState_j] = temp;
+}
 
+void Context::swapPotentialEnergy(int replica_i, int replica_j)
+{
 	// Exchange potential energies (not necessary)
 	SimTK::Real tempE = replicas[replica_i].getPotentialEnergy();
 	replicas[replica_i].setPotentialEnergy(replicas[replica_j].getPotentialEnergy());
 	replicas[replica_j].setPotentialEnergy(tempE);
-
-	//std::cout << "Swap done." << std::endl;
 }
 
 // Attempt swap between replicas r_i and r_j
@@ -2359,6 +2360,7 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
 		swapThermodynamicStates(replica_i, replica_j);
+		swapPotentialEnergy(replica_i, replica_j);
 
 		returnValue = true;
 
@@ -2456,7 +2458,7 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
 	SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
 
-/* 	std::cout << "ETerm " << ETerm << std::endl;
+	std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl;
 	std::cout << "bibjwiwj "
 		<< thermodynamicStates[thermoState_i].getBeta() << " "
@@ -2468,7 +2470,7 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
 	std::cout << "LiiLjj " << Lii << " " << Ljj << " "
-		<< Lij << " " << Lji << std::endl; */
+		<< Lij << " " << Lji << std::endl;
 
 
 	SimTK::Real log_p_accept = WTerm;
@@ -2489,13 +2491,23 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 				
 		// Swap thermodynamic states
 		swapThermodynamicStates(replica_i, replica_j);
+		swapPotentialEnergy(replica_i, replica_j);
 
-		/* std::cout << "swapped\n" << endl; */
+		std::cout << "swapped\n" << endl;
 
 		returnValue = true;
 
 	}else{
-		/* std::cout << "left\n" << endl; */
+		
+		// Update replicas coordinates from work generated coordinates
+		set_WORK_CoordinatesAsFinal(replica_i);
+		set_WORK_CoordinatesAsFinal(replica_j);
+
+		// Update replica's energy from work last potential energy
+		set_WORK_PotentialAsFinal(replica_i);
+		set_WORK_PotentialAsFinal(replica_j);
+
+		std::cout << "left\n" << endl;
 
 		returnValue = false;
 	}
