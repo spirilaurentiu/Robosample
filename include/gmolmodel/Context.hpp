@@ -319,7 +319,7 @@ public:
 	// Exchanges thermodynamic states between replicas
 	bool attemptSwap(int replica_i, int replica_j);
 
-	int attemptRENSSwap(int replica_i, int replica_j);
+	bool attemptRENSSwap(int replica_i, int replica_j);
 
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);

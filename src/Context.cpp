@@ -2375,7 +2375,7 @@ bool Context::attemptSwap(int replica_i, int replica_j)
  * equilibrium simulations and the work done by the non-equilibrium 
  * worlds should be stored in the last energy of the last world
 */
-int Context::attemptRENSSwap(int replica_i, int replica_j)
+bool Context::attemptRENSSwap(int replica_i, int replica_j)
 {
 	int returnValue = false;
 
@@ -2456,9 +2456,19 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
 	SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
 
-	std::cout << "ETerm " << ETerm << std::endl;
+/* 	std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl;
-	std::cout << "LiiLjj " << Lii << " " << Ljj << std::endl;
+	std::cout << "bibjwiwj "
+		<< thermodynamicStates[thermoState_i].getBeta() << " "
+		<< thermodynamicStates[thermoState_j].getBeta() << " "
+		<< replicas[replica_i].get_WORK_PotentialEnergy_New() << " "
+		<< replicas[replica_j].get_WORK_PotentialEnergy_New() << " "
+		<< std::endl;
+
+	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
+	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
+	std::cout << "LiiLjj " << Lii << " " << Ljj << " "
+		<< Lij << " " << Lji << std::endl; */
 
 
 	SimTK::Real log_p_accept = WTerm;
@@ -2466,11 +2476,8 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	// 
+	// Accept or reject
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
-		
-		// Swap thermodynamic states
-		swapThermodynamicStates(replica_i, replica_j);
 
 		// Update replicas coordinates from work generated coordinates
 		set_WORK_CoordinatesAsFinal(replica_i);
@@ -2479,11 +2486,18 @@ int Context::attemptRENSSwap(int replica_i, int replica_j)
 		// Update replica's energy from work last potential energy
 		set_WORK_PotentialAsFinal(replica_i);
 		set_WORK_PotentialAsFinal(replica_j);
+				
+		// Swap thermodynamic states
+		swapThermodynamicStates(replica_i, replica_j);
 
-		returnValue = 2;
+		/* std::cout << "swapped\n" << endl; */
+
+		returnValue = true;
 
 	}else{
-		returnValue = 0;
+		/* std::cout << "left\n" << endl; */
+
+		returnValue = false;
 	}
 
 return returnValue;
@@ -2517,13 +2531,17 @@ void Context::mixAllReplicas(int nSwapAttempts)
 // Mix neighboring replicas
 void Context::mixNeighboringReplicas(unsigned int startingFrom)
 {
+	int thermoState_i = 0;
+	int thermoState_j = 1;
+
 	// Go through neighboring thermodynamic states
 	for(size_t thermoState_k = startingFrom;
-	thermoState_k < (nofThermodynamicStates - 1 + startingFrom);
+	thermoState_k < (nofThermodynamicStates - 1);
 	thermoState_k += 2){
+		
 		// Get thermodynamic states
-		int thermoState_i = thermoState_k;
-		int thermoState_j = thermoState_k + 1;
+		thermoState_i = thermoState_k;
+		thermoState_j = thermoState_k + 1;
 
 		// Get replicas corresponding to the thermodynamic states
 		int replica_i = thermo2ReplicaIxs[thermoState_i];
