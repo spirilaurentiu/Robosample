@@ -484,7 +484,11 @@ void Replica::updAtomsLocationsInGround_FromWORK(void)
 	/* atomsLocations.insert(WORK_atomsLocations.end(),
 		WORK_atomsLocations.begin(),
 		WORK_atomsLocations.end()); */
+	
+
 	atomsLocations = WORK_atomsLocations;
+
+
 }
 
 void Replica::PrintCoordinates(void)
@@ -2458,20 +2462,19 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
 	SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
 
-	std::cout << "ETerm " << ETerm << std::endl;
-	std::cout << "WTerm " << WTerm << std::endl;
+	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
+	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
+
 	std::cout << "bibjwiwj "
 		<< thermodynamicStates[thermoState_i].getBeta() << " "
 		<< thermodynamicStates[thermoState_j].getBeta() << " "
-		<< replicas[replica_i].get_WORK_PotentialEnergy_New() << " "
-		<< replicas[replica_j].get_WORK_PotentialEnergy_New() << " "
 		<< std::endl;
 
-	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
-	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
 	std::cout << "LiiLjj " << Lii << " " << Ljj << " "
 		<< Lij << " " << Lji << std::endl;
 
+	std::cout << "ETerm " << ETerm << std::endl;
+	std::cout << "WTerm " << WTerm << std::endl;
 
 	SimTK::Real log_p_accept = WTerm;
 
@@ -2502,7 +2505,7 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		// Update replicas coordinates from work generated coordinates
 		set_WORK_CoordinatesAsFinal(replica_i);
 		set_WORK_CoordinatesAsFinal(replica_j);
-
+		
 		// Update replica's energy from work last potential energy
 		set_WORK_PotentialAsFinal(replica_i);
 		set_WORK_PotentialAsFinal(replica_j);
