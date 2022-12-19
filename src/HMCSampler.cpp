@@ -1429,9 +1429,6 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 		calcNewConfigurationAndEnergies(someState);
 
-
-		work += (pe_n - pe_o);
-
 	}
 
 	return validateProposal();
@@ -1487,7 +1484,7 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
 		if(DistortOpt > 0){
 			validated = proposeNMA(someState);
 		}else if(DistortOpt < 0){
-			validated = proposeEquilibrium(someState);
+			validated = proposeNEHMC(someState);
 		}else{
 			validated = proposeEquilibrium(someState);
 		}
@@ -2806,19 +2803,19 @@ bool HMCSampler::acceptSample() {
 		const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 		SimTK::Real prob = 0.0;
 		if(DistortOpt == 0){
-			prob = MHAcceptProbability(etot_o, etot_n + work);
+			prob = MHAcceptProbability(etot_o, etot_n);
 		}else if(DistortOpt > 0){
 
 			if(useFixman){
 				prob = MHAcceptProbability(pe_o + ke_prop_nma6 + fix_o,
-										pe_n + ke_n_nma6    + fix_n + work);
+										pe_n + ke_n_nma6 + fix_n);
 
 			}else{
-				prob = MHAcceptProbability(pe_o + ke_prop_nma6, pe_n + ke_n_nma6 + work);
+				prob = MHAcceptProbability(pe_o + ke_prop_nma6, pe_n + ke_n_nma6);
 
 			}
 		}else{
-			prob = MHAcceptProbability(etot_o, etot_n + work);
+			prob = MHAcceptProbability(etot_o, etot_n);
 		}
 
 		// std::cout << "\trand_no=" << rand_no << ", prob=" << prob 
