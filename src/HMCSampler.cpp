@@ -1487,7 +1487,7 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
 		if(DistortOpt > 0){
 			validated = proposeNMA(someState);
 		}else if(DistortOpt < 0){
-			validated = proposeNEHMC(someState);
+			validated = proposeEquilibrium(someState);
 		}else{
 			validated = proposeEquilibrium(someState);
 		}
