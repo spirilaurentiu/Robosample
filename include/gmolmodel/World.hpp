@@ -158,7 +158,8 @@ public:
 
 	// --- Inter-world functions: Pass configurations among Worlds
 	// ELIZA
-	SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::AtomIndex&){assert(!"Not implemented");}
+	SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(
+		const SimTK::DuMM::AtomIndex&){assert(!"Not implemented");}
 
 	/** Get the current Compound Cartesian coords.
 	* Return a 2D vector representing all the coordinates of this World.

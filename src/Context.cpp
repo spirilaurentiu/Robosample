@@ -3352,7 +3352,6 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 
 	/* std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
-
 }
 
 SimTK::Real Context::getWork(int replicaIx)

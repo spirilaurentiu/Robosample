@@ -653,7 +653,7 @@ SimTK::Matrix& SOA_GetHLikeElement(SimTK::Matrix inMatrix, int which, SimTK::Mat
 /*
  * Print Big Matrices separated by spaces
  */
-void PrintBigMat(SimTK::Matrix M, int nrows, int ncols, int decimal_places, std::string header)
+void PrintBigMat(const SimTK::Matrix& M, int nrows, int ncols, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
     std::cout << std::setprecision(decimal_places);
@@ -735,14 +735,14 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
     std::cout << std::setprecision(decimal_places);
     for(int i = 0; i < 2; i++){
         for(int j = 0; j < 2; j++){
+
             for(int k = 0; k < 3; k++){
                 for(int l = 0; l < 3; l++){
                     std::cout << M[i][j][k][l] << " ";
                 }
-                std::cout << "  ";
+				std::cout << std::endl;
             }
         }
-        std::cout << std::endl;
     }
 }
 
@@ -764,7 +764,8 @@ void PrintSpatialVec(SimTK::SpatialVec M, int decimal_places, std::string header
 /*
  * Print Big Vector separated by spaces
  */
-void PrintBigMat(SimTK::Vector V, int nrows, int decimal_places, std::string header)
+void PrintBigMat(const SimTK::Vector& V, int nrows,
+	int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
     std::cout << std::setprecision(decimal_places) << std::fixed;

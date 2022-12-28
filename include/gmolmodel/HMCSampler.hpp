@@ -100,7 +100,8 @@ public:
 	* It translates generalized velocities u into Cartesian velocities
 	* for each atom on all topologies
 	*/ 
-	void calcMathJacobian(const SimTK::State& someState,
+	SimTK::Matrix& 
+	calcMathJacobian(const SimTK::State& someState,
 		SimTK::Matrix& mathJ);
 
 	/*
