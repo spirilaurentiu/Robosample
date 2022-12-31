@@ -2460,7 +2460,8 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real WTerm = -1.0 * (Wij + Wji); */
 
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
-	SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
+	//SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
+	SimTK::Real WTerm = -1.0 * ((Lji - Ejj) + (Lij - Eii));
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
@@ -3314,8 +3315,11 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	// Run the equilibrium worlds
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
-		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]] == 0){
+		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+		== 0){
+		
 			RunFrontWorldAndRotate(replicaIx);
+		
 		}
 	} // END iteration through worlds
 
@@ -3345,8 +3349,11 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	worldCnt < replicaNofWorlds; 
 	worldCnt++){
 			
-		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]] != 0){
+		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+		!= 0){
+		
 			RunFrontWorldAndRotate(replicaIx);
+		
 		}
 	} // END iteration through worlds
 

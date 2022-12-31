@@ -1267,6 +1267,7 @@ void HMCSampler::setQScaleFactor(const SimTK::Real& s)
 void HMCSampler::shiftQ(SimTK::State& someState)
 {
 	// Test
+	this->QScaleFactor = 1.05;
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor\n";
 	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
@@ -1325,16 +1326,16 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		
 		// we only allocated  X_PFs for non-Ground bodies
-		/* mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
-		mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]); */
+		mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
+		mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
 
-		randomNumber_Unif = uniformRealDistribution(randomEngine);
+/* 		randomNumber_Unif = uniformRealDistribution(randomEngine);
 		randomNumber_Unif = (randomNumber_Unif * 2.0) - 1.0;
 		mobod.setOneQ(someState, 0, randomNumber_Unif * 0.0005);
 
 		randomNumber_Unif = uniformRealDistribution(randomEngine);
 		randomNumber_Unif = (randomNumber_Unif * 2.0) - 1.0;
-		mobod.setOneQ(someState, 1, randomNumber_Unif * 0.0005);
+		mobod.setOneQ(someState, 1, randomNumber_Unif * 0.0005); */
 
 	}
 
