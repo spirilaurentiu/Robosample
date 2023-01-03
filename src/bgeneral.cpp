@@ -569,6 +569,63 @@ bool NumericalRightInverse(SimTK::Matrix M, SimTK::Matrix& MRightInv, int nrows,
    */ 
 }
 
+// See Rosetta Code: https://rosettacode.org/wiki/Determinant_and_permanent#C
+int trianglize(double **m, int n)
+{
+	int sign = 1;
+	for (int i = 0; i < n; i++) {
+		int max = 0;
+ 
+		for (int row = i; row < n; row++)
+			if (fabs(m[row][i]) > fabs(m[max][i]))
+				max = row;
+ 
+		if (max) {
+			sign = -sign;
+			double *tmp = m[i];
+			m[i] = m[max], m[max] = tmp;
+		}
+ 
+		if (!m[i][i]) return 0;
+ 
+		for (int row = i + 1; row < n; row++) {
+			double r = m[row][i] / m[i][i];
+			if (!r)    continue;
+ 
+			for (int col = i; col < n; col ++)
+				m[row][col] -= m[i][col] * r;
+		}
+	}
+	return -sign;
+}
+ 
+double cstyle_det(double *in, int n)
+{
+	double *m[n];
+	m[0] = in;
+ 
+	for (int i = 1; i < n; i++)
+		m[i] = m[i - 1] + n;
+ 
+	int sign = trianglize(m, n);
+	if (!sign){
+		return 0;
+	}
+ 
+ 	std::cout << std::setprecision(10) << std::fixed;
+
+	double p = 1;
+	for (int i = 0; i < n; i++)
+	{
+		p *= m[i][i];
+		std::cout << "i p " << i << " " << p << std::endl;
+	}
+	std::cout << "sign " << sign << std::endl;
+	return p * sign;
+}
+
+
+
 /*
  * Convert spatial vector to 6-dim vector
  */

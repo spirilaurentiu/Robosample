@@ -636,6 +636,11 @@ void World::allocateStatsContainers(void)
 
 }
 
+SimTK::Real World::getWork(void)
+{
+	return getSampler(0)->getWork();
+}
+
 /*
  * Shift all the generalized coordinates
  */
@@ -671,7 +676,7 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		acosX_PF00[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
-/* 		// Print something for now
+		/* // Print something for now
 		SimTK::Real bond = normX_BMp[int(mbx) - 1];
 		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
 		SimTK::Real angle = acosX_PF00[int(mbx) - 1];

@@ -154,6 +154,9 @@ public:
 	SimTK::Real getSetPE(void) const;
 	void setSetPE(SimTK::Real argPE); 
 
+	// Get/set work
+	SimTK::Real getWork(void) const;
+
 	// Set/get residual embedded potential energy: potential
 	// stored inside rigid bodies
 	void setREP(SimTK::Real); 
@@ -282,6 +285,12 @@ public:
 	/** Shift all the generalized coordinates
 	 **/
 	void shiftQ(SimTK::State& someState);
+
+	/**
+	 * 
+	*/
+	SimTK::Real getBendStretchLogJacobian(SimTK::State& someState,
+		std::vector<SimTK::Real> scaleFactors);
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setTemperature(double HMCBoostTemperature);

@@ -2461,7 +2461,8 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
 	//SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
-	SimTK::Real WTerm = -1.0 * ((Lji - Ejj) + (Lij - Eii));
+	SimTK::Real WTerm = -1.0 * ((Lji - Ejj - replicas[replica_j].getWork()) +
+		(Lij - Eii - replicas[replica_i].getWork()));
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
@@ -2473,6 +2474,11 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 
 	std::cout << "LiiLjj " << Lii << " " << Ljj << " "
 		<< Lij << " " << Lji << std::endl;
+	std::cout << "EiiEjj " << Eii << " " << Ejj << " "
+		<< Eij << " " << Eji << std::endl;
+
+	std::cout << "Total work i j " << replicas[replica_i].getWork()
+		<< " " << replicas[replica_j].getWork() << std::endl;
 
 	std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl;
@@ -3361,7 +3367,7 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 }
 
-SimTK::Real Context::getWork(int replicaIx)
+SimTK::Real Context::calcReplicaWork(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
@@ -3376,12 +3382,20 @@ SimTK::Real Context::getWork(int replicaIx)
 	// Run the non-equilibrium worlds
 	SimTK::Real work = 0;
 
-	// Accumulate work from all non-equil worlds
+/* 	// Accumulate work from energy differences of nonequil worlds
 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++)
 	{
 		if(NDistortOpt[worldIx] != 0){
 			work += ( worlds[worldIx].updSampler(0)->getNewPE()
 					- worlds[worldIx].updSampler(0)->getOldPE() );
+		}
+	} // END iteration through worlds */
+
+	// Accumulate work from perturbation kernels of nonequil worlds
+	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++)
+	{
+		if(NDistortOpt[worldIx] != 0){
+			work += ( worlds[worldIx].getWork() );
 		}
 	} // END iteration through worlds
 
@@ -3470,7 +3484,7 @@ void Context::RunRENS(void)
 			RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
 			// ========================= UNLOAD =======================
-			replicas[replicaIx].setWork( getWork(replicaIx) );
+			replicas[replicaIx].setWork( calcReplicaWork(replicaIx) );
 
 			// Deposit work coordinates into the replica
 			store_WORK_CoordinatesFromFrontWorld(replicaIx);

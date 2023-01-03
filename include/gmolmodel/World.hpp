@@ -306,6 +306,9 @@ public:
 	/** Allocate space for containers that keep statistics if we're doing any **/
 	void allocateStatsContainers(void);
 
+	// Get log of the Jacobian of the transformation
+	SimTK::Real getWork(void);
+
 	// Set initial values of X_PF or X_BM
 	void setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
 		const std::vector<SimTK::Real>& givenX_BM);

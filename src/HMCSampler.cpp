@@ -1267,7 +1267,7 @@ void HMCSampler::setQScaleFactor(const SimTK::Real& s)
 void HMCSampler::shiftQ(SimTK::State& someState)
 {
 	// Test
-	this->QScaleFactor = 1.05;
+	//this->QScaleFactor = 1.05;
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor\n";
 	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
@@ -1291,13 +1291,13 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
 	}
 
-	// 3. Scale the differences
+	// 3. Scale the differences with QScale. -1 is only here because Q is always 0
 	int k = -1;
 	for(auto& diff : X_PFdiffs){
-		diff *= (QScaleFactor - 1.0);
+		diff *= QScaleFactor - 1.0;
 	}
 	for(auto& diff : X_BMdiffs){
-		diff *= (QScaleFactor - 1.0);
+		diff *= QScaleFactor - 1.0;
 	}
 
 	// Print the differences	
@@ -1344,16 +1344,55 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 
 	// Test
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
-	//world->getTransformsStatistics(someState);
 
-/*	Matrix mathJ;
+/* 	int nu = someState.getNU();
+
+	Matrix mathJ;
 	calcMathJacobian(someState, mathJ);
-
 	PrintBigMat(mathJ, mathJ.nrow(), mathJ.ncol(), 2, "mathJacobian");
-	for(unsigned int i = 0; i < ndofs; i++){
-		std::cout << mathJ << " ";
+
+	SimTK::Matrix mathJtJ;
+	mathJtJ = mathJ.transpose() * mathJ;
+
+	PrintBigMat(mathJtJ, mathJtJ.nrow(), mathJtJ.ncol(), 2, "mathJacobianSquared");
+
+
+	std::vector<SimTK::Real> tempM(mathJtJ.nrow() * mathJtJ.ncol());
+	for(int i=0; i<mathJtJ.nrow(); i++){
+		for(int j=0; j<mathJtJ.ncol(); j++){
+			tempM[i * nu + j] = mathJtJ(i, j);
+		}
 	}
-	std::cout << std::endl; */
+
+	SimTK::Real detMathJ = cstyle_det(&tempM[0], nu);
+	std::cout << std::setprecision(10) << std::fixed;
+	std::cout << "mathDeterminant " << detMathJ << std::endl;
+
+	//SimTK::Lapack::getrf
+
+	// Get System Jacobian
+	SimTK::Matrix J_G;
+	matter->calcSystemJacobian(someState, J_G);
+	//PrintBigMat(J_G, J_G.nrow(), J_G.ncol(), 2, "systemJacobian");
+
+	// Get Cartesian mass matrix
+	SimTK::Matrix cartM;
+	getCartesianMassMatrix(someState, cartM);
+	PrintBigMat(cartM, cartM.nrow(), cartM.ncol(), 2, "CartesianMassMatrix");
+
+	// Compare metric tensor
+	SimTK::Matrix JtJ;
+	JtJ = J_G.transpose() * J_G;
+	PrintBigMat(JtJ, JtJ.nrow(), JtJ.ncol(), 2, "sysJacobianSquared");
+
+	std::vector<SimTK::Real> EiM(nu * nu);
+	for(int i=0; i<nu; i++){
+		for(int j=0; j<nu; j++){
+			EiM[i * nu + j] = JtJ(i, j);
+		}
+	}
+	SimTK::Real detJ = cstyle_det(&EiM[0], nu);
+	std::cout << "sysDeterminant " << detJ << std::endl; */
 
 /* 	// Get System Jacobian
 	SimTK::Matrix J_G;
@@ -1407,6 +1446,120 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 
 }
 
+SimTK::Real HMCSampler::getBendStretchLogJacobian(
+	SimTK::State& someState,
+	std::vector<SimTK::Real> scaleFactors)
+{
+
+	// Get log of the Cartesian->BAT Jacobian
+	SimTK::Real logJacBAT = 0.0;
+	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+
+		// Get bond term
+		SimTK::Real d4 = world->normX_BMp[k];
+		if(d4 != 0){
+			d4 = 4.0 * std::log(d4);
+		}
+
+		// Get the angle term
+		SimTK::Real sineSq = world->acosX_PF00[k];
+
+		if(sineSq != 0){
+			sineSq = std::log(std::sin(sineSq) * std::sin(sineSq));
+		}
+
+		// Accumulate result
+		logJacBAT += (d4 + sineSq);
+	}
+
+	// Get log of the scaling Jacobian
+	// Although the method seems stupid for now, it has generality
+	// and allows insertion of new code
+	SimTK::Real logJacScale = 0.0;
+	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+
+		// Accumulate result
+		if(scaleFactors[k] != 0){
+			logJacScale += std::log(scaleFactors[k]);
+		}
+	}
+
+	// Get log of the BAT->Cartesian Jacobian after scaling
+	SimTK::Real logJacBATInv = 0.0;
+	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+
+		// Get bond term
+		SimTK::Real d4 = (world->normX_BMp[k] * scaleFactors[k]);
+		if(d4 != 0){
+			d4 = -4.0 * std::log(d4);
+		}
+
+		// Get the angle term
+		SimTK::Real sineSq = (world->acosX_PF00[k] * scaleFactors[k]);
+
+		if(sineSq != 0){
+			sineSq = -1.0 * std::log(std::sin(sineSq) * std::sin(sineSq));
+		}
+
+		// Accumulate result
+		logJacBATInv += (d4 + sineSq);
+	}
+
+	// Final result
+
+	SimTK::Real logBendStretchJac = logJacBAT + logJacScale + logJacBATInv;
+
+	std::cout << "logJacBAT " << logJacBAT
+		<< " logJacScale " << logJacScale
+		<< " logJacBATInv " << logJacBATInv
+		<< " logBendStretchJac " << logBendStretchJac
+		<< std::endl;
+
+	return logBendStretchJac;
+
+/* 	SimTK::Real jacfwd = 0.0;
+	for(unsigned int k = 0; k < world->acosX_PF00_means.size(); k++){
+
+		jacfwd += std::log(std::sin( world->acosX_PF00[k] ) *
+			std::sin( world->acosX_PF00[k] ));
+
+		SimTK::Real cor = 0.0;
+		cor = (1.0 - this->QScaleFactor) * world->acosX_PF00_means[k];
+		cor /= world->acosX_PF00[k];
+		cor += this->QScaleFactor;
+		cor = std::log(cor);
+
+		jacfwd += cor;
+	}
+
+	std::cout << "logjacobian fwd " << jacfwd << std::endl;
+
+	SimTK::Real jacbwd = 0.0;
+	for(unsigned int k = 0; k < world->acosX_PF00_means.size(); k++){
+
+		// Get q
+		SimTK::Real addTerm = 0.0;
+		if (k > 0){
+			addTerm = someState.getQ()[2*(k-1)]; // suppose we have Weld
+			//std::cout << "state index " << 2*(k-1) << std::endl;
+		}
+
+		SimTK::Real cor = 0.0;
+		cor = (1.0 - this->QScaleFactor) * world->acosX_PF00_means[k];
+		cor /= (world->acosX_PF00[k] + addTerm);
+		cor += this->QScaleFactor;
+
+		cor *= (world->acosX_PF00[k] + addTerm);
+
+		jacbwd += std::log(std::sin(cor) * std::sin(cor));
+	}
+
+	std::cout << "logjacobian bwd " << jacbwd << std::endl;
+
+	return (jacfwd - jacbwd); */
+
+	// ==============================
+}
 
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 {
@@ -1416,6 +1569,34 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 	// Apply the non-equilibrium transformation
 	shiftQ(someState);
+
+	std::vector<SimTK::Real> scaleFactors;
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size());
+	
+	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+		if(world->normX_BMp[k] != 0.0){
+			scaleFactors[k] = this->QScaleFactor;
+			scaleFactors[k] *= 
+				1.0 - (world->normX_BMp_means[k] / world->normX_BMp[k]);
+
+			scaleFactors[k] +=
+				(world->normX_BMp_means[k] / world->normX_BMp[k]);
+		}
+	}
+
+	for(unsigned int k = 0; k < world->acosX_PF00.size(); k++){
+		scaleFactors[world->normX_BMp.size() + k] = this->QScaleFactor;
+		scaleFactors[world->normX_BMp.size() + k] *=
+			1.0 - (world->acosX_PF00_means[k] / world->acosX_PF00[k]);
+
+		scaleFactors[world->normX_BMp.size() + k] +=
+			(world->acosX_PF00_means[k] / world->acosX_PF00[k]);
+	}
+
+	std::cout << "scaleFactors: ";
+	PrintCppVector(scaleFactors);
+
+	this->work -= getBendStretchLogJacobian(someState, scaleFactors);
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){
@@ -1749,6 +1930,11 @@ SimTK::Real HMCSampler::getSetPE(void) const
 void HMCSampler::setSetPE(SimTK::Real argPE)
 {
 	this->pe_set = argPE;
+}
+
+SimTK::Real HMCSampler::getWork(void) const
+{
+	return this->work;
 }
 
 // Set/get Residual Embedded Potential

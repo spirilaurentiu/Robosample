@@ -215,6 +215,11 @@ bool NumericalLeftInverse(SimTK::Matrix M, SimTK::Matrix& MLeftInv, int nrows, i
 bool NumericalRightInverse(SimTK::Matrix M, SimTK::Matrix& MRightInv, int nrows, int ncols);
 
 /**
+ * Compute determinant
+*/
+double cstyle_det(double *cstyle_matrix, int dim);
+
+/**
  * Print C++ vector
 */
 template <typename S>
