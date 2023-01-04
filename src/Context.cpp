@@ -2461,8 +2461,8 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
 	//SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
-	SimTK::Real WTerm = -1.0 * ((Lji - Ejj - replicas[replica_j].getWork()) +
-		(Lij - Eii - replicas[replica_i].getWork()));
+	SimTK::Real WTerm = -1.0 * ((Lji - Ejj + replicas[replica_j].getWork()) +
+		(Lij - Eii + replicas[replica_i].getWork()));
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;

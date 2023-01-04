@@ -282,6 +282,12 @@ public:
 
 	void setQScaleFactor(const SimTK::Real& s);
 
+	/**
+	 * Take a variable and transforming according to some distribution
+	*/
+	SimTK::Real& distributeVariable(SimTK::Real& var,
+		std::string distrib = "alternateInverse");
+
 	/** Shift all the generalized coordinates
 	 **/
 	void shiftQ(SimTK::State& someState);
