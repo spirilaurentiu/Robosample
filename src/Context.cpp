@@ -2358,17 +2358,34 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 	//	<< std::endl;
 	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
+	std::cout << "bibjwiwj "
+		<< thermodynamicStates[thermoState_i].getBeta() << " "
+		<< thermodynamicStates[thermoState_j].getBeta() << " "
+		<< std::endl;
+
 	// Apply acceptance criterion
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
+		PrintReplicaMaps();
+
 		swapThermodynamicStates(replica_i, replica_j);
+
+		PrintReplicaMaps();
+
+
 		swapPotentialEnergy(replica_i, replica_j);
 
 		returnValue = true;
 
-		//PrintReplicaMaps();
+		std::cout << "swapped\n" << endl;
+
+
+
+	}else{
+		std::cout << "left\n" << endl;
+		PrintReplicaMaps();
 
 	}
 
@@ -2510,12 +2527,12 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	}else{
 		
 		// Update replicas coordinates from work generated coordinates
-		set_WORK_CoordinatesAsFinal(replica_i);
+		/* set_WORK_CoordinatesAsFinal(replica_i);
 		set_WORK_CoordinatesAsFinal(replica_j);
 		
 		// Update replica's energy from work last potential energy
 		set_WORK_PotentialAsFinal(replica_i);
-		set_WORK_PotentialAsFinal(replica_j);
+		set_WORK_PotentialAsFinal(replica_j); */
 
 		std::cout << "left\n" << endl;
 
@@ -3706,13 +3723,12 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		}
 		
 	}
-	//(worlds[0].updSampler(0))->setQScaleFactor( 1.0 ); //DELETE
 
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
 		// DELETE THIS CODE
-/* 		std::cout << "TEST MODE\n";
+		/* std::cout << "TEST MODE\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
 

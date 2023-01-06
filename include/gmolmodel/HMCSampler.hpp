@@ -286,7 +286,9 @@ public:
 	 * Take a variable and transforming according to some distribution
 	*/
 	SimTK::Real& distributeVariable(SimTK::Real& var,
-		std::string distrib = "alternateInverse");
+		std::string distrib = "alternateInverse",
+		SimTK::Real param1 = 1.0,
+		SimTK::Real param2 = 0.0);
 
 	/** Shift all the generalized coordinates
 	 **/

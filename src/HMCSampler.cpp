@@ -2393,9 +2393,10 @@ void HMCSampler::setQScaleFactor(const SimTK::Real& s)
 }
 
 SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
-		std::string distrib)
+		std::string distrib, SimTK::Real param1, SimTK::Real param2)
 {
-	if(distrib == "alternateInverse"){
+	// Bernoulli trial between the var and its inverse
+	if(distrib == "BernoulliInverse"){
 		SimTK::Real randomNumber_Unif;
 		int randomSign;
 
@@ -2404,7 +2405,9 @@ SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
 		if(randomSign < 0){
 			var = 1.0 / var;
 		}
-	}else if(distrib == "alternateReciprocal"){
+	}
+	// Bernoulli trial between the var and its reciprocal
+	else if(distrib == "BernoulliReciprocal"){
 		SimTK::Real randomNumber_Unif;
 		int randomSign;
 
@@ -2414,8 +2417,38 @@ SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
 			var = -1.0 * var;
 		}
 	}
+	// Run Gaussian distribution
+	else if(distrib == "normal"){
+
+		var = var + (gaurand(randomEngine) * param1);
+	}
+	// Run truncated Gaussian distribution
+	else if(distrib == "truncNormal"){
+
+		SimTK::Real mean = var;
+		var = var + (gaurand(randomEngine) * param1);
+
+		if(var <= 0){
+			var = mean;
+		}
+		if(var >= (2*mean)){
+			var = mean ;
+		}
+	}
+	// Run bimodal Gaussian distribution
+	else if(distrib == "bimodalNormal"){
+
+		var = distributeVariable(var, "BernoulliInverse");
+		var = var + gaurand(randomEngine);
+
+	}
+	// Gamma distribution
+	else if(distrib == "gamma"){
+		var = gammarand(randomEngine);
+	}
 
 	return var;
+
 }
 
 /*
@@ -2423,13 +2456,15 @@ SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
  */
 void HMCSampler::shiftQ(SimTK::State& someState)
 {
-	// Get scaling factor
-	
-	//this->QScaleFactor = 1.05;
-	
+	// Scaling factor is set by Context only in the begining
+	this->QScaleFactor = 1.0;
+
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
 
-	distributeVariable(this->QScaleFactor, "alternateInverse");
+	//distributeVariable(this->QScaleFactor, "BernoulliInverse");
+
+	distributeVariable(this->QScaleFactor, "truncNormal",
+		0.2);
 	
 	std::cout << "and turned it into " << this->QScaleFactor << "\n";
 	
@@ -2995,7 +3030,7 @@ bool HMCSampler::acceptSample() {
 									pe_n + ke_n_nma6);
 
 			}
-		}else{
+		}else if(DistortOpt < 0){
 			prob =
 			MHAcceptProbability(etot_o,
 								etot_n + this->work);
