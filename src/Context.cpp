@@ -3722,7 +3722,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
 		// DELETE THIS CODE
-		std::cout << "TEST MODE\n";
+		/* std::cout << "TEST MODE\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
 
@@ -3771,7 +3771,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		givenX_BM[20] = 0.108296974;
 		givenX_BM[21] = 0.111305194;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM); */
 		// DELETE CODE ABOVE
 
 		// Main loop: iterate through rounds

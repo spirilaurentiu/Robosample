@@ -1101,7 +1101,16 @@ DataFrame k_means(const DataFrame& data,
   return means;
 }
 
+double update_variance(double current_value, 
+	double last_variance, 
+	double last_average,
+	int n)
+{
+    double new_variance = (1.0 / (n-1)) * ( (n-2) * 
+		last_variance + std::pow(current_value - last_average,2));
 
+    return new_variance;
+}
 
 // Utilities for von Mises-Fisher distribution
 

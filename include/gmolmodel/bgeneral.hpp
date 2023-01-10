@@ -403,8 +403,15 @@ DataFrame k_means(const DataFrame& data,
 				  size_t k,
 				  size_t number_of_iterations);
 
+double update_variance(double current_value, 
+	double last_variance, 
+	double last_average,
+	int n);
+
 
 // STD linear algebra
+
+
 
 // Print
 

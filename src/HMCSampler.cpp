@@ -2468,11 +2468,6 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	
 	std::cout << "and turned it into " << this->QScaleFactor << "\n";
 	
-	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
-
-	// 1. Update means of values before altering them
-	//world->updateTransformsMeans(someState);
-
 	//world->PrintX_PFMeans();
 	//world->PrintX_BMMeans();
 
@@ -3117,6 +3112,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 			// RESET
 			restore(someState);
 		}
+
+		// 1. Update means of values before altering them
+		world->updateTransformsMeans(someState);
 
 	}
 
