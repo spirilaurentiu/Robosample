@@ -255,6 +255,8 @@ public:
 	/** Set GBSA implicit solvent scale factor **/
 	void setGbsaGlobalScaleFactor(SimTK::Real);
 
+	SimTK::DuMMForceFieldSubsystem& getForceField();
+
 	/** Get a writeble pointer to the DuMM force field **/
 	SimTK::DuMMForceFieldSubsystem * updForceField();
 

@@ -1584,6 +1584,12 @@ void World::setGbsaGlobalScaleFactor(SimTK::Real scaleFactor)
 }
 
 /** Get a writeble pointer to the DuMM force field **/
+SimTK::DuMMForceFieldSubsystem& World::getForceField()
+{
+	return *forceField;
+}
+
+/** Get a writeble pointer to the DuMM force field **/
 SimTK::DuMMForceFieldSubsystem * World::updForceField()
 {
 	return forceField.get();

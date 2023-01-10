@@ -75,7 +75,7 @@ public:
     SimTK::BiotypeIndex biotypeIndex;
     SimTK::Compound::AtomIndex atomIndex;
 
-    char elem {};
+    std::string elem;
   
 public:
     void Print(int whichWorld);
@@ -87,7 +87,7 @@ public:
     std::string getName() const;
     std::string getInName() const;
     int getNumber() const;
-    char getElem() const;
+    std::string getElem() const;
     SimTK::mdunits::Mass getMass() const;
     void setMass(SimTK::Real);
     SimTK::Real getX() const;
@@ -124,7 +124,7 @@ public:
     void setName(std::string);
     void setInName(std::string);
     void setNumber(int);
-    void setElem(char);
+    void setElem(std::string);
 
     void setX(SimTK::Real);
     void setY(SimTK::Real);

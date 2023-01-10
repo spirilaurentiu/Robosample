@@ -58,7 +58,13 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 				break;
 			}
 		}
-		bAtomList[i].setElem(str_buf.at(strix));
+
+		//bAtomList[i].setElem(str_buf.at(strix));
+		/* bAtomList[i].setElem( (amberReader->getAtomsName(i)).substr(0, 1) ); */
+
+		// CORRECT WAY TO SET ELEMENT
+ 		bAtomList[i].setAtomicNumber( amberReader->getAtomicNumber(i) );
+		//==========================
 
 		// Assign a "unique" name. The generator is however limited.
 		bAtomList[i].setName(GetUniqueName(i));
@@ -142,70 +148,178 @@ void Topology::SetGmolAtomsMolmodelTypesTrial(){
 
 	// Set Gmolmodel name and element and inboard length
 	for(int i = 0; i < (natoms); i++) {
-		if(toupper(bAtomList[i].elem) == 'H'){
+		if(bAtomList[i].getAtomicNumber() == 1){
+			bAtomList[i].setElem("H");
 			bAtomList[i].bAtomType = new
-					Compound::SingleAtom( bAtomList[i].name, Element( 1, "Hydrogen", "H", bAtomList[i].getMass()) );
+				Compound::SingleAtom(bAtomList[i].name, Element(1, "Hydrogen", "H", bAtomList[i].getMass()) );
+		}
+		else if(bAtomList[i].getAtomicNumber() == 8){
+			bAtomList[i].setElem("O");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name, Element(8, "Oxygen", "O", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 9){
+			bAtomList[i].setElem("F");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 53){
+			bAtomList[i].setElem("I");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 7){
+			bAtomList[i].setElem("N");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 6){
+			bAtomList[i].setElem("C");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 16){
+			bAtomList[i].setElem("S");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 15){
+			bAtomList[i].setElem("P");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 12){
+			bAtomList[i].setElem("Mg");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(12, "Magnesium", "Mg", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 25){
+			bAtomList[i].setElem("Mn");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(25, "Manganese", "Mn", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 11){
+			bAtomList[i].setElem("Na");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(11, "Sodium", "Na", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 20){
+			bAtomList[i].setElem("Ca");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(20, "Calcium", "Ca", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 17){
+			bAtomList[i].setElem("Cl");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(17, "Chlorine", "Cl", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 30){
+			bAtomList[i].setElem("Zn");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(30, "Zinc", "Zn", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 35){
+			bAtomList[i].setElem("Br");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(35, "Bromine", "Br", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 26){
+			bAtomList[i].setElem("Fe");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(26, "Iron", "Fe", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 23){
+			bAtomList[i].setElem("V");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(23, "Vanadium", "V", bAtomList[i].getMass()));
+		}
+		else if(bAtomList[i].getAtomicNumber() == 19){
+			bAtomList[i].setElem("K");
+			bAtomList[i].bAtomType = new
+				Compound::SingleAtom(bAtomList[i].name,  Element(19, "Potassium", "K", bAtomList[i].getMass()));
+		}
+
+
+	}	
+
+	/* // Set Gmolmodel name and element and inboard length
+	for(int i = 0; i < (natoms); i++) {
+		if(((bAtomList[i].elem) == "H")){
+			bAtomList[i].bAtomType = new
+					Compound::SingleAtom(bAtomList[i].name, Element(1, "Hydrogen", "H", bAtomList[i].getMass()) );
 			bAtomList[i].setAtomicNumber(1);
-		}else if(toupper(bAtomList[i].elem) == 'O'){
+		}else if(((bAtomList[i].elem) == "O")){
 			bAtomList[i].bAtomType = new
 					Compound::SingleAtom(bAtomList[i].name, Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(8);
-		}else if(toupper(bAtomList[i].elem) == 'F'){
+		}else if(((bAtomList[i].elem) == "F")){
 			bAtomList[i].bAtomType = new
 					Compound::SingleAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(9);
-		}else if(toupper(bAtomList[i].elem) == 'I'){
+		}else if(((bAtomList[i].elem) == "I")){
 			bAtomList[i].bAtomType = new
 					Compound::SingleAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(53);
-		}else if(toupper(bAtomList[i].elem) == 'N'){
+		}else if(((bAtomList[i].elem) == "N")){
 			bAtomList[i].bAtomType = new
 					Compound::SingleAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(7);
-		}else if(toupper(bAtomList[i].elem) == 'C'){
+		}else if(((bAtomList[i].elem) == "C")){
 			bAtomList[i].bAtomType = new
 					Compound::SingleAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(6);
-		}else if(toupper(bAtomList[i].elem) == 'S'){
+		}else if(((bAtomList[i].elem) == "S")){
 			bAtomList[i].bAtomType = new
 					Compound::SingleAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(16);
-		}else if(toupper(bAtomList[i].elem) == 'P'){
+		}else if(((bAtomList[i].elem) == "P")){
 			bAtomList[i].bAtomType = new
 					Compound::SingleAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(15);
+		}else if(((bAtomList[i].elem) == "M")){
+			bAtomList[i].bAtomType = new
+					Compound::SingleAtom(bAtomList[i].name,  Element(15, "Magnesium", "Mg", bAtomList[i].getMass()));
+			bAtomList[i].setAtomicNumber(12);
 		}
 
-	}
+	} */
 
 	Angle TetrahedralAngle = 109.47 * Deg2Rad;
+
 	for(int i = 0; i < (natoms); i++) {
+
 		(bAtomList[i].bAtomType)->setCompoundName("SingleAtom");
+
 		// Add BondCenters
-		if(bAtomList[i].nbonds == 1){
-			(bAtomList[i].bAtomType)->addFirstBondCenter("bond1", bAtomList[i].name);
-		}else{
-			(bAtomList[i].bAtomType)->addFirstTwoBondCenters("bond1", "bond2", bAtomList[i].name, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0)); // FEBREM
-			//(bAtomList[i].bAtomType)->addFirstTwoBondCenters("bond1", "bond2", bAtomList[i].name, UnitVec3(0.866025, 0.0, -0.5), UnitVec3(0.0, 0.0, 1.0)); // REFEBREM
-			if(bAtomList[i].nbonds > 2){
-				(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond3", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
-			}
-			if(bAtomList[i].nbonds > 3){
-				(bAtomList[i].bAtomType)->addRightHandedBondCenter("bond4", bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
-			}
-		}
+		if(bAtomList[i].nbonds > 0){
 
-		/*if(bAtomList[i].nbonds > 1){
-			//(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond2", bAtomList[i].name, TetrahedralAngle, 0);
-			(bAtomList[i].bAtomType)->addSecondBondCenter("bond2", bAtomList[i].name, TetrahedralAngle);
-		}*/
+			if(bAtomList[i].nbonds == 1){ // One bond only
+				(bAtomList[i].bAtomType)->addFirstBondCenter("bond1",
+					bAtomList[i].name);
+			}else if(bAtomList[i].nbonds > 1){ // multiple bonds
+				(bAtomList[i].bAtomType)->addFirstTwoBondCenters("bond1", "bond2",
+					bAtomList[i].name, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
+				if(bAtomList[i].nbonds > 2){
+					(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond3",
+						bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
+				}
+				if(bAtomList[i].nbonds > 3){
+					(bAtomList[i].bAtomType)->addRightHandedBondCenter("bond4",
+						bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
+				}
+			}
 
-		// Set the inboard BondCenter
-		(bAtomList[i].bAtomType)->setInboardBondCenter("bond1");
-		(bAtomList[i].bAtomType)->setDefaultInboardBondLength(0.19);
-	}
+			// Set the inboard BondCenter
+			(bAtomList[i].bAtomType)->setInboardBondCenter("bond1");
+			(bAtomList[i].bAtomType)->setDefaultInboardBondLength(0.19);
+
+		} // bonded atoms iterator
+
+	} // atoms iterator
+
 }
 
+// TODO: delete or update 
 void Topology::SetGmolAtomsMolmodelTypes()
 {
 	// ---------------------------------------------
@@ -219,39 +333,39 @@ void Topology::SetGmolAtomsMolmodelTypes()
 	for(int i = 0; i < (natoms); i++){
 		// Atoms with one bond
 		if(bAtomList[i].nbonds == 1){
-			if(toupper(bAtomList[i].elem) == 'H'){
+			if(std::string(bAtomList[i].elem) == "H"){
 				bAtomList[i].bAtomType = new UnivalentAtom(bAtomList[i].name,
 						                                   SimTK::Element( 1, "Hydrogen", "H", bAtomList[i].getMass() ));
 				bAtomList[i].setAtomicNumber(1);
 			}
-				/*else if((toupper(bAtomList[i].name[0]) == 'C') && (toupper(bAtomList[i].name[0]) == 'L')){
-					bAtomList[i].bAtomType = new
-					UnivalentAtom(bAtomList[i].name, Element(17, "Chlorine", "Cl", bAtomList[i].getMass()));
-					bAtomList[i].setAtomicNumber(17);
-				}*/
-			else if(toupper(bAtomList[i].elem) == 'O'){
+			/*else if((toupper(bAtomList[i].name[0]) == 'C') && (toupper(bAtomList[i].name[0]) == 'L')){
+				bAtomList[i].bAtomType = new
+				UnivalentAtom(bAtomList[i].name, Element(17, "Chlorine", "Cl", bAtomList[i].getMass()));
+				bAtomList[i].setAtomicNumber(17);
+			}*/
+			else if(std::string(bAtomList[i].elem) == "O"){
 				bAtomList[i].bAtomType = new UnivalentAtom(bAtomList[i].name,
 						                                   Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(8);
 			}
-			else if(toupper(bAtomList[i].elem) == 'F'){
+			else if(std::string(bAtomList[i].elem) == "F"){
 				bAtomList[i].bAtomType = new
 						UnivalentAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(9);
 			}
-				/*
-				else if((toupper(bAtomList[i].name[0]) == 'B') && (toupper(bAtomList[i].name[0]) == 'R')){
-				  bAtomList[i].bAtomType = new
-					UnivalentAtom(bAtomList[i].name, Element(35, "Bromine", "Br", bAtomList[i].getMass()));
-				  bAtomList[i].setAtomicNumber(35);
-				}
-				*/
-			else if(toupper(bAtomList[i].elem) == 'I'){
+			/*
+			else if((toupper(bAtomList[i].name[0]) == 'B') && (toupper(bAtomList[i].name[0]) == 'R')){
+				bAtomList[i].bAtomType = new
+				UnivalentAtom(bAtomList[i].name, Element(35, "Bromine", "Br", bAtomList[i].getMass()));
+				bAtomList[i].setAtomicNumber(35);
+			}
+			*/
+			else if(std::string(bAtomList[i].elem) == "I"){
 				bAtomList[i].bAtomType = new
 						UnivalentAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(53);
 			}
-			else if(toupper(bAtomList[i].elem) == 'N'){
+			else if(std::string(bAtomList[i].elem) == "N"){
 				bAtomList[i].bAtomType = new
 						UnivalentAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
@@ -260,28 +374,28 @@ void Topology::SetGmolAtomsMolmodelTypes()
 		}
 			// Atoms with two bonds
 		else if (bAtomList[i].nbonds == 2){
-			if(toupper(bAtomList[i].elem) == 'H'){
+			if(std::string(bAtomList[i].elem) == "H"){
 				bAtomList[i].bAtomType = new
 						BivalentAtom(bAtomList[i].name, Element(1, "Hydrogen", "H", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(1);
 			}
-			else if(toupper(bAtomList[i].elem) == 'C'){
+			else if(std::string(bAtomList[i].elem) == "C"){
 				bAtomList[i].bAtomType = new
 						BivalentAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(6);
 			}
-			else if(toupper(bAtomList[i].elem) == 'O'){
+			else if(std::string(bAtomList[i].elem) == "O"){
 				bAtomList[i].bAtomType = new
 						BivalentAtom(bAtomList[i].name,  Element(8, "Oxygen", "O", bAtomList[i].getMass()),
 						             109.47*Deg2Rad);
 				bAtomList[i].setAtomicNumber(8);
 			}
-			else if(toupper(bAtomList[i].elem) == 'N'){
+			else if(std::string(bAtomList[i].elem) == "N"){
 				bAtomList[i].bAtomType = new
 						BivalentAtom(bAtomList[i].name,  Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
 			}
-			else if(toupper(bAtomList[i].elem) == 'S'){
+			else if(std::string(bAtomList[i].elem) == "S"){
 				bAtomList[i].bAtomType = new
 						BivalentAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()),
 						             109.47*Deg2Rad);
@@ -291,29 +405,29 @@ void Topology::SetGmolAtomsMolmodelTypes()
 		}
 			// Atoms with three bonds
 		else if (bAtomList[i].nbonds == 3){
-			if(toupper(bAtomList[i].elem) == 'C'){
+			if(std::string(bAtomList[i].elem) == "C"){
 				bAtomList[i].bAtomType = new
 						TrivalentAtom(bAtomList[i].name, Element(6, "Carbon", "C", bAtomList[i].getMass()),
 						              120*Deg2Rad, 120*Deg2Rad
 				);
 				bAtomList[i].setAtomicNumber(6);
 			}
-			else if(toupper(bAtomList[i].elem) == 'O'){
+			else if(std::string(bAtomList[i].elem) == "O"){
 				bAtomList[i].bAtomType = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(8);
 			}
-			else if(toupper(bAtomList[i].elem) == 'N'){
+			else if(std::string(bAtomList[i].elem) == "N"){
 				bAtomList[i].bAtomType = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
 			}
-			else if(toupper(bAtomList[i].elem) == 'S'){
+			else if(std::string(bAtomList[i].elem) == "S"){
 				bAtomList[i].bAtomType = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(16);
 			}
-			else if(toupper(bAtomList[i].elem) == 'P'){
+			else if(std::string(bAtomList[i].elem) == "P"){
 				bAtomList[i].bAtomType = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(15);
@@ -322,27 +436,27 @@ void Topology::SetGmolAtomsMolmodelTypes()
 		}
 			// Atoms with four bonds
 		else if (bAtomList[i].nbonds == 4){
-			if(toupper(bAtomList[i].elem) == 'C'){
+			if(std::string(bAtomList[i].elem) == "C"){
 				bAtomList[i].bAtomType = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(6);
 			}
-			else if(toupper(bAtomList[i].elem) == 'O'){
+			else if(std::string(bAtomList[i].elem) == "O"){
 				bAtomList[i].bAtomType = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(8);
 			}
-			else if(toupper(bAtomList[i].elem) == 'N'){
+			else if(std::string(bAtomList[i].elem) == "N"){
 				bAtomList[i].bAtomType = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
 			}
-			else if(toupper(bAtomList[i].elem) == 'S'){
+			else if(std::string(bAtomList[i].elem) == "S"){
 				bAtomList[i].bAtomType = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(16);
 			}
-			else if(toupper(bAtomList[i].elem) == 'P'){
+			else if(std::string(bAtomList[i].elem) == "P"){
 				bAtomList[i].bAtomType = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(15);
@@ -403,8 +517,8 @@ void Topology::bAddBiotypes(
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
 			  SimTK::Element(
 				  bAtomList[i].getAtomicNumber(),
-				  (std::to_string(bAtomList[i].getElem())).c_str(),
-				  (std::to_string(bAtomList[i].getElem())).c_str(),
+				  ((bAtomList[i].getElem())).c_str(),
+				  ((bAtomList[i].getElem())).c_str(),
 				  bAtomList[i].getMass()),
 			bAtomList[i].getNBonds(),
 			resName.c_str(),
@@ -419,7 +533,8 @@ void Topology::bAddBiotypes(
 		std::string temp(name + bAtomList[i].name); // DEL MULMOL
 		temp += bAtomList[i].fftype;
 		bAtomList[i].setBiotype(temp);
-		//std::cout << "Added Biotype " << temp << " with BiotypeIndex " << biotypeIndex << std::endl;
+		/* std::cout << "Added Biotype " << temp 
+			<< " with BiotypeIndex " << biotypeIndex << std::endl; */
 	}
 }
 
@@ -432,38 +547,6 @@ void Topology::generateDummAtomClasses(
 				, SimTK::DuMMForceFieldSubsystem& dumm
 )
 {
-/*
-	// Define AtomClasses
-	SimTK::DuMM::AtomClassIndex aCIx;
-
-	// Iterate through amberReader atoms and define AtomClasses
-	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
-		// Get an AtomClass index
-		aCIx = dumm.getNextUnusedAtomClassIndex();
-		bAtomList[i].setAtomClassIndex(aCIx);
-
-		// Define an AtomClass name
-		std::string atomClassName =
-				//std::string("top") // restore MULMOL
-				name // del MULMOL
-				+ resName
-				+ bAtomList[i].getFftype()
-				+ std::string("_")
-				+ std::to_string(bAtomList[i].getNumber());
-
-		// Define an AtomClass (has info about van der Waals)
-		dumm.defineAtomClass(
-			aCIx,
-			atomClassName.c_str(),
-			bAtomList[i].getAtomicNumber(), // int atomicNumber
-			bAtomList[i].getNBonds(), // expected valence
-			bAtomList[i].getVdwRadius() / 10.0, // nm
-			bAtomList[i].getLJWellDepth() * 4.184 // kcal to kJ
-		);
-
-		//std::cout << "Defined AtomClass " << atomClassName << " with atomClassIndex " << aCIx << std::endl;
-	}
-*/
 
 	// Iterate through Gmolmodel atoms and define AtomClasses
 	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
@@ -497,7 +580,9 @@ void Topology::generateDummAtomClasses(
 			// Define an AtomClass name
 			atomClassName = bAtomList[i].getFftype();
 
-			//std::cout << "!foundit aCIx atomClassName " << aCIx << " " << atomClassName  << std::endl;
+			//std::cout << "!foundit aCIx atomClassName " << aCIx << " "
+			//	<< atomClassName  << std::endl;
+
 			// Define an AtomClass
 			dumm.defineAtomClass(aCIx, atomClassName.c_str(),
 				atomParams.atomicNumber,
@@ -641,12 +726,15 @@ void Topology::transferDummAtomClasses(
 }
 
 /** Print Molmodel specific types as introduced in Gmolmodel **/
-const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const
+const void Topology::PrintMolmodelAndDuMMTypes(
+	SimTK::DuMMForceFieldSubsystem& dumm) const
 {
-	std::cout << "Print Molmodel And DuMM Types:" << std::endl;
+	std::cout << "Print Molmodel And DuMM Types:" << std::endl 
+	<< std::flush;
 	for(size_t i = 0; i < bAtomList.size(); i++){
 		std::cout << " list ix " << i
 			<< " CompoundAtomIndex " << bAtomList[i].getCompoundAtomIndex()
+			/* //<< " DuMMAtomIndex " << getDuMMAtomIndex(bAtomList[i].getCompoundAtomIndex())
 			<< " biotypename " << bAtomList[i].biotype
 			<< " name " << bAtomList[i].name
 			<< " BiotypeIndex " << bAtomList[i].getBiotypeIndex()
@@ -658,8 +746,8 @@ const void Topology::PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& d
 			<< " DuMM VdW Radius "
 			<< dumm.getVdwRadius(bAtomList[i].getAtomClassIndex())
 			<< " DuMM VdW Well Depth "
-			<< dumm.getVdwWellDepth(bAtomList[i].getAtomClassIndex())
-			<< std::endl;
+			<< dumm.getVdwWellDepth(bAtomList[i].getAtomClassIndex()) */
+			<< std::endl << std::flush;
 	}
 }
 
@@ -861,7 +949,7 @@ void Topology::generateDummParams(
 
 	// Add types
 	generateDummAtomClasses(resName, amberReader, dumm);
-
+std::cout << "generateDummParams 0 \n"; PrintMolmodelAndDuMMTypes(dumm);
 	// Add parameters
 	bAddDummBondParams(resName, amberReader, dumm);
 	bAddDummAngleParams(resName, amberReader, dumm);
@@ -1508,9 +1596,15 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	}
 
 	// Build the graph
-	nofProcesses = 0;
-	buildAcyclicGraph(root, root);
-    std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
+	if(bAtomList.size() == 1){
+		this->setBaseAtom(*bAtomList[0].getBAtomType());
+		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
+		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
+	}else{
+		nofProcesses = 0;
+		buildAcyclicGraph(root, root);
+		std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
+	}
 
 	// Close the remaining bonds
 	addRingClosingBonds();
@@ -1818,28 +1912,6 @@ void Topology::loadAIx2MbxMap(){
 
 
 }
-
-//void Topology::loadMbx2AIxMap(){
-//	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-//
-//		// Get atomIndex from atomList
-//		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
-//
-//		// Get MobilizedBodyIndex from CompoundAtom
-//		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
-//
-//		// Map mbx2aIx contains only atoms at the origin of mobods
-//		//std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
-//		//        pairToBeInserted(mbx, aIx);
-//		if (getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
-//			mbx2aIx.insert(
-//				std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex>
-//				(mbx, aIx));
-//		}
-//
-//	}
-//
-//}
 
 
 /** Compound AtomIndex to bAtomList number **/

@@ -36,7 +36,7 @@ void bSpecificAtom::Zero(){
     visited = 0;
     moleculeIndex = std::numeric_limits<int>::min();
 
-    elem = '\0';
+    elem = "";
 }
 
 void bSpecificAtom::Print(int whichWorld)
@@ -102,7 +102,7 @@ int bSpecificAtom::getNumber() const
 }
 
 // Returns atom element
-char bSpecificAtom::getElem() const
+std::string bSpecificAtom::getElem() const
 {
     return this->elem;
 }
@@ -204,7 +204,7 @@ void bSpecificAtom::setNumber(int inpNumber){
 }
 
 // Set element
-void bSpecificAtom::setElem(char inpElem){
+void bSpecificAtom::setElem(std::string inpElem){
     this->elem = inpElem;
 }
 
@@ -369,7 +369,7 @@ void bSpecificAtom::setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIn
  * ******************/
 int bAtomAssign(MolAtom *dest, const bSpecificAtom *src)
 {
-    dest->name = new char[5]; // TODO who deletes this?
+/*     dest->name = new char[5]; // TODO who deletes this?
 
     std::copy(dest->name, dest->name + 5, src->getName().begin());
 
@@ -388,7 +388,7 @@ int bAtomAssign(MolAtom *dest, const bSpecificAtom *src)
     // TODO they use float, we use double
     dest->pos[0] = static_cast<float>(src->getX());
     dest->pos[1] = static_cast<float>(src->getY());
-    dest->pos[2] = static_cast<float>(src->getZ());
+    dest->pos[2] = static_cast<float>(src->getZ()); */
 
     return 0;
 }

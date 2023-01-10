@@ -903,6 +903,7 @@ void Context::AddMolecules(
 	int requestedNofMols,
 	SetupReader& setupReader
 ){
+
 	topologies.reserve(requestedNofMols);
 	moleculeCount = -1;
 
@@ -933,7 +934,6 @@ void Context::AddMolecules(
 		// Initialize an input reader
 		readAmberInput amberReader;
 		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
-
 		moleculeCount++; // Used for unique names of molecules // from world
 		std::string moleculeName = "MOL" + std::to_string(moleculeCount); // from world
 		roots.emplace_back(argRoots[molIx]); // from world
@@ -947,18 +947,14 @@ void Context::AddMolecules(
 		// Set atoms Molmodel types (Compound::SingleAtom derived) based on // from world
 		// their valence // from world
 		topologies[molIx].SetGmolAtomsMolmodelTypesTrial(); // from world
-
 		// Add Biotypes // from world
 		topologies[molIx].bAddBiotypes(&amberReader); // from world
-
 		// Build Robosample graph and Compound graph.
 		// It also asigns atom indexes in Compound
 		// This is done only once and it needs
 		topologies[molIx].buildGraphAndMatchCoords(
 			std::stoi(roots.back()));
-
 		topologies[molIx].loadTriples();
-
 		// Map of Compound atom indexes to Robosample atom indexes
 		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
 		//std::cout << "Topology " << molIx << " info\n";
@@ -999,6 +995,7 @@ void Context::addDummParams(
 			// Add parameters in DuMM
 			(updWorld(worldIx))->transferDummParams(molIx, &amberReader);
 		}
+
 	}
 
 }
@@ -2278,6 +2275,7 @@ void Context::swapPotentialEnergy(int replica_i, int replica_j)
 // Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
 // as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
 //, 135:194110, 2011. DOI:10.1063/1.3660669
+// replica_i and replica_j are variable
 bool Context::attemptSwap(int replica_i, int replica_j)
 {
 	bool returnValue = false;
@@ -2358,9 +2356,9 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 	//	<< std::endl;
 	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
 
-	std::cout << "bibjwiwj "
-		<< thermodynamicStates[thermoState_i].getBeta() << " "
-		<< thermodynamicStates[thermoState_j].getBeta() << " "
+	std::cout << "bibj "
+		<< thermodynamicStates[0].getBeta() << " "
+		<< thermodynamicStates[1].getBeta() << " "
 		<< std::endl;
 
 	// Apply acceptance criterion
@@ -2368,12 +2366,7 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
-		PrintReplicaMaps();
-
 		swapThermodynamicStates(replica_i, replica_j);
-
-		PrintReplicaMaps();
-
 
 		swapPotentialEnergy(replica_i, replica_j);
 
@@ -2381,11 +2374,8 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 		std::cout << "swapped\n" << endl;
 
-
-
 	}else{
 		std::cout << "left\n" << endl;
-		PrintReplicaMaps();
 
 	}
 
@@ -2568,6 +2558,7 @@ void Context::mixAllReplicas(int nSwapAttempts)
 }
 
 // Mix neighboring replicas
+// Thermodyanmic states are fixed; replicas are variables
 void Context::mixNeighboringReplicas(unsigned int startingFrom)
 {
 	int thermoState_i = 0;
@@ -3297,12 +3288,15 @@ void Context::RunREX(void)
 
 		} // end replicas simulations
 
+
 		// Mix replicas
 		if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 			if ((mixi % 2) == 0){
 				mixNeighboringReplicas(0);
+
 			}else{
 				mixNeighboringReplicas(1);
+
 			}
 		}else{
 			mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
@@ -3728,7 +3722,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
 		// DELETE THIS CODE
-		/* std::cout << "TEST MODE\n";
+		std::cout << "TEST MODE\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
 
@@ -3777,7 +3771,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		givenX_BM[20] = 0.108296974;
 		givenX_BM[21] = 0.111305194;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM); */
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
 		// DELETE CODE ABOVE
 
 		// Main loop: iterate through rounds

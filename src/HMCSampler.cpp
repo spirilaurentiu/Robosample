@@ -2471,7 +2471,7 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	//std::cout << "unshifted Q = " << someState.getQ() << std::endl;
 
 	// 1. Update means of values before altering them
-	world->updateTransformsMeans(someState);
+	//world->updateTransformsMeans(someState);
 
 	//world->PrintX_PFMeans();
 	//world->PrintX_BMMeans();
@@ -3032,8 +3032,8 @@ bool HMCSampler::acceptSample() {
 			}
 		}else if(DistortOpt < 0){
 			prob =
-			MHAcceptProbability(etot_o,
-								etot_n + this->work);
+			MHAcceptProbability(pe_o + fix_o,
+								pe_n + fix_n + this->work);
 		}
 
 		// std::cout << "\trand_no=" << rand_no << ", prob=" << prob 

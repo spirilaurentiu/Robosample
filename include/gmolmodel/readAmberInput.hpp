@@ -48,6 +48,9 @@ class readAmberInput{
       TARGET_TYPE getAtomsRadii(int p); // A
       TARGET_TYPE getAtomsRVdW(int p);  // A
       TARGET_TYPE getAtomsEpsilon(int p); // kcal
+
+      TARGET_TYPE getAtomicNumber(int p);
+
       // amber internal charge
       // q = amber int charge / chargemMultiplier;
       // chargemMultiplier = 18.2223;
@@ -180,6 +183,7 @@ class readAmberInput{
     std::vector<int> AtomsTypesIndex;
     std::vector<TARGET_TYPE> AtomsScreenGBIS;
 
+    std::vector<TARGET_TYPE> AtomicNumbers;
 
     std::vector<TARGET_TYPE> tempBond_K;
     std::vector<TARGET_TYPE> tempBond_eq;
@@ -218,6 +222,8 @@ class readAmberInput{
     void readAtomsRadii();
     void readAtomsTypesIndex();
     void readAtomsScreenGBIS();
+
+    void readAtomicNumber();
 
     void readNonbondedParmIndex();
     void readTempBondsForceK();

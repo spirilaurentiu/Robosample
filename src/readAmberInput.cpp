@@ -39,6 +39,10 @@ try
         readPointers();
     else if (line.find("CHARGE") != std::string::npos)
         readAtomsCharge();
+
+    else if (line.find("ATOMIC_NUMBER") != std::string::npos)
+        readAtomicNumber();
+
     else if (line.find("MASS") != std::string::npos)
         readAtomsMass();
     else if (line.find("FLAG RADII") != std::string::npos)
@@ -53,6 +57,7 @@ try
         readAtomsNameAlias();
     else if (line.find("NONBONDED_PARM_INDEX") != std::string::npos)
         readNonbondedParmIndex();
+
 
 
     else if (line.find("BOND_FORCE_CONSTANT") != std::string::npos)
@@ -100,7 +105,7 @@ try
         readLennardJonesBCOEF();
 
   }
-
+std::cout << " DEBUG 2.666 " << std::endl << std::flush;
   readLennardJonesRVdWEpsilon();
 
 }
@@ -166,6 +171,14 @@ void readAmberInput::readPointers(){
     for(i = 0; i < NumberAtoms; i++)
     {
          prmtop >> temp_val; AtomsCharge.push_back(temp_val);
+    }
+  }
+
+  void readAmberInput::readAtomicNumber(){
+    getline(prmtop, line);
+    for(i = 0; i < NumberAtoms; i++)
+    {
+         prmtop >> temp_val; AtomicNumbers.push_back(temp_val);
     }
   }
 
@@ -240,7 +253,6 @@ void readAmberInput::readPointers(){
          }
     }
   }
-
 
   void readAmberInput::readTempBondsForceK(){
     getline(prmtop, line);
@@ -567,7 +579,9 @@ TARGET_TYPE readAmberInput::getAtomsEpsilon(int p){
   return AtomsEpsilon[p];
 }
 
-
+TARGET_TYPE readAmberInput::getAtomicNumber(int p){
+  return AtomicNumbers[p];
+}
 
 int readAmberInput::getBondsAtomsIndex1(int bond){
   return BondsAtomsIndex[bond][0];
@@ -625,23 +639,26 @@ int readAmberInput::getDihedralsAtomsIndex(int dihIndex, int atomIndx)
 //HOREA
 void readAmberInput::GeneratePairStartAndLen()
 {
-	std::vector<int> currentDihedralIndices = DihedralsAtomsIndex[0];
-	PairStartAndLen.push_back( std::make_pair(0,1) );
+  if( DihedralsAtomsIndex.size() ){
+    std::vector<int> currentDihedralIndices = DihedralsAtomsIndex[0];
+    PairStartAndLen.push_back( std::make_pair(0,1) );
 
-	for(unsigned int idx = 1 ; idx < DihedralsAtomsIndex.size() ; idx++ )
-	{
-		if( currentDihedralIndices[0] == DihedralsAtomsIndex[i][0] &&
-		    currentDihedralIndices[1] == DihedralsAtomsIndex[i][1] &&
-		    currentDihedralIndices[2] == DihedralsAtomsIndex[i][2] &&
-		    currentDihedralIndices[3] == DihedralsAtomsIndex[i][3] )
-		{
-			PairStartAndLen[ PairStartAndLen.size() -1 ].second ++;
-		}
-		else {
-			int nextIndx = PairStartAndLen.back().first;
-			PairStartAndLen.push_back( std::make_pair( nextIndx + 1, 1) );
-		}
-	}
+    for(unsigned int idx = 1 ; idx < DihedralsAtomsIndex.size() ; idx++ )
+    {
+      if( currentDihedralIndices[0] == DihedralsAtomsIndex[i][0] &&
+          currentDihedralIndices[1] == DihedralsAtomsIndex[i][1] &&
+          currentDihedralIndices[2] == DihedralsAtomsIndex[i][2] &&
+          currentDihedralIndices[3] == DihedralsAtomsIndex[i][3] )
+      {
+        PairStartAndLen[ PairStartAndLen.size() -1 ].second ++;
+      }
+      else {
+        int nextIndx = PairStartAndLen.back().first;
+        PairStartAndLen.push_back( std::make_pair( nextIndx + 1, 1) );
+      }
+    }
+  }
+	
 }
 
 std::vector < std::pair<int, int> > readAmberInput::getPairStartAndLen()

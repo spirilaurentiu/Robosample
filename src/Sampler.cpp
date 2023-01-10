@@ -230,7 +230,9 @@ SimTK::Real Sampler::getBeta() const {
     return beta;
 }
 
-SimTK::Real Sampler::generateRandomNumber(GmolRandDistributionType distributionType) {
+SimTK::Real
+Sampler::generateRandomNumber(GmolRandDistributionType distributionType)
+{
     if(distributionType == GmolRandDistributionType::UNIFORM){
         return uniformRealDistribution(randomEngine);
     }else{

@@ -245,6 +245,15 @@ int main(int argc, char **argv)
 	// Add molecules based on the setup reader
 	context.AddMolecules(requestedNofMols, setupReader);
 
+	//============================================ @@
+	/* std::cout << "Context::AddMolecules:\n" << std::flush;	
+	const Topology& topology = context.updWorld(0)->getTopology(0);
+	//topology.bAtomList.size();
+	//std::cout << " First atom CompoundAtomIndex " << topology.bAtomList[0].getCompoundAtomIndex() << std::endl << std::flush;
+	//topology.PrintMolmodelAndDuMMTypes(dumm);
+	//context.PrintMolmodelAndDuMMTypes(); */
+	//============================================ @@
+
 	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
 	int finalNofMols = context.getNofMolecules();
 	if(requestedNofMols != finalNofMols){
@@ -260,6 +269,7 @@ int main(int argc, char **argv)
 	// Adopts compound by the CompoundSystem
 	// and loads maps of indexes
 	context.model(finalNofMols, setupReader);
+
 
 	// Allocate space for containers that keep statistics if we're doing any
 	context.allocWorldsStatsContainers();
