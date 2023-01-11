@@ -154,8 +154,8 @@ public:
 	SimTK::Real getSetPE(void) const;
 	void setSetPE(SimTK::Real argPE); 
 
-	// Get/set work
-	SimTK::Real getWork(void) const;
+	// Get/set Jacobians
+	SimTK::Real getDistortJacobianDetLog(void) const;
 
 	// Set/get residual embedded potential energy: potential
 	// stored inside rigid bodies
@@ -277,7 +277,8 @@ public:
 	int getJointTypeFromH(const SimTK::State& someState,
 		const SimTK::MobilizedBody& mobod);
 
-	// 
+	// Are we performing work by modifying Q
+	const int getDistortOpt();
 	void setDistortOption(const int& distortOptArg);
 
 	void setQScaleFactor(const SimTK::Real& s);
@@ -297,7 +298,7 @@ public:
 	/**
 	 * 
 	*/
-	SimTK::Real getBendStretchLogJacobian(SimTK::State& someState,
+	SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState,
 		std::vector<SimTK::Real> scaleFactors);
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
@@ -493,7 +494,7 @@ protected:
 	SimTK::Real ke_prop_nma6;
 	SimTK::Real ke_n_nma6;
 
-	SimTK::Real work;
+	SimTK::Real bendStretchJacobianDetLog;
 
 	SimTK::Real boostT;
 	SimTK::Real boostRT;

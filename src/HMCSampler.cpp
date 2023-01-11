@@ -149,7 +149,7 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	totalMass = 0;
 
 	// Work
-	work = 0.0;
+	bendStretchJacobianDetLog = 0.0;
 
 }
 
@@ -261,7 +261,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 	this->totalMass = matter->calcSystemMass(someState);
 
 	// Work
-	work = 0.0;
+	bendStretchJacobianDetLog = 0.0;
 
 }
 
@@ -353,7 +353,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	this->totalMass = matter->calcSystemMass(someState);
 	
 	// Work
-	work = 0.0;
+	bendStretchJacobianDetLog = 0.0;
 
 }
 
@@ -1318,9 +1318,16 @@ void HMCSampler::setSetPE(SimTK::Real argPE)
 	this->pe_set = argPE;
 }
 
-SimTK::Real HMCSampler::getWork(void) const
+SimTK::Real HMCSampler::getDistortJacobianDetLog(void) const
 {
-	return this->work;
+	// Accumulate all transformation Jacobians in here
+	SimTK::Real retValue = 0.0;
+
+	// Bend-Stretch joints
+	retValue += this->bendStretchJacobianDetLog;
+
+
+	return retValue;
 }
 
 // Set/get Residual Embedded Potential
@@ -2381,6 +2388,10 @@ void HMCSampler::setSetConfigurationAndEnergiesToOld(
 
 }
 
+const int HMCSampler::getDistortOpt(void)
+{
+	return this->DistortOpt;
+}
 
 void HMCSampler::setDistortOption(const int& distortOptArg)
 {
@@ -2642,7 +2653,7 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 }
 
 SimTK::Real 
-HMCSampler::getBendStretchLogJacobian(
+HMCSampler::calcBendStretchJacobianDetLog(
 	SimTK::State& someState,
 	std::vector<SimTK::Real> scaleFactors)
 {
@@ -2792,7 +2803,8 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	std::cout << "scaleFactors: ";
 	PrintCppVector(scaleFactors);
 
-	this->work -= getBendStretchLogJacobian(someState, scaleFactors);
+	this->bendStretchJacobianDetLog =
+		calcBendStretchJacobianDetLog(someState, scaleFactors);
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){
@@ -3028,7 +3040,7 @@ bool HMCSampler::acceptSample() {
 		}else if(DistortOpt < 0){
 			prob =
 			MHAcceptProbability(pe_o + fix_o,
-								pe_n + fix_n + this->work);
+								pe_n + fix_n + this->bendStretchJacobianDetLog);
 		}
 
 		// std::cout << "\trand_no=" << rand_no << ", prob=" << prob 
@@ -3304,7 +3316,7 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 		//<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
 		<< "\n\tts " << timestep  //<< ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
 		<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_o
-		<< ", work " << work
+		<< ", work " << bendStretchJacobianDetLog
 		<< std::endl;
 }
 

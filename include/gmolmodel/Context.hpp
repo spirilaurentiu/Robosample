@@ -311,7 +311,7 @@ public:
 	const int& getSwapFixman(void){return swapFixman;}
 	void setSwapFixman(const int argSwapFixman){swapFixman = argSwapFixman;}
 
-	SimTK::Real calcReplicaWork(int replicaIx);
+	SimTK::Real calcReplicaTransferedEnergy(int replicaIx);
 
 	// SWaps replicas thermodynamic states
 	void swapThermodynamicStates(int replica_i, int replica_j);

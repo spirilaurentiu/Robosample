@@ -308,8 +308,10 @@ public:
 	/** Allocate space for containers that keep statistics if we're doing any **/
 	void allocateStatsContainers(void);
 
-	// Get log of the Jacobian of the transformation
-	SimTK::Real getWork(void);
+	// Get the (potential) energy transfer
+	// If any of the Q, U or tau is actively modifyied by the sampler
+	// the Jacobian of that transformation will be included too
+	SimTK::Real getWorkOrHeat(void);
 
 	// Set initial values of X_PF or X_BM
 	void setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,

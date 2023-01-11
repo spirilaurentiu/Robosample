@@ -636,9 +636,31 @@ void World::allocateStatsContainers(void)
 
 }
 
-SimTK::Real World::getWork(void)
+// Get the (potential) energy transfer
+// If any of the Q, U or tau is actively modifyied by the sampler
+// the Jacobian of that transformation will be included too
+SimTK::Real World::getWorkOrHeat(void)
 {
-	return getSampler(0)->getWork();
+	// Accumulate in this variable
+	SimTK::Real retValue = 0.0;
+
+	// Get the energy transfer from all the samplers
+	for(auto& sampler : this->samplers){
+
+		// Get the potential energy difference
+		retValue += 
+			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
+
+		// Get the Q modifying samplers Jacobians
+		if(sampler->getDistortOpt() < 0){
+			retValue -= 
+				sampler->getDistortJacobianDetLog();
+		}
+		
+	}
+	
+	return retValue;
+
 }
 
 /*

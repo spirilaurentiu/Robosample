@@ -295,8 +295,8 @@ class Replica{
 	void setPotentialEnergy(const SimTK::Real& somePotential){
 		potential = somePotential;}
 
-	const SimTK::Real getWork(void){return work;}
-	void setWork(const SimTK::Real workArg){this->work = workArg;}
+	const SimTK::Real getTransferedEnergy(void){return transferedEnergy;}
+	void setTransferedEnergy(const SimTK::Real workArg){this->transferedEnergy = workArg;}
 
 	const SimTK::Real get_WORK_PotentialEnergy_New(void)
 	{ return this->WORK_potential;}
@@ -327,7 +327,7 @@ class Replica{
 	SimTK::Real potential; // TODO: turn into a vector for worlds
 	SimTK::Real WORK_potential; // TODO: turn into a vector for worlds
 
-	SimTK::Real work; // TODO: turn into a vector for worlds
+	SimTK::Real transferedEnergy; // TODO: turn into a vector for worlds
 	SimTK::Real FixmanPotential; // TODO: turn into a vector for worlds
 
 };
@@ -530,7 +530,6 @@ void Context::throwAndExit(std::string errMsg, int errCode){
 		throw std::exception();
 		std::exit(errCode);
 }
-
 
 // Default constructor
 Context::Context(const SetupReader& setupReader, std::string logFilename)
@@ -1318,7 +1317,8 @@ void Context::setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mix
 /////////////////////////
 
 // Get/set the main temperature (acc/rej temperature for MC)
-SimTK::Real Context::getTemperature(std::size_t whichWorld) const {
+SimTK::Real Context::getTemperature(std::size_t whichWorld) const
+{
 	return worlds[whichWorld].temperature;
 }
 
@@ -1424,12 +1424,14 @@ void Context::initializeSampler(std::size_t whichWorld,
 }
 
 // Amber like scale factors.
-void Context::setAmberForceFieldScaleFactors(std::size_t whichWorld){
+void Context::setAmberForceFieldScaleFactors(std::size_t whichWorld)
+{
 	worlds[whichWorld].setAmberForceFieldScaleFactors();
 }
 
 // Amber like scale factors.
-void Context::setAmberForceFieldScaleFactors(void){
+void Context::setAmberForceFieldScaleFactors(void)
+{
 	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
 		worlds[worldIx].setAmberForceFieldScaleFactors();
 	}
@@ -1437,11 +1439,13 @@ void Context::setAmberForceFieldScaleFactors(void){
 
 // Set a global scaling factor for the forcefield
 void Context::setGlobalForceFieldScaleFactor(
-	std::size_t whichWorld, SimTK::Real globalScaleFactor){
+	std::size_t whichWorld, SimTK::Real globalScaleFactor)
+{
 	worlds[whichWorld].setGlobalForceFieldScaleFactor(globalScaleFactor);
 }
 
-void Context::setGlobalForceFieldScaleFactor(SimTK::Real globalScaleFactor){
+void Context::setGlobalForceFieldScaleFactor(SimTK::Real globalScaleFactor)
+{
 	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
 		worlds[worldIx].setGlobalForceFieldScaleFactor(globalScaleFactor);
 	}
@@ -1460,7 +1464,8 @@ void Context::setGbsaGlobalScaleFactor(SimTK::Real gbsaGlobalScaleFactor){
 }
 
 // If HMC, get/set the number of MD steps
-int Context::getNofMDStepsPerSample(std::size_t whichWorld, std::size_t whichSampler){
+int Context::getNofMDStepsPerSample(std::size_t whichWorld, std::size_t whichSampler)
+{
    return pHMC(worlds[whichWorld].updSampler(whichSampler))->getMDStepsPerSample();
 }
 
@@ -1870,7 +1875,8 @@ void Context::addReplica(int index)
 	));
 
 	///* // EXPERIMENTAL
-    std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocationsFromFile;
+    std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
+		referenceAtomsLocationsFromFile;
 
     // Iterate through molecules
     for(unsigned int molIx = 0; molIx < nofMols; molIx++){
@@ -2430,19 +2436,19 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	// ============================ WORK ======================================
 	// Replica i reduced potential in state i
 	SimTK::Real Wii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].getWork();
+		* replicas[replica_i].getTransferedEnergy();
 
 	// Replica j reduced potential in state j
 	SimTK::Real Wjj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].getWork();
+		* replicas[replica_j].getTransferedEnergy();
 
 	// Replica i reduced potential in state j
 	SimTK::Real Wij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].getWork();
+		* replicas[replica_i].getTransferedEnergy();
 
 	// Replica j reduced potential in state i
 	SimTK::Real Wji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].getWork();
+		* replicas[replica_j].getTransferedEnergy();
 	// ========================================================================
 
 	// ========================== LAST PE =====================================
@@ -2468,8 +2474,11 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 
 	SimTK::Real ETerm = -1.0 * (Eij + Eji) + Eii + Ejj;
 	//SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
-	SimTK::Real WTerm = -1.0 * ((Lji - Ejj + replicas[replica_j].getWork()) +
-		(Lij - Eii + replicas[replica_i].getWork()));
+	//SimTK::Real WTerm = -1.0 * ((Lji - Ejj + replicas[replica_j].getTransferedEnergy()) +
+	//	(Lij - Eii + replicas[replica_i].getTransferedEnergy()));
+	SimTK::Real WTerm = -1.0 *  // 
+		(replicas[replica_i].getTransferedEnergy() +
+		 replicas[replica_j].getTransferedEnergy());
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
@@ -2484,8 +2493,8 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	std::cout << "EiiEjj " << Eii << " " << Ejj << " "
 		<< Eij << " " << Eji << std::endl;
 
-	std::cout << "Total work i j " << replicas[replica_i].getWork()
-		<< " " << replicas[replica_j].getWork() << std::endl;
+	std::cout << "Total work i j " << replicas[replica_i].getTransferedEnergy()
+		<< " " << replicas[replica_j].getTransferedEnergy() << std::endl;
 
 	std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl;
@@ -2805,8 +2814,6 @@ void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
     SimTK::Real U = pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
 	replicas[replicaIx].setFixman(U);
 }
-
-
 
 // Update replicas coordinates from work generated coordinates
 void Context::set_WORK_CoordinatesAsFinal(int replicaIx)
@@ -3234,14 +3241,10 @@ void Context::RunREX(void)
 			writePdbs(0,	replica2ThermoIxs[replicaIx]);
 	}
 
-	// Mix replicas
-	//mixReplicas();
-
 	PrintNofAcceptedSwapsMatrix();
 
 	// Main loop
 	int nofMixes = int(nofRounds / swapEvery);
-
 
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 		std::cout << " REX batch " << mixi << std::endl;
@@ -3252,7 +3255,6 @@ void Context::RunREX(void)
 		}else{ // even batch
 			qScaleFactors = &qScaleFactorsEven;
 		}
-
 		
 		// Run each replica serially
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
@@ -3378,7 +3380,7 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 }
 
-SimTK::Real Context::calcReplicaWork(int replicaIx)
+SimTK::Real Context::calcReplicaTransferedEnergy(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
@@ -3390,27 +3392,18 @@ SimTK::Real Context::calcReplicaWork(int replicaIx)
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
-	// Run the non-equilibrium worlds
-	SimTK::Real work = 0;
+	// Accumulate energy transfer here
+	SimTK::Real deltaEnergy = 0;
 
-/* 	// Accumulate work from energy differences of nonequil worlds
+	// Accumulate heat from equilibrium worlds and
+	// work from perturbation kernels of nonequil worlds
 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++)
 	{
-		if(NDistortOpt[worldIx] != 0){
-			work += ( worlds[worldIx].updSampler(0)->getNewPE()
-					- worlds[worldIx].updSampler(0)->getOldPE() );
-		}
-	} // END iteration through worlds */
+			deltaEnergy += ( worlds[worldIx].getWorkOrHeat() );
+	}
 
-	// Accumulate work from perturbation kernels of nonequil worlds
-	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++)
-	{
-		if(NDistortOpt[worldIx] != 0){
-			work += ( worlds[worldIx].getWork() );
-		}
-	} // END iteration through worlds
+	return deltaEnergy;
 
-	return work;
 }
 
 void Context::RunRENS(void)
@@ -3495,7 +3488,8 @@ void Context::RunRENS(void)
 			RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
 			// ========================= UNLOAD =======================
-			replicas[replicaIx].setWork( calcReplicaWork(replicaIx) );
+			replicas[replicaIx].setTransferedEnergy(
+				calcReplicaTransferedEnergy(replicaIx) );
 
 			// Deposit work coordinates into the replica
 			store_WORK_CoordinatesFromFrontWorld(replicaIx);
@@ -3718,7 +3712,6 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		
 	}
 
-
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
 		// DELETE THIS CODE
@@ -3892,8 +3885,7 @@ uint32_t Context::getSeed(std::size_t whichWorld, std::size_t whichSampler) cons
 }
 
 
-
-	//------------
+//------------
 //------------
 
 
