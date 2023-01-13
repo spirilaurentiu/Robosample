@@ -48,7 +48,7 @@ void bSpecificAtom::Print(int whichWorld)
         //<< " bAtomType "<< bAtomType 
         <<" charge "<<charge<<" mobile "<<mobile<<" visited "<<visited<<std::endl;
 
-    std::cout << "Neighbors:";
+/*     std::cout << "Neighbors:";
     for(std::vector<bSpecificAtom *>::iterator it = neighbors.begin();
     it != neighbors.end(); ++it){
         std::cout << ' ' << (*it)->number;
@@ -59,7 +59,7 @@ void bSpecificAtom::Print(int whichWorld)
     for(std::vector<bBond *>::iterator it = bondsInvolved.begin();
     it != bondsInvolved.end(); ++it){
         (*it)->Print(whichWorld);
-    }
+    } */
 
     // Residue info
     //std::string residueName;

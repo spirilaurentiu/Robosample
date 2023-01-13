@@ -105,7 +105,7 @@ try
         readLennardJonesBCOEF();
 
   }
-std::cout << " DEBUG 2.666 " << std::endl << std::flush;
+  
   readLennardJonesRVdWEpsilon();
 
 }

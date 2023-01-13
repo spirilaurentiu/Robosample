@@ -909,6 +909,8 @@ void Context::AddMolecules(
 	std::vector<std::string> argRoots = setupReader.get("ROOTS");
 	std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
+	std::vector<readAmberInput> amberReader(requestedNofMols);
+
 	// Iterate through topology filenames vector
 	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
@@ -931,30 +933,42 @@ void Context::AddMolecules(
 		loadCoordinatesFile( crdFN );
 
 		// Initialize an input reader
-		readAmberInput amberReader;
-		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
+		//readAmberInput amberReader;
+		amberReader[molIx].readAmberFiles(crdFNs[molIx], topFNs[molIx]);
+
+		// Keep track of the number of molecules
 		moleculeCount++; // Used for unique names of molecules // from world
-		std::string moleculeName = "MOL" + std::to_string(moleculeCount); // from world
+		std::string moleculeName = "MOL" + std::to_string(moleculeCount); 
 		roots.emplace_back(argRoots[molIx]); // from world
 		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok? // from world
+		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok? 
+
 		// Set atoms properties from a reader: number, name, element, initial
 		// name, force field type, charge, coordinates, mass, LJ parameters
-		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader); // from world
-		// Set bonds properties from reader: bond indeces, atom neighbours // from world
-		topologies[molIx].SetGmolBondingPropertiesFromReader(&amberReader); // from world
-		// Set atoms Molmodel types (Compound::SingleAtom derived) based on // from world
+		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]); 
+
+		std::cout << "ATOM_LIST for Topology " << molIx << std::endl;
+		topologies[molIx].PrintAtomList(0);
+
+		// Set bonds properties from reader: bond indeces, atom neighbours
+		topologies[molIx].SetGmolBondingPropertiesFromReader(&amberReader[molIx]);
+
+		// Set atoms Molmodel types (Compound::SingleAtom derived) based on
 		// their valence // from world
-		topologies[molIx].SetGmolAtomsMolmodelTypesTrial(); // from world
+		topologies[molIx].SetGmolAtomsMolmodelTypesTrial();
+
 		// Add Biotypes // from world
-		topologies[molIx].bAddBiotypes(&amberReader); // from world
+		topologies[molIx].bAddBiotypes(&amberReader[molIx]);
+
 		// Build Robosample graph and Compound graph.
 		// It also asigns atom indexes in Compound
 		// This is done only once and it needs
 		topologies[molIx].buildGraphAndMatchCoords(
 			std::stoi(roots.back()));
+
 		topologies[molIx].loadTriples();
 		// Map of Compound atom indexes to Robosample atom indexes
+
 		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
 		//std::cout << "Topology " << molIx << " info\n";
 		//topologies[molIx].printMaps();
@@ -964,7 +978,7 @@ void Context::AddMolecules(
 
 }
 
-// Loads parameters into DuMM, adopts compound by the CompoundSystem
+/* // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes
 void Context::addDummParams(
 	int requestedNofMols,
@@ -972,19 +986,24 @@ void Context::addDummParams(
 ){
 	//std::vector<std::string> argRoots = setupReader.get("ROOTS");
 
+	// Accumulate DuMM parameters in these vectors
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+
 	// Iterate through molecules
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
 
 		// Initialize an input reader
 		readAmberInput amberReader;
 		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
-
 		
 		// Pass current topology to the current world
 		(updWorld(0))->topologies = &topologies;
 
 		// Add parameters in DuMM
-		(updWorld(0))->generateDummParams(molIx, &amberReader);
+		(updWorld(0))->generateDummParams(molIx, &amberReader,
+			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
 
 		for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
 
@@ -996,6 +1015,67 @@ void Context::addDummParams(
 		}
 
 	}
+
+} */
+
+// Loads parameters into DuMM, adopts compound by the CompoundSystem
+// and loads maps of indexes
+void Context::addDummParams(
+	int requestedNofMols,
+	SetupReader& setupReader
+){
+	//std::vector<std::string> argRoots = setupReader.get("ROOTS");
+
+	// Get an input reader
+	std::vector<readAmberInput> amberReader(requestedNofMols);
+
+	// Load Amber info for all molecules
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+		(amberReader[molIx]).readAmberFiles(crdFNs[molIx], topFNs[molIx]);
+	}
+
+	// Accumulate DuMM parameters in these vectors
+
+	std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+
+	// Load DuMM parameters for the first world
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+
+		// Pass current topology to the current world
+		(updWorld(0))->topologies = &topologies;
+
+		// Add parameters in DuMM
+		(updWorld(0))->generateDummParams(molIx, &amberReader[molIx],
+			aClassParams2aClassId,
+			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+	}
+
+	// Load DuMM params for the rest of the worlds
+	for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
+
+		// Accumulate DuMM parameters in these vectors
+		aClassParams2aClassId = std::map<AtomClassParams, AtomClassId>();
+		allBondsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
+		allAnglesACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
+		allDihedralsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
+		std::cout << "SIZE aClassParams2aClassId " << aClassParams2aClassId.size() << std::endl; 
+
+		// Iterate through molecules
+		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+				// Pass current topology to the current world
+				(updWorld(worldIx))->topologies = &topologies;
+
+				// Add parameters in DuMM
+				(updWorld(worldIx))->transferDummParams(molIx, &amberReader[molIx],
+				aClassParams2aClassId,
+				allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+			}
+
+	}
+	
 
 }
 

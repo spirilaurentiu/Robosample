@@ -165,15 +165,41 @@ public:
 			std::string resName
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
+			, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 	);
 
 	/** It calls DuMMs defineAtomClass, defineChargedAtomTye and
 	setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 	information regarding the force field parameters. **/
 	void transferDummAtomClasses(
+		std::string resName
+		, readAmberInput *amberReader
+		, SimTK::DuMMForceFieldSubsystem& dumm
+		, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+	);
+
+	/** Calls DuMM defineBondStretch. **/
+	void bAddDummBondParams(
 			std::string resName
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
+			, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
+	);
+
+	/** Calls DuMM defineBondBend. **/
+	void bAddDummAngleParams(
+			std::string resName
+			, readAmberInput *amberReader
+			, SimTK::DuMMForceFieldSubsystem& dumm
+			, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
+	);
+
+	/** Calls DuMM defineBondTorsion for 1, 2 and 3 periodicities **/
+	void bAddDummTorsionParams(
+			std::string resName
+			, readAmberInput *amberReader
+			, SimTK::DuMMForceFieldSubsystem& dumm
+			, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 	);
 
 	/** Calls DuMM defineBondStretch. **/
@@ -201,12 +227,20 @@ public:
 	void generateDummParams(
 		readAmberInput *amberReader
 		, SimTK::DuMMForceFieldSubsystem& dumm
+		, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 	);
 
 	/** Transfer already generated force field parameters to DuMM **/
 	void transferDummParams(
 		readAmberInput *amberReader
 		, SimTK::DuMMForceFieldSubsystem& dumm
+		, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 	);
 
 	/** Print Molmodel specific types as introduced in Gmolmodel **/
@@ -438,7 +472,7 @@ private:
 	std::map< SimTK::Compound::BondIndex, int > bondIx2GmolBond;
 	std::map< int,  SimTK::Compound::BondIndex> GmolBond2bondIx;
 
-	std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
+	//std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
 
 
 };

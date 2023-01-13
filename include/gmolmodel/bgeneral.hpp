@@ -236,6 +236,22 @@ void PrintCppVector(const vector<S>& vec,
 
 }
 
+template <typename S>
+void PrintCppVector(const vector < vector <S>>& vec,
+	std::string sep = " ",
+	std::string ending = "\n") 
+{
+    // Iterating over all elements of vector
+    for (const auto &v : vec) {
+		for(const auto &elem : v){
+			std::cout << sep << elem;
+		}
+		std::cout << std::endl;
+        
+    }
+	std::cout << ending;
+}
+
 /*
  * Get the block corresponding to a body from an H-like matrix
  * Body index "which" starts from 0, 0 being the Ground body.

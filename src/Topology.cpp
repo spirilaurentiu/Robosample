@@ -493,10 +493,10 @@ void Topology::PrintAtomList(int whichWorld)
 		bAtomList[i].Print(whichWorld);
 	}
 
-	// Bonds
+/* 	// Bonds
 	for(unsigned int i = 0; i < bonds.size(); i++){
 		bonds[i].Print(whichWorld);
-	}
+	} */
 }
 
 /** Biotype is a Molmodel hook that is usually used to look up molecular
@@ -538,6 +538,258 @@ void Topology::bAddBiotypes(
 	}
 }
 
+/** The following functions are used to build the molecular graph using bonding
+information from bonds list and bondsInvolved list of each atom in bAtomList.
+**/
+
+/** The actual recursive function that builds the graph **/
+void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)
+{
+	// The base atom has to be set once Molmodel
+	baseSetFlag = 0;
+
+	// Only process unvisited nodes
+	if( node->visited ){
+		return;
+	}
+
+	// Mark the depth of the recursivity
+	++nofProcesses;
+
+	// Mark Gmolmodel bond and create bond in Molmodel
+	for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
+		bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
+	{
+		// Check if there is a bond between prevnode and node based on bonds
+		// read from amberReader
+		if ((*bondsInvolvedIter)->isThisMe(node->number, previousNode->number) ) {
+			(*bondsInvolvedIter)->setVisited(1);
+
+			// Skip the first step as we don't have yet two atoms
+			if (nofProcesses != 1) {
+
+				// The first bond is special in Molmodel and has to be
+				// treated differently. Set a base atom first
+				if (nofProcesses == 2) {
+					if (baseSetFlag == 0) {
+						this->setBaseAtom(*(previousNode->bAtomType));
+						this->setAtomBiotype(previousNode->name, (this->name), previousNode->getName());
+						this->convertInboardBondCenterToOutboard();
+						baseSetFlag = 1;
+					}
+				}
+
+				// Bond current node by the previous (Compound function)
+				std::stringstream parentBondCenterPathName;
+				if (previousNode->number == baseAtomNumber) {
+					parentBondCenterPathName << previousNode->name
+						<< "/bond" << previousNode->freebonds;
+				} else {
+					parentBondCenterPathName << previousNode->name
+						<< "/bond" << (previousNode->nbonds - previousNode->freebonds + 1);
+				}
+
+				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
+				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
+				std::string debugString = parentBondCenterPathName.str();
+				this->bondAtom(*node->bAtomType,
+						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
+
+				// Set the final Biotype
+				this->setAtomBiotype(node->name, (this->name).c_str(), node->getName());
+
+				// Set bSpecificAtom atomIndex to the last atom added to bond
+				node->atomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1);
+
+
+				// The only time we have to set atomIndex to the previous node
+				if (nofProcesses == 2) {
+					previousNode->atomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0);
+				}
+
+				// Set bBond Molmodel Compound::BondIndex
+				(*bondsInvolvedIter)->setBondIndex(Compound::BondIndex(getNumBonds() - 1));
+				std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
+						Compound::BondIndex(getNumBonds() - 1),
+						(*bondsInvolvedIter)->getIndex()
+				);
+
+				bondIx2GmolBond.insert(pairToBeInserted);
+
+				GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+						(*bondsInvolvedIter)->getIndex(),
+						Compound::BondIndex(getNumBonds() - 1)
+				) );
+
+				//std::cout << "DEBUG inserted into GmolBond2bondIx bondIx2GmolBond  " 
+				//<< GmolBond2bondIx.size() << " " << bondIx2GmolBond.size() 
+				//<< std::endl << std::flush;
+
+				// Drop the number of available bonds
+				--previousNode->freebonds;
+				--node->freebonds;
+
+				// Bond was inserted in Molmodel Compound. Get out and search
+				// the next bond
+				break;
+
+			}
+		}
+	}
+
+	// Mark the node as visited
+	node->visited = 1;
+
+	// Set the previous node to this node
+	previousNode = node;
+
+	// Go to the next node. Choose it from his neighbours.
+	for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
+		buildAcyclicGraph((node->neighbors)[i], previousNode);
+	}
+
+}
+
+/** After building the acyclic molecular tree close the remaining bonds **/
+void Topology::addRingClosingBonds() {
+	// Consider all remaining bonds ring closing bonds and close them
+	for(int i=0; i<nbonds; i++){
+		if(bonds[i].isVisited() == 0){
+
+			bSpecificAtom *leftNode  =  &(bAtomList[bonds[i].i]);
+			bSpecificAtom *rightNode =  &(bAtomList[bonds[i].j]);
+
+			std::stringstream sbuff;
+			if(leftNode->number == baseAtomNumber){
+				sbuff << leftNode->name << "/bond" << leftNode->freebonds;
+			}else{
+				sbuff << leftNode->name << "/bond"
+					<< (leftNode->nbonds - leftNode->freebonds + 1);
+			}
+
+			std::stringstream otsbuff;
+			if(rightNode->number == baseAtomNumber){
+				otsbuff << rightNode->name << "/bond" << rightNode->freebonds;
+			}else{
+				otsbuff << rightNode->name << "/bond"
+					<< (rightNode->nbonds - rightNode->freebonds + 1);
+			}
+
+			this->addRingClosingBond(
+					(sbuff.str()).c_str(),
+					(otsbuff.str()).c_str(),
+					0.14,
+					109*Deg2Rad,
+					BondMobility::Rigid // CHANGE
+			);
+
+			// Set bBond Molmodel Compound::BondIndex // TODO is this necessary ?
+			bonds[i].setBondIndex(Compound::BondIndex(getNumBonds() - 1));
+			bonds[i].setAsRingClosing();
+			std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
+					Compound::BondIndex(getNumBonds() - 1),
+					bonds[i].getIndex()
+			);
+
+			bondIx2GmolBond.insert(pairToBeInserted);
+
+			GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+					bonds[i].getIndex(),
+					Compound::BondIndex(getNumBonds() - 1)
+			) );
+			////////////////////////////////////////////
+
+			// Compound::setAtomBiotype(Compound::AtomPathName,
+			// biotypeResidueName, biotypeAtomName
+			// SimTK::Ordinality::Residue = SimTK::Ordinality::Any)
+			this->setAtomBiotype(leftNode->name, (this->name), leftNode->getName());
+			this->setAtomBiotype(rightNode->name, (this->name), rightNode->getName());
+
+			--leftNode->freebonds;
+			--rightNode->freebonds;
+
+		}
+	}
+}
+
+/** Match Default configuration with the coordinates loaded from
+ * the input reader **/
+void Topology::matchDefaultConfigurationWithAtomList(
+		SimTK::Compound::MatchStratagem matchStratagem)
+{
+	// Assign Compound coordinates by matching bAtomList coordinates
+	std::map<AtomIndex, Vec3> atomTargets;
+	for(int ix = 0; ix < getNumAtoms(); ++ix){
+		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+	}
+
+	matchDefaultConfiguration(atomTargets, matchStratagem, true, 150.0);
+	std::cout << "Gmolmodel Topology match done" << std::endl;
+}
+
+/** Builds the molecular tree, closes the rings, matches the configuration
+on the graph using using Molmodels matchDefaultConfiguration and sets the
+general flexibility of the molecule. **/
+// TODO: break in two functions
+void Topology::buildGraphAndMatchCoords(int argRoot)
+{
+	// Initialize all atoms and bonds to unvisited
+	for (int i = 0; i < natoms; i++) {
+		bAtomList[i].setVisited(0);
+	}
+	for (int i = 0; i < nbonds; i++) {
+		bonds[i].setVisited(0);
+	}
+
+	// Find an atom to be the root. It has to have more than one bond
+	bSpecificAtom *root = nullptr;
+	if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
+		baseAtomNumber = argRoot;
+		root = &(bAtomList[argRoot]);
+		bSpecificAtomRootIndex = argRoot;
+	}else {
+		std::cout << "Root atom will be chosen by Gmolmodel...  ";
+		int baseAtomListIndex = 0;
+		for (int i = 0; i < natoms; i++) {
+			if (bAtomList[i].getNBonds() > 1) {
+				baseAtomListIndex = i;
+				std::cout << "done. Root chosen " << i << std::endl;
+				break;
+			}
+		}
+
+		root = &(bAtomList[baseAtomListIndex]);
+		bSpecificAtomRootIndex = baseAtomListIndex;
+		baseAtomNumber = root->number;
+	}
+
+	// Build the graph
+	if(bAtomList.size() == 1){
+		this->setBaseAtom(*bAtomList[0].getBAtomType());
+		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
+		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
+	}else{
+		nofProcesses = 0;
+		buildAcyclicGraph(root, root);
+		std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
+	}
+
+	// Close the remaining bonds
+	addRingClosingBonds();
+    std::cout << "Topology::buildGraphAndMatcoords  addRingClosingBonds done\n" << std::flush;
+
+	// Build the conformation
+	matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
+
+	// Now that everything is built, initialize aIx2TopTransforms map
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).atomIndex, SimTK::Transform()));
+	}
+
+}
+
+
 /** It calls DuMMs defineAtomClass, defineChargedAtomTye and
 setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 information regarding the force field parameters. **/
@@ -545,14 +797,21 @@ void Topology::generateDummAtomClasses(
 				  std::string resName
 				, readAmberInput *amberReader
 				, SimTK::DuMMForceFieldSubsystem& dumm
+				, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+
 )
 {
+	std::cout << "Topology::generateDummAtomClasses START\n";
+
+	// 
+	std::vector<bool> founditInDuMM(
+		amberReader->getNumberAtoms(), false);
 
 	// Iterate through Gmolmodel atoms and define AtomClasses
 	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
 
 		// Get AtomClass parameters from bSpecificAtom info
-		AtomClassParams atomParams(
+		AtomClassParams atomClassParams(
 			bAtomList[i].getAtomicNumber(),
 			bAtomList[i].getNBonds(),
 			bAtomList[i].getVdwRadius() / 10.0, // nm
@@ -563,17 +822,32 @@ void Topology::generateDummAtomClasses(
 		std::string atomClassName;
 
 		// Check if we already have this Atom Class
-		bool foundit = false;
+		bool founditInThisTopology = false;
+
 		std::map<AtomClassParams, AtomClassId>::const_iterator it;
 		for (	it = aClassParams2aClassId.begin();
 			it != aClassParams2aClassId.end(); ++it){
-			if(it->first == atomParams){
-				foundit = true;
+			if(it->first == atomClassParams){
+				founditInThisTopology = true;
 				break;
 			}
 		}
 
-		if ( !foundit ) { // we don't have this AtomClass
+		// Further search in DuMM
+		if(!founditInThisTopology){
+			std::string str(bAtomList[i].getFftype());
+			const SimTK::String simtkstr(str);
+			founditInDuMM[i] = dumm.hasAtomClass(simtkstr);
+		}
+
+		std::cout << "Topology::generateDummAtomClasses try AtomClassName " 
+			<< " " << bAtomList[i].getFftype() << " "
+			<< founditInThisTopology << " " << founditInDuMM[i];
+		atomClassParams.dump();
+
+		// we don't have this AtomClass
+		if ( (!founditInThisTopology) && (!founditInDuMM[i]) ) {
+
 			// Get an AtomClass index from DuMM
 			aCIx = dumm.getNextUnusedAtomClassIndex();
 		
@@ -585,30 +859,37 @@ void Topology::generateDummAtomClasses(
 
 			// Define an AtomClass
 			dumm.defineAtomClass(aCIx, atomClassName.c_str(),
-				atomParams.atomicNumber,
-				atomParams.valence,
-				atomParams.vdwRadius,
-				atomParams.LJWellDepth
+				atomClassParams.atomicNumber,
+				atomClassParams.valence,
+				atomClassParams.vdwRadius,
+				atomClassParams.LJWellDepth
 			);
 
-			std::cout << "Topology::generateAtomClasses " 
+			std::cout << "Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName " 
 				<< aCIx << " " << atomClassName ;
-			atomParams.dump();
+			atomClassParams.dump();
 
 			// Insert an entry in our map too
 			AtomClassId atomClassId(aCIx, atomClassName);
-			aClassParams2aClassId.insert( std::make_pair(atomParams, atomClassId) );
+			aClassParams2aClassId.insert( std::make_pair(atomClassParams, atomClassId) );
 
 		}else{ // we already have this AtomClass
 
-			//aClassParams2aClassId.at(atomParams);
-			//AtomClassId& atomClassId = aClassParams2aClassId.at(atomParams);
-			const AtomClassId& atomClassId = it->second;
+			if(!founditInDuMM[i]){
+				//aClassParams2aClassId.at(atomParams);
+				//AtomClassId& atomClassId = aClassParams2aClassId.at(atomParams);
+				const AtomClassId& atomClassId = it->second;
 
-			aCIx = atomClassId.index;
-			atomClassName = atomClassId.name;
-	
-			//std::cout << "foundit  aCIx atomClassName " << aCIx << " " << atomClassName << std::endl;
+				aCIx = atomClassId.index;
+
+				atomClassName = atomClassId.name;
+		
+				//std::cout << "foundit  aCIx atomClassName " << aCIx << " " << atomClassName << std::endl;
+			}else{
+				aCIx = dumm.getAtomClassIndex(bAtomList[i].getFftype());
+				atomClassName = bAtomList[i].getFftype();
+			}
+
 		}
 
 		// Insert AtomClass index in Gmolmodel atom list too
@@ -624,6 +905,7 @@ void Topology::generateDummAtomClasses(
 
 	// Iterate through atoms and define DuMM charged atom types
 	for(int k = 0; k < amberReader->getNumberAtoms(); k++){
+
 		// Get a ChargedAtomType index
 		chargedAtomTypeIndex = dumm.getNextUnusedChargedAtomTypeIndex();
 		bAtomList[k].setChargedAtomTypeIndex(chargedAtomTypeIndex);
@@ -634,17 +916,19 @@ void Topology::generateDummAtomClasses(
 
 		// Define a ChargedAtomType (AtomClass with a charge)
 		dumm.defineChargedAtomType(
-		  chargedAtomTypeIndex,
-		  chargedAtomTypeName.c_str(),
-		  bAtomList[k].getAtomClassIndex(),
-		  bAtomList[k].charge
+		chargedAtomTypeIndex,
+		chargedAtomTypeName.c_str(),
+		bAtomList[k].getAtomClassIndex(),
+		bAtomList[k].charge
 		);
-		//std::cout << "Defined chargedAtomType " << chargedAtomTypeName << " with chargedAtomTypeIndex " << chargedAtomTypeIndex << std::endl;
+		/*std::cout << "Defined chargedAtomType " << chargedAtomTypeName 
+			<< " with chargedAtomTypeIndex " << chargedAtomTypeIndex
+			<< std::endl; */
 
 		// Associate a ChargedAtomTypeIndex with a Biotype index
 		dumm.setBiotypeChargedAtomType(
-		  bAtomList[k].getChargedAtomTypeIndex(),
-		  bAtomList[k].getBiotypeIndex()
+		bAtomList[k].getChargedAtomTypeIndex(),
+		bAtomList[k].getBiotypeIndex()
 		);
 
 	}
@@ -655,9 +939,10 @@ void Topology::generateDummAtomClasses(
 setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 information regarding the force field parameters. **/
 void Topology::transferDummAtomClasses(
-				  std::string resName
-				, readAmberInput *amberReader
-				, SimTK::DuMMForceFieldSubsystem& dumm
+		std::string resName
+	, readAmberInput *amberReader
+	, SimTK::DuMMForceFieldSubsystem& dumm
+	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId				
 )
 {
 
@@ -734,7 +1019,7 @@ const void Topology::PrintMolmodelAndDuMMTypes(
 	for(size_t i = 0; i < bAtomList.size(); i++){
 		std::cout << " list ix " << i
 			<< " CompoundAtomIndex " << bAtomList[i].getCompoundAtomIndex()
-			/* //<< " DuMMAtomIndex " << getDuMMAtomIndex(bAtomList[i].getCompoundAtomIndex())
+			//<< " DuMMAtomIndex " << getDuMMAtomIndex(bAtomList[i].getCompoundAtomIndex())
 			<< " biotypename " << bAtomList[i].biotype
 			<< " name " << bAtomList[i].name
 			<< " BiotypeIndex " << bAtomList[i].getBiotypeIndex()
@@ -746,17 +1031,20 @@ const void Topology::PrintMolmodelAndDuMMTypes(
 			<< " DuMM VdW Radius "
 			<< dumm.getVdwRadius(bAtomList[i].getAtomClassIndex())
 			<< " DuMM VdW Well Depth "
-			<< dumm.getVdwWellDepth(bAtomList[i].getAtomClassIndex()) */
+			<< dumm.getVdwWellDepth(bAtomList[i].getAtomClassIndex())
 			<< std::endl << std::flush;
 	}
 }
 
 /** Calls DuMM defineBondStretch to define bonds parameters. **/
-void Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
+void Topology::bAddDummBondParams(std::string, 
+	readAmberInput *amberReader, 
+	SimTK::DuMMForceFieldSubsystem& dumm,
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs)
 {
 
 	// Keep track of inserted AtomClass pairs
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
+	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 
 	// Iterate through bonds and define their parameters
 	// Suppose or try to have the same order as the reader
@@ -797,12 +1085,28 @@ void Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimT
 	}
 }
 
+/** Calls DuMM defineBondStretch to define bonds parameters. **/
+void Topology::bAddDummBondParams(std::string, 
+	readAmberInput *amberReader, 
+	SimTK::DuMMForceFieldSubsystem& dumm)
+{
+/* 	// Keep track of inserted AtomClass pairs
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
+
+	bAddDummBondParams(this->name, amberReader, dumm, allBondsACIxs); */
+
+}
+
+
 /** Calls DuMM defineBondBend to define angle parameters. **/
-void Topology::bAddDummAngleParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)
+void Topology::bAddDummAngleParams(std::string,
+	readAmberInput *amberReader,
+	SimTK::DuMMForceFieldSubsystem& dumm,
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs)
 {
 
 	// Keep track of inserted AtomClass pairs
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
+	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
 
 	// Iterate through angles and define their parameters
 	for(int t = 0; t < amberReader->getNumberAngles(); t++){
@@ -851,13 +1155,19 @@ void Topology::bAddDummTorsionParams(
 	  std::string resName
 	, readAmberInput *amberReader
 	, SimTK::DuMMForceFieldSubsystem& dumm
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>&
+		allDihedralsACIxs
 )
 {
 	// Keep track of inserted AtomClass pairs
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+
+	std::cout << "Topology::bAddDummTorsionParams allDihedralsACIxs\n";
+	PrintCppVector(allDihedralsACIxs);
 
 	// Amber reader dihedrals vector
-	std::vector<std::pair<int, int>> pairStartAndLens = amberReader->getPairStartAndLen();
+	std::vector<std::pair<int, int>> pairStartAndLens =
+		amberReader->getPairStartAndLen();
 
 	for(unsigned int index=0; index<pairStartAndLens.size(); index++){
 
@@ -869,10 +1179,21 @@ void Topology::bAddDummTorsionParams(
 		for(int t = first; t < (first + numberOf); t++){
 
 			// Get AtomClass indeces first
-			SimTK::DuMM::AtomClassIndex aCIx1 = bAtomList[amberReader->getDihedralsAtomsIndex1(t)].getAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx2 = bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx3 = bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx4 = bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getAtomClassIndex();
+			std::cout << "Topology::bAddDummDihedralParams checking DihedralAIxs " 
+				<< amberReader->getDihedralsAtomsIndex1(t) << " "
+				<< amberReader->getDihedralsAtomsIndex2(t) << " "
+				<< amberReader->getDihedralsAtomsIndex3(t) << " "
+				<< amberReader->getDihedralsAtomsIndex4(t) << " "
+				<< std::endl ;
+
+			SimTK::DuMM::AtomClassIndex aCIx1 =
+				bAtomList[amberReader->getDihedralsAtomsIndex1(t)].getAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx2 =
+				bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx3 =
+				bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx4 =
+				bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getAtomClassIndex();
 
 			// Generate a quad of atom class indexes for this angle
 			std::vector<SimTK::DuMM::AtomClassIndex> thisDihedralACIxs;
@@ -891,11 +1212,13 @@ void Topology::bAddDummTorsionParams(
 
 			if (  !foundit ){ // angle was not found
 
-				std::cout << "Topology::bAddDummDihedralParams " 
+				std::cout << "Topology::bAddDummDihedralParams insert " 
 					<< thisDihedralACIxs[0] << " "
 					<< thisDihedralACIxs[1] << " "
 					<< thisDihedralACIxs[2] << " "
-					<< thisDihedralACIxs[3] << std::endl;
+					<< thisDihedralACIxs[3] << " | " 
+					<< numberOf << " " << amberReader->getDihedralsPeriod(t)
+					<< std::endl << std::flush;
 
 				// Define the dihedrals
 				if(numberOf == 1){
@@ -942,36 +1265,44 @@ void Topology::bAddDummTorsionParams(
 void Topology::generateDummParams(
 	readAmberInput *amberReader
 	, SimTK::DuMMForceFieldSubsystem& dumm
+	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 )
 {
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
 	// Add types
-	generateDummAtomClasses(resName, amberReader, dumm);
-std::cout << "generateDummParams 0 \n"; PrintMolmodelAndDuMMTypes(dumm);
+	generateDummAtomClasses(resName, amberReader, dumm, aClassParams2aClassId);
+
 	// Add parameters
-	bAddDummBondParams(resName, amberReader, dumm);
-	bAddDummAngleParams(resName, amberReader, dumm);
-	bAddDummTorsionParams(resName, amberReader, dumm);
+	bAddDummBondParams(resName, amberReader, dumm, allBondsACIxs);
+	bAddDummAngleParams(resName, amberReader, dumm, allAnglesACIxs);
+	bAddDummTorsionParams(resName, amberReader, dumm, allDihedralsACIxs);
 }
 
 /** Transfer already generated force field parameters to DuMM **/
 void Topology::transferDummParams(
 	readAmberInput *amberReader
 	, SimTK::DuMMForceFieldSubsystem& dumm
+	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 )
 {
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
 	// Add types
-	transferDummAtomClasses(resName, amberReader, dumm);
+	transferDummAtomClasses(resName, amberReader, dumm, aClassParams2aClassId);
 
 	// Add parameters
-	bAddDummBondParams(resName, amberReader, dumm);
-	bAddDummAngleParams(resName, amberReader, dumm);
-	bAddDummTorsionParams(resName, amberReader, dumm);
+	bAddDummBondParams(resName, amberReader, dumm, allBondsACIxs);
+	bAddDummAngleParams(resName, amberReader, dumm, allAnglesACIxs);
+	bAddDummTorsionParams(resName, amberReader, dumm, allDihedralsACIxs);
 }
 
 bool Topology::checkIfTripleUnorderedAreEqual(
@@ -1369,256 +1700,6 @@ int Topology::getBondOrder(int, int) const
 }
 
 
-/** The following functions are used to build the molecular graph using bonding
-information from bonds list and bondsInvolved list of each atom in bAtomList.
-**/
-
-/** The actual recursive function that builds the graph **/
-void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)
-{
-	// The base atom has to be set once Molmodel
-	baseSetFlag = 0;
-
-	// Only process unvisited nodes
-	if( node->visited ){
-		return;
-	}
-
-	// Mark the depth of the recursivity
-	++nofProcesses;
-
-	// Mark Gmolmodel bond and create bond in Molmodel
-	for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
-		bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
-	{
-		// Check if there is a bond between prevnode and node based on bonds
-		// read from amberReader
-		if ((*bondsInvolvedIter)->isThisMe(node->number, previousNode->number) ) {
-			(*bondsInvolvedIter)->setVisited(1);
-
-			// Skip the first step as we don't have yet two atoms
-			if (nofProcesses != 1) {
-
-				// The first bond is special in Molmodel and has to be
-				// treated differently. Set a base atom first
-				if (nofProcesses == 2) {
-					if (baseSetFlag == 0) {
-						this->setBaseAtom(*(previousNode->bAtomType));
-						this->setAtomBiotype(previousNode->name, (this->name), previousNode->getName());
-						this->convertInboardBondCenterToOutboard();
-						baseSetFlag = 1;
-					}
-				}
-
-				// Bond current node by the previous (Compound function)
-				std::stringstream parentBondCenterPathName;
-				if (previousNode->number == baseAtomNumber) {
-					parentBondCenterPathName << previousNode->name
-						<< "/bond" << previousNode->freebonds;
-				} else {
-					parentBondCenterPathName << previousNode->name
-						<< "/bond" << (previousNode->nbonds - previousNode->freebonds + 1);
-				}
-
-				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
-				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
-				std::string debugString = parentBondCenterPathName.str();
-				this->bondAtom(*node->bAtomType,
-						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
-
-				// Set the final Biotype
-				this->setAtomBiotype(node->name, (this->name).c_str(), node->getName());
-
-				// Set bSpecificAtom atomIndex to the last atom added to bond
-				node->atomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1);
-
-
-				// The only time we have to set atomIndex to the previous node
-				if (nofProcesses == 2) {
-					previousNode->atomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0);
-				}
-
-				// Set bBond Molmodel Compound::BondIndex
-				(*bondsInvolvedIter)->setBondIndex(Compound::BondIndex(getNumBonds() - 1));
-				std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
-						Compound::BondIndex(getNumBonds() - 1),
-						(*bondsInvolvedIter)->getIndex()
-				);
-
-				bondIx2GmolBond.insert(pairToBeInserted);
-
-				GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
-						(*bondsInvolvedIter)->getIndex(),
-						Compound::BondIndex(getNumBonds() - 1)
-				) );
-
-				//std::cout << "DEBUG inserted into GmolBond2bondIx bondIx2GmolBond  " 
-				//<< GmolBond2bondIx.size() << " " << bondIx2GmolBond.size() 
-				//<< std::endl << std::flush;
-
-				// Drop the number of available bonds
-				--previousNode->freebonds;
-				--node->freebonds;
-
-				// Bond was inserted in Molmodel Compound. Get out and search
-				// the next bond
-				break;
-
-			}
-		}
-	}
-
-	// Mark the node as visited
-	node->visited = 1;
-
-	// Set the previous node to this node
-	previousNode = node;
-
-	// Go to the next node. Choose it from his neighbours.
-	for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
-		buildAcyclicGraph((node->neighbors)[i], previousNode);
-	}
-
-}
-
-/** After building the acyclic molecular tree close the remaining bonds **/
-void Topology::addRingClosingBonds() {
-	// Consider all remaining bonds ring closing bonds and close them
-	for(int i=0; i<nbonds; i++){
-		if(bonds[i].isVisited() == 0){
-
-			bSpecificAtom *leftNode  =  &(bAtomList[bonds[i].i]);
-			bSpecificAtom *rightNode =  &(bAtomList[bonds[i].j]);
-
-			std::stringstream sbuff;
-			if(leftNode->number == baseAtomNumber){
-				sbuff << leftNode->name << "/bond" << leftNode->freebonds;
-			}else{
-				sbuff << leftNode->name << "/bond"
-					<< (leftNode->nbonds - leftNode->freebonds + 1);
-			}
-
-			std::stringstream otsbuff;
-			if(rightNode->number == baseAtomNumber){
-				otsbuff << rightNode->name << "/bond" << rightNode->freebonds;
-			}else{
-				otsbuff << rightNode->name << "/bond"
-					<< (rightNode->nbonds - rightNode->freebonds + 1);
-			}
-
-			this->addRingClosingBond(
-					(sbuff.str()).c_str(),
-					(otsbuff.str()).c_str(),
-					0.14,
-					109*Deg2Rad,
-					BondMobility::Rigid // CHANGE
-			);
-
-			// Set bBond Molmodel Compound::BondIndex // TODO is this necessary ?
-			bonds[i].setBondIndex(Compound::BondIndex(getNumBonds() - 1));
-			bonds[i].setAsRingClosing();
-			std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
-					Compound::BondIndex(getNumBonds() - 1),
-					bonds[i].getIndex()
-			);
-
-			bondIx2GmolBond.insert(pairToBeInserted);
-
-			GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
-					bonds[i].getIndex(),
-					Compound::BondIndex(getNumBonds() - 1)
-			) );
-			////////////////////////////////////////////
-
-			// Compound::setAtomBiotype(Compound::AtomPathName,
-			// biotypeResidueName, biotypeAtomName
-			// SimTK::Ordinality::Residue = SimTK::Ordinality::Any)
-			this->setAtomBiotype(leftNode->name, (this->name), leftNode->getName());
-			this->setAtomBiotype(rightNode->name, (this->name), rightNode->getName());
-
-			--leftNode->freebonds;
-			--rightNode->freebonds;
-
-		}
-	}
-}
-
-/** Match Default configuration with the coordinates loaded from
- * the input reader **/
-void Topology::matchDefaultConfigurationWithAtomList(
-		SimTK::Compound::MatchStratagem matchStratagem)
-{
-	// Assign Compound coordinates by matching bAtomList coordinates
-	std::map<AtomIndex, Vec3> atomTargets;
-	for(int ix = 0; ix < getNumAtoms(); ++ix){
-		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
-	}
-
-	matchDefaultConfiguration(atomTargets, matchStratagem, true, 150.0);
-	std::cout << "Gmolmodel Topology match done" << std::endl;
-}
-
-/** Builds the molecular tree, closes the rings, matches the configuration
-on the graph using using Molmodels matchDefaultConfiguration and sets the
-general flexibility of the molecule. **/
-// TODO: break in two functions
-void Topology::buildGraphAndMatchCoords(int argRoot)
-{
-	// Initialize all atoms and bonds to unvisited
-	for (int i = 0; i < natoms; i++) {
-		bAtomList[i].setVisited(0);
-	}
-	for (int i = 0; i < nbonds; i++) {
-		bonds[i].setVisited(0);
-	}
-
-	// Find an atom to be the root. It has to have more than one bond
-	bSpecificAtom *root = nullptr;
-	if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
-		baseAtomNumber = argRoot;
-		root = &(bAtomList[argRoot]);
-		bSpecificAtomRootIndex = argRoot;
-	}else {
-		std::cout << "Root atom will be chosen by Gmolmodel...  ";
-		int baseAtomListIndex = 0;
-		for (int i = 0; i < natoms; i++) {
-			if (bAtomList[i].getNBonds() > 1) {
-				baseAtomListIndex = i;
-				std::cout << "done. Root chosen " << i << std::endl;
-				break;
-			}
-		}
-
-		root = &(bAtomList[baseAtomListIndex]);
-		bSpecificAtomRootIndex = baseAtomListIndex;
-		baseAtomNumber = root->number;
-	}
-
-	// Build the graph
-	if(bAtomList.size() == 1){
-		this->setBaseAtom(*bAtomList[0].getBAtomType());
-		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
-		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
-	}else{
-		nofProcesses = 0;
-		buildAcyclicGraph(root, root);
-		std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
-	}
-
-	// Close the remaining bonds
-	addRingClosingBonds();
-    std::cout << "Topology::buildGraphAndMatcoords  addRingClosingBonds done\n" << std::flush;
-
-	// Build the conformation
-	matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
-
-	// Now that everything is built, initialize aIx2TopTransforms map
-	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).atomIndex, SimTK::Transform()));
-	}
-
-}
 
 /** Get regimen **/
 std::string Topology::getRegimen(){
@@ -2158,13 +2239,16 @@ void Topology::getCoordinates(
 }
 
 /** Get own CompoundIndex in CompoundSystem **/
-const CompoundSystem::CompoundIndex &Topology::getCompoundIndex() const {
+const CompoundSystem::CompoundIndex &Topology::getCompoundIndex() const
+{
 	return compoundIndex;
 }
 
 /** Set the compoundIndex which is the position in the vector of Compounds
  * of the CompoundSystem **/
-void Topology::setCompoundIndex(const CompoundSystem::CompoundIndex &compoundIndex) {
+void Topology::setCompoundIndex(
+	const CompoundSystem::CompoundIndex &compoundIndex)
+{
 	//Topology::compoundIndex = compoundIndex;
 	this->compoundIndex = compoundIndex;
 }
@@ -2243,107 +2327,5 @@ Topology::getChemicalParent(
 	return chemParentAIx;
 }
 
-// This function is only intended for root atoms!!
-/*
-std::vector<SimTK::Transform>
-Topology::calcMobodToMobodTransforms(
-	SimTK::SimbodyMatterSubsystem *matter,
-	SimTK::Compound::AtomIndex aIx,
-	const SimTK::State& someState,
-	SimTK::DuMMForceFieldSubsystem& dumm,
-	int whichWorld)
-{
-	// There is no P_X_F and B_X_M inside a body.
-	assert(getAtomLocationInMobilizedBodyFrame(aIx) == 0);
-
-	// Get body, parentBody
-	SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
-	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-
-	// Get the neighbor atom in the parent mobilized body
-	//SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx); // SAFE
-	SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx, dumm); // DANGER
-
-	// Get parent-child BondCenters relationship
-	SimTK::Transform X_parentBC_childBC =
-			getDefaultBondCenterFrameInOtherBondCenterFrame(aIx, chemParentAIx);
-
-	// Get Top to parent frame
-	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
-	SimTK::Transform T_X_Proot = getTopTransform(parentRootAIx);
-	SimTK::Transform Proot_X_T = ~T_X_Proot;
-
-	// Get inboard dihedral angle
-	SimTK::Angle inboardBondDihedralAngle = bgetDefaultInboardDihedralAngle(aIx);
-	SimTK::Transform InboardDihedral_XAxis
-		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
-	SimTK::Transform InboardDihedral_ZAxis
-		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
-
-	// Get the old PxFxMxB transform
-	SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
-	SimTK::Transform Z_to_X = ~X_to_Z;
-	SimTK::Transform oldX_PB =
-		(~T_X_Proot) * getTopTransform(aIx)
-		* InboardDihedral_XAxis * X_to_Z
-		* InboardDihedral_ZAxis * Z_to_X;
-
-	// B_X_Ms
-	SimTK::Transform B_X_M = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
-	SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
-	SimTK::Transform B_X_M_univ = X_parentBC_childBC
-		* SimTK::Transform(Rotation(-90*Deg2Rad, XAxis)); // Move rotation axis Y to Z
-
-	// P_X_Fs = old P_X_B * B_X_M
-	SimTK::Transform P_X_F = oldX_PB * B_X_M;
-	SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
-	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
-
-	// Get mobility (joint type)
-	bSpecificAtom *atom = updAtomByAtomIx(aIx);
-	SimTK::BondMobility::Mobility mobility;
-	bBond bond = getBond(getNumber(aIx), getNumber(chemParentAIx));
-	mobility = bond.getBondMobility(whichWorld);
-
-	bool pinORslider =
-		(mobility == SimTK::BondMobility::Mobility::Torsion)
-		|| (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider);
-
-	if( (pinORslider) && ((atom->neighbors).size() == 1)){
-
-		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
-
-		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
-
-	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
-	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
-	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
-	){
-
-		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
-
-	}else{
-
-		std::cout << "Warning: unknown mobility." << std::endl;
-		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-	}
-
-	//// The Molmodel notation
-	// M0 and Mr are actually used for F
-	//SimTK::Transform root_X_M0 = InboardDihedral_XAxis; // name used in Molmodel
-	//SimTK::Transform T_X_M0 = T_X_root[int(mbx)] * root_X_M0;
-	//SimTK::Transform Proot_X_M0 = Proot_X_T * T_X_M0;
-	//Transform oldX_PF = Proot_X_M0 * M_X_pin;
-	//Transform oldX_BM = M_X_pin;
-	//Transform oldX_MB = ~oldX_BM;
-	//Transform oldX_FM = InboardDihedral_ZAxis;
-	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
-}
-*/
 
 

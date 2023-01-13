@@ -87,8 +87,20 @@ public:
 
 	//
 	void AddBiotypes(int which, readAmberInput *amberReader);
-	void generateDummParams(int which, readAmberInput *amberReader);
-	void transferDummParams(int which, readAmberInput *amberReader);
+	
+	void generateDummParams(int which, readAmberInput *amberReader
+	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs);
+
+	void transferDummParams(int which, readAmberInput *amberReader
+	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	);
+
 	void BuildTopologyGraph(int which, std::string argRoot);
 	void AllocateCoordBuffers(int which);
 
