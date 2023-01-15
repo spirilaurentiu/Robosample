@@ -3316,7 +3316,7 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 		//<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
 		<< "\n\tts " << timestep  //<< ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
 		<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_o
-		<< ", work " << bendStretchJacobianDetLog
+		<< ", JDetLog " << bendStretchJacobianDetLog
 		<< std::endl;
 }
 

@@ -301,8 +301,8 @@ class Replica{
 	const SimTK::Real get_WORK_PotentialEnergy_New(void)
 	{ return this->WORK_potential;}
 
-	void set_WORK_LastPotentialEnergy(SimTK::Real wpArg)
-	{ this->WORK_potential = wpArg;}
+/* 	void set_WORK_LastPotentialEnergy(SimTK::Real wpArg)
+	{ this->WORK_potential = wpArg;} */
 
     const SimTK::Real getFixman(void){return FixmanPotential;}
 	void setFixman(const SimTK::Real& somePotential){FixmanPotential = somePotential;}
@@ -1057,11 +1057,11 @@ void Context::addDummParams(
 	for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
 
 		// Accumulate DuMM parameters in these vectors
-		aClassParams2aClassId = std::map<AtomClassParams, AtomClassId>();
+		//aClassParams2aClassId = std::map<AtomClassParams, AtomClassId>();
 		allBondsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allAnglesACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allDihedralsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
-		std::cout << "SIZE aClassParams2aClassId " << aClassParams2aClassId.size() << std::endl; 
+		std::cout << "SIZE aClassParams2aClassId "<< aClassParams2aClassId.size() << std::endl;
 
 		// Iterate through molecules
 		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
@@ -2556,9 +2556,12 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	//SimTK::Real WTerm = -1.0 * (Lij + Lji) + Lii + Ljj;
 	//SimTK::Real WTerm = -1.0 * ((Lji - Ejj + replicas[replica_j].getTransferedEnergy()) +
 	//	(Lij - Eii + replicas[replica_i].getTransferedEnergy()));
-	SimTK::Real WTerm = -1.0 *  // 
-		(replicas[replica_i].getTransferedEnergy() +
-		 replicas[replica_j].getTransferedEnergy());
+	//SimTK::Real WTerm = -1.0 *  // 
+	//	(replicas[replica_i].getTransferedEnergy() +
+	//	 replicas[replica_j].getTransferedEnergy());
+	SimTK::Real Work_A = Lij - Eii;
+	SimTK::Real Work_B = Lji - Ejj;
+	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
@@ -2573,7 +2576,7 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	std::cout << "EiiEjj " << Eii << " " << Ejj << " "
 		<< Eij << " " << Eji << std::endl;
 
-	std::cout << "Total work i j " << replicas[replica_i].getTransferedEnergy()
+	std::cout << "Transferred E i j " << replicas[replica_i].getTransferedEnergy()
 		<< " " << replicas[replica_j].getTransferedEnergy() << std::endl;
 
 	std::cout << "ETerm " << ETerm << std::endl;
