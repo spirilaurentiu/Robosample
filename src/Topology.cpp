@@ -946,7 +946,6 @@ void Topology::transferDummAtomClasses(
 )
 {
 
-
 	SimTK::DuMM::AtomClassIndex aCIx;
 	std::string atomClassName;
 
@@ -975,7 +974,15 @@ void Topology::transferDummAtomClasses(
 
 	}
 	// --------------------------- DONE
+}
 
+void Topology::transferDummChargedAtomClasses(
+			std::string resName
+	, readAmberInput *amberReader
+	, SimTK::DuMMForceFieldSubsystem& dumm
+	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId				
+)
+{
 
 	// Define ChargedAtomTypeIndeces
 	SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
@@ -1297,7 +1304,8 @@ void Topology::transferDummParams(
 	std::string resName = this->name;
 
 	// Add types
-	transferDummAtomClasses(resName, amberReader, dumm, aClassParams2aClassId);
+	//transferDummAtomClasses(resName, amberReader, dumm, aClassParams2aClassId);
+	transferDummChargedAtomClasses(resName, amberReader, dumm, aClassParams2aClassId);
 
 	// Add parameters
 	bAddDummBondParams(resName, amberReader, dumm, allBondsACIxs);

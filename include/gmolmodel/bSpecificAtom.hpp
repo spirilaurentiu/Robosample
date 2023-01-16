@@ -38,7 +38,7 @@ public:
     //char biotype[20];
 
     // used to be initialized with bZeroCharArray
-    // as per c++11 (https://stackoverflow.com/questions/18295302/default-initialization-of-stdarray)
+    // as per c++11
     // it should be initialized to default
     char fftype[20] {};
 

@@ -178,6 +178,16 @@ public:
 		, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 	);
 
+	/** It calls DuMMs defineAtomClass, defineChargedAtomTye and
+	setBiotypeChargedAtomType for every atom. These Molmodel functions contain
+	information regarding the force field parameters. **/
+	void transferDummChargedAtomClasses(
+		std::string resName
+		, readAmberInput *amberReader
+		, SimTK::DuMMForceFieldSubsystem& dumm
+		, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+	);
+
 	/** Calls DuMM defineBondStretch. **/
 	void bAddDummBondParams(
 			std::string resName

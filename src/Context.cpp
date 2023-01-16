@@ -276,11 +276,12 @@ class Replica{
 	void upd_WORK_AtomsLocationsInGround(std::vector<
 		std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>);
 
-
 	void set_WORK_PotentialEnergy_New(
 		const SimTK::Real& somePotential)
 	{WORK_potential = somePotential;}
 
+	SimTK::Real get_WORK_Jacobian(void);
+	void set_WORK_Jacobian(SimTK::Real);
 
 	void setPotentialEnergy_FromWORK(void)
 	{this->potential = this->WORK_potential;}
@@ -328,6 +329,8 @@ class Replica{
 	SimTK::Real WORK_potential; // TODO: turn into a vector for worlds
 
 	SimTK::Real transferedEnergy; // TODO: turn into a vector for worlds
+	SimTK::Real workJacobiansContributions; // TODO: turn into a vector for worlds
+
 	SimTK::Real FixmanPotential; // TODO: turn into a vector for worlds
 
 };
@@ -479,6 +482,17 @@ void Replica::upd_WORK_AtomsLocationsInGround(
 
 }
 
+SimTK::Real Replica::get_WORK_Jacobian(void)
+{
+	return this->workJacobiansContributions;
+}
+
+void Replica::set_WORK_Jacobian(SimTK::Real inpJac)
+{
+	this->workJacobiansContributions = inpJac;
+}
+
+
 void Replica::updAtomsLocationsInGround_FromWORK(void)
 {
 	/* atomsLocations.insert(WORK_atomsLocations.end(),
@@ -518,6 +532,7 @@ void Replica::Print_WORK_Coordinates(void)
 		}
 	}
 }
+
 
 
 //////////////////////////
@@ -1035,7 +1050,6 @@ void Context::addDummParams(
 	}
 
 	// Accumulate DuMM parameters in these vectors
-
 	std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
@@ -1043,6 +1057,7 @@ void Context::addDummParams(
 
 	// Load DuMM parameters for the first world
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+		std::cout << "Context::addDummParas WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
 
 		// Pass current topology to the current world
 		(updWorld(0))->topologies = &topologies;
@@ -1061,23 +1076,55 @@ void Context::addDummParams(
 		allBondsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allAnglesACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allDihedralsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
-		std::cout << "SIZE aClassParams2aClassId "<< aClassParams2aClassId.size() << std::endl;
+
+		//============== FROM TOPOLOGY transferDummAtomClasses ======================
+		SimTK::DuMM::AtomClassIndex aCIx;
+		std::string atomClassName;
+		// Iterate through AtomClasses map and put AtomClasses in Dumm
+		std::map<AtomClassParams, AtomClassId>::const_iterator it;
+		for (	it = aClassParams2aClassId.begin();
+			it != aClassParams2aClassId.end(); ++it){
+
+			const AtomClassParams& atomParams = it->first;
+			const AtomClassId& atomClassId = it->second;
+
+			aCIx = atomClassId.index;
+			atomClassName = atomClassId.name;
+
+			std::cout << "not Topology::transferAtomClasses "
+				<< aCIx << " " << atomClassName ;
+			atomParams.dump();
+
+			// Define an AtomClass
+			(updWorld(worldIx))->forceField->defineAtomClass(aCIx, atomClassName.c_str(),
+				atomParams.atomicNumber,
+				atomParams.valence,
+				atomParams.vdwRadius,
+				atomParams.LJWellDepth
+			);
+		}
+		//============== FROM TOPOLOGY END ======================
 
 		// Iterate through molecules
 		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-				// Pass current topology to the current world
-				(updWorld(worldIx))->topologies = &topologies;
+			std::cout << "Context::addDummParas WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
 
-				// Add parameters in DuMM
-				(updWorld(worldIx))->transferDummParams(molIx, &amberReader[molIx],
-				aClassParams2aClassId,
-				allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
-			}
+			// Pass current topology to the current world
+			(updWorld(worldIx))->topologies = &topologies;
+
+			// Add parameters in DuMM
+			(updWorld(worldIx))->transferDummParams(molIx, &amberReader[molIx],
+			aClassParams2aClassId,
+			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+		}
 
 	}
 	
-
 }
+
+
+
+
 
 // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes
@@ -2559,8 +2606,8 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	//SimTK::Real WTerm = -1.0 *  // 
 	//	(replicas[replica_i].getTransferedEnergy() +
 	//	 replicas[replica_j].getTransferedEnergy());
-	SimTK::Real Work_A = Lij - Eii;
-	SimTK::Real Work_B = Lji - Ejj;
+	SimTK::Real Work_A = Lij - Eii - replicas[replica_i].get_WORK_Jacobian();
+	SimTK::Real Work_B = Lji - Ejj - replicas[replica_j].get_WORK_Jacobian();
 	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
@@ -2869,6 +2916,22 @@ void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 
 }
 
+// Store any WORK Jacobians contribution from back world
+void Context::store_WORK_JacobianFromBackWorld(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[replicaIx];
+
+    // Get the index of the back world
+	int backWorldIx =
+    thermodynamicStates[thermoIx].getWorldIndexes().back();
+
+    // Set this replica's WORK Jacobians potential
+    SimTK::Real jac = pHMC((worlds[backWorldIx].samplers[0]))->getDistortJacobianDetLog();
+	replicas[replicaIx].set_WORK_Jacobian(jac);
+}
+
 
 // Get Fixman of the back world and store it in replica thisReplica
 void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
@@ -2877,21 +2940,9 @@ void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
 	// KEYWORD = replica, VALUE = thermoState
 	int thermoIx = replica2ThermoIxs[replicaIx];
 
-    // Get the index of the front world
+    // Get the index of the back world
 	int backWorldIx =
     thermodynamicStates[thermoIx].getWorldIndexes().back();
-
-		/* TEST if replica j buffer has the same coordinates as its back world
-		int replica_j = replicaIx;
-		int thermoState_j = replica2ThermoIxs[replica_j];
-		int world_j_back = thermodynamicStates[thermoState_j].getWorldIndexes().back();
-		int world_j_front = thermodynamicStates[thermoState_j].getWorldIndexes().front();
-		const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-        X_j_back =  worlds[world_j_back].getCurrentAtomsLocationsInGround();
-        std::cout << "Replica " << replica_j << " back world" << std::endl;
-        PrintCoordinates(X_j_back);
-        //PrintCoordinates(X_j);
-        */
 
     // Set this replica's Fixman potential
     SimTK::Real U = pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
@@ -3579,6 +3630,9 @@ void Context::RunRENS(void)
 
 			// Deposit energy terms
 			store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
+
+			// Store any transformation Jacobians contribution
+			store_WORK_JacobianFromBackWorld(replicaIx);
 
 			// Store Fixman if required
 			storeReplicaFixmanFromBackWorld(replicaIx);

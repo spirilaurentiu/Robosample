@@ -3309,10 +3309,12 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 {
 	std::cout << std::setprecision(5) << std::fixed;
 	std::cout
-		<< "\tpe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB " << /*" turned off for time being"*/ getPEFromEvaluator(someState)
+		<< "\tpe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB "
+		<< /*" turned off for time being"*/ getPEFromEvaluator(someState)
 		<< "\n\tke_prop " << ke_o << ", ke_n " << ke_n
 		<< "\n\tfix_o " << fix_o << ", fix_n " << fix_n
-		<< "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o << ", logSineSqrGamma2_n " << logSineSqrGamma2_n
+		<< "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o
+		<< ", logSineSqrGamma2_n " << logSineSqrGamma2_n
 		//<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
 		<< "\n\tts " << timestep  //<< ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
 		<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_o

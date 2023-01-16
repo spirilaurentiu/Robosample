@@ -367,6 +367,9 @@ public:
     	// Get ennergy of the front world and store it in replica thisReplica
 	void storeReplicaEnergyFromFrontWorldFull(int thisReplica);
 
+	// Store any WORK Jacobians contribution from back world
+	void store_WORK_JacobianFromBackWorld(int replicaIx);
+
 	// Get Fixman of the back world and store it in replica thisReplica
     void storeReplicaFixmanFromBackWorld(int replicaIx);
 
