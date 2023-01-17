@@ -42,6 +42,13 @@ public:
 		//std::vector<std::string> argRootMobilities
 	);
 
+	/** It calls DuMMs defineAtomClass. These Molmodel functions contain
+	information regarding the force field parameters. **/
+	void updDummAtomClasses(
+		std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+		, int worldIx		
+	);
+
 	// Loads parameters into DuMM
 	void addDummParams(
 		int requestedNofMols,
@@ -127,15 +134,15 @@ public:
 
 	// --- Mixing parameters ---
 	// Another way to do it is setting the number of rounds
-	int getNofRounds();
-	void setNofRounds(int nofRounds);
+	int getRequiredNofRounds();
+	void setRequiredNofRounds(int argNofRounds);
 
 	int getNofRoundsTillReblock();
 	void setNofRoundsTillReblock(int nofRoundsTillReblock);
 	void updNofRoundsTillReblock(int nofRoundsTillReblock);
 
-	int getNofSamplesPerRound(std::size_t whichWorld);
-	void setNofSamplesPerRound(std::size_t whichWorld, int MCStepsPerRound);
+	SimTK::Real getNofSamplesPerRound(std::size_t whichWorld);
+	void setNofSamplesPerRound(std::size_t whichWorld, SimTK::Real MCStepsPerRound);
 
 	std::size_t getWorldIndex(std::size_t which) const;
 
@@ -446,12 +453,13 @@ private:
 	// WORLD END
 
 	// Simulation parameters
+	int requiredNofRounds;
 	int nofRounds;
 	//int total_mcsteps;
 
 	std::size_t nofWorlds;
 	bool isWorldsOrderRandom;
-	std::vector<int> nofSamplesPerRound;
+	std::vector<SimTK::Real> nofSamplesPerRound;
 	std::vector<int> nofMDStepsPerSample;
 	std::vector<SimTK::Real> timesteps;
 

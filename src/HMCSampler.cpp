@@ -2468,14 +2468,14 @@ SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
 void HMCSampler::shiftQ(SimTK::State& someState)
 {
 	// Scaling factor is set by Context only in the begining
-	this->QScaleFactor = 1.0;
+	//this->QScaleFactor = 1.0;
 
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
 
 	//distributeVariable(this->QScaleFactor, "BernoulliInverse");
 
 	distributeVariable(this->QScaleFactor, "truncNormal",
-		0.2);
+		0.1);
 	
 	std::cout << "and turned it into " << this->QScaleFactor << "\n";
 	
@@ -3152,8 +3152,8 @@ void HMCSampler::updateQBuffer(const SimTK::State& someState)
 void HMCSampler::storeAdaptiveData(SimTK::State& someState)
 {
 	updateQBuffer(someState);
-			pushCoordinatesInR(someState);
-			pushVelocitiesInRdot(someState);
+	pushCoordinatesInR(someState);
+	pushVelocitiesInRdot(someState);
 }
 
 void HMCSampler::PrintAdaptiveData(void)

@@ -1033,6 +1033,46 @@ void Context::addDummParams(
 
 } */
 
+// TODO: move to world
+/** It calls DuMMs defineAtomClass. These Molmodel functions contain
+information regarding the force field parameters. **/
+void Context::updDummAtomClasses(
+	std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
+	, int worldIx			
+)
+{
+	// Accumulate DuMM parameters in these vectors
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+
+		SimTK::DuMM::AtomClassIndex aCIx;
+		std::string atomClassName;
+		// Iterate through AtomClasses map and put AtomClasses in Dumm
+		std::map<AtomClassParams, AtomClassId>::const_iterator it;
+		for (	it = aClassParams2aClassId.begin();
+			it != aClassParams2aClassId.end(); ++it){
+
+			const AtomClassParams& atomParams = it->first;
+			const AtomClassId& atomClassId = it->second;
+
+			aCIx = atomClassId.index;
+			atomClassName = atomClassId.name;
+
+			std::cout << "Context::transferAtomClasses "
+				<< aCIx << " " << atomClassName ;
+			atomParams.dump();
+
+			// Define an AtomClass
+			(updWorld(worldIx))->forceField->defineAtomClass(aCIx, atomClassName.c_str(),
+				atomParams.atomicNumber,
+				atomParams.valence,
+				atomParams.vdwRadius,
+				atomParams.LJWellDepth
+			);
+		}
+}
+
 // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes
 void Context::addDummParams(
@@ -1077,33 +1117,7 @@ void Context::addDummParams(
 		allAnglesACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allDihedralsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 
-		//============== FROM TOPOLOGY transferDummAtomClasses ======================
-		SimTK::DuMM::AtomClassIndex aCIx;
-		std::string atomClassName;
-		// Iterate through AtomClasses map and put AtomClasses in Dumm
-		std::map<AtomClassParams, AtomClassId>::const_iterator it;
-		for (	it = aClassParams2aClassId.begin();
-			it != aClassParams2aClassId.end(); ++it){
-
-			const AtomClassParams& atomParams = it->first;
-			const AtomClassId& atomClassId = it->second;
-
-			aCIx = atomClassId.index;
-			atomClassName = atomClassId.name;
-
-			std::cout << "not Topology::transferAtomClasses "
-				<< aCIx << " " << atomClassName ;
-			atomParams.dump();
-
-			// Define an AtomClass
-			(updWorld(worldIx))->forceField->defineAtomClass(aCIx, atomClassName.c_str(),
-				atomParams.atomicNumber,
-				atomParams.valence,
-				atomParams.vdwRadius,
-				atomParams.LJWellDepth
-			);
-		}
-		//============== FROM TOPOLOGY END ======================
+		updDummAtomClasses(aClassParams2aClassId, worldIx);
 
 		// Iterate through molecules
 		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
@@ -1121,9 +1135,6 @@ void Context::addDummParams(
 	}
 	
 }
-
-
-
 
 
 // Loads parameters into DuMM, adopts compound by the CompoundSystem
@@ -1663,14 +1674,14 @@ bool Context::isUsingFixmanPotential(std::size_t whichWorld, std::size_t whichSa
 /////////////////////////
 
 // Another way to do it is setting the number of rounds
-int Context::getNofRounds()
+int Context::getRequiredNofRounds()
 {
-	return nofRounds;
+	return requiredNofRounds;
 }
 
-void Context::setNofRounds(int argNofRounds)
+void Context::setRequiredNofRounds(int argNofRounds)
 {
-	nofRounds = argNofRounds;
+	requiredNofRounds = argNofRounds;
 }
 
 int Context::getNofRoundsTillReblock()
@@ -1721,13 +1732,13 @@ void Context::allocateReblockQsCacheQVectors(void){
 }
 
 // Get the number of samples returned by the sampler in one round
-int Context::getNofSamplesPerRound(std::size_t whichWorld)
+SimTK::Real Context::getNofSamplesPerRound(std::size_t whichWorld)
 {
 	return nofSamplesPerRound[whichWorld];
 }
 
 // Set the number of samples returned by the sampler in one round
-void Context::setNofSamplesPerRound(std::size_t whichWorld, int MCStepsPerRound)
+void Context::setNofSamplesPerRound(std::size_t whichWorld, SimTK::Real MCStepsPerRound)
 {
 	nofSamplesPerRound[whichWorld] = MCStepsPerRound;
 }
@@ -1790,7 +1801,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 	//SimTK::Real dBoostT = (finBoostT - iniBoostT) / this->nofBoostStairs[0];
 
 	// Main
-	for(int round = 0; round < nofRounds; round++){ // Iterate rounds
+	for(int round = 0; round < requiredNofRounds; round++){ // Iterate rounds
 		for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){ // Iterate worlds
 
 			// Rotate worlds indeces (translate from right to left)
@@ -1837,7 +1848,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
 			// Update
-			for(int k = 0; k < getNofSamplesPerRound(currentWorldIx); k++){ // Iterate through samples
+			for(int k = 0; k < int(getNofSamplesPerRound(currentWorldIx)); k++){ // Iterate through samples
 				updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
 			} // END for samples
 
@@ -1867,6 +1878,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			}
 		} // if write pdbs
 
+		this->nofRounds++;
 	} // for i in rounds
 }
 
@@ -3219,27 +3231,14 @@ void Context::setWorldsParameters(int thisReplica)
 // Run a particular world
 void Context::RunWorld(int whichWorld)
 {
-/* 
-	// Get thermoState corresponding to this replica
-	// KEYWORD = replica, VALUE = thermoState
-	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
-
-	// Get this world indexes from the corresponding thermoState
-	std::vector<int> replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
-
-	// Check if the world is in this replica
-	assert(std::find(replicaWorldIxs.begin(),
-		replicaWorldIxs.end(),
-		whichWorld) != replicaWorldIxs.end()); */
 
 	// == SAMPLE == from the current world
 	if(NDistortOpt[whichWorld] == 0){
 		int accepted = worlds[whichWorld].generateSamples(
-			nofSamplesPerRound[whichWorld]);
+			int(nofSamplesPerRound[whichWorld]));
 	}else if(NDistortOpt[whichWorld] == -1){
 		int accepted = worlds[whichWorld].generateSamples(
-			nofSamplesPerRound[whichWorld]);
+			int(nofSamplesPerRound[whichWorld]));
 	}
 
 }
@@ -3378,7 +3377,7 @@ void Context::RunREX(void)
 	PrintNofAcceptedSwapsMatrix();
 
 	// Main loop
-	int nofMixes = int(nofRounds / swapEvery);
+	int nofMixes = int(requiredNofRounds / swapEvery);
 
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 		std::cout << " REX batch " << mixi << std::endl;
@@ -3577,7 +3576,7 @@ void Context::RunRENS(void)
 	PrintNofAcceptedSwapsMatrix();
 
 	// Main loop
-	int nofMixes = int(nofRounds / swapEvery);
+	int nofMixes = int(requiredNofRounds / swapEvery);
 
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 
@@ -3812,7 +3811,7 @@ void Context::RunOneRound(void)
 
 		// Generate samples from the current world
 		int accepted = worlds[currentWorldIx].generateSamples(
-			nofSamplesPerRound[currentWorldIx]);
+			int(nofSamplesPerRound[currentWorldIx]));
 
 	} // END iteration through worlds
 }
@@ -3827,12 +3826,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	std::size_t lastWorldIx = 0;
 
 	// Write an initial pdb
-    topologies[0].writeAtomListPdb(
-        outputDir,
-        "/pdbs/ini.",
-        ".pdb",
-        10,
-        0);
+    topologies[0].writeAtomListPdb(outputDir,
+        "/pdbs/ini.", ".pdb",
+        10, 0);
 
     writeInitialPdb();
 
@@ -3905,7 +3901,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		// DELETE CODE ABOVE
 
 		// Main loop: iterate through rounds
-		for(int round = 0; round < nofRounds; round++){
+		for(int round = 0; round < requiredNofRounds; round++){
 
 			RunOneRound();
 
@@ -3922,12 +3918,14 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				}
 			}
 
+		this->nofRounds++;
+
 		}
 
 	}else{// if Ti != Tf heating protocol
-		SimTK::Real Tincr = (Tf - Ti) / static_cast<SimTK::Real>(nofRounds);
+		SimTK::Real Tincr = (Tf - Ti) / static_cast<SimTK::Real>(requiredNofRounds);
 		SimTK::Real currT = Ti;
-		for(int round = 0; round < nofRounds; round++){ // Iterate rounds
+		for(int round = 0; round < requiredNofRounds; round++){ // Iterate rounds
 
 			// Set current temperature
 			currT += Tincr;
@@ -3949,6 +3947,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				}
 			}
 
+			this->nofRounds++;
 		}
 
 	}
@@ -4338,7 +4337,7 @@ void Context::writeFinalPdb(void)
 	for(unsigned int mol_i = 0; mol_i < nofMols; mol_i++){
 		topologies[mol_i].writeAtomListPdb(
 			getOutputDir(), "/pdbs/final." + getPdbPrefix() + ".", ".pdb", 10,
-			getNofRounds());
+			getRequiredNofRounds());
 	}
 }
 

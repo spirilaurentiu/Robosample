@@ -440,7 +440,7 @@ int main(int argc, char **argv)
 	currentWorldIx = 0;
 	round_mcsteps = 0;
 
-	context.setNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
+	context.setRequiredNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
 
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		round_mcsteps += context.getNofSamplesPerRound(worldIx);
@@ -562,7 +562,7 @@ int main(int argc, char **argv)
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
-		context.RunSimulatedTempering(context.getNofRounds(),
+		context.RunSimulatedTempering(context.getRequiredNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 	}else if(setupReader.get("RUN_TYPE")[0] == "REX"){
@@ -571,7 +571,7 @@ int main(int argc, char **argv)
 		context.setThermostatesNonequilibrium();
 		context.RunRENS();
 	}else{
-		context.Run(context.getNofRounds(),
+		context.Run(context.getRequiredNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 	}

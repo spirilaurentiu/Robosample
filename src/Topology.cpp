@@ -794,11 +794,10 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 information regarding the force field parameters. **/
 void Topology::generateDummAtomClasses(
-				  std::string resName
-				, readAmberInput *amberReader
-				, SimTK::DuMMForceFieldSubsystem& dumm
-				, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
-
+		std::string resName
+	, readAmberInput *amberReader
+	, SimTK::DuMMForceFieldSubsystem& dumm
+	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 )
 {
 	std::cout << "Topology::generateDummAtomClasses START\n";
@@ -935,6 +934,7 @@ void Topology::generateDummAtomClasses(
 
 }
 
+//TODO: DELETE // NO LONGER NEEDED
 /** It calls DuMMs defineAtomClass, defineChargedAtomTye and
 setBiotypeChargedAtomType for every atom. These Molmodel functions contain
 information regarding the force field parameters. **/
