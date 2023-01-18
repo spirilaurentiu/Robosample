@@ -2465,7 +2465,8 @@ SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
 /*
  * Shift all the generalized coordinates
  */
-void HMCSampler::shiftQ(SimTK::State& someState)
+void HMCSampler::shiftQ(SimTK::State& someState,
+	std::vector<SimTK::Real>& scaleFactors)
 {
 	// Scaling factor is set by Context only in the begining
 	//this->QScaleFactor = 1.0;
@@ -2473,12 +2474,15 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
 
 	//distributeVariable(this->QScaleFactor, "BernoulliInverse");
-
 	distributeVariable(this->QScaleFactor, "truncNormal",
 		0.1);
 	
 	std::cout << "and turned it into " << this->QScaleFactor << "\n";
-	
+
+	// Return the scaling factors
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+
 	//world->PrintX_PFMeans();
 	//world->PrintX_BMMeans();
 
@@ -2491,7 +2495,6 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
 		X_PFdiffs[k] = world->acosX_PF00[k] - world->acosX_PF00_means[k];
 	}
-
 	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
 		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
 	}
@@ -2500,13 +2503,15 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 	int k = -1;
 	for(auto& diff : X_PFdiffs){
 		diff *= QScaleFactor - 1.0;
+		//std::cout << "diff= " << diff << std::endl;
 	}
 	for(auto& diff : X_BMdiffs){
 		diff *= QScaleFactor - 1.0;
+		//std::cout << "diff= " << diff << std::endl;
 	}
 
 	// Print the differences	
-	/*for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+	/* for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
 		std::cout << "Excel X_PF " << k << " "
 			<< world->acosX_PF00[k] << " "
 			<< world->acosX_PF00_means[k] << " " 
@@ -2534,6 +2539,31 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 		mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
 		mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
 
+		// Get the scaleFactors too
+		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
+			scaleFactors[ (int(mbx) - 1) ] = 
+			(world->normX_BMp[int(mbx) - 1] + X_BMdiffs[int(mbx) - 1]) /
+				world->normX_BMp[int(mbx) - 1];
+
+		/* std::cout << "i bm diff c "
+			<< int(mbx) - 1 << " " 
+			<< world->normX_BMp[int(mbx) - 1] << " "
+			<< X_BMdiffs[int(mbx) - 1] << " "
+			<< scaleFactors[ (int(mbx) - 1) ] << " "
+			<< std::endl; */
+		}		
+
+		scaleFactors[ world->normX_BMp.size() + (int(mbx) - 1) ] = 
+		(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
+			world->acosX_PF00[int(mbx) - 1];
+		
+		/* std::cout << "i pf diff c "
+			<< world->normX_BMp.size() + (int(mbx) - 1) << " " 
+			<< world->acosX_PF00[int(mbx) - 1] << " "
+			<< X_PFdiffs[int(mbx) - 1] << " "
+			<< scaleFactors[ (int(mbx) - 1) ] << " "
+			<< std::endl; */
+
 		// Set Q to a uniform distribution
 		/*randomNumber_Unif = uniformRealDistribution(randomEngine);
 		randomNumber_Unif = (randomNumber_Unif * 2.0) - 1.0;
@@ -2550,6 +2580,29 @@ void HMCSampler::shiftQ(SimTK::State& someState)
 
 	// Test
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+
+/* 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+		if(world->normX_BMp[k] != 0.0){
+			scaleFactors[k] = this->QScaleFactor;
+			scaleFactors[k] *= 
+				1.0 - (world->normX_BMp_means[k] / world->normX_BMp[k]);
+
+			scaleFactors[k] +=
+				(world->normX_BMp_means[k] / world->normX_BMp[k]);
+		}
+	}
+
+	for(unsigned int k = 0; k < world->acosX_PF00.size(); k++){
+		scaleFactors[world->normX_BMp.size() + k] = this->QScaleFactor;
+		scaleFactors[world->normX_BMp.size() + k] *=
+			1.0 - (world->acosX_PF00_means[k] / world->acosX_PF00[k]);
+
+		scaleFactors[world->normX_BMp.size() + k] +=
+			(world->acosX_PF00_means[k] / world->acosX_PF00[k]);
+	} */
+
+
+
 
 /* 	int nu = someState.getNU();
 
@@ -2775,10 +2828,11 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	storeOldConfigurationAndPotentialEnergies(someState); */
 
 	// Apply the non-equilibrium transformation
-	shiftQ(someState);
-
 	std::vector<SimTK::Real> scaleFactors;
-	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size());
+	shiftQ(someState, scaleFactors);
+
+	
+/* 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size());
 	
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 		if(world->normX_BMp[k] != 0.0){
@@ -2798,7 +2852,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 		scaleFactors[world->normX_BMp.size() + k] +=
 			(world->acosX_PF00_means[k] / world->acosX_PF00[k]);
-	}
+	} */
 
 	std::cout << "scaleFactors: ";
 	PrintCppVector(scaleFactors);

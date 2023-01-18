@@ -291,9 +291,11 @@ public:
 		SimTK::Real param1 = 1.0,
 		SimTK::Real param2 = 0.0);
 
-	/** Shift all the generalized coordinates
+	/** Shift all the generalized coordinates and
+	 * return the scale factors of angles and bonds
 	 **/
-	void shiftQ(SimTK::State& someState);
+	void shiftQ(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
 
 	/**
 	 * 
