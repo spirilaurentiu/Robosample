@@ -296,7 +296,7 @@ int main(int argc, char **argv)
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		BaseSampler *p = context.addSampler(worldIx,
-			setupReader.get("SAMPLERS")[worldIx],
+			to_upper(setupReader.get("SAMPLERS")[worldIx]),
 			setupReader.get("INTEGRATORS")[worldIx]);
 	}
 
@@ -555,7 +555,7 @@ int main(int argc, char **argv)
 
 		context.setSwapFixman(std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]));
 
-		context.PrepareNonEquilibriumParams();
+		context.PrepareNonEquilibriumParams_Q();
 
 	}
 		

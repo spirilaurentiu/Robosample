@@ -67,18 +67,38 @@ public:
 
 	// Draws one sample from vonMises distribution with concentration k
 	// The algorithm is taken from 1979 Best, page 155
-	SimTK::Real vonMises(SimTK::Real miu, SimTK::Real k);
+	SimTK::Real generateVonMisesSample(SimTK::Real miu, SimTK::Real k);
 
 	// Draws X from von Mises-Fisher distribution with concentration 
 	// parameter k TODO: reference to the algorithm
 	// X vector has the dimensions of the ndofs
-	std::vector<double>& vonMisesFisher(std::vector<double>& X, double k);
+	std::vector<double>& generateVonMisesFisherSample(std::vector<double>& X, double k);
 
 	// Draws from chi distribution
-	double chi(void);
+	double generateChiSample(void);
 
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
+
+	/**
+	 * Take a variable and transforming according to some distribution
+	 * //TODO revise param1 and param2
+	*/
+	SimTK::Real& distributeVariable(SimTK::Real& var,
+		std::string distrib = "alternateInverse",
+		SimTK::Real param1 = 1.0,
+		SimTK::Real param2 = 0.0);
+
+	SimTK::Real& distributeVariable(
+		std::vector<SimTK::Real>& vvar,
+		std::string distrib = "alternateInverse",
+		SimTK::Real param1 = 1.0,
+		SimTK::Real param2 = 0.0);
+
+	SimTK::Real calcDeformationPotential(SimTK::Real& var,
+		std::string distrib = "alternateInverse",
+		SimTK::Real param1 = 1.0,
+		SimTK::Real param2 = 0.0);
 
 	virtual void shiftQ ( SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors) = 0;

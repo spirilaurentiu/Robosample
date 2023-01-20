@@ -604,7 +604,7 @@ void MonteCarloSampler::perturbQ(SimTK::State& someState)
 	SimTK::Real q1_actVal = someState.getQ()[1];
 
 	// Draw from vonMises distribution
-	SimTK::Real q0_vonMises = vonMises(q0_actVal, 5);
+	SimTK::Real q0_vonMises = generateVonMisesSample(q0_actVal, 5);
 	if(std::isnan(q0_vonMises)){q0_vonMises = q0_actVal;}
 	std::cout << "vonMises " << q0_vonMises << "\n";
 

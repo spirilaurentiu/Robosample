@@ -297,7 +297,7 @@ public:
 		std::vector<int>& mdstepsInThisReplica);
 
 	// Prepare Q, U, and tau altering function parameters
-	void PrepareNonEquilibriumParams(void);
+	void PrepareNonEquilibriumParams_Q(void);
 
 	// Set thermodynamic states nonequilibrium flag
 	void setThermostatesNonequilibrium(void);
@@ -392,6 +392,9 @@ public:
 
 	// Reset worlds parameters according to thermodynamic state
 	void setWorldsParameters(int thisReplica);
+
+	// Set nonequilibrium parameters for one replica
+	void updWorldsNonequilibriumParameters(int thisReplica);
 
 	// Run a particular world
 	void RunWorld(int whichWorld);
@@ -534,7 +537,8 @@ private:
 	// Non-equilibrium parameters
 	std::vector<SimTK::Real> qScaleFactorsEven;
 	std::vector<SimTK::Real> qScaleFactorsOdd;
-	std::vector<SimTK::Real> *qScaleFactors = nullptr;
+	std::vector<SimTK::Real> qScaleFactors;
+	SimTK::Real qScaleDistribStd;
 
 };
 

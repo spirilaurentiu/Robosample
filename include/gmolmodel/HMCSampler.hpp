@@ -281,15 +281,8 @@ public:
 	const int getDistortOpt();
 	void setDistortOption(const int& distortOptArg);
 
+	const SimTK::Real& getQScaleFactor(void);
 	void setQScaleFactor(const SimTK::Real& s);
-
-	/**
-	 * Take a variable and transforming according to some distribution
-	*/
-	SimTK::Real& distributeVariable(SimTK::Real& var,
-		std::string distrib = "alternateInverse",
-		SimTK::Real param1 = 1.0,
-		SimTK::Real param2 = 0.0);
 
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds

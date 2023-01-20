@@ -681,7 +681,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		U.resize(ndofs, 0.0);
 		double concentration = 100;
 
-		vonMisesFisher(X, concentration);
+		generateVonMisesFisherSample(X, concentration);
 		std::cout << "X 0 "; for(int i = 0; i < nu; i++){ std::cout << X[i] << " " ;} std::cout << "\n";
 
 		// Rotate to appropiate location
@@ -2398,11 +2398,17 @@ void HMCSampler::setDistortOption(const int& distortOptArg)
 	this->DistortOpt = distortOptArg;
 }
 
+const SimTK::Real& HMCSampler::getQScaleFactor(void)
+{
+	return this->QScaleFactor;
+}
+
 void HMCSampler::setQScaleFactor(const SimTK::Real& s)
 {
 	this->QScaleFactor = s;
 }
 
+/* // TODO revise param1 and param2
 SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
 		std::string distrib, SimTK::Real param1, SimTK::Real param2)
 {
@@ -2462,6 +2468,56 @@ SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
 
 }
 
+SimTK::Real HMCSampler::calcDeformationPotential(
+		SimTK::Real& var,
+		std::string distrib,
+		SimTK::Real param1, SimTK::Real param2
+)
+{
+	SimTK::Real retVal = 0.0;
+
+	// Bernoulli trial between the var and its inverse
+	if(distrib == "BernoulliInverse"){
+		return 0;
+	}
+	// Bernoulli trial between the var and its reciprocal
+	else if(distrib == "BernoulliReciprocal"){
+		return 0;
+	}
+	// Run Gaussian distribution
+	else if(distrib == "normal"){
+		return 0;
+	}
+	// Run truncated Gaussian distribution
+	else if(distrib == "truncNormal"){
+		SimTK::Real var2 = var*var;
+
+		SimTK::Real firstTerm = 0.0;
+		SimTK::Real secondTerm = 0.0;
+
+		firstTerm = (1.0 / (var2)) - var2;
+		secondTerm = 2.0 * param1 * (var - (1.0/var));
+
+		SimTK::Real numerator = firstTerm + secondTerm;
+		SimTK::Real denominator = param2*param2;
+
+		retVal = (1.0 / this->beta) * 0.5 * (numerator / denominator);
+
+	}
+	// Run bimodal Gaussian distribution
+	else if(distrib == "bimodalNormal"){
+		return 0;
+	}
+	// Gamma distribution
+	else if(distrib == "gamma"){
+		return 0;
+	}
+
+	return retVal;
+	
+} */
+
+
 /*
  * Shift all the generalized coordinates
  */
@@ -2474,8 +2530,8 @@ void HMCSampler::shiftQ(SimTK::State& someState,
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
 
 	//distributeVariable(this->QScaleFactor, "BernoulliInverse");
-	distributeVariable(this->QScaleFactor, "truncNormal",
-		0.1);
+	//distributeVariable(this->QScaleFactor, "truncNormal",
+	//	0.1);
 	
 	std::cout << "and turned it into " << this->QScaleFactor << "\n";
 
@@ -2601,9 +2657,6 @@ void HMCSampler::shiftQ(SimTK::State& someState,
 			(world->acosX_PF00_means[k] / world->acosX_PF00[k]);
 	} */
 
-
-
-
 /* 	int nu = someState.getNU();
 
 	Matrix mathJ;
@@ -2704,6 +2757,8 @@ void HMCSampler::shiftQ(SimTK::State& someState,
 	std::cout << "mathJtJ determinant\n" << detMathJtJ << std::endl; */
 
 }
+
+
 
 SimTK::Real 
 HMCSampler::calcBendStretchJacobianDetLog(
@@ -2828,6 +2883,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	storeOldConfigurationAndPotentialEnergies(someState); */
 
 	// Apply the non-equilibrium transformation
+	// And get the BAT scaling factors back
 	std::vector<SimTK::Real> scaleFactors;
 	shiftQ(someState, scaleFactors);
 

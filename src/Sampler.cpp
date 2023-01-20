@@ -454,7 +454,7 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 
 
 // Draws from von Mises distribution with concentration kK
-SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
+SimTK::Real Sampler::generateVonMisesSample(SimTK::Real Mean, SimTK::Real K){
 
 	// Declarations
 	SimTK::Real tau = 0.0;
@@ -528,7 +528,7 @@ SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
 
 
 // Draws from von Mises-Fisher distribution
-std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
+std::vector<double>& Sampler::generateVonMisesFisherSample(std::vector<double>& X,
 	double lambda)
 {
 	//int NDOFS = 3; // DELETE THIS
@@ -589,13 +589,140 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 
 
 // Draws from von Mises-Fisher distribution
-double Sampler::chi(void)
+double Sampler::generateChiSample(void)
 {
 	int NDOFS = 3;
 
 }
 
 
+// TODO revise param1 and param2
+SimTK::Real& Sampler::distributeVariable(SimTK::Real& var,
+		std::string distrib,
+		SimTK::Real param1, SimTK::Real param2)
+{
+	// Bernoulli trial between the var and its inverse
+	if(distrib == "BernoulliInverse"){
+		SimTK::Real randomNumber_Unif;
+		int randomSign;
+
+		randomNumber_Unif = uniformRealDistribution(randomEngine);
+		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
+		if(randomSign < 0){
+			var = 1.0 / var;
+		}
+	}
+	// Bernoulli trial between the var and its reciprocal
+	else if(distrib == "BernoulliReciprocal"){
+		SimTK::Real randomNumber_Unif;
+		int randomSign;
+
+		randomNumber_Unif = uniformRealDistribution(randomEngine);
+		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
+		if(randomSign < 0){
+			var = -1.0 * var;
+		}
+	}
+	// Run Gaussian distribution
+	else if(distrib == "normal"){
+
+		var = var + (gaurand(randomEngine) * param1);
+	}
+	// Run truncated Gaussian distribution
+	else if(distrib == "truncNormal"){
+
+		SimTK::Real mean = var;
+		var = var + (gaurand(randomEngine) * param1);
+
+		if(var <= 0){
+			var = mean;
+		}
+		if(var >= (2*mean)){
+			var = mean ;
+		}
+	}
+	// Run bimodal Gaussian distribution
+	else if(distrib == "bimodalNormal"){
+
+		var = distributeVariable(var, "BernoulliInverse");
+		var = var + gaurand(randomEngine);
+
+	}
+	// Gamma distribution
+	else if(distrib == "gamma"){
+		var = gammarand(randomEngine);
+	}else{
+		std::cerr << "Sampler distribute variable: Unkown distribution\n";
+	}
+
+	return var;
+}
+
+SimTK::Real& Sampler::distributeVariable(
+	std::vector<SimTK::Real>& vvar,
+	std::string distrib,
+	SimTK::Real param1, SimTK::Real param2)
+{
+	for(auto& var : vvar){
+		distributeVariable(var, distrib, param1, param2);
+	}
+}
+
+SimTK::Real Sampler::calcDeformationPotential(
+		SimTK::Real& var,
+		std::string distrib,
+		SimTK::Real param1, SimTK::Real param2
+)
+{
+	SimTK::Real retVal = 0.0;
+
+	// Bernoulli trial between the var and its inverse
+	if(distrib == "BernoulliInverse"){
+		return 0;
+	}
+	// Bernoulli trial between the var and its reciprocal
+	else if(distrib == "BernoulliReciprocal"){
+		return 0;
+	}
+	// Run Gaussian distribution
+	else if(distrib == "normal"){
+		return 0;
+	}
+	// Run truncated Gaussian distribution
+	else if(distrib == "truncNormal"){
+		SimTK::Real var2 = var*var;
+
+		SimTK::Real firstTerm = 0.0;
+		SimTK::Real secondTerm = 0.0;
+
+		firstTerm = (1.0 / (var2)) - var2;
+		secondTerm = 2.0 * param1 * (var - (1.0/var));
+
+		SimTK::Real numerator = firstTerm + secondTerm;
+		SimTK::Real denominator = param2*param2;
+
+		retVal = (1.0 / this->beta) * 0.5 * (numerator / denominator);
+
+	}
+	// Run bimodal Gaussian distribution
+	else if(distrib == "bimodalNormal"){
+		return 0;
+	}
+	// Gamma distribution
+	else if(distrib == "gamma"){
+		return 0;
+	}
+
+	return retVal;
+	
+}
+
+SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev)
+{
+    SimTK::Real exponent = -0.5 * std::pow((x - mean) / stddev, 2);
+	SimTK::Real normalizingFactor = 1.0 / (stddev * sqrt(2 * M_PI));
+    return normalizingFactor * std::exp(exponent);
+}
 
 
 

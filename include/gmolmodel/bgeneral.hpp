@@ -152,6 +152,9 @@ int bZeroStr(char *dest);
  */
 int bSubstr (char *dest, const char *src, int start, int no_chars);
 
+std::string to_lower(std::string str);
+std::string to_upper(std::string str);
+
 /*
  * Left trim
  */

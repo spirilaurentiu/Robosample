@@ -325,6 +325,17 @@ int bSubstr (char *dest, const char *src, int start, int no_chars)
 	return 1;
 }
 
+// To lower for strings
+std::string to_lower(std::string str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    return str;
+}
+
+// To upper for strings
+std::string to_upper(std::string str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
+}
 
 /*
  * SEQRES line to 1-letter code aa
