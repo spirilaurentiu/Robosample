@@ -495,8 +495,12 @@ protected:
 	SimTK::Real boostRT;
 	SimTK::Real sqrtBoostRT; // vel init
 	SimTK::Real boostBeta;
-	SimTK::Real boostFactor;
-	SimTK::Real unboostFactor;
+
+	SimTK::Real boostKEFactor;
+	SimTK::Real unboostKEFactor;
+
+	SimTK::Real boostUFactor;
+	SimTK::Real unboostUFactor;
 	int boostMDSteps;
 
 	int MDStepsPerSample;

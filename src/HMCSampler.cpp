@@ -465,7 +465,7 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	system->realize(someState, SimTK::Stage::Velocity);
 
 	// Store kinetic energies
-	this->ke_o = matter->calcKineticEnergy(someState);
+	this->ke_o = (this->unboostKEFactor) * matter->calcKineticEnergy(someState);
 	this->ke_set = this->ke_o;
 
 	// Update total energies
@@ -1892,9 +1892,12 @@ void HMCSampler::setBoostTemperature(SimTK::Real argT)
 	this->boostBeta = 1.0 / boostRT;
 	//std::cout << "HMC: boostBeta: " << this->boostBeta << std::endl;
 
-	this->boostFactor = std::sqrt(this->boostT / this->temperature);
-	this->unboostFactor = 1 / boostFactor;
-	//std::cout << "HMC: boost velocity scale factor: " << this->boostFactor << std::endl;
+	this->boostKEFactor = (this->boostT / this->temperature);
+	this->unboostKEFactor = 1 / boostKEFactor;
+
+	this->boostUFactor = std::sqrt(this->boostT / this->temperature);
+	this->unboostUFactor = 1 / boostUFactor;
+	//std::cout << "HMC: boost velocity scale factor: " << this->boostUFactor << std::endl;
 }
 
 void HMCSampler::setBoostMDSteps(int argMDSteps)
@@ -1939,7 +1942,7 @@ void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 	// OLD RESTORE TODO BOOST
 	// this->ke_proposed = matter->calcKineticEnergy(someState);
 	// NEW TRY TODO BOOST
-	this->ke_o = this->unboostFactor * matter->calcKineticEnergy(someState);
+	this->ke_o = (this->unboostKEFactor) * matter->calcKineticEnergy(someState);
 
 	// Store proposed total energy
 	this->etot_o = getOldPE() + getOldKE() 
@@ -2228,7 +2231,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 	// OLD RESTORE TODO BOOST
 	//ke_n = matter->calcKineticEnergy(someState);
 	// NEW TRY TODO BOOST
-	ke_n = this->unboostFactor * matter->calcKineticEnergy(someState);
+	ke_n = (this->boostKEFactor) * matter->calcKineticEnergy(someState);
 
 	// Get new potential energy
 	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
