@@ -213,9 +213,13 @@ public:
 	/** Analysis related functions **/
 	void addDistance(std::size_t whichWorld, std::size_t whichCompound,
 		int aIx1, int aIx2);
+	void addAngle(std::size_t whichWorld, std::size_t whichCompound,
+		int aIx1, int aIx2, int aIx3);
 	void addDihedral(std::size_t whichWorld, std::size_t whichCompound,
 		int aIx1, int aIx2, int aIx3, int aIx4);
+
 	void addDistances(std::vector<int> distanceIx);
+	void addAngles(std::vector<int> dihedralIx);
 	void addDihedrals(std::vector<int> dihedralIx);
 
 	// Allocate space for containers that keep statistics if we're doing any
@@ -234,12 +238,14 @@ public:
 
 	// Print Simbody related information
 	void PrintSimbodyMobods(void);
-	void PrintSamplerData(std::size_t whichWorld);
+	void PrintSamplerDataToLog(std::size_t whichWorld);
 	void PrintGeometry(SetupReader&, std::size_t whichWorld);
-	void PrintGeometry(std::size_t whichWorld);
-	void PrintDistances(std::size_t whichWorld);
-	void PrintDihedrals(std::size_t whichWorld);
-	void PrintDihedralsQs(std::size_t whichWorld);
+
+	void PrintGeometryToLog(std::size_t whichWorld);
+	void PrintDistancesToLog(std::size_t whichWorld);
+	void PrintAnglesToLog(std::size_t whichWorld);
+	void PrintDihedralsToLog(std::size_t whichWorld);
+	void PrintDihedralsQsToLog(std::size_t whichWorld);
 	void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
 	void PrintToLog(int whichWorld);
 
@@ -255,6 +261,8 @@ public:
 
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2, int a3, int a4);
+	SimTK::Real Roboangle(std::size_t whichWorld, std::size_t whichCompound,
+		std::size_t whichSampler, int a1, int a2, int a3);
 	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2);
 
@@ -483,6 +491,7 @@ private:
 	// First two integers specifiy the world and the Compound. The rest
 	// specifies atom indeces
 	std::vector< std::vector<int> > distanceIxs;
+	std::vector< std::vector<int> > angleIxs;
 	std::vector< std::vector<int> > dihedralIxs;
 
 	SimTK::Real geom1[PRINT_BUFFER_SIZE];

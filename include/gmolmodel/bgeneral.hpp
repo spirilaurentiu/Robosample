@@ -298,6 +298,10 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
  * Print Transform
  */
 void PrintTransform(SimTK::Transform T, int decimal_places);
+/*
+ * Angle
+ */
+SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2);
 
 /*
  * Dihedral angle

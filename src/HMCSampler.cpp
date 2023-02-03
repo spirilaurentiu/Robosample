@@ -2231,7 +2231,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 	// OLD RESTORE TODO BOOST
 	//ke_n = matter->calcKineticEnergy(someState);
 	// NEW TRY TODO BOOST
-	ke_n = (this->boostKEFactor) * matter->calcKineticEnergy(someState);
+	ke_n = (this->unboostKEFactor) * matter->calcKineticEnergy(someState);
 
 	// Get new potential energy
 	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
@@ -2770,24 +2770,29 @@ HMCSampler::calcBendStretchJacobianDetLog(
 {
 
 	// Get log of the Cartesian->BAT Jacobian
-	SimTK::Real logJacBAT = 0.0;
+	SimTK::Real logJacBAT_0 = 0.0;
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
-		// Get bond term
-		SimTK::Real d4 = world->normX_BMp[k];
-		if(d4 != 0){
-			d4 = 4.0 * std::log(d4);
-		}
+			// Checks
+			/* std::cout << " k normBM acosPF " << k << " "
+				<< world->normX_BMp[k] << " " << world->acosX_PF00[k] << " "
+				<< std::endl << std::flush; */
 
-		// Get the angle term
-		SimTK::Real sineSq = world->acosX_PF00[k];
+			// Get bond term
+			SimTK::Real d2 = world->normX_BMp[k];
+			if(d2 != 0){
+					d2 = 2.0 * std::log(d2);
+			}
 
-		if(sineSq != 0){
-			sineSq = std::log(std::sin(sineSq) * std::sin(sineSq));
-		}
+			// Get the angle term
+			SimTK::Real sineTheta = world->acosX_PF00[k];
 
-		// Accumulate result
-		logJacBAT += (d4 + sineSq);
+			if(sineTheta != 0){
+					sineTheta = std::log(std::sin(sineTheta));
+			}
+
+			// Accumulate result
+			logJacBAT_0 += (d2 + sineTheta);
 	}
 
 	// Get log of the scaling Jacobian
@@ -2796,87 +2801,47 @@ HMCSampler::calcBendStretchJacobianDetLog(
 	SimTK::Real logJacScale = 0.0;
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
-		// Accumulate result
-		if(scaleFactors[k] != 0){
-			logJacScale += std::log(scaleFactors[k]);
-		}
+			// Accumulate result
+			if(scaleFactors[k] != 0){
+					logJacScale += std::log(scaleFactors[k]);
+			}
 	}
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
-	SimTK::Real logJacBATInv = 0.0;
+	SimTK::Real logJacBAT_tau = 0.0;
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
-		// Get bond term
-		SimTK::Real d4 = (world->normX_BMp[k] * scaleFactors[k]);
-		if(d4 != 0){
-			d4 = -4.0 * std::log(d4);
-		}
+			// Get bond term
+			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
+			if(d2 != 0){
+					d2 = 2.0 * std::log(d2);
+			}
 
-		// Get the angle term
-		SimTK::Real sineSq = (world->acosX_PF00[k] * scaleFactors[k]);
+			// Get the angle term
+			SimTK::Real sineTheta = (world->acosX_PF00[k] * scaleFactors[k]);
 
-		if(sineSq != 0){
-			sineSq = -1.0 * std::log(std::sin(sineSq) * std::sin(sineSq));
-		}
+			if(sineTheta != 0){
+					sineTheta = std::log(std::sin(sineTheta));
+			}
 
-		// Accumulate result
-		logJacBATInv += (d4 + sineSq);
+			// Accumulate result
+			logJacBAT_tau += (d2 + sineTheta);
 	}
 
-	// Final result
+        // Final result
+        //SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
+        //SimTK::Real logBendStretchJac = logJacScale; // 7000
+        SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau); // 8000
+        //SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau); // 9000
 
-	SimTK::Real logBendStretchJac = logJacBAT + logJacScale + logJacBATInv;
-
-	std::cout << "logJacBAT " << logJacBAT
-		<< " logJacScale " << logJacScale
-		<< " logJacBATInv " << logJacBATInv
-		<< " logBendStretchJac " << logBendStretchJac
-		<< std::endl;
+        std::cout << "logJacBAT " << logJacBAT_0
+                << " logJacScale " << logJacScale
+                << " logJacBATInv " << logJacBAT_tau
+                << " logBendStretchJac " << logBendStretchJac
+                << std::endl;
 
 	return logBendStretchJac;
 
-/* 	SimTK::Real jacfwd = 0.0;
-	for(unsigned int k = 0; k < world->acosX_PF00_means.size(); k++){
-
-		jacfwd += std::log(std::sin( world->acosX_PF00[k] ) *
-			std::sin( world->acosX_PF00[k] ));
-
-		SimTK::Real cor = 0.0;
-		cor = (1.0 - this->QScaleFactor) * world->acosX_PF00_means[k];
-		cor /= world->acosX_PF00[k];
-		cor += this->QScaleFactor;
-		cor = std::log(cor);
-
-		jacfwd += cor;
-	}
-
-	std::cout << "logjacobian fwd " << jacfwd << std::endl;
-
-	SimTK::Real jacbwd = 0.0;
-	for(unsigned int k = 0; k < world->acosX_PF00_means.size(); k++){
-
-		// Get q
-		SimTK::Real addTerm = 0.0;
-		if (k > 0){
-			addTerm = someState.getQ()[2*(k-1)]; // suppose we have Weld
-			//std::cout << "state index " << 2*(k-1) << std::endl;
-		}
-
-		SimTK::Real cor = 0.0;
-		cor = (1.0 - this->QScaleFactor) * world->acosX_PF00_means[k];
-		cor /= (world->acosX_PF00[k] + addTerm);
-		cor += this->QScaleFactor;
-
-		cor *= (world->acosX_PF00[k] + addTerm);
-
-		jacbwd += std::log(std::sin(cor) * std::sin(cor));
-	}
-
-	std::cout << "logjacobian bwd " << jacbwd << std::endl;
-
-	return (jacfwd - jacbwd); */
-
-	// ==============================
 }
 
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)

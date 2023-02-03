@@ -1853,10 +1853,12 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 
 		// Print energy and geometric features
 		if( !(round % getPrintFreq()) ){
-			PrintSamplerData(worldIndexes.back());
-			PrintDistances(worldIndexes.back());
-			PrintDihedralsQs(worldIndexes.back());
-			fprintf(logFile, "\n");
+			/* PrintSamplerDataToLog(worldIndexes.back());
+			PrintDistancesToLog(worldIndexes.back());
+			PrintAnglesToLog(worldIndexes.back());
+			PrintDihedralsQsToLog(worldIndexes.back());
+			fprintf(logFile, "\n"); */
+			PrintToLog(worldIndexes.back());
 		}
 
 		// Write pdb
@@ -4053,7 +4055,33 @@ void Context::addDistances(std::vector<int> distanceIx)
 	}
 }
 
-void Context::addDihedral(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2, int aIx3, int aIx4)
+void Context::addAngle(std::size_t whichWorld, std::size_t whichCompound,
+	int aIx1, int aIx2, int aIx3)
+{
+	// TODO some are 64 bit, some 32 bit. What to do?
+	std::vector<int> tempV;
+	tempV.push_back(static_cast<int>(whichWorld));
+	tempV.push_back(static_cast<int>(whichCompound));
+	tempV.push_back(aIx1);
+	tempV.push_back(aIx2);
+	tempV.push_back(aIx3);
+
+	angleIxs.push_back(tempV);
+}
+
+// Get dihedrals. TODO : only adds to the first Topology
+void Context::addAngles(std::vector<int> angleIx){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for(unsigned int ai = 0; ai < angleIx.size() / 3; ai++){
+			addAngle(worldIx, 0,
+				angleIx[3*ai + 0], angleIx[3*ai + 1],
+				angleIx[3*ai + 2]);
+		}
+	}
+}
+
+void Context::addDihedral(std::size_t whichWorld, std::size_t whichCompound,
+	int aIx1, int aIx2, int aIx3, int aIx4)
 {
 	// TODO some are 64 bit, some 32 bit. What to do?
 	std::vector<int> tempV;
@@ -4081,7 +4109,7 @@ void Context::addDihedrals(std::vector<int> dihedralIx){
 // --- Printing functions --
 
 // Print energy information
-void Context::PrintSamplerData(std::size_t whichWorld)
+void Context::PrintSamplerDataToLog(std::size_t whichWorld)
 {
 
 	SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
@@ -4190,42 +4218,58 @@ void Context::PrintGeometry(SetupReader& setupReader, std::size_t whichWorld)
 	}
 }
 
-void Context::PrintGeometry(std::size_t whichWorld)
+void Context::PrintGeometryToLog(std::size_t whichWorld)
 {
-	// TODO same 32 vs 64 bit thing. See the many other function below. Might use a vector<struct>, not a vector<vector>
+/* 	// TODO same 32 vs 64 bit thing. See the many other function below. Might use a vector<struct>, not a vector<vector>
 	for (const auto& distanceIx : distanceIxs) {
 		if( distanceIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ",
-				Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]));
+			fprintf(logFile, "%.3f ", Distance(distanceIx[0], distanceIx[1], 0,
+					distanceIx[2], distanceIx[3]));
 		}
 	}
 
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]));
+			fprintf(logFile, "%.3f ", Dihedral(dihedralIx[0], dihedralIx[1], 0,
+				dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]));
 		}
-	}
+	} */
+	PrintDistancesToLog(whichWorld);
+	PrintAnglesToLog(whichWorld);
+	PrintDihedralsQsToLog(whichWorld);
 }
 
-void Context::PrintDistances(std::size_t whichWorld)
+void Context::PrintDistancesToLog(std::size_t whichWorld)
 {
 	for (const auto& distanceIx : distanceIxs) {
 		if( distanceIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) );
+			fprintf(logFile, "%.3f ", Distance(distanceIx[0], distanceIx[1], 0,
+				distanceIx[2], distanceIx[3]) );
 		}
 	}
 }
 
-void Context::PrintDihedrals(std::size_t whichWorld)
+void Context::PrintAnglesToLog(std::size_t whichWorld)
+{
+	for (const auto& angleIx : angleIxs){
+		if( angleIx[0] == static_cast<int>(whichWorld)){
+			fprintf(logFile, "%.3f ", Roboangle(angleIx[0], angleIx[1], 0,
+				angleIx[2], angleIx[3], angleIx[4]) );
+		}
+	}
+}
+
+void Context::PrintDihedralsToLog(std::size_t whichWorld)
 {
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) );
+			fprintf(logFile, "%.3f ", Dihedral(dihedralIx[0], dihedralIx[1], 0,
+				dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) );
 		}
 	}
 }
 
-void Context::PrintDihedralsQs(std::size_t whichWorld)
+void Context::PrintDihedralsQsToLog(std::size_t whichWorld)
 {
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == static_cast<int>(whichWorld)){
@@ -4307,9 +4351,13 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 
 void Context::PrintToLog(int worldIx)
 {
-	PrintSamplerData(worldIx);
-	PrintDistances(worldIx);
-	PrintDihedralsQs(worldIx);
+	PrintSamplerDataToLog(worldIx);
+
+	PrintGeometryToLog(worldIx);
+	/* PrintDistancesToLog(worldIx);
+	PrintAnglesToLog(worldIx);
+	PrintDihedralsQsToLog(worldIx); */
+
 	fprintf(logFile, "\n");
 }
 
@@ -4396,6 +4444,34 @@ std::string Context::getPdbPrefix()
 void Context::setPdbPrefix(std::string arg)
 {
 	this->pdbPrefix = arg;
+}
+
+SimTK::Real Context::Roboangle(std::size_t whichWorld,
+	std::size_t whichCompound, std::size_t whichSampler,
+	int a1, int a2, int a3)
+{
+
+	SimTK::State& state = worlds[whichWorld].integ->updAdvancedState();
+
+	Topology& topology = worlds[whichWorld].updTopology(whichCompound);
+
+	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[whichWorld].forceField);
+
+	SimTK::SimbodyMatterSubsystem& matter = *(worlds[whichWorld].matter);
+
+	SimTK::Vec3 a1pos, a2pos, a3pos, a4pos;
+	a1pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
+		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)),
+		dumm, matter, state);
+	a2pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
+		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)),
+		dumm, matter, state);
+	a3pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
+		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)),
+		dumm, matter, state);
+
+	return bAngle(a1pos, a2pos, a3pos);
+
 }
 
 
@@ -4490,7 +4566,6 @@ void Context::PrintNumThreads() {
 		worldIx++;
 	}
 }
-
 
 ///////////////////////////
 // CTYPES

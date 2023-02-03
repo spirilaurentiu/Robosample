@@ -452,14 +452,20 @@ int main(int argc, char **argv)
 	// Get atom indeces for geometry calculations
 	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
 		std::vector<int> distanceIx;
+		std::vector<int> angleIx;
 		std::vector<int> dihedralIx;
 		for(unsigned int i = 0; i < setupReader.get("DISTANCE").size(); i++){
 			distanceIx.push_back(atoi(setupReader.get("DISTANCE")[i].c_str()));
 		}
+		for(unsigned int i = 0; i < setupReader.get("ANGLE").size(); i++){
+			angleIx.push_back(atoi(setupReader.get("ANGLE")[i].c_str()));
+		}
 		for(unsigned int i = 0; i < setupReader.get("DIHEDRAL").size(); i++){
 			dihedralIx.push_back(atoi(setupReader.get("DIHEDRAL")[i].c_str()));
 		}
+
 		context.addDistances(distanceIx);
+		context.addAngles(angleIx);
 		context.addDihedrals(dihedralIx);
 	}
 

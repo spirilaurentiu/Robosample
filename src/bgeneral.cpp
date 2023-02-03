@@ -860,9 +860,24 @@ void PrintTransform(SimTK::Transform T, int decimal_places)
 }
 
 /*
+ * Angle
+ */
+SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
+{
+	SimTK::Vec3 v01 = pos1 - pos0;
+	SimTK::Vec3 v02 = pos2 - pos0;
+
+	SimTK::Real angleCos = SimTK::dot(v01, v02) / (v01.norm() * v02.norm());
+
+	return std::acos(angleCos);
+}
+
+/*
  * Dihedral angle
  */
-SimTK::Real bDihedral(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3){
+SimTK::Real bDihedral(
+SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3)
+{
  
   //std::cout << "bDihedral pos " << pos0 << ' ' << pos1 << ' ' << pos2 << ' ' << pos3 << std::endl;
  
