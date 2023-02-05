@@ -2779,11 +2779,11 @@ HMCSampler::calcBendStretchJacobianDetLog(
 			x_pf_k = k + world->normX_BMp.size();
 
 			// Checks
-			std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
+			/*std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
 				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
 					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
 					<< world->normX_BMp[k] * scaleFactors[k] << " "
-				<< std::endl << std::flush;
+				<< std::endl << std::flush;*/
 
 			// Get bond term
 			SimTK::Real d2 = world->normX_BMp[k];
