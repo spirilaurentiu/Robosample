@@ -2612,9 +2612,11 @@ void HMCSampler::shiftQ(SimTK::State& someState,
 			<< std::endl; */
 		}		
 
-		scaleFactors[ world->normX_BMp.size() + (int(mbx) - 1) ] = 
-		(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
-			world->acosX_PF00[int(mbx) - 1];
+		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
+			scaleFactors[ world->normX_BMp.size() + (int(mbx) - 1) ] = 
+			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
+				world->acosX_PF00[int(mbx) - 1];
+		}
 		
 		/* std::cout << "i pf diff c "
 			<< world->normX_BMp.size() + (int(mbx) - 1) << " " 
@@ -2761,22 +2763,27 @@ void HMCSampler::shiftQ(SimTK::State& someState,
 
 }
 
-
-
 SimTK::Real 
 HMCSampler::calcBendStretchJacobianDetLog(
 	SimTK::State& someState,
 	std::vector<SimTK::Real> scaleFactors)
 {
 
+	int x_pf_k = 0;
+
 	// Get log of the Cartesian->BAT Jacobian
 	SimTK::Real logJacBAT_0 = 0.0;
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
+			// scaleFactors index is shifted
+			x_pf_k = k + world->normX_BMp.size();
+
 			// Checks
-			/* std::cout << " k normBM acosPF " << k << " "
-				<< world->normX_BMp[k] << " " << world->acosX_PF00[k] << " "
-				<< std::endl << std::flush; */
+			std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
+				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
+					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
+					<< world->normX_BMp[k] * scaleFactors[k] << " "
+				<< std::endl << std::flush;
 
 			// Get bond term
 			SimTK::Real d2 = world->normX_BMp[k];
@@ -2799,7 +2806,7 @@ HMCSampler::calcBendStretchJacobianDetLog(
 	// Although the method seems stupid for now, it has generality
 	// and allows insertion of new code
 	SimTK::Real logJacScale = 0.0;
-	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+	for(unsigned int k = 0; k < scaleFactors.size(); k++){
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
@@ -2811,6 +2818,9 @@ HMCSampler::calcBendStretchJacobianDetLog(
 	SimTK::Real logJacBAT_tau = 0.0;
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
+			// scaleFactors index is shifted
+			x_pf_k = k + world->normX_BMp.size();
+
 			// Get bond term
 			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
 			if(d2 != 0){
@@ -2818,7 +2828,7 @@ HMCSampler::calcBendStretchJacobianDetLog(
 			}
 
 			// Get the angle term
-			SimTK::Real sineTheta = (world->acosX_PF00[k] * scaleFactors[k]);
+			SimTK::Real sineTheta = (world->acosX_PF00[k] * scaleFactors[x_pf_k]);
 
 			if(sineTheta != 0){
 					sineTheta = std::log(std::sin(sineTheta));
@@ -2855,7 +2865,6 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	std::vector<SimTK::Real> scaleFactors;
 	shiftQ(someState, scaleFactors);
 
-	
 /* 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size());
 	
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
