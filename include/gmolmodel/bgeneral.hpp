@@ -42,6 +42,31 @@
 
 using namespace std;
 
+
+// Smart trace
+template <typename T>
+void trace_impl(std::ostream &os, T &&t)
+{
+    os << t;
+}
+
+template <typename T, typename... Args>
+void trace_impl(std::ostream &os, T &&t, Args &&... args)
+{
+    os << t << ' ';
+    trace_impl(os, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void trace(Args &&... args)
+{
+    std::cout << "[TRACE] ";
+    trace_impl(std::cout, std::forward<Args>(args)...);
+    std::cout << std::endl;
+}
+
+// ----------
+
 #define sq(x)		((x)*(x))
 
 //#ifndef sqr

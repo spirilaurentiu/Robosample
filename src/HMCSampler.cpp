@@ -3127,7 +3127,7 @@ bool HMCSampler::acceptSample() {
 		}else if(DistortOpt < 0){
 			prob =
 			MHAcceptProbability(pe_o + fix_o,
-								pe_n + fix_n + this->bendStretchJacobianDetLog);
+								pe_n + fix_n - this->bendStretchJacobianDetLog);
 		}
 
 		// std::cout << "\trand_no=" << rand_no << ", prob=" << prob 

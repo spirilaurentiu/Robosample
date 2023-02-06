@@ -3227,6 +3227,7 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 		);
 
 		SimTK::Real qScaleFactor = (qScaleFactors).at(thisThermoStateIx);
+		if(thisThermoStateIx == 0){qScaleFactor = 1.0;} // SCALE ONLY DOWN
 		qScaleDistribStd = 0.0;
 		worlds[replicaWorldIxs[i]].updSampler(0)->distributeVariable(
 			qScaleFactor, "truncNormal", qScaleDistribStd);
