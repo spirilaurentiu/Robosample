@@ -3227,12 +3227,13 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 		);
 
 		SimTK::Real qScaleFactor = (qScaleFactors).at(thisThermoStateIx);
-		if(thisThermoStateIx == 0){qScaleFactor = 1.0;} // SCALE ONLY DOWN
+
 		qScaleDistribStd = 0.0;
+		
 		worlds[replicaWorldIxs[i]].updSampler(0)->distributeVariable(
 			qScaleFactor, "truncNormal", qScaleDistribStd);
 		
-		worlds[replicaWorldIxs[i]].updSampler(0)->setQScaleFactor(
+		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
 			qScaleFactor);
 	}
 
@@ -3796,6 +3797,16 @@ void Context::RunOneRound(void)
 
 	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 
+		// Non-equilibrium parameters
+		if( NDistortOpt[worldIx] == -1 ){
+			// Set the Q scaling factor to Gaussian random around 1.0
+			SimTK::Real sf = 1.0;
+			SimTK::Real standardDeviation = 0.1;
+			(worlds[worldIx].updSampler(0))->distributeVariable(sf,
+				"truncNormal", standardDeviation);
+			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
+		}	
+
 		// Rotate worlds indices (translate from right to left)
 		if(isWorldsOrderRandom){
 			randomizeWorldIndexes();
@@ -3839,19 +3850,6 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
         10, 0);
 
     writeInitialPdb();
-
-	// Non-equilibrium parameters
-	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-
-		// Q altering parameters
-		if( NDistortOpt[worldIx] == -1 ){
-			
-			// Set the Q scaling factor to 600K / 300K
-			(worlds[worldIx].updSampler(0))->setQScaleFactor( 
-				1.1 ); 
-		}
-		
-	}
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 

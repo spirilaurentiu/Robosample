@@ -2401,12 +2401,12 @@ void HMCSampler::setDistortOption(const int& distortOptArg)
 	this->DistortOpt = distortOptArg;
 }
 
-const SimTK::Real& HMCSampler::getQScaleFactor(void)
+const SimTK::Real& HMCSampler::getBendStretchStdevScaleFactor(void)
 {
 	return this->QScaleFactor;
 }
 
-void HMCSampler::setQScaleFactor(const SimTK::Real& s)
+void HMCSampler::setBendStretchStdevScaleFactor(const SimTK::Real& s)
 {
 	this->QScaleFactor = s;
 }
@@ -2522,10 +2522,178 @@ SimTK::Real HMCSampler::calcDeformationPotential(
 
 
 /*
- * Shift all the generalized coordinates
+ * Shift all the generalized coordinates to scale bonds and angles
+ * through BendStretch joint
  */
-void HMCSampler::shiftQ(SimTK::State& someState,
+void HMCSampler::setQToScaleBendStretch(SimTK::State& someState,
 	std::vector<SimTK::Real>& scaleFactors)
+{
+	// Scaling factor is set by Context only in the begining
+	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
+	std::cout << "and turned it into " << this->QScaleFactor << "\n";
+
+	// Set the return scalingFactors to QScaleFactor
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+
+	// Ground and first mobod don't have internal coordinates
+	int mbxOffset = 2;
+	int sfIxOffset = world->normX_BMp.size();
+	SimTK::Real sf = 1.0;
+
+	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobilized body
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);	
+
+		// Set Q for angle
+		sf = this->QScaleFactor - 1.0;
+		scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = this->QScaleFactor;
+
+		mobod.setOneQ(someState, 0,
+			-1.0 * (sf * world->acosX_PF00[int(mbx) - 1])  );
+
+		// Set Q for bond
+		sf = this->QScaleFactor - 1.0;
+		scaleFactors[ (int(mbx) - 1) ] = this->QScaleFactor;
+		mobod.setOneQ(someState, 1,
+			sf * world->normX_BMp[int(mbx) - 1]  );
+
+	}
+
+	// Save changes by advancing to Position Stage
+	system->realize(someState, SimTK::Stage::Position);
+
+	// Test
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+}
+
+
+// Calculate bond length and angle deviations from their means
+void HMCSampler::calcBendStretchDeviations(
+	SimTK::State& someState,
+	std::vector<SimTK::Real>& X_PFdiffs,
+	std::vector<SimTK::Real>& X_BMdiffs
+)
+{
+
+	// Make sure it has 
+	X_PFdiffs.resize(world->acosX_PF00_means.size(), 0.0);
+	X_BMdiffs.resize(world->normX_BMp_means.size(), 0.0);
+
+	// 
+	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		X_PFdiffs[k] = world->acosX_PF00[k] - world->acosX_PF00_means[k];
+	}
+	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
+		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
+	}
+
+}
+
+
+/*
+ * Shift all the generalized coordinates to scale bonds and angles
+ * standard deviations through BendStretch joint
+ */
+void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
+std::vector<SimTK::Real>& scaleFactors)
+{
+	// Print the scale factor
+	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
+		<< std::endl;
+
+	// Prepare scaling factors for return
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+		
+	// 1. Get the deviations from their means
+	std::vector<SimTK::Real> X_PFdiffs;
+	std::vector<SimTK::Real> X_BMdiffs;
+	calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
+
+	// Scale the differences with QScale. -1 is only here because Q is always 0
+	int k = -1;
+	for(auto& diff : X_PFdiffs){
+		diff *= QScaleFactor - 1.0;
+		//std::cout << "diff= " << diff << std::endl;
+	}
+	for(auto& diff : X_BMdiffs){
+		diff *= QScaleFactor - 1.0;
+		//std::cout << "diff= " << diff << std::endl;
+	}
+
+	// Ground and first mobod don't have internal coordinates
+	int mbxOffset = 2;
+	int sfIxOffset = world->normX_BMp.size();
+
+	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobilized body
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		
+		// We only allocated  X_PFs for non-Ground bodies
+		//RESTORE RESTORE RESTORE Check X_FM assignment 0
+
+		// Get the scaleFactors too
+		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
+
+			mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
+
+			scaleFactors[ (int(mbx) - 1) ] = 
+			(world->normX_BMp[int(mbx) - 1] + X_BMdiffs[int(mbx) - 1]) /
+				world->normX_BMp[int(mbx) - 1];
+		}		
+
+		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
+			mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
+			
+			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
+			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
+				world->acosX_PF00[int(mbx) - 1];
+		}
+
+
+		/* // DELETE DELETE DELETE DELETE Check X_FM assignment 0
+		SimTK::Real someConstant = 1.123;
+		mobod.setOneQ(someState, 0, someConstant);
+		mobod.setOneQ(someState, 1, someConstant);
+
+		trace("normX_BM", world->normX_BMp[(int(mbx) - 1)], "acosX_PF", world->acosX_PF00[int(mbx) - 1]);
+
+		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
+			scaleFactors[ (int(mbx) - 1) ] = 
+			(world->normX_BMp[int(mbx) - 1] + someConstant) /
+				world->normX_BMp[int(mbx) - 1];
+		}		
+
+		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
+			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
+			(world->acosX_PF00[int(mbx) - 1] + someConstant) /
+				world->acosX_PF00[int(mbx) - 1];
+		} */		
+
+	}
+
+	// Save changes by advancing to Position Stage
+	system->realize(someState, SimTK::Stage::Position);
+
+	// Test
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+
+}
+
+
+/*
+ * Shift all the generalized coordinates to scale bonds and angles
+ * standard deviations through BendStretch joint
+ */
+void HMCSampler::setQToScaleBendStretchStdev_Old(SimTK::State& someState,
+std::vector<SimTK::Real>& scaleFactors)
 {
 	// Scaling factor is set by Context only in the begining
 	//this->QScaleFactor = 1.0;
@@ -2863,29 +3031,8 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	// Apply the non-equilibrium transformation
 	// And get the BAT scaling factors back
 	std::vector<SimTK::Real> scaleFactors;
-	shiftQ(someState, scaleFactors);
-
-/* 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size());
-	
-	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
-		if(world->normX_BMp[k] != 0.0){
-			scaleFactors[k] = this->QScaleFactor;
-			scaleFactors[k] *= 
-				1.0 - (world->normX_BMp_means[k] / world->normX_BMp[k]);
-
-			scaleFactors[k] +=
-				(world->normX_BMp_means[k] / world->normX_BMp[k]);
-		}
-	}
-
-	for(unsigned int k = 0; k < world->acosX_PF00.size(); k++){
-		scaleFactors[world->normX_BMp.size() + k] = this->QScaleFactor;
-		scaleFactors[world->normX_BMp.size() + k] *=
-			1.0 - (world->acosX_PF00_means[k] / world->acosX_PF00[k]);
-
-		scaleFactors[world->normX_BMp.size() + k] +=
-			(world->acosX_PF00_means[k] / world->acosX_PF00[k]);
-	} */
+	//setQToScaleBendStretch(someState, scaleFactors);
+	setQToScaleBendStretchStdev(someState, scaleFactors);
 
 	std::cout << "scaleFactors: ";
 	PrintCppVector(scaleFactors);
@@ -3179,7 +3326,14 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	storeOldConfigurationAndPotentialEnergies(someState);
 
 	// Generate a trial move in the stochastic chain
+//world->traceBendStretch(someState);
+
+	// Calculate X_PFs and X_BMs
+	world->getTransformsStatistics(someState);
+
 	bool validated = generateProposal(someState);
+
+//world->traceBendStretch(someState);
 
 	// Apply the acceptance criterion
 	if(validated){

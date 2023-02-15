@@ -729,6 +729,32 @@ void World::getTransformsStatistics(SimTK::State& someState)
 
 }
 
+// Print bond lengths and angle bends
+void World::traceBendStretch(SimTK::State& someState){
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+
+		// Get BAT coordinates B and A
+		SimTK::Vec3 bondVector = X_BM.p();
+		trace( bondVector.norm(),  std::acos(X_PF.R()(0)(0)));
+		//trace("X_FM");
+		//PrintTransform(X_FM, 10);
+	
+	}
+}
+
 // Print X_PF means
 void World::PrintX_PFs(void)
 {
