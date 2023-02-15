@@ -43,9 +43,15 @@ do
 			;;
 		-b | --build)
 			BUILD_TYPE="$2"
+			
+			# lowercase all
 			BUILD_TYPE=$(echo "$BUILD_TYPE" | awk '{print tolower($0)}')
+			
+			# capitalize first letter
+			# this capitalization is required by all cmake configurations
+			BUILD_TYPE="$(tr '[:lower:]' '[:upper:]' <<< ${BUILD_TYPE:0:1})${BUILD_TYPE:1}"
 
-			if [[ "$BUILD_TYPE" != "debug" && "$BUILD_TYPE" != "release" ]]; then
+			if [[ "$BUILD_TYPE" != "Debug" && "$BUILD_TYPE" != "Release" ]]; then
 				echo "Error: Build configuration must be \"debug\" or \"release\" (case insensitive)."
 				echo "Error: Build configuration was ${BUILD_TYPE}"
 				echo
