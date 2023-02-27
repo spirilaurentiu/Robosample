@@ -3022,17 +3022,25 @@ HMCSampler::calcBendStretchJacobianDetLog(
 
 }
 
+/** It implements a non-equilibrium proposal move, 
+ * then propagates the trajectory. **/
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 {
 
 /* 	// Store old configuration
 	storeOldConfigurationAndPotentialEnergies(someState); */
 
+
+
 	// Apply the non-equilibrium transformation
-	// And get the BAT scaling factors back
 	std::vector<SimTK::Real> scaleFactors;
-	//setQToScaleBendStretch(someState, scaleFactors);
-	setQToScaleBendStretchStdev(someState, scaleFactors);
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+	if(this->nofSamples > 3000){
+		// And get the BAT scaling factors back
+		//setQToScaleBendStretch(someState, scaleFactors);
+		setQToScaleBendStretchStdev(someState, scaleFactors);
+	}
 
 	std::cout << "scaleFactors: ";
 	PrintCppVector(scaleFactors);
@@ -3073,8 +3081,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 }
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo
-algorithm. It essentially propagates the trajectory after it stores
-the configuration and energies. **/
+algorithm. It essentially propagates the trajectory. **/
 bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 {
 
@@ -3331,7 +3338,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	// Calculate X_PFs and X_BMs
 	world->getTransformsStatistics(someState);
 
-	bool validated = generateProposal(someState);
+	bool validated = true;
+	validated = generateProposal(someState);
 
 //world->traceBendStretch(someState);
 
