@@ -3039,7 +3039,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 	// And get the BAT scaling factors back
 	//setQToScaleBendStretch(someState, scaleFactors);
-	if(this->nofSamples > 3000){
+	if(this->nofSamples > 6000){
 		setQToScaleBendStretchStdev(someState, scaleFactors);
 	}
 
@@ -3386,7 +3386,7 @@ world->traceBendStretch(someState);
 		world->getTransformsStatistics(someState);
 
 		// Update means of values before altering them
-		if(this->nofSamples <= 3000){
+		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
 			world->updateTransformsMeans(someState);
 		}
 
