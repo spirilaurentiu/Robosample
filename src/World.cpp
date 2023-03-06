@@ -802,7 +802,7 @@ void World::updateTransformsMeans(SimTK::State& someState)
 	int nofSamples = getNofSamples() + 1;
 	//std::cout << "Nof samples " << nofSamples << std::endl;
 
-	getTransformsStatistics(someState);
+	//getTransformsStatistics(someState);
 
 	// Useful vars
 	SimTK::Real N_1overN = 9999, NInv = 9999;

@@ -3036,9 +3036,10 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	std::vector<SimTK::Real> scaleFactors;
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
 		1.0);
+
+	// And get the BAT scaling factors back
+	//setQToScaleBendStretch(someState, scaleFactors);
 	if(this->nofSamples > 3000){
-		// And get the BAT scaling factors back
-		//setQToScaleBendStretch(someState, scaleFactors);
 		setQToScaleBendStretchStdev(someState, scaleFactors);
 	}
 
@@ -3176,10 +3177,16 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
 
 	// Propose
 	for (int i = 0; i < 10; i++){
+
+		// Normal Modes based trial
 		if(DistortOpt > 0){
 			validated = proposeNMA(someState);
+
+		// Non-equilibrium trial - TFEP
 		}else if(DistortOpt < 0){
 			validated = proposeNEHMC(someState);
+
+		// Equilibrium trial
 		}else{
 			validated = proposeEquilibrium(someState);
 		}
@@ -3340,6 +3347,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 	bool validated = true;
 	validated = generateProposal(someState);
+	
 
 //world->traceBendStretch(someState);
 
@@ -3374,8 +3382,13 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 			restore(someState);
 		}
 
-		// 1. Update means of values before altering them
-		world->updateTransformsMeans(someState);
+		// Calculate X_PFs and X_BMs
+		world->getTransformsStatistics(someState);
+
+		// Update means of values before altering them
+		if(this->nofSamples <= 3000){
+			world->updateTransformsMeans(someState);
+		}
 
 	}
 
