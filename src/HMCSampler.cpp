@@ -3038,9 +3038,9 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		1.0);
 
 	// And get the BAT scaling factors back
-	//setQToScaleBendStretch(someState, scaleFactors);
+	setQToScaleBendStretch(someState, scaleFactors);
 	if(this->nofSamples > 6000){
-		setQToScaleBendStretchStdev(someState, scaleFactors);
+	//	setQToScaleBendStretchStdev(someState, scaleFactors);
 	}
 
 	std::cout << "scaleFactors: ";
