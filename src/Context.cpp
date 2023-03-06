@@ -3582,6 +3582,59 @@ void Context::RunRENS(void)
 
 	PrintNofAcceptedSwapsMatrix();
 
+		// DELETE THIS CODE
+		std::cout << "TEST MODE\n";
+		std::vector<SimTK::Real> givenX_PF(22, 999);
+		std::vector<SimTK::Real> givenX_BM(22, 999);
+
+		givenX_PF[0] = 0.382213052;
+		givenX_PF[1] = 1.909352531;
+		givenX_PF[2] = 1.893749726;
+		givenX_PF[3] = 1.947370624;
+		givenX_PF[4] = 0;
+		givenX_PF[5] = 1.956830795;
+		givenX_PF[6] = 2.048214246;
+		givenX_PF[7] = 2.039980631;
+		givenX_PF[8] = 2.161855757;
+		givenX_PF[9] = 1.901552048;
+		givenX_PF[10] = 1.895242261;
+		givenX_PF[11] = 1.944130783;
+		givenX_PF[12] = 1.977970389;
+		givenX_PF[13] = 1.919833798;
+		givenX_PF[14] = 1.967840235;
+		givenX_PF[15] = 2.056850251;
+		givenX_PF[16] = 2.101173327;
+		givenX_PF[17] = 2.108547254;
+		givenX_PF[18] = 2.251719968;
+		givenX_PF[19] = 1.869673523;
+		givenX_PF[20] = 1.935043108;
+		givenX_PF[21] = 1.916275746;
+		givenX_BM[0] = 0;
+		givenX_BM[1] = 0.108791084;
+		givenX_BM[2] = 0.114675602;
+		givenX_BM[3] = 0.10683655;
+		givenX_BM[4] = 0.153979978;
+		givenX_BM[5] = 0.120963202;
+		givenX_BM[6] = 0.134721103;
+		givenX_BM[7] = 0.09633632;
+		givenX_BM[8] = 0.147241057;
+		givenX_BM[9] = 0.107930417;
+		givenX_BM[10] = 0.150565067;
+		givenX_BM[11] = 0.111184402;
+		givenX_BM[12] = 0.109086027;
+		givenX_BM[13] = 0.110920344;
+		givenX_BM[14] = 0.154254133;
+		givenX_BM[15] = 0.123863943;
+		givenX_BM[16] = 0.131670032;
+		givenX_BM[17] = 0.106489035;
+		givenX_BM[18] = 0.147187697;
+		givenX_BM[19] = 0.110298069;
+		givenX_BM[20] = 0.108296974;
+		givenX_BM[21] = 0.111305194;
+
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+		// DELETE CODE ABOVE
+
 	// Main loop
 	int nofMixes = int(requiredNofRounds / swapEvery);
 
