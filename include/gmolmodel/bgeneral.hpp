@@ -428,6 +428,8 @@ struct Point {
 
 using DataFrame = std::vector<Point>;
 
+SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev);
+
 // Gmolmodel version of mean
 SimTK::Real bMean(std::vector<SimTK::Real> v);
 SimTK::Real bVariance(std::vector<SimTK::Real> v);

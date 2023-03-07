@@ -717,12 +717,7 @@ SimTK::Real Sampler::calcDeformationPotential(
 	
 }
 
-SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev)
-{
-    SimTK::Real exponent = -0.5 * std::pow((x - mean) / stddev, 2);
-	SimTK::Real normalizingFactor = 1.0 / (stddev * sqrt(2 * M_PI));
-    return normalizingFactor * std::exp(exponent);
-}
+
 
 
 

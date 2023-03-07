@@ -2613,7 +2613,14 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
 	// Correction term
-	SimTK::Real correctionTerm = qScaleFactors.at(thermoState_i);
+	SimTK::Real s_i = qScaleFactors.at(thermoState_i);
+	SimTK::Real s_j = qScaleFactors.at(thermoState_j);
+	SimTK::Real s_i_1 = 1.0 / s_i;
+	SimTK::Real s_j_1 = 1.0 / s_j;
+
+	SimTK::Real correctionTerm = 
+		(normalPdf(s_i_1, 1.0, 0.1) * normalPdf(s_j_1, 1.0, 0.1)) / 
+		(normalPdf(s_i, 1.0, 0.1)   * normalPdf(s_j, 1.0, 0.1));
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
@@ -2629,6 +2636,8 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		<< " " << replicas[replica_j].getTransferedEnergy() << std::endl;
 	std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl;
+	std::cout << "correctionTerm " << correctionTerm << std::endl;
+
 
 	SimTK::Real log_p_accept = WTerm;
 
