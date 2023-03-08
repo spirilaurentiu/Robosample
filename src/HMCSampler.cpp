@@ -395,10 +395,16 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 
  	if(integratorNameArg == "OMMVV"){
 		this->integratorName = IntegratorName::OMMVV;
+
 	}else if (integratorNameArg == "VV"){
 		integratorName = IntegratorName::VERLET;
+
+	}else if (integratorNameArg == "RANDOM_WALK"){
+		integratorName = IntegratorName::RANDOM_WALK;
+
 	}else{
 		integratorName = IntegratorName::EMPTY;
+
 	}
 
 }
@@ -3069,7 +3075,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		integrateTrajectory(someState);
 		//integrateTrajectoryOneStepAtATime(someState);
 	}else{
-		std::cout << "ProposeNEHMC: EMPTY integrator\n";
+		std::cout << "ProposeNEHMC: NON-VERLET integrator\n";
 		system->realize(someState, SimTK::Stage::Dynamics);
 	}
 
@@ -3125,6 +3131,56 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 		calcNewConfigurationAndEnergies(someState);
 	
+	}else if (integratorName == IntegratorName::RANDOM_WALK){
+
+		std::cout << "Propose: RANDOM_WALK integrator" << std::endl;
+		std::cout << "Q = " << someState.updQ() << std::endl;
+
+		// Generate random rotation quaternion
+		double x,y,z, u,v,w, s;
+		do {
+			x = uniformRealDistribution_m1_1(randomEngine);
+			y = uniformRealDistribution_m1_1(randomEngine);
+			z = x*x + y*y;
+		}while (z > 1);
+		do {
+			u = uniformRealDistribution_m1_1(randomEngine);
+			v = uniformRealDistribution_m1_1(randomEngine);
+			w = u*u + v*v;
+		} while (w > 1);
+
+		s = sqrt((1-z) / w);
+
+		someState.updQ()[0] = x;
+		someState.updQ()[1] = y;
+		someState.updQ()[2] = s*u;
+		someState.updQ()[3] = s*v;
+
+		// Generate radom translaation
+		someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
+		someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
+		someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
+
+		// If molecule is too far reposition on a sphere
+		SimTK::Real dist = std::sqrt(
+			(someState.updQ()[4] * someState.updQ()[4]) +
+			(someState.updQ()[5] * someState.updQ()[5]) + 
+			(someState.updQ()[6] * someState.updQ()[6]));
+
+		if(dist > 10.0){
+			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+
+			someState.updQ()[4] = 10.0 * std::cos(theta) * std::sin(phi);
+			someState.updQ()[5] = 10.0 * std::sin(theta) * std::sin(phi);
+			someState.updQ()[6] = 10.0 * std::cos(phi);
+
+		}
+
+		system->realize(someState, SimTK::Stage::Dynamics);
+
+		calcNewConfigurationAndEnergies(someState);
+
 	}else if (integratorName == IntegratorName::EMPTY){
 
 /* 		// Alter Q in some way
