@@ -3395,7 +3395,7 @@ world->traceBendStretch(someState);
 
 		// Update means of values before altering them
 		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
-			world->updateTransformsMeans(someState);
+			//world->updateTransformsMeans(someState);
 		}
 
 	}
