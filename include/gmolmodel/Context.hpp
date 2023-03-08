@@ -546,8 +546,10 @@ private:
 	// Non-equilibrium parameters
 	std::vector<SimTK::Real> qScaleFactorsEven;
 	std::vector<SimTK::Real> qScaleFactorsOdd;
+	std::vector<SimTK::Real> qScaleFactorsMiu;
+	std::vector<SimTK::Real> qScaleFactorsStd;
+
 	std::vector<SimTK::Real> qScaleFactors;
-	SimTK::Real qScaleDistribStd;
 
 };
 

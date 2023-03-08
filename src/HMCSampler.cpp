@@ -3030,17 +3030,15 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 /* 	// Store old configuration
 	storeOldConfigurationAndPotentialEnergies(someState); */
 
-
-
 	// Apply the non-equilibrium transformation
 	std::vector<SimTK::Real> scaleFactors;
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
 		1.0);
 
 	// And get the BAT scaling factors back
-	setQToScaleBendStretch(someState, scaleFactors);
+	//setQToScaleBendStretch(someState, scaleFactors);
 	if(this->nofSamples > 6000){
-		//setQToScaleBendStretchStdev(someState, scaleFactors);
+		setQToScaleBendStretchStdev(someState, scaleFactors);
 	}
 
 	std::cout << "scaleFactors: ";
@@ -3097,7 +3095,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		OMM_integrateTrajectory(someState);
 		OMM_calcNewConfigurationAndEnergies();
 
-	}else{
+	}else if (integratorName == IntegratorName::VERLET){
 
 		// Adapt timestep
 		if(shouldAdaptTimestep){
@@ -3126,6 +3124,16 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		}
 
 		calcNewConfigurationAndEnergies(someState);
+	
+	}else if (integratorName == IntegratorName::EMPTY){
+
+/* 		// Alter Q in some way
+		if(this->sampleGenerator == 1){
+			
+		} */
+
+	}else{
+		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
 	}
 
 	return validateProposal();

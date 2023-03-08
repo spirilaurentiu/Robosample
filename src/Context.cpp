@@ -572,6 +572,8 @@ Context::Context(const SetupReader& setupReader, std::string logFilename)
 
 	swapFixman = 1;
 
+	qScaleFactorsMiu.resize(qScaleFactorsEven.size(), 1.0);
+	qScaleFactorsStd.resize(qScaleFactorsEven.size(), 0.0);
 	qScaleFactors.resize(qScaleFactorsEven.size(), 1.0);
 
 }
@@ -2613,14 +2615,19 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
 	// Correction term
+	SimTK::Real miu_i = qScaleFactorsMiu.at(thermoState_i);
+	SimTK::Real miu_j = qScaleFactorsMiu.at(thermoState_j);
+	SimTK::Real std_i = qScaleFactorsStd.at(thermoState_i);
+	SimTK::Real std_j = qScaleFactorsStd.at(thermoState_j);
+	
 	SimTK::Real s_i = qScaleFactors.at(thermoState_i);
 	SimTK::Real s_j = qScaleFactors.at(thermoState_j);
 	SimTK::Real s_i_1 = 1.0 / s_i;
 	SimTK::Real s_j_1 = 1.0 / s_j;
 
 	SimTK::Real correctionTerm = 
-		(normalPdf(s_i_1, 1.0, 0.1) * normalPdf(s_j_1, 1.0, 0.1)) / 
-		(normalPdf(s_i, 1.0, 0.1)   * normalPdf(s_j, 1.0, 0.1));
+		(normalPdf(s_i_1, miu_j, std_j) * normalPdf(s_j_1, miu_i, std_i)) / 
+		(normalPdf(s_i, miu_i, std_i)   * normalPdf(s_j, miu_j, std_j));
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
@@ -2636,8 +2643,11 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		<< " " << replicas[replica_j].getTransferedEnergy() << std::endl;
 	std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl;
-	std::cout << "correctionTerm " << correctionTerm << std::endl;
-
+	std::cout << "correctionTerm s_i s_f " << correctionTerm 
+		<< " " << s_i << " " << s_j << " " << s_i_1 << " " << s_j_1
+		<< " " << normalPdf(s_i, miu_i, std_i) << " " << normalPdf(s_j, miu_j, std_j)
+		<< " " << normalPdf(s_i_1, miu_j, std_j) << " " << normalPdf(s_j_1, miu_i, std_i)
+		<< std::endl;
 
 	SimTK::Real log_p_accept = WTerm;
 
@@ -2669,7 +2679,7 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		returnValue = false;
 	}
 
-return returnValue;
+	return returnValue;
 
 }
 
@@ -3068,6 +3078,9 @@ void Context::PrepareNonEquilibriumParams_Q(void){
 	// Initialize a vector of scalingFactors for scaling Qs (non-equil)
 	qScaleFactorsEven.resize(nofThermodynamicStates, 1.0);
 	qScaleFactorsOdd.resize(nofThermodynamicStates, 1.0);
+	qScaleFactorsMiu.resize(nofThermodynamicStates, 1.0);
+	qScaleFactorsStd.resize(nofThermodynamicStates, 1.0);
+	qScaleFactors.resize(nofThermodynamicStates, 1.0);
 
 	// Set the even scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
@@ -3235,17 +3248,18 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
 		);
 
-		//SimTK::Real qScaleFactor = (qScaleFactors).at(thisThermoStateIx);
-		SimTK::Real qScaleFactor = 1.0;
+		qScaleFactors.at(thisThermoStateIx) = (qScaleFactorsMiu).at(thisThermoStateIx);
+		//qScaleFactors.at(thisThermoStateIx) = 1.0;
 
-		//qScaleDistribStd = 0.0;
-		qScaleDistribStd = 0.1;
+		//qScaleFactorsStd.at(thisThermoStateIx) =  = 0.0;
+		qScaleFactorsStd.at(thisThermoStateIx) = 0.1;
 		
 		worlds[replicaWorldIxs[i]].updSampler(0)->distributeVariable(
-			qScaleFactor, "truncNormal", qScaleDistribStd);
+			qScaleFactors.at(thisThermoStateIx), "truncNormal",
+			qScaleFactorsStd.at(thisThermoStateIx));
 		
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
-			qScaleFactor);
+			qScaleFactors.at(thisThermoStateIx));
 	}
 
 }
@@ -3400,9 +3414,9 @@ void Context::RunREX(void)
 
 		// Prepare non-equilibrium params
 		if(mixi % 2){ // odd batch
-			qScaleFactors = qScaleFactorsOdd;
+			qScaleFactorsMiu = qScaleFactorsOdd;
 		}else{ // even batch
-			qScaleFactors = qScaleFactorsEven;
+			qScaleFactorsMiu = qScaleFactorsEven;
 		}
 		
 		// Run each replica serially
@@ -3653,12 +3667,19 @@ void Context::RunRENS(void)
 
 		// Prepare non-equilibrium params
 		if(mixi % 2){ // odd batch
-			qScaleFactors = qScaleFactorsOdd;
+			qScaleFactorsMiu = qScaleFactorsOdd;
 		}else{ // even batch
-			qScaleFactors = qScaleFactorsEven;
+			qScaleFactorsMiu = qScaleFactorsEven;
 		}
 
-		
+		// Square all the factors
+		for(auto& qsf : qScaleFactorsMiu){
+			if(qsf < 1.0){
+				qsf = qsf * qsf;
+			}else{
+				qsf = 1.0;
+			}
+		}
 
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
