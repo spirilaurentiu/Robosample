@@ -3162,9 +3162,9 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		someState.updQ()[3] = s*v; */
 
 		someState.updQ()[0] = resultQuat.asVec4()[0];
-		someState.updQ()[1] = resultQuat.asVec4()[0];
-		someState.updQ()[2] = resultQuat.asVec4()[0];
-		someState.updQ()[3] = resultQuat.asVec4()[0];
+		someState.updQ()[1] = resultQuat.asVec4()[1];
+		someState.updQ()[2] = resultQuat.asVec4()[2];
+		someState.updQ()[3] = resultQuat.asVec4()[3];
 
 		// Generate radom translaation
 		someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
