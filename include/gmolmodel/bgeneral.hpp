@@ -516,7 +516,7 @@ std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
 // Gram–Schmidt
 bMatrix& gram_schmidt(bMatrix& M, bMatrix& es);
 
-
+SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2);
 
 
 #ifndef MONTECARLOSAMPLER

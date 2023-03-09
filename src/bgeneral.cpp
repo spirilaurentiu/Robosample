@@ -1382,7 +1382,21 @@ bMatrix& gram_schmidt(bMatrix& M, bMatrix& es){
 //}
 
 
+SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2)
+{
+	SimTK::Vec4 q1 = Q1.asVec4();
+	SimTK::Vec4 q2 = Q2.asVec4();
 
+	SimTK::Vec4 q3;
+
+	q3[0] = q1[0] * q2[0] - (q1[1] * q2[1] + q1[2] * q2[2] + q1[3] * q2[3]); // scalar component
+    q3[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]; // i component
+    q3[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]; // j component
+    q3[3] = q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]; // k component
+	
+    return SimTK::Quaternion(q3);
+
+}
 
 
 
