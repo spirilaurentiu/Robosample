@@ -3156,10 +3156,15 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			someState.updQ()[2], someState.updQ()[3]);
 		SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
 
-		someState.updQ()[0] = x;
+		/* someState.updQ()[0] = x;
 		someState.updQ()[1] = y;
 		someState.updQ()[2] = s*u;
-		someState.updQ()[3] = s*v;
+		someState.updQ()[3] = s*v; */
+
+		someState.updQ()[0] = resultQuat.asVec4()[0];
+		someState.updQ()[1] = resultQuat.asVec4()[0];
+		someState.updQ()[2] = resultQuat.asVec4()[0];
+		someState.updQ()[3] = resultQuat.asVec4()[0];
 
 		// Generate radom translaation
 		someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
