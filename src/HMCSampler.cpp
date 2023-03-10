@@ -3134,7 +3134,71 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 	}else if (integratorName == IntegratorName::RANDOM_WALK){
 
 		std::cout << "Propose: RANDOM_WALK integrator" << std::endl;
-		std::cout << "Q = " << someState.updQ() << std::endl;
+		if(topologies.size() < 2){
+			std::cout << "RANDOM_WALK integrators should only be used over many molecules\n"; 
+		}
+		std::cout << "Q= " << someState.getQ() << std::endl;
+
+		// Protein 
+		const SimTK::MobilizedBody& mobod_P = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(1) );
+		const Vec3 COM_P = mobod_P.getBodyMassProperties(someState).getMassCenter();
+		const Transform& X_GP = mobod_P.getBodyTransform(someState);
+
+		// Ligand
+		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(2) ); 
+		const Vec3 COM_L = mobod_L.getBodyMassProperties(someState).getMassCenter();
+		const Transform& X_GL = mobod_L.getBodyTransform(someState);
+		const Transform& X_PF = mobod_L.getInboardFrame(someState);
+		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
+		const Transform& X_BM = mobod_L.getOutboardFrame(someState);
+
+		PrintTransform(X_PF, 2, "X_PF");
+		PrintTransform(X_FM, 2, "X_FM");
+		PrintTransform(X_BM, 2, "X_BM");
+
+		// If molecule is too far reposition on a sphere centered on the first body
+		// center of mass
+		if(X_PF.p().norm() > 10.0){
+
+			// Sample a random vector centered in 0 and expressed in G
+			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+			SimTK::Vec3 randVec;
+
+			randVec[0] = 10.0 * std::cos(theta) * std::sin(phi);
+			randVec[1] = 10.0 * std::sin(theta) * std::sin(phi);
+			randVec[2] = 10.0 * std::cos(phi);
+
+			// Move it in P (still expressed in Ground)
+			randVec += X_GP.p();
+
+			// Re-express it in P
+			randVec = (~(X_GP)).R() * randVec;
+
+			// Substract PF from it
+			randVec -= X_PF.p();
+
+			// Re-express it in F
+			randVec = (~X_PF).R() * randVec;
+
+			// Set Q to fit 
+			SimTK::Transform newX_FM;
+			newX_FM.set((~X_PF).R() , randVec);
+			mobod_L.setQToFitTransform(someState, newX_FM);
+
+			// Add 
+
+		// Generate radom translation
+		}else{
+			someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
+			someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
+			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
+		}
+
+		system->realize(someState, SimTK::Stage::Position);
+
 
 		// Generate random rotation quaternion
 		double x,y,z, u,v,w, s;
@@ -3156,50 +3220,10 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			someState.updQ()[2], someState.updQ()[3]);
 		SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
 
-		/* someState.updQ()[0] = x;
-		someState.updQ()[1] = y;
-		someState.updQ()[2] = s*u;
-		someState.updQ()[3] = s*v; */
-
 		someState.updQ()[0] = resultQuat.asVec4()[0];
 		someState.updQ()[1] = resultQuat.asVec4()[1];
 		someState.updQ()[2] = resultQuat.asVec4()[2];
 		someState.updQ()[3] = resultQuat.asVec4()[3];
-
-		// Generate radom translaation
-		someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
-		someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
-		someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * 0.1;
-
-		// If molecule is too far reposition on a sphere centered on the first body
-		// center of mass
-		SimTK::Real dist = std::sqrt(
-			(someState.updQ()[4] * someState.updQ()[4]) +
-			(someState.updQ()[5] * someState.updQ()[5]) + 
-			(someState.updQ()[6] * someState.updQ()[6]));
-
-		if(dist > 10.0){
-			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-
-			someState.updQ()[4] = 10.0 * std::cos(theta) * std::sin(phi);
-			someState.updQ()[5] = 10.0 * std::sin(theta) * std::sin(phi);
-			someState.updQ()[6] = 10.0 * std::cos(phi);
-
-			if(topologies.size() < 2){
-				std::cout << "RANDOM_WALK integrators should only be used over many molecules\n"; 
-			}else{
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(
-					SimTK::MobilizedBodyIndex(1) ); 
-				const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
-				const Vec3 COM = mp.getMassCenter();
-
-				someState.updQ()[4] += COM[0];
-				someState.updQ()[5] += COM[1];
-				someState.updQ()[6] += COM[2];
-			}
-
-		}
 
 		system->realize(someState, SimTK::Stage::Dynamics);
 

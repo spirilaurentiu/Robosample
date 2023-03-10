@@ -322,7 +322,7 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
 /*
  * Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places);
+void PrintTransform(SimTK::Transform T, int decimal_places, std::string header);
 /*
  * Angle
  */

@@ -846,8 +846,10 @@ void PrintBigMat(const SimTK::Vector& V, int nrows,
 /*
  * Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places)
+void PrintTransform(SimTK::Transform T, int decimal_places,
+	std::string header)
 {
+    std::cout << header << std::endl;	
     const SimTK::Mat44 M = T.toMat44();
     std::cout << std::setprecision(decimal_places) << std::fixed;
     for(int i = 0; i < 4; i++){
