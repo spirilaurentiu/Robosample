@@ -2649,7 +2649,8 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		<< " " << normalPdf(s_i_1, miu_j, std_j) << " " << normalPdf(s_j_1, miu_i, std_i)
 		<< std::endl;
 
-	SimTK::Real log_p_accept = WTerm * correctionTerm;
+
+	SimTK::Real log_p_accept = WTerm ; //+ std::log(correctionTerm);
 
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
@@ -2674,8 +2675,14 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		returnValue = true;
 
 	}else{
-		// Do nothing
+
+		// Return to equilibrium worlds coordinates
+
+		// Return to equilibrium worlds energies
+
+		// Don't swap thermodynamics states nor energies
 		std::cout << "left\n" << endl;
+
 		returnValue = false;
 	}
 

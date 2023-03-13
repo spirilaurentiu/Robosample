@@ -3452,7 +3452,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	storeOldConfigurationAndPotentialEnergies(someState);
 
 	// Generate a trial move in the stochastic chain
-world->traceBendStretch(someState);
+//world->traceBendStretch(someState);
 
 	// Calculate X_PFs and X_BMs
 	world->getTransformsStatistics(someState);
@@ -3493,7 +3493,7 @@ world->traceBendStretch(someState);
 		}
 
 		// Calculate X_PFs and X_BMs
-world->traceBendStretch(someState);
+//world->traceBendStretch(someState);
 
 		world->getTransformsStatistics(someState);
 

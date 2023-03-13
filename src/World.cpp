@@ -1634,8 +1634,6 @@ void World::setGlobalForceFieldScaleFactor(SimTK::Real scaleFactor)
 //	forceField->setCoulomb15ScaleFactor(0);
 //	forceField->setCoulombGlobalScaleFactor(0);
 
-
-
 }
 
 /** Set GBSA implicit solvent scale factor. **/
