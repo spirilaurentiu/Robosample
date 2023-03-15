@@ -2677,8 +2677,10 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	}else{
 
 		// Return to equilibrium worlds coordinates
+		// - no need because it is restored in RunRENS
 
 		// Return to equilibrium worlds energies
+		// - no need because it is restored in RunRENS
 
 		// Don't swap thermodynamics states nor energies
 		std::cout << "left\n" << endl;
@@ -3672,17 +3674,17 @@ void Context::RunRENS(void)
 
 		std::cout << " REX batch " << mixi << std::endl;
 
-		// Prepare non-equilibrium params
+		// Set initial scale factors
 		if(mixi % 2){ // odd batch
 			qScaleFactorsMiu = qScaleFactorsOdd;
 		}else{ // even batch
 			qScaleFactorsMiu = qScaleFactorsEven;
 		}
 
-		// Square all the factors
+		// Apply other functions to scale factors
 		for(auto& qsf : qScaleFactorsMiu){
 			if(qsf < 1.0){
-				qsf = qsf * qsf;
+				qsf = 1.0;
 			}else{
 				qsf = 1.0;
 			}
@@ -3702,6 +3704,7 @@ void Context::RunRENS(void)
 
 			setWorldsParameters(replicaIx);
 
+			// Distribute scale factors
 			updWorldsNonequilibriumParameters(replicaIx);
 
 			// ======================== SIMULATE ======================

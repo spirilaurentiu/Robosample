@@ -3137,7 +3137,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		if(topologies.size() < 2){
 			std::cout << "RANDOM_WALK integrators should only be used over many molecules\n"; 
 		}
-		std::cout << "Q= " << someState.getQ() << std::endl;
+		std::cout << "Qini= " << someState.getQ() << std::endl;
 
 		// Protein 
 		const SimTK::MobilizedBody& mobod_P = matter->getMobilizedBody(
@@ -3154,9 +3154,11 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
 		const Transform& X_BM = mobod_L.getOutboardFrame(someState);
 
-		PrintTransform(X_PF, 2, "X_PF");
-		PrintTransform(X_FM, 2, "X_FM");
-		PrintTransform(X_BM, 2, "X_BM");
+		//PrintTransform(X_PF, 2, "X_PF");
+		//PrintTransform(X_FM, 2, "X_FM");
+		//PrintTransform(X_BM, 2, "X_BM");
+		SimTK::Vec3 X_PF_v = X_PF.p();
+		std::cout << "X_PF.v " << X_PF_v << " " << X_PF_v.norm() << std::endl;
 
 		// If molecule is too far reposition on a sphere centered on the first body
 		// center of mass
@@ -3226,6 +3228,8 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		someState.updQ()[3] = resultQuat.asVec4()[3];
 
 		system->realize(someState, SimTK::Stage::Dynamics);
+
+		std::cout << "Qfin= " << someState.getQ() << std::endl;
 
 		calcNewConfigurationAndEnergies(someState);
 
