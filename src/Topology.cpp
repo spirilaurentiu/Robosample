@@ -821,7 +821,7 @@ void Topology::generateDummAtomClasses(
 std::cout << "ORDER Topology::generateDummAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId)" << std::endl << std::flush;//ORDER
 	std::cout << "Topology::generateDummAtomClasses START\n";
 
-	// 
+	// Declarations
 	std::vector<bool> founditInDuMM(
 		amberReader->getNumberAtoms(), false);
 
@@ -846,7 +846,8 @@ std::cout << "ORDER Topology::generateDummAtomClasses(std::string resName, readA
 			 aCP2aCI_iter != aClassParams2aClassId.end();
 		   ++aCP2aCI_iter)
 		{
-			if(aCP2aCI_iter->first == atomClassParams)
+			//if(aCP2aCI_iter->first == atomClassParams)
+			if((aCP2aCI_iter->second).name == bAtomList[i].getFftype())
 			{
 				founditInThisTopology = true;
 				break;
@@ -903,12 +904,12 @@ std::cout << "ORDER Topology::generateDummAtomClasses(std::string resName, readA
 
 				dummAtomClassIndex = atomClassId.dummAtomClassIndex;
 
-				atomClassName = atomClassId.name;
+				//atomClassName = atomClassId.name;
 		
 				//std::cout << "foundit  aCIx atomClassName " << aCIx << " " << atomClassName << std::endl;
 			}else{
 				dummAtomClassIndex = dumm.getAtomClassIndex(bAtomList[i].getFftype());
-				atomClassName = bAtomList[i].getFftype();
+				//atomClassName = bAtomList[i].getFftype();
 			}
 
 		}
