@@ -8,6 +8,7 @@ using namespace SimTK;
 /** Default constructor.Sets the name of this molecule to 'no_name '.
 The name has no particular function and is not guaranteed to be unique **/
 Topology::Topology(){
+std::cout << "ORDER Topology::Topology()" << std::endl << std::flush;//ORDER
 	this->name = std::string("no_name");
 	this->setCompoundName((this->name));
 }
@@ -15,6 +16,7 @@ Topology::Topology(){
 /** Constructor that sets the name of the molecule. The name has no particular
 function and is not guaranteed to be unique **/
 Topology::Topology(std::string nameOfThisMolecule){
+std::cout << "ORDER Topology::Topology(std::string nameOfThisMolecule)" << std::endl << std::flush;//ORDER
 	this->name = nameOfThisMolecule;
 	this->setCompoundName((this->name));
 }
@@ -23,15 +25,19 @@ Topology::Topology(std::string nameOfThisMolecule){
 because we want to allow the valence to change during the simulation
 e.g. semi-grand canonical ensemble. **/
 Topology::~Topology(){
+std::cout << "ORDER Topology::~Topology()" << std::endl << std::flush;//ORDER
 	for(size_t i = 0; i < bAtomList.size(); i++){
-		delete bAtomList[i].bAtomType;
+		delete bAtomList[i].compoundSingleAtom;
 	}
 }
 
-/** Set atoms properties from a reader: number, name, element, initial
- * name, force field type, charge, coordinates, mass, LJ parameters **/
+/** Set Gmolmodel atoms properties from a reader: number, name, element,
+ * initial name, force field type, charge, coordinates, mass, LJ parameters.
+ * 1-to-1 correspondence between prmtop and Gmolmodel.
+ * This does not set anything in Compund or DuMM.  **/
 void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 {
+std::cout << "ORDER Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	// Alloc memory for atoms and bonds list
 	natoms = amberReader->getNumberAtoms();
 	bAtomList.resize(natoms);
@@ -59,9 +65,9 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 			}
 		}
 
+		// Set element
 		//bAtomList[i].setElem(str_buf.at(strix));
-		/* bAtomList[i].setElem( (amberReader->getAtomsName(i)).substr(0, 1) ); */
-
+		//bAtomList[i].setElem( (amberReader->getAtomsName(i)).substr(0, 1) );
 		// CORRECT WAY TO SET ELEMENT
  		bAtomList[i].setAtomicNumber( amberReader->getAtomicNumber(i) );
 		//==========================
@@ -73,9 +79,9 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		bAtomList[i].setInName(str_buf);
 
 		// Set atom type
-		str_buf = amberReader->getAtomsNameAlias(i);
+		str_buf = amberReader->getAtomsType(i);
 		ROBOSAMPLE::trim(str_buf);
-		bAtomList[i].setFftype(str_buf);
+		bAtomList[i].setFfType(str_buf);
 
 		// Set charge as it is used in Amber
 		SimTK::Real chargeMultiplier = 18.2223;
@@ -100,9 +106,12 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 	} // END atom properties
 }
 
-/** Set bonds properties from reader: bond indeces, atom neighbours **/
+/** Set bonds properties from reader: bond indeces, atom neighbours.
+ *  1-to-1 correspondence between prmtop and Gmolmodel.
+ **/
 void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 {
+std::cout << "ORDER Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	assert( (!bAtomList.empty()) &&
 	"Topology::loadAtomAndBondInfoFromReader: atom list empty.");
 
@@ -110,7 +119,8 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 	nbonds = amberReader->getNumberBonds();
 	bonds.resize(nbonds);
 
-	// Iterate through bonds and get atom indeces
+	// Iterate bonds and get atom indeces
+	// This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
 	for(int i=0; i<nbonds; i++){
 		bonds[i].setIndex(i);
 		bonds[i].i = amberReader->getBondsAtomsIndex1(i);
@@ -133,7 +143,7 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 	// Assign neighbors and bonds involved for each atom
 	// which translates into pushing bSpecificAtom * and bBond *
 	// into their apropriate vectors
-	for(int i=0; i<nbonds; i++){
+	for(int i = 0; i < nbonds; i++){
 		(bAtomList[ bonds[i].i  ]).addNeighbor( &(bAtomList[ bonds[i].j  ]) );
 		(bAtomList[ bonds[i].i  ]).addBond( &(bonds[i]) );
 
@@ -145,97 +155,98 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 /** Set atoms Molmodel types (Compound::SingleAtom derived) based on
  * their valence **/
 void Topology::SetGmolAtomsMolmodelTypesTrial(){
+std::cout << "ORDER Topology::SetGmolAtomsMolmodelTypesTrial()" << std::endl << std::flush;//ORDER
 
 	// Set Gmolmodel name and element and inboard length
 	for(int i = 0; i < (natoms); i++) {
 		if(bAtomList[i].getAtomicNumber() == 1){
 			bAtomList[i].setElem("H");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name, Element(1, "Hydrogen", "H", bAtomList[i].getMass()) );
 		}
 		else if(bAtomList[i].getAtomicNumber() == 8){
 			bAtomList[i].setElem("O");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name, Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 9){
 			bAtomList[i].setElem("F");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 53){
 			bAtomList[i].setElem("I");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 7){
 			bAtomList[i].setElem("N");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 6){
 			bAtomList[i].setElem("C");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 16){
 			bAtomList[i].setElem("S");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 15){
 			bAtomList[i].setElem("P");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 12){
 			bAtomList[i].setElem("Mg");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(12, "Magnesium", "Mg", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 25){
 			bAtomList[i].setElem("Mn");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(25, "Manganese", "Mn", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 11){
 			bAtomList[i].setElem("Na");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(11, "Sodium", "Na", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 20){
 			bAtomList[i].setElem("Ca");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(20, "Calcium", "Ca", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 17){
 			bAtomList[i].setElem("Cl");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(17, "Chlorine", "Cl", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 30){
 			bAtomList[i].setElem("Zn");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(30, "Zinc", "Zn", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 35){
 			bAtomList[i].setElem("Br");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(35, "Bromine", "Br", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 26){
 			bAtomList[i].setElem("Fe");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(26, "Iron", "Fe", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 23){
 			bAtomList[i].setElem("V");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(23, "Vanadium", "V", bAtomList[i].getMass()));
 		}
 		else if(bAtomList[i].getAtomicNumber() == 19){
 			bAtomList[i].setElem("K");
-			bAtomList[i].bAtomType = new
+			bAtomList[i].compoundSingleAtom = new
 				Compound::SingleAtom(bAtomList[i].name,  Element(19, "Potassium", "K", bAtomList[i].getMass()));
 		}
 
@@ -245,73 +256,74 @@ void Topology::SetGmolAtomsMolmodelTypesTrial(){
 	/* // Set Gmolmodel name and element and inboard length
 	for(int i = 0; i < (natoms); i++) {
 		if(((bAtomList[i].elem) == "H")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name, Element(1, "Hydrogen", "H", bAtomList[i].getMass()) );
 			bAtomList[i].setAtomicNumber(1);
 		}else if(((bAtomList[i].elem) == "O")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name, Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(8);
 		}else if(((bAtomList[i].elem) == "F")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(9);
 		}else if(((bAtomList[i].elem) == "I")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(53);
 		}else if(((bAtomList[i].elem) == "N")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(7);
 		}else if(((bAtomList[i].elem) == "C")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(6);
 		}else if(((bAtomList[i].elem) == "S")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(16);
 		}else if(((bAtomList[i].elem) == "P")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(15);
 		}else if(((bAtomList[i].elem) == "M")){
-			bAtomList[i].bAtomType = new
+			bAtomList[i].CompoundSingleAtom = new
 					Compound::SingleAtom(bAtomList[i].name,  Element(15, "Magnesium", "Mg", bAtomList[i].getMass()));
 			bAtomList[i].setAtomicNumber(12);
 		}
 
 	} */
 
+	// Add bond centers
 	Angle TetrahedralAngle = 109.47 * Deg2Rad;
 
 	for(int i = 0; i < (natoms); i++) {
 
-		(bAtomList[i].bAtomType)->setCompoundName("SingleAtom");
+		(bAtomList[i].compoundSingleAtom)->setCompoundName("SingleAtom");
 
 		// Add BondCenters
 		if(bAtomList[i].nbonds > 0){
 
 			if(bAtomList[i].nbonds == 1){ // One bond only
-				(bAtomList[i].bAtomType)->addFirstBondCenter("bond1",
+				(bAtomList[i].compoundSingleAtom)->addFirstBondCenter("bond1",
 					bAtomList[i].name);
 			}else if(bAtomList[i].nbonds > 1){ // multiple bonds
-				(bAtomList[i].bAtomType)->addFirstTwoBondCenters("bond1", "bond2",
+				(bAtomList[i].compoundSingleAtom)->addFirstTwoBondCenters("bond1", "bond2",
 					bAtomList[i].name, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
 				if(bAtomList[i].nbonds > 2){
-					(bAtomList[i].bAtomType)->addLeftHandedBondCenter("bond3",
+					(bAtomList[i].compoundSingleAtom)->addLeftHandedBondCenter("bond3",
 						bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
 				}
 				if(bAtomList[i].nbonds > 3){
-					(bAtomList[i].bAtomType)->addRightHandedBondCenter("bond4",
+					(bAtomList[i].compoundSingleAtom)->addRightHandedBondCenter("bond4",
 						bAtomList[i].name, TetrahedralAngle, TetrahedralAngle);
 				}
 			}
 
 			// Set the inboard BondCenter
-			(bAtomList[i].bAtomType)->setInboardBondCenter("bond1");
-			(bAtomList[i].bAtomType)->setDefaultInboardBondLength(0.19);
+			(bAtomList[i].compoundSingleAtom)->setInboardBondCenter("bond1");
+			(bAtomList[i].compoundSingleAtom)->setDefaultInboardBondLength(0.19);
 
 		} // bonded atoms iterator
 
@@ -322,6 +334,7 @@ void Topology::SetGmolAtomsMolmodelTypesTrial(){
 // TODO: delete or update 
 void Topology::SetGmolAtomsMolmodelTypes()
 {
+std::cout << "ORDER Topology::SetGmolAtomsMolmodelTypes()" << std::endl << std::flush;//ORDER
 	// ---------------------------------------------
 	// Set every atom's (SimTK::Compound::SingleAtom *) to it's
 	// appropriate element and assign it's Compound::AtomName to unique name
@@ -334,7 +347,7 @@ void Topology::SetGmolAtomsMolmodelTypes()
 		// Atoms with one bond
 		if(bAtomList[i].nbonds == 1){
 			if(std::string(bAtomList[i].elem) == "H"){
-				bAtomList[i].bAtomType = new UnivalentAtom(bAtomList[i].name,
+				bAtomList[i].compoundSingleAtom = new UnivalentAtom(bAtomList[i].name,
 						                                   SimTK::Element( 1, "Hydrogen", "H", bAtomList[i].getMass() ));
 				bAtomList[i].setAtomicNumber(1);
 			}
@@ -344,12 +357,12 @@ void Topology::SetGmolAtomsMolmodelTypes()
 				bAtomList[i].setAtomicNumber(17);
 			}*/
 			else if(std::string(bAtomList[i].elem) == "O"){
-				bAtomList[i].bAtomType = new UnivalentAtom(bAtomList[i].name,
+				bAtomList[i].compoundSingleAtom = new UnivalentAtom(bAtomList[i].name,
 						                                   Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(8);
 			}
 			else if(std::string(bAtomList[i].elem) == "F"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						UnivalentAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(9);
 			}
@@ -361,107 +374,107 @@ void Topology::SetGmolAtomsMolmodelTypes()
 			}
 			*/
 			else if(std::string(bAtomList[i].elem) == "I"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						UnivalentAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(53);
 			}
 			else if(std::string(bAtomList[i].elem) == "N"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						UnivalentAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
 			}
-			bAtomList[i].bAtomType->setDefaultInboardBondLength(0.1112); // Just for initial construction
+			bAtomList[i].compoundSingleAtom->setDefaultInboardBondLength(0.1112); // Just for initial construction
 		}
 			// Atoms with two bonds
 		else if (bAtomList[i].nbonds == 2){
 			if(std::string(bAtomList[i].elem) == "H"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						BivalentAtom(bAtomList[i].name, Element(1, "Hydrogen", "H", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(1);
 			}
 			else if(std::string(bAtomList[i].elem) == "C"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						BivalentAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(6);
 			}
 			else if(std::string(bAtomList[i].elem) == "O"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						BivalentAtom(bAtomList[i].name,  Element(8, "Oxygen", "O", bAtomList[i].getMass()),
 						             109.47*Deg2Rad);
 				bAtomList[i].setAtomicNumber(8);
 			}
 			else if(std::string(bAtomList[i].elem) == "N"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						BivalentAtom(bAtomList[i].name,  Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
 			}
 			else if(std::string(bAtomList[i].elem) == "S"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						BivalentAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()),
 						             109.47*Deg2Rad);
 				bAtomList[i].setAtomicNumber(16);
 			}
-			bAtomList[i].bAtomType->setDefaultInboardBondLength(0.19);
+			bAtomList[i].compoundSingleAtom->setDefaultInboardBondLength(0.19);
 		}
 			// Atoms with three bonds
 		else if (bAtomList[i].nbonds == 3){
 			if(std::string(bAtomList[i].elem) == "C"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						TrivalentAtom(bAtomList[i].name, Element(6, "Carbon", "C", bAtomList[i].getMass()),
 						              120*Deg2Rad, 120*Deg2Rad
 				);
 				bAtomList[i].setAtomicNumber(6);
 			}
 			else if(std::string(bAtomList[i].elem) == "O"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(8);
 			}
 			else if(std::string(bAtomList[i].elem) == "N"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
 			}
 			else if(std::string(bAtomList[i].elem) == "S"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(16);
 			}
 			else if(std::string(bAtomList[i].elem) == "P"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						TrivalentAtomTetra(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(15);
 			}
-			bAtomList[i].bAtomType->setDefaultInboardBondLength(0.19);
+			bAtomList[i].compoundSingleAtom->setDefaultInboardBondLength(0.19);
 		}
 			// Atoms with four bonds
 		else if (bAtomList[i].nbonds == 4){
 			if(std::string(bAtomList[i].elem) == "C"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(6);
 			}
 			else if(std::string(bAtomList[i].elem) == "O"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(8, "Oxygen", "O", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(8);
 			}
 			else if(std::string(bAtomList[i].elem) == "N"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(7);
 			}
 			else if(std::string(bAtomList[i].elem) == "S"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(16);
 			}
 			else if(std::string(bAtomList[i].elem) == "P"){
-				bAtomList[i].bAtomType = new
+				bAtomList[i].compoundSingleAtom = new
 						QuadrivalentAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
 				bAtomList[i].setAtomicNumber(15);
 			}
-			bAtomList[i].bAtomType->setDefaultInboardBondLength(0.19);
+			bAtomList[i].compoundSingleAtom->setDefaultInboardBondLength(0.19);
 		}
 
 
@@ -472,6 +485,7 @@ void Topology::SetGmolAtomsMolmodelTypes()
  * bAtomList and bonds lists **/
 void Topology::loadAtomAndBondInfoFromReader(readAmberInput *amberReader)
 {
+std::cout << "ORDER Topology::loadAtomAndBondInfoFromReader(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	// Set atoms properties from a reader: number, name, element, initial
 	// name, force field type, charge, coordinates, mass, LJ parameters
 	SetGmolAtomPropertiesFromReader(amberReader);
@@ -487,6 +501,7 @@ void Topology::loadAtomAndBondInfoFromReader(readAmberInput *amberReader)
 /** Print atom and bonds list with details**/
 void Topology::PrintAtomList(int whichWorld)
 {
+std::cout << "ORDER Topology::PrintAtomList(int whichWorld)" << std::endl << std::flush;//ORDER
 	// Atoms
 	std::cout<<"Topology::PrintAtomList\n";
 	for(unsigned int i = 0; i < bAtomList.size(); i++){
@@ -504,15 +519,14 @@ force field specific parameters for an atom type. Gmolmodel defines a
 new Biotype for each atom. The only thing that is specified is the element
 with info about name, atomic number, valence and mass. **/
 void Topology::bAddBiotypes(
-	  //std::string resName,
 	readAmberInput *amberReader
-	//, SimTK::DuMMForceFieldSubsystem& dumm
 )
 {
+std::cout << "ORDER Topology::bAddBiotypes(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
-	// Iterate through atoms and define Biotypes based on resname
+	// Iterate atoms and define Biotypes with their indeces and names
 	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
 			  SimTK::Element(
@@ -545,6 +559,7 @@ information from bonds list and bondsInvolved list of each atom in bAtomList.
 /** The actual recursive function that builds the graph **/
 void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)
 {
+std::cout << "ORDER Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)" << std::endl << std::flush;//ORDER
 	// The base atom has to be set once Molmodel
 	baseSetFlag = 0;
 
@@ -572,7 +587,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				// treated differently. Set a base atom first
 				if (nofProcesses == 2) {
 					if (baseSetFlag == 0) {
-						this->setBaseAtom(*(previousNode->bAtomType));
+						this->setBaseAtom(*(previousNode->compoundSingleAtom));
 						this->setAtomBiotype(previousNode->name, (this->name), previousNode->getName());
 						this->convertInboardBondCenterToOutboard();
 						baseSetFlag = 1;
@@ -592,19 +607,19 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
 				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
 				std::string debugString = parentBondCenterPathName.str();
-				this->bondAtom(*node->bAtomType,
+				this->bondAtom(*node->compoundSingleAtom,
 						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
 
 				// Set the final Biotype
 				this->setAtomBiotype(node->name, (this->name).c_str(), node->getName());
 
 				// Set bSpecificAtom atomIndex to the last atom added to bond
-				node->atomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1);
+				node->compoundAtomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1);
 
 
 				// The only time we have to set atomIndex to the previous node
 				if (nofProcesses == 2) {
-					previousNode->atomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0);
+					previousNode->compoundAtomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0);
 				}
 
 				// Set bBond Molmodel Compound::BondIndex
@@ -652,6 +667,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 
 /** After building the acyclic molecular tree close the remaining bonds **/
 void Topology::addRingClosingBonds() {
+std::cout << "ORDER Topology::addRingClosingBonds()" << std::endl << std::flush;//ORDER
 	// Consider all remaining bonds ring closing bonds and close them
 	for(int i=0; i<nbonds; i++){
 		if(bonds[i].isVisited() == 0){
@@ -717,11 +733,12 @@ void Topology::addRingClosingBonds() {
 void Topology::matchDefaultConfigurationWithAtomList(
 		SimTK::Compound::MatchStratagem matchStratagem)
 {
+std::cout << "ORDER Topology::matchDefaultConfigurationWithAtomList(SimTK::Compound::MatchStratagem matchStratagem)" << std::endl << std::flush;//ORDER
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
 	}
 
 	matchDefaultConfiguration(atomTargets, matchStratagem, true, 150.0);
@@ -734,6 +751,7 @@ general flexibility of the molecule. **/
 // TODO: break in two functions
 void Topology::buildGraphAndMatchCoords(int argRoot)
 {
+std::cout << "ORDER Topology::buildGraphAndMatchCoords(int argRoot)" << std::endl << std::flush;//ORDER
 	// Initialize all atoms and bonds to unvisited
 	for (int i = 0; i < natoms; i++) {
 		bAtomList[i].setVisited(0);
@@ -784,7 +802,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 
 	// Now that everything is built, initialize aIx2TopTransforms map
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).atomIndex, SimTK::Transform()));
+		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).compoundAtomIndex, SimTK::Transform()));
 	}
 
 }
@@ -800,16 +818,17 @@ void Topology::generateDummAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 )
 {
+std::cout << "ORDER Topology::generateDummAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId)" << std::endl << std::flush;//ORDER
 	std::cout << "Topology::generateDummAtomClasses START\n";
 
 	// 
 	std::vector<bool> founditInDuMM(
 		amberReader->getNumberAtoms(), false);
 
-	// Iterate through Gmolmodel atoms and define AtomClasses
+	// Iterate Gmolmodel atoms and define AtomClasses based on
 	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
 
-		// Get AtomClass parameters from bSpecificAtom info
+		// Get AtomClass parameters from bAtomList info
 		AtomClassParams atomClassParams(
 			bAtomList[i].getAtomicNumber(),
 			bAtomList[i].getNBonds(),
@@ -817,16 +836,18 @@ void Topology::generateDummAtomClasses(
 			bAtomList[i].getLJWellDepth() * 4.184 // kcal to kJ
 		);
 
-		SimTK::DuMM::AtomClassIndex aCIx;
+		SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
 		std::string atomClassName;
 
-		// Check if we already have this Atom Class
+		// Check if we already have this Atom Class in this Topology
 		bool founditInThisTopology = false;
-
-		std::map<AtomClassParams, AtomClassId>::const_iterator it;
-		for (	it = aClassParams2aClassId.begin();
-			it != aClassParams2aClassId.end(); ++it){
-			if(it->first == atomClassParams){
+		std::map<AtomClassParams, AtomClassId>::const_iterator aCP2aCI_iter;
+		for (aCP2aCI_iter  = aClassParams2aClassId.begin();
+			 aCP2aCI_iter != aClassParams2aClassId.end();
+		   ++aCP2aCI_iter)
+		{
+			if(aCP2aCI_iter->first == atomClassParams)
+			{
 				founditInThisTopology = true;
 				break;
 			}
@@ -848,7 +869,7 @@ void Topology::generateDummAtomClasses(
 		if ( (!founditInThisTopology) && (!founditInDuMM[i]) ) {
 
 			// Get an AtomClass index from DuMM
-			aCIx = dumm.getNextUnusedAtomClassIndex();
+			dummAtomClassIndex = dumm.getNextUnusedAtomClassIndex();
 		
 			// Define an AtomClass name
 			atomClassName = bAtomList[i].getFftype();
@@ -857,7 +878,8 @@ void Topology::generateDummAtomClasses(
 			//	<< atomClassName  << std::endl;
 
 			// Define an AtomClass
-			dumm.defineAtomClass(aCIx, atomClassName.c_str(),
+			dumm.defineAtomClass(dummAtomClassIndex,
+				atomClassName.c_str(),
 				atomClassParams.atomicNumber,
 				atomClassParams.valence,
 				atomClassParams.vdwRadius,
@@ -865,11 +887,11 @@ void Topology::generateDummAtomClasses(
 			);
 
 			std::cout << "Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName " 
-				<< aCIx << " " << atomClassName ;
+				<< dummAtomClassIndex << " " << atomClassName ;
 			atomClassParams.dump();
 
 			// Insert an entry in our map too
-			AtomClassId atomClassId(aCIx, atomClassName);
+			AtomClassId atomClassId(dummAtomClassIndex, atomClassName);
 			aClassParams2aClassId.insert( std::make_pair(atomClassParams, atomClassId) );
 
 		}else{ // we already have this AtomClass
@@ -877,24 +899,24 @@ void Topology::generateDummAtomClasses(
 			if(!founditInDuMM[i]){
 				//aClassParams2aClassId.at(atomParams);
 				//AtomClassId& atomClassId = aClassParams2aClassId.at(atomParams);
-				const AtomClassId& atomClassId = it->second;
+				const AtomClassId& atomClassId = aCP2aCI_iter->second;
 
-				aCIx = atomClassId.index;
+				dummAtomClassIndex = atomClassId.dummAtomClassIndex;
 
 				atomClassName = atomClassId.name;
 		
 				//std::cout << "foundit  aCIx atomClassName " << aCIx << " " << atomClassName << std::endl;
 			}else{
-				aCIx = dumm.getAtomClassIndex(bAtomList[i].getFftype());
+				dummAtomClassIndex = dumm.getAtomClassIndex(bAtomList[i].getFftype());
 				atomClassName = bAtomList[i].getFftype();
 			}
 
 		}
 
 		// Insert AtomClass index in Gmolmodel atom list too
-		bAtomList[i].setAtomClassIndex(aCIx);
+		bAtomList[i].setAtomClassIndex(dummAtomClassIndex);
 
-	} // --------------------------- DONE
+	} // --------------------------- DONE AmberReader atoms
 
 
 
@@ -945,6 +967,7 @@ void Topology::transferDummAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId				
 )
 {
+std::cout << "ORDER Topology::transferDummAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId)" << std::endl << std::flush;//ORDER
 
 	SimTK::DuMM::AtomClassIndex aCIx;
 	std::string atomClassName;
@@ -957,7 +980,7 @@ void Topology::transferDummAtomClasses(
 		const AtomClassParams& atomParams = it->first;
 		const AtomClassId& atomClassId = it->second;
 
-		aCIx = atomClassId.index;
+		aCIx = atomClassId.dummAtomClassIndex;
 		atomClassName = atomClassId.name;
 
 		std::cout << "Topology::transferAtomClasses " 
@@ -983,6 +1006,7 @@ void Topology::transferDummChargedAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId				
 )
 {
+std::cout << "ORDER Topology::transferDummChargedAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId" << std::endl << std::flush;//ORDER
 
 	// Define ChargedAtomTypeIndeces
 	SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
@@ -1049,6 +1073,7 @@ void Topology::bAddDummBondParams(std::string,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs)
 {
+std::cout << "ORDER Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm,std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs)" << std::endl << std::flush;//ORDER
 
 	// Keep track of inserted AtomClass pairs
 	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
@@ -1097,6 +1122,7 @@ void Topology::bAddDummBondParams(std::string,
 	readAmberInput *amberReader, 
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
+std::cout << "ORDER Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 /* 	// Keep track of inserted AtomClass pairs
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 
@@ -1111,6 +1137,7 @@ void Topology::bAddDummAngleParams(std::string,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs)
 {
+std::cout << "ORDER Topology::bAddDummAngleParams(std::string, readAmberInput *amberReader,	SimTK::DuMMForceFieldSubsystem& dumm, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs)" << std::endl << std::flush;//ORDER
 
 	// Keep track of inserted AtomClass pairs
 	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
@@ -1166,6 +1193,7 @@ void Topology::bAddDummTorsionParams(
 		allDihedralsACIxs
 )
 {
+std::cout << "ORDER Topology::std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>&allDihedralsACIxs" << std::endl << std::flush;//ORDER
 	// Keep track of inserted AtomClass pairs
 	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
 
@@ -1278,6 +1306,7 @@ void Topology::generateDummParams(
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 )
 {
+std::cout << "ORDER Topology::generateDummParams(readAmberInput *amberReader, DuMMForceFieldSubsystem& dumm, map<AtomClassParams, AtomClassId>& aClassParams2aClassId, vec<vec<DuMM::AtomClassIndex>>& allBondsACIxs, vec<vec<DuMM::AtomClassIndex>>& allAnglesACIxs, vec<vec<DuMM::AtomClassIndex>>& allDihedralsACIxs)" << std::endl << std::flush;//ORDER
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
@@ -1300,6 +1329,7 @@ void Topology::transferDummParams(
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 )
 {
+std::cout << "ORDER Topology::transferDummParams(readAmberInput *amberReader, DuMMForceFieldSubsystem& dumm, map<AtomClassParams, AtomClassId>& aClassParams2aClassId, vec<vec<DuMM::AtomClassIndex>>& allBondsACIxs, vec<vec<DuMM::AtomClassIndex>>& allAnglesACIxs, vec<vec<DuMM::AtomClassIndex>>& allDihedralsACIxs)" << std::endl << std::flush;//ORDER
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
@@ -1333,14 +1363,17 @@ bool Topology::checkIfTripleUnorderedAreEqual(
 
 }
 
+// Helper function for calcLogDetMBATAnglesContribution
+// Finds all triple runs - TODO VERY INEFFICIENT
 void Topology::loadTriples()
 {
+std::cout << "ORDER Topology::loadTriples()" << std::endl << std::flush;//ORDER
 	// Assign Compound coordinates by matching bAtomList coordinates
 	//std::cout << "Topology triples: " << std::endl ;
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
 	}
 	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
 	getBondedAtomRuns(3, atomTargets);
@@ -1396,7 +1429,9 @@ void Topology::loadTriples()
 }
 
 // Numerically unstable around -pi, 0 and pi due to the log(0)
-SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState) {
+SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState)
+{
+std::cout << "ORDER Topology::calcLogSineSqrGamma2(const SimTK::State &quatState)" << std::endl << std::flush;//ORDER
 	bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
 	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
 	SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
@@ -1427,6 +1462,7 @@ SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState) {
 
 
 SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatState){
+std::cout << "ORDER Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatState)" << std::endl << std::flush;//ORDER
 	//State& eulerState;
 	//matter.convertToEulerAngles(quatState, eulerState);
 	//std::cout << "calcLogDetMBATGamma2Contribution quaternionState " << quatState << std::endl;
@@ -1464,13 +1500,14 @@ SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatS
 
 
 SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State&){
+std::cout << "ORDER Topology::calcLogDetMBATDistsContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
 	// function args were const SimTK::State& someState
 
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
 	}
 
 	//std::cout << "Topology::calcLogDetMBATDistsContribution dists: " ;
@@ -1501,14 +1538,17 @@ SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State&){
 }
 
 
-SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&){
+SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&)
+{
+std::cout << "ORDER Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
+
 	// function args were const SimTK::State& someState
 
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 			Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
 	}
 
 	//std::cout << "Topology::calcLogDetMBATDistsMassesContribution dists squared: " ;
@@ -1538,13 +1578,14 @@ TODO: calculate atomTargets only once: getAtomLocationsInGround
 TODO: realize position
 */
 SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State&){
+std::cout << "ORDER Topology::calcLogDetMBATAnglesContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
 	// function args were const SimTK::State& someState
 
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 			Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].atomIndex, vec));
+			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
 	}
 
 	//std::cout << "Topology::calcLogDetMBATAnglesContribution angles: " ;
@@ -1576,7 +1617,9 @@ SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State&){
 }
 
 
-SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State&){
+SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State&)
+{
+std::cout << "ORDER Topology::calcLogDetMBATMassesContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
 	// function args were const SimTK::State& someState
 
 	//std::cout << "Topology::calcLogDetMBATMassesContribution masses: " ;
@@ -1593,6 +1636,7 @@ SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State&){
 
 SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
 {
+std::cout << "ORDER Topology::calcLogDetMBAT(const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	SimTK::Real gamma2Contribution = calcLogDetMBATGamma2Contribution(someState);
 	SimTK::Real distsContribution = calcLogDetMBATDistsContribution(someState);
 	//SimTK::Real distsMassesContribution = calcLogDetMBATDistsMassesContribution(someState);
@@ -1612,6 +1656,7 @@ SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
 
 SimTK::Real Topology::calcLogDetMBATInternal(const SimTK::State& someState)
 {
+std::cout << "ORDER Topology::calcLogDetMBATInternal(const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	SimTK::Real distsContribution = calcLogDetMBATDistsContribution(someState);
 	SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
 	SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
@@ -1683,13 +1728,15 @@ std::vector<bSpecificAtom *> Topology::getNeighbours(int) const {
 /** **/
 const bBond& Topology::getBond(int a1, int a2) const
 {
+std::cout << "ORDER Topology::getBond(int a1, int a2)" << std::endl << std::flush;//ORDER
 	for(int i = 0; i < nbonds; i++){
 		if( (bonds[i]).isThisMe(a1, a2) ){
 			return bonds[i];
 		}
 	}
 
-	std::string assert_string("No bond with these atom indeces found: " + to_string(a1) + " " + to_string(a2) + ". Exiting.");
+	std::string assert_string("No bond with these atom indeces found: " 
+		+ to_string(a1) + " " + to_string(a2) + ". Exiting.");
 	std::cout << assert_string << std::endl;
 	assert(0);
 
@@ -1702,6 +1749,7 @@ const bBond& Topology::getBond(int a1, int a2) const
 /** Get bond order. **/
 int Topology::getBondOrder(int, int) const
 {
+std::cout << "ORDER Topology::getBondOrder(int, int)" << std::endl << std::flush;//ORDER
 	assert(!"Not implemented."); throw std::exception();
 
 	return 0;
@@ -1717,6 +1765,7 @@ std::string Topology::getRegimen(){
 /** Set scale factors for U entries according to flexibility file **/
 void Topology::setUScaleFactorsToBonds(std::string flexFN)
 {
+std::cout << "ORDER Topology::setUScaleFactorsToBonds(std::string flexFN)" << std::endl << std::flush;//ORDER
 	//
 	std::string line;
 	std::ifstream F(flexFN);
@@ -1757,7 +1806,9 @@ void Topology::setUScaleFactorsToBonds(std::string flexFN)
 
 /** Set regimen according to input file **/
 // Compound doesn't care about Worlds. We keep multiple Bond::Mobilities in bBond
-void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld){
+void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld)
+{
+std::cout << "ORDER Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld)" << std::endl << std::flush;//ORDER
 
 	if(argRegimen == "IC"){
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
@@ -1964,7 +2015,9 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 }
 
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
-void Topology::loadAIx2MbxMap(){
+void Topology::loadAIx2MbxMap()
+{
+std::cout << "ORDER Topology::loadAIx2MbxMap()" << std::endl << std::flush;//ORDER
 
 	// If the map is empty fill with empty vectors first
 	if(aIx2mbx.empty()){
@@ -1972,7 +2025,7 @@ void Topology::loadAIx2MbxMap(){
 		for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 
 			// Get atomIndex from atomList
-			SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+			SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
 
 			// Insert
 			aIx2mbx.insert(
@@ -1987,7 +2040,7 @@ void Topology::loadAIx2MbxMap(){
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 
 		// Get atomIndex from atomList
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
 
 		// Get MobilizedBodyIndex from CompoundAtom
 		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
@@ -2006,6 +2059,7 @@ void Topology::loadAIx2MbxMap(){
 /** Compound AtomIndex to bAtomList number **/
 void Topology::loadCompoundAtomIx2GmolAtomIx()
 {
+std::cout << "ORDER Topology::loadCompoundAtomIx2GmolAtomIx()" << std::endl << std::flush;//ORDER
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
 		int gmolIx = (bAtomList[i]).getNumber();
@@ -2028,8 +2082,9 @@ calcDefaultAtomFrameInCompoundFrame multiple times. This has
 to be called every time the coordinates change though. **/
 void Topology::calcTopTransforms()
 {
+std::cout << "ORDER Topology::calcTopTransforms()" << std::endl << std::flush;//ORDER
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
 		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
 	}
 }
@@ -2039,7 +2094,7 @@ void Topology::printTopTransforms()
 {
 	std::cout << "Topology TopTransforms " << std::endl;
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).atomIndex;
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
 		std::cout << aIx << " " << aIx2TopTransform[aIx] << std::endl;
 	}
 }
@@ -2055,6 +2110,7 @@ SimTK::Transform& Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
 	SimTK::SimbodyMatterSubsystem& matter,
 	const SimTK::State& someState)
 {
+std::cout << "ORDER Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(SimTK::Compound::AtomIndex aIx, SimTK::DuMMForceFieldSubsystem& dumm, SimTK::SimbodyMatterSubsystem& matter, const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
 	const  SimTK::MobilizedBodyIndex mbx = dumm.getAtomBody(dAIx);
 	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
@@ -2078,6 +2134,7 @@ SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexThroughDumm(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
+std::cout << "ORDER Topology::getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex aIx,SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
 	return dumm.getAtomBody(dAIx);
 }
@@ -2087,6 +2144,7 @@ SimTK::Vec3 Topology::getAtomLocationInMobilizedBodyFrameThroughDumm(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
+std::cout << "ORDER Topology::getAtomLocationInMobilizedBodyFrameThroughDumm(SimTK::Compound::AtomIndex aIx,SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
 	return dumm.getAtomStationOnBody(dAIx);
 }
@@ -2097,6 +2155,7 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 	SimTK::SimbodyMatterSubsystem& matter,
 	const SimTK::State& someState)
 {
+std::cout << "ORDER Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compound::AtomIndex aIx,SimTK::DuMMForceFieldSubsystem& dumm,SimTK::SimbodyMatterSubsystem& matter,const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
 	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
 
@@ -2115,6 +2174,7 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
 	SimTK::Compound::AtomIndex aIx, int whichWorld)
 {
+std::cout << "ORDER Topology::getAtomMobilizedBodyIndexFromMap(SimTK::Compound::AtomIndex aIx, int whichWorld)" << std::endl << std::flush;//ORDER
 	if(!aIx2mbx.empty()){
 		if(!((aIx2mbx[aIx]).empty())){
 			return (aIx2mbx[aIx])[whichWorld];
@@ -2271,6 +2331,7 @@ Topology::getChemicalParent(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
+std::cout << "ORDER Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx, SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 
 	SimTK::Compound::AtomIndex chemParentAIx;
 	int gmolAtomIndex = -111111;

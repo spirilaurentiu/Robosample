@@ -960,8 +960,9 @@ void Context::AddMolecules(
 		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
 		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok? 
 
-		// Set atoms properties from a reader: number, name, element, initial
-		// name, force field type, charge, coordinates, mass, LJ parameters
+		// Set Gmolmodel atoms properties from a reader: number, name, element
+		// initial name, force field type, charge, coordinates, mass,
+		// LJ parameters
 		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]); 
 
 		// Set bonds properties from reader: bond indeces, atom neighbours
@@ -971,7 +972,7 @@ void Context::AddMolecules(
 		// their valence // from world
 		topologies[molIx].SetGmolAtomsMolmodelTypesTrial();
 
-		// Add Biotypes // from world
+		// Add Biotype indeces and Biotype names representing Biotypes
 		topologies[molIx].bAddBiotypes(&amberReader[molIx]);
 
 		// Build Robosample graph and Compound graph.
@@ -980,9 +981,10 @@ void Context::AddMolecules(
 		topologies[molIx].buildGraphAndMatchCoords(
 			std::stoi(roots.back()));
 
+		// Helper function for calc MBAT determinant
 		topologies[molIx].loadTriples();
-		// Map of Compound atom indexes to Robosample atom indexes
 
+		// Map of Compound atom indexes to Robosample atom indexes
 		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
 		//std::cout << "Topology " << molIx << " info\n";
 		//topologies[molIx].printMaps();
@@ -1055,7 +1057,7 @@ void Context::updDummAtomClasses(
 			const AtomClassParams& atomParams = it->first;
 			const AtomClassId& atomClassId = it->second;
 
-			aCIx = atomClassId.index;
+			aCIx = atomClassId.dummAtomClassIndex;
 			atomClassName = atomClassId.name;
 
 			std::cout << "Context::transferAtomClasses "

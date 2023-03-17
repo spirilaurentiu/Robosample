@@ -32,7 +32,7 @@ printf("\n");
 printf(" %4s \t %4s \t %4s \t %11s \t %11s \t %11s \t %11s \t %11s \t %11s \t %11s \t %11s \n", "index", "Name", "Name2", "AtomsXcoord", "AtomsYcoord", "AtomsZcoord", "AtomsMass", "AtomsCharge", "AtomsRadii", "AtomsRVdW", "AtomsEpsilon");
 for(int i=0; i < MOL.getNumberAtoms(); i++)
 {
-    printf("%4i \t %4s \t %4s \t %11f \t %11f \t %11f \t %11f \t %11f \t %11f \t %11f \t %11f \n", i, MOL.getAtomsName(i).c_str(), MOL.getAtomsNameAlias(i).c_str(), MOL.getAtomsXcoord(i), MOL.getAtomsYcoord(i), MOL.getAtomsZcoord(i), MOL.getAtomsMass(i), MOL.getAtomsCharge(i), MOL.getAtomsRadii(i), MOL.getAtomsRVdW(i), MOL.getAtomsEpsilon(i));
+    printf("%4i \t %4s \t %4s \t %11f \t %11f \t %11f \t %11f \t %11f \t %11f \t %11f \t %11f \n", i, MOL.getAtomsName(i).c_str(), MOL.getAtomsType(i).c_str(), MOL.getAtomsXcoord(i), MOL.getAtomsYcoord(i), MOL.getAtomsZcoord(i), MOL.getAtomsMass(i), MOL.getAtomsCharge(i), MOL.getAtomsRadii(i), MOL.getAtomsRVdW(i), MOL.getAtomsEpsilon(i));
 }
 
 printf("\n\n");

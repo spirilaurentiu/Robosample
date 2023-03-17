@@ -95,11 +95,11 @@ map **/
 class AtomClassId {
 
   public:
-	SimTK::DuMM::AtomClassIndex index;
+	SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
 	std::string name = "noName";
 
 	AtomClassId(int i, std::string s) :
-		index(i), name(s) {}
+		dummAtomClassIndex(i), name(s) {}
 };
 
 /** Topological information (bonds graph) for one molecule.
@@ -129,7 +129,8 @@ public:
 	virtual ~Topology();
 
 	/** Set atoms properties from a reader: number, name, element, initial
-	 * name, force field type, charge, coordinates, mass, LJ parameters **/
+	 * name, force field type, charge, coordinates, mass, LJ parameters.
+	 * This does not set anything in Compund or DuMM. **/
 	void SetGmolAtomPropertiesFromReader(readAmberInput *amberReader);
 
 	/** Set bonds properties from reader: bond indeces, atom neighbours **/
@@ -303,6 +304,8 @@ public:
 			std::vector<Compound::AtomIndex> &first,
 			std::vector<Compound::AtomIndex> &second);
 
+	// Helper function for calcLogDetMBATAnglesContribution
+	// Finds all triple runs - TODO VERY INEFFICIENT
 	void loadTriples(void);
 	SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
 	SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);

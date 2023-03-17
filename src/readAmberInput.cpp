@@ -54,7 +54,7 @@ try
     else if (line.find("ATOM_NAME") != std::string::npos)
         readAtomsName();
     else if (line.find("AMBER_ATOM_TYPE") != std::string::npos)
-        readAtomsNameAlias();
+        readAtomsTypes();
     else if (line.find("NONBONDED_PARM_INDEX") != std::string::npos)
         readNonbondedParmIndex();
 
@@ -227,7 +227,7 @@ void readAmberInput::readPointers(){
       }
     }
   }
-  void readAmberInput::readAtomsNameAlias(){
+  void readAmberInput::readAtomsTypes(){
     getline(prmtop, line); // format flag
     i=0;
     while(line.find("FLAG") == std::string::npos && i < NumberAtoms) // if stays within same field
@@ -235,7 +235,7 @@ void readAmberInput::readPointers(){
       getline(prmtop, line);
       for(unsigned int k=0; k + readAmberInput::AtomNameSize <=line.length(); k += readAmberInput::AtomNameSize )
       {
-        AtomsNameAlias.push_back(line.substr(k, readAmberInput::AtomNameSize ));
+        AtomsTypes.push_back(line.substr(k, readAmberInput::AtomNameSize ));
         i++;
       }
     }
@@ -549,8 +549,8 @@ std::string readAmberInput::getAtomsName(int p){
   return AtomsName[p];
 }
 
-std::string readAmberInput::getAtomsNameAlias(int p){
-  return AtomsNameAlias[p];
+std::string readAmberInput::getAtomsType(int p){
+  return AtomsTypes[p];
 }
 
 

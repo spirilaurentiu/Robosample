@@ -46,7 +46,7 @@ public:
     // initializetion. It could be Univalent, Bivalent, TrivalentAtom.
     // The size of this variable will be known  after Topology loads info
     // from an inputReader
-    SimTK::Compound::SingleAtom *bAtomType = nullptr;
+    SimTK::Compound::SingleAtom *compoundSingleAtom = nullptr;
 
     double charge = 0.0;
     long int residueIndex = std::numeric_limits<long int>::min(); // Residue and chain
@@ -73,7 +73,7 @@ public:
     SimTK::DuMM::AtomClassIndex atomClassIndex;
     SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
     SimTK::BiotypeIndex biotypeIndex;
-    SimTK::Compound::AtomIndex atomIndex;
+    SimTK::Compound::AtomIndex compoundAtomIndex;
 
     std::string elem;
   
@@ -129,7 +129,7 @@ public:
     void setX(SimTK::Real);
     void setY(SimTK::Real);
     void setZ(SimTK::Real);
-    void setFftype(std::string);
+    void setFfType(std::string);
     void setBiotype(std::string);
     void setBiotype(const char *);
     void setBAtomType(SimTK::Compound::SingleAtom *);

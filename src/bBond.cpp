@@ -136,7 +136,14 @@ void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which
 
 float bBond::getUScaleFactor(int which) const
 {
-	return uScaleFactors[which];
+  
+  if(which >= uScaleFactors.size()){
+    std::cout << "bBond::getUScaleFactor QUICK DIRTY FIX \n" << std::endl;
+    return 1.0;
+  }else{
+    return uScaleFactors[which];
+  }
+
 }
 
 void bBond::addUScaleFactor(float argUScaleFactor)

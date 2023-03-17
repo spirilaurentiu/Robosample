@@ -603,7 +603,7 @@ void World::loadMbx2AIxMap(){
 		for (unsigned int i = 0; i < topology.getNumAtoms(); ++i) {
 
 			// Get atomIndex from atomList
-			SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).atomIndex;
+			SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).compoundAtomIndex;
 
 			// Get MobilizedBodyIndex from CompoundAtom
 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);

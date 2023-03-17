@@ -12,7 +12,7 @@ void bSpecificAtom::Zero(){
 
     std::fill(begin(fftype), end(fftype), '\0');
 
-    bAtomType = nullptr;
+    compoundSingleAtom = nullptr;
 
     charge = 0.0;
     residueIndex = std::numeric_limits<long int>::min();
@@ -42,7 +42,7 @@ void bSpecificAtom::Zero(){
 void bSpecificAtom::Print(int whichWorld)
 {
     std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
-        <<" number "<<number<<" atomIndex  "<<atomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
+        <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
         <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
         <<" atomClassIndex  "<<atomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
         //<< " bAtomType "<< bAtomType 
@@ -140,13 +140,13 @@ std::string bSpecificAtom::getBiotype() const
 // Returns Molmodel atom type as SimTK::Compound::SingleAtom *
 SimTK::Compound::SingleAtom * bSpecificAtom::getBAtomType() const
 {
-    return this->bAtomType;
+    return this->compoundSingleAtom;
 }
 
 // Get atom's index as held in Compound
 SimTK::Compound::AtomIndex bSpecificAtom:: getCompoundAtomIndex() const
 {
-    return this->atomIndex;
+    return this->compoundAtomIndex;
 }
 
 //
@@ -236,7 +236,7 @@ void bSpecificAtom::setMass(SimTK::Real inpMass)
 }
 
 // Set force field atom type
-void bSpecificAtom::setFftype(std::string inpFftype)
+void bSpecificAtom::setFfType(std::string inpFftype)
 {
     std::copy(inpFftype.begin(), inpFftype.end(), begin(fftype));
 }
@@ -262,7 +262,7 @@ void bSpecificAtom::setBAtomType(SimTK::Compound::SingleAtom *)
 
 void bSpecificAtom::setCompoundAtomIndex(SimTK::Compound::AtomIndex inpAtomIndex)
 {
-    this->atomIndex = inpAtomIndex;
+    this->compoundAtomIndex = inpAtomIndex;
 }
 
 // Set charge
