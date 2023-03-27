@@ -44,7 +44,7 @@ void bSpecificAtom::Print(int whichWorld)
     std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
         <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
         <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
-        <<" atomClassIndex  "<<atomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
+        <<" atomClassIndex  "<<dummAtomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
         //<< " bAtomType "<< bAtomType 
         <<" charge "<<charge<<" mobile "<<mobile<<" visited "<<visited<<std::endl;
 
@@ -285,15 +285,15 @@ void bSpecificAtom::setVisited(int argVisited)
 }
 
 // Get the atom class index
-DuMM::AtomClassIndex bSpecificAtom::getAtomClassIndex() const
+DuMM::AtomClassIndex bSpecificAtom::getDummAtomClassIndex() const
 {
-    return this->atomClassIndex;
+    return this->dummAtomClassIndex;
 }
 
 // Set the atom class index
-void bSpecificAtom::setAtomClassIndex(DuMM::AtomClassIndex inpAtomClassIndex)
+void bSpecificAtom::setDummAtomClassIndex(DuMM::AtomClassIndex inpAtomClassIndex)
 {
-    this->atomClassIndex = inpAtomClassIndex;
+    this->dummAtomClassIndex = inpAtomClassIndex;
 }
 
 // Get the atomic number

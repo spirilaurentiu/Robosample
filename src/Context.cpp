@@ -970,7 +970,7 @@ void Context::AddMolecules(
 
 		// Set atoms Molmodel types (Compound::SingleAtom derived) based on
 		// their valence // from world
-		topologies[molIx].SetGmolAtomsMolmodelTypesTrial();
+		topologies[molIx].SetGmolAtomsCompoundTypesTrial();
 
 		// Add Biotype indeces and Biotype names representing Biotypes
 		topologies[molIx].bAddBiotypes(&amberReader[molIx]);

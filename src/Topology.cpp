@@ -8,7 +8,6 @@ using namespace SimTK;
 /** Default constructor.Sets the name of this molecule to 'no_name '.
 The name has no particular function and is not guaranteed to be unique **/
 Topology::Topology(){
-std::cout << "ORDER Topology::Topology()" << std::endl << std::flush;//ORDER
 	this->name = std::string("no_name");
 	this->setCompoundName((this->name));
 }
@@ -16,7 +15,6 @@ std::cout << "ORDER Topology::Topology()" << std::endl << std::flush;//ORDER
 /** Constructor that sets the name of the molecule. The name has no particular
 function and is not guaranteed to be unique **/
 Topology::Topology(std::string nameOfThisMolecule){
-std::cout << "ORDER Topology::Topology(std::string nameOfThisMolecule)" << std::endl << std::flush;//ORDER
 	this->name = nameOfThisMolecule;
 	this->setCompoundName((this->name));
 }
@@ -25,7 +23,6 @@ std::cout << "ORDER Topology::Topology(std::string nameOfThisMolecule)" << std::
 because we want to allow the valence to change during the simulation
 e.g. semi-grand canonical ensemble. **/
 Topology::~Topology(){
-std::cout << "ORDER Topology::~Topology()" << std::endl << std::flush;//ORDER
 	for(size_t i = 0; i < bAtomList.size(); i++){
 		delete bAtomList[i].compoundSingleAtom;
 	}
@@ -37,7 +34,6 @@ std::cout << "ORDER Topology::~Topology()" << std::endl << std::flush;//ORDER
  * This does not set anything in Compund or DuMM.  **/
 void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 {
-std::cout << "ORDER Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	// Alloc memory for atoms and bonds list
 	natoms = amberReader->getNumberAtoms();
 	bAtomList.resize(natoms);
@@ -111,7 +107,6 @@ std::cout << "ORDER Topology::SetGmolAtomPropertiesFromReader(readAmberInput *am
  **/
 void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 {
-std::cout << "ORDER Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	assert( (!bAtomList.empty()) &&
 	"Topology::loadAtomAndBondInfoFromReader: atom list empty.");
 
@@ -154,8 +149,7 @@ std::cout << "ORDER Topology::SetGmolBondingPropertiesFromReader(readAmberInput 
 
 /** Set atoms Molmodel types (Compound::SingleAtom derived) based on
  * their valence **/
-void Topology::SetGmolAtomsMolmodelTypesTrial(){
-std::cout << "ORDER Topology::SetGmolAtomsMolmodelTypesTrial()" << std::endl << std::flush;//ORDER
+void Topology::SetGmolAtomsCompoundTypesTrial(){
 
 	// Set Gmolmodel name and element and inboard length
 	for(int i = 0; i < (natoms); i++) {
@@ -332,9 +326,8 @@ std::cout << "ORDER Topology::SetGmolAtomsMolmodelTypesTrial()" << std::endl << 
 }
 
 // TODO: delete or update 
-void Topology::SetGmolAtomsMolmodelTypes()
+void Topology::SetGmolAtomsCompoundTypes()
 {
-std::cout << "ORDER Topology::SetGmolAtomsMolmodelTypes()" << std::endl << std::flush;//ORDER
 	// ---------------------------------------------
 	// Set every atom's (SimTK::Compound::SingleAtom *) to it's
 	// appropriate element and assign it's Compound::AtomName to unique name
@@ -485,7 +478,6 @@ std::cout << "ORDER Topology::SetGmolAtomsMolmodelTypes()" << std::endl << std::
  * bAtomList and bonds lists **/
 void Topology::loadAtomAndBondInfoFromReader(readAmberInput *amberReader)
 {
-std::cout << "ORDER Topology::loadAtomAndBondInfoFromReader(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	// Set atoms properties from a reader: number, name, element, initial
 	// name, force field type, charge, coordinates, mass, LJ parameters
 	SetGmolAtomPropertiesFromReader(amberReader);
@@ -495,13 +487,12 @@ std::cout << "ORDER Topology::loadAtomAndBondInfoFromReader(readAmberInput *ambe
 
 	// Set atoms Molmodel types (Compound::SingleAtom derived) based on
 	// their valence
-	SetGmolAtomsMolmodelTypes();
+	SetGmolAtomsCompoundTypes();
 }
 
 /** Print atom and bonds list with details**/
 void Topology::PrintAtomList(int whichWorld)
 {
-std::cout << "ORDER Topology::PrintAtomList(int whichWorld)" << std::endl << std::flush;//ORDER
 	// Atoms
 	std::cout<<"Topology::PrintAtomList\n";
 	for(unsigned int i = 0; i < bAtomList.size(); i++){
@@ -522,7 +513,6 @@ void Topology::bAddBiotypes(
 	readAmberInput *amberReader
 )
 {
-std::cout << "ORDER Topology::bAddBiotypes(readAmberInput *amberReader)" << std::endl << std::flush;//ORDER
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
@@ -559,7 +549,6 @@ information from bonds list and bondsInvolved list of each atom in bAtomList.
 /** The actual recursive function that builds the graph **/
 void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)
 {
-std::cout << "ORDER Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)" << std::endl << std::flush;//ORDER
 	// The base atom has to be set once Molmodel
 	baseSetFlag = 0;
 
@@ -667,7 +656,6 @@ std::cout << "ORDER Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAt
 
 /** After building the acyclic molecular tree close the remaining bonds **/
 void Topology::addRingClosingBonds() {
-std::cout << "ORDER Topology::addRingClosingBonds()" << std::endl << std::flush;//ORDER
 	// Consider all remaining bonds ring closing bonds and close them
 	for(int i=0; i<nbonds; i++){
 		if(bonds[i].isVisited() == 0){
@@ -733,7 +721,6 @@ std::cout << "ORDER Topology::addRingClosingBonds()" << std::endl << std::flush;
 void Topology::matchDefaultConfigurationWithAtomList(
 		SimTK::Compound::MatchStratagem matchStratagem)
 {
-std::cout << "ORDER Topology::matchDefaultConfigurationWithAtomList(SimTK::Compound::MatchStratagem matchStratagem)" << std::endl << std::flush;//ORDER
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
@@ -751,7 +738,6 @@ general flexibility of the molecule. **/
 // TODO: break in two functions
 void Topology::buildGraphAndMatchCoords(int argRoot)
 {
-std::cout << "ORDER Topology::buildGraphAndMatchCoords(int argRoot)" << std::endl << std::flush;//ORDER
 	// Initialize all atoms and bonds to unvisited
 	for (int i = 0; i < natoms; i++) {
 		bAtomList[i].setVisited(0);
@@ -818,7 +804,6 @@ void Topology::generateDummAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 )
 {
-std::cout << "ORDER Topology::generateDummAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId)" << std::endl << std::flush;//ORDER
 	std::cout << "Topology::generateDummAtomClasses START\n";
 
 	// Declarations
@@ -915,7 +900,7 @@ std::cout << "ORDER Topology::generateDummAtomClasses(std::string resName, readA
 		}
 
 		// Insert AtomClass index in Gmolmodel atom list too
-		bAtomList[i].setAtomClassIndex(dummAtomClassIndex);
+		bAtomList[i].setDummAtomClassIndex(dummAtomClassIndex);
 
 	} // --------------------------- DONE AmberReader atoms
 
@@ -940,7 +925,7 @@ std::cout << "ORDER Topology::generateDummAtomClasses(std::string resName, readA
 		dumm.defineChargedAtomType(
 		chargedAtomTypeIndex,
 		chargedAtomTypeName.c_str(),
-		bAtomList[k].getAtomClassIndex(),
+		bAtomList[k].getDummAtomClassIndex(),
 		bAtomList[k].charge
 		);
 		/*std::cout << "Defined chargedAtomType " << chargedAtomTypeName 
@@ -968,7 +953,6 @@ void Topology::transferDummAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId				
 )
 {
-std::cout << "ORDER Topology::transferDummAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId)" << std::endl << std::flush;//ORDER
 
 	SimTK::DuMM::AtomClassIndex aCIx;
 	std::string atomClassName;
@@ -1007,7 +991,6 @@ void Topology::transferDummChargedAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId				
 )
 {
-std::cout << "ORDER Topology::transferDummChargedAtomClasses(std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId" << std::endl << std::flush;//ORDER
 
 	// Define ChargedAtomTypeIndeces
 	SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
@@ -1027,7 +1010,7 @@ std::cout << "ORDER Topology::transferDummChargedAtomClasses(std::string resName
 		dumm.defineChargedAtomType(
 		  chargedAtomTypeIndex,
 		  chargedAtomTypeName.c_str(),
-		  bAtomList[k].getAtomClassIndex(),
+		  bAtomList[k].getDummAtomClassIndex(),
 		  bAtomList[k].charge
 		);
 		//std::cout << "Defined chargedAtomType " << chargedAtomTypeName << " with chargedAtomTypeIndex " << chargedAtomTypeIndex << std::endl;
@@ -1056,14 +1039,14 @@ const void Topology::PrintMolmodelAndDuMMTypes(
 			<< " name " << bAtomList[i].name
 			<< " BiotypeIndex " << bAtomList[i].getBiotypeIndex()
 			<< " ChargedAtomTypeIndex "<< bAtomList[i].getChargedAtomTypeIndex()
-			<< " AtomClassIx " << bAtomList[i].getAtomClassIndex()
+			<< " AtomClassIx " << bAtomList[i].getDummAtomClassIndex()
 			<< " partialChargeInE " << bAtomList[i].charge
 			<< " chargedAtomTypeIndex "
 			<< bAtomList[i].getChargedAtomTypeIndex()
 			<< " DuMM VdW Radius "
-			<< dumm.getVdwRadius(bAtomList[i].getAtomClassIndex())
+			<< dumm.getVdwRadius(bAtomList[i].getDummAtomClassIndex())
 			<< " DuMM VdW Well Depth "
-			<< dumm.getVdwWellDepth(bAtomList[i].getAtomClassIndex())
+			<< dumm.getVdwWellDepth(bAtomList[i].getDummAtomClassIndex())
 			<< std::endl << std::flush;
 	}
 }
@@ -1074,7 +1057,6 @@ void Topology::bAddDummBondParams(std::string,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs)
 {
-std::cout << "ORDER Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm,std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs)" << std::endl << std::flush;//ORDER
 
 	// Keep track of inserted AtomClass pairs
 	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
@@ -1086,9 +1068,9 @@ std::cout << "ORDER Topology::bAddDummBondParams(std::string, readAmberInput *am
 		// Generate a pair of atom classes for this bond
 		std::vector<SimTK::DuMM::AtomClassIndex> thisBondACIxs;
 		thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			(bAtomList[bonds[t].i]).getAtomClassIndex()) );
+			(bAtomList[bonds[t].i]).getDummAtomClassIndex()) );
 		thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			(bAtomList[bonds[t].j]).getAtomClassIndex()) );
+			(bAtomList[bonds[t].j]).getDummAtomClassIndex()) );
 
 		// Check if we already have this bond
 		bool foundit = false;
@@ -1105,8 +1087,8 @@ std::cout << "ORDER Topology::bAddDummBondParams(std::string, readAmberInput *am
 				<< thisBondACIxs[1] << std::endl;
 		
 			dumm.defineBondStretch_KA(
-				(bAtomList[bonds[t].i]).getAtomClassIndex(),
-				(bAtomList[bonds[t].j]).getAtomClassIndex(),
+				(bAtomList[bonds[t].i]).getDummAtomClassIndex(),
+				(bAtomList[bonds[t].j]).getDummAtomClassIndex(),
 				amberReader->getBondsForceK(t),  //k1
 				amberReader->getBondsEqval(t)   //equil1
 			);
@@ -1123,7 +1105,6 @@ void Topology::bAddDummBondParams(std::string,
 	readAmberInput *amberReader, 
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
-std::cout << "ORDER Topology::bAddDummBondParams(std::string, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 /* 	// Keep track of inserted AtomClass pairs
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 
@@ -1138,22 +1119,21 @@ void Topology::bAddDummAngleParams(std::string,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs)
 {
-std::cout << "ORDER Topology::bAddDummAngleParams(std::string, readAmberInput *amberReader,	SimTK::DuMMForceFieldSubsystem& dumm, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs)" << std::endl << std::flush;//ORDER
 
 	// Keep track of inserted AtomClass pairs
 	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
 
-	// Iterate through angles and define their parameters
+	// Iterate angles and define their parameters
 	for(int t = 0; t < amberReader->getNumberAngles(); t++){
 
 		// Generate a triple of atom class indexes for this angle
 		std::vector<SimTK::DuMM::AtomClassIndex> thisAngleACIxs;
 		thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			bAtomList[amberReader->getAnglesAtomsIndex1(t)].getAtomClassIndex()) );
+			bAtomList[amberReader->getAnglesAtomsIndex1(t)].getDummAtomClassIndex()) );
 		thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			bAtomList[amberReader->getAnglesAtomsIndex2(t)].getAtomClassIndex()) );
+			bAtomList[amberReader->getAnglesAtomsIndex2(t)].getDummAtomClassIndex()) );
 		thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			bAtomList[amberReader->getAnglesAtomsIndex3(t)].getAtomClassIndex()) );
+			bAtomList[amberReader->getAnglesAtomsIndex3(t)].getDummAtomClassIndex()) );
 
 		// Check if we already have this angle
 		bool foundit = false;
@@ -1171,9 +1151,9 @@ std::cout << "ORDER Topology::bAddDummAngleParams(std::string, readAmberInput *a
 				<< thisAngleACIxs[2] << std::endl;
 		
 			dumm.defineBondBend_KA(
-				bAtomList[amberReader->getAnglesAtomsIndex1(t)].getAtomClassIndex(),
-				bAtomList[amberReader->getAnglesAtomsIndex2(t)].getAtomClassIndex(),
-				bAtomList[amberReader->getAnglesAtomsIndex3(t)].getAtomClassIndex(),
+				bAtomList[amberReader->getAnglesAtomsIndex1(t)].getDummAtomClassIndex(),
+				bAtomList[amberReader->getAnglesAtomsIndex2(t)].getDummAtomClassIndex(),
+				bAtomList[amberReader->getAnglesAtomsIndex3(t)].getDummAtomClassIndex(),
 				amberReader->getAnglesForceK(t),
 				static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
 					* amberReader->getAnglesEqval(t))) // TODO 32 vs 64 bit
@@ -1194,7 +1174,6 @@ void Topology::bAddDummTorsionParams(
 		allDihedralsACIxs
 )
 {
-std::cout << "ORDER Topology::std::string resName, readAmberInput *amberReader, SimTK::DuMMForceFieldSubsystem& dumm, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>&allDihedralsACIxs" << std::endl << std::flush;//ORDER
 	// Keep track of inserted AtomClass pairs
 	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
 
@@ -1215,21 +1194,21 @@ std::cout << "ORDER Topology::std::string resName, readAmberInput *amberReader, 
 		for(int t = first; t < (first + numberOf); t++){
 
 			// Get AtomClass indeces first
-			std::cout << "Topology::bAddDummDihedralParams checking DihedralAIxs " 
-				<< amberReader->getDihedralsAtomsIndex1(t) << " "
-				<< amberReader->getDihedralsAtomsIndex2(t) << " "
-				<< amberReader->getDihedralsAtomsIndex3(t) << " "
-				<< amberReader->getDihedralsAtomsIndex4(t) << " "
-				<< std::endl ;
-
 			SimTK::DuMM::AtomClassIndex aCIx1 =
-				bAtomList[amberReader->getDihedralsAtomsIndex1(t)].getAtomClassIndex();
+				bAtomList[amberReader->getDihedralsAtomsIndex1(t)].getDummAtomClassIndex();
 			SimTK::DuMM::AtomClassIndex aCIx2 =
-				bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getAtomClassIndex();
+				bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getDummAtomClassIndex();
 			SimTK::DuMM::AtomClassIndex aCIx3 =
-				bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getAtomClassIndex();
+				bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getDummAtomClassIndex();
 			SimTK::DuMM::AtomClassIndex aCIx4 =
-				bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getAtomClassIndex();
+				bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getDummAtomClassIndex();
+
+			std::cout << "Topology::bAddDummDihedralParams checking " 
+				<< amberReader->getDihedralsAtomsIndex1(t) << " " << amberReader->getDihedralsAtomsIndex2(t) << " "
+				<< amberReader->getDihedralsAtomsIndex3(t) << " " << amberReader->getDihedralsAtomsIndex4(t) << " :| "
+				<< first << " " << t << " " << numberOf << " | " 
+				<< aCIx1 << " " << aCIx2 << " " << aCIx3 << " " << aCIx4
+				<< std::endl;
 
 			// Generate a quad of atom class indexes for this angle
 			std::vector<SimTK::DuMM::AtomClassIndex> thisDihedralACIxs;
@@ -1249,12 +1228,21 @@ std::cout << "ORDER Topology::std::string resName, readAmberInput *amberReader, 
 			if (  !foundit ){ // angle was not found
 
 				std::cout << "Topology::bAddDummDihedralParams insert " 
-					<< thisDihedralACIxs[0] << " "
-					<< thisDihedralACIxs[1] << " "
-					<< thisDihedralACIxs[2] << " "
-					<< thisDihedralACIxs[3] << " | " 
-					<< numberOf << " " << amberReader->getDihedralsPeriod(t)
-					<< std::endl << std::flush;
+					<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
+					<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
+					<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
+					<< " ;| " << amberReader->getDihedralsForceK(t) 
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
+				if(numberOf == 2){std::cout
+					<< " | " << amberReader->getDihedralsForceK(t+1)
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
+				if(numberOf == 3){std::cout
+					<< " | " << amberReader->getDihedralsForceK(t+2)
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
+				if(numberOf > 3){std::cout
+					<< " | " << amberReader->getDihedralsForceK(t+3)
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
+				std::cout << std::endl << std::flush;
 
 				// Define the dihedrals
 				if(numberOf == 1){
@@ -1286,6 +1274,21 @@ std::cout << "ORDER Topology::std::string resName, readAmberInput *amberReader, 
 						amberReader->getDihedralsForceK(t + 2),
 						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
 					);
+				}else if (numberOf == 4){
+					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t + 1),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
+						static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t + 2),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2))),
+						static_cast<int>(amberReader->getDihedralsPeriod(t+3)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t+3),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)))
+					);
 				}
 
 				// Put the entry in our map too
@@ -1307,7 +1310,6 @@ void Topology::generateDummParams(
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 )
 {
-std::cout << "ORDER Topology::generateDummParams(readAmberInput *amberReader, DuMMForceFieldSubsystem& dumm, map<AtomClassParams, AtomClassId>& aClassParams2aClassId, vec<vec<DuMM::AtomClassIndex>>& allBondsACIxs, vec<vec<DuMM::AtomClassIndex>>& allAnglesACIxs, vec<vec<DuMM::AtomClassIndex>>& allDihedralsACIxs)" << std::endl << std::flush;//ORDER
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
@@ -1330,7 +1332,6 @@ void Topology::transferDummParams(
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
 )
 {
-std::cout << "ORDER Topology::transferDummParams(readAmberInput *amberReader, DuMMForceFieldSubsystem& dumm, map<AtomClassParams, AtomClassId>& aClassParams2aClassId, vec<vec<DuMM::AtomClassIndex>>& allBondsACIxs, vec<vec<DuMM::AtomClassIndex>>& allAnglesACIxs, vec<vec<DuMM::AtomClassIndex>>& allDihedralsACIxs)" << std::endl << std::flush;//ORDER
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
@@ -1368,7 +1369,6 @@ bool Topology::checkIfTripleUnorderedAreEqual(
 // Finds all triple runs - TODO VERY INEFFICIENT
 void Topology::loadTriples()
 {
-std::cout << "ORDER Topology::loadTriples()" << std::endl << std::flush;//ORDER
 	// Assign Compound coordinates by matching bAtomList coordinates
 	//std::cout << "Topology triples: " << std::endl ;
 	std::map<AtomIndex, Vec3> atomTargets;
@@ -1432,7 +1432,6 @@ std::cout << "ORDER Topology::loadTriples()" << std::endl << std::flush;//ORDER
 // Numerically unstable around -pi, 0 and pi due to the log(0)
 SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState)
 {
-std::cout << "ORDER Topology::calcLogSineSqrGamma2(const SimTK::State &quatState)" << std::endl << std::flush;//ORDER
 	bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
 	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
 	SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
@@ -1463,7 +1462,6 @@ std::cout << "ORDER Topology::calcLogSineSqrGamma2(const SimTK::State &quatState
 
 
 SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatState){
-std::cout << "ORDER Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatState)" << std::endl << std::flush;//ORDER
 	//State& eulerState;
 	//matter.convertToEulerAngles(quatState, eulerState);
 	//std::cout << "calcLogDetMBATGamma2Contribution quaternionState " << quatState << std::endl;
@@ -1501,7 +1499,6 @@ std::cout << "ORDER Topology::calcLogDetMBATGamma2Contribution(const SimTK::Stat
 
 
 SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State&){
-std::cout << "ORDER Topology::calcLogDetMBATDistsContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
 	// function args were const SimTK::State& someState
 
 	// Assign Compound coordinates by matching bAtomList coordinates
@@ -1541,7 +1538,6 @@ std::cout << "ORDER Topology::calcLogDetMBATDistsContribution(const SimTK::State
 
 SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&)
 {
-std::cout << "ORDER Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
 
 	// function args were const SimTK::State& someState
 
@@ -1579,7 +1575,6 @@ TODO: calculate atomTargets only once: getAtomLocationsInGround
 TODO: realize position
 */
 SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State&){
-std::cout << "ORDER Topology::calcLogDetMBATAnglesContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
 	// function args were const SimTK::State& someState
 
 	// Assign Compound coordinates by matching bAtomList coordinates
@@ -1620,7 +1615,6 @@ std::cout << "ORDER Topology::calcLogDetMBATAnglesContribution(const SimTK::Stat
 
 SimTK::Real Topology::calcLogDetMBATMassesContribution(const SimTK::State&)
 {
-std::cout << "ORDER Topology::calcLogDetMBATMassesContribution(const SimTK::State&)" << std::endl << std::flush;//ORDER
 	// function args were const SimTK::State& someState
 
 	//std::cout << "Topology::calcLogDetMBATMassesContribution masses: " ;
@@ -1637,7 +1631,6 @@ std::cout << "ORDER Topology::calcLogDetMBATMassesContribution(const SimTK::Stat
 
 SimTK::Real Topology::calcLogDetMBAT(const SimTK::State& someState)
 {
-std::cout << "ORDER Topology::calcLogDetMBAT(const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	SimTK::Real gamma2Contribution = calcLogDetMBATGamma2Contribution(someState);
 	SimTK::Real distsContribution = calcLogDetMBATDistsContribution(someState);
 	//SimTK::Real distsMassesContribution = calcLogDetMBATDistsMassesContribution(someState);
@@ -1657,7 +1650,6 @@ std::cout << "ORDER Topology::calcLogDetMBAT(const SimTK::State& someState)" << 
 
 SimTK::Real Topology::calcLogDetMBATInternal(const SimTK::State& someState)
 {
-std::cout << "ORDER Topology::calcLogDetMBATInternal(const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	SimTK::Real distsContribution = calcLogDetMBATDistsContribution(someState);
 	SimTK::Real anglesContribution = calcLogDetMBATAnglesContribution(someState);
 	SimTK::Real massesContribution = calcLogDetMBATMassesContribution(someState);
@@ -1729,7 +1721,6 @@ std::vector<bSpecificAtom *> Topology::getNeighbours(int) const {
 /** **/
 const bBond& Topology::getBond(int a1, int a2) const
 {
-std::cout << "ORDER Topology::getBond(int a1, int a2)" << std::endl << std::flush;//ORDER
 	for(int i = 0; i < nbonds; i++){
 		if( (bonds[i]).isThisMe(a1, a2) ){
 			return bonds[i];
@@ -1750,7 +1741,6 @@ std::cout << "ORDER Topology::getBond(int a1, int a2)" << std::endl << std::flus
 /** Get bond order. **/
 int Topology::getBondOrder(int, int) const
 {
-std::cout << "ORDER Topology::getBondOrder(int, int)" << std::endl << std::flush;//ORDER
 	assert(!"Not implemented."); throw std::exception();
 
 	return 0;
@@ -1766,7 +1756,6 @@ std::string Topology::getRegimen(){
 /** Set scale factors for U entries according to flexibility file **/
 void Topology::setUScaleFactorsToBonds(std::string flexFN)
 {
-std::cout << "ORDER Topology::setUScaleFactorsToBonds(std::string flexFN)" << std::endl << std::flush;//ORDER
 	//
 	std::string line;
 	std::ifstream F(flexFN);
@@ -1809,7 +1798,6 @@ std::cout << "ORDER Topology::setUScaleFactorsToBonds(std::string flexFN)" << st
 // Compound doesn't care about Worlds. We keep multiple Bond::Mobilities in bBond
 void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld)
 {
-std::cout << "ORDER Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld)" << std::endl << std::flush;//ORDER
 
 	if(argRegimen == "IC"){
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
@@ -2018,7 +2006,6 @@ std::cout << "ORDER Topology::setFlexibility(std::string argRegimen, std::string
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 void Topology::loadAIx2MbxMap()
 {
-std::cout << "ORDER Topology::loadAIx2MbxMap()" << std::endl << std::flush;//ORDER
 
 	// If the map is empty fill with empty vectors first
 	if(aIx2mbx.empty()){
@@ -2060,7 +2047,6 @@ std::cout << "ORDER Topology::loadAIx2MbxMap()" << std::endl << std::flush;//ORD
 /** Compound AtomIndex to bAtomList number **/
 void Topology::loadCompoundAtomIx2GmolAtomIx()
 {
-std::cout << "ORDER Topology::loadCompoundAtomIx2GmolAtomIx()" << std::endl << std::flush;//ORDER
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
 		int gmolIx = (bAtomList[i]).getNumber();
@@ -2083,7 +2069,6 @@ calcDefaultAtomFrameInCompoundFrame multiple times. This has
 to be called every time the coordinates change though. **/
 void Topology::calcTopTransforms()
 {
-std::cout << "ORDER Topology::calcTopTransforms()" << std::endl << std::flush;//ORDER
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
 		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
@@ -2111,7 +2096,6 @@ SimTK::Transform& Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
 	SimTK::SimbodyMatterSubsystem& matter,
 	const SimTK::State& someState)
 {
-std::cout << "ORDER Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(SimTK::Compound::AtomIndex aIx, SimTK::DuMMForceFieldSubsystem& dumm, SimTK::SimbodyMatterSubsystem& matter, const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
 	const  SimTK::MobilizedBodyIndex mbx = dumm.getAtomBody(dAIx);
 	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
@@ -2135,7 +2119,6 @@ SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexThroughDumm(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
-std::cout << "ORDER Topology::getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex aIx,SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
 	return dumm.getAtomBody(dAIx);
 }
@@ -2145,7 +2128,6 @@ SimTK::Vec3 Topology::getAtomLocationInMobilizedBodyFrameThroughDumm(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
-std::cout << "ORDER Topology::getAtomLocationInMobilizedBodyFrameThroughDumm(SimTK::Compound::AtomIndex aIx,SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
 	return dumm.getAtomStationOnBody(dAIx);
 }
@@ -2156,7 +2138,6 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 	SimTK::SimbodyMatterSubsystem& matter,
 	const SimTK::State& someState)
 {
-std::cout << "ORDER Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compound::AtomIndex aIx,SimTK::DuMMForceFieldSubsystem& dumm,SimTK::SimbodyMatterSubsystem& matter,const SimTK::State& someState)" << std::endl << std::flush;//ORDER
 	const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
 	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
 
@@ -2175,7 +2156,6 @@ std::cout << "ORDER Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK:
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
 	SimTK::Compound::AtomIndex aIx, int whichWorld)
 {
-std::cout << "ORDER Topology::getAtomMobilizedBodyIndexFromMap(SimTK::Compound::AtomIndex aIx, int whichWorld)" << std::endl << std::flush;//ORDER
 	if(!aIx2mbx.empty()){
 		if(!((aIx2mbx[aIx]).empty())){
 			return (aIx2mbx[aIx])[whichWorld];
@@ -2332,7 +2312,6 @@ Topology::getChemicalParent(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
-std::cout << "ORDER Topology::getChemicalParent(SimTK::SimbodyMatterSubsystem *matter, SimTK::Compound::AtomIndex aIx, SimTK::DuMMForceFieldSubsystem& dumm)" << std::endl << std::flush;//ORDER
 
 	SimTK::Compound::AtomIndex chemParentAIx;
 	int gmolAtomIndex = -111111;

@@ -73,8 +73,12 @@ void trace(Args &&... args)
 //#define sqr(x) ((x)*(x))
 //#endif
 
+#ifndef ANG_360_TO_m180_180
+#define ANG_360_TO_m180_180(x) (((x)>180.0) ? ((x)-360.0) : (x))
+#endif
+
 #ifndef ANG_360_TO_180
-#define ANG_360_TO_180(x) (((x)>180) ? ((x)-360) : (x))
+#define ANG_360_TO_180(x) std::abs(((x)>180.0) ? ((x)-360.0) : (x))
 #endif
 
 // Check versus Velocity Verlet in cart coords

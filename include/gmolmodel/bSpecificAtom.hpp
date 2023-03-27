@@ -70,7 +70,7 @@ public:
     int visited = 0;
     int moleculeIndex = std::numeric_limits<int>::min(); // Residue and chain
     
-    SimTK::DuMM::AtomClassIndex atomClassIndex;
+    SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
     SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
     SimTK::BiotypeIndex biotypeIndex;
     SimTK::Compound::AtomIndex compoundAtomIndex;
@@ -101,8 +101,8 @@ public:
     int getIsVisited() const;
     std::string getFftype() const;
 
-    SimTK::DuMM::AtomClassIndex getAtomClassIndex() const;
-    void setAtomClassIndex(SimTK::DuMM::AtomClassIndex);
+    SimTK::DuMM::AtomClassIndex getDummAtomClassIndex() const;
+    void setDummAtomClassIndex(SimTK::DuMM::AtomClassIndex);
 
     int getAtomicNumber() const;
     void setAtomicNumber(int);

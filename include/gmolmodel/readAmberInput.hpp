@@ -163,7 +163,7 @@ class readAmberInput{
 
 
     // some temp data
-    int i;
+    int global_i = 0;
     TARGET_TYPE temp_val;
     std::string line;
 
