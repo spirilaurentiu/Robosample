@@ -1099,7 +1099,7 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 }
 
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
 
 	try {
 		// ELIZA: Insert code here
@@ -1136,7 +1136,7 @@ void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
 
 // ELIZA: Check the code below
 void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
 
 	// Get new Fixman potential
 	if(useFixman){

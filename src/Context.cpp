@@ -42,7 +42,7 @@ class ThermodynamicState{
 
 	// Next functions set Q, U, tau perturbing functions options
 	// for samplers
-	void setDistortOptions(std::vector<int>& rexDistortOptionsArg);
+	void setDistortOptions(std::vector<int> rexDistortOptionsArg);
 	std::vector<int>& getDistortOptions(void);
 	void setFlowOptions(std::vector<int>& rexFlowOptionsArg);
 	void setWorkOptions(std::vector<int>& rexWorkOptionsArg);
@@ -182,10 +182,9 @@ ThermodynamicState::getSamplers(void)
 
 // Next functions set Q, U, tau perturbing functions options for samplers
 void ThermodynamicState::setDistortOptions(
-	std::vector<int>& rexDistortOptionsArg)
+	std::vector<int> rexDistortOptionsArg)
 {
 	this->rexDistortOptions = rexDistortOptionsArg;
-
 }
 
 std::vector<int>& ThermodynamicState::getDistortOptions(void)
@@ -3508,9 +3507,9 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	// Run the equilibrium worlds
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
-		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
-		
+
 			RunFrontWorldAndRotate(replicaIx);
 		
 		}
@@ -3538,13 +3537,11 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the non-equilibrium worlds
-	for(std::size_t worldCnt = 0;
-	worldCnt < replicaNofWorlds; 
-	worldCnt++){
-			
-		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
-		
+
 			RunFrontWorldAndRotate(replicaIx);
 		
 		}
