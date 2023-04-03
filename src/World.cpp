@@ -253,12 +253,14 @@ void World::generateDummParams(int which, readAmberInput *amberReader
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs)
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs)
+
 {
 	// Add DuMM parameters from amberReader
 	((*topologies)[which]).generateDummParams(amberReader, *forceField,
 	aClassParams2aClassId,
-	allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+	allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 }
 
 void World::transferDummParams(int which, readAmberInput *amberReader
@@ -266,12 +268,13 @@ void World::transferDummParams(int which, readAmberInput *amberReader
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
 	)
 {
 	// Add DuMM parameters from amberReader
 	((*topologies)[which]).transferDummParams(amberReader, *forceField,
 		aClassParams2aClassId,
-		allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+		allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 }
 
 void World::BuildTopologyGraph(int which, std::string argRoot)

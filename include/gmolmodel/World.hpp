@@ -92,13 +92,17 @@ public:
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs);
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
+	);
 
 	void transferDummParams(int which, readAmberInput *amberReader
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
+
 	);
 
 	void BuildTopologyGraph(int which, std::string argRoot);

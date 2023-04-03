@@ -1165,13 +1165,16 @@ void Topology::bAddDummAngleParams(std::string,
 	}
 }
 
-/** Calls DuMM defineBondTorsion for 1, 2 and 3 periodicities **/
+/** Calls DuMM defineBondTorsion for 1, 2, 3 and 4 periodicities **/
 void Topology::bAddDummTorsionParams(
 	  std::string resName
 	, readAmberInput *amberReader
 	, SimTK::DuMMForceFieldSubsystem& dumm
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>&
 		allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& 
+		allImpropersACIxs
+
 )
 {
 	// Keep track of inserted AtomClass pairs
@@ -1188,10 +1191,11 @@ void Topology::bAddDummTorsionParams(
 
 		// Get start and len of this dihedral
 		int first    = pairStartAndLens[index].first;
+		int t        = pairStartAndLens[index].first;
 		int numberOf = pairStartAndLens[index].second;
 
 		// Iterate through this dihedral definitions
-		for(int t = first; t < (first + numberOf); t++){
+		//for(int t = first; t < (first + numberOf); t++){
 
 			// Get AtomClass indeces first
 			SimTK::DuMM::AtomClassIndex aCIx1 =
@@ -1206,26 +1210,76 @@ void Topology::bAddDummTorsionParams(
 			std::cout << "Topology::bAddDummDihedralParams checking " 
 				<< amberReader->getDihedralsAtomsIndex1(t) << " " << amberReader->getDihedralsAtomsIndex2(t) << " "
 				<< amberReader->getDihedralsAtomsIndex3(t) << " " << amberReader->getDihedralsAtomsIndex4(t) << " :| "
-				<< first << " " << t << " " << numberOf << " | " 
+				<< first << " " << t << " " << numberOf << " | " << " forceK: " 
+				<< SimTK_KCAL_TO_KJOULE * amberReader->getDihedralsForceK(t) << " period " 
+				<< amberReader->getDihedralsPeriod(t)
+				<< " phase: " << amberReader->getDihedralsPhase(t) << " | "
 				<< aCIx1 << " " << aCIx2 << " " << aCIx3 << " " << aCIx4
 				<< std::endl;
 
-			// Generate a quad of atom class indexes for this angle
+			// Check if a quad of atom indices is a normal dihedral
+			// or an improper dihedral, by checking if consecutive
+			// atoms are bonded 
+
+			int amber_aIx_1 = amberReader->getDihedralsAtomsIndex1(t);
+			int amber_aIx_2 = amberReader->getDihedralsAtomsIndex2(t);
+			int amber_aIx_3 = amberReader->getDihedralsAtomsIndex3(t);
+			int amber_aIx_4 = amberReader->getDihedralsAtomsIndex4(t);
+
+			bool dihedral=false;
+			bool improper=true;
+
+			if (checkBond(amber_aIx_1, amber_aIx_2) &&
+				checkBond(amber_aIx_2, amber_aIx_3) &&
+				checkBond(amber_aIx_3, amber_aIx_4))
+			{
+				dihedral = true;
+				improper = false;
+			}
+			
+			// Generate a quad of atom class indexes for this dihedral, 
+			// regardless of whether it's a torsion or an improper
 			std::vector<SimTK::DuMM::AtomClassIndex> thisDihedralACIxs;
 			thisDihedralACIxs.push_back(aCIx1);
 			thisDihedralACIxs.push_back(aCIx2);
 			thisDihedralACIxs.push_back(aCIx3);
 			thisDihedralACIxs.push_back(aCIx4);
 
-			// Check if we already have this dihedrals
+
+/* 			// Check if this is a regular dihedral angle or an improper,
+			// by checking if the atoms are bonded in the order they appear.
+			int amber_aIx_1 = amberReader->getDihedralsAtomsIndex1(t);
+			int amber_aIx_2 = amberReader->getDihedralsAtomsIndex2(t);
+			int amber_aIx_3 = amberReader->getDihedralsAtomsIndex3(t);
+			int amber_aIx_4 = amberReader->getDihedralsAtomsIndex4(t);
+
+			if (checkBond(amber_aIx_1, amber_aIx_2) &&
+				checkBond(amber_aIx_2, amber_aIx_3) &&
+				checkBond(amber_aIx_3, amber_aIx_4))
+			{
+				
+				printf ("%d %d %d %d is a normal angle\n", amber_aIx_1, amber_aIx_2, amber_aIx_3, amber_aIx_4);
+			}
+			else
+			{
+				// call defineAmberImproperTorsion_KA if this is the case
+				printf("%d %d %d %d is an improper angle\n", amber_aIx_1, amber_aIx_2, amber_aIx_3, amber_aIx_4);
+			} */
+
+			if (dihedral){
+			for (int tempVar=0; tempVar<numberOf; tempVar++)
+				std::cout << "found dihedral angle!\n";
+			// If it is a normal dihedral, check if we have it in our
+			// dihedral list
 			bool foundit = false;
 			for(auto& row:allDihedralsACIxs){
-				if ( IsTheSameTorsion (thisDihedralACIxs, row) ){
+				if ( IsTheSameTorsion (thisDihedralACIxs, row))
+					{
 					foundit = true;	break;
-				}
+					}
 			}
 
-			if (  !foundit ){ // angle was not found
+			if (!foundit){ // dihedral was not found
 
 				std::cout << "Topology::bAddDummDihedralParams insert " 
 					<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
@@ -1291,12 +1345,85 @@ void Topology::bAddDummTorsionParams(
 					);
 				}
 
-				// Put the entry in our map too
-				allDihedralsACIxs.push_back(thisDihedralACIxs);
+				
 
 			} // END of not foundit
+		
+			// Add the improper to the list of impropers.
+			allDihedralsACIxs.push_back(thisDihedralACIxs);
 
-		}
+			}
+			
+			if (improper){
+			// If it is an improper dihedral, we check if it exitsts, without
+			// checking for the reverse (order matters for impropers)
+
+			for (int tempVar=0; tempVar<numberOf; tempVar++)
+				std::cout << "found improper angle!\n";
+
+			bool foundit = false;
+			for(auto& row:allImpropersACIxs){
+				if ((thisDihedralACIxs == row))
+					{
+					foundit = true;	break;
+					}
+				}
+			
+			if (!foundit){ // dihedral was not found
+
+				std::cout << "Topology::bAddDummDihedralParams insert (Improper) " 
+					<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
+					<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
+					<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
+					<< " ;| " << amberReader->getDihedralsForceK(t) 
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
+				if(numberOf == 2){std::cout
+					<< " | " << amberReader->getDihedralsForceK(t+1)
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
+				if(numberOf == 3){std::cout
+					<< " | " << amberReader->getDihedralsForceK(t+2)
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
+				if(numberOf > 3){std::cout
+					<< " | " << amberReader->getDihedralsForceK(t+3)
+					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
+				std::cout << std::endl << std::flush;
+
+				// Define the dihedrals
+				if(numberOf == 1){
+					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)))
+					);
+				}
+				else if(numberOf == 2){
+					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t + 1),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)))
+					);
+				}
+				else if(numberOf == 3){
+					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t + 1),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
+						static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
+						amberReader->getDihedralsForceK(t + 2),
+						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
+					);
+				}
+			}
+			}	
+		// Add the improper to the list of impropers.
+		allImpropersACIxs.push_back(thisDihedralACIxs);
+
 	}
 }
 
@@ -1308,6 +1435,8 @@ void Topology::generateDummParams(
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
+
 )
 {
 	// We don't have any residues. The whole molecule is one residue
@@ -1319,7 +1448,7 @@ void Topology::generateDummParams(
 	// Add parameters
 	bAddDummBondParams(resName, amberReader, dumm, allBondsACIxs);
 	bAddDummAngleParams(resName, amberReader, dumm, allAnglesACIxs);
-	bAddDummTorsionParams(resName, amberReader, dumm, allDihedralsACIxs);
+	bAddDummTorsionParams(resName, amberReader, dumm, allDihedralsACIxs, allImpropersACIxs);
 }
 
 /** Transfer already generated force field parameters to DuMM **/
@@ -1330,6 +1459,8 @@ void Topology::transferDummParams(
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
+
 )
 {
 	// We don't have any residues. The whole molecule is one residue
@@ -1342,7 +1473,7 @@ void Topology::transferDummParams(
 	// Add parameters
 	bAddDummBondParams(resName, amberReader, dumm, allBondsACIxs);
 	bAddDummAngleParams(resName, amberReader, dumm, allAnglesACIxs);
-	bAddDummTorsionParams(resName, amberReader, dumm, allDihedralsACIxs);
+	bAddDummTorsionParams(resName, amberReader, dumm, allDihedralsACIxs, allImpropersACIxs);
 }
 
 bool Topology::checkIfTripleUnorderedAreEqual(
@@ -1716,6 +1847,18 @@ std::vector<bSpecificAtom *> Topology::getNeighbours(int) const {
 	assert(!"Not implemented."); throw std::exception();
 
 	return {};
+}
+
+/* Check if a1 and a2 are bonded */
+bool Topology::checkBond(int a1, int a2)
+{
+	for(int i = 0; i < nbonds; i++){
+		if( (bonds[i]).isThisMe(a1, a2) )
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 /** **/

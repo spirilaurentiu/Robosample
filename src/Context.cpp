@@ -1046,6 +1046,8 @@ void Context::updDummAtomClasses(
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allImpropersACIxs;
+
 
 		SimTK::DuMM::AtomClassIndex aCIx;
 		std::string atomClassName;
@@ -1095,6 +1097,8 @@ void Context::addDummParams(
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allImpropersACIxs;
+
 
 	// Load DuMM parameters for the first world
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
@@ -1106,7 +1110,7 @@ void Context::addDummParams(
 		// Add parameters in DuMM
 		(updWorld(0))->generateDummParams(molIx, &amberReader[molIx],
 			aClassParams2aClassId,
-			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 	}
 
 	// Load DuMM params for the rest of the worlds
@@ -1117,6 +1121,8 @@ void Context::addDummParams(
 		allBondsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allAnglesACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allDihedralsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
+		allImpropersACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
+
 
 		updDummAtomClasses(aClassParams2aClassId, worldIx);
 
@@ -1130,7 +1136,7 @@ void Context::addDummParams(
 			// Add parameters in DuMM
 			(updWorld(worldIx))->transferDummParams(molIx, &amberReader[molIx],
 			aClassParams2aClassId,
-			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 		}
 
 	}
@@ -4461,6 +4467,29 @@ void Context::PrintToLog(int worldIx)
 // TODO: what's the deal with mc_step
 void Context::writeInitialPdb(void)
 {
+
+/* 		///////////////////////////////////
+        constexpr int TOPOLOGY = 0;
+        std::vector<SimTK::DuMM::AtomIndex> mapping(topologies[TOPOLOGY].getNumAtoms());
+
+        std::cout << "###AMBER - DuMM Mapping###\n";
+        std::cout << "DuMM\t|\tAMBER\n";
+        std::cout << std::string(21,'-') << "\n";
+        for(std::size_t k = 0; k < topologies[TOPOLOGY].getNumAtoms(); k++) {
+            // amber indices
+            const auto aIx = (topologies[TOPOLOGY].bAtomList[k]).getCompoundAtomIndex();
+            
+            // dumm indices
+            const auto d = topologies[TOPOLOGY].getDuMMAtomIndex(aIx);
+
+            // mapping[dumm_index] = amber_index
+            mapping.push_back(d);
+            mapping[d] = static_cast<SimTK::DuMM::AtomIndex>(k);
+
+            std::cout << d << "\t|\t" << k << std::endl;
+        }
+		///////////////////////////////////
+ */
 
 	// - we need this to get compound atoms
 	int currentWorldIx = worldIndexes.front();

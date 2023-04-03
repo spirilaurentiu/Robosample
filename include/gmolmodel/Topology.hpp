@@ -211,6 +211,7 @@ public:
 			, readAmberInput *amberReader
 			, SimTK::DuMMForceFieldSubsystem& dumm
 			, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+			, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
 	);
 
 	/** Calls DuMM defineBondStretch. **/
@@ -242,6 +243,8 @@ public:
 		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
 		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
+
 	);
 
 	/** Transfer already generated force field parameters to DuMM **/
@@ -252,6 +255,8 @@ public:
 		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
 		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+		, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
+
 	);
 
 	/** Print Molmodel specific types as introduced in Gmolmodel **/
@@ -364,6 +369,9 @@ public:
 
 	/**  **/
 	SimTK::Transform getTopTransform(SimTK::Compound::AtomIndex);
+
+	/** **/
+	bool checkBond(int, int);
 
 	/** **/
 	const bBond& getBond(int, int) const;
