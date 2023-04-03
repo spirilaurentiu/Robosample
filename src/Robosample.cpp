@@ -422,10 +422,8 @@ int main(int argc, char **argv)
 	and variables that store the energies, both needed for the
 	acception-rejection step. Also realize velocities and initialize
 	the timestepper. **/
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0;
-		samplerIx < context.getWorld(worldIx)->getNofSamplers();
-		samplerIx++){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (int samplerIx = 0; samplerIx < context.getWorld(worldIx)->getNofSamplers(); samplerIx++){
 			context.initializeSampler(worldIx, samplerIx);
 		}
 	}

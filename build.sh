@@ -235,6 +235,7 @@ fi
 
 # warning flags to be applied in all projects
 ROBO_WARNINGS="-Wall -Wextra -Wpedantic -Wshadow -Wdouble-promotion -Wformat=2 -Wformat-truncation -Wundef -Wconversion -Wunused-parameter"
+ROBO_WARNINGS=""
 
 # sanitizers to use
 ROBO_SANITIZER="-fsanitize=undefined -fsanitize=address -fsanitize-recover=address"
@@ -382,6 +383,9 @@ for ((i=0;i<ROUNDS;i++)); do
 	cd ${MOLMODEL_BUILD_DIR}
 	rm -rf *
 
+	export OPENMM_PLUGIN_DIR_DEBUG="${MOLMODEL_BUILD_DIR}"
+	export OPENMM_PLUGIN_DIR_RELEASE="/home/victor/Robosample/install/Release/openmm/lib/plugins/"
+
 	cmake \
 		${MOLMODEL_SRC} \
 		-DCMAKE_C_COMPILER=${C_COMPILER} \
@@ -475,8 +479,6 @@ for ((i=0;i<ROUNDS;i++)); do
 		fi
 	fi
 done
-
-
 
 # tell the user that we are done
 echo

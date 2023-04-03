@@ -168,6 +168,8 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// After an event handler has made a discontinuous change to the
 	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
+	// /home/victor/Robosample/Molmodel/Simbody01/SimTKcommon/./include/SimTKcommon/internal/Value.h:126:47: runtime error: load of value 190, which is not a valid value for type 'bool'
+	// this is for world[1] in inp.2but.dual
 	timeStepper->initialize(compoundSystem->getDefaultState());
 
 	// Get no of degrees of freedom
@@ -263,6 +265,8 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// Work
 	bendStretchJacobianDetLog = 0.0;
 
+	OMM_setTemperature(boostT);
+
 }
 
 /** Same as initialize **/
@@ -354,6 +358,8 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	
 	// Work
 	bendStretchJacobianDetLog = 0.0;
+
+	OMM_setTemperature(boostT);
 
 }
 
@@ -1078,7 +1084,8 @@ bool b = false;
 
 // ELIZA: Insert code here
 void HMCSampler::OMM_setTemperature(double HMCBoostTemperature){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
+	dumm->setOpenMMtemperature(HMCBoostTemperature);
 }
 
 // ELIZA: Insert code here
@@ -1093,30 +1100,42 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 }
 
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
 
 	try {
 		// ELIZA: Insert code here
-		dumm->OMM_integrateTrajectory(this->MDStepsPerSample );
+		dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+
+		// transfer to simbody from omm ???
+		// ce face timestepper?
+
+		// iau de aici? cate topologii am? toti atomii sunt 0, 1, ..., 
+		// set atoms locations?
+		// ommintegrator in simbody
+		// muti omm integrator in timestepper
+
+		// world->getTopology();
+
+		// cauta aici
+		///////////////////////////////////////////////////////////////
+		//             FULLY FLEXIBLE CARTESIAN WORLD                //
+		//              Parent body is always Ground                 //
+		///////////////////////////////////////////////////////////////
+		// world->setAtomsLocationsInGround();
 
 	}catch(const std::exception&){
 		// Send general message
 		std::cout << "\t[WARNING] propose exception caught!\n";
 		proposeExceptionCaught = true;
 
-		// Restore configuration
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
-		}
-		system->realize(someState, SimTK::Stage::Position);
+		OMM_restoreConfiguration(someState);
 	}
 
 }
 
 // ELIZA: Check the code below
 void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
 
 	this->ke_o = OMM_calcKineticEnergy();
 
@@ -1130,7 +1149,7 @@ void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
 
 // ELIZA: Check the code below
 void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
 
 	// Get new Fixman potential
 	if(useFixman){
@@ -1161,6 +1180,16 @@ void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
 		etot_o = pe_o + ke_o;
 	//}
 
+}
+
+void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
+{
+	// Restore configuration
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+	}
+	system->realize(someState, SimTK::Stage::Position);
 }
 
 /* 
@@ -3162,7 +3191,6 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 			// sample is rejected
 			this->acc = false;
 			std::cout << "\tsample rejected (metropolis-hastings)\n";
-			setSetConfigurationToOld(someState);
 		}
 	}
 
@@ -3187,11 +3215,15 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		// Print all the energy terms first
 		PrintDetailedEnergyInfo(someState);
 
+		// omm_settemperature invalidates the subsystem topology cache
+		if(integratorName == IntegratorName::OMMVV)
+			system->realizeTopology();
+
 		// Decide
 		if(acceptSample()){
 			// Print info
 			std::cout << "\tsample accepted";
-			if(this->alwaysAccept == true){
+			if(this->alwaysAccept){
 				std::cout << " (simple molecular dynamics)\n";
 			}else{
 				std::cout << " (metropolis-hastings)\n";

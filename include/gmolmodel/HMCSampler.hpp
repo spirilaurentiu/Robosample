@@ -309,6 +309,8 @@ public:
 
 	void OMM_calcNewConfigurationAndEnergies(void);
 
+	void OMM_restoreConfiguration(SimTK::State& someState);
+
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 

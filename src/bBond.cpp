@@ -13,48 +13,39 @@
 /****
  * intpair
  ****/
-intpair::intpair(){
-    i = 0; j = 0;
-  }
-intpair::intpair(int inI, int inJ){
-    this->i = inI;
-    this->j = inJ;
+intpair::intpair(int inI, int inJ) : i(inI), j(inJ) {
 }
-intpair::~intpair(){}
 
-bool intpair::operator==(const intpair *other){
+bool intpair::operator==(const intpair& rhs){
   return (
-    ((this->i == other->i) && (this->j == other->j)) ||
-    ((this->i == other->j) && (this->j == other->i))
+    ((this->i == rhs.i) && (this->j == rhs.j)) ||
+    ((this->i == rhs.j) && (this->j == rhs.i))
   );
 }
 
-bool intpair::operator!=(const intpair *other){
+bool intpair::operator!=(const intpair& rhs){
   return (
-    ((this->i != other->i) || (this->j != other->j)) &&
-    ((this->i != other->j) || (this->j != other->i))
+    ((this->i != rhs.i) || (this->j != rhs.j)) &&
+    ((this->i != rhs.j) || (this->j != rhs.i))
   );
 }
 
-bool intpair::isTheSameAs(const intpair *other){
+bool intpair::isTheSameAs(const intpair& rhs){
   return (
-    ((this->i == other->i) && (this->j == other->j)) ||
-    ((this->i == other->j) && (this->j == other->i))
+    ((this->i == rhs.i) && (this->j == rhs.j)) ||
+    ((this->i == rhs.j) && (this->j == rhs.i))
   );
 }
 
-void intpair::swap(void){
-  int inter;
-  inter = this->i;
-  this->i = this->j;
-  this->j = inter;
+void intpair::swap(){
+  std::swap(i, j);
 }
 
-void intpair::dump(void){
+void intpair::dump(){
   std::cout<<i<<' '<<j<<std::endl;
 }
 
-std::string intpair::getString(void){
+std::string intpair::getString(){
   std::stringstream ret;
   ret<<i<<' '<<j;
   return ret.str();
@@ -66,48 +57,19 @@ std::string intpair::getString(void){
 /****
  * bBond
  ****/
-bBond::bBond(void) : intpair(){
-  inring = 0;
-  //rigid = 0;
-  //mobility = SimTK::BondMobility::Mobility::Free;
-  ring_closing = 0; // later
-  ring_no = 0; // later
-  _isFirst = false;
-  visited = 0;
-  bondIndex = SimTK::Compound::BondIndex(99999999);
-  uScaleFactors = std::vector<float>(1, 1.0);
-}
-
 bBond::bBond(int a, int b) : intpair(a, b){
-  inring = 0;
-  //rigid = 0;
-  //mobility = SimTK::BondMobility::Mobility::Free;
-  ring_closing = 0;
-  ring_no = 0; // later
-  _isFirst = false;
-  visited = 0;
-  bondIndex = SimTK::Compound::BondIndex(99999999);
-  uScaleFactors = std::vector<float>(1, 1.0);
 }
 
-bBond::~bBond(void){;}
-
-bool bBond::isInRing(void){
-  if(this->inring == 1)
-    return true;
-  else
-    return false;
+bool bBond::isInRing() const {
+  return this->inring;
 }
 
-bool bBond::isRingClosing(void){
-  if(this->ring_closing == 1)
-    return true;
-  else
-    return false;
+bool bBond::isRingClosing() const {
+  return this->ring_closing;
 }
 
 /*
-bool bBond::isRigid(void){
+bool bBond::isRigid() const {
   if(this->rigid == 1)
     return true;
   else
@@ -136,6 +98,10 @@ void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which
 
 float bBond::getUScaleFactor(int which) const
 {
+  if (which >= uScaleFactors.size()) {
+    std::cout << "[WARNING] bBond::getUScaleFactor DIRTY FIX for atoms " << i << " and "  << j << " in world " << which << std::endl;
+    return 1.0f;
+  }
 	return uScaleFactors[which];
 }
 
@@ -155,19 +121,19 @@ void bBond::updUScaleFactor(int which, float argUScaleFactor)
 }
 
 
-int bBond::ringNo(void){
+int bBond::ringNo() const{
   return this->ring_no;
 }
 
-void bBond::setInRing(void){
-  this->inring = 1;
+void bBond::setInRing(){
+  this->inring = true;
 }
 
-void bBond::setAsRingClosing(void){
-  this->ring_closing = 1;
+void bBond::setAsRingClosing(){
+  this->ring_closing = true;
 }
 /*
-void bBond::setAsRigid(void){
+void bBond::setAsRigid(){
   this->rigid = 1;
 }
 */
@@ -175,7 +141,7 @@ void bBond::setRingNo(int rn){
   this->ring_no = rn;
 }
 
-SimTK::Compound::BondIndex bBond::getBondIndex(void){
+SimTK::Compound::BondIndex bBond::getBondIndex() const {
   return bondIndex;
 }
   
@@ -195,13 +161,12 @@ void bBond::Print(int whichWorld)
 }
 
 // Return true if this is set as the first bond in Compound
-bool bBond::isFirst(void)
-{
+bool bBond::isFirst() const {
     return _isFirst;
 }
 
 // Set this bond as the first one in a Compound
-void bBond::setAsFirst(void)
+void bBond::setAsFirst()
 {
     _isFirst = true;
 }
@@ -228,10 +193,9 @@ void bBond::setVisited(int argVisited)
 }
 
 // Return the number of times this bond was visited
-int bBond::isVisited(void)
+int bBond::isVisited() const
 {
-	int ret = this->visited;
-	return ret;
+	return this->visited;
 }
 
 // Gmolmodel indices (prmtop)
@@ -240,7 +204,7 @@ void bBond::setIndex(int someOtherIndex)
     myindex = someOtherIndex;
 }
 
-int bBond::getIndex(void)
+int bBond::getIndex() const
 {
     return myindex;
 }

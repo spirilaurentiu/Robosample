@@ -889,6 +889,11 @@ void World::printMaps(void)
 	}
 }
 
+SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::AtomIndex& )
+{
+	assert("HELO");
+}
+
 //==============================================================================
 //                             2. Inter-world functions.
 //==============================================================================
@@ -904,7 +909,7 @@ void World::printMaps(void)
 
 std::vector< std::vector<
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
-World::getAtomsLocationsInGround(const SimTK::State & state)
+World::getAtomsLocationsInGround(SimTK::State & state)
 {
 	// Return vector
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
@@ -928,7 +933,8 @@ World::getAtomsLocationsInGround(const SimTK::State & state)
 
 			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
 				// ELIZA
-				location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
+				// location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
+				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
 			}else{
 				location = 
 				topology.calcAtomLocationInGroundFrameThroughSimbody(
@@ -1753,25 +1759,26 @@ bool World::generateProposal(void)
 /**
  *  Generate a number of samples
  * */
-int World::generateSamples(int howMany)
+int World::generateSamples(int howMany, SimTK::State* currentAdvancedState)
 {
 
 	// Update Robosample bAtomList
-	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromCompound(currentAdvancedState);
+	if (currentAdvancedState == nullptr)
+		currentAdvancedState = &integ->updAdvancedState();
+	updateAtomListsFromCompound(*currentAdvancedState);
 
 	// Print message to identify this World
 	std::cout << "World " << ownWorldIndex 
-		<< ", NU " << currentAdvancedState.getNU() << ":\n";
+		<< ", NU " << currentAdvancedState->getNU() << ":\n";
 
 	// Reinitialize current sampler (configuration and energies)
-	updSampler(0)->reinitialize(currentAdvancedState);
+	updSampler(0)->reinitialize(*currentAdvancedState);
 
 	// GENERATE the requested number of samples
 	// is accepted wrong here?
 	int accepted;
 	for(int k = 0; k < howMany; k++) {
-		accepted += updSampler(0)->sample_iteration(currentAdvancedState);
+		accepted += updSampler(0)->sample_iteration(*currentAdvancedState);
 	}
 
 	// Return the number of accepted samples

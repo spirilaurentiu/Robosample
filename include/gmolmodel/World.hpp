@@ -170,8 +170,7 @@ public:
 
 	// --- Inter-world functions: Pass configurations among Worlds
 	// ELIZA
-	SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(
-		const SimTK::DuMM::AtomIndex&){assert(!"Not implemented");}
+	SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::AtomIndex&);
 
 	/** Get the current Compound Cartesian coords.
 	* Return a 2D vector representing all the coordinates of this World.
@@ -183,7 +182,7 @@ public:
  	**/
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
-		getAtomsLocationsInGround(const SimTK::State&
+		getAtomsLocationsInGround(SimTK::State&
 	);
 
 	/** Get the current Compound Cartesian coordinates using Simbody **/
@@ -288,7 +287,7 @@ public:
 	bool generateProposal(void);
 
 	/** Generate a number of samples **/
-	int generateSamples(int howMany);
+	int generateSamples(int howMany, SimTK::State* currentAdvancedState = nullptr);
 	//...............
 
 	//...................

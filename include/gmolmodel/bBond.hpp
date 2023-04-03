@@ -22,18 +22,20 @@
  * Intpair Class is a two int vector used for connectivity definition in MoleculeReader.
 **/
 class intpair{
- public:
-	int i; int j; // These will correspond to bSpecificAtom.number
-	intpair();
-	intpair(int inI, int inJ);
-	~intpair();
+	public:
+		intpair() = default;
+		intpair(int inI, int inJ);
 
-	bool operator==(const intpair *other);
-	bool operator!=(const intpair *other);
-	bool isTheSameAs(const intpair *other);
-	void swap();
-	void dump();
-	std::string getString();
+		bool operator==(const intpair& rhs);
+		bool operator!=(const intpair& rhs);
+		bool isTheSameAs(const intpair& rhs);
+		void swap();
+		void dump();
+		std::string getString();
+
+		// These will correspond to bSpecificAtom.number
+		int i = 0;
+		int j = 0;
 };
 
 //==============================================================================
@@ -43,59 +45,59 @@ class intpair{
  * Bond Class used for connectivity definition in MoleculeReader.
 **/
 class bBond : public intpair{
- private:
-	int visited;
-	int inring;
-	int ring_closing;
-	//int rigid;
-	std::vector<SimTK::BondMobility::Mobility> mobilities;
-	int ring_no;
-	SimTK::Compound::BondIndex bondIndex;
-	bool _isFirst;
-	int myindex;
-	std::vector<float> uScaleFactors;
+	private:
+		std::vector<SimTK::BondMobility::Mobility> mobilities;
+		// std::vector<float> uScaleFactors = std::vector<float>(1, 1.0);
+		std::vector<float> uScaleFactors = { 1.0f };
+		SimTK::Compound::BondIndex bondIndex = SimTK::Compound::BondIndex(99999999);
+		int ring_no = 0;
+		int myindex = -1;
+		//int rigid;
+		bool visited = false;
+		bool inring = false;
+		bool ring_closing = false;
+		bool _isFirst = false;
 
- public:
-	bBond();
-	bBond(int a, int b);
-	~bBond();
+	public:
+		bBond() = default;
+		bBond(int a, int b);
 
-	bool isInRing();
-	bool isRingClosing();
-	//bool isRigid();
-	SimTK::BondMobility::Mobility getBondMobility(int whichWorld) const;
-	int ringNo();
+		bool isInRing() const;
+		bool isRingClosing() const;
+		//bool isRigid() const;
+		SimTK::BondMobility::Mobility getBondMobility(int whichWorld) const;
+		int ringNo() const;
 
-	void setInRing();
-	void setAsRingClosing();
-	//void setAsRigid();
+		void setInRing();
+		void setAsRingClosing();
+		//void setAsRigid();
 
-	void addBondMobility(SimTK::BondMobility::Mobility someMobility);	
-	void setBondMobility(SimTK::BondMobility::Mobility someMobility, int whichWorld);
-	void updBondMobility(SimTK::BondMobility::Mobility someMobility, int whichWorld);
-	void setRingNo(int rn);
+		void addBondMobility(SimTK::BondMobility::Mobility someMobility);	
+		void setBondMobility(SimTK::BondMobility::Mobility someMobility, int whichWorld);
+		void updBondMobility(SimTK::BondMobility::Mobility someMobility, int whichWorld);
+		void setRingNo(int rn);
 
-	SimTK::Compound::BondIndex getBondIndex();
-	void setBondIndex(SimTK::Compound::BondIndex otherIx);
+		SimTK::Compound::BondIndex getBondIndex() const;
+		void setBondIndex(SimTK::Compound::BondIndex otherIx);
 
-	// Gmolmodel indices (prmtop)
-	void setIndex(int);
-	int getIndex();
+		// Gmolmodel indices (prmtop)
+		void setIndex(int);
+		int getIndex() const;
 
-	void Print(int whichWorld);
+		void Print(int whichWorld);
 
-	bool isFirst();
-	void setAsFirst();
+		bool isFirst() const;
+		void setAsFirst();
 
-	int isThisMe(int argFirst, int argSecond) const ;
+		int isThisMe(int argFirst, int argSecond) const;
 
-	void setVisited(int);
-	int isVisited();
+		void setVisited(int);
+		int isVisited() const;
 
-	float getUScaleFactor(int) const;
-	void addUScaleFactor(float);
-	void setUScaleFactor(int, float);
-	void updUScaleFactor(int, float);
+		float getUScaleFactor(int) const;
+		void addUScaleFactor(float);
+		void setUScaleFactor(int, float);
+		void updUScaleFactor(int, float);
 
 };
 
