@@ -1099,7 +1099,7 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 }
 
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
 
 	try {
 		// ELIZA: Insert code here
@@ -1136,7 +1136,7 @@ void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
 
 // ELIZA: Check the code below
 void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
-	assert(!"Not implemented");
+	// assert(!"Not implemented");
 
 	// Get new Fixman potential
 	if(useFixman){
@@ -3042,9 +3042,9 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		1.0);
 
 	// And get the BAT scaling factors back
-	setQToScaleBendStretch(someState, scaleFactors);
+	//setQToScaleBendStretch(someState, scaleFactors);
 	//if(this->nofSamples > 6000){
-	//	setQToScaleBendStretchStdev(someState, scaleFactors);
+		setQToScaleBendStretchStdev(someState, scaleFactors);
 	//}
 
 	std::cout << "scaleFactors: ";

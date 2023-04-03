@@ -42,7 +42,7 @@ class ThermodynamicState{
 
 	// Next functions set Q, U, tau perturbing functions options
 	// for samplers
-	void setDistortOptions(std::vector<int>& rexDistortOptionsArg);
+	void setDistortOptions(std::vector<int> rexDistortOptionsArg);
 	std::vector<int>& getDistortOptions(void);
 	void setFlowOptions(std::vector<int>& rexFlowOptionsArg);
 	void setWorkOptions(std::vector<int>& rexWorkOptionsArg);
@@ -182,10 +182,9 @@ ThermodynamicState::getSamplers(void)
 
 // Next functions set Q, U, tau perturbing functions options for samplers
 void ThermodynamicState::setDistortOptions(
-	std::vector<int>& rexDistortOptionsArg)
+	std::vector<int> rexDistortOptionsArg)
 {
 	this->rexDistortOptions = rexDistortOptionsArg;
-
 }
 
 std::vector<int>& ThermodynamicState::getDistortOptions(void)
@@ -2658,7 +2657,7 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		<< std::endl;
 
 
-	SimTK::Real log_p_accept = WTerm ; //+ std::log(correctionTerm);
+	SimTK::Real log_p_accept = WTerm + std::log(correctionTerm);
 
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
@@ -3514,9 +3513,9 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	// Run the equilibrium worlds
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
-		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
-		
+
 			RunFrontWorldAndRotate(replicaIx);
 		
 		}
@@ -3544,13 +3543,11 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the non-equilibrium worlds
-	for(std::size_t worldCnt = 0;
-	worldCnt < replicaNofWorlds; 
-	worldCnt++){
-			
-		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
-		
+
 			RunFrontWorldAndRotate(replicaIx);
 		
 		}
@@ -3623,7 +3620,7 @@ void Context::RunRENS(void)
 	PrintNofAcceptedSwapsMatrix();
 
 		// DELETE THIS CODE
-		std::cout << "TEST MODE\n";
+		/*std::cout << "TEST MODE\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
 
@@ -3672,7 +3669,7 @@ void Context::RunRENS(void)
 		givenX_BM[20] = 0.108296974;
 		givenX_BM[21] = 0.111305194;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);*/
 		// DELETE CODE ABOVE
 
 	// Main loop
@@ -3690,13 +3687,13 @@ void Context::RunRENS(void)
 		}
 
 		// Apply other functions to scale factors
-		for(auto& qsf : qScaleFactorsMiu){
+		/* for(auto& qsf : qScaleFactorsMiu){
 			if(qsf < 1.0){
 				qsf = 1.0;
 			}else{
 				qsf = 1.0;
 			}
-		}
+		} */
 
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
