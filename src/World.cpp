@@ -1033,6 +1033,8 @@ void World::updateAtomListsFromCompound(const SimTK::State &state)
 			atom.setX(location[0]);
 			atom.setY(location[1]);
 			atom.setZ(location[2]);
+
+			std::cout << "updateAtomListsFromCompound (after f_x_m) " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
 		}
 	}
 }

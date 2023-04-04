@@ -6,6 +6,8 @@ Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed
 
 # Installation
 
+MAKE SURE NO CONDA IS ACTIVTE
+
 ## Installing dependencies
 Install the dependencies:
 ```

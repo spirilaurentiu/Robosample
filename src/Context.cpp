@@ -3836,31 +3836,55 @@ void Context::RunOneRound()
 
 			for (auto& topology : *worlds[worldIx].topologies) {
 				SimTK::Vec3 prevLocation;
-				prevLocation[0] = 0;
-				prevLocation[1] = 0;
-				prevLocation[2] = 0;
-				bool noPrevLoc = true;
+				bool firsAtom = true;
 
 				for (int i = 0; i < topology.bAtomList.size(); i++) {
 					auto compoundAtomIndex = topology.bAtomList[i].getCompoundAtomIndex();
+					// topology.bAtomList[i].getX();
 					const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
-					SimTK::Vec3 location = worlds[worldIx].forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
+					const SimTK::Vec3 location = worlds[worldIx].forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
+
+					// std::cout << "OPENMM location " << location[0] << " " << location[1] << " " << location[2] << std::endl;
+					std::cout << "DUMM " << int(dAIx) << ", i " << i << ", location OpenMM " << location << ", location DuMM " <<
+						topology.bAtomList[i].getX() << " " << topology.bAtomList[i].getY() << " " << topology.bAtomList[i].getZ() << std::endl;
 
 					const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(compoundAtomIndex, *worlds[worldIx].forceField);
 					P_X_M[int(mbx)] = Transform(Rotation(), location);
 
 					worlds[worldIx].compoundSystem->realize(state, SimTK::Stage::Position);
 					SimTK::MobilizedBody& mobod = worlds[worldIx].matter->updMobilizedBody(mbx);
-					SimTK::Transform t;
-					mobod.setDefaultInboardFrame(t);
-					mobod.setDefaultOutboardFrame(t);
-					worlds[worldIx].compoundSystem->realizeTopology();
-					mobod.setQToFitTransform(state, SimTK::Transform(SimTK::Rotation(), prevLocation - location));
+					SimTK::Transform P_X_F = mobod.getInboardFrame(state);
+					SimTK::Transform F_X_P = ~P_X_F;
+					SimTK::Transform F_X_M = F_X_P * P_X_M[int(mbx)];
 
-					if(noPrevLoc) {
-						noPrevLoc = false;
-						prevLocation = location;
-					}
+					mobod.setQToFitTransform(state, F_X_M);
+
+					// worlds[worldIx].compoundSystem->realize(state, SimTK::Stage::Position);
+					// SimTK::MobilizedBody& mobod = worlds[worldIx].matter->updMobilizedBody(mbx);
+					// SimTK::Transform PF, BM;
+					// mobod.setDefaultInboardFrame(PF);
+					// mobod.setDefaultOutboardFrame(BM);
+					// worlds[worldIx].compoundSystem->realizeTopology();
+
+					// SimTK::Transform FM;
+					// if (firsAtom) {
+					// 	FM = SimTK::Transform(SimTK::Rotation(), location);
+					// 	firsAtom = false;
+					// 	// std::cout << "LOCATION " << location << std::endl;
+					// }
+					// else {
+					// 	FM = SimTK::Transform(SimTK::Rotation(), location);
+					// 	// std::cout << "LOCATION " << prevLocation - location << std::endl;
+					// }
+
+					// prevLocation = location;
+
+					// mobod.setQToFitTransform(state, FM);
+
+					// std::cout << "PF\n"; PrintTransform(PF, 10);
+					// std::cout << "FM\n"; PrintTransform(FM, 10);
+					// std::cout << "BM\n"; PrintTransform(BM, 10);
+
 				}
 			}
 
