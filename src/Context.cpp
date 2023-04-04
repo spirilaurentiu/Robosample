@@ -3270,9 +3270,9 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 		//qScaleFactorsStd.at(thisThermoStateIx) =  = 0.0;
 		qScaleFactorsStd.at(thisThermoStateIx) = 0.1;
 		
-		worlds[replicaWorldIxs[i]].updSampler(0)->distributeVariable(
+		/* worlds[replicaWorldIxs[i]].updSampler(0)->convoluteVariable(
 			qScaleFactors.at(thisThermoStateIx), "truncNormal",
-			qScaleFactorsStd.at(thisThermoStateIx));
+			qScaleFactorsStd.at(thisThermoStateIx)); */
 		
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
 			qScaleFactors.at(thisThermoStateIx));
@@ -3900,10 +3900,15 @@ void Context::RunOneRound(void)
 		// Non-equilibrium parameters
 		if( NDistortOpt[worldIx] == -1 ){
 			// Set the Q scaling factor to Gaussian random around 1.0
-			SimTK::Real sf = 1.0;
-			SimTK::Real standardDeviation = 0.1;
-			(worlds[worldIx].updSampler(0))->distributeVariable(sf,
-				"truncNormal", standardDeviation);
+			SimTK::Real sf = 0.0;
+			SimTK::Real standardDeviation = 0.001;
+			//(worlds[worldIx].updSampler(0))->convoluteVariable(sf,
+			//	"truncNormal", standardDeviation);
+
+			sf += standardDeviation;
+			(worlds[worldIx].updSampler(0))->convoluteVariable(sf,
+				"BernoulliReciprocal", standardDeviation);
+			
 			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
 		}	
 

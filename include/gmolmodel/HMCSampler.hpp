@@ -297,6 +297,9 @@ public:
 	void setQToScaleBendStretch(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 
+	void setQToShiftBendStretchStdev(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds
 	 **/
