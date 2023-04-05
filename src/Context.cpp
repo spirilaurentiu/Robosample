@@ -3903,7 +3903,7 @@ void Context::RunOneRound(void)
 			SimTK::Real sf = 0.0;
 			SimTK::Real standardDeviation = 0.001;
 			(worlds[worldIx].updSampler(0))->convoluteVariable(sf,
-				"truncNormal", standardDeviation);
+				"normal", standardDeviation);
 
 			/* sf += standardDeviation;
 			(worlds[worldIx].updSampler(0))->convoluteVariable(sf,

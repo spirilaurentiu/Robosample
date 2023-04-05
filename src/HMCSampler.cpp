@@ -2652,7 +2652,7 @@ std::vector<SimTK::Real>& scaleFactors)
 			mobod.setOneQ(someState, 1, this->QScaleFactor);
 
 			scaleFactors[ (int(mbx) - 1) ] = 
-			(world->normX_BMp[int(mbx) - 1] + X_BMdiffs[int(mbx) - 1]) /
+			(world->normX_BMp[int(mbx) - 1] + this->QScaleFactor) /
 				world->normX_BMp[int(mbx) - 1];
 		}		
 
@@ -2661,7 +2661,7 @@ std::vector<SimTK::Real>& scaleFactors)
 			mobod.setOneQ(someState, 0, -1.0 * this->QScaleFactor);
 			
 			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
-			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
+			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * this->QScaleFactor)) /
 				world->acosX_PF00[int(mbx) - 1];
 		}	
 
