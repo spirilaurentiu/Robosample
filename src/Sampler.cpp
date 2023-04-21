@@ -597,7 +597,7 @@ double Sampler::generateChiSample(void)
 
 
 // TODO revise param1 and param2
-SimTK::Real& Sampler::distributeVariable(SimTK::Real& var,
+SimTK::Real& Sampler::convoluteVariable(SimTK::Real& var,
 		std::string distrib,
 		SimTK::Real param1, SimTK::Real param2)
 {
@@ -644,7 +644,7 @@ SimTK::Real& Sampler::distributeVariable(SimTK::Real& var,
 	// Run bimodal Gaussian distribution
 	else if(distrib == "bimodalNormal"){
 
-		var = distributeVariable(var, "BernoulliInverse");
+		var = convoluteVariable(var, "BernoulliInverse");
 		var = var + gaurand(randomEngine);
 
 	}
@@ -658,13 +658,13 @@ SimTK::Real& Sampler::distributeVariable(SimTK::Real& var,
 	return var;
 }
 
-SimTK::Real& Sampler::distributeVariable(
+SimTK::Real& Sampler::convoluteVariable(
 	std::vector<SimTK::Real>& vvar,
 	std::string distrib,
 	SimTK::Real param1, SimTK::Real param2)
 {
 	for(auto& var : vvar){
-		distributeVariable(var, distrib, param1, param2);
+		convoluteVariable(var, distrib, param1, param2);
 	}
 }
 

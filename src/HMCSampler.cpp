@@ -2418,7 +2418,7 @@ void HMCSampler::setBendStretchStdevScaleFactor(const SimTK::Real& s)
 }
 
 /* // TODO revise param1 and param2
-SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
+SimTK::Real& HMCSampler::convoluteVariable(SimTK::Real& var,
 		std::string distrib, SimTK::Real param1, SimTK::Real param2)
 {
 	// Bernoulli trial between the var and its inverse
@@ -2464,7 +2464,7 @@ SimTK::Real& HMCSampler::distributeVariable(SimTK::Real& var,
 	// Run bimodal Gaussian distribution
 	else if(distrib == "bimodalNormal"){
 
-		var = distributeVariable(var, "BernoulliInverse");
+		var = convoluteVariable(var, "BernoulliInverse");
 		var = var + gaurand(randomEngine);
 
 	}
@@ -2599,6 +2599,80 @@ void HMCSampler::calcBendStretchDeviations(
 
 }
 
+/*
+ * Shift all the generalized coordinates to scale bonds and angles
+ * standard deviations through BendStretch joint
+ */
+void HMCSampler::setQToShiftBendStretchStdev(SimTK::State& someState,
+std::vector<SimTK::Real>& scaleFactors)
+{
+	/* 	world->PrintX_PFs();
+	world->PrintX_BMs(); */
+		// Print the scale factor
+	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
+		<< std::endl;
+
+	// Prepare scaling factors for return
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+		
+	// 1. Get the deviations from their means
+	std::vector<SimTK::Real> X_PFdiffs;
+	std::vector<SimTK::Real> X_BMdiffs;
+	calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
+
+	// Scale the differences with QScale. -1 is only here because Q is always 0
+	int k = -1;
+	for(auto& diff : X_PFdiffs){
+		/* diff += QScaleFactor; */
+		//std::cout << "diff= " << diff << std::endl;
+	}
+	for(auto& diff : X_BMdiffs){
+		/* diff += QScaleFactor; */
+		//std::cout << "diff= " << diff << std::endl;
+	}
+
+	// Ground and first mobod don't have internal coordinates
+	int mbxOffset = 2;
+	int sfIxOffset = world->normX_BMp.size();
+
+	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobilized body
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		
+		// We only allocated  X_PFs for non-Ground bodies
+		//RESTORE RESTORE RESTORE Check X_FM assignment 0
+
+		// Get the scaleFactors too
+		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
+
+			mobod.setOneQ(someState, 1, this->QScaleFactor);
+
+			scaleFactors[ (int(mbx) - 1) ] = 
+			(world->normX_BMp[int(mbx) - 1] + this->QScaleFactor) /
+				world->normX_BMp[int(mbx) - 1];
+		}		
+
+		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
+
+			mobod.setOneQ(someState, 0, -1.0 * this->QScaleFactor);
+			
+			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
+			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * this->QScaleFactor)) /
+				world->acosX_PF00[int(mbx) - 1];
+		}	
+
+	}
+
+	// Save changes by advancing to Position Stage
+	system->realize(someState, SimTK::Stage::Position);
+
+	// Test
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+}
 
 /*
  * Shift all the generalized coordinates to scale bonds and angles
@@ -2607,6 +2681,7 @@ void HMCSampler::calcBendStretchDeviations(
 void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
+
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
@@ -2706,8 +2781,8 @@ std::vector<SimTK::Real>& scaleFactors)
 
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
 
-	//distributeVariable(this->QScaleFactor, "BernoulliInverse");
-	//distributeVariable(this->QScaleFactor, "truncNormal",
+	//convoluteVariable(this->QScaleFactor, "BernoulliInverse");
+	//convoluteVariable(this->QScaleFactor, "truncNormal",
 	//	0.1);
 	
 	std::cout << "and turned it into " << this->QScaleFactor << "\n";
@@ -3043,9 +3118,10 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 	// And get the BAT scaling factors back
 	//setQToScaleBendStretch(someState, scaleFactors);
-	//if(this->nofSamples > 6000){
-		setQToScaleBendStretchStdev(someState, scaleFactors);
-	//}
+	////if(this->nofSamples > 6000){
+	//	setQToScaleBendStretchStdev(someState, scaleFactors);
+	////}
+	setQToShiftBendStretchStdev(someState, scaleFactors);
 
 	std::cout << "scaleFactors: ";
 	PrintCppVector(scaleFactors);
