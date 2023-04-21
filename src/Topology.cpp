@@ -1267,111 +1267,111 @@ void Topology::bAddDummTorsionParams(
 			} */
 
 			if (dihedral){
-			for (int tempVar=0; tempVar<numberOf; tempVar++)
-				std::cout << "found dihedral angle!\n";
-			// If it is a normal dihedral, check if we have it in our
-			// dihedral list
-			bool foundit = false;
-			for(auto& row:allDihedralsACIxs){
-				if ( IsTheSameTorsion (thisDihedralACIxs, row))
-					{
-					foundit = true;	break;
+				for (int tempVar=0; tempVar<numberOf; tempVar++)
+					std::cout << "found dihedral angle!\n";
+				// If it is a normal dihedral, check if we have it in our
+				// dihedral list
+				bool foundit = false;
+				printf("allDihedralsACIxs.size: %d\n", allDihedralsACIxs.size());
+
+				for(auto& row:allDihedralsACIxs){
+					if ( IsTheSameTorsion (thisDihedralACIxs, row))
+						{
+						foundit = true;	break;
+						}
+				}
+
+				if (!foundit){ // dihedral was not found
+
+					std::cout << "Topology::bAddDummDihedralParams insert " 
+						<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
+						<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
+						<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
+						<< " ;| " << amberReader->getDihedralsForceK(t) 
+						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
+					if(numberOf == 2){std::cout
+						<< " | " << amberReader->getDihedralsForceK(t+1)
+						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
+					if(numberOf == 3){std::cout
+						<< " | " << amberReader->getDihedralsForceK(t+2)
+						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
+					if(numberOf > 3){std::cout
+						<< " | " << amberReader->getDihedralsForceK(t+3)
+						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
+					std::cout << std::endl << std::flush;
+
+					// Define the dihedrals
+					if(numberOf == 1){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)))
+						);
 					}
-			}
+					else if(numberOf == 2){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+							static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)))
+						);
+					}
+					else if(numberOf == 3){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+							static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
+							static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t + 2),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
+						);
+					}else if (numberOf == 4){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
+							static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
+							static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t + 2),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2))),
+							static_cast<int>(amberReader->getDihedralsPeriod(t+3)), // TODO wants int, returns double
+							amberReader->getDihedralsForceK(t+3),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)))
+						);
+					}
 
-			if (!foundit){ // dihedral was not found
+					// Add the dihedral to the list of impropers.
+					allDihedralsACIxs.push_back(thisDihedralACIxs);
 
-				std::cout << "Topology::bAddDummDihedralParams insert " 
-					<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
-					<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
-					<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
-					<< " ;| " << amberReader->getDihedralsForceK(t) 
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
-				if(numberOf == 2){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+1)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
-				if(numberOf == 3){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+2)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
-				if(numberOf > 3){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+3)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
-				std::cout << std::endl << std::flush;
-
-				// Define the dihedrals
-				if(numberOf == 1){
-					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)))
-					);
-				}
-				else if(numberOf == 2){
-					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 1),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)))
-					);
-				}
-				else if(numberOf == 3){
-					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 1),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 2),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
-					);
-				}else if (numberOf == 4){
-					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 1),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 2),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t+3)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t+3),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)))
-					);
-				}
-
-				
-
-			} // END of not foundit
+				} // END of not foundit
 		
-			// Add the improper to the list of impropers.
-			allDihedralsACIxs.push_back(thisDihedralACIxs);
-
 			}
 			
 			if (improper){
 			// If it is an improper dihedral, we check if it exitsts, without
 			// checking for the reverse (order matters for impropers)
 
-			for (int tempVar=0; tempVar<numberOf; tempVar++)
-				std::cout << "found improper angle!\n";
+
 
 			bool foundit = false;
 			for(auto& row:allImpropersACIxs){
 				if ((thisDihedralACIxs == row))
 					{
-					foundit = true;	break;
+					foundit = true;	
+					break;
 					}
 				}
 			
-			if (!foundit){ // dihedral was not found
+			if (!foundit){ // improper was not found
 
-				std::cout << "Topology::bAddDummDihedralParams insert (Improper) " 
+				std::cout << "*** improper inserted: " 
 					<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
 					<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
 					<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
@@ -1419,10 +1419,11 @@ void Topology::bAddDummTorsionParams(
 						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
 					);
 				}
+				// Add the improper to the list of impropers.
+				allImpropersACIxs.push_back(thisDihedralACIxs);
 			}
 			}	
-		// Add the improper to the list of impropers.
-		allImpropersACIxs.push_back(thisDihedralACIxs);
+
 
 	}
 }
