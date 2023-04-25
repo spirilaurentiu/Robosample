@@ -2967,6 +2967,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 		// // ELIZA: Check the code below
 		OMM_setTemperature(this->boostT);
+		dumm->setOpenMMvelocities(this->boostT);
 		OMM_calcProposedKineticAndTotalEnergy();
 		OMM_integrateTrajectory(someState);
 		OMM_calcNewConfigurationAndEnergies();
