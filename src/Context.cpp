@@ -2632,9 +2632,10 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real s_i_1 = 1.0 / s_i;
 	SimTK::Real s_j_1 = 1.0 / s_j;
 
-	SimTK::Real correctionTerm = 
-		(normalPdf(s_i_1, miu_j, std_j) * normalPdf(s_j_1, miu_i, std_i)) / 
-		(normalPdf(s_i, miu_i, std_i)   * normalPdf(s_j, miu_j, std_j));
+	//SimTK::Real correctionTerm = 
+	//	(normalPdf(s_i_1, miu_j, std_j) * normalPdf(s_j_1, miu_i, std_i)) / 
+	//	(normalPdf(s_i, miu_i, std_i)   * normalPdf(s_j, miu_j, std_j));
+	SimTK::Real correctionTerm = 1.0;
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
