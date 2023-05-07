@@ -468,6 +468,7 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 	}
 
 	// Realize velocity
+	system->realizeTopology();
 	system->realize(someState, SimTK::Stage::Velocity);
 
 	// Store kinetic energies
@@ -1100,28 +1101,51 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 }
 
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
-	// assert(!"Not implemented");
 
 	try {
-		// ELIZA: Insert code here
+		
+		// actual openmm integration
 		dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
 
-		// transfer to simbody from omm ???
-		// ce face timestepper?
+		// this code works for updating simbody bodies
+		// each body should be an atom
+		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 
-		// iau de aici? cate topologii am? toti atomii sunt 0, 1, ..., 
-		// set atoms locations?
-		// ommintegrator in simbody
-		// muti omm integrator in timestepper
+		// somewhere, the topology gets ruined
+		system->realizeTopology();
 
-		// world->getTopology();
+		std::vector<SimTK::Vec3> parents;
+		parents.push_back(SimTK::Vec3(0, 0, 0));
+		for (int i = 0; i < dumm->getNumAtoms(); i++) {
+			parents.push_back(dumm->calcAtomLocationInGroundFrameThroughOMM(SimTK::DuMM::AtomIndex(i)));
+		}
 
-		// cauta aici
-		///////////////////////////////////////////////////////////////
-		//             FULLY FLEXIBLE CARTESIAN WORLD                //
-		//              Parent body is always Ground                 //
-		///////////////////////////////////////////////////////////////
-		// world->setAtomsLocationsInGround();
+		// calculate atom transformations after integrating with openmm
+		for (int i = 0; i < dumm->getNumAtoms(); i++) {
+			SimTK:DuMM::AtomIndex aix(i);
+			auto mbx = dumm->getAtomBody(aix);
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			const SimTK::Vec3 location = dumm->calcAtomLocationInGroundFrameThroughOMM(aix);
+
+			auto parent = parents[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
+
+			mobod.setDefaultInboardFrame(Transform(Rotation(), location));
+			mobod.setDefaultOutboardFrame(Transform(Rotation(), parent));
+			system->realizeTopology();
+
+			mobod.setQToFitTransform(someState, Transform(Rotation()));
+		}
+
+		compoundSystem->realize(someState, SimTK::Stage::Position);
+
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+			// const Transform& X_GB = mobod.getBodyTransform(someState);
+			// std::cout << "AFTER REALIZE " << int(mbx) << " " << X_GB << std::endl;
+
+			// std::cout << "AFTER REALIZE " << int(mbx) << " " << mobod.getBodyOriginLocation(someState) << std::endl;
+		}
 
 	}catch(const std::exception&){
 		// Send general message
@@ -1135,7 +1159,6 @@ void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 
 // ELIZA: Check the code below
 void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
-	// assert(!"Not implemented");
 
 	this->ke_o = OMM_calcKineticEnergy();
 
@@ -2666,6 +2689,7 @@ void HMCSampler::shiftQ(SimTK::State& someState,
 	}
 
 	// Save changes by advancing to Position Stage
+	system->realizeTopology();
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Test
@@ -2966,8 +2990,17 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 	if(integratorName == IntegratorName::OMMVV){
 
 		// // ELIZA: Check the code below
-		OMM_setTemperature(this->boostT);
 		dumm->setOpenMMvelocities(this->boostT);
+		OMM_setTemperature(this->boostT);
+
+		// set the positions we want to start from
+		std::vector<SimTK::Vec3> startingPos;
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			startingPos.push_back(mobod.getBodyOriginLocation(someState));
+		}
+
+		dumm->OMM_updatePositions(startingPos);
 		OMM_calcProposedKineticAndTotalEnergy();
 		OMM_integrateTrajectory(someState);
 		OMM_calcNewConfigurationAndEnergies();

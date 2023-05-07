@@ -941,6 +941,8 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 					compoundAtomIndex, *forceField, *matter, state);
 			}
 
+			std::cout << "getAtomsLocationsInGround " << dAIx << " " << location << std::endl;
+
 			currentTopologyInfo.emplace_back(&atom, location);
 		}
 
@@ -1034,7 +1036,7 @@ void World::updateAtomListsFromCompound(const SimTK::State &state)
 			atom.setY(location[1]);
 			atom.setZ(location[2]);
 
-			std::cout << "updateAtomListsFromCompound (after f_x_m) " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
+			std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
 		}
 	}
 }
@@ -1761,26 +1763,24 @@ bool World::generateProposal(void)
 /**
  *  Generate a number of samples
  * */
-int World::generateSamples(int howMany, SimTK::State* currentAdvancedState)
+int World::generateSamples(int howMany)
 {
-
 	// Update Robosample bAtomList
-	if (currentAdvancedState == nullptr)
-		currentAdvancedState = &integ->updAdvancedState();
-	updateAtomListsFromCompound(*currentAdvancedState);
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	updateAtomListsFromCompound(currentAdvancedState);
 
 	// Print message to identify this World
 	std::cout << "World " << ownWorldIndex 
-		<< ", NU " << currentAdvancedState->getNU() << ":\n";
+		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
 	// Reinitialize current sampler (configuration and energies)
-	updSampler(0)->reinitialize(*currentAdvancedState);
+	updSampler(0)->reinitialize(currentAdvancedState);
 
 	// GENERATE the requested number of samples
 	// is accepted wrong here?
 	int accepted;
 	for(int k = 0; k < howMany; k++) {
-		accepted += updSampler(0)->sample_iteration(*currentAdvancedState);
+		accepted += updSampler(0)->sample_iteration(currentAdvancedState);
 	}
 
 	// Return the number of accepted samples
