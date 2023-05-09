@@ -891,7 +891,8 @@ void World::printMaps(void)
 
 SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::AtomIndex& )
 {
-	assert("HELO");
+	assert("NOT IMPLEMENTED!");
+	return SimTK::Vec3(-1, -1, -1);
 }
 
 //==============================================================================
@@ -941,7 +942,7 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 					compoundAtomIndex, *forceField, *matter, state);
 			}
 
-			std::cout << "getAtomsLocationsInGround " << dAIx << " " << location << std::endl;
+			// std::cout << "getAtomsLocationsInGround " << dAIx << " " << location << std::endl;
 
 			currentTopologyInfo.emplace_back(&atom, location);
 		}
@@ -1007,12 +1008,10 @@ void World::PrintAtomsLocations(const std::vector<std::vector<
 {	
 	std::cout << "myAtomsLocations[0]" << std::endl;
 	for(std::size_t j = 0; j < someAtomsLocations[0].size(); j++){
-		auto compoundAtomIndex = 
-			someAtomsLocations[0][j].first->getCompoundAtomIndex();
+		int compoundAtomIndex = someAtomsLocations[0][j].first->getCompoundAtomIndex();
 		auto loc = someAtomsLocations[0][j].second;
 
-		printf("%d %.10f %.10f %.10f\n",
-			compoundAtomIndex, loc[0], loc[1], loc[2]);
+		printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
 	}
 }
 
