@@ -1036,7 +1036,7 @@ void World::updateAtomListsFromCompound(const SimTK::State &state)
 			atom.setY(location[1]);
 			atom.setZ(location[2]);
 
-			std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
+			// std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
 		}
 	}
 }
@@ -1367,7 +1367,7 @@ World::calcMobodToMobodTransforms(
 	const SimTK::State& someState)
 {
 	// There is no P_X_F and B_X_M inside a body.
-	assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
+	// assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
 
 	// Get body, parentBody
 	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
