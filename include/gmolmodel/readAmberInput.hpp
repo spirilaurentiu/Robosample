@@ -40,7 +40,7 @@ class readAmberInput{
       int getNumberDihedrals();
 
       std::string getAtomsName(int p);
-      std::string getAtomsNameAlias(int p);
+      std::string getAtomsType(int p);
       TARGET_TYPE getAtomsXcoord(int p);
       TARGET_TYPE getAtomsYcoord(int p);
       TARGET_TYPE getAtomsZcoord(int p);
@@ -117,7 +117,7 @@ class readAmberInput{
     // ATOMS
     // 4 characters std::strings left aligned - "CA  "
     std::vector<std::string> AtomsName;
-    std::vector<std::string> AtomsNameAlias;  //
+    std::vector<std::string> AtomsTypes;  //
     std::vector<TARGET_TYPE> AtomsXcoord;
     std::vector<TARGET_TYPE> AtomsYcoord;
     std::vector<TARGET_TYPE> AtomsZcoord;
@@ -163,7 +163,7 @@ class readAmberInput{
 
 
     // some temp data
-    int i;
+    int global_i = 0;
     TARGET_TYPE temp_val;
     std::string line;
 
@@ -216,7 +216,7 @@ class readAmberInput{
     void readInpcrd();
     void readPointers();
     void readAtomsName();
-    void readAtomsNameAlias();
+    void readAtomsTypes();
     void readAtomsCharge();
     void readAtomsMass();
     void readAtomsRadii();

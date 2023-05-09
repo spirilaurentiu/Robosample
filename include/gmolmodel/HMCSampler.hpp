@@ -281,13 +281,31 @@ public:
 	const int getDistortOpt();
 	void setDistortOption(const int& distortOptArg);
 
-	const SimTK::Real& getQScaleFactor(void);
-	void setQScaleFactor(const SimTK::Real& s);
+	const SimTK::Real& getBendStretchStdevScaleFactor(void);
+	void setBendStretchStdevScaleFactor(const SimTK::Real& s);
+
+	// 
+	void calcBendStretchDeviations(
+		SimTK::State& someState,
+		std::vector<SimTK::Real>& X_PFdiffs,
+		std::vector<SimTK::Real>& X_BMdiffs
+	);
 
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds
 	 **/
-	void shiftQ(SimTK::State& someState,
+	void setQToScaleBendStretch(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+
+	void setQToShiftBendStretchStdev(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+
+	/** Shift all the generalized coordinates and
+	 * return the scale factors of angles and bonds
+	 **/
+	void setQToScaleBendStretchStdev(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+	void setQToScaleBendStretchStdev_Old(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 
 	/**

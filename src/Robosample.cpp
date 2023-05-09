@@ -140,7 +140,8 @@ int main(int argc, char **argv)
 		setupReader.get("OUTPUT_DIR")[0],
 		std::stoi(setupReader.get("SEED")[0]));
 
-	// Instantiate a context object
+	// Instantiate a context object, check parameters,
+	// reserve # of worlds and # of molecules
 	Context context(setupReader, logFilename);
 
 	// Set the directory where the logs and the trajectories are stored

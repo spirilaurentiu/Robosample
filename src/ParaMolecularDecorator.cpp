@@ -55,7 +55,7 @@ void ParaMolecularDecorator::setAtomTargets(
 	atomTargets.clear();
 	for(unsigned int j = 0; j < residueAtomLocations.size(); j++){
 		SimTK::Compound::AtomIndex atomIndex =
-		((residueAtomLocations[j]).first)->atomIndex;
+		((residueAtomLocations[j]).first)->compoundAtomIndex;
 		SimTK::Vec3 location = ((residueAtomLocations[j]).second);
 		atomTargets.insert(std::pair<
 		SimTK::Compound::AtomIndex, SimTK::Vec3>(atomIndex, location));

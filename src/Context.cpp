@@ -42,8 +42,8 @@ class ThermodynamicState{
 
 	// Next functions set Q, U, tau perturbing functions options
 	// for samplers
-	void setDistortOptions(std::vector<int>& rexDistortOptionsArg);
-	std::vector<int>& getDistortOptions();
+	void setDistortOptions(std::vector<int> rexDistortOptionsArg);
+	std::vector<int>& getDistortOptions(void);
 	void setFlowOptions(std::vector<int>& rexFlowOptionsArg);
 	void setWorkOptions(std::vector<int>& rexWorkOptionsArg);
 
@@ -182,10 +182,9 @@ ThermodynamicState::getSamplers()
 
 // Next functions set Q, U, tau perturbing functions options for samplers
 void ThermodynamicState::setDistortOptions(
-	std::vector<int>& rexDistortOptionsArg)
+	std::vector<int> rexDistortOptionsArg)
 {
 	this->rexDistortOptions = rexDistortOptionsArg;
-
 }
 
 std::vector<int>& ThermodynamicState::getDistortOptions()
@@ -587,6 +586,8 @@ Context::Context(const SetupReader& setupReader, std::string logFilename)
 
 	swapFixman = 1;
 
+	qScaleFactorsMiu.resize(qScaleFactorsEven.size(), 1.0);
+	qScaleFactorsStd.resize(qScaleFactorsEven.size(), 0.0);
 	qScaleFactors.resize(qScaleFactorsEven.size(), 1.0);
 
 }
@@ -973,8 +974,9 @@ void Context::AddMolecules(
 		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
 		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok? 
 
-		// Set atoms properties from a reader: number, name, element, initial
-		// name, force field type, charge, coordinates, mass, LJ parameters
+		// Set Gmolmodel atoms properties from a reader: number, name, element
+		// initial name, force field type, charge, coordinates, mass,
+		// LJ parameters
 		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]); 
 
 		// Set bonds properties from reader: bond indeces, atom neighbours
@@ -982,9 +984,9 @@ void Context::AddMolecules(
 
 		// Set atoms Molmodel types (Compound::SingleAtom derived) based on
 		// their valence // from world
-		topologies[molIx].SetGmolAtomsMolmodelTypesTrial();
+		topologies[molIx].SetGmolAtomsCompoundTypesTrial();
 
-		// Add Biotypes // from world
+		// Add Biotype indeces and Biotype names representing Biotypes
 		topologies[molIx].bAddBiotypes(&amberReader[molIx]);
 
 		// Build Robosample graph and Compound graph.
@@ -993,9 +995,10 @@ void Context::AddMolecules(
 		topologies[molIx].buildGraphAndMatchCoords(
 			std::stoi(roots.back()));
 
+		// Helper function for calc MBAT determinant
 		topologies[molIx].loadTriples();
-		// Map of Compound atom indexes to Robosample atom indexes
 
+		// Map of Compound atom indexes to Robosample atom indexes
 		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
 		//std::cout << "Topology " << molIx << " info\n";
 		//topologies[molIx].printMaps();
@@ -1057,6 +1060,8 @@ void Context::updDummAtomClasses(
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allImpropersACIxs;
+
 
 		SimTK::DuMM::AtomClassIndex aCIx;
 		std::string atomClassName;
@@ -1068,7 +1073,7 @@ void Context::updDummAtomClasses(
 			const AtomClassParams& atomParams = it->first;
 			const AtomClassId& atomClassId = it->second;
 
-			aCIx = atomClassId.index;
+			aCIx = atomClassId.dummAtomClassIndex;
 			atomClassName = atomClassId.name;
 
 			std::cout << "Context::transferAtomClasses "
@@ -1106,6 +1111,8 @@ void Context::addDummParams(
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allImpropersACIxs;
+
 
 	// Load DuMM parameters for the first world
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
@@ -1117,7 +1124,7 @@ void Context::addDummParams(
 		// Add parameters in DuMM
 		(updWorld(0))->generateDummParams(molIx, &amberReader[molIx],
 			aClassParams2aClassId,
-			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 	}
 
 	// Load DuMM params for the rest of the worlds
@@ -1128,6 +1135,8 @@ void Context::addDummParams(
 		allBondsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allAnglesACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
 		allDihedralsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
+		allImpropersACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
+
 
 		updDummAtomClasses(aClassParams2aClassId, worldIx);
 
@@ -1141,7 +1150,7 @@ void Context::addDummParams(
 			// Add parameters in DuMM
 			(updWorld(worldIx))->transferDummParams(molIx, &amberReader[molIx],
 			aClassParams2aClassId,
-			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 		}
 
 	}
@@ -2628,7 +2637,20 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
 	// Correction term
-	SimTK::Real correctionTerm = qScaleFactors.at(thermoState_i);
+	SimTK::Real miu_i = qScaleFactorsMiu.at(thermoState_i);
+	SimTK::Real miu_j = qScaleFactorsMiu.at(thermoState_j);
+	SimTK::Real std_i = qScaleFactorsStd.at(thermoState_i);
+	SimTK::Real std_j = qScaleFactorsStd.at(thermoState_j);
+	
+	SimTK::Real s_i = qScaleFactors.at(thermoState_i);
+	SimTK::Real s_j = qScaleFactors.at(thermoState_j);
+	SimTK::Real s_i_1 = 1.0 / s_i;
+	SimTK::Real s_j_1 = 1.0 / s_j;
+
+	//SimTK::Real correctionTerm = 
+	//	(normalPdf(s_i_1, miu_j, std_j) * normalPdf(s_j_1, miu_i, std_i)) / 
+	//	(normalPdf(s_i, miu_i, std_i)   * normalPdf(s_j, miu_j, std_j));
+	SimTK::Real correctionTerm = 1.0;
 
 	std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
 	std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
@@ -2644,8 +2666,14 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		<< " " << replicas[replica_j].getTransferedEnergy() << std::endl;
 	std::cout << "ETerm " << ETerm << std::endl;
 	std::cout << "WTerm " << WTerm << std::endl;
+	std::cout << "correctionTerm s_i s_f " << correctionTerm 
+		<< " " << s_i << " " << s_j << " " << s_i_1 << " " << s_j_1
+		<< " " << normalPdf(s_i, miu_i, std_i) << " " << normalPdf(s_j, miu_j, std_j)
+		<< " " << normalPdf(s_i_1, miu_j, std_j) << " " << normalPdf(s_j_1, miu_i, std_i)
+		<< std::endl;
 
-	SimTK::Real log_p_accept = WTerm;
+
+	SimTK::Real log_p_accept = WTerm + std::log(correctionTerm);
 
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
@@ -2670,12 +2698,20 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 		returnValue = true;
 
 	}else{
-		// Do nothing
+
+		// Return to equilibrium worlds coordinates
+		// - no need because it is restored in RunRENS
+
+		// Return to equilibrium worlds energies
+		// - no need because it is restored in RunRENS
+
+		// Don't swap thermodynamics states nor energies
 		std::cout << "left\n" << endl;
+
 		returnValue = false;
 	}
 
-return returnValue;
+	return returnValue;
 
 }
 
@@ -3074,6 +3110,9 @@ void Context::PrepareNonEquilibriumParams_Q(){
 	// Initialize a vector of scalingFactors for scaling Qs (non-equil)
 	qScaleFactorsEven.resize(nofThermodynamicStates, 1.0);
 	qScaleFactorsOdd.resize(nofThermodynamicStates, 1.0);
+	qScaleFactorsMiu.resize(nofThermodynamicStates, 1.0);
+	qScaleFactorsStd.resize(nofThermodynamicStates, 1.0);
+	qScaleFactors.resize(nofThermodynamicStates, 1.0);
 
 	// Set the even scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
@@ -3241,14 +3280,18 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
 		);
 
-		SimTK::Real qScaleFactor = (qScaleFactors).at(thisThermoStateIx);
-		if(thisThermoStateIx == 0){qScaleFactor = 1.0;} // SCALE ONLY DOWN
-		qScaleDistribStd = 0.0;
-		worlds[replicaWorldIxs[i]].updSampler(0)->distributeVariable(
-			qScaleFactor, "truncNormal", qScaleDistribStd);
+		qScaleFactors.at(thisThermoStateIx) = (qScaleFactorsMiu).at(thisThermoStateIx) / 10.0;
+		//qScaleFactors.at(thisThermoStateIx) = 1.0;
+
+		//qScaleFactorsStd.at(thisThermoStateIx) =  = 0.0;
+		qScaleFactorsStd.at(thisThermoStateIx) = 0.1;
 		
-		worlds[replicaWorldIxs[i]].updSampler(0)->setQScaleFactor(
-			qScaleFactor);
+		/* worlds[replicaWorldIxs[i]].updSampler(0)->convoluteVariable(
+			qScaleFactors.at(thisThermoStateIx), "truncNormal",
+			qScaleFactorsStd.at(thisThermoStateIx)); */
+		
+		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
+			qScaleFactors.at(thisThermoStateIx));
 	}
 
 }
@@ -3403,9 +3446,9 @@ void Context::RunREX()
 
 		// Prepare non-equilibrium params
 		if(mixi % 2){ // odd batch
-			qScaleFactors = qScaleFactorsOdd;
+			qScaleFactorsMiu = qScaleFactorsOdd;
 		}else{ // even batch
-			qScaleFactors = qScaleFactorsEven;
+			qScaleFactorsMiu = qScaleFactorsEven;
 		}
 		
 		// Run each replica serially
@@ -3486,9 +3529,9 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	// Run the equilibrium worlds
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
-		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
-		
+
 			RunFrontWorldAndRotate(replicaIx);
 		
 		}
@@ -3516,13 +3559,11 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the non-equilibrium worlds
-	for(std::size_t worldCnt = 0;
-	worldCnt < replicaNofWorlds; 
-	worldCnt++){
-			
-		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[replicaWorldIxs[0]]
+	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
-		
+
 			RunFrontWorldAndRotate(replicaIx);
 		
 		}
@@ -3594,6 +3635,59 @@ void Context::RunRENS()
 
 	PrintNofAcceptedSwapsMatrix();
 
+		// DELETE THIS CODE
+		/*std::cout << "TEST MODE\n";
+		std::vector<SimTK::Real> givenX_PF(22, 999);
+		std::vector<SimTK::Real> givenX_BM(22, 999);
+
+		givenX_PF[0] = 0.382213052;
+		givenX_PF[1] = 1.909352531;
+		givenX_PF[2] = 1.893749726;
+		givenX_PF[3] = 1.947370624;
+		givenX_PF[4] = 0;
+		givenX_PF[5] = 1.956830795;
+		givenX_PF[6] = 2.048214246;
+		givenX_PF[7] = 2.039980631;
+		givenX_PF[8] = 2.161855757;
+		givenX_PF[9] = 1.901552048;
+		givenX_PF[10] = 1.895242261;
+		givenX_PF[11] = 1.944130783;
+		givenX_PF[12] = 1.977970389;
+		givenX_PF[13] = 1.919833798;
+		givenX_PF[14] = 1.967840235;
+		givenX_PF[15] = 2.056850251;
+		givenX_PF[16] = 2.101173327;
+		givenX_PF[17] = 2.108547254;
+		givenX_PF[18] = 2.251719968;
+		givenX_PF[19] = 1.869673523;
+		givenX_PF[20] = 1.935043108;
+		givenX_PF[21] = 1.916275746;
+		givenX_BM[0] = 0;
+		givenX_BM[1] = 0.108791084;
+		givenX_BM[2] = 0.114675602;
+		givenX_BM[3] = 0.10683655;
+		givenX_BM[4] = 0.153979978;
+		givenX_BM[5] = 0.120963202;
+		givenX_BM[6] = 0.134721103;
+		givenX_BM[7] = 0.09633632;
+		givenX_BM[8] = 0.147241057;
+		givenX_BM[9] = 0.107930417;
+		givenX_BM[10] = 0.150565067;
+		givenX_BM[11] = 0.111184402;
+		givenX_BM[12] = 0.109086027;
+		givenX_BM[13] = 0.110920344;
+		givenX_BM[14] = 0.154254133;
+		givenX_BM[15] = 0.123863943;
+		givenX_BM[16] = 0.131670032;
+		givenX_BM[17] = 0.106489035;
+		givenX_BM[18] = 0.147187697;
+		givenX_BM[19] = 0.110298069;
+		givenX_BM[20] = 0.108296974;
+		givenX_BM[21] = 0.111305194;
+
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);*/
+		// DELETE CODE ABOVE
+
 	// Main loop
 	int nofMixes = int(requiredNofRounds / swapEvery);
 
@@ -3601,14 +3695,21 @@ void Context::RunRENS()
 
 		std::cout << " REX batch " << mixi << std::endl;
 
-		// Prepare non-equilibrium params
+		// Set initial scale factors
 		if(mixi % 2){ // odd batch
-			qScaleFactors = qScaleFactorsOdd;
+			qScaleFactorsMiu = qScaleFactorsOdd;
 		}else{ // even batch
-			qScaleFactors = qScaleFactorsEven;
+			qScaleFactorsMiu = qScaleFactorsEven;
 		}
 
-		
+		// Apply other functions to scale factors
+		/* for(auto& qsf : qScaleFactorsMiu){
+			if(qsf < 1.0){
+				qsf = 1.0;
+			}else{
+				qsf = 1.0;
+			}
+		} */
 
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
@@ -3624,6 +3725,7 @@ void Context::RunRENS()
 
 			setWorldsParameters(replicaIx);
 
+			// Distribute scale factors
 			updWorldsNonequilibriumParameters(replicaIx);
 
 			// ======================== SIMULATE ======================
@@ -3811,6 +3913,21 @@ void Context::RunOneRound()
 
 	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 
+		// Non-equilibrium parameters
+		if( NDistortOpt[worldIx] == -1 ){
+			// Set the Q scaling factor to Gaussian random around 1.0
+			SimTK::Real sf = 0.0;
+			SimTK::Real standardDeviation = 0.001;
+			(worlds[worldIx].updSampler(0))->convoluteVariable(sf,
+				"normal", standardDeviation);
+
+			/* sf += standardDeviation;
+			(worlds[worldIx].updSampler(0))->convoluteVariable(sf,
+				"BernoulliReciprocal", standardDeviation); */
+			
+			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
+		}	
+
 		// Rotate worlds indices (translate from right to left)
 		if(isWorldsOrderRandom){
 			randomizeWorldIndexes();
@@ -3849,19 +3966,6 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
         10, 0);
 
     writeInitialPdb();
-
-	// Non-equilibrium parameters
-	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-
-		// Q altering parameters
-		if( NDistortOpt[worldIx] == -1 ){
-			
-			// Set the Q scaling factor to 600K / 300K
-			(worlds[worldIx].updSampler(0))->setQScaleFactor( 
-				1.1 ); 
-		}
-		
-	}
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
@@ -4376,6 +4480,29 @@ void Context::PrintToLog(int worldIx)
 // TODO: what's the deal with mc_step
 void Context::writeInitialPdb()
 {
+
+/* 		///////////////////////////////////
+        constexpr int TOPOLOGY = 0;
+        std::vector<SimTK::DuMM::AtomIndex> mapping(topologies[TOPOLOGY].getNumAtoms());
+
+        std::cout << "###AMBER - DuMM Mapping###\n";
+        std::cout << "DuMM\t|\tAMBER\n";
+        std::cout << std::string(21,'-') << "\n";
+        for(std::size_t k = 0; k < topologies[TOPOLOGY].getNumAtoms(); k++) {
+            // amber indices
+            const auto aIx = (topologies[TOPOLOGY].bAtomList[k]).getCompoundAtomIndex();
+            
+            // dumm indices
+            const auto d = topologies[TOPOLOGY].getDuMMAtomIndex(aIx);
+
+            // mapping[dumm_index] = amber_index
+            mapping.push_back(d);
+            mapping[d] = static_cast<SimTK::DuMM::AtomIndex>(k);
+
+            std::cout << d << "\t|\t" << k << std::endl;
+        }
+		///////////////////////////////////
+ */
 
 	// - we need this to get compound atoms
 	int currentWorldIx = worldIndexes.front();

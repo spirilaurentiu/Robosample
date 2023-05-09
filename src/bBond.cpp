@@ -98,11 +98,14 @@ void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which
 
 float bBond::getUScaleFactor(int which) const
 {
-  if (which >= uScaleFactors.size()) {
-    std::cout << "[WARNING] bBond::getUScaleFactor DIRTY FIX for atoms " << i << " and "  << j << " in world " << which << std::endl;
-    return 1.0f;
+  
+  if(which >= uScaleFactors.size()){
+    std::cout << "bBond::getUScaleFactor QUICK DIRTY FIX \n" << std::endl;
+    return 1.0;
+  }else{
+    return uScaleFactors[which];
   }
-	return uScaleFactors[which];
+
 }
 
 void bBond::addUScaleFactor(float argUScaleFactor)

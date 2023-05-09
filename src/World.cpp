@@ -253,12 +253,14 @@ void World::generateDummParams(int which, readAmberInput *amberReader
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs)
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs)
+
 {
 	// Add DuMM parameters from amberReader
 	((*topologies)[which]).generateDummParams(amberReader, *forceField,
 	aClassParams2aClassId,
-	allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+	allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 }
 
 void World::transferDummParams(int which, readAmberInput *amberReader
@@ -266,12 +268,13 @@ void World::transferDummParams(int which, readAmberInput *amberReader
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
 	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
+	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
 	)
 {
 	// Add DuMM parameters from amberReader
 	((*topologies)[which]).transferDummParams(amberReader, *forceField,
 		aClassParams2aClassId,
-		allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
+		allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 }
 
 void World::BuildTopologyGraph(int which, std::string argRoot)
@@ -603,7 +606,7 @@ void World::loadMbx2AIxMap(){
 		for (unsigned int i = 0; i < topology.getNumAtoms(); ++i) {
 
 			// Get atomIndex from atomList
-			SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).atomIndex;
+			SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).compoundAtomIndex;
 
 			// Get MobilizedBodyIndex from CompoundAtom
 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
@@ -729,6 +732,32 @@ void World::getTransformsStatistics(SimTK::State& someState)
 
 }
 
+// Print bond lengths and angle bends
+void World::traceBendStretch(SimTK::State& someState){
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+
+		// Get BAT coordinates B and A
+		SimTK::Vec3 bondVector = X_BM.p();
+		trace( bondVector.norm(),  std::acos(X_PF.R()(0)(0)));
+		//trace("X_FM");
+		//PrintTransform(X_FM, 10);
+	
+	}
+}
+
 // Print X_PF means
 void World::PrintX_PFs(void)
 {
@@ -776,7 +805,7 @@ void World::updateTransformsMeans(SimTK::State& someState)
 	int nofSamples = getNofSamples() + 1;
 	//std::cout << "Nof samples " << nofSamples << std::endl;
 
-	getTransformsStatistics(someState);
+	//getTransformsStatistics(someState);
 
 	// Useful vars
 	SimTK::Real N_1overN = 9999, NInv = 9999;
@@ -1616,8 +1645,6 @@ void World::setGlobalForceFieldScaleFactor(SimTK::Real scaleFactor)
 //	forceField->setCoulomb14ScaleFactor(0);
 //	forceField->setCoulomb15ScaleFactor(0);
 //	forceField->setCoulombGlobalScaleFactor(0);
-
-
 
 }
 

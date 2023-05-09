@@ -846,8 +846,10 @@ void PrintBigMat(const SimTK::Vector& V, int nrows,
 /*
  * Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places)
+void PrintTransform(SimTK::Transform T, int decimal_places,
+	std::string header)
 {
+    std::cout << header << std::endl;	
     const SimTK::Mat44 M = T.toMat44();
     std::cout << std::setprecision(decimal_places) << std::fixed;
     for(int i = 0; i < 4; i++){
@@ -985,6 +987,13 @@ void normalize(std::vector<SimTK::Real>& V) {
 //}
 
 using SimTK::square;
+
+SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev)
+{
+    SimTK::Real exponent = -0.5 * std::pow((x - mean) / stddev, 2);
+	SimTK::Real normalizingFactor = 1.0 / (stddev * sqrt(2 * M_PI));
+    return normalizingFactor * std::exp(exponent);
+}
 
 SimTK::Real bMean(std::vector<SimTK::Real> v)
 {
@@ -1375,7 +1384,21 @@ bMatrix& gram_schmidt(bMatrix& M, bMatrix& es){
 //}
 
 
+SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2)
+{
+	SimTK::Vec4 q1 = Q1.asVec4();
+	SimTK::Vec4 q2 = Q2.asVec4();
 
+	SimTK::Vec4 q3;
+
+	q3[0] = q1[0] * q2[0] - (q1[1] * q2[1] + q1[2] * q2[2] + q1[3] * q2[3]); // scalar component
+    q3[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]; // i component
+    q3[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]; // j component
+    q3[3] = q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]; // k component
+	
+    return SimTK::Quaternion(q3);
+
+}
 
 
 

@@ -73,8 +73,12 @@ void trace(Args &&... args)
 //#define sqr(x) ((x)*(x))
 //#endif
 
+#ifndef ANG_360_TO_m180_180
+#define ANG_360_TO_m180_180(x) (((x)>180.0) ? ((x)-360.0) : (x))
+#endif
+
 #ifndef ANG_360_TO_180
-#define ANG_360_TO_180(x) (((x)>180) ? ((x)-360) : (x))
+#define ANG_360_TO_180(x) std::abs(((x)>180.0) ? ((x)-360.0) : (x))
 #endif
 
 // Check versus Velocity Verlet in cart coords
@@ -322,7 +326,7 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
 /*
  * Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places);
+void PrintTransform(SimTK::Transform T, int decimal_places, std::string header);
 /*
  * Angle
  */
@@ -374,6 +378,7 @@ enum struct IntegratorName : int { // Integrators
 	RUNGEKUTTA3,
 	RUNGEKUTTAFELDBERG,
 	OMMVV,
+	RANDOM_WALK,
 	NOF_INTEGRATORS
 };
 
@@ -388,7 +393,8 @@ IntegratorNameS{
 	{"RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2},
 	{"RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3},
 	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
-	{"OMMVV", IntegratorName::OMMVV}
+	{"OMMVV", IntegratorName::OMMVV},
+	{"RANDOM_WALK", IntegratorName::RANDOM_WALK}
 };
 
 /*
@@ -427,6 +433,8 @@ struct Point {
 };
 
 using DataFrame = std::vector<Point>;
+
+SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev);
 
 // Gmolmodel version of mean
 SimTK::Real bMean(std::vector<SimTK::Real> v);
@@ -512,7 +520,7 @@ std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
 // Gram–Schmidt
 bMatrix& gram_schmidt(bMatrix& M, bMatrix& es);
 
-
+SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2);
 
 
 #ifndef MONTECARLOSAMPLER

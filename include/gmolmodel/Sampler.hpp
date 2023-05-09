@@ -84,12 +84,12 @@ public:
 	 * Take a variable and transforming according to some distribution
 	 * //TODO revise param1 and param2
 	*/
-	SimTK::Real& distributeVariable(SimTK::Real& var,
+	SimTK::Real& convoluteVariable(SimTK::Real& var,
 		std::string distrib = "alternateInverse",
 		SimTK::Real param1 = 1.0,
 		SimTK::Real param2 = 0.0);
 
-	SimTK::Real& distributeVariable(
+	SimTK::Real& convoluteVariable(
 		std::vector<SimTK::Real>& vvar,
 		std::string distrib = "alternateInverse",
 		SimTK::Real param1 = 1.0,
@@ -100,7 +100,7 @@ public:
 		SimTK::Real param1 = 1.0,
 		SimTK::Real param2 = 0.0);
 
-	virtual void shiftQ ( SimTK::State& someState,
+	virtual void setQToScaleBendStretchStdev ( SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors) = 0;
 
 	//virtual void setIntegratorName(IntegratorName) = 0;
