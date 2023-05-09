@@ -240,9 +240,6 @@ fi
 
 source ~/.bashrc
 
-exit 1
-echo EXECUTED
-
 
 
 # warning flags to be applied in all projects
