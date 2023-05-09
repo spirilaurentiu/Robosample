@@ -190,9 +190,8 @@ ROBOSAMPLE_BUILD_DIR="${BUILD_DIR}/robosample/"
 mkdir -p ${ROBOSAMPLE_BUILD_DIR}
 
 
-
 # set build configuration dependant flags
-if [ "${BUILD_TYPE}" == "debug" ]; then
+if [ "${BUILD_TYPE}" == "Debug" ]; then
 	# on debug builds, write everything to the screen
 	out=/dev/stderr
 
@@ -202,6 +201,10 @@ if [ "${BUILD_TYPE}" == "debug" ]; then
 	# do not use pgo for debug builds
 	ROBO_PGO_FLAGS_GENERATE=""
 	ROBO_PGO_FLAGS_USE=""
+
+	echo '' >> ~/.bashrc
+	echo "export OPENMM_PLUGIN_DIR_DEBUG=${MOLMODEL_BUILD_DIR}" >> ~/.bashrc
+	echo "export OPENMM_PLUGIN_PLATFORMS_DEBUG=${OPENMM_INSTALL_DIR}lib/plugins/" >> ~/.bashrc
 else
 	# get a lower-case string containing current date and time
 	time_now=`date +"%b-%d-%Y-%H_%M_%S"`
@@ -229,7 +232,16 @@ else
 		ROBO_PGO_FLAGS_GENERATE=""
 		ROBO_PGO_FLAGS_USE=""
 	fi
+
+	echo '' >> ~/.bashrc
+	echo "export OPENMM_PLUGIN_DIR_RELEASE=${MOLMODEL_BUILD_DIR}" >> ~/.bashrc
+	echo "export OPENMM_PLUGIN_PLATFORMS_RELEASE=${OPENMM_INSTALL_DIR}lib/plugins/" >> ~/.bashrc
 fi
+
+source ~/.bashrc
+
+exit 1
+echo EXECUTED
 
 
 
@@ -382,9 +394,6 @@ for ((i=0;i<ROUNDS;i++)); do
 	# molmodel
 	cd ${MOLMODEL_BUILD_DIR}
 	rm -rf *
-
-	export OPENMM_PLUGIN_DIR_DEBUG="${MOLMODEL_BUILD_DIR}"
-	export OPENMM_PLUGIN_DIR_RELEASE="/home/victor/Robosample/install/Release/openmm/lib/plugins/"
 
 	cmake \
 		${MOLMODEL_SRC} \
