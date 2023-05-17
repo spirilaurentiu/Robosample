@@ -1,0 +1,1081 @@
+Reading input...
+Dumping input file:
+  BOOST_MDSTEPS : 1 1 
+  BOOST_TEMPERATURE : 300 300 
+  DIHEDRAL : 0 1 2 3 
+  DISTANCE : 0 1 
+  DISTORT_OPTION : 0 0 
+  FFSCALE : AMBER AMBER 
+  FIXMAN_POTENTIAL : FALSE TRUE 
+  FIXMAN_TORQUE : FALSE TRUE 
+  FLEXFILE : ligand.flex.cart ligand.flex.7td 
+  FLOW_OPTION : 0 0 
+  GBSA : 0.0 0.0 
+  GEOMETRY : FALSE FALSE 
+  INPCRD : ligand.min 
+  INTEGRATORS : OMMVV VV 
+  MDSTEPS : 30 30 
+  MOLECULES : ala1 
+  NONBONDED_CUTOFF : 1.2 1.2 
+  NONBONDED_METHOD : 0 0 
+  OPENMM : TRUE TRUE 
+  OPENMM_CalcOnlyNonbonded : FALSE TRUE 
+  OUTPUT_DIR : temp 
+  PRINT_FREQ : 1 0 
+  PRMTOP : ligand.prmtop 
+  RANDOM_WORLD_ORDER : FALSE FALSE 
+  RBFILE : ligand.rb ligand.rb 
+  REPRODUCIBLE : FALSE FALSE 
+  REX_FILE : trex.dat 
+  REX_SWAP_EVERY : 1 
+  ROOTS : 0 0 
+  ROOT_MOBILITY : Weld Weld 
+  ROUNDS : 30 
+  ROUNDS_TILL_REBLOCK : 10 10 
+  RUN_TYPE : Normal 
+  SAMPLERS : EMPTY EMPTY 
+  SAMPLES_PER_ROUND : 1 1 
+  SEED : 666 666 
+  TEMPERATURE_FIN : 300 300 
+  TEMPERATURE_INI : 300 300 
+  THERMOSTAT : Andersen Andersen 
+  THREADS : 0 0 
+  TIMESTEPS : 0.001 0.001 
+  VISUAL : FALSE FALSE 
+  WORK_OPTION : 0 0 
+  WORLDS : R0 R1 
+  WRITEPDBS : 1 1 
+Done.
+Molecule directory: ala1
+CUDA_ROOT not set.
+Requested 1 molecules
+NOTE: Searching OPENMM_PLUGIN_DIR_DEBUG (/home/victor/Robosample/build/Debug/Molmodel/) for the OpenMM plugin.
+NOTE: Searching OPENMM_PLUGIN_DIR_DEBUG (/home/victor/Robosample/build/Debug/Molmodel/) for the OpenMM plugin.
+Added 2 empty worlds
+Robosample requested 0 threads 
+Robosample requested 0 threads 
+World 0 requested 0 and got 0
+World 1 requested 0 and got 0
+SETTING TEMPERATURE in DUMM 
+300
+SETTING INTEGRATOR in ROBOSAMPLE 
+SETTING INTEGRATOR in ROBOSAMPLE 
+readAmberInput::readDihedrals 43
+5 4 6 7 2 1 0
+5 4 6 7 2.5 2 3.14159
+4 6 8 9 0 2 0
+3 1 4 5 0.8 1 0
+3 1 4 5 0 2 0
+3 1 4 5 0.08 3 3.14159
+3 1 4 6 0 2 0
+2 1 4 5 0.8 1 0
+2 1 4 5 0 2 0
+2 1 4 5 0.08 3 3.14159
+2 1 4 6 0 2 0
+1 4 6 7 2.5 2 3.14159
+0 1 4 5 0.8 1 0
+0 1 4 5 0 2 0
+0 1 4 5 0.08 3 3.14159
+0 1 4 6 0 2 0
+15 14 16 17 2 1 0
+15 14 16 17 2.5 2 3.14159
+14 16 18 19 0 2 0
+14 16 18 20 0 2 0
+14 16 18 21 0 2 0
+13 10 8 14 0.155556 3 0
+12 10 8 14 0.155556 3 0
+11 10 8 14 0.155556 3 0
+9 8 10 11 0.155556 3 0
+9 8 10 12 0.155556 3 0
+9 8 10 13 0.155556 3 0
+9 8 14 15 0.8 1 0
+9 8 14 15 0 2 0
+9 8 14 15 0.08 3 3.14159
+9 8 14 16 0 2 0
+8 14 16 17 2.5 2 3.14159
+7 6 8 9 0 2 0
+7 6 8 10 0 2 0
+7 6 8 14 0 2 0
+6 8 10 11 0.155556 3 0
+6 8 10 12 0.155556 3 0
+6 8 10 13 0.155556 3 0
+17 16 18 19 0 2 0
+17 16 18 20 0 2 0
+17 16 18 21 0 2 0
+4 8 6 7 1.1 2 3.14159
+14 18 16 17 1.1 2 3.14159
+readAmberInput::readDihedrals 24
+5 4 6 7 2 1 0
+5 4 6 7 2.5 2 3.14159
+4 6 8 9 0 2 0
+3 1 4 5 0.8 1 0
+3 1 4 5 0 2 0
+3 1 4 5 0.08 3 3.14159
+3 1 4 6 0 2 0
+2 1 4 5 0.8 1 0
+2 1 4 5 0 2 0
+2 1 4 5 0.08 3 3.14159
+2 1 4 6 0 2 0
+1 4 6 7 2.5 2 3.14159
+0 1 4 5 0.8 1 0
+0 1 4 5 0 2 0
+0 1 4 5 0.08 3 3.14159
+0 1 4 6 0 2 0
+15 14 16 17 2 1 0
+15 14 16 17 2.5 2 3.14159
+14 16 18 19 0 2 0
+14 16 18 20 0 2 0
+14 16 18 21 0 2 0
+13 10 8 14 0.155556 3 0
+12 10 8 14 0.155556 3 0
+11 10 8 14 0.155556 3 0
+9 8 10 11 0.155556 3 0
+9 8 10 12 0.155556 3 0
+9 8 10 13 0.155556 3 0
+9 8 14 15 0.8 1 0
+9 8 14 15 0 2 0
+9 8 14 15 0.08 3 3.14159
+9 8 14 16 0 2 0
+8 14 16 17 2.5 2 3.14159
+7 6 8 9 0 2 0
+7 6 8 10 0 2 0
+7 6 8 14 0 2 0
+6 8 10 11 0.155556 3 0
+6 8 10 12 0.155556 3 0
+6 8 10 13 0.155556 3 0
+17 16 18 19 0 2 0
+17 16 18 20 0 2 0
+17 16 18 21 0 2 0
+4 8 6 7 1.1 2 3.14159
+14 18 16 17 1.1 2 3.14159
+5 4 6 8 2.5 2 3.14159
+4 6 8 10 2 1 0
+4 6 8 10 1.8 2 0
+4 6 8 10 0.8 3 0
+4 6 8 10 0 4 0
+4 6 8 14 0 1 0
+4 6 8 14 0.27 2 0
+4 6 8 14 0.42 3 0
+4 6 8 14 0 4 0
+1 4 6 8 2.5 2 3.14159
+15 14 16 18 2.5 2 3.14159
+10 8 14 15 0 2 0
+10 8 14 16 0.2 1 0
+10 8 14 16 0.2 2 0
+10 8 14 16 0.4 3 0
+10 8 14 16 0 4 0
+8 14 16 18 2.5 2 3.14159
+6 8 14 15 0 2 0
+6 8 14 16 0.45 1 3.14159
+6 8 14 16 1.58 2 3.14159
+6 8 14 16 0.55 3 3.14159
+6 8 14 16 0 4 0
+1 6 4 5 10.5 2 3.14159
+8 16 14 15 10.5 2 3.14159
+GeneratePairStartAndLen  5 4 6 7 || 0 1
+GeneratePairStartAndLen  5 4 6 7 || 0 2
+GeneratePairStartAndLen  4 6 8 9 || 2 1
+GeneratePairStartAndLen  3 1 4 5 || 3 1
+GeneratePairStartAndLen  3 1 4 5 || 3 2
+GeneratePairStartAndLen  3 1 4 5 || 3 3
+GeneratePairStartAndLen  3 1 4 6 || 6 1
+GeneratePairStartAndLen  2 1 4 5 || 7 1
+GeneratePairStartAndLen  2 1 4 5 || 7 2
+GeneratePairStartAndLen  2 1 4 5 || 7 3
+GeneratePairStartAndLen  2 1 4 6 || 10 1
+GeneratePairStartAndLen  1 4 6 7 || 11 1
+GeneratePairStartAndLen  0 1 4 5 || 12 1
+GeneratePairStartAndLen  0 1 4 5 || 12 2
+GeneratePairStartAndLen  0 1 4 5 || 12 3
+GeneratePairStartAndLen  0 1 4 6 || 15 1
+GeneratePairStartAndLen  15 14 16 17 || 16 1
+GeneratePairStartAndLen  15 14 16 17 || 16 2
+GeneratePairStartAndLen  14 16 18 19 || 18 1
+GeneratePairStartAndLen  14 16 18 20 || 19 1
+GeneratePairStartAndLen  14 16 18 21 || 20 1
+GeneratePairStartAndLen  13 10 8 14 || 21 1
+GeneratePairStartAndLen  12 10 8 14 || 22 1
+GeneratePairStartAndLen  11 10 8 14 || 23 1
+GeneratePairStartAndLen  9 8 10 11 || 24 1
+GeneratePairStartAndLen  9 8 10 12 || 25 1
+GeneratePairStartAndLen  9 8 10 13 || 26 1
+GeneratePairStartAndLen  9 8 14 15 || 27 1
+GeneratePairStartAndLen  9 8 14 15 || 27 2
+GeneratePairStartAndLen  9 8 14 15 || 27 3
+GeneratePairStartAndLen  9 8 14 16 || 30 1
+GeneratePairStartAndLen  8 14 16 17 || 31 1
+GeneratePairStartAndLen  7 6 8 9 || 32 1
+GeneratePairStartAndLen  7 6 8 10 || 33 1
+GeneratePairStartAndLen  7 6 8 14 || 34 1
+GeneratePairStartAndLen  6 8 10 11 || 35 1
+GeneratePairStartAndLen  6 8 10 12 || 36 1
+GeneratePairStartAndLen  6 8 10 13 || 37 1
+GeneratePairStartAndLen  17 16 18 19 || 38 1
+GeneratePairStartAndLen  17 16 18 20 || 39 1
+GeneratePairStartAndLen  17 16 18 21 || 40 1
+GeneratePairStartAndLen  4 8 6 7 || 41 1
+GeneratePairStartAndLen  14 18 16 17 || 42 1
+GeneratePairStartAndLen  5 4 6 8 || 43 1
+GeneratePairStartAndLen  4 6 8 10 || 44 1
+GeneratePairStartAndLen  4 6 8 10 || 44 2
+GeneratePairStartAndLen  4 6 8 10 || 44 3
+GeneratePairStartAndLen  4 6 8 10 || 44 4
+GeneratePairStartAndLen  4 6 8 14 || 48 1
+GeneratePairStartAndLen  4 6 8 14 || 48 2
+GeneratePairStartAndLen  4 6 8 14 || 48 3
+GeneratePairStartAndLen  4 6 8 14 || 48 4
+GeneratePairStartAndLen  1 4 6 8 || 52 1
+GeneratePairStartAndLen  15 14 16 18 || 53 1
+GeneratePairStartAndLen  10 8 14 15 || 54 1
+GeneratePairStartAndLen  10 8 14 16 || 55 1
+GeneratePairStartAndLen  10 8 14 16 || 55 2
+GeneratePairStartAndLen  10 8 14 16 || 55 3
+GeneratePairStartAndLen  10 8 14 16 || 55 4
+GeneratePairStartAndLen  8 14 16 18 || 59 1
+GeneratePairStartAndLen  6 8 14 15 || 60 1
+GeneratePairStartAndLen  6 8 14 16 || 61 1
+GeneratePairStartAndLen  6 8 14 16 || 61 2
+GeneratePairStartAndLen  6 8 14 16 || 61 3
+GeneratePairStartAndLen  6 8 14 16 || 61 4
+GeneratePairStartAndLen  1 6 4 5 || 65 1
+GeneratePairStartAndLen  8 16 14 15 || 66 1
+Root atom will be chosen by Gmolmodel...  done. Root chosen 1
+Topology::buildGraphAndMatcoords buildAcyclicGraph done
+Topology::buildGraphAndMatcoords  addRingClosingBonds done
+Gmolmodel Topology match done
+Added 1 molecules
+readAmberInput::readDihedrals 43
+5 4 6 7 2 1 0
+5 4 6 7 2.5 2 3.14159
+4 6 8 9 0 2 0
+3 1 4 5 0.8 1 0
+3 1 4 5 0 2 0
+3 1 4 5 0.08 3 3.14159
+3 1 4 6 0 2 0
+2 1 4 5 0.8 1 0
+2 1 4 5 0 2 0
+2 1 4 5 0.08 3 3.14159
+2 1 4 6 0 2 0
+1 4 6 7 2.5 2 3.14159
+0 1 4 5 0.8 1 0
+0 1 4 5 0 2 0
+0 1 4 5 0.08 3 3.14159
+0 1 4 6 0 2 0
+15 14 16 17 2 1 0
+15 14 16 17 2.5 2 3.14159
+14 16 18 19 0 2 0
+14 16 18 20 0 2 0
+14 16 18 21 0 2 0
+13 10 8 14 0.155556 3 0
+12 10 8 14 0.155556 3 0
+11 10 8 14 0.155556 3 0
+9 8 10 11 0.155556 3 0
+9 8 10 12 0.155556 3 0
+9 8 10 13 0.155556 3 0
+9 8 14 15 0.8 1 0
+9 8 14 15 0 2 0
+9 8 14 15 0.08 3 3.14159
+9 8 14 16 0 2 0
+8 14 16 17 2.5 2 3.14159
+7 6 8 9 0 2 0
+7 6 8 10 0 2 0
+7 6 8 14 0 2 0
+6 8 10 11 0.155556 3 0
+6 8 10 12 0.155556 3 0
+6 8 10 13 0.155556 3 0
+17 16 18 19 0 2 0
+17 16 18 20 0 2 0
+17 16 18 21 0 2 0
+4 8 6 7 1.1 2 3.14159
+14 18 16 17 1.1 2 3.14159
+readAmberInput::readDihedrals 24
+5 4 6 7 2 1 0
+5 4 6 7 2.5 2 3.14159
+4 6 8 9 0 2 0
+3 1 4 5 0.8 1 0
+3 1 4 5 0 2 0
+3 1 4 5 0.08 3 3.14159
+3 1 4 6 0 2 0
+2 1 4 5 0.8 1 0
+2 1 4 5 0 2 0
+2 1 4 5 0.08 3 3.14159
+2 1 4 6 0 2 0
+1 4 6 7 2.5 2 3.14159
+0 1 4 5 0.8 1 0
+0 1 4 5 0 2 0
+0 1 4 5 0.08 3 3.14159
+0 1 4 6 0 2 0
+15 14 16 17 2 1 0
+15 14 16 17 2.5 2 3.14159
+14 16 18 19 0 2 0
+14 16 18 20 0 2 0
+14 16 18 21 0 2 0
+13 10 8 14 0.155556 3 0
+12 10 8 14 0.155556 3 0
+11 10 8 14 0.155556 3 0
+9 8 10 11 0.155556 3 0
+9 8 10 12 0.155556 3 0
+9 8 10 13 0.155556 3 0
+9 8 14 15 0.8 1 0
+9 8 14 15 0 2 0
+9 8 14 15 0.08 3 3.14159
+9 8 14 16 0 2 0
+8 14 16 17 2.5 2 3.14159
+7 6 8 9 0 2 0
+7 6 8 10 0 2 0
+7 6 8 14 0 2 0
+6 8 10 11 0.155556 3 0
+6 8 10 12 0.155556 3 0
+6 8 10 13 0.155556 3 0
+17 16 18 19 0 2 0
+17 16 18 20 0 2 0
+17 16 18 21 0 2 0
+4 8 6 7 1.1 2 3.14159
+14 18 16 17 1.1 2 3.14159
+5 4 6 8 2.5 2 3.14159
+4 6 8 10 2 1 0
+4 6 8 10 1.8 2 0
+4 6 8 10 0.8 3 0
+4 6 8 10 0 4 0
+4 6 8 14 0 1 0
+4 6 8 14 0.27 2 0
+4 6 8 14 0.42 3 0
+4 6 8 14 0 4 0
+1 4 6 8 2.5 2 3.14159
+15 14 16 18 2.5 2 3.14159
+10 8 14 15 0 2 0
+10 8 14 16 0.2 1 0
+10 8 14 16 0.2 2 0
+10 8 14 16 0.4 3 0
+10 8 14 16 0 4 0
+8 14 16 18 2.5 2 3.14159
+6 8 14 15 0 2 0
+6 8 14 16 0.45 1 3.14159
+6 8 14 16 1.58 2 3.14159
+6 8 14 16 0.55 3 3.14159
+6 8 14 16 0 4 0
+1 6 4 5 10.5 2 3.14159
+8 16 14 15 10.5 2 3.14159
+GeneratePairStartAndLen  5 4 6 7 || 0 1
+GeneratePairStartAndLen  5 4 6 7 || 0 2
+GeneratePairStartAndLen  4 6 8 9 || 2 1
+GeneratePairStartAndLen  3 1 4 5 || 3 1
+GeneratePairStartAndLen  3 1 4 5 || 3 2
+GeneratePairStartAndLen  3 1 4 5 || 3 3
+GeneratePairStartAndLen  3 1 4 6 || 6 1
+GeneratePairStartAndLen  2 1 4 5 || 7 1
+GeneratePairStartAndLen  2 1 4 5 || 7 2
+GeneratePairStartAndLen  2 1 4 5 || 7 3
+GeneratePairStartAndLen  2 1 4 6 || 10 1
+GeneratePairStartAndLen  1 4 6 7 || 11 1
+GeneratePairStartAndLen  0 1 4 5 || 12 1
+GeneratePairStartAndLen  0 1 4 5 || 12 2
+GeneratePairStartAndLen  0 1 4 5 || 12 3
+GeneratePairStartAndLen  0 1 4 6 || 15 1
+GeneratePairStartAndLen  15 14 16 17 || 16 1
+GeneratePairStartAndLen  15 14 16 17 || 16 2
+GeneratePairStartAndLen  14 16 18 19 || 18 1
+GeneratePairStartAndLen  14 16 18 20 || 19 1
+GeneratePairStartAndLen  14 16 18 21 || 20 1
+GeneratePairStartAndLen  13 10 8 14 || 21 1
+GeneratePairStartAndLen  12 10 8 14 || 22 1
+GeneratePairStartAndLen  11 10 8 14 || 23 1
+GeneratePairStartAndLen  9 8 10 11 || 24 1
+GeneratePairStartAndLen  9 8 10 12 || 25 1
+GeneratePairStartAndLen  9 8 10 13 || 26 1
+GeneratePairStartAndLen  9 8 14 15 || 27 1
+GeneratePairStartAndLen  9 8 14 15 || 27 2
+GeneratePairStartAndLen  9 8 14 15 || 27 3
+GeneratePairStartAndLen  9 8 14 16 || 30 1
+GeneratePairStartAndLen  8 14 16 17 || 31 1
+GeneratePairStartAndLen  7 6 8 9 || 32 1
+GeneratePairStartAndLen  7 6 8 10 || 33 1
+GeneratePairStartAndLen  7 6 8 14 || 34 1
+GeneratePairStartAndLen  6 8 10 11 || 35 1
+GeneratePairStartAndLen  6 8 10 12 || 36 1
+GeneratePairStartAndLen  6 8 10 13 || 37 1
+GeneratePairStartAndLen  17 16 18 19 || 38 1
+GeneratePairStartAndLen  17 16 18 20 || 39 1
+GeneratePairStartAndLen  17 16 18 21 || 40 1
+GeneratePairStartAndLen  4 8 6 7 || 41 1
+GeneratePairStartAndLen  14 18 16 17 || 42 1
+GeneratePairStartAndLen  5 4 6 8 || 43 1
+GeneratePairStartAndLen  4 6 8 10 || 44 1
+GeneratePairStartAndLen  4 6 8 10 || 44 2
+GeneratePairStartAndLen  4 6 8 10 || 44 3
+GeneratePairStartAndLen  4 6 8 10 || 44 4
+GeneratePairStartAndLen  4 6 8 14 || 48 1
+GeneratePairStartAndLen  4 6 8 14 || 48 2
+GeneratePairStartAndLen  4 6 8 14 || 48 3
+GeneratePairStartAndLen  4 6 8 14 || 48 4
+GeneratePairStartAndLen  1 4 6 8 || 52 1
+GeneratePairStartAndLen  15 14 16 18 || 53 1
+GeneratePairStartAndLen  10 8 14 15 || 54 1
+GeneratePairStartAndLen  10 8 14 16 || 55 1
+GeneratePairStartAndLen  10 8 14 16 || 55 2
+GeneratePairStartAndLen  10 8 14 16 || 55 3
+GeneratePairStartAndLen  10 8 14 16 || 55 4
+GeneratePairStartAndLen  8 14 16 18 || 59 1
+GeneratePairStartAndLen  6 8 14 15 || 60 1
+GeneratePairStartAndLen  6 8 14 16 || 61 1
+GeneratePairStartAndLen  6 8 14 16 || 61 2
+GeneratePairStartAndLen  6 8 14 16 || 61 3
+GeneratePairStartAndLen  6 8 14 16 || 61 4
+GeneratePairStartAndLen  1 6 4 5 || 65 1
+GeneratePairStartAndLen  8 16 14 15 || 66 1
+Context::addDummParas WORLD 0 topology 0
+Topology::generateDummAtomClasses START
+Topology::generateDummAtomClasses try AtomClassName  HC 0 0 atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 0 HC atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  CT 0 0 atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 1 CT atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Topology::generateDummAtomClasses try AtomClassName  HC 1 0 atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  HC 1 0 atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  C 0 0 atomicNumber 6 valence 3 vdwRadius 0.1908 LJWellDepth 0.359824
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 2 C atomicNumber 6 valence 3 vdwRadius 0.1908 LJWellDepth 0.359824
+Topology::generateDummAtomClasses try AtomClassName  O 0 0 atomicNumber 8 valence 1 vdwRadius 0.16612 LJWellDepth 0.87864
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 3 O atomicNumber 8 valence 1 vdwRadius 0.16612 LJWellDepth 0.87864
+Topology::generateDummAtomClasses try AtomClassName  N 0 0 atomicNumber 7 valence 3 vdwRadius 0.1824 LJWellDepth 0.71128
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 4 N atomicNumber 7 valence 3 vdwRadius 0.1824 LJWellDepth 0.71128
+Topology::generateDummAtomClasses try AtomClassName  H 0 0 atomicNumber 1 valence 1 vdwRadius 0.06 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 5 H atomicNumber 1 valence 1 vdwRadius 0.06 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  CX 0 0 atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 6 CX atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Topology::generateDummAtomClasses try AtomClassName  H1 0 0 atomicNumber 1 valence 1 vdwRadius 0.1387 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName 7 H1 atomicNumber 1 valence 1 vdwRadius 0.1387 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  CT 1 0 atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Topology::generateDummAtomClasses try AtomClassName  HC 1 0 atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  HC 1 0 atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  HC 1 0 atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  C 1 0 atomicNumber 6 valence 3 vdwRadius 0.1908 LJWellDepth 0.359824
+Topology::generateDummAtomClasses try AtomClassName  O 1 0 atomicNumber 8 valence 1 vdwRadius 0.16612 LJWellDepth 0.87864
+Topology::generateDummAtomClasses try AtomClassName  N 1 0 atomicNumber 7 valence 3 vdwRadius 0.1824 LJWellDepth 0.71128
+Topology::generateDummAtomClasses try AtomClassName  H 1 0 atomicNumber 1 valence 1 vdwRadius 0.06 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  CT 1 0 atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Topology::generateDummAtomClasses try AtomClassName  H1 1 0 atomicNumber 1 valence 1 vdwRadius 0.1387 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  H1 1 0 atomicNumber 1 valence 1 vdwRadius 0.1387 LJWellDepth 0.0656888
+Topology::generateDummAtomClasses try AtomClassName  H1 1 0 atomicNumber 1 valence 1 vdwRadius 0.1387 LJWellDepth 0.0656888
+Topology::bAddDummBondParams 1 0
+Topology::bAddDummBondParams 6 7
+Topology::bAddDummBondParams 4 5
+Topology::bAddDummBondParams 1 7
+Topology::bAddDummBondParams 2 3
+Topology::bAddDummBondParams 2 4
+Topology::bAddDummBondParams 1 2
+Topology::bAddDummBondParams 6 1
+Topology::bAddDummBondParams 6 2
+Topology::bAddDummBondParams 4 6
+Topology::bAddDummBondParams 4 1
+Topology::bAddDummAngleParams 2 4 5
+Topology::bAddDummAngleParams 0 1 2
+Topology::bAddDummAngleParams 0 1 0
+Topology::bAddDummAngleParams 7 6 1
+Topology::bAddDummAngleParams 7 6 2
+Topology::bAddDummAngleParams 6 1 0
+Topology::bAddDummAngleParams 5 4 6
+Topology::bAddDummAngleParams 4 6 7
+Topology::bAddDummAngleParams 7 1 7
+Topology::bAddDummAngleParams 5 4 1
+Topology::bAddDummAngleParams 4 1 7
+Topology::bAddDummAngleParams 3 2 4
+Topology::bAddDummAngleParams 2 4 6
+Topology::bAddDummAngleParams 1 2 3
+Topology::bAddDummAngleParams 1 2 4
+Topology::bAddDummAngleParams 2 4 1
+Topology::bAddDummAngleParams 1 6 2
+Topology::bAddDummAngleParams 6 2 3
+Topology::bAddDummAngleParams 6 2 4
+Topology::bAddDummAngleParams 4 6 1
+Topology::bAddDummAngleParams 4 6 2
+Topology::bAddDummTorsionParams allDihedralsACIxs
+
+Topology::bAddDummDihedralParams checking 5 4 6 7 :| 0 0 2 |  forceK: 8.368 period 1 phase: 0 | 3 2 4 5
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 0
+Topology::bAddDummDihedralParams insert 3 2 4 5 := 2 1 ;| 2 0 | 2.5 180
+Topology::bAddDummDihedralParams checking 4 6 8 9 :| 2 2 1 |  forceK: 0 period 2 phase: 0 | 2 4 6 7
+found dihedral angle!
+allDihedralsACIxs.size: 1
+Topology::bAddDummDihedralParams insert 2 4 6 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 3 1 4 5 :| 3 3 3 |  forceK: 3.3472 period 1 phase: 0 | 0 1 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 2
+Topology::bAddDummDihedralParams insert 0 1 2 3 := 3 1 ;| 0.8 0 | 0.08 180
+Topology::bAddDummDihedralParams checking 3 1 4 6 :| 6 6 1 |  forceK: 0 period 2 phase: 0 | 0 1 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 3
+Topology::bAddDummDihedralParams insert 0 1 2 4 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 2 1 4 5 :| 7 7 3 |  forceK: 3.3472 period 1 phase: 0 | 0 1 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 4
+Topology::bAddDummDihedralParams checking 2 1 4 6 :| 10 10 1 |  forceK: 0 period 2 phase: 0 | 0 1 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 4
+Topology::bAddDummDihedralParams checking 1 4 6 7 :| 11 11 1 |  forceK: 10.46 period 2 phase: 3.14159 | 1 2 4 5
+found dihedral angle!
+allDihedralsACIxs.size: 4
+Topology::bAddDummDihedralParams insert 1 2 4 5 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 0 1 4 5 :| 12 12 3 |  forceK: 3.3472 period 1 phase: 0 | 0 1 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams checking 0 1 4 6 :| 15 15 1 |  forceK: 0 period 2 phase: 0 | 0 1 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams checking 15 14 16 17 :| 16 16 2 |  forceK: 8.368 period 1 phase: 0 | 3 2 4 5
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams checking 14 16 18 19 :| 18 18 1 |  forceK: 0 period 2 phase: 0 | 2 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams insert 2 4 1 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 14 16 18 20 :| 19 19 1 |  forceK: 0 period 2 phase: 0 | 2 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 6
+Topology::bAddDummDihedralParams checking 14 16 18 21 :| 20 20 1 |  forceK: 0 period 2 phase: 0 | 2 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 6
+Topology::bAddDummDihedralParams checking 13 10 8 14 :| 21 21 1 |  forceK: 0.650844 period 3 phase: 0 | 0 1 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 6
+Topology::bAddDummDihedralParams insert 0 1 6 2 := 1 3 ;| 0.155556 0
+Topology::bAddDummDihedralParams checking 12 10 8 14 :| 22 22 1 |  forceK: 0.650844 period 3 phase: 0 | 0 1 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 7
+Topology::bAddDummDihedralParams checking 11 10 8 14 :| 23 23 1 |  forceK: 0.650844 period 3 phase: 0 | 0 1 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 7
+Topology::bAddDummDihedralParams checking 9 8 10 11 :| 24 24 1 |  forceK: 0.650844 period 3 phase: 0 | 7 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 7
+Topology::bAddDummDihedralParams insert 7 6 1 0 := 1 3 ;| 0.155556 0
+Topology::bAddDummDihedralParams checking 9 8 10 12 :| 25 25 1 |  forceK: 0.650844 period 3 phase: 0 | 7 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 8
+Topology::bAddDummDihedralParams checking 9 8 10 13 :| 26 26 1 |  forceK: 0.650844 period 3 phase: 0 | 7 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 8
+Topology::bAddDummDihedralParams checking 9 8 14 15 :| 27 27 3 |  forceK: 3.3472 period 1 phase: 0 | 7 6 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 8
+Topology::bAddDummDihedralParams insert 7 6 2 3 := 3 1 ;| 0.8 0 | 0.08 180
+Topology::bAddDummDihedralParams checking 9 8 14 16 :| 30 30 1 |  forceK: 0 period 2 phase: 0 | 7 6 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 9
+Topology::bAddDummDihedralParams insert 7 6 2 4 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 8 14 16 17 :| 31 31 1 |  forceK: 10.46 period 2 phase: 3.14159 | 6 2 4 5
+found dihedral angle!
+allDihedralsACIxs.size: 10
+Topology::bAddDummDihedralParams insert 6 2 4 5 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 7 6 8 9 :| 32 32 1 |  forceK: 0 period 2 phase: 0 | 5 4 6 7
+found dihedral angle!
+allDihedralsACIxs.size: 11
+Topology::bAddDummDihedralParams insert 5 4 6 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 7 6 8 10 :| 33 33 1 |  forceK: 0 period 2 phase: 0 | 5 4 6 1
+found dihedral angle!
+allDihedralsACIxs.size: 12
+Topology::bAddDummDihedralParams insert 5 4 6 1 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 7 6 8 14 :| 34 34 1 |  forceK: 0 period 2 phase: 0 | 5 4 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 13
+Topology::bAddDummDihedralParams insert 5 4 6 2 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 6 8 10 11 :| 35 35 1 |  forceK: 0.650844 period 3 phase: 0 | 4 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 14
+Topology::bAddDummDihedralParams insert 4 6 1 0 := 1 3 ;| 0.155556 0
+Topology::bAddDummDihedralParams checking 6 8 10 12 :| 36 36 1 |  forceK: 0.650844 period 3 phase: 0 | 4 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 15
+Topology::bAddDummDihedralParams checking 6 8 10 13 :| 37 37 1 |  forceK: 0.650844 period 3 phase: 0 | 4 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 15
+Topology::bAddDummDihedralParams checking 17 16 18 19 :| 38 38 1 |  forceK: 0 period 2 phase: 0 | 5 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 15
+Topology::bAddDummDihedralParams insert 5 4 1 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 17 16 18 20 :| 39 39 1 |  forceK: 0 period 2 phase: 0 | 5 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 16
+Topology::bAddDummDihedralParams checking 17 16 18 21 :| 40 40 1 |  forceK: 0 period 2 phase: 0 | 5 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 16
+Topology::bAddDummDihedralParams checking 4 8 6 7 :| 41 41 1 |  forceK: 4.6024 period 2 phase: 3.14159 | 2 6 4 5
+*** improper inserted: 2 6 4 5 := 1 2 ;| 1.1 180
+Topology::bAddDummDihedralParams checking 14 18 16 17 :| 42 42 1 |  forceK: 4.6024 period 2 phase: 3.14159 | 2 1 4 5
+*** improper inserted: 2 1 4 5 := 1 2 ;| 1.1 180
+Topology::bAddDummDihedralParams checking 5 4 6 8 :| 43 43 1 |  forceK: 10.46 period 2 phase: 3.14159 | 3 2 4 6
+found dihedral angle!
+allDihedralsACIxs.size: 16
+Topology::bAddDummDihedralParams insert 3 2 4 6 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 4 6 8 10 :| 44 44 4 |  forceK: 8.368 period 1 phase: 0 | 2 4 6 1
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 17
+Topology::bAddDummDihedralParams insert 2 4 6 1 := 4 1 ;| 2 0 | 0 0
+Topology::bAddDummDihedralParams checking 4 6 8 14 :| 48 48 4 |  forceK: 0 period 1 phase: 0 | 2 4 6 2
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 18
+Topology::bAddDummDihedralParams insert 2 4 6 2 := 4 1 ;| 0 0 | 0 0
+Topology::bAddDummDihedralParams checking 1 4 6 8 :| 52 52 1 |  forceK: 10.46 period 2 phase: 3.14159 | 1 2 4 6
+found dihedral angle!
+allDihedralsACIxs.size: 19
+Topology::bAddDummDihedralParams insert 1 2 4 6 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 15 14 16 18 :| 53 53 1 |  forceK: 10.46 period 2 phase: 3.14159 | 3 2 4 1
+found dihedral angle!
+allDihedralsACIxs.size: 20
+Topology::bAddDummDihedralParams insert 3 2 4 1 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 10 8 14 15 :| 54 54 1 |  forceK: 0 period 2 phase: 0 | 1 6 2 3
+found dihedral angle!
+allDihedralsACIxs.size: 21
+Topology::bAddDummDihedralParams insert 1 6 2 3 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 10 8 14 16 :| 55 55 4 |  forceK: 0.8368 period 1 phase: 0 | 1 6 2 4
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 22
+Topology::bAddDummDihedralParams insert 1 6 2 4 := 4 1 ;| 0.2 0 | 0 0
+Topology::bAddDummDihedralParams checking 8 14 16 18 :| 59 59 1 |  forceK: 10.46 period 2 phase: 3.14159 | 6 2 4 1
+found dihedral angle!
+allDihedralsACIxs.size: 23
+Topology::bAddDummDihedralParams insert 6 2 4 1 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 6 8 14 15 :| 60 60 1 |  forceK: 0 period 2 phase: 0 | 4 6 2 3
+found dihedral angle!
+allDihedralsACIxs.size: 24
+Topology::bAddDummDihedralParams insert 4 6 2 3 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 6 8 14 16 :| 61 61 4 |  forceK: 1.8828 period 1 phase: 3.14159 | 4 6 2 4
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 25
+Topology::bAddDummDihedralParams insert 4 6 2 4 := 4 1 ;| 0.45 180 | 0 0
+Topology::bAddDummDihedralParams checking 1 6 4 5 :| 65 65 1 |  forceK: 43.932 period 2 phase: 3.14159 | 1 4 2 3
+*** improper inserted: 1 4 2 3 := 1 2 ;| 10.5 180
+Topology::bAddDummDihedralParams checking 8 16 14 15 :| 66 66 1 |  forceK: 43.932 period 2 phase: 3.14159 | 6 4 2 3
+*** improper inserted: 6 4 2 3 := 1 2 ;| 10.5 180
+Context::transferAtomClasses 5 H atomicNumber 1 valence 1 vdwRadius 0.06 LJWellDepth 0.0656888
+Context::transferAtomClasses 7 H1 atomicNumber 1 valence 1 vdwRadius 0.1387 LJWellDepth 0.0656888
+Context::transferAtomClasses 0 HC atomicNumber 1 valence 1 vdwRadius 0.1487 LJWellDepth 0.0656888
+Context::transferAtomClasses 2 C atomicNumber 6 valence 3 vdwRadius 0.1908 LJWellDepth 0.359824
+Context::transferAtomClasses 6 CX atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Context::transferAtomClasses 1 CT atomicNumber 6 valence 4 vdwRadius 0.1908 LJWellDepth 0.45773
+Context::transferAtomClasses 4 N atomicNumber 7 valence 3 vdwRadius 0.1824 LJWellDepth 0.71128
+Context::transferAtomClasses 3 O atomicNumber 8 valence 1 vdwRadius 0.16612 LJWellDepth 0.87864
+Context::addDummParas WORLD 1 topology 0
+Topology::bAddDummBondParams 1 0
+Topology::bAddDummBondParams 6 7
+Topology::bAddDummBondParams 4 5
+Topology::bAddDummBondParams 1 7
+Topology::bAddDummBondParams 2 3
+Topology::bAddDummBondParams 2 4
+Topology::bAddDummBondParams 1 2
+Topology::bAddDummBondParams 6 1
+Topology::bAddDummBondParams 6 2
+Topology::bAddDummBondParams 4 6
+Topology::bAddDummBondParams 4 1
+Topology::bAddDummAngleParams 2 4 5
+Topology::bAddDummAngleParams 0 1 2
+Topology::bAddDummAngleParams 0 1 0
+Topology::bAddDummAngleParams 7 6 1
+Topology::bAddDummAngleParams 7 6 2
+Topology::bAddDummAngleParams 6 1 0
+Topology::bAddDummAngleParams 5 4 6
+Topology::bAddDummAngleParams 4 6 7
+Topology::bAddDummAngleParams 7 1 7
+Topology::bAddDummAngleParams 5 4 1
+Topology::bAddDummAngleParams 4 1 7
+Topology::bAddDummAngleParams 3 2 4
+Topology::bAddDummAngleParams 2 4 6
+Topology::bAddDummAngleParams 1 2 3
+Topology::bAddDummAngleParams 1 2 4
+Topology::bAddDummAngleParams 2 4 1
+Topology::bAddDummAngleParams 1 6 2
+Topology::bAddDummAngleParams 6 2 3
+Topology::bAddDummAngleParams 6 2 4
+Topology::bAddDummAngleParams 4 6 1
+Topology::bAddDummAngleParams 4 6 2
+Topology::bAddDummTorsionParams allDihedralsACIxs
+
+Topology::bAddDummDihedralParams checking 5 4 6 7 :| 0 0 2 |  forceK: 8.368 period 1 phase: 0 | 3 2 4 5
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 0
+Topology::bAddDummDihedralParams insert 3 2 4 5 := 2 1 ;| 2 0 | 2.5 180
+Topology::bAddDummDihedralParams checking 4 6 8 9 :| 2 2 1 |  forceK: 0 period 2 phase: 0 | 2 4 6 7
+found dihedral angle!
+allDihedralsACIxs.size: 1
+Topology::bAddDummDihedralParams insert 2 4 6 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 3 1 4 5 :| 3 3 3 |  forceK: 3.3472 period 1 phase: 0 | 0 1 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 2
+Topology::bAddDummDihedralParams insert 0 1 2 3 := 3 1 ;| 0.8 0 | 0.08 180
+Topology::bAddDummDihedralParams checking 3 1 4 6 :| 6 6 1 |  forceK: 0 period 2 phase: 0 | 0 1 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 3
+Topology::bAddDummDihedralParams insert 0 1 2 4 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 2 1 4 5 :| 7 7 3 |  forceK: 3.3472 period 1 phase: 0 | 0 1 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 4
+Topology::bAddDummDihedralParams checking 2 1 4 6 :| 10 10 1 |  forceK: 0 period 2 phase: 0 | 0 1 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 4
+Topology::bAddDummDihedralParams checking 1 4 6 7 :| 11 11 1 |  forceK: 10.46 period 2 phase: 3.14159 | 1 2 4 5
+found dihedral angle!
+allDihedralsACIxs.size: 4
+Topology::bAddDummDihedralParams insert 1 2 4 5 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 0 1 4 5 :| 12 12 3 |  forceK: 3.3472 period 1 phase: 0 | 0 1 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams checking 0 1 4 6 :| 15 15 1 |  forceK: 0 period 2 phase: 0 | 0 1 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams checking 15 14 16 17 :| 16 16 2 |  forceK: 8.368 period 1 phase: 0 | 3 2 4 5
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams checking 14 16 18 19 :| 18 18 1 |  forceK: 0 period 2 phase: 0 | 2 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 5
+Topology::bAddDummDihedralParams insert 2 4 1 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 14 16 18 20 :| 19 19 1 |  forceK: 0 period 2 phase: 0 | 2 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 6
+Topology::bAddDummDihedralParams checking 14 16 18 21 :| 20 20 1 |  forceK: 0 period 2 phase: 0 | 2 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 6
+Topology::bAddDummDihedralParams checking 13 10 8 14 :| 21 21 1 |  forceK: 0.650844 period 3 phase: 0 | 0 1 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 6
+Topology::bAddDummDihedralParams insert 0 1 6 2 := 1 3 ;| 0.155556 0
+Topology::bAddDummDihedralParams checking 12 10 8 14 :| 22 22 1 |  forceK: 0.650844 period 3 phase: 0 | 0 1 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 7
+Topology::bAddDummDihedralParams checking 11 10 8 14 :| 23 23 1 |  forceK: 0.650844 period 3 phase: 0 | 0 1 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 7
+Topology::bAddDummDihedralParams checking 9 8 10 11 :| 24 24 1 |  forceK: 0.650844 period 3 phase: 0 | 7 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 7
+Topology::bAddDummDihedralParams insert 7 6 1 0 := 1 3 ;| 0.155556 0
+Topology::bAddDummDihedralParams checking 9 8 10 12 :| 25 25 1 |  forceK: 0.650844 period 3 phase: 0 | 7 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 8
+Topology::bAddDummDihedralParams checking 9 8 10 13 :| 26 26 1 |  forceK: 0.650844 period 3 phase: 0 | 7 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 8
+Topology::bAddDummDihedralParams checking 9 8 14 15 :| 27 27 3 |  forceK: 3.3472 period 1 phase: 0 | 7 6 2 3
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 8
+Topology::bAddDummDihedralParams insert 7 6 2 3 := 3 1 ;| 0.8 0 | 0.08 180
+Topology::bAddDummDihedralParams checking 9 8 14 16 :| 30 30 1 |  forceK: 0 period 2 phase: 0 | 7 6 2 4
+found dihedral angle!
+allDihedralsACIxs.size: 9
+Topology::bAddDummDihedralParams insert 7 6 2 4 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 8 14 16 17 :| 31 31 1 |  forceK: 10.46 period 2 phase: 3.14159 | 6 2 4 5
+found dihedral angle!
+allDihedralsACIxs.size: 10
+Topology::bAddDummDihedralParams insert 6 2 4 5 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 7 6 8 9 :| 32 32 1 |  forceK: 0 period 2 phase: 0 | 5 4 6 7
+found dihedral angle!
+allDihedralsACIxs.size: 11
+Topology::bAddDummDihedralParams insert 5 4 6 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 7 6 8 10 :| 33 33 1 |  forceK: 0 period 2 phase: 0 | 5 4 6 1
+found dihedral angle!
+allDihedralsACIxs.size: 12
+Topology::bAddDummDihedralParams insert 5 4 6 1 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 7 6 8 14 :| 34 34 1 |  forceK: 0 period 2 phase: 0 | 5 4 6 2
+found dihedral angle!
+allDihedralsACIxs.size: 13
+Topology::bAddDummDihedralParams insert 5 4 6 2 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 6 8 10 11 :| 35 35 1 |  forceK: 0.650844 period 3 phase: 0 | 4 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 14
+Topology::bAddDummDihedralParams insert 4 6 1 0 := 1 3 ;| 0.155556 0
+Topology::bAddDummDihedralParams checking 6 8 10 12 :| 36 36 1 |  forceK: 0.650844 period 3 phase: 0 | 4 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 15
+Topology::bAddDummDihedralParams checking 6 8 10 13 :| 37 37 1 |  forceK: 0.650844 period 3 phase: 0 | 4 6 1 0
+found dihedral angle!
+allDihedralsACIxs.size: 15
+Topology::bAddDummDihedralParams checking 17 16 18 19 :| 38 38 1 |  forceK: 0 period 2 phase: 0 | 5 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 15
+Topology::bAddDummDihedralParams insert 5 4 1 7 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 17 16 18 20 :| 39 39 1 |  forceK: 0 period 2 phase: 0 | 5 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 16
+Topology::bAddDummDihedralParams checking 17 16 18 21 :| 40 40 1 |  forceK: 0 period 2 phase: 0 | 5 4 1 7
+found dihedral angle!
+allDihedralsACIxs.size: 16
+Topology::bAddDummDihedralParams checking 4 8 6 7 :| 41 41 1 |  forceK: 4.6024 period 2 phase: 3.14159 | 2 6 4 5
+*** improper inserted: 2 6 4 5 := 1 2 ;| 1.1 180
+Topology::bAddDummDihedralParams checking 14 18 16 17 :| 42 42 1 |  forceK: 4.6024 period 2 phase: 3.14159 | 2 1 4 5
+*** improper inserted: 2 1 4 5 := 1 2 ;| 1.1 180
+Topology::bAddDummDihedralParams checking 5 4 6 8 :| 43 43 1 |  forceK: 10.46 period 2 phase: 3.14159 | 3 2 4 6
+found dihedral angle!
+allDihedralsACIxs.size: 16
+Topology::bAddDummDihedralParams insert 3 2 4 6 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 4 6 8 10 :| 44 44 4 |  forceK: 8.368 period 1 phase: 0 | 2 4 6 1
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 17
+Topology::bAddDummDihedralParams insert 2 4 6 1 := 4 1 ;| 2 0 | 0 0
+Topology::bAddDummDihedralParams checking 4 6 8 14 :| 48 48 4 |  forceK: 0 period 1 phase: 0 | 2 4 6 2
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 18
+Topology::bAddDummDihedralParams insert 2 4 6 2 := 4 1 ;| 0 0 | 0 0
+Topology::bAddDummDihedralParams checking 1 4 6 8 :| 52 52 1 |  forceK: 10.46 period 2 phase: 3.14159 | 1 2 4 6
+found dihedral angle!
+allDihedralsACIxs.size: 19
+Topology::bAddDummDihedralParams insert 1 2 4 6 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 15 14 16 18 :| 53 53 1 |  forceK: 10.46 period 2 phase: 3.14159 | 3 2 4 1
+found dihedral angle!
+allDihedralsACIxs.size: 20
+Topology::bAddDummDihedralParams insert 3 2 4 1 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 10 8 14 15 :| 54 54 1 |  forceK: 0 period 2 phase: 0 | 1 6 2 3
+found dihedral angle!
+allDihedralsACIxs.size: 21
+Topology::bAddDummDihedralParams insert 1 6 2 3 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 10 8 14 16 :| 55 55 4 |  forceK: 0.8368 period 1 phase: 0 | 1 6 2 4
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 22
+Topology::bAddDummDihedralParams insert 1 6 2 4 := 4 1 ;| 0.2 0 | 0 0
+Topology::bAddDummDihedralParams checking 8 14 16 18 :| 59 59 1 |  forceK: 10.46 period 2 phase: 3.14159 | 6 2 4 1
+found dihedral angle!
+allDihedralsACIxs.size: 23
+Topology::bAddDummDihedralParams insert 6 2 4 1 := 1 2 ;| 2.5 180
+Topology::bAddDummDihedralParams checking 6 8 14 15 :| 60 60 1 |  forceK: 0 period 2 phase: 0 | 4 6 2 3
+found dihedral angle!
+allDihedralsACIxs.size: 24
+Topology::bAddDummDihedralParams insert 4 6 2 3 := 1 2 ;| 0 0
+Topology::bAddDummDihedralParams checking 6 8 14 16 :| 61 61 4 |  forceK: 1.8828 period 1 phase: 3.14159 | 4 6 2 4
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+found dihedral angle!
+allDihedralsACIxs.size: 25
+Topology::bAddDummDihedralParams insert 4 6 2 4 := 4 1 ;| 0.45 180 | 0 0
+Topology::bAddDummDihedralParams checking 1 6 4 5 :| 65 65 1 |  forceK: 43.932 period 2 phase: 3.14159 | 1 4 2 3
+*** improper inserted: 1 4 2 3 := 1 2 ;| 10.5 180
+Topology::bAddDummDihedralParams checking 8 16 14 15 :| 66 66 1 |  forceK: 43.932 period 2 phase: 3.14159 | 6 4 2 3
+*** improper inserted: 6 4 2 3 := 1 2 ;| 10.5 180
+ Context::AddMolecule for world 0 
+ Context::AddMolecule molIx 0 
+ Context::AddMolecule topFNs[molIx] ala1/ligand.prmtop ala1/ligand.min.rst7 ala1/ligand.rb
+Context setting flexibility for mol 0 world 0 regimenFN R0 flexSpecsFNs ala1/ligand.flex.cart
+Topology::PrintAtomList
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAA inName HH31 number 0 atomIndex  3 elem H atomicNumber 1 x 0.2 y 0.1 z -1.3e-07 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAAAHC biotypeIndex 1 charge 0.1123 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAB inName CH3  number 1 atomIndex  0 elem C atomicNumber 6 x 0.2 y 0.209 z 1e-08 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CT atomClassIndex  1 biotype MOL0AAABCT biotypeIndex 2 charge -0.3662 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAC inName HH32 number 2 atomIndex  1 elem H atomicNumber 1 x 0.148626 y 0.245385 z 0.0889824 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAACHC biotypeIndex 3 charge 0.1123 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAD inName HH33 number 3 atomIndex  2 elem H atomicNumber 1 x 0.148626 y 0.245385 z -0.088982 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAADHC biotypeIndex 4 charge 0.1123 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAE inName C    number 4 atomIndex  4 elem C atomicNumber 6 x 0.342742 y 0.264079 z -3e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.086 fftype C atomClassIndex  2 biotype MOL0AAAEC biotypeIndex 5 charge 0.5972 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAF inName O    number 5 atomIndex  5 elem O atomicNumber 8 x 0.439058 y 0.187741 z -6.6e-07 mass 16 vdwRadius  1.6612 LJWellDepth  0.21 fftype O atomClassIndex  3 biotype MOL0AAAFO biotypeIndex 6 charge -0.5679 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAG inName N    number 6 atomIndex  6 elem N atomicNumber 7 x 0.355538 y 0.396965 z -3.1e-07 mass 14.01 vdwRadius  1.824 LJWellDepth  0.17 fftype N atomClassIndex  4 biotype MOL0AAAGN biotypeIndex 7 charge -0.4157 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAH inName H    number 7 atomIndex  7 elem H atomicNumber 1 x 0.273312 y 0.455616 z -1.3e-07 mass 1.008 vdwRadius  0.6 LJWellDepth  0.0157 fftype H atomClassIndex  5 biotype MOL0AAAHH biotypeIndex 8 charge 0.2719 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAI inName CA   number 8 atomIndex  8 elem C atomicNumber 6 x 0.485326 y 0.461393 z -4.3e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CX atomClassIndex  6 biotype MOL0AAAICX biotypeIndex 9 charge 0.0337 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAJ inName HA   number 9 atomIndex  9 elem H atomicNumber 1 x 0.54076 y 0.431554 z 0.0889815 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAAJH1 biotypeIndex 10 charge 0.0823 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAK inName CB   number 10 atomIndex  10 elem C atomicNumber 6 x 0.56613 y 0.422084 z -0.123215 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CT atomClassIndex  1 biotype MOL0AAAKCT biotypeIndex 11 charge -0.1825 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAL inName HB1  number 11 atomIndex  11 elem H atomicNumber 1 x 0.512326 y 0.452136 z -0.21312 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAALHC biotypeIndex 12 charge 0.0603 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAM inName HB2  number 12 atomIndex  12 elem H atomicNumber 1 x 0.663048 y 0.471894 z -0.120579 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAAMHC biotypeIndex 13 charge 0.0603 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAN inName HB3  number 13 atomIndex  13 elem H atomicNumber 1 x 0.580854 y 0.314087 z -0.124138 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAANHC biotypeIndex 14 charge 0.0603 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAO inName C    number 14 atomIndex  14 elem C atomicNumber 6 x 0.471268 y 0.612942 z 1.4e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.086 fftype C atomClassIndex  2 biotype MOL0AAAOC biotypeIndex 15 charge 0.5973 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAP inName O    number 15 atomIndex  15 elem O atomicNumber 8 x 0.360064 y 0.66527 z 6.2e-07 mass 16 vdwRadius  1.6612 LJWellDepth  0.21 fftype O atomClassIndex  3 biotype MOL0AAAPO biotypeIndex 16 charge -0.5679 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAQ inName N    number 16 atomIndex  16 elem N atomicNumber 7 x 0.584605 y 0.683488 z 2.5e-07 mass 14.01 vdwRadius  1.824 LJWellDepth  0.17 fftype N atomClassIndex  4 biotype MOL0AAAQN biotypeIndex 17 charge -0.4157 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAR inName H    number 17 atomIndex  17 elem H atomicNumber 1 x 0.6737 y 0.635916 z -4e-08 mass 1.008 vdwRadius  0.6 LJWellDepth  0.0157 fftype H atomClassIndex  5 biotype MOL0AAARH biotypeIndex 18 charge 0.2719 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAS inName CH3  number 18 atomIndex  18 elem C atomicNumber 6 x 0.584606 y 0.828388 z 6.2e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CT atomClassIndex  1 biotype MOL0AAASCT biotypeIndex 19 charge -0.149 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAT inName HH31 number 19 atomIndex  19 elem H atomicNumber 1 x 0.481858 y 0.864773 z 1.04e-06 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAATH1 biotypeIndex 20 charge 0.0976 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAU inName HH32 number 20 atomIndex  20 elem H atomicNumber 1 x 0.63598 y 0.864773 z 0.0889828 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAAUH1 biotypeIndex 21 charge 0.0976 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAV inName HH33 number 21 atomIndex  21 elem H atomicNumber 1 x 0.635979 y 0.864774 z -0.0889819 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAAVH1 biotypeIndex 22 charge 0.0976 mobile 0 visited 1
+modelOneCompound
+Step 1 create atomBonds
+Step 2 analyze bonding structure
+Step 3 distribute atoms
+Step 4 assign rigid body parents
+Step 5 set ground frames
+Step 6 set child frames
+Step 7 populate dumm clusters
+Step 8 create mobilized bodies
+ got Weld mobodIx 1
+ got Trans mobodIx 2
+ got Trans mobodIx 3
+ got Trans mobodIx 4
+ got Trans mobodIx 5
+ got Trans mobodIx 6
+ got Trans mobodIx 7
+ got Trans mobodIx 8
+ got Trans mobodIx 9
+ got Trans mobodIx 10
+ got Trans mobodIx 11
+ got Trans mobodIx 12
+ got Trans mobodIx 13
+ got Trans mobodIx 14
+ got Trans mobodIx 15
+ got Trans mobodIx 16
+ got Trans mobodIx 17
+ got Trans mobodIx 18
+ got Trans mobodIx 19
+ got Trans mobodIx 20
+ got Trans mobodIx 21
+ got Trans mobodIx 22
+Step 9 create decorations
+Finished modelOneCompound
+ Context::AddMolecule for world 1 
+ Context::AddMolecule molIx 0 
+ Context::AddMolecule topFNs[molIx] ala1/ligand.prmtop ala1/ligand.min.rst7 ala1/ligand.rb
+Context setting flexibility for mol 0 world 1 regimenFN R1 flexSpecsFNs ala1/ligand.flex.7td
+Topology::PrintAtomList
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAA inName HH31 number 0 atomIndex  3 elem H atomicNumber 1 x 0.2 y 0.1 z -1.3e-07 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAAAHC biotypeIndex 1 charge 0.1123 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAB inName CH3  number 1 atomIndex  0 elem C atomicNumber 6 x 0.2 y 0.209 z 1e-08 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CT atomClassIndex  1 biotype MOL0AAABCT biotypeIndex 2 charge -0.3662 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAC inName HH32 number 2 atomIndex  1 elem H atomicNumber 1 x 0.148626 y 0.245385 z 0.0889824 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAACHC biotypeIndex 3 charge 0.1123 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAD inName HH33 number 3 atomIndex  2 elem H atomicNumber 1 x 0.148626 y 0.245385 z -0.088982 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAADHC biotypeIndex 4 charge 0.1123 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAE inName C    number 4 atomIndex  4 elem C atomicNumber 6 x 0.342742 y 0.264079 z -3e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.086 fftype C atomClassIndex  2 biotype MOL0AAAEC biotypeIndex 5 charge 0.5972 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAF inName O    number 5 atomIndex  5 elem O atomicNumber 8 x 0.439058 y 0.187741 z -6.6e-07 mass 16 vdwRadius  1.6612 LJWellDepth  0.21 fftype O atomClassIndex  3 biotype MOL0AAAFO biotypeIndex 6 charge -0.5679 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAG inName N    number 6 atomIndex  6 elem N atomicNumber 7 x 0.355538 y 0.396965 z -3.1e-07 mass 14.01 vdwRadius  1.824 LJWellDepth  0.17 fftype N atomClassIndex  4 biotype MOL0AAAGN biotypeIndex 7 charge -0.4157 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAH inName H    number 7 atomIndex  7 elem H atomicNumber 1 x 0.273312 y 0.455616 z -1.3e-07 mass 1.008 vdwRadius  0.6 LJWellDepth  0.0157 fftype H atomClassIndex  5 biotype MOL0AAAHH biotypeIndex 8 charge 0.2719 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAI inName CA   number 8 atomIndex  8 elem C atomicNumber 6 x 0.485326 y 0.461393 z -4.3e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CX atomClassIndex  6 biotype MOL0AAAICX biotypeIndex 9 charge 0.0337 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAJ inName HA   number 9 atomIndex  9 elem H atomicNumber 1 x 0.54076 y 0.431554 z 0.0889815 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAAJH1 biotypeIndex 10 charge 0.0823 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAK inName CB   number 10 atomIndex  10 elem C atomicNumber 6 x 0.56613 y 0.422084 z -0.123215 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CT atomClassIndex  1 biotype MOL0AAAKCT biotypeIndex 11 charge -0.1825 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAL inName HB1  number 11 atomIndex  11 elem H atomicNumber 1 x 0.512326 y 0.452136 z -0.21312 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAALHC biotypeIndex 12 charge 0.0603 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAM inName HB2  number 12 atomIndex  12 elem H atomicNumber 1 x 0.663048 y 0.471894 z -0.120579 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAAMHC biotypeIndex 13 charge 0.0603 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAN inName HB3  number 13 atomIndex  13 elem H atomicNumber 1 x 0.580854 y 0.314087 z -0.124138 mass 1.008 vdwRadius  1.487 LJWellDepth  0.0157 fftype HC atomClassIndex  0 biotype MOL0AAANHC biotypeIndex 14 charge 0.0603 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAO inName C    number 14 atomIndex  14 elem C atomicNumber 6 x 0.471268 y 0.612942 z 1.4e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.086 fftype C atomClassIndex  2 biotype MOL0AAAOC biotypeIndex 15 charge 0.5973 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAP inName O    number 15 atomIndex  15 elem O atomicNumber 8 x 0.360064 y 0.66527 z 6.2e-07 mass 16 vdwRadius  1.6612 LJWellDepth  0.21 fftype O atomClassIndex  3 biotype MOL0AAAPO biotypeIndex 16 charge -0.5679 mobile 0 visited 1
+bSpecificAtom Print: nbonds 3 freebonds 0 name AAAQ inName N    number 16 atomIndex  16 elem N atomicNumber 7 x 0.584605 y 0.683488 z 2.5e-07 mass 14.01 vdwRadius  1.824 LJWellDepth  0.17 fftype N atomClassIndex  4 biotype MOL0AAAQN biotypeIndex 17 charge -0.4157 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAR inName H    number 17 atomIndex  17 elem H atomicNumber 1 x 0.6737 y 0.635916 z -4e-08 mass 1.008 vdwRadius  0.6 LJWellDepth  0.0157 fftype H atomClassIndex  5 biotype MOL0AAARH biotypeIndex 18 charge 0.2719 mobile 0 visited 1
+bSpecificAtom Print: nbonds 4 freebonds 0 name AAAS inName CH3  number 18 atomIndex  18 elem C atomicNumber 6 x 0.584606 y 0.828388 z 6.2e-07 mass 12.01 vdwRadius  1.908 LJWellDepth  0.1094 fftype CT atomClassIndex  1 biotype MOL0AAASCT biotypeIndex 19 charge -0.149 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAT inName HH31 number 19 atomIndex  19 elem H atomicNumber 1 x 0.481858 y 0.864773 z 1.04e-06 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAATH1 biotypeIndex 20 charge 0.0976 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAU inName HH32 number 20 atomIndex  20 elem H atomicNumber 1 x 0.63598 y 0.864773 z 0.0889828 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAAUH1 biotypeIndex 21 charge 0.0976 mobile 0 visited 1
+bSpecificAtom Print: nbonds 1 freebonds 0 name AAAV inName HH33 number 21 atomIndex  21 elem H atomicNumber 1 x 0.635979 y 0.864774 z -0.0889819 mass 1.008 vdwRadius  1.387 LJWellDepth  0.0157 fftype H1 atomClassIndex  7 biotype MOL0AAAVH1 biotypeIndex 22 charge 0.0976 mobile 0 visited 1
+modelOneCompound
+Step 1 create atomBonds
+Step 2 analyze bonding structure
+Step 3 distribute atoms
+Step 4 assign rigid body parents
+Step 5 set ground frames
+Step 6 set child frames
+Step 7 populate dumm clusters
+Step 8 create mobilized bodies
+ got Weld mobodIx 1
+ got Pin mobodIx 2
+ got Pin mobodIx 3
+ got Pin mobodIx 4
+ got Pin mobodIx 5
+ got Pin mobodIx 6
+ got Pin mobodIx 7
+ got Pin mobodIx 8
+Step 9 create decorations
+Finished modelOneCompound
+LOAD ATTEMPT: '/home/victor/Robosample/build/Debug/Molmodel/libOpenMMPlugin_d.so' ... SUCCEEDED.
+NOTE: DuMM: successfully loaded OpenMM plugin
+NOTE: DuMM: successfully obtained OpenMM interface from plugin.
+NOTE: DuMM: OpenMM plugin was built with Molmodel version 3.0.0
+Loaded 12 OpenMM plugins:  libOpenMMCPU.so
+ libOpenMMCUDA.so
+ libOpenMMOpenCL.so
+ libOpenMMRPMDCUDA.so
+ libOpenMMDrudeCUDA.so
+ libOpenMMRPMDOpenCL.so
+ libOpenMMAmoebaCUDA.so
+ libOpenMMDrudeOpenCL.so
+ libOpenMMCudaCompiler.so
+ libOpenMMRPMDReference.so
+ libOpenMMDrudeReference.so
+ libOpenMMAmoebaReference.so
+OpenMM has 3 Platforms registered: Reference
+ CPU
+ CUDA
+=================================================================
+==7297==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60400002dac0 at pc 0x7f83d63d7d83 bp 0x7ffc25075e40 sp 0x7ffc25075e30
+WRITE of size 8 at 0x60400002dac0 thread T0
+    #0 0x7f83d63d7d82 in OpenMM::Kernel::Kernel() /home/victor/Robosample/openmm/olla/src/Kernel.cpp:37
+    #1 0x7f83d63ce025 in OpenMM::VerletIntegrator::VerletIntegrator(double) /home/victor/Robosample/openmm/openmmapi/src/VerletIntegrator.cpp:43
+    #2 0x7f83db058520 in OpenMMInterface::initializeOpenMM(bool, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >&) /home/victor/Robosample/Molmodel/OpenMMPlugin/OpenMMPlugin.cpp:526
+    #3 0x7f8423979bc7 in SimTK::DuMMForceFieldSubsystemRep::realizeInternalLists(SimTK::State&) const /home/victor/Robosample/Molmodel/src/DuMMForceFieldSubsystemRep.cpp:1446
+    #4 0x7f842392b3b3 in SimTK::DuMMForceFieldSubsystemRep::realizeSubsystemTopologyImpl(SimTK::State&) const /home/victor/Robosample/Molmodel/src/DuMMForceFieldSubsystemRep.cpp:258
+    #5 0x7f842714183c in SimTK::Subsystem::Guts::realizeSubsystemTopology(SimTK::State&) const /home/victor/Robosample/Molmodel/Simbody01/SimTKcommon/Simulation/src/Subsystem.cpp:209
+    #6 0x7f843387a2d1 in SimTK::MultibodySystemRep::realizeTopologyImpl(SimTK::State&) const /home/victor/Robosample/Molmodel/Simbody01/Simbody/src/MultibodySystem.cpp:188
+    #7 0x7f8427160a0d in SimTK::System::Guts::realizeTopology() const /home/victor/Robosample/Molmodel/Simbody01/SimTKcommon/Simulation/src/System.cpp:358
+    #8 0x7f842715a768 in SimTK::System::realizeTopology() const /home/victor/Robosample/Molmodel/Simbody01/SimTKcommon/Simulation/src/System.cpp:169
+    #9 0x564282a3a904 in Context::model(int, SetupReader&) /home/victor/Robosample/src/Context.cpp:1230
+    #10 0x564282e6908a in main /home/victor/Robosample/src/Robosample.cpp:274
+    #11 0x7f8420cd4c86 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x21c86)
+    #12 0x5642829f21f9 in _start (/home/victor/Robosample/build/Debug/robosample/src/GMOLMODEL_robo+0xbc41f9)
+
+0x60400002dac0 is located 0 bytes to the right of 48-byte region [0x60400002da90,0x60400002dac0)
+allocated by thread T0 here:
+    #0 0x7f84383f7448 in operator new(unsigned long) (/usr/lib/x86_64-linux-gnu/libasan.so.4+0xe0448)
+    #1 0x7f83db0584ff in OpenMMInterface::initializeOpenMM(bool, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >&) /home/victor/Robosample/Molmodel/OpenMMPlugin/OpenMMPlugin.cpp:526
+    #2 0x7f8423979bc7 in SimTK::DuMMForceFieldSubsystemRep::realizeInternalLists(SimTK::State&) const /home/victor/Robosample/Molmodel/src/DuMMForceFieldSubsystemRep.cpp:1446
+    #3 0x7f842392b3b3 in SimTK::DuMMForceFieldSubsystemRep::realizeSubsystemTopologyImpl(SimTK::State&) const /home/victor/Robosample/Molmodel/src/DuMMForceFieldSubsystemRep.cpp:258
+    #4 0x7f842714183c in SimTK::Subsystem::Guts::realizeSubsystemTopology(SimTK::State&) const /home/victor/Robosample/Molmodel/Simbody01/SimTKcommon/Simulation/src/Subsystem.cpp:209
+    #5 0x7f843387a2d1 in SimTK::MultibodySystemRep::realizeTopologyImpl(SimTK::State&) const /home/victor/Robosample/Molmodel/Simbody01/Simbody/src/MultibodySystem.cpp:188
+    #6 0x7f8427160a0d in SimTK::System::Guts::realizeTopology() const /home/victor/Robosample/Molmodel/Simbody01/SimTKcommon/Simulation/src/System.cpp:358
+    #7 0x7f842715a768 in SimTK::System::realizeTopology() const /home/victor/Robosample/Molmodel/Simbody01/SimTKcommon/Simulation/src/System.cpp:169
+    #8 0x564282a3a904 in Context::model(int, SetupReader&) /home/victor/Robosample/src/Context.cpp:1230
+    #9 0x564282e6908a in main /home/victor/Robosample/src/Robosample.cpp:274
+    #10 0x7f8420cd4c86 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x21c86)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /home/victor/Robosample/openmm/olla/src/Kernel.cpp:37 in OpenMM::Kernel::Kernel()
+Shadow bytes around the buggy address:
+  0x0c087fffdb00: fa fa fd fd fd fd fd fa fa fa 00 00 00 00 03 fa
+  0x0c087fffdb10: fa fa fd fd fd fd fd fa fa fa 00 00 00 00 03 fa
+  0x0c087fffdb20: fa fa fd fd fd fd fd fa fa fa fd fd fd fd fd fa
+  0x0c087fffdb30: fa fa fd fd fd fd fd fa fa fa fd fd fd fd fd fa
+  0x0c087fffdb40: fa fa fd fd fd fd fd fa fa fa fd fd fd fd fd fa
+=>0x0c087fffdb50: fa fa 00 00 00 00 00 00[fa]fa fa fa fa fa fa fa
+  0x0c087fffdb60: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c087fffdb70: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c087fffdb80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c087fffdb90: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c087fffdba0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==7297==ABORTING

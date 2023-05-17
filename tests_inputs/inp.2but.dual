@@ -1,9 +1,9 @@
 # Molecule information
-MOLECULES ala10
-PRMTOP ligand.prmtop
-INPCRD ligand
-RBFILE ligand.rb ligand.rb 
-FLEXFILE ligand.all.flex ligand.rama.flex
+MOLECULES 2but              # Molecules to load
+PRMTOP ligand.prmtop        # Parameter file
+INPCRD ligand        # Coordinate / Restart file
+RBFILE ligand.rb ligand.rb           # Rigid bodies definition file
+FLEXFILE ligand.cart.flex ligand.td.flex        # Flexible bonds definition file
 OUTPUT_DIR temp temp
 ROOTS 0 0
 ROOT_MOBILITY Weld Weld

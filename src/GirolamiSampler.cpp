@@ -238,6 +238,10 @@ bool GirolamiSampler::propose(SimTK::State& someState, SimTK::Real timestep, int
 ////    PrintBigMat(someState.getU(), someState.getNU(), 3, "U");
     // END TODEL
 
+    // TODO
+    assert(!"What should we return here?");
+    return true;
+
 }
 
 /** Main function that contains all the 3 steps of HMC.

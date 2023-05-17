@@ -15,6 +15,7 @@
 class DerivedSetupReader : virtual public SetupReader{
 public:
     // Constructor
+    DerivedSetupReader() = default;
     DerivedSetupReader (std::string& FN) : SetupReader(FN){}
 
     ~DerivedSetupReader(){}
@@ -24,7 +25,7 @@ public:
 void testSetupReader(){
 
     // Setup Reader
-    DerivedSetupReader setupReader();
+    DerivedSetupReader setupReader;
 }
 
 /**  **/

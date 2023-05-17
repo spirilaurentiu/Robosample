@@ -387,7 +387,7 @@ public:
 	//}
 
 	// Alternatives
-	SimTK::Transform& 
+	SimTK::Transform 
 		calcDefaultAtomFrameInCompoundFrameThroughDuMM(
 		SimTK::Compound::AtomIndex aIx,
 		SimTK::DuMMForceFieldSubsystem& dumm,

@@ -562,7 +562,6 @@ void Context::throwAndExit(std::string errMsg, int errCode){
 
 // Default constructor
 Context::Context(const SetupReader& setupReader, std::string logFilename)
-: thermodynamicStates(), replicas()
 {
 	nofWorlds = 0;
 	nofMols = 0;
@@ -664,18 +663,17 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	}
 
 	// Molecule specific parameters
-	for(std::size_t molIx = 0; molIx < inpNofMols; molIx++){
-		if(!SimTK::Pathname::fileExists(
-			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("PRMTOP")[molIx]) ){
-			throwAndExit("Molecule " + std::to_string(molIx) + " prmtop not found\n", 1);
+	// TODO please stop throwing in constructors
+	for(std::size_t molIx = 0; molIx < inpNofMols; molIx++) {
+		const auto prmtop = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("PRMTOP")[molIx];
+		const auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
 
+		if(!SimTK::Pathname::fileExists(prmtop)) {
+			throwAndExit("Molecule " + std::to_string(molIx) + " prmtop not found at " + prmtop + "\n", 1);
 		}
-		if(!SimTK::Pathname::fileExists(
-			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx] + ".rst7") ){
-			throwAndExit("Molecule " + std::to_string(molIx) + " inpcrd not found\n", 1);
-			}
+		if(!SimTK::Pathname::fileExists(inpcrd)) {
+			throwAndExit("Molecule " + std::to_string(molIx) + " inpcrd not found at " + inpcrd + "\n", 1);
+		}
 	}
 
 	// Topology specific paramters

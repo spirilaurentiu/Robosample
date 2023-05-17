@@ -1865,27 +1865,21 @@ bool Topology::checkBond(int a1, int a2)
 /** **/
 const bBond& Topology::getBond(int a1, int a2) const
 {
-	for(int i = 0; i < nbonds; i++){
-		if( (bonds[i]).isThisMe(a1, a2) ){
-			return bonds[i];
-		}
-	}
+	// TODO is this fast enough?
+	const auto bond = std::find_if(bonds.begin(), bonds.end(), [a1, a2](bBond b) { return b.isThisMe(a1, a2); });
 
-	std::string assert_string("No bond with these atom indeces found: " 
-		+ to_string(a1) + " " + to_string(a2) + ". Exiting.");
-	std::cout << assert_string << std::endl;
-	assert(0);
+#ifndef NDEBUG
+    std::string assert_string("No bond with these atom indeces found: " + to_string(a1) + " " + to_string(a2));
+	assert(bond != bonds.end() && assert_string.size());
+#endif
 
-	// TODO what should we return? std::optional? this std::exception looks sketchy
-	// anyways, return {}; returns a local and it's not good
-	throw std::exception();
-	return {};
+	return *bond;
 }
 
 /** Get bond order. **/
 int Topology::getBondOrder(int, int) const
 {
-	assert(!"Not implemented."); throw std::exception();
+	assert(!"Not implemented.");
 
 	return 0;
 }
@@ -2234,27 +2228,31 @@ SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
 	return aIx2TopTransform[aIx];
 }
 
-SimTK::Transform& Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
+SimTK::Transform Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	SimTK::SimbodyMatterSubsystem& matter,
 	const SimTK::State& someState)
 {
-	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
-	const  SimTK::MobilizedBodyIndex mbx = dumm.getAtomBody(dAIx);
-	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
+	// TODO
+	assert(!"Not implemented!");
+	return {};
 
-	// Body transforms
-	const Transform&    X_GB = mobod.getBodyTransform(someState);
-	const Rotation&     R_GB = X_GB.R();
-	const Vec3&         p_GB = X_GB.p();
+	// SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
+	// const  SimTK::MobilizedBodyIndex mbx = dumm.getAtomBody(dAIx);
+	// const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
 
-	// Atom
-	SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
+	// // Body transforms
+	// const Transform&    X_GB = mobod.getBodyTransform(someState);
+	// const Rotation&     R_GB = X_GB.R();
+	// const Vec3&         p_GB = X_GB.p();
 
-	// return
-	//const Vec3 p_BS_G = R_GB * station;
-	//return X;
+	// // Atom
+	// SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
+
+	// // return
+	// //const Vec3 p_BS_G = R_GB * station;
+	// //return X;
 
 }
 

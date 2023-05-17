@@ -396,6 +396,10 @@ bool ConformationalSearch::proposeEquilibrium(SimTK::State& someState)
     }
     */
 
+   // TODO
+    assert(!"What should we return here?");
+    return true;
+
 }
 
 // The update step in Monte Carlo methods consists in:

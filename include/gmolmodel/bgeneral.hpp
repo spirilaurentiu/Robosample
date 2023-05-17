@@ -492,7 +492,7 @@ double bDot(std::vector<double> &u, std::vector<double> &v);
 std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar);
 
 // Multiply by scalar and put in W
-std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W);
+void bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W);
 
 // Porject U on V and put in in p_UV
 std::vector<double>& proj(std::vector<double>& u, std::vector<double>& v, std::vector<double>& p_uv);
@@ -511,10 +511,10 @@ bMatrix& bCopyMat(bMatrix& src, bMatrix& dest);
 void bPrintMat(bMatrix src);
 
 // Transpose
-bMatrix& bTransposeInPlace(bMatrix&);
+void bTransposeInPlace(bMatrix&);
 
 // Multiply U by M and put it in V
-std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
+void bMulVecByMatrix(std::vector<double> &U,
 				     bMatrix& M,
 				     std::vector<double> &V);
 // Gram–Schmidt

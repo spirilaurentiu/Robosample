@@ -1264,7 +1264,7 @@ std::vector<double>& bMulByScalar(std::vector<double>& V,
 	return V;
 }
 
-std::vector<double>& bMulByScalar(std::vector<double>& V,
+void bMulByScalar(std::vector<double>& V,
 				  double scalar,
 				  std::vector<double>& W){
 	for (int i = 0; i < V.size(); i++){
@@ -1304,7 +1304,7 @@ void bPrintMat(bMatrix src){
 }
 
 // Transpose
-bMatrix& bTransposeInPlace(bMatrix& M){
+void bTransposeInPlace(bMatrix& M){
 	std::vector<std::vector<double>> tM;
 	tM.resize(M.size(), std::vector<double>(M[0].size(), 0));
 	double temp = 0.0;
@@ -1314,11 +1314,10 @@ bMatrix& bTransposeInPlace(bMatrix& M){
 			M[i][j] = tM[j][i];
 		}
 	}
-	
 }
 
 // Multiply U by M and put it in V
-std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
+void bMulVecByMatrix(std::vector<double> &U,
 				     bMatrix& M,
 				     std::vector<double> &V)
 {
@@ -1331,7 +1330,6 @@ std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
 			V[i] += M[i][j] * U[j];
 		}
 	}
-
 }
 
 // Rotation matrix generation using Gram–Schmidt procedure 

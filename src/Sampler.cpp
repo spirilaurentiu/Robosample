@@ -591,16 +591,21 @@ std::vector<double>& Sampler::generateVonMisesFisherSample(std::vector<double>& 
 // Draws from von Mises-Fisher distribution
 double Sampler::generateChiSample(void)
 {
+	// TODO
+	assert(!"Not implemented!");
+
 	int NDOFS = 3;
 
+	return 0;
 }
 
 
 // TODO revise param1 and param2
-SimTK::Real& Sampler::convoluteVariable(SimTK::Real& var,
+SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 		std::string distrib,
 		SimTK::Real param1, SimTK::Real param2)
 {
+	// TODO this string compare is extremely slow
 	// Bernoulli trial between the var and its inverse
 	if(distrib == "BernoulliInverse"){
 		SimTK::Real randomNumber_Unif;
@@ -658,7 +663,7 @@ SimTK::Real& Sampler::convoluteVariable(SimTK::Real& var,
 	return var;
 }
 
-SimTK::Real& Sampler::convoluteVariable(
+SimTK::Real Sampler::convoluteVariable(
 	std::vector<SimTK::Real>& vvar,
 	std::string distrib,
 	SimTK::Real param1, SimTK::Real param2)
@@ -666,6 +671,10 @@ SimTK::Real& Sampler::convoluteVariable(
 	for(auto& var : vvar){
 		convoluteVariable(var, distrib, param1, param2);
 	}
+
+	// TODO
+    assert(!"What should we return here?");
+    return std::numeric_limits<SimTK::Real>::min();
 }
 
 SimTK::Real Sampler::calcDeformationPotential(

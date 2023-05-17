@@ -66,9 +66,8 @@ bool CreateOutputDirectory(std::string outDir)
 			return false;
 		}
 	}
-    else{
-        return true;
-    }
+    
+	return true;
 }
 
 std::string CreateLogfilename( std::string outDir, long long int seed )

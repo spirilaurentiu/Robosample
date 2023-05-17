@@ -462,6 +462,10 @@ bool MonteCarloSampler::proposeEquilibrium(SimTK::State& someState)
 
     system->realize(someState, SimTK::Stage::Position); // NECESSARY
 
+    // TODO
+    assert(!"What should we return here?");
+    return true;
+
 }
 
 // The update step in Monte Carlo methods consists in:

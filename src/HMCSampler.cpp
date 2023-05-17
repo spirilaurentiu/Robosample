@@ -1710,6 +1710,9 @@ int HMCSampler::getJointTypeFromH(const SimTK::State& someState,
 		}
 	}
 
+	// TODO
+    assert(!"What should we return here?");
+    return -1;
 }
 
 /*

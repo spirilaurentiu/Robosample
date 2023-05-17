@@ -763,6 +763,10 @@ bool LAHMCSampler::proposeEquilibrium(SimTK::State& someState)
     calcNewConfigurationAndEnergies(someState, 0);
 
     PrintDetailedEnergyInfo(someState);
+
+    // TODO
+    assert(!"What should we return here?");
+    return true;
 }
 
 /** Store new configuration and energy terms**/
