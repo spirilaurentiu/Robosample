@@ -3209,6 +3209,13 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 	
 	}else if (integratorName == IntegratorName::RANDOM_WALK){
 
+		// Set velocities to zero
+		setVelocitiesToZero(someState);
+		system->realize(someState, SimTK::Stage::Velocity);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
 		std::cout << "Propose: RANDOM_WALK integrator" << std::endl;
 		if(topologies.size() < 2){
 			std::cout << "RANDOM_WALK integrators should only be used over many molecules\n"; 
