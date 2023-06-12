@@ -3,15 +3,11 @@
 // Constructor
 
 MyState::MyState(){
-
     //;
-
 }
 
 // Destructor
-
 MyState::~MyState(){
-    //;
 }
 
 

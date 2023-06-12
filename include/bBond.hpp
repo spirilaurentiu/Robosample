@@ -12,7 +12,7 @@
 
 #include "bgeneral.hpp"
 #include "Robo.hpp"
-#include "Simbody.h"
+// #include "Simbody.h"
 #include "Molmodel.h"
 
 //==============================================================================

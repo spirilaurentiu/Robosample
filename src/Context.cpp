@@ -1074,9 +1074,9 @@ void Context::updDummAtomClasses(
 			aCIx = atomClassId.dummAtomClassIndex;
 			atomClassName = atomClassId.name;
 
-			std::cout << "Context::transferAtomClasses "
-				<< aCIx << " " << atomClassName ;
-			atomParams.dump();
+			// std::cout << "Context::transferAtomClasses "
+			// 	<< aCIx << " " << atomClassName ;
+			// atomParams.dump();
 
 			// Define an AtomClass
 			(updWorld(worldIx))->forceField->defineAtomClass(aCIx, atomClassName.c_str(),
@@ -1114,7 +1114,7 @@ void Context::addDummParams(
 
 	// Load DuMM parameters for the first world
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-		std::cout << "Context::addDummParas WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
+		// std::cout << "Context::addDummParas WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
 
 		// Pass current topology to the current world
 		(updWorld(0))->topologies = &topologies;
@@ -1140,7 +1140,7 @@ void Context::addDummParams(
 
 		// Iterate through molecules
 		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-			std::cout << "Context::addDummParas WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
+			// std::cout << "Context::addDummParas WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
 
 			// Pass current topology to the current world
 			(updWorld(worldIx))->topologies = &topologies;
@@ -1169,7 +1169,7 @@ void Context::model(
 
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 
-			// Add entry to flexibility filenames matrix
+			// TODO check if count rbfile == count flexfile
 			loadRigidBodiesSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
@@ -4518,30 +4518,6 @@ void Context::writeInitialPdb()
 		topologies[mol_i].writeAtomListPdb(getOutputDir(),
 		"/pdbs/sb." + getPdbPrefix() + ".", ".pdb", 10, mc_step);
 	}
-
-
-
-
-
-    constexpr int TOPOLOGY = 0;
-        std::vector<SimTK::DuMM::AtomIndex> mapping(topologies[TOPOLOGY].getNumAtoms());
-
-        std::cout << "###AMBER - DuMM Mapping###\n";
-        std::cout << "DuMM\t|\tAMBER\n";
-        std::cout << std::string(21,'-') << "\n";
-        for(std::size_t k = 0; k < topologies[TOPOLOGY].getNumAtoms(); k++) {
-            // amber indices
-            const auto aIx = (topologies[TOPOLOGY].bAtomList[k]).getCompoundAtomIndex();
-            
-            // dumm indices
-            const auto d = topologies[TOPOLOGY].getDuMMAtomIndex(aIx);
-
-            // mapping[dumm_index] = amber_index
-            mapping.push_back(d);
-            mapping[d] = static_cast<SimTK::DuMM::AtomIndex>(k);
-
-            std::cout << d << "\t|\t" << k << std::endl;
-        }
 }
 
 // Write final pdb for reference

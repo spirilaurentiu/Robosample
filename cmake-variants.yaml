@@ -1,0 +1,19 @@
+buildType:
+  default: debug
+  choices:
+    debug:
+      short: Debug
+      long: Emit debug information
+      buildType: Debug
+    release:
+      short: Release
+      long: Optimize generated code
+      buildType: Release
+    release-train:
+      short: PGO Train
+      long: Run the instrumentation for Profile Guided Optimization
+      buildType: PGO_Train
+    release-use:
+      short: PGO Use
+      long: Use the generated instrumentation data for Profile Guided Optimization
+      buildType: PGO_Use

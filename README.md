@@ -1,18 +1,23 @@
 # Robosample: Generalized Coordinates Molecular Simulation Coupled with Gibbs Sampling (GCHMC)
 
 Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed robotics algorithms imlemented in Simbody and molecular modelling facilities in Molmodel to generate Markov Chain Monte Carlo moves coupled with Gibbs sampling able to reproduce the atomistic level detailed distribution of molecular systems.
+
 ![](drug.gif)
+
 [More about the method.](https://pubmed.ncbi.nlm.nih.gov/28892630/)
 
 # Installation
-
-MAKE SURE NO CONDA IS ACTIVTE
+## Prerequisites
+* Turn off all `conda` environments.
+* Disable all antivirus programs (especially for WSL).
+* Execute all commands in the native terminal if running under WSL.
+* Install everything in `/home/<username>/` if running under WSL.
 
 ## Installing dependencies
 Install the dependencies:
 ```
 sudo apt-get update
-sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev
+sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build linux-tools-common linux-tools-generic linux-tools-`uname -r`
 ```
 
 ### Fill in exports exports:
@@ -20,12 +25,8 @@ sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libg
 export CUDA_INC_DIR=/usr/local/cuda
 export CUDA_ROOT=/usr/local/cuda
 ```
-**WARNING:** It is recommended to run these exports in the WSL or native Linux terminal. When running in the Visual Studio Code terminal on WSL, these exports are not saved (not even in `.bashrc`) and must be restated before executing Robosample.
-
-Also make sure that `cmake --version` is greater than 3.1.
 
 ##  Cloning the project
-**WARNING:** Maximum performance is obtained if the folder project folder is installed in `/home/<user name>/` (see [this](https://docs.microsoft.com/en-us/windows/wsl/compare-versions#performance-across-os-file-systems) for more details). An antivirus program might interfere with WSL and cause performace drops. When running WSL, the user may opt to shut the running antivirus.
 ```
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
@@ -34,79 +35,119 @@ cd Robosample
 ## Robosample branches
 * `master` Stable version. Install by executing (from Robosample directory):
 ```
-cd Molmodel/Simbody01/
+cd openmm/
+git checkout master
+
+cd ../Simbody01/
+git checkout master
+
+cd ../Molmodel/
 git checkout master
 
 cd ../
 git checkout master
-
-cd ../
-git checkout master
-
-cd openmm
-git checkout master
-cd ../
 ```
 * `cpp_latest` - Stable version with latest C++ standard.
 * `experimental_cpp_latest` - Unstable version with latest C++ version.
 
 ## Building Robosample
-Run `build.sh`. A mandatory parameter is `-b` (`--build`) which specifies whether to build as debug or release. Other two mandatory parameters are `--cc` (C compiler) and `--cpp` (C++ compiler). To set the number of CPU cores involved in compilation, use `-n` (`--nproc`, default is `nproc * 2`). On release builds, if you want to have an address sanitizer, compile with `-u` (`--ubsan`). **Do not run as sudo.**
+### Compiler
+We have compiled Robosample with `gcc` and `clang`:
+* `clang` compiles faster and produces marginally faster code.
+* `GCC 11` produces ICE (internal compiler error) for OpenMM when using IPO. This is not the case with earlier versions (`GCC 7.5` works).
 
-Building for production with GCC:
-```
-bash build.sh -b release --cc gcc --cpp g++ --pgo
-```
+### OpenMM platform
+OpenMM can use hardware acceleration. Robosample defaults with OpenCL. To set the platform, you can set it via the `cmake` command in the next step:
+* `OPENMM_PLATFORM=CPU` for CPU.
+* `OPENMM_PLATFORM=CUDA` for CUDA.
+* `OPENMM_PLATFORM=OPENCL` for OpenCL.
 
-Building for debug with GCC:
+### Building Robosample
 ```
-bash build.sh -b debug --cc gcc --cpp g++
-```
-
-Building with fewer cores (machines with limited resources, especially RAM, can fail if too many cores are used):
-```
-bash build.sh -b release --cc gcc --cpp g++ -n 2
-```
-
-Building with address sanitizer (already on if compiling for debug):
-```
-bash build.sh -b release --cc gcc --cpp g++ -u
-```
-
-To read more information, execute with the help flag (`-h` or `--help`):
-```
-bash build.sh -h
-```
-
-Building for production with GCC using other versions of GCC:
-```
-bash build.sh -b release --cc /usr/bin/gcc-8 --cpp /usr/bin/g++-8
-```
-
-# Open the project using any IDE (e.g. Visual Studio Code)
-Install [Visual Studio Code](https://code.visualstudio.com/) on Windows. Run `code .` in `Robosample`.
-
-# Working on Robosample
-After working on Robosample, it must be compiled as debug or release (the same flags as in section [Building Robosample](#building-robosample)). To compile as a different configuration, full recompilation is needed (see [Building Robosample](#building-robosample)).
-```
-cd build/debug/robosample
-make -j$((`nproc`*2))
+mkdir build
+cd build
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
+ninja robosample
 ```
 
 # Running Robosample
-`Robosample` is located in `build/debug/robosample` or `build/release/robosample`.
+The executable is compiled in `build/`. Examples are available in the same folder. To see them, type:
 ```
-cd build/release/robosample
-./src/GMOLMODEL_robo inp.2but
+ll inp.*
 ```
-**WARNING**: To avoid dynamic library lookup failures, it is recommended to run Robosample in the WSL or native Linux terminal and not in Visual Studio Code terminal. See more details at [Installing dependencies](#installing-dependencies).  
-  
-To change different parameters (use visualizer, use OpenMM etc) edit `inp.2but` which is located in `build-debug` or `build-release`.
 
-# Using the visualizer
-Robosample can show in real time the progress of the simulation. To do so, change `VISUAL FALSE` to `VISUAL TRUE` in `inp`.
+To run any of them, execute:
+```
+./robosample inp.2but
+```
 
-When running in WSL, an X server such as Xming is needed in order for the program to draw to screen. In Windows, download and install [Xming](https://sourceforge.net/projects/xming/) using the default options. Open `.bashrc` with `vi ~/.bashrc` and add `export DISPLAY=:0` at the end of the file. Xming must be running when Robosample is started with a visualizer\.
+# BOLT
+We have applied [LLVM-BOLT](https://github.com/llvm/llvm-project/tree/main/bolt) developed by Facebook.
 
-## Troubleshooting the visualizer
-`freeglut (simbody-visualizer_d): failed to open display ':0'`: make sure [Xming](#installing-xming) is running. If it does not work, change `VISUAL TRUE` to `VISUAL FALSE`.
+## Installing BOLT
+Downlad BOLT and compile it. A docker file is also available.
+```
+git clone https://github.com/llvm/llvm-project.git
+mkdir build
+cd build
+cmake -G Ninja ../llvm-project/llvm -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS="bolt"
+ninja bolt
+```
+
+Add BOLT to `PATH`:
+```
+echo "PATH=$(pwd)/bin:$PATH" >> ~/.bashrc
+source ~/.bashrc
+```
+
+Allow intrumentation:
+```
+sudo echo "-1" > /proc/sys/kernel/perf_event_paranoid
+```
+This does not seem to fix the value forever. You will most likely need to change it every time you want to run BOLT.
+
+## Instrumentation
+We have discovered that running **only one** simulation round yields the best result. Also, using a larger system seems to be optimal. Perform the necessary changes in the input file and execute:
+```
+perf record -e cycles:u -j any,u -a -o perf.data ./robosample inp.aper
+```
+
+Convert the data into something that can be used by BOLT:
+```
+perf2bolt -p perf.data robosample -o perf.fdata
+```
+
+Optimize the binary:
+```
+llvm-bolt robosample -o robosample.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+```
+
+Finally, the optimized binary can be run as:
+```
+./robosample.bolt inp.2but
+```
+
+
+# Development
+Robosample is being developed using [Visual Studio Code](https://code.visualstudio.com/) on Windows. To start it, run `code .` in `Robosample`.
+
+## Sanitizers
+We use address and undefined behaviour sanitizers in our debug builds. To get the correct output, run:
+```
+echo "export ASAN_OPTIONS=detect_odr_violation=0:detect_leaks=0" >> ~/.bashrc
+echo "export UBSAN_OPTIONS=print_stacktrace=1" >> ~/.bashrc
+source ~/.bashrc
+```
+
+Set `detect_leaks=1` if you want to see memory leaks.
+
+## Fun facts
+To get the total number of lines in header and source files, execute this from the root directory:
+```
+find . -name '*.h' -o -name '*.cpp' | xargs wc -l
+```
+
+To see all exported symbols, use:
+```
+nm -an build/robosample | c++filt
+```

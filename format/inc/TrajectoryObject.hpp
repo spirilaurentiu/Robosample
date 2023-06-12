@@ -7,7 +7,7 @@
 
 
 extern "C" {
-#include "format/mdtraj/dcdplugin.h"
+#include "mdtraj/dcdplugin.h"
 }
 
 #include <iostream>

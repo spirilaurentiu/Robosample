@@ -22,7 +22,7 @@
 // Molmodel specific headers
 
 #include "Molmodel.h"
-#include "mol.h"
+#include "molmodel/internal/mol.h"
 
 #include "SimTKcommon.h"
 #include "molmodel/internal/common.h"
@@ -42,14 +42,43 @@
 
 using namespace std;
 
+
+// Smart trace
+template <typename T>
+void trace_impl(std::ostream &os, T &&t)
+{
+    os << t;
+}
+
+template <typename T, typename... Args>
+void trace_impl(std::ostream &os, T &&t, Args &&... args)
+{
+    os << t << ' ';
+    trace_impl(os, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void trace(Args &&... args)
+{
+    std::cout << "[TRACE] ";
+    trace_impl(std::cout, std::forward<Args>(args)...);
+    std::cout << std::endl;
+}
+
+// ----------
+
 #define sq(x)		((x)*(x))
 
 //#ifndef sqr
 //#define sqr(x) ((x)*(x))
 //#endif
 
+#ifndef ANG_360_TO_m180_180
+#define ANG_360_TO_m180_180(x) (((x)>180.0) ? ((x)-360.0) : (x))
+#endif
+
 #ifndef ANG_360_TO_180
-#define ANG_360_TO_180(x) (((x)>180) ? ((x)-360) : (x))
+#define ANG_360_TO_180(x) std::abs(((x)>180.0) ? ((x)-360.0) : (x))
 #endif
 
 // Check versus Velocity Verlet in cart coords
@@ -100,7 +129,7 @@ inline long double RandomRealRange(long double min, long double max)
 }
 
 
-double round(double r);
+//double round(double r);
 
 // Log-sum-exp function
 double LSE2(double, double);
@@ -152,6 +181,9 @@ int bZeroStr(char *dest);
  */
 int bSubstr (char *dest, const char *src, int start, int no_chars);
 
+std::string to_lower(std::string str);
+std::string to_upper(std::string str);
+
 /*
  * Left trim
  */
@@ -189,9 +221,9 @@ bool AreSame(double a, double b, double EPSILON);
  * Check if pair, triple or quadruple is the same irrespective of order
  * from the chemical point of view (ex.: a-b-c-d != a-c-b-d)
  */
-bool IsTheSameBond(std::vector<int>);
-bool IsTheSameAngle(std::vector<int>);
-bool IsTheSameTorsion(std::vector<int>);
+bool IsTheSameBond(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
+bool IsTheSameAngle(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
+bool IsTheSameTorsion(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref);
 
 /*
  * Given a frame F1 expressed in another frame G and a station v1 expressed 
@@ -214,6 +246,44 @@ bool NumericalInverse(SimTK::Matrix M, SimTK::Matrix& MInv, int nrows, int ncols
 bool NumericalLeftInverse(SimTK::Matrix M, SimTK::Matrix& MLeftInv, int nrows, int ncols);
 bool NumericalRightInverse(SimTK::Matrix M, SimTK::Matrix& MRightInv, int nrows, int ncols);
 
+/**
+ * Compute determinant
+*/
+double cstyle_det(double *cstyle_matrix, int dim);
+
+/**
+ * Print C++ vector
+*/
+template <typename S>
+ 
+void PrintCppVector(const vector<S>& vec,
+	std::string sep = " ",
+	std::string ending = "\n") 
+{
+    // Iterating over all elements of vector
+    for (const auto &elem : vec) {
+        std::cout << sep << elem;
+    }
+	std::cout << ending;
+
+}
+
+template <typename S>
+void PrintCppVector(const vector < vector <S>>& vec,
+	std::string sep = " ",
+	std::string ending = "\n") 
+{
+    // Iterating over all elements of vector
+    for (const auto &v : vec) {
+		for(const auto &elem : v){
+			std::cout << sep << elem;
+		}
+		std::cout << std::endl;
+        
+    }
+	std::cout << ending;
+}
+
 /*
  * Get the block corresponding to a body from an H-like matrix
  * Body index "which" starts from 0, 0 being the Ground body.
@@ -234,12 +304,18 @@ void SOA_SpatialMat2Mat66(const SimTK::SpatialMat& in, SimTK::Mat66& out);
 /*
  * Print Big Matrices separated by spaces
  */
-void PrintBigMat(SimTK::Matrix M, int nrows, int ncols, int decimal_places, std::string header);
+void PrintBigMat(const SimTK::Matrix& M,
+	int nrows, int ncols,
+	int decimal_places,
+	std::string header);
+	
 void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places, std::string header);
 void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places, std::string header);
-void PrintBigMat(SimTK::Vector M, int nrows, int decimal_places, std::string header);
+void PrintBigMat(
+	const SimTK::Vector& M, int nrows,
+	int decimal_places = 3, std::string header = "unknown matrix");
 
 /*
  * Print Spatial Matrix
@@ -250,7 +326,11 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
 /*
  * Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places);
+void PrintTransform(SimTK::Transform T, int decimal_places, std::string header);
+/*
+ * Angle
+ */
+SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2);
 
 /*
  * Dihedral angle
@@ -287,7 +367,8 @@ enum struct ThermostatName : int { // Thermostats
  * Simulation
  */
 
-enum struct IntegratorName : int { // Samplers
+enum struct IntegratorName : int { // Integrators
+	EMPTY,
 	VERLET,
 	EULER,
 	EULER2,
@@ -295,7 +376,25 @@ enum struct IntegratorName : int { // Samplers
 	RUNGEKUTTA,
 	RUNGEKUTTA2,
 	RUNGEKUTTA3,
-	RUNGEKUTTAFELDBERG
+	RUNGEKUTTAFELDBERG,
+	OMMVV,
+	RANDOM_WALK,
+	NOF_INTEGRATORS
+};
+
+const std::unordered_map<std::string, IntegratorName>
+IntegratorNameS{
+	{"EMPTY", IntegratorName::EMPTY},
+	{"VERLET", IntegratorName::VERLET},
+	{"EULER", IntegratorName::EULER},
+	{"EULER2", IntegratorName::EULER2},
+	{"CPODES", IntegratorName::CPODES},
+	{"RUNGEKUTTA", IntegratorName::RUNGEKUTTA},
+	{"RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2},
+	{"RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3},
+	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
+	{"OMMVV", IntegratorName::OMMVV},
+	{"RANDOM_WALK", IntegratorName::RANDOM_WALK}
 };
 
 /*
@@ -309,6 +408,7 @@ enum struct GmolRandDistributionType : int {
 
 // Samplers
 enum struct SamplerName : int {
+	EMPTY,
 	MC,
 	HMC,
 	LAHMC
@@ -334,6 +434,8 @@ struct Point {
 
 using DataFrame = std::vector<Point>;
 
+SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev);
+
 // Gmolmodel version of mean
 SimTK::Real bMean(std::vector<SimTK::Real> v);
 SimTK::Real bVariance(std::vector<SimTK::Real> v);
@@ -357,10 +459,19 @@ DataFrame k_means(const DataFrame& data,
 				  size_t k,
 				  size_t number_of_iterations);
 
+double update_variance(double current_value, 
+	double last_variance, 
+	double last_average,
+	int n);
+
 
 // STD linear algebra
 
+
+
 // Print
+
+
 void bPrintVec(std::vector<double> &src);
 
 // Assign
@@ -381,7 +492,7 @@ double bDot(std::vector<double> &u, std::vector<double> &v);
 std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar);
 
 // Multiply by scalar and put in W
-std::vector<double>& bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W);
+void bMulByScalar(std::vector<double>& V, double scalar, std::vector<double>& W);
 
 // Porject U on V and put in in p_UV
 std::vector<double>& proj(std::vector<double>& u, std::vector<double>& v, std::vector<double>& p_uv);
@@ -400,16 +511,16 @@ bMatrix& bCopyMat(bMatrix& src, bMatrix& dest);
 void bPrintMat(bMatrix src);
 
 // Transpose
-bMatrix& bTransposeInPlace(bMatrix&);
+void bTransposeInPlace(bMatrix&);
 
 // Multiply U by M and put it in V
-std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
+void bMulVecByMatrix(std::vector<double> &U,
 				     bMatrix& M,
 				     std::vector<double> &V);
 // Gram–Schmidt
 bMatrix& gram_schmidt(bMatrix& M, bMatrix& es);
 
-
+SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2);
 
 
 #ifndef MONTECARLOSAMPLER

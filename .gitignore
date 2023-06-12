@@ -1,14 +1,7 @@
-# ide's
-.idea/
-.vscode/
-
-# compilation directories
-build/
-install/
-
-# all swap files
-*/.*.swp
-.*.swp
+# compilation stuff
+build
+doc/html
+doc/html/*
 
 # tools folder
 tools/__pycache__/*
@@ -17,47 +10,6 @@ tools/.*.swp
 tools/demo/robots/
 tools/demo/inp.*
 tools/demo/out.*
-
-# docs folder
-doc/html
-doc/html/*
-
-# src/CMakeLists.txt
-
-cmake-build-debug
-cmake-build-debug/*
-cmake-build-debug/*/*
-
-build-release/
-build-release/*
-build-release/*/*
-build-release/*/*/*
-build-release/*/*/*/*
-
-Molmodel/build-release/
-Molmodel/build-release/*
-Molmodel/build-release/*/*
-Molmodel/build-release/*/*/*
-Molmodel/build-release/*/*/*/*
-
-Molmodel/Simbody01/build-release/
-Molmodel/Simbody01/build-release/*
-Molmodel/Simbody01/build-release/*/*
-Molmodel/Simbody01/build-release/*/*/*
-Molmodel/Simbody01/build-release/*/*/*/*
-
-Molmodel/build-release/
-Molmodel/build-release/*
-Molmodel/build-release/*/*
-Molmodel/build-release/*/*/*
-Molmodel/build-release/*/*/*/*
-
-openmm/build-release/
-openmm/build-release/*
-openmm/build-release/*/*
-openmm/build-release/*/*/*
-openmm/build-release/*/*/*/*
-
 tools/__pycache__/
 tools/__pycache__/*
 

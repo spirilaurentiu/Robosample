@@ -164,27 +164,27 @@ World::World(int worldIndex,
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
 	ts = std::make_unique<SimTK::TimeStepper>(*compoundSystem, *integ);
 
-	// Set the visual flag and if true initialize a Decorations Subsystem,
-	// a Visualizer and a Simbody EventReporter which interacts with the
-	// Visualizer
-	this->visual = isVisual;
-	if(visual){
-		decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
-		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
-		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
-			*visualizer, std::abs(visualizerFrequency));
-		compoundSystem->addEventReporter(visualizerReporter.get());
+	// // Set the visual flag and if true initialize a Decorations Subsystem,
+	// // a Visualizer and a Simbody EventReporter which interacts with the
+	// // Visualizer
+	// this->visual = isVisual;
+	// if(visual){
+	// 	decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
+	// 	visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
+	// 	visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
+	// 		*visualizer, std::abs(visualizerFrequency));
+	// 	compoundSystem->addEventReporter(visualizerReporter.get());
 
-		// Initialize a DecorationGenerator
-		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
-			compoundSystem.get(),
-			matter.get(),
-			forceField.get(),
-			forces.get()
-		);
+	// 	// Initialize a DecorationGenerator
+	// 	paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
+	// 		compoundSystem.get(),
+	// 		matter.get(),
+	// 		forceField.get(),
+	// 		forces.get()
+	// 	);
 
-		visualizer->addDecorationGenerator(paraMolecularDecorator.get());
-	}
+	// 	visualizer->addDecorationGenerator(paraMolecularDecorator.get());
+	// }
 
 	// Statistics
 	moleculeCount = -1;
@@ -342,12 +342,12 @@ void World::adoptTopology(int which)
 	//		SimTK::CompoundSystem::CompoundIndex(
 	//		 compoundSystem->getNumCompounds() - 1));
 
-	// Add the Topology object to Decorators's vector of molecules
-	if(visual){
-		// We need copy here.
-		//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
-		paraMolecularDecorator->AddMolecule( &((*topologies)[which]) ); // DANGER
-	}
+	// // Add the Topology object to Decorators's vector of molecules
+	// if(visual){
+	// 	// We need copy here.
+	// 	//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
+	// 	paraMolecularDecorator->AddMolecule( &((*topologies)[which]) ); // DANGER
+	// }
 
 }
 
@@ -1110,10 +1110,10 @@ SimTK::State& World::setAtomsLocationsInGround(
 	// Loop through molecules/topologies
 	for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++) {
 
-		// Set the decorator
-		if (visual == true) {
-			paraMolecularDecorator->setAtomTargets(otherWorldsAtomsLocations[i]);
-		}
+		// // Set the decorator
+		// if (visual == true) {
+		// 	paraMolecularDecorator->setAtomTargets(otherWorldsAtomsLocations[i]);
+		// }
 
 		/////////////////
 		// 1. COMPOUND

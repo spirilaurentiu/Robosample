@@ -42,8 +42,11 @@
  *
  ***************************************************************************/
 
-#include "format/mdtraj/largefiles.h"   /* platform dependent 64-bit file I/O defines */
-#include "format/mdtraj/fastio.h"       /* must come before others, for O_DIRECT...   */
+#include "mdtraj/largefiles.h"   /* platform dependent 64-bit file I/O defines */
+#include "mdtraj/fastio.h"       /* must come before others, for O_DIRECT...   */
+#include "mdtraj/endianswap.h"
+#include "mdtraj/molfile_plugin.h"
+#include "mdtraj/dcdplugin.h"
 
 #include <stdio.h>
 #include <sys/stat.h>
@@ -52,9 +55,6 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "format/mdtraj/endianswap.h"
-#include "format/mdtraj/molfile_plugin.h"
-#include "format/mdtraj/dcdplugin.h"
 
 /* print DCD error in a human readable way */
 static void print_dcderror(const char *func, int errcode) {

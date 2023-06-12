@@ -24,9 +24,9 @@ std::string exec(const char* cmd) {
  **************************************/
 
 
-double round(double r) {
-    return (r > 0.0) ? floor(r + 0.5) : ceil(r - 0.5);
-}
+// double round(double r) {
+//     return (r > 0.0) ? floor(r + 0.5) : ceil(r - 0.5);
+// }
  
 
 // Log-sum-exp function for 2 arguments

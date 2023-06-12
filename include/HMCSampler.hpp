@@ -430,6 +430,8 @@ protected:
 
 	RANDOM_CACHE RandomCache;
 
+	std::vector<SimTK::Vec3> omm_locations;
+
 	// BEGIN MCSampler
 	std::vector<SimTK::Transform> SetTVector; // Transform matrices
 	std::vector<SimTK::Transform> TVector; // Transform matrices

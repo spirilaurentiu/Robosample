@@ -41,12 +41,13 @@ void bSpecificAtom::Zero(){
 
 void bSpecificAtom::Print(int whichWorld)
 {
-    std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
-        <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
-        <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
-        <<" atomClassIndex  "<<dummAtomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
-        //<< " bAtomType "<< bAtomType 
-        <<" charge "<<charge<<" mobile "<<mobile<<" visited "<<visited<<std::endl;
+    // std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
+    //     <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
+    //     <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
+    //     <<" atomClassIndex  "<<dummAtomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
+    //     //<< " bAtomType "<< bAtomType 
+    //     <<" charge "<<charge<<" mobile "<<mobile<<" visited "<<visited<<std::endl;
+
 
 /*     std::cout << "Neighbors:";
     for(std::vector<bSpecificAtom *>::iterator it = neighbors.begin();

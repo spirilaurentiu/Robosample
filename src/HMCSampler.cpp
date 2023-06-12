@@ -1107,24 +1107,25 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 }
 
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
-	// assert(!"Not implemented");
-
 	try {
 		
-		// actual openmm integration
-		dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
-
 		// this code works for updating simbody bodies
 		// each body should be an atom
 		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 
+		// actual openmm integration
+		dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+
 		// somewhere, the topology gets ruined
 		system->realizeTopology();
 
-		std::vector<SimTK::Vec3> parents;
-		parents.push_back(SimTK::Vec3(0, 0, 0));
-		for (int i = 0; i < dumm->getNumAtoms(); i++) {
-			parents.push_back(dumm->calcAtomLocationInGroundFrameThroughOMM(SimTK::DuMM::AtomIndex(i)));
+		// transfer coordinates from openmm to simbody
+		omm_locations.reserve(matter->getNumBodies());
+		omm_locations[0] = SimTK::Vec3(0, 0, 0);
+
+		const auto positions = dumm->OMM_getPositions();
+		for (int i = 0; i < positions.size(); i++) {
+			omm_locations[i + 1] = SimTK::Vec3(positions[i][0], positions[i][1], positions[i][2]);
 		}
 
 		// calculate atom transformations after integrating with openmm
@@ -1132,9 +1133,9 @@ void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 			SimTK:DuMM::AtomIndex aix(i);
 			auto mbx = dumm->getAtomBody(aix);
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-			const SimTK::Vec3 location = dumm->calcAtomLocationInGroundFrameThroughOMM(aix);
-
-			auto parent = parents[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
+			
+			const auto location = omm_locations[i + 1];
+			const auto parent = omm_locations[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
 
 			mobod.setDefaultInboardFrame(Transform(Rotation(), location));
 			mobod.setDefaultOutboardFrame(Transform(Rotation(), parent));
@@ -1144,15 +1145,6 @@ void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 		}
 
 		compoundSystem->realize(someState, SimTK::Stage::Position);
-
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-
-			// const Transform& X_GB = mobod.getBodyTransform(someState);
-			// std::cout << "AFTER REALIZE " << int(mbx) << " " << X_GB << std::endl;
-
-			// std::cout << "AFTER REALIZE " << int(mbx) << " " << mobod.getBodyOriginLocation(someState) << std::endl;
-		}
 
 	}catch(const std::exception&){
 		// Send general message

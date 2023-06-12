@@ -1,4 +1,4 @@
-#include "format/PDBObject.hpp"
+#include "PDBObject.hpp"
 
 // Uses standard PDB formatting reccomandations
 void PDBObject::readPDBfile(std::string pdbfile)

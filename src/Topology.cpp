@@ -493,11 +493,11 @@ void Topology::loadAtomAndBondInfoFromReader(readAmberInput *amberReader)
 /** Print atom and bonds list with details**/
 void Topology::PrintAtomList(int whichWorld)
 {
-	// Atoms
-	std::cout<<"Topology::PrintAtomList\n";
-	for(unsigned int i = 0; i < bAtomList.size(); i++){
-		bAtomList[i].Print(whichWorld);
-	}
+	// // Atoms
+	// std::cout<<"Topology::PrintAtomList\n";
+	// for(unsigned int i = 0; i < bAtomList.size(); i++){
+	// 	bAtomList[i].Print(whichWorld);
+	// }
 
 /* 	// Bonds
 	for(unsigned int i = 0; i < bonds.size(); i++){
@@ -804,7 +804,7 @@ void Topology::generateDummAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 )
 {
-	std::cout << "Topology::generateDummAtomClasses START\n";
+	// std::cout << "Topology::generateDummAtomClasses START\n";
 
 	// Declarations
 	std::vector<bool> founditInDuMM(
@@ -846,10 +846,10 @@ void Topology::generateDummAtomClasses(
 			founditInDuMM[i] = dumm.hasAtomClass(simtkstr);
 		}
 
-		std::cout << "Topology::generateDummAtomClasses try AtomClassName " 
-			<< " " << bAtomList[i].getFftype() << " "
-			<< founditInThisTopology << " " << founditInDuMM[i];
-		atomClassParams.dump();
+		// std::cout << "Topology::generateDummAtomClasses try AtomClassName " 
+		// 	<< " " << bAtomList[i].getFftype() << " "
+		// 	<< founditInThisTopology << " " << founditInDuMM[i];
+		// atomClassParams.dump();
 
 		// we don't have this AtomClass
 		if ( (!founditInThisTopology) && (!founditInDuMM[i]) ) {
@@ -872,9 +872,9 @@ void Topology::generateDummAtomClasses(
 				atomClassParams.LJWellDepth
 			);
 
-			std::cout << "Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName " 
-				<< dummAtomClassIndex << " " << atomClassName ;
-			atomClassParams.dump();
+			// std::cout << "Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName " 
+			// 	<< dummAtomClassIndex << " " << atomClassName ;
+			// atomClassParams.dump();
 
 			// Insert an entry in our map too
 			AtomClassId atomClassId(dummAtomClassIndex, atomClassName);
@@ -1082,9 +1082,9 @@ void Topology::bAddDummBondParams(std::string,
 
 		if (  !foundit ){ // bond was not found
 
-			std::cout << "Topology::bAddDummBondParams " 
-				<< thisBondACIxs[0] << " "
-				<< thisBondACIxs[1] << std::endl;
+			// std::cout << "Topology::bAddDummBondParams " 
+			// 	<< thisBondACIxs[0] << " "
+			// 	<< thisBondACIxs[1] << std::endl;
 		
 			dumm.defineBondStretch_KA(
 				(bAtomList[bonds[t].i]).getDummAtomClassIndex(),
@@ -1145,10 +1145,10 @@ void Topology::bAddDummAngleParams(std::string,
 
 		if (  !foundit ){ // angle was not found
 
-			std::cout << "Topology::bAddDummAngleParams " 
-				<< thisAngleACIxs[0] << " "
-				<< thisAngleACIxs[1] << " "
-				<< thisAngleACIxs[2] << std::endl;
+			// std::cout << "Topology::bAddDummAngleParams " 
+			// 	<< thisAngleACIxs[0] << " "
+			// 	<< thisAngleACIxs[1] << " "
+			// 	<< thisAngleACIxs[2] << std::endl;
 		
 			dumm.defineBondBend_KA(
 				bAtomList[amberReader->getAnglesAtomsIndex1(t)].getDummAtomClassIndex(),
@@ -1180,8 +1180,9 @@ void Topology::bAddDummTorsionParams(
 	// Keep track of inserted AtomClass pairs
 	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
 
-	std::cout << "Topology::bAddDummTorsionParams allDihedralsACIxs\n";
-	PrintCppVector(allDihedralsACIxs);
+	// TODO should allDihedralsACIxs be empty?
+	// std::cout << "Topology::bAddDummTorsionParams allDihedralsACIxs\n";
+	// PrintCppVector(allDihedralsACIxs);
 
 	// Amber reader dihedrals vector
 	std::vector<std::pair<int, int>> pairStartAndLens =
@@ -1207,15 +1208,15 @@ void Topology::bAddDummTorsionParams(
 			SimTK::DuMM::AtomClassIndex aCIx4 =
 				bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getDummAtomClassIndex();
 
-			std::cout << "Topology::bAddDummDihedralParams checking " 
-				<< amberReader->getDihedralsAtomsIndex1(t) << " " << amberReader->getDihedralsAtomsIndex2(t) << " "
-				<< amberReader->getDihedralsAtomsIndex3(t) << " " << amberReader->getDihedralsAtomsIndex4(t) << " :| "
-				<< first << " " << t << " " << numberOf << " | " << " forceK: " 
-				<< SimTK_KCAL_TO_KJOULE * amberReader->getDihedralsForceK(t) << " period " 
-				<< amberReader->getDihedralsPeriod(t)
-				<< " phase: " << amberReader->getDihedralsPhase(t) << " | "
-				<< aCIx1 << " " << aCIx2 << " " << aCIx3 << " " << aCIx4
-				<< std::endl;
+			// std::cout << "Topology::bAddDummDihedralParams checking " 
+			// 	<< amberReader->getDihedralsAtomsIndex1(t) << " " << amberReader->getDihedralsAtomsIndex2(t) << " "
+			// 	<< amberReader->getDihedralsAtomsIndex3(t) << " " << amberReader->getDihedralsAtomsIndex4(t) << " :| "
+			// 	<< first << " " << t << " " << numberOf << " | " << " forceK: " 
+			// 	<< SimTK_KCAL_TO_KJOULE * amberReader->getDihedralsForceK(t) << " period " 
+			// 	<< amberReader->getDihedralsPeriod(t)
+			// 	<< " phase: " << amberReader->getDihedralsPhase(t) << " | "
+			// 	<< aCIx1 << " " << aCIx2 << " " << aCIx3 << " " << aCIx4
+			// 	<< std::endl;
 
 			// Check if a quad of atom indices is a normal dihedral
 			// or an improper dihedral, by checking if consecutive
@@ -1267,38 +1268,40 @@ void Topology::bAddDummTorsionParams(
 			} */
 
 			if (dihedral){
-				for (int tempVar=0; tempVar<numberOf; tempVar++)
-					std::cout << "found dihedral angle!\n";
+				// for (int tempVar=0; tempVar<numberOf; tempVar++)
+				// 	std::cout << "found dihedral angle!\n";
+
 				// If it is a normal dihedral, check if we have it in our
 				// dihedral list
 				bool foundit = false;
-				printf("allDihedralsACIxs.size: %d\n", allDihedralsACIxs.size());
+				// std::cout << "allDihedralsACIxs.size: " << allDihedralsACIxs.size() << std::endl;
 
-				for(auto& row:allDihedralsACIxs){
+				for(auto& row:allDihedralsACIxs)
+				{
 					if ( IsTheSameTorsion (thisDihedralACIxs, row))
-						{
+					{
 						foundit = true;	break;
-						}
+					}
 				}
 
 				if (!foundit){ // dihedral was not found
 
-					std::cout << "Topology::bAddDummDihedralParams insert " 
-						<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
-						<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
-						<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
-						<< " ;| " << amberReader->getDihedralsForceK(t) 
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
-					if(numberOf == 2){std::cout
-						<< " | " << amberReader->getDihedralsForceK(t+1)
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
-					if(numberOf == 3){std::cout
-						<< " | " << amberReader->getDihedralsForceK(t+2)
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
-					if(numberOf > 3){std::cout
-						<< " | " << amberReader->getDihedralsForceK(t+3)
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
-					std::cout << std::endl << std::flush;
+					// std::cout << "Topology::bAddDummDihedralParams insert " 
+					// 	<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
+					// 	<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
+					// 	<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
+					// 	<< " ;| " << amberReader->getDihedralsForceK(t) 
+					// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
+					// if(numberOf == 2){std::cout
+					// 	<< " | " << amberReader->getDihedralsForceK(t+1)
+					// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
+					// if(numberOf == 3){std::cout
+					// 	<< " | " << amberReader->getDihedralsForceK(t+2)
+					// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
+					// if(numberOf > 3){std::cout
+					// 	<< " | " << amberReader->getDihedralsForceK(t+3)
+					// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
+					// std::cout << std::endl << std::flush;
 
 					// Define the dihedrals
 					if(numberOf == 1){
@@ -1371,22 +1374,22 @@ void Topology::bAddDummTorsionParams(
 			
 			if (!foundit){ // improper was not found
 
-				std::cout << "*** improper inserted: " 
-					<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
-					<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
-					<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
-					<< " ;| " << amberReader->getDihedralsForceK(t) 
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
-				if(numberOf == 2){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+1)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
-				if(numberOf == 3){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+2)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
-				if(numberOf > 3){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+3)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
-				std::cout << std::endl << std::flush;
+				// std::cout << "*** improper inserted: " 
+				// 	<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
+				// 	<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
+				// 	<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
+				// 	<< " ;| " << amberReader->getDihedralsForceK(t) 
+				// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
+				// if(numberOf == 2){std::cout
+				// 	<< " | " << amberReader->getDihedralsForceK(t+1)
+				// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
+				// if(numberOf == 3){std::cout
+				// 	<< " | " << amberReader->getDihedralsForceK(t+2)
+				// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
+				// if(numberOf > 3){std::cout
+				// 	<< " | " << amberReader->getDihedralsForceK(t+3)
+				// 	<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
+				// std::cout << std::endl << std::flush;
 
 				// Define the dihedrals
 				if(numberOf == 1){
@@ -2377,8 +2380,8 @@ void Topology::writeAtomListPdb(std::string dirname,
 {
 	// Using floor here is no buneo because the index can be zero
 	std::string zeros("");
-	if(int nofDigits = static_cast<int>(std::to_string(index).size());
-	maxNofDigits > nofDigits){
+	int nofDigits = static_cast<int>(std::to_string(index).size());
+	if(maxNofDigits > nofDigits){
 		zeros = std::string(maxNofDigits - nofDigits, '0');
 	}
 

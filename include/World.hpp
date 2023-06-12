@@ -448,8 +448,8 @@ public:
 	std::vector<SimTK::Real> normX_BMp_means;
 	//...............
 
-	// --- Graphics ---
-	bool visual;
+	// // --- Graphics ---
+	// bool visual;
 
 	// Our decorations
 	std::unique_ptr<ParaMolecularDecorator> paraMolecularDecorator;
@@ -457,11 +457,11 @@ public:
 	// Decoration subsystem
 	std::unique_ptr<SimTK::DecorationSubsystem> decorations;
 
-	// Visualizer
-	std::unique_ptr<SimTK::Visualizer> visualizer;
+	// // Visualizer
+	// std::unique_ptr<SimTK::Visualizer> visualizer;
 
-	// Visualizer reporter
-	std::unique_ptr<SimTK::Visualizer::Reporter> visualizerReporter;
+	// // Visualizer reporter
+	// std::unique_ptr<SimTK::Visualizer::Reporter> visualizerReporter;
 	//...............
 
 	// --- Mixing data ---
