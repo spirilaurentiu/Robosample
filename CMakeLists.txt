@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.4)
+cmake_minimum_required(VERSION 3.10)
 
 project(Robosample C CXX)
 
@@ -16,14 +16,16 @@ SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 # https://clang.llvm.org/docs/AddressSanitizer.html
 set(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
 
-# TODO openmm uses  -msse4.1 -mavx. do we need them in our build?
-set(EXTRA_COMPILE_FLAGS_DEBUG   "-msse4.1 -mavx -O0 -g -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
-set(EXTRA_COMPILE_FLAGS_RELEASE "-msse4.1 -mavx -O3 -march=native -mtune=native -flto")
+# OpenMM wants these set for some library
+set(COMMON_FLAGS "-msse4.1 -mavx")
+
+# -O2 is marginally slower than -O3
+set(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O0 -g -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
+set(EXTRA_COMPILE_FLAGS_RELEASE "${COMMON_FLAGS} -O3 -march=native -mtune=native")
 
 # set the profile guided optimization (pgo) flags
 set(PGO_DIR ${CMAKE_BINARY_DIR}/profile-data)
 set(PGO_FILE ${CMAKE_BINARY_DIR}/profile-data/default.profraw)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--emit-relocs")
 
 if (CMAKE_COMPILER_IS_GNUCXX)
     SET(PGO_GENERATE "-fprofile-generate=${PGO_DIR} -fno-reorder-blocks-and-partition")
@@ -46,16 +48,17 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
 elseif(CMAKE_BUILD_TYPE MATCHES "Release")
     set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS}   ${EXTRA_COMPILE_FLAGS_RELEASE}")
     set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
+    set(BOLT_FLAGS        "-Wl,--emit-relocs")
 elseif(CMAKE_BUILD_TYPE MATCHES "PGO_Train")
     set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS}   ${EXTRA_COMPILE_FLAGS_RELEASE} ${PGO_GENERATE}")
     set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE} ${PGO_GENERATE}")
 elseif(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
     set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS}   ${EXTRA_COMPILE_FLAGS_RELEASE} ${PGO_USE}")
     set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE} ${PGO_USE}")
+    set(BOLT_FLAGS        "-Wl,--emit-relocs")
 endif()
 
 # set(CMAKE_CXX_STANDARD 14)
-
 
 # link prerequisites
 find_package(BLAS REQUIRED)
@@ -244,7 +247,7 @@ target_compile_definitions(openmm
     # PRIVATE PTHREAD_BUILDING_STATIC_LIBRARY=1
 )
 target_link_libraries(openmm PRIVATE ${OPENMM_LIBRARIES})
-
+target_link_options(openmm PRIVATE ${BOLT_FLAGS})
 
 
 
@@ -305,6 +308,7 @@ target_compile_definitions(simbody
     PRIVATE SimTK_SIMBODY_MINOR_VERSION=8
     PRIVATE SimTK_SIMBODY_PATCH_VERSION=0
 )
+target_link_options(simbody PRIVATE ${BOLT_FLAGS})
 
 # build molmodel
 set(MOLMODEL_DIRS ${CMAKE_SOURCE_DIR}/Molmodel)
@@ -375,12 +379,22 @@ target_compile_definitions(robosample
     PRIVATE OPENMM_PLATFORM_CUDA=${OPENMM_PLATFORM_CUDA}
     PRIVATE OPENMM_PLATFORM_OPENCL=${OPENMM_PLATFORM_OPENCL}
 )
+target_link_options(robosample PRIVATE ${BOLT_FLAGS})
+
+# we require ipo (interprocedural optimization) aka lto (link time optimization)
+# this is fancy -flto basically
+# on clang, it sets -flto=thin and this seems to work better than the default -flto(=full)
+# even though the binary is larger, it runs faster
+include(CheckIPOSupported)
+check_ipo_supported()
+
+if (NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+    set_target_properties(openmm simbody robosample
+        PROPERTIES INTERPROCEDURAL_OPTIMIZATION INTERPROCEDURAL_OPTIMIZATION INTERPROCEDURAL_OPTIMIZATION
+        TRUE TRUE TRUE)
+endif()
 
 # add example inputs
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/temp/pdbs)
 file(GLOB INPUTS ${CMAKE_SOURCE_DIR}/tests_inputs/*)
 file(COPY ${INPUTS} DESTINATION ${CMAKE_BINARY_DIR})
-
-foreach(dir ${OPENMM_INCLUDE_DIRS} ${SIMBODY_INCLUDE_DIRS} ${MOLMODEL_INCLUDE_DIRS} ${ROBOSAMPLE_INCLUDE_DIRS})
-    message(${dir})
-endforeach()

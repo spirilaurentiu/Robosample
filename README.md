@@ -122,9 +122,10 @@ Optimize the binary:
 llvm-bolt robosample -o robosample.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 ```
 
-Finally, the optimized binary can be run as:
+Compare the binaries:
 ```
-./robosample.bolt inp.2but
+time ./robosample inp.ala10
+time ./robosample.bolt inp.ala10
 ```
 
 
