@@ -1217,8 +1217,6 @@ void Context::model(
 
 			topologies[molIx].loadAIx2MbxMap();
 			(updWorld(worldIx))->loadMbx2AIxMap();
-
-
 		}
 
 	}

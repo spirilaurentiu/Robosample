@@ -612,12 +612,8 @@ void World::loadMbx2AIxMap(){
 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
 
 			// Map mbx2aIx contains only atoms at the origin of mobods
-			//std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
-			//        pairToBeInserted(mbx, aIx);
 			if (topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
-				mbx2aIx.insert(
-					std::pair<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex>
-					(mbx, aIx));
+				mbx2aIx.insert(std::make_pair(mbx, aIx));
 			}
 
 		} // atoms

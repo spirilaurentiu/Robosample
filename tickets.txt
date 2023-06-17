@@ -1,0 +1,31 @@
+UI/UX/UR/UE
+no input validation (how many params)
+input as csv
+1 prmtop for the entire system -> one topology
+1 molmodel compound for 1 molecule -> 1 topology has all molecules
+remove index mapping
+molmodel memory error in compound
+state reporter for pdb, dcd, csv for all energies
+mass repartition
+can we eliminate bond centers? what does matchConfiguration() do?
+do the rng generate random bits at the beginning?
+why is dumm this big? is there any redundant code?
+
+tests:
+copy tests from all dependencies (openmm, simbody, molmodel) and use them
+
+obs:
+nonbonded forces are not calculated inside rigid bodies (molmodel)
+
+
+acum: 1 openmm plugin pt 1 dumm
+1 dumm pt 1 topology (many topologies)
+
+dim molecules x dim worlds (robots) = num dumm = num openmm plugin
+openmm plugin is a mirror of the system (prmtop)
+1 openmm with dim worlds (robots) nonbonded forces
+
+
+
+eu:
+compound graph? how does it work?

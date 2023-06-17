@@ -109,17 +109,17 @@ This does not seem to fix the value forever. You will most likely need to change
 ## Instrumentation
 We have discovered that running **only one** simulation round yields the best result. Also, using a larger system seems to be optimal. Perform the necessary changes in the input file and execute:
 ```
-perf record -e cycles:u -j any,u -a -o perf.data ./robosample inp.aper
+perf record -e cycles:u -j any,u -a -o perf.data ./robosample.pgo.use inp.aper
 ```
 
 Convert the data into something that can be used by BOLT:
 ```
-perf2bolt -p perf.data robosample -o perf.fdata
+perf2bolt -p perf.data robosample.pgo.use -o perf.fdata
 ```
 
 Optimize the binary:
 ```
-llvm-bolt robosample -o robosample.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+llvm-bolt robosample.pgo.use -o robosample.pgo.use.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 ```
 
 Compare the binaries:
@@ -128,19 +128,37 @@ time ./robosample inp.ala10
 time ./robosample.bolt inp.ala10
 ```
 
+# PGO (Profile Guided Optimization)
+PGO requires us to compile to compile Robosample once, run it a few times and compile it again taking into account the hot code paths.
+
+First compilation:
+```
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
+ninja robosample
+```
+
+Run the examples:
+```
+
+```
+
 
 # Development
 Robosample is being developed using [Visual Studio Code](https://code.visualstudio.com/) on Windows. To start it, run `code .` in `Robosample`.
 
-## Sanitizers
+## Sanitizers (**mandatory**)
 We use address and undefined behaviour sanitizers in our debug builds. To get the correct output, run:
 ```
-echo "export ASAN_OPTIONS=detect_odr_violation=0:detect_leaks=0" >> ~/.bashrc
+echo "export ASAN_OPTIONS=detect_odr_violation=0:detect_leaks=0:protect_shadow_gap=0" >> ~/.bashrc
 echo "export UBSAN_OPTIONS=print_stacktrace=1" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-Set `detect_leaks=1` if you want to see memory leaks.
+Explaination:
+* `detect_odr_violation`
+* `detect_leaks=0` - OpenMM has some memory leaks. Set `detect_leaks=1` if you want to see memory all leaks. 
+* `protect_shadow_gap=0` - OpenCL and CUDA (which both use the NVIDIA driver) conflict with ASAN, as stated by [here](https://stackoverflow.com/a/68027496/3740613).
+* `print_stacktrace=1`: show which lines trigger the undefined behaviour sanitizer (UBSAN).
 
 ## Fun facts
 To get the total number of lines in header and source files, execute this from the root directory:
