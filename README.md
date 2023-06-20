@@ -170,3 +170,49 @@ To see all exported symbols, use:
 ```
 nm -an build/robosample | c++filt
 ```
+
+
+
+
+Generating precompiled headers.
+```
+grep -rohE '^\s*#include\s*<[^>]+>' /path/to/src /path/to/inc | sort -t: -u -k1,1 > pch/project_pch.h
+```
+Explaination:
+* `grep -rohE '^\s*#include\s*<[^>]+>'`:
+  * `r`: recursively
+  * `o`: show only the matching part of the line
+  * `h`: hide file name
+  * `E`: use that regex expression
+* `sort -t: -u -k1,1`: lexicographic sort and delete duplicates
+
+OpenMM PCH:
+```
+grep -rohE '^\s*#include\s*<[^>]+>' --exclude-dir='.*' openmm/ | sort -t: -u -k1,1 > pch/openmm_pch.h
+```
+
+Simbody PCH:
+```
+grep -rohE '^\s*#include\s*<[^>]+>' --exclude-dir='.*' Simbody01/Simbody/ Simbody01/SimTKcommon/ Simbody01/SimTKmath/ | sort -t: -u -k1,1 > pch/simbody_pch.h
+
+#include "SimTKcommon.h"
+```
+
+Molmodel PCH:
+```
+grep -rohE '^\s*#include\s*<[^>]+>' --exclude-dir='.*' Molmodel/src/ Molmodel/include/ | sort -t: -u -k1,1 > pch/molmodel_pch.h
+
+#include "Simbody.h"
+#include "OpenMM.h"
+```
+
+Robosample PCH:
+```
+echo "#pragma once"
+
+grep -rohE '^\s*#include\s*<[^>]+>' --exclude-dir='.*' src/ include/ | sort -t: -u -k1,1 > pch/robosample_pch.h
+
+#include "OpenMM.h"
+#include "Simbody.h"
+#include "Molmodel.h"
+```

@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/robosample.d",
-            "args": ["${workspaceFolder}/build/inp.2but"],
+            "args": ["${workspaceFolder}/build/inp.2but.mono"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
             "environment": [],
