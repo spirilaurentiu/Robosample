@@ -68,6 +68,8 @@ Sampler::Sampler(World *argWorld,
 Sampler::~Sampler() {
 }
 
+// Random numbers
+
 // Get set the seed
 int64_t Sampler::getSeed() const
 {
@@ -124,6 +126,48 @@ void Sampler::setSeed(int64_t argSeed)
 	// [1] https://doi.org/10.1145/1276927.1276928
 	// [2] https://stats.stackexchange.com/questions/436733/is-there-such-a-thing-as-a-good-bad-seed-in-pseudo-random-number-generation
 	randomEngine.discard(Size * 2);
+}
+
+// Generate a random number from a uniform distribution
+// with limits L and R
+SimTK::Real Sampler::uniformRealDistributionRandTrunc(
+	SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real r = uniformRealDistribution(randomEngine);
+	return r * (R - L) + L;
+}
+
+// Get the PDF of a random number from a uniform distribution
+// with limits L and R
+SimTK::Real Sampler::uniformRealDistributionPDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real pdf = SimTK::NaN;
+	
+	if ((X >= L) && (X <= R)){
+		pdf = 1.0 / (R - L);
+	}
+
+	return pdf;
+}
+
+// Get the CDF of a random number from a uniform distribution
+// with limits L and R
+SimTK::Real Sampler::uniformRealDistributionCDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real cdf = SimTK::NaN;
+	
+	if (X < L){
+		cdf = 0.0;
+	}
+	else if(X > R){
+		cdf = 1.0;
+	}else{
+		cdf = (X - L) / (R - L);
+	}
+
+	return cdf;
 }
 
 // Is the sampler always accepting the proposed moves

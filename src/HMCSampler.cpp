@@ -3123,8 +3123,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	////}
 	//setQToShiftBendStretchStdev(someState, scaleFactors);
 
-	std::cout << "scaleFactors: ";
-	PrintCppVector(scaleFactors);
+	std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
 
 	this->bendStretchJacobianDetLog =
 		calcBendStretchJacobianDetLog(someState, scaleFactors);
@@ -3225,7 +3224,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 		std::cout << "Propose: RANDOM_WALK integrator" << std::endl;
 		if(topologies.size() < 2){
-			std::cout << "RANDOM_WALK integrators should only be used over many molecules\n"; 
+			std::cout << "RANDOM_WALK integrators should only be used over many molecules\n";
 		}
 
 		// We *assume* the last molecule is the ligand.
@@ -3240,7 +3239,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 
 
-		// Protein 
+		// Protein
 		const SimTK::MobilizedBody& mobod_P = matter->getMobilizedBody(
 			SimTK::MobilizedBodyIndex(nOfBodies-2) );
 		const Transform& X_GP = mobod_P.getBodyTransform(someState);

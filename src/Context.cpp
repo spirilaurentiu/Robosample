@@ -3276,7 +3276,7 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
 		);
 
-		qScaleFactors.at(thisThermoStateIx) = (qScaleFactorsMiu).at(thisThermoStateIx) / 10.0;
+		qScaleFactors.at(thisThermoStateIx) = (qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
 		//qScaleFactors.at(thisThermoStateIx) = 1.0;
 
 		//qScaleFactorsStd.at(thisThermoStateIx) =  = 0.0;

@@ -27,6 +27,18 @@ public:
 	// Destructor
 	virtual ~Sampler();
 
+	// Uniform distribution number generator
+	SimTK::Real uniformRealDistributionRandTrunc(
+		SimTK::Real L, SimTK::Real R);
+
+	// Uniform distribution PDF
+	SimTK::Real uniformRealDistributionPDFTrunc(
+		SimTK::Real X, SimTK::Real L, SimTK::Real R);
+
+	// Uniform distribution CDF
+	SimTK::Real uniformRealDistributionCDFTrunc(
+		SimTK::Real X, SimTK::Real L, SimTK::Real R);
+
 	// Compute mass matrix determinant (O(n))
 	// TODO Move
 	SimTK::Real calcMassDeterminant(const SimTK::State&);
@@ -177,6 +189,9 @@ public:
 	std::normal_distribution<> gaurand = std::normal_distribution<>(0.0, 1.0);
 
 	std::gamma_distribution<double> gammarand = std::gamma_distribution<double>(1, 2);
+
+	std::lognormal_distribution<double> lognormal =
+		std::lognormal_distribution<double>(0.0, 1.0);
 
  };
 
