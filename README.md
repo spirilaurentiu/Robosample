@@ -137,9 +137,14 @@ cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CM
 ninja robosample
 ```
 
-Run the examples:
+Clear output of previous runs:
+```
+find . -name "*.gcda" -delete
 ```
 
+Run the examples:
+```
+bash pgo.sh
 ```
 
 

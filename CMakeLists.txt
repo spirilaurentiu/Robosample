@@ -14,62 +14,67 @@ SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 # set the sanitizer flags
 # https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
 # https://clang.llvm.org/docs/AddressSanitizer.html
-set(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
+SET(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
 
 # OpenMM wants these set for some library
-set(COMMON_FLAGS "-msse4.1 -mavx")
+SET(COMMON_FLAGS "-msse4.1 -mavx")
 
 # -O2 is marginally slower than -O3
-set(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O0 -g")
-set(EXTRA_COMPILE_FLAGS_RELEASE "${COMMON_FLAGS} -O3 -march=native -mtune=native")
+SET(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O0 -g")
+SET(EXTRA_COMPILE_FLAGS_RELEASE "${COMMON_FLAGS} -O3 -march=native -mtune=native")
 
 # set the profile guided optimization (pgo) flags
-set(PGO_DIR ${CMAKE_BINARY_DIR}/profile-data)
-set(PGO_FILE ${CMAKE_BINARY_DIR}/profile-data/default.profraw)
+SET(PGO_DIR ${CMAKE_BINARY_DIR}/profile-data)
+SET(PGO_FILE ${CMAKE_BINARY_DIR}/profile-data/default.profraw)
 
-if (CMAKE_COMPILER_IS_GNUCXX)
-    SET(PGO_GENERATE "-fprofile-generate=${PGO_DIR} -fno-reorder-blocks-and-partition")
-    SET(PGO_USE      "-fprofile-use=${PGO_DIR} -fprofile-correction -fno-reorder-blocks-and-partition")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES Clang)
-    set(PGO_CLANG_RAW ${CMAKE_BINARY_DIR}/profile-data/default.profraw)
-    set(PGO_CLANG_DATA ${CMAKE_BINARY_DIR}/profile-data/default.profdata)
+IF(CMAKE_COMPILER_IS_GNUCXX)
+    IF(CMAKE_BUILD_TYPE MATCHES "PGO_Train")
+        SET(PGO_FLAGS "-fprofile-generate=${PGO_DIR} -fno-reorder-blocks-and-partition")
+    ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
+        SET(PGO_FLAGS "-fprofile-use=${PGO_DIR} -fprofile-correction -fno-reorder-blocks-and-partition")
+    ENDIF()
+ELSEIF(CMAKE_CXX_COMPILER_ID MATCHES Clang)
+    SET(PGO_CLANG_RAW ${CMAKE_BINARY_DIR}/profile-data/default.profraw)
+    SET(PGO_CLANG_DATA ${CMAKE_BINARY_DIR}/profile-data/default.profdata)
 
-    SET(PGO_GENERATE "-fprofile-instr-generate=${PGO_CLANG_RAW} -fcoverage-mapping") # -fprofile-arcs -ftest-coverage
-    SET(PGO_USE      "-fprofile-instr-use=${PGO_CLANG_DATA}")
-endif()
+    IF(CMAKE_BUILD_TYPE MATCHES "PGO_Train")
+        # -fcoverage-mapping -ftest-coverage -fprofile-arcs
+        SET(PGO_FLAGS "-fprofile-instr-generate=${PGO_CLANG_RAW}")
+    ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
+        SET(PGO_FLAGS "-fprofile-instr-use=${PGO_CLANG_DATA}")
+    ENDIF()
+ENDIF()
 
-if (CMAKE_BUILD_TYPE MATCHES "Debug")
-    set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS}   ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
-    set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
-    set(PREFIX ".d")
-    # set(INCREMENTAL_LINKING "-Wl,-i,-no-pie")
-elseif(CMAKE_BUILD_TYPE MATCHES "Release")
-    set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS}   ${EXTRA_COMPILE_FLAGS_RELEASE}")
-    set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
-    set(BOLT_FLAGS "-Wl,--emit-relocs")
-elseif(CMAKE_BUILD_TYPE MATCHES "PGO_Train")
-    # note: using the sanitizer flags in debug builds make opencl fail on initialization
-    set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS}   ${EXTRA_COMPILE_FLAGS_DEBUG} ${PGO_GENERATE}")
-    set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} ${PGO_GENERATE}")
-    set(PREFIX ".pgo.train")
-elseif(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
-    set(CMAKE_C_FLAGS     "${CMAKE_C_FLAGS}   ${EXTRA_COMPILE_FLAGS_RELEASE} ${PGO_USE}")
-    set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE} ${PGO_USE}")
-    set(PREFIX ".pgo.use")
-    set(BOLT_FLAGS "-Wl,--emit-relocs")
-endif()
+IF(CMAKE_BUILD_TYPE MATCHES "Debug")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
+    SET(PREFIX ".d")
+ELSEIF(CMAKE_BUILD_TYPE MATCHES "Release")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
+    SET(BOLT_FLAGS "-Wl,--emit-relocs")
+ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Train")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
+    SET(PREFIX ".pgo.train")
+ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
+    SET(PREFIX ".pgo.use")
+    SET(BOLT_FLAGS "-Wl,--emit-relocs")
+ENDIF()
+
+separate_arguments(PGO_FLAGS UNIX_COMMAND "${PGO_FLAGS}")
+separate_arguments(BUILD_FLAGS UNIX_COMMAND "${BUILD_FLAGS}")
+separate_arguments(BOLT_FLAGS UNIX_COMMAND "${BOLT_FLAGS}")
 
 # set names of the targets we will build
-set(OPENMM_LIB_NAME "openmm${PREFIX}")
-set(SIMBODY_LIB_NAME "simbody${PREFIX}")
-set(MOLMODEL_LIB_NAME "molmodel${PREFIX}")
-set(ROBOSAMPLE_NAME "robosample${PREFIX}")
+SET(OPENMM_LIB_NAME "openmm${PREFIX}")
+SET(SIMBODY_LIB_NAME "simbody${PREFIX}")
+SET(MOLMODEL_LIB_NAME "molmodel${PREFIX}")
+SET(ROBOSAMPLE_NAME "robosample${PREFIX}")
 
-if (CMAKE_BUILD_TYPE MATCHES "Debug")
-    set(LIBRARY_TYPE SHARED)
-else()
-    set(LIBRARY_TYPE STATIC)
-endif()
+IF(CMAKE_BUILD_TYPE MATCHES "Debug")
+    SET(LIBRARY_TYPE SHARED)
+ELSE()
+    SET(LIBRARY_TYPE STATIC)
+ENDIF()
 
 # we require ipo (interprocedural optimization) aka lto (link time optimization)
 # this is fancy -flto basically
@@ -78,13 +83,13 @@ endif()
 include(CheckIPOSupported)
 check_ipo_supported()
 
-if (CMAKE_BUILD_TYPE MATCHES "Release|PGO_Use")
-    set(USE_IPO TRUE)
-else()
-    set(USE_IPO FALSE)
-endif()
+IF(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+    SET(USE_IPO TRUE)
+ELSE()
+    SET(USE_IPO FALSE)
+ENDIF()
 
-# set(CMAKE_CXX_STANDARD 14)
+# SET(CMAKE_CXX_STANDARD 14)
 
 
 # link prerequisites
@@ -94,10 +99,10 @@ find_library(DL_LIBRARY dl REQUIRED)
 find_library(MATH_LIBRARY m REQUIRED)
 find_library(RT_LIBRARY rt REQUIRED) # wants -lrt
 
-set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+SET(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
-set(LIBRARIES
+SET(LIBRARIES
     ${BLAS_LIBRARIES}
     ${LAPACK_LIBRARIES}
     ${RT_LIBRARY}
@@ -107,7 +112,7 @@ set(LIBRARIES
 )
 
 # get openmm source directories
-set(OPENMM_INCLUDE_DIRS)
+SET(OPENMM_INCLUDE_DIRS)
 SET(OPENMM_DIRS
     # ${CMAKE_SOURCE_DIR}/openmm/
     ${CMAKE_SOURCE_DIR}/openmm/openmmapi
@@ -236,9 +241,9 @@ FOREACH(subdir ${OPENMM_DIRS})
 ENDFOREACH(subdir)
 
 # find source and header files
-set(OPENMM_SOURCE_C_FILES)
-set(OPENMM_SOURCE_CXX_FILES)
-set(OPENMM_SOURCE_INCLUDE_FILES)
+SET(OPENMM_SOURCE_C_FILES)
+SET(OPENMM_SOURCE_CXX_FILES)
+SET(OPENMM_SOURCE_INCLUDE_FILES)
 
 FOREACH(subdir ${OPENMM_DIRS})
     FILE(GLOB src_c_files ${subdir}/src/*.c ${subdir}/src/*/*.c)
@@ -253,6 +258,7 @@ FOREACH(subdir ${OPENMM_DIRS})
 ENDFOREACH(subdir)
 
 add_library(${OPENMM_LIB_NAME} ${LIBRARY_TYPE} ${OPENMM_SOURCE_C_FILES} ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_SOURCE_INCLUDE_FILES})
+target_compile_options(${OPENMM_LIB_NAME} PRIVATE ${BUILD_FLAGS})
 target_include_directories(${OPENMM_LIB_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS})
 target_link_libraries(${OPENMM_LIB_NAME} PRIVATE ${OPENMM_LIBRARIES})
 target_compile_definitions(${OPENMM_LIB_NAME}
@@ -278,37 +284,37 @@ set_source_files_properties(${OPENMM_LIB_NAME} PROPERTIES SKIP_PRECOMPILE_HEADER
 
 
 # build simbody
-set(SIMBODY_DIRS)
-set(SIMBODY_INCLUDE_DIRS)
+SET(SIMBODY_DIRS)
+SET(SIMBODY_INCLUDE_DIRS)
 
-set(SIMTK_COMMON_DIRS . Scalar SmallMatrix Mechanics BigMatrix Geometry Simulation Random Polynomial)
+SET(SIMTK_COMMON_DIRS . Scalar SmallMatrix Mechanics BigMatrix Geometry Simulation Random Polynomial)
 foreach(subdir ${SIMTK_COMMON_DIRS})
-    set(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir})
-    set(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
+    SET(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir})
+    SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include
         ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include/SimTKcommon
         ${CMAKE_SOURCE_DIR}/Simbody01/SimTKcommon/${subdir}/include/SimTKcommon/internal)
 endforeach(subdir)
 
-set(SIMTK_MATH_DIRS . LinearAlgebra Integrators Integrators/src/CPodes/sundials Optimizers Geometry)
+SET(SIMTK_MATH_DIRS . LinearAlgebra Integrators Integrators/src/CPodes/sundials Optimizers Geometry)
 foreach(subdir ${SIMTK_MATH_DIRS})
-    set(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir})
-    set(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
+    SET(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir})
+    SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include
         ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include/simmath
         ${CMAKE_SOURCE_DIR}/Simbody01/SimTKmath/${subdir}/include/simmath/internal)
 endforeach(subdir)
 
-set(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/Simbody)
-set(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
+SET(SIMBODY_DIRS ${SIMBODY_DIRS} ${CMAKE_SOURCE_DIR}/Simbody01/Simbody)
+SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include/simbody
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include/simbody/internal)
 
 # find source and header files
-set(SIMBODY_SOURCE_C_FILES)
-set(SIMBODY_SOURCE_CXX_FILES)
-set(SIMBODY_SOURCE_INCLUDE_FILES)
+SET(SIMBODY_SOURCE_C_FILES)
+SET(SIMBODY_SOURCE_CXX_FILES)
+SET(SIMBODY_SOURCE_INCLUDE_FILES)
 
 FOREACH(subdir ${SIMBODY_DIRS})
     FILE(GLOB src_c_files ${subdir}/src/*.c ${subdir}/src/*/*.c)
@@ -323,6 +329,7 @@ FOREACH(subdir ${SIMBODY_DIRS})
 ENDFOREACH(subdir)
 
 add_library(${SIMBODY_LIB_NAME} ${LIBRARY_TYPE} ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES} ${SIMBODY_SOURCE_INCLUDE_FILES})
+target_compile_options(${SIMBODY_LIB_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
 target_include_directories(${SIMBODY_LIB_NAME} PRIVATE ${SIMBODY_INCLUDE_DIRS})
 target_compile_definitions(${SIMBODY_LIB_NAME}
     PRIVATE SimTK_SimTKCOMMON_LIBRARY_NAME="SimTKcommon"
@@ -343,14 +350,14 @@ target_precompile_headers(${SIMBODY_LIB_NAME} PRIVATE pch/simbody_pch.h)
 set_source_files_properties(${SIMBODY_SOURCE_C_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 # build molmodel
-set(MOLMODEL_DIRS ${CMAKE_SOURCE_DIR}/Molmodel)
-set(MOLMODEL_INCLUDE_DIRS
+SET(MOLMODEL_DIRS ${CMAKE_SOURCE_DIR}/Molmodel)
+SET(MOLMODEL_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/Molmodel/include
     ${CMAKE_SOURCE_DIR}/Molmodel/include/molmodel
     ${CMAKE_SOURCE_DIR}/Molmodel/include/molmodel/internal)
 
-set(MOLMODEL_SOURCE_FILES)
-set(MOLMODEL_SOURCE_INCLUDE_FILES)
+SET(MOLMODEL_SOURCE_FILES)
+SET(MOLMODEL_SOURCE_INCLUDE_FILES)
 
 FOREACH(subdir ${MOLMODEL_DIRS})
     FILE(GLOB src_files ${subdir}/src/*.cpp ${subdir}/src/*.c ${subdir}/src/*/*.cpp ${subdir}/src/*/*.c)
@@ -362,6 +369,7 @@ FOREACH(subdir ${MOLMODEL_DIRS})
 ENDFOREACH(subdir)
 
 add_library(${MOLMODEL_LIB_NAME} ${LIBRARY_TYPE} ${MOLMODEL_SOURCE_FILES} ${MOLMODEL_SOURCE_INCLUDE_FILES})
+target_compile_options(${MOLMODEL_LIB_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
 target_include_directories(${MOLMODEL_LIB_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS} ${SIMBODY_INCLUDE_DIRS} ${MOLMODEL_INCLUDE_DIRS})
 target_compile_definitions(${MOLMODEL_LIB_NAME}
     PRIVATE MOLMODEL_COPYRIGHT_YEARS="2006-12"
@@ -384,13 +392,16 @@ set_source_files_properties(Molmodel/src/vmdsock.c PROPERTIES SKIP_PRECOMPILE_HE
 #     ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
 # SET(FORMAT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/format/inc)
 # add_library(format ${LIBRARY_TYPE} ${FORMAT_SOURCE_FILES})
+# target_compile_options(format PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
 # target_include_directories(format PRIVATE ${FORMAT_INCLUDE_DIRS})
 
 # build robosample
 FILE(GLOB ROBOSAMPLE_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
-set(ROBOSAMPLE_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include)
+SET(ROBOSAMPLE_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include)
 
 add_executable(${ROBOSAMPLE_NAME} ${ROBOSAMPLE_SOURCE_FILES})
+target_compile_options(${ROBOSAMPLE_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+
 target_include_directories(${ROBOSAMPLE_NAME} PRIVATE
     ${OPENMM_INCLUDE_DIRS}
     ${SIMBODY_INCLUDE_DIRS}
@@ -408,7 +419,7 @@ target_link_libraries(${ROBOSAMPLE_NAME} PRIVATE
 )
 set_target_properties(${ROBOSAMPLE_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
 target_precompile_headers(${ROBOSAMPLE_NAME} PRIVATE pch/robosample_pch.h)
-target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${BOLT_FLAGS})
+target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${BOLT_FLAGS} ${PGO_FLAGS})
 
 # add example inputs
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/temp/pdbs)
