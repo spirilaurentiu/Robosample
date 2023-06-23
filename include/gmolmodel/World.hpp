@@ -177,6 +177,14 @@ public:
 	SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(
 		const SimTK::DuMM::AtomIndex&){assert(!"Not implemented");}
 
+	// Get geometric center of a subset of atoms
+	// TEODOR
+	SimTK::Vec3 getGeometricCenterOfSelection(
+		const SimTK::State & state, const std::vector<int>& topologyIx, 
+		const std::vector<std::vector<int>>& amberAtomList);
+
+	float setSphereRadius (float argRadius);
+
 	/** Get the current Compound Cartesian coords.
 	* Return a 2D vector representing all the coordinates of this World.
  	* The first dimension represents the molecules (topologies) and the second
