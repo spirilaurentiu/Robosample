@@ -11,11 +11,6 @@ SET(ROBOSAMPLE_COPYRIGHT_YEARS "2021-01")
 # underbar separated list of dotted authors, no spaces or commas
 SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 
-# set the sanitizer flags
-# https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
-# https://clang.llvm.org/docs/AddressSanitizer.html
-SET(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
-
 # OpenMM wants these set for some library
 SET(COMMON_FLAGS "-msse4.1 -mavx")
 
@@ -46,6 +41,11 @@ ELSEIF(CMAKE_CXX_COMPILER_ID MATCHES Clang)
 ENDIF()
 
 IF(CMAKE_BUILD_TYPE MATCHES "Debug")
+    # set the sanitizer flags
+    # https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
+    # https://clang.llvm.org/docs/AddressSanitizer.html
+    SET(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
+
     SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
     SET(PREFIX ".d")
 ELSEIF(CMAKE_BUILD_TYPE MATCHES "Release")
@@ -60,6 +60,7 @@ ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
     SET(BOLT_FLAGS "-Wl,--emit-relocs")
 ENDIF()
 
+separate_arguments(SANITIZER_FLAGS UNIX_COMMAND "${SANITIZER_FLAGS}")
 separate_arguments(PGO_FLAGS UNIX_COMMAND "${PGO_FLAGS}")
 separate_arguments(BUILD_FLAGS UNIX_COMMAND "${BUILD_FLAGS}")
 separate_arguments(BOLT_FLAGS UNIX_COMMAND "${BOLT_FLAGS}")
@@ -68,6 +69,8 @@ separate_arguments(BOLT_FLAGS UNIX_COMMAND "${BOLT_FLAGS}")
 SET(OPENMM_LIB_NAME "openmm${PREFIX}")
 SET(SIMBODY_LIB_NAME "simbody${PREFIX}")
 SET(MOLMODEL_LIB_NAME "molmodel${PREFIX}")
+SET(FORMATS_LIB_NAME "formats${PREFIX}")
+SET(ROBOSAMPLE_LIB_NAME "robosample.lib${PREFIX}")
 SET(ROBOSAMPLE_NAME "robosample${PREFIX}")
 
 IF(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -279,6 +282,7 @@ target_compile_definitions(${OPENMM_LIB_NAME}
     # PRIVATE PTHREAD_BUILDING_STATIC_LIBRARY=1
 )
 set_target_properties(${OPENMM_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+target_link_options(${OPENMM_LIB_NAME} PRIVATE ${SANITIZER_FLAGS})
 target_precompile_headers(${OPENMM_LIB_NAME} PRIVATE pch/openmm_pch.h)
 set_source_files_properties(${OPENMM_LIB_NAME} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
@@ -346,6 +350,7 @@ target_compile_definitions(${SIMBODY_LIB_NAME}
     PRIVATE SimTK_SIMBODY_PATCH_VERSION=0
 )
 set_target_properties(${SIMBODY_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+target_link_options(${SIMBODY_LIB_NAME} PRIVATE ${SANITIZER_FLAGS})
 target_precompile_headers(${SIMBODY_LIB_NAME} PRIVATE pch/simbody_pch.h)
 set_source_files_properties(${SIMBODY_SOURCE_C_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
@@ -383,6 +388,7 @@ target_compile_definitions(${MOLMODEL_LIB_NAME}
     PRIVATE OPENMM_PLATFORM_OPENCL=${OPENMM_PLATFORM_OPENCL}
 )
 set_target_properties(${MOLMODEL_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+target_link_options(${MOLMODEL_LIB_NAME} PRIVATE ${SANITIZER_FLAGS})
 target_precompile_headers(${MOLMODEL_LIB_NAME} PRIVATE pch/molmodel_pch.h)
 set_source_files_properties(Molmodel/src/vmdsock.c PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
@@ -391,15 +397,40 @@ set_source_files_properties(Molmodel/src/vmdsock.c PROPERTIES SKIP_PRECOMPILE_HE
 #     ${CMAKE_SOURCE_DIR}/format/src/*.c
 #     ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
 # SET(FORMAT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/format/inc)
-# add_library(format ${LIBRARY_TYPE} ${FORMAT_SOURCE_FILES})
-# target_compile_options(format PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-# target_include_directories(format PRIVATE ${FORMAT_INCLUDE_DIRS})
+# add_library(${FORMATS_LIB_NAME} ${LIBRARY_TYPE} ${FORMAT_SOURCE_FILES})
+# target_compile_options(${FORMATS_LIB_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+# target_include_directories(${FORMATS_LIB_NAME} PRIVATE ${FORMAT_INCLUDE_DIRS})
 
 # build robosample
 FILE(GLOB ROBOSAMPLE_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
+list(REMOVE_ITEM ROBOSAMPLE_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/Robosample.cpp)
 SET(ROBOSAMPLE_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include)
 
-add_executable(${ROBOSAMPLE_NAME} ${ROBOSAMPLE_SOURCE_FILES})
+add_library(${ROBOSAMPLE_LIB_NAME} ${LIBRARY_TYPE} ${ROBOSAMPLE_SOURCE_FILES})
+target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+
+target_include_directories(${ROBOSAMPLE_LIB_NAME} PRIVATE
+    ${OPENMM_INCLUDE_DIRS}
+    ${SIMBODY_INCLUDE_DIRS}
+    ${MOLMODEL_INCLUDE_DIRS}
+    # ${FORMAT_INCLUDE_DIRS}
+    ${ROBOSAMPLE_INCLUDE_DIRS}
+)
+
+# the order of these libraries is extremely important
+target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE
+    ${LIBRARIES}
+    # ${FORMATS_LIB_NAME}
+    ${MOLMODEL_LIB_NAME}
+    ${SIMBODY_LIB_NAME}
+    ${OPENMM_LIB_NAME}
+)
+set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+target_precompile_headers(${ROBOSAMPLE_LIB_NAME} PRIVATE pch/robosample_pch.h)
+target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${BOLT_FLAGS} ${PGO_FLAGS} ${SANITIZER_FLAGS})
+
+# add the actual robosample executable
+add_executable(${ROBOSAMPLE_NAME} ${CMAKE_SOURCE_DIR}/src/Robosample.cpp)
 target_compile_options(${ROBOSAMPLE_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
 
 target_include_directories(${ROBOSAMPLE_NAME} PRIVATE
@@ -412,14 +443,43 @@ target_include_directories(${ROBOSAMPLE_NAME} PRIVATE
 
 # the order of these libraries is extremely important
 target_link_libraries(${ROBOSAMPLE_NAME} PRIVATE
-    ${LIBRARIES}
+    ${ROBOSAMPLE_LIB_NAME}
+    # ${FORMATS_LIB_NAME}
     ${MOLMODEL_LIB_NAME}
     ${SIMBODY_LIB_NAME}
-    ${OPENMM_LIB_NAME}
 )
 set_target_properties(${ROBOSAMPLE_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_precompile_headers(${ROBOSAMPLE_NAME} PRIVATE pch/robosample_pch.h)
-target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${BOLT_FLAGS} ${PGO_FLAGS})
+target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${BOLT_FLAGS} ${PGO_FLAGS} ${SANITIZER_FLAGS})
+
+# add tests
+enable_testing()
+file(GLOB TESTS_SOURCES tests/*.cpp)
+foreach(test_src ${TESTS_SOURCES})
+    # get test name by removing file location and extension
+    file(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/tests ${test_src})
+    STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
+    message(${test_name})
+
+    # needs refactoring
+    add_executable(${test_name} ${test_src})
+    target_include_directories(${test_name} PRIVATE
+        ${OPENMM_INCLUDE_DIRS}
+        ${SIMBODY_INCLUDE_DIRS}
+        ${MOLMODEL_INCLUDE_DIRS}
+        # ${FORMAT_INCLUDE_DIRS}
+        ${ROBOSAMPLE_INCLUDE_DIRS}
+    )
+    target_link_libraries(${test_name} PRIVATE
+        ${ROBOSAMPLE_LIB_NAME}
+        # ${FORMATS_LIB_NAME}
+        ${MOLMODEL_LIB_NAME}
+        ${SIMBODY_LIB_NAME}
+    )
+
+    add_test(NAME ${test_name} COMMAND ${test_name})
+
+endforeach(test_src )
+
 
 # add example inputs
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/temp/pdbs)
