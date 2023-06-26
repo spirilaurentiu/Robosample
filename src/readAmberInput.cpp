@@ -717,14 +717,14 @@ void readAmberInput::GeneratePairStartAndLen()
 
       }
 
-
+/*
       std::cout << "GeneratePairStartAndLen " 
         << " " << DihedralsAtomsIndex[idx][0] << " " << DihedralsAtomsIndex[idx][1]
         << " " << DihedralsAtomsIndex[idx][2] << " " << DihedralsAtomsIndex[idx][3]
         << " || " << PairStartAndLen[ PairStartAndLen.size() - 1 ].first
         << " " << PairStartAndLen[ PairStartAndLen.size() - 1 ].second
         << std::endl << std::flush;
-
+*/
       idx++;
 
     }

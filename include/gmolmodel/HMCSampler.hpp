@@ -334,6 +334,7 @@ public:
 	the configuration and energies. Returns true if the proposal is 
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
+	void setBindingSiteParams(const SimTK::Vec3& argGeometricCenter, float argSphereRadius);
 	bool proposeEquilibrium(SimTK::State& someState);
 	bool proposeNEHMC(SimTK::State& someState);
 	bool proposeNMA(SimTK::State& someState);
@@ -481,6 +482,8 @@ protected:
 
 	// Integration
 	IntegratorName integratorName = IntegratorName::EMPTY;
+	SimTK::Vec3 geometricCenter;
+	float sphereRadius;
 
 	// Sampling
 	int sampleGenerator = 0;

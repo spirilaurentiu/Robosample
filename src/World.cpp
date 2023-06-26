@@ -956,6 +956,80 @@ void World::printMaps(void)
 //                             2. Inter-world functions.
 //==============================================================================
 // Pass configurations between Worlds
+
+
+SimTK::Vec3 
+World::getGeometricCenterOfSelection(const SimTK::State & state, 
+									 const std::vector<int>& topologyIx, 
+									 const std::vector<std::vector<int>>& amberAtomList)
+{
+
+	// return Vec3
+	SimTK::Vec3 geometricCenter={0,0,0};
+	// We could just divide by the size of amberAtomList
+	// but this works even if the user *mistakenly* repeats
+	// indices
+	int nOfPoints=0;
+
+
+	// Just a quick check, to skip unnecessary computation in case of 
+	// user error.
+	if (amberAtomList.size() == 0) {
+		std::cerr << "Warning: getGeometricCenterOfSelection called with amberAtomList of size 0" << std::endl;
+		return geometricCenter;
+	}
+	
+	// We *assume* the first topology is the one 
+	// containing the atoms we are interested in
+	// TODO: FIX THIS
+
+	std::cerr << "topologies atoms size " << topologyIx.size() << " " << topologyIx.size() << std::endl;
+
+	for (int i = 0; i < topologyIx.size(); i++) {
+		const auto& topology = (*topologies)[topologyIx[i]];
+		const auto& atoms = amberAtomList[i];
+
+		int amberIx=0;
+
+		// Iterate through atoms in said topology and check 	
+		// if they are in the list
+		for (auto& atom : topology.bAtomList) {
+			if (std::find(atoms.begin(), atoms.end(), amberIx) != atoms.end()){
+				// found
+				// Get Compound atom index
+				auto compoundAtomIndex = atom.getCompoundAtomIndex();
+				// Get DuMM atom index
+				const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
+				// Get Mobilized Body index
+				const MobilizedBodyIndex mobilizedBodyIndex = forceField->getAtomBody(dAIx);
+				// Get DuMM Atom Station on its body.
+				const Vec3 dAS_B = forceField->getAtomStationOnBody(dAIx);
+				// Compute Transform then re-express in G
+				const SimTK::MobilizedBody& mobod_A = matter->getMobilizedBody(mobilizedBodyIndex);
+				const Transform& X_GP = mobod_A.getBodyTransform(state);
+				const SimTK::Vec3 dAS_G = X_GP*dAS_B;
+				geometricCenter += dAS_G;
+				nOfPoints += 1;
+
+/* 				std::cout << "amberIx: " << amberIx << " dAIx: " << dAIx
+				<< " MobilizedBodyIndex: " << mobilizedBodyIndex 
+				<< " dAS_G: " << dAS_G << " nOfPoints: " << nOfPoints
+				<< std::endl; */
+			}
+			
+			amberIx += 1;
+		}
+	}
+
+	// This can probably be done better, but is it clearer?
+	for(int i=0;i<3;++i)
+		geometricCenter[i] = geometricCenter[i] / nOfPoints;
+	std::cout << "geometricCenter : " << geometricCenter << std::endl;
+
+	return geometricCenter;
+
+}
+
 /** Get the current Compound Cartesian coords.
 * Return a 2D vector representing all the coordinates of this World.
  * The first dimension represents the molecules (topologies) and the second
@@ -964,6 +1038,7 @@ void World::printMaps(void)
  * contains all the information in bSpecificAtom as well. The bottleneck here
  * is the calcAtomLocationInGroundFrame from Compound.
  **/
+
 
 std::vector< std::vector<
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >

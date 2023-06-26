@@ -30,7 +30,7 @@ bool LoadInputIntoSetupReader(int argc, char **argv,
 	std::cout << "Reading input...\n" ;
 
 	std::string helpString =
-		"Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
+		"Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robosample file\n";
 
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
@@ -305,6 +305,52 @@ int main(int argc, char **argv)
 	//////////////////////
 	// Thermodynamics
 	//////////////////////
+
+	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
+		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
+		setupReader.get("SPHERE_RADIUS")[0] != "ERROR_KEY_NOT_FOUND") {
+		// Set binding site TopologyIx, AtomIx and Sphere Radius
+
+		// Generate Amber-style Atom Lists
+		std::vector<std::vector<int>> amberAtomIXs;
+		amberAtomIXs.push_back({});
+		int cur_topology = 0;
+
+		for (const auto& value : setupReader.get("BINDINGSITE_ATOMS")) {
+			if (value == ",") {
+				amberAtomIXs.push_back({});
+				cur_topology++;
+			}
+			else {
+				amberAtomIXs[cur_topology].push_back(std::stoi(value));
+			}
+		}
+
+		std::cout << "amberAtomIXs: \n" ;
+		for (const auto& v1 : amberAtomIXs) {
+			for (const auto& v2 : v1)
+				std::cout << v2 << " ";
+			std::cout << std::endl;
+		}
+		std::cout << std::endl;
+
+		std::vector<int> topologyIXs;
+		for (const auto& value : setupReader.get("BINDINGSITE_MOLECULES")) {
+			topologyIXs.push_back(std::stoi(value));
+		}
+
+		std::cout << "topologyIXs: \n" ;
+		for (const auto& v1 : topologyIXs) {	
+			std::cout << v1 << " ";
+		}
+		std::cout << std::endl << std::endl;
+
+		float sphere_radius = std::stoi(setupReader.get("SPHERE_RADIUS")[0]);
+		std::cout << "sphere_radius: " << sphere_radius << std::endl;
+
+		context.setBindingSiteParameters(topologyIXs, amberAtomIXs, sphere_radius);
+	}
+
 	// Set thermostats to the samplers
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 
