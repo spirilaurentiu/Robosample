@@ -2763,13 +2763,11 @@ std::vector<SimTK::Real>& scaleFactors)
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
 
-
-
-		// Get mobod inboard frame X_FM measured and expressed in P
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(2));
-		const Transform& X_FM = mobod.getMobilizerTransform(someState);
-		std::cout << " X_FM after scaling\n" << X_FM << std::endl;
+	// Get mobod inboard frame X_FM measured and expressed in P
+	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(
+		SimTK::MobilizedBodyIndex(2));
+	const Transform& X_FM = mobod.getMobilizerTransform(someState);
+	std::cout << " X_FM after scaling\n" << X_FM << std::endl;
 
 
 	// Test
