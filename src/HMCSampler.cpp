@@ -3160,13 +3160,6 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 }
 
-// Set Geometric Center to use when doing RANDOM_WALK
-void HMCSampler::setBindingSiteParams(const SimTK::Vec3& argGeometricCenter, float argSphereRadius)
-{
-	geometricCenter = argGeometricCenter;
-	sphereRadius = argSphereRadius;
-}
-
 // Set Sphere Radius when doing RANDOM_WALK
 void HMCSampler::setSphereRadius(float argSphereRadius)
 {
@@ -3237,7 +3230,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 		// Get the binding site center
 		// Currently Hard-coded TODO: FIX
-		float sphereRadius=2;
+		//float sphereRadius=5;
 		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
 
 		// We *assume* the last molecule is the ligand.
@@ -3288,7 +3281,8 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		// If ligand is too far reposition on a sphere centered on the last body
 		// center of mass (also add a margin of error, so you don't stay too much on the surface
 		// of the sphere)
-		if(ligandToSite.norm() > (sphereRadius)){
+		//if(ligandToSite.norm() > (sphereRadius)){
+		if (1){
 
 			SimTK::Vec3 BR={0,0,0};
 
@@ -3301,7 +3295,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
 			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
 			randVec[2] = sphereRadius * std::cos(phi);
-
+			randVec *= uniformRealDistribution(randomEngine);
 
 			std::cout << "randVec (G): " << randVec << std::endl;
 

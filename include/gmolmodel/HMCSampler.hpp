@@ -333,7 +333,6 @@ public:
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
 	void setSphereRadius(float argSphereRadius);
-	void setBindingSiteParams(const SimTK::Vec3& argGeometricCenter, float argSphereRadius);
 	bool proposeEquilibrium(SimTK::State& someState);
 	bool proposeNEHMC(SimTK::State& someState);
 	bool proposeNMA(SimTK::State& someState);

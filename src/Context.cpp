@@ -3939,9 +3939,6 @@ void Context::RunOneRound(void)
 		SimTK::Vec3 geometricCenter = worlds[currentWorldIx].getGeometricCenterOfSelection(
 			worlds[currentWorldIx].integ->updAdvancedState());
 
-		worlds[currentWorldIx].samplers[0]->setBindingSiteParams(geometricCenter,
-																 radius);
-
 
 		// Generate samples from the current world
 		int accepted = worlds[currentWorldIx].generateSamples(
