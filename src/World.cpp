@@ -924,10 +924,20 @@ void World::printMaps(void)
 // Pass configurations between Worlds
 
 
+// RANDOM_WALK functions
+void World::setTopologyIXs(std::vector<int> argTopologyIXs){
+	topologyIXs = argTopologyIXs;
+}
+
+void World::setAmberAtomIXs(std::vector<std::vector<int>> argAmberAtomIXs){
+	amberAtomIXs = argAmberAtomIXs;
+}
+
 SimTK::Vec3 
-World::getGeometricCenterOfSelection(const SimTK::State & state, 
-									 const std::vector<int>& topologyIx, 
-									 const std::vector<std::vector<int>>& amberAtomList)
+World::getGeometricCenterOfSelection(const SimTK::State & state 
+									 //const std::vector<int>& topologyIx, 
+									 //const std::vector<std::vector<int>>& amberAtomList
+									 )
 {
 
 	// return Vec3
@@ -940,20 +950,16 @@ World::getGeometricCenterOfSelection(const SimTK::State & state,
 
 	// Just a quick check, to skip unnecessary computation in case of 
 	// user error.
-	if (amberAtomList.size() == 0) {
+	if (amberAtomIXs.size() == 0) {
 		std::cerr << "Warning: getGeometricCenterOfSelection called with amberAtomList of size 0" << std::endl;
 		return geometricCenter;
 	}
 	
-	// We *assume* the first topology is the one 
-	// containing the atoms we are interested in
-	// TODO: FIX THIS
+	std::cout << "topologies atoms size " << topologyIXs.size() << " " << topologyIXs.size() << std::endl;
 
-	std::cerr << "topologies atoms size " << topologyIx.size() << " " << topologyIx.size() << std::endl;
-
-	for (int i = 0; i < topologyIx.size(); i++) {
-		const auto& topology = (*topologies)[topologyIx[i]];
-		const auto& atoms = amberAtomList[i];
+	for (int i = 0; i < topologyIXs.size(); i++) {
+		const auto& topology = (*topologies)[topologyIXs[i]];
+		const auto& atoms = amberAtomIXs[i];
 
 		int amberIx=0;
 
@@ -970,10 +976,11 @@ World::getGeometricCenterOfSelection(const SimTK::State & state,
 				const MobilizedBodyIndex mobilizedBodyIndex = forceField->getAtomBody(dAIx);
 				// Get DuMM Atom Station on its body.
 				const Vec3 dAS_B = forceField->getAtomStationOnBody(dAIx);
-				// Compute Transform then re-express in G
+				// Re-Express in G
 				const SimTK::MobilizedBody& mobod_A = matter->getMobilizedBody(mobilizedBodyIndex);
-				const Transform& X_GP = mobod_A.getBodyTransform(state);
-				const SimTK::Vec3 dAS_G = X_GP*dAS_B;
+				const SimTK::Vec3 dAS_G = mobod_A.findStationLocationInGround(state, dAS_B);
+				/* const Transform& X_GP = mobod_A.getBodyTransform(state);
+				const SimTK::Vec3 dAS_G = X_GP*dAS_B; */
 				geometricCenter += dAS_G;
 				nOfPoints += 1;
 

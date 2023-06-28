@@ -180,8 +180,7 @@ public:
 	// Get geometric center of a subset of atoms
 	// TEODOR
 	SimTK::Vec3 getGeometricCenterOfSelection(
-		const SimTK::State & state, const std::vector<int>& topologyIx, 
-		const std::vector<std::vector<int>>& amberAtomList);
+		const SimTK::State & state);
 
 	float setSphereRadius (float argRadius);
 
@@ -389,6 +388,10 @@ public:
 	//...............
 
 
+	// RANDOM_WALK related functions; we don't need getter, since we only
+	// use these values inside the scope of World.
+	void setTopologyIXs(std::vector<int> topologyIXs);
+	void setAmberAtomIXs(std::vector<std::vector<int>> AmberAtomIXs);
 
 public:
 
@@ -494,6 +497,9 @@ private:
 	// Maps a generalized velocity scale factor for every mobod
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Real > mbx2uScale;
 
+	// Binding Site Data: Topologies, AtomIx
+	std::vector<int> topologyIXs;
+	std::vector<std::vector<int>> amberAtomIXs;
 
 };
 

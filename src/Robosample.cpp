@@ -326,29 +326,23 @@ int main(int argc, char **argv)
 			}
 		}
 
-		std::cout << "amberAtomIXs: \n" ;
-		for (const auto& v1 : amberAtomIXs) {
-			for (const auto& v2 : v1)
-				std::cout << v2 << " ";
-			std::cout << std::endl;
-		}
-		std::cout << std::endl;
-
 		std::vector<int> topologyIXs;
 		for (const auto& value : setupReader.get("BINDINGSITE_MOLECULES")) {
 			topologyIXs.push_back(std::stoi(value));
 		}
 
-		std::cout << "topologyIXs: \n" ;
-		for (const auto& v1 : topologyIXs) {	
-			std::cout << v1 << " ";
-		}
-		std::cout << std::endl << std::endl;
+
 
 		float sphere_radius = std::stoi(setupReader.get("SPHERE_RADIUS")[0]);
-		std::cout << "sphere_radius: " << sphere_radius << std::endl;
 
-		context.setBindingSiteParameters(topologyIXs, amberAtomIXs, sphere_radius);
+		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
+
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+			context.getWorld(worldIx)->setTopologyIXs(topologyIXs);
+			context.getWorld(worldIx)->setAmberAtomIXs(amberAtomIXs);
+			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(0));
+			sampler_p->setSphereRadius(sphere_radius);
+		}
 	}
 
 	// Set thermostats to the samplers

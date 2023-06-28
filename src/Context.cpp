@@ -1567,16 +1567,6 @@ void Context::initializeSampler(std::size_t whichWorld,
 		worlds[whichWorld].integ->updAdvancedState());
 }
 
-// Set TopologyIx, Amber-like AtomIx and sphere radius for 
-// ligand binding site
-void Context::setBindingSiteParameters(const std::vector<int>& argTopologyIXs, const std::vector<std::vector<int>>& argAmberAtomIXs, 
-								float argradius)
-{
-	TopologyIXs = argTopologyIXs;
-	AmberAtomIXs = argAmberAtomIXs;
-	radius = argradius;
-}
-
 
 // Amber like scale factors.
 void Context::setAmberForceFieldScaleFactors(std::size_t whichWorld)
@@ -3947,9 +3937,7 @@ void Context::RunOneRound(void)
 
 		// Teodor
 		SimTK::Vec3 geometricCenter = worlds[currentWorldIx].getGeometricCenterOfSelection(
-			worlds[currentWorldIx].integ->updAdvancedState(),
-			TopologyIXs,
-			AmberAtomIXs);
+			worlds[currentWorldIx].integ->updAdvancedState());
 
 		worlds[currentWorldIx].samplers[0]->setBindingSiteParams(geometricCenter,
 																 radius);
