@@ -101,11 +101,6 @@ public:
 	// Samplers have to set parameters after Simbody subsystems generation
 	void initializeSampler(std::size_t whichWorld, std::size_t whichSampler);
 
-	// Set TopologyIx, Amber-like AtomIx and sphere radius for 
-	// ligand binding site
-	void setBindingSiteParameters(const std::vector<int>& argTopologyIXs, const std::vector<std::vector<int>>& argAmberAtomIXs, 
-								float argradius);
-
 	// Amber like scale factors.
 	void setAmberForceFieldScaleFactors(std::size_t whichWorld);
 	void setAmberForceFieldScaleFactors(void);

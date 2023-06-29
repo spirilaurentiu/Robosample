@@ -3226,11 +3226,12 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 }
 
-// Set Geometric Center to use when doing RANDOM_WALK
-void HMCSampler::setBindingSiteParams(const SimTK::Vec3& argGeometricCenter, float argSphereRadius)
+// Set Sphere Radius when doing RANDOM_WALK
+void HMCSampler::setSphereRadius(float argSphereRadius)
 {
-	geometricCenter = argGeometricCenter;
+	//std::cout << "HMCSampler::setSphereRadius:  Radius Set: " << sphereRadius << std::endl;	
 	sphereRadius = argSphereRadius;
+	std::cout << "HMCSampler::setSphereRadius:  Radius Set: " << sphereRadius << std::endl;
 }
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo
@@ -3293,43 +3294,25 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			std::cout << "RANDOM_WALK integrators should only be used over many molecules\n";
 		}
 
+		// Get the binding site center
+		// Currently Hard-coded TODO: FIX
+		//float sphereRadius=5;
+		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
+
 		// We *assume* the last molecule is the ligand.
 		const int nOfBodies = matter->getNumBodies();
-		std::cout << "nOfBodies: " << nOfBodies << std::endl;
-
-		geometricCenter = {5,0,0};
 
 		// Print the geometric center (for debugging purposes)
 		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
-		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";		
-
-
-
-		// Protein
-		const SimTK::MobilizedBody& mobod_P = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(nOfBodies-2) );
-		const Transform& X_GP = mobod_P.getBodyTransform(someState);
+		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
 
 		// Ligand
 		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
 			SimTK::MobilizedBodyIndex(nOfBodies-1) ); 
-		//const Vec3 COM_L = mobod_L.findMassCenterLocationInGround(someState);
 		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
 		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
-		const Transform& X_GL = mobod_L.getBodyTransform(someState);
 		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
 		const Transform& X_PF = mobod_L.getInboardFrame(someState);
-		const Transform& X_BM = mobod_L.getOutboardFrame(someState);
-		const Transform& X_GF = X_GP*X_PF;
-
-		std::cout << "\nProtein Origin Location: " << mobod_P.getBodyOriginLocation(someState) << std::endl;
-		std::cout << "Ligand Origin Location: " << mobod_L.getBodyOriginLocation(someState) << std::endl;
-		std::cout << "Mobilizer F location in Ground: " << mobod_L.findStationLocationInGround(someState, X_PF.p()) << std::endl; 
-		std::cout << "Mobilizer M location in Ground: " << mobod_L.findStationLocationInGround(someState, X_BM.p()) << std::endl; 
-
-		std::cout << "Ligand Center of Mass " << COM_L << std::endl;
-		std::cout << "Ligand Center of Mass in Ground: " << COM_G << std::endl;
-		std::cout << "\n\n";
 
 		// It's best to first compute the rotation, then
 		// compute the translation to fit the "New" X_FM
@@ -3350,143 +3333,59 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		s = sqrt((1-z) / w);
 
 		SimTK::Quaternion randQuat(x, y, s*u, s*v);
-		//SimTK::Quaternion currQuat(someState.updQ()[0], someState.updQ()[1],
-		//	someState.updQ()[2], someState.updQ()[3]);
-		//SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
+		SimTK::Quaternion currQuat(someState.updQ()[0], someState.updQ()[1],
+			someState.updQ()[2], someState.updQ()[3]);
+		SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
 
-		//Debug Stuff
-		SimTK::Quaternion resultQuat = randQuat;
+		mobod_L.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
+		system->realize(someState, SimTK::Stage::Dynamics);
 
-/*
-		std::cout << "RandQuat: " << randQuat << std::endl;
-		std::cout << "currQuat: " << currQuat << std::endl;
-		std::cout << "ResultQuat: " << resultQuat << std::endl;
-*/
-/* 
-		someState.updQ()[0] = resultQuat.asVec4()[0];
-		someState.updQ()[1] = resultQuat.asVec4()[1];
-		someState.updQ()[2] = resultQuat.asVec4()[2];
-		someState.updQ()[3] = resultQuat.asVec4()[3];
- */
-		// Set Q to fit 
-
-		//mobod_L.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
-		//mobod_L.setQToFitTranslation(someState, X_FM.p());
-
-		PrintTransform(X_GP, 6, "X_GP");
-		PrintTransform(X_GL, 6, "X_GL");
-		PrintTransform(X_PF, 6, "X_PF");
-		PrintTransform(X_FM, 6, "X_FM");
-		PrintTransform(X_BM, 6, "X_BM");
-		PrintTransform(X_GF, 6, "X_GF");
-
-		SimTK::Vec3 BR={0,0,0};
+		// Determine the distance between center of mass of ligand and geometricCenter
+		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
+		std::cout << "ligandToSite: " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
 
 		// If ligand is too far reposition on a sphere centered on the last body
-		// center of mass
-		//if(S_COML.norm() > sphereRadius){
-		if(1){
+		// center of mass (also add a margin of error, so you don't stay too much on the surface
+		// of the sphere)
+		//if(ligandToSite.norm() > (sphereRadius)){
+		if (1){
+
+			SimTK::Vec3 BR={0,0,0};
 
 			// Sample a random vector centered in 0 and expressed in G
 			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
 			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
 			SimTK::Vec3 randVec={0,0,0};
 
-/*
+
 			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
 			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
 			randVec[2] = sphereRadius * std::cos(phi);
-*/
+			randVec *= uniformRealDistribution(randomEngine);
 
 			std::cout << "randVec (G): " << randVec << std::endl;
 
 			// Move it in BindingSiteCenter (BS)
-			//randVec_GC = R;
 			SimTK::Vec3 GR;
-			//GR = randVec + geometricCenter;
 			GR = randVec + (geometricCenter - X_PF.p());
 
 			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
 			
 			// Account for COM_L
-
 			BR = BR - COM_L;
 
 			// Express BR in F
 			BR = X_FM.R()*BR;
-
-			std::cout << "\nCOM Vector expressed in Ground: " << COM_G << "\n";
-
-
-			std::cout << "\nSite Vector expressed in Fixed Frame: " << BR << "\n\n";
-/*
-			mobod_L.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
 			mobod_L.setQToFitTranslation(someState, BR);
-*/
 
-			// Add 
-
-		// Generate random translation
+		// If not, just generate a random translation
 		}else{
-			someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
-			someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
-			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
+			someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+			someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
 		}
 
-		SimTK::Transform new_XFM;
-		new_XFM.set(SimTK::Rotation(resultQuat), BR);
-		//new_XFM.set(SimTK::Rotation(), BR);
-		mobod_L.setQToFitTransform(someState, new_XFM);
-		
-		PrintTransform(new_XFM, 6, "new_XFM");
-		std::cout<<"\n\n";
-
-		system->realize(someState, SimTK::Stage::Position);
-
-
-/* 		// Generate random rotation quaternion
-		double x,y,z, u,v,w, s;
-		do {
-			x = uniformRealDistribution_m1_1(randomEngine);
-			y = uniformRealDistribution_m1_1(randomEngine);
-			z = x*x + y*y;
-		}while (z > 1);
-		do {
-			u = uniformRealDistribution_m1_1(randomEngine);
-			v = uniformRealDistribution_m1_1(randomEngine);
-			w = u*u + v*v;
-		} while (w > 1);
-
-		s = sqrt((1-z) / w);
-
-		SimTK::Quaternion randQuat(x, y, s*u, s*v);
-		SimTK::Quaternion currQuat(someState.updQ()[0], someState.updQ()[1],
-			someState.updQ()[2], someState.updQ()[3]);
-		SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
-
-		//Debug Stuff
-		//resultQuat = {0.7071, 0, 0.7071, 0};
-
-		std::cout << "RandQuat: " << randQuat << std::endl;
-		std::cout << "currQuat: " << currQuat << std::endl;
-		std::cout << "ResultQuat: " << resultQuat << std::endl;
-
-/* 
-		someState.updQ()[0] = resultQuat.asVec4()[0];
-		someState.updQ()[1] = resultQuat.asVec4()[1];
-		someState.updQ()[2] = resultQuat.asVec4()[2];
-		someState.updQ()[3] = resultQuat.asVec4()[3];
- */
-		// Set Q to fit 
-
-		//mobod_L.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
-		//mobod_L.setQToFitTranslation(someState, BR); */
-
 		system->realize(someState, SimTK::Stage::Dynamics);
-
-
-		//std::cout << "Qfin= " << someState.getQ() << std::endl;
-
 		calcNewConfigurationAndEnergies(someState);
 
 	}else if (integratorName == IntegratorName::EMPTY){
