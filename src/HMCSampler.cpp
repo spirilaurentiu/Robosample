@@ -109,6 +109,9 @@ HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem
 	this->sqrtBoostRT = 0.0;
 	this->boostBeta = 0.0;
 
+	// For RANDOM_WALK Docking Simulations
+	this->sphereRadius=0.0;
+
 	MDStepsPerSample = 0;
 	proposeExceptionCaught = false;
 	shouldAdaptTimestep = false;
@@ -3229,8 +3232,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		}
 
 		// Get the binding site center
-		// Currently Hard-coded TODO: FIX
-		//float sphereRadius=5;
+
 		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
 
 		// We *assume* the last molecule is the ligand.
@@ -3296,8 +3298,6 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
 			randVec[2] = sphereRadius * std::cos(phi);
 			randVec *= uniformRealDistribution(randomEngine);
-
-			std::cout << "randVec (G): " << randVec << std::endl;
 
 			// Move it in BindingSiteCenter (BS)
 			SimTK::Vec3 GR;

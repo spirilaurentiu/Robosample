@@ -3935,11 +3935,6 @@ void Context::RunOneRound(void)
 			transferCoordinates(lastWorldIx, currentWorldIx);
 		}
 
-		// Teodor
-		SimTK::Vec3 geometricCenter = worlds[currentWorldIx].getGeometricCenterOfSelection(
-			worlds[currentWorldIx].integ->updAdvancedState());
-
-
 		// Generate samples from the current world
 		int accepted = worlds[currentWorldIx].generateSamples(
 			int(nofSamplesPerRound[currentWorldIx]));
