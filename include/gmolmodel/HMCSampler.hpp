@@ -84,6 +84,24 @@ public:
 	/** Destructor **/
 	virtual ~HMCSampler();
 
+	/** ===============================
+	 * RANDOM NUMBERS
+		=============================== */
+
+	// Uniform distribution number generator
+	SimTK::Real uniformRealDistributionRandTrunc(
+		SimTK::Real L, SimTK::Real R);
+
+	// Uniform distribution PDF
+	SimTK::Real uniformRealDistributionPDFTrunc(
+		SimTK::Real X, SimTK::Real L, SimTK::Real R);
+
+	// Uniform distribution CDF
+	SimTK::Real uniformRealDistributionCDFTrunc(
+		SimTK::Real X, SimTK::Real L, SimTK::Real R);
+		
+
+
 	// BEGIN MCSAMPLER
 	// Get/Set a thermostat (even for MCMC)
 	void setThermostat(ThermostatName);

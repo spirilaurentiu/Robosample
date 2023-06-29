@@ -158,6 +158,59 @@ HMCSampler::~HMCSampler()
 {
 }
 
+/** ===============================
+ * RANDOM NUMBERS
+    =============================== */
+
+
+/** Generate a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionRandTrunc(
+	SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real r = uniformRealDistribution(randomEngine);
+	
+	return r * (R - L) + L;
+}
+
+/** Get the PDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionPDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real pdf = SimTK::NaN;
+	
+	if ((X >= L) && (X <= R)){
+		pdf = 1.0 / (R - L);
+	}
+
+	return pdf;
+}
+
+/** Get the CDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionCDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real cdf = SimTK::NaN;
+	
+	if (X < L){
+		cdf = 0.0;
+	}
+	else if(X > R){
+		cdf = 1.0;
+	}else{
+		cdf = (X - L) / (R - L);
+	}
+
+	return cdf;
+}
+
+
+
 /** Seed the random number generator. Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
@@ -2732,7 +2785,8 @@ std::vector<SimTK::Real>& scaleFactors)
 				world->normX_BMp[int(mbx) - 1];
 		}
 		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
-			mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
+
+			//mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
 			
 			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
 			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
@@ -2762,13 +2816,6 @@ std::vector<SimTK::Real>& scaleFactors)
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
-
-	// Get mobod inboard frame X_FM measured and expressed in P
-	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(
-		SimTK::MobilizedBodyIndex(2));
-	const Transform& X_FM = mobod.getMobilizerTransform(someState);
-	std::cout << " X_FM after scaling\n" << X_FM << std::endl;
-
 
 	// Test
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
@@ -3853,7 +3900,6 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 
 	return Rdot.size();
 }
-
 
 /** Calculate Mean Square Displacement based on stored R vectors **/
 SimTK::Real HMCSampler::calculateMSD()

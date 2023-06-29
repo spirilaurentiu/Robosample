@@ -27,18 +27,6 @@ public:
 	// Destructor
 	virtual ~Sampler();
 
-	// Uniform distribution number generator
-	SimTK::Real uniformRealDistributionRandTrunc(
-		SimTK::Real L, SimTK::Real R);
-
-	// Uniform distribution PDF
-	SimTK::Real uniformRealDistributionPDFTrunc(
-		SimTK::Real X, SimTK::Real L, SimTK::Real R);
-
-	// Uniform distribution CDF
-	SimTK::Real uniformRealDistributionCDFTrunc(
-		SimTK::Real X, SimTK::Real L, SimTK::Real R);
-
 	// Compute mass matrix determinant (O(n))
 	// TODO Move
 	SimTK::Real calcMassDeterminant(const SimTK::State&);

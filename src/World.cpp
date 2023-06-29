@@ -671,6 +671,7 @@ SimTK::Real World::getWorkOrHeat(void)
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
+				std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
 		}
 		
 	}
@@ -698,15 +699,15 @@ void World::getTransformsStatistics(SimTK::State& someState)
 
 		// Get mobod inboard frame X_PF
 		const Transform& X_PF = mobod.getInboardFrame(someState);
-		std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
 
 		// Get mobod inboard frame X_FM measured and expressed in P
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
-		std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
 
 		// Get mobod inboard frame X_BM
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
-		std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
 		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
 
 		// Get BAT coordinate "angle"
@@ -975,7 +976,7 @@ World::getGeometricCenterOfSelection(const SimTK::State & state,
 	// Just a quick check, to skip unnecessary computation in case of 
 	// user error.
 	if (amberAtomList.size() == 0) {
-		std::cerr << "Warning: getGeometricCenterOfSelection called with amberAtomList of size 0" << std::endl;
+		//std::cerr << "Warning: getGeometricCenterOfSelection called with amberAtomList of size 0" << std::endl;
 		return geometricCenter;
 	}
 	
