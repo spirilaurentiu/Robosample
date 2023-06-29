@@ -161,6 +161,59 @@ HMCSampler::~HMCSampler()
 {
 }
 
+/** ===============================
+ * RANDOM NUMBERS
+    =============================== */
+
+
+/** Generate a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionRandTrunc(
+	SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real r = uniformRealDistribution(randomEngine);
+	
+	return r * (R - L) + L;
+}
+
+/** Get the PDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionPDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real pdf = SimTK::NaN;
+	
+	if ((X >= L) && (X <= R)){
+		pdf = 1.0 / (R - L);
+	}
+
+	return pdf;
+}
+
+/** Get the CDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionCDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real cdf = SimTK::NaN;
+	
+	if (X < L){
+		cdf = 0.0;
+	}
+	else if(X > R){
+		cdf = 1.0;
+	}else{
+		cdf = (X - L) / (R - L);
+	}
+
+	return cdf;
+}
+
+
+
 /** Seed the random number generator. Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
@@ -2580,8 +2633,10 @@ void HMCSampler::setQToScaleBendStretch(SimTK::State& someState,
 }
 
 
-// Calculate bond length and angle deviations from their means
-void HMCSampler::calcBendStretchDeviations(
+/**
+ * Calculate bond length and angle deviations from their means
+*/ 
+/* void HMCSampler::calcBendStretchDeviations(
 	SimTK::State& someState,
 	std::vector<SimTK::Real>& X_PFdiffs,
 	std::vector<SimTK::Real>& X_BMdiffs
@@ -2600,7 +2655,7 @@ void HMCSampler::calcBendStretchDeviations(
 		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
 	}
 
-}
+} */
 
 /*
  * Shift all the generalized coordinates to scale bonds and angles
@@ -2622,7 +2677,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	// 1. Get the deviations from their means
 	std::vector<SimTK::Real> X_PFdiffs;
 	std::vector<SimTK::Real> X_BMdiffs;
-	calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
+	world->calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
 
 	// Scale the differences with QScale. -1 is only here because Q is always 0
 	int k = -1;
@@ -2677,10 +2732,10 @@ std::vector<SimTK::Real>& scaleFactors)
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
 }
 
-/*
+/**
  * Shift all the generalized coordinates to scale bonds and angles
  * standard deviations through BendStretch joint
- */
+*/
 void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
@@ -2689,24 +2744,24 @@ std::vector<SimTK::Real>& scaleFactors)
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
 
-	// Prepare scaling factors for return
+	// Resize scaling factors
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
 		1.0);
 		
 	// 1. Get the deviations from their means
 	std::vector<SimTK::Real> X_PFdiffs;
 	std::vector<SimTK::Real> X_BMdiffs;
-	calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
+	world->calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
 
 	// Scale the differences with QScale. -1 is only here because Q is always 0
 	int k = -1;
 	for(auto& diff : X_PFdiffs){
 		diff *= QScaleFactor - 1.0;
-		//std::cout << "diff= " << diff << std::endl;
+		std::cout << "diff= " << diff << std::endl;
 	}
 	for(auto& diff : X_BMdiffs){
 		diff *= QScaleFactor - 1.0;
-		//std::cout << "diff= " << diff << std::endl;
+		std::cout << "diff= " << diff << std::endl;
 	}
 
 	// Ground and first mobod don't have internal coordinates
@@ -2720,7 +2775,7 @@ std::vector<SimTK::Real>& scaleFactors)
 		// Get mobilized body
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		
-		// We only allocated  X_PFs for non-Ground bodies
+		// We only allocated X_PFs for non-Ground bodies
 		//RESTORE RESTORE RESTORE Check X_FM assignment 0
 
 		// Get the scaleFactors too
@@ -2731,16 +2786,15 @@ std::vector<SimTK::Real>& scaleFactors)
 			scaleFactors[ (int(mbx) - 1) ] = 
 			(world->normX_BMp[int(mbx) - 1] + X_BMdiffs[int(mbx) - 1]) /
 				world->normX_BMp[int(mbx) - 1];
-		}		
-
+		}
 		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
-			mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
+
+			//mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
 			
 			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
 			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
 				world->acosX_PF00[int(mbx) - 1];
 		}
-
 
 		/* // DELETE DELETE DELETE DELETE Check X_FM assignment 0
 		SimTK::Real someConstant = 1.123;
@@ -3015,6 +3069,9 @@ std::vector<SimTK::Real>& scaleFactors)
 
 }
 
+/**
+ * Get the log of the Jacobian of a bond-angle strtch
+*/
 SimTK::Real 
 HMCSampler::calcBendStretchJacobianDetLog(
 	SimTK::State& someState,
@@ -3031,11 +3088,11 @@ HMCSampler::calcBendStretchJacobianDetLog(
 			x_pf_k = k + world->normX_BMp.size();
 
 			// Checks
-			/*std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
+			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
 				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
 					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
 					<< world->normX_BMp[k] * scaleFactors[k] << " "
-				<< std::endl << std::flush;*/
+				<< std::endl << std::flush; */
 
 			// Get bond term
 			SimTK::Real d2 = world->normX_BMp[k];
@@ -3062,7 +3119,7 @@ HMCSampler::calcBendStretchJacobianDetLog(
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
-					logJacScale += std::log(scaleFactors[k]);
+					logJacScale += std::log(std::abs(scaleFactors[k]));
 			}
 	}
 
@@ -3073,8 +3130,16 @@ HMCSampler::calcBendStretchJacobianDetLog(
 			// scaleFactors index is shifted
 			x_pf_k = k + world->normX_BMp.size();
 
+			// Checks
+			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
+				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
+					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
+					<< world->normX_BMp[k] * scaleFactors[k] << " "
+				<< std::endl << std::flush; */
+
 			// Get bond term
 			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
+
 			if(d2 != 0){
 					d2 = 2.0 * std::log(d2);
 			}
@@ -3082,7 +3147,7 @@ HMCSampler::calcBendStretchJacobianDetLog(
 			// Get the angle term
 			SimTK::Real sineTheta = (world->acosX_PF00[k] * scaleFactors[x_pf_k]);
 
-			if(sineTheta != 0){
+			if(std::abs(sineTheta) > 0.0000001){
 					sineTheta = std::log(std::sin(sineTheta));
   			}
 
@@ -3106,28 +3171,29 @@ HMCSampler::calcBendStretchJacobianDetLog(
 
 }
 
-/** It implements a non-equilibrium proposal move, 
- * then propagates the trajectory. **/
+/**
+ * It implements a non-equilibrium proposal move, 
+ * then propagates the trajectory.
+*/
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 {
 
-/* 	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState); */
+	/*// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);*/
 
-	// Apply the non-equilibrium transformation
+	// Resize the scale factors vector to be handed further
 	std::vector<SimTK::Real> scaleFactors;
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
 		1.0);
 
-	// And get the BAT scaling factors back
-	//setQToScaleBendStretch(someState, scaleFactors);
-	////if(this->nofSamples > 6000){
+	// Scale bonds and angles
+	if(this->nofSamples >= 0){ // dont't take burn-in
+		//setQToScaleBendStretch(someState, scaleFactors);
 		setQToScaleBendStretchStdev(someState, scaleFactors);
-	////}
-	//setQToShiftBendStretchStdev(someState, scaleFactors);
+		std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
+	}
 
-	std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
-
+	// Get the log of the Jacobian of the change
 	this->bendStretchJacobianDetLog =
 		calcBendStretchJacobianDetLog(someState, scaleFactors);
 
@@ -3733,7 +3799,6 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 
 	return Rdot.size();
 }
-
 
 /** Calculate Mean Square Displacement based on stored R vectors **/
 SimTK::Real HMCSampler::calculateMSD()

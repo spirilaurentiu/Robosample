@@ -671,6 +671,7 @@ SimTK::Real World::getWorkOrHeat(void)
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
+				std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
 		}
 		
 	}
@@ -710,11 +711,17 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
 
 		// Get BAT coordinate "angle"
+		/*
+		/ cos t
+		| 
+		|
+		\
+		*/
 		SimTK::Vec3 bondVector = X_BM.p();
 		acosX_PF00[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
-		/* // Print something for now
+		// Print something for now
 		SimTK::Real bond = normX_BMp[int(mbx) - 1];
 		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
 		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
@@ -726,7 +733,7 @@ void World::getTransformsStatistics(SimTK::State& someState)
 			<< "angleMean " << int(mbx) - 1 << " "
 			<< angleMean * (180 / SimTK::Pi) << " "
 			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
-			<< std::endl; */
+			<< std::endl;
 
 	}
 
@@ -798,8 +805,31 @@ void World::PrintX_BMMeans(void)
 	}
 }
 
+/**
+ * Set X_PF, X_BM means
+*/
+void World::setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
+const std::vector<SimTK::Real>& givenX_BM)
+{
+	// Update acosX_PF00 means
+	int i = -1;
+	for(auto &xpf : acosX_PF00_means ){
+		i += 1;
+		xpf = givenX_PF[i]; 
+	}
+	
+	// Update normX_BMp means
+	i = -1;
+	for(auto &xbm : normX_BMp_means ){
+		i += 1;
+		xbm = givenX_BM[i];
+	}
 
-// Update transforms means
+}
+
+/**
+ * Update X_PF, X_BM means
+*/
 void World::updateTransformsMeans(SimTK::State& someState)
 {
 	int nofSamples = getNofSamples() + 1;
@@ -826,7 +856,8 @@ void World::updateTransformsMeans(SimTK::State& someState)
 			N_1overN = N_1 / nofSamples;
 			NInv = 1.0 / nofSamples;
 		}
-		//std::cout << "updateX_PFMeans check " << " " <<  N_1overN << " " <<  NInv  << " " << std::flush;
+		//std::cout << "updateX_PFMeans check " << " "
+		//	<<  N_1overN << " " <<  NInv  << " " << std::flush;
 
 		// Update acosX_PF00 means
 		int i = -1;
@@ -846,26 +877,6 @@ void World::updateTransformsMeans(SimTK::State& someState)
 }
 
 // Get X_PF means
-void World::setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
-const std::vector<SimTK::Real>& givenX_BM)
-{
-	// Update acosX_PF00 means
-	int i = -1;
-	for(auto &xpf : acosX_PF00_means ){
-		i += 1;
-		xpf = givenX_PF[i]; 
-	}
-	
-	// Update normX_BMp means
-	i = -1;
-	for(auto &xbm : normX_BMp_means ){
-		i += 1;
-		xbm = givenX_BM[i];
-	}
-
-}
-
-// Get X_PF means
 std::vector<SimTK::Real>& World::getX_PFMeans(void)
 {
 	return acosX_PF00_means;
@@ -875,6 +886,30 @@ std::vector<SimTK::Real>& World::getX_PFMeans(void)
 std::vector<SimTK::Real>& World::getX_BMMeans(void)
 {
 	return normX_BMp_means;
+}
+
+/**
+ * Calculate bond length and angle deviations from their means
+*/ 
+void World::calcBendStretchDeviations(
+	SimTK::State& someState,
+	std::vector<SimTK::Real>& X_PFdiffs,
+	std::vector<SimTK::Real>& X_BMdiffs
+)
+{
+
+	// Make sure it has 
+	X_PFdiffs.resize(this->acosX_PF00_means.size(), 0.0);
+	X_BMdiffs.resize(this->normX_BMp_means.size(), 0.0);
+
+	// 
+	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		X_PFdiffs[k] = this->acosX_PF00[k] - this->acosX_PF00_means[k];
+	}
+	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
+		X_BMdiffs[k] = this->normX_BMp[k] - this->normX_BMp_means[k];
+	}
+
 }
 
 // Get the number of molecules

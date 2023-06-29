@@ -352,6 +352,15 @@ public:
 	/** Get X_BM means */
 	std::vector<SimTK::Real>& getX_BMMeans(void);
 
+	/**
+	 * Calculate bond length and angle deviations from their means
+	*/ 
+	void calcBendStretchDeviations(
+		SimTK::State& someState,
+		std::vector<SimTK::Real>& X_PFdiffs,
+		std::vector<SimTK::Real>& X_BMdiffs
+	);
+	
 	// Print bond lengths and angle bends
 	void traceBendStretch(SimTK::State& someState);
 

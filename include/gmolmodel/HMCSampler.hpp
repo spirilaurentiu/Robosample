@@ -84,6 +84,24 @@ public:
 	/** Destructor **/
 	virtual ~HMCSampler();
 
+	/** ===============================
+	 * RANDOM NUMBERS
+		=============================== */
+
+	// Uniform distribution number generator
+	SimTK::Real uniformRealDistributionRandTrunc(
+		SimTK::Real L, SimTK::Real R);
+
+	// Uniform distribution PDF
+	SimTK::Real uniformRealDistributionPDFTrunc(
+		SimTK::Real X, SimTK::Real L, SimTK::Real R);
+
+	// Uniform distribution CDF
+	SimTK::Real uniformRealDistributionCDFTrunc(
+		SimTK::Real X, SimTK::Real L, SimTK::Real R);
+		
+
+
 	// BEGIN MCSAMPLER
 	// Get/Set a thermostat (even for MCMC)
 	void setThermostat(ThermostatName);
@@ -284,12 +302,14 @@ public:
 	const SimTK::Real& getBendStretchStdevScaleFactor(void);
 	void setBendStretchStdevScaleFactor(const SimTK::Real& s);
 
-	// 
-	void calcBendStretchDeviations(
+	/**
+	 * Calculate bond length and angle deviations from their means
+	*/ 
+	/* void calcBendStretchDeviations(
 		SimTK::State& someState,
 		std::vector<SimTK::Real>& X_PFdiffs,
 		std::vector<SimTK::Real>& X_BMdiffs
-	);
+	); */
 
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds
@@ -309,7 +329,7 @@ public:
 		std::vector<SimTK::Real>& scaleFactors);
 
 	/**
-	 * 
+	 * Get the log of the Jacobian of a bond-angle strtch
 	*/
 	SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState,
 		std::vector<SimTK::Real> scaleFactors);
