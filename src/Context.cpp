@@ -3306,6 +3306,11 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 			worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistributionRandTrunc(
 				0.8, 1.25);
 
+		SimTK::Real randSign;
+		SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
+		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+		qScaleFactors.at(thisThermoStateIx) *= randSign;
+
 		// Set the sampler scale factor
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
 			qScaleFactors.at(thisThermoStateIx));
@@ -3325,7 +3330,6 @@ void Context::RunWorld(int whichWorld)
 		int accepted = worlds[whichWorld].generateSamples(
 			int(nofSamplesPerRound[whichWorld]));
 	}
-
 }
 
 // Rewind back world
@@ -3652,6 +3656,16 @@ void Context::RunRENS(void)
 
 	PrintNofAcceptedSwapsMatrix();
 
+
+		// lin4 transforms
+		std::vector<SimTK::Real> givenX_PF(2, 999);
+		std::vector<SimTK::Real> givenX_BM(2, 999);
+		givenX_PF[0] = 0.0000000000;
+		givenX_PF[1] = 1.5707963268;
+		givenX_BM[0] = 0.0000000000;
+		givenX_BM[1] = 0.1000000000;
+
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
 		// DELETE THIS CODE
 		/*std::cout << "TEST MODE given X_PF givenX_BM\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
@@ -3949,6 +3963,10 @@ void Context::RunOneRound(void)
 			// limits L and R
 			sf = worlds[worldIx].updSampler(0)->uniformRealDistributionRandTrunc(
 				0.8, 1.25);
+			SimTK::Real randSign;
+			SimTK::Real randUni_m1_1 = worlds[worldIx].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
+			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+			sf *= randSign;
 
 			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
 		}	
@@ -3999,8 +4017,19 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
+		// lin4 transforms
+		std::vector<SimTK::Real> givenX_PF(2, 999);
+		std::vector<SimTK::Real> givenX_BM(2, 999);
+		givenX_PF[0] = 0.0000000000;
+		givenX_PF[1] = 1.5707963268;
+		givenX_BM[0] = 0.0000000000;
+		givenX_BM[1] = 0.1000000000;
+
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+
 		// DELETE THIS CODE
 		/* std::cout << "TEST MODE\n";
+		// Ala1 given transforms
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
 

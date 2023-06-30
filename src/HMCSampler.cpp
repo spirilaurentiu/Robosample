@@ -2740,6 +2740,9 @@ void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
 
+	world->PrintX_PFs();
+	world->PrintX_BMs();
+
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
@@ -2824,6 +2827,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
 
 }
+
 
 
 /*

@@ -722,7 +722,7 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
 		// Print something for now
-		SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		/* SimTK::Real bond = normX_BMp[int(mbx) - 1];
 		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
 		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
 		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
@@ -733,7 +733,7 @@ void World::getTransformsStatistics(SimTK::State& someState)
 			<< "angleMean " << int(mbx) - 1 << " "
 			<< angleMean * (180 / SimTK::Pi) << " "
 			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
-			<< std::endl;
+			<< std::endl; */
 
 	}
 
@@ -771,7 +771,9 @@ void World::PrintX_PFs(void)
 	int i = -1;
 	for(const auto &xpf : acosX_PF00 ){
 		i += 1;
-		std::cout << "X_PF " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		//std::cout << "X_PF " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		std::cout << "X_PF " << i << " " << xpf << std::endl;
+
 	}
 }
 
