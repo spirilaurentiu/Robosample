@@ -793,7 +793,8 @@ void World::PrintX_PFMeans(void)
 	int i = -1;
 	for(const auto &xpf : acosX_PF00_means ){
 		i += 1;
-		std::cout << "X_PFMean " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		//std::cout << "X_PFMean " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		std::cout << "X_PFMean " << i << " " << xpf << std::endl;
 	}
 }
 

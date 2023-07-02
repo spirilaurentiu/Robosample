@@ -3665,8 +3665,9 @@ void Context::RunRENS(void)
 		givenX_BM[0] = 0.0000000000;
 		givenX_BM[1] = 0.1000000000;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
-		// DELETE THIS CODE
+		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+		}		// DELETE THIS CODE
 		/*std::cout << "TEST MODE given X_PF givenX_BM\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
@@ -3985,10 +3986,8 @@ void Context::RunOneRound(void)
 
 		// Transfer coordinates from last world to current
 		if(worldIndexes.size() > 1) {
-
 			std::cout << "Transfer from world " << lastWorldIx
 				<< " to " << currentWorldIx << std::endl;
-
 			transferCoordinates(lastWorldIx, currentWorldIx);
 		}
 
@@ -4025,7 +4024,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		givenX_BM[0] = 0.0000000000;
 		givenX_BM[1] = 0.1000000000;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+		}
 
 		// DELETE THIS CODE
 		/* std::cout << "TEST MODE\n";
@@ -4099,7 +4100,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				}
 			}
 
-		this->nofRounds++;
+			this->nofRounds++;
 
 		}
 
@@ -4130,7 +4131,6 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			this->nofRounds++;
 		}
-
 	}
 
 

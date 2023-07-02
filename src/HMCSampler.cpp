@@ -2741,7 +2741,10 @@ std::vector<SimTK::Real>& scaleFactors)
 {
 
 	world->PrintX_PFs();
+	world->PrintX_PFMeans();
 	world->PrintX_BMs();
+	world->PrintX_BMMeans();
+	//world->traceBendStretch(someState);
 
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
@@ -2781,7 +2784,7 @@ std::vector<SimTK::Real>& scaleFactors)
 		// We only allocated X_PFs for non-Ground bodies
 		//RESTORE RESTORE RESTORE Check X_FM assignment 0
 
-		// Get the scaleFactors too
+		// Record the scaleFactors too
 		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
 
 			mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
