@@ -3656,19 +3656,16 @@ void Context::RunRENS(void)
 
 	PrintNofAcceptedSwapsMatrix();
 
-
+		// DELETE THIS CODE
 		// lin4 transforms
-		std::vector<SimTK::Real> givenX_PF(2, 999);
-		std::vector<SimTK::Real> givenX_BM(2, 999);
-		givenX_PF[0] = 0.0000000000;
-		givenX_PF[1] = 1.5707963268;
-		givenX_BM[0] = 0.0000000000;
-		givenX_BM[1] = 0.1000000000;
+		//std::vector<SimTK::Real> givenX_PF(2, 999);
+		//std::vector<SimTK::Real> givenX_BM(2, 999);
+		//givenX_PF[0] = 0.0000000000;
+		//givenX_PF[1] = 1.5707963268;
+		//givenX_BM[0] = 0.0000000000;
+		//givenX_BM[1] = 0.1000000000;
 
-		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
-		}		// DELETE THIS CODE
-		/*std::cout << "TEST MODE given X_PF givenX_BM\n";
+		std::cout << "TEST MODE given X_PF givenX_BM\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
 
@@ -3717,7 +3714,11 @@ void Context::RunRENS(void)
 		givenX_BM[20] = 0.108296974;
 		givenX_BM[21] = 0.111305194;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);*/
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+
+		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+		}
 		// DELETE CODE ABOVE
 
 	// Main loop
@@ -3967,7 +3968,7 @@ void Context::RunOneRound(void)
 			SimTK::Real randSign;
 			SimTK::Real randUni_m1_1 = worlds[worldIx].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-			sf *= randSign;
+			//sf *= randSign;
 
 			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
 		}	
@@ -4016,21 +4017,16 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
-		// lin4 transforms
-		std::vector<SimTK::Real> givenX_PF(2, 999);
-		std::vector<SimTK::Real> givenX_BM(2, 999);
-		givenX_PF[0] = 0.0000000000;
-		givenX_PF[1] = 1.5707963268;
-		givenX_BM[0] = 0.0000000000;
-		givenX_BM[1] = 0.1000000000;
-
-		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
-		}
-
 		// DELETE THIS CODE
-		/* std::cout << "TEST MODE\n";
-		// Ala1 given transforms
+		// lin4 transforms
+		//std::vector<SimTK::Real> givenX_PF(2, 999);
+		//std::vector<SimTK::Real> givenX_BM(2, 999);
+		//givenX_PF[0] = 0.0000000000;
+		//givenX_PF[1] = 1.5707963268;
+		//givenX_BM[0] = 0.0000000000;
+		//givenX_BM[1] = 0.1000000000;
+
+		std::cout << "TEST MODE given X_PF givenX_BM\n";
 		std::vector<SimTK::Real> givenX_PF(22, 999);
 		std::vector<SimTK::Real> givenX_BM(22, 999);
 
@@ -4079,7 +4075,11 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		givenX_BM[20] = 0.108296974;
 		givenX_BM[21] = 0.111305194;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM); */
+		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+		
+		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+		}
 		// DELETE CODE ABOVE
 
 		// Main loop: iterate through rounds

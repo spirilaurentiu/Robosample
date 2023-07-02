@@ -766,7 +766,7 @@ void World::traceBendStretch(SimTK::State& someState){
 }
 
 // Print X_PF means
-void World::PrintX_PFs(void)
+void World::PrintAcosX_PFs(void)
 {
 	int i = -1;
 	for(const auto &xpf : acosX_PF00 ){
@@ -778,7 +778,7 @@ void World::PrintX_PFs(void)
 }
 
 // Print X_PF means
-void World::PrintX_BMs(void)
+void World::PrintNormX_BMs(void)
 {
 	int i = -1;
 	for(const auto &xbm : normX_BMp ){
@@ -788,7 +788,7 @@ void World::PrintX_BMs(void)
 }
 
 // Print X_PF means
-void World::PrintX_PFMeans(void)
+void World::PrintAcosX_PFMeans(void)
 {
 	int i = -1;
 	for(const auto &xpf : acosX_PF00_means ){
@@ -799,7 +799,7 @@ void World::PrintX_PFMeans(void)
 }
 
 // Print X_PF means
-void World::PrintX_BMMeans(void)
+void World::PrintNormX_BMMeans(void)
 {
 	int i = -1;
 	for(const auto &xbm : normX_BMp_means ){
@@ -894,13 +894,11 @@ std::vector<SimTK::Real>& World::getX_BMMeans(void)
 /**
  * Calculate bond length and angle deviations from their means
 */ 
-void World::calcBendStretchDeviations(
-	SimTK::State& someState,
+void World::calcBendStretchDeviations(SimTK::State& someState,
 	std::vector<SimTK::Real>& X_PFdiffs,
 	std::vector<SimTK::Real>& X_BMdiffs
 )
 {
-
 	// Make sure it has 
 	X_PFdiffs.resize(this->acosX_PF00_means.size(), 0.0);
 	X_BMdiffs.resize(this->normX_BMp_means.size(), 0.0);

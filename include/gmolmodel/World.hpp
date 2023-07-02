@@ -365,16 +365,16 @@ public:
 	void traceBendStretch(SimTK::State& someState);
 
 	// Print X_PF
-	void PrintX_PFs(void);
+	void PrintAcosX_PFs(void);
 
 	// Print X_PF
-	void PrintX_BMs(void);
+	void PrintNormX_BMs(void);
 
 	// Print X_PF means
-	void PrintX_PFMeans(void);
+	void PrintAcosX_PFMeans(void);
 
 	// Print X_PF means
-	void PrintX_BMMeans(void);
+	void PrintNormX_BMMeans(void);
 
 	//...............
 
