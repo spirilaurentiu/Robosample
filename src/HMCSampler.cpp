@@ -3089,7 +3089,8 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 	int x_pf_k = 0;
 
 	// Get log of the Cartesian->BAT Jacobian
-	SimTK::Real logJacBAT_0 = 0.0;
+	SimTK::Real logJacBAT_0 = 0.0; // log space
+	//SimTK::Real logJacBAT_0 = 1.0; // normal space
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
@@ -3105,34 +3106,40 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			// Get bond term
 			SimTK::Real d2 = world->normX_BMp[k];
 			if(d2 != 0){
-					d2 = 2.0 * std::log(d2);
+					d2 = 2.0 * std::log(d2); // log space
+					//d2 = d2 * d2; // normal space
 			}
 
 			// Get the angle term
 			SimTK::Real sineTheta = world->acosX_PF00[k];
 
 			if(sineTheta != 0){
-					sineTheta = std::log(std::sin(sineTheta));
+					sineTheta = std::log(std::sin(sineTheta)); // log space
+					//sineTheta = std::sin(sineTheta); // normal space
 			}
 
 			// Accumulate result
-			logJacBAT_0 += (d2 + sineTheta);
+			logJacBAT_0 += (d2 + sineTheta); // log space
+			//logJacBAT_0 *= (d2 * sineTheta); // normal space
 	}
 
 	// Get log of the scaling Jacobian
 	// Although the method seems stupid for now, it has generality
 	// and allows insertion of new code
-	SimTK::Real logJacScale = 0.0;
+	SimTK::Real logJacScale = 0.0; // log space
+	//SimTK::Real logJacScale = 1.0; // normal space
 	for(unsigned int k = 0; k < scaleFactors.size(); k++){
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
-					logJacScale += std::log(std::abs(scaleFactors[k]));
+					logJacScale += std::log(std::abs(scaleFactors[k])); // log space
+					//logJacScale *= std::abs(scaleFactors[k]); // normal space
 			}
 	}
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
-	SimTK::Real logJacBAT_tau = 0.0;
+	SimTK::Real logJacBAT_tau = 0.0; // log space
+	//SimTK::Real logJacBAT_tau = 1.0; // normal space
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
@@ -3149,18 +3156,21 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
 
 			if(d2 != 0){
-					d2 = 2.0 * std::log(d2);
+					d2 = 2.0 * std::log(d2); // log space
+					//d2 = d2 * d2; // normal space
 			}
 
 			// Get the angle term
 			SimTK::Real sineTheta = (world->acosX_PF00[k] * scaleFactors[x_pf_k]);
 
 			if(std::abs(sineTheta) > 0.0000001){
-					sineTheta = std::log(std::sin(sineTheta));
+					sineTheta = std::log(std::sin(sineTheta)); // log space
+					//sineTheta = std::sin(sineTheta); // normal space
   			}
 
 			// Accumulate result
-			logJacBAT_tau += (d2 + sineTheta);
+			logJacBAT_tau += (d2 + sineTheta); // log space
+			//logJacBAT_tau *= (d2 * sineTheta); // normal space
 	}
 
         // Final result

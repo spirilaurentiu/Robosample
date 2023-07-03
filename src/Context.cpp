@@ -3309,7 +3309,7 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 		SimTK::Real randSign;
 		SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-		qScaleFactors.at(thisThermoStateIx) *= randSign;
+		//qScaleFactors.at(thisThermoStateIx) *= randSign;
 
 		// Set the sampler scale factor
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
