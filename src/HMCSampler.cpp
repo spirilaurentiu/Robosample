@@ -2740,10 +2740,10 @@ void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
 
-	//world->PrintAcosX_PFs();
-	//world->PrintAcosX_PFMeans();
-	//world->PrintNormX_BMs();
-	//world->PrintNormX_BMMeans();
+	world->PrintAcosX_PFs();
+	world->PrintAcosX_PFMeans();
+	world->PrintNormX_BMs();
+	world->PrintNormX_BMMeans();
 
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
@@ -2762,11 +2762,11 @@ std::vector<SimTK::Real>& scaleFactors)
 	int k = -1;
 	for(auto& diff : Q_of_X_PFdiffs){
 		diff *= QScaleFactor - 1.0;
-		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
+		std::cout << "Q(X_PFdiff)= " << diff << std::endl;
 	}
 	for(auto& diff : Q_of_X_BMdiffs){
 		diff *= QScaleFactor - 1.0;
-		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
+		std::cout << "Q(X_BMdiff)= " << diff << std::endl;
 	}
 
 	// Ground and first mobod don't have internal coordinates
@@ -2786,22 +2786,21 @@ std::vector<SimTK::Real>& scaleFactors)
 		// Record the scaleFactors too: (X + Q) / X
 		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
 
-			mobod.setOneQ(someState, 1, Q_of_X_BMdiffs[int(mbx) - 1]);
-
+			mobod.setOneQ(someState, 1, (+1.0) * Q_of_X_BMdiffs[int(mbx) - 1]);
 			scaleFactors[ (int(mbx) - 1) ] = 
-			(world->normX_BMp[int(mbx) - 1] + Q_of_X_BMdiffs[int(mbx) - 1]) /
+			(world->normX_BMp[int(mbx) - 1] + ((+1.0) * Q_of_X_BMdiffs[int(mbx) - 1])) /
 				world->normX_BMp[int(mbx) - 1];
 		}
 		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
 
-			mobod.setOneQ(someState, 0, -1.0 * Q_of_X_PFdiffs[int(mbx) - 1]);
+			mobod.setOneQ(someState, 0, (+1.0) * Q_of_X_PFdiffs[int(mbx) - 1]);
 			
 			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
-			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * Q_of_X_PFdiffs[int(mbx) - 1])) /
+			(world->acosX_PF00[int(mbx) - 1] + ((+1.0) * Q_of_X_PFdiffs[int(mbx) - 1])) /
 				world->acosX_PF00[int(mbx) - 1];
 		}
 
-		//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
+		std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
 
 
 		/* // DELETE DELETE DELETE DELETE Check X_FM assignment 0

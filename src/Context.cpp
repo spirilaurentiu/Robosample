@@ -3300,7 +3300,8 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 			qScaleFactors.at(thisThermoStateIx) = 1.0; */
 
 			qScaleFactors.at(0) = 1.0;
-			qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
+			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
+			qScaleFactors.at(1) = std::sqrt(300.0 / 400.0);
 
 		// Draw the Q scale factor from a truncated normal
 		}else if(distribOpt == "gauss"){
@@ -3962,25 +3963,32 @@ void Context::RunOneRound(void)
 		if( NDistortOpt[worldIx] == -1 ){
 			
 			// Set the Q scaling factor to Gaussian random around 1.0
-			SimTK::Real sf = 0.0;
+			std::string distribOpt = "deterministic";
+			SimTK::Real sf = 1.0;
 
-			/* // Draw scaling factor from a normal distribution 
-			SimTK::Real standardDeviation = 0.001;
-			(worlds[worldIx].updSampler(0))->convoluteVariable(sf,
-				"normal", standardDeviation); */
+			// Set the Q scale factor at a fixed value
+			if(distribOpt == "deterministic"){
 
-			/* sf += standardDeviation;
-			(worlds[worldIx].updSampler(0))->convoluteVariable(sf,
-				"BernoulliReciprocal", standardDeviation); */
-			
-			// Draw scaling factor from a uniform distribution with
-			// limits L and R
-			sf = worlds[worldIx].updSampler(0)->uniformRealDistributionRandTrunc(
-				0.8, 1.25);
-			SimTK::Real randSign;
-			SimTK::Real randUni_m1_1 = worlds[worldIx].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
+				sf = std::sqrt(300.0 / 400.0);
+
+			// Draw the Q scale factor from a truncated normal
+			}else if(distribOpt == "gauss"){
+				sf = 0.1;
+				worlds[0].updSampler(0)->convoluteVariable(
+					sf, "truncNormal",0.1);
+
+			// Draw the Q scale factor from a uniform distribution
+			}else if(distribOpt == "uniform"){
+				sf = 
+					worlds[0].updSampler(0)->uniformRealDistributionRandTrunc(
+						0.8, 1.25);
+			}
+
+			// Assign a random sign (optional)
+			/* SimTK::Real randSign;
+			SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-			//sf *= randSign;
+			qScaleFactors.at(thisThermoStateIx) *= randSign; */
 
 			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
 		}	
