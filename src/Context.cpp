@@ -2637,12 +2637,12 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	//correctionTerm = 
 	//	(normalPdf(s_i_1, miu_j, std_j) * normalPdf(s_j_1, miu_i, std_i)) / 
 	//	(normalPdf(s_i, miu_i, std_i)   * normalPdf(s_j, miu_j, std_j));
-	SimTK::Real qC_s_i, qH_s_j, qH_s_i_1, qC_s_j_1;
+	SimTK::Real qC_s_i = 1.0, qH_s_j = 1.0, qH_s_i_1 = 1.0, qC_s_j_1 = 1.0;
 	auto genericSampler = updWorld(0)->updSampler(0);
-	qC_s_i   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
+	/* qC_s_i   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
 	qH_s_j   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
 	qH_s_i_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
-	qC_s_j_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25);
+	qC_s_j_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
 
 	correctionTerm = (qH_s_i_1 * qC_s_j_1) / (qC_s_i * qH_s_j);
 
