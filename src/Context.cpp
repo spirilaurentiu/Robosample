@@ -3285,35 +3285,47 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 
 	// SET NON_EQUIL PARAMS ------------------------- 
 	// Non-equilibrium params change with every replica / thermoState
+	std::string distribOpt = "deterministic";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 
+		// Send DISTORT_OPTION from the input to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
 		);
 
 		// Set the Q scale factor at a fixed value
-		//qScaleFactors.at(thisThermoStateIx) = (qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
-		//qScaleFactors.at(thisThermoStateIx) = 1.0;
+		if(distribOpt == "deterministic"){
+			/* qScaleFactors.at(thisThermoStateIx) = 
+				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
+			qScaleFactors.at(thisThermoStateIx) = 1.0; */
 
-		/*qScaleFactorsStd.at(thisThermoStateIx) = 0.1;
-		 worlds[replicaWorldIxs[i]].updSampler(0)->convoluteVariable(
-			qScaleFactors.at(thisThermoStateIx), "truncNormal",
-			qScaleFactorsStd.at(thisThermoStateIx)); */
+			qScaleFactors.at(0) = 1.0;
+			qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
 
-		// Draw the scale factor from a uniform distribution between 
-		// limits L and R
-		qScaleFactors.at(thisThermoStateIx) = 
-			worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistributionRandTrunc(
-				0.8, 1.25);
+		// Draw the Q scale factor from a truncated normal
+		}else if(distribOpt == "gauss"){
+			qScaleFactorsStd.at(thisThermoStateIx) = 0.1;
+		 	worlds[replicaWorldIxs[i]].updSampler(0)->convoluteVariable(
+				qScaleFactors.at(thisThermoStateIx), "truncNormal",
+				qScaleFactorsStd.at(thisThermoStateIx));
 
-		SimTK::Real randSign;
+		// Draw the Q scale factor from a uniform distribution
+		}else if(distribOpt == "uniform"){
+			qScaleFactors.at(thisThermoStateIx) = 
+				worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistributionRandTrunc(
+					0.8, 1.25);
+		}
+
+		// Assign a random sign (optional)
+		/* SimTK::Real randSign;
 		SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-		//qScaleFactors.at(thisThermoStateIx) *= randSign;
+		qScaleFactors.at(thisThermoStateIx) *= randSign; */
 
-		// Set the sampler scale factor
+		// Send the scale factor to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
 			qScaleFactors.at(thisThermoStateIx));
+
 	}
 
 }
