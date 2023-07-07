@@ -78,7 +78,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 	*/
 
 	// Draw DuMM based geometry
- //   /*
+    /*
 	for (SimTK::DuMM::BondIndex bIx(0); bIx < dumm->getNumBonds(); ++bIx) {
 		const SimTK::DuMM::AtomIndex dAIx1 = dumm->getBondAtom(bIx, 0);
 		const SimTK::DuMM::AtomIndex dAIx2 = dumm->getBondAtom(bIx, 1);
@@ -108,7 +108,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 		}
 	}
 //    */
- ///*
+ /*
 	// DuMM
 	for (DuMM::AtomIndex daIx(0); daIx < dumm->getNumAtoms(); ++daIx) {
 		const SimTK::MobilizedBodyIndex mbx = dumm->getAtomBody(daIx);
@@ -132,7 +132,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 		(geometry.back()).setOpacity(opacity);
 		(geometry.back()).setResolution(3);
 		(geometry.back()).setTransform(X_BD);
-		*/
+		
 
 		// Text
 		//std::ostringstream streamObj;
@@ -152,7 +152,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 // */
 
 
-	SimTK::Transform G_X_T = molecules[0]->getTopLevelTransform();
+	//SimTK::Transform G_X_T = molecules[0]->getTopLevelTransform();
 
 /*            DecorativeFrame decorativeFrameT;
 			decorativeFrameT.setTransform(G_X_T);
@@ -163,12 +163,12 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 
 	// Draw Compound transforms for root atoms NEW WAY
-			SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // Moves rotation from X to Z
+/* 			SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // Moves rotation from X to Z
 			SimTK::Transform P_X_F[matter->getNumBodies()]; // related to X_PFs
 			SimTK::Transform T_X_root[matter->getNumBodies()]; // related to CompoundAtom.frameInMobilizedBodyFrame s
-			SimTK::Transform T_X_Proot; // NEW
+			SimTK::Transform T_X_Proot;
 			SimTK::Transform root_X_M0[matter->getNumBodies()];
-			SimTK::Angle inboardBondDihedralAngles[matter->getNumBodies()]; // related to X_FMs
+			SimTK::Angle inboardBondDihedralAngles[matter->getNumBodies()]; */ // related to X_FMs
 			//SimTK::Real inboardBondLengths[matter->getNumBodies()]; // related to X_FMs
 			//SimTK::Vec3 locs[molecules[0]->getNumAtoms()];
 
