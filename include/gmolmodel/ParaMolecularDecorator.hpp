@@ -32,6 +32,12 @@ public:
 
 	void clearLines(void);
 
+	void drawFrame(
+		Array_<DecorativeGeometry>& geometry, SimTK::Transform G_X_F,
+		SimTK::Real scaleFactor, SimTK::Real lineThickness, SimTK::Vec3 color,
+		std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor
+	);
+
 	void generateDecorations(const State& state,
 		Array_<DecorativeGeometry>& geometry);
 

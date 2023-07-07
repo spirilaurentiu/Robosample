@@ -2826,6 +2826,7 @@ std::vector<SimTK::Real>& scaleFactors)
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
+	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
 	// Test
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
