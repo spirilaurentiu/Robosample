@@ -19,6 +19,8 @@ ParaMolecularDecorator::ParaMolecularDecorator(
 	// this->molecule = argResidue; //RE
 	this->dumm = argDumm;
 	this->forces = argForces;
+
+	commVar = SimTK::NaN;
 	
 }
 
@@ -60,6 +62,11 @@ void ParaMolecularDecorator::setAtomTargets(
 		atomTargets.insert(std::pair<
 		SimTK::Compound::AtomIndex, SimTK::Vec3>(atomIndex, location));
 	}
+}
+
+void ParaMolecularDecorator::updCommVar(SimTK::Real argCommVar)
+{
+	this->commVar = argCommVar;
 }
 
 void ParaMolecularDecorator::drawFrame(
@@ -199,7 +206,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 // */
 
 
-	//SimTK::Transform G_X_T = molecules[0]->getTopLevelTransform();
+	SimTK::Transform G_X_T = molecules[0]->getTopLevelTransform();
 
 /*            DecorativeFrame decorativeFrameT;
 			decorativeFrameT.setTransform(G_X_T);
@@ -511,24 +518,6 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 //        decorativeBrick.setOpacity(0.5);
 //        geometry.push_back( decorativeBrick );
 //
-/*        std::ostringstream streamObjB;
-		streamObjB << std::string("B") + std::to_string(int(mbx)); 
-		std::string textB = streamObjB.str();
-		DecorativeText decorativeTextB(textB);
-		SimTK::Transform textOffsetB(SimTK::Rotation(), SimTK::Vec3(0.0, 0.0, -0.01));
-		decorativeTextB.setTransform(G_X_B * textOffsetB);
-		decorativeTextB.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
-		decorativeTextB.setColor(SimTK::Vec3(0, 0, 0));
-		geometry.push_back(decorativeTextB);
-
-		DecorativeFrame decorativeFrame;
-		decorativeFrame.setTransform(G_X_B);
-		decorativeFrame.setScaleFactors(SimTK::Vec3(0.03, 0.03, 0.03));
-		decorativeFrame.setLineThickness(4); 
-		decorativeFrame.setColor(SimTK::Vec3(0, 0, 0));
-		decorativeFrame.setRepresentation(SimTK::DecorativeGeometry::Representation::DrawPoints); 
-		geometry.push_back( decorativeFrame ); */
-
 		if((mbx > 0)){
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
@@ -542,9 +531,6 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			SimTK::Transform P_X_F = mobod.getInboardFrame(someState);
 			SimTK::Transform G_X_F = G_X_P * P_X_F;
 			SimTK::Transform F_X_M = mobod.getMobilizerTransform(someState);
-			//SimTK::Transform G_X_M = G_X_F * F_X_M; // = G_X_B * B_X_M;
-
-
 
 			// F
 			//DecorativeSphere decorativeSphereF(0.02);
@@ -552,15 +538,6 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			//decorativeSphereF.setOpacity(0.5);
 			//decorativeSphereF.setTransform(G_X_F);
 			//geometry.push_back(decorativeSphereF);
-
-			//X_PF, X_BM frames and text
-
-
-			// Line between P and F
-			//DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
-			//decorativeLinePF.setLineThickness(3);
-			//decorativeLinePF.setColor(SimTK::Vec3(1, 0, 0));
-			//geometry.push_back(decorativeLinePF);
 
 			// M
 			//DecorativeSphere decorativeSphereM(0.02);
@@ -592,11 +569,11 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				// Frame M
 				std::ostringstream streamObjM;
 				std::setprecision(2);
-				streamObjM << std::string("M") + std::to_string(int(mbx)) ;
-					 //+ " " + std::to_string(float(mobod.getOneQ(someState, 0)));
+				streamObjM << std::string("M") + std::to_string(int(mbx))
+					 + " " + std::to_string(this->commVar);
 				drawFrame(geometry, G_X_M,
 					0.05, 4, SimTK::Vec3(1, 0, 0),
-					streamObjM.str(), 0.008, SimTK::Vec3(1, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
+					streamObjM.str(), 0.008, SimTK::Vec3(1, 0, 0), SimTK::Vec3(-0.03, 0.0, 0.0));
 
 				// Frame B
 				std::ostringstream streamObjB;
@@ -610,29 +587,23 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 			// Draw lines
 			if(mbx > 1){
-			/*// X_PF, X_BM lines
 
-				drawLine(geometry, G_X_P, G_X_F,
-					mobod.getNumU(someState), 5);
-
-				drawLine(geometry, G_X_F, G_X_M,
-					mobod.getNumU(someState), 3);
-
-		// */
-
+				// BM expressed in Ground
 				drawLine(geometry, G_X_B, G_X_M,
 					mobod.getNumU(someState), 4);
 
-		}else if(mbx == 1){
-				//SimTK::MobilizedBody& memBody = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(1));
-		//Vec3 halfSize2(4, 4, 0.3);
-		//ContactGeometry::TriangleMesh box2(PolygonalMesh::createBrickMesh(halfSize2, 60));
-		//DecorativeMesh showBox2(box2.createPolygonalMesh());
-		//memBody.updBody().addDecoration(Transform(), showBox2.setColor(Cyan).setOpacity(.6));
-		//memBody.updBody().addDecoration(Transform(), showBox2.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
-		//compoundSystem->realizeTopology();
-		
-		} // */
+			}/* else if(mbx == 1){
+				SimTK::MobilizedBody& memBody = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(1));
+				Vec3 halfSize2(4, 4, 0.3);
+				ContactGeometry::TriangleMesh box2(PolygonalMesh::createBrickMesh(halfSize2, 60));
+				DecorativeMesh showBox2(box2.createPolygonalMesh());
+				memBody.updBody().addDecoration(Transform(),
+					showBox2.setColor(Cyan).setOpacity(.6));
+				memBody.updBody().addDecoration(Transform(),
+					showBox2.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
+				compoundSystem->realizeTopology();
+			
+			}*/
 
 		}
 

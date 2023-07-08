@@ -2761,6 +2761,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	// Scale differences with QScale-1. (Solve s(X-miu) + miu = Q + X)
 	int k = -1;
 	for(auto& diff : Q_of_X_PFdiffs){
+		world->paraMolecularDecorator->updCommVar(diff);
 		diff *= QScaleFactor - 1.0;
 		std::cout << "Q(X_PFdiff)= " << diff << std::endl;
 	}
