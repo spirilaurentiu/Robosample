@@ -20,7 +20,7 @@ ParaMolecularDecorator::ParaMolecularDecorator(
 	this->dumm = argDumm;
 	this->forces = argForces;
 
-	commVar = SimTK::NaN;
+	MCommVar = SimTK::NaN;
 	
 }
 
@@ -64,10 +64,26 @@ void ParaMolecularDecorator::setAtomTargets(
 	}
 }
 
-void ParaMolecularDecorator::updCommVar(SimTK::Real argCommVar)
+void ParaMolecularDecorator::updPCommVars(SimTK::Real argCommVar)
 {
-	this->commVar = argCommVar;
+	this->PCommVar = argCommVar;
 }
+
+
+void ParaMolecularDecorator::updFCommVars(SimTK::Real argCommVar)
+{
+	this->FCommVar = argCommVar;
+}
+void ParaMolecularDecorator::updMCommVars(SimTK::Real argCommVar)
+{
+	this->MCommVar = argCommVar;
+}
+
+void ParaMolecularDecorator::updBCommVars(SimTK::Real argCommVar)
+{
+	this->BCommVar = argCommVar;
+}
+
 
 void ParaMolecularDecorator::drawFrame(
 	Array_<DecorativeGeometry>& geometry, SimTK::Transform G_X_F,
@@ -560,7 +576,8 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 				// Frame F
 				std::ostringstream streamObjF;
-				streamObjF << std::string("F") + std::to_string(int(mbx));
+				streamObjF << std::string("F") + std::to_string(int(mbx))
+					+ " " + std::to_string(this->FCommVar);
 				std::string textF = streamObjF.str();
 				drawFrame(geometry, G_X_F,
 					0.04, 4, SimTK::Vec3(0, 0, 1),
@@ -569,15 +586,15 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				// Frame M
 				std::ostringstream streamObjM;
 				std::setprecision(2);
-				streamObjM << std::string("M") + std::to_string(int(mbx))
-					 + " " + std::to_string(this->commVar);
+				streamObjM << std::string("M") + std::to_string(int(mbx));
 				drawFrame(geometry, G_X_M,
 					0.05, 4, SimTK::Vec3(1, 0, 0),
 					streamObjM.str(), 0.008, SimTK::Vec3(1, 0, 0), SimTK::Vec3(-0.03, 0.0, 0.0));
 
 				// Frame B
 				std::ostringstream streamObjB;
-				streamObjB << std::string("B") + std::to_string(int(mbx));
+				streamObjB << std::string("B") + std::to_string(int(mbx))
+					+ " " + std::to_string(this->BCommVar);
 				std::string textB = streamObjB.str();
 				drawFrame(geometry, G_X_B,
 					0.04, 4, SimTK::Vec3(0, 0, 0),

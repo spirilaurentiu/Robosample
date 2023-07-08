@@ -3969,7 +3969,8 @@ void Context::RunOneRound(void)
 			// Set the Q scale factor at a fixed value
 			if(distribOpt == "deterministic"){
 
-				sf = std::sqrt(300.0 / 400.0);
+				//sf = std::sqrt(300.0 / 400.0);
+				sf = 2.0;
 
 			// Draw the Q scale factor from a truncated normal
 			}else if(distribOpt == "gauss"){

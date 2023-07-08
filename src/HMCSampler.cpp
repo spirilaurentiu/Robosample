@@ -2761,13 +2761,18 @@ std::vector<SimTK::Real>& scaleFactors)
 	// Scale differences with QScale-1. (Solve s(X-miu) + miu = Q + X)
 	int k = -1;
 	for(auto& diff : Q_of_X_PFdiffs){
-		world->paraMolecularDecorator->updCommVar(diff);
 		diff *= QScaleFactor - 1.0;
 		std::cout << "Q(X_PFdiff)= " << diff << std::endl;
+		if(world->visual){
+			world->paraMolecularDecorator->updFCommVars(diff);
+		}
 	}
 	for(auto& diff : Q_of_X_BMdiffs){
 		diff *= QScaleFactor - 1.0;
 		std::cout << "Q(X_BMdiff)= " << diff << std::endl;
+		if(world->visual){
+			world->paraMolecularDecorator->updBCommVars(diff);
+		}
 	}
 
 	// Ground and first mobod don't have internal coordinates
@@ -2827,7 +2832,7 @@ std::vector<SimTK::Real>& scaleFactors)
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(4000));
 
 	// Test
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;

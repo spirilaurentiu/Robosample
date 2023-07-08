@@ -55,7 +55,11 @@ public:
 	void setAtomTargets(std::vector<std::pair<bSpecificAtom *,
 		SimTK::Vec3>> residueAtomLocations);
 
-	void updCommVar(SimTK::Real argCommVar);
+	void updPCommVars(SimTK::Real argCommVar);
+	void updFCommVars(SimTK::Real argCommVar);
+	void updMCommVars(SimTK::Real argCommVar);
+	void updBCommVars(SimTK::Real argCommVar);
+	
 
 private:
 	SimTK::CompoundSystem *compoundSystem;
@@ -71,7 +75,7 @@ private:
 	// Gmolmodel specific
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
 
-	SimTK::Real commVar;
+	SimTK::Real PCommVar, FCommVar, MCommVar, BCommVar;
 
 };
 
