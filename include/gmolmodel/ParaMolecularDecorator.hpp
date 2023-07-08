@@ -32,10 +32,18 @@ public:
 
 	void clearLines(void);
 
+	// Draw a frame
 	void drawFrame(
 		Array_<DecorativeGeometry>& geometry, SimTK::Transform G_X_F,
 		SimTK::Real scaleFactor, SimTK::Real lineThickness, SimTK::Vec3 color,
-		std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor
+		std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor,
+		SimTK::Vec3 textOffset
+	);
+
+	// Draw a line
+	void drawLine(Array_<DecorativeGeometry>& geometry,
+		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
+		int numOfDofs, SimTK::Real lineThickness
 	);
 
 	void generateDecorations(const State& state,

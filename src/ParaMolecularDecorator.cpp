@@ -65,7 +65,8 @@ void ParaMolecularDecorator::setAtomTargets(
 void ParaMolecularDecorator::drawFrame(
 	Array_<DecorativeGeometry>& geometry, SimTK::Transform G_X_F,
 	SimTK::Real scaleFactor, SimTK::Real lineThickness, SimTK::Vec3 color,
-	std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor
+	std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor,
+	SimTK::Vec3 textOffset
 )
 {
 		DecorativeFrame decorativeFrameF;
@@ -77,12 +78,34 @@ void ParaMolecularDecorator::drawFrame(
 		geometry.push_back( decorativeFrameF );
 
 		DecorativeText decorativeTextF(text);
-		SimTK::Transform textOffsetF(SimTK::Rotation(), SimTK::Vec3(-0.02, 0.0, 0.0));
+		SimTK::Transform textOffsetF(SimTK::Rotation(), textOffset);
 		decorativeTextF.setTransform(G_X_F * textOffsetF);
 		decorativeTextF.setScaleFactors(SimTK::Vec3(textScaleFactor,
 			textScaleFactor, textScaleFactor));
 		decorativeTextF.setColor(textColor);
 		geometry.push_back(decorativeTextF);
+}
+
+void ParaMolecularDecorator::drawLine(
+	Array_<DecorativeGeometry>& geometry,
+	SimTK::Transform G_X_B, SimTK::Transform G_X_M,
+	int numOfDofs, SimTK::Real lineThickness
+)
+{
+	DecorativeLine decorativeLineBM(G_X_B.p(), G_X_M.p());
+	decorativeLineBM.setLineThickness( lineThickness);
+	if(numOfDofs == 3){
+		decorativeLineBM.setColor(SimTK::Vec3(SimTK::Orange));
+	}else if(numOfDofs == 5){
+		decorativeLineBM.setColor(SimTK::Vec3(SimTK::Magenta));
+	}else if (numOfDofs == 2){
+		decorativeLineBM.setColor(SimTK::Vec3(SimTK::Cyan));
+	}else if (numOfDofs == 1){
+		decorativeLineBM.setColor(SimTK::Vec3(SimTK::Green));
+	}else{
+		decorativeLineBM.setColor(SimTK::Vec3(SimTK::Red));
+	}
+	geometry.push_back(decorativeLineBM);
 }
 
 
@@ -546,127 +569,60 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			//decorativeSphereM.setTransform(G_X_M);
 			//geometry.push_back(decorativeSphereM);
 
-			// /*
+			// Draw frames
 			if(mbx > 1) {
+			// /*
 				
 				// Frame P
 				std::ostringstream streamObjP;
 				streamObjP << std::string("P") + std::to_string(int(mbx));
 				std::string textP = streamObjP.str();
-				drawFrame(
-					geometry, G_X_P,
+				drawFrame(geometry, G_X_P,
 					0.05, 4, SimTK::Vec3(0, 0, 0),
-					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0));
+					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
 
-
-				DecorativeFrame decorativeFrameF;
-				decorativeFrameF.setTransform(G_X_F);
-				decorativeFrameF.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
-				decorativeFrameF.setLineThickness(4);
-				decorativeFrameF.setColor(SimTK::Vec3(0, 0, 1));
-				geometry.push_back( decorativeFrameF );
-
+				// Frame F
 				std::ostringstream streamObjF;
 				streamObjF << std::string("F") + std::to_string(int(mbx));
 				std::string textF = streamObjF.str();
-				DecorativeText decorativeTextF(textF);
-				SimTK::Transform textOffsetF(SimTK::Rotation(), SimTK::Vec3(-0.02, 0.0, 0.0));
-				decorativeTextF.setTransform(G_X_F * textOffsetF);
-				decorativeTextF.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
-				decorativeTextF.setColor(SimTK::Vec3(0, 0, 1));
-				geometry.push_back(decorativeTextF);
+				drawFrame(geometry, G_X_F,
+					0.04, 4, SimTK::Vec3(0, 0, 1),
+					streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0));
 
-				/*
-				DecorativeFrame decorativeFrameB;
-				decorativeFrameB.setTransform(G_X_B);
-				decorativeFrameB.setScaleFactors(SimTK::Vec3(0.04, 0.04, 0.04));
-				decorativeFrameB.setLineThickness(4);
-				decorativeFrameB.setColor(SimTK::Vec3(0, 0, 0));
-				geometry.push_back( decorativeFrameB );
-
-
-				
-				std::ostringstream streamObjB;
-				streamObjB << std::string("B") + std::to_string(int(mbx));
-				std::string textB = streamObjB.str();
-				DecorativeText decorativeTextB(textB);
-				SimTK::Transform textOffsetB(SimTK::Rotation(), SimTK::Vec3(-0.02, 0.0, 0.0));
-				decorativeTextB.setTransform(G_X_B * textOffsetF);
-				decorativeTextB.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
-				decorativeTextB.setColor(SimTK::Vec3(0, 0, 1));
-				geometry.push_back(decorativeTextB);
-				*/
-
-				DecorativeFrame decorativeFrameM;
-				decorativeFrameM.setTransform(G_X_M);
-				decorativeFrameM.setScaleFactors(SimTK::Vec3(0.05, 0.05, 0.05));
-				decorativeFrameM.setLineThickness(4);
-				decorativeFrameM.setColor(SimTK::Vec3(1, 0, 0));
-				geometry.push_back(decorativeFrameM);
-
+				// Frame M
 				std::ostringstream streamObjM;
 				std::setprecision(2);
 				streamObjM << std::string("M") + std::to_string(int(mbx)) ;
 					 //+ " " + std::to_string(float(mobod.getOneQ(someState, 0)));
-				std::string textM = streamObjM.str();
-				DecorativeText decorativeTextM(textM);
-				SimTK::Transform textOffsetM(SimTK::Rotation(), SimTK::Vec3(0.0, -0.02, 0.0));
-				decorativeTextM.setTransform(G_X_M * textOffsetM);
-				decorativeTextM.setScaleFactors(SimTK::Vec3(0.008, 0.008, 0.008));
-				decorativeTextM.setColor(SimTK::Vec3(1, 0, 0));
-				geometry.push_back(decorativeTextM);
+				drawFrame(geometry, G_X_M,
+					0.05, 4, SimTK::Vec3(1, 0, 0),
+					streamObjM.str(), 0.008, SimTK::Vec3(1, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
+
+				// Frame B
+				std::ostringstream streamObjB;
+				streamObjB << std::string("B") + std::to_string(int(mbx));
+				std::string textB = streamObjB.str();
+				drawFrame(geometry, G_X_B,
+					0.04, 4, SimTK::Vec3(0, 0, 0),
+					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
 
 			} // */
 
+			// Draw lines
 			if(mbx > 1){
-			// X_PF, X_BM lines
 			/*// X_PF, X_BM lines
-					DecorativeLine decorativeLinePF(G_X_P.p(), G_X_F.p());
-					decorativeLinePF.setLineThickness(5);
-					if(mobod.getNumU(someState) == 3){
-					    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Orange));
-					}else if(mobod.getNumU(someState) == 5){
-					    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Magenta));
-					}else if(mobod.getNumU(someState) == 2){
-					    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Cyan));
-					}else if (mobod.getNumU(someState) == 1){
-					    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Magenta));
-					}else{
-					    decorativeLinePF.setColor(SimTK::Vec3(SimTK::Red));
-					}
-					geometry.push_back(decorativeLinePF);
 
-				DecorativeLine decorativeLineFM(G_X_F.p(), G_X_M.p());
-				decorativeLineFM.setLineThickness(3);
-				if(mobod.getNumU(someState) == 3){
-					decorativeLineFM.setColor(SimTK::Vec3(SimTK::Orange));
-				}else if(mobod.getNumU(someState) == 5){
-					decorativeLineFM.setColor(SimTK::Vec3(SimTK::Magenta));
-				}else if (mobod.getNumU(someState) == 2){
-					decorativeLineFM.setColor(SimTK::Vec3(SimTK::Cyan));
-				}else if (mobod.getNumU(someState) == 1){
-					decorativeLineFM.setColor(SimTK::Vec3(SimTK::Red));
-				}else{
-					decorativeLineFM.setColor(SimTK::Vec3(SimTK::Red));
-				}
-				geometry.push_back(decorativeLineFM);
+				drawLine(geometry, G_X_P, G_X_F,
+					mobod.getNumU(someState), 5);
+
+				drawLine(geometry, G_X_F, G_X_M,
+					mobod.getNumU(someState), 3);
+
 		// */
 
-				DecorativeLine decorativeLineBM(G_X_B.p(), G_X_M.p());
-				decorativeLineBM.setLineThickness(4);
-				if(mobod.getNumU(someState) == 3){
-					decorativeLineBM.setColor(SimTK::Vec3(SimTK::Orange));
-				}else if(mobod.getNumU(someState) == 5){
-					decorativeLineBM.setColor(SimTK::Vec3(SimTK::Magenta));
-				}else if (mobod.getNumU(someState) == 2){
-					decorativeLineBM.setColor(SimTK::Vec3(SimTK::Cyan));
-				}else if (mobod.getNumU(someState) == 1){
-					decorativeLineBM.setColor(SimTK::Vec3(SimTK::Green));
-				}else{
-					decorativeLineBM.setColor(SimTK::Vec3(SimTK::Red));
-				}
-				geometry.push_back(decorativeLineBM);
-		// */
+				drawLine(geometry, G_X_B, G_X_M,
+					mobod.getNumU(someState), 4);
+
 		}else if(mbx == 1){
 				//SimTK::MobilizedBody& memBody = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(1));
 		//Vec3 halfSize2(4, 4, 0.3);
