@@ -36,6 +36,9 @@ For a specific branch:
 ```
 git clone -b build --single-branch https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
+rm openmm -rf && git clone https://github.com/spirilaurentiu/openmm.git
+rm Simbody01 -rf && git clone -b build --single-branch https://github.com/spirilaurentiu/Simbody01.git
+rm Molmodel -rf && git clone -b build --single-branch https://github.com/spirilaurentiu/Molmodel.git
 ```
 
 ## Robosample branches
@@ -237,9 +240,20 @@ grep -rohE '^\s*#include\s*<[^>]+>' --exclude-dir='.*' src/ include/ | sort -t: 
 
 
 
+cmake -G "Unix Makefiles" ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
+
+
+
+
+
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=CUDA
+
+mkdir build
+cd build
 cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.train && rm profile-data/ -rf && bash pgo.sh && cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Use -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.use
 ./robosample.pgo.use inp.aper | grep elapsed
 
-
+mkdir build
+cd build
 cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.train && rm profile-data/ -rf && bash pgo.sh && cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Use -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.use
 ./robosample.pgo.use inp.aper | grep elapsed

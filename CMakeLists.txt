@@ -164,10 +164,15 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
     FILE(GLOB COMMON_KERNELS ${COMMON_KERNEL_SOURCE_DIR}/kernels/*.cc)
     ADD_CUSTOM_COMMAND(OUTPUT ${COMMON_KERNELS_CPP} ${COMMON_KERNELS_H}
         COMMAND ${CMAKE_COMMAND}
+        COMMAND ${CMAKE_COMMAND} echo -E "ambasing============================================================="
         ARGS -D KERNEL_SOURCE_DIR=${COMMON_KERNEL_SOURCE_DIR} -D KERNELS_CPP=${COMMON_KERNELS_CPP} -D KERNELS_H=${COMMON_KERNELS_H} -D KERNEL_SOURCE_CLASS=${COMMON_KERNEL_SOURCE_CLASS} -D KERNEL_FILE_EXTENSION=cc -P ${CMAKE_SOURCE_DIR}/openmm/cmake_modules/EncodeKernelFiles.cmake
         DEPENDS ${COMMON_KERNELS}
+        COMMENT "Generating common kernel sources for OpenMM..."
     )
+
+    # this command is executed when building, not when running CMakeLists.txt
     ADD_CUSTOM_TARGET(CommonKernels DEPENDS ${COMMON_KERNELS_CPP} ${COMMON_KERNELS_H})
+    SET(OPENMM_DEPENDENCIES CommonKernels)
 
     SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/common)
     SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src)
@@ -190,8 +195,12 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
             COMMAND ${CMAKE_COMMAND}
             ARGS -D KERNEL_SOURCE_DIR=${CUDA_KERNEL_SOURCE_DIR} -D KERNELS_CPP=${CUDA_KERNELS_CPP} -D KERNELS_H=${CUDA_KERNELS_H} -D KERNEL_SOURCE_CLASS=${CUDA_KERNEL_SOURCE_CLASS} -D KERNEL_FILE_EXTENSION=cu -P ${CMAKE_SOURCE_DIR}/openmm/cmake_modules/EncodeKernelFiles.cmake
             DEPENDS ${CUDA_KERNELS}
+            COMMENT "Generating CUDA kernel sources for OpenMM..."
         )
+
+        # this command is executed when building, not when running CMakeLists.txt
         ADD_CUSTOM_TARGET(CUDAKernels DEPENDS ${CUDA_KERNELS_CPP} ${CUDA_KERNELS_H})
+        SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} CUDAKernels)
 
         SET(OPENMM_DIRS ${OPENMM_DIRS}
             ${CMAKE_SOURCE_DIR}/openmm/platforms/cuda
@@ -213,8 +222,8 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
         SET(OPENMM_LIBRARIES ${OpenCL_LIBRARY})
 
         # compile all opencl kernels into one single file
-        SET(OPENCL_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cuda/src")
-        SET(OPENCL_KERNEL_SOURCE_CLASS OPENCLKernelSources)
+        SET(OPENCL_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src")
+        SET(OPENCL_KERNEL_SOURCE_CLASS OpenCLKernelSources)
         SET(OPENCL_KERNELS_CPP ${OPENCL_KERNEL_SOURCE_DIR}/${OPENCL_KERNEL_SOURCE_CLASS}.cpp)
         SET(OPENCL_KERNELS_H ${OPENCL_KERNEL_SOURCE_DIR}/${OPENCL_KERNEL_SOURCE_CLASS}.h)
         FILE(GLOB OPENCL_KERNELS ${OPENCL_KERNEL_SOURCE_DIR}/kernels/*.cl)
@@ -222,8 +231,14 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
             COMMAND ${CMAKE_COMMAND}
             ARGS -D KERNEL_SOURCE_DIR=${OPENCL_KERNEL_SOURCE_DIR} -D KERNELS_CPP=${OPENCL_KERNELS_CPP} -D KERNELS_H=${OPENCL_KERNELS_H} -D KERNEL_SOURCE_CLASS=${OPENCL_KERNEL_SOURCE_CLASS} -D KERNEL_FILE_EXTENSION=cl -P ${CMAKE_SOURCE_DIR}/openmm/cmake_modules/EncodeKernelFiles.cmake
             DEPENDS ${OPENCL_KERNELS}
+            COMMENT "Generating OpenCL kernel sources for OpenMM..."
         )
-        ADD_CUSTOM_TARGET(OPENCLKernels DEPENDS ${OPENCL_KERNELS_CPP} ${OPENCL_KERNELS_H})
+        
+        # this command is executed when building, not when running CMakeLists.txt
+        ADD_CUSTOM_TARGET(OpenCLKernels DEPENDS ${OPENCL_KERNELS_CPP} ${OPENCL_KERNELS_H})
+        SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} OpenCLKernels)
+
+        # message(STATUS "COMMAND ${CMAKE_COMMAND} -D KERNEL_SOURCE_DIR=${OPENCL_KERNEL_SOURCE_DIR} -D KERNELS_CPP=${OPENCL_KERNELS_CPP} -D KERNELS_H=${OPENCL_KERNELS_H} -D KERNEL_SOURCE_CLASS=${OPENCL_KERNEL_SOURCE_CLASS} -D KERNEL_FILE_EXTENSION=cl -P ${CMAKE_SOURCE_DIR}/openmm/cmake_modules/EncodeKernelFiles.cmake")
 
         SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
         SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src)
@@ -285,6 +300,9 @@ set_target_properties(${OPENMM_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION
 target_link_options(${OPENMM_LIB_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS}) # ${PGO_FLAGS}
 target_precompile_headers(${OPENMM_LIB_NAME} PRIVATE pch/openmm_pch.h)
 set_source_files_properties(${OPENMM_LIB_NAME} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+# this forces cmake to encode the kernels before compiling anything else
+add_dependencies(${OPENMM_LIB_NAME} ${OPENMM_DEPENDENCIES})
 
 
 # build simbody
