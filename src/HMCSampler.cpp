@@ -3580,9 +3580,15 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 	return this->acc;
 }
 
+#include <iostream>
+#include <chrono>
+#include <ctime> 
+
 // The main function that generates a sample
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
+	auto start = std::chrono::system_clock::now();
+
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
 
@@ -3646,9 +3652,13 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 	}
 
-		// Increase the sample counter and return
-		++nofSamples;
-		return this->acc;
+	auto end = std::chrono::system_clock::now();
+    auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << "\telapsed time (microseconds): " << useconds << std::endl;
+
+	// Increase the sample counter and return
+	++nofSamples;
+	return this->acc;
 
 }
 

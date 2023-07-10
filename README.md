@@ -32,6 +32,12 @@ git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
 ```
 
+For a specific branch:
+```
+git clone -b build --single-branch https://github.com/spirilaurentiu/Robosample.git
+cd Robosample
+```
+
 ## Robosample branches
 * `master` Stable version. Install by executing (from Robosample directory):
 ```
@@ -221,3 +227,19 @@ grep -rohE '^\s*#include\s*<[^>]+>' --exclude-dir='.*' src/ include/ | sort -t: 
 #include "Simbody.h"
 #include "Molmodel.h"
 ```
+
+
+
+
+
+
+
+
+
+
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.train && rm profile-data/ -rf && bash pgo.sh && cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Use -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.use
+./robosample.pgo.use inp.aper | grep elapsed
+
+
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.train && rm profile-data/ -rf && bash pgo.sh && cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Use -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.use
+./robosample.pgo.use inp.aper | grep elapsed
