@@ -648,8 +648,6 @@ void World::allocateStatsContainers(void)
 	// contain the bond length for the BendStretch joint
 	normX_BMp.resize(matter->getNumBodies() - 1);
 	normX_BMp_means.resize(matter->getNumBodies() - 1);
-
-
 }
 
 // Get the (potential) energy transfer
@@ -749,12 +747,14 @@ void World::traceBendStretch(SimTK::State& someState){
 		
 		// Get mobod inboard frame X_PF
 		const Transform& X_PF = mobod.getInboardFrame(someState);
+		//PrintTransform(X_PF, 4, "X_PF " + std::to_string(int(mbx)));
 
 		// Get mobod inboard frame X_FM measured and expressed in P
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
 
 		// Get mobod inboard frame X_BM
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		//PrintTransform(X_BM, 4, "X_BM " + std::to_string(int(mbx)));
 
 		// Get BAT coordinates B and A
 		SimTK::Vec3 bondVector = X_BM.p();
@@ -772,7 +772,7 @@ void World::PrintAcosX_PFs(void)
 	for(const auto &xpf : acosX_PF00 ){
 		i += 1;
 		//std::cout << "X_PF " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
-		std::cout << "X_PF " << i << " " << xpf << std::endl;
+		std::cout << "acosX_PF " << i << " " << xpf << std::endl;
 
 	}
 }
@@ -783,7 +783,7 @@ void World::PrintNormX_BMs(void)
 	int i = -1;
 	for(const auto &xbm : normX_BMp ){
 		i += 1;
-		std::cout << "X_BM " << i << " " << xbm << std::endl;
+		std::cout << "normX_BM " << i << " " << xbm << std::endl;
 	}
 }
 
@@ -794,7 +794,7 @@ void World::PrintAcosX_PFMeans(void)
 	for(const auto &xpf : acosX_PF00_means ){
 		i += 1;
 		//std::cout << "X_PFMean " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
-		std::cout << "X_PFMean " << i << " " << xpf << std::endl;
+		std::cout << "acosX_PFMean " << i << " " << xpf << std::endl;
 	}
 }
 
@@ -804,7 +804,7 @@ void World::PrintNormX_BMMeans(void)
 	int i = -1;
 	for(const auto &xbm : normX_BMp_means ){
 		i += 1;
-		std::cout << "X_BMMean " << i << " " << xbm << std::endl;
+		std::cout << "normX_BMMean " << i << " " << xbm << std::endl;
 	}
 }
 

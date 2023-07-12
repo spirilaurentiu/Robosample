@@ -2740,10 +2740,11 @@ void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
 
-	/* world->PrintAcosX_PFs();
-	world->PrintAcosX_PFMeans();
-	world->PrintNormX_BMs();
-	world->PrintNormX_BMMeans(); */
+	//world->traceBendStretch(someState);
+	//world->PrintAcosX_PFs();
+	//world->PrintAcosX_PFMeans();
+	//world->PrintNormX_BMs();
+	//world->PrintNormX_BMMeans();
 
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
@@ -2775,9 +2776,9 @@ std::vector<SimTK::Real>& scaleFactors)
 		}
 	}
 
-	// Ground and first mobod don't have internal coordinates
-	int mbxOffset = 2;
-	int sfIxOffset = world->normX_BMp.size();
+	// Now set Qs to the scaled differences
+	int mbxOffset = 2; // no internal coordinates for Ground and first mobod 
+	int sfIxOffset = world->normX_BMp.size(); 
 
 	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
 		mbx < matter->getNumBodies();
@@ -2786,53 +2787,50 @@ std::vector<SimTK::Real>& scaleFactors)
 		// Get mobilized body
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		
-		// We only allocated X_PFs for non-Ground bodies
-		//RESTORE RESTORE RESTORE Check X_FM assignment 0
+		// Previous mbx
+		int sfIx = (int(mbx) - 1);
 
-		// Record the scaleFactors too: (X + Q) / X
-		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
+		// Set the stretch 
+		if(std::abs(world->normX_BMp[ sfIx ]) > 0.00000001){
 
-			mobod.setOneQ(someState, 1, (+1.0) * Q_of_X_BMdiffs[int(mbx) - 1]);
-			scaleFactors[ (int(mbx) - 1) ] = 
-			(world->normX_BMp[int(mbx) - 1] + ((+1.0) * Q_of_X_BMdiffs[int(mbx) - 1])) /
-				world->normX_BMp[int(mbx) - 1];
+			// Set Q to scaled diff
+			if(mobod.getNumQ(someState) == 2){
+				mobod.setOneQ(someState, 1, (+1.0) * Q_of_X_BMdiffs[sfIx]);
+			}else{
+				mobod.setOneQ(someState, 0, (+1.0) * Q_of_X_BMdiffs[sfIx]);
+			}
+
+			// Record the scaleFactors too: (X + Q) / X
+			scaleFactors[ sfIx ] = 
+			(world->normX_BMp[ sfIx ] + ((+1.0) * Q_of_X_BMdiffs[ sfIx ])) /
+				world->normX_BMp[ sfIx ];
 		}
-		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
 
-			mobod.setOneQ(someState, 0, (+1.0) * Q_of_X_PFdiffs[int(mbx) - 1]);
+		// Set the bend rotation
+		if(std::abs(world->acosX_PF00[ sfIx ]) > 0.00000001){
+
+			// Set Q to scaled diff
+			if(mobod.getNumQ(someState) == 2){
+				mobod.setOneQ(someState, 0, (-1.0) * Q_of_X_PFdiffs[ sfIx ]);
 			
-			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
-			(world->acosX_PF00[int(mbx) - 1] + ((+1.0) * Q_of_X_PFdiffs[int(mbx) - 1])) /
-				world->acosX_PF00[int(mbx) - 1];
-		}
+				// Record the scaleFactors too: (X + Q) / X
+				scaleFactors[ sfIxOffset + sfIx ] = 
+				(world->acosX_PF00[ sfIx ] + ((+1.0) * Q_of_X_PFdiffs[ sfIx ])) /
+					world->acosX_PF00[ sfIx ];
+			}else{
+				scaleFactors[ sfIxOffset + sfIx ] = 1.0;
+			}
 
-		//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
-
-
-		/* // DELETE DELETE DELETE DELETE Check X_FM assignment 0
-		SimTK::Real someConstant = 1.123;
-		mobod.setOneQ(someState, 0, someConstant);
-		mobod.setOneQ(someState, 1, someConstant);
-
-		trace("normX_BM", world->normX_BMp[(int(mbx) - 1)], "acosX_PF", world->acosX_PF00[int(mbx) - 1]);
-
-		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
-			scaleFactors[ (int(mbx) - 1) ] = 
-			(world->normX_BMp[int(mbx) - 1] + someConstant) /
-				world->normX_BMp[int(mbx) - 1];
 		}		
-
-		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
-			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
-			(world->acosX_PF00[int(mbx) - 1] + someConstant) /
-				world->acosX_PF00[int(mbx) - 1];
-		} */		
-
 	}
+
+	//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
-	//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+	if(world->visual){
+		std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+	}
 
 	// Test
 	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
@@ -3117,7 +3115,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			}
 
 			// Get the angle term
-			SimTK::Real sineTheta = world->acosX_PF00[k];
+			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k]);
 
 			if(sineTheta != 0){
 					sineTheta = std::log(std::sin(sineTheta)); // log space
@@ -3167,7 +3165,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			}
 
 			// Get the angle term
-			SimTK::Real sineTheta = (world->acosX_PF00[k] * scaleFactors[x_pf_k]);
+			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k] * scaleFactors[x_pf_k]);
 
 			if(std::abs(sineTheta) > 0.0000001){
 					sineTheta = std::log(std::sin(sineTheta)); // log space

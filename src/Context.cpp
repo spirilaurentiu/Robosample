@@ -3318,10 +3318,10 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 		}
 
 		// Assign a random sign (optional)
-		/* SimTK::Real randSign;
+		SimTK::Real randSign;
 		SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-		qScaleFactors.at(thisThermoStateIx) *= randSign; */
+		qScaleFactors.at(thisThermoStateIx) *= randSign;
 
 		// Send the scale factor to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
@@ -3669,70 +3669,82 @@ void Context::RunRENS(void)
 
 	PrintNofAcceptedSwapsMatrix();
 
-		// DELETE THIS CODE
-		// lin4 transforms
-		//std::vector<SimTK::Real> givenX_PF(2, 999);
-		//std::vector<SimTK::Real> givenX_BM(2, 999);
-		//givenX_PF[0] = 0.0000000000;
-		//givenX_PF[1] = 1.5707963268;
-		//givenX_BM[0] = 0.0000000000;
-		//givenX_BM[1] = 0.1000000000;
+		bool givenTsMode = true;
+		if(givenTsMode){
+			std::cout << "givenTsMode = true\n";
+			std::vector<SimTK::Real> givenX_PF;
+			std::vector<SimTK::Real> givenX_BM;
 
-		std::cout << "TEST MODE given X_PF givenX_BM\n";
-		std::vector<SimTK::Real> givenX_PF(22, 999);
-		std::vector<SimTK::Real> givenX_BM(22, 999);
+			std::string molecule = "ala1";
+			if(molecule == "lin4"){
+				givenX_PF.resize(4, 999);
+				givenX_BM.resize(4, 999);
 
-		givenX_PF[0] = 0.382213052;
-		givenX_PF[1] = 1.909352531;
-		givenX_PF[2] = 1.893749726;
-		givenX_PF[3] = 1.947370624;
-		givenX_PF[4] = 0;
-		givenX_PF[5] = 1.956830795;
-		givenX_PF[6] = 2.048214246;
-		givenX_PF[7] = 2.039980631;
-		givenX_PF[8] = 2.161855757;
-		givenX_PF[9] = 1.901552048;
-		givenX_PF[10] = 1.895242261;
-		givenX_PF[11] = 1.944130783;
-		givenX_PF[12] = 1.977970389;
-		givenX_PF[13] = 1.919833798;
-		givenX_PF[14] = 1.967840235;
-		givenX_PF[15] = 2.056850251;
-		givenX_PF[16] = 2.101173327;
-		givenX_PF[17] = 2.108547254;
-		givenX_PF[18] = 2.251719968;
-		givenX_PF[19] = 1.869673523;
-		givenX_PF[20] = 1.935043108;
-		givenX_PF[21] = 1.916275746;
-		givenX_BM[0] = 0;
-		givenX_BM[1] = 0.108791084;
-		givenX_BM[2] = 0.114675602;
-		givenX_BM[3] = 0.10683655;
-		givenX_BM[4] = 0.153979978;
-		givenX_BM[5] = 0.120963202;
-		givenX_BM[6] = 0.134721103;
-		givenX_BM[7] = 0.09633632;
-		givenX_BM[8] = 0.147241057;
-		givenX_BM[9] = 0.107930417;
-		givenX_BM[10] = 0.150565067;
-		givenX_BM[11] = 0.111184402;
-		givenX_BM[12] = 0.109086027;
-		givenX_BM[13] = 0.110920344;
-		givenX_BM[14] = 0.154254133;
-		givenX_BM[15] = 0.123863943;
-		givenX_BM[16] = 0.131670032;
-		givenX_BM[17] = 0.106489035;
-		givenX_BM[18] = 0.147187697;
-		givenX_BM[19] = 0.110298069;
-		givenX_BM[20] = 0.108296974;
-		givenX_BM[21] = 0.111305194;
+				givenX_PF[0] = 0.0000000000;
+				givenX_PF[1] = 1.5707963268;
+				givenX_PF[2] = 0.0000000000;
+				givenX_PF[3] = 1.5707963268;
+				givenX_BM[0] = 0.0000000000;
+				givenX_BM[1] = 0.1000000000;
+				givenX_BM[2] = 0.1000000000;
+				givenX_BM[3] = 0.1000000000;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
+			}else if(molecule == "ala1"){
+				givenX_PF.resize(22, 999);
+				givenX_BM.resize(22, 999);
 
-		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+				givenX_PF[0] = 0.382213052;
+				givenX_PF[1] = 1.909352531;
+				givenX_PF[2] = 1.893749726;
+				givenX_PF[3] = 1.947370624;
+				givenX_PF[4] = 0;
+				givenX_PF[5] = 1.956830795;
+				givenX_PF[6] = 2.048214246;
+				givenX_PF[7] = 2.039980631;
+				givenX_PF[8] = 2.161855757;
+				givenX_PF[9] = 1.901552048;
+				givenX_PF[10] = 1.895242261;
+				givenX_PF[11] = 1.944130783;
+				givenX_PF[12] = 1.977970389;
+				givenX_PF[13] = 1.919833798;
+				givenX_PF[14] = 1.967840235;
+				givenX_PF[15] = 2.056850251;
+				givenX_PF[16] = 2.101173327;
+				givenX_PF[17] = 2.108547254;
+				givenX_PF[18] = 2.251719968;
+				givenX_PF[19] = 1.869673523;
+				givenX_PF[20] = 1.935043108;
+				givenX_PF[21] = 1.916275746;
+				givenX_BM[0] = 0;
+				givenX_BM[1] = 0.108791084;
+				givenX_BM[2] = 0.114675602;
+				givenX_BM[3] = 0.10683655;
+				givenX_BM[4] = 0.153979978;
+				givenX_BM[5] = 0.120963202;
+				givenX_BM[6] = 0.134721103;
+				givenX_BM[7] = 0.09633632;
+				givenX_BM[8] = 0.147241057;
+				givenX_BM[9] = 0.107930417;
+				givenX_BM[10] = 0.150565067;
+				givenX_BM[11] = 0.111184402;
+				givenX_BM[12] = 0.109086027;
+				givenX_BM[13] = 0.110920344;
+				givenX_BM[14] = 0.154254133;
+				givenX_BM[15] = 0.123863943;
+				givenX_BM[16] = 0.131670032;
+				givenX_BM[17] = 0.106489035;
+				givenX_BM[18] = 0.147187697;
+				givenX_BM[19] = 0.110298069;
+				givenX_BM[20] = 0.108296974;
+				givenX_BM[21] = 0.111305194;
+
+			}
+			
+			for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+				worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+			}
 		}
-		// DELETE CODE ABOVE
+
 
 	// Main loop
 	int nofMixes = int(requiredNofRounds / swapEvery);
@@ -3963,14 +3975,14 @@ void Context::RunOneRound(void)
 		if( NDistortOpt[worldIx] == -1 ){
 			
 			// Set the Q scaling factor to Gaussian random around 1.0
-			std::string distribOpt = "deterministic";
+			std::string distribOpt = "uniform";
 			SimTK::Real sf = 1.0;
 
 			// Set the Q scale factor at a fixed value
 			if(distribOpt == "deterministic"){
 
-				//sf = std::sqrt(300.0 / 400.0);
-				sf = 2.0;
+				sf = std::sqrt(300.0 / 400.0);
+				//sf = 2.0;
 
 			// Draw the Q scale factor from a truncated normal
 			}else if(distribOpt == "gauss"){
@@ -3982,14 +3994,17 @@ void Context::RunOneRound(void)
 			}else if(distribOpt == "uniform"){
 				sf = 
 					worlds[0].updSampler(0)->uniformRealDistributionRandTrunc(
+						//0.625, 1.600);
 						0.8, 1.25);
 			}
 
 			// Assign a random sign (optional)
-			/* SimTK::Real randSign;
-			SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
+			SimTK::Real randSign;
+			SimTK::Real randUni_m1_1 =
+				worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
+					randomEngine);
 			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-			qScaleFactors.at(thisThermoStateIx) *= randSign; */
+			sf *= randSign;
 
 			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
 		}	
@@ -4038,70 +4053,82 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
-		// DELETE THIS CODE
-		// lin4 transforms
-		//std::vector<SimTK::Real> givenX_PF(2, 999);
-		//std::vector<SimTK::Real> givenX_BM(2, 999);
-		//givenX_PF[0] = 0.0000000000;
-		//givenX_PF[1] = 1.5707963268;
-		//givenX_BM[0] = 0.0000000000;
-		//givenX_BM[1] = 0.1000000000;
+		bool givenTsMode = true;
+		if(givenTsMode){
+			std::cout << "givenTsMode = true\n";
+			std::vector<SimTK::Real> givenX_PF;
+			std::vector<SimTK::Real> givenX_BM;
 
-		std::cout << "TEST MODE given X_PF givenX_BM\n";
-		std::vector<SimTK::Real> givenX_PF(22, 999);
-		std::vector<SimTK::Real> givenX_BM(22, 999);
+			std::string molecule = "ala1";
+			if(molecule == "lin4"){
+				givenX_PF.resize(4, 999);
+				givenX_BM.resize(4, 999);
 
-		givenX_PF[0] = 0.382213052;
-		givenX_PF[1] = 1.909352531;
-		givenX_PF[2] = 1.893749726;
-		givenX_PF[3] = 1.947370624;
-		givenX_PF[4] = 0;
-		givenX_PF[5] = 1.956830795;
-		givenX_PF[6] = 2.048214246;
-		givenX_PF[7] = 2.039980631;
-		givenX_PF[8] = 2.161855757;
-		givenX_PF[9] = 1.901552048;
-		givenX_PF[10] = 1.895242261;
-		givenX_PF[11] = 1.944130783;
-		givenX_PF[12] = 1.977970389;
-		givenX_PF[13] = 1.919833798;
-		givenX_PF[14] = 1.967840235;
-		givenX_PF[15] = 2.056850251;
-		givenX_PF[16] = 2.101173327;
-		givenX_PF[17] = 2.108547254;
-		givenX_PF[18] = 2.251719968;
-		givenX_PF[19] = 1.869673523;
-		givenX_PF[20] = 1.935043108;
-		givenX_PF[21] = 1.916275746;
-		givenX_BM[0] = 0;
-		givenX_BM[1] = 0.108791084;
-		givenX_BM[2] = 0.114675602;
-		givenX_BM[3] = 0.10683655;
-		givenX_BM[4] = 0.153979978;
-		givenX_BM[5] = 0.120963202;
-		givenX_BM[6] = 0.134721103;
-		givenX_BM[7] = 0.09633632;
-		givenX_BM[8] = 0.147241057;
-		givenX_BM[9] = 0.107930417;
-		givenX_BM[10] = 0.150565067;
-		givenX_BM[11] = 0.111184402;
-		givenX_BM[12] = 0.109086027;
-		givenX_BM[13] = 0.110920344;
-		givenX_BM[14] = 0.154254133;
-		givenX_BM[15] = 0.123863943;
-		givenX_BM[16] = 0.131670032;
-		givenX_BM[17] = 0.106489035;
-		givenX_BM[18] = 0.147187697;
-		givenX_BM[19] = 0.110298069;
-		givenX_BM[20] = 0.108296974;
-		givenX_BM[21] = 0.111305194;
+				givenX_PF[0] = 0.0000000000;
+				givenX_PF[1] = 1.5707963268;
+				givenX_PF[2] = 0.0000000000;
+				givenX_PF[3] = 1.5707963268;
+				givenX_BM[0] = 0.0000000000;
+				givenX_BM[1] = 0.1000000000;
+				givenX_BM[2] = 0.1000000000;
+				givenX_BM[3] = 0.1000000000;
 
-		worlds[0].setTransformsMeans(givenX_PF, givenX_BM);
-		
-		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-			worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+			}else if(molecule == "ala1"){
+				givenX_PF.resize(22, 999);
+				givenX_BM.resize(22, 999);
+
+				givenX_PF[0] = 0.382213052;
+				givenX_PF[1] = 1.909352531;
+				givenX_PF[2] = 1.893749726;
+				givenX_PF[3] = 1.947370624;
+				givenX_PF[4] = 0;
+				givenX_PF[5] = 1.956830795;
+				givenX_PF[6] = 2.048214246;
+				givenX_PF[7] = 2.039980631;
+				givenX_PF[8] = 2.161855757;
+				givenX_PF[9] = 1.901552048;
+				givenX_PF[10] = 1.895242261;
+				givenX_PF[11] = 1.944130783;
+				givenX_PF[12] = 1.977970389;
+				givenX_PF[13] = 1.919833798;
+				givenX_PF[14] = 1.967840235;
+				givenX_PF[15] = 2.056850251;
+				givenX_PF[16] = 2.101173327;
+				givenX_PF[17] = 2.108547254;
+				givenX_PF[18] = 2.251719968;
+				givenX_PF[19] = 1.869673523;
+				givenX_PF[20] = 1.935043108;
+				givenX_PF[21] = 1.916275746;
+				givenX_BM[0] = 0;
+				givenX_BM[1] = 0.108791084;
+				givenX_BM[2] = 0.114675602;
+				givenX_BM[3] = 0.10683655;
+				givenX_BM[4] = 0.153979978;
+				givenX_BM[5] = 0.120963202;
+				givenX_BM[6] = 0.134721103;
+				givenX_BM[7] = 0.09633632;
+				givenX_BM[8] = 0.147241057;
+				givenX_BM[9] = 0.107930417;
+				givenX_BM[10] = 0.150565067;
+				givenX_BM[11] = 0.111184402;
+				givenX_BM[12] = 0.109086027;
+				givenX_BM[13] = 0.110920344;
+				givenX_BM[14] = 0.154254133;
+				givenX_BM[15] = 0.123863943;
+				givenX_BM[16] = 0.131670032;
+				givenX_BM[17] = 0.106489035;
+				givenX_BM[18] = 0.147187697;
+				givenX_BM[19] = 0.110298069;
+				givenX_BM[20] = 0.108296974;
+				givenX_BM[21] = 0.111305194;
+
+			}
+			
+			for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+				worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
+			}
 		}
-		// DELETE CODE ABOVE
+
 
 		// Main loop: iterate through rounds
 		for(int round = 0; round < requiredNofRounds; round++){
@@ -4638,7 +4665,7 @@ int Context::getPrintFreq()
 	return this->printFreq;
 }
 
-//
+// 
 void Context::setPrintFreq(int argFreq)
 {
 	this->printFreq = argFreq;
