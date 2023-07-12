@@ -1417,11 +1417,11 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 						//std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
 
-						std::vector<SimTK::Transform> mobodTs = // DANGER
-							calcMobodToMobodTransforms( // DANGER
-								(*topologies)[i],	// DANGER
-								aIx,		// DANGER
-								someState);	// DANGER
+						std::vector<SimTK::Transform> mobodTs = 
+							calcMobodToMobodTransforms( 
+								(*topologies)[i],	
+								aIx,		
+								someState);
 
 						//std::cout << "calcMobodTransforms for atom " << aIx << " done\n" << std::flush;
 
@@ -1565,12 +1565,11 @@ World::calcMobodToMobodTransforms(
 		|| (mobility == SimTK::BondMobility::Mobility::BendStretch);
 
 	if( (pinORslider) && ((atom->neighbors).size() == 1)){
-
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
 	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
-
-		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
+		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
+		//return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)

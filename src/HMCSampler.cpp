@@ -2740,14 +2740,18 @@ void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
 
-	world->PrintAcosX_PFs();
+	/* world->PrintAcosX_PFs();
 	world->PrintAcosX_PFMeans();
 	world->PrintNormX_BMs();
-	world->PrintNormX_BMMeans();
+	world->PrintNormX_BMMeans(); */
 
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
+
+	// Save changes by advancing to Position Stage
+	system->realize(someState, SimTK::Stage::Position);
+	std::this_thread::sleep_for(std::chrono::milliseconds(4000));
 
 	// Resize scaling factors
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
@@ -2762,14 +2766,14 @@ std::vector<SimTK::Real>& scaleFactors)
 	int k = -1;
 	for(auto& diff : Q_of_X_PFdiffs){
 		diff *= QScaleFactor - 1.0;
-		std::cout << "Q(X_PFdiff)= " << diff << std::endl;
+		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
 		if(world->visual){
 			world->paraMolecularDecorator->updFCommVars(diff);
 		}
 	}
 	for(auto& diff : Q_of_X_BMdiffs){
 		diff *= QScaleFactor - 1.0;
-		std::cout << "Q(X_BMdiff)= " << diff << std::endl;
+		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
 		if(world->visual){
 			world->paraMolecularDecorator->updBCommVars(diff);
 		}
@@ -2806,7 +2810,7 @@ std::vector<SimTK::Real>& scaleFactors)
 				world->acosX_PF00[int(mbx) - 1];
 		}
 
-		std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
+		//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
 
 
 		/* // DELETE DELETE DELETE DELETE Check X_FM assignment 0
@@ -2832,10 +2836,10 @@ std::vector<SimTK::Real>& scaleFactors)
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
-	std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
 	// Test
-	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
 
 }
 

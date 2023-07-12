@@ -521,6 +521,11 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 // */
 
 	// Draw Rigid bodies
+	// Ground frame
+	/* drawFrame(geometry, Transform(),
+		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
+		"G", 0.009, SimTK::Vec3(0.5, 0.5, 0.5), SimTK::Vec3(0.02, 0.0, 0.0)); */
+
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
@@ -563,21 +568,28 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			//geometry.push_back(decorativeSphereM);
 
 			// Draw frames
-			if(mbx > 1) {
+			int chosenBody = 2;
+			if(chosenBody >= matter->getNumBodies()){
+				std::cerr << "Visualizer chosenBody greater than allowed.\n"
+					<< std::flush;
+				exit(1);
+			}
+			if((mbx >= 1) || (mbx == chosenBody)) {
 			// /*
 				
-				// Frame P
+				/* // Frame P
 				std::ostringstream streamObjP;
 				streamObjP << std::string("P") + std::to_string(int(mbx));
 				std::string textP = streamObjP.str();
 				drawFrame(geometry, G_X_P,
 					0.05, 4, SimTK::Vec3(0, 0, 0),
-					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
+					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0)); */
 
 				// Frame F
 				std::ostringstream streamObjF;
 				streamObjF << std::string("F") + std::to_string(int(mbx))
-					+ " " + std::to_string(this->FCommVar);
+					//+ " " + std::to_string(this->FCommVar)
+					;
 				std::string textF = streamObjF.str();
 				drawFrame(geometry, G_X_F,
 					0.04, 4, SimTK::Vec3(0, 0, 1),
@@ -591,19 +603,20 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 					0.05, 4, SimTK::Vec3(1, 0, 0),
 					streamObjM.str(), 0.008, SimTK::Vec3(1, 0, 0), SimTK::Vec3(-0.03, 0.0, 0.0));
 
-				// Frame B
+				/* // Frame B
 				std::ostringstream streamObjB;
 				streamObjB << std::string("B") + std::to_string(int(mbx))
-					+ " " + std::to_string(this->BCommVar);
+					//+ " " + std::to_string(this->BCommVar)
+					;
 				std::string textB = streamObjB.str();
 				drawFrame(geometry, G_X_B,
 					0.04, 4, SimTK::Vec3(0, 0, 0),
-					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
+					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.04, 0.0, 0.0)); */
 
 			} // */
 
 			// Draw lines
-			if(mbx > 1){
+			if((mbx >= 1) || (mbx == chosenBody)) {
 
 				// BM expressed in Ground
 				drawLine(geometry, G_X_B, G_X_M,
