@@ -2749,10 +2749,6 @@ std::vector<SimTK::Real>& scaleFactors)
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
 
-	// Save changes by advancing to Position Stage
-	system->realize(someState, SimTK::Stage::Position);
-	std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-
 	// Resize scaling factors
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
 		1.0);
@@ -2836,7 +2832,7 @@ std::vector<SimTK::Real>& scaleFactors)
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+	//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
 	// Test
 	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
