@@ -3318,10 +3318,10 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 		}
 
 		// Assign a random sign (optional)
-		SimTK::Real randSign;
+		/* SimTK::Real randSign;
 		SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-		qScaleFactors.at(thisThermoStateIx) *= randSign;
+		qScaleFactors.at(thisThermoStateIx) *= randSign; */
 
 		// Send the scale factor to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
@@ -3975,7 +3975,7 @@ void Context::RunOneRound(void)
 		if( NDistortOpt[worldIx] == -1 ){
 			
 			// Set the Q scaling factor to Gaussian random around 1.0
-			std::string distribOpt = "uniform";
+			std::string distribOpt = "deterministic";
 			SimTK::Real sf = 1.0;
 
 			// Set the Q scale factor at a fixed value
@@ -3999,12 +3999,12 @@ void Context::RunOneRound(void)
 			}
 
 			// Assign a random sign (optional)
-			SimTK::Real randSign;
+			/* SimTK::Real randSign;
 			SimTK::Real randUni_m1_1 =
 				worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
 					randomEngine);
 			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-			sf *= randSign;
+			sf *= randSign; */
 
 			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
 		}	
@@ -4059,7 +4059,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 			std::vector<SimTK::Real> givenX_PF;
 			std::vector<SimTK::Real> givenX_BM;
 
-			std::string molecule = "ala1";
+			std::string molecule = "ala1min";
 			if(molecule == "lin4"){
 				givenX_PF.resize(4, 999);
 				givenX_BM.resize(4, 999);
@@ -4073,7 +4073,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				givenX_BM[2] = 0.1000000000;
 				givenX_BM[3] = 0.1000000000;
 
-			}else if(molecule == "ala1"){
+			}else if(molecule == "ala1avg"){
 				givenX_PF.resize(22, 999);
 				givenX_BM.resize(22, 999);
 
@@ -4121,7 +4121,54 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				givenX_BM[19] = 0.110298069;
 				givenX_BM[20] = 0.108296974;
 				givenX_BM[21] = 0.111305194;
+			}else if(molecule == "ala1min"){
+				givenX_PF.resize(22, 999);
+				givenX_BM.resize(22, 999);
 
+				givenX_PF[0] = 0.3682643796;
+				givenX_PF[1] = 1.8960517108;
+				givenX_PF[2] = 1.8960516113;
+				givenX_PF[3] = 1.9390607064;
+				givenX_PF[4] = 0.0000000000;
+				givenX_PF[5] = 2.1031232500;
+				givenX_PF[6] = 2.0350548087;
+				givenX_PF[7] = 2.0943959009;
+				givenX_PF[8] = 2.1275573188;
+				givenX_PF[9] = 1.9111356926;
+				givenX_PF[10] = 1.9390611609;
+				givenX_PF[11] = 1.9111367719;
+				givenX_PF[12] = 1.9111354691;
+				givenX_PF[13] = 1.9111364697;
+				givenX_PF[14] = 1.9390619788;
+				givenX_PF[15] = 2.1031219670;
+				givenX_PF[16] = 2.0350548028;
+				givenX_PF[17] = 2.0943960153;
+				givenX_PF[18] = 2.1275572828;
+				givenX_PF[19] = 1.9111358481;
+				givenX_PF[20] = 1.9111364441;
+				givenX_PF[21] = 1.9111361106;
+				givenX_BM[0] = 0.0000000000;
+				givenX_BM[1] = 0.1089999254;
+				givenX_BM[2] = 0.1089999510;
+				givenX_BM[3] = 0.1090000000;
+				givenX_BM[4] = 0.1530000044;
+				givenX_BM[5] = 0.1228999573;
+				givenX_BM[6] = 0.1335000002;
+				givenX_BM[7] = 0.1009999727;
+				givenX_BM[8] = 0.1449000378;
+				givenX_BM[9] = 0.1089999687;
+				givenX_BM[10] = 0.1524999850;
+				givenX_BM[11] = 0.1090000050;
+				givenX_BM[12] = 0.1090000157;
+				givenX_BM[13] = 0.1089999583;
+				givenX_BM[14] = 0.1522000039;
+				givenX_BM[15] = 0.1228999670;
+				givenX_BM[16] = 0.1334999968;
+				givenX_BM[17] = 0.1009999640;
+				givenX_BM[18] = 0.1449000400;
+				givenX_BM[19] = 0.1090000363;
+				givenX_BM[20] = 0.1090000286;
+				givenX_BM[21] = 0.1089999982;
 			}
 			
 			for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
