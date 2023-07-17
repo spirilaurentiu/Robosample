@@ -2838,7 +2838,6 @@ std::vector<SimTK::Real>& scaleFactors)
 }
 
 
-
 /*
  * Shift all the generalized coordinates to scale bonds and angles
  * standard deviations through BendStretch joint
@@ -3508,8 +3507,7 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
  * because we don't have the partition function
 */
 SimTK::Real HMCSampler::MHAcceptProbability(
-	SimTK::Real argEtot_proposed,
-	SimTK::Real argEtot_n) const 
+	SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const 
 {
 	if(argEtot_n < argEtot_proposed) {
 		return 1;
@@ -3592,7 +3590,9 @@ bool HMCSampler::acceptSample() {
 	
 }
 
-/// Acception rejection step - not used
+/**
+ * Acception rejection step - not used
+*/
 bool HMCSampler::accRejStep(SimTK::State& someState) {
 
 	// Empty sample generator
@@ -3622,7 +3622,9 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 	return this->acc;
 }
 
-// The main function that generates a sample
+/**
+ * The main function that generates a sample
+*/
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
 	// Set the number of decimals to be printed

@@ -635,7 +635,6 @@ void World::loadMobodsRelatedMaps()
 	}
 }
 
-
 // Allocate space for containers that keep statistics if we're doing any
 void World::allocateStatsContainers(void)
 {
@@ -918,7 +917,6 @@ int World::getNofMolecules() const
 {
 	return (this->moleculeCount + 1);
 }
-
 
 
 /** Get MobilizedBody to AtomIndex map **/

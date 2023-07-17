@@ -568,7 +568,10 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			//geometry.push_back(decorativeSphereM);
 
 			// Draw frames
-			std::vector<int> chosenBodies = {2,3,4,5,6,7,8,9};
+			std::vector<int> chosenBodies =
+			{          2,  3,  4,  5,  6,  7,  8,  9,
+			  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+			  20, 21, 22, 23, 24, 25, 26, 27, 28, 29};
 			/* if(chosenBodies >= matter->getNumBodies()){
 				std::cerr << "Visualizer chosenBody greater than allowed.\n"
 					<< std::flush;
@@ -580,16 +583,16 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				(std::find(std::begin(chosenBodies), std::end(chosenBodies), int(mbx))
 				!= std::end(chosenBodies));
 
-			if(found) {
+			if(int(mbx) > 1) {
 			// /*
 				
-				// Frame P
+				/* // Frame P
 				std::ostringstream streamObjP;
 				streamObjP << std::string("P") + std::to_string(int(mbx));
 				std::string textP = streamObjP.str();
 				drawFrame(geometry, G_X_P,
 					0.05, 4, SimTK::Vec3(0, 0, 0),
-					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
+					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0)); */
 
 				// Frame F
 				std::ostringstream streamObjF;
@@ -601,7 +604,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 					0.04, 4, SimTK::Vec3(0, 0, 1),
 					streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0));
 
-				// Frame M
+				/* // Frame M
 				std::ostringstream streamObjM;
 				std::setprecision(2);
 				streamObjM << std::string("M") + std::to_string(int(mbx));
@@ -617,12 +620,12 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				std::string textB = streamObjB.str();
 				drawFrame(geometry, G_X_B,
 					0.04, 4, SimTK::Vec3(0, 0, 0),
-					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.04, 0.0, 0.0));
+					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.04, 0.0, 0.0)); */
 
 			} // */
 
 			// Draw lines
-			if(found) {
+			if(int(mbx) > 1) {
 
 				// BM expressed in Ground
 				drawLine(geometry, G_X_B, G_X_M,

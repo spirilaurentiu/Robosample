@@ -3299,7 +3299,7 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
 			qScaleFactors.at(thisThermoStateIx) = 1.0; */
 
-			qScaleFactors.at(0) = 1.0;
+			qScaleFactors.at(0) = std::sqrt(400.0 / 300.0);
 			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
 			qScaleFactors.at(1) = std::sqrt(300.0 / 400.0);
 
@@ -3669,7 +3669,7 @@ void Context::RunRENS(void)
 
 	PrintNofAcceptedSwapsMatrix();
 
-		bool givenTsMode = true;
+		bool givenTsMode = false;
 		if(givenTsMode){
 			std::cout << "givenTsMode = true\n";
 			std::vector<SimTK::Real> givenX_PF;
