@@ -285,6 +285,10 @@ int SetupReader::readREXConfigFile(std::string FN,
 	for(auto& mdsteps : rexMdsteps){for(auto& ts : mdsteps){std::cout << ts << " ";}std::cout << std::endl;}
 	std::cout << "All the samplesPerRound that I got:\n" ;
 	for(auto& samplesPerRound : rexSamplesPerRound){for(auto& ts : samplesPerRound){std::cout << ts << " ";}std::cout << std::endl;}	
+	std::cout << "All the Samplers that I got:\n" ;
+	for(auto& samplers : rexSamplers){for(auto& ts : samplers){std::cout << ts << " ";}std::cout << std::endl;}	
+	std::cout << "All the temperatures that I got:\n" ;
+	for(auto& temperatures_ix : temperatures){{std::cout << temperatures_ix << " ";}std::cout << std::endl;}	
 
 	return nofReplicas;
 	

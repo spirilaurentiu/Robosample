@@ -333,7 +333,7 @@ int main(int argc, char **argv)
 
 
 
-		float sphere_radius = std::stoi(setupReader.get("SPHERE_RADIUS")[0]);
+		float sphere_radius = std::stod(setupReader.get("SPHERE_RADIUS")[0]);
 
 		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
 
