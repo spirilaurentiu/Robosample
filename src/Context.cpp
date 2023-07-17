@@ -2726,7 +2726,6 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 
 }
 
-
 // Exhange all replicas
 void Context::mixAllReplicas(int nSwapAttempts)
 {
@@ -2796,7 +2795,6 @@ void Context::mixReplicas(void)
 //		mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
 //	}
 }
-
 
 // Load replica's atomLocations into it's front world
 void Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
@@ -2925,7 +2923,6 @@ void Context::store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx)
 	replicas[replicaIx].set_WORK_PotentialEnergy_New(energy);
 
 }
-
 
 // Get energy of the back world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromBackWorld(int replicaIx)
@@ -3669,13 +3666,13 @@ void Context::RunRENS(void)
 
 	PrintNofAcceptedSwapsMatrix();
 
-		bool givenTsMode = false;
+		bool givenTsMode = true;
 		if(givenTsMode){
 			std::cout << "givenTsMode = true\n";
 			std::vector<SimTK::Real> givenX_PF;
 			std::vector<SimTK::Real> givenX_BM;
 
-			std::string molecule = "ala1min";
+			std::string molecule = "trpch";
 			if(molecule == "lin4"){
 				givenX_PF.resize(4, 999);
 				givenX_BM.resize(4, 999);
@@ -3785,6 +3782,11 @@ void Context::RunRENS(void)
 				givenX_BM[19] = 0.1090000363;
 				givenX_BM[20] = 0.1090000286;
 				givenX_BM[21] = 0.1089999982;
+
+			}else if(molecule == "trpch"){
+				givenX_PF.resize(313, 999);
+				givenX_BM.resize(313, 999);
+				#include "trpchTransforms.hpp";
 			}
 			
 			for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
@@ -4106,7 +4108,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 			std::vector<SimTK::Real> givenX_PF;
 			std::vector<SimTK::Real> givenX_BM;
 
-			std::string molecule = "ala1min";
+			std::string molecule = "trpch";
 			if(molecule == "lin4"){
 				givenX_PF.resize(4, 999);
 				givenX_BM.resize(4, 999);
@@ -4216,8 +4218,11 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 				givenX_BM[19] = 0.1090000363;
 				givenX_BM[20] = 0.1090000286;
 				givenX_BM[21] = 0.1089999982;
+			}else if(molecule == "trpch"){
+				givenX_PF.resize(313, 999);
+				givenX_BM.resize(313, 999);
+				#include "trpchTransforms.hpp";
 			}
-			
 			for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
 				worlds[worldIx].setTransformsMeans(givenX_PF, givenX_BM);
 			}
