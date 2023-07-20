@@ -340,6 +340,9 @@ public:
 	void setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
 		const std::vector<SimTK::Real>& givenX_BM);
 
+	// Set X_PF and X_BM related values
+	void setTransformsStatisticsToMin(readAmberInput &amberReader);
+
 	// Get X_PF and X_BM related values
 	void getTransformsStatistics(SimTK::State& someState);
 

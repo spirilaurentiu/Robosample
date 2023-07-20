@@ -677,6 +677,49 @@ SimTK::Real World::getWorkOrHeat(void)
 
 }
 
+/**
+ * Set bonds and angles values
+*/
+void World::setTransformsStatisticsToMin(readAmberInput &amberReader)
+{
+	
+	// Set bonds and angles values
+	for(int angleIndex = 0; angleIndex < amberReader.getNumberAngles(); angleIndex++){
+
+		int a1 = amberReader.getAnglesAtomsIndex1(angleIndex);
+		int a2 = amberReader.getAnglesAtomsIndex2(angleIndex);
+		int a3 = amberReader.getAnglesAtomsIndex3(angleIndex);
+
+		for (auto& topology : (*topologies)){
+			SimTK::Compound::AtomIndex aIx = topology.bAtomList[a3].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(aIx);
+			const SimTK::MobilizedBodyIndex mbx = forceField->getAtomBody(dAIx);
+			
+			acosX_PF00_means[int(mbx) - 1] = amberReader.getAnglesEqval(angleIndex);
+
+		}
+	}	
+
+	for(int bondIndex = 0; bondIndex < amberReader.getNumberBonds(); bondIndex++){
+
+		int a1 = amberReader.getBondsAtomsIndex1(bondIndex);
+		int a2 = amberReader.getBondsAtomsIndex2(bondIndex);
+
+		for (auto& topology : (*topologies)){
+
+			SimTK::Compound::AtomIndex aIx = topology.bAtomList[a2].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(aIx);
+			const SimTK::MobilizedBodyIndex mbx = forceField->getAtomBody(dAIx);
+			
+			normX_BMp_means[int(mbx) - 1] = amberReader.getBondsEqval(bondIndex) / 10.0; // Ang to nano conv
+
+		}
+	}	
+
+
+
+}
+
 /*
  * Shift all the generalized coordinates
  */
