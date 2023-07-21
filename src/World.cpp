@@ -677,48 +677,6 @@ SimTK::Real World::getWorkOrHeat(void)
 
 }
 
-/**
- * Set bonds and angles values
-*/
-void World::setTransformsStatisticsToMin(readAmberInput &amberReader)
-{
-	
-	// Set bonds and angles values
-	for(int angleIndex = 0; angleIndex < amberReader.getNumberAngles(); angleIndex++){
-
-		int a1 = amberReader.getAnglesAtomsIndex1(angleIndex);
-		int a2 = amberReader.getAnglesAtomsIndex2(angleIndex);
-		int a3 = amberReader.getAnglesAtomsIndex3(angleIndex);
-
-		for (auto& topology : (*topologies)){
-			SimTK::Compound::AtomIndex aIx = topology.bAtomList[a3].getCompoundAtomIndex();
-			SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(aIx);
-			const SimTK::MobilizedBodyIndex mbx = forceField->getAtomBody(dAIx);
-			
-			acosX_PF00_means[int(mbx) - 1] = amberReader.getAnglesEqval(angleIndex);
-
-		}
-	}	
-
-	for(int bondIndex = 0; bondIndex < amberReader.getNumberBonds(); bondIndex++){
-
-		int a1 = amberReader.getBondsAtomsIndex1(bondIndex);
-		int a2 = amberReader.getBondsAtomsIndex2(bondIndex);
-
-		for (auto& topology : (*topologies)){
-
-			SimTK::Compound::AtomIndex aIx = topology.bAtomList[a2].getCompoundAtomIndex();
-			SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(aIx);
-			const SimTK::MobilizedBodyIndex mbx = forceField->getAtomBody(dAIx);
-			
-			normX_BMp_means[int(mbx) - 1] = amberReader.getBondsEqval(bondIndex) / 10.0; // Ang to nano conv
-
-		}
-	}	
-
-
-
-}
 
 /*
  * Shift all the generalized coordinates
@@ -871,6 +829,152 @@ const std::vector<SimTK::Real>& givenX_BM)
 	}
 
 }
+
+/**
+ * Set X_PF, X_BM means to initial values
+*/
+void World::setTransformsMeansToIni(void)
+{
+	const SimTK::State& defaultState = matter->getSystem().getDefaultState();
+
+	// Get generalized coordinates Q template values. These are the values that
+	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
+	// <(P_x, F_x) angle.
+
+	// Get bonds and angles values
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(defaultState);
+		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(defaultState);
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(defaultState);
+		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
+
+		SimTK::Vec3 bondVector = X_BM.p();
+		acosX_PF00[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
+		normX_BMp[int(mbx) - 1] = bondVector.norm();
+
+		// Print something for now
+		/* SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
+		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
+		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
+
+		std::cout 
+			<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
+			<< "bond " << int(mbx) - 1 << " " << bond << " "
+			<< "angleMean " << int(mbx) - 1 << " "
+			<< angleMean * (180 / SimTK::Pi) << " "
+			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
+			<< std::endl; */
+
+	}
+
+}
+
+
+/**
+ * Set bonds and angles values
+*/
+void World::setTransformsMeansToMin(readAmberInput &amberReader)
+{
+	const SimTK::State& defaultState = matter->getSystem().getDefaultState();
+
+	// Set bonds and angles values
+	for(int angleIndex = 0; angleIndex < amberReader.getNumberAngles(); angleIndex++){
+
+		int a_1 = amberReader.getAnglesAtomsIndex1(angleIndex);
+		int a_2 = amberReader.getAnglesAtomsIndex2(angleIndex);
+		int a_3 = amberReader.getAnglesAtomsIndex3(angleIndex);
+
+		for (auto& topology : (*topologies)){
+			SimTK::Compound::AtomIndex aIx_1 = topology.bAtomList[a_1].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
+			const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
+			SimTK::Compound::AtomIndex aIx_2 = topology.bAtomList[a_2].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
+			const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
+			SimTK::Compound::AtomIndex aIx_3 = topology.bAtomList[a_3].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_3 = topology.getDuMMAtomIndex(aIx_3);
+			const SimTK::MobilizedBodyIndex mbx_3 = forceField->getAtomBody(dAIx_3);
+
+			const SimTK::MobilizedBodyIndex mbx = mbx_3;
+
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			const Transform& X_PF = mobod.getInboardFrame(defaultState);
+			const Transform& X_BM = mobod.getOutboardFrame(defaultState);
+
+			if( (int(mbx_3) == 1) ){
+
+				/* std::cout << "angle redundancy " 
+					<< a_1 << " " << a_2 << " " << a_3 << " "
+					<< int(mbx_1) << " " <<  int(mbx_2) << " " <<  int(mbx_3) << std::endl; */
+
+				acosX_PF00_means[int(mbx) - 1] =
+					std::acos(X_PF.R()(0)(0));
+			}else{
+				acosX_PF00_means[int(mbx) - 1] =
+					amberReader.getAnglesEqval(angleIndex);
+			}
+				
+			//if(mobod.getNumQ(defaultState) == 2){}else{}
+
+		}
+	}	
+
+	for(int bondIndex = 0; bondIndex < amberReader.getNumberBonds(); bondIndex++){
+
+		int a_1 = amberReader.getBondsAtomsIndex1(bondIndex);
+		int a_2 = amberReader.getBondsAtomsIndex2(bondIndex);
+		std::cout << "setTransformsStatisticsToMin atomIxs " << a_1 << " " << a_2 << " ";
+
+		for (auto& topology : (*topologies)){
+			SimTK::Compound::AtomIndex aIx_1 = topology.bAtomList[a_1].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
+			const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
+			SimTK::Compound::AtomIndex aIx_2 = topology.bAtomList[a_2].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
+			const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
+
+			const SimTK::MobilizedBodyIndex mbx = mbx_2;
+
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			const Transform& X_PF = mobod.getInboardFrame(defaultState);
+			const Transform& X_BM = mobod.getOutboardFrame(defaultState);
+
+			if(int(mbx_2) == 1){
+				/* std::cout << "bond redundancy " 
+					<< a_1 << " " << a_2 << " " 
+					<< int(mbx_1) << " " <<  int(mbx_2)  << std::endl; */
+
+				normX_BMp_means[int(mbx) - 1] = X_BM.p().norm();
+			}else{
+				normX_BMp_means[int(mbx) - 1] =
+					amberReader.getBondsEqval(bondIndex) / 10.0; // Ang to nano
+			}
+
+			//if(mobod.getNumQ(defaultState) == 2){}else{}
+
+			std::cout << " mbx " << int(mbx) << " normX_BMMean[" << int(mbx) - 1 << "]= " << normX_BMp_means[int(mbx) - 1] << std::endl;
+
+		}
+	}	
+
+
+}
+
 
 /**
  * Update X_PF, X_BM means

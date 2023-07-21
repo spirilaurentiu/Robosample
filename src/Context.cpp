@@ -5481,8 +5481,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			}
 			//for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-			//worlds[1].setTransformsMeans(givenX_PF, givenX_BM);
-			worlds[1].setTransformsStatisticsToMin(amberReader[0]);
+			worlds[1].setTransformsMeans(givenX_PF, givenX_BM);
+			//worlds[1].setTransformsMeansToMin(amberReader[0]);
+			//worlds[1].setTransformsMeansToIni();
 			//}
 		}
 

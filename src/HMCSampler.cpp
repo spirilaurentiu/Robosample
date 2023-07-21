@@ -2741,9 +2741,9 @@ std::vector<SimTK::Real>& scaleFactors)
 {
 
 	//world->traceBendStretch(someState);
-	//world->PrintAcosX_PFs();
+	world->PrintAcosX_PFs();
 	world->PrintAcosX_PFMeans();
-	//world->PrintNormX_BMs();
+	world->PrintNormX_BMs();
 	world->PrintNormX_BMMeans();
 
 	// Print the scale factor
