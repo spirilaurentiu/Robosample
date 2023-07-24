@@ -2744,10 +2744,10 @@ std::vector<SimTK::Real>& scaleFactors)
 {
 
 	//world->traceBendStretch(someState);
-	//world->PrintAcosX_PFs();
-	//world->PrintAcosX_PFMeans();
-	//world->PrintNormX_BMs();
-	//world->PrintNormX_BMMeans();
+	world->PrintAcosX_PFs();
+	world->PrintAcosX_PFMeans();
+	world->PrintNormX_BMs();
+	world->PrintNormX_BMMeans();
 
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
@@ -2765,15 +2765,21 @@ std::vector<SimTK::Real>& scaleFactors)
 	// Scale differences with QScale-1. (Solve s(X-miu) + miu = Q + X)
 	int k = -1;
 	for(auto& diff : Q_of_X_PFdiffs){
-		diff *= QScaleFactor - 1.0;
 		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
+		
+		//diff *= (QScaleFactor - 1.0);
+		diff *= -1.0;
+		
 		if(world->visual){
 			world->paraMolecularDecorator->updFCommVars(diff);
 		}
 	}
 	for(auto& diff : Q_of_X_BMdiffs){
-		diff *= QScaleFactor - 1.0;
 		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
+		
+		//diff *= (QScaleFactor - 1.0);
+		diff *= -1.0;
+		
 		if(world->visual){
 			world->paraMolecularDecorator->updBCommVars(diff);
 		}
@@ -2799,6 +2805,7 @@ std::vector<SimTK::Real>& scaleFactors)
 			// Set Q to scaled diff
 			if(mobod.getNumQ(someState) == 2){
 				mobod.setOneQ(someState, 1, (+1.0) * Q_of_X_BMdiffs[sfIx]);
+				//std::cout << "setQToScaleBendStretchStdev mobod.setOneQ 0\n";
 			}else{
 				mobod.setOneQ(someState, 0, (+1.0) * Q_of_X_BMdiffs[sfIx]);
 			}
@@ -2836,7 +2843,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	}
 
 	// Test
-	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
 
 }
 

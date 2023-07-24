@@ -440,6 +440,7 @@ private:
 	std::vector<std::vector<int>> AmberAtomIXs;
 	float radius;
 	std::vector<World> worlds;
+	std::vector<readAmberInput> amberReader;
 
 	std::vector<std::size_t> worldIndexes;
 	// Molecules files

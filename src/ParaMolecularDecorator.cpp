@@ -224,13 +224,12 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 	SimTK::Transform G_X_T = molecules[0]->getTopLevelTransform();
 
-/*            DecorativeFrame decorativeFrameT;
+          /*  DecorativeFrame decorativeFrameT;
 			decorativeFrameT.setTransform(G_X_T);
 			decorativeFrameT.setScaleFactors(SimTK::Vec3(0.06, 0.06, 0.06));
 			decorativeFrameT.setLineThickness(5);
-			decorativeFrameT.setColor(SimTK::Vec3(0.5, 0, 0));
-			geometry.push_back( decorativeFrameT );*/
-
+			decorativeFrameT.setColor(SimTK::Vec3(0.5, 0.5, 0));
+			geometry.push_back( decorativeFrameT ); */
 
 	// Draw Compound transforms for root atoms NEW WAY
 /* 			SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // Moves rotation from X to Z
@@ -522,9 +521,12 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 	// Draw Rigid bodies
 	// Ground frame
-	/* drawFrame(geometry, Transform(),
+	drawFrame(geometry, Transform(),
 		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
-		"G", 0.009, SimTK::Vec3(0.5, 0.5, 0.5), SimTK::Vec3(0.02, 0.0, 0.0)); */
+		"G", 0.009, SimTK::Vec3(0.5, 0.5, 0.5), SimTK::Vec3(0.02, 0.0, 0.0));
+	drawFrame(geometry, G_X_T,
+		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
+		"Top", 0.009, SimTK::Vec3(0.5, 0.0, 0.5), SimTK::Vec3(0.02, 0.0, 0.0));
 
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -538,7 +540,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 //        //decorativeBrick.setColor(SimTK::Vec3(10, 0, 0));
 //        decorativeBrick.setOpacity(0.5);
 //        geometry.push_back( decorativeBrick );
-//
+
 		if((mbx > 0)){
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
@@ -568,10 +570,10 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			//geometry.push_back(decorativeSphereM);
 
 			// Draw frames
-			std::vector<int> chosenBodies =
-			{          2,  3,  4,  5,  6,  7,  8,  9,
-			  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-			  20, 21, 22, 23, 24, 25, 26, 27, 28, 29};
+			std::vector<int> chosenBodies = //{57, 118, 198, 265, 279};
+			{        1,  2,  3,  4,  5};//, 6,  7,  8,  9
+			//, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+			//, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29};
 			/* if(chosenBodies >= matter->getNumBodies()){
 				std::cerr << "Visualizer chosenBody greater than allowed.\n"
 					<< std::flush;
@@ -583,7 +585,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				(std::find(std::begin(chosenBodies), std::end(chosenBodies), int(mbx))
 				!= std::end(chosenBodies));
 
-			if(int(mbx) > 1) {
+			if(found) {
 			// /*
 				
 				/* // Frame P
@@ -592,7 +594,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				std::string textP = streamObjP.str();
 				drawFrame(geometry, G_X_P,
 					0.05, 4, SimTK::Vec3(0, 0, 0),
-					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0)); */
+					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
 
 				// Frame F
 				std::ostringstream streamObjF;
@@ -602,9 +604,9 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				std::string textF = streamObjF.str();
 				drawFrame(geometry, G_X_F,
 					0.04, 4, SimTK::Vec3(0, 0, 1),
-					streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0));
+					streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0)); */
 
-				/* // Frame M
+				// Frame M
 				std::ostringstream streamObjM;
 				std::setprecision(2);
 				streamObjM << std::string("M") + std::to_string(int(mbx));
@@ -620,12 +622,12 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				std::string textB = streamObjB.str();
 				drawFrame(geometry, G_X_B,
 					0.04, 4, SimTK::Vec3(0, 0, 0),
-					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.04, 0.0, 0.0)); */
+					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.04, 0.0, 0.0));
 
 			} // */
 
 			// Draw lines
-			if(int(mbx) > 1) {
+			if(found) {
 
 				// BM expressed in Ground
 				drawLine(geometry, G_X_B, G_X_M,
