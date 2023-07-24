@@ -457,6 +457,9 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 
 	}else if (integratorNameArg == "RANDOM_WALK"){
 		integratorName = IntegratorName::RANDOM_WALK;
+	
+	}else if (integratorNameArg == "RANDOM_KICK"){
+		integratorName = IntegratorName::RANDOM_KICK;
 
 	}else{
 		integratorName = IntegratorName::EMPTY;
@@ -3408,12 +3411,100 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Dynamics);
 		calcNewConfigurationAndEnergies(someState);
 
+	}else if (integratorName == IntegratorName::RANDOM_KICK){
+
+		// Set velocities to zero
+		setVelocitiesToZero(someState);
+		system->realize(someState, SimTK::Stage::Velocity);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
+		std::cout << "Propose: RANDOM_KICK integrator" << std::endl;
+		if(topologies.size() < 2){
+			std::cout << "RANDOM_KICK integrators should only be used over many molecules\n";
+		}
+
+		// Get the binding site center
+
+		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
+
+		// We *assume* the last molecule is the ligand.
+		const int nOfBodies = matter->getNumBodies();
+
+		// Print the geometric center (for debugging purposes)
+		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
+		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
+
+		// Ligand
+		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(nOfBodies-1) ); 
+		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
+		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
+		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
+		const Transform& X_PF = mobod_L.getInboardFrame(someState);
+
+		// Unlike "RANDOM_WALK", this integrator does not need to do 
+		// random rotation, since we integrate the trajectory, which
+		// includes rotation.
+
+		// Determine the distance between center of mass of ligand and geometricCenter
+		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
+		std::cout << "ligandToSite(kick): " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
+
+		// If ligand is too far reposition on a sphere centered on the last body
+		// center of mass
+		if(ligandToSite.norm() > sphereRadius){
+		//if (1){
+
+			std::cout << "Ligand too far from center (" << ligandToSite.norm() << "), repositioning...\n";
+			SimTK::Vec3 BR={0,0,0};
+
+			// Sample a random vector centered in 0 and expressed in G
+			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+			SimTK::Vec3 randVec={0,0,0};
+
+			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
+			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
+			randVec[2] = sphereRadius * std::cos(phi);
+			randVec *= uniformRealDistribution(randomEngine);
+
+			// Move it in BindingSiteCenter (BS)
+			SimTK::Vec3 GR;
+			GR = randVec + (geometricCenter - X_PF.p());
+
+			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
+			
+			// Account for COM_L
+			BR = BR - COM_L;
+
+			// Express BR in F
+			BR = X_FM.R()*BR;
+			mobod_L.setQToFitTranslation(someState, BR);
+
+			system->realize(someState, SimTK::Stage::Dynamics);
+		}
+
+		// Else, if not repositioned, integrate trajectory.
+		else {
+		initializeVelocities(someState);
+		calcProposedKineticAndTotalEnergy(someState);
+
+		integrateTrajectory(someState);
+		}
+
+		system->realize(someState, SimTK::Stage::Dynamics);
+		calcNewConfigurationAndEnergies(someState);
+
 	}else if (integratorName == IntegratorName::EMPTY){
 
 /* 		// Alter Q in some way
 		if(this->sampleGenerator == 1){
 			
 		} */
+
+
 
 	}else{
 		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
