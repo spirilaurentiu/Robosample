@@ -4732,7 +4732,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat
 
-		bool givenTsMode = true;
+		bool givenTsMode = false;
 		if(givenTsMode){
 			std::cout << "givenTsMode = true\n";
 			std::vector<SimTK::Real> givenX_PF;
@@ -5481,7 +5481,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			}
 			//for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-			worlds[1].setTransformsMeans(givenX_PF, givenX_BM);
+			//worlds[1].setTransformsMeans(givenX_PF, givenX_BM);
 			//worlds[1].setTransformsMeansToMin(amberReader[0]);
 			//worlds[1].setTransformsMeansToIni();
 			//}

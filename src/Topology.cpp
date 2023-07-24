@@ -2505,7 +2505,9 @@ Topology::getChemicalParent(
 					bondsInvolvedIter != (originSpecAtom->bondsInvolved).end(); ++bondsInvolvedIter){
 
 					// Check if this neighbor is involved in this bond
-					if((*bondsInvolvedIter)->isThisMe(originSpecAtom->getNumber(), originSpecAtom->neighbors[k]->getNumber())){
+					if( (*bondsInvolvedIter)->isThisMe(
+						originSpecAtom->getNumber(), originSpecAtom->neighbors[k]->getNumber()
+						) ){
 
 						Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
 
@@ -2523,6 +2525,7 @@ Topology::getChemicalParent(
 				}
 			}
 		}
+		
 	}else{
 		std::cout << "Warning: requiring chemical parent for non-root atom\n";
 		bSpecificAtom *originSpecAtom = nullptr;

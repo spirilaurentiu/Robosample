@@ -585,10 +585,10 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				(std::find(std::begin(chosenBodies), std::end(chosenBodies), int(mbx))
 				!= std::end(chosenBodies));
 
-			if(found) {
+			if(int(mbx) >= 1) {
 			// /*
 				
-				/* // Frame P
+				// Frame P
 				std::ostringstream streamObjP;
 				streamObjP << std::string("P") + std::to_string(int(mbx));
 				std::string textP = streamObjP.str();
@@ -604,7 +604,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				std::string textF = streamObjF.str();
 				drawFrame(geometry, G_X_F,
 					0.04, 4, SimTK::Vec3(0, 0, 1),
-					streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0)); */
+					streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0));
 
 				// Frame M
 				std::ostringstream streamObjM;
@@ -627,7 +627,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			} // */
 
 			// Draw lines
-			if(found) {
+			if(int(mbx) >= 1) {
 
 				// BM expressed in Ground
 				drawLine(geometry, G_X_B, G_X_M,

@@ -3641,7 +3641,14 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	storeOldConfigurationAndPotentialEnergies(someState);
 
 	// Generate a trial move in the stochastic chain
-//world->traceBendStretch(someState);
+	//world->traceBendStretch(someState);
+
+	// Set X_PF and X_BM means to whatever iti is now
+	///////////////////////////////////////////////////
+	if(nofSamples == 0){
+		world->setTransformsMeansToCurrent(someState);
+	}
+	///////////////////////////////////////////////////
 
 	// Calculate X_PFs and X_BMs
 	world->getTransformsStatistics(someState);
@@ -3649,7 +3656,6 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	bool validated = true;
 	validated = generateProposal(someState);
 	
-
 	// Apply the acceptance criterion
 	if(validated){
 
