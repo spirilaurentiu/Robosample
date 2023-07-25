@@ -5,5 +5,5 @@
 
 int main() {
     std::cout << "Hello test" << std::endl;
-    return 1;
+    return 0;
 }

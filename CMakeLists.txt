@@ -472,15 +472,18 @@ target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} 
 
 # # add tests
 # enable_testing()
+# include(CTest)
 # file(GLOB TESTS_SOURCES tests/*.cpp)
 # foreach(test_src ${TESTS_SOURCES})
 #     # get test name by removing file location and extension
 #     file(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/tests ${test_src})
 #     STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
-#     message(${test_name})
 
 #     # needs refactoring
 #     add_executable(${test_name} ${test_src})
+#     target_compile_options(${test_name} PRIVATE ${BUILD_FLAGS})
+#     target_link_options(${test_name} PRIVATE ${SANITIZER_FLAGS})
+
 #     target_include_directories(${test_name} PRIVATE
 #         ${OPENMM_INCLUDE_DIRS}
 #         ${SIMBODY_INCLUDE_DIRS}

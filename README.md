@@ -75,7 +75,17 @@ OpenMM can use hardware acceleration. Robosample defaults with OpenCL. To set th
 ```
 mkdir build
 cd build
+```
+
+For `clang`:
+```
 cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
+ninja robosample
+```
+
+For `gcc`:
+```
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL
 ninja robosample
 ```
 
@@ -159,6 +169,12 @@ bash pgo.sh
 
 # Development
 Robosample is being developed using [Visual Studio Code](https://code.visualstudio.com/) on Windows. To start it, run `code .` in `Robosample`.
+
+## Visual Studio Code Shortcuts
+```
+>CMake: Select Variant -> Debug
+>CMake: Build (F7)
+```
 
 ## Sanitizers (**mandatory**)
 We use address and undefined behaviour sanitizers in our debug builds. To get the correct output, run:
