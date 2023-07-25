@@ -2742,16 +2742,15 @@ std::vector<SimTK::Real>& scaleFactors)
 void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
-
-	//world->traceBendStretch(someState);
-	world->PrintAcosX_PFs();
-	world->PrintAcosX_PFMeans();
-	world->PrintNormX_BMs();
-	world->PrintNormX_BMMeans();
-
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
+
+	//world->traceBendStretch(someState);
+	//world->PrintAcosX_PFs();
+	//world->PrintNormX_BMs();
+	//world->PrintAcosX_PFMeans();
+	//world->PrintNormX_BMMeans();
 
 	// Resize scaling factors
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
@@ -2767,8 +2766,8 @@ std::vector<SimTK::Real>& scaleFactors)
 	for(auto& diff : Q_of_X_PFdiffs){
 		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
 		
-		//diff *= (QScaleFactor - 1.0);
-		diff *= -1.0;
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
 		
 		if(world->visual){
 			world->paraMolecularDecorator->updFCommVars(diff);
@@ -2777,8 +2776,8 @@ std::vector<SimTK::Real>& scaleFactors)
 	for(auto& diff : Q_of_X_BMdiffs){
 		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
 		
-		//diff *= (QScaleFactor - 1.0);
-		diff *= -1.0;
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
 		
 		if(world->visual){
 			world->paraMolecularDecorator->updBCommVars(diff);
@@ -3725,6 +3724,9 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
+/* std::cout << "Transforms before\n";
+world->PrintAcosX_PFs();
+world->PrintNormX_BMs(); */
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
 
@@ -3792,6 +3794,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 		// Increase the sample counter and return
 		++nofSamples;
+/* std::cout << "Transforms after\n";
+world->PrintAcosX_PFs();
+world->PrintNormX_BMs(); */
 		return this->acc;
 
 }

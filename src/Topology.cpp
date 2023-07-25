@@ -2053,7 +2053,6 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 
 						    //std::cout << "DEBUG bond about to be set " << i << " ";
 
-
 						    if(lineWords.size() == 2) {
 						        bonds[i].setBondMobility(BondMobility::Torsion, whichWorld);
 						        setBondMobility(BondMobility::Torsion,
@@ -2061,7 +2060,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 						        break;
 						    }else{
 
-							//std::cout << " lineWords[2] " << lineWords[2] << " ";
+								//std::cout << " lineWords[2] " << lineWords[2] << " ";
 
 						        if(lineWords[2] == "Free"){
 						            bonds[i].setBondMobility(BondMobility::Free, whichWorld);
@@ -2147,7 +2146,6 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 						    } // if nof words is different than 2
 
 						} // if bond found
-
 
 					} // end iterate bonds
 
