@@ -26,10 +26,6 @@
 
 using namespace SimTK;
 
-void foo() {
-    TaskSpace t();
-}
-
 //==============================================================================
 // Jacobian
 //==============================================================================
@@ -435,9 +431,9 @@ class TasksMeasure : public Measure_<T> {
 public:
     SimTK_MEASURE_HANDLE_PREAMBLE(TasksMeasure, Measure_<T>);
 
-    TasksMeasure(const SimTK::GeneralForceSubsystem& force) 
+    TasksMeasure(SimTK::GeneralForceSubsystem& force, SimTK::SimbodyMatterSubsystem& matter, MobilizedBodyIndex body, Vec3 station) 
     :   Measure_<T>(force, 
-                    new Implementation(force), // was modelRobot
+                    new Implementation(matter, body, station),
                     AbstractMeasure::SetHandle()) {}
 
     const Vec3& getTarget() const { return getImpl().m_desiredTaskPosInGround; }
@@ -470,12 +466,14 @@ public:
 template <class T>
 class TasksMeasure<T>::Implementation : public Measure_<T>::Implementation {
 public:
-    Implementation(const SimTK::SimbodyMatterSubsystem matter,
-                   Real proportionalGain=225, double derivativeGain=30) 
+    Implementation(SimTK::SimbodyMatterSubsystem& matter, MobilizedBodyIndex body, Vec3 station)
     :   Measure_<T>::Implementation(T(), 1),
         m_tspace1(matter),
-        m_proportionalGain(proportionalGain),
-        m_derivativeGain(derivativeGain),
+        m_matter(matter),
+        m_body(body),
+        m_endEffectorStation(station),
+        m_proportionalGain(225),
+        m_derivativeGain(30),
         m_jointPositionGain(100),
         m_jointDampingGain(20),
         m_controlPose(true),
@@ -484,8 +482,7 @@ public:
         m_desiredTaskPosInGround(Vec3(0.4, -0.1, 1)) // Z is up
     {       
         //TODO: should have end effector body
-        m_tspace1.addStationTask(m_modelRobot.getEndEffectorBody(), // mobod
-                                 m_modelRobot.getEndEffectorStation()); // station
+        m_tspace1.addStationTask(body, station);
     }
 
     // Implementations of virtual methods.
@@ -505,11 +502,10 @@ public:
 
         // Shorthands.
         // -----------
-        const State& ms = modelState;
         const TaskSpace& p1 = m_tspace1;
 
-        const int mnq = ms.getNQ();
-        const int mnu = ms.getNU();
+        const int mnq = s.getNQ();
+        const int mnu = s.getNU();
         tau.resize(mnu);
 
         const Real& kd = m_derivativeGain;
@@ -518,68 +514,68 @@ public:
         // The desired task position is in Ground. We need instead to measure it
         // from the real robot's pelvis origin so that we can translate it into the 
         // model's pelvis-centric viewpoint.
-        const Transform& X_GP = m_modelRobot.getSampledPelvisPose(ms); // this is origin
+        const Transform& X_GP = Transform(); // m_modelRobot.getSampledPelvisPose(s); // this is origin
         const Vec3 x1_des = ~X_GP*m_desiredTaskPosInGround; // measure in P
-
 
         // Compute control law in task space (F*).
         // ---------------------------------------
         Vec3 xd_des(0);
         Vec3 xdd_des(0);
 
+        const auto EE = m_matter.getMobilizedBody(m_body).findStationLocationInGround(s, m_endEffectorStation);
+
         // Get the model's estimate of the end effector location in Ground, which
         // is also the pelvis origin.
         Vec3 x1, x1d;
-        p1.findStationLocationAndVelocityInGround(ms,
+        p1.findStationLocationAndVelocityInGround(s,
                 TaskSpace::StationTaskIndex(0),
                 m_modelRobot.getEndEffectorStation(), x1, x1d);
 
-        if (m_endEffectorSensing) {
-            // Since the controller model has the pelvis origin fixed at (0,0,0),
-            // we need to know the real robot's pelvis location so we can measure
-            // the real robot's end effector from its pelvis location. We don't
-            // have to modify x1d because we want the end effector stationary
-            // in Ground, not in the pelvis.
-            const Vec3& x1_G = m_modelRobot.getSampledEndEffectorPos(ms);
-            x1 = ~X_GP*x1_G; // measure end effector in pelvis frame
-        }
+        // if (m_endEffectorSensing) {
+        //     // Since the controller model has the pelvis origin fixed at (0,0,0),
+        //     // we need to know the real robot's pelvis location so we can measure
+        //     // the real robot's end effector from its pelvis location. We don't
+        //     // have to modify x1d because we want the end effector stationary
+        //     // in Ground, not in the pelvis.
+        //     const Vec3& x1_G = m_modelRobot.getSampledEndEffectorPos(s);
+        //     x1 = ~X_GP*x1_G; // measure end effector in pelvis frame
+        // }
 
         // Units of acceleration.
         Vec3 Fstar1 = xdd_des + kd * (xd_des - x1d) + kp * (x1_des - x1);
 
         // Compute task-space force that achieves the task-space control.
         // F = Lambda Fstar + p
-        // Lambda is inertia
-        Vector F1 = p1.Lambda(ms) * Fstar1 + p1.mu(ms) + p1.p(ms);
-        //Vector F2 = p2.calcInverseDynamics(ms, Fstar2);
+        Vector F1 = p1.Lambda(s) * Fstar1 + p1.mu(s);
 
         // Combine the reaching task with the gravity compensation and pose 
         // control to a neutral q=0 pose with u=0 also.
-        const Vector& q = ms.getQ();
-        const Vector& u = ms.getU();
-        const Real k = m_jointPositionGain;
-        const Real c = m_jointDampingGain;
+        const Vector& q = s.getQ();
+        const Vector& u = s.getU();
+        // const Real k = m_jointPositionGain;
+        // const Real c = m_jointDampingGain;
         Vector Mu(mnu), Mq(mnu);
-        m_modelRobot.getMatterSubsystem().multiplyByM(ms, u, Mu);
-        m_modelRobot.getMatterSubsystem().multiplyByM(ms, q, Mq);
+        m_matter.multiplyByM(s, u, Mu);
+        m_matter.multiplyByM(s, q, Mq);
 
-        tau.setToZero();
-        const Real pFac = m_controlPose?1.:0.;
-        if (m_controlTask) {
-            tau += p1.JT(ms) * F1;
-            tau += p1.NT(ms) * (gFac*p1.g(ms) - pFac*k*Mq - c*Mu); // damping always
-        } else 
-            tau += gFac*p1.g(ms) - (pFac*k*Mq + c*Mu);
+        // tau.setToZero();
+        // const Real pFac = m_controlPose?1.:0.;
+        // if (m_controlTask) {
+        //     tau += p1.JT(s) * F1;
+        //     tau += p1.NT(s) * (gFac*p1.g(s) - pFac*k*Mq - c*Mu); // damping always
+        // } else {
+        //     tau += gFac*p1.g(s) - (pFac*k*Mq + c*Mu);
+        // }
 
-        // Cut tau back to within effort limits.
-        // TODO: can't use these limits with one-foot support!
-        const Vector& effortLimits = m_modelRobot.getEffortLimits();
-        for (int i=0; i < mnu; ++i) {
-            const Real oldtau = tau[i], effort = 10*effortLimits[i]; // cheating
-            if (std::abs(oldtau) <= effort) continue;
-            const Real newtau = clamp(-effort, oldtau, effort);
-            tau[i] = newtau;
-        }
+        // // Cut tau back to within effort limits.
+        // // TODO: can't use these limits with one-foot support!
+        // const Vector& effortLimits = m_modelRobot.getEffortLimits();
+        // for (int i=0; i < mnu; ++i) {
+        //     const Real oldtau = tau[i], effort = 10*effortLimits[i]; // cheating
+        //     if (std::abs(oldtau) <= effort) continue;
+        //     const Real newtau = clamp(-effort, oldtau, effort);
+        //     tau[i] = newtau;
+        // }
 
     }
 
@@ -591,19 +587,21 @@ public:
 private:
 friend class TasksMeasure<T>;
 
-    TaskSpace       m_tspace1;
+    TaskSpace m_tspace1;
+    const SimbodyMatterSubsystem& m_matter;
+    MobilizedBodyIndex m_body;
+    Vec3 m_endEffectorStation;
 
-    const Real      m_proportionalGain;     // task space
-    const Real      m_derivativeGain;
-    const Real      m_jointPositionGain;    // joint space
-    const Real      m_jointDampingGain;
+    const Real m_proportionalGain;     // task space
+    const Real m_derivativeGain;
+    const Real m_jointPositionGain;    // joint space
+    const Real m_jointDampingGain;
 
-    bool            m_controlPose;
-    bool            m_controlTask;
-    bool            m_endEffectorSensing;
-    Vec3            m_desiredTaskPosInGround;
+    bool m_controlPose;
+    bool m_controlTask;
+    bool m_endEffectorSensing;
+    Vec3 m_desiredTaskPosInGround;
 };
-
 
 //==============================================================================
 //                    REACHING AND GRAVITY COMPENSATION
@@ -619,13 +617,8 @@ friend class TasksMeasure<T>;
 // for the internal model, but returns them to be applied to the real Atlas.
 class ReachingAndGravityCompensation : public Force::Custom::Implementation {
 public:
-    ReachingAndGravityCompensation(const std::string& auxDir, 
-                                   const Atlas& realRobot) 
-    :   m_modelRobot(auxDir, "atlas_v4_upper.urdf"), m_modelTasks(m_modelRobot), 
-        m_realRobot(realRobot), m_targetColor(Red)
+    ReachingAndGravityCompensation(SimTK::GeneralForceSubsystem& force, SimTK::SimbodyMatterSubsystem& matter, MobilizedBodyIndex body, Vec3 station) : m_modelTasks(force, matter, body, station)
     {
-        m_modelRobot.initialize(m_modelState);
-        printf("Controller model has %d dofs.\n", m_modelState.getNU());
     }
 
     // // Call this after the real robot has been initialized to set up
@@ -667,17 +660,17 @@ public:
     //     std::cout<<"m2rQ="<<m_model2realQ<<std::endl;
     // }
 
-    const Vec3& getTarget() const {return m_modelTasks.getTarget();}
-    Vec3& updTarget() {return m_modelTasks.updTarget();}
-    void setTarget(Vec3 pos) {m_modelTasks.setTarget(pos);}
+    // const Vec3& getTarget() const {return m_modelTasks.getTarget();}
+    // Vec3& updTarget() {return m_modelTasks.updTarget();}
+    // void setTarget(Vec3 pos) {m_modelTasks.setTarget(pos);}
 
-    void toggleGravityComp() {m_modelTasks.toggleGravityComp();}
-    void togglePoseControl() {m_modelTasks.togglePoseControl();}
-    void toggleTask() {m_modelTasks.toggleTask();}
-    void toggleEndEffectorSensing() {m_modelTasks.toggleEndEffectorSensing();}
+    // void toggleGravityComp() {m_modelTasks.toggleGravityComp();}
+    // void togglePoseControl() {m_modelTasks.togglePoseControl();}
+    // void toggleTask() {m_modelTasks.toggleTask();}
+    // void toggleEndEffectorSensing() {m_modelTasks.toggleEndEffectorSensing();}
 
-    bool isGravityCompensationOn() const 
-    {   return m_modelTasks.isGravityCompensationOn(); }
+    // bool isGravityCompensationOn() const 
+    // {   return m_modelTasks.isGravityCompensationOn(); }
 
     // This method calculates the needed control torques and adds them into
     // the given mobilityForces Vector which will be applied to the real Atlas.
@@ -688,34 +681,34 @@ public:
                    SimTK::Vector_<SimTK::Vec3>&       particleForces,
                    SimTK::Vector&                     mobilityForces) const override
     {
-        // Sense the real robot and use readings to update model robot.
-        // ------------------------------------------------------------
+        // // Sense the real robot and use readings to update model robot.
+        // // ------------------------------------------------------------
         const int mnq = m_modelState.getNQ(), mnu = m_modelState.getNU();
-        const Vector& sensedQ = m_realRobot.getSampledAngles(realState);
-        const Vector& sensedU = m_realRobot.getSampledRates(realState);
-        for (int i=0; i < mnq; ++i)
-            realState.updQ()[QIndex(i)] = sensedQ[m_model2realQ[i]];
-        for (int i=0; i < mnu; ++i)
-            realState.updU()[UIndex(i)] = sensedU[m_model2realU[i]];
+        // const Vector& sensedQ = m_realRobot.getSampledAngles(realState); // real + noise
+        // const Vector& sensedU = m_realRobot.getSampledRates(realState); // real + noise
+        // for (int i=0; i < mnq; ++i)
+        //     realState.updQ()[QIndex(i)] = sensedQ[m_model2realQ[i]];
+        // for (int i=0; i < mnu; ++i)
+        //     realState.updU()[UIndex(i)] = sensedU[m_model2realU[i]];
 
-        // We have to know the pose of the real robot's pelvis so we can figure
-        // out the pelvis-relative location of the end effector, and the effective
-        // gravity direction since the model robot has its pelvis frame welded to
-        // its Ground frame.
+        // // We have to know the pose of the real robot's pelvis so we can figure
+        // // out the pelvis-relative location of the end effector, and the effective
+        // // gravity direction since the model robot has its pelvis frame welded to
+        // // its Ground frame.
 
-        const Transform& X_GP = m_realRobot.getSampledPelvisPose(realState);
-        m_modelRobot.setSampledPelvisPose(m_modelState, X_GP);
+        // const Transform& X_GP = m_realRobot.getSampledPelvisPose(realState);
+        // m_modelRobot.setSampledPelvisPose(m_modelState, X_GP);
 
-        // Optional: if real robot end effector location can be sensed, it can
-        // be used to improve accuracy. Otherwise, estimate the end effector
-        // location using the model robot.
-        const Vec3& sensedEEPos = m_realRobot.getSampledEndEffectorPos(realState);
-        m_modelRobot.setSampledEndEffectorPos(m_modelState, sensedEEPos);
+        // // Optional: if real robot end effector location can be sensed, it can
+        // // be used to improve accuracy. Otherwise, estimate the end effector
+        // // location using the model robot.
+        // const Vec3& sensedEEPos = m_realRobot.getSampledEndEffectorPos(realState);
+        // m_modelRobot.setSampledEndEffectorPos(m_modelState, sensedEEPos);
 
-        // Calculate model kinematics.
-        m_modelRobot.realize(m_modelState, Stage::Velocity);
-        // Obtain joint torques from task controller.
-        const Vector& tau = m_modelTasks.getValue(m_modelState);
+        // // Calculate model kinematics.
+        // m_modelRobot.realize(m_modelState, Stage::Velocity);
+        // // Obtain joint torques from task controller.
+        const Vector& tau = m_modelTasks.getValue(realState);
 
         // Apply model joint torques to their corresponding real robot dofs.
         for (int i=0; i < mnu; ++i)
@@ -729,7 +722,6 @@ public:
 private:
     TasksMeasure<Vector> m_modelTasks;
     mutable State        m_modelState;   // Temporary: State for the model robot.
-    const Vec3           m_targetColor;
 
     // Map from model robot coordinates to real robot coordinates.
     Array_<int>          m_model2realQ;
