@@ -65,6 +65,9 @@ public:
 	void modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer);
 	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
+	// Add task spaces
+	void addTaskSpacesLS(void);
+
 	void realizeTopology();
 	void realizePosition();
 

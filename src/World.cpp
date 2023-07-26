@@ -119,6 +119,18 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
+
+//==============================================================================
+//                   CLASS TaskSpace
+//==============================================================================
+/**
+ *  Contains a Symbody task space and additional data
+ **/
+StationTaskLaurentiu::StationTaskLaurentiu(void)
+{
+
+}
+
 //==============================================================================
 //                             1. STRUCTURAL FUNCTIONS
 //==============================================================================
@@ -396,6 +408,67 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// // Realize Topology
 	// compoundSystem->realizeTopology();
 }
+
+
+
+
+
+/**
+ * Add a task space
+*/
+void World::addTaskSpaceLS(void)
+{
+	StationTaskLaurentiu stationTask;
+
+	int targetTopology = 1;
+	std::vector<int> bAtomIxs = {2, 9}; // atoms on target topology
+
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == targetTopology){
+
+			// Atoms
+			for (int bAtomIx : bAtomIxs) {
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+
+				onBodyB.emplace_back(mbx);
+				stationPInB.emplace_back(topology.getAtomLocationInMobilizedBodyFrame(aIx));
+
+			}
+		}
+	}
+
+}
+
+/**
+ * Calc Station Jacobian JS
+*/
+void World::calcStationJacobian(
+	const State&                               someState,
+	SimTK::Matrix_<SimTK::Vec3>&                      JS) const
+{
+		matter->calcStationJacobian(someState, onBodyB, stationPInB, JS);
+
+
+
+		std::cout << "Task Bodies ";
+		std::cout << onBodyB << std::endl;
+		std::cout << "Task Stations ";
+		std::cout << stationPInB << std::endl;
+		std::cout << "Station Jacobian ";
+		std::cout << JS << std::endl;
+
+		
+}
+
+
+
+
+
+
 
 /** Add a membrane represented by a contact surface **/
 void World::addMembrane(
