@@ -460,7 +460,8 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 	
 	}else if (integratorNameArg == "RANDOM_KICK"){
 		integratorName = IntegratorName::RANDOM_KICK;
-
+	}else if(integratorNameArg == "STATIONS_TASK"){
+		integratorName = IntegratorName::STATIONS_TASK;
 	}else{
 		integratorName = IntegratorName::EMPTY;
 
@@ -3503,14 +3504,52 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Dynamics);
 		calcNewConfigurationAndEnergies(someState);
 
+	}else if(integratorName == IntegratorName::STATIONS_TASK){
+
+		std::cout << "STATIONS_TASK\n";
+
+		system->realize(someState, SimTK::Stage::Position);
+
+		// Update target space
+		world->updateTaskSpace(someState);
+		SimTK::Array_<SimTK::Vec3> deltaStationP = world->getTaskSpaceDeltaStationP();
+		std::cout << "deltaStationP " << deltaStationP << std::endl;
+
+		SimTK::Matrix_<SimTK::Vec3> JS;
+		world->calcStationJacobian(someState, JS);
+
+		// Initialize velocities from Maxwell-Boltzmann distribution
+		initializeVelocities(someState);
+		//setVelocitiesToZero(someState);
+
+		SimTK::Vector f;
+		matter->multiplyByStationJacobianTranspose(someState, world->onBodyB[0], world->stationPInGuest[0], deltaStationP[0], f);
+
+		SimTK::Vector givenU = SimTK::Vector(someState.getU().size());
+		someState.setU(10*f);
+		system->realize(someState, SimTK::Stage::Velocity);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
+		// Adapt timestep
+		bool shouldAdaptWorldBlocks = false;
+		if(shouldAdaptWorldBlocks){
+			adaptWorldBlocks(someState);
+		}
+
+		// Apply the L operator
+		integrateTrajectory(someState);
+		//integrateTrajectoryOneStepAtATime(someState);
+
+		calcNewConfigurationAndEnergies(someState);
+
 	}else if (integratorName == IntegratorName::EMPTY){
 
 /* 		// Alter Q in some way
 		if(this->sampleGenerator == 1){
 			
 		} */
-
-
 
 	}else{
 		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
@@ -3724,11 +3763,11 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-/* std::cout << "Transforms before sample_iteration\n";
+std::cout << "Transforms before sample_iteration\n";
 world->PrintAcosX_PFs();
 world->PrintNormX_BMs();
 world->PrintAcosX_PFMeans();
-world->PrintNormX_BMMeans(); */
+world->PrintNormX_BMMeans();
 
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;

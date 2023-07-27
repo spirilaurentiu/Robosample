@@ -4721,7 +4721,7 @@ void Context::RunOneRound(void)
 			int(nofSamplesPerRound[currentWorldIx]));
 
 		// Write pdb every world
-		//writePdbs(nofRounds, currentWorldIx);
+		writePdbs(nofRounds, currentWorldIx);
 
 	} // END iteration through worlds
 }
@@ -5505,16 +5505,6 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			std::cout << "Start round" << std::endl;
 			RunOneRound();
-
-
-			/* // Task space
-			SimTK::Matrix_<SimTK::Vec3> JS;
-			worlds[0].calcStationJacobian(
-				worlds[0].integ->updAdvancedState(),
-				JS
-			);
-			// end Task Space */
-
 
 			// Write energy and geometric features to logfile
 			if( !(round % getPrintFreq()) ){

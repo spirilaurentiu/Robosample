@@ -420,28 +420,95 @@ void World::addTaskSpaceLS(void)
 {
 	StationTaskLaurentiu stationTask;
 
-	int targetTopology = 1;
-	std::vector<int> bAtomIxs = {2, 9}; // atoms on target topology
+	int guestTopology = 1;
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
 
 	int topi = -1;
 	for(auto& topology : (*topologies)){
 		topi++;
 
-		if(topi == targetTopology){
+		if(topi == guestTopology){
 
 			// Atoms
-			for (int bAtomIx : bAtomIxs) {
+			for (int bAtomIx : bAtomIxs_guest) {
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
 
 				onBodyB.emplace_back(mbx);
-				stationPInB.emplace_back(topology.getAtomLocationInMobilizedBodyFrame(aIx));
+				stationPInGuest.emplace_back(SimTK::Vec3());
+				stationPInHost.emplace_back(SimTK::Vec3());
+				deltaStationP.emplace_back(SimTK::Vec3());
 
 			}
 		}
 	}
+}
+
+/**
+ * Update target task space
+*/
+void World::updateTaskSpace(const State& someState)
+{
+
+	int hostTopology = 0;
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+		if(topi == hostTopology){
+
+			// Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_host) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				stationPInHost[tz] = (~X_GB.R()) * topology.getAtomLocationInMobilizedBodyFrame(aIx);
+			}
+		}
+	}
+
+	int guestTopology = 1;
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+	topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == guestTopology){
+
+			// Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_guest) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				stationPInGuest[tz] = (~X_GB.R()) * topology.getAtomLocationInMobilizedBodyFrame(aIx);
+
+			}
+		}
+	}	
+
+
+	for(size_t tz = 0; tz < stationPInGuest.size(); tz++){
+		deltaStationP[tz] = stationPInGuest[tz] - stationPInHost[tz];
+	}
 
 }
+
+SimTK::Array_<SimTK::Vec3>& 
+World::getTaskSpaceDeltaStationP(void)
+{
+	return deltaStationP;
+}
+
 
 /**
  * Calc Station Jacobian JS
@@ -450,21 +517,17 @@ void World::calcStationJacobian(
 	const State&                               someState,
 	SimTK::Matrix_<SimTK::Vec3>&                      JS) const
 {
-		matter->calcStationJacobian(someState, onBodyB, stationPInB, JS);
-
-
+		matter->calcStationJacobian(someState, onBodyB, stationPInGuest, JS);
 
 		std::cout << "Task Bodies ";
 		std::cout << onBodyB << std::endl;
 		std::cout << "Task Stations ";
-		std::cout << stationPInB << std::endl;
+		std::cout << stationPInGuest << std::endl;
 		std::cout << "Station Jacobian ";
 		std::cout << JS << std::endl;
 
-		
+		//matter->calcBiasForStationJacobian(someState, onBodyB, stationPInB, JSDotu);
 }
-
-
 
 
 

@@ -537,8 +537,7 @@ int main(int argc, char **argv)
 
 
 	// Setup task spaces
-	//context.addTaskSpacesLS();
-
+	context.addTaskSpacesLS();
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
