@@ -1062,9 +1062,9 @@ void Context::updDummAtomClasses(
 			aCIx = atomClassId.dummAtomClassIndex;
 			atomClassName = atomClassId.name;
 
-			std::cout << "Context::transferAtomClasses "
+			/* std::cout << "Context::transferAtomClasses "
 				<< aCIx << " " << atomClassName ;
-			atomParams.dump();
+			atomParams.dump(); */
 
 			// Define an AtomClass
 			(updWorld(worldIx))->forceField->defineAtomClass(aCIx, atomClassName.c_str(),
@@ -1102,7 +1102,7 @@ void Context::addDummParams(
 
 	// Load DuMM parameters for the first world
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-		std::cout << "Context::addDummParas WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
+		std::cout << "Context::addDummParams WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
 
 		// Pass current topology to the current world
 		(updWorld(0))->topologies = &topologies;
@@ -1128,7 +1128,7 @@ void Context::addDummParams(
 
 		// Iterate through molecules
 		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-			std::cout << "Context::addDummParas WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
+			std::cout << "Context::addDummParams WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
 
 			// Pass current topology to the current world
 			(updWorld(worldIx))->topologies = &topologies;
@@ -3309,8 +3309,7 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
 			qScaleFactors.at(thisThermoStateIx) = 1.0; */
 
-			qScaleFactors.at(thermodynamicStates[thisThermoStateIx].getTemperature()) =
-				std::sqrt(340.0 / 300.0);
+			qScaleFactors.at(0) = std::sqrt(340.0 / 300.0);
 			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
 			qScaleFactors.at(1) = std::sqrt(300.0 / 340.0);
 
