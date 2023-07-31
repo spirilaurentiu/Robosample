@@ -503,6 +503,9 @@ void World::updateTaskSpace(const State& someState)
 
 }
 
+/**
+ * Get the difference between the station task and the target
+*/
 SimTK::Array_<SimTK::Vec3>& 
 World::getTaskSpaceDeltaStationP(void)
 {

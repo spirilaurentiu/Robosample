@@ -339,12 +339,10 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	// Store the configuration
 	int i = 0;
 	for (SimTK::MobilizedBodyIndex mbx(1);
-	mbx < matter->getNumBodies();
-	++mbx){
+		mbx < matter->getNumBodies();
+		++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SetTVector[i] 
-			//= TVector[i] 
-			= mobod.getMobilizerTransform(someState);
+		SetTVector[i] = mobod.getMobilizerTransform(someState); //= TVector[i]
 		i++;
 	}
 
@@ -2767,8 +2765,8 @@ std::vector<SimTK::Real>& scaleFactors)
 	for(auto& diff : Q_of_X_PFdiffs){
 		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
 		
-		//diff *= (QScaleFactor - 1.0);
-		diff *= -1.0;
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
 		
 		if(world->visual){
 			world->paraMolecularDecorator->updFCommVars(diff);
@@ -2777,8 +2775,8 @@ std::vector<SimTK::Real>& scaleFactors)
 	for(auto& diff : Q_of_X_BMdiffs){
 		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
 		
-		//diff *= (QScaleFactor - 1.0);
-		diff *= -1.0;
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
 		
 		if(world->visual){
 			world->paraMolecularDecorator->updBCommVars(diff);
@@ -3763,11 +3761,11 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-std::cout << "Transforms before sample_iteration\n";
+/* std::cout << "Transforms before sample_iteration\n";
 world->PrintAcosX_PFs();
 world->PrintNormX_BMs();
 world->PrintAcosX_PFMeans();
-world->PrintNormX_BMMeans();
+world->PrintNormX_BMMeans(); */
 
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
