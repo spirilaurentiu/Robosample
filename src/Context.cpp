@@ -3309,9 +3309,9 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
 			qScaleFactors.at(thisThermoStateIx) = 1.0; */
 
-			qScaleFactors.at(0) = std::sqrt(340.0 / 300.0);
+			qScaleFactors.at(0) = (340.0 / 300.0);
 			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
-			qScaleFactors.at(1) = std::sqrt(300.0 / 340.0);
+			qScaleFactors.at(1) = (300.0 / 340.0);
 
 		// Draw the Q scale factor from a truncated normal
 		}else if(distribOpt == "gauss"){
