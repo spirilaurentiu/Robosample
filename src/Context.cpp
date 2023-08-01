@@ -5502,7 +5502,6 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		// Main loop: iterate through rounds
 		for(int round = 0; round < requiredNofRounds; round++){
 
-			std::cout << "Start round" << std::endl;
 			RunOneRound();
 
 			// Write energy and geometric features to logfile

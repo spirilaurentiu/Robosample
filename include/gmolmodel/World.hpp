@@ -422,6 +422,17 @@ public:
 
 	//...............
 
+	// REORIENT
+
+	SimTK::Transform& getReorientTransformInAnotherBody(
+		const State &someState,
+		const MobilizedBody &inBodyA,
+		const MobilizedBody &ofBodyB,
+		const SimTK::Transform &reorientAB,
+		SimTK::Transform& X_FMprim);
+
+	//...............
+
 	// -- Debugging / helper functions ---
 	/** Print information about Simbody systems **/
 	void PrintSimbodyStateCache(SimTK::State&);

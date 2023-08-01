@@ -947,6 +947,30 @@ void World::PrintNormX_BMMeans(void)
 	}
 }
 
+
+// REORIENT
+
+SimTK::Transform& World::getReorientTransformInAnotherBody(
+	const State &someState,
+	const MobilizedBody &inBodyA,
+	const MobilizedBody &ofBodyB,
+	const SimTK::Transform &reorientAB,
+	SimTK::Transform& X_FMprim)
+{
+
+	SimTK::Transform X_MB = ~(ofBodyB.getOutboardFrame(someState));
+	SimTK::Transform X_FM = ofBodyB.getMobilizerTransform(someState);
+	SimTK::Transform X_AB = 
+		ofBodyB.findBodyTransformInAnotherBody(someState, inBodyA);
+
+	SimTK::Transform X_BBprim = (~X_AB) * reorientAB;
+	X_FMprim = X_FM * X_MB * X_BBprim * X_MB;
+
+	return X_FMprim;
+}
+
+//...............
+
 /**
  * Set X_PF, X_BM means
 */
