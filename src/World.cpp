@@ -816,7 +816,6 @@ SimTK::Real World::getWorkOrHeat(void)
 
 }
 
-
 /*
  * Shift all the generalized coordinates
  */
@@ -947,13 +946,11 @@ void World::PrintNormX_BMMeans(void)
 	}
 }
 
-
 // REORIENT
 
 SimTK::Transform& World::getReorientTransformInAnotherBody(
 	const State &someState,
-	const MobilizedBody &inBodyA,
-	const MobilizedBody &ofBodyB,
+	const MobilizedBody &inBodyA, const MobilizedBody &ofBodyB,
 	const SimTK::Transform &reorientAB,
 	SimTK::Transform& X_FMprim)
 {
@@ -1099,7 +1096,6 @@ void World::setTransformsMeansToCurrent(SimTK::State& someState)
 
 }
 
-
 /**
  * Set bonds values
 */
@@ -1197,7 +1193,6 @@ void World::setTransformsMeansToMin(readAmberInput &amberReader)
 
 }
 
-
 /**
  * Update X_PF, X_BM means
 */
@@ -1286,7 +1281,6 @@ int World::getNofMolecules() const
 {
 	return (this->moleculeCount + 1);
 }
-
 
 /** Get MobilizedBody to AtomIndex map **/
 std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >

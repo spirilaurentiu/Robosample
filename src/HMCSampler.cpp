@@ -165,7 +165,6 @@ HMCSampler::~HMCSampler()
  * RANDOM NUMBERS
     =============================== */
 
-
 /** Generate a random number from a uniform distribution
  * with limits L and R
 */
@@ -211,8 +210,6 @@ SimTK::Real HMCSampler::uniformRealDistributionCDFTrunc(
 
 	return cdf;
 }
-
-
 
 /** Seed the random number generator. Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
@@ -1448,7 +1445,6 @@ ThermostatName HMCSampler::getThermostat(void) const{
 // FIMAN POTENTIAL RELATED
 ////////////////////////////////////
 
-
 // Get the potential energy from an external source as far as the sampler
 // is concerned - OPENMM has to be inserted here
 SimTK::Real HMCSampler::getPEFromEvaluator(const SimTK::State& someState) const{
@@ -2408,7 +2404,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 			+ (0.5*bXMX) // + (0.5* bmuMmu)
 			- bcorr;
 
-		std::cout << "ke_n_nma6 " << ke_n_nma6 << "\n";
+		//std::cout << "ke_n_nma6 " << ke_n_nma6 << "\n";
 
 }
 
@@ -2841,7 +2837,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	}
 
 	// Test
-	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
 
 }
 
@@ -3247,7 +3243,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		integrateTrajectory(someState);
 		//integrateTrajectoryOneStepAtATime(someState);
 	}else{
-		std::cout << "ProposeNEHMC: NON-VERLET integrator\n";
+		//std::cout << "ProposeNEHMC: NON-VERLET integrator\n";
 		system->realize(someState, SimTK::Stage::Dynamics);
 	}
 
@@ -3664,156 +3660,6 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 		calcNewConfigurationAndEnergies(someState);
 
-	/* }else if (integratorName == IntegratorName::WATER_CAGE){
-
-		// Set velocities to zero
-		setVelocitiesToZero(someState);
-		system->realize(someState, SimTK::Stage::Velocity);
-
-		// Store the proposed energies
-		calcProposedKineticAndTotalEnergy(someState);
-
-		std::cout << "Propose: WATER_CAGE integrator" << std::endl;
-		if(topologies.size() < 2){
-			std::cout << "RANDOM_KICK integrators should only be used over many molecules\n";
-		}
-
-		// Get the binding site center
-
-		// We *assume* the last molecule is the ligand.
-		const int nOfBodies = matter->getNumBodies();
-
-		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
-
-		// Print the geometric center (for debugging purposes)
-		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
-		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n"; 	
-
-		// Ligand
-		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(2) ); 
-		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
-		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
-		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
-		const Transform& X_PF = mobod_L.getInboardFrame(someState);
-		
-		// Unlike "RANDOM_WALK", this integrator does not need to do 
-		// random rotation, since we integrate the trajectory, which
-		// includes rotation.
-
-		// Determine the distance between center of mass of ligand and geometricCenter
-		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
-		std::cout << "ligandToSite(kick): " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
-
-		//if(ligandToSite.norm() > sphereRadius){
-		if (1){
-
-			std::cout << "Ligand too far from center (" << ligandToSite.norm() << "), repositioning...\n";
-			SimTK::Vec3 BR={0,0,0};
-
-			// Sample a random vector centered in 0 and expressed in G
-			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-			SimTK::Vec3 randVec={0,0,0};
-
-			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
-			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
-			randVec[2] = sphereRadius * std::cos(phi);
-			randVec *= uniformRealDistribution(randomEngine);
-
-			// Move it in BindingSiteCenter (BS)
-			SimTK::Vec3 GR;
-			GR = randVec + (geometricCenter - X_PF.p());
-
-			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
-			
-			// Account for COM_L
-			BR = BR - COM_L;
-
-			// Express BR in F
-			BR = X_FM.R()*BR;
-			mobod_L.setQToFitTranslation(someState, BR);
-
-			system->realize(someState, SimTK::Stage::Dynamics);
-
-			
-		}
-
-		const SimTK::MobilizedBody& mobod_L_PostTP = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(2) ); 
-		const Vec3 COM_L_PostTP = mobod_L_PostTP.getBodyMassCenterStation(someState);
-		const Vec3 COM_G_PostTP = mobod_L_PostTP.findMassCenterLocationInGround(someState);
-		const Transform& X_FM_PostTP = mobod_L_PostTP.getMobilizerTransform(someState);
-		const Transform& X_PF_PostTP = mobod_L_PostTP.getInboardFrame(someState);
-
-		// Water
-		for (int waterIx = 1; waterIx < nOfBodies-2; waterIx++){ 
-			const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
-				SimTK::MobilizedBodyIndex(2+waterIx) ); 
-			const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
-			const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
-			const Transform& X_FM_Water = mobod_W.getMobilizerTransform(someState);
-			const Transform& X_PF_Water = mobod_W.getInboardFrame(someState);
-
-			// Get distance between water and ligand
-					
-			const Vec3 WL = mobod_W.findStationLocationInAnotherBody(someState, COM_W, mobod_L);
-			std::cout << "COM_L: " << COM_G << " COM_GW: " << COM_GW << std::endl;
-			std::cout << "WL: " << WL << " WL_NORM: " << WL.norm() << std::endl;
-
-			// If water is too far from ligand reposition on a sphere centered on the 
-			// ligand center of mass
-			float waterSphere = 2;
-			if(WL.norm() > waterSphere){
-			//if (1){
-
-				std::cout << "Water (" << waterIx-1 << ") too far from ligand (" << WL.norm() << "), repositioning...\n";
-				SimTK::Vec3 BR={0,0,0};
-
-				// Sample a random vector centered in 0 and expressed in G
-				SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-				SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-				SimTK::Vec3 randVec={0,0,0};
-
-				randVec[0] = waterSphere * std::cos(theta) * std::sin(phi);
-				randVec[1] = waterSphere * std::sin(theta) * std::sin(phi);
-				randVec[2] = waterSphere * std::cos(phi);
-				randVec *= uniformRealDistribution(randomEngine);
-
-				// Move it in BindingSiteCenter (BS)
-				SimTK::Vec3 GR;
-				//GR = randVec + (geometricCenter - X_PF.p());
-				GR = randVec + (COM_G_PostTP - X_PF_Water.p());
-
-				BR = mobod_W.expressGroundVectorInBodyFrame(someState, GR);
-				
-				// Account for COM_L
-				BR = BR - COM_W;
-
-				// Express BR in F
-				BR = X_FM_Water.R()*BR;
-				mobod_W.setQToFitTranslation(someState, BR);
-				system->realize(someState, SimTK::Stage::Position);
-				std::cout << "Water (" << waterIx-1
-				          <<") repositioned in " << mobod_W.expressVectorInGroundFrame(someState, BR) 
-						  << std::endl << std::endl;
-
-			}
-		}
-		system->realize(someState, SimTK::Stage::Dynamics);
-
-		// Else, if not repositioned, integrate trajectory.
-		//if(1) {
-		else {
-		initializeVelocities(someState);
-		calcProposedKineticAndTotalEnergy(someState);
-
-		integrateTrajectory(someState);
-		} 
-
-		system->realize(someState, SimTK::Stage::Dynamics);
-		calcNewConfigurationAndEnergies(someState);
- */
 	}else if(integratorName == IntegratorName::STATIONS_TASK){
 
 		std::cout << "STATIONS_TASK\n";
@@ -4110,11 +3956,11 @@ world->PrintNormX_BMMeans(); */
 		// Decide
 		if(acceptSample()){
 			// Print info
-			std::cout << "\tsample accepted";
+			std::cout << "\tacc";
 			if(this->alwaysAccept == true){
-				std::cout << " (simple molecular dynamics)\n";
+				std::cout << " (MD)\n";
 			}else{
-				std::cout << " (metropolis-hastings)\n";
+				std::cout << " (MH)\n";
 			}
 
 			// UPDATE
@@ -4122,11 +3968,11 @@ world->PrintNormX_BMMeans(); */
 
 			// Deal with adaptive data
 			storeAdaptiveData(someState);
-			PrintAdaptiveData();
+			//PrintAdaptiveData();
 
 		}else{
 			//Print info
-			std::cout << "\tsample rejected (metropolis-hastings)\n";
+			std::cout << "\trej (MH)\n";
 
 			// RESET
 			restore(someState);
