@@ -4138,6 +4138,7 @@ world->PrintNormX_BMMeans(); */
 		world->getTransformsStatistics(someState);
 
 		// Update means of values before altering them
+		world->updateTransformsMeans(someState);
 		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
 			//world->updateTransformsMeans(someState);
 		}
