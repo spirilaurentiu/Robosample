@@ -230,8 +230,9 @@ void HMCSampler::initialize(SimTK::State& someState)
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Set old potential energy
-	this->pe_o = this->pe_set = forces->getMultibodySystem().calcPotentialEnergy(
-		someState);
+	this->pe_o = this->pe_set = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
+	std::cout << "HMCSampler::initialize pe_o " << pe_o << std::endl;
 
 	// Store the configuration
 	for (SimTK::MobilizedBodyIndex mbx(1);
@@ -330,8 +331,10 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Set old potential energy
-	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(
-		someState);
+	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
+	std::cout << "HMCSampler::reinitialize pe_o " << pe_o << std::endl;
+
 
 	// Store the configuration
 	int i = 0;
@@ -866,9 +869,9 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		}
 		bcorr /= this->beta;
 
-		std::cout << "Keval terms bXMX muMmu bmuMX LSE(bmuMX) = "
+		/* std::cout << "Keval terms bXMX muMmu bmuMX LSE(bmuMX) = "
 			<< 0.5*bXMX << " " // << 0.5*bmuMmu << " "
-			<< bmuMX << " " << bcorr << std::endl;
+			<< bmuMX << " " << bcorr << std::endl; */
 
 		ke_prop_nma6 = // (-1.0 * RT * std::log(0.5))
 			+ (0.5*bXMX) // + (0.5* bmuMmu)
@@ -921,7 +924,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		ke_prop_nma6 = -1.0 * RT * std::log(0.5 * (leftExp + rightExp));
 		// */
 
-		std::cout << "ke_prop_nma6 " << ke_prop_nma6 << "\n";
+		//std::cout << "ke_prop_nma6 " << ke_prop_nma6 << "\n";
 
 
 
@@ -1040,6 +1043,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 
 			SimTK::Real KE = matter->calcKineticEnergy(someState);
 			SimTK::Real PE = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			//SimTK::Real PE = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
 			std::cout << "KE PE " << KE << " " << PE << std::endl;
 
 			//// Calculate generalized quantities
@@ -1451,7 +1455,7 @@ SimTK::Real HMCSampler::getPEFromEvaluator(const SimTK::State& someState) const{
 		return forces->getMultibodySystem().calcPotentialEnergy(someState);
 	// Eliza's potential energy's calculations including rigid bodies
 	// internal energy
-	//return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+	//return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
 
 }
 
@@ -2295,7 +2299,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 
 	// Get new potential energy
 	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
 	// TODO: replace with the following after checking is the same thing
 	//pe_n = compoundSystem->calcPotentialEnergy(someState);
 

@@ -816,6 +816,35 @@ SimTK::Real World::getWorkOrHeat(void)
 
 }
 
+// Get the (potential) energy transfer in the form of work
+// If any of the Q, U or tau is actively modifyied by the sampler
+// the Jacobian of that transformation will be included too
+SimTK::Real World::getWork(void)
+{
+	// Accumulate in this variable
+	SimTK::Real retValue = 0.0;
+
+	// Get the energy transfer from all the samplers
+	for(auto& sampler : this->samplers){
+
+		if(sampler->getDistortOpt() < 0){
+
+		// Get the potential energy difference
+		retValue += 
+			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
+
+		// Get the Q modifying samplers Jacobians
+			retValue -= 
+				sampler->getDistortJacobianDetLog();
+				//std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
+		}
+		
+	}
+	
+	return retValue;
+
+}
+
 /*
  * Shift all the generalized coordinates
  */
@@ -2211,7 +2240,7 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 	updateAtomListsFromCompound(currentAdvancedState);
 
 	// Set old potential energy of the new world via OpenMM
-	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);// DOESN'T WORK WITH OPENMM
 }
 
 // Calculate Fixman potential
@@ -2238,7 +2267,7 @@ bool World::generateProposal(void)
 		currentAdvancedState);
 	//auto OldPE =
 	//	forceField->CalcFullPotEnergyIncludingRigidBodies(
-	//	currentAdvancedState);
+	//	currentAdvancedState);// DOESN'T WORK WITH OPENMM
 
 	// Set sampler's old potential energy 
 	pHMC(updSampler(0))->setOldPE(OldPE); */

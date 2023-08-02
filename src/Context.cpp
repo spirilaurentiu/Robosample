@@ -2615,19 +2615,23 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	// ========================== LAST PE =====================================
 	// Replica i reduced potential in state i
 	SimTK::Real lii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].get_WORK_PotentialEnergy_New();
+		//* replicas[replica_i].get_WORK_PotentialEnergy_New();
+		* (replicas[replica_i].getPotentialEnergy() + replicas[replica_i].getTransferedEnergy());
 
 	// Replica j reduced potential in state j
 	SimTK::Real ljj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].get_WORK_PotentialEnergy_New();
+		//* replicas[replica_j].get_WORK_PotentialEnergy_New();
+		* (replicas[replica_j].getPotentialEnergy() + replicas[replica_j].getTransferedEnergy());
 
 	// Replica i reduced potential in state j
 	SimTK::Real lij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].get_WORK_PotentialEnergy_New();
+		//* replicas[replica_i].get_WORK_PotentialEnergy_New();
+		* (replicas[replica_i].getPotentialEnergy() + replicas[replica_i].getTransferedEnergy());
 
 	// Replica j reduced potential in state i
 	SimTK::Real lji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].get_WORK_PotentialEnergy_New();
+		//* replicas[replica_j].get_WORK_PotentialEnergy_New();
+		* (replicas[replica_j].getPotentialEnergy() + replicas[replica_j].getTransferedEnergy());
 	// ========================================================================
 
 	SimTK::Real ETerm = -1.0 * (eij + eji) + eii + ejj;
@@ -2970,7 +2974,7 @@ void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 
 	// Get the front world energy
 	SimTK::Real energy =
-		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
+		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies(); // DOESN'T WORK with OPENMM
 
 	// Add the Fixman potential to the energy (DANGEROUS)
 	//energy += pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
@@ -3398,8 +3402,11 @@ void Context::RunFrontWorldAndRotate(int thisReplica)
 	// == SAMPLE == from the current world
 	frontIx = replicaWorldIxs.front();
 
-	RunWorld(frontIx);
-
+	RunWorld(frontIx); 
+	
+	// Write pdbs every world
+	writePdbs(nofRounds, frontIx);
+	
 	// == ROTATE == worlds indices (translate from right to left)
 	std::rotate(replicaWorldIxs.begin(),
 		replicaWorldIxs.begin() + 1,
@@ -3634,12 +3641,36 @@ SimTK::Real Context::calcReplicaTransferedEnergy(int replicaIx)
 
 	// Accumulate heat from equilibrium worlds and
 	// work from perturbation kernels of nonequil worlds
-	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++)
-	{
+	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
 			deltaEnergy += ( worlds[worldIx].getWorkOrHeat() );
 	}
 
 	return deltaEnergy;
+
+}
+
+SimTK::Real Context::calcReplicaWork(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+
+	// Get this world indexes from the corresponding thermoState
+	std::vector<int> replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+
+	// Get nof worlds in this replica
+	size_t replicaNofWorlds = replicaWorldIxs.size();
+
+	// Accumulate energy transfer here
+	SimTK::Real Work = 0;
+
+	// Accumulate heat from equilibrium worlds and
+	// work from perturbation kernels of nonequil worlds
+	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
+			Work += ( worlds[worldIx].getWork() );
+	}
+
+	return Work;
 
 }
 
@@ -4440,7 +4471,7 @@ void Context::RunRENS(void)
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 
 		std::cout << " REX batch " << mixi << std::endl;
-
+		nofRounds = mixi;
 		// Set initial scale factors
 		if(mixi % 2){ // odd batch
 			qScaleFactorsMiu = qScaleFactorsOdd;
@@ -4493,7 +4524,7 @@ void Context::RunRENS(void)
 
 			// ========================= UNLOAD =======================
 			replicas[replicaIx].setTransferedEnergy(
-				calcReplicaTransferedEnergy(replicaIx) );
+				calcReplicaWork(replicaIx) );
 
 			// Deposit work coordinates into the replica
 			store_WORK_CoordinatesFromFrontWorld(replicaIx);

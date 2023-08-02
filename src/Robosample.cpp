@@ -30,7 +30,7 @@ bool LoadInputIntoSetupReader(int argc, char **argv,
 	std::cout << "Reading input...\n" ;
 
 	std::string helpString =
-		"Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robosample file\n";
+		"Usage: Robosample [options]\n Options:\n  -h, --help for help\nUsage: Robosample file\n";
 
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";

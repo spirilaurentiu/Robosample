@@ -371,6 +371,11 @@ public:
 	// the Jacobian of that transformation will be included too
 	SimTK::Real getWorkOrHeat(void);
 
+	// Get the (potential) energy transfer in the form of work
+	// If any of the Q, U or tau is actively modifyied by the sampler
+	// the Jacobian of that transformation will be included too
+	SimTK::Real getWork(void);
+
 	// Set initial values of X_PF or X_BM
 	void setTransformsMeansToIni(void);
 
