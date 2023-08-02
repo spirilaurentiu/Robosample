@@ -119,6 +119,18 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
+
+//==============================================================================
+//                   CLASS TaskSpace
+//==============================================================================
+/**
+ *  Contains a Symbody task space and additional data
+ **/
+StationTaskLaurentiu::StationTaskLaurentiu(void)
+{
+
+}
+
 //==============================================================================
 //                             1. STRUCTURAL FUNCTIONS
 //==============================================================================
@@ -396,6 +408,133 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// // Realize Topology
 	// compoundSystem->realizeTopology();
 }
+
+
+
+
+
+/**
+ * Add a task space
+*/
+void World::addTaskSpaceLS(void)
+{
+	StationTaskLaurentiu stationTask;
+
+	int guestTopology = 1;
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == guestTopology){
+
+			// Atoms
+			for (int bAtomIx : bAtomIxs_guest) {
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+
+				onBodyB.emplace_back(mbx);
+				stationPInGuest.emplace_back(SimTK::Vec3());
+				stationPInHost.emplace_back(SimTK::Vec3());
+				deltaStationP.emplace_back(SimTK::Vec3());
+
+			}
+		}
+	}
+}
+
+/**
+ * Update target task space
+*/
+void World::updateTaskSpace(const State& someState)
+{
+
+	int hostTopology = 0;
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+		if(topi == hostTopology){
+
+			// Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_host) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				stationPInHost[tz] = (~X_GB.R()) * topology.getAtomLocationInMobilizedBodyFrame(aIx);
+			}
+		}
+	}
+
+	int guestTopology = 1;
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+	topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == guestTopology){
+
+			// Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_guest) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				stationPInGuest[tz] = (~X_GB.R()) * topology.getAtomLocationInMobilizedBodyFrame(aIx);
+
+			}
+		}
+	}	
+
+
+	for(size_t tz = 0; tz < stationPInGuest.size(); tz++){
+		deltaStationP[tz] = stationPInGuest[tz] - stationPInHost[tz];
+	}
+
+}
+
+/**
+ * Get the difference between the station task and the target
+*/
+SimTK::Array_<SimTK::Vec3>& 
+World::getTaskSpaceDeltaStationP(void)
+{
+	return deltaStationP;
+}
+
+
+/**
+ * Calc Station Jacobian JS
+*/
+void World::calcStationJacobian(
+	const State&                               someState,
+	SimTK::Matrix_<SimTK::Vec3>&                      JS) const
+{
+		matter->calcStationJacobian(someState, onBodyB, stationPInGuest, JS);
+
+		std::cout << "Task Bodies ";
+		std::cout << onBodyB << std::endl;
+		std::cout << "Task Stations ";
+		std::cout << stationPInGuest << std::endl;
+		std::cout << "Station Jacobian ";
+		std::cout << JS << std::endl;
+
+		//matter->calcBiasForStationJacobian(someState, onBodyB, stationPInB, JSDotu);
+}
+
+
+
+
 
 /** Add a membrane represented by a contact surface **/
 void World::addMembrane(
@@ -807,6 +946,30 @@ void World::PrintNormX_BMMeans(void)
 		std::cout << "normX_BMMean " << i << " " << xbm << std::endl;
 	}
 }
+
+
+// REORIENT
+
+SimTK::Transform& World::getReorientTransformInAnotherBody(
+	const State &someState,
+	const MobilizedBody &inBodyA,
+	const MobilizedBody &ofBodyB,
+	const SimTK::Transform &reorientAB,
+	SimTK::Transform& X_FMprim)
+{
+
+	SimTK::Transform X_MB = ~(ofBodyB.getOutboardFrame(someState));
+	SimTK::Transform X_FM = ofBodyB.getMobilizerTransform(someState);
+	SimTK::Transform X_AB = 
+		ofBodyB.findBodyTransformInAnotherBody(someState, inBodyA);
+
+	SimTK::Transform X_BBprim = (~X_AB) * reorientAB;
+	X_FMprim = X_FM * X_MB * X_BBprim * X_MB;
+
+	return X_FMprim;
+}
+
+//...............
 
 /**
  * Set X_PF, X_BM means

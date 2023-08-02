@@ -131,24 +131,10 @@ void ParaMolecularDecorator::drawLine(
 	geometry.push_back(decorativeLineBM);
 }
 
-
-void ParaMolecularDecorator::generateDecorations(const State& someState,
-		Array_<DecorativeGeometry>& geometry) 
+// Draw DuMM based geometry
+void ParaMolecularDecorator::drawDummBasedGeometry(Array_<DecorativeGeometry>& geometry,
+const State& someState)
 {
-
-	/*
-	for (auto p = points.begin(); p != points.end(); p++) {
-		geometry.push_back(DecorativePoint(*p));
-	}
-	for (auto p = lines.begin(); p != lines.end(); p++) {
-		geometry.push_back(DecorativeLine( p->first, p->second ));
-		(geometry.back()).setLineThickness(5);
-		(geometry.back()).setColor( Vec3(1, 0, 1) );
-	}
-	*/
-
-	// Draw DuMM based geometry
-    
 	for (SimTK::DuMM::BondIndex bIx(0); bIx < dumm->getNumBonds(); ++bIx) {
 		const SimTK::DuMM::AtomIndex dAIx1 = dumm->getBondAtom(bIx, 0);
 		const SimTK::DuMM::AtomIndex dAIx2 = dumm->getBondAtom(bIx, 1);
@@ -177,6 +163,26 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			(geometry.back()).setColor( SimTK::Black );
 		}
 	}
+}
+
+void ParaMolecularDecorator::generateDecorations(const State& someState,
+		Array_<DecorativeGeometry>& geometry) 
+{
+
+	/*
+	for (auto p = points.begin(); p != points.end(); p++) {
+		geometry.push_back(DecorativePoint(*p));
+	}
+	for (auto p = lines.begin(); p != lines.end(); p++) {
+		geometry.push_back(DecorativeLine( p->first, p->second ));
+		(geometry.back()).setLineThickness(5);
+		(geometry.back()).setColor( Vec3(1, 0, 1) );
+	}
+	*/
+
+	// Draw DuMM based geometry
+	drawDummBasedGeometry(geometry, someState);
+
 //   
  /*
 	// DuMM
@@ -521,12 +527,12 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 	// Draw Rigid bodies
 	// Ground frame
-	drawFrame(geometry, Transform(),
+	/* drawFrame(geometry, Transform(),
 		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
 		"G", 0.009, SimTK::Vec3(0.5, 0.5, 0.5), SimTK::Vec3(0.02, 0.0, 0.0));
 	drawFrame(geometry, G_X_T,
 		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
-		"Top", 0.009, SimTK::Vec3(0.5, 0.0, 0.5), SimTK::Vec3(0.02, 0.0, 0.0));
+		"Top", 0.009, SimTK::Vec3(0.5, 0.0, 0.5), SimTK::Vec3(0.02, 0.0, 0.0)); */
 
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -570,11 +576,11 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			//geometry.push_back(decorativeSphereM);
 
 			// Draw frames
-			std::vector<int> chosenBodies = //{57, 118, 198, 265, 279};
-			{        1,  2,  3,  4,  5};//, 6,  7,  8,  9
-			//, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-			//, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29};
-			/* if(chosenBodies >= matter->getNumBodies()){
+			std::vector<int> chosenBodies = {8};
+			/* {        1,  2,  3,  4,  5, 6,  7,  8,  9
+			, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+			, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29}; */
+			/* if(chosenBodies.size() >= matter->getNumBodies()){
 				std::cerr << "Visualizer chosenBody greater than allowed.\n"
 					<< std::flush;
 				exit(1);
@@ -585,10 +591,11 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				(std::find(std::begin(chosenBodies), std::end(chosenBodies), int(mbx))
 				!= std::end(chosenBodies));
 
-			if(int(mbx) >= 1) {
-			// /*
-				
-				// Frame P
+			//if(found) {
+			if( (int(mbx) > 1) ) {
+			//if( (int(mbx) > 1) && (int(mbx) < 5) ) {
+
+				/* // Frame P
 				std::ostringstream streamObjP;
 				streamObjP << std::string("P") + std::to_string(int(mbx));
 				std::string textP = streamObjP.str();
@@ -622,12 +629,15 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				std::string textB = streamObjB.str();
 				drawFrame(geometry, G_X_B,
 					0.04, 4, SimTK::Vec3(0, 0, 0),
-					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.04, 0.0, 0.0));
+					streamObjB.str(), 0.008, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.04, 0.0, 0.0)); */
 
-			} // */
+			}
 
 			// Draw lines
-			if(int(mbx) >= 1) {
+			//if(found) {
+			if( (int(mbx) > 1) ) {
+			//if( (int(mbx) > 1) && (int(mbx) < 5) ) {
+			//if(false){
 
 				// BM expressed in Ground
 				drawLine(geometry, G_X_B, G_X_M,

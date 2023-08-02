@@ -1062,9 +1062,9 @@ void Context::updDummAtomClasses(
 			aCIx = atomClassId.dummAtomClassIndex;
 			atomClassName = atomClassId.name;
 
-			std::cout << "Context::transferAtomClasses "
+			/* std::cout << "Context::transferAtomClasses "
 				<< aCIx << " " << atomClassName ;
-			atomParams.dump();
+			atomParams.dump(); */
 
 			// Define an AtomClass
 			(updWorld(worldIx))->forceField->defineAtomClass(aCIx, atomClassName.c_str(),
@@ -1102,7 +1102,7 @@ void Context::addDummParams(
 
 	// Load DuMM parameters for the first world
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-		std::cout << "Context::addDummParas WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
+		std::cout << "Context::addDummParams WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
 
 		// Pass current topology to the current world
 		(updWorld(0))->topologies = &topologies;
@@ -1128,7 +1128,7 @@ void Context::addDummParams(
 
 		// Iterate through molecules
 		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-			std::cout << "Context::addDummParas WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
+			std::cout << "Context::addDummParams WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
 
 			// Pass current topology to the current world
 			(updWorld(worldIx))->topologies = &topologies;
@@ -1281,6 +1281,18 @@ void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizer
 
 
 }
+
+
+
+/** Add task spaces */
+void Context::addTaskSpacesLS(void)
+{
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+			worlds[worldIx].addTaskSpaceLS();
+		}
+}
+
+
 
 void Context::printStatus(void){
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
@@ -3297,9 +3309,9 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
 			qScaleFactors.at(thisThermoStateIx) = 1.0; */
 
-			qScaleFactors.at(0) = std::sqrt(400.0 / 300.0);
+			qScaleFactors.at(0) = (340.0 / 300.0);
 			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
-			qScaleFactors.at(1) = std::sqrt(300.0 / 400.0);
+			qScaleFactors.at(1) = (300.0 / 340.0);
 
 		// Draw the Q scale factor from a truncated normal
 		}else if(distribOpt == "gauss"){
@@ -3667,7 +3679,7 @@ void Context::RunRENS(void)
 
 	PrintNofAcceptedSwapsMatrix();
 
-		bool givenTsMode = true;
+		bool givenTsMode = false;
 		if(givenTsMode){
 			std::cout << "givenTsMode = true\n";
 			std::vector<SimTK::Real> givenX_PF;
@@ -4709,7 +4721,7 @@ void Context::RunOneRound(void)
 			int(nofSamplesPerRound[currentWorldIx]));
 
 		// Write pdb every world
-		writePdbs(nofRounds, currentWorldIx);
+		//writePdbs(nofRounds, currentWorldIx);
 
 	} // END iteration through worlds
 }
@@ -5487,11 +5499,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 			//}
 		}
 
-
 		// Main loop: iterate through rounds
 		for(int round = 0; round < requiredNofRounds; round++){
 
-			std::cout << "Start round" << std::endl;
 			RunOneRound();
 
 			// Write energy and geometric features to logfile

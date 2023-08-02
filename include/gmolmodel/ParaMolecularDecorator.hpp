@@ -46,6 +46,10 @@ public:
 		int numOfDofs, SimTK::Real lineThickness
 	);
 
+	// Draw DuMM based geometry
+	void drawDummBasedGeometry(Array_<DecorativeGeometry>& geometry,
+		const State& someState);
+
 	void generateDecorations(const State& state,
 		Array_<DecorativeGeometry>& geometry);
 

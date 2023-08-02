@@ -273,7 +273,6 @@ int main(int argc, char **argv)
 	// and loads maps of indexes
 	context.model(finalNofMols, setupReader);
 
-
 	// Allocate space for containers that keep statistics if we're doing any
 	context.allocWorldsStatsContainers();
 
@@ -535,6 +534,10 @@ int main(int argc, char **argv)
 
 	// Load/store Mobilized bodies joint types in samplers
 	context.loadMbxsToMobilities();
+
+
+	// Setup task spaces
+	context.addTaskSpacesLS();
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];

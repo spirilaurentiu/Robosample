@@ -380,6 +380,7 @@ enum struct IntegratorName : int { // Integrators
 	OMMVV,
 	BOUND_WALK,
 	BOUND_HMC,
+	STATIONS_TASK,
 	NOF_INTEGRATORS
 };
 
@@ -396,7 +397,8 @@ IntegratorNameS{
 	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
 	{"OMMVV", IntegratorName::OMMVV},
 	{"RANDOM_WALK", IntegratorName::BOUND_WALK},
-	{"RANDOM_KICK", IntegratorName::BOUND_HMC}
+	{"RANDOM_KICK", IntegratorName::BOUND_HMC},
+	{"STATIONS_TASK", IntegratorName::STATIONS_TASK}
 };
 
 /*

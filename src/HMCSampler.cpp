@@ -339,12 +339,10 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	// Store the configuration
 	int i = 0;
 	for (SimTK::MobilizedBodyIndex mbx(1);
-	mbx < matter->getNumBodies();
-	++mbx){
+		mbx < matter->getNumBodies();
+		++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SetTVector[i] 
-			//= TVector[i] 
-			= mobod.getMobilizerTransform(someState);
+		SetTVector[i] = mobod.getMobilizerTransform(someState); //= TVector[i]
 		i++;
 	}
 
@@ -460,7 +458,8 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 	
 	}else if (integratorNameArg == "BOUND_HMC"){
 		integratorName = IntegratorName::BOUND_HMC;
-
+	}else if(integratorNameArg == "STATIONS_TASK"){
+		integratorName = IntegratorName::STATIONS_TASK;
 	}else{
 		integratorName = IntegratorName::EMPTY;
 
@@ -2742,16 +2741,15 @@ std::vector<SimTK::Real>& scaleFactors)
 void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
-
-	//world->traceBendStretch(someState);
-	world->PrintAcosX_PFs();
-	world->PrintAcosX_PFMeans();
-	world->PrintNormX_BMs();
-	world->PrintNormX_BMMeans();
-
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
+
+	//world->traceBendStretch(someState);
+	//world->PrintAcosX_PFs();
+	//world->PrintNormX_BMs();
+	//world->PrintAcosX_PFMeans();
+	//world->PrintNormX_BMMeans();
 
 	// Resize scaling factors
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
@@ -2767,8 +2765,8 @@ std::vector<SimTK::Real>& scaleFactors)
 	for(auto& diff : Q_of_X_PFdiffs){
 		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
 		
-		//diff *= (QScaleFactor - 1.0);
-		diff *= -1.0;
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
 		
 		if(world->visual){
 			world->paraMolecularDecorator->updFCommVars(diff);
@@ -2777,8 +2775,8 @@ std::vector<SimTK::Real>& scaleFactors)
 	for(auto& diff : Q_of_X_BMdiffs){
 		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
 		
-		//diff *= (QScaleFactor - 1.0);
-		diff *= -1.0;
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
 		
 		if(world->visual){
 			world->paraMolecularDecorator->updBCommVars(diff);
@@ -3816,14 +3814,52 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Dynamics);
 		calcNewConfigurationAndEnergies(someState);
  */
+	}else if(integratorName == IntegratorName::STATIONS_TASK){
+
+		std::cout << "STATIONS_TASK\n";
+
+		system->realize(someState, SimTK::Stage::Position);
+
+		// Update target space
+		world->updateTaskSpace(someState);
+		SimTK::Array_<SimTK::Vec3> deltaStationP = world->getTaskSpaceDeltaStationP();
+		std::cout << "deltaStationP " << deltaStationP << std::endl;
+
+		SimTK::Matrix_<SimTK::Vec3> JS;
+		world->calcStationJacobian(someState, JS);
+
+		// Initialize velocities from Maxwell-Boltzmann distribution
+		initializeVelocities(someState);
+		//setVelocitiesToZero(someState);
+
+		SimTK::Vector f;
+		matter->multiplyByStationJacobianTranspose(someState, world->onBodyB[0], world->stationPInGuest[0], deltaStationP[0], f);
+
+		SimTK::Vector givenU = SimTK::Vector(someState.getU().size());
+		someState.setU(10*f);
+		system->realize(someState, SimTK::Stage::Velocity);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
+		// Adapt timestep
+		bool shouldAdaptWorldBlocks = false;
+		if(shouldAdaptWorldBlocks){
+			adaptWorldBlocks(someState);
+		}
+
+		// Apply the L operator
+		integrateTrajectory(someState);
+		//integrateTrajectoryOneStepAtATime(someState);
+
+		calcNewConfigurationAndEnergies(someState);
+
 	}else if (integratorName == IntegratorName::EMPTY){
 
 /* 		// Alter Q in some way
 		if(this->sampleGenerator == 1){
 			
 		} */
-
-
 
 	}else{
 		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
@@ -4037,6 +4073,12 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
+/* std::cout << "Transforms before sample_iteration\n";
+world->PrintAcosX_PFs();
+world->PrintNormX_BMs();
+world->PrintAcosX_PFMeans();
+world->PrintNormX_BMMeans(); */
+
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
 

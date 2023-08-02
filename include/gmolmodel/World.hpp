@@ -60,6 +60,23 @@ void writePdb(	  SimTK::Compound& c, SimTK::State& advanced,
 void writePdb(SimTK::PdbStructure pdb, const char *FN);
 
 //==============================================================================
+//                   CLASS TaskSpace
+//==============================================================================
+/**
+ *  Contains a Symbody task space and additional data
+ **/
+class StationTaskLaurentiu{
+    friend class Context;
+
+public:
+
+    StationTaskLaurentiu();
+
+private:
+
+};
+
+//==============================================================================
 //                   CLASS World
 //==============================================================================
 /**
@@ -123,6 +140,24 @@ public:
 	/** Calls CompoundSystem.modelCompounds and realizes Topology
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
+
+
+
+	/** Add a task space */
+	void addTaskSpaceLS(void);
+
+	/** Update target task space */
+	void updateTaskSpace(const State& someState);
+
+	/** Get delta stationP */
+	SimTK::Array_<SimTK::Vec3>& 
+	getTaskSpaceDeltaStationP(void);
+
+	/** Calc station Jacobian */
+	void calcStationJacobian(const State& someState,
+        SimTK::Matrix_<SimTK::Vec3>& JS) const;
+
+
 
 	/** Add a membrane represented by a contact surface **/
 	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth,
@@ -387,6 +422,17 @@ public:
 
 	//...............
 
+	// REORIENT
+
+	SimTK::Transform& getReorientTransformInAnotherBody(
+		const State &someState,
+		const MobilizedBody &inBodyA,
+		const MobilizedBody &ofBodyB,
+		const SimTK::Transform &reorientAB,
+		SimTK::Transform& X_FMprim);
+
+	//...............
+
 	// -- Debugging / helper functions ---
 	/** Print information about Simbody systems **/
 	void PrintSimbodyStateCache(SimTK::State&);
@@ -507,6 +553,12 @@ public:
 	FixmanTorqueExt* FixmanTorqueExtImpl = nullptr;
 	SimTK::Force::Custom* FixmanTorqueExtForce = nullptr;
 
+	//Task Space
+	SimTK::Array_<SimTK::MobilizedBodyIndex> onBodyB;
+	SimTK::Array_<SimTK::Vec3> stationPInGuest;
+	SimTK::Array_<SimTK::Vec3> stationPInHost;
+	SimTK::Array_<SimTK::Vec3> deltaStationP;
+	
 private:
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
@@ -518,6 +570,8 @@ private:
 	// Binding Site Data: Topologies, AtomIx
 	std::vector<int> topologyIXs;
 	std::vector<std::vector<int>> amberAtomIXs;
+
+
 
 };
 

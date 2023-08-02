@@ -387,7 +387,7 @@ void readAmberInput::readPointers(){
         tempDihedral_phase[ t5 - readAmberInput::AmberIndexDiff]);
     }
 
-    std::cout << "readAmberInput::readDihedrals " << nr << "\n" ;
+    /* std::cout << "readAmberInput::readDihedrals " << nr << "\n" ;
     for(int i = 0; i < DihedralsAtomsIndex.size(); i++){
 
       for(int j = 0; j < DihedralsAtomsIndex[i].size(); j++){
@@ -396,7 +396,7 @@ void readAmberInput::readPointers(){
     
       std::cout << DihedralsForceK[i] << " " << DihedralsPeriod[i] << " " << DihedralsPhase[i] << std::endl;
 
-    }
+    } */
 
   }
 
