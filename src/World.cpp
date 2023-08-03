@@ -410,15 +410,18 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 }
 
 
-
-
+//==============================================================================
+//                   TaskSpace Functions
+//==============================================================================
 
 /**
- * Add a task space
+ * Allocate memory for a task space consisting of a set of body indeces
+ * station on the bodies expresed in both guest (target) and host 
+ * and the difference between them
 */
 void World::addTaskSpaceLS(void)
 {
-	StationTaskLaurentiu stationTask;
+	//StationTaskLaurentiu stationTask;
 
 	int guestTopology = 1;
 	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
@@ -429,7 +432,7 @@ void World::addTaskSpaceLS(void)
 
 		if(topi == guestTopology){
 
-			// Atoms
+			// Guest atoms iteration
 			for (int bAtomIx : bAtomIxs_guest) {
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
@@ -451,8 +454,12 @@ void World::updateTaskSpace(const State& someState)
 {
 
 	int hostTopology = 0;
-	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+	int guestTopology = 1;
 
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+	// Get stations in host
 	int topi = -1;
 	for(auto& topology : (*topologies)){
 		topi++;
@@ -467,14 +474,13 @@ void World::updateTaskSpace(const State& someState)
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
-				stationPInHost[tz] = (~X_GB.R()) * topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				stationPInHost[tz] = (X_GB.R()) * B_aLoc;
 			}
 		}
 	}
 
-	int guestTopology = 1;
-	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
-
+	// Get stations in guest
 	topi = -1;
 	for(auto& topology : (*topologies)){
 		topi++;
@@ -490,13 +496,14 @@ void World::updateTaskSpace(const State& someState)
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
-				stationPInGuest[tz] = (~X_GB.R()) * topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				stationPInGuest[tz] = (X_GB.R()) * B_aLoc;
 
 			}
 		}
 	}	
 
-
+	// Get the difference between stations expressed in Ground
 	for(size_t tz = 0; tz < stationPInGuest.size(); tz++){
 		deltaStationP[tz] = stationPInGuest[tz] - stationPInHost[tz];
 	}
@@ -512,12 +519,11 @@ World::getTaskSpaceDeltaStationP(void)
 	return deltaStationP;
 }
 
-
 /**
  * Calc Station Jacobian JS
 */
 void World::calcStationJacobian(
-	const State&                               someState,
+	const State&                           someState,
 	SimTK::Matrix_<SimTK::Vec3>&                      JS) const
 {
 		matter->calcStationJacobian(someState, onBodyB, stationPInGuest, JS);
@@ -534,6 +540,9 @@ void World::calcStationJacobian(
 
 
 
+//=============================================================================
+//                   MEMBRANE Functions
+//=============================================================================
 
 
 /** Add a membrane represented by a contact surface **/
@@ -2233,7 +2242,7 @@ Topology& World::updTopology(std::size_t moleculeNumber){
 	return (*topologies)[moleculeNumber];
 }
 
-// TODO: optimize to get
+// DOESN'T WORK WITH OPENMM
 SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();

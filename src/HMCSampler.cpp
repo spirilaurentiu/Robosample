@@ -411,7 +411,6 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 
 }
 
-
 SimTK::Real HMCSampler::getMDStepsPerSampleStd() const
 {
 	return MDStepsPerSampleStd;
@@ -3313,21 +3312,18 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 	
 	}else if (integratorName == IntegratorName::BOUND_WALK){
 
-		// Hard-coded, need to be able to propagate from input
-		// but for the moment this will have to do.
+		/* Hard-coded, need to be able to propagate from input
+		but for the moment this will have to do.
 		
-		// These are integers, since you'd never *really* need a long list
-		// of bounders
-		//const vector<vector<int>> bounders{{0},{2}};
-		// These are strings, since you could  want all solvent
-		// molecules to be bound, so the "s" option is implemented
-		//const vector<vector<string>> boundeds{{"2"},{"s"}};
-		// These are strings, since you could want the 
-		//const vector<vector<string>> bounder_subset{{"74","88"},{"a"}};
-		//const vector<float> bound_radii;
-
-
-
+		These are integers, since you'd never *really* need a long list
+		of bounders
+		const vector<vector<int>> bounders{{0},{2}};
+		These are strings, since you could  want all solvent
+		molecules to be bound, so the "s" option is implemented
+		const vector<vector<string>> boundeds{{"2"},{"s"}};
+		These are strings, since you could want the 
+		const vector<vector<string>> bounder_subset{{"74","88"},{"a"}};
+		const vector<float> bound_radii; */
 
 		// Set velocities to zero
 		setVelocitiesToZero(someState);
@@ -3452,65 +3448,6 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
 		}
 
-		//system->realize(someState, SimTK::Stage::Dynamics);
-
-
-		/* // Water
-		for (int waterIx = 3; waterIx < nOfBodies; waterIx++){ 
-			const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
-				SimTK::MobilizedBodyIndex(waterIx) ); 
-			const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
-			const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
-			const Transform& X_FM_Water = mobod_W.getMobilizerTransform(someState);
-			const Transform& X_PF_Water = mobod_W.getInboardFrame(someState);
-
-			// Get distance between water and ligand
-					
-			const Vec3 WL = mobod_W.findStationLocationInAnotherBody(someState, COM_W, mobod_L);
-			std::cout << "COM_L: " << COM_G << " COM_GW: " << COM_GW << std::endl;
-			std::cout << "WL: " << WL << " WL_NORM: " << WL.norm() << std::endl;
-
-			// If water is too far from ligand reposition on a sphere centered on the 
-			// ligand center of mass
-			float waterSphere = 1;
-			if(WL.norm() > waterSphere){
-			//if (1){
-
-				std::cout << "Water (" << waterIx-1 << ") too far from ligand (" << WL.norm() << "), repositioning...\n";
-				SimTK::Vec3 BR={0,0,0};
-
-				// Sample a random vector centered in 0 and expressed in G
-				SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-				SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-				SimTK::Vec3 randVec={0,0,0};
-
-				randVec[0] = waterSphere * std::cos(theta) * std::sin(phi);
-				randVec[1] = waterSphere * std::sin(theta) * std::sin(phi);
-				randVec[2] = waterSphere * std::cos(phi);
-				//randVec *= uniformRealDistribution(randomEngine);
-
-				// Move it in BindingSiteCenter (BS)
-				SimTK::Vec3 GR;
-				//GR = randVec + (geometricCenter - X_PF.p());
-				GR = randVec + (COM_G_PostTP - X_PF_Water.p());
-
-				BR = mobod_W.expressGroundVectorInBodyFrame(someState, GR);
-				
-				// Account for COM_L
-				BR = BR - COM_W;
-
-				// Express BR in F
-				BR = X_FM_Water.R()*BR;
-				mobod_W.setQToFitTranslation(someState, BR);
-				system->realize(someState, SimTK::Stage::Position);
-				std::cout << "Water (" << waterIx-1
-				          <<") repositioned in " << mobod_W.expressVectorInGroundFrame(someState, BR) 
-						  << std::endl << std::endl;
-				system->realize(someState, SimTK::Stage::Dynamics);
-
-			}
-		}
- */
 		system->realize(someState, SimTK::Stage::Dynamics);
 		calcNewConfigurationAndEnergies(someState);
 
@@ -3678,15 +3615,48 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		SimTK::Matrix_<SimTK::Vec3> JS;
 		world->calcStationJacobian(someState, JS);
 
-		// Initialize velocities from Maxwell-Boltzmann distribution
-		initializeVelocities(someState);
-		//setVelocitiesToZero(someState);
+		SimTK::Vector taskForce;
+		//matter->multiplyByStationJacobianTranspose(someState,
+		//	world->onBodyB[0], world->stationPInGuest[0],
+		//	deltaStationP[0], taskForce);
+		std::cout << "state numU " << someState.getNU()
+			<< " fSize " << taskForce.size() << std::endl;
 
-		SimTK::Vector f;
-		matter->multiplyByStationJacobianTranspose(someState, world->onBodyB[0], world->stationPInGuest[0], deltaStationP[0], f);
+		// Topologies and target atoms
+		int hostTopology = 0;
+		int guestTopology = 1;
+		std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+		std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
 
-		SimTK::Vector givenU = SimTK::Vector(someState.getU().size());
-		someState.setU(10*f);
+		// Get stations in guest
+		int topi = -1;
+		for(auto& topology : (topologies)){ // topologies
+			topi++;
+			if(topi == guestTopology){
+				int tz = -1;
+				for (int bAtomIx : bAtomIxs_guest) { // atoms
+					tz++;
+
+					// Get body
+					SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+					SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+					SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+					// Get mobod X_GB, X_PF, X_FM and X_BM
+					const Transform& X_GB = mobod.getBodyTransform(someState);
+					const Transform& X_PF = mobod.getInboardFrame(someState);
+					const Transform& X_FM = mobod.getMobilizerTransform(someState);
+					const Transform& X_BM = mobod.getOutboardFrame(someState);
+
+					mobod.setOneU(someState, 0, deltaStationP[0][0]);
+					mobod.setOneU(someState, 1, deltaStationP[0][1]);
+					mobod.setOneU(someState, 2, deltaStationP[0][2]);
+
+
+				}
+			}
+		}
+
 		system->realize(someState, SimTK::Stage::Velocity);
 
 		// Store the proposed energies
@@ -3706,13 +3676,12 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 	}else if (integratorName == IntegratorName::EMPTY){
 
-/* 		// Alter Q in some way
-		if(this->sampleGenerator == 1){
-			
-		} */
+		calcNewConfigurationAndEnergies(someState);
 
 	}else{
 		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
+		calcNewConfigurationAndEnergies(someState);
+
 	}
 
 	return validateProposal();

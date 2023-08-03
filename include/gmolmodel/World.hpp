@@ -142,8 +142,14 @@ public:
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
 
+	//=========================================================================
+	//                   TaskSpace Functions
+	//=========================================================================
 
-	/** Add a task space */
+	/** Allocate memory for a task space consisting of a set of body indeces
+ 	* station on the bodies expresed in both guest (target) and host 
+ 	* and the difference between them
+	*/
 	void addTaskSpaceLS(void);
 
 	/** Update target task space */
@@ -157,7 +163,9 @@ public:
 	void calcStationJacobian(const State& someState,
         SimTK::Matrix_<SimTK::Vec3>& JS) const;
 
-
+	//=========================================================================
+	//                   MEMBRANE Functions
+	//=========================================================================
 
 	/** Add a membrane represented by a contact surface **/
 	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth,
@@ -322,7 +330,7 @@ public:
 	bool isUsingFixmanTorque() const;
 	//...............
 
-	// TODO: optimize to get
+	// DOESN'T WORK WITH OPENMM
 	SimTK::Real CalcFullPotentialEnergyIncludingRigidBodies(void);
 
 	// Calculate Fixman potential
