@@ -157,6 +157,14 @@ public:
 
 	/** Get delta stationP */
 	SimTK::Array_<SimTK::Vec3>& 
+	getTaskSpaceStationPInGuest(void);
+
+	/** Get delta stationP */
+	SimTK::Array_<SimTK::Vec3>& 
+	getTaskSpaceStationPInHost(void);
+
+	/** Get delta stationP */
+	SimTK::Array_<SimTK::Vec3>& 
 	getTaskSpaceDeltaStationP(void);
 
 	/** Calc station Jacobian */

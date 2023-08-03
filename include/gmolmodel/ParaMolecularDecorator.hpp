@@ -16,17 +16,19 @@ class ParaMolecularDecorator : public DecorationGenerator {
 public:
 	ParaMolecularDecorator(SimTK::CompoundSystem *argCompoundSystem,
 		SimTK::SimbodyMatterSubsystem *argMatter,
-		//Topology *argResidue, // RE
 		SimTK::DuMMForceFieldSubsystem *argDumm,
 		SimTK::GeneralForceSubsystem *argForces
 	);
 
 	void AddMolecule(Topology *argMolecule);
 
-
 	void loadPoint(const Vec3 point);
 
 	void loadLine(const Vec3 p1, const Vec3 p2);
+
+	void loadArrow(const Vec3 p1, const Vec3 p2);
+
+	void updateArrow(int which, const Vec3 p1, const Vec3 p2);
 
 	void clearPoints(void);
 
@@ -45,6 +47,14 @@ public:
 		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
 		int numOfDofs, SimTK::Real lineThickness
 	);
+
+	// Draw a line
+	void drawArrow(Array_<DecorativeGeometry>& geometry,
+		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
+		int numOfDofs, SimTK::Real lineThickness
+	);
+
+	void drawLoadedArrows(Array_<DecorativeGeometry>& geometry);
 
 	// Draw DuMM based geometry
 	void drawDummBasedGeometry(Array_<DecorativeGeometry>& geometry,
@@ -75,6 +85,7 @@ private:
 
 	Array_< Vec3 >  points;
 	Array_< std::pair< Vec3, Vec3 > > lines;
+	Array_< std::pair< Vec3, Vec3 > > arrows;
 
 	// Gmolmodel specific
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;

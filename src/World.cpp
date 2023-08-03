@@ -442,6 +442,10 @@ void World::addTaskSpaceLS(void)
 				stationPInHost.emplace_back(SimTK::Vec3());
 				deltaStationP.emplace_back(SimTK::Vec3());
 
+				if(this->visual == true){
+					paraMolecularDecorator->loadArrow(SimTK::Vec3(0), SimTK::Vec3(0));
+				}
+
 			}
 		}
 	}
@@ -475,7 +479,7 @@ void World::updateTaskSpace(const State& someState)
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
 				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
-				stationPInHost[tz] = (X_GB.R()) * B_aLoc;
+				stationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
 			}
 		}
 	}
@@ -497,17 +501,42 @@ void World::updateTaskSpace(const State& someState)
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
 				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
-				stationPInGuest[tz] = (X_GB.R()) * B_aLoc;
+				stationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
 
+				deltaStationP[tz] = stationPInHost[tz] - stationPInGuest[tz];
+
+				if(this->visual == true){
+					paraMolecularDecorator->updateArrow(tz, stationPInGuest[tz], stationPInGuest[tz] + deltaStationP[tz]);
+				}
 			}
 		}
 	}	
 
 	// Get the difference between stations expressed in Ground
 	for(size_t tz = 0; tz < stationPInGuest.size(); tz++){
-		deltaStationP[tz] = stationPInGuest[tz] - stationPInHost[tz];
+
+
+		
+
 	}
 
+}
+
+/**
+ * Get the difference between the station task and the target
+*/
+SimTK::Array_<SimTK::Vec3>& 
+World::getTaskSpaceStationPInGuest(void)
+{
+	return stationPInGuest;
+}
+/**
+ * Get the difference between the station task and the target
+*/
+SimTK::Array_<SimTK::Vec3>& 
+World::getTaskSpaceStationPInHost(void)
+{
+	return stationPInHost;
 }
 
 /**

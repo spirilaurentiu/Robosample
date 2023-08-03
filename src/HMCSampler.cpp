@@ -3604,7 +3604,6 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 	}else if(integratorName == IntegratorName::STATIONS_TASK){
 
 		std::cout << "STATIONS_TASK\n";
-
 		system->realize(someState, SimTK::Stage::Position);
 
 		// Update target space
@@ -3616,13 +3615,18 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		world->calcStationJacobian(someState, JS);
 
 		SimTK::Vector taskForce;
-		//matter->multiplyByStationJacobianTranspose(someState,
-		//	world->onBodyB[0], world->stationPInGuest[0],
-		//	deltaStationP[0], taskForce);
+		
+		matter->multiplyByStationJacobianTranspose(someState,
+			world->onBodyB[0], world->stationPInGuest[0],
+			deltaStationP[0], taskForce);
+		
 		std::cout << "state numU " << someState.getNU()
-			<< " fSize " << taskForce.size() << std::endl;
+			<< " tasForce " << -1.0 * taskForce
+			<< std::endl;
 
-		// Topologies and target atoms
+		someState.setU(-1 * taskForce);
+
+		/* // Topologies and target atoms
 		int hostTopology = 0;
 		int guestTopology = 1;
 		std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
@@ -3647,15 +3651,18 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 					const Transform& X_PF = mobod.getInboardFrame(someState);
 					const Transform& X_FM = mobod.getMobilizerTransform(someState);
 					const Transform& X_BM = mobod.getOutboardFrame(someState);
+					
+					const Transform& X_GF = X_GB * X_BM * (~X_FM);
+					SimTK::Vec3 G_S = deltaStationP[0];
+					SimTK::Vec3 F_S = (~X_GF) * G_S;
 
-					mobod.setOneU(someState, 0, deltaStationP[0][0]);
-					mobod.setOneU(someState, 1, deltaStationP[0][1]);
-					mobod.setOneU(someState, 2, deltaStationP[0][2]);
-
+					mobod.setOneU(someState, 0, F_S[0]);
+					mobod.setOneU(someState, 1, F_S[1]);
+					mobod.setOneU(someState, 2, F_S[2]);
 
 				}
 			}
-		}
+		} */
 
 		system->realize(someState, SimTK::Stage::Velocity);
 
