@@ -8,6 +8,7 @@
  */
 
 #include "Sampler.hpp"
+#include "TaskSpace.hpp"
 #include <thread>
 
 // Just to remove the long syntax requirement
@@ -73,13 +74,13 @@ friend class Context;
 public:
 
 	/** Constructor **/
-	HMCSampler(World *argWorld,
-		SimTK::CompoundSystem *argCompoundSystem,
-		SimTK::SimbodyMatterSubsystem *argMatter,
+	HMCSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
 		std::vector<Topology> &argTopologies, 
-		SimTK::DuMMForceFieldSubsystem *argDumm,
-		SimTK::GeneralForceSubsystem *argForces,
-		SimTK::TimeStepper *argTimeStepper);
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper);
 
 	/** Destructor **/
 	virtual ~HMCSampler();

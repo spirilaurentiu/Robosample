@@ -80,6 +80,9 @@
         "__split_buffer": "cpp",
         "cassert": "cpp",
         "hash_map": "cpp",
-        "cerrno": "cpp"
+        "cerrno": "cpp",
+        "shared_mutex": "cpp",
+        "cfloat": "cpp",
+        "climits": "cpp"
     }
 }

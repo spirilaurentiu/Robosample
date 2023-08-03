@@ -1505,6 +1505,11 @@ void World::addFixmanTorque()
 	FixmanTorqueForce = new Force::Custom(*forces, FixmanTorqueImpl);
 	FixmanTorqueExtImpl = new FixmanTorqueExt(compoundSystem.get(), *matter);
 	FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);
+
+	for (int i = 0; i < 10; i++) {
+		controller.push_back(std::make_unique<SimTK::ConformationalController>(*forces, *matter, SimTK::MobilizedBodyIndex(i), SimTK::Vec3(0,0,0)));
+		controlForce.push_back(std::make_unique<SimTK::Force::Custom>(*forces, controller.back().get()));
+	}
 }
 
 /** Check if the Fixman torque flag is set **/
@@ -1698,10 +1703,7 @@ BaseSampler * World::addSampler(SamplerName samplerName)
 {
 	// We only use HMCSampler for now
 	if(samplerName == SamplerName::HMC) {
-        	samplers.emplace_back(std::make_unique<HMCSampler>(this
-			, compoundSystem.get(), matter.get(), (*topologies)
-			, forceField.get(), forces.get()
-			, ts.get()));
+        	samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
 	} /*else if (samplerName == SamplerName::LAHMC) {
         samplers.emplace_back(std::make_unique<LAHMCSampler>(this
 		, compoundSystem.get(), matter.get(), topologies
@@ -1871,5 +1873,15 @@ void World::setCompoundSystem(CompoundSystem *inCompoundSystem) {
 	compoundSystem.reset(inCompoundSystem);
 }
 
+// void World::initializeTaskSpace(SimTK::CompoundSystem &compoundSystem, SimTK::GeneralForceSubsystem& force, SimTK::SimbodyMatterSubsystem& matter) {
+	
+
+// 	// compoundSystem.realizeTopology();
+// 	// compoundSystem.realize()
+// }
+
+// void World::getLocationsForTaskSpace() {
+
+// }
 
 

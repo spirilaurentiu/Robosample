@@ -37,28 +37,21 @@ Implementation of HMCSampler class. **/
 //                           CONSTRUCTOR
 //==============================================================================
 // Description.
-HMCSampler::HMCSampler(World* argWorld, SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper) :
+HMCSampler::HMCSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper) :
 		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 		//, MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
-	// Ensure Sampler prerequisites
-	assert(argCompoundSystem != nullptr);
-	assert(argMatter != nullptr);
-	assert(argDumm != nullptr);
-	assert(argForces != nullptr);
-	assert(argTimeStepper != nullptr);
-
-	this->system = &argMatter->getSystem();
-
+	this->system = &argMatter.getSystem(); // TODO do we need this? was already defined in sampler.hpp
 
 	//this->rootTopology = argResidue;
 
+	// TODO do not throw in constructors
 	if( !(topologies.size() > 0) ){
 		std::cerr << "HMCSampler: No topologies found. Exiting...";
 		throw std::exception();

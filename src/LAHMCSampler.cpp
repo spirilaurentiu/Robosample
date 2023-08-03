@@ -8,14 +8,13 @@ Implementation of LAHMCSampler class. **/
 #include "Topology.hpp"
 
 //** Constructor **/
-LAHMCSampler::LAHMCSampler(World *argWorld,
-    SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper,
+LAHMCSampler::LAHMCSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper,
     unsigned int Kext) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         //MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),

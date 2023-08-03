@@ -26,7 +26,7 @@ public:
 
     SimTK::Real calcPotentialEnergy(const SimTK::State& state) const override;
 
-    bool dependsOnlyOnPositions() const;
+    bool dependsOnlyOnPositions() const override;
 
     SimTK::Real getScaleFactor(void);
     void setScaleFactor(SimTK::Real);
@@ -61,7 +61,7 @@ public:
 
     SimTK::Real calcPotentialEnergy(const SimTK::State& state) const override;
 
-    bool dependsOnlyOnPositions() const;
+    bool dependsOnlyOnPositions() const override;
 
     SimTK::Real getScaleFactor(void);
     void setScaleFactor(SimTK::Real);

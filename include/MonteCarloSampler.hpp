@@ -20,14 +20,13 @@ class MonteCarloSampler : virtual public Sampler
 public:
 
     // Constructor
-    MonteCarloSampler(World *argWorld,
-        SimTK::CompoundSystem *argCompoundSystem,
-		SimTK::SimbodyMatterSubsystem *argMatter,
-		//SimTK::Compound *argResidue,
-		std::vector<Topology> &argTopologies,
-		SimTK::DuMMForceFieldSubsystem *argDumm,
-		SimTK::GeneralForceSubsystem *argForces,
-		SimTK::TimeStepper *argTimeStepper);
+    MonteCarloSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper);
 
     // Destructor
     virtual ~MonteCarloSampler();

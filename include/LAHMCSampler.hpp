@@ -33,14 +33,13 @@ friend class Context;
 public:
 
     /** Constructor **/
-    LAHMCSampler(World *argWorld,
-        SimTK::CompoundSystem *argCompoundSystem,
-		SimTK::SimbodyMatterSubsystem *argMatter,
-		//SimTK::Compound *argResidue,
-		std::vector<Topology> &argTopologies,
-		SimTK::DuMMForceFieldSubsystem *argDumm,
-		SimTK::GeneralForceSubsystem *argForces,
-		SimTK::TimeStepper *argTimeStepper,
+    LAHMCSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper,
       unsigned int Kext);
 
     /** Destructor **/

@@ -9,43 +9,33 @@ Implementation of Sampler class. **/
 
 // Constructor
 
-Sampler::Sampler(World *argWorld,
-	SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper) :
-		world(argWorld),
-		compoundSystem(argCompoundSystem),
-		matter(argMatter),
+Sampler::Sampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper) :
+		world(&argWorld),
+		compoundSystem(&argCompoundSystem),
+		matter(&argMatter),
 		topologies(argTopologies),
-		dumm(argDumm),
-		forces(argForces),
-		timeStepper(argTimeStepper),
+		dumm(&argDumm),
+		forces(&argForces),
+		timeStepper(&argTimeStepper),
 		thermostat(ThermostatName::NONE),
 		temperature(SimTK::Zero),
 		RT(SimTK::Zero),
 		beta(std::numeric_limits<SimTK::Real>::min()),
 		seed(std::numeric_limits<uint32_t>::min()),
 		nofSamples(std::numeric_limits<int>::min()),
-		acc(false)
+		acc(false),
+		system(&argMatter.getSystem()),
+		alwaysAccept(false)
 {
-	assert(argCompoundSystem != nullptr);
-	assert(argMatter != nullptr);
-	assert(argDumm != nullptr);
-	assert(argForces != nullptr);
-	assert(argTimeStepper != nullptr);
-
-	this->system = &argMatter->getSystem();
-
 	//this->rootTopology = argResidue;
 	assert(topologies.size() > 0);
-	this->rootTopology = &topologies[0];
-
-	//
-	this->alwaysAccept = false;
+	rootTopology = &topologies[0];
 
 	// Set total number of atoms and dofs
 	natoms = 0;

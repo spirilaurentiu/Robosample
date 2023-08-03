@@ -213,6 +213,13 @@ public:
 	/** Return own CompoundSystem **/
 	CompoundSystem *getCompoundSystem() const;
 
+	SimTK::GeneralForceSubsystem* getGeneralForceSubsystem() const {
+		return forces.get();
+	}
+	SimTK::SimbodyMatterSubsystem* getSimbodyMatterSubsystem() const {
+		return matter.get();
+	}
+
 	/** Set own Compound system **/
 	// TODO find a solution for the old one
 	void setCompoundSystem(CompoundSystem *compoundSystem);
@@ -379,7 +386,8 @@ public:
 	void printPossVels(const SimTK::Compound& c, SimTK::State& someState);
 	//...............
 
-
+	// void initializeTaskSpace(SimTK::CompoundSystem &compoundSystem, SimTK::GeneralForceSubsystem& force, SimTK::SimbodyMatterSubsystem& matter);
+	// void getLocationsForTaskSpace();
 
 public:
 
@@ -395,6 +403,9 @@ public:
 
 	/** Subsystem->ForceSubsystem->DuMMForceFieldSubsystem **/
 	std::unique_ptr<SimTK::DuMMForceFieldSubsystem> forceField;
+
+	std::vector<std::unique_ptr<SimTK::ConformationalController>> controller;
+	std::vector<std::unique_ptr<SimTK::Force::Custom>> controlForce;
 
 	/** Nof molecules **/
 	int moleculeCount;

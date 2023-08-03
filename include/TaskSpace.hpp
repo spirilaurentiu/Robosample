@@ -477,4 +477,233 @@ inline Vector operator+(const Vector& f, const TaskSpace::InertialForces& p)
     return f + p.value();
 }
 
+//==============================================================================
+//                             TASKS MEASURE
+//==============================================================================
+// This Measure is added to the modelRobot and is used to manage the tasks
+// it is supposed to achieve and to return as its value the control torques
+// that should be applied to the realRobot (that is, the simulated one).
+// This should only be instantiated with T=Vector.
+template <class T>
+class TasksMeasure : public Measure_<T> {
+public:
+    SimTK_MEASURE_HANDLE_PREAMBLE(TasksMeasure, Measure_<T>);
+
+    TasksMeasure(GeneralForceSubsystem& force, SimbodyMatterSubsystem& matter, MobilizedBodyIndex body, Vec3 station) 
+    :   Measure_<T>(force, 
+                    new Implementation(matter, body, station),
+                    AbstractMeasure::SetHandle()) {}
+
+    const Vec3& getTarget() const { return getImpl().m_desiredTaskPosInGround; }
+    Vec3& updTarget() { return updImpl().m_desiredTaskPosInGround; }
+    void setTarget(Vec3 pos) { updImpl().m_desiredTaskPosInGround = pos; }
+
+    void toggleGravityComp() {
+        updImpl().m_compensateForGravity = !isGravityCompensationOn();}
+    void togglePoseControl() {
+        updImpl().m_controlPose = !isPoseControlOn();}
+    void toggleTask() {updImpl().m_controlTask = !getImpl().m_controlTask;}
+    void toggleEndEffectorSensing() 
+    {   updImpl().m_endEffectorSensing = !getImpl().m_endEffectorSensing;}
+
+    bool isGravityCompensationOn() const 
+    {   return getImpl().m_compensateForGravity; }
+    bool isPoseControlOn() const 
+    {   return getImpl().m_controlPose; }
+    bool isEndEffectorSensingOn() const 
+    {   return getImpl().m_endEffectorSensing; }
+    bool isTaskPointFollowingOn() const
+    {   return getImpl().m_controlTask; }
+    const Vec3& getTaskPointInEndEffector() const 
+    {   return getImpl().m_taskPointInEndEffector; }
+
+    SimTK_MEASURE_HANDLE_POSTSCRIPT(TasksMeasure, Measure_<T>);
+};
+
+template <class T>
+class TasksMeasure<T>::Implementation : public Measure_<T>::Implementation {
+public:
+    Implementation(SimbodyMatterSubsystem& matter, MobilizedBodyIndex body, Vec3 station)
+    :   Measure_<T>::Implementation(T(), 1),
+        m_tspace1(matter),
+        m_matter(matter),
+        m_body(body),
+        m_endEffectorStation(station),
+        m_proportionalGain(225),
+        m_derivativeGain(30),
+        m_jointPositionGain(100),
+        m_jointDampingGain(20),
+        m_controlPose(true),
+        m_controlTask(false),
+        m_endEffectorSensing(false),
+        m_desiredTaskPosInGround(Vec3(0.4, -0.1, 1)) // Z is up
+    {       
+        //TODO: should have end effector body
+        m_tspace1.addStationTask(body, station);
+    }
+
+    // Implementations of virtual methods.
+    Implementation* cloneVirtual() const override
+    {   return new Implementation(*this); }
+    int getNumTimeDerivativesVirtual() const override {return 0;}
+    Stage getDependsOnStageVirtual(int order) const override
+    {   return Stage::Velocity; }
+
+    // This is the task space controller. It returns joint torques tau as the
+    // value of the enclosing Measure.
+    void calcCachedValueVirtual(const State& s, int derivOrder, T& tau) const override
+    {
+        SimTK_ASSERT1_ALWAYS(derivOrder==0,
+            "TasksMeasure::Implementation::calcCachedValueVirtual():"
+            " derivOrder %d seen but only 0 allowed.", derivOrder);
+
+        // Shorthands.
+        // -----------
+        const TaskSpace& p1 = m_tspace1;
+
+        const int mnq = s.getNQ();
+        const int mnu = s.getNU();
+        tau.resize(mnu);
+
+        const Real& kd = m_derivativeGain;
+        const Real& kp = m_proportionalGain;
+
+        // The desired task position is in Ground. We need instead to measure it
+        // from the real robot's pelvis origin so that we can translate it into the 
+        // model's pelvis-centric viewpoint.
+        const Transform& X_GP = Transform(); // m_modelRobot.getSampledPelvisPose(s); // this is origin
+        const Vec3 x1_des = ~X_GP*m_desiredTaskPosInGround; // measure in P
+
+        // Compute control law in task space (F*).
+        // ---------------------------------------
+        Vec3 xd_des(0);
+        Vec3 xdd_des(0);
+
+        const auto EE = m_matter.getMobilizedBody(m_body).findStationLocationInGround(s, m_endEffectorStation);
+
+        // Get the model's estimate of the end effector location in Ground, which
+        // is also the pelvis origin.
+        Vec3 x1, x1d;
+        p1.findStationLocationAndVelocityInGround(s, TaskSpace::StationTaskIndex(0), EE, x1, x1d);
+
+        // if (m_endEffectorSensing) {
+        //     // Since the controller model has the pelvis origin fixed at (0,0,0),
+        //     // we need to know the real robot's pelvis location so we can measure
+        //     // the real robot's end effector from its pelvis location. We don't
+        //     // have to modify x1d because we want the end effector stationary
+        //     // in Ground, not in the pelvis.
+        //     const Vec3& x1_G = m_modelRobot.getSampledEndEffectorPos(s);
+        //     x1 = ~X_GP*x1_G; // measure end effector in pelvis frame
+        // }
+
+        // Units of acceleration.
+        Vec3 Fstar1 = xdd_des + kd * (xd_des - x1d) + kp * (x1_des - x1);
+
+        // Compute task-space force that achieves the task-space control.
+        // F = Lambda Fstar + p
+        Vector F1 = p1.Lambda(s) * Fstar1 + p1.mu(s);
+
+        // Combine the reaching task with the gravity compensation and pose 
+        // control to a neutral q=0 pose with u=0 also.
+        const Vector& q = s.getQ();
+        const Vector& u = s.getU();
+        // const Real k = m_jointPositionGain;
+        // const Real c = m_jointDampingGain;
+        Vector Mu(mnu), Mq(mnu);
+        m_matter.multiplyByM(s, u, Mu);
+        m_matter.multiplyByM(s, q, Mq);
+
+        // tau.setToZero();
+        // const Real pFac = m_controlPose?1.:0.;
+        // if (m_controlTask) {
+        //     tau += p1.JT(s) * F1;
+        //     tau += p1.NT(s) * (gFac*p1.g(s) - pFac*k*Mq - c*Mu); // damping always
+        // } else {
+        //     tau += gFac*p1.g(s) - (pFac*k*Mq + c*Mu);
+        // }
+
+        // // Cut tau back to within effort limits.
+        // // TODO: can't use these limits with one-foot support!
+        // const Vector& effortLimits = m_modelRobot.getEffortLimits();
+        // for (int i=0; i < mnu; ++i) {
+        //     const Real oldtau = tau[i], effort = 10*effortLimits[i]; // cheating
+        //     if (std::abs(oldtau) <= effort) continue;
+        //     const Real newtau = clamp(-effort, oldtau, effort);
+        //     tau[i] = newtau;
+        // }
+
+    }
+
+    // TaskSpace objects require some State resources; this call is the time
+    // for doing that so forward on to the TaskSpace.
+    void realizeMeasureTopologyVirtual(State& modelState) const override {
+        m_tspace1.realizeTopology(modelState);
+    }
+private:
+friend class TasksMeasure<T>;
+
+    TaskSpace m_tspace1;
+    const SimbodyMatterSubsystem& m_matter;
+    MobilizedBodyIndex m_body;
+    Vec3 m_endEffectorStation;
+
+    const Real m_proportionalGain;     // task space
+    const Real m_derivativeGain;
+    const Real m_jointPositionGain;    // joint space
+    const Real m_jointDampingGain;
+
+    bool m_controlPose;
+    bool m_controlTask;
+    bool m_endEffectorSensing;
+    Vec3 m_desiredTaskPosInGround;
+};
+
+//==============================================================================
+//                    REACHING AND GRAVITY COMPENSATION
+//==============================================================================
+// This is a task-space controller that tries to move the end effector to 
+// a particular target location, and applies gravity compensation and some
+// joint damping as lower-priority tasks.
+//
+// The controller has its own internal Atlas model which in general does not
+// match the "real" Atlas perfectly. Each time it is asked to
+// generate control torques it reads the sensors on the real Atlas, updates
+// its internal model to match. It then generates torques that would be right
+// for the internal model, but returns them to be applied to the real Atlas.
+class ConformationalController : public Force::Custom::Implementation {
+public:
+    ConformationalController(GeneralForceSubsystem& force, SimbodyMatterSubsystem& matter, MobilizedBodyIndex body, Vec3 station);
+    const Vec3& getTarget() const {return m_modelTasks.getTarget();}
+    Vec3& updTarget() {return m_modelTasks.updTarget();}
+    void setTarget(Vec3 pos) {m_modelTasks.setTarget(pos);}
+
+    // void toggleGravityComp() {m_modelTasks.toggleGravityComp();}
+    // void togglePoseControl() {m_modelTasks.togglePoseControl();}
+    // void toggleTask() {m_modelTasks.toggleTask();}
+    // void toggleEndEffectorSensing() {m_modelTasks.toggleEndEffectorSensing();}
+
+    // bool isGravityCompensationOn() const 
+    // {   return m_modelTasks.isGravityCompensationOn(); }
+
+    // This method calculates the needed control torques and adds them into
+    // the given mobilityForces Vector which will be applied to the real Atlas.
+    // The supplied State is from the real Atlas and will be used to read its
+    // sensors.
+    void calcForce(const State&                realState,
+                   Vector_<SpatialVec>& bodyForces,
+                   Vector_<Vec3>&       particleForces,
+                   Vector&                     mobilityForces) const override;
+
+    // This controller does not contribute potential energy to the system.
+    Real calcPotentialEnergy(const State& state) const override;
+
+private:
+    TasksMeasure<Vector> m_modelTasks;
+    mutable State        m_modelState;   // Temporary: State for the model robot.
+
+    // Map from model robot coordinates to real robot coordinates.
+    Array_<int>          m_model2realQ;
+    Array_<int>          m_model2realU;
+};
+
 } // end namespace

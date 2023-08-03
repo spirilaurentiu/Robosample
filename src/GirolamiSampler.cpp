@@ -8,14 +8,13 @@ Implementation of GirolamiSampler class. **/
 #include "Topology.hpp"
 
 //** Constructor **/
-GirolamiSampler::GirolamiSampler(World *argWorld,
-    SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper) :
+GirolamiSampler::GirolamiSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         //MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         HMCSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)

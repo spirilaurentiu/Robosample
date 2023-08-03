@@ -8,14 +8,13 @@ Implementation of MonteCarloSampler class. **/
 #include "Topology.hpp"
 
 // Constructor
-MonteCarloSampler::MonteCarloSampler(World *argWorld,
-    SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper) :
+MonteCarloSampler::MonteCarloSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());

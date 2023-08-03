@@ -114,6 +114,12 @@ SET(LIBRARIES
     ${MATH_LIBRARY}
 )
 
+# set the precompiled headers
+set(OPENMM_PCH pch/openmm_pch.h)
+set(SIMBODY_PCH pch/simbody_pch.h)
+set(MOLMODEL_PCH pch/molmodel_pch.h)
+set(ROBOSAMPLE_PCH pch/robosample_pch.h)
+
 # get openmm source directories
 SET(OPENMM_INCLUDE_DIRS)
 SET(OPENMM_DIRS
@@ -238,8 +244,6 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
         ADD_CUSTOM_TARGET(OpenCLKernels DEPENDS ${OPENCL_KERNELS_CPP} ${OPENCL_KERNELS_H})
         SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} OpenCLKernels)
 
-        # message(STATUS "COMMAND ${CMAKE_COMMAND} -D KERNEL_SOURCE_DIR=${OPENCL_KERNEL_SOURCE_DIR} -D KERNELS_CPP=${OPENCL_KERNELS_CPP} -D KERNELS_H=${OPENCL_KERNELS_H} -D KERNEL_SOURCE_CLASS=${OPENCL_KERNEL_SOURCE_CLASS} -D KERNEL_FILE_EXTENSION=cl -P ${CMAKE_SOURCE_DIR}/openmm/cmake_modules/EncodeKernelFiles.cmake")
-
         SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
         SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src)
     ENDIF(OPENMM_PLATFORM MATCHES "OPENCL")
@@ -298,7 +302,7 @@ target_compile_definitions(${OPENMM_LIB_NAME}
 )
 set_target_properties(${OPENMM_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
 target_link_options(${OPENMM_LIB_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS}) # ${PGO_FLAGS}
-target_precompile_headers(${OPENMM_LIB_NAME} PRIVATE pch/openmm_pch.h)
+target_precompile_headers(${OPENMM_LIB_NAME} PRIVATE ${OPENMM_PCH})
 set_source_files_properties(${OPENMM_LIB_NAME} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 # this forces cmake to encode the kernels before compiling anything else
@@ -369,7 +373,7 @@ target_compile_definitions(${SIMBODY_LIB_NAME}
 )
 set_target_properties(${SIMBODY_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
 target_link_options(${SIMBODY_LIB_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS}) # ${PGO_FLAGS}
-target_precompile_headers(${SIMBODY_LIB_NAME} PRIVATE pch/simbody_pch.h)
+target_precompile_headers(${SIMBODY_LIB_NAME} PRIVATE ${SIMBODY_PCH})
 set_source_files_properties(${SIMBODY_SOURCE_C_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 # build molmodel
@@ -407,10 +411,10 @@ target_compile_definitions(${MOLMODEL_LIB_NAME}
 )
 set_target_properties(${MOLMODEL_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
 target_link_options(${MOLMODEL_LIB_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS}) # ${PGO_FLAGS}
-target_precompile_headers(${MOLMODEL_LIB_NAME} PRIVATE pch/molmodel_pch.h)
+target_precompile_headers(${MOLMODEL_LIB_NAME} PRIVATE ${MOLMODEL_PCH})
 set_source_files_properties(Molmodel/src/vmdsock.c PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
-# # build format
+# # build format - this does not have ipo or pch yet
 # FILE(GLOB FORMAT_SOURCE_FILES
 #     ${CMAKE_SOURCE_DIR}/format/src/*.c
 #     ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
@@ -445,7 +449,7 @@ target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE
     ${OPENMM_LIB_NAME}
 )
 set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_precompile_headers(${ROBOSAMPLE_LIB_NAME} PRIVATE pch/robosample_pch.h)
+target_precompile_headers(${ROBOSAMPLE_LIB_NAME} PRIVATE ${ROBOSAMPLE_PCH})
 target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS}) # ${PGO_FLAGS}
 
 # add the actual robosample executable

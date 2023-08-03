@@ -1576,6 +1576,14 @@ void Context::initializeSampler(std::size_t whichWorld,
 {
 	worlds[whichWorld].updSampler(whichSampler)->initialize(
 		worlds[whichWorld].integ->updAdvancedState());
+
+	// auto compoundSystem = worlds[whichWorld].getCompoundSystem();
+	// auto forces = worlds[whichWorld].getGeneralForceSubsystem();
+	// auto matter = worlds[whichWorld].getSimbodyMatterSubsystem();
+
+	// worlds[whichWorld].updSampler(whichSampler)->initializeTaskSpace(*compoundSystem, *forces, *matter);
+
+	// worlds[whichWorld].updSampler(whichSampler)->initializeTaskSpace(*worlds[whichWorld].getCompoundSystem(), *worlds[whichWorld].getGeneralForceSubsystem(), *worlds[whichWorld].getSimbodyMatterSubsystem());
 }
 
 // Amber like scale factors.
