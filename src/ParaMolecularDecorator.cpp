@@ -154,7 +154,7 @@ void ParaMolecularDecorator::drawLoadedArrows(Array_<DecorativeGeometry>& geomet
 		tip.setColor(SimTK::Vec3(1, 0, 0));
 		tip.setOpacity(0.5);
 		tip.setTransform(SimTK::Transform(SimTK::Rotation(), arrows[tz].second));
-		geometry.push_back(tip); */
+		geometry.push_back(tip); */ 
 	}
 
 }

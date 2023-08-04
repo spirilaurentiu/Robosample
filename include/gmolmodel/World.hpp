@@ -141,6 +141,12 @@ public:
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
+	//=========================================================================
+	//                   CONSTRAINTS
+	//=========================================================================
+
+	/** Add contact constraints to specific bodies **/
+	const SimTK::State& addConstraints(int prmtopIndex);
 
 	//=========================================================================
 	//                   TaskSpace Functions
@@ -170,6 +176,13 @@ public:
 	/** Calc station Jacobian */
 	void calcStationJacobian(const State& someState,
         SimTK::Matrix_<SimTK::Vec3>& JS) const;
+	
+	//=========================================================================
+	//                   CONTACTS Functions
+	//=========================================================================
+
+	/** Add contact surfaces to bodies **/
+	const SimTK::State& addContacts(int prmtopIndex);
 
 	//=========================================================================
 	//                   MEMBRANE Functions
@@ -179,11 +192,6 @@ public:
 	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth,
 		SimTK::Real zWidth, int resolution);
 
-	/** Add contact constraints to specific bodies **/
-	const SimTK::State& addConstraints(int prmtopIndex);
-
-	/** Add contact surfaces to bodies **/
-	const SimTK::State& addContacts(int prmtopIndex);
 
 	/** Realize Topology for this World **/
 	const SimTK::State& realizeTopology();

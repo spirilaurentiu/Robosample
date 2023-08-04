@@ -568,52 +568,9 @@ void World::calcStationJacobian(
 }
 
 
-
 //=============================================================================
-//                   MEMBRANE Functions
+//                   CONSTRAINTS
 //=============================================================================
-
-
-/** Add a membrane represented by a contact surface **/
-void World::addMembrane(
-	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
-{
-	SimTK::Real stiffness = 10000.0;
-	SimTK::Real dissipation = 0.0;
-	SimTK::Real staticFriction = 0.0;
-	SimTK::Real dynamicFriction = 0.0;
-	SimTK::Real viscousFriction = 0.0;
-
-	//ContactGeometry::HalfSpace contactGeometry;
-	//ContactGeometry::Sphere contactGeometry(1);
-
-	PolygonalMesh mesh = PolygonalMesh::createBrickMesh(
-		Vec3(xWidth, yWidth, zWidth), resolution);
-	ContactGeometry::TriangleMesh contactGeometry(mesh);
-
-	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
-		//Transform(),
-		ContactSurface(
-		contactGeometry,
-		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction),
-		1.0)
-	);
-
-	DecorativeFrame contactGeometryDecoFrame;
-	matter->Ground().updBody().addDecoration(
-		Transform(), contactGeometryDecoFrame
-	);
-
-	//DecorativeMesh contactGeometryDeco(mesh);
-	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
-	matter->Ground().updBody().addDecoration(
-		Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
-	);
-
-
-}
 
 /** Add contact constraints to specific bodies.
 TODO:use number of mobilities. TODO: Solve if **/
@@ -640,6 +597,10 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
 	return returnState;
 }
+
+//=============================================================================
+//                   CONTACTS Functions
+//=============================================================================
 
 
 /** Add contact surfaces to bodies **/
@@ -708,6 +669,53 @@ std::cout << "CONTACT INFO:"
 // CONTACT DEBUG enD
 /** Assign a scale factor for generalized velocities to every mobilized
 body **/
+
+
+//=============================================================================
+//                   MEMBRANE Functions
+//=============================================================================
+
+/** Add a membrane represented by a contact surface **/
+void World::addMembrane(
+	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
+{
+	SimTK::Real stiffness = 10000.0;
+	SimTK::Real dissipation = 0.0;
+	SimTK::Real staticFriction = 0.0;
+	SimTK::Real dynamicFriction = 0.0;
+	SimTK::Real viscousFriction = 0.0;
+
+	//ContactGeometry::HalfSpace contactGeometry;
+	//ContactGeometry::Sphere contactGeometry(1);
+
+	PolygonalMesh mesh = PolygonalMesh::createBrickMesh(
+		Vec3(xWidth, yWidth, zWidth), resolution);
+	ContactGeometry::TriangleMesh contactGeometry(mesh);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
+		//Transform(),
+		ContactSurface(
+		contactGeometry,
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction),
+		1.0)
+	);
+
+	DecorativeFrame contactGeometryDecoFrame;
+	matter->Ground().updBody().addDecoration(
+		Transform(), contactGeometryDecoFrame
+	);
+
+	//DecorativeMesh contactGeometryDeco(mesh);
+	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
+	matter->Ground().updBody().addDecoration(
+		Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
+	);
+
+
+}
+
 
 /** Realize Topology for this World **/
 const SimTK::State& World::realizeTopology()
