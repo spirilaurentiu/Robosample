@@ -119,6 +119,18 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
+
+//==============================================================================
+//                   CLASS TaskSpace
+//==============================================================================
+/**
+ *  Contains a Symbody task space and additional data
+ **/
+StationTaskLaurentiu::StationTaskLaurentiu(void)
+{
+
+}
+
 //==============================================================================
 //                             1. STRUCTURAL FUNCTIONS
 //==============================================================================
@@ -164,27 +176,27 @@ World::World(int worldIndex,
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
 	ts = std::make_unique<SimTK::TimeStepper>(*compoundSystem, *integ);
 
-	// // Set the visual flag and if true initialize a Decorations Subsystem,
-	// // a Visualizer and a Simbody EventReporter which interacts with the
-	// // Visualizer
-	// this->visual = isVisual;
-	// if(visual){
-	// 	decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
-	// 	visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
-	// 	visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
-	// 		*visualizer, std::abs(visualizerFrequency));
-	// 	compoundSystem->addEventReporter(visualizerReporter.get());
+	// Set the visual flag and if true initialize a Decorations Subsystem,
+	// a Visualizer and a Simbody EventReporter which interacts with the
+	// Visualizer
+	this->visual = isVisual;
+	if(visual){
+		decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
+		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
+		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
+			*visualizer, std::abs(visualizerFrequency));
+		compoundSystem->addEventReporter(visualizerReporter.get());
 
-	// 	// Initialize a DecorationGenerator
-	// 	paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
-	// 		compoundSystem.get(),
-	// 		matter.get(),
-	// 		forceField.get(),
-	// 		forces.get()
-	// 	);
+		// Initialize a DecorationGenerator
+		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
+			compoundSystem.get(),
+			matter.get(),
+			forceField.get(),
+			forces.get()
+		);
 
-	// 	visualizer->addDecorationGenerator(paraMolecularDecorator.get());
-	// }
+		visualizer->addDecorationGenerator(paraMolecularDecorator.get());
+	}
 
 	// Statistics
 	moleculeCount = -1;
@@ -342,12 +354,12 @@ void World::adoptTopology(int which)
 	//		SimTK::CompoundSystem::CompoundIndex(
 	//		 compoundSystem->getNumCompounds() - 1));
 
-	// // Add the Topology object to Decorators's vector of molecules
-	// if(visual){
-	// 	// We need copy here.
-	// 	//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
-	// 	paraMolecularDecorator->AddMolecule( &((*topologies)[which]) ); // DANGER
-	// }
+	// Add the Topology object to Decorators's vector of molecules
+	if(visual){
+		// We need copy here.
+		//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
+		paraMolecularDecorator->AddMolecule( &((*topologies)[which]) ); // DANGER
+	}
 
 }
 
@@ -396,6 +408,142 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// // Realize Topology
 	// compoundSystem->realizeTopology();
 }
+
+
+//==============================================================================
+//                   TaskSpace Functions
+//==============================================================================
+
+/**
+ * Allocate memory for a task space consisting of a set of body indeces
+ * station on the bodies expresed in both guest (target) and host 
+ * and the difference between them
+*/
+void World::addTaskSpaceLS(void)
+{
+	//StationTaskLaurentiu stationTask;
+
+	int guestTopology = 1;
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == guestTopology){
+
+			// Guest atoms iteration
+			for (int bAtomIx : bAtomIxs_guest) {
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+
+				onBodyB.emplace_back(mbx);
+				stationPInGuest.emplace_back(SimTK::Vec3());
+				stationPInHost.emplace_back(SimTK::Vec3());
+				deltaStationP.emplace_back(SimTK::Vec3());
+
+			}
+		}
+	}
+}
+
+/**
+ * Update target task space
+*/
+void World::updateTaskSpace(const State& someState)
+{
+
+	int hostTopology = 0;
+	int guestTopology = 1;
+
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+	// Get stations in host
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+		if(topi == hostTopology){
+
+			// Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_host) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				stationPInHost[tz] = (X_GB.R()) * B_aLoc;
+			}
+		}
+	}
+
+	// Get stations in guest
+	topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == guestTopology){
+
+			// Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_guest) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				stationPInGuest[tz] = (X_GB.R()) * B_aLoc;
+
+			}
+		}
+	}	
+
+	// Get the difference between stations expressed in Ground
+	for(size_t tz = 0; tz < stationPInGuest.size(); tz++){
+		deltaStationP[tz] = stationPInGuest[tz] - stationPInHost[tz];
+	}
+
+}
+
+/**
+ * Get the difference between the station task and the target
+*/
+SimTK::Array_<SimTK::Vec3>& 
+World::getTaskSpaceDeltaStationP(void)
+{
+	return deltaStationP;
+}
+
+/**
+ * Calc Station Jacobian JS
+*/
+void World::calcStationJacobian(
+	const State&                           someState,
+	SimTK::Matrix_<SimTK::Vec3>&                      JS) const
+{
+		matter->calcStationJacobian(someState, onBodyB, stationPInGuest, JS);
+
+		std::cout << "Task Bodies ";
+		std::cout << onBodyB << std::endl;
+		std::cout << "Task Stations ";
+		std::cout << stationPInGuest << std::endl;
+		std::cout << "Station Jacobian ";
+		std::cout << JS << std::endl;
+
+		//matter->calcBiasForStationJacobian(someState, onBodyB, stationPInB, JSDotu);
+}
+
+
+
+//=============================================================================
+//                   MEMBRANE Functions
+//=============================================================================
+
 
 /** Add a membrane represented by a contact surface **/
 void World::addMembrane(
@@ -637,7 +785,6 @@ void World::loadMobodsRelatedMaps()
 	}
 }
 
-
 // Allocate space for containers that keep statistics if we're doing any
 void World::allocateStatsContainers(void)
 {
@@ -650,8 +797,6 @@ void World::allocateStatsContainers(void)
 	// contain the bond length for the BendStretch joint
 	normX_BMp.resize(matter->getNumBodies() - 1);
 	normX_BMp_means.resize(matter->getNumBodies() - 1);
-
-
 }
 
 // Get the (potential) energy transfer
@@ -673,6 +818,36 @@ SimTK::Real World::getWorkOrHeat(void)
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
+				//std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
+		}
+		
+	}
+	
+	return retValue;
+
+}
+
+// Get the (potential) energy transfer in the form of work
+// If any of the Q, U or tau is actively modifyied by the sampler
+// the Jacobian of that transformation will be included too
+SimTK::Real World::getWork(void)
+{
+	// Accumulate in this variable
+	SimTK::Real retValue = 0.0;
+
+	// Get the energy transfer from all the samplers
+	for(auto& sampler : this->samplers){
+
+		if(sampler->getDistortOpt() < 0){
+
+		// Get the potential energy difference
+		retValue += 
+			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
+
+		// Get the Q modifying samplers Jacobians
+			retValue -= 
+				sampler->getDistortJacobianDetLog();
+				//std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
 		}
 		
 	}
@@ -712,12 +887,18 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
 
 		// Get BAT coordinate "angle"
+		/*
+		/ cos t
+		| 
+		|
+		\
+		*/
 		SimTK::Vec3 bondVector = X_BM.p();
 		acosX_PF00[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
-		/* // Print something for now
-		SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		// Print something for now
+		/* SimTK::Real bond = normX_BMp[int(mbx) - 1];
 		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
 		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
 		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
@@ -744,12 +925,14 @@ void World::traceBendStretch(SimTK::State& someState){
 		
 		// Get mobod inboard frame X_PF
 		const Transform& X_PF = mobod.getInboardFrame(someState);
+		//PrintTransform(X_PF, 4, "X_PF " + std::to_string(int(mbx)));
 
 		// Get mobod inboard frame X_FM measured and expressed in P
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
 
 		// Get mobod inboard frame X_BM
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		//PrintTransform(X_BM, 4, "X_BM " + std::to_string(int(mbx)));
 
 		// Get BAT coordinates B and A
 		SimTK::Vec3 bondVector = X_BM.p();
@@ -761,47 +944,298 @@ void World::traceBendStretch(SimTK::State& someState){
 }
 
 // Print X_PF means
-void World::PrintX_PFs(void)
+void World::PrintAcosX_PFs(void)
 {
 	int i = -1;
 	for(const auto &xpf : acosX_PF00 ){
 		i += 1;
-		std::cout << "X_PF " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		//std::cout << "X_PF " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		std::cout << "acosX_PF " << i << " " << xpf << std::endl;
+
 	}
 }
 
 // Print X_PF means
-void World::PrintX_BMs(void)
+void World::PrintNormX_BMs(void)
 {
 	int i = -1;
 	for(const auto &xbm : normX_BMp ){
 		i += 1;
-		std::cout << "X_BM " << i << " " << xbm << std::endl;
+		std::cout << "normX_BM " << i << " " << xbm << std::endl;
 	}
 }
 
 // Print X_PF means
-void World::PrintX_PFMeans(void)
+void World::PrintAcosX_PFMeans(void)
 {
 	int i = -1;
 	for(const auto &xpf : acosX_PF00_means ){
 		i += 1;
-		std::cout << "X_PFMean " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		//std::cout << "X_PFMean " << i << " " << xpf * (180 / SimTK::Pi) << std::endl;
+		std::cout << "acosX_PFMean " << i << " " << xpf << std::endl;
 	}
 }
 
 // Print X_PF means
-void World::PrintX_BMMeans(void)
+void World::PrintNormX_BMMeans(void)
 {
 	int i = -1;
 	for(const auto &xbm : normX_BMp_means ){
 		i += 1;
-		std::cout << "X_BMMean " << i << " " << xbm << std::endl;
+		std::cout << "normX_BMMean " << i << " " << xbm << std::endl;
 	}
 }
 
+// REORIENT
 
-// Update transforms means
+SimTK::Transform& World::getReorientTransformInAnotherBody(
+	const State &someState,
+	const MobilizedBody &inBodyA, const MobilizedBody &ofBodyB,
+	const SimTK::Transform &reorientAB,
+	SimTK::Transform& X_FMprim)
+{
+
+	SimTK::Transform X_MB = ~(ofBodyB.getOutboardFrame(someState));
+	SimTK::Transform X_FM = ofBodyB.getMobilizerTransform(someState);
+	SimTK::Transform X_AB = 
+		ofBodyB.findBodyTransformInAnotherBody(someState, inBodyA);
+
+	SimTK::Transform X_BBprim = (~X_AB) * reorientAB;
+	X_FMprim = X_FM * X_MB * X_BBprim * X_MB;
+
+	return X_FMprim;
+}
+
+//...............
+
+/**
+ * Set X_PF, X_BM means
+*/
+void World::setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
+const std::vector<SimTK::Real>& givenX_BM)
+{
+	// Update acosX_PF00 means
+	int i = -1;
+	for(auto &xpf : acosX_PF00_means ){
+		i += 1;
+		xpf = givenX_PF[i]; 
+	}
+	
+	// Update normX_BMp means
+	i = -1;
+	for(auto &xbm : normX_BMp_means ){
+		i += 1;
+		xbm = givenX_BM[i];
+	}
+
+}
+
+/**
+ * Set X_PF, X_BM means to initial values
+*/
+void World::setTransformsMeansToIni(void)
+{
+	const SimTK::State& defaultState = matter->getSystem().getDefaultState();
+
+	// Get generalized coordinates Q template values. These are the values that
+	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
+	// <(P_x, F_x) angle.
+
+	// Get bonds and angles values
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(defaultState);
+		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(defaultState);
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(defaultState);
+		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
+
+		SimTK::Vec3 bondVector = X_BM.p();
+		acosX_PF00[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
+		normX_BMp[int(mbx) - 1] = bondVector.norm();
+
+		// Print something for now
+		/* SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
+		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
+		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
+
+		std::cout 
+			<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
+			<< "bond " << int(mbx) - 1 << " " << bond << " "
+			<< "angleMean " << int(mbx) - 1 << " "
+			<< angleMean * (180 / SimTK::Pi) << " "
+			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
+			<< std::endl; */
+
+	}
+
+}
+
+/*
+ * Shift all the generalized coordinates
+ */
+void World::setTransformsMeansToCurrent(SimTK::State& someState)
+{
+	// Get generalized coordinates Q template values. These are the values that
+	// Q is extending. In the case of an AnglePin mobilizer, Q is extending an 
+	// <(P_x, F_x) angle.
+
+	// Get bonds and angles values
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+		//std::cout << "mobod " << mbx << " X_PM\n" << X_PF * X_FM * (~X_BM) << std::endl;
+
+		SimTK::Vec3 bondVector = X_BM.p();
+		acosX_PF00_means[int(mbx) - 1] = std::acos(X_PF.R()(0)(0));
+		normX_BMp_means[int(mbx) - 1] = bondVector.norm();
+
+		// Print something for now
+		/* SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
+		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
+		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
+
+		std::cout 
+			<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
+			<< "bond " << int(mbx) - 1 << " " << bond << " "
+			<< "angleMean " << int(mbx) - 1 << " "
+			<< angleMean * (180 / SimTK::Pi) << " "
+			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
+			<< std::endl; */
+
+	}
+
+}
+
+/**
+ * Set bonds values
+*/
+void World::setTransformsMeansToMin(readAmberInput &amberReader)
+{
+	const SimTK::State& defaultState = matter->getSystem().getDefaultState();
+
+	// Set bonds and angles values
+	for(int bondIndex = 0; bondIndex < amberReader.getNumberBonds(); bondIndex++){
+
+		int prm_a_1 = amberReader.getBondsAtomsIndex1(bondIndex);
+		int prm_a_2 = amberReader.getBondsAtomsIndex2(bondIndex);
+		
+		//std::cout << "setTransformsStatisticsToMin atomIxs " << a_1 << " " << a_2 << " ";
+
+		for (auto& topology : (*topologies)){
+
+			//bSpecificAtom * gAtom = topology.bAtomList[prm_a_1];
+			bool rinClosing = topology.bonds[bondIndex].isRingClosing();
+
+			SimTK::Compound::AtomIndex aIx_1 = topology.bAtomList[prm_a_1].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
+			const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
+			SimTK::Compound::AtomIndex aIx_2 = topology.bAtomList[prm_a_2].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
+			const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
+
+			const SimTK::MobilizedBodyIndex mbx = mbx_2;
+
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			const Transform& X_PF = mobod.getInboardFrame(defaultState);
+			const Transform& X_BM = mobod.getOutboardFrame(defaultState);
+
+			std::cout << "bond redundancy " << prm_a_1 << " " << prm_a_2 << " " 
+				<< int(mbx_1) << " " <<  int(mbx_2)  << std::endl;
+
+			if(rinClosing){
+				std::cout << "ring closing\n";
+			}
+			else if((int(mbx_2) == 1)){
+				normX_BMp_means[int(mbx) - 1] = X_BM.p().norm();
+				
+			}else{
+				normX_BMp_means[int(mbx) - 1] =
+					amberReader.getBondsEqval(bondIndex) / 10.0; // Ang to nano
+			}
+
+			//if(mobod.getNumQ(defaultState) == 2){}else{}
+			//std::cout << " mbx " << int(mbx) << " normX_BMMean[" << int(mbx) - 1 << "]= " << normX_BMp_means[int(mbx) - 1] << std::endl;
+
+		}
+	}	
+
+	// Set angles values
+	for(int angleIndex = 0; angleIndex < amberReader.getNumberAngles(); angleIndex++){
+
+		int prm_a_1 = amberReader.getAnglesAtomsIndex1(angleIndex);
+		int prm_a_2 = amberReader.getAnglesAtomsIndex2(angleIndex);
+		int prm_a_3 = amberReader.getAnglesAtomsIndex3(angleIndex);
+
+		for (auto& topology : (*topologies)){
+
+			SimTK::Compound::AtomIndex aIx_1 = topology.bAtomList[prm_a_1].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
+			const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
+			SimTK::Compound::AtomIndex aIx_2 = topology.bAtomList[prm_a_2].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
+			const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
+			SimTK::Compound::AtomIndex aIx_3 = topology.bAtomList[prm_a_3].getCompoundAtomIndex();
+			SimTK::DuMM::AtomIndex dAIx_3 = topology.getDuMMAtomIndex(aIx_3);
+			const SimTK::MobilizedBodyIndex mbx_3 = forceField->getAtomBody(dAIx_3);
+
+			const SimTK::MobilizedBodyIndex mbx = mbx_3;
+
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			const Transform& X_PF = mobod.getInboardFrame(defaultState);
+			const Transform& X_BM = mobod.getOutboardFrame(defaultState);
+
+			std::cout << "angle redundancy " << prm_a_1 << " " << prm_a_2 << " " << prm_a_3 << " "
+								<< int(mbx_1) << " " <<  int(mbx_2) << " " <<  int(mbx_3) << std::endl;
+
+			if( (int(mbx_3) == 1) ){
+				acosX_PF00_means[int(mbx) - 1] =
+					std::acos(X_PF.R()(0)(0));
+			}else{
+				acosX_PF00_means[int(mbx) - 1] =
+					amberReader.getAnglesEqval(angleIndex);
+			}
+				
+			//if(mobod.getNumQ(defaultState) == 2){}else{}
+
+		}
+	}	
+
+
+}
+
+/**
+ * Update X_PF, X_BM means
+*/
 void World::updateTransformsMeans(SimTK::State& someState)
 {
 	int nofSamples = getNofSamples() + 1;
@@ -828,7 +1262,8 @@ void World::updateTransformsMeans(SimTK::State& someState)
 			N_1overN = N_1 / nofSamples;
 			NInv = 1.0 / nofSamples;
 		}
-		//std::cout << "updateX_PFMeans check " << " " <<  N_1overN << " " <<  NInv  << " " << std::flush;
+		//std::cout << "updateX_PFMeans check " << " "
+		//	<<  N_1overN << " " <<  NInv  << " " << std::flush;
 
 		// Update acosX_PF00 means
 		int i = -1;
@@ -848,26 +1283,6 @@ void World::updateTransformsMeans(SimTK::State& someState)
 }
 
 // Get X_PF means
-void World::setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
-const std::vector<SimTK::Real>& givenX_BM)
-{
-	// Update acosX_PF00 means
-	int i = -1;
-	for(auto &xpf : acosX_PF00_means ){
-		i += 1;
-		xpf = givenX_PF[i]; 
-	}
-	
-	// Update normX_BMp means
-	i = -1;
-	for(auto &xbm : normX_BMp_means ){
-		i += 1;
-		xbm = givenX_BM[i];
-	}
-
-}
-
-// Get X_PF means
 std::vector<SimTK::Real>& World::getX_PFMeans(void)
 {
 	return acosX_PF00_means;
@@ -879,13 +1294,33 @@ std::vector<SimTK::Real>& World::getX_BMMeans(void)
 	return normX_BMp_means;
 }
 
+/**
+ * Calculate bond length and angle deviations from their means
+*/ 
+void World::calcBendStretchDeviations(SimTK::State& someState,
+	std::vector<SimTK::Real>& X_PFdiffs,
+	std::vector<SimTK::Real>& X_BMdiffs
+)
+{
+	// Make sure it has 
+	X_PFdiffs.resize(this->acosX_PF00_means.size(), 0.0);
+	X_BMdiffs.resize(this->normX_BMp_means.size(), 0.0);
+
+	// 
+	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
+		X_PFdiffs[k] = this->acosX_PF00[k] - this->acosX_PF00_means[k];
+	}
+	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
+		X_BMdiffs[k] = this->normX_BMp[k] - this->normX_BMp_means[k];
+	}
+
+}
+
 // Get the number of molecules
 int World::getNofMolecules() const
 {
 	return (this->moleculeCount + 1);
 }
-
-
 
 /** Get MobilizedBody to AtomIndex map **/
 std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
@@ -930,6 +1365,87 @@ SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::At
 //                             2. Inter-world functions.
 //==============================================================================
 // Pass configurations between Worlds
+
+
+// RANDOM_WALK functions
+void World::setTopologyIXs(std::vector<int> argTopologyIXs){
+	topologyIXs = argTopologyIXs;
+}
+
+void World::setAmberAtomIXs(std::vector<std::vector<int>> argAmberAtomIXs){
+	amberAtomIXs = argAmberAtomIXs;
+}
+
+SimTK::Vec3 
+World::getGeometricCenterOfSelection(const SimTK::State & state 
+									 //const std::vector<int>& topologyIx, 
+									 //const std::vector<std::vector<int>>& amberAtomList
+									 )
+{
+
+	// return Vec3
+	SimTK::Vec3 geometricCenter={0,0,0};
+	// We could just divide by the size of amberAtomList
+	// but this works even if the user *mistakenly* repeats
+	// indices
+	int nOfPoints=0;
+
+
+	// Just a quick check, to skip unnecessary computation in case of 
+	// user error.
+	if (amberAtomIXs.size() == 0) {
+		std::cerr << "Warning: getGeometricCenterOfSelection called with amberAtomList of size 0" << std::endl;
+		return geometricCenter;
+	}
+	
+	std::cout << "topologies atoms size " << topologyIXs.size() << " " << topologyIXs.size() << std::endl;
+
+	for (int i = 0; i < topologyIXs.size(); i++) {
+		const auto& topology = (*topologies)[topologyIXs[i]];
+		const auto& atoms = amberAtomIXs[i];
+
+		int amberIx=0;
+
+		// Iterate through atoms in said topology and check 	
+		// if they are in the list
+		for (auto& atom : topology.bAtomList) {
+			if (std::find(atoms.begin(), atoms.end(), amberIx) != atoms.end()){
+				// found
+				// Get Compound atom index
+				auto compoundAtomIndex = atom.getCompoundAtomIndex();
+				// Get DuMM atom index
+				const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
+				// Get Mobilized Body index
+				const MobilizedBodyIndex mobilizedBodyIndex = forceField->getAtomBody(dAIx);
+				// Get DuMM Atom Station on its body.
+				const Vec3 dAS_B = forceField->getAtomStationOnBody(dAIx);
+				// Re-Express in G
+				const SimTK::MobilizedBody& mobod_A = matter->getMobilizedBody(mobilizedBodyIndex);
+				const SimTK::Vec3 dAS_G = mobod_A.findStationLocationInGround(state, dAS_B);
+				/* const Transform& X_GP = mobod_A.getBodyTransform(state);
+				const SimTK::Vec3 dAS_G = X_GP*dAS_B; */
+				geometricCenter += dAS_G;
+				nOfPoints += 1;
+
+/* 				std::cout << "amberIx: " << amberIx << " dAIx: " << dAIx
+				<< " MobilizedBodyIndex: " << mobilizedBodyIndex 
+				<< " dAS_G: " << dAS_G << " nOfPoints: " << nOfPoints
+				<< std::endl; */
+			}
+			
+			amberIx += 1;
+		}
+	}
+
+	// This can probably be done better, but is it clearer?
+	for(int i=0;i<3;++i)
+		geometricCenter[i] = geometricCenter[i] / nOfPoints;
+	std::cout << "geometricCenter : " << geometricCenter << std::endl;
+
+	return geometricCenter;
+
+}
+
 /** Get the current Compound Cartesian coords.
 * Return a 2D vector representing all the coordinates of this World.
  * The first dimension represents the molecules (topologies) and the second
@@ -938,6 +1454,7 @@ SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::At
  * contains all the information in bSpecificAtom as well. The bottleneck here
  * is the calcAtomLocationInGroundFrame from Compound.
  **/
+
 
 std::vector< std::vector<
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
@@ -1112,10 +1629,10 @@ SimTK::State& World::setAtomsLocationsInGround(
 	// Loop through molecules/topologies
 	for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++) {
 
-		// // Set the decorator
-		// if (visual == true) {
-		// 	paraMolecularDecorator->setAtomTargets(otherWorldsAtomsLocations[i]);
-		// }
+		// Set the decorator
+		if (visual == true) {
+			paraMolecularDecorator->setAtomTargets(otherWorldsAtomsLocations[i]);
+		}
 
 		/////////////////
 		// 1. COMPOUND
@@ -1310,11 +1827,11 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 						//std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
 
-						std::vector<SimTK::Transform> mobodTs = // DANGER
-							calcMobodToMobodTransforms( // DANGER
-								(*topologies)[i],	// DANGER
-								aIx,		// DANGER
-								someState);	// DANGER
+						std::vector<SimTK::Transform> mobodTs = 
+							calcMobodToMobodTransforms( 
+								(*topologies)[i],	
+								aIx,		
+								someState);
 
 						//std::cout << "calcMobodTransforms for atom " << aIx << " done\n" << std::flush;
 
@@ -1458,12 +1975,11 @@ World::calcMobodToMobodTransforms(
 		|| (mobility == SimTK::BondMobility::Mobility::BendStretch);
 
 	if( (pinORslider) && ((atom->neighbors).size() == 1)){
-
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
 	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
-
-		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
+		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
+		//return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
@@ -1506,10 +2022,10 @@ void World::addFixmanTorque()
 	FixmanTorqueExtImpl = new FixmanTorqueExt(compoundSystem.get(), *matter);
 	FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);
 
-	for (int i = 0; i < 10; i++) {
-		controller.push_back(std::make_unique<SimTK::ConformationalController>(*forces, *matter, SimTK::MobilizedBodyIndex(i), SimTK::Vec3(0,0,0)));
-		controlForce.push_back(std::make_unique<SimTK::Force::Custom>(*forces, controller.back().get()));
-	}
+	// for (int i = 0; i < 10; i++) {
+	// 	controller.push_back(std::make_unique<SimTK::ConformationalController>(*forces, *matter, SimTK::MobilizedBodyIndex(i), SimTK::Vec3(0,0,0)));
+	// 	controlForce.push_back(std::make_unique<SimTK::Force::Custom>(*forces, controller.back().get()));
+	// }
 }
 
 /** Check if the Fixman torque flag is set **/
@@ -1739,14 +2255,14 @@ Topology& World::updTopology(std::size_t moleculeNumber){
 	return (*topologies)[moleculeNumber];
 }
 
-// TODO: optimize to get
+// DOESN'T WORK WITH OPENMM
 SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
 
 	// Set old potential energy of the new world via OpenMM
-	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);// DOESN'T WORK WITH OPENMM
 }
 
 // Calculate Fixman potential
@@ -1773,7 +2289,7 @@ bool World::generateProposal(void)
 		currentAdvancedState);
 	//auto OldPE =
 	//	forceField->CalcFullPotEnergyIncludingRigidBodies(
-	//	currentAdvancedState);
+	//	currentAdvancedState);// DOESN'T WORK WITH OPENMM
 
 	// Set sampler's old potential energy 
 	pHMC(updSampler(0))->setOldPE(OldPE); */

@@ -58,6 +58,8 @@ Sampler::Sampler(World &argWorld,
 Sampler::~Sampler() {
 }
 
+// Random numbers
+
 // Get set the seed
 int64_t Sampler::getSeed() const
 {

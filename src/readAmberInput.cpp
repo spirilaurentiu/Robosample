@@ -387,8 +387,8 @@ void readAmberInput::readPointers(){
         tempDihedral_phase[ t5 - readAmberInput::AmberIndexDiff]);
     }
 
-    // std::cout << "readAmberInput::readDihedrals " << nr << "\n" ;
-    // for(int i = 0; i < DihedralsAtomsIndex.size(); i++){
+    /* std::cout << "readAmberInput::readDihedrals " << nr << "\n" ;
+    for(int i = 0; i < DihedralsAtomsIndex.size(); i++){
 
     //   for(int j = 0; j < DihedralsAtomsIndex[i].size(); j++){
     //     std::cout << DihedralsAtomsIndex[i][j] << " ";
@@ -396,7 +396,7 @@ void readAmberInput::readPointers(){
     
     //   std::cout << DihedralsForceK[i] << " " << DihedralsPeriod[i] << " " << DihedralsPhase[i] << std::endl;
 
-    // }
+    } */
 
   }
 
@@ -717,14 +717,14 @@ void readAmberInput::GeneratePairStartAndLen()
 
       }
 
-
-      // std::cout << "GeneratePairStartAndLen " 
-      //   << " " << DihedralsAtomsIndex[idx][0] << " " << DihedralsAtomsIndex[idx][1]
-      //   << " " << DihedralsAtomsIndex[idx][2] << " " << DihedralsAtomsIndex[idx][3]
-      //   << " || " << PairStartAndLen[ PairStartAndLen.size() - 1 ].first
-      //   << " " << PairStartAndLen[ PairStartAndLen.size() - 1 ].second
-      //   << std::endl << std::flush;
-
+/*
+      std::cout << "GeneratePairStartAndLen " 
+        << " " << DihedralsAtomsIndex[idx][0] << " " << DihedralsAtomsIndex[idx][1]
+        << " " << DihedralsAtomsIndex[idx][2] << " " << DihedralsAtomsIndex[idx][3]
+        << " || " << PairStartAndLen[ PairStartAndLen.size() - 1 ].first
+        << " " << PairStartAndLen[ PairStartAndLen.size() - 1 ].second
+        << std::endl << std::flush;
+*/
       idx++;
 
     }

@@ -30,7 +30,7 @@ bool LoadInputIntoSetupReader(int argc, char **argv,
 	std::cout << "Reading input...\n" ;
 
 	std::string helpString =
-		"Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
+		"Usage: Robosample [options]\n Options:\n  -h, --help for help\nUsage: Robosample file\n";
 
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
@@ -272,7 +272,6 @@ int main(int argc, char **argv)
 	// and loads maps of indexes
 	context.model(finalNofMols, setupReader);
 
-
 	// Allocate space for containers that keep statistics if we're doing any
 	context.allocWorldsStatsContainers();
 
@@ -304,6 +303,46 @@ int main(int argc, char **argv)
 	//////////////////////
 	// Thermodynamics
 	//////////////////////
+
+	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
+		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
+		setupReader.get("SPHERE_RADIUS")[0] != "ERROR_KEY_NOT_FOUND") {
+		// Set binding site TopologyIx, AtomIx and Sphere Radius
+
+		// Generate Amber-style Atom Lists
+		std::vector<std::vector<int>> amberAtomIXs;
+		amberAtomIXs.push_back({});
+		int cur_topology = 0;
+
+		for (const auto& value : setupReader.get("BINDINGSITE_ATOMS")) {
+			if (value == ",") {
+				amberAtomIXs.push_back({});
+				cur_topology++;
+			}
+			else {
+				amberAtomIXs[cur_topology].push_back(std::stoi(value));
+			}
+		}
+
+		std::vector<int> topologyIXs;
+		for (const auto& value : setupReader.get("BINDINGSITE_MOLECULES")) {
+			topologyIXs.push_back(std::stoi(value));
+		}
+
+
+
+		float sphere_radius = std::stod(setupReader.get("SPHERE_RADIUS")[0]);
+
+		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
+
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+			context.getWorld(worldIx)->setTopologyIXs(topologyIXs);
+			context.getWorld(worldIx)->setAmberAtomIXs(amberAtomIXs);
+			HMCSampler* sampler_p = pHMC(context.updWorld(worldIx)->updSampler(0));
+			sampler_p->setSphereRadius(sphere_radius);
+		}
+	}
+
 	// Set thermostats to the samplers
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 
@@ -492,6 +531,10 @@ int main(int argc, char **argv)
 
 	// Load/store Mobilized bodies joint types in samplers
 	context.loadMbxsToMobilities();
+
+
+	// Setup task spaces
+	context.addTaskSpacesLS();
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];

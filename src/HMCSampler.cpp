@@ -102,6 +102,9 @@ HMCSampler::HMCSampler(World &argWorld,
 	this->sqrtBoostRT = 0.0;
 	this->boostBeta = 0.0;
 
+	// For RANDOM_WALK Docking Simulations
+	this->sphereRadius=0.0;
+
 	MDStepsPerSample = 0;
 	proposeExceptionCaught = false;
 	shouldAdaptTimestep = false;
@@ -151,6 +154,56 @@ HMCSampler::~HMCSampler()
 {
 }
 
+/** ===============================
+ * RANDOM NUMBERS
+    =============================== */
+
+/** Generate a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionRandTrunc(
+	SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real r = uniformRealDistribution(randomEngine);
+	
+	return r * (R - L) + L;
+}
+
+/** Get the PDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionPDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real pdf = SimTK::NaN;
+	
+	if ((X >= L) && (X <= R)){
+		pdf = 1.0 / (R - L);
+	}
+
+	return pdf;
+}
+
+/** Get the CDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionCDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real cdf = SimTK::NaN;
+	
+	if (X < L){
+		cdf = 0.0;
+	}
+	else if(X > R){
+		cdf = 1.0;
+	}else{
+		cdf = (X - L) / (R - L);
+	}
+
+	return cdf;
+}
+
 /** Seed the random number generator. Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
@@ -172,8 +225,9 @@ void HMCSampler::initialize(SimTK::State& someState)
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Set old potential energy
-	this->pe_o = this->pe_set = forces->getMultibodySystem().calcPotentialEnergy(
-		someState);
+	this->pe_o = this->pe_set = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
+	std::cout << "HMCSampler::initialize pe_o " << pe_o << std::endl;
 
 	// Store the configuration
 	for (SimTK::MobilizedBodyIndex mbx(1);
@@ -274,18 +328,18 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Set old potential energy
-	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(
-		someState);
+	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
+	std::cout << "HMCSampler::reinitialize pe_o " << pe_o << std::endl;
+
 
 	// Store the configuration
 	int i = 0;
 	for (SimTK::MobilizedBodyIndex mbx(1);
-	mbx < matter->getNumBodies();
-	++mbx){
+		mbx < matter->getNumBodies();
+		++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SetTVector[i] 
-			//= TVector[i] 
-			= mobod.getMobilizerTransform(someState);
+		SetTVector[i] = mobod.getMobilizerTransform(someState); //= TVector[i]
 		i++;
 	}
 
@@ -356,7 +410,6 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 
 }
 
-
 SimTK::Real HMCSampler::getMDStepsPerSampleStd() const
 {
 	return MDStepsPerSampleStd;
@@ -398,9 +451,13 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 	}else if (integratorNameArg == "VV"){
 		integratorName = IntegratorName::VERLET;
 
-	}else if (integratorNameArg == "RANDOM_WALK"){
-		integratorName = IntegratorName::RANDOM_WALK;
-
+	}else if (integratorNameArg == "BOUND_WALK"){
+		integratorName = IntegratorName::BOUND_WALK;
+	
+	}else if (integratorNameArg == "BOUND_HMC"){
+		integratorName = IntegratorName::BOUND_HMC;
+	}else if(integratorNameArg == "STATIONS_TASK"){
+		integratorName = IntegratorName::STATIONS_TASK;
 	}else{
 		integratorName = IntegratorName::EMPTY;
 
@@ -811,9 +868,9 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		}
 		bcorr /= this->beta;
 
-		std::cout << "Keval terms bXMX muMmu bmuMX LSE(bmuMX) = "
+		/* std::cout << "Keval terms bXMX muMmu bmuMX LSE(bmuMX) = "
 			<< 0.5*bXMX << " " // << 0.5*bmuMmu << " "
-			<< bmuMX << " " << bcorr << std::endl;
+			<< bmuMX << " " << bcorr << std::endl; */
 
 		ke_prop_nma6 = // (-1.0 * RT * std::log(0.5))
 			+ (0.5*bXMX) // + (0.5* bmuMmu)
@@ -866,7 +923,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		ke_prop_nma6 = -1.0 * RT * std::log(0.5 * (leftExp + rightExp));
 		// */
 
-		std::cout << "ke_prop_nma6 " << ke_prop_nma6 << "\n";
+		//std::cout << "ke_prop_nma6 " << ke_prop_nma6 << "\n";
 
 
 
@@ -985,6 +1042,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 
 			SimTK::Real KE = matter->calcKineticEnergy(someState);
 			SimTK::Real PE = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			//SimTK::Real PE = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
 			std::cout << "KE PE " << KE << " " << PE << std::endl;
 
 			//// Calculate generalized quantities
@@ -1428,14 +1486,13 @@ ThermostatName HMCSampler::getThermostat(void) const{
 // FIMAN POTENTIAL RELATED
 ////////////////////////////////////
 
-
 // Get the potential energy from an external source as far as the sampler
 // is concerned - OPENMM has to be inserted here
 SimTK::Real HMCSampler::getPEFromEvaluator(const SimTK::State& someState) const{
 		return forces->getMultibodySystem().calcPotentialEnergy(someState);
 	// Eliza's potential energy's calculations including rigid bodies
 	// internal energy
-	//return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+	//return dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
 
 }
 
@@ -2282,7 +2339,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 
 	// Get new potential energy
 	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);
+	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
 	// TODO: replace with the following after checking is the same thing
 	//pe_n = compoundSystem->calcPotentialEnergy(someState);
 
@@ -2391,7 +2448,7 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 			+ (0.5*bXMX) // + (0.5* bmuMmu)
 			- bcorr;
 
-		std::cout << "ke_n_nma6 " << ke_n_nma6 << "\n";
+		//std::cout << "ke_n_nma6 " << ke_n_nma6 << "\n";
 
 }
 
@@ -2618,8 +2675,10 @@ void HMCSampler::setQToScaleBendStretch(SimTK::State& someState,
 }
 
 
-// Calculate bond length and angle deviations from their means
-void HMCSampler::calcBendStretchDeviations(
+/**
+ * Calculate bond length and angle deviations from their means
+*/ 
+/* void HMCSampler::calcBendStretchDeviations(
 	SimTK::State& someState,
 	std::vector<SimTK::Real>& X_PFdiffs,
 	std::vector<SimTK::Real>& X_BMdiffs
@@ -2638,7 +2697,7 @@ void HMCSampler::calcBendStretchDeviations(
 		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
 	}
 
-}
+} */
 
 /*
  * Shift all the generalized coordinates to scale bonds and angles
@@ -2660,7 +2719,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	// 1. Get the deviations from their means
 	std::vector<SimTK::Real> X_PFdiffs;
 	std::vector<SimTK::Real> X_BMdiffs;
-	calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
+	world->calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
 
 	// Scale the differences with QScale. -1 is only here because Q is always 0
 	int k = -1;
@@ -2715,41 +2774,58 @@ std::vector<SimTK::Real>& scaleFactors)
 	std::cout << "shifted Q = " << someState.getQ() << std::endl;
 }
 
-/*
+/**
  * Shift all the generalized coordinates to scale bonds and angles
  * standard deviations through BendStretch joint
- */
+*/
 void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
-
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
 
-	// Prepare scaling factors for return
+	//world->traceBendStretch(someState);
+	//world->PrintAcosX_PFs();
+	//world->PrintNormX_BMs();
+	//world->PrintAcosX_PFMeans();
+	//world->PrintNormX_BMMeans();
+
+	// Resize scaling factors
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
 		1.0);
 		
 	// 1. Get the deviations from their means
-	std::vector<SimTK::Real> X_PFdiffs;
-	std::vector<SimTK::Real> X_BMdiffs;
-	calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
+	std::vector<SimTK::Real> Q_of_X_PFdiffs;
+	std::vector<SimTK::Real> Q_of_X_BMdiffs;
+	world->calcBendStretchDeviations(someState, Q_of_X_PFdiffs, Q_of_X_BMdiffs);
 
-	// Scale the differences with QScale. -1 is only here because Q is always 0
+	// Scale differences with QScale-1. (Solve s(X-miu) + miu = Q + X)
 	int k = -1;
-	for(auto& diff : X_PFdiffs){
-		diff *= QScaleFactor - 1.0;
-		//std::cout << "diff= " << diff << std::endl;
+	for(auto& diff : Q_of_X_PFdiffs){
+		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
+		
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
+		
+		if(world->visual){
+			world->paraMolecularDecorator->updFCommVars(diff);
+		}
 	}
-	for(auto& diff : X_BMdiffs){
-		diff *= QScaleFactor - 1.0;
-		//std::cout << "diff= " << diff << std::endl;
+	for(auto& diff : Q_of_X_BMdiffs){
+		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
+		
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
+		
+		if(world->visual){
+			world->paraMolecularDecorator->updBCommVars(diff);
+		}
 	}
 
-	// Ground and first mobod don't have internal coordinates
-	int mbxOffset = 2;
-	int sfIxOffset = world->normX_BMp.size();
+	// Now set Qs to the scaled differences
+	int mbxOffset = 2; // no internal coordinates for Ground and first mobod 
+	int sfIxOffset = world->normX_BMp.size(); 
 
 	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
 		mbx < matter->getNumBodies();
@@ -2758,54 +2834,54 @@ std::vector<SimTK::Real>& scaleFactors)
 		// Get mobilized body
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		
-		// We only allocated  X_PFs for non-Ground bodies
-		//RESTORE RESTORE RESTORE Check X_FM assignment 0
+		// Previous mbx
+		int sfIx = (int(mbx) - 1);
 
-		// Get the scaleFactors too
-		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
+		// Set the stretch 
+		if(std::abs(world->normX_BMp[ sfIx ]) > 0.00000001){
 
-			mobod.setOneQ(someState, 1, X_BMdiffs[int(mbx) - 1]);
+			// Set Q to scaled diff
+			if(mobod.getNumQ(someState) == 2){
+				mobod.setOneQ(someState, 1, (+1.0) * Q_of_X_BMdiffs[sfIx]);
+				//std::cout << "setQToScaleBendStretchStdev mobod.setOneQ 0\n";
+			}else{
+				mobod.setOneQ(someState, 0, (+1.0) * Q_of_X_BMdiffs[sfIx]);
+			}
 
-			scaleFactors[ (int(mbx) - 1) ] = 
-			(world->normX_BMp[int(mbx) - 1] + X_BMdiffs[int(mbx) - 1]) /
-				world->normX_BMp[int(mbx) - 1];
-		}		
-
-		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
-			mobod.setOneQ(someState, 0, -1.0 * X_PFdiffs[int(mbx) - 1]);
-			
-			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
-			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * X_PFdiffs[int(mbx) - 1])) /
-				world->acosX_PF00[int(mbx) - 1];
+			// Record the scaleFactors too: (X + Q) / X
+			scaleFactors[ sfIx ] = 
+			(world->normX_BMp[ sfIx ] + ((+1.0) * Q_of_X_BMdiffs[ sfIx ])) /
+				world->normX_BMp[ sfIx ];
 		}
 
+		// Set the bend rotation
+		if(std::abs(world->acosX_PF00[ sfIx ]) > 0.00000001){
 
-		/* // DELETE DELETE DELETE DELETE Check X_FM assignment 0
-		SimTK::Real someConstant = 1.123;
-		mobod.setOneQ(someState, 0, someConstant);
-		mobod.setOneQ(someState, 1, someConstant);
+			// Set Q to scaled diff
+			if(mobod.getNumQ(someState) == 2){
+				mobod.setOneQ(someState, 0, (-1.0) * Q_of_X_PFdiffs[ sfIx ]);
+			
+				// Record the scaleFactors too: (X + Q) / X
+				scaleFactors[ sfIxOffset + sfIx ] = 
+				(world->acosX_PF00[ sfIx ] + ((+1.0) * Q_of_X_PFdiffs[ sfIx ])) /
+					world->acosX_PF00[ sfIx ];
+			}else{
+				scaleFactors[ sfIxOffset + sfIx ] = 1.0;
+			}
 
-		trace("normX_BM", world->normX_BMp[(int(mbx) - 1)], "acosX_PF", world->acosX_PF00[int(mbx) - 1]);
-
-		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
-			scaleFactors[ (int(mbx) - 1) ] = 
-			(world->normX_BMp[int(mbx) - 1] + someConstant) /
-				world->normX_BMp[int(mbx) - 1];
 		}		
-
-		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
-			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
-			(world->acosX_PF00[int(mbx) - 1] + someConstant) /
-				world->acosX_PF00[int(mbx) - 1];
-		} */		
-
 	}
+
+	//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
 
 	// Save changes by advancing to Position Stage
 	system->realize(someState, SimTK::Stage::Position);
+	if(world->visual){
+		std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+	}
 
 	// Test
-	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
 
 }
 
@@ -3054,79 +3130,99 @@ std::vector<SimTK::Real>& scaleFactors)
 
 }
 
+/**
+ * Get the log of the Jacobian of a bond-angle strtch
+*/
 SimTK::Real 
-HMCSampler::calcBendStretchJacobianDetLog(
-	SimTK::State& someState,
+HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 	std::vector<SimTK::Real> scaleFactors)
 {
 
 	int x_pf_k = 0;
 
 	// Get log of the Cartesian->BAT Jacobian
-	SimTK::Real logJacBAT_0 = 0.0;
+	SimTK::Real logJacBAT_0 = 0.0; // log space
+	//SimTK::Real logJacBAT_0 = 1.0; // normal space
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
 			x_pf_k = k + world->normX_BMp.size();
 
 			// Checks
-			/*std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
+			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
 				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
 					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
 					<< world->normX_BMp[k] * scaleFactors[k] << " "
-				<< std::endl << std::flush;*/
+				<< std::endl << std::flush; */
 
 			// Get bond term
 			SimTK::Real d2 = world->normX_BMp[k];
 			if(d2 != 0){
-					d2 = 2.0 * std::log(d2);
+					d2 = 2.0 * std::log(d2); // log space
+					//d2 = d2 * d2; // normal space
 			}
 
 			// Get the angle term
-			SimTK::Real sineTheta = world->acosX_PF00[k];
+			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k]);
 
 			if(sineTheta != 0){
-					sineTheta = std::log(std::sin(sineTheta));
+					sineTheta = std::log(std::sin(sineTheta)); // log space
+					//sineTheta = std::sin(sineTheta); // normal space
 			}
 
 			// Accumulate result
-			logJacBAT_0 += (d2 + sineTheta);
+			logJacBAT_0 += (d2 + sineTheta); // log space
+			//logJacBAT_0 *= (d2 * sineTheta); // normal space
 	}
 
 	// Get log of the scaling Jacobian
 	// Although the method seems stupid for now, it has generality
 	// and allows insertion of new code
-	SimTK::Real logJacScale = 0.0;
+	SimTK::Real logJacScale = 0.0; // log space
+	//SimTK::Real logJacScale = 1.0; // normal space
 	for(unsigned int k = 0; k < scaleFactors.size(); k++){
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
-					logJacScale += std::log(scaleFactors[k]);
+					logJacScale += std::log(std::abs(scaleFactors[k])); // log space
+					//logJacScale *= std::abs(scaleFactors[k]); // normal space
 			}
 	}
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
-	SimTK::Real logJacBAT_tau = 0.0;
+	SimTK::Real logJacBAT_tau = 0.0; // log space
+	//SimTK::Real logJacBAT_tau = 1.0; // normal space
 	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
 			x_pf_k = k + world->normX_BMp.size();
 
+			// Checks
+			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
+				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
+					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
+					<< world->normX_BMp[k] * scaleFactors[k] << " "
+				<< std::endl << std::flush; */
+
 			// Get bond term
 			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
+
 			if(d2 != 0){
-					d2 = 2.0 * std::log(d2);
+					d2 = 2.0 * std::log(d2); // log space
+					//d2 = d2 * d2; // normal space
 			}
 
 			// Get the angle term
-			SimTK::Real sineTheta = (world->acosX_PF00[k] * scaleFactors[x_pf_k]);
+			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k] * scaleFactors[x_pf_k]);
 
-			if(sineTheta != 0){
-					sineTheta = std::log(std::sin(sineTheta));
-			}
+			if(std::abs(sineTheta) > 0.0000001){
+					sineTheta = std::log(std::sin(sineTheta)); // log space
+					//sineTheta = std::sin(sineTheta); // normal space
+  			}
 
 			// Accumulate result
-			logJacBAT_tau += (d2 + sineTheta);
+			logJacBAT_tau += (d2 + sineTheta); // log space
+			//logJacBAT_tau *= (d2 * sineTheta); // normal space
 	}
 
         // Final result
@@ -3145,29 +3241,28 @@ HMCSampler::calcBendStretchJacobianDetLog(
 
 }
 
-/** It implements a non-equilibrium proposal move, 
- * then propagates the trajectory. **/
+/**
+ * It implements a non-equilibrium proposal move, 
+ * then propagates the trajectory.
+*/
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 {
 
-/* 	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState); */
+	/*// Store old configuration
+	storeOldConfigurationAndPotentialEnergies(someState);*/
 
-	// Apply the non-equilibrium transformation
+	// Resize the scale factors vector to be handed further
 	std::vector<SimTK::Real> scaleFactors;
 	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
 		1.0);
 
-	// And get the BAT scaling factors back
-	//setQToScaleBendStretch(someState, scaleFactors);
-	////if(this->nofSamples > 6000){
+	// Scale bonds and angles
+	if(this->nofSamples >= 0){ // dont't take burn-in
+		//setQToScaleBendStretch(someState, scaleFactors);
 		setQToScaleBendStretchStdev(someState, scaleFactors);
-	////}
-	//setQToShiftBendStretchStdev(someState, scaleFactors);
+	}
 
-	std::cout << "scaleFactors: ";
-	PrintCppVector(scaleFactors);
-
+	// Get the log of the Jacobian of the change
 	this->bendStretchJacobianDetLog =
 		calcBendStretchJacobianDetLog(someState, scaleFactors);
 
@@ -3193,7 +3288,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		integrateTrajectory(someState);
 		//integrateTrajectoryOneStepAtATime(someState);
 	}else{
-		std::cout << "ProposeNEHMC: NON-VERLET integrator\n";
+		//std::cout << "ProposeNEHMC: NON-VERLET integrator\n";
 		system->realize(someState, SimTK::Stage::Dynamics);
 	}
 
@@ -3201,6 +3296,14 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 
 	return validateProposal();
 
+}
+
+// Set Sphere Radius when doing RANDOM_WALK
+void HMCSampler::setSphereRadius(float argSphereRadius)
+{
+	//std::cout << "HMCSampler::setSphereRadius:  Radius Set: " << sphereRadius << std::endl;	
+	sphereRadius = argSphereRadius;
+	std::cout << "HMCSampler::setSphereRadius:  Radius Set: " << sphereRadius << std::endl;
 }
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo
@@ -3259,77 +3362,68 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 		calcNewConfigurationAndEnergies(someState);
 	
-	}else if (integratorName == IntegratorName::RANDOM_WALK){
+	}else if (integratorName == IntegratorName::BOUND_WALK){
 
-		std::cout << "Propose: RANDOM_WALK integrator" << std::endl;
+		/* Hard-coded, need to be able to propagate from input
+		but for the moment this will have to do.
+		
+		These are integers, since you'd never *really* need a long list
+		of bounders
+		const vector<vector<int>> bounders{{0},{2}};
+		These are strings, since you could  want all solvent
+		molecules to be bound, so the "s" option is implemented
+		const vector<vector<string>> boundeds{{"2"},{"s"}};
+		These are strings, since you could want the 
+		const vector<vector<string>> bounder_subset{{"74","88"},{"a"}};
+		const vector<float> bound_radii; */
+
+		// Set velocities to zero
+		setVelocitiesToZero(someState);
+		system->realize(someState, SimTK::Stage::Velocity);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
+		std::cout << "Propose: BOUND_WALK integrator" << std::endl;
 		if(topologies.size() < 2){
-			std::cout << "RANDOM_WALK integrators should only be used over many molecules\n"; 
+			std::cout << "BOUND integrators should only be used over many molecules\n";
 		}
-		std::cout << "Qini= " << someState.getQ() << std::endl;
 
-		// Protein 
-		const SimTK::MobilizedBody& mobod_P = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(1) );
-		const Vec3 COM_P = mobod_P.getBodyMassProperties(someState).getMassCenter();
-		const Transform& X_GP = mobod_P.getBodyTransform(someState);
+		// Get the binding site center
+
+		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
+
+		// We *assume* the last molecule is the ligand.
+		const int nOfBodies = matter->getNumBodies();
+
+		// Print the geometric center (for debugging purposes)
+		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
+		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
 
 		// Ligand
 		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
 			SimTK::MobilizedBodyIndex(2) ); 
-		const Vec3 COM_L = mobod_L.getBodyMassProperties(someState).getMassCenter();
-		const Transform& X_GL = mobod_L.getBodyTransform(someState);
-		const Transform& X_PF = mobod_L.getInboardFrame(someState);
+		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
+		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
 		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
-		const Transform& X_BM = mobod_L.getOutboardFrame(someState);
+		const Transform& X_PF = mobod_L.getInboardFrame(someState);
+		const Transform& X_GL = mobod_L.getBodyTransform(someState);
 
-		//PrintTransform(X_PF, 2, "X_PF");
-		//PrintTransform(X_FM, 2, "X_FM");
-		//PrintTransform(X_BM, 2, "X_BM");
-		SimTK::Vec3 X_PF_v = X_PF.p();
-		std::cout << "X_PF.v " << X_PF_v << " " << X_PF_v.norm() << std::endl;
-
-		// If molecule is too far reposition on a sphere centered on the first body
-		// center of mass
-		if(X_PF.p().norm() > 10.0){
-
-			// Sample a random vector centered in 0 and expressed in G
-			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-			SimTK::Vec3 randVec;
-
-			randVec[0] = 10.0 * std::cos(theta) * std::sin(phi);
-			randVec[1] = 10.0 * std::sin(theta) * std::sin(phi);
-			randVec[2] = 10.0 * std::cos(phi);
-
-			// Move it in P (still expressed in Ground)
-			randVec += X_GP.p();
-
-			// Re-express it in P
-			randVec = (~(X_GP)).R() * randVec;
-
-			// Substract PF from it
-			randVec -= X_PF.p();
-
-			// Re-express it in F
-			randVec = (~X_PF).R() * randVec;
-
-			// Set Q to fit 
-			SimTK::Transform newX_FM;
-			newX_FM.set((~X_PF).R() , randVec);
-			mobod_L.setQToFitTransform(someState, newX_FM);
-
-			// Add 
-
-		// Generate radom translation
-		}else{
-			someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
-			someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
-			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (100 * this->timestep);
-		}
-
-		system->realize(someState, SimTK::Stage::Position);
+		// Water (Before rotation)
+		const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
+				SimTK::MobilizedBodyIndex(3) ); 
+		const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
+		const Transform& X_GW = mobod_W.getBodyTransform(someState);
+		const Vec3 COM_LW = mobod_W.findMassCenterLocationInAnotherBody(someState, mobod_L); // Expressed in W (??)
+		const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
+		const Transform& X_PF_Wat = mobod_W.getInboardFrame(someState);
 
 
+		std::cout << "COM_LW: " << COM_LW << " (" << COM_LW.norm() << ")\n" ;
+
+		// It's best to first compute the rotation, then
+		// compute the translation to fit the "New" X_FM
+		
 		// Generate random rotation quaternion
 		double x,y,z, u,v,w, s;
 		do {
@@ -3350,26 +3444,296 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			someState.updQ()[2], someState.updQ()[3]);
 		SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
 
-		someState.updQ()[0] = resultQuat.asVec4()[0];
-		someState.updQ()[1] = resultQuat.asVec4()[1];
-		someState.updQ()[2] = resultQuat.asVec4()[2];
-		someState.updQ()[3] = resultQuat.asVec4()[3];
-
+		mobod_L.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
+		//mobod_W.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
 		system->realize(someState, SimTK::Stage::Dynamics);
 
-		std::cout << "Qfin= " << someState.getQ() << std::endl;
+		// Translate
+		SimTK::Vec3 New_LW = SimTK::Rotation(resultQuat) * COM_LW ; //Still expressed in L
+		std::cout << "New_LW: " << New_LW << " (" << New_LW.norm() << ")\n" ;
+		New_LW = X_GL.shiftBaseStationToFrame(New_LW); // Expressed in Ground
+		New_LW = X_GW.shiftBaseStationToFrame(New_LW); // Expressed in Water
+		std::cout << "New_LW (expressed in W): " << New_LW << " (" << New_LW.norm() << ")\n\n" ;
+		//mobod_W.setQToFitTranslation(someState, New_LW);
+		//system->realize(someState, SimTK::Stage::Dynamics);
+
+		// Determine the distance between center of mass of ligand and geometricCenter
+		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
+		std::cout << "ligandToSite: " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
+
+		// If ligand is too far reposition on a sphere centered on the last body
+		// center of mass (also add a margin of error, so you don't stay too much on the surface
+		// of the sphere)
+		//if(ligandToSite.norm() > (sphereRadius)){
+		if (0){
+
+			SimTK::Vec3 BR={0,0,0};
+
+			// Sample a random vector centered in 0 and expressed in G
+			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+			SimTK::Vec3 randVec={0,0,0};
+
+
+			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
+			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
+			randVec[2] = sphereRadius * std::cos(phi);
+			randVec *= uniformRealDistribution(randomEngine);
+
+			// Move it in BindingSiteCenter (BS)
+			SimTK::Vec3 GR;
+			GR = randVec + (geometricCenter - X_PF.p());
+
+			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
+			
+			// Account for COM_L
+			BR = BR - COM_L;
+
+			// Express BR in F
+			BR = X_FM.R()*BR;
+			mobod_L.setQToFitTranslation(someState, BR);
+
+		// If not, just generate a random translation
+		}else{
+			someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+			someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+		}
+
+		system->realize(someState, SimTK::Stage::Dynamics);
+		calcNewConfigurationAndEnergies(someState);
+
+	}else if (integratorName == IntegratorName::BOUND_HMC){
+
+		// Set velocities to zero
+		setVelocitiesToZero(someState);
+		system->realize(someState, SimTK::Stage::Velocity);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
+		std::cout << "Propose: BOUND_HMC integrator" << std::endl;
+		if(topologies.size() < 2){
+			std::cout << "BOUND integrators should only be used over many molecules\n";
+		}
+
+		// Get the binding site center
+
+		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
+
+		// We *assume* the last molecule is the ligand.
+		const int nOfBodies = matter->getNumBodies();
+
+		// Print the geometric center (for debugging purposes)
+		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
+		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
+
+		// Ligand
+		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(2) ); 
+		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
+		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
+		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
+		const Transform& X_PF = mobod_L.getInboardFrame(someState);
+
+		// Unlike "RANDOM_WALK", this integrator does not need to do 
+		// random rotation, since we integrate the trajectory, which
+		// includes rotation.
+
+		// Determine the distance between center of mass of ligand and geometricCenter
+		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
+		std::cout << "ligandToSite(kick): " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
+
+		// If ligand is too far reposition on a sphere centered on the last body
+		// center of mass
+		if(ligandToSite.norm() > sphereRadius){
+		//if (1){
+
+			std::cout << "Ligand too far from center (" << ligandToSite.norm() << "), repositioning...\n";
+			SimTK::Vec3 BR={0,0,0};
+
+			// Sample a random vector centered in 0 and expressed in G
+			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+			SimTK::Vec3 randVec={0,0,0};
+
+			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
+			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
+			randVec[2] = sphereRadius * std::cos(phi);
+			randVec *= uniformRealDistribution(randomEngine);
+
+			// Move it in BindingSiteCenter (BS)
+			SimTK::Vec3 GR;
+			GR = randVec + (geometricCenter - X_PF.p());
+
+			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
+			
+			// Account for COM_L
+			BR = BR - COM_L;
+
+			// Express BR in F
+			BR = X_FM.R()*BR;
+			mobod_L.setQToFitTranslation(someState, BR);
+
+			system->realize(someState, SimTK::Stage::Dynamics);
+		}
+
+		// Water Part
+		const SimTK::MobilizedBody& mobod_L_PostTP = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(2) ); 
+		const Vec3 COM_L_PostTP = mobod_L_PostTP.getBodyMassCenterStation(someState);
+		const Vec3 COM_G_PostTP = mobod_L_PostTP.findMassCenterLocationInGround(someState);
+		const Transform& X_FM_PostTP = mobod_L_PostTP.getMobilizerTransform(someState);
+		const Transform& X_PF_PostTP = mobod_L_PostTP.getInboardFrame(someState);
+
+		// Water
+		for (int waterIx = 3; waterIx < nOfBodies; waterIx++){ 
+			const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
+				SimTK::MobilizedBodyIndex(waterIx) ); 
+			const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
+			const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
+			const Transform& X_FM_Water = mobod_W.getMobilizerTransform(someState);
+			const Transform& X_PF_Water = mobod_W.getInboardFrame(someState);
+
+			// Get distance between water and ligand
+					
+			const Vec3 WL = mobod_W.findStationLocationInAnotherBody(someState, COM_W, mobod_L_PostTP);
+			std::cout << "COM_L: " << COM_G << " COM_GW: " << COM_GW << std::endl;
+			std::cout << "WL: " << WL << " WL_NORM: " << WL.norm() << std::endl;
+
+			// If water is too far from ligand reposition on a sphere centered on the 
+			// ligand center of mass
+			float waterSphere = 1;
+			if(WL.norm() > waterSphere){
+			//if (1){
+
+				std::cout << "Water (" << waterIx << ") too far from ligand (" << WL.norm() << "), repositioning...\n";
+				SimTK::Vec3 BR={0,0,0};
+
+				// Sample a random vector centered in 0 and expressed in G
+				SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+				SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+				SimTK::Vec3 randVec={0,0,0};
+
+				randVec[0] = waterSphere * std::cos(theta) * std::sin(phi);
+				randVec[1] = waterSphere * std::sin(theta) * std::sin(phi);
+				randVec[2] = waterSphere * std::cos(phi);
+				//randVec *= uniformRealDistribution(randomEngine);
+
+				// Move it in BindingSiteCenter (BS)
+				SimTK::Vec3 GR;
+				//GR = randVec + (geometricCenter - X_PF.p());
+				GR = randVec + (COM_G_PostTP - X_PF_Water.p());
+
+				BR = mobod_W.expressGroundVectorInBodyFrame(someState, GR);
+				
+				// Account for COM_L
+				BR = BR - COM_W;
+
+				// Express BR in F
+				BR = X_FM_Water.R()*BR;
+				mobod_W.setQToFitTranslation(someState, BR);
+				system->realize(someState, SimTK::Stage::Position);
+				std::cout << "Water (" << waterIx-1
+				          <<") repositioned in " << mobod_W.expressVectorInGroundFrame(someState, BR) 
+						  << std::endl << std::endl;
+
+			}
+		}
+		system->realize(someState, SimTK::Stage::Dynamics);
+
+		// Else, if not repositioned, integrate trajectory.
+		if(ligandToSite.norm() <= sphereRadius) {
+			initializeVelocities(someState);
+			calcProposedKineticAndTotalEnergy(someState);
+
+			integrateTrajectory(someState);
+			system->realize(someState, SimTK::Stage::Dynamics);
+		}
+
+		calcNewConfigurationAndEnergies(someState);
+
+	}else if(integratorName == IntegratorName::STATIONS_TASK){
+
+		std::cout << "STATIONS_TASK\n";
+
+		system->realize(someState, SimTK::Stage::Position);
+
+		// Update target space
+		world->updateTaskSpace(someState);
+		SimTK::Array_<SimTK::Vec3> deltaStationP = world->getTaskSpaceDeltaStationP();
+		std::cout << "deltaStationP " << deltaStationP << std::endl;
+
+		SimTK::Matrix_<SimTK::Vec3> JS;
+		world->calcStationJacobian(someState, JS);
+
+		SimTK::Vector taskForce;
+		//matter->multiplyByStationJacobianTranspose(someState,
+		//	world->onBodyB[0], world->stationPInGuest[0],
+		//	deltaStationP[0], taskForce);
+		std::cout << "state numU " << someState.getNU()
+			<< " fSize " << taskForce.size() << std::endl;
+
+		// Topologies and target atoms
+		int hostTopology = 0;
+		int guestTopology = 1;
+		std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+		std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+		// Get stations in guest
+		int topi = -1;
+		for(auto& topology : (topologies)){ // topologies
+			topi++;
+			if(topi == guestTopology){
+				int tz = -1;
+				for (int bAtomIx : bAtomIxs_guest) { // atoms
+					tz++;
+
+					// Get body
+					SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+					SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+					SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+					// Get mobod X_GB, X_PF, X_FM and X_BM
+					const Transform& X_GB = mobod.getBodyTransform(someState);
+					const Transform& X_PF = mobod.getInboardFrame(someState);
+					const Transform& X_FM = mobod.getMobilizerTransform(someState);
+					const Transform& X_BM = mobod.getOutboardFrame(someState);
+
+					mobod.setOneU(someState, 0, deltaStationP[0][0]);
+					mobod.setOneU(someState, 1, deltaStationP[0][1]);
+					mobod.setOneU(someState, 2, deltaStationP[0][2]);
+
+
+				}
+			}
+		}
+
+		system->realize(someState, SimTK::Stage::Velocity);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergy(someState);
+
+		// Adapt timestep
+		bool shouldAdaptWorldBlocks = false;
+		if(shouldAdaptWorldBlocks){
+			adaptWorldBlocks(someState);
+		}
+
+		// Apply the L operator
+		integrateTrajectory(someState);
+		//integrateTrajectoryOneStepAtATime(someState);
 
 		calcNewConfigurationAndEnergies(someState);
 
 	}else if (integratorName == IntegratorName::EMPTY){
 
-/* 		// Alter Q in some way
-		if(this->sampleGenerator == 1){
-			
-		} */
+		calcNewConfigurationAndEnergies(someState);
 
 	}else{
 		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
+		calcNewConfigurationAndEnergies(someState);
+
 	}
 
 	return validateProposal();
@@ -3460,8 +3824,7 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
  * because we don't have the partition function
 */
 SimTK::Real HMCSampler::MHAcceptProbability(
-	SimTK::Real argEtot_proposed,
-	SimTK::Real argEtot_n) const 
+	SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const 
 {
 	if(argEtot_n < argEtot_proposed) {
 		return 1;
@@ -3544,7 +3907,9 @@ bool HMCSampler::acceptSample() {
 	
 }
 
-/// Acception rejection step - not used
+/**
+ * Acception rejection step - not used
+*/
 bool HMCSampler::accRejStep(SimTK::State& someState) {
 
 	// Empty sample generator
@@ -3573,14 +3938,18 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 	return this->acc;
 }
 
-#include <iostream>
-#include <chrono>
-#include <ctime> 
-
-// The main function that generates a sample
+/**
+ * The main function that generates a sample
+*/
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
 	auto start = std::chrono::system_clock::now();
+	
+	/* std::cout << "Transforms before sample_iteration\n";
+	world->PrintAcosX_PFs();
+	world->PrintNormX_BMs();
+	world->PrintAcosX_PFMeans();
+	world->PrintNormX_BMMeans(); */
 
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
@@ -3589,7 +3958,14 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	storeOldConfigurationAndPotentialEnergies(someState);
 
 	// Generate a trial move in the stochastic chain
-//world->traceBendStretch(someState);
+	//world->traceBendStretch(someState);
+
+	// Set X_PF and X_BM means to whatever iti is now
+	///////////////////////////////////////////////////
+	if(nofSamples == 0){
+		world->setTransformsMeansToCurrent(someState);
+	}
+	///////////////////////////////////////////////////
 
 	// Calculate X_PFs and X_BMs
 	world->getTransformsStatistics(someState);
@@ -3597,7 +3973,6 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	bool validated = true;
 	validated = generateProposal(someState);
 	
-
 	// Apply the acceptance criterion
 	if(validated){
 
@@ -3611,11 +3986,11 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		// Decide
 		if(acceptSample()){
 			// Print info
-			std::cout << "\tsample accepted";
-			if(this->alwaysAccept){
-				std::cout << " (simple molecular dynamics)\n";
+			std::cout << "\tacc";
+			if(this->alwaysAccept == true){
+				std::cout << " (MD)\n";
 			}else{
-				std::cout << " (metropolis-hastings)\n";
+				std::cout << " (MH)\n";
 			}
 
 			// UPDATE
@@ -3623,11 +3998,11 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 			// Deal with adaptive data
 			storeAdaptiveData(someState);
-			PrintAdaptiveData();
+			//PrintAdaptiveData();
 
 		}else{
 			//Print info
-			std::cout << "\tsample rejected (metropolis-hastings)\n";
+			std::cout << "\trej (MH)\n";
 
 			// RESET
 			restore(someState);
@@ -3639,6 +4014,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		world->getTransformsStatistics(someState);
 
 		// Update means of values before altering them
+		world->updateTransformsMeans(someState);
 		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
 			//world->updateTransformsMeans(someState);
 		}
@@ -3785,7 +4161,6 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 
 	return Rdot.size();
 }
-
 
 /** Calculate Mean Square Displacement based on stored R vectors **/
 SimTK::Real HMCSampler::calculateMSD()

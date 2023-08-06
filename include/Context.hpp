@@ -65,6 +65,9 @@ public:
 	void modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer);
 	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
+	// Add task spaces
+	void addTaskSpacesLS(void);
+
 	void realizeTopology();
 	void realizePosition();
 
@@ -327,6 +330,8 @@ public:
 	void setSwapFixman(const int argSwapFixman){swapFixman = argSwapFixman;}
 
 	SimTK::Real calcReplicaTransferedEnergy(int replicaIx);
+	SimTK::Real calcReplicaWork(int replicaIx);
+
 
 	// SWaps replicas thermodynamic states
 	void swapThermodynamicStates(int replica_i, int replica_j);
@@ -436,7 +441,11 @@ private:
 	void reserveWorldsAndTopologies(int inpNofWorlds, int inpNofMols,
 		int inpNofEmbeddedTopologies);
 
+	std::vector<int> TopologyIXs;
+	std::vector<std::vector<int>> AmberAtomIXs;
+	float radius;
 	std::vector<World> worlds;
+	std::vector<readAmberInput> amberReader;
 
 	std::vector<std::size_t> worldIndexes;
 	// Molecules files

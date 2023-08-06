@@ -177,6 +177,9 @@ public:
 
 	std::gamma_distribution<double> gammarand = std::gamma_distribution<double>(1, 2);
 
+	std::lognormal_distribution<double> lognormal =
+		std::lognormal_distribution<double>(0.0, 1.0);
+
  };
 
 

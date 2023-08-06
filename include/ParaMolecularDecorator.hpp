@@ -32,6 +32,24 @@ public:
 
 	void clearLines(void);
 
+	// Draw a frame
+	void drawFrame(
+		Array_<DecorativeGeometry>& geometry, SimTK::Transform G_X_F,
+		SimTK::Real scaleFactor, SimTK::Real lineThickness, SimTK::Vec3 color,
+		std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor,
+		SimTK::Vec3 textOffset
+	);
+
+	// Draw a line
+	void drawLine(Array_<DecorativeGeometry>& geometry,
+		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
+		int numOfDofs, SimTK::Real lineThickness
+	);
+
+	// Draw DuMM based geometry
+	void drawDummBasedGeometry(Array_<DecorativeGeometry>& geometry,
+		const State& someState);
+
 	void generateDecorations(const State& state,
 		Array_<DecorativeGeometry>& geometry);
 
@@ -40,6 +58,12 @@ public:
 	// 
 	void setAtomTargets(std::vector<std::pair<bSpecificAtom *,
 		SimTK::Vec3>> residueAtomLocations);
+
+	void updPCommVars(SimTK::Real argCommVar);
+	void updFCommVars(SimTK::Real argCommVar);
+	void updMCommVars(SimTK::Real argCommVar);
+	void updBCommVars(SimTK::Real argCommVar);
+	
 
 private:
 	SimTK::CompoundSystem *compoundSystem;
@@ -54,6 +78,8 @@ private:
 
 	// Gmolmodel specific
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
+
+	SimTK::Real PCommVar, FCommVar, MCommVar, BCommVar;
 
 };
 

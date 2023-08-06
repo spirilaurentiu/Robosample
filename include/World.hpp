@@ -60,6 +60,23 @@ void writePdb(	  SimTK::Compound& c, SimTK::State& advanced,
 void writePdb(SimTK::PdbStructure pdb, const char *FN);
 
 //==============================================================================
+//                   CLASS TaskSpace
+//==============================================================================
+/**
+ *  Contains a Symbody task space and additional data
+ **/
+class StationTaskLaurentiu{
+    friend class Context;
+
+public:
+
+    StationTaskLaurentiu();
+
+private:
+
+};
+
+//==============================================================================
 //                   CLASS World
 //==============================================================================
 /**
@@ -124,6 +141,32 @@ public:
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
+
+	//=========================================================================
+	//                   TaskSpace Functions
+	//=========================================================================
+
+	/** Allocate memory for a task space consisting of a set of body indeces
+ 	* station on the bodies expresed in both guest (target) and host 
+ 	* and the difference between them
+	*/
+	void addTaskSpaceLS(void);
+
+	/** Update target task space */
+	void updateTaskSpace(const State& someState);
+
+	/** Get delta stationP */
+	SimTK::Array_<SimTK::Vec3>& 
+	getTaskSpaceDeltaStationP(void);
+
+	/** Calc station Jacobian */
+	void calcStationJacobian(const State& someState,
+        SimTK::Matrix_<SimTK::Vec3>& JS) const;
+
+	//=========================================================================
+	//                   MEMBRANE Functions
+	//=========================================================================
+
 	/** Add a membrane represented by a contact surface **/
 	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth,
 		SimTK::Real zWidth, int resolution);
@@ -175,6 +218,13 @@ public:
 	// --- Inter-world functions: Pass configurations among Worlds
 	// ELIZA
 	SimTK::Vec3 calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::AtomIndex&);
+
+	// Get geometric center of a subset of atoms
+	// TEODOR
+	SimTK::Vec3 getGeometricCenterOfSelection(
+		const SimTK::State & state);
+
+	float setSphereRadius (float argRadius);
 
 	/** Get the current Compound Cartesian coords.
 	* Return a 2D vector representing all the coordinates of this World.
@@ -286,7 +336,7 @@ public:
 	bool isUsingFixmanTorque() const;
 	//...............
 
-	// TODO: optimize to get
+	// DOESN'T WORK WITH OPENMM
 	SimTK::Real CalcFullPotentialEnergyIncludingRigidBodies(void);
 
 	// Calculate Fixman potential
@@ -335,9 +385,23 @@ public:
 	// the Jacobian of that transformation will be included too
 	SimTK::Real getWorkOrHeat(void);
 
+	// Get the (potential) energy transfer in the form of work
+	// If any of the Q, U or tau is actively modifyied by the sampler
+	// the Jacobian of that transformation will be included too
+	SimTK::Real getWork(void);
+
+	// Set initial values of X_PF or X_BM
+	void setTransformsMeansToIni(void);
+
+	// Set initial values of X_PF or X_BM
+	void setTransformsMeansToCurrent(SimTK::State& someState);
+
 	// Set initial values of X_PF or X_BM
 	void setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
 		const std::vector<SimTK::Real>& givenX_BM);
+
+	// Set X_PF and X_BM related values
+	void setTransformsMeansToMin(readAmberInput &amberReader);
 
 	// Get X_PF and X_BM related values
 	void getTransformsStatistics(SimTK::State& someState);
@@ -351,20 +415,40 @@ public:
 	/** Get X_BM means */
 	std::vector<SimTK::Real>& getX_BMMeans(void);
 
+	/**
+	 * Calculate bond length and angle deviations from their means
+	*/ 
+	void calcBendStretchDeviations(
+		SimTK::State& someState,
+		std::vector<SimTK::Real>& X_PFdiffs,
+		std::vector<SimTK::Real>& X_BMdiffs
+	);
+	
 	// Print bond lengths and angle bends
 	void traceBendStretch(SimTK::State& someState);
 
 	// Print X_PF
-	void PrintX_PFs(void);
+	void PrintAcosX_PFs(void);
 
 	// Print X_PF
-	void PrintX_BMs(void);
+	void PrintNormX_BMs(void);
 
 	// Print X_PF means
-	void PrintX_PFMeans(void);
+	void PrintAcosX_PFMeans(void);
 
 	// Print X_PF means
-	void PrintX_BMMeans(void);
+	void PrintNormX_BMMeans(void);
+
+	//...............
+
+	// REORIENT
+
+	SimTK::Transform& getReorientTransformInAnotherBody(
+		const State &someState,
+		const MobilizedBody &inBodyA,
+		const MobilizedBody &ofBodyB,
+		const SimTK::Transform &reorientAB,
+		SimTK::Transform& X_FMprim);
 
 	//...............
 
@@ -386,8 +470,11 @@ public:
 	void printPossVels(const SimTK::Compound& c, SimTK::State& someState);
 	//...............
 
-	// void initializeTaskSpace(SimTK::CompoundSystem &compoundSystem, SimTK::GeneralForceSubsystem& force, SimTK::SimbodyMatterSubsystem& matter);
-	// void getLocationsForTaskSpace();
+
+	// RANDOM_WALK related functions; we don't need getter, since we only
+	// use these values inside the scope of World.
+	void setTopologyIXs(std::vector<int> topologyIXs);
+	void setAmberAtomIXs(std::vector<std::vector<int>> AmberAtomIXs);
 
 public:
 
@@ -460,7 +547,7 @@ public:
 	//...............
 
 	// // --- Graphics ---
-	// bool visual;
+	bool visual;
 
 	// Our decorations
 	std::unique_ptr<ParaMolecularDecorator> paraMolecularDecorator;
@@ -468,11 +555,11 @@ public:
 	// Decoration subsystem
 	std::unique_ptr<SimTK::DecorationSubsystem> decorations;
 
-	// // Visualizer
-	// std::unique_ptr<SimTK::Visualizer> visualizer;
+	// Visualizer
+	std::unique_ptr<SimTK::Visualizer> visualizer;
 
-	// // Visualizer reporter
-	// std::unique_ptr<SimTK::Visualizer::Reporter> visualizerReporter;
+	// Visualizer reporter
+	std::unique_ptr<SimTK::Visualizer::Reporter> visualizerReporter;
 	//...............
 
 	// --- Mixing data ---
@@ -488,6 +575,12 @@ public:
 	FixmanTorqueExt* FixmanTorqueExtImpl = nullptr;
 	SimTK::Force::Custom* FixmanTorqueExtForce = nullptr;
 
+	//Task Space
+	SimTK::Array_<SimTK::MobilizedBodyIndex> onBodyB;
+	SimTK::Array_<SimTK::Vec3> stationPInGuest;
+	SimTK::Array_<SimTK::Vec3> stationPInHost;
+	SimTK::Array_<SimTK::Vec3> deltaStationP;
+	
 private:
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
@@ -495,6 +588,11 @@ private:
 
 	// Maps a generalized velocity scale factor for every mobod
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Real > mbx2uScale;
+
+	// Binding Site Data: Topologies, AtomIx
+	std::vector<int> topologyIXs;
+	std::vector<std::vector<int>> amberAtomIXs;
+
 
 
 };
