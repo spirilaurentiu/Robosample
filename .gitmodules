@@ -1,9 +1,9 @@
 [submodule "openmm"]
 	path = openmm
-	url = https://github.com/spirilaurentiu/openmm.git
+	url = https://github.com/spirilaurentiu/openmm/
 [submodule "Simbody01"]
 	path = Simbody01
-	url = https://github.com/spirilaurentiu/Simbody01.git
+	url = https://github.com/spirilaurentiu/Simbody01/
 [submodule "Molmodel"]
 	path = Molmodel
-	url = https://github.com/spirilaurentiu/Molmodel.git
+	url = https://github.com/spirilaurentiu/Molmodel/
