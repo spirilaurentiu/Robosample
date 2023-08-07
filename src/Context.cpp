@@ -5865,7 +5865,7 @@ void Context::PrintDistancesToLog(std::size_t whichWorld)
 {
 	for (const auto& distanceIx : distanceIxs) {
 		if( distanceIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Distance(distanceIx[0], distanceIx[1], 0,
+			fprintf(logFile, "%.6f ", Distance(distanceIx[0], distanceIx[1], 0,
 				distanceIx[2], distanceIx[3]) );
 		}
 	}
@@ -5875,7 +5875,7 @@ void Context::PrintAnglesToLog(std::size_t whichWorld)
 {
 	for (const auto& angleIx : angleIxs){
 		if( angleIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Roboangle(angleIx[0], angleIx[1], 0,
+			fprintf(logFile, "%.6f ", Roboangle(angleIx[0], angleIx[1], 0,
 				angleIx[2], angleIx[3], angleIx[4]) );
 		}
 	}
@@ -5885,7 +5885,7 @@ void Context::PrintDihedralsToLog(std::size_t whichWorld)
 {
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Dihedral(dihedralIx[0], dihedralIx[1], 0,
+			fprintf(logFile, "%.6f ", Dihedral(dihedralIx[0], dihedralIx[1], 0,
 				dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) );
 		}
 	}

@@ -409,7 +409,6 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// compoundSystem->realizeTopology();
 }
 
-
 //==============================================================================
 //                   TaskSpace Functions
 //==============================================================================
@@ -435,7 +434,7 @@ void World::addTaskSpaceLS(void)
 			// Guest atoms iteration
 			for (int bAtomIx : bAtomIxs_guest) {
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
 				onBodyB.emplace_back(mbx);
 				stationPInGuest.emplace_back(SimTK::Vec3());
@@ -474,7 +473,7 @@ void World::updateTaskSpace(const State& someState)
 			for (int bAtomIx : bAtomIxs_host) {
 				tz++;
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
@@ -496,7 +495,7 @@ void World::updateTaskSpace(const State& someState)
 			for (int bAtomIx : bAtomIxs_guest) {
 				tz++;
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
@@ -511,14 +510,6 @@ void World::updateTaskSpace(const State& someState)
 			}
 		}
 	}	
-
-	// Get the difference between stations expressed in Ground
-	for(size_t tz = 0; tz < stationPInGuest.size(); tz++){
-
-
-		
-
-	}
 
 }
 
@@ -576,6 +567,15 @@ void World::calcStationJacobian(
 TODO:use number of mobilities. TODO: Solve if **/
 const SimTK::State& World::addConstraints(int prmtopIndex)
 {
+
+	int hostTopology = 0;
+	int guestTopology = 1;
+
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+
+
 	if(prmtopIndex >= 0){
 		std::cout << "Adding constraint to atom with prmtop index "
 			<< prmtopIndex << "\n" ;
