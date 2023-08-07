@@ -36,9 +36,9 @@ For a specific branch:
 ```
 git clone -b build --single-branch https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
-rm openmm -rf && git clone https://github.com/spirilaurentiu/openmm.git
-rm Simbody01 -rf && git clone -b build --single-branch https://github.com/spirilaurentiu/Simbody01.git
-rm Molmodel -rf && git clone -b build --single-branch https://github.com/spirilaurentiu/Molmodel.git
+rm openmm -rf && git clone -b master https://github.com/spirilaurentiu/openmm.git
+rm Simbody01 -rf && git clone -b master --single-branch https://github.com/spirilaurentiu/Simbody01.git
+rm Molmodel -rf && git clone -b merge --single-branch https://github.com/spirilaurentiu/Molmodel.git
 ```
 
 ## Robosample branches
