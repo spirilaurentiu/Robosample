@@ -5,12 +5,11 @@
 #include "Sampler.hpp"
 #include "SetupReader.hpp"
 #include "World.hpp"
+#include "ThermodynamicState.hpp"
+#include "Replica.hpp"
 
 class Sampler;
 class World;
-
-class ThermodynamicState;
-class Replica;
 
 enum ReplicaMixingScheme {all, neighboring};
 
