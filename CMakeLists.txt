@@ -517,37 +517,71 @@ target_link_libraries(${ROBOSAMPLE_NAME} PRIVATE
 set_target_properties(${ROBOSAMPLE_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
 target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS}) # ${PGO_FLAGS}
 
-# # add tests
-# enable_testing()
-# include(CTest)
-# file(GLOB TESTS_SOURCES tests/*.cpp)
-# foreach(test_src ${TESTS_SOURCES})
+
+# add tests
+enable_testing()
+include(CTest)
+
+SET(TEST_NAMES)
+SET(TEST_SOURCES)
+
+
+# # find openmm tests
+# FILE(GLOB TESTS_SOURCES openmm/tests/*.cpp)
+# FOREACH(test_src ${TESTS_SOURCES})
 #     # get test name by removing file location and extension
-#     file(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/tests ${test_src})
+#     FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/openmm/tests ${test_src})
 #     STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
 
-#     # needs refactoring
-#     add_executable(${test_name} ${test_src})
-#     target_compile_options(${test_name} PRIVATE ${BUILD_FLAGS})
-#     target_link_options(${test_name} PRIVATE ${SANITIZER_FLAGS})
+#     LIST(APPEND TEST_NAMES ${test_name})
+#     LIST(APPEND TEST_SOURCES ${test_src})
+# ENDFOREACH(test_src)
 
-#     target_include_directories(${test_name} PRIVATE
-#         ${OPENMM_INCLUDE_DIRS}
-#         ${SIMBODY_INCLUDE_DIRS}
-#         ${MOLMODEL_INCLUDE_DIRS}
-#         # ${FORMAT_INCLUDE_DIRS}
-#         ${ROBOSAMPLE_INCLUDE_DIRS}
-#     )
-#     target_link_libraries(${test_name} PRIVATE
-#         ${ROBOSAMPLE_LIB_NAME}
-#         # ${FORMATS_LIB_NAME}
-#         ${MOLMODEL_LIB_NAME}
-#         ${SIMBODY_LIB_NAME}
-#     )
+# # find simbody tests
+# FILE(GLOB TESTS_SOURCES Simbody01/Simbody/tests/*.cpp)
+# FOREACH(test_src ${TESTS_SOURCES})
+#     # get test name by removing file location and extension
+#     FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/tests ${test_src})
+#     STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
 
-#     add_test(NAME ${test_name} COMMAND ${test_name})
+#     LIST(APPEND TEST_NAMES ${test_name})
+#     LIST(APPEND TEST_SOURCES ${test_src})
+# ENDFOREACH(test_src)
 
-# endforeach(test_src )
+# find robosample tests
+FILE(GLOB TESTS_SOURCES tests/*.cpp)
+FOREACH(test_src ${TESTS_SOURCES})
+    # get test name by removing file location and extension
+    FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/tests ${test_src})
+    STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
+
+    LIST(APPEND TEST_NAMES ${test_name})
+    LIST(APPEND TEST_SOURCES ${test_src})
+ENDFOREACH(test_src)
+
+# add the tests
+FOREACH(test_name test_src IN ZIP_LISTS TEST_NAMES TEST_SOURCES)
+    # needs refactoring
+    add_executable(${test_name} ${test_src})
+    target_compile_options(${test_name} PRIVATE ${BUILD_FLAGS})
+    target_link_options(${test_name} PRIVATE ${SANITIZER_FLAGS})
+
+    target_include_directories(${test_name} PRIVATE
+        ${OPENMM_INCLUDE_DIRS}
+        ${SIMBODY_INCLUDE_DIRS}
+        ${MOLMODEL_INCLUDE_DIRS}
+        # ${FORMAT_INCLUDE_DIRS}
+        ${ROBOSAMPLE_INCLUDE_DIRS}
+    )
+    target_link_libraries(${test_name} PRIVATE
+        ${ROBOSAMPLE_LIB_NAME}
+        # ${FORMATS_LIB_NAME}
+        ${MOLMODEL_LIB_NAME}
+        ${SIMBODY_LIB_NAME}
+    )
+
+    add_test(NAME ${test_name} COMMAND ${test_name})
+ENDFOREACH()
 
 
 # add example inputs
