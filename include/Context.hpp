@@ -1,5 +1,4 @@
-#ifndef __CONTEXT_HPP__
-#define __CONTEXT_HPP__
+#pragma once
 
 #include "Robo.hpp"
 #include "Sampler.hpp"
@@ -7,18 +6,31 @@
 #include "World.hpp"
 #include "ThermodynamicState.hpp"
 #include "Replica.hpp"
+#include "SetupReader.hpp"
+
+#include <fstream>
+
+constexpr unsigned int BUFSIZE = 1024 * 1048576;
 
 class Sampler;
 class World;
 
-enum ReplicaMixingScheme {all, neighboring};
+enum class ReplicaMixingScheme : int {
+	all = 0,
+	neighboring = 1
+};
+
+enum class RunType : int {
+	Default = 0,
+	SimulatedTempering = 1,
+	REX = 2,
+	RENS = 3
+};
 
 class Context{
-
 public:
-	// Context(const SetupReader& setupReader, World *, std::string logFilenameArg);
-	Context(const SetupReader& setupReader, std::string logFilenameArg);
-	~Context();
+	bool initializeFromFile(const std::string& file);
+	void run();
 
 	// Input functions
 	bool loadTopologyFile(std::string topologyFilename);
@@ -187,7 +199,6 @@ public:
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
 
-	void Run(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void setNofBoostStairs(std::size_t whichWorld, int howManyStairs);
@@ -214,15 +225,15 @@ public:
 
 	/** Analysis related functions **/
 	void addDistance(std::size_t whichWorld, std::size_t whichCompound,
-		int aIx1, int aIx2);
+		std::size_t aIx1, std::size_t aIx2);
 	void addAngle(std::size_t whichWorld, std::size_t whichCompound,
-		int aIx1, int aIx2, int aIx3);
+		std::size_t aIx1, std::size_t aIx2, std::size_t aIx3);
 	void addDihedral(std::size_t whichWorld, std::size_t whichCompound,
-		int aIx1, int aIx2, int aIx3, int aIx4);
+		std::size_t aIx1, std::size_t aIx2, std::size_t aIx3, std::size_t aIx4);
 
-	void addDistances(std::vector<int> distanceIx);
-	void addAngles(std::vector<int> dihedralIx);
-	void addDihedrals(std::vector<int> dihedralIx);
+	void addDistances(const std::vector<std::size_t>& distanceIx);
+	void addAngles(const std::vector<std::size_t>& angleIx);
+	void addDihedrals(const std::vector<std::size_t>& dihedralIx);
 
 	// Allocate space for containers that keep statistics if we're doing any
 	void allocWorldsStatsContainers(void);
@@ -230,7 +241,6 @@ public:
 	// --- Output ---
 	void printThermodynamics(void);
 	void printStatus(void);
-	void throwAndExit(std::string errMsg, int errCode);
 
 	// Print Molmodel related information
 	void PrintMolmodelAndDuMMTypes(void);
@@ -436,17 +446,20 @@ public:
 	void PrintNofAcceptedSwapsMatrix(void);
 
 private:
-	void CheckInputParameters(const SetupReader& setupReader);
+	bool CreateOutputDirectory(const std::string& outDir);
+	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
+	std::string GetMoleculeDirectoryShort(const std::string& path) const;
+	bool CheckInputParameters(const SetupReader& setupReader);
 	void reserveWorldsAndTopologies(int inpNofWorlds, int inpNofMols,
 		int inpNofEmbeddedTopologies);
 
 	std::vector<int> TopologyIXs;
 	std::vector<std::vector<int>> AmberAtomIXs;
-	float radius;
 	std::vector<World> worlds;
 	std::vector<readAmberInput> amberReader;
 
 	std::vector<std::size_t> worldIndexes;
+
 	// Molecules files
 	std::vector<std::string> topFNs;
 	std::vector<std::string> crdFNs;
@@ -456,7 +469,7 @@ private:
 	std::vector<std::string> rootMobilities; // WORLD CONFLICT
 
 	// Nof molecules
-	int moleculeCount;
+	int moleculeCount = -1;
 
 	// Molecules (topologies<-Compounds) objects
 	//std::vector<bMoleculeReader *> moleculeReaders;
@@ -472,44 +485,40 @@ private:
 	// WORLD END
 
 	// Simulation parameters
-	int requiredNofRounds;
-	int nofRounds;
+	int requiredNofRounds = -1;
+	int nofRounds = -1;
 	//int total_mcsteps;
 
-	std::size_t nofWorlds;
-	bool isWorldsOrderRandom;
+	std::size_t nofWorlds = 0;
+	bool isWorldsOrderRandom = false;
 	std::vector<SimTK::Real> nofSamplesPerRound;
 	std::vector<int> nofMDStepsPerSample;
 	std::vector<SimTK::Real> timesteps;
 
 	std::vector<int> nofBoostStairs;
 
-	std::size_t nofMols;
-	std::size_t nofEmbeddedTopologies; // nofWorlds x nofMols
-	//
-	bool reproducible;
-	int pdbRestartFreq;
-	int printFreq;
+	std::size_t nofMols = 0;
+	std::size_t nofEmbeddedTopologies = 0; // nofWorlds x nofMols
 
-	//
+	int pdbRestartFreq = false;
+	int printFreq = -1;
+
 	std::string outputDir;
 	std::string pdbPrefix;
 
 	// Geometric features analysis
 	// First two integers specifiy the world and the Compound. The rest
 	// specifies atom indeces
-	std::vector< std::vector<int> > distanceIxs;
-	std::vector< std::vector<int> > angleIxs;
-	std::vector< std::vector<int> > dihedralIxs;
+	std::vector< std::vector<std::size_t> > distanceIxs;
+	std::vector< std::vector<std::size_t> > angleIxs;
+	std::vector< std::vector<std::size_t> > dihedralIxs;
 
 	SimTK::Real geom1[PRINT_BUFFER_SIZE];
 	SimTK::Real geom2[PRINT_BUFFER_SIZE];
 	SimTK::Real geom3[PRINT_BUFFER_SIZE];
 
 	// Output
-	unsigned int BUFSIZE;
-	std::unique_ptr<char[]> buffer;
-	FILE *logFile;
+	std::ofstream logFile;
 
 	// Adaptive Gibbs blocking variables
 	int roundsTillReblock;
@@ -537,19 +546,18 @@ private:
 	std::vector<std::vector<int>> nofAttemptedSwapsMatrix;
 	std::vector<std::vector<int>> nofAcceptedSwapsMatrix;
 
-	size_t nofReplicas;
-	size_t nofThermodynamicStates;
-	ReplicaMixingScheme replicaMixingScheme;
+	size_t nofReplicas = 0;
+	size_t nofThermodynamicStates = 0;
+	ReplicaMixingScheme replicaMixingScheme = ReplicaMixingScheme::neighboring;
 
-	int swapFixman;
-
+	int swapFixman = 1;
 
 	std::random_device rd;
 	std::mt19937 randomEngine;
 	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution =
 		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, SimTK::One);
 
-	int swapEvery;
+	int swapEvery = 1;
 
 	// Non-equilibrium parameters
 	std::vector<SimTK::Real> qScaleFactorsEven;
@@ -559,11 +567,10 @@ private:
 
 	std::vector<SimTK::Real> qScaleFactors;
 
+	std::string cerr_prefix = "[ERROR] ";
+
+	RunType run_type = RunType::Default;
+	SimTK::Real tempIni = 0,
+		tempFin = 0;
 };
-
-#endif //__CONTEXT_HPP__
-
-
-
-
 

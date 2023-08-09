@@ -1,81 +1,533 @@
 #include "Context.hpp"
-
-// Includes to get the structure of additional classes
-
 #include "World.hpp"
 #include "Sampler.hpp"
+#include "readAmberInput.hpp"
 
-//Primitive error handling
-void Context::throwAndExit(std::string errMsg, int errCode){
-		std::cerr << "Context: " << errMsg;
-		throw std::exception();
-		std::exit(errCode);
-}
+#include <sys/stat.h>
+#include <sys/sysinfo.h>
 
-// Default constructor
-Context::Context(const SetupReader& setupReader, std::string logFilename)
+bool Context::initializeFromFile(const std::string &file)
 {
-	nofWorlds = 0;
-	nofMols = 0;
-	nofEmbeddedTopologies = 0;
+	// Read input into a SetupReader object
+	SetupReader setupReader;
+	setupReader.ReadSetup(file);
+	setupReader.dump(true);
 
-	isWorldsOrderRandom = false;
-
-	CheckInputParameters(setupReader);
-
-	BUFSIZE = 1024 * 1048576; // 1048576
-	buffer = std::make_unique<char[]>(BUFSIZE);
-	logFile = fopen(logFilename.c_str(), "w+");
-	if ( setvbuf(logFile, &buffer[0], _IOFBF, BUFSIZE) != 0){
-	   perror("setvbuf()");
+	// Set the log filename
+	std::string logFilename = CreateLogfilename(setupReader.get("OUTPUT_DIR")[0], std::stoi(setupReader.get("SEED")[0]));
+	logFile = std::ofstream(logFilename);
+	if ( !logFile.is_open() ) {
+		std::cerr << cerr_prefix << "Failed to open log file " << logFilename << std::endl;
+		return false;
 	}
 
-	nofReplicas = 0;
-	nofThermodynamicStates = 0;
-	replicaMixingScheme = ReplicaMixingScheme::neighboring;
-	swapEvery = 1;
+	// Set the directory where the logs and the trajectories are stored
+	if ( !CreateOutputDirectory(setupReader.get("OUTPUT_DIR")[0]) ) {
+		return false;
+	}
+	setOutputDir(setupReader.get("OUTPUT_DIR")[0]);
 
-	swapFixman = 1;
+	if ( !CheckInputParameters(setupReader) ) {
+		return false;
+	}
 
-	qScaleFactorsMiu.resize(qScaleFactorsEven.size(), 1.0);
-	qScaleFactorsStd.resize(qScaleFactorsEven.size(), 0.0);
-	qScaleFactors.resize(qScaleFactorsEven.size(), 1.0);
+	// - Get molecules directory
+	std::string molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
+	std::cout << "Molecule directory: " << molDir << std::endl << std::flush;
+	setPdbPrefix(molDir + setupReader.get("SEED")[0]);
 
+	// Alert user of CUDA environment variables
+	if(SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
+		std::cout << "CUDA_ROOT not set." << std::endl;
+	}else{
+		std::cout << "CUDA_ROOT set to " << SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
+	}
+
+	// Requested nof Worlds in input. We'll try to construct them all
+	// but we're not sure if we'll going to succesed.
+	const auto requestedNofMols = nofMols;
+	std::cout << "Requested " << nofMols << " molecules in " << nofWorlds << " worlds" << std::endl;
+
+	/////////// Add Worlds to context ////////////
+	// Add Worlds to the  Every World instantiates a:
+	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
+	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
+	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
+	//  ParaMolecularDecorator
+
+	// Deal with visualizer before adding worlds.
+	std::vector<double> visualizerFrequencies;
+	int i = -1;
+	for(auto ts : setupReader.get("TIMESTEPS")){
+		i++;
+		if (setupReader.get("VISUAL")[i] == "TRUE"){
+			visualizerFrequencies.push_back(std::stod(ts));
+		}else{
+			visualizerFrequencies.push_back(0);
+		}
+	}
+
+	// Add Worlds
+	addEmptyWorlds(setupReader.get("WORLDS").size(), visualizerFrequencies);
+	
+	// Get how much available memory we have
+	struct sysinfo info;
+	if (sysinfo(&info) == 0) {
+        std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
+    }
+
+	// Request threads
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		setNumThreadsRequested(worldIx, std::stoi(setupReader.get("THREADS")[worldIx]));
+	}
+	PrintNumThreads();
+
+	// Set force field scale factor.
+	if(setupReader.get("FFSCALE")[0] == "AMBER"){
+		setAmberForceFieldScaleFactors();
+	}else{
+		setGlobalForceFieldScaleFactor(std::stod(setupReader.get("FFSCALE")[0]));
+	}
+
+	// Set GBSA scale factor
+	setGbsaGlobalScaleFactor(std::stod(setupReader.get("GBSA")[0]));
+
+	// Use OpenMM if possible
+	if(setupReader.get("OPENMM")[0] == "TRUE"){
+		setUseOpenMMAcceleration(true);
+	}
+
+	if(setupReader.get("OPENMM_CalcOnlyNonbonded")[0] == "TRUE"){
+		setUseOpenMMCalcOnlyNonBonded(true);
+	} else {
+		setUseOpenMMCalcOnlyNonBonded(false);
+	}
+
+	for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+		// Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
+		// OpenMM could be integrated as well.
+		if(setupReader.get("NONBONDED_METHOD")[worldIx] == "1"){
+			setNonbondedMethod(worldIx, 1);
+			setNonbondedCutoff(worldIx, std::stod( setupReader.get("NONBONDED_CUTOFF")[worldIx] ));
+		}
+
+		if(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"){
+			setUseOpenMMIntegration(worldIx,
+				std::stod( setupReader.get("BOOST_TEMPERATURE")[worldIx]),
+				std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+		}
+		std::cout<<"SETTING INTEGRATOR in ROBOSAMPLE "<<std::endl << std::flush;
+	}
+
+
+    // Set Lennard-Jones mixing rule
+	setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
+
+	// Add molecules based on the setup reader
+	AddMolecules(requestedNofMols, setupReader);
+
+	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
+	int finalNofMols = getNofMolecules();
+	if(requestedNofMols != finalNofMols){
+		std::cerr << cerr_prefix << "Something went wrong while adding the world" << std::endl;
+		return false;
+	}
+	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
+
+	// Loads parameters into DuMM
+	addDummParams(finalNofMols, setupReader);
+
+	// Adopts compound by the CompoundSystem and loads maps of indexes
+	model(finalNofMols, setupReader);
+
+	// Allocate space for containers that keep statistics if we're doing any
+	allocWorldsStatsContainers();
+
+	// Adaptive Gibbs blocking
+	setNofRoundsTillReblock(std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
+
+	// Only now we can allocate memory for reblocking Q vectors
+	//allocateReblockQsCacheQVectors();
+
+	// Add Fixman torque (Additional ForceSubsystem) if required
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
+			addFixmanTorque(worldIx);
+		}
+	}
+
+	// Is this necessary?
+	realizeTopology();
+
+	// Add empty samplers to the worlds.
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		BaseSampler *p = addSampler(worldIx,
+			to_upper(setupReader.get("SAMPLERS")[worldIx]),
+			setupReader.get("INTEGRATORS")[worldIx]);
+	}
+
+	//std::cout << "OS memory 3\n" << exec("free") << std::endl;
+	//////////////////////
+	// Thermodynamics
+	//////////////////////
+
+	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
+		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
+		setupReader.get("SPHERE_RADIUS")[0] != "ERROR_KEY_NOT_FOUND") {
+		// Set binding site TopologyIx, AtomIx and Sphere Radius
+
+		// Generate Amber-style Atom Lists
+		std::vector<std::vector<int>> amberAtomIXs;
+		amberAtomIXs.push_back({});
+		int cur_topology = 0;
+
+		for (const auto& value : setupReader.get("BINDINGSITE_ATOMS")) {
+			if (value == ",") {
+				amberAtomIXs.push_back({});
+				cur_topology++;
+			}
+			else {
+				amberAtomIXs[cur_topology].push_back(std::stoi(value));
+			}
+		}
+
+		std::vector<int> topologyIXs;
+		for (const auto& value : setupReader.get("BINDINGSITE_MOLECULES")) {
+			topologyIXs.push_back(std::stoi(value));
+		}
+
+		float sphere_radius = std::stod(setupReader.get("SPHERE_RADIUS")[0]);
+
+		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
+
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+			getWorld(worldIx)->setTopologyIXs(topologyIXs);
+			getWorld(worldIx)->setAmberAtomIXs(amberAtomIXs);
+			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(0));
+			sampler_p->setSphereRadius(sphere_radius);
+		}
+	}
+
+	// Set thermostats to the samplers
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+
+		for (int samplerIx = 0;
+		samplerIx < getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setThermostat(
+				setupReader.get("THERMOSTAT")[worldIx]);
+		}
+
+		setTemperature(worldIx, std::stof(setupReader.get("TEMPERATURE_INI")[0]));
+	}
+
+	// Set the guidance Hamiltonian parameters
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (int samplerIx = 0;
+		samplerIx < getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setBoostTemperature(std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
+		}
+	}
+
+	//////////////////////
+	// MD parameters
+	//////////////////////
+	// Set timesteps
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (int samplerIx = 0;
+		samplerIx < getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+
+			// Set timesteps
+			setTimestep(worldIx, samplerIx, std::stof(setupReader.get("TIMESTEPS")[worldIx]));
+
+			// Activate Fixman potential if needed
+			if(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"){
+				useFixmanPotential(worldIx, samplerIx);
+			}
+		}
+	}
+
+	// Set the nunmber of MD steps
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0;
+		samplerIx < getWorld(worldIx)->getNofSamplers();
+		samplerIx++) {
+			setNofMDStepsPerSample(worldIx,
+				samplerIx,
+				std::stoi(setupReader.get("MDSTEPS")[worldIx]));
+
+			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
+
+			if(setupReader.find("MDSTEPS_STD")){
+				sampler_p->setMDStepsPerSampleStd(std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]));
+			}else{
+				sampler_p->setMDStepsPerSampleStd(0);
+			}
+
+		}
+	}
+
+	// Guidance Hamiltonian MD
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+			HMCSampler* sampler_p =
+			pHMC(updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setBoostMDSteps(std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
+		}
+	}
+
+	//////////////////////
+	// Non-equilibrium parameters
+	//////////////////////
+
+	// Q distortin parameters
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++) {
+			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
+			sampler_p->setDistortOption(std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]));
+		}
+	}
+
+	//////////////////////
+	// Simulation parameters
+	//////////////////////
+	// Set the seeds for reproducibility. Samplers have to be here already.
+	// Let the user set one seed only. TODO: better algorithm (Victor).
+	if( setupReader.find("SEED") ){
+		if( !(setupReader.get("SEED").empty()) ){
+			for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+				setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[0]) + worldIx );
+			}
+		}
+	}
+
+	// Initialize samplers
+	/** Set simulation temperature,
+	velocities to desired temperature, variables that store the configuration
+	and variables that store the energies, both needed for the
+	acception-rejection step. Also realize velocities and initialize
+	the timestepper. **/
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++){
+			initializeSampler(worldIx, samplerIx);
+		}
+	}
+
+	// Set the number of samples per round
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		setNofSamplesPerRound(worldIx, std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
+	}
+
+	// Simulation parameters
+	int currentWorldIx = 0;
+	int round_mcsteps = 0;
+
+	setRequiredNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
+
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		round_mcsteps += getNofSamplesPerRound(worldIx);
+	}
+
+	// Set pdb writing frequency
+	setPdbRestartFreq( std::stoi(setupReader.get("WRITEPDBS")[0]) );
+
+	// Get atom indeces for geometry calculations
+	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
+		std::vector<std::size_t> distanceIx;
+		std::vector<std::size_t> angleIx;
+		std::vector<std::size_t> dihedralIx;
+		for(unsigned int i = 0; i < setupReader.get("DISTANCE").size(); i++){
+			distanceIx.push_back(atoi(setupReader.get("DISTANCE")[i].c_str()));
+		}
+		for(unsigned int i = 0; i < setupReader.get("ANGLE").size(); i++){
+			angleIx.push_back(atoi(setupReader.get("ANGLE")[i].c_str()));
+		}
+		for(unsigned int i = 0; i < setupReader.get("DIHEDRAL").size(); i++){
+			dihedralIx.push_back(atoi(setupReader.get("DIHEDRAL")[i].c_str()));
+		}
+
+		addDistances(distanceIx);
+		addAngles(angleIx);
+		addDihedrals(dihedralIx);
+	}
+
+	// Write intial pdb for reference
+	if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
+		writeInitialPdb();
+	}
+
+	// Get output printing frequency
+	setPrintFreq( std::stoi(setupReader.get("PRINT_FREQ")[0]) );
+
+	// Realize topology for all the Worlds
+	realizeTopology();
+
+	// U Scale Factors uses maps stored in Topology
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+		(updWorld(worldIx))->setUScaleFactorsToMobods();
+	}
+
+	// Realize topology for all the Worlds
+	realizeTopology();
+
+	//std::cout << "OS memory 4.\n" << exec("free") << std::endl;
+	// Check atom stations for debug purposes
+	checkAtomStationsThroughDumm();
+
+	// Load/store Mobilized bodies joint types in samplers
+	loadMbxsToMobilities();
+
+
+	// Setup task spaces
+	addTaskSpacesLS();
+
+	// -- Setup REX --
+	std::string runType = setupReader.get("RUN_TYPE")[0];
+	if((runType == "REX") || (runType == "RENS")){
+
+		SetupReader rexReader;
+
+		// Storage for thermodynamic state temperatures
+		std::vector<SimTK::Real> temperatures;
+
+		// Storage for sampling details
+		std::vector<std::vector<std::string>> rexSamplers;
+		std::vector<std::vector<int>> rexDistortOptions;
+		std::vector<std::vector<int>> rexFlowOptions;
+		std::vector<std::vector<int>> rexWorkOptions;
+
+		// Storage for each replica simulation parameters
+		std::vector<std::vector<std::string>> rexIntegrators;
+		std::vector<std::vector<SimTK::Real>> rexTimesteps;
+		std::vector<std::vector<int>> rexWorldIndexes;
+		std::vector<std::vector<int>> rexMdsteps;
+		std::vector<std::vector<int>> rexSamplesPerRound;
+
+		// Read REX config file
+		size_t nofReplicas = rexReader.readREXConfigFile(
+			setupReader.get("REX_FILE")[0],
+			temperatures,
+
+			rexSamplers,
+			rexDistortOptions,
+			rexFlowOptions,
+			rexWorkOptions,
+			rexIntegrators,
+
+			rexTimesteps,
+			rexWorldIndexes,
+			rexMdsteps,
+			rexSamplesPerRound);
+
+		// Add thermodynamic states
+		for(int k = 0; k < temperatures.size(); k++){
+			addThermodynamicState(k, temperatures[k],
+
+				rexSamplers[k],
+				rexDistortOptions[k],
+				rexFlowOptions[k],
+				rexWorkOptions[k],
+				rexIntegrators[k],
+
+				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
+		}
+
+		// Add replicas
+		for(int k = 0; k < nofReplicas; k++){
+			addReplica(k);
+		}
+
+		// Consider renaming
+		loadReplica2ThermoIxs();
+
+		PrintReplicas();
+
+		// How many Gibbs rounds until replica swpas occurs
+		setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
+
+		setSwapFixman(std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]));
+
+		PrepareNonEquilibriumParams_Q();
+	}
+
+    return true;
 }
 
-// Destructor
-Context::~Context(){
-	fclose(logFile);
+void Context::run() {
+	if(run_type == RunType::SimulatedTempering) {
+		RunSimulatedTempering(getRequiredNofRounds(), tempIni, tempFin);
+	}else if(run_type == RunType::REX){
+		RunREX();
+	}else if(run_type == RunType::RENS){
+		setThermostatesNonequilibrium();
+		RunRENS();
+	}else{
+		Run(getRequiredNofRounds(), tempIni, tempFin);
+	}
+}
 
-	//for(int i = 0; i < replicas.size(); i++){
-	//	replicas[i].thermodynamicStateIx.clear();
-	//}
+bool Context::CreateOutputDirectory(const std::string& outDir)
+{
+    if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
+		const int err = mkdir((outDir + "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (err == -1){
+			std::cerr << cerr_prefix << "Failed to create " << outDir + "/pdbs" << std::endl;
+			return false;
+		}
+	}
+    
+	return true;
+}
+
+std::string Context::CreateLogfilename(const std::string& outDir, long long int seed) const
+{
+	return outDir + std::string("/log.") + std::to_string(seed);
+}
+
+std::string Context::GetMoleculeDirectoryShort(const std::string& path) const
+{
+	std::size_t lastSlashPos = path.find_last_of("/");
+	return path.substr(lastSlashPos + 1, path.length());
 }
 
 // Check input
-void Context::CheckInputParameters(const SetupReader& setupReader) {
+bool Context::CheckInputParameters(const SetupReader& setupReader) {
 
 	// Context specific parameters
-	assert(SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0]));
+	if ( !SimTK::Pathname::fileExists(setupReader.get("OUTPUT_DIR")[0]) ) {
+		std::cerr << cerr_prefix << setupReader.get("OUTPUT_DIR")[0] << " does not exist" << std::endl;
+		return false;
+	}
 
-	assert( std::stoi((setupReader.get("ROUNDS"))[0]) >= 0);
-	assert( std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]) > 0);
+	if ( std::stoi((setupReader.get("ROUNDS"))[0]) < 0 ) {
+		std::cerr << cerr_prefix << std::stoi((setupReader.get("ROUNDS"))[0]) << " must be positive" << std::endl;
+		return false;
+	}
 
-	// TODO: if seed not provided, generate one and warn
-	assert( std::stoi((setupReader.get("SEED"))[0]) > 0);
+	if ( std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]) < 0 ) {
+		std::cerr << cerr_prefix << std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]) << " must be positive" << std::endl;
+		return false;
+	}
+	
+	if ( std::stoi((setupReader.get("SEED"))[0]) < 0 ) {
+		std::cerr << cerr_prefix << std::stoi((setupReader.get("SEED"))[0]) << " must be positive" << std::endl;
+		return false;
+	}
 
 	if(setupReader.find("RANDOM_WORLD_ORDER")){
 		if(setupReader.get("RANDOM_WORLD_ORDER").size() == 0){
-			std::cerr << "Please specify RANDOM_WORLD_ORDER with TRUE/FALSE\n";
-			throw std::exception();
-			std::exit(1);
-		}else{
+			std::cerr << cerr_prefix << "Please specify RANDOM_WORLD_ORDER with TRUE/FALSE" << std::endl;
+			return false;
+		} else {
 			isWorldsOrderRandom = ((setupReader.get("RANDOM_WORLD_ORDER")[0] == "TRUE") ? true : false);
 		}
 	}else{
-		std::cerr << "Please specify if the world order should be random through RANDOM_WORLD_ORDER keyword\n";
-		throw std::exception();
-		std::exit(1);
+		std::cerr << cerr_prefix << "Please specify if the world order should be random through RANDOM_WORLD_ORDER keyword" << std::endl;
+		return false;
 	}
 
 	// Set these numbers first
@@ -84,28 +536,24 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	std::size_t inpNofEmbeddedTopologies = inpNofWorlds * inpNofMols;
 
 	if(setupReader.get("ROOTS").size() != inpNofEmbeddedTopologies){
-		std::cerr << "Must have the same no. of root atoms as the no. of Topologies = nofWorlds x nofMolecules.\n";
-		throw std::exception();
-		std::exit(1);
+		std::cerr << cerr_prefix << "Must have the same no. of root atoms as the no. of Topologies = nofWorlds x nofMolecules.\n" << std::endl;
+		return false;
 	}
 
 	if(setupReader.get("ROOT_MOBILITY").size() != setupReader.get("ROOTS").size()){
-		std::cerr << "Must have the same no. of root mobilities as the no. of root atoms.\n";
-		throw std::exception();
-		std::exit(1);
+		std::cerr << cerr_prefix << "Must have the same no. of root mobilities as the no. of root atoms.\n" << std::endl;
+		return false;
 	}
 
 	// World Samplers specific parameters
 	if(setupReader.get("SAMPLERS").size() != inpNofWorlds){
-		std::cerr << "Must have the same no. of samplers as the no. of worlds.\n";
-		throw std::exception();
-		std::exit(1);
+		std::cerr << cerr_prefix << "Must have the same no. of samplers as the no. of worlds.\n" << std::endl;
+		return false;
 	}
 
 	if(inpNofWorlds > setupReader.get("TIMESTEPS").size()){
-		std::cerr << "Must have the at least same no. of timesteps as the no. of worlds.\n";
-		throw std::exception();
-		std::exit(1);
+		std::cerr << cerr_prefix << "Must have the at least same no. of timesteps as the no. of worlds.\n" << std::endl;
+		return false;
 	}else{
 		for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
 			if( std::abs(std::stod(setupReader.get("TIMESTEPS")[worldIx])) <= 0.0000001){
@@ -121,29 +569,28 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 		const auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
 
 		if(!SimTK::Pathname::fileExists(prmtop)) {
-			throwAndExit("Molecule " + std::to_string(molIx) + " prmtop not found at " + prmtop + "\n", 1);
+			std::cerr << cerr_prefix << "Molecule " + std::to_string(molIx) + " prmtop not found at " + prmtop << std::endl;
+			return false;
 		}
+
 		if(!SimTK::Pathname::fileExists(inpcrd)) {
-			throwAndExit("Molecule " + std::to_string(molIx) + " inpcrd not found at " + inpcrd + "\n", 1);
+			std::cerr << cerr_prefix << "Molecule " + std::to_string(molIx) + " inpcrd not found at " + inpcrd << std::endl;
+			return false;
 		}
 	}
 
 	// Topology specific paramters
-	for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
-		for(std::size_t molIx = 0; molIx < inpNofMols; molIx++){
-			if(!SimTK::Pathname::fileExists(
-				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("RBFILE")[molIx]) ){
-				throwAndExit("world " + std::to_string(worldIx) +
-					" molecule " + std::to_string(molIx) +
-					" rb not found\n", 1);
+	for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++) {
+		for(std::size_t molIx = 0; molIx < inpNofMols; molIx++) {
+
+			if(!SimTK::Pathname::fileExists(setupReader.get("MOLECULES")[molIx] + std::string("/") + setupReader.get("RBFILE")[molIx]) ){
+				std::cerr << cerr_prefix << "world " + std::to_string(worldIx) + " molecule " + std::to_string(molIx) + " rb not found" << std::endl;
+				return false;
 			}
-			if(!SimTK::Pathname::fileExists(
-				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("FLEXFILE")[molIx]) ){
-				throwAndExit("world " + std::to_string(worldIx) +
-					" molecule " + std::to_string(molIx) +
-					" flex not found\n", 1);
+
+			if(!SimTK::Pathname::fileExists(setupReader.get("MOLECULES")[molIx] + std::string("/") + setupReader.get("FLEXFILE")[molIx]) ){
+				std::cerr << cerr_prefix << "world " + std::to_string(worldIx) + " molecule " + std::to_string(molIx) + " flex not found" << std::endl;
+				return false;
 			}
 
 		}
@@ -152,21 +599,31 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	// Normal modes options
 	NDistortOpt.resize(inpNofWorlds, 0);
 	if(setupReader.find("DISTORT_OPTION")){
-
 		for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
 			NDistortOpt[worldIx] = std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]);
 		}
-
 	}
 
     if(setupReader.find("REX_SWAP_FIXMAN")){
 		if(setupReader.get("REX_SWAP_FIXMAN").size() == 0){
-			std::cerr << "The DISTORT_OPTION key is present. Please specify a value.\n";
-			throw std::exception();
-			std::exit(1);
+			std::cerr << cerr_prefix << "The DISTORT_OPTION key is present. Please specify a value" << std::endl;
+			return false;
 		}else{
             swapFixman = std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]);
 		}
+	}
+
+	if ( setupReader.get("RUN_TYPE")[0] == "SimulatedTempering" ) {
+		run_type = RunType::SimulatedTempering;
+		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
+		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
+	} else if ( setupReader.get("RUN_TYPE")[0] == "REX" ) {
+		run_type = RunType::REX;
+	} else if ( setupReader.get("RUN_TYPE")[0] == "RENS" ) {
+		run_type = RunType::RENS;
+	} else {
+		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
+		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
 	}
 
 	// If we got here we can set global variables
@@ -178,6 +635,7 @@ void Context::CheckInputParameters(const SetupReader& setupReader) {
 	worlds.reserve(nofWorlds);
 	worldIndexes.reserve(nofWorlds);
 
+	return true;
 }
 
 void Context::reserveWorldsAndTopologies( int inpNofWorlds, int inpNofMols,
@@ -836,8 +1294,8 @@ void Context::printThermodynamics()
 			std::cout << "World " << worldIx << " Sampler " << samplerIx
 				<< " temperature = " << updWorld(worldIx)->updSampler(samplerIx)->getTemperature()
 				<< " initial const state PE: " << std::setprecision(20)
-				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
-				//<< (context.updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(context.updAdvancedState(worldIx, samplerIx))
+				//<< (updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
+				//<< (updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(updAdvancedState(worldIx, samplerIx))
 				<< " useFixmanPotential = "
 				<< pHMC(updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
 				<< std::endl;
@@ -1247,13 +1705,6 @@ void Context::initializeMixingParamters(){assert(!"Not implemented"); throw std:
 // --- Mix ---
 void Context::RotateWorlds(){assert(!"Not implemented"); throw std::exception();}
 //------------
-
-// -- Main ---
-void Context::Run()
-{
-	assert(!"Not implemented"); throw std::exception();
-	throw std::exception();
-}
 
 // SImulate Tempering
 void Context::setNofBoostStairs(std::size_t whichWorld, int howManyStairs)
@@ -5124,20 +5575,14 @@ uint32_t Context::getSeed(std::size_t whichWorld, std::size_t whichSampler) cons
 
 
 /** Analysis related functions **/
-void Context::addDistance(std::size_t whichWorld, std::size_t whichCompound, int aIx1, int aIx2)
+void Context::addDistance(std::size_t whichWorld, std::size_t whichCompound,
+	std::size_t aIx1, std::size_t aIx2)
 {
-	// TODO some are 64 bit, some 32 bit. What to do?
-	std::vector<int> tempV;
-	tempV.push_back(static_cast<int>(whichWorld));
-	tempV.push_back(static_cast<int>(whichCompound));
-	tempV.push_back(aIx1);
-	tempV.push_back(aIx2);
-
-	distanceIxs.push_back(tempV);
+	distanceIxs.push_back({ whichWorld, whichCompound, aIx1, aIx2 });
 }
 
 // Get distances
-void Context::addDistances(std::vector<int> distanceIx)
+void Context::addDistances(const std::vector<std::size_t>& distanceIx)
 {
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for(unsigned int ai = 0; ai < distanceIx.size() / 2; ai++){
@@ -5147,21 +5592,14 @@ void Context::addDistances(std::vector<int> distanceIx)
 }
 
 void Context::addAngle(std::size_t whichWorld, std::size_t whichCompound,
-	int aIx1, int aIx2, int aIx3)
+	std::size_t aIx1, std::size_t aIx2, std::size_t aIx3)
 {
-	// TODO some are 64 bit, some 32 bit. What to do?
-	std::vector<int> tempV;
-	tempV.push_back(static_cast<int>(whichWorld));
-	tempV.push_back(static_cast<int>(whichCompound));
-	tempV.push_back(aIx1);
-	tempV.push_back(aIx2);
-	tempV.push_back(aIx3);
-
-	angleIxs.push_back(tempV);
+	angleIxs.push_back({ whichWorld, whichCompound, aIx1, aIx2, aIx3 });
 }
 
 // Get dihedrals. TODO : only adds to the first Topology
-void Context::addAngles(std::vector<int> angleIx){
+void Context::addAngles(const std::vector<std::size_t>& angleIx)
+{
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for(unsigned int ai = 0; ai < angleIx.size() / 3; ai++){
 			addAngle(worldIx, 0,
@@ -5172,22 +5610,14 @@ void Context::addAngles(std::vector<int> angleIx){
 }
 
 void Context::addDihedral(std::size_t whichWorld, std::size_t whichCompound,
-	int aIx1, int aIx2, int aIx3, int aIx4)
+	std::size_t aIx1, std::size_t aIx2, std::size_t aIx3, std::size_t aIx4)
 {
-	// TODO some are 64 bit, some 32 bit. What to do?
-	std::vector<int> tempV;
-	tempV.push_back(static_cast<int>(whichWorld));
-	tempV.push_back(static_cast<int>(whichCompound));
-	tempV.push_back(aIx1);
-	tempV.push_back(aIx2);
-	tempV.push_back(aIx3);
-	tempV.push_back(aIx4);
-
-	dihedralIxs.push_back(tempV);
+	dihedralIxs.push_back({ whichWorld, whichCompound, aIx1, aIx2, aIx3, aIx4 });
 }
 
 // Get dihedrals. TODO : only adds to the first Topology
-void Context::addDihedrals(std::vector<int> dihedralIx){
+void Context::addDihedrals(const std::vector<std::size_t>& dihedralIx)
+{
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for(unsigned int ai = 0; ai < dihedralIx.size() / 4; ai++){
 			addDihedral(worldIx, 0,
@@ -5202,61 +5632,28 @@ void Context::addDihedrals(std::vector<int> dihedralIx){
 // Print energy information
 void Context::PrintSamplerDataToLog(std::size_t whichWorld)
 {
-
 	SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
-/*    std::cout << currentAdvancedState.getNU() << ' '
-		<< worlds[whichWorld].updSampler(0)->getAcceptedSteps() << ' '
-		<< std::setprecision(4) << std::fixed
-		<< worlds[whichWorld].updSampler(0)->getOldPE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getSetPE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getLastAcceptedKE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getProposedKE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getOldFixman() << ' '
-		<< worlds[whichWorld].updSampler(0)->getSetFixman() << ' '
-		<< worlds[whichWorld].updSampler(0)->getProposedFixman() << ' '
-		;
-*/
-/*    // Use printf for faster output
-	printf("%d %d %.2f %.2f %.2f %.2f %.2f %.2f %.2f "
-		, currentAdvancedState.getNU()
-		, worlds[whichWorld].updSampler(0)->getAcceptedSteps()
-		, worlds[whichWorld].updSampler(0)->getOldPE()
-		, worlds[whichWorld].updSampler(0)->getSetPE()
-		, worlds[whichWorld].updSampler(0)->getLastAcceptedKE()
-		, worlds[whichWorld].updSampler(0)->getProposedKE()
-		, worlds[whichWorld].updSampler(0)->getOldFixman()
-		, worlds[whichWorld].updSampler(0)->getSetFixman()
-		, worlds[whichWorld].updSampler(0)->getProposedFixman()
-	);
-*/
 
-/*    // Avoid get function calls
-	printf("%d %d %.2f %.2f %.2f %.2f %.2f %.2f"
-		, currentAdvancedState.getNU()
-		, (worlds[whichWorld].samplers[0])->acceptedSteps
-		, (worlds[whichWorld].samplers[0])->pe_o
-		, (worlds[whichWorld].samplers[0])->pe_set
-		, (worlds[whichWorld].samplers[0])->ke_proposed
-		, (worlds[whichWorld].samplers[0])->ke_n
-		, (worlds[whichWorld].samplers[0])->fix_o
-		, (worlds[whichWorld].samplers[0])->fix_set
-	);
-*/
+	const auto NU = currentAdvancedState.getNU();
+	const auto acceptedSteps = pHMC((worlds[whichWorld].samplers[0]))->acceptedSteps;
+	const auto pe_o = pHMC((worlds[whichWorld].samplers[0]))->pe_o;
+	const auto pe_set = pHMC((worlds[whichWorld].samplers[0]))->pe_set;
+	const auto ke_o = pHMC((worlds[whichWorld].samplers[0]))->ke_o;
+	const auto ke_n = pHMC((worlds[whichWorld].samplers[0]))->ke_n;
+	const auto fix_o = pHMC((worlds[whichWorld].samplers[0]))->fix_o;
+	const auto fix_n = pHMC((worlds[whichWorld].samplers[0]))->fix_n;
+	const auto fix_set = pHMC((worlds[whichWorld].samplers[0]))->fix_set;
 
 	// Write to a file instead of stdout
-	fprintf(logFile, "%d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
-		, currentAdvancedState.getNU()
-		, pHMC(worlds[whichWorld].samplers[0])->acceptedSteps
-		, pHMC((worlds[whichWorld].samplers[0]))->pe_o
-		, pHMC((worlds[whichWorld].samplers[0]))->pe_set
-		, pHMC((worlds[whichWorld].samplers[0]))->ke_o
-		, pHMC((worlds[whichWorld].samplers[0]))->ke_n
-		, pHMC((worlds[whichWorld].samplers[0]))->fix_o
-		, pHMC((worlds[whichWorld].samplers[0]))->fix_n
-		, pHMC((worlds[whichWorld].samplers[0]))->fix_set
-	);
-	fflush(logFile);
-
+	logFile << NU << " "
+		<< acceptedSteps << " "
+		<< std::fixed << std::setprecision(2) << pe_o << " "
+		<< pe_set << " "
+		<< ke_o << " "
+		<< ke_n << " "
+		<< fix_o << " "
+		<< fix_n << " "
+		<< fix_set << std::endl;
 }
 
 // Print geometric parameters during simulation
@@ -5333,9 +5730,8 @@ void Context::PrintGeometryToLog(std::size_t whichWorld)
 void Context::PrintDistancesToLog(std::size_t whichWorld)
 {
 	for (const auto& distanceIx : distanceIxs) {
-		if( distanceIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Distance(distanceIx[0], distanceIx[1], 0,
-				distanceIx[2], distanceIx[3]) );
+		if( distanceIx[0] == whichWorld ) {
+			logFile << std::fixed << std::setprecision(3) << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << std::endl;
 		}
 	}
 }
@@ -5343,9 +5739,8 @@ void Context::PrintDistancesToLog(std::size_t whichWorld)
 void Context::PrintAnglesToLog(std::size_t whichWorld)
 {
 	for (const auto& angleIx : angleIxs){
-		if( angleIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Roboangle(angleIx[0], angleIx[1], 0,
-				angleIx[2], angleIx[3], angleIx[4]) );
+		if( angleIx[0] == whichWorld ) {
+			logFile << std::fixed << std::setprecision(3) << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << std::endl;
 		}
 	}
 }
@@ -5353,9 +5748,8 @@ void Context::PrintAnglesToLog(std::size_t whichWorld)
 void Context::PrintDihedralsToLog(std::size_t whichWorld)
 {
 	for (const auto& dihedralIx : dihedralIxs){
-		if( dihedralIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Dihedral(dihedralIx[0], dihedralIx[1], 0,
-				dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) );
+		if( dihedralIx[0] == whichWorld ) {
+			logFile << std::fixed << std::setprecision(3) << Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << std::endl;
 		}
 	}
 }
@@ -5363,7 +5757,7 @@ void Context::PrintDihedralsToLog(std::size_t whichWorld)
 void Context::PrintDihedralsQsToLog(std::size_t whichWorld)
 {
 	for (const auto& dihedralIx : dihedralIxs){
-		if( dihedralIx[0] == static_cast<int>(whichWorld)){
+		if( dihedralIx[0] == whichWorld ) {
 
 			// std::cout << "Context::PrintDihedralsQs w c s a1 a2 a3 a4 ="
 			//     << " " << dihedralIx[0] << " " << dihedralIx[1] << " " << 0
@@ -5373,10 +5767,10 @@ void Context::PrintDihedralsQsToLog(std::size_t whichWorld)
 			//     << " " << (worlds[whichWorld].getTopology(0)).getAtomName( SimTK::Compound::AtomIndex(dihedralIx[5]))
 			//     << std::endl;
 
-			fprintf(logFile, "%.3f ", Dihedral(
+			logFile << std::fixed << std::setprecision(3) << Dihedral(
 				dihedralIx[0], dihedralIx[1], 0,
 				dihedralIx[2], dihedralIx[3],
-				dihedralIx[4], dihedralIx[5]) );
+				dihedralIx[4], dihedralIx[5]) << std::endl;
 
 			// const Topology& topology = worlds[whichWorld].getTopology(dihedralIx[1]);
 			// SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
@@ -5399,11 +5793,10 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 	SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
 
 	for (const auto& distanceIx : distanceIxs) {
-		if( distanceIx[0] == static_cast<int>(whichWorld)){
+		if( distanceIx[0] == whichWorld ) {
 
-			fprintf(logFile, "%.3f ",
-				Distance(distanceIx[0], distanceIx[1], 0,
-				   distanceIx[2], distanceIx[3]) );
+			logFile << std::fixed << std::setprecision(3) << 
+				Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << std::endl;
 
 			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndex(
 				SimTK::Compound::AtomIndex(distanceIx[2]) );
@@ -5419,8 +5812,7 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 			SimTK::Transform X_FM2 = mobod2.getMobilizerTransform(currentAdvancedState);
 
 			SimTK::Transform deltaX_PF = X_PF2.p() - X_PF1.p();
-			fprintf(logFile, "%.3f ",
-				((-1 * X_FM1.p()) + deltaX_PF.p() + X_FM2.p()).norm() );
+			logFile << std::fixed << std::setprecision(3) << ((-1 * X_FM1.p()) + deltaX_PF.p() + X_FM2.p()).norm() << std::endl;
 
 			//std::cout << "X_PF1:" << std::endl << X_PF1 << std::endl;
 			//std::cout << "X_FM1:" << std::endl << X_FM1 << std::endl;
@@ -5449,7 +5841,7 @@ void Context::PrintToLog(int worldIx)
 	PrintAnglesToLog(worldIx);
 	PrintDihedralsQsToLog(worldIx); */
 
-	fprintf(logFile, "\n");
+	logFile << std::endl;
 }
 
 // Write intial pdb for reference
@@ -5680,18 +6072,3 @@ void Context::PrintNumThreads() {
 		worldIx++;
 	}
 }
-
-///////////////////////////
-// CTYPES
-///////////////////////////
-
-//
-//extern "C"
-//{
-//	Context* makeContext
-//}
-
-//------------
-
-
-
