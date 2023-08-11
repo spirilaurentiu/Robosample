@@ -2744,6 +2744,12 @@ std::vector<SimTK::Real>& scaleFactors)
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
 
+	SimTK::Vector v;
+	SimTK::Vector MInvV;
+	SimTK::Real detM;
+	matter->calcDetM(someState, v, MInvV, &detM);
+	std::cout << "detM " << detM << std::endl;
+
 	//world->traceBendStretch(someState);
 	//world->PrintAcosX_PFs();
 	//world->PrintNormX_BMs();
@@ -2840,6 +2846,11 @@ std::vector<SimTK::Real>& scaleFactors)
 	}
 
 	// Test
+	/* SimTK::Vector v;
+	SimTK::Vector MInvV;
+	SimTK::Real detM; */
+	matter->calcDetM(someState, v, MInvV, &detM);
+	std::cout << "detM " << detM << std::endl;
 	/* //std::cout << "shifted Q = " << someState.getQ() << std::endl;
 	// Get bonds and angles values
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -3189,9 +3200,9 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 	// Final result
 	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
 	//SimTK::Real logBendStretchJac = logJacScale;
-	SimTK::Real logBendStretchJac = -1.0 * logJacScale;
+	//SimTK::Real logBendStretchJac = -1.0 * logJacScale;
 	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);
-	//SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
+	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
 	//SimTK::Real logBendStretchJac = logJacBAT_0 - logJacScale + (-1.0 * logJacBAT_tau);
 
 	std::cout << "logJacBAT " << logJacBAT_0
