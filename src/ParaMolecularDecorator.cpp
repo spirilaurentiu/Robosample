@@ -569,12 +569,12 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 	// Draw Rigid bodies
 	// Ground frame
-	/* drawFrame(geometry, Transform(),
+	drawFrame(geometry, Transform(),
 		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
 		"G", 0.009, SimTK::Vec3(0.5, 0.5, 0.5), SimTK::Vec3(0.02, 0.0, 0.0));
 	drawFrame(geometry, G_X_T,
 		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
-		"Top", 0.009, SimTK::Vec3(0.5, 0.0, 0.5), SimTK::Vec3(0.02, 0.0, 0.0)); */
+		"Top", 0.009, SimTK::Vec3(0.5, 0.0, 0.5), SimTK::Vec3(0.02, 0.0, 0.0));
 
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -634,7 +634,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				!= std::end(chosenBodies));
 
 			//if(found) {
-			if( (int(mbx) > 1) ) {
+			if( (int(mbx) >= 1) ) {
 			//if( (int(mbx) > 1) && (int(mbx) < 5) ) {
 
 				// Frame P
@@ -677,7 +677,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 
 			// Draw lines
 			//if(found) {
-			if( (int(mbx) > 1) ) {
+			if( (int(mbx) >= 1) ) {
 			//if( (int(mbx) > 1) && (int(mbx) < 5) ) {
 			//if(false){
 

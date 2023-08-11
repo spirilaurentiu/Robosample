@@ -2850,7 +2850,8 @@ std::vector<SimTK::Real>& scaleFactors)
  * standard deviations through BendStretch joint
  */
 void HMCSampler::setQToScaleBendStretchStdev_Old(SimTK::State& someState,
-std::vector<SimTK::Real>& scaleFactors)
+std::vector<SimTK::Real>& scaleFactors
+)
 {
 	// Scaling factor is set by Context only in the begining
 	//this->QScaleFactor = 1.0;
@@ -3093,15 +3094,16 @@ std::vector<SimTK::Real>& scaleFactors)
 */
 SimTK::Real 
 HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
-	std::vector<SimTK::Real> scaleFactors)
+	std::vector<SimTK::Real> scaleFactors,
+	unsigned int startFromBody)
 {
 
 	int x_pf_k = 0;
 
 	// Get log of the Cartesian->BAT Jacobian
 	SimTK::Real logJacBAT_0 = 0.0; // log space
-	//SimTK::Real logJacBAT_0 = 1.0; // normal space
-	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+	startFromBody -= 1; // align with k (exclude Ground)
+	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
 			x_pf_k = k + world->normX_BMp.size();
@@ -3109,65 +3111,55 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			// Checks
 			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
 				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
-					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
-					<< world->normX_BMp[k] * scaleFactors[k] << " "
+				<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
+				<< world->normX_BMp[k] * scaleFactors[k] << " "
 				<< std::endl << std::flush; */
 
 			// Get bond term
 			SimTK::Real d2 = world->normX_BMp[k];
 			if(d2 != 0){
 					d2 = 2.0 * std::log(d2); // log space
-					//d2 = d2 * d2; // normal space
 			}
+			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
 
 			// Get the angle term
 			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k]);
 
 			if(sineTheta != 0){
 					sineTheta = std::log(std::sin(sineTheta)); // log space
-					//sineTheta = std::sin(sineTheta); // normal space
 			}
+			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
+
 
 			// Accumulate result
 			logJacBAT_0 += (d2 + sineTheta); // log space
-			//logJacBAT_0 *= (d2 * sineTheta); // normal space
 	}
 
 	// Get log of the scaling Jacobian
 	// Although the method seems stupid for now, it has generality
 	// and allows insertion of new code
 	SimTK::Real logJacScale = 0.0; // log space
-	//SimTK::Real logJacScale = 1.0; // normal space
-	for(unsigned int k = 0; k < scaleFactors.size(); k++){
+	for(unsigned int k = startFromBody; k < scaleFactors.size(); k++){
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
 					logJacScale += std::log(std::abs(scaleFactors[k])); // log space
-					//logJacScale *= std::abs(scaleFactors[k]); // normal space
 			}
+			//std::cout << "sf " << k << " " << scaleFactors[k] << std::endl; 
 	}
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
 	SimTK::Real logJacBAT_tau = 0.0; // log space
-	//SimTK::Real logJacBAT_tau = 1.0; // normal space
-	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
 			x_pf_k = k + world->normX_BMp.size();
-
-			// Checks
-			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
-				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
-					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
-					<< world->normX_BMp[k] * scaleFactors[k] << " "
-				<< std::endl << std::flush; */
 
 			// Get bond term
 			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
 
 			if(d2 != 0){
 					d2 = 2.0 * std::log(d2); // log space
-					//d2 = d2 * d2; // normal space
 			}
 
 			// Get the angle term
@@ -3175,24 +3167,22 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 			if(std::abs(sineTheta) > 0.0000001){
 					sineTheta = std::log(std::sin(sineTheta)); // log space
-					//sineTheta = std::sin(sineTheta); // normal space
   			}
 
 			// Accumulate result
 			logJacBAT_tau += (d2 + sineTheta); // log space
-			//logJacBAT_tau *= (d2 * sineTheta); // normal space
 	}
 
-        // Final result
-        //SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
-        //SimTK::Real logBendStretchJac = logJacScale; // 7000
-        SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau); // 8000
-        //SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau); // 9000
+	// Final result
+	/*SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
+	SimTK::Real logBendStretchJac = logJacScale;
+	SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);*/
+	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
 
-        std::cout << "logJacBAT " << logJacBAT_0
-                << " logJacScale " << logJacScale
-                << " logJacBATInv " << logJacBAT_tau
-                << " logBendStretchJac " << logBendStretchJac
+	std::cout << "logJacBAT " << logJacBAT_0
+			<< " logJacScale " << logJacScale
+			<< " logJacBATInv " << logJacBAT_tau
+			<< " logBendStretchJac " << logBendStretchJac
                 << std::endl;
 
 	return logBendStretchJac;
@@ -3221,8 +3211,9 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	}
 
 	// Get the log of the Jacobian of the change
+	unsigned int startFromBody = 2;
 	this->bendStretchJacobianDetLog =
-		calcBendStretchJacobianDetLog(someState, scaleFactors);
+		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){

@@ -4701,7 +4701,7 @@ void Context::RunOneRound(void)
 			if(distribOpt == "deterministic"){
 
 				//sf = std::sqrt(300.0 / 400.0);
-				sf = 0.01;
+				sf = 0.3;
 
 			// Draw the Q scale factor from a truncated normal
 			}else if(distribOpt == "gauss"){
@@ -4752,7 +4752,12 @@ void Context::RunOneRound(void)
 			int(nofSamplesPerRound[currentWorldIx]));
 
 		// Write pdb every world
-		//writePdbs(nofRounds, currentWorldIx);
+		/* writePdbs(nofRounds, currentWorldIx);
+		std::cout << "Wrote pdb "
+			<< pdbPrefix + "." + std::to_string(0) + "." + "s" 
+				+ std::to_string(currentWorldIx) 
+				+ "..." + std::to_string(nofRounds)
+			 << std::endl; */
 
 	} // END iteration through worlds
 }
@@ -5807,7 +5812,6 @@ void Context::PrintGeometry(SetupReader& setupReader, std::size_t whichWorld)
 			<< Distance(whichWorld, 0, 0,
 				distanceIx[2*ai + 0], distanceIx[2*ai + 1]) << " ";
 			*/
-
 			printf("%.2f ", Distance(whichWorld, 0, 0,
 				 distanceIx[2*ai + 0], distanceIx[2*ai + 1]));
 

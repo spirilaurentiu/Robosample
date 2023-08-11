@@ -332,7 +332,8 @@ public:
 	 * Get the log of the Jacobian of a bond-angle strtch
 	*/
 	SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState,
-		std::vector<SimTK::Real> scaleFactors);
+		std::vector<SimTK::Real> scaleFactors,
+		unsigned int startFromBody = 0);
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setTemperature(double HMCBoostTemperature);
