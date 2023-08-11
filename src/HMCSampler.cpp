@@ -2840,7 +2840,18 @@ std::vector<SimTK::Real>& scaleFactors)
 	}
 
 	// Test
-	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	/* //std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	// Get bonds and angles values
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+
+		std::cout << "HMCSampler check world " << world->ownWorldIndex << " " 
+			<< "bond " << int(mbx) - 1 << " " << X_BM.p().norm() << " "
+			<< std::endl;
+	} */
 
 }
 
@@ -3161,6 +3172,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			if(d2 != 0){
 					d2 = 2.0 * std::log(d2); // log space
 			}
+			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
 
 			// Get the angle term
 			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k] * scaleFactors[x_pf_k]);
@@ -3168,6 +3180,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			if(std::abs(sineTheta) > 0.0000001){
 					sineTheta = std::log(std::sin(sineTheta)); // log space
   			}
+			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
 
 			// Accumulate result
 			logJacBAT_tau += (d2 + sineTheta); // log space
@@ -3907,13 +3920,14 @@ world->PrintNormX_BMMeans(); */
 
 	// Set X_PF and X_BM means to whatever iti is now
 	///////////////////////////////////////////////////
-	if(nofSamples == 0){
+	/* if(nofSamples == 0){
 		world->setTransformsMeansToCurrent(someState);
-	}
+	} */
 	///////////////////////////////////////////////////
 
 	// Calculate X_PFs and X_BMs
 	world->getTransformsStatistics(someState);
+	world->updateTransformsMeans(someState); // Movable
 
 	bool validated = true;
 	validated = generateProposal(someState);
@@ -3952,13 +3966,13 @@ world->PrintNormX_BMMeans(); */
 		// Calculate X_PFs and X_BMs
 //world->traceBendStretch(someState);
 
-		world->getTransformsStatistics(someState);
+		/* world->getTransformsStatistics(someState);
 
 		// Update means of values before altering them
 		world->updateTransformsMeans(someState);
 		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
 			//world->updateTransformsMeans(someState);
-		}
+		} */
 
 	}
 

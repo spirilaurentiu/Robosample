@@ -933,17 +933,17 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
 		// Print something for now
-		/* SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		SimTK::Real bond = normX_BMp[int(mbx) - 1];
 		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
 		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
 		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
 
-		std::cout 
-			<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
+		/* std::cout << "World " << ownWorldIndex << " " 
+			//<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
 			<< "bond " << int(mbx) - 1 << " " << bond << " "
-			<< "angleMean " << int(mbx) - 1 << " "
-			<< angleMean * (180 / SimTK::Pi) << " "
-			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
+			//<< "angleMean " << int(mbx) - 1 << " "
+			//<< angleMean * (180 / SimTK::Pi) << " "
+			//<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
 			<< std::endl; */
 
 	}
@@ -1276,8 +1276,6 @@ void World::updateTransformsMeans(SimTK::State& someState)
 	int nofSamples = getNofSamples() + 1;
 	//std::cout << "Nof samples " << nofSamples << std::endl;
 
-	//getTransformsStatistics(someState);
-
 	// Useful vars
 	SimTK::Real N_1overN = 9999, NInv = 9999;
 
@@ -1287,6 +1285,7 @@ void World::updateTransformsMeans(SimTK::State& someState)
 		}
 		for(unsigned int k = 0; k < normX_BMp_means.size(); k++){
 			normX_BMp_means[k] = normX_BMp[k];
+			//std::cout << "World " << ownWorldIndex << " bondUpdMean " << k << " " << normX_BMp_means[k] << std::endl;
 		}
 	}else{
 		if(nofSamples == 2){
@@ -1312,6 +1311,7 @@ void World::updateTransformsMeans(SimTK::State& someState)
 		for(auto &xbm : normX_BMp_means ){
 			i += 1;
 			xbm = (N_1overN * xbm) + (NInv * normX_BMp.at(i));
+			//std::cout << "World " << ownWorldIndex << " bondUpdMean " << i << " " << xbm << std::endl;
 		}
 	}
 
@@ -1347,6 +1347,9 @@ void World::calcBendStretchDeviations(SimTK::State& someState,
 	}
 	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
 		X_BMdiffs[k] = this->normX_BMp[k] - this->normX_BMp_means[k];
+		/* std::cout << "World " << ownWorldIndex << " bondDiff " << k << " "
+		//<< this->normX_BMp[k] << " " << this->normX_BMp_means[k] << " "
+		<< X_BMdiffs[k] << std::endl; */
 	}
 
 }
