@@ -2743,13 +2743,6 @@ std::vector<SimTK::Real>& scaleFactors)
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
-
-	SimTK::Vector v(someState.getNU());
-	SimTK::Vector MInvV(someState.getNU());
-	SimTK::Real detM = 0.0;
-	matter->calcDetM(someState, v, MInvV, &detM);
-	std::cout << "detM " << detM << std::endl;
-
 	//world->traceBendStretch(someState);
 	//world->PrintAcosX_PFs();
 	//world->PrintNormX_BMs();
@@ -2846,9 +2839,10 @@ std::vector<SimTK::Real>& scaleFactors)
 	}
 
 	// Test
-	/* SimTK::Vector v;
-	SimTK::Vector MInvV;
-	SimTK::Real detM; */
+	matter->realizeArticulatedBodyInertias(someState);
+	SimTK::Vector v(someState.getNU());
+	SimTK::Vector MInvV(someState.getNU());
+	SimTK::Real detM = 0.0;
 	matter->calcDetM(someState, v, MInvV, &detM);
 	std::cout << "detM " << detM << std::endl;
 	/* //std::cout << "shifted Q = " << someState.getQ() << std::endl;
