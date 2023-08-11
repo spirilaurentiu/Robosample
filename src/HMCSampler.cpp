@@ -3187,10 +3187,10 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 	}
 
 	// Final result
-	/*SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
 	SimTK::Real logBendStretchJac = logJacScale;
-	SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);*/
-	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);
+	//SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
 
 	std::cout << "logJacBAT " << logJacBAT_0
 			<< " logJacScale " << logJacScale
