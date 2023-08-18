@@ -2844,7 +2844,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	SimTK::Vector MInvV(someState.getNU());
 	SimTK::Real detM = 0.0;
 	matter->calcDetM(someState, v, MInvV, &detM);
-	std::cout << "detM " << detM << std::endl;
+	std::cout << "logDetM " << detM << std::endl;
 	/* //std::cout << "shifted Q = " << someState.getQ() << std::endl;
 	// Get bonds and angles values
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){

@@ -2635,8 +2635,12 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	// ========================================================================
 
 	SimTK::Real ETerm = -1.0 * (eij + eji) + eii + ejj;
-	SimTK::Real Work_A = lij - eii - replicas[replica_i].get_WORK_Jacobian();
-	SimTK::Real Work_B = lji - ejj - replicas[replica_j].get_WORK_Jacobian();
+
+	/* SimTK::Real Work_A = lij - eii - replicas[replica_i].get_WORK_Jacobian();
+	SimTK::Real Work_B = lji - ejj - replicas[replica_j].get_WORK_Jacobian(); */
+	SimTK::Real Work_A = lij - eii - std::log(qScaleFactors.at(thermoState_i));
+	SimTK::Real Work_B = lji - ejj - std::log(qScaleFactors.at(thermoState_j));
+
 	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
 	// Correction term
@@ -3309,33 +3313,51 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 
 		// Set the Q scale factor at a fixed value
 		if(distribOpt == "deterministic"){
-			/* qScaleFactors.at(thisThermoStateIx) = 
-				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
-			qScaleFactors.at(thisThermoStateIx) = 1.0; */
+			
+			/* qScaleFactors.at(0) = (500.0 / 300.0);
+			qScaleFactors.at(1) = (300.0 / 500.0); */
 
-			qScaleFactors.at(0) = (500.0 / 300.0);
-			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
-			qScaleFactors.at(1) = (300.0 / 500.0);
+			qScaleFactors.at(0) = 4.0;
+			qScaleFactors.at(1) = 0.25;
+		}
+		// Draw Q scale factor from a Bernoulli trial
+		else if(distribOpt == "Bernoulli"){
+			
+			// Get the scale factor
+			SimTK::Real scaleFactor = (3.0);
 
+			// Scale factor up or down randomly
+			HMCSampler *pHMC_0 = worlds[replicaWorldIxs[i]].updSampler(0);
+			SimTK::Real randUni_m1_1 =
+				pHMC_0->uniformRealDistribution_m1_1(randomEngine);
+			SimTK::Real BernoulliScale = 
+				(randUni_m1_1 > 0) ? scaleFactor : 1.0 / scaleFactor ;
+
+			// Set the scale factor
+			qScaleFactors.at(thisThermoStateIx) *= BernoulliScale;
+
+		}
 		// Draw the Q scale factor from a truncated normal
-		}else if(distribOpt == "gauss"){
+		else if(distribOpt == "gauss"){
 			qScaleFactorsStd.at(thisThermoStateIx) = 0.1;
 		 	worlds[replicaWorldIxs[i]].updSampler(0)->convoluteVariable(
 				qScaleFactors.at(thisThermoStateIx), "truncNormal",
 				qScaleFactorsStd.at(thisThermoStateIx));
-
+		}
 		// Draw the Q scale factor from a uniform distribution
-		}else if(distribOpt == "uniform"){
+		else if(distribOpt == "uniform"){
 			qScaleFactors.at(thisThermoStateIx) = 
 				worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistributionRandTrunc(
 					0.8, 1.25);
 		}
+		else if (distribOpt == "continueFromHere"){
+			/* qScaleFactors.at(thisThermoStateIx) = 
+				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
+			qScaleFactors.at(thisThermoStateIx) = 1.0; */
+			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
+		}
 
 		// Assign a random sign (optional)
-		/* SimTK::Real randSign;
-		SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
-		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-		qScaleFactors.at(thisThermoStateIx) *= randSign; */
 
 		// Send the scale factor to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
