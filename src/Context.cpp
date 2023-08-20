@@ -2100,13 +2100,11 @@ void Context::addReplica(int index)
 
 void Context::addThermodynamicState(int index,
 		SimTK::Real T,
-
 		std::vector<std::string>& rexSamplers,
 		std::vector<int>& rexDistortOptions,
 		std::vector<int>& rexFlowOptions,
 		std::vector<int>& rexWorkOptions,
-		std::vector<std::string>& rexIntegrators,		
-
+		std::vector<std::string>& rexIntegrators,
 		std::vector<int>& argWorldIndexes,
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica)
@@ -2429,7 +2427,7 @@ void Context::swapThermodynamicStates(int replica_i, int replica_j){
 	thermo2ReplicaIxs[thermoState_j] = temp;
 }
 
-void Context::swapPotentialEnergy(int replica_i, int replica_j)
+void Context::swapPotentialEnergies(int replica_i, int replica_j)
 {
 	// Exchange potential energies (not necessary)
 	SimTK::Real tempE = replicas[replica_i].getPotentialEnergy();
@@ -2535,7 +2533,7 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 		swapThermodynamicStates(replica_i, replica_j);
 
-		swapPotentialEnergy(replica_i, replica_j);
+		swapPotentialEnergies(replica_i, replica_j);
 
 		returnValue = true;
 
@@ -2555,152 +2553,147 @@ bool Context::attemptSwap(int replica_i, int replica_j)
  * equilibrium simulations and the work done by the non-equilibrium 
  * worlds should be stored in the last energy of the last world
 */
-bool Context::attemptRENSSwap(int replica_i, int replica_j)
+bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 {
 	int returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
-	int thermoState_i = replica2ThermoIxs[replica_i];
-	int thermoState_j = replica2ThermoIxs[replica_j];
-
-	/* std::cout << "EA, bA, EB, bB "
-		<< replicas[replica_i].getPotentialEnergy() << " "
-		<< thermodynamicStates[thermoState_i].getBeta()
-		<< replicas[replica_j].getPotentialEnergy() << " "
-		<< thermodynamicStates[thermoState_j].getBeta()
-		<< std::endl; */
+	int thermoState_C = replica2ThermoIxs[replica_X];
+	int thermoState_H = replica2ThermoIxs[replica_Y];
 
 	// Record this attempt
-	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
-	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
+	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
+	nofAttemptedSwapsMatrix[thermoState_H][thermoState_C] += 1;
 
+	// ========================= INITIAL PE x,y 0 ==============================
 	// Replica i reduced potential in state i
-	SimTK::Real eii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
+	SimTK::Real eC_X0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
 
 	// Replica j reduced potential in state j
-	SimTK::Real ejj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
+	SimTK::Real eH_Y0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
 
 	// Replica i reduced potential in state j
-	SimTK::Real eij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
+	SimTK::Real eH_X0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
 
 	// Replica j reduced potential in state i
-	SimTK::Real eji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
+	SimTK::Real eC_Y0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
 
 	// Include the Fixman term if indicated
 	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
 	int ndofs_i = 0, ndofs_j = 0;
 
 	// ============================ WORK ======================================
-	// Replica i reduced potential in state i
-	SimTK::Real wii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].getTransferedEnergy();
+	/* // Replica i reduced potential in state i
+	SimTK::Real wii = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_X].getTransferedEnergy();
 
 	// Replica j reduced potential in state j
-	SimTK::Real wjj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].getTransferedEnergy();
+	SimTK::Real wjj = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_Y].getTransferedEnergy();
 
 	// Replica i reduced potential in state j
-	SimTK::Real wij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].getTransferedEnergy();
+	SimTK::Real wij = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_X].getTransferedEnergy();
 
 	// Replica j reduced potential in state i
-	SimTK::Real wji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].getTransferedEnergy();
+	SimTK::Real wji = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_Y].getTransferedEnergy(); */
 	// ========================================================================
 
-	// ========================== LAST PE =====================================
+	// ========================== LAST PE x,y tau =============================
 	// Replica i reduced potential in state i
-	SimTK::Real lii = thermodynamicStates[thermoState_i].getBeta()
-		//* replicas[replica_i].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_i].getPotentialEnergy() + replicas[replica_i].getTransferedEnergy());
+	SimTK::Real lC_Xtau = thermodynamicStates[thermoState_C].getBeta()
+		//* replicas[replica_i].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
 
 	// Replica j reduced potential in state j
-	SimTK::Real ljj = thermodynamicStates[thermoState_j].getBeta()
-		//* replicas[replica_j].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_j].getPotentialEnergy() + replicas[replica_j].getTransferedEnergy());
+	SimTK::Real lH_Ytau = thermodynamicStates[thermoState_H].getBeta()
+		//* replicas[replica_j].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
 
 	// Replica i reduced potential in state j
-	SimTK::Real lij = thermodynamicStates[thermoState_j].getBeta()
-		//* replicas[replica_i].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_i].getPotentialEnergy() + replicas[replica_i].getTransferedEnergy());
+	SimTK::Real lH_Xtau = thermodynamicStates[thermoState_H].getBeta()
+		//* replicas[replica_i].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
 
 	// Replica j reduced potential in state i
-	SimTK::Real lji = thermodynamicStates[thermoState_i].getBeta()
-		//* replicas[replica_j].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_j].getPotentialEnergy() + replicas[replica_j].getTransferedEnergy());
+	SimTK::Real lC_Ytau = thermodynamicStates[thermoState_C].getBeta()
+		//* replicas[replica_j].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
 	// ========================================================================
 
-	SimTK::Real ETerm = -1.0 * (eij + eji) + eii + ejj;
+	SimTK::Real ETerm = -1.0 * (eH_X0 + eC_Y0) + eC_X0 + eH_Y0;
 
 	/* SimTK::Real Work_A = lij - eii - replicas[replica_i].get_WORK_Jacobian();
 	SimTK::Real Work_B = lji - ejj - replicas[replica_j].get_WORK_Jacobian(); */
-	SimTK::Real Work_A = lij - eii - std::log(qScaleFactors.at(thermoState_i));
-	SimTK::Real Work_B = lji - ejj - std::log(qScaleFactors.at(thermoState_j));
+	SimTK::Real Work_A = lH_Xtau - eC_X0 - std::log(qScaleFactors.at(thermoState_C));
+	SimTK::Real Work_B = lC_Ytau - eH_Y0 - std::log(qScaleFactors.at(thermoState_H));
 
 	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
 	// Correction term
-	SimTK::Real miu_i = qScaleFactorsMiu.at(thermoState_i);
-	SimTK::Real miu_j = qScaleFactorsMiu.at(thermoState_j);
-	SimTK::Real std_i = qScaleFactorsStd.at(thermoState_i);
-	SimTK::Real std_j = qScaleFactorsStd.at(thermoState_j);
+	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
+	SimTK::Real miu_H = qScaleFactorsMiu.at(thermoState_H);
+	SimTK::Real std_C = qScaleFactorsStd.at(thermoState_C);
+	SimTK::Real std_H = qScaleFactorsStd.at(thermoState_H);
 	
-	SimTK::Real s_i = qScaleFactors.at(thermoState_i);
-	SimTK::Real s_j = qScaleFactors.at(thermoState_j);
-	SimTK::Real s_i_1 = 1.0 / s_i;
-	SimTK::Real s_j_1 = 1.0 / s_j;
+	SimTK::Real s_X = qScaleFactors.at(thermoState_C);
+	SimTK::Real s_Y = qScaleFactors.at(thermoState_H);
+	SimTK::Real s_X_1 = 1.0 / s_X;
+	SimTK::Real s_Y_1 = 1.0 / s_Y;
 
 	SimTK::Real correctionTerm = 1.0;
 	//correctionTerm = 
-	//	(normalPdf(s_i_1, miu_j, std_j) * normalPdf(s_j_1, miu_i, std_i)) / 
-	//	(normalPdf(s_i, miu_i, std_i)   * normalPdf(s_j, miu_j, std_j));
-	SimTK::Real qC_s_i = 1.0, qH_s_j = 1.0, qH_s_i_1 = 1.0, qC_s_j_1 = 1.0;
+	//	(normalPdf(s_X_1, miu_H, std_H) * normalPdf(s_Y_1, miu_C, std_C)) / 
+	//	(normalPdf(s_X, miu_C, std_C)   * normalPdf(s_Y, miu_H, std_H));
+	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
+	
 	auto genericSampler = updWorld(0)->updSampler(0);
-	/* qC_s_i   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
-	qH_s_j   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
-	qH_s_i_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
-	qC_s_j_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
+	/* qC_s_X   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
+	qH_s_Y   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
+	qH_s_X_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
+	qC_s_Y_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
 
-	correctionTerm = (qH_s_i_1 * qC_s_j_1) / (qC_s_i * qH_s_j);
+	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
 
 	bool printTerms = false, printWithoutText = true;
 	if (printTerms){
-		std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
-		std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
+		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
+		std::cout << "replicaIxs " << replica_X << " " << replica_Y << std::endl;
 		std::cout << "bibjwiwj "
-			<< thermodynamicStates[thermoState_i].getBeta() << " "
-			<< thermodynamicStates[thermoState_j].getBeta() << " "
+			<< thermodynamicStates[thermoState_C].getBeta() << " "
+			<< thermodynamicStates[thermoState_H].getBeta() << " "
 			<< std::endl;
-		std::cout << "LiiLjj " << lii << " " << ljj << " "
-			<< lij << " " << lji << std::endl;
-		std::cout << "EiiEjj " << eii << " " << ejj << " "
-			<< eij << " " << eji << std::endl;
-		std::cout << "Transferred E i j " << replicas[replica_i].getTransferedEnergy()
-			<< " " << replicas[replica_j].getTransferedEnergy() << std::endl;
+		std::cout << "LiiLjj " << lC_Xtau << " " << lH_Ytau << " "
+			<< lH_Xtau << " " << lC_Ytau << std::endl;
+		std::cout << "EiiEjj " << eC_X0 << " " << eH_Y0 << " "
+			<< eH_X0 << " " << eC_Y0 << std::endl;
+		std::cout << "Transferred E i j " << replicas[replica_X].getTransferedEnergy()
+			<< " " << replicas[replica_Y].getTransferedEnergy() << std::endl;
 		std::cout << "ETerm " << ETerm << std::endl;
 		std::cout << "WTerm " << WTerm << std::endl;
 		std::cout << "correctionTerm s_i s_f " << correctionTerm 
-			<< " " << s_i << " " << s_j << " " << s_i_1 << " " << s_j_1
-			<< " " << qC_s_i << " " << qH_s_j << " " << qH_s_i_1 << " " << qC_s_j_1
+			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1
+			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1
 			<< std::endl;
 	}
 	if(printWithoutText){
-		std::cout << "RENSdetails " << thermoState_i << " " << thermoState_j << " " 
-			<< replica_i << " " << replica_j << " " 
-			<< thermodynamicStates[thermoState_i].getBeta() << " "
-			<< thermodynamicStates[thermoState_j].getBeta() << " "
-			<< eii << " " << ejj << " " << eij << " " << eji << " "
-			<< lii << " " << ljj << " " << lij << " " << lji << " "
-			<< replicas[replica_i].get_WORK_Jacobian() << " " 
-			<< replicas[replica_j].get_WORK_Jacobian() << " "
-			<< replicas[replica_i].getTransferedEnergy() << " "
-			<< replicas[replica_j].getTransferedEnergy() << " "
-			<< " " << s_i << " " << s_j << " " << s_i_1 << " " << s_j_1 << " "
-			<< " " << qC_s_i << " " << qH_s_j << " " << qH_s_i_1 << " " << qC_s_j_1 << " "
+		std::cout << "RENSdetails " << thermoState_C << " " << thermoState_H << " " 
+			<< replica_X << " " << replica_Y << " " 
+			<< thermodynamicStates[thermoState_C].getBeta() << " "
+			<< thermodynamicStates[thermoState_H].getBeta() << " "
+			<< eC_X0 << " " << eH_Y0 << " " << eH_X0 << " " << eC_Y0 << " "
+			<< lC_Xtau << " " << lH_Ytau << " " << lH_Xtau << " " << lC_Ytau << " "
+			<< replicas[replica_X].get_WORK_Jacobian() << " " 
+			<< replicas[replica_Y].get_WORK_Jacobian() << " "
+			<< replicas[replica_X].getTransferedEnergy() << " "
+			<< replicas[replica_Y].getTransferedEnergy() << " "
+			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1 << " "
+			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1 << " "
 			<< ETerm << " " << WTerm << " " << correctionTerm << " "
 		<< std::endl;
 	}
@@ -2714,16 +2707,16 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
 		// Update replicas coordinates from work generated coordinates
-		set_WORK_CoordinatesAsFinal(replica_i);
-		set_WORK_CoordinatesAsFinal(replica_j);
+		set_WORK_CoordinatesAsFinal(replica_X);
+		set_WORK_CoordinatesAsFinal(replica_Y);
 
 		// Update replica's energy from work last potential energy
-		set_WORK_PotentialAsFinal(replica_i);
-		set_WORK_PotentialAsFinal(replica_j);
+		set_WORK_PotentialAsFinal(replica_X);
+		set_WORK_PotentialAsFinal(replica_Y);
 				
 		// Swap thermodynamic states
-		swapThermodynamicStates(replica_i, replica_j);
-		swapPotentialEnergy(replica_i, replica_j);
+		swapThermodynamicStates(replica_X, replica_Y);
+		swapPotentialEnergies(replica_X, replica_Y);
 
 		std::cout << "swapped\n" << endl;
 
@@ -2846,7 +2839,6 @@ void Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
 	//std::cout << "Context::restoreReplicaCoordinatesToFrontWorld worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
 
 }
-
 
 // Load replica's atomLocations into it's back world
 void Context::restoreReplicaCoordinatesToBackWorld(int whichReplica)
@@ -4501,18 +4493,11 @@ void Context::RunRENS(void)
 			qScaleFactorsMiu = qScaleFactorsEven;
 		}
 
-		// Apply other functions to scale factors
-		/* for(auto& qsf : qScaleFactorsMiu){
-			if(qsf < 1.0){
-				qsf = 1.0;
-			}else{
-				qsf = 1.0;
-			}
-		} */
-
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl << std::flush;
+
+
 
 			// ----------------------------------------------------------------
 			// EQUILIBRIUM
@@ -4521,6 +4506,20 @@ void Context::RunRENS(void)
 			// ========================== LOAD ========================
 			// Load the front world
 			restoreReplicaCoordinatesToFrontWorld(replicaIx);
+
+
+			// Write energy and geometric features to logfile
+			if( !(mixi % getPrintFreq()) ){
+				PrintToLog(worldIndexes.front());
+			}
+
+			// Write pdb
+			if( pdbRestartFreq != 0){
+				int thermoStateIx = replica2ThermoIxs[replicaIx];
+				if((mixi % pdbRestartFreq) == 0){
+					writePdbs(mixi, thermoStateIx);
+				}
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 			setWorldsParameters(replicaIx);
 
@@ -4559,21 +4558,6 @@ void Context::RunRENS(void)
 
 			// Store Fixman if required
 			storeReplicaFixmanFromBackWorld(replicaIx);
-
-			// Write energy and geometric features to logfile
-			if( !(mixi % getPrintFreq()) ){
-				PrintToLog(worldIndexes.front());
-			}
-
-			// Write pdb
-			if( pdbRestartFreq != 0){
-				int thermoStateIx = replica2ThermoIxs[replicaIx];
-				if((mixi % pdbRestartFreq) == 0){
-					writePdbs(mixi,
-					thermoStateIx);
-				}
-			}
-
 
 		} // end replicas simulations
 

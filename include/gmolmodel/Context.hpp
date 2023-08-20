@@ -337,7 +337,7 @@ public:
 	void swapThermodynamicStates(int replica_i, int replica_j);
 
 	// Swap replicas' potential energies
-	void swapPotentialEnergy(int replica_i, int replica_j);
+	void swapPotentialEnergies(int replica_i, int replica_j);
 
 	// Exchanges thermodynamic states between replicas
 	bool attemptSwap(int replica_i, int replica_j);
