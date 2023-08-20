@@ -2628,10 +2628,10 @@ bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 
 	SimTK::Real ETerm = -1.0 * (eH_X0 + eC_Y0) + eC_X0 + eH_Y0;
 
-	/* SimTK::Real Work_A = lij - eii - replicas[replica_i].get_WORK_Jacobian();
-	SimTK::Real Work_B = lji - ejj - replicas[replica_j].get_WORK_Jacobian(); */
-	SimTK::Real Work_A = lH_Xtau - eC_X0 - std::log(qScaleFactors.at(thermoState_C));
-	SimTK::Real Work_B = lC_Ytau - eH_Y0 - std::log(qScaleFactors.at(thermoState_H));
+	SimTK::Real Work_A = lH_Xtau - eC_X0 - replicas[replica_X].get_WORK_Jacobian();
+	SimTK::Real Work_B = lC_Ytau - eH_Y0 - replicas[replica_Y].get_WORK_Jacobian();
+	/* SimTK::Real Work_A = lH_Xtau - eC_X0 - std::log(qScaleFactors.at(thermoState_C));
+	SimTK::Real Work_B = lC_Ytau - eH_Y0 - std::log(qScaleFactors.at(thermoState_H)); */
 
 	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
 
