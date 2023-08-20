@@ -3159,7 +3159,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
-					logJacScale += std::log(std::abs(scaleFactors[k])); // log space
+					logJacScale -= std::log(std::abs(scaleFactors[k])); // log space
 			}
 			//std::cout << "sf " << k << " " << scaleFactors[k] << std::endl; 
 	}
