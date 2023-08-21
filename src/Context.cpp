@@ -3524,6 +3524,19 @@ void Context::RunREX(void)
 			//replicas[replicaIx].PrintCoordinates();
 			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
+			// Write energy and geometric features to logfile
+			if( !(mixi % getPrintFreq()) ){
+				PrintToLog(worldIndexes.front());
+			}
+
+			// Write pdb
+			if( pdbRestartFreq != 0){
+				int thermoStateIx = replica2ThermoIxs[replicaIx];
+				if((mixi % pdbRestartFreq) == 0){
+					writePdbs(mixi, thermoStateIx);
+				}
+			}
+
 			// Iterate this replica's worlds
 			RunReplicaAllWorlds(replicaIx, swapEvery);
 
@@ -3534,19 +3547,6 @@ void Context::RunREX(void)
 			storeReplicaEnergyFromFrontWorldFull(replicaIx);
             storeReplicaFixmanFromBackWorld(replicaIx);
 
-			// Write energy and geometric features to logfile
-			if( !(mixi % getPrintFreq()) ){
-				PrintToLog(worldIndexes.front());
-			}
-
-			// Write pdb
-			if( pdbRestartFreq != 0){
-				int thermoStateIx = replica2ThermoIxs[replicaIx];
-				if((mixi % pdbRestartFreq) == 0){
-					writePdbs(mixi,
-					thermoStateIx);
-				}
-			}
 
 		} // end replicas simulations
 
