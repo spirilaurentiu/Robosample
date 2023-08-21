@@ -348,6 +348,7 @@ public:
 
 	// DOESN'T WORK WITH OPENMM
 	SimTK::Real CalcFullPotentialEnergyIncludingRigidBodies(void);
+	SimTK::Real CalcPotentialEnergy(void);
 
 	// Calculate Fixman potential
 	SimTK::Real calcFixman();

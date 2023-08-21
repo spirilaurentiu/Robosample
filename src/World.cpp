@@ -2288,8 +2288,18 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
 
-	// Set old potential energy of the new world via OpenMM
+	// Set old potential energy of the new world via DuMM !!!
 	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);// DOESN'T WORK WITH OPENMM
+}
+
+// 
+SimTK::Real World::CalcPotentialEnergy(void)
+{
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	updateAtomListsFromCompound(currentAdvancedState);
+
+	// Set old potential energy of the new world via DuMM !!!
+	return forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
 }
 
 // Calculate Fixman potential
