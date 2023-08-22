@@ -611,16 +611,25 @@ int main(int argc, char **argv)
 		
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --
+	
+	context.setThermostatesNonequilibrium();
+
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 		context.RunSimulatedTempering(context.getRequiredNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+			context.setRunType(1);
+
 	}else if(setupReader.get("RUN_TYPE")[0] == "REX"){
+		context.setRunType(1);
 		context.RunREX();
+
 	}else if(setupReader.get("RUN_TYPE")[0] == "RENS"){
-		context.setThermostatesNonequilibrium();
+		context.setRunType(2);
 		context.RunRENS();
+
 	}else{
+		context.setRunType(0);
 		context.Run(context.getRequiredNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));

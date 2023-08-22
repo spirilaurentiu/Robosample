@@ -340,7 +340,7 @@ public:
 	void swapPotentialEnergies(int replica_i, int replica_j);
 
 	// Exchanges thermodynamic states between replicas
-	bool attemptSwap(int replica_i, int replica_j);
+	bool attemptREXSwap(int replica_i, int replica_j);
 
 	bool attemptRENSSwap(int replica_i, int replica_j);
 
@@ -404,13 +404,26 @@ public:
 	void initializeReplica(int whichReplica);
 
 	// Reset worlds parameters according to thermodynamic state
-	void setWorldsParameters(int thisReplica);
+	void setReplicasWorldsParameters(int thisReplica);
+
+	// Given a scaling factor
+	SimTK::Real distributeScalingFactor(
+		std::vector<std::string> how, SimTK::Real sf,
+		bool randSignOpt = false);
+
+	// Set world distort parameters
+	void setWorldDistortParameters(int whichWorld,
+		std::vector<std::string> how, SimTK::Real scaleFactor,
+		bool randSignOpt);
 
 	// Set nonequilibrium parameters for one replica
 	void updWorldsNonequilibriumParameters(int thisReplica);
 
+	int getRunType(void){return runType;}
+	void setRunType(int runTypeArg){this->runType = runTypeArg;}
+
 	// Run a particular world
-	void RunWorld(int whichWorld);
+	int RunWorld(int whichWorld);
 
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);
@@ -523,6 +536,8 @@ private:
 	////////////////////////
 	//// REPLICA EXCHANGE //
 	////////////////////////
+	int runType;
+
 	std::vector<ThermodynamicState> thermodynamicStates;
 	std::vector<Replica> replicas;
 
