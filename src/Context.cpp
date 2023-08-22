@@ -2539,8 +2539,7 @@ bool Context::attemptREXSwap(int replica_i, int replica_j)
 	// Apply acceptance criterion
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	//if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
-	if(false){
+	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
 		swapThermodynamicStates(replica_i, replica_j);
 
@@ -2552,7 +2551,6 @@ bool Context::attemptREXSwap(int replica_i, int replica_j)
 
 	}else{
 		std::cout << "left\n" << endl;
-
 	}
 
 	return returnValue;
