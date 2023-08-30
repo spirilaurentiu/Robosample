@@ -31,6 +31,7 @@ class Context{
 public:
 	bool initializeFromFile(const std::string& file);
 	void run();
+	void destroy();
 
 	// Input functions
 	bool loadTopologyFile(std::string topologyFilename);
@@ -445,6 +446,8 @@ public:
 	void PrintNofAttemptedSwapsMatrix(void);
 	void PrintNofAcceptedSwapsMatrix(void);
 
+	SimTK::Real getPotentialEnergy(std::size_t world, std::size_t sampler) const;
+
 private:
 	bool CreateOutputDirectory(const std::string& outDir);
 	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
@@ -572,5 +575,7 @@ private:
 	RunType run_type = RunType::Default;
 	SimTK::Real tempIni = 0,
 		tempFin = 0;
+
+	SetupReader setupReader;
 };
 

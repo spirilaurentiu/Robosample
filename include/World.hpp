@@ -491,8 +491,8 @@ public:
 	/** Subsystem->ForceSubsystem->DuMMForceFieldSubsystem **/
 	std::unique_ptr<SimTK::DuMMForceFieldSubsystem> forceField;
 
-	std::vector<std::unique_ptr<SimTK::ConformationalController>> controller;
-	std::vector<std::unique_ptr<SimTK::Force::Custom>> controlForce;
+	// std::vector<std::unique_ptr<SimTK::ConformationalController>> controller;
+	// std::vector<std::unique_ptr<SimTK::Force::Custom>> controlForce;
 
 	/** Nof molecules **/
 	int moleculeCount;
@@ -500,7 +500,7 @@ public:
 
 	/** Molecules (topologies<-Compounds) objects **/
 	//std::vector<bMoleculeReader *> moleculeReaders;
-	std::vector<Topology> *topologies;
+	std::vector<Topology>* topologies = nullptr;
 	std::vector<std::string> roots;
 	std::vector<std::string> rootMobilities;
 
@@ -570,19 +570,47 @@ public:
 	// std::unique_ptr<FixmanTorque> FixmanTorqueImpl;
 	// std::unique_ptr<SimTK::Force::Custom> FixmanTorqueForce;
 
+	std::unique_ptr<SimTK::Force::Custom> FixmanTorqueForce;
+	// std::unique_ptr<FixmanTorque> FixmanTorqueImpl;
+	std::unique_ptr<SimTK::Force::Custom> FixmanTorqueExtForce;
+	// std::unique_ptr<FixmanTorqueExt> FixmanTorqueExtImpl;
+
 	FixmanTorque* FixmanTorqueImpl = nullptr;
-	SimTK::Force::Custom* FixmanTorqueForce = nullptr;
+	// SimTK::Force::Custom* FixmanTorqueForce = nullptr;
 	FixmanTorqueExt* FixmanTorqueExtImpl = nullptr;
-	SimTK::Force::Custom* FixmanTorqueExtForce = nullptr;
+	// SimTK::Force::Custom* FixmanTorqueExtForce = nullptr;
 
 	//Task Space
 	SimTK::Array_<SimTK::MobilizedBodyIndex> onBodyB;
 	SimTK::Array_<SimTK::Vec3> stationPInGuest;
 	SimTK::Array_<SimTK::Vec3> stationPInHost;
 	SimTK::Array_<SimTK::Vec3> deltaStationP;
+
+	void removeFixmanTorque() {
+
+		// if (FixmanTorqueExtImpl) {
+		// 	delete FixmanTorqueExtImpl;
+		// 	FixmanTorqueExtImpl = nullptr;
+		// }
+
+		// if (FixmanTorqueExtForce) {
+		// 	delete FixmanTorqueExtForce;
+		// 	FixmanTorqueExtForce = nullptr;
+		// }
+
+		// if (FixmanTorqueImpl) {
+		// 	delete FixmanTorqueImpl;
+		// 	FixmanTorqueImpl = nullptr;
+		// }
+
+		// if (FixmanTorqueForce) {
+		// 	delete FixmanTorqueForce;
+		// 	FixmanTorqueForce = nullptr;
+		// }
+		
+	}
 	
 private:
-
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx; // DANGER
 
@@ -592,9 +620,6 @@ private:
 	// Binding Site Data: Topologies, AtomIx
 	std::vector<int> topologyIXs;
 	std::vector<std::vector<int>> amberAtomIXs;
-
-
-
 };
 
 #endif /*WORLD_H_*/

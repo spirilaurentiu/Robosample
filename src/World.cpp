@@ -2014,13 +2014,16 @@ void World::addFixmanTorque()
 	_useFixmanTorque = true;
 
 	// Alloc memory for FixmanTorque implementation and add to forces
-	// FixmanTorqueImpl = std::make_unique<FixmanTorque>(compoundSystem.get(), *matter);
-	// FixmanTorqueForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueImpl.get());
+	FixmanTorqueImpl = new FixmanTorque(matter.get());
+	FixmanTorqueForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueImpl);
 
-	FixmanTorqueImpl = new FixmanTorque(compoundSystem.get(), *matter);
-	FixmanTorqueForce = new Force::Custom(*forces, FixmanTorqueImpl);
-	FixmanTorqueExtImpl = new FixmanTorqueExt(compoundSystem.get(), *matter);
-	FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);
+	FixmanTorqueExtImpl = new FixmanTorqueExt(matter.get());
+	FixmanTorqueExtForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueExtImpl);
+
+	// FixmanTorqueImpl = new FixmanTorque(matter.get());			//	
+	// FixmanTorqueForce = new Force::Custom(*forces, FixmanTorqueImpl);			//
+	// FixmanTorqueExtImpl = new FixmanTorqueExt(matter.get());	//
+	// FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);		//
 
 	// for (int i = 0; i < 10; i++) {
 	// 	controller.push_back(std::make_unique<SimTK::ConformationalController>(*forces, *matter, SimTK::MobilizedBodyIndex(i), SimTK::Vec3(0,0,0)));

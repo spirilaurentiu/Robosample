@@ -9,7 +9,6 @@
 bool Context::initializeFromFile(const std::string &file)
 {
 	// Read input into a SetupReader object
-	SetupReader setupReader;
 	setupReader.ReadSetup(file);
 	setupReader.dump(true);
 
@@ -468,6 +467,14 @@ void Context::run() {
 	}else{
 		Run(getRequiredNofRounds(), tempIni, tempFin);
 	}
+}
+
+void Context::destroy() {
+	// for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+	// 	if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
+	// 		worlds[worldIx].removeFixmanTorque();
+	// 	}
+	// }
 }
 
 bool Context::CreateOutputDirectory(const std::string& outDir)
@@ -938,10 +945,10 @@ void Context::addDummParams(
 		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 		
 		// Pass current topology to the current world
-		(updWorld(0))->topologies = &topologies;
+		updWorld(0)->topologies = &topologies;
 
 		// Add parameters in DuMM
-		(updWorld(0))->generateDummParams(molIx, &amberReader,
+		updWorld(0)->generateDummParams(molIx, &amberReader,
 			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
 
 		for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
@@ -1028,10 +1035,10 @@ void Context::addDummParams(
 		std::cout << "Context::addDummParams WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
 
 		// Pass current topology to the current world
-		(updWorld(0))->topologies = &topologies;
+		updWorld(0)->topologies = &topologies;
 
 		// Add parameters in DuMM
-		(updWorld(0))->generateDummParams(molIx, &amberReader[molIx],
+		updWorld(0)->generateDummParams(molIx, &amberReader[molIx],
 			aClassParams2aClassId,
 			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 	}
@@ -6071,4 +6078,8 @@ void Context::PrintNumThreads() {
 
 		worldIx++;
 	}
+}
+
+SimTK::Real Context::getPotentialEnergy(std::size_t world, std::size_t sampler) const {
+	return pHMC((worlds[world].samplers[sampler]))->pe_o;
 }
