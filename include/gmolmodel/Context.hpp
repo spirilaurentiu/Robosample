@@ -187,7 +187,6 @@ public:
 
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
-
 	void Run(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
@@ -196,7 +195,6 @@ public:
 	void setNumThreadsRequested(std::size_t which, int howMany);
 	void setUseOpenMMAcceleration(bool arg);
 	void setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize);
-
 	void setUseOpenMMCalcOnlyNonBonded(bool arg);
 	void setNonbondedMethod(std::size_t whichWorld, int methodInx);
 	void setNonbondedCutoff(std::size_t whichWorld, Real cutoffNm);
@@ -429,7 +427,7 @@ public:
 	void RewindBackWorld(int thisReplica);
 
 	// Run front world, rotate and transfer
-	void RunFrontWorldAndRotate(int thisReplica);
+	void RunFrontWorldAndRotate(std::vector<int> & worldIxs);
 
 	// Go through all of this replica's worlds and generate samples
 	void RunReplicaAllWorlds(int whichReplica, int howManyRounds);
@@ -460,7 +458,7 @@ private:
 	std::vector<World> worlds;
 	std::vector<readAmberInput> amberReader;
 
-	std::vector<std::size_t> worldIndexes;
+	std::vector<int> worldIndexes;
 	// Molecules files
 	std::vector<std::string> topFNs;
 	std::vector<std::string> crdFNs;

@@ -702,17 +702,18 @@ void World::addMembrane(
 		1.0)
 	);
 
-	DecorativeFrame contactGeometryDecoFrame;
-	matter->Ground().updBody().addDecoration(
-		Transform(), contactGeometryDecoFrame
-	);
+	if (visual == true) {
+		DecorativeFrame contactGeometryDecoFrame;
+		matter->Ground().updBody().addDecoration(
+			Transform(), contactGeometryDecoFrame
+		);
 
-	//DecorativeMesh contactGeometryDeco(mesh);
-	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
-	matter->Ground().updBody().addDecoration(
-		Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
-	);
-
+		//DecorativeMesh contactGeometryDeco(mesh);
+		DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
+		matter->Ground().updBody().addDecoration(
+			Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
+		);
+	}
 
 }
 
