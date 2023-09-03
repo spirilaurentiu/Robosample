@@ -3590,7 +3590,7 @@ void Context::RunREX(void)
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
 
-			//RunReplicaAllWorlds(replicaIx, swapEvery);
+			//RunReplicaAllWorlds(replicaIx, swapEvery);storeReplicaCoordinatesFromFrontWorld(replicaIx);storeReplicaEnergyFromFrontWorldFull(replicaIx);
 					// ======================== SIMULATE ======================
 					RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
 
@@ -3625,15 +3625,12 @@ void Context::RunREX(void)
 
 		} // end replicas simulations
 
-
 		// Mix replicas
 		if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 			if ((mixi % 2) == 0){
 				mixNeighboringReplicas(0);
-
 			}else{
 				mixNeighboringReplicas(1);
-
 			}
 		}else{
 			mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
@@ -4601,6 +4598,7 @@ void Context::RunRENS(void)
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
 
+					
 					// ======================== SIMULATE ======================
 					RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
 
@@ -5810,21 +5808,9 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld)
 	);
 */
 
-/*    // Avoid get function calls
-	printf("%d %d %.2f %.2f %.2f %.2f %.2f %.2f"
-		, currentAdvancedState.getNU()
-		, (worlds[whichWorld].samplers[0])->acceptedSteps
-		, (worlds[whichWorld].samplers[0])->pe_o
-		, (worlds[whichWorld].samplers[0])->pe_set
-		, (worlds[whichWorld].samplers[0])->ke_proposed
-		, (worlds[whichWorld].samplers[0])->ke_n
-		, (worlds[whichWorld].samplers[0])->fix_o
-		, (worlds[whichWorld].samplers[0])->fix_set
-	);
-*/
-
 	// Write to a file instead of stdout
-	fprintf(logFile, "%d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
+	fprintf(logFile, "%f %d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
+		, pHMC(worlds[whichWorld].samplers[0])->getTemperature()
 		, currentAdvancedState.getNU()
 		, pHMC(worlds[whichWorld].samplers[0])->acceptedSteps
 		, pHMC((worlds[whichWorld].samplers[0]))->pe_o
