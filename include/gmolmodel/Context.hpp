@@ -358,8 +358,8 @@ public:
 	// Configuration manipulation functions between worlds and replicas
 	// This can be quite costly since they imply transfer between worlds
 
-	// Load replica's atomLocations into it's front world
-	void restoreReplicaCoordinatesToFrontWorld(int whichReplica);
+	// Load replica's atomLocations into it's front world. Returns world index
+	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
 
 	// Load replica's atomLocations into it's back world
     void restoreReplicaCoordinatesToBackWorld(int whichReplica);
@@ -426,18 +426,18 @@ public:
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);
 
-	// Run front world, rotate and transfer
-	void RunFrontWorldAndRotate(std::vector<int> & worldIxs);
+	// Run front world, rotate and transfer. Return worldIxs.front
+	int RunFrontWorldAndRotate(std::vector<int> & worldIxs);
 
 	// Go through all of this replica's worlds and generate samples
-	void RunReplicaAllWorlds(int whichReplica, int howManyRounds);
+	int RunReplicaAllWorlds(int whichReplica, int howManyRounds);
 
 	void RunREX();
 
 	// Helper Functions for RENS
 
-	void RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
-	void RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
+	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
+	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
 
 	// RENS
 	void RunRENS(void);
