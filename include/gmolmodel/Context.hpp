@@ -68,6 +68,9 @@ public:
 	// Add task spaces
 	void addTaskSpacesLS(void);
 
+	/** Add constraints */
+	void addConstraints(void);
+
 	void realizeTopology();
 	void realizePosition();
 

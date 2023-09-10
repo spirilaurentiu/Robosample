@@ -3614,7 +3614,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 	}else if(integratorName == IntegratorName::STATIONS_TASK){
 
-		std::cout << "STATIONS_TASK\n";
+		/* std::cout << "STATIONS_TASK\n";
 		system->realize(someState, SimTK::Stage::Position);
 
 		// Update target space
@@ -3628,14 +3628,14 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		SimTK::Vector taskForce;
 		
 		matter->multiplyByStationJacobianTranspose(someState,
-			world->onBodyB[0], world->stationPInGuest[0],
+			world->onBodyB[0], world->taskStationPInGuest[0],
 			deltaStationP[0], taskForce);
 		
 		std::cout << "state numU " << someState.getNU()
-			<< " tasForce " << -1.0 * taskForce
+			<< " taskForce " << -1.0 * taskForce
 			<< std::endl;
 
-		someState.setU(-1 * taskForce);
+		someState.setU(-1 * taskForce); */
 
 		/* // Topologies and target atoms
 		int hostTopology = 0;

@@ -330,8 +330,6 @@ int main(int argc, char **argv)
 			topologyIXs.push_back(std::stoi(value));
 		}
 
-
-
 		float sphere_radius = std::stod(setupReader.get("SPHERE_RADIUS")[0]);
 
 		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
@@ -613,6 +611,9 @@ int main(int argc, char **argv)
 	// -- Run --
 	
 	context.setThermostatesNonequilibrium();
+	
+	// Add constraints
+	//context.addConstraints();
 
 	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 		context.RunSimulatedTempering(context.getRequiredNofRounds(),

@@ -437,9 +437,9 @@ void World::addTaskSpaceLS(void)
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
 				onBodyB.emplace_back(mbx);
-				stationPInGuest.emplace_back(SimTK::Vec3());
-				stationPInHost.emplace_back(SimTK::Vec3());
-				deltaStationP.emplace_back(SimTK::Vec3());
+				taskStationPInGuest.emplace_back(SimTK::Vec3());
+				taskStationPInHost.emplace_back(SimTK::Vec3());
+				taskDeltaStationP.emplace_back(SimTK::Vec3());
 
 				if(this->visual == true){
 					paraMolecularDecorator->loadArrow(SimTK::Vec3(0), SimTK::Vec3(0));
@@ -478,7 +478,7 @@ void World::updateTaskSpace(const State& someState)
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
 				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
-				stationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
+				taskStationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
 			}
 		}
 	}
@@ -500,12 +500,12 @@ void World::updateTaskSpace(const State& someState)
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
 				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
-				stationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
+				taskStationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
 
-				deltaStationP[tz] = stationPInHost[tz] - stationPInGuest[tz];
+				taskDeltaStationP[tz] = taskStationPInHost[tz] - taskStationPInGuest[tz];
 
 				if(this->visual == true){
-					paraMolecularDecorator->updateArrow(tz, stationPInGuest[tz], stationPInGuest[tz] + deltaStationP[tz]);
+					paraMolecularDecorator->updateArrow(tz, taskStationPInGuest[tz], taskStationPInGuest[tz] + taskDeltaStationP[tz]);
 				}
 			}
 		}
@@ -519,7 +519,7 @@ void World::updateTaskSpace(const State& someState)
 SimTK::Array_<SimTK::Vec3>& 
 World::getTaskSpaceStationPInGuest(void)
 {
-	return stationPInGuest;
+	return taskStationPInGuest;
 }
 /**
  * Get the difference between the station task and the target
@@ -527,7 +527,7 @@ World::getTaskSpaceStationPInGuest(void)
 SimTK::Array_<SimTK::Vec3>& 
 World::getTaskSpaceStationPInHost(void)
 {
-	return stationPInHost;
+	return taskStationPInHost;
 }
 
 /**
@@ -536,7 +536,7 @@ World::getTaskSpaceStationPInHost(void)
 SimTK::Array_<SimTK::Vec3>& 
 World::getTaskSpaceDeltaStationP(void)
 {
-	return deltaStationP;
+	return taskDeltaStationP;
 }
 
 /**
@@ -546,12 +546,12 @@ void World::calcStationJacobian(
 	const State&                           someState,
 	SimTK::Matrix_<SimTK::Vec3>&                      JS) const
 {
-		matter->calcStationJacobian(someState, onBodyB, stationPInGuest, JS);
+		matter->calcStationJacobian(someState, onBodyB, taskStationPInGuest, JS);
 
 		std::cout << "Task Bodies ";
 		std::cout << onBodyB << std::endl;
 		std::cout << "Task Stations ";
-		std::cout << stationPInGuest << std::endl;
+		std::cout << taskStationPInGuest << std::endl;
 		std::cout << "Station Jacobian ";
 		std::cout << JS << std::endl;
 
@@ -563,9 +563,10 @@ void World::calcStationJacobian(
 //                   CONSTRAINTS
 //=============================================================================
 
-/** Add contact constraints to specific bodies.
-TODO:use number of mobilities. TODO: Solve if **/
-const SimTK::State& World::addConstraints(int prmtopIndex)
+/**
+ * Add contact constraints to specific bodies.
+ **/
+void World::addRodConstraint(State& someState)
 {
 
 	int hostTopology = 0;
@@ -573,8 +574,82 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 
 	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
 	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+	rodBodies.emplace_back(std::make_pair(SimTK::MobilizedBody(), SimTK::MobilizedBody()));
+	conStationPInGuest.emplace_back(SimTK::Vec3());
+	conStationPInHost.emplace_back(SimTK::Vec3());
+	conDeltaStationP.emplace_back(SimTK::Vec3());
 
+	// Get stations in host
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+		if(topi == hostTopology){
 
+			/* // Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_host) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
+
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				rodBodies[0].first = mbx;
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				conStationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
+			} */
+		}
+	}
+
+	// Get stations in guest
+	topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == guestTopology){
+
+			/* // Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_guest) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
+				
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				rodBodies[0].second = mbx;
+				
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				conStationPInGuest[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
+
+			} */
+		}
+	}
+
+/* 	std::cout << "Rod bodies: " << rodBodies[0].first
+		<< " " << rodBodies[0].second << std::endl << std::flush;
+
+	rodConstraints.emplace_back( SimTK::Constraint::Rod(
+		matter->updMobilizedBody(rodBodies[0].first),  SimTK::Vec3(),
+		matter->updMobilizedBody(rodBodies[0].second), SimTK::Vec3(), 0.1) ); */
+
+	//rodConstraints.back().enable(someState);
+
+}
+
+/** Add speed constraints to specific bodies.
+TODO:use number of mobilities. TODO: Solve if **/
+const SimTK::State& World::addSpeedConstraint(int prmtopIndex)
+{
+
+	int hostTopology = 0;
+	int guestTopology = 1;
+
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
 
 	if(prmtopIndex >= 0){
 		std::cout << "Adding constraint to atom with prmtop index "

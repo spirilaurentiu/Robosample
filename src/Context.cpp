@@ -1284,8 +1284,6 @@ void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizer
 
 }
 
-
-
 /** Add task spaces */
 void Context::addTaskSpacesLS(void)
 {
@@ -1294,8 +1292,17 @@ void Context::addTaskSpacesLS(void)
 		}
 }
 
+/** Add rod constraints */
+void Context::addConstraints(void)
+{
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+			worlds[worldIx].addRodConstraint(
+				worlds[worldIx].integ->updAdvancedState()
+			);
+		}
+}
 
-
+// Print status
 void Context::printStatus(void){
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		if ((updWorld(worldIx))->integ  == nullptr ){
@@ -3309,23 +3316,16 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	qScaleFactors.at(1) = 0.25;
 	std::vector<std::string> how;
 	if(getRunType() == 1){
-		how = { "deterministic", "Bernoulli"};
+		how = { "deterministic", "gauss"};
 	}else if(getRunType() == 2){
-		how = { "deterministic"};
+		how = { "deterministic", "gauss"};
 	}
 
 	// Send the scale factor to the sampler
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 
+		// Distribute scaling factor
 		bool randSignOpt = true;
-		/* qScaleFactors.at(thisThermoStateIx) =
-			distributeScalingFactor(how, qScaleFactors.at(thisThermoStateIx),
-			randSignOpt);
-
-		HMCSampler *replFirstSampler = worlds[replicaWorldIxs[i]].updSampler(0);
-		replFirstSampler->setBendStretchStdevScaleFactor(
-			qScaleFactors.at(thisThermoStateIx)); */
-
 		setWorldDistortParameters(replicaWorldIxs[i], how,
 			qScaleFactors.at(thisThermoStateIx), randSignOpt);
 
@@ -3346,8 +3346,9 @@ SimTK::Real Context::distributeScalingFactor(
 	
 	// Truncated normal
 	if (std::find(how.begin(), how.end(), "gauss") != how.end()){
+		SimTK::Real scaleFactorStd = 0.3;
 		worlds[0].updSampler(0)->convoluteVariable(
-			scalefactor, "truncNormal",0.1);
+			scalefactor, "truncNormal", scaleFactorStd, -5, 5);
 	}
 
 	// Uniform distribution
