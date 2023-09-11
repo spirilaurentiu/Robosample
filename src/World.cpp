@@ -693,7 +693,8 @@ void World::addMembrane(
 	ContactGeometry::TriangleMesh contactGeometry(mesh);
 
 	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
+		//Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(2,2,2)),
+		Transform(Rotation(), Vec3(1,1,1)),
 		//Transform(),
 		ContactSurface(
 		contactGeometry,
@@ -701,6 +702,105 @@ void World::addMembrane(
 			staticFriction, dynamicFriction, viscousFriction),
 		1.0)
 	);
+	
+	// Test
+	// Generate spherical mesh
+	PolygonalMesh sphereMesh = PolygonalMesh::createSphereMesh(0.1);
+	ContactGeometry::TriangleMesh contactGeometry_1(sphereMesh);
+	SimTK::MobilizedBody mobod = matter->updMobilizedBody(MobilizedBodyIndex(1));
+	SimTK::Body bod = mobod.updBody();
+	bod.addContactSurface(SimTK::Transform(),
+			ContactSurface(
+			contactGeometry_1,	
+			ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction), 1.0));
+	mobod.addBodyDecoration(DecorativeSphere(0.1).setColor(Red));
+	//SimTK::MobilizedBody mobod = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(1));
+	//mobod.addBodyDecoration(Transform(), DecorativeSphere(0.1));
+
+	// Add sphere contact geometry, of radius equal to
+	// the atom's VdW radius
+	// Iterate through atoms and get their MobilizedBodyIndeces
+	for (const auto& topology : (*topologies)){
+		//const auto& topology = (*topologies)[0];
+		for (auto& atom : topology.bAtomList) {
+
+			// Get Compound atom index
+			auto compoundAtomIndex = atom.getCompoundAtomIndex();
+			// Get DuMM atom index
+			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
+			
+			// Get radius and element of said atom
+			const int atomType = forceField->getAtomElement(dAIx);
+			Real vdwRadius = forceField->getAtomRadius(dAIx);
+			vdwRadius /= 10;
+
+			// Generate spherical mesh
+			PolygonalMesh sphereMesh = PolygonalMesh::createSphereMesh(vdwRadius);
+			ContactGeometry::TriangleMesh contactGeometry(sphereMesh);
+
+			// Get Mobilized Body index
+			const MobilizedBodyIndex mobilizedBodyIndex = forceField->getAtomBody(dAIx);
+
+			SimTK::MobilizedBody mobod = matter->updMobilizedBody(mobilizedBodyIndex);
+			SimTK::Body bod = mobod.updBody();
+			
+			/* bod.addContactSurface(SimTK::Transform(),
+			ContactSurface(
+			contactGeometry,	
+			ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction), 1.0)); */
+			
+
+			/* std::cout << "DummAtomIx: " << dAIx 
+			<< " Atomic Number: " << atomType
+			<< " vdwRadius: " << vdwRadius << std::endl; */
+			
+			//Isn't visible, FIX
+
+			if (visual == true) {
+			//std::cout << "added decorator for " << mobilizedBodyIndex << std::endl;		
+			// Assign the representation to the decorator
+			//mobod.addBodyDecoration(DecorativeSphere(vdwRadius).setColor(Red));
+			//bod.addDecoration(DecorativeSphere(vdwRadius).setColor(Red));
+			
+
+
+
+			/* bod.addDecoration(
+			Transform(), contactGeometryDecoFrame
+			);
+
+			//DecorativeMesh contactGeometryDeco(mesh);
+			DecorativeMesh contactGeometryDeco(sphereMesh);
+			bod.addDecoration(
+				Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
+			);*/
+			std::cout << "Object " << mobilizedBodyIndex << " has " <<
+			bod.getNumDecorations() << " pieces of decoration." << std::endl;
+
+			}
+		}
+	}
+	
+	//Real vdwRadius = 1;
+	// Generate spherical mesh
+	//PolygonalMesh sphereMesh = PolygonalMesh::createSphereMesh(vdwRadius);
+	//ContactGeometry::TriangleMesh contactGeometrySphere(sphereMesh);
+	
+	if (1){
+/* 		DecorativeFrame contactGeometryDecoFrame;
+		matter->Ground().updBody().addDecoration(
+			Transform(), contactGeometryDecoFrame
+		);
+ */
+		//DecorativeMesh contactGeometryDeco(mesh);
+	/* 	DecorativeMesh contactGeometryDeco(contactGeometrySphere.createPolygonalMesh());
+		matter->Ground().updBody().addDecoration(
+			Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
+		); */
+	}
+
 
 	if (visual == true) {
 		DecorativeFrame contactGeometryDecoFrame;
@@ -1438,6 +1538,7 @@ World::getGeometricCenterOfSelection(const SimTK::State & state
 		const auto& atoms = amberAtomIXs[i];
 
 		int amberIx=0;
+
 
 		// Iterate through atoms in said topology and check 	
 		// if they are in the list

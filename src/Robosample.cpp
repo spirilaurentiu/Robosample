@@ -293,6 +293,21 @@ int main(int argc, char **argv)
 	// Is this necessary?
 	context.realizeTopology();
 
+	// Add membrane
+	
+	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
+	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
+	float memZWidth = std::stof(setupReader.get("MEMBRANE")[2]);
+	int memResolution = std::stof(setupReader.get("MEMBRANE")[3]);
+	bool haveMembrane = (memXWidth > SimTK::TinyReal) && (memYWidth > SimTK::TinyReal) && (memZWidth > SimTK::TinyReal);
+	if(haveMembrane){
+		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
+		}
+	}
+
+	context.realizeTopology();
+
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		BaseSampler *p = context.addSampler(worldIx,
