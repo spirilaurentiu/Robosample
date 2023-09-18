@@ -2057,14 +2057,17 @@ World::calcMobodToMobodTransforms(
 		* InboardDihedral_ZAxis * Z_to_X;
 
 	// B_X_Ms
+	SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
 	SimTK::Transform B_X_M = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
 	SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
+	SimTK::Transform B_X_M_pin = X_parentBC_childBC * M_X_pin;
 	SimTK::Transform B_X_M_univ = X_parentBC_childBC
 		* SimTK::Transform(Rotation(-90*Deg2Rad, XAxis)); // Move rotation axis Y to Z
 
 	// P_X_Fs = old P_X_B * B_X_M
 	SimTK::Transform P_X_F = oldX_PB * B_X_M;
 	SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
+	SimTK::Transform P_X_F_pin = oldX_PB * B_X_M_pin;
 	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
 
 	// Get mobility (joint type)
@@ -2073,18 +2076,22 @@ World::calcMobodToMobodTransforms(
 	bBond bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
-	bool pinORslider =
-		(mobility == SimTK::BondMobility::Mobility::Torsion)
-		|| (mobility == SimTK::BondMobility::Mobility::AnglePin)
+	bool anglePin_OR = (
+		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
 		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch);
+		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
+		//|| (mobility == SimTK::BondMobility::Mobility::Torsion)
+	);
 
-	if( (pinORslider) && ((atom->neighbors).size() == 1)){
+	if( (anglePin_OR) && ((atom->neighbors).size() == 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
-	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
+	}else if( (anglePin_OR) && ((atom->neighbors).size() != 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 		//return std::vector<SimTK::Transform> {P_X_F, B_X_M};
+
+	}else if(mobility == SimTK::BondMobility::Mobility::Torsion){
+		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
