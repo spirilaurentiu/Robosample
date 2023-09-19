@@ -3171,7 +3171,7 @@ void Context::PrepareNonEquilibriumParams_Q(void){
 
 	// Set the even scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
 		// s_i = T_j
 		qScaleFactorsEven.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
 		qScaleFactorsEven.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
@@ -3187,7 +3187,7 @@ void Context::PrepareNonEquilibriumParams_Q(void){
 
 	// Set the odd scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
+	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
 
 		// s_i = T_j
 		qScaleFactorsOdd.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
@@ -3203,24 +3203,19 @@ void Context::PrepareNonEquilibriumParams_Q(void){
 	}
 
 	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
-		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
+		std::cout << "ScaleFactor even for thermoState " << thermoIx << " "
 			<< qScaleFactorsEven.at(thermoIx) << std::endl;
 	}
 	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
-		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
+		std::cout << "ScaleFactor odd for thermoState " << thermoIx << " "
 			<< qScaleFactorsOdd.at(thermoIx) << std::endl;
 	}
 
 }
 
 // Set world distort parameters
-void Context::setWorldDistortParameters(int whichWorld,
-	std::vector<std::string> how, SimTK::Real scaleFactor,
-	bool randSignOpt)
+void Context::setWorldDistortParameters(int whichWorld, SimTK::Real scaleFactor)
 {
-		// Assign a scaling factor
-		scaleFactor = distributeScalingFactor(how, scaleFactor, randSignOpt);
-
 		// Set the scaling factor
 		HMCSampler *worldFirstSampler = (worlds[whichWorld].updSampler(0));
 		worldFirstSampler->setBendStretchStdevScaleFactor(
@@ -3307,31 +3302,6 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	std::cout << std::endl;
 	// =============
 
-	// -------------
-	// Set non-equilibrium parameters
-	// =============
-
-	// Assign a scaling factor
-	qScaleFactors.at(0) = 4.0;
-	qScaleFactors.at(1) = 0.25;
-	std::vector<std::string> how;
-	if(getRunType() == 1){
-		how = { "deterministic", "gauss"};
-	}else if(getRunType() == 2){
-		how = { "deterministic", "gauss"};
-	}
-
-	// Send the scale factor to the sampler
-	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-
-		// Distribute scaling factor
-		bool randSignOpt = true;
-		setWorldDistortParameters(replicaWorldIxs[i], how,
-			qScaleFactors.at(thisThermoStateIx), randSignOpt);
-
-	}
-
-
 }
 
 // TODO turn strings into enum
@@ -3380,7 +3350,7 @@ SimTK::Real Context::distributeScalingFactor(
 }
 
 // Set nonequilibrium parameters for one replica
-void Context::updWorldsNonequilibriumParameters(int thisReplica)
+void Context::updWorldsDistortOptions(int thisReplica)
 {
 
 	// Get thermoState corresponding to this replica
@@ -3395,14 +3365,16 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 	// SET NON_EQUIL PARAMS ------------------------- 
 	// Non-equilibrium params change with every replica / thermoState
 
-	// SET qScaleFactorsMiu HERE TODO
-
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 
 		// Send DISTORT_OPTION from the input to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
 		);		
+
+		// Set scale Q scale factor
+		setWorldDistortParameters(replicaWorldIxs[i],
+			qScaleFactors.at(thisThermoStateIx));
 
 	}
 
@@ -3522,6 +3494,43 @@ int Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
 
 }
 
+// Set non-equilibrium parameters
+void Context::updQScaleFactors(int mixi)
+{
+
+	// -------------
+	// Set non-equilibrium parameters
+	// =============
+
+	// Prepare non-equilibrium params
+	if(mixi % 2){ // odd batch
+		qScaleFactorsMiu = qScaleFactorsOdd;
+	}else{ // even batch
+		qScaleFactorsMiu = qScaleFactorsEven;
+	}
+
+	// Get scaling factor
+	qScaleFactors = qScaleFactorsMiu;
+
+	std::vector<std::string> how;
+	if(getRunType() == 1){
+		how = { "deterministic", "gauss"};
+	}else if(getRunType() == 2){
+		how = { "deterministic", "gauss"};
+	}
+	bool randSignOpt = true;
+
+	for(size_t sfIx = 0; sfIx < qScaleFactors.size(); sfIx++){
+		if(qScaleFactors.at(sfIx) != 1){
+			qScaleFactors.at(sfIx) = distributeScalingFactor(
+				how, qScaleFactorsMiu.at(sfIx), randSignOpt);
+		}
+	}
+
+
+}
+
+
 // Run replica exchange protocol
 void Context::RunREX(void)
 {
@@ -3568,13 +3577,8 @@ void Context::RunREX(void)
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 		std::cout << " REX batch " << mixi << std::endl;
 
-		// Prepare non-equilibrium params
-		if(mixi % 2){ // odd batch
-			qScaleFactorsMiu = qScaleFactorsOdd;
-		}else{ // even batch
-			qScaleFactorsMiu = qScaleFactorsEven;
-		}
-		
+		updQScaleFactors(mixi);
+
 		// Run each replica serially
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
@@ -3584,7 +3588,7 @@ void Context::RunREX(void)
 			currWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Set non-equilibrium parameters
-			updWorldsNonequilibriumParameters(replicaIx);
+			updWorldsDistortOptions(replicaIx);
 
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
@@ -4593,12 +4597,8 @@ void Context::RunRENS(void)
 
 		std::cout << " REX batch " << mixi << std::endl;
 		nofRounds = mixi;
-		// Set initial scale factors
-		if(mixi % 2){ // odd batch
-			qScaleFactorsMiu = qScaleFactorsOdd;
-		}else{ // even batch
-			qScaleFactorsMiu = qScaleFactorsEven;
-		}
+
+		updQScaleFactors(mixi);
 
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
@@ -4613,7 +4613,7 @@ void Context::RunRENS(void)
 			currWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Get scale factors 
-			updWorldsNonequilibriumParameters(replicaIx);
+			updWorldsDistortOptions(replicaIx);
 
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
@@ -4820,11 +4820,14 @@ void Context::RunOneRound(void)
 		}
 
 		// Non-equilibrium parameters
-		SimTK::Real scaleFactor = 0.25;
-		std::vector<std::string> how = { "deterministic", "Bernoulli"};
+		SimTK::Real qScaleFactor = 0.25;
+		std::vector<std::string> how = { "deterministic", "gauss"};
 		bool randSignOpt = true;
-		setWorldDistortParameters(worldIx, how, scaleFactor, randSignOpt);
+		distributeScalingFactor(how, qScaleFactor, randSignOpt);
 
+		if(qScaleFactor != 1){
+			setWorldDistortParameters(worldIx, qScaleFactor);
+		}
 		// Run front world
 		RunFrontWorldAndRotate(worldIndexes);
 

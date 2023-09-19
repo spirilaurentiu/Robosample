@@ -413,12 +413,11 @@ public:
 		bool randSignOpt = false);
 
 	// Set world distort parameters
-	void setWorldDistortParameters(int whichWorld,
-		std::vector<std::string> how, SimTK::Real scaleFactor,
-		bool randSignOpt);
+	void setWorldDistortParameters(int whichWorld, SimTK::Real scaleFactor);
 
 	// Set nonequilibrium parameters for one replica
-	void updWorldsNonequilibriumParameters(int thisReplica);
+	void updWorldsDistortOptions(int thisReplica);
+	void updQScaleFactors(int mixi);
 
 	int getRunType(void){return runType;}
 	void setRunType(int runTypeArg){this->runType = runTypeArg;}
