@@ -3162,6 +3162,8 @@ void Context::initializeReplica(int thisReplica)
 // Prepare Q, U, and tau altering function parameters
 void Context::PrepareNonEquilibriumParams_Q(void){
 
+	if(nofThermodynamicStates == 0){return;}
+	
 	// Initialize a vector of scalingFactors for scaling Qs (non-equil)
 	qScaleFactorsEven.resize(nofThermodynamicStates, 1.0);
 	qScaleFactorsOdd.resize(nofThermodynamicStates, 1.0);
@@ -4824,6 +4826,7 @@ void Context::RunOneRound(void)
 		std::vector<std::string> how = { "deterministic", "gauss"};
 		bool randSignOpt = true;
 		distributeScalingFactor(how, qScaleFactor, randSignOpt);
+
 
 		if(qScaleFactor != 1){
 			setWorldDistortParameters(worldIx, qScaleFactor);
