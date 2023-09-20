@@ -100,3 +100,10 @@ mkdir build
 cd build
 cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.train && rm profile-data/ -rf && bash pgo.sh && cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Use -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL && ninja robosample.pgo.use
 ./robosample.pgo.use inp.aper | grep elapsed
+
+
+
+
+un input de flexibilitati are pt un prmtop cu n legaturi are n linii cu 5 valori:
+  i0_prmtop i1_prmtop i0_bat i1_bat joint_type
+ordinea legaturilor este cea in care se vor adauga legaturile in sistem
