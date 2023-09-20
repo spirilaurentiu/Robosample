@@ -13,3 +13,4 @@ tools/demo/out.*
 tools/__pycache__/
 tools/__pycache__/*
 
+tickets.txt
