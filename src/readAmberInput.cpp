@@ -1,12 +1,13 @@
 #include "readAmberInput.hpp"
 #include <assert.h>
+#include <algorithm>
+#include <string>
+#include <cctype>
 
 int readAmberInput::AtomNameSize = 4;
 TARGET_TYPE readAmberInput::chargemMultiplier = 18.2223;
 int readAmberInput::AmberIndexMultiplier = 3;
 int readAmberInput::AmberIndexDiff = 1;
-
-
 
 void readAmberInput::readAmberFiles(std::string inpcrdfile, std::string prmtopfile)
 {
@@ -222,7 +223,11 @@ void readAmberInput::readPointers(){
       getline(prmtop, line);
       for(unsigned int k=0; k + readAmberInput::AtomNameSize <=line.length(); k += readAmberInput::AtomNameSize )
       {
-        AtomsName.push_back(line.substr(k, readAmberInput::AtomNameSize ));
+        auto name = line.substr(k, readAmberInput::AtomNameSize );
+        auto it = std::remove_if(name.begin(), name.end(), [](char& c) {return std::isspace<char>(c, std::locale::classic()); });
+        name.erase(it, name.end());
+
+        AtomsName.push_back(name);
         global_i++;
       }
     }
@@ -235,7 +240,11 @@ void readAmberInput::readPointers(){
       getline(prmtop, line);
       for(unsigned int k=0; k + readAmberInput::AtomNameSize <=line.length(); k += readAmberInput::AtomNameSize )
       {
-        AtomsTypes.push_back(line.substr(k, readAmberInput::AtomNameSize ));
+        auto name = line.substr(k, readAmberInput::AtomNameSize );
+        auto it = std::remove_if(name.begin(), name.end(), [](char& c) {return std::isspace<char>(c, std::locale::classic()); });
+        name.erase(it, name.end());
+
+        AtomsTypes.push_back(name);
         global_i++;
       }
     }

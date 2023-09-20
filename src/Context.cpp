@@ -469,12 +469,17 @@ void Context::run() {
 	}
 }
 
-void Context::destroy() {
-	// for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-	// 	if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
-	// 		worlds[worldIx].removeFixmanTorque();
-	// 	}
-	// }
+void Context::run(int rounds) {
+	if(run_type == RunType::SimulatedTempering) {
+		RunSimulatedTempering(rounds, tempIni, tempFin);
+	}else if(run_type == RunType::REX){
+		RunREX();
+	}else if(run_type == RunType::RENS){
+		setThermostatesNonequilibrium();
+		RunRENS();
+	}else{
+		Run(rounds, tempIni, tempFin);
+	}
 }
 
 bool Context::CreateOutputDirectory(const std::string& outDir)
@@ -4644,6 +4649,7 @@ void Context::RunOneRound()
 					worlds[0].updSampler(0)->uniformRealDistributionRandTrunc(
 						//0.625, 1.600);
 						0.8, 1.25);
+						//
 			}
 
 			// Assign a random sign (optional)

@@ -5,11 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/robosample.d",
-            "args": ["${workspaceFolder}/build/inp.2but.mono"],
+            // "program": "${workspaceFolder}/build/robosample.d",
+            // "args": ["${workspaceFolder}/build/inp.2but"],
+            "program": "${workspaceFolder}/build/TestEnergy",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
             "environment": [],
@@ -28,6 +37,5 @@
                 }
             ]
         }
-
     ]
 }

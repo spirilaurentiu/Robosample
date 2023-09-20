@@ -31,7 +31,7 @@ class Context{
 public:
 	bool initializeFromFile(const std::string& file);
 	void run();
-	void destroy();
+	void run(int steps);
 
 	// Input functions
 	bool loadTopologyFile(std::string topologyFilename);

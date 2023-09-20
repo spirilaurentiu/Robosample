@@ -1,7 +1,7 @@
 #include "Context.hpp"
 
 int main(int argc, char **argv)
-{	
+{
 	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
 	std::string helpString =  "Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
@@ -33,8 +33,6 @@ int main(int argc, char **argv)
 	
 	// Write final pdbs
 	c.writeFinalPdb();
-
-	c.destroy();
 
 	//std::cout << "OS memory 6\n" << exec("free") << std::endl;
 	//std::cout << "printStatus 1 " << std::endl;
