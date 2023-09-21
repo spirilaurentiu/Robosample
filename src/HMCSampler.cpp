@@ -333,7 +333,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	// Set old potential energy
 	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(someState);
 	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
-	std::cout << "HMCSampler::reinitialize pe_o " << pe_o << std::endl;
+	//std::cout << "HMCSampler::reinitialize pe_o " << pe_o << std::endl;
 
 
 	// Store the configuration

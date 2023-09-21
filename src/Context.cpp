@@ -3081,7 +3081,7 @@ void Context::initializeReplica(int thisReplica)
 		worlds[replicaWorldIxs[i]].setBoostTemperature( T );
 	}
 
-	std::cout << "iniTemperature set to " << T << std::endl << std::flush;
+	//std::cout << "iniTemperature set to " << T << std::endl << std::flush;
 
 	// -------------
 	// Set samplers parameters for this replica
@@ -3098,12 +3098,12 @@ void Context::initializeReplica(int thisReplica)
 			replicaMdsteps[i]);
 	}
 
-	std::cout << "iniTimesteps set to ";
+	//std::cout << "iniTimesteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep() << " " ;
 	}
 	std::cout << std::endl;
-	std::cout << "iniMdsteps set to ";
+	//std::cout << "iniMdsteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample() << " " ;
 	}
