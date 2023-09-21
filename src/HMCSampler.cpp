@@ -2743,6 +2743,10 @@ std::vector<SimTK::Real>& scaleFactors)
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
+
+	if (this->QScaleFactor == 1){
+		return;
+	}
 	//world->traceBendStretch(someState);
 	//world->PrintAcosX_PFs();
 	//world->PrintNormX_BMs();

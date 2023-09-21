@@ -3173,7 +3173,7 @@ void Context::PrepareNonEquilibriumParams_Q(void){
 
 	// Set the even scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
 		// s_i = T_j
 		qScaleFactorsEven.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
 		qScaleFactorsEven.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
@@ -3189,7 +3189,7 @@ void Context::PrepareNonEquilibriumParams_Q(void){
 
 	// Set the odd scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
+	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
 
 		// s_i = T_j
 		qScaleFactorsOdd.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
@@ -3516,9 +3516,9 @@ void Context::updQScaleFactors(int mixi)
 
 	std::vector<std::string> how;
 	if(getRunType() == 1){
-		how = { "deterministic", "gauss"};
+		how = { "deterministic", "Bernoulli"};
 	}else if(getRunType() == 2){
-		how = { "deterministic", "gauss"};
+		how = { "deterministic", "Bernoulli"};
 	}
 	bool randSignOpt = true;
 
@@ -3528,7 +3528,6 @@ void Context::updQScaleFactors(int mixi)
 				how, qScaleFactorsMiu.at(sfIx), randSignOpt);
 		}
 	}
-
 
 }
 
@@ -3580,6 +3579,10 @@ void Context::RunREX(void)
 		std::cout << " REX batch " << mixi << std::endl;
 
 		updQScaleFactors(mixi);
+		std::cout << "qScaleFactors ";
+		for(auto qsf : qScaleFactors){
+			std::cout << qsf << " ";
+		}std::cout << std::endl;
 
 		// Run each replica serially
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
@@ -4823,7 +4826,7 @@ void Context::RunOneRound(void)
 
 		// Non-equilibrium parameters
 		SimTK::Real qScaleFactor = 0.25;
-		std::vector<std::string> how = { "deterministic", "gauss"};
+		std::vector<std::string> how = { "deterministic", "Bernoulli"};
 		bool randSignOpt = true;
 		distributeScalingFactor(how, qScaleFactor, randSignOpt);
 
