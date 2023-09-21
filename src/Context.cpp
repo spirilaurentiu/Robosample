@@ -3599,7 +3599,7 @@ void Context::RunREX(void)
 			setReplicasWorldsParameters(replicaIx);
 
 			// Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
+			/* if(printFreq || pdbRestartFreq){
 				if( !(mixi % printFreq) ){
 					PrintToLog(worldIndexes.front());
 				}
@@ -3609,7 +3609,7 @@ void Context::RunREX(void)
 						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
 					}
 				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
 
 			//RunReplicaAllWorlds(replicaIx, swapEvery);storeReplicaCoordinatesFromFrontWorld(replicaIx);storeReplicaEnergyFromFrontWorldFull(replicaIx);
 					// ======================== SIMULATE ======================
@@ -3643,7 +3643,9 @@ void Context::RunREX(void)
 			// Store Fixman if required
             storeReplicaFixmanFromBackWorld(replicaIx);
 
-			/* // Write energy and geometric features to logfile
+			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
+
+			// Write energy and geometric features to logfile
 			if(printFreq || pdbRestartFreq){
 				if( !(mixi % printFreq) ){
 					PrintToLog(worldIndexes.front());
@@ -3654,9 +3656,7 @@ void Context::RunREX(void)
 						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
 					}
 				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
-
-			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 		} // end replicas simulations
 
@@ -4623,7 +4623,7 @@ void Context::RunRENS(void)
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
 
-			// Write energy and geometric features to logfile
+			/* // Write energy and geometric features to logfile
 			if(printFreq || pdbRestartFreq){
 				if( !(mixi % printFreq) ){
 					PrintToLog(currWIx);
@@ -4634,7 +4634,7 @@ void Context::RunRENS(void)
 						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
 					}
 				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
 					
 					// ======================== SIMULATE ======================
 					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
@@ -4667,7 +4667,9 @@ void Context::RunRENS(void)
 			// Store Fixman if required
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
-			/* // Write energy and geometric features to logfile
+			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
+
+			// Write energy and geometric features to logfile
 			if(printFreq || pdbRestartFreq){
 				if( !(mixi % printFreq) ){
 					PrintToLog(currWIx);
@@ -4678,9 +4680,7 @@ void Context::RunRENS(void)
 						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
 					}
 				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
-
-			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 		} // end replicas simulations
 
