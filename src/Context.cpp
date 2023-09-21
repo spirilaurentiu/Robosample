@@ -3628,6 +3628,19 @@ void Context::RunREX(void)
 					// ======================== SIMULATE ======================
 					currWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
+// Write energy and geometric features to logfile
+if(printFreq || pdbRestartFreq){
+	if( !(mixi % printFreq) ){
+		PrintToLog(worldIndexes.front());
+	}
+	// Write pdb
+	if( pdbRestartFreq != 0){
+		if((mixi % pdbRestartFreq) == 0){
+			writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+		}
+	}
+} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+
 					// ========================= UNLOAD =======================
 					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
 
@@ -3644,19 +3657,6 @@ void Context::RunREX(void)
             storeReplicaFixmanFromBackWorld(replicaIx);
 
 			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
-
-			// Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(mixi % printFreq) ){
-					PrintToLog(worldIndexes.front());
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((mixi % pdbRestartFreq) == 0){
-						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-					}
-				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 		} // end replicas simulations
 
@@ -4638,6 +4638,19 @@ void Context::RunRENS(void)
 					
 					// ======================== SIMULATE ======================
 					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+
+// Write energy and geometric features to logfile
+if(printFreq || pdbRestartFreq){
+	if( !(mixi % printFreq) ){
+		PrintToLog(worldIndexes.front());
+	}
+	// Write pdb
+	if( pdbRestartFreq != 0){
+		if((mixi % pdbRestartFreq) == 0){
+			writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+		}
+	}
+} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 					// ========================= UNLOAD =======================
 					storeReplicaCoordinatesFromFrontWorld(replicaIx);
