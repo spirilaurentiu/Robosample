@@ -3618,7 +3618,7 @@ void Context::RunREX(void)
 // Write energy and geometric features to logfile
 if(printFreq || pdbRestartFreq){
 	if( !(mixi % printFreq) ){
-		PrintToLog(currWIx);
+		PrintToLog(worldIndexes.front());
 	}
 	// Write pdb
 	if( pdbRestartFreq != 0){
@@ -3699,14 +3699,14 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the equilibrium worlds
-	int frontWIx = -1;
+	int currFrontWIx = -1;
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
 		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
 
 			// Run front world
-			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
+			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
 		
 		}
 	} // END iteration through worlds
@@ -3714,7 +3714,7 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	/* std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs after ";
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
-	return frontWIx;
+	return currFrontWIx;
 
 }
 
@@ -4596,7 +4596,7 @@ void Context::RunRENS(void)
 
 	// Main loop
 	int nofMixes = int(requiredNofRounds / swapEvery);
-	int currWIx = -1;
+	int currFrontWIx = -1;
 
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 
@@ -4615,7 +4615,7 @@ void Context::RunRENS(void)
 			
 			// ========================== LOAD ========================
 			// Load the front world
-			currWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
+			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Get scale factors 
 			updWorldsDistortOptions(replicaIx);
@@ -4626,7 +4626,7 @@ void Context::RunRENS(void)
 			/* // Write energy and geometric features to logfile
 			if(printFreq || pdbRestartFreq){
 				if( !(mixi % printFreq) ){
-					PrintToLog(currWIx);
+					PrintToLog(worldIndexes.front());
 				}
 				// Write pdb
 				if( pdbRestartFreq != 0){
@@ -4637,7 +4637,7 @@ void Context::RunRENS(void)
 			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
 					
 					// ======================== SIMULATE ======================
-					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+					currFrontWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
 
 // Write energy and geometric features to logfile
 if(printFreq || pdbRestartFreq){
@@ -4663,7 +4663,7 @@ if(printFreq || pdbRestartFreq){
 					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 					// ======================== SIMULATE ======================
-					currWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
+					currFrontWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
 					// ========================= UNLOAD =======================
 					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
@@ -4680,20 +4680,7 @@ if(printFreq || pdbRestartFreq){
 			// Store Fixman if required
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
-			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
-
-			// Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(mixi % printFreq) ){
-					PrintToLog(currWIx);
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((mixi % pdbRestartFreq) == 0){
-						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-					}
-				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+			if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 
 		} // end replicas simulations
 
