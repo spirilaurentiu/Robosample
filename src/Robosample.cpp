@@ -87,8 +87,7 @@ std::string GetMoleculeDirectoryShort(std::string path)
 	return molDir;
 }
 
-
-vector<string> split(const string& i_str, const string& i_delim)
+/* vector<string> split(const string& i_str, const string& i_delim)
 {
     vector<string> result;
 
@@ -104,7 +103,7 @@ vector<string> split(const string& i_str, const string& i_delim)
     if(startIndex != i_str.size())
         result.push_back(string(i_str.begin()+startIndex, i_str.end()));
     return result;
-}
+} */
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////   MAIN   ////////////////////////////////////////
@@ -549,6 +548,7 @@ int main(int argc, char **argv)
 		// Storage for sampling details
 		std::vector<std::vector<std::string>> rexSamplers;
 		std::vector<std::vector<int>> rexDistortOptions;
+		std::vector<std::vector<std::string>> rexDistortArgs;
 		std::vector<std::vector<int>> rexFlowOptions;
 		std::vector<std::vector<int>> rexWorkOptions;
 
@@ -566,6 +566,7 @@ int main(int argc, char **argv)
 
 			rexSamplers,
 			rexDistortOptions,
+			rexDistortArgs,
 			rexFlowOptions,
 			rexWorkOptions,
 			rexIntegrators,
@@ -581,6 +582,7 @@ int main(int argc, char **argv)
 
 				rexSamplers[k],
 				rexDistortOptions[k],
+				rexDistortArgs[k],
 				rexFlowOptions[k],
 				rexWorkOptions[k],
 				rexIntegrators[k],

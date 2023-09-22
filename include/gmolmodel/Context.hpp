@@ -300,6 +300,7 @@ public:
 
 		std::vector<std::string>& rexSamplers,
 		std::vector<int>& rexDistortOptions,
+		std::vector<std::string>& rexDistortArgs,
 		std::vector<int>& rexFlowOptions,
 		std::vector<int>& rexWorkOptions,
 		std::vector<std::string>& rexIntegrators,

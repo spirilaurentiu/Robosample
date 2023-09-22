@@ -44,6 +44,8 @@ class ThermodynamicState{
 	// for samplers
 	void setDistortOptions(std::vector<int> rexDistortOptionsArg);
 	std::vector<int>& getDistortOptions(void);
+	void setDistortArgs(std::vector<std::string> rexDistortOptionsArg);
+	std::vector<std::string>& getDistortArgs(void);
 	void setFlowOptions(std::vector<int>& rexFlowOptionsArg);
 	void setWorkOptions(std::vector<int>& rexWorkOptionsArg);
 
@@ -77,6 +79,7 @@ class ThermodynamicState{
 
 	std::vector<std::string> rexSamplers;
 	std::vector<int> rexDistortOptions;
+	std::vector<std::string> rexDistortArgs;
 	std::vector<int> rexFlowOptions;
 	std::vector<int> rexWorkOptions;
 	std::vector<std::string> rexIntegrators;	
@@ -190,6 +193,17 @@ void ThermodynamicState::setDistortOptions(
 std::vector<int>& ThermodynamicState::getDistortOptions(void)
 {
 	return this->rexDistortOptions;
+}
+
+void ThermodynamicState::setDistortArgs(
+	std::vector<std::string> rexDistortArgsArg)
+{
+	this->rexDistortArgs = rexDistortArgsArg;
+}
+
+std::vector<std::string>& ThermodynamicState::getDistortArgs(void)
+{
+	return this->rexDistortArgs;
 }
 
 void ThermodynamicState::setFlowOptions(
@@ -2111,6 +2125,7 @@ void Context::addThermodynamicState(int index,
 		SimTK::Real T,
 		std::vector<std::string>& rexSamplers,
 		std::vector<int>& rexDistortOptions,
+		std::vector<std::string>& rexDistortArgs,
 		std::vector<int>& rexFlowOptions,
 		std::vector<int>& rexWorkOptions,
 		std::vector<std::string>& rexIntegrators,
@@ -2136,6 +2151,7 @@ void Context::addThermodynamicState(int index,
 
 	// Set non-equilibrium params
 	thermodynamicStates.back().setDistortOptions(rexDistortOptions);
+	thermodynamicStates.back().setDistortArgs(rexDistortArgs);
 	thermodynamicStates.back().setFlowOptions(rexFlowOptions);
 	thermodynamicStates.back().setWorkOptions(rexWorkOptions);
 
@@ -3496,6 +3512,24 @@ int Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
 
 }
 
+/* vector<string> split(const string& i_str, const string& i_delim)
+{
+    vector<string> result;
+
+    size_t found = i_str.find(i_delim);
+    size_t startIndex = 0;
+
+    while(found != string::npos)
+    {
+        result.push_back(string(i_str.begin()+startIndex, i_str.begin()+found));
+        startIndex = found + i_delim.size();
+        found = i_str.find(i_delim, startIndex);
+    }
+    if(startIndex != i_str.size())
+        result.push_back(string(i_str.begin()+startIndex, i_str.end()));
+    return result;
+} */
+
 // Set non-equilibrium parameters
 void Context::updQScaleFactors(int mixi)
 {
@@ -3514,18 +3548,34 @@ void Context::updQScaleFactors(int mixi)
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
-	std::vector<std::string> how;
-	if(getRunType() == 1){
-		how = { "deterministic", "Bernoulli"};
-	}else if(getRunType() == 2){
-		how = { "deterministic", "Bernoulli"};
-	}
 	bool randSignOpt = true;
 
-	for(size_t sfIx = 0; sfIx < qScaleFactors.size(); sfIx++){
-		if(qScaleFactors.at(sfIx) != 1){
-			qScaleFactors.at(sfIx) = distributeScalingFactor(
-				how, qScaleFactorsMiu.at(sfIx), randSignOpt);
+	std::vector<std::string> how;
+
+	// Go through all thermodynamic states which should correspond to scale factors
+	for(size_t thermoIx = 0; thermoIx < qScaleFactors.size(); thermoIx++){
+
+		// Get thermoState world indexes 
+		std::vector<int>& worldIxs = 
+			thermodynamicStates[thermoIx].updWorldIndexes();
+		size_t thermoNofWorlds = worldIxs.size();
+
+		// Go through all the worlds this thermostate should go through
+		for(std::size_t worldCnt = 0; worldCnt < thermoNofWorlds; worldCnt++){
+
+			// Assign distribution from the first nonequilibrium world FOR NOW
+			if(thermodynamicStates[thermoIx].getDistortOptions()[worldCnt] != 0){
+
+				how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
+				break;
+			}
+
+			// Distribute scale factor
+			if(qScaleFactors.at(thermoIx) != 1){
+				qScaleFactors.at(thermoIx) = distributeScalingFactor(
+					how, qScaleFactorsMiu.at(thermoIx), randSignOpt);
+			}
+
 		}
 	}
 

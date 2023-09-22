@@ -151,6 +151,7 @@ int SetupReader::readREXConfigFile(std::string FN,
 
 		std::vector<std::vector<std::string>>& rexSamplers,
 		std::vector<std::vector<int>>& rexDistortOptions,
+		std::vector<std::vector<std::string>>& rexDistortArgs,
 		std::vector<std::vector<int>>& rexFlowOptions,
 		std::vector<std::vector<int>>& rexWorkOptions,
 		std::vector<std::vector<std::string>>& rexIntegrators,
@@ -184,6 +185,7 @@ int SetupReader::readREXConfigFile(std::string FN,
 
 	rexSamplers.resize(nofReplicas);
 	rexDistortOptions.resize(nofReplicas);
+	rexDistortArgs.resize(nofReplicas);
 	rexFlowOptions.resize(nofReplicas);
 	rexWorkOptions.resize(nofReplicas);	
 	rexIntegrators.resize(nofReplicas);
@@ -227,6 +229,11 @@ int SetupReader::readREXConfigFile(std::string FN,
 					case RexKey::DISTORT_OPTIONS:
 						for(int i = 2; i < words.size(); i++){
 							rexDistortOptions[repIx].push_back(std::stod(words[i]));
+						}
+						break;
+					case RexKey::DISTORT_ARGS:
+						for(int i = 2; i < words.size(); i++){
+							rexDistortArgs[repIx].push_back(words[i]);
 						}
 						break;
 					case RexKey::FLOW_OPTIONS:
