@@ -3579,10 +3579,10 @@ void Context::RunREX(void)
 		std::cout << " REX batch " << mixi << std::endl;
 
 		updQScaleFactors(mixi);
-		std::cout << "qScaleFactors ";
+		/* std::cout << "qScaleFactors ";
 		for(auto qsf : qScaleFactors){
 			std::cout << qsf << " ";
-		}std::cout << std::endl;
+		}std::cout << std::endl; */
 
 		// Run each replica serially
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
@@ -3615,6 +3615,19 @@ void Context::RunREX(void)
 					// ======================== SIMULATE ======================
 					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
 
+// Write energy and geometric features to logfile
+if(printFreq || pdbRestartFreq){
+	if( !(mixi % printFreq) ){
+		PrintToLog(currWIx);
+	}
+	// Write pdb
+	if( pdbRestartFreq != 0){
+		if((mixi % pdbRestartFreq) == 0){
+			writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+		}
+	}
+} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+
 					// ========================= UNLOAD =======================
 					storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
@@ -3627,19 +3640,6 @@ void Context::RunREX(void)
 
 					// ======================== SIMULATE ======================
 					currWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
-
-// Write energy and geometric features to logfile
-if(printFreq || pdbRestartFreq){
-	if( !(mixi % printFreq) ){
-		PrintToLog(worldIndexes.front());
-	}
-	// Write pdb
-	if( pdbRestartFreq != 0){
-		if((mixi % pdbRestartFreq) == 0){
-			writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-		}
-	}
-} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 					// ========================= UNLOAD =======================
 					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
@@ -5833,31 +5833,6 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld)
 {
 
 	SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
-/*    std::cout << currentAdvancedState.getNU() << ' '
-		<< worlds[whichWorld].updSampler(0)->getAcceptedSteps() << ' '
-		<< std::setprecision(4) << std::fixed
-		<< worlds[whichWorld].updSampler(0)->getOldPE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getSetPE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getLastAcceptedKE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getProposedKE() << ' '
-		<< worlds[whichWorld].updSampler(0)->getOldFixman() << ' '
-		<< worlds[whichWorld].updSampler(0)->getSetFixman() << ' '
-		<< worlds[whichWorld].updSampler(0)->getProposedFixman() << ' '
-		;
-*/
-/*    // Use printf for faster output
-	printf("%d %d %.2f %.2f %.2f %.2f %.2f %.2f %.2f "
-		, currentAdvancedState.getNU()
-		, worlds[whichWorld].updSampler(0)->getAcceptedSteps()
-		, worlds[whichWorld].updSampler(0)->getOldPE()
-		, worlds[whichWorld].updSampler(0)->getSetPE()
-		, worlds[whichWorld].updSampler(0)->getLastAcceptedKE()
-		, worlds[whichWorld].updSampler(0)->getProposedKE()
-		, worlds[whichWorld].updSampler(0)->getOldFixman()
-		, worlds[whichWorld].updSampler(0)->getSetFixman()
-		, worlds[whichWorld].updSampler(0)->getProposedFixman()
-	);
-*/
 
 	// Write to a file instead of stdout
 	fprintf(logFile, "%f %d %d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
