@@ -4879,7 +4879,7 @@ void Context::RunOneRound(void)
 		SimTK::Real qScaleFactor = 0.25;
 		std::vector<std::string> how = { "deterministic", "Bernoulli"};
 		bool randSignOpt = true;
-		distributeScalingFactor(how, qScaleFactor, randSignOpt);
+		qScaleFactor = distributeScalingFactor(how, qScaleFactor, randSignOpt);
 
 
 		if(qScaleFactor != 1){
