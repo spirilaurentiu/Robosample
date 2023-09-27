@@ -1453,7 +1453,7 @@ SimTK::Real World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
 		if(mbx2uScale.find(mbx) != mbx2uScale.end()){
 			return mbx2uScale.at(mbx);
 		}else{
-			std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
+			//std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
 			return 1;
 		}
 	}else{

@@ -2474,33 +2474,33 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 // as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
 //, 135:194110, 2011. DOI:10.1063/1.3660669
 // replica_i and replica_j are variable
-bool Context::attemptREXSwap(int replica_i, int replica_j)
+bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
 	bool returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
-	int thermoState_i = replica2ThermoIxs[replica_i];
-	int thermoState_j = replica2ThermoIxs[replica_j];
+	int thermoState_C = replica2ThermoIxs[replica_X];
+	int thermoState_H = replica2ThermoIxs[replica_Y];
 
 	// Record this attempt
-	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
-	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
+	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
+	nofAttemptedSwapsMatrix[thermoState_H][thermoState_C] += 1;
 
 	// Replica i reduced potential in state i
-	SimTK::Real Eii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
+	SimTK::Real eC_X0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
 
 	// Replica j reduced potential in state j
-	SimTK::Real Ejj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
+	SimTK::Real eH_Y0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
 
 	// Replica i reduced potential in state j
-	SimTK::Real Eij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
+	SimTK::Real eH_X0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
 
 	// Replica j reduced potential in state i
-	SimTK::Real Eji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
+	SimTK::Real eC_Y0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
 
 	// Include the Fixman term if indicated
 	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
@@ -2508,27 +2508,27 @@ bool Context::attemptREXSwap(int replica_i, int replica_j)
 
 	if (swapFixman){
         ndofs_i = worlds[
-            thermodynamicStates[thermoState_i].getWorldIndexes().back()
+            thermodynamicStates[thermoState_C].getWorldIndexes().back()
         ].matter->getNumMobilities();
         ndofs_j = worlds[
-            thermodynamicStates[thermoState_j].getWorldIndexes().back()
+            thermodynamicStates[thermoState_H].getWorldIndexes().back()
         ].matter->getNumMobilities();
 
-        if (thermoState_i == 0){
-			std::cout << "Swap between " << thermoState_i << " and "
-				<< thermoState_j << " ";
+        if (thermoState_C == 0){
+			std::cout << "Swap between " << thermoState_C << " and "
+				<< thermoState_H << " ";
 
             // Replica i reduced Fixman potential in state i
-            Uii = thermodynamicStates[thermoState_i].getBeta()
-                * calcFixman_IinJ(replica_i, replica_i);
+            Uii = thermodynamicStates[thermoState_C].getBeta()
+                * calcFixman_IinJ(replica_X, replica_X);
 
             // Replica j reduced Fixman potential in state j
-            Ujj = thermodynamicStates[thermoState_j].getBeta()
-                * calcFixman_IinJ(replica_j, replica_j);
+            Ujj = thermodynamicStates[thermoState_H].getBeta()
+                * calcFixman_IinJ(replica_Y, replica_Y);
 
             // Replica i reduced Fixman potential in state j
-            Uij = thermodynamicStates[thermoState_j].getBeta()
-                * calcFixman_IinJ(replica_i, replica_j);
+            Uij = thermodynamicStates[thermoState_H].getBeta()
+                * calcFixman_IinJ(replica_X, replica_Y);
 
             // Replica j reduced Fixman potential in state i
             //Uji = thermodynamicStates[thermoState_i].getBeta()
@@ -2545,7 +2545,7 @@ bool Context::attemptREXSwap(int replica_i, int replica_j)
             << " " << Uij << " " << Uji << std::endl;
 	}
 
-	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
+	SimTK::Real log_p_accept = -1.0 * (eH_X0 + eC_Y0) + eC_X0 + eH_Y0;
 	log_p_accept            += -1.0 * (Uij + Uji) + Uii + Ujj;
 
 	//std::cout << "Replicas energies = "
@@ -2564,9 +2564,9 @@ bool Context::attemptREXSwap(int replica_i, int replica_j)
 
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
-		swapThermodynamicStates(replica_i, replica_j);
+		swapThermodynamicStates(replica_X, replica_Y);
 
-		swapPotentialEnergies(replica_i, replica_j);
+		swapPotentialEnergies(replica_X, replica_Y);
 
 		returnValue = true;
 
@@ -3534,10 +3534,6 @@ int Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
 void Context::updQScaleFactors(int mixi)
 {
 
-	// -------------
-	// Set non-equilibrium parameters
-	// =============
-
 	// Prepare non-equilibrium params
 	if(mixi % 2){ // odd batch
 		qScaleFactorsMiu = qScaleFactorsOdd;
@@ -3566,7 +3562,16 @@ void Context::updQScaleFactors(int mixi)
 			// Assign distribution from the first nonequilibrium world FOR NOW
 			if(thermodynamicStates[thermoIx].getDistortOptions()[worldCnt] != 0){
 
-				how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
+				// Error checking
+				if(  thermodynamicStates[thermoIx].getDistortArgs().size()  ){
+
+					how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
+
+				}else{
+					
+					how = {"deterministic"};
+				}
+
 				break;
 			}
 
@@ -3629,10 +3634,6 @@ void Context::RunREX(void)
 		std::cout << " REX batch " << mixi << std::endl;
 
 		updQScaleFactors(mixi);
-		/* std::cout << "qScaleFactors ";
-		for(auto qsf : qScaleFactors){
-			std::cout << qsf << " ";
-		}std::cout << std::endl; */
 
 		// Run each replica serially
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
