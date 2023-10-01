@@ -86,7 +86,8 @@ public:
 	SimTK::Real convoluteVariable(SimTK::Real& var,
 		std::string distrib = "alternateInverse",
 		SimTK::Real param1 = 1.0,
-		SimTK::Real param2 = 0.0);
+		SimTK::Real param2 = 0.0,
+		SimTK::Real param3 = 0.0);
 
 	SimTK::Real convoluteVariable(
 		std::vector<SimTK::Real>& vvar,

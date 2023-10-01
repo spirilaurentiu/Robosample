@@ -80,6 +80,9 @@ public:
 	// Add task spaces
 	void addTaskSpacesLS(void);
 
+	/** Add constraints */
+	void addConstraints(void);
+
 	void realizeTopology();
 	void realizePosition();
 
@@ -199,7 +202,6 @@ public:
 
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
-
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void setNofBoostStairs(std::size_t whichWorld, int howManyStairs);
@@ -207,7 +209,6 @@ public:
 	void setNumThreadsRequested(std::size_t which, int howMany);
 	void setUseOpenMMAcceleration(bool arg);
 	void setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize);
-
 	void setUseOpenMMCalcOnlyNonBonded(bool arg);
 	void setNonbondedMethod(std::size_t whichWorld, int methodInx);
 	void setNonbondedCutoff(std::size_t whichWorld, Real cutoffNm);
@@ -347,10 +348,10 @@ public:
 	void swapThermodynamicStates(int replica_i, int replica_j);
 
 	// Swap replicas' potential energies
-	void swapPotentialEnergy(int replica_i, int replica_j);
+	void swapPotentialEnergies(int replica_i, int replica_j);
 
 	// Exchanges thermodynamic states between replicas
-	bool attemptSwap(int replica_i, int replica_j);
+	bool attemptREXSwap(int replica_i, int replica_j);
 
 	bool attemptRENSSwap(int replica_i, int replica_j);
 
@@ -370,8 +371,8 @@ public:
 	// Configuration manipulation functions between worlds and replicas
 	// This can be quite costly since they imply transfer between worlds
 
-	// Load replica's atomLocations into it's front world
-	void restoreReplicaCoordinatesToFrontWorld(int whichReplica);
+	// Load replica's atomLocations into it's front world. Returns world index
+	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
 
 	// Load replica's atomLocations into it's back world
     void restoreReplicaCoordinatesToBackWorld(int whichReplica);
@@ -414,29 +415,41 @@ public:
 	void initializeReplica(int whichReplica);
 
 	// Reset worlds parameters according to thermodynamic state
-	void setWorldsParameters(int thisReplica);
+	void setReplicasWorldsParameters(int thisReplica);
+
+	// Given a scaling factor
+	SimTK::Real distributeScalingFactor(
+		std::vector<std::string> how, SimTK::Real sf,
+		bool randSignOpt = false);
+
+	// Set world distort parameters
+	void setWorldDistortParameters(int whichWorld, SimTK::Real scaleFactor);
 
 	// Set nonequilibrium parameters for one replica
-	void updWorldsNonequilibriumParameters(int thisReplica);
+	void updWorldsDistortOptions(int thisReplica);
+	void updQScaleFactors(int mixi);
+
+	int getRunType(void){return runType;}
+	void setRunType(int runTypeArg){this->runType = runTypeArg;}
 
 	// Run a particular world
-	void RunWorld(int whichWorld);
+	int RunWorld(int whichWorld);
 
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);
 
-	// Run front world, rotate and transfer
-	void RunFrontWorldAndRotate(int thisReplica);
+	// Run front world, rotate and transfer. Return worldIxs.front
+	int RunFrontWorldAndRotate(std::vector<int> & worldIxs);
 
 	// Go through all of this replica's worlds and generate samples
-	void RunReplicaAllWorlds(int whichReplica, int howManyRounds);
+	int RunReplicaAllWorlds(int whichReplica, int howManyRounds);
 
 	void RunREX();
 
 	// Helper Functions for RENS
 
-	void RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
-	void RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
+	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
+	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
 
 	// RENS
 	void RunRENS(void);
@@ -461,8 +474,7 @@ private:
 	std::vector<World> worlds;
 	std::vector<readAmberInput> amberReader;
 
-	std::vector<std::size_t> worldIndexes;
-
+	std::vector<int> worldIndexes;
 	// Molecules files
 	std::vector<std::string> topFNs;
 	std::vector<std::string> crdFNs;
@@ -534,6 +546,8 @@ private:
 	////////////////////////
 	//// REPLICA EXCHANGE //
 	////////////////////////
+	int runType;
+
 	std::vector<ThermodynamicState> thermodynamicStates;
 	std::vector<Replica> replicas;
 

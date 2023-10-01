@@ -595,9 +595,9 @@ double Sampler::generateChiSample(void)
 // TODO revise param1 and param2
 SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 		std::string distrib,
-		SimTK::Real param1, SimTK::Real param2)
+		SimTK::Real param1, SimTK::Real param2, SimTK::Real param3)
 {
-	// TODO this string compare is extremely slow
+	// TODO this string compare is slow
 	// Bernoulli trial between the var and its inverse
 	if(distrib == "BernoulliInverse"){
 		SimTK::Real randomNumber_Unif;
@@ -609,6 +609,7 @@ SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 			var = 1.0 / var;
 		}
 	}
+
 	// Bernoulli trial between the var and its reciprocal
 	else if(distrib == "BernoulliReciprocal"){
 		SimTK::Real randomNumber_Unif;
@@ -620,24 +621,40 @@ SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 			var = -1.0 * var;
 		}
 	}
+
 	// Run Gaussian distribution
 	else if(distrib == "normal"){
 
 		var = var + (gaurand(randomEngine) * param1);
 	}
+
 	// Run truncated Gaussian distribution
 	else if(distrib == "truncNormal"){
 
 		SimTK::Real mean = var;
-		var = var + (gaurand(randomEngine) * param1);
+		bool flag = false;
 
-		if(var <= 0){
+		for (int tz = 0; tz < 100; tz++){
+			var = var + (gaurand(randomEngine) * param1);
+			if((var >= param2) && (var <= param3)){
+				flag = true;
+				break;
+			}
+		}
+
+		if(!flag){
+			var = SimTK::NaN;
+		}
+
+		/* if(var <= 0){
 			var = mean;
 		}
 		if(var >= (2*mean)){
 			var = mean ;
-		}
+		} */
+
 	}
+
 	// Run bimodal Gaussian distribution
 	else if(distrib == "bimodalNormal"){
 
@@ -645,6 +662,7 @@ SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 		var = var + gaurand(randomEngine);
 
 	}
+	
 	// Gamma distribution
 	else if(distrib == "gamma"){
 		var = gammarand(randomEngine);

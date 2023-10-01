@@ -409,7 +409,6 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// compoundSystem->realizeTopology();
 }
 
-
 //==============================================================================
 //                   TaskSpace Functions
 //==============================================================================
@@ -435,12 +434,16 @@ void World::addTaskSpaceLS(void)
 			// Guest atoms iteration
 			for (int bAtomIx : bAtomIxs_guest) {
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
 				onBodyB.emplace_back(mbx);
-				stationPInGuest.emplace_back(SimTK::Vec3());
-				stationPInHost.emplace_back(SimTK::Vec3());
-				deltaStationP.emplace_back(SimTK::Vec3());
+				taskStationPInGuest.emplace_back(SimTK::Vec3());
+				taskStationPInHost.emplace_back(SimTK::Vec3());
+				taskDeltaStationP.emplace_back(SimTK::Vec3());
+
+				if(this->visual == true){
+					paraMolecularDecorator->loadArrow(SimTK::Vec3(0), SimTK::Vec3(0));
+				}
 
 			}
 		}
@@ -470,12 +473,12 @@ void World::updateTaskSpace(const State& someState)
 			for (int bAtomIx : bAtomIxs_host) {
 				tz++;
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
 				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
-				stationPInHost[tz] = (X_GB.R()) * B_aLoc;
+				taskStationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
 			}
 		}
 	}
@@ -492,22 +495,39 @@ void World::updateTaskSpace(const State& someState)
 			for (int bAtomIx : bAtomIxs_guest) {
 				tz++;
 				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
 				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
 				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
-				stationPInGuest[tz] = (X_GB.R()) * B_aLoc;
+				taskStationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
 
+				taskDeltaStationP[tz] = taskStationPInHost[tz] - taskStationPInGuest[tz];
+
+				if(this->visual == true){
+					paraMolecularDecorator->updateArrow(tz, taskStationPInGuest[tz], taskStationPInGuest[tz] + taskDeltaStationP[tz]);
+				}
 			}
 		}
 	}	
 
-	// Get the difference between stations expressed in Ground
-	for(size_t tz = 0; tz < stationPInGuest.size(); tz++){
-		deltaStationP[tz] = stationPInGuest[tz] - stationPInHost[tz];
-	}
+}
 
+/**
+ * Get the difference between the station task and the target
+*/
+SimTK::Array_<SimTK::Vec3>& 
+World::getTaskSpaceStationPInGuest(void)
+{
+	return taskStationPInGuest;
+}
+/**
+ * Get the difference between the station task and the target
+*/
+SimTK::Array_<SimTK::Vec3>& 
+World::getTaskSpaceStationPInHost(void)
+{
+	return taskStationPInHost;
 }
 
 /**
@@ -516,7 +536,7 @@ void World::updateTaskSpace(const State& someState)
 SimTK::Array_<SimTK::Vec3>& 
 World::getTaskSpaceDeltaStationP(void)
 {
-	return deltaStationP;
+	return taskDeltaStationP;
 }
 
 /**
@@ -526,12 +546,12 @@ void World::calcStationJacobian(
 	const State&                           someState,
 	SimTK::Matrix_<SimTK::Vec3>&                      JS) const
 {
-		matter->calcStationJacobian(someState, onBodyB, stationPInGuest, JS);
+		matter->calcStationJacobian(someState, onBodyB, taskStationPInGuest, JS);
 
 		std::cout << "Task Bodies ";
 		std::cout << onBodyB << std::endl;
 		std::cout << "Task Stations ";
-		std::cout << stationPInGuest << std::endl;
+		std::cout << taskStationPInGuest << std::endl;
 		std::cout << "Station Jacobian ";
 		std::cout << JS << std::endl;
 
@@ -539,57 +559,98 @@ void World::calcStationJacobian(
 }
 
 
-
 //=============================================================================
-//                   MEMBRANE Functions
+//                   CONSTRAINTS
 //=============================================================================
 
-
-/** Add a membrane represented by a contact surface **/
-void World::addMembrane(
-	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
+/**
+ * Add contact constraints to specific bodies.
+ **/
+void World::addRodConstraint(State& someState)
 {
-	SimTK::Real stiffness = 10000.0;
-	SimTK::Real dissipation = 0.0;
-	SimTK::Real staticFriction = 0.0;
-	SimTK::Real dynamicFriction = 0.0;
-	SimTK::Real viscousFriction = 0.0;
 
-	//ContactGeometry::HalfSpace contactGeometry;
-	//ContactGeometry::Sphere contactGeometry(1);
+	int hostTopology = 0;
+	int guestTopology = 1;
 
-	PolygonalMesh mesh = PolygonalMesh::createBrickMesh(
-		Vec3(xWidth, yWidth, zWidth), resolution);
-	ContactGeometry::TriangleMesh contactGeometry(mesh);
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+	rodBodies.emplace_back(std::make_pair(SimTK::MobilizedBody(), SimTK::MobilizedBody()));
+	conStationPInGuest.emplace_back(SimTK::Vec3());
+	conStationPInHost.emplace_back(SimTK::Vec3());
+	conDeltaStationP.emplace_back(SimTK::Vec3());
 
-	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
-		//Transform(),
-		ContactSurface(
-		contactGeometry,
-		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction),
-		1.0)
-	);
+	// Get stations in host
+	int topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+		if(topi == hostTopology){
 
-	DecorativeFrame contactGeometryDecoFrame;
-	matter->Ground().updBody().addDecoration(
-		Transform(), contactGeometryDecoFrame
-	);
+			/* // Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_host) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
-	//DecorativeMesh contactGeometryDeco(mesh);
-	DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
-	matter->Ground().updBody().addDecoration(
-		Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
-	);
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
+				rodBodies[0].first = mbx;
+
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				conStationPInHost[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
+			} */
+		}
+	}
+
+	// Get stations in guest
+	topi = -1;
+	for(auto& topology : (*topologies)){
+		topi++;
+
+		if(topi == guestTopology){
+
+			/* // Atoms
+			int tz = -1;
+			for (int bAtomIx : bAtomIxs_guest) {
+				tz++;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
+				
+				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+				rodBodies[0].second = mbx;
+				
+				SimTK::Transform X_GB = mobod.getBodyTransform(someState);
+				SimTK::Vec3 B_aLoc = topology.getAtomLocationInMobilizedBodyFrame(aIx);
+				conStationPInGuest[tz] = X_GB.p() + ((X_GB.R()) * B_aLoc);
+
+			} */
+		}
+	}
+
+/* 	std::cout << "Rod bodies: " << rodBodies[0].first
+		<< " " << rodBodies[0].second << std::endl << std::flush;
+
+	rodConstraints.emplace_back( SimTK::Constraint::Rod(
+		matter->updMobilizedBody(rodBodies[0].first),  SimTK::Vec3(),
+		matter->updMobilizedBody(rodBodies[0].second), SimTK::Vec3(), 0.1) ); */
+
+	//rodConstraints.back().enable(someState);
 
 }
 
-/** Add contact constraints to specific bodies.
+/** Add speed constraints to specific bodies.
 TODO:use number of mobilities. TODO: Solve if **/
-const SimTK::State& World::addConstraints(int prmtopIndex)
+const SimTK::State& World::addSpeedConstraint(int prmtopIndex)
 {
+
+	int hostTopology = 0;
+	int guestTopology = 1;
+
+	std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+	std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
 	if(prmtopIndex >= 0){
 		std::cout << "Adding constraint to atom with prmtop index "
 			<< prmtopIndex << "\n" ;
@@ -611,6 +672,10 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
 	return returnState;
 }
+
+//=============================================================================
+//                   CONTACTS Functions
+//=============================================================================
 
 
 /** Add contact surfaces to bodies **/
@@ -679,6 +744,54 @@ std::cout << "CONTACT INFO:"
 // CONTACT DEBUG enD
 /** Assign a scale factor for generalized velocities to every mobilized
 body **/
+
+
+//=============================================================================
+//                   MEMBRANE Functions
+//=============================================================================
+
+/** Add a membrane represented by a contact surface **/
+void World::addMembrane(
+	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
+{
+	SimTK::Real stiffness = 10000.0;
+	SimTK::Real dissipation = 0.0;
+	SimTK::Real staticFriction = 0.0;
+	SimTK::Real dynamicFriction = 0.0;
+	SimTK::Real viscousFriction = 0.0;
+
+	//ContactGeometry::HalfSpace contactGeometry;
+	//ContactGeometry::Sphere contactGeometry(1);
+
+	PolygonalMesh mesh = PolygonalMesh::createBrickMesh(
+		Vec3(xWidth, yWidth, zWidth), resolution);
+	ContactGeometry::TriangleMesh contactGeometry(mesh);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
+		//Transform(),
+		ContactSurface(
+		contactGeometry,
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction),
+		1.0)
+	);
+
+	if (visual == true) {
+		DecorativeFrame contactGeometryDecoFrame;
+		matter->Ground().updBody().addDecoration(
+			Transform(), contactGeometryDecoFrame
+		);
+
+		//DecorativeMesh contactGeometryDeco(mesh);
+		DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
+		matter->Ground().updBody().addDecoration(
+			Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
+		);
+	}
+
+}
+
 
 /** Realize Topology for this World **/
 const SimTK::State& World::realizeTopology()
@@ -898,17 +1011,17 @@ void World::getTransformsStatistics(SimTK::State& someState)
 		normX_BMp[int(mbx) - 1] = bondVector.norm();
 
 		// Print something for now
-		/* SimTK::Real bond = normX_BMp[int(mbx) - 1];
+		SimTK::Real bond = normX_BMp[int(mbx) - 1];
 		SimTK::Real bondMean = normX_BMp_means[int(mbx) - 1];
 		SimTK::Real angle = acosX_PF00[int(mbx) - 1];
 		SimTK::Real angleMean = acosX_PF00_means[int(mbx) - 1];
 
-		std::cout 
-			<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
+		/* std::cout << "World " << ownWorldIndex << " " 
+			//<< "bondMean " << int(mbx) - 1 << " " << bondMean << " "
 			<< "bond " << int(mbx) - 1 << " " << bond << " "
-			<< "angleMean " << int(mbx) - 1 << " "
-			<< angleMean * (180 / SimTK::Pi) << " "
-			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
+			//<< "angleMean " << int(mbx) - 1 << " "
+			//<< angleMean * (180 / SimTK::Pi) << " "
+			//<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
 			<< std::endl; */
 
 	}
@@ -1241,8 +1354,6 @@ void World::updateTransformsMeans(SimTK::State& someState)
 	int nofSamples = getNofSamples() + 1;
 	//std::cout << "Nof samples " << nofSamples << std::endl;
 
-	//getTransformsStatistics(someState);
-
 	// Useful vars
 	SimTK::Real N_1overN = 9999, NInv = 9999;
 
@@ -1252,6 +1363,7 @@ void World::updateTransformsMeans(SimTK::State& someState)
 		}
 		for(unsigned int k = 0; k < normX_BMp_means.size(); k++){
 			normX_BMp_means[k] = normX_BMp[k];
+			//std::cout << "World " << ownWorldIndex << " bondUpdMean " << k << " " << normX_BMp_means[k] << std::endl;
 		}
 	}else{
 		if(nofSamples == 2){
@@ -1277,6 +1389,7 @@ void World::updateTransformsMeans(SimTK::State& someState)
 		for(auto &xbm : normX_BMp_means ){
 			i += 1;
 			xbm = (N_1overN * xbm) + (NInv * normX_BMp.at(i));
+			//std::cout << "World " << ownWorldIndex << " bondUpdMean " << i << " " << xbm << std::endl;
 		}
 	}
 
@@ -1312,6 +1425,9 @@ void World::calcBendStretchDeviations(SimTK::State& someState,
 	}
 	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
 		X_BMdiffs[k] = this->normX_BMp[k] - this->normX_BMp_means[k];
+		/* std::cout << "World " << ownWorldIndex << " bondDiff " << k << " "
+		//<< this->normX_BMp[k] << " " << this->normX_BMp_means[k] << " "
+		<< X_BMdiffs[k] << std::endl; */
 	}
 
 }
@@ -1952,14 +2068,17 @@ World::calcMobodToMobodTransforms(
 		* InboardDihedral_ZAxis * Z_to_X;
 
 	// B_X_Ms
+	SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
 	SimTK::Transform B_X_M = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
 	SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
+	SimTK::Transform B_X_M_pin = X_parentBC_childBC * M_X_pin;
 	SimTK::Transform B_X_M_univ = X_parentBC_childBC
 		* SimTK::Transform(Rotation(-90*Deg2Rad, XAxis)); // Move rotation axis Y to Z
 
 	// P_X_Fs = old P_X_B * B_X_M
 	SimTK::Transform P_X_F = oldX_PB * B_X_M;
 	SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
+	SimTK::Transform P_X_F_pin = oldX_PB * B_X_M_pin;
 	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
 
 	// Get mobility (joint type)
@@ -1968,18 +2087,22 @@ World::calcMobodToMobodTransforms(
 	bBond bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
-	bool pinORslider =
-		(mobility == SimTK::BondMobility::Mobility::Torsion)
-		|| (mobility == SimTK::BondMobility::Mobility::AnglePin)
+	bool anglePin_OR = (
+		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
 		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch);
+		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
+		//|| (mobility == SimTK::BondMobility::Mobility::Torsion)
+	);
 
-	if( (pinORslider) && ((atom->neighbors).size() == 1)){
+	if( (anglePin_OR) && ((atom->neighbors).size() == 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
-	}else if( (pinORslider) && ((atom->neighbors).size() != 1)){
+	}else if( (anglePin_OR) && ((atom->neighbors).size() != 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 		//return std::vector<SimTK::Transform> {P_X_F, B_X_M};
+
+	}else if(mobility == SimTK::BondMobility::Mobility::Torsion){
+		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
@@ -2264,8 +2387,18 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
 
-	// Set old potential energy of the new world via OpenMM
+	// Set old potential energy of the new world via DuMM !!!
 	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);// DOESN'T WORK WITH OPENMM
+}
+
+// 
+SimTK::Real World::CalcPotentialEnergy(void)
+{
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	updateAtomListsFromCompound(currentAdvancedState);
+
+	// Set old potential energy of the new world via DuMM !!!
+	return forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
 }
 
 // Calculate Fixman potential

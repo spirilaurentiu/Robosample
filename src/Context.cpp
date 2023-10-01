@@ -1215,8 +1215,6 @@ void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizer
 
 }
 
-
-
 /** Add task spaces */
 void Context::addTaskSpacesLS(void)
 {
@@ -1225,8 +1223,17 @@ void Context::addTaskSpacesLS(void)
 		}
 }
 
+/** Add rod constraints */
+void Context::addConstraints(void)
+{
+		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
+			worlds[worldIx].addRodConstraint(
+				worlds[worldIx].integ->updAdvancedState()
+			);
+		}
+}
 
-
+// Print status
 void Context::printStatus(void){
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		if ((updWorld(worldIx))->integ  == nullptr ){
@@ -2034,13 +2041,11 @@ void Context::addReplica(int index)
 
 void Context::addThermodynamicState(int index,
 		SimTK::Real T,
-
 		std::vector<std::string>& rexSamplers,
 		std::vector<int>& rexDistortOptions,
 		std::vector<int>& rexFlowOptions,
 		std::vector<int>& rexWorkOptions,
-		std::vector<std::string>& rexIntegrators,		
-
+		std::vector<std::string>& rexIntegrators,
 		std::vector<int>& argWorldIndexes,
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica)
@@ -2142,7 +2147,15 @@ void Context::setThermostatesNonequilibrium(){
 	for(size_t thermoState_k = 0;
 	thermoState_k < nofThermodynamicStates;
 	thermoState_k++){
-		thermodynamicStates[thermoState_k].setNonequilibrium(1);
+		std::vector<int> distortOptions =
+			thermodynamicStates[thermoState_k].getDistortOptions();
+		for(auto distOpt : distortOptions){
+			if(distOpt == -1){
+				thermodynamicStates[thermoState_k].setNonequilibrium(1);
+				std::cout << "THERMO " << thermoState_k << " nonequil" << std::endl;
+			}
+		}
+		
 	}
 }
 
@@ -2363,7 +2376,7 @@ void Context::swapThermodynamicStates(int replica_i, int replica_j){
 	thermo2ReplicaIxs[thermoState_j] = temp;
 }
 
-void Context::swapPotentialEnergy(int replica_i, int replica_j)
+void Context::swapPotentialEnergies(int replica_i, int replica_j)
 {
 	// Exchange potential energies (not necessary)
 	SimTK::Real tempE = replicas[replica_i].getPotentialEnergy();
@@ -2377,7 +2390,7 @@ void Context::swapPotentialEnergy(int replica_i, int replica_j)
 // as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
 //, 135:194110, 2011. DOI:10.1063/1.3660669
 // replica_i and replica_j are variable
-bool Context::attemptSwap(int replica_i, int replica_j)
+bool Context::attemptREXSwap(int replica_i, int replica_j)
 {
 	bool returnValue = false;
 
@@ -2469,7 +2482,7 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 		swapThermodynamicStates(replica_i, replica_j);
 
-		swapPotentialEnergy(replica_i, replica_j);
+		swapPotentialEnergies(replica_i, replica_j);
 
 		returnValue = true;
 
@@ -2477,7 +2490,6 @@ bool Context::attemptSwap(int replica_i, int replica_j)
 
 	}else{
 		std::cout << "left\n" << endl;
-
 	}
 
 	return returnValue;
@@ -2489,148 +2501,147 @@ bool Context::attemptSwap(int replica_i, int replica_j)
  * equilibrium simulations and the work done by the non-equilibrium 
  * worlds should be stored in the last energy of the last world
 */
-bool Context::attemptRENSSwap(int replica_i, int replica_j)
+bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 {
 	int returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
-	int thermoState_i = replica2ThermoIxs[replica_i];
-	int thermoState_j = replica2ThermoIxs[replica_j];
-
-	/* std::cout << "EA, bA, EB, bB "
-		<< replicas[replica_i].getPotentialEnergy() << " "
-		<< thermodynamicStates[thermoState_i].getBeta()
-		<< replicas[replica_j].getPotentialEnergy() << " "
-		<< thermodynamicStates[thermoState_j].getBeta()
-		<< std::endl; */
+	int thermoState_C = replica2ThermoIxs[replica_X];
+	int thermoState_H = replica2ThermoIxs[replica_Y];
 
 	// Record this attempt
-	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
-	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
+	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
+	nofAttemptedSwapsMatrix[thermoState_H][thermoState_C] += 1;
 
+	// ========================= INITIAL PE x,y 0 ==============================
 	// Replica i reduced potential in state i
-	SimTK::Real eii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
+	SimTK::Real eC_X0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
 
 	// Replica j reduced potential in state j
-	SimTK::Real ejj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
+	SimTK::Real eH_Y0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
 
 	// Replica i reduced potential in state j
-	SimTK::Real eij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
+	SimTK::Real eH_X0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
 
 	// Replica j reduced potential in state i
-	SimTK::Real eji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
+	SimTK::Real eC_Y0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
 
 	// Include the Fixman term if indicated
 	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
 	int ndofs_i = 0, ndofs_j = 0;
 
 	// ============================ WORK ======================================
-	// Replica i reduced potential in state i
-	SimTK::Real wii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].getTransferedEnergy();
+	/* // Replica i reduced potential in state i
+	SimTK::Real wii = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_X].getTransferedEnergy();
 
 	// Replica j reduced potential in state j
-	SimTK::Real wjj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].getTransferedEnergy();
+	SimTK::Real wjj = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_Y].getTransferedEnergy();
 
 	// Replica i reduced potential in state j
-	SimTK::Real wij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].getTransferedEnergy();
+	SimTK::Real wij = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_X].getTransferedEnergy();
 
 	// Replica j reduced potential in state i
-	SimTK::Real wji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].getTransferedEnergy();
+	SimTK::Real wji = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_Y].getTransferedEnergy(); */
 	// ========================================================================
 
-	// ========================== LAST PE =====================================
+	// ========================== LAST PE x,y tau =============================
 	// Replica i reduced potential in state i
-	SimTK::Real lii = thermodynamicStates[thermoState_i].getBeta()
-		//* replicas[replica_i].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_i].getPotentialEnergy() + replicas[replica_i].getTransferedEnergy());
+	SimTK::Real lC_Xtau = thermodynamicStates[thermoState_C].getBeta()
+		//* replicas[replica_i].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
 
 	// Replica j reduced potential in state j
-	SimTK::Real ljj = thermodynamicStates[thermoState_j].getBeta()
-		//* replicas[replica_j].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_j].getPotentialEnergy() + replicas[replica_j].getTransferedEnergy());
+	SimTK::Real lH_Ytau = thermodynamicStates[thermoState_H].getBeta()
+		//* replicas[replica_j].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
 
 	// Replica i reduced potential in state j
-	SimTK::Real lij = thermodynamicStates[thermoState_j].getBeta()
-		//* replicas[replica_i].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_i].getPotentialEnergy() + replicas[replica_i].getTransferedEnergy());
+	SimTK::Real lH_Xtau = thermodynamicStates[thermoState_H].getBeta()
+		//* replicas[replica_i].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
 
 	// Replica j reduced potential in state i
-	SimTK::Real lji = thermodynamicStates[thermoState_i].getBeta()
-		//* replicas[replica_j].get_WORK_PotentialEnergy_New();
-		* (replicas[replica_j].getPotentialEnergy() + replicas[replica_j].getTransferedEnergy());
+	SimTK::Real lC_Ytau = thermodynamicStates[thermoState_C].getBeta()
+		//* replicas[replica_j].get_WORK_PotentialEnergy_New(); // not full PE
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
 	// ========================================================================
 
-	SimTK::Real ETerm = -1.0 * (eij + eji) + eii + ejj;
-	SimTK::Real Work_A = lij - eii - replicas[replica_i].get_WORK_Jacobian();
-	SimTK::Real Work_B = lji - ejj - replicas[replica_j].get_WORK_Jacobian();
-	SimTK::Real WTerm = -1.0 * (Work_A + Work_B);
+	SimTK::Real ETerm = -1.0 * (eH_X0 + eC_Y0) + eC_X0 + eH_Y0;
+
+	SimTK::Real Work_X = lH_Xtau - eC_X0 - replicas[replica_X].get_WORK_Jacobian();
+	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - replicas[replica_Y].get_WORK_Jacobian();
+	/* SimTK::Real Work_X = lH_Xtau - eC_X0 - std::log(qScaleFactors.at(thermoState_C));
+	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - std::log(qScaleFactors.at(thermoState_H)); */
+
+	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// Correction term
-	SimTK::Real miu_i = qScaleFactorsMiu.at(thermoState_i);
-	SimTK::Real miu_j = qScaleFactorsMiu.at(thermoState_j);
-	SimTK::Real std_i = qScaleFactorsStd.at(thermoState_i);
-	SimTK::Real std_j = qScaleFactorsStd.at(thermoState_j);
+	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
+	SimTK::Real miu_H = qScaleFactorsMiu.at(thermoState_H);
+	SimTK::Real std_C = qScaleFactorsStd.at(thermoState_C);
+	SimTK::Real std_H = qScaleFactorsStd.at(thermoState_H);
 	
-	SimTK::Real s_i = qScaleFactors.at(thermoState_i);
-	SimTK::Real s_j = qScaleFactors.at(thermoState_j);
-	SimTK::Real s_i_1 = 1.0 / s_i;
-	SimTK::Real s_j_1 = 1.0 / s_j;
+	SimTK::Real s_X = qScaleFactors.at(thermoState_C);
+	SimTK::Real s_Y = qScaleFactors.at(thermoState_H);
+	SimTK::Real s_X_1 = 1.0 / s_X;
+	SimTK::Real s_Y_1 = 1.0 / s_Y;
 
 	SimTK::Real correctionTerm = 1.0;
 	//correctionTerm = 
-	//	(normalPdf(s_i_1, miu_j, std_j) * normalPdf(s_j_1, miu_i, std_i)) / 
-	//	(normalPdf(s_i, miu_i, std_i)   * normalPdf(s_j, miu_j, std_j));
-	SimTK::Real qC_s_i = 1.0, qH_s_j = 1.0, qH_s_i_1 = 1.0, qC_s_j_1 = 1.0;
+	//	(normalPdf(s_X_1, miu_H, std_H) * normalPdf(s_Y_1, miu_C, std_C)) / 
+	//	(normalPdf(s_X, miu_C, std_C)   * normalPdf(s_Y, miu_H, std_H));
+	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
+	
 	auto genericSampler = updWorld(0)->updSampler(0);
-	/* qC_s_i   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
-	qH_s_j   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
-	qH_s_i_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
-	qC_s_j_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
+	/* qC_s_X   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
+	qH_s_Y   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
+	qH_s_X_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
+	qC_s_Y_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
 
-	correctionTerm = (qH_s_i_1 * qC_s_j_1) / (qC_s_i * qH_s_j);
+	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
 
 	bool printTerms = false, printWithoutText = true;
 	if (printTerms){
-		std::cout << "thermoIxs " << thermoState_i << " " << thermoState_j << std::endl;
-		std::cout << "replicaIxs " << replica_i << " " << replica_j << std::endl;
+		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
+		std::cout << "replicaIxs " << replica_X << " " << replica_Y << std::endl;
 		std::cout << "bibjwiwj "
-			<< thermodynamicStates[thermoState_i].getBeta() << " "
-			<< thermodynamicStates[thermoState_j].getBeta() << " "
+			<< thermodynamicStates[thermoState_C].getBeta() << " "
+			<< thermodynamicStates[thermoState_H].getBeta() << " "
 			<< std::endl;
-		std::cout << "LiiLjj " << lii << " " << ljj << " "
-			<< lij << " " << lji << std::endl;
-		std::cout << "EiiEjj " << eii << " " << ejj << " "
-			<< eij << " " << eji << std::endl;
-		std::cout << "Transferred E i j " << replicas[replica_i].getTransferedEnergy()
-			<< " " << replicas[replica_j].getTransferedEnergy() << std::endl;
+		std::cout << "LiiLjj " << lC_Xtau << " " << lH_Ytau << " "
+			<< lH_Xtau << " " << lC_Ytau << std::endl;
+		std::cout << "EiiEjj " << eC_X0 << " " << eH_Y0 << " "
+			<< eH_X0 << " " << eC_Y0 << std::endl;
+		std::cout << "Transferred E i j " << replicas[replica_X].getTransferedEnergy()
+			<< " " << replicas[replica_Y].getTransferedEnergy() << std::endl;
 		std::cout << "ETerm " << ETerm << std::endl;
 		std::cout << "WTerm " << WTerm << std::endl;
 		std::cout << "correctionTerm s_i s_f " << correctionTerm 
-			<< " " << s_i << " " << s_j << " " << s_i_1 << " " << s_j_1
-			<< " " << qC_s_i << " " << qH_s_j << " " << qH_s_i_1 << " " << qC_s_j_1
+			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1
+			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1
 			<< std::endl;
 	}
 	if(printWithoutText){
-		std::cout << "RENSdetails " << thermoState_i << " " << thermoState_j << " " 
-			<< replica_i << " " << replica_j << " " 
-			<< thermodynamicStates[thermoState_i].getBeta() << " "
-			<< thermodynamicStates[thermoState_j].getBeta() << " "
-			<< eii << " " << ejj << " " << eij << " " << eji << " "
-			<< lii << " " << ljj << " " << lij << " " << lji << " "
-			<< replicas[replica_i].get_WORK_Jacobian() << " " 
-			<< replicas[replica_j].get_WORK_Jacobian() << " "
-			<< replicas[replica_i].getTransferedEnergy() << " "
-			<< replicas[replica_j].getTransferedEnergy() << " "
-			<< " " << s_i << " " << s_j << " " << s_i_1 << " " << s_j_1 << " "
-			<< " " << qC_s_i << " " << qH_s_j << " " << qH_s_i_1 << " " << qC_s_j_1 << " "
+		std::cout << "RENSdetails " << thermoState_C << " " << thermoState_H << " " 
+			<< replica_X << " " << replica_Y << " " 
+			<< thermodynamicStates[thermoState_C].getBeta() << " "
+			<< thermodynamicStates[thermoState_H].getBeta() << " "
+			<< eC_X0 << " " << eH_Y0 << " " << eH_X0 << " " << eC_Y0 << " "
+			<< lC_Xtau << " " << lH_Ytau << " " << lH_Xtau << " " << lC_Ytau << " "
+			<< replicas[replica_X].get_WORK_Jacobian() << " " 
+			<< replicas[replica_Y].get_WORK_Jacobian() << " "
+			<< replicas[replica_X].getTransferedEnergy() << " "
+			<< replicas[replica_Y].getTransferedEnergy() << " "
+			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1 << " "
+			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1 << " "
 			<< ETerm << " " << WTerm << " " << correctionTerm << " "
 		<< std::endl;
 	}
@@ -2644,16 +2655,16 @@ bool Context::attemptRENSSwap(int replica_i, int replica_j)
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
 		// Update replicas coordinates from work generated coordinates
-		set_WORK_CoordinatesAsFinal(replica_i);
-		set_WORK_CoordinatesAsFinal(replica_j);
+		set_WORK_CoordinatesAsFinal(replica_X);
+		set_WORK_CoordinatesAsFinal(replica_Y);
 
 		// Update replica's energy from work last potential energy
-		set_WORK_PotentialAsFinal(replica_i);
-		set_WORK_PotentialAsFinal(replica_j);
+		set_WORK_PotentialAsFinal(replica_X);
+		set_WORK_PotentialAsFinal(replica_Y);
 				
 		// Swap thermodynamic states
-		swapThermodynamicStates(replica_i, replica_j);
-		swapPotentialEnergy(replica_i, replica_j);
+		swapThermodynamicStates(replica_X, replica_Y);
+		swapPotentialEnergies(replica_X, replica_Y);
 
 		std::cout << "swapped\n" << endl;
 
@@ -2696,7 +2707,15 @@ void Context::mixAllReplicas(int nSwapAttempts)
 			<< " and " << replica_j << std::endl;
 
 		// Attempt to swap
-		attemptSwap(replica_i, replica_j);
+		bool swapped = false;
+
+		//if( ! thermodynamicStates[replica2ThermoIxs[replica_i]].hasNonequilibriumMoves() ){
+		if( getRunType() == 1 ){ // TODO make it enum
+			swapped = attemptREXSwap(replica_i, replica_j);
+
+		}else if ( getRunType() == 2 ){
+			swapped = attemptRENSSwap(replica_i, replica_j);
+		}
 	}
 }
 
@@ -2727,9 +2746,11 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 
 		// Attempt to swap
 		bool swapped = false;
-		if( ! thermodynamicStates[thermoState_i].hasNonequilibriumMoves() ){
-			swapped = attemptSwap(replica_i, replica_j);
-		}else{
+		//if( ! thermodynamicStates[thermoState_i].hasNonequilibriumMoves() ){
+		if( getRunType() == 1 ){ // TODO make it enum
+			swapped = attemptREXSwap(replica_i, replica_j);
+
+		}else if ( getRunType() == 2 ){
 			swapped = attemptRENSSwap(replica_i, replica_j);
 		}
 
@@ -2748,7 +2769,7 @@ void Context::mixReplicas()
 }
 
 // Load replica's atomLocations into it's front world
-void Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
+int Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
 {
 
 	//std::cout <<  "Context::restoreReplicaCoordinatesToFrontWorld " << whichReplica << ": " << std::flush;
@@ -2767,16 +2788,20 @@ void Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
 
 	// Set thoermoState front world from replica coordinate buffer
 	// Will use worlds own integrator's advanced state
-	SimTK::State& state =
-		(worlds[worldIndexes.front()].integ)->updAdvancedState();
+	int currWorldIx;
+	currWorldIx = worldIndexes.front();
 
-	worlds[worldIndexes.front()].setAtomsLocationsInGround(state,
+	SimTK::State& state =
+		(worlds[currWorldIx].integ)->updAdvancedState();
+
+	worlds[currWorldIx].setAtomsLocationsInGround(state,
 		replicas[whichReplica].getAtomsLocationsInGround());
 
 	//std::cout << "Context::restoreReplicaCoordinatesToFrontWorld worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
 
-}
+	return currWorldIx;
 
+}
 
 // Load replica's atomLocations into it's back world
 void Context::restoreReplicaCoordinatesToBackWorld(int whichReplica)
@@ -2868,7 +2893,9 @@ void Context::store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx)
 
 	// Get the front world energy
 	SimTK::Real energy =
-		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
+		//worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
+		worlds[frontWorldIx].CalcPotentialEnergy();
+
 
 	// Set this replica's energy
 	replicas[replicaIx].set_WORK_PotentialEnergy_New(energy);
@@ -2908,7 +2935,8 @@ void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 
 	// Get the front world energy
 	SimTK::Real energy =
-		worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies(); // DOESN'T WORK with OPENMM
+		//worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies(); // DOESN'T WORK with OPENMM
+		worlds[frontWorldIx].CalcPotentialEnergy();
 
 	// Add the Fixman potential to the energy (DANGEROUS)
 	//energy += pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
@@ -3066,6 +3094,8 @@ void Context::initializeReplica(int thisReplica)
 // Prepare Q, U, and tau altering function parameters
 void Context::PrepareNonEquilibriumParams_Q(){
 
+	if(nofThermodynamicStates == 0){return;}
+	
 	// Initialize a vector of scalingFactors for scaling Qs (non-equil)
 	qScaleFactorsEven.resize(nofThermodynamicStates, 1.0);
 	qScaleFactorsOdd.resize(nofThermodynamicStates, 1.0);
@@ -3075,7 +3105,7 @@ void Context::PrepareNonEquilibriumParams_Q(){
 
 	// Set the even scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
 		// s_i = T_j
 		qScaleFactorsEven.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
 		qScaleFactorsEven.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
@@ -3091,7 +3121,7 @@ void Context::PrepareNonEquilibriumParams_Q(){
 
 	// Set the odd scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
+	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
 
 		// s_i = T_j
 		qScaleFactorsOdd.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
@@ -3107,18 +3137,27 @@ void Context::PrepareNonEquilibriumParams_Q(){
 	}
 
 	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
-		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
+		std::cout << "ScaleFactor even for thermoState " << thermoIx << " "
 			<< qScaleFactorsEven.at(thermoIx) << std::endl;
 	}
 	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
-		std::cout << "ScaleFactor for thermoState " << thermoIx << " "
+		std::cout << "ScaleFactor odd for thermoState " << thermoIx << " "
 			<< qScaleFactorsOdd.at(thermoIx) << std::endl;
 	}
 
 }
 
+// Set world distort parameters
+void Context::setWorldDistortParameters(int whichWorld, SimTK::Real scaleFactor)
+{
+		// Set the scaling factor
+		HMCSampler *worldFirstSampler = (worlds[whichWorld].updSampler(0));
+		worldFirstSampler->setBendStretchStdevScaleFactor(
+			scaleFactor);
+}
+
 // Set thermodynamic and simulation parameters for one replica
-void Context::setWorldsParameters(int thisReplica)
+void Context::setReplicasWorldsParameters(int thisReplica)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -3150,28 +3189,7 @@ void Context::setWorldsParameters(int thisReplica)
 		worlds[replicaWorldIxs[i]].updSampler(0)->setSampleGenerator(
 			thermodynamicStates[thisThermoStateIx].getSamplers()[i]
 		);
-	}	
-
-/* 	// Get worlds indexes of this thermodynamic state
-	int backworldIx = 
-	thermodynamicStates[thisThermoStateIx].getWorldIndexes().back();
-
-	// Set distort option
-	std::cout << "Context: setting DistortOpt for world " 
-		<< backworldIx << " to "
-		<< thermodynamicStates[thisThermoStateIx].getDistortOptions().back()
-		<< std::endl;
-
-	(worlds[backworldIx].updSampler(0))->setDistortOption(
-		thermodynamicStates[thisThermoStateIx].getDistortOptions().back());
-
-	// Set altering function parameters
-	std::cout << "Context: setting QScaleFactor for world " 
-		<< backworldIx << " to "
-		<< (*qScaleFactors).at(thisThermoStateIx) << " at " << thisThermoStateIx
-		<< std::endl;
-	(worlds[backworldIx].updSampler(0))->setQScaleFactor(
-		(*qScaleFactors).at(thisThermoStateIx)); */
+	}
 
 	// -------------
 	// Set simulation parameters
@@ -3217,11 +3235,58 @@ void Context::setWorldsParameters(int thisReplica)
 	}
 	std::cout << std::endl;
 	// =============
+
+}
+
+// TODO turn strings into enum
+SimTK::Real Context::distributeScalingFactor(
+	std::vector<std::string> how, SimTK::Real scalefactor, bool randSignOpt)
+{
+
+	// Deterministic
+	if (std::find(how.begin(), how.end(), "deterministic") != how.end()){
+		// Do nothing
+	}
+	
+	// Truncated normal
+	if (std::find(how.begin(), how.end(), "gauss") != how.end()){
+		SimTK::Real scaleFactorStd = 0.3;
+		worlds[0].updSampler(0)->convoluteVariable(
+			scalefactor, "truncNormal", scaleFactorStd, -5, 5);
+	}
+
+	// Uniform distribution
+	if (std::find(how.begin(), how.end(), "uniform") != how.end()){
+		scalefactor = 
+			worlds[0].updSampler(0)->uniformRealDistributionRandTrunc(
+				0.8, 1.25); //0.625, 1.600);
+	}
+
+	// Assign a random direction: stretch or compress
+	if (std::find(how.begin(), how.end(), "Bernoulli") != how.end()){
+		SimTK::Real randDir =
+			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
+				randomEngine);
+		scalefactor = (randDir > 0) ? scalefactor : (1.0/scalefactor) ;
+	}
+
+	// Assign a random sign (optional)
+	if(randSignOpt){
+		SimTK::Real randSign;
+		SimTK::Real randUni_m1_1 =
+			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
+				randomEngine);
+		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
+		scalefactor *= randSign;
+	}
+	
+	return scalefactor;
 }
 
 // Set nonequilibrium parameters for one replica
-void Context::updWorldsNonequilibriumParameters(int thisReplica)
+void Context::updWorldsDistortOptions(int thisReplica)
 {
+
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
@@ -3233,46 +3298,16 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 
 	// SET NON_EQUIL PARAMS ------------------------- 
 	// Non-equilibrium params change with every replica / thermoState
-	std::string distribOpt = "deterministic";
+
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 
 		// Send DISTORT_OPTION from the input to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
-		);
+		);		
 
-		// Set the Q scale factor at a fixed value
-		if(distribOpt == "deterministic"){
-			/* qScaleFactors.at(thisThermoStateIx) = 
-				(qScaleFactorsMiu).at(thisThermoStateIx) / 10.0; // BUG
-			qScaleFactors.at(thisThermoStateIx) = 1.0; */
-
-			qScaleFactors.at(0) = (340.0 / 300.0);
-			//qScaleFactors.at(1) = qScaleFactorsMiu.at(1);
-			qScaleFactors.at(1) = (300.0 / 340.0);
-
-		// Draw the Q scale factor from a truncated normal
-		}else if(distribOpt == "gauss"){
-			qScaleFactorsStd.at(thisThermoStateIx) = 0.1;
-		 	worlds[replicaWorldIxs[i]].updSampler(0)->convoluteVariable(
-				qScaleFactors.at(thisThermoStateIx), "truncNormal",
-				qScaleFactorsStd.at(thisThermoStateIx));
-
-		// Draw the Q scale factor from a uniform distribution
-		}else if(distribOpt == "uniform"){
-			qScaleFactors.at(thisThermoStateIx) = 
-				worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistributionRandTrunc(
-					0.8, 1.25);
-		}
-
-		// Assign a random sign (optional)
-		/* SimTK::Real randSign;
-		SimTK::Real randUni_m1_1 = worlds[replicaWorldIxs[i]].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
-		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-		qScaleFactors.at(thisThermoStateIx) *= randSign; */
-
-		// Send the scale factor to the sampler
-		worlds[replicaWorldIxs[i]].updSampler(0)->setBendStretchStdevScaleFactor(
+		// Set scale Q scale factor
+		setWorldDistortParameters(replicaWorldIxs[i],
 			qScaleFactors.at(thisThermoStateIx));
 
 	}
@@ -3280,17 +3315,27 @@ void Context::updWorldsNonequilibriumParameters(int thisReplica)
 }
 
 // Run a particular world
-void Context::RunWorld(int whichWorld)
+int Context::RunWorld(int whichWorld)
 {
-
 	// == SAMPLE == from the current world
+	int accepted = 0;
+
+	// Equilibrium world
 	if(NDistortOpt[whichWorld] == 0){
-		int accepted = worlds[whichWorld].generateSamples(
+
+		accepted = worlds[whichWorld].generateSamples(
 			int(nofSamplesPerRound[whichWorld]));
+
+	// Non-equilibrium world
 	}else if(NDistortOpt[whichWorld] == -1){
-		int accepted = worlds[whichWorld].generateSamples(
+
+		// Generate samples
+		accepted = worlds[whichWorld].generateSamples(
 			int(nofSamplesPerRound[whichWorld]));
+
 	}
+	return accepted;
+
 }
 
 // Rewind back world
@@ -3320,7 +3365,36 @@ void Context::RewindBackWorld(int thisReplica)
 }
 
 // Run front world, rotate and transfer
-void Context::RunFrontWorldAndRotate(int thisReplica)
+int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
+{
+	int frontWorldIx = -1;
+	int backWorldIx = -1;
+
+	// == SAMPLE == from the front world
+	frontWorldIx = worldIxs.front();
+	RunWorld(frontWorldIx);	
+	// Write pdbs every world
+	//writePdbs(nofRounds, frontWorldIx);
+	
+	// == ROTATE == worlds indices (translate from right to left)
+	std::rotate(worldIxs.begin(),
+		worldIxs.begin() + 1,
+		worldIxs.end());
+
+	// == TRANSFER == coordinates from back world to front
+	frontWorldIx = worldIxs.front();
+	backWorldIx = worldIxs.back();
+	if(worldIxs.size() > 1) {
+		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx << std::endl;
+		transferCoordinates(backWorldIx, frontWorldIx);
+	}
+
+	return worldIxs.front();
+
+}
+
+// Go through all of this replica's worlds and generate samples
+int Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -3330,61 +3404,66 @@ void Context::RunFrontWorldAndRotate(int thisReplica)
 	std::vector<int> &replicaWorldIxs = 
 		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
 
-	int frontIx = -1;
-	int backIx = -1;
-
-	// == SAMPLE == from the current world
-	frontIx = replicaWorldIxs.front();
-
-	RunWorld(frontIx); 
-	
-	// Write pdbs every world
-	writePdbs(nofRounds, frontIx);
-	
-	// == ROTATE == worlds indices (translate from right to left)
-	std::rotate(replicaWorldIxs.begin(),
-		replicaWorldIxs.begin() + 1,
-		replicaWorldIxs.end());
-
-	// == TRANSFER == coordinates from last world to current
-	// TODO: eliminate in the last iteration
-	frontIx = replicaWorldIxs.front();
-	backIx = replicaWorldIxs.back();
-	if(replicaWorldIxs.size() > 1) {
-		transferCoordinates(backIx, frontIx);
-	}
-
-}
-
-// Go through all of this replica's worlds and generate samples
-void Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
-{
-	// Get thermoState corresponding to this replica
-	// KEYWORD = replica, VALUE = thermoState
-	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
-
-	// Get this world indexes from the corresponding thermoState
-	const std::vector<int> &replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
-
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	// Set thermo and simulation parameters for the worlds in this replica
-	setWorldsParameters(thisReplica);
+	setReplicasWorldsParameters(thisReplica);
 
 	// Go through the requested nof rounds
+	int frontWIx = -1;
 	for(size_t ri = 0; ri < howManyRounds; ri++){
 
 		// Go through each world of this replica
-		for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
-			RunFrontWorldAndRotate(thisReplica);
+		for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+			// Run front world
+			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
 
 		} // END iteration through worlds
 
 	} // END iteration through rounds
 
+	return frontWIx;
+
 }
+
+// Set non-equilibrium parameters
+void Context::updQScaleFactors(int mixi)
+{
+
+	// -------------
+	// Set non-equilibrium parameters
+	// =============
+
+	// Prepare non-equilibrium params
+	if(mixi % 2){ // odd batch
+		qScaleFactorsMiu = qScaleFactorsOdd;
+	}else{ // even batch
+		qScaleFactorsMiu = qScaleFactorsEven;
+	}
+
+	// Get scaling factor
+	qScaleFactors = qScaleFactorsMiu;
+
+	std::vector<std::string> how;
+	if(getRunType() == 1){
+		how = { "deterministic", "gauss"};
+	}else if(getRunType() == 2){
+		how = { "deterministic", "gauss"};
+	}
+	bool randSignOpt = true;
+
+	for(size_t sfIx = 0; sfIx < qScaleFactors.size(); sfIx++){
+		if(qScaleFactors.at(sfIx) != 1){
+			qScaleFactors.at(sfIx) = distributeScalingFactor(
+				how, qScaleFactorsMiu.at(sfIx), randSignOpt);
+		}
+	}
+
+
+}
+
 
 // Run replica exchange protocol
 void Context::RunREX()
@@ -3404,6 +3483,8 @@ void Context::RunREX()
             //std::cout << "Replica front world coordinates:\n";
 			//replicas[replicaIx].PrintCoordinates();
 			initializeReplica(replicaIx);
+
+			// 
 			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Iterate this replica's worlds
@@ -3425,60 +3506,95 @@ void Context::RunREX()
 
 	// Main loop
 	int nofMixes = int(requiredNofRounds / swapEvery);
+	int currWIx = -1;
 
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 		std::cout << " REX batch " << mixi << std::endl;
 
-		// Prepare non-equilibrium params
-		if(mixi % 2){ // odd batch
-			qScaleFactorsMiu = qScaleFactorsOdd;
-		}else{ // even batch
-			qScaleFactorsMiu = qScaleFactorsEven;
-		}
-		
+		updQScaleFactors(mixi);
+
 		// Run each replica serially
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
 
-			//std::cout << "Replica front world coordinates:\n";
-			//replicas[replicaIx].PrintCoordinates();
-			restoreReplicaCoordinatesToFrontWorld(replicaIx);
+			// ========================== LOAD ========================
+			// Load the front world
+			currWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
-			// Iterate this replica's worlds
-			RunReplicaAllWorlds(replicaIx, swapEvery);
+			// Set non-equilibrium parameters
+			updWorldsDistortOptions(replicaIx);
 
-			// This should always be a fully flexible world
-			storeReplicaCoordinatesFromFrontWorld(replicaIx);
-
-			// Store energy terms
-			storeReplicaEnergyFromFrontWorldFull(replicaIx);
-            storeReplicaFixmanFromBackWorld(replicaIx);
+			// Set thermo and simulation parameters for the worlds in this replica
+			setReplicasWorldsParameters(replicaIx);
 
 			// Write energy and geometric features to logfile
-			if( !(mixi % getPrintFreq()) ){
-				PrintToLog(worldIndexes.front());
-			}
-
-			// Write pdb
-			if( pdbRestartFreq != 0){
-				int thermoStateIx = replica2ThermoIxs[replicaIx];
-				if((mixi % pdbRestartFreq) == 0){
-					writePdbs(mixi,
-					thermoStateIx);
+			if(printFreq || pdbRestartFreq){
+				if( !(mixi % printFreq) ){
+					PrintToLog(worldIndexes.front());
 				}
-			}
+				// Write pdb
+				if( pdbRestartFreq != 0){
+					if((mixi % pdbRestartFreq) == 0){
+						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+					}
+				}
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+
+			//RunReplicaAllWorlds(replicaIx, swapEvery);storeReplicaCoordinatesFromFrontWorld(replicaIx);storeReplicaEnergyFromFrontWorldFull(replicaIx);
+					// ======================== SIMULATE ======================
+					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+
+					// ========================= UNLOAD =======================
+					storeReplicaCoordinatesFromFrontWorld(replicaIx);
+
+					// Deposit energy terms
+					storeReplicaEnergyFromFrontWorldFull(replicaIx);
+
+					// ----------------------------------------------------------------
+					// NON-EQUILIBRIUM
+					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+					// ======================== SIMULATE ======================
+					currWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
+
+					// ========================= UNLOAD =======================
+					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
+
+					// Deposit work coordinates into the replica
+					store_WORK_CoordinatesFromFrontWorld(replicaIx);
+
+					// Deposit energy terms
+					store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
+
+					// Store any transformation Jacobians contribution
+					store_WORK_JacobianFromBackWorld(replicaIx);			
+
+			// Store Fixman if required
+            storeReplicaFixmanFromBackWorld(replicaIx);
+
+			/* // Write energy and geometric features to logfile
+			if(printFreq || pdbRestartFreq){
+				if( !(mixi % printFreq) ){
+					PrintToLog(worldIndexes.front());
+				}
+				// Write pdb
+				if( pdbRestartFreq != 0){
+					if((mixi % pdbRestartFreq) == 0){
+						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+					}
+				}
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
+
+			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
 
 		} // end replicas simulations
-
 
 		// Mix replicas
 		if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 			if ((mixi % 2) == 0){
 				mixNeighboringReplicas(0);
-
 			}else{
 				mixNeighboringReplicas(1);
-
 			}
 		}else{
 			mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
@@ -3496,14 +3612,14 @@ void Context::RunREX()
 }
 
 
-void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
+int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 {
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
 	// Get this world indexes from the corresponding thermoState
-	const std::vector<int>& replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+	std::vector<int>& replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
 
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
@@ -3512,12 +3628,14 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the equilibrium worlds
+	int frontWIx = -1;
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
 		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
 
-			RunFrontWorldAndRotate(replicaIx);
+			// Run front world
+			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
 		
 		}
 	} // END iteration through worlds
@@ -3525,17 +3643,19 @@ void Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	/* std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs after ";
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
+	return frontWIx;
+
 }
 
-void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
+int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
 	/* std::cout << "Context::RunReplicaNonequilibriumWorlds\n"; */
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
 	// Get this world indexes from the corresponding thermoState
-	const std::vector<int>& replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+	std::vector<int>& replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
 
 	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
@@ -3544,18 +3664,22 @@ void Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the non-equilibrium worlds
+	int frontWIx = -1;
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
 
-			RunFrontWorldAndRotate(replicaIx);
+			// Run front world
+			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
 		
 		}
 	} // END iteration through worlds
 
 	/* std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
+
+	return frontWIx;
 }
 
 SimTK::Real Context::calcReplicaTransferedEnergy(int replicaIx)
@@ -4401,26 +4525,14 @@ void Context::RunRENS(void)
 
 	// Main loop
 	int nofMixes = int(requiredNofRounds / swapEvery);
+	int currWIx = -1;
 
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 
 		std::cout << " REX batch " << mixi << std::endl;
 		nofRounds = mixi;
-		// Set initial scale factors
-		if(mixi % 2){ // odd batch
-			qScaleFactorsMiu = qScaleFactorsOdd;
-		}else{ // even batch
-			qScaleFactorsMiu = qScaleFactorsEven;
-		}
 
-		// Apply other functions to scale factors
-		/* for(auto& qsf : qScaleFactorsMiu){
-			if(qsf < 1.0){
-				qsf = 1.0;
-			}else{
-				qsf = 1.0;
-			}
-		} */
+		updQScaleFactors(mixi);
 
 		// Run each replica serially for equilibrium worlds
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
@@ -4432,60 +4544,72 @@ void Context::RunRENS(void)
 			
 			// ========================== LOAD ========================
 			// Load the front world
-			restoreReplicaCoordinatesToFrontWorld(replicaIx);
+			currWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
-			setWorldsParameters(replicaIx);
+			// Get scale factors 
+			updWorldsDistortOptions(replicaIx);
 
-			// Distribute scale factors
-			updWorldsNonequilibriumParameters(replicaIx);
+			// Set thermo and simulation parameters for the worlds in this replica
+			setReplicasWorldsParameters(replicaIx);
 
-			// ======================== SIMULATE ======================
-			RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+			// Write energy and geometric features to logfile
+			if(printFreq || pdbRestartFreq){
+				if( !(mixi % printFreq) ){
+					PrintToLog(currWIx);
+				}
+				// Write pdb
+				if( pdbRestartFreq != 0){
+					if((mixi % pdbRestartFreq) == 0){
+						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+					}
+				}
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+					
+					// ======================== SIMULATE ======================
+					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
 
-			// ========================= UNLOAD =======================
-			storeReplicaCoordinatesFromFrontWorld(replicaIx);
+					// ========================= UNLOAD =======================
+					storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
-			// Deposit energy terms
-			storeReplicaEnergyFromFrontWorldFull(replicaIx);
+					// Deposit energy terms
+					storeReplicaEnergyFromFrontWorldFull(replicaIx);
 
+					// ----------------------------------------------------------------
+					// NON-EQUILIBRIUM
+					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-			// ----------------------------------------------------------------
-			// NON-EQUILIBRIUM
-			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+					// ======================== SIMULATE ======================
+					currWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
-			// ======================== SIMULATE ======================
-			RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
+					// ========================= UNLOAD =======================
+					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
 
-			// ========================= UNLOAD =======================
-			replicas[replicaIx].setTransferedEnergy(
-				calcReplicaWork(replicaIx) );
+					// Deposit work coordinates into the replica
+					store_WORK_CoordinatesFromFrontWorld(replicaIx);
 
-			// Deposit work coordinates into the replica
-			store_WORK_CoordinatesFromFrontWorld(replicaIx);
+					// Deposit energy terms
+					store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
 
-			// Deposit energy terms
-			store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
-
-			// Store any transformation Jacobians contribution
-			store_WORK_JacobianFromBackWorld(replicaIx);
+					// Store any transformation Jacobians contribution
+					store_WORK_JacobianFromBackWorld(replicaIx);
 
 			// Store Fixman if required
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
-			// Write energy and geometric features to logfile
-			if( !(mixi % getPrintFreq()) ){
-				PrintToLog(worldIndexes.front());
-			}
-
-			// Write pdb
-			if( pdbRestartFreq != 0){
-				int thermoStateIx = replica2ThermoIxs[replicaIx];
-				if((mixi % pdbRestartFreq) == 0){
-					writePdbs(mixi,
-					thermoStateIx);
+			/* // Write energy and geometric features to logfile
+			if(printFreq || pdbRestartFreq){
+				if( !(mixi % printFreq) ){
+					PrintToLog(currWIx);
 				}
-			}
+				// Write pdb
+				if( pdbRestartFreq != 0){
+					if((mixi % pdbRestartFreq) == 0){
+						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+					}
+				}
+			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
 
+			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
 
 		} // end replicas simulations
 
@@ -4622,74 +4746,29 @@ void Context::transferCoordinates(int src, int dest)
 void Context::RunOneRound()
 {
 
-	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-
-		// Non-equilibrium parameters
-		if( NDistortOpt[worldIx] == -1 ){
-			
-			// Set the Q scaling factor to Gaussian random around 1.0
-			std::string distribOpt = "deterministic";
-			SimTK::Real sf = 1.0;
-
-			// Set the Q scale factor at a fixed value
-			if(distribOpt == "deterministic"){
-
-				//sf = std::sqrt(300.0 / 400.0);
-				sf = 0.01;
-
-			// Draw the Q scale factor from a truncated normal
-			}else if(distribOpt == "gauss"){
-				sf = 0.1;
-				worlds[0].updSampler(0)->convoluteVariable(
-					sf, "truncNormal",0.1);
-
-			// Draw the Q scale factor from a uniform distribution
-			}else if(distribOpt == "uniform"){
-				sf = 
-					worlds[0].updSampler(0)->uniformRealDistributionRandTrunc(
-						//0.625, 1.600);
-						0.8, 1.25);
-						//
-			}
-
-			// Assign a random sign (optional)
-			/* SimTK::Real randSign;
-			SimTK::Real randUni_m1_1 =
-				worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
-					randomEngine);
-			randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-			sf *= randSign; */
-
-			(worlds[worldIx].updSampler(0))->setBendStretchStdevScaleFactor( sf );
-		}	
+	for(std::size_t worldIx = 0; worldIx < getNofWorlds(); worldIx++){	
 
 		// Rotate worlds indices (translate from right to left)
 		if(isWorldsOrderRandom){
 			randomizeWorldIndexes();
 		}
 
-		// Rotate the vector of world indexes
-	   	std::rotate(worldIndexes.begin(), worldIndexes.begin() + 1, worldIndexes.end());
+		// Non-equilibrium parameters
+		SimTK::Real qScaleFactor = 0.25;
+		std::vector<std::string> how = { "deterministic", "gauss"};
+		bool randSignOpt = true;
+		distributeScalingFactor(how, qScaleFactor, randSignOpt);
 
-		// Get indeces
-		int currentWorldIx = worldIndexes.front();
-		int lastWorldIx = worldIndexes.back();
 
-		if(worldIndexes.size() > 1) {
-			std::cout << "Transfer from world " << lastWorldIx
-				<< " to " << currentWorldIx << std::endl;
-			transferCoordinates(lastWorldIx, currentWorldIx);
+		if(qScaleFactor != 1){
+			setWorldDistortParameters(worldIx, qScaleFactor);
 		}
-
-		// Generate samples from the current world
-		int accepted = worlds[currentWorldIx].generateSamples(int(nofSamplesPerRound[currentWorldIx]));
-
-		// Write pdb every world
-		//writePdbs(nofRounds, currentWorldIx);
+		// Run front world
+		RunFrontWorldAndRotate(worldIndexes);
 
 	} // END iteration through worlds
-}
 
+}
 
 // Normal run
 void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
@@ -5469,15 +5548,16 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 			RunOneRound();
 
 			// Write energy and geometric features to logfile
-			if( !(round % getPrintFreq()) ){
-				PrintToLog(worldIndexes.back());
-				PrintToLog(worldIndexes.front());
-			}
-
-			// Write pdb
-			if( pdbRestartFreq != 0){
-				if((round % pdbRestartFreq) == 0){
-					writePdbs(round);
+			if(printFreq || pdbRestartFreq){
+				if( !(round % getPrintFreq()) ){
+					PrintToLog(worldIndexes.front());
+					PrintToLog(worldIndexes.back());
+				}
+				// Write pdb
+				if( pdbRestartFreq != 0){
+					if((round % pdbRestartFreq) == 0){
+						writePdbs(round);
+					}
 				}
 			}
 
@@ -5497,16 +5577,17 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			RunOneRound();
 
-			// Write energy and geometric features to logfile
-			if( !(round % getPrintFreq()) ){
-				PrintToLog(worldIndexes.back());
-				PrintToLog(worldIndexes.front());
-			}
-
-			// Write pdb
-			if( pdbRestartFreq != 0){
-				if((round % pdbRestartFreq) == 0){
-					writePdbs(round);
+			if(printFreq || pdbRestartFreq){
+				// Write energy and geometric features to logfile
+				if( !(round % getPrintFreq()) ){
+					PrintToLog(worldIndexes.front());
+					PrintToLog(worldIndexes.back());
+				}
+				// Write pdb
+				if( pdbRestartFreq != 0){
+					if((round % pdbRestartFreq) == 0){
+						writePdbs(round);
+					}
 				}
 			}
 
@@ -5570,7 +5651,6 @@ void Context::setNonbondedCutoff(std::size_t which, Real cutoffNm)
 }
 
 
-
 /** Get/Set seed for reproducibility. **/
 void Context::setSeed(std::size_t whichWorld, std::size_t whichSampler, uint32_t argSeed)
 {
@@ -5586,10 +5666,9 @@ uint32_t Context::getSeed(std::size_t whichWorld, std::size_t whichSampler) cons
 //------------
 //------------
 
-
 /** Analysis related functions **/
 void Context::addDistance(std::size_t whichWorld, std::size_t whichCompound,
-	std::size_t aIx1, std::size_t aIx2)
+		std::size_t aIx1, std::size_t aIx2)
 {
 	distanceIxs.push_back({ whichWorld, whichCompound, aIx1, aIx2 });
 }
@@ -5599,7 +5678,8 @@ void Context::addDistances(const std::vector<std::size_t>& distanceIx)
 {
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for(unsigned int ai = 0; ai < distanceIx.size() / 2; ai++){
-			addDistance(worldIx, 0, distanceIx[2*ai + 0], distanceIx[2*ai + 1]);
+			addDistance(worldIx, 0,
+				distanceIx[2*ai + 0], distanceIx[2*ai + 1]);
 		}
 	}
 }
@@ -5686,7 +5766,6 @@ void Context::PrintGeometry(SetupReader& setupReader, std::size_t whichWorld)
 			<< Distance(whichWorld, 0, 0,
 				distanceIx[2*ai + 0], distanceIx[2*ai + 1]) << " ";
 			*/
-
 			printf("%.2f ", Distance(whichWorld, 0, 0,
 				 distanceIx[2*ai + 0], distanceIx[2*ai + 1]));
 
@@ -6025,7 +6104,9 @@ SimTK::Real Context::Dihedral(std::size_t whichWorld,
 
 }
 
-SimTK::Real Context::Distance(std::size_t whichWorld, std::size_t whichCompound, std::size_t, int a1, int a2)
+SimTK::Real Context::Distance(
+	std::size_t whichWorld, std::size_t whichCompound, std::size_t whichSampler,
+	int a1, int a2)
 {
 
 	SimTK::State& state = worlds[whichWorld].integ->updAdvancedState();

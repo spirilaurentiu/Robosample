@@ -2784,7 +2784,6 @@ std::vector<SimTK::Real>& scaleFactors)
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
-
 	//world->traceBendStretch(someState);
 	//world->PrintAcosX_PFs();
 	//world->PrintNormX_BMs();
@@ -2881,7 +2880,24 @@ std::vector<SimTK::Real>& scaleFactors)
 	}
 
 	// Test
-	//std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	matter->realizeArticulatedBodyInertias(someState);
+	SimTK::Vector v(someState.getNU());
+	SimTK::Vector MInvV(someState.getNU());
+	SimTK::Real detM = 0.0;
+	matter->calcDetM(someState, v, MInvV, &detM);
+	std::cout << "logDetM " << detM << std::endl;
+	/* //std::cout << "shifted Q = " << someState.getQ() << std::endl;
+	// Get bonds and angles values
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+
+		std::cout << "HMCSampler check world " << world->ownWorldIndex << " " 
+			<< "bond " << int(mbx) - 1 << " " << X_BM.p().norm() << " "
+			<< std::endl;
+	} */
 
 }
 
@@ -2891,7 +2907,8 @@ std::vector<SimTK::Real>& scaleFactors)
  * standard deviations through BendStretch joint
  */
 void HMCSampler::setQToScaleBendStretchStdev_Old(SimTK::State& someState,
-std::vector<SimTK::Real>& scaleFactors)
+std::vector<SimTK::Real>& scaleFactors
+)
 {
 	// Scaling factor is set by Context only in the begining
 	//this->QScaleFactor = 1.0;
@@ -3135,15 +3152,16 @@ std::vector<SimTK::Real>& scaleFactors)
 */
 SimTK::Real 
 HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
-	std::vector<SimTK::Real> scaleFactors)
+	std::vector<SimTK::Real> scaleFactors,
+	unsigned int startFromBody)
 {
 
 	int x_pf_k = 0;
 
 	// Get log of the Cartesian->BAT Jacobian
 	SimTK::Real logJacBAT_0 = 0.0; // log space
-	//SimTK::Real logJacBAT_0 = 1.0; // normal space
-	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+	startFromBody -= 1; // align with k (exclude Ground)
+	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
 			x_pf_k = k + world->normX_BMp.size();
@@ -3151,90 +3169,82 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			// Checks
 			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
 				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
-					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
-					<< world->normX_BMp[k] * scaleFactors[k] << " "
+				<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
+				<< world->normX_BMp[k] * scaleFactors[k] << " "
 				<< std::endl << std::flush; */
 
 			// Get bond term
 			SimTK::Real d2 = world->normX_BMp[k];
 			if(d2 != 0){
 					d2 = 2.0 * std::log(d2); // log space
-					//d2 = d2 * d2; // normal space
 			}
+			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
 
 			// Get the angle term
 			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k]);
 
 			if(sineTheta != 0){
 					sineTheta = std::log(std::sin(sineTheta)); // log space
-					//sineTheta = std::sin(sineTheta); // normal space
 			}
+			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
+
 
 			// Accumulate result
 			logJacBAT_0 += (d2 + sineTheta); // log space
-			//logJacBAT_0 *= (d2 * sineTheta); // normal space
 	}
 
 	// Get log of the scaling Jacobian
 	// Although the method seems stupid for now, it has generality
 	// and allows insertion of new code
 	SimTK::Real logJacScale = 0.0; // log space
-	//SimTK::Real logJacScale = 1.0; // normal space
-	for(unsigned int k = 0; k < scaleFactors.size(); k++){
+	for(unsigned int k = startFromBody; k < scaleFactors.size(); k++){
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
-					logJacScale += std::log(std::abs(scaleFactors[k])); // log space
-					//logJacScale *= std::abs(scaleFactors[k]); // normal space
+					logJacScale -= std::log(std::abs(scaleFactors[k])); // log space
 			}
+			//std::cout << "sf " << k << " " << scaleFactors[k] << std::endl; 
 	}
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
 	SimTK::Real logJacBAT_tau = 0.0; // log space
-	//SimTK::Real logJacBAT_tau = 1.0; // normal space
-	for(unsigned int k = 0; k < world->normX_BMp.size(); k++){
+	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
 
 			// scaleFactors index is shifted
 			x_pf_k = k + world->normX_BMp.size();
-
-			// Checks
-			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
-				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
-					<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
-					<< world->normX_BMp[k] * scaleFactors[k] << " "
-				<< std::endl << std::flush; */
 
 			// Get bond term
 			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
 
 			if(d2 != 0){
 					d2 = 2.0 * std::log(d2); // log space
-					//d2 = d2 * d2; // normal space
 			}
+			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
 
 			// Get the angle term
 			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k] * scaleFactors[x_pf_k]);
 
 			if(std::abs(sineTheta) > 0.0000001){
 					sineTheta = std::log(std::sin(sineTheta)); // log space
-					//sineTheta = std::sin(sineTheta); // normal space
   			}
+			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
 
 			// Accumulate result
 			logJacBAT_tau += (d2 + sineTheta); // log space
-			//logJacBAT_tau *= (d2 * sineTheta); // normal space
 	}
 
-        // Final result
-        //SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
-        //SimTK::Real logBendStretchJac = logJacScale; // 7000
-        SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau); // 8000
-        //SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau); // 9000
+	// Final result
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
+	//SimTK::Real logBendStretchJac = logJacScale;
+	//SimTK::Real logBendStretchJac = -1.0 * logJacScale;
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);
+	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
+	//SimTK::Real logBendStretchJac = logJacBAT_0 - logJacScale + (-1.0 * logJacBAT_tau);
 
-        std::cout << "logJacBAT " << logJacBAT_0
-                << " logJacScale " << logJacScale
-                << " logJacBATInv " << logJacBAT_tau
-                << " logBendStretchJac " << logBendStretchJac
+	std::cout << "logJacBAT " << logJacBAT_0
+			<< " logJacScale " << logJacScale
+			<< " logJacBATInv " << logJacBAT_tau
+			<< " logBendStretchJac " << logBendStretchJac
                 << std::endl;
 
 	return logBendStretchJac;
@@ -3263,8 +3273,9 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	}
 
 	// Get the log of the Jacobian of the change
+	unsigned int startFromBody = 2;
 	this->bendStretchJacobianDetLog =
-		calcBendStretchJacobianDetLog(someState, scaleFactors);
+		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){
@@ -3655,8 +3666,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 
 	}else if(integratorName == IntegratorName::STATIONS_TASK){
 
-		std::cout << "STATIONS_TASK\n";
-
+		/* std::cout << "STATIONS_TASK\n";
 		system->realize(someState, SimTK::Stage::Position);
 
 		// Update target space
@@ -3668,13 +3678,18 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		world->calcStationJacobian(someState, JS);
 
 		SimTK::Vector taskForce;
-		//matter->multiplyByStationJacobianTranspose(someState,
-		//	world->onBodyB[0], world->stationPInGuest[0],
-		//	deltaStationP[0], taskForce);
+		
+		matter->multiplyByStationJacobianTranspose(someState,
+			world->onBodyB[0], world->taskStationPInGuest[0],
+			deltaStationP[0], taskForce);
+		
 		std::cout << "state numU " << someState.getNU()
-			<< " fSize " << taskForce.size() << std::endl;
+			<< " taskForce " << -1.0 * taskForce
+			<< std::endl;
 
-		// Topologies and target atoms
+		someState.setU(-1 * taskForce); */
+
+		/* // Topologies and target atoms
 		int hostTopology = 0;
 		int guestTopology = 1;
 		std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
@@ -3699,15 +3714,18 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 					const Transform& X_PF = mobod.getInboardFrame(someState);
 					const Transform& X_FM = mobod.getMobilizerTransform(someState);
 					const Transform& X_BM = mobod.getOutboardFrame(someState);
+					
+					const Transform& X_GF = X_GB * X_BM * (~X_FM);
+					SimTK::Vec3 G_S = deltaStationP[0];
+					SimTK::Vec3 F_S = (~X_GF) * G_S;
 
-					mobod.setOneU(someState, 0, deltaStationP[0][0]);
-					mobod.setOneU(someState, 1, deltaStationP[0][1]);
-					mobod.setOneU(someState, 2, deltaStationP[0][2]);
-
+					mobod.setOneU(someState, 0, F_S[0]);
+					mobod.setOneU(someState, 1, F_S[1]);
+					mobod.setOneU(someState, 2, F_S[2]);
 
 				}
 			}
-		}
+		} */
 
 		system->realize(someState, SimTK::Stage::Velocity);
 
@@ -3962,13 +3980,14 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 	// Set X_PF and X_BM means to whatever iti is now
 	///////////////////////////////////////////////////
-	if(nofSamples == 0){
+	/* if(nofSamples == 0){
 		world->setTransformsMeansToCurrent(someState);
-	}
+	} */
 	///////////////////////////////////////////////////
 
 	// Calculate X_PFs and X_BMs
 	world->getTransformsStatistics(someState);
+	world->updateTransformsMeans(someState); // Movable
 
 	bool validated = true;
 	validated = generateProposal(someState);
@@ -4011,13 +4030,13 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		// Calculate X_PFs and X_BMs
 //world->traceBendStretch(someState);
 
-		world->getTransformsStatistics(someState);
+		/* world->getTransformsStatistics(someState);
 
 		// Update means of values before altering them
 		world->updateTransformsMeans(someState);
 		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
 			//world->updateTransformsMeans(someState);
-		}
+		} */
 
 	}
 

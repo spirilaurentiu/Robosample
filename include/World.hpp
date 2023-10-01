@@ -141,6 +141,15 @@ public:
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
+	//=========================================================================
+	//                   CONSTRAINTS
+	//=========================================================================
+
+	/** Add contact constraints to specific bodies **/
+	void addRodConstraint(State& someState);
+
+	/** Add contact constraints to specific bodies **/
+	const SimTK::State& addSpeedConstraint(int prmtopIndex);
 
 	//=========================================================================
 	//                   TaskSpace Functions
@@ -157,11 +166,26 @@ public:
 
 	/** Get delta stationP */
 	SimTK::Array_<SimTK::Vec3>& 
+	getTaskSpaceStationPInGuest(void);
+
+	/** Get delta stationP */
+	SimTK::Array_<SimTK::Vec3>& 
+	getTaskSpaceStationPInHost(void);
+
+	/** Get delta stationP */
+	SimTK::Array_<SimTK::Vec3>& 
 	getTaskSpaceDeltaStationP(void);
 
 	/** Calc station Jacobian */
 	void calcStationJacobian(const State& someState,
         SimTK::Matrix_<SimTK::Vec3>& JS) const;
+
+	//=========================================================================
+	//                   CONTACTS Functions
+	//=========================================================================
+
+	/** Add contact surfaces to bodies **/
+	const SimTK::State& addContacts(int prmtopIndex);
 
 	//=========================================================================
 	//                   MEMBRANE Functions
@@ -171,11 +195,6 @@ public:
 	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth,
 		SimTK::Real zWidth, int resolution);
 
-	/** Add contact constraints to specific bodies **/
-	const SimTK::State& addConstraints(int prmtopIndex);
-
-	/** Add contact surfaces to bodies **/
-	const SimTK::State& addContacts(int prmtopIndex);
 
 	/** Realize Topology for this World **/
 	const SimTK::State& realizeTopology();
@@ -338,6 +357,7 @@ public:
 
 	// DOESN'T WORK WITH OPENMM
 	SimTK::Real CalcFullPotentialEnergyIncludingRigidBodies(void);
+	SimTK::Real CalcPotentialEnergy(void);
 
 	// Calculate Fixman potential
 	SimTK::Real calcFixman();
@@ -582,33 +602,16 @@ public:
 
 	//Task Space
 	SimTK::Array_<SimTK::MobilizedBodyIndex> onBodyB;
-	SimTK::Array_<SimTK::Vec3> stationPInGuest;
-	SimTK::Array_<SimTK::Vec3> stationPInHost;
-	SimTK::Array_<SimTK::Vec3> deltaStationP;
+	SimTK::Array_<SimTK::Vec3> taskStationPInGuest;
+	SimTK::Array_<SimTK::Vec3> taskStationPInHost;
+	SimTK::Array_<SimTK::Vec3> taskDeltaStationP;
 
-	void removeFixmanTorque() {
-
-		// if (FixmanTorqueExtImpl) {
-		// 	delete FixmanTorqueExtImpl;
-		// 	FixmanTorqueExtImpl = nullptr;
-		// }
-
-		// if (FixmanTorqueExtForce) {
-		// 	delete FixmanTorqueExtForce;
-		// 	FixmanTorqueExtForce = nullptr;
-		// }
-
-		// if (FixmanTorqueImpl) {
-		// 	delete FixmanTorqueImpl;
-		// 	FixmanTorqueImpl = nullptr;
-		// }
-
-		// if (FixmanTorqueForce) {
-		// 	delete FixmanTorqueForce;
-		// 	FixmanTorqueForce = nullptr;
-		// }
-		
-	}
+	// Constraints
+	std::vector<std::pair <SimTK::MobilizedBodyIndex, SimTK::MobilizedBodyIndex> > rodBodies;
+	SimTK::Array_<SimTK::Vec3> conStationPInGuest;
+	SimTK::Array_<SimTK::Vec3> conStationPInHost;
+	SimTK::Array_<SimTK::Vec3> conDeltaStationP;
+	SimTK::Array_<SimTK::Constraint::Rod> rodConstraints;
 	
 private:
 	// Map mbx2aIx contains only atoms at the origin of mobods
