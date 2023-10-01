@@ -40,7 +40,18 @@ ELSEIF(CMAKE_CXX_COMPILER_ID MATCHES Clang)
     ENDIF()
 ENDIF()
 
-IF(CMAKE_BUILD_TYPE MATCHES "Debug")
+set(BUILD_VISUALIZER ON)
+
+# building tests requires us to rebuild the entire project as a shared object using different flags
+# default builds require only static libraries (different flags)
+# there are multiple build configurations
+# - debug (no tests): build only as shared object for faster compilation (faster linking)
+# - debug_tests: build only as shared object for faster compilation and compile tests
+# - release (no tests): build only a standalone executable with ipo on from static objects
+# - release_tests: build static and dynamic objects (for the executable and tests respectively)
+# - pgo_train (no tests): same as release
+# - pgo_use (no tests): same as release
+IF(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "Debug_Tests" OR CMAKE_BUILD_TYPE MATCHES "Debug_Full")
     # set the sanitizer flags
     # https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
     # https://clang.llvm.org/docs/AddressSanitizer.html
@@ -48,16 +59,36 @@ IF(CMAKE_BUILD_TYPE MATCHES "Debug")
 
     SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
     SET(PREFIX ".d")
-ELSEIF(CMAKE_BUILD_TYPE MATCHES "Release")
+    SET(BUILD_STATIC OFF)
+    SET(BUILD_DYNAMIC ON)
+
+ELSEIF(CMAKE_BUILD_TYPE MATCHES "Release" OR CMAKE_BUILD_TYPE MATCHES "Release_Tests" OR CMAKE_BUILD_TYPE MATCHES "Release_Full")
     SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
     SET(BOLT_FLAGS "-Wl,--emit-relocs")
+
+    SET(BUILD_STATIC ON)
+    SET(BUILD_DYNAMIC OFF)
+
+    IF (CMAKE_BUILD_TYPE MATCHES "Release_Tests")
+        SET(BUILD_STATIC OFF)
+        SET(BUILD_DYNAMIC ON)
+    ELSEIF(CMAKE_BUILD_TYPE MATCHES "Release_Full")
+        SET(BUILD_STATIC ON)
+        SET(BUILD_DYNAMIC ON)
+    ENDIF()
+
 ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Train")
     SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
     SET(PREFIX ".pgo.train")
+    SET(BUILD_STATIC ON)
+    SET(BUILD_DYNAMIC OFF)
+
 ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
     SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
     SET(PREFIX ".pgo.use")
     SET(BOLT_FLAGS "-Wl,--emit-relocs")
+    SET(BUILD_STATIC ON)
+    SET(BUILD_DYNAMIC OFF)
 ENDIF()
 
 separate_arguments(SANITIZER_FLAGS UNIX_COMMAND "${SANITIZER_FLAGS}")
@@ -75,9 +106,6 @@ SET(SIMBODY_LIB_STATIC_NAME "simbody.static${PREFIX}")
 SET(MOLMODEL_LIB_SHARED_NAME "molmodel.shared${PREFIX}")
 SET(MOLMODEL_LIB_STATIC_NAME "molmodel.static${PREFIX}")
 
-# SET(FORMATS_LIB_NAME "formats${PREFIX}")
-# SET(FORMATS_LIB_NAME "formats${PREFIX}")
-
 SET(ROBOSAMPLE_LIB_SHARED_NAME "robosample.shared${PREFIX}")
 SET(ROBOSAMPLE_LIB_STATIC_NAME "robosample.static${PREFIX}")
 
@@ -90,15 +118,13 @@ SET(ROBOSAMPLE_NAME "robosample${PREFIX}")
 include(CheckIPOSupported)
 check_ipo_supported()
 
-IF(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+IF(NOT CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT CMAKE_BUILD_TYPE MATCHES "Debug_Tests")
     SET(USE_IPO TRUE)
 ELSE()
     SET(USE_IPO FALSE)
 ENDIF()
 
 # SET(CMAKE_CXX_STANDARD 14)
-
-set(BUILD_VISUALIZER ON)
 
 # link prerequisites
 find_package(BLAS REQUIRED)
@@ -344,26 +370,30 @@ FOREACH(subdir ${OPENMM_DIRS})
     SET(OPENMM_SOURCE_INCLUDE_FILES ${OPENMM_SOURCE_INCLUDE_FILES} ${incl_files})
 ENDFOREACH(subdir)
 
-add_library(${OPENMM_LIB_SHARED_NAME} SHARED ${OPENMM_SOURCE_C_FILES} ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_SOURCE_INCLUDE_FILES})
-target_compile_options(${OPENMM_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS})
-target_link_libraries(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_LIBRARIES})
-target_compile_definitions(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_COMPILE_DEFINITIONS})
-set_target_properties(${OPENMM_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_link_options(${OPENMM_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
-target_precompile_headers(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_PCH})
 set_source_files_properties(${OPENMM_LIB_SHARED_NAME} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
-set_property(TARGET ${OPENMM_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(${OPENMM_LIB_STATIC_NAME} STATIC ${OPENMM_SOURCE_C_FILES} ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_SOURCE_INCLUDE_FILES})
-target_compile_options(${OPENMM_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS})
-target_link_libraries(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_LIBRARIES})
-target_compile_definitions(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_COMPILE_DEFINITIONS})
-set_target_properties(${OPENMM_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_link_options(${OPENMM_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
-target_precompile_headers(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_PCH})
-set_source_files_properties(${OPENMM_LIB_STATIC_NAME} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+IF (BUILD_DYNAMIC)
+    add_library(${OPENMM_LIB_SHARED_NAME} SHARED ${OPENMM_SOURCE_C_FILES} ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_SOURCE_INCLUDE_FILES})
+    target_compile_options(${OPENMM_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS})
+    target_link_libraries(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_LIBRARIES})
+    target_compile_definitions(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_COMPILE_DEFINITIONS})
+    set_target_properties(${OPENMM_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_link_options(${OPENMM_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
+    target_precompile_headers(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_PCH})
+    set_property(TARGET ${OPENMM_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+ENDIF (BUILD_DYNAMIC)
+
+IF (BUILD_STATIC)
+    add_library(${OPENMM_LIB_STATIC_NAME} STATIC ${OPENMM_SOURCE_C_FILES} ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_SOURCE_INCLUDE_FILES})
+    target_compile_options(${OPENMM_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS})
+    target_link_libraries(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_LIBRARIES})
+    target_compile_definitions(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_COMPILE_DEFINITIONS})
+    set_target_properties(${OPENMM_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_link_options(${OPENMM_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
+    target_precompile_headers(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_PCH})
+ENDIF (BUILD_STATIC)
 
 # this forces cmake to encode the kernels before compiling anything else
 add_dependencies(${OPENMM_LIB_NAME} ${OPENMM_DEPENDENCIES})
@@ -424,27 +454,31 @@ FOREACH(subdir ${SIMBODY_DIRS})
     SET(SIMBODY_SOURCE_INCLUDE_FILES ${SIMBODY_SOURCE_INCLUDE_FILES} ${incl_files})
 ENDFOREACH(subdir)
 
-add_library(${SIMBODY_LIB_SHARED_NAME} SHARED ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES} ${SIMBODY_SOURCE_INCLUDE_FILES})
-target_compile_options(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SIMBODY_INCLUDE_DIRS})
-target_compile_definitions(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SIMBODY_COMPILE_DEFINITIONS})
-set_target_properties(${SIMBODY_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_link_options(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
-target_precompile_headers(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SIMBODY_PCH})
 set_source_files_properties(${SIMBODY_SOURCE_C_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
-set_property(TARGET ${SIMBODY_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(${SIMBODY_LIB_STATIC_NAME} STATIC ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES} ${SIMBODY_SOURCE_INCLUDE_FILES})
-target_compile_options(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SIMBODY_INCLUDE_DIRS})
-target_compile_definitions(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SIMBODY_COMPILE_DEFINITIONS})
-set_target_properties(${SIMBODY_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_link_options(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
-target_precompile_headers(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SIMBODY_PCH})
-set_source_files_properties(${SIMBODY_SOURCE_C_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+IF (BUILD_DYNAMIC)
+    add_library(${SIMBODY_LIB_SHARED_NAME} SHARED ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES} ${SIMBODY_SOURCE_INCLUDE_FILES})
+    target_compile_options(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SIMBODY_INCLUDE_DIRS})
+    target_compile_definitions(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SIMBODY_COMPILE_DEFINITIONS})
+    set_target_properties(${SIMBODY_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_link_options(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
+    target_precompile_headers(${SIMBODY_LIB_SHARED_NAME} PRIVATE ${SIMBODY_PCH})
+    set_property(TARGET ${SIMBODY_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+ENDIF (BUILD_DYNAMIC)
+
+IF (BUILD_STATIC)
+    add_library(${SIMBODY_LIB_STATIC_NAME} STATIC ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES} ${SIMBODY_SOURCE_INCLUDE_FILES})
+    target_compile_options(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SIMBODY_INCLUDE_DIRS})
+    target_compile_definitions(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SIMBODY_COMPILE_DEFINITIONS})
+    set_target_properties(${SIMBODY_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_link_options(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
+    target_precompile_headers(${SIMBODY_LIB_STATIC_NAME} PRIVATE ${SIMBODY_PCH})
+ENDIF (BUILD_STATIC)
 
 IF(BUILD_VISUALIZER)
-    IF(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+    IF(NOT CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT CMAKE_BUILD_TYPE MATCHES "Debug_Tests")
         SET(GUI_NAME "simbody-visualizer")
     ELSE()
         SET(GUI_NAME "simbody-visualizer_d")
@@ -456,7 +490,13 @@ IF(BUILD_VISUALIZER)
 
     add_executable(${GUI_NAME} ${VISUALIZER_SOURCE_INCLUDE_FILES} ${VISUALIZER_SOURCE_CXX_FILES})
     target_include_directories(${GUI_NAME} PRIVATE ${GLUT_INCLUDE_DIR} ${SIMBODY_INCLUDE_DIRS})
-    target_link_libraries(${GUI_NAME} ${SIMBODY_LIB_SHARED_NAME} ${LIBRARIES} ${GLUT_LIBRARIES} ${OPENGL_LIBRARIES}) # TODO CHECK HERE PLEASE
+
+    IF (BUILD_DYNAMIC)
+        target_link_libraries(${GUI_NAME} ${SIMBODY_LIB_SHARED_NAME} ${LIBRARIES} ${GLUT_LIBRARIES} ${OPENGL_LIBRARIES})
+    ELSE()
+        target_link_libraries(${GUI_NAME} ${SIMBODY_LIB_STATIC_NAME} ${LIBRARIES} ${GLUT_LIBRARIES} ${OPENGL_LIBRARIES})
+    ENDIF()
+    
     set_target_properties(${GUI_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
     target_link_options(${GUI_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
 ENDIF(BUILD_VISUALIZER)
@@ -472,59 +512,62 @@ SET(MOLMODEL_SOURCE_FILES)
 SET(MOLMODEL_SOURCE_INCLUDE_FILES)
 
 FOREACH(subdir ${MOLMODEL_DIRS})
-    FILE(GLOB src_files ${subdir}/src/*.cpp ${subdir}/src/*.c ${subdir}/src/*/*.cpp ${subdir}/src/*/*.c)
-    SET(MOLMODEL_SOURCE_FILES ${MOLMODEL_SOURCE_FILES} ${src_files})
+    FILE(GLOB src_c_files ${subdir}/src/*.c ${subdir}/src/*/*.c)
+    SET(MOLMODEL_C_SOURCE_FILES ${MOLMODEL_SOURCE_FILES} ${src_c_files})
+
+    FILE(GLOB src_cxx_files ${subdir}/src/*.cpp ${subdir}/src/*/*.cpp)
+    SET(MOLMODEL_CXX_SOURCE_FILES ${MOLMODEL_SOURCE_FILES} ${src_cxx_files})
 
     # pimpl pattern is used and headers are stored in the src directory
     FILE(GLOB incl_files ${subdir}/src/*.h ${subdir}/src/*/*.h)
     SET(MOLMODEL_SOURCE_INCLUDE_FILES ${MOLMODEL_SOURCE_INCLUDE_FILES} ${incl_files})
 ENDFOREACH(subdir)
 
-add_library(${MOLMODEL_LIB_SHARED_NAME} SHARED ${MOLMODEL_SOURCE_FILES} ${MOLMODEL_SOURCE_INCLUDE_FILES})
-target_compile_options(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS} ${SIMBODY_INCLUDE_DIRS} ${MOLMODEL_INCLUDE_DIRS})
-target_compile_definitions(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${MOLMODEL_COMPILE_DEFINITIONS})
-set_target_properties(${MOLMODEL_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_link_options(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
-target_precompile_headers(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${MOLMODEL_PCH})
-set_source_files_properties(Molmodel/src/vmdsock.c PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
-set_property(TARGET ${MOLMODEL_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_source_files_properties(${MOLMODEL_C_SOURCE_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
-add_library(${MOLMODEL_LIB_STATIC_NAME} STATIC ${MOLMODEL_SOURCE_FILES} ${MOLMODEL_SOURCE_INCLUDE_FILES})
-target_compile_options(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS} ${SIMBODY_INCLUDE_DIRS} ${MOLMODEL_INCLUDE_DIRS})
-target_compile_definitions(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${MOLMODEL_COMPILE_DEFINITIONS})
-set_target_properties(${MOLMODEL_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_link_options(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
-target_precompile_headers(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${MOLMODEL_PCH})
-set_source_files_properties(Molmodel/src/vmdsock.c PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+IF (BUILD_DYNAMIC)
+    add_library(${MOLMODEL_LIB_SHARED_NAME} SHARED ${MOLMODEL_C_SOURCE_FILES} ${MOLMODEL_CXX_SOURCE_FILES} ${MOLMODEL_SOURCE_INCLUDE_FILES})
+    target_compile_options(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS} ${SIMBODY_INCLUDE_DIRS} ${MOLMODEL_INCLUDE_DIRS})
+    target_compile_definitions(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${MOLMODEL_COMPILE_DEFINITIONS})
+    set_target_properties(${MOLMODEL_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_link_options(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
+    target_precompile_headers(${MOLMODEL_LIB_SHARED_NAME} PRIVATE ${MOLMODEL_PCH})
+    set_property(TARGET ${MOLMODEL_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+ENDIF (BUILD_DYNAMIC)
 
-# # build format - this does not have ipo or pch yet
-# FILE(GLOB FORMAT_SOURCE_FILES
-#     ${CMAKE_SOURCE_DIR}/format/src/*.c
-#     ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
-# SET(FORMAT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/format/inc)
-# add_library(${FORMATS_LIB_NAME} ${LIBRARY_TYPE} ${FORMAT_SOURCE_FILES})
-# target_compile_options(${FORMATS_LIB_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-# target_include_directories(${FORMATS_LIB_NAME} PRIVATE ${FORMAT_INCLUDE_DIRS})
-# target_link_options(${FORMATS_LIB_NAME} PRIVATE ${BOLT_FLAGS} ${SANITIZER_FLAGS} ${PGO_FLAGS})
+IF (BUILD_STATIC)
+    add_library(${MOLMODEL_LIB_STATIC_NAME} STATIC ${MOLMODEL_C_SOURCE_FILES} ${MOLMODEL_CXX_SOURCE_FILES} ${MOLMODEL_SOURCE_INCLUDE_FILES})
+    target_compile_options(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${OPENMM_INCLUDE_DIRS} ${SIMBODY_INCLUDE_DIRS} ${MOLMODEL_INCLUDE_DIRS})
+    target_compile_definitions(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${MOLMODEL_COMPILE_DEFINITIONS})
+    set_target_properties(${MOLMODEL_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_link_options(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
+    target_precompile_headers(${MOLMODEL_LIB_STATIC_NAME} PRIVATE ${MOLMODEL_PCH})
+ENDIF (BUILD_STATIC)
 
-# build robosample libraries
-FILE(GLOB ROBOSAMPLE_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
-list(REMOVE_ITEM ROBOSAMPLE_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/Robosample.cpp)
+
+# build the robosample library
+FILE(GLOB src_c_files ${CMAKE_SOURCE_DIR}/format/src/*.c)
+SET(ROBOSAMPLE_C_SOURCE_FILES ${src_c_files})
+set_source_files_properties(${ROBOSAMPLE_C_SOURCE_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+FILE(GLOB src_cxx_files ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
+SET(ROBOSAMPLE_CXX_SOURCE_FILES ${src_cxx_files})
+LIST(REMOVE_ITEM ROBOSAMPLE_CXX_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/Robosample.cpp)
 
 SET(ROBOSAMPLE_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/format/inc
+    ${CMAKE_SOURCE_DIR}/format/inc/mdtraj
     ${OPENMM_INCLUDE_DIRS}
     ${SIMBODY_INCLUDE_DIRS}
     ${MOLMODEL_INCLUDE_DIRS}
-    # ${FORMAT_INCLUDE_DIRS}
 )
 
 # the order of these libraries is extremely important
 SET(ROBOSAMPLE_LIBRARIES_SHARED
     ${LIBRARIES}
-    # ${FORMATS_LIB_NAME}
     ${MOLMODEL_LIB_SHARED_NAME}
     ${SIMBODY_LIB_SHARED_NAME}
     ${OPENMM_LIB_SHARED_NAME}
@@ -532,92 +575,101 @@ SET(ROBOSAMPLE_LIBRARIES_SHARED
 
 SET(ROBOSAMPLE_LIBRARIES_STATIC
     ${LIBRARIES}
-    # ${FORMATS_LIB_NAME}
     ${MOLMODEL_LIB_STATIC_NAME}
     ${SIMBODY_LIB_STATIC_NAME}
     ${OPENMM_LIB_STATIC_NAME}
 )
 
-add_library(${ROBOSAMPLE_LIB_SHARED_NAME} SHARED ${ROBOSAMPLE_SOURCE_FILES})
-target_compile_options(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
-target_link_libraries(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${ROBOSAMPLE_LIBRARIES_SHARED})
-set_target_properties(${ROBOSAMPLE_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_precompile_headers(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${ROBOSAMPLE_PCH})
-target_link_options(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
-set_property(TARGET ${ROBOSAMPLE_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+IF (BUILD_DYNAMIC)
+    add_library(${ROBOSAMPLE_LIB_SHARED_NAME} SHARED ${ROBOSAMPLE_C_SOURCE_FILES} ${ROBOSAMPLE_CXX_SOURCE_FILES})
+    target_compile_options(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
+    target_link_libraries(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${ROBOSAMPLE_LIBRARIES_SHARED})
+    set_target_properties(${ROBOSAMPLE_LIB_SHARED_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_precompile_headers(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${ROBOSAMPLE_PCH})
+    target_link_options(${ROBOSAMPLE_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
+    set_property(TARGET ${ROBOSAMPLE_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+ENDIF (BUILD_DYNAMIC)
 
-add_library(${ROBOSAMPLE_LIB_STATIC_NAME} STATIC ${ROBOSAMPLE_SOURCE_FILES})
-target_compile_options(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
-target_include_directories(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
-target_link_libraries(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${ROBOSAMPLE_LIBRARIES_STATIC})
-set_target_properties(${ROBOSAMPLE_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-target_precompile_headers(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${ROBOSAMPLE_PCH})
-target_link_options(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
+IF (BUILD_STATIC)
+    add_library(${ROBOSAMPLE_LIB_STATIC_NAME} STATIC ${ROBOSAMPLE_C_SOURCE_FILES} ${ROBOSAMPLE_CXX_SOURCE_FILES})
+    target_compile_options(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${BUILD_FLAGS} ${PGO_FLAGS})
+    target_include_directories(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
+    target_link_libraries(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${ROBOSAMPLE_LIBRARIES_STATIC})
+    set_target_properties(${ROBOSAMPLE_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    target_precompile_headers(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${ROBOSAMPLE_PCH})
+    target_link_options(${ROBOSAMPLE_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
+ENDIF (BUILD_STATIC)
 
-# # add the actual robosample executable
-# add_executable(${ROBOSAMPLE_NAME} ${CMAKE_SOURCE_DIR}/src/Robosample.cpp)
-# target_compile_options(${ROBOSAMPLE_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
-# target_include_directories(${ROBOSAMPLE_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
-# target_link_libraries(${ROBOSAMPLE_NAME} PRIVATE ${ROBOSAMPLE_LIB_STATIC_NAME} ${MOLMODEL_LIB_STATIC_NAME} ${SIMBODY_LIB_STATIC_NAME})
-# set_target_properties(${ROBOSAMPLE_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
-# target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
+# add the actual robosample executable
+add_executable(${ROBOSAMPLE_NAME} ${CMAKE_SOURCE_DIR}/src/Robosample.cpp)
+target_compile_options(${ROBOSAMPLE_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
+target_include_directories(${ROBOSAMPLE_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
+set_target_properties(${ROBOSAMPLE_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+target_link_options(${ROBOSAMPLE_NAME} PRIVATE ${SANITIZER_FLAGS} ${BOLT_FLAGS} ${PGO_FLAGS})
+
+IF(BUILD_DYNAMIC)
+    target_link_libraries(${ROBOSAMPLE_NAME} PRIVATE ${ROBOSAMPLE_LIB_SHARED_NAME} ${MOLMODEL_LIB_SHARED_NAME} ${SIMBODY_LIB_SHARED_NAME})
+ELSE()
+    target_link_libraries(${ROBOSAMPLE_NAME} PRIVATE ${ROBOSAMPLE_LIB_STATIC_NAME} ${MOLMODEL_LIB_STATIC_NAME} ${SIMBODY_LIB_STATIC_NAME})
+ENDIF(BUILD_DYNAMIC)
 
 
 # add tests
-enable_testing()
-include(CTest)
+IF (CMAKE_BUILD_TYPE MATCHES "Debug_Tests" OR CMAKE_BUILD_TYPE MATCHES "Release_Tests" OR
+    CMAKE_BUILD_TYPE MATCHES "Debug_Full" OR CMAKE_BUILD_TYPE MATCHES "Release_Full")
 
-SET(TEST_NAMES)
-SET(TEST_SOURCES)
+    enable_testing()
+    include(CTest)
 
+    SET(TEST_NAMES)
+    SET(TEST_SOURCES)
 
-# # find openmm tests
-# FILE(GLOB TESTS_SOURCES openmm/tests/*.cpp)
-# FOREACH(test_src ${TESTS_SOURCES})
-#     # get test name by removing file location and extension
-#     FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/openmm/tests ${test_src})
-#     STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
+    # # find openmm tests
+    # FILE(GLOB TESTS_SOURCES openmm/tests/*.cpp)
+    # FOREACH(test_src ${TESTS_SOURCES})
+    #     # get test name by removing file location and extension
+    #     FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/openmm/tests ${test_src})
+    #     STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
 
-#     LIST(APPEND TEST_NAMES ${test_name})
-#     LIST(APPEND TEST_SOURCES ${test_src})
-# ENDFOREACH(test_src)
+    #     LIST(APPEND TEST_NAMES ${test_name})
+    #     LIST(APPEND TEST_SOURCES ${test_src})
+    # ENDFOREACH(test_src)
 
-# # find simbody tests
-# FILE(GLOB TESTS_SOURCES Simbody01/Simbody/tests/*.cpp)
-# FOREACH(test_src ${TESTS_SOURCES})
-#     # get test name by removing file location and extension
-#     FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/tests ${test_src})
-#     STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
+    # # find simbody tests
+    # FILE(GLOB TESTS_SOURCES Simbody01/Simbody/tests/*.cpp)
+    # FOREACH(test_src ${TESTS_SOURCES})
+    #     # get test name by removing file location and extension
+    #     FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/tests ${test_src})
+    #     STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
 
-#     LIST(APPEND TEST_NAMES ${test_name})
-#     LIST(APPEND TEST_SOURCES ${test_src})
-# ENDFOREACH(test_src)
+    #     LIST(APPEND TEST_NAMES ${test_name})
+    #     LIST(APPEND TEST_SOURCES ${test_src})
+    # ENDFOREACH(test_src)
 
-# find robosample tests
-FILE(GLOB TESTS_SOURCES tests/*.cpp)
-FOREACH(test_src ${TESTS_SOURCES})
-    # get test name by removing file location and extension
-    FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/tests ${test_src})
-    STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
+    # find robosample tests
+    FILE(GLOB TESTS_SOURCES tests/*.cpp)
+    FOREACH(test_src ${TESTS_SOURCES})
+        # get test name by removing file location and extension
+        FILE(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/tests ${test_src})
+        STRING(REGEX REPLACE ".cpp" "" test_name ${test_name})
 
-    LIST(APPEND TEST_NAMES ${test_name})
-    LIST(APPEND TEST_SOURCES ${test_src})
-ENDFOREACH(test_src)
+        LIST(APPEND TEST_NAMES ${test_name})
+        LIST(APPEND TEST_SOURCES ${test_src})
+    ENDFOREACH(test_src)
 
-# add the tests
-FOREACH(test_name test_src IN ZIP_LISTS TEST_NAMES TEST_SOURCES)
-    # needs refactoring
-    add_executable(${test_name} ${test_src})
-    target_compile_options(${test_name} PRIVATE ${BUILD_FLAGS})
-    target_link_options(${test_name} PRIVATE ${SANITIZER_FLAGS})
-    set_target_properties(${test_name} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
+    # add the tests
+    FOREACH(test_name test_src IN ZIP_LISTS TEST_NAMES TEST_SOURCES)
+        # the test executable is non-ipo
+        add_executable(${test_name} ${test_src})
+        target_compile_options(${test_name} PRIVATE ${BUILD_FLAGS})
+        target_link_options(${test_name} PRIVATE ${SANITIZER_FLAGS})
+        target_include_directories(${test_name} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
+        target_link_libraries(${test_name} PRIVATE ${ROBOSAMPLE_LIB_SHARED_NAME} ${MOLMODEL_LIB_SHARED_NAME} ${SIMBODY_LIB_SHARED_NAME} ${LIBRARIES})
 
-    target_include_directories(${test_name} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
-    target_link_libraries(${test_name} PRIVATE ${ROBOSAMPLE_LIB_SHARED_NAME} ${MOLMODEL_LIB_SHARED_NAME} ${SIMBODY_LIB_SHARED_NAME} ${LIBRARIES})
-
-    add_test(NAME ${test_name} COMMAND ${test_name})
-ENDFOREACH()
+        add_test(NAME ${test_name} COMMAND ${test_name})
+    ENDFOREACH()
+ENDIF ()
 
 
 # add example inputs
