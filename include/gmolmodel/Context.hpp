@@ -183,6 +183,7 @@ public:
 
 	// --- Main ---
 	void randomizeWorldIndexes(void);
+	void getContactDebugInfo(std::size_t whichWorld);
 	void transferCoordinates(int src, int dest);
 
 	// Go through all the worlds and generate samples

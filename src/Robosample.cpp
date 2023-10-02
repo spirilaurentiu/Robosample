@@ -303,6 +303,7 @@ int main(int argc, char **argv)
 	if(haveMembrane){
 		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
+			context.updWorld(worldIx)->addContacts(0);
 		}
 	}
 
