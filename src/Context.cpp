@@ -5873,8 +5873,9 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld)
 	SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
 
 	// Write to a file instead of stdout
-	fprintf(logFile, "%f %d %d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
-		, pHMC(worlds[whichWorld].samplers[0])->getTemperature()
+	/* fprintf(logFile, "%f %d %d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
+		//, pHMC(worlds[whichWorld].samplers[0])->getTemperature()
+		, worlds[whichWorld].updSampler(0)->getTemperature()
 		, whichWorld
 		, currentAdvancedState.getNU()
 		, pHMC(worlds[whichWorld].samplers[0])->acceptedSteps
@@ -5885,6 +5886,19 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld)
 		, pHMC((worlds[whichWorld].samplers[0]))->fix_o
 		, pHMC((worlds[whichWorld].samplers[0]))->fix_n
 		, pHMC((worlds[whichWorld].samplers[0]))->fix_set
+	); */
+	fprintf(logFile, "%f %d %d %d %.2f %.2f %.2f %.2f %.12f %.12f %.12f "
+		, worlds[whichWorld].updSampler(0)->getTemperature()
+		, whichWorld
+		, currentAdvancedState.getNU()
+		, worlds[whichWorld].updSampler(0)->getAcceptedSteps()
+		, worlds[whichWorld].updSampler(0)->getOldPE()
+		, worlds[whichWorld].updSampler(0)->getSetPE()
+		, worlds[whichWorld].updSampler(0)->getOldKE()
+		, worlds[whichWorld].updSampler(0)->getNewKE()
+		, worlds[whichWorld].updSampler(0)->getOldFixman()
+		, worlds[whichWorld].updSampler(0)->getNewFixman()
+		, worlds[whichWorld].updSampler(0)->getSetFixman()
 	);
 	fflush(logFile);
 

@@ -143,6 +143,10 @@ public:
 	SimTK::Real getOldFixman(void) const;
 
 	// Set/get Fixman potential
+	void setNewFixman(SimTK::Real);
+	SimTK::Real getNewFixman(void) const;
+
+	// Set/get Fixman potential
 	void setSetFixman(SimTK::Real);
 	SimTK::Real getSetFixman(void) const;
 
@@ -409,6 +413,10 @@ public:
 	
 	/** Get the stored kinetic energy. This is set rightafter a move is
 	accepted. It's a component of the total energy stored. **/
+	SimTK::Real getNewKE() { return this->ke_n; }
+
+	/** Get the stored kinetic energy. This is set rightafter a move is
+	accepted. It's a component of the total energy stored. **/
 	SimTK::Real getLastAcceptedKE() { return this->ke_set; }
 	
 	/** Sets the proposed kinetic energy before the proposal. This should be
@@ -445,6 +453,8 @@ public:
  	* Test ground mostly for SOA
  	*/
 	void testSOA(SimTK::State& someState);
+	
+	const int & getAcceptedSteps(void) const { return acceptedSteps;}
 
 protected:
 

@@ -1334,16 +1334,35 @@ SimTK::Real HMCSampler::getOldFixman(void) const
 	return this->fix_o;
 }
 
-// Set set Fixman potential
-void HMCSampler::setSetFixman(SimTK::Real argFixman)
+// Set old Fixman potential
+void HMCSampler::setOldFixman(SimTK::Real argFixman)
 {
-	this->fix_set = argFixman;
+	this->fix_o = argFixman;
+}
+
+// Get Fixman potential
+SimTK::Real HMCSampler::getNewFixman(void) const
+{
+	return this->fix_n;
+}
+
+
+// Set old Fixman potential
+void HMCSampler::setNewFixman(SimTK::Real argFixman)
+{
+	this->fix_n = argFixman;
 }
 
 // Get set Fixman potential
 SimTK::Real HMCSampler::getSetFixman(void) const
 {
 	return this->fix_set;
+}
+
+// Set set Fixman potential
+void HMCSampler::setSetFixman(SimTK::Real argFixman)
+{
+	this->fix_set = argFixman;
 }
 
 // Get the stored potential energy
@@ -1517,12 +1536,6 @@ SimTK::Real HMCSampler::calcNumFixman(SimTK::State&){
 	SimTK::Real result = 0.5 * RT * std::log(EiDetM);
 	return result;
 	*/
-}
-
-// Set old Fixman potential
-void HMCSampler::setOldFixman(SimTK::Real argFixman)
-{
-	this->fix_o = argFixman;
 }
 
 // Set/get External MBAT contribution potential
