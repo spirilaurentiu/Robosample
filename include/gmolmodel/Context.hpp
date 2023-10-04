@@ -242,16 +242,16 @@ public:
 
 	// Print Simbody related information
 	void PrintSimbodyMobods(void);
-	void PrintSamplerDataToLog(std::size_t whichWorld);
+	void PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSampler);
 	void PrintGeometry(SetupReader&, std::size_t whichWorld);
 
-	void PrintGeometryToLog(std::size_t whichWorld);
-	void PrintDistancesToLog(std::size_t whichWorld);
-	void PrintAnglesToLog(std::size_t whichWorld);
-	void PrintDihedralsToLog(std::size_t whichWorld);
-	void PrintDihedralsQsToLog(std::size_t whichWorld);
+	void PrintGeometryToLog(std::size_t whichWorld, std::size_t whichSampler);
+	void PrintDistancesToLog(std::size_t whichWorld, std::size_t whichSampler);
+	void PrintAnglesToLog(std::size_t whichWorld, std::size_t whichSampler);
+	void PrintDihedralsToLog(std::size_t whichWorld, std::size_t whichSampler);
+	void PrintDihedralsQsToLog(std::size_t whichWorld, std::size_t whichSampler);
 	void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
-	void PrintToLog(int whichWorld);
+	void PrintToLog(std::size_t whichWorld, std::size_t whichSampler);
 
 	// Write intial/final pdb for reference
 	void writeInitialPdb(void);
@@ -434,6 +434,9 @@ public:
 
 	// Go through all of this replica's worlds and generate samples
 	int RunReplicaAllWorlds(int whichReplica, int howManyRounds);
+
+	// Print to log and write pdbs
+	void REXLog(int mixi, int replicaIx);
 
 	void RunREX();
 

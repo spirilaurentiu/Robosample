@@ -617,19 +617,29 @@ int main(int argc, char **argv)
 	// Add constraints
 	//context.addConstraints();
 
-	if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
-		context.RunSimulatedTempering(context.getRequiredNofRounds(),
+	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
+		context.setRunType(0);
+		context.Run(context.getRequiredNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
-			context.setRunType(1);
+			
+	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+			context.setRunType(0);
+			context.RunSimulatedTempering(context.getRequiredNofRounds(),
+				std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+				std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 
-	}else if(setupReader.get("RUN_TYPE")[0] == "REX"){
+	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
 		context.setRunType(1);
 		context.RunREX();
 
-	}else if(setupReader.get("RUN_TYPE")[0] == "RENS"){
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
 		context.setRunType(2);
-		context.RunRENS();
+		context.RunREX();
+
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
+		context.setRunType(3);
+		context.RunREX();
 
 	}else{
 		context.setRunType(0);

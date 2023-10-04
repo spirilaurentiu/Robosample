@@ -2753,6 +2753,7 @@ std::vector<SimTK::Real>& scaleFactors)
 void HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
 std::vector<SimTK::Real>& scaleFactors)
 {
+
 	// Print the scale factor
 	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
 		<< std::endl;
@@ -3220,7 +3221,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			<< " logJacScale " << logJacScale
 			<< " logJacBATInv " << logJacBAT_tau
 			<< " logBendStretchJac " << logBendStretchJac
-                << std::endl;
+            << std::endl;
 
 	return logBendStretchJac;
 
