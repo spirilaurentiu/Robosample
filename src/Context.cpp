@@ -2476,6 +2476,8 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 // replica_i and replica_j are variable
 bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
+	std::cout << "attemptREXSwap\n" << std::endl; 
+
 	bool returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
@@ -2560,11 +2562,18 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	}
 
 	// ----------------------------------------------------------------
-	// LOGP ENERGY
+	// LOGP ENERGY EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real ETerm_equil    = -1.0 * (eC_Y0   + eH_X0)   + (eC_X0   + eH_Y0);
+	SimTK::Real ETerm_equil    = eH_X0 - eC_X0;
+	ETerm_equil               += eC_Y0 - eH_Y0;
+	ETerm_equil = -1.0 * ETerm_equil;
 
-	SimTK::Real ETerm_nonequil = -1.0 * (lC_Ytau + lH_Xtau) + (lC_Xtau + lH_Ytau);
+	// ----------------------------------------------------------------
+	// LOGP ENERGY NON-EQUILIBRIUM
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real ETerm_nonequil = lH_Xtau - lC_Xtau;
+	ETerm_nonequil            += lC_Ytau - lH_Ytau;
+	ETerm_nonequil = -1.0 * ETerm_nonequil;
 
 	// ----------------------------------------------------------------
 	// LOGP WORK
@@ -2574,7 +2583,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// ----------------------------------------------------------------
-	// CORRECTION TERM
+	// CORRECTION TERM FOR NON-EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	SimTK::Real correctionTerm = 1.0;
 	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
@@ -2588,13 +2597,6 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real s_Y_1 = 1.0 / s_Y;
 
 	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
-	/* correctionTerm = 
-		(normalPdf(s_X_1, miu_H, std_H) * normalPdf(s_Y_1, miu_C, std_C)) / 
-		(normalPdf(s_X, miu_C, std_C)   * normalPdf(s_Y, miu_H, std_H)); */	
-	/* qC_s_X   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
-	qH_s_Y   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
-	qH_s_X_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
-	qC_s_Y_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
 
 	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
 
@@ -2650,11 +2652,17 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	} */
 
 	if(getRunType() == 1){
+
 		log_p_accept = ETerm_equil ;
+
 	}else if(getRunType() == 2){
-		log_p_accept = ETerm_nonequil + std::log(correctionTerm);
+
+		log_p_accept = ETerm_nonequil + std::log(correctionTerm) ;
+
 	}else if( getRunType() == 3){
-		log_p_accept = WTerm + std::log(correctionTerm);
+
+		log_p_accept = WTerm + std::log(correctionTerm) ;
+
 	}
 
 	// Draw from uniform distribution
@@ -3691,12 +3699,10 @@ void Context::updQScaleFactors(int mixi)
 		qScaleFactorsMiu = qScaleFactorsEven;
 	}
 
-std::cout << "DEBUG REX updQScale 0 " << std::endl << std::flush;
 
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
-std::cout << "DEBUG REX updQScale 1 " << std::endl << std::flush;
 	bool randSignOpt = true;
 
 	std::vector<std::string> how;
@@ -3709,19 +3715,15 @@ std::cout << "DEBUG REX updQScale 1 " << std::endl << std::flush;
 			thermodynamicStates[thermoIx].updWorldIndexes();
 		size_t thermoNofWorlds = worldIxs.size();
 
-std::cout << "DEBUG REX updQScale 2 " << std::endl << std::flush;
 		// Go through all the worlds this thermostate should go through
 		for(std::size_t worldCnt = 0; worldCnt < thermoNofWorlds; worldCnt++){
 
-std::cout << "DEBUG REX updQScale 3 " << std::endl << std::flush;
 			// Assign distribution from the first nonequilibrium world FOR NOW
 			if(thermodynamicStates[thermoIx].getDistortOptions()[worldCnt] != 0){
 
-std::cout << "DEBUG REX updQScale 4 " << std::endl << std::flush;
 				// Error checking
 				if(  thermodynamicStates[thermoIx].getDistortArgs().size()  ){
 
-std::cout << "DEBUG REX updQScale 5 " << std::endl << std::flush;
 					how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
 
 				}else{
@@ -3734,8 +3736,6 @@ std::cout << "DEBUG REX updQScale 5 " << std::endl << std::flush;
 
 			// Distribute scale factor
 			if(qScaleFactors.at(thermoIx) != 1){
-
-std::cout << "DEBUG REX updQScale 6 " << std::endl << std::flush;
 				qScaleFactors.at(thermoIx) = distributeScalingFactor(
 					how, qScaleFactorsMiu.at(thermoIx), randSignOpt);
 			}
@@ -3769,52 +3769,29 @@ void Context::RunREX(void)
 	// Is this necesary =======================================================
 	realizeTopology(); 
 
-std::cout << "DEBUG REX 0 " << std::endl << std::flush;
-
 	// Allocate space for swap matrices
 	allocateSwapMatrices();
-
-std::cout << "DEBUG REX 1 " << std::endl << std::flush;
-
 
 	// Run each replica one time initially
 	std::cout << " REX batch " << 0 << std::endl;
 	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 		std::cout << "REX replica " << replicaIx << std::endl;
 
-std::cout << "DEBUG REX 2 " << std::endl << std::flush;
-
-
 			// Set intial parameters
 			initializeReplica(replicaIx);
-
-std::cout << "DEBUG REX 3 " << std::endl << std::flush;
-
 
 			// Copy coordinates from replica to front world
 			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
-std::cout << "DEBUG REX 4 " << std::endl << std::flush;
-
-
 			// Iterate this replica's worlds
 			RunReplicaAllWorlds(replicaIx, swapEvery);
-
-std::cout << "DEBUG REX 5 " << std::endl << std::flush;
-
 
 			// Copy coordinates from front world to replica
 			storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
-std::cout << "DEBUG REX 6 " << std::endl << std::flush;
-
-
 			// Store energy
 			storeReplicaEnergyFromFrontWorldFull(replicaIx);
 			storeReplicaFixmanFromBackWorld(replicaIx);
-
-std::cout << "DEBUG REX 7 " << std::endl << std::flush;
-
 
 			PrintToLog(worldIndexes.front(), 0);
 
@@ -3822,9 +3799,6 @@ std::cout << "DEBUG REX 7 " << std::endl << std::flush;
 	} // ======================================================================
 
 	PrintNofAcceptedSwapsMatrix();
-
-std::cout << "DEBUG REX 8 " << std::endl << std::flush;
-
 
 	bool givenTsMode = false;
 		if(givenTsMode){
@@ -4590,36 +4564,21 @@ std::cout << "DEBUG REX 8 " << std::endl << std::flush;
 		std::cout << " REX batch " << mixi << std::endl;
 		nofRounds = mixi;
 
-std::cout << "DEBUG REX 9 " << std::endl << std::flush;
-
-
 		updQScaleFactors(mixi);
 
 		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
 
-std::cout << "DEBUG REX 10 " << std::endl << std::flush;
-
-
 			// ========================== LOAD ========================
 			// Load the front world
 			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
-std::cout << "DEBUG REX 11 " << std::endl << std::flush;
-
-
 			// Set non-equilibrium parameters: get scale factors
 			updWorldsDistortOptions(replicaIx);
 
-std::cout << "DEBUG REX 12 " << std::endl << std::flush;
-
-
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
-
-std::cout << "DEBUG REX 13 " << std::endl << std::flush;
-
 
 			// ----------------------------------------------------------------
 			// EQUILIBRIUM
@@ -4628,21 +4587,12 @@ std::cout << "DEBUG REX 13 " << std::endl << std::flush;
 					// ======================== SIMULATE ======================
 					currFrontWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
 
-std::cout << "DEBUG REX 14 " << std::endl << std::flush;
-
-
 					// Write energy and geometric features to logfile
 					REXLog(mixi, replicaIx);
-
-std::cout << "DEBUG REX 15 " << std::endl << std::flush;
-
 
 					// ========================= UNLOAD =======================
 					// Deposit front world coordinates into the replica
 					storeReplicaCoordinatesFromFrontWorld(replicaIx);
-
-std::cout << "DEBUG REX 16 " << std::endl << std::flush;
-
 
 					// Deposit energy terms
 					storeReplicaEnergyFromFrontWorldFull(replicaIx);
@@ -4651,44 +4601,23 @@ std::cout << "DEBUG REX 16 " << std::endl << std::flush;
 			// NON-EQUILIBRIUM
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-std::cout << "DEBUG REX 17 " << std::endl << std::flush;
-
-
 					// ======================== SIMULATE ======================
 					currFrontWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
-
-std::cout << "DEBUG REX 18 " << std::endl << std::flush;
-
 
 					// ========================= UNLOAD =======================
 					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
 
-std::cout << "DEBUG REX 19 " << std::endl << std::flush;
-
-
 					// Deposit work coordinates into the replica
 					store_WORK_CoordinatesFromFrontWorld(replicaIx);
-
-std::cout << "DEBUG REX 20 " << std::endl << std::flush;
-
 
 					// Deposit energy terms
 					store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
 
-std::cout << "DEBUG REX 21 " << std::endl << std::flush;
-
-
 					// Store any transformation Jacobians contribution
 					store_WORK_JacobianFromBackWorld(replicaIx);			
 
-std::cout << "DEBUG REX 22 " << std::endl << std::flush;
-
-
 					// Store Fixman if required
 					storeReplicaFixmanFromBackWorld(replicaIx);
-
-std::cout << "DEBUG REX 23 " << std::endl << std::flush;
-
 
 					if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 

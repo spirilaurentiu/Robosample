@@ -3259,7 +3259,14 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	}
 
 	// Initialize velocities from Maxwell-Boltzmann distribution
+	/* if(this->integratorName == IntegratorName::EMPTY){
+		setVelocitiesToZero(someState);
+	}else{
+		initializeVelocities(someState);
+	} */
 	initializeVelocities(someState);
+
+	
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergy(someState);

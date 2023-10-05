@@ -538,7 +538,7 @@ int main(int argc, char **argv)
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
-	if((runType == "REX") || (runType == "RENS")){
+	if((runType[0] == 'R') || (runType[1] == 'E')){
 
 		SetupReader rexReader;
 
