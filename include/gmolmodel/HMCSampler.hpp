@@ -247,6 +247,7 @@ public:
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
 	void setVelocitiesToZero(SimTK::State& someState);
+	virtual void initializeVelocitiesToZero(SimTK::State& someState);
 	virtual void initializeVelocities(SimTK::State& someState);
 	void initializeNMAVelocities(SimTK::State& someState);
 
@@ -318,17 +319,18 @@ public:
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds
 	 **/
-	void setQToScaleBendStretch(SimTK::State& someState,
+	SimTK::Real setQToScaleBendStretch(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 
-	void setQToShiftBendStretchStdev(SimTK::State& someState,
+	SimTK::Real setQToShiftBendStretchStdev(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds
 	 **/
-	void setQToScaleBendStretchStdev(SimTK::State& someState,
+	SimTK::Real setQToScaleBendStretchStdev(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
+
 	void setQToScaleBendStretchStdev_Old(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 

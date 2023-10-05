@@ -929,7 +929,6 @@ SimTK::Real World::getWorkOrHeat(void)
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
-				//std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
 		}
 		
 	}
@@ -958,7 +957,6 @@ SimTK::Real World::getWork(void)
 		// Get the Q modifying samplers Jacobians
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
-				//std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
 		}
 		
 	}

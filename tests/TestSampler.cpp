@@ -29,7 +29,7 @@ public:
 
     ~DerivedSampler(){}
     bool proposeEquilibrium(SimTK::State& someState) { return false; }
-    void setQToScaleBendStretchStdev(SimTK::State& someState, std::vector<SimTK::Real>& scaleFactors) { }
+    SimTK::Real setQToScaleBendStretchStdev(SimTK::State& someState, std::vector<SimTK::Real>& scaleFactors) { }
     void update(SimTK::State& someState){}
 };
 

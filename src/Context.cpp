@@ -2476,8 +2476,6 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 // replica_i and replica_j are variable
 bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
-	std::cout << "attemptREXSwap\n" << std::endl; 
-
 	bool returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
@@ -2578,8 +2576,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real Work_X = lH_Xtau - eC_X0 - replicas[replica_X].get_WORK_Jacobian();
-	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - replicas[replica_Y].get_WORK_Jacobian();
+	SimTK::Real Work_X = lH_Xtau - eC_X0; //- replicas[replica_X].get_WORK_Jacobian();
+	SimTK::Real Work_Y = lC_Ytau - eH_Y0; //- replicas[replica_Y].get_WORK_Jacobian();
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// ----------------------------------------------------------------
@@ -3200,7 +3198,8 @@ void Context::store_WORK_JacobianFromBackWorld(int replicaIx)
     thermodynamicStates[thermoIx].getWorldIndexes().back();
 
     // Set this replica's WORK Jacobians potential
-    SimTK::Real jac = pHMC((worlds[backWorldIx].samplers[0]))->getDistortJacobianDetLog();
+	
+    SimTK::Real jac = (worlds[backWorldIx].updSampler(0))->getDistortJacobianDetLog();
 	replicas[replicaIx].set_WORK_Jacobian(jac);
 }
 
