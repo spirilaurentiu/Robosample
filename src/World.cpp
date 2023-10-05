@@ -168,7 +168,7 @@ World::World(int worldIndex,
 	tracker = std::make_unique<ContactTrackerSubsystem>(*compoundSystem);
 	contactForces = std::make_unique<CompliantContactSubsystem>(*compoundSystem, *tracker);
 	contactForces->setTrackDissipatedEnergy(true);
-	contactForces->setTransitionVelocity(1e-2);
+	contactForces->setTransitionVelocity(1e-3);
     	//clique1 = ContactSurface::createNewContactClique();
 	
 
@@ -603,17 +603,15 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 //=============================================================================
 
 
+
 /** Add contact surfaces to bodies **/
 const SimTK::State& World::addContacts(int prmtopIx)
 {
+
 	if(prmtopIx >= 0){
 		std::cout <<
 			"Adding contacts with membrane to atom with prmtop index " <<
 		 prmtopIx << "\n" ;
-
-		ContactCliqueId contactsClique = ContactSurface::createNewContactClique();
-		ContactCliqueId contactsClique2 = ContactSurface::createNewContactClique();
-
 
 		const Real stiffness = 0.0; // stiffness in pascals
 		const Real dissipation = 0.0;    // to turn off dissipation
@@ -625,23 +623,28 @@ const SimTK::State& World::addContacts(int prmtopIx)
 		mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(
 			SimTK::Compound::AtomIndex(prmtopIx), *forceField);
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 1));
+		//ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 1));
+		
+		PolygonalMesh sphereMesh;
+    	sphereMesh = PolygonalMesh::createSphereMesh(0.3,1);
+		
+		ContactGeometry::TriangleMesh sphere(sphereMesh);
+		if (visual == true) 
+		{
+		DecorativeMesh showSphere(sphere.createPolygonalMesh());
+		mobod.updBody().addDecoration(Transform(), 
+			showSphere.setColor(Cyan).setOpacity(0.2));
+		mobod.updBody().addDecoration(Transform(), 
+			showSphere.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
+		}
 
-		DecorativeMesh deco(mesh.createPolygonalMesh());
-		mobod.updBody().addDecoration(
-			Transform(), deco.setColor(Red).setOpacity(.6));
-		int tempName = mobod.updBody().addContactSurface(
-			Transform(), ContactSurface(
-				mesh, ContactMaterial(
-					stiffness, dissipation,
-					staticFriction, dynamicFriction, viscousFriction),
-				 0.01).joinClique(contactsClique).joinClique(contactsClique2)
-				 );
-	printf("contact set on atom %d, in clique with id ", prmtopIx);
-	std::cout << contactsClique << std::endl<<std::endl;
+		mobod.updBody().addContactSurface(Transform(), 
+			ContactSurface(sphere,
+				ContactMaterial(stiffness,dissipation,
+								staticFriction,dynamicFriction,
+								viscousFriction),
+				.5));
 	}
-
-	
 
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
 	return returnState;
@@ -689,17 +692,7 @@ void World::addMembrane(
 	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
 {
 
-	float distanceValue = 0.25;
-	ContactCliqueId membraneClique = ContactSurface::createNewContactClique();
-
-
-	// Generate a ContactTrackerSubsystem
-	//tracker = std::make_unique<ContactTrackerSubsystem>(*compoundSystem);
-
-
-	// Initialize Cliques, 1st for membrane, 2nd for atoms
-	ContactCliqueId clique1 = ContactSurface::createNewContactClique();
-    ContactCliqueId clique2 = ContactSurface::createNewContactClique();
+	float distanceValue = 0.65;
 
 	SimTK::Real stiffness = 10000.0;
 	//SimTK::Real stiffness = 0.0;
@@ -709,133 +702,33 @@ void World::addMembrane(
 	SimTK::Real viscousFriction = 0.0;
 	SimTK::Real membraneThickness = 0.1;
 
-
-	//PolygonalMesh mesh1 = PolygonalMesh::createBrickMesh(
-	//	Vec3(xWidth, yWidth, zWidth), resolution);
-	//ContactGeometry::TriangleMesh contactGeometry1(mesh1);
-
-	 matter->Ground().updBody().addContactSurface(
+	matter->Ground().updBody().addContactSurface(
 		//Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(2,2,2)),
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(-distanceValue, 0,0)),
+		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-distanceValue, 0,0)),
 		//Transform(),
 		ContactSurface(
-		ContactGeometry::Brick(Vec3(xWidth, yWidth, zWidth)),
+		//ContactGeometry::Brick(Vec3(xWidth, yWidth, zWidth)),
+		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction),
-		membraneThickness).joinClique(membraneClique)
+			staticFriction, dynamicFriction, viscousFriction))
 	);
 	matter->Ground().updBody().addContactSurface(
 		//Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(2,2,2)),
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(distanceValue,0,0)),
+		Transform(Vec3(distanceValue,0,0)),
 		//Transform(),
 		ContactSurface(
-		ContactGeometry::Brick(Vec3(xWidth, yWidth, zWidth)),
+		//ContactGeometry::Brick(Vec3(xWidth, yWidth, zWidth)),
+		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction),
-		membraneThickness).joinClique(membraneClique)
-	); 
-	
-	std::cout << "\nimplicit membrane created, in clique with id " << membraneClique << std::endl;
+			staticFriction, dynamicFriction, viscousFriction))
+	);
 
-	// Test
-	// Generate spherical mesh
-	/* PolygonalMesh sphereMesh = PolygonalMesh::createSphereMesh(0.1);
-	ContactGeometry::TriangleMesh contactGeometry_1(sphereMesh);
-	SimTK::MobilizedBody mobod = matter->updMobilizedBody(MobilizedBodyIndex(1));
-	SimTK::Body bod = mobod.updBody(); */
-	/* bod.addContactSurface(SimTK::Transform(),
-			ContactSurface(
-			contactGeometry_1,	
-			ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction), 1.0));
-	mobod.addBodyDecoration(DecorativeSphere(0.1).setColor(Red)); */
-	//SimTK::MobilizedBody mobod = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(1));
-	//mobod.addBodyDecoration(Transform(), DecorativeSphere(0.1));
-
-	// Add sphere contact geometry, of radius equal to
-	// the atom's VdW radius
-	// Iterate through atoms and get their MobilizedBodyIndeces
-	/* 
-	// for (const auto& topology : (*topologies)){
-	// 	//const auto& topology = (*topologies)[0];
-	// 	for (auto& atom : topology.bAtomList) {
-
-	// 		// Get Compound atom index
-	// 		auto compoundAtomIndex = atom.getCompoundAtomIndex();
-	// 		// Get DuMM atom index
-	// 		const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
-			
-	// 		// Get radius and element of said atom
-	// 		const int atomType = forceField->getAtomElement(dAIx);
-	// 		Real vdwRadius = forceField->getAtomRadius(dAIx);
-	// 		//vdwRadius /= 10;
-
-	// 		// Generate spherical mesh
-	// 		PolygonalMesh sphereMesh = PolygonalMesh::createSphereMesh(vdwRadius);
-	// 		ContactGeometry::TriangleMesh contactGeometry(sphereMesh);
-
-	// 		// Get Mobilized Body index
-	// 		const MobilizedBodyIndex mobilizedBodyIndex = forceField->getAtomBody(dAIx);
-
-	// 		SimTK::MobilizedBody mobod = matter->updMobilizedBody(mobilizedBodyIndex);
-	// 		SimTK::Body bod = mobod.updBody();
-			
-	// 		bod.addContactSurface(SimTK::Transform(),
-	// 		ContactSurface(
-	// 		contactGeometry,	
-	// 		ContactMaterial(stiffness, dissipation,
-	// 		staticFriction, dynamicFriction, viscousFriction), 1.0));
-		
-
-	// 		/* std::cout << "DummAtomIx: " << dAIx 
-	// 		<< " Atomic Number: " << atomType
-	// 		<< " vdwRadius: " << vdwRadius << std::endl; */
-			
-	// 		//Isn't visible, FIX
-
-	// 		if (visual == true) {
-	// 		std::cout << "added decorator for " << mobilizedBodyIndex << std::endl;		
-	// 		// Assign the representation to the decorator
-	// 		mobod.addBodyDecoration(DecorativeSphere(vdwRadius).setColor(Red));
-	// 		//bod.addDecoration(DecorativeSphere(vdwRadius).setColor(Red));
-			
-
-
-
-	// 		/* bod.addDecoration(
-	// 		Transform(), contactGeometryDecoFrame
-	// 		);
-
-	// 		//DecorativeMesh contactGeometryDeco(mesh);
-	// 		DecorativeMesh contactGeometryDeco(sphereMesh);
-	// 		bod.addDecoration(
-	// 			Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
-	// 		);*/
-	// 		std::cout << "Object " << mobilizedBodyIndex << " has " <<
-	// 		bod.getNumDecorations() << " pieces of decoration." << std::endl;
-
-	// 		}
-	// 	}
-	// } */
-	
-	//Real vdwRadius = 1;
-	// Generate spherical mesh
-	//PolygonalMesh sphereMesh = PolygonalMesh::createSphereMesh(vdwRadius);
-	//ContactGeometry::TriangleMesh contactGeometrySphere(sphereMesh);
-	
-	if (1){
-/* 		DecorativeFrame contactGeometryDecoFrame;
-		matter->Ground().updBody().addDecoration(
-			Transform(), contactGeometryDecoFrame
-		);
- */
-		//DecorativeMesh contactGeometryDeco(mesh);
-	/* 	DecorativeMesh contactGeometryDeco(contactGeometrySphere.createPolygonalMesh());
-		matter->Ground().updBody().addDecoration(
-			Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
-		); */
-	}
-
+	/* OLDcontact.addBody(OLDcontactSet, matter->Ground(),
+							ContactGeometry::Brick(Vec3(xWidth, yWidth, zWidth)), 
+							Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(-distanceValue, 0,0)));
+	OLDcontact.addBody(OLDcontactSet, matter->Ground(),
+							ContactGeometry::Brick(Vec3(xWidth, yWidth, zWidth)), 
+							Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(distanceValue, 0,0))); */
 
 	if (visual == true) {
 		DecorativeFrame contactGeometryDecoFrame;
@@ -843,23 +736,14 @@ void World::addMembrane(
 			Transform(), contactGeometryDecoFrame
 		);
 
-		//DecorativeMesh contactGeometryDeco(mesh);
 		matter->Ground().updBody().addDecoration(
 			Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(-distanceValue, 0, 0)),
-        DecorativeBrick(Vec3(xWidth, yWidth, zWidth)).setColor(Gray).setOpacity(0.5));
+        DecorativeBrick(Vec3(xWidth, yWidth, zWidth)).setColor(Gray).setOpacity(0.7));
 		
 		matter->Ground().updBody().addDecoration(
 			Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(distanceValue, 0, 0)),
-        DecorativeBrick(Vec3(xWidth, yWidth, zWidth)).setColor(Gray).setOpacity(0.5));
-
-		/* DecorativeMesh contactGeometryDeco1(contactGeometry1.createPolygonalMesh());
-		matter->Ground().updBody().addDecoration(
-			Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(-0.35, 0, 0)), contactGeometryDeco1.setColor(Cyan).setOpacity(0.5)
-		);
-		DecorativeMesh contactGeometryDeco2(contactGeometry2.createPolygonalMesh());
-		matter->Ground().updBody().addDecoration(
-			Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0.35, 0, 0)), contactGeometryDeco2.setColor(Cyan).setOpacity(0.5)
-		); */
+        DecorativeBrick(Vec3(xWidth, yWidth, zWidth)).setColor(Gray).setOpacity(0.7));
+		
 	}
 
 }

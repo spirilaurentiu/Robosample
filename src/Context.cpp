@@ -4788,13 +4788,7 @@ void Context::getContactDebugInfo(std::size_t whichWorld)
 	<< snpsht.hasContact(ContactSurfaceIndex(0), ContactSurfaceIndex(2)) << std::endl;
 
 
-	std::cout << "\nCONTACT INFO:";
-
-	for (int surfaceIx; surfaceIx<ctsNofSurfaces; surfaceIx++) {
-		const ContactSurface& cs = cts.getContactSurface(ContactSurfaceIndex(surfaceIx));
-		std::cout << "Surface number: " << surfaceIx 
-		<<" is in clique: " << cs.getCliques() << std::endl;
-	}
+	std::cout << "\nCONTACT INFO:\n";
 
 	for (int forceIx; forceIx<numForces; forceIx++) {
 		const ContactForce& ctForce = updWorld(whichWorld)->contactForces->getContactForce(
