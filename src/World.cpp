@@ -925,6 +925,10 @@ SimTK::Real World::getWorkOrHeat(void)
 		retValue += 
 			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
 
+		// Get Fixman potential difference
+		retValue +=
+			( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
+
 		// Get the Q modifying samplers Jacobians
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
@@ -950,11 +954,15 @@ SimTK::Real World::getWork(void)
 
 		if(sampler->getDistortOpt() < 0){
 
-		// Get the potential energy difference
-		retValue += 
-			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
+			// Get the potential energy difference
+			retValue += 
+				( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
 
-		// Get the Q modifying samplers Jacobians
+			// Get Fixman potential difference
+			retValue +=
+				( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
+
+			// Get the Q modifying samplers Jacobians
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
 		}
