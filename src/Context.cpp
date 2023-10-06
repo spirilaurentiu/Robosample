@@ -4782,12 +4782,6 @@ void Context::getContactDebugInfo(std::size_t whichWorld)
 		updWorld(whichWorld)->contactForces->getContactTrackerSubsystem();
 	int ctsNofSurfaces = cts.getNumSurfaces();
 
-	// are any of the surfaces in contact?
-	SimTK::ContactSnapshot snpsht = cts.getActiveContacts(currentAdvancedState);
-	std::cout << "Surfaces 0 and 2 have contacts: "
-	<< snpsht.hasContact(ContactSurfaceIndex(0), ContactSurfaceIndex(2)) << std::endl;
-
-
 	std::cout << "\nCONTACT INFO:\n";
 
 	for (int forceIx; forceIx<numForces; forceIx++) {
@@ -4805,25 +4799,6 @@ void Context::getContactDebugInfo(std::size_t whichWorld)
 	<< "\n#mobods = " << nofMobods
 	<< "\n#Surfaces = " << ctsNofSurfaces
 	<< std::endl << std::endl;
-
-	// Show ContactSurfaceIndex for each contact surface
-	for (MobilizedBodyIndex mbx(0); mbx < updWorld(whichWorld)->matter->getNumBodies(); ++mbx) {
-	const MobilizedBody& mobod = updWorld(whichWorld)->matter->getMobilizedBody(mbx);
-	const int nsurfs = mobod.getBody().getNumContactSurfaces();
-	printf("mobod %d has %d contact surfaces\n", (int)mbx, nsurfs);
-	for (int i=0; i<nsurfs; ++i) {
-		const ContactSurface& cs = mobod.getBody().getContactSurface(i);
-		printf("%2d: index %d cliqueIndices: ", i, 
-				(int)cts.getContactSurfaceIndex(mbx,i)); 
-		// Taken from cliquesIntersect definition
-		const Array_<ContactCliqueId,short>& a = cs.getCliques();
-		Array_<ContactCliqueId,short>::const_iterator ap = a.begin();
-		for(auto v : a){std::cout << v << " ";}
-		std::cout<<std::endl;
-		}
-    }
-
-
 
 }
 

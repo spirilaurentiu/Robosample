@@ -304,6 +304,7 @@ int main(int argc, char **argv)
 		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
 			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
 			context.updWorld(worldIx)->addContacts(0);
+			context.updWorld(worldIx)->addContacts(3);
 		}
 	}
 
