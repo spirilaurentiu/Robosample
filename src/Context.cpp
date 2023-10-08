@@ -5777,20 +5777,44 @@ void Context::RunOneRound(void)
 		}
 
 		// Non-equilibrium parameters
-		SimTK::Real qScaleFactor = 0.25;
-		std::vector<std::string> how = { "deterministic", "Bernoulli"};
-		bool randSignOpt = true;
-		qScaleFactor = distributeScalingFactor(how, qScaleFactor, randSignOpt);
+		if( worlds[worldIx].getSampler(0)->getDistortOpt() < 0){
 
+			SimTK::Real qScaleFactor = 4.0;
+			std::vector<std::string> how = { "deterministic", "Bernoulli"};
+			
+			bool randSignOpt = false;
+			qScaleFactor = distributeScalingFactor(how, qScaleFactor, randSignOpt);
 
-		if(qScaleFactor != 1){
-			setWorldDistortParameters(worldIx, qScaleFactor);
+			if(qScaleFactor != 1){
+				setWorldDistortParameters(worldIx, qScaleFactor);
+			}
+
 		}
+
+
 		// Run front world
 		RunFrontWorldAndRotate(worldIndexes);
 
 	} // END iteration through worlds
 
+}
+
+// Print to log and write pdbs
+void Context::RunLog(int round)
+{
+	// Write energy and geometric features to logfile
+	if(printFreq || pdbRestartFreq){
+		if( !(round % getPrintFreq()) ){
+			PrintToLog(worldIndexes.front(), 0);
+			PrintToLog(worldIndexes.back(), 0);
+		}
+		// Write pdb
+		if( pdbRestartFreq != 0){
+			if((round % pdbRestartFreq) == 0){
+				writePdbs(round);
+			}
+		}
+	}
 }
 
 // Normal run
@@ -6570,19 +6594,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			RunOneRound();
 
-			// Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(round % getPrintFreq()) ){
-					PrintToLog(worldIndexes.front(), 0);
-					PrintToLog(worldIndexes.back(), 0);
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((round % pdbRestartFreq) == 0){
-						writePdbs(round);
-					}
-				}
-			}
+			RunLog(round);
 
 			this->nofRounds++;
 
@@ -6600,19 +6612,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			RunOneRound();
 
-			if(printFreq || pdbRestartFreq){
-				// Write energy and geometric features to logfile
-				if( !(round % getPrintFreq()) ){
-					PrintToLog(worldIndexes.front(), 0);
-					PrintToLog(worldIndexes.back(), 0);
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((round % pdbRestartFreq) == 0){
-						writePdbs(round);
-					}
-				}
-			}
+			RunLog(round);
 
 			this->nofRounds++;
 		}

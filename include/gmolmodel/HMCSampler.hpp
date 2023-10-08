@@ -282,8 +282,10 @@ public:
 		SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
-	SimTK::Real MHAcceptProbability(SimTK::Real argEtot_proposed,
-		SimTK::Real argEtot_n) const;
+	SimTK::Real MHAcceptProbability(
+		SimTK::Real argEtot_proposed,
+		SimTK::Real argEtot_n,
+		SimTK::Real lnJ) const;
 
 	/** Accetion rejection step **/
 	virtual bool accRejStep(SimTK::State& someState);

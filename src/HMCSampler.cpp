@@ -2976,14 +2976,20 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 	// Although the method seems stupid for now, it has generality
 	// and allows insertion of new code
 	SimTK::Real logJacScale = 0.0; // log space
-	for(unsigned int k = startFromBody; k < scaleFactors.size(); k++){
+	/* for(unsigned int k = startFromBody; k < scaleFactors.size(); k++){
 
 			// Accumulate result
 			if(scaleFactors[k] != 0){
 					logJacScale -= std::log(std::abs(scaleFactors[k])); // log space
 			}
+
 			//std::cout << "sf " << k << " " << scaleFactors[k] << std::endl; 
-	}
+	} */
+
+	int internNdofs = this->ndofs - 
+		matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1)).getNumU(someState);
+
+	logJacScale =  internNdofs * std::log( std::abs( this->QScaleFactor ) ); 
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
 	SimTK::Real logJacBAT_tau = 0.0; // log space
@@ -3014,10 +3020,10 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 	// Final result
 	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
-	//SimTK::Real logBendStretchJac = logJacScale;
+	SimTK::Real logBendStretchJac = logJacScale;
 	//SimTK::Real logBendStretchJac = -1.0 * logJacScale;
 	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);
-	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
+	//SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
 	//SimTK::Real logBendStretchJac = logJacBAT_0 - logJacScale + (-1.0 * logJacBAT_tau);
 
 	std::cout << "logJacBAT " << logJacBAT_0
@@ -3025,6 +3031,12 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 			<< " logJacBATInv " << logJacBAT_tau
 			<< " logBendStretchJac " << logBendStretchJac
             << std::endl;
+
+
+	//logBendStretchJac = std::log(this->QScaleFactor); 
+	//std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
+
+
 
 	return logBendStretchJac;
 
@@ -3611,18 +3623,28 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
  * because we don't have the partition function
 */
 SimTK::Real HMCSampler::MHAcceptProbability(
-	SimTK::Real argEtot_proposed, SimTK::Real argEtot_n) const 
+	SimTK::Real argEtot_proposed,
+	SimTK::Real argEtot_n,
+	SimTK::Real lnJ) const 
 {
-	if(argEtot_n < argEtot_proposed) {
+
+	SimTK::Real dE = argEtot_n - argEtot_proposed;
+	SimTK::Real beta_dE = this->beta * dE;
+	SimTK::Real beta_dE_mJ = beta_dE - lnJ;
+
+	/* std::cout << "\tdiff=" << argEtot_n - argEtot_proposed 
+		<< ", argEtot_n=" << argEtot_n 
+		<< ", argEtot_proposed=" << argEtot_proposed
+		<< ", beta=" << beta << std::endl; */
+
+	if(beta_dE_mJ < 0) {
 		return 1;
 	} else {
-		/* std::cout << "\tdiff=" << argEtot_n - argEtot_proposed 
-			<< ", argEtot_n=" << argEtot_n 
-			<< ", argEtot_proposed=" << argEtot_proposed
-			<< ", beta=" << beta << std::endl; */
-		return exp(-(argEtot_n - argEtot_proposed) * this->beta);
+		return exp(-1.0 * beta_dE_mJ );
 	}
+
 }
+
 
 /** Checks if the proposal is valid **/
 bool HMCSampler::validateProposal() const {
@@ -3665,24 +3687,30 @@ bool HMCSampler::acceptSample() {
 		const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
 		SimTK::Real prob = 0.0;
 		if(DistortOpt == 0){
-			prob = MHAcceptProbability(etot_o, etot_n);
+			prob = MHAcceptProbability(etot_o, etot_n,
+										0);
 		}else if(DistortOpt > 0){
 
 			if(useFixman){
 				prob = 
 				MHAcceptProbability(pe_o + ke_prop_nma6 + fix_o,
-									pe_n + ke_n_nma6 + fix_n);
+									pe_n + ke_n_nma6 + fix_n,
+									0);
 
 			}else{
 				prob =
 				MHAcceptProbability(pe_o + ke_prop_nma6,
-									pe_n + ke_n_nma6);
+									pe_n + ke_n_nma6,
+									0);
 
 			}
 		}else if(DistortOpt < 0){
 			prob =
-			MHAcceptProbability(pe_o + fix_o,
-								pe_n + fix_n - getDistortJacobianDetLog());
+			MHAcceptProbability(  pe_o + fix_o
+								, pe_n + fix_n
+								, getDistortJacobianDetLog()
+								//, std::log(std::abs(this->QScaleFactor))
+								);
 		}
 
 		this->acc = (rand_no < prob);

@@ -436,6 +436,7 @@ public:
 	int RunReplicaAllWorlds(int whichReplica, int howManyRounds);
 
 	// Print to log and write pdbs
+	void RunLog(int roundi);
 	void REXLog(int mixi, int replicaIx);
 
 	void RunREX();
