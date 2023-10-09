@@ -2989,7 +2989,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 	int internNdofs = this->ndofs - 
 		matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1)).getNumU(someState);
 
-	logJacScale =  internNdofs * std::log( std::abs( this->QScaleFactor ) ); 
+	logJacScale =  internNdofs * std::log( ( this->QScaleFactor ) );
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
 	SimTK::Real logJacBAT_tau = 0.0; // log space
@@ -3020,11 +3020,12 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 	// Final result
 	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
-	SimTK::Real logBendStretchJac = logJacScale;
+	//SimTK::Real logBendStretchJac = logJacScale;
 	//SimTK::Real logBendStretchJac = -1.0 * logJacScale;
 	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);
-	//SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
 	//SimTK::Real logBendStretchJac = logJacBAT_0 - logJacScale + (-1.0 * logJacBAT_tau);
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
+	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
 
 	std::cout << "logJacBAT " << logJacBAT_0
 			<< " logJacScale " << logJacScale
@@ -3034,9 +3035,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 
 	//logBendStretchJac = std::log(this->QScaleFactor); 
-	//std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
-
-
+	std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
 
 	return logBendStretchJac;
 
