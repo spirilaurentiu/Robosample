@@ -242,16 +242,17 @@ public:
 
 	// Print Simbody related information
 	void PrintSimbodyMobods(void);
-	void PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSampler);
 	void PrintGeometry(SetupReader&, std::size_t whichWorld);
+	void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
 
 	void PrintGeometryToLog(std::size_t whichWorld, std::size_t whichSampler);
 	void PrintDistancesToLog(std::size_t whichWorld, std::size_t whichSampler);
 	void PrintAnglesToLog(std::size_t whichWorld, std::size_t whichSampler);
 	void PrintDihedralsToLog(std::size_t whichWorld, std::size_t whichSampler);
 	void PrintDihedralsQsToLog(std::size_t whichWorld, std::size_t whichSampler);
-	void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
-	void PrintToLog(std::size_t whichWorld, std::size_t whichSampler);
+	void PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSampler);
+	void PrintToLog(std::size_t whichReplica,
+		std::size_t whichWorld, std::size_t whichSampler);
 
 	// Write intial/final pdb for reference
 	void writeInitialPdb(void);

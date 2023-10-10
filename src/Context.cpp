@@ -1904,7 +1904,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			PrintAnglesToLog(worldIndexes.back());
 			PrintDihedralsQsToLog(worldIndexes.back());
 			fprintf(logFile, "\n"); */
-			PrintToLog(worldIndexes.back(), 0);
+			PrintToLog(0, worldIndexes.back(), 0);
 		}
 
 		// Write pdb
@@ -3750,7 +3750,11 @@ void Context::REXLog(int mixi, int replicaIx)
 	// Write energy and geometric features to logfile
 	if(printFreq || pdbRestartFreq){
 		if( !(mixi % printFreq) ){
-			PrintToLog(worldIndexes.front(), 0);
+
+			for(auto wIx: worldIndexes){
+				PrintToLog(replicaIx, wIx, 0);
+			}
+
 		}
 		// Write pdb
 		if( pdbRestartFreq != 0){
@@ -3792,9 +3796,12 @@ void Context::RunREX(void)
 			storeReplicaEnergyFromFrontWorldFull(replicaIx);
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
-			PrintToLog(worldIndexes.front(), 0);
+			/* PrintToLog(replicaIx, worldIndexes.front(), 0);
+			writePdbs(0,	replica2ThermoIxs[replicaIx]); */
 
-			writePdbs(0,	replica2ThermoIxs[replicaIx]);
+			// Write energy and geometric features to logfile
+			REXLog(0, replicaIx);
+
 	} // ======================================================================
 
 	PrintNofAcceptedSwapsMatrix();
@@ -4797,9 +4804,12 @@ void Context::RunRENS(void)
 			storeReplicaEnergyFromFrontWorldFull(replicaIx);
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
-			PrintToLog(worldIndexes.front(), 0);
+			/* PrintToLog(replicaIx, worldIndexes.front(), 0);
+			writePdbs(0,	replica2ThermoIxs[replicaIx]); */
 
-			writePdbs(0,	replica2ThermoIxs[replicaIx]);
+			// Write energy and geometric features to logfile
+			REXLog(0, replicaIx);
+
 	} // ======================================================================
 
 	PrintNofAcceptedSwapsMatrix();
@@ -5805,8 +5815,11 @@ void Context::RunLog(int round)
 	// Write energy and geometric features to logfile
 	if(printFreq || pdbRestartFreq){
 		if( !(round % getPrintFreq()) ){
-			PrintToLog(worldIndexes.front(), 0);
-			PrintToLog(worldIndexes.back(), 0);
+
+			for(auto wIx: worldIndexes){
+				PrintToLog(0, wIx, 0);
+			}
+		
 		}
 		// Write pdb
 		if( pdbRestartFreq != 0){
@@ -6956,8 +6969,14 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 
 }
 
-void Context::PrintToLog(std::size_t whichWorld, std::size_t whichSampler)
+void Context::PrintToLog(std::size_t whichReplica,
+	std::size_t whichWorld, std::size_t whichSampler)
 {
+	fprintf(logFile, "%d "
+		, whichReplica
+	);
+	fflush(logFile);	
+
 	PrintSamplerDataToLog(whichWorld, whichSampler);
 
 	PrintGeometryToLog(whichWorld, whichSampler);
