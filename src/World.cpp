@@ -929,11 +929,11 @@ SimTK::Real World::getWorkOrHeat(void)
 		retValue +=
 			( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
 
-		// Get the Q modifying samplers Jacobians
+		/* // Get the Q modifying samplers Jacobians
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
-		}
+		} */
 		
 	}
 	
@@ -962,9 +962,9 @@ SimTK::Real World::getWork(void)
 			retValue +=
 				( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
 
-			// Get the Q modifying samplers Jacobians
+			/* // Get the Jacobians
 			retValue -= 
-				sampler->getDistortJacobianDetLog();
+				sampler->getDistortJacobianDetLog(); */
 		}
 		
 	}

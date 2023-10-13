@@ -2569,15 +2569,16 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// LOGP ENERGY NON-EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real ETerm_nonequil = lH_Xtau - lC_Xtau;
-	ETerm_nonequil            += lC_Ytau - lH_Ytau;
+	SimTK::Real
+	ETerm_nonequil  = lH_Xtau - lC_Xtau;
+	ETerm_nonequil += lC_Ytau - lH_Ytau;
 	ETerm_nonequil = -1.0 * ETerm_nonequil;
 
 	// ----------------------------------------------------------------
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real Work_X = lH_Xtau - eC_X0; //- replicas[replica_X].get_WORK_Jacobian();
-	SimTK::Real Work_Y = lC_Ytau - eH_Y0; //- replicas[replica_Y].get_WORK_Jacobian();
+	SimTK::Real Work_X = lH_Xtau - eC_X0 - replicas[replica_X].get_WORK_Jacobian();
+	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - replicas[replica_Y].get_WORK_Jacobian();
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// ----------------------------------------------------------------
