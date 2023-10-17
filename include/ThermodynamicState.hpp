@@ -6,19 +6,19 @@
 
 constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 
-class ThermodynamicState {
-public:
+class ThermodynamicState{
+  public:
+	ThermodynamicState() = default;
 	ThermodynamicState(int index);
 
-	ThermodynamicState(int index,
-        SimTK::Real T,
-	    std::vector<int>& argWorldIndexes,
-	    std::vector<SimTK::Real>& argTimesteps,
-	    std::vector<int>& argMdsteps
+	ThermodynamicState(int index, const SimTK::Real& T,
+		const std::vector<int>& argWorldIndexes,
+		const std::vector<SimTK::Real>& argTimesteps,
+		const std::vector<int>& argMdsteps
 	);
 
-	int getIndex() const;
-	void setIndex(int someIndex);
+	const int getIndex(){return myIndex;}
+	void setIndex(const int& someIndex){myIndex = someIndex;}
 
 	void setTemperature(SimTK::Real T);
 	SimTK::Real getTemperature() const;
@@ -36,7 +36,9 @@ public:
 	// Next functions set Q, U, tau perturbing functions options
 	// for samplers
 	void setDistortOptions(const std::vector<int>& rexDistortOptionsArg);
-	const std::vector<int>& getDistortOptions() const;
+	std::vector<int>& getDistortOptions();
+	void setDistortArgs(const std::vector<std::string>& rexDistortOptionsArg);
+	std::vector<std::string>& getDistortArgs();
 	void setFlowOptions(const std::vector<int>& rexFlowOptionsArg);
 	void setWorkOptions(const std::vector<int>& rexWorkOptionsArg);
 
@@ -45,13 +47,14 @@ public:
 	const std::vector<std::string>& getIntegrators() const;
 
 	// If any of the distort, flow or work options are active
-	int hasNonequilibriumMoves() const;
-	void setNonequilibrium(int nArg);
+	const int hasNonequilibriumMoves(){
+		return this->nonequilibrium;}
+	void setNonequilibrium(int nArg){this->nonequilibrium = nArg;}
 
 	// Print everything about thermostate
-	void Print() const;
+	void Print();
 
-private:
+  private:
 
 	// Index
 	int myIndex = 0;
@@ -70,7 +73,8 @@ private:
 
 	std::vector<std::string> rexSamplers;
 	std::vector<int> rexDistortOptions;
+	std::vector<std::string> rexDistortArgs;
 	std::vector<int> rexFlowOptions;
 	std::vector<int> rexWorkOptions;
-	std::vector<std::string> rexIntegrators;
+	std::vector<std::string> rexIntegrators;	
 };
