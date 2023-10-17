@@ -350,19 +350,19 @@ bool TestCartesian() {
 // return 0 for success
 // return 1 for fail
 int main() {
-    // if (!TestSlider01()) {
-    //     return 1;
-    // }
-
-    // TOOO what about skewness? KolmogorovSmirnov? energy? dcd?
-
-    if (!TestSlider01BS02()) {
+    if (!TestSlider01()) {
         return 1;
     }
 
-    // if (!TestCartesian()) {
+    // TOOO what about skewness? KolmogorovSmirnov? energy? dcd?
+
+    // if (!TestSlider01BS02()) {
     //     return 1;
     // }
+
+    if (!TestCartesian()) {
+        return 1;
+    }
 
     return 0;
 }

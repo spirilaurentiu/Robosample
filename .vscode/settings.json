@@ -22,7 +22,6 @@
         "cfenv": "cpp",
         "chrono": "cpp",
         "cinttypes": "cpp",
-        "codecvt": "cpp",
         "compare": "cpp",
         "complex": "cpp",
         "concepts": "cpp",
@@ -67,6 +66,7 @@
         "ostream": "cpp",
         "scoped_allocator": "cpp",
         "semaphore": "cpp",
+        "shared_mutex": "cpp",
         "sstream": "cpp",
         "stdexcept": "cpp",
         "stop_token": "cpp",
@@ -75,14 +75,7 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "valarray": "cpp",
-        "variant": "cpp",
-        "__nullptr": "cpp",
-        "__split_buffer": "cpp",
-        "cassert": "cpp",
-        "hash_map": "cpp",
-        "cerrno": "cpp",
-        "shared_mutex": "cpp",
-        "cfloat": "cpp",
-        "climits": "cpp"
-    }
+        "variant": "cpp"
+    },
+    "C_Cpp.intelliSenseEngineFallback": "enabled"
 }

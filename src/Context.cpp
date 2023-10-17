@@ -123,6 +123,7 @@ bool Context::initializeFromFile(const std::string &file)
 	setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
 	// Add molecules based on the setup reader
+	// amber -> robo
 	AddMolecules(requestedNofMols, setupReader);
 
 	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
@@ -880,6 +881,10 @@ void Context::AddMolecules(
 			setupReader.get("MOLECULES")[molIx] + std::string("/")
 			+ setupReader.get("INPCRD")[molIx] + ".rst7";
 
+		// make amber reader create multiple molecule
+		// each molecule then generate one topology
+		// amber: vector<molecule info>
+
 		loadTopologyFile( topFN );
 
 		loadCoordinatesFile( crdFN );
@@ -909,6 +914,8 @@ void Context::AddMolecules(
 
 		// Add Biotype indeces and Biotype names representing Biotypes
 		topologies[molIx].bAddBiotypes(&amberReader[molIx]);
+
+		// topologies[molIx].BAT();
 
 		// Build Robosample graph and Compound graph.
 		// It also asigns atom indexes in Compound
@@ -1132,6 +1139,7 @@ void Context::model(
 			(updWorld(worldIx))->adoptTopology(molIx);
 
 			// Calls modelOneCompound from CompoundSystem
+			// amber (robo) -> dumm
 			modelOneEmbeddedTopology(molIx, worldIx,
 				argRootMobilities[(requestedNofMols * worldIx) + molIx]);
 

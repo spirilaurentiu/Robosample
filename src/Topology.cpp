@@ -5,6 +5,234 @@ Implementation of Topology class. **/
 
 using namespace SimTK;
 
+struct BOND {
+	int first = -1,
+		second = -1;
+};
+
+struct ANGLE {
+	int first = -1,
+		second = -1,
+		third = -1;
+};
+
+struct TORSION {
+	int first = -1,
+		second = -1,
+		third = -1,
+		fourth = -1;
+};
+
+struct AmberAtom {
+	SimTK::Real mass = -1.0;
+	int bonds = -1,
+		amberId = -1;
+
+	AmberAtom(const bSpecificAtom& b) {
+		mass = b.mass;
+		bonds = b.getNBonds();
+		amberId = b.number;
+	}
+	AmberAtom(const bSpecificAtom* b) {
+		mass = b->mass;
+		bonds = b->getNBonds();
+		amberId = b->number;
+	}
+	bool operator==(const AmberAtom& rhs) {
+		return amberId == rhs.amberId;
+	}
+	bool operator!=(const AmberAtom& rhs) {
+		return !(*this == rhs);
+	}
+};
+
+class InternalCoordinates {
+public:
+	TORSION getRoot(const std::vector<bSpecificAtom>& bAtomList) {
+
+		// get terminal atoms
+		std::vector<AmberAtom> terminalAtoms;
+		terminalAtoms.reserve(bAtomList.size());
+
+		for (int i=0; i < bAtomList.size(); i++) {
+			AmberAtom a(bAtomList[i]);
+			if (isTerminal(a)) {
+				terminalAtoms.push_back(a);
+			}
+		}
+
+		// prioritize by mass and amber id
+		sortByMass(terminalAtoms, true);
+
+		// find root
+		TORSION root;
+		root.first = terminalAtoms[0].amberId;
+		root.second = bAtomList[root.first].neighbors[0]->number;
+
+		if (bAtomList[root.second].neighbors.size() == 1) {
+			root.third = bAtomList[root.second].neighbors[0]->number;
+		} else {
+			std::vector<AmberAtom> candidates;
+			for (const auto& b : bAtomList[root.second].neighbors) {
+				AmberAtom a(b);
+				if (!isTerminal(a)) {
+					candidates.push_back(a);
+				}
+			}
+			sortByMass(candidates, true);
+			root.third = candidates[0].amberId;
+		}
+
+		// std::cout << root.first << ", " << root.second << ", " << root.third << std::endl;
+
+		return root;
+	}
+
+	void compute(const std::vector<bSpecificAtom>& bAtomList) {
+		const auto root = getRoot(bAtomList);
+
+		selectedAtoms.reserve(bAtomList.size());
+		indexMap = std::vector<int>(bAtomList.size(), -1);
+		
+		selectAtom(root.first);
+		selectAtom(root.second);
+		selectAtom(root.third);
+
+		while (selectedAtoms.size() < bAtomList.size()) {
+			for (int i = 0; i < selectedAtoms.size(); i++) {
+				const auto a1 = selectedAtoms[i];
+
+				a0_list.clear();
+				a0_list.reserve(bAtomList[a1].neighbors.size());
+				for (const auto& b : bAtomList[a1].neighbors) {
+					AmberAtom a0(b);
+					if (!isSelected(a0))
+						a0_list.push_back(a0);
+				}
+				sortByMass(a0_list, false);
+
+				for(const auto& a0 : a0_list) {
+
+					a2_list.clear();
+					a2_list.reserve(bAtomList[a1].neighbors.size() - 1);
+					for (const auto& b : bAtomList[a1].neighbors) {
+						AmberAtom a2(b);
+						if (isSelected(a2) && !isTerminal(a2) && a2 != a0) {
+							a2_list.push_back(a2);
+						}
+					}
+					sortByMass(a2_list, false);
+					if(a2_list.empty()) continue;
+					const auto& a2 = a2_list[0];
+
+					a3_list.clear();
+					a3_list.reserve(bAtomList[a2.amberId].neighbors.size());
+					for (const auto& b : bAtomList[a2.amberId].neighbors) {
+						AmberAtom a3(b);
+						if (isSelected(a3) && a3.amberId != a1) {
+							a3_list.push_back(a3);
+						}
+					}
+					sortByMass(a3_list, false);
+					if(a3_list.empty()) continue;
+					const auto& a3 = a3_list[0];
+
+					selectAtom(a0);
+					bonds.push_back({ a0.amberId, a1 });
+					angles.push_back({ a0.amberId, a1, a2.amberId });
+					torsions.push_back({ a0.amberId, a1, a2.amberId, a3.amberId });
+				}
+			}
+		}
+	}
+
+	const std::vector<BOND>& getBonds() const {
+		return bonds;
+	}
+
+	const std::vector<ANGLE>& getAngles() const {
+		return angles;
+	}
+
+	const std::vector<TORSION>& getTorsions() const {
+		return torsions;
+	}
+
+	int amber2BAT(int amberIx) {
+		return indexMap[amberIx];
+	}
+
+	int BAT2amber(int bat) {
+		return selectedAtoms[bat];
+	}
+
+private:
+	// function that sorts atom by mass in descending order
+	void sortByMass(std::vector<AmberAtom>& v, bool reverse) {
+		std::sort(v.begin(), v.end(), [reverse](const AmberAtom& lhs, const AmberAtom& rhs) {
+			if (lhs.mass == rhs.mass) {
+				if (reverse) return lhs.amberId > rhs.amberId;
+				return lhs.amberId < rhs.amberId;
+			}
+
+			if (reverse) return lhs.mass > rhs.mass;
+			return lhs.mass < rhs.mass;
+		});
+	};
+
+	bool isSelected(const AmberAtom& a) const {
+		return indexMap[a.amberId] != -1;
+	}
+
+	void selectAtom(const AmberAtom& a) {
+		selectedAtoms.push_back(a.amberId);
+		indexMap[a.amberId] = selectedAtoms.size() - 1;
+	}
+
+	void selectAtom(int a) {
+		selectedAtoms.push_back(a);
+		indexMap[a] = selectedAtoms.size() - 1;
+	}
+
+	bool isTerminal(const AmberAtom& a) const {
+		return a.bonds == 1;
+	}
+
+	std::vector<BOND> bonds;
+	std::vector<ANGLE> angles;
+	std::vector<TORSION> torsions;
+
+	std::vector<AmberAtom> a0_list, a1_list, a2_list, a3_list;
+
+	std::vector<int> selectedAtoms;
+	std::vector<int> indexMap;
+};
+
+void Topology::BAT() {
+	std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT BEGIN" << std::endl;
+
+	InternalCoordinates bat;
+	bat.compute(bAtomList);
+
+	for (const auto& b : bat.getBonds()) {
+		std::cout << "bond " << b.first << " " << b.second << std::endl;
+	}
+
+	for (const auto& a : bat.getAngles()) {
+		std::cout << "angle " << a.first << " " << a.second << " " << a.third << " " << std::endl;
+	}
+
+	for (const auto& t : bat.getTorsions()) {
+		std::cout << "torsion " << t.first << " " << t.second << " " << t.third << " " << t.fourth << std::endl;
+	}
+
+	for (int i = 0; i < bAtomList.size(); i++) {
+		std::cout << i << " " << bat.amber2BAT(i) << " " << bat.BAT2amber(bat.amber2BAT(i)) << std::endl;
+	}
+
+	std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT END" << std::endl;
+}
+
 /** Default constructor.Sets the name of this molecule to 'no_name '.
 The name has no particular function and is not guaranteed to be unique **/
 Topology::Topology(){
