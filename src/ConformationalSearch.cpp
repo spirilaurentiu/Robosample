@@ -8,13 +8,13 @@ Implementation of ConformationalSearch class. **/
 #include "Topology.hpp"
 
 // Constructor
-ConformationalSearch::ConformationalSearch(World *argWorld,
-    SimTK::CompoundSystem *argCompoundSystem,
-    SimTK::SimbodyMatterSubsystem *argMatter,
-    std::vector<Topology>& argTopologies,
-    SimTK::DuMMForceFieldSubsystem *argDumm,
-    SimTK::GeneralForceSubsystem *argForces,
-    SimTK::TimeStepper *argTimeStepper) :
+ConformationalSearch::ConformationalSearch(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
     TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
@@ -361,7 +361,7 @@ void ConformationalSearch::assignConfFromTVector(SimTK::State& someState)
 // In torsional dynamics the first body has 7 Q variables for 6 dofs - one
 // quaternion (q) and 3 Cartesian coordinates (x). updQ will return: 
 // [qw, qx, qy, qz, x1, x2, x3]
-bool ConformationalSearch::propose(SimTK::State& someState)
+bool ConformationalSearch::proposeEquilibrium(SimTK::State& someState)
 {
     //randomEngine.seed(4294653137UL); // for reproductibility
 
@@ -396,6 +396,10 @@ bool ConformationalSearch::propose(SimTK::State& someState)
     }
     */
 
+   // TODO
+    assert(!"What should we return here?");
+    return true;
+
 }
 
 // The update step in Monte Carlo methods consists in:
@@ -409,7 +413,7 @@ void ConformationalSearch::update(SimTK::State& someState){
 
     // Assign random configuration
 
-    propose(someState);
+    proposeEquilibrium(someState);
 
     // Send configuration to evaluator  
 

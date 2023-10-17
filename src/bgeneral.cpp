@@ -1,13 +1,32 @@
 #include "bgeneral.hpp"
 
+
+/**************************************
+ * 		Debugging Functions   *
+ **************************************/
+
+std::string exec(const char* cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+	printf ("No pipe with error: %s\n",strerror(errno));
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
+
 /**************************************
  * 		General Functions             *
  **************************************/
 
 
-double round(double r) {
-    return (r > 0.0) ? floor(r + 0.5) : ceil(r - 0.5);
-}
+// double round(double r) {
+//     return (r > 0.0) ? floor(r + 0.5) : ceil(r - 0.5);
+// }
  
 
 // Log-sum-exp function for 2 arguments
@@ -306,6 +325,39 @@ int bSubstr (char *dest, const char *src, int start, int no_chars)
 	return 1;
 }
 
+// To lower for strings
+std::string to_lower(std::string str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    return str;
+}
+
+// To upper for strings
+std::string to_upper(std::string str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
+}
+
+/*
+ * Python like split
+ */
+// TODO: Victor: Can we trust this function?
+std::vector<std::string> split(const std::string& i_str, const std::string& i_delim)
+{
+    std::vector<std::string> result;
+    
+    size_t found = i_str.find(i_delim);
+    size_t startIndex = 0;
+
+    while(found != std::string::npos)
+    {
+        result.push_back(std::string(i_str.begin()+startIndex, i_str.begin()+found));
+        startIndex = found + i_delim.size();
+        found = i_str.find(i_delim, startIndex);
+    }
+    if(startIndex != i_str.size())
+        result.push_back(std::string(i_str.begin()+startIndex, i_str.end()));
+    return result;      
+}
 
 /*
  * SEQRES line to 1-letter code aa
@@ -366,6 +418,34 @@ bool AreSame(double a, double b, double EPSILON)
 {
     return fabs(a - b) < EPSILON;
 }
+
+/*
+ * Check if pair, triple or quadruple is the same irrespective of order
+ * from the chemical point of view (ex.: a-b-c-d != a-c-b-d)
+ */
+bool IsTheSameBond(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref)
+{
+	return (((tar[0] == ref[0]) && (tar[1] == ref[1])) ||
+		((tar[0] == ref[1]) && (tar[1] == ref[0])));
+}
+
+bool IsTheSameAngle(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref)
+{
+	return (((tar[0] == ref[0]) &&
+	 	 (tar[1] == ref[1]) && (tar[2] == ref[2])) ||
+		((tar[0] == ref[2]) && 
+		 (tar[1] == ref[1]) && (tar[2] == ref[0])));
+}
+
+bool IsTheSameTorsion(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const std::vector<SimTK::DuMM::AtomClassIndex>& ref)
+{
+
+	return (((tar[0] == ref[0]) && (tar[1] == ref[1]) &&
+		 (tar[2] == ref[2]) && (tar[3] == ref[3])) ||
+		((tar[0] == ref[3]) && (tar[1] == ref[2]) &&
+		 (tar[2] == ref[1]) && (tar[3] == ref[0])));
+}
+
 
 /*
  * Given a frame F1 expressed in another frame G and a station v1 expressed
@@ -522,6 +602,63 @@ bool NumericalRightInverse(SimTK::Matrix M, SimTK::Matrix& MRightInv, int nrows,
    */ 
 }
 
+// See Rosetta Code: https://rosettacode.org/wiki/Determinant_and_permanent#C
+int trianglize(double **m, int n)
+{
+	int sign = 1;
+	for (int i = 0; i < n; i++) {
+		int max = 0;
+ 
+		for (int row = i; row < n; row++)
+			if (fabs(m[row][i]) > fabs(m[max][i]))
+				max = row;
+ 
+		if (max) {
+			sign = -sign;
+			double *tmp = m[i];
+			m[i] = m[max], m[max] = tmp;
+		}
+ 
+		if (!m[i][i]) return 0;
+ 
+		for (int row = i + 1; row < n; row++) {
+			double r = m[row][i] / m[i][i];
+			if (!r)    continue;
+ 
+			for (int col = i; col < n; col ++)
+				m[row][col] -= m[i][col] * r;
+		}
+	}
+	return -sign;
+}
+ 
+double cstyle_det(double *in, int n)
+{
+	double *m[n];
+	m[0] = in;
+ 
+	for (int i = 1; i < n; i++)
+		m[i] = m[i - 1] + n;
+ 
+	int sign = trianglize(m, n);
+	if (!sign){
+		return 0;
+	}
+ 
+ 	std::cout << std::setprecision(10) << std::fixed;
+
+	double p = 1;
+	for (int i = 0; i < n; i++)
+	{
+		p *= m[i][i];
+		std::cout << "i p " << i << " " << p << std::endl;
+	}
+	std::cout << "sign " << sign << std::endl;
+	return p * sign;
+}
+
+
+
 /*
  * Convert spatial vector to 6-dim vector
  */
@@ -606,7 +743,7 @@ SimTK::Matrix& SOA_GetHLikeElement(SimTK::Matrix inMatrix, int which, SimTK::Mat
 /*
  * Print Big Matrices separated by spaces
  */
-void PrintBigMat(SimTK::Matrix M, int nrows, int ncols, int decimal_places, std::string header)
+void PrintBigMat(const SimTK::Matrix& M, int nrows, int ncols, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
     std::cout << std::setprecision(decimal_places);
@@ -688,14 +825,14 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
     std::cout << std::setprecision(decimal_places);
     for(int i = 0; i < 2; i++){
         for(int j = 0; j < 2; j++){
+
             for(int k = 0; k < 3; k++){
                 for(int l = 0; l < 3; l++){
                     std::cout << M[i][j][k][l] << " ";
                 }
-                std::cout << "  ";
+				std::cout << std::endl;
             }
         }
-        std::cout << std::endl;
     }
 }
 
@@ -717,7 +854,8 @@ void PrintSpatialVec(SimTK::SpatialVec M, int decimal_places, std::string header
 /*
  * Print Big Vector separated by spaces
  */
-void PrintBigMat(SimTK::Vector V, int nrows, int decimal_places, std::string header)
+void PrintBigMat(const SimTK::Vector& V, int nrows,
+	int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
     std::cout << std::setprecision(decimal_places) << std::fixed;
@@ -730,8 +868,10 @@ void PrintBigMat(SimTK::Vector V, int nrows, int decimal_places, std::string hea
 /*
  * Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places)
+void PrintTransform(SimTK::Transform T, int decimal_places,
+	std::string header)
 {
+    std::cout << header << std::endl;	
     const SimTK::Mat44 M = T.toMat44();
     std::cout << std::setprecision(decimal_places) << std::fixed;
     for(int i = 0; i < 4; i++){
@@ -744,9 +884,24 @@ void PrintTransform(SimTK::Transform T, int decimal_places)
 }
 
 /*
+ * Angle
+ */
+SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
+{
+	SimTK::Vec3 v01 = pos1 - pos0;
+	SimTK::Vec3 v02 = pos2 - pos0;
+
+	SimTK::Real angleCos = SimTK::dot(v01, v02) / (v01.norm() * v02.norm());
+
+	return std::acos(angleCos);
+}
+
+/*
  * Dihedral angle
  */
-SimTK::Real bDihedral(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3){
+SimTK::Real bDihedral(
+SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3)
+{
  
   //std::cout << "bDihedral pos " << pos0 << ' ' << pos1 << ' ' << pos2 << ' ' << pos3 << std::endl;
  
@@ -854,6 +1009,13 @@ void normalize(std::vector<SimTK::Real>& V) {
 //}
 
 using SimTK::square;
+
+SimTK::Real normalPdf(SimTK::Real x, SimTK::Real mean, SimTK::Real stddev)
+{
+    SimTK::Real exponent = -0.5 * std::pow((x - mean) / stddev, 2);
+	SimTK::Real normalizingFactor = 1.0 / (stddev * sqrt(2 * M_PI));
+    return normalizingFactor * std::exp(exponent);
+}
 
 SimTK::Real bMean(std::vector<SimTK::Real> v)
 {
@@ -996,6 +1158,17 @@ DataFrame k_means(const DataFrame& data,
   return means;
 }
 
+double update_variance(double current_value, 
+	double last_variance, 
+	double last_average,
+	int n)
+{
+    double new_variance = (1.0 / (n-1)) * ( (n-2) * 
+		last_variance + std::pow(current_value - last_average,2));
+
+    return new_variance;
+}
+
 // Utilities for von Mises-Fisher distribution
 
 // Print
@@ -1113,7 +1286,7 @@ std::vector<double>& bMulByScalar(std::vector<double>& V,
 	return V;
 }
 
-std::vector<double>& bMulByScalar(std::vector<double>& V,
+void bMulByScalar(std::vector<double>& V,
 				  double scalar,
 				  std::vector<double>& W){
 	for (int i = 0; i < V.size(); i++){
@@ -1153,7 +1326,7 @@ void bPrintMat(bMatrix src){
 }
 
 // Transpose
-bMatrix& bTransposeInPlace(bMatrix& M){
+void bTransposeInPlace(bMatrix& M){
 	std::vector<std::vector<double>> tM;
 	tM.resize(M.size(), std::vector<double>(M[0].size(), 0));
 	double temp = 0.0;
@@ -1163,11 +1336,10 @@ bMatrix& bTransposeInPlace(bMatrix& M){
 			M[i][j] = tM[j][i];
 		}
 	}
-	
 }
 
 // Multiply U by M and put it in V
-std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
+void bMulVecByMatrix(std::vector<double> &U,
 				     bMatrix& M,
 				     std::vector<double> &V)
 {
@@ -1180,7 +1352,6 @@ std::vector<double>& bMulVecByMatrix(std::vector<double> &U,
 			V[i] += M[i][j] * U[j];
 		}
 	}
-
 }
 
 // Rotation matrix generation using Gram–Schmidt procedure 
@@ -1233,7 +1404,21 @@ bMatrix& gram_schmidt(bMatrix& M, bMatrix& es){
 //}
 
 
+SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2)
+{
+	SimTK::Vec4 q1 = Q1.asVec4();
+	SimTK::Vec4 q2 = Q2.asVec4();
 
+	SimTK::Vec4 q3;
+
+	q3[0] = q1[0] * q2[0] - (q1[1] * q2[1] + q1[2] * q2[2] + q1[3] * q2[3]); // scalar component
+    q3[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]; // i component
+    q3[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]; // j component
+    q3[3] = q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]; // k component
+	
+    return SimTK::Quaternion(q3);
+
+}
 
 
 

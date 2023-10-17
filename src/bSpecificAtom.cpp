@@ -12,7 +12,7 @@ void bSpecificAtom::Zero(){
 
     std::fill(begin(fftype), end(fftype), '\0');
 
-    bAtomType = nullptr;
+    compoundSingleAtom = nullptr;
 
     charge = 0.0;
     residueIndex = std::numeric_limits<long int>::min();
@@ -36,19 +36,20 @@ void bSpecificAtom::Zero(){
     visited = 0;
     moleculeIndex = std::numeric_limits<int>::min();
 
-    elem = '\0';
+    elem = "";
 }
 
-void bSpecificAtom::Print()
+void bSpecificAtom::Print(int whichWorld)
 {
-    std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
-        <<" number "<<number<<" atomIndex  "<<atomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
-        <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
-        <<" atomClassIndex  "<<atomClassIndex<<" biotype (useless) "<< biotype << " biotypeIndex " << biotypeIndex 
-        //<< " bAtomType "<< bAtomType 
-        <<" charge "<<charge<<" mobile "<<mobile<<" visited "<<visited<<std::endl;
+    // std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
+    //     <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
+    //     <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
+    //     <<" atomClassIndex  "<<dummAtomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
+    //     //<< " bAtomType "<< bAtomType 
+    //     <<" charge "<<charge<<" mobile "<<mobile<<" visited "<<visited<<std::endl;
 
-    std::cout << "Neighbors:";
+
+/*     std::cout << "Neighbors:";
     for(std::vector<bSpecificAtom *>::iterator it = neighbors.begin();
     it != neighbors.end(); ++it){
         std::cout << ' ' << (*it)->number;
@@ -58,8 +59,8 @@ void bSpecificAtom::Print()
     std::cout << "Bonds Involved:" << std::endl;
     for(std::vector<bBond *>::iterator it = bondsInvolved.begin();
     it != bondsInvolved.end(); ++it){
-        (*it)->Print();
-    }
+        (*it)->Print(whichWorld);
+    } */
 
     // Residue info
     //std::string residueName;
@@ -102,7 +103,7 @@ int bSpecificAtom::getNumber() const
 }
 
 // Returns atom element
-char bSpecificAtom::getElem() const
+std::string bSpecificAtom::getElem() const
 {
     return this->elem;
 }
@@ -140,13 +141,13 @@ std::string bSpecificAtom::getBiotype() const
 // Returns Molmodel atom type as SimTK::Compound::SingleAtom *
 SimTK::Compound::SingleAtom * bSpecificAtom::getBAtomType() const
 {
-    return this->bAtomType;
+    return this->compoundSingleAtom;
 }
 
 // Get atom's index as held in Compound
 SimTK::Compound::AtomIndex bSpecificAtom:: getCompoundAtomIndex() const
 {
-    return this->atomIndex;
+    return this->compoundAtomIndex;
 }
 
 //
@@ -204,7 +205,7 @@ void bSpecificAtom::setNumber(int inpNumber){
 }
 
 // Set element
-void bSpecificAtom::setElem(char inpElem){
+void bSpecificAtom::setElem(std::string inpElem){
     this->elem = inpElem;
 }
 
@@ -236,7 +237,7 @@ void bSpecificAtom::setMass(SimTK::Real inpMass)
 }
 
 // Set force field atom type
-void bSpecificAtom::setFftype(std::string inpFftype)
+void bSpecificAtom::setFfType(std::string inpFftype)
 {
     std::copy(inpFftype.begin(), inpFftype.end(), begin(fftype));
 }
@@ -262,7 +263,7 @@ void bSpecificAtom::setBAtomType(SimTK::Compound::SingleAtom *)
 
 void bSpecificAtom::setCompoundAtomIndex(SimTK::Compound::AtomIndex inpAtomIndex)
 {
-    this->atomIndex = inpAtomIndex;
+    this->compoundAtomIndex = inpAtomIndex;
 }
 
 // Set charge
@@ -285,15 +286,15 @@ void bSpecificAtom::setVisited(int argVisited)
 }
 
 // Get the atom class index
-DuMM::AtomClassIndex bSpecificAtom::getAtomClassIndex() const
+DuMM::AtomClassIndex bSpecificAtom::getDummAtomClassIndex() const
 {
-    return this->atomClassIndex;
+    return this->dummAtomClassIndex;
 }
 
 // Set the atom class index
-void bSpecificAtom::setAtomClassIndex(DuMM::AtomClassIndex inpAtomClassIndex)
+void bSpecificAtom::setDummAtomClassIndex(DuMM::AtomClassIndex inpAtomClassIndex)
 {
-    this->atomClassIndex = inpAtomClassIndex;
+    this->dummAtomClassIndex = inpAtomClassIndex;
 }
 
 // Get the atomic number
@@ -369,7 +370,7 @@ void bSpecificAtom::setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIn
  * ******************/
 int bAtomAssign(MolAtom *dest, const bSpecificAtom *src)
 {
-    dest->name = new char[5]; // TODO who deletes this?
+/*     dest->name = new char[5]; // TODO who deletes this?
 
     std::copy(dest->name, dest->name + 5, src->getName().begin());
 
@@ -388,7 +389,7 @@ int bAtomAssign(MolAtom *dest, const bSpecificAtom *src)
     // TODO they use float, we use double
     dest->pos[0] = static_cast<float>(src->getX());
     dest->pos[1] = static_cast<float>(src->getY());
-    dest->pos[2] = static_cast<float>(src->getZ());
+    dest->pos[2] = static_cast<float>(src->getZ()); */
 
     return 0;
 }

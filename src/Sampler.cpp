@@ -9,49 +9,42 @@ Implementation of Sampler class. **/
 
 // Constructor
 
-Sampler::Sampler(World *argWorld,
-	SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper) :
-		world(argWorld),
-		compoundSystem(argCompoundSystem),
-		matter(argMatter),
+Sampler::Sampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper) :
+		world(&argWorld),
+		compoundSystem(&argCompoundSystem),
+		matter(&argMatter),
 		topologies(argTopologies),
-		dumm(argDumm),
-		forces(argForces),
-		timeStepper(argTimeStepper),
+		dumm(&argDumm),
+		forces(&argForces),
+		timeStepper(&argTimeStepper),
 		thermostat(ThermostatName::NONE),
 		temperature(SimTK::Zero),
 		RT(SimTK::Zero),
 		beta(std::numeric_limits<SimTK::Real>::min()),
 		seed(std::numeric_limits<uint32_t>::min()),
 		nofSamples(std::numeric_limits<int>::min()),
-		acc(false)
+		acc(false),
+		system(&argMatter.getSystem()),
+		alwaysAccept(false)
 {
-	assert(argCompoundSystem != nullptr);
-	assert(argMatter != nullptr);
-	assert(argDumm != nullptr);
-	assert(argForces != nullptr);
-	assert(argTimeStepper != nullptr);
-
-	this->system = &argMatter->getSystem();
-
 	//this->rootTopology = argResidue;
 	assert(topologies.size() > 0);
-	this->rootTopology = &topologies[0];
-
-	//
-	this->alwaysAccept = false;
+	rootTopology = &topologies[0];
 
 	// Set total number of atoms and dofs
 	natoms = 0;
 	for (const auto& topology: topologies){
 		natoms += topology.getNumAtoms();
 	}
+
+	// Set total mass of the system to non-realistic valaue
+	this->totalMass = 0;
 
 	int ThreeFrom3D = 3;
 	ndofs = natoms * ThreeFrom3D;
@@ -64,6 +57,8 @@ Sampler::Sampler(World *argWorld,
 // Destructor
 Sampler::~Sampler() {
 }
+
+// Random numbers
 
 // Get set the seed
 int64_t Sampler::getSeed() const
@@ -92,7 +87,7 @@ void Sampler::setSeed(int64_t argSeed)
 	// To ease reproducibility, we use one 32-bit seed to initialize a less powerful RNG.
 	// Then, we use this RNG to initialize the state of MT.
 	randomEngineInit.seed(seed); // TODO seed is 64 bit, but we cast here to 32. I guess it's alright
-	
+
 	// Initial generator function.
 	auto source = [this]() {
 		// This LCG generates 64 bits.
@@ -227,7 +222,9 @@ SimTK::Real Sampler::getBeta() const {
     return beta;
 }
 
-SimTK::Real Sampler::generateRandomNumber(GmolRandDistributionType distributionType) {
+SimTK::Real
+Sampler::generateRandomNumber(GmolRandDistributionType distributionType)
+{
     if(distributionType == GmolRandDistributionType::UNIFORM){
         return uniformRealDistribution(randomEngine);
     }else{
@@ -235,9 +232,39 @@ SimTK::Real Sampler::generateRandomNumber(GmolRandDistributionType distributionT
     }
 }
 
-/** Load the map of mobods to joint types **/
-void Sampler::loadMbx2mobility(SimTK::State&)
+// Just for checking
+void Sampler::checkAtomStationsThroughDumm(void)
 {
+	// Lop through topologies
+	for(auto& topology : topologies){
+
+		// Loop through atoms
+		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
+
+			//std::cout << "DEBUG getAtomLocationInMobilizedBodyFrame"
+			//	<< " aIx " << aIx;
+
+			//SimTK::Vec3 atomMobodStation =
+			//	topology.getAtomLocationInMobilizedBodyFrame(aIx);
+			SimTK::Vec3 atomMobodStationThroughDumm =
+				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
+
+			//std::cout << " through Compound " << atomMobodStation
+			//	<< std::endl;
+			//std::cout << " through DuMM " << atomMobodStationThroughDumm
+			//	<< std::endl;
+		}
+	}
+
+}
+
+/** Load the map of mobods to joint types **/
+//void Sampler::loadMbx2mobility(SimTK::State&) // SAFE
+// The ideal way to do this would be to keep have MobilizedBody keep a Mobility name
+void Sampler::loadMbx2mobility(int whichWorld) // DANGER
+{
+	//std::cout << "DEBUG Entering Sampler::loadMbx2mobility" << std::endl << std::flush;
+
 	// function args were SimTK::State& someState
 
 	// Lop through topologies
@@ -245,36 +272,45 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 
 		// Loop through atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
-	
-			if(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin
+
+			//SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex (aIx); // DANGER
+
+			//if(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin // SAFE
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0 ){ // DANGER
+			//if(dumm->getAtomStationOnBody(dAIx) == SimTK::Vec3(0, 0, 0)){ // atom is at body's origin // DANGER
 
 				// Get body, parentBody
-				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				//const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx); // SAFE
+				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm); // DANGER
+
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
 				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-	
+
 				if(parentMbx != 0){
 					// Get the neighbor atom in the parent mobilized body
-					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx);
-				
+					//SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx); // SAFE
+					//std::unique_ptr<SimTK::SimbodyMatterSubsystem> up_matter(matter);
+					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(
+						matter, aIx, *dumm); // DANGER
+
 					// Get mobility (joint type)
 					const auto& bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
-					auto mobility = bond.getBondMobility();
-	
+					auto mobility = bond.getBondMobility(whichWorld);
+
 					mbx2mobility.insert(std::make_pair(mbx, mobility));
-				
+
 					//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
 					//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
 					//	<< " mobility " << mobility
 					//	<< std::endl;
-	
+
 				} // Parent is not Ground
 
 			} // if is a root atom
-		
+
 		} // END loop through atoms
-	
+
 	} // END loop through topologies
 
     for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
@@ -339,6 +375,12 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
 				break;
 
+			///< Torsion and translation
+			case SimTK::BondMobility::Mobility::BendStretch:
+				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+				break;
+
 			///< Three translational mobilities (Cartesian). // NEWMOB
 			case SimTK::BondMobility::Mobility::Translation:
 				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
@@ -393,7 +435,7 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 				std::cout << "Warning: unknown joint type" << std::endl;
 		}
 
-		// // Loop through body's Us
+		// Loop through body's Us
 		// for(int ui = 0; ui < mobodNU; ui++){
 		// 	SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
 		// 	std::cout << "H_FMCol= " << H_FMCol << std::endl;
@@ -404,7 +446,7 @@ void Sampler::loadMbx2mobility(SimTK::State&)
 
 
 // Draws from von Mises distribution with concentration kK
-SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
+SimTK::Real Sampler::generateVonMisesSample(SimTK::Real Mean, SimTK::Real K){
 
 	// Declarations
 	SimTK::Real tau = 0.0;
@@ -426,10 +468,10 @@ SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
 	// Prereq
 	tau = 1 + std::sqrt(1 + 4*K*K);
 	rho = (tau - std::sqrt(2*tau)) / (2*K);
-	
+
 	// Step 0 variables
 	r = (1 + (rho*rho)) / (2 * rho);
-	
+
 	// Step 1 variables
 	z = std::cos(SimTK_PI * u1);
 	f = (1 + (r*z)) / (r + z);
@@ -469,7 +511,7 @@ SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
 		}else if(theta < (-1.0 * SimTK_PI)){
 			theta = (2*SimTK_PI) + theta;
 		}
-		
+
 	}
 
 	return theta;
@@ -478,7 +520,7 @@ SimTK::Real Sampler::vonMises(SimTK::Real Mean, SimTK::Real K){
 
 
 // Draws from von Mises-Fisher distribution
-std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
+std::vector<double>& Sampler::generateVonMisesFisherSample(std::vector<double>& X,
 	double lambda)
 {
 	//int NDOFS = 3; // DELETE THIS
@@ -499,7 +541,7 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 	double x0 = (1 - b) / (1 + b);
 
 	double LOG = ndofs_1 * std::log(1 - (x0*x0));
-	
+
 	double c = (lambda*x0) + LOG;
 
 	int nofTries = 10;
@@ -508,13 +550,13 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 		double Z1 = gammarand(randomEngine);
 		double Z2 = gammarand(randomEngine);
 		double Z = Z1 / (Z1 + Z2);
-	
+
 		double U = uniformRealDistribution(randomEngine);
-	
+
 		double W_num = 1.0 - ((1.0 + b)*Z);
 		double W_den = 1.0 - ((1.0 - b)*Z);
 		double W = W_num / W_den;
-	
+
 		// STEP 2
 		if( ((lambda*W) + LOG - c) >= std::log(U) ){
 			// Generate uniform random vector on sphere ndofs - 1
@@ -522,14 +564,14 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 				V[j] = gaurand(randomEngine);
 			}
 			bNormalizeInPlace(V);
-			
+
 			// Actual sample
 			bMulByScalar(V, std::sqrt(1 - (W*W)), X_lowdim);
 			for(int j = 1; j < ndofs; j++){
 				X[j] = X_lowdim[j-1];
 			}
 			X[0] = W;
-			
+
 			break;
 		}
 	}
@@ -539,9 +581,158 @@ std::vector<double>& Sampler::vonMisesFisher(std::vector<double>& X,
 
 
 // Draws from von Mises-Fisher distribution
-double Sampler::chi(void)
+double Sampler::generateChiSample(void)
 {
+	// TODO
+	assert(!"Not implemented!");
+
 	int NDOFS = 3;
+
+	return 0;
+}
+
+
+// TODO revise param1 and param2
+SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
+		std::string distrib,
+		SimTK::Real param1, SimTK::Real param2, SimTK::Real param3)
+{
+	// TODO this string compare is slow
+	// Bernoulli trial between the var and its inverse
+	if(distrib == "BernoulliInverse"){
+		SimTK::Real randomNumber_Unif;
+		int randomSign;
+
+		randomNumber_Unif = uniformRealDistribution(randomEngine);
+		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
+		if(randomSign < 0){
+			var = 1.0 / var;
+		}
+	}
+
+	// Bernoulli trial between the var and its reciprocal
+	else if(distrib == "BernoulliReciprocal"){
+		SimTK::Real randomNumber_Unif;
+		int randomSign;
+
+		randomNumber_Unif = uniformRealDistribution(randomEngine);
+		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
+		if(randomSign < 0){
+			var = -1.0 * var;
+		}
+	}
+
+	// Run Gaussian distribution
+	else if(distrib == "normal"){
+
+		var = var + (gaurand(randomEngine) * param1);
+	}
+
+	// Run truncated Gaussian distribution
+	else if(distrib == "truncNormal"){
+
+		SimTK::Real mean = var;
+		bool flag = false;
+
+		for (int tz = 0; tz < 100; tz++){
+			var = var + (gaurand(randomEngine) * param1);
+			if((var >= param2) && (var <= param3)){
+				flag = true;
+				break;
+			}
+		}
+
+		if(!flag){
+			var = SimTK::NaN;
+		}
+
+		/* if(var <= 0){
+			var = mean;
+		}
+		if(var >= (2*mean)){
+			var = mean ;
+		} */
+
+	}
+
+	// Run bimodal Gaussian distribution
+	else if(distrib == "bimodalNormal"){
+
+		var = convoluteVariable(var, "BernoulliInverse");
+		var = var + gaurand(randomEngine);
+
+	}
+	
+	// Gamma distribution
+	else if(distrib == "gamma"){
+		var = gammarand(randomEngine);
+	}else{
+		std::cerr << "Sampler distribute variable: Unkown distribution\n";
+	}
+
+	return var;
+}
+
+SimTK::Real Sampler::convoluteVariable(
+	std::vector<SimTK::Real>& vvar,
+	std::string distrib,
+	SimTK::Real param1, SimTK::Real param2)
+{
+	for(auto& var : vvar){
+		convoluteVariable(var, distrib, param1, param2);
+	}
+
+	// TODO
+    assert(!"What should we return here?");
+    return std::numeric_limits<SimTK::Real>::min();
+}
+
+SimTK::Real Sampler::calcDeformationPotential(
+		SimTK::Real& var,
+		std::string distrib,
+		SimTK::Real param1, SimTK::Real param2
+)
+{
+	SimTK::Real retVal = 0.0;
+
+	// Bernoulli trial between the var and its inverse
+	if(distrib == "BernoulliInverse"){
+		return 0;
+	}
+	// Bernoulli trial between the var and its reciprocal
+	else if(distrib == "BernoulliReciprocal"){
+		return 0;
+	}
+	// Run Gaussian distribution
+	else if(distrib == "normal"){
+		return 0;
+	}
+	// Run truncated Gaussian distribution
+	else if(distrib == "truncNormal"){
+		SimTK::Real var2 = var*var;
+
+		SimTK::Real firstTerm = 0.0;
+		SimTK::Real secondTerm = 0.0;
+
+		firstTerm = (1.0 / (var2)) - var2;
+		secondTerm = 2.0 * param1 * (var - (1.0/var));
+
+		SimTK::Real numerator = firstTerm + secondTerm;
+		SimTK::Real denominator = param2*param2;
+
+		retVal = (1.0 / this->beta) * 0.5 * (numerator / denominator);
+
+	}
+	// Run bimodal Gaussian distribution
+	else if(distrib == "bimodalNormal"){
+		return 0;
+	}
+	// Gamma distribution
+	else if(distrib == "gamma"){
+		return 0;
+	}
+
+	return retVal;
 	
 }
 

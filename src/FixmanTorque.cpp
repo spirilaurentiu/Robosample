@@ -5,13 +5,10 @@
 ////////////////////////////
 ////// FIXMAN TORQUE //////////
 ////////////////////////////
-FixmanTorque::FixmanTorque(SimTK::CompoundSystem *argCompoundSystem, SimTK::SimbodyMatterSubsystem& argMatter
-					) : matter(argMatter){
-	this->compoundSystem = argCompoundSystem;
+FixmanTorque::FixmanTorque(SimTK::SimbodyMatterSubsystem* argMatter) : matter(argMatter){
 	scaleFactor = 1.0;
 	this->temperature = 0.0;
-	this->RT = temperature * static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD); // TODO double vs long double
-	
+	this->RT = temperature * static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD);
 }
 
 void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>&,
@@ -25,21 +22,21 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	SimTK::Vector V3(nu);
 	SimTK::Vector V4(nu);
 	SimTK::Real D0 = 1.0;
-	matter.calcFixmanTorque(state, V3, V4, &D0);
+	matter->calcFixmanTorque(state, V3, V4, &D0);
 	// end - Compute Fixman torque
 
 	// Calculate geometric features fast
 	//xstd::cout << " 1 " ;
-	//xfor (SimTK::MobilizedBodyIndex mbx(2); mbx < matter.getNumBodies(); ++mbx){
-	//x    const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
+	//xfor (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+	//x    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	//x    const SimTK::MobilizedBody *p_mobod = &mobod;
 	//x    std::cout << std::setprecision(10) << std::fixed <<  ((SimTK::MobilizedBody::Pin *)(p_mobod))->getAngle(state) << ' ' ;
 	//x}
 
 	//std::cout << " FT " ;
 	int uslot = -1;
-	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter.getNumBodies(); ++mbx){
-		const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
+	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
 		for(int k = 0; k < mobod.getNumU(state); k++){
 			uslot++;
@@ -112,15 +109,10 @@ void FixmanTorque::setScaleFactor(SimTK::Real argScaleFactor)
 ////////////////////////////////////////
 ////// FIXMAN TORQUE EXTERNAL //////////
 ///////////////////////////////////////
-FixmanTorqueExt::FixmanTorqueExt(SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem& argMatter
-	) : matter(argMatter){
-
-	this->compoundSystem = argCompoundSystem;
+FixmanTorqueExt::FixmanTorqueExt(SimTK::SimbodyMatterSubsystem* argMatter) : matter(argMatter) {
 	scaleFactor = 1.0;
 	this->temperature = 0.0;
-	this->RT = temperature * static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD); // TODO double vs long double
-	
+	this->RT = temperature * static_cast<SimTK::Real>(SimTK_BOLTZMANN_CONSTANT_MD);
 }
 
 void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>&,
@@ -134,7 +126,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 	int nu = state.getNU();
 
 	// Get First mobod 
-	const SimTK::MobilizedBody& mobod1 = matter.getMobilizedBody(SimTK::MobilizedBodyIndex(1));
+	const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1));
 	int extnu = mobod1.getNumU(state);
 
 	if((extnu != 0) && (extnu != 3) && (extnu != 6) && (extnu != 1)){
@@ -329,8 +321,8 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 	}
 
 	// The rest of the mobilized bodies
-	for(int i = 2; i < matter.getNumBodies(); i++){
-		const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(SimTK::MobilizedBodyIndex(i));
+	for(int i = 2; i < matter->getNumBodies(); i++){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(i));
 		const SimTK::MobilizedBody* mobodptr = &mobod;
 
 		////std::cout << "mobod " << i << " Q " << mobod.getQAsVector(state) << std::endl;
@@ -361,7 +353,7 @@ SimTK::Real FixmanTorqueExt::getTemperature(void)
 
 void FixmanTorqueExt::setTemperature(SimTK::Real argTemperature)
 {
-	std::cout << "Setting T for external Fixman torque.\n";
+	//std::cout << "Setting T for external Fixman torque.\n";
 	this->temperature = argTemperature;
 	this->RT = temperature * SimTK_BOLTZMANN_CONSTANT_MD;
 }

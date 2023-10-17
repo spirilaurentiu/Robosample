@@ -1,52 +1,53 @@
-# Molecule information
-MOLECULES aper                   # Molecules to load
-PRMTOP ligand.prmtop       # Parameter file
-INPCRD ligand.00.rst7      # Coordinate / Restart file
-RBFILE ligand.rb ligand.rb    # Rigid bodies definition file
-FLEXFILE ligand.03.flex ligand.all.flex  # Flexible bonds definition file
-ROOT_MOBILITY Free Cartesian # Ground to Compound mobilizer
-OUTPUT_DIR temp temp # Output directory
-MEMBRANE 10 10 1.4 10 # Membrane x y z width and resolution
-CONTACTS 0 0 # Membrane-atom contacts
-CONSTRAINTS 3291 3291 # Constrained atoms
+MOLECULES aper
+PRMTOP ligand.prmtop
+INPCRD ligand.min
+RBFILE ligand.rb ligand.rb ligand.rb ligand.rb
+FLEXFILE ligand.all.flex ligand.03.flex ligand.loops.ballm.flex ligand.loops.pin.flex
+OUTPUT_DIR temp temp temp temp
+ROOTS 0 0 0 0
+ROOT_MOBILITY Weld Weld Weld Weld
 
-# Simulation
-RUN_TYPE Normal # normal HMC or Non-Eq HMC
-ROUNDS 1                   # Gibbs sampling rounds
-ROUNDS_TILL_REBLOCK 10 10
-RANDOM_WORLD_ORDER FALSE 
-WORLDS R0 R1        # Worlds unique names 
+NONBONDED_METHOD 0 0 0 0
+NONBONDED_CUTOFF 1.2 1.2 1.2 1.2
 
-ROOTS 0 0 # Atoms representing first bodies
-SAMPLER HMC HMC      # Sampler
-TIMESTEPS 0.004 0.0006              # Timesteps
-MDSTEPS 30 3     # Number of MD trial steps
-BOOST_MDSTEPS 1 1  
-SAMPLES_PER_ROUND 1 1  # Number of acc-rej steps per Gibbs round
-REPRODUCIBLE TRUE TRUE
-SEED 9999 9999
+RUN_TYPE Normal
+REX_SWAP_EVERY 1
+REX_FILE trex.dat
 
-# Thermodynamics
-THERMOSTAT Andersen Andersen     # Thermostat 
-TEMPERATURE_INI  300 300    # Initial temperature
-TEMPERATURE_FIN  300 300    # Final temperature
-BOOST_TEMPERATURE  1 1     # 
-FFSCALE AMBER AMBER       # Force field scale factors
-GBSA 1.0 1.0          # GBSA scale factor
+ROUNDS 1
+ROUNDS_TILL_REBLOCK 10 10 10 10
+WORLDS R0 R1 R2 R3
+RANDOM_WORLD_ORDER FALSE FALSE FALSE FALSE
+REPRODUCIBLE FALSE FALSE FALSE FALSE
+SEED 123 456 789 123
 
-# Generalized coordinates related
-FIXMAN_POTENTIAL FALSE FALSE  # Use Fixman potential
-FIXMAN_TORQUE FALSE FALSE        # Use Fixman torque
+DISTORT_OPTION 0 0 0 0
+FLOW_OPTION 0 0 0 0
+WORK_OPTION 0 0 0 0
+SAMPLERS MC MC MC MC
+INTEGRATORS OMMVV VV VV VV
 
-# Output
-VISUAL FALSE FALSE           # Use the visualizer
-PRINT_FREQ  1 1 # Output print frequency
-WRITEPDBS 0 0    # Pdb write frequency
-GEOMETRY FALSE FALSE             # Calculate geometric features
+SAMPLES_PER_ROUND 1 1 1 1
+TIMESTEPS 0.001 0.001 0.001 0.001
+MDSTEPS 200 50 50 50
+TEMPERATURE_FIN 300 300 300 300
+TEMPERATURE_INI 300 300 300 300
+THERMOSTAT Andersen Andersen Andersen Andersen
+FFSCALE AMBER AMBER AMBER AMBER
+GBSA 0.0 0.0 0.0 0.0
 
-DISTANCE 2 17
-DIHEDRAL 16 14 0 6 14 0 6 8
+FIXMAN_POTENTIAL FALSE TRUE TRUE TRUE
+FIXMAN_TORQUE FALSE TRUE TRUE TRUE
 
-# Software specs
-THREADS 0 0
-OPENMM TRUE TRUE
+BOOST_TEMPERATURE 300 300 300 300
+BOOST_MDSTEPS 1 1 1 1
+
+PRINT_FREQ 1 0 0 0
+WRITEPDBS 0 0 0 0
+VISUAL FALSE FALSE FALSE FALSE
+
+GEOMETRY FALSE FALSE FALSE FALSE
+
+THREADS 0 0 0 0
+OPENMM TRUE TRUE TRUE TRUE
+OPENMM_CalcOnlyNonbonded FALSE TRUE TRUE TRUE

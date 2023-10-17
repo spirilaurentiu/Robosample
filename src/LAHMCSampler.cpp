@@ -8,14 +8,13 @@ Implementation of LAHMCSampler class. **/
 #include "Topology.hpp"
 
 //** Constructor **/
-LAHMCSampler::LAHMCSampler(World *argWorld,
-    SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper,
+LAHMCSampler::LAHMCSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper,
     unsigned int Kext) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
         //MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper),
@@ -153,14 +152,14 @@ This is lower triangular matrix and it is computed by multipling a set of
 move is accepted. It's a component of the total energy stored. **/
 void LAHMCSampler::setLastAcceptedKE(SimTK::Real inpKE)
 {
-    this->ke_lastAccepted = inpKE;
+    this->ke_set = inpKE;
 }
 
 /** Sets the proposed kinetic energy before the proposal. This should be
 set right after the velocities are initialized. **/
 void LAHMCSampler::setProposedKE(SimTK::Real inpKE)
 {
-    this->ke_proposed = inpKE;
+    this->ke_o = inpKE;
 }
 
 /** Get/set the TimeStepper that manages the integrator **/
@@ -262,8 +261,8 @@ void LAHMCSampler::initialize(SimTK::State& someState )
     setLastAcceptedKE(getProposedKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    this->etot_set = this->etot_proposed;
+    this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_set = this->etot_o;
 
   
 }
@@ -330,8 +329,8 @@ void LAHMCSampler::reinitialize(SimTK::State& someState)
     setLastAcceptedKE(getProposedKE());
 
     // Store total energies
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    this->etot_set = this->etot_proposed;
+    this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_set = this->etot_o;
 
 }
 
@@ -375,9 +374,9 @@ void LAHMCSampler::initializeVelocities(SimTK::State& someState){
 /** Store the proposed energies **/
 void LAHMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
     // setProposedKE(matter->calcKineticEnergy(someState));
-    this->ke_proposed = matter->calcKineticEnergy(someState);
+    this->ke_o = matter->calcKineticEnergy(someState);
     
-    this->etot_proposed = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+    this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
 }
     
 /** Apply the L operator **/
@@ -422,10 +421,10 @@ void LAHMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState, int 
     // Calculate total energy
     if(useFixman){
         etot_ns[k] = pe_ns[k] + ke_ns[k] + fix_ns[k] - (0.5 * RT * logSineSqrGamma2_ns[k]);
-        etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+        etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
     }else{
         etot_ns[k] = pe_ns[k] + ke_ns[k];
-        etot_proposed = pe_o + ke_proposed;
+        etot_o = pe_o + ke_o;
     }
 
     pe_n = pe_ns[k];
@@ -750,7 +749,7 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
 initializeVelocities and propagate/integrate **/
-bool LAHMCSampler::propose(SimTK::State& someState)
+bool LAHMCSampler::proposeEquilibrium(SimTK::State& someState)
 {
 
     storeOldConfigurationAndPotentialEnergies(someState);
@@ -763,6 +762,10 @@ bool LAHMCSampler::propose(SimTK::State& someState)
     calcNewConfigurationAndEnergies(someState, 0);
 
     PrintDetailedEnergyInfo(someState);
+
+    // TODO
+    assert(!"What should we return here?");
+    return true;
 }
 
 /** Store new configuration and energy terms**/
@@ -772,8 +775,8 @@ void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
     pe_set = pe_n;
     fix_set = fix_n;
     logSineSqrGamma2_set = logSineSqrGamma2_n;
-    ke_lastAccepted = ke_n;
-    etot_set = pe_set + fix_set + ke_proposed + logSineSqrGamma2_set;
+    ke_set = ke_n;
+    etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
 }
 
 /** Update. **/
@@ -787,7 +790,7 @@ void LAHMCSampler::update(SimTK::State& someState)
 
 bool LAHMCSampler::sample_iteration(SimTK::State& someState)
 {
-	propose(someState);
+	proposeEquilibrium(someState);
 
 	accRejStep(someState);
     
@@ -815,12 +818,12 @@ void LAHMCSampler::PrintDetailedEnergyInfo(SimTK::State& someState)
     std::cout << std::setprecision(5) << std::fixed;
     std::cout << "pe_o " << pe_o << " pe_n " << pe_n
         << " pe_nB " << getPEFromEvaluator(someState)
-        << " ke_prop " << ke_proposed << " ke_n " << ke_n
+        << " ke_prop " << ke_o << " ke_n " << ke_n
         << " fix_o " << fix_o << " fix_n " << fix_n << " "
         << " logSineSqrGamma2_o " << logSineSqrGamma2_o << " logSineSqrGamma2_n " << logSineSqrGamma2_n << " "
         //<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
-        << " ts " << timestep  << " exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-        << " etot_n " << etot_n  << " etot_proposed " << etot_proposed
+        << " ts " << timestep  << " exp(bdE) " << exp(-(etot_n - etot_o) / RT)
+        << " etot_n " << etot_n  << " etot_proposed " << etot_o
         //<< std::endl
         ;
 }

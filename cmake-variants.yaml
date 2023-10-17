@@ -1,0 +1,37 @@
+buildType:
+  default: debug
+  choices:
+    debug:
+      short: Debug Robosample
+      long: Build debug Robosample
+      buildType: Debug
+    debug-tests:
+      short: Debug Tests
+      long: Build debug tests
+      buildType: Debug_Tests
+    debug-full:
+      short: Debug Robosample with Tests
+      long: Build debug Robosample and tests
+      buildType: Debug_Full
+
+    release:
+      short: Release Robosample
+      long: Build optimized Robosample
+      buildType: Release
+    release-tests:
+      short: Release Tests
+      long: Build optimized tests
+      buildType: Release_Tests
+    release-full:
+      short: Release Robosample with Tests
+      long: Build optimized Robosample and tests
+      buildType: Release_Full
+
+    pgo-train:
+      short: PGO Train
+      long: Run the instrumentation for Profile Guided Optimization
+      buildType: PGO_Train
+    pgo-use:
+      short: PGO Use
+      long: Use the generated instrumentation data for Profile Guided Optimization
+      buildType: PGO_Use

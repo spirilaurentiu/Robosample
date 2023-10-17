@@ -113,6 +113,7 @@ def CestGrossfield(argM, series):
 	n = series.size
 	mean = np.mean(series)
 	variance = np.var(series)
+	#print("CestGrossfield mean var", mean, variance)
 
 	# Vars
 	lags = np.arange(0, argM)
@@ -121,10 +122,15 @@ def CestGrossfield(argM, series):
 
 	for lag in lags:
 
+		#print("CestGrossfield s-mu", series[0 : (n - lag)] - mean)
+		#print("CestGrossfield s-mu", series[lag : n]       - mean)
+
 		resultF[lag] = np.mean( \
 			(series[0 : (n - lag)] - mean) * \
 			(series[lag : n]       - mean) ) \
 			/ variance
+
+		#print("CestGrossfield", lag,  resultF[lag])
 
 		# If the correlation function reaches 0 the rest is considered noise
 		if resultF[lag] < tiny:

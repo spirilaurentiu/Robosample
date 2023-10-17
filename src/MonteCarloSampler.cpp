@@ -8,14 +8,13 @@ Implementation of MonteCarloSampler class. **/
 #include "Topology.hpp"
 
 // Constructor
-MonteCarloSampler::MonteCarloSampler(World *argWorld,
-    SimTK::CompoundSystem *argCompoundSystem,
-	SimTK::SimbodyMatterSubsystem *argMatter,
-	//SimTK::Compound *argResidue,
-	std::vector<Topology> &argTopologies,
-	SimTK::DuMMForceFieldSubsystem *argDumm,
-	SimTK::GeneralForceSubsystem *argForces,
-	SimTK::TimeStepper *argTimeStepper) :
+MonteCarloSampler::MonteCarloSampler(World &argWorld,
+		SimTK::CompoundSystem &argCompoundSystem,
+		SimTK::SimbodyMatterSubsystem &argMatter,
+		std::vector<Topology> &argTopologies, 
+		SimTK::DuMMForceFieldSubsystem &argDumm,
+		SimTK::GeneralForceSubsystem &argForces,
+		SimTK::TimeStepper &argTimeStepper) :
         Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
 	TVector = std::vector<SimTK::Transform>(matter->getNumBodies());
@@ -448,7 +447,7 @@ void MonteCarloSampler::assignConfFromTVector(SimTK::State& someState)
 // In torsional dynamics the first body has 7 Q variables for 6 dofs - one
 // quaternion (q) and 3 Cartesian coordinates (x). updQ will return: 
 // [qw, qx, qy, qz, x1, x2, x3]
-bool MonteCarloSampler::propose(SimTK::State& someState)
+bool MonteCarloSampler::proposeEquilibrium(SimTK::State& someState)
 {
     for (int i = 1; i < matter->getNumBodies(); ++i){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(i));
@@ -461,6 +460,10 @@ bool MonteCarloSampler::propose(SimTK::State& someState)
     }
 
     system->realize(someState, SimTK::Stage::Position); // NECESSARY
+
+    // TODO
+    assert(!"What should we return here?");
+    return true;
 
 }
 
@@ -475,7 +478,7 @@ void MonteCarloSampler::update(SimTK::State& someState){
     pe_o = getOldPE();
 
     // Assign random configuration
-    propose(someState);
+    proposeEquilibrium(someState);
 
     // Send configuration to evaluator  
     sendConfToEvaluator(); // OPENMM
@@ -580,6 +583,45 @@ int MonteCarloSampler::getAcceptedSteps() const
 }
 
 
+/** Modifies Q randomly
+ **/
+void MonteCarloSampler::perturbQ(SimTK::State& someState)
+{
+	// Perturb Q
+	//SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+	SimTK::Real rand_no = uniformRealDistribution_mpi_pi(randomEngine);
+	int nq = someState.getNQ();
+	//SimTK::Vector V(nq);
 
+	//
+	SimTK::Real q0_refVal, q1_refVal;
+	if(rand_no < 0){
+		q0_refVal = 2;
+		q1_refVal = -1.7;
+	}else{
+		q0_refVal = 0;
+		q1_refVal = 0;
+	}
+	// q1_refVal = -2.3
+	SimTK::Real q0_actVal = someState.getQ()[0];
+	SimTK::Real q1_actVal = someState.getQ()[1];
+
+	// Draw from vonMises distribution
+	SimTK::Real q0_vonMises = generateVonMisesSample(q0_actVal, 5);
+	if(std::isnan(q0_vonMises)){q0_vonMises = q0_actVal;}
+	std::cout << "vonMises " << q0_vonMises << "\n";
+
+	// Add Gaussian noise
+	//std::normal_distribution<double> Noiser(q0_refVal, 1);
+	//double noise = Noiser(RandomCache.RandomEngine);
+
+	std::cout << "HMCSampler::perturbQ " << someState.getQ() << " with " << q0_vonMises << std::endl;
+	//someState.updQ()[which] = uniformRealDistribution_mpi_pi(randomEngine);
+	someState.updQ()[0] = q0_vonMises;
+	//someState.updQ()[1] = q1_vonMises;
+	system->realize(someState, SimTK::Stage::Position);
+	std::cout << "HMCSampler::perturbQ " << someState.getQ() << std::endl;
+
+}
 
 
