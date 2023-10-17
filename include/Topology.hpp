@@ -451,6 +451,8 @@ public:
 
 public:
 
+	void BAT();
+
 	// TODO move to Context
 	int natoms;
 	std::vector<bSpecificAtom> bAtomList;

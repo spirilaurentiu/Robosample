@@ -927,12 +927,15 @@ SimTK::Real World::getWorkOrHeat(void)
 		retValue += 
 			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
 
-		// Get the Q modifying samplers Jacobians
+		// Get Fixman potential difference
+		retValue +=
+			( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
+
+		/* // Get the Q modifying samplers Jacobians
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
-				//std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
-		}
+		} */
 		
 	}
 	
@@ -953,14 +956,17 @@ SimTK::Real World::getWork(void)
 
 		if(sampler->getDistortOpt() < 0){
 
-		// Get the potential energy difference
-		retValue += 
-			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
+			// Get the potential energy difference
+			retValue += 
+				( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
 
-		// Get the Q modifying samplers Jacobians
+			// Get Fixman potential difference
+			retValue +=
+				( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
+
+			/* // Get the Jacobians
 			retValue -= 
-				sampler->getDistortJacobianDetLog();
-				//std::cout << "sampler->getDistortJacobianDetLog() " << sampler->getDistortJacobianDetLog();
+				sampler->getDistortJacobianDetLog(); */
 		}
 		
 	}
@@ -1455,7 +1461,7 @@ SimTK::Real World::getMobodUScaleFactor(SimTK::MobilizedBodyIndex& mbx) const
 		if(mbx2uScale.find(mbx) != mbx2uScale.end()){
 			return mbx2uScale.at(mbx);
 		}else{
-			std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
+			//std::cout << "Warning: U scale factor for mobod " << int(mbx) << " not found.\n";
 			return 1;
 		}
 	}else{

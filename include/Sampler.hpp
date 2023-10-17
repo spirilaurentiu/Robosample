@@ -100,7 +100,7 @@ public:
 		SimTK::Real param1 = 1.0,
 		SimTK::Real param2 = 0.0);
 
-	virtual void setQToScaleBendStretchStdev ( SimTK::State& someState,
+	virtual SimTK::Real setQToScaleBendStretchStdev ( SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors) = 0;
 
 	//virtual void setIntegratorName(IntegratorName) = 0;

@@ -144,6 +144,10 @@ public:
 	SimTK::Real getOldFixman(void) const;
 
 	// Set/get Fixman potential
+	void setNewFixman(SimTK::Real);
+	SimTK::Real getNewFixman(void) const;
+
+	// Set/get Fixman potential
 	void setSetFixman(SimTK::Real);
 	SimTK::Real getSetFixman(void) const;
 
@@ -244,6 +248,7 @@ public:
 	/** Initialize velocities according to the Maxwell-Boltzmann
 	distribution.  Coresponds to R operator in LAHMC **/
 	void setVelocitiesToZero(SimTK::State& someState);
+	virtual void initializeVelocitiesToZero(SimTK::State& someState);
 	virtual void initializeVelocities(SimTK::State& someState);
 	void initializeNMAVelocities(SimTK::State& someState);
 
@@ -278,8 +283,10 @@ public:
 		SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
-	SimTK::Real MHAcceptProbability(SimTK::Real argEtot_proposed,
-		SimTK::Real argEtot_n) const;
+	SimTK::Real MHAcceptProbability(
+		SimTK::Real argEtot_proposed,
+		SimTK::Real argEtot_n,
+		SimTK::Real lnJ) const;
 
 	/** Accetion rejection step **/
 	virtual bool accRejStep(SimTK::State& someState);
@@ -315,17 +322,18 @@ public:
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds
 	 **/
-	void setQToScaleBendStretch(SimTK::State& someState,
+	SimTK::Real setQToScaleBendStretch(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 
-	void setQToShiftBendStretchStdev(SimTK::State& someState,
+	SimTK::Real setQToShiftBendStretchStdev(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 
 	/** Shift all the generalized coordinates and
 	 * return the scale factors of angles and bonds
 	 **/
-	void setQToScaleBendStretchStdev(SimTK::State& someState,
+	SimTK::Real setQToScaleBendStretchStdev(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
+
 	void setQToScaleBendStretchStdev_Old(SimTK::State& someState,
 		std::vector<SimTK::Real>& scaleFactors);
 
@@ -412,6 +420,10 @@ public:
 	
 	/** Get the stored kinetic energy. This is set rightafter a move is
 	accepted. It's a component of the total energy stored. **/
+	SimTK::Real getNewKE() { return this->ke_n; }
+
+	/** Get the stored kinetic energy. This is set rightafter a move is
+	accepted. It's a component of the total energy stored. **/
 	SimTK::Real getLastAcceptedKE() { return this->ke_set; }
 	
 	/** Sets the proposed kinetic energy before the proposal. This should be
@@ -448,6 +460,8 @@ public:
  	* Test ground mostly for SOA
  	*/
 	void testSOA(SimTK::State& someState);
+	
+	const int & getAcceptedSteps(void) const { return acceptedSteps;}
 
 protected:
 

@@ -97,7 +97,7 @@ std::vector<int>& ThermodynamicState::getDistortOptions()
 
 void ThermodynamicState::setDistortArgs(const std::vector<std::string>& rexDistortOptionsArg)
 {
-	this->rexDistortArgs = rexDistortArgsArg;
+	this->rexDistortArgs = rexDistortOptionsArg;
 }
 
 std::vector<std::string>& ThermodynamicState::getDistortArgs()

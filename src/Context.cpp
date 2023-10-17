@@ -387,7 +387,7 @@ bool Context::initializeFromFile(const std::string &file)
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
-	if((runType == "REX") || (runType == "RENS")){
+	if((runType[0] == 'R') || (runType[1] == 'E')){
 
 		SetupReader rexReader;
 
@@ -397,6 +397,7 @@ bool Context::initializeFromFile(const std::string &file)
 		// Storage for sampling details
 		std::vector<std::vector<std::string>> rexSamplers;
 		std::vector<std::vector<int>> rexDistortOptions;
+		std::vector<std::vector<std::string>> rexDistortArgs;
 		std::vector<std::vector<int>> rexFlowOptions;
 		std::vector<std::vector<int>> rexWorkOptions;
 
@@ -414,6 +415,7 @@ bool Context::initializeFromFile(const std::string &file)
 
 			rexSamplers,
 			rexDistortOptions,
+			rexDistortArgs,
 			rexFlowOptions,
 			rexWorkOptions,
 			rexIntegrators,
@@ -429,6 +431,7 @@ bool Context::initializeFromFile(const std::string &file)
 
 				rexSamplers[k],
 				rexDistortOptions[k],
+				rexDistortArgs[k],
 				rexFlowOptions[k],
 				rexWorkOptions[k],
 				rexIntegrators[k],
@@ -451,8 +454,14 @@ bool Context::initializeFromFile(const std::string &file)
 
 		setSwapFixman(std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]));
 
-		PrepareNonEquilibriumParams_Q();
 	}
+
+	PrepareNonEquilibriumParams_Q();
+		
+	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
+	// -- Run --
+	
+	setThermostatesNonequilibrium();
 
     return true;
 }
@@ -1830,7 +1839,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			PrintAnglesToLog(worldIndexes.back());
 			PrintDihedralsQsToLog(worldIndexes.back());
 			fprintf(logFile, "\n"); */
-			PrintToLog(worldIndexes.back());
+			PrintToLog(0, worldIndexes.back(), 0);
 		}
 
 		// Write pdb
@@ -2051,6 +2060,7 @@ void Context::addThermodynamicState(int index,
 		SimTK::Real T,
 		std::vector<std::string>& rexSamplers,
 		std::vector<int>& rexDistortOptions,
+		std::vector<std::string>& rexDistortArgs,
 		std::vector<int>& rexFlowOptions,
 		std::vector<int>& rexWorkOptions,
 		std::vector<std::string>& rexIntegrators,
@@ -2076,6 +2086,7 @@ void Context::addThermodynamicState(int index,
 
 	// Set non-equilibrium params
 	thermodynamicStates.back().setDistortOptions(rexDistortOptions);
+	thermodynamicStates.back().setDistortArgs(rexDistortArgs);
 	thermodynamicStates.back().setFlowOptions(rexFlowOptions);
 	thermodynamicStates.back().setWorkOptions(rexWorkOptions);
 
@@ -2398,120 +2409,9 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 // as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
 //, 135:194110, 2011. DOI:10.1063/1.3660669
 // replica_i and replica_j are variable
-bool Context::attemptREXSwap(int replica_i, int replica_j)
+bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
 	bool returnValue = false;
-
-	// Get replicas' thermodynamic states indexes
-	int thermoState_i = replica2ThermoIxs[replica_i];
-	int thermoState_j = replica2ThermoIxs[replica_j];
-
-	// Record this attempt
-	nofAttemptedSwapsMatrix[thermoState_i][thermoState_j] += 1;
-	nofAttemptedSwapsMatrix[thermoState_j][thermoState_i] += 1;
-
-	// Replica i reduced potential in state i
-	SimTK::Real Eii = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
-
-	// Replica j reduced potential in state j
-	SimTK::Real Ejj = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
-
-	// Replica i reduced potential in state j
-	SimTK::Real Eij = thermodynamicStates[thermoState_j].getBeta()
-		* replicas[replica_i].getPotentialEnergy();
-
-	// Replica j reduced potential in state i
-	SimTK::Real Eji = thermodynamicStates[thermoState_i].getBeta()
-		* replicas[replica_j].getPotentialEnergy();
-
-	// Include the Fixman term if indicated
-	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
-	int ndofs_i = 0, ndofs_j = 0;
-
-	if (swapFixman){
-        ndofs_i = worlds[
-            thermodynamicStates[thermoState_i].getWorldIndexes().back()
-        ].matter->getNumMobilities();
-        ndofs_j = worlds[
-            thermodynamicStates[thermoState_j].getWorldIndexes().back()
-        ].matter->getNumMobilities();
-
-        if (thermoState_i == 0){
-			std::cout << "Swap between " << thermoState_i << " and "
-				<< thermoState_j << " ";
-
-            // Replica i reduced Fixman potential in state i
-            Uii = thermodynamicStates[thermoState_i].getBeta()
-                * calcFixman_IinJ(replica_i, replica_i);
-
-            // Replica j reduced Fixman potential in state j
-            Ujj = thermodynamicStates[thermoState_j].getBeta()
-                * calcFixman_IinJ(replica_j, replica_j);
-
-            // Replica i reduced Fixman potential in state j
-            Uij = thermodynamicStates[thermoState_j].getBeta()
-                * calcFixman_IinJ(replica_i, replica_j);
-
-            // Replica j reduced Fixman potential in state i
-            //Uji = thermodynamicStates[thermoState_i].getBeta()
-            //    * calcFixman_IinJ(replica_j, replica_i);
-			// We don't need to compute it because thermodynamic state 1
-			// is reserved to a fully flexible world for now 
-			Uji = 0.0; 
-
-        }else{
-            Uii = Ujj = Uij = Uji = 0;
-        }
-
-        std::cout << "Uii Ujj Uij Uji " << Uii << " " << Ujj
-            << " " << Uij << " " << Uji << std::endl;
-	}
-
-	SimTK::Real log_p_accept = -1.0 * (Eij + Eji) + Eii + Ejj;
-	log_p_accept            += -1.0 * (Uij + Uji) + Uii + Ujj;
-
-	//std::cout << "Replicas energies = "
-	//	<< replicas[replica_i].getPotentialEnergy() << " "
-	//	<< replicas[replica_j].getPotentialEnergy() << " "
-	//	<< std::endl;
-	//std::cout << "log_p_accept = " << log_p_accept << std::endl;
-
-	std::cout << "bibj "
-		<< thermodynamicStates[0].getBeta() << " "
-		<< thermodynamicStates[1].getBeta() << " "
-		<< std::endl;
-
-	// Apply acceptance criterion
-	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
-
-	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
-
-		swapThermodynamicStates(replica_i, replica_j);
-
-		swapPotentialEnergies(replica_i, replica_j);
-
-		returnValue = true;
-
-		std::cout << "swapped\n" << endl;
-
-	}else{
-		std::cout << "left\n" << endl;
-	}
-
-	return returnValue;
-
-}
-
-/**
- * At this stage, the potential energy of the replica is accumulated by
- * equilibrium simulations and the work done by the non-equilibrium 
- * worlds should be stored in the last energy of the last world
-*/
-bool Context::attemptRENSSwap(int replica_X, int replica_Y)
-{
-	int returnValue = false;
 
 	// Get replicas' thermodynamic states indexes
 	int thermoState_C = replica2ThermoIxs[replica_X];
@@ -2521,7 +2421,12 @@ bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
 	nofAttemptedSwapsMatrix[thermoState_H][thermoState_C] += 1;
 
-	// ========================= INITIAL PE x,y 0 ==============================
+	// For useful functions
+	auto genericSampler = updWorld(0)->updSampler(0);
+
+	// ----------------------------------------------------------------
+	// INITIAL PE x,y 0
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Replica i reduced potential in state i
 	SimTK::Real eC_X0 = thermodynamicStates[thermoState_C].getBeta()
 		* replicas[replica_X].getPotentialEnergy();
@@ -2538,60 +2443,83 @@ bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 	SimTK::Real eC_Y0 = thermodynamicStates[thermoState_C].getBeta()
 		* replicas[replica_Y].getPotentialEnergy();
 
-	// Include the Fixman term if indicated
-	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
-	int ndofs_i = 0, ndofs_j = 0;
-
-	// ============================ WORK ======================================
-	/* // Replica i reduced potential in state i
-	SimTK::Real wii = thermodynamicStates[thermoState_C].getBeta()
-		* replicas[replica_X].getTransferedEnergy();
-
-	// Replica j reduced potential in state j
-	SimTK::Real wjj = thermodynamicStates[thermoState_H].getBeta()
-		* replicas[replica_Y].getTransferedEnergy();
-
-	// Replica i reduced potential in state j
-	SimTK::Real wij = thermodynamicStates[thermoState_H].getBeta()
-		* replicas[replica_X].getTransferedEnergy();
-
-	// Replica j reduced potential in state i
-	SimTK::Real wji = thermodynamicStates[thermoState_C].getBeta()
-		* replicas[replica_Y].getTransferedEnergy(); */
-	// ========================================================================
-
-	// ========================== LAST PE x,y tau =============================
+	// ----------------------------------------------------------------
+	// LAST PE x,y tau
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Replica i reduced potential in state i
 	SimTK::Real lC_Xtau = thermodynamicStates[thermoState_C].getBeta()
-		//* replicas[replica_i].get_WORK_PotentialEnergy_New(); // not full PE
 		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
 
 	// Replica j reduced potential in state j
 	SimTK::Real lH_Ytau = thermodynamicStates[thermoState_H].getBeta()
-		//* replicas[replica_j].get_WORK_PotentialEnergy_New(); // not full PE
 		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
 
 	// Replica i reduced potential in state j
 	SimTK::Real lH_Xtau = thermodynamicStates[thermoState_H].getBeta()
-		//* replicas[replica_i].get_WORK_PotentialEnergy_New(); // not full PE
 		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
 
 	// Replica j reduced potential in state i
 	SimTK::Real lC_Ytau = thermodynamicStates[thermoState_C].getBeta()
-		//* replicas[replica_j].get_WORK_PotentialEnergy_New(); // not full PE
 		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
 	// ========================================================================
 
-	SimTK::Real ETerm = -1.0 * (eH_X0 + eC_Y0) + eC_X0 + eH_Y0;
+	// Include the Fixman term if indicated
+	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
+	if (swapFixman){
 
+        if (thermoState_C == 0){
+			std::cout << "Swap between " << thermoState_C << " and "
+				<< thermoState_H << " ";
+
+            // Replica i reduced Fixman potential in state i
+            Uii = thermodynamicStates[thermoState_C].getBeta()
+                * calcFixman_IinJ(replica_X, replica_X);
+
+            // Replica j reduced Fixman potential in state j
+            Ujj = thermodynamicStates[thermoState_H].getBeta()
+                * calcFixman_IinJ(replica_Y, replica_Y);
+
+            // Replica i reduced Fixman potential in state j
+            Uij = thermodynamicStates[thermoState_H].getBeta()
+                * calcFixman_IinJ(replica_X, replica_Y);
+
+            // Replica j reduced Fixman potential in state i
+            Uji = thermodynamicStates[thermoState_C].getBeta()
+                * calcFixman_IinJ(replica_Y, replica_X); 
+        }else{
+            Uii = Ujj = Uij = Uji = 0;
+        }
+
+        std::cout << "Uii Ujj Uij Uji " << Uii << " " << Ujj
+            << " " << Uij << " " << Uji << std::endl;
+	}
+
+	// ----------------------------------------------------------------
+	// LOGP ENERGY EQUILIBRIUM
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real ETerm_equil    = eH_X0 - eC_X0;
+	ETerm_equil               += eC_Y0 - eH_Y0;
+	ETerm_equil = -1.0 * ETerm_equil;
+
+	// ----------------------------------------------------------------
+	// LOGP ENERGY NON-EQUILIBRIUM
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real
+	ETerm_nonequil  = lH_Xtau - lC_Xtau;
+	ETerm_nonequil += lC_Ytau - lH_Ytau;
+	ETerm_nonequil = -1.0 * ETerm_nonequil;
+
+	// ----------------------------------------------------------------
+	// LOGP WORK
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	SimTK::Real Work_X = lH_Xtau - eC_X0 - replicas[replica_X].get_WORK_Jacobian();
 	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - replicas[replica_Y].get_WORK_Jacobian();
-	/* SimTK::Real Work_X = lH_Xtau - eC_X0 - std::log(qScaleFactors.at(thermoState_C));
-	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - std::log(qScaleFactors.at(thermoState_H)); */
-
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
-	// Correction term
+	// ----------------------------------------------------------------
+	// CORRECTION TERM FOR NON-EQUILIBRIUM
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real correctionTerm = 1.0;
 	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
 	SimTK::Real miu_H = qScaleFactorsMiu.at(thermoState_H);
 	SimTK::Real std_C = qScaleFactorsStd.at(thermoState_C);
@@ -2602,20 +2530,13 @@ bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 	SimTK::Real s_X_1 = 1.0 / s_X;
 	SimTK::Real s_Y_1 = 1.0 / s_Y;
 
-	SimTK::Real correctionTerm = 1.0;
-	//correctionTerm = 
-	//	(normalPdf(s_X_1, miu_H, std_H) * normalPdf(s_Y_1, miu_C, std_C)) / 
-	//	(normalPdf(s_X, miu_C, std_C)   * normalPdf(s_Y, miu_H, std_H));
 	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
-	
-	auto genericSampler = updWorld(0)->updSampler(0);
-	/* qC_s_X   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
-	qH_s_Y   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
-	qH_s_X_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
-	qC_s_Y_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
 
 	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
 
+	// ----------------------------------------------------------------
+	// PRINT
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	bool printTerms = false, printWithoutText = true;
 	if (printTerms){
 		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
@@ -2630,7 +2551,7 @@ bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 			<< eH_X0 << " " << eC_Y0 << std::endl;
 		std::cout << "Transferred E i j " << replicas[replica_X].getTransferedEnergy()
 			<< " " << replicas[replica_Y].getTransferedEnergy() << std::endl;
-		std::cout << "ETerm " << ETerm << std::endl;
+		std::cout << "ETerm " << ETerm_equil << std::endl;
 		std::cout << "WTerm " << WTerm << std::endl;
 		std::cout << "correctionTerm s_i s_f " << correctionTerm 
 			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1
@@ -2638,7 +2559,7 @@ bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 			<< std::endl;
 	}
 	if(printWithoutText){
-		std::cout << "RENSdetails " << thermoState_C << " " << thermoState_H << " " 
+		std::cout << "REXdetails " << thermoState_C << " " << thermoState_H << " " 
 			<< replica_X << " " << replica_Y << " " 
 			<< thermodynamicStates[thermoState_C].getBeta() << " "
 			<< thermodynamicStates[thermoState_H].getBeta() << " "
@@ -2650,11 +2571,255 @@ bool Context::attemptRENSSwap(int replica_X, int replica_Y)
 			<< replicas[replica_Y].getTransferedEnergy() << " "
 			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1 << " "
 			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1 << " "
-			<< ETerm << " " << WTerm << " " << correctionTerm << " "
+			<< ETerm_equil << " " << WTerm << " " << correctionTerm << " "
 		<< std::endl;
 	}
 
-	SimTK::Real log_p_accept = WTerm + std::log(correctionTerm);
+	// ----------------------------------------------------------------
+	// EVALUATE
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real log_p_accept = 1.0;
+	/* if(getRunType() > 0){
+		log_p_accept = ETerm_nonequil + std::log(correctionTerm);
+	}else{
+		log_p_accept = ETerm_equil ;
+	} */
+
+	if(getRunType() == 1){
+
+		log_p_accept = ETerm_equil ;
+
+	}else if(getRunType() == 2){
+
+		log_p_accept = ETerm_nonequil + std::log(correctionTerm) ;
+
+	}else if( getRunType() == 3){
+
+		log_p_accept = WTerm + std::log(correctionTerm) ;
+
+	}
+
+	// Draw from uniform distribution
+	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+
+	// Accept or reject
+	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
+
+		// Update replicas coordinates from work generated coordinates
+		set_WORK_CoordinatesAsFinal(replica_X);
+		set_WORK_CoordinatesAsFinal(replica_Y);
+
+		// Update replica's energy from work last potential energy
+		set_WORK_PotentialAsFinal(replica_X);
+		set_WORK_PotentialAsFinal(replica_Y);
+
+		// Swap thermodynamic states
+		swapThermodynamicStates(replica_X, replica_Y);
+		swapPotentialEnergies(replica_X, replica_Y);
+
+		std::cout << "swapped\n" << endl;
+
+		returnValue = true;
+
+	}else{
+
+		// Return to equilibrium worlds coordinates
+		// - no need because it is restored in RunRENS
+
+		// Return to equilibrium worlds energies
+		// - no need because it is restored in RunRENS
+
+		// Don't swap thermodynamics states nor energies
+
+		std::cout << "left\n" << endl;
+
+		returnValue = false;
+	}
+
+	return returnValue;
+
+}
+
+// Attempt swap between replicas r_i and r_j
+// Code inspired from OpenmmTools
+// Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
+// as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
+//, 135:194110, 2011. DOI:10.1063/1.3660669
+// replica_i and replica_j are variable
+bool Context::attemptRENSSwap(int replica_X, int replica_Y)
+{
+	int returnValue = false;
+
+	// Get replicas' thermodynamic states indexes
+	int thermoState_C = replica2ThermoIxs[replica_X];
+	int thermoState_H = replica2ThermoIxs[replica_Y];
+
+	// Record this attempt
+	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
+	nofAttemptedSwapsMatrix[thermoState_H][thermoState_C] += 1;
+
+	// For useful functions
+	auto genericSampler = updWorld(0)->updSampler(0);
+
+	// ----------------------------------------------------------------
+	// INITIAL PE x,y 0
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Replica i reduced potential in state i
+	SimTK::Real eC_X0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
+
+	// Replica j reduced potential in state j
+	SimTK::Real eH_Y0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
+
+	// Replica i reduced potential in state j
+	SimTK::Real eH_X0 = thermodynamicStates[thermoState_H].getBeta()
+		* replicas[replica_X].getPotentialEnergy();
+
+	// Replica j reduced potential in state i
+	SimTK::Real eC_Y0 = thermodynamicStates[thermoState_C].getBeta()
+		* replicas[replica_Y].getPotentialEnergy();
+
+	// ----------------------------------------------------------------
+	// LAST PE x,y tau
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Replica i reduced potential in state i
+	SimTK::Real lC_Xtau = thermodynamicStates[thermoState_C].getBeta()
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
+
+	// Replica j reduced potential in state j
+	SimTK::Real lH_Ytau = thermodynamicStates[thermoState_H].getBeta()
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
+
+	// Replica i reduced potential in state j
+	SimTK::Real lH_Xtau = thermodynamicStates[thermoState_H].getBeta()
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
+
+	// Replica j reduced potential in state i
+	SimTK::Real lC_Ytau = thermodynamicStates[thermoState_C].getBeta()
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
+	// ========================================================================
+
+	// Include the Fixman term if indicated
+	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
+	if (swapFixman){
+
+        if (thermoState_C == 0){
+			std::cout << "Swap between " << thermoState_C << " and "
+				<< thermoState_H << " ";
+
+            // Replica i reduced Fixman potential in state i
+            Uii = thermodynamicStates[thermoState_C].getBeta()
+                * calcFixman_IinJ(replica_X, replica_X);
+
+            // Replica j reduced Fixman potential in state j
+            Ujj = thermodynamicStates[thermoState_H].getBeta()
+                * calcFixman_IinJ(replica_Y, replica_Y);
+
+            // Replica i reduced Fixman potential in state j
+            Uij = thermodynamicStates[thermoState_H].getBeta()
+                * calcFixman_IinJ(replica_X, replica_Y);
+
+            // Replica j reduced Fixman potential in state i
+            Uji = thermodynamicStates[thermoState_C].getBeta()
+                * calcFixman_IinJ(replica_Y, replica_X); 
+        }else{
+            Uii = Ujj = Uij = Uji = 0;
+        }
+
+        std::cout << "Uii Ujj Uij Uji " << Uii << " " << Ujj
+            << " " << Uij << " " << Uji << std::endl;
+	}
+
+	// ----------------------------------------------------------------
+	// LOGP ENERGY
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real ETerm_equil    = -1.0 * (eC_Y0   + eH_X0)   + (eC_X0   + eH_Y0);
+
+	SimTK::Real ETerm_nonequil = -1.0 * (lC_Ytau + lH_Xtau) + (lC_Xtau + lH_Ytau);
+
+	// ----------------------------------------------------------------
+	// LOGP WORK
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real Work_X = lH_Xtau - eC_X0 - replicas[replica_X].get_WORK_Jacobian();
+	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - replicas[replica_Y].get_WORK_Jacobian();
+	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
+
+	// ----------------------------------------------------------------
+	// CORRECTION TERM
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real correctionTerm = 1.0;
+	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
+	SimTK::Real miu_H = qScaleFactorsMiu.at(thermoState_H);
+	SimTK::Real std_C = qScaleFactorsStd.at(thermoState_C);
+	SimTK::Real std_H = qScaleFactorsStd.at(thermoState_H);
+	
+	SimTK::Real s_X = qScaleFactors.at(thermoState_C);
+	SimTK::Real s_Y = qScaleFactors.at(thermoState_H);
+	SimTK::Real s_X_1 = 1.0 / s_X;
+	SimTK::Real s_Y_1 = 1.0 / s_Y;
+
+	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
+	/* correctionTerm = 
+		(normalPdf(s_X_1, miu_H, std_H) * normalPdf(s_Y_1, miu_C, std_C)) / 
+		(normalPdf(s_X, miu_C, std_C)   * normalPdf(s_Y, miu_H, std_H)); */	
+	/* qC_s_X   = genericSampler->uniformRealDistributionPDFTrunc(s_i,   0.8, 1.25);
+	qH_s_Y   = genericSampler->uniformRealDistributionPDFTrunc(s_j,   0.8, 1.25);
+	qH_s_X_1 = genericSampler->uniformRealDistributionPDFTrunc(s_i_1, 0.8, 1.25);
+	qC_s_Y_1 = genericSampler->uniformRealDistributionPDFTrunc(s_j_1, 0.8, 1.25); */
+
+	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
+
+	// ----------------------------------------------------------------
+	// PRINT
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	bool printTerms = false, printWithoutText = true;
+	if (printTerms){
+		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
+		std::cout << "replicaIxs " << replica_X << " " << replica_Y << std::endl;
+		std::cout << "bibjwiwj "
+			<< thermodynamicStates[thermoState_C].getBeta() << " "
+			<< thermodynamicStates[thermoState_H].getBeta() << " "
+			<< std::endl;
+		std::cout << "LiiLjj " << lC_Xtau << " " << lH_Ytau << " "
+			<< lH_Xtau << " " << lC_Ytau << std::endl;
+		std::cout << "EiiEjj " << eC_X0 << " " << eH_Y0 << " "
+			<< eH_X0 << " " << eC_Y0 << std::endl;
+		std::cout << "Transferred E i j " << replicas[replica_X].getTransferedEnergy()
+			<< " " << replicas[replica_Y].getTransferedEnergy() << std::endl;
+		std::cout << "ETerm " << ETerm_equil << std::endl;
+		std::cout << "WTerm " << WTerm << std::endl;
+		std::cout << "correctionTerm s_i s_f " << correctionTerm 
+			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1
+			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1
+			<< std::endl;
+	}
+	if(printWithoutText){
+		std::cout << "REXdetails " << thermoState_C << " " << thermoState_H << " " 
+			<< replica_X << " " << replica_Y << " " 
+			<< thermodynamicStates[thermoState_C].getBeta() << " "
+			<< thermodynamicStates[thermoState_H].getBeta() << " "
+			<< eC_X0 << " " << eH_Y0 << " " << eH_X0 << " " << eC_Y0 << " "
+			<< lC_Xtau << " " << lH_Ytau << " " << lH_Xtau << " " << lC_Ytau << " "
+			<< replicas[replica_X].get_WORK_Jacobian() << " " 
+			<< replicas[replica_Y].get_WORK_Jacobian() << " "
+			<< replicas[replica_X].getTransferedEnergy() << " "
+			<< replicas[replica_Y].getTransferedEnergy() << " "
+			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1 << " "
+			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1 << " "
+			<< ETerm_equil << " " << WTerm << " " << correctionTerm << " "
+		<< std::endl;
+	}
+
+	// ----------------------------------------------------------------
+	// EVALUATE
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real log_p_accept = 1.0;
+	if(getRunType() > 0){	
+		log_p_accept = WTerm + std::log(correctionTerm);
+	}else{
+		log_p_accept = ETerm_equil ;
+	}
 
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
@@ -2717,13 +2882,15 @@ void Context::mixAllReplicas(int nSwapAttempts)
 		// Attempt to swap
 		bool swapped = false;
 
-		//if( ! thermodynamicStates[replica2ThermoIxs[replica_i]].hasNonequilibriumMoves() ){
-		if( getRunType() == 1 ){ // TODO make it enum
+/* 		if( getRunType() == 1 ){ // TODO make it enum
 			swapped = attemptREXSwap(replica_i, replica_j);
 
 		}else if ( getRunType() == 2 ){
 			swapped = attemptRENSSwap(replica_i, replica_j);
-		}
+		} */
+
+		swapped = attemptREXSwap(replica_i, replica_j);
+
 	}
 }
 
@@ -2754,13 +2921,14 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 
 		// Attempt to swap
 		bool swapped = false;
-		//if( ! thermodynamicStates[thermoState_i].hasNonequilibriumMoves() ){
-		if( getRunType() == 1 ){ // TODO make it enum
+		/* if( getRunType() == 1 ){ // TODO make it enum
 			swapped = attemptREXSwap(replica_i, replica_j);
 
 		}else if ( getRunType() == 2 ){
 			swapped = attemptRENSSwap(replica_i, replica_j);
-		}
+		} */
+
+		swapped = attemptREXSwap(replica_i, replica_j);
 
 	}
 }
@@ -2966,7 +3134,8 @@ void Context::store_WORK_JacobianFromBackWorld(int replicaIx)
     thermodynamicStates[thermoIx].getWorldIndexes().back();
 
     // Set this replica's WORK Jacobians potential
-    SimTK::Real jac = pHMC((worlds[backWorldIx].samplers[0]))->getDistortJacobianDetLog();
+	
+    SimTK::Real jac = (worlds[backWorldIx].updSampler(0))->getDistortJacobianDetLog();
 	replicas[replicaIx].set_WORK_Jacobian(jac);
 }
 
@@ -3021,7 +3190,7 @@ void Context::initializeReplica(int thisReplica)
 		worlds[replicaWorldIxs[i]].setBoostTemperature( T );
 	}
 
-	std::cout << "iniTemperature set to " << T << std::endl << std::flush;
+	//std::cout << "iniTemperature set to " << T << std::endl << std::flush;
 
 	// -------------
 	// Set samplers parameters for this replica
@@ -3038,12 +3207,12 @@ void Context::initializeReplica(int thisReplica)
 			replicaMdsteps[i]);
 	}
 
-	std::cout << "iniTimesteps set to ";
+	//std::cout << "iniTimesteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep() << " " ;
 	}
 	std::cout << std::endl;
-	std::cout << "iniMdsteps set to ";
+	//std::cout << "iniMdsteps set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample() << " " ;
 	}
@@ -3436,13 +3605,27 @@ int Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
 
 }
 
+/* vector<string> split(const string& i_str, const string& i_delim)
+{
+    vector<string> result;
+
+    size_t found = i_str.find(i_delim);
+    size_t startIndex = 0;
+
+    while(found != string::npos)
+    {
+        result.push_back(string(i_str.begin()+startIndex, i_str.begin()+found));
+        startIndex = found + i_delim.size();
+        found = i_str.find(i_delim, startIndex);
+    }
+    if(startIndex != i_str.size())
+        result.push_back(string(i_str.begin()+startIndex, i_str.end()));
+    return result;
+} */
+
 // Set non-equilibrium parameters
 void Context::updQScaleFactors(int mixi)
 {
-
-	// -------------
-	// Set non-equilibrium parameters
-	// =============
 
 	// Prepare non-equilibrium params
 	if(mixi % 2){ // odd batch
@@ -3451,25 +3634,71 @@ void Context::updQScaleFactors(int mixi)
 		qScaleFactorsMiu = qScaleFactorsEven;
 	}
 
+
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
-	std::vector<std::string> how;
-	if(getRunType() == 1){
-		how = { "deterministic", "gauss"};
-	}else if(getRunType() == 2){
-		how = { "deterministic", "gauss"};
-	}
 	bool randSignOpt = true;
 
-	for(size_t sfIx = 0; sfIx < qScaleFactors.size(); sfIx++){
-		if(qScaleFactors.at(sfIx) != 1){
-			qScaleFactors.at(sfIx) = distributeScalingFactor(
-				how, qScaleFactorsMiu.at(sfIx), randSignOpt);
+	std::vector<std::string> how;
+
+	// Go through all thermodynamic states which should correspond to scale factors
+	for(size_t thermoIx = 0; thermoIx < qScaleFactors.size(); thermoIx++){
+
+		// Get thermoState world indexes 
+		std::vector<int>& worldIxs = 
+			thermodynamicStates[thermoIx].updWorldIndexes();
+		size_t thermoNofWorlds = worldIxs.size();
+
+		// Go through all the worlds this thermostate should go through
+		for(std::size_t worldCnt = 0; worldCnt < thermoNofWorlds; worldCnt++){
+
+			// Assign distribution from the first nonequilibrium world FOR NOW
+			if(thermodynamicStates[thermoIx].getDistortOptions()[worldCnt] != 0){
+
+				// Error checking
+				if(  thermodynamicStates[thermoIx].getDistortArgs().size()  ){
+
+					how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
+
+				}else{
+					
+					how = {"deterministic"};
+				}
+
+				break;
+			}
+
+			// Distribute scale factor
+			if(qScaleFactors.at(thermoIx) != 1){
+				qScaleFactors.at(thermoIx) = distributeScalingFactor(
+					how, qScaleFactorsMiu.at(thermoIx), randSignOpt);
+			}
+
 		}
 	}
 
+}
 
+// Print to log and write pdbs
+void Context::REXLog(int mixi, int replicaIx)
+{
+	// Write energy and geometric features to logfile
+	if(printFreq || pdbRestartFreq){
+		if( !(mixi % printFreq) ){
+
+			for(auto wIx: worldIndexes){
+				PrintToLog(replicaIx, wIx, 0);
+			}
+
+		}
+		// Write pdb
+		if( pdbRestartFreq != 0){
+			if((mixi % pdbRestartFreq) == 0){
+				writePdbs(mixi, replica2ThermoIxs[replicaIx]);
+			}
+		}
+	} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 }
 
 
@@ -3477,8 +3706,8 @@ void Context::updQScaleFactors(int mixi)
 void Context::RunREX()
 {
 
-	// Is this necesary
-	realizeTopology();
+	// Is this necesary =======================================================
+	realizeTopology(); 
 
 	// Allocate space for swap matrices
 	allocateSwapMatrices();
@@ -3488,82 +3717,835 @@ void Context::RunREX()
 	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 		std::cout << "REX replica " << replicaIx << std::endl;
 
-            //std::cout << "Replica front world coordinates:\n";
-			//replicas[replicaIx].PrintCoordinates();
+			// Set intial parameters
 			initializeReplica(replicaIx);
 
-			// 
+			// Copy coordinates from replica to front world
 			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Iterate this replica's worlds
 			RunReplicaAllWorlds(replicaIx, swapEvery);
 
-			// This should always be a fully flexible world
+			// Copy coordinates from front world to replica
 			storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
 			// Store energy
 			storeReplicaEnergyFromFrontWorldFull(replicaIx);
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
-			PrintToLog(worldIndexes.front());
+			/* PrintToLog(replicaIx, worldIndexes.front(), 0);
+			writePdbs(0,	replica2ThermoIxs[replicaIx]); */
 
-			writePdbs(0,	replica2ThermoIxs[replicaIx]);
-	}
+			// Write energy and geometric features to logfile
+			REXLog(0, replicaIx);
+
+	} // ======================================================================
 
 	PrintNofAcceptedSwapsMatrix();
 
-	// Main loop
-	int nofMixes = int(requiredNofRounds / swapEvery);
-	int currWIx = -1;
+	bool givenTsMode = false;
+		if(givenTsMode){
+			std::cout << "givenTsMode = true\n";
+			std::vector<SimTK::Real> givenX_PF;
+			std::vector<SimTK::Real> givenX_BM;
 
+			std::string molecule = "trpch";
+			if(molecule == "lin4"){
+				givenX_PF.resize(4, 999);
+				givenX_BM.resize(4, 999);
+
+				givenX_PF[0] = 0.0000000000;
+				givenX_PF[1] = 1.5707963268;
+				givenX_PF[2] = 0.0000000000;
+				givenX_PF[3] = 1.5707963268;
+				givenX_BM[0] = 0.0000000000;
+				givenX_BM[1] = 0.1000000000;
+				givenX_BM[2] = 0.1000000000;
+				givenX_BM[3] = 0.1000000000;
+
+			}else if(molecule == "ala1avg"){
+				givenX_PF.resize(22, 999);
+				givenX_BM.resize(22, 999);
+
+				givenX_PF[0] = 0.382213052;
+				givenX_PF[1] = 1.909352531;
+				givenX_PF[2] = 1.893749726;
+				givenX_PF[3] = 1.947370624;
+				givenX_PF[4] = 0;
+				givenX_PF[5] = 1.956830795;
+				givenX_PF[6] = 2.048214246;
+				givenX_PF[7] = 2.039980631;
+				givenX_PF[8] = 2.161855757;
+				givenX_PF[9] = 1.901552048;
+				givenX_PF[10] = 1.895242261;
+				givenX_PF[11] = 1.944130783;
+				givenX_PF[12] = 1.977970389;
+				givenX_PF[13] = 1.919833798;
+				givenX_PF[14] = 1.967840235;
+				givenX_PF[15] = 2.056850251;
+				givenX_PF[16] = 2.101173327;
+				givenX_PF[17] = 2.108547254;
+				givenX_PF[18] = 2.251719968;
+				givenX_PF[19] = 1.869673523;
+				givenX_PF[20] = 1.935043108;
+				givenX_PF[21] = 1.916275746;
+				givenX_BM[0] = 0;
+				givenX_BM[1] = 0.108791084;
+				givenX_BM[2] = 0.114675602;
+				givenX_BM[3] = 0.10683655;
+				givenX_BM[4] = 0.153979978;
+				givenX_BM[5] = 0.120963202;
+				givenX_BM[6] = 0.134721103;
+				givenX_BM[7] = 0.09633632;
+				givenX_BM[8] = 0.147241057;
+				givenX_BM[9] = 0.107930417;
+				givenX_BM[10] = 0.150565067;
+				givenX_BM[11] = 0.111184402;
+				givenX_BM[12] = 0.109086027;
+				givenX_BM[13] = 0.110920344;
+				givenX_BM[14] = 0.154254133;
+				givenX_BM[15] = 0.123863943;
+				givenX_BM[16] = 0.131670032;
+				givenX_BM[17] = 0.106489035;
+				givenX_BM[18] = 0.147187697;
+				givenX_BM[19] = 0.110298069;
+				givenX_BM[20] = 0.108296974;
+				givenX_BM[21] = 0.111305194;
+			}else if(molecule == "ala1min"){
+				givenX_PF.resize(22, 999);
+				givenX_BM.resize(22, 999);
+
+				givenX_PF[0] = 0.3682643796;
+				givenX_PF[1] = 1.8960517108;
+				givenX_PF[2] = 1.8960516113;
+				givenX_PF[3] = 1.9390607064;
+				givenX_PF[4] = 0.0000000000;
+				givenX_PF[5] = 2.1031232500;
+				givenX_PF[6] = 2.0350548087;
+				givenX_PF[7] = 2.0943959009;
+				givenX_PF[8] = 2.1275573188;
+				givenX_PF[9] = 1.9111356926;
+				givenX_PF[10] = 1.9390611609;
+				givenX_PF[11] = 1.9111367719;
+				givenX_PF[12] = 1.9111354691;
+				givenX_PF[13] = 1.9111364697;
+				givenX_PF[14] = 1.9390619788;
+				givenX_PF[15] = 2.1031219670;
+				givenX_PF[16] = 2.0350548028;
+				givenX_PF[17] = 2.0943960153;
+				givenX_PF[18] = 2.1275572828;
+				givenX_PF[19] = 1.9111358481;
+				givenX_PF[20] = 1.9111364441;
+				givenX_PF[21] = 1.9111361106;
+				givenX_BM[0] = 0.0000000000;
+				givenX_BM[1] = 0.1089999254;
+				givenX_BM[2] = 0.1089999510;
+				givenX_BM[3] = 0.1090000000;
+				givenX_BM[4] = 0.1530000044;
+				givenX_BM[5] = 0.1228999573;
+				givenX_BM[6] = 0.1335000002;
+				givenX_BM[7] = 0.1009999727;
+				givenX_BM[8] = 0.1449000378;
+				givenX_BM[9] = 0.1089999687;
+				givenX_BM[10] = 0.1524999850;
+				givenX_BM[11] = 0.1090000050;
+				givenX_BM[12] = 0.1090000157;
+				givenX_BM[13] = 0.1089999583;
+				givenX_BM[14] = 0.1522000039;
+				givenX_BM[15] = 0.1228999670;
+				givenX_BM[16] = 0.1334999968;
+				givenX_BM[17] = 0.1009999640;
+				givenX_BM[18] = 0.1449000400;
+				givenX_BM[19] = 0.1090000363;
+				givenX_BM[20] = 0.1090000286;
+				givenX_BM[21] = 0.1089999982;
+
+			}else if(molecule == "trpch"){
+				givenX_PF.resize(313, 999);
+				givenX_BM.resize(313, 999);
+
+				givenX_PF[0] = 0.3546822847;
+				givenX_PF[1] = 1.9060295594;
+				givenX_PF[2] = 1.9025968860;
+				givenX_PF[3] = 1.9085402776;
+				givenX_PF[4] = 0.0000000000;
+				givenX_PF[5] = 2.0972907588;
+				givenX_PF[6] = 2.0286793909;
+				givenX_PF[7] = 2.0528478579;
+				givenX_PF[8] = 2.1856998721;
+				givenX_PF[9] = 1.8976058090;
+				givenX_PF[10] = 1.8923232504;
+				givenX_PF[11] = 1.9157441224;
+				givenX_PF[12] = 1.9019129118;
+				givenX_PF[13] = 1.9736009040;
+				givenX_PF[14] = 2.1301094220;
+				givenX_PF[15] = 2.0607535226;
+				givenX_PF[16] = 2.0683506033;
+				givenX_PF[17] = 2.1025786704;
+				givenX_PF[18] = 1.9483879442;
+				givenX_PF[19] = 2.1031608321;
+				givenX_PF[20] = 2.0445610426;
+				givenX_PF[21] = 2.0548638906;
+				givenX_PF[22] = 2.1865167749;
+				givenX_PF[23] = 1.8902389266;
+				givenX_PF[24] = 1.8919530347;
+				givenX_PF[25] = 1.8973191683;
+				givenX_PF[26] = 1.8843467699;
+				givenX_PF[27] = 2.0225037933;
+				givenX_PF[28] = 1.9164111080;
+				givenX_PF[29] = 1.9593176345;
+				givenX_PF[30] = 1.9179949567;
+				givenX_PF[31] = 1.9109740368;
+				givenX_PF[32] = 1.9317063439;
+				givenX_PF[33] = 1.9137230829;
+				givenX_PF[34] = 1.9119425217;
+				givenX_PF[35] = 1.9166099906;
+				givenX_PF[36] = 1.9265660743;
+				givenX_PF[37] = 1.9467291662;
+				givenX_PF[38] = 2.1069122215;
+				givenX_PF[39] = 2.0380728825;
+				givenX_PF[40] = 2.0636509144;
+				givenX_PF[41] = 2.1849156725;
+				givenX_PF[42] = 1.9036827862;
+				givenX_PF[43] = 1.9028519748;
+				givenX_PF[44] = 1.8985802682;
+				givenX_PF[45] = 1.8991351349;
+				givenX_PF[46] = 1.9990811312;
+				givenX_PF[47] = 2.1017283378;
+				givenX_PF[48] = 2.0963127214;
+				givenX_PF[49] = 2.0966888848;
+				givenX_PF[50] = 2.0958286111;
+				givenX_PF[51] = 2.0951333537;
+				givenX_PF[52] = 2.1005785546;
+				givenX_PF[53] = 1.9454248283;
+				givenX_PF[54] = 2.0898968645;
+				givenX_PF[55] = 2.0861882065;
+				givenX_PF[56] = 2.0957670977;
+				givenX_PF[57] = 2.0916569458;
+				givenX_PF[58] = 1.9467887308;
+				givenX_PF[59] = 2.1043491351;
+				givenX_PF[60] = 2.0409994308;
+				givenX_PF[61] = 2.0645186930;
+				givenX_PF[62] = 2.1851497994;
+				givenX_PF[63] = 1.8785875064;
+				givenX_PF[64] = 1.9285669787;
+				givenX_PF[65] = 1.8707517759;
+				givenX_PF[66] = 1.9664730133;
+				givenX_PF[67] = 1.9275536223;
+				givenX_PF[68] = 1.9216421825;
+				givenX_PF[69] = 1.9232931081;
+				givenX_PF[70] = 1.9343982249;
+				givenX_PF[71] = 1.9206727194;
+				givenX_PF[72] = 1.8943858879;
+				givenX_PF[73] = 1.9849338530;
+				givenX_PF[74] = 1.9286310059;
+				givenX_PF[75] = 1.9080544674;
+				givenX_PF[76] = 1.9216912458;
+				givenX_PF[77] = 1.9382808489;
+				givenX_PF[78] = 2.1100238217;
+				givenX_PF[79] = 2.0359411049;
+				givenX_PF[80] = 2.0637726022;
+				givenX_PF[81] = 2.1820152550;
+				givenX_PF[82] = 1.8999568650;
+				givenX_PF[83] = 1.8870757948;
+				givenX_PF[84] = 1.8721276270;
+				givenX_PF[85] = 1.9103678119;
+				givenX_PF[86] = 2.0013246207;
+				givenX_PF[87] = 1.9084775450;
+				givenX_PF[88] = 1.9064898914;
+				givenX_PF[89] = 1.9786797952;
+				givenX_PF[90] = 2.1481050455;
+				givenX_PF[91] = 2.0649048391;
+				givenX_PF[92] = 2.0685713331;
+				givenX_PF[93] = 2.1037377954;
+				givenX_PF[94] = 1.9439987133;
+				givenX_PF[95] = 2.1092299220;
+				givenX_PF[96] = 2.0398318192;
+				givenX_PF[97] = 2.0577988141;
+				givenX_PF[98] = 2.1878648340;
+				givenX_PF[99] = 1.8981511799;
+				givenX_PF[100] = 1.9107149966;
+				givenX_PF[101] = 1.8951991682;
+				givenX_PF[102] = 1.8933703508;
+				givenX_PF[103] = 2.0136715476;
+				givenX_PF[104] = 2.1926006291;
+				givenX_PF[105] = 2.1820189052;
+				givenX_PF[106] = 1.9143953536;
+				givenX_PF[107] = 2.1505633045;
+				givenX_PF[108] = 1.9477799610;
+				givenX_PF[109] = 2.3248098767;
+				givenX_PF[110] = 2.0962864568;
+				givenX_PF[111] = 2.0797879199;
+				givenX_PF[112] = 2.0972027863;
+				givenX_PF[113] = 2.0928747640;
+				givenX_PF[114] = 2.0887104199;
+				givenX_PF[115] = 2.1026642840;
+				givenX_PF[116] = 2.0897385707;
+				givenX_PF[117] = 2.1132408922;
+				givenX_PF[118] = 1.9504043494;
+				givenX_PF[119] = 2.1065158495;
+				givenX_PF[120] = 2.0399601106;
+				givenX_PF[121] = 2.0526264717;
+				givenX_PF[122] = 2.1922756592;
+				givenX_PF[123] = 1.8890854089;
+				givenX_PF[124] = 1.8922075944;
+				givenX_PF[125] = 1.9009444223;
+				givenX_PF[126] = 1.8849971665;
+				givenX_PF[127] = 2.0175363167;
+				givenX_PF[128] = 1.9166675576;
+				givenX_PF[129] = 1.9581818222;
+				givenX_PF[130] = 1.9197668502;
+				givenX_PF[131] = 1.9130533634;
+				givenX_PF[132] = 1.9264445855;
+				givenX_PF[133] = 1.9153354928;
+				givenX_PF[134] = 1.9147854208;
+				givenX_PF[135] = 1.9140057603;
+				givenX_PF[136] = 1.9262883765;
+				givenX_PF[137] = 1.9386548552;
+				givenX_PF[138] = 2.1035360538;
+				givenX_PF[139] = 2.0361795925;
+				givenX_PF[140] = 2.0440147313;
+				givenX_PF[141] = 2.2003681240;
+				givenX_PF[142] = 1.9057549962;
+				givenX_PF[143] = 1.8938414328;
+				givenX_PF[144] = 1.8955189295;
+				givenX_PF[145] = 1.9072405546;
+				givenX_PF[146] = 1.9837702346;
+				givenX_PF[147] = 1.9142935650;
+				givenX_PF[148] = 1.8974667717;
+				givenX_PF[149] = 1.9453184802;
+				givenX_PF[150] = 1.9106492921;
+				givenX_PF[151] = 1.9081797141;
+				givenX_PF[152] = 1.9141439608;
+				givenX_PF[153] = 1.8964646406;
+				givenX_PF[154] = 1.8966724573;
+				givenX_PF[155] = 1.9484650728;
+				givenX_PF[156] = 1.9450112409;
+				givenX_PF[157] = 1.9355462675;
+				givenX_PF[158] = 1.9420097951;
+				givenX_PF[159] = 1.9346942909;
+				givenX_PF[160] = 2.1026579150;
+				givenX_PF[161] = 2.0401940212;
+				givenX_PF[162] = 2.0504011055;
+				givenX_PF[163] = 2.1895778276;
+				givenX_PF[164] = 1.8923998400;
+				givenX_PF[165] = 1.9029584548;
+				givenX_PF[166] = 1.8996918520;
+				givenX_PF[167] = 1.8976042223;
+				givenX_PF[168] = 1.9952278171;
+				givenX_PF[169] = 2.0931485781;
+				givenX_PF[170] = 2.0638634541;
+				givenX_PF[171] = 1.9509833613;
+				givenX_PF[172] = 2.1061710457;
+				givenX_PF[173] = 2.0539640343;
+				givenX_PF[174] = 2.0565427514;
+				givenX_PF[175] = 2.1768286729;
+				givenX_PF[176] = 1.9006437041;
+				givenX_PF[177] = 1.9085236199;
+				givenX_PF[178] = 1.9972224858;
+				givenX_PF[179] = 2.1199564547;
+				givenX_PF[180] = 2.0285118793;
+				givenX_PF[181] = 2.0620725015;
+				givenX_PF[182] = 2.1786554950;
+				givenX_PF[183] = 1.9064561379;
+				givenX_PF[184] = 1.9051001451;
+				givenX_PF[185] = 1.9815833279;
+				givenX_PF[186] = 2.0910613048;
+				givenX_PF[187] = 2.0647151234;
+				givenX_PF[188] = 2.1938031203;
+				givenX_PF[189] = 1.9065896593;
+				givenX_PF[190] = 1.9592308159;
+				givenX_PF[191] = 1.8367779217;
+				givenX_PF[192] = 1.9516989943;
+				givenX_PF[193] = 1.9140479369;
+				givenX_PF[194] = 1.7874935688;
+				givenX_PF[195] = 1.9061040162;
+				givenX_PF[196] = 1.9476123512;
+				givenX_PF[197] = 1.8075396343;
+				givenX_PF[198] = 1.8936910247;
+				givenX_PF[199] = 1.9358411796;
+				givenX_PF[200] = 2.1211539853;
+				givenX_PF[201] = 2.0261040289;
+				givenX_PF[202] = 2.0575414594;
+				givenX_PF[203] = 2.1844827265;
+				givenX_PF[204] = 1.9003089900;
+				givenX_PF[205] = 1.9133228300;
+				givenX_PF[206] = 1.9053429104;
+				givenX_PF[207] = 1.9135208847;
+				givenX_PF[208] = 1.9411871262;
+				givenX_PF[209] = 1.8831903026;
+				givenX_PF[210] = 1.9475942156;
+				givenX_PF[211] = 2.1084639821;
+				givenX_PF[212] = 2.0420323909;
+				givenX_PF[213] = 2.0551226250;
+				givenX_PF[214] = 2.1855421858;
+				givenX_PF[215] = 1.8964508261;
+				givenX_PF[216] = 1.9090550721;
+				givenX_PF[217] = 1.9040380242;
+				givenX_PF[218] = 1.9054116109;
+				givenX_PF[219] = 1.9420578617;
+				givenX_PF[220] = 1.8831943571;
+				givenX_PF[221] = 1.9495337668;
+				givenX_PF[222] = 2.1096558536;
+				givenX_PF[223] = 2.0441278532;
+				givenX_PF[224] = 2.0565540983;
+				givenX_PF[225] = 2.1781904154;
+				givenX_PF[226] = 1.9037972656;
+				givenX_PF[227] = 1.9158766989;
+				givenX_PF[228] = 1.9781768392;
+				givenX_PF[229] = 2.1100483844;
+				givenX_PF[230] = 2.0275490532;
+				givenX_PF[231] = 2.0439282215;
+				givenX_PF[232] = 2.2009644204;
+				givenX_PF[233] = 1.8860950801;
+				givenX_PF[234] = 1.8936518233;
+				givenX_PF[235] = 1.9046827733;
+				givenX_PF[236] = 1.8975766492;
+				givenX_PF[237] = 2.0036276240;
+				givenX_PF[238] = 1.9026688199;
+				givenX_PF[239] = 1.9231440495;
+				givenX_PF[240] = 1.9510738028;
+				givenX_PF[241] = 1.8974617167;
+				givenX_PF[242] = 1.8895346902;
+				givenX_PF[243] = 1.9597212135;
+				givenX_PF[244] = 2.0400569149;
+				givenX_PF[245] = 2.2091361729;
+				givenX_PF[246] = 2.1328467466;
+				givenX_PF[247] = 2.0765568963;
+				givenX_PF[248] = 2.1062601359;
+				givenX_PF[249] = 2.1017446840;
+				givenX_PF[250] = 2.1026693021;
+				givenX_PF[251] = 2.0984816720;
+				givenX_PF[252] = 1.9562928586;
+				givenX_PF[253] = 2.0677805527;
+				givenX_PF[254] = 2.0918312343;
+				givenX_PF[255] = 2.1986593975;
+				givenX_PF[256] = 1.9165189167;
+				givenX_PF[257] = 1.9565785520;
+				givenX_PF[258] = 1.8430490356;
+				givenX_PF[259] = 1.9523857129;
+				givenX_PF[260] = 1.9190989716;
+				givenX_PF[261] = 1.7768568570;
+				givenX_PF[262] = 1.9085657405;
+				givenX_PF[263] = 1.9392098013;
+				givenX_PF[264] = 1.8048273606;
+				givenX_PF[265] = 1.8971914309;
+				givenX_PF[266] = 1.9488814049;
+				givenX_PF[267] = 2.0888948454;
+				givenX_PF[268] = 2.0749337637;
+				givenX_PF[269] = 2.1993164513;
+				givenX_PF[270] = 1.9090593058;
+				givenX_PF[271] = 1.9583698751;
+				givenX_PF[272] = 1.8484405858;
+				givenX_PF[273] = 1.9570274940;
+				givenX_PF[274] = 1.9196822263;
+				givenX_PF[275] = 1.7852819207;
+				givenX_PF[276] = 1.9052741741;
+				givenX_PF[277] = 1.9472029173;
+				givenX_PF[278] = 1.8027767205;
+				givenX_PF[279] = 1.8936170089;
+				givenX_PF[280] = 1.9422810797;
+				givenX_PF[281] = 2.0913707135;
+				givenX_PF[282] = 2.0696026076;
+				givenX_PF[283] = 2.2033975130;
+				givenX_PF[284] = 1.9094898513;
+				givenX_PF[285] = 1.9676571874;
+				givenX_PF[286] = 1.8480409241;
+				givenX_PF[287] = 1.9526830081;
+				givenX_PF[288] = 1.9165995246;
+				givenX_PF[289] = 1.7890846367;
+				givenX_PF[290] = 1.9089650925;
+				givenX_PF[291] = 1.9493411392;
+				givenX_PF[292] = 1.7996900542;
+				givenX_PF[293] = 1.8879339261;
+				givenX_PF[294] = 1.9317353425;
+				givenX_PF[295] = 2.1262708378;
+				givenX_PF[296] = 2.0163168156;
+				givenX_PF[297] = 2.0537614806;
+				givenX_PF[298] = 2.1953318893;
+				givenX_PF[299] = 1.9030651096;
+				givenX_PF[300] = 1.9081860754;
+				givenX_PF[301] = 1.9055771124;
+				givenX_PF[302] = 1.9057078620;
+				givenX_PF[303] = 1.9409172378;
+				givenX_PF[304] = 1.8821451082;
+				givenX_PF[305] = 1.9461397186;
+				givenX_PF[306] = 2.1048967532;
+				givenX_PF[307] = 2.0474785304;
+				givenX_PF[308] = 2.0475537899;
+				givenX_PF[309] = 2.1775864064;
+				givenX_PF[310] = 1.9179094702;
+				givenX_PF[311] = 1.9214511776;
+				givenX_PF[312] = 1.9186145868;
+				givenX_BM[0] = 0.0000000000;
+				givenX_BM[1] = 0.1090246435;
+				givenX_BM[2] = 0.1089611430;
+				givenX_BM[3] = 0.1088887059;
+				givenX_BM[4] = 0.1512119011;
+				givenX_BM[5] = 0.1229953007;
+				givenX_BM[6] = 0.1332475116;
+				givenX_BM[7] = 0.1012104784;
+				givenX_BM[8] = 0.1466790832;
+				givenX_BM[9] = 0.1089070394;
+				givenX_BM[10] = 0.1541380585;
+				givenX_BM[11] = 0.1091986161;
+				givenX_BM[12] = 0.1086267086;
+				givenX_BM[13] = 0.1521923454;
+				givenX_BM[14] = 0.1223891120;
+				givenX_BM[15] = 0.1313195091;
+				givenX_BM[16] = 0.1010366526;
+				givenX_BM[17] = 0.1008362434;
+				givenX_BM[18] = 0.1544789696;
+				givenX_BM[19] = 0.1236851971;
+				givenX_BM[20] = 0.1337804589;
+				givenX_BM[21] = 0.1010535402;
+				givenX_BM[22] = 0.1468748606;
+				givenX_BM[23] = 0.1094311526;
+				givenX_BM[24] = 0.1546577366;
+				givenX_BM[25] = 0.1090881978;
+				givenX_BM[26] = 0.1089148070;
+				givenX_BM[27] = 0.1540642445;
+				givenX_BM[28] = 0.1089135908;
+				givenX_BM[29] = 0.1530862764;
+				givenX_BM[30] = 0.1090820865;
+				givenX_BM[31] = 0.1095053386;
+				givenX_BM[32] = 0.1085289250;
+				givenX_BM[33] = 0.1525912545;
+				givenX_BM[34] = 0.1091679146;
+				givenX_BM[35] = 0.1089778755;
+				givenX_BM[36] = 0.1089279545;
+				givenX_BM[37] = 0.1541147268;
+				givenX_BM[38] = 0.1233800563;
+				givenX_BM[39] = 0.1336268153;
+				givenX_BM[40] = 0.1009739448;
+				givenX_BM[41] = 0.1468845991;
+				givenX_BM[42] = 0.1089132113;
+				givenX_BM[43] = 0.1538098879;
+				givenX_BM[44] = 0.1089349231;
+				givenX_BM[45] = 0.1096612164;
+				givenX_BM[46] = 0.1518091900;
+				givenX_BM[47] = 0.1409119078;
+				givenX_BM[48] = 0.1082135161;
+				givenX_BM[49] = 0.1408949333;
+				givenX_BM[50] = 0.1081677131;
+				givenX_BM[51] = 0.1411278920;
+				givenX_BM[52] = 0.1358340081;
+				givenX_BM[53] = 0.0973687393;
+				givenX_BM[54] = 0.1411904777;
+				givenX_BM[55] = 0.1080645162;
+				givenX_BM[56] = 0.1407694904;
+				givenX_BM[57] = 0.1080411254;
+				givenX_BM[58] = 0.1543189613;
+				givenX_BM[59] = 0.1235939436;
+				givenX_BM[60] = 0.1335945738;
+				givenX_BM[61] = 0.1011419977;
+				givenX_BM[62] = 0.1472492549;
+				givenX_BM[63] = 0.1090083966;
+				givenX_BM[64] = 0.1550790946;
+				givenX_BM[65] = 0.1089965731;
+				givenX_BM[66] = 0.1540308442;
+				givenX_BM[67] = 0.1087724445;
+				givenX_BM[68] = 0.1088931585;
+				givenX_BM[69] = 0.1093576686;
+				givenX_BM[70] = 0.1546632982;
+				givenX_BM[71] = 0.1092444657;
+				givenX_BM[72] = 0.1091583294;
+				givenX_BM[73] = 0.1532226003;
+				givenX_BM[74] = 0.1089781547;
+				givenX_BM[75] = 0.1095529000;
+				givenX_BM[76] = 0.1093110536;
+				givenX_BM[77] = 0.1539169420;
+				givenX_BM[78] = 0.1235312117;
+				givenX_BM[79] = 0.1336962500;
+				givenX_BM[80] = 0.1010558395;
+				givenX_BM[81] = 0.1471144148;
+				givenX_BM[82] = 0.1090630423;
+				givenX_BM[83] = 0.1540442614;
+				givenX_BM[84] = 0.1090066462;
+				givenX_BM[85] = 0.1091474837;
+				givenX_BM[86] = 0.1538853624;
+				givenX_BM[87] = 0.1092098236;
+				givenX_BM[88] = 0.1089832937;
+				givenX_BM[89] = 0.1531461493;
+				givenX_BM[90] = 0.1227255987;
+				givenX_BM[91] = 0.1316033794;
+				givenX_BM[92] = 0.1005593862;
+				givenX_BM[93] = 0.1009929241;
+				givenX_BM[94] = 0.1538968160;
+				givenX_BM[95] = 0.1234078198;
+				givenX_BM[96] = 0.1339430395;
+				givenX_BM[97] = 0.1015477792;
+				givenX_BM[98] = 0.1469355994;
+				givenX_BM[99] = 0.1092251213;
+				givenX_BM[100] = 0.1539129188;
+				givenX_BM[101] = 0.1087132516;
+				givenX_BM[102] = 0.1086750257;
+				givenX_BM[103] = 0.1500653191;
+				givenX_BM[104] = 0.1352341955;
+				givenX_BM[105] = 0.1083480015;
+				givenX_BM[106] = 0.1382706217;
+				givenX_BM[107] = 0.1013633676;
+				givenX_BM[108] = 0.1377757629;
+				givenX_BM[109] = 0.1403323281;
+				givenX_BM[110] = 0.1084189744;
+				givenX_BM[111] = 0.1403741481;
+				givenX_BM[112] = 0.1082738595;
+				givenX_BM[113] = 0.1408162496;
+				givenX_BM[114] = 0.1082189558;
+				givenX_BM[115] = 0.1408998050;
+				givenX_BM[116] = 0.1082277109;
+				givenX_BM[117] = 0.1412069802;
+				givenX_BM[118] = 0.1539102782;
+				givenX_BM[119] = 0.1235478255;
+				givenX_BM[120] = 0.1338366032;
+				givenX_BM[121] = 0.1014792051;
+				givenX_BM[122] = 0.1466765977;
+				givenX_BM[123] = 0.1093139224;
+				givenX_BM[124] = 0.1545583048;
+				givenX_BM[125] = 0.1090609309;
+				givenX_BM[126] = 0.1089917860;
+				givenX_BM[127] = 0.1542572227;
+				givenX_BM[128] = 0.1091092503;
+				givenX_BM[129] = 0.1528377002;
+				givenX_BM[130] = 0.1086855100;
+				givenX_BM[131] = 0.1090069799;
+				givenX_BM[132] = 0.1088229710;
+				givenX_BM[133] = 0.1527074498;
+				givenX_BM[134] = 0.1089371660;
+				givenX_BM[135] = 0.1093998501;
+				givenX_BM[136] = 0.1091054136;
+				givenX_BM[137] = 0.1542260622;
+				givenX_BM[138] = 0.1233897402;
+				givenX_BM[139] = 0.1339178182;
+				givenX_BM[140] = 0.1011292284;
+				givenX_BM[141] = 0.1472313314;
+				givenX_BM[142] = 0.1093323021;
+				givenX_BM[143] = 0.1539517623;
+				givenX_BM[144] = 0.1092798014;
+				givenX_BM[145] = 0.1092630978;
+				givenX_BM[146] = 0.1537676117;
+				givenX_BM[147] = 0.1091087282;
+				givenX_BM[148] = 0.1092213543;
+				givenX_BM[149] = 0.1531569689;
+				givenX_BM[150] = 0.1092989141;
+				givenX_BM[151] = 0.1092354767;
+				givenX_BM[152] = 0.1533351813;
+				givenX_BM[153] = 0.1095263991;
+				givenX_BM[154] = 0.1093729327;
+				givenX_BM[155] = 0.1488485333;
+				givenX_BM[156] = 0.1014463826;
+				givenX_BM[157] = 0.1011444614;
+				givenX_BM[158] = 0.1011313057;
+				givenX_BM[159] = 0.1535990317;
+				givenX_BM[160] = 0.1233270776;
+				givenX_BM[161] = 0.1332883510;
+				givenX_BM[162] = 0.1011828070;
+				givenX_BM[163] = 0.1470413037;
+				givenX_BM[164] = 0.1093039028;
+				givenX_BM[165] = 0.1540453536;
+				givenX_BM[166] = 0.1094210108;
+				givenX_BM[167] = 0.1091027872;
+				givenX_BM[168] = 0.1541242884;
+				givenX_BM[169] = 0.1255901901;
+				givenX_BM[170] = 0.1254144526;
+				givenX_BM[171] = 0.1546396816;
+				givenX_BM[172] = 0.1238138770;
+				givenX_BM[173] = 0.1334788256;
+				givenX_BM[174] = 0.1014508890;
+				givenX_BM[175] = 0.1468219112;
+				givenX_BM[176] = 0.1089912945;
+				givenX_BM[177] = 0.1092770892;
+				givenX_BM[178] = 0.1533866448;
+				givenX_BM[179] = 0.1235538003;
+				givenX_BM[180] = 0.1335485651;
+				givenX_BM[181] = 0.1012081431;
+				givenX_BM[182] = 0.1469201701;
+				givenX_BM[183] = 0.1090674787;
+				givenX_BM[184] = 0.1087755405;
+				givenX_BM[185] = 0.1539117816;
+				givenX_BM[186] = 0.1237414658;
+				givenX_BM[187] = 0.1349918300;
+				givenX_BM[188] = 0.1456517052;
+				givenX_BM[189] = 0.1087819337;
+				givenX_BM[190] = 0.1088528265;
+				givenX_BM[191] = 0.1526357316;
+				givenX_BM[192] = 0.1089486467;
+				givenX_BM[193] = 0.1090354091;
+				givenX_BM[194] = 0.1526844340;
+				givenX_BM[195] = 0.1090666982;
+				givenX_BM[196] = 0.1088680604;
+				givenX_BM[197] = 0.1533868861;
+				givenX_BM[198] = 0.1090709460;
+				givenX_BM[199] = 0.1538576250;
+				givenX_BM[200] = 0.1235673200;
+				givenX_BM[201] = 0.1335307896;
+				givenX_BM[202] = 0.1012610638;
+				givenX_BM[203] = 0.1475156262;
+				givenX_BM[204] = 0.1087259861;
+				givenX_BM[205] = 0.1534284963;
+				givenX_BM[206] = 0.1093549041;
+				givenX_BM[207] = 0.1095612359;
+				givenX_BM[208] = 0.1417453444;
+				givenX_BM[209] = 0.0968862385;
+				givenX_BM[210] = 0.1537572977;
+				givenX_BM[211] = 0.1233645650;
+				givenX_BM[212] = 0.1336225607;
+				givenX_BM[213] = 0.1014005881;
+				givenX_BM[214] = 0.1472460103;
+				givenX_BM[215] = 0.1089570624;
+				givenX_BM[216] = 0.1534064913;
+				givenX_BM[217] = 0.1093519117;
+				givenX_BM[218] = 0.1092723154;
+				givenX_BM[219] = 0.1418233605;
+				givenX_BM[220] = 0.0968792986;
+				givenX_BM[221] = 0.1535565023;
+				givenX_BM[222] = 0.1236719868;
+				givenX_BM[223] = 0.1335367748;
+				givenX_BM[224] = 0.1008776669;
+				givenX_BM[225] = 0.1467591743;
+				givenX_BM[226] = 0.1092218838;
+				givenX_BM[227] = 0.1089869748;
+				givenX_BM[228] = 0.1534847031;
+				givenX_BM[229] = 0.1235790720;
+				givenX_BM[230] = 0.1339847221;
+				givenX_BM[231] = 0.1011703612;
+				givenX_BM[232] = 0.1481113239;
+				givenX_BM[233] = 0.1088485961;
+				givenX_BM[234] = 0.1546084639;
+				givenX_BM[235] = 0.1088398135;
+				givenX_BM[236] = 0.1091605369;
+				givenX_BM[237] = 0.1541286780;
+				givenX_BM[238] = 0.1092840946;
+				givenX_BM[239] = 0.1088307125;
+				givenX_BM[240] = 0.1533891107;
+				givenX_BM[241] = 0.1091113279;
+				givenX_BM[242] = 0.1090299694;
+				givenX_BM[243] = 0.1478563744;
+				givenX_BM[244] = 0.1009887522;
+				givenX_BM[245] = 0.1323462966;
+				givenX_BM[246] = 0.1303905255;
+				givenX_BM[247] = 0.1002590727;
+				givenX_BM[248] = 0.1005403799;
+				givenX_BM[249] = 0.1302825238;
+				givenX_BM[250] = 0.1004346395;
+				givenX_BM[251] = 0.1006216938;
+				givenX_BM[252] = 0.1548033194;
+				givenX_BM[253] = 0.1237104436;
+				givenX_BM[254] = 0.1352588259;
+				givenX_BM[255] = 0.1459445792;
+				givenX_BM[256] = 0.1088217263;
+				givenX_BM[257] = 0.1089579551;
+				givenX_BM[258] = 0.1525105053;
+				givenX_BM[259] = 0.1090796970;
+				givenX_BM[260] = 0.1093124550;
+				givenX_BM[261] = 0.1524391680;
+				givenX_BM[262] = 0.1093151780;
+				givenX_BM[263] = 0.1090639664;
+				givenX_BM[264] = 0.1535862007;
+				givenX_BM[265] = 0.1091823120;
+				givenX_BM[266] = 0.1549141931;
+				givenX_BM[267] = 0.1238807540;
+				givenX_BM[268] = 0.1353444264;
+				givenX_BM[269] = 0.1458535973;
+				givenX_BM[270] = 0.1089480906;
+				givenX_BM[271] = 0.1091728148;
+				givenX_BM[272] = 0.1524692560;
+				givenX_BM[273] = 0.1085712380;
+				givenX_BM[274] = 0.1090602443;
+				givenX_BM[275] = 0.1524898252;
+				givenX_BM[276] = 0.1091231072;
+				givenX_BM[277] = 0.1093495308;
+				givenX_BM[278] = 0.1531818157;
+				givenX_BM[279] = 0.1086848820;
+				givenX_BM[280] = 0.1548892349;
+				givenX_BM[281] = 0.1236987588;
+				givenX_BM[282] = 0.1354165076;
+				givenX_BM[283] = 0.1460331964;
+				givenX_BM[284] = 0.1086226730;
+				givenX_BM[285] = 0.1089760916;
+				givenX_BM[286] = 0.1527042451;
+				givenX_BM[287] = 0.1088315594;
+				givenX_BM[288] = 0.1093185819;
+				givenX_BM[289] = 0.1524625194;
+				givenX_BM[290] = 0.1089351821;
+				givenX_BM[291] = 0.1089686644;
+				givenX_BM[292] = 0.1531714709;
+				givenX_BM[293] = 0.1090611651;
+				givenX_BM[294] = 0.1537435867;
+				givenX_BM[295] = 0.1237029917;
+				givenX_BM[296] = 0.1336612218;
+				givenX_BM[297] = 0.1010373000;
+				givenX_BM[298] = 0.1469735718;
+				givenX_BM[299] = 0.1086997949;
+				givenX_BM[300] = 0.1535674554;
+				givenX_BM[301] = 0.1092393794;
+				givenX_BM[302] = 0.1093165198;
+				givenX_BM[303] = 0.1418305179;
+				givenX_BM[304] = 0.0972558348;
+				givenX_BM[305] = 0.1539689650;
+				givenX_BM[306] = 0.1237117844;
+				givenX_BM[307] = 0.1338410355;
+				givenX_BM[308] = 0.1008766682;
+				givenX_BM[309] = 0.1462938416;
+				givenX_BM[310] = 0.1093677792;
+				givenX_BM[311] = 0.1090733576;
+				givenX_BM[312] = 0.1087810443;
+
+			}
+			
+			//for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+			worlds[1].setTransformsMeans(givenX_PF, givenX_BM);
+			//}
+		}
+
+	int nofMixes = int(requiredNofRounds / swapEvery);
+	int currFrontWIx = -1;
+	
+	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
+
 		std::cout << " REX batch " << mixi << std::endl;
+		nofRounds = mixi;
 
 		updQScaleFactors(mixi);
 
-		// Run each replica serially
+		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
 
 			// ========================== LOAD ========================
 			// Load the front world
-			currWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
+			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
-			// Set non-equilibrium parameters
+			// Set non-equilibrium parameters: get scale factors
 			updWorldsDistortOptions(replicaIx);
 
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
 
-			// Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(mixi % printFreq) ){
-					PrintToLog(worldIndexes.front());
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((mixi % pdbRestartFreq) == 0){
-						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-					}
-				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+			// ----------------------------------------------------------------
+			// EQUILIBRIUM
+			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-			//RunReplicaAllWorlds(replicaIx, swapEvery);storeReplicaCoordinatesFromFrontWorld(replicaIx);storeReplicaEnergyFromFrontWorldFull(replicaIx);
 					// ======================== SIMULATE ======================
-					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+					currFrontWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+
+					// Write energy and geometric features to logfile
+					REXLog(mixi, replicaIx);
 
 					// ========================= UNLOAD =======================
+					// Deposit front world coordinates into the replica
 					storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
 					// Deposit energy terms
 					storeReplicaEnergyFromFrontWorldFull(replicaIx);
 
-					// ----------------------------------------------------------------
-					// NON-EQUILIBRIUM
-					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+			// ----------------------------------------------------------------
+			// NON-EQUILIBRIUM
+			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 					// ======================== SIMULATE ======================
-					currWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
+					currFrontWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
 					// ========================= UNLOAD =======================
 					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
@@ -3577,45 +4559,33 @@ void Context::RunREX()
 					// Store any transformation Jacobians contribution
 					store_WORK_JacobianFromBackWorld(replicaIx);			
 
-			// Store Fixman if required
-            storeReplicaFixmanFromBackWorld(replicaIx);
+					// Store Fixman if required
+					storeReplicaFixmanFromBackWorld(replicaIx);
 
-			/* // Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(mixi % printFreq) ){
-					PrintToLog(worldIndexes.front());
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((mixi % pdbRestartFreq) == 0){
-						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-					}
-				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
-
-			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
+					if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 
 		} // end replicas simulations
 
 		// Mix replicas
-		if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-			if ((mixi % 2) == 0){
-				mixNeighboringReplicas(0);
+		if(getRunType() > 0){
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				if ((mixi % 2) == 0){
+					mixNeighboringReplicas(0);
+				}else{
+					mixNeighboringReplicas(1);
+				}
 			}else{
-				mixNeighboringReplicas(1);
+				mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
 			}
-		}else{
-			mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
-		}
 
-		PrintNofAcceptedSwapsMatrix();
+			PrintNofAcceptedSwapsMatrix();
+		} 
 
 	} // end rounds
 
 	//PrintNofAttemptedSwapsMatrix();
 	PrintNofAcceptedSwapsMatrix();
 	//PrintReplicaMaps();
-
 
 }
 
@@ -3636,14 +4606,14 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the equilibrium worlds
-	int frontWIx = -1;
+	int currFrontWIx = -1;
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
 		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
 
 			// Run front world
-			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
+			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
 		
 		}
 	} // END iteration through worlds
@@ -3651,7 +4621,7 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 	/* std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs after ";
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
-	return frontWIx;
+	return currFrontWIx;
 
 }
 
@@ -3740,6 +4710,7 @@ SimTK::Real Context::calcReplicaWork(int replicaIx)
 
 }
 
+// Run replica exchange protocol
 void Context::RunRENS(void)
 {
 
@@ -3754,24 +4725,28 @@ void Context::RunRENS(void)
 	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 		std::cout << "REX replica " << replicaIx << std::endl;
 
-            //std::cout << "Replica front world coordinates:\n";
-			//replicas[replicaIx].PrintCoordinates();
+			// Set intial parameters
 			initializeReplica(replicaIx);
+
+			// Copy coordinates from replica to front world
 			restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
 			// Iterate this replica's worlds
 			RunReplicaAllWorlds(replicaIx, swapEvery);
 
-			// This should always be a fully flexible world
+			// Copy coordinates from front world to replica
 			storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
 			// Store energy
 			storeReplicaEnergyFromFrontWorldFull(replicaIx);
 			storeReplicaFixmanFromBackWorld(replicaIx);
 
-			PrintToLog(worldIndexes.front());
+			/* PrintToLog(replicaIx, worldIndexes.front(), 0);
+			writePdbs(0,	replica2ThermoIxs[replicaIx]); */
 
-			writePdbs(0,	replica2ThermoIxs[replicaIx]);
+			// Write energy and geometric features to logfile
+			REXLog(0, replicaIx);
+
 	} // ======================================================================
 
 	PrintNofAcceptedSwapsMatrix();
@@ -4530,11 +5505,11 @@ void Context::RunRENS(void)
 			worlds[1].setTransformsMeans(givenX_PF, givenX_BM);
 			//}
 		}
-
-	// Main loop
+	
 	int nofMixes = int(requiredNofRounds / swapEvery);
-	int currWIx = -1;
+	int currFrontWIx = -1;
 
+	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
 	for(size_t mixi = 1; mixi < nofMixes; mixi++){
 
 		std::cout << " REX batch " << mixi << std::endl;
@@ -4542,52 +5517,43 @@ void Context::RunRENS(void)
 
 		updQScaleFactors(mixi);
 
-		// Run each replica serially for equilibrium worlds
+		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl << std::flush;
-
-			// ----------------------------------------------------------------
-			// EQUILIBRIUM
-			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			
 			// ========================== LOAD ========================
 			// Load the front world
-			currWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
+			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
 
-			// Get scale factors 
+			// Set non-equilibrium parameters: get scale factors
 			updWorldsDistortOptions(replicaIx);
 
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
 
-			// Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(mixi % printFreq) ){
-					PrintToLog(currWIx);
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((mixi % pdbRestartFreq) == 0){
-						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-					}
-				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
-					
+			// ----------------------------------------------------------------
+			// EQUILIBRIUM
+			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
 					// ======================== SIMULATE ======================
-					currWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+					currFrontWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+
+					// Write energy and geometric features to logfile
+					REXLog(mixi, replicaIx);
 
 					// ========================= UNLOAD =======================
+					// Deposit front world coordinates into the replica
 					storeReplicaCoordinatesFromFrontWorld(replicaIx);
 
 					// Deposit energy terms
 					storeReplicaEnergyFromFrontWorldFull(replicaIx);
 
-					// ----------------------------------------------------------------
-					// NON-EQUILIBRIUM
-					// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+			// ----------------------------------------------------------------
+			// NON-EQUILIBRIUM
+			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 					// ======================== SIMULATE ======================
-					currWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
+					currFrontWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
 					// ========================= UNLOAD =======================
 					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
@@ -4601,38 +5567,34 @@ void Context::RunRENS(void)
 					// Store any transformation Jacobians contribution
 					store_WORK_JacobianFromBackWorld(replicaIx);
 
-			// Store Fixman if required
-			storeReplicaFixmanFromBackWorld(replicaIx);
+					// Store Fixman if required
+					storeReplicaFixmanFromBackWorld(replicaIx);
 
-			/* // Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(mixi % printFreq) ){
-					PrintToLog(currWIx);
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((mixi % pdbRestartFreq) == 0){
-						writePdbs(mixi, replica2ThermoIxs[replicaIx]);
-					}
-				}
-			} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww */
-
-			if(currWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currWIx << std::endl;}
+					if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 
 		} // end replicas simulations
 
 		// Mix replicas
-		if ((mixi % 2) == 0){
-			mixNeighboringReplicas(0);
-		}else{
-			mixNeighboringReplicas(1);
-		}
+		if(getRunType() > 0){
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				if ((mixi % 2) == 0){
+					mixNeighboringReplicas(0);
+				}else{
+					mixNeighboringReplicas(1);
+				}
+			}else{
+				mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
+			}
 
-		PrintNofAcceptedSwapsMatrix();
+			PrintNofAcceptedSwapsMatrix();
+		} 
 
 	} // end rounds
 
+	//PrintNofAttemptedSwapsMatrix();
 	PrintNofAcceptedSwapsMatrix();
+	//PrintReplicaMaps();
+
 }
 
 // Print info about all the replicas and thermo states
@@ -4762,20 +5724,47 @@ void Context::RunOneRound()
 		}
 
 		// Non-equilibrium parameters
-		SimTK::Real qScaleFactor = 0.25;
-		std::vector<std::string> how = { "deterministic", "gauss"};
-		bool randSignOpt = true;
-		distributeScalingFactor(how, qScaleFactor, randSignOpt);
+		if( worlds[worldIx].getSampler(0)->getDistortOpt() < 0){
 
+			SimTK::Real qScaleFactor = 4.0;
+			std::vector<std::string> how = { "deterministic", "Bernoulli"};
+			
+			bool randSignOpt = false;
+			qScaleFactor = distributeScalingFactor(how, qScaleFactor, randSignOpt);
 
-		if(qScaleFactor != 1){
-			setWorldDistortParameters(worldIx, qScaleFactor);
+			if(qScaleFactor != 1){
+				setWorldDistortParameters(worldIx, qScaleFactor);
+			}
+
 		}
+
+
 		// Run front world
 		RunFrontWorldAndRotate(worldIndexes);
 
 	} // END iteration through worlds
 
+}
+
+// Print to log and write pdbs
+void Context::RunLog(int round)
+{
+	// Write energy and geometric features to logfile
+	if(printFreq || pdbRestartFreq){
+		if( !(round % getPrintFreq()) ){
+
+			for(auto wIx: worldIndexes){
+				PrintToLog(0, wIx, 0);
+			}
+		
+		}
+		// Write pdb
+		if( pdbRestartFreq != 0){
+			if((round % pdbRestartFreq) == 0){
+				writePdbs(round);
+			}
+		}
+	}
 }
 
 // Normal run
@@ -5555,19 +6544,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			RunOneRound();
 
-			// Write energy and geometric features to logfile
-			if(printFreq || pdbRestartFreq){
-				if( !(round % getPrintFreq()) ){
-					PrintToLog(worldIndexes.front());
-					PrintToLog(worldIndexes.back());
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((round % pdbRestartFreq) == 0){
-						writePdbs(round);
-					}
-				}
-			}
+			RunLog(round);
 
 			this->nofRounds++;
 
@@ -5585,19 +6562,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			RunOneRound();
 
-			if(printFreq || pdbRestartFreq){
-				// Write energy and geometric features to logfile
-				if( !(round % getPrintFreq()) ){
-					PrintToLog(worldIndexes.front());
-					PrintToLog(worldIndexes.back());
-				}
-				// Write pdb
-				if( pdbRestartFreq != 0){
-					if((round % pdbRestartFreq) == 0){
-						writePdbs(round);
-					}
-				}
-			}
+			RunLog(round);
 
 			this->nofRounds++;
 		}
@@ -5731,7 +6696,7 @@ void Context::addDihedrals(const std::vector<std::size_t>& dihedralIx)
 // --- Printing functions --
 
 // Print energy information
-void Context::PrintSamplerDataToLog(std::size_t whichWorld)
+void Context::PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
 	SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
 
@@ -5806,28 +6771,14 @@ void Context::PrintGeometry(SetupReader& setupReader, std::size_t whichWorld)
 	}
 }
 
-void Context::PrintGeometryToLog(std::size_t whichWorld)
+void Context::PrintGeometryToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
-/* 	// TODO same 32 vs 64 bit thing. See the many other function below. Might use a vector<struct>, not a vector<vector>
-	for (const auto& distanceIx : distanceIxs) {
-		if( distanceIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Distance(distanceIx[0], distanceIx[1], 0,
-					distanceIx[2], distanceIx[3]));
-		}
-	}
-
-	for (const auto& dihedralIx : dihedralIxs){
-		if( dihedralIx[0] == static_cast<int>(whichWorld)){
-			fprintf(logFile, "%.3f ", Dihedral(dihedralIx[0], dihedralIx[1], 0,
-				dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]));
-		}
-	} */
-	PrintDistancesToLog(whichWorld);
-	PrintAnglesToLog(whichWorld);
-	PrintDihedralsQsToLog(whichWorld);
+	PrintDistancesToLog(whichWorld, whichSampler);
+	PrintAnglesToLog(whichWorld, whichSampler);
+	PrintDihedralsQsToLog(whichWorld, whichSampler);
 }
 
-void Context::PrintDistancesToLog(std::size_t whichWorld)
+void Context::PrintDistancesToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
 	for (const auto& distanceIx : distanceIxs) {
 		if( distanceIx[0] == whichWorld ) {
@@ -5836,7 +6787,7 @@ void Context::PrintDistancesToLog(std::size_t whichWorld)
 	}
 }
 
-void Context::PrintAnglesToLog(std::size_t whichWorld)
+void Context::PrintAnglesToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
 	for (const auto& angleIx : angleIxs){
 		if( angleIx[0] == whichWorld ) {
@@ -5845,7 +6796,7 @@ void Context::PrintAnglesToLog(std::size_t whichWorld)
 	}
 }
 
-void Context::PrintDihedralsToLog(std::size_t whichWorld)
+void Context::PrintDihedralsToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == whichWorld ) {
@@ -5854,7 +6805,7 @@ void Context::PrintDihedralsToLog(std::size_t whichWorld)
 	}
 }
 
-void Context::PrintDihedralsQsToLog(std::size_t whichWorld)
+void Context::PrintDihedralsQsToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == whichWorld ) {
@@ -5932,45 +6883,22 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 
 }
 
-void Context::PrintToLog(int worldIx)
+void Context::PrintToLog(std::size_t whichReplica,
+	std::size_t whichWorld, std::size_t whichSampler)
 {
-	PrintSamplerDataToLog(worldIx);
+	logFile << whichReplica << "\n";
 
-	PrintGeometryToLog(worldIx);
-	/* PrintDistancesToLog(worldIx);
-	PrintAnglesToLog(worldIx);
-	PrintDihedralsQsToLog(worldIx); */
+	PrintSamplerDataToLog(whichWorld, whichSampler);
 
-	logFile << std::endl;
+	PrintGeometryToLog(whichWorld, whichSampler);
+
+	logFile << "\n";
 }
 
 // Write intial pdb for reference
 // TODO: what's the deal with mc_step
 void Context::writeInitialPdb()
 {
-
-/* 		///////////////////////////////////
-        constexpr int TOPOLOGY = 0;
-        std::vector<SimTK::DuMM::AtomIndex> mapping(topologies[TOPOLOGY].getNumAtoms());
-
-        std::cout << "###AMBER - DuMM Mapping###\n";
-        std::cout << "DuMM\t|\tAMBER\n";
-        std::cout << std::string(21,'-') << "\n";
-        for(std::size_t k = 0; k < topologies[TOPOLOGY].getNumAtoms(); k++) {
-            // amber indices
-            const auto aIx = (topologies[TOPOLOGY].bAtomList[k]).getCompoundAtomIndex();
-            
-            // dumm indices
-            const auto d = topologies[TOPOLOGY].getDuMMAtomIndex(aIx);
-
-            // mapping[dumm_index] = amber_index
-            mapping.push_back(d);
-            mapping[d] = static_cast<SimTK::DuMM::AtomIndex>(k);
-
-            std::cout << d << "\t|\t" << k << std::endl;
-        }
-		///////////////////////////////////
- */
 
 	// - we need this to get compound atoms
 	int currentWorldIx = worldIndexes.front();

@@ -51,6 +51,7 @@ public:
 		
 		std::vector<std::vector<std::string>>& rexSamplers,
 		std::vector<std::vector<int>>& rexDistortOptions,
+		std::vector<std::vector<std::string>>& rexDistortArgs,
 		std::vector<std::vector<int>>& rexFlowOptions,
 		std::vector<std::vector<int>>& rexWorkOptions,
 		std::vector<std::vector<std::string>>& rexIntegrators,
@@ -74,14 +75,15 @@ private:
 
 		{"SAMPLERS", 1},
 		{"DISTORT_OPTIONS", 2},
-		{"FLOW_OPTIONS", 3},
-		{"WORK_OPTIONS", 4},
-		{"INTEGRATORS", 5},
+		{"DISTORT_ARGS", 3},
+		{"FLOW_OPTIONS", 4},
+		{"WORK_OPTIONS", 5},
+		{"INTEGRATORS", 6},
 
-		{"TIMESTEPS", 6},
-		{"WORLD_INDEXES", 7},
-		{"MDSTEPS", 8},
-		{"SAMPLES_PER_ROUND", 9}
+		{"TIMESTEPS", 7},
+		{"WORLD_INDEXES", 8},
+		{"MDSTEPS", 9},
+		{"SAMPLES_PER_ROUND", 10}
 	};
 
 	enum RexKey{
@@ -89,6 +91,7 @@ private:
 
 		SAMPLERS,
 		DISTORT_OPTIONS,
+		DISTORT_ARGS,
 		FLOW_OPTIONS,
 		WORK_OPTIONS,
 		INTEGRATORS,
