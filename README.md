@@ -22,6 +22,8 @@ sudo apt-get update
 sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build linux-tools-common linux-tools-generic linux-tools-`uname -r`
 ```
 
+Minimum CMake version is 3.17.
+
 ### Exports
 
 ```bash
@@ -34,6 +36,15 @@ export CUDA_ROOT=/usr/local/cuda
 ```bash
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
+
+cd openmm
+git checkout master
+cd ../Molmodel
+git checkout master
+cd ../Simbody
+git checkout master
+cd ../
+git checkout master
 ```
 
 For a specific branch:

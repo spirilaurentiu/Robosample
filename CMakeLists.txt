@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.17)
 
 project(Robosample C CXX)
 
@@ -189,7 +189,7 @@ SET(OPENMM_DIRS
 # thus, we can only roll with reference + cpu / cuda / opencl
 # cpu will compile and run on any machine so it is a good starting point
 # to change it, run `cmake -DOPENMM_PLATFORM=CUDA`
-SET(OPENMM_PLATFORM "OPENCL" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
+SET(OPENMM_PLATFORM "CUDA" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
 
 IF(OPENMM_PLATFORM MATCHES "CPU")
     # build the default CPU platform
@@ -234,7 +234,7 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
 
         # compile all cuda kernels into one single file
         SET(CUDA_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cuda/src")
-        SET(CUDA_KERNEL_SOURCE_CLASS CUDAKernelSources)
+        SET(CUDA_KERNEL_SOURCE_CLASS CudaKernelSources)
         SET(CUDA_KERNELS_CPP ${CUDA_KERNEL_SOURCE_DIR}/${CUDA_KERNEL_SOURCE_CLASS}.cpp)
         SET(CUDA_KERNELS_H ${CUDA_KERNEL_SOURCE_DIR}/${CUDA_KERNEL_SOURCE_CLASS}.h)
         FILE(GLOB CUDA_KERNELS ${CUDA_KERNEL_SOURCE_DIR}/kernels/*.cu)
@@ -246,8 +246,8 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
         )
 
         # this command is executed when building, not when running CMakeLists.txt
-        ADD_CUSTOM_TARGET(CUDAKernels DEPENDS ${CUDA_KERNELS_CPP} ${CUDA_KERNELS_H})
-        SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} CUDAKernels)
+        ADD_CUSTOM_TARGET(CudaKernels DEPENDS ${CUDA_KERNELS_CPP} ${CUDA_KERNELS_H})
+        SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} CudaKernels)
 
         SET(OPENMM_DIRS ${OPENMM_DIRS}
             ${CMAKE_SOURCE_DIR}/openmm/platforms/cuda
@@ -382,6 +382,9 @@ IF (BUILD_DYNAMIC)
     target_link_options(${OPENMM_LIB_SHARED_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
     target_precompile_headers(${OPENMM_LIB_SHARED_NAME} PRIVATE ${OPENMM_PCH})
     set_property(TARGET ${OPENMM_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+    # this forces cmake to encode the kernels before compiling anything else
+    add_dependencies(${OPENMM_LIB_SHARED_NAME} ${OPENMM_DEPENDENCIES})
 ENDIF (BUILD_DYNAMIC)
 
 IF (BUILD_STATIC)
@@ -393,10 +396,10 @@ IF (BUILD_STATIC)
     set_target_properties(${OPENMM_LIB_STATIC_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${USE_IPO})
     target_link_options(${OPENMM_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
     target_precompile_headers(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_PCH})
-ENDIF (BUILD_STATIC)
 
-# this forces cmake to encode the kernels before compiling anything else
-add_dependencies(${OPENMM_LIB_NAME} ${OPENMM_DEPENDENCIES})
+    # this forces cmake to encode the kernels before compiling anything else
+    add_dependencies(${OPENMM_LIB_STATIC_NAME} ${OPENMM_DEPENDENCIES})
+ENDIF (BUILD_STATIC)
 
 
 # build simbody
