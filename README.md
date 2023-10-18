@@ -41,7 +41,7 @@ cd openmm
 git checkout master
 cd ../Molmodel
 git checkout master
-cd ../Simbody
+cd ../Simbody01
 git checkout master
 cd ../
 git checkout master
