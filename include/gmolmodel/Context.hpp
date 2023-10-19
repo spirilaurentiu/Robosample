@@ -345,8 +345,6 @@ public:
 	// Exchanges thermodynamic states between replicas
 	bool attemptREXSwap(int replica_i, int replica_j);
 
-	bool attemptRENSSwap(int replica_i, int replica_j);
-
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
 
@@ -442,13 +440,10 @@ public:
 
 	void RunREX();
 
-	// Helper Functions for RENS
+	// Helper Functions for REX
 
 	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
 	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
-
-	// RENS
-	void RunRENS(void);
 
 	void PrintReplicas(void);
 	void PrintReplicaMaps(void);
