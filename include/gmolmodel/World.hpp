@@ -141,6 +141,8 @@ public:
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
+	void PrintInitialRecommendedTimesteps(void);
+
 	//=========================================================================
 	//                   CONSTRAINTS
 	//=========================================================================

@@ -4729,6 +4729,18 @@ void Context::RunLog(int round)
 	}
 }
 
+// Print recommended timesteps
+void Context::PrintInitialRecommendedTimesteps(void)
+{
+	std::cout << "Initial recommended timesteps ";
+	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
+		std::cout << "World " << worldIx << " " ;
+;
+		worlds[worldIx].PrintInitialRecommendedTimesteps();
+	}
+	std::cout << std::endl;
+}
+
 // Normal run
 void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 {

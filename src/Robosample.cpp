@@ -292,6 +292,8 @@ int main(int argc, char **argv)
 	// Is this necessary?
 	context.realizeTopology();
 
+
+
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		BaseSampler *p = context.addSampler(worldIx,
@@ -538,8 +540,8 @@ int main(int argc, char **argv)
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
-	//if((runType[0] == 'R') || (runType[1] == 'E')){
-	if(1){
+	if((runType[0] == 'R') || (runType[1] == 'E')){
+	//if(1){
 
 		SetupReader rexReader;
 
@@ -617,6 +619,8 @@ int main(int argc, char **argv)
 	
 	// Add constraints
 	//context.addConstraints();
+
+	context.PrintInitialRecommendedTimesteps();
 
 	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
 		context.setRunType(0);

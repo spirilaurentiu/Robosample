@@ -188,6 +188,9 @@ public:
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
 
+	// Print recommended timesteps
+	void PrintInitialRecommendedTimesteps(void);
+
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
 	void Run(void);

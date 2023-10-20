@@ -374,21 +374,11 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// Model the Compounds one by one in case we want to attach different types
 	// of Mobilizers to the Ground in the feature.
 	for ( std::size_t i = 0; i < this->topologies->size(); i++){
-		//SimTK::String GroundToCompoundMobilizerType = "Free";
-		//SimTK::String GroundToCompoundMobilizerType = "Weld";
-		//SimTK::String GroundToCompoundMobilizerType = "Cartesian";
 
-		//rootMobilities[i] = GroundToCompoundMobilizerType;
-
-		//if(i == 0) { // First compound
 			compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(i),
 				rootMobilities[i]);
-		//} else {
-		//	compoundSystem->modelOneCompound(
-		//		SimTK::CompoundSystem::CompoundIndex(i),
-		//		rootMobilities[i]);
-		//}
+
 		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
 		         << " grounded with mobilizer " << rootMobilities[i] << std::endl;
 
@@ -408,6 +398,65 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// // Realize Topology
 	// compoundSystem->realizeTopology();
 }
+
+// Print recommended timesteps. We need and advanced State here
+void World::PrintInitialRecommendedTimesteps(void)
+{
+	SimTK::State& someState = integ->updAdvancedState();
+	int nu = matter->getNU(someState);
+
+	/* SimTK::Real CartesianTimestepInv = 1.0 / 0.001; // ps
+	SimTK::Vector V(nu, CartesianTimestepInv);
+	SimTK::Vector timesteps(nu);
+
+	matter->multiplyBySqrtMInv(someState, V, timesteps);
+
+	for (int j=0; j < nu; ++j){
+		timesteps[j] = 1.0 / timesteps[j];
+	}
+
+	for (int j=0; j < nu; ++j){
+		std::cout << timesteps[j] << " ";
+	}
+	std::cout << std::endl; */
+
+	/* SimTK::Matrix M;
+	matter->calcM(someState, M);
+	std::cout << M << " "; */
+
+	SimTK::Real CartesianTimestep = 0.001;
+	SimTK::Vector V(matter->getNumBodies() - 1, CartesianTimestep);
+
+	// Get Mobods mass properties
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		SimTK::SpatialInertia sp = mobod.getBodySpatialInertiaInGround(someState);
+
+		V[int(mbx) - 1] *= sp.getMass();
+
+	}
+
+	std::cout << SimTK::min(V) << " ";
+
+	/* for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		SimTK::SpatialInertia sp = mobod.getBodySpatialInertiaInGround(someState);
+
+		std::cout << sp.getMass() << " ";
+
+	} */
+
+}
+
+
 
 //==============================================================================
 //                   TaskSpace Functions

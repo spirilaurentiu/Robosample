@@ -2991,6 +2991,8 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 	logJacScale =  internNdofs * std::log( ( this->QScaleFactor ) );
 
+	std::cout << "PRINT NAN JAC " << internNdofs << " " << this->QScaleFactor << " " << std::log( ( this->QScaleFactor ) ) << std::endl;
+
 	// Get log of the BAT->Cartesian Jacobian after scaling
 	SimTK::Real logJacBAT_tau = 0.0; // log space
 	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
@@ -3035,7 +3037,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 
 	//logBendStretchJac = std::log(this->QScaleFactor); 
-	std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
+	//std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
 
 	return logBendStretchJac;
 
