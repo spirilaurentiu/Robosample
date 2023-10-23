@@ -3482,7 +3482,7 @@ void Context::updQScaleFactors(int mixi)
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
-	bool randSignOpt = true;
+	bool randSignOpt = false;
 
 	std::vector<std::string> how;
 
