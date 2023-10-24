@@ -319,22 +319,27 @@ void HMCSampler::initialize(SimTK::State& someState)
 
 }
 
-/** Same as initialize **/
+/** 
+ * Same as initialize
+ **/
 void HMCSampler::reinitialize(SimTK::State& someState)
 {
-	// After an event handler has made a discontinuous change to the
-	// Integrator's "advanced state", this method must be called to
-	// reinitialize the Integrator.
-	//(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
 
 	// Potential energy and configuration need stage Position
 	system->realize(someState, SimTK::Stage::Position);
 
+	// Check if we have any functional error
+	if( (forces->getMultibodySystem().calcPotentialEnergy(someState) - pe_o) > 300.0 ){
+		std::cout << "[WARNING] PE - prevPE greater than 300.0\n";
+
+		// Reset
+		restore(someState);
+		
+	}
+
 	// Set old potential energy
 	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(someState);
 	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
-	//std::cout << "HMCSampler::reinitialize pe_o " << pe_o << std::endl;
-
 
 	// Store the configuration
 	int i = 0;
@@ -342,7 +347,7 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 		mbx < matter->getNumBodies();
 		++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SetTVector[i] = mobod.getMobilizerTransform(someState); //= TVector[i]
+		SetTVector[i] = mobod.getMobilizerTransform(someState);
 		i++;
 	}
 
@@ -372,32 +377,9 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	ndofs = nu;
 
 	// Initialize velocities to temperature
-	/*// kT
-	double sqrtRT = std::sqrt(RT);
-	SimTK::Vector V(nu);
-	SimTK::Vector SqrtMInvV(nu);
 	for (int j=0; j < nu; ++j){
-		V[j] = gaurand(randomEngine);
-	}
-	matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
-	SqrtMInvV *= sqrtRT; // Set stddev according to temperature
-	someState.updU() = SqrtMInvV;
-	system->realize(someState, SimTK::Stage::Velocity); */
-
-	//initializeVelocities(someState);
-
-/* 	// Store kinetic energies
-	setProposedKE(matter->calcKineticEnergy(someState));
-	setLastAcceptedKE(getProposedKE());
-
-	// Store total energies
-	this->etot_proposed = getOldPE() + getProposedKE()
-		+ getOldFixman() + getOldLogSineSqrGamma2();
-	this->etot_set = this->etot_proposed; */
-
-	for (int j=0; j < nu; ++j){
-        UScaleFactors[j] = 1;
-        InvUScaleFactors[j] = 1;
+		UScaleFactors[j] = 1;
+		InvUScaleFactors[j] = 1;
 	}
 
 	// Set the generalized velocities scale factors
@@ -2990,8 +2972,6 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 		matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1)).getNumU(someState);
 
 	logJacScale =  internNdofs * std::log( ( this->QScaleFactor ) );
-
-	std::cout << "PRINT NAN JAC " << internNdofs << " " << this->QScaleFactor << " " << std::log( ( this->QScaleFactor ) ) << std::endl;
 
 	// Get log of the BAT->Cartesian Jacobian after scaling
 	SimTK::Real logJacBAT_tau = 0.0; // log space
