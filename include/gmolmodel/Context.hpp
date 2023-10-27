@@ -426,7 +426,7 @@ public:
 	void setRunType(int runTypeArg){this->runType = runTypeArg;}
 
 	// Run a particular world
-	int RunWorld(int whichWorld);
+	bool RunWorld(int whichWorld);
 
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);

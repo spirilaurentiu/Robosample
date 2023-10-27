@@ -1851,6 +1851,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 		} // DEBUG
 		*/
+
 		///////////////////////////////////////////////////////////////
 		//             FULLY FLEXIBLE CARTESIAN WORLD                //
 		//              Parent body is always Ground                 //
@@ -2153,7 +2154,6 @@ World::calcMobodToMobodTransforms(
 	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
 	//|| (mobility == SimTK::BondMobility::Mobility::Spherical)
 	){
-
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
 	}else{
@@ -2473,18 +2473,18 @@ bool World::generateProposal(void)
 	std::cout << "World " << ownWorldIndex 
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
-	// Reinitialize current sampler (configuration and energies)
-	updSampler(0)->reinitialize(currentAdvancedState);
-
 	// GENERATE a proposal
-	return updSampler(0)->generateProposal(currentAdvancedState);
+		bool validated = updSampler(0)->reinitialize(currentAdvancedState);	
+		validated = updSampler(0)->generateProposal(currentAdvancedState) && validated;
+
+		return validated;
 
 }
 
 /**
  *  Generate a number of samples
  * */
-int World::generateSamples(int howMany)
+bool World::generateSamples(int howMany)
 {
 
 	// Update Robosample bAtomList
@@ -2495,18 +2495,16 @@ int World::generateSamples(int howMany)
 	std::cout << "World " << ownWorldIndex 
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
-	// Reinitialize current sampler (configuration and energies)
-	updSampler(0)->reinitialize(currentAdvancedState);
-
 	// GENERATE the requested number of samples
-	// is accepted wrong here?
-	int accepted;
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState);
+
 	for(int k = 0; k < howMany; k++) {
-		accepted += updSampler(0)->sample_iteration(currentAdvancedState);
+		validated = updSampler(0)->sample_iteration(currentAdvancedState) && validated;
 	}
 
+
 	// Return the number of accepted samples
-	return accepted;
+	return validated;
 
 }
 

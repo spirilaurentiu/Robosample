@@ -270,7 +270,7 @@ void LAHMCSampler::initialize(SimTK::State& someState )
 
 /** Same as initialize **/
 //r void LAHMCSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature) 
-void LAHMCSampler::reinitialize(SimTK::State& someState)
+bool LAHMCSampler::reinitialize(SimTK::State& someState)
 {
      // After an event handler has made a discontinuous change to the
     // Integrator's "advanced state", this method must be called to 

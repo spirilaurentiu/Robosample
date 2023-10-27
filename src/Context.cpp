@@ -1888,12 +1888,16 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 					pHMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE() );
 
 			// Reinitialize current sampler
-			updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
+			if(updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState)){
 
-			// Update
-			for(int k = 0; k < int(getNofSamplesPerRound(currentWorldIx)); k++){ // Iterate through samples
-				updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
-			} // END for samples
+				// Iterate through samples
+				for(int k = 0; k < int(getNofSamplesPerRound(currentWorldIx)); k++){ 
+					updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
+				} // END for samples
+
+			}
+
+
 
 		} // for i in worlds
 
@@ -3336,26 +3340,26 @@ void Context::updWorldsDistortOptions(int thisReplica)
 }
 
 // Run a particular world
-int Context::RunWorld(int whichWorld)
+bool Context::RunWorld(int whichWorld)
 {
 	// == SAMPLE == from the current world
-	int accepted = 0;
+	bool validated = false;
 
 	// Equilibrium world
 	if(NDistortOpt[whichWorld] == 0){
 
-		accepted = worlds[whichWorld].generateSamples(
+		validated = worlds[whichWorld].generateSamples(
 			int(nofSamplesPerRound[whichWorld]));
 
 	// Non-equilibrium world
 	}else if(NDistortOpt[whichWorld] == -1){
 
 		// Generate samples
-		accepted = worlds[whichWorld].generateSamples(
+		validated = worlds[whichWorld].generateSamples(
 			int(nofSamplesPerRound[whichWorld]));
 
 	}
-	return accepted;
+	return validated;
 
 }
 
@@ -3388,12 +3392,15 @@ void Context::RewindBackWorld(int thisReplica)
 // Run front world, rotate and transfer
 int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 {
+	bool validated = false;
+
 	int frontWorldIx = -1;
 	int backWorldIx = -1;
 
 	// == SAMPLE == from the front world
 	frontWorldIx = worldIxs.front();
-	RunWorld(frontWorldIx);	
+	validated = RunWorld(frontWorldIx);
+
 	// Write pdbs every world
 	//writePdbs(nofRounds, frontWorldIx);
 	
@@ -3405,9 +3412,16 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 	// == TRANSFER == coordinates from back world to front
 	frontWorldIx = worldIxs.front();
 	backWorldIx = worldIxs.back();
+
 	if(worldIxs.size() > 1) {
-		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx << std::endl;
-		transferCoordinates(backWorldIx, frontWorldIx);
+		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+		if(validated){
+			transferCoordinates(backWorldIx, frontWorldIx);
+			std::cout << std::endl;
+		}else{
+			std::cout << " not allowed." << std::endl;
+		}
+
 	}
 
 	return worldIxs.front();

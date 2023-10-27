@@ -7,6 +7,26 @@
  * This is part of Robosampling                                               *
  */
 
+/** @file
+This defines the HMCSampler class, which (TODO)
+
+The class should theoretically track the following vars:
+
+pe ke    fix lnsingamma lnJ TVec fX_PF gX_BM
+
+One iteration must include:
+
+1. reinitialize
+	1.1. calc initial vars      (pe_o         fix_o lnsingamma_o lnJ_o TVec_o fX_PF_o gX_BM_o)
+2. proposal
+    2.1. initialize velocities  (pe_o ke_prop fix_o lnsingamma_o lnJ_o TVec_o fX_PF_o gX_BM_o)
+	2.2. integrate trajectories (pe_n ke_n    fix_n lnsingamma_n lnJ_n TVec_n fX_PF_n gX_BM_n)
+3. acc-rej step                 (pe_s ke_s    fix_s lnsingamma_s lnJ_s TVec_s fX_PF_s gX_BM_s) = 
+    3.1. accept                 (pe_n ke_n    fix_n lnsingamma_n lnJ_n TVec_n fX_PF_n gX_BM_n) OR
+	3.2. reject                 (pe_o ke_prop fix_o lnsingamma_o lnJ_o TVec_o fX_PF_o gX_BM_o)
+
+**/
+
 #include "Sampler.hpp"
 #include <thread>
 
@@ -212,16 +232,6 @@ public:
 	map every time the velocities are intialized **/
 	void loadUScaleFactors(SimTK::State& someState);
 
-	/** Seed the random number GenerateGaussian. Set simulation temperature, 
-	velocities to desired temperature, variables that store the configuration
-	and variables that store the energies, both needed for the 
-	acception-rejection step. Also realize velocities and initialize 
-	the timestepper. **/
-	virtual void initialize(SimTK::State& advanced);
-
-	/** Same as initialize **/
-	virtual void reinitialize(SimTK::State& advanced) ;
-
 	/** Get the TimeStepper that manages the integrator **/
 	const SimTK::TimeStepper * getTimeStepper();
 	SimTK::TimeStepper * updTimeStepper();
@@ -288,7 +298,7 @@ public:
 		SimTK::Real lnJ) const;
 
 	/** Accetion rejection step **/
-	virtual bool accRejStep(SimTK::State& someState);
+	//virtual bool accRejStep(SimTK::State& someState);
 
 	/** Checks if the proposal is valid **/
 	bool validateProposal() const;
@@ -343,6 +353,17 @@ public:
 		std::vector<SimTK::Real> scaleFactors,
 		unsigned int startFromBody = 0);
 
+
+	/** Seed the random number GenerateGaussian. Set simulation temperature, 
+	velocities to desired temperature, variables that store the configuration
+	and variables that store the energies, both needed for the 
+	acception-rejection step. Also realize velocities and initialize 
+	the timestepper. **/
+	virtual void initialize(SimTK::State& advanced);
+
+	/** Same as initialize **/
+	virtual bool reinitialize(SimTK::State& advanced) ;
+
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setTemperature(double HMCBoostTemperature);
 
@@ -356,12 +377,13 @@ public:
 
 	void OMM_calcNewConfigurationAndEnergies(void);
 
+	void setSphereRadius(float argSphereRadius);
+
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
-	void setSphereRadius(float argSphereRadius);
 	bool proposeEquilibrium(SimTK::State& someState);
 	bool proposeNEHMC(SimTK::State& someState);
 	bool proposeNMA(SimTK::State& someState);
@@ -467,7 +489,8 @@ protected:
 	// BEGIN MCSampler
 	std::vector<SimTK::Transform> SetTVector; // Transform matrices
 	std::vector<SimTK::Transform> TVector; // Transform matrices
-	SimTK::Real pe_set = 0.0,
+	SimTK::Real pe_init = 0.0,
+		pe_set = 0.0,
 	    pe_o = 0.0,
 	    pe_n = 0.0;
 

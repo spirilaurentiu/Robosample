@@ -364,7 +364,7 @@ public:
 	bool generateProposal(void);
 
 	/** Generate a number of samples **/
-	int generateSamples(int howMany);
+	bool generateSamples(int howMany);
 	//...............
 
 	//...................
