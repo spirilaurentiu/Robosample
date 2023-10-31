@@ -18,7 +18,7 @@
             "request": "launch",
             // "program": "${workspaceFolder}/build/robosample.d",
             // "args": ["${workspaceFolder}/build/inp.2but"],
-            "program": "${workspaceFolder}/build/TestEnergy",
+            "program": "${workspaceFolder}/build/TestGeometry",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
             "environment": [],

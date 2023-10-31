@@ -22,7 +22,28 @@ sudo apt-get update
 sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build linux-tools-common linux-tools-generic linux-tools-`uname -r`
 ```
 
-Minimum CMake version is 3.17.
+### CMake
+
+Minimum `CMake` version is 3.17. It can be tested with:
+
+```bash
+cmake --version
+```
+
+To install the correct version, head to the [CMake website](https://cmake.org/download/) and find the `.tar.gz` version for your operating system. The code below is an example for CMake 3.27 under Linux:
+
+```bash
+cd ~
+wget https://github.com/Kitware/CMake/releases/download/v3.27.7/cmake-3.27.7-linux-x86_64.tar.gz
+tar -xf cmake-3.27.7-linux-x86_64.tar.gz
+rm cmake-3.27.7-linux-x86_64.tar.gz
+```
+
+The executable is located in the `bin` forlder:
+
+```bash
+~/cmake-3.27.7-linux-x86_64/cmake-3.27.7-linux-x86_64/bin/cmake
+```
 
 ### Exports
 

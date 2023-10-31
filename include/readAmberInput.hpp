@@ -1,109 +1,89 @@
-#ifndef __READAMBERINPUT_HPP__
-#define __READAMBERINPUT_HPP__
-
-#ifndef TARGET_TYPE
-#define TARGET_TYPE double
-#endif
-
+#pragma once
 
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <string.h>
 #include <vector>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include <utility>
+#include "Molmodel.h"
 
+// TO DO: impropers ?!?
+// Errors to be continued...
+// Epot calc & units
 class readAmberInput{
+public:
+    void readAmberFiles(const std::string& inpcrdfile, const std::string& prmtopfile);
 
-  // TO DO: impropers ?!?
-  // Errors to be continued...
-  // Epot calc & units
+    int getNumberAtoms() const;
+    int getNumberBonds() const;
+    int getNumberAngles() const;
+    int getNumberDihedrals() const;
 
+    const std::string& getAtomsName(int p) const;
+    const std::string& getAtomsType(int p) const;
+    SimTK::Real getAtomsXcoord(int p) const;
+    SimTK::Real getAtomsYcoord(int p) const;
+    SimTK::Real getAtomsZcoord(int p) const;
+    SimTK::Real getAtomsMass(int p) const;
+    SimTK::Real getAtomsRadii(int p) const; // A
+    SimTK::Real getAtomsRVdW(int p) const;  // A
+    SimTK::Real getAtomsEpsilon(int p) const; // kcal
 
+    SimTK::Real getAtomicNumber(int p) const;
 
-    public:
+    // amber internal charge
+    // q = amber int charge / chargemMultiplier;
+    // chargemMultiplier = 18.2223;
+    SimTK::Real getAtomsCharge(int p) const;
 
-      static int AtomNameSize;
-      static TARGET_TYPE chargemMultiplier;
-      static int AmberIndexMultiplier;
-      static int AmberIndexDiff;
+    // Natmos x Natomd matrix containing 0 for excluded pairs
+    bool getNonBondedAtomsMatrix(int at1, int at2) const;
 
-      void readAmberFiles(std::string inpcrdfile, std::string prmtopfile);
+    // BONDS
+    int getBondsAtomsIndex1(int bond) const;
+    int getBondsAtomsIndex2(int bond) const;
+    // Ebond = 1/2  * k (r - r0)^2
+    SimTK::Real getBondsForceK(int bond) const;  // kcal / mol^-1 A^-2
+    SimTK::Real getBondsEqval(int bond) const;   // A
 
-      int getNumberAtoms();
-      int getNumberBonds();
-      int getNumberAngles();
-      int getNumberDihedrals();
+    // ANGLE
+    int getAnglesAtomsIndex1(int angle) const;
+    int getAnglesAtomsIndex2(int angle) const;
+    int getAnglesAtomsIndex3(int angle) const;
+    // Eangle = 1/2  * k  (ang - ang0)^2
+    SimTK::Real getAnglesForceK(int angle) const;   // kcal / mol^-1 rad^-2
+    SimTK::Real getAnglesEqval(int angle) const;
 
-      std::string getAtomsName(int p);
-      std::string getAtomsType(int p);
-      TARGET_TYPE getAtomsXcoord(int p);
-      TARGET_TYPE getAtomsYcoord(int p);
-      TARGET_TYPE getAtomsZcoord(int p);
-      TARGET_TYPE getAtomsMass(int p);
-      TARGET_TYPE getAtomsRadii(int p); // A
-      TARGET_TYPE getAtomsRVdW(int p);  // A
-      TARGET_TYPE getAtomsEpsilon(int p); // kcal
+    // DIHEDRALS
+    // Edih = k * cos (n*phi + psi)
+    int getDihedralsAtomsIndex1(int dih) const;
+    int getDihedralsAtomsIndex2(int dih) const;
+    int getDihedralsAtomsIndex3(int dih) const;
+    int getDihedralsAtomsIndex4(int dih) const;
 
-      TARGET_TYPE getAtomicNumber(int p);
+    //HOREA
+    int getDihedralsAtomsIndex(int dihIndex, int atomIndx);
+    void GeneratePairStartAndLen();
 
-      // amber internal charge
-      // q = amber int charge / chargemMultiplier;
-      // chargemMultiplier = 18.2223;
-      TARGET_TYPE getAtomsCharge(int p);
+    std::vector < std::pair<int, int> > getPairStartAndLen();
 
-      // Natmos x Natomd matrix containing 0 for excluded pairs
-      bool getNonBondedAtomsMatrix(int at1, int at2);
+    SimTK::Real getDihedralsForceK(int dih) const;  // kcal / mol^-1 rad^-2
+    SimTK::Real getDihedralsEqval(int dih) const; // rad
+    SimTK::Real getDihedralsPeriod(int dih) const;
+    SimTK::Real getDihedralsPhase(int dih) const;
 
-      // BONDS
-      int getBondsAtomsIndex1(int bond);
-      int getBondsAtomsIndex2(int bond);
-      // Ebond = 1/2  * k (r - r0)^2
-      TARGET_TYPE getBondsForceK(int bond);  // kcal / mol^-1 A^-2
-      TARGET_TYPE getBondsEqval(int bond);   // A
-
-      // ANGLE
-      int getAnglesAtomsIndex1(int angle);
-      int getAnglesAtomsIndex2(int angle);
-      int getAnglesAtomsIndex3(int angle);
-      // Eangle = 1/2  * k  (ang - ang0)^2
-      TARGET_TYPE getAnglesForceK(int angle);   // kcal / mol^-1 rad^-2
-      TARGET_TYPE getAnglesEqval(int angle);
-
-      // DIHEDRALS
-      // Edih = k * cos (n*phi + psi)
-      int getDihedralsAtomsIndex1(int dih);
-      int getDihedralsAtomsIndex2(int dih);
-      int getDihedralsAtomsIndex3(int dih);
-      int getDihedralsAtomsIndex4(int dih);
-
-      //HOREA
-      int getDihedralsAtomsIndex(int dihIndex, int atomIndx);
-      void GeneratePairStartAndLen();
-
-      std::vector < std::pair<int, int> > getPairStartAndLen();
-
-      TARGET_TYPE getDihedralsForceK(int dih);  // kcal / mol^-1 rad^-2
-      TARGET_TYPE getDihedralsEqval(int dih); // rad
-      TARGET_TYPE getDihedralsPeriod(int dih);
-      TARGET_TYPE getDihedralsPhase(int dih);
-
-      // Other
-      // TARGET_TYPE getDihedralsSCEE(int p);
-      // TARGET_TYPE getDihedralsSCNB(int p);
+    // Other
+    // SimTK::Real getDihedralsSCEE(int p);
+    // SimTK::Real getDihedralsSCNB(int p);
 
 
 
 
-  private:
-
+private:
   // General
-
-
     std::ifstream inpcrd;
     std::ifstream prmtop;
 
@@ -118,44 +98,44 @@ class readAmberInput{
     // 4 characters std::strings left aligned - "CA  "
     std::vector<std::string> AtomsName;
     std::vector<std::string> AtomsTypes;  //
-    std::vector<TARGET_TYPE> AtomsXcoord;
-    std::vector<TARGET_TYPE> AtomsYcoord;
-    std::vector<TARGET_TYPE> AtomsZcoord;
-    std::vector<TARGET_TYPE> AtomsMass;
-    std::vector<TARGET_TYPE> AtomsRadii; // A
-    std::vector<TARGET_TYPE> AtomsRVdW;  // A
-    std::vector<TARGET_TYPE> AtomsEpsilon; // kcal
+    std::vector<SimTK::Real> AtomsXcoord;
+    std::vector<SimTK::Real> AtomsYcoord;
+    std::vector<SimTK::Real> AtomsZcoord;
+    std::vector<SimTK::Real> AtomsMass;
+    std::vector<SimTK::Real> AtomsRadii; // A
+    std::vector<SimTK::Real> AtomsRVdW;  // A
+    std::vector<SimTK::Real> AtomsEpsilon; // kcal
     // amber internal charge
     // q = amber int charge / chargemMultiplier;
     // chargemMultiplier = 18.2223;
-    std::vector<TARGET_TYPE> AtomsCharge;
+    std::vector<SimTK::Real> AtomsCharge;
 
 
     // BONDS
     std::vector <std::vector <int> > BondsAtomsIndex;
     // Ebond = 1/2  * k (r - r0)^2
-    std::vector<TARGET_TYPE> BondsForceK;  // kcal / mol^-1 A^-2
-    std::vector<TARGET_TYPE> BondsEqval;   // A
+    std::vector<SimTK::Real> BondsForceK;  // kcal / mol^-1 A^-2
+    std::vector<SimTK::Real> BondsEqval;   // A
 
     // ANGLE
     std::vector <std::vector <int> > AnglesAtomsIndex;
 
     // Eangle = 1/2  * k  (ang - ang0)^2
-    std::vector<TARGET_TYPE> AnglesForceK;   // kcal / mol^-1 rad^-2
-    std::vector<TARGET_TYPE> AnglesEqval;
+    std::vector<SimTK::Real> AnglesForceK;   // kcal / mol^-1 rad^-2
+    std::vector<SimTK::Real> AnglesEqval;
 
     // DIHEDRALS
     std::vector <std::vector <int> > DihedralsAtomsIndex;
     std::vector < std::pair<int, int> > PairStartAndLen;
     // Edih = k * cos (n*phi + psi)
-    std::vector<TARGET_TYPE> DihedralsForceK;
-    std::vector<TARGET_TYPE> DihedralsEqval;
-    std::vector<TARGET_TYPE> DihedralsPeriod;
-    std::vector<TARGET_TYPE> DihedralsPhase;
+    std::vector<SimTK::Real> DihedralsForceK;
+    std::vector<SimTK::Real> DihedralsEqval;
+    std::vector<SimTK::Real> DihedralsPeriod;
+    std::vector<SimTK::Real> DihedralsPhase;
 
     // Other
-    // std::vector<TARGET_TYPE> SCEEScaleFactor;
-    // std::vector<TARGET_TYPE> SCNBScaleFactor;
+    // std::vector<SimTK::Real> SCEEScaleFactor;
+    // std::vector<SimTK::Real> SCNBScaleFactor;
 
 
 
@@ -164,7 +144,7 @@ class readAmberInput{
 
     // some temp data
     int global_i = 0;
-    TARGET_TYPE temp_val;
+    SimTK::Real temp_val;
     std::string line;
 
     int FlagPointers[32];
@@ -181,21 +161,21 @@ class readAmberInput{
     int LennardJonesTypes;
 
     std::vector<int> AtomsTypesIndex;
-    std::vector<TARGET_TYPE> AtomsScreenGBIS;
+    std::vector<SimTK::Real> AtomsScreenGBIS;
 
-    std::vector<TARGET_TYPE> AtomicNumbers;
+    std::vector<SimTK::Real> AtomicNumbers;
 
-    std::vector<TARGET_TYPE> tempBond_K;
-    std::vector<TARGET_TYPE> tempBond_eq;
-    std::vector<TARGET_TYPE> tempAngle_K;
-    std::vector<TARGET_TYPE> tempAngle_eq;
-    std::vector<TARGET_TYPE> tempDihedral_K;
-    std::vector<TARGET_TYPE> tempDihedral_per;
-    std::vector<TARGET_TYPE> tempDihedral_phase;
-    std::vector<TARGET_TYPE> tempDihedral_SCEE;
-    std::vector<TARGET_TYPE> tempDihedral_SCNB;
-    TARGET_TYPE acoef;
-    TARGET_TYPE bcoef;
+    std::vector<SimTK::Real> tempBond_K;
+    std::vector<SimTK::Real> tempBond_eq;
+    std::vector<SimTK::Real> tempAngle_K;
+    std::vector<SimTK::Real> tempAngle_eq;
+    std::vector<SimTK::Real> tempDihedral_K;
+    std::vector<SimTK::Real> tempDihedral_per;
+    std::vector<SimTK::Real> tempDihedral_phase;
+    std::vector<SimTK::Real> tempDihedral_SCEE;
+    std::vector<SimTK::Real> tempDihedral_SCNB;
+    SimTK::Real acoef;
+    SimTK::Real bcoef;
     int t1;
     int t2;
     int t3;
@@ -203,9 +183,9 @@ class readAmberInput{
     int t5;
 
 
-    std::vector<TARGET_TYPE> LennardJonesNonbondParmIndex;
-    std::vector<TARGET_TYPE> tempLJONES_ACOEFF;
-    std::vector<TARGET_TYPE> tempLJONES_BCOEFF;
+    std::vector<SimTK::Real> LennardJonesNonbondParmIndex;
+    std::vector<SimTK::Real> tempLJONES_ACOEFF;
+    std::vector<SimTK::Real> tempLJONES_BCOEFF;
 
 
     std::vector<int> NumberExcludedAtomsList;
@@ -247,11 +227,4 @@ class readAmberInput{
 
     void readNumberExcludedAtomsList();
     void readExcludedAtomsList();
-
-
-
-
 };
-
-
-#endif // __READAMBERINPUT_HPP__

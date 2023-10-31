@@ -2,41 +2,26 @@
 
 using namespace SimTK;
 
-// Init function
-void bSpecificAtom::Zero(){
-    biotype.clear();
-    residueName.clear();
-    chain.clear();
-    neighbors.clear();
-    bondsInvolved.clear();
+void bSpecificAtom::setAtomCompoundType(const SimTK::Compound::AtomName &atomName,
+        int atomicNumber,
+        SimTK::Element::Name elementName,
+        SimTK::Element::Symbol elementSymbol,
+        SimTK::mdunits::Mass atomicMass) {
+    // compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, SimTK::Element(atomicNumber, atomName, elementSymbol, atomicMass));
 
-    std::fill(begin(fftype), end(fftype), '\0');
+    // the biotype is added like this. i want to have one element in a vector inside topology and reference it from there
+    compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, SimTK::Element(atomicNumber, elementSymbol, elementSymbol, atomicMass));
+    setElem(elementSymbol);
+    setCompoundName("SingleAtom");
 
-    compoundSingleAtom = nullptr;
+    // std::cout << "defined element in bSpecific atom " << atomicNumber << atomName << elementSymbol << atomicMass << std::endl;
+}
 
-    charge = 0.0;
-    residueIndex = std::numeric_limits<long int>::min();
-
-    mass = std::numeric_limits<SimTK::Real>::min();
-    vdwRadius = std::numeric_limits<SimTK::Real>::min();
-    LJWellDepth = std::numeric_limits<SimTK::Real>::min();
-
-    std::fill(begin(name), end(name), '\0');
-    std::fill(begin(inName), end(inName), '\0');
-
-    x = std::numeric_limits<SimTK::Real>::min();
-    y = std::numeric_limits<SimTK::Real>::min();
-    z = std::numeric_limits<SimTK::Real>::min();
-
-    nbonds = 0;
-    freebonds = 0;
-    number = 0;
-    atomicNumber = 0;
-    mobile = 0;
-    visited = 0;
-    moleculeIndex = std::numeric_limits<int>::min();
-
-    elem = "";
+void bSpecificAtom::destroy() {
+    if (compoundSingleAtom != nullptr) {
+        delete compoundSingleAtom;
+        compoundSingleAtom = nullptr;
+    }
 }
 
 void bSpecificAtom::Print(int whichWorld)
@@ -138,10 +123,8 @@ std::string bSpecificAtom::getBiotype() const
     return this->biotype;
 }
 
-// Returns Molmodel atom type as SimTK::Compound::SingleAtom *
-SimTK::Compound::SingleAtom * bSpecificAtom::getBAtomType() const
-{
-    return this->compoundSingleAtom;
+const SimTK::Compound::SingleAtom& bSpecificAtom::getSingleAtom() const {
+    return *compoundSingleAtom;
 }
 
 // Get atom's index as held in Compound
@@ -159,13 +142,13 @@ SimTK::Real bSpecificAtom::getCharge() const {
 }
 
 //
-int bSpecificAtom::getIsMobile() const
-{
-    assert(!"Not implemented");
-    throw std::exception();
+// int bSpecificAtom::getIsMobile() const
+// {
+//     assert(!"Not implemented");
+//     throw std::exception();
     
-    return std::numeric_limits<int>::min();
-}
+//     return std::numeric_limits<int>::min();
+// }
 
 //
 int bSpecificAtom::getIsVisited() const
@@ -189,14 +172,34 @@ void bSpecificAtom::setFreebonds(int)
 }
 
 // Set atom unique name
-void bSpecificAtom::setName(std::string inpName){
-    std::copy(inpName.begin(), inpName.end(), begin(name));
+void bSpecificAtom::generateName(int nameCounter) {
+    std::string string_name;
+    std::string aStr, bStr, cStr, dStr;
+    int a=65, b=65, c=65, d=65;
+    int aRest=0, bRest=0, cRest=0;
+
+    a = int(nameCounter / std::pow(25, 3));
+    aStr = (char)(a + 65);
+    aRest = nameCounter % int(std::pow(25, 3));
+
+    b = int(aRest / std::pow(25, 2));
+    bStr = (char)(b + 65);
+    bRest = aRest % int(std::pow(25, 2));
+
+    c = int(bRest / std::pow(25, 1));
+    cStr = (char)(c + 65);
+    cRest = bRest % int(std::pow(25, 1));
+
+    d = int(cRest / std::pow(25, 0));
+    dStr = (char)(d + 65);
+
+    name = aStr + bStr + cStr + dStr;
 }
 
 // Set initial name
 
-void bSpecificAtom::setInName(std::string inpInName){
-    std::copy(inpInName.begin(), inpInName.end(), begin(inName));
+void bSpecificAtom::setInName(const std::string& inName){
+    this->inName = inName;
 }
 
 // Set number
@@ -205,8 +208,8 @@ void bSpecificAtom::setNumber(int inpNumber){
 }
 
 // Set element
-void bSpecificAtom::setElem(std::string inpElem){
-    this->elem = inpElem;
+void bSpecificAtom::setElem(const std::string& elem){
+    this->elem = elem;
 }
 
 // Set the X coordinate
@@ -237,28 +240,15 @@ void bSpecificAtom::setMass(SimTK::Real inpMass)
 }
 
 // Set force field atom type
-void bSpecificAtom::setFfType(std::string inpFftype)
+void bSpecificAtom::setFfType(const std::string& fftype)
 {
-    std::copy(inpFftype.begin(), inpFftype.end(), begin(fftype));
+    this->fftype = fftype;
 }
 
 // Set atom Biotype name - dangerous
-void bSpecificAtom::setBiotype(std::string inpBiotype)
+void bSpecificAtom::setBiotype(const std::string& biotype)
 {
-    biotype = inpBiotype;
-}
-
-// Set atom Biotype name - dangerous
-void bSpecificAtom::setBiotype(const char * inpBiotype)
-{
-    biotype = inpBiotype;
-}
-
-// Set 
-void bSpecificAtom::setBAtomType(SimTK::Compound::SingleAtom *)
-{
-    assert(!"Not implemented");
-    throw std::exception();
+    this->biotype = biotype;
 }
 
 void bSpecificAtom::setCompoundAtomIndex(SimTK::Compound::AtomIndex inpAtomIndex)
@@ -269,13 +259,6 @@ void bSpecificAtom::setCompoundAtomIndex(SimTK::Compound::AtomIndex inpAtomIndex
 // Set charge
 void bSpecificAtom::setCharge(SimTK::Real inpCharge){
     this->charge = inpCharge;
-}
-
-
-void bSpecificAtom::setIsMobile(int)
-{
-    assert(!"Not implemented");
-    throw std::exception();
 }
 
 /** Set the number of times this atom was visited during the construction of
@@ -394,6 +377,39 @@ int bAtomAssign(MolAtom *dest, const bSpecificAtom *src)
     return 0;
 }
 
+void bSpecificAtom::setCompoundName(const SimTK::Compound::Name& name) {
+    compoundSingleAtom->setCompoundName(name);
+}
+void bSpecificAtom::addFirstBondCenter(const SimTK::Compound::BondCenterName& centerName,
+    const SimTK::Compound::AtomPathName& atomName) {
+    compoundSingleAtom->addFirstBondCenter(centerName, atomName);
+}
+void bSpecificAtom::addFirstTwoBondCenters(const SimTK::Compound::BondCenterName& centerName1,
+    const SimTK::Compound::BondCenterName& centerName2,
+    const SimTK::Compound::AtomPathName& atomName,
+    SimTK::UnitVec3 dir1,
+    SimTK::UnitVec3 dir2) {
+    compoundSingleAtom->addFirstTwoBondCenters(centerName1, centerName2, atomName, dir1, dir2);
+}
 
+void bSpecificAtom::addLeftHandedBondCenter(const SimTK::Compound::BondCenterName& centerName,
+    const SimTK::Compound::AtomName& atomName,
+    SimTK::Angle bondAngle1,
+    SimTK::Angle bondAngle2) {
+    compoundSingleAtom->addLeftHandedBondCenter(centerName, atomName, bondAngle1, bondAngle2);
+}
 
+void bSpecificAtom::addRightHandedBondCenter(const SimTK::Compound::BondCenterName& centerName,
+    const SimTK::Compound::AtomName& atomName,
+    SimTK::Angle bondAngle1,
+    SimTK::Angle bondAngle2) {
+    compoundSingleAtom->addRightHandedBondCenter(centerName, atomName, bondAngle1, bondAngle2);
+}
 
+void bSpecificAtom::setInboardBondCenter(const SimTK::Compound::BondCenterName& centerName) {
+    compoundSingleAtom->setInboardBondCenter(centerName);
+}
+
+void bSpecificAtom::setDefaultInboardBondLength(SimTK::mdunits::Length length) {
+    compoundSingleAtom->setDefaultInboardBondLength(length);
+}
