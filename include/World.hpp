@@ -141,6 +141,8 @@ public:
 	To be called after loading all Compounds. **/
 	void modelTopologies(std::string GroundToCompoundMobilizerType);
 
+	void PrintInitialRecommendedTimesteps(void);
+
 	//=========================================================================
 	//                   CONSTRAINTS
 	//=========================================================================
@@ -368,7 +370,7 @@ public:
 	bool generateProposal(void);
 
 	/** Generate a number of samples **/
-	int generateSamples(int howMany);
+	bool generateSamples(int howMany);
 	//...............
 
 	//...................

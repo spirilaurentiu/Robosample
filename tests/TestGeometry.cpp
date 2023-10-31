@@ -31,7 +31,7 @@ int main() {
         return 1;
     }
 
-    c.run();
+    c.Run();
 
     // for (std::size_t i = 0; i < distances.size(); i++) {
     //     const auto d = c.Distance(0, 0, 0, distances[i].i, distances[i].j) * 10;

@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	c.run();
+	c.Run();
 		
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --

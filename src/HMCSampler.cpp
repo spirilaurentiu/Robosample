@@ -855,6 +855,7 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 		// Probability terms
 		SimTK::Real boostBetaPlus = this->boostBeta * 1.4142135623730950488;
 		SimTK::Real localBoostFactor = boostBetaPlus / this->beta;
+		// bool b = false;
 		//std::cout << "b+sqrt(2)/b " << localBoostFactor << std::endl;
 
 		// Kinetic term
@@ -1156,10 +1157,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 
 		system->realize(someState, SimTK::Stage::Position);
 	}
-
 }
-
-bool b = false;
 
 // ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 
@@ -1705,6 +1703,7 @@ void HMCSampler::setSetTVector(const SimTK::State& someState)
 	SetTVector[i] = mobod.getMobilizerTransform(someState);
 	i++;
   }
+
 }
 
 // Stores the configuration into an internal vector of transforms TVector
@@ -1718,16 +1717,14 @@ SimTK::Transform * HMCSampler::getSetTVector(void)
 void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
 {
   system->realize(someState, SimTK::Stage::Position);
+
   int i = 0;
   for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-	//system->realize(someState, SimTK::Stage::Position);
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	mobod.setQToFitTransform(someState, SetTVector[i]);
-
-	//system->realize(someState, SimTK::Stage::Position);
-
 	i++;
   }
+
   system->realize(someState, SimTK::Stage::Position);
 }
 
@@ -2421,10 +2418,10 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 	// Calculate total energy
 	if(useFixman){
 		etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-		etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
+		etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o); // ALGO REV NO
 	}else{
 		etot_n = pe_n + ke_n;
-		etot_o = pe_o + ke_o;
+		etot_o = pe_o + ke_o; // ALGO REV NO
 	}
 
 		/*// Kinetic energy new for the evaluation Hamiltonian
@@ -3115,7 +3112,7 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 
 
 	//logBendStretchJac = std::log(this->QScaleFactor); 
-	std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
+	//std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
 
 	return logBendStretchJac;
 
@@ -3838,37 +3835,6 @@ bool HMCSampler::acceptSample() {
 }
 
 /**
- * Acception rejection step - not used
-*/
-bool HMCSampler::accRejStep(SimTK::State& someState) {
-
-	// Empty sample generator
-	if ( alwaysAccept == true ){
-		// Simple molecular dynamics
-		this->acc = true;
-		std::cout << "\tsample accepted (simple molecular dynamics)\n";
-		update(someState);
-	} else {
-		// we do not consider this sample accepted unless it passes all checks
-		this->acc = false;
-
-		// Apply Metropolis-Hastings criterion
-		if(acceptSample()) {
-			// sample is accepted
-			this->acc = true;
-			std::cout << "\tsample accepted (metropolis-hastings)\n";
-			update(someState);
-		} else {
-			// sample is rejected
-			this->acc = false;
-			std::cout << "\tsample rejected (metropolis-hastings)\n";
-		}
-	}
-
-	return this->acc;
-}
-
-/**
  * The main function that generates a sample
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
@@ -3880,6 +3846,11 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	world->PrintNormX_BMs();
 	world->PrintAcosX_PFMeans();
 	world->PrintNormX_BMMeans(); */
+
+	bool validated = true;
+	if((pe_o - pe_init) > 300.0){
+		validated = false;
+	}
 
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
@@ -3901,18 +3872,13 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	world->getTransformsStatistics(someState);
 	world->updateTransformsMeans(someState); // Movable
 
-	bool validated = true;
-	validated = generateProposal(someState);
-	
+	validated = generateProposal(someState) && validated;
+
+	// Print all the energy terms first
+	PrintDetailedEnergyInfo(someState);
+
 	// Apply the acceptance criterion
 	if(validated){
-
-		// Print all the energy terms first
-		PrintDetailedEnergyInfo(someState);
-
-		// omm_settemperature invalidates the subsystem topology cache
-		if(integratorName == IntegratorName::OMMVV)
-			system->realizeTopology();
 
 		// Decide
 		if(acceptSample()){
@@ -3940,16 +3906,21 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		}
 
 		// Calculate X_PFs and X_BMs
-//world->traceBendStretch(someState);
-
+		//world->traceBendStretch(someState);
 		/* world->getTransformsStatistics(someState);
-
 		// Update means of values before altering them
 		world->updateTransformsMeans(someState);
 		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
 			//world->updateTransformsMeans(someState);
 		} */
 
+	}else{
+		if(this->alwaysAccept == true){
+			std::cout << "\trej (MD) invalid\n";
+		}else{
+			std::cout << "\trej (MH) invalid\n";
+		}
+		
 	}
 
 	auto end = std::chrono::system_clock::now();
@@ -3977,9 +3948,10 @@ void HMCSampler::updateQBuffer(const SimTK::State& someState)
 
 void HMCSampler::storeAdaptiveData(SimTK::State& someState)
 {
+	// TODO THIS IS BAD, FIX IT
 	updateQBuffer(someState);
-	pushCoordinatesInR(someState);
-	pushVelocitiesInRdot(someState);
+	// pushCoordinatesInR(someState);
+	// pushVelocitiesInRdot(someState);
 }
 
 void HMCSampler::PrintAdaptiveData(void)

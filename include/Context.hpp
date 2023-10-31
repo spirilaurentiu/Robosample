@@ -30,8 +30,8 @@ public:
 	bool initializeFromFile(const std::string& file);
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 	
-	void run();
-	void run(int steps);
+	void Run();
+	void Run(int steps);
 
 	// Input functions
 	bool loadTopologyFile(std::string topologyFilename);
@@ -200,6 +200,9 @@ public:
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
 
+	// Print recommended timesteps
+	void PrintInitialRecommendedTimesteps(void);
+
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
@@ -355,8 +358,6 @@ public:
 	// Exchanges thermodynamic states between replicas
 	bool attemptREXSwap(int replica_i, int replica_j);
 
-	bool attemptRENSSwap(int replica_i, int replica_j);
-
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
 
@@ -435,7 +436,7 @@ public:
 	void setRunType(int runTypeArg){this->runType = runTypeArg;}
 
 	// Run a particular world
-	int RunWorld(int whichWorld);
+	bool RunWorld(int whichWorld);
 
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);
@@ -452,13 +453,10 @@ public:
 
 	void RunREX();
 
-	// Helper Functions for RENS
+	// Helper Functions for REX
 
 	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
 	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
-
-	// RENS
-	void RunRENS(void);
 
 	void PrintReplicas(void);
 	void PrintReplicaMaps(void);
