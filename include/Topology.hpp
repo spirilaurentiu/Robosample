@@ -117,6 +117,8 @@ objects **/
 class Topology : public SimTK::Compound{
 public:
 
+	void load(const readAmberInput& amberReader);
+
 	/** Default Constructor. Sets the name of this molecule to 'no_name '.
 	The name has no particular function and is not guaranteed to be unique.**/
 	Topology();
@@ -139,7 +141,6 @@ public:
 	/** Set atoms Molmodel types (Compound::SingleAtom derived) based on
 	 * their valence **/
 	void SetGmolAtomsCompoundTypes();
-	void SetGmolAtomsCompoundTypesTrial();
 
 
 	/** Reads data from a specific reader (readAmberInput for now) object **/

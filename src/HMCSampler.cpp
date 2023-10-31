@@ -1188,21 +1188,36 @@ void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 
 		// actual openmm integration
+		// auto start = std::chrono::system_clock::now();
 		dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+		// auto end = std::chrono::system_clock::now();
+		// auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\t\tOMM_integrateTrajectory (microseconds): " << useconds << std::endl;
 
 		// somewhere, the topology gets ruined
+		// start = std::chrono::system_clock::now();
 		system->realizeTopology();
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\t\tsystem->realizeTopology (microseconds): " << useconds << std::endl;
 
 		// transfer coordinates from openmm to simbody
 		omm_locations.reserve(matter->getNumBodies());
 		omm_locations[0] = SimTK::Vec3(0, 0, 0);
 
+		// start = std::chrono::system_clock::now();
 		const auto positions = dumm->OMM_getPositions();
 		for (int i = 0; i < positions.size(); i++) {
 			omm_locations[i + 1] = SimTK::Vec3(positions[i][0], positions[i][1], positions[i][2]);
 		}
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\t\tOMM_getPositions (microseconds): " << useconds << std::endl;
+
+		// std::vector<SimTK::Vec3> SetTVector;
 
 		// calculate atom transformations after integrating with openmm
+		// start = std::chrono::system_clock::now();
 		for (int i = 0; i < dumm->getNumAtoms(); i++) {
 			SimTK:DuMM::AtomIndex aix(i);
 			auto mbx = dumm->getAtomBody(aix);
@@ -1211,14 +1226,38 @@ void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 			const auto location = omm_locations[i + 1];
 			const auto parent = omm_locations[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
 
-			mobod.setDefaultInboardFrame(Transform(Rotation(), location));
-			mobod.setDefaultOutboardFrame(Transform(Rotation(), parent));
-			system->realizeTopology();
+			// SetTVector.push_back(location);
+			// SetTVector.push_back(parent);
+
+			// std::cout << "Atom " << i << std::endl;
+			// std::cout << mobod.getDefaultInboardFrame() << " " << mobod.getDefaultOutboardFrame() << std::endl;
+
+			mobod.updateDefaultFrames(Transform(Rotation(), location), Transform(Rotation(), parent));
+			// mobod.setDefaultInboardFrame(Transform(Rotation(), location)); // 59
+			// mobod.setDefaultOutboardFrame(Transform(Rotation(), parent)); // 61
+			// system->realizeTopology();
 
 			mobod.setQToFitTransform(someState, Transform(Rotation()));
+
+			// std::cout << mobod.getDefaultInboardFrame() << " " << mobod.getDefaultOutboardFrame() << std::endl;
 		}
 
+		system->realizeTopology();
+
+		// for (const auto& v : SetTVector) {
+		// 	std::cout << v << " ";
+		// }
+		// std::cout << std::endl;
+
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\t\tmobod (microseconds): " << useconds << std::endl;
+
+		// start = std::chrono::system_clock::now();
 		compoundSystem->realize(someState, SimTK::Stage::Position);
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\t\tcompoundSystem->realize (microseconds): " << useconds << std::endl;
 
 	}catch(const std::exception&){
 		// Send general message
@@ -3159,20 +3198,48 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 	if(integratorName == IntegratorName::OMMVV){
 
 		// // ELIZA: Check the code below
+		// auto start = std::chrono::system_clock::now();
 		dumm->setOpenMMvelocities(this->boostT);
 		OMM_setTemperature(this->boostT);
 
+		// auto end = std::chrono::system_clock::now();
+		// auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\tsetOpenMMvelocities (microseconds): " << useconds << std::endl;
+
 		// set the positions we want to start from
+		// start = std::chrono::system_clock::now();
 		std::vector<SimTK::Vec3> startingPos;
 		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 			startingPos.push_back(mobod.getBodyOriginLocation(someState));
 		}
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\tstartingPos (microseconds): " << useconds << std::endl;
 
+		// start = std::chrono::system_clock::now();
 		dumm->OMM_updatePositions(startingPos);
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\tOMM_updatePositions (microseconds): " << useconds << std::endl;
+
+		// start = std::chrono::system_clock::now();
 		OMM_calcProposedKineticAndTotalEnergy();
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\tOMM_calcProposedKineticAndTotalEnergy (microseconds): " << useconds << std::endl;
+
+		// start = std::chrono::system_clock::now();
 		OMM_integrateTrajectory(someState);
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\tOMM_integrateTrajectory (microseconds): " << useconds << std::endl;
+
+		// start = std::chrono::system_clock::now();
 		OMM_calcNewConfigurationAndEnergies();
+		// end = std::chrono::system_clock::now();
+		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		// std::cout << "\tOMM_calcNewConfigurationAndEnergies (microseconds): " << useconds << std::endl;
 
 	}else if (integratorName == IntegratorName::VERLET){
 

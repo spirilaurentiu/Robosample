@@ -30,7 +30,7 @@ bool Context::initializeFromFile(const std::string &file)
 		return false;
 	}
 
-	// - Get molecules directory
+	// Get molecules directory
 	std::string molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
 	std::cout << "Molecule directory: " << molDir << std::endl << std::flush;
 	setPdbPrefix(molDir + setupReader.get("SEED")[0]);
@@ -464,6 +464,274 @@ bool Context::initializeFromFile(const std::string &file)
 	setThermostatesNonequilibrium();
 
     return true;
+}
+
+#include <stack>
+
+void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
+	// readAmberInput reader;
+	// reader.readAmberFiles(inpcrd, prmtop);
+	// const auto natoms = reader.getNumberAtoms();
+
+	// // build adjacency list
+	// std::vector<std::vector<int>> adjacency(natoms);
+	// const int nbonds = reader.getNumberBonds();
+	// for (int i = 0; i < nbonds; i++) {
+	// 	const int b0 = reader.getBondsAtomsIndex1(i);
+	// 	const int b1 = reader.getBondsAtomsIndex2(i);
+	// 	adjacency[b0].push_back(b1);
+	// }
+
+	// // map atoms to molecules
+	// // whichMolecule[i] tells us which molecule does atom i from the prmtop file belong to
+	// std::vector<int> whichMolecule(natoms, -1);
+	// std::vector<int> atomsPerMolecule;
+	// std::vector<bool> visited(natoms, false);
+	// int numMols = -1;
+
+	// // this reduces to counting the number of connected components from an adjacency list
+	// for (int i = 0; i < natoms; i++) {
+
+	// 	// build graph of the current molecule using dfs
+	// 	std::stack<int> nodesToVisit;
+	// 	nodesToVisit.push(i);
+
+	// 	if (!visited[i]) {
+	// 		numMols++;
+	// 		atomsPerMolecule.push_back(0);
+	// 	}
+
+	// 	// non recursive dfs
+	// 	while (!nodesToVisit.empty()) {
+	// 		int atom = nodesToVisit.top();
+	// 		nodesToVisit.pop();
+
+	// 		if (visited[atom]) {
+	// 			continue;
+	// 		}
+
+	// 		visited[atom] = true;
+	// 		whichMolecule[atom] = numMols;
+	// 		atomsPerMolecule[numMols]++;
+	// 		for (auto to_visit : adjacency[atom]) {
+	// 			nodesToVisit.push(to_visit);
+	// 		}
+	// 	}
+	// }
+
+	// // // molecules are stored as a vector of atoms
+	// // // bAtomList[moleculeIndex][atomIndex] where atomIndex is in range [0, atomsPerMolecule[moleculeIndex])
+	// // std::vector<std::vector<bSpecificAtom>> bAtomList(numMols + 1);
+	// // for (int i = 0; i < numMols; i++) {
+	// // 	bAtomList[i].resize(atomsPerMolecule[i]);
+	// // }
+
+	// std::vector<bSpecificAtom> bAtomList;
+	// bAtomList.resize(natoms);
+
+	// std::vector<bBond> bonds;
+	// bonds.resize(nbonds);
+
+	// for (int i = 0; i < natoms; i++) {
+	// 	bSpecificAtom atom;
+
+	// 	// Assign an index like in prmtop
+	// 	atom.setNumber(i);
+
+	// 	// N, H1, OX etc
+	// 	auto atomType = reader.getAtomsType(i);
+	// 	ROBOSAMPLE::trim(atomType);
+	// 	atom.setInName(atomType);
+	// 	atom.setFfType(atomType);
+
+ 	// 	atom.setAtomicNumber( reader.getAtomicNumber(i) );
+
+	// 	// Assign a "unique" name. The generator is however limited.
+	// 	// AAAA, AAAB, AAAC, AAAD, AAAF etc - why do we need this?
+	// 	atom.setName(GetUniqueName(i));
+
+	// 	std::cout << i << " " << atom.getAtomicNumber() << " " << atom.getInName() << " " << atom.getName() << std::endl;
+
+	// 	// Set charge as it is used in Amber 						????????????????????????
+	// 	SimTK::Real chargeMultiplier = 18.2223;
+	// 	atom.setCharge(reader.getAtomsCharge(i) / chargeMultiplier);
+
+	// 	// Set coordinates in nm
+	// 	atom.setX(reader.getAtomsXcoord(i) / 10.0);
+	// 	atom.setY(reader.getAtomsYcoord(i) / 10.0);
+	// 	atom.setZ(reader.getAtomsZcoord(i) / 10.0);
+
+	// 	// Set mass
+	// 	atom.setMass(reader.getAtomsMass(i));
+
+	// 	// Set Lennard-Jones parameters
+	// 	atom.setVdwRadius(reader.getAtomsRVdW(i));
+	// 	atom.setLJWellDepth(reader.getAtomsEpsilon(i));
+
+	// 	// Set residue name and index
+	// 	atom.residueName = std::string("UNK");
+	// 	atom.residueIndex = 1;
+
+	// 	switch(atom.getAtomicNumber()) {
+	// 	case 1:
+	// 		atom.setElem("H");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name, Element(1, "Hydrogen", "H", atom.getMass()) );
+	// 		break;
+	// 	case 6:
+	// 		atom.setElem("C");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(6, "Carbon", "C", atom.getMass()));
+	// 		break;
+	// 	case 7:
+	// 		atom.setElem("N");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name, Element(7, "Nitrogen", "N", atom.getMass()));
+	// 		break;
+	// 	case 8:
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name, Element(8, "Oxygen", "O", atom.getMass()));
+	// 		break;
+	// 	case 9:
+	// 		atom.setElem("F");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name, Element(9, "Fluorine", "F", atom.getMass()));
+	// 		break;
+	// 	case 11:
+	// 		atom.setElem("Na");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(11, "Sodium", "Na", atom.getMass()));
+	// 		break;
+	// 	case 12:
+	// 		atom.setElem("Mg");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(12, "Magnesium", "Mg", atom.getMass()));
+	// 		break;
+	// 	case 15:
+	// 		atom.setElem("P");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(15, "Phosphorus", "P", atom.getMass()));
+	// 		break;
+	// 	case 16:
+	// 		atom.setElem("S");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(16, "Sulfur", "S", atom.getMass()));
+	// 		break;
+	// 	case 17:
+	// 		atom.setElem("Cl");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(17, "Chlorine", "Cl", atom.getMass()));
+	// 		break;
+	// 	case 19:
+	// 		atom.setElem("K");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(19, "Potassium", "K", atom.getMass()));
+	// 		break;
+	// 	case 20:
+	// 		atom.setElem("Ca");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(20, "Calcium", "Ca", atom.getMass()));
+	// 		break;
+	// 	case 23:
+	// 		atom.setElem("V");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(23, "Vanadium", "V", atom.getMass()));
+	// 		break;
+	// 	case 25:
+	// 		atom.setElem("Mn");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(25, "Manganese", "Mn", atom.getMass()));
+	// 		break;
+	// 		atom.setElem("O");
+	// 	case 26:
+	// 		atom.setElem("Fe");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(26, "Iron", "Fe", atom.getMass()));
+	// 		break;
+	// 	case 30:
+	// 		atom.setElem("Zn");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(30, "Zinc", "Zn", atom.getMass()));
+	// 		break;
+	// 	case 35:
+	// 		atom.setElem("Br");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name,  Element(35, "Bromine", "Br", atom.getMass()));
+	// 		break;
+	// 	case 53:
+	// 		atom.setElem("I");
+	// 		atom.compoundSingleAtom = new
+	// 			Compound::SingleAtom(atom.name, Element(53, "Iodine", "I", atom.getMass()));
+	// 		break;
+	// 	default:
+	// 		std::cerr << "Atom with atomic number " << atom.getAtomicNumber() << " not available." << std::endl;
+	// 		// return false;
+	// 	}
+
+	// 	// Add bond centers
+	// 	Angle TetrahedralAngle = 109.47 * Deg2Rad;
+
+	// 	// Add BondCenters
+	// 	for(int i = 0; i < (natoms); i++) {
+	// 		(atom.compoundSingleAtom)->setCompoundName("SingleAtom");
+
+	// 		if(atom.nbonds > 0){
+	// 			if(atom.nbonds == 1){ // One bond only
+	// 				(atom.compoundSingleAtom)->addFirstBondCenter("bond1",
+	// 					atom.name);
+	// 			}else if(atom.nbonds > 1){ // multiple bonds
+	// 				(atom.compoundSingleAtom)->addFirstTwoBondCenters("bond1", "bond2",
+	// 					atom.name, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
+	// 				if(atom.nbonds > 2){
+	// 					(atom.compoundSingleAtom)->addLeftHandedBondCenter("bond3",
+	// 						atom.name, TetrahedralAngle, TetrahedralAngle);
+	// 				}
+	// 				if(atom.nbonds > 3){
+	// 					(atom.compoundSingleAtom)->addRightHandedBondCenter("bond4",
+	// 						atom.name, TetrahedralAngle, TetrahedralAngle);
+	// 				}
+	// 			}
+
+	// 			// Set the inboard BondCenter
+	// 			(atom.compoundSingleAtom)->setInboardBondCenter("bond1");
+	// 			(atom.compoundSingleAtom)->setDefaultInboardBondLength(0.19);
+
+	// 		} // bonded atoms iterator
+	// 	} // atoms iterator
+
+	// 	// // Add atom to the list
+	// 	// int whichMol = whichMolecule[i];
+	// 	// bAtomList[whichMol].push_back(atom);
+	// 	bAtomList.push_back(atom);
+	// }
+
+	// // Iterate bonds and get atom indeces
+	// // This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
+	// for(int i=0; i<nbonds; i++){
+	// 	bBond bond;
+	// 	bond.setIndex(i);
+	// 	bond.i = reader.getBondsAtomsIndex1(i);
+	// 	bond.j = reader.getBondsAtomsIndex2(i);
+	// 	bonds.push_back(bond);
+	// }
+
+	// // Assign neighbors and bonds involved for each atom
+	// // which translates into pushing bSpecificAtom * and bBond *
+	// // into their apropriate vectors
+	// for(int i = 0; i < nbonds; i++){
+	// 	(bAtomList[ bonds[i].i  ]).addNeighbor( &(bAtomList[ bonds[i].j  ]) );
+	// 	(bAtomList[ bonds[i].i  ]).addBond( &(bonds[i]) );
+
+	// 	(bAtomList[ bonds[i].j  ]).addNeighbor( &(bAtomList[ bonds[i].i  ]) );
+	// 	(bAtomList[ bonds[i].j  ]).addBond( &(bonds[i]) );
+	// }
+
+	// // Assign the number of bonds an atom has and set the number of freebonds
+	// // equal to the number of bonds for now
+	// for (int i = 0; i < natoms; i++) {
+	// 	bAtomList[i].nbonds = bAtomList[i].bondsInvolved.size();
+	// 	bAtomList[i].freebonds = bAtomList[i].bondsInvolved.size();
+	// }
 }
 
 void Context::run() {
@@ -919,7 +1187,9 @@ void Context::AddMolecules(
 
 		// Set atoms Molmodel types (Compound::SingleAtom derived) based on
 		// their valence // from world
-		topologies[molIx].SetGmolAtomsCompoundTypesTrial();
+		topologies[molIx].SetGmolAtomsCompoundTypes();
+
+		// topologies[molIx].load(amberReader[molIx]);
 
 		// Add Biotype indeces and Biotype names representing Biotypes
 		topologies[molIx].bAddBiotypes(&amberReader[molIx]);

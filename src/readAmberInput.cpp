@@ -4,12 +4,11 @@
 #include <string>
 #include <cctype>
 
-int readAmberInput::AtomNameSize = 4;
-TARGET_TYPE readAmberInput::chargemMultiplier = 18.2223;
-int readAmberInput::AmberIndexMultiplier = 3;
-int readAmberInput::AmberIndexDiff = 1;
+constexpr int ATOM_NAME_SIZE = 4;
+constexpr int AMBER_INDEX_MULTIPLIER = 3;
+constexpr int AMBER_INDEX_DIFF = 1;
 
-void readAmberInput::readAmberFiles(std::string inpcrdfile, std::string prmtopfile)
+void readAmberInput::readAmberFiles(const std::string& inpcrdfile, const std::string& prmtopfile)
 {
 
 try
@@ -221,9 +220,9 @@ void readAmberInput::readPointers(){
     while(line.find("FLAG") == std::string::npos && global_i < NumberAtoms) // if stays within same field
     {
       getline(prmtop, line);
-      for(unsigned int k=0; k + readAmberInput::AtomNameSize <=line.length(); k += readAmberInput::AtomNameSize )
+      for(unsigned int k=0; k + ATOM_NAME_SIZE <=line.length(); k += ATOM_NAME_SIZE )
       {
-        auto name = line.substr(k, readAmberInput::AtomNameSize );
+        auto name = line.substr(k, ATOM_NAME_SIZE );
         auto it = std::remove_if(name.begin(), name.end(), [](char& c) {return std::isspace<char>(c, std::locale::classic()); });
         name.erase(it, name.end());
 
@@ -238,9 +237,9 @@ void readAmberInput::readPointers(){
     while(line.find("FLAG") == std::string::npos && global_i < NumberAtoms) // if stays within same field
     {
       getline(prmtop, line);
-      for(unsigned int k=0; k + readAmberInput::AtomNameSize <=line.length(); k += readAmberInput::AtomNameSize )
+      for(unsigned int k=0; k + ATOM_NAME_SIZE <=line.length(); k += ATOM_NAME_SIZE )
       {
-        auto name = line.substr(k, readAmberInput::AtomNameSize );
+        auto name = line.substr(k, ATOM_NAME_SIZE );
         auto it = std::remove_if(name.begin(), name.end(), [](char& c) {return std::isspace<char>(c, std::locale::classic()); });
         name.erase(it, name.end());
 
@@ -288,10 +287,10 @@ void readAmberInput::readPointers(){
       prmtop >> t3;
 
       BondsAtomsIndex.push_back(std::vector<int> {
-        t1 / readAmberInput::AmberIndexMultiplier , 
-        t2 / readAmberInput::AmberIndexMultiplier});
-      BondsForceK.push_back(tempBond_K[ t3 - readAmberInput::AmberIndexDiff]);
-      BondsEqval.push_back(tempBond_eq[ t3 - readAmberInput::AmberIndexDiff]);
+        t1 / AMBER_INDEX_MULTIPLIER , 
+        t2 / AMBER_INDEX_MULTIPLIER});
+      BondsForceK.push_back(tempBond_K[ t3 - AMBER_INDEX_DIFF]);
+      BondsEqval.push_back(tempBond_eq[ t3 - AMBER_INDEX_DIFF]);
     }
   }
 
@@ -322,11 +321,11 @@ void readAmberInput::readPointers(){
       prmtop >> t4;
 
       AnglesAtomsIndex.push_back(std::vector<int> {
-        t1 / readAmberInput::AmberIndexMultiplier ,
-        t2 / readAmberInput::AmberIndexMultiplier,
-        t3 / readAmberInput::AmberIndexMultiplier});
-      AnglesForceK.push_back(tempAngle_K[ t4 - readAmberInput::AmberIndexDiff]);
-      AnglesEqval.push_back(tempAngle_eq[ t4 - readAmberInput::AmberIndexDiff]);
+        t1 / AMBER_INDEX_MULTIPLIER ,
+        t2 / AMBER_INDEX_MULTIPLIER,
+        t3 / AMBER_INDEX_MULTIPLIER});
+      AnglesForceK.push_back(tempAngle_K[ t4 - AMBER_INDEX_DIFF]);
+      AnglesEqval.push_back(tempAngle_eq[ t4 - AMBER_INDEX_DIFF]);
     }
   }
 
@@ -383,17 +382,17 @@ void readAmberInput::readPointers(){
       prmtop >> t5;
 
       DihedralsAtomsIndex.push_back(std::vector<int> {
-        abs(t1 / readAmberInput::AmberIndexMultiplier), // AmberIndexMultiplier=3
-        abs(t2 / readAmberInput::AmberIndexMultiplier),
-        abs(t3 / readAmberInput::AmberIndexMultiplier), 
-        abs(t4 / readAmberInput::AmberIndexMultiplier)});
+        abs(t1 / AMBER_INDEX_MULTIPLIER), // AmberIndexMultiplier=3
+        abs(t2 / AMBER_INDEX_MULTIPLIER),
+        abs(t3 / AMBER_INDEX_MULTIPLIER), 
+        abs(t4 / AMBER_INDEX_MULTIPLIER)});
 
       DihedralsForceK.push_back(
-        tempDihedral_K[ t5 - readAmberInput::AmberIndexDiff]); // AmberIndexDiff=1
+        tempDihedral_K[ t5 - AMBER_INDEX_DIFF]); // AmberIndexDiff=1
       DihedralsPeriod.push_back(
-        tempDihedral_per[ t5 - readAmberInput::AmberIndexDiff]);
+        tempDihedral_per[ t5 - AMBER_INDEX_DIFF]);
       DihedralsPhase.push_back(
-        tempDihedral_phase[ t5 - readAmberInput::AmberIndexDiff]);
+        tempDihedral_phase[ t5 - AMBER_INDEX_DIFF]);
     }
 
     /* std::cout << "readAmberInput::readDihedrals " << nr << "\n" ;
@@ -431,11 +430,11 @@ void readAmberInput::readPointers(){
     void readAmberInput::readLennardJonesRVdWEpsilon(){
     // adapted from OpenMM - amber_file_parser.py
 
-    TARGET_TYPE typeRVdW[NumberTypes];
-    TARGET_TYPE typeEpsilon[NumberTypes];
+    SimTK::Real typeRVdW[NumberTypes];
+    SimTK::Real typeEpsilon[NumberTypes];
 
-    TARGET_TYPE rmin;
-    TARGET_TYPE eps;
+    SimTK::Real rmin;
+    SimTK::Real eps;
 
 
       for(global_i = 0; global_i < NumberAtoms; global_i++)
@@ -480,10 +479,10 @@ void readAmberInput::readPointers(){
             int index = LennardJonesNonbondParmIndex[ NumberTypes * global_i + j ] - 1;
             if (index < 0 )
             {
-              TARGET_TYPE rij = typeRVdW[global_i] + typeRVdW[j];
-              TARGET_TYPE wij = sqrt( typeEpsilon[global_i] * typeEpsilon[j] );
-              TARGET_TYPE pairA = tempLJONES_ACOEFF[index];
-              TARGET_TYPE pairB = tempLJONES_BCOEFF[index];
+              SimTK::Real rij = typeRVdW[global_i] + typeRVdW[j];
+              SimTK::Real wij = sqrt( typeEpsilon[global_i] * typeEpsilon[j] );
+              SimTK::Real pairA = tempLJONES_ACOEFF[index];
+              SimTK::Real pairB = tempLJONES_BCOEFF[index];
 
               // Check for 0 terms
               if( ( pairA * pairB ==0 && ( pairA + pairB != 0 || wij * rij !=0 )))
@@ -493,8 +492,8 @@ void readAmberInput::readPointers(){
               }
               // Check for small terms
 
-              TARGET_TYPE termA = ( pairA - (wij * pow(rij, 12) ) ) / pairA;
-              TARGET_TYPE termB = ( pairB - ( 2* wij * pow(rij, 6) ) ) / pairB;
+              SimTK::Real termA = ( pairA - (wij * pow(rij, 12) ) ) / pairA;
+              SimTK::Real termB = ( pairB - ( 2* wij * pow(rij, 6) ) ) / pairB;
 
               if ( abs(termA) > pow(10, -6) || abs(termB) > pow(10, -6) )
               {
@@ -562,105 +561,105 @@ void readAmberInput::readPointers(){
 // GET FUNCTIONS
 
 
-int readAmberInput::getNumberAtoms(){
+int readAmberInput::getNumberAtoms() const {
   return NumberAtoms;
 }
 
-int readAmberInput::getNumberBonds(){
+int readAmberInput::getNumberBonds() const {
   return NumberBonds;
 }
 
-int readAmberInput::getNumberAngles(){
+int readAmberInput::getNumberAngles() const {
   return NumberAngles;
 }
 
-int readAmberInput::getNumberDihedrals(){
+int readAmberInput::getNumberDihedrals() const {
   return NumberDihedrals;
 }
 
 
-std::string readAmberInput::getAtomsName(int p){
+const std::string& readAmberInput::getAtomsName(int p) const {
   return AtomsName[p];
 }
 
-std::string readAmberInput::getAtomsType(int p){
+const std::string& readAmberInput::getAtomsType(int p) const {
   return AtomsTypes[p];
 }
 
 
-TARGET_TYPE readAmberInput::getAtomsXcoord(int p){
+SimTK::Real readAmberInput::getAtomsXcoord(int p) const {
   return AtomsXcoord[p];
 }
-TARGET_TYPE readAmberInput::getAtomsYcoord(int p){
+SimTK::Real readAmberInput::getAtomsYcoord(int p) const {
   return AtomsYcoord[p];
 }
-TARGET_TYPE readAmberInput::getAtomsZcoord(int p){
+SimTK::Real readAmberInput::getAtomsZcoord(int p) const {
   return AtomsZcoord[p];
 }
-TARGET_TYPE readAmberInput::getAtomsMass(int p){
+SimTK::Real readAmberInput::getAtomsMass(int p) const {
   return AtomsMass[p];
 }
-TARGET_TYPE readAmberInput::getAtomsCharge(int p){
+SimTK::Real readAmberInput::getAtomsCharge(int p) const {
   return AtomsCharge[p];
 }
-TARGET_TYPE readAmberInput::getAtomsRadii(int p){
+SimTK::Real readAmberInput::getAtomsRadii(int p) const {
   return AtomsRadii[p];
 }
-TARGET_TYPE readAmberInput::getAtomsRVdW(int p){
+SimTK::Real readAmberInput::getAtomsRVdW(int p) const {
   return AtomsRVdW[p];
 }
-TARGET_TYPE readAmberInput::getAtomsEpsilon(int p){
+SimTK::Real readAmberInput::getAtomsEpsilon(int p) const {
   return AtomsEpsilon[p];
 }
 
-TARGET_TYPE readAmberInput::getAtomicNumber(int p){
+SimTK::Real readAmberInput::getAtomicNumber(int p) const {
   return AtomicNumbers[p];
 }
 
-int readAmberInput::getBondsAtomsIndex1(int bond){
+int readAmberInput::getBondsAtomsIndex1(int bond) const {
   return BondsAtomsIndex[bond][0];
 }
-int readAmberInput::getBondsAtomsIndex2(int bond){
+int readAmberInput::getBondsAtomsIndex2(int bond) const {
   return BondsAtomsIndex[bond][1];
 }
-TARGET_TYPE readAmberInput::getBondsForceK(int bond){
+SimTK::Real readAmberInput::getBondsForceK(int bond) const {
   return BondsForceK[bond];
 }
-TARGET_TYPE readAmberInput::getBondsEqval(int bond){
+SimTK::Real readAmberInput::getBondsEqval(int bond) const {
   return BondsEqval[bond];
 }
 
 
 
 
-int readAmberInput::getAnglesAtomsIndex1(int angle){
+int readAmberInput::getAnglesAtomsIndex1(int angle) const {
   return AnglesAtomsIndex[angle][0];
 }
-int readAmberInput::getAnglesAtomsIndex2(int angle){
+int readAmberInput::getAnglesAtomsIndex2(int angle) const {
   return AnglesAtomsIndex[angle][1];
 }
-int readAmberInput::getAnglesAtomsIndex3(int angle){
+int readAmberInput::getAnglesAtomsIndex3(int angle) const {
   return AnglesAtomsIndex[angle][2];
 }
-TARGET_TYPE readAmberInput::getAnglesForceK(int angle){
+SimTK::Real readAmberInput::getAnglesForceK(int angle) const {
   return AnglesForceK[angle];
 }
-TARGET_TYPE readAmberInput::getAnglesEqval(int angle){
+SimTK::Real readAmberInput::getAnglesEqval(int angle) const {
   return AnglesEqval[angle];
 }
 
 
 
-int readAmberInput::getDihedralsAtomsIndex1(int dihedral){
+int readAmberInput::getDihedralsAtomsIndex1(int dihedral) const {
   return DihedralsAtomsIndex[dihedral][0];
 }
-int readAmberInput::getDihedralsAtomsIndex2(int dihedral){
+int readAmberInput::getDihedralsAtomsIndex2(int dihedral) const {
   return DihedralsAtomsIndex[dihedral][1];
 }
-int readAmberInput::getDihedralsAtomsIndex3(int dihedral){
+int readAmberInput::getDihedralsAtomsIndex3(int dihedral) const {
   return DihedralsAtomsIndex[dihedral][2];
 }
-int readAmberInput::getDihedralsAtomsIndex4(int dihedral){
+int readAmberInput::getDihedralsAtomsIndex4(int dihedral) const {
   return DihedralsAtomsIndex[dihedral][3];
 }
 
@@ -747,16 +746,16 @@ std::vector < std::pair<int, int> > readAmberInput::getPairStartAndLen()
 }
 
 
-TARGET_TYPE readAmberInput::getDihedralsForceK(int dihedral){
+SimTK::Real readAmberInput::getDihedralsForceK(int dihedral) const {
   return DihedralsForceK[dihedral];
 }
-TARGET_TYPE readAmberInput::getDihedralsPhase(int dihedral){
+SimTK::Real readAmberInput::getDihedralsPhase(int dihedral) const {
   return DihedralsPhase[dihedral];
 }
-TARGET_TYPE readAmberInput::getDihedralsPeriod(int dihedral){
+SimTK::Real readAmberInput::getDihedralsPeriod(int dihedral) const {
   return DihedralsPeriod[dihedral];
 }
 
-bool readAmberInput::getNonBondedAtomsMatrix(int at1, int at2){
+bool readAmberInput::getNonBondedAtomsMatrix(int at1, int at2) const {
   return NonBondedAtomsMatrix[at1][at2];
 }

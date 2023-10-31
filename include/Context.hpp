@@ -28,6 +28,8 @@ enum class RunType : int {
 class Context{
 public:
 	bool initializeFromFile(const std::string& file);
+	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
+	
 	void run();
 	void run(int steps);
 

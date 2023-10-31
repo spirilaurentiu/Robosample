@@ -25,15 +25,18 @@ constexpr std::array<DISTANCE, 14> distances = {{
 
 int main() {
     Context c;
+    // c.loadAmberSystem("diala_double/diala_double.prmtop", "diala_double/diala_double.rst7");
     if (!c.initializeFromFile("inp.2but")) {
         std::cout << "Failed to initialize context from inp.2but" << std::endl;
         return 1;
     }
 
-    for (std::size_t i = 0; i < distances.size(); i++) {
-        const auto d = c.Distance(0, 0, 0, distances[i].i, distances[i].j) * 10;
-        std::cout << distances[i].i << " " << distances[i].j << " " << distances[i].distance << " " << d << std::endl;
-    }
+    c.run();
+
+    // for (std::size_t i = 0; i < distances.size(); i++) {
+    //     const auto d = c.Distance(0, 0, 0, distances[i].i, distances[i].j) * 10;
+    //     std::cout << distances[i].i << " " << distances[i].j << " " << distances[i].distance << " " << d << std::endl;
+    // }
 
     // c.getWorld(0)->topologies[0]->
 
