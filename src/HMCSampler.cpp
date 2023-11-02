@@ -1053,16 +1053,31 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// Potential energy and configuration need stage Position
 	system->realize(someState, SimTK::Stage::Position);
 
-	// Check if we have any numerical error
-	if( (forces->getMultibodySystem().calcPotentialEnergy(someState) - pe_set) > 300.0 ){
+	pe_init = pe_set;
+
+	/* // Check if we have any numerical error
+	if( (forces->getMultibodySystem().calcPotentialEnergy(someState) - pe_set) > 10000.0 ){
 		std::cout
-			<< "[WARNING] dPE GT 300.0. MOLECULE_MAY_BE_DISTORTED. RESETING.\n";
+			<< "[WARNING] dPE GT 300.0. MOLECULE_MAY_BE_DISTORTED. RESETING." << " "
+			<< " Stage version: " << someState.getSystemTopologyStageVersion() << " "
+			<< std::endl;
 
 		// Reset
-		restore(someState);
-		validated = false;
+		SimTK::Real ne_pe = forces->getMultibodySystem().calcPotentialEnergy(someState);
+		std::cout << "NUMERIC_ERROR a " << ne_pe << std::endl;
 
-	}
+		//someState.invalidateAll(SimTK::Stage::Position);
+		matter->invalidateSubsystemTopologyCache();
+
+		assignConfFromSetTVector(someState);
+		system->realize(someState, SimTK::Stage::Position);
+
+		ne_pe = forces->getMultibodySystem().calcPotentialEnergy(someState);
+		std::cout << "NUMERIC_ERROR b " << ne_pe << std::endl;
+
+		// Mark received structure as invalid
+		validated = false;
+	} */
 
 	// Set old potential energy
 	setOldPE(
@@ -3697,9 +3712,6 @@ world->PrintAcosX_PFMeans();
 world->PrintNormX_BMMeans(); */
 
 	bool validated = true;
-	if((pe_o - pe_init) > 300.0){
-		validated = false;
-	}
 
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
@@ -3722,6 +3734,18 @@ world->PrintNormX_BMMeans(); */
 	world->updateTransformsMeans(someState); // Movable
 
 	validated = generateProposal(someState) && validated;
+
+	/* std::cout << "NUMERIC_ERROR c "
+		<< pe_init << " " << pe_o << " " << pe_n << " "
+	<< std::endl; */
+	
+	SimTK::Real deltaPE = (pe_n - pe_o);
+	SimTK::Real energyLimit = beta * 10000;
+	if((beta * deltaPE) > energyLimit){
+		std::cout << "[WARNING] Reduced PE GT " << energyLimit << "."
+			<< std::endl;
+		validated = false;
+	}
 
 	// Print all the energy terms first
 	PrintDetailedEnergyInfo(someState);
@@ -3764,6 +3788,9 @@ world->PrintNormX_BMMeans(); */
 		} */
 
 	}else{
+		// RESET
+		restore(someState);
+
 		if(this->alwaysAccept == true){
 			std::cout << "\trej (MD) invalid\n";
 		}else{
