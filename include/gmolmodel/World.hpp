@@ -269,6 +269,7 @@ public:
 	/** Nice print helper for get/setAtomsLocations */
 	void PrintAtomsLocations(const std::vector<std::vector<
 		std::pair<bSpecificAtom *, SimTK::Vec3> > >& someAtomsLocations);
+	void WriteRst7FromTopology(std::string FN);
 
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(

@@ -3742,8 +3742,9 @@ world->PrintNormX_BMMeans(); */
 	SimTK::Real deltaPE = (pe_n - pe_o);
 	SimTK::Real energyLimit = beta * 10000;
 	if((beta * deltaPE) > energyLimit){
-		std::cout << "[WARNING] Reduced PE GT " << energyLimit << "."
-			<< std::endl;
+		std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
+			<< pe_init << " " << pe_o 
+		<< "." << std::endl;
 		validated = false;
 	}
 

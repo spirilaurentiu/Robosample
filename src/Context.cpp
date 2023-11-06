@@ -325,6 +325,9 @@ class Replica{
 	void PrintCoordinates(void);
 	void Print_WORK_Coordinates(void);
 
+	void PrintRst7(void);
+	void WriteRst7(std::string FN);
+
   private:
 
 	int myIndex;
@@ -515,6 +518,81 @@ void Replica::updAtomsLocationsInGround_FromWORK(void)
 
 	atomsLocations = WORK_atomsLocations;
 
+
+}
+
+/**
+ * Write coordinates to a rst7 file
+*/
+void Replica::WriteRst7(std::string FN)
+
+{
+	FILE *File = fopen(FN.c_str(), "w+");
+
+	int Natoms = 0;
+	for(auto& topology : atomsLocations){
+		Natoms += topology.size();
+	}
+
+	fprintf(File, "TITLE: Created by Robosample with %d atoms\n", Natoms);
+	fprintf(File, "%6d\n", Natoms);
+
+	int atomCnt = -1;
+	for(auto& topology : atomsLocations){
+		for(auto& atomCoordinates : topology){
+			++atomCnt;
+			fprintf(File, "%12.7f%12.7f%12.7f", 
+				atomCoordinates.second[0] * 10.0,
+				atomCoordinates.second[1] * 10.0,
+				atomCoordinates.second[2] * 10.0);
+
+			if(atomCnt % 2 == 1){
+				fprintf(File, "\n");
+			}
+
+		}
+	}
+
+	if(atomCnt % 2 == 0){
+		fprintf(File, "\n");
+	}
+
+	fflush(File);
+	fclose(File);
+}
+
+/**
+ * Print coordinates in Amber rst7 format
+ */
+void Replica::PrintRst7(void)
+{
+	int Natoms = 0;
+	for(auto& topology : atomsLocations){
+		Natoms += topology.size();
+	}
+
+	printf("TITLE: Created by Robosample with %d atoms\n", Natoms);
+	printf("%6d\n", Natoms);
+
+	int atomCnt = -1;
+	for(auto& topology : atomsLocations){
+		for(auto& atomCoordinates : topology){
+			++atomCnt;
+			printf("%12.7f%12.7f%12.7f", 
+				atomCoordinates.second[0],
+				atomCoordinates.second[1],
+				atomCoordinates.second[2]);
+
+			if(atomCnt % 2 == 1){
+				printf("\n");
+			}
+
+		}
+	}
+
+	if(atomCnt % 2 == 0){
+		printf("\n");
+	}
 
 }
 
@@ -2818,10 +2896,28 @@ int Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
 	SimTK::State& state =
 		(worlds[currWorldIx].integ)->updAdvancedState();
 
+	// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+	/* std::cout << "PE_  Context::restoreReplicaCoordinatesToFrontWorld world " << currWorldIx << std::endl << std::flush;
+	replicas[whichReplica].WriteRst7("debug0.rst7");
+
+	SimTK::Real pe_front = (worlds[currWorldIx].forces)->getMultibodySystem().calcPotentialEnergy(state);
+	std::cout << "PE_ setAtomsLocs front " << pe_front << std::endl << std::flush; */
+
+	// =====================================================
 	worlds[currWorldIx].setAtomsLocationsInGround(state,
 		replicas[whichReplica].getAtomsLocationsInGround());
+	// =====================================================
 
-	//std::cout << "Context::restoreReplicaCoordinatesToFrontWorld worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
+	/* SimTK::Real pe_back = (worlds[currWorldIx].forces)->getMultibodySystem().calcPotentialEnergy(state);
+	std::cout << "PE_ setAtomsLocs back " << pe_back << std::endl << std::flush;
+
+	worlds[currWorldIx].WriteRst7FromTopology("debug1.rst7");
+
+	if((pe_back - pe_front)  > 1000){
+		exit(1);
+	} */
+	// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
 
 	return currWorldIx;
 
@@ -3415,11 +3511,12 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 	if(worldIxs.size() > 1) {
 		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+		transferCoordinates(backWorldIx, frontWorldIx);
+
 		if(validated){
-			transferCoordinates(backWorldIx, frontWorldIx);
 			std::cout << std::endl;
 		}else{
-			std::cout << " not allowed." << std::endl;
+			std::cout << " invalid sample." << std::endl;
 		}
 
 	}
