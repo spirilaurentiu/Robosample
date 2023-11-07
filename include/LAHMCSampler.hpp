@@ -65,7 +65,7 @@ public:
     virtual void initialize(SimTK::State& advanced);
 
     /** Same as initialize **/
-    virtual void reinitialize(SimTK::State& advanced) ;
+    virtual bool reinitialize(SimTK::State& advanced) ;
 
     /** Get the TimeStepper that manages the integrator **/
     //const SimTK::TimeStepper * getTimeStepper();

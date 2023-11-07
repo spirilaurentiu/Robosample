@@ -928,6 +928,7 @@ SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3)
   //std::cout << "bDihedral dots " << dots[0] << ' ' << dots[1] << std::endl;
   //std::cout << "bDihedral psin pcos " << psin << ' ' << pcos << std::endl;
   //std::cout << " bDihedral return " << atan2(psin, pcos) << "  ==========" << std::endl; 
+  
 
   return atan2(psin, pcos);
 }

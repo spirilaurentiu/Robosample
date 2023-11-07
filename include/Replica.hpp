@@ -53,6 +53,9 @@ public:
 	void Print() const;
 	void PrintCoordinates() const;
 	void Print_WORK_Coordinates() const;
+	
+	void PrintRst7(void) const;
+	void WriteRst7(std::string FN) const;
 
 private:
 

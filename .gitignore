@@ -1,5 +1,6 @@
 # compilation stuff
 build
+build_debug
 doc/html
 doc/html/*
 

@@ -197,3 +197,78 @@ void Replica::Print_WORK_Coordinates() const
 		}
 	}
 }
+
+/**
+ * Write coordinates to a rst7 file
+*/
+void Replica::WriteRst7(std::string FN) const
+
+{
+	FILE *File = fopen(FN.c_str(), "w+");
+
+	int Natoms = 0;
+	for(auto& topology : atomsLocations){
+		Natoms += topology.size();
+	}
+
+	fprintf(File, "TITLE: Created by Robosample with %d atoms\n", Natoms);
+	fprintf(File, "%6d\n", Natoms);
+
+	int atomCnt = -1;
+	for(auto& topology : atomsLocations){
+		for(auto& atomCoordinates : topology){
+			++atomCnt;
+			fprintf(File, "%12.7f%12.7f%12.7f", 
+				atomCoordinates.second[0] * 10.0,
+				atomCoordinates.second[1] * 10.0,
+				atomCoordinates.second[2] * 10.0);
+
+			if(atomCnt % 2 == 1){
+				fprintf(File, "\n");
+			}
+
+		}
+	}
+
+	if(atomCnt % 2 == 0){
+		fprintf(File, "\n");
+	}
+
+	fflush(File);
+	fclose(File);
+}
+
+/**
+ * Print coordinates in Amber rst7 format
+ */
+void Replica::PrintRst7(void) const
+{
+	int Natoms = 0;
+	for(auto& topology : atomsLocations){
+		Natoms += topology.size();
+	}
+
+	printf("TITLE: Created by Robosample with %d atoms\n", Natoms);
+	printf("%6d\n", Natoms);
+
+	int atomCnt = -1;
+	for(auto& topology : atomsLocations){
+		for(auto& atomCoordinates : topology){
+			++atomCnt;
+			printf("%12.7f%12.7f%12.7f", 
+				atomCoordinates.second[0],
+				atomCoordinates.second[1],
+				atomCoordinates.second[2]);
+
+			if(atomCnt % 2 == 1){
+				printf("\n");
+			}
+
+		}
+	}
+
+	if(atomCnt % 2 == 0){
+		printf("\n");
+	}
+
+}

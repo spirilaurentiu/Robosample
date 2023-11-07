@@ -3610,11 +3610,12 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 	if(worldIxs.size() > 1) {
 		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+		transferCoordinates(backWorldIx, frontWorldIx);
+
 		if(validated){
-			transferCoordinates(backWorldIx, frontWorldIx);
 			std::cout << std::endl;
 		}else{
-			std::cout << " not allowed." << std::endl;
+			std::cout << " invalid sample." << std::endl;
 		}
 
 	}
@@ -5895,7 +5896,12 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSam
 	const auto fix_set = pHMC((worlds[whichWorld].samplers[0]))->fix_set;
 
 	// Write to a file instead of stdout
-	logFile << NU << " "
+	logFile
+		<< std::fixed << std::setprecision(3)
+		<< worlds[whichWorld].updSampler(whichSampler)->getTemperature() << " "
+		<< std::fixed << std::setprecision(0)
+		<< whichWorld << " "
+		<< NU << " "
 		<< acceptedSteps << " "
 		<< std::fixed << std::setprecision(2) << pe_o << " "
 		<< pe_set << " "
@@ -5903,7 +5909,7 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSam
 		<< ke_n << " "
 		<< fix_o << " "
 		<< fix_n << " "
-		<< fix_set << std::endl;
+		<< fix_set << " ";
 }
 
 // Print geometric parameters during simulation
@@ -5966,7 +5972,7 @@ void Context::PrintDistancesToLog(std::size_t whichWorld, std::size_t whichSampl
 {
 	for (const auto& distanceIx : distanceIxs) {
 		if( distanceIx[0] == whichWorld ) {
-			logFile << std::fixed << std::setprecision(3) << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << std::endl;
+			logFile << std::fixed << std::setprecision(3) << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << " ";
 		}
 	}
 }
@@ -5975,7 +5981,7 @@ void Context::PrintAnglesToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
 	for (const auto& angleIx : angleIxs){
 		if( angleIx[0] == whichWorld ) {
-			logFile << std::fixed << std::setprecision(3) << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << std::endl;
+			logFile << std::fixed << std::setprecision(3) << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << " ";
 		}
 	}
 }
@@ -5984,7 +5990,9 @@ void Context::PrintDihedralsToLog(std::size_t whichWorld, std::size_t whichSampl
 {
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == whichWorld ) {
-			logFile << std::fixed << std::setprecision(3) << Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << std::endl;
+			logFile << std::fixed << std::setprecision(3) 
+				<< Dihedral(dihedralIx[0], dihedralIx[1], 0,
+				dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << " ";
 		}
 	}
 }
@@ -6005,7 +6013,7 @@ void Context::PrintDihedralsQsToLog(std::size_t whichWorld, std::size_t whichSam
 			logFile << std::fixed << std::setprecision(3) << Dihedral(
 				dihedralIx[0], dihedralIx[1], 0,
 				dihedralIx[2], dihedralIx[3],
-				dihedralIx[4], dihedralIx[5]) << std::endl;
+				dihedralIx[4], dihedralIx[5]) << " ";
 
 			// const Topology& topology = worlds[whichWorld].getTopology(dihedralIx[1]);
 			// SimTK::State& currentAdvancedState = worlds[whichWorld].integ->updAdvancedState();
@@ -6070,7 +6078,7 @@ void Context::PrintFreeE2EDist(std::size_t whichWorld, int whichCompound)
 void Context::PrintToLog(std::size_t whichReplica,
 	std::size_t whichWorld, std::size_t whichSampler)
 {
-	logFile << whichReplica << "\n";
+	logFile << whichReplica << " ";
 
 	PrintSamplerDataToLog(whichWorld, whichSampler);
 

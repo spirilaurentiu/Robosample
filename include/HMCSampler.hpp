@@ -363,7 +363,7 @@ public:
 	virtual void initialize(SimTK::State& advanced);
 
 	/** Same as initialize **/
-	virtual void reinitialize(SimTK::State& advanced) ;
+	virtual bool reinitialize(SimTK::State& advanced) ;
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setTemperature(double HMCBoostTemperature);

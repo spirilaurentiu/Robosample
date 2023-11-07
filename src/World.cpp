@@ -1734,6 +1734,45 @@ void World::PrintAtomsLocations(const std::vector<std::vector<
 	}
 }
 
+/**
+ * Write coordinates to a rst7 file
+ * Very costly
+*/
+void World::WriteRst7FromTopology(std::string FN)
+
+{
+	updateAtomListsFromCompound(integ->updAdvancedState());
+
+	FILE *File = fopen(FN.c_str(), "w+");
+
+	int Natoms = 0;
+	for(auto& topology : (*topologies)){
+		Natoms += topology.getNAtoms();
+	}
+
+	fprintf(File, "TITLE: Created by Robosample with %d atoms\n", Natoms);
+	fprintf(File, "%6d\n", Natoms);
+
+	int atomCnt = -1;
+	for(auto& topology : (*topologies)){
+		for (auto& atom : topology.bAtomList) {			++atomCnt;
+			fprintf(File, "%12.7f%12.7f%12.7f", 
+				atom.getX() * 10.0, atom.getY() * 10.0, atom.getZ() * 10.0);
+
+			if(atomCnt % 2 == 1){
+				fprintf(File, "\n");
+			}
+		}
+	}
+
+	if(atomCnt % 2 == 0){
+		fprintf(File, "\n");
+	}
+
+	fflush(File);
+	fclose(File);
+}
+
 /** Put coordinates into bAtomLists of Topologies.
  * When provided with a State, calcAtomLocationInGroundFrame
  * realizes Position and uses matter to calculate locations **/
@@ -2490,8 +2529,8 @@ bool World::generateProposal(void)
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
 	// GENERATE a proposal
-	updSampler(0)->reinitialize(currentAdvancedState);	
-	bool validated = updSampler(0)->generateProposal(currentAdvancedState) && validated;
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState);	
+	validated = updSampler(0)->generateProposal(currentAdvancedState) && validated;
 
 	return validated;
 }
@@ -2510,9 +2549,8 @@ bool World::generateSamples(int howMany)
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
 	// GENERATE the requested number of samples
-	updSampler(0)->reinitialize(currentAdvancedState);
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState);
 
-	bool validated = false;
 	for(int k = 0; k < howMany; k++) {
 		validated = updSampler(0)->sample_iteration(currentAdvancedState) && validated;
 	}
