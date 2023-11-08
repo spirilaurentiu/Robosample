@@ -35,7 +35,6 @@ public:
 
     void destroy();
 
-    std::string biotype; // moleculeName + force field type + fftype (MOL0AAAAoh, MOL0AAAOho)
     std::string residueName; // Residue and chain
     std::string elem; // H, C, N, O, S, P, F, Cl, Br, I etc
     std::string fftype; // atom name from the force field ("O1", "C1", "C2", "H1", "H10")
@@ -151,6 +150,14 @@ public:
 public:
     // wasted 6 hours trying to make this unique_ptr or allocated on the stack
     SimTK::Compound::SingleAtom* compoundSingleAtom = nullptr;
+
+
+
+public:
+
+    std::string biotype; // moleculeName + force field type + fftype (MOL0AAAAoh, MOL0AAAOho)
+
+
 };
 
 // Update Molmodel MolAtom dest with Gmolmodel bSpecificAtom src values
