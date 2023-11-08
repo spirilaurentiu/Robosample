@@ -379,7 +379,7 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		bAtomList[i].setLJWellDepth(amberReader->getAtomsEpsilon(i));
 
 		// Set residue name and index
-		bAtomList[i].residueName = std::string("UNK");
+		bAtomList[i].setResidueName(std::string("UNK"));
 		bAtomList[i].residueIndex = 1;
 
 	} // END atom properties
@@ -432,19 +432,21 @@ void Topology::SetGmolAtomsCompoundTypes(){
 		GetElement(atomicNumber, name, symbol);
 		
 		// bond centers must have been already set
-		atom.setAtomCompoundType(atom.name, atomicNumber, name, symbol, atom.getMass());
+		const std::string& currAtomName = atom.getName();
+		const int& currAtomNBonds = atom.getNBonds();
+		atom.setAtomCompoundType(currAtomName, atomicNumber, name, symbol, atom.getMass());
 		
 		// Add BondCenters
-		if(atom.nbonds > 0){
-			if (atom.nbonds == 1){
-				atom.addFirstBondCenter("bond1", atom.name);
+		if(currAtomNBonds > 0){
+			if (currAtomNBonds == 1){
+				atom.addFirstBondCenter("bond1", currAtomName);
 			} else {
-				atom.addFirstTwoBondCenters("bond1", "bond2", atom.name, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
-				if (atom.nbonds > 2) {
-					atom.addLeftHandedBondCenter("bond3", atom.name, TetrahedralAngle, TetrahedralAngle);
+				atom.addFirstTwoBondCenters("bond1", "bond2", currAtomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
+				if (currAtomNBonds > 2) {
+					atom.addLeftHandedBondCenter("bond3", currAtomName, TetrahedralAngle, TetrahedralAngle);
 				}
-				if (atom.nbonds > 3){
-					atom.addRightHandedBondCenter("bond4", atom.name, TetrahedralAngle, TetrahedralAngle);
+				if (currAtomNBonds > 3){
+					atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
 				}
 			}
 
@@ -520,8 +522,8 @@ void Topology::bAddBiotypes(
 
 		// Assign atom's biotype as a composed name: name + force field type
 		//std::string temp(bAtomList[i].name); // @ Restore MULMOL
-		std::string temp(name + bAtomList[i].name); // DEL MULMOL
-		temp += bAtomList[i].fftype;
+		std::string temp(name + bAtomList[i].getName()); // DEL MULMOL
+		temp += bAtomList[i].getFftype();
 		bAtomList[i].setBiotype(temp);
 		// std::cout << "biotype name is " << temp << std::endl;
 		/* std::cout << "Added Biotype " << temp 
@@ -564,7 +566,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				if (nofProcesses == 2) {
 					if (baseSetFlag == 0) {
 						this->setBaseAtom(previousNode->getSingleAtom());
-						this->setAtomBiotype(previousNode->name, (this->name), previousNode->getName());
+						this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
 						this->convertInboardBondCenterToOutboard();
 						baseSetFlag = 1;
 					}
@@ -573,11 +575,11 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				// Bond current node by the previous (Compound function)
 				std::stringstream parentBondCenterPathName;
 				if (previousNode->number == baseAtomNumber) {
-					parentBondCenterPathName << previousNode->name
-						<< "/bond" << previousNode->freebonds;
+					parentBondCenterPathName << previousNode->getName()
+						<< "/bond" << previousNode->getFreebonds();
 				} else {
-					parentBondCenterPathName << previousNode->name
-						<< "/bond" << (previousNode->nbonds - previousNode->freebonds + 1);
+					parentBondCenterPathName << previousNode->getName()
+						<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
 				}
 
 				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
@@ -587,7 +589,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
 
 				// Set the final Biotype
-				this->setAtomBiotype(node->name, (this->name).c_str(), node->getName());
+				this->setAtomBiotype(node->getName(), (this->name).c_str(), node->getName());
 
 				// Set bSpecificAtom atomIndex to the last atom added to bond
 				node->compoundAtomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1);
@@ -652,18 +654,18 @@ void Topology::addRingClosingBonds() {
 
 			std::stringstream sbuff;
 			if(leftNode->number == baseAtomNumber){
-				sbuff << leftNode->name << "/bond" << leftNode->freebonds;
+				sbuff << leftNode->getName() << "/bond" << leftNode->getFreebonds();
 			}else{
-				sbuff << leftNode->name << "/bond"
-					<< (leftNode->nbonds - leftNode->freebonds + 1);
+				sbuff << leftNode->getName() << "/bond"
+					<< (leftNode->getNBonds() - leftNode->getFreebonds() + 1);
 			}
 
 			std::stringstream otsbuff;
 			if(rightNode->number == baseAtomNumber){
-				otsbuff << rightNode->name << "/bond" << rightNode->freebonds;
+				otsbuff << rightNode->getName() << "/bond" << rightNode->getFreebonds();
 			}else{
-				otsbuff << rightNode->name << "/bond"
-					<< (rightNode->nbonds - rightNode->freebonds + 1);
+				otsbuff << rightNode->getName() << "/bond"
+					<< (rightNode->getNBonds() - rightNode->getFreebonds() + 1);
 			}
 
 			this->addRingClosingBond(
@@ -693,8 +695,8 @@ void Topology::addRingClosingBonds() {
 			// Compound::setAtomBiotype(Compound::AtomPathName,
 			// biotypeResidueName, biotypeAtomName
 			// SimTK::Ordinality::Residue = SimTK::Ordinality::Any)
-			this->setAtomBiotype(leftNode->name, (this->name), leftNode->getName());
-			this->setAtomBiotype(rightNode->name, (this->name), rightNode->getName());
+			this->setAtomBiotype(leftNode->getName(), (this->name), leftNode->getName());
+			this->setAtomBiotype(rightNode->getName(), (this->name), rightNode->getName());
 
 			--leftNode->freebonds;
 			--rightNode->freebonds;
@@ -906,7 +908,7 @@ void Topology::generateDummAtomClasses(
 
 		// Define a chargedAtomType name
 		chargedAtomTypeName =  resName;
-		chargedAtomTypeName += bAtomList[k].biotype;
+		chargedAtomTypeName += bAtomList[k].getBiotype();
 
 		// Define a ChargedAtomType (AtomClass with a charge)
 		dumm.defineChargedAtomType(
@@ -991,7 +993,7 @@ void Topology::transferDummChargedAtomClasses(
 
 		// Define a chargedAtomType name
 		chargedAtomTypeName =  resName;
-		chargedAtomTypeName += bAtomList[k].biotype;
+		chargedAtomTypeName += bAtomList[k].getBiotype();
 
 		// Define a ChargedAtomType (AtomClass with a charge)
 		dumm.defineChargedAtomType(
@@ -1022,8 +1024,8 @@ const void Topology::PrintMolmodelAndDuMMTypes(
 		std::cout << " list ix " << i
 			<< " CompoundAtomIndex " << bAtomList[i].getCompoundAtomIndex()
 			//<< " DuMMAtomIndex " << getDuMMAtomIndex(bAtomList[i].getCompoundAtomIndex())
-			<< " biotypename " << bAtomList[i].biotype
-			<< " name " << bAtomList[i].name
+			<< " biotypename " << bAtomList[i].getBiotype()
+			<< " name " << bAtomList[i].getName()
 			<< " BiotypeIndex " << bAtomList[i].getBiotypeIndex()
 			<< " ChargedAtomTypeIndex "<< bAtomList[i].getChargedAtomTypeIndex()
 			<< " AtomClassIx " << bAtomList[i].getDummAtomClassIndex()
@@ -2399,7 +2401,7 @@ void Topology::writeAtomListPdb(std::string dirname,
 			fprintf(oF, "%-6s%5d %4s %3s %c%4d    %8.3f%8.3f%8.3f  %4.2f%6.2f          %2s\n"
 				, "ATOM"                 // record
 				, i                      // index
-				, bAtomList[i].inName.c_str()  // name
+				, bAtomList[i].getInName().c_str()  // name
 				, "UNK"                  // residue name
 				, 'A'                    // chain
 				, 1                      // residue index

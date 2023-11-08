@@ -35,12 +35,6 @@ public:
 
     void destroy();
 
-    std::string residueName; // Residue and chain
-    std::string elem; // H, C, N, O, S, P, F, Cl, Br, I etc
-    std::string fftype; // atom name from the force field ("O1", "C1", "C2", "H1", "H10")
-    std::string name; // combination of four letters that depends on the amber index
-    std::string inName; // original name in the sdf file ("O1", "C1", "C2", "H1", "H10")
-
     // Graph useful vars
     std::vector<bSpecificAtom *> neighbors;
     std::vector<bBond *> bondsInvolved;
@@ -75,6 +69,8 @@ public:
     int getNBonds() const;
     int getFreebonds() const;
     std::string getName() const;
+    void setName(const std::string& name);
+
     std::string getInName() const;
     int getNumber() const;
     std::string getElem() const;
@@ -147,16 +143,42 @@ public:
     void addNeighbor(bSpecificAtom *);
     void addBond(bBond *);
 
+
+    // Getter and setter for the residueName property
+    std::string getResidueName() const;
+    void setResidueName(const std::string& residueName);
+    
+/*     // Getter for the biotype property
+    std::string getBiotype() const;
+
+    // Setter for the biotype property
+    // @param biotype The biotype to set.
+    void setBiotype(const std::string& biotype);
+
+
+    // Getter and setter for the elem property
+    std::string getElem() const;
+    void setElem(const std::string& elem);
+
+    // Getter and setter for the fftype property
+    std::string getFftype() const;
+    void setFftype(const std::string& fftype); */
+
+
 public:
     // wasted 6 hours trying to make this unique_ptr or allocated on the stack
     SimTK::Compound::SingleAtom* compoundSingleAtom = nullptr;
 
 
 
-public:
+private:
 
     std::string biotype; // moleculeName + force field type + fftype (MOL0AAAAoh, MOL0AAAOho)
-
+    std::string residueName; // Residue and chain
+    std::string elem; // H, C, N, O, S, P, F, Cl, Br, I etc
+    std::string fftype; // atom name from the force field ("O1", "C1", "C2", "H1", "H10")
+    std::string name; // combination of four letters that depends on the amber index
+    std::string inName; // original name in the sdf file ("O1", "C1", "C2", "H1", "H10")
 
 };
 

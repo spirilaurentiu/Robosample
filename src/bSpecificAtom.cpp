@@ -415,3 +415,54 @@ void bSpecificAtom::setInboardBondCenter(const SimTK::Compound::BondCenterName& 
 void bSpecificAtom::setDefaultInboardBondLength(SimTK::mdunits::Length length) {
     compoundSingleAtom->setDefaultInboardBondLength(length);
 }
+
+
+// Getter and setter for the residueName property
+std::string bSpecificAtom::getResidueName() const {
+    return residueName;
+}
+
+void bSpecificAtom::setResidueName(const std::string& value) {
+    residueName = value; // Directly assign the new value
+}
+
+/* // Getter for the biotype property
+std::string bSpecificAtom::getBiotype() const {
+    return biotype;
+}
+
+// Setter for the biotype property
+// @param biotype The biotype to set.
+void bSpecificAtom::setBiotype(const std::string& value) {
+    // You can add validation logic here if needed.
+    biotype = value;
+}
+
+
+// Getter and setter for the elem property
+std::string bSpecificAtom::getElem() const {
+    return elem;
+}
+
+void bSpecificAtom::setElem(const std::string& value) {
+    elem = value; // Directly assign the new value
+}
+
+// Getter and setter for the fftype property
+std::string bSpecificAtom::getFftype() const {
+    return fftype;
+}
+
+void bSpecificAtom::setFftype(const std::string& value) {
+    fftype = value; // Directly assign the new value
+}
+
+
+void bSpecificAtom::setName(const std::string& value) {
+    name = value; // Directly assign the new value
+}
+
+void bSpecificAtom::setInName(const std::string& value) {
+    inName = value; // Directly assign the new value
+}
+ */
