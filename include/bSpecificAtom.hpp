@@ -7,7 +7,7 @@
  *  This is an extension of SimTK Molmodel package.                           *
  * -------------------------------------------------------------------------- */
 /** @file
- * This defines the bMoleculeReader class and additional heloer classes
+ * This defines the SpecificAtom class
  **/
 
 #include "bgeneral.hpp"
@@ -22,46 +22,31 @@
 //                           CLASS SpecificAtom
 //==============================================================================
 /** 
- * gMolmodel Specific Atom Type Class.
+ * gMolmodel Specific Atom Class which incorporates everything below.
  * This incorporates additional Amber forcefield data.
 **/
 class bSpecificAtom{ /*Information like in sdf*/
+
 public:
+    ///////////////////////
+    //     INTERFACE     //
+    ///////////////////////
+
+    //------------------------------------------------------------------------------
+    /** @name Interface - Interface. **/
+
+    /**@{**/
+
+    /** TODO comment. **/
     void setAtomCompoundType(const SimTK::Compound::AtomName &atomName,
         int atomicNumber,
         SimTK::Element::Name elementName,
         SimTK::Element::Symbol elementSymbol,
         SimTK::mdunits::Mass atomicMass);
 
+    /** TODO comment. **/
     void destroy();
 
-    // Graph useful vars
-    std::vector<bSpecificAtom *> neighbors;
-    std::vector<bBond *> bondsInvolved;
-
-    SimTK::Real charge = SimTK::NaN;
-    int residueIndex = std::numeric_limits<int>::min();
-
-    SimTK::Real mass = SimTK::NaN;
-    SimTK::Real vdwRadius = SimTK::NaN;
-    SimTK::Real LJWellDepth = SimTK::NaN;
-
-    SimTK::Real x = SimTK::NaN;
-    SimTK::Real y = SimTK::NaN;
-    SimTK::Real z = SimTK::NaN;
-
-    int nbonds = std::numeric_limits<int>::min();
-    int freebonds = std::numeric_limits<int>::min();
-    int number = std::numeric_limits<int>::min(); // amber index
-    int atomicNumber = std::numeric_limits<int>::min();
-    int visited = std::numeric_limits<int>::min();
-    int moleculeIndex = std::numeric_limits<int>::min();
-    
-    SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
-    SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
-    SimTK::BiotypeIndex biotypeIndex;
-    SimTK::Compound::AtomIndex compoundAtomIndex;
-  
 public:
     void Print(int whichWorld);
 
@@ -103,7 +88,9 @@ public:
 
     SimTK::Compound::AtomIndex getCompoundAtomIndex() const;
     SimTK::Real getCharge() const;
-    int getIsVisited() const;
+    bool wasVisited() const;
+    int getVisited() const;
+
     std::string getFftype() const;
 
     SimTK::DuMM::AtomClassIndex getDummAtomClassIndex() const;
@@ -124,8 +111,11 @@ public:
     SimTK::BiotypeIndex getBiotypeIndex() const;
     void setBiotypeIndex(SimTK::BiotypeIndex);
 
-    void setNbonds(int);
-    void setFreebonds(int);
+    void setNbonds(const int&);
+    void setFreebonds(const int&);
+    void incrFreebonds(void);
+    void decrFreebonds(void);
+
     void generateName(int index);
     void setInName(const std::string& name);
     void setNumber(int);
@@ -138,38 +128,53 @@ public:
     void setBiotype(const std::string&);
     void setCompoundAtomIndex(SimTK::Compound::AtomIndex);
     void setCharge(SimTK::Real);
-    void setVisited(int);
+    void setVisited(const int&);
 
     void addNeighbor(bSpecificAtom *);
     void addBond(bBond *);
 
-
     // Getter and setter for the residueName property
     std::string getResidueName() const;
     void setResidueName(const std::string& residueName);
+
+    // End of interface
+    /**@}**/
+
+    // Graph useful vars
+    std::vector<bSpecificAtom *> neighbors;
+    std::vector<bBond *> bondsInvolved;
+
+    SimTK::Real charge = SimTK::NaN;
+    int residueIndex = std::numeric_limits<int>::min();
+
+    SimTK::Real mass = SimTK::NaN;
+    SimTK::Real vdwRadius = SimTK::NaN;
+    SimTK::Real LJWellDepth = SimTK::NaN;
+
+    SimTK::Real x = SimTK::NaN;
+    SimTK::Real y = SimTK::NaN;
+    SimTK::Real z = SimTK::NaN;
+
+private:
+    int nbonds = std::numeric_limits<int>::min();
+    int freebonds = std::numeric_limits<int>::min();
+    int number = std::numeric_limits<int>::min(); // amber index
+    int atomicNumber = std::numeric_limits<int>::min();
+    int visited = std::numeric_limits<int>::min();
+
+public:
+
+    int moleculeIndex = std::numeric_limits<int>::min();
     
-/*     // Getter for the biotype property
-    std::string getBiotype() const;
-
-    // Setter for the biotype property
-    // @param biotype The biotype to set.
-    void setBiotype(const std::string& biotype);
-
-
-    // Getter and setter for the elem property
-    std::string getElem() const;
-    void setElem(const std::string& elem);
-
-    // Getter and setter for the fftype property
-    std::string getFftype() const;
-    void setFftype(const std::string& fftype); */
-
+    SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
+    SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
+    SimTK::BiotypeIndex biotypeIndex;
+    SimTK::Compound::AtomIndex compoundAtomIndex;
+  
 
 public:
     // wasted 6 hours trying to make this unique_ptr or allocated on the stack
     SimTK::Compound::SingleAtom* compoundSingleAtom = nullptr;
-
-
 
 private:
 
@@ -186,5 +191,3 @@ private:
 int bAtomAssign(MolAtom *dest, const bSpecificAtom *src);
 
 #endif  //__BSPECIFICATOM__
-
-

@@ -414,8 +414,8 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 	// Assign the number of bonds an atom has and set the number of freebonds
 	// equal to the number of bonds for now
 	for(int i = 0; i < natoms ; i++) {
-		bAtomList[i].nbonds = bAtomList[i].bondsInvolved.size();
-		bAtomList[i].freebonds = bAtomList[i].bondsInvolved.size();
+		bAtomList[i].setNbonds(bAtomList[i].bondsInvolved.size());
+		bAtomList[i].setFreebonds(bAtomList[i].bondsInvolved.size());
 	}
 }
 
@@ -542,7 +542,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 	baseSetFlag = 0;
 
 	// Only process unvisited nodes
-	if( node->visited ){
+	if( node->wasVisited() ){
 		return;
 	}
 
@@ -555,7 +555,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 	{
 		// Check if there is a bond between prevnode and node based on bonds
 		// read from amberReader
-		if ((*bondsInvolvedIter)->isThisMe(node->number, previousNode->number) ) {
+		if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
 			(*bondsInvolvedIter)->setVisited(1);
 
 			// Skip the first step as we don't have yet two atoms
@@ -574,7 +574,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 
 				// Bond current node by the previous (Compound function)
 				std::stringstream parentBondCenterPathName;
-				if (previousNode->number == baseAtomNumber) {
+				if (previousNode->getNumber() == baseAtomNumber) {
 					parentBondCenterPathName << previousNode->getName()
 						<< "/bond" << previousNode->getFreebonds();
 				} else {
@@ -619,8 +619,11 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				//<< std::endl << std::flush;
 
 				// Drop the number of available bonds
-				--previousNode->freebonds;
-				--node->freebonds;
+				/* --(previousNode->freebonds);
+				--(node->freebonds); */
+
+				previousNode->decrFreebonds();
+				node->decrFreebonds();
 
 				// Bond was inserted in Molmodel Compound. Get out and search
 				// the next bond
@@ -631,7 +634,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 	}
 
 	// Mark the node as visited
-	node->visited = 1;
+	node->setVisited(1);
 
 	// Set the previous node to this node
 	previousNode = node;
@@ -653,7 +656,7 @@ void Topology::addRingClosingBonds() {
 			bSpecificAtom *rightNode =  &(bAtomList[bonds[i].j]);
 
 			std::stringstream sbuff;
-			if(leftNode->number == baseAtomNumber){
+			if(leftNode->getNumber() == baseAtomNumber){
 				sbuff << leftNode->getName() << "/bond" << leftNode->getFreebonds();
 			}else{
 				sbuff << leftNode->getName() << "/bond"
@@ -661,7 +664,7 @@ void Topology::addRingClosingBonds() {
 			}
 
 			std::stringstream otsbuff;
-			if(rightNode->number == baseAtomNumber){
+			if(rightNode->getNumber() == baseAtomNumber){
 				otsbuff << rightNode->getName() << "/bond" << rightNode->getFreebonds();
 			}else{
 				otsbuff << rightNode->getName() << "/bond"
@@ -698,8 +701,12 @@ void Topology::addRingClosingBonds() {
 			this->setAtomBiotype(leftNode->getName(), (this->name), leftNode->getName());
 			this->setAtomBiotype(rightNode->getName(), (this->name), rightNode->getName());
 
-			--leftNode->freebonds;
-			--rightNode->freebonds;
+			/* --leftNode->freebonds;
+			--rightNode->freebonds; */
+
+			leftNode->decrFreebonds();
+			rightNode->decrFreebonds();
+
 
 		}
 	}
@@ -754,7 +761,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 
 		root = &(bAtomList[baseAtomListIndex]);
 		bSpecificAtomRootIndex = baseAtomListIndex;
-		baseAtomNumber = root->number;
+		baseAtomNumber = root->getNumber();
 	}
 
 	// Build the graph

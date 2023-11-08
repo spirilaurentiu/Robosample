@@ -3,13 +3,13 @@
 AmberAtom::AmberAtom(const bSpecificAtom& b) {
 	mass = b.mass;
 	bonds = static_cast<int>(b.bondsInvolved.size());
-	amberId = b.number;
+	amberId = b.getNumber();
 }
 
 AmberAtom::AmberAtom(const bSpecificAtom* b) {
 	mass = b->mass;
 	bonds = static_cast<int>(b->bondsInvolved.size());
-	amberId = b->number;
+	amberId = b->getNumber();
 }
 
 bool AmberAtom::operator==(const AmberAtom& rhs) {
@@ -119,10 +119,10 @@ void InternalCoordinates::computeRoot(const std::vector<bSpecificAtom>& bAtomLis
 
 	// find root
 	root.first = terminalAtoms[0].amberId;
-	root.second = bAtomList[root.first].neighbors[0]->number;
+	root.second = bAtomList[root.first].neighbors[0]->getNumber();
 
 	if (bAtomList[root.second].neighbors.size() == 1) {
-		root.third = bAtomList[root.second].neighbors[0]->number;
+		root.third = bAtomList[root.second].neighbors[0]->getNumber();
 	} else {
 		std::vector<AmberAtom> candidates;
 		for (const auto& b : bAtomList[root.second].neighbors) {

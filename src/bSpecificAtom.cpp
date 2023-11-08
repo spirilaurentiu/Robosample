@@ -153,24 +153,45 @@ SimTK::Real bSpecificAtom::getCharge() const {
 // }
 
 //
-int bSpecificAtom::getIsVisited() const
+bool bSpecificAtom::wasVisited() const
 {
-    assert(!"Not implemented");
-    throw std::exception();
-    
-    return std::numeric_limits<int>::min();
+    if( this->visited > 0){
+        return true;
+    }else{
+        return false;
+    }
 }
 
-void bSpecificAtom::setNbonds(int)
+int bSpecificAtom::getVisited() const
 {
-    assert(!"Not implemented");
-    throw std::exception();
+    return this->visited;
 }
 
-void bSpecificAtom::setFreebonds(int)
+/** Set the number of times this atom was visited during the construction of
+ * the graph **/
+void bSpecificAtom::setVisited(const int& argVisited)
 {
-    assert(!"Not implemented");
-    throw std::exception();
+    this->visited = argVisited;
+}
+
+void bSpecificAtom::setNbonds(const int& nbondsArg)
+{
+     this->nbonds = nbondsArg;
+}
+
+void bSpecificAtom::setFreebonds(const int& freebondsArg)
+{
+     this->freebonds = freebondsArg;
+}
+
+void bSpecificAtom::incrFreebonds(void)
+{
+     (this->freebonds)++;
+}
+
+void bSpecificAtom::decrFreebonds(void)
+{
+     (this->freebonds)--;
 }
 
 // Set atom unique name
@@ -261,13 +282,6 @@ void bSpecificAtom::setCompoundAtomIndex(SimTK::Compound::AtomIndex inpAtomIndex
 // Set charge
 void bSpecificAtom::setCharge(SimTK::Real inpCharge){
     this->charge = inpCharge;
-}
-
-/** Set the number of times this atom was visited during the construction of
- * the graph **/
-void bSpecificAtom::setVisited(int argVisited)
-{
-    this->visited = argVisited;
 }
 
 // Get the atom class index
@@ -425,44 +439,3 @@ std::string bSpecificAtom::getResidueName() const {
 void bSpecificAtom::setResidueName(const std::string& value) {
     residueName = value; // Directly assign the new value
 }
-
-/* // Getter for the biotype property
-std::string bSpecificAtom::getBiotype() const {
-    return biotype;
-}
-
-// Setter for the biotype property
-// @param biotype The biotype to set.
-void bSpecificAtom::setBiotype(const std::string& value) {
-    // You can add validation logic here if needed.
-    biotype = value;
-}
-
-
-// Getter and setter for the elem property
-std::string bSpecificAtom::getElem() const {
-    return elem;
-}
-
-void bSpecificAtom::setElem(const std::string& value) {
-    elem = value; // Directly assign the new value
-}
-
-// Getter and setter for the fftype property
-std::string bSpecificAtom::getFftype() const {
-    return fftype;
-}
-
-void bSpecificAtom::setFftype(const std::string& value) {
-    fftype = value; // Directly assign the new value
-}
-
-
-void bSpecificAtom::setName(const std::string& value) {
-    name = value; // Directly assign the new value
-}
-
-void bSpecificAtom::setInName(const std::string& value) {
-    inName = value; // Directly assign the new value
-}
- */

@@ -1,3 +1,14 @@
+#ifndef __INTERNALCOORDINATES__
+#define __INTERNALCOORDINATES__
+
+/* -------------------------------------------------------------------------- *
+ *                                gMolModel                                   *
+ * -------------------------------------------------------------------------- *
+ *  This is an extension of SimTK Molmodel package.                           *
+ * -------------------------------------------------------------------------- */
+/** @file This defines the Internal Coordinates class
+ **/
+
 #include "Topology.hpp"
 
 using namespace SimTK;
@@ -31,6 +42,24 @@ struct AmberAtom {
 	bool operator==(const AmberAtom& rhs);
 	bool operator!=(const AmberAtom& rhs);
 };
+
+//==============================================================================
+//                           CLASS InternalCoordinates
+//==============================================================================
+/** 
+ * This defines the Internal Coordinates class. Code inspired from MDAnalysis
+ * package, analysis.bat algorithm written by Soohaeng Yoo Willow and David Minh
+ * and derived from:
+ * Chia-En Chang, Michael J. Potter, and Michael K. Gilson. * Calculation of 
+ * molecular configuration integrals.  * The Journal of Physical Chemistry B,
+ * 107(4):1048–1055, 2003. doi:10.1021/jp027149c.
+ * Simon Hikiri, Takashi Yoshidome, and Mitsunori Ikeguchi. Computational methods
+ * for configurational entropy using internal and cartesian coordinates. Journal
+ * of Chemical Theory and Computation, 12(12):5990–6000, 2016. PMID: 27951672.
+ * David D. L. Minh. Alchemical grid dock (algdock): binding free energy calculations
+ * between flexible ligands and rigid receptors. Journal of Computational Chemistry,
+ * 41(7):715–730, 2020. doi:https://doi.org/10.1002/jcc.26036.
+**/
 
 class InternalCoordinates {
 public:
@@ -66,3 +95,5 @@ private:
 
     TORSION root;
 };
+
+#endif //__INTERNALCOORDINATES__
