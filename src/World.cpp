@@ -119,6 +119,80 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
+//==============================================================================
+//                   CLASS ForceArrowGenerator
+//==============================================================================
+/* 
+*	Added by Teodor
+*	Shamelessly copied from the ExampleContactPlayground CPP file
+*	(from Simbody) and adapted to work in Robosample
+*/
+
+class ForceArrowGenerator : public DecorationGenerator {
+public:
+    ForceArrowGenerator(const MultibodySystem& system,
+                        const CompliantContactSubsystem& complCont) 
+    :   m_system(system), m_compliant(complCont) {}
+
+    virtual void generateDecorations(const State& state, Array_<DecorativeGeometry>& geometry) override {
+		static const Real ForceScale = .25;
+        const Vec3 frcColors[] = {Red,Orange,Cyan};
+        const Vec3 momColors[] = {Blue,Green,Purple};
+        m_system.realize(state, Stage::Velocity);
+
+        const int ncont = m_compliant.getNumContactForces(state);
+        for (int i=0; i < ncont; ++i) {
+            const ContactForce& force = m_compliant.getContactForce(state,i);
+            const ContactId     id    = force.getContactId();
+            const Vec3& frc = force.getForceOnSurface2()[1];
+            const Vec3& mom = force.getForceOnSurface2()[0];
+            Real  frcMag = frc.norm(), momMag=mom.norm();
+            int frcThickness = 1, momThickness = 1;
+            Real frcScale = ForceScale, momScale = ForceScale;
+            while (frcMag > 10)
+                frcThickness++, frcScale /= 10, frcMag /= 10;
+            while (momMag > 10)
+                momThickness++, momScale /= 10, momMag /= 10;
+            DecorativeLine frcLine(force.getContactPoint(),
+                force.getContactPoint() + frcScale*frc);
+            DecorativeLine momLine(force.getContactPoint(),
+                force.getContactPoint() + momScale*mom);
+            frcLine.setColor(frcColors[id%3]);
+            momLine.setColor(momColors[id%3]);
+            frcLine.setLineThickness(2*frcThickness);
+            momLine.setLineThickness(2*momThickness);
+            geometry.push_back(frcLine);
+            geometry.push_back(momLine);
+
+            ContactPatch patch;
+            const bool found = m_compliant.calcContactPatchDetailsById(state,id,patch);
+            //cout << "patch for id" << id << " found=" << found << endl;
+            //cout << "resultant=" << patch.getContactForce() << endl;
+            //cout << "num details=" << patch.getNumDetails() << endl;
+            for (int i=0; i < patch.getNumDetails(); ++i) {
+                const ContactDetail& detail = patch.getContactDetail(i);
+                const Real peakPressure = detail.getPeakPressure();
+                // Make a black line from the element's contact point in the normal
+                // direction, with length proportional to log(peak pressure)
+                // on that element. 
+                DecorativeLine normal(detail.getContactPoint(),
+                    detail.getContactPoint()+ std::log10(peakPressure)
+                                                * detail.getContactNormal());
+                normal.setColor(Black);
+                geometry.push_back(normal);
+                // Make a red line that extends from the contact
+                // point in the direction of the slip velocity, of length 3*slipvel.
+                DecorativeLine slip(detail.getContactPoint(),
+                    detail.getContactPoint()+3*detail.getSlipVelocity());
+                slip.setColor(Red);
+                geometry.push_back(slip);
+            }
+        }
+    }
+private:
+    const MultibodySystem&              m_system;
+    const CompliantContactSubsystem&    m_compliant;
+};
 
 //==============================================================================
 //                   CLASS TaskSpace
@@ -163,15 +237,17 @@ World::World(int worldIndex,
 	// Initialize Molmodel default ForceSubsystem (DuMM)
 	forceField = std::make_unique<SimTK::DuMMForceFieldSubsystem>(*compoundSystem);
 
+	// Get a reference to the multibody system, which is used many times
+	// throughout this CPP
+	const SimTK::MultibodySystem& mbs = forces->getMultibodySystem();
+
 	// Contact system
 	
 	tracker = std::make_unique<ContactTrackerSubsystem>(*compoundSystem);
 	contactForces = std::make_unique<CompliantContactSubsystem>(*compoundSystem, *tracker);
 	contactForces->setTrackDissipatedEnergy(true);
 	contactForces->setTransitionVelocity(1e-3);
-    	//clique1 = ContactSurface::createNewContactClique();
 	
-
 	// Intialize an integrator and a TimeStepper to manage it
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
 	ts = std::make_unique<SimTK::TimeStepper>(*compoundSystem, *integ);
@@ -186,6 +262,8 @@ World::World(int worldIndex,
 		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
 			*visualizer, std::abs(visualizerFrequency));
 		compoundSystem->addEventReporter(visualizerReporter.get());
+		visualizer->addDecorationGenerator(new ForceArrowGenerator(mbs,*contactForces));
+
 
 		// Initialize a DecorationGenerator
 		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
@@ -614,10 +692,17 @@ const SimTK::State& World::addContacts(int prmtopIx)
 		 prmtopIx << "\n" ;
 
 		const Real stiffness = 10000; // stiffness in pascals
-		const Real dissipation = 0.0;    // to turn off dissipation
+		const Real dissipation = 1.0;    // to turn off dissipation
 		SimTK::Real staticFriction = 0.0;
 		SimTK::Real dynamicFriction = 0.0;
 		SimTK::Real viscousFriction = 0.0;
+
+		// Copied from ExampleContactPlayground
+		const Real fFac = 1; // to turn off friction
+		const Real fDis = .5*0.2; // to turn off dissipation
+		const Real fVis =  .1*.1; // to turn off viscous friction
+		const Real fK = 100*1e6; // pascals
+
 
 		// Map from AmberAtomIndex to CompoundAtomIndex 
 		SimTK::Compound::AtomIndex cAIx = ((*topologies)[0]).
@@ -661,7 +746,9 @@ const SimTK::State& World::addContacts(int prmtopIx)
 			ContactSurface(sphere,
 				ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction),
-				.5));
+			//	ContactMaterial(fK*.1,fDis*.9,
+			//.1*fFac*.8,.1*fFac*.7,fVis*1),
+				0.1));
 	}
 
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
@@ -677,34 +764,44 @@ void World::addMembrane(
 	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
 {
 
-	float distanceValue = resolution;
+	//float distanceValue = resolution;
 
 	SimTK::Real stiffness = 10000;
-	SimTK::Real dissipation = 0.0;
+	SimTK::Real dissipation = 0;
 	SimTK::Real staticFriction = 0.0;
 	SimTK::Real dynamicFriction = 0.0;
 	SimTK::Real viscousFriction = 0.0;
-	SimTK::Real membraneThickness = 0.1;
+
+	// Copied from ExampleContactPlayground
+	const Real fFac =1; // to turn off friction
+	const Real fDis = .5*0.2; // to turn off dissipation
+	const Real fVis =  .1*.1; // to turn off viscous friction
+	const Real fK = 100*1e6; // pascals
 
 	// X Axis walls
+	if (xWidth > 0) {
 	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-distanceValue,0,0)),
+		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-xWidth,0,0)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
+		//ContactMaterial(fK*.01,fDis*.9,fFac*.8,fFac*.7,fVis*10))
 	);
 	 matter->Ground().updBody().addContactSurface(
-		Transform(Vec3(distanceValue,0,0)),
+		Transform(Vec3(xWidth,0,0)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
-	);
+		//ContactMaterial(fK*.01,fDis*.9,fFac*.8,fFac*.7,fVis*10))
+	); 
+	}
 	
 	// Y Axis walls
+	if (yWidth > 0) {
 	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, distanceValue,0)),
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, yWidth,0)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
@@ -712,16 +809,18 @@ void World::addMembrane(
 	);
 	
 	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, -distanceValue,0)),
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, -yWidth,0)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
-	);
+	); 
+	}
 
 	// Z Axis walls
-	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, distanceValue)),
+	if (zWidth > 0) {
+ 	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, zWidth)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
@@ -729,12 +828,13 @@ void World::addMembrane(
 	);
 	
 	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -distanceValue)),
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -zWidth)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
-	);
+	);  
+	}
 
 
 
@@ -745,30 +845,31 @@ void World::addMembrane(
 		);
 		// X Axis walls
 		matter->Ground().updBody().addDecoration(
-		Transform(Vec3(distanceValue+xWidth,0,0)),
-        DecorativeBrick(Vec3(xWidth, 50*yWidth, 50*zWidth)).setColor(Gray).setOpacity(0.1));
+		Transform(),
+        //DecorativeBrick(Vec3(5,5,0.4)).setColor(Red).setOpacity(0.5));
+        DecorativeBrick().setColor(Red).setOpacity(0.5));
 		
-		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-(distanceValue+xWidth), 0,0)),
-        DecorativeBrick(Vec3(xWidth, 50*yWidth, 50*zWidth)).setColor(Gray).setOpacity(0.1));
+		/* matter->Ground().updBody().addDecoration(
+		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-xWidth, 0,0)),
+        DecorativeBrick(Vec3(0.01, 5, 5)).setColor(Red).setOpacity(0.1)); */
 
-		// Y Axis walls
-		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, distanceValue+yWidth, 0)),
-        DecorativeBrick(Vec3(50*xWidth, yWidth, 50*zWidth)).setColor(Gray).setOpacity(0.1));
+		/* // Y Axis walls
+		 matter->Ground().updBody().addDecoration(
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, yWidth, 0)),
+        DecorativeBrick(Vec3(5, 0.01, 5)).setColor(Blue).setOpacity(0.1));
 		
 		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, -(distanceValue+xWidth), 0)),
-        DecorativeBrick(Vec3(50*xWidth, yWidth, 50*zWidth)).setColor(Gray).setOpacity(0.1));
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, -yWidth, 0)),
+        DecorativeBrick(Vec3(5, 0.01, 5)).setColor(Blue).setOpacity(0.1)); 
 
 		// Z Axis walls
-		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::XAxis), Vec3(0, 0, distanceValue+yWidth)),
-        DecorativeBrick(Vec3(50*xWidth, yWidth, 50*zWidth)).setColor(Gray).setOpacity(0.1));
+ 		matter->Ground().updBody().addDecoration(
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, zWidth)),
+        DecorativeBrick(Vec3(5, 5, 0.01)).setColor(Green).setOpacity(0.1));
 		
 		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::XAxis), Vec3(0, 0, -(distanceValue+xWidth))),
-        DecorativeBrick(Vec3(50*xWidth, yWidth, 50*zWidth)).setColor(Gray).setOpacity(0.1));
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -zWidth)),
+        DecorativeBrick(Vec3(5, 5, 0.01)).setColor(Green).setOpacity(0.1)); */
 	}
 
 }
