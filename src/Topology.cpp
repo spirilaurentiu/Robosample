@@ -592,12 +592,12 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				this->setAtomBiotype(node->getName(), (this->name).c_str(), node->getName());
 
 				// Set bSpecificAtom atomIndex to the last atom added to bond
-				node->compoundAtomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1);
+				node->setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1));
 
 
 				// The only time we have to set atomIndex to the previous node
 				if (nofProcesses == 2) {
-					previousNode->compoundAtomIndex = getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0);
+					previousNode->setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0));
 				}
 
 				// Set bBond Molmodel Compound::BondIndex
@@ -721,7 +721,7 @@ void Topology::matchDefaultConfigurationWithAtomList(
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
 	}
 
 	matchDefaultConfiguration(atomTargets, matchStratagem, true, 150.0);
@@ -784,7 +784,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 
 	// Now that everything is built, initialize aIx2TopTransforms map
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).compoundAtomIndex, SimTK::Transform()));
+		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
 	}
 
 }
@@ -1522,7 +1522,7 @@ void Topology::loadTriples()
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
 	}
 	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
 	getBondedAtomRuns(3, atomTargets);
@@ -1653,7 +1653,7 @@ SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State&){
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
+		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
 	}
 
 	//std::cout << "Topology::calcLogDetMBATDistsContribution dists: " ;
@@ -1693,7 +1693,7 @@ SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&)
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 			Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
+			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
 	}
 
 	//std::cout << "Topology::calcLogDetMBATDistsMassesContribution dists squared: " ;
@@ -1729,7 +1729,7 @@ SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State&){
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
 			Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].compoundAtomIndex, vec));
+			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
 	}
 
 	//std::cout << "Topology::calcLogDetMBATAnglesContribution angles: " ;
@@ -2165,7 +2165,7 @@ void Topology::loadAIx2MbxMap()
 		for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 
 			// Get atomIndex from atomList
-			SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
+			SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
 
 			// Insert
 			aIx2mbx.insert(
@@ -2180,7 +2180,7 @@ void Topology::loadAIx2MbxMap()
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 
 		// Get atomIndex from atomList
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
 
 		// Get MobilizedBodyIndex from CompoundAtom
 		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
@@ -2222,7 +2222,7 @@ to be called every time the coordinates change though. **/
 void Topology::calcTopTransforms()
 {
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
 		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
 	}
 }
@@ -2232,7 +2232,7 @@ void Topology::printTopTransforms()
 {
 	std::cout << "Topology TopTransforms " << std::endl;
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).compoundAtomIndex;
+		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
 		std::cout << aIx << " " << aIx2TopTransform[aIx] << std::endl;
 	}
 }

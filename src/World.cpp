@@ -482,7 +482,7 @@ void World::addTaskSpaceLS(void)
 
 			// Guest atoms iteration
 			for (int bAtomIx : bAtomIxs_guest) {
-				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
 				onBodyB.emplace_back(mbx);
@@ -521,7 +521,7 @@ void World::updateTaskSpace(const State& someState)
 			int tz = -1;
 			for (int bAtomIx : bAtomIxs_host) {
 				tz++;
-				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
@@ -543,7 +543,7 @@ void World::updateTaskSpace(const State& someState)
 			int tz = -1;
 			for (int bAtomIx : bAtomIxs_guest) {
 				tz++;
-				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
@@ -916,7 +916,7 @@ void World::loadMbx2AIxMap(){
 		for (unsigned int i = 0; i < topology.getNumAtoms(); ++i) {
 
 			// Get atomIndex from atomList
-			SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).compoundAtomIndex;
+			SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).getCompoundAtomIndex();
 
 			// Get MobilizedBodyIndex from CompoundAtom
 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
