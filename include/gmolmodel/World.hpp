@@ -178,19 +178,28 @@ public:
         SimTK::Matrix_<SimTK::Vec3>& JS) const;
 	
 	//=========================================================================
-	//                   CONTACTS Functions
+	//                   Membrane-Related Functions
 	//=========================================================================
 
-	/** Add contact surfaces to bodies **/
-	const SimTK::State& addContacts(int prmtopIndex);
+	/** Add contact surfaces to bodies 
+		By (my own) convention, the atoms that are in Z>0 are in constant 
+		contact	with the half-space with clique1, so set those in Clique 0 to
+		avoid system destruction.**/
+	void addContacts(std::vector<int>& prmtopIndex, int topologyIx, 
+		SimTK::ContactCliqueId cliqueId);
+
+	
+
+	/* 	Add a membrane represented by a contact surface 
+		It's two halfspaces, occupying the Z>0 and Z<0 spaces, which
+		are shifted on the Z axis by halfThickness. The theoretical
+		membrane thus generated is of thickness 2*halfThickness. By using
+		contact cliques, we can simulate the presence of a membrane.*/
+	void addMembrane(SimTK::Real halfThickness);
 
 	//=========================================================================
-	//                   MEMBRANE Functions
+	//                   Membrane-Related Functions END
 	//=========================================================================
-
-	/** Add a membrane represented by a contact surface **/
-	void addMembrane(SimTK::Real xWidth, SimTK::Real yWidth,
-		SimTK::Real zWidth, int resolution);
 
 
 	/** Realize Topology for this World **/

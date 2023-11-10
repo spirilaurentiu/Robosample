@@ -299,13 +299,23 @@ int main(int argc, char **argv)
 	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
 	float memZWidth = std::stof(setupReader.get("MEMBRANE")[2]);
 	int memResolution = std::stof(setupReader.get("MEMBRANE")[3]);
+	
+	std::vector<std::vector<int>> atomIxsClique1 {{282}, {270}};
+	std::vector<std::vector<int>> atomIxsClique0 {{11}, {40}};
+
 	bool haveMembrane = (memXWidth > SimTK::TinyReal) && (memYWidth > SimTK::TinyReal) && (memZWidth > SimTK::TinyReal);
 	if(haveMembrane){
 		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-			(context.updWorld(worldIx))->addMembrane(memXWidth, memYWidth, memZWidth, memResolution);
-			context.updWorld(worldIx)->addContacts(0);
-			//context.updWorld(worldIx)->addContacts(971);
-			//context.updWorld(worldIx)->addContacts(3);
+
+			// Add contacts for all worlds
+			// I *assume* there will be no case where you'd exclude a topology from contact calculation
+			// for just one of the cliques so I won't split this for-loop.
+			for (int topologyIx=0; topologyIx<atomIxsClique0.size(); topologyIx++){
+				context.updWorld(worldIx)->addContacts(atomIxsClique0[topologyIx], topologyIx, SimTK::ContactCliqueId(0));
+				context.updWorld(worldIx)->addContacts(atomIxsClique1[topologyIx], topologyIx, SimTK::ContactCliqueId(1));}
+
+
+			(context.updWorld(worldIx))->addMembrane(memZWidth);
 		}
 	}
 

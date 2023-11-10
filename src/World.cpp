@@ -684,12 +684,30 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 
 /** Add contact surfaces to bodies **/
 // Hard-coded for NS2, this needs to be changed
-const SimTK::State& World::addContacts(int prmtopIx)
+//const SimTK::State& World::addContacts(std::vector<int>& prmtopIndex, int topologyIx)
+void World::addContacts(std::vector<int>& prmtopIndex, int topologyIx, SimTK::ContactCliqueId cliqueId)
 {
-	if(prmtopIx >= 0){
-		std::cout <<
-			"Adding contacts with membrane to atom with prmtop index " <<
-		 prmtopIx << "\n" ;
+	// Iterate through the prmtopIndex and add the appropriate spheres
+
+	cliqueId = SimTK::ContactCliqueId(cliqueId);
+
+	for(int prmtopIx : (prmtopIndex)){
+		if (prmtopIx == -1 && (prmtopIndex.size() == 1)){
+			break;
+		}
+		if (prmtopIx == -1 && (prmtopIndex.size() > 1)){
+			std::cout << "################################################" << std::endl;
+			std::cout << "Warning: you included the atom index \"-1\", which is "
+			"invalid. The inclusion of -1 in the contacts parameters is used to skip "
+			" topologies, and it looks like you may have included it by accident. You have been warned.";
+			std::cout << "###############################################" << std::endl;
+			break;
+		}
+
+		std::cout << "Adding contacts with membrane to atom with prmtop index " <<
+			prmtopIx << " to topology " << topologyIx << std::endl;
+
+
 
 		const Real stiffness = 10000; // stiffness in pascals
 		const Real dissipation = 1.0;    // to turn off dissipation
@@ -697,27 +715,17 @@ const SimTK::State& World::addContacts(int prmtopIx)
 		SimTK::Real dynamicFriction = 0.0;
 		SimTK::Real viscousFriction = 0.0;
 
-		// Copied from ExampleContactPlayground
-		const Real fFac = 1; // to turn off friction
-		const Real fDis = .5*0.2; // to turn off dissipation
-		const Real fVis =  .1*.1; // to turn off viscous friction
-		const Real fK = 100*1e6; // pascals
-
-
 		// Map from AmberAtomIndex to CompoundAtomIndex 
-		SimTK::Compound::AtomIndex cAIx = ((*topologies)[0]).
+		SimTK::Compound::AtomIndex cAIx = ((*topologies)[topologyIx]).
 										bAtomList[prmtopIx].getCompoundAtomIndex();
 
-		std::cout << "prmtopIx: " << prmtopIx
-				  << " compound atom Index: " << cAIx << std::endl;
-
 		SimTK::MobilizedBodyIndex
-		mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(
+		mbx = ((*topologies)[topologyIx]).getAtomMobilizedBodyIndexThroughDumm(
 			cAIx, *forceField);
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 		
 		// Need to get vdw radius for said atom
-		const SimTK::DuMM::AtomIndex dAIx = ((*topologies)[0]).getDuMMAtomIndex(cAIx);
+		const SimTK::DuMM::AtomIndex dAIx = ((*topologies)[topologyIx]).getDuMMAtomIndex(cAIx);
 		Real vdwRadius = forceField->getAtomRadius(dAIx);
 
 		std::cout << "Atom element: " << forceField->getAtomElement(dAIx)
@@ -730,29 +738,29 @@ const SimTK::State& World::addContacts(int prmtopIx)
 		// must also apply a translation from the Origin of the MoBod to the
 		// location of the station coressponding to said atom.
 
-		SimTK::Vec3 atomPos = ((*topologies)[0]).getAtomLocationInMobilizedBodyFrameThroughDumm
+		SimTK::Vec3 atomPos = ((*topologies)[topologyIx]).getAtomLocationInMobilizedBodyFrameThroughDumm
 								(cAIx,getForceField());
 
 
 		ContactGeometry::TriangleMesh sphere(sphereMesh);
-		DecorativeMesh showSphere(sphere.createPolygonalMesh());
-		mobod.updBody().addDecoration(Transform(atomPos), 
-			showSphere.setColor(Cyan).setOpacity(0.2));
-		mobod.updBody().addDecoration(Transform(atomPos), 
-			showSphere.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
-
-		
 		mobod.updBody().addContactSurface(Transform(atomPos), 
 			ContactSurface(sphere,
 				ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction),
-			//	ContactMaterial(fK*.1,fDis*.9,
-			//.1*fFac*.8,.1*fFac*.7,fVis*1),
-				0.1));
+				0.1).joinClique(cliqueId));
+
+		if (visual == true) {
+			DecorativeMesh showSphere(sphere.createPolygonalMesh());
+			mobod.updBody().addDecoration(Transform(atomPos), 
+				showSphere.setColor(Cyan).setOpacity(0.2));
+			//TODO: Remove this in production
+			mobod.updBody().addDecoration(Transform(atomPos), 
+				showSphere.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
+		}
 	}
 
-	const SimTK::State& returnState = compoundSystem->realizeTopology();
-	return returnState;
+	/* const SimTK::State& returnState = compoundSystem->realizeTopology();
+	return returnState; */
 }
 
 //=============================================================================
@@ -760,8 +768,7 @@ const SimTK::State& World::addContacts(int prmtopIx)
 //=============================================================================
 
 /** Add a membrane represented by a contact surface **/
-void World::addMembrane(
-	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
+void World::addMembrane(SimTK::Real halfThickness)
 {
 
 	//float distanceValue = resolution;
@@ -772,104 +779,33 @@ void World::addMembrane(
 	SimTK::Real dynamicFriction = 0.0;
 	SimTK::Real viscousFriction = 0.0;
 
-	// Copied from ExampleContactPlayground
-	const Real fFac =1; // to turn off friction
-	const Real fDis = .5*0.2; // to turn off dissipation
-	const Real fVis =  .1*.1; // to turn off viscous friction
-	const Real fK = 100*1e6; // pascals
-
-	// X Axis walls
-	if (xWidth > 0) {
-	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-xWidth,0,0)),
-		ContactSurface(
-		ContactGeometry::HalfSpace(),
-		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction))
-		//ContactMaterial(fK*.01,fDis*.9,fFac*.8,fFac*.7,fVis*10))
-	);
-	 matter->Ground().updBody().addContactSurface(
-		Transform(Vec3(xWidth,0,0)),
-		ContactSurface(
-		ContactGeometry::HalfSpace(),
-		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction))
-		//ContactMaterial(fK*.01,fDis*.9,fFac*.8,fFac*.7,fVis*10))
-	); 
-	}
-	
-	// Y Axis walls
-	if (yWidth > 0) {
-	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, yWidth,0)),
-		ContactSurface(
-		ContactGeometry::HalfSpace(),
-		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction))
-	);
-	
-	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, -yWidth,0)),
-		ContactSurface(
-		ContactGeometry::HalfSpace(),
-		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction))
-	); 
-	}
 
 	// Z Axis walls
-	if (zWidth > 0) {
  	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, zWidth)),
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -halfThickness)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
-	);
+			.joinClique(SimTK::ContactCliqueId(1)));
 	
 	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -zWidth)),
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, halfThickness)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
-	);  
-	}
-
-
+			.joinClique(SimTK::ContactCliqueId(0)));
 
 	if (visual == true) {
 		DecorativeFrame contactGeometryDecoFrame;
-		matter->Ground().updBody().addDecoration(
+		/* matter->Ground().updBody().addDecoration(
 			Transform(), contactGeometryDecoFrame.setColor(Red)
-		);
-		// X Axis walls
+		); */
 		matter->Ground().updBody().addDecoration(
 		Transform(),
-        //DecorativeBrick(Vec3(5,5,0.4)).setColor(Red).setOpacity(0.5));
-        DecorativeBrick().setColor(Red).setOpacity(0.5));
+        DecorativeBrick(Vec3(10,10,halfThickness)).setColor(Orange).setOpacity(0.25));
 		
-		/* matter->Ground().updBody().addDecoration(
-		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-xWidth, 0,0)),
-        DecorativeBrick(Vec3(0.01, 5, 5)).setColor(Red).setOpacity(0.1)); */
-
-		/* // Y Axis walls
-		 matter->Ground().updBody().addDecoration(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, yWidth, 0)),
-        DecorativeBrick(Vec3(5, 0.01, 5)).setColor(Blue).setOpacity(0.1));
-		
-		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, -yWidth, 0)),
-        DecorativeBrick(Vec3(5, 0.01, 5)).setColor(Blue).setOpacity(0.1)); 
-
-		// Z Axis walls
- 		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, zWidth)),
-        DecorativeBrick(Vec3(5, 5, 0.01)).setColor(Green).setOpacity(0.1));
-		
-		matter->Ground().updBody().addDecoration(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -zWidth)),
-        DecorativeBrick(Vec3(5, 5, 0.01)).setColor(Green).setOpacity(0.1)); */
 	}
 
 }
@@ -921,7 +857,7 @@ void World::setUScaleFactorsToMobods(void)
 				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx2, Bond.getUScaleFactor(ownWorldIndex)));
 			}else{
 				if(Bond.getUScaleFactor(ownWorldIndex) != 0){
-					std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n";
+					//std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n";
 				}
 			}
 
