@@ -27,7 +27,9 @@ void bSpecificAtom::destroy() {
 void bSpecificAtom::Print(int whichWorld)
 {
     std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
-        <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
+        <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber
+        << " x " << x << " y " << y << " z " << z
+        <<" Cartesians " << Cartesians[0] << " " << Cartesians[1] << " " << Cartesians[2] 
         <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
         <<" atomClassIndex  "<<dummAtomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
         //<< " bAtomType "<< bAtomType 

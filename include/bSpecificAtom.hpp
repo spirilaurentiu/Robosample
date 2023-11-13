@@ -165,6 +165,7 @@ public:
     SimTK::Real z = SimTK::NaN;
 
     double Cartesians[3];
+    OpenMM::Vec3 OpenMMCoords;
 
 private:
     int nbonds = std::numeric_limits<int>::min();

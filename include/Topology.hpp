@@ -457,6 +457,11 @@ public:
 	// TODO move to Context
 	int natoms;
 	std::vector<bSpecificAtom> bAtomList;
+	std::vector<bSpecificAtom>::iterator atomsBeg_It;
+	std::vector<bSpecificAtom>::iterator atomsEnd_It;
+	size_t atomsBeg_Ix;
+	size_t atomsEnd_Ix;
+
 
 	int nbonds;
 	std::vector<bBond> bonds;

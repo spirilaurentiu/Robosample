@@ -370,6 +370,10 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		bAtomList[i].setX(amberReader->getAtomsXcoord(i) / 10.0);
 		bAtomList[i].setY(amberReader->getAtomsYcoord(i) / 10.0);
 		bAtomList[i].setZ(amberReader->getAtomsZcoord(i) / 10.0);
+		bAtomList[i].setCartesians(
+			amberReader->getAtomsXcoord(i) / 10.0,
+			amberReader->getAtomsYcoord(i) / 10.0,
+			amberReader->getAtomsZcoord(i) / 10.0 );
 
 		// Set mass
 		bAtomList[i].setMass(amberReader->getAtomsMass(i));
