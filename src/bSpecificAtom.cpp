@@ -20,7 +20,9 @@ void bSpecificAtom::destroy() {
 void bSpecificAtom::Print(int whichWorld)
 {
     std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
-        <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber<<" x "<<x<<" y "<< y<<" z "<<z
+        <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber
+        << " x " << x << " y " << y << " z " << z
+        <<" Cartesians " << Cartesians[0] << " " << Cartesians[1] << " " << Cartesians[2] 
         <<" mass "<<mass<<" vdwRadius  "<<vdwRadius<<" LJWellDepth  "<<LJWellDepth<<" fftype "<< fftype
         <<" atomClassIndex  "<<dummAtomClassIndex<<" biotype "<< biotype << " biotypeIndex " << biotypeIndex 
         //<< " bAtomType "<< bAtomType 
@@ -104,6 +106,12 @@ SimTK::Real bSpecificAtom::getY() const
 SimTK::Real bSpecificAtom::getZ() const
 {
     return this->z;
+}
+
+// Returns the Cartesian coordinates
+const double* bSpecificAtom::getCartesians() const
+{
+    return Cartesians;
 }
 
 // Returns force field atom type
@@ -213,7 +221,6 @@ void bSpecificAtom::generateName(int nameCounter) {
 }
 
 // Set initial name
-
 void bSpecificAtom::setInName(const std::string& inName){
     this->inName = inName;
 }
@@ -242,6 +249,45 @@ void bSpecificAtom::setY(SimTK::Real inpY){
 void bSpecificAtom::setZ(SimTK::Real inpZ){
     this->z = inpZ;
 }
+
+// Set the Cartesian coordinates
+void bSpecificAtom::setCartesians(
+    SimTK::Real inpX, SimTK::Real inpY, SimTK::Real inpZ)
+{
+    Cartesians[0] = inpX;
+    Cartesians[1] = inpY;
+    Cartesians[2] = inpZ;
+}
+
+// Set the Cartesian coordinates
+void bSpecificAtom::setCartesians(
+    double* inpXYZ)
+{
+    assert( sizeof(inpXYZ) / sizeof(inpXYZ[0]) == 3 );
+    Cartesians[0] = inpXYZ[0];
+    Cartesians[1] = inpXYZ[1];
+    Cartesians[2] = inpXYZ[2];
+
+}
+
+// Set the Cartesian coordinates
+void bSpecificAtom::setCartesians(
+    SimTK::Vec3 inpXYZ)
+{
+    Cartesians[0] = inpXYZ[0];
+    Cartesians[1] = inpXYZ[1];
+    Cartesians[2] = inpXYZ[2];
+}
+
+// Set the Cartesian coordinates
+void bSpecificAtom::setCartesians(
+    OpenMM::Vec3 inpXYZ)
+{
+    Cartesians[0] = inpXYZ[0];
+    Cartesians[1] = inpXYZ[1];
+    Cartesians[2] = inpXYZ[2];
+}
+
 
 // Get atomic mass
 SimTK::mdunits::Mass bSpecificAtom::getMass() const

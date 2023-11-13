@@ -60,6 +60,8 @@ public:
     SimTK::Real getX() const;
     SimTK::Real getY() const;
     SimTK::Real getZ() const;
+    const double* getCartesians() const;
+
     std::string getBiotype() const;
 
     const SimTK::Compound::SingleAtom& getSingleAtom() const;
@@ -120,6 +122,13 @@ public:
     void setX(SimTK::Real);
     void setY(SimTK::Real);
     void setZ(SimTK::Real);
+
+    void setCartesians(SimTK::Real, SimTK::Real, SimTK::Real);
+    void setCartesians(double *);
+
+    void setCartesians(SimTK::Vec3);
+    void setCartesians(OpenMM::Vec3 );
+
     void setFfType(const std::string&);
     void setBiotype(const std::string&);
     void setCompoundAtomIndex(SimTK::Compound::AtomIndex);
@@ -151,20 +160,23 @@ public:
     SimTK::Real y = SimTK::NaN;
     SimTK::Real z = SimTK::NaN;
 
+    double Cartesians[3];
+    OpenMM::Vec3 OpenMMCoords;
+
 private:
     int nbonds = std::numeric_limits<int>::min();
     int freebonds = std::numeric_limits<int>::min();
     int number = std::numeric_limits<int>::min(); // amber index
     int atomicNumber = std::numeric_limits<int>::min();
     int visited = std::numeric_limits<int>::min();
-
-public:
-
     int moleculeIndex = std::numeric_limits<int>::min();
-    
     SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
     SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
     SimTK::BiotypeIndex biotypeIndex;
+
+public:
+
+    
     SimTK::Compound::AtomIndex compoundAtomIndex;
   
 
