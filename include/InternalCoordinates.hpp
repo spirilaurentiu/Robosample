@@ -9,7 +9,7 @@
 /** @file This defines the Internal Coordinates class
  **/
 
-#include "Topology.hpp"
+#include "bSpecificAtom.hpp"
 
 using namespace SimTK;
 

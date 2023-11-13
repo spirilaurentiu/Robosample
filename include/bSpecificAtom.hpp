@@ -38,11 +38,7 @@ public:
     /**@{**/
 
     /** TODO comment. **/
-    void setAtomCompoundType(const SimTK::Compound::AtomName &atomName,
-        int atomicNumber,
-        SimTK::Element::Name elementName,
-        SimTK::Element::Symbol elementSymbol,
-        SimTK::mdunits::Mass atomicMass);
+    void setAtomCompoundType(const SimTK::Compound::AtomName &atomName, const SimTK::Element &element);
 
     /** TODO comment. **/
     void destroy();
@@ -174,6 +170,12 @@ public:
 
 public:
     // wasted 6 hours trying to make this unique_ptr or allocated on the stack
+    // after more hours wasted, i read this article: https://www.cppstories.com/2014/05/vector-of-objects-vs-vector-of-pointers/
+    // as expected, it should be faster to have this allocated on the stack
+    // however, taking into account that this is called only a few times, it is not worth the trouble
+    // there are two use cases for this: addition of bond centers and building the molecule graph
+    // in the first case, the calls are sequential, so we waste some time
+    // in the second case, the calls are random and the article shows that it is actually better to have the objects allocated on the heap
     SimTK::Compound::SingleAtom* compoundSingleAtom = nullptr;
 
 private:

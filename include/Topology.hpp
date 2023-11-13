@@ -7,6 +7,8 @@
  * This is part of Robosampling	                                              *
  */
 
+#include "ElementCache.hpp"
+#include "InternalCoordinates.hpp"
 #include "TrivalentAtomTetra.hpp"
 #include "bSpecificAtom.hpp"
 #include "bBond.hpp"
@@ -498,7 +500,7 @@ private:
 
 	//std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
 
-
+	ELEMENT_CACHE elementCache;
 };
 
 

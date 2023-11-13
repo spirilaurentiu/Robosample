@@ -2,140 +2,8 @@
 Implementation of Topology class. **/
 
 #include "Topology.hpp"
-#include "InternalCoordinates.hpp"
 
 using namespace SimTK;
-
-// std::array is an aggregate type and requires 1 more layer of braces
-std::array<std::pair<std::string, std::string>, 118> elements = { {
-	{ "Hydrogen", "H" },
-	{ "Helium", "He" },
-	{ "Lithium", "Li" },
-	{ "Beryllium", "Be" },
-	{ "Boron", "B" },
-	{ "Carbon", "C" },
-	{ "Nitrogen", "N" },
-	{ "Oxygen", "O" },
-	{ "Fluorine", "F" },
-	{ "Neon", "Ne" },
-	{ "Sodium", "Na" },
-	{ "Magnesium", "Mg" },
-	{ "Aluminum", "Al" },
-	{ "Silicon", "Si" },
-	{ "Phosphorus", "P" },
-	{ "Sulfur", "S" },
-	{ "Chlorine", "Cl" },
-	{ "Argon", "Ar" },
-	{ "Potassium", "K" },
-	{ "Calcium", "Ca" },
-	{ "Scandium", "Sc" },
-	{ "Titanium", "Ti" },
-	{ "Vanadium", "V" },
-	{ "Chromium", "Cr" },
-	{ "Manganese", "Mn" },
-	{ "Iron", "Fe" },
-	{ "Cobalt", "Co" },
-	{ "Nickel", "Ni" },
-	{ "Copper", "Cu" },
-	{ "Zinc", "Zn" },
-	{ "Gallium", "Ga" },
-	{ "Germanium", "Ge" },
-	{ "Arsenic", "As" },
-	{ "Selenium", "Se" },
-	{ "Bromine", "Br" },
-	{ "Krypton", "Kr" },
-	{ "Rubidium", "Rb" },
-	{ "Strontium", "Sr" },
-	{ "Yttrium", "Y" },
-	{ "Zirconium", "Zr" },
-	{ "Niobium", "Nb" },
-	{ "Molybdenum", "Mo" },
-	{ "Technetium", "Tc" },
-	{ "Ruthenium", "Ru" },
-	{ "Rhodium", "Rh" },
-	{ "Palladium", "Pd" },
-	{ "Silver", "Ag" },
-	{ "Cadmium", "Cd" },
-	{ "Indium", "In" },
-	{ "Tin", "Sn" },
-	{ "Antimony", "Sb" },
-	{ "Tellurium", "Te" },
-	{ "Iodine", "I" },
-	{ "Xenon", "Xe" },
-	{ "Cesium", "Cs" },
-	{ "Barium", "Ba" },
-	{ "Lanthanum", "La" },
-	{ "Cerium", "Ce" },
-	{ "Praseodymium", "Pr" },
-	{ "Neodymium", "Nd" },
-	{ "Promethium", "Pm" },
-	{ "Samarium", "Sm" },
-	{ "Europium", "Eu" },
-	{ "Gadolinium", "Gd" },
-	{ "Terbium", "Tb" },
-	{ "Dysprosium", "Dy" },
-	{ "Holmium", "Ho" },
-	{ "Erbium", "Er" },
-	{ "Thulium", "Tm" },
-	{ "Ytterbium", "Yb" },
-	{ "Lutetium", "Lu" },
-	{ "Hafnium", "Hf" },
-	{ "Tantalum", "Ta" },
-	{ "Tungsten", "W" },
-	{ "Rhenium", "Re" },
-	{ "Osmium", "Os" },
-	{ "Iridium", "Ir" },
-	{ "Platinum", "Pt" },
-	{ "Gold", "Au" },
-	{ "Mercury", "Hg" },
-	{ "Thallium", "Tl" },
-	{ "Lead", "Pb" },
-	{ "Bismuth", "Bi" },
-	{ "Polonium", "Po" },
-	{ "Astatine", "At" },
-	{ "Radon", "Rn" },
-	{ "Francium", "Fr" },
-	{ "Radium", "Ra" },
-	{ "Actinium", "Ac" },
-	{ "Thorium", "Th" },
-	{ "Protactinium", "Pa" },
-	{ "Uranium", "U" },
-	{ "Neptunium", "Np" },
-	{ "Plutonium", "Pu" },
-	{ "Americium", "Am" },
-	{ "Curium", "Cm" },
-	{ "Berkelium", "Bk" },
-	{ "Californium", "Cf" },
-	{ "Einsteinium", "Es" },
-	{ "Fermium", "Fm" },
-	{ "Mendelevium", "Md" },
-	{ "Nobelium", "No" },
-	{ "Lawrencium", "Lr" },
-	{ "Rutherfordium", "Rf" },
-	{ "Dubnium", "Db" },
-	{ "Seaborgium", "Sg" },
-	{ "Bohrium", "Bh" },
-	{ "Hassium", "Hs" },
-	{ "Meitnerium", "Mt" },
-	{ "Darmstadtium", "Ds" },
-	{ "Roentgenium", "Rg" },
-	{ "Copernicium", "Cn" },
-	{ "Nihonium", "Nh" },
-	{ "Flerovium", "Fl" },
-	{ "Moscovium", "Mc" },
-	{ "Livermorium", "Lv" },
-	{ "Tennessine", "Ts" },
-	{ "Oganesson", "Og" }
-} };
-
-void GetElement(int atomicNumber, std::string& name, std::string& symbol) {
-	if (atomicNumber < 1 || atomicNumber > 118) {
-		throw std::runtime_error("Invalid atomic number");
-	}
-
-	name = elements[atomicNumber - 1].first;
-	symbol = elements[atomicNumber - 1].second;
-}
 
 void Topology::BAT() {
 	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT BEGIN" << std::endl;
@@ -351,7 +219,9 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		const std::string initialName = amberReader->getAtomsName(i);
 		
 		// Set element
- 		bAtomList[i].setAtomicNumber( amberReader->getAtomicNumber(i) );
+		const int atomicNumber = amberReader->getAtomicNumber(i);
+ 		bAtomList[i].setAtomicNumber(atomicNumber);
+		bAtomList[i].setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
 
 		// Assign a "unique" name. The generator is however limited.
 		bAtomList[i].generateName(i);
@@ -359,7 +229,7 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		// Store the initial name from prmtop
 		bAtomList[i].setInName(initialName);
 
-		// Set atom type
+		// Set force field atom type
 		bAtomList[i].setFfType(initialName);
 
 		// Set charge as it is used in Amber
@@ -372,7 +242,8 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		bAtomList[i].setZ(amberReader->getAtomsZcoord(i) / 10.0);
 
 		// Set mass
-		bAtomList[i].setMass(amberReader->getAtomsMass(i));
+		const int mass = amberReader->getAtomsMass(i);
+		bAtomList[i].setMass(mass);
 
 		// Set Lennard-Jones parameters
 		bAtomList[i].setVdwRadius(amberReader->getAtomsRVdW(i));
@@ -382,7 +253,9 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		bAtomList[i].setResidueName(std::string("UNK"));
 		bAtomList[i].residueIndex = 1;
 
-	} // END atom properties
+		// Add element to cache
+		elementCache.addElement(atomicNumber, mass);
+	}
 }
 
 /** Set bonds properties from reader: bond indeces, atom neighbours.
@@ -427,16 +300,15 @@ void Topology::SetGmolAtomsCompoundTypes(){
 
 	// Set Gmolmodel name and element and inboard length
 	for(auto& atom : bAtomList) {
-		const int atomicNumber = atom.getAtomicNumber();
-		std::string name, symbol;
-		GetElement(atomicNumber, name, symbol);
 		
 		// bond centers must have been already set
 		const std::string& currAtomName = atom.getName();
-		const int& currAtomNBonds = atom.getNBonds();
-		atom.setAtomCompoundType(currAtomName, atomicNumber, name, symbol, atom.getMass());
+		const int atomicNumber = atom.getAtomicNumber();
+		const int mass = atom.getMass();
+		atom.setAtomCompoundType(currAtomName, elementCache.getElement(atomicNumber, mass));
 		
 		// Add BondCenters
+		const int currAtomNBonds = atom.getNBonds();
 		if(currAtomNBonds > 0){
 			if (currAtomNBonds == 1){
 				atom.addFirstBondCenter("bond1", currAtomName);
@@ -500,34 +372,20 @@ void Topology::bAddBiotypes(
 	std::string resName = this->name;
 
 	// Iterate atoms and define Biotypes with their indeces and names
-	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
+	for(auto& atom : bAtomList){
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
-			  SimTK::Element(
-				  bAtomList[i].getAtomicNumber(),
-				  ((bAtomList[i].getElem())).c_str(),
-				  ((bAtomList[i].getElem())).c_str(),
-				  bAtomList[i].getMass()),
-			bAtomList[i].getNBonds(),
+			elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
+			atom.getNBonds(),
 			resName.c_str(),
-			(bAtomList[i].getName()).c_str(),
+			(atom.getName()).c_str(),
 			SimTK::Ordinality::Any
 		);
 
-		// std::cout << "defined element in bAddBiotypes atom " << bAtomList[i].getAtomicNumber() << ((bAtomList[i].getElem())).c_str() << ((bAtomList[i].getElem())).c_str() << bAtomList[i].getMass() << std::endl;
-
-		// std::cout << "Added element with " << bAtomList[i].getAtomicNumber() << " " << bAtomList[i].getElem() << " " << bAtomList[i].getMass() << std::endl;
-		// std::cout << "BiotypeIndex"
-
-		bAtomList[i].setBiotypeIndex(biotypeIndex);
+		atom.setBiotypeIndex(biotypeIndex);
 
 		// Assign atom's biotype as a composed name: name + force field type
-		//std::string temp(bAtomList[i].name); // @ Restore MULMOL
-		std::string temp(name + bAtomList[i].getName()); // DEL MULMOL
-		temp += bAtomList[i].getFftype();
-		bAtomList[i].setBiotype(temp);
-		// std::cout << "biotype name is " << temp << std::endl;
-		/* std::cout << "Added Biotype " << temp 
-			<< " with BiotypeIndex " << biotypeIndex << std::endl; */
+		std::string biotype = resName + atom.getName() + atom.getFftype();
+		atom.setBiotype(biotype);
 	}
 }
 

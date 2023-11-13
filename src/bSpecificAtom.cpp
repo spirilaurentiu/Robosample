@@ -2,19 +2,12 @@
 
 using namespace SimTK;
 
-void bSpecificAtom::setAtomCompoundType(const SimTK::Compound::AtomName &atomName,
-        int atomicNumber,
-        SimTK::Element::Name elementName,
-        SimTK::Element::Symbol elementSymbol,
-        SimTK::mdunits::Mass atomicMass) {
-    // compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, SimTK::Element(atomicNumber, atomName, elementSymbol, atomicMass));
-
+void bSpecificAtom::setAtomCompoundType(const SimTK::Compound::AtomName &atomName, const SimTK::Element &element) {
     // the biotype is added like this. i want to have one element in a vector inside topology and reference it from there
-    compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, SimTK::Element(atomicNumber, elementSymbol, elementSymbol, atomicMass));
-    setElem(elementSymbol);
+    compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
     setCompoundName("SingleAtom");
 
-    // std::cout << "defined element in bSpecific atom " << atomicNumber << atomName << elementSymbol << atomicMass << std::endl;
+    // std::cout << "defined element in bSpecific atom " << atomicNumber << elementName << elementSymbol << atomicMass << std::endl;
 }
 
 void bSpecificAtom::destroy() {
