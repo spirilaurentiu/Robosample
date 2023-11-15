@@ -2136,8 +2136,8 @@ World::calcMobodToMobodTransforms(
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
 	// Get the neighbor atom in the parent mobilized body
-	//SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx); // SAFE
-	SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter.get(), aIx, *forceField); // DANGER
+	SimTK::Compound::AtomIndex chemParentAIx =
+		topology.getChemicalParent(matter.get(), aIx, *forceField);
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
@@ -2187,7 +2187,6 @@ World::calcMobodToMobodTransforms(
 		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
 		|| (mobility == SimTK::BondMobility::Mobility::Slider)
 		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-		//|| (mobility == SimTK::BondMobility::Mobility::Torsion)
 	);
 
 	if( (anglePin_OR) && ((atom->neighbors).size() == 1)){
@@ -2195,15 +2194,15 @@ World::calcMobodToMobodTransforms(
 
 	}else if( (anglePin_OR) && ((atom->neighbors).size() != 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-		//return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
-	}else if(mobility == SimTK::BondMobility::Mobility::Torsion){
+	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
+			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
+			||	(mobility == SimTK::BondMobility::Mobility::Spherical)){
 		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
 	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
-	//|| (mobility == SimTK::BondMobility::Mobility::Spherical)
 	){
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
