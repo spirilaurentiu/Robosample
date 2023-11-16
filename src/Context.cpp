@@ -463,6 +463,43 @@ bool Context::initializeFromFile(const std::string &file)
 	
 	setThermostatesNonequilibrium();
 
+
+	/* // Add constraints
+	//context.addConstraints();
+
+	PrintInitialRecommendedTimesteps();
+
+	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
+		setRunType(0);
+		Run(getRequiredNofRounds(),
+			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+			
+	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+			setRunType(0);
+			RunSimulatedTempering(getRequiredNofRounds(),
+				std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+				std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+
+	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
+		setRunType(1);
+		RunREX();
+
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
+		setRunType(2);
+		RunREX();
+
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
+		setRunType(3);
+		RunREX();
+
+	}else{
+		setRunType(0);
+		Run(getRequiredNofRounds(),
+			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+	} */
+
     return true;
 }
 
@@ -734,23 +771,41 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// }
 }
 
+/** 
+ * Main run function
+*/
 void Context::Run() {
-	if(run_type == RunType::SimulatedTempering) {
-		RunSimulatedTempering(getRequiredNofRounds(), tempIni, tempFin);
-	}else if(run_type == RunType::REX){
-		RunREX();
-	}else{
+	if(getRunType() == RunType::Default) {
 		Run(getRequiredNofRounds(), tempIni, tempFin);
+
+	}else if(  (getRunType() == RunType::REMC)
+			|| (getRunType() == RunType::RENEMC)
+			|| (getRunType() == RunType::RENE)){
+		RunREX();
+
+	}else{
+		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
+		Run(getRequiredNofRounds(), tempIni, tempFin);
+
 	}
 }
 
+/** 
+ * Main run function
+*/
 void Context::Run(int rounds) {
-	if(run_type == RunType::SimulatedTempering) {
-		RunSimulatedTempering(rounds, tempIni, tempFin);
-	}else if(run_type == RunType::REX){
+	if(getRunType() == RunType::Default) {
+		Run(rounds, tempIni, tempFin);
+
+	}else if(  (getRunType() == RunType::REMC)
+			|| (getRunType() == RunType::RENEMC)
+			|| (getRunType() == RunType::RENE)){
+
 		RunREX();
 	}else{
+		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
 		Run(rounds, tempIni, tempFin);
+
 	}
 }
 
@@ -897,18 +952,20 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 		}
 	}
 
-	if ( setupReader.get("RUN_TYPE")[0] == "SimulatedTempering" ) {
-		run_type = RunType::SimulatedTempering;
-		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
-		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
-	} else if ( setupReader.get("RUN_TYPE")[0] == "REX" ) {
-		run_type = RunType::REX;
-	} else if ( setupReader.get("RUN_TYPE")[0] == "RENS" ) {
-		run_type = RunType::RENS;
+	// Set the type of simulation and temperatures
+	if ( setupReader.get("RUN_TYPE")[0] == "REMC" ) {
+		setRunType(RunType::REMC);
+	} else if ( setupReader.get("RUN_TYPE")[0] == "RENEMC" ) {
+		setRunType(RunType::RENEMC);
+	}else if ( setupReader.get("RUN_TYPE")[0] == "RENE" ) {
+		setRunType(RunType::RENE);
 	} else {
 		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
 		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
+
+		setRunType(RunType::Default);
 	}
+	std::cout << "[CheckInput] " << "Im doing " << static_cast<int>(runType) << std::endl;
 
 	// If we got here we can set global variables
 	// Reserve memory
@@ -2849,17 +2906,20 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		log_p_accept = ETerm_equil ;
 	} */
 
-	if(getRunType() == 1){
+	if(getRunType() == RunType::REMC){
 
 		log_p_accept = ETerm_equil ;
+		std::cout << "[REX] " << "Im doing REMC\n";
 
-	}else if(getRunType() == 2){
+	}else if(getRunType() == RunType::RENEMC){
 
 		log_p_accept = ETerm_nonequil + std::log(correctionTerm) ;
+		std::cout << "[REX] " << "Im doing RENEMC\n";
 
-	}else if( getRunType() == 3){
+	}else if( getRunType() == RunType::RENE){
 
 		log_p_accept = WTerm + std::log(correctionTerm) ;
+		std::cout << "[REX] " << "Im doing RENE\n";
 
 	}
 
@@ -4621,7 +4681,7 @@ void Context::RunREX()
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() > 0){
+		if(getRunType() != RunType::Default){
 			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 				if ((mixi % 2) == 0){
 					mixNeighboringReplicas(0);

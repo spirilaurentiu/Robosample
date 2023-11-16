@@ -20,9 +20,9 @@ enum class ReplicaMixingScheme : int {
 
 enum class RunType : int {
 	Default = 0,
-	SimulatedTempering = 1,
-	REX = 2,
-	RENS = 3
+	REMC = 1,
+	RENEMC = 2,
+	RENE = 3
 };
 
 class Context{
@@ -432,8 +432,9 @@ public:
 	void updWorldsDistortOptions(int thisReplica);
 	void updQScaleFactors(int mixi);
 
-	int getRunType(void){return runType;}
-	void setRunType(int runTypeArg){this->runType = runTypeArg;}
+	RunType getRunType(void) const {return runType;}
+	void setRunType(const int runTypeArg){this->runType = RunType(runTypeArg);}
+	void setRunType(const RunType runTypeArg){this->runType = runTypeArg;}
 
 	// Run a particular world
 	bool RunWorld(int whichWorld);
@@ -550,7 +551,6 @@ private:
 	////////////////////////
 	//// REPLICA EXCHANGE //
 	////////////////////////
-	int runType;
 
 	std::vector<ThermodynamicState> thermodynamicStates;
 	std::vector<Replica> replicas;
@@ -590,7 +590,7 @@ private:
 
 	std::string cerr_prefix = "[ERROR] ";
 
-	RunType run_type = RunType::Default;
+	RunType runType = RunType::Default;
 	SimTK::Real tempIni = 0,
 		tempFin = 0;
 

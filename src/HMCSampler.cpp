@@ -3818,7 +3818,7 @@ bool HMCSampler::acceptSample() {
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-	auto start = std::chrono::system_clock::now();
+	//auto start = std::chrono::system_clock::now();
 	
 	/* std::cout << "Transforms before sample_iteration\n";
 	world->PrintAcosX_PFs();
@@ -3908,9 +3908,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		
 	}
 
-	auto end = std::chrono::system_clock::now();
-    auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "\telapsed time (microseconds): " << useconds << std::endl;
+	// auto end = std::chrono::system_clock::now();
+    // auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    // std::cout << "\telapsed time (microseconds): " << useconds << std::endl;
 
 	// Increase the sample counter and return
 	++nofSamples;
