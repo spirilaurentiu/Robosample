@@ -263,7 +263,7 @@ int main(int argc, char **argv)
 		throw std::exception();
 		std::exit(1);
 	}
-	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
+	std::cout << "Added " << finalNofMols << " molecules" << std::endl<< std::flush;
 
 	// Loads parameters into DuMM
 	context.addDummParams(finalNofMols, setupReader);
@@ -333,7 +333,7 @@ int main(int argc, char **argv)
 
 		float sphere_radius = std::stod(setupReader.get("SPHERE_RADIUS")[0]);
 
-		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
+		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl<< std::flush;
 
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 			context.getWorld(worldIx)->setTopologyIXs(topologyIXs);

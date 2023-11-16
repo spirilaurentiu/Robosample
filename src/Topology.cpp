@@ -247,48 +247,6 @@ void Topology::SetGmolAtomsCompoundTypesTrial(){
 
 	}	
 
-	/* // Set Gmolmodel name and element and inboard length
-	for(int i = 0; i < (natoms); i++) {
-		if(((bAtomList[i].elem) == "H")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name, Element(1, "Hydrogen", "H", bAtomList[i].getMass()) );
-			bAtomList[i].setAtomicNumber(1);
-		}else if(((bAtomList[i].elem) == "O")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name, Element(8, "Oxygen", "O", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(8);
-		}else if(((bAtomList[i].elem) == "F")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name, Element(9, "Fluorine", "F", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(9);
-		}else if(((bAtomList[i].elem) == "I")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name, Element(53, "Iodine", "I", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(53);
-		}else if(((bAtomList[i].elem) == "N")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name, Element(7, "Nitrogen", "N", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(7);
-		}else if(((bAtomList[i].elem) == "C")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name,  Element(6, "Carbon", "C", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(6);
-		}else if(((bAtomList[i].elem) == "S")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name,  Element(16, "Sulfur", "S", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(16);
-		}else if(((bAtomList[i].elem) == "P")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name,  Element(15, "Phosphorus", "P", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(15);
-		}else if(((bAtomList[i].elem) == "M")){
-			bAtomList[i].CompoundSingleAtom = new
-					Compound::SingleAtom(bAtomList[i].name,  Element(15, "Magnesium", "Mg", bAtomList[i].getMass()));
-			bAtomList[i].setAtomicNumber(12);
-		}
-
-	} */
-
 	// Add bond centers
 	Angle TetrahedralAngle = 109.47 * Deg2Rad;
 
