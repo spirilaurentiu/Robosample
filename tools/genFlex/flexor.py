@@ -1,7 +1,7 @@
 import numpy as np
 import mdtraj as md
 import networkx as nx
-import json, sys
+import os
 
 
 class Flexor:
@@ -25,8 +25,7 @@ class Flexor:
         self._DB = {}
 
 
-    def addWorld(self, range, subset,jointType, FNOut, distanceCutoff=0, sasa_value=-1, rolling=False,
-                fileCounter=0):
+    def addWorld(self, range, subset,jointType, FNOut, distanceCutoff=0, sasa_value=-1, rolling=False):
         '''
         Parameters
         ----------
@@ -68,8 +67,6 @@ class Flexor:
         rolling:  bool
             if True, this world's flexibility will be split across multiple files (one joint
             per file)
-        fileCounter: int
-            Needed for world assignment in RIG (Robosample Input Generator).
         Returns
         ----------
         None
@@ -83,10 +80,10 @@ class Flexor:
             jointType = "cart"
 
         jointCount = 0
+        fileCounter = 0
         if (rolling == False):
             fileOut = open("{}.flex".format(FNOut), "w")
-            fileNameIX.append([fileOut,fileCounter])
-            fileCounter+=1
+            fileNameIX.append(os.path.basename(fileOut.name))
             
 
         selIx = list(self._MDTrajObject.topology.select(range))
@@ -142,7 +139,7 @@ class Flexor:
                             (self.check_cycle(edge[0],edge[1]))):
                             if (rolling == True):
                                 fileOut = open("{}.{}.flex".format(FNOut, fileCounter), "w")
-                                fileNameIX.append([fileOut,fileCounter])
+                                fileNameIX.append(os.path.basename(fileOut.name))
                                 fileCounter += 1
                             fileOut.write("{:5d} {:5d} {} #{} {}\n".format(edge[0].index, edge[1].index, jointType.capitalize(),
                                                             edge[0], edge[1]))
@@ -179,7 +176,7 @@ class Flexor:
 
         fileOut.close()
         print ("Flex file {} generated! ({} joints)".format(fileOut.name, jointCount))
-        return (fileCounter)
+        return (fileNameIX)
 
     # Helper functions
     def check_joint(self, atom, jointType, subset):

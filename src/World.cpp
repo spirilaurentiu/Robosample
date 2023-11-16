@@ -683,34 +683,24 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 
 
 /** Add contact surfaces to bodies **/
-// Hard-coded for NS2, this needs to be changed
-//const SimTK::State& World::addContacts(std::vector<int>& prmtopIndex, int topologyIx)
-void World::addContacts(std::vector<int>& prmtopIndex, int topologyIx, SimTK::ContactCliqueId cliqueId)
+void World::addContacts(const std::vector<int>& prmtopIndex, const int topologyIx, 
+						const SimTK::ContactCliqueId cliqueId)
 {
 	// Iterate through the prmtopIndex and add the appropriate spheres
 
-	cliqueId = SimTK::ContactCliqueId(cliqueId);
-
 	for(int prmtopIx : (prmtopIndex)){
-		if (prmtopIx == -1 && (prmtopIndex.size() == 1)){
-			break;
-		}
-		if (prmtopIx == -1 && (prmtopIndex.size() > 1)){
-			std::cout << "################################################" << std::endl;
-			std::cout << "Warning: you included the atom index \"-1\", which is "
-			"invalid. The inclusion of -1 in the contacts parameters is used to skip "
-			" topologies, and it looks like you may have included it by accident. You have been warned.";
-			std::cout << "###############################################" << std::endl;
+		if (prmtopIx == -1) {
+			std::cout << "World::addContacts: prmtop index -1 found. Skipping topologyIx " << topologyIx << std::endl;
 			break;
 		}
 
 		std::cout << "Adding contacts with membrane to atom with prmtop index " <<
-			prmtopIx << " to topology " << topologyIx << std::endl;
+			prmtopIx << " to topology " << topologyIx << " in clique " << cliqueId << std::endl;
 
 
 
 		const Real stiffness = 10000; // stiffness in pascals
-		const Real dissipation = 1.0;    // to turn off dissipation
+		const Real dissipation = 0.0; 
 		SimTK::Real staticFriction = 0.0;
 		SimTK::Real dynamicFriction = 0.0;
 		SimTK::Real viscousFriction = 0.0;
@@ -758,9 +748,6 @@ void World::addContacts(std::vector<int>& prmtopIndex, int topologyIx, SimTK::Co
 				showSphere.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
 		}
 	}
-
-	/* const SimTK::State& returnState = compoundSystem->realizeTopology();
-	return returnState; */
 }
 
 //=============================================================================
@@ -768,10 +755,8 @@ void World::addContacts(std::vector<int>& prmtopIndex, int topologyIx, SimTK::Co
 //=============================================================================
 
 /** Add a membrane represented by a contact surface **/
-void World::addMembrane(SimTK::Real halfThickness)
+void World::addMembrane(const SimTK::Real halfThickness)
 {
-
-	//float distanceValue = resolution;
 
 	SimTK::Real stiffness = 10000;
 	SimTK::Real dissipation = 0;
@@ -779,15 +764,26 @@ void World::addMembrane(SimTK::Real halfThickness)
 	SimTK::Real dynamicFriction = 0.0;
 	SimTK::Real viscousFriction = 0.0;
 
-
-	// Z Axis walls
  	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, halfThickness)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(1))
+			.joinClique(SimTK::ContactCliqueId(2))
+			.joinClique(SimTK::ContactCliqueId(3))
+			);
+
+	matter->Ground().updBody().addContactSurface(
 		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -halfThickness)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
-			.joinClique(SimTK::ContactCliqueId(1)));
+			.joinClique(SimTK::ContactCliqueId(0))
+			.joinClique(SimTK::ContactCliqueId(2))
+			.joinClique(SimTK::ContactCliqueId(3)));
 	
 	matter->Ground().updBody().addContactSurface(
 		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, halfThickness)),
@@ -795,13 +791,25 @@ void World::addMembrane(SimTK::Real halfThickness)
 		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
 			staticFriction, dynamicFriction, viscousFriction))
-			.joinClique(SimTK::ContactCliqueId(0)));
+			.joinClique(SimTK::ContactCliqueId(0))
+			.joinClique(SimTK::ContactCliqueId(1))
+			.joinClique(SimTK::ContactCliqueId(3))
+			);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -halfThickness)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			.joinClique(SimTK::ContactCliqueId(1))
+			.joinClique(SimTK::ContactCliqueId(2))
+			);
+
 
 	if (visual == true) {
 		DecorativeFrame contactGeometryDecoFrame;
-		/* matter->Ground().updBody().addDecoration(
-			Transform(), contactGeometryDecoFrame.setColor(Red)
-		); */
 		matter->Ground().updBody().addDecoration(
 		Transform(),
         DecorativeBrick(Vec3(10,10,halfThickness)).setColor(Orange).setOpacity(0.25));

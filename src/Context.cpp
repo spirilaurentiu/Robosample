@@ -3430,7 +3430,7 @@ int Context::RunWorld(int whichWorld)
 
 	}
 	// Print Contact info Debug
-	getContactDebugInfo(whichWorld);
+	//getContactDebugInfo(whichWorld);
 	return accepted;
 
 }

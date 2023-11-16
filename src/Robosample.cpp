@@ -293,33 +293,81 @@ int main(int argc, char **argv)
 	// Is this necessary?
 	context.realizeTopology();
 
-	// Add membrane
+	// Membrane START //
+	bool haveMembrane = (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND");
+	if (haveMembrane){
+	// Add membrane.
 	
-	float memXWidth = std::stof(setupReader.get("MEMBRANE")[0]);
-	float memYWidth = std::stof(setupReader.get("MEMBRANE")[1]);
-	float memZWidth = std::stof(setupReader.get("MEMBRANE")[2]);
-	int memResolution = std::stof(setupReader.get("MEMBRANE")[3]);
+		float memZWidth = std::stof(setupReader.get("MEMBRANE")[0]);
 	
-	std::vector<std::vector<int>> atomIxsClique1 {{282}, {270}};
-	std::vector<std::vector<int>> atomIxsClique0 {{11}, {40}};
+		// Before adding the membrane, we add the contacts and join them
+		// to the appropiate Contact Cliques
 
-	bool haveMembrane = (memXWidth > SimTK::TinyReal) && (memYWidth > SimTK::TinyReal) && (memZWidth > SimTK::TinyReal);
-	if(haveMembrane){
+		// Each of the flags are formatted as such:
+		// CONTACTS_X  int1 int2 , int3 int4 int5
+		// X is one of {0,1,2,3}, the ints are atom indices (0-Based)
+		// and the comma separates the topologies. In the example given
+		// the contacts are set on atoms int1, int2 for topology 0,
+		// and on atoms int3, int4 and int5 for topology 1.
+		// If the user wishes to skip a topology, then they'd 
+		// input "-1" as the only atom index.
+
+		std::vector<std::vector<std::vector<int>>> atomIxsCliques;
+
+		
+		for (int contactClique=0; contactClique<4; contactClique++){
+			atomIxsCliques.push_back({});
+			int cur_topology=0;
+			atomIxsCliques[contactClique].push_back({});
+			
+			std::ostringstream flag_name;
+			flag_name << "CONTACTS_" << contactClique;
+			
+			if (setupReader.get(flag_name.str()).size() > 2) {
+				for (const auto& value : setupReader.get(flag_name.str())){
+					
+					if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
+						atomIxsCliques[contactClique].push_back({});
+						cur_topology++;
+					}
+					else {
+						atomIxsCliques[contactClique][cur_topology].push_back(std::stoi(value));
+					}
+				}
+
+				for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
+				// Add contacts for all worlds
+					for (int topologyIx=0; topologyIx<atomIxsCliques[contactClique].size(); topologyIx++){
+						context.updWorld(worldIx)->addContacts(atomIxsCliques[contactClique][topologyIx],
+																topologyIx, SimTK::ContactCliqueId(contactClique));
+
+					}
+				}
+			}
+		}
+
+		// Add membrane to all worlds.
+
 		for(unsigned int worldIx = 0; worldIx < context.getNofWorlds(); worldIx++){
-
-			// Add contacts for all worlds
-			// I *assume* there will be no case where you'd exclude a topology from contact calculation
-			// for just one of the cliques so I won't split this for-loop.
-			for (int topologyIx=0; topologyIx<atomIxsClique0.size(); topologyIx++){
-				context.updWorld(worldIx)->addContacts(atomIxsClique0[topologyIx], topologyIx, SimTK::ContactCliqueId(0));
-				context.updWorld(worldIx)->addContacts(atomIxsClique1[topologyIx], topologyIx, SimTK::ContactCliqueId(1));}
-
-
 			(context.updWorld(worldIx))->addMembrane(memZWidth);
 		}
+		std::cout << "\n########## MEMBRANE STATS ##########\n";
+		std::cout << "Atom cliques are: \n";
+		for (int contactClique=0; contactClique<4; contactClique++){
+			for (const auto& topologyIx : atomIxsCliques[contactClique]) {
+			for (int atomIx : topologyIx) {
+				std::cout << atomIx << " ";
+			}
+			std::cout << " / ";
+		}
+		std::cout << std::endl;
+		}
+		std::cout << "########## MEMBRANE STATS ##########\n\n";
+
+		context.realizeTopology();
 	}
 
-	context.realizeTopology();
+	// Membrane END //
 
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){

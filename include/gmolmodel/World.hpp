@@ -180,26 +180,42 @@ public:
 	//=========================================================================
 	//                   Membrane-Related Functions
 	//=========================================================================
-
-	/** Add contact surfaces to bodies 
+	
+	//------------------------------------------------------------------------------
+	/** @name addContacts - addContacts  **/
+	/**@{**/
+	/**	Add contact surfaces to bodies 
 		By (my own) convention, the atoms that are in Z>0 are in constant 
 		contact	with the half-space with clique1, so set those in Clique 0 to
-		avoid system destruction.**/
-	void addContacts(std::vector<int>& prmtopIndex, int topologyIx, 
-		SimTK::ContactCliqueId cliqueId);
+		avoid large energies/movements.
+		If a prmtopIndex of (-1) is encountered, that means that 
+		particlular topology needs to be skipped.**/
+	void addContacts(const std::vector<int>& prmtopIndex, const int topologyIx, 
+		const SimTK::ContactCliqueId cliqueId);
 
-	
-
-	/* 	Add a membrane represented by a contact surface 
-		It's two halfspaces, occupying the Z>0 and Z<0 spaces, which
-		are shifted on the Z axis by halfThickness. The theoretical
-		membrane thus generated is of thickness 2*halfThickness. By using
-		contact cliques, we can simulate the presence of a membrane.*/
-	void addMembrane(SimTK::Real halfThickness);
-
-	//=========================================================================
-	//                   Membrane-Related Functions END
-	//=========================================================================
+	/** Add a membrane represented by a contact surface 
+	We can approximate a membrane-like environment (mechanically speaking,
+ 	i.e. no electrostatic interactions (!yet!) ) via an elastic environment.
+	In practice, we realize this by way of 4 overlapping half-spaces. 
+	2 of them occupy the Z>0 space and are translated on the Z axis by the
+	value of halfThickness. The other 2 occupy the Z<0 spaceand are translated
+	by the same value.
+	The way this works is we select 4 subsets of atoms: 
+		*) 1 that is "below" the membrane, and can't go up on the Z axis:
+			these can be charged atoms that can't cross the hydrophobic core of the membrane
+		*) 1 that is "above" the membrane, and can't go higher on the Z axis:
+			these can be hydrophobic patches that can't "escape" the hydrophobic patch
+			Think of a hydrophobic helix that's lodged in the membrane
+		*) The other 2 are the same, but in reverse ("above" the membrane, but can't cross down
+			and "below" but can't go lower") 
+	Each of these subsets are only affected by one half-space. The contact cliques are:
+		0) Z>0, translated by +halfThickness on the Z axis
+		1) Z>0, translated by -halfThickness on the Z axis
+		2) Z<0, translated by +halfThickness on the Z axis
+		3) Z<0, translated by -halfThickness on the Z axis **/
+	void addMembrane(const SimTK::Real halfThickness);
+	/**@}**/
+	//------------------------------------------------------------------------------
 
 
 	/** Realize Topology for this World **/
