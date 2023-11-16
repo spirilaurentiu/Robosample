@@ -181,9 +181,10 @@ public:
 	//                   Membrane-Related Functions
 	//=========================================================================
 	
-	//------------------------------------------------------------------------------
-	/** @name addContacts - addContacts  **/
+	//-------------------------------------------------------------------------
+	/** @name Contacts - Contacts  **/
 	/**@{**/
+
 	/**	Add contact surfaces to bodies 
 		By (my own) convention, the atoms that are in Z>0 are in constant 
 		contact	with the half-space with clique1, so set those in Clique 0 to
@@ -215,7 +216,7 @@ public:
 		3) Z<0, translated by -halfThickness on the Z axis **/
 	void addMembrane(const SimTK::Real halfThickness);
 	/**@}**/
-	//------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------
 
 
 	/** Realize Topology for this World **/

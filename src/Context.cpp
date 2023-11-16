@@ -6305,4 +6305,75 @@ void Context::PrintNumThreads() {
 //------------
 
 
+void Context::addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader){
+
+	
+		// Before adding the membrane, we add the contacts and join them
+		// to the appropiate Contact Cliques
+
+		// Each of the flags are formatted as such:
+		// CONTACTS_X  int1 int2 , int3 int4 int5
+		// X is one of {0,1,2,3}, the ints are atom indices (0-Based)
+		// and the comma separates the topologies. In the example given
+		// the contacts are set on atoms int1, int2 for topology 0,
+		// and on atoms int3, int4 and int5 for topology 1.
+		// If the user wishes to skip a topology, then they'd 
+		// input "-1" as the only atom index.
+
+		std::vector<std::vector<std::vector<int>>> atomIxsCliques;
+
+		
+		for (int contactClique=0; contactClique<4; contactClique++){
+			atomIxsCliques.push_back({});
+			int cur_topology=0;
+			atomIxsCliques[contactClique].push_back({});
+			
+			std::ostringstream flag_name;
+			flag_name << "CONTACTS_" << contactClique;
+			
+			if (setupReader.get(flag_name.str()).size() > 2) {
+				for (const auto& value : setupReader.get(flag_name.str())){
+					
+					if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
+						atomIxsCliques[contactClique].push_back({});
+						cur_topology++;
+					}
+					else {
+						atomIxsCliques[contactClique][cur_topology].push_back(std::stoi(value));
+					}
+				}
+
+				for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+				// Add contacts for all worlds
+					for (int topologyIx=0; topologyIx<atomIxsCliques[contactClique].size(); topologyIx++){
+						updWorld(worldIx)->addContacts(atomIxsCliques[contactClique][topologyIx],
+																topologyIx, SimTK::ContactCliqueId(contactClique));
+
+					}
+				}
+			}
+		}
+
+		// Add membrane to all worlds.
+
+		for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+			(updWorld(worldIx))->addMembrane(memZWidth);
+		}
+		std::cout << "\n########## MEMBRANE STATS ##########\n";
+		std::cout << "Atom cliques are: \n";
+		for (int contactClique=0; contactClique<4; contactClique++){
+			for (const auto& topologyIx : atomIxsCliques[contactClique]) {
+			for (int atomIx : topologyIx) {
+				std::cout << atomIx << " ";
+			}
+			std::cout << " / ";
+		}
+		std::cout << std::endl;
+		}
+		std::cout << "########## MEMBRANE STATS ##########\n\n";
+
+		realizeTopology();
+	}
+
+
 

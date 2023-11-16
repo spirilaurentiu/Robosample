@@ -574,6 +574,12 @@ private:
 
 	std::vector<SimTK::Real> qScaleFactors;
 
+public:
+	/** Implicit membrane mimicked by half-space contacts */
+	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
+
+
+
 };
 
 #endif //__CONTEXT_HPP__

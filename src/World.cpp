@@ -680,8 +680,6 @@ const SimTK::State& World::addConstraints(int prmtopIndex)
 //                   CONTACTS Functions
 //=============================================================================
 
-
-
 /** Add contact surfaces to bodies **/
 void World::addContacts(const std::vector<int>& prmtopIndex, const int topologyIx, 
 						const SimTK::ContactCliqueId cliqueId)
@@ -817,6 +815,7 @@ void World::addMembrane(const SimTK::Real halfThickness)
 	}
 
 }
+
 
 
 /** Realize Topology for this World **/
