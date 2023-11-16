@@ -176,6 +176,8 @@ World::World(int worldIndex,
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
 	ts = std::make_unique<SimTK::TimeStepper>(*compoundSystem, *integ);
 
+	const SimTK::MultibodySystem& mbs = forces->getMultibodySystem();
+	
 	// Set the visual flag and if true initialize a Decorations Subsystem,
 	// a Visualizer and a Simbody EventReporter which interacts with the
 	// Visualizer
@@ -186,6 +188,8 @@ World::World(int worldIndex,
 		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
 			*visualizer, std::abs(visualizerFrequency));
 		compoundSystem->addEventReporter(visualizerReporter.get());
+
+		visualizer->addDecorationGenerator(new ForceArrowGenerator(mbs, *contactForces));
 
 		// Initialize a DecorationGenerator
 		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
