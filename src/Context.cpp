@@ -2909,17 +2909,14 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	if(getRunType() == RunType::REMC){
 
 		log_p_accept = ETerm_equil ;
-		std::cout << "[REX] " << "Im doing REMC\n";
 
 	}else if(getRunType() == RunType::RENEMC){
 
 		log_p_accept = ETerm_nonequil + std::log(correctionTerm) ;
-		std::cout << "[REX] " << "Im doing RENEMC\n";
 
 	}else if( getRunType() == RunType::RENE){
 
 		log_p_accept = WTerm + std::log(correctionTerm) ;
-		std::cout << "[REX] " << "Im doing RENE\n";
 
 	}
 
