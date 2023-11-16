@@ -6332,10 +6332,10 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 			// Get values for this contactCliqueIx
 			std::string contactClique_key = "CONTACTS_";
 			contactClique_key.append( std::to_string(contactCliqueIx) );
-			std::vector<std::string> contactClique_vals = setupReader.get(contactClique_key);
+			const std::vector<std::string>& contactClique_vals = setupReader.get(contactClique_key);
 			
 			int cur_topology = 0;
-			if (contactClique_vals > 2) {
+			if (contactClique_vals.size() > 2) {
 
 				// Get atom indexes for this clique
 				for (const auto& value : contactClique_vals){
