@@ -595,5 +595,11 @@ private:
 		tempFin = 0;
 
 	SetupReader setupReader;
+
+public:
+	/** Implicit membrane mimicked by half-space contacts */
+	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
+
+
 };
 
