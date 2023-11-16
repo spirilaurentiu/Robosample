@@ -6304,7 +6304,7 @@ void Context::PrintNumThreads() {
 
 //------------
 
-
+/** Implicit membrane mimicked by half-space contacts */
 void Context::addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader){
 
 	
@@ -6320,49 +6320,64 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 		// If the user wishes to skip a topology, then they'd 
 		// input "-1" as the only atom index.
 
-		std::vector<std::vector<std::vector<int>>> atomIxsCliques;
+		std::vector<std::vector<std::vector<int>>> cliqueAtomIxs;
 
 		
-		for (int contactClique=0; contactClique<4; contactClique++){
-			atomIxsCliques.push_back({});
-			int cur_topology=0;
-			atomIxsCliques[contactClique].push_back({});
+		for (int contactCliqueIx = 0; contactCliqueIx < 4; contactCliqueIx++){
+
+			// Empty vector of prmtop atom indexes
+			cliqueAtomIxs.push_back({});
+			cliqueAtomIxs[contactCliqueIx].push_back({});
+
+			// Get values for this contactCliqueIx
+			std::string contactClique_key = "CONTACTS_";
+			contactClique_key.append( std::to_string(contactCliqueIx) );
+			std::vector<std::string> contactClique_vals = setupReader.get(contactClique_key);
 			
-			std::ostringstream flag_name;
-			flag_name << "CONTACTS_" << contactClique;
-			
-			if (setupReader.get(flag_name.str()).size() > 2) {
-				for (const auto& value : setupReader.get(flag_name.str())){
+			int cur_topology = 0;
+			if (contactClique_vals > 2) {
+
+				// Get atom indexes for this clique
+				for (const auto& value : contactClique_vals){
 					
 					if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
-						atomIxsCliques[contactClique].push_back({});
+						cliqueAtomIxs[contactCliqueIx].push_back({});
 						cur_topology++;
 					}
 					else {
-						atomIxsCliques[contactClique][cur_topology].push_back(std::stoi(value));
+						cliqueAtomIxs[contactCliqueIx][cur_topology].push_back(std::stoi(value));
 					}
 				}
 
-				for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-				// Add contacts for all worlds
-					for (int topologyIx=0; topologyIx<atomIxsCliques[contactClique].size(); topologyIx++){
-						updWorld(worldIx)->addContacts(atomIxsCliques[contactClique][topologyIx],
-																topologyIx, SimTK::ContactCliqueId(contactClique));
+				// Check
+				if(cur_topology != topologies.size()){
+					std::cout << "[WARNING] " 
+						<< "Number of topologies in CONTACT_ keys don't match the actual number of topologies\n";
+				}
 
+				// Add contact atom indexes for all worlds
+				for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+					for (int topologyIx = 0;topologyIx < cliqueAtomIxs[contactCliqueIx].size(); topologyIx++){
+						
+						(updWorld(worldIx))->addContacts(
+								cliqueAtomIxs[contactCliqueIx][topologyIx],
+								topologyIx,
+								SimTK::ContactCliqueId(contactCliqueIx));
 					}
 				}
 			}
 		}
 
 		// Add membrane to all worlds.
-
 		for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 			(updWorld(worldIx))->addMembrane(memZWidth);
 		}
+
+		// Print
 		std::cout << "\n########## MEMBRANE STATS ##########\n";
 		std::cout << "Atom cliques are: \n";
 		for (int contactClique=0; contactClique<4; contactClique++){
-			for (const auto& topologyIx : atomIxsCliques[contactClique]) {
+			for (const auto& topologyIx : cliqueAtomIxs[contactClique]) {
 			for (int atomIx : topologyIx) {
 				std::cout << atomIx << " ";
 			}
@@ -6372,7 +6387,10 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 		}
 		std::cout << "########## MEMBRANE STATS ##########\n\n";
 
+
+		// TODO: Do we need this here (looks like World's buissiness)
 		realizeTopology();
+
 	}
 
 
