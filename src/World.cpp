@@ -2182,14 +2182,14 @@ SimTK::State& World::setAtomsLocationsInGround(
 std::vector<SimTK::Transform>
 World::calcMobodToMobodTransforms(
 	Topology& topology,
-	SimTK::Compound::AtomIndex aIx,
+	SimTK::Compound::AtomIndex rootAIx,
 	const SimTK::State& someState)
 {
 	// There is no P_X_F and B_X_M inside a body.
 	// assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
 
 	// Get body, parentBody
-	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
 
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
@@ -2197,11 +2197,11 @@ World::calcMobodToMobodTransforms(
 
 	// Get the neighbor atom in the parent mobilized body
 	SimTK::Compound::AtomIndex chemParentAIx =
-		topology.getChemicalParent(matter.get(), aIx, *forceField);
+		topology.getChemicalParent(matter.get(), rootAIx, *forceField);
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
-	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(aIx, chemParentAIx);
+	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
 
 	// Get Top to parent frame
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
@@ -2209,7 +2209,7 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 
 	// Get inboard dihedral angle
-	SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(aIx);
+	SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
 	SimTK::Transform InboardDihedral_XAxis
 		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
 	SimTK::Transform InboardDihedral_ZAxis
@@ -2219,7 +2219,7 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
 	SimTK::Transform Z_to_X = ~X_to_Z;
 	SimTK::Transform oldX_PB =
-		(~T_X_Proot) * topology.getTopTransform(aIx)
+		(~T_X_Proot) * topology.getTopTransform(rootAIx)
 		* InboardDihedral_XAxis * X_to_Z
 		* InboardDihedral_ZAxis * Z_to_X;
 
@@ -2238,9 +2238,9 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
 
 	// Get mobility (joint type)
-	bSpecificAtom *atom = topology.updAtomByAtomIx(aIx);
+	bSpecificAtom *atom = topology.updAtomByAtomIx(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	bBond bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
+	bBond bond = topology.getBond(topology.getNumber(rootAIx), topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	bool anglePin_OR = (
