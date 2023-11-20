@@ -3900,6 +3900,10 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		} */
 
 	}else{
+		
+		// RESET
+		restore(someState);
+
 		if(this->alwaysAccept == true){
 			std::cout << "\trej (MD) invalid\n";
 		}else{

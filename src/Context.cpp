@@ -2155,14 +2155,14 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			// Reinitialize current sampler
 			updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
-			// Iterate through samples
+			// Update
 			for(int k = 0; k < int(getNofSamplesPerRound(currentWorldIx)); k++){ 
 				updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
 			} // END for samples
 
 		} // for i in worlds
 
-		// Print energy and geometric features
+		// Print energy and geometric feat	ures
 		if( !(round % getPrintFreq()) ){
 			/* PrintSamplerDataToLog(worldIndexes.back());
 			PrintDistancesToLog(worldIndexes.back());
