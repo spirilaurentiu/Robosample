@@ -216,7 +216,7 @@ public:
 	virtual void initialize(SimTK::State& advanced);
 
 	/** Same as initialize **/
-	virtual void reinitialize(SimTK::State& advanced) ;
+	virtual bool reinitialize(SimTK::State& advanced) ;
 
 	/** Get the TimeStepper that manages the integrator **/
 	const SimTK::TimeStepper * getTimeStepper();
@@ -453,7 +453,8 @@ protected:
 	// BEGIN MCSampler
 	std::vector<SimTK::Transform> SetTVector; // Transform matrices
 	std::vector<SimTK::Transform> TVector; // Transform matrices
-	SimTK::Real pe_set = 0.0,
+	SimTK::Real pe_init = 0.0,
+		pe_set = 0.0,
 	    pe_o = 0.0,
 	    pe_n = 0.0;
 

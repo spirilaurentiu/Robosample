@@ -597,7 +597,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
 				std::string debugString = parentBondCenterPathName.str();
 				this->bondAtom(*node->compoundSingleAtom,
-						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
+						(parentBondCenterPathName.str()).c_str(), 0.149, 0, SimTK::BondMobility::Default);
 
 				// Set the final Biotype
 				this->setAtomBiotype(node->name, (this->name).c_str(), node->getName());

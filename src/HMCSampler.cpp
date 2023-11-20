@@ -230,20 +230,21 @@ void HMCSampler::initialize(SimTK::State& someState)
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Set old potential energy
-	this->pe_o = this->pe_set = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
+	setOldPE(
+		forces->getMultibodySystem().calcPotentialEnergy(someState)
+		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
+	);
+
+	// Set set potential energy
+	setSetPE(getOldPE());
+
+	pe_init = pe_set;
+
 	std::cout << "HMCSampler::initialize pe_o " << pe_o << std::endl;
 
 	// Store the configuration
-	for (SimTK::MobilizedBodyIndex mbx(1);
-		mbx < matter->getNumBodies();
-		++mbx)
-	{
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SetTVector[mbx - 1] = 
-			//TVector[mbx - 1] = 
-			mobod.getMobilizerTransform(someState);
-	}
+	setSetTVector(someState);
+
 
 	// Initialize QsBuffer with zeros
 	int nq = matter->getNQ(someState);
@@ -252,12 +253,6 @@ void HMCSampler::initialize(SimTK::State& someState)
 		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
 		QsBuffer.push_back(SimTK::Real(0));
 	}
-
-/* 	// Store potential energies
-	//setOldPE(getPEFromEvaluator(someState));
-	setOldPE(forces->getMultibodySystem().calcPotentialEnergy(someState));
-	//setOldPE(dumm->CalcFullPotEnergyIncludingRigidBodies(someState));
-	setSetPE(getOldPE()); */
 
 	// Store Fixman potential
 	if(useFixman){
@@ -277,28 +272,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 	}
 
 	// Initialize velocities to temperature
-/* 	double sqrtRT = std::sqrt(RT);
-	SimTK::Vector V(nu);
-	SimTK::Vector SqrtMInvV(nu);
-	for (int j=0; j < nu; ++j){
-		V[j] = gaurand(randomEngine);
-	}
-	matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
-
-	SqrtMInvV *= sqrtRT; // Set stddev according to temperature
-	someState.updU() = SqrtMInvV;
-	system->realize(someState, SimTK::Stage::Velocity); */
-
 	initializeVelocities(someState);
-
-/* 	// Store kinetic energies
-	setOldKE(matter->calcKineticEnergy(someState));
-	setSetKE(getProposedKE());
-
-	// Store total energies
-	this->etot_proposed = getOldPE() + getProposedKE() 
-		+ getOldFixman() + getOldLogSineSqrGamma2();
-	this->etot_set = this->etot_proposed; */
 
 	// Set the generalized velocities scale factors
 	for (int j=0; j < nu; ++j){
@@ -317,52 +291,77 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// Work
 	bendStretchJacobianDetLog = 0.0;
 
+	//OMM_setTemperature(boostT);
+
 }
 
 /** Same as initialize **/
-void HMCSampler::reinitialize(SimTK::State& someState)
+bool HMCSampler::reinitialize(SimTK::State& someState)
 {
-	// After an event handler has made a discontinuous change to the
-	// Integrator's "advanced state", this method must be called to
-	// reinitialize the Integrator.
-	//(this->timeStepper->updIntegrator()).reinitialize(SimTK::Stage::Topology, false);
+	bool validated = true;
 
 	// Potential energy and configuration need stage Position
 	system->realize(someState, SimTK::Stage::Position);
 
-	// Set old potential energy
-	this->pe_o = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	//this->pe_o = this->pe_set = dumm->CalcFullPotEnergyIncludingRigidBodies(someState); // DOESN'T WORK WITH OPENMM
-	std::cout << "HMCSampler::reinitialize pe_o " << pe_o << std::endl;
+	pe_init = pe_set;
 
+	/* // Check if we have any numerical error
+	if( (forces->getMultibodySystem().calcPotentialEnergy(someState) - pe_set) > 10000.0 ){
+		std::cout
+			<< "[WARNING] dPE GT 300.0. MOLECULE_MAY_BE_DISTORTED. RESETING." << " "
+			<< " Stage version: " << someState.getSystemTopologyStageVersion() << " "
+			<< std::endl;
+
+		// Reset
+		SimTK::Real ne_pe = forces->getMultibodySystem().calcPotentialEnergy(someState);
+		std::cout << "NUMERIC_ERROR a " << ne_pe << std::endl;
+
+		//someState.invalidateAll(SimTK::Stage::Position);
+		matter->invalidateSubsystemTopologyCache();
+
+		assignConfFromSetTVector(someState);
+		system->realize(someState, SimTK::Stage::Position);
+
+		ne_pe = forces->getMultibodySystem().calcPotentialEnergy(someState);
+		std::cout << "NUMERIC_ERROR b " << ne_pe << std::endl;
+
+		// Mark received structure as invalid
+		validated = false;
+	} */
+
+	// Set old potential energy
+	setOldPE(
+		forces->getMultibodySystem().calcPotentialEnergy(someState)
+		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
+	);
 
 	// Store the configuration
-	int i = 0;
-	for (SimTK::MobilizedBodyIndex mbx(1);
-		mbx < matter->getNumBodies();
-		++mbx){
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SetTVector[i] = mobod.getMobilizerTransform(someState); //= TVector[i]
-		i++;
-	}
+	setSetTVector(someState);
 
 	// Store potential energies
-	setSetPE(getOldPE());
+	setSetPE(getOldPE()); // ALGO REV NO
 
 	// Store Fixman potential
 	if(useFixman){
+		
+		// Internal Fixman potential
 		this->fix_o = calcFixman(someState);
-		this->fix_set = this->fix_o;
+		this->fix_set = this->fix_o; // ALGO REV NO
 
+		// External Fixman potential
 		setOldLogSineSqrGamma2( 
 			((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
-		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-	}else{
-		this->fix_o = 0.0;
-		this->fix_set = this->fix_o;
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2()); // ALGO REV NO
 
+	}else{
+
+		// Internal Fixman potential
+		this->fix_o = 0.0;
+		this->fix_set = this->fix_o; // ALGO REV NO
+
+		// External Fixman potential
 		setOldLogSineSqrGamma2(0.0);
-		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2()); // ALGO REV NO
 	}
 
 	// Initialize velocities to temperature
@@ -372,32 +371,9 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	ndofs = nu;
 
 	// Initialize velocities to temperature
-	/*// kT
-	double sqrtRT = std::sqrt(RT);
-	SimTK::Vector V(nu);
-	SimTK::Vector SqrtMInvV(nu);
 	for (int j=0; j < nu; ++j){
-		V[j] = gaurand(randomEngine);
-	}
-	matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
-	SqrtMInvV *= sqrtRT; // Set stddev according to temperature
-	someState.updU() = SqrtMInvV;
-	system->realize(someState, SimTK::Stage::Velocity); */
-
-	//initializeVelocities(someState);
-
-/* 	// Store kinetic energies
-	setProposedKE(matter->calcKineticEnergy(someState));
-	setLastAcceptedKE(getProposedKE());
-
-	// Store total energies
-	this->etot_proposed = getOldPE() + getProposedKE()
-		+ getOldFixman() + getOldLogSineSqrGamma2();
-	this->etot_set = this->etot_proposed; */
-
-	for (int j=0; j < nu; ++j){
-        UScaleFactors[j] = 1;
-        InvUScaleFactors[j] = 1;
+		UScaleFactors[j] = 1;
+		InvUScaleFactors[j] = 1;
 	}
 
 	// Set the generalized velocities scale factors
@@ -406,8 +382,15 @@ void HMCSampler::reinitialize(SimTK::State& someState)
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
 	
-	// Work
+	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
+
+	// Victor
+	OMM_setTemperature(boostT);
+
+	return validated;
+
+
 
 }
 
@@ -3910,11 +3893,15 @@ bool HMCSampler::accRejStep(SimTK::State& someState) {
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-/* std::cout << "Transforms before sample_iteration\n";
-world->PrintAcosX_PFs();
-world->PrintNormX_BMs();
-world->PrintAcosX_PFMeans();
-world->PrintNormX_BMMeans(); */
+	//auto start = std::chrono::system_clock::now();
+	
+	/* std::cout << "Transforms before sample_iteration\n";
+	world->PrintAcosX_PFs();
+	world->PrintNormX_BMs();
+	world->PrintAcosX_PFMeans();
+	world->PrintNormX_BMMeans(); */
+
+	bool validated = true;
 
 	// Set the number of decimals to be printed
 	std::cout << std::setprecision(10) << std::fixed;
@@ -3936,14 +3923,22 @@ world->PrintNormX_BMMeans(); */
 	world->getTransformsStatistics(someState);
 	world->updateTransformsMeans(someState); // Movable
 
-	bool validated = true;
-	validated = generateProposal(someState);
-	
+	validated = generateProposal(someState) && validated;
+
+	SimTK::Real deltaPE = (pe_n - pe_o);
+	SimTK::Real energyLimit = beta * 10000;
+	if((beta * deltaPE) > energyLimit){
+		std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
+			<< pe_init << " " << pe_o 
+		<< "." << std::endl;
+		validated = false;
+	}
+
+	// Print all the energy terms first
+	PrintDetailedEnergyInfo(someState);
+
 	// Apply the acceptance criterion
 	if(validated){
-
-		// Print all the energy terms first
-		PrintDetailedEnergyInfo(someState);
 
 		// Decide
 		if(acceptSample()){
@@ -3971,21 +3966,34 @@ world->PrintNormX_BMMeans(); */
 		}
 
 		// Calculate X_PFs and X_BMs
-//world->traceBendStretch(someState);
-
+		//world->traceBendStretch(someState);
 		/* world->getTransformsStatistics(someState);
-
 		// Update means of values before altering them
 		world->updateTransformsMeans(someState);
 		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
 			//world->updateTransformsMeans(someState);
 		} */
 
+	}else{
+		
+		// RESET
+		restore(someState);
+
+		if(this->alwaysAccept == true){
+			std::cout << "\trej (MD) invalid\n";
+		}else{
+			std::cout << "\trej (MH) invalid\n";
+		}
+		
 	}
 
-		// Increase the sample counter and return
-		++nofSamples;
-		return this->acc;
+	// auto end = std::chrono::system_clock::now();
+    // auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    // std::cout << "\telapsed time (microseconds): " << useconds << std::endl;
+
+	// Increase the sample counter and return
+	++nofSamples;
+	return this->acc;
 
 }
 
