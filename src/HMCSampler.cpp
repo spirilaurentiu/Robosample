@@ -236,8 +236,15 @@ void HMCSampler::initialize(SimTK::State& someState)
 	std::cout << "HMCSampler::initialize pe_o " << pe_o << std::endl;
 
 	// Store the configuration
-	setSetTVector(someState);
+	// Reserve space for OpenMM
+	if(this->integratorName == IntegratorName::OMMVV){
 
+		omm_locations_old.resize(matter->getNumBodies());
+
+		OMM_storeOMMConfiguration();
+	}
+			
+	updateStoredConfiguration(someState);
 
 	// Initialize QsBuffer with zeros
 	int nq = matter->getNQ(someState);
@@ -297,65 +304,45 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// Potential energy and configuration need stage Position
 	system->realize(someState, SimTK::Stage::Position);
 
+	// Convenient variable to use for distortion detection
 	pe_init = pe_set;
-
-	/* // Check if we have any numerical error
-	if( (forces->getMultibodySystem().calcPotentialEnergy(someState) - pe_set) > 10000.0 ){
-		std::cout
-			<< "[WARNING] dPE GT 300.0. MOLECULE_MAY_BE_DISTORTED. RESETING." << " "
-			<< " Stage version: " << someState.getSystemTopologyStageVersion() << " "
-			<< std::endl;
-
-		// Reset
-		SimTK::Real ne_pe = forces->getMultibodySystem().calcPotentialEnergy(someState);
-		std::cout << "NUMERIC_ERROR a " << ne_pe << std::endl;
-
-		//someState.invalidateAll(SimTK::Stage::Position);
-		matter->invalidateSubsystemTopologyCache();
-
-		assignConfFromSetTVector(someState);
-		system->realize(someState, SimTK::Stage::Position);
-
-		ne_pe = forces->getMultibodySystem().calcPotentialEnergy(someState);
-		std::cout << "NUMERIC_ERROR b " << ne_pe << std::endl;
-
-		// Mark received structure as invalid
-		validated = false;
-	} */
 
 	// Set old potential energy
 	setOldPE(
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
-	);
+	);		
 
 	// Store the configuration
-	setSetTVector(someState);
+	if(this->integratorName == IntegratorName::OMMVV){
+		OMM_storeOMMConfiguration();
+	}
+	updateStoredConfiguration(someState);
 
 	// Store potential energies
-	setSetPE(getOldPE()); // ALGO REV NO
+	setSetPE(getOldPE());
 
 	// Store Fixman potential
 	if(useFixman){
 		
 		// Internal Fixman potential
 		this->fix_o = calcFixman(someState);
-		this->fix_set = this->fix_o; // ALGO REV NO
+		this->fix_set = this->fix_o;
 
 		// External Fixman potential
 		setOldLogSineSqrGamma2( 
 			((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
-		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2()); // ALGO REV NO
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 
 	}else{
 
 		// Internal Fixman potential
 		this->fix_o = 0.0;
-		this->fix_set = this->fix_o; // ALGO REV NO
+		this->fix_set = this->fix_o;
 
 		// External Fixman potential
 		setOldLogSineSqrGamma2(0.0);
-		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2()); // ALGO REV NO
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}
 
 	// Initialize velocities to temperature
@@ -1155,7 +1142,115 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 	return dumm->OMM_calcPotentialEnergy();
 }
 
+void HMCSampler::OMM_storeOMMConfiguration(void)
+{
+		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
+
+		const std::vector<OpenMM::Vec3>& positions = dumm->OMM_getPositions();
+
+		for (int i = 0; i < positions.size(); i++) {
+			omm_locations_old[i + 1] = SimTK::Vec3(
+				positions[i][0],
+				positions[i][1],
+				positions[i][2]);
+		}
+
+}
+
+
+void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
+{
+
+	/* // Restore configuration
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+	}
+	system->realize(someState, SimTK::Stage::Position); */
+
+		/* omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
+
+		std::vector<OpenMM::Vec3>& positions = dumm->OMM_updatePositions();
+
+		for (int i = 0; i < positions.size(); i++) {
+			positions[i + 1] = OpenMM::Vec3(
+				omm_locations_old[i][0],
+				omm_locations_old[i][1],
+				omm_locations_old[i][2]);
+		} */
+
+	std::cout << "[HMCSampler::OMM_restoreConfiguration]length_error " << omm_locations_old.size() << std::endl;
+
+	std::vector<SimTK::Vec3>::const_iterator it_begin = 
+		omm_locations_old.begin() + size_t(1);
+	std::vector<SimTK::Vec3>::const_iterator it_end = 
+		omm_locations_old.end();
+
+	const std::vector<SimTK::Vec3> omm_locations_old_1(it_begin, it_end);
+
+	dumm->OMM_updatePositions(omm_locations_old_1);
+
+}
+
+
+
+// Transfer coordinates from openmm to simbody
+void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
+{
+		omm_locations.resize(matter->getNumBodies());
+
+		omm_locations[0] = SimTK::Vec3(0, 0, 0);
+
+		const std::vector<OpenMM::Vec3>& positions = dumm->OMM_getPositions();
+
+		for (int i = 0; i < positions.size(); i++) {
+			omm_locations[i + 1] = SimTK::Vec3(
+				positions[i][0],
+				positions[i][1],
+				positions[i][2]);
+		}
+
+		// Invalidate all statges
+		matter->invalidateSubsystemTopologyCache();
+
+		for (int i = 0; i < dumm->getNumAtoms(); i++) {
+
+			SimTK:DuMM::AtomIndex aix(i);
+			SimTK::MobilizedBodyIndex mbx = dumm->getAtomBody(aix);
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			
+			const auto location = omm_locations[i + 1];
+			const auto parent = omm_locations[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
+
+			mobod.updateDefaultFrames(Transform(Rotation(), location), Transform(Rotation(), parent));
+
+			mobod.setQToFitTransform(someState, Transform(Rotation()));
+
+		}
+
+		system->realizeTopology();
+
+		compoundSystem->realize(someState, SimTK::Stage::Position);
+
+}
+
+void HMCSampler::OMM_PrintLocations(void)
+{
+	const auto positions = dumm->OMM_getPositions();
+
+	std::cout << "OMM locations" << std::endl;
+
+	for (int i = 0; i < positions.size(); i++) {
+		std::cout
+			<< positions[i][0] << " "
+			<< positions[i][1] << " "
+			<< positions[i][2] << " "
+			<< std::endl;
+	}	
+}
+
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
+
 	try {
 		
 		// this code works for updating simbody bodies
@@ -1163,76 +1258,10 @@ void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 
 		// actual openmm integration
-		// auto start = std::chrono::system_clock::now();
 		dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
-		// auto end = std::chrono::system_clock::now();
-		// auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\t\tOMM_integrateTrajectory (microseconds): " << useconds << std::endl;
 
 		// somewhere, the topology gets ruined
-		// start = std::chrono::system_clock::now();
 		system->realizeTopology();
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\t\tsystem->realizeTopology (microseconds): " << useconds << std::endl;
-
-		// transfer coordinates from openmm to simbody
-		omm_locations.reserve(matter->getNumBodies());
-		omm_locations[0] = SimTK::Vec3(0, 0, 0);
-
-		// start = std::chrono::system_clock::now();
-		const auto positions = dumm->OMM_getPositions();
-		for (int i = 0; i < positions.size(); i++) {
-			omm_locations[i + 1] = SimTK::Vec3(positions[i][0], positions[i][1], positions[i][2]);
-		}
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\t\tOMM_getPositions (microseconds): " << useconds << std::endl;
-
-		// std::vector<SimTK::Vec3> SetTVector;
-
-		// calculate atom transformations after integrating with openmm
-		// start = std::chrono::system_clock::now();
-		for (int i = 0; i < dumm->getNumAtoms(); i++) {
-			SimTK:DuMM::AtomIndex aix(i);
-			auto mbx = dumm->getAtomBody(aix);
-			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-			
-			const auto location = omm_locations[i + 1];
-			const auto parent = omm_locations[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
-
-			// SetTVector.push_back(location);
-			// SetTVector.push_back(parent);
-
-			// std::cout << "Atom " << i << std::endl;
-			// std::cout << mobod.getDefaultInboardFrame() << " " << mobod.getDefaultOutboardFrame() << std::endl;
-
-			mobod.updateDefaultFrames(Transform(Rotation(), location), Transform(Rotation(), parent));
-			// mobod.setDefaultInboardFrame(Transform(Rotation(), location)); // 59
-			// mobod.setDefaultOutboardFrame(Transform(Rotation(), parent)); // 61
-			// system->realizeTopology();
-
-			mobod.setQToFitTransform(someState, Transform(Rotation()));
-
-			// std::cout << mobod.getDefaultInboardFrame() << " " << mobod.getDefaultOutboardFrame() << std::endl;
-		}
-
-		system->realizeTopology();
-
-		// for (const auto& v : SetTVector) {
-		// 	std::cout << v << " ";
-		// }
-		// std::cout << std::endl;
-
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\t\tmobod (microseconds): " << useconds << std::endl;
-
-		// start = std::chrono::system_clock::now();
-		compoundSystem->realize(someState, SimTK::Stage::Position);
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\t\tcompoundSystem->realize (microseconds): " << useconds << std::endl;
 
 	}catch(const std::exception&){
 		// Send general message
@@ -1245,7 +1274,7 @@ void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
 }
 
 // ELIZA: Check the code below
-void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
+void HMCSampler::OMM_calcProposedKineticAndTotalEnergyOld(void){
 
 	this->ke_o = OMM_calcKineticEnergy();
 
@@ -1258,18 +1287,14 @@ void HMCSampler::OMM_calcProposedKineticAndTotalEnergy(void){
 
 
 // ELIZA: Check the code below
-void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
-	// assert(!"Not implemented");
+void HMCSampler::OMM_calcNewEnergies(void){
 
 	// Get new Fixman potential
 	if(useFixman){
 		std::cerr 
-		<< "Attempting Fixman potential calculation with OpenMM integrators.";
+			<< "Attempting Fixman potential calculation with OpenMM integrators.";
 		throw std::exception();
 		std::exit(1);
-		//fix_n = calcFixman(someState);
-		//logSineSqrGamma2_n = 
-		//	((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
 	}else{
 		fix_n = 0.0;
 		logSineSqrGamma2_n = 0.0;
@@ -1281,25 +1306,9 @@ void HMCSampler::OMM_calcNewConfigurationAndEnergies(void){
 	// Get new potential energy
 	pe_n = OMM_calcPotentialEnergy();
 
-	// Calculate total energy
-	//if(useFixman){
-	//	etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-	//	etot_proposed = pe_o + ke_proposed + fix_o - (0.5 * RT * logSineSqrGamma2_o);
-	//}else{
-		etot_n = pe_n + ke_n;
-		etot_o = pe_o + ke_o;
-	//}
+	etot_n = pe_n + ke_n;
+	etot_o = pe_o + ke_o;
 
-}
-
-void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
-{
-	// Restore configuration
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
-	}
-	system->realize(someState, SimTK::Stage::Position);
 }
 
 /* 
@@ -1672,7 +1681,7 @@ void HMCSampler::setTVector(SimTK::Transform *inpTVector)
 }
 
 // Stores the set configuration into an internal vector of transforms TVector
-void HMCSampler::setSetTVector(const SimTK::State& someState)
+void HMCSampler::updateStoredConfiguration(const SimTK::State& someState)
 {
   int i = 0;
   for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -2065,7 +2074,7 @@ void HMCSampler::setBoostMDSteps(int argMDSteps)
  * potential energies
  */
 void
-HMCSampler::storeOldConfigurationAndPotentialEnergies(
+HMCSampler::storeOldPotentialEnergies(
 	SimTK::State& someState)
 { 
 	// Ensure stage Position is realized
@@ -2087,7 +2096,7 @@ HMCSampler::storeOldConfigurationAndPotentialEnergies(
 }
 
 /** Store the proposed energies **/
-void HMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
+void HMCSampler::calcProposedKineticAndTotalEnergyOld(SimTK::State& someState){
 
 	// Store proposed kinetic energy
 	// setProposedKE(matter->calcKineticEnergy(someState));
@@ -2367,8 +2376,15 @@ void HMCSampler::geomDihedral(SimTK::State& someState){
 }
 
 /** Store new configuration and energy terms **/
-void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
+void HMCSampler::calcNewEnergies(SimTK::State& someState)
 {
+
+	// Get new potential energy
+	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
+	// TODO: replace with the following after checking is the same thing
+	//pe_n = compoundSystem->calcPotentialEnergy(someState);
+
 	// Get new Fixman potential
 	if(useFixman){
 		fix_n = calcFixman(someState);
@@ -2386,163 +2402,24 @@ void HMCSampler::calcNewConfigurationAndEnergies(SimTK::State& someState)
 	// NEW TRY TODO BOOST
 	ke_n = (this->unboostKEFactor) * matter->calcKineticEnergy(someState);
 
-	// Get new potential energy
-	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
-	// TODO: replace with the following after checking is the same thing
-	//pe_n = compoundSystem->calcPotentialEnergy(someState);
-
-	// Calculate total energy
+	// Get new total energy
 	if(useFixman){
 		etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-		etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o); // ALGO REV NO
+		etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
 	}else{
 		etot_n = pe_n + ke_n;
-		etot_o = pe_o + ke_o; // ALGO REV NO
+		etot_o = pe_o + ke_o;
 	}
-
-		/*// Kinetic energy new for the evaluation Hamiltonian
-		const int nu = someState.getNU();
-		ke_n_nma6 = 0;
-		SimTK::Vector v_miu(nu, 1);
-		SimTK::Vector v_miuM(nu, 1);
-
-		SimTK::Real leftExp = 0.0;
-		SimTK::Real rightExp = 0.0;
-
-		// Left exponential
-		v_miu = (someState.getU() - DOFUScaleFactors);
-		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ 
-			std::cout << v_miu[i] << " " ;} std::cout << "\n";
-
-		matter->multiplyByM(someState, v_miu, v_miuM);
-		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){
-			std::cout << v_miuM[i] << " " ;} std::cout << "\n";
-
-		for(int j = 0; j < ndofs; j++){leftExp += (v_miuM[j] * v_miu[j]);}
-		std::cout << "leftExp 0 " << leftExp << "\n";
-
-		//leftExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
-		leftExp *= ((-0.5) * 1.4142135623730950488 * this->boostBeta);
-		std::cout << "leftExp 1 " << leftExp << "\n";
-
-		leftExp = std::exp(leftExp);
-		std::cout << "leftExp 2 " << leftExp << "\n";
-
-		// Right exponential
-		v_miu = (someState.getU() + DOFUScaleFactors);
-		std::cout << "v_miu 0 "; for(int i = 0; i < nu; i++){ std::cout << v_miu[i] << " " ;} std::cout << "\n";
-
-		matter->multiplyByM(someState, v_miu, v_miuM);
-		std::cout << "v_miuM 1 "; for(int i = 0; i < nu; i++){ std::cout << v_miuM[i] << " " ;} std::cout << "\n";
-
-		for(int j = 0; j < ndofs; j++){rightExp += (v_miuM[j] * v_miu[j]);}
-		std::cout << "rightExp 0 " << rightExp << "\n";
-
-		//rightExp *= ((-0.5) * 1.4142135623730950488 * this->beta);
-		std::cout << "beta boostBeta " << this->beta << " " << this->boostBeta << "\n" ;
-		rightExp *= ((-0.5) * 1.4142135623730950488 * this->boostBeta);
-		std::cout << "rightExp 1 " << rightExp << "\n";
-
-		rightExp = std::exp(rightExp);
-		std::cout << "rightExp 2 " << rightExp << "\n";
-
-		ke_n_nma6 = -1.0 * RT * std::log(0.5 * (leftExp + rightExp));
-		// */
-
-		// Probability terms
-		const int nu = someState.getNU();
-		SimTK::Real boostBetaPlus = this->boostBeta * 1.4142135623730950488;
-		SimTK::Real localBoostFactor = boostBetaPlus / this->beta;
-
-		// Kinetic term
-		SimTK::Vector X(someState.getU());
-		SimTK::Vector XM(nu, 1);
-		SimTK::Real XMX = 0.0;
-		SimTK::Real bXMX = 0.0;
-
-		matter->multiplyByM(someState, X, XM);
-		for(int j = 0; j < ndofs; j++){XMX += (XM[j] * X[j]);}
-		bXMX = localBoostFactor * XMX;
-
-		// Bias term
-		//SimTK::Vector DOFUScaleFactorsM(nu, 1);
-		//SimTK::Real muMmu = 0.0;
-		//SimTK::Real bmuMmu = 0.0;
-		//matter->multiplyByM(someState, DOFUScaleFactors, DOFUScaleFactorsM);
-		//for(int j = 0; j < ndofs; j++){muMmu += (DOFUScaleFactorsM[j] * DOFUScaleFactors[j]);}
-		//bmuMmu = localBoostFactor * muMmu;
-
-		// Correlation term
-		SimTK::Real muMX = 0.0;
-		SimTK::Real bmuMX = 0.0;
-		SimTK::Real _bmuMX = 0.0;
-		SimTK::Real bcorr = 0.0;
-		for(int j = 0; j < ndofs; j++){muMX += (XM[j] * DOFUScaleFactors[j]);}
-		bmuMX = boostBetaPlus * muMX;
-		_bmuMX = -1.0 * bmuMX;
-
-		if(bcorr < 16){ // safe limit to use exponentials
-			bcorr = LSE2(bmuMX, _bmuMX);
-		}else{
-			bcorr = (bmuMX >= 0 ? bmuMX : _bmuMX); // approximation to LSE
-		}
-		bcorr /= this->beta;
-
-		std::cout << "Keval terms end bXMX muMmu bmuMX LSE(bmuMX) = "
-			<< 0.5*bXMX << " " // << 0.5*bmuMmu << " "
-			<< bmuMX << " " << bcorr << std::endl;
-
-		ke_n_nma6 = // (-1.0 * RT * std::log(0.5))
-			+ (0.5*bXMX) // + (0.5* bmuMmu)
-			- bcorr;
-
-		//std::cout << "ke_n_nma6 " << ke_n_nma6 << "\n";
 
 }
 
 /** Set energies and configuration to new state **/
 void HMCSampler::setSetConfigurationAndEnergiesToNew(
 	SimTK::State& someState)
-{
-	// Store new configuration
-	setSetTVector(someState);
-
-	// Store new energies
-	pe_set = pe_n;
-	fix_set = fix_n;
-	logSineSqrGamma2_set = logSineSqrGamma2_n;
-	ke_set = ke_n;
-
-	// Set final total energies
-	etot_set = pe_set + fix_set + ke_set + logSineSqrGamma2_set;
-}
-
-void HMCSampler::setSetConfigurationToOld(
-	SimTK::State& someState)
-{
-	assignConfFromSetTVector(someState);
-	proposeExceptionCaught = false;
-}
-
-/** Restore configuration and set energies to old */
-void HMCSampler::setSetConfigurationAndEnergiesToOld(
-	SimTK::State& someState)
-{
-	// Restore old configuration
-	assignConfFromSetTVector(someState);
-	proposeExceptionCaught = false;
-
-	// Set final energies to the precalculated old ones
-	pe_set = pe_o;
-	fix_set = fix_o;
-	logSineSqrGamma2_set = logSineSqrGamma2_o;
-	ke_set = ke_o;
-
-	// Set the final total energy
-	etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
+{		
 
 }
+
 
 const int HMCSampler::getDistortOpt(void)
 {
@@ -3139,7 +3016,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 	}
 
 	// Store the proposed energies
-	calcProposedKineticAndTotalEnergy(someState);
+	calcProposedKineticAndTotalEnergyOld(someState);
 
 	// Apply the L operator
 	if(this->integratorName == IntegratorName::EMPTY){
@@ -3149,7 +3026,7 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		//integrateTrajectoryOneStepAtATime(someState);
 	}
 
-	calcNewConfigurationAndEnergies(someState);
+	calcNewEnergies(someState);
 
 	return validateProposal();
 
@@ -3158,9 +3035,24 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 // Set Sphere Radius when doing RANDOM_WALK
 void HMCSampler::setSphereRadius(float argSphereRadius)
 {
-	//std::cout << "HMCSampler::setSphereRadius:  Radius Set: " << sphereRadius << std::endl;	
 	sphereRadius = argSphereRadius;
-	std::cout << "HMCSampler::setSphereRadius:  Radius Set: " << sphereRadius << std::endl;
+	std::cout 
+		<< "HMCSampler::setSphereRadius:  Radius Set: " 
+		<< sphereRadius << std::endl;
+}
+
+// Update OpenMM position from a Simbody Cartesian world
+void HMCSampler::Simbody_To_OMM_setAtomsLocations(SimTK::State& someState)
+{
+		std::vector<SimTK::Vec3> startingPos;
+
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx)
+		{
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			startingPos.push_back(mobod.getBodyOriginLocation(someState));
+		}
+
+		dumm->OMM_updatePositions(startingPos);
 }
 
 /** It implements the proposal move in the Hamiltonian Monte Carlo
@@ -3174,48 +3066,37 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 	if(integratorName == IntegratorName::OMMVV){
 
 		// // ELIZA: Check the code below
-		// auto start = std::chrono::system_clock::now();
 		dumm->setOpenMMvelocities(this->boostT);
 		OMM_setTemperature(this->boostT);
 
-		// auto end = std::chrono::system_clock::now();
-		// auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\tsetOpenMMvelocities (microseconds): " << useconds << std::endl;
-
 		// set the positions we want to start from
-		// start = std::chrono::system_clock::now();
-		std::vector<SimTK::Vec3> startingPos;
+		//Simbody_To_OMM_setAtomsLocations(someState);
+
+		// Get current energies and set it to old
+		OMM_calcProposedKineticAndTotalEnergyOld();
+
+		// Integrate trajectory
+		OMM_integrateTrajectory(someState);
+
+		// Get new nergy after integration
+		OMM_calcNewEnergies();
+
+		/* std::cout << "X_PF X_FM X_BM ps \n";
 		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-			startingPos.push_back(mobod.getBodyOriginLocation(someState));
-		}
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\tstartingPos (microseconds): " << useconds << std::endl;
+			const Transform& X_PF = mobod.getDefaultInboardFrame();
+			const Transform& X_FM = mobod.getMobilizerTransform(someState);
+			const Transform& X_BM = mobod.getOutboardFrame(someState);
+			std::cout
+				<< X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " "
+				<< X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " "
+				<< X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " " 
+				<< std::endl;
+		} */
 
-		// start = std::chrono::system_clock::now();
-		dumm->OMM_updatePositions(startingPos);
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\tOMM_updatePositions (microseconds): " << useconds << std::endl;
+		/* std::cout << "[OMM_DEBUG]HMCSampler::proposeEquilibrium 3 "
+			<< "pe_o " << pe_o << " pe_n " << pe_n  << std::endl; */
 
-		// start = std::chrono::system_clock::now();
-		OMM_calcProposedKineticAndTotalEnergy();
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\tOMM_calcProposedKineticAndTotalEnergy (microseconds): " << useconds << std::endl;
-
-		// start = std::chrono::system_clock::now();
-		OMM_integrateTrajectory(someState);
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\tOMM_integrateTrajectory (microseconds): " << useconds << std::endl;
-
-		// start = std::chrono::system_clock::now();
-		OMM_calcNewConfigurationAndEnergies();
-		// end = std::chrono::system_clock::now();
-		// useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		// std::cout << "\tOMM_calcNewConfigurationAndEnergies (microseconds): " << useconds << std::endl;
 
 	}else if (integratorName == IntegratorName::VERLET){
 
@@ -3224,11 +3105,11 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			adaptTimestep(someState);
 		}
 
-		// Initialize velocities from Maxwell-Boltzmann distribution
+		// Initialize velocities
 		initializeVelocities(someState);
 
 		// Store the proposed energies
-		calcProposedKineticAndTotalEnergy(someState);
+		calcProposedKineticAndTotalEnergyOld(someState);
 
 		// Adapt timestep
 		bool shouldAdaptWorldBlocks = false;
@@ -3236,16 +3117,12 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 			adaptWorldBlocks(someState);
 		}
 
-		// Apply the L operator
-		if(this->integratorName == IntegratorName::VERLET){
-			integrateTrajectory(someState);
-			//integrateTrajectoryOneStepAtATime(someState);
-		}else{
-			std::cout << "Propose: EMPTY integrator\n";
-			system->realize(someState, SimTK::Stage::Dynamics);
-		}
+		// Integrate trajectory
+		integrateTrajectory(someState);
+		//integrateTrajectoryOneStepAtATime(someState);
 
-		calcNewConfigurationAndEnergies(someState);
+
+		calcNewEnergies(someState);
 	
 	}else if (integratorName == IntegratorName::BOUND_WALK){
 
@@ -3267,7 +3144,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Velocity);
 
 		// Store the proposed energies
-		calcProposedKineticAndTotalEnergy(someState);
+		calcProposedKineticAndTotalEnergyOld(someState);
 
 		std::cout << "Propose: BOUND_WALK integrator" << std::endl;
 		if(topologies.size() < 2){
@@ -3386,7 +3263,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		}
 
 		system->realize(someState, SimTK::Stage::Dynamics);
-		calcNewConfigurationAndEnergies(someState);
+		calcNewEnergies(someState);
 
 	}else if (integratorName == IntegratorName::BOUND_HMC){
 
@@ -3395,7 +3272,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Velocity);
 
 		// Store the proposed energies
-		calcProposedKineticAndTotalEnergy(someState);
+		calcProposedKineticAndTotalEnergyOld(someState);
 
 		std::cout << "Propose: BOUND_HMC integrator" << std::endl;
 		if(topologies.size() < 2){
@@ -3530,13 +3407,13 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		// Else, if not repositioned, integrate trajectory.
 		if(ligandToSite.norm() <= sphereRadius) {
 			initializeVelocities(someState);
-			calcProposedKineticAndTotalEnergy(someState);
+			calcProposedKineticAndTotalEnergyOld(someState);
 
 			integrateTrajectory(someState);
 			system->realize(someState, SimTK::Stage::Dynamics);
 		}
 
-		calcNewConfigurationAndEnergies(someState);
+		calcNewEnergies(someState);
 
 	}else if(integratorName == IntegratorName::STATIONS_TASK){
 
@@ -3604,7 +3481,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Velocity);
 
 		// Store the proposed energies
-		calcProposedKineticAndTotalEnergy(someState);
+		calcProposedKineticAndTotalEnergyOld(someState);
 
 		// Adapt timestep
 		bool shouldAdaptWorldBlocks = false;
@@ -3616,15 +3493,18 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		integrateTrajectory(someState);
 		//integrateTrajectoryOneStepAtATime(someState);
 
-		calcNewConfigurationAndEnergies(someState);
+		calcNewEnergies(someState);
 
 	}else if (integratorName == IntegratorName::EMPTY){
 
-		calcNewConfigurationAndEnergies(someState);
+		calcNewEnergies(someState);
+		// system->realize(someState, SimTK::Stage::Dynamics); // maybe
 
 	}else{
+
 		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
-		calcNewConfigurationAndEnergies(someState);
+		calcNewEnergies(someState);
+		// system->realize(someState, SimTK::Stage::Dynamics); // maybe
 
 	}
 
@@ -3642,7 +3522,7 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 	initializeNMAVelocities(someState);
 
 	// Store the proposed energies
-	calcProposedKineticAndTotalEnergy(someState);
+	calcProposedKineticAndTotalEnergyOld(someState);
 
 	// Adapt timestep
 	if(shouldAdaptTimestep){
@@ -3658,7 +3538,7 @@ bool HMCSampler::proposeNMA(SimTK::State& someState)
 	// Apply the L operator
 	integrateVariableTrajectory(someState);
 
-	calcNewConfigurationAndEnergies(someState);
+	calcNewEnergies(someState);
 
 	return validateProposal();
 
@@ -3694,17 +3574,6 @@ bool HMCSampler::generateProposal(SimTK::State& someState)
 		if (validated){
 			break;
 		}
-	}
-
-	// The sample was not validated
-	if ( !validated ){ 
-		// Warn user
-		std::cout 
-			<< "Warning: Proposal not validated after 10 tries.\n";
-
-		// Reset
-		this->acc = false;
-		setSetConfigurationAndEnergiesToOld(someState);
 	}
 
 	return validated;
@@ -3813,6 +3682,7 @@ bool HMCSampler::acceptSample() {
 	
 }
 
+
 /**
  * The main function that generates a sample
 */
@@ -3832,7 +3702,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 	std::cout << std::setprecision(10) << std::fixed;
 
 	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);
+	storeOldPotentialEnergies(someState);
 
 	// Generate a trial move in the stochastic chain
 	//world->traceBendStretch(someState);
@@ -3850,6 +3720,25 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 
 	validated = generateProposal(someState) && validated;
 
+	// The sample was not validated
+	if ( !validated ){
+		 
+		// Warn user
+		std::cout 
+			<< "Warning: Proposal not validated after 10 tries.\n";
+
+		// Reset
+		this->acc = false;
+
+		// Restore old configuration
+		restoreConfiguration(someState);
+
+		// Restore old energies
+		restoreEnergies();
+
+	}
+
+	// Check if the system appears distorted
 	SimTK::Real deltaPE = (pe_n - pe_o);
 	SimTK::Real energyLimit = beta * 10000;
 	if((beta * deltaPE) > energyLimit){
@@ -3879,8 +3768,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 			update(someState);
 
 			// Deal with adaptive data
-			storeAdaptiveData(someState);
-			//PrintAdaptiveData();
+			storeAdaptiveData(someState); //PrintAdaptiveData();
 
 		}else{
 			//Print info
@@ -3911,10 +3799,6 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 		}
 		
 	}
-
-	// auto end = std::chrono::system_clock::now();
-    // auto useconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    // std::cout << "\telapsed time (microseconds): " << useconds << std::endl;
 
 	// Increase the sample counter and return
 	++nofSamples;
@@ -3953,29 +3837,93 @@ void HMCSampler::PrintAdaptiveData(void)
 }
 
 
-/** Main function that contains all the 3 steps of HMC.
-Implements the acception-rejection step and sets the state of the
-compound to the appropriate conformation wether it accepted or not. **/
-void HMCSampler::update(SimTK::State& someState)
+///////////////////////////////////////////////////////
+// RESTORE
+///////////////////////////////////////////////////////
+
+void HMCSampler::restoreConfiguration(
+	SimTK::State& someState)
 {
-	// Store final configuration and energy
-	setSetConfigurationAndEnergiesToNew(someState);
-	
-	// Acceptance rate buffer
-	++acceptedSteps;
-	acceptedStepsBuffer.push_back(1);
-	acceptedStepsBuffer.pop_front();
+
+	if(integratorName == IntegratorName::OMMVV){
+		OMM_restoreConfiguration(someState);
+	}else{
+		assignConfFromSetTVector(someState);
+	}
+
+	proposeExceptionCaught = false;
 }
 
+/** Restore energies */
+void HMCSampler::restoreEnergies(void){
+
+	// Set final energies to the precalculated old ones
+	pe_set = pe_o;
+	ke_set = ke_o;
+	fix_set = fix_o;
+	logSineSqrGamma2_set = logSineSqrGamma2_o;
+
+	// Set the final total energy
+	etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
+}
+
+/** Restore */
 void HMCSampler::restore(SimTK::State& someState)
 {
-	// Restore configuration and energies to old
-	setSetConfigurationAndEnergiesToOld(someState);
+
+	// Restore old configuration
+	restoreConfiguration(someState);
+
+	// Restore energies
+	restoreEnergies();
 
 	// Update acceptance rate buffer
 	acceptedStepsBuffer.push_back(0);
 	acceptedStepsBuffer.pop_front();
 }
+
+///////////////////////////////////////////////////////
+// UPDATE
+///////////////////////////////////////////////////////
+
+/** Update energies */
+void HMCSampler::updateEnergies(void)
+{
+	// Store new energies
+	pe_set = pe_n;
+	ke_set = ke_n;
+	fix_set = fix_n;
+	logSineSqrGamma2_set = logSineSqrGamma2_n;
+
+	// Set final total energies
+	etot_set = pe_set + fix_set + ke_set + logSineSqrGamma2_set;
+}
+
+/** Update **/
+void HMCSampler::update(SimTK::State& someState)
+{
+
+	if(this->integratorName == IntegratorName::OMMVV){
+		// Update Simbody too
+		OMM_To_Simbody_setAtomsLocations(someState);
+	}
+	
+	// Store final configuration and energy
+	// Store new configuration
+	updateStoredConfiguration(someState);
+
+	// Set the final energies to the new ones
+	updateEnergies();
+	
+	// Acceptance rate buffer
+	++acceptedSteps;
+	acceptedStepsBuffer.push_back(1);
+	acceptedStepsBuffer.pop_front();
+
+}
+
+
+
 
 /** Push Cartesian coordinates into R vector stored in Sampler.
 Return the size of R **/

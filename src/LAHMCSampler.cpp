@@ -335,7 +335,7 @@ bool LAHMCSampler::reinitialize(SimTK::State& someState)
 }
 
 /** Store configuration **/
-void LAHMCSampler::storeOldConfigurationAndPotentialEnergies(SimTK::State& someState){ // func
+void LAHMCSampler::storeOldPotentialEnergies(SimTK::State& someState){ // func
     system->realize(someState, SimTK::Stage::Position);
 
     int t = 0;
@@ -752,7 +752,7 @@ initializeVelocities and propagate/integrate **/
 bool LAHMCSampler::proposeEquilibrium(SimTK::State& someState)
 {
 
-    storeOldConfigurationAndPotentialEnergies(someState);
+    storeOldPotentialEnergies(someState);
 
     initializeVelocities(someState);
 
@@ -771,7 +771,7 @@ bool LAHMCSampler::proposeEquilibrium(SimTK::State& someState)
 /** Store new configuration and energy terms**/
 void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
 {
-    setSetTVector(someState);
+    updateStoredConfiguration(someState);
     pe_set = pe_n;
     fix_set = fix_n;
     logSineSqrGamma2_set = logSineSqrGamma2_n;
