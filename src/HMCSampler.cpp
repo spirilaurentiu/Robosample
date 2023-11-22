@@ -239,6 +239,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// Reserve space for OpenMM
 	if(this->integratorName == IntegratorName::OMMVV){
 
+		omm_locations.resize(matter->getNumBodies());
 		omm_locations_old.resize(matter->getNumBodies());
 
 		OMM_storeOMMConfiguration();
@@ -315,6 +316,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 
 	// Store the configuration
 	if(this->integratorName == IntegratorName::OMMVV){
+		omm_locations.resize(matter->getNumBodies());
+		omm_locations_old.resize(matter->getNumBodies());
+		
 		OMM_storeOMMConfiguration();
 	}
 	updateStoredConfiguration(someState);
@@ -1197,7 +1201,7 @@ void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
 // Transfer coordinates from openmm to simbody
 void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 {
-		omm_locations.resize(matter->getNumBodies());
+		//omm_locations.resize(matter->getNumBodies());
 
 		omm_locations[0] = SimTK::Vec3(0, 0, 0);
 
@@ -1222,7 +1226,9 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 			const auto location = omm_locations[i + 1];
 			const auto parent = omm_locations[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
 
-			mobod.updateDefaultFrames(Transform(Rotation(), location), Transform(Rotation(), parent));
+			mobod.updateDefaultFrames(
+				Transform(Rotation(), location),
+				Transform(Rotation(), parent));
 
 			mobod.setQToFitTransform(someState, Transform(Rotation()));
 
@@ -1233,6 +1239,7 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 		compoundSystem->realize(someState, SimTK::Stage::Position);
 
 }
+
 
 void HMCSampler::OMM_PrintLocations(void)
 {
