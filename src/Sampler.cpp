@@ -232,6 +232,28 @@ Sampler::generateRandomNumber(GmolRandDistributionType distributionType)
     }
 }
 
+SimTK::Quaternion Sampler::generateRandomQuaternion(void)
+{
+		double x,y,z, u,v,w, s;
+		do {
+			x = uniformRealDistribution_m1_1(randomEngine);
+			y = uniformRealDistribution_m1_1(randomEngine);
+			z = x*x + y*y;
+		}while (z > 1);
+		do {
+			u = uniformRealDistribution_m1_1(randomEngine);
+			v = uniformRealDistribution_m1_1(randomEngine);
+			w = u*u + v*v;
+		} while (w > 1);
+
+		s = sqrt((1-z) / w);
+
+		SimTK::Quaternion randQuat(x, y, s*u, s*v);
+
+		return randQuat;
+}
+
+
 // Just for checking
 void Sampler::checkAtomStationsThroughDumm(void)
 {

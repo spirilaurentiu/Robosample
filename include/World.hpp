@@ -283,6 +283,8 @@ public:
 	SimTK::Vec3 getGeometricCenterOfSelection(
 		const SimTK::State & state);
 
+
+
 	float setSphereRadius (float argRadius);
 
 	/** Get the current Compound Cartesian coords.
@@ -307,6 +309,8 @@ public:
 	void PrintAtomsLocations(const std::vector<std::vector<
 		std::pair<bSpecificAtom *, SimTK::Vec3> > >& someAtomsLocations);
 	void WriteRst7FromTopology(std::string FN);
+
+	void PrintFullTransformationGeometry(const SimTK::State&);
 
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(

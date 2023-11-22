@@ -272,6 +272,15 @@ public:
 	/** Integrate trajectory one step at a time to compute quantities instantly **/
 	virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
 
+	/** BOUND WALK */
+	void integrateTrajectory_Bounded(SimTK::State& someState);
+
+	/** BOUND HMC */
+	void integrateTrajectory_BoundHMC(SimTK::State& someState);
+
+	/** Integrate trajectory using task space forces */
+	void integrateTrajectory_TaskSpace(SimTK::State& someState);
+
 	/** Use stochastic optimization to adapt timestep **/
 	virtual void adaptTimestep(SimTK::State& someState);
 

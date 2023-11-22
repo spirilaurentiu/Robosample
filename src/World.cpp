@@ -1833,6 +1833,25 @@ void World::WriteRst7FromTopology(std::string FN)
 	fclose(File);
 }
 
+/** Print transformation geometries */
+void World::PrintFullTransformationGeometry(const SimTK::State& someState)
+{
+	std::cout << "X_PF X_FM X_BM ps \n";
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+		const Transform& X_PF = mobod.getDefaultInboardFrame();
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		std::cout
+			<< X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " "
+			<< X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " "
+			<< X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " " 
+			<< std::endl;
+	}
+}
+
+
+
 /** Put coordinates into bAtomLists of Topologies.
  * When provided with a State, calcAtomLocationInGroundFrame
  * realizes Position and uses matter to calculate locations **/

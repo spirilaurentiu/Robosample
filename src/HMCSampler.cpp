@@ -318,7 +318,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	if(this->integratorName == IntegratorName::OMMVV){
 		omm_locations.resize(matter->getNumBodies());
 		omm_locations_old.resize(matter->getNumBodies());
-		
+
 		OMM_storeOMMConfiguration();
 	}
 	updateStoredConfiguration(someState);
@@ -1127,6 +1127,346 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 	}
 }
 
+/*
+* Integrate trajectory: with boundary conditions using random 
+* spherical distribution
+	Hard-coded, need to be able to propagate from input
+but for the moment this will have to do.
+
+These are integers, since you'd never *really* need a long list
+of bounders
+const vector<vector<int>> bounders{{0},{2}};
+These are strings, since you could  want all solvent
+molecules to be bound, so the "s" option is implemented
+const vector<vector<string>> boundeds{{"2"},{"s"}};
+These are strings, since you could want the 
+const vector<vector<string>> bounder_subset{{"74","88"},{"a"}};
+const vector<float> bound_radii; */
+void HMCSampler::integrateTrajectory_Bounded(SimTK::State& someState){
+
+	assert(!"Not implemented");
+
+		std::cout << "Propose: BOUND_WALK integrator" << std::endl;
+		if(topologies.size() < 2){
+			std::cout << "BOUND integrators should only be used over many molecules\n";
+		}
+
+		// Get the binding site center
+
+		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
+
+		// We *assume* the last molecule is the ligand.
+		const int nOfBodies = matter->getNumBodies();
+
+		// Print the geometric center (for debugging purposes)
+		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
+		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
+
+		// Ligand
+		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(2) ); 
+		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
+		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
+		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
+		const Transform& X_PF = mobod_L.getInboardFrame(someState);
+		const Transform& X_GL = mobod_L.getBodyTransform(someState);
+
+		// Water (Before rotation)
+		const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
+				SimTK::MobilizedBodyIndex(3) ); 
+		const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
+		const Transform& X_GW = mobod_W.getBodyTransform(someState);
+		const Vec3 COM_LW = mobod_W.findMassCenterLocationInAnotherBody(someState, mobod_L); // Expressed in W (??)
+		const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
+		const Transform& X_PF_Wat = mobod_W.getInboardFrame(someState);
+
+
+		std::cout << "COM_LW: " << COM_LW << " (" << COM_LW.norm() << ")\n" ;
+
+		// It's best to first compute the rotation, then
+		// compute the translation to fit the "New" X_FM
+		
+		SimTK::Quaternion randQuat = generateRandomQuaternion();
+
+		SimTK::Quaternion currQuat(someState.updQ()[0], someState.updQ()[1],
+			someState.updQ()[2], someState.updQ()[3]);
+
+		SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
+
+		mobod_L.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
+		system->realize(someState, SimTK::Stage::Dynamics);
+
+		// Translate
+		SimTK::Vec3 New_LW = SimTK::Rotation(resultQuat) * COM_LW ; //Still expressed in L
+		std::cout << "New_LW: " << New_LW << " (" << New_LW.norm() << ")\n" ;
+		New_LW = X_GL.shiftBaseStationToFrame(New_LW); // Expressed in Ground
+		New_LW = X_GW.shiftBaseStationToFrame(New_LW); // Expressed in Water
+		std::cout << "New_LW (expressed in W): " << New_LW << " (" << New_LW.norm() << ")\n\n" ;
+		//mobod_W.setQToFitTranslation(someState, New_LW);
+		//system->realize(someState, SimTK::Stage::Dynamics);
+
+		// Determine the distance between center of mass of ligand and geometricCenter
+		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
+		std::cout << "ligandToSite: " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
+
+		// If ligand is too far reposition on a sphere centered on the last body
+		// center of mass (also add a margin of error, so you don't stay too much on the surface
+		// of the sphere)
+
+		//if(ligandToSite.norm() > (sphereRadius)){
+		if (0){
+
+			SimTK::Vec3 BR={0,0,0};
+
+			// Sample a random vector centered in 0 and expressed in G
+			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+			SimTK::Vec3 randVec={0,0,0};
+
+
+			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
+			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
+			randVec[2] = sphereRadius * std::cos(phi);
+			randVec *= uniformRealDistribution(randomEngine);
+
+			// Move it in BindingSiteCenter (BS)
+			SimTK::Vec3 GR;
+			GR = randVec + (geometricCenter - X_PF.p());
+
+			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
+			
+			// Account for COM_L
+			BR = BR - COM_L;
+
+			// Express BR in F
+			BR = X_FM.R()*BR;
+			mobod_L.setQToFitTranslation(someState, BR);
+
+		// If not, just generate a random translation
+		}else{
+			someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+			someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
+		}
+
+		system->realize(someState, SimTK::Stage::Dynamics);
+}
+
+/*
+* Integrate trajectory: with boundary conditions using random 
+* spherical distribution and HMC
+*/
+void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState){
+		std::cout << "Propose: BOUND_HMC integrator" << std::endl;
+		if(topologies.size() < 2){
+			std::cout << "BOUND integrators should only be used over many molecules\n";
+		}
+
+		// Get the binding site center
+
+		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
+
+		// We *assume* the last molecule is the ligand.
+		const int nOfBodies = matter->getNumBodies();
+
+		// Print the geometric center (for debugging purposes)
+		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
+		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
+
+		// Ligand
+		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(2) ); 
+		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
+		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
+		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
+		const Transform& X_PF = mobod_L.getInboardFrame(someState);
+
+		// Unlike "RANDOM_WALK", this integrator does not need to do 
+		// random rotation, since we integrate the trajectory, which
+		// includes rotation.
+
+		// Determine the distance between center of mass of ligand and geometricCenter
+		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
+		std::cout << "ligandToSite(kick): " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
+
+		// If ligand is too far reposition on a sphere centered on the last body
+		// center of mass
+		if(ligandToSite.norm() > sphereRadius){
+		//if (1){
+
+			std::cout << "Ligand too far from center (" << ligandToSite.norm() << "), repositioning...\n";
+			SimTK::Vec3 BR={0,0,0};
+
+			// Sample a random vector centered in 0 and expressed in G
+			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+			SimTK::Vec3 randVec={0,0,0};
+
+			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
+			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
+			randVec[2] = sphereRadius * std::cos(phi);
+			randVec *= uniformRealDistribution(randomEngine);
+
+			// Move it in BindingSiteCenter (BS)
+			SimTK::Vec3 GR;
+			GR = randVec + (geometricCenter - X_PF.p());
+
+			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
+			
+			// Account for COM_L
+			BR = BR - COM_L;
+
+			// Express BR in F
+			BR = X_FM.R()*BR;
+			mobod_L.setQToFitTranslation(someState, BR);
+
+			system->realize(someState, SimTK::Stage::Dynamics);
+		}
+
+		// Water Part
+		const SimTK::MobilizedBody& mobod_L_PostTP = matter->getMobilizedBody(
+			SimTK::MobilizedBodyIndex(2) ); 
+		const Vec3 COM_L_PostTP = mobod_L_PostTP.getBodyMassCenterStation(someState);
+		const Vec3 COM_G_PostTP = mobod_L_PostTP.findMassCenterLocationInGround(someState);
+		const Transform& X_FM_PostTP = mobod_L_PostTP.getMobilizerTransform(someState);
+		const Transform& X_PF_PostTP = mobod_L_PostTP.getInboardFrame(someState);
+
+		// Water
+		for (int waterIx = 3; waterIx < nOfBodies; waterIx++){ 
+			const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
+				SimTK::MobilizedBodyIndex(waterIx) ); 
+			const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
+			const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
+			const Transform& X_FM_Water = mobod_W.getMobilizerTransform(someState);
+			const Transform& X_PF_Water = mobod_W.getInboardFrame(someState);
+
+			// Get distance between water and ligand
+					
+			const Vec3 WL = mobod_W.findStationLocationInAnotherBody(someState, COM_W, mobod_L_PostTP);
+			std::cout << "COM_L: " << COM_G << " COM_GW: " << COM_GW << std::endl;
+			std::cout << "WL: " << WL << " WL_NORM: " << WL.norm() << std::endl;
+
+			// If water is too far from ligand reposition on a sphere centered on the 
+			// ligand center of mass
+			float waterSphere = 1;
+			if(WL.norm() > waterSphere){
+			//if (1){
+
+				std::cout << "Water (" << waterIx << ") too far from ligand (" << WL.norm() << "), repositioning...\n";
+				SimTK::Vec3 BR={0,0,0};
+
+				// Sample a random vector centered in 0 and expressed in G
+				SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+				SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+				SimTK::Vec3 randVec={0,0,0};
+
+				randVec[0] = waterSphere * std::cos(theta) * std::sin(phi);
+				randVec[1] = waterSphere * std::sin(theta) * std::sin(phi);
+				randVec[2] = waterSphere * std::cos(phi);
+				//randVec *= uniformRealDistribution(randomEngine);
+
+				// Move it in BindingSiteCenter (BS)
+				SimTK::Vec3 GR;
+				//GR = randVec + (geometricCenter - X_PF.p());
+				GR = randVec + (COM_G_PostTP - X_PF_Water.p());
+
+				BR = mobod_W.expressGroundVectorInBodyFrame(someState, GR);
+				
+				// Account for COM_L
+				BR = BR - COM_W;
+
+				// Express BR in F
+				BR = X_FM_Water.R()*BR;
+				mobod_W.setQToFitTranslation(someState, BR);
+				system->realize(someState, SimTK::Stage::Position);
+				std::cout << "Water (" << waterIx-1
+				          <<") repositioned in " << mobod_W.expressVectorInGroundFrame(someState, BR) 
+						  << std::endl << std::endl;
+
+			}
+		}
+		system->realize(someState, SimTK::Stage::Dynamics);
+
+		// Else, if not repositioned, integrate trajectory.
+		if(ligandToSite.norm() <= sphereRadius) {
+			initializeVelocities(someState);
+			calcProposedKineticAndTotalEnergyOld(someState);
+
+			integrateTrajectory(someState);
+			system->realize(someState, SimTK::Stage::Dynamics);
+		}
+}
+
+
+/** Integrate trajectory using task space forces */
+void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState){
+
+		/* std::cout << "STATIONS_TASK\n";
+		system->realize(someState, SimTK::Stage::Position);
+
+		// Update target space
+		world->updateTaskSpace(someState);
+		SimTK::Array_<SimTK::Vec3> deltaStationP = world->getTaskSpaceDeltaStationP();
+		std::cout << "deltaStationP " << deltaStationP << std::endl;
+
+		SimTK::Matrix_<SimTK::Vec3> JS;
+		world->calcStationJacobian(someState, JS);
+
+		SimTK::Vector taskForce;
+		
+		matter->multiplyByStationJacobianTranspose(someState,
+			world->onBodyB[0], world->taskStationPInGuest[0],
+			deltaStationP[0], taskForce);
+		
+		std::cout << "state numU " << someState.getNU()
+			<< " taskForce " << -1.0 * taskForce
+			<< std::endl;
+
+		someState.setU(-1 * taskForce); */
+
+		/* // Topologies and target atoms
+		int hostTopology = 0;
+		int guestTopology = 1;
+		std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
+		std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
+
+		// Get stations in guest
+		int topi = -1;
+		for(auto& topology : (topologies)){ // topologies
+			topi++;
+			if(topi == guestTopology){
+				int tz = -1;
+				for (int bAtomIx : bAtomIxs_guest) { // atoms
+					tz++;
+
+					// Get body
+					SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
+					SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+					SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+					// Get mobod X_GB, X_PF, X_FM and X_BM
+					const Transform& X_GB = mobod.getBodyTransform(someState);
+					const Transform& X_PF = mobod.getInboardFrame(someState);
+					const Transform& X_FM = mobod.getMobilizerTransform(someState);
+					const Transform& X_BM = mobod.getOutboardFrame(someState);
+					
+					const Transform& X_GF = X_GB * X_BM * (~X_FM);
+					SimTK::Vec3 G_S = deltaStationP[0];
+					SimTK::Vec3 F_S = (~X_GF) * G_S;
+
+					mobod.setOneU(someState, 0, F_S[0]);
+					mobod.setOneU(someState, 1, F_S[1]);
+					mobod.setOneU(someState, 2, F_S[2]);
+
+				}
+			}
+		} */
+
+		system->realize(someState, SimTK::Stage::Velocity);
+
+}
+
+
 // ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 
 // ELIZA: Insert code here
@@ -1165,26 +1505,8 @@ void HMCSampler::OMM_storeOMMConfiguration(void)
 void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
 {
 
-	/* // Restore configuration
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
-	}
-	system->realize(someState, SimTK::Stage::Position); */
-
-		/* omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
-
-		std::vector<OpenMM::Vec3>& positions = dumm->OMM_updatePositions();
-
-		for (int i = 0; i < positions.size(); i++) {
-			positions[i + 1] = OpenMM::Vec3(
-				omm_locations_old[i][0],
-				omm_locations_old[i][1],
-				omm_locations_old[i][2]);
-		} */
-
-	std::cout << "[HMCSampler::OMM_restoreConfiguration]length_error " << omm_locations_old.size() << std::endl;
-
+	// New code
+	// Restore OpenMM positions
 	std::vector<SimTK::Vec3>::const_iterator it_begin = 
 		omm_locations_old.begin() + size_t(1);
 	std::vector<SimTK::Vec3>::const_iterator it_end = 
@@ -1193,6 +1515,29 @@ void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
 	const std::vector<SimTK::Vec3> omm_locations_old_1(it_begin, it_end);
 
 	dumm->OMM_updatePositions(omm_locations_old_1);
+
+	// Reset Simbody (may not be necessary)
+	OMM_To_Simbody_setAtomsLocations(someState);
+
+	// Old code
+	/* // Restore configuration
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+	}
+	system->realize(someState, SimTK::Stage::Position);
+
+	omm_locations[0] = SimTK::Vec3(0, 0, 0);
+
+	std::vector<OpenMM::Vec3>& positions = dumm->OMM_updatePositions();
+
+	for (int i = 0; i < positions.size(); i++) {
+		positions[i + 1] = OpenMM::Vec3(
+			omm_locations[i][0],
+			omm_locations[i][1],
+			omm_locations[i][2]);
+	} */
+
 
 }
 
@@ -3067,14 +3412,11 @@ algorithm. It essentially propagates the trajectory. **/
 bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 {
 
-/* 	// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState); */
-
 	if(integratorName == IntegratorName::OMMVV){
 
 		// // ELIZA: Check the code below
 		dumm->setOpenMMvelocities(this->boostT);
-		OMM_setTemperature(this->boostT);
+		OMM_setTemperature(this->boostT); // the same thing but set dumm T also
 
 		// set the positions we want to start from
 		//Simbody_To_OMM_setAtomsLocations(someState);
@@ -3085,25 +3427,8 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		// Integrate trajectory
 		OMM_integrateTrajectory(someState);
 
-		// Get new nergy after integration
+		// Get all new energies after integration
 		OMM_calcNewEnergies();
-
-		/* std::cout << "X_PF X_FM X_BM ps \n";
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-			const Transform& X_PF = mobod.getDefaultInboardFrame();
-			const Transform& X_FM = mobod.getMobilizerTransform(someState);
-			const Transform& X_BM = mobod.getOutboardFrame(someState);
-			std::cout
-				<< X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " "
-				<< X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " "
-				<< X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " " 
-				<< std::endl;
-		} */
-
-		/* std::cout << "[OMM_DEBUG]HMCSampler::proposeEquilibrium 3 "
-			<< "pe_o " << pe_o << " pe_n " << pe_n  << std::endl; */
-
 
 	}else if (integratorName == IntegratorName::VERLET){
 
@@ -3128,23 +3453,10 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		integrateTrajectory(someState);
 		//integrateTrajectoryOneStepAtATime(someState);
 
-
+		// Get all new energies after integration
 		calcNewEnergies(someState);
 	
 	}else if (integratorName == IntegratorName::BOUND_WALK){
-
-		/* Hard-coded, need to be able to propagate from input
-		but for the moment this will have to do.
-		
-		These are integers, since you'd never *really* need a long list
-		of bounders
-		const vector<vector<int>> bounders{{0},{2}};
-		These are strings, since you could  want all solvent
-		molecules to be bound, so the "s" option is implemented
-		const vector<vector<string>> boundeds{{"2"},{"s"}};
-		These are strings, since you could want the 
-		const vector<vector<string>> bounder_subset{{"74","88"},{"a"}};
-		const vector<float> bound_radii; */
 
 		// Set velocities to zero
 		setVelocitiesToZero(someState);
@@ -3153,123 +3465,9 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		// Store the proposed energies
 		calcProposedKineticAndTotalEnergyOld(someState);
 
-		std::cout << "Propose: BOUND_WALK integrator" << std::endl;
-		if(topologies.size() < 2){
-			std::cout << "BOUND integrators should only be used over many molecules\n";
-		}
+		// Integrate trajectory
+		integrateTrajectory_Bounded(someState);
 
-		// Get the binding site center
-
-		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
-
-		// We *assume* the last molecule is the ligand.
-		const int nOfBodies = matter->getNumBodies();
-
-		// Print the geometric center (for debugging purposes)
-		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
-		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
-
-		// Ligand
-		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(2) ); 
-		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
-		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
-		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
-		const Transform& X_PF = mobod_L.getInboardFrame(someState);
-		const Transform& X_GL = mobod_L.getBodyTransform(someState);
-
-		// Water (Before rotation)
-		const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
-				SimTK::MobilizedBodyIndex(3) ); 
-		const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
-		const Transform& X_GW = mobod_W.getBodyTransform(someState);
-		const Vec3 COM_LW = mobod_W.findMassCenterLocationInAnotherBody(someState, mobod_L); // Expressed in W (??)
-		const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
-		const Transform& X_PF_Wat = mobod_W.getInboardFrame(someState);
-
-
-		std::cout << "COM_LW: " << COM_LW << " (" << COM_LW.norm() << ")\n" ;
-
-		// It's best to first compute the rotation, then
-		// compute the translation to fit the "New" X_FM
-		
-		// Generate random rotation quaternion
-		double x,y,z, u,v,w, s;
-		do {
-			x = uniformRealDistribution_m1_1(randomEngine);
-			y = uniformRealDistribution_m1_1(randomEngine);
-			z = x*x + y*y;
-		}while (z > 1);
-		do {
-			u = uniformRealDistribution_m1_1(randomEngine);
-			v = uniformRealDistribution_m1_1(randomEngine);
-			w = u*u + v*v;
-		} while (w > 1);
-
-		s = sqrt((1-z) / w);
-
-		SimTK::Quaternion randQuat(x, y, s*u, s*v);
-		SimTK::Quaternion currQuat(someState.updQ()[0], someState.updQ()[1],
-			someState.updQ()[2], someState.updQ()[3]);
-		SimTK::Quaternion resultQuat = multiplyQuaternions(randQuat, currQuat);
-
-		mobod_L.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
-		//mobod_W.setQToFitRotation(someState, SimTK::Rotation(resultQuat));
-		system->realize(someState, SimTK::Stage::Dynamics);
-
-		// Translate
-		SimTK::Vec3 New_LW = SimTK::Rotation(resultQuat) * COM_LW ; //Still expressed in L
-		std::cout << "New_LW: " << New_LW << " (" << New_LW.norm() << ")\n" ;
-		New_LW = X_GL.shiftBaseStationToFrame(New_LW); // Expressed in Ground
-		New_LW = X_GW.shiftBaseStationToFrame(New_LW); // Expressed in Water
-		std::cout << "New_LW (expressed in W): " << New_LW << " (" << New_LW.norm() << ")\n\n" ;
-		//mobod_W.setQToFitTranslation(someState, New_LW);
-		//system->realize(someState, SimTK::Stage::Dynamics);
-
-		// Determine the distance between center of mass of ligand and geometricCenter
-		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
-		std::cout << "ligandToSite: " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
-
-		// If ligand is too far reposition on a sphere centered on the last body
-		// center of mass (also add a margin of error, so you don't stay too much on the surface
-		// of the sphere)
-		//if(ligandToSite.norm() > (sphereRadius)){
-		if (0){
-
-			SimTK::Vec3 BR={0,0,0};
-
-			// Sample a random vector centered in 0 and expressed in G
-			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-			SimTK::Vec3 randVec={0,0,0};
-
-
-			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
-			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
-			randVec[2] = sphereRadius * std::cos(phi);
-			randVec *= uniformRealDistribution(randomEngine);
-
-			// Move it in BindingSiteCenter (BS)
-			SimTK::Vec3 GR;
-			GR = randVec + (geometricCenter - X_PF.p());
-
-			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
-			
-			// Account for COM_L
-			BR = BR - COM_L;
-
-			// Express BR in F
-			BR = X_FM.R()*BR;
-			mobod_L.setQToFitTranslation(someState, BR);
-
-		// If not, just generate a random translation
-		}else{
-			someState.updQ()[4] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
-			someState.updQ()[5] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
-			someState.updQ()[6] += uniformRealDistribution_m1_1(randomEngine) * (1 * this->timestep);
-		}
-
-		system->realize(someState, SimTK::Stage::Dynamics);
 		calcNewEnergies(someState);
 
 	}else if (integratorName == IntegratorName::BOUND_HMC){
@@ -3281,211 +3479,14 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		// Store the proposed energies
 		calcProposedKineticAndTotalEnergyOld(someState);
 
-		std::cout << "Propose: BOUND_HMC integrator" << std::endl;
-		if(topologies.size() < 2){
-			std::cout << "BOUND integrators should only be used over many molecules\n";
-		}
-
-		// Get the binding site center
-
-		SimTK::Vec3 geometricCenter = world->getGeometricCenterOfSelection(someState);
-
-		// We *assume* the last molecule is the ligand.
-		const int nOfBodies = matter->getNumBodies();
-
-		// Print the geometric center (for debugging purposes)
-		std::cout << "HMCSampler Binding Site Center: \t" << geometricCenter << std::endl;
-		std::cout << "HMCSampler Binding Site Sphere Radius: \t" << sphereRadius << " nm\n";	
-
-		// Ligand
-		const SimTK::MobilizedBody& mobod_L = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(2) ); 
-		const Vec3 COM_L = mobod_L.getBodyMassCenterStation(someState);
-		const Vec3 COM_G = mobod_L.findMassCenterLocationInGround(someState);
-		const Transform& X_FM = mobod_L.getMobilizerTransform(someState);
-		const Transform& X_PF = mobod_L.getInboardFrame(someState);
-
-		// Unlike "RANDOM_WALK", this integrator does not need to do 
-		// random rotation, since we integrate the trajectory, which
-		// includes rotation.
-
-		// Determine the distance between center of mass of ligand and geometricCenter
-		SimTK::Vec3 ligandToSite = geometricCenter - COM_G;
-		std::cout << "ligandToSite(kick): " << ligandToSite << " ligandToSite Norm: " << ligandToSite.norm() << std::endl;
-
-		// If ligand is too far reposition on a sphere centered on the last body
-		// center of mass
-		if(ligandToSite.norm() > sphereRadius){
-		//if (1){
-
-			std::cout << "Ligand too far from center (" << ligandToSite.norm() << "), repositioning...\n";
-			SimTK::Vec3 BR={0,0,0};
-
-			// Sample a random vector centered in 0 and expressed in G
-			SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-			SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-			SimTK::Vec3 randVec={0,0,0};
-
-			randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
-			randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
-			randVec[2] = sphereRadius * std::cos(phi);
-			randVec *= uniformRealDistribution(randomEngine);
-
-			// Move it in BindingSiteCenter (BS)
-			SimTK::Vec3 GR;
-			GR = randVec + (geometricCenter - X_PF.p());
-
-			BR = mobod_L.expressGroundVectorInBodyFrame(someState, GR);
-			
-			// Account for COM_L
-			BR = BR - COM_L;
-
-			// Express BR in F
-			BR = X_FM.R()*BR;
-			mobod_L.setQToFitTranslation(someState, BR);
-
-			system->realize(someState, SimTK::Stage::Dynamics);
-		}
-
-		// Water Part
-		const SimTK::MobilizedBody& mobod_L_PostTP = matter->getMobilizedBody(
-			SimTK::MobilizedBodyIndex(2) ); 
-		const Vec3 COM_L_PostTP = mobod_L_PostTP.getBodyMassCenterStation(someState);
-		const Vec3 COM_G_PostTP = mobod_L_PostTP.findMassCenterLocationInGround(someState);
-		const Transform& X_FM_PostTP = mobod_L_PostTP.getMobilizerTransform(someState);
-		const Transform& X_PF_PostTP = mobod_L_PostTP.getInboardFrame(someState);
-
-		// Water
-		for (int waterIx = 3; waterIx < nOfBodies; waterIx++){ 
-			const SimTK::MobilizedBody& mobod_W = matter->getMobilizedBody(
-				SimTK::MobilizedBodyIndex(waterIx) ); 
-			const Vec3 COM_W = mobod_W.getBodyMassCenterStation(someState);
-			const Vec3 COM_GW = mobod_W.findMassCenterLocationInGround(someState);
-			const Transform& X_FM_Water = mobod_W.getMobilizerTransform(someState);
-			const Transform& X_PF_Water = mobod_W.getInboardFrame(someState);
-
-			// Get distance between water and ligand
-					
-			const Vec3 WL = mobod_W.findStationLocationInAnotherBody(someState, COM_W, mobod_L_PostTP);
-			std::cout << "COM_L: " << COM_G << " COM_GW: " << COM_GW << std::endl;
-			std::cout << "WL: " << WL << " WL_NORM: " << WL.norm() << std::endl;
-
-			// If water is too far from ligand reposition on a sphere centered on the 
-			// ligand center of mass
-			float waterSphere = 1;
-			if(WL.norm() > waterSphere){
-			//if (1){
-
-				std::cout << "Water (" << waterIx << ") too far from ligand (" << WL.norm() << "), repositioning...\n";
-				SimTK::Vec3 BR={0,0,0};
-
-				// Sample a random vector centered in 0 and expressed in G
-				SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
-				SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
-				SimTK::Vec3 randVec={0,0,0};
-
-				randVec[0] = waterSphere * std::cos(theta) * std::sin(phi);
-				randVec[1] = waterSphere * std::sin(theta) * std::sin(phi);
-				randVec[2] = waterSphere * std::cos(phi);
-				//randVec *= uniformRealDistribution(randomEngine);
-
-				// Move it in BindingSiteCenter (BS)
-				SimTK::Vec3 GR;
-				//GR = randVec + (geometricCenter - X_PF.p());
-				GR = randVec + (COM_G_PostTP - X_PF_Water.p());
-
-				BR = mobod_W.expressGroundVectorInBodyFrame(someState, GR);
-				
-				// Account for COM_L
-				BR = BR - COM_W;
-
-				// Express BR in F
-				BR = X_FM_Water.R()*BR;
-				mobod_W.setQToFitTranslation(someState, BR);
-				system->realize(someState, SimTK::Stage::Position);
-				std::cout << "Water (" << waterIx-1
-				          <<") repositioned in " << mobod_W.expressVectorInGroundFrame(someState, BR) 
-						  << std::endl << std::endl;
-
-			}
-		}
-		system->realize(someState, SimTK::Stage::Dynamics);
-
-		// Else, if not repositioned, integrate trajectory.
-		if(ligandToSite.norm() <= sphereRadius) {
-			initializeVelocities(someState);
-			calcProposedKineticAndTotalEnergyOld(someState);
-
-			integrateTrajectory(someState);
-			system->realize(someState, SimTK::Stage::Dynamics);
-		}
+		// Integrate trajectory
+		integrateTrajectory_BoundHMC(someState);
 
 		calcNewEnergies(someState);
 
 	}else if(integratorName == IntegratorName::STATIONS_TASK){
 
-		/* std::cout << "STATIONS_TASK\n";
-		system->realize(someState, SimTK::Stage::Position);
-
-		// Update target space
-		world->updateTaskSpace(someState);
-		SimTK::Array_<SimTK::Vec3> deltaStationP = world->getTaskSpaceDeltaStationP();
-		std::cout << "deltaStationP " << deltaStationP << std::endl;
-
-		SimTK::Matrix_<SimTK::Vec3> JS;
-		world->calcStationJacobian(someState, JS);
-
-		SimTK::Vector taskForce;
-		
-		matter->multiplyByStationJacobianTranspose(someState,
-			world->onBodyB[0], world->taskStationPInGuest[0],
-			deltaStationP[0], taskForce);
-		
-		std::cout << "state numU " << someState.getNU()
-			<< " taskForce " << -1.0 * taskForce
-			<< std::endl;
-
-		someState.setU(-1 * taskForce); */
-
-		/* // Topologies and target atoms
-		int hostTopology = 0;
-		int guestTopology = 1;
-		std::vector<int> bAtomIxs_host = {4}; // atoms on host topology
-		std::vector<int> bAtomIxs_guest = {29}; // atoms on target topology
-
-		// Get stations in guest
-		int topi = -1;
-		for(auto& topology : (topologies)){ // topologies
-			topi++;
-			if(topi == guestTopology){
-				int tz = -1;
-				for (int bAtomIx : bAtomIxs_guest) { // atoms
-					tz++;
-
-					// Get body
-					SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).compoundAtomIndex;
-					SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
-					SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-
-					// Get mobod X_GB, X_PF, X_FM and X_BM
-					const Transform& X_GB = mobod.getBodyTransform(someState);
-					const Transform& X_PF = mobod.getInboardFrame(someState);
-					const Transform& X_FM = mobod.getMobilizerTransform(someState);
-					const Transform& X_BM = mobod.getOutboardFrame(someState);
-					
-					const Transform& X_GF = X_GB * X_BM * (~X_FM);
-					SimTK::Vec3 G_S = deltaStationP[0];
-					SimTK::Vec3 F_S = (~X_GF) * G_S;
-
-					mobod.setOneU(someState, 0, F_S[0]);
-					mobod.setOneU(someState, 1, F_S[1]);
-					mobod.setOneU(someState, 2, F_S[2]);
-
-				}
-			}
-		} */
-
-		system->realize(someState, SimTK::Stage::Velocity);
+		integrateTrajectory_TaskSpace(someState);
 
 		// Store the proposed energies
 		calcProposedKineticAndTotalEnergyOld(someState);
