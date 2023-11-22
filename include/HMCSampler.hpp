@@ -252,6 +252,8 @@ public:
 		storeOldPotentialEnergies(
 			SimTK::State& someState);
 
+	void storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState);
+
 	// Set the method of integration
 	void setSampleGenerator(const std::string& samplerNameArg);
 
@@ -286,6 +288,9 @@ public:
 
 	/** Adapt Gibbs blocks definitions **/
 	void adaptWorldBlocks(SimTK::State& someState);
+
+	/** Cartesian Fixman potential */
+	SimTK::Real CartesianFixmanPotential(void);
 
 	/** Store new configuration and energy terms**/
 	virtual void calcNewEnergies(SimTK::State& someState);
@@ -392,7 +397,7 @@ public:
 
 	void OMM_integrateTrajectory(SimTK::State&);
 
-	void OMM_calcNewEnergies(void);
+	//void OMM_calcNewEnergies(void);
 
 	void OMM_restoreConfiguration(SimTK::State& someState);
 

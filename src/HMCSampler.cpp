@@ -433,32 +433,53 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 
 }
 
-/**
- * Set U to zero
-*/
-void HMCSampler::setVelocitiesToZero(SimTK::State& someState){
-	
-	// Set velocities to 0
-	someState.updU() = 0.0;
-}
-
-/** Initialize velocities to zero
- * */
-void HMCSampler::initializeVelocitiesToZero(SimTK::State& someState){
-
-	setVelocitiesToZero(someState);
-
-	// Realize velocity
-	system->realize(someState, SimTK::Stage::Velocity);
-
+/** Store old and set kinetic and total energies */
+void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
+{
 	// Store kinetic energies
-	this->ke_o = (this->unboostKEFactor) * matter->calcKineticEnergy(someState);
+	if(this->integratorName == IntegratorName::OMMVV){
+		this->ke_o = OMM_calcKineticEnergy();
+	}else{
+		this->ke_o = matter->calcKineticEnergy(someState);		
+	}
+	
+	this->ke_o *= (this->unboostKEFactor);
+
 	this->ke_set = this->ke_o;
 
 	// Update total energies
 	this->etot_o = getOldPE() + getOldKE()
 		+ getOldFixman() + getOldLogSineSqrGamma2();
 	this->etot_set = this->etot_o;
+
+}
+
+/**
+ * Set velocities to 0
+*/
+void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
+{	
+	// Set velocities to 0
+	if(this->integratorName == IntegratorName::OMMVV){
+		dumm->setOpenMMvelocities(0);
+	}else{
+		someState.updU() = 0;
+	}
+
+}
+
+/** Initialize velocities to zero
+ * */
+void HMCSampler::initializeVelocitiesToZero(SimTK::State& someState)
+{
+
+	setVelocitiesToZero(someState);
+
+	// Realize velocity
+	system->realize(someState, SimTK::Stage::Velocity);
+
+	// Store kinetic and total energies
+	storeOldAndSetKineticAndTotalEnergies(someState);
 
 }
 
@@ -473,64 +494,60 @@ void HMCSampler::initializeVelocities(SimTK::State& someState){
 		setVelocitiesToZero(someState);
 
 	}else{
-		// Check if we can use our cache
-		const int nu = someState.getNU();
-		if (nu != RandomCache.nu) {
-			// Rebuild the cache
-			// We also get here if the cache is not initialized
-			RandomCache.V.resize(nu);
-			RandomCache.SqrtMInvV.resize(nu);
 
-			// OLD RESTORE TODO BOOST
-			//RandomCache.sqrtRT = std::sqrt(RT);
-			// NEW TRY TODO BOOST
-			RandomCache.sqrtRT = std::sqrt(this->boostRT);
+		if(this->integratorName == IntegratorName::OMMVV){
 
-			RandomCache.nu = nu;
+			dumm->setOpenMMvelocities(this->boostT);
 
-			// we don't get to use multithreading here
-			RandomCache.FillWithGaussian();
-		} else {
-			// wait for random number generation to finish (should be done by this stage)
-			RandomCache.task.wait();
+		}else{
+
+			// Check if we can use our cache
+			const int nu = someState.getNU();
+			if (nu != RandomCache.nu) {
+
+				// Rebuild the cache
+				// We also get here if the cache is not initialized
+				RandomCache.V.resize(nu);
+				RandomCache.SqrtMInvV.resize(nu);
+				RandomCache.sqrtRT = std::sqrt(this->boostRT);
+
+				RandomCache.nu = nu;
+
+				// We don't get to use multithreading here
+				RandomCache.FillWithGaussian();
+
+			} else {
+
+				// Wait for random number generation to finish (should be done by this stage)
+				RandomCache.task.wait();
+			}
+
+			// Scale by square root of the inverse mass matrix
+			matter->multiplyBySqrtMInv(someState,
+				RandomCache.V,
+				RandomCache.SqrtMInvV);
+
+			// Set stddev according to temperature
+			RandomCache.SqrtMInvV *= sqrtBoostRT;
+
+			// Raise the temperature
+			someState.updU() = RandomCache.SqrtMInvV;
+
 		}
 
-		// V[i] *= UScaleFactors[i] - note that V is already populated with random numbers
-		//std::transform(RandomCache.V.begin(), RandomCache.V.end(), // apply an operation on this
-		//	UScaleFactors.begin(), // and this
-		//	RandomCache.V.begin(), // and store here
-		//	std::multiplies<SimTK::Real>()); // this is the operation
+		// Realize velocity
+		system->realize(someState, SimTK::Stage::Velocity);
 
-		// Scale by square root of the inverse mass matrix
-		matter->multiplyBySqrtMInv(someState,
-			RandomCache.V,
-			RandomCache.SqrtMInvV);
-
-		// Set stddev according to temperature
-		RandomCache.SqrtMInvV *= sqrtBoostRT;
-
-		// Raise the temperature
-		someState.updU() = RandomCache.SqrtMInvV;
+		// Ask for a number of random numbers and check if we are done the next
+		//  time we hit this function
+		RandomCache.task = std::async(std::launch::async,
+			RandomCache.FillWithGaussian);
 
 	}
 
-	// Realize velocity
-	system->realizeTopology();
-	system->realize(someState, SimTK::Stage::Velocity);
+	// Store kinetic and total energies
+	storeOldAndSetKineticAndTotalEnergies(someState);
 
-	// Store kinetic energies
-	this->ke_o = (this->unboostKEFactor) * matter->calcKineticEnergy(someState);
-	this->ke_set = this->ke_o;
-
-	// Update total energies
-	this->etot_o = getOldPE() + getOldKE()
-		+ getOldFixman() + getOldLogSineSqrGamma2();
-	this->etot_set = this->etot_o;
-
-	// ask for a number of random numbers and check if we are done the next
-	//  time we hit this function
-	RandomCache.task = std::async(std::launch::async,
-		RandomCache.FillWithGaussian);
 }
 
 /** Initialize velocities scaled by NMA factors.
@@ -933,30 +950,135 @@ void HMCSampler::initializeNMAVelocities(SimTK::State& someState){
 }
 
 /*
-* Integrate trajectory: Apply the L operator for non-equlibrium processes
+* Integrate trajectory
 */
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
-	//std::cout << "HMCSampler::integrateTrajectory: ts mds " << timestep << " " << MDStepsPerSample << std::endl;
-	try {
-		// Instant geometry
-		//geomDihedral(someState);
 
-		// Call Simbody TimeStepper to advance time
-		this->world->ts->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-		//this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
-		system->realize(someState, SimTK::Stage::Position);
+	if(this->integratorName == IntegratorName::VERLET){
+		try {
 
-	}catch(const std::exception&){
-		std::cout << "\t[WARNING] propose exception caught!\n";
-		proposeExceptionCaught = true;
+			// Call Simbody TimeStepper to advance time
+			this->world->ts->stepTo(
+				someState.getTime() + (timestep*MDStepsPerSample));
 
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			mobod.setQToFitTransform(someState, SetTVector[mbx - 1]);
+			system->realize(someState, SimTK::Stage::Position);
+
+		}catch(const std::exception&){
+
+			std::cout << "\t[WARNING] propose exception caught!\n";
+			proposeExceptionCaught = true;
+
+			assignConfFromSetTVector(someState);
+
 		}
 
-		system->realize(someState, SimTK::Stage::Position);
+	}else if(this->integratorName == IntegratorName::BOUND_WALK){
+		try {
+
+			// Call Simbody TimeStepper to advance time
+			integrateTrajectory_Bounded(someState);
+
+		}catch(const std::exception&){
+
+			std::cout << "\t[WARNING] propose exception caught!\n";
+			proposeExceptionCaught = true;
+
+			assignConfFromSetTVector(someState);
+			
+		}
+
+	}else if(this->integratorName == IntegratorName::BOUND_HMC){
+		try {
+
+			// Call Simbody TimeStepper to advance time
+			integrateTrajectory_BoundHMC(someState);
+
+		}catch(const std::exception&){
+
+			std::cout << "\t[WARNING] propose exception caught!\n";
+			proposeExceptionCaught = true;
+
+			assignConfFromSetTVector(someState);
+			
+		}
+
+	}else if(this->integratorName == IntegratorName::STATIONS_TASK){
+		try {
+
+			// Call Simbody TimeStepper to advance time
+			integrateTrajectory_TaskSpace(someState);
+
+		}catch(const std::exception&){
+
+			std::cout << "\t[WARNING] propose exception caught!\n";
+			proposeExceptionCaught = true;
+
+			assignConfFromSetTVector(someState);
+			
+		}
+
+	}else if(this->integratorName == IntegratorName::OMMVV){
+		try {
+			
+			// This code works for updating simbody bodies
+			// each body should be an atom
+			assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
+
+			// Actual openmm integration
+			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+
+			// Somewhere, the topology gets ruined
+			system->realizeTopology();
+
+		}catch(const std::exception&){
+
+			// Send general message
+			std::cout << "\t[WARNING] propose exception caught!\n";
+			proposeExceptionCaught = true;
+
+			OMM_restoreConfiguration(someState);
+		}
+
+	}else if(this->integratorName == IntegratorName::EMPTY){
+		try {
+
+			// Advance to Position Stage
+			system->realize(someState, SimTK::Stage::Dynamics);
+
+		}catch(const std::exception&){
+
+			std::cout << "\t[WARNING] propose exception caught!\n";
+			proposeExceptionCaught = true;
+
+			assignConfFromSetTVector(someState);
+			
+		}
+
+	}else{ // Anything else is consodered Empty
+		try {
+
+			// Advance to Position Stage
+			system->realize(someState, SimTK::Stage::Dynamics);
+
+		}catch(const std::exception&){
+
+			std::cout << "\t[WARNING] propose exception caught!\n";
+			proposeExceptionCaught = true;
+			
+			assignConfFromSetTVector(someState);
+
+		}
+
 	}
+
+
+
+}
+
+
+void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState)
+{
+
 }
 
 // Trajectory length has an average of MDStepsPerSample and a given std
@@ -1471,14 +1593,12 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState){
 
 // ELIZA: Insert code here
 void HMCSampler::OMM_setTemperature(double HMCBoostTemperature){
-	// assert(!"Not implemented");
 	dumm->setOpenMMtemperature(HMCBoostTemperature);
 }
 
 // ELIZA: Insert code here
 double HMCSampler::OMM_calcKineticEnergy(void){
 	return dumm->OMM_calcKineticEnergy();
-	// assert(!"Not implemented");
 }
 
 // ELIZA: Insert code here
@@ -1601,30 +1721,6 @@ void HMCSampler::OMM_PrintLocations(void)
 	}	
 }
 
-void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState){
-
-	try {
-		
-		// this code works for updating simbody bodies
-		// each body should be an atom
-		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
-
-		// actual openmm integration
-		dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
-
-		// somewhere, the topology gets ruined
-		system->realizeTopology();
-
-	}catch(const std::exception&){
-		// Send general message
-		std::cout << "\t[WARNING] propose exception caught!\n";
-		proposeExceptionCaught = true;
-
-		OMM_restoreConfiguration(someState);
-	}
-
-}
-
 // ELIZA: Check the code below
 void HMCSampler::OMM_calcProposedKineticAndTotalEnergyOld(void){
 
@@ -1637,31 +1733,6 @@ void HMCSampler::OMM_calcProposedKineticAndTotalEnergyOld(void){
 		+ getOldLogSineSqrGamma2();
 }
 
-
-// ELIZA: Check the code below
-void HMCSampler::OMM_calcNewEnergies(void){
-
-	// Get new Fixman potential
-	if(useFixman){
-		std::cerr 
-			<< "Attempting Fixman potential calculation with OpenMM integrators.";
-		throw std::exception();
-		std::exit(1);
-	}else{
-		fix_n = 0.0;
-		logSineSqrGamma2_n = 0.0;
-	}
-
-	// Get new kinetic energy
-	ke_n = OMM_calcKineticEnergy();
-
-	// Get new potential energy
-	pe_n = OMM_calcPotentialEnergy();
-
-	etot_n = pe_n + ke_n;
-	etot_o = pe_o + ke_o;
-
-}
 
 /* 
 * Compute mathematical, rather than robotic Jacobian.
@@ -2412,6 +2483,9 @@ void HMCSampler::setBoostTemperature(SimTK::Real argT)
 	this->boostUFactor = std::sqrt(this->boostT / this->temperature);
 	this->unboostUFactor = 1 / boostUFactor;
 	//std::cout << "HMC: boost velocity scale factor: " << this->boostUFactor << std::endl;
+
+	OMM_setTemperature(this->boostT);
+
 }
 
 void HMCSampler::setBoostMDSteps(int argMDSteps)
@@ -2727,32 +2801,50 @@ void HMCSampler::geomDihedral(SimTK::State& someState){
 	// INSTANT GEOMETRY END
 }
 
+/** Cartesian Fixman potential */
+SimTK::Real HMCSampler::CartesianFixmanPotential(void){
+	std::cerr 
+		<< "Attempting Fixman potential calculation with OpenMM integrators.";
+	throw std::exception();
+	std::exit(1);
+}
+
 /** Store new configuration and energy terms **/
 void HMCSampler::calcNewEnergies(SimTK::State& someState)
 {
 
 	// Get new potential energy
-	pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
-	//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
-	// TODO: replace with the following after checking is the same thing
-	//pe_n = compoundSystem->calcPotentialEnergy(someState);
+	if(this->integratorName == IntegratorName::OMMVV){
+		pe_n = OMM_calcPotentialEnergy();
+	}else{
+		pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+		//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
+		// TODO: replace with the following after checking is the same thing
+		//pe_n = compoundSystem->calcPotentialEnergy(someState);
+	}
 
 	// Get new Fixman potential
 	if(useFixman){
-		fix_n = calcFixman(someState);
-		logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
+		if(this->integratorName == IntegratorName::OMMVV){
+			fix_n = CartesianFixmanPotential();
+		}else{
+			fix_n = calcFixman(someState);
+			logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState);
+		}
 	}else{
 		fix_n = 0.0;
 		logSineSqrGamma2_n = 0.0;
 	}
 
 	// Get new kinetic energy
-	system->realize(someState, SimTK::Stage::Velocity);
+	if(this->integratorName == IntegratorName::OMMVV){
+		ke_n = OMM_calcKineticEnergy();
+	}else{
+		ke_n = matter->calcKineticEnergy(someState);
+		system->realize(someState, SimTK::Stage::Velocity);
+	}
 
-	// OLD RESTORE TODO BOOST
-	//ke_n = matter->calcKineticEnergy(someState);
-	// NEW TRY TODO BOOST
-	ke_n = (this->unboostKEFactor) * matter->calcKineticEnergy(someState);
+	ke_n *= (this->unboostKEFactor); // TODO: Check
 
 	// Get new total energy
 	if(useFixman){
@@ -2764,6 +2856,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 	}
 
 }
+
 
 /** Set energies and configuration to new state **/
 void HMCSampler::setSetConfigurationAndEnergiesToNew(
@@ -3333,9 +3426,6 @@ HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
 bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 {
 
-	/*// Store old configuration
-	storeOldConfigurationAndPotentialEnergies(someState);*/
-
 	// Adapt timestep
 	bool shouldAdaptWorldBlocks = false;
 	if(shouldAdaptWorldBlocks){
@@ -3375,7 +3465,6 @@ bool HMCSampler::proposeNEHMC(SimTK::State& someState)
 		system->realize(someState, SimTK::Stage::Dynamics);
 	}else{
 		integrateTrajectory(someState);
-		//integrateTrajectoryOneStepAtATime(someState);
 	}
 
 	calcNewEnergies(someState);
@@ -3412,11 +3501,15 @@ algorithm. It essentially propagates the trajectory. **/
 bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 {
 
+	// Adapt timestep
+	if(shouldAdaptTimestep){
+		adaptTimestep(someState);
+	}
+
 	if(integratorName == IntegratorName::OMMVV){
 
-		// // ELIZA: Check the code below
+		// Initialize velocities
 		dumm->setOpenMMvelocities(this->boostT);
-		OMM_setTemperature(this->boostT); // the same thing but set dumm T also
 
 		// set the positions we want to start from
 		//Simbody_To_OMM_setAtomsLocations(someState);
@@ -3424,18 +3517,7 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		// Get current energies and set it to old
 		OMM_calcProposedKineticAndTotalEnergyOld();
 
-		// Integrate trajectory
-		OMM_integrateTrajectory(someState);
-
-		// Get all new energies after integration
-		OMM_calcNewEnergies();
-
 	}else if (integratorName == IntegratorName::VERLET){
-
-		// Adapt timestep
-		if(shouldAdaptTimestep){
-			adaptTimestep(someState);
-		}
 
 		// Initialize velocities
 		initializeVelocities(someState);
@@ -3448,74 +3530,64 @@ bool HMCSampler::proposeEquilibrium(SimTK::State& someState)
 		if(shouldAdaptWorldBlocks){
 			adaptWorldBlocks(someState);
 		}
-
-		// Integrate trajectory
-		integrateTrajectory(someState);
-		//integrateTrajectoryOneStepAtATime(someState);
-
-		// Get all new energies after integration
-		calcNewEnergies(someState);
 	
 	}else if (integratorName == IntegratorName::BOUND_WALK){
 
 		// Set velocities to zero
-		setVelocitiesToZero(someState);
-		system->realize(someState, SimTK::Stage::Velocity);
+		initializeVelocitiesToZero(someState);
 
 		// Store the proposed energies
 		calcProposedKineticAndTotalEnergyOld(someState);
-
-		// Integrate trajectory
-		integrateTrajectory_Bounded(someState);
-
-		calcNewEnergies(someState);
 
 	}else if (integratorName == IntegratorName::BOUND_HMC){
 
 		// Set velocities to zero
-		setVelocitiesToZero(someState);
-		system->realize(someState, SimTK::Stage::Velocity);
+		initializeVelocitiesToZero(someState);
 
 		// Store the proposed energies
 		calcProposedKineticAndTotalEnergyOld(someState);
-
-		// Integrate trajectory
-		integrateTrajectory_BoundHMC(someState);
-
-		calcNewEnergies(someState);
 
 	}else if(integratorName == IntegratorName::STATIONS_TASK){
 
-		integrateTrajectory_TaskSpace(someState);
+		// Set velocities to zero
+		initializeVelocitiesToZero(someState);
 
 		// Store the proposed energies
 		calcProposedKineticAndTotalEnergyOld(someState);
 
-		// Adapt timestep
-		bool shouldAdaptWorldBlocks = false;
-		if(shouldAdaptWorldBlocks){
-			adaptWorldBlocks(someState);
-		}
-
-		// Apply the L operator
-		integrateTrajectory(someState);
-		//integrateTrajectoryOneStepAtATime(someState);
-
-		calcNewEnergies(someState);
-
 	}else if (integratorName == IntegratorName::EMPTY){
 
-		calcNewEnergies(someState);
-		// system->realize(someState, SimTK::Stage::Dynamics); // maybe
+		// Set velocities to zero
+		initializeVelocitiesToZero(someState);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergyOld(someState);
 
 	}else{
 
 		std::cout << "Warning UNKNOWN INTEGRATOR TREATED AS EMPTY\n";
-		calcNewEnergies(someState);
-		// system->realize(someState, SimTK::Stage::Dynamics); // maybe
+
+		// Set velocities to zero
+		initializeVelocitiesToZero(someState);
+
+		// Store the proposed energies
+		calcProposedKineticAndTotalEnergyOld(someState);
 
 	}
 
+	// Adapt timestep
+	bool shouldAdaptWorldBlocks = false;
+	if(shouldAdaptWorldBlocks){
+		adaptWorldBlocks(someState);
+	}
+
+	// Integrate trajectory
+	integrateTrajectory(someState);
+
+	// Get all new energies after integration
+	calcNewEnergies(someState);
+
+	// Validate proposal
 	return validateProposal();
 
 }
