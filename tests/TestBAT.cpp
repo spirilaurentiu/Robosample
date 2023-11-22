@@ -347,9 +347,9 @@ int main() {
         return 1;
     }
 
-    // if (!test3cycles()) {
-    //     return 1;
-    // }
+    if (!test3cycles()) {
+        return 1;
+    }
 
     // endConstruction()
 
