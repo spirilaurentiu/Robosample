@@ -12,6 +12,22 @@
 
 using namespace SimTK;
 
+class ForceArrowGenerator : public DecorationGenerator {
+
+public:
+    ForceArrowGenerator(const MultibodySystem& system,
+                        const CompliantContactSubsystem& complCont) 
+    :   m_system(system), m_compliant(complCont) {}
+
+    virtual void generateDecorations(const State& state, Array_<DecorativeGeometry>& geometry);
+
+private:
+    const MultibodySystem&              m_system;
+    const CompliantContactSubsystem&    m_compliant;
+
+};
+
+
 class ParaMolecularDecorator : public DecorationGenerator {
 public:
 	ParaMolecularDecorator(SimTK::CompoundSystem *argCompoundSystem,

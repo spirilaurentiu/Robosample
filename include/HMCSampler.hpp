@@ -206,7 +206,7 @@ public:
 	SimTK::Real getREP(void) const; 
 
 	// Set/get Fixman potential
-	void setSetTVector(const SimTK::State& advanced); 
+	void updateStoredConfiguration(const SimTK::State& advanced); 
 	SimTK::Transform * getSetTVector(void);
 	void assignConfFromSetTVector(SimTK::State& advanced);
 
@@ -249,7 +249,7 @@ public:
 
 	/** Store configuration and PE, Fixman potential and logsin gamma squared **/
 	virtual void 
-		storeOldConfigurationAndPotentialEnergies(
+		storeOldPotentialEnergies(
 			SimTK::State& someState);
 
 	// Set the method of integration
@@ -263,7 +263,7 @@ public:
 	void initializeNMAVelocities(SimTK::State& someState);
 
 	/** Store the proposed energies **/
-	virtual void calcProposedKineticAndTotalEnergy(SimTK::State& someState);
+	virtual void calcProposedKineticAndTotalEnergyOld(SimTK::State& someState);
 
 	/** Apply the L operator **/
 	virtual void integrateTrajectory(SimTK::State& someState);
@@ -272,6 +272,15 @@ public:
 	/** Integrate trajectory one step at a time to compute quantities instantly **/
 	virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
 
+	/** BOUND WALK */
+	void integrateTrajectory_Bounded(SimTK::State& someState);
+
+	/** BOUND HMC */
+	void integrateTrajectory_BoundHMC(SimTK::State& someState);
+
+	/** Integrate trajectory using task space forces */
+	void integrateTrajectory_TaskSpace(SimTK::State& someState);
+
 	/** Use stochastic optimization to adapt timestep **/
 	virtual void adaptTimestep(SimTK::State& someState);
 
@@ -279,17 +288,13 @@ public:
 	void adaptWorldBlocks(SimTK::State& someState);
 
 	/** Store new configuration and energy terms**/
-	virtual void calcNewConfigurationAndEnergies(SimTK::State& someState);
+	virtual void calcNewEnergies(SimTK::State& someState);
 
 	/**  Restore old configuration and energies**/
-	virtual void setSetConfigurationToOld(SimTK::State& someState);
+	virtual void restoreConfiguration(SimTK::State& someState);
 
 	/** Update new configuration and energiees **/
 	virtual void setSetConfigurationAndEnergiesToNew(
-		SimTK::State& someState);
-
-	/** Restore configuration and set energies to old */
-	void setSetConfigurationAndEnergiesToOld(
 		SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
@@ -368,19 +373,34 @@ public:
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setTemperature(double HMCBoostTemperature);
 
+	// Update OpenMM position from a Simbody Cartesian world
+	void Simbody_To_OMM_setAtomsLocations(SimTK::State& someState);
+
+
 	double OMM_calcPotentialEnergy(void);
 
 	double OMM_calcKineticEnergy(void);
 
-	void OMM_calcProposedKineticAndTotalEnergy(void);
+	void OMM_calcProposedKineticAndTotalEnergyOld(void);
+
+	void OMM_storeOMMConfiguration(void);
+
+	void OMM_To_Simbody_setAtomsLocations(SimTK::State& someState);
+
+	void OMM_PrintLocations(void);
+
 
 	void OMM_integrateTrajectory(SimTK::State&);
 
-	void OMM_calcNewConfigurationAndEnergies(void);
+	void OMM_calcNewEnergies(void);
 
 	void OMM_restoreConfiguration(SimTK::State& someState);
 
 	void setSphereRadius(float argSphereRadius);
+
+	///////////////////////////////////////////////////////
+	// PROPOSE
+	///////////////////////////////////////////////////////
 
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
@@ -396,9 +416,22 @@ public:
 	*/
 	bool generateProposal(SimTK::State& someState);
 
+	///////////////////////////////////////////////////////
+	// UPDATE
+	///////////////////////////////////////////////////////
+
+	/** Update energies */
+	void updateEnergies(void);
+
 	/** Calls setSetConfigurationAndEnergiesToNew **/
 	void update(SimTK::State& someState);
 
+	///////////////////////////////////////////////////////
+	// RESTORE
+	///////////////////////////////////////////////////////
+
+	/** Restore energies */
+	void restoreEnergies(void);
 	/** Calls setSetConfigurationAndEnergiesToOld **/
 	void restore(SimTK::State& someState);
 
@@ -490,6 +523,7 @@ protected:
 	RANDOM_CACHE RandomCache;
 
 	std::vector<SimTK::Vec3> omm_locations;
+	std::vector<SimTK::Vec3> omm_locations_old;
 
 	// BEGIN MCSampler
 	std::vector<SimTK::Transform> SetTVector; // Transform matrices

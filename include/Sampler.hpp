@@ -79,6 +79,10 @@ public:
 	/** Generate a random number. **/
 	SimTK::Real generateRandomNumber(GmolRandDistributionType);
 
+	/** Generate random rotation quaternion */
+	SimTK::Quaternion generateRandomQuaternion(void);
+
+
 	/**
 	 * Take a variable and transforming according to some distribution
 	 * //TODO revise param1 and param2
@@ -113,6 +117,9 @@ public:
 
 	// For debugging purposes
 	void PrintSimbodyStateCache(SimTK::State& someState);
+
+
+
 
 public: 
 	// Classes we need to access

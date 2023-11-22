@@ -176,6 +176,8 @@ World::World(int worldIndex,
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
 	ts = std::make_unique<SimTK::TimeStepper>(*compoundSystem, *integ);
 
+	const SimTK::MultibodySystem& mbs = forces->getMultibodySystem();
+	
 	// Set the visual flag and if true initialize a Decorations Subsystem,
 	// a Visualizer and a Simbody EventReporter which interacts with the
 	// Visualizer
@@ -186,6 +188,8 @@ World::World(int worldIndex,
 		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
 			*visualizer, std::abs(visualizerFrequency));
 		compoundSystem->addEventReporter(visualizerReporter.get());
+
+		visualizer->addDecorationGenerator(new ForceArrowGenerator(mbs, *contactForces));
 
 		// Initialize a DecorationGenerator
 		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
@@ -726,40 +730,72 @@ const SimTK::State& World::addSpeedConstraint(int prmtopIndex)
 //                   CONTACTS Functions
 //=============================================================================
 
-
 /** Add contact surfaces to bodies **/
-const SimTK::State& World::addContacts(int prmtopIx)
+void World::addContacts(const std::vector<int>& prmtopIndex, const int topologyIx, 
+						const SimTK::ContactCliqueId cliqueId)
 {
-	if(prmtopIx >= 0){
-		std::cout <<
-			"Adding contacts with membrane to atom with prmtop index " <<
-		 prmtopIx << "\n" ;
+	// Iterate through the prmtopIndex and add the appropriate spheres
 
-		const Real stiffness = 10000.0; // stiffness in pascals
-		const Real dissipation = 0.0;    // to turn off dissipation
+	for(int prmtopIx : (prmtopIndex)){
+		if (prmtopIx == -1) {
+			std::cout << "World::addContacts: prmtop index -1 found. Skipping topologyIx " << topologyIx << std::endl;
+			break;
+		}
+
+		std::cout << "Adding contacts with membrane to atom with prmtop index " <<
+			prmtopIx << " to topology " << topologyIx << " in clique " << cliqueId << std::endl;
+
+
+
+		const Real stiffness = 10000; // stiffness in pascals
+		const Real dissipation = 0.0; 
 		SimTK::Real staticFriction = 0.0;
 		SimTK::Real dynamicFriction = 0.0;
 		SimTK::Real viscousFriction = 0.0;
 
+		// Map from AmberAtomIndex to CompoundAtomIndex 
+		SimTK::Compound::AtomIndex cAIx = ((*topologies)[topologyIx]).
+										bAtomList[prmtopIx].getCompoundAtomIndex();
+
 		SimTK::MobilizedBodyIndex
-		mbx = ((*topologies)[0]).getAtomMobilizedBodyIndexThroughDumm(
-			SimTK::Compound::AtomIndex(prmtopIx), *forceField);
+		mbx = ((*topologies)[topologyIx]).getAtomMobilizedBodyIndexThroughDumm(
+			cAIx, *forceField);
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-		ContactGeometry::TriangleMesh mesh(PolygonalMesh::createSphereMesh(0.3, 2));
+		
+		// Need to get vdw radius for said atom
+		const SimTK::DuMM::AtomIndex dAIx = ((*topologies)[topologyIx]).getDuMMAtomIndex(cAIx);
+		Real vdwRadius = forceField->getAtomRadius(dAIx);
 
-		DecorativeMesh deco(mesh.createPolygonalMesh());
-		mobod.updBody().addDecoration(
-			Transform(), deco.setColor(Cyan).setOpacity(.6));
-		mobod.updBody().addContactSurface(
-			Transform(), ContactSurface(
-				mesh, ContactMaterial(
-					stiffness, dissipation,
-					staticFriction, dynamicFriction, viscousFriction),
-				 0.001));
+		std::cout << "Atom element: " << forceField->getAtomElement(dAIx)
+				  << " Atom radius (nm): " << forceField->getAtomRadius(dAIx) << std::endl;
+
+		PolygonalMesh sphereMesh;
+    	sphereMesh = PolygonalMesh::createSphereMesh(vdwRadius,1);
+			
+		// We need to account for the position of the actual atom, so we
+		// must also apply a translation from the Origin of the MoBod to the
+		// location of the station coressponding to said atom.
+
+		SimTK::Vec3 atomPos = ((*topologies)[topologyIx]).getAtomLocationInMobilizedBodyFrameThroughDumm
+								(cAIx,getForceField());
+
+
+		ContactGeometry::TriangleMesh sphere(sphereMesh);
+		mobod.updBody().addContactSurface(Transform(atomPos), 
+			ContactSurface(sphere,
+				ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction),
+				0.1).joinClique(cliqueId));
+
+		if (visual == true) {
+			DecorativeMesh showSphere(sphere.createPolygonalMesh());
+			mobod.updBody().addDecoration(Transform(atomPos), 
+				showSphere.setColor(Cyan).setOpacity(0.2));
+			//TODO: Remove this in production
+			mobod.updBody().addDecoration(Transform(atomPos), 
+				showSphere.setColor(Gray).setRepresentation(DecorativeGeometry::DrawWireframe));
+		}
 	}
-
-	const SimTK::State& returnState = compoundSystem->realizeTopology();
-	return returnState;
 }
 
 // CONTACT DEBUG
@@ -794,52 +830,76 @@ std::cout << "CONTACT INFO:"
 /** Assign a scale factor for generalized velocities to every mobilized
 body **/
 
-
 //=============================================================================
 //                   MEMBRANE Functions
 //=============================================================================
 
 /** Add a membrane represented by a contact surface **/
-void World::addMembrane(
-	SimTK::Real xWidth, SimTK::Real yWidth, SimTK::Real zWidth, int resolution)
+void World::addMembrane(const SimTK::Real halfThickness)
 {
-	SimTK::Real stiffness = 10000.0;
-	SimTK::Real dissipation = 0.0;
+
+	SimTK::Real stiffness = 10000;
+	SimTK::Real dissipation = 0;
 	SimTK::Real staticFriction = 0.0;
 	SimTK::Real dynamicFriction = 0.0;
 	SimTK::Real viscousFriction = 0.0;
 
-	//ContactGeometry::HalfSpace contactGeometry;
-	//ContactGeometry::Sphere contactGeometry(1);
-
-	PolygonalMesh mesh = PolygonalMesh::createBrickMesh(
-		Vec3(xWidth, yWidth, zWidth), resolution);
-	ContactGeometry::TriangleMesh contactGeometry(mesh);
+ 	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, halfThickness)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(1))
+			.joinClique(SimTK::ContactCliqueId(2))
+			.joinClique(SimTK::ContactCliqueId(3))
+			);
 
 	matter->Ground().updBody().addContactSurface(
-		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis)),
-		//Transform(),
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -halfThickness)),
 		ContactSurface(
-		contactGeometry,
+		ContactGeometry::HalfSpace(),
 		ContactMaterial(stiffness, dissipation,
-			staticFriction, dynamicFriction, viscousFriction),
-		1.0)
-	);
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			.joinClique(SimTK::ContactCliqueId(2))
+			.joinClique(SimTK::ContactCliqueId(3)));
+	
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, halfThickness)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			.joinClique(SimTK::ContactCliqueId(1))
+			.joinClique(SimTK::ContactCliqueId(3))
+			);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -halfThickness)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			.joinClique(SimTK::ContactCliqueId(1))
+			.joinClique(SimTK::ContactCliqueId(2))
+			);
+
 
 	if (visual == true) {
 		DecorativeFrame contactGeometryDecoFrame;
 		matter->Ground().updBody().addDecoration(
-			Transform(), contactGeometryDecoFrame
-		);
-
-		//DecorativeMesh contactGeometryDeco(mesh);
-		DecorativeMesh contactGeometryDeco(contactGeometry.createPolygonalMesh());
-		matter->Ground().updBody().addDecoration(
-			Transform(), contactGeometryDeco.setColor(Cyan).setOpacity(0.5)
-		);
+		Transform(),
+        DecorativeBrick(Vec3(10,10,halfThickness)).setColor(Orange).setOpacity(0.25));
+		
 	}
 
 }
+
+
+
 
 
 /** Realize Topology for this World **/
@@ -1773,6 +1833,25 @@ void World::WriteRst7FromTopology(std::string FN)
 	fclose(File);
 }
 
+/** Print transformation geometries */
+void World::PrintFullTransformationGeometry(const SimTK::State& someState)
+{
+	std::cout << "X_PF X_FM X_BM ps \n";
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+		const Transform& X_PF = mobod.getDefaultInboardFrame();
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		std::cout
+			<< X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " "
+			<< X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " "
+			<< X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " " 
+			<< std::endl;
+	}
+}
+
+
+
 /** Put coordinates into bAtomLists of Topologies.
  * When provided with a State, calcAtomLocationInGroundFrame
  * realizes Position and uses matter to calculate locations **/
@@ -2122,26 +2201,26 @@ SimTK::State& World::setAtomsLocationsInGround(
 std::vector<SimTK::Transform>
 World::calcMobodToMobodTransforms(
 	Topology& topology,
-	SimTK::Compound::AtomIndex aIx,
+	SimTK::Compound::AtomIndex rootAIx,
 	const SimTK::State& someState)
 {
 	// There is no P_X_F and B_X_M inside a body.
 	// assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
 
 	// Get body, parentBody
-	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
 
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
 	// Get the neighbor atom in the parent mobilized body
-	//SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx); // SAFE
-	SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter.get(), aIx, *forceField); // DANGER
+	SimTK::Compound::AtomIndex chemParentAIx =
+		topology.getChemicalParent(matter.get(), rootAIx, *forceField);
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
-	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(aIx, chemParentAIx);
+	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
 
 	// Get Top to parent frame
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
@@ -2149,7 +2228,7 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 
 	// Get inboard dihedral angle
-	SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(aIx);
+	SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
 	SimTK::Transform InboardDihedral_XAxis
 		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
 	SimTK::Transform InboardDihedral_ZAxis
@@ -2159,7 +2238,7 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
 	SimTK::Transform Z_to_X = ~X_to_Z;
 	SimTK::Transform oldX_PB =
-		(~T_X_Proot) * topology.getTopTransform(aIx)
+		(~T_X_Proot) * topology.getTopTransform(rootAIx)
 		* InboardDihedral_XAxis * X_to_Z
 		* InboardDihedral_ZAxis * Z_to_X;
 
@@ -2178,16 +2257,15 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
 
 	// Get mobility (joint type)
-	bSpecificAtom *atom = topology.updAtomByAtomIx(aIx);
+	bSpecificAtom *atom = topology.updAtomByAtomIx(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	bBond bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
+	bBond bond = topology.getBond(topology.getNumber(rootAIx), topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	bool anglePin_OR = (
 		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
 		|| (mobility == SimTK::BondMobility::Mobility::Slider)
 		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-		//|| (mobility == SimTK::BondMobility::Mobility::Torsion)
 	);
 
 	if( (anglePin_OR) && ((atom->neighbors).size() == 1)){
@@ -2195,15 +2273,15 @@ World::calcMobodToMobodTransforms(
 
 	}else if( (anglePin_OR) && ((atom->neighbors).size() != 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-		//return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 
-	}else if(mobility == SimTK::BondMobility::Mobility::Torsion){
+	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
+			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
+			||	(mobility == SimTK::BondMobility::Mobility::Spherical)){
 		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
 
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
 	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
-	//|| (mobility == SimTK::BondMobility::Mobility::Spherical)
 	){
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 

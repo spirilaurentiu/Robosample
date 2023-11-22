@@ -82,7 +82,7 @@ public:
     //void setBoostMDSteps(int);
 
     /** Store configuration and PE, Fixman potential and logsin gamma squared **/
-    void storeOldConfigurationAndPotentialEnergies(SimTK::State& someState);
+    void storeOldPotentialEnergies(SimTK::State& someState);
 
     /** Initialize velocities according to the Maxwell-Boltzmann   
     distribution.  Coresponds to R operator in LAHMC **/
@@ -153,7 +153,7 @@ public:
     /** Get the proposed kinetic energy. This is set right  after velocities
     are initialized. **/
     SimTK::Real getProposedKE() { return this->ke_o; }
-    
+      
     /** Get the stored kinetic energy. This is set rightafter a move is
     accepted. It's a component of the total energy stored. **/
     SimTK::Real getLastAcceptedKE() { return this->ke_set; }

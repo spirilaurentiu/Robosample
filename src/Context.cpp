@@ -159,6 +159,15 @@ bool Context::initializeFromFile(const std::string &file)
 	// Is this necessary?
 	realizeTopology();
 
+
+	// Add membrane.
+	bool haveMembrane = (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND");
+	if (haveMembrane){
+		float memZWidth = std::stof(setupReader.get("MEMBRANE")[0]);
+		addContactImplicitMembrane(memZWidth, setupReader);
+	
+	}
+
 	// Add empty samplers to the worlds.
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		BaseSampler *p = addSampler(worldIx,
@@ -462,6 +471,43 @@ bool Context::initializeFromFile(const std::string &file)
 	// -- Run --
 	
 	setThermostatesNonequilibrium();
+
+
+	/* // Add constraints
+	//context.addConstraints();
+
+	PrintInitialRecommendedTimesteps();
+
+	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
+		setRunType(0);
+		Run(getRequiredNofRounds(),
+			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+			
+	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+			setRunType(0);
+			RunSimulatedTempering(getRequiredNofRounds(),
+				std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+				std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+
+	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
+		setRunType(1);
+		RunREX();
+
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
+		setRunType(2);
+		RunREX();
+
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
+		setRunType(3);
+		RunREX();
+
+	}else{
+		setRunType(0);
+		Run(getRequiredNofRounds(),
+			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+	} */
 
     return true;
 }
@@ -913,23 +959,41 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// }
 }
 
+/** 
+ * Main run function
+*/
 void Context::Run() {
-	if(run_type == RunType::SimulatedTempering) {
-		RunSimulatedTempering(getRequiredNofRounds(), tempIni, tempFin);
-	}else if(run_type == RunType::REX){
-		RunREX();
-	}else{
+	if(getRunType() == RunType::Default) {
 		Run(getRequiredNofRounds(), tempIni, tempFin);
+
+	}else if(  (getRunType() == RunType::REMC)
+			|| (getRunType() == RunType::RENEMC)
+			|| (getRunType() == RunType::RENE)){
+		RunREX();
+
+	}else{
+		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
+		Run(getRequiredNofRounds(), tempIni, tempFin);
+
 	}
 }
 
+/** 
+ * Main run function
+*/
 void Context::Run(int rounds) {
-	if(run_type == RunType::SimulatedTempering) {
-		RunSimulatedTempering(rounds, tempIni, tempFin);
-	}else if(run_type == RunType::REX){
+	if(getRunType() == RunType::Default) {
+		Run(rounds, tempIni, tempFin);
+
+	}else if(  (getRunType() == RunType::REMC)
+			|| (getRunType() == RunType::RENEMC)
+			|| (getRunType() == RunType::RENE)){
+
 		RunREX();
 	}else{
+		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
 		Run(rounds, tempIni, tempFin);
+
 	}
 }
 
@@ -1076,18 +1140,20 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 		}
 	}
 
-	if ( setupReader.get("RUN_TYPE")[0] == "SimulatedTempering" ) {
-		run_type = RunType::SimulatedTempering;
-		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
-		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
-	} else if ( setupReader.get("RUN_TYPE")[0] == "REX" ) {
-		run_type = RunType::REX;
-	} else if ( setupReader.get("RUN_TYPE")[0] == "RENS" ) {
-		run_type = RunType::RENS;
+	// Set the type of simulation and temperatures
+	if ( setupReader.get("RUN_TYPE")[0] == "REMC" ) {
+		setRunType(RunType::REMC);
+	} else if ( setupReader.get("RUN_TYPE")[0] == "RENEMC" ) {
+		setRunType(RunType::RENEMC);
+	}else if ( setupReader.get("RUN_TYPE")[0] == "RENE" ) {
+		setRunType(RunType::RENE);
 	} else {
 		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
 		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
+
+		setRunType(RunType::Default);
 	}
+	std::cout << "[CheckInput] " << "Im doing " << static_cast<int>(runType) << std::endl;
 
 	// If we got here we can set global variables
 	// Reserve memory
@@ -2268,14 +2334,14 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			// Reinitialize current sampler
 			updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
 
-			// Iterate through samples
+			// Update
 			for(int k = 0; k < int(getNofSamplesPerRound(currentWorldIx)); k++){ 
 				updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
 			} // END for samples
 
 		} // for i in worlds
 
-		// Print energy and geometric features
+		// Print energy and geometric feat	ures
 		if( !(round % getPrintFreq()) ){
 			/* PrintSamplerDataToLog(worldIndexes.back());
 			PrintDistancesToLog(worldIndexes.back());
@@ -3028,15 +3094,15 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		log_p_accept = ETerm_equil ;
 	} */
 
-	if(getRunType() == 1){
+	if(getRunType() == RunType::REMC){
 
 		log_p_accept = ETerm_equil ;
 
-	}else if(getRunType() == 2){
+	}else if(getRunType() == RunType::RENEMC){
 
 		log_p_accept = ETerm_nonequil + std::log(correctionTerm) ;
 
-	}else if( getRunType() == 3){
+	}else if( getRunType() == RunType::RENE){
 
 		log_p_accept = WTerm + std::log(correctionTerm) ;
 
@@ -4800,7 +4866,7 @@ void Context::RunREX()
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() > 0){
+		if(getRunType() != RunType::Default){
 			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 				if ((mixi % 2) == 0){
 					mixNeighboringReplicas(0);
@@ -6477,3 +6543,98 @@ void Context::PrintNumThreads() {
 SimTK::Real Context::getPotentialEnergy(std::size_t world, std::size_t sampler) const {
 	return pHMC((worlds[world].samplers[sampler]))->pe_o;
 }
+
+
+// Teodor's membrane
+
+/** Implicit membrane mimicked by half-space contacts */
+void Context::addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader){
+
+	
+		// Before adding the membrane, we add the contacts and join them
+		// to the appropiate Contact Cliques
+
+		// Each of the flags are formatted as such:
+		// CONTACTS_X  int1 int2 , int3 int4 int5
+		// X is one of {0,1,2,3}, the ints are atom indices (0-Based)
+		// and the comma separates the topologies. In the example given
+		// the contacts are set on atoms int1, int2 for topology 0,
+		// and on atoms int3, int4 and int5 for topology 1.
+		// If the user wishes to skip a topology, then they'd 
+		// input "-1" as the only atom index.
+
+		std::vector<std::vector<std::vector<int>>> cliqueAtomIxs;
+
+		
+		for (int contactCliqueIx = 0; contactCliqueIx < 4; contactCliqueIx++){
+
+			// Empty vector of prmtop atom indexes
+			cliqueAtomIxs.push_back({});
+			cliqueAtomIxs[contactCliqueIx].push_back({});
+
+			// Get values for this contactCliqueIx
+			std::string contactClique_key = "CONTACTS_";
+			contactClique_key.append( std::to_string(contactCliqueIx) );
+			const std::vector<std::string>& contactClique_vals = setupReader.get(contactClique_key);
+			
+			int cur_topology = 0;
+			if (contactClique_vals.size() > 2) {
+
+				// Get atom indexes for this clique
+				for (const auto& value : contactClique_vals){
+					
+					if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
+						cliqueAtomIxs[contactCliqueIx].push_back({});
+						cur_topology++;
+					}
+					else {
+						cliqueAtomIxs[contactCliqueIx][cur_topology].push_back(std::stoi(value));
+					}
+				}
+
+				// Check
+				if(cur_topology != topologies.size()){
+					std::cout << "[WARNING] " 
+						<< "Number of topologies in CONTACT_ keys don't match the actual number of topologies\n";
+				}
+
+				// Add contact atom indexes for all worlds
+				for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+					for (int topologyIx = 0;topologyIx < cliqueAtomIxs[contactCliqueIx].size(); topologyIx++){
+						
+						(updWorld(worldIx))->addContacts(
+								cliqueAtomIxs[contactCliqueIx][topologyIx],
+								topologyIx,
+								SimTK::ContactCliqueId(contactCliqueIx));
+					}
+				}
+			}
+		}
+
+		// Add membrane to all worlds.
+		for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+			(updWorld(worldIx))->addMembrane(memZWidth);
+		}
+
+		// Print
+		std::cout << "\n########## MEMBRANE STATS ##########\n";
+		std::cout << "Atom cliques are: \n";
+		for (int contactClique=0; contactClique<4; contactClique++){
+			for (const auto& topologyIx : cliqueAtomIxs[contactClique]) {
+			for (int atomIx : topologyIx) {
+				std::cout << atomIx << " ";
+			}
+			std::cout << " / ";
+		}
+		std::cout << std::endl;
+		}
+		std::cout << "########## MEMBRANE STATS ##########\n\n";
+
+
+		// TODO: Do we need this here (looks like World's buissiness)
+		realizeTopology();
+
+	}
+
+
+

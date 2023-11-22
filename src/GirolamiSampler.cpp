@@ -290,7 +290,7 @@ void GirolamiSampler::update(SimTK::State& someState, SimTK::Real timestep, int 
     //assert(!std::isnan(pe_n));
     if ( (!std::isnan(pe_n)) || (etot_n < etot_o) || (rand_no < exp(-(etot_n - etot_o)/RT)) ){ // Accept
         std::cout << " acc 1 " ;
-        setSetTVector(someState);
+        updateStoredConfiguration(someState);
         //sendConfToEvaluator(); // OPENMM
         setSetPE(pe_n);
         setSetFixman(fix_n);
