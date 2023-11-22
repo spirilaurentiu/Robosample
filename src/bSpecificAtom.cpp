@@ -5,6 +5,17 @@ using namespace SimTK;
 void bSpecificAtom::setAtomCompoundType(const SimTK::Compound::AtomName &atomName, const SimTK::Element &element) {
     // the biotype is added like this. i want to have one element in a vector inside topology and reference it from there
     compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
+
+    // cout << "setAtomCompoundType " << atomName << " " << element.getSymbol() << endl;
+    // if (element.getSymbol() == "C")
+    //     compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element);
+    // else if (element.getSymbol() == "H")
+    //     compoundSingleAtom = new SimTK::UnivalentAtom(atomName, element);
+    // else if (element.getSymbol() == "O")
+    //     compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
+    // else
+    //     std::cout << "wrong element " << element.getSymbol() << std::endl;
+
     setCompoundName("SingleAtom");
 
     // std::cout << "defined element in bSpecific atom " << atomicNumber << elementName << elementSymbol << atomicMass << std::endl;
@@ -403,34 +414,34 @@ void bSpecificAtom::setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIn
     bSpecificAtom::chargedAtomTypeIndex = cAIx;
 }
 
-/********************
- *     FUNCTIONS
- * ******************/
-int bAtomAssign(MolAtom *dest, const bSpecificAtom *src)
-{
-/*     dest->name = new char[5]; // TODO who deletes this?
+// /********************
+//  *     FUNCTIONS
+//  * ******************/
+// int bAtomAssign(MolAtom *dest, const bSpecificAtom *src)
+// {
+// /*     dest->name = new char[5]; // TODO who deletes this?
 
-    std::copy(dest->name, dest->name + 5, src->getName().begin());
+//     std::copy(dest->name, dest->name + 5, src->getName().begin());
 
-    dest->num = src->getNumber();
+//     dest->num = src->getNumber();
 
-    switch(src->getElem()){
-        case 'C': dest->type = MOL_ATOM_ELEMENT_CARBON; break;
-        case 'H': dest->type = MOL_ATOM_ELEMENT_HYDROGEN; break;
-        case 'N': dest->type = MOL_ATOM_ELEMENT_NITROGEN; break;
-        case 'O': dest->type = MOL_ATOM_ELEMENT_OXYGEN; break;
-        case 'S': dest->type = MOL_ATOM_ELEMENT_SULFUR; break;
-        case 'P': dest->type = MOL_ATOM_ELEMENT_PHOSPHORUS; break;
-        default: dest->type = MOL_ATOM_ELEMENT_UNKNOWN; break;
-    }
+//     switch(src->getElem()){
+//         case 'C': dest->type = MOL_ATOM_ELEMENT_CARBON; break;
+//         case 'H': dest->type = MOL_ATOM_ELEMENT_HYDROGEN; break;
+//         case 'N': dest->type = MOL_ATOM_ELEMENT_NITROGEN; break;
+//         case 'O': dest->type = MOL_ATOM_ELEMENT_OXYGEN; break;
+//         case 'S': dest->type = MOL_ATOM_ELEMENT_SULFUR; break;
+//         case 'P': dest->type = MOL_ATOM_ELEMENT_PHOSPHORUS; break;
+//         default: dest->type = MOL_ATOM_ELEMENT_UNKNOWN; break;
+//     }
 
-    // TODO they use float, we use double
-    dest->pos[0] = static_cast<float>(src->getX());
-    dest->pos[1] = static_cast<float>(src->getY());
-    dest->pos[2] = static_cast<float>(src->getZ()); */
+//     // TODO they use float, we use double
+//     dest->pos[0] = static_cast<float>(src->getX());
+//     dest->pos[1] = static_cast<float>(src->getY());
+//     dest->pos[2] = static_cast<float>(src->getZ()); */
 
-    return 0;
-}
+//     return 0;
+// }
 
 void bSpecificAtom::setCompoundName(const SimTK::Compound::Name& name) {
     compoundSingleAtom->setCompoundName(name);

@@ -16,12 +16,18 @@ using namespace SimTK;
 struct BOND {
 	int first = -1,
 		second = -1;
+
+	bool operator==(const BOND& rhs) const;
+	bool operator!=(const BOND& rhs) const;
 };
 
 struct ANGLE {
 	int first = -1,
 		second = -1,
 		third = -1;
+
+	bool operator==(const ANGLE& rhs) const;
+	bool operator!=(const ANGLE& rhs) const;
 };
 
 struct TORSION {
@@ -29,18 +35,27 @@ struct TORSION {
 		second = -1,
 		third = -1,
 		fourth = -1;
+
+	bool operator==(const TORSION& rhs) const;
+	bool operator!=(const TORSION& rhs) const;
 };
 
 struct AmberAtom {
 	SimTK::Real mass = -1.0;
 	int bonds = -1,
-		amberId = -1;
+		amberId = -1,
+		parent = -1;
 
 	AmberAtom(const bSpecificAtom& b);
 	AmberAtom(const bSpecificAtom* b);
 
 	bool operator==(const AmberAtom& rhs);
 	bool operator!=(const AmberAtom& rhs);
+};
+
+struct BAT_ATOM {
+	int amberIndex = -1;
+	int parent = -1;
 };
 
 //==============================================================================
@@ -61,12 +76,17 @@ struct AmberAtom {
  * 41(7):715–730, 2020. doi:https://doi.org/10.1002/jcc.26036.
 **/
 
+// ecternal atom i alay lighter. if equal, petite id -> big id
+
+
 class InternalCoordinates {
 public:
 	void compute(const std::vector<bSpecificAtom>& bAtomList);
+	void computeLevelsAndOffsets(const std::vector<bSpecificAtom>& bAtomList);
 
     const TORSION& getRoot() const;
 	const std::vector<BOND>& getBonds() const;
+	const std::vector<BOND>& getRingClosingBonds() const;
 	const std::vector<ANGLE>& getAngles() const;
 	const std::vector<TORSION>& getTorsions() const;
 
@@ -84,9 +104,11 @@ private:
 
 	bool isTerminal(const AmberAtom& a) const;
 
-	std::vector<BOND> bonds;
+	std::vector<BOND> bonds, ringClosingBonds;
 	std::vector<ANGLE> angles;
 	std::vector<TORSION> torsions;
+
+	std::vector<std::vector<BAT_ATOM>> levelGraph;
 
 	std::vector<AmberAtom> a0_list, a1_list, a2_list, a3_list;
 

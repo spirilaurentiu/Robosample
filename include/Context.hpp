@@ -465,7 +465,7 @@ public:
 
 	SimTK::Real getPotentialEnergy(std::size_t world, std::size_t sampler) const;
 
-private:
+protected:
 	bool CreateOutputDirectory(const std::string& outDir);
 	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
 	std::string GetMoleculeDirectoryShort(const std::string& path) const;
@@ -595,5 +595,19 @@ private:
 		tempFin = 0;
 
 	SetupReader setupReader;
+
+	int natoms = std::numeric_limits<int>::min();
+	std::vector<bSpecificAtom> atoms;
+	
+	int nbonds = std::numeric_limits<int>::min();
+	std::vector<bBond> bonds;
+	
+	ELEMENT_CACHE elementCache;
+
+	std::vector<int> findMolecules(const readAmberInput& reader);
+	void loadAtoms(const readAmberInput& reader);
+	void loadBonds(const readAmberInput& reader);
+	void setAtomCompoundTypes();
+	void addBiotypes();
 };
 

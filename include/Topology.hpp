@@ -119,8 +119,6 @@ objects **/
 class Topology : public SimTK::Compound{
 public:
 
-	void load(const readAmberInput& amberReader);
-
 	/** Default Constructor. Sets the name of this molecule to 'no_name '.
 	The name has no particular function and is not guaranteed to be unique.**/
 	Topology();
@@ -451,6 +449,10 @@ public:
 			std::vector<SimTK::Real> Xs,
 			std::vector<SimTK::Real> Ys,
 			std::vector<SimTK::Real> Zs);
+
+	void setAtomList(const std::vector<bSpecificAtom>& argAtomList) {
+		this->bAtomList = argAtomList;
+	}
 
 public:
 

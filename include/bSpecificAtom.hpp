@@ -1,5 +1,4 @@
-#ifndef __BSPECIFICATOM__
-#define __BSPECIFICATOM__
+#pragma once
 
 /* -------------------------------------------------------------------------- *
  *                                gMolModel                                   *
@@ -149,6 +148,9 @@ public:
     std::vector<bSpecificAtom *> neighbors;
     std::vector<bBond *> bondsInvolved;
 
+    std::vector<int> neighborsIndex;
+    std::vector<int> bondsInvolvedIndex;
+
     SimTK::Real charge = SimTK::NaN;
     int residueIndex = std::numeric_limits<int>::min();
 
@@ -201,7 +203,5 @@ private:
 
 };
 
-// Update Molmodel MolAtom dest with Gmolmodel bSpecificAtom src values
-int bAtomAssign(MolAtom *dest, const bSpecificAtom *src);
-
-#endif  //__BSPECIFICATOM__
+// // Update Molmodel MolAtom dest with Gmolmodel bSpecificAtom src values
+// int bAtomAssign(MolAtom *dest, const bSpecificAtom *src);

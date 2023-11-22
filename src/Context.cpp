@@ -468,63 +468,242 @@ bool Context::initializeFromFile(const std::string &file)
 
 #include <stack>
 
+std::vector<int> Context::findMolecules(const readAmberInput& reader) {
+	// build adjacency list
+	std::vector<std::vector<int>> adjacency(natoms);
+	const int nbonds = reader.getNumberBonds();
+	for (int i = 0; i < nbonds; i++) {
+		const int b0 = reader.getBondsAtomsIndex1(i);
+		const int b1 = reader.getBondsAtomsIndex2(i);
+		adjacency[b0].push_back(b1);
+	}
+
+	// map atoms to molecules
+	// moleculeAtomIndices[i][j] points to the jth atom (in prmtop order, [0, natoms)) in the ith molecule
+	std::vector<std::vector<int>> moleculeAtomIndices;
+	std::vector<bool> visited(natoms, false);
+	int numMols = -1;
+
+	// this reduces to counting the number of connected components from an adjacency list
+	for (int i = 0; i < natoms; i++) {
+
+		// build graph of the current molecule using bfs
+		std::stack<int> nodesToVisit;
+		nodesToVisit.push(i);
+
+		// new molecule found
+		if (!visited[i]) {
+			numMols++;
+			moleculeAtomIndices.push_back(std::vector<int>());
+		}
+
+		// non recursive dfs
+		while (!nodesToVisit.empty()) {
+			int atom = nodesToVisit.top();
+			nodesToVisit.pop();
+
+			if (visited[atom]) {
+				continue;
+			}
+
+			visited[atom] = true;
+			moleculeAtomIndices[numMols].push_back(atom);
+			for (auto to_visit : adjacency[atom]) {
+				nodesToVisit.push(to_visit);
+			}
+		}
+	}
+
+	// sort the atoms in each molecule by their index in the prmtop file
+	std::vector<int> moleculesBegin;
+	for (auto& molecule : moleculeAtomIndices) {
+		moleculesBegin.push_back(*std::min(molecule.begin(), molecule.end()));
+	}
+
+	return moleculesBegin;
+}
+
+void Context::loadBonds(const readAmberInput& reader) {
+	// Allocate memory for bonds list
+	nbonds = reader.getNumberBonds();
+	bonds.reserve(nbonds);
+
+	// Iterate bonds and get atom indeces
+	// This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
+	for(int i = 0; i < nbonds; i++) {
+		bBond bond;
+		bond.setIndex(i);
+		bond.i = reader.getBondsAtomsIndex1(i);
+		bond.j = reader.getBondsAtomsIndex2(i);
+		bonds.push_back(bond);
+
+		// BAD! this will break if we invalidate the bonds vector
+		atoms[bond.i].addNeighbor(&atoms[bonds[i].j]);
+		atoms[bond.i].addBond(&bonds[i]);
+
+		atoms[bond.j].addNeighbor(&atoms[bonds[i].i]);
+		atoms[bond.j].addBond(&bonds[i]);
+	}
+
+	// Assign the number of bonds an atom has and set the number of freebonds
+	// equal to the number of bonds for now
+	for(auto& atom : atoms) {
+		atom.setNbonds(atom.bondsInvolved.size());
+		atom.setFreebonds(atom.bondsInvolved.size());
+	}
+}
+
+void Context::loadAtoms(const readAmberInput& reader) {
+	// Alloc memory for atoms and bonds list
+	natoms = reader.getNumberAtoms();
+	atoms.reserve(natoms);
+
+	// Iterate through atoms and set as much as possible from amberReader
+	for(int i = 0; i < natoms; i++) {
+		bSpecificAtom atom;
+
+		// Assign an index like in prmtop
+		atom.setNumber(i);
+
+		// This is the name of the atom in the .prmtop file
+		// Examples: "O1", "C1", "C2", "H1", "H10"
+		const std::string initialName = reader.getAtomsName(i);
+		
+		// Set element
+		const int atomicNumber = reader.getAtomicNumber(i);
+ 		atom.setAtomicNumber(atomicNumber);
+		atom.setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
+
+		// Assign a "unique" name. The generator is however limited.
+		atom.generateName(i);
+
+		// Store the initial name from prmtop
+		atom.setInName(initialName);
+
+		// Set force field atom type
+		atom.setFfType(initialName);
+
+		// Set charge as it is used in Amber
+		constexpr SimTK::Real chargeMultiplier = 18.2223;
+		atom.setCharge(reader.getAtomsCharge(i) / chargeMultiplier);
+
+		// Set coordinates in nm
+		atom.setX(reader.getAtomsXcoord(i) / 10.0);
+		atom.setY(reader.getAtomsYcoord(i) / 10.0);
+		atom.setZ(reader.getAtomsZcoord(i) / 10.0);
+		atom.setCartesians(
+			reader.getAtomsXcoord(i) / 10.0,
+			reader.getAtomsYcoord(i) / 10.0,
+			reader.getAtomsZcoord(i) / 10.0 );
+
+		// Set mass
+		const int mass = reader.getAtomsMass(i);
+		atom.setMass(mass);
+
+		// Set Lennard-Jones parameters
+		atom.setVdwRadius(reader.getAtomsRVdW(i));
+		atom.setLJWellDepth(reader.getAtomsEpsilon(i));
+
+		// Set residue name and index
+		atom.setResidueName(std::string("UNK"));
+		atom.residueIndex = 1;
+
+		// Add element to cache
+		elementCache.addElement(atomicNumber, mass);
+
+		atoms.push_back(atom);
+	}
+}
+
+void Context::setAtomCompoundTypes() {
+	Angle TetrahedralAngle = 109.47 * Deg2Rad;
+
+	// Set Gmolmodel name and element and inboard length
+	for(auto& atom : atoms) {
+		
+		// bond centers must have been already set
+		const std::string& currAtomName = atom.getName();
+		const int atomicNumber = atom.getAtomicNumber();
+		const int mass = atom.getMass();
+		atom.setAtomCompoundType(currAtomName, elementCache.getElement(atomicNumber, mass));
+		
+		// Add BondCenters
+		const int currAtomNBonds = atom.getNBonds();
+		if(currAtomNBonds > 0){
+			if (currAtomNBonds == 1){
+				atom.addFirstBondCenter("bond1", currAtomName);
+			} else {
+				atom.addFirstTwoBondCenters("bond1", "bond2", currAtomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
+				if (currAtomNBonds > 2) {
+					atom.addLeftHandedBondCenter("bond3", currAtomName, TetrahedralAngle, TetrahedralAngle);
+				}
+				if (currAtomNBonds > 3){
+					atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
+				}
+			}
+
+			// Set the inboard BondCenter
+			atom.setInboardBondCenter("bond1");
+			atom.setDefaultInboardBondLength(0.19);
+		}
+	}
+}
+
+void Context::addBiotypes() {
+	// We don't have any residues. The whole molecule is one residue
+	std::string resName = "this->name";
+
+	// Iterate atoms and define Biotypes with their indeces and names
+	for(auto& atom : atoms) {
+		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
+			elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
+			atom.getNBonds(),
+			resName.c_str(),
+			(atom.getName()).c_str(),
+			SimTK::Ordinality::Any
+		);
+
+		atom.setBiotypeIndex(biotypeIndex);
+
+		// Assign atom's biotype as a composed name: name + force field type
+		std::string biotype = resName + atom.getName() + atom.getFftype();
+		atom.setBiotype(biotype);
+	}
+}
+
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
-	// readAmberInput reader;
-	// reader.readAmberFiles(inpcrd, prmtop);
-	// const auto natoms = reader.getNumberAtoms();
+	readAmberInput reader;
+	reader.readAmberFiles(inpcrd, prmtop);
+	natoms = reader.getNumberAtoms();
 
-	// // build adjacency list
-	// std::vector<std::vector<int>> adjacency(natoms);
-	// const int nbonds = reader.getNumberBonds();
-	// for (int i = 0; i < nbonds; i++) {
-	// 	const int b0 = reader.getBondsAtomsIndex1(i);
-	// 	const int b1 = reader.getBondsAtomsIndex2(i);
-	// 	adjacency[b0].push_back(b1);
+	// look at prmtop and create a mapping between atoms and molecule index. for each molecule:
+	// - create the final atomlist via internalcoordinates. this is where we read from files
+	// - add dumm parameters and classes now because we need molecule names
+	// - reorder all lists to bat (batomlist, bonds, flexibilitie etc)
+	// - pass to topology ????
+
+	loadAtoms(reader);
+	loadBonds(reader);
+	setAtomCompoundTypes();
+	addBiotypes();
+
+	// addDummParams()
+
+	// int num_atoms = 0;
+	// const auto moleculeAtomIndices = findMolecules(reader);
+	// for (const auto& indices : moleculeAtomIndices) {
+
+	// 	std::cout << indices << std::endl;
 	// }
 
-	// // map atoms to molecules
-	// // whichMolecule[i] tells us which molecule does atom i from the prmtop file belong to
-	// std::vector<int> whichMolecule(natoms, -1);
-	// std::vector<int> atomsPerMolecule;
-	// std::vector<bool> visited(natoms, false);
-	// int numMols = -1;
+	return;
 
-	// // this reduces to counting the number of connected components from an adjacency list
-	// for (int i = 0; i < natoms; i++) {
-
-	// 	// build graph of the current molecule using dfs
-	// 	std::stack<int> nodesToVisit;
-	// 	nodesToVisit.push(i);
-
-	// 	if (!visited[i]) {
-	// 		numMols++;
-	// 		atomsPerMolecule.push_back(0);
-	// 	}
-
-	// 	// non recursive dfs
-	// 	while (!nodesToVisit.empty()) {
-	// 		int atom = nodesToVisit.top();
-	// 		nodesToVisit.pop();
-
-	// 		if (visited[atom]) {
-	// 			continue;
-	// 		}
-
-	// 		visited[atom] = true;
-	// 		whichMolecule[atom] = numMols;
-	// 		atomsPerMolecule[numMols]++;
-	// 		for (auto to_visit : adjacency[atom]) {
-	// 			nodesToVisit.push(to_visit);
-	// 		}
-	// 	}
+	// // molecules are stored as a vector of atoms
+	// // bAtomList[moleculeIndex][atomIndex] where atomIndex is in range [0, atomsPerMolecule[moleculeIndex])
+	// std::vector<std::vector<bSpecificAtom>> bAtomList(numMols + 1);
+	// for (int i = 0; i < numMols; i++) {
+	// 	bAtomList[i].resize(atomsPerMolecule[i]);
 	// }
-
-	// // // molecules are stored as a vector of atoms
-	// // // bAtomList[moleculeIndex][atomIndex] where atomIndex is in range [0, atomsPerMolecule[moleculeIndex])
-	// // std::vector<std::vector<bSpecificAtom>> bAtomList(numMols + 1);
-	// // for (int i = 0; i < numMols; i++) {
-	// // 	bAtomList[i].resize(atomsPerMolecule[i]);
-	// // }
 
 	// std::vector<bSpecificAtom> bAtomList;
 	// bAtomList.resize(natoms);
@@ -1041,7 +1220,7 @@ void Context::addEmptyWorlds(std::size_t argNofWorlds,
 	}
 
 	if(argNofWorlds != nofWorlds){
-		std::cerr << "Something went wrong while adding the world\n";
+		std::cerr << cerr_prefix << "Something went wrong while adding the world\n";
 		throw std::exception();
 		std::exit(1);
 	}
@@ -1760,7 +1939,7 @@ BaseSampler * Context::addSampler(
 		return p;
 	}else{
 		// Replace with a macro
-		std::cerr << "Context No sampler specified.\n";throw std::exception();std::exit(1);
+		std::cerr << cerr_prefix << "Context No sampler specified.\n";throw std::exception();std::exit(1);
 	}	 */
 }
 
