@@ -1,5 +1,29 @@
 #include "InternalCoordinates.hpp"
 
+bool BOND::operator==(const BOND& rhs) const {
+	return first == rhs.first && second == rhs.second;
+}
+
+bool BOND::operator!=(const BOND& rhs) const {
+	return !operator==(rhs);
+}
+
+bool ANGLE::operator==(const ANGLE& rhs) const {
+	return first == rhs.first && second == rhs.second && third == rhs.third;
+}
+
+bool ANGLE::operator!=(const ANGLE& rhs) const {
+	return !operator==(rhs);
+}
+
+bool TORSION::operator==(const TORSION& rhs) const {
+	return first == rhs.first && second == rhs.second && third == rhs.third && fourth == rhs.fourth;
+}
+
+bool TORSION::operator!=(const TORSION& rhs) const {
+	return !operator==(rhs);
+}
+
 AmberAtom::AmberAtom(const bSpecificAtom& b) {
 	mass = b.mass;
 	bonds = static_cast<int>(b.bondsInvolved.size());
@@ -26,14 +50,20 @@ void InternalCoordinates::compute(const std::vector<bSpecificAtom>& bAtomList) {
 	selectedAtoms.reserve(bAtomList.size());
 	indexMap = std::vector<int>(bAtomList.size(), -1);
 
-	selectAtom(getRoot().first);
-	selectAtom(getRoot().second);
-	selectAtom(getRoot().third);
+	selectAtom(root.first);
+	selectAtom(root.second);
+	selectAtom(root.third);
+
+	// add root bonds
+	bonds.push_back({ root.first, root.second });
+	bonds.push_back({ root.second, root.third });
 
 	while (selectedAtoms.size() < bAtomList.size()) {
 		for (int i = 0; i < selectedAtoms.size(); i++) {
+			// a1 is the base atom
 			const auto a1 = selectedAtoms[i];
 
+			// a0 is a new atom connected to a1
 			a0_list.clear();
 			a0_list.reserve(bAtomList[a1].neighbors.size());
 			for (const auto& b : bAtomList[a1].neighbors) {
@@ -43,8 +73,10 @@ void InternalCoordinates::compute(const std::vector<bSpecificAtom>& bAtomList) {
 			}
 			sortByMass(a0_list, false);
 
+			// iterate all a0 atoms
 			for(const auto& a0 : a0_list) {
 
+				// a2 is an atom connected to a1, is not a terminal atom and has been selected
 				a2_list.clear();
 				a2_list.reserve(bAtomList[a1].neighbors.size() - 1);
 				for (const auto& b : bAtomList[a1].neighbors) {
@@ -57,6 +89,7 @@ void InternalCoordinates::compute(const std::vector<bSpecificAtom>& bAtomList) {
 				if(a2_list.empty()) continue;
 				const auto& a2 = a2_list[0];
 
+				// a3 is connected to a2, has been selected and is not a1
 				a3_list.clear();
 				a3_list.reserve(bAtomList[a2.amberId].neighbors.size());
 				for (const auto& b : bAtomList[a2.amberId].neighbors) {
@@ -69,11 +102,121 @@ void InternalCoordinates::compute(const std::vector<bSpecificAtom>& bAtomList) {
 				if(a3_list.empty()) continue;
 				const auto& a3 = a3_list[0];
 
+				// created a new torsion
 				selectAtom(a0);
 				bonds.push_back({ a0.amberId, a1 });
 				angles.push_back({ a0.amberId, a1, a2.amberId });
 				torsions.push_back({ a0.amberId, a1, a2.amberId, a3.amberId });
 			}
+		}
+	}
+
+	computeLevelsAndOffsets(bAtomList);
+}
+
+struct DEPTH_NODE {
+	int i = -1;
+	int depth = -1;
+	int parent = -1;
+};
+
+bool equal_bond(const BOND& lhs, const BOND& rhs) {
+	return (lhs.first == rhs.first && lhs.second == rhs.second) ||
+		(lhs.first == rhs.second && lhs.second == rhs.first);
+}
+
+void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAtom>& bAtomList) {
+	// adj list is bonds
+	// node values are i&j from adj list
+	// create vector<vector<int>> v; v[level][offset] is amber id (bAtomList indexing)
+	// getOrderedAtoms() -> bAtomList indexing
+	// getOrderedBonds() -> order of bonds as in orderedAtoms; i and j are from bAtomList
+
+	// iterate original bonds
+	for (int i = 0; i < bAtomList.size(); i++) {
+		for (const auto& b : bAtomList[i].neighbors) {
+			const int j = b->getNumber();
+
+			if (j >= i) continue;
+
+			BOND b1 = { i, j };
+			bool found = false;
+
+			for (const auto& b0 : bonds) {
+				if (equal_bond(b0, b1)) {
+					found = true;
+					// cout << "bond " << b0.first << " " << b0.second << endl;
+					break;
+				}
+			}
+
+			if (!found) {
+				ringClosingBonds.push_back(b1);
+				// missing bond
+				// std::cout << "missing bond " << b1.first << " " << b1.second << std::endl;
+			}	
+		}
+	}
+
+	// build adjacency lists for unordered graph
+	std::vector<std::vector<int>> adjacency(bAtomList.size());
+	adjacency[root.first].push_back(root.second);
+	adjacency[root.second].push_back(root.first);
+	adjacency[root.second].push_back(root.third);
+	adjacency[root.third].push_back(root.second);
+
+	for (const auto& b : bonds) {
+		adjacency[b.first].push_back(b.second);
+		adjacency[b.second].push_back(b.first);
+	}
+
+	// compute depth of the molecule graph using dfs
+	// we start from the first atom
+	std::stack<DEPTH_NODE> nodesToVisit;
+	nodesToVisit.push({ root.first, 0, -1 });
+
+	// store levels and offsets
+	std::vector<std::vector<AmberAtom>> depthGraph;
+	std::vector<bool> v(bAtomList.size(), false);
+
+	// non recursive bfs
+	while (!nodesToVisit.empty()) {
+		const auto atom = nodesToVisit.top();
+		nodesToVisit.pop();
+
+		if (v[atom.i])
+			continue;
+		v[atom.i] = true;
+
+		int depth = atom.depth;
+		if (depthGraph.size() < depth + 1)
+			depthGraph.push_back({});
+
+		AmberAtom a(bAtomList[atom.i]);
+		a.parent = atom.parent;
+		depthGraph[depth].emplace_back(a);
+
+		for (const int i : adjacency[atom.i])
+			nodesToVisit.push({ i, depth + 1, atom.i });
+	}
+
+	// sort by mass (ligher first). if equal, sort by amber index (lower first)
+	for (auto& level : depthGraph)
+		sortByMass(level, false);
+
+	// copy the graph to a more managable structure
+	for (int level = 0; level < depthGraph.size(); level++) {
+		for (int off = 0; off < depthGraph[level].size(); off++) {
+			if (levelGraph.size() < level + 1)
+				levelGraph.push_back({});
+			levelGraph[level].push_back({depthGraph[level][off].amberId, depthGraph[level][off].parent});
+		}
+	}
+
+	std::cout << "level offset ix parent" << std::endl;
+	for (int level = 0; level < depthGraph.size(); level++) {
+		for (int off = 0; off < depthGraph[level].size(); off++) {
+			std::cout << "LO " << level << " " << off << " " << levelGraph[level][off].amberIndex << " " << levelGraph[level][off].parent << std::endl;
 		}
 	}
 }
@@ -84,6 +227,10 @@ const TORSION& InternalCoordinates::getRoot() const {
 
 const std::vector<BOND>& InternalCoordinates::getBonds() const {
 	return bonds;
+}
+
+const std::vector<BOND>& InternalCoordinates::getRingClosingBonds() const {
+	return ringClosingBonds;
 }
 
 const std::vector<ANGLE>& InternalCoordinates::getAngles() const {
@@ -103,6 +250,11 @@ int InternalCoordinates::BAT2amber(int bat) const {
 }
 
 void InternalCoordinates::computeRoot(const std::vector<bSpecificAtom>& bAtomList) {
+	// the root consists of three atoms
+	// first is the heaviest terminal atom with the largest amber id
+	// second is bonded to the first atom (there is only one bonded since first is terminal)
+	// third is the heaviest atom bonded to second. if there are more than three, it cannot be terminal
+
 	// get terminal atoms
 	std::vector<AmberAtom> terminalAtoms;
 	terminalAtoms.reserve(bAtomList.size());
