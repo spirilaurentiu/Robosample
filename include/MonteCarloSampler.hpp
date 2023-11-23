@@ -66,7 +66,7 @@ public:
     void assignConfFromTVector(SimTK::State& advanced);
 
     // Assign a random conformation
-    bool proposeEquilibrium(SimTK::State& advanced);
+    bool propose(SimTK::State& advanced);
 
     /** Modifies Q randomly
      **/

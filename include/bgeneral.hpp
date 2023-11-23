@@ -379,11 +379,40 @@ enum struct IntegratorName : int { // Integrators
 	RUNGEKUTTA2,
 	RUNGEKUTTA3,
 	RUNGEKUTTAFELDBERG,
+	BENDSTRETCH,
 	OMMVV,
 	BOUND_WALK,
 	BOUND_HMC,
 	STATIONS_TASK,
 	NOF_INTEGRATORS
+};
+
+enum struct PositionsPerturbMethod : int {
+	EMPTY,
+	BENDSTRETCH,
+	NOF_
+};
+
+enum struct VelocitiesPerturbMethod : int {
+	TO_T,
+	TO_ZERO,
+	NOF_
+};
+
+enum struct NMAOptions : int {
+	EMPTY,
+	NMA_ALT_SIGN,
+	NMA_BERNOULLI,
+	NMA_GAUSS,
+	NMA_GAUSS_SCALE,
+	NMA_LENPERT,
+	NMA_FINAL,
+	NOF_
+};
+
+enum struct ForcesPerturbMethod : int {
+	EMPTY,
+	NOF_
 };
 
 const std::unordered_map<std::string, IntegratorName>

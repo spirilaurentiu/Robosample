@@ -361,7 +361,7 @@ void ConformationalSearch::assignConfFromTVector(SimTK::State& someState)
 // In torsional dynamics the first body has 7 Q variables for 6 dofs - one
 // quaternion (q) and 3 Cartesian coordinates (x). updQ will return: 
 // [qw, qx, qy, qz, x1, x2, x3]
-bool ConformationalSearch::proposeEquilibrium(SimTK::State& someState)
+bool ConformationalSearch::propose(SimTK::State& someState)
 {
     //randomEngine.seed(4294653137UL); // for reproductibility
 
@@ -413,7 +413,7 @@ void ConformationalSearch::update(SimTK::State& someState){
 
     // Assign random configuration
 
-    proposeEquilibrium(someState);
+    propose(someState);
 
     // Send configuration to evaluator  
 

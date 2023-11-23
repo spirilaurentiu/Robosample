@@ -257,12 +257,19 @@ public:
 	// Set the method of integration
 	void setSampleGenerator(const std::string& samplerNameArg);
 
-	/** Initialize velocities according to the Maxwell-Boltzmann
-	distribution.  Coresponds to R operator in LAHMC **/
+	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
+
+	/** Set velocities to zero.  **/
 	void setVelocitiesToZero(SimTK::State& someState);
-	virtual void initializeVelocitiesToZero(SimTK::State& someState);
-	virtual void initializeVelocities(SimTK::State& someState);
-	void initializeNMAVelocities(SimTK::State& someState);
+
+	/** Set velocities according to the Maxwell-Boltzmann
+	distribution.  **/
+	void setVelocitiesToGaussian(SimTK::State& someState);
+
+	virtual void perturbVelocities(SimTK::State& someState,
+		VelocitiesPerturbMethod VPM = VelocitiesPerturbMethod::TO_T);
+
+	void setVelocitiesToNMA(SimTK::State& someState);
 
 	/** Store the proposed energies **/
 	virtual void calcProposedKineticAndTotalEnergyOld(SimTK::State& someState);
@@ -386,8 +393,6 @@ public:
 
 	double OMM_calcKineticEnergy(void);
 
-	void OMM_calcProposedKineticAndTotalEnergyOld(void);
-
 	void OMM_storeOMMConfiguration(void);
 
 	void OMM_To_Simbody_setAtomsLocations(SimTK::State& someState);
@@ -407,19 +412,18 @@ public:
 	// PROPOSE
 	///////////////////////////////////////////////////////
 
+	/** Returns the 'how' argument of perturbPositions */
+	PositionsPerturbMethod positionsPerturbMethod(void);
+
+	/** Returns the 'how' argument of perturbVelocities */
+	VelocitiesPerturbMethod velocitiesPerturbMethod(void);
+
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
-	bool proposeEquilibrium(SimTK::State& someState);
-	bool proposeNEHMC(SimTK::State& someState);
-	bool proposeNMA(SimTK::State& someState);
-
-	/**
-	 * Generate a trial move in the chain
-	*/
-	bool generateProposal(SimTK::State& someState);
+	bool propose(SimTK::State& someState);
 
 	///////////////////////////////////////////////////////
 	// UPDATE

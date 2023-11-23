@@ -111,7 +111,7 @@ public:
 	//virtual void setIntegratorName(std::string integratorName) = 0;
 
 	/** Propose a move **/
-	virtual bool proposeEquilibrium(SimTK::State& someState) = 0;
+	virtual bool propose(SimTK::State& someState) = 0;
 	//virtual eval() = 0;
 	virtual void update(SimTK::State& someState) = 0;
 

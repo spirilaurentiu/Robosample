@@ -2609,7 +2609,7 @@ bool World::generateProposal(void)
 
 	// GENERATE a proposal
 	bool validated = updSampler(0)->reinitialize(currentAdvancedState);	
-	validated = updSampler(0)->generateProposal(currentAdvancedState) && validated;
+	validated = updSampler(0)->propose(currentAdvancedState) && validated;
 
 	return validated;
 }
