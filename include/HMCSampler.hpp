@@ -310,16 +310,24 @@ public:
 		SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
-	SimTK::Real MHAcceptProbability(
+	SimTK::Real MetropolisHastings(
+		SimTK::Real argEtot_o,
+		SimTK::Real argEtot_n,
+		SimTK::Real lnJ) const;
+
+	/** Metropolis-Hastings acceptance probability **/
+	SimTK::Real MetropolisHastings(
 		SimTK::Real argEtot_proposed,
 		SimTK::Real argEtot_n,
+		SimTK::Real transProb,
+		SimTK::Real invTransProb,
 		SimTK::Real lnJ) const;
 
 	/** Accetion rejection step **/
 	//virtual bool accRejStep(SimTK::State& someState);
 
 	/** Checks if the proposal is valid **/
-	bool validateProposal() const;
+	bool checkExceptionsAndEnergiesForNAN();
 
 	/** Chooses whether to accept a sample or not based on a probability **/
 	bool acceptSample();
@@ -444,7 +452,19 @@ public:
 	/** Calls setSetConfigurationAndEnergiesToOld **/
 	void restore(SimTK::State& someState);
 
+	/**
+	 * Checks is there are any sudden jumps in potential energy which usually
+	 * indicate a distortion in the system
+	*/
+	bool checkDistortionBasedOnPE(void);
+
 	virtual bool sample_iteration(SimTK::State& someState);
+
+	/**
+	 * Print everything after proposal generation
+	*/
+	void Print(const SimTK::State& someState,
+		bool isTheSampleValid, bool isTheSampleAccepted);
 
 	/**
 	*  Add generalized coordinates to a buffer
@@ -525,9 +545,11 @@ public:
  	*/
 	void testSOA(SimTK::State& someState);
 	
-	const int & getAcceptedSteps(void) const { return acceptedSteps;}
+	const int & getAcceptedSteps(void) const { return acceptedSteps; }
 
 protected:
+
+	//bool NAN_TO_INF(SimTK::Real& someNumber);
 
 	RANDOM_CACHE RandomCache;
 

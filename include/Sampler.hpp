@@ -110,6 +110,10 @@ public:
 	//virtual void setIntegratorName(IntegratorName) = 0;
 	//virtual void setIntegratorName(std::string integratorName) = 0;
 
+	virtual const bool& getAcc(void) const;
+	virtual bool& updAcc(void);
+	virtual void setAcc(bool);
+
 	/** Propose a move **/
 	virtual bool propose(SimTK::State& someState) = 0;
 	//virtual eval() = 0;

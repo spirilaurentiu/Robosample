@@ -32,6 +32,22 @@ Implementation of HMCSampler class. **/
 		return false; \
 	}
 
+#define NAN_WARNING(n) \
+	std::cout << "\t[WARNING]: " << #n << " is nan!\n"; \
+	return false;
+
+bool NAN_TO_INF(SimTK::Real& someNumber)
+{
+	if(std::isnan(someNumber)){
+		//someNumber = SimTK::Infinity; // TODO: Victor check this please
+		someNumber = std::numeric_limits<double>::max();
+		return true;
+	}else{
+		return false;
+	}
+}
+
+
 //** Constructor **/
 //==============================================================================
 //                           CONSTRUCTOR
@@ -146,6 +162,9 @@ HMCSampler::HMCSampler(World &argWorld,
 
 	// Work
 	bendStretchJacobianDetLog = 0.0;
+
+	// Acc
+	this->acc = false;
 
 }
 
@@ -448,8 +467,11 @@ void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
 	this->ke_set = this->ke_o;
 
 	// Update total energies
-	this->etot_o = getOldPE() + getOldKE()
-		+ getOldFixman() + getOldLogSineSqrGamma2();
+	this->etot_o = getOldPE()
+				 + getOldKE()
+				 + getOldFixman()
+				 + getOldLogSineSqrGamma2();
+
 	this->etot_set = this->etot_o;
 
 }
@@ -459,6 +481,21 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 {
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
+		//std::cout << "Transforms before sample_iteration\n";
+		//world->PrintAcosX_PFs();
+		//world->PrintNormX_BMs();
+		//world->PrintAcosX_PFMeans();
+		//world->PrintNormX_BMMeans();
+		//
+		//world->traceBendStretch(someState);
+		//
+		// Set X_PF and X_BM means to whatever iti is now
+		///////////////////////////////////////////////////
+		// if(nofSamples == 0){
+		//	world->setTransformsMeansToCurrent(someState);
+		//}
+		///////////////////////////////////////////////////
+
 		// Resize the scale factors vector to be handed further
 		std::vector<SimTK::Real> scaleFactors;
 		scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
@@ -466,6 +503,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 		// Scale bonds and angles
 		if(this->nofSamples >= 0){ // dont't take burn-in
+
+			// Calculate X_PFs and X_BMs
+			world->getTransformsStatistics(someState);
+			world->updateTransformsMeans(someState);
+
 			//setQToScaleBendStretch(someState, scaleFactors);
 			setQToScaleBendStretchStdev(someState, scaleFactors);
 		}
@@ -3516,6 +3558,8 @@ PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
 bool HMCSampler::propose(SimTK::State& someState)
 {
 
+	bool proposalValidation = true;
+
 	for (int i = 0; i < 10; i++){
 
 		// Adapt Gibbs blocks (Transformer)
@@ -3543,19 +3587,87 @@ bool HMCSampler::propose(SimTK::State& someState)
 		// Get all new energies after integration
 		calcNewEnergies(someState);
 
-		// Validate proposal
-		if (validateProposal()){
+		// TODO: Any validation should be inserted here
+
+		// Check if any energies are nan
+		// or any exception during perturbations or integrations
+		proposalValidation = checkExceptionsAndEnergiesForNAN()
+			&& proposalValidation;
+
+		// Check if molecule was distorted during
+		// perturbations or integrations
+		proposalValidation = checkDistortionBasedOnPE()
+			&& proposalValidation;
+
+		if(proposalValidation){
 			return true;
 		}
+
 	}
+
+	return false;
+
 }
 
+/** Checks if the proposal is valid **/
+bool HMCSampler::checkExceptionsAndEnergiesForNAN() {
+	// TODO should we check anything else?
+	// TODO do we need to check the old values?
+
+	if(proposeExceptionCaught) {
+		std::cout << "\t[WARNING] invalid sample: propose exception caught!\n";
+		return false;
+	}
+
+	if (NAN_TO_INF(pe_n)){
+		NAN_WARNING(pe_n);
+		return false;
+	}
+
+	if (NAN_TO_INF(ke_o)){
+		NAN_WARNING(ke_o);
+		return false;
+	}
+	if (NAN_TO_INF(ke_n)){
+		NAN_WARNING(ke_n);
+		return false;
+	}
+
+	if (NAN_TO_INF(fix_n)){
+		NAN_WARNING(fix_n);
+		return false;
+	}
+
+	if (NAN_TO_INF(logSineSqrGamma2_n)){
+		NAN_WARNING(logSineSqrGamma2_n);
+		return false;
+	}
+
+	if (NAN_TO_INF(timestep)){
+		NAN_WARNING(timestep);
+		return false;
+	}
+
+	CHECK_IF_NAN(exp(-(etot_n - etot_o) / RT)); // TODO:
+
+	if (NAN_TO_INF(etot_o)){
+		NAN_WARNING(etot_o);
+		return false;
+	}
+
+	if (NAN_TO_INF(etot_n)){
+		NAN_WARNING(etot_n);
+		return false;
+	}
+
+	return true;
+}
 
 /** 
  * This is actually the Boltzmann factor not the probability 
  * because we don't have the partition function
 */
-SimTK::Real HMCSampler::MHAcceptProbability(
+SimTK::Real HMCSampler::MetropolisHastings(
 	SimTK::Real argEtot_proposed,
 	SimTK::Real argEtot_n,
 	SimTK::Real lnJ) const 
@@ -3578,205 +3690,204 @@ SimTK::Real HMCSampler::MHAcceptProbability(
 
 }
 
-
-/** Checks if the proposal is valid **/
-bool HMCSampler::validateProposal() const {
-	// TODO should we check anything else?
-	// TODO do we need to check the old values?
-
-	if(proposeExceptionCaught) {
-		std::cout << "\t[WARNING] invalid sample: propose exception caught!\n";
-		return false;
-	}
-
-	// CHECK_IF_NAN(pe_o);
-	CHECK_IF_NAN(pe_n);
-
-	CHECK_IF_NAN(ke_o);
-	CHECK_IF_NAN(ke_n);
-
-	// CHECK_IF_NAN(fix_o);
-	CHECK_IF_NAN(fix_n);
-
-	// CHECK_IF_NAN(logSineSqrGamma2_o);
-	CHECK_IF_NAN(logSineSqrGamma2_n);
-
-	CHECK_IF_NAN(timestep);
-	CHECK_IF_NAN(exp(-(etot_n - etot_o) / RT));
-
-	CHECK_IF_NAN(etot_n);
-	CHECK_IF_NAN(etot_o);
-
-	return true;
-}
-
-/** Chooses whether to accept a sample or not based on a probability **/
+/** 
+ * Chooses whether to accept a sample or not based on a probability 
+ **/
 bool HMCSampler::acceptSample() {
+
+	// Return value
+	bool acceptSampleReturn = false;
+
+	// Local vars
+	SimTK::Real hereE_o  = 0.0;
+	SimTK::Real hereE_n  = 0.0;
+	SimTK::Real here_lnj = 0.0;
 
 	// The decision tree sets the value of internal variable acc
 	if(this->alwaysAccept == true){ // Empty sampler
-		this->acc = true;
+
+		acceptSampleReturn = true;
+
 	}else{ // Markov-Chain Monte Carlo
+
 		const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+
 		SimTK::Real prob = 0.0;
+
 		if(DistortOpt == 0){
-			prob = MHAcceptProbability(etot_o, etot_n,
-										0);
+			hereE_o = etot_o;
+			hereE_n = etot_n;
+			here_lnj = 0.0;
+
 		}else if(DistortOpt > 0){
 
 			if(useFixman){
-				prob = 
-				MHAcceptProbability(pe_o + ke_prop_nma6 + fix_o,
-									pe_n + ke_n_nma6 + fix_n,
-									0);
+				hereE_o = pe_o + ke_prop_nma6 + fix_o;
+				hereE_n = pe_n + ke_n_nma6    + fix_n;
+				here_lnj = 0.0;
 
 			}else{
-				prob =
-				MHAcceptProbability(pe_o + ke_prop_nma6,
-									pe_n + ke_n_nma6,
-									0);
+				hereE_o = pe_o + ke_prop_nma6;
+				hereE_n = pe_n + ke_n_nma6;
+				here_lnj = 0.0;				
 
 			}
+			
 		}else if(DistortOpt < 0){
-			prob =
-			MHAcceptProbability(  pe_o + fix_o
-								, pe_n + fix_n
-								, getDistortJacobianDetLog()
-								//, std::log(std::abs(this->QScaleFactor))
-								);
+
+			hereE_o = pe_o + fix_o;
+			hereE_n = pe_n + fix_n;
+			here_lnj = getDistortJacobianDetLog();
+			// here_lnj = std::log(std::abs(this->QScaleFactor))
+
 		}
 
-		this->acc = (rand_no < prob);
+		prob = MetropolisHastings(hereE_o, hereE_n, here_lnj);
+
+		acceptSampleReturn = (rand_no < prob);
+
 	}
 
-	return this->acc;
+	return acceptSampleReturn;
 	
 }
 
+/**
+ * Checks is there are any sudden jumps in potential energy which usually
+ * indicate a distortion in the system
+*/
+bool HMCSampler::checkDistortionBasedOnPE(void)
+{
+
+	// Set an energy limit for the potential energy difference in kT
+	SimTK::Real energyLimit = beta * 10000;
+
+	// Get the potential energy difference
+	SimTK::Real deltaPE = (pe_n - pe_o);
+	
+	// Apply
+	if((beta * deltaPE) > energyLimit){
+		std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
+			<< pe_init << " " << pe_o 
+		<< "." << std::endl;
+		return false;
+	}else{
+		return true;
+	}
+
+}
+
+/**
+ * Print everything after proposal generation
+*/
+void HMCSampler::Print(const SimTK::State& someState,
+	bool isTheSampleValid, bool isTheSampleAccepted)
+{
+
+	// Set precision
+	std::cout << std::setprecision(10) << std::fixed;
+
+	// Do we distort? // TODO remove
+	std::cout << "DISTORT_OPTION " << this->DistortOpt << std::endl;
+
+	// Print all the energy terms first
+	PrintDetailedEnergyInfo(someState);
+
+	//Print acc
+	if(isTheSampleAccepted){
+		std::cout << "\tacc";
+	}else{
+		std::cout << "\trej";
+	}
+	
+	// Print simulation type
+	if(this->alwaysAccept == true){
+		std::cout << "\t (MD)";
+	}else{
+		std::cout << "\t (MH)";
+	}
+
+	// Print validity
+	if(isTheSampleValid){
+		std::cout << " \n";
+	}else{
+		std::cout << " invalid\n";
+	}
+	
+}
 
 /**
  * The main function that generates a sample
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState)
 {
-	//auto start = std::chrono::system_clock::now();
-	
-	/* std::cout << "Transforms before sample_iteration\n";
-	world->PrintAcosX_PFs();
-	world->PrintNormX_BMs();
-	world->PrintAcosX_PFMeans();
-	world->PrintNormX_BMMeans(); */
 
+	// Flag if anything goes wrong during simulation
 	bool validated = true;
-
-	// Set the number of decimals to be printed
-	std::cout << std::setprecision(10) << std::fixed;
 
 	// Store old configuration
 	storeOldPotentialEnergies(someState);
 
+	// PROPOSE
 	// Generate a trial move in the stochastic chain
-	//world->traceBendStretch(someState);
-
-	// Set X_PF and X_BM means to whatever iti is now
-	///////////////////////////////////////////////////
-	/* if(nofSamples == 0){
-		world->setTransformsMeansToCurrent(someState);
-	} */
-	///////////////////////////////////////////////////
-
-	// Calculate X_PFs and X_BMs
-	world->getTransformsStatistics(someState);
-	world->updateTransformsMeans(someState); // Movable
-
-	// For output
-	std::cout << "DISTORT_OPTION " << this->DistortOpt << std::endl;
-
 	validated = propose(someState) && validated;
 
-	// The sample was not validated
+	// --- invalid --- //
 	if ( !validated ){
-		 
-		// Warn user
-		std::cout 
-			<< "Warning: Proposal not validated after 10 tries.\n";
 
-		// Reset
-		this->acc = false;
+				// Set status
+				setAcc(false);
 
-		// Restore old configuration
-		restoreConfiguration(someState);
+				// RESTORE
+				restore(someState);
 
-		// Restore old energies
-		restoreEnergies();
+				// Deal with adaptive data
+				storeAdaptiveData(someState); // PrintAdaptiveData();
+				
+				// Print
+				Print(someState, validated, getAcc());
 
-	}
-
-	// Check if the system appears distorted
-	SimTK::Real deltaPE = (pe_n - pe_o);
-	SimTK::Real energyLimit = beta * 10000;
-	if((beta * deltaPE) > energyLimit){
-		std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
-			<< pe_init << " " << pe_o 
-		<< "." << std::endl;
-		validated = false;
-	}
-
-	// Print all the energy terms first
-	PrintDetailedEnergyInfo(someState);
-
-	// Apply the acceptance criterion
-	if(validated){
-
-		// Decide
-		if(acceptSample()){
-			// Print info
-			std::cout << "\tacc";
-			if(this->alwaysAccept == true){
-				std::cout << " (MD)\n";
-			}else{
-				std::cout << " (MH)\n";
-			}
-
-			// UPDATE
-			update(someState);
-
-			// Deal with adaptive data
-			storeAdaptiveData(someState); //PrintAdaptiveData();
-
-		}else{
-			//Print info
-			std::cout << "\trej (MH)\n";
-
-			// RESET
-			restore(someState);
-		}
-
-		// Calculate X_PFs and X_BMs
-		//world->traceBendStretch(someState);
-		/* world->getTransformsStatistics(someState);
-		// Update means of values before altering them
-		world->updateTransformsMeans(someState);
-		if((this->nofSamples > 3000) && (this->nofSamples <= 6000)){
-			//world->updateTransformsMeans(someState);
-		} */
-
+	// --- valid --- //
 	}else{
-		
-		// RESET
-		restore(someState);
 
-		if(this->alwaysAccept == true){
-			std::cout << "\trej (MD) invalid\n";
-		}else{
-			std::cout << "\trej (MH) invalid\n";
-		}
-		
+				// --- accept --- //
+				if(acceptSample()){
+
+					// Set status
+					setAcc(true);
+
+					// Print
+					Print(someState, validated, getAcc());
+
+					// UPDATE
+					update(someState);
+
+					// Deal with adaptive data
+					storeAdaptiveData(someState); // PrintAdaptiveData();
+
+				// --- reject --- //
+				}else{
+
+					// Set status
+					setAcc(false);
+
+					// Print
+					Print(someState, validated, getAcc());
+
+					// RESTORE
+					restore(someState);
+
+					// Deal with adaptive data
+					storeAdaptiveData(someState); // PrintAdaptiveData();
+				}
+
 	}
 
 	// Increase the sample counter and return
 	++nofSamples;
-	return this->acc;
+
+	// Return accepted
+	return getAcc();
 
 }
 
@@ -3796,7 +3907,7 @@ void HMCSampler::updateQBuffer(const SimTK::State& someState)
 void HMCSampler::storeAdaptiveData(SimTK::State& someState)
 {
 	// TODO THIS IS BAD, FIX IT
-	updateQBuffer(someState);
+	//updateQBuffer(someState);
 	// pushCoordinatesInR(someState);
 	// pushVelocitiesInRdot(someState);
 }
@@ -4096,3 +4207,19 @@ void HMCSampler::loadMbx2mobility(SimTK::State& someState)
 		}
 }
 */
+
+
+const bool& Sampler::getAcc(void) const
+{
+	return this->acc;
+}
+
+bool& Sampler::updAcc(void)
+{
+	return this->acc;
+}
+
+void Sampler::setAcc(bool accArg)
+{
+	this->acc = accArg;
+}
