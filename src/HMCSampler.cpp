@@ -228,7 +228,7 @@ velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
 acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
-void HMCSampler::initialize(SimTK::State& someState)
+/* void HMCSampler::initialize(SimTK::State& someState)
 {
 	// After an event handler has made a discontinuous change to the
 	// Integrator's "advanced state", this method must be called to
@@ -241,21 +241,18 @@ void HMCSampler::initialize(SimTK::State& someState)
 	// Potential energy and configuration need stage Position
 	system->realize(someState, SimTK::Stage::Position);
 
+	// Convenient variable to use for distortion detection
+	pe_init = pe_set;
+
 	// Set old potential energy
 	setOldPE(
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
 	);
 
-	// Set set potential energy
-	setSetPE(getOldPE());
-
-	pe_init = pe_set;
-
 	std::cout << "HMCSampler::initialize pe_o " << pe_o << std::endl;
 
 	// Store the configuration
-	// Reserve space for OpenMM
 	if(this->integratorName == IntegratorName::OMMVV){
 
 		omm_locations.resize(matter->getNumBodies());
@@ -265,6 +262,9 @@ void HMCSampler::initialize(SimTK::State& someState)
 	}
 			
 	updateStoredConfiguration(someState);
+
+	// Set set potential energy
+	setSetPE(getOldPE());
 
 	// Initialize QsBuffer with zeros
 	int nq = matter->getNQ(someState);
@@ -284,6 +284,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 			((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}else{
+		
 		this->fix_o = 0.0;
 		this->fix_set = this->fix_o;
 
@@ -303,7 +304,7 @@ void HMCSampler::initialize(SimTK::State& someState)
 	loadUScaleFactors(someState);
 
 	// Buffer to hold Q means
-	QsMeans.resize(nq), 0;
+	QsMeans.resize(nq, 0);
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
@@ -313,14 +314,29 @@ void HMCSampler::initialize(SimTK::State& someState)
 
 	//OMM_setTemperature(boostT);
 
-}
+} */
 
-/** Same as initialize **/
+
+/** Seed the random number generator. Set simulation temperature,
+velocities to desired temperature, variables that store the configuration
+and variables that store the energies, both needed for the
+acception-rejection step. Also realize velocities and initialize
+the timestepper. **/
 bool HMCSampler::reinitialize(SimTK::State& someState)
 {
-
+	// Set a validation flag
 	bool validated = true;
 
+	// After an event handler has made a discontinuous change to the
+	// Integrator's "advanced state", this method must be called to
+	// reinitialize the Integrator.
+	if(this->nofSamples == 0){
+		timeStepper->initialize(compoundSystem->getDefaultState());
+	}
+
+	// Get no of degrees of freedom
+	const int nu = someState.getNU();
+	
 	// Potential energy and configuration need stage Position
 	system->realize(someState, SimTK::Stage::Position);
 
@@ -340,17 +356,27 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 
 		OMM_storeOMMConfiguration();
 	}
+
 	updateStoredConfiguration(someState);
 
 	// Store potential energies
 	setSetPE(getOldPE());
 
+	// Initialize QsBuffer with zeros
+	if(this->nofSamples == 0){
+		int nq = matter->getNQ(someState);
+		int totSize = QsBufferSize * nq;
+		for(int i = 0; i < totSize; i++){
+			QsBuffer.push_back(SimTK::Real(0));
+		}
+	}
+
 	// Store Fixman potential
 	if(useFixman){
 		
 		// Internal Fixman potential
-		this->fix_o = calcFixman(someState);
-		this->fix_set = this->fix_o;
+		setOldFixman(calcFixman(someState));
+		setSetFixman(getOldFixman());
 
 		// External Fixman potential
 		setOldLogSineSqrGamma2( 
@@ -360,8 +386,8 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	}else{
 
 		// Internal Fixman potential
-		this->fix_o = 0.0;
-		this->fix_set = this->fix_o;
+		setOldFixman(0.0);
+		setSetFixman(getOldFixman());
 
 		// External Fixman potential
 		setOldLogSineSqrGamma2(0.0);
@@ -369,7 +395,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	}
 
 	// Initialize velocities to temperature
-	int nu = someState.getNU();
+	if(this->nofSamples == 0){
+		perturbVelocities(someState);
+	}
 
 	// Reset ndofs
 	ndofs = nu;
@@ -383,6 +411,11 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// Set the generalized velocities scale factors
 	loadUScaleFactors(someState);
 
+	// Buffer to hold Q means
+	if(this->nofSamples == 0){
+		QsMeans.resize(matter->getNQ(someState), 0);
+	}
+
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
 	
@@ -393,7 +426,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	OMM_setTemperature(boostT);
 
 	return validated;
-
 
 }
 
@@ -3732,7 +3764,7 @@ bool HMCSampler::acceptSample() {
 				here_lnj = 0.0;				
 
 			}
-			
+
 		}else if(DistortOpt < 0){
 
 			hereE_o = pe_o + fix_o;
@@ -4140,74 +4172,6 @@ void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
 		<< ", JDetLog " << bendStretchJacobianDetLog
 		<< std::endl;
 }
-
-/** Load the map of mobods to joint types **/
-/*
-void HMCSampler::loadMbx2mobility(SimTK::State& someState)
-{
-	// Lop through topologies
-	for(int i = 0; i < topologies.size(); i++){
-		// Loop through atoms
-		for (SimTK::Compound::AtomIndex aIx(0); aIx < topologies[i]->getNumAtoms(); ++aIx){
-
-			// Get body, parentBody
-			SimTK::MobilizedBodyIndex mbx = (topologies[i])->getAtomMobilizedBodyIndex(aIx);
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
-			if(parentMbx != 0){
-				// Get the neighbor atom in the parent mobilized body
-				SimTK::Compound::AtomIndex chemParentAIx = (topologies[i])->getChemicalParent(matter, aIx);
-
-				//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
-				//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
-				//	<< std::endl;
-				// Get Top to parent frame
-				SimTK::Compound::AtomIndex parentRootAIx = (topologies[i])->mbx2aIx[parentMbx];
-
-				// Get mobility (joint type)
-				bSpecificAtom *atom = (topologies[i])->updAtomByAtomIx(aIx);
-				SimTK::BondMobility::Mobility mobility;
-				bBond bond = (topologies[i])->getBond(
-					(topologies[i])->getNumber(aIx), (topologies[i])->getNumber(chemParentAIx));
-				mobility = bond.getBondMobility();
-				mbx2mobility.insert(std::pair<SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility>
-								(mbx, mobility));
-
-				(mobility == SimTK::BondMobility::Mobility::Torsion);
-
-			} // Parent is not Ground
-
-		} // END loop through atoms
-
-	} // END loop through topologies
-		for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-				SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
-				int mobodNQ = mobod.getNumQ(someState);
-				int mobodNU = mobod.getNumU(someState);
-				//const SimTK::Transform T = mobod.getMobilizerTransform(someState);
-				//const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
-				//const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
-				std::cout << "mbx= " << mbx << " mobility= "
-				//      << std::endl
-				;
-				// Loop through body's Qs
-				int internQIx = -1;
-				for(int qi = qIx; qi < (mobodNQ + qIx); qi++){
-						internQIx++;
-						std::cout << " " << qi ;
-				}
-				std::cout << std::endl;
-				// Loop through body's Us
-				for(int ui = 0; ui < mobodNU; ui++){
-						//SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
-						//std::cout << "H_FMCol= " << H_FMCol << std::endl;
-				}
-		}
-}
-*/
-
 
 const bool& Sampler::getAcc(void) const
 {

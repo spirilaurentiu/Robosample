@@ -2042,16 +2042,17 @@ BaseSampler * Context::addSampler(
 void Context::initializeSampler(std::size_t whichWorld,
 	std::size_t whichSampler)
 {
-	worlds[whichWorld].updSampler(whichSampler)->initialize(
+	worlds[whichWorld].updSampler(whichSampler)->reinitialize(
 		worlds[whichWorld].integ->updAdvancedState());
 
 	// auto compoundSystem = worlds[whichWorld].getCompoundSystem();
 	// auto forces = worlds[whichWorld].getGeneralForceSubsystem();
 	// auto matter = worlds[whichWorld].getSimbodyMatterSubsystem();
-
 	// worlds[whichWorld].updSampler(whichSampler)->initializeTaskSpace(*compoundSystem, *forces, *matter);
-
-	// worlds[whichWorld].updSampler(whichSampler)->initializeTaskSpace(*worlds[whichWorld].getCompoundSystem(), *worlds[whichWorld].getGeneralForceSubsystem(), *worlds[whichWorld].getSimbodyMatterSubsystem());
+	// worlds[whichWorld].updSampler(whichSampler)->initializeTaskSpace(
+	// *worlds[whichWorld].getCompoundSystem(),
+	// *worlds[whichWorld].getGeneralForceSubsystem(),
+	// *worlds[whichWorld].getSimbodyMatterSubsystem());
 }
 
 
