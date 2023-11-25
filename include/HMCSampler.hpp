@@ -10,6 +10,38 @@
 /** @file
 This defines the HMCSampler class, which (TODO)
 
+
+             ┌─────────────────────────┐
+             │                         │
+             │      REINITIALIZE       │
+             │                         │
+             └────────────┬────────────┘
+                          │
+                          │
+                    ┌─────▼─────┐
+                    │  PROPOSE  │
+                    └─────┬─────┘
+                          │
+                          │
+                          │                
+                     ┌────▼──────┐       NO     
+                     │ VALIDATE  │────────────────
+                     └────┬──────┘               | 
+                          │                      |
+                          │  YES                 |
+                          │                      |
+                      ┌───▼─────┐                |
+                      │ ACCEPT  │                |
+                      └────┬────┘                |
+                           │                     |
+                YES        │       NO            |
+     ┌────-────────────────┴─────────────────────┬
+┌────▼────-                                      │
+│ UPDATE  │                                 ┌────▼─────┐
+└─────────┘                                 │ RESTORE  │
+                                            └──────────┘
+
+
 The class should theoretically track the following vars:
 
 pe ke    fix lnsingamma lnJ TVec fX_PF gX_BM

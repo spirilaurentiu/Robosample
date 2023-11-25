@@ -187,9 +187,17 @@ World::World(int worldIndex,
 		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
 		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
 			*visualizer, std::abs(visualizerFrequency));
+
 		compoundSystem->addEventReporter(visualizerReporter.get());
 
-		visualizer->addDecorationGenerator(new ForceArrowGenerator(mbs, *contactForces));
+		if(contactForces){
+			std::cout << "[WARNING] Victor check Teodor's contacts." << std::endl;
+			visualizer->addDecorationGenerator(
+				new ForceArrowGenerator(mbs, *contactForces));
+		}else{
+			std::cout << "[WARNING] Teodor's contacts." << std::endl;
+		}
+		
 
 		// Initialize a DecorationGenerator
 		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
