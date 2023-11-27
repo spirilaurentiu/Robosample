@@ -1740,8 +1740,9 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 	return returnVector;
 }
 
-/** Almost the same thing as above but it takes the current integrator state
- and returns a reference to atomsLocations
+/** Order: bAtomList
+ * Almost the same thing as above but it takes the current integrator state
+ * and returns a reference to atomsLocations
  **/
 std::vector< std::vector< 
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
@@ -1788,6 +1789,7 @@ World::getCurrentAtomsLocationsInGround(void)
 
 	return returnVector;
 }
+
 
 /** Nice print helper for get/setAtomsLocations */
 void World::PrintAtomsLocations(const std::vector<std::vector<
@@ -1842,19 +1844,30 @@ void World::WriteRst7FromTopology(std::string FN)
 }
 
 /** Print transformation geometries */
-void World::PrintFullTransformationGeometry(const SimTK::State& someState)
+void World::PrintFullTransformationGeometry(const SimTK::State& someState,
+		bool x_pf_r, bool x_fm_r, bool x_bm_r,
+		bool x_pf_p, bool x_fm_p, bool x_bm_p)
 {
+	std::cout <<  std::setw(9) << std::fixed << std::setprecision(3);
 	std::cout << "X_PF X_FM X_BM ps \n";
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 		const Transform& X_PF = mobod.getDefaultInboardFrame();
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
-		std::cout
-			<< X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " "
-			<< X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " "
-			<< X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " " 
-			<< std::endl;
+
+		if(x_pf_p){
+			std::cout << X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " ";
+		}
+		if(x_fm_p){
+			std::cout << X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " ";
+		}
+		if(x_bm_p){
+			std::cout << X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " ";
+		}
+
+		std::cout << std::endl;
+
 	}
 }
 

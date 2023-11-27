@@ -2042,6 +2042,7 @@ BaseSampler * Context::addSampler(
 void Context::initializeSampler(std::size_t whichWorld,
 	std::size_t whichSampler)
 {
+
 	worlds[whichWorld].updSampler(whichSampler)->reinitialize(
 		worlds[whichWorld].integ->updAdvancedState());
 
@@ -6024,7 +6025,7 @@ void Context::setUseOpenMMAcceleration(bool arg)
 void Context::setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize)
 {
 	worlds[which].updForceField()->setUseOpenMMIntegration(true);
-	worlds[which].updForceField()->setOpenMMtemperature(temperature);
+	worlds[which].updForceField()->setDuMMTemperature(temperature);
 	worlds[which].updForceField()->setOpenMMstepsize(stepsize);
 }
 

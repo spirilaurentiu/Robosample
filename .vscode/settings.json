@@ -80,7 +80,9 @@
         "filesystem": "cpp",
         "codecvt": "cpp",
         "__nullptr": "cpp",
-        "locale": "cpp"
+        "locale": "cpp",
+        "*.ipp": "cpp"
     },
-    "C_Cpp.intelliSenseEngineFallback": "enabled"
+    "C_Cpp.intelliSenseEngineFallback": "enabled",
+    "cmake.configureOnOpen": false
 }

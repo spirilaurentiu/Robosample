@@ -356,7 +356,7 @@ int main(int argc, char **argv)
 				(rand_no < exp(-(etot_n - etot_proposed) * (1 / RT))))) { // Accept based on full energy
 				acc = true;
 				std::cout << " acc ";
-				(pHMC(pSampler))->setSetTVector(advancedState);
+				(pHMC(pSampler))->storeSimbodyConfiguration_XFMs(advancedState);
 				pe_set = pe_n;
 				fix_set = fix_n;
 				extfix_set = extfix_n;

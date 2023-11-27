@@ -82,13 +82,15 @@
                 "${workspaceFolder}/Simbody01/Simbody/include",
                 "${workspaceFolder}/Simbody01/Simbody/include/simbody",
                 "${workspaceFolder}/Simbody01/Simbody/include/simbody/internal",
+                "${workspaceFolder}/Simbody01/Simbody/Visualizer/include/simbody/internal",
                 "${workspaceFolder}/Molmodel/include",
                 "${workspaceFolder}/Molmodel/include/molmodel",
                 "${workspaceFolder}/Molmodel/include/molmodel/internal",
-                "${workspaceFolder}/include"
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/Simbody01/Simbody/Visualizer/include"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/clang++",
+            "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "clang-x64",

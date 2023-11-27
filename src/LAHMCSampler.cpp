@@ -771,7 +771,7 @@ bool LAHMCSampler::propose(SimTK::State& someState)
 /** Store new configuration and energy terms**/
 void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
 {
-    updateStoredConfiguration(someState);
+    storeSimbodyConfiguration_XFMs(someState);
     pe_set = pe_n;
     fix_set = fix_n;
     logSineSqrGamma2_set = logSineSqrGamma2_n;

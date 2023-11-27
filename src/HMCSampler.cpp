@@ -336,64 +336,100 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 
 	// Get no of degrees of freedom
 	const int nu = someState.getNU();
-	
-	// Potential energy and configuration need stage Position
-	system->realize(someState, SimTK::Stage::Position);
 
 	// Convenient variable to use for distortion detection
 	pe_init = pe_set;
 
+
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   X_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Calculate and set old configuration
 
-	setOldPE(
-		forces->getMultibodySystem().calcPotentialEnergy(someState)
-		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
-	);		
+	// Calculate Simbody configuration
+	system->realize(someState, SimTK::Stage::Position);
 
-	// Store the configuration
-	if(this->integratorName == IntegratorName::OMMVV){
-		omm_locations.resize(matter->getNumBodies());
-		omm_locations_old.resize(matter->getNumBodies());
-
-		OMM_storeOMMConfiguration();
-	}
-
-	updateStoredConfiguration(someState);
-
-	// Store potential energies
-	setSetPE(getOldPE());
+	// Copy coordinates to OpenMM
+	Simbody_To_OMM_setAtomsLocationsCartesian(someState);
 
 	// Initialize QsBuffer with zeros
 	if(this->nofSamples == 0){
-		int nq = matter->getNQ(someState);
-		int totSize = QsBufferSize * nq;
+		int totSize = QsBufferSize * matter->getNQ(someState);
 		for(int i = 0; i < totSize; i++){
 			QsBuffer.push_back(SimTK::Real(0));
 		}
 	}
 
-	// Store Fixman potential
+
+	// Store Simbody configuration
+	storeSimbodyConfiguration_XFMs(someState);
+
+	// Store OpenMM configuration
+	if(this->integratorName == IntegratorName::OMMVV){
+		omm_locations.resize(matter->getNumBodies());
+		omm_locations_old.resize(matter->getNumBodies());
+
+		OMM_storeOMMConfiguration_X(dumm->OMM_getPositions());
+	}
+
+	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Calculate and set old potential energy. This should call OpenMMPlugin to 
+	// calculate energy and forces
+	std::cout << "HMCSampler::reinitialize\n";
+	setOldPE(
+		forces->getMultibodySystem().calcPotentialEnergy(someState)
+		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
+	);
+
+
+	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_O &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Calc old Fixman potential
 	if(useFixman){
 		
 		// Internal Fixman potential
 		setOldFixman(calcFixman(someState));
-		setSetFixman(getOldFixman());
 
 		// External Fixman potential
 		setOldLogSineSqrGamma2( 
 			((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
-		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 
 	}else{
 
 		// Internal Fixman potential
 		setOldFixman(0.0);
-		setSetFixman(getOldFixman());
 
 		// External Fixman potential
 		setOldLogSineSqrGamma2(0.0);
+	}
+
+	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_SET   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Store potential energies
+	setSetPE(getOldPE());
+
+	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_SET  &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Set final Fixman potential to old
+	if(useFixman){
+		
+		// Internal Fixman potential
+		setSetFixman(getOldFixman());
+
+		// External Fixman potential
+		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+
+	}else{
+
+		// Internal Fixman potential
+		setSetFixman(getOldFixman());
+
+		// External Fixman potential
 		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
 	}
 
@@ -425,8 +461,8 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
 
-	// Victor
-	OMM_setTemperature(boostT);
+	// Set DuMM temperature : TODO: should propagate to OpenMM
+	OMM_setDuMMTemperature(boostT);
 
 	return validated;
 
@@ -1696,8 +1732,8 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState){
 // ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 
 // ELIZA: Insert code here
-void HMCSampler::OMM_setTemperature(double HMCBoostTemperature){
-	dumm->setOpenMMtemperature(HMCBoostTemperature);
+void HMCSampler::OMM_setDuMMTemperature(double HMCBoostTemperature){
+	dumm->setDuMMTemperature(HMCBoostTemperature);
 }
 
 // ELIZA: Insert code here
@@ -1710,11 +1746,9 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 	return dumm->OMM_calcPotentialEnergy();
 }
 
-void HMCSampler::OMM_storeOMMConfiguration(void)
+void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
 {
 		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
-
-		const std::vector<OpenMM::Vec3>& positions = dumm->OMM_getPositions();
 
 		for (int i = 0; i < positions.size(); i++) {
 			omm_locations_old[i + 1] = SimTK::Vec3(
@@ -1738,7 +1772,7 @@ void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
 
 	const std::vector<SimTK::Vec3> omm_locations_old_1(it_begin, it_end);
 
-	dumm->OMM_updatePositions(omm_locations_old_1);
+	dumm->OMM_setOpenMMPositions(omm_locations_old_1);
 
 	// Reset Simbody (may not be necessary)
 	OMM_To_Simbody_setAtomsLocations(someState);
@@ -2196,7 +2230,7 @@ void HMCSampler::setTVector(SimTK::Transform *inpTVector)
 }
 
 // Stores the set configuration into an internal vector of transforms TVector
-void HMCSampler::updateStoredConfiguration(const SimTK::State& someState)
+void HMCSampler::storeSimbodyConfiguration_XFMs(const SimTK::State& someState)
 {
   int i = 0;
   for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -2576,7 +2610,7 @@ void HMCSampler::setBoostTemperature(SimTK::Real argT)
 	this->unboostUFactor = 1 / boostUFactor;
 	//std::cout << "HMC: boost velocity scale factor: " << this->boostUFactor << std::endl;
 
-	OMM_setTemperature(this->boostT);
+	OMM_setDuMMTemperature(this->boostT);
 
 }
 
@@ -3524,19 +3558,66 @@ void HMCSampler::setSphereRadius(float argSphereRadius)
 		<< sphereRadius << std::endl;
 }
 
-// Update OpenMM position from a Simbody Cartesian world
-void HMCSampler::Simbody_To_OMM_setAtomsLocations(SimTK::State& someState)
+/**
+ * Order should be DuMM::NonbondedAtomIx 
+ * Update OpenMM position from a Simbody Cartesian world
+ * */
+void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someState,
+	bool throughDumm)
 {
-		std::vector<SimTK::Vec3> startingPos;
 
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx)
-		{
+	/* std::cout << "HMCSampler::Simbody_To_OMM "
+		<< "someState.getTime() " << someState.getTime()
+		<< std::endl << std::flush; */
+
+	std::vector<SimTK::Vec3> startingPos;
+	startingPos.resize(this->natoms);
+
+	system->realize(someState, SimTK::Stage::Position);
+
+	if(throughDumm){
+		const Vector_<Vec3>& DuMMIncludedAtomStationsInG = 
+			dumm->getIncludedAtomPositionsInG(someState);
+
+		for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
+			startingPos[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
+		}
+
+		/* for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
+			std::cout << "atom " << atomCnt << " "
+				<< startingPos[atomCnt][0] << " "
+				<< startingPos[atomCnt][1] << " "
+				<< startingPos[atomCnt][2] << " "
+				<< std::endl;
+		}
+
+		world->PrintFullTransformationGeometry(someState,
+			false, false, false, true, true, true);
+
+		for(SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); mbx++){
+			SimTK::MobilizedBody mobod = matter->getMobilizedBody(mbx);
+
+			//SimTK::Vec3 mobodOrig = mobod.expressVectorInGroundFrame(someState, SimTK::Vec3(0, 0, 0));
+			SimTK::Vec3 mobodOrig = mobod.getBodyOriginLocation(someState);
+			std::cout << "mobodOrig " << int(mbx) << " "
+				<< mobodOrig[0] << " "
+				<< mobodOrig[1] << " "
+				<< mobodOrig[2] << " "
+				<< std::endl;		
+		} */
+
+	}else{
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 			startingPos.push_back(mobod.getBodyOriginLocation(someState));
 		}
+	}
 
-		dumm->OMM_updatePositions(startingPos);
+	// Apply
+	dumm->OMM_setOpenMMPositions(startingPos);
+
 }
+
 
 /** Returns the 'how' argument of initializeVelocities */
 VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
@@ -4030,7 +4111,7 @@ void HMCSampler::update(SimTK::State& someState)
 	
 	// Store final configuration and energy
 	// Store new configuration
-	updateStoredConfiguration(someState);
+	storeSimbodyConfiguration_XFMs(someState);
 
 	// Set the final energies to the new ones
 	updateEnergies();

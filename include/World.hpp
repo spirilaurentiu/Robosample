@@ -310,7 +310,9 @@ public:
 		std::pair<bSpecificAtom *, SimTK::Vec3> > >& someAtomsLocations);
 	void WriteRst7FromTopology(std::string FN);
 
-	void PrintFullTransformationGeometry(const SimTK::State&);
+	void PrintFullTransformationGeometry(const SimTK::State&,
+		bool x_pf_r = false, bool x_fm_r = false, bool x_bm_r = false,
+		bool x_pf_p = false, bool x_fm_p = false, bool x_bm_p = false);
 
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(

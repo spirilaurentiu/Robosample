@@ -10,36 +10,40 @@
 /** @file
 This defines the HMCSampler class, which (TODO)
 
+Topology 0:                                                      :       
+          :                                                      :
+Position 0:                                                      :
+          :          ┌─────────────────────────┐                 :
+                     │                         │                 :X_o
+                     │      REINITIALIZE       │                 :pe_o, pe_set
+                     │                         │                 :fix_o, fix_set
+                     └────────────┬────────────┘                 :
+                                  │                              :
+                                  │                              :
+                            ┌─────▼─────┐                        :
+                            │  PROPOSE  │                        :     
+                            └─────┬─────┘                        :
+                                  │                              :
+Dynamics 0                        │                              :
+                                  │                              :
+                             ┌────▼──────┐       NO              :
+                             │ VALIDATE  │────────────────       :
+                             └────┬──────┘               |       :
+                                  │                      |
+                                  │  YES                 |
+                                  │                      |
+                              ┌───▼─────┐                |
+                              │ ACCEPT  │                |
+                              └────┬────┘                |
+                                   │                     |
+                        YES        │       NO            |
+             ┌────-────────────────┴─────────────────────┬
+             |                                           │ 
+        ┌────▼────-                                 ┌────▼─────┐            
+        │ UPDATE  │                                 │ RESTORE  │
+        └─────────┘                                 └──────────┘
+         Dynamics 0                                  Position 0
 
-             ┌─────────────────────────┐
-             │                         │
-             │      REINITIALIZE       │
-             │                         │
-             └────────────┬────────────┘
-                          │
-                          │
-                    ┌─────▼─────┐
-                    │  PROPOSE  │
-                    └─────┬─────┘
-                          │
-                          │
-                          │                
-                     ┌────▼──────┐       NO     
-                     │ VALIDATE  │────────────────
-                     └────┬──────┘               | 
-                          │                      |
-                          │  YES                 |
-                          │                      |
-                      ┌───▼─────┐                |
-                      │ ACCEPT  │                |
-                      └────┬────┘                |
-                           │                     |
-                YES        │       NO            |
-     ┌────-────────────────┴─────────────────────┬
-┌────▼────-                                      │
-│ UPDATE  │                                 ┌────▼─────┐
-└─────────┘                                 │ RESTORE  │
-                                            └──────────┘
 
 
 The class should theoretically track the following vars:
@@ -238,7 +242,7 @@ public:
 	SimTK::Real getREP(void) const; 
 
 	// Set/get Fixman potential
-	void updateStoredConfiguration(const SimTK::State& advanced); 
+	void storeSimbodyConfiguration_XFMs(const SimTK::State& advanced); 
 	SimTK::Transform * getSetTVector(void);
 	void assignConfFromSetTVector(SimTK::State& advanced);
 
@@ -423,17 +427,18 @@ public:
 	virtual bool reinitialize(SimTK::State& advanced) ;
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
-	void OMM_setTemperature(double HMCBoostTemperature);
+	void OMM_setDuMMTemperature(double HMCBoostTemperature);
 
 	// Update OpenMM position from a Simbody Cartesian world
-	void Simbody_To_OMM_setAtomsLocations(SimTK::State& someState);
+	void Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someState,
+		bool throughDumm = true);
 
 
 	double OMM_calcPotentialEnergy(void);
 
 	double OMM_calcKineticEnergy(void);
 
-	void OMM_storeOMMConfiguration(void);
+	void OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions);
 
 	void OMM_To_Simbody_setAtomsLocations(SimTK::State& someState);
 
