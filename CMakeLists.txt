@@ -189,7 +189,7 @@ SET(OPENMM_DIRS
 # thus, we can only roll with reference + cpu / cuda / opencl
 # cpu will compile and run on any machine so it is a good starting point
 # to change it, run `cmake -DOPENMM_PLATFORM=CUDA`
-SET(OPENMM_PLATFORM "CUDA" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
+SET(OPENMM_PLATFORM "OPENCL" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
 
 IF(OPENMM_PLATFORM MATCHES "CPU")
     # build the default CPU platform
@@ -384,7 +384,9 @@ IF (BUILD_DYNAMIC)
     set_property(TARGET ${OPENMM_LIB_SHARED_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     # this forces cmake to encode the kernels before compiling anything else
-    add_dependencies(${OPENMM_LIB_SHARED_NAME} ${OPENMM_DEPENDENCIES})
+    IF(NOT OPENMM_PLATFORM MATCHES "CPU")
+        add_dependencies(${OPENMM_LIB_SHARED_NAME} ${OPENMM_DEPENDENCIES})
+    ENDIF(NOT OPENMM_PLATFORM MATCHES "CPU")
 ENDIF (BUILD_DYNAMIC)
 
 IF (BUILD_STATIC)
@@ -397,8 +399,9 @@ IF (BUILD_STATIC)
     target_link_options(${OPENMM_LIB_STATIC_NAME} PRIVATE ${SANITIZER_FLAGS} ${PGO_FLAGS})
     target_precompile_headers(${OPENMM_LIB_STATIC_NAME} PRIVATE ${OPENMM_PCH})
 
-    # this forces cmake to encode the kernels before compiling anything else
-    add_dependencies(${OPENMM_LIB_STATIC_NAME} ${OPENMM_DEPENDENCIES})
+    IF(NOT OPENMM_PLATFORM MATCHES "CPU")
+        add_dependencies(${OPENMM_LIB_STATIC_NAME} ${OPENMM_DEPENDENCIES})
+    ENDIF(NOT OPENMM_PLATFORM MATCHES "CPU")
 ENDIF (BUILD_STATIC)
 
 

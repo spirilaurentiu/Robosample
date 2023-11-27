@@ -9,9 +9,8 @@ Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed
 ## Prerequisites
 
 * Turn off all `conda` environments.
-* Disable all antivirus programs (especially for WSL).
-* Execute all commands in the native terminal if running under WSL.
-* Install everything in `/home/<username>/` if running under WSL.
+* Disable all antivirus programs (known to be needed for WSL).
+* Execute all commands in the native terminal if running under WSL (not in VS Code or any other application that provides a terminal).
 
 ## Installing dependencies
 
@@ -19,7 +18,7 @@ Install the dependencies:
 
 ```bash
 sudo apt-get update
-sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build linux-tools-common linux-tools-generic linux-tools-`uname -r`
+sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build
 ```
 
 ### CMake
@@ -39,10 +38,27 @@ tar -xf cmake-3.27.7-linux-x86_64.tar.gz
 rm cmake-3.27.7-linux-x86_64.tar.gz
 ```
 
-The executable is located in the `bin` forlder:
+The executable is located in the `bin` folder:
 
 ```bash
 ~/cmake-3.27.7-linux-x86_64/cmake-3.27.7-linux-x86_64/bin/cmake
+```
+
+### Ninja
+
+There is no required Ninja version. It can also be replaced with Unix Makefiles. If installation from `apt-get` fails, downloading the binaries is recommended. Go to [Ninja website](https://ninja-build.org/) and find the [binary downloads](https://ninja-build.org/). The following is an example for version 1.11.1:
+
+```bash
+cd ~
+wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip
+unzip ninja-linux.zip
+rm ninja-linux.zip
+```
+
+If used as intended further into the README, the executable must be run from the full path:
+
+```bash
+/home/myuser/ninja
 ```
 
 ### Exports
@@ -68,7 +84,7 @@ cd ../
 git checkout master
 ```
 
-For a specific branch:
+For a specific branch (named `build` in this example):
 
 ```bash
 git clone -b build --single-branch https://github.com/spirilaurentiu/Robosample.git
@@ -76,32 +92,6 @@ cd Robosample
 rm openmm -rf && git clone -b master https://github.com/spirilaurentiu/openmm.git
 rm Simbody01 -rf && git clone -b master --single-branch https://github.com/spirilaurentiu/Simbody01.git
 rm Molmodel -rf && git clone -b merge --single-branch https://github.com/spirilaurentiu/Molmodel.git
-```
-
-For the development branch:
-
-```bash
-cd openmm
-git checkout master
-cd ../Molmodel
-git checkout merge
-cd ../Simbody01
-git checkout master
-cd ../
-git checkout build
-```
-
-If `Simbody01` is missing:
-
-```bash
-cd Simbody01/
-git submodule update --init
-git checkout master
-cd ../openmm
-git checkout master
-cd ../Molmodel
-git checkout merge
-cd ../
 ```
 
 ## Building Robosample
@@ -142,6 +132,25 @@ cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=gcc -D CMAKE_
 ninja robosample
 ```
 
+Assuming that CMake and Ninja have been installed as binaries and not from `apt-get`:
+
+```bash
+~/cmake-3.27.7-linux-x86_64/bin/cmake -G Ninja -DCMAKE_MAKE_PROGRAM=/home/myuser/ninja -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=OPENCL
+```
+
+Once the CMake files have been generated, Robosample can be compiled with Ninja:
+
+```bash
+~/ninja robosample
+```
+
+If you want to use Unix Makefiles:
+
+```bash
+cmake -G "Unix Makefiles" ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
+make -j$(nproc)
+```
+
 #### Compiling from Visual Studio Code
 
 Select the kit and then compile:
@@ -171,6 +180,13 @@ To run any of them, execute:
 
 We have applied [LLVM-BOLT](https://github.com/llvm/llvm-project/tree/main/bolt) developed by Facebook.
 
+### Installing prerequisites
+
+```bash
+sudo apt-get update
+sudo apt-get installlinux-tools-common linux-tools-generic linux-tools-`uname -r`
+```
+
 ### Installing BOLT
 
 Downlad BOLT and compile it. A docker file is also available.
@@ -193,10 +209,8 @@ source ~/.bashrc
 Allow intrumentation:
 
 ```bash
-sudo echo "-1" > /proc/sys/kernel/perf_event_paranoid
+sudo sysctl kernel.perf_event_paranoid=-1
 ```
-
-This does not seem to fix the value forever. You will most likely need to change it every time you want to run BOLT.
 
 ### Instrumentation
 
