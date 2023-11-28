@@ -28,7 +28,7 @@ public:
         : Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper) {}
 
     ~DerivedSampler(){}
-    bool proposeEquilibrium(SimTK::State& someState) { return false; }
+    bool propose(SimTK::State& someState) { return false; }
     SimTK::Real setQToScaleBendStretchStdev(SimTK::State& someState, std::vector<SimTK::Real>& scaleFactors) { }
     void update(SimTK::State& someState){}
 };

@@ -736,7 +736,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				std::ostringstream streamObjB;
 				streamObjB << std::string("B") + std::to_string(int(mbx))
 					//+ " " + std::to_string(this->BCommVar)
-					;
+					;	
 				std::string textB = streamObjB.str();
 				drawFrame(geometry, G_X_B,
 					0.04, 4, SimTK::Vec3(0, 0, 0),

@@ -134,7 +134,7 @@ public:
     algorithm. It essentially propagates the trajectory after it stores
     the configuration and energies. TODO: break in two functions:
     initializeVelocities and propagate/integrate **/
-    bool proposeEquilibrium(SimTK::State& someState);
+    bool propose(SimTK::State& someState);
 
     /** Main function that contains all the 3 steps of HMC.
     Implements the acception-rejection step and sets the state of the 

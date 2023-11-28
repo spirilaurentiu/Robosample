@@ -10,6 +10,42 @@
 /** @file
 This defines the HMCSampler class, which (TODO)
 
+Topology 0:                                                      :       
+          :                                                      :
+Position 0:                                                      :
+          :          ┌─────────────────────────┐                 :
+                     │                         │                 :X_o
+                     │      REINITIALIZE       │                 :pe_o, pe_set
+                     │                         │                 :fix_o, fix_set
+                     └────────────┬────────────┘                 :
+                                  │                              :
+                                  │                              :
+                            ┌─────▼─────┐                        :
+                            │  PROPOSE  │                        :     
+                            └─────┬─────┘                        :
+                                  │                              :
+Dynamics 0                        │                              :
+                                  │                              :
+                             ┌────▼──────┐       NO              :
+                             │ VALIDATE  │────────────────       :
+                             └────┬──────┘               |       :
+                                  │                      |
+                                  │  YES                 |
+                                  │                      |
+                              ┌───▼─────┐                |
+                              │ ACCEPT  │                |
+                              └────┬────┘                |
+                                   │                     |
+                        YES        │       NO            |
+             ┌────-────────────────┴─────────────────────┬
+             |                                           │ 
+        ┌────▼────-                                 ┌────▼─────┐            
+        │ UPDATE  │                                 │ RESTORE  │
+        └─────────┘                                 └──────────┘
+         Dynamics 0                                  Position 0
+
+
+
 The class should theoretically track the following vars:
 
 pe ke    fix lnsingamma lnJ TVec fX_PF gX_BM
@@ -206,7 +242,7 @@ public:
 	SimTK::Real getREP(void) const; 
 
 	// Set/get Fixman potential
-	void updateStoredConfiguration(const SimTK::State& advanced); 
+	void storeSimbodyConfiguration_XFMs(const SimTK::State& advanced); 
 	SimTK::Transform * getSetTVector(void);
 	void assignConfFromSetTVector(SimTK::State& advanced);
 
@@ -252,15 +288,24 @@ public:
 		storeOldPotentialEnergies(
 			SimTK::State& someState);
 
+	void storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState);
+
 	// Set the method of integration
 	void setSampleGenerator(const std::string& samplerNameArg);
 
-	/** Initialize velocities according to the Maxwell-Boltzmann
-	distribution.  Coresponds to R operator in LAHMC **/
+	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
+
+	/** Set velocities to zero.  **/
 	void setVelocitiesToZero(SimTK::State& someState);
-	virtual void initializeVelocitiesToZero(SimTK::State& someState);
-	virtual void initializeVelocities(SimTK::State& someState);
-	void initializeNMAVelocities(SimTK::State& someState);
+
+	/** Set velocities according to the Maxwell-Boltzmann
+	distribution.  **/
+	void setVelocitiesToGaussian(SimTK::State& someState);
+
+	virtual void perturbVelocities(SimTK::State& someState,
+		VelocitiesPerturbMethod VPM = VelocitiesPerturbMethod::TO_T);
+
+	void setVelocitiesToNMA(SimTK::State& someState);
 
 	/** Store the proposed energies **/
 	virtual void calcProposedKineticAndTotalEnergyOld(SimTK::State& someState);
@@ -287,6 +332,9 @@ public:
 	/** Adapt Gibbs blocks definitions **/
 	void adaptWorldBlocks(SimTK::State& someState);
 
+	/** Cartesian Fixman potential */
+	SimTK::Real CartesianFixmanPotential(void);
+
 	/** Store new configuration and energy terms**/
 	virtual void calcNewEnergies(SimTK::State& someState);
 
@@ -298,16 +346,24 @@ public:
 		SimTK::State& someState);
 
 	/** Metropolis-Hastings acceptance probability **/
-	SimTK::Real MHAcceptProbability(
+	SimTK::Real MetropolisHastings(
+		SimTK::Real argEtot_o,
+		SimTK::Real argEtot_n,
+		SimTK::Real lnJ) const;
+
+	/** Metropolis-Hastings acceptance probability **/
+	SimTK::Real MetropolisHastings(
 		SimTK::Real argEtot_proposed,
 		SimTK::Real argEtot_n,
+		SimTK::Real transProb,
+		SimTK::Real invTransProb,
 		SimTK::Real lnJ) const;
 
 	/** Accetion rejection step **/
 	//virtual bool accRejStep(SimTK::State& someState);
 
 	/** Checks if the proposal is valid **/
-	bool validateProposal() const;
+	bool checkExceptionsAndEnergiesForNAN();
 
 	/** Chooses whether to accept a sample or not based on a probability **/
 	bool acceptSample();
@@ -365,25 +421,24 @@ public:
 	and variables that store the energies, both needed for the 
 	acception-rejection step. Also realize velocities and initialize 
 	the timestepper. **/
-	virtual void initialize(SimTK::State& advanced);
+	//virtual void initialize(SimTK::State& advanced);
 
 	/** Same as initialize **/
 	virtual bool reinitialize(SimTK::State& advanced) ;
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
-	void OMM_setTemperature(double HMCBoostTemperature);
+	void OMM_setDuMMTemperature(double HMCBoostTemperature);
 
 	// Update OpenMM position from a Simbody Cartesian world
-	void Simbody_To_OMM_setAtomsLocations(SimTK::State& someState);
+	void Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someState,
+		bool throughDumm = true);
 
 
 	double OMM_calcPotentialEnergy(void);
 
 	double OMM_calcKineticEnergy(void);
 
-	void OMM_calcProposedKineticAndTotalEnergyOld(void);
-
-	void OMM_storeOMMConfiguration(void);
+	void OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions);
 
 	void OMM_To_Simbody_setAtomsLocations(SimTK::State& someState);
 
@@ -392,7 +447,7 @@ public:
 
 	void OMM_integrateTrajectory(SimTK::State&);
 
-	void OMM_calcNewEnergies(void);
+	//void OMM_calcNewEnergies(void);
 
 	void OMM_restoreConfiguration(SimTK::State& someState);
 
@@ -402,19 +457,18 @@ public:
 	// PROPOSE
 	///////////////////////////////////////////////////////
 
+	/** Returns the 'how' argument of perturbPositions */
+	PositionsPerturbMethod positionsPerturbMethod(void);
+
+	/** Returns the 'how' argument of perturbVelocities */
+	VelocitiesPerturbMethod velocitiesPerturbMethod(void);
+
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
-	bool proposeEquilibrium(SimTK::State& someState);
-	bool proposeNEHMC(SimTK::State& someState);
-	bool proposeNMA(SimTK::State& someState);
-
-	/**
-	 * Generate a trial move in the chain
-	*/
-	bool generateProposal(SimTK::State& someState);
+	bool propose(SimTK::State& someState);
 
 	///////////////////////////////////////////////////////
 	// UPDATE
@@ -435,7 +489,19 @@ public:
 	/** Calls setSetConfigurationAndEnergiesToOld **/
 	void restore(SimTK::State& someState);
 
+	/**
+	 * Checks is there are any sudden jumps in potential energy which usually
+	 * indicate a distortion in the system
+	*/
+	bool checkDistortionBasedOnPE(void);
+
 	virtual bool sample_iteration(SimTK::State& someState);
+
+	/**
+	 * Print everything after proposal generation
+	*/
+	void Print(const SimTK::State& someState,
+		bool isTheSampleValid, bool isTheSampleAccepted);
 
 	/**
 	*  Add generalized coordinates to a buffer
@@ -516,9 +582,11 @@ public:
  	*/
 	void testSOA(SimTK::State& someState);
 	
-	const int & getAcceptedSteps(void) const { return acceptedSteps;}
+	const int & getAcceptedSteps(void) const { return acceptedSteps; }
 
 protected:
+
+	//bool NAN_TO_INF(SimTK::Real& someNumber);
 
 	RANDOM_CACHE RandomCache;
 

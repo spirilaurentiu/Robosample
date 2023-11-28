@@ -189,7 +189,7 @@ SET(OPENMM_DIRS
 # thus, we can only roll with reference + cpu / cuda / opencl
 # cpu will compile and run on any machine so it is a good starting point
 # to change it, run `cmake -DOPENMM_PLATFORM=CUDA`
-SET(OPENMM_PLATFORM "OPENCL" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
+SET(OPENMM_PLATFORM "CPU" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
 
 IF(OPENMM_PLATFORM MATCHES "CPU")
     # build the default CPU platform

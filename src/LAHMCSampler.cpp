@@ -332,6 +332,7 @@ bool LAHMCSampler::reinitialize(SimTK::State& someState)
     this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_o;
 
+    return true;
 }
 
 /** Store configuration **/
@@ -749,7 +750,7 @@ bool LAHMCSampler::accRejStep(SimTK::State& someState){
 algorithm. It essentially propagates the trajectory after it stores
 the configuration and energies. TODO: break in two functions:
 initializeVelocities and propagate/integrate **/
-bool LAHMCSampler::proposeEquilibrium(SimTK::State& someState)
+bool LAHMCSampler::propose(SimTK::State& someState)
 {
 
     storeOldPotentialEnergies(someState);
@@ -771,7 +772,7 @@ bool LAHMCSampler::proposeEquilibrium(SimTK::State& someState)
 /** Store new configuration and energy terms**/
 void LAHMCSampler::setSetConfigurationAndEnergiesToNew(SimTK::State& someState)
 {
-    updateStoredConfiguration(someState);
+    storeSimbodyConfiguration_XFMs(someState);
     pe_set = pe_n;
     fix_set = fix_n;
     logSineSqrGamma2_set = logSineSqrGamma2_n;
@@ -790,7 +791,7 @@ void LAHMCSampler::update(SimTK::State& someState)
 
 bool LAHMCSampler::sample_iteration(SimTK::State& someState)
 {
-	proposeEquilibrium(someState);
+	propose(someState);
 
 	accRejStep(someState);
     

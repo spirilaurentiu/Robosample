@@ -187,9 +187,17 @@ World::World(int worldIndex,
 		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
 		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
 			*visualizer, std::abs(visualizerFrequency));
+
 		compoundSystem->addEventReporter(visualizerReporter.get());
 
-		visualizer->addDecorationGenerator(new ForceArrowGenerator(mbs, *contactForces));
+		if(contactForces){
+			std::cout << "[WARNING] Victor check Teodor's contacts." << std::endl;
+			visualizer->addDecorationGenerator(
+				new ForceArrowGenerator(mbs, *contactForces));
+		}else{
+			std::cout << "[WARNING] Teodor's contacts." << std::endl;
+		}
+		
 
 		// Initialize a DecorationGenerator
 		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
@@ -1732,8 +1740,9 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 	return returnVector;
 }
 
-/** Almost the same thing as above but it takes the current integrator state
- and returns a reference to atomsLocations
+/** Order: bAtomList
+ * Almost the same thing as above but it takes the current integrator state
+ * and returns a reference to atomsLocations
  **/
 std::vector< std::vector< 
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
@@ -1780,6 +1789,7 @@ World::getCurrentAtomsLocationsInGround(void)
 
 	return returnVector;
 }
+
 
 /** Nice print helper for get/setAtomsLocations */
 void World::PrintAtomsLocations(const std::vector<std::vector<
@@ -1834,19 +1844,61 @@ void World::WriteRst7FromTopology(std::string FN)
 }
 
 /** Print transformation geometries */
-void World::PrintFullTransformationGeometry(const SimTK::State& someState)
+void World::PrintFullTransformationGeometry(const SimTK::State& someState,
+		bool x_pf_r, bool x_fm_r, bool x_bm_r,
+		bool x_pf_p, bool x_fm_p, bool x_bm_p)
 {
-	std::cout << "X_PF X_FM X_BM ps \n";
+	std::cout << std::fixed << std::setprecision(3);
+	std::cout << "X_PF X_FM X_MB\n";
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 		const Transform& X_PF = mobod.getDefaultInboardFrame();
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
-		std::cout
-			<< X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " "
-			<< X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " "
-			<< X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " " 
-			<< std::endl;
+		const Transform& X_MB = ~X_BM;
+
+		if( x_pf_r && x_fm_r && x_bm_r && x_pf_p && x_fm_p && x_bm_p){
+			std::cout << "mobod " << int(mbx) << std::endl
+				<< std::fixed << std::setprecision(3);
+
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[0][0], X_PF.toMat44()[0][1], X_PF.toMat44()[0][2], X_PF.toMat44()[0][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[0][0], X_FM.toMat44()[0][1], X_FM.toMat44()[0][2], X_FM.toMat44()[0][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[0][0], X_MB.toMat44()[0][1], X_MB.toMat44()[0][2], X_MB.toMat44()[0][3]);
+
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[1][0], X_PF.toMat44()[1][1], X_PF.toMat44()[1][2], X_PF.toMat44()[1][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[1][0], X_FM.toMat44()[1][1], X_FM.toMat44()[1][2], X_FM.toMat44()[1][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[1][0], X_MB.toMat44()[1][1], X_MB.toMat44()[1][2], X_MB.toMat44()[1][3]);
+
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[2][0], X_PF.toMat44()[2][1], X_PF.toMat44()[2][2], X_PF.toMat44()[2][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[2][0], X_FM.toMat44()[2][1], X_FM.toMat44()[2][2], X_FM.toMat44()[2][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[2][0], X_MB.toMat44()[2][1], X_MB.toMat44()[2][2], X_MB.toMat44()[2][3]);
+
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[3][0], X_PF.toMat44()[3][1], X_PF.toMat44()[3][2], X_PF.toMat44()[3][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[3][0], X_FM.toMat44()[3][1], X_FM.toMat44()[3][2], X_FM.toMat44()[3][3]);
+			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[3][0], X_MB.toMat44()[3][1], X_MB.toMat44()[3][2], X_MB.toMat44()[3][3]);
+			
+		}else if(x_pf_r){
+			PrintMat33(X_PF.R().toMat33(), 3, "X_PF.R");
+		}
+		else if(x_fm_r){
+			PrintMat33(X_FM.R().toMat33(), 3, "X_FM.R");
+		}
+		else if(x_bm_r){
+			PrintMat33(X_BM.R().toMat33(), 3, "X_BM.R");
+		}
+
+		else if(x_pf_p){
+			std::cout << X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " ";
+		}
+		else if(x_fm_p){
+			std::cout << X_FM.p()[0] << " " << X_FM.p()[1] << " " << X_FM.p()[2] << " ";
+		}
+		else if(x_bm_p){
+			std::cout << X_BM.p()[0] << " " << X_BM.p()[1] << " " << X_BM.p()[2] << " ";
+		}
+
+		std::cout << std::endl;
+
 	}
 }
 
@@ -2609,7 +2661,7 @@ bool World::generateProposal(void)
 
 	// GENERATE a proposal
 	bool validated = updSampler(0)->reinitialize(currentAdvancedState);	
-	validated = updSampler(0)->generateProposal(currentAdvancedState) && validated;
+	validated = updSampler(0)->propose(currentAdvancedState) && validated;
 
 	return validated;
 }

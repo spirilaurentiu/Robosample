@@ -761,5 +761,3 @@ SimTK::Real Sampler::calcDeformationPotential(
 
 
 
-
-
