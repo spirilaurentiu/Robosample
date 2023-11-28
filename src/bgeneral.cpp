@@ -746,7 +746,7 @@ SimTK::Matrix& SOA_GetHLikeElement(SimTK::Matrix inMatrix, int which, SimTK::Mat
 void PrintBigMat(const SimTK::Matrix& M, int nrows, int ncols, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places);
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < nrows; i++){
         for(int j = 0; j < ncols; j++){
             std::cout << M[i][j] << " ";
@@ -762,7 +762,7 @@ void PrintBigMat(const SimTK::Matrix& M, int nrows, int ncols, int decimal_place
 void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places);
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < nrows; i++){
         for(int j = 0; j < ncols; j++){
             std::cout << M[i][j] << " ";
@@ -777,7 +777,7 @@ void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places, std::
 void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places);
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < nrows; i++){
         for(int j = 0; j < ncols; j++){
             std::cout << M[i][j] << " ";
@@ -792,7 +792,7 @@ void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places, std::
 void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places);
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < nrows; i++){
         for(int j = 0; j < ncols; j++){
             std::cout << M[i][j] << " ";
@@ -807,7 +807,7 @@ void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places, std::
 void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places);
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < nrows; i++){
         for(int j = 0; j < ncols; j++){
             std::cout << M[i][j] << " ";
@@ -822,7 +822,7 @@ void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places, std::
 void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places);
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < 2; i++){
         for(int j = 0; j < 2; j++){
 
@@ -842,7 +842,7 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
 void PrintSpatialVec(SimTK::SpatialVec M, int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places) << std::fixed;
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < 2; i++){
         for(int k = 0; k < 3; k++){
             std::cout << M[i][k] << " ";
@@ -858,11 +858,29 @@ void PrintBigMat(const SimTK::Vector& V, int nrows,
 	int decimal_places, std::string header)
 {
     std::cout << header << std::endl;
-    std::cout << std::setprecision(decimal_places) << std::fixed;
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < nrows; i++){
             std::cout << V[i] << " ";
     }
     std::cout << std::endl;
+}
+
+
+/*
+ * Print 3D matrix
+ */
+void PrintMat33(SimTK::Mat33 M, int decimal_places,
+	std::string header)
+{
+    std::cout << header << std::endl;	
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+    for(int i = 0; i < 3; i++){
+        for(int k = 0; k < 3; k++){
+            std::cout << M(i, k) << " ";
+        }
+        std::cout << std::endl;
+    }
+
 }
 
 /*
@@ -873,7 +891,7 @@ void PrintTransform(SimTK::Transform T, int decimal_places,
 {
     std::cout << header << std::endl;	
     const SimTK::Mat44 M = T.toMat44();
-    std::cout << std::setprecision(decimal_places) << std::fixed;
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < 4; i++){
         for(int k = 0; k < 4; k++){
             std::cout << M(i, k) << " ";
@@ -882,6 +900,9 @@ void PrintTransform(SimTK::Transform T, int decimal_places,
     }
 
 }
+
+
+
 
 /*
  * Angle

@@ -371,12 +371,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 		OMM_storeOMMConfiguration_X(dumm->OMM_getPositions());
 	}
 
-	// DEB: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	// &&&&&&&&&&&&&&&&&&&&&&&&   Let's see what is here   &&&&&&&&&&&&&&&&&&&&
-	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Print Simbody
-	world->PrintFullTransformationGeometry(someState,
-		true, true, true, true, true, true);
+	//world->PrintFullTransformationGeometry(someState,
+	//	true, true, true, true, true, true);
 
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -384,7 +381,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Calculate and set old potential energy. This should call OpenMMPlugin to 
 	// calculate energy and forces
-	std::cout << "HMCSampler::reinitialize\n";
 	setOldPE(
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
@@ -2720,6 +2716,7 @@ void HMCSampler::calcProposedKineticAndTotalEnergyOld(SimTK::State& someState){
 	// Get proposed kinetic energy
 	if(integratorName == IntegratorName::OMMVV){
 		this->ke_o = OMM_calcKineticEnergy();
+
 	}else{
 		this->ke_o = matter->calcKineticEnergy(someState);
 	}

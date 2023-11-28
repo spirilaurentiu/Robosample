@@ -228,7 +228,7 @@ bool Context::initializeFromFile(const std::string &file)
 				setupReader.get("THERMOSTAT")[worldIx]);
 		}
 
-		setTemperature(worldIx, std::stof(setupReader.get("TEMPERATURE_INI")[0]));
+		setTemperature(worldIx, std::stof(setupReader.get("TEMPERATURE_INI")[worldIx]));
 	}
 
 	// Set the guidance Hamiltonian parameters
@@ -5065,22 +5065,32 @@ void Context::setSwapEvery(const int& n){
 void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 {
 
-	// Update bAtomList in Topology
-	const SimTK::State& pdbState =
-	worlds[worldIndexes.front()].integ->updAdvancedState();
-	worlds[worldIndexes.front()].updateAtomListsFromCompound(pdbState);
+	//for(int world_i = 0; world_i < this->nofWorlds; world_i++){
 
-	// Write
-	for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-		topologies[mol_i].writeAtomListPdb(
-			outputDir,
-			"/pdbs/sb."
-			    + pdbPrefix + "." + std::to_string(mol_i) + "."
-			    + "s" + std::to_string(thermodynamicStateIx) + ".",
-			".pdb",
-			10,
-			someIndex);
-	}
+		// Update bAtomList in Topology
+		const SimTK::State& pdbState =
+				worlds[worldIndexes.front()].integ->updAdvancedState();
+			worlds[worldIndexes.front()].updateAtomListsFromCompound(pdbState);
+
+		// const SimTK::State& pdbState =
+		// 	worlds[world_i].integ->updAdvancedState();
+		// worlds[world_i].updateAtomListsFromCompound(pdbState);
+
+		// Write
+		for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
+			topologies[mol_i].writeAtomListPdb(
+				outputDir,
+				"/pdbs/sb."
+					+ pdbPrefix + "." + std::to_string(mol_i) + "."
+					+ "s" + std::to_string(thermodynamicStateIx) + ".",
+					//+ "w" + std::to_string(world_i) + ".",
+					".pdb",
+					10,
+					someIndex);
+		}
+
+	//}
+
 }
 
 void Context::randomizeWorldIndexes()
@@ -5171,6 +5181,7 @@ void Context::RunLog(int round)
 {
 	// Write energy and geometric features to logfile
 	if(printFreq || pdbRestartFreq){
+
 		if( !(round % getPrintFreq()) ){
 
 			for(auto wIx: worldIndexes){
@@ -5178,13 +5189,16 @@ void Context::RunLog(int round)
 			}
 		
 		}
+
 		// Write pdb
 		if( pdbRestartFreq != 0){
 			if((round % pdbRestartFreq) == 0){
 				writePdbs(round);
 			}
 		}
+
 	}
+
 }
 
 // Print recommended timesteps
@@ -6360,11 +6374,24 @@ void Context::writeInitialPdb()
 // Write final pdb for reference
 void Context::writeFinalPdb()
 {
+
+
+	// Update bAtomList in Topology
+	const SimTK::State& pdbState =
+			worlds[worldIndexes.front()].integ->updAdvancedState();
+		worlds[worldIndexes.front()].updateAtomListsFromCompound(pdbState);
+
+	// Write
 	for(unsigned int mol_i = 0; mol_i < nofMols; mol_i++){
 		topologies[mol_i].writeAtomListPdb(
-			getOutputDir(), "/pdbs/final." + getPdbPrefix() + ".", ".pdb", 10,
+			getOutputDir(),
+			"/pdbs/final."
+			+ getPdbPrefix() + std::to_string(mol_i) + ".",
+			".pdb",
+			10,
 			getRequiredNofRounds());
 	}
+
 }
 
 // Get / set pdb files writing frequency

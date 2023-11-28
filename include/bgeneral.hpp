@@ -308,27 +308,28 @@ void SOA_SpatialMat2Mat66(const SimTK::SpatialMat& in, SimTK::Mat66& out);
  */
 void PrintBigMat(const SimTK::Matrix& M,
 	int nrows, int ncols,
-	int decimal_places,
-	std::string header);
+	int decimal_places = 3,
+	std::string header = "unknown");
 	
-void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places, std::string header);
-void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places, std::string header);
-void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places, std::string header);
-void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places, std::string header);
+void PrintBigMat(SimTK::Mat33 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
+void PrintBigMat(SimTK::Mat44 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
+void PrintBigMat(SimTK::Mat55 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
+void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places = 3, std::string header = "unknown");
 void PrintBigMat(
 	const SimTK::Vector& M, int nrows,
 	int decimal_places = 3, std::string header = "unknown matrix");
-
+void PrintMat33(SimTK::Mat33 M, int decimal_places = 3,
+	std::string header = "unknown");
 /*
  * Print Spatial Matrix
  */
-void PrintSpatialVec(SimTK::SpatialVec V, int decimal_places, std::string header);
-void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header);
+void PrintSpatialVec(SimTK::SpatialVec V, int decimal_places, std::string header = "unknown");
+void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header = "unknown");
 
 /*
  * Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places, std::string header);
+void PrintTransform(SimTK::Transform T, int decimal_places, std::string header = "unknown");
 /*
  * Angle
  */
