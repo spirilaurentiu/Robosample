@@ -206,17 +206,23 @@ void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAto
 
 	// copy the graph to a more managable structure
 	for (int level = 0; level < depthGraph.size(); level++) {
-		for (int off = 0; off < depthGraph[level].size(); off++) {
-			if (levelGraph.size() < level + 1)
-				levelGraph.push_back({});
-			levelGraph[level].push_back({depthGraph[level][off].amberId, depthGraph[level][off].parent});
-		}
-	}
 
-	std::cout << "level offset ix parent" << std::endl;
-	for (int level = 0; level < depthGraph.size(); level++) {
+		// allocate space for the level
+		levelGraph.push_back({});
+		graphedAtoms.push_back({});
+
+		if (level > 0) {
+			graphedBonds.push_back({});
+		}
+
 		for (int off = 0; off < depthGraph[level].size(); off++) {
-			std::cout << "LO " << level << " " << off << " " << levelGraph[level][off].amberIndex << " " << levelGraph[level][off].parent << std::endl;
+			levelGraph[level].push_back({depthGraph[level][off].amberId, depthGraph[level][off].parent});
+			graphedAtoms[level].push_back(levelGraph[level][off].amberIndex);
+
+			const auto& a = levelGraph[level][off];
+			if (a.parent != -1) {
+				graphedBonds[level - 1].push_back({ a.amberIndex, a.parent });
+			}
 		}
 	}
 }
@@ -239,6 +245,18 @@ const std::vector<ANGLE>& InternalCoordinates::getAngles() const {
 
 const std::vector<TORSION>& InternalCoordinates::getTorsions() const {
 	return torsions;
+}
+
+const std::vector<std::vector<BAT_ATOM>>& InternalCoordinates::getLevelGraph() const {
+	return levelGraph;
+}
+
+const std::vector<std::vector<int>>& InternalCoordinates::getGraphedAtoms() const {
+	return graphedAtoms;
+}
+
+const std::vector<std::vector<BOND>>& InternalCoordinates::getGraphedBonds() const {
+	return graphedBonds;
 }
 
 int InternalCoordinates::amber2BAT(int amberIx) const {

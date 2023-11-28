@@ -90,6 +90,11 @@ public:
 	const std::vector<ANGLE>& getAngles() const;
 	const std::vector<TORSION>& getTorsions() const;
 
+	const std::vector<std::vector<BAT_ATOM>>& getLevelGraph() const;
+
+	const std::vector<std::vector<int>>& getGraphedAtoms() const;
+	const std::vector<std::vector<BOND>>& getGraphedBonds() const;
+
 	int amber2BAT(int amberIx) const;
 	int BAT2amber(int bat) const;
 
@@ -109,6 +114,8 @@ private:
 	std::vector<TORSION> torsions;
 
 	std::vector<std::vector<BAT_ATOM>> levelGraph;
+	std::vector<std::vector<int>> graphedAtoms;
+	std::vector<std::vector<BOND>> graphedBonds;
 
 	std::vector<AmberAtom> a0_list, a1_list, a2_list, a3_list;
 
