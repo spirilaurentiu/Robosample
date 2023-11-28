@@ -1856,6 +1856,10 @@ void World::PrintFullTransformationGeometry(const SimTK::State& someState,
 		const Transform& X_FM = mobod.getMobilizerTransform(someState);
 		const Transform& X_BM = mobod.getOutboardFrame(someState);
 
+		if(x_pf_r){
+			std::cout << X_PF.R();
+		}
+
 		if(x_pf_p){
 			std::cout << X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " ";
 		}

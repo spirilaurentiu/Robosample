@@ -360,7 +360,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 		}
 	}
 
-
 	// Store Simbody configuration
 	storeSimbodyConfiguration_XFMs(someState);
 
@@ -371,6 +370,14 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 
 		OMM_storeOMMConfiguration_X(dumm->OMM_getPositions());
 	}
+
+	// DEB: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&   Let's see what is here   &&&&&&&&&&&&&&&&&&&&
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// Print Simbody
+	world->PrintFullTransformationGeometry(someState,
+		true, true, true, true, true, true);
+
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -1800,6 +1807,66 @@ void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
 }
 
 
+/**
+ * Order should be DuMM::NonbondedAtomIx 
+ * Update OpenMM position from a Simbody Cartesian world
+ * */
+void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someState,
+	bool throughDumm)
+{
+
+	/* std::cout << "HMCSampler::Simbody_To_OMM "
+		<< "someState.getTime() " << someState.getTime()
+		<< std::endl << std::flush; */
+
+	std::vector<SimTK::Vec3> startingPos;
+	startingPos.resize(this->natoms);
+
+	system->realize(someState, SimTK::Stage::Position);
+
+	if(throughDumm){
+		const Vector_<Vec3>& DuMMIncludedAtomStationsInG = 
+			dumm->getIncludedAtomPositionsInG(someState);
+
+		for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
+			startingPos[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
+		}
+
+		/* for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
+			std::cout << "atom " << atomCnt << " "
+				<< startingPos[atomCnt][0] << " "
+				<< startingPos[atomCnt][1] << " "
+				<< startingPos[atomCnt][2] << " "
+				<< std::endl;
+		}
+
+		world->PrintFullTransformationGeometry(someState,
+			false, false, false, true, true, true);
+
+		for(SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); mbx++){
+			SimTK::MobilizedBody mobod = matter->getMobilizedBody(mbx);
+
+			//SimTK::Vec3 mobodOrig = mobod.expressVectorInGroundFrame(someState, SimTK::Vec3(0, 0, 0));
+			SimTK::Vec3 mobodOrig = mobod.getBodyOriginLocation(someState);
+			std::cout << "mobodOrig " << int(mbx) << " "
+				<< mobodOrig[0] << " "
+				<< mobodOrig[1] << " "
+				<< mobodOrig[2] << " "
+				<< std::endl;		
+		} */
+
+	}else{
+
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			startingPos.push_back(mobod.getBodyOriginLocation(someState));
+		}
+	}
+
+	// Apply
+	dumm->OMM_setOpenMMPositions(startingPos);
+
+}
 
 // Transfer coordinates from openmm to simbody
 void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
@@ -3557,67 +3624,6 @@ void HMCSampler::setSphereRadius(float argSphereRadius)
 		<< "HMCSampler::setSphereRadius:  Radius Set: " 
 		<< sphereRadius << std::endl;
 }
-
-/**
- * Order should be DuMM::NonbondedAtomIx 
- * Update OpenMM position from a Simbody Cartesian world
- * */
-void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someState,
-	bool throughDumm)
-{
-
-	/* std::cout << "HMCSampler::Simbody_To_OMM "
-		<< "someState.getTime() " << someState.getTime()
-		<< std::endl << std::flush; */
-
-	std::vector<SimTK::Vec3> startingPos;
-	startingPos.resize(this->natoms);
-
-	system->realize(someState, SimTK::Stage::Position);
-
-	if(throughDumm){
-		const Vector_<Vec3>& DuMMIncludedAtomStationsInG = 
-			dumm->getIncludedAtomPositionsInG(someState);
-
-		for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
-			startingPos[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
-		}
-
-		/* for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
-			std::cout << "atom " << atomCnt << " "
-				<< startingPos[atomCnt][0] << " "
-				<< startingPos[atomCnt][1] << " "
-				<< startingPos[atomCnt][2] << " "
-				<< std::endl;
-		}
-
-		world->PrintFullTransformationGeometry(someState,
-			false, false, false, true, true, true);
-
-		for(SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); mbx++){
-			SimTK::MobilizedBody mobod = matter->getMobilizedBody(mbx);
-
-			//SimTK::Vec3 mobodOrig = mobod.expressVectorInGroundFrame(someState, SimTK::Vec3(0, 0, 0));
-			SimTK::Vec3 mobodOrig = mobod.getBodyOriginLocation(someState);
-			std::cout << "mobodOrig " << int(mbx) << " "
-				<< mobodOrig[0] << " "
-				<< mobodOrig[1] << " "
-				<< mobodOrig[2] << " "
-				<< std::endl;		
-		} */
-
-	}else{
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-			startingPos.push_back(mobod.getBodyOriginLocation(someState));
-		}
-	}
-
-	// Apply
-	dumm->OMM_setOpenMMPositions(startingPos);
-
-}
-
 
 /** Returns the 'how' argument of initializeVelocities */
 VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
