@@ -2,23 +2,38 @@
 
 using namespace SimTK;
 
-void bSpecificAtom::setAtomCompoundType(const SimTK::Compound::AtomName &atomName, const SimTK::Element &element) {
-    // the biotype is added like this. i want to have one element in a vector inside topology and reference it from there
-    compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
+void bSpecificAtom::setAtomCompoundType(const bSpecificAtom &atom, const SimTK::Element &element) {
+    const std::string& atomName = atom.getName();
+    const int numAtomBonds = atom.getNBonds();
+    
+    switch (numAtomBonds) {
+        case 0:
+            compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
+            cout << "Added single atom " << atomName << endl;
+            break;
+        case 1:
+            compoundSingleAtom = new SimTK::UnivalentAtom(atomName, element);
+            cout << "Added univalent atom " << atomName << endl;
+            break;
+        case 2:
+            compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
+            cout << "Added bivalent atom " << atomName << endl;
+            break;
+        case 3:
+            compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element);
+            cout << "Added trivalent atom " << atomName << endl;
+            break;
+        case 4:
+            compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element);
+            cout << "Added quadrivalent atom " << atomName << endl;
+            break;
+        default:
+            assert(!"Not implemented");
+            throw std::exception();
+    }
 
-    // cout << "setAtomCompoundType " << atomName << " " << element.getSymbol() << endl;
-    // if (element.getSymbol() == "C")
-    //     compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element);
-    // else if (element.getSymbol() == "H")
-    //     compoundSingleAtom = new SimTK::UnivalentAtom(atomName, element);
-    // else if (element.getSymbol() == "O")
-    //     compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
-    // else
-    //     std::cout << "wrong element " << element.getSymbol() << std::endl;
-
-    setCompoundName("SingleAtom");
-
-    // std::cout << "defined element in bSpecific atom " << atomicNumber << elementName << elementSymbol << atomicMass << std::endl;
+    compoundSingleAtom->setCompoundName("SingleAtom");
+    compoundSingleAtom->setDefaultInboardBondLength(0.19);
 }
 
 void bSpecificAtom::destroy() {
@@ -446,40 +461,6 @@ void bSpecificAtom::setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIn
 void bSpecificAtom::setCompoundName(const SimTK::Compound::Name& name) {
     compoundSingleAtom->setCompoundName(name);
 }
-void bSpecificAtom::addFirstBondCenter(const SimTK::Compound::BondCenterName& centerName,
-    const SimTK::Compound::AtomPathName& atomName) {
-    compoundSingleAtom->addFirstBondCenter(centerName, atomName);
-}
-void bSpecificAtom::addFirstTwoBondCenters(const SimTK::Compound::BondCenterName& centerName1,
-    const SimTK::Compound::BondCenterName& centerName2,
-    const SimTK::Compound::AtomPathName& atomName,
-    SimTK::UnitVec3 dir1,
-    SimTK::UnitVec3 dir2) {
-    compoundSingleAtom->addFirstTwoBondCenters(centerName1, centerName2, atomName, dir1, dir2);
-}
-
-void bSpecificAtom::addLeftHandedBondCenter(const SimTK::Compound::BondCenterName& centerName,
-    const SimTK::Compound::AtomName& atomName,
-    SimTK::Angle bondAngle1,
-    SimTK::Angle bondAngle2) {
-    compoundSingleAtom->addLeftHandedBondCenter(centerName, atomName, bondAngle1, bondAngle2);
-}
-
-void bSpecificAtom::addRightHandedBondCenter(const SimTK::Compound::BondCenterName& centerName,
-    const SimTK::Compound::AtomName& atomName,
-    SimTK::Angle bondAngle1,
-    SimTK::Angle bondAngle2) {
-    compoundSingleAtom->addRightHandedBondCenter(centerName, atomName, bondAngle1, bondAngle2);
-}
-
-void bSpecificAtom::setInboardBondCenter(const SimTK::Compound::BondCenterName& centerName) {
-    compoundSingleAtom->setInboardBondCenter(centerName);
-}
-
-void bSpecificAtom::setDefaultInboardBondLength(SimTK::mdunits::Length length) {
-    compoundSingleAtom->setDefaultInboardBondLength(length);
-}
-
 
 // Getter and setter for the residueName property
 std::string bSpecificAtom::getResidueName() const {

@@ -37,7 +37,7 @@ public:
     /**@{**/
 
     /** TODO comment. **/
-    void setAtomCompoundType(const SimTK::Compound::AtomName &atomName, const SimTK::Element &element);
+    void setAtomCompoundType(const bSpecificAtom &atom, const SimTK::Element &element);
 
     /** TODO comment. **/
     void destroy();
@@ -65,23 +65,6 @@ public:
 
     const SimTK::Compound::SingleAtom& getSingleAtom() const;
     void setCompoundName(const SimTK::Compound::Name& name);
-    void addFirstBondCenter(const SimTK::Compound::BondCenterName& centerName,
-        const SimTK::Compound::AtomPathName& atomName);
-    void addFirstTwoBondCenters(const SimTK::Compound::BondCenterName& centerName1,
-        const SimTK::Compound::BondCenterName& centerName2,
-        const SimTK::Compound::AtomPathName& atomName,
-        SimTK::UnitVec3 dir1,
-        SimTK::UnitVec3 dir2);
-    void addLeftHandedBondCenter(const SimTK::Compound::BondCenterName& centerName,
-        const SimTK::Compound::AtomName& atomName,
-        SimTK::Angle bondAngle1,
-        SimTK::Angle bondAngle2);
-    void addRightHandedBondCenter(const SimTK::Compound::BondCenterName& centerName,
-        const SimTK::Compound::AtomName& atomName,
-        SimTK::Angle bondAngle1,
-        SimTK::Angle bondAngle2);
-    void setInboardBondCenter(const SimTK::Compound::BondCenterName& centerName);
-    void setDefaultInboardBondLength(SimTK::mdunits::Length length);
 
     SimTK::Compound::AtomIndex getCompoundAtomIndex() const;
     SimTK::Real getCharge() const;

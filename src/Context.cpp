@@ -671,27 +671,27 @@ void Context::setAtomCompoundTypes() {
 		const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
-		atom.setAtomCompoundType(currAtomName, elementCache.getElement(atomicNumber, mass));
+		atom.setAtomCompoundType(atom, elementCache.getElement(atomicNumber, mass));
 		
-		// Add BondCenters
-		const int currAtomNBonds = atom.getNBonds();
-		if(currAtomNBonds > 0){
-			if (currAtomNBonds == 1){
-				atom.addFirstBondCenter("bond1", currAtomName);
-			} else {
-				atom.addFirstTwoBondCenters("bond1", "bond2", currAtomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
-				if (currAtomNBonds > 2) {
-					atom.addLeftHandedBondCenter("bond3", currAtomName, TetrahedralAngle, TetrahedralAngle);
-				}
-				if (currAtomNBonds > 3){
-					atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
-				}
-			}
+		// // Add BondCenters
+		// const int currAtomNBonds = atom.getNBonds();
+		// if(currAtomNBonds > 0){
+		// 	if (currAtomNBonds == 1){
+		// 		atom.addFirstBondCenter("bond1", currAtomName);
+		// 	} else {
+		// 		atom.addFirstTwoBondCenters("bond1", "bond2", currAtomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
+		// 		if (currAtomNBonds > 2) {
+		// 			atom.addLeftHandedBondCenter("bond3", currAtomName, TetrahedralAngle, TetrahedralAngle);
+		// 		}
+		// 		if (currAtomNBonds > 3){
+		// 			atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
+		// 		}
+		// 	}
 
-			// Set the inboard BondCenter
-			atom.setInboardBondCenter("bond1");
-			atom.setDefaultInboardBondLength(0.19);
-		}
+		// 	// Set the inboard BondCenter
+		// 	atom.setInboardBondCenter("bond1");
+		// 	atom.setDefaultInboardBondLength(0.19);
+		// }
 	}
 }
 
@@ -731,7 +731,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	loadAtoms(reader);
 	loadBonds(reader);
 	setAtomCompoundTypes();
-	addBiotypes();
+	// addBiotypes();
 
 	// addDummParams()
 
