@@ -37,7 +37,7 @@ public:
     /**@{**/
 
     /** TODO comment. **/
-    void setAtomCompoundType(const bSpecificAtom &atom, const SimTK::Element &element);
+    void setAtomCompoundType(const SimTK::Element &element);
 
     /** TODO comment. **/
     void destroy();
@@ -106,7 +106,7 @@ public:
     void setZ(SimTK::Real);
 
     void setCartesians(SimTK::Real, SimTK::Real, SimTK::Real);
-    void setCartesians(double *);
+    // void setCartesians(double *);
 
     void setCartesians(SimTK::Vec3);
     void setCartesians(OpenMM::Vec3 );
