@@ -155,7 +155,7 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
  * their valence **/
 void Topology::SetGmolAtomsCompoundTypes(){
 
-	Angle TetrahedralAngle = 109.47 * Deg2Rad;
+	// Angle TetrahedralAngle = 109.47 * Deg2Rad;
 
 	// Set Gmolmodel name and element and inboard length
 	for(auto& atom : bAtomList) {
@@ -164,7 +164,7 @@ void Topology::SetGmolAtomsCompoundTypes(){
 		// const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
-		atom.setAtomCompoundType(atom, elementCache.getElement(atomicNumber, mass));
+		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
 		
 		// // Add BondCenters
 		// const int currAtomNBonds = atom.getNBonds();

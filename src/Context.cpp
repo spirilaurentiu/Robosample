@@ -621,19 +621,22 @@ void Context::loadAtoms(const readAmberInput& reader) {
 		atom.setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
 
 		// Assign a "unique" name. The generator is however limited.
+		// Examples: AAAA, AAAB, AAAC, AAAD etc
 		atom.generateName(i);
 
 		// Store the initial name from prmtop
+		// Examples: "O1", "C1", "C2", "H1", "H10"
 		atom.setInName(initialName);
 
 		// Set force field atom type
+		// Examples: "O1", "C1", "C2", "H1", "H10"
 		atom.setFfType(initialName);
 
 		// Set charge as it is used in Amber
 		constexpr SimTK::Real chargeMultiplier = 18.2223;
 		atom.setCharge(reader.getAtomsCharge(i) / chargeMultiplier);
 
-		// Set coordinates in nm
+		// Set coordinates in nm (AMBER uses Angstroms)
 		atom.setX(reader.getAtomsXcoord(i) / 10.0);
 		atom.setY(reader.getAtomsYcoord(i) / 10.0);
 		atom.setZ(reader.getAtomsZcoord(i) / 10.0);
@@ -651,7 +654,7 @@ void Context::loadAtoms(const readAmberInput& reader) {
 		atom.setLJWellDepth(reader.getAtomsEpsilon(i));
 
 		// Set residue name and index
-		atom.setResidueName(std::string("UNK"));
+		atom.setResidueName("UNK");
 		atom.residueIndex = 1;
 
 		// Add element to cache
@@ -662,7 +665,7 @@ void Context::loadAtoms(const readAmberInput& reader) {
 }
 
 void Context::setAtomCompoundTypes() {
-	Angle TetrahedralAngle = 109.47 * Deg2Rad;
+	// Angle TetrahedralAngle = 109.47 * Deg2Rad;
 
 	// Set Gmolmodel name and element and inboard length
 	for(auto& atom : atoms) {
@@ -671,7 +674,7 @@ void Context::setAtomCompoundTypes() {
 		const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
-		atom.setAtomCompoundType(atom, elementCache.getElement(atomicNumber, mass));
+		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
 		
 		// // Add BondCenters
 		// const int currAtomNBonds = atom.getNBonds();
@@ -696,23 +699,20 @@ void Context::setAtomCompoundTypes() {
 }
 
 void Context::addBiotypes() {
-	// We don't have any residues. The whole molecule is one residue
-	std::string resName = "this->name";
-
 	// Iterate atoms and define Biotypes with their indeces and names
 	for(auto& atom : atoms) {
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
 			elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
 			atom.getNBonds(),
-			resName.c_str(),
-			(atom.getName()).c_str(),
+			atom.getResidueName().c_str(),
+			atom.getName().c_str(),
 			SimTK::Ordinality::Any
 		);
 
 		atom.setBiotypeIndex(biotypeIndex);
 
 		// Assign atom's biotype as a composed name: name + force field type
-		std::string biotype = resName + atom.getName() + atom.getFftype();
+		std::string biotype = atom.getResidueName() + atom.getName() + atom.getFftype();
 		atom.setBiotype(biotype);
 	}
 }
@@ -720,7 +720,6 @@ void Context::addBiotypes() {
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	readAmberInput reader;
 	reader.readAmberFiles(inpcrd, prmtop);
-	natoms = reader.getNumberAtoms();
 
 	// look at prmtop and create a mapping between atoms and molecule index. for each molecule:
 	// - create the final atomlist via internalcoordinates. this is where we read from files
@@ -731,7 +730,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	loadAtoms(reader);
 	loadBonds(reader);
 	setAtomCompoundTypes();
-	// addBiotypes();
+	addBiotypes();
 
 	// addDummParams()
 

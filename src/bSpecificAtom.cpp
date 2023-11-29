@@ -2,35 +2,48 @@
 
 using namespace SimTK;
 
-void bSpecificAtom::setAtomCompoundType(const bSpecificAtom &atom, const SimTK::Element &element) {
-    const std::string& atomName = atom.getName();
-    const int numAtomBonds = atom.getNBonds();
+void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
+    const std::string& atomName = getName();
+    const int numAtomBonds = getNBonds();
     
     switch (numAtomBonds) {
         case 0:
             compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
-            cout << "Added single atom " << atomName << endl;
             break;
         case 1:
             compoundSingleAtom = new SimTK::UnivalentAtom(atomName, element);
-            cout << "Added univalent atom " << atomName << endl;
             break;
         case 2:
             compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
-            cout << "Added bivalent atom " << atomName << endl;
             break;
         case 3:
             compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element);
-            cout << "Added trivalent atom " << atomName << endl;
             break;
         case 4:
             compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element);
-            cout << "Added quadrivalent atom " << atomName << endl;
             break;
         default:
-            assert(!"Not implemented");
+            std::cerr << "[ERROR] Atom " << atomName << " has " << numAtomBonds << " bonds, which is not supported." << std::endl;
             throw std::exception();
     }
+
+    // q: how do i test that this works?
+    // a: use the following code
+    // SimTK::CompoundSystem system;
+    // SimTK::DuMMForceFieldSubsystem dumm(system);
+    // SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex = dumm.defineChargedAtomType(compoundSingleAtom->getAtomName(), element, 0.0, 0.0);
+    // cout << "Charged atom type index: " << chargedAtomTypeIndex << endl;
+    // cout << "Charged atom type name: " << dumm.getChargedAtomTypeName(chargedAtomTypeIndex) << endl;
+    // cout << "Charged atom type element: " << dumm.getChargedAtomTypeElement(chargedAtomTypeIndex) << endl;
+    // cout << "Charged atom type charge: " << dumm.getChargedAtomTypeCharge(chargedAtomTypeIndex) << endl;
+    // cout << "Charged atom type radius: " << dumm.getChargedAtomTypeRadius(chargedAtomTypeIndex) << endl;
+    // cout << "Charged atom type well depth: " << dumm.getChargedAtomTypeWellDepth(chargedAtomTypeIndex) << endl;
+    // cout << "Charged atom type index: " << dumm.getChargedAtomTypeIndex(compoundSingleAtom->getAtomName(), element) << endl;
+
+    // compoundSingleAtom->setAtomClassIndex(dumm.getAtomClassIndex(compoundSingleAtom->getAtomName(), element));
+    // compoundSingleAtom->setChargedAtomTypeIndex(dumm.getChargedAtomTypeIndex(compoundSingleAtom->getAtomName(), element));
+    // compoundSingleAtom->setCompoundName(compoundSingleAtom->getAtomName());
+    // compoundSingleAtom->setDefaultInboardBondLength(0.19);
 
     compoundSingleAtom->setCompoundName("SingleAtom");
     compoundSingleAtom->setDefaultInboardBondLength(0.19);
@@ -285,16 +298,16 @@ void bSpecificAtom::setCartesians(
     Cartesians[2] = inpZ;
 }
 
-// Set the Cartesian coordinates
-void bSpecificAtom::setCartesians(
-    double* inpXYZ)
-{
-    assert( sizeof(inpXYZ) / sizeof(inpXYZ[0]) == 3 );
-    Cartesians[0] = inpXYZ[0];
-    Cartesians[1] = inpXYZ[1];
-    Cartesians[2] = inpXYZ[2];
+// // Set the Cartesian coordinates
+// void bSpecificAtom::setCartesians(
+//     double* inpXYZ)
+// {
+//     assert( sizeof(inpXYZ) / sizeof(inpXYZ[0]) == 3 );
+//     Cartesians[0] = inpXYZ[0];
+//     Cartesians[1] = inpXYZ[1];
+//     Cartesians[2] = inpXYZ[2];
 
-}
+// }
 
 // Set the Cartesian coordinates
 void bSpecificAtom::setCartesians(
