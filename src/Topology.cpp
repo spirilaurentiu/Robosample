@@ -2189,12 +2189,10 @@ Topology::getChemicalParent(
 	SimTK::Compound::AtomIndex chemParentAIx;
 	int gmolAtomIndex = -111111;
 
-	//if(getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin // SAFE
-	if(getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm) == 0){ // atom is at body's origin // DANGER
+	if(getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm) == 0){
 
 		// Get body, parentBody, parentAtom
-		//SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx); // SAFE
-		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm); // DANGER
+		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();

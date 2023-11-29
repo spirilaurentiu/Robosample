@@ -352,7 +352,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			geometry.push_back( decorativeFrameT ); */
 
 	// Draw Compound transforms for root atoms NEW WAY
-	/* 			SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // Moves rotation from X to Z
+	/* 		
 			SimTK::Transform P_X_F[matter->getNumBodies()]; // related to X_PFs
 			SimTK::Transform T_X_root[matter->getNumBodies()]; // related to CompoundAtom.frameInMobilizedBodyFrame s
 			SimTK::Transform T_X_Proot;

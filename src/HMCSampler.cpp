@@ -1867,6 +1867,10 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someSta
 // Transfer coordinates from openmm to simbody
 void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 {
+
+		std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations BEFORE " << std::endl;
+		world->PrintFullTransformationGeometry(someState);
+
 		//omm_locations.resize(matter->getNumBodies());
 
 		omm_locations[0] = SimTK::Vec3(0, 0, 0);
@@ -1903,6 +1907,10 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 		system->realizeTopology();
 
 		compoundSystem->realize(someState, SimTK::Stage::Position);
+
+		std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations AFTER " << std::endl;
+		world->PrintFullTransformationGeometry(someState);
+
 
 }
 

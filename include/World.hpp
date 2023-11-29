@@ -659,6 +659,26 @@ public:
 	SimTK::Array_<SimTK::Vec3> conStationPInHost;
 	SimTK::Array_<SimTK::Vec3> conDeltaStationP;
 	SimTK::Array_<SimTK::Constraint::Rod> rodConstraints;
+
+
+	/**
+	 * Define some convenient transforms
+	*/
+
+	// X axis to Z axis switch
+	const SimTK::Transform X_to_Z 
+		=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
+	const SimTK::Transform Z_to_X = ~X_to_Z;
+
+	// Y axis to Z axis switch
+	const SimTK::Transform Y_to_Z =
+		SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
+	const SimTK::Transform Z_to_Y = ~Y_to_Z;
+
+	// X axis to X axis switch
+	const SimTK::Transform Y_to_X =
+		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
+	const SimTK::Transform X_to_Y = ~Y_to_X;	
 	
 private:
 	// Map mbx2aIx contains only atoms at the origin of mobods

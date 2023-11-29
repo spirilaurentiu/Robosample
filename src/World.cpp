@@ -2259,9 +2259,11 @@ World::calcMobodToMobodTransforms(
 	// There is no P_X_F and B_X_M inside a body.
 	// assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
 
-	// Get body, parentBody
-	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
-
+	// Get body and parentBody
+	// don't know why it works
+	//SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
+ 	// this should be the correct version
+	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
@@ -2280,38 +2282,40 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 
 	// Get inboard dihedral angle
-	SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
+	SimTK::Angle inboardBondDihedralAngle =
+		topology.bgetDefaultInboardDihedralAngle(rootAIx);
 	SimTK::Transform InboardDihedral_XAxis
 		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
 	SimTK::Transform InboardDihedral_ZAxis
 		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::ZAxis);
 
+	// Samuel Flores' terminology
+	SimTK::Transform M_X_pin =
+		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
+
 	// Get the old PxFxMxB transform
-	SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
-	SimTK::Transform Z_to_X = ~X_to_Z;
 	SimTK::Transform oldX_PB =
 		(~T_X_Proot) * topology.getTopTransform(rootAIx)
 		* InboardDihedral_XAxis * X_to_Z
 		* InboardDihedral_ZAxis * Z_to_X;
 
 	// B_X_Ms
-	SimTK::Transform M_X_pin = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
-	SimTK::Transform B_X_M = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
+	SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
 	SimTK::Transform B_X_M_anglePin = X_parentBC_childBC;
-	SimTK::Transform B_X_M_pin = X_parentBC_childBC * M_X_pin;
-	SimTK::Transform B_X_M_univ = X_parentBC_childBC
-		* SimTK::Transform(Rotation(-90*Deg2Rad, XAxis)); // Move rotation axis Y to Z
+	SimTK::Transform B_X_M_pin 		= X_parentBC_childBC * X_to_Z;
+	SimTK::Transform B_X_M_univ 	= X_parentBC_childBC * Y_to_Z;
 
 	// P_X_Fs = old P_X_B * B_X_M
-	SimTK::Transform P_X_F = oldX_PB * B_X_M;
+	SimTK::Transform P_X_F 			= oldX_PB * B_X_M;
 	SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
-	SimTK::Transform P_X_F_pin = oldX_PB * B_X_M_pin;
-	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
+	SimTK::Transform P_X_F_pin 		= oldX_PB * B_X_M_pin;
+	SimTK::Transform P_X_F_univ 	= oldX_PB * B_X_M;
 
 	// Get mobility (joint type)
 	bSpecificAtom *atom = topology.updAtomByAtomIx(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	bBond bond = topology.getBond(topology.getNumber(rootAIx), topology.getNumber(chemParentAIx));
+	bBond bond = 	topology.getBond(topology.getNumber(rootAIx),
+					topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	bool anglePin_OR = (
@@ -2334,8 +2338,13 @@ World::calcMobodToMobodTransforms(
 	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
 	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
 	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
+	
 	){
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
+
+	// }else if((mobility == SimTK::BondMobility::Mobility::Translation)){ // Cartesian
+
+	// 	return std::vector<SimTK::Transform> {Transform(), Transform()};
 
 	}else{
 		std::cout << "Warning: unknown mobility\n";
