@@ -5,20 +5,25 @@ Replica::Replica(int argIndex) : myIndex(argIndex)
 }
 
 // Get coordinates from this replica
-const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& Replica::getAtomsLocationsInGround() const
+const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>&
+	Replica::getAtomsLocationsInGround() const
 {
+
 	return atomsLocations;
 }
 
 // Get coordinates from this replica
-const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& Replica::get_WORK_AtomsLocationsInGround() const
+const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+	Replica::get_WORK_AtomsLocationsInGround() const
 {
 	return WORK_atomsLocations;
 }
 
 // Set the coordinates of this replica
 // Also allocate memory
-void Replica::setAtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations)
+void Replica::setAtomsLocationsInGround(
+	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		otherAtomsLocations)
 {
 	for (auto& topology : otherAtomsLocations){
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
@@ -39,7 +44,9 @@ void Replica::setAtomsLocationsInGround(const std::vector<std::vector<std::pair 
 
 // Set the coordinates of this replica
 // Also allocate memory
-void Replica::set_WORK_AtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations)
+void Replica::set_WORK_AtomsLocationsInGround(
+	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		otherAtomsLocations)
 {
 	for (auto& topology : otherAtomsLocations){
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
@@ -57,13 +64,16 @@ void Replica::set_WORK_AtomsLocationsInGround(const std::vector<std::vector<std:
 }
 
 // Update the coordinates of this replica
-void Replica::updAtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations)
+void Replica::updAtomsLocationsInGround(
+	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		otherAtomsLocations)
 {
 	int i = -1;
 	for (auto& topology : otherAtomsLocations){
 		i += 1;
 
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>& myTopology = atomsLocations[i];
+		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>& myTopology =
+			atomsLocations[i];
 
 		int j = -1;
 		for(auto& otherAtom : topology){
@@ -84,11 +94,25 @@ void Replica::updAtomsLocationsInGround_FromWORK()
 		WORK_atomsLocations.begin(),
 		WORK_atomsLocations.end()); */
 
+		std::cout << "before" << std::endl;
+		PrintCoordinates();
+		Print_WORK_Coordinates();
+		std::cout << std::flush;
+
 	atomsLocations = WORK_atomsLocations;
+
+		std::cout << "after" << std::endl;
+		PrintCoordinates();
+		Print_WORK_Coordinates();
+		std::cout << std::flush;
+
+
 }
 
 // Update the coordinates of this replica
-void Replica::upd_WORK_AtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations)
+void Replica::upd_WORK_AtomsLocationsInGround(
+	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
+		otherAtomsLocations)
 {
 	int i = -1;
 	for (auto& topology : otherAtomsLocations){

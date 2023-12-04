@@ -17,10 +17,10 @@ void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
             compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
             break;
         case 3:
-            compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element);
+            compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element); // 120 rad
             break;
         case 4:
-            compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element);
+            compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element); // 109.47 rad
             break;
         default:
             std::cerr << "[ERROR] Atom " << atomName << " has " << numAtomBonds << " bonds, which is not supported." << std::endl;

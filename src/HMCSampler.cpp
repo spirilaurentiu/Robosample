@@ -578,12 +578,27 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 		// Scale bonds and angles
 		if(this->nofSamples >= 0){ // dont't take burn-in
 
+			// Just for the Visualizer
+			if(world->visual){
+				this->world->ts->stepTo(
+					someState.getTime() + (0.00001));
+				std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+			}
+
 			// Calculate X_PFs and X_BMs
 			world->getTransformsStatistics(someState);
 			world->updateTransformsMeans(someState);
 
 			//setQToScaleBendStretch(someState, scaleFactors);
 			setQToScaleBendStretchStdev(someState, scaleFactors);
+
+			// Just for the Visualizer
+			if(world->visual){
+				std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+				this->world->ts->stepTo(
+					someState.getTime() + (0.00001));
+			}
+
 		}
 
 	}else{
@@ -1868,8 +1883,8 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someSta
 void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 {
 
-		std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations BEFORE " << std::endl;
-		world->PrintFullTransformationGeometry(someState);
+		/* std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations BEFORE " << std::endl;
+		world->PrintFullTransformationGeometry(someState); */
 
 		//omm_locations.resize(matter->getNumBodies());
 
@@ -1908,8 +1923,8 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 		compoundSystem->realize(someState, SimTK::Stage::Position);
 
-		std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations AFTER " << std::endl;
-		world->PrintFullTransformationGeometry(someState);
+		/* std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations AFTER " << std::endl;
+		world->PrintFullTransformationGeometry(someState); */
 
 
 }
@@ -3472,9 +3487,6 @@ std::vector<SimTK::Real>& scaleFactors)
 	std::cout << "STAGE CHECK 0" << std::endl << std::flush;
 	system->realize(someState, SimTK::Stage::Topology);
 	system->realize(someState, SimTK::Stage::Position);
-	if(world->visual){
-		std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-	}
 
 	// Test
 	if(0){

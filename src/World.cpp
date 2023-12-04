@@ -2263,7 +2263,8 @@ World::calcMobodToMobodTransforms(
 	// don't know why it works
 	//SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
  	// this should be the correct version
-	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
+	SimTK::MobilizedBodyIndex mbx =
+		topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
@@ -2274,7 +2275,11 @@ World::calcMobodToMobodTransforms(
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
-	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
+	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(
+		rootAIx, chemParentAIx);  
+
+	// Get Top frame
+	SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
 
 	// Get Top to parent frame
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
@@ -2295,7 +2300,7 @@ World::calcMobodToMobodTransforms(
 
 	// Get the old PxFxMxB transform
 	SimTK::Transform oldX_PB =
-		(~T_X_Proot) * topology.getTopTransform(rootAIx)
+		(~T_X_Proot) * T_X_root
 		* InboardDihedral_XAxis * X_to_Z
 		* InboardDihedral_ZAxis * Z_to_X;
 

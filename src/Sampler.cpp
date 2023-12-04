@@ -615,7 +615,10 @@ double Sampler::generateChiSample(void)
 
 
 // TODO revise param1 and param2
-SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
+/**
+ * Note that parameters here are not the parameters of the distribution
+*/
+SimTK::Real Sampler::convoluteVariable(SimTK::Real& passedVariable,
 		std::string distrib,
 		SimTK::Real param1, SimTK::Real param2, SimTK::Real param3)
 {
@@ -628,7 +631,7 @@ SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 		randomNumber_Unif = uniformRealDistribution(randomEngine);
 		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
 		if(randomSign < 0){
-			var = 1.0 / var;
+			passedVariable = 1.0 / passedVariable;
 		}
 	}
 
@@ -640,32 +643,40 @@ SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 		randomNumber_Unif = uniformRealDistribution(randomEngine);
 		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
 		if(randomSign < 0){
-			var = -1.0 * var;
+			passedVariable = -1.0 * passedVariable;
 		}
 	}
 
 	// Run Gaussian distribution
 	else if(distrib == "normal"){
 
-		var = var + (gaurand(randomEngine) * param1);
+		passedVariable = passedVariable + (gaurand(randomEngine) * param1);    
 	}
 
-	// Run truncated Gaussian distribution
+	// Convolute a Gaussian distribution with the mean equal to the passed
+	// variable
 	else if(distrib == "truncNormal"){
 
-		SimTK::Real mean = var;
+		// The passed variable becomes the mean of a truncated normal
+		SimTK::Real mean = passedVariable;
 		bool flag = false;
 
+		// Try to get a hit inside the limits
 		for (int tz = 0; tz < 100; tz++){
-			var = var + (gaurand(randomEngine) * param1);
-			if((var >= param2) && (var <= param3)){
+
+			// Add Gaussian noise with std = param1
+			passedVariable = passedVariable + (gaurand(randomEngine) * param1);
+
+			// Check if the passed variable exceeds the limits
+			if((passedVariable >= param2) && (passedVariable <= param3)){
 				flag = true;
 				break;
 			}
 		}
 
+		// Return nan if no sample was generated
 		if(!flag){
-			var = SimTK::NaN;
+			passedVariable = SimTK::NaN;
 		}
 
 		/* if(var <= 0){
@@ -680,19 +691,19 @@ SimTK::Real Sampler::convoluteVariable(SimTK::Real& var,
 	// Run bimodal Gaussian distribution
 	else if(distrib == "bimodalNormal"){
 
-		var = convoluteVariable(var, "BernoulliInverse");
-		var = var + gaurand(randomEngine);
+		passedVariable = convoluteVariable(passedVariable, "BernoulliInverse");
+		passedVariable = passedVariable + gaurand(randomEngine);
 
 	}
 	
 	// Gamma distribution
 	else if(distrib == "gamma"){
-		var = gammarand(randomEngine);
+		passedVariable = gammarand(randomEngine);
 	}else{
 		std::cerr << "Sampler distribute variable: Unkown distribution\n";
 	}
 
-	return var;
+	return passedVariable;
 }
 
 SimTK::Real Sampler::convoluteVariable(
