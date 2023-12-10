@@ -94,18 +94,7 @@ void Replica::updAtomsLocationsInGround_FromWORK()
 		WORK_atomsLocations.begin(),
 		WORK_atomsLocations.end()); */
 
-		std::cout << "before" << std::endl;
-		PrintCoordinates();
-		Print_WORK_Coordinates();
-		std::cout << std::flush;
-
 	atomsLocations = WORK_atomsLocations;
-
-		std::cout << "after" << std::endl;
-		PrintCoordinates();
-		Print_WORK_Coordinates();
-		std::cout << std::flush;
-
 
 }
 
@@ -118,7 +107,8 @@ void Replica::upd_WORK_AtomsLocationsInGround(
 	for (auto& topology : otherAtomsLocations){
 		i += 1;
 
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>& myTopology = WORK_atomsLocations[i];
+		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>& myTopology =
+			WORK_atomsLocations[i];
 
 		int j = -1;
 		for(auto& otherAtom : topology){

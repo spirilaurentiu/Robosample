@@ -922,8 +922,10 @@ const SimTK::State& World::realizeTopology()
 	return returnState;
 }
 
-/** Assign a scale factor for generalized velocities to every mobilized
- body **/
+/** 
+ * Assign a scale factor for generalized velocities to every mobilized
+ * body
+ */
 void World::setUScaleFactorsToMobods(void)
 {
 
@@ -956,7 +958,7 @@ void World::setUScaleFactorsToMobods(void)
 				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx2, Bond.getUScaleFactor(ownWorldIndex)));
 			}else{
 				if(Bond.getUScaleFactor(ownWorldIndex) != 0){
-					std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n";
+					//std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n";
 				}
 			}
 
@@ -1772,14 +1774,14 @@ World::getCurrentAtomsLocationsInGround(void)
 			// Calculate atom location in Ground
 			SimTK::Vec3 location;
 
-			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
-				// ELIZA
-				location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
-			}else{
+			// if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
+			// 	// ELIZA
+			// 	location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
+			// }else{
 				location = 
 				topology.calcAtomLocationInGroundFrameThroughSimbody(
 					compoundAtomIndex, *forceField, *matter, state);
-			}
+			//}
 
 			currentTopologyInfo.emplace_back(&atom, location);
 		}
@@ -2245,6 +2247,13 @@ SimTK::State& World::setAtomsLocationsInGround(
 	}*/
 	// DEBUG
 
+	std::cout << "World::setAtomsLocationsInGround " << std::endl << std::flush; // DEBUG !!!!!!!!!!!!!!!!!!!!!!
+
+	// Copy everything to OpenMM too
+	if(getSampler(0)->getIntegratorName() == IntegratorName::OMMVV){
+		updSampler(0)->Simbody_To_OMM_setAtomsLocationsCartesian(someState); // COMPLETE
+	}
+
 	return someState;
 
 }
@@ -2657,17 +2666,6 @@ bool World::generateProposal(void)
 	// Update Robosample bAtomList
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
-
-/* 	// Get potential energy via OpenMM
-	auto OldPE = 
-		updSampler(0)->forces->getMultibodySystem().calcPotentialEnergy(
-		currentAdvancedState);
-	//auto OldPE =
-	//	forceField->CalcFullPotEnergyIncludingRigidBodies(
-	//	currentAdvancedState);// DOESN'T WORK WITH OPENMM
-
-	// Set sampler's old potential energy 
-	pHMC(updSampler(0))->setOldPE(OldPE); */
 
 	// Print message to identify this World
 	std::cout << "World " << ownWorldIndex 

@@ -99,7 +99,7 @@ void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which
 float bBond::getUScaleFactor(int which) const
 {
   if(which >= uScaleFactors.size()){
-	  std::cout << "[WARNING] bBond::getUScaleFactor() " << which << " not found. Returning 1" << std::endl;
+	  //std::cout << "[WARNING] bBond::getUScaleFactor() " << which << " not found. Returning 1" << std::endl;
 	  return 1.0;
   }else{
 	  return uScaleFactors[which];

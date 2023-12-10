@@ -62,7 +62,7 @@ public:
     and variables that store the energies, both needed for the 
     acception-rejection step. Also realize velocities and initialize 
     the timestepper. **/
-    virtual void initialize(SimTK::State& advanced);
+    virtual bool initialize(SimTK::State& advanced);
 
     /** Same as initialize **/
     virtual bool reinitialize(SimTK::State& advanced) ;

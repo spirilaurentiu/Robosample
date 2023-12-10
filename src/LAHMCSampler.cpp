@@ -183,7 +183,7 @@ velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
 acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
-void LAHMCSampler::initialize(SimTK::State& someState )
+bool LAHMCSampler::initialize(SimTK::State& someState )
 {
     // After an event handler has made a discontinuous change to the
     // Integrator's "advanced state", this method must be called to 

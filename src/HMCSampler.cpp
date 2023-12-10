@@ -228,93 +228,40 @@ velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
 acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
-/* void HMCSampler::initialize(SimTK::State& someState)
+bool HMCSampler::initialize(SimTK::State& someState)
 {
+	// Set a validation flag
+	bool validated = true;
+
 	// After an event handler has made a discontinuous change to the
-	// Integrator's "advanced state", this method must be called to
-	// reinitialize the Integrator.
+	// Integrator's "advanced state", 
 	timeStepper->initialize(compoundSystem->getDefaultState());
 
-	// Get no of degrees of freedom
-	const int nu = someState.getNU();
-
-	// Potential energy and configuration need stage Position
+	// Calculate Simbody configuration
 	system->realize(someState, SimTK::Stage::Position);
 
-	// Convenient variable to use for distortion detection
-	pe_init = pe_set;
-
-	// Set old potential energy
-	setOldPE(
-		forces->getMultibodySystem().calcPotentialEnergy(someState)
-		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
-	);
-
-	std::cout << "HMCSampler::initialize pe_o " << pe_o << std::endl;
-
-	// Store the configuration
-	if(this->integratorName == IntegratorName::OMMVV){
-
-		omm_locations.resize(matter->getNumBodies());
-		omm_locations_old.resize(matter->getNumBodies());
-
-		OMM_storeOMMConfiguration();
-	}
-			
-	updateStoredConfiguration(someState);
-
-	// Set set potential energy
-	setSetPE(getOldPE());
-
 	// Initialize QsBuffer with zeros
-	int nq = matter->getNQ(someState);
-	int totSize = QsBufferSize * nq;
-	for(int i = 0; i < totSize; i++){
-		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
-		QsBuffer.push_back(SimTK::Real(0));
+	if(this->nofSamples == 0){
+		int totSize = QsBufferSize * matter->getNQ(someState);
+		for(int i = 0; i < totSize; i++){
+			QsBuffer.push_back(SimTK::Real(0));
+		}
 	}
-
-	// Store Fixman potential
-	if(useFixman){
-		std::cout << "Hamiltonian Monte Carlo sampler: using Fixman potential.\n";
-		this->fix_o = calcFixman(someState);
-		this->fix_set = this->fix_o;
-
-		setOldLogSineSqrGamma2(
-			((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
-		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-	}else{
-		
-		this->fix_o = 0.0;
-		this->fix_set = this->fix_o;
-
-		setOldLogSineSqrGamma2(0.0);
-		setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-	}
-
-	// Initialize velocities to temperature
-	perturbVelocities(someState);
-
-	// Set the generalized velocities scale factors
-	for (int j=0; j < nu; ++j){
-		UScaleFactors[j] = 1;
-		InvUScaleFactors[j] = 1;
-	}
-
-	loadUScaleFactors(someState);
 
 	// Buffer to hold Q means
-	QsMeans.resize(nq, 0);
+	if(this->nofSamples == 0){
+		QsMeans.resize(matter->getNQ(someState), 0);
+	}
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
-
-	// Work
+	
+	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
 
-	//OMM_setTemperature(boostT);
+	return validated;
 
-} */
+}
 
 
 /** Seed the random number generator. Set simulation temperature,
@@ -332,6 +279,10 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// reinitialize the Integrator.
 	if(this->nofSamples == 0){
 		timeStepper->initialize(compoundSystem->getDefaultState());
+		//timeStepper->initialize(someState);
+
+		if(integratorName == IntegratorName::OMMVV){
+		}
 	}
 
 	// Get no of degrees of freedom
@@ -344,13 +295,15 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   X_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	// Calculate and set old configuration
+	// Calculate and set old configurationthis->natoms
 
 	// Calculate Simbody configuration
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Copy coordinates to OpenMM
-	Simbody_To_OMM_setAtomsLocationsCartesian(someState);
+	if(this->integratorName == IntegratorName::OMMVV){
+		Simbody_To_OMM_setAtomsLocationsCartesian(someState);
+	}
 
 	// Initialize QsBuffer with zeros
 	if(this->nofSamples == 0){
@@ -437,9 +390,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	}
 
 	// Initialize velocities to temperature
-	if(this->nofSamples == 0){
-		perturbVelocities(someState);
-	}
+	// if(this->nofSamples == 0){
+	// 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_ZERO);
+	// }
 
 	// Reset ndofs
 	ndofs = nu;
@@ -465,7 +418,10 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	bendStretchJacobianDetLog = 0.0;
 
 	// Set DuMM temperature : TODO: should propagate to OpenMM
-	OMM_setDuMMTemperature(boostT);
+	if(this->integratorName == IntegratorName::OMMVV){
+		OMM_setDuMMTemperature(boostT);
+	}
+	
 
 	return validated;
 
@@ -511,14 +467,16 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
 
 	}else if (integratorNameArg == "VV"){
 		integratorName = IntegratorName::VERLET;
-
+		
 	}else if (integratorNameArg == "BOUND_WALK"){
 		integratorName = IntegratorName::BOUND_WALK;
 	
 	}else if (integratorNameArg == "BOUND_HMC"){
 		integratorName = IntegratorName::BOUND_HMC;
+
 	}else if(integratorNameArg == "STATIONS_TASK"){
 		integratorName = IntegratorName::STATIONS_TASK;
+
 	}else{
 		integratorName = IntegratorName::EMPTY;
 
@@ -1188,6 +1146,9 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			// Somewhere, the topology gets ruined
 			system->realizeTopology();
 
+			// Transfer back to Simbody (TODO: might be redundant)
+			OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
+
 		}catch(const std::exception&){
 
 			// Send general message
@@ -1195,6 +1156,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			proposeExceptionCaught = true;
 
 			OMM_restoreConfiguration(someState);
+
+			// Transfer back to Simbody (TODO: might be redundant)
+			OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
+
 		}
 
 	}else if(this->integratorName == IntegratorName::EMPTY){
@@ -1236,31 +1201,33 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 void HMCSampler::OMM_integrateTrajectory(SimTK::State& someState)
 {
-
+	assert(!"Not implemented");
 }
 
 // Trajectory length has an average of MDStepsPerSample and a given std
 void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 	try {
 
-	float timeJump = 0;
-	if(MDStepsPerSampleStd != 0){
-		std::cout << "Got MDSTEPS_STD " << MDStepsPerSampleStd << '\n';
+		float timeJump = 0;
+		if(MDStepsPerSampleStd != 0){
+			std::cout << "Got MDSTEPS_STD " << MDStepsPerSampleStd << '\n';
 
-		// TODO moe to internal variables set
-			std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd);
-			float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
-		timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
-	}else{
-		std::cout << "Didn't get MDSTEPS_STD" << '\n';
-		timeJump = (timestep*MDStepsPerSample);
-	}
+			// TODO moe to internal variables set
+				std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd);
+				float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
+			timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
+
+		}else{
+			std::cout << "Didn't get MDSTEPS_STD" << '\n';
+			timeJump = (timestep*MDStepsPerSample);
+		}
 
 		this->timeStepper->stepTo(someState.getTime() + timeJump);
 
 		system->realize(someState, SimTK::Stage::Position);
 
 	}catch(const std::exception&){
+
 		std::cout << "\t[WARNING] propose exception caught!\n";
 		proposeExceptionCaught = true;
 
@@ -1836,6 +1803,7 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someSta
 	system->realize(someState, SimTK::Stage::Position);
 
 	if(throughDumm){
+
 		const Vector_<Vec3>& DuMMIncludedAtomStationsInG = 
 			dumm->getIncludedAtomPositionsInG(someState);
 
@@ -1843,7 +1811,8 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someSta
 			startingPos[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
 		}
 
-		/* for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
+		/* //for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
+		for(int atomCnt = 0; atomCnt < std::min(10, static_cast<int>(this->natoms)); atomCnt++){
 			std::cout << "atom " << atomCnt << " "
 				<< startingPos[atomCnt][0] << " "
 				<< startingPos[atomCnt][1] << " "
@@ -1851,10 +1820,15 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someSta
 				<< std::endl;
 		}
 
-		world->PrintFullTransformationGeometry(someState,
-			false, false, false, true, true, true);
+		// world->PrintFullTransformationGeometry(someState,
+		//	false, false, false, true, true, true);
+		std::cout << "numBodies " <<  matter->getNumBodies() << std::endl << std::flush;
 
-		for(SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); mbx++){
+		//for(SimTK::MobilizedBodyIndex mbx(1); mbx < (matter->getNumBodies()); mbx++){
+		for(SimTK::MobilizedBodyIndex mbx(1);
+		mbx < std::min(10, matter->getNumBodies());
+		mbx++){
+
 			SimTK::MobilizedBody mobod = matter->getMobilizedBody(mbx);
 
 			//SimTK::Vec3 mobodOrig = mobod.expressVectorInGroundFrame(someState, SimTK::Vec3(0, 0, 0));
@@ -2696,7 +2670,9 @@ void HMCSampler::setBoostTemperature(SimTK::Real argT)
 	this->unboostUFactor = 1 / boostUFactor;
 	//std::cout << "HMC: boost velocity scale factor: " << this->boostUFactor << std::endl;
 
-	OMM_setDuMMTemperature(this->boostT);
+	if(this->integratorName == IntegratorName::OMMVV){
+		OMM_setDuMMTemperature(this->boostT);
+	}
 
 }
 
@@ -4071,6 +4047,8 @@ void HMCSampler::restoreConfiguration(
 
 	if(integratorName == IntegratorName::OMMVV){
 		OMM_restoreConfiguration(someState);
+		OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
+		
 	}else{
 		assignConfFromSetTVector(someState);
 	}

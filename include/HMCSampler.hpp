@@ -14,10 +14,10 @@ Topology 0:                                                      :
           :                                                      :
 Position 0:                                                      :
           :          ┌─────────────────────────┐                 :
-                     │                         │                 :X_o
-                     │      REINITIALIZE       │                 :pe_o, pe_set
-                     │                         │                 :fix_o, fix_set
-                     └────────────┬────────────┘                 :
+                     │                         │                 : X_o
+                     │      REINITIALIZE       │                 : pe_o, pe_set
+                     │                         │                 : fix_o, fix_set
+                     └────────────┬────────────┘                 : 
                                   │                              :
                                   │                              :
                             ┌─────▼─────┐                        :
@@ -29,20 +29,20 @@ Dynamics 0                        │                              :
                              ┌────▼──────┐       NO              :
                              │ VALIDATE  │────────────────       :
                              └────┬──────┘               |       :
-                                  │                      |
-                                  │  YES                 |
-                                  │                      |
-                              ┌───▼─────┐                |
-                              │ ACCEPT  │                |
-                              └────┬────┘                |
-                                   │                     |
-                        YES        │       NO            |
-             ┌────-────────────────┴─────────────────────┬
-             |                                           │ 
-        ┌────▼────-                                 ┌────▼─────┐            
-        │ UPDATE  │                                 │ RESTORE  │
-        └─────────┘                                 └──────────┘
-         Dynamics 0                                  Position 0
+                                  │                      |       :
+                                  │  YES                 |       :
+                                  │                      |       :
+                              ┌───▼─────┐                |       :
+                              │ ACCEPT  │                |       :
+                              └────┬────┘                |       :
+                                   │                     |       :
+                        YES        │       NO            |       :
+             ┌────-────────────────┴─────────────────────┬       :
+             |                                           │       :
+        ┌────▼────-                                 ┌────▼─────┐ :          
+        │ UPDATE  │                                 │ RESTORE  │ :
+        └─────────┘                                 └──────────┘ :
+         Dynamics 0                                  Position 0  :
 
 
 
@@ -424,6 +424,7 @@ public:
 	//virtual void initialize(SimTK::State& advanced);
 
 	/** Same as initialize **/
+	virtual bool initialize(SimTK::State& advanced) ;
 	virtual bool reinitialize(SimTK::State& advanced) ;
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE

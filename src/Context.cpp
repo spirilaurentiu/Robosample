@@ -321,8 +321,13 @@ bool Context::initializeFromFile(const std::string &file)
 	acception-rejection step. Also realize velocities and initialize
 	the timestepper. **/
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++){
+		
+		for (int samplerIx = 0;
+		samplerIx < getWorld(worldIx)->getNofSamplers();
+		samplerIx++){
+
 			initializeSampler(worldIx, samplerIx);
+		
 		}
 	}
 
@@ -2042,8 +2047,10 @@ void Context::initializeSampler(std::size_t whichWorld,
 	std::size_t whichSampler)
 {
 
-	worlds[whichWorld].updSampler(whichSampler)->reinitialize(
-		worlds[whichWorld].integ->updAdvancedState());
+	World& thisWorld = worlds[whichWorld];
+	SimTK::State& worldAdvancedState = thisWorld.integ->updAdvancedState();
+	HMCSampler *poHMC = worlds[whichWorld].updSampler(whichSampler);
+	poHMC->initialize( worldAdvancedState );
 
 	// auto compoundSystem = worlds[whichWorld].getCompoundSystem();
 	// auto forces = worlds[whichWorld].getGeneralForceSubsystem();
@@ -3323,8 +3330,6 @@ void Context::storeReplicaCoordinatesFromFrontWorld(int whichReplica)
 // Store first world coordinates into replica's work coords buffer
 void Context::store_WORK_CoordinatesFromFrontWorld(int whichReplica)
 {
-	//std::cout <<  "storeReplicaCoordinatesFromFrontWorld " << whichReplica << ": ";
-
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thermoIx = replica2ThermoIxs[whichReplica];
@@ -3335,13 +3340,11 @@ void Context::store_WORK_CoordinatesFromFrontWorld(int whichReplica)
 	std::vector<int> worldIndexes =
 		thermodynamicStates[thermoIx].getWorldIndexes();
 
-	//std::cout <<  " worldIndexes[1] " << worldIndexes[1];
-
 	// Update replica atomsLocations from back
 	replicas[whichReplica].upd_WORK_AtomsLocationsInGround(
 		worlds[worldIndexes.front()].getCurrentAtomsLocationsInGround()
 	);
-	
+
 }
 
 // Store front world potential energy into work last energy buffer of the
@@ -3478,81 +3481,84 @@ void Context::initializeReplica(int thisReplica)
 		worlds[replicaWorldIxs[i]].setTemperature( T );
 		worlds[replicaWorldIxs[i]].setBoostTemperature( T );
 	}
-
 	//std::cout << "iniTemperature set to " << T << std::endl << std::flush;
 
 	// -------------
 	// Set samplers parameters for this replica
 	// =============
-	std::vector<SimTK::Real> replicaTimesteps = thermodynamicStates[thisThermoStateIx].getTimesteps();
-	std::vector<int> replicaMdsteps = thermodynamicStates[thisThermoStateIx].getMdsteps();
+	std::vector<SimTK::Real> replicaTimesteps =
+		thermodynamicStates[thisThermoStateIx].getTimesteps();
+	std::vector<int> replicaMdsteps =
+		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
 			replicaTimesteps[i]);
 	}
+
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(
 			replicaMdsteps[i]);
 	}
 
-	//std::cout << "iniTimesteps set to ";
+	std::cout << "initialTss set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep() << " " ;
 	}
 	std::cout << std::endl;
-	//std::cout << "iniMdsteps set to ";
+
+	std::cout << "initialMDSs set to ";
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 		std::cout << worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample() << " " ;
 	}
 	std::cout << std::endl;
 	// =============
 
+	// // For some reason I run the worlds a few times
+	// for(size_t ri = 0; ri < 1; ri++){
+	// 	for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
 
-	for(size_t ri = 0; ri < 1; ri++){
-		for(std::size_t worldIx = 0; worldIx < replicaNofWorlds; worldIx++){
+	// 		int frontIx = -1;
+	// 		int backIx = -1;
 
-			int frontIx = -1;
-			int backIx = -1;
+	// 		// -------------
+	// 		// SAMPLE from the current world
+	// 		frontIx = replicaWorldIxs.front();
+	// 		//std::cout << "Sample world " << front << "\n";
+	// 		int accepted = worlds[frontIx].generateSamples(0);
+	// 		// =============
 
-			// -------------
-			// SAMPLE from the current world
-			frontIx = replicaWorldIxs.front();
-			//std::cout << "Sample world " << front << "\n";
-			int accepted = worlds[frontIx].generateSamples(0);
-			// =============
+	// 		// -------------
+	// 		// ROTATE
+	// 		///*print*/std::cout << "Rotate from";/*print*/
+	// 		///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
 
-			// -------------
-			// ROTATE
-			///*print*/std::cout << "Rotate from";/*print*/
-			///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
+	// 		// Rotate worlds indices (translate from right to left)
+	// 	   	std::rotate(replicaWorldIxs.begin(),
+	// 			replicaWorldIxs.begin() + 1,
+	// 			replicaWorldIxs.end());
 
-			// Rotate worlds indices (translate from right to left)
-		   	std::rotate(replicaWorldIxs.begin(),
-				replicaWorldIxs.begin() + 1,
-				replicaWorldIxs.end());
+	// 		///*print*/std::cout << " to";/*print*/
+	// 		///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
+	// 		///*print*/std::cout << "\n";/*print*/
+	// 		// =============
 
-			///*print*/std::cout << " to";/*print*/
-			///*print*/for(int k = 0; k < replicaNofWorlds; k++){std::cout << " " << replicaWorldIxs[k];}/*print*/
-			///*print*/std::cout << "\n";/*print*/
-			// =============
+	// 		// -------------
+	// 		// TRANSFER coordinates from last world to current
+	// 		// TODO: eliminate in the last iteration
+	// 		frontIx = replicaWorldIxs.front();
+	// 		backIx = replicaWorldIxs.back();
 
-			// -------------
-			// TRANSFER coordinates from last world to current
-			// TODO: eliminate in the last iteration
-			frontIx = replicaWorldIxs.front();
-			backIx = replicaWorldIxs.back();
+	// 		if(replicaNofWorlds > 1) {
+	// 			//std::cout << "Transfer from world " << backIx
+	// 			//	<< " to " << frontIx << std::endl;
 
-			if(replicaNofWorlds > 1) {
-				//std::cout << "Transfer from world " << backIx
-				//	<< " to " << frontIx << std::endl;
+	// 			transferCoordinates(backIx, frontIx);
+	// 		}
+	// 		// =============
 
-				transferCoordinates(backIx, frontIx);
-			}
-			// =============
-
-		} // END iteration through worlds
-	} // END iteration through rounds
+	// 	} // END iteration through worlds
+	// } // END iteration through rounds
 
 
 }
@@ -3663,6 +3669,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 
 	// Set integrator
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+
 		worlds[replicaWorldIxs[i]].updSampler(0)->setIntegratorName(
 			thermodynamicStates[thisThermoStateIx].getIntegrators()[i]
 		);
@@ -4027,34 +4034,34 @@ void Context::RunREX()
 	// Allocate space for swap matrices
 	allocateSwapMatrices();
 
-	// // Run each replica one time initially
+	// Run each replica one time initially
 	// std::cout << " REX batch " << 0 << std::endl;
-	// for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 	// 	std::cout << "REX replica " << replicaIx << std::endl;
-
+	//
 	// 		// Set intial parameters
-	// 		initializeReplica(replicaIx);
-
+	 		initializeReplica(replicaIx);
+	//
 	// 		// Copy coordinates from replica to front world
 	// 		restoreReplicaCoordinatesToFrontWorld(replicaIx);
-
+	//
 	// 		// Iterate this replica's worlds
 	// 		RunReplicaAllWorlds(replicaIx, swapEvery);
-
+	//
 	// 		// Copy coordinates from front world to replica
 	// 		storeReplicaCoordinatesFromFrontWorld(replicaIx);
-
+	//
 	// 		// Store energy
 	// 		storeReplicaEnergyFromFrontWorldFull(replicaIx);
 	// 		storeReplicaFixmanFromBackWorld(replicaIx);
-
+	//
 	// 		/* PrintToLog(replicaIx, worldIndexes.front(), 0);
 	// 		writePdbs(0,	replica2ThermoIxs[replicaIx]); */
-
+	//
 	// 		// Write energy and geometric features to logfile
 	// 		REXLog(0, replicaIx);
-
-	// } // ===================================================================
+	//
+	} // ===================================================================
 
 	// PrintNofAcceptedSwapsMatrix();
 
@@ -4062,7 +4069,7 @@ void Context::RunREX()
 
 	int nofMixes = int(requiredNofRounds / swapEvery);
 	int currFrontWIx = -1;
-	
+
 	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
 	for(size_t mixi = 0; mixi < nofMixes; mixi++){
 
@@ -4075,13 +4082,19 @@ void Context::RunREX()
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 			std::cout << "REX replica " << replicaIx << std::endl;
 
+// std::cout << "WorkCoordinate   after (1.0) replica " << replicaIx << " work " << std::endl;		// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// replicas[replicaIx].Print_WORK_Coordinates();													// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// std::cout << "================ after (1.0) replica " << replicaIx << " work \n" << std::flush;	// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// std::cout << "Context::RunREX OMM (1.0) world " << 0 << std::endl;									// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// (worlds[0].getSampler(0))->OMM_PrintLocations();													// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// std::cout << std::flush;																			// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// std::cout << "Context::RunREX Sim (1.0) world " << 0 << std::endl;									// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// PrintCoordinates(worlds[0].getCurrentAtomsLocationsInGround());										// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+// std::cout << "Context::RunREX (1.0) world " << 0 << "================\n" << std::flush;				// DEBUG !!!!!!!!!!!!!!!!!!!!!!
+
 			// ========================== LOAD ========================
 			// Load the front world
-			std::cout << "Equilibrium" << std::endl;
-			replicas[replicaIx].PrintCoordinates();
-			std::cout << std::flush;
-			
-			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
+			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);                  // (1)
 
 			// Set non-equilibrium parameters: get scale factors
 			updWorldsDistortOptions(replicaIx);
@@ -4094,14 +4107,15 @@ void Context::RunREX()
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 					// ======================== SIMULATE ======================
-					currFrontWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);
+					// Includes worlds rotations
+					currFrontWIx = RunReplicaEquilibriumWorlds(replicaIx, swapEvery);         // (2) + (3) + (4)
 
 					// Write energy and geometric features to logfile
 					REXLog(mixi, replicaIx);
 
 					// ========================= UNLOAD =======================
 					// Deposit front world coordinates into the replica
-					storeReplicaCoordinatesFromFrontWorld(replicaIx);
+					storeReplicaCoordinatesFromFrontWorld(replicaIx);                         // (4.5)
 
 					// Deposit energy terms
 					storeReplicaEnergyFromFrontWorldFull(replicaIx);
@@ -4111,17 +4125,14 @@ void Context::RunREX()
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 					// ======================== SIMULATE ======================
+					// Includes worlds rotations                                              // (5)
 					currFrontWIx = RunReplicaNonequilibriumWorlds(replicaIx, swapEvery);
 
 					// ========================= UNLOAD =======================
 					replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
 
 					// Deposit work coordinates into the replica
-					std::cout << "Nonequilibrium" << std::endl;
-					replicas[replicaIx].PrintCoordinates();
-					std::cout << std::flush;
-					
-					store_WORK_CoordinatesFromFrontWorld(replicaIx);
+					store_WORK_CoordinatesFromFrontWorld(replicaIx);                          // (8)
 
 					// Deposit energy terms
 					store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
@@ -4137,7 +4148,7 @@ void Context::RunREX()
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() != RunType::Default){
+		if(getRunType() != RunType::Default){                                                 // (9) + (10)
 			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 				if ((mixi % 2) == 0){
 					mixNeighboringReplicas(0);
@@ -4159,7 +4170,10 @@ void Context::RunREX()
 
 }
 
-
+/**
+ * Go through the vector of worlds and if their equilibrium worlds run and 
+ * rotate. 
+*/
 int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 {
 	// Get thermoState corresponding to this replica
