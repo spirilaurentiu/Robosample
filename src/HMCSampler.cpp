@@ -3711,7 +3711,7 @@ bool HMCSampler::propose(SimTK::State& someState)
 
 		// Check if molecule was distorted during
 		// perturbations or integrations
-		proposalValidation = checkDistortionBasedOnPE()
+		proposalValidation = checkDistortionBasedOnE(pe_n - pe_o)
 			&& proposalValidation;
 
 		if(proposalValidation){
@@ -3871,20 +3871,16 @@ bool HMCSampler::acceptSample() {
  * Checks is there are any sudden jumps in potential energy which usually
  * indicate a distortion in the system
 */
-bool HMCSampler::checkDistortionBasedOnPE(void)
+bool HMCSampler::checkDistortionBasedOnE(SimTK::Real deltaPE)
 {
 
 	// Set an energy limit for the potential energy difference in kT
 	SimTK::Real energyLimit = beta * 10000;
-
-	// Get the potential energy difference
-	SimTK::Real deltaPE = (pe_n - pe_o);
 	
 	// Apply
 	if((beta * deltaPE) > energyLimit){
 		std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
-			<< pe_init << " " << pe_o 
-		<< "." << std::endl;
+			<< deltaPE << "." << std::endl;
 		return false;
 	}else{
 		return true;

@@ -494,7 +494,7 @@ public:
 	 * Checks is there are any sudden jumps in potential energy which usually
 	 * indicate a distortion in the system
 	*/
-	bool checkDistortionBasedOnPE(void);
+	bool checkDistortionBasedOnE(SimTK::Real deltaPE);
 
 	virtual bool sample_iteration(SimTK::State& someState);
 

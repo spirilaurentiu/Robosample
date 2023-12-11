@@ -1,6 +1,6 @@
 #include "World.hpp"
 
-
+#define CHECK_RECONSTRUCTION true
 
 // TODO write a pdb writer for all the Compounds
 // TODO move this in Topology since they work only for one Compound
@@ -1962,6 +1962,13 @@ SimTK::State& World::setAtomsLocationsInGround(
 	std::cout << std::flush;
 	// */
 
+	// Check reconstruction
+	bool checkReconstruction = true;
+	SimTK::Real pe_init = SimTK::NaN;
+	if(CHECK_RECONSTRUCTION){
+		pe_init = forces->getMultibodySystem().calcPotentialEnergy(someState);
+	}
+
 	// Get the total no of bodies in this world (each World has its own
 	// SimbodyMatterSubsystem)
 	int totalNofBodies = matter->getNumBodies();
@@ -2247,11 +2254,20 @@ SimTK::State& World::setAtomsLocationsInGround(
 	}*/
 	// DEBUG
 
-	std::cout << "World::setAtomsLocationsInGround " << std::endl << std::flush; // DEBUG !!!!!!!!!!!!!!!!!!!!!!
-
 	// Copy everything to OpenMM too
 	if(getSampler(0)->getIntegratorName() == IntegratorName::OMMVV){
 		updSampler(0)->Simbody_To_OMM_setAtomsLocationsCartesian(someState); // COMPLETE
+	}
+
+	// Check reconstruction
+	if(CHECK_RECONSTRUCTION){
+		SimTK::Real deltaPE =
+			forces->getMultibodySystem().calcPotentialEnergy(someState) -
+			pe_init;
+
+			if(!this->updSampler(0)->checkDistortionBasedOnE(deltaPE)){
+				std::cout << " from setAtomsLocations check distortion" << std::endl;
+			}	
 	}
 
 	return someState;
