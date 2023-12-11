@@ -1949,18 +1949,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 		const std::vector<std::vector<
 		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations)
 {
-	/*
-	for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
-		std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;
-		for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
-			auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
-			auto loc = otherWorldsAtomsLocations[i][j].second;
-			printf("%d %.10f %.10f %.10f\n", int(compoundAtomIndex), loc[0], loc[1], loc[2]);
-			//std::cout << loc << std::endl;
-		}
-	}
-	std::cout << std::flush;
-	// */
 
 	// Check reconstruction
 	bool checkReconstruction = true;
@@ -2266,7 +2254,20 @@ SimTK::State& World::setAtomsLocationsInGround(
 			pe_init;
 
 			if(!this->updSampler(0)->checkDistortionBasedOnE(deltaPE)){
-				std::cout << " from setAtomsLocations check distortion" << std::endl;
+				std::cout << "deltaPE " <<  deltaPE
+					<< " from setAtomsLocations check distortion: ";
+
+			for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
+				std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;
+				for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
+					auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
+					auto loc = otherWorldsAtomsLocations[i][j].second;
+					printf("%d %.10f %.10f %.10f\n", int(compoundAtomIndex), loc[0], loc[1], loc[2]);
+				}
+			}
+			std::cout << std::flush;
+
+
 			}	
 	}
 
