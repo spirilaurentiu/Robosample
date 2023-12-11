@@ -2257,16 +2257,21 @@ SimTK::State& World::setAtomsLocationsInGround(
 				std::cout << "deltaPE " <<  deltaPE
 					<< " from setAtomsLocations check distortion: ";
 
-			for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
-				std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;
-				for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
-					auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
-					auto loc = otherWorldsAtomsLocations[i][j].second;
-					printf("%d %.10f %.10f %.10f\n", int(compoundAtomIndex), loc[0], loc[1], loc[2]);
+				std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>
+					cal = getCurrentAtomsLocationsInGround();
+
+				for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
+					std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;
+					for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
+						auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
+						auto loc = otherWorldsAtomsLocations[i][j].second;
+						auto calloc = cal[i][j].second;
+						printf("%d %.10f %.10f %.10f %d %.10f %.10f %.10f\n", int(compoundAtomIndex),
+							loc[0], loc[1], loc[2], calloc[0], calloc[1], calloc[2]);
+					}
 				}
-			}
-			std::cout << std::flush;
-			exit(1);
+				std::cout << std::flush;
+				exit(1);
 
 			}	
 	}
