@@ -2266,7 +2266,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 				}
 			}
 			std::cout << std::flush;
-
+			exit(1);
 
 			}	
 	}
