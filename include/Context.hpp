@@ -466,6 +466,13 @@ public:
 
 	SimTK::Real getPotentialEnergy(std::size_t world, std::size_t sampler) const;
 
+
+	//////////////////////////////////
+	/////     TEST FUNCTIONS     /////
+	//////////////////////////////////
+	void areAllDuMMsTheSame(void);
+
+
 protected:
 	bool CreateOutputDirectory(const std::string& outDir);
 	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;

@@ -1983,7 +1983,7 @@ SimTK::Real World::RMSD(
 /**
  * Maximum distance between two corresponding atoms
 */
-std::pair<int, SimTK::Real> World::maxAtomPairDistance(
+std::pair<int, SimTK::Real> World::maxAtomDeviation(
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
 		 srcWorldsAtomsLocations,
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
@@ -2047,7 +2047,9 @@ SimTK::State& World::setAtomsLocationsInGround(
 		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations)
 {
 
+	// ========================================================================
 	// Check reconstruction
+	// ========================================================================
 	SimTK::Real pe_init = SimTK::NaN;
 	bool reconstructFail = false;
 
@@ -2061,6 +2063,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 	if(CHECK_RECONSTRUCTION){
 		pe_init = forces->getMultibodySystem().calcPotentialEnergy(someState);
 	}
+	// ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
 
 	// Get the total no of bodies in this world (each World has its own
 	// SimbodyMatterSubsystem)
@@ -2118,38 +2122,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 		//             FULLY FLEXIBLE CARTESIAN WORLD                //
 		//              Parent body is always Ground                 //
 		///////////////////////////////////////////////////////////////
-		if(((*topologies)[i]).getRegimen().at(0) == 'I') {
-			/////////////////
-			// 3. SIMBODY MATTER
-			//---------------
-			// 3.1 MOBILIZED BODIES
-			/////////////////
-
-			// Parent (Ground) to mobile point M (atom) on body
-			SimTK::Transform P_X_M[totalNofBodies]; // related to X_PFs
-
-			// P_X_Ms are set to atom positions in Ground
-			for (SimTK::Compound::AtomIndex aIx(0); aIx < ((*topologies)[i]).getNumAtoms(); ++aIx){
-				const auto mbx = ((*topologies)[i]).getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
-				P_X_M[int(mbx)] = Transform(Rotation(), atomTargets[aIx]);
-			}
-
-			// Set X_FM: backs up to stage Time
-			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-
-				SimTK::Transform P_X_F = mobod.getInboardFrame(someState);
-				SimTK::Transform F_X_P = ~P_X_F;
-				SimTK::Transform F_X_M = F_X_P * P_X_M[int(mbx)];
-
-				mobod.setQToFitTransform(someState, F_X_M);
-			}
-
-		///////////////////////////////////////////////////////////////
-		//            NON-CARTESIAN JOINT TYPE WORLDs                //
-		//       Bodies are linked in a tree with P-F-M-B links      //
-		///////////////////////////////////////////////////////////////
-		}else{
+		
 
 			/////////////////
 			// 2.1 MORE COMPOUND FOR DUMM
@@ -2239,17 +2212,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 					if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 
 						// Get mobod transforms
-						//std::vector<SimTK::Transform> mobodTs = ((*topologies)[i]).calcMobodToMobodTransforms(matter.get(), aIx, someState); // SAFE
-						//std::vector<SimTK::Transform> mobodTs = // DANGER
-						//	((*topologies)[i]).calcMobodToMobodTransforms( // DANGER
-						//		matter.get(),	// DANGER
-						//		aIx,		// DANGER
-						//		someState,	// DANGER
-						//		*forceField,	// DANGER
-						//		ownWorldIndex);	// DANGER
-
-						//std::cout << "calcMobodTransforms for atom " << aIx << "\n" << std::flush;
-
 						std::vector<SimTK::Transform> mobodTs = 
 							calcMobodToMobodTransforms( 
 								(*topologies)[i],	
@@ -2294,22 +2256,16 @@ SimTK::State& World::setAtomsLocationsInGround(
 			//std::cout << "realizeTopology done" << "\n" << std::flush;
 		} // END TD regimen and all regimens
 
-	} // END iterating through molecules/topologies
-
 	this->compoundSystem->realize(someState, SimTK::Stage::Position);
-
-	// Print F_X_Ms - should always be I
-	//for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-	//	SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-	//	std::cout << "F_X_M " << mobod.getMobilizerTransform(someState) << std::endl;
-	//}
 
 	// Copy everything to OpenMM too
 	if(getSampler(0)->getIntegratorName() == IntegratorName::OMMVV){
 		updSampler(0)->Simbody_To_OMM_setAtomsLocationsCartesian(someState); // COMPLETE
 	}
 
+	// ========================================================================
 	// Check reconstruction
+	// ========================================================================
 	if(CHECK_RECONSTRUCTION){
 		SimTK::Real deltaPE =
 			forces->getMultibodySystem().calcPotentialEnergy(someState) -
@@ -2322,12 +2278,17 @@ SimTK::State& World::setAtomsLocationsInGround(
 				std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>
 					cal = getCurrentAtomsLocationsInGround();
 
-				std::pair<int, SimTK::Real> mad =
-					maxAtomPairDistance(otherWorldsAtomsLocations,
+				SimTK::Real rmsd =
+					RMSD(otherWorldsAtomsLocations,
 					getCurrentAtomsLocationsInGround());
 
-				std::cout << "[WARNING] RMSD (nm) " << mad.first << " " << mad.second << std::endl;
+				std::pair<int, SimTK::Real> mad =
+					maxAtomDeviation(otherWorldsAtomsLocations,
+					getCurrentAtomsLocationsInGround());
 
+				std::cout << "[WARNING] RMSD (nm) " << rmsd << std::endl;
+				std::cout << "[WARNING] MAD (nm) " << mad.first << " " << mad.second << std::endl;
+				PrintFullTransformationGeometry(someState, true, true, true, false, false, false);
 				/* for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
 					std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;
 					for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
@@ -2347,6 +2308,9 @@ SimTK::State& World::setAtomsLocationsInGround(
 				break; // goto return
 			}
 	}
+	// ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
+
 
 	} // multiple reconstruction tries
 

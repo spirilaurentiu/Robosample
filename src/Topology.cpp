@@ -372,6 +372,12 @@ void Topology::addRingClosingBonds() {
 			bSpecificAtom *leftNode  =  &(bAtomList[bonds[i].i]);
 			bSpecificAtom *rightNode =  &(bAtomList[bonds[i].j]);
 
+			// std::cout << "Topology::addRingClosingBonds " << bonds[i].i << " ";
+			// bAtomList[bonds[i].i].Print(0);
+			// std::cout << bonds[i].j << " ";
+			// bAtomList[bonds[i].j].Print(0);
+			// std::cout << std::endl;
+
 			std::stringstream sbuff;
 			if(leftNode->getNumber() == baseAtomNumber){
 				sbuff << leftNode->getName() << "/bond" << leftNode->getFreebonds();
@@ -2029,7 +2035,8 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
 	SimTK::Compound::AtomIndex aIx, int whichWorld)
 {
-	if(!aIx2mbx.empty()){
+	assert(!"Not implemented");
+/* 	if(!aIx2mbx.empty()){
 		if(!((aIx2mbx[aIx]).empty())){
 			return (aIx2mbx[aIx])[whichWorld];
 		}else{
@@ -2042,7 +2049,7 @@ SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
 		std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx not yet loaded.\n";
 		throw std::exception();
 		std::exit(1);
-	}
+	} */
 }
 
 /** Print maps **/

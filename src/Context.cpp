@@ -369,10 +369,10 @@ bool Context::initializeFromFile(const std::string &file)
 		addDihedrals(dihedralIx);
 	}
 
-	// Write intial pdb for reference
-	if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
-		writeInitialPdb();
-	}
+	// // Write intial pdb for reference
+	// if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
+	// 	writeInitialPdb();
+	// }
 
 	// Get output printing frequency
 	setPrintFreq( std::stoi(setupReader.get("PRINT_FREQ")[0]) );
@@ -2454,11 +2454,9 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 		// Reset mobilized body indeces in Compound
 		for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
 
-			
+			// Get atom index
 			SimTK::Compound::AtomIndex aIx =
 				(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
-
-
 
 			// Get mobod
 			SimTK::MobilizedBodyIndex mbx =
@@ -2474,16 +2472,14 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 
 		}
 
-
 		// TODO Restante DANGER
-        	//c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
+        //c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
 	}
 }
 
 ////////////////////////
 // REX
 ////////////////////////
-
 
 // Set the number of replicas. This could be dangerous
 void Context::setNofReplicas(const size_t& argNofReplicas)
@@ -4915,18 +4911,21 @@ void Context::writeInitialPdb()
 	// Pass compounds to the new world
 	passTopologiesToNewWorld(currentWorldIx);
 
+	// 
 	(updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
 	std::cout << "Writing pdb initial" << mc_step << ".pdb" << std::endl;
+
+	// 
 	for(unsigned int mol_i = 0; mol_i < topologies.size(); mol_i++){
 		topologies[mol_i].writeAtomListPdb(getOutputDir(),
 		"/pdbs/sb." + getPdbPrefix() + ".", ".pdb", 10, mc_step);
 	}
+
 }
 
 // Write final pdb for reference
 void Context::writeFinalPdb()
 {
-
 
 	// Update bAtomList in Topology
 	const SimTK::State& pdbState =
@@ -5124,6 +5123,52 @@ void Context::PrintNumThreads() {
 SimTK::Real Context::getPotentialEnergy(std::size_t world, std::size_t sampler) const {
 	return pHMC((worlds[world].samplers[sampler]))->pe_o;
 }
+
+
+// TESTING FUNCTIONS
+
+/**
+ *  Pass compounds to the new world
+ */
+void Context::areAllDuMMsTheSame(void)
+{
+
+	std::cout << "=== areAllDuMMsTheSame ===\n";
+
+	// All molecules
+	for(std::size_t molIx = 0; molIx < nofMols; molIx++){
+
+		// All Compound atoms
+		for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
+
+			// Get atom index
+			SimTK::Compound::AtomIndex aIx =
+				(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
+
+			std::cout << aIx << " ";
+
+			// All worlds
+			for(int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+
+				// Get mobod
+				SimTK::MobilizedBodyIndex mbx =
+					topologies[molIx].getAtomMobilizedBodyIndexThroughDumm(aIx,
+					*(worlds[worldIx].forceField) );
+
+				SimTK::DuMM::AtomIndex dAIx = topologies[molIx].getDuMMAtomIndex(aIx);
+
+				std::cout << dAIx << " ";	
+			}
+			std::cout << std::endl;
+
+		}
+
+		// TODO Restante DANGER
+        //c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
+	}
+}
+
+
 
 
 // Teodor's membrane

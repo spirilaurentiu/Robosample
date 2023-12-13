@@ -327,7 +327,7 @@ public:
 	/**
 	 * Maximum distance between two corresponding atoms
 	*/
-	std::pair<int, SimTK::Real> maxAtomPairDistance(
+	std::pair<int, SimTK::Real> maxAtomDeviation(
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
 		 srcWorldsAtomsLocations,
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
