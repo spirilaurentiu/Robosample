@@ -1932,17 +1932,42 @@ void World::updateAtomListsFromCompound(const SimTK::State &state)
 	}
 }
 
+/**
+ * 
+*/
+SimTK::Real World::RMSD(
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		 srcWorldsAtomsLocations,
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		destWorldsAtomsLocations
+		) const
+{
 
-/** Set Compound, MultibodySystem and DuMM configurations according to
-some other World's atoms.
-A body is composed of a root atom and other periferic atoms which have their own stations.
-Unles is a fully flexible Cartesian world, the function has the following steps:
-1. Set Compound
-2. Set DuMM
-3. Set Simbody bodies
-	3.1. Transforms X_PF and X_BM
-	3.2. Mass properties
+	for(std::size_t i = 0; i < srcWorldsAtomsLocations.size(); i++){
+		for(std::size_t j = 0; j < destWorldsAtomsLocations[i].size(); j++){
 
+			auto compoundAtomIndex = srcWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
+			auto srcLoc = srcWorldsAtomsLocations[i][j].second;
+			auto destLoc = destWorldsAtomsLocations[i][j].second;
+			printf("%d %.10f %.10f %.10f %.10f %.10f %.10f\n", int(compoundAtomIndex),
+				srcLoc[0], srcLoc[1], srcLoc[2], destLoc[0], destLoc[1], destLoc[2]);
+		}
+	}
+
+}
+
+
+/** 
+ * Set Compound, MultibodySystem and DuMM configurations according to
+ * some other World's atoms.
+ * A body is composed of a root atom and other periferic atoms which have their own stations.
+ * Unles is a fully flexible Cartesian world, the function has the following steps:
+ * 1. Set Compound
+ * 2. Set DuMM
+ * 3. Set Simbody bodies
+ *  3.1. Transforms X_PF and X_BM
+ *  3.2. Mass properties
+ * 
 **/
 SimTK::State& World::setAtomsLocationsInGround(
 		SimTK::State& someState,
@@ -1951,8 +1976,15 @@ SimTK::State& World::setAtomsLocationsInGround(
 {
 
 	// Check reconstruction
-	bool checkReconstruction = true;
 	SimTK::Real pe_init = SimTK::NaN;
+	bool reconstructFail = false;
+
+	// Try to reconstruct multiple times
+	for(int reCnt = 0; reCnt < 5; reCnt++){
+
+	pe_init = SimTK::NaN;
+	reconstructFail = false;
+
 	if(CHECK_RECONSTRUCTION){
 		pe_init = forces->getMultibodySystem().calcPotentialEnergy(someState);
 	}
@@ -2008,28 +2040,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 		//std::cout << "Calculate defaultAtomFrames start ...." << "\n" << std::flush;
 		((*topologies)[i]).calcTopTransforms();
 		//std::cout << "defaultAtomFrames done" << "\n" << std::flush;
-
-		//// DEBUG DANGER
-		/*
-		std::cout << "Locations after match and calcDefaultAtomsFrameInCompoundFrame\n";
-		std::cout << "mol new\n";
-		for (auto& atom : ((*topologies)[i]).bAtomList) {
-			auto compoundAtomIndex = atom.getCompoundAtomIndex();
-
-		//	// Based on Simbody
-		//	//SimTK::Vec3 loc = ((*topologies)[i]).calcAtomLocationInGroundFrame(
-		//	//	someState, compoundAtomIndex);
-
-			// Based on Compound frames
-			SimTK::Vec3 loc = ((*topologies)[i]).calcDefaultAtomLocationInGroundFrame(
-				((*topologies)[i]).getAtomName(compoundAtomIndex));
-
-			// Print VMD friendly
-			printf("graphics 0 sphere {%.10f %.10f %.10f} radius 0.05\n",
-				compoundAtomIndex, loc[0], loc[1], loc[2]);
-
-		} // DEBUG
-		*/
 
 		///////////////////////////////////////////////////////////////
 		//             FULLY FLEXIBLE CARTESIAN WORLD                //
@@ -2221,27 +2231,6 @@ SimTK::State& World::setAtomsLocationsInGround(
 	//	std::cout << "F_X_M " << mobod.getMobilizerTransform(someState) << std::endl;
 	//}
 
-	// DEBUG DANGER
-	/*std::cout << "Locations after realizePosition\n";
-	std::cout << "mol new\n";
-	for (auto& atom : ((*topologies)[0]).bAtomList) {
-		auto compoundAtomIndex = atom.getCompoundAtomIndex();
-
-		// Based on Simbody
-		SimTK::Vec3 loc = ((*topologies)[0]).calcAtomLocationInGroundFrame(
-			someState, compoundAtomIndex);
-
-		// Based on Compound frames
-		//SimTK::Vec3 loc = ((*topologies)[0]).calcDefaultAtomLocationInGroundFrame(
-		//	((*topologies)[i]).getAtomName(compoundAtomIndex));
-
-		// Print VMD friendly
-		printf("graphics %d sphere {%.10f %.10f %.10f} radius 0.05\n",
-			compoundAtomIndex, loc[0], loc[1], loc[2]);
-
-	}*/
-	// DEBUG
-
 	// Copy everything to OpenMM too
 	if(getSampler(0)->getIntegratorName() == IntegratorName::OMMVV){
 		updSampler(0)->Simbody_To_OMM_setAtomsLocationsCartesian(someState); // COMPLETE
@@ -2266,15 +2255,21 @@ SimTK::State& World::setAtomsLocationsInGround(
 						auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
 						auto loc = otherWorldsAtomsLocations[i][j].second;
 						auto calloc = cal[i][j].second;
-						printf("%d %.10f %.10f %.10f %d %.10f %.10f %.10f\n", int(compoundAtomIndex),
+						printf("%d %.10f %.10f %.10f %.10f %.10f %.10f\n", int(compoundAtomIndex),
 							loc[0], loc[1], loc[2], calloc[0], calloc[1], calloc[2]);
 					}
 				}
-				std::cout << std::flush;
-				exit(1);
+				std::cout << "=================" << std::endl << std::flush;
 
-			}	
+				reconstructFail = true;
+
+			}else{
+				reconstructFail = false;
+				break; // goto return
+			}
 	}
+
+	} // multiple reconstruction tries
 
 	return someState;
 

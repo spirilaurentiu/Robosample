@@ -313,6 +313,16 @@ public:
 	void PrintFullTransformationGeometry(const SimTK::State&,
 		bool x_pf_r = true, bool x_fm_r = true, bool x_bm_r = true,
 		bool x_pf_p = true, bool x_fm_p = true, bool x_bm_p = true);
+	
+	/**
+	 * RMSD function
+	*/
+	SimTK::Real RMSD(
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		 srcWorldsAtomsLocations,
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		destWorldsAtomsLocations	
+	) const ;
 
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(

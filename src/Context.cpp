@@ -4505,10 +4505,13 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	std::size_t lastWorldIx = 0;
 
 	// Write an initial pdb
-    topologies[0].writeAtomListPdb(outputDir,
-        "/pdbs/ini.", ".pdb",
-        10, 0);
+	for(int moli = 0; moli < this->nofMols; moli++){
+		topologies[moli].writeAtomListPdb(outputDir,
+			"/pdbs/ini." + std::to_string(moli) + "." + setupReader.get("SEED")[0] + ".", ".pdb",
+			10, 0);
+	}
 
+	// Write pdb at time 0
     writeInitialPdb();
 
 	if( std::abs(Tf - Ti) < SimTK::TinyReal){ // Don't heat

@@ -3875,7 +3875,7 @@ bool HMCSampler::checkDistortionBasedOnE(SimTK::Real deltaPE)
 {
 
 	// Set an energy limit for the potential energy difference in kT
-	SimTK::Real energyLimit = beta * 10000;
+	SimTK::Real energyLimit = beta * 100 * ndofs;
 	
 	// Apply
 	if((beta * deltaPE) > energyLimit){
