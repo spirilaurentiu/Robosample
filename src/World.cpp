@@ -938,8 +938,11 @@ void World::setUScaleFactorsToMobods(void)
 			SimTK::Compound::AtomIndex aIx1 = topology.bAtomList[Bond.i].getCompoundAtomIndex();
 			SimTK::Compound::AtomIndex aIx2 = topology.bAtomList[Bond.j].getCompoundAtomIndex();
 
-			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1, ownWorldIndex);
-			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2, ownWorldIndex);
+			// SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1, ownWorldIndex);
+			// SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2, ownWorldIndex);
+
+			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx1, *forceField);
+			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx2, *forceField);
 
 			//std::cout
 			//<< "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 "
@@ -1977,6 +1980,54 @@ SimTK::Real World::RMSD(
 
 }
 
+/**
+ * Maximum distance between two corresponding atoms
+*/
+std::pair<int, SimTK::Real> World::maxAtomPairDistance(
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		 srcWorldsAtomsLocations,
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		destWorldsAtomsLocations
+		) const
+{
+
+	assert( srcWorldsAtomsLocations.size() == destWorldsAtomsLocations.size() && 
+		!("RMSD different size") );
+
+	SimTK::Real distVal = 0;
+	SimTK::Real maxVal = 0;
+	int atomCnt = -1;
+	int pairIndex = -1;
+
+	for(std::size_t i = 0; i < srcWorldsAtomsLocations.size(); i++){
+		for(std::size_t j = 0; j < srcWorldsAtomsLocations[i].size(); j++){
+
+			atomCnt++;
+
+			auto srcLoc = srcWorldsAtomsLocations[i][j].second;
+			auto destLoc = destWorldsAtomsLocations[i][j].second;
+
+			SimTK::Real sqX = (srcLoc[0] - destLoc[0]);
+			sqX = sqX * sqX;
+			SimTK::Real sqY = (srcLoc[1] - destLoc[1]);
+			sqY = sqY * sqY;
+			SimTK::Real sqZ = (srcLoc[2] - destLoc[2]);
+			sqZ = sqZ * sqZ;
+
+			SimTK::Real dist = std::sqrt(sqX + sqY + sqZ);
+			
+			if(dist > distVal){
+				distVal = dist;
+				pairIndex = atomCnt;
+			}
+
+		}
+	}
+
+	return std::pair<int, SimTK::Real>(pairIndex, distVal);
+
+}
+
 
 /** 
  * Set Compound, MultibodySystem and DuMM configurations according to
@@ -2271,10 +2322,11 @@ SimTK::State& World::setAtomsLocationsInGround(
 				std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>
 					cal = getCurrentAtomsLocationsInGround();
 
-				SimTK::Real rmsd = RMSD(otherWorldsAtomsLocations,
+				std::pair<int, SimTK::Real> mad =
+					maxAtomPairDistance(otherWorldsAtomsLocations,
 					getCurrentAtomsLocationsInGround());
 
-					std::cout << "[WARNING] RMSD (nm) " << rmsd << std::endl;
+				std::cout << "[WARNING] RMSD (nm) " << mad.first << " " << mad.second << std::endl;
 
 				/* for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
 					std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;

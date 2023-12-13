@@ -324,6 +324,16 @@ public:
 		destWorldsAtomsLocations	
 	) const ;
 
+	/**
+	 * Maximum distance between two corresponding atoms
+	*/
+	std::pair<int, SimTK::Real> maxAtomPairDistance(
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		 srcWorldsAtomsLocations,
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		destWorldsAtomsLocations	
+	) const ;
+
 	// Helper for setAtoms Locations This function is only intended for root atoms!!
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(
 		Topology& topology,

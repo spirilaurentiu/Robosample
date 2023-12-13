@@ -2438,23 +2438,42 @@ SimTK::Real Context::Pearson(std::vector<std::vector<SimTK::Real>> inputVector, 
 }
 
 
-// Pass compounds to the new world
+/**
+ *  Pass compounds to the new world
+ */
 void Context::passTopologiesToNewWorld(int newWorldIx)
 {
+
+	// Go through all the molecules
 	for(std::size_t molIx = 0; molIx < nofMols; molIx++){
+
+		// Aquire the CompoundSystem
 		topologies[molIx].setMultibodySystem(
 			*((updWorld(newWorldIx))->compoundSystem) );
 
 		// Reset mobilized body indeces in Compound
 		for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
+
+			
 			SimTK::Compound::AtomIndex aIx =
 				(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
-		//	//SimTK::MobilizedBodyIndex mbx =
-		//	//	worlds[newWorldIx].getMobilizedBodyIndex(aIx);
+
+
+
+			// Get mobod
 			SimTK::MobilizedBodyIndex mbx =
-				topologies[molIx].getAtomMobilizedBodyIndexFromMap(aIx, newWorldIx);
+				topologies[molIx].getAtomMobilizedBodyIndexThroughDumm(aIx,
+				*(worlds[newWorldIx].forceField) );
+
+			// SimTK::MobilizedBodyIndex mbx =
+			// 	topologies[molIx].getAtomMobilizedBodyIndexFromMap(aIx,
+			// 	newWorldIx);
+
+			// Set the corresponding mobod
 			topologies[molIx].setAtomMobilizedBodyIndex(aIx, mbx);
+
 		}
+
 
 		// TODO Restante DANGER
         	//c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
