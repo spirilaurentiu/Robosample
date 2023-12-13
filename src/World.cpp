@@ -2272,13 +2272,9 @@ SimTK::State& World::setAtomsLocationsInGround(
 					cal = getCurrentAtomsLocationsInGround();
 
 				SimTK::Real rmsd = RMSD(otherWorldsAtomsLocations,
-										getCurrentAtomsLocationsInGround());
+					getCurrentAtomsLocationsInGround());
 
-				if( rmsd > 1.0 ){
-
-					std::cout << "[WARNING] RMSD " << rmsd << std::endl;
-
-				}
+					std::cout << "[WARNING] RMSD (nm) " << rmsd << std::endl;
 
 				/* for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
 					std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;

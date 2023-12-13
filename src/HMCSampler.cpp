@@ -3460,7 +3460,6 @@ std::vector<SimTK::Real>& scaleFactors)
 	//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
 
 	// Save changes by advancing to Position Stage
-	std::cout << "STAGE CHECK 0" << std::endl << std::flush;
 	system->realize(someState, SimTK::Stage::Topology);
 	system->realize(someState, SimTK::Stage::Position);
 
