@@ -1932,8 +1932,9 @@ void World::updateAtomListsFromCompound(const SimTK::State &state)
 	}
 }
 
+
 /**
- * 
+ * RMSD function
 */
 SimTK::Real World::RMSD(
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
@@ -1943,16 +1944,36 @@ SimTK::Real World::RMSD(
 		) const
 {
 
-	for(std::size_t i = 0; i < srcWorldsAtomsLocations.size(); i++){
-		for(std::size_t j = 0; j < destWorldsAtomsLocations[i].size(); j++){
+	assert( srcWorldsAtomsLocations.size() == destWorldsAtomsLocations.size() && 
+		!("RMSD different size") );
 
-			auto compoundAtomIndex = srcWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
+	SimTK::Real rmsdVal = 0;
+	int localNofAtoms = 0;
+
+	for(std::size_t i = 0; i < srcWorldsAtomsLocations.size(); i++){
+		for(std::size_t j = 0; j < srcWorldsAtomsLocations[i].size(); j++){
+
 			auto srcLoc = srcWorldsAtomsLocations[i][j].second;
 			auto destLoc = destWorldsAtomsLocations[i][j].second;
-			printf("%d %.10f %.10f %.10f %.10f %.10f %.10f\n", int(compoundAtomIndex),
-				srcLoc[0], srcLoc[1], srcLoc[2], destLoc[0], destLoc[1], destLoc[2]);
+
+			SimTK::Real sqX = (srcLoc[0] - destLoc[0]);
+			sqX = sqX * sqX;
+			SimTK::Real sqY = (srcLoc[1] - destLoc[1]);
+			sqY = sqY * sqY;
+			SimTK::Real sqZ = (srcLoc[2] - destLoc[2]);
+			sqZ = sqZ * sqZ;
+
+			rmsdVal += (sqX + sqY + sqZ);
+
+			localNofAtoms++;
+
 		}
 	}
+
+	rmsdVal /= SimTK::Real(localNofAtoms);
+	rmsdVal = std::sqrt(rmsdVal);
+
+	return rmsdVal;
 
 }
 
@@ -1980,7 +2001,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 	bool reconstructFail = false;
 
 	// Try to reconstruct multiple times
-	for(int reCnt = 0; reCnt < 5; reCnt++){
+	int nofReconstructAttempts = 5;
+	for(int reCnt = 0; reCnt < nofReconstructAttempts; reCnt++){
 
 	pe_init = SimTK::NaN;
 	reconstructFail = false;
@@ -2249,7 +2271,16 @@ SimTK::State& World::setAtomsLocationsInGround(
 				std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>
 					cal = getCurrentAtomsLocationsInGround();
 
-				for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
+				SimTK::Real rmsd = RMSD(otherWorldsAtomsLocations,
+										getCurrentAtomsLocationsInGround());
+
+				if( rmsd > 1.0 ){
+
+					std::cout << "[WARNING] RMSD " << rmsd << std::endl;
+
+				}
+
+				/* for(std::size_t i = 0; i < otherWorldsAtomsLocations.size(); i++){
 					std::cout << "otherWorldsAtomsLocations[" << i << "]" << std::endl;
 					for(std::size_t j = 0; j < otherWorldsAtomsLocations[i].size(); j++){
 						auto compoundAtomIndex = otherWorldsAtomsLocations[i][j].first->getCompoundAtomIndex();
@@ -2259,7 +2290,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 							loc[0], loc[1], loc[2], calloc[0], calloc[1], calloc[2]);
 					}
 				}
-				std::cout << "=================" << std::endl << std::flush;
+				std::cout << "=================" << std::endl << std::flush; */
 
 				reconstructFail = true;
 
