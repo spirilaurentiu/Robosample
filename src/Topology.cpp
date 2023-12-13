@@ -78,9 +78,6 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
  		bAtomList[i].setAtomicNumber(atomicNumber);
 		bAtomList[i].setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
 
-		// Assign a "unique" name. The generator is however limited.
-		bAtomList[i].generateName(i);
-
 		// Store the initial name from prmtop
 		bAtomList[i].setInName(initialName);
 
@@ -109,8 +106,19 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 		bAtomList[i].setLJWellDepth(amberReader->getAtomsEpsilon(i));
 
 		// Set residue name and index
-		bAtomList[i].setResidueName(std::string("UNK"));
-		bAtomList[i].residueIndex = 1;
+		// bAtomList[i].setResidueName(std::string("UNK"));
+		// bAtomList[i].residueIndex = 1;
+		bAtomList[i].setResidueName(amberReader->getResidueLabel(i));
+		bAtomList[i].residueIndex = amberReader->getResidueIndex(i);
+
+		// Assign a unique atom name
+		bAtomList[i].setName(
+			bAtomList[i].getResidueName() + std::to_string(bAtomList[i].residueIndex) + "-" +
+			bAtomList[i].getFftype() + "-" +
+			std::to_string(bAtomList[i].getNumber())
+		);
+
+		std::cout << "Added atom with name " << bAtomList[i].getName() << std::endl;
 
 		// Add element to cache
 		elementCache.addElement(atomicNumber, mass);
@@ -134,6 +142,8 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 		bonds[i].setIndex(i);
 		bonds[i].i = amberReader->getBondsAtomsIndex1(i);
 		bonds[i].j = amberReader->getBondsAtomsIndex2(i);
+		bonds[i].setForceK(amberReader->getBondsForceK(i));
+		bonds[i].setForceEquil(amberReader->getBondsEqval(i));
 
 		// BAD! this will break if we invalidate the bonds vector
 		bAtomList[bonds[i].i].addNeighbor(&bAtomList[bonds[i].j]);
@@ -148,6 +158,71 @@ void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 	for(int i = 0; i < natoms ; i++) {
 		bAtomList[i].setNbonds(bAtomList[i].bondsInvolved.size());
 		bAtomList[i].setFreebonds(bAtomList[i].bondsInvolved.size());
+	}
+
+	// add angles parameters
+	dummAngles.resize(amberReader->getNumberAngles());
+	for (int i = 0; i < amberReader->getNumberAngles(); i++) {
+		dummAngles[i].k = amberReader->getAnglesForceK(i);
+		dummAngles[i].equil = amberReader->getAnglesEqval(i);
+		dummAngles[i].first = amberReader->getAnglesAtomsIndex1(i);
+		dummAngles[i].second = amberReader->getAnglesAtomsIndex2(i);
+		dummAngles[i].third = amberReader->getAnglesAtomsIndex3(i);
+	}
+
+
+
+
+	// There are multiple torsions defined with the same four indices
+	// This vector shows us where each torsion begins (first) and how long it is (second)
+	std::vector<std::pair<int, int>> pairStartAndLens = amberReader->getPairStartAndLen();
+
+	for(const auto& tor : pairStartAndLens){
+		int t = tor.first;
+		int periodicity = tor.second;
+
+		// Fill this torsion
+		DUMM_TORSION dummTorsion;
+		dummTorsion.num = periodicity;
+
+		// Check if a quad of atom indices is a normal dihedral or an improper dihedral, by checking if consecutive atoms are bonded
+		// TODO: amberReader getDihedralsAtomsIndex4() is negative if this is an improper, but we never look at it and even abs() it
+		dummTorsion.first = amberReader->getDihedralsAtomsIndex1(tor.first);
+		dummTorsion.second = amberReader->getDihedralsAtomsIndex2(tor.first);
+		dummTorsion.third = amberReader->getDihedralsAtomsIndex3(tor.first);
+		dummTorsion.fourth = amberReader->getDihedralsAtomsIndex4(tor.first);
+
+		if (checkBond(dummTorsion.first, dummTorsion.second) &&
+			checkBond(dummTorsion.second, dummTorsion.third) &&
+			checkBond(dummTorsion.third, dummTorsion.fourth)) {
+			dummTorsion.improper = false;
+		} else {
+			dummTorsion.improper = true;
+		}
+
+		// Define parameters
+		if (periodicity >= 1) {
+			dummTorsion.period[0] = static_cast<int>(amberReader->getDihedralsPeriod(t));
+			dummTorsion.k[0] = amberReader->getDihedralsForceK(t);
+			dummTorsion.phase[0] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
+		}
+		if (periodicity >= 2) {
+			dummTorsion.period[1] = static_cast<int>(amberReader->getDihedralsPeriod(t + 1));
+			dummTorsion.k[1] = amberReader->getDihedralsForceK(t + 1);
+			dummTorsion.phase[1] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t + 1)));
+		}
+		if (periodicity >= 3) {
+			dummTorsion.period[2] = static_cast<int>(amberReader->getDihedralsPeriod(t + 2));
+			dummTorsion.k[2] = amberReader->getDihedralsForceK(t + 2);
+			dummTorsion.phase[2] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t + 2)));
+		}
+		if (periodicity >= 4) {
+			dummTorsion.period[3] = static_cast<int>(amberReader->getDihedralsPeriod(t + 3));
+			dummTorsion.k[3] = amberReader->getDihedralsForceK(t + 3);
+			dummTorsion.phase[3] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t + 3)));
+		}
+
+		dummTorsions.push_back(dummTorsion);
 	}
 }
 
@@ -283,6 +358,8 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				if (nofProcesses == 2) {
 					if (baseSetFlag == 0) {
 						this->setBaseAtom(previousNode->getSingleAtom());
+
+						// replace this-name with previousNode->getResidueName()
 						this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
 						this->convertInboardBondCenterToOutboard();
 						baseSetFlag = 1;
@@ -294,10 +371,13 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				if (previousNode->getNumber() == baseAtomNumber) {
 					parentBondCenterPathName << previousNode->getName()
 						<< "/bond" << previousNode->getFreebonds();
+						std::cout << "BASE ";
 				} else {
 					parentBondCenterPathName << previousNode->getName()
 						<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
 				}
+
+				std::cout << previousNode->getName() << " " << node->getName() << " " << parentBondCenterPathName.str() << std::endl;
 
 				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
 				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
@@ -345,7 +425,6 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				// Bond was inserted in Molmodel Compound. Get out and search
 				// the next bond
 				break;
-
 			}
 		}
 	}
@@ -431,18 +510,24 @@ void Topology::addRingClosingBonds() {
 
 /** Match Default configuration with the coordinates loaded from
  * the input reader **/
-void Topology::matchDefaultConfigurationWithAtomList(
+SimTK::Real Topology::matchDefaultConfigurationWithAtomList(
 		SimTK::Compound::MatchStratagem matchStratagem)
 {
 	// Assign Compound coordinates by matching bAtomList coordinates
-	std::map<AtomIndex, Vec3> atomTargets;
-	for(int ix = 0; ix < getNumAtoms(); ++ix){
-		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
+	AtomTargetLocations atomTargets;
+	for(const auto& atom : bAtomList){
+		Vec3 vec(atom.getX(), atom.getY(), atom.getZ());
+		atomTargets.insert(std::make_pair(atom.getCompoundAtomIndex(), vec));
 	}
 
 	matchDefaultConfiguration(atomTargets, matchStratagem, true, 150.0);
+
+	const auto res = getTransformAndResidual(atomTargets);
+	std::cout << "getTransformAndResidual().residual: " << res.residual << std::endl;
+	std::cout << "getTransformAndResidual().transform: " << res.transform << std::endl;
+
 	std::cout << "Gmolmodel Topology match done" << std::endl;
+	return res.residual;
 }
 
 /** Builds the molecular tree, closes the rings, matches the configuration
@@ -451,58 +536,161 @@ general flexibility of the molecule. **/
 // TODO: break in two functions
 void Topology::buildGraphAndMatchCoords(int argRoot)
 {
-	// Initialize all atoms and bonds to unvisited
-	for (int i = 0; i < natoms; i++) {
-		bAtomList[i].setVisited(0);
-	}
-	for (int i = 0; i < nbonds; i++) {
-		bonds[i].setVisited(0);
-	}
+	InternalCoordinates bat;
+	bat.compute(bAtomList);
 
-	// Find an atom to be the root. It has to have more than one bond
-	bSpecificAtom *root = nullptr;
-	if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
-		baseAtomNumber = argRoot;
-		root = &(bAtomList[argRoot]);
-		bSpecificAtomRootIndex = argRoot;
-	}else {
-		std::cout << "Root atom will be chosen by Gmolmodel...  ";
-		int baseAtomListIndex = 0;
-		for (int i = 0; i < natoms; i++) {
-			if (bAtomList[i].getNBonds() > 1) {
-				baseAtomListIndex = i;
-				std::cout << "done. Root chosen " << i << std::endl;
-				break;
+	const std::string resName = "TOP0";
+
+	bool isFirst = true;
+	for (const auto& level : bat.getGraphedBonds()) {
+		std::cout << "LEVEL " << std::endl;
+
+		for (const auto& b : level) {
+			std::stringstream bondCenter;
+			auto& dst = bAtomList[b.first];
+			auto& src = bAtomList[b.second];
+
+			if (isFirst) {
+				this->setBaseAtom(src.getSingleAtom());
+				this->setAtomBiotype(src.getName(), src.getResidueName(), src.getName());
+				this->convertInboardBondCenterToOutboard();
+				bondCenter << src.getName() << "/bond";
+			} else {
+				bondCenter << src.getName() << "/bond" << (src.getNBonds() - src.getFreebonds() + 1);
 			}
+			
+			std::cout << dst.getName() << " " << src.getName() << " " << bondCenter.str() << " " << std::endl;
+
+			this->bondAtom(dst.getSingleAtom(), bondCenter.str().c_str(), 0.149, 0);
+			this->setAtomBiotype(dst.getName(), (this->name).c_str(), dst.getName());
+
+			dst.setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1));
+			if (isFirst) {
+				src.setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0));
+				isFirst = false;
+			}
+
+			dst.decrFreebonds();
+			src.decrFreebonds();
 		}
-
-		root = &(bAtomList[baseAtomListIndex]);
-		bSpecificAtomRootIndex = baseAtomListIndex;
-		baseAtomNumber = root->getNumber();
 	}
 
-	// Build the graph
-	if(bAtomList.size() == 1){
-		this->setBaseAtom(bAtomList[0].getSingleAtom());
-		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
-		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
-	}else{
-		nofProcesses = 0;
-		buildAcyclicGraph(root, root);
-		std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
-	}
+	// TODO add ring closings
 
-	// Close the remaining bonds
-	addRingClosingBonds();
-    std::cout << "Topology::buildGraphAndMatcoords  addRingClosingBonds done\n" << std::flush;
+	// matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
 
-	// Build the conformation
-	matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
+	// // Now that everything is built, initialize aIx2TopTransforms map
+	// for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+	// 	aIx2TopTransform.insert(std::make_pair((bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
+	// }
 
-	// Now that everything is built, initialize aIx2TopTransforms map
-	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
-	}
+	// // Print the bonds
+	// bool isFirst = true;
+	// for (const auto& b : bat.getBonds()) {
+	// 	auto& dst = bAtomList[b.first];
+	// 	auto& src = bAtomList[b.second];
+	// 	std::stringstream parentBondCenterPathName;
+
+	// 	if (isFirst) {
+	// 		this->setBaseAtom(dst.getSingleAtom());
+	// 		this->setAtomBiotype(dst.getName(), (this->name), dst.getName());
+	// 		this->convertInboardBondCenterToOutboard();
+	// 		parentBondCenterPathName << src.getName() << "/bond" << src.getFreebonds();
+
+	// 		isFirst = false;
+	// 		// std::cout << "BASE ";
+	// 		std::cout << "First bond: " << b.first << " " << b.second << std::endl;
+	// 	} else {
+	// 		std::cout << "Bond: " << b.first << " " << b.second << std::endl;
+	// 		parentBondCenterPathName << dst.getName() << "/bond" << (dst.getNBonds() - dst.getFreebonds() + 1);
+	// 	}
+
+	// 	std::cout << dst.getName() << " " << src.getName() << " " << parentBondCenterPathName.str() << std::endl;
+
+	// 	// this->bondAtom(src.getSingleAtom(), (parentBondCenterPathName.str()).c_str(), 0.149, 0);
+
+	// 	// // Set the final Biotype
+	// 	// this->setAtomBiotype(src.getName(), (this->name).c_str(), src.getName());
+
+	// 	// // Set bSpecificAtom atomIndex to the last atom added to bond
+	// 	// src.setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1));
+
+
+	// 	// The only time we have to set atomIndex to the previous node
+	// 	if (nofProcesses == 2) {
+	// 		dst.setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0));
+	// 	}
+
+	// 	// // Set bBond Molmodel Compound::BondIndex
+	// 	// (*bondsInvolvedIter)->setBondIndex(Compound::BondIndex(getNumBonds() - 1));
+	// 	// std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
+	// 	// 		Compound::BondIndex(getNumBonds() - 1),
+	// 	// 		(*bondsInvolvedIter)->getIndex()
+	// 	// );
+
+	// 	// bondIx2GmolBond.insert(pairToBeInserted);
+
+	// 	// GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+	// 	// 		(*bondsInvolvedIter)->getIndex(),
+	// 	// 		Compound::BondIndex(getNumBonds() - 1)
+	// 	// ) );
+
+	// 	dst.decrFreebonds();
+	// 	src.decrFreebonds();
+	// }
+
+	// // Initialize all atoms and bonds to unvisited
+	// for (int i = 0; i < natoms; i++) {
+	// 	bAtomList[i].setVisited(0);
+	// }
+	// for (int i = 0; i < nbonds; i++) {
+	// 	bonds[i].setVisited(0);
+	// }
+
+	// // Find an atom to be the root. It has to have more than one bond
+	// bSpecificAtom *root = nullptr;
+	// if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
+	// 	baseAtomNumber = argRoot;
+	// 	root = &(bAtomList[argRoot]);
+	// 	bSpecificAtomRootIndex = argRoot;
+	// }else {
+	// 	std::cout << "Root atom will be chosen by Gmolmodel...  ";
+	// 	int baseAtomListIndex = 0;
+	// 	for (int i = 0; i < natoms; i++) {
+	// 		if (bAtomList[i].getNBonds() > 1) {
+	// 			baseAtomListIndex = i;
+	// 			std::cout << "done. Root chosen " << i << std::endl;
+	// 			break;
+	// 		}
+	// 	}
+
+	// 	root = &(bAtomList[baseAtomListIndex]);
+	// 	bSpecificAtomRootIndex = baseAtomListIndex;
+	// 	baseAtomNumber = root->getNumber();
+	// }
+
+	// // Build the graph
+	// if(bAtomList.size() == 1){
+	// 	this->setBaseAtom(bAtomList[0].getSingleAtom());
+	// 	(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
+	// 	std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
+	// }else{
+	// 	nofProcesses = 0;
+	// 	buildAcyclicGraph(root, root);
+	// 	std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
+	// }
+
+	// // Close the remaining bonds
+	// addRingClosingBonds();
+    // std::cout << "Topology::buildGraphAndMatcoords  addRingClosingBonds done\n" << std::flush;
+
+	// // Build the conformation
+	// matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
+
+	// // Now that everything is built, initialize aIx2TopTransforms map
+	// for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+	// 	aIx2TopTransform.insert(std::make_pair((bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
+	// }
 
 }
 
@@ -517,142 +705,35 @@ void Topology::generateDummAtomClasses(
 	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
 )
 {
-	// std::cout << "Topology::generateDummAtomClasses START\n";
+	for(auto& atom : bAtomList) {
 
-	// Declarations
-	std::vector<bool> founditInDuMM(
-		amberReader->getNumberAtoms(), false);
-
-	// Iterate Gmolmodel atoms and define AtomClasses based on
-	for(int i = 0; i < amberReader->getNumberAtoms(); i++){
-
-		// Get AtomClass parameters from bAtomList info
-		AtomClassParams atomClassParams(
-			bAtomList[i].getAtomicNumber(),
-			bAtomList[i].getNBonds(),
-			bAtomList[i].getVdwRadius() / 10.0, // nm
-			bAtomList[i].getLJWellDepth() * 4.184 // kcal to kJ
+		// Create the atom class
+		const auto atomClassIndex = dumm.getNextUnusedAtomClassIndex();
+		dumm.defineAtomClass(atomClassIndex,
+			atom.getName().c_str(),
+			atom.getAtomicNumber(),
+			atom.getNBonds(),
+			atom.getVdwRadius() / 10.0, // nm
+			atom.getLJWellDepth() * 4.184 // kcal to kJ
 		);
 
-		SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
-		std::string atomClassName;
+		atom.setDummAtomClassIndex(atomClassIndex);
 
-		// Check if we already have this Atom Class in this Topology
-		bool founditInThisTopology = false;
-		std::map<AtomClassParams, AtomClassId>::const_iterator aCP2aCI_iter;
-		for (aCP2aCI_iter  = aClassParams2aClassId.begin();
-			 aCP2aCI_iter != aClassParams2aClassId.end();
-		   ++aCP2aCI_iter)
-		{
-			//if(aCP2aCI_iter->first == atomClassParams)
-			if((aCP2aCI_iter->second).name == bAtomList[i].getFftype())
-			{
-				founditInThisTopology = true;
-				break;
-			}
-		}
-
-		// Further search in DuMM
-		if(!founditInThisTopology){
-			std::string str(bAtomList[i].getFftype());
-			const SimTK::String simtkstr(str);
-			founditInDuMM[i] = dumm.hasAtomClass(simtkstr);
-		}
-
-		/* std::cout << "Topology::generateDummAtomClasses try AtomClassName " 
-			<< " " << bAtomList[i].getFftype() << " "
-			<< founditInThisTopology << " " << founditInDuMM[i];
-		atomClassParams.dump(); */
-
-		// we don't have this AtomClass
-		if ( (!founditInThisTopology) && (!founditInDuMM[i]) ) {
-
-			// Get an AtomClass index from DuMM
-			dummAtomClassIndex = dumm.getNextUnusedAtomClassIndex();
-		
-			// Define an AtomClass name
-			atomClassName = bAtomList[i].getFftype();
-
-			//std::cout << "!foundit aCIx atomClassName " << aCIx << " "
-			//	<< atomClassName  << std::endl;
-
-			// Define an AtomClass
-			dumm.defineAtomClass(dummAtomClassIndex,
-				atomClassName.c_str(),
-				atomClassParams.atomicNumber,
-				atomClassParams.valence,
-				atomClassParams.vdwRadius,
-				atomClassParams.LJWellDepth
-			);
-
-			/* std::cout << "Topology::generateDummAtomClasses insert AtomClassIndex AtomClassName " 
-				<< dummAtomClassIndex << " " << atomClassName ;
-			atomClassParams.dump(); */
-
-			// Insert an entry in our map too
-			AtomClassId atomClassId(dummAtomClassIndex, atomClassName);
-			aClassParams2aClassId.insert( std::make_pair(atomClassParams, atomClassId) );
-
-		}else{ // we already have this AtomClass
-
-			if(!founditInDuMM[i]){
-				//aClassParams2aClassId.at(atomParams);
-				//AtomClassId& atomClassId = aClassParams2aClassId.at(atomParams);
-				const AtomClassId& atomClassId = aCP2aCI_iter->second;
-
-				dummAtomClassIndex = atomClassId.dummAtomClassIndex;
-
-				//atomClassName = atomClassId.name;
-		
-				//std::cout << "foundit  aCIx atomClassName " << aCIx << " " << atomClassName << std::endl;
-			}else{
-				dummAtomClassIndex = dumm.getAtomClassIndex(bAtomList[i].getFftype());
-				//atomClassName = bAtomList[i].getFftype();
-			}
-
-		}
-
-		// Insert AtomClass index in Gmolmodel atom list too
-		bAtomList[i].setDummAtomClassIndex(dummAtomClassIndex);
-
-	} // --------------------------- DONE AmberReader atoms
-
-
-
-	// Define ChargedAtomTypeIndeces
-	SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
-	std::string chargedAtomTypeName;
-
-	// Iterate through atoms and define DuMM charged atom types
-	for(int k = 0; k < amberReader->getNumberAtoms(); k++){
-
-		// Get a ChargedAtomType index
-		chargedAtomTypeIndex = dumm.getNextUnusedChargedAtomTypeIndex();
-		bAtomList[k].setChargedAtomTypeIndex(chargedAtomTypeIndex);
-
-		// Define a chargedAtomType name
-		chargedAtomTypeName =  resName;
-		chargedAtomTypeName += bAtomList[k].getBiotype();
-
-		// Define a ChargedAtomType (AtomClass with a charge)
+		// Create charged atom type
+		const auto chargedAtomTypeIndex = dumm.getNextUnusedChargedAtomTypeIndex();
 		dumm.defineChargedAtomType(
-		chargedAtomTypeIndex,
-		chargedAtomTypeName.c_str(),
-		bAtomList[k].getDummAtomClassIndex(),
-		bAtomList[k].charge
+			chargedAtomTypeIndex,
+			atom.getName().c_str(),
+			atomClassIndex,
+			atom.charge
 		);
-		/*std::cout << "Defined chargedAtomType " << chargedAtomTypeName 
-			<< " with chargedAtomTypeIndex " << chargedAtomTypeIndex
-			<< std::endl; */
 
-		// Associate a ChargedAtomTypeIndex with a Biotype index
+		atom.setChargedAtomTypeIndex(chargedAtomTypeIndex);
 		dumm.setBiotypeChargedAtomType(
-		bAtomList[k].getChargedAtomTypeIndex(),
-		bAtomList[k].getBiotypeIndex()
+			atom.getChargedAtomTypeIndex(),
+			atom.getBiotypeIndex()
 		);
-
 	}
-
 }
 
 //TODO: DELETE // NO LONGER NEEDED
@@ -770,46 +851,12 @@ void Topology::bAddDummBondParams(std::string,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs)
 {
-
-	// Keep track of inserted AtomClass pairs
-	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
-
-	// Iterate through bonds and define their parameters
-	// Suppose or try to have the same order as the reader
-	for(int t = 0; t < amberReader->getNumberBonds(); t++){
-		
-		// Generate a pair of atom classes for this bond
-		std::vector<SimTK::DuMM::AtomClassIndex> thisBondACIxs;
-		thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			(bAtomList[bonds[t].i]).getDummAtomClassIndex()) );
-		thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			(bAtomList[bonds[t].j]).getDummAtomClassIndex()) );
-
-		// Check if we already have this bond
-		bool foundit = false;
-		for(auto& row:allBondsACIxs){
-			if ( IsTheSameBond (thisBondACIxs, row) ){
-				foundit = true;	break;
-			}
-		}
-
-		if (  !foundit ){ // bond was not found
-
-			/* std::cout << "Topology::bAddDummBondParams " 
-				<< thisBondACIxs[0] << " "
-				<< thisBondACIxs[1] << std::endl; */
-		
-			dumm.defineBondStretch_KA(
-				(bAtomList[bonds[t].i]).getDummAtomClassIndex(),
-				(bAtomList[bonds[t].j]).getDummAtomClassIndex(),
-				amberReader->getBondsForceK(t),  //k1
-				amberReader->getBondsEqval(t)   //equil1
-			);
-
-			// Put the entry in our map too
-			allBondsACIxs.push_back(thisBondACIxs);
-
-		}
+	for (const auto& b : bonds) {
+		dumm.defineBondStretch_KA(
+			bAtomList[b.i].getDummAtomClassIndex(),
+			bAtomList[b.j].getDummAtomClassIndex(),
+			b.getForceK(),
+			b.getForceEquil());
 	}
 }
 
@@ -832,49 +879,13 @@ void Topology::bAddDummAngleParams(std::string,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs)
 {
-
-	// Keep track of inserted AtomClass pairs
-	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
-
-	// Iterate angles and define their parameters
-	for(int t = 0; t < amberReader->getNumberAngles(); t++){
-
-		// Generate a triple of atom class indexes for this angle
-		std::vector<SimTK::DuMM::AtomClassIndex> thisAngleACIxs;
-		thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			bAtomList[amberReader->getAnglesAtomsIndex1(t)].getDummAtomClassIndex()) );
-		thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			bAtomList[amberReader->getAnglesAtomsIndex2(t)].getDummAtomClassIndex()) );
-		thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-			bAtomList[amberReader->getAnglesAtomsIndex3(t)].getDummAtomClassIndex()) );
-
-		// Check if we already have this angle
-		bool foundit = false;
-		for(auto& row:allAnglesACIxs){
-			if ( IsTheSameAngle (thisAngleACIxs, row) ){
-				foundit = true;	break;
-			}
-		}
-
-		if (  !foundit ){ // angle was not found
-
-			/* std::cout << "Topology::bAddDummAngleParams " 
-				<< thisAngleACIxs[0] << " "
-				<< thisAngleACIxs[1] << " "
-				<< thisAngleACIxs[2] << std::endl; */
-		
-			dumm.defineBondBend_KA(
-				bAtomList[amberReader->getAnglesAtomsIndex1(t)].getDummAtomClassIndex(),
-				bAtomList[amberReader->getAnglesAtomsIndex2(t)].getDummAtomClassIndex(),
-				bAtomList[amberReader->getAnglesAtomsIndex3(t)].getDummAtomClassIndex(),
-				amberReader->getAnglesForceK(t),
-				static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
-					* amberReader->getAnglesEqval(t))) // TODO 32 vs 64 bit
-			);
-
-			// Put the entry in our map too
-			allAnglesACIxs.push_back(thisAngleACIxs);
-		}
+	for (const auto& angle : dummAngles) {
+		dumm.defineBondBend_KA(
+			bAtomList[angle.first].getDummAtomClassIndex(),
+			bAtomList[angle.second].getDummAtomClassIndex(),
+			bAtomList[angle.third].getDummAtomClassIndex(),
+			angle.k,
+			static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * angle.equil)));	
 	}
 }
 
@@ -890,274 +901,64 @@ void Topology::bAddDummTorsionParams(
 
 )
 {
-	// Keep track of inserted AtomClass pairs
-	//std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+	for (const auto& torsion : dummTorsions) {
+		// Get atom class indices
+		const auto aCIx1 = bAtomList[torsion.first].getDummAtomClassIndex();
+		const auto aCIx2 = bAtomList[torsion.second].getDummAtomClassIndex();
+		const auto aCIx3 = bAtomList[torsion.third].getDummAtomClassIndex();
+		const auto aCIx4 = bAtomList[torsion.fourth].getDummAtomClassIndex();
 
-	std::cout << "Topology::bAddDummTorsionParams allDihedralsACIxs\n";
-	//PrintCppVector(allDihedralsACIxs);
-
-	// Amber reader dihedrals vector
-	std::vector<std::pair<int, int>> pairStartAndLens =
-		amberReader->getPairStartAndLen();
-
-	for(unsigned int index=0; index<pairStartAndLens.size(); index++){
-
-		// Get start and len of this dihedral
-		int first    = pairStartAndLens[index].first;
-		int t        = pairStartAndLens[index].first;
-		int numberOf = pairStartAndLens[index].second;
-
-		// Iterate through this dihedral definitions
-		//for(int t = first; t < (first + numberOf); t++){
-
-			// Get AtomClass indeces first
-			SimTK::DuMM::AtomClassIndex aCIx1 =
-				bAtomList[amberReader->getDihedralsAtomsIndex1(t)].getDummAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx2 =
-				bAtomList[amberReader->getDihedralsAtomsIndex2(t)].getDummAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx3 =
-				bAtomList[amberReader->getDihedralsAtomsIndex3(t)].getDummAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx4 =
-				bAtomList[amberReader->getDihedralsAtomsIndex4(t)].getDummAtomClassIndex();
-
-			/* std::cout << "Topology::bAddDummDihedralParams checking " 
-				<< amberReader->getDihedralsAtomsIndex1(t) << " " << amberReader->getDihedralsAtomsIndex2(t) << " "
-				<< amberReader->getDihedralsAtomsIndex3(t) << " " << amberReader->getDihedralsAtomsIndex4(t) << " :| "
-				<< first << " " << t << " " << numberOf << " | " << " forceK: " 
-				<< SimTK_KCAL_TO_KJOULE * amberReader->getDihedralsForceK(t) << " period " 
-				<< amberReader->getDihedralsPeriod(t)
-				<< " phase: " << amberReader->getDihedralsPhase(t) << " | "
-				<< aCIx1 << " " << aCIx2 << " " << aCIx3 << " " << aCIx4
-				<< std::endl; */
-
-			// Check if a quad of atom indices is a normal dihedral
-			// or an improper dihedral, by checking if consecutive
-			// atoms are bonded 
-
-			int amber_aIx_1 = amberReader->getDihedralsAtomsIndex1(t);
-			int amber_aIx_2 = amberReader->getDihedralsAtomsIndex2(t);
-			int amber_aIx_3 = amberReader->getDihedralsAtomsIndex3(t);
-			int amber_aIx_4 = amberReader->getDihedralsAtomsIndex4(t);
-
-			bool dihedral=false;
-			bool improper=true;
-
-			if (checkBond(amber_aIx_1, amber_aIx_2) &&
-				checkBond(amber_aIx_2, amber_aIx_3) &&
-				checkBond(amber_aIx_3, amber_aIx_4))
-			{
-				dihedral = true;
-				improper = false;
-			}
-			
-			// Generate a quad of atom class indexes for this dihedral, 
-			// regardless of whether it's a torsion or an improper
-			std::vector<SimTK::DuMM::AtomClassIndex> thisDihedralACIxs;
-			thisDihedralACIxs.push_back(aCIx1);
-			thisDihedralACIxs.push_back(aCIx2);
-			thisDihedralACIxs.push_back(aCIx3);
-			thisDihedralACIxs.push_back(aCIx4);
-
-
-/* 			// Check if this is a regular dihedral angle or an improper,
-			// by checking if the atoms are bonded in the order they appear.
-			int amber_aIx_1 = amberReader->getDihedralsAtomsIndex1(t);
-			int amber_aIx_2 = amberReader->getDihedralsAtomsIndex2(t);
-			int amber_aIx_3 = amberReader->getDihedralsAtomsIndex3(t);
-			int amber_aIx_4 = amberReader->getDihedralsAtomsIndex4(t);
-
-			if (checkBond(amber_aIx_1, amber_aIx_2) &&
-				checkBond(amber_aIx_2, amber_aIx_3) &&
-				checkBond(amber_aIx_3, amber_aIx_4))
-			{
-				
-				printf ("%d %d %d %d is a normal angle\n", amber_aIx_1, amber_aIx_2, amber_aIx_3, amber_aIx_4);
-			}
-			else
-			{
-				// call defineAmberImproperTorsion_KA if this is the case
-				printf("%d %d %d %d is an improper angle\n", amber_aIx_1, amber_aIx_2, amber_aIx_3, amber_aIx_4);
-			} */
-
-			if (dihedral){
-				/* for (int tempVar=0; tempVar<numberOf; tempVar++)
-					std::cout << "found dihedral angle!\n"; */
-				// If it is a normal dihedral, check if we have it in our
-				// dihedral list
-				bool foundit = false;
-				//printf("allDihedralsACIxs.size: %d\n", allDihedralsACIxs.size());
-
-				for(auto& row:allDihedralsACIxs)
-				{
-					if ( IsTheSameTorsion (thisDihedralACIxs, row))
-					{
-						foundit = true;	break;
-					}
-				}
-
-				if (!foundit){ // dihedral was not found
-
-					/* std::cout << "Topology::bAddDummDihedralParams insert " 
-						<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
-						<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
-						<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
-						<< " ;| " << amberReader->getDihedralsForceK(t) 
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))); */
-					/* if(numberOf == 2){std::cout
-						<< " | " << amberReader->getDihedralsForceK(t+1)
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
-					if(numberOf == 3){std::cout
-						<< " | " << amberReader->getDihedralsForceK(t+2)
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
-					if(numberOf ==4){std::cout
-						<< " | " << amberReader->getDihedralsForceK(t+3)
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
-					if(numberOf ==5){std::cout
-						<< " | " << amberReader->getDihedralsForceK(t+4)
-						<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+4)));}
-					std::cout << std::endl << std::flush; */
-
-					// Define the dihedrals
-					if(numberOf == 1){
-						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)))
-						);
-					}
-					else if(numberOf == 2){
-						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-							static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t + 1),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)))
-						);
-					}
-					else if(numberOf == 3){
-						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-							static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t + 1),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
-							static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t + 2),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
-						);
-					}else if (numberOf == 4){
-						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-							static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-							static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t + 1),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
-							static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t + 2),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2))),
-							static_cast<int>(amberReader->getDihedralsPeriod(t+ 3)), // TODO wants int, returns double
-							amberReader->getDihedralsForceK(t+3),
-							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)))
-						);
-					}else if (numberOf == 5){
-						// dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						// 	static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						// 	amberReader->getDihedralsForceK(t),
-						// 	static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-						// 	static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-						// 	amberReader->getDihedralsForceK(t + 1),
-						// 	static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
-						// 	static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
-						// 	amberReader->getDihedralsForceK(t + 2),
-						// 	static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2))),
-						// 	static_cast<int>(amberReader->getDihedralsPeriod(t+ 3)), // TODO wants int, returns double
-						// 	amberReader->getDihedralsForceK(t+3),
-						// 	static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3))),
-						// 	static_cast<int>(amberReader->getDihedralsPeriod(t+ 4)), // TODO wants int, returns double
-						// 	amberReader->getDihedralsForceK(t+4),
-						// 	static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+4)))
-						// );
-					}
-					
-					// Add the dihedral to the list of impropers.
-					allDihedralsACIxs.push_back(thisDihedralACIxs);
-
-				} // END of not foundit
-		
-			}
-			
-			if (improper){
-			// If it is an improper dihedral, we check if it exitsts, without
-			// checking for the reverse (order matters for impropers)
-
-			bool foundit = false;
-			for(auto& row:allImpropersACIxs){
-				if ((thisDihedralACIxs == row))
-					{
-					foundit = true;	
+		// Define dihedrals
+		if (!torsion.improper) {
+			switch(torsion.num) {
+				case 1:
+					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0]);
 					break;
-					}
-				}
-			
-			if (!foundit){ // improper was not found
+					
+				case 2:
+					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1]);
+					break;
 
-				/* std::cout << "*** improper inserted: " 
-					<< thisDihedralACIxs[0] << " " << thisDihedralACIxs[1] << " "
-					<< thisDihedralACIxs[2] << " " << thisDihedralACIxs[3] << " := " 
-					<< numberOf << " " << amberReader->getDihedralsPeriod(t) 
-					<< " ;| " << amberReader->getDihedralsForceK(t) 
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)));
-				if(numberOf == 2){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+1)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)));}
-				if(numberOf == 3){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+2)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)));}
-				if(numberOf > 3){std::cout
-					<< " | " << amberReader->getDihedralsForceK(t+3)
-					<< " " << (ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+3)));}
-				std::cout << std::endl << std::flush; */
+				case 3:
+					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2]);
+					break;
 
-				// Define the dihedrals
-				if(numberOf == 1){
-					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t)))
-					);
-				}
-				else if(numberOf == 2){
-					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 1),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1)))
-					);
-				}
-				else if(numberOf == 3){
-					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						static_cast<int>(amberReader->getDihedralsPeriod(t)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 1)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 1),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+1))),
-						static_cast<int>(amberReader->getDihedralsPeriod(t + 2)), // TODO wants int, returns double
-						amberReader->getDihedralsForceK(t + 2),
-						static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader->getDihedralsPhase(t+2)))
-					);
-				}
-				// Add the improper to the list of impropers.
-				allImpropersACIxs.push_back(thisDihedralACIxs);
+				case 4:
+					dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2],
+						torsion.period[3], torsion.k[3], torsion.phase[3]);
+					break;
 			}
-			}	
+		} else {
+			// Define impropers
+			switch(torsion.num) {
+				case 1:
+					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0]);
+					break;
+					
+				case 2:
+					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1]);
+					break;
 
-
+				case 3:
+					dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2]);
+					break;
+			}
+		}
 	}
 }
 
@@ -1176,10 +977,10 @@ void Topology::generateDummParams(
 	// We don't have any residues. The whole molecule is one residue
 	std::string resName = this->name;
 
-	// Add types
+	// Add atom classes: these are basically ff types
 	generateDummAtomClasses(resName, amberReader, dumm, aClassParams2aClassId);
 
-	// Add parameters
+	// Add parameters: they are created using previously registered ff types (see above)
 	bAddDummBondParams(resName, amberReader, dumm, allBondsACIxs);
 	bAddDummAngleParams(resName, amberReader, dumm, allAnglesACIxs);
 	bAddDummTorsionParams(resName, amberReader, dumm, allDihedralsACIxs, allImpropersACIxs);
@@ -1292,6 +1093,14 @@ void Topology::loadTriples()
 		}
 
 	} // END Iterate bondedAtomRuns
+
+	// print triples
+	std::cout << "Topology triples: " << std::endl ;
+	for(auto triple: triples){
+		for(auto aIx: triple){std::cout << " " << aIx;}; std::cout << std::endl;
+	}
+	std::cout << "==========================" << std::endl;
+
 }
 
 // Numerically unstable around -pi, 0 and pi due to the log(0)
@@ -1724,6 +1533,9 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
 			bonds[r].addBondMobility(BondMobility::Rigid); // TODO: Change to rigid
 		}
+
+		// const auto& i = getImpl();
+		// i.getBondCenter(0);
 
 		// Get flexible bonds from file. Numbering starts at 0 in prmtop
 		std::string line;

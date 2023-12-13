@@ -2,9 +2,33 @@
 
 using namespace SimTK;
 
-void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
+bool bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
     const std::string& atomName = getName();
     const int numAtomBonds = getNBonds();
+
+    // compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
+
+    // // Add BondCenters
+	// const int currAtomNBonds = getNBonds();
+	// if(currAtomNBonds > 0){
+    //     Angle TetrahedralAngle = 109.47 * Deg2Rad;
+
+	// 	if (currAtomNBonds == 1){
+	// 		compoundSingleAtom->addFirstBondCenter("bond1", atomName);
+	// 	} else {
+	// 		compoundSingleAtom->addFirstTwoBondCenters("bond1", "bond2", atomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
+	// 		if (currAtomNBonds > 2) {
+	// 			compoundSingleAtom->addLeftHandedBondCenter("bond3", atomName, TetrahedralAngle, TetrahedralAngle);
+	// 		}
+	// 		if (currAtomNBonds > 3){
+	// 			compoundSingleAtom->addRightHandedBondCenter("bond4", atomName, TetrahedralAngle, TetrahedralAngle);
+	// 		}
+	// 	}
+
+	// 	// Set the inboard BondCenter
+	// 	compoundSingleAtom->setInboardBondCenter("bond1");
+	// 	compoundSingleAtom->setDefaultInboardBondLength(0.19);
+    // }
     
     switch (numAtomBonds) {
         case 0:
@@ -12,19 +36,29 @@ void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
             break;
         case 1:
             compoundSingleAtom = new SimTK::UnivalentAtom(atomName, element);
+            std::cout << atomName << " " << compoundSingleAtom->hasBondCenter(atomName + "/bond1") << std::endl;
             break;
         case 2:
             compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
+            std::cout << atomName << " " << compoundSingleAtom->hasBondCenter(atomName + "/bond1")
+                << compoundSingleAtom->hasBondCenter(atomName + "/bond2") << std::endl;
             break;
         case 3:
             compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element);
+            std::cout << atomName << " " << compoundSingleAtom->hasBondCenter(atomName + "/bond1")
+                << compoundSingleAtom->hasBondCenter(atomName + "/bond3")
+                << compoundSingleAtom->hasBondCenter(atomName + "/bond4") << std::endl;
             break;
         case 4:
             compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element);
+            std::cout << atomName << " " << compoundSingleAtom->hasBondCenter(atomName + "/bond1")
+                << compoundSingleAtom->hasBondCenter(atomName + "/bond2")
+                << compoundSingleAtom->hasBondCenter(atomName + "/bond3")
+                << compoundSingleAtom->hasBondCenter(atomName + "/bond4") << std::endl;
             break;
         default:
             std::cerr << "[ERROR] Atom " << atomName << " has " << numAtomBonds << " bonds, which is not supported." << std::endl;
-            throw std::exception();
+            return false;
     }
 
     // q: how do i test that this works?
@@ -47,6 +81,8 @@ void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
 
     compoundSingleAtom->setCompoundName("SingleAtom");
     compoundSingleAtom->setDefaultInboardBondLength(0.19);
+
+    return true;
 }
 
 void bSpecificAtom::destroy() {
@@ -234,29 +270,9 @@ void bSpecificAtom::decrFreebonds(void)
      (this->freebonds)--;
 }
 
-// Set atom unique name
-void bSpecificAtom::generateName(int nameCounter) {
-    std::string string_name;
-    std::string aStr, bStr, cStr, dStr;
-    int a=65, b=65, c=65, d=65;
-    int aRest=0, bRest=0, cRest=0;
-
-    a = int(nameCounter / std::pow(25, 3));
-    aStr = (char)(a + 65);
-    aRest = nameCounter % int(std::pow(25, 3));
-
-    b = int(aRest / std::pow(25, 2));
-    bStr = (char)(b + 65);
-    bRest = aRest % int(std::pow(25, 2));
-
-    c = int(bRest / std::pow(25, 1));
-    cStr = (char)(c + 65);
-    cRest = bRest % int(std::pow(25, 1));
-
-    d = int(cRest / std::pow(25, 0));
-    dStr = (char)(d + 65);
-
-    name = aStr + bStr + cStr + dStr;
+void bSpecificAtom::setName(const std::string& name)
+{
+    this->name = name;
 }
 
 // Set initial name
@@ -365,7 +381,8 @@ void bSpecificAtom::setCharge(SimTK::Real inpCharge){
 // Get the atom class index
 DuMM::AtomClassIndex bSpecificAtom::getDummAtomClassIndex() const
 {
-    return this->dummAtomClassIndex;
+    // return this->dummAtomClassIndex;
+    return DuMM::AtomClassIndex(number);
 }
 
 // Set the atom class index
@@ -435,7 +452,8 @@ void bSpecificAtom::addBond(bBond *someBond)
 }
 
 DuMM::ChargedAtomTypeIndex bSpecificAtom::getChargedAtomTypeIndex() const {
-    return chargedAtomTypeIndex;
+    // return chargedAtomTypeIndex;
+    return DuMM::ChargedAtomTypeIndex(number);
 }
 
 void bSpecificAtom::setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIndex cAIx) {

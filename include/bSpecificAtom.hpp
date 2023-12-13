@@ -37,7 +37,7 @@ public:
     /**@{**/
 
     /** TODO comment. **/
-    void setAtomCompoundType(const SimTK::Element &element);
+    bool setAtomCompoundType(const SimTK::Element &element);
 
     /** TODO comment. **/
     void destroy();
@@ -49,7 +49,6 @@ public:
     int getNBonds() const;
     int getFreebonds() const;
     std::string getName() const;
-    void setName(const std::string& name);
 
     std::string getInName() const;
     int getNumber() const;
@@ -96,7 +95,7 @@ public:
     void incrFreebonds(void);
     void decrFreebonds(void);
 
-    void generateName(int index);
+    void setName(const std::string& name);
     void setInName(const std::string& name);
     void setNumber(int);
     void setElem(const std::string& elem);

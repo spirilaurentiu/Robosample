@@ -11,6 +11,14 @@ public:
     std::vector<bSpecificAtom> getAtoms() {
         return atoms;
     }
+
+    void testLoadAtoms(readAmberInput& reader) {
+        loadAtoms(reader);
+    }
+
+    void testLoadBonds(readAmberInput& reader) {
+        loadBonds(reader);
+    }
 };
 
 struct LEVEL_OFFSET_ATOM {
@@ -42,8 +50,12 @@ bool equal(const std::vector<T>& a, const std::vector<T>& b) {
 }
 
 bool test2But() {
+    readAmberInput reader;
+	reader.readAmberFiles("2but/ligand.inpcrd", "2but/ligand.prmtop");
+
     TEST_CONTEXT c;
-    c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
+    c.testLoadAtoms(reader);
+    c.testLoadBonds(reader);
 
     InternalCoordinates ic;
     ic.compute(c.getAtoms());
@@ -177,8 +189,12 @@ bool test2But() {
 }
 
 bool test3cycles() {
+    readAmberInput reader;
+	reader.readAmberFiles("3cycles/3cycles.rst7", "3cycles/3cycles.prmtop");
+
     TEST_CONTEXT c;
-    c.loadAmberSystem("3cycles/3cycles.prmtop", "3cycles/3cycles.rst7");
+    c.testLoadAtoms(reader);
+    c.testLoadBonds(reader);
 
     InternalCoordinates ic;
     ic.compute(c.getAtoms());

@@ -64,6 +64,22 @@
 //   return this->inring;
 // }
 
+void bBond::setForceK(SimTK::Real forceK) {
+	this->forceK = forceK;
+}
+
+SimTK::Real bBond::getForceK() const {
+	return this->forceK;
+}
+
+void bBond::setForceEquil(SimTK::Real forceEquil) {
+	this->forceEquil = forceEquil;
+}
+
+SimTK::Real bBond::getForceEquil() const {
+	return this->forceEquil;
+}
+
 bool bBond::isRingClosing() const {
   return this->ring_closing;
 }

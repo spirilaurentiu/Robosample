@@ -22,11 +22,23 @@ int main(int argc, char **argv)
 	}
 	
 	Context c;
-	if (!c.initializeFromFile(argv[1])) {
-		return -1;
-	}
 
-	c.Run();
+	// 3cycles/3cycles.rst7
+	c.addWorld(false);
+	// c.addWorld(false);
+	if (!c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.inpcrd")) {
+		return -1;
+	} else {
+		c.Run(1);
+		return 0;
+	}
+	
+	// if (!c.initializeFromFile(argv[1])) {
+	// 	return -1;
+	// }
+
+	std::cout << "Running Robosample...\n";
+	c.Run(1);
 		
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --

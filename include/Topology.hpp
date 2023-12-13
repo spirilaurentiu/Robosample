@@ -271,7 +271,7 @@ public:
 
 	/** Match Default configuration with the coordinates loaded from
 	 * the input reader **/
-	void matchDefaultConfigurationWithAtomList(
+	SimTK::Real matchDefaultConfigurationWithAtomList(
 			SimTK::Compound::MatchStratagem matchStratagem);
 
 	/** Builds the Compound's tree, closes the rings, matches the configuration
@@ -469,6 +469,9 @@ public:
 
 	int nbonds;
 	std::vector<bBond> bonds;
+
+	std::vector<DUMM_ANGLE> dummAngles;
+	std::vector<DUMM_TORSION> dummTorsions;
 
 	int nTriples;
 	std::vector< std::vector<Compound::AtomIndex> > triples;

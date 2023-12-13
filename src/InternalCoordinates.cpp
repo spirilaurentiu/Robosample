@@ -55,8 +55,8 @@ void InternalCoordinates::compute(const std::vector<bSpecificAtom>& bAtomList) {
 	selectAtom(root.third);
 
 	// add root bonds
-	bonds.push_back({ root.first, root.second });
-	bonds.push_back({ root.second, root.third });
+	bonds.push_back({ root.second, root.first });
+	bonds.push_back({ root.third, root.second });
 
 	while (selectedAtoms.size() < bAtomList.size()) {
 		for (int i = 0; i < selectedAtoms.size(); i++) {

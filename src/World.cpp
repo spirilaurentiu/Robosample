@@ -1,6 +1,186 @@
 #include "World.hpp"
 
+/*
 
+for molecule:
+	for level:
+		for off:
+			defineBiotype()
+			defineAtomClass()
+
+for molecule:
+	for bond:
+		defineBondStretch_KA()
+
+for molecule:
+	for angle:
+		defineBondBend_KA
+
+for molecule:
+	for dihedral:
+		defineBondTorsion_KA
+
+bondAtom1()
+setBaseAtom()
+for molecule:
+	for batBond:
+		bondAtoms()
+
+*/
+
+bool World::generateDummParams(const std::vector<bSpecificAtom>& atoms,
+		const std::vector<DUMM_ANGLE>& dummAngles,
+		const std::vector<DUMM_TORSION>& dummTorsions,
+		const ELEMENT_CACHE& elementCache) {
+
+	// Define atom classes and charged types
+	for(const auto& atom : atoms) {
+		forceField->defineAtomClass(atom.getDummAtomClassIndex(),
+			atom.getName().c_str(),
+			atom.getAtomicNumber(),
+			atom.getNBonds(),
+			atom.getVdwRadius() / 10.0, // nm
+			atom.getLJWellDepth() * 4.184 // kcal to kJ
+		);
+
+		// Create charged atom type
+		forceField->defineChargedAtomType(
+			atom.getChargedAtomTypeIndex(),
+			atom.getName().c_str(),
+			atom.getDummAtomClassIndex(),
+			atom.charge
+		);
+
+		forceField->setBiotypeChargedAtomType(
+			atom.getChargedAtomTypeIndex(),
+			atom.getBiotypeIndex()
+		);
+	}
+
+	// Define angles
+	for (const auto& angle : dummAngles) {
+		forceField->defineBondBend_KA(
+			atoms[angle.first].getDummAtomClassIndex(),
+			atoms[angle.second].getDummAtomClassIndex(),
+			atoms[angle.third].getDummAtomClassIndex(),
+			angle.k,
+			angle.equil);	
+	}
+
+	// Define torsions
+	for (const auto& torsion : dummTorsions) {
+		// Get atom class indices
+		const auto aCIx1 = atoms[torsion.first].getDummAtomClassIndex();
+		const auto aCIx2 = atoms[torsion.second].getDummAtomClassIndex();
+		const auto aCIx3 = atoms[torsion.third].getDummAtomClassIndex();
+		const auto aCIx4 = atoms[torsion.fourth].getDummAtomClassIndex();
+
+		// Define dihedrals
+		if (!torsion.improper) {
+			switch(torsion.num) {
+				case 1:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0]);
+					break;
+					
+				case 2:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1]);
+					break;
+
+				case 3:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2]);
+					break;
+
+				case 4:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2],
+						torsion.period[3], torsion.k[3], torsion.phase[3]);
+					break;
+			}
+		} else {
+			// Define impropers
+			switch(torsion.num) {
+				case 1:
+					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0]);
+					break;
+					
+				case 2:
+					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1]);
+					break;
+
+				case 3:
+					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2]);
+					break;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool World::buildTopologies(const InternalCoordinates& ic, std::vector<bSpecificAtom>& atoms) {
+	bool isFirst = true;
+
+	auto& t = _topologies[0];
+
+	for (const auto& level : ic.getGraphedBonds()) {
+		std::cout << "LEVEL " << std::endl;
+
+		for (const auto& b : level) {
+			std::stringstream bondCenter;
+			auto& dst = atoms[b.first];
+			auto& src = atoms[b.second];
+
+			if (isFirst) {
+				t.setBaseAtom(src.getSingleAtom());
+				t.setAtomBiotype(src.getName(), src.getResidueName(), src.getName());
+				t.convertInboardBondCenterToOutboard();
+				bondCenter << src.getName() << "/bond";
+			} else {
+				bondCenter << src.getName() << "/bond" << (src.getNBonds() - src.getFreebonds() + 1);
+			}
+			
+			std::cout << dst.getName() << " " << src.getName() << " " << bondCenter.str() << " " << std::endl;
+
+			t.bondAtom(dst.getSingleAtom(), bondCenter.str().c_str(), 0.149, 0);
+			t.setAtomBiotype(dst.getName(), dst.getName().c_str(), dst.getName());
+
+			dst.setCompoundAtomIndex(t.getBondAtomIndex(Compound::BondIndex(t.getNumBonds() - 1), 1));
+			if (isFirst) {
+				src.setCompoundAtomIndex(t.getBondAtomIndex(Compound::BondIndex(t.getNumBonds() - 1), 0));
+				isFirst = false;
+			}
+
+			dst.decrFreebonds();
+			src.decrFreebonds();
+		}
+	}
+
+	// TODO add ring closings
+
+	t.matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
+	// t.loadTriples();
+
+	// // Now that everything is built, initialize aIx2TopTransforms map
+	// for (unsigned int i = 0; i < t.getNumAtoms(); ++i) {
+	// 	aIx2TopTransform.insert(std::make_pair((bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
+	// }
+
+	return true;
+}
 
 // TODO write a pdb writer for all the Compounds
 // TODO move this in Topology since they work only for one Compound
@@ -221,7 +401,7 @@ World::World(int worldIndex,
 }
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
- * adds parameters: defines Biotypes; - adds BAT parameters to DuMM. Also
+ * adds parameters: defines Biotypes; - adds BAT parameters to forceField-> Also
  * creates decorations for visualizers **/
 void World::AddMolecule(
 		readAmberInput *amberReader,

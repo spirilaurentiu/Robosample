@@ -84,6 +84,13 @@ private:
  **/
 class World {
 public:
+	bool generateDummParams(const std::vector<bSpecificAtom>& atoms,
+		const std::vector<DUMM_ANGLE>& dummAngles,
+		const std::vector<DUMM_TORSION>& dummTorsions,
+		const ELEMENT_CACHE& elementCache);
+
+	bool buildTopologies(const InternalCoordinates& ic, std::vector<bSpecificAtom>& atoms);
+
 	// --- Structural functions ---
 	/** Constructor **/
 	explicit World(	int worldIndex,
@@ -564,6 +571,7 @@ public:
 	/** Nof molecules **/
 	int moleculeCount;
 
+	std::vector<Topology> _topologies;
 
 	/** Molecules (topologies<-Compounds) objects **/
 	//std::vector<bMoleculeReader *> moleculeReaders;

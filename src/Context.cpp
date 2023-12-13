@@ -581,6 +581,8 @@ void Context::loadBonds(const readAmberInput& reader) {
 		bond.setIndex(i);
 		bond.i = reader.getBondsAtomsIndex1(i);
 		bond.j = reader.getBondsAtomsIndex2(i);
+		bond.setForceK(reader.getBondsForceK(i));
+		bond.setForceEquil(reader.getBondsEqval(i));
 		bonds.push_back(bond);
 
 		// BAD! this will break if we invalidate the bonds vector
@@ -620,9 +622,9 @@ void Context::loadAtoms(const readAmberInput& reader) {
  		atom.setAtomicNumber(atomicNumber);
 		atom.setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
 
-		// Assign a "unique" name. The generator is however limited.
-		// Examples: AAAA, AAAB, AAAC, AAAD etc
-		atom.generateName(i);
+		// // Assign a "unique" name. The generator is however limited.
+		// // Examples: AAAA, AAAB, AAAC, AAAD etc
+		// atom.generateName(i);
 
 		// Store the initial name from prmtop
 		// Examples: "O1", "C1", "C2", "H1", "H10"
@@ -654,61 +656,124 @@ void Context::loadAtoms(const readAmberInput& reader) {
 		atom.setLJWellDepth(reader.getAtomsEpsilon(i));
 
 		// Set residue name and index
-		atom.setResidueName("UNK");
-		atom.residueIndex = 1;
+		atom.setResidueName(reader.getResidueLabel(i));
+		atom.residueIndex = reader.getResidueIndex(i);
 
-		// Add element to cache
+		// Assign an unique atom name
+		// TODO add topology number - this is not unique
+		atom.setName(
+			atom.getResidueName() + std::to_string(atom.residueIndex) + "-" +
+			atom.getFftype() + "-" +
+			std::to_string(atom.getNumber())
+		);
+
+		// Save
 		elementCache.addElement(atomicNumber, mass);
-
 		atoms.push_back(atom);
 	}
 }
 
-void Context::setAtomCompoundTypes() {
-	// Angle TetrahedralAngle = 109.47 * Deg2Rad;
+void Context::loadAngles(const readAmberInput& reader) {
+	dummAngles.reserve(reader.getNumberAngles());
 
-	// Set Gmolmodel name and element and inboard length
+	for (int i = 0; i < reader.getNumberAngles(); i++) {
+		DUMM_ANGLE angle;
+		angle.first = reader.getAnglesAtomsIndex1(i);
+		angle.second = reader.getAnglesAtomsIndex2(i);
+		angle.third = reader.getAnglesAtomsIndex3(i);
+
+		angle.k = reader.getAnglesForceK(i);
+		angle.equil = reader.getAnglesEqval(i);
+		angle.equil = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * angle.equil));
+
+		dummAngles.push_back(angle);
+	}
+}
+
+void Context::loadTorsions(const readAmberInput& reader) {
+	// There are multiple torsions defined with the same four indices
+	// This vector shows us where each torsion begins (first) and how long it is (second)
+	std::vector<std::pair<int, int>> pairStartAndLens = reader.getPairStartAndLen();
+
+	auto checkBond = [&](int a1, int a2) {
+		for(int i = 0; i < nbonds; i++){
+			if( (bonds[i]).isThisMe(a1, a2) ) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	for(const auto& tor : pairStartAndLens){
+		int t = tor.first;
+		int periodicity = tor.second;
+
+		// Fill this torsion
+		DUMM_TORSION dummTorsion;
+		dummTorsion.num = periodicity;
+
+		// Check if a quad of atom indices is a normal dihedral or an improper dihedral, by checking if consecutive atoms are bonded
+		// TODO: amberReader getDihedralsAtomsIndex4() is negative if this is an improper, but we never look at it and even abs() it
+		dummTorsion.first = reader.getDihedralsAtomsIndex1(tor.first);
+		dummTorsion.second = reader.getDihedralsAtomsIndex2(tor.first);
+		dummTorsion.third = reader.getDihedralsAtomsIndex3(tor.first);
+		dummTorsion.fourth = reader.getDihedralsAtomsIndex4(tor.first);
+
+		if (checkBond(dummTorsion.first, dummTorsion.second) &&
+			checkBond(dummTorsion.second, dummTorsion.third) &&
+			checkBond(dummTorsion.third, dummTorsion.fourth)) {
+			dummTorsion.improper = false;
+		} else {
+			dummTorsion.improper = true;
+		}
+
+		// Define parameters
+		if (periodicity >= 1) {
+			dummTorsion.period[0] = static_cast<int>(reader.getDihedralsPeriod(t));
+			dummTorsion.k[0] = reader.getDihedralsForceK(t);
+			dummTorsion.phase[0] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t)));
+		}
+		if (periodicity >= 2) {
+			dummTorsion.period[1] = static_cast<int>(reader.getDihedralsPeriod(t + 1));
+			dummTorsion.k[1] = reader.getDihedralsForceK(t + 1);
+			dummTorsion.phase[1] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 1)));
+		}
+		if (periodicity >= 3) {
+			dummTorsion.period[2] = static_cast<int>(reader.getDihedralsPeriod(t + 2));
+			dummTorsion.k[2] = reader.getDihedralsForceK(t + 2);
+			dummTorsion.phase[2] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 2)));
+		}
+		if (periodicity >= 4) {
+			dummTorsion.period[3] = static_cast<int>(reader.getDihedralsPeriod(t + 3));
+			dummTorsion.k[3] = reader.getDihedralsForceK(t + 3);
+			dummTorsion.phase[3] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 3)));
+		}
+
+		dummTorsions.push_back(dummTorsion);
+	}
+}
+
+void Context::setAtomCompoundTypes() {
 	for(auto& atom : atoms) {
-		
-		// bond centers must have been already set
 		const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
 		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
-		
-		// // Add BondCenters
-		// const int currAtomNBonds = atom.getNBonds();
-		// if(currAtomNBonds > 0){
-		// 	if (currAtomNBonds == 1){
-		// 		atom.addFirstBondCenter("bond1", currAtomName);
-		// 	} else {
-		// 		atom.addFirstTwoBondCenters("bond1", "bond2", currAtomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
-		// 		if (currAtomNBonds > 2) {
-		// 			atom.addLeftHandedBondCenter("bond3", currAtomName, TetrahedralAngle, TetrahedralAngle);
-		// 		}
-		// 		if (currAtomNBonds > 3){
-		// 			atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
-		// 		}
-		// 	}
-
-		// 	// Set the inboard BondCenter
-		// 	atom.setInboardBondCenter("bond1");
-		// 	atom.setDefaultInboardBondLength(0.19);
-		// }
 	}
 }
 
 void Context::addBiotypes() {
-	// Iterate atoms and define Biotypes with their indeces and names
-	for(auto& atom : atoms) {
-		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
-			elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
-			atom.getNBonds(),
-			atom.getResidueName().c_str(),
-			atom.getName().c_str(),
-			SimTK::Ordinality::Any
-		);
 
+	for(auto& atom : atoms) {
+		const std::string& residueName = atom.getResidueName();
+		const std::string& atomName = atom.getName();
+		
+		const auto biotypeIndex = SimTK::Biotype::defineBiotype(
+				elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
+				atom.getNBonds(),
+				atom.getResidueName().c_str(),
+				atom.getName().c_str(),
+				SimTK::Ordinality::Any);
 		atom.setBiotypeIndex(biotypeIndex);
 
 		// Assign atom's biotype as a composed name: name + force field type
@@ -717,7 +782,7 @@ void Context::addBiotypes() {
 	}
 }
 
-void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
+bool Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	readAmberInput reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
@@ -727,12 +792,37 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// - reorder all lists to bat (batomlist, bonds, flexibilitie etc)
 	// - pass to topology ????
 
+	// Read parameters from files
 	loadAtoms(reader);
 	loadBonds(reader);
+	loadAngles(reader);
+	loadTorsions(reader);
+
+	// Create internal coordinates indexing
+	InternalCoordinates ic;
+	ic.compute(atoms);
+
+	// Compound atom types and biotypes are not specific to one force field instance, so we define them here
 	setAtomCompoundTypes();
 	addBiotypes();
 
-	// addDummParams()
+	for (const auto& a : atoms) {
+		auto c = Biotype::get(a.getResidueName().c_str(), a.getName().c_str());
+		std::cout << a.getName() << " " << a.getResidueName() << " " << c.getAtomName() << std::endl;
+	}
+
+	for (auto& w : worlds) {
+		w.generateDummParams(atoms, dummAngles, dummTorsions, elementCache);
+		w._topologies.push_back({});
+		w.buildTopologies(ic, atoms);
+	}
+
+	// apply for each world - each dumm needs these
+	// addDummParams() iterates each world and calls these functions from topology
+	// generateDummAtomClasses();
+	// bAddDummBondParams();
+	// bAddDummAngleParams();
+	// bAddDummTorsionParams();
 
 	// int num_atoms = 0;
 	// const auto moleculeAtomIndices = findMolecules(reader);
@@ -741,7 +831,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// 	std::cout << indices << std::endl;
 	// }
 
-	return;
+	return true;
 
 	// // molecules are stored as a vector of atoms
 	// // bAtomList[moleculeIndex][atomIndex] where atomIndex is in range [0, atomsPerMolecule[moleculeIndex])

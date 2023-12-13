@@ -28,7 +28,7 @@ enum class RunType : int {
 class Context{
 public:
 	bool initializeFromFile(const std::string& file);
-	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
+	bool loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 	
 	void Run();
 	void Run(int steps);
@@ -601,12 +601,17 @@ protected:
 	
 	int nbonds = std::numeric_limits<int>::min();
 	std::vector<bBond> bonds;
+
+	std::vector<DUMM_ANGLE> dummAngles;
+	std::vector<DUMM_TORSION> dummTorsions;
 	
 	ELEMENT_CACHE elementCache;
 
 	std::vector<int> findMolecules(const readAmberInput& reader);
 	void loadAtoms(const readAmberInput& reader);
 	void loadBonds(const readAmberInput& reader);
+	void loadAngles(const readAmberInput& reader);
+	void loadTorsions(const readAmberInput& reader);
 	void setAtomCompoundTypes();
 	void addBiotypes();
 	
@@ -614,6 +619,9 @@ public:
 	/** Implicit membrane mimicked by half-space contacts */
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
+private:
+	std::map<std::string, SimTK::DuMM::AtomClassIndex> dummAtomClasses;
 
+	SimTK::DuMM::AtomClassIndex getDummAtomClassIndex(const bSpecificAtom& atom);
 };
 
