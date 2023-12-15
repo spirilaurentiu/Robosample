@@ -578,7 +578,8 @@ public:
 	/** Implicit membrane mimicked by half-space contacts */
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
-
+	/** Function to check if there is contact between the membrane and selected atoms */
+	bool isMembranePenetrated(std::size_t whichWorld);
 
 };
 

@@ -3430,7 +3430,7 @@ int Context::RunWorld(int whichWorld)
 
 	}
 	// Print Contact info Debug
-	//getContactDebugInfo(whichWorld);
+	getContactDebugInfo(whichWorld);
 	return accepted;
 
 }
@@ -3473,6 +3473,16 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 	// Write pdbs every world
 	//writePdbs(nofRounds, frontWorldIx);
 	
+	/* // If membrane is used, check that there is no penetration of the membrane
+	// before rotating. That is, run this world until no penetration is found
+	while (isMembranePenetrated(frontWorldIx)) {
+		std::cout << "##################\n";
+		std::cout << "isMembranePenetrated came up True. Doing world " 
+				  <<  frontWorldIx << " again\n";
+		std::cout << "##################\n";
+		RunWorld(frontWorldIx);
+	} */
+
 	// == ROTATE == worlds indices (translate from right to left)
 	std::rotate(worldIxs.begin(),
 		worldIxs.begin() + 1,
@@ -6325,6 +6335,7 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 		
 		for (int contactCliqueIx = 0; contactCliqueIx < 4; contactCliqueIx++){
 
+			std::cout << "Checking contactClique: " << contactCliqueIx << std::endl;
 			// Empty vector of prmtop atom indexes
 			cliqueAtomIxs.push_back({});
 			cliqueAtomIxs[contactCliqueIx].push_back({});
@@ -6335,8 +6346,7 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 			const std::vector<std::string>& contactClique_vals = setupReader.get(contactClique_key);
 			
 			int cur_topology = 0;
-			if (contactClique_vals.size() > 2) {
-
+			if (contactClique_vals.size() > 0) {
 				// Get atom indexes for this clique
 				for (const auto& value : contactClique_vals){
 					
@@ -6346,6 +6356,7 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 					}
 					else {
 						cliqueAtomIxs[contactCliqueIx][cur_topology].push_back(std::stoi(value));
+						std::cout<<value<<std::endl;
 					}
 				}
 
@@ -6393,5 +6404,27 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 
 	}
 
+/** Helper function to check if the membrane is in contact with selected atoms.*/
+bool Context::isMembranePenetrated(std::size_t whichWorld)
+{
+	bool inContact = false;
 
+	SimTK::State& currentAdvancedState = updWorld(whichWorld)->integ->updAdvancedState();
+	int numForces = updWorld(whichWorld)->contactForces->getNumContactForces(
+		currentAdvancedState);
+	SimTK::Real dissEnergy = updWorld(whichWorld)->contactForces->
+		getDissipatedEnergy(currentAdvancedState);
 
+	for (int forceIx; forceIx<numForces; forceIx++) {
+		const ContactForce& ctForce = updWorld(whichWorld)->contactForces->getContactForce(
+			currentAdvancedState,forceIx);
+		Real cfPotential = ctForce.getPotentialEnergy();
+		std::cout << "\nForce No: " << forceIx << std::endl;
+		std::cout << "Potential Energy: " << cfPotential << std::endl;
+		if (cfPotential > 0)
+			{inContact = true;break;}
+	}
+
+	return inContact;
+
+}

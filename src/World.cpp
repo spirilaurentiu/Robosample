@@ -697,8 +697,8 @@ void World::addContacts(const std::vector<int>& prmtopIndex, const int topologyI
 
 
 
-		const Real stiffness = 10000; // stiffness in pascals
-		const Real dissipation = 0.0; 
+		const Real stiffness = std::pow(10,12); // stiffness in pascals
+		const Real dissipation = 0; 
 		SimTK::Real staticFriction = 0.0;
 		SimTK::Real dynamicFriction = 0.0;
 		SimTK::Real viscousFriction = 0.0;
@@ -756,13 +756,75 @@ void World::addContacts(const std::vector<int>& prmtopIndex, const int topologyI
 void World::addMembrane(const SimTK::Real halfThickness)
 {
 
-	SimTK::Real stiffness = 10000;
+	SimTK::Real stiffness = 1;
 	SimTK::Real dissipation = 0;
 	SimTK::Real staticFriction = 0.0;
 	SimTK::Real dynamicFriction = 0.0;
 	SimTK::Real viscousFriction = 0.0;
 
- 	matter->Ground().updBody().addContactSurface(
+/*
+For testing/debugging purposes, we place 6 half spaces in a cube formation
+and release a small chemical compound (or more) inside of it. This  guarantees
+a system where the molecules interact ad infinitum with the 
+membrane (good for debugging).
+*/
+	matter->Ground().updBody().addContactSurface(
+		Transform(Vec3(halfThickness, 0, 0)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(SimTK::Pi, SimTK::YAxis), Vec3(-halfThickness, 0, 0)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, halfThickness, 0)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::ZAxis), Vec3(0, -halfThickness, 0)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))	
+			);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, halfThickness)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			);
+
+	matter->Ground().updBody().addContactSurface(
+		Transform(Rotation(0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, -halfThickness)),
+		ContactSurface(
+		ContactGeometry::HalfSpace(),
+		ContactMaterial(stiffness, dissipation,
+			staticFriction, dynamicFriction, viscousFriction))
+			.joinClique(SimTK::ContactCliqueId(0))
+			);
+
+/* Slime Cube End.*/
+
+ 	/* matter->Ground().updBody().addContactSurface(
 		Transform(Rotation(-0.5 * SimTK::Pi, SimTK::YAxis), Vec3(0, 0, halfThickness)),
 		ContactSurface(
 		ContactGeometry::HalfSpace(),
@@ -803,15 +865,37 @@ void World::addMembrane(const SimTK::Real halfThickness)
 			.joinClique(SimTK::ContactCliqueId(0))
 			.joinClique(SimTK::ContactCliqueId(1))
 			.joinClique(SimTK::ContactCliqueId(2))
-			);
+			); */
 
 
 	if (visual == true) {
-		DecorativeFrame contactGeometryDecoFrame;
+		/* DecorativeFrame contactGeometryDecoFrame;
 		matter->Ground().updBody().addDecoration(
 		Transform(),
-        DecorativeBrick(Vec3(10,10,halfThickness)).setColor(Orange).setOpacity(0.25));
+        DecorativeBrick(Vec3(10,10,halfThickness)).setColor(Orange).setOpacity(0.25)); */
 		
+		// X Axis walls
+		matter->Ground().updBody().addDecoration(
+		Transform(Vec3(halfThickness, 0, 0)),
+        DecorativeBrick(Vec3(0.1, halfThickness, halfThickness)).setColor(Red).setOpacity(0.5));
+		matter->Ground().updBody().addDecoration(
+		Transform(Vec3(-halfThickness, 0, 0)),
+        DecorativeBrick(Vec3(0.1, halfThickness, halfThickness)).setColor(Red).setOpacity(0.5));
+
+		matter->Ground().updBody().addDecoration(
+		Transform(Vec3(0, -halfThickness, 0)),
+        DecorativeBrick(Vec3(halfThickness ,0.1 ,halfThickness)).setColor(Red).setOpacity(0.5));
+		matter->Ground().updBody().addDecoration(
+		Transform(Vec3(0, halfThickness, 0)),
+        DecorativeBrick(Vec3(halfThickness,0.1,halfThickness)).setColor(Red).setOpacity(0.5));
+
+		matter->Ground().updBody().addDecoration(
+		Transform(Vec3(0, 0, -halfThickness)),
+        DecorativeBrick(Vec3(halfThickness,halfThickness,0.1)).setColor(Red).setOpacity(0.5));
+		matter->Ground().updBody().addDecoration(
+		Transform(Vec3(0, 0, halfThickness)),
+        DecorativeBrick(Vec3(halfThickness,halfThickness,0.1)).setColor(Red).setOpacity(0.5));
+	
 	}
 
 }

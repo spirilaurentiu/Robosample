@@ -53,7 +53,7 @@ class Flexor:
                         that use n_bonds to determine joint types. Also includes Glycans
                         or DNA molecules.
                 
-                side: DEPRECATED - Use the "sidechain" keyword to the range to include
+                side: To be DEPRECATED - Use the "sidechain" keyword to the range to include
                       or exclude the sidechain atoms.
                     
         jointType: string
@@ -173,6 +173,13 @@ class Flexor:
                                                                                 jointType.capitalize(),
                                                                                 edge[0], edge[1]))
                                 jointCount += 1
+
+        ## There is a possibility that we do Rolling selection and 
+        ## there are no valid atoms to select, in which case no fileOut
+        ## will actually be opened. In that case, we don't need to close 
+        ## it and will return an empty fileNameIX
+        if (rolling == True and jointCount == 0):
+            return (fileNameIX)    
 
         fileOut.close()
         print ("Flex file {} generated! ({} joints)".format(fileOut.name, jointCount))
