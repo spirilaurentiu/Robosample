@@ -310,6 +310,17 @@ public:
 		std::pair<bSpecificAtom *, SimTK::Vec3> > >& someAtomsLocations);
 	void WriteRst7FromTopology(std::string FN);
 
+
+	//=========================================================================
+	//                   RECONSTRUCTION-Related Functions
+	//=========================================================================
+	
+	//-------------------------------------------------------------------------
+	/** @name Contacts - Contacts  **/
+	/**@{**/
+
+	/**	Description **/
+
 	void PrintFullTransformationGeometry(const SimTK::State&,
 		bool x_pf_r = true, bool x_fm_r = true, bool x_bm_r = true,
 		bool x_pf_p = true, bool x_fm_p = true, bool x_bm_p = true);
@@ -334,8 +345,18 @@ public:
 		destWorldsAtomsLocations	
 	) const ;
 
-	// Helper for setAtoms Locations This function is only intended for root atoms!!
+	/**
+	 * Helper for setAtoms Locations This function is only intended for root atoms!!
+	*/
 	std::vector<SimTK::Transform>calcMobodToMobodTransforms(
+		Topology& topology,
+		SimTK::Compound::AtomIndex aIx,
+		const SimTK::State& someState);
+
+	/**
+	 * Calc X_FM transforms for reconstruction
+	*/
+	SimTK::Transform calcX_FMTransforms(
 		Topology& topology,
 		SimTK::Compound::AtomIndex aIx,
 		const SimTK::State& someState);
@@ -345,6 +366,9 @@ public:
 	SimTK::State& setAtomsLocationsInGround(SimTK::State&,
         const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
         otherWorldsAtomsLocations);
+
+	/**@}**/
+
 
 	/** Return own CompoundSystem **/
 	CompoundSystem *getCompoundSystem() const;
@@ -710,6 +734,9 @@ private:
 	// Binding Site Data: Topologies, AtomIx
 	std::vector<int> topologyIXs;
 	std::vector<std::vector<int>> amberAtomIXs;
+
+	// Track the Stage of the system
+	SimTK::Stage currStage;
 };
 
 #endif /*WORLD_H_*/

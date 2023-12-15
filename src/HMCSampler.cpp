@@ -3820,7 +3820,10 @@ bool HMCSampler::acceptSample() {
 	SimTK::Real here_lnj = 0.0;
 
 	// The decision tree sets the value of internal variable acc
-	if(this->alwaysAccept == true){ // Empty sampler
+	if((this->alwaysAccept == true) || 
+		((this->nofSamples < equilNofRounds) &&
+			(world->ownWorldIndex == 0))) // DIRTY FIX
+	{ // Empty sampler
 
 		acceptSampleReturn = true;
 

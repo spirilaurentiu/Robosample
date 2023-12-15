@@ -587,6 +587,8 @@ public:
 
 protected:
 
+	int equilNofRounds = 0;
+
 	//bool NAN_TO_INF(SimTK::Real& someNumber);
 
 	RANDOM_CACHE RandomCache;
