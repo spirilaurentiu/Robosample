@@ -119,80 +119,6 @@ void World::printPossVels(const SimTK::Compound& c, SimTK::State& advanced)
 	std::cout<<std::endl;
 }
 
-//==============================================================================
-//                   CLASS ForceArrowGenerator
-//==============================================================================
-/* 
-*	Added by Teodor
-*	Shamelessly copied from the ExampleContactPlayground CPP file
-*	(from Simbody) and adapted to work in Robosample
-*/
-
-class ForceArrowGenerator : public DecorationGenerator {
-public:
-    ForceArrowGenerator(const MultibodySystem& system,
-                        const CompliantContactSubsystem& complCont) 
-    :   m_system(system), m_compliant(complCont) {}
-
-    virtual void generateDecorations(const State& state, Array_<DecorativeGeometry>& geometry) override {
-		static const Real ForceScale = .25;
-        const Vec3 frcColors[] = {Red,Orange,Cyan};
-        const Vec3 momColors[] = {Blue,Green,Purple};
-        m_system.realize(state, Stage::Velocity);
-
-        const int ncont = m_compliant.getNumContactForces(state);
-        for (int i=0; i < ncont; ++i) {
-            const ContactForce& force = m_compliant.getContactForce(state,i);
-            const ContactId     id    = force.getContactId();
-            const Vec3& frc = force.getForceOnSurface2()[1];
-            const Vec3& mom = force.getForceOnSurface2()[0];
-            Real  frcMag = frc.norm(), momMag=mom.norm();
-            int frcThickness = 1, momThickness = 1;
-            Real frcScale = ForceScale, momScale = ForceScale;
-            while (frcMag > 10)
-                frcThickness++, frcScale /= 10, frcMag /= 10;
-            while (momMag > 10)
-                momThickness++, momScale /= 10, momMag /= 10;
-            DecorativeLine frcLine(force.getContactPoint(),
-                force.getContactPoint() + frcScale*frc);
-            DecorativeLine momLine(force.getContactPoint(),
-                force.getContactPoint() + momScale*mom);
-            frcLine.setColor(frcColors[id%3]);
-            momLine.setColor(momColors[id%3]);
-            frcLine.setLineThickness(2*frcThickness);
-            momLine.setLineThickness(2*momThickness);
-            geometry.push_back(frcLine);
-            geometry.push_back(momLine);
-
-            ContactPatch patch;
-            const bool found = m_compliant.calcContactPatchDetailsById(state,id,patch);
-            //cout << "patch for id" << id << " found=" << found << endl;
-            //cout << "resultant=" << patch.getContactForce() << endl;
-            //cout << "num details=" << patch.getNumDetails() << endl;
-            for (int i=0; i < patch.getNumDetails(); ++i) {
-                const ContactDetail& detail = patch.getContactDetail(i);
-                const Real peakPressure = detail.getPeakPressure();
-                // Make a black line from the element's contact point in the normal
-                // direction, with length proportional to log(peak pressure)
-                // on that element. 
-                DecorativeLine normal(detail.getContactPoint(),
-                    detail.getContactPoint()+ std::log10(peakPressure)
-                                                * detail.getContactNormal());
-                normal.setColor(Black);
-                geometry.push_back(normal);
-                // Make a red line that extends from the contact
-                // point in the direction of the slip velocity, of length 3*slipvel.
-                DecorativeLine slip(detail.getContactPoint(),
-                    detail.getContactPoint()+3*detail.getSlipVelocity());
-                slip.setColor(Red);
-                geometry.push_back(slip);
-            }
-        }
-    }
-private:
-    const MultibodySystem&              m_system;
-    const CompliantContactSubsystem&    m_compliant;
-};
 
 //==============================================================================
 //                   CLASS TaskSpace
@@ -2125,26 +2051,25 @@ SimTK::State& World::setAtomsLocationsInGround(
 std::vector<SimTK::Transform>
 World::calcMobodToMobodTransforms(
 	Topology& topology,
-	SimTK::Compound::AtomIndex aIx,
+	SimTK::Compound::AtomIndex rootAIx,
 	const SimTK::State& someState)
 {
 	// There is no P_X_F and B_X_M inside a body.
-	assert(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0);
+	assert(topology.getAtomLocationInMobilizedBodyFrame(rootAIx) == 0);
 
 	// Get body, parentBody
-	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(rootAIx);
 
 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
 	// Get the neighbor atom in the parent mobilized body
-	//SimTK::Compound::AtomIndex chemParentAIx = getChemicalParent(matter, aIx); // SAFE
-	SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter.get(), aIx, *forceField); // DANGER
+	SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter.get(), rootAIx, *forceField); 
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
-	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(aIx, chemParentAIx);
+	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
 
 	// Get Top to parent frame
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
@@ -2152,7 +2077,7 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 
 	// Get inboard dihedral angle
-	SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(aIx);
+	SimTK::Angle inboardBondDihedralAngle = topology.bgetDefaultInboardDihedralAngle(rootAIx);
 	SimTK::Transform InboardDihedral_XAxis
 		= SimTK::Rotation(inboardBondDihedralAngle, SimTK::XAxis);
 	SimTK::Transform InboardDihedral_ZAxis
@@ -2162,7 +2087,7 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis); // aka M_X_pin
 	SimTK::Transform Z_to_X = ~X_to_Z;
 	SimTK::Transform oldX_PB =
-		(~T_X_Proot) * topology.getTopTransform(aIx)
+		(~T_X_Proot) * topology.getTopTransform(rootAIx)
 		* InboardDihedral_XAxis * X_to_Z
 		* InboardDihedral_ZAxis * Z_to_X;
 
@@ -2178,9 +2103,9 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform P_X_F_univ = oldX_PB * B_X_M;
 
 	// Get mobility (joint type)
-	bSpecificAtom *atom = topology.updAtomByAtomIx(aIx);
+	bSpecificAtom *atom = topology.updAtomByAtomIx(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	bBond bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
+	bBond bond = topology.getBond(topology.getNumber(rootAIx), topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	bool pinORslider =
@@ -2532,7 +2457,7 @@ bool World::generateProposal(void)
 /**
  *  Generate a number of samples
  * */
-int World::generateSamples(int howMany)
+bool World::generateSamples(int howMany)
 {
 
 	// Update Robosample bAtomList
@@ -2543,18 +2468,15 @@ int World::generateSamples(int howMany)
 	std::cout << "World " << ownWorldIndex 
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
-	// Reinitialize current sampler (configuration and energies)
-	updSampler(0)->reinitialize(currentAdvancedState);
-
 	// GENERATE the requested number of samples
-	// is accepted wrong here?
-	int accepted;
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState);
+
 	for(int k = 0; k < howMany; k++) {
-		accepted += updSampler(0)->sample_iteration(currentAdvancedState);
+		validated = updSampler(0)->sample_iteration(currentAdvancedState) && validated;
 	}
 
 	// Return the number of accepted samples
-	return accepted;
+	return validated;
 
 }
 
