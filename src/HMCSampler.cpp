@@ -280,8 +280,8 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
 	if(this->nofSamples == 0){
-		timeStepper->initialize(compoundSystem->getDefaultState());
-		//timeStepper->initialize(someState);
+		//timeStepper->initialize(compoundSystem->getDefaultState());
+		timeStepper->initialize(someState);
 
 		if(integratorName == IntegratorName::OMMVV){
 		}
@@ -537,12 +537,14 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 		// Scale bonds and angles
 		if(this->nofSamples >= 0){ // dont't take burn-in
-
+			
 			// Just for the Visualizer
 			if(world->visual){
 				this->world->ts->stepTo(
-					someState.getTime() + (0.00001));
-				std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+					someState.getTime() + (0.00001));				
+				std::cout << "Sleeping... " << std::flush;
+				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+				std::cout << "done.\n" << std::flush;
 			}
 
 			// Calculate X_PFs and X_BMs
@@ -552,11 +554,22 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//setQToScaleBendStretch(someState, scaleFactors);
 			setQToScaleBendStretchStdev(someState, scaleFactors);
 
+
+			// DEBUG PRINT
+			// World& myWorld = *world;
+			// if(myWorld.ownWorldIndex == 1){
+			// 	myWorld.PrintFullTransformationGeometry(someState,
+			// 		false, false, false, true, false, false);
+			// }
+
+
 			// Just for the Visualizer
 			if(world->visual){
-				std::this_thread::sleep_for(std::chrono::milliseconds(4000));
 				this->world->ts->stepTo(
-					someState.getTime() + (0.00001));
+					someState.getTime() + (0.00001));				
+				std::cout << "Sleeping... " << std::flush;
+				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+				std::cout << "done.\n" << std::flush;
 			}
 
 		}
