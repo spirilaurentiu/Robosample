@@ -13,6 +13,9 @@
 
 using namespace SimTK;
 
+//==============================================================================
+//                               struct BOND
+//==============================================================================
 struct BOND {
 	int first = -1,
 		second = -1;
@@ -20,7 +23,12 @@ struct BOND {
 	bool operator==(const BOND& rhs) const;
 	bool operator!=(const BOND& rhs) const;
 };
+//------------------------------------------------------------------------------
 
+
+//==============================================================================
+//                               struct ANGLE
+//==============================================================================
 struct ANGLE {
 	int first = -1,
 		second = -1,
@@ -30,6 +38,10 @@ struct ANGLE {
 	bool operator!=(const ANGLE& rhs) const;
 };
 
+
+//==============================================================================
+//                               struct TORSION
+//==============================================================================
 struct TORSION {
 	int first = -1,
 		second = -1,
@@ -39,7 +51,12 @@ struct TORSION {
 	bool operator==(const TORSION& rhs) const;
 	bool operator!=(const TORSION& rhs) const;
 };
+//------------------------------------------------------------------------------
 
+
+//==============================================================================
+//                               Amber ATOM
+//==============================================================================
 struct AmberAtom {
 	SimTK::Real mass = -1.0;
 	int bonds = -1,
@@ -57,6 +74,8 @@ struct BAT_ATOM {
 	int amberIndex = -1;
 	int parent = -1;
 };
+//------------------------------------------------------------------------------
+
 
 //==============================================================================
 //                           CLASS InternalCoordinates
@@ -81,8 +100,31 @@ struct BAT_ATOM {
 
 class InternalCoordinates {
 public:
+
+    /** @name Main functions. This function should be called before accesing 
+	 any interface functions **/
+
+    /**@{**/
+
+	/**
+	* @brief This function computes the BAT graph in two formats
+	* @param bAtomList Atom list read from Amber.
+	*/
 	void compute(const std::vector<bSpecificAtom>& bAtomList);
+
+	/**	
+	* @brief Puts BAT graph in level / offset format
+	* @param bAtomList Atom list read from Amber.
+	*/
 	void computeLevelsAndOffsets(const std::vector<bSpecificAtom>& bAtomList);
+    
+	/**@}**/
+
+    /** @name Interface functions
+	*/
+
+    /**@{**/
+
 
     const TORSION& getRoot() const;
 	const std::vector<BOND>& getBonds() const;
@@ -90,13 +132,47 @@ public:
 	const std::vector<ANGLE>& getAngles() const;
 	const std::vector<TORSION>& getTorsions() const;
 
+	/**	
+	* @brief Return the molecular graph in a level / offset format which
+	* contains a table of : level, offset, atom and parent
+	* @return 2D vector of BAT_ATOM (Amber index)
+	*/
 	const std::vector<std::vector<BAT_ATOM>>& getLevelGraph() const;
 
+	/**	
+	* @brief
+	* @return
+	*/
 	const std::vector<std::vector<int>>& getGraphedAtoms() const;
+
+	/**	
+	* @brief
+	* @return
+	*/
 	const std::vector<std::vector<BOND>>& getGraphedBonds() const;
 
+	/**@}**/
+
+    /** @name Cartesian to BAT and inverse onversion functions
+	*/
+
+    /**@{**/
+	
+	/**	
+	* @brief
+	* @param Amber index
+	* @return BAT index
+	*/
 	int amber2BAT(int amberIx) const;
+
+	/**	
+	* @brief
+	* @param BAT index
+	* @return Amber index
+	*/
 	int BAT2amber(int bat) const;
+	/**@}**/
+
 
 private:
     void computeRoot(const std::vector<bSpecificAtom>& bAtomList);

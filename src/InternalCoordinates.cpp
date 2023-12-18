@@ -44,6 +44,10 @@ bool AmberAtom::operator!=(const AmberAtom& rhs) {
 	return !operator==(rhs);
 }
 
+/*!
+ * <!-- This function computes the BAT graph and calls computeLevelsAndOffsets
+ * to calculate it into a level / offset format -->
+*/
 void InternalCoordinates::compute(const std::vector<bSpecificAtom>& bAtomList) {
     computeRoot(bAtomList);
 
@@ -125,6 +129,11 @@ bool equal_bond(const BOND& lhs, const BOND& rhs) {
 		(lhs.first == rhs.second && lhs.second == rhs.first);
 }
 
+/*!
+ * <!-- Calculate level / offset format from the atom list read from Amber 
+ * prmtop and deposit in levelGraph graphedAtoms
+ * @todo what is levelGraph and graphedAtoms -->
+*/
 void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAtom>& bAtomList) {
 	// adj list is bonds
 	// node values are i&j from adj list
@@ -247,6 +256,9 @@ const std::vector<TORSION>& InternalCoordinates::getTorsions() const {
 	return torsions;
 }
 
+/*!
+ * <!--  -->
+*/
 const std::vector<std::vector<BAT_ATOM>>& InternalCoordinates::getLevelGraph() const {
 	return levelGraph;
 }
