@@ -313,7 +313,7 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 					// Get the neighbor atom in the parent mobilized body
 					//SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx); // SAFE
 					//std::unique_ptr<SimTK::SimbodyMatterSubsystem> up_matter(matter);
-					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(
+					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(
 						matter, aIx, *dumm); // DANGER
 
 					// Get mobility (joint type)

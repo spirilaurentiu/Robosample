@@ -636,7 +636,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 	//}
 // */
 
-	// Draw Rigid bodies
+	// Draw Ground and Top frames
 	// Ground frame
 	drawFrame(geometry, Transform(),
 		0.05, 4, SimTK::Vec3(0.5, 0.5, 0.5),
@@ -659,6 +659,7 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 //        geometry.push_back( decorativeBrick );
 
 		if((mbx > 0)){
+		//if(int(mbx) == 3){
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 

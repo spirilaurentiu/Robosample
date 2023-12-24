@@ -343,11 +343,16 @@ public:
 	/** Get the neighbours in the graph **/
 	std::vector<bSpecificAtom *> getNeighbours(int) const;
 
+	/** Get the bonded upstream neighbor atom **/
+	SimTK::Compound::AtomIndex
+	getNeighbourWithSmallerAIx(
+		SimTK::Compound::AtomIndex aIx,
+		SimTK::DuMMForceFieldSubsystem& dumm);
+
 	/** Get the bonded neighbor atom in the parent mobilized body **/
 	SimTK::Compound::AtomIndex
-	getChemicalParent(
+	getChemicalParent_IfIAmRoot(
 		SimTK::SimbodyMatterSubsystem *matter,
-		//std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter,
 		SimTK::Compound::AtomIndex aIx,
 		SimTK::DuMMForceFieldSubsystem& dumm);
 

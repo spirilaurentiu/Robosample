@@ -2412,7 +2412,8 @@ World::calcMobodToMobodTransforms(
 
 	// Get the neighbor atom in the parent mobilized body
 	SimTK::Compound::AtomIndex chemParentAIx =
-		topology.getChemicalParent(matter.get(), rootAIx, *forceField);
+		topology.getChemicalParent_IfIAmRoot(matter.get(), rootAIx, *forceField);
+
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
@@ -2426,6 +2427,33 @@ World::calcMobodToMobodTransforms(
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
+
+
+/* 	// BEGIN GET ANGLE
+	SimTK::Compound::AtomIndex chemGrandParentIx;
+	SimTK::Transform T_X_grand;
+
+	if(chemParentAIx > 0){
+
+		chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+
+		T_X_grand = topology.getTopTransform(chemGrandParentIx);
+
+		SimTK::Vec3 v1 = T_X_grand.p();
+		SimTK::Vec3 v2 = T_X_Proot.p();
+		SimTK::Vec3 v3 = T_X_root.p();
+
+		SimTK::Real bondAngle = bAngle(v1, v2, v3);
+
+		std::cout << "World::calcMobodToMobodTransforms chemGrandParentIx chemParentAIx rootAIx andle "
+			<< chemGrandParentIx << " " << chemParentAIx << " " << rootAIx << " "
+			<< v1 << " " << v2 << " " << v3 << " "
+			<< bondAngle << std::endl;
+
+	}
+	// END GET ANGLE	 */
+
+
 
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle =
@@ -2462,16 +2490,16 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform P_X_F_pin 		= oldX_PB * B_X_M_pin;
 	SimTK::Transform P_X_F_univ 	= oldX_PB * B_X_M;
 
-
 	//SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z * InboardLength_mZAxis;
 	//SimTK::Transform B_X_M_spheric  = Transform();
-	SimTK::Transform B_X_M_spheric = B_X_M_pin;
+	//SimTK::Transform B_X_M_spheric = B_X_M_pin;
+	SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z;
 	
 	//SimTK::Transform P_X_F_spheric  = oldX_PB * B_X_M_pin;
 	//SimTK::Transform P_X_F_spheric = Transform();
-	SimTK::Transform P_X_F_spheric = P_X_F_pin;
-
-
+	//SimTK::Transform P_X_F_spheric = P_X_F_pin;
+	SimTK::Transform P_X_F_spheric = oldX_PB * B_X_M_pin;
+	
 	// Get mobility (joint type)
 	bSpecificAtom *atom = topology.updAtomByAtomIx(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
@@ -2549,7 +2577,7 @@ SimTK::Transform World::calcX_FMTransforms(
 
 	// Get the neighbor atom in the parent mobilized body
 	SimTK::Compound::AtomIndex chemParentAIx =
-		topology.getChemicalParent(matter.get(), rootAIx, *forceField);
+		topology.getChemicalParent_IfIAmRoot(matter.get(), rootAIx, *forceField);
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =

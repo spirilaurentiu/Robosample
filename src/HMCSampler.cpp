@@ -233,9 +233,13 @@ bool HMCSampler::initialize(SimTK::State& someState)
 	// Set a validation flag
 	bool validated = true;
 
+	//system->realize(someState, SimTK::Stage::Model);
+
 	// After an event handler has made a discontinuous change to the
 	// Integrator's "advanced state", 
 	timeStepper->initialize(compoundSystem->getDefaultState());
+	//timeStepper->initialize(someState);
+
 
 	// Calculate Simbody configuration
 	system->realize(someState, SimTK::Stage::Position);

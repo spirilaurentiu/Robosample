@@ -1341,14 +1341,14 @@ void Context::LoadWorldsFromSetup(SetupReader&)
 }
 
 void Context::modelOneEmbeddedTopology(int whichTopology,
-int whichWorld,
-std::string rootMobilizer)
+	int whichWorld,
+	std::string rootMobilizer)
 {
 		this->rootMobilities.push_back(rootMobilizer);
 
 		(updWorld(whichWorld))->compoundSystem->modelOneCompound(
 			SimTK::CompoundSystem::CompoundIndex(whichTopology),
-			rootMobilizer);
+			SimTK::String(rootMobilizer));
 
 		SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(whichWorld))->forceField);
 
@@ -1379,7 +1379,7 @@ void Context::AddMolecules(
 	moleculeCount = -1;
 
 	std::vector<std::string> argRoots = setupReader.get("ROOTS");
-	std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+	//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
 	//std::vector<readAmberInput> amberReader(requestedNofMols);
 	amberReader.resize(requestedNofMols);
@@ -1878,7 +1878,7 @@ void Context::PrintSimbodyMobods(){
 				SimTK::Compound::AtomIndex aIx
 					= (topology.bAtomList[i]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
-				std::cout << "i aIx " << i << " " << aIx << " "
+				std::cout << "i aIx mbx " << i << " " << aIx << " "
 					<< mbx << std::endl << std::flush;
 			}
 		}

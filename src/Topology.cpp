@@ -2182,11 +2182,64 @@ void Topology::setCompoundIndex(
 	this->compoundIndex = compoundIndex;
 }
 
+/*!
+ * <!-- Get the chemical parent -->
+*/
+SimTK::Compound::AtomIndex
+Topology::getNeighbourWithSmallerAIx(
+	SimTK::Compound::AtomIndex aIx,
+	SimTK::DuMMForceFieldSubsystem& dumm)
+{
+	assert( (int(aIx) > 0) &&
+		"Topology::getNeighbourWithSmallerAIx atomIx is 0." );
 
-/** Get the neighbor atom in the parent mobilized body.
+	// Declare convenient vars
+	SimTK::Compound::AtomIndex chemParentAIx;
+
+	// Find the true bSpecificAtom (CHEMICAL) parent
+	bSpecificAtom *originSpecAtom = nullptr;
+	originSpecAtom = updAtomByAtomIx(aIx);
+
+	// Loop through neighbor atoms (bSpecificAtom)
+	for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
+
+		// Loop through bonds that this atom is involved in (bBond);
+		for(std::vector<bBond *>::iterator
+			bondsInvolvedIter = (originSpecAtom->bondsInvolved).begin();
+			bondsInvolvedIter != (originSpecAtom->bondsInvolved).end();
+			++bondsInvolvedIter){
+
+			// Check if this neighbor is involved in this bond
+			if( (*bondsInvolvedIter)->isThisMe(originSpecAtom->getNumber(),
+								originSpecAtom->neighbors[k]->getNumber()) )
+			{
+
+				// Get Compound Atom Index
+				Compound::AtomIndex candidateChemParentAIx =
+					originSpecAtom->neighbors[k]->getCompoundAtomIndex();
+
+				// Smaller Atom Index 
+				if(candidateChemParentAIx < aIx){
+					chemParentAIx = candidateChemParentAIx;
+					break;
+				}
+
+			}
+		}
+
+	}
+		
+	// Return
+	return chemParentAIx;
+}
+
+
+
+
+/** Get the neighbor atom bonded to aIx atom in the parent mobilized body.
 TODO: No chemical parent for satelite atoms or first atom. **/
 SimTK::Compound::AtomIndex
-Topology::getChemicalParent(
+Topology::getChemicalParent_IfIAmRoot(
 	SimTK::SimbodyMatterSubsystem *matter,
 	//std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter,
 	SimTK::Compound::AtomIndex aIx,
@@ -2225,8 +2278,7 @@ Topology::getChemicalParent(
 						Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
 
 						// Check if neighbor atom's mobod is a parent mobod
-						//if(getAtomMobilizedBodyIndex(candidateChemParentAIx) == parentMbx){ // SAFE
-						if(getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx){ // DANGER
+						if(getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx){
 
 							if(!(*bondsInvolvedIter)->isRingClosing()){ // No ring atoms are allowed
 								chemParentAIx = candidateChemParentAIx;
@@ -2245,7 +2297,6 @@ Topology::getChemicalParent(
 		originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
 		for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
 			Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
-			//if(getAtomLocationInMobilizedBodyFrame(candidateChemParentAIx) == 0){ // atom is at body's origin // SAFE
 			if(getAtomLocationInMobilizedBodyFrameThroughDumm(candidateChemParentAIx, dumm) == 0){ // atom is at body's origin // DANGER
 				chemParentAIx = candidateChemParentAIx;
 				gmolAtomIndex = originSpecAtom->neighbors[k]->getNumber();
