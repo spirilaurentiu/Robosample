@@ -156,7 +156,7 @@ public:
 	 with info about name, atomic number, valence and mass. **/
 	void bAddBiotypes(
 			//std::string resName, 
-			readAmberInput *amberReader
+			//readAmberInput *amberReader
 			//, SimTK::DuMMForceFieldSubsystem& dumm
 	);
 
@@ -266,6 +266,9 @@ public:
 	/** Build the molecular tree without the cycle closing bonds **/
 	void buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode);
 
+	/** */
+	void buildAcyclicGraphWrap(bSpecificAtom* root);
+
 	/** After building the acyclic molecular tree close the remaining bonds **/
 	void addRingClosingBonds();
 
@@ -273,6 +276,16 @@ public:
 	 * the input reader **/
 	void matchDefaultConfigurationWithAtomList(
 			SimTK::Compound::MatchStratagem matchStratagem);
+
+	/**
+	 * Check if the provided atom is a possible root and if not find one
+	*/
+	bSpecificAtom* findARoot(int argRoot);
+
+	/**
+	 * Generate an AtomIndex to Top Transforms map
+	*/
+	void generateAIx2TopXMaps(void );
 
 	/** Builds the Compound's tree, closes the rings, matches the configuration
 	on the graph using using Molmodels matchDefaultConfiguration and sets the
@@ -455,8 +468,13 @@ public:
 			std::vector<SimTK::Real> Ys,
 			std::vector<SimTK::Real> Zs);
 
-	void setAtomList(const std::vector<bSpecificAtom>& argAtomList) {
+	void setAtomList(
+		const std::vector<bSpecificAtom>& argAtomList,
+		const ELEMENT_CACHE& elementCacheArg)
+	{
 		this->bAtomList = argAtomList;
+		natoms = (this->bAtomList).size();
+		elementCache = elementCacheArg;
 	}
 
 public:

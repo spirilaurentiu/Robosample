@@ -27,8 +27,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	c.PrintMolmodelAndDuMMTypes();
-	c.PrintSimbodyMobods();
+	// c.PrintMolmodelAndDuMMTypes();
+	// c.PrintSimbodyMobods();
 
 	c.Run();
 		

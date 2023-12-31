@@ -149,11 +149,13 @@ public:
     OpenMM::Vec3 OpenMMCoords;
 
 private:
-    int nbonds = std::numeric_limits<int>::min();
+    //int nbonds = std::numeric_limits<int>::min(); // SP_OLD
+    int nbonds = 0; // SP_NEW
     int freebonds = std::numeric_limits<int>::min();
     int number = std::numeric_limits<int>::min(); // amber index
     int atomicNumber = std::numeric_limits<int>::min();
-    int visited = std::numeric_limits<int>::min();
+    //int visited = std::numeric_limits<int>::min(); // SP_OLD
+    int visited = 0; // SP_NEW
     int moleculeIndex = std::numeric_limits<int>::min();
     SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
     SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;

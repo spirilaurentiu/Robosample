@@ -5,6 +5,10 @@ Implementation of Topology class. **/
 
 using namespace SimTK;
 
+#ifndef TRACE_GRAPH
+#define TRACE_GRAPH true
+#endif
+
 void Topology::BAT() {
 	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT BEGIN" << std::endl;
 
@@ -224,7 +228,7 @@ force field specific parameters for an atom type. Gmolmodel defines a
 new Biotype for each atom. The only thing that is specified is the element
 with info about name, atomic number, valence and mass. **/
 void Topology::bAddBiotypes(
-	readAmberInput *amberReader
+	//readAmberInput *amberReader
 )
 {
 	// We don't have any residues. The whole molecule is one residue
@@ -286,6 +290,12 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 						this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
 						this->convertInboardBondCenterToOutboard();
 						baseSetFlag = 1;
+
+						if(TRACE_GRAPH){
+							std::cout << "Topology::buildAcyclicGraph base " 
+								<< previousNode->compoundAtomIndex << std::endl;
+						}
+
 					}
 				}
 
@@ -310,7 +320,12 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 
 				// Set bSpecificAtom atomIndex to the last atom added to bond
 				node->setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1));
-
+				
+				if(TRACE_GRAPH){
+					std::cout << "Topology::buildAcyclicGraph " 
+						<< previousNode->compoundAtomIndex << " " 
+						<< node->compoundAtomIndex << std::endl;
+				}
 
 				// The only time we have to set atomIndex to the previous node
 				if (nofProcesses == 2) {
@@ -330,10 +345,6 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 						(*bondsInvolvedIter)->getIndex(),
 						Compound::BondIndex(getNumBonds() - 1)
 				) );
-
-				//std::cout << "DEBUG inserted into GmolBond2bondIx bondIx2GmolBond  " 
-				//<< GmolBond2bondIx.size() << " " << bondIx2GmolBond.size() 
-				//<< std::endl << std::flush;
 
 				// Drop the number of available bonds
 				/* --(previousNode->freebonds);
@@ -451,22 +462,13 @@ void Topology::matchDefaultConfigurationWithAtomList(
 	std::cout << "Gmolmodel Topology match done" << std::endl;
 }
 
-/** Builds the molecular tree, closes the rings, matches the configuration
-on the graph using using Molmodels matchDefaultConfiguration and sets the
-general flexibility of the molecule. **/
-// TODO: break in two functions
-void Topology::buildGraphAndMatchCoords(int argRoot)
+/**
+ * Check if the provided atom is a possible root and if not find one
+*/
+bSpecificAtom* Topology::findARoot(int argRoot)
 {
-	// Initialize all atoms and bonds to unvisited
-	for (int i = 0; i < natoms; i++) {
-		bAtomList[i].setVisited(0);
-	}
-	for (int i = 0; i < nbonds; i++) {
-		bonds[i].setVisited(0);
-	}
-
-	// Find an atom to be the root. It has to have more than one bond
 	bSpecificAtom *root = nullptr;
+	
 	if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
 		baseAtomNumber = argRoot;
 		root = &(bAtomList[argRoot]);
@@ -487,6 +489,36 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 		baseAtomNumber = root->getNumber();
 	}
 
+	return root;
+
+}
+
+
+void Topology::generateAIx2TopXMaps(void)
+{
+	for (unsigned int i = 0; i < getNumAtoms(); ++i){
+		aIx2TopTransform.insert(std::make_pair(
+			(bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
+	}
+}
+
+/** Builds the molecular tree, closes the rings, matches the configuration
+on the graph using using Molmodels matchDefaultConfiguration and sets the
+general flexibility of the molecule. **/
+// TODO: break in two functions
+void Topology::buildGraphAndMatchCoords(int argRoot)
+{
+	// Initialize all atoms and bonds to unvisited
+	/* for (int i = 0; i < natoms; i++) {
+		bAtomList[i].setVisited(0);
+	}
+	for (int i = 0; i < nbonds; i++) {
+		bonds[i].setVisited(0);
+	} */ // SP_OLD
+
+	// Find an atom to be the root. It has to have more than one bond
+	bSpecificAtom *root = findARoot(argRoot); // SP_NEWOLD
+
 	// Build the graph
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
@@ -499,18 +531,40 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	}
 
 	// Close the remaining bonds
-	addRingClosingBonds();
-    std::cout << "Topology::buildGraphAndMatcoords  addRingClosingBonds done\n" << std::flush;
+	addRingClosingBonds(); // SP_OLD
+    std::cout << "Topology::buildGraphAndMatcoords  addRingClosingBonds done\n"; // SP_OLD
 
 	// Build the conformation
-	matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact);
+	matchDefaultConfigurationWithAtomList(SimTK::Compound::Match_Exact); // SP_OLD
 
 	// Now that everything is built, initialize aIx2TopTransforms map
-	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		aIx2TopTransform.insert(std::make_pair((bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
+	/* for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		aIx2TopTransform.insert(std::make_pair(
+			(bAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
+	} */ // SP_OLD
+
+	generateAIx2TopXMaps(); // SP_OLDNEW
+
+}
+
+/** */
+void Topology::buildAcyclicGraphWrap(bSpecificAtom* root)
+{
+
+	// Build the graph
+	if(bAtomList.size() == 1){
+		this->setBaseAtom(bAtomList[0].getSingleAtom());
+		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
+		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
+	}else{
+		nofProcesses = 0;
+		buildAcyclicGraph(root, root);
+		std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
 	}
 
 }
+
+
 
 
 /** It calls DuMMs defineAtomClass, defineChargedAtomTye and

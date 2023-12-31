@@ -2425,36 +2425,10 @@ World::calcMobodToMobodTransforms(
 
 	// Get Top to parent frame
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
+	// root of the parent mobod
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
-
-
-/* 	// BEGIN GET ANGLE
-	SimTK::Compound::AtomIndex chemGrandParentIx;
-	SimTK::Transform T_X_grand;
-
-	if(chemParentAIx > 0){
-
-		chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
-
-		T_X_grand = topology.getTopTransform(chemGrandParentIx);
-
-		SimTK::Vec3 v1 = T_X_grand.p();
-		SimTK::Vec3 v2 = T_X_Proot.p();
-		SimTK::Vec3 v3 = T_X_root.p();
-
-		SimTK::Real bondAngle = bAngle(v1, v2, v3);
-
-		std::cout << "World::calcMobodToMobodTransforms chemGrandParentIx chemParentAIx rootAIx andle "
-			<< chemGrandParentIx << " " << chemParentAIx << " " << rootAIx << " "
-			<< v1 << " " << v2 << " " << v3 << " "
-			<< bondAngle << std::endl;
-
-	}
-	// END GET ANGLE	 */
-
-
-
+	
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle =
 		topology.bgetDefaultInboardDihedralAngle(rootAIx);
@@ -2591,6 +2565,46 @@ SimTK::Transform World::calcX_FMTransforms(
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
+
+
+
+	// chemical parent atom
+	SimTK::Transform T_X_chemProot = topology.getTopTransform(chemParentAIx);
+	
+
+	// BEGIN GET ANGLE
+	SimTK::Compound::AtomIndex chemGrandParentIx;
+	SimTK::Transform T_X_grand;
+
+	if(chemParentAIx > 0){
+
+		chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+
+		T_X_grand = topology.getTopTransform(chemGrandParentIx);
+
+		SimTK::Vec3 v1 = (~(T_X_root.R())) * T_X_grand.p();
+		SimTK::Vec3 v2 = (~(T_X_root.R())) * T_X_chemProot.p();
+		SimTK::Vec3 v3 = (~(T_X_root.R()))  * T_X_root.p();
+
+		SimTK::Real bondAngle = bAngle(v2, v1, v3);
+
+		//if(ownWorldIndex == 1){
+			std::cout << "World::calcMobodToMobodTransforms chemGrandParentIx chemParentAIx rootAIx angle "
+				<< chemGrandParentIx << " " << chemParentAIx << " " << rootAIx << " " 
+				//<< std::endl << T_X_grand << T_X_chemProot << T_X_root << std::endl
+				//<< std::endl << topology.getTopTransform(chemGrandParentIx) << topology.getTopTransform(chemParentAIx) << topology.getTopTransform(rootAIx) << std::endl
+				//<< "============================="
+				//<< std::endl << topology.getTopTransform(Compound::AtomIndex(2)) << topology.getTopTransform(Compound::AtomIndex(4)) << topology.getTopTransform(Compound::AtomIndex(7)) << std::endl
+				//<< v1 << " " << v2 << " " << v3 << " "
+				<< bondAngle << std::endl;
+		//}
+
+	}
+	// END GET ANGLE	
+
+
+
+
 
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle =

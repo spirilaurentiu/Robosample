@@ -1423,7 +1423,10 @@ void Context::AddMolecules(
 		// Set Gmolmodel atoms properties from a reader: number, name, element
 		// initial name, force field type, charge, coordinates, mass,
 		// LJ parameters
-		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]); 
+		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]); // SP_OLD
+		//loadAtoms(amberReader[0]); // SP_NEW
+		//topologies[molIx].setAtomList(atoms, elementCache); // SP_NEW
+
 
 		// Set bonds properties from reader: bond indeces, atom neighbours
 		topologies[molIx].SetGmolBondingPropertiesFromReader(&amberReader[molIx]);
@@ -1435,15 +1438,24 @@ void Context::AddMolecules(
 		// topologies[molIx].load(amberReader[molIx]);
 
 		// Add Biotype indeces and Biotype names representing Biotypes
-		topologies[molIx].bAddBiotypes(&amberReader[molIx]);
-
+		topologies[molIx].bAddBiotypes(//&amberReader[molIx]);
+		);
 		// topologies[molIx].BAT();
+
 
 		// Build Robosample graph and Compound graph.
 		// It also asigns atom indexes in Compound
 		// This is done only once and it needs
-		topologies[molIx].buildGraphAndMatchCoords(
-			std::stoi(roots.back()));
+		//topologies[molIx].buildGraphAndMatchCoords(
+		//	std::stoi(roots.back())); // SP_OLD
+
+		bSpecificAtom *root = topologies[molIx].findARoot(
+			std::stoi(roots.back())); // SP_NEW
+		topologies[molIx].buildAcyclicGraphWrap(root); // SP_NEW
+		topologies[molIx].addRingClosingBonds(); // SP_NEW
+		topologies[molIx].matchDefaultConfigurationWithAtomList(
+			SimTK::Compound::Match_Exact); // SP_NEW
+		topologies[molIx].generateAIx2TopXMaps(); // SP_NEW
 
 		// Helper function for calc MBAT determinant
 		topologies[molIx].loadTriples();
