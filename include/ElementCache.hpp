@@ -18,7 +18,7 @@ private:
 	SimTK::Element::Symbol null = "";
 
 	// std::array is an aggregate type and requires 1 more layer of braces
-	std::array<std::pair<SimTK::Element::Name, SimTK::Element::Symbol>, 119> elements = { {
+	std::array<std::pair<SimTK::Element::Name, SimTK::Element::Symbol>, 119> elements = { { // Laurentiu
 		{ "Hydrogen", "H" },
 		{ "Helium", "He" },
 		{ "Lithium", "Li" },
@@ -137,6 +137,6 @@ private:
 		{ "Livermorium", "Lv" },
 		{ "Tennessine", "Ts" },
 		{ "Oganesson", "Og" },
-		{ "Dummy", "Du" }
+		{ "Dummy", "Du" } // Laurentiu
 	} };
 };

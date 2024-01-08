@@ -125,8 +125,8 @@ bool Context::initializeFromFile(const std::string &file)
 	// Add molecules based on the setup reader
 	// amber -> robo
 	int finalNofMols = 0;
-	//AddMolecules(requestedNofMols, setupReader); // SP_OLD
-	AddMolecules_SP_NEW(requestedNofMols, setupReader); // SP_NEW
+	AddMolecules(requestedNofMols, setupReader); // SP_OLD
+	//AddMolecules_SP_NEW(requestedNofMols, setupReader); // SP_NEW
 
 	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
 	finalNofMols = getNofMolecules();
@@ -134,9 +134,11 @@ bool Context::initializeFromFile(const std::string &file)
 		std::cerr << cerr_prefix << "Something went wrong while adding the world" << std::endl;
 		return false;
 	}
+
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
-	return false; // SP_NEW
+	//std::cout << "Robosample in development mode. Delete return after print." << std::endl; // SP_NEW
+	//return false; // SP_NEW
 
 	// Loads parameters into DuMM
 	addDummParams(finalNofMols, setupReader);
@@ -1513,7 +1515,7 @@ void Context::AddMolecules_SP_NEW(
 		nofMols++;
 		internCoords.PrintRoot();
 		internCoords.computeBAT( getAtoms() );
-		internCoords.computeLevelsAndOffsets( getAtoms() );
+		//internCoords.computeLevelsAndOffsets( getAtoms() );
 		internCoords.updateVisited(atoms);
 		internCoords.PrintBAT();
 
@@ -1545,7 +1547,8 @@ void Context::AddMolecules_SP_NEW(
 		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
 		Topology topology(moleculeName);
 
-		topologies.push_back(topology);
+		topologies.push_back(topology);		
+
 	}
 
 	// ========================================================================

@@ -17,6 +17,7 @@ using namespace SimTK;
 //                               struct BOND
 //==============================================================================
 struct BOND {
+
 	int first = -1,
 		second = -1;
 
@@ -34,6 +35,7 @@ struct BOND {
 //                               struct ANGLE
 //==============================================================================
 struct ANGLE {
+
 	int first = -1,
 		second = -1,
 		third = -1;
@@ -51,6 +53,7 @@ struct ANGLE {
 //                               struct TORSION
 //==============================================================================
 struct TORSION {
+
 	int first = -1,
 		second = -1,
 		third = -1,
