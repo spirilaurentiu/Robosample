@@ -132,6 +132,7 @@ public:
 	* @brief This function computes the BAT graph
 	* @param bAtomList Atom list read from Amber.
 	*/
+	void computeBATOld(const std::vector<bSpecificAtom>& bAtomList);
 	void computeBAT(const std::vector<bSpecificAtom>& bAtomList);
 
 	/**
