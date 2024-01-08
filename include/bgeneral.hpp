@@ -67,6 +67,14 @@ void trace(Args &&... args)
 
 // ----------
 
+// Useful
+
+#ifndef  eolf
+#define eolf std::endl<<std::flush 
+# endif
+
+// ----------
+
 #define sq(x)		((x)*(x))
 
 //#ifndef sqr

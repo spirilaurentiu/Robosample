@@ -29,7 +29,14 @@ class Context{
 public:
 	bool initializeFromFile(const std::string& file);
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
-	
+
+	// Experimental movements
+	bSpecificAtom* findARoot(Topology topology, int argRoot);
+	void buildAcyclicGraph(Topology topology,
+		bSpecificAtom *node, bSpecificAtom *previousNode);
+	void buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root);
+
+
 	void Run();
 	void Run(int steps);
 
@@ -53,6 +60,11 @@ public:
 		//std::vector<std::string> argRoots,
 		//std::vector<std::string> argRootMobilities
 	);
+	void AddMolecules_SP_NEW(
+		int requestedNofMols,
+		SetupReader& setupReader
+	);
+
 
 	/** It calls DuMMs defineAtomClass. These Molmodel functions contain
 	information regarding the force field parameters. **/
@@ -501,7 +513,7 @@ protected:
 	// Molecules (topologies<-Compounds) objects
 	//std::vector<bMoleculeReader *> moleculeReaders;
 	std::vector<Topology> topologies;
-	std::vector<std::string> roots;
+	std::vector<int> roots;
 	//std::vector<std::string> rootMobilities;
 
 	/** Vectors of Cartesian coordinates **/
@@ -614,8 +626,11 @@ protected:
 	std::vector<int> findMolecules(const readAmberInput& reader);
 	void loadAtoms(const readAmberInput& reader);
 	void loadBonds(const readAmberInput& reader);
-	void setAtomCompoundTypes();
+	void SetGmolAtomsCompoundTypes();
 	void addBiotypes();
+	std::vector<bSpecificAtom>& getAtoms() {
+        return atoms;
+    }
 	
 public:
 	/** Implicit membrane mimicked by half-space contacts */

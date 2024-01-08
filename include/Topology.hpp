@@ -282,6 +282,12 @@ public:
 	*/
 	bSpecificAtom* findARoot(int argRoot);
 
+	std::vector<bSpecificAtom>::iterator findARoot(
+		std::vector<bSpecificAtom>::iterator bAtomListBeg,
+		std::vector<bSpecificAtom>::iterator bAtomListEnd);
+
+	void findARoot(std::vector<bSpecificAtom>& bAtomListArg);
+
 	/**
 	 * Generate an AtomIndex to Top Transforms map
 	*/
@@ -469,19 +475,26 @@ public:
 			std::vector<SimTK::Real> Zs);
 
 	void setAtomList(
-		const std::vector<bSpecificAtom>& argAtomList,
-		const ELEMENT_CACHE& elementCacheArg)
-	{
-		this->bAtomList = argAtomList;
+		std::vector<bSpecificAtom>& argAtomList,
+		ELEMENT_CACHE& elementCacheArg)
+	{		
+		(this->bAtomList) = (argAtomList);
 		natoms = (this->bAtomList).size();
 		elementCache = elementCacheArg;
 	}
+
+	void setBondList(
+		std::vector<bBond>& argBonds)
+	{
+		this->bonds = argBonds;
+		nbonds = (this->bonds).size();
+	}	
 
 public:
 
 	void BAT();
 
-	// TODO move to Context
+	// Atoms
 	int natoms;
 	std::vector<bSpecificAtom> bAtomList;
 	std::vector<bSpecificAtom>::iterator atomsBeg_It;
@@ -489,17 +502,22 @@ public:
 	size_t atomsBeg_Ix;
 	size_t atomsEnd_Ix;
 
-
+	// Bonds
 	int nbonds;
 	std::vector<bBond> bonds;
+	std::vector<bBond>::iterator bondsBeg_It;
+	std::vector<bBond>::iterator bondsEnd_It;
+	size_t bondsBeg_Ix;
+	size_t bondsEnd_Ix;
 
+	// Triples
 	int nTriples;
 	std::vector< std::vector<Compound::AtomIndex> > triples;
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	//std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
 
-	// Map aIx is redundant in MobilizedBodyIndeces
+	// Map aIx is redundant in MobilizedBodyIndeces // TODO remove 
 	std::map< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> > aIx2mbx;
 
 	// Map aIx to its Transform Default top transform
@@ -508,9 +526,19 @@ public:
 	// Map bSpecificAtom number to aIx
 	std::map< SimTK::Compound::AtomIndex, int > CompoundAtomIx2GmolAtomIx;
 
-private:
+	// Gmolmodel to Molmodel (and inverse) bond mappings
+	std::map< SimTK::Compound::BondIndex, int > bondIx2GmolBond;
+	std::map< int,  SimTK::Compound::BondIndex> GmolBond2bondIx;
+
+
+	int nofProcesses;
+	int baseSetFlag;
+	int baseAtomNumber;
 
 	int bSpecificAtomRootIndex;
+
+private:
+
 
 	std::string regimen;
 	std::string name;
@@ -520,13 +548,7 @@ private:
 	 */
 	SimTK::CompoundSystem::CompoundIndex compoundIndex;
 
-	int nofProcesses;
-	int baseSetFlag;
-	int baseAtomNumber;
 
-	// Gmolmodel to Molmodel (and inverse) bond mappings
-	std::map< SimTK::Compound::BondIndex, int > bondIx2GmolBond;
-	std::map< int,  SimTK::Compound::BondIndex> GmolBond2bondIx;
 
 	//std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
 

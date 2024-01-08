@@ -30,13 +30,13 @@ int main(int argc, char **argv)
 	// c.PrintMolmodelAndDuMMTypes();
 	// c.PrintSimbodyMobods();
 
-	c.Run();
+	//c.Run();
 		
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --
 	
 	// Write final pdbs
-	c.writeFinalPdb();
+	//c.writeFinalPdb();
 
 	//std::cout << "OS memory 6\n" << exec("free") << std::endl;
 	//std::cout << "printStatus 1 " << std::endl;

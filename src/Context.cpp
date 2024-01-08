@@ -124,15 +124,19 @@ bool Context::initializeFromFile(const std::string &file)
 
 	// Add molecules based on the setup reader
 	// amber -> robo
-	AddMolecules(requestedNofMols, setupReader);
+	int finalNofMols = 0;
+	//AddMolecules(requestedNofMols, setupReader); // SP_OLD
+	AddMolecules_SP_NEW(requestedNofMols, setupReader); // SP_NEW
 
 	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
-	int finalNofMols = getNofMolecules();
+	finalNofMols = getNofMolecules();
 	if(requestedNofMols != finalNofMols){
 		std::cerr << cerr_prefix << "Something went wrong while adding the world" << std::endl;
 		return false;
 	}
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
+
+	return false; // SP_NEW
 
 	// Loads parameters into DuMM
 	addDummParams(finalNofMols, setupReader);
@@ -397,7 +401,10 @@ bool Context::initializeFromFile(const std::string &file)
 
 
 	// Setup task spaces
-	addTaskSpacesLS();
+	bool usingTaskSpace = false;
+	if(usingTaskSpace){
+		addTaskSpacesLS();
+	}
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
@@ -574,36 +581,10 @@ std::vector<int> Context::findMolecules(const readAmberInput& reader) {
 	return moleculesBegin;
 }
 
-void Context::loadBonds(const readAmberInput& reader) {
-	// Allocate memory for bonds list
-	nbonds = reader.getNumberBonds();
-	bonds.reserve(nbonds);
-
-	// Iterate bonds and get atom indeces
-	// This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
-	for(int i = 0; i < nbonds; i++) {
-		bBond bond;
-		bond.setIndex(i);
-		bond.i = reader.getBondsAtomsIndex1(i);
-		bond.j = reader.getBondsAtomsIndex2(i);
-		bonds.push_back(bond);
-
-		// BAD! this will break if we invalidate the bonds vector
-		atoms[bond.i].addNeighbor(&atoms[bonds[i].j]);
-		atoms[bond.i].addBond(&bonds[i]);
-
-		atoms[bond.j].addNeighbor(&atoms[bonds[i].i]);
-		atoms[bond.j].addBond(&bonds[i]);
-	}
-
-	// Assign the number of bonds an atom has and set the number of freebonds
-	// equal to the number of bonds for now
-	for(auto& atom : atoms) {
-		atom.setNbonds(atom.bondsInvolved.size());
-		atom.setFreebonds(atom.bondsInvolved.size());
-	}
-}
-
+/** Set Gmolmodel atoms properties from a reader: number, name, element,
+ * initial name, force field type, charge, coordinates, mass, LJ parameters.
+ * 1-to-1 correspondence between prmtop and Gmolmodel.
+ * This does not set anything in Compund or DuMM.  **/
 void Context::loadAtoms(const readAmberInput& reader) {
 	// Alloc memory for atoms and bonds list
 	natoms = reader.getNumberAtoms();
@@ -628,6 +609,7 @@ void Context::loadAtoms(const readAmberInput& reader) {
 		// Assign a "unique" name. The generator is however limited.
 		// Examples: AAAA, AAAB, AAAC, AAAD etc
 		atom.generateName(i);
+		std::cout << "SP_NEW atom " << i << " " << atom.getName() << std::endl << std::flush;
 
 		// Store the initial name from prmtop
 		// Examples: "O1", "C1", "C2", "H1", "H10"
@@ -669,7 +651,45 @@ void Context::loadAtoms(const readAmberInput& reader) {
 	}
 }
 
-void Context::setAtomCompoundTypes() {
+/** Set bonds properties from reader: bond indeces, atom neighbours.
+ *  1-to-1 correspondence between prmtop and Gmolmodel.
+ **/
+void Context::loadBonds(const readAmberInput& reader) {
+	
+	assert( (!atoms.empty()) &&
+		"Context::loadBonds: atom list empty.");
+
+	// Allocate memory for bonds list
+	nbonds = reader.getNumberBonds();
+	bonds.reserve(nbonds);
+
+	// Iterate bonds and get atom indeces
+	// This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
+	for(int i = 0; i < nbonds; i++) {
+		bBond bond;
+		bond.setIndex(i);
+		bond.i = reader.getBondsAtomsIndex1(i);
+		bond.j = reader.getBondsAtomsIndex2(i);
+		bonds.push_back(bond);
+
+		// BAD! this will break if we invalidate the bonds vector
+		atoms[bond.i].addNeighbor(&atoms[bonds[i].j]);
+		atoms[bond.i].addBond(&bonds[i]);
+
+		atoms[bond.j].addNeighbor(&atoms[bonds[i].i]);
+		atoms[bond.j].addBond(&bonds[i]);
+	}
+
+	// Assign the number of bonds an atom has and set the number of freebonds
+	// equal to the number of bonds for now
+	for(auto& atom : atoms) {
+		atom.setNbonds(atom.bondsInvolved.size());
+		atom.setFreebonds(atom.bondsInvolved.size());
+	}
+}
+
+
+void Context::SetGmolAtomsCompoundTypes() {
 	// Angle TetrahedralAngle = 109.47 * Deg2Rad;
 
 	// Set Gmolmodel name and element and inboard length
@@ -695,11 +715,12 @@ void Context::setAtomCompoundTypes() {
 		// 			atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
 		// 		}
 		// 	}
-
+		//
 		// 	// Set the inboard BondCenter
 		// 	atom.setInboardBondCenter("bond1");
 		// 	atom.setDefaultInboardBondLength(0.19);
 		// }
+
 	}
 }
 
@@ -734,234 +755,188 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	loadAtoms(reader);
 	loadBonds(reader);
-	setAtomCompoundTypes();
+	SetGmolAtomsCompoundTypes();
 	addBiotypes();
-
-	// addDummParams()
-
-	// int num_atoms = 0;
-	// const auto moleculeAtomIndices = findMolecules(reader);
-	// for (const auto& indices : moleculeAtomIndices) {
-
-	// 	std::cout << indices << std::endl;
-	// }
 
 	return;
 
-	// // molecules are stored as a vector of atoms
-	// // bAtomList[moleculeIndex][atomIndex] where atomIndex is in range [0, atomsPerMolecule[moleculeIndex])
-	// std::vector<std::vector<bSpecificAtom>> bAtomList(numMols + 1);
-	// for (int i = 0; i < numMols; i++) {
-	// 	bAtomList[i].resize(atomsPerMolecule[i]);
-	// }
 
-	// std::vector<bSpecificAtom> bAtomList;
-	// bAtomList.resize(natoms);
-
-	// std::vector<bBond> bonds;
-	// bonds.resize(nbonds);
-
-	// for (int i = 0; i < natoms; i++) {
-	// 	bSpecificAtom atom;
-
-	// 	// Assign an index like in prmtop
-	// 	atom.setNumber(i);
-
-	// 	// N, H1, OX etc
-	// 	auto atomType = reader.getAtomsType(i);
-	// 	ROBOSAMPLE::trim(atomType);
-	// 	atom.setInName(atomType);
-	// 	atom.setFfType(atomType);
-
- 	// 	atom.setAtomicNumber( reader.getAtomicNumber(i) );
-
-	// 	// Assign a "unique" name. The generator is however limited.
-	// 	// AAAA, AAAB, AAAC, AAAD, AAAF etc - why do we need this?
-	// 	atom.setName(GetUniqueName(i));
-
-	// 	std::cout << i << " " << atom.getAtomicNumber() << " " << atom.getInName() << " " << atom.getName() << std::endl;
-
-	// 	// Set charge as it is used in Amber 						????????????????????????
-	// 	SimTK::Real chargeMultiplier = 18.2223;
-	// 	atom.setCharge(reader.getAtomsCharge(i) / chargeMultiplier);
-
-	// 	// Set coordinates in nm
-	// 	atom.setX(reader.getAtomsXcoord(i) / 10.0);
-	// 	atom.setY(reader.getAtomsYcoord(i) / 10.0);
-	// 	atom.setZ(reader.getAtomsZcoord(i) / 10.0);
-
-	// 	// Set mass
-	// 	atom.setMass(reader.getAtomsMass(i));
-
-	// 	// Set Lennard-Jones parameters
-	// 	atom.setVdwRadius(reader.getAtomsRVdW(i));
-	// 	atom.setLJWellDepth(reader.getAtomsEpsilon(i));
-
-	// 	// Set residue name and index
-	// 	atom.residueName = std::string("UNK");
-	// 	atom.residueIndex = 1;
-
-	// 	switch(atom.getAtomicNumber()) {
-	// 	case 1:
-	// 		atom.setElem("H");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name, Element(1, "Hydrogen", "H", atom.getMass()) );
-	// 		break;
-	// 	case 6:
-	// 		atom.setElem("C");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(6, "Carbon", "C", atom.getMass()));
-	// 		break;
-	// 	case 7:
-	// 		atom.setElem("N");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name, Element(7, "Nitrogen", "N", atom.getMass()));
-	// 		break;
-	// 	case 8:
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name, Element(8, "Oxygen", "O", atom.getMass()));
-	// 		break;
-	// 	case 9:
-	// 		atom.setElem("F");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name, Element(9, "Fluorine", "F", atom.getMass()));
-	// 		break;
-	// 	case 11:
-	// 		atom.setElem("Na");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(11, "Sodium", "Na", atom.getMass()));
-	// 		break;
-	// 	case 12:
-	// 		atom.setElem("Mg");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(12, "Magnesium", "Mg", atom.getMass()));
-	// 		break;
-	// 	case 15:
-	// 		atom.setElem("P");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(15, "Phosphorus", "P", atom.getMass()));
-	// 		break;
-	// 	case 16:
-	// 		atom.setElem("S");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(16, "Sulfur", "S", atom.getMass()));
-	// 		break;
-	// 	case 17:
-	// 		atom.setElem("Cl");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(17, "Chlorine", "Cl", atom.getMass()));
-	// 		break;
-	// 	case 19:
-	// 		atom.setElem("K");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(19, "Potassium", "K", atom.getMass()));
-	// 		break;
-	// 	case 20:
-	// 		atom.setElem("Ca");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(20, "Calcium", "Ca", atom.getMass()));
-	// 		break;
-	// 	case 23:
-	// 		atom.setElem("V");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(23, "Vanadium", "V", atom.getMass()));
-	// 		break;
-	// 	case 25:
-	// 		atom.setElem("Mn");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(25, "Manganese", "Mn", atom.getMass()));
-	// 		break;
-	// 		atom.setElem("O");
-	// 	case 26:
-	// 		atom.setElem("Fe");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(26, "Iron", "Fe", atom.getMass()));
-	// 		break;
-	// 	case 30:
-	// 		atom.setElem("Zn");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(30, "Zinc", "Zn", atom.getMass()));
-	// 		break;
-	// 	case 35:
-	// 		atom.setElem("Br");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name,  Element(35, "Bromine", "Br", atom.getMass()));
-	// 		break;
-	// 	case 53:
-	// 		atom.setElem("I");
-	// 		atom.compoundSingleAtom = new
-	// 			Compound::SingleAtom(atom.name, Element(53, "Iodine", "I", atom.getMass()));
-	// 		break;
-	// 	default:
-	// 		std::cerr << "Atom with atomic number " << atom.getAtomicNumber() << " not available." << std::endl;
-	// 		// return false;
-	// 	}
-
-	// 	// Add bond centers
-	// 	Angle TetrahedralAngle = 109.47 * Deg2Rad;
-
-	// 	// Add BondCenters
-	// 	for(int i = 0; i < (natoms); i++) {
-	// 		(atom.compoundSingleAtom)->setCompoundName("SingleAtom");
-
-	// 		if(atom.nbonds > 0){
-	// 			if(atom.nbonds == 1){ // One bond only
-	// 				(atom.compoundSingleAtom)->addFirstBondCenter("bond1",
-	// 					atom.name);
-	// 			}else if(atom.nbonds > 1){ // multiple bonds
-	// 				(atom.compoundSingleAtom)->addFirstTwoBondCenters("bond1", "bond2",
-	// 					atom.name, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
-	// 				if(atom.nbonds > 2){
-	// 					(atom.compoundSingleAtom)->addLeftHandedBondCenter("bond3",
-	// 						atom.name, TetrahedralAngle, TetrahedralAngle);
-	// 				}
-	// 				if(atom.nbonds > 3){
-	// 					(atom.compoundSingleAtom)->addRightHandedBondCenter("bond4",
-	// 						atom.name, TetrahedralAngle, TetrahedralAngle);
-	// 				}
-	// 			}
-
-	// 			// Set the inboard BondCenter
-	// 			(atom.compoundSingleAtom)->setInboardBondCenter("bond1");
-	// 			(atom.compoundSingleAtom)->setDefaultInboardBondLength(0.19);
-
-	// 		} // bonded atoms iterator
-	// 	} // atoms iterator
-
-	// 	// // Add atom to the list
-	// 	// int whichMol = whichMolecule[i];
-	// 	// bAtomList[whichMol].push_back(atom);
-	// 	bAtomList.push_back(atom);
-	// }
-
-	// // Iterate bonds and get atom indeces
-	// // This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
-	// for(int i=0; i<nbonds; i++){
-	// 	bBond bond;
-	// 	bond.setIndex(i);
-	// 	bond.i = reader.getBondsAtomsIndex1(i);
-	// 	bond.j = reader.getBondsAtomsIndex2(i);
-	// 	bonds.push_back(bond);
-	// }
-
-	// // Assign neighbors and bonds involved for each atom
-	// // which translates into pushing bSpecificAtom * and bBond *
-	// // into their apropriate vectors
-	// for(int i = 0; i < nbonds; i++){
-	// 	(bAtomList[ bonds[i].i  ]).addNeighbor( &(bAtomList[ bonds[i].j  ]) );
-	// 	(bAtomList[ bonds[i].i  ]).addBond( &(bonds[i]) );
-
-	// 	(bAtomList[ bonds[i].j  ]).addNeighbor( &(bAtomList[ bonds[i].i  ]) );
-	// 	(bAtomList[ bonds[i].j  ]).addBond( &(bonds[i]) );
-	// }
-
-	// // Assign the number of bonds an atom has and set the number of freebonds
-	// // equal to the number of bonds for now
-	// for (int i = 0; i < natoms; i++) {
-	// 	bAtomList[i].nbonds = bAtomList[i].bondsInvolved.size();
-	// 	bAtomList[i].freebonds = bAtomList[i].bondsInvolved.size();
-	// }
 }
+
+
+/**
+ * SP_NEW
+ * Check if the provided atom is a possible root and if not find one
+*/
+bSpecificAtom* Context::findARoot(Topology topology, int argRoot)
+{
+
+	bSpecificAtom *root = nullptr;
+	
+	if ((static_cast<size_t>(argRoot) > atoms.size()) || (atoms[argRoot].getNBonds() > 1)) {
+		topology.baseAtomNumber = argRoot;
+		root = &(atoms[argRoot]);
+		topology.bSpecificAtomRootIndex = argRoot;
+	}else {
+		std::cout << "Root atom will be chosen by Gmolmodel...  ";
+		int baseAtomListIndex = 0;
+		for (int i = 0; i < natoms; i++) {
+			if (atoms[i].getNBonds() > 1) {
+				baseAtomListIndex = i;
+				std::cout << "done. Root chosen " << i << std::endl;
+				break;
+			}
+		}
+
+		root = &(atoms[baseAtomListIndex]);
+		topology.bSpecificAtomRootIndex = baseAtomListIndex;
+		topology.baseAtomNumber = root->getNumber();
+	}
+
+	return root;
+
+}
+
+/** SP_NEW */
+void Context::buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root)
+{
+
+	// Build the graph
+	if(atoms.size() == 1){
+		topology.setBaseAtom(atoms[0].getSingleAtom());
+		(atoms[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
+		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
+	}else{
+		topology.nofProcesses = 0;
+		buildAcyclicGraph(topology, root, root);
+		std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
+	}
+
+}
+
+/** 
+ * SP_NEW
+ * The actual recursive function that builds the graph **/
+void Context::buildAcyclicGraph(
+	Topology topology,
+	bSpecificAtom *node, bSpecificAtom *previousNode)
+{
+	// The base atom has to be set once Molmodel
+	topology.baseSetFlag = 0;
+
+	std::cout << "SP_NEWa " << node->getNumber() << " "
+		<< previousNode->getNumber() << " " 
+		<< node << " " << previousNode << std::endl << std::flush;
+
+	// Only process unvisited nodes
+	if( node->wasVisited() ){
+		return;
+	}
+
+	// Mark the depth of the recursivity
+	++topology.nofProcesses;
+
+	// Mark Gmolmodel bond and create bond in Molmodel
+	for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
+		bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
+	{
+		// Check if there is a bond between prevnode and node based on bonds
+		// read from amberReader
+		if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
+			(*bondsInvolvedIter)->setVisited(1);
+
+			// Skip the first step as we don't have yet two atoms
+			if (topology.nofProcesses != 1) {
+
+				// The first bond is special in Molmodel and has to be
+				// treated differently. Set a base atom first
+				if (topology.nofProcesses == 2) {
+					if (topology.baseSetFlag == 0) {
+						topology.setBaseAtom(previousNode->getSingleAtom());
+						topology.setAtomBiotype(previousNode->getName(), (topology.getName()),
+												previousNode->getName());
+						topology.convertInboardBondCenterToOutboard();
+						topology.baseSetFlag = 1;
+
+					}
+				}
+
+				// Bond current node by the previous (Compound function)
+				std::stringstream parentBondCenterPathName;
+				if (previousNode->getNumber() == topology.baseAtomNumber) {
+					parentBondCenterPathName << previousNode->getName()
+						<< "/bond" << previousNode->getFreebonds();
+				} else {
+					parentBondCenterPathName << previousNode->getName()
+						<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
+				}
+
+				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
+				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
+				std::string debugString = parentBondCenterPathName.str();
+				topology.bondAtom(node->getSingleAtom(),
+						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
+
+				// Set the final Biotype
+				topology.setAtomBiotype(node->getName(), (topology.getName()).c_str(), node->getName());
+
+				// Set bSpecificAtom atomIndex to the last atom added to bond
+				node->setCompoundAtomIndex(
+					topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 1));
+				
+
+				// The only time we have to set atomIndex to the previous node
+				if (topology.nofProcesses == 2) {
+					previousNode->setCompoundAtomIndex(topology.getBondAtomIndex(
+						Compound::BondIndex(topology.getNumBonds() - 1), 0));
+				}
+
+				// Set bBond Molmodel Compound::BondIndex
+				(*bondsInvolvedIter)->setBondIndex(
+					Compound::BondIndex(topology.getNumBonds() - 1));
+				std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
+						Compound::BondIndex(topology.getNumBonds() - 1),
+						(*bondsInvolvedIter)->getIndex()
+				);
+
+				topology.bondIx2GmolBond.insert(pairToBeInserted);
+
+				topology.GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+						(*bondsInvolvedIter)->getIndex(),
+						Compound::BondIndex(topology.getNumBonds() - 1)
+				) );
+
+				// Drop the number of available bonds
+				/* --(previousNode->freebonds);
+				--(node->freebonds); */
+
+				previousNode->decrFreebonds();
+				node->decrFreebonds();
+
+				// Bond was inserted in Molmodel Compound. Get out and search
+				// the next bond
+				break;
+
+			}
+		}
+	}
+
+	// Mark the node as visited
+	node->setVisited(1);
+
+	// Set the previous node to this node
+	previousNode = node;
+
+	// Go to the next node. Choose it from his neighbours.
+	for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
+		buildAcyclicGraph(topology, (node->neighbors)[i], previousNode);
+	}
+
+}
+
+
+
+
 
 /** 
  * Main run function
@@ -1416,17 +1391,14 @@ void Context::AddMolecules(
 		// Keep track of the number of molecules
 		moleculeCount++; // Used for unique names of molecules // from world
 		std::string moleculeName = "MOL" + std::to_string(moleculeCount); 
-		roots.emplace_back(argRoots[molIx]); // from world
+		roots.emplace_back(std::stoi(argRoots[molIx])); // from world
 		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
 		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok? 
 
 		// Set Gmolmodel atoms properties from a reader: number, name, element
 		// initial name, force field type, charge, coordinates, mass,
 		// LJ parameters
-		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]); // SP_OLD
-		//loadAtoms(amberReader[0]); // SP_NEW
-		//topologies[molIx].setAtomList(atoms, elementCache); // SP_NEW
-
+		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]);
 
 		// Set bonds properties from reader: bond indeces, atom neighbours
 		topologies[molIx].SetGmolBondingPropertiesFromReader(&amberReader[molIx]);
@@ -1442,20 +1414,19 @@ void Context::AddMolecules(
 		);
 		// topologies[molIx].BAT();
 
+		for(int tz = 0; tz < topologies[molIx].bAtomList.size(); tz++){
+			std::cout << "SP_NEW " << topologies[molIx].bAtomList[tz].getNumber() << " "
+				<< &(topologies[molIx].bAtomList[tz]) << std::endl << std::flush;
+		}
 
 		// Build Robosample graph and Compound graph.
 		// It also asigns atom indexes in Compound
 		// This is done only once and it needs
-		//topologies[molIx].buildGraphAndMatchCoords(
-		//	std::stoi(roots.back())); // SP_OLD
-
-		bSpecificAtom *root = topologies[molIx].findARoot(
-			std::stoi(roots.back())); // SP_NEW
-		topologies[molIx].buildAcyclicGraphWrap(root); // SP_NEW
-		topologies[molIx].addRingClosingBonds(); // SP_NEW
-		topologies[molIx].matchDefaultConfigurationWithAtomList(
-			SimTK::Compound::Match_Exact); // SP_NEW
-		topologies[molIx].generateAIx2TopXMaps(); // SP_NEW
+		topologies[molIx].buildGraphAndMatchCoords(
+			//std::stoi(
+				roots.back()
+			//)
+			);
 
 		// Helper function for calc MBAT determinant
 		topologies[molIx].loadTriples();
@@ -1469,6 +1440,140 @@ void Context::AddMolecules(
 
 
 }
+
+
+/** Load molecules based on loaded filenames **/
+void Context::AddMolecules_SP_NEW(
+	int requestedNofMols,
+	SetupReader& setupReader
+){
+
+
+	std::vector<std::string> argRoots = setupReader.get("ROOTS");
+	//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+
+	amberReader.resize(requestedNofMols);
+
+	// Get user requested Amber filenames
+	std::vector<std::string> reqTopFNs;
+	std::vector<std::string> reqCrdFNs;
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+		reqTopFNs.push_back(
+			setupReader.get("MOLECULES")[molIx] + std::string("/") +
+			setupReader.get("PRMTOP")[molIx]
+		);
+
+		reqCrdFNs.push_back(
+			setupReader.get("MOLECULES")[molIx] + std::string("/") +
+			setupReader.get("INPCRD")[molIx] + ".rst7"
+		);	
+
+	}
+
+	// Add filenames to Context filenames vectors
+	// This has to be called before Worlds constructors so that
+	// reserve will be called for molecules and topologies
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+
+		// make amber reader create multiple molecule
+		// each molecule then generate one topology
+		// amber: vector<molecule info>
+
+		loadTopologyFile( reqTopFNs[molIx] );
+		loadCoordinatesFile( reqCrdFNs[molIx] );
+
+	}
+
+	// Load all the roots here
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+		roots.push_back(std::stoi(argRoots[molIx]));
+		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+	}
+
+	// ========================================================================
+	// ======== (0) Read atoms from all the molecules =========================
+	// ========================================================================
+
+	amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
+	loadAtoms(amberReader[0]);
+	loadBonds(amberReader[0]);
+	SetGmolAtomsCompoundTypes();
+	addBiotypes();
+
+	// ========================================================================
+	// ======== (1) Get BAT graphs ============================================
+	// ========================================================================
+
+	InternalCoordinates internCoords;
+
+	nofMols = 0;
+
+	while( internCoords.computeRoot( getAtoms() )){
+
+		nofMols++;
+		internCoords.PrintRoot();
+		internCoords.computeBAT( getAtoms() );
+		internCoords.computeLevelsAndOffsets( getAtoms() );
+		internCoords.updateVisited(atoms);
+		internCoords.PrintBAT();
+
+	}
+
+		// Scenario (a) - on the fly
+			// Set visited based on internCoords indexMap (isSelected())
+			// Transfer content visited to a Topology
+			// Build a topology based on visited
+			// Remove visited
+
+		// Scenario (b) - diferent roots inside InternalCoordinates
+			// Loop updateVisited + computeBAT = find joints
+				// computeRoot()
+				// computeBAT()
+				// Find cycles
+				// Find external joints
+
+	// ========================================================================
+	// ======== (2) Build graphs with bondAtom ================================
+	// ========================================================================
+
+	topologies.reserve(requestedNofMols);
+	moleculeCount = -1;
+
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		// Add an empty topology
+		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
+		Topology topology(moleculeName);
+
+		topologies.push_back(topology);
+	}
+
+	// ========================================================================
+	// ======== (3) Rest from AddMolecules ====================================
+	// ========================================================================
+
+
+		// Build Robosample graph and Compound graph.
+		// bSpecificAtom *rootAtom = findARoot(topology, roots[molIx]);
+		// buildAcyclicGraphWrap(topology, rootAtom);
+		// topology.setAtomList(atoms, elementCache);
+		// topology.setBondList(bonds);
+		// topology.addRingClosingBonds();
+		// topology.matchDefaultConfigurationWithAtomList(
+		// 	SimTK::Compound::Match_Exact);
+		// topology.generateAIx2TopXMaps();
+		// Helper function for calc MBAT determinant
+		//topology.loadTriples();
+		//
+		// Map of Compound atom indexes to Robosample atom indexes
+		//topology.loadCompoundAtomIx2GmolAtomIx();
+
+
+
+}
+
+
+
 
 /* // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes
