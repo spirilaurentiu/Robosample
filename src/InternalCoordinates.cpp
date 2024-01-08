@@ -50,7 +50,7 @@ bool AmberAtom::operator!=(const AmberAtom& rhs) {
  * <!-- This function computes the BAT graph and calls computeLevelsAndOffsets
  * to calculate it into a level / offset format -->
 */
-void InternalCoordinates::compute(const std::vector<bSpecificAtom>& bAtomList) {
+void InternalCoordinates::compute(std::vector<bSpecificAtom>& bAtomList) {
 
     computeRoot(bAtomList);
 
@@ -132,75 +132,75 @@ bool InternalCoordinates::computeRoot(
  * <!-- This function computes the BAT graph and calls computeLevelsAndOffsets
  * to calculate it into a level / offset format -->
 */
-void InternalCoordinates::computeBAT(const std::vector<bSpecificAtom>& bAtomList) {
+void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
 
-	selectedAtoms.reserve(bAtomList.size());
-	indexMap = std::vector<int>(bAtomList.size(), -1);
+    selectedAtoms.reserve(bAtomList.size());
+    indexMap = std::vector<int>(bAtomList.size(), -1);
 
-	std::unordered_map<int, int> parents;
-	parents.reserve(bAtomList.size() + 2);
-	parents[-1] = -2;
-	parents[root.first] = -1;
-	parents[root.second] = root.first;
-	parents[root.third] = root.second;
+    selectAtom(root.first);
+    selectAtom(root.second);
+    selectAtom(root.third);
 
-	selectAtom(root.first);
-	selectAtom(root.second);
-	selectAtom(root.third);
+	bAtomList[root.first].setParentNumber(-1);
+	bAtomList[root.second].setParentNumber(root.first);
+	bAtomList[root.third].setParentNumber(root.second);
 
-	perMolBonds.push_back(std::vector<BOND>());		// Laurentiu
-	std::vector<BOND>& bonds = perMolBonds.back();	// Laurentiu
-	perMolAngles.push_back(std::vector<ANGLE>());		// Laurentiu
-	std::vector<ANGLE>& angles = perMolAngles.back();	// Laurentiu
-	perMolTorsions.push_back(std::vector<TORSION>());		// Laurentiu
-	std::vector<TORSION>& torsions = perMolTorsions.back();	// Laurentiu
+    perMolBonds.push_back(std::vector<BOND>());     // Laurentiu
+    std::vector<BOND>& bonds = perMolBonds.back();  // Laurentiu
+    perMolAngles.push_back(std::vector<ANGLE>());       // Laurentiu
+    std::vector<ANGLE>& angles = perMolAngles.back();   // Laurentiu
+    perMolTorsions.push_back(std::vector<TORSION>());       // Laurentiu
+    std::vector<TORSION>& torsions = perMolTorsions.back(); // Laurentiu
 
-	// add root bonds
-	bonds.push_back({ root.second, root.first });
-	bonds.push_back({ root.third, root.second });
+    // add root bonds
+    bonds.push_back({ root.second, root.first });
+    bonds.push_back({ root.third, root.second });
 
-	std::size_t lastSelectedAtomsSize = 0;						// Laurentiu
+    std::size_t lastSelectedAtomsSize = 0;                      // Laurentiu
 
-	while (selectedAtoms.size() < bAtomList.size()) {
+    while (selectedAtoms.size() < bAtomList.size()) {
 
-		if(!(selectedAtoms.size() > lastSelectedAtomsSize)){	// Laurentiu
-			break;												// Laurentiu
-		}														// Laurentiu
-		lastSelectedAtomsSize = selectedAtoms.size(); 			// Laurentiu
+        if(!(selectedAtoms.size() > lastSelectedAtomsSize)){    // Laurentiu
+            break;                                              // Laurentiu
+        }                                                       // Laurentiu
+        lastSelectedAtomsSize = selectedAtoms.size();           // Laurentiu
 
-		for (int i = 0; i < selectedAtoms.size(); i++) {
-			// a1 is the base atom
-			const auto a1 = selectedAtoms[i];
+        for (int i = 0; i < selectedAtoms.size(); i++) {
+            // a1 is the base atom
+            const auto a1 = selectedAtoms[i];
 
-			// a0 is a new atom connected to a1
-			a0_list.clear();
-			a0_list.reserve(bAtomList[a1].neighbors.size());
-			for (const auto& b : bAtomList[a1].neighbors) {
-				AmberAtom a0(b);
-				if (!isSelected(a0))
-					a0_list.push_back(a0);
-			}
-			sortByMass(a0_list, false);
+            // a0 is a new atom connected to a1
+            a0_list.clear();
+            a0_list.reserve(bAtomList[a1].neighbors.size());
+            for (const auto& b : bAtomList[a1].neighbors) {
+                AmberAtom a0(b);
+                if (!isSelected(a0))
+                    a0_list.push_back(a0);
+            }
+            sortByMass(a0_list, false);
 
-			// iterate all a0 atoms
-			for(const auto& a0 : a0_list) {
+            // iterate all a0 atoms
+            for(const auto& a0 : a0_list) {
 
-				// created a new torsion
-				selectAtom(a0);
-				bonds.push_back({ a0.amberId, a1 });
-				parents[a0.amberId] = a1;
-			}
-		}
-	}
+                // created a new torsion
+                selectAtom(a0);
+                bonds.push_back({ a0.amberId, a1 });
+                bAtomList[a0.amberId].setParentNumber(a1);
+            }
+        }
+    }
 
-	
+    for(int i = 0; i < bAtomList.size(); i++) {
+        std::cout << "Parent of " << i << " is " << bAtomList[i].getParentNumber() << std::endl;
+    }
 }
+
 
 /*!
  * <!-- This function computes the BAT graph and calls computeLevelsAndOffsets
  * to calculate it into a level / offset format -->
 */
-void InternalCoordinates::computeBATOld(const std::vector<bSpecificAtom>& bAtomList) {
+void InternalCoordinates::computeBATOld(std::vector<bSpecificAtom>& bAtomList) {
 
 	selectedAtoms.reserve(bAtomList.size());
 	indexMap = std::vector<int>(bAtomList.size(), -1);
