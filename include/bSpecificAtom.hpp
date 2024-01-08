@@ -124,6 +124,9 @@ public:
     std::string getResidueName() const;
     void setResidueName(const std::string& residueName);
 
+    void setParentNumber(int n);
+    int getParentNumber() const;
+
     // End of interface
     /**@}**/
 
@@ -153,7 +156,8 @@ private:
     int nbonds = 0; // SP_NEW
     int freebonds = std::numeric_limits<int>::min();
     int number = std::numeric_limits<int>::min(); // amber index
-    int atomicNumber = std::numeric_limits<int>::min();
+    int parentNumber = std::numeric_limits<int>::min(); // amber index of parent atom
+    int atomicNumber = std::numeric_limits<int>::min(); // atomic number
     //int visited = std::numeric_limits<int>::min(); // SP_OLD
     int visited = 0; // SP_NEW
     int moleculeIndex = std::numeric_limits<int>::min();

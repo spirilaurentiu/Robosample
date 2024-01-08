@@ -137,10 +137,16 @@ void InternalCoordinates::computeBAT(const std::vector<bSpecificAtom>& bAtomList
 	selectedAtoms.reserve(bAtomList.size());
 	indexMap = std::vector<int>(bAtomList.size(), -1);
 
+	std::unordered_map<int, int> parents;
+	parents.reserve(bAtomList.size() + 2);
+	parents[-1] = -2;
+	parents[root.first] = -1;
+	parents[root.second] = root.first;
+	parents[root.third] = root.second;
+
 	selectAtom(root.first);
 	selectAtom(root.second);
 	selectAtom(root.third);
-
 
 	perMolBonds.push_back(std::vector<BOND>());		// Laurentiu
 	std::vector<BOND>& bonds = perMolBonds.back();	// Laurentiu
@@ -182,11 +188,12 @@ void InternalCoordinates::computeBAT(const std::vector<bSpecificAtom>& bAtomList
 				// created a new torsion
 				selectAtom(a0);
 				bonds.push_back({ a0.amberId, a1 });
-
+				parents[a0.amberId] = a1;
 			}
 		}
 	}
 
+	
 }
 
 /*!

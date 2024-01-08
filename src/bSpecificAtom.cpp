@@ -483,3 +483,11 @@ std::string bSpecificAtom::getResidueName() const {
 void bSpecificAtom::setResidueName(const std::string& value) {
     residueName = value; // Directly assign the new value
 }
+
+void bSpecificAtom::setParentNumber(int n) {
+    parentNumber = n;
+}
+
+int bSpecificAtom::getParentNumber() const {
+    return parentNumber;
+};
