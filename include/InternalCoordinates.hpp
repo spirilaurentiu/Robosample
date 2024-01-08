@@ -22,6 +22,10 @@ struct BOND {
 
 	bool operator==(const BOND& rhs) const;
 	bool operator!=(const BOND& rhs) const;
+
+	void Print(void) const {
+		std::cout << first << " " << second;
+	}
 };
 //------------------------------------------------------------------------------
 
@@ -36,6 +40,10 @@ struct ANGLE {
 
 	bool operator==(const ANGLE& rhs) const;
 	bool operator!=(const ANGLE& rhs) const;
+
+	void Print(void) const {
+		std::cout << first << " " << second << " " << third;
+	}	
 };
 
 
@@ -50,6 +58,10 @@ struct TORSION {
 
 	bool operator==(const TORSION& rhs) const;
 	bool operator!=(const TORSION& rhs) const;
+
+	void Print(void) const {
+		std::cout << first << " " << second << " " << third << " " << fourth;
+	}
 };
 //------------------------------------------------------------------------------
 
@@ -116,6 +128,59 @@ public:
 	*/
 	void compute(const std::vector<bSpecificAtom>& bAtomList);
 
+	/**
+	* @brief This function computes the BAT graph
+	* @param bAtomList Atom list read from Amber.
+	*/
+	void computeBAT(const std::vector<bSpecificAtom>& bAtomList);
+
+	/**
+	* @brief This function prints the BAT graph
+	*/
+	void PrintBAT(void){
+		std::vector<BOND>::iterator bIt;
+		std::vector<ANGLE>::iterator aIt;
+		std::vector<TORSION>::iterator tIt;
+
+		std::cout << "BAT\n";
+		for(bIt = perMolBonds.back().begin(); bIt < perMolBonds.back().end(); bIt++){
+			std::cout << "bond " ;
+			bIt->Print();
+			std::cout << std::endl;
+		}
+		for(aIt = perMolAngles.back().begin(); aIt < perMolAngles.back().end(); aIt++){
+			std::cout << "angle " ;
+			aIt->Print();
+			std::cout << std::endl;
+		}
+		for(tIt = perMolTorsions.back().begin(); tIt < perMolTorsions.back().end(); tIt++){
+			std::cout << "torsion " ;
+			tIt->Print();
+			std::cout << std::endl;
+		}
+		//std::cout << std::endl;
+
+	}
+
+	void updateVisited(std::vector<bSpecificAtom>& bAtomList);
+
+	/**
+	* @brief This function prints the BAT graph
+	*/
+	void PrintRoot(void){
+
+		std::vector<TORSION>::iterator tIt;
+
+		std::cout << "BAT root\n";
+		for(tIt = roots.begin(); tIt < roots.end(); tIt++){
+			std::cout << "torsion " ;
+			tIt->Print();
+			std::cout << std::endl;
+		}
+		//std::cout << std::endl;
+
+	}
+
 	/**	
 	* @brief Puts BAT graph in level / offset format
 	* @param bAtomList Atom list read from Amber.
@@ -130,7 +195,7 @@ public:
     /**@{**/
 
 
-    const TORSION& getRoot() const;
+    const TORSION& getLastRoot() const;
 	const std::vector<BOND>& getBonds() const;
 	const std::vector<BOND>& getRingClosingBonds() const;
 	const std::vector<ANGLE>& getAngles() const;
@@ -177,9 +242,9 @@ public:
 	int BAT2amber(int bat) const;
 	/**@}**/
 
+    bool computeRoot(const std::vector<bSpecificAtom>& bAtomList);
 
 private:
-    void computeRoot(const std::vector<bSpecificAtom>& bAtomList);
 
 	void sortByMass(std::vector<AmberAtom>& v, bool reverse);
 
@@ -189,9 +254,14 @@ private:
 
 	bool isTerminal(const AmberAtom& a) const;
 
-	std::vector<BOND> bonds, ringClosingBonds;
-	std::vector<ANGLE> angles;
-	std::vector<TORSION> torsions;
+	std::vector<BOND> allbonds, ringClosingBonds;
+	std::vector<ANGLE> allangles;
+	std::vector<TORSION> alltorsions;
+
+	std::vector<std::vector<BOND>> perMolBonds; // Laurentiu
+	std::vector<std::vector<ANGLE>> perMolAngles; // Laurentiu
+	std::vector<std::vector<TORSION>> perMolTorsions; // Laurentiu
+
 
 	std::vector<std::vector<BAT_ATOM>> levelGraph;
 	std::vector<std::vector<int>> graphedAtoms;
@@ -203,6 +273,7 @@ private:
 	std::vector<int> indexMap;
 
     TORSION root;
+	std::vector<TORSION> roots;
 };
 
 #endif //__INTERNALCOORDINATES__
