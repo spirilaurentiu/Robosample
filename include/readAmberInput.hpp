@@ -10,12 +10,56 @@
 #include <utility>
 #include "Molmodel.h"
 
+template <typename T>
+struct Interval {
+    int start;
+    int end;
+    T data;
+
+    // Overloading the less than operator for set comparison
+    bool operator<(const Interval& other) const {
+        return end < other.start;
+    }
+};
+
+template <typename T>
+class IntervalTree {
+public:
+    // Insert an interval into the tree
+    void insert(const Interval<T>& interval) {
+        intervals.insert(interval);
+    }
+
+    // Find the string for a given number
+    const T& get(int number) const {
+        Interval<T> dummyInterval;
+        dummyInterval.start = number;
+        dummyInterval.end = number;
+
+        auto it = intervals.lower_bound(dummyInterval);
+
+        if (it != intervals.end() && number >= it->start && number <= it->end) {
+            return it->data;
+        }
+
+        // Return an empty string or an indication that the number was not found in any interval
+        return notFound;
+    }
+
+private:
+    std::set<Interval<T>> intervals;
+    T notFound {};
+};
+
+
 // TO DO: impropers ?!?
 // Errors to be continued...
 // Epot calc & units
 class readAmberInput{
 public:
     void readAmberFiles(const std::string& inpcrdfile, const std::string& prmtopfile);
+
+
 
     int getNumberAtoms() const;
     int getNumberBonds() const;
@@ -68,12 +112,15 @@ public:
     int getDihedralsAtomsIndex(int dihIndex, int atomIndx);
     void GeneratePairStartAndLen();
 
-    std::vector < std::pair<int, int> > getPairStartAndLen();
+    std::vector < std::pair<int, int> > getPairStartAndLen() const;
 
     SimTK::Real getDihedralsForceK(int dih) const;  // kcal / mol^-1 rad^-2
     SimTK::Real getDihedralsEqval(int dih) const; // rad
     SimTK::Real getDihedralsPeriod(int dih) const;
     SimTK::Real getDihedralsPhase(int dih) const;
+
+    const std::string& getResidueLabel(int i) const;
+    int getResidueIndex(int i) const;
 
     // Other
     // SimTK::Real getDihedralsSCEE(int p);
@@ -137,10 +184,10 @@ private:
     // std::vector<SimTK::Real> SCEEScaleFactor;
     // std::vector<SimTK::Real> SCNBScaleFactor;
 
-
-
-
-
+    std::vector<std::string> residueLabels;
+    std::vector<int> residuePointers;
+    IntervalTree<std::string> residueLabelTree;
+    IntervalTree<int> residueIndexTree;
 
     // some temp data
     int global_i = 0;
@@ -202,6 +249,9 @@ private:
     void readAtomsRadii();
     void readAtomsTypesIndex();
     void readAtomsScreenGBIS();
+
+    void readResidueLabels();
+    void readResiduePointers();
 
     void readAtomicNumber();
 

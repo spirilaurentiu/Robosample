@@ -8,6 +8,8 @@ constexpr int ATOM_NAME_SIZE = 4;
 constexpr int AMBER_INDEX_MULTIPLIER = 3;
 constexpr int AMBER_INDEX_DIFF = 1;
 
+int numres = 0;
+
 void readAmberInput::readAmberFiles(const std::string& inpcrdfile, const std::string& prmtopfile)
 {
 
@@ -42,6 +44,11 @@ try
 
     else if (line.find("ATOMIC_NUMBER") != std::string::npos)
         readAtomicNumber();
+
+    else if (line.find("RESIDUE_LABEL") != std::string::npos)
+        readResidueLabels();
+    else if (line.find("RESIDUE_POINTER") != std::string::npos)
+        readResiduePointers();
 
     else if (line.find("MASS") != std::string::npos)
         readAtomsMass();
@@ -115,6 +122,22 @@ catch(std::exception e){
 }
 
 	GeneratePairStartAndLen();
+
+  // populate the interval tree for residue names
+  residuePointers.push_back(NumberAtoms + 1);
+  for (int i = 0; i < residueLabels.size(); i++) {
+    residueLabelTree.insert({
+      residuePointers[i] - 1,
+      residuePointers[i + 1] - 2,
+      residueLabels[i]
+    });
+
+    residueIndexTree.insert({
+      residuePointers[i] - 1,
+      residuePointers[i + 1] - 2,
+      i + 1
+    });
+  }
 }
 
 void readAmberInput::readInpcrd(){
@@ -158,6 +181,7 @@ void readAmberInput::readPointers(){
       NumberDihedrals = NumberDihedralsH + NumberDihedralsNONH;
 
       NumberExcludedAtoms = FlagPointers[10];
+      numres = FlagPointers[11];
 
       NumberBondsTypes = FlagPointers[15];
       NumberAnglesTypes = FlagPointers[16];
@@ -165,6 +189,25 @@ void readAmberInput::readPointers(){
 
   }
 
+  void readAmberInput::readResidueLabels() {
+    getline(prmtop, line);
+    for(global_i = 0; global_i < numres; global_i++)
+    {
+      std::string label;
+      prmtop >> label;
+      residueLabels.push_back(label);
+    }
+  }
+
+  void readAmberInput::readResiduePointers() {
+    getline(prmtop, line);
+    for(global_i = 0; global_i < numres; global_i++)
+    {
+      std::string label;
+      prmtop >> label;
+      residuePointers.push_back(std::stoi(label));
+    }
+  }
 
   void readAmberInput::readAtomsCharge(){
     getline(prmtop, line);
@@ -740,7 +783,7 @@ void readAmberInput::GeneratePairStartAndLen()
 	
 }
 
-std::vector < std::pair<int, int> > readAmberInput::getPairStartAndLen()
+std::vector < std::pair<int, int> > readAmberInput::getPairStartAndLen() const
 {
 	return PairStartAndLen;
 }
@@ -758,4 +801,12 @@ SimTK::Real readAmberInput::getDihedralsPeriod(int dihedral) const {
 
 bool readAmberInput::getNonBondedAtomsMatrix(int at1, int at2) const {
   return NonBondedAtomsMatrix[at1][at2];
+}
+
+const std::string& readAmberInput::getResidueLabel(int i) const {
+  return residueLabelTree.get(i);
+}
+
+int readAmberInput::getResidueIndex(int i) const {
+  return residueIndexTree.get(i);
 }
