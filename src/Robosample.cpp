@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
 	std::string helpString = 
-	"Usage: Robsample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
+	"Usage: Robosample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
 
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
@@ -27,10 +27,12 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	// c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.inpcrd");
+
 	// c.PrintMolmodelAndDuMMTypes();
 	// c.PrintSimbodyMobods();
 
-	//c.Run();
+	// c.Run();
 		
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --
