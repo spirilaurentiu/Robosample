@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	// c.PrintMolmodelAndDuMMTypes();
 	// c.PrintSimbodyMobods();
 
-	// c.Run();
+	c.Run();
 		
 	//std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	// -- Run --

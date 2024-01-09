@@ -87,7 +87,9 @@
         "__mutex_base": "cpp",
         "ios": "cpp",
         "stack": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "__functional_base": "cpp",
+        "__memory": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "enabled",
     "cmake.configureOnOpen": false

@@ -65,13 +65,21 @@ void trace(Args &&... args)
     std::cout << std::endl;
 }
 
-// ----------
-
-// Useful
+// Less smart trace and print
 
 #ifndef  eolf
 #define eolf std::endl<<std::flush 
 # endif
+
+#ifndef  eol
+#define eol std::endl 
+# endif
+
+#ifndef  scout
+#define scout(x) std::cout<<x
+# endif
+
+
 
 // ----------
 

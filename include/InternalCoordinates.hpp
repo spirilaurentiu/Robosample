@@ -17,6 +17,7 @@ using namespace SimTK;
 //                               struct BOND
 //==============================================================================
 struct BOND {
+
 	int first = -1,
 		second = -1;
 
@@ -34,6 +35,7 @@ struct BOND {
 //                               struct ANGLE
 //==============================================================================
 struct ANGLE {
+
 	int first = -1,
 		second = -1,
 		third = -1;
@@ -51,6 +53,7 @@ struct ANGLE {
 //                               struct TORSION
 //==============================================================================
 struct TORSION {
+
 	int first = -1,
 		second = -1,
 		third = -1,
@@ -195,10 +198,35 @@ public:
 
     /**@{**/
 
-
+	/**	
+	* @brief Return the last added molecule's root
+	* @return TORSION which has the root in first
+	*/	
     const TORSION& getLastRoot() const;
-	const std::vector<BOND>& getBonds() const;
+
+	/**	
+	* @brief Return the root of the whichMoleculeth molecule
+	* @param whichMolecule Molecule index
+	* @return TORSION which has the root in first
+	*/	
+	const TORSION& getRoot( int whichMolecule ) const;
+	
+	/**	
+	* @brief Return the all the roots as TORSION type
+	* @return TORSION vector
+	*/	
+	const std::vector<TORSION>& getRoots() const;
+
+	/**	
+	* @brief Return the last added molecule's bond list
+	* @return Last molecules BOND vector
+	*/	
+	const std::vector<BOND>& getLastMolsBonds() const;
+
+
 	const std::vector<BOND>& getRingClosingBonds() const;
+
+
 	const std::vector<ANGLE>& getAngles() const;
 	const std::vector<TORSION>& getTorsions() const;
 

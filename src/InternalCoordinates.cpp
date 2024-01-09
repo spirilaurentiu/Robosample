@@ -158,41 +158,89 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
 
     std::size_t lastSelectedAtomsSize = 0;                      // Laurentiu
 
-    while (selectedAtoms.size() < bAtomList.size()) {
+	while (selectedAtoms.size() < bAtomList.size()) {
 
-        if(!(selectedAtoms.size() > lastSelectedAtomsSize)){    // Laurentiu
-            break;                                              // Laurentiu
-        }                                                       // Laurentiu
-        lastSelectedAtomsSize = selectedAtoms.size();           // Laurentiu
+		if(!(selectedAtoms.size() > lastSelectedAtomsSize)){	// Laurentiu
+			break;												// Laurentiu
+		}														// Laurentiu
+		lastSelectedAtomsSize = selectedAtoms.size(); 			// Laurentiu
 
-        for (int i = 0; i < selectedAtoms.size(); i++) {
-            // a1 is the base atom
-            const auto a1 = selectedAtoms[i];
+		for (int i = 0; i < selectedAtoms.size(); i++) {
+			// a1 is the base atom
+			const auto a1 = selectedAtoms[i];
 
-            // a0 is a new atom connected to a1
-            a0_list.clear();
-            a0_list.reserve(bAtomList[a1].neighbors.size());
-            for (const auto& b : bAtomList[a1].neighbors) {
-                AmberAtom a0(b);
-                if (!isSelected(a0))
-                    a0_list.push_back(a0);
-            }
-            sortByMass(a0_list, false);
+			// a0 is a new atom connected to a1
+			a0_list.clear();
+			a0_list.reserve(bAtomList[a1].neighbors.size());
+			for (const auto& b : bAtomList[a1].neighbors) {
+				AmberAtom a0(b);
+				if (!isSelected(a0))
+					a0_list.push_back(a0);
+			}
+			sortByMass(a0_list, false);
 
-            // iterate all a0 atoms
-            for(const auto& a0 : a0_list) {
+			// iterate all a0 atoms
+			for(const auto& a0 : a0_list) {
 
-                // created a new torsion
-                selectAtom(a0);
-                bonds.push_back({ a0.amberId, a1 });
-                bAtomList[a0.amberId].setParentNumber(a1);
-            }
-        }
-    }
+				// a2 is an atom connected to a1, is not a terminal atom and has been selected
+				a2_list.clear();
+				a2_list.reserve(bAtomList[a1].neighbors.size() - 1);
+				for (const auto& b : bAtomList[a1].neighbors) {
+					AmberAtom a2(b);
+					if (isSelected(a2) && !isTerminal(a2) && a2 != a0) {
+						a2_list.push_back(a2);
+					}
+				}
+				sortByMass(a2_list, false);
+				if(a2_list.empty()) continue;
+				const auto& a2 = a2_list[0];
 
-    for(int i = 0; i < bAtomList.size(); i++) {
-        std::cout << "Parent of " << i << " is " << bAtomList[i].getParentNumber() << std::endl;
-    }
+				// a3 is connected to a2, has been selected and is not a1
+				a3_list.clear();
+				a3_list.reserve(bAtomList[a2.amberId].neighbors.size());
+				for (const auto& b : bAtomList[a2.amberId].neighbors) {
+					AmberAtom a3(b);
+					if (isSelected(a3) && a3.amberId != a1) {
+						a3_list.push_back(a3);
+					}
+				}
+				sortByMass(a3_list, false);
+				if(a3_list.empty()) continue;
+				const auto& a3 = a3_list[0];
+
+				// created a new torsion
+				selectAtom(a0);
+				bonds.push_back({ a0.amberId, a1 });
+
+				bAtomList[a0.amberId].setParentNumber(a1);
+
+				//angles.push_back({ a0.amberId, a1, a2.amberId });
+				//torsions.push_back({ a0.amberId, a1, a2.amberId, a3.amberId });
+			}
+		}
+	}
+
+	for(size_t cnt = 0; cnt < bonds.size(); cnt++){
+
+		BOND& bond  = bonds[cnt];
+
+		int child    = bond.first;
+		int parent   = bond.second;
+		int gparent  = bAtomList[parent].getParentNumber();
+		int ggparent = -2;
+		if(gparent >= 0){
+			ggparent = bAtomList[gparent].getParentNumber();
+		}
+
+		angles.push_back({gparent, parent, child});
+		torsions.push_back({ggparent, gparent, parent, child});
+
+		// std::cout << "BAT pushed "
+		// 	<< ggparent << " " << gparent << " " << parent << " "   << child 
+		// << eol;
+
+	}
+
 }
 
 
@@ -404,11 +452,35 @@ void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAto
 	}
 }
 
+/*!
+ * <!-- Get the last root added -->
+*/
 const TORSION& InternalCoordinates::getLastRoot() const {
     return root;
 }
 
-const std::vector<BOND>& InternalCoordinates::getBonds() const {
+/*!
+ * <!-- Return the root of the whichMoleculeth molecule -->
+*/
+const TORSION& InternalCoordinates::getRoot( int which ) const
+{
+
+	return roots[which];
+
+}
+
+/*!
+ * <!-- Get all the roots -->
+*/
+const std::vector<TORSION>& InternalCoordinates::getRoots() const
+{
+	return roots;
+}
+
+/*!
+ * <!-- Get the last molecule's bond vector added -->
+*/
+const std::vector<BOND>& InternalCoordinates::getLastMolsBonds() const {
 	return perMolBonds.back();
 }
 
