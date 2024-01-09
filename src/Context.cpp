@@ -125,20 +125,38 @@ bool Context::initializeFromFile(const std::string &file)
 	// Add molecules based on the setup reader
 	// amber -> robo
 	int finalNofMols = 0;
-	AddMolecules(requestedNofMols, setupReader); // SP_OLD
-	//AddMolecules_SP_NEW(requestedNofMols, setupReader); // SP_NEW
 
-	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
-	finalNofMols = getNofMolecules();
-	if(requestedNofMols != finalNofMols){
-		std::cerr << cerr_prefix << "Something went wrong while adding the world" << std::endl;
+	bool singlePrmtop = false;
+
+	if(singlePrmtop){ // SP_NEW
+
+		AddMolecules_SP_NEW(requestedNofMols, setupReader);
+
+		std::cout 
+			<< "Robosample in development mode. Delete return after print."
+			<< eol;
+
 		return false;
+
+	}else{ // SP_OLD
+
+		AddMolecules(requestedNofMols, setupReader);
+
+		if(requestedNofMols != getNofMolecules()){
+
+			std::cerr << cerr_prefix
+				<< "Something went wrong while adding the world" 
+				<< eol;
+
+			return false;
+		}
+
+		std::cout << "Added " << finalNofMols << " molecules" << std::endl;		
 	}
 
-	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
-	//std::cout << "Robosample in development mode. Delete return after print." << std::endl; // SP_NEW
-	//return false; // SP_NEW
+	// Set the final number of molecules added
+	finalNofMols = getNofMolecules();
 
 	// Loads parameters into DuMM
 	addDummParams(finalNofMols, setupReader);
@@ -826,10 +844,6 @@ void Context::buildAcyclicGraph(
 	// The base atom has to be set once Molmodel
 	topology.baseSetFlag = 0;
 
-	std::cout << "SP_NEWa " << node->getNumber() << " "
-		<< previousNode->getNumber() << " " 
-		<< node << " " << previousNode << std::endl << std::flush;
-
 	// Only process unvisited nodes
 	if( node->wasVisited() ){
 		return;
@@ -1416,11 +1430,6 @@ void Context::AddMolecules(
 		);
 		// topologies[molIx].BAT();
 
-		for(int tz = 0; tz < topologies[molIx].bAtomList.size(); tz++){
-			std::cout << "SP_NEW " << topologies[molIx].bAtomList[tz].getNumber() << " "
-				<< &(topologies[molIx].bAtomList[tz]) << std::endl << std::flush;
-		}
-
 		// Build Robosample graph and Compound graph.
 		// It also asigns atom indexes in Compound
 		// This is done only once and it needs
@@ -1495,7 +1504,6 @@ void Context::AddMolecules_SP_NEW(
 	// ========================================================================
 	// ======== (0) Read atoms from all the molecules =========================
 	// ========================================================================
-
 	amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
 	loadAtoms(amberReader[0]);
 	loadBonds(amberReader[0]);
@@ -1505,49 +1513,114 @@ void Context::AddMolecules_SP_NEW(
 	// ========================================================================
 	// ======== (1) Get BAT graphs ============================================
 	// ========================================================================
-
 	InternalCoordinates internCoords;
-
 	nofMols = 0;
 
-	while( internCoords.computeRoot( getAtoms() )){
+	// Find a root in the unvisited atoms
+	while( internCoords.computeRoot( getAtoms() )){ // find a root
 
-		nofMols++;
 		internCoords.PrintRoot();
+		nofMols++;
+		
+		// Compute the new molecule's BAT coordinates
 		internCoords.computeBAT( getAtoms() );
-		//internCoords.computeLevelsAndOffsets( getAtoms() );
 		internCoords.updateVisited(atoms);
-		internCoords.PrintBAT();
+		//internCoords.PrintBAT();
 
 	}
-
-		// Scenario (a) - on the fly
-			// Set visited based on internCoords indexMap (isSelected())
-			// Transfer content visited to a Topology
-			// Build a topology based on visited
-			// Remove visited
-
-		// Scenario (b) - diferent roots inside InternalCoordinates
-			// Loop updateVisited + computeBAT = find joints
-				// computeRoot()
-				// computeBAT()
-				// Find cycles
-				// Find external joints
 
 	// ========================================================================
 	// ======== (2) Build graphs with bondAtom ================================
 	// ========================================================================
-
 	topologies.reserve(requestedNofMols);
 	moleculeCount = -1;
 
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	for(unsigned int molIx = 0; molIx < 1; molIx++){
 
 		// Add an empty topology
 		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
 		Topology topology(moleculeName);
 
-		topologies.push_back(topology);		
+		// --------------------------------------------------------------------
+		// ------- (1) findARoot ----------------------------------------------
+		// --------------------------------------------------------------------
+
+		// Set Topology base atom
+		const int rootAmberIx = internCoords.getRoot( molIx ).first;
+		const bSpecificAtom& rootAtom = atoms[rootAmberIx];
+		const SimTK::Compound::SingleAtom& compoundRootAtom
+			= rootAtom.getSingleAtom();
+
+		topology.baseAtomNumber = rootAmberIx;
+		topology.setBaseAtom( compoundRootAtom );
+		topology.setAtomBiotype(rootAtom.getName(), topology.getName(),
+								rootAtom.getName());
+		topology.convertInboardBondCenterToOutboard();
+		topology.baseSetFlag = 1;
+
+		scout("rootAmberIx ") << rootAmberIx << eol;
+
+		// --------------------------------------------------------------------
+		// ------- (2) buildAcyclicGraph --------------------------------------
+		// --------------------------------------------------------------------
+
+		// Iterate internCoords bonds
+		std::vector<BOND>::const_iterator bIt;
+		std::size_t bCnt = 0;
+		const std::vector<BOND>& theseBonds = internCoords.getLastMolsBonds();
+
+		// We have to get the root first
+		for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
+
+			bIt->Print();
+			cout << eol;
+
+			int childAmberIx = bIt->first;
+			bSpecificAtom& child = atoms[childAmberIx];
+			const SimTK::Compound::SingleAtom& childCompoundAtom
+				= child.getSingleAtom();
+
+			int parentAmberIx = bIt->second;
+			bSpecificAtom& parent = atoms[parentAmberIx];
+			const SimTK::Compound::SingleAtom& parentCompoundAtom
+				= parent.getSingleAtom();
+
+			// Set a BondCenterPathName for the parent
+			std::stringstream parentBondCenterPathName;
+			if (parentAmberIx == rootAmberIx) {
+				parentBondCenterPathName << parent.getName()
+					<< "/bond" 
+					<< parent.getFreebonds();
+			}else{
+				parentBondCenterPathName << parent.getName()
+					<< "/bond" 
+					<< (parent.getNBonds() - parent.getFreebonds() + 1);
+			}
+
+			scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+				<< eol;
+			scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
+				<< eol;
+			// scout("CompoundIxs ") << childCompoundAtom.getAtomIndex() << " "
+			// 	<< parentCompoundAtom.getAtomIndex()
+			// 	<< eol;
+
+				parent.decrFreebonds();
+				child.decrFreebonds();
+
+
+		}
+
+		// Get bSpecificAtoms
+		// topology.bondAtom
+
+		// --------------------------------------------------------------------
+		// ------- (2) topology.setAtomList(atoms, elementCache); -------------
+		// --------------------------------------------------------------------
+
+		// Add to the list of topologies
+		topologies.push_back(topology);
 
 	}
 
@@ -1556,9 +1629,6 @@ void Context::AddMolecules_SP_NEW(
 	// ========================================================================
 
 
-		// Build Robosample graph and Compound graph.
-		// bSpecificAtom *rootAtom = findARoot(topology, roots[molIx]);
-		// buildAcyclicGraphWrap(topology, rootAtom);
 		// topology.setAtomList(atoms, elementCache);
 		// topology.setBondList(bonds);
 		// topology.addRingClosingBonds();

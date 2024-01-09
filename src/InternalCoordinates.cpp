@@ -211,18 +211,8 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
 				// created a new torsion
 				selectAtom(a0);
 				bonds.push_back({ a0.amberId, a1 });
-				bAtomList[a0.amberId].setParentNumber(a1);
-				// 
-/* 				int child    = bonds.back().first;
-				int parent   = bonds.back().second;
-				int gparent  = bAtomList[parent].getParentNumber();
-				int ggparent = -2;
-				if(gparent >= 0){
-					ggparent = bAtomList[gparent].getParentNumber();
-				}
 
-				angles.push_back({gparent, parent, child});
-				torsions.push_back({ggparent, gparent, parent, child}); */
+				bAtomList[a0.amberId].setParentNumber(a1);
 
 				//angles.push_back({ a0.amberId, a1, a2.amberId });
 				//torsions.push_back({ a0.amberId, a1, a2.amberId, a3.amberId });
@@ -245,10 +235,9 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
 		angles.push_back({gparent, parent, child});
 		torsions.push_back({ggparent, gparent, parent, child});
 
-		std::cout << "BAT pushed \n"
-			<< ggparent << " " << gparent << " "
-			<< parent << " "   << child << " "
-		;
+		// std::cout << "BAT pushed "
+		// 	<< ggparent << " " << gparent << " " << parent << " "   << child 
+		// << eol;
 
 	}
 
@@ -463,11 +452,35 @@ void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAto
 	}
 }
 
+/*!
+ * <!-- Get the last root added -->
+*/
 const TORSION& InternalCoordinates::getLastRoot() const {
     return root;
 }
 
-const std::vector<BOND>& InternalCoordinates::getBonds() const {
+/*!
+ * <!-- Return the root of the whichMoleculeth molecule -->
+*/
+const TORSION& InternalCoordinates::getRoot( int which ) const
+{
+
+	return roots[which];
+
+}
+
+/*!
+ * <!-- Get all the roots -->
+*/
+const std::vector<TORSION>& InternalCoordinates::getRoots() const
+{
+	return roots;
+}
+
+/*!
+ * <!-- Get the last molecule's bond vector added -->
+*/
+const std::vector<BOND>& InternalCoordinates::getLastMolsBonds() const {
 	return perMolBonds.back();
 }
 
