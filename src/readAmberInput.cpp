@@ -140,18 +140,22 @@ catch(std::exception e){
   }
 }
 
-void readAmberInput::readInpcrd(){
-  int natms_count = 0;
+void readAmberInput::readInpcrd() {
+  // Ignore the first line
   getline(inpcrd, line);
-  inpcrd >> NumberAtoms2;
-  while(!inpcrd.eof() && natms_count <= NumberAtoms2)
-  {
-      inpcrd >> temp_val; AtomsXcoord.push_back(temp_val);
-      inpcrd >> temp_val; AtomsYcoord.push_back(temp_val);
-      inpcrd >> temp_val; AtomsZcoord.push_back(temp_val);
 
-      // std::cout << temp_val;
-      natms_count++;
+  // Next line contains one or two values
+  // The first is the number of atoms present in this file
+  // The second, if present, stores the simulation time
+  // We ignore both values
+  getline(inpcrd, line);
+
+  // Read the coordinates
+  SimTK::Real x, y, z;
+  while(inpcrd >> x >> y >> z) {
+    AtomsXcoord.push_back(x);
+    AtomsYcoord.push_back(y);
+    AtomsZcoord.push_back(z);
   }
 }
 
