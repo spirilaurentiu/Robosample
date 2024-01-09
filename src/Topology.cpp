@@ -84,7 +84,6 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 
 		// Assign a "unique" name. The generator is however limited.
 		bAtomList[i].generateName(i);
-		std::cout << "SP_NEW atom " << i << " " << bAtomList[i].getName() << std::endl << std::flush;
 
 		// Store the initial name from prmtop
 		bAtomList[i].setInName(initialName);
@@ -127,8 +126,7 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
  **/
 void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 {
-	assert( (!bAtomList.empty()) &&
-		"Topology::SetGmolBondingPropertiesFromReader: atom list empty.");
+	assert( (!bAtomList.empty()) && "Topology::loadAtomAndBondInfoFromReader: atom list empty.");
 
 	// Alloc memory for bonds list
 	nbonds = amberReader->getNumberBonds();
@@ -186,7 +184,7 @@ void Topology::SetGmolAtomsCompoundTypes(){
 		// 			atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
 		// 		}
 		// 	}
-		//
+
 		// 	// Set the inboard BondCenter
 		// 	atom.setInboardBondCenter("bond1");
 		// 	atom.setDefaultInboardBondLength(0.19);
@@ -264,10 +262,6 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 	// The base atom has to be set once Molmodel
 	baseSetFlag = 0;
 
-	std::cout << "SP_NEWa " << node->getNumber() << " "
-		<< previousNode->getNumber() << " " 
-		<< node << " " << previousNode << std::endl << std::flush;
-
 	// Only process unvisited nodes
 	if( node->wasVisited() ){
 		return;
@@ -314,6 +308,8 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 					parentBondCenterPathName << previousNode->getName()
 						<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
 				}
+
+				std::cout << "Bonding " << node->getName() << " to " << previousNode->getName() << " with bond center name " << parentBondCenterPathName.str() << std::endl;
 
 				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
 				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
@@ -473,7 +469,6 @@ void Topology::matchDefaultConfigurationWithAtomList(
 */
 bSpecificAtom* Topology::findARoot(int argRoot)
 {
-
 	bSpecificAtom *root = nullptr;
 	
 	if ((static_cast<size_t>(argRoot) > bAtomList.size()) || (bAtomList[argRoot].getNBonds() > 1)) {
@@ -498,38 +493,6 @@ bSpecificAtom* Topology::findARoot(int argRoot)
 
 	return root;
 
-}
-
-/**
- *  SP_NEW
- * Check if the provided atom is a possible root and if not find one
-*/
-std::vector<bSpecificAtom>::iterator
-Topology::findARoot(
-	std::vector<bSpecificAtom>::iterator bAtomListBeg,
-	std::vector<bSpecificAtom>::iterator bAtomListEnd)
-{
-
-	std::vector<bSpecificAtom>::iterator aIt = bAtomListBeg;
-	
-	int cnt = 0;
-	for(aIt = bAtomListBeg; aIt != bAtomListEnd; aIt++, cnt++)
-	{
-		aIt->setVisited(1);
-	}
-
-	return aIt;
-
-}
-
-/**
- * SP_NEW
-*/
-void Topology::findARoot(std::vector<bSpecificAtom>& bAtomListArg)
-{
-	for(int cnt = 0; cnt < bAtomListArg.size(); cnt++){
-		bAtomListArg[cnt].setVisited(1);
-	}
 }
 
 
@@ -1821,7 +1784,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 			setBondMobility(BondMobility::Rigid, SimTK::Compound::BondIndex(r));
 		}
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
-			bonds[r].addBondMobility(BondMobility::Rigid);
+			bonds[r].addBondMobility(BondMobility::Rigid); // TODO: Change to rigid
 		}
 
 		// Get flexible bonds from file. Numbering starts at 0 in prmtop

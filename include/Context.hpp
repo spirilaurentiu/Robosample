@@ -620,13 +620,18 @@ protected:
 	
 	int nbonds = std::numeric_limits<int>::min();
 	std::vector<bBond> bonds;
+
+	std::vector<DUMM_ANGLE> dummAngles;
+	std::vector<DUMM_TORSION> dummTorsions;
 	
 	ELEMENT_CACHE elementCache;
 
 	std::vector<int> findMolecules(const readAmberInput& reader);
 	void loadAtoms(const readAmberInput& reader);
 	void loadBonds(const readAmberInput& reader);
-	void SetGmolAtomsCompoundTypes();
+	void loadAngles(const readAmberInput& reader);
+	void loadTorsions(const readAmberInput& reader);
+	void setAtomCompoundTypes();
 	void addBiotypes();
 	std::vector<bSpecificAtom>& getAtoms() {
         return atoms;

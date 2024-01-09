@@ -491,3 +491,7 @@ void bSpecificAtom::setParentNumber(int n) {
 int bSpecificAtom::getParentNumber() const {
     return parentNumber;
 };
+
+void bSpecificAtom::setName(const std::string& name) {
+    this->name = name;
+}

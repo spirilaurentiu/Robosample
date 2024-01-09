@@ -48,9 +48,12 @@ class bBond /* : public intpair */ {
 		std::vector<SimTK::BondMobility::Mobility> mobilities;
 		// std::vector<float> uScaleFactors = std::vector<float>(1, 1.0);
 		std::vector<float> uScaleFactors = { 1.0f };
-		SimTK::Compound::BondIndex bondIndex = SimTK::Compound::BondIndex(99999999);
+		SimTK::Compound::BondIndex bondIndex = std::numeric_limits<SimTK::Compound::BondIndex>::max();
 		// int ring_no = 0;
 		int myindex = std::numeric_limits<int>::min();
+
+		SimTK::Real forceK = std::numeric_limits<SimTK::Real>::min();
+		SimTK::Real forceEquil = std::numeric_limits<SimTK::Real>::min();
 
 	public:
 		// These will correspond to bSpecificAtom.number
@@ -67,6 +70,12 @@ class bBond /* : public intpair */ {
 	public:
 		// bBond() = default;
 		// bBond(int a, int b);
+
+		void setForceK(SimTK::Real forceK);
+		SimTK::Real getForceK() const;
+
+		void setForceEquil(SimTK::Real forceEquil);
+		SimTK::Real getForceEquil() const;
 
 		// bool isInRing() const;
 		bool isRingClosing() const;
@@ -106,3 +115,27 @@ class bBond /* : public intpair */ {
 		// void updUScaleFactor(int, float);
 };
 
+struct DUMM_ANGLE {
+	int first = std::numeric_limits<int>::min();
+	int second = std::numeric_limits<int>::min();
+	int third = std::numeric_limits<int>::min();
+
+	SimTK::Real k = std::numeric_limits<SimTK::Real>::min();
+	SimTK::Real equil = std::numeric_limits<SimTK::Real>::min();
+};
+
+struct DUMM_TORSION {
+	int first = std::numeric_limits<int>::min();
+	int second = std::numeric_limits<int>::min();
+	int third = std::numeric_limits<int>::min();
+	int fourth = std::numeric_limits<int>::min();
+	bool improper = false;
+
+	// How many impropers with these four indices are present here
+	int num = 0; 
+
+	// These values are filled according to num (see above)
+	int period[4] {};
+	SimTK::Real k[4] {};
+	SimTK::Real phase[4] {};
+};

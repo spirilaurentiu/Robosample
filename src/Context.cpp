@@ -125,8 +125,9 @@ bool Context::initializeFromFile(const std::string &file)
 	// Add molecules based on the setup reader
 	// amber -> robo
 	int finalNofMols = 0;
-	//AddMolecules(requestedNofMols, setupReader); // SP_OLD
-	AddMolecules_SP_NEW(requestedNofMols, setupReader); // SP_NEW
+	AddMolecules(requestedNofMols, setupReader); // SP_OLD
+	// AddMolecules_SP_NEW(requestedNofMols, setupReader); // SP_NEW
+	// return false; // SP_NEW
 
 	//std::cout << "OS memory 2.\n" << exec("free") << std::endl;
 	finalNofMols = getNofMolecules();
@@ -135,8 +136,6 @@ bool Context::initializeFromFile(const std::string &file)
 		return false;
 	}
 	std::cout << "Added " << finalNofMols << " molecules" << std::endl;
-
-	return false; // SP_NEW
 
 	// Loads parameters into DuMM
 	addDummParams(finalNofMols, setupReader);
@@ -485,7 +484,7 @@ bool Context::initializeFromFile(const std::string &file)
 	setThermostatesNonequilibrium();
 
 
-	/* // Add constraints
+	// Add constraints
 	//context.addConstraints();
 
 	PrintInitialRecommendedTimesteps();
@@ -519,7 +518,7 @@ bool Context::initializeFromFile(const std::string &file)
 		Run(getRequiredNofRounds(),
 			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
-	} */
+	}
 
     return true;
 }
@@ -588,14 +587,14 @@ std::vector<int> Context::findMolecules(const readAmberInput& reader) {
 void Context::loadAtoms(const readAmberInput& reader) {
 	// Alloc memory for atoms and bonds list
 	natoms = reader.getNumberAtoms();
-	atoms.reserve(natoms);
+	atoms.resize(natoms);
 
 	// Iterate through atoms and set as much as possible from amberReader
 	for(int i = 0; i < natoms; i++) {
-		bSpecificAtom atom;
-
 		// Assign an index like in prmtop
-		atom.setNumber(i);
+		atoms[i].setNumber(i);
+		atoms[i].setDummAtomClassIndex(SimTK::DuMM::AtomClassIndex(i));
+		atoms[i].setChargedAtomTypeIndex(SimTK::DuMM::ChargedAtomTypeIndex(i));
 
 		// This is the name of the atom in the .prmtop file
 		// Examples: "O1", "C1", "C2", "H1", "H10"
@@ -603,51 +602,56 @@ void Context::loadAtoms(const readAmberInput& reader) {
 		
 		// Set element
 		const int atomicNumber = reader.getAtomicNumber(i);
- 		atom.setAtomicNumber(atomicNumber);
-		atom.setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
+ 		atoms[i].setAtomicNumber(atomicNumber);
+		atoms[i].setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
 
-		// Assign a "unique" name. The generator is however limited.
-		// Examples: AAAA, AAAB, AAAC, AAAD etc
-		atom.generateName(i);
-		std::cout << "SP_NEW atom " << i << " " << atom.getName() << std::endl << std::flush;
+		// // Assign a "unique" name. The generator is however limited.
+		// // Examples: AAAA, AAAB, AAAC, AAAD etc
+		// atoms[i].generateName(i);
 
 		// Store the initial name from prmtop
 		// Examples: "O1", "C1", "C2", "H1", "H10"
-		atom.setInName(initialName);
+		atoms[i].setInName(initialName);
 
 		// Set force field atom type
 		// Examples: "O1", "C1", "C2", "H1", "H10"
-		atom.setFfType(initialName);
+		atoms[i].setFfType(initialName);
 
 		// Set charge as it is used in Amber
 		constexpr SimTK::Real chargeMultiplier = 18.2223;
-		atom.setCharge(reader.getAtomsCharge(i) / chargeMultiplier);
+		atoms[i].setCharge(reader.getAtomsCharge(i) / chargeMultiplier);
 
 		// Set coordinates in nm (AMBER uses Angstroms)
-		atom.setX(reader.getAtomsXcoord(i) / 10.0);
-		atom.setY(reader.getAtomsYcoord(i) / 10.0);
-		atom.setZ(reader.getAtomsZcoord(i) / 10.0);
-		atom.setCartesians(
+		atoms[i].setX(reader.getAtomsXcoord(i) / 10.0);
+		atoms[i].setY(reader.getAtomsYcoord(i) / 10.0);
+		atoms[i].setZ(reader.getAtomsZcoord(i) / 10.0);
+		atoms[i].setCartesians(
 			reader.getAtomsXcoord(i) / 10.0,
 			reader.getAtomsYcoord(i) / 10.0,
 			reader.getAtomsZcoord(i) / 10.0 );
 
 		// Set mass
 		const int mass = reader.getAtomsMass(i);
-		atom.setMass(mass);
+		atoms[i].setMass(mass);
 
 		// Set Lennard-Jones parameters
-		atom.setVdwRadius(reader.getAtomsRVdW(i));
-		atom.setLJWellDepth(reader.getAtomsEpsilon(i));
+		atoms[i].setVdwRadius(reader.getAtomsRVdW(i));
+		atoms[i].setLJWellDepth(reader.getAtomsEpsilon(i));
 
 		// Set residue name and index
-		atom.setResidueName("UNK");
-		atom.residueIndex = 1;
+		atoms[i].setResidueName(reader.getResidueLabel(i));
+		atoms[i].residueIndex = reader.getResidueIndex(i);
 
-		// Add element to cache
+		// Assign an unique atom name
+		// TODO add topology number - this is not unique
+		atoms[i].setName(
+			atoms[i].getResidueName() + std::to_string(atoms[i].residueIndex) + "_" +
+			atoms[i].getFftype() + "_" +
+			std::to_string(atoms[i].getNumber())
+		);
+
+		// Save
 		elementCache.addElement(atomicNumber, mass);
-
-		atoms.push_back(atom);
 	}
 }
 
@@ -689,38 +693,94 @@ void Context::loadBonds(const readAmberInput& reader) {
 }
 
 
-void Context::SetGmolAtomsCompoundTypes() {
-	// Angle TetrahedralAngle = 109.47 * Deg2Rad;
+void Context::loadAngles(const readAmberInput& reader) {
+	dummAngles.reserve(reader.getNumberAngles());
 
-	// Set Gmolmodel name and element and inboard length
+	for (int i = 0; i < reader.getNumberAngles(); i++) {
+		DUMM_ANGLE angle;
+		angle.first = reader.getAnglesAtomsIndex1(i);
+		angle.second = reader.getAnglesAtomsIndex2(i);
+		angle.third = reader.getAnglesAtomsIndex3(i);
+
+		angle.k = reader.getAnglesForceK(i);
+		angle.equil = reader.getAnglesEqval(i);
+		angle.equil = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * angle.equil));
+
+		dummAngles.push_back(angle);
+	}
+}
+
+
+void Context::loadTorsions(const readAmberInput& reader) {
+	// There are multiple torsions defined with the same four indices
+	// This vector shows us where each torsion begins (first) and how long it is (second)
+	std::vector<std::pair<int, int>> pairStartAndLens = reader.getPairStartAndLen();
+
+	auto checkBond = [&](int a1, int a2) {
+		for(int i = 0; i < nbonds; i++){
+			if( (bonds[i]).isThisMe(a1, a2) ) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	for(const auto& tor : pairStartAndLens){
+		int t = tor.first;
+		int periodicity = tor.second;
+
+		// Fill this torsion
+		DUMM_TORSION dummTorsion;
+		dummTorsion.num = periodicity;
+
+		// Check if a quad of atom indices is a normal dihedral or an improper dihedral, by checking if consecutive atoms are bonded
+		// TODO: amberReader getDihedralsAtomsIndex4() is negative if this is an improper, but we never look at it and even abs() it
+		dummTorsion.first = reader.getDihedralsAtomsIndex1(tor.first);
+		dummTorsion.second = reader.getDihedralsAtomsIndex2(tor.first);
+		dummTorsion.third = reader.getDihedralsAtomsIndex3(tor.first);
+		dummTorsion.fourth = reader.getDihedralsAtomsIndex4(tor.first);
+
+		if (checkBond(dummTorsion.first, dummTorsion.second) &&
+			checkBond(dummTorsion.second, dummTorsion.third) &&
+			checkBond(dummTorsion.third, dummTorsion.fourth)) {
+			dummTorsion.improper = false;
+		} else {
+			dummTorsion.improper = true;
+		}
+
+		// Define parameters
+		if (periodicity >= 1) {
+			dummTorsion.period[0] = static_cast<int>(reader.getDihedralsPeriod(t));
+			dummTorsion.k[0] = reader.getDihedralsForceK(t);
+			dummTorsion.phase[0] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t)));
+		}
+		if (periodicity >= 2) {
+			dummTorsion.period[1] = static_cast<int>(reader.getDihedralsPeriod(t + 1));
+			dummTorsion.k[1] = reader.getDihedralsForceK(t + 1);
+			dummTorsion.phase[1] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 1)));
+		}
+		if (periodicity >= 3) {
+			dummTorsion.period[2] = static_cast<int>(reader.getDihedralsPeriod(t + 2));
+			dummTorsion.k[2] = reader.getDihedralsForceK(t + 2);
+			dummTorsion.phase[2] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 2)));
+		}
+		if (periodicity >= 4) {
+			dummTorsion.period[3] = static_cast<int>(reader.getDihedralsPeriod(t + 3));
+			dummTorsion.k[3] = reader.getDihedralsForceK(t + 3);
+			dummTorsion.phase[3] = static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * reader.getDihedralsPhase(t + 3)));
+		}
+
+		dummTorsions.push_back(dummTorsion);
+	}
+}
+
+
+void Context::setAtomCompoundTypes() {
 	for(auto& atom : atoms) {
-		
-		// bond centers must have been already set
 		const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
 		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
-		
-		// // Add BondCenters
-		// const int currAtomNBonds = atom.getNBonds();
-		// if(currAtomNBonds > 0){
-		// 	if (currAtomNBonds == 1){
-		// 		atom.addFirstBondCenter("bond1", currAtomName);
-		// 	} else {
-		// 		atom.addFirstTwoBondCenters("bond1", "bond2", currAtomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
-		// 		if (currAtomNBonds > 2) {
-		// 			atom.addLeftHandedBondCenter("bond3", currAtomName, TetrahedralAngle, TetrahedralAngle);
-		// 		}
-		// 		if (currAtomNBonds > 3){
-		// 			atom.addRightHandedBondCenter("bond4", currAtomName, TetrahedralAngle, TetrahedralAngle);
-		// 		}
-		// 	}
-		//
-		// 	// Set the inboard BondCenter
-		// 	atom.setInboardBondCenter("bond1");
-		// 	atom.setDefaultInboardBondLength(0.19);
-		// }
-
 	}
 }
 
@@ -753,10 +813,15 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// - reorder all lists to bat (batomlist, bonds, flexibilitie etc)
 	// - pass to topology ????
 
+	// Read parameters from files
 	loadAtoms(reader);
 	loadBonds(reader);
-	SetGmolAtomsCompoundTypes();
-	addBiotypes();
+	loadAngles(reader);
+	loadTorsions(reader);
+
+	// Create internal coordinates indexing
+	InternalCoordinates ic;
+	ic.compute(atoms);
 
 	return;
 
@@ -1349,6 +1414,20 @@ void Context::AddMolecules(
 	int requestedNofMols,
 	SetupReader& setupReader
 ){
+	const int molIx = 0;
+	auto prmtop = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("PRMTOP")[molIx];
+	auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
+
+	readAmberInput reader;
+	reader.readAmberFiles(inpcrd, prmtop);
+	loadAtoms(reader);
+	loadBonds(reader);
+	loadAngles(reader);
+	loadTorsions(reader);
+	setAtomCompoundTypes();
+	addBiotypes();
+
+
 
 	topologies.reserve(requestedNofMols);
 	moleculeCount = -1;
@@ -1393,7 +1472,9 @@ void Context::AddMolecules(
 		std::string moleculeName = "MOL" + std::to_string(moleculeCount); 
 		roots.emplace_back(std::stoi(argRoots[molIx])); // from world
 		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok? 
+		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
+
+		// // topologies[molIx].setAtomList(atoms);
 
 		// Set Gmolmodel atoms properties from a reader: number, name, element
 		// initial name, force field type, charge, coordinates, mass,
@@ -1449,124 +1530,124 @@ void Context::AddMolecules_SP_NEW(
 ){
 
 
-	std::vector<std::string> argRoots = setupReader.get("ROOTS");
-	//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+	// std::vector<std::string> argRoots = setupReader.get("ROOTS");
+	// //std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
-	amberReader.resize(requestedNofMols);
+	// amberReader.resize(requestedNofMols);
 
-	// Get user requested Amber filenames
-	std::vector<std::string> reqTopFNs;
-	std::vector<std::string> reqCrdFNs;
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-		reqTopFNs.push_back(
-			setupReader.get("MOLECULES")[molIx] + std::string("/") +
-			setupReader.get("PRMTOP")[molIx]
-		);
+	// // Get user requested Amber filenames
+	// std::vector<std::string> reqTopFNs;
+	// std::vector<std::string> reqCrdFNs;
+	// for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+	// 	reqTopFNs.push_back(
+	// 		setupReader.get("MOLECULES")[molIx] + std::string("/") +
+	// 		setupReader.get("PRMTOP")[molIx]
+	// 	);
 
-		reqCrdFNs.push_back(
-			setupReader.get("MOLECULES")[molIx] + std::string("/") +
-			setupReader.get("INPCRD")[molIx] + ".rst7"
-		);	
+	// 	reqCrdFNs.push_back(
+	// 		setupReader.get("MOLECULES")[molIx] + std::string("/") +
+	// 		setupReader.get("INPCRD")[molIx] + ".rst7"
+	// 	);	
 
-	}
+	// }
 
-	// Add filenames to Context filenames vectors
-	// This has to be called before Worlds constructors so that
-	// reserve will be called for molecules and topologies
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+	// // Add filenames to Context filenames vectors
+	// // This has to be called before Worlds constructors so that
+	// // reserve will be called for molecules and topologies
+	// for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
 
-		// make amber reader create multiple molecule
-		// each molecule then generate one topology
-		// amber: vector<molecule info>
+	// 	// make amber reader create multiple molecule
+	// 	// each molecule then generate one topology
+	// 	// amber: vector<molecule info>
 
-		loadTopologyFile( reqTopFNs[molIx] );
-		loadCoordinatesFile( reqCrdFNs[molIx] );
+	// 	loadTopologyFile( reqTopFNs[molIx] );
+	// 	loadCoordinatesFile( reqCrdFNs[molIx] );
 
-	}
+	// }
 
-	// Load all the roots here
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-		roots.push_back(std::stoi(argRoots[molIx]));
-		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-	}
+	// // Load all the roots here
+	// for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	// 	roots.push_back(std::stoi(argRoots[molIx]));
+	// 	//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+	// }
 
-	// ========================================================================
-	// ======== (0) Read atoms from all the molecules =========================
-	// ========================================================================
+	// // ========================================================================
+	// // ======== (0) Read atoms from all the molecules =========================
+	// // ========================================================================
 
-	amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
-	loadAtoms(amberReader[0]);
-	loadBonds(amberReader[0]);
-	SetGmolAtomsCompoundTypes();
-	addBiotypes();
+	// amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
+	// loadAtoms(amberReader[0]);
+	// loadBonds(amberReader[0]);
+	// SetGmolAtomsCompoundTypes();
+	// addBiotypes();
 
-	// ========================================================================
-	// ======== (1) Get BAT graphs ============================================
-	// ========================================================================
+	// // ========================================================================
+	// // ======== (1) Get BAT graphs ============================================
+	// // ========================================================================
 
-	InternalCoordinates internCoords;
+	// InternalCoordinates internCoords;
 
-	nofMols = 0;
+	// nofMols = 0;
 
-	while( internCoords.computeRoot( getAtoms() )){
+	// while( internCoords.computeRoot( getAtoms() )){
 
-		nofMols++;
-		internCoords.PrintRoot();
-		internCoords.computeBAT( getAtoms() );
-		internCoords.computeLevelsAndOffsets( getAtoms() );
-		internCoords.updateVisited(atoms);
-		internCoords.PrintBAT();
+	// 	nofMols++;
+	// 	internCoords.PrintRoot();
+	// 	internCoords.computeBAT( getAtoms() );
+	// 	internCoords.computeLevelsAndOffsets( getAtoms() );
+	// 	internCoords.updateVisited(atoms);
+	// 	internCoords.PrintBAT();
 
-	}
+	// }
 
-		// Scenario (a) - on the fly
-			// Set visited based on internCoords indexMap (isSelected())
-			// Transfer content visited to a Topology
-			// Build a topology based on visited
-			// Remove visited
+	// 	// Scenario (a) - on the fly
+	// 		// Set visited based on internCoords indexMap (isSelected())
+	// 		// Transfer content visited to a Topology
+	// 		// Build a topology based on visited
+	// 		// Remove visited
 
-		// Scenario (b) - diferent roots inside InternalCoordinates
-			// Loop updateVisited + computeBAT = find joints
-				// computeRoot()
-				// computeBAT()
-				// Find cycles
-				// Find external joints
+	// 	// Scenario (b) - diferent roots inside InternalCoordinates
+	// 		// Loop updateVisited + computeBAT = find joints
+	// 			// computeRoot()
+	// 			// computeBAT()
+	// 			// Find cycles
+	// 			// Find external joints
 
-	// ========================================================================
-	// ======== (2) Build graphs with bondAtom ================================
-	// ========================================================================
+	// // ========================================================================
+	// // ======== (2) Build graphs with bondAtom ================================
+	// // ========================================================================
 
-	topologies.reserve(requestedNofMols);
-	moleculeCount = -1;
+	// topologies.reserve(requestedNofMols);
+	// moleculeCount = -1;
 
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	// for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
-		// Add an empty topology
-		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
-		Topology topology(moleculeName);
+	// 	// Add an empty topology
+	// 	std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
+	// 	Topology topology(moleculeName);
 
-		topologies.push_back(topology);
-	}
+	// 	topologies.push_back(topology);
+	// }
 
-	// ========================================================================
-	// ======== (3) Rest from AddMolecules ====================================
-	// ========================================================================
+	// // ========================================================================
+	// // ======== (3) Rest from AddMolecules ====================================
+	// // ========================================================================
 
 
-		// Build Robosample graph and Compound graph.
-		// bSpecificAtom *rootAtom = findARoot(topology, roots[molIx]);
-		// buildAcyclicGraphWrap(topology, rootAtom);
-		// topology.setAtomList(atoms, elementCache);
-		// topology.setBondList(bonds);
-		// topology.addRingClosingBonds();
-		// topology.matchDefaultConfigurationWithAtomList(
-		// 	SimTK::Compound::Match_Exact);
-		// topology.generateAIx2TopXMaps();
-		// Helper function for calc MBAT determinant
-		//topology.loadTriples();
-		//
-		// Map of Compound atom indexes to Robosample atom indexes
-		//topology.loadCompoundAtomIx2GmolAtomIx();
+	// 	// Build Robosample graph and Compound graph.
+	// 	// bSpecificAtom *rootAtom = findARoot(topology, roots[molIx]);
+	// 	// buildAcyclicGraphWrap(topology, rootAtom);
+	// 	// topology.setAtomList(atoms, elementCache);
+	// 	// topology.setBondList(bonds);
+	// 	// topology.addRingClosingBonds();
+	// 	// topology.matchDefaultConfigurationWithAtomList(
+	// 	// 	SimTK::Compound::Match_Exact);
+	// 	// topology.generateAIx2TopXMaps();
+	// 	// Helper function for calc MBAT determinant
+	// 	//topology.loadTriples();
+	// 	//
+	// 	// Map of Compound atom indexes to Robosample atom indexes
+	// 	//topology.loadCompoundAtomIx2GmolAtomIx();
 
 
 

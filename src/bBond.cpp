@@ -64,6 +64,22 @@
 //   return this->inring;
 // }
 
+void bBond::setForceK(SimTK::Real forceK) {
+	this->forceK = forceK;
+}
+
+SimTK::Real bBond::getForceK() const {
+	return this->forceK;
+}
+
+void bBond::setForceEquil(SimTK::Real forceEquil) {
+	this->forceEquil = forceEquil;
+}
+
+SimTK::Real bBond::getForceEquil() const {
+	return this->forceEquil;
+}
+
 bool bBond::isRingClosing() const {
   return this->ring_closing;
 }
@@ -99,7 +115,7 @@ void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which
 float bBond::getUScaleFactor(int which) const
 {
   if(which >= uScaleFactors.size()){
-	  //std::cout << "[WARNING] bBond::getUScaleFactor() " << which << " not found. Returning 1" << std::endl;
+	  std::cout << "[WARNING] bBond::getUScaleFactor() " << which << " not found. Returning 1" << std::endl;
 	  return 1.0;
   }else{
 	  return uScaleFactors[which];

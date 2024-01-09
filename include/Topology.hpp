@@ -119,6 +119,13 @@ objects **/
 class Topology : public SimTK::Compound{
 public:
 
+	void setAtomList(
+		std::vector<bSpecificAtom>& argAtomList)
+	{		
+		(this->bAtomList) = (argAtomList);
+		natoms = (this->bAtomList).size();
+	}
+
 	/** Default Constructor. Sets the name of this molecule to 'no_name '.
 	The name has no particular function and is not guaranteed to be unique.**/
 	Topology();
