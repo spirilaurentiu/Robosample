@@ -79,6 +79,13 @@ void trace(Args &&... args)
 #define scout(x) std::cout<<x
 # endif
 
+# ifndef ceol
+#define ceol std::cout<<std::endl
+#endif
+
+#ifndef ceolf
+#define ceolf std::cout<<std::endl<<std::flush
+#endif
 
 
 // ----------

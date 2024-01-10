@@ -223,7 +223,14 @@ public:
 	*/	
 	const std::vector<BOND>& getLastMolsBonds() const;
 
+	/**	
+	* @brief Return a particular molecule's bond list
+	* @param whichMolecule Molecule index
+	* @return BOND vector
+	*/
+	const std::vector<BOND>& getMoleculeBonds( int whichMolecule ) const;
 
+	///////////////////
 	const std::vector<BOND>& getRingClosingBonds() const;
 
 

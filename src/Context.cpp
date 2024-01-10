@@ -151,7 +151,7 @@ bool Context::initializeFromFile(const std::string &file)
 			return false;
 		}
 
-		std::cout << "Added " << finalNofMols << " molecules" << std::endl;		
+		std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 	}
 
 
@@ -628,7 +628,7 @@ void Context::loadAtoms(const readAmberInput& reader) {
 
 		// // Assign a "unique" name. The generator is however limited.
 		// // Examples: AAAA, AAAB, AAAC, AAAD etc
-		// atoms[i].generateName(i);
+		atoms[i].generateName(i);
 
 		// Store the initial name from prmtop
 		// Examples: "O1", "C1", "C2", "H1", "H10"
@@ -665,11 +665,11 @@ void Context::loadAtoms(const readAmberInput& reader) {
 
 		// Assign an unique atom name
 		// TODO add topology number - this is not unique
-		atoms[i].setName(
-			atoms[i].getResidueName() + std::to_string(atoms[i].residueIndex) + "_" +
-			atoms[i].getFftype() + "_" +
-			std::to_string(atoms[i].getNumber())
-		);
+		// atoms[i].setName(
+		// 	atoms[i].getResidueName() + std::to_string(atoms[i].residueIndex) + "_" +
+		// 	atoms[i].getFftype() + "_" +
+		// 	std::to_string(atoms[i].getNumber())
+		// );
 
 		// Save
 		elementCache.addElement(atomicNumber, mass);
@@ -1541,47 +1541,46 @@ void Context::AddMolecules_SP_NEW(
 	SetupReader& setupReader
 ){
 
+	std::vector<std::string> argRoots = setupReader.get("ROOTS");
+	//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
-	// std::vector<std::string> argRoots = setupReader.get("ROOTS");
-	// //std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+	amberReader.resize(requestedNofMols);
 
-	// amberReader.resize(requestedNofMols);
+	// Get user requested Amber filenames
+	std::vector<std::string> reqTopFNs;
+	std::vector<std::string> reqCrdFNs;
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+		reqTopFNs.push_back(
+			setupReader.get("MOLECULES")[molIx] + std::string("/") +
+			setupReader.get("PRMTOP")[molIx]
+		);
 
-	// // Get user requested Amber filenames
-	// std::vector<std::string> reqTopFNs;
-	// std::vector<std::string> reqCrdFNs;
-	// for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-	// 	reqTopFNs.push_back(
-	// 		setupReader.get("MOLECULES")[molIx] + std::string("/") +
-	// 		setupReader.get("PRMTOP")[molIx]
-	// 	);
+		reqCrdFNs.push_back(
+			setupReader.get("MOLECULES")[molIx] + std::string("/") +
+			setupReader.get("INPCRD")[molIx] + ".rst7"
+		);	
 
-	// 	reqCrdFNs.push_back(
-	// 		setupReader.get("MOLECULES")[molIx] + std::string("/") +
-	// 		setupReader.get("INPCRD")[molIx] + ".rst7"
-	// 	);	
+	}
 
-	// }
+	// Add filenames to Context filenames vectors
+	// This has to be called before Worlds constructors so that
+	// reserve will be called for molecules and topologies
+	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
 
-	// // Add filenames to Context filenames vectors
-	// // This has to be called before Worlds constructors so that
-	// // reserve will be called for molecules and topologies
-	// for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+		// make amber reader create multiple molecule
+		// each molecule then generate one topology
+		// amber: vector<molecule info>
 
-	// 	// make amber reader create multiple molecule
-	// 	// each molecule then generate one topology
-	// 	// amber: vector<molecule info>
+		loadTopologyFile( reqTopFNs[molIx] );
+		loadCoordinatesFile( reqCrdFNs[molIx] );
 
-	// 	loadTopologyFile( reqTopFNs[molIx] );
-	// 	loadCoordinatesFile( reqCrdFNs[molIx] );
+	}
 
-	// }
-
-	// // Load all the roots here
-	// for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-	// 	roots.push_back(std::stoi(argRoots[molIx]));
-	// 	//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-	// }
+	// Load all the roots here
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+		roots.push_back(std::stoi(argRoots[molIx]));
+		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+	}
 
 	// ========================================================================
 	// ======== (0) Read atoms from all the molecules =========================
@@ -1618,7 +1617,7 @@ void Context::AddMolecules_SP_NEW(
 	moleculeCount = -1;
 
 	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-	for(unsigned int molIx = 0; molIx < 1; molIx++){
+	for(unsigned int molIx = 1; molIx <= 1; molIx++){
 
 		// Add an empty topology
 		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
@@ -1641,56 +1640,114 @@ void Context::AddMolecules_SP_NEW(
 		topology.convertInboardBondCenterToOutboard();
 		topology.baseSetFlag = 1;
 
-		scout("rootAmberIx ") << rootAmberIx << eol;
+		scout("rootAmberIx ") << rootAmberIx << " " << rootAtom.getName()
+			<< eol;
 
 		// --------------------------------------------------------------------
-		// ------- (2) buildAcyclicGraph --------------------------------------
-		// --------------------------------------------------------------------
+		// (2) buildAcyclicGraph
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-		// Iterate internCoords bonds
 		std::vector<BOND>::const_iterator bIt;
 		std::size_t bCnt = 0;
-		const std::vector<BOND>& theseBonds = internCoords.getLastMolsBonds();
+		const std::vector<BOND>& theseBonds = 
+			internCoords.getMoleculeBonds( molIx );
 
-		// We have to get the root first
+
+		//scout(" bonds theseBonds euqivalence ")	
+
+		// Do Bonding
 		for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
 
+			scout("internCoord bond ");
 			bIt->Print();
-			cout << eol;
+			ceol;
 
+			// ===================== GET ATOMS IN THIS BOND ===================
+			// Child
 			int childAmberIx = bIt->first;
 			bSpecificAtom& child = atoms[childAmberIx];
 			const SimTK::Compound::SingleAtom& childCompoundAtom
 				= child.getSingleAtom();
 
+			// Parent
 			int parentAmberIx = bIt->second;
 			bSpecificAtom& parent = atoms[parentAmberIx];
 			const SimTK::Compound::SingleAtom& parentCompoundAtom
 				= parent.getSingleAtom();
 
-			// Set a BondCenterPathName for the parent
-			std::stringstream parentBondCenterPathName;
-			if (parentAmberIx == rootAmberIx) {
-				parentBondCenterPathName << parent.getName()
-					<< "/bond" 
-					<< parent.getFreebonds();
-			}else{
-				parentBondCenterPathName << parent.getName()
-					<< "/bond" 
-					<< (parent.getNBonds() - parent.getFreebonds() + 1);
-			}
-
+			// Print
 			scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
 				<< eol;
+
+			// ====================== PARENT BOND CENTER ======================
+			
+			// Convenient vars
+			std::stringstream parentBondCenterPathName;
+			std::string parentBondCenterPathNameStr = "";
+			int parentNextAvailBondCenter = -111111;
+			std::string parentNextAvailBondCenterStr = "";
+			int parentNofBonds = parent.getNBonds();
+			int parentNofFreebonds = parent.getFreebonds();
+
+			// Get next available BondCenter id
+			parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
+			if((parentNofBonds != 1)){
+				parentNextAvailBondCenterStr =
+					std::to_string(parentNextAvailBondCenter);
+			}
+
+			// Cook the parentBondCenterPathName
+			parentBondCenterPathName << parent.getName()
+				<< "/bond" 
+				<< parentNextAvailBondCenterStr;
+			parentBondCenterPathNameStr = parentBondCenterPathName.str();
+
 			scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
 				<< eol;
-			// scout("CompoundIxs ") << childCompoundAtom.getAtomIndex() << " "
-			// 	<< parentCompoundAtom.getAtomIndex()
-			// 	<< eol;
 
-				parent.decrFreebonds();
-				child.decrFreebonds();
+			// ======================== ACTUAL BONDING ========================
+			std::cout << "Bonding child " << child.getName() << " to parent "
+				<< parent.getName() << " with bond center name "
+				<< parentBondCenterPathNameStr << std::endl;
 
+			// Bond
+			topology.bondAtom(child.getSingleAtom(),
+					(parentBondCenterPathNameStr).c_str(), 0.149, 0);
+
+			// Set the final Biotype
+			topology.setAtomBiotype(child.getName(),
+								(topology.getName()).c_str(),
+								 child.getName());
+
+			// Set bSpecificAtom atomIndex to the last atom added to bond
+			child.setCompoundAtomIndex(topology.getBondAtomIndex(
+				Compound::BondIndex(topology.getNumBonds() - 1), 1));
+
+			// TODO Not so sure about this TODO check if necessary !!!!
+			if(parentAmberIx == rootAmberIx){
+				parent.setCompoundAtomIndex(topology.getBondAtomIndex(
+					Compound::BondIndex(topology.getNumBonds() - 1), 0));
+			}
+
+
+
+
+			// Set bBond Molmodel Compound::BondIndex
+			//(*bondsInvolvedIter)->setBondIndex(Compound::BondIndex(
+			//	topology.getNumBonds() - 1));
+
+			// bondIx2GmolBond.insert(pairToBeInserted);
+
+			// GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+			// 		(*bondsInvolvedIter)->getIndex(),
+			// 		Compound::BondIndex(getNumBonds() - 1)
+			// ) );
+
+			// ====================== RECORD MODIFICATION =====================
+
+			// Decrease freebonds
+			parent.decrFreebonds();
+			child.decrFreebonds();
 
 		}
 
@@ -1699,16 +1756,16 @@ void Context::AddMolecules_SP_NEW(
 
 		// --------------------------------------------------------------------
 		// ------- (2) topology.setAtomList(atoms, elementCache); -------------
-		// --------------------------------------------------------------------
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 		// Add to the list of topologies
 		topologies.push_back(topology);
 
 	}
 
-	// // ========================================================================
-	// // ======== (3) Rest from AddMolecules ====================================
-	// // ========================================================================
+	// ========================================================================
+	// ======== (3) Rest from AddMolecules ====================================
+	// ========================================================================
 
 
 		// topology.setAtomList(atoms, elementCache);
