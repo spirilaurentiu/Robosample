@@ -60,6 +60,22 @@ public:
 		//std::vector<std::string> argRoots,
 		//std::vector<std::string> argRootMobilities
 	);
+
+
+
+	/**  */
+	void setBaseAtom(Topology& topology, int molIx);
+
+	/**  */
+	void load_BONDS_to_bonds(const std::vector<std::vector<BOND>>& BATbonds);
+
+	/**  */
+	void buildAcyclicGraph_SP_NEW(
+		Topology& topology,
+		int rootAmberIx,
+		int molIx);
+
+	/**  */
 	void AddMolecules_SP_NEW(
 		int requestedNofMols,
 		SetupReader& setupReader
@@ -515,6 +531,7 @@ protected:
 	std::vector<Topology> topologies;
 	std::vector<int> roots;
 	//std::vector<std::string> rootMobilities;
+	InternalCoordinates internCoords;
 
 	/** Vectors of Cartesian coordinates **/
 	std::vector<SimTK::Real> Xs;
@@ -620,6 +637,7 @@ protected:
 	
 	int nbonds = std::numeric_limits<int>::min();
 	std::vector<bBond> bonds;
+	std::vector<std::vector<int>> BONDS_to_bonds; // correspondence
 
 	std::vector<DUMM_ANGLE> dummAngles;
 	std::vector<DUMM_TORSION> dummTorsions;

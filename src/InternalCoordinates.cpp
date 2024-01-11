@@ -492,6 +492,15 @@ const std::vector<BOND>& InternalCoordinates::getMoleculeBonds( int which ) cons
 	return perMolBonds[which];
 }
 
+/**	
+* @brief Return the bond list
+* @return BOND vector
+*/	
+const std::vector<std::vector<BOND>>& InternalCoordinates::getBonds() const
+{
+	return perMolBonds;
+}
+
 const std::vector<BOND>& InternalCoordinates::getRingClosingBonds() const {
 	return ringClosingBonds;
 }

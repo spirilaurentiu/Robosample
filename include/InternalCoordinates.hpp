@@ -230,6 +230,12 @@ public:
 	*/
 	const std::vector<BOND>& getMoleculeBonds( int whichMolecule ) const;
 
+	/**	
+	* @brief Return the bond list
+	* @return BOND vector
+	*/	
+	const std::vector<std::vector<BOND>>& getBonds() const;
+
 	///////////////////
 	const std::vector<BOND>& getRingClosingBonds() const;
 

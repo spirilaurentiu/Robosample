@@ -167,14 +167,21 @@ void bBond::setBondIndex(SimTK::Compound::BondIndex otherIx){
 }
 
 // Print bond variables
-void bBond::Print(int whichWorld)
+void bBond::Print(void)
 {
-  //   std::cout << "bBond Print: i " << i << " j " << j << " mobility " << mobilities[whichWorld]
-  //	   << " inring " << inring << " ring_no " << ring_no
-  //	   << " ring_closing " << ring_closing 
-  //	   << " visited " << visited 
-  //	   << " uScaleFactor[0] " << uScaleFactors[0]
-	// << std::endl;
+    std::cout << "indexes_ij " << i << " " << j ;
+
+	scout(" mobilities ");
+	for(size_t cnt = 0; cnt < mobilities.size(); cnt++){
+		scout(mobilities[cnt]) <<" ";
+	}
+
+	//std::cout << " inring " << inring << " ring_no " << ring_no
+
+	std::cout << " ring_closing " << ring_closing 
+		<< " visited " << visited
+		<< " uScaleFactor[0] " << uScaleFactors[0];
+
 }
 
 // // Return true if this is set as the first bond in Compound
