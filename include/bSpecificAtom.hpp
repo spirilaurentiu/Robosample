@@ -124,6 +124,9 @@ public:
     std::string getResidueName() const;
     void setResidueName(const std::string& residueName);
 
+    const int getMoleculeIndex() const;
+    void setMoleculeIndex(int);
+
     void setParentNumber(int n);
     int getParentNumber() const;
 
@@ -160,13 +163,12 @@ private:
     int atomicNumber = std::numeric_limits<int>::min(); // atomic number
     //int visited = std::numeric_limits<int>::min(); // SP_OLD
     int visited = 0; // SP_NEW
-    int moleculeIndex = std::numeric_limits<int>::min();
+    int moleculeIndex = -111111;
     SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
     SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
     SimTK::BiotypeIndex biotypeIndex;
 
 public:
-
     
     SimTK::Compound::AtomIndex compoundAtomIndex;
   

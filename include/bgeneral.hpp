@@ -87,8 +87,53 @@ void trace(Args &&... args)
 #define ceolf std::cout<<std::endl<<std::flush
 #endif
 
-
 // ----------
+
+/**************************************
+ * 		Sub-Array   
+ **************************************/
+
+template <typename Iterator>
+class array_view {
+
+private:
+	// Begin and end iterators to some vector
+    Iterator begin_;
+    Iterator end_;
+
+public:
+
+	// Default constructor
+	array_view() = default;
+
+    // Constructor based on specific limits
+    array_view(Iterator begin, Iterator end):
+		begin_(begin), end_(end) {}
+
+	// Array limits
+    Iterator begin() const { return this->begin_; }
+    Iterator end() const   { return this->end_; }
+    
+	typename std::iterator_traits<Iterator>::reference
+    
+	operator[](std::size_t index) { return this->begin_[index]; }
+
+};
+
+// int example_usage_array_view (void) {
+
+//     std::vector<int> data = {1, 2, 3, 4, 5};
+//     array_view<std::vector<int>::iterator> view(data.begin(), data.end());
+
+//     for (auto& elem : view) {
+//         std::cout << elem << " ";
+//     }
+//     std::cout << std::endl;
+
+//     return 0;
+// }
+
+//
 
 #define sq(x)		((x)*(x))
 

@@ -9,7 +9,7 @@
  * This defines the bMoleculeReader class and additional heloer classes
  **/
 
-// #include "bgeneral.hpp"
+#include "bgeneral.hpp"
 // #include "Robo.hpp"
 // #include "Simbody.h"
 #include "Molmodel.h"
@@ -44,28 +44,6 @@
  * Bond Class used for connectivity definition in MoleculeReader.
 **/
 class bBond /* : public intpair */ {
-	private:
-		std::vector<SimTK::BondMobility::Mobility> mobilities;
-		// std::vector<float> uScaleFactors = std::vector<float>(1, 1.0);
-		std::vector<float> uScaleFactors = { 1.0f };
-		SimTK::Compound::BondIndex bondIndex = std::numeric_limits<SimTK::Compound::BondIndex>::max();
-		// int ring_no = 0;
-		int myindex = std::numeric_limits<int>::min();
-
-		SimTK::Real forceK = std::numeric_limits<SimTK::Real>::min();
-		SimTK::Real forceEquil = std::numeric_limits<SimTK::Real>::min();
-
-	public:
-		// These will correspond to bSpecificAtom.number
-		int i = std::numeric_limits<int>::min();
-		int j = std::numeric_limits<int>::min();
-
-	private:
-		//int rigid;
-		bool visited = false;
-		// bool inring = false;
-		bool ring_closing = false;
-		// bool _isFirst = false;
 
 	public:
 		// bBond() = default;
@@ -99,7 +77,8 @@ class bBond /* : public intpair */ {
 		void setIndex(int);
 		int getIndex() const;
 
-		void Print(int whichWorld);
+		void Print();
+		void Print(int whichWorld){assert(!"Not implemented");}
 
 		// bool isFirst() const;
 		// void setAsFirst();
@@ -113,6 +92,30 @@ class bBond /* : public intpair */ {
 		void addUScaleFactor(float);
 		void setUScaleFactor(int, float);
 		// void updUScaleFactor(int, float);
+
+	private:
+		std::vector<SimTK::BondMobility::Mobility> mobilities;
+		// std::vector<float> uScaleFactors = std::vector<float>(1, 1.0);
+		std::vector<float> uScaleFactors = { 1.0f };
+		SimTK::Compound::BondIndex bondIndex = std::numeric_limits<SimTK::Compound::BondIndex>::max();
+		// int ring_no = 0;
+		int myindex = std::numeric_limits<int>::min();
+
+		SimTK::Real forceK = std::numeric_limits<SimTK::Real>::min();
+		SimTK::Real forceEquil = std::numeric_limits<SimTK::Real>::min();
+
+	public:
+		// These will correspond to bSpecificAtom.number
+		int i = std::numeric_limits<int>::min();
+		int j = std::numeric_limits<int>::min();
+
+	private:
+		//int rigid;
+		bool visited = false;
+		// bool inring = false;
+		bool ring_closing = false;
+		// bool _isFirst = false;
+
 };
 
 struct DUMM_ANGLE {

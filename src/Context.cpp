@@ -1545,7 +1545,245 @@ void Context::AddMolecules(
 }
 
 
-/** Load molecules based on loaded filenames **/
+// ============================================================================
+// ============================================================================
+// ==========================   SINGLE PRMTOP    ==============================
+// ============================================================================
+// ============================================================================
+/*!
+ * <!-- -->
+*/
+void Context::setBaseAtom(Topology& topology, int rootAmberIx)
+{
+	// Set Topology base atom
+	const bSpecificAtom& rootAtom = atoms[rootAmberIx];
+	const SimTK::Compound::SingleAtom& compoundRootAtom
+		= rootAtom.getSingleAtom();
+
+	topology.baseAtomNumber = rootAmberIx;
+	topology.setBaseAtom( compoundRootAtom );
+	topology.setAtomBiotype(rootAtom.getName(), topology.getName(),
+							rootAtom.getName());
+	topology.convertInboardBondCenterToOutboard();
+	topology.baseSetFlag = 1;
+
+	scout("rootAmberIx ") << rootAmberIx << " " << rootAtom.getName()
+		<< eol;	
+}
+
+/*!
+ * <!--  -->
+*/
+void Context::load_BONDS_to_bonds(
+	const std::vector<std::vector<BOND>>& BATbonds)
+{
+
+	BONDS_to_bonds.resize(BATbonds.size());
+	for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
+		BONDS_to_bonds[molIx].resize(BATbonds[molIx].size(), -111111);
+	}
+
+	// bBonds and BAT bonds equivalence
+	scout(" bonds BATbonds euqivalence ") << eol;
+	bool found = false;
+
+	for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
+
+		for(size_t cnt = 0; cnt < BATbonds[molIx].size(); cnt++){
+
+			found = false;
+			for(size_t bbCnt = 0; bbCnt < bonds.size(); bbCnt++){
+
+				if(	(BATbonds[molIx][cnt].first  == bonds[bbCnt].j) &&
+					(BATbonds[molIx][cnt].second == bonds[bbCnt].i)){
+					found = true;
+
+				}else if((BATbonds[molIx][cnt].first  == bonds[bbCnt].i) &&
+						(BATbonds[molIx][cnt].second == bonds[bbCnt].j)){
+					found = true;
+
+				}
+
+				if(found){
+					BONDS_to_bonds[molIx][cnt] = bbCnt;
+					break;
+				}
+
+			}
+		}
+	}
+
+	// scout("BONDS_to_bonds");
+	// for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
+	// 	for(size_t cnt = 0; cnt < BATbonds[molIx].size(); cnt++){
+	
+	// 		cout << molIx << " " << cnt << " " << BONDS_to_bonds[molIx][cnt] ;
+	// 			ceol;
+	// 		scout("bBond "); bonds[BONDS_to_bonds[molIx][cnt]].Print();
+	// 			ceol;
+	// 		scout("BATbonds "); BATbonds[molIx][cnt].Print();
+	// 			ceol;
+	// 		ceol;
+	
+	// 	}
+	// }
+
+}
+
+void Context::buildAcyclicGraph_SP_NEW(
+	Topology& topology,
+	int rootAmberIx,
+	int molIx)
+{
+
+	const std::vector<BOND>& theseBonds = internCoords.getMoleculeBonds(molIx);
+
+	std::vector<BOND>::const_iterator bIt;
+	std::size_t bCnt = 0;
+
+	// Do Bonding
+	for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
+
+		scout("internCoord bond ");
+		bIt->Print();
+		ceol;
+
+		// ===================== GET ATOMS IN THIS BOND ===================
+		// Child
+		int childAmberIx = bIt->first;
+		bSpecificAtom& child = (atoms[childAmberIx]);
+		const SimTK::Compound::SingleAtom& childCompoundAtom
+			= child.getSingleAtom();
+
+		// Parent
+		int parentAmberIx = bIt->second;
+		bSpecificAtom& parent = (atoms[parentAmberIx]);
+		const SimTK::Compound::SingleAtom& parentCompoundAtom
+			= parent.getSingleAtom();
+
+		// Set a molecule identifier
+		child.setMoleculeIndex(molIx);
+		parent.setMoleculeIndex(molIx);
+
+		// Print
+		scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+			<< eol;
+
+		// ====================== PARENT BOND CENTER ======================
+		
+		// Convenient vars
+		std::stringstream parentBondCenterPathName;
+		std::string parentBondCenterPathNameStr = "";
+		int parentNextAvailBondCenter = -111111;
+		std::string parentNextAvailBondCenterStr = "";
+		int parentNofBonds = parent.getNBonds();
+		int parentNofFreebonds = parent.getFreebonds();
+
+		// Get next available BondCenter id
+		parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
+		if((parentNofBonds != 1)){
+			parentNextAvailBondCenterStr =
+				std::to_string(parentNextAvailBondCenter);
+		}
+
+		// Cook the parentBondCenterPathName
+		parentBondCenterPathName << parent.getName()
+			<< "/bond" 
+			<< parentNextAvailBondCenterStr;
+		parentBondCenterPathNameStr = parentBondCenterPathName.str();
+
+		scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
+			<< eol;
+
+		// ======================== ACTUAL BONDING ========================
+		scout("Bonding child ") << child.getName() << " to parent "
+			<< parent.getName() << " with bond center name "
+			<< parentBondCenterPathNameStr << eol;
+
+		// Bond
+		topology.bondAtom(child.getSingleAtom(),
+				(parentBondCenterPathNameStr).c_str(), 0.149, 0);
+
+		// Set the final Biotype
+		topology.setAtomBiotype(child.getName(),
+								topology.getName().c_str(),
+								child.getName());
+
+		// Set bSpecificAtom atomIndex to the last atom added to bond
+		child.setCompoundAtomIndex(topology.getBondAtomIndex(
+			Compound::BondIndex(topology.getNumBonds() - 1), 1));
+
+		// TODO Not so sure about this TODO check if necessary !!!!
+		if(parentAmberIx == rootAmberIx){
+			parent.setCompoundAtomIndex(topology.getBondAtomIndex(
+				Compound::BondIndex(topology.getNumBonds() - 1), 0));
+		}
+
+		// Set bBond Molmodel Compound::BondIndex
+		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
+		int currentCompoundBondIndex = topology.getNumBonds() - 1;
+
+		bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
+
+		// Record bond into topologies map
+		topology.bondIx2GmolBond.insert(
+			std::pair<SimTK::Compound::BondIndex, int>(
+				Compound::BondIndex(currentCompoundBondIndex),
+				bond.getIndex()
+		));
+
+		topology.GmolBond2bondIx.insert(
+			std::pair<int, SimTK::Compound::BondIndex>(
+				bond.getIndex(),
+				Compound::BondIndex(currentCompoundBondIndex)
+		));
+
+		// Not sure where is useful
+		bond.setVisited(1);
+
+		// ====================== RECORD MODIFICATION =====================
+
+		// Decrease freebonds
+		parent.decrFreebonds();
+		child.decrFreebonds();
+
+	}
+
+	// Add to the list of topologies
+	topologies.push_back(topology);
+
+}
+
+/*!
+ * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
+*/
+void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
+{
+	std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets;
+	for(int ix = 0; ix < topology.getNumAtoms(); ++ix){
+
+		if(atoms[ix].getMoleculeIndex() == molIx){
+			Vec3 vec(
+				atoms[ix].getX(),
+				atoms[ix].getY(),
+				atoms[ix].getZ());
+
+			atomTargets.insert(std::pair<Compound::AtomIndex, SimTK::Vec3> (
+				atoms[ix].getCompoundAtomIndex(),
+				vec));
+		}
+
+	}
+
+	topology.matchDefaultConfiguration(
+		atomTargets,
+		SimTK::Compound::Match_Exact,
+		true, 150.0);
+}
+
+/*!
+ * <!-- Load molecules based on loaded filenames -->
+*/
 void Context::AddMolecules_SP_NEW(
 	int requestedNofMols,
 	SetupReader& setupReader
@@ -1597,14 +1835,14 @@ void Context::AddMolecules_SP_NEW(
 	// ========================================================================
 	amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
 	loadAtoms(amberReader[0]);
-	loadBonds(amberReader[0]);
+	loadBonds(amberReader[0]);	
+
 	setAtomCompoundTypes();
 	addBiotypes();
 
 	// ========================================================================
 	// ======== (1) Get BAT graphs ============================================
 	// ========================================================================
-	InternalCoordinates internCoords;
 	nofMols = 0;
 
 	// Find a root in the unvisited atoms
@@ -1621,155 +1859,49 @@ void Context::AddMolecules_SP_NEW(
 	}
 
 	// ========================================================================
+	// ======== (2) BAT bonds to bonds ========================================
+	// ========================================================================
+	const std::vector<std::vector<BOND>>& BATbonds =
+		internCoords.getBonds();
+
+	load_BONDS_to_bonds( internCoords.getBonds() );
+
+	// ========================================================================
 	// ======== (2) Build graphs with bondAtom ================================
 	// ========================================================================
 	topologies.reserve(requestedNofMols);
 	moleculeCount = -1;
 
-	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-	for(unsigned int molIx = 1; molIx <= 1; molIx++){
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	//for(unsigned int molIx = 1; molIx <= 1; molIx++){
 
 		// Add an empty topology
 		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
 		Topology topology(moleculeName);
 
 		// --------------------------------------------------------------------
-		// ------- (1) findARoot ----------------------------------------------
-		// --------------------------------------------------------------------
-
-		// Set Topology base atom
+		//  (1) findARoot 
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		const int rootAmberIx = internCoords.getRoot( molIx ).first;
-		const bSpecificAtom& rootAtom = atoms[rootAmberIx];
-		const SimTK::Compound::SingleAtom& compoundRootAtom
-			= rootAtom.getSingleAtom();
-
-		topology.baseAtomNumber = rootAmberIx;
-		topology.setBaseAtom( compoundRootAtom );
-		topology.setAtomBiotype(rootAtom.getName(), topology.getName(),
-								rootAtom.getName());
-		topology.convertInboardBondCenterToOutboard();
-		topology.baseSetFlag = 1;
-
-		scout("rootAmberIx ") << rootAmberIx << " " << rootAtom.getName()
-			<< eol;
+		setBaseAtom( topology, rootAmberIx );
 
 		// --------------------------------------------------------------------
 		// (2) buildAcyclicGraph
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-		std::vector<BOND>::const_iterator bIt;
-		std::size_t bCnt = 0;
-		const std::vector<BOND>& theseBonds = 
-			internCoords.getMoleculeBonds( molIx );
+		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
 
-
-		//scout(" bonds theseBonds euqivalence ")	
-
-		// Do Bonding
-		for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
-
-			scout("internCoord bond ");
-			bIt->Print();
-			ceol;
-
-			// ===================== GET ATOMS IN THIS BOND ===================
-			// Child
-			int childAmberIx = bIt->first;
-			bSpecificAtom& child = atoms[childAmberIx];
-			const SimTK::Compound::SingleAtom& childCompoundAtom
-				= child.getSingleAtom();
-
-			// Parent
-			int parentAmberIx = bIt->second;
-			bSpecificAtom& parent = atoms[parentAmberIx];
-			const SimTK::Compound::SingleAtom& parentCompoundAtom
-				= parent.getSingleAtom();
-
-			// Print
-			scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
-				<< eol;
-
-			// ====================== PARENT BOND CENTER ======================
-			
-			// Convenient vars
-			std::stringstream parentBondCenterPathName;
-			std::string parentBondCenterPathNameStr = "";
-			int parentNextAvailBondCenter = -111111;
-			std::string parentNextAvailBondCenterStr = "";
-			int parentNofBonds = parent.getNBonds();
-			int parentNofFreebonds = parent.getFreebonds();
-
-			// Get next available BondCenter id
-			parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
-			if((parentNofBonds != 1)){
-				parentNextAvailBondCenterStr =
-					std::to_string(parentNextAvailBondCenter);
-			}
-
-			// Cook the parentBondCenterPathName
-			parentBondCenterPathName << parent.getName()
-				<< "/bond" 
-				<< parentNextAvailBondCenterStr;
-			parentBondCenterPathNameStr = parentBondCenterPathName.str();
-
-			scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
-				<< eol;
-
-			// ======================== ACTUAL BONDING ========================
-			std::cout << "Bonding child " << child.getName() << " to parent "
-				<< parent.getName() << " with bond center name "
-				<< parentBondCenterPathNameStr << std::endl;
-
-			// Bond
-			topology.bondAtom(child.getSingleAtom(),
-					(parentBondCenterPathNameStr).c_str(), 0.149, 0);
-
-			// Set the final Biotype
-			topology.setAtomBiotype(child.getName(),
-								(topology.getName()).c_str(),
-								 child.getName());
-
-			// Set bSpecificAtom atomIndex to the last atom added to bond
-			child.setCompoundAtomIndex(topology.getBondAtomIndex(
-				Compound::BondIndex(topology.getNumBonds() - 1), 1));
-
-			// TODO Not so sure about this TODO check if necessary !!!!
-			if(parentAmberIx == rootAmberIx){
-				parent.setCompoundAtomIndex(topology.getBondAtomIndex(
-					Compound::BondIndex(topology.getNumBonds() - 1), 0));
-			}
-
-
-
-
-			// Set bBond Molmodel Compound::BondIndex
-			//(*bondsInvolvedIter)->setBondIndex(Compound::BondIndex(
-			//	topology.getNumBonds() - 1));
-
-			// bondIx2GmolBond.insert(pairToBeInserted);
-
-			// GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
-			// 		(*bondsInvolvedIter)->getIndex(),
-			// 		Compound::BondIndex(getNumBonds() - 1)
-			// ) );
-
-			// ====================== RECORD MODIFICATION =====================
-
-			// Decrease freebonds
-			parent.decrFreebonds();
-			child.decrFreebonds();
-
-		}
-
-		// Get bSpecificAtoms
-		// topology.bondAtom
+		// topology.addRingClosingBonds();
 
 		// --------------------------------------------------------------------
-		// ------- (2) topology.setAtomList(atoms, elementCache); -------------
+		// (2) matchDefaultConfiguration
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-		// Add to the list of topologies
-		topologies.push_back(topology);
+		// Assign Compound coordinates by matching bAtomList coordinates
+		matchDefaultConfiguration_SP_NEW(topology, molIx);
+		// PrintAtoms();
+
+
 
 	}
 
@@ -1777,12 +1909,9 @@ void Context::AddMolecules_SP_NEW(
 	// ======== (3) Rest from AddMolecules ====================================
 	// ========================================================================
 
-
 		// topology.setAtomList(atoms, elementCache);
 		// topology.setBondList(bonds);
-		// topology.addRingClosingBonds();
-		// topology.matchDefaultConfigurationWithAtomList(
-		// 	SimTK::Compound::Match_Exact);
+		// -------
 		// topology.generateAIx2TopXMaps();
 		// Helper function for calc MBAT determinant
 		//topology.loadTriples();
@@ -1790,12 +1919,22 @@ void Context::AddMolecules_SP_NEW(
 		// Map of Compound atom indexes to Robosample atom indexes
 		//topology.loadCompoundAtomIx2GmolAtomIx();
 
-
-
 }
 
 
 
+/*!
+ * <!-- Long print of all atoms properties -->
+*/
+void Context::PrintAtoms(void){
+
+	std::vector<bSpecificAtom>::iterator aIt;
+	size_t aCnt;
+	for(aIt = atoms.begin(); aIt != atoms.end(); aIt++, aCnt){
+		aIt->Print(0);
+	}
+
+}
 
 /* // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes

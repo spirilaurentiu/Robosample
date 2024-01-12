@@ -67,7 +67,9 @@ void bSpecificAtom::Print(int whichWorld)
         //<< " bAtomType "<< bAtomType 
         <<" charge "<<charge
         //<< " mobile "<<mobile
-        <<" visited "<<visited<<std::endl;
+        <<" visited "<<visited
+        <<" moleculeIndex "<<moleculeIndex
+        <<std::endl;
 
 
 /*     std::cout << "Neighbors:";
@@ -482,6 +484,17 @@ std::string bSpecificAtom::getResidueName() const {
 
 void bSpecificAtom::setResidueName(const std::string& value) {
     residueName = value; // Directly assign the new value
+}
+
+
+const int bSpecificAtom::getMoleculeIndex() const
+{
+    return moleculeIndex;
+}
+
+void bSpecificAtom::setMoleculeIndex(int molIxArg)
+{
+    this->moleculeIndex = molIxArg;
 }
 
 void bSpecificAtom::setParentNumber(int n) {
