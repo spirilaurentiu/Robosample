@@ -4289,3 +4289,10 @@ void Sampler::setAcc(bool accArg)
 {
 	this->acc = accArg;
 }
+
+void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass) {
+	// set if using openmm integrator
+	if(integratorName == IntegratorName::OMMVV) {
+		dumm->setOpenMMparticleMass(nax, mass);
+	}
+}

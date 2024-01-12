@@ -585,6 +585,8 @@ public:
 	
 	const int & getAcceptedSteps(void) const { return acceptedSteps; }
 
+	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
+
 protected:
 
 	int equilNofRounds = 0;

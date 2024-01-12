@@ -510,6 +510,16 @@ bool Context::initializeFromFile(const std::string &file)
 
 	PrintInitialRecommendedTimesteps();
 
+	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		for (const auto& t : topologies) {
+			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
+				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
+				const SimTK::DuMM::NonbondAtomIndex nax(aix);
+				updWorld(worldIx)->updSampler(0)->setOMMmass(nax, mass);
+			}
+		}
+	}
+
 	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
 		setRunType(0);
 		Run(getRequiredNofRounds(),
