@@ -249,6 +249,8 @@ void Topology::bAddBiotypes(
 		// Assign atom's biotype as a composed name: name + force field type
 		std::string biotype = resName + atom.getName() + atom.getFftype();
 		atom.setBiotype(biotype);
+
+		std::cout << "Topology::bAddBiotypes " << atom.getBiotypeIndex() << " " << atom.getBiotype() << " with bonds = " << atom.getNBonds() << std::endl;
 	}
 }
 
@@ -525,7 +527,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
 		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
-		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
+		this->setAtomBiotype(bAtomList[0].getName(), (this->name), bAtomList[0].getName());
 	}else{
 		nofProcesses = 0;
 		buildAcyclicGraph(root, root);

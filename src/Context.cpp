@@ -1441,18 +1441,18 @@ void Context::AddMolecules(
 	int requestedNofMols,
 	SetupReader& setupReader
 ){
-	const int molIx = 0;
-	auto prmtop = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("PRMTOP")[molIx];
-	auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
+	// const int molIx = 0;
+	// auto prmtop = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("PRMTOP")[molIx];
+	// auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
 
-	readAmberInput reader;
-	reader.readAmberFiles(inpcrd, prmtop);
-	loadAtoms(reader);
-	loadBonds(reader);
-	loadAngles(reader);
-	loadTorsions(reader);
-	setAtomCompoundTypes();
-	addBiotypes();
+	// readAmberInput reader;
+	// reader.readAmberFiles(inpcrd, prmtop);
+	// loadAtoms(reader);
+	// loadBonds(reader);
+	// loadAngles(reader);
+	// loadTorsions(reader);
+	// setAtomCompoundTypes();
+	// addBiotypes();
 
 
 

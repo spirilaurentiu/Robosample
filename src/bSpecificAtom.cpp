@@ -46,7 +46,10 @@ void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
     // compoundSingleAtom->setDefaultInboardBondLength(0.19);
 
     compoundSingleAtom->setCompoundName("SingleAtom");
-    compoundSingleAtom->setDefaultInboardBondLength(0.19);
+
+    if (numAtomBonds > 0) {
+        compoundSingleAtom->setDefaultInboardBondLength(0.19);
+    }
 }
 
 void bSpecificAtom::destroy() {
