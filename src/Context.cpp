@@ -700,19 +700,19 @@ void Context::loadBonds(const readAmberInput& reader) {
 
 	// Iterate bonds and get atom indeces
 	// This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
-	for(int i = 0; i < nbonds; i++) {
+	for(int bCnt = 0; bCnt < nbonds; bCnt++) {
 		bBond bond;
-		bond.setIndex(i);
-		bond.i = reader.getBondsAtomsIndex1(i);
-		bond.j = reader.getBondsAtomsIndex2(i);
+		bond.setIndex(bCnt);
+		bond.i = reader.getBondsAtomsIndex1(bCnt);
+		bond.j = reader.getBondsAtomsIndex2(bCnt);
 		bonds.push_back(bond);
 
 		// BAD! this will break if we invalidate the bonds vector
-		atoms[bond.i].addNeighbor(&atoms[bonds[i].j]);
-		atoms[bond.i].addBond(&bonds[i]);
+		atoms[bond.i].addNeighbor(&atoms[bonds[bCnt].j]);
+		atoms[bond.i].addBond(&bonds[bCnt]);
 
-		atoms[bond.j].addNeighbor(&atoms[bonds[i].i]);
-		atoms[bond.j].addBond(&bonds[i]);
+		atoms[bond.j].addNeighbor(&atoms[bonds[bCnt].i]);
+		atoms[bond.j].addBond(&bonds[bCnt]);
 	}
 
 	// Assign the number of bonds an atom has and set the number of freebonds
@@ -723,6 +723,14 @@ void Context::loadBonds(const readAmberInput& reader) {
 	}
 }
 
+void Context::PrintBonds(void){
+
+	for(size_t cnt = 0; cnt < nbonds; cnt++) {
+		bonds[cnt].Print();
+		ceol;
+	}
+
+}
 
 void Context::loadAngles(const readAmberInput& reader) {
 	dummAngles.reserve(reader.getNumberAngles());
@@ -1741,6 +1749,9 @@ void Context::buildAcyclicGraph_SP_NEW(
 		// Not sure where is useful
 		bond.setVisited(1);
 
+		// Also set it's molecule index
+		bond.setMoleculeIndex(molIx);
+
 		// ====================== RECORD MODIFICATION =====================
 
 		// Decrease freebonds
@@ -1780,6 +1791,151 @@ void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
 		SimTK::Compound::Match_Exact,
 		true, 150.0);
 }
+
+/*!
+ * <!-- Subarray view of atoms -->
+*/
+void Context::generateSubAtomLists(void){
+	
+	subAtomLists.resize( getNofMolecules() );
+
+	// Detect begin and start indeces
+	std::vector<int> molRanges;
+	int nextMolStart = -1;
+
+	// Go through atoms
+	for(size_t atomCnt = 0; atomCnt < atoms.size(); atomCnt++){
+
+		bSpecificAtom& atom = atoms[atomCnt];
+
+		// Go through molecules
+		for(int molIx = 0; molIx < getNofMolecules(); molIx++ ){
+
+			// different molecule index
+			if(atom.getMoleculeIndex() != nextMolStart){ 
+
+				molRanges.push_back( atomCnt - 1 );
+				molRanges.push_back( atomCnt );
+
+				nextMolStart = atom.getMoleculeIndex();
+
+			}
+
+		}
+	}
+
+	// Add the last element in the end
+	molRanges.push_back( atoms.size() - 1);
+
+	// First element is -1 just for convenience
+	if( !(molRanges.empty()) ){
+		molRanges.erase( molRanges.begin() );
+	}
+
+	scout("Bonds ranges\n");
+	for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
+		cout << molRanges[cnt] << " ";
+	}
+	ceol;
+
+	// Set atom sublists for every Compound
+	int sIx = -1;
+	if( !(molRanges.empty()) ){
+		for( size_t cnt = 0; cnt < molRanges.size(); cnt += 2 ){
+
+			sIx++;
+			subAtomLists[sIx].set_view(
+				atoms.begin() + molRanges[cnt],
+				atoms.begin() + molRanges[cnt+1] + 1);
+
+
+			;
+		}
+	}
+
+	// Check
+	for(const auto& view:subAtomLists){
+		scout("New molecule") << eol;
+		for(auto it = view.begin(); it != view.end(); it++){
+			it->Print(0);
+		}
+	}
+
+
+}
+
+/*!
+ * <!-- Subarray view of bonds -->
+*/
+void Context::generateSubBondLists(void){
+	
+	subBondLists.resize( getNofMolecules() );
+
+	// Detect begin and start indeces
+	std::vector<int> molRanges;
+	int nextMolStart = -1;
+
+	// Go through atoms
+	for(size_t bondCnt = 0; bondCnt < bonds.size(); bondCnt++){
+
+		bBond& bond = bonds[bondCnt];
+
+		// Go through molecules
+		for(int molIx = 0; molIx < getNofMolecules(); molIx++ ){
+
+			// different molecule index
+			if(bond.getMoleculeIndex() != nextMolStart){ 
+
+				molRanges.push_back( bondCnt - 1 );
+				molRanges.push_back( bondCnt );
+
+				nextMolStart = bond.getMoleculeIndex();
+
+			}
+
+		}
+	}
+
+	// Add the last element in the end
+	molRanges.push_back( bonds.size() - 1);
+
+	// First element is -1 just for convenience
+	if( !(molRanges.empty()) ){
+		molRanges.erase( molRanges.begin() );
+	}
+
+	scout("Bonds ranges\n");
+	for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
+		cout << molRanges[cnt] << " ";
+	}
+	ceol;
+
+	// Set atom sublists for every Compound
+	int sIx = -1;
+	if( !(molRanges.empty()) ){
+		for( size_t cnt = 0; cnt < molRanges.size(); cnt += 2 ){
+
+			sIx++;
+			subBondLists[sIx].set_view(
+				bonds.begin() + molRanges[cnt],
+				bonds.begin() + molRanges[cnt+1] + 1);
+
+		}
+	}
+
+	// Check
+	for(const auto& view:subBondLists){
+		scout("New molecule") << eol;
+		for(auto it = view.begin(); it != view.end(); it++){
+			it->Print();
+			ceol;
+		}
+	}
+
+
+}
+
+
 
 /*!
  * <!-- Load molecules based on loaded filenames -->
@@ -1901,23 +2057,57 @@ void Context::AddMolecules_SP_NEW(
 		matchDefaultConfiguration_SP_NEW(topology, molIx);
 		// PrintAtoms();
 
+	}
 
+	// Generate subarray views for atoms and bonds
+
+	// std::sort(atoms.begin(), atoms.end(), [](
+	// 	const bSpecificAtom& lhs, const bSpecificAtom& rhs){
+	// 		return lhs.getMoleculeIndex() < rhs.getMoleculeIndex();
+	// 	}
+	// );
+
+	generateSubAtomLists();
+
+	scout("Loaded bonds") << eol;
+	PrintBonds();
+	
+	std::sort(bonds.begin(), bonds.end(), [](
+		const bBond& lhs, const bBond& rhs){
+			return lhs.getMoleculeIndex() < rhs.getMoleculeIndex();
+		}
+	);
+
+	generateSubBondLists();
+
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		Topology& topology = topologies[molIx];
+
+		topology.setAtomList(
+			subAtomLists[molIx].begin(),
+			subAtomLists[molIx].end(),
+			elementCache);
+
+		topology.generateAIx2TopXMaps_SP_NEW();
+
+		topology.setBondList(
+			subBondLists[molIx].begin(),
+			subBondLists[molIx].end());
 
 	}
+
 
 	// ========================================================================
 	// ======== (3) Rest from AddMolecules ====================================
 	// ========================================================================
 
-		// topology.setAtomList(atoms, elementCache);
-		// topology.setBondList(bonds);
 		// -------
-		// topology.generateAIx2TopXMaps();
 		// Helper function for calc MBAT determinant
-		//topology.loadTriples();
+		// topology.loadTriples();
 		//
 		// Map of Compound atom indexes to Robosample atom indexes
-		//topology.loadCompoundAtomIx2GmolAtomIx();
+		// topology.loadCompoundAtomIx2GmolAtomIx();
 
 }
 

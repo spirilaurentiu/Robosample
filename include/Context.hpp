@@ -81,6 +81,12 @@ public:
 	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
 
 	/**  */
+	void generateSubAtomLists(void);
+
+	/**  */
+	void generateSubBondLists(void);
+
+	/**  */
 	void AddMolecules_SP_NEW(
 		int requestedNofMols,
 		SetupReader& setupReader
@@ -507,6 +513,7 @@ public:
 	//////////////////////////////////
 	void areAllDuMMsTheSame(void);
 
+	void PrintBonds(void);
 
 protected:
 	bool CreateOutputDirectory(const std::string& outDir);
@@ -641,7 +648,12 @@ protected:
 
 	int natoms = std::numeric_limits<int>::min();
 	std::vector<bSpecificAtom> atoms;
-    array_view<std::vector<bSpecificAtom>::iterator> subAtomList;
+
+	// Every molecule has an array_view for atoms and bonds
+	std::vector<array_view<std::vector<bSpecificAtom>::iterator>>
+		subAtomLists;
+	std::vector<array_view<std::vector<bBond>::iterator>>
+		subBondLists;
 
 	
 	int nbonds = std::numeric_limits<int>::min();

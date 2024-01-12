@@ -298,7 +298,8 @@ public:
 	/**
 	 * Generate an AtomIndex to Top Transforms map
 	*/
-	void generateAIx2TopXMaps(void );
+	void generateAIx2TopXMaps( void );
+	void generateAIx2TopXMaps_SP_NEW( void );
 
 	/** Builds the Compound's tree, closes the rings, matches the configuration
 	on the graph using using Molmodels matchDefaultConfiguration and sets the
@@ -477,25 +478,18 @@ public:
 
 	/** Get coordinates **/
 	void getCoordinates(
-			std::vector<SimTK::Real> Xs,
-			std::vector<SimTK::Real> Ys,
-			std::vector<SimTK::Real> Zs);
+			std::vector<SimTK::Real>& Xs,
+			std::vector<SimTK::Real>& Ys,
+			std::vector<SimTK::Real>& Zs);
 
 	void setAtomList(
-		std::vector<bSpecificAtom>& argAtomList,
-		ELEMENT_CACHE& elementCacheArg)
-	{		
-		(this->bAtomList) = (argAtomList);
-		natoms = (this->bAtomList).size();
-		elementCache = elementCacheArg;
-	}
+		std::vector<bSpecificAtom>::iterator beginArg,
+		std::vector<bSpecificAtom>::iterator endArg,
+		ELEMENT_CACHE& elementCacheArg);
 
 	void setBondList(
-		std::vector<bBond>& argBonds)
-	{
-		this->bonds = argBonds;
-		nbonds = (this->bonds).size();
-	}	
+		std::vector<bBond>::iterator beginArg,
+		std::vector<bBond>::iterator endArg);
 
 public:
 
@@ -508,6 +502,7 @@ public:
 	std::vector<bSpecificAtom>::iterator atomsEnd_It;
 	size_t atomsBeg_Ix;
 	size_t atomsEnd_Ix;
+	array_view<std::vector<bSpecificAtom>::iterator> subAtomList;
 
 	// Bonds
 	int nbonds;
@@ -516,6 +511,8 @@ public:
 	std::vector<bBond>::iterator bondsEnd_It;
 	size_t bondsBeg_Ix;
 	size_t bondsEnd_Ix;
+	array_view<std::vector<bBond>::iterator> subBondList;
+
 
 	// Triples
 	int nTriples;
