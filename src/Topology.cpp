@@ -504,6 +504,15 @@ void Topology::generateAIx2TopXMaps(void)
 	}
 }
 
+
+void Topology::generateAIx2TopXMaps_SP_NEW(void)
+{
+	for (unsigned int i = 0; i < getNumAtoms(); ++i){
+		aIx2TopTransform.insert(std::make_pair(
+			(subAtomList[i]).getCompoundAtomIndex(), SimTK::Transform()));
+	}
+}
+
 /** Builds the molecular tree, closes the rings, matches the configuration
 on the graph using using Molmodels matchDefaultConfiguration and sets the
 general flexibility of the molecule. **/
@@ -2209,9 +2218,9 @@ void Topology::writeAtomListPdb(std::string dirname,
 
 /** Get bAtomList coordinates coordinates **/
 void Topology::getCoordinates(
-		std::vector<SimTK::Real> Xs,
-		std::vector<SimTK::Real> Ys,
-		std::vector<SimTK::Real> Zs)
+		std::vector<SimTK::Real>& Xs,
+		std::vector<SimTK::Real>& Ys,
+		std::vector<SimTK::Real>& Zs)
 {
 	assert(Xs.size() == static_cast<size_t>(getNumAtoms()));
 	assert(Ys.size() == static_cast<size_t>(getNumAtoms()));
@@ -2221,6 +2230,30 @@ void Topology::getCoordinates(
 		Ys[ix] = bAtomList[ix].getY();
 		Zs[ix] = bAtomList[ix].getZ();
 	}
+}
+
+void Topology::setAtomList(
+	std::vector<bSpecificAtom>::iterator beginArg,
+	std::vector<bSpecificAtom>::iterator endArg,
+	ELEMENT_CACHE& elementCacheArg)
+{		
+
+
+	subAtomList.set_view( beginArg, endArg );
+
+	natoms = (subAtomList).size();
+
+	elementCache = elementCacheArg;
+}
+
+void Topology::setBondList(
+	std::vector<bBond>::iterator beginArg,
+	std::vector<bBond>::iterator endArg)
+{		
+
+	subBondList.set_view( beginArg, endArg );
+
+	natoms = (subBondList).size();
 }
 
 /** Get own CompoundIndex in CompoundSystem **/

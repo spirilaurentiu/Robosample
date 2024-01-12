@@ -180,6 +180,7 @@ void bBond::Print(void)
 
 	std::cout << " ring_closing " << ring_closing 
 		<< " visited " << visited
+		<< " moleculeIndex " << moleculeIndex
 		<< " uScaleFactor[0] " << uScaleFactors[0];
 
 }
@@ -232,3 +233,15 @@ int bBond::getIndex() const
 {
 	return myindex;
 }
+
+
+const int bBond::getMoleculeIndex() const
+{
+    return moleculeIndex;
+}
+
+void bBond::setMoleculeIndex(int molIxArg)
+{
+    this->moleculeIndex = molIxArg;
+}
+

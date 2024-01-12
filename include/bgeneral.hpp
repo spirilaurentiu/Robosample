@@ -103,20 +103,25 @@ private:
 
 public:
 
-	// Default constructor
-	array_view() = default;
-
     // Constructor based on specific limits
-    array_view(Iterator begin, Iterator end):
-		begin_(begin), end_(end) {}
+    void set_view(Iterator begin, Iterator end){
+		begin_ = begin;
+		end_ = end;
+	}
 
 	// Array limits
     Iterator begin() const { return this->begin_; }
     Iterator end() const   { return this->end_; }
-    
+
+	// 
 	typename std::iterator_traits<Iterator>::reference
-    
-	operator[](std::size_t index) { return this->begin_[index]; }
+	operator[](std::size_t index) {
+		return this->begin_[index];
+	}
+
+	size_t size(void) const {
+		return std::distance(begin_, end_);
+	}
 
 };
 

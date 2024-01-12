@@ -93,6 +93,11 @@ class bBond /* : public intpair */ {
 		void setUScaleFactor(int, float);
 		// void updUScaleFactor(int, float);
 
+
+
+		const int getMoleculeIndex() const;
+		void setMoleculeIndex(int);
+
 	private:
 		std::vector<SimTK::BondMobility::Mobility> mobilities;
 		// std::vector<float> uScaleFactors = std::vector<float>(1, 1.0);
@@ -112,6 +117,7 @@ class bBond /* : public intpair */ {
 	private:
 		//int rigid;
 		bool visited = false;
+    	int moleculeIndex = -111111;
 		// bool inring = false;
 		bool ring_closing = false;
 		// bool _isFirst = false;
