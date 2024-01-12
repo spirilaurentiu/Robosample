@@ -136,6 +136,14 @@ bool Context::initializeFromFile(const std::string &file)
 			<< "Robosample in development mode. Delete return after print."
 			<< eol;
 
+
+		// Set the final number of molecules added
+		finalNofMols = getNofMolecules();
+
+
+		// Loads parameters into DuMM
+		addDummParams(1, setupReader);
+
 		return false;
 
 	}else{ // SP_OLD
@@ -152,14 +160,15 @@ bool Context::initializeFromFile(const std::string &file)
 		}
 
 		std::cout << "Added " << finalNofMols << " molecules" << std::endl;
+
+		// Set the final number of molecules added
+		finalNofMols = getNofMolecules();
+
+
+		// Loads parameters into DuMM
+		addDummParams(finalNofMols, setupReader);
+
 	}
-
-
-	// Set the final number of molecules added
-	finalNofMols = getNofMolecules();
-
-	// Loads parameters into DuMM
-	addDummParams(finalNofMols, setupReader);
 
 	// Adopts compound by the CompoundSystem and loads maps of indexes
 	model(finalNofMols, setupReader);
@@ -1733,18 +1742,18 @@ void Context::buildAcyclicGraph_SP_NEW(
 
 		bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
 
-		// Record bond into topologies map
-		topology.bondIx2GmolBond.insert(
-			std::pair<SimTK::Compound::BondIndex, int>(
-				Compound::BondIndex(currentCompoundBondIndex),
-				bond.getIndex()
-		));
+		// // Record bond into topologies map
+		// topology.bondIx2GmolBond.insert(
+		// 	std::pair<SimTK::Compound::BondIndex, int>(
+		// 		Compound::BondIndex(currentCompoundBondIndex),
+		// 		bond.getIndex()
+		// ));
 
-		topology.GmolBond2bondIx.insert(
-			std::pair<int, SimTK::Compound::BondIndex>(
-				bond.getIndex(),
-				Compound::BondIndex(currentCompoundBondIndex)
-		));
+		// topology.GmolBond2bondIx.insert(
+		// 	std::pair<int, SimTK::Compound::BondIndex>(
+		// 		bond.getIndex(),
+		// 		Compound::BondIndex(currentCompoundBondIndex)
+		// ));
 
 		// Not sure where is useful
 		bond.setVisited(1);
@@ -2059,7 +2068,10 @@ void Context::AddMolecules_SP_NEW(
 
 	}
 
-	// Generate subarray views for atoms and bonds
+	// 
+	// ========================================================================
+	// ======== (3) Generate subarray views for atoms and bonds ===============
+	// ========================================================================
 
 	// std::sort(atoms.begin(), atoms.end(), [](
 	// 	const bSpecificAtom& lhs, const bSpecificAtom& rhs){
@@ -2072,12 +2084,34 @@ void Context::AddMolecules_SP_NEW(
 	scout("Loaded bonds") << eol;
 	PrintBonds();
 	
+	// SORT the bonds after molecule:
+	// ATENTION: this changes all maps containg bonds indeces
 	std::sort(bonds.begin(), bonds.end(), [](
 		const bBond& lhs, const bBond& rhs){
 			return lhs.getMoleculeIndex() < rhs.getMoleculeIndex();
 		}
 	);
 
+	// Record bond into topologies map
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		Topology& topology = topologies[molIx];
+		
+		for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
+
+			bBond& bond = bonds[bCnt];
+		
+			topology.bondIx2GmolBond.insert(
+			std::pair<SimTK::Compound::BondIndex, int>(
+				bond.getBondIndex(), bond.getIndex()));
+
+			topology.GmolBond2bondIx.insert(
+				std::pair<int, SimTK::Compound::BondIndex>(
+					bond.getIndex(), bond.getBondIndex()));		
+		}
+	}
+
+	// Bonds
 	generateSubBondLists();
 
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
@@ -2097,17 +2131,30 @@ void Context::AddMolecules_SP_NEW(
 
 	}
 
+	// Helper function for calc MBAT determinant
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
+		Topology& topology = topologies[molIx];
+
+		topology.loadTriples_SP_NEW();
+
+	}
+
+	// Map of Compound atom indexes to Robosample atom indexes
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		Topology& topology = topologies[molIx];
+
+		topology.loadCompoundAtomIx2GmolAtomIx_SP_NEW();
+
+	}
 	// ========================================================================
 	// ======== (3) Rest from AddMolecules ====================================
 	// ========================================================================
 
 		// -------
-		// Helper function for calc MBAT determinant
-		// topology.loadTriples();
 		//
 		// Map of Compound atom indexes to Robosample atom indexes
-		// topology.loadCompoundAtomIx2GmolAtomIx();
 
 }
 
@@ -2223,6 +2270,8 @@ void Context::addDummParams(
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
 		(amberReader[molIx]).readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 	}
+
+
 
 	// Accumulate DuMM parameters in these vectors
 	std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;

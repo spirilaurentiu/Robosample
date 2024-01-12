@@ -340,6 +340,7 @@ public:
 	// Helper function for calcLogDetMBATAnglesContribution
 	// Finds all triple runs - TODO VERY INEFFICIENT
 	void loadTriples(void);
+	void loadTriples_SP_NEW(void);
 	SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
 	SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
@@ -468,6 +469,7 @@ public:
 
         /** Compound AtomIndex to bAtomList number **/
 	void loadCompoundAtomIx2GmolAtomIx(void);
+	void loadCompoundAtomIx2GmolAtomIx_SP_NEW(void);
 	
 	/**  **/
 	int getNumber(SimTK::Compound::AtomIndex);

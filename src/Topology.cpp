@@ -1367,6 +1367,67 @@ void Topology::loadTriples()
 	} // END Iterate bondedAtomRuns
 }
 
+
+// Helper function for calcLogDetMBATAnglesContribution
+// Finds all triple runs - TODO VERY INEFFICIENT
+void Topology::loadTriples_SP_NEW()
+{
+	// Assign Compound coordinates by matching bAtomList coordinates
+	std::map<AtomIndex, Vec3> atomTargets;
+	for(int ix = 0; ix < getNumAtoms(); ++ix){
+
+		Vec3 vec(subAtomList[ix].getX(),
+				 subAtomList[ix].getY(),
+				 subAtomList[ix].getZ());
+
+		atomTargets.insert(pair<AtomIndex, Vec3> (
+			subAtomList[ix].getCompoundAtomIndex(), vec));
+
+	}
+
+	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
+	getBondedAtomRuns(3, atomTargets);
+
+	// Find root bAtomList index
+	int ix = -1;
+	for(const auto& atom: subAtomList){
+		ix++;
+	}
+
+	// Find neighbour with maximum atomIndex
+	int maxAIx = -1;
+	Compound::AtomIndex aIx;
+	for(auto atom: subAtomList[ix].neighbors){
+		aIx = atom->getCompoundAtomIndex();
+		if(aIx > maxAIx){
+			maxAIx = aIx;
+		}
+	}
+
+	int flag;
+	int bIx = -1;
+	for(auto bAR: bondedAtomRuns){ // Iterate bondedAtomRuns
+
+		bIx++;
+		flag = 0;
+		for(auto tripleEntry: triples){ // Iterate triples gathered so far
+			if(checkIfTripleUnorderedAreEqual(bAR, tripleEntry)){
+				flag = 1;
+				break;
+			}
+		} // END Iterate triples gathered so far
+
+		if(!flag){ // Not found in gathered triples
+			if((bAR[0] < bAR[1]) || (bAR[2] < bAR[1]) // Only level changing branches
+			|| ((bAR[1] == 0) && (bAR[2] == maxAIx)) // except for the root atom
+			){
+				triples.push_back(bAR);
+			}
+		}
+
+	} // END Iterate bondedAtomRuns
+}
+
 // Numerically unstable around -pi, 0 and pi due to the log(0)
 SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState)
 {
@@ -1992,6 +2053,19 @@ void Topology::loadCompoundAtomIx2GmolAtomIx()
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
 		int gmolIx = (bAtomList[i]).getNumber();
+
+		CompoundAtomIx2GmolAtomIx.insert(
+			std::pair<SimTK::Compound::AtomIndex, int>
+			(aIx, gmolIx));
+	}
+}
+
+/** Compound AtomIndex to bAtomList number **/
+void Topology::loadCompoundAtomIx2GmolAtomIx_SP_NEW()
+{
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
+		int gmolIx = (subAtomList[i]).getNumber();
 
 		CompoundAtomIx2GmolAtomIx.insert(
 			std::pair<SimTK::Compound::AtomIndex, int>
