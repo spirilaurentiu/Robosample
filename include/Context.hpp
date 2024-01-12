@@ -26,7 +26,9 @@ enum class RunType : int {
 };
 
 class Context{
+
 public:
+
 	bool initializeFromFile(const std::string& file);
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 
@@ -75,12 +77,17 @@ public:
 		int rootAmberIx,
 		int molIx);
 
+	/** Assign Compound coordinates by matching bAtomList coordinates */
+	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
+
 	/**  */
 	void AddMolecules_SP_NEW(
 		int requestedNofMols,
 		SetupReader& setupReader
 	);
 
+	/** Long print of all atoms properties */
+	void PrintAtoms(void);
 
 	/** It calls DuMMs defineAtomClass. These Molmodel functions contain
 	information regarding the force field parameters. **/
@@ -634,6 +641,8 @@ protected:
 
 	int natoms = std::numeric_limits<int>::min();
 	std::vector<bSpecificAtom> atoms;
+    array_view<std::vector<bSpecificAtom>::iterator> subAtomList;
+
 	
 	int nbonds = std::numeric_limits<int>::min();
 	std::vector<bBond> bonds;

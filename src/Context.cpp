@@ -126,7 +126,7 @@ bool Context::initializeFromFile(const std::string &file)
 	// amber -> robo
 	int finalNofMols = 0;
 
-	bool singlePrmtop = true;
+	bool singlePrmtop = false;
 
 	if(singlePrmtop){ // SP_NEW
 
@@ -1641,15 +1641,19 @@ void Context::buildAcyclicGraph_SP_NEW(
 		// ===================== GET ATOMS IN THIS BOND ===================
 		// Child
 		int childAmberIx = bIt->first;
-		bSpecificAtom& child = atoms[childAmberIx];
+		bSpecificAtom& child = (atoms[childAmberIx]);
 		const SimTK::Compound::SingleAtom& childCompoundAtom
 			= child.getSingleAtom();
 
 		// Parent
 		int parentAmberIx = bIt->second;
-		bSpecificAtom& parent = atoms[parentAmberIx];
+		bSpecificAtom& parent = (atoms[parentAmberIx]);
 		const SimTK::Compound::SingleAtom& parentCompoundAtom
 			= parent.getSingleAtom();
+
+		// Set a molecule identifier
+		child.setMoleculeIndex(molIx);
+		parent.setMoleculeIndex(molIx);
 
 		// Print
 		scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
@@ -1735,15 +1739,36 @@ void Context::buildAcyclicGraph_SP_NEW(
 
 	}
 
-	// Get bSpecificAtoms
-	// topology.bondAtom
-
-	// --------------------------------------------------------------------
-	// ------- (2) topology.setAtomList(atoms, elementCache); -------------
-	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
 	// Add to the list of topologies
 	topologies.push_back(topology);
+
+}
+
+/*!
+ * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
+*/
+void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
+{
+	std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets;
+	for(int ix = 0; ix < topology.getNumAtoms(); ++ix){
+
+		if(atoms[ix].getMoleculeIndex() == molIx){
+			Vec3 vec(
+				atoms[ix].getX(),
+				atoms[ix].getY(),
+				atoms[ix].getZ());
+
+			atomTargets.insert(std::pair<Compound::AtomIndex, SimTK::Vec3> (
+				atoms[ix].getCompoundAtomIndex(),
+				vec));
+		}
+
+	}
+
+	topology.matchDefaultConfiguration(
+		atomTargets,
+		SimTK::Compound::Match_Exact,
+		true, 150.0);
 }
 
 /*!
@@ -1856,6 +1881,17 @@ void Context::AddMolecules_SP_NEW(
 
 		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
 
+		// topology.addRingClosingBonds();
+
+		// --------------------------------------------------------------------
+		// (2) matchDefaultConfiguration
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+		// Assign Compound coordinates by matching bAtomList coordinates
+		matchDefaultConfiguration_SP_NEW(topology, molIx);
+		// PrintAtoms();
+
+
 
 	}
 
@@ -1865,9 +1901,7 @@ void Context::AddMolecules_SP_NEW(
 
 		// topology.setAtomList(atoms, elementCache);
 		// topology.setBondList(bonds);
-		// topology.addRingClosingBonds();
-		// topology.matchDefaultConfigurationWithAtomList(
-		// 	SimTK::Compound::Match_Exact);
+		// -------
 		// topology.generateAIx2TopXMaps();
 		// Helper function for calc MBAT determinant
 		//topology.loadTriples();
@@ -1875,12 +1909,22 @@ void Context::AddMolecules_SP_NEW(
 		// Map of Compound atom indexes to Robosample atom indexes
 		//topology.loadCompoundAtomIx2GmolAtomIx();
 
-
-
 }
 
 
 
+/*!
+ * <!-- Long print of all atoms properties -->
+*/
+void Context::PrintAtoms(void){
+
+	std::vector<bSpecificAtom>::iterator aIt;
+	size_t aCnt;
+	for(aIt = atoms.begin(); aIt != atoms.end(); aIt++, aCnt){
+		aIt->Print(0);
+	}
+
+}
 
 /* // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes
