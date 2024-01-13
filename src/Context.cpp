@@ -714,6 +714,10 @@ void Context::loadBonds(const readAmberInput& reader) {
 		bond.setIndex(bCnt);
 		bond.i = reader.getBondsAtomsIndex1(bCnt);
 		bond.j = reader.getBondsAtomsIndex2(bCnt);
+
+		bond.setForceEquil( reader.getBondsEqval(bCnt) );
+		bond.setForceK( reader.getBondsForceK(bCnt) );
+
 		bonds.push_back(bond);
 
 		// BAD! this will break if we invalidate the bonds vector
@@ -2462,7 +2466,7 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 		scout("Dumm bonds") << eol;
 
 		// Iterate through bonds and define their parameters
-		for(int bCnt = 0; bCnt < amberReader.getNumberBonds(); bCnt++){
+		for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
 			
 			// Generate a pair of atom classes for this bond
 			std::vector<SimTK::DuMM::AtomClassIndex> thisBondACIxs;
@@ -2484,25 +2488,314 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 			// Add bond to Dumm
 			if (  !foundit ){ // bond was not found
 
+				// DANGER: THIS DOESN'T WORK IF bonds ARE SORTED
+				// dumm.defineBondStretch_KA(
+				// 	(atoms[bonds[bCnt].i]).getDummAtomClassIndex(),
+				// 	(atoms[bonds[bCnt].j]).getDummAtomClassIndex(),
+				// 	amberReader.getBondsForceK(bCnt),  //k1
+				// 	amberReader.getBondsEqval(bCnt)   //equil1
+				// );
+
 				dumm.defineBondStretch_KA(
 					(atoms[bonds[bCnt].i]).getDummAtomClassIndex(),
 					(atoms[bonds[bCnt].j]).getDummAtomClassIndex(),
-					amberReader.getBondsForceK(bCnt),  //k1
-					amberReader.getBondsEqval(bCnt)   //equil1
-				);
+					bonds[bCnt].getForceK(),  //k1
+					bonds[bCnt].getForceEquil()   //equil1
+				);				
 
 				scout("bond ")
-					<< (atoms[bonds[bCnt].i]).getDummAtomClassIndex() <<" "
-					<< (atoms[bonds[bCnt].j]).getDummAtomClassIndex() <<" "
+					<< (atoms[bonds[bCnt].i]).getInName() <<" "
+					<< (atoms[bonds[bCnt].j]).getInName() <<" "
+					<< bonds[bCnt].getForceEquil() <<" "
+					<< bonds[bCnt].getForceK() <<" "
 					<< eol;
 
 				// Put the entry in our map too
 				allBondsACIxs.push_back(thisBondACIxs);
 
 			}
-		}
+		} // evvery bond
+	} // every world
 
+}
+
+/*!
+ * <!-- Calls DuMM defineBondBend to define angle parameters. -->
+*/
+void Context::bAddDummAngleParams_SP_NEW(readAmberInput& amberReader)
+{
+
+	// Iterate worlds
+	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
+
+		scout("World ") << wCnt << eol;
+
+		// Get world and its force field
+		World& world = worlds[wCnt];
+		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
+
+		// Keep track of inserted AtomClass pairs
+		std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
+
+		// Iterate angles and define their parameters
+		for(int angCnt = 0; angCnt < amberReader.getNumberAngles(); angCnt++){
+
+			// Gmolmodel Atom indeces
+			int a1 = amberReader.getAnglesAtomsIndex1(angCnt);
+			int a2 = amberReader.getAnglesAtomsIndex2(angCnt);
+			int a3 = amberReader.getAnglesAtomsIndex3(angCnt);
+
+			// Generate a triple of atom class indexes for this angle
+			std::vector<SimTK::DuMM::AtomClassIndex> thisAngleACIxs;
+			thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+				atoms[a1].getDummAtomClassIndex()) );
+			thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+				atoms[a2].getDummAtomClassIndex()) );
+			thisAngleACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+				atoms[a3].getDummAtomClassIndex()) );
+
+			// Check if we already have this angle
+			bool foundit = false;
+			for(auto& row:allAnglesACIxs){
+				if ( IsTheSameAngle (thisAngleACIxs, row) ){
+					foundit = true;
+					break;
+				}
+			}
+
+			// Add angle to Dumm
+			if (  !foundit ){ // angle was not found
+			
+				dumm.defineBondBend_KA(
+					atoms[a1].getDummAtomClassIndex(),
+					atoms[a2].getDummAtomClassIndex(),
+					atoms[a3].getDummAtomClassIndex(),
+					amberReader.getAnglesForceK(angCnt),
+					static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
+						* amberReader.getAnglesEqval(angCnt))) // TODO 32 vs 64 bit
+				);
+
+				// Put the entry in our map too
+				allAnglesACIxs.push_back(thisAngleACIxs);
+
+				scout("angle ") << a1 <<" " << a2 <<" " << a3 << eol;
+			}
+		}		
+
+	} // every world
+}
+
+/*!
+ * <!-- Check if a1 and a2 are bonded. -->
+*/
+bool Context::checkBond(int a1, int a2)
+{
+	for(int i = 0; i < nbonds; i++){
+		if( (bonds[i]).isThisMe(a1, a2) )
+		{
+			return true;
+		}
 	}
+	return false;
+}
+
+/*!
+ * <!-- Calls DuMM defineBondTorsion. -->
+*/
+void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
+{
+
+	// Iterate worlds
+	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
+
+		scout("World ") << wCnt << eol;
+
+		// Get world and its force field
+		World& world = worlds[wCnt];
+		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
+
+		// Keep track of inserted AtomClass pairs
+		std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
+		std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allImpropersACIxs;
+
+		// Amber reader dihedrals vector
+		std::vector<std::pair<int, int>> pairStartAndLens =
+			amberReader.getPairStartAndLen();
+
+		for(unsigned int index = 0; index < pairStartAndLens.size(); index++){
+
+			// Get start and len of this dihedral
+			int torsCnt        = pairStartAndLens[index].first;
+			int numberOf = pairStartAndLens[index].second;
+
+			// Get AtomClass indeces first
+			SimTK::DuMM::AtomClassIndex aCIx1 =
+				atoms[amberReader.getDihedralsAtomsIndex1(torsCnt)].getDummAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx2 =
+				atoms[amberReader.getDihedralsAtomsIndex2(torsCnt)].getDummAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx3 =
+				atoms[amberReader.getDihedralsAtomsIndex3(torsCnt)].getDummAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx4 =
+				atoms[amberReader.getDihedralsAtomsIndex4(torsCnt)].getDummAtomClassIndex();
+
+			// Check if a quad of atom indices is a normal dihedral
+			// or an improper dihedral, by checking if consecutive
+			// atoms are bonded 
+
+			int amber_aIx_1 = amberReader.getDihedralsAtomsIndex1(torsCnt);
+			int amber_aIx_2 = amberReader.getDihedralsAtomsIndex2(torsCnt);
+			int amber_aIx_3 = amberReader.getDihedralsAtomsIndex3(torsCnt);
+			int amber_aIx_4 = amberReader.getDihedralsAtomsIndex4(torsCnt);
+
+			bool dihedral=false;
+			bool improper=true;
+
+			if (checkBond(amber_aIx_1, amber_aIx_2) &&
+				checkBond(amber_aIx_2, amber_aIx_3) &&
+				checkBond(amber_aIx_3, amber_aIx_4))
+			{
+				dihedral = true;
+				improper = false;
+			}
+				
+			// Generate a quad of atom class indexes for this dihedral, 
+			// regardless of whether it's a torsion or an improper
+			std::vector<SimTK::DuMM::AtomClassIndex> thisDihedralACIxs;
+			thisDihedralACIxs.push_back(aCIx1);
+			thisDihedralACIxs.push_back(aCIx2);
+			thisDihedralACIxs.push_back(aCIx3);
+			thisDihedralACIxs.push_back(aCIx4);
+
+			if (dihedral){
+
+				// If it is a normal dihedral, check if we have it in our
+				// dihedral list
+				bool foundit = false;
+
+				for(auto& row:allDihedralsACIxs)
+				{
+					if ( IsTheSameTorsion (thisDihedralACIxs, row))
+					{
+						foundit = true;	break;
+					}
+				}
+
+				if (!foundit){ // dihedral was not found
+
+					// Define the dihedrals
+					if(numberOf == 1){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt)))
+						);
+					}
+					else if(numberOf == 2){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 1)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1)))
+						);
+					}
+					else if(numberOf == 3){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 1)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 2)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 2),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+2)))
+						);
+					}else if (numberOf == 4){
+						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 1)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 2)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 2),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+2))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt+ 3)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt+3),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+3)))
+						);
+					}
+					
+					// Add the dihedral to the list of impropers.
+					allDihedralsACIxs.push_back(thisDihedralACIxs);
+
+				} // END of not foundit
+		
+			}
+			
+			if (improper){
+				// If it is an improper dihedral, we check if it exitsts, without
+				// checking for the reverse (order matters for impropers)
+
+				bool foundit = false;
+				for(auto& row:allImpropersACIxs){
+					if ((thisDihedralACIxs == row))
+						{
+						foundit = true;	
+						break;
+						}
+					}
+				
+				if (!foundit){ // improper was not found
+
+					// Define the dihedrals
+					if(numberOf == 1){
+						dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt)))
+						);
+					}
+					else if(numberOf == 2){
+						dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 1)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1)))
+						);
+					}
+					else if(numberOf == 3){
+						dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 1)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 1),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1))),
+							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt + 2)), // TODO wants int, returns double
+							amberReader.getDihedralsForceK(torsCnt + 2),
+							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+2)))
+						);
+					}
+					// Add the improper to the list of impropers.
+					allImpropersACIxs.push_back(thisDihedralACIxs);
+				}
+			} // improper	
+
+
+			scout("torsion ") << amber_aIx_1 <<" " << amber_aIx_2 <<" "
+				<< amber_aIx_3 <<" " << amber_aIx_4 << eol;
+
+		} // torsions
+
+
+	} // every world
+
 }
 
 /*!
@@ -2513,8 +2806,20 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 void Context::addDummParams_SP_NEW(readAmberInput& amberReader)
 {
 
+	// DANGER: BONDS WERE SORTED =>
+	// amberReader and bonds have no longer the same indeces
+
+	// Add atom types and charged atmo types
 	generateDummAtomClasses_SP_NEW(amberReader);
+
+	// Add bonds parameters
 	bAddDummBondParams_SP_NEW(amberReader);
+
+	// Add angle parameters
+	bAddDummAngleParams_SP_NEW(amberReader);
+
+	// Add torsion parameters
+	bAddDummTorsionParams_SP_NEW(amberReader);
 
 }
 

@@ -111,6 +111,9 @@ public:
 	// Add Dumm params for single prmtop
 	void generateDummAtomClasses_SP_NEW(readAmberInput& amberReader);
 	void bAddDummBondParams_SP_NEW(readAmberInput& amberReader);
+	void bAddDummAngleParams_SP_NEW(readAmberInput& amberReader);
+	bool checkBond(int a1, int a2);
+	void bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader);
 
 	void addDummParams_SP_NEW(readAmberInput& amberReader);
 
