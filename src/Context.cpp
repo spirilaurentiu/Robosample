@@ -142,7 +142,7 @@ bool Context::initializeFromFile(const std::string &file)
 
 
 		// Loads parameters into DuMM
-		addDummParams(1, setupReader);
+		addDummParams_SP_NEW(amberReader[0]);
 
 		return false;
 
@@ -2073,6 +2073,7 @@ void Context::AddMolecules_SP_NEW(
 	// ======== (3) Generate subarray views for atoms and bonds ===============
 	// ========================================================================
 
+	// Atoms
 	// std::sort(atoms.begin(), atoms.end(), [](
 	// 	const bSpecificAtom& lhs, const bSpecificAtom& rhs){
 	// 		return lhs.getMoleculeIndex() < rhs.getMoleculeIndex();
@@ -2081,8 +2082,8 @@ void Context::AddMolecules_SP_NEW(
 
 	generateSubAtomLists();
 
-	scout("Loaded bonds") << eol;
-	PrintBonds();
+	// scout("Loaded bonds") << eol;
+	// PrintBonds();
 	
 	// SORT the bonds after molecule:
 	// ATENTION: this changes all maps containg bonds indeces
@@ -2271,15 +2272,12 @@ void Context::addDummParams(
 		(amberReader[molIx]).readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 	}
 
-
-
 	// Accumulate DuMM parameters in these vectors
 	std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
 	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allImpropersACIxs;
-
 
 	// Load DuMM parameters for the first world
 	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
@@ -2324,6 +2322,206 @@ void Context::addDummParams(
 	
 }
 
+
+
+// ============================================================================
+// NEW WAY TO ADD PARAMS
+// ============================================================================
+/*!
+ * <!-- It calls DuMMs defineAtomClass, defineChargedAtomTye and
+ * setBiotypeChargedAtomType for every atom. These Molmodel functions contain
+ * information regarding the force field parameters.-->
+*/
+void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
+{
+	// Iterate worlds
+	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
+		World& world = worlds[wCnt];
+		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
+
+		scout("World ") << wCnt << eol;
+
+		// Declarations
+		std::vector<bool> founditInDuMM(atoms.size(), false);
+
+		// ========================================================================
+		// ======== (1) DuMM atom classes =========================================
+		// ========================================================================
+
+		// Iterate atoms
+		for(size_t aCnt = 0; aCnt < atoms.size(); aCnt++){
+
+			SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
+			std::string atomClassName;
+
+			// Define an AtomClassparam for this atom
+			AtomClassParams atomClassParams(
+				atoms[aCnt].getAtomicNumber(),
+				atoms[aCnt].getNBonds(),
+				atoms[aCnt].getVdwRadius() / 10.0, // nm
+				atoms[aCnt].getLJWellDepth() * 4.184 // kcal to kJ
+			);
+
+			std::string str(atoms[aCnt].getFftype());
+			const SimTK::String simtkstr(str);
+
+			founditInDuMM[aCnt] = dumm.hasAtomClass(simtkstr);
+
+			// Define the AtomClass
+			if (!founditInDuMM[aCnt]){ // We don't have this AtomClass
+				
+				// Get an AtomClass index from DuMM
+				dummAtomClassIndex = dumm.getNextUnusedAtomClassIndex();
+
+				// Define an AtomClass name
+				atomClassName = atoms[aCnt].getFftype();
+
+				// Define an AtomClass
+				dumm.defineAtomClass(dummAtomClassIndex,
+					atomClassName.c_str(),
+					atomClassParams.atomicNumber,
+					atomClassParams.valence,
+					atomClassParams.vdwRadius,
+					atomClassParams.LJWellDepth
+				);
+
+			}else{ // We have this AtomClass
+
+				// Get AtomClass index from DuMM
+				dummAtomClassIndex = dumm.getAtomClassIndex(
+					atoms[aCnt].getFftype());
+			}			
+
+			// Insert AtomClass index in Gmolmodel atom list too
+			atoms[aCnt].setDummAtomClassIndex(dummAtomClassIndex);
+
+			scout("Added atom aCnt atomClassIndex ") 
+				<< aCnt <<" " << dummAtomClassIndex << eol;
+
+		} // every atom
+
+
+		// Define ChargedAtomTypeIndeces
+		SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
+		std::string chargedAtomTypeName;
+
+		// ========================================================================
+		// ======== (2) DuMM charged atom types ===================================
+		// ========================================================================
+
+		// Iterate atoms
+		for(size_t aCnt = 0; aCnt < atoms.size(); aCnt++){
+
+			// Get a ChargedAtomType index
+			chargedAtomTypeIndex = dumm.getNextUnusedChargedAtomTypeIndex();
+			atoms[aCnt].setChargedAtomTypeIndex(chargedAtomTypeIndex);
+
+			// Define a chargedAtomType name
+			chargedAtomTypeName =  atoms[aCnt].getResidueName(); // taken from Amber
+			chargedAtomTypeName += atoms[aCnt].getBiotype();
+
+			// Define a ChargedAtomType (AtomClass with a charge)
+			dumm.defineChargedAtomType(
+				chargedAtomTypeIndex,
+				chargedAtomTypeName.c_str(),
+				atoms[aCnt].getDummAtomClassIndex(),
+				atoms[aCnt].charge
+			);
+
+			// Associate a ChargedAtomTypeIndex with a Biotype index
+			dumm.setBiotypeChargedAtomType(
+				atoms[aCnt].getChargedAtomTypeIndex(),
+				atoms[aCnt].getBiotypeIndex()
+			);
+
+			scout("Defined chargedAtomType ") << chargedAtomTypeName 
+				<< " with chargedAtomTypeIndex " << chargedAtomTypeIndex
+				<< eol;
+
+		} // every atom
+
+	} // every world
+}
+
+/*!
+ * <!-- Calls DuMM defineBondStretch to define bonds parameters. -->
+*/
+void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
+{
+
+	// Iterate worlds
+	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
+
+		// Get world and its force field
+		World& world = worlds[wCnt];
+		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
+
+		// Keep track of inserted AtomClass pairs		
+		std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
+	
+		scout("Dumm bonds") << eol;
+
+		// Iterate through bonds and define their parameters
+		for(int bCnt = 0; bCnt < amberReader.getNumberBonds(); bCnt++){
+			
+			// Generate a pair of atom classes for this bond
+			std::vector<SimTK::DuMM::AtomClassIndex> thisBondACIxs;
+
+			thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+				(atoms[bonds[bCnt].i]).getDummAtomClassIndex()) );
+			thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
+				(atoms[bonds[bCnt].j]).getDummAtomClassIndex()) );
+
+			// Check if we already have this bond
+			bool foundit = false;
+			for(auto& row:allBondsACIxs){
+				if ( IsTheSameBond (thisBondACIxs, row) ){
+					foundit = true;
+					break;
+				}
+			}
+
+			// Add bond to Dumm
+			if (  !foundit ){ // bond was not found
+
+				dumm.defineBondStretch_KA(
+					(atoms[bonds[bCnt].i]).getDummAtomClassIndex(),
+					(atoms[bonds[bCnt].j]).getDummAtomClassIndex(),
+					amberReader.getBondsForceK(bCnt),  //k1
+					amberReader.getBondsEqval(bCnt)   //equil1
+				);
+
+				scout("bond ")
+					<< (atoms[bonds[bCnt].i]).getDummAtomClassIndex() <<" "
+					<< (atoms[bonds[bCnt].j]).getDummAtomClassIndex() <<" "
+					<< eol;
+
+				// Put the entry in our map too
+				allBondsACIxs.push_back(thisBondACIxs);
+
+			}
+		}
+
+	}
+}
+
+/*!
+ * <!-- It calls DuMMs defineAtomClass, defineChargedAtomTye and
+ * setBiotypeChargedAtomType for every atom. These Molmodel functions contain
+ * information regarding the force field parameters.-->
+*/
+void Context::addDummParams_SP_NEW(readAmberInput& amberReader)
+{
+
+	generateDummAtomClasses_SP_NEW(amberReader);
+	bAddDummBondParams_SP_NEW(amberReader);
+
+}
+
+
+// ============================================================================
+// MODEL
+// ============================================================================
 
 // Loads parameters into DuMM, adopts compound by the CompoundSystem
 // and loads maps of indexes

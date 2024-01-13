@@ -108,6 +108,14 @@ public:
 		SetupReader& setupReader
 	);
 
+	// Add Dumm params for single prmtop
+	void generateDummAtomClasses_SP_NEW(readAmberInput& amberReader);
+	void bAddDummBondParams_SP_NEW(readAmberInput& amberReader);
+
+	void addDummParams_SP_NEW(readAmberInput& amberReader);
+
+	// -------------------------
+
 	// Adopts compound by the CompoundSystem
 	// and loads maps of indexes
 	void model(
