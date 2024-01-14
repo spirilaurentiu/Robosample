@@ -50,7 +50,7 @@ public:
 		SimTK::Vec3>>>& atomsLocations);
 
 	bool loadRigidBodiesSpecs(std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN);
-	bool loadFlexibleBondsSpecs(std::size_t whichWorld, int whichMolecule, std::string FlexSpecsFN);
+	bool loadFlexibleBondsSpecs(std::size_t whichWorld, std::string FlexSpecsFN);
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
 
 	/** Load molecules based on loaded filenames. One molecule
@@ -86,11 +86,15 @@ public:
 	/**  */
 	void generateSubBondLists(void);
 
+	/** Pass Context topologies to all the worlds */
+	void passTopologiesToWorlds(void);
+	
 	/**  */
 	void AddMolecules_SP_NEW(
 		int requestedNofMols,
 		SetupReader& setupReader
 	);
+
 
 	/** Long print of all atoms properties */
 	void PrintAtoms(void);
@@ -125,6 +129,20 @@ public:
 		int requestedNofMols,
 		SetupReader& setupReader
 	);
+
+	// ---------
+	/** Set all flexibilities for all the worlds to Rigid. */
+	void initializeFlexibility(void);
+
+	/** Set flexibilities. */
+	void setFlexibility(
+		std::string argRegimen,
+		std::string flexFN,
+		int whichWorld);
+
+	void model_SP_NEW(SetupReader& setupReader);
+
+	// ---------
 
 	void modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer);
 	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);

@@ -126,7 +126,7 @@ bool Context::initializeFromFile(const std::string &file)
 	// amber -> robo
 	int finalNofMols = 0;
 
-	bool singlePrmtop = false;
+	bool singlePrmtop = true;
 
 	if(singlePrmtop){ // SP_NEW
 
@@ -143,6 +143,9 @@ bool Context::initializeFromFile(const std::string &file)
 
 		// Loads parameters into DuMM
 		addDummParams_SP_NEW(amberReader[0]);
+
+		// Adopts compound by the CompoundSystem and loads maps of indexes
+		model_SP_NEW(setupReader);
 
 		return false;
 
@@ -168,10 +171,12 @@ bool Context::initializeFromFile(const std::string &file)
 		// Loads parameters into DuMM
 		addDummParams(finalNofMols, setupReader);
 
+		// Adopts compound by the CompoundSystem and loads maps of indexes
+		model(finalNofMols, setupReader);
+
 	}
 
-	// Adopts compound by the CompoundSystem and loads maps of indexes
-	model(finalNofMols, setupReader);
+
 
 	// Allocate space for containers that keep statistics if we're doing any
 	allocWorldsStatsContainers();
@@ -1340,7 +1345,9 @@ bool Context::loadRigidBodiesSpecs(std::size_t whichWorld, int, std::string RBSp
 
 // Add flexibility filename to whichWorld row of the flexibility filenames
 // matrix
-bool Context::loadFlexibleBondsSpecs(std::size_t whichWorld, int, std::string flexSpecsFN)
+bool Context::loadFlexibleBondsSpecs(
+	std::size_t whichWorld,
+	std::string flexSpecsFN)
 {
 	// function args were std::size_t whichWorld, int whichMolecule, std::string flexSpecsFN
 	std::ifstream file(flexSpecsFN);
@@ -1949,6 +1956,23 @@ void Context::generateSubBondLists(void){
 }
 
 
+/*!
+ * <!-- Pass newly created topologies to the worlds -->
+*/
+void Context::passTopologiesToWorlds(void){
+
+	// Iterate worlds
+	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
+
+		scout("World ") << wCnt << eol;
+
+		// Get world and its force field
+		World& world = worlds[wCnt];
+
+		// Pass current topology to the current world
+		world.topologies = &topologies;
+	}
+}
 
 /*!
  * <!-- Load molecules based on loaded filenames -->
@@ -2160,6 +2184,10 @@ void Context::AddMolecules_SP_NEW(
 		// -------
 		//
 		// Map of Compound atom indexes to Robosample atom indexes
+
+
+	// Context topologies to all the worlds
+	passTopologiesToWorlds();
 
 }
 
@@ -2847,21 +2875,22 @@ void Context::model(
 				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
-			loadFlexibleBondsSpecs( worldIx, molIx,
+			loadFlexibleBondsSpecs( worldIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
+			// TODO: delete from Topology
 			setRegimen( worldIx, molIx,
-				setupReader.get("WORLDS")[worldIx] ); // TODO: delete from Topology
+				setupReader.get("WORLDS")[worldIx] );
 
-			std::cout << " Context::AddMolecule for world "<< worldIx << " " << std::endl;
-			std::cout << " Context::AddMolecule molIx "<< molIx << " " << std::endl;
+			std::cout << " Context::AddMolecule for world "<< worldIx << " "
+				<< std::endl;
+			std::cout << " Context::AddMolecule molIx "<< molIx << " "
+				<< std::endl;
 			std::cout << " Context::AddMolecule topFNs[molIx] "<< topFNs[molIx]
 				<< " " << crdFNs[molIx] << " " << rbSpecsFNs[worldIx][molIx]
 				<< std::endl << std::flush;
-
-			//(updWorld(worldIx))->AllocateCoordBuffers(molIx); // TODO: remove
 
 			// Set BondFlexibilities in Compound
 			std::cout << "Context setting flexibility for mol "
@@ -2900,6 +2929,214 @@ void Context::model(
 	}
 
 }
+
+/*!
+ * <!-- Set all flexibilities for all the worlds to Rigid. -->
+*/
+void Context::initializeFlexibility(void)
+{
+
+	// Iterate worlds
+	for(size_t worldIx = 0; worldIx < worlds.size(); worldIx++){
+
+		// Set all Compounds' bonds mobilities to Rigid as a default
+		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
+
+			Topology& topology = topologies[topCnt];
+
+			for(size_t topBCnt = 0; topBCnt < topology.getNumBonds(); topBCnt++){
+				topology.setBondMobility(BondMobility::Rigid,
+					SimTK::Compound::BondIndex(topBCnt));
+			}
+		}
+
+		// Set all Gmolmodel bonds Rigid also
+		for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
+			bonds[bCnt].addBondMobility(SimTK::BondMobility::Rigid);
+		}
+
+	}
+
+}
+
+/*!
+ * <!-- Set flexibilities. -->
+*/
+void Context::setFlexibility(
+	std::string argRegimen,
+	std::string flexFN,
+	int whichWorld)
+{
+
+	// Get flexible bonds from file. Numbering starts at 0 in prmtop
+	std::string line;
+	std::ifstream flexF(flexFN);
+
+	while(flexF.good()){
+
+		// Get a line
+		std::getline(flexF, line);
+		if(!line.empty()){
+
+			// Comment
+			if(line.at(0) == '#'){continue;}
+
+			// Get words
+			std::istringstream iss(line);
+			std::string word;
+			std::vector<std::string> lineWords;
+
+			while(iss >> word){
+				lineWords.push_back(std::move(word));
+			}
+
+			// Check the line
+			if(lineWords.size() >= 3 ){
+
+				int index_1 = std::stoi(lineWords[0]);
+				int index_2 = std::stoi(lineWords[1]);
+				std::string mobility =  lineWords[2];
+
+				// Iterate Gmolmodel bonds
+				for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
+
+					bBond& bond = bonds[bCnt];
+
+					if(bond.isThisMe(index_1, index_2) ){
+
+						// Get this bond's topology and Comopund index
+						Topology& topology =
+							topologies[bond.getMoleculeIndex()];
+						SimTK::Compound::BondIndex compoundBondIx =
+							bond.getBondIndex();
+						
+						// --- Pin ---
+						if((mobility == "Pin") || (mobility == "Torsion")){
+							bond.setBondMobility(BondMobility::Torsion,
+								whichWorld);
+							topology.setBondMobility(BondMobility::Torsion,
+								compoundBondIx);
+							break;
+
+						// --- Cartesian ---
+						}else if((mobility == "Translation") || (mobility == "Cartesian")){
+							bond.setBondMobility(BondMobility::Translation,
+								whichWorld);
+							topology.setBondMobility(BondMobility::Translation,
+								compoundBondIx);
+
+						// --- Weld ---
+						}else if((mobility == "Rigid") || (mobility == "Weld")){
+							bond.setBondMobility(BondMobility::Rigid,
+								whichWorld);
+							topology.setBondMobility(BondMobility::Rigid,
+								compoundBondIx);
+							break;
+
+						// --- Slider ---
+						}else if((mobility == "Slider") ){
+							bond.setBondMobility(BondMobility::Slider,
+								whichWorld);
+							topology.setBondMobility(BondMobility::Slider,
+								compoundBondIx);
+							break;
+
+						// --- Slider ---
+						}else if((mobility == "AnglePin") ){
+							bond.setBondMobility(BondMobility::AnglePin,
+								whichWorld);
+							topology.setBondMobility(BondMobility::AnglePin,
+								compoundBondIx);
+							break;
+
+						// --- Slider ---
+						}else if((mobility == "BendStretch") ){
+							bond.setBondMobility(BondMobility::BendStretch,
+								whichWorld);
+							topology.setBondMobility(BondMobility::BendStretch,
+								compoundBondIx);
+							break;
+
+						// --- Default ---	
+						}else{
+							bond.setBondMobility(BondMobility::Rigid,
+								whichWorld);
+							topology.setBondMobility(BondMobility::Rigid,
+								compoundBondIx);
+							break;							
+						}
+
+					} // found the bond
+
+				} // search every bond
+			} // more than two words per line
+
+			else{
+				scout("Bad flex file format");
+			} // less than two words per line
+
+		} // line is not empty
+	} // every line
+
+}
+
+/*!
+ * <!--  -->
+*/
+void Context::model_SP_NEW(SetupReader& setupReader)
+{
+	// Root mobilities
+	std::vector<std::string> argRootMobilities =
+		setupReader.get("ROOT_MOBILITY");
+
+	// Iterate worlds
+	for(size_t worldIx = 0; worldIx < worlds.size(); worldIx++){
+
+		scout("World ") << worldIx << eol;
+
+		// Get world and its force field
+		World& world = worlds[worldIx];
+		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
+
+		// Get flexibility files
+		std::string flexFileFN
+			= setupReader.get("MOLECULES")[0] + std::string("/")
+			+ setupReader.get("FLEXFILE")[worldIx];
+
+		// Load 2d vector of flexibility filenames
+		loadFlexibleBondsSpecs(worldIx, flexFileFN);
+
+		// Set all flexibilities to Rigid
+		initializeFlexibility();
+
+		// Set flexibility from file
+		setFlexibility("noregimen", flexFileFN, worldIx);		
+
+		scout("Loaded flexibilities for world ") << worldIx << eol;
+
+		// Add topologies by CompoundSystem and add it to the
+		// Visualizer's vector of molecules
+		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
+
+			//Topology& topology = topologies[topCnt];
+
+			(updWorld(worldIx))->adoptTopology(topCnt);
+
+		} // every molecule
+
+
+	} // every world
+
+
+}
+
+
+
+
+// ============================================================================
+// WORK
+// ============================================================================
+
 
 // Allocate space for containers that keep statistics if we're doing any
 void Context::allocWorldsStatsContainers()

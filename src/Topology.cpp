@@ -1798,10 +1798,15 @@ void Topology::setUScaleFactorsToBonds(std::string flexFN)
 
 }
 
-
-/** Set regimen according to input file **/
-// Compound doesn't care about Worlds. We keep multiple Bond::Mobilities in bBond
-void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int whichWorld)
+/*!
+ * <!-- Set regimen according to input file.
+ * Compound doesn't care about Worlds. We keep multiple Bond::Mobilities in
+ * bBond -->
+*/
+void Topology::setFlexibility(
+	std::string argRegimen,
+	std::string flexFN,
+	int whichWorld)
 {
 
 	if(argRegimen == "IC"){
@@ -1856,7 +1861,7 @@ void Topology::setFlexibility(std::string argRegimen, std::string flexFN, int wh
 			setBondMobility(BondMobility::Rigid, SimTK::Compound::BondIndex(r));
 		}
 		for (unsigned int r=0 ; r<getNumBonds(); r++){
-			bonds[r].addBondMobility(BondMobility::Rigid); // TODO: Change to rigid
+			bonds[r].addBondMobility(BondMobility::Rigid);
 		}
 
 		// Get flexible bonds from file. Numbering starts at 0 in prmtop
