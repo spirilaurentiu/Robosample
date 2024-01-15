@@ -126,7 +126,7 @@ bool Context::initializeFromFile(const std::string &file)
 	// amber -> robo
 	int finalNofMols = 0;
 
-	bool singlePrmtop = true;
+	bool singlePrmtop = false;
 
 	if(singlePrmtop){ // SP_NEW
 
@@ -3083,6 +3083,50 @@ void Context::setFlexibility(
 /*!
  * <!--  -->
 */
+void Context::modelOneEmbeddedTopology_SP_NEW(int whichTopology,
+	int whichWorld,
+	std::string rootMobilizer)
+{
+
+	// Add a root mobilizer
+	this->rootMobilities.push_back(rootMobilizer);
+
+	// Call Molmodel to model Compound
+	(updWorld(whichWorld))->compoundSystem->modelOneCompound(
+		SimTK::CompoundSystem::CompoundIndex(whichTopology),
+		SimTK::String(rootMobilizer));
+
+	// Get the forcefield within this world
+	SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(whichWorld))->forceField);
+
+	// For every atom
+	for(std::size_t aCnt = 0;
+	aCnt < topologies[whichTopology].getNumAtoms(); aCnt++){
+
+		// Get atom's mobod
+		SimTK::Compound::AtomIndex aIx =
+			(topologies[whichTopology].subAtomList[aCnt]).getCompoundAtomIndex();
+
+		SimTK::MobilizedBodyIndex mbx =
+			topologies[whichTopology].getAtomMobilizedBodyIndex(aIx);
+
+		// SimTK::MobilizedBodyIndex mbxCheck =
+		// 	topologies[whichTopology].getAtomMobilizedBodyIndexThroughDumm(
+		// 		aIx,
+		// 		dumm);
+
+		scout("atom ") <<aCnt <<" " <<aIx <<" "
+			<<mbx <<" "
+			//<<mbxCheck <<" " 
+			<< eol;
+
+	}
+
+}
+
+/*!
+ * <!--  -->
+*/
 void Context::model_SP_NEW(SetupReader& setupReader)
 {
 	// Root mobilities
@@ -3124,6 +3168,13 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 
 		} // every molecule
 
+		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
+
+			//Topology& topology = topologies[topCnt];
+
+			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Weld");
+
+		} // every molecule
 
 	} // every world
 

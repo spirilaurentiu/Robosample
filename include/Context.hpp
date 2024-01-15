@@ -88,7 +88,7 @@ public:
 
 	/** Pass Context topologies to all the worlds */
 	void passTopologiesToWorlds(void);
-	
+
 	/**  */
 	void AddMolecules_SP_NEW(
 		int requestedNofMols,
@@ -139,6 +139,10 @@ public:
 		std::string argRegimen,
 		std::string flexFN,
 		int whichWorld);
+
+	void modelOneEmbeddedTopology_SP_NEW(int whichTopology,
+		int whichWorld,
+		std::string rootMobilizer);
 
 	void model_SP_NEW(SetupReader& setupReader);
 
