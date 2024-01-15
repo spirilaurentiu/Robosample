@@ -147,7 +147,15 @@ bool Context::initializeFromFile(const std::string &file)
 		// Adopts compound by the CompoundSystem and loads maps of indexes
 		model_SP_NEW(setupReader);
 
-		return false;
+		realizeTopology();
+
+		for(size_t topoCnt = 0; topoCnt < topologies.size(); topoCnt++){
+			Topology& topology = topologies[topoCnt];
+			topology.setAtomList();
+			topology.setBondList();
+		}
+
+		//return false;
 
 	}else{ // SP_OLD
 
@@ -175,8 +183,6 @@ bool Context::initializeFromFile(const std::string &file)
 		model(finalNofMols, setupReader);
 
 	}
-
-
 
 	// Allocate space for containers that keep statistics if we're doing any
 	allocWorldsStatsContainers();
@@ -420,7 +426,7 @@ bool Context::initializeFromFile(const std::string &file)
 
 	// U Scale Factors uses maps stored in Topology
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		(updWorld(worldIx))->setUScaleFactorsToMobods();
+		//(updWorld(worldIx))->setUScaleFactorsToMobods();
 	}
 
 	// Realize topology for all the Worlds
@@ -1781,7 +1787,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 	}
 
 	// Add to the list of topologies
-	topologies.push_back(topology);
+	// topologies.push_back(topology);
 
 }
 
@@ -1817,59 +1823,59 @@ void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
 */
 void Context::generateSubAtomLists(void){
 	
+	// Resize subAtomList
 	subAtomLists.resize( getNofMolecules() );
 
 	// Detect begin and start indeces
-	std::vector<int> molRanges;
+	std::vector<std::pair<size_t, size_t>> molRanges;
+	molRanges.reserve(getNofMolecules());
+
+	std::vector<size_t> molStarts;
 	int nextMolStart = -1;
 
-	// Go through atoms
+	// Fill a vector of molecule start indeces
+	std::set<size_t> uniqueMolIx; // unique molecule indeces
+
 	for(size_t atomCnt = 0; atomCnt < atoms.size(); atomCnt++){
 
-		bSpecificAtom& atom = atoms[atomCnt];
+		bool inserted =
+			uniqueMolIx.insert( atoms[atomCnt].getMoleculeIndex() ).second;
 
-		// Go through molecules
-		for(int molIx = 0; molIx < getNofMolecules(); molIx++ ){
-
-			// different molecule index
-			if(atom.getMoleculeIndex() != nextMolStart){ 
-
-				molRanges.push_back( atomCnt - 1 );
-				molRanges.push_back( atomCnt );
-
-				nextMolStart = atom.getMoleculeIndex();
-
-			}
-
+		if ( inserted ) {
+			molStarts.push_back(atomCnt);
 		}
 	}
 
-	// Add the last element in the end
-	molRanges.push_back( atoms.size() - 1);
+	// Also add a last element
+	molStarts.push_back(atoms.size());
 
-	// First element is -1 just for convenience
-	if( !(molRanges.empty()) ){
-		molRanges.erase( molRanges.begin() );
+	// Build ranges of molecules
+	for (size_t i = 0; i < molStarts.size() - 1; i++) {
+		molRanges.push_back(std::make_pair(molStarts[i], molStarts[i + 1]));
 	}
 
-	scout("Bonds ranges\n");
+	// Sort by molecule index
+	std::sort(molRanges.begin(), molRanges.end(),[this]
+		(const std::pair<std::size_t, std::size_t>& lhs,
+		 const std::pair<std::size_t, std::size_t>& rhs) {
+			return atoms[lhs.first].getMoleculeIndex() < atoms[rhs.first].getMoleculeIndex();
+	});
+
+	scout("subAtoms ranges\n");
 	for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
-		cout << molRanges[cnt] << " ";
+		cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
 	}
-	ceol;
 
 	// Set atom sublists for every Compound
 	int sIx = -1;
 	if( !(molRanges.empty()) ){
-		for( size_t cnt = 0; cnt < molRanges.size(); cnt += 2 ){
+		for( size_t cnt = 0; cnt < molRanges.size(); cnt ++ ){
 
 			sIx++;
 			subAtomLists[sIx].set_view(
-				atoms.begin() + molRanges[cnt],
-				atoms.begin() + molRanges[cnt+1] + 1);
+				atoms.begin() + molRanges[cnt].first,
+				atoms.begin() + molRanges[cnt].second);
 
-
-			;
 		}
 	}
 
@@ -1889,56 +1895,58 @@ void Context::generateSubAtomLists(void){
 */
 void Context::generateSubBondLists(void){
 	
+	// Resize subAtomList
 	subBondLists.resize( getNofMolecules() );
 
 	// Detect begin and start indeces
-	std::vector<int> molRanges;
+	std::vector<std::pair<size_t, size_t>> molRanges;
+	molRanges.reserve(getNofMolecules());
+
+	std::vector<size_t> molStarts;
 	int nextMolStart = -1;
 
-	// Go through atoms
+	// Fill a vector of molecule start indeces
+	std::set<size_t> uniqueMolIx; // unique molecule indeces
+
 	for(size_t bondCnt = 0; bondCnt < bonds.size(); bondCnt++){
 
-		bBond& bond = bonds[bondCnt];
+		bool inserted =
+			uniqueMolIx.insert( bonds[bondCnt].getMoleculeIndex() ).second;
 
-		// Go through molecules
-		for(int molIx = 0; molIx < getNofMolecules(); molIx++ ){
-
-			// different molecule index
-			if(bond.getMoleculeIndex() != nextMolStart){ 
-
-				molRanges.push_back( bondCnt - 1 );
-				molRanges.push_back( bondCnt );
-
-				nextMolStart = bond.getMoleculeIndex();
-
-			}
-
+		if ( inserted ) {
+			molStarts.push_back(bondCnt);
 		}
 	}
 
-	// Add the last element in the end
-	molRanges.push_back( bonds.size() - 1);
+	// Also add a last element
+	molStarts.push_back(bonds.size());
 
-	// First element is -1 just for convenience
-	if( !(molRanges.empty()) ){
-		molRanges.erase( molRanges.begin() );
+	// Build ranges of molecules
+	for (size_t i = 0; i < molStarts.size() - 1; i++) {
+		molRanges.push_back(std::make_pair(molStarts[i], molStarts[i + 1]));
 	}
 
-	scout("Bonds ranges\n");
+	// Sort by molecule index
+	std::sort(molRanges.begin(), molRanges.end(),[this]
+		(const std::pair<std::size_t, std::size_t>& lhs,
+		 const std::pair<std::size_t, std::size_t>& rhs) {
+			return bonds[lhs.first].getMoleculeIndex() < bonds[rhs.first].getMoleculeIndex();
+	});
+
+	scout("subBonds ranges\n");
 	for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
-		cout << molRanges[cnt] << " ";
+		cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
 	}
-	ceol;
 
 	// Set atom sublists for every Compound
 	int sIx = -1;
 	if( !(molRanges.empty()) ){
-		for( size_t cnt = 0; cnt < molRanges.size(); cnt += 2 ){
+		for( size_t cnt = 0; cnt < molRanges.size(); cnt ++ ){
 
 			sIx++;
 			subBondLists[sIx].set_view(
-				bonds.begin() + molRanges[cnt],
-				bonds.begin() + molRanges[cnt+1] + 1);
+				bonds.begin() + molRanges[cnt].first,
+				bonds.begin() + molRanges[cnt].second);
 
 		}
 	}
@@ -2087,12 +2095,20 @@ void Context::AddMolecules_SP_NEW(
 		// topology.addRingClosingBonds();
 
 		// --------------------------------------------------------------------
-		// (2) matchDefaultConfiguration
+		// (3) matchDefaultConfiguration
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 		// Assign Compound coordinates by matching bAtomList coordinates
 		matchDefaultConfiguration_SP_NEW(topology, molIx);
 		// PrintAtoms();
+
+
+		// --------------------------------------------------------------------
+		// (4) Add new topology 
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+		// Add to the list of topologies
+		topologies.push_back(topology);		
 
 	}
 
@@ -2147,14 +2163,14 @@ void Context::AddMolecules_SP_NEW(
 
 		Topology& topology = topologies[molIx];
 
-		topology.setAtomList(
+		topology.setSubAtomList(
 			subAtomLists[molIx].begin(),
 			subAtomLists[molIx].end(),
 			elementCache);
 
 		topology.generateAIx2TopXMaps_SP_NEW();
 
-		topology.setBondList(
+		topology.setSubBondList(
 			subBondLists[molIx].begin(),
 			subBondLists[molIx].end());
 
@@ -3081,9 +3097,11 @@ void Context::setFlexibility(
 }
 
 /*!
- * <!--  -->
+ * <!-- 
+ * Careful: topology index comes first -->
 */
-void Context::modelOneEmbeddedTopology_SP_NEW(int whichTopology,
+void Context::modelOneEmbeddedTopology_SP_NEW(
+	int whichTopology,
 	int whichWorld,
 	std::string rootMobilizer)
 {
@@ -3100,8 +3118,8 @@ void Context::modelOneEmbeddedTopology_SP_NEW(int whichTopology,
 	SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(whichWorld))->forceField);
 
 	// For every atom
-	for(std::size_t aCnt = 0;
-	aCnt < topologies[whichTopology].getNumAtoms(); aCnt++){
+	size_t topoNatoms = topologies[whichTopology].getNumAtoms();
+	for(std::size_t aCnt = 0; aCnt < topoNatoms; aCnt++){
 
 		// Get atom's mobod
 		SimTK::Compound::AtomIndex aIx =
@@ -3115,9 +3133,11 @@ void Context::modelOneEmbeddedTopology_SP_NEW(int whichTopology,
 		// 		aIx,
 		// 		dumm);
 
-		scout("atom ") <<aCnt <<" " <<aIx <<" "
-			<<mbx <<" "
-			//<<mbxCheck <<" " 
+		scout("world topology atom aIx")
+			<< whichWorld <<" " << whichTopology <<" "
+			<< aCnt <<" " << aIx <<" "
+			<< mbx <<" "
+			// << mbxCheck <<" " 
 			<< eol;
 
 	}
@@ -3162,19 +3182,28 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		// Visualizer's vector of molecules
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
 
-			//Topology& topology = topologies[topCnt];
-
 			(updWorld(worldIx))->adoptTopology(topCnt);
 
 		} // every molecule
 
+		// Model each topology: build mobods
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
-
-			//Topology& topology = topologies[topCnt];
 
 			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Weld");
 
 		} // every molecule
+
+		// Load maps
+		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
+
+			Topology& topology = topologies[topCnt];
+
+			topology.loadAIx2MbxMap_SP_NEW();
+
+		} // every molecule
+
+
+		(updWorld(worldIx))->loadMbx2AIxMap_SP_NEW();
 
 	} // every world
 
