@@ -2052,6 +2052,48 @@ void Topology::loadAIx2MbxMap()
 }
 
 
+/** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
+void Topology::loadAIx2MbxMap_SP_NEW()
+{
+
+	// If the map is empty fill with empty vectors first
+	if(aIx2mbx.empty()){
+		
+		// Iterate through atoms and get their MobilizedBodyIndeces
+		for (unsigned int aCnt = 0; aCnt < getNumAtoms(); ++aCnt) {
+
+			// Get atomIndex from atomList
+			SimTK::Compound::AtomIndex aIx = (subAtomList[aCnt]).getCompoundAtomIndex();
+
+			// Insert
+			aIx2mbx.insert(
+				std::pair< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> >
+					(aIx, std::vector<SimTK::MobilizedBodyIndex>())
+			);
+		}
+
+	}
+
+	// Iterate through atoms and get their MobilizedBodyIndeces
+	for (unsigned int aCnt = 0; aCnt < getNumAtoms(); ++aCnt) {
+
+		// Get atomIndex from atomList
+		SimTK::Compound::AtomIndex aIx = (subAtomList[aCnt]).getCompoundAtomIndex();
+
+		// Get MobilizedBodyIndex from CompoundAtom
+		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndex(aIx);
+
+		// Insert
+		//aIx2mbx.insert(
+		//		std::pair<SimTK::Compound::AtomIndex, SimTK::MobilizedBodyIndex>
+		//		(aIx, mbx));
+		aIx2mbx[aIx].emplace_back(mbx);
+	}
+
+
+}
+
+
 /** Compound AtomIndex to bAtomList number **/
 void Topology::loadCompoundAtomIx2GmolAtomIx()
 {
@@ -2313,7 +2355,10 @@ void Topology::getCoordinates(
 	}
 }
 
-void Topology::setAtomList(
+/*!
+ * <!--  -->
+*/
+void Topology::setSubAtomList(
 	std::vector<bSpecificAtom>::iterator beginArg,
 	std::vector<bSpecificAtom>::iterator endArg,
 	ELEMENT_CACHE& elementCacheArg)
@@ -2327,14 +2372,41 @@ void Topology::setAtomList(
 	elementCache = elementCacheArg;
 }
 
-void Topology::setBondList(
+/*!
+ * <!--  -->
+*/
+void Topology::setAtomList(void){
+
+	for(size_t aCnt = 0; aCnt < subAtomList.size(); aCnt++){
+		bAtomList.push_back(subAtomList[aCnt]);
+	}
+
+	scout("Topology bAtomLIst size ") << bAtomList.size() << eol;
+}
+
+/*!
+ * <!--  -->
+*/
+void Topology::setSubBondList(
 	std::vector<bBond>::iterator beginArg,
 	std::vector<bBond>::iterator endArg)
 {		
 
 	subBondList.set_view( beginArg, endArg );
 
-	natoms = (subBondList).size();
+	nbonds = (subBondList).size();
+}
+
+/*!
+ * <!--  -->
+*/
+void Topology::setBondList(void){
+
+	for(size_t aCnt = 0; aCnt < subBondList.size(); aCnt++){
+		bonds.push_back(subBondList[aCnt]);
+	}
+
+	scout("Topology bonds size ") << bonds.size() << eol;
 }
 
 /** Get own CompoundIndex in CompoundSystem **/

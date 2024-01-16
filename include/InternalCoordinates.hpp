@@ -288,6 +288,12 @@ public:
 
 private:
 
+	/**	
+	* @brief Sort atoms in place first by mass and then by indeces
+	* @param v Vector of Amber atoms
+	* @param v Sort direction
+	* @return
+	*/
 	void sortByMass(std::vector<AmberAtom>& v, bool reverse);
 
 	bool isSelected(const AmberAtom& a) const;

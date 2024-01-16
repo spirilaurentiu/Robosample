@@ -68,7 +68,11 @@ public:
 		//std::vector<std::string> argRootMobilities
 	);
 
-
+	// ============================================================================
+	// ============================================================================
+	// ==========================   SINGLE PRMTOP    ==============================
+	// ============================================================================
+	// ============================================================================
 
 	/**  */
 	void setBaseAtom(Topology& topology, int molIx);
@@ -96,10 +100,10 @@ public:
 
 	/**  */
 	void AddMolecules_SP_NEW(
-		int requestedNofMols,
-		SetupReader& setupReader
+		std::vector<std::string>& argRoots
 	);
 
+	// ------------- SP_NEW -------------
 
 	/** Long print of all atoms properties */
 	void PrintAtoms(void);

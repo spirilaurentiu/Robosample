@@ -1014,6 +1014,36 @@ void World::loadMbx2AIxMap(){
 
 }
 
+/** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
+void World::loadMbx2AIxMap_SP_NEW(){
+
+	for (auto& topology : (*topologies)){
+
+		// Iterate through atoms and get their MobilizedBodyIndeces
+		for (unsigned int aCnt = 0; aCnt < topology.getNumAtoms(); ++aCnt) {
+
+			// Get atomIndex from atomList
+			SimTK::Compound::AtomIndex aIx = (topology.subAtomList[aCnt]).getCompoundAtomIndex();
+
+			// Get MobilizedBodyIndex from CompoundAtom
+			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+
+			if(!aIx.isValid() || !mbx.isValid())
+			{
+				std::cout << "[WARNING]: Tried adding invalid index in loadMbx2AIxMap() aIx: " << aIx << ", mbx: " << mbx << std::endl;
+				continue;
+			}
+
+			// Map mbx2aIx contains only atoms at the origin of mobods
+			if (topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
+				mbx2aIx.insert(std::make_pair(mbx, aIx));
+			}
+
+		} // atoms
+	} // topologies
+
+}
+
 void World::loadMobodsRelatedMaps()
 {
 	//for (auto& topology : topologies){ // SAFE

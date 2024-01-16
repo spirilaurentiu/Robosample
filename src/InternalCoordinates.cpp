@@ -536,32 +536,60 @@ int InternalCoordinates::BAT2amber(int bat) const {
 	return selectedAtoms[bat];
 }
 
-void InternalCoordinates::sortByMass(std::vector<AmberAtom>& v, bool reverse) {
-	std::sort(v.begin(), v.end(), [reverse](const AmberAtom& lhs, const AmberAtom& rhs) {
+/*!
+ * <!-- Sort atoms in place first by mass and then by indeces -->
+*/
+void InternalCoordinates::sortByMass(std::vector<AmberAtom>& v, bool reverse)
+{
+	// Sort atoms first by mass and then by indeces
+	std::sort(v.begin(), v.end(),
+		[reverse](const AmberAtom& lhs, const AmberAtom& rhs)
+	{
+		// If masses are equal sort by indeces
 		if (lhs.mass == rhs.mass) {
-			if (reverse) return lhs.amberId > rhs.amberId;
-			return lhs.amberId < rhs.amberId;
+			if (reverse){
+				return lhs.amberId > rhs.amberId;
+			}else{
+				return lhs.amberId < rhs.amberId;
+			}
 		}
 
-		if (reverse) return lhs.mass > rhs.mass;
-		return lhs.mass < rhs.mass;
+		// Sort mass
+		if (reverse) {
+			return lhs.mass > rhs.mass;
+		}else{
+			return lhs.mass < rhs.mass;
+		}
+
 	});
 };
 
+/*!
+ * <!-- -->
+*/
 bool InternalCoordinates::isSelected(const AmberAtom& a) const {
 	return indexMap[a.amberId] != -1;
 }
 
+/*!
+ * <!-- -->
+*/
 void InternalCoordinates::selectAtom(const AmberAtom& a) {
 	selectedAtoms.push_back(a.amberId);
 	indexMap[a.amberId] = selectedAtoms.size() - 1;
 }
 
+/*!
+ * <!-- -->
+*/
 void InternalCoordinates::selectAtom(int a) {
 	selectedAtoms.push_back(a);
 	indexMap[a] = selectedAtoms.size() - 1;
 }
 
+/*!
+ * <!-- -->
+*/
 bool InternalCoordinates::isTerminal(const AmberAtom& a) const {
 	return a.bonds == 1;
 }

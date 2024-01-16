@@ -248,6 +248,7 @@ public:
 
 	/** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 	void loadMbx2AIxMap();
+	void loadMbx2AIxMap_SP_NEW();
 
 	/**  **/
 	void loadMobodsRelatedMaps();

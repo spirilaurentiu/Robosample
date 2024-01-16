@@ -465,6 +465,7 @@ public:
 	/** To be removed. *Create MobilizedBodyIndex vs Compound::AtomIndex
 	 * maps. **/
 	void loadAIx2MbxMap();
+	void loadAIx2MbxMap_SP_NEW();
 	//void loadMbx2AIxMap();
 
         /** Compound AtomIndex to bAtomList number **/
@@ -484,15 +485,19 @@ public:
 			std::vector<SimTK::Real>& Ys,
 			std::vector<SimTK::Real>& Zs);
 
-	void setAtomList(
+	void setSubAtomList(
 		std::vector<bSpecificAtom>::iterator beginArg,
 		std::vector<bSpecificAtom>::iterator endArg,
 		ELEMENT_CACHE& elementCacheArg);
 
-	void setBondList(
+	void setAtomList(void);		
+
+	void setSubBondList(
 		std::vector<bBond>::iterator beginArg,
 		std::vector<bBond>::iterator endArg);
 
+	void setBondList(void);
+	
 public:
 
 	void BAT();
