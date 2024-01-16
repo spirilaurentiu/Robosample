@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
 	std::string helpString = 
-	"Usage: Robosample [options]\n Options:\n  -h, --help for help\nUsage: Robsample file\n";
+	"Usage: ./robosample [options]\n Options:\n  -h, --help for help\nUsage: ./robosample [file]\n";
 
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";

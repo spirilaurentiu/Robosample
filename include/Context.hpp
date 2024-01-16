@@ -29,6 +29,11 @@ class Context{
 
 public:
 
+	void setNumThreads(int threads);
+	void setNonbonded(int method, SimTK::Real cutoff);
+	void setGBSA(SimTK::Real globalScaleFactor);
+	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
+
 	bool initializeFromFile(const std::string& file);
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 
@@ -249,6 +254,19 @@ public:
 	void addEmptyWorlds(std::size_t NofWorlds, std::vector<double> visualizerFrequencies);
 	World * addWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
 	//World * AddWorld(World *, bool visual);
+	void addWorld(
+		bool fixmanTorque,
+		bool useOpenMM,
+		bool useOpenMMOnlyNonBonded,
+		bool useOpenMMIntegrator,
+		SimTK::Real boostTemp,
+		int boostMDSteps,
+		SimTK::Real timestep,
+		int mdSteps,
+		int samplesPerRound,
+		int distort,
+		bool visual,
+		SimTK::Real visualizerFrequency);
 
 	// Load/store Mobilized bodies joint types in samplers
 	void loadMbxsToMobilities(void);
@@ -708,7 +726,15 @@ protected:
 	std::vector<bSpecificAtom>& getAtoms() {
         return atoms;
     }
-	
+
+	int numThreads = 0;
+	int nonbondedMethod = 0; // 0 = NoCutoff, 1 = CutoffNonPeriodic
+	SimTK::Real nonbondedCutoff = 1.2; // 1.2 nm, not used by default (no cutoff)
+	SimTK::Real gbsaGlobalScaleFactor = 0.0; // Default is 0 (vacuum). Use 1 for water
+
+	bool useAmberForceFieldScaleFactors = true;
+	SimTK::Real globalForceFieldScaleFactor = 1.0; // Used in place of Amber scaling (not default)
+
 public:
 	/** Implicit membrane mimicked by half-space contacts */
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
