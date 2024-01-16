@@ -118,7 +118,6 @@ bool Context::initializeFromFile(const std::string &file)
 		std::cout<<"SETTING INTEGRATOR in ROBOSAMPLE "<<std::endl << std::flush;
 	}
 
-
     // Set Lennard-Jones mixing rule
 	setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
@@ -130,16 +129,36 @@ bool Context::initializeFromFile(const std::string &file)
 
 	if(singlePrmtop){ // SP_NEW
 
-		AddMolecules_SP_NEW(requestedNofMols, setupReader);
+		std::vector<std::string> argRoots = setupReader.get("ROOTS");
+		//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
-		std::cout 
-			<< "Robosample in development mode. Delete return after print."
-			<< eol;
+		// Load all the roots here
+		for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
+			roots.push_back(std::stoi(argRoots[molIx]));
+			//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+		}
 
+		// Get user requested Amber filenames
+		amberReader.resize(1);
+
+		std::string reqTopFNs(
+			setupReader.get("MOLECULES")[0] + std::string("/") +
+			setupReader.get("PRMTOP")[0]);
+
+		std::string reqCrdFNs(
+			setupReader.get("MOLECULES")[0] + std::string("/") +
+			setupReader.get("INPCRD")[0] + ".rst7");
+
+		loadTopologyFile( reqTopFNs );
+		loadCoordinatesFile( reqCrdFNs );
+
+		amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
+
+		// 
+		AddMolecules_SP_NEW(argRoots);
 
 		// Set the final number of molecules added
 		finalNofMols = getNofMolecules();
-
 
 		// Loads parameters into DuMM
 		addDummParams_SP_NEW(amberReader[0]);
@@ -155,7 +174,10 @@ bool Context::initializeFromFile(const std::string &file)
 			topology.setBondList();
 		}
 
-		//return false;
+		// std::cout 
+		// 	<< "Robosample in development mode. Delete return after print."
+		// 	<< eol;
+		// return false;
 
 	}else{ // SP_OLD
 
@@ -1664,6 +1686,9 @@ void Context::load_BONDS_to_bonds(
 
 }
 
+/*!
+ * <!--  -->
+*/
 void Context::buildAcyclicGraph_SP_NEW(
 	Topology& topology,
 	int rootAmberIx,
@@ -1796,26 +1821,31 @@ void Context::buildAcyclicGraph_SP_NEW(
 */
 void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
 {
+	// Convenient vars
 	std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets;
+	array_view<std::vector<bSpecificAtom>::iterator>& topoSubAtomList =
+		topology.subAtomList;
+
+	// For every atom in this topology deposit coords in atomTargets
 	for(int ix = 0; ix < topology.getNumAtoms(); ++ix){
+		
+		SimTK::Vec3 atomCoords(
+			topoSubAtomList[ix].getX(),
+			topoSubAtomList[ix].getY(),
+			topoSubAtomList[ix].getZ());
 
-		if(atoms[ix].getMoleculeIndex() == molIx){
-			Vec3 vec(
-				atoms[ix].getX(),
-				atoms[ix].getY(),
-				atoms[ix].getZ());
-
-			atomTargets.insert(std::pair<Compound::AtomIndex, SimTK::Vec3> (
-				atoms[ix].getCompoundAtomIndex(),
-				vec));
-		}
+		atomTargets.insert(std::pair<Compound::AtomIndex, SimTK::Vec3> (
+			topoSubAtomList[ix].getCompoundAtomIndex(),
+			atomCoords));
 
 	}
 
+	// Match coordinates
 	topology.matchDefaultConfiguration(
 		atomTargets,
 		SimTK::Compound::Match_Exact,
 		true, 150.0);
+
 }
 
 /*!
@@ -1986,71 +2016,27 @@ void Context::passTopologiesToWorlds(void){
  * <!-- Load molecules based on loaded filenames -->
 */
 void Context::AddMolecules_SP_NEW(
-	int requestedNofMols,
-	SetupReader& setupReader
+		std::vector<std::string>& argRoots
 ){
-
-	std::vector<std::string> argRoots = setupReader.get("ROOTS");
-	//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
-
-	amberReader.resize(requestedNofMols);
-
-	// Get user requested Amber filenames
-	std::vector<std::string> reqTopFNs;
-	std::vector<std::string> reqCrdFNs;
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-		reqTopFNs.push_back(
-			setupReader.get("MOLECULES")[molIx] + std::string("/") +
-			setupReader.get("PRMTOP")[molIx]
-		);
-
-		reqCrdFNs.push_back(
-			setupReader.get("MOLECULES")[molIx] + std::string("/") +
-			setupReader.get("INPCRD")[molIx] + ".rst7"
-		);	
-
-	}
-
-	// Add filenames to Context filenames vectors
-	// This has to be called before Worlds constructors so that
-	// reserve will be called for molecules and topologies
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-
-		// make amber reader create multiple molecule
-		// each molecule then generate one topology
-		// amber: vector<molecule info>
-
-		loadTopologyFile( reqTopFNs[molIx] );
-		loadCoordinatesFile( reqCrdFNs[molIx] );
-
-	}
-
-	// Load all the roots here
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-		roots.push_back(std::stoi(argRoots[molIx]));
-		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-	}
 
 	// ========================================================================
 	// ======== (0) Read atoms from all the molecules =========================
 	// ========================================================================
-	amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
+
 	loadAtoms(amberReader[0]);
 	loadBonds(amberReader[0]);	
-
 	setAtomCompoundTypes();
 	addBiotypes();
 
 	// ========================================================================
 	// ======== (1) Get BAT graphs ============================================
 	// ========================================================================
+
+	// Find a root in the unvisited atoms and build BAT graphs
 	nofMols = 0;
-
-	// Find a root in the unvisited atoms
 	while( internCoords.computeRoot( getAtoms() )){ // find a root
-
-		internCoords.PrintRoot();
 		nofMols++;
+		internCoords.PrintRoot();
 		
 		// Compute the new molecule's BAT coordinates
 		internCoords.computeBAT( getAtoms() );
@@ -2070,11 +2056,10 @@ void Context::AddMolecules_SP_NEW(
 	// ========================================================================
 	// ======== (2) Build graphs with bondAtom ================================
 	// ========================================================================
-	topologies.reserve(requestedNofMols);
+	topologies.reserve(nofMols);
 	moleculeCount = -1;
 
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-	//for(unsigned int molIx = 1; molIx <= 1; molIx++){
 
 		// Add an empty topology
 		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
@@ -2095,24 +2080,14 @@ void Context::AddMolecules_SP_NEW(
 		// topology.addRingClosingBonds();
 
 		// --------------------------------------------------------------------
-		// (3) matchDefaultConfiguration
-		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-		// Assign Compound coordinates by matching bAtomList coordinates
-		matchDefaultConfiguration_SP_NEW(topology, molIx);
-		// PrintAtoms();
-
-
-		// --------------------------------------------------------------------
 		// (4) Add new topology 
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 		// Add to the list of topologies
-		topologies.push_back(topology);		
+		topologies.push_back(topology);
 
 	}
-
-	// 
+ 
 	// ========================================================================
 	// ======== (3) Generate subarray views for atoms and bonds ===============
 	// ========================================================================
@@ -2176,6 +2151,20 @@ void Context::AddMolecules_SP_NEW(
 
 	}
 
+
+	// --------------------------------------------------------------------
+	// matchDefaultConfiguration
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+	// Assign Compound coordinates by matching bAtomList coordinates
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		Topology& topology = topologies[molIx];
+
+		matchDefaultConfiguration_SP_NEW(topology, molIx);
+		// PrintAtoms();
+	}
+
 	// Helper function for calc MBAT determinant
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
@@ -2196,11 +2185,6 @@ void Context::AddMolecules_SP_NEW(
 	// ========================================================================
 	// ======== (3) Rest from AddMolecules ====================================
 	// ========================================================================
-
-		// -------
-		//
-		// Map of Compound atom indexes to Robosample atom indexes
-
 
 	// Context topologies to all the worlds
 	passTopologiesToWorlds();
@@ -2511,14 +2495,20 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 
 		// Iterate through bonds and define their parameters
 		for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
-			
+
+			// Get atoms
+			int atomNumber1 = bonds[bCnt].i;
+			int atomNumber2 = bonds[bCnt].j;
+			bSpecificAtom& atom1 = atoms[atomNumber1];
+			bSpecificAtom& atom2 = atoms[atomNumber2];
+
 			// Generate a pair of atom classes for this bond
 			std::vector<SimTK::DuMM::AtomClassIndex> thisBondACIxs;
 
 			thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-				(atoms[bonds[bCnt].i]).getDummAtomClassIndex()) );
+				atom1.getDummAtomClassIndex()) );
 			thisBondACIxs.push_back( SimTK::DuMM::AtomClassIndex(
-				(atoms[bonds[bCnt].j]).getDummAtomClassIndex()) );
+				atom2.getDummAtomClassIndex()) );
 
 			// Check if we already have this bond
 			bool foundit = false;
@@ -2532,26 +2522,28 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 			// Add bond to Dumm
 			if (  !foundit ){ // bond was not found
 
-				// DANGER: THIS DOESN'T WORK IF bonds ARE SORTED
-				// dumm.defineBondStretch_KA(
-				// 	(atoms[bonds[bCnt].i]).getDummAtomClassIndex(),
-				// 	(atoms[bonds[bCnt].j]).getDummAtomClassIndex(),
-				// 	amberReader.getBondsForceK(bCnt),  //k1
-				// 	amberReader.getBondsEqval(bCnt)   //equil1
-				// );
-
 				dumm.defineBondStretch_KA(
-					(atoms[bonds[bCnt].i]).getDummAtomClassIndex(),
-					(atoms[bonds[bCnt].j]).getDummAtomClassIndex(),
+					atom1.getDummAtomClassIndex(),
+					atom2.getDummAtomClassIndex(),
 					bonds[bCnt].getForceK(),  //k1
 					bonds[bCnt].getForceEquil()   //equil1
 				);				
 
+				// Print
+				Topology& topology1 = topologies[ atom1.getMoleculeIndex() ];
+				Topology& topology2 = topologies[ atom2.getMoleculeIndex() ];
+
+				const SimTK::Compound::AtomIndex cAIx1 = atom1.getCompoundAtomIndex(); 
+				const SimTK::Compound::AtomIndex cAIx2 = atom2.getCompoundAtomIndex(); 
+				const SimTK::DuMM::AtomIndex dAIx1 = topology1.getDuMMAtomIndex(cAIx1);
+				const SimTK::DuMM::AtomIndex dAIx2 = topology2.getDuMMAtomIndex(cAIx2);
+
 				scout("bond ")
-					<< (atoms[bonds[bCnt].i]).getInName() <<" "
-					<< (atoms[bonds[bCnt].j]).getInName() <<" "
-					<< bonds[bCnt].getForceEquil() <<" "
+					<< atomNumber1 <<" " << atomNumber2 <<" "
+					<< atom1.getInName() <<" " << atom2.getInName() <<" "
+					<< dAIx1 <<" " << dAIx2 <<" "
 					<< bonds[bCnt].getForceK() <<" "
+					<< bonds[bCnt].getForceEquil() <<" "
 					<< eol;
 
 				// Put the entry in our map too
@@ -2622,7 +2614,15 @@ void Context::bAddDummAngleParams_SP_NEW(readAmberInput& amberReader)
 				// Put the entry in our map too
 				allAnglesACIxs.push_back(thisAngleACIxs);
 
-				scout("angle ") << a1 <<" " << a2 <<" " << a3 << eol;
+				scout("angle ")
+					<< a1 <<" " << a2 <<" " << a3 <<" "
+					<< atoms[a1].getInName() <<" "
+					<< atoms[a2].getInName() <<" "
+					<< atoms[a3].getInName() <<" "
+					<< amberReader.getAnglesForceK(angCnt) <<" "
+					<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
+						* amberReader.getAnglesEqval(angCnt)))
+					<< eol;
 			}
 		}		
 
@@ -2672,24 +2672,16 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 			int torsCnt        = pairStartAndLens[index].first;
 			int numberOf = pairStartAndLens[index].second;
 
-			// Get AtomClass indeces first
-			SimTK::DuMM::AtomClassIndex aCIx1 =
-				atoms[amberReader.getDihedralsAtomsIndex1(torsCnt)].getDummAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx2 =
-				atoms[amberReader.getDihedralsAtomsIndex2(torsCnt)].getDummAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx3 =
-				atoms[amberReader.getDihedralsAtomsIndex3(torsCnt)].getDummAtomClassIndex();
-			SimTK::DuMM::AtomClassIndex aCIx4 =
-				atoms[amberReader.getDihedralsAtomsIndex4(torsCnt)].getDummAtomClassIndex();
-
-			// Check if a quad of atom indices is a normal dihedral
-			// or an improper dihedral, by checking if consecutive
-			// atoms are bonded 
-
+			// Get Amber indeces
 			int amber_aIx_1 = amberReader.getDihedralsAtomsIndex1(torsCnt);
 			int amber_aIx_2 = amberReader.getDihedralsAtomsIndex2(torsCnt);
 			int amber_aIx_3 = amberReader.getDihedralsAtomsIndex3(torsCnt);
 			int amber_aIx_4 = amberReader.getDihedralsAtomsIndex4(torsCnt);
+
+
+			// Check if a quad of atom indices is a normal dihedral
+			// or an improper dihedral, by checking if consecutive
+			// atoms are bonded 
 
 			bool dihedral=false;
 			bool improper=true;
@@ -2701,6 +2693,17 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 				dihedral = true;
 				improper = false;
 			}
+
+			// Get AtomClass indeces 
+			SimTK::DuMM::AtomClassIndex aCIx1 =
+				atoms[amber_aIx_1].getDummAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx2 =
+				atoms[amber_aIx_2].getDummAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx3 =
+				atoms[amber_aIx_3].getDummAtomClassIndex();
+			SimTK::DuMM::AtomClassIndex aCIx4 =
+				atoms[amber_aIx_4].getDummAtomClassIndex();
+
 				
 			// Generate a quad of atom class indexes for this dihedral, 
 			// regardless of whether it's a torsion or an improper
@@ -2726,6 +2729,14 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 
 				if (!foundit){ // dihedral was not found
 
+					scout("dihedral ")
+							<< amber_aIx_1 <<" " << amber_aIx_2 <<" "
+							<< amber_aIx_3 <<" " << amber_aIx_4 <<" "
+							<< atoms[amber_aIx_1].getInName() <<" "
+							<< atoms[amber_aIx_2].getInName() <<" "
+							<< atoms[amber_aIx_3].getInName() <<" "
+							<< atoms[amber_aIx_4].getInName() <<" ";
+
 					// Define the dihedrals
 					if(numberOf == 1){
 						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
@@ -2733,6 +2744,11 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							amberReader.getDihedralsForceK(torsCnt),
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt)))
 						);
+
+						scout("") << amberReader.getDihedralsForceK(torsCnt) <<" "
+							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+								amberReader.getDihedralsPhase(torsCnt))) <<" ";
+
 					}
 					else if(numberOf == 2){
 						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
@@ -2743,6 +2759,11 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							amberReader.getDihedralsForceK(torsCnt + 1),
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1)))
 						);
+
+						scout("") << amberReader.getDihedralsForceK(torsCnt + 1) <<" "
+							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+								amberReader.getDihedralsPhase(torsCnt + 1))) <<" ";
+
 					}
 					else if(numberOf == 3){
 						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
@@ -2756,6 +2777,11 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							amberReader.getDihedralsForceK(torsCnt + 2),
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+2)))
 						);
+
+						scout("") << amberReader.getDihedralsForceK(torsCnt + 2) <<" "
+							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+								amberReader.getDihedralsPhase(torsCnt + 2))) <<" ";
+
 					}else if (numberOf == 4){
 						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
 							static_cast<int>(amberReader.getDihedralsPeriod(torsCnt)), // TODO wants int, returns double
@@ -2771,8 +2797,14 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							amberReader.getDihedralsForceK(torsCnt+3),
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+3)))
 						);
+
+						scout("") << amberReader.getDihedralsForceK(torsCnt + 3) <<" "
+							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+								amberReader.getDihedralsPhase(torsCnt + 3))) <<" ";
 					}
 					
+					ceol;
+
 					// Add the dihedral to the list of impropers.
 					allDihedralsACIxs.push_back(thisDihedralACIxs);
 
@@ -2781,6 +2813,7 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 			}
 			
 			if (improper){
+
 				// If it is an improper dihedral, we check if it exitsts, without
 				// checking for the reverse (order matters for impropers)
 
@@ -2795,6 +2828,14 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 				
 				if (!foundit){ // improper was not found
 
+					scout("improper ")
+							<< amber_aIx_1 <<" " << amber_aIx_2 <<" "
+							<< amber_aIx_3 <<" " << amber_aIx_4 <<" "
+							<< atoms[amber_aIx_1].getInName() <<" "
+							<< atoms[amber_aIx_2].getInName() <<" "
+							<< atoms[amber_aIx_3].getInName() <<" "
+							<< atoms[amber_aIx_4].getInName() <<" ";
+
 					// Define the dihedrals
 					if(numberOf == 1){
 						dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
@@ -2802,6 +2843,11 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							amberReader.getDihedralsForceK(torsCnt),
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt)))
 						);
+
+						scout("") << amberReader.getDihedralsForceK(torsCnt) <<" "
+							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+								amberReader.getDihedralsPhase(torsCnt))) <<" ";
+
 					}
 					else if(numberOf == 2){
 						dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
@@ -2812,6 +2858,11 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							amberReader.getDihedralsForceK(torsCnt + 1),
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1)))
 						);
+
+						scout("") << amberReader.getDihedralsForceK(torsCnt + 1) <<" "
+							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+								amberReader.getDihedralsPhase(torsCnt + 1))) <<" ";
+
 					}
 					else if(numberOf == 3){
 						dumm.defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
@@ -2825,15 +2876,19 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							amberReader.getDihedralsForceK(torsCnt + 2),
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+2)))
 						);
+
+						scout("") << amberReader.getDihedralsForceK(torsCnt + 2) <<" "
+							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+								amberReader.getDihedralsPhase(torsCnt + 2))) <<" ";
+
 					}
+
+					ceol;
+
 					// Add the improper to the list of impropers.
 					allImpropersACIxs.push_back(thisDihedralACIxs);
 				}
-			} // improper	
-
-
-			scout("torsion ") << amber_aIx_1 <<" " << amber_aIx_2 <<" "
-				<< amber_aIx_3 <<" " << amber_aIx_4 << eol;
+			} // improper
 
 		} // torsions
 
