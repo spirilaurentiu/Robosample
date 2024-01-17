@@ -29,7 +29,7 @@ class Context{
 
 public:
 
-	bool initializeFromFile(const std::string& file);
+	bool initializeFromFile(const std::string& file, bool singlePrmtop = false);
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 
 	// Experimental movements

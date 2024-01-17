@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
-bool Context::initializeFromFile(const std::string &file)
+bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 {
 	// Read input into a SetupReader object
 	setupReader.ReadSetup(file);
@@ -124,8 +124,6 @@ bool Context::initializeFromFile(const std::string &file)
 	// Add molecules based on the setup reader
 	// amber -> robo
 	int finalNofMols = 0;
-
-	bool singlePrmtop = false;
 
 	if(singlePrmtop){ // SP_NEW
 
@@ -1784,19 +1782,6 @@ void Context::buildAcyclicGraph_SP_NEW(
 
 		bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
 
-		// // Record bond into topologies map
-		// topology.bondIx2GmolBond.insert(
-		// 	std::pair<SimTK::Compound::BondIndex, int>(
-		// 		Compound::BondIndex(currentCompoundBondIndex),
-		// 		bond.getIndex()
-		// ));
-
-		// topology.GmolBond2bondIx.insert(
-		// 	std::pair<int, SimTK::Compound::BondIndex>(
-		// 		bond.getIndex(),
-		// 		Compound::BondIndex(currentCompoundBondIndex)
-		// ));
-
 		// Not sure where is useful
 		bond.setVisited(1);
 
@@ -2428,7 +2413,13 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 			atoms[aCnt].setDummAtomClassIndex(dummAtomClassIndex);
 
 			scout("Added atom aCnt atomClassIndex ") 
-				<< aCnt <<" " << dummAtomClassIndex << eol;
+				<< aCnt <<" " << dummAtomClassIndex <<" "
+				<< "|" << atomClassName <<"| "
+				<< 	atomClassParams.atomicNumber <<" "
+				<< atomClassParams.valence <<" "
+				<< atomClassParams.vdwRadius <<" "
+				<< atomClassParams.LJWellDepth <<" "
+				<< eol;
 
 		} // every atom
 
@@ -2466,8 +2457,11 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 				atoms[aCnt].getBiotypeIndex()
 			);
 
-			scout("Defined chargedAtomType ") << chargedAtomTypeName 
-				<< " with chargedAtomTypeIndex " << chargedAtomTypeIndex
+			scout("Defined chargedAtomType ") << chargedAtomTypeName  <<" "
+				<< chargedAtomTypeIndex <<" "
+				<< "|" << chargedAtomTypeName <<"| "
+				<< atoms[aCnt].getDummAtomClassIndex() <<" "
+				<< atoms[aCnt].charge
 				<< eol;
 
 		} // every atom
@@ -2538,10 +2532,18 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 				const SimTK::DuMM::AtomIndex dAIx1 = topology1.getDuMMAtomIndex(cAIx1);
 				const SimTK::DuMM::AtomIndex dAIx2 = topology2.getDuMMAtomIndex(cAIx2);
 
-				scout("bond ")
+				// LAB BEGIN
+				// SimTK::DuMM::IncludedAtomIndex inclAIx = a.getIncludedAtomIndex();
+				// dumm.getIncludedAtomIndexOfDummAtom(dAIx);
+				// SimTK::DuMM::AtomIndex	 dAIx = getAtomIndexOfNonbondAtom (SimTK::DuMM::NonbondAtomIndex nbDAIx);
+				// SimTK::DuMM::AtomIndex dAIx = dumm.getAtomIndexOfIncludedAtom(inclDAIx);
+				// SimTK::DuMM::IncludedAtomIndex inclDAIx = dumm.getIncludedAtomIndexOfNonbondAtom(nbDAIx);
+				// LAB END
+
+				scout("bond ") << bonds[bCnt].getMoleculeIndex() <<" "
 					<< atomNumber1 <<" " << atomNumber2 <<" "
 					<< atom1.getInName() <<" " << atom2.getInName() <<" "
-					<< dAIx1 <<" " << dAIx2 <<" "
+					<< cAIx1 <<" " << cAIx2 <<" "
 					<< bonds[bCnt].getForceK() <<" "
 					<< bonds[bCnt].getForceEquil() <<" "
 					<< eol;

@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 	}
 	
 	Context c;
-	if (!c.initializeFromFile(argv[1])) {
+	if (!c.initializeFromFile(argv[1], false)) {
 		return -1;
 	}
 
