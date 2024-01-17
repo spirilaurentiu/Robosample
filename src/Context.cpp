@@ -66,60 +66,37 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 	}
 
-	// Add Worlds
-	addEmptyWorlds(setupReader.get("WORLDS").size(), visualizerFrequencies);
+	// // Add Worlds
+	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
+		addWorld(
+			(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"),
+			(setupReader.get("OPENMM")[worldIx] == "TRUE"),
+			(setupReader.get("OPENMM_CalcOnlyNonbonded")[worldIx] == "TRUE"),
+			(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"),
+			std::stod(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
+			std::stod(setupReader.get("BOOST_MDSTEPS")[worldIx]),
+			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
+			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
+			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]),
+			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
+			(setupReader.get("VISUAL")[worldIx] == "TRUE"),
+			std::stod(setupReader.get("TIMESTEPS")[worldIx])
+		);
+	}
+
+	// Context c(numThreads = nproc, nbMethod = 0, nbCutoff = 1.2); // nu conteaza cutoff cand method = 0
+	// getWorld(0).useOpenMM(calcOnlyNB, useOMMintegrator);
+	// getWorld(0).useVisualizer(frequency);
+	// setGuidanceHamiltonian(BOOST_TEMPERATURE, BOOST_MDSTEPS); // default == tempIni
+
+	// setWork(distort, flow, work);
+	// setEvaluationHamiltonian(TEMPERATURE, );
 	
 	// Get how much available memory we have
 	struct sysinfo info;
 	if (sysinfo(&info) == 0) {
         std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
     }
-
-	// Request threads
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		setNumThreadsRequested(worldIx, std::stoi(setupReader.get("THREADS")[worldIx]));
-	}
-	PrintNumThreads();
-
-	// Set force field scale factor.
-	if(setupReader.get("FFSCALE")[0] == "AMBER"){
-		setAmberForceFieldScaleFactors();
-	}else{
-		setGlobalForceFieldScaleFactor(std::stod(setupReader.get("FFSCALE")[0]));
-	}
-
-	// Set GBSA scale factor
-	setGbsaGlobalScaleFactor(std::stod(setupReader.get("GBSA")[0]));
-
-	// Use OpenMM if possible
-	if(setupReader.get("OPENMM")[0] == "TRUE"){
-		setUseOpenMMAcceleration(true);
-	}
-
-	if(setupReader.get("OPENMM_CalcOnlyNonbonded")[0] == "TRUE"){
-		setUseOpenMMCalcOnlyNonBonded(true);
-	} else {
-		setUseOpenMMCalcOnlyNonBonded(false);
-	}
-
-	for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-		// Only NoCutoff (0) and CutoffNonPeriodic(1) methods are supported. Additional 3 methods available in
-		// OpenMM could be integrated as well.
-		if(setupReader.get("NONBONDED_METHOD")[worldIx] == "1"){
-			setNonbondedMethod(worldIx, 1);
-			setNonbondedCutoff(worldIx, std::stod( setupReader.get("NONBONDED_CUTOFF")[worldIx] ));
-		}
-
-		if(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"){
-			setUseOpenMMIntegration(worldIx,
-				std::stod( setupReader.get("BOOST_TEMPERATURE")[worldIx]),
-				std::stod(setupReader.get("TIMESTEPS")[worldIx]));
-		}
-		std::cout<<"SETTING INTEGRATOR in ROBOSAMPLE "<<std::endl << std::flush;
-	}
-
-    // Set Lennard-Jones mixing rule
-	setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot);
 
 	// Add molecules based on the setup reader
 	// amber -> robo
@@ -212,13 +189,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	// Only now we can allocate memory for reblocking Q vectors
 	//allocateReblockQsCacheQVectors();
-
-	// Add Fixman torque (Additional ForceSubsystem) if required
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		if(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"){
-			addFixmanTorque(worldIx);
-		}
-	}
 
 	// Is this necessary?
 	realizeTopology();
@@ -1451,6 +1421,80 @@ World * Context::addWorld(bool visual, SimTK::Real visualizerFrequency){
 
 	//
 	return &worlds.back();
+}
+
+// Add an empty world to the context
+// timestep in ps
+void Context::addWorld(
+	bool fixmanTorque,
+	bool useOpenMM,
+	bool useOpenMMOnlyNonBonded,
+	bool useOpenMMIntegrator,
+	SimTK::Real boostTemp,
+	int boostMDSteps,
+	SimTK::Real timestep,
+	int mdSteps,
+	int samplesPerRound,
+	int distort,
+	bool visual,
+	SimTK::Real visualizerFrequency) {
+
+	// Create new world and add its index
+	worldIndexes.push_back(worldIndexes.size());
+	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
+
+	// Set force field scale factor.
+	if (useAmberForceFieldScaleFactors) {
+		worlds.back().setAmberForceFieldScaleFactors();
+	} else {
+		worlds.back().setGlobalForceFieldScaleFactor(globalForceFieldScaleFactor);
+	}
+
+	// Set the nonbonded method and cutoff
+	worlds.back().updForceField()->setNonbondedMethod(nonbondedMethod);
+	worlds.back().updForceField()->setNonbondedCutoff(nonbondedCutoff);
+
+	// If requested, add Fixman torque as an additional force subsystem
+	if (fixmanTorque) {
+		worlds.back().addFixmanTorque();
+	}
+
+	// Set the number of threads for DuMM
+	if (numThreads == 1) {
+		worlds.back().updForceField()->setUseMultithreadedComputation(false);
+	} else {
+		worlds.back().updForceField()->setNumThreadsRequested(numThreads);
+	}
+
+	// Set GBSA scaling and VdW mixing rule
+	worlds.back().setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
+	worlds.back().updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot); // GLOBAL
+
+	// Use OpenMM if requested
+	worlds.back().updForceField()->setUseOpenMMAcceleration(useOpenMM);
+	worlds.back().updForceField()->setUseOpenMMCalcOnlyNonBonded(useOpenMMOnlyNonBonded);
+
+	if (useOpenMMIntegrator) {
+		worlds.back().updForceField()->setUseOpenMMIntegration(true);
+		worlds.back().updForceField()->setDuMMTemperature(boostTemp);
+		worlds.back().updForceField()->setOpenMMstepsize(timestep);
+	}
+
+	// Variable World specific parameters
+	nofSamplesPerRound.push_back(samplesPerRound); // how many times to run sample_iteration; should be in world
+	nofMDStepsPerSample.push_back(mdSteps); // belongs to world's sampler
+	timesteps.push_back(timestep); // ps; belongs to world's sampler
+	nofBoostStairs.push_back(boostMDSteps); // not used; will be removed
+	NDistortOpt.push_back(distort); // belongs to world and passed to sampler. should all samplers use this?
+
+	worlds.back().setTemperature(tempIni);
+
+	rbSpecsFNs.push_back(std::vector<std::string>());
+	flexSpecsFNs.push_back(std::vector<std::string>());
+	regimens.push_back(std::vector<std::string>());
+
+	// Store the number of worlds
+	nofWorlds = worlds.size();
 }
 
 // Use a SetupReader Object to read worlds information from a file
@@ -2943,17 +2987,21 @@ void Context::model(
 		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 
 			// TODO check if count rbfile == count flexfile
+			// does not use molIx, sets nofEmbeddedTopologies
+			// does push_back
 			loadRigidBodiesSpecs( worldIx, molIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
+			// does push_back
 			loadFlexibleBondsSpecs( worldIx,
 				setupReader.get("MOLECULES")[molIx] + std::string("/")
 				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
 			);
 
 			// TODO: delete from Topology
+			// does push_back
 			setRegimen( worldIx, molIx,
 				setupReader.get("WORLDS")[worldIx] );
 
@@ -6856,5 +6904,47 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 
 	}
 
+void Context::setNumThreads(int threads) {
+	if (threads < 0) {
+		std::cerr << "Invalid number of threads (negative value). Default number (0) of threads will be used." << std::endl;
+		numThreads = 0;
+	} else {
+		numThreads = threads;
+	}
+}
 
+void Context::setNonbonded(int method, SimTK::Real cutoff) {
+	if (method !=0 && method != 1) {
+        std::cerr << "Invalid nonbonded method (0 = nocutoff; 1 = cutoffNonPeriodic). Default NoCutoff method will be used." << std::endl;
+		nonbondedMethod = 0;
+    } else {
+		nonbondedMethod = method;
+    }
 
+	if (cutoff < 0) {
+		std::cerr << "Invalid cutoff requested (negative value). Default cutoff of 1.2 nm will be used instead." << std::endl;
+		nonbondedCutoff = 1.2;
+    }else{
+		nonbondedCutoff = cutoff;
+    }
+}
+
+void Context::setGBSA(SimTK::Real globalScaleFactor) {
+	if (globalScaleFactor < 0 && globalScaleFactor > 1) {
+		std::cerr << "Invalid GBSA scale factor (valid range is 0 to 1). Default value of 0.0 will be used instead." << std::endl;
+		gbsaGlobalScaleFactor = 0.0;
+	}else{
+		gbsaGlobalScaleFactor = globalScaleFactor;
+	}
+}
+
+void Context::setForceFieldScaleFactors(SimTK::Real globalScaleFactor) {
+	useAmberForceFieldScaleFactors = false;
+
+	if (globalScaleFactor < 0 && globalScaleFactor > 1) {
+		std::cerr << "Invalid force field scale factor (valid range is 0 to 1). Default value of 1.0 will be used instead." << std::endl;
+		globalForceFieldScaleFactor = 1.0;
+	} else {
+		globalForceFieldScaleFactor = globalScaleFactor;
+	}
+}
