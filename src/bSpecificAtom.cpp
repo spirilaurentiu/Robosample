@@ -443,8 +443,8 @@ DuMM::ChargedAtomTypeIndex bSpecificAtom::getChargedAtomTypeIndex() const {
     return chargedAtomTypeIndex;
 }
 
-void bSpecificAtom::setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIndex cAIx) {
-    bSpecificAtom::chargedAtomTypeIndex = cAIx;
+void bSpecificAtom::setChargedAtomTypeIndex(const SimTK::DuMM::ChargedAtomTypeIndex chATIx) {
+    bSpecificAtom::chargedAtomTypeIndex = chATIx;
 }
 
 // /********************

@@ -244,6 +244,9 @@ void Topology::bAddBiotypes(
 			SimTK::Ordinality::Any
 		);
 
+		std::cout << "SP_NEW_LAB Topology biotypeIndex "
+			<< biotypeIndex <<" " << std::endl;
+
 		atom.setBiotypeIndex(biotypeIndex);
 
 		// Assign atom's biotype as a composed name: name + force field type
@@ -709,10 +712,10 @@ void Topology::generateDummAtomClasses(
 
 		// Define a ChargedAtomType (AtomClass with a charge)
 		dumm.defineChargedAtomType(
-		chargedAtomTypeIndex,
-		chargedAtomTypeName.c_str(),
-		bAtomList[k].getDummAtomClassIndex(),
-		bAtomList[k].charge
+			chargedAtomTypeIndex,
+			chargedAtomTypeName.c_str(),
+			bAtomList[k].getDummAtomClassIndex(),
+			bAtomList[k].charge
 		);
 		/*std::cout << "Defined chargedAtomType " << chargedAtomTypeName 
 			<< " with chargedAtomTypeIndex " << chargedAtomTypeIndex
@@ -720,8 +723,8 @@ void Topology::generateDummAtomClasses(
 
 		// Associate a ChargedAtomTypeIndex with a Biotype index
 		dumm.setBiotypeChargedAtomType(
-		bAtomList[k].getChargedAtomTypeIndex(),
-		bAtomList[k].getBiotypeIndex()
+			bAtomList[k].getChargedAtomTypeIndex(),
+			bAtomList[k].getBiotypeIndex()
 		);
 
 	}

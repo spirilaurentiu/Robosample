@@ -6,6 +6,9 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
+/*!
+ * <!-- -->
+*/
 bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 {
 	// Read input into a SetupReader object
@@ -631,57 +634,58 @@ void Context::loadAtoms(const readAmberInput& reader) {
 	atoms.resize(natoms);
 
 	// Iterate through atoms and set as much as possible from amberReader
-	for(int i = 0; i < natoms; i++) {
+	for(int aCnt = 0; aCnt < natoms; aCnt++) {
 		// Assign an index like in prmtop
-		atoms[i].setNumber(i);
-		atoms[i].setDummAtomClassIndex(SimTK::DuMM::AtomClassIndex(i));
-		atoms[i].setChargedAtomTypeIndex(SimTK::DuMM::ChargedAtomTypeIndex(i));
+		atoms[aCnt].setNumber(aCnt);
+		atoms[aCnt].setDummAtomClassIndex(SimTK::DuMM::AtomClassIndex(aCnt));
+		atoms[aCnt].setChargedAtomTypeIndex(SimTK::DuMM::ChargedAtomTypeIndex(aCnt));
 
 		// This is the name of the atom in the .prmtop file
 		// Examples: "O1", "C1", "C2", "H1", "H10"
-		const std::string initialName = reader.getAtomsName(i);
+		const std::string initialName = reader.getAtomsName(aCnt);
 		
 		// Set element
-		const int atomicNumber = reader.getAtomicNumber(i);
- 		atoms[i].setAtomicNumber(atomicNumber);
-		atoms[i].setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
+		const int atomicNumber = reader.getAtomicNumber(aCnt);
+ 		atoms[aCnt].setAtomicNumber(atomicNumber);
+		atoms[aCnt].setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
 
 		// // Assign a "unique" name. The generator is however limited.
 		// // Examples: AAAA, AAAB, AAAC, AAAD etc
-		atoms[i].generateName(i);
+		atoms[aCnt].generateName(aCnt);
 
 		// Store the initial name from prmtop
 		// Examples: "O1", "C1", "C2", "H1", "H10"
-		atoms[i].setInName(initialName);
+		atoms[aCnt].setInName(initialName);
 
 		// Set force field atom type
 		// Examples: "O1", "C1", "C2", "H1", "H10"
-		atoms[i].setFfType(initialName);
+		//atoms[i].setFfType(initialName);
+		atoms[aCnt].setFfType(reader.getAtomsType(aCnt));
 
 		// Set charge as it is used in Amber
 		constexpr SimTK::Real chargeMultiplier = 18.2223;
-		atoms[i].setCharge(reader.getAtomsCharge(i) / chargeMultiplier);
+		atoms[aCnt].setCharge(reader.getAtomsCharge(aCnt) / chargeMultiplier);
 
 		// Set coordinates in nm (AMBER uses Angstroms)
-		atoms[i].setX(reader.getAtomsXcoord(i) / 10.0);
-		atoms[i].setY(reader.getAtomsYcoord(i) / 10.0);
-		atoms[i].setZ(reader.getAtomsZcoord(i) / 10.0);
-		atoms[i].setCartesians(
-			reader.getAtomsXcoord(i) / 10.0,
-			reader.getAtomsYcoord(i) / 10.0,
-			reader.getAtomsZcoord(i) / 10.0 );
+		atoms[aCnt].setX(reader.getAtomsXcoord(aCnt) / 10.0);
+		atoms[aCnt].setY(reader.getAtomsYcoord(aCnt) / 10.0);
+		atoms[aCnt].setZ(reader.getAtomsZcoord(aCnt) / 10.0);
+		atoms[aCnt].setCartesians(
+			reader.getAtomsXcoord(aCnt) / 10.0,
+			reader.getAtomsYcoord(aCnt) / 10.0,
+			reader.getAtomsZcoord(aCnt) / 10.0 );
 
 		// Set mass
-		const int mass = reader.getAtomsMass(i);
-		atoms[i].setMass(mass);
+		const int mass = reader.getAtomsMass(aCnt);
+		atoms[aCnt].setMass(mass);
 
 		// Set Lennard-Jones parameters
-		atoms[i].setVdwRadius(reader.getAtomsRVdW(i));
-		atoms[i].setLJWellDepth(reader.getAtomsEpsilon(i));
+		atoms[aCnt].setVdwRadius(reader.getAtomsRVdW(aCnt));
+		atoms[aCnt].setLJWellDepth(reader.getAtomsEpsilon(aCnt));
 
 		// Set residue name and index
-		atoms[i].setResidueName(reader.getResidueLabel(i));
-		atoms[i].residueIndex = reader.getResidueIndex(i);
+		atoms[aCnt].setResidueName(reader.getResidueLabel(aCnt));
+		atoms[aCnt].residueIndex = reader.getResidueIndex(aCnt);
 
 		// Assign an unique atom name
 		// TODO add topology number - this is not unique
@@ -838,8 +842,15 @@ void Context::setAtomCompoundTypes() {
 }
 
 void Context::addBiotypes() {
+
+	// 
+	std::string resName = "MOL0";
+
 	// Iterate atoms and define Biotypes with their indeces and names
+	int aCnt = -1;
 	for(auto& atom : atoms) {
+		aCnt++;
+
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
 			elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
 			atom.getNBonds(),
@@ -848,11 +859,18 @@ void Context::addBiotypes() {
 			SimTK::Ordinality::Any
 		);
 
+		std::cout << "SP_NEW_LAB Context biotypeIndex "
+			<< biotypeIndex <<" " << std::endl;
+
 		atom.setBiotypeIndex(biotypeIndex);
 
 		// Assign atom's biotype as a composed name: name + force field type
 		std::string biotype = atom.getResidueName() + atom.getName() + atom.getFftype();
 		atom.setBiotype(biotype);
+
+		std::cout << "SP_NEW_LAB  Context::bAddBiotypes " << atom.getBiotypeIndex() << " "
+			<< atom.getBiotype() << " with bonds = " << atom.getNBonds()
+			<< std::endl;
 	}
 }
 
@@ -1660,7 +1678,7 @@ void Context::setBaseAtom(Topology& topology, int rootAmberIx)
 
 	topology.baseAtomNumber = rootAmberIx;
 	topology.setBaseAtom( compoundRootAtom );
-	topology.setAtomBiotype(rootAtom.getName(), topology.getName(),
+	topology.setAtomBiotype(rootAtom.getName(), rootAtom.getResidueName(),
 							rootAtom.getName());
 	topology.convertInboardBondCenterToOutboard();
 	topology.baseSetFlag = 1;
@@ -1807,8 +1825,10 @@ void Context::buildAcyclicGraph_SP_NEW(
 
 		// Set the final Biotype
 		topology.setAtomBiotype(child.getName(),
-								topology.getName().c_str(),
+								child.getResidueName().c_str(),
 								child.getName());
+
+		scout(" bonded. ") << eol;
 
 		// Set bSpecificAtom atomIndex to the last atom added to bond
 		child.setCompoundAtomIndex(topology.getBondAtomIndex(
@@ -2397,13 +2417,13 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 {
 	// Iterate worlds
 	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
+		
+		// Convenient vars
 		World& world = worlds[wCnt];
 		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
+		std::vector<bool> founditInDuMM(atoms.size(), false);
 
 		scout("World ") << wCnt << eol;
-
-		// Declarations
-		std::vector<bool> founditInDuMM(atoms.size(), false);
 
 		// ========================================================================
 		// ======== (1) DuMM atom classes =========================================
@@ -2446,6 +2466,15 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 					atomClassParams.LJWellDepth
 				);
 
+				scout("Added atom aCnt atomClassIndex ") 
+					<< aCnt <<" " << dummAtomClassIndex <<" "
+					<< "|" << atomClassName <<"| "
+					<< 	atomClassParams.atomicNumber <<" "
+					<< atomClassParams.valence <<" "
+					<< atomClassParams.vdwRadius <<" "
+					<< atomClassParams.LJWellDepth <<" "
+					<< eol;				
+
 			}else{ // We have this AtomClass
 
 				// Get AtomClass index from DuMM
@@ -2455,15 +2484,6 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 
 			// Insert AtomClass index in Gmolmodel atom list too
 			atoms[aCnt].setDummAtomClassIndex(dummAtomClassIndex);
-
-			scout("Added atom aCnt atomClassIndex ") 
-				<< aCnt <<" " << dummAtomClassIndex <<" "
-				<< "|" << atomClassName <<"| "
-				<< 	atomClassParams.atomicNumber <<" "
-				<< atomClassParams.valence <<" "
-				<< atomClassParams.vdwRadius <<" "
-				<< atomClassParams.LJWellDepth <<" "
-				<< eol;
 
 		} // every atom
 
@@ -2495,17 +2515,21 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 				atoms[aCnt].charge
 			);
 
+			scout("SP_NEW_LAB Defined chargedAtomType ") << chargedAtomTypeName  <<" "
+				<< chargedAtomTypeIndex <<" "
+				<< "|" << chargedAtomTypeName <<"| "
+				<< atoms[aCnt].getDummAtomClassIndex() <<" "
+				<< atoms[aCnt].charge
+				<< eol;
+
 			// Associate a ChargedAtomTypeIndex with a Biotype index
 			dumm.setBiotypeChargedAtomType(
 				atoms[aCnt].getChargedAtomTypeIndex(),
 				atoms[aCnt].getBiotypeIndex()
 			);
 
-			scout("Defined chargedAtomType ") << chargedAtomTypeName  <<" "
-				<< chargedAtomTypeIndex <<" "
-				<< "|" << chargedAtomTypeName <<"| "
-				<< atoms[aCnt].getDummAtomClassIndex() <<" "
-				<< atoms[aCnt].charge
+			scout("SP_NEW_LAB setBiotypeChargedAtomType biotypeIx chargedATIx ") << atoms[aCnt].getBiotypeIndex()  <<" "
+				<< atoms[aCnt].getChargedAtomTypeIndex() <<" "
 				<< eol;
 
 		} // every atom
@@ -3294,7 +3318,7 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		// Model each topology: build mobods
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
 
-			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Weld");
+			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Free");
 
 		} // every molecule
 

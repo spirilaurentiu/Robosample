@@ -29,16 +29,19 @@ class Context{
 
 public:
 
-<<<<<<< HEAD
-	bool initializeFromFile(const std::string& file, bool singlePrmtop = false);
-=======
+	/**	
+	* @brief Read all parameters from an input file
+	* @param filename input file name
+	* @param singlePrmtop Read all molecules from a single prmtop
+	* @return succes of the function
+	*/	
+	bool initializeFromFile(const std::string& filename, bool singlePrmtop = false);
+
 	void setNumThreads(int threads);
 	void setNonbonded(int method, SimTK::Real cutoff);
 	void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
 
-	bool initializeFromFile(const std::string& file);
->>>>>>> b0be410a275fea084c634cc3322f6c30dc04adc4
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 
 	// Experimental movements
