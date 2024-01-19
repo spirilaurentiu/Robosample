@@ -16,10 +16,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	setupReader.dump(true);
 
 	// Set the log filename
-	std::string logFilename = CreateLogfilename(setupReader.get("OUTPUT_DIR")[0], std::stoi(setupReader.get("SEED")[0]));
+	std::string logFilename = CreateLogfilename(setupReader.get("OUTPUT_DIR")[0],
+		std::stoi(setupReader.get("SEED")[0]));
 	logFile = std::ofstream(logFilename);
 	if ( !logFile.is_open() ) {
-		std::cerr << cerr_prefix << "Failed to open log file " << logFilename << std::endl;
+		std::cerr << cerr_prefix << "Failed to open log file " << logFilename
+			<< std::endl;
 		return false;
 	}
 
@@ -126,7 +128,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 		amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
 
-		// 
+		// Build graph and match coords
 		AddMolecules_SP_NEW(argRoots);
 
 		// Set the final number of molecules added
@@ -717,12 +719,16 @@ void Context::loadTorsions(const readAmberInput& reader) {
 	}
 }
 
-
+/*!
+ * <!-- This is where we create a Comopund for each atom -->
+*/
 void Context::setAtomCompoundTypes() {
 	for(auto& atom : atoms) {
 		const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
+
+		// Create Compound
 		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
 	}
 }
@@ -1486,7 +1492,7 @@ void Context::setBaseAtom(Topology& topology, int rootAmberIx)
 	topology.convertInboardBondCenterToOutboard();
 	topology.baseSetFlag = 1;
 
-	scout("rootAmberIx ") << rootAmberIx << " " << rootAtom.getName()
+	scout("rootAmberIx root ") << rootAtom.getName() <<" " << rootAtom.getInName() << " " << rootAmberIx 
 		<< eol;	
 }
 
@@ -1498,12 +1504,73 @@ void Context::load_BONDS_to_bonds(
 {
 
 	BONDS_to_bonds.resize(BATbonds.size());
+
 	for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
 		BONDS_to_bonds[molIx].resize(BATbonds[molIx].size(), -111111);
 	}
 
 	// bBonds and BAT bonds equivalence
 	scout(" bonds BATbonds euqivalence ") << eol;
+	bool found = false;
+
+	for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
+
+		for(size_t cnt = 0; cnt < BATbonds[molIx].size(); cnt++){
+
+			found = false;
+			for(size_t bbCnt = 0; bbCnt < bonds.size(); bbCnt++){
+
+				if(	(BATbonds[molIx][cnt].first  == bonds[bbCnt].j) &&
+					(BATbonds[molIx][cnt].second == bonds[bbCnt].i)){
+					found = true;
+
+				}else if((BATbonds[molIx][cnt].first  == bonds[bbCnt].i) &&
+						(BATbonds[molIx][cnt].second == bonds[bbCnt].j)){
+					found = true;
+
+				}
+
+				if(found){
+					BONDS_to_bonds[molIx][cnt] = bbCnt;
+					break;
+				}
+
+			}
+		}
+	}
+
+	// scout("BONDS_to_bonds");
+	// for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
+	// 	for(size_t cnt = 0; cnt < BATbonds[molIx].size(); cnt++){
+	
+	// 		cout << molIx << " " << cnt << " " << BONDS_to_bonds[molIx][cnt] ;
+	// 			ceol;
+	// 		scout("bBond "); bonds[BONDS_to_bonds[molIx][cnt]].Print();
+	// 			ceol;
+	// 		scout("BATbonds "); BATbonds[molIx][cnt].Print();
+	// 			ceol;
+	// 		ceol;
+	
+	// 	}
+	// }
+
+}
+
+/*!
+ * <!--  -->
+*/
+void Context::reset_BONDS_to_bonds(
+	const std::vector<std::vector<BOND>>& BATbonds)
+{
+
+	//BONDS_to_bonds.resize(BATbonds.size());
+
+	for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
+		BONDS_to_bonds[molIx].resize(BATbonds[molIx].size(), -111111);
+	}
+
+	// bBonds and BAT bonds equivalence
+	scout(" reset bonds BATbonds euqivalence ") << eol;
 	bool found = false;
 
 	for(unsigned int molIx = 0; molIx < BATbonds.size(); molIx++){
@@ -1566,7 +1633,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 	// Do Bonding
 	for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
 
-		scout("internCoord bond ");
+		scout("internCoord bond first second ");
 		bIt->Print();
 		ceol;
 
@@ -1614,13 +1681,17 @@ void Context::buildAcyclicGraph_SP_NEW(
 			<< parentNextAvailBondCenterStr;
 		parentBondCenterPathNameStr = parentBondCenterPathName.str();
 
-		scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
-			<< eol;
+		// scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
+		// 	<< eol;
 
 		// ======================== ACTUAL BONDING ========================
-		scout("Bonding child ") << child.getName() << " to parent "
-			<< parent.getName() << " with bond center name "
-			<< parentBondCenterPathNameStr << eol;
+		scout("Bonding ")
+			<< "child " << child.getName() <<" " << child.getInName()
+			<<" " << child.getNumber() <<" "
+			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+			<< parent.getNumber() <<" "
+			<< "with bond center name " << parentBondCenterPathNameStr
+			<< eol;
 
 		// Bond
 		topology.bondAtom(child.getSingleAtom(),
@@ -1630,8 +1701,6 @@ void Context::buildAcyclicGraph_SP_NEW(
 		topology.setAtomBiotype(child.getName(),
 								child.getResidueName().c_str(),
 								child.getName());
-
-		scout(" bonded. ") << eol;
 
 		// Set bSpecificAtom atomIndex to the last atom added to bond
 		child.setCompoundAtomIndex(topology.getBondAtomIndex(
@@ -1743,10 +1812,11 @@ void Context::generateSubAtomLists(void){
 			return atoms[lhs.first].getMoleculeIndex() < atoms[rhs.first].getMoleculeIndex();
 	});
 
-	scout("subAtoms ranges\n");
-	for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
-		cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
-	}
+	// Print
+	// scout("subAtoms ranges\n");
+	// for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
+	// 	cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
+	// }
 
 	// Set atom sublists for every Compound
 	int sIx = -1;
@@ -1762,12 +1832,12 @@ void Context::generateSubAtomLists(void){
 	}
 
 	// Check
-	for(const auto& view:subAtomLists){
-		scout("New molecule") << eol;
-		for(auto it = view.begin(); it != view.end(); it++){
-			it->Print(0);
-		}
-	}
+	// for(const auto& view:subAtomLists){
+	// 	scout("New molecule") << eol;
+	// 	for(auto it = view.begin(); it != view.end(); it++){
+	// 		it->Print(0);
+	// 	}
+	// }
 
 
 }
@@ -1833,14 +1903,14 @@ void Context::generateSubBondLists(void){
 		}
 	}
 
-	// Check
-	for(const auto& view:subBondLists){
-		scout("New molecule") << eol;
-		for(auto it = view.begin(); it != view.end(); it++){
-			it->Print();
-			ceol;
-		}
-	}
+	// // Check
+	// for(const auto& view:subBondLists){
+	// 	scout("New molecule") << eol;
+	// 	for(auto it = view.begin(); it != view.end(); it++){
+	// 		it->Print();
+	// 		ceol;
+	// 	}
+	// }
 
 
 }
@@ -1887,6 +1957,7 @@ void Context::AddMolecules_SP_NEW(
 	// Find a root in the unvisited atoms and build BAT graphs
 	nofMols = 0;
 	while( internCoords.computeRoot( getAtoms() )){ // find a root
+
 		nofMols++;
 		internCoords.PrintRoot();
 		
@@ -1963,6 +2034,9 @@ void Context::AddMolecules_SP_NEW(
 			return lhs.getMoleculeIndex() < rhs.getMoleculeIndex();
 		}
 	);
+
+	// Keep a map of BONDS to bonds after sorting
+	reset_BONDS_to_bonds( internCoords.getBonds() );
 
 	// Record bond into topologies map
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
@@ -2222,7 +2296,7 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
 		std::vector<bool> founditInDuMM(atoms.size(), false);
 
-		scout("World ") << wCnt << eol;
+		// scout("World ") << wCnt << eol;
 
 		// ========================================================================
 		// ======== (1) DuMM atom classes =========================================
@@ -2265,14 +2339,14 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 					atomClassParams.LJWellDepth
 				);
 
-				scout("Added atom aCnt atomClassIndex ") 
-					<< aCnt <<" " << dummAtomClassIndex <<" "
-					<< "|" << atomClassName <<"| "
-					<< 	atomClassParams.atomicNumber <<" "
-					<< atomClassParams.valence <<" "
-					<< atomClassParams.vdwRadius <<" "
-					<< atomClassParams.LJWellDepth <<" "
-					<< eol;				
+				// scout("Added atom aCnt atomClassIndex ") 
+				// 	<< aCnt <<" " << dummAtomClassIndex <<" "
+				// 	<< "|" << atomClassName <<"| "
+				// 	<< 	atomClassParams.atomicNumber <<" "
+				// 	<< atomClassParams.valence <<" "
+				// 	<< atomClassParams.vdwRadius <<" "
+				// 	<< atomClassParams.LJWellDepth <<" "
+				// 	<< eol;				
 
 			}else{ // We have this AtomClass
 
@@ -2314,12 +2388,12 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 				atoms[aCnt].charge
 			);
 
-			scout("SP_NEW_LAB Defined chargedAtomType ") << chargedAtomTypeName  <<" "
-				<< chargedAtomTypeIndex <<" "
-				<< "|" << chargedAtomTypeName <<"| "
-				<< atoms[aCnt].getDummAtomClassIndex() <<" "
-				<< atoms[aCnt].charge
-				<< eol;
+			// scout("SP_NEW_LAB Defined chargedAtomType ") << chargedAtomTypeName  <<" "
+			// 	<< chargedAtomTypeIndex <<" "
+			// 	<< "|" << chargedAtomTypeName <<"| "
+			// 	<< atoms[aCnt].getDummAtomClassIndex() <<" "
+			// 	<< atoms[aCnt].charge
+			// 	<< eol;
 
 			// Associate a ChargedAtomTypeIndex with a Biotype index
 			dumm.setBiotypeChargedAtomType(
@@ -2327,9 +2401,10 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 				atoms[aCnt].getBiotypeIndex()
 			);
 
-			scout("SP_NEW_LAB setBiotypeChargedAtomType biotypeIx chargedATIx ") << atoms[aCnt].getBiotypeIndex()  <<" "
-				<< atoms[aCnt].getChargedAtomTypeIndex() <<" "
-				<< eol;
+			// scout("SP_NEW_LAB setBiotypeChargedAtomType biotypeIx chargedATIx ")
+			// 	<< atoms[aCnt].getBiotypeIndex()  <<" "
+			// 	<< atoms[aCnt].getChargedAtomTypeIndex() <<" "
+			// 	<< eol;
 
 		} // every atom
 
@@ -2352,7 +2427,7 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 		// Keep track of inserted AtomClass pairs		
 		std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
 	
-		scout("Dumm bonds") << eol;
+		// scout("Dumm bonds") << eol;
 
 		// Iterate through bonds and define their parameters
 		for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
@@ -2407,13 +2482,13 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 				// SimTK::DuMM::IncludedAtomIndex inclDAIx = dumm.getIncludedAtomIndexOfNonbondAtom(nbDAIx);
 				// LAB END
 
-				scout("bond ") << bonds[bCnt].getMoleculeIndex() <<" "
-					<< atomNumber1 <<" " << atomNumber2 <<" "
-					<< atom1.getInName() <<" " << atom2.getInName() <<" "
-					<< cAIx1 <<" " << cAIx2 <<" "
-					<< bonds[bCnt].getForceK() <<" "
-					<< bonds[bCnt].getForceEquil() <<" "
-					<< eol;
+				// scout("bond ") << bonds[bCnt].getMoleculeIndex() <<" "
+				// 	<< atomNumber1 <<" " << atomNumber2 <<" "
+				// 	<< atom1.getInName() <<" " << atom2.getInName() <<" "
+				// 	<< cAIx1 <<" " << cAIx2 <<" "
+				// 	<< bonds[bCnt].getForceK() <<" "
+				// 	<< bonds[bCnt].getForceEquil() <<" "
+				// 	<< eol;
 
 				// Put the entry in our map too
 				allBondsACIxs.push_back(thisBondACIxs);
@@ -2433,7 +2508,7 @@ void Context::bAddDummAngleParams_SP_NEW(readAmberInput& amberReader)
 	// Iterate worlds
 	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
 
-		scout("World ") << wCnt << eol;
+		// scout("World ") << wCnt << eol;
 
 		// Get world and its force field
 		World& world = worlds[wCnt];
@@ -2483,15 +2558,15 @@ void Context::bAddDummAngleParams_SP_NEW(readAmberInput& amberReader)
 				// Put the entry in our map too
 				allAnglesACIxs.push_back(thisAngleACIxs);
 
-				scout("angle ")
-					<< a1 <<" " << a2 <<" " << a3 <<" "
-					<< atoms[a1].getInName() <<" "
-					<< atoms[a2].getInName() <<" "
-					<< atoms[a3].getInName() <<" "
-					<< amberReader.getAnglesForceK(angCnt) <<" "
-					<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
-						* amberReader.getAnglesEqval(angCnt)))
-					<< eol;
+				// scout("angle ")
+				// 	<< a1 <<" " << a2 <<" " << a3 <<" "
+				// 	<< atoms[a1].getInName() <<" "
+				// 	<< atoms[a2].getInName() <<" "
+				// 	<< atoms[a3].getInName() <<" "
+				// 	<< amberReader.getAnglesForceK(angCnt) <<" "
+				// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE 
+				// 		* amberReader.getAnglesEqval(angCnt)))
+				// 	<< eol;
 			}
 		}		
 
@@ -2521,7 +2596,7 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 	// Iterate worlds
 	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
 
-		scout("World ") << wCnt << eol;
+		// scout("World ") << wCnt << eol;
 
 		// Get world and its force field
 		World& world = worlds[wCnt];
@@ -2598,13 +2673,13 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 
 				if (!foundit){ // dihedral was not found
 
-					scout("dihedral ")
-							<< amber_aIx_1 <<" " << amber_aIx_2 <<" "
-							<< amber_aIx_3 <<" " << amber_aIx_4 <<" "
-							<< atoms[amber_aIx_1].getInName() <<" "
-							<< atoms[amber_aIx_2].getInName() <<" "
-							<< atoms[amber_aIx_3].getInName() <<" "
-							<< atoms[amber_aIx_4].getInName() <<" ";
+					// scout("dihedral ")
+					// 		<< amber_aIx_1 <<" " << amber_aIx_2 <<" "
+					// 		<< amber_aIx_3 <<" " << amber_aIx_4 <<" "
+					// 		<< atoms[amber_aIx_1].getInName() <<" "
+					// 		<< atoms[amber_aIx_2].getInName() <<" "
+					// 		<< atoms[amber_aIx_3].getInName() <<" "
+					// 		<< atoms[amber_aIx_4].getInName() <<" ";
 
 					// Define the dihedrals
 					if(numberOf == 1){
@@ -2614,9 +2689,9 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt)))
 						);
 
-						scout("") << amberReader.getDihedralsForceK(torsCnt) <<" "
-							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
-								amberReader.getDihedralsPhase(torsCnt))) <<" ";
+						// scout("") << amberReader.getDihedralsForceK(torsCnt) <<" "
+						// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+						// 		amberReader.getDihedralsPhase(torsCnt))) <<" ";
 
 					}
 					else if(numberOf == 2){
@@ -2629,9 +2704,9 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1)))
 						);
 
-						scout("") << amberReader.getDihedralsForceK(torsCnt + 1) <<" "
-							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
-								amberReader.getDihedralsPhase(torsCnt + 1))) <<" ";
+						// scout("") << amberReader.getDihedralsForceK(torsCnt + 1) <<" "
+						// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+						// 		amberReader.getDihedralsPhase(torsCnt + 1))) <<" ";
 
 					}
 					else if(numberOf == 3){
@@ -2647,9 +2722,9 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+2)))
 						);
 
-						scout("") << amberReader.getDihedralsForceK(torsCnt + 2) <<" "
-							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
-								amberReader.getDihedralsPhase(torsCnt + 2))) <<" ";
+						// scout("") << amberReader.getDihedralsForceK(torsCnt + 2) <<" "
+						// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+						// 		amberReader.getDihedralsPhase(torsCnt + 2))) <<" ";
 
 					}else if (numberOf == 4){
 						dumm.defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
@@ -2667,9 +2742,9 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+3)))
 						);
 
-						scout("") << amberReader.getDihedralsForceK(torsCnt + 3) <<" "
-							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
-								amberReader.getDihedralsPhase(torsCnt + 3))) <<" ";
+						// scout("") << amberReader.getDihedralsForceK(torsCnt + 3) <<" "
+						// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+						// 		amberReader.getDihedralsPhase(torsCnt + 3))) <<" ";
 					}
 					
 					ceol;
@@ -2697,13 +2772,13 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 				
 				if (!foundit){ // improper was not found
 
-					scout("improper ")
-							<< amber_aIx_1 <<" " << amber_aIx_2 <<" "
-							<< amber_aIx_3 <<" " << amber_aIx_4 <<" "
-							<< atoms[amber_aIx_1].getInName() <<" "
-							<< atoms[amber_aIx_2].getInName() <<" "
-							<< atoms[amber_aIx_3].getInName() <<" "
-							<< atoms[amber_aIx_4].getInName() <<" ";
+					// scout("improper ")
+					// 		<< amber_aIx_1 <<" " << amber_aIx_2 <<" "
+					// 		<< amber_aIx_3 <<" " << amber_aIx_4 <<" "
+					// 		<< atoms[amber_aIx_1].getInName() <<" "
+					// 		<< atoms[amber_aIx_2].getInName() <<" "
+					// 		<< atoms[amber_aIx_3].getInName() <<" "
+					// 		<< atoms[amber_aIx_4].getInName() <<" ";
 
 					// Define the dihedrals
 					if(numberOf == 1){
@@ -2713,9 +2788,9 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt)))
 						);
 
-						scout("") << amberReader.getDihedralsForceK(torsCnt) <<" "
-							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
-								amberReader.getDihedralsPhase(torsCnt))) <<" ";
+						// scout("") << amberReader.getDihedralsForceK(torsCnt) <<" "
+						// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+						// 		amberReader.getDihedralsPhase(torsCnt))) <<" ";
 
 					}
 					else if(numberOf == 2){
@@ -2728,9 +2803,9 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+1)))
 						);
 
-						scout("") << amberReader.getDihedralsForceK(torsCnt + 1) <<" "
-							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
-								amberReader.getDihedralsPhase(torsCnt + 1))) <<" ";
+						// scout("") << amberReader.getDihedralsForceK(torsCnt + 1) <<" "
+						// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+						// 		amberReader.getDihedralsPhase(torsCnt + 1))) <<" ";
 
 					}
 					else if(numberOf == 3){
@@ -2746,9 +2821,9 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 							static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE * amberReader.getDihedralsPhase(torsCnt+2)))
 						);
 
-						scout("") << amberReader.getDihedralsForceK(torsCnt + 2) <<" "
-							<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
-								amberReader.getDihedralsPhase(torsCnt + 2))) <<" ";
+						// scout("") << amberReader.getDihedralsForceK(torsCnt + 2) <<" "
+						// 	<< static_cast<SimTK::Real>(ANG_360_TO_180(SimTK_RADIAN_TO_DEGREE *
+						// 		amberReader.getDihedralsPhase(torsCnt + 2))) <<" ";
 
 					}
 
