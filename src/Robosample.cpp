@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 	}
 	
 	Context c;
-	bool singlePrmtop = false;
+	bool singlePrmtop = true;
 	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
 		return -1;
 	}

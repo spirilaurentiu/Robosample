@@ -87,6 +87,9 @@ public:
 	/**  */
 	void load_BONDS_to_bonds(const std::vector<std::vector<BOND>>& BATbonds);
 
+	/** If bonds are resorted */
+	void reset_BONDS_to_bonds(const std::vector<std::vector<BOND>>& BATbonds);
+
 	/**  */
 	void buildAcyclicGraph_SP_NEW(
 		Topology& topology,
