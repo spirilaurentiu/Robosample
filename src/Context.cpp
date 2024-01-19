@@ -57,25 +57,20 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
 	//  ParaMolecularDecorator
 
-	// Deal with visualizer before adding worlds.
-	std::vector<double> visualizerFrequencies;
-	int i = -1;
-	for(auto ts : setupReader.get("TIMESTEPS")){
-		i++;
-		if (setupReader.get("VISUAL")[i] == "TRUE"){
-			visualizerFrequencies.push_back(std::stod(ts));
-		}else{
-			visualizerFrequencies.push_back(0);
-		}
-	}
-
 	// // Add Worlds
 	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
+
+		// Frequency of visualizer
+		int visualizerFrequency = 0;
+		if (setupReader.get("VISUAL")[worldIx] == "TRUE"){
+			visualizerFrequency = std::stoi(setupReader.get("TIMESTEPS")[worldIx]);
+		}
+
 		addWorld(
 			(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"),
-			(setupReader.get("OPENMM")[worldIx] == "TRUE"),
-			(setupReader.get("OPENMM_CalcOnlyNonbonded")[worldIx] == "TRUE"),
-			(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"),
+			(setupReader.get("OPENMM")[worldIx] == "TRUE"), // mandatory true. keep for debugging
+			(setupReader.get("OPENMM_CalcOnlyNonbonded")[worldIx] == "TRUE"), // redundant, see below
+			(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"), // merge doar la lumea flexibila
 			std::stod(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
 			std::stod(setupReader.get("BOOST_MDSTEPS")[worldIx]),
 			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
@@ -83,8 +78,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]),
 			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
 			(setupReader.get("VISUAL")[worldIx] == "TRUE"),
-			std::stod(setupReader.get("TIMESTEPS")[worldIx])
-		);
+			visualizerFrequency);
 	}
 
 	// Context c(numThreads = nproc, nbMethod = 0, nbCutoff = 1.2); // nu conteaza cutoff cand method = 0
@@ -205,18 +199,47 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	
 	}
 
-	// Add empty samplers to the worlds.
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		BaseSampler *p = addSampler(worldIx,
-			to_upper(setupReader.get("SAMPLERS")[worldIx]),
-			setupReader.get("INTEGRATORS")[worldIx]);
-	}
-
 	//std::cout << "OS memory 3\n" << exec("free") << std::endl;
 	//////////////////////
 	// Thermodynamics
 	//////////////////////
 
+	// Add samplers
+	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+
+		// Read MD steps per sample
+		SimTK::Real MDStepsPerSample = 0;
+		if(setupReader.find("MDSTEPS_STD")){ // per world
+			MDStepsPerSample = std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]);
+		}
+
+		World& world = worlds[worldIx];
+		world.addSampler(SamplerName::HMC,
+			to_upper(setupReader.get("SAMPLERS")[worldIx]),
+			setupReader.get("INTEGRATORS")[worldIx],
+			setupReader.get("THERMOSTAT")[worldIx],
+			std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
+			std::stof(setupReader.get("TIMESTEPS")[worldIx]),
+			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
+			MDStepsPerSample,
+			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]),
+			(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"),
+			std::stoi(setupReader.get("SEED")[worldIx]));
+
+		// Tell OpenMM what masses we're going to use
+		// By default, OpenMM uses Molmodel masses which do not match Amber masses
+		// This call is done here, after the sampler has been initialized
+		// The sampler also initializes the OpenMM context
+		for (const auto& t : topologies) {
+			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
+				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
+				const SimTK::DuMM::NonbondAtomIndex nax(aix);
+				world.updSampler(0)->setOMMmass(nax, mass);
+			}
+		}
+	}
+
+	// If there is any problem here, it might be because this block was above the previous one
 	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("SPHERE_RADIUS")[0] != "ERROR_KEY_NOT_FOUND") {
@@ -246,142 +269,15 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
 
-		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-			getWorld(worldIx)->setTopologyIXs(topologyIXs);
-			getWorld(worldIx)->setAmberAtomIXs(amberAtomIXs);
-			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(0));
+		for (auto& world : worlds) {
+			world.setTopologyIXs(topologyIXs);
+			world.setAmberAtomIXs(amberAtomIXs);
+			HMCSampler* sampler_p = pHMC(world.updSampler(0));
 			sampler_p->setSphereRadius(sphere_radius);
 		}
 	}
 
-	// Set thermostats to the samplers
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-
-		for (int samplerIx = 0;
-		samplerIx < getWorld(worldIx)->getNofSamplers();
-		samplerIx++) {
-			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
-			sampler_p->setThermostat(
-				setupReader.get("THERMOSTAT")[worldIx]);
-		}
-
-		setTemperature(worldIx, std::stof(setupReader.get("TEMPERATURE_INI")[worldIx]));
-	}
-
-	// Set the guidance Hamiltonian parameters
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		for (int samplerIx = 0;
-		samplerIx < getWorld(worldIx)->getNofSamplers();
-		samplerIx++) {
-			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
-			sampler_p->setBoostTemperature(std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]));
-		}
-	}
-
-	//////////////////////
-	// MD parameters
-	//////////////////////
-	// Set timesteps
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		for (int samplerIx = 0;
-		samplerIx < getWorld(worldIx)->getNofSamplers();
-		samplerIx++) {
-
-			// Set timesteps
-			setTimestep(worldIx, samplerIx, std::stof(setupReader.get("TIMESTEPS")[worldIx]));
-
-			// Activate Fixman potential if needed
-			if(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"){
-				useFixmanPotential(worldIx, samplerIx);
-			}
-		}
-	}
-
-	// Set the nunmber of MD steps
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0;
-		samplerIx < getWorld(worldIx)->getNofSamplers();
-		samplerIx++) {
-			setNofMDStepsPerSample(worldIx,
-				samplerIx,
-				std::stoi(setupReader.get("MDSTEPS")[worldIx]));
-
-			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
-
-			if(setupReader.find("MDSTEPS_STD")){
-				sampler_p->setMDStepsPerSampleStd(std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]));
-			}else{
-				sampler_p->setMDStepsPerSampleStd(0);
-			}
-
-		}
-	}
-
-	// Guidance Hamiltonian MD
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++) {
-			HMCSampler* sampler_p =
-			pHMC(updWorld(worldIx)->updSampler(samplerIx));
-			sampler_p->setBoostMDSteps(std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]));
-		}
-	}
-
-	//////////////////////
-	// Non-equilibrium parameters
-	//////////////////////
-
-	// Q distortin parameters
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++) {
-			HMCSampler* sampler_p = pHMC(updWorld(worldIx)->updSampler(samplerIx));
-			sampler_p->setDistortOption(std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]));
-		}
-	}
-
-	//////////////////////
-	// Simulation parameters
-	//////////////////////
-	// Set the seeds for reproducibility. Samplers have to be here already.
-	// Let the user set one seed only. TODO: better algorithm (Victor).
-	if( setupReader.find("SEED") ){
-		if( !(setupReader.get("SEED").empty()) ){
-			for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-				setSeed(worldIx, 0, std::stoi(setupReader.get("SEED")[0]) + worldIx );
-			}
-		}
-	}
-
-	// Initialize samplers
-	/** Set simulation temperature,
-	velocities to desired temperature, variables that store the configuration
-	and variables that store the energies, both needed for the
-	acception-rejection step. Also realize velocities and initialize
-	the timestepper. **/
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		
-		for (int samplerIx = 0;
-		samplerIx < getWorld(worldIx)->getNofSamplers();
-		samplerIx++){
-
-			initializeSampler(worldIx, samplerIx);
-		
-		}
-	}
-
-	// Set the number of samples per round
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		setNofSamplesPerRound(worldIx, std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]));
-	}
-
-	// Simulation parameters
-	int currentWorldIx = 0;
-	int round_mcsteps = 0;
-
 	setRequiredNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
-
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		round_mcsteps += getNofSamplesPerRound(worldIx);
-	}
 
 	// Set pdb writing frequency
 	setPdbRestartFreq( std::stoi(setupReader.get("WRITEPDBS")[0]) );
@@ -418,8 +314,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	realizeTopology();
 
 	// U Scale Factors uses maps stored in Topology
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		//(updWorld(worldIx))->setUScaleFactorsToMobods();
+	for(auto& world : worlds){
+		// world.setUScaleFactorsToMobods();
 	}
 
 	// Realize topology for all the Worlds
@@ -522,16 +418,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	//context.addConstraints();
 
 	PrintInitialRecommendedTimesteps();
-
-	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		for (const auto& t : topologies) {
-			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
-				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
-				const SimTK::DuMM::NonbondAtomIndex nax(aix);
-				updWorld(worldIx)->updSampler(0)->setOMMmass(nax, mass);
-			}
-		}
-	}
 
 	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
 		setRunType(0);
@@ -1234,14 +1120,6 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 		}
 	}
 
-	// Normal modes options
-	NDistortOpt.resize(inpNofWorlds, 0);
-	if(setupReader.find("DISTORT_OPTION")){
-		for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++){
-			NDistortOpt[worldIx] = std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]);
-		}
-	}
-
     if(setupReader.find("REX_SWAP_FIXMAN")){
 		if(setupReader.get("REX_SWAP_FIXMAN").size() == 0){
 			std::cerr << cerr_prefix << "The DISTORT_OPTION key is present. Please specify a value" << std::endl;
@@ -1276,17 +1154,6 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 	worldIndexes.reserve(nofWorlds);
 
 	return true;
-}
-
-void Context::reserveWorldsAndTopologies( int inpNofWorlds, int inpNofMols,
-	int inpNofEmbeddedTopologies)
-{
-	nofWorlds = inpNofWorlds;
-	nofMols = inpNofMols;
-	nofEmbeddedTopologies = inpNofEmbeddedTopologies;
-
-	worlds.reserve(nofWorlds);
-	worldIndexes.reserve(nofWorlds);
 }
 
 // Input molecular files TODO : merge with loadCoordinatesFile
@@ -1379,68 +1246,6 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 	regimens[whichWorld].push_back(regimen);
 }
 
-// Add a number of empty worlds
-// Each world initializes the following objects:
-//  - CompoundSystem
-//  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
-//		Visualizer, Visualizer::Reporter, DuMMForceFieldSubsystem,
-//  - Integrator with a TimeStepper on top
-void Context::addEmptyWorlds(std::size_t argNofWorlds,
-	std::vector<double> visualizerFrequencies)
-{
-	for(unsigned int worldIx = 0;
-		worldIx < argNofWorlds;
-		worldIx++){
-		if(visualizerFrequencies[worldIx] > 0){
-			addWorld(true, visualizerFrequencies[worldIx]);
-		}else{
-			addWorld(false);
-		}
-	}
-
-	if(argNofWorlds != nofWorlds){
-		std::cerr << cerr_prefix << "Something went wrong while adding the world\n";
-		throw std::exception();
-		std::exit(1);
-	}
-
-	std::cout << "Added " << nofWorlds << " empty worlds" << std::endl;
-
-	//
-	//allocateReblockQsCache();
-
-}
-
-// Add an empty world to the context
-World * Context::addWorld(bool visual, SimTK::Real visualizerFrequency){
-
-	// Increment worldIndexes
-	worldIndexes.push_back(worldIndexes.size());
-
-	// Call World constructor
-	worlds.emplace_back(worldIndexes.back(), nofMols, visual,
-		visualizerFrequency);
-
-	// Add another row in the matrix of flexibility filenames
-	rbSpecsFNs.push_back(std::vector<std::string>());
-	// Add another row in the matrix of rigidity filenames
-	flexSpecsFNs.push_back(std::vector<std::string>());
-	// Add another row in the matrix of regimen filenames
-	regimens.push_back(std::vector<std::string>());
-
-	// Variable World specific parameters
-	nofSamplesPerRound.push_back(1);
-	nofMDStepsPerSample.push_back(1);
-	timesteps.push_back(0.002); // ps
-	nofBoostStairs.push_back(0);
-
-	// Store the number of worlds
-	nofWorlds = worlds.size();
-
-	//
-	return &worlds.back();
-}
-
 // Add an empty world to the context
 // timestep in ps
 void Context::addWorld(
@@ -1475,6 +1280,7 @@ void Context::addWorld(
 	// If requested, add Fixman torque as an additional force subsystem
 	if (fixmanTorque) {
 		worlds.back().addFixmanTorque();
+		worlds.back().updFixmanTorque()->setScaleFactor(1);
 	}
 
 	// Set the number of threads for DuMM
@@ -1498,13 +1304,10 @@ void Context::addWorld(
 		worlds.back().updForceField()->setOpenMMstepsize(timestep);
 	}
 
-	// Variable World specific parameters
-	nofSamplesPerRound.push_back(samplesPerRound); // how many times to run sample_iteration; should be in world
-	nofMDStepsPerSample.push_back(mdSteps); // belongs to world's sampler
-	timesteps.push_back(timestep); // ps; belongs to world's sampler
-	nofBoostStairs.push_back(boostMDSteps); // not used; will be removed
-	NDistortOpt.push_back(distort); // belongs to world and passed to sampler. should all samplers use this?
+	// Set how many times to run sample_iteration()
+	worlds.back().setSamplesPerRound(samplesPerRound);
 
+	worlds.back().setDistortOption(distort);
 	worlds.back().setTemperature(tempIni);
 
 	rbSpecsFNs.push_back(std::vector<std::string>());
@@ -1529,11 +1332,11 @@ void Context::modelOneEmbeddedTopology(int whichTopology,
 {
 		this->rootMobilities.push_back(rootMobilizer);
 
-		(updWorld(whichWorld))->compoundSystem->modelOneCompound(
+		worlds[whichWorld].compoundSystem->modelOneCompound(
 			SimTK::CompoundSystem::CompoundIndex(whichTopology),
 			SimTK::String(rootMobilizer));
 
-		SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(whichWorld))->forceField);
+		SimTK::DuMMForceFieldSubsystem& dumm = *worlds[whichWorld].forceField;
 
 		for(std::size_t k = 0; k < topologies[whichTopology].getNumAtoms(); k++){
 			SimTK::Compound::AtomIndex aIx =
@@ -2246,13 +2049,9 @@ void Context::AddMolecules_SP_NEW(
  * <!-- Long print of all atoms properties -->
 */
 void Context::PrintAtoms(void){
-
-	std::vector<bSpecificAtom>::iterator aIt;
-	size_t aCnt;
-	for(aIt = atoms.begin(); aIt != atoms.end(); aIt++, aCnt){
-		aIt->Print(0);
+	for(const auto& atom : atoms) {
+		atom.Print(0);
 	}
-
 }
 
 /* // Loads parameters into DuMM, adopts compound by the CompoundSystem
@@ -2276,19 +2075,19 @@ void Context::addDummParams(
 		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 		
 		// Pass current topology to the current world
-		updWorld(0)->topologies = &topologies;
+		worlds[0].topologies = &topologies;
 
 		// Add parameters in DuMM
-		updWorld(0)->generateDummParams(molIx, &amberReader,
+		worlds[0].generateDummParams(molIx, &amberReader,
 			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
 
 		for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
 
 			// Pass current topology to the current world
-			(updWorld(worldIx))->topologies = &topologies;
+			worlds[worldIx].topologies = &topologies;
 
 			// Add parameters in DuMM
-			(updWorld(worldIx))->transferDummParams(molIx, &amberReader);
+			worlds[worldIx].transferDummParams(molIx, &amberReader);
 		}
 
 	}
@@ -2328,7 +2127,7 @@ void Context::updDummAtomClasses(
 			atomParams.dump(); */
 
 			// Define an AtomClass
-			(updWorld(worldIx))->forceField->defineAtomClass(aCIx, atomClassName.c_str(),
+			worlds[worldIx].forceField->defineAtomClass(aCIx, atomClassName.c_str(),
 				atomParams.atomicNumber,
 				atomParams.valence,
 				atomParams.vdwRadius,
@@ -2365,10 +2164,10 @@ void Context::addDummParams(
 		std::cout << "Context::addDummParams WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
 
 		// Pass current topology to the current world
-		updWorld(0)->topologies = &topologies;
+		worlds[0].topologies = &topologies;
 
 		// Add parameters in DuMM
-		updWorld(0)->generateDummParams(molIx, &amberReader[molIx],
+		worlds[0].generateDummParams(molIx, &amberReader[molIx],
 			aClassParams2aClassId,
 			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 	}
@@ -2391,10 +2190,10 @@ void Context::addDummParams(
 			std::cout << "Context::addDummParams WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
 
 			// Pass current topology to the current world
-			(updWorld(worldIx))->topologies = &topologies;
+			worlds[worldIx].topologies = &topologies;
 
 			// Add parameters in DuMM
-			(updWorld(worldIx))->transferDummParams(molIx, &amberReader[molIx],
+			worlds[worldIx].transferDummParams(molIx, &amberReader[molIx],
 			aClassParams2aClassId,
 			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
 		}
@@ -3052,7 +2851,7 @@ void Context::model(
 
 			// Add topology by CompoundSystem and add it to the
 			//Visualizer's vector of molecules
-			(updWorld(worldIx))->adoptTopology(molIx);
+			worlds[worldIx].adoptTopology(molIx);
 
 			// Calls modelOneCompound from CompoundSystem
 			// amber (robo) -> dumm
@@ -3060,17 +2859,17 @@ void Context::model(
 				argRootMobilities[(requestedNofMols * worldIx) + molIx]);
 
 			// Realize Topology Stage involvs all the SubSystems
-			//(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
+			//worlds[worldIx].getCompoundSystem()->realizeTopology();
 
 			topologies[molIx].loadAIx2MbxMap();
-			(updWorld(worldIx))->loadMbx2AIxMap();
+			worlds[worldIx].loadMbx2AIxMap();
 		}
 
 	}
 
 	// Realize topology for all the worlds all subsystems
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		(updWorld(worldIx))->getCompoundSystem()->realizeTopology();
+		worlds[worldIx].getCompoundSystem()->realizeTopology();
 	}
 
 }
@@ -3239,12 +3038,12 @@ void Context::modelOneEmbeddedTopology_SP_NEW(
 	this->rootMobilities.push_back(rootMobilizer);
 
 	// Call Molmodel to model Compound
-	(updWorld(whichWorld))->compoundSystem->modelOneCompound(
+	worlds[whichWorld].compoundSystem->modelOneCompound(
 		SimTK::CompoundSystem::CompoundIndex(whichTopology),
 		SimTK::String(rootMobilizer));
 
 	// Get the forcefield within this world
-	SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(whichWorld))->forceField);
+	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[whichWorld].forceField);
 
 	// For every atom
 	size_t topoNatoms = topologies[whichTopology].getNumAtoms();
@@ -3311,7 +3110,7 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		// Visualizer's vector of molecules
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
 
-			(updWorld(worldIx))->adoptTopology(topCnt);
+			worlds[worldIx].adoptTopology(topCnt);
 
 		} // every molecule
 
@@ -3332,7 +3131,7 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		} // every molecule
 
 
-		(updWorld(worldIx))->loadMbx2AIxMap_SP_NEW();
+		worlds[worldIx].loadMbx2AIxMap_SP_NEW();
 
 	} // every world
 
@@ -3362,13 +3161,13 @@ void Context::allocWorldsStatsContainers()
 void Context::loadMbxsToMobilities()
 {
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++){
+		for (int samplerIx = 0; samplerIx < worlds[worldIx].getNofSamplers(); samplerIx++){
 			std::cout << "Loading mbx2mobility" << std::endl;
 
 			// Pass compounds to the new world
 			passTopologiesToNewWorld(worldIx);
 
-			(updWorld(worldIx)->updSampler(samplerIx))->loadMbx2mobility(worldIx);
+			(worlds[worldIx].updSampler(samplerIx))->loadMbx2mobility(worldIx);
 		}
 	}
 }
@@ -3390,7 +3189,7 @@ void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizer
 			this->rootMobilities.push_back(
 				GroundToCompoundMobilizerTypes[(nofMols * worldIx) + molIx]);
 
-			(updWorld(worldIx))->compoundSystem->modelOneCompound(
+			worlds[worldIx].compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(molIx),
 				rootMobilities[(nofMols * worldIx) + molIx]);
 
@@ -3432,11 +3231,11 @@ void Context::addConstraints(void)
 // Print status
 void Context::printStatus(void){
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		if ((updWorld(worldIx))->integ  == nullptr ){
+		if (worlds[worldIx].integ  == nullptr ){
 			std::cout << "Context: integrator is null" << std::endl;
 			break;
 		}
-		SimTK::VerletIntegrator& checkIntegrator = *(updWorld(worldIx))->integ;
+		SimTK::VerletIntegrator& checkIntegrator = *worlds[worldIx].integ;
 		const SimTK::State& checkState = checkIntegrator.getState();
 		const SimTK::Stage& checkStage = checkState.getSystemStage();
 		std::cout << "Context world " << worldIx << " integ state stage "
@@ -3460,7 +3259,7 @@ void Context::printStatus(void){
 
 
 		// CompoundSystem <- MolecularMechanicsSystem <- MultibodySystem <- System
-		SimTK::CompoundSystem& compoundSystem = *((updWorld(worldIx))->getCompoundSystem());
+		SimTK::CompoundSystem& compoundSystem = *(worlds[worldIx].getCompoundSystem());
 		std::cout << "Context world " << worldIx << " compoundSystem nof compounds "
 			<< compoundSystem.getNumCompounds() << std::endl;
 		std::cout << "Context world " << worldIx << " System Topology realized "
@@ -3468,20 +3267,20 @@ void Context::printStatus(void){
 			<< " times.\n" << std::flush;
 
 		// Matter
-		////const SimTK::System& checkSystem = ((updWorld(worldIx))->matter)->getSystem();
-		SimTK::SimbodyMatterSubsystem& matter = *((updWorld(worldIx))->matter);
+		////const SimTK::System& checkSystem = (worlds[worldIx].matter)->getSystem();
+		SimTK::SimbodyMatterSubsystem& matter = *(worlds[worldIx].matter);
 		std::cout << "Context world " << worldIx
 			<< " matter nofBodies " << matter.getNumBodies()
 			<< " nofConstraints " << matter.getNumConstraints()
 			<< "\n" << std::flush;
 
 		// GeneralForceSubsystem
-		SimTK::GeneralForceSubsystem& gfs = *((updWorld(worldIx))->forces);
+		SimTK::GeneralForceSubsystem& gfs = *(worlds[worldIx].forces);
 		std::cout << "Context world " << worldIx
 			<< " gfs nofForces " << gfs.getNumForces()
 			<< "\n" << std::flush;
 
-		SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(worldIx))->forceField);
+		SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[worldIx].forceField);
 		std::cout << "Context world " << worldIx
 			<< " dumm nofThreads " << dumm.getNumThreadsRequested()
 			<< " useOpenMM " << dumm.getUseOpenMMAcceleration()
@@ -3497,22 +3296,22 @@ void Context::printThermodynamics()
 {
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		std::cout << "World " << worldIx << " temperature = "
-			<< getWorld(worldIx)->getTemperature()
+			<< worlds[worldIx].getTemperature()
 			<< std::endl;
-		if(isUsingFixmanTorque(worldIx)){
+		if(worlds[worldIx].isUsingFixmanTorque()){
 			std::cout << "World " << worldIx
 			<< " FixmanTorque temperature = "
-			<< updWorld(worldIx)->updFixmanTorque()->getTemperature()
+			<< worlds[worldIx].updFixmanTorque()->getTemperature()
 			<< std::endl;
 		}
-		for (int samplerIx = 0; samplerIx < getWorld(worldIx)->getNofSamplers(); samplerIx++){
+		for (int samplerIx = 0; samplerIx < worlds[worldIx].getNofSamplers(); samplerIx++){
 			std::cout << "World " << worldIx << " Sampler " << samplerIx
-				<< " temperature = " << updWorld(worldIx)->updSampler(samplerIx)->getTemperature()
+				<< " temperature = " << worlds[worldIx].updSampler(samplerIx)->getTemperature()
 				<< " initial const state PE: " << std::setprecision(20)
-				//<< (updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy((updWorld(worldIx))->integ->updAdvancedState())
-				//<< (updWorld(worldIx))->forces->getMultibodySystem().calcPotentialEnergy(updAdvancedState(worldIx, samplerIx))
+				//<< worlds[worldIx].forces->getMultibodySystem().calcPotentialEnergy(worlds[worldIx].integ->updAdvancedState())
+				//<< worlds[worldIx].forces->getMultibodySystem().calcPotentialEnergy(updAdvancedState(worldIx, samplerIx))
 				<< " useFixmanPotential = "
-				<< pHMC(updWorld(worldIx)->updSampler(samplerIx))->isUsingFixmanPotential()
+				<< pHMC(worlds[worldIx].updSampler(samplerIx))->isUsingFixmanPotential()
 				<< std::endl;
 		}
 
@@ -3526,7 +3325,7 @@ void Context::PrintMolmodelAndDuMMTypes(){
 		for(std::size_t molIx = 0; molIx < nofMols; molIx++){
 			std::cout << "Context::PrintMolmodelAndDuMMTypes molecule " << molIx << "\n";
 			const Topology& topology = worlds[worldIx].getTopology(molIx);
-			SimTK::DuMMForceFieldSubsystem& dumm = *((updWorld(worldIx))->forceField);
+			SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[worldIx].forceField);
 			topology.PrintMolmodelAndDuMMTypes(dumm);
 		}
 	}
@@ -3556,31 +3355,21 @@ void Context::checkAtomStationsThroughDumm()
 {
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
 		for (int samplerIx = 0;
-			samplerIx < getWorld(worldIx)->getNofSamplers();
+			samplerIx < worlds[worldIx].getNofSamplers();
 			samplerIx++){
-			(updWorld(worldIx)->updSampler(samplerIx))->checkAtomStationsThroughDumm();
+			(worlds[worldIx].updSampler(samplerIx))->checkAtomStationsThroughDumm();
 		}
 	}
 }
 
-// Get world
-World * Context::getWorld() {
-	return &worlds.back();
+World& Context::getWorld(std::size_t whichWorld)
+{
+	return worlds[whichWorld];
 }
 
-// Get a specific world
-World * Context::getWorld(std::size_t which) {
-	return &worlds[which];
-}
-
-// Get the last mutable world
-World * Context::updWorld(){
-	return &worlds.back();
-}
-
-// Get a mutable specific world
-World * Context::updWorld(std::size_t which) {
-	return &worlds[which];
+const World& Context::getWorld(std::size_t whichWorld) const
+{
+	return worlds[whichWorld];
 }
 
 std::size_t Context::getNofWorlds() const
@@ -3597,245 +3386,6 @@ int Context::getNofMolecules()
 {
 	return nofMols;
 }
-
-// Set mixing rule for Lennard-Jones
-void Context::setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mixingRule){
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		(updWorld(worldIx))->updForceField()->setVdwMixingRule(mixingRule);
-	}
-}
-
-/////////////////////////
-// --- Thermodynamics ---
-/////////////////////////
-
-// Get/set the main temperature (acc/rej temperature for MC)
-SimTK::Real Context::getTemperature(std::size_t whichWorld) const
-{
-	return worlds[whichWorld].temperature;
-}
-
-void  Context::setTemperature(std::size_t whichWorld,
-	float someTemperature)
-{
-	std::cout << " Context::setTemperature for world " 
-		<< whichWorld << " " << someTemperature << std::endl;
-	worlds[whichWorld].setTemperature(someTemperature);
-}
-
-// Set a temperature for all the worlds
-void  Context::setTemperature(float someTemperature){
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		worlds[worldIx].setTemperature(someTemperature);
-	}
-}
-
-
-// If HMC, get/set the guidance Hamiltonian temperature
-SimTK::Real Context::getGuidanceTemperature(std::size_t, std::size_t)
-{
-	// function args were std::size_t whichWorld, std::size_t whichSampler
-	assert(!"Not implemented"); throw std::exception();
-
-	return SimTK::NaN;
-}
-
-void Context::setGuidanceTemperature(std::size_t, std::size_t, SimTK::Real)
-{
-	// function args were std::size_t whichWorld,
-	// std::size_t whichSampler, float someTemperature
-	assert(!"Not implemented"); throw std::exception();
-}
-//------------
-
-/////////////////////////
-// --- Simulation parameters ---
-/////////////////////////
-/* 
-* Add a sampler
-*/
-BaseSampler * Context::addSampler(
-	std::size_t whichWorld,
-	SamplerName whichSampler,
-	IntegratorName whichIntegrator)
-{
-	assert(!"Not implemented");
-/* 	// We only use HMCSampler for now. Later we'll add LAHMC and Girolami
-	if( !samplerName.empty() ){
-
-		// Add HMCSampler
-		BaseSampler *p = worlds[whichWorld].addSampler(whichSampler);
-
-		// Set the chain generation method (ex. Markov Cahin Monte Carlo)
-		pHMC(p)->setSampleGenerator(whichSampler);
-
-		// Set the integration method
-		pHMC(p)->setIntegratorName(whichIntegrator);	
-
-		return p;
-	}else{
-		// Replace with a macro
-		std::cerr << cerr_prefix << "Context No sampler specified.\n";throw std::exception();std::exit(1);
-	}	 */
-}
-
-/* 
-* Add a sampler
-*/
-BaseSampler * Context::addSampler(
-	std::size_t whichWorld,
-	std::string samplerName,
-	std::string integratorName)
-{
-
-	// We only use HMCSampler for now. Later we'll add LAHMC and Girolami
-	if( !samplerName.empty() ){
-
-		// Add HMCSampler
-		BaseSampler *p = worlds[whichWorld].addSampler(SamplerName::HMC);
-		
-		// Set the chain generation method (ex. Markov Cahin Monte Carlo)
-		pHMC(p)->setSampleGenerator(samplerName);
-
-		// Set the integration method
-		pHMC(p)->setIntegratorName(integratorName);
-
-		return p;
-
-	}else{
-		// Replace with a macro
-		std::cerr << "Context No sampler specified.\n";throw std::exception();std::exit(1);
-	}
-
-}
-
-void Context::initializeSampler(std::size_t whichWorld,
-	std::size_t whichSampler)
-{
-
-	World& thisWorld = worlds[whichWorld];
-	SimTK::State& worldAdvancedState = thisWorld.integ->updAdvancedState();
-	HMCSampler *poHMC = worlds[whichWorld].updSampler(whichSampler);
-	poHMC->initialize( worldAdvancedState );
-
-	// auto compoundSystem = worlds[whichWorld].getCompoundSystem();
-	// auto forces = worlds[whichWorld].getGeneralForceSubsystem();
-	// auto matter = worlds[whichWorld].getSimbodyMatterSubsystem();
-	// worlds[whichWorld].updSampler(whichSampler)->initializeTaskSpace(*compoundSystem, *forces, *matter);
-	// worlds[whichWorld].updSampler(whichSampler)->initializeTaskSpace(
-	// *worlds[whichWorld].getCompoundSystem(),
-	// *worlds[whichWorld].getGeneralForceSubsystem(),
-	// *worlds[whichWorld].getSimbodyMatterSubsystem());
-}
-
-
-// Amber like scale factors.
-void Context::setAmberForceFieldScaleFactors(std::size_t whichWorld)
-{
-	worlds[whichWorld].setAmberForceFieldScaleFactors();
-}
-
-// Amber like scale factors.
-void Context::setAmberForceFieldScaleFactors()
-{
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		worlds[worldIx].setAmberForceFieldScaleFactors();
-	}
-}
-
-// Set a global scaling factor for the forcefield
-void Context::setGlobalForceFieldScaleFactor(
-	std::size_t whichWorld, SimTK::Real globalScaleFactor)
-{
-	worlds[whichWorld].setGlobalForceFieldScaleFactor(globalScaleFactor);
-}
-
-void Context::setGlobalForceFieldScaleFactor(SimTK::Real globalScaleFactor)
-{
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		worlds[worldIx].setGlobalForceFieldScaleFactor(globalScaleFactor);
-	}
-}
-
-// Set GBSA implicit solvent scale factor
-void Context::setGbsaGlobalScaleFactor(std::size_t whichWorld, SimTK::Real gbsaGlobalScaleFactor)
-{
-	worlds[whichWorld].setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
-}
-
-void Context::setGbsaGlobalScaleFactor(SimTK::Real gbsaGlobalScaleFactor){
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		worlds[worldIx].setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
-	}
-}
-
-// If HMC, get/set the number of MD steps
-int Context::getNofMDStepsPerSample(std::size_t whichWorld, std::size_t whichSampler)
-{
-   return pHMC(worlds[whichWorld].updSampler(whichSampler))->getMDStepsPerSample();
-}
-
-void Context::setNofMDStepsPerSample(
-	std::size_t whichWorld,
-	std::size_t whichSampler,
-	int MDStepsPerSample)
-{
-   nofMDStepsPerSample[whichWorld] = MDStepsPerSample;
-
-   pHMC(worlds[whichWorld].updSampler(whichSampler))->setMDStepsPerSample(MDStepsPerSample);
-
-}
-
-// If HMC, get/set timestep forMD
-SimTK::Real Context::getTimestep(std::size_t whichWorld, std::size_t whichSampler) const
-{
-	return pHMC(worlds[whichWorld].getSampler(whichSampler))->getTimeStepper()->getIntegrator().getPredictedNextStepSize();
-}
-
-void Context::setTimestep(std::size_t whichWorld, std::size_t whichSampler, SimTK::Real argTimestep)
-{
-	//worlds[whichWorld].updSampler(whichSampler)->updTimeStepper()->updIntegrator().setFixedStepSize(argTimestep);
-	pHMC(worlds[whichWorld].updSampler(whichSampler))->setTimestep(argTimestep);
-}
-
-// Use Fixman torque as an additional force subsystem
-void Context::addFixmanTorque(std::size_t whichWorld)
-{
-	worlds[whichWorld].addFixmanTorque();
-}
-
-bool Context::isUsingFixmanTorque(std::size_t whichWorld) const
-{
-	return worlds[whichWorld].isUsingFixmanTorque();
-}
-
-void Context::setFixmanTorqueScaleFactor(std::size_t whichWorld, SimTK::Real scaleFactor)
-{
-	std::cout << "Context::setFixmanTorqueScaleFactor: ( (FixmanTorque *) (worlds["
-	<< whichWorld << "]->updFixmanTorque()) )->setScaleFactor(" << scaleFactor << ") "<< std::endl;
-	( (FixmanTorque *) (worlds[whichWorld].updFixmanTorque()) )->setScaleFactor(scaleFactor);
-}
-
-void Context::setFixmanTorqueTemperature(std::size_t whichWorld, SimTK::Real argTemperature)
-{
-	std::cout << "Context::setFixmanTemperature: ( (FixmanTorque *) (worlds["
-	<< whichWorld << "]->updFixmanTorque()) )->setTemperature(" << argTemperature << ") "<< std::endl;
-	( (FixmanTorque *) (worlds[whichWorld].updFixmanTorque()) )->setTemperature(argTemperature);
-}
-
-// Use Fixman potential
-void Context::useFixmanPotential(std::size_t whichWorld, std::size_t whichSampler)
-{
-	pHMC(worlds[whichWorld].updSampler(whichSampler))->useFixmanPotential();
-}
-
-bool Context::isUsingFixmanPotential(std::size_t whichWorld, std::size_t whichSampler)
-{
-	return pHMC(worlds[whichWorld].updSampler(whichSampler))->isUsingFixmanPotential();
-}
-
-
-//------------
 
 /////////////////////////
 // --- Mixing parameters ---
@@ -3876,7 +3426,7 @@ void Context::allocateReblockQsCache()
 	}
 }
 
-// This seems wrong !!!
+// TODO This seems wrong !!!
 void Context::allocateReblockQsCacheQVectors(){
 	// Adaptive Gibbs blocking: // TODO generalized coord may not always be Real
 	if(QsCache[0][0].size() == 0){
@@ -3899,18 +3449,6 @@ void Context::allocateReblockQsCacheQVectors(){
 	}
 }
 
-// Get the number of samples returned by the sampler in one round
-SimTK::Real Context::getNofSamplesPerRound(std::size_t whichWorld)
-{
-	return nofSamplesPerRound[whichWorld];
-}
-
-// Set the number of samples returned by the sampler in one round
-void Context::setNofSamplesPerRound(std::size_t whichWorld, SimTK::Real MCStepsPerRound)
-{
-	nofSamplesPerRound[whichWorld] = MCStepsPerRound;
-}
-
 // Return the world index in position 'which'. To be used when rotationg
 std::size_t Context::getWorldIndex(std::size_t which) const
 {
@@ -3925,17 +3463,6 @@ void Context::initializeMixingParamters(){assert(!"Not implemented"); throw std:
 void Context::RotateWorlds(){assert(!"Not implemented"); throw std::exception();}
 //------------
 
-// SImulate Tempering
-void Context::setNofBoostStairs(std::size_t whichWorld, int howManyStairs)
-{
-	nofBoostStairs[whichWorld] = howManyStairs;
-}
-
-int Context::getNofBoostStairs(std::size_t whichWorld)
-{
-	return nofBoostStairs[whichWorld];
-}
-
 // Simulated Tempering
 void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 
@@ -3945,7 +3472,7 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 	// Write the initial Default Configuration of the first Compound of the first World
 	PdbStructure  pdb(worlds[0].getTopology(0));
 	std::ostringstream sstream;
-	sstream << "pdbs/sb_" << (updWorld(worldIndexes.back())->getTopology(0)).getName() <<"_ini"<<".pdb";
+	sstream << "pdbs/sb_" << (worlds[worldIndexes.back()].getTopology(0)).getName() <<"_ini"<<".pdb";
 	std::string ofilename = sstream.str();
 	std::filebuf fb;
 	std::cout<<"Writing pdb file: "<<ofilename<<std::endl;
@@ -3955,11 +3482,11 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 	fb.close();
 
 	// Simulated Tempering specifics
-	//SimTK::Real iniBoostBeta = updWorld(worldIndexes.front())->updSampler(0)->getBeta(); // Intial beta
-	//SimTK::Real finBoostBeta = 1.0 / (updWorld(worldIndexes.front())->updSampler(0)->getBoostTemperature() * SimTK_BOLTZMANN_CONSTANT_MD);
-	//SimTK::Real iniBoostT = updWorld(worldIndexes.front())->updSampler(0)->getTemperature();
-	//SimTK::Real finBoostT = updWorld(worldIndexes.front())->updSampler(0)->getBoostTemperature();
-	//SimTK::Real dBoostT = (finBoostT - iniBoostT) / this->nofBoostStairs[0];
+	//SimTK::Real iniBoostBeta = worlds[worldIndexes.front()].updSampler(0)->getBeta(); // Intial beta
+	//SimTK::Real finBoostBeta = 1.0 / (worlds[worldIndexes.front()].updSampler(0)->getBoostTemperature() * SimTK_BOLTZMANN_CONSTANT_MD);
+	//SimTK::Real iniBoostT = worlds[worldIndexes.front()].updSampler(0)->getTemperature();
+	//SimTK::Real finBoostT = worlds[worldIndexes.front()].updSampler(0)->getBoostTemperature();
+	//SimTK::Real dBoostT = (finBoostT - iniBoostT) / this->nofBoostStairs[0]; // TODO does nofBoostStairs[0] belong to world?
 
 	// Main
 	for(int round = 0; round < requiredNofRounds; round++){ // Iterate rounds
@@ -3973,44 +3500,44 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			lastWorldIx = worldIndexes.back();
 
 			// Transfer coordinates from last world to current
-			SimTK::State& lastAdvancedState = updWorld(lastWorldIx)->integ->updAdvancedState();
-			SimTK::State& currentAdvancedState = updWorld(currentWorldIx)->integ->updAdvancedState();
+			SimTK::State& lastAdvancedState = worlds[lastWorldIx].integ->updAdvancedState();
+			SimTK::State& currentAdvancedState = worlds[currentWorldIx].integ->updAdvancedState();
 
 			if(worldIndexes.size() > 1) {
 				// DANGER ZONE
 				const std::vector<std::vector<std::pair<
 					bSpecificAtom *, SimTK::Vec3> > >&
-					otherWorldsAtomsLocations = updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState);
+					otherWorldsAtomsLocations = worlds[worldIndexes.back()].getAtomsLocationsInGround(lastAdvancedState);
 
 					// Pass compounds to the new world
 					//passTopologiesToNewWorld(currentWorldIx);
 
-					currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
+					currentAdvancedState = worlds[currentWorldIx].setAtomsLocationsInGround(
 							currentAdvancedState, otherWorldsAtomsLocations);
 				// SAFE ZONE
-				//	currentAdvancedState = updWorld(currentWorldIx)->setAtomsLocationsInGround(
+				//	currentAdvancedState = worlds[currentWorldIx].setAtomsLocationsInGround(
 				//			currentAdvancedState,
-				//			updWorld(worldIndexes.back())->getAtomsLocationsInGround(lastAdvancedState));
+				//			worlds[worldIndexes.back()].)->getAtomsLocationsInGround(lastAdvancedState));
 				// ZONE
 
 			}
 
 			// Check if reconstructions is done correctly
-			//double backSetE = pMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE();
-			//double backCalcE = updWorld(lastWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(lastAdvancedState);
-			//double currOldE = pMC(updWorld(currentWorldIx)->updSampler(0))->getOldPE();
-			//double currCalcE = updWorld(currentWorldIx)->forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
+			//double backSetE = pMC(worlds[lastWorldIx].updSampler(0))->getSetPE();
+			//double backCalcE = worlds[lastWorldIx].forceField->CalcFullPotEnergyIncludingRigidBodies(lastAdvancedState);
+			//double currOldE = pMC(worlds[currentWorldIx].updSampler(0))->getOldPE();
+			//double currCalcE = worlds[currentWorldIx].forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);
 
 			// Set old potential energy of the new world
-			pHMC(updWorld(currentWorldIx)->updSampler(0))->setOldPE(
-					pHMC(updWorld(lastWorldIx)->updSampler(0))->getSetPE() );
+			pHMC(worlds[currentWorldIx].updSampler(0))->setOldPE(
+					pHMC(worlds[lastWorldIx].updSampler(0))->getSetPE() );
 
 			// Reinitialize current sampler
-			updWorld(currentWorldIx)->updSampler(0)->reinitialize(currentAdvancedState);
+			worlds[currentWorldIx].updSampler(0)->reinitialize(currentAdvancedState);
 
 			// Update
-			for(int k = 0; k < int(getNofSamplesPerRound(currentWorldIx)); k++){ 
-				updWorld(currentWorldIx)->updSampler(0)->sample_iteration(currentAdvancedState);
+			for(int k = 0; k < worlds[currentWorldIx].getSamplesPerRound(); k++){ 
+				worlds[currentWorldIx].updSampler(0)->sample_iteration(currentAdvancedState);
 			} // END for samples
 
 		} // for i in worlds
@@ -4029,11 +3556,11 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 		if( pdbRestartFreq != 0){
 			if(((round) % pdbRestartFreq) == 0){
 
-				const SimTK::State& pdbState = updWorld(worldIndexes.front())->integ->updAdvancedState();
-				updWorld(worldIndexes.front())->updateAtomListsFromCompound(pdbState);
+				const SimTK::State& pdbState = worlds[worldIndexes.front()].integ->updAdvancedState();
+				worlds[worldIndexes.front()].updateAtomListsFromCompound(pdbState);
 
 				for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-					updWorld(worldIndexes.front())->getTopology(mol_i).writeAtomListPdb(getOutputDir(),
+					worlds[worldIndexes.front()].getTopology(mol_i).writeAtomListPdb(getOutputDir(),
 						"/pdbs/sb." +
 						getPdbPrefix() + "." + std::to_string(mol_i) + ".",
 						".pdb", 10, round);
@@ -4114,8 +3641,7 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 	for(std::size_t molIx = 0; molIx < nofMols; molIx++){
 
 		// Aquire the CompoundSystem
-		topologies[molIx].setMultibodySystem(
-			*((updWorld(newWorldIx))->compoundSystem) );
+		topologies[molIx].setMultibodySystem(*worlds[newWorldIx].compoundSystem);
 
 		// Reset mobilized body indeces in Compound
 		for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
@@ -4620,7 +4146,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	nofAttemptedSwapsMatrix[thermoState_H][thermoState_C] += 1;
 
 	// For useful functions
-	auto genericSampler = updWorld(0)->updSampler(0);
+	auto genericSampler = worlds[0].updSampler(0);
 
 	// ----------------------------------------------------------------
 	// INITIAL PE x,y 0
@@ -5483,23 +5009,23 @@ bool Context::RunWorld(int whichWorld)
 {
 	// == SAMPLE == from the current world
 	bool validated = false;
+	const int numSamples = worlds[whichWorld].getSamplesPerRound();
+	const int distortOption = worlds[whichWorld].getDistortOption();
 
 	// Equilibrium world
-	if(NDistortOpt[whichWorld] == 0){
+	if(distortOption == 0) {
 
-		validated = worlds[whichWorld].generateSamples(
-			int(nofSamplesPerRound[whichWorld]));
+		validated = worlds[whichWorld].generateSamples(numSamples);
 
 	// Non-equilibrium world
-	}else if(NDistortOpt[whichWorld] == -1){
+	} else if (distortOption == -1) {
 
 		// Generate samples
-		validated = worlds[whichWorld].generateSamples(
-			int(nofSamplesPerRound[whichWorld]));
+		validated = worlds[whichWorld].generateSamples(numSamples);
 
 	}
-	return validated;
 
+	return validated;
 }
 
 // Rewind back world
@@ -6084,20 +5610,20 @@ void Context::randomizeWorldIndexes()
 void Context::transferCoordinates(int src, int dest)
 {
 	// Get advanced states of the integrators
-	SimTK::State& lastAdvancedState = updWorld(src)->integ->updAdvancedState();
-	SimTK::State& currentAdvancedState = updWorld(dest)->integ->updAdvancedState();
+	SimTK::State& lastAdvancedState = worlds[src].integ->updAdvancedState();
+	SimTK::State& currentAdvancedState = worlds[dest].integ->updAdvancedState();
 
 	// Get coordinates from source
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		otherWorldsAtomsLocations =
-	updWorld(src)->getAtomsLocationsInGround(lastAdvancedState);
+	worlds[src].getAtomsLocationsInGround(lastAdvancedState);
 
 	// Pass compounds to the new world
 	passTopologiesToNewWorld(dest);
 
 	// Set coordinates to destination (reconstruct)
-	currentAdvancedState = updWorld(dest)->setAtomsLocationsInGround(
+	currentAdvancedState = worlds[dest].setAtomsLocationsInGround(
 		currentAdvancedState, otherWorldsAtomsLocations);
 }
 
@@ -6217,7 +5743,9 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 
 			// Set current temperature
 			currT += Tincr;
-			setTemperature(currT);
+			for (auto& world : worlds) {
+				world.setTemperature(currT);
+			}
 			std::cout << "T= " << currT << std::endl;
 
 			RunOneRound();
@@ -6569,8 +6097,7 @@ void Context::writeInitialPdb()
 
 	// - we need this to get compound atoms
 	int currentWorldIx = worldIndexes.front();
-	SimTK::State& advancedState =
-		(updWorld(currentWorldIx))->integ->updAdvancedState();
+	SimTK::State& advancedState = worlds[currentWorldIx].integ->updAdvancedState();
 
 	constexpr int mc_step = -1;
 
@@ -6578,7 +6105,7 @@ void Context::writeInitialPdb()
 	passTopologiesToNewWorld(currentWorldIx);
 
 	// 
-	(updWorld(currentWorldIx))->updateAtomListsFromCompound(advancedState);
+	worlds[currentWorldIx].updateAtomListsFromCompound(advancedState);
 	std::cout << "Writing pdb initial" << mc_step << ".pdb" << std::endl;
 
 	// 
@@ -6894,7 +6421,7 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 				for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
 					for (int topologyIx = 0;topologyIx < cliqueAtomIxs[contactCliqueIx].size(); topologyIx++){
 						
-						(updWorld(worldIx))->addContacts(
+						worlds[worldIx].addContacts(
 								cliqueAtomIxs[contactCliqueIx][topologyIx],
 								topologyIx,
 								SimTK::ContactCliqueId(contactCliqueIx));
@@ -6905,7 +6432,7 @@ void Context::addContactImplicitMembrane(const float memZWidth, const SetupReade
 
 		// Add membrane to all worlds.
 		for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-			(updWorld(worldIx))->addMembrane(memZWidth);
+			worlds[worldIx].addMembrane(memZWidth);
 		}
 
 		// Print

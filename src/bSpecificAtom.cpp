@@ -59,7 +59,7 @@ void bSpecificAtom::destroy() {
     }
 }
 
-void bSpecificAtom::Print(int whichWorld)
+void bSpecificAtom::Print(int whichWorld) const
 {
     std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName
         <<" number "<<number<<" atomIndex  "<<compoundAtomIndex<<" elem "<<elem<<" atomicNumber "<<atomicNumber

@@ -473,8 +473,17 @@ public:
 	std::size_t getNofSamplers() const;
 
 	/** Add a sampler to the World **/
-	BaseSampler* addSampler(std::string samplerName);
-	BaseSampler* addSampler(SamplerName);
+	bool addSampler(SamplerName samplerName,
+		const std::string& generatorName,
+		const std::string& integratorName,
+		const std::string& thermostatName,
+		SimTK::Real boostTemperature,
+		SimTK::Real timestep,
+		int mdStepsPerSample,
+		int mdStepsPerSampleStd,
+		int boostMDSteps,
+		bool useFixmanPotential,
+		int seed);
 
 	// TODO Use Sampler polymorphism
 	/** Get a sampler based on its position in the samplers vector **/
@@ -723,7 +732,14 @@ public:
 	// X axis to X axis switch
 	const SimTK::Transform Y_to_X =
 		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
-	const SimTK::Transform X_to_Y = ~Y_to_X;	
+	const SimTK::Transform X_to_Y = ~Y_to_X;
+
+	void setSamplesPerRound(int samples);
+	int getSamplesPerRound() const;
+
+	void setDistortOption(int distort);
+	int getDistortOption() const;
+
 	
 private:
 	// Map mbx2aIx contains only atoms at the origin of mobods
@@ -738,6 +754,9 @@ private:
 
 	// Track the Stage of the system
 	SimTK::Stage currStage;
+
+	int samplesPerRound = 0;
+	int distortOption = 0;
 };
 
 #endif /*WORLD_H_*/

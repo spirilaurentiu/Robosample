@@ -183,61 +183,8 @@ public:
 	int getNofMolecules();
 	//------------
 
-	// --- Thermodynamics ---
-	// Set mixing rule for Lennard-Jones
-	void setVdwMixingRule(SimTK::DuMMForceFieldSubsystem::VdwMixingRule mixingRule);
-
-	// Get/set the main temperature (acc/rej temperature for MC)
-	SimTK::Real getTemperature(std::size_t whichWorld) const;
-	void  setTemperature(std::size_t whichWorld, float someTemperature);
-	void setTemperature(float someTemperature);
-
-	// If HMC, get/set the guidance Hamiltonian temperature
-	SimTK::Real getGuidanceTemperature(std::size_t whichWorld, std::size_t whichSampler);
-	void  setGuidanceTemperature(std::size_t whichWorld, std::size_t whichSampler, SimTK::Real someTemperature);
-	//------------
-
 	// --- Simulation parameters ---
 
-	// Add sampler
-	BaseSampler* addSampler(std::size_t whichWorld,
-		std::string samplerName, std::string integratorName);
-
-	BaseSampler* addSampler(std::size_t whichWorld,
-		SamplerName whichSampler, IntegratorName whichIntegrator);
-
-	// Samplers have to set parameters after Simbody subsystems generation
-	void initializeSampler(std::size_t whichWorld, std::size_t whichSampler);
-
-	// Amber like scale factors.
-	void setAmberForceFieldScaleFactors(std::size_t whichWorld);
-	void setAmberForceFieldScaleFactors(void);
-
-	// Set a global scaling factor for the forcefield
-	void setGlobalForceFieldScaleFactor(std::size_t whichWorld, SimTK::Real);
-	void setGlobalForceFieldScaleFactor(SimTK::Real);
-
-	// Set GBSA implicit solvent scale factor
-	void setGbsaGlobalScaleFactor(std::size_t whichWorld, SimTK::Real);
-	void setGbsaGlobalScaleFactor(SimTK::Real);
-
-	// If HMC, get/set the number of MD steps
-	int getNofMDStepsPerSample(std::size_t whichWorld, std::size_t whichSampler);
-	void setNofMDStepsPerSample(std::size_t whichWorld, std::size_t whichSampler, int MDStepsPerSample);
-
-	// If HMC, get/set timestep forMD
-	SimTK::Real getTimestep(std::size_t whichWorld, std::size_t whichSampler) const;
-	void setTimestep(std::size_t whichWorld, std::size_t whichSampler, SimTK::Real timeStep);
-
-	// Use Fixman torque as an additional force subsystem
-	void useFixmanPotential(std::size_t whichWorld, std::size_t whichSampler);
-	bool isUsingFixmanPotential(std::size_t whichWorld, std::size_t whichSampler);
-
-	void addFixmanTorque(std::size_t whichWorld);
-	bool isUsingFixmanTorque(std::size_t whichWorld) const;
-
-	void setFixmanTorqueScaleFactor(std::size_t whichWorld, SimTK::Real scaleFactor);
-	void setFixmanTorqueTemperature(std::size_t whichWorld, SimTK::Real temperature);
 	//------------
 
 	// --- Mixing parameters ---
@@ -249,9 +196,6 @@ public:
 	void setNofRoundsTillReblock(int nofRoundsTillReblock);
 	void updNofRoundsTillReblock(int nofRoundsTillReblock);
 
-	SimTK::Real getNofSamplesPerRound(std::size_t whichWorld);
-	void setNofSamplesPerRound(std::size_t whichWorld, SimTK::Real MCStepsPerRound);
-
 	std::size_t getWorldIndex(std::size_t which) const;
 
 	// Adaptive Gibbs blocking: TODO: consider moving in World
@@ -262,9 +206,6 @@ public:
 	void initializeMixingParamters();
 	//------------
 
-	void addEmptyWorlds(std::size_t NofWorlds, std::vector<double> visualizerFrequencies);
-	World * addWorld(bool visual, SimTK::Real visualizerFrequency = 0.0015);
-	//World * AddWorld(World *, bool visual);
 	void addWorld(
 		bool fixmanTorque,
 		bool useOpenMM,
@@ -282,11 +223,8 @@ public:
 	// Load/store Mobilized bodies joint types in samplers
 	void loadMbxsToMobilities(void);
 
-	World * getWorld();
-	World * getWorld(std::size_t which);
-
-	World * updWorld();
-	World * updWorld(std::size_t which);
+	World& getWorld(std::size_t which);
+	const World& getWorld(std::size_t which) const;
 
 	// Returns the size of the worlds vector
 	std::size_t getNofWorlds() const;
@@ -310,8 +248,6 @@ public:
 	void RunOneRound(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
-	void setNofBoostStairs(std::size_t whichWorld, int howManyStairs);
-	int getNofBoostStairs(std::size_t whichWorld);
 	void setNumThreadsRequested(std::size_t which, int howMany);
 	void setUseOpenMMAcceleration(bool arg);
 	void setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize);
@@ -577,13 +513,11 @@ public:
 
 	void PrintBonds(void);
 
-protected:
+private:
 	bool CreateOutputDirectory(const std::string& outDir);
 	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
 	std::string GetMoleculeDirectoryShort(const std::string& path) const;
 	bool CheckInputParameters(const SetupReader& setupReader);
-	void reserveWorldsAndTopologies(int inpNofWorlds, int inpNofMols,
-		int inpNofEmbeddedTopologies);
 
 	std::vector<int> TopologyIXs;
 	std::vector<std::vector<int>> AmberAtomIXs;
@@ -623,11 +557,6 @@ protected:
 
 	std::size_t nofWorlds = 0;
 	bool isWorldsOrderRandom = false;
-	std::vector<SimTK::Real> nofSamplesPerRound;
-	std::vector<int> nofMDStepsPerSample;
-	std::vector<SimTK::Real> timesteps;
-
-	std::vector<int> nofBoostStairs;
 
 	std::size_t nofMols = 0;
 	std::size_t nofEmbeddedTopologies = 0; // nofWorlds x nofMols
@@ -656,9 +585,6 @@ protected:
 	int roundsTillReblock;
 	std::vector<std::vector<std::vector<SimTK::Real>>>
 		QsCache; // 1D nofWorlds; 2D roundsTillReblock; 3D nofQs
-
-	// Normal mode analysis
-	std::vector<int> NDistortOpt;
 
 	////////////////////////
 	//// REPLICA EXCHANGE //

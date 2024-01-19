@@ -2800,9 +2800,11 @@ Fixman torque temperature. **/
 void World::setTemperature(SimTK::Real argTemperature)
 {
 	// Set the temperature for the samplers
+	// TODO unused
 	for (auto& sampler: samplers) {
 		sampler->setTemperature(argTemperature);
 	}
+
 	// Set the temperature for this World
 	this->temperature = argTemperature;
 
@@ -2950,19 +2952,50 @@ std::size_t World::getNofSamplers() const
 
 /** Add a sampler to this World using the specialized struct
 for samplers names. **/
-BaseSampler * World::addSampler(SamplerName samplerName)
+bool World::addSampler(SamplerName samplerName,
+	const std::string& generatorName,
+	const std::string& integratorName,
+	const std::string& thermostatName,
+	SimTK::Real boostTemperature,
+	SimTK::Real timestep,
+	int mdStepsPerSample,
+	int mdStepsPerSampleStd,
+	int boostMDSteps,
+	bool useFixmanPotential,
+	int seed)
 {
 	// We only use HMCSampler for now
 	if(samplerName == SamplerName::HMC) {
-        	samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
-	} /*else if (samplerName == SamplerName::LAHMC) {
-        samplers.emplace_back(std::make_unique<LAHMCSampler>(this
-		, compoundSystem.get(), matter.get(), topologies
-		, forceField.get(), forces.get()
-		, ts.get(), 4));
-	}*/
 
-	return samplers.back().get();
+		// Construct a new sampler
+		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
+		
+		// Set sampler parameters
+		samplers.back()->setSampleGenerator(generatorName);
+		samplers.back()->setIntegratorName(integratorName);
+		samplers.back()->setThermostat(thermostatName);
+		samplers.back()->setTemperature(this->temperature);
+		samplers.back()->setBoostTemperature(boostTemperature);
+		samplers.back()->setTimestep(timestep);
+		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
+		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
+		samplers.back()->setBoostMDSteps(boostMDSteps);
+		samplers.back()->setDistortOption(distortOption);
+		samplers.back()->setSeed(seed);
+
+		if (useFixmanPotential) {
+			samplers.back()->useFixmanPotential();
+		}
+	} else {
+		std::cerr << "Unknown sampler name" << std::endl;
+		return false;
+	}
+
+	// Initialize the sampler
+	SimTK::State& worldAdvancedState = integ->updAdvancedState();
+	samplers.back()->initialize(worldAdvancedState);
+
+	return true;
 }
 
 // Get a sampler based on its position in the samplers vector
@@ -3130,3 +3163,18 @@ void World::setCompoundSystem(CompoundSystem *inCompoundSystem) {
 // }
 
 
+void World::setSamplesPerRound(int samples) {
+	samplesPerRound = samples;
+}
+
+int World::getSamplesPerRound() const {
+	return samplesPerRound;
+}
+
+void World::setDistortOption(int distort) {
+	distortOption = distort;
+}
+
+int World::getDistortOption() const {
+	return distortOption;
+}

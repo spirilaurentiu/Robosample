@@ -43,7 +43,7 @@ public:
     void destroy();
 
 public:
-    void Print(int whichWorld);
+    void Print(int whichWorld) const;
 
     // Interface
     int getNBonds() const;
