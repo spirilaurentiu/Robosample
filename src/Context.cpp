@@ -833,12 +833,16 @@ void Context::loadTorsions(const readAmberInput& reader) {
 	}
 }
 
-
+/*!
+ * <!-- This is where we create a Comopund for each atom -->
+*/
 void Context::setAtomCompoundTypes() {
 	for(auto& atom : atoms) {
 		const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
+
+		// Create Compound
 		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
 	}
 }
@@ -1879,9 +1883,12 @@ void Context::buildAcyclicGraph_SP_NEW(
 
 		// ======================== ACTUAL BONDING ========================
 		scout("Bonding ")
-			<< "child " << child.getName() <<" " << child.getInName() <<" " << child.getNumber() <<" "
-			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" " << parent.getNumber() <<" "
-			<< "with bond center name " << parentBondCenterPathNameStr << eol;
+			<< "child " << child.getName() <<" " << child.getInName()
+			<<" " << child.getNumber() <<" "
+			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+			<< parent.getNumber() <<" "
+			<< "with bond center name " << parentBondCenterPathNameStr
+			<< eol;
 
 		// Bond
 		topology.bondAtom(child.getSingleAtom(),

@@ -2,6 +2,9 @@
 
 using namespace SimTK;
 
+/*!
+ * <!-- This is where we create a Comopund for a specific atom -->
+*/
 void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
     const std::string& atomName = getName();
     const int numAtomBonds = getNBonds();
@@ -17,13 +20,14 @@ void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
             compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
             break;
         case 3:
-            compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element); // 120 rad
+            compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element); // 120 rad x 3
             break;
         case 4:
             compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element); // 109.47 rad
             break;
         default:
-            std::cerr << "[ERROR] Atom " << atomName << " has " << numAtomBonds << " bonds, which is not supported." << std::endl;
+            std::cerr << "[ERROR] Atom " << atomName << " has " << numAtomBonds
+                << " bonds, which is not supported." << std::endl;
             throw std::exception();
     }
 
