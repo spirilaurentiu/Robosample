@@ -548,6 +548,10 @@ public:
 
 	int bSpecificAtomRootIndex;
 
+	// Atom frames in Top frame
+	std::vector<SimTK::Transform> atomFrameCache;
+
+
 private:
 
 

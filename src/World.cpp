@@ -391,8 +391,11 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 	// of Mobilizers to the Ground in the feature.
 	for ( std::size_t i = 0; i < this->topologies->size(); i++){
 
+			Topology& topology = (*topologies)[i];
+
 			compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(i),
+				topology.atomFrameCache,
 				rootMobilities[i]);
 
 		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
@@ -2950,8 +2953,10 @@ std::size_t World::getNofSamplers() const
 	return samplers.size();
 }
 
-/** Add a sampler to this World using the specialized struct
-for samplers names. **/
+/*!
+ * <!-- Add a sampler to this World using the specialized struct
+for samplers names. -->
+*/
 bool World::addSampler(SamplerName samplerName,
 	const std::string& generatorName,
 	const std::string& integratorName,
