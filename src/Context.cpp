@@ -424,33 +424,33 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
 		setRunType(0);
-		Run(getRequiredNofRounds(),
-			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+		// Run(getRequiredNofRounds(),
+		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 			
 	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 			setRunType(0);
-			RunSimulatedTempering(getRequiredNofRounds(),
-				std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-				std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+			// RunSimulatedTempering(getRequiredNofRounds(),
+			// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
 		setRunType(1);
-		RunREX();
+		// RunREX();
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
 		setRunType(2);
-		RunREX();
+		// RunREX();
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
 		setRunType(3);
-		RunREX();
+		// RunREX();
 
 	}else{
 		setRunType(0);
-		Run(getRequiredNofRounds(),
-			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+		// Run(getRequiredNofRounds(),
+		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 	}
 
     return true;
@@ -1765,10 +1765,26 @@ void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
 	}
 
 	// Match coordinates
-	topology.matchDefaultConfiguration(
-		atomTargets,
-		SimTK::Compound::Match_Exact,
-		true, 150.0);
+	// topology.matchDefaultConfiguration(
+	// 	atomTargets,
+	// 	SimTK::Compound::Match_Exact,
+	// 	true, 150.0);
+
+	//std::cout << "Match start." << "\n" << std::flush;
+	bool flipAllChirality = true;
+	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
+	topology.matchDefaultBondLengths(atomTargets);
+	//std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
+	topology.matchDefaultBondAngles(atomTargets);
+	//std::cout << "matchDefaultBondAngles done. " << "\n" << std::flush;
+	topology.matchDefaultDirections(atomTargets);
+	//std::cout << "matchDefaultDirections done. " << "\n" << std::flush;
+	topology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
+	//std::cout << "matchDefaultDefaultDihedralAngles done. " << "\n" << std::flush;
+	topology.matchDefaultTopLevelTransform(atomTargets);
+	//std::cout << "matchDefaultDefaultTopLevelTransform done. " << "\n" << std::flush;
+
 
 }
 
@@ -3193,7 +3209,7 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		initializeFlexibility();
 
 		// Set flexibility from file
-		setFlexibility("noregimen", flexFileFN, worldIx);		
+		setFlexibility("noregimen", flexFileFN, worldIx);
 
 		scout("Loaded flexibilities for world ") << worldIx << eol;
 

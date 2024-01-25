@@ -360,6 +360,7 @@ void World::SetBondFlexibilities(
 void World::adoptTopology(int which)
 {
 	// Add Topology to CompoundSystem and realize topology
+	scout("World: adopting ") << which <<" " << "topology" << eol;
 	compoundSystem->adoptCompound(((*topologies)[which]));
 
 	// Sets the
@@ -2142,7 +2143,8 @@ SimTK::State& World::setAtomsLocationsInGround(
 					}
 
 					//std::cout << "Match start." << "\n" << std::flush;
-					currTopology.matchDefaultAtomChirality(atomTargets, 0.01, false);
+					bool flipAllChirality = false;
+					currTopology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
 					//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
 					currTopology.matchDefaultBondLengths(atomTargets);
 					//std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
