@@ -61,8 +61,8 @@ public:
 	int getNofSamples();
 
 	// Get set the seed
-	int64_t getSeed() const;
-	void setSeed(int64_t);
+	uint32_t getSeed() const;
+	void setSeed(uint32_t);
 
 	// Draws one sample from vonMises distribution with concentration k
 	// The algorithm is taken from 1979 Best, page 155
@@ -159,18 +159,14 @@ public:
 
 	// Sampling
 	int nofSamples;
-	int64_t seed;
+	uint32_t seed;
 	bool acc;
 
-	// Random number generators - not sure if I need two
-	using RANDOM_ENGINE = std::mt19937_64; // mt19937_64
+	// Random number generators
 	RANDOM_ENGINE randomEngine;
 
 	// Use this to initialize randomEngine
-	using RANDOM_ENGINE_INIT = std::minstd_rand; // ranlux48
 	RANDOM_ENGINE_INIT randomEngineInit;
-
-	using RANDOM_ENGINE_INIT_RESULT_TYPE = uint32_t; 
 
 	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution_0_2pi =
 		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, 2*SimTK::Pi);

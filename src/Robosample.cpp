@@ -23,7 +23,12 @@ int main(int argc, char **argv)
 	}
 	
 	Context c;
-	bool singlePrmtop = true;
+
+	// c.setNumThreads(3);
+	// c.useVisualizer(frequency); // GLOBAL?
+
+
+	bool singlePrmtop = false;
 	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
 		return -1;
 	}

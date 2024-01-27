@@ -230,9 +230,6 @@ acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
 bool HMCSampler::initialize(SimTK::State& someState)
 {
-	// Set a validation flag
-	bool validated = true;
-
 	//system->realize(someState, SimTK::Stage::Model);
 
 	// After an event handler has made a discontinuous change to the
@@ -259,12 +256,8 @@ bool HMCSampler::initialize(SimTK::State& someState)
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
-	
-	// Transformation Jacobian
-	bendStretchJacobianDetLog = 0.0;
 
-	return validated;
-
+	return true;
 }
 
 
@@ -403,11 +396,15 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// Reset ndofs
 	ndofs = nu;
 
-	// Initialize velocities to temperature
-	for (int j=0; j < nu; ++j){
-		UScaleFactors[j] = 1;
-		InvUScaleFactors[j] = 1;
-	}
+	// TODO replaced code beloe
+	std::fill(UScaleFactors.begin(), UScaleFactors.end(), 1);
+	std::fill(InvUScaleFactors.begin(), InvUScaleFactors.end(), 1);
+
+	// // Initialize velocities to temperature
+	// for (int j=0; j < nu; ++j){
+	// 	UScaleFactors[j] = 1;
+	// 	InvUScaleFactors[j] = 1;
+	// }
 
 	// Set the generalized velocities scale factors
 	loadUScaleFactors(someState);
@@ -4295,4 +4292,19 @@ void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass)
 	if(integratorName == IntegratorName::OMMVV) {
 		dumm->setOpenMMparticleMass(nax, mass);
 	}
+}
+
+void HMCSampler::setNonequilibriumParameters(int distort, int work, int flow) {
+	DistortOpt = distort;
+	WorkOpt = work;
+	FlowOpt = flow;
+}
+
+int HMCSampler::getDistortOption() const {
+	return DistortOpt;
+}
+
+void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps) {
+	setBoostTemperature(boostTemperature); // used for OpenMM and other minor stuff
+	setBoostMDSteps(boostMDSteps); // not used
 }

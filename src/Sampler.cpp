@@ -61,14 +61,14 @@ Sampler::~Sampler() {
 // Random numbers
 
 // Get set the seed
-int64_t Sampler::getSeed() const
+uint32_t Sampler::getSeed() const
 {
     return this->seed;
 }
 
 /** Store the value of the seed internally and also feed it to the random
 number generator **/
-void Sampler::setSeed(int64_t argSeed)
+void Sampler::setSeed(uint32_t argSeed)
 {
     if(argSeed == 0) {
 		// We use chrono to get the time in ns.
@@ -77,16 +77,16 @@ void Sampler::setSeed(int64_t argSeed)
         int64_t clockSeed = dtn.count();
 
 		// Save the seed.
-        seed = clockSeed;
+        this->seed = static_cast<RANDOM_ENGINE_INIT::result_type>(clockSeed);
     } else {
 		// The seed is already provided, we just need to save it
-        seed = argSeed;
+        this->seed = argSeed;
     }
 
 	// We need many bytes of random data to initialize a Mersenne Twister.
 	// To ease reproducibility, we use one 32-bit seed to initialize a less powerful RNG.
 	// Then, we use this RNG to initialize the state of MT.
-	randomEngineInit.seed(seed); // TODO seed is 64 bit, but we cast here to 32. I guess it's alright
+	randomEngineInit.seed(seed);
 
 	// Initial generator function.
 	auto source = [this]() {
@@ -94,9 +94,9 @@ void Sampler::setSeed(int64_t argSeed)
 		// According to this https://stackoverflow.com/a/18262495, the lower bits are of not-so-exceptional quality.
 		// This is also stated in https://en.wikipedia.org/wiki/Linear_congruential_generator.
 		// In order to mitigate this, only keep the highest 32 bits.
-		// return static_cast<RANDOM_ENGINE_INIT_RESULT_TYPE>(randomEngineInit() >> sizeof(RANDOM_ENGINE_INIT_RESULT_TYPE)); // result is already 32 bit
+		// return static_cast<RANDOM_ENGINE_INIT::result_type>(randomEngineInit() >> sizeof(RANDOM_ENGINE_INIT::result_type)); // result is already 32 bit
 
-		return static_cast<RANDOM_ENGINE_INIT_RESULT_TYPE>(randomEngineInit());
+		return static_cast<RANDOM_ENGINE_INIT::result_type>(randomEngineInit());
 	};
 
 	// Size for initial state bits

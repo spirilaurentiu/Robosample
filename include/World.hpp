@@ -477,13 +477,13 @@ public:
 		const std::string& generatorName,
 		const std::string& integratorName,
 		const std::string& thermostatName,
-		SimTK::Real boostTemperature,
 		SimTK::Real timestep,
 		int mdStepsPerSample,
-		int mdStepsPerSampleStd,
-		int boostMDSteps,
+		int mdStepsPerSampleStd, 
 		bool useFixmanPotential,
 		int seed);
+
+	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);
 
 	// TODO Use Sampler polymorphism
 	/** Get a sampler based on its position in the samplers vector **/
@@ -656,8 +656,6 @@ public:
 	ContactCliqueId clique1;
 	std::unique_ptr<MobilizedBody::Weld> membrane;
 	std::unique_ptr<Body::Rigid> memBody;
-
-	bool _useFixmanTorque;
 	//...............
 
 	// --- Statistics ---
@@ -737,10 +735,6 @@ public:
 	void setSamplesPerRound(int samples);
 	int getSamplesPerRound() const;
 
-	void setDistortOption(int distort);
-	int getDistortOption() const;
-
-	
 private:
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx; // DANGER
@@ -755,8 +749,8 @@ private:
 	// Track the Stage of the system
 	SimTK::Stage currStage;
 
+	bool useFixmanTorque = false;
 	int samplesPerRound = 0;
-	int distortOption = 0;
 };
 
 #endif /*WORLD_H_*/

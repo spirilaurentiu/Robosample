@@ -96,10 +96,13 @@ struct RANDOM_CACHE {
 	int nu = -1;
 
 	RANDOM_CACHE() {
-		// Fill all state 19k bits of Mersenne Twister
+		// Mersenne Twister internal state is 19937 bits, that is 624 32-bit integers
+		// Note that std::seed_seq::result_type is uint32
 		std::vector<uint32_t> RandomData(624);
 		std::random_device Source;
 		std::generate(RandomData.begin(), RandomData.end(), std::ref(Source));
+
+		// Fill all state 19k bits of Mersenne Twister
 		std::seed_seq SeedSeq(RandomData.begin(), RandomData.end());
 		RandomEngine = std::mt19937(SeedSeq);
 
@@ -587,6 +590,10 @@ public:
 
 	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
 
+	void setNonequilibriumParameters(int distort, int work, int flow);
+	int getDistortOption() const;
+	void setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps);
+
 protected:
 
 	int equilNofRounds = 0;
@@ -680,7 +687,7 @@ protected:
 	SimTK::Real ke_prop_nma6;
 	SimTK::Real ke_n_nma6;
 
-	SimTK::Real bendStretchJacobianDetLog;
+	SimTK::Real bendStretchJacobianDetLog = 0;
 
 	SimTK::Real boostT;
 	SimTK::Real boostRT;

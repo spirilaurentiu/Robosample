@@ -69,27 +69,18 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 
 		addWorld(
-			(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"),
-			(setupReader.get("OPENMM")[worldIx] == "TRUE"), // mandatory true. keep for debugging
-			(setupReader.get("OPENMM_CalcOnlyNonbonded")[worldIx] == "TRUE"), // redundant, see below
-			(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"), // merge doar la lumea flexibila
-			std::stod(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
-			std::stod(setupReader.get("BOOST_MDSTEPS")[worldIx]),
-			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
-			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
+			setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE",
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]),
-			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
-			(setupReader.get("VISUAL")[worldIx] == "TRUE"),
+			setupReader.get("VISUAL")[worldIx] == "TRUE",
 			visualizerFrequency);
+
+		if (setupReader.get("OPENMM")[worldIx] == "TRUE") {
+			getWorld(worldIx).useOpenMM(
+				setupReader.get("INTEGRATORS")[worldIx] == "OMMVV",
+				std::stod(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
+				std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+		}
 	}
-
-	// Context c(numThreads = nproc, nbMethod = 0, nbCutoff = 1.2); // nu conteaza cutoff cand method = 0
-	// getWorld(0).useOpenMM(calcOnlyNB, useOMMintegrator);
-	// getWorld(0).useVisualizer(frequency);
-	// setGuidanceHamiltonian(BOOST_TEMPERATURE, BOOST_MDSTEPS); // default == tempIni
-
-	// setWork(distort, flow, work);
-	// setEvaluationHamiltonian(TEMPERATURE, );
 	
 	// Get how much available memory we have
 	struct sysinfo info;
@@ -220,13 +211,23 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			to_upper(setupReader.get("SAMPLERS")[worldIx]),
 			setupReader.get("INTEGRATORS")[worldIx],
 			setupReader.get("THERMOSTAT")[worldIx],
-			std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
 			std::stof(setupReader.get("TIMESTEPS")[worldIx]),
 			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
 			MDStepsPerSample,
-			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]),
-			(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"),
+			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE",
 			std::stoi(setupReader.get("SEED")[worldIx]));
+
+		world.getSampler(0)->setNonequilibriumParameters(
+			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
+			0, 0);
+
+		// TODO 
+		world.getSampler(0)->setGuidanceHamiltonian(
+			std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
+			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx])
+		);
+
+		// setEvaluationHamiltonian(TEMPERATURE, );
 
 		// Tell OpenMM what masses we're going to use
 		// By default, OpenMM uses Molmodel masses which do not match Amber masses
@@ -241,7 +242,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 	}
 
-	// If there is any problem here, it might be because this block was above the previous one
+	// TODO If there is any problem here, it might be because this block was above the previous one
 	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("SPHERE_RADIUS")[0] != "ERROR_KEY_NOT_FOUND") {
@@ -1256,15 +1257,7 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 // timestep in ps
 void Context::addWorld(
 	bool fixmanTorque,
-	bool useOpenMM,
-	bool useOpenMMOnlyNonBonded,
-	bool useOpenMMIntegrator,
-	SimTK::Real boostTemp,
-	int boostMDSteps,
-	SimTK::Real timestep,
-	int mdSteps,
 	int samplesPerRound,
-	int distort,
 	bool visual,
 	SimTK::Real visualizerFrequency) {
 
@@ -1300,20 +1293,10 @@ void Context::addWorld(
 	worlds.back().setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
 	worlds.back().updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot); // GLOBAL
 
-	// Use OpenMM if requested
-	worlds.back().updForceField()->setUseOpenMMAcceleration(useOpenMM);
-	worlds.back().updForceField()->setUseOpenMMCalcOnlyNonBonded(useOpenMMOnlyNonBonded);
-
-	if (useOpenMMIntegrator) {
-		worlds.back().updForceField()->setUseOpenMMIntegration(true);
-		worlds.back().updForceField()->setDuMMTemperature(boostTemp);
-		worlds.back().updForceField()->setOpenMMstepsize(timestep);
-	}
-
 	// Set how many times to run sample_iteration()
 	worlds.back().setSamplesPerRound(samplesPerRound);
 
-	worlds.back().setDistortOption(distort);
+	// Set temperatures for sampler and Fixman torque is applied to this world
 	worlds.back().setTemperature(tempIni);
 
 	rbSpecsFNs.push_back(std::vector<std::string>());
@@ -3452,9 +3435,12 @@ std::size_t Context::getNofWorlds() const
 	return nofWorlds;
 }
 
-SimTK::DuMMForceFieldSubsystem * Context::updForceField(std::size_t whichWorld)
-{
-	return worlds[whichWorld].updForceField();
+std::vector<World>& Context::getWorlds() {
+	return worlds;
+}
+
+const std::vector<World>& Context::getWorlds() const {
+	return worlds;
 }
 
 int Context::getNofMolecules()
@@ -5085,7 +5071,7 @@ bool Context::RunWorld(int whichWorld)
 	// == SAMPLE == from the current world
 	bool validated = false;
 	const int numSamples = worlds[whichWorld].getSamplesPerRound();
-	const int distortOption = worlds[whichWorld].getDistortOption();
+	const int distortOption = worlds[whichWorld].getSampler(0)->getDistortOption(); // TODO
 
 	// Equilibrium world
 	if(distortOption == 0) {
@@ -5886,19 +5872,6 @@ void Context::setNonbondedCutoff(std::size_t which, Real cutoffNm)
     }
 }
 
-
-/** Get/Set seed for reproducibility. **/
-void Context::setSeed(std::size_t whichWorld, std::size_t whichSampler, uint32_t argSeed)
-{
-	worlds[whichWorld].updSampler(whichSampler)->setSeed(argSeed);
-}
-
-uint32_t Context::getSeed(std::size_t whichWorld, std::size_t whichSampler) const
-{
-	return worlds[whichWorld].getSampler(whichSampler)->getSeed();
-}
-
-
 //------------
 //------------
 
@@ -6573,4 +6546,8 @@ void Context::setForceFieldScaleFactors(SimTK::Real globalScaleFactor) {
 	} else {
 		globalForceFieldScaleFactor = globalScaleFactor;
 	}
+}
+
+void Context::setSeed(uint32_t seed) {
+	this->seed = seed;
 }

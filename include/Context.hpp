@@ -41,6 +41,7 @@ public:
 	void setNonbonded(int method, SimTK::Real cutoff);
 	void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
+	void setSeed(uint32_t seed);
 
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 
@@ -211,28 +212,19 @@ public:
 
 	void addWorld(
 		bool fixmanTorque,
-		bool useOpenMM,
-		bool useOpenMMOnlyNonBonded,
-		bool useOpenMMIntegrator,
-		SimTK::Real boostTemp,
-		int boostMDSteps,
-		SimTK::Real timestep,
-		int mdSteps,
 		int samplesPerRound,
-		int distort,
-		bool visual,
-		SimTK::Real visualizerFrequency);
+		bool visual = false,
+		SimTK::Real visualizerFrequency = 0);
 
 	// Load/store Mobilized bodies joint types in samplers
 	void loadMbxsToMobilities(void);
 
+	std::size_t getNofWorlds() const;
 	World& getWorld(std::size_t which);
 	const World& getWorld(std::size_t which) const;
 
-	// Returns the size of the worlds vector
-	std::size_t getNofWorlds() const;
-
-	SimTK::DuMMForceFieldSubsystem * updForceField(std::size_t whichWorld);
+	std::vector<World>& getWorlds();
+	const std::vector<World>& getWorlds() const;
 
 	// Writeble reference to a samplers advanced state
 	SimTK::State& updAdvancedState(std::size_t whichWorld, std::size_t whichSampler);
@@ -263,10 +255,6 @@ public:
 
 	/** Print the number of threads each World got **/
 	void PrintNumThreads();
-
-	/** Get/Set seed for reproducibility. **/
-	void setSeed(std::size_t whichWorld, std::size_t whichSampler, uint32_t seed);
-	uint32_t getSeed(std::size_t whichWorld, std::size_t whichSampler) const;
 
 	//------------
 
@@ -634,6 +622,7 @@ private:
 	RunType runType = RunType::Default;
 	SimTK::Real tempIni = 0,
 		tempFin = 0;
+	uint32_t seed = 0;
 
 	SetupReader setupReader;
 

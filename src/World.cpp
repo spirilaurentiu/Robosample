@@ -148,9 +148,6 @@ World::World(int worldIndex,
 	// Get an index from a higher caller
 	ownWorldIndex = worldIndex;
 
-	// Initialize Fixman torque flag
-	_useFixmanTorque = false;
-
 	// Molmodel System derived from Simbody System
 	compoundSystem = std::make_unique<SimTK::CompoundSystem>();
 
@@ -2743,7 +2740,7 @@ void World::addFixmanTorque()
 {
 	// Set flag
 	assert(!isUsingFixmanTorque());
-	_useFixmanTorque = true;
+	useFixmanTorque = true;
 
 	// Alloc memory for FixmanTorque implementation and add to forces
 	FixmanTorqueImpl = new FixmanTorque(matter.get());
@@ -2766,7 +2763,7 @@ void World::addFixmanTorque()
 /** Check if the Fixman torque flag is set **/
 bool World::isUsingFixmanTorque() const
 {
-	return _useFixmanTorque;
+	return useFixmanTorque;
 }
 
 /** Get writble pointer to FixmanTorque implementation **/
@@ -2809,7 +2806,7 @@ void World::setTemperature(SimTK::Real argTemperature)
 	this->temperature = argTemperature;
 
 	// Set the temperature for the Fixman torque also
-	if(_useFixmanTorque){
+	if(useFixmanTorque){
 		FixmanTorqueImpl->setTemperature(this->temperature);
 		FixmanTorqueExtImpl->setTemperature(this->temperature);
 	}
@@ -2956,13 +2953,11 @@ bool World::addSampler(SamplerName samplerName,
 	const std::string& generatorName,
 	const std::string& integratorName,
 	const std::string& thermostatName,
-	SimTK::Real boostTemperature,
 	SimTK::Real timestep,
 	int mdStepsPerSample,
-	int mdStepsPerSampleStd,
-	int boostMDSteps,
+	int mdStepsPerSampleStd, 
 	bool useFixmanPotential,
-	int seed)
+	int seed) // TODO have one lcg from sampler generate seed from context and pass
 {
 	// We only use HMCSampler for now
 	if(samplerName == SamplerName::HMC) {
@@ -2974,15 +2969,13 @@ bool World::addSampler(SamplerName samplerName,
 		samplers.back()->setSampleGenerator(generatorName);
 		samplers.back()->setIntegratorName(integratorName);
 		samplers.back()->setThermostat(thermostatName);
-		samplers.back()->setTemperature(this->temperature);
-		samplers.back()->setBoostTemperature(boostTemperature);
-		samplers.back()->setTimestep(timestep);
+		samplers.back()->setTemperature(this->temperature); // where???
+		samplers.back()->setTimestep(timestep); // should error when negative
 		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
 		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
-		samplers.back()->setBoostMDSteps(boostMDSteps);
-		samplers.back()->setDistortOption(distortOption);
 		samplers.back()->setSeed(seed);
 
+		// TODO should this be inherited from parent world?
 		if (useFixmanPotential) {
 			samplers.back()->useFixmanPotential();
 		}
@@ -2992,10 +2985,24 @@ bool World::addSampler(SamplerName samplerName,
 	}
 
 	// Initialize the sampler
+	// This does not care about passed parameters
 	SimTK::State& worldAdvancedState = integ->updAdvancedState();
 	samplers.back()->initialize(worldAdvancedState);
 
 	return true;
+}
+
+void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
+	forceField->setUseOpenMMAcceleration(true);
+
+	if (ommvv) {
+		forceField->setUseOpenMMIntegration(true);
+		forceField->setUseOpenMMCalcOnlyNonBonded(false);
+		forceField->setDuMMTemperature(boostTemp);
+		forceField->setOpenMMstepsize(timestep);
+	} else {
+		forceField->setUseOpenMMCalcOnlyNonBonded(true);
+	}
 }
 
 // Get a sampler based on its position in the samplers vector
@@ -3169,12 +3176,4 @@ void World::setSamplesPerRound(int samples) {
 
 int World::getSamplesPerRound() const {
 	return samplesPerRound;
-}
-
-void World::setDistortOption(int distort) {
-	distortOption = distort;
-}
-
-int World::getDistortOption() const {
-	return distortOption;
 }
