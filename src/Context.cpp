@@ -730,10 +730,17 @@ void Context::setAtomCompoundTypes() {
 		const int mass = atom.getMass();
 
 		// Create Compound
-		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
+		atom.setAtomCompoundType(
+			elementCache.getElement(atomicNumber, mass));
+
 	}
 }
 
+/*!
+ * <!--
+ * Define biotypes for each atom
+ * -->
+*/
 void Context::addBiotypes() {
 
 	// 
@@ -744,6 +751,7 @@ void Context::addBiotypes() {
 	for(auto& atom : atoms) {
 		aCnt++;
 
+		// Define a new biotype
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
 			elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
 			atom.getNBonds(),
@@ -1633,7 +1641,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 	std::vector<BOND>::const_iterator bIt;
 	std::size_t bCnt = 0;
 
-	// Do Bonding
+	// Iterate bonds from internal coordinates
 	for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
 
 		scout("internCoord bond first second ");
