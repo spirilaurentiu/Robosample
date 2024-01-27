@@ -281,45 +281,50 @@ void Sampler::checkAtomStationsThroughDumm(void)
 }
 
 /** Load the map of mobods to joint types **/
-//void Sampler::loadMbx2mobility(SimTK::State&) // SAFE
-// The ideal way to do this would be to keep have MobilizedBody keep a Mobility name
+// void Sampler::loadMbx2mobility(SimTK::State&) // SAFE
+// The ideal way to do this would be to keep have MobilizedBody keep
+// a Mobility name
 void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 {
-	//std::cout << "DEBUG Entering Sampler::loadMbx2mobility" << std::endl << std::flush;
-
-	// function args were SimTK::State& someState
 
 	// Lop through topologies
 	for(auto& topology : topologies){
 
 		// Loop through atoms
-		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
+		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms();
+		++aIx)
+		{
 
-			//SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex (aIx); // DANGER
+			// Get atom location in mobod
+			SimTK::Vec3 atomLoc =
+				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(
+					aIx, *dumm);
 
-			//if(topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0){ // atom is at body's origin // SAFE
-			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0 ){ // DANGER
-			//if(dumm->getAtomStationOnBody(dAIx) == SimTK::Vec3(0, 0, 0)){ // atom is at body's origin // DANGER
+			// Mobod origin atom
+			if(atomLoc == 0){
 
 				// Get body, parentBody
-				//const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx); // SAFE
-				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm); // DANGER
-
+				const SimTK::MobilizedBodyIndex mbx = 
+					topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
 				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+				// Parent is not Ground
 				if(parentMbx != 0){
+
 					// Get the neighbor atom in the parent mobilized body
-					//SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent(matter, aIx); // SAFE
-					//std::unique_ptr<SimTK::SimbodyMatterSubsystem> up_matter(matter);
-					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(
-						matter, aIx, *dumm); // DANGER
+					SimTK::Compound::AtomIndex chemParentAIx =
+						topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
 
 					// Get mobility (joint type)
-					const auto& bond = topology.getBond(topology.getNumber(aIx), topology.getNumber(chemParentAIx));
+					const auto& bond = topology.getBond(
+						topology.getNumber(aIx),
+						topology.getNumber(chemParentAIx));
+
 					auto mobility = bond.getBondMobility(whichWorld);
 
+					// Insert mobility into the map
 					mbx2mobility.insert(std::make_pair(mbx, mobility));
 
 					//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
@@ -327,13 +332,13 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 					//	<< " mobility " << mobility
 					//	<< std::endl;
 
-				} // Parent is not Ground
+				} // parent is not Ground
 
 			} // if is a root atom
 
-		} // END loop through atoms
+		} // every atom
 
-	} // END loop through topologies
+	} // every topology
 
     for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
         // const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -351,6 +356,7 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 		SimTK::BondMobility::Mobility mobility = mbx2mobility[mbx];
 		int qi = 1; // TODO what value?
 		switch(mobility) {
+
 			///< Unrestricted bond, permitting changes in stretch, bend, and torsion modes
 			case SimTK::BondMobility::Mobility::Free:
 				//int internQIx = -1;
@@ -462,6 +468,7 @@ void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 		// 	SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
 		// 	std::cout << "H_FMCol= " << H_FMCol << std::endl;
 		// }
+
     }
 
 }

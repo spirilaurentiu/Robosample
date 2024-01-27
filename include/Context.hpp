@@ -183,6 +183,7 @@ public:
 	void LoadWorldsFromSetup(SetupReader&);
 
 	void passTopologiesToNewWorld(int newWorldIx);
+	void passTopologiesToNewWorld_SP_NEW(int newWorldIx);
 
 	int getNofMolecules();
 	//------------
@@ -218,6 +219,7 @@ public:
 
 	// Load/store Mobilized bodies joint types in samplers
 	void loadMbxsToMobilities(void);
+	void loadMbxsToMobilities_SP_NEW(void);
 
 	std::size_t getNofWorlds() const;
 	World& getWorld(std::size_t which);

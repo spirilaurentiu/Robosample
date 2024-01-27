@@ -63,9 +63,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
 
 		// Frequency of visualizer
-		int visualizerFrequency = 0;
+		SimTK::Real visualizerFrequency = 0;
 		if (setupReader.get("VISUAL")[worldIx] == "TRUE"){
-			visualizerFrequency = std::stoi(setupReader.get("TIMESTEPS")[worldIx]);
+			visualizerFrequency = SimTK::Real(std::stod(setupReader.get("TIMESTEPS")[worldIx]));
 		}
 
 		addWorld(
@@ -305,11 +305,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		addDihedrals(dihedralIx);
 	}
 
-	// // Write intial pdb for reference
-	// if(setupReader.get("WRITEPDBS")[0] == "TRUE"){
-	// 	writeInitialPdb();
-	// }
-
 	// Get output printing frequency
 	setPrintFreq( std::stoi(setupReader.get("PRINT_FREQ")[0]) );
 
@@ -320,7 +315,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	for(auto& world : worlds){
 		// world.setUScaleFactorsToMobods();
 	}
-
 	// Realize topology for all the Worlds
 	realizeTopology();
 
@@ -328,8 +322,15 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// Check atom stations for debug purposes
 	checkAtomStationsThroughDumm();
 
-	// Load/store Mobilized bodies joint types in samplers
-	loadMbxsToMobilities();
+
+
+	if(singlePrmtop){ // SP_NEW
+		// Load/store Mobilized bodies joint types in samplers
+		//loadMbxsToMobilities_SP_NEW();
+	}else{
+		// Load/store Mobilized bodies joint types in samplers
+		loadMbxsToMobilities();
+	}
 
 
 	// Setup task spaces
@@ -424,33 +425,33 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
 		setRunType(0);
-		Run(getRequiredNofRounds(),
-			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+		// Run(getRequiredNofRounds(),
+		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 			
 	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
 			setRunType(0);
-			RunSimulatedTempering(getRequiredNofRounds(),
-				std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-				std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+			// RunSimulatedTempering(getRequiredNofRounds(),
+			// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+			// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
 		setRunType(1);
-		RunREX();
+		// RunREX();
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
 		setRunType(2);
-		RunREX();
+		// RunREX();
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
 		setRunType(3);
-		RunREX();
+		// RunREX();
 
 	}else{
 		setRunType(0);
-		Run(getRequiredNofRounds(),
-			std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-			std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
+		// Run(getRequiredNofRounds(),
+		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
+		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 	}
 
     return true;
@@ -730,10 +731,17 @@ void Context::setAtomCompoundTypes() {
 		const int mass = atom.getMass();
 
 		// Create Compound
-		atom.setAtomCompoundType(elementCache.getElement(atomicNumber, mass));
+		atom.setAtomCompoundType(
+			elementCache.getElement(atomicNumber, mass));
+
 	}
 }
 
+/*!
+ * <!--
+ * Define biotypes for each atom
+ * -->
+*/
 void Context::addBiotypes() {
 
 	// 
@@ -744,6 +752,7 @@ void Context::addBiotypes() {
 	for(auto& atom : atoms) {
 		aCnt++;
 
+		// Define a new biotype
 		SimTK::BiotypeIndex biotypeIndex = SimTK::Biotype::defineBiotype(
 			elementCache.getElement(atom.getAtomicNumber(), atom.getMass()),
 			atom.getNBonds(),
@@ -1323,6 +1332,7 @@ void Context::modelOneEmbeddedTopology(int whichTopology,
 
 		worlds[whichWorld].compoundSystem->modelOneCompound(
 			SimTK::CompoundSystem::CompoundIndex(whichTopology),
+			topologies[whichTopology].atomFrameCache,
 			SimTK::String(rootMobilizer));
 
 		SimTK::DuMMForceFieldSubsystem& dumm = *worlds[whichWorld].forceField;
@@ -1414,6 +1424,7 @@ void Context::AddMolecules(
 		// Set Gmolmodel atoms properties from a reader: number, name, element
 		// initial name, force field type, charge, coordinates, mass,
 		// LJ parameters
+		// Also resizes atomFrameCache
 		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]);
 
 		// Set bonds properties from reader: bond indeces, atom neighbours
@@ -1613,7 +1624,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 	std::vector<BOND>::const_iterator bIt;
 	std::size_t bCnt = 0;
 
-	// Do Bonding
+	// Iterate bonds from internal coordinates
 	for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
 
 		scout("internCoord bond first second ");
@@ -1745,10 +1756,26 @@ void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
 	}
 
 	// Match coordinates
-	topology.matchDefaultConfiguration(
-		atomTargets,
-		SimTK::Compound::Match_Exact,
-		true, 150.0);
+	// topology.matchDefaultConfiguration(
+	// 	atomTargets,
+	// 	SimTK::Compound::Match_Exact,
+	// 	true, 150.0);
+
+	//std::cout << "Match start." << "\n" << std::flush;
+	bool flipAllChirality = true;
+	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
+	topology.matchDefaultBondLengths(atomTargets);
+	//std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
+	topology.matchDefaultBondAngles(atomTargets);
+	//std::cout << "matchDefaultBondAngles done. " << "\n" << std::flush;
+	topology.matchDefaultDirections(atomTargets);
+	//std::cout << "matchDefaultDirections done. " << "\n" << std::flush;
+	topology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
+	//std::cout << "matchDefaultDefaultDihedralAngles done. " << "\n" << std::flush;
+	topology.matchDefaultTopLevelTransform(atomTargets);
+	//std::cout << "matchDefaultDefaultTopLevelTransform done. " << "\n" << std::flush;
+
 
 }
 
@@ -2730,7 +2757,7 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 						// 		amberReader.getDihedralsPhase(torsCnt + 3))) <<" ";
 					}
 					
-					ceol;
+					//ceol;
 
 					// Add the dihedral to the list of impropers.
 					allDihedralsACIxs.push_back(thisDihedralACIxs);
@@ -2810,7 +2837,7 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
 
 					}
 
-					ceol;
+					//ceol;
 
 					// Add the improper to the list of impropers.
 					allImpropersACIxs.push_back(thisDihedralACIxs);
@@ -3043,7 +3070,7 @@ void Context::setFlexibility(
 								compoundBondIx);
 							break;
 
-						// --- Slider ---
+						// --- AnglePin ---
 						}else if((mobility == "AnglePin") ){
 							bond.setBondMobility(BondMobility::AnglePin,
 								whichWorld);
@@ -3051,11 +3078,19 @@ void Context::setFlexibility(
 								compoundBondIx);
 							break;
 
-						// --- Slider ---
+						// --- BendStretch ---
 						}else if((mobility == "BendStretch") ){
 							bond.setBondMobility(BondMobility::BendStretch,
 								whichWorld);
 							topology.setBondMobility(BondMobility::BendStretch,
+								compoundBondIx);
+							break;
+
+						// --- Spherical ---
+						}else if((mobility == "Spherical") ){
+							bond.setBondMobility(BondMobility::Spherical,
+								whichWorld);
+							topology.setBondMobility(BondMobility::Spherical,
 								compoundBondIx);
 							break;
 
@@ -3096,8 +3131,13 @@ void Context::modelOneEmbeddedTopology_SP_NEW(
 	this->rootMobilities.push_back(rootMobilizer);
 
 	// Call Molmodel to model Compound
+
+	std::vector<SimTK::Transform>& atomFrameCache =
+		topologies[whichTopology].atomFrameCache;
+
 	worlds[whichWorld].compoundSystem->modelOneCompound(
 		SimTK::CompoundSystem::CompoundIndex(whichTopology),
+		atomFrameCache,
 		SimTK::String(rootMobilizer));
 
 	// Get the forcefield within this world
@@ -3160,7 +3200,7 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		initializeFlexibility();
 
 		// Set flexibility from file
-		setFlexibility("noregimen", flexFileFN, worldIx);		
+		setFlexibility("noregimen", flexFileFN, worldIx);
 
 		scout("Loaded flexibilities for world ") << worldIx << eol;
 
@@ -3218,8 +3258,12 @@ void Context::allocWorldsStatsContainers()
 // Load/store Mobilized bodies joint types in samplers
 void Context::loadMbxsToMobilities()
 {
+	
 	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		for (int samplerIx = 0; samplerIx < worlds[worldIx].getNofSamplers(); samplerIx++){
+
+		for (int samplerIx = 0; samplerIx < worlds[worldIx].getNofSamplers();
+		samplerIx++)
+		{
 			std::cout << "Loading mbx2mobility" << std::endl;
 
 			// Pass compounds to the new world
@@ -3228,7 +3272,9 @@ void Context::loadMbxsToMobilities()
 			(worlds[worldIx].updSampler(samplerIx))->loadMbx2mobility(worldIx);
 		}
 	}
+
 }
+
 
 void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
 {
@@ -3249,6 +3295,7 @@ void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizer
 
 			worlds[worldIx].compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(molIx),
+				topologies[molIx].atomFrameCache,
 				rootMobilities[(nofMols * worldIx) + molIx]);
 
 			for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
@@ -3704,8 +3751,10 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 		// Aquire the CompoundSystem
 		topologies[molIx].setMultibodySystem(*worlds[newWorldIx].compoundSystem);
 
+		int presumNAtoms = topologies[molIx].getNumAtoms();
+
 		// Reset mobilized body indeces in Compound
-		for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
+		for(std::size_t k = 0; k < presumNAtoms; k++){
 
 			// Get atom index
 			SimTK::Compound::AtomIndex aIx =
@@ -3729,6 +3778,42 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
         //c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
 	}
 }
+
+
+/**
+ *  Pass compounds to the new world
+ */
+void Context::passTopologiesToNewWorld_SP_NEW(int newWorldIx)
+{
+
+	// Go through all the molecules
+	for(std::size_t molIx = 0; molIx < nofMols; molIx++){
+
+		// Aquire the CompoundSystem
+		topologies[molIx].setMultibodySystem(*worlds[newWorldIx].compoundSystem);
+
+		int presumNAtoms = topologies[molIx].getNumAtoms();
+
+		// Reset mobilized body indeces in Compound
+		for(std::size_t k = 0; k < presumNAtoms; k++){
+
+			// Get atom index
+			SimTK::Compound::AtomIndex aIx =
+				(topologies[molIx].subAtomList[k]).getCompoundAtomIndex();
+
+			// Get mobod
+			SimTK::MobilizedBodyIndex mbx =
+				topologies[molIx].getAtomMobilizedBodyIndexThroughDumm(aIx,
+				*(worlds[newWorldIx].forceField) );
+
+			// Set the corresponding mobod
+			topologies[molIx].setAtomMobilizedBodyIndex(aIx, mbx);
+
+		}
+
+	}
+}
+
 
 ////////////////////////
 // REX

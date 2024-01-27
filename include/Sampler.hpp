@@ -55,7 +55,7 @@ public:
 
 	/** Load the map of mobods to joint types **/
 	//void loadMbx2mobility(SimTK::State& someState); // SAFE
-	void loadMbx2mobility(int whichWorld); // DANGER
+	void loadMbx2mobility(int whichWorld);
 
 	/** Returns the number of samples extracted so far. **/
 	int getNofSamples();

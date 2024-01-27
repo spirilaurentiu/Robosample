@@ -67,6 +67,9 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
 	natoms = amberReader->getNumberAtoms();
 	bAtomList.resize(natoms);
 
+	// Resize atomFrameCache filled from CompoudnAtomSystem
+	atomFrameCache.resize(natoms);
+
 	// Iterate through atoms and set as much as possible from amberReader
 	for(int i = 0; i < natoms; i++){
 
@@ -235,7 +238,10 @@ void Topology::bAddBiotypes(
 		std::string biotype = resName + atom.getName() + atom.getFftype();
 		atom.setBiotype(biotype);
 
-		std::cout << "Topology::bAddBiotypes " << atom.getBiotypeIndex() << " " << atom.getBiotype() << " with bonds = " << atom.getNBonds() << std::endl;
+		std::cout << "Topology::bAddBiotypes "
+			<< atom.getBiotypeIndex() << " "
+			<< atom.getBiotype() << " with bonds = "
+			<< atom.getNBonds() << std::endl;
 	}
 }
 
@@ -2354,6 +2360,8 @@ void Topology::setSubAtomList(
 
 	natoms = (subAtomList).size();
 
+	atomFrameCache.resize(natoms);
+
 	elementCache = elementCacheArg;
 }
 
@@ -2459,6 +2467,8 @@ Topology::getNeighbourWithSmallerAIx(
 	// Return
 	return chemParentAIx;
 }
+
+
 
 
 

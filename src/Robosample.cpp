@@ -29,6 +29,16 @@ int main(int argc, char **argv)
 
 
 	bool singlePrmtop = false;
+
+	std::string singlePrmtopOpt;
+	if(argc >= 3){
+		singlePrmtopOpt = argv[2];
+	}
+
+	if(singlePrmtopOpt == "singlePrmtop"){
+		singlePrmtop = true;
+	}
+
 	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
 		return -1;
 	}
