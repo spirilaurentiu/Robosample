@@ -422,8 +422,7 @@ public:
 
 	// --- Simulation ---
 	/** Get/Set seed for reproducibility. **/
-	void setSeed(int whichSampler, uint32_t argSeed);
-	uint32_t getSeed(int whichSampler) const;
+	void setSeed(uint32_t argSeed);
 
 	/** Use the Fixman torque as an additional force subsystem.
 	Careful not have different temperatures for World and Fixman Torque. **/
@@ -480,8 +479,7 @@ public:
 		SimTK::Real timestep,
 		int mdStepsPerSample,
 		int mdStepsPerSampleStd, 
-		bool useFixmanPotential,
-		int seed);
+		bool useFixmanPotential);
 
 	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);
 
@@ -751,6 +749,8 @@ private:
 
 	bool useFixmanTorque = false;
 	int samplesPerRound = 0;
+
+	Random32 randomEngine;
 };
 
 #endif /*WORLD_H_*/

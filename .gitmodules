@@ -7,3 +7,6 @@
 [submodule "Molmodel"]
 	path = Molmodel
 	url = https://github.com/spirilaurentiu/Molmodel/
+[submodule "pcg-cpp"]
+	path = pcg-cpp
+	url = https://github.com/imneme/pcg-cpp

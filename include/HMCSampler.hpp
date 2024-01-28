@@ -77,40 +77,6 @@ One iteration must include:
 class Topology;
 class IState;
 
-struct RANDOM_CACHE {
-	std::normal_distribution<> Gaussian;
-	std::mt19937 RandomEngine; // mt19937_64 is faster in our case
-
-	std::function<SimTK::Real()> GenerateGaussian = [this]() mutable {
-		return this->Gaussian(this->RandomEngine);
-	};
-
-	std::function<void()> FillWithGaussian = [this]() mutable {
-		std::generate(V.begin(), V.end(), GenerateGaussian);
-	};
-
-	std::future<void> task;
-
-	SimTK::Vector V, SqrtMInvV;
-	SimTK::Real sqrtRT;
-	int nu = -1;
-
-	RANDOM_CACHE() {
-		// Mersenne Twister internal state is 19937 bits, that is 624 32-bit integers
-		// Note that std::seed_seq::result_type is uint32
-		std::vector<uint32_t> RandomData(624);
-		std::random_device Source;
-		std::generate(RandomData.begin(), RandomData.end(), std::ref(Source));
-
-		// Fill all state 19k bits of Mersenne Twister
-		std::seed_seq SeedSeq(RandomData.begin(), RandomData.end());
-		RandomEngine = std::mt19937(SeedSeq);
-
-		// We want a Gaussian distribution
-		Gaussian = std::normal_distribution<>(0.0, 1.0);
-	}
-};
-
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
 	const char *dirname, const char *prefix, int midlength,
 	const char *sufix, double aTime);
@@ -419,7 +385,7 @@ public:
 		unsigned int startFromBody = 0);
 
 
-	/** Seed the random number GenerateGaussian. Set simulation temperature, 
+	/** Set simulation temperature, 
 	velocities to desired temperature, variables that store the configuration
 	and variables that store the energies, both needed for the 
 	acception-rejection step. Also realize velocities and initialize 
@@ -600,8 +566,6 @@ protected:
 
 	//bool NAN_TO_INF(SimTK::Real& someNumber);
 
-	RANDOM_CACHE RandomCache;
-
 	std::vector<SimTK::Vec3> omm_locations;
 	std::vector<SimTK::Vec3> omm_locations_old;
 
@@ -710,6 +674,8 @@ protected:
 
 	SimTK::Real QScaleFactor;
 
+	// TODO explain what this does
+	SimTK::Vector sqrtMInvV;
 };
 
 #endif // __HAMMONTECARLOSAMPLER_HPP__

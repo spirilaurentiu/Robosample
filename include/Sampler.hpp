@@ -2,6 +2,7 @@
 #define __SAMPLER_HPP__
 
 #include "Robo.hpp"
+#include "Random.hpp"
 
 #ifndef PRINT_BUFFER_SIZE
 #define PRINT_BUFFER_SIZE 4096
@@ -61,8 +62,7 @@ public:
 	int getNofSamples();
 
 	// Get set the seed
-	uint32_t getSeed() const;
-	void setSeed(uint32_t);
+	void setSeed(Random32& seeder);
 
 	// Draws one sample from vonMises distribution with concentration k
 	// The algorithm is taken from 1979 Best, page 155
@@ -163,10 +163,8 @@ public:
 	bool acc;
 
 	// Random number generators
-	RANDOM_ENGINE randomEngine;
-
-	// Use this to initialize randomEngine
-	RANDOM_ENGINE_INIT randomEngineInit;
+	Random64 randomEngine;
+	RANDOM_CACHE RandomCache;
 
 	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution_0_2pi =
 		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, 2*SimTK::Pi);

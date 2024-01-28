@@ -613,7 +613,7 @@ void MonteCarloSampler::perturbQ(SimTK::State& someState)
 
 	// Add Gaussian noise
 	//std::normal_distribution<double> Noiser(q0_refVal, 1);
-	//double noise = Noiser(RandomCache.RandomEngine);
+	//double noise = Noiser(RandomCache.Random64);
 
 	std::cout << "HMCSampler::perturbQ " << someState.getQ() << " with " << q0_vonMises << std::endl;
 	//someState.updQ()[which] = uniformRealDistribution_mpi_pi(randomEngine);

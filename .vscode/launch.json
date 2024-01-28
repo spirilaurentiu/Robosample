@@ -16,7 +16,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/TestBAT",
+            "program": "${workspaceFolder}/build/robosample.d",
             "args": ["${workspaceFolder}/build/inp.2but"],
             // "program": "${workspaceFolder}/build/TestGeometry",
             "stopAtEntry": false,

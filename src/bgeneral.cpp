@@ -1131,6 +1131,7 @@ double squared_l2_distance(Point first, Point second) {
 DataFrame k_means(const DataFrame& data,
                   size_t k,
                   size_t number_of_iterations) {
+  // TODO this is not reproducible
   static std::random_device seed;
   static std::mt19937 random_number_generator(seed());
   std::uniform_int_distribution<size_t> indices(0, data.size() - 1);

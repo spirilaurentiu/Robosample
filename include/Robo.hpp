@@ -104,6 +104,7 @@
 #include "readAmberInput.hpp"
 #include "SetupReader.hpp"
 #include "trim.hpp"
+#include "pcg_random.hpp"
 
 //#ifndef DEBUG_ROBO
 //#define DEBUG_ROBO
@@ -114,8 +115,5 @@
 #else
 #define TRACE(STR)
 #endif
-
-using RANDOM_ENGINE = std::mt19937_64; // TODO why 64 and not 32?
-using RANDOM_ENGINE_INIT = std::minstd_rand; // linear congruential generator
 
 #endif // __ROBO_HPP

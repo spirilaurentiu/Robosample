@@ -25,8 +25,8 @@ int main(int argc, char **argv)
 	Context c;
 
 	// c.setNumThreads(3);
+	// c.setSeed(42);
 	// c.useVisualizer(frequency); // GLOBAL?
-
 
 	bool singlePrmtop = false;
 

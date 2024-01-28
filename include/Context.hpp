@@ -604,8 +604,6 @@ private:
 
 	int swapFixman = 1;
 
-	std::random_device rd;
-	std::mt19937 randomEngine;
 	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution =
 		    std::uniform_real_distribution<SimTK::Real>(SimTK::Zero, SimTK::One);
 
@@ -624,7 +622,6 @@ private:
 	RunType runType = RunType::Default;
 	SimTK::Real tempIni = 0,
 		tempFin = 0;
-	uint32_t seed = 0;
 
 	SetupReader setupReader;
 
@@ -665,6 +662,9 @@ private:
 
 	bool useAmberForceFieldScaleFactors = true;
 	SimTK::Real globalForceFieldScaleFactor = 1.0; // Used in place of Amber scaling (not default)
+
+	// Random number generator
+	Random32 randomEngine;
 
 public:
 	/** Implicit membrane mimicked by half-space contacts */

@@ -58,64 +58,14 @@ Sampler::Sampler(World &argWorld,
 Sampler::~Sampler() {
 }
 
-// Random numbers
-
-// Get set the seed
-uint32_t Sampler::getSeed() const
-{
-    return this->seed;
-}
-
 /** Store the value of the seed internally and also feed it to the random
 number generator **/
-void Sampler::setSeed(uint32_t argSeed)
+void Sampler::setSeed(Random32& seeder)
 {
-    if(argSeed == 0) {
-		// We use chrono to get the time in ns.
-        std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
-        std::chrono::system_clock::duration dtn = tp.time_since_epoch();
-        int64_t clockSeed = dtn.count();
-
-		// Save the seed.
-        this->seed = static_cast<RANDOM_ENGINE_INIT::result_type>(clockSeed);
-    } else {
-		// The seed is already provided, we just need to save it
-        this->seed = argSeed;
-    }
-
-	// We need many bytes of random data to initialize a Mersenne Twister.
-	// To ease reproducibility, we use one 32-bit seed to initialize a less powerful RNG.
-	// Then, we use this RNG to initialize the state of MT.
-	randomEngineInit.seed(seed);
-
-	// Initial generator function.
-	auto source = [this]() {
-		// This LCG generates 64 bits.
-		// According to this https://stackoverflow.com/a/18262495, the lower bits are of not-so-exceptional quality.
-		// This is also stated in https://en.wikipedia.org/wiki/Linear_congruential_generator.
-		// In order to mitigate this, only keep the highest 32 bits.
-		// return static_cast<RANDOM_ENGINE_INIT::result_type>(randomEngineInit() >> sizeof(RANDOM_ENGINE_INIT::result_type)); // result is already 32 bit
-
-		return static_cast<RANDOM_ENGINE_INIT::result_type>(randomEngineInit());
-	};
-
-	// Size for initial state bits
-	constexpr std::size_t N = RANDOM_ENGINE::state_size * sizeof(RANDOM_ENGINE::result_type);
-	constexpr auto Size = (N - 1) / sizeof(source()) + 1; // TODO is this correct?
-
-	// Generate random data for seeding
-	std::array<RANDOM_ENGINE_INIT::result_type, Size> RandomData;
-	std::generate(RandomData.begin(), RandomData.end(), std::ref(source));
-
-	// Seed the engine
-	std::seed_seq SeedSeq(RandomData.begin(), RandomData.end());
-	randomEngine.seed(SeedSeq);
-
-	// According to Matsumoto [1][2], we should discard the first Size (or Size*2) numbers.
-	// This isn't the case here, but we do it just in case.
-	// [1] https://doi.org/10.1145/1276927.1276928
-	// [2] https://stats.stackexchange.com/questions/436733/is-there-such-a-thing-as-a-good-bad-seed-in-pseudo-random-number-generation
-	randomEngine.discard(Size * 2);
+	// These two engines will be different because the builder function
+	// calls the seeder engine multiple times, altering its state
+	randomEngine = buildRandom64(seeder);
+    RandomCache.setSeed(seeder);
 }
 
 // Is the sampler always accepting the proposed moves

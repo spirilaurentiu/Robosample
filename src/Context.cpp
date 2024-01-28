@@ -15,6 +15,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	setupReader.ReadSetup(file);
 	setupReader.dump(true);
 
+	// Set random seed
+	setSeed(std::stoi(setupReader.get("SEED")[0]));
+
 	// Set the log filename
 	std::string logFilename = CreateLogfilename(setupReader.get("OUTPUT_DIR")[0],
 		std::stoi(setupReader.get("SEED")[0]));
@@ -214,8 +217,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			std::stof(setupReader.get("TIMESTEPS")[worldIx]),
 			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
 			MDStepsPerSample,
-			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE",
-			std::stoi(setupReader.get("SEED")[worldIx]));
+			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE");
 
 		world.getSampler(0)->setNonequilibriumParameters(
 			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
@@ -1300,7 +1302,7 @@ void Context::addWorld(
 
 	// Set GBSA scaling and VdW mixing rule
 	worlds.back().setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
-	worlds.back().updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot); // GLOBAL
+	worlds.back().updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot); // DuMMForceFieldSubsystem::WaldmanHagler
 
 	// Set how many times to run sample_iteration()
 	worlds.back().setSamplesPerRound(samplesPerRound);
@@ -1311,6 +1313,9 @@ void Context::addWorld(
 	rbSpecsFNs.push_back(std::vector<std::string>());
 	flexSpecsFNs.push_back(std::vector<std::string>());
 	regimens.push_back(std::vector<std::string>());
+
+	// Set seed for random number generators
+	worlds.back().setSeed(randomEngine());
 
 	// Store the number of worlds
 	nofWorlds = worlds.size();
@@ -4513,11 +4518,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 // Exhange all replicas
 void Context::mixAllReplicas(int nSwapAttempts)
 {
-	// Get a random number generator
-	//std::random_device rd; // obtain a random number
-	//std::mt19937 randomEngine(rd()); // seed the generator
-	std::uniform_int_distribution<std::size_t>
-		randReplicaDistrib(0, nofReplicas-1);
+	std::uniform_int_distribution<std::size_t> randReplicaDistrib(0, nofReplicas-1);
 
 	// Try nSwapAttempts to swap between random replicas
 	for(size_t swap_k = 0; swap_k < nSwapAttempts; swap_k++){
@@ -5101,8 +5102,7 @@ SimTK::Real Context::distributeScalingFactor(
 			<< std::endl;
 
 		SimTK::Real randDir =
-			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
-				randomEngine);
+			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		scalefactor = (randDir > 0) ? scalefactor : (1.0/scalefactor) ;
 	}
 
@@ -5110,8 +5110,7 @@ SimTK::Real Context::distributeScalingFactor(
 	if(randSignOpt){
 		SimTK::Real randSign;
 		SimTK::Real randUni_m1_1 =
-			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
-				randomEngine);
+			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
 		scalefactor *= randSign;
 	}
@@ -5732,15 +5731,13 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 void Context::randomizeWorldIndexes()
 {
 	// Random int for random world order
-	std::random_device rd; // obtain a random number from hardware
-	std::mt19937 gen(rd()); // seed the generator
 	std::uniform_int_distribution<std::size_t>
 		randWorldDistrib(1, nofWorlds-1); // TODO between 1 and nOfWorlds-1?
 
 	if(getNofWorlds() >= 3){
 
 		// Swap world indeces between vector position 2 and random
-		auto randVecPos = randWorldDistrib(gen);
+		auto randVecPos = randWorldDistrib(randomEngine);
 		//std::cout << "Swapping position 1 with "
 		//	<< randVecPos << std::endl;
 
@@ -6634,5 +6631,5 @@ void Context::setForceFieldScaleFactors(SimTK::Real globalScaleFactor) {
 }
 
 void Context::setSeed(uint32_t seed) {
-	this->seed = seed;
+	randomEngine = buildRandom32(seed);
 }

@@ -2834,14 +2834,10 @@ void World::setBoostTemperature(SimTK::Real argTemperature)
 //...................
 
 /** Get/Set seed for reproducibility. **/
-void World::setSeed(int whichSampler, uint32_t argSeed)
+void World::setSeed(uint32_t argSeed)
 {
-	samplers[whichSampler]->setSeed(argSeed);
-}
-
-uint32_t World::getSeed(int whichSampler) const
-{
-	return samplers[whichSampler]->getSeed();
+	randomEngine = buildRandom32(argSeed);
+	forceField->setOpenMMseed(randomEngine());
 }
 
 
@@ -2963,8 +2959,7 @@ bool World::addSampler(SamplerName samplerName,
 	SimTK::Real timestep,
 	int mdStepsPerSample,
 	int mdStepsPerSampleStd, 
-	bool useFixmanPotential,
-	int seed) // TODO have one lcg from sampler generate seed from context and pass
+	bool useFixmanPotential)
 {
 	// We only use HMCSampler for now
 	if(samplerName == SamplerName::HMC) {
@@ -2976,11 +2971,11 @@ bool World::addSampler(SamplerName samplerName,
 		samplers.back()->setSampleGenerator(generatorName);
 		samplers.back()->setIntegratorName(integratorName);
 		samplers.back()->setThermostat(thermostatName);
-		samplers.back()->setTemperature(this->temperature); // where???
-		samplers.back()->setTimestep(timestep); // should error when negative
+		samplers.back()->setTemperature(this->temperature); // TODO where???
+		samplers.back()->setTimestep(timestep); // TODO should error when negative
 		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
 		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
-		samplers.back()->setSeed(seed);
+		samplers.back()->setSeed(randomEngine);
 
 		// TODO should this be inherited from parent world?
 		if (useFixmanPotential) {
