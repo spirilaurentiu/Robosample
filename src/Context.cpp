@@ -128,8 +128,17 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 		amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
 
-		// Build graph and match coords
-		AddMolecules_SP_NEW(argRoots);
+		// Read molecules from a reader
+		readMolecules_SP_NEW();
+
+		// Build graph (bondAtom)
+		constructTopologies_SP_NEW(argRoots);
+
+		// Generate Topologies sub_array views
+		generateTopologiesSubarrays();
+
+		// Match Compounds configurations to atoms Cartesian coords
+		matchDefaultConfigurations_SP_NEW();
 
 		// Set the final number of molecules added
 		finalNofMols = getNofMolecules();
@@ -1681,10 +1690,10 @@ void Context::buildAcyclicGraph_SP_NEW(
 
 		// Get next available BondCenter id
 		parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
-		if((parentNofBonds != 1)){
+		//if((parentNofBonds != 1)){ // this decides if it's bond or bond1
 			parentNextAvailBondCenterStr =
 				std::to_string(parentNextAvailBondCenter);
-		}
+		//}
 
 		// Cook the parentBondCenterPathName
 		parentBondCenterPathName << parent.getName()
@@ -1749,52 +1758,117 @@ void Context::buildAcyclicGraph_SP_NEW(
 }
 
 /*!
- * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
+ * <!-- Pass newly created topologies to the worlds -->
 */
-void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
+void Context::passTopologiesToWorlds(void){
+
+	// Iterate worlds
+	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
+
+		scout("World ") << wCnt << eol;
+
+		// Get world and its force field
+		World& world = worlds[wCnt];
+
+		// Pass current topology to the current world
+		world.topologies = &topologies;
+	}
+}
+
+/*!
+ * <!--
+ * ========================================================================
+ * ======== (0) Read atoms and bonds from all the molecules ===============
+ * ========================================================================
+  -->
+*/
+void Context::readMolecules_SP_NEW(void)
 {
-	// Convenient vars
-	std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets;
-	array_view<std::vector<bSpecificAtom>::iterator>& topoSubAtomList =
-		topology.subAtomList;
 
-	// For every atom in this topology deposit coords in atomTargets
-	for(int ix = 0; ix < topology.getNumAtoms(); ++ix){
+	loadAtoms(amberReader[0]);
+	loadBonds(amberReader[0]);
+}
+
+
+
+/*!
+ * <!--  -->
+*/
+void Context::constructTopologies_SP_NEW(
+	std::vector<std::string>& argRoots
+){
+
+	// ========================================================================
+	// ======== Construct a Compound for every atom ===========================
+	// ========================================================================		
+	setAtomCompoundTypes();
+
+	// Biotype will be used to look up molecular
+	// force field specific parameters for an atom type
+	addBiotypes();
+
+	// ========================================================================
+	// ======== (1) Get BAT graphs ============================================
+	// ========================================================================
+
+	// Find a root in the unvisited atoms and build BAT graphs
+	nofMols = 0;
+	while( internCoords.computeRoot( getAtoms() )){ // find a root
+
+		nofMols++;
+		internCoords.PrintRoot();
 		
-		SimTK::Vec3 atomCoords(
-			topoSubAtomList[ix].getX(),
-			topoSubAtomList[ix].getY(),
-			topoSubAtomList[ix].getZ());
-
-		atomTargets.insert(std::pair<Compound::AtomIndex, SimTK::Vec3> (
-			topoSubAtomList[ix].getCompoundAtomIndex(),
-			atomCoords));
+		// Compute the new molecule's BAT coordinates
+		internCoords.computeBAT( getAtoms() );
+		internCoords.updateVisited(atoms);
+		//internCoords.PrintBAT();
 
 	}
 
-	// Match coordinates
-	// topology.matchDefaultConfiguration(
-	// 	atomTargets,
-	// 	SimTK::Compound::Match_Exact,
-	// 	true, 150.0);
+	// ========================================================================
+	// ======== (2) BAT bonds to bonds ========================================
+	// ========================================================================
+	const std::vector<std::vector<BOND>>& BATbonds =
+		internCoords.getBonds();
 
-	//std::cout << "Match start." << "\n" << std::flush;
-	bool flipAllChirality = true;
-	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
-	//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
-	topology.matchDefaultBondLengths(atomTargets);
-	//std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
-	topology.matchDefaultBondAngles(atomTargets);
-	//std::cout << "matchDefaultBondAngles done. " << "\n" << std::flush;
-	topology.matchDefaultDirections(atomTargets);
-	//std::cout << "matchDefaultDirections done. " << "\n" << std::flush;
-	topology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
-	//std::cout << "matchDefaultDefaultDihedralAngles done. " << "\n" << std::flush;
-	topology.matchDefaultTopLevelTransform(atomTargets);
-	//std::cout << "matchDefaultDefaultTopLevelTransform done. " << "\n" << std::flush;
+	load_BONDS_to_bonds( internCoords.getBonds() );
 
+	// ========================================================================
+	// ======== (2) Build graphs with bondAtom ================================
+	// ========================================================================
+	topologies.reserve(nofMols);
+	moleculeCount = -1;
 
-}
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		// Add an empty topology
+		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
+		Topology topology(moleculeName);
+
+		// --------------------------------------------------------------------
+		//  (1) findARoot 
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		const int rootAmberIx = internCoords.getRoot( molIx ).first;
+		setBaseAtom( topology, rootAmberIx );
+
+		// --------------------------------------------------------------------
+		// (2) buildAcyclicGraph
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
+
+		// topology.addRingClosingBonds();
+
+		// --------------------------------------------------------------------
+		// (4) Add new topology 
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+		// Add to the list of topologies
+		topologies.push_back(topology);
+
+	}
+ }
+
 
 /*!
  * <!-- Subarray view of atoms -->
@@ -1939,116 +2013,25 @@ void Context::generateSubBondLists(void){
 	// 	}
 	// }
 
-
-}
-
-
-/*!
- * <!-- Pass newly created topologies to the worlds -->
-*/
-void Context::passTopologiesToWorlds(void){
-
-	// Iterate worlds
-	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
-
-		scout("World ") << wCnt << eol;
-
-		// Get world and its force field
-		World& world = worlds[wCnt];
-
-		// Pass current topology to the current world
-		world.topologies = &topologies;
-	}
 }
 
 /*!
- * <!-- Load molecules based on loaded filenames -->
+ * <!--
+ * ========================================================================
+ * ======== (3) Generate subarray views for atoms and bonds ===============
+ * ========================================================================
+ * -->
 */
-void Context::AddMolecules_SP_NEW(
-		std::vector<std::string>& argRoots
-){
+void Context::generateTopologiesSubarrays(void){
 
-	// ========================================================================
-	// ======== (0) Read atoms from all the molecules =========================
-	// ========================================================================
-
-	loadAtoms(amberReader[0]);
-	loadBonds(amberReader[0]);	
-	setAtomCompoundTypes();
-	addBiotypes();
-
-	// ========================================================================
-	// ======== (1) Get BAT graphs ============================================
-	// ========================================================================
-
-	// Find a root in the unvisited atoms and build BAT graphs
-	nofMols = 0;
-	while( internCoords.computeRoot( getAtoms() )){ // find a root
-
-		nofMols++;
-		internCoords.PrintRoot();
-		
-		// Compute the new molecule's BAT coordinates
-		internCoords.computeBAT( getAtoms() );
-		internCoords.updateVisited(atoms);
-		//internCoords.PrintBAT();
-
-	}
-
-	// ========================================================================
-	// ======== (2) BAT bonds to bonds ========================================
-	// ========================================================================
-	const std::vector<std::vector<BOND>>& BATbonds =
-		internCoords.getBonds();
-
-	load_BONDS_to_bonds( internCoords.getBonds() );
-
-	// ========================================================================
-	// ======== (2) Build graphs with bondAtom ================================
-	// ========================================================================
-	topologies.reserve(nofMols);
-	moleculeCount = -1;
-
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-
-		// Add an empty topology
-		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
-		Topology topology(moleculeName);
-
-		// --------------------------------------------------------------------
-		//  (1) findARoot 
-		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-		const int rootAmberIx = internCoords.getRoot( molIx ).first;
-		setBaseAtom( topology, rootAmberIx );
-
-		// --------------------------------------------------------------------
-		// (2) buildAcyclicGraph
-		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
-
-		// topology.addRingClosingBonds();
-
-		// --------------------------------------------------------------------
-		// (4) Add new topology 
-		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-		// Add to the list of topologies
-		topologies.push_back(topology);
-
-	}
- 
-	// ========================================================================
-	// ======== (3) Generate subarray views for atoms and bonds ===============
-	// ========================================================================
-
-	// Atoms
+	// Atoms - should never be sorted though
 	// std::sort(atoms.begin(), atoms.end(), [](
 	// 	const bSpecificAtom& lhs, const bSpecificAtom& rhs){
 	// 		return lhs.getMoleculeIndex() < rhs.getMoleculeIndex();
 	// 	}
 	// );
 
+	// Generate array_views for atoms in every topology
 	generateSubAtomLists();
 
 	// scout("Loaded bonds") << eol;
@@ -2084,7 +2067,7 @@ void Context::AddMolecules_SP_NEW(
 		}
 	}
 
-	// Bonds
+	// Generate array_views for bonds and bonds in every topology
 	generateSubBondLists();
 
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
@@ -2104,6 +2087,60 @@ void Context::AddMolecules_SP_NEW(
 
 	}
 
+}
+
+
+/*!
+ * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
+*/
+void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
+{
+	// Convenient vars
+	std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets;
+	array_view<std::vector<bSpecificAtom>::iterator>& topoSubAtomList =
+		topology.subAtomList;
+
+	// For every atom in this topology deposit coords in atomTargets
+	for(int ix = 0; ix < topology.getNumAtoms(); ++ix){
+		
+		SimTK::Vec3 atomCoords(
+			topoSubAtomList[ix].getX(),
+			topoSubAtomList[ix].getY(),
+			topoSubAtomList[ix].getZ());
+
+		atomTargets.insert(std::pair<Compound::AtomIndex, SimTK::Vec3> (
+			topoSubAtomList[ix].getCompoundAtomIndex(),
+			atomCoords));
+
+	}
+
+	// Match coordinates
+	// topology.matchDefaultConfiguration(
+	// 	atomTargets,
+	// 	SimTK::Compound::Match_Exact,
+	// 	true, 150.0);
+
+	//std::cout << "Match start." << "\n" << std::flush;
+	bool flipAllChirality = true;
+	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
+	topology.matchDefaultBondLengths(atomTargets);
+	//std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
+	topology.matchDefaultBondAngles(atomTargets);
+	//std::cout << "matchDefaultBondAngles done. " << "\n" << std::flush;
+	topology.matchDefaultDirections(atomTargets);
+	//std::cout << "matchDefaultDirections done. " << "\n" << std::flush;
+	topology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
+	//std::cout << "matchDefaultDefaultDihedralAngles done. " << "\n" << std::flush;
+	topology.matchDefaultTopLevelTransform(atomTargets);
+	//std::cout << "matchDefaultDefaultTopLevelTransform done. " << "\n" << std::flush;
+
+}
+
+/*!
+ * <!-- Match Compounds configurations to atoms Cartesian coords -->
+*/
+void Context::matchDefaultConfigurations_SP_NEW(void){
 
 	// --------------------------------------------------------------------
 	// matchDefaultConfiguration
@@ -3221,7 +3258,7 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 
 		scout("Loaded flexibilities for world ") << worldIx << eol;
 
-		// Add topologies by CompoundSystem and add it to the
+		// Add topologies to CompoundSystem and add it to the
 		// Visualizer's vector of molecules
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
 
@@ -3241,11 +3278,13 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 
 			Topology& topology = topologies[topCnt];
 
+			// This is many to one map
 			topology.loadAIx2MbxMap_SP_NEW();
 
 		} // every molecule
 
 
+		// This is one to many map
 		worlds[worldIx].loadMbx2AIxMap_SP_NEW();
 
 	} // every world

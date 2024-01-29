@@ -6,62 +6,57 @@ using namespace SimTK;
  * <!-- This is where we create a Comopund for a specific atom -->
 */
 void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
+
     const std::string& atomName = getName();
 
-
-    compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
-
-	// NEW COMPOUND ATOM --------------------------------------------------
+	// // NEW COMPOUND ATOM --------------------------------------------------
     // const int numAtomBonds = getNBonds();
     // switch (numAtomBonds) {
     //     case 0: {
-    //         compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
+    //         compoundSingleAtom = new SimTK::Compound::SingleAtom(
+    //             atomName, element);
     //     } break;
     //     case 1: {
-    //         compoundSingleAtom = new SimTK::UnivalentAtom(atomName, element);
+    //         compoundSingleAtom = new SimTK::UnivalentAtom(
+    //             atomName, element);
     //     } break;
     //     case 2: {
-    //         compoundSingleAtom = new SimTK::BivalentAtom(atomName, element);
+    //         compoundSingleAtom = new SimTK::BivalentAtom(
+    //             atomName, element);
     //     } break;
     //     case 3: {
-    //         compoundSingleAtom = new SimTK::TrivalentAtom(atomName, element); // 120 rad x 3
+    //         compoundSingleAtom = new SimTK::TrivalentAtom(
+    //             atomName, element); // 120 rad x 3
     //     } break;
     //     case 4: {
-    //         compoundSingleAtom = new SimTK::QuadrivalentAtom(atomName, element); // 109.47 rad
-    //     } break;
-        
+    //         compoundSingleAtom = new SimTK::QuadrivalentAtom(
+    //             atomName, element); // 109.47 rad
+    //     } break;        
     //     default: {
-    //         std::cerr << "[ERROR] Atom " << atomName << " has " << numAtomBonds
+    //         std::cerr << "[ERROR] Atom " << atomName
+    //             << " has " << numAtomBonds
     //             << " bonds, which is not supported." << std::endl;
     //         throw std::exception();
     //     }
     // }
-
     // if (numAtomBonds > 0) {
     //     compoundSingleAtom->setDefaultInboardBondLength(0.19);
     // }
-	// NEW COMPOUND ATOM --------------------------------------------------
+	// // NEW COMPOUND ATOM --------------------------------------------------
 
 
     // OLD COMPOUND ATOM --------------------------------------------------
     // Add BondCenters 
+    compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
     const int currAtomNBonds = getNBonds();
-
 	const std::string& currAtomName = getName();    
-
     if(currAtomNBonds > 0){
-
         if (currAtomNBonds == 1){
-
             compoundSingleAtom->addFirstBondCenter("bond1", currAtomName);
-
         } else {
-
             SimTK::Angle TetrahedralAngle = 109.47 * Deg2Rad;
-
             compoundSingleAtom->addFirstTwoBondCenters("bond1", "bond2",
                 currAtomName, UnitVec3(1, 0, 0), UnitVec3(-0.5, 0.866025, 0.0));
-
             if (currAtomNBonds > 2) {
                 compoundSingleAtom->addLeftHandedBondCenter("bond3",
                     currAtomName, TetrahedralAngle, TetrahedralAngle);
@@ -71,11 +66,11 @@ void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
                     currAtomName, TetrahedralAngle, TetrahedralAngle);
             }
         }
-
         // Set the inboard BondCenter
         compoundSingleAtom->setInboardBondCenter("bond1");
         compoundSingleAtom->setDefaultInboardBondLength(0.19);
-    } // OLD COMPOUND ATOM ------------------------------------------------
+    }
+    // OLD COMPOUND ATOM ------------------------------------------------
 
     // Set the Compound name for the atom
     compoundSingleAtom->setCompoundName("SingleAtom");

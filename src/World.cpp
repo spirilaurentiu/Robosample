@@ -2460,7 +2460,7 @@ World::calcMobodToMobodTransforms(
 
 	// Get Top to parent frame
 	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
-	// root of the parent mobod
+	// Origin of the parent mobod
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 	
@@ -3185,3 +3185,4 @@ void World::setDistortOption(int distort) {
 int World::getDistortOption() const {
 	return distortOption;
 }
+

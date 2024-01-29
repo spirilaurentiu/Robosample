@@ -96,8 +96,6 @@ public:
 		int rootAmberIx,
 		int molIx);
 
-	/** Assign Compound coordinates by matching bAtomList coordinates */
-	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
 
 	/**  */
 	void generateSubAtomLists(void);
@@ -108,10 +106,22 @@ public:
 	/** Pass Context topologies to all the worlds */
 	void passTopologiesToWorlds(void);
 
+	/** Read atoms and bonds from all the molecules */
+	void readMolecules_SP_NEW(void);
+	
 	/**  */
-	void AddMolecules_SP_NEW(
+	void constructTopologies_SP_NEW(
 		std::vector<std::string>& argRoots
 	);
+
+	/**  */
+	void generateTopologiesSubarrays(void);
+
+	/** Assign Compound coordinates by matching bAtomList coordinates */
+	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
+
+	/** Match Compounds configurations to atoms Cartesian coords */
+	void matchDefaultConfigurations_SP_NEW(void);
 
 	// ------------- SP_NEW -------------
 

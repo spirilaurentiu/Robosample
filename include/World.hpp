@@ -740,10 +740,10 @@ public:
 	void setDistortOption(int distort);
 	int getDistortOption() const;
 
-	
 private:
+
 	// Map mbx2aIx contains only atoms at the origin of mobods
-	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx; // DANGER
+	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
 
 	// Maps a generalized velocity scale factor for every mobod
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Real > mbx2uScale;
