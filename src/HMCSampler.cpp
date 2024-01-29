@@ -223,16 +223,13 @@ SimTK::Real HMCSampler::uniformRealDistributionCDFTrunc(
 	return cdf;
 }
 
-/** Seed the random number generator. Set simulation temperature,
+/** Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
 acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
 bool HMCSampler::initialize(SimTK::State& someState)
 {
-	// Set a validation flag
-	bool validated = true;
-
 	//system->realize(someState, SimTK::Stage::Model);
 
 	// After an event handler has made a discontinuous change to the
@@ -259,17 +256,13 @@ bool HMCSampler::initialize(SimTK::State& someState)
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
-	
-	// Transformation Jacobian
-	bendStretchJacobianDetLog = 0.0;
 
-	return validated;
-
+	return true;
 }
 
 
 /**
- * Seed the random number generator. Set simulation temperature,
+ * Set simulation temperature,
  * velocities to desired temperature, variables that store the configuration
  * and variables that store the energies, both needed for the
  * acception-rejection step. Also realize velocities and initialize
@@ -403,11 +396,15 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	// Reset ndofs
 	ndofs = nu;
 
-	// Initialize velocities to temperature
-	for (int j=0; j < nu; ++j){
-		UScaleFactors[j] = 1;
-		InvUScaleFactors[j] = 1;
-	}
+	// TODO replaced code beloe
+	std::fill(UScaleFactors.begin(), UScaleFactors.end(), 1);
+	std::fill(InvUScaleFactors.begin(), InvUScaleFactors.end(), 1);
+
+	// // Initialize velocities to temperature
+	// for (int j=0; j < nu; ++j){
+	// 	UScaleFactors[j] = 1;
+	// 	InvUScaleFactors[j] = 1;
+	// }
 
 	// Set the generalized velocities scale factors
 	loadUScaleFactors(someState);
@@ -591,7 +588,8 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 {	
 	// Set velocities to 0
 	if(this->integratorName == IntegratorName::OMMVV){
-		dumm->setOpenMMvelocities(0);
+		uint32_t seed = randomEngine() >> 32;
+		dumm->setOpenMMvelocities(0, seed);
 	}else{
 		someState.updU() = 0;
 	}
@@ -602,52 +600,35 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 distribution.  **/
 void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 {
-
-	if(this->integratorName == IntegratorName::OMMVV){
-
-		dumm->setOpenMMvelocities(this->boostT);
-
-	}else{
-
+	if (this->integratorName == IntegratorName::OMMVV){
+		uint32_t seed = randomEngine() >> 32;
+		dumm->setOpenMMvelocities(this->boostT, seed);
+	} else {
 		// Check if we can use our cache
 		const int nu = someState.getNU();
-		if (nu != RandomCache.nu) {
-
+		if (nu != RandomCache.getNU()) {
 			// Rebuild the cache
 			// We also get here if the cache is not initialized
-			RandomCache.V.resize(nu);
-			RandomCache.SqrtMInvV.resize(nu);
-			RandomCache.sqrtRT = std::sqrt(this->boostRT);
-
-			RandomCache.nu = nu;
-
-			// We don't get to use multithreading here
-			RandomCache.FillWithGaussian();
-
+			RandomCache.initialize(nu);
+			sqrtMInvV.resize(nu);
 		} else {
-
 			// Wait for random number generation to finish (should be done by this stage)
-			RandomCache.task.wait();
+			RandomCache.wait();
 		}
 
 		// Scale by square root of the inverse mass matrix
-		matter->multiplyBySqrtMInv(someState,
-			RandomCache.V,
-			RandomCache.SqrtMInvV);
+		matter->multiplyBySqrtMInv(someState, RandomCache.getV(), sqrtMInvV);
 
 		// Set stddev according to temperature
-		RandomCache.SqrtMInvV *= sqrtBoostRT;
+		sqrtMInvV *= sqrtBoostRT;
 
 		// Raise the temperature
-		someState.updU() = RandomCache.SqrtMInvV;
+		someState.updU() = sqrtMInvV;
 
 		// Ask for a number of random numbers and check if we are done the next
-		//  time we hit this function
-		RandomCache.task = std::async(std::launch::async,
-			RandomCache.FillWithGaussian);
-
+		// time we hit this function
+		RandomCache.generateGaussianVelocities();
 	}
-
 }
 
 
@@ -694,6 +675,7 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 	SimTK::Vector Us(nu, 1);
 
 	// Vector multiplied by the sqrt of the inverse mass matrix
+	// TODO move to class member to store memory
 	SimTK::Vector sqrtMInvUs(nu, 1);
 
 	if(DistortOpt == 1){ // For pure demonstrative purposes
@@ -770,22 +752,16 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 
 		// Check if we can use our cache
 		// Draw X from a normal distribution N(0, 1)
-		if (nu != RandomCache.nu) {
+		if (nu != RandomCache.getNU()) {
 			// Rebuild the cache
 			// We also get here if the cache is not initialized
-			RandomCache.V.resize(nu);
-			RandomCache.SqrtMInvV.resize(nu);
-			RandomCache.sqrtRT = std::sqrt(RT);
-			RandomCache.nu = nu;
-
-			// we don't get to use multithreading here
-			RandomCache.FillWithGaussian();
+			RandomCache.initialize(nu);
 		} else {
-			// wait for random number generation to finish (should be done by this stage)
-			RandomCache.task.wait();
+			// Wait for random number generation to finish (should be done by this stage)
+			RandomCache.wait();
 		}
 
-		Us = RandomCache.V;
+		Us = RandomCache.getV();
 
 		// Multiply by the square root of the inverse mass matrix
 		matter->multiplyBySqrtMInv(someState, Us, sqrtMInvUs);
@@ -820,22 +796,16 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 
 		// Check if we can use our cache
 		// Draw X from a normal distribution N(0, 1)
-		if (nu != RandomCache.nu) {
+		if (nu != RandomCache.getNU()) {
 			// Rebuild the cache
 			// We also get here if the cache is not initialized
-			RandomCache.V.resize(nu);
-			RandomCache.SqrtMInvV.resize(nu);
-			RandomCache.sqrtRT = std::sqrt(RT);
-			RandomCache.nu = nu;
-
-			// we don't get to use multithreading here
-			RandomCache.FillWithGaussian();
+			RandomCache.initialize(nu);
 		} else {
-			// wait for random number generation to finish (should be done by this stage)
-			RandomCache.task.wait();
+			// Wait for random number generation to finish (should be done by this stage)
+			RandomCache.wait();
 		}
 
-		Us = RandomCache.V;
+		Us = RandomCache.getV();
 
 		std::cout << "Us 1 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
 
@@ -907,7 +877,7 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 
 		// Add Gaussian noise to the length
 		std::normal_distribution<double> lengthNoiser(1, 0.1);
-		double lengthNoise = lengthNoiser(RandomCache.RandomEngine);
+		double lengthNoise = lengthNoiser(randomEngine);
 		std::cout << "lengthNoise " << lengthNoise << "\n";
 		for(int j = 0; j < ndofs; j++){Us[j] *= lengthNoise;}
 		std::cout << "Us 4 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
@@ -921,22 +891,16 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 		//std::cout << "DOFUs 0 "; for(int i = 0; i < nu; i++){ std::cout << DOFUScaleFactors[i] << " " ;} std::cout << "\n";
 
 		// Sample from N(0, 1)
-		if (nu != RandomCache.nu) {
+		if (nu != RandomCache.getNU()) {
 			// Rebuild the cache
 			// We also get here if the cache is not initialized
-			RandomCache.V.resize(nu);
-			RandomCache.SqrtMInvV.resize(nu);
-			RandomCache.sqrtRT = std::sqrt(RT);
-			RandomCache.nu = nu;
-
-			// we don't get to use multithreading here
-			RandomCache.FillWithGaussian();
+			RandomCache.initialize(nu);
 		} else {
-			// wait for random number generation to finish (should be done by this stage)
-			RandomCache.task.wait();
+			// Wait for random number generation to finish (should be done by this stage)
+			RandomCache.wait();
 		}
 
-		Us = RandomCache.V;
+		Us = RandomCache.getV();
 		//std::cout << "Us 0 "; for(int i = 0; i < nu; i++){ std::cout << Us[i] << " " ;} std::cout << "\n";
 
 		// Get random -1 or 1
@@ -1074,9 +1038,7 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 	// Realize velocity
 	system->realize(someState, SimTK::Stage::Velocity);
 
-	// ask for a number of random numbers and check if we are done the next
-	//  time we hit this function
-	RandomCache.task = std::async(std::launch::async, RandomCache.FillWithGaussian);
+	RandomCache.generateGaussianVelocities();
 }
 
 /*
@@ -1233,7 +1195,7 @@ void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 
 			// TODO moe to internal variables set
 				std::normal_distribution<float> trajLenNoiser(1.0, MDStepsPerSampleStd);
-				float trajLenNoise = trajLenNoiser(RandomCache.RandomEngine);
+				float trajLenNoise = trajLenNoiser(randomEngine);
 			timeJump = (timestep*MDStepsPerSample) * trajLenNoise;
 
 		}else{
@@ -4295,4 +4257,19 @@ void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass)
 	if(integratorName == IntegratorName::OMMVV) {
 		dumm->setOpenMMparticleMass(nax, mass);
 	}
+}
+
+void HMCSampler::setNonequilibriumParameters(int distort, int work, int flow) {
+	DistortOpt = distort;
+	WorkOpt = work;
+	FlowOpt = flow;
+}
+
+int HMCSampler::getDistortOption() const {
+	return DistortOpt;
+}
+
+void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps) {
+	setBoostTemperature(boostTemperature); // used for OpenMM and other minor stuff
+	setBoostMDSteps(boostMDSteps); // not used
 }

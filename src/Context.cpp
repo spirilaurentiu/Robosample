@@ -15,6 +15,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	setupReader.ReadSetup(file);
 	setupReader.dump(true);
 
+	// Set random seed
+	setSeed(std::stoi(setupReader.get("SEED")[0]));
+
 	// Set the log filename
 	std::string logFilename = CreateLogfilename(setupReader.get("OUTPUT_DIR")[0],
 		std::stoi(setupReader.get("SEED")[0]));
@@ -69,27 +72,29 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 
 		addWorld(
-			(setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE"),
-			(setupReader.get("OPENMM")[worldIx] == "TRUE"), // mandatory true. keep for debugging
-			(setupReader.get("OPENMM_CalcOnlyNonbonded")[worldIx] == "TRUE"), // redundant, see below
-			(setupReader.get("INTEGRATORS")[worldIx] == "OMMVV"), // merge doar la lumea flexibila
-			std::stod(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
-			std::stod(setupReader.get("BOOST_MDSTEPS")[worldIx]),
-			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
-			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
+			setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE",
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]),
-			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
-			(setupReader.get("VISUAL")[worldIx] == "TRUE"),
+			setupReader.get("VISUAL")[worldIx] == "TRUE",
 			visualizerFrequency);
+
+		if (setupReader.get("OPENMM")[worldIx] == "TRUE") {
+			getWorld(worldIx).useOpenMM(
+				setupReader.get("INTEGRATORS")[worldIx] == "OMMVV",
+				std::stod(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
+				std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+		}
+
+		setNonbonded(
+			std::stoi(setupReader.get("NONBONDED_METHOD")[worldIx]),
+			std::stod(setupReader.get("NONBONDED_CUTOFF")[worldIx]));
+
+		if(setupReader.get("OPENMM_CalcOnlyNonbonded")[worldIx] == "TRUE"){
+			setUseOpenMMCalcOnlyNonBonded(true);
+		}else{
+			setUseOpenMMCalcOnlyNonBonded(false);
+		}
+
 	}
-
-	// Context c(numThreads = nproc, nbMethod = 0, nbCutoff = 1.2); // nu conteaza cutoff cand method = 0
-	// getWorld(0).useOpenMM(calcOnlyNB, useOMMintegrator);
-	// getWorld(0).useVisualizer(frequency);
-	// setGuidanceHamiltonian(BOOST_TEMPERATURE, BOOST_MDSTEPS); // default == tempIni
-
-	// setWork(distort, flow, work);
-	// setEvaluationHamiltonian(TEMPERATURE, );
 	
 	// Get how much available memory we have
 	struct sysinfo info;
@@ -134,7 +139,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		// Build graph (bondAtom)
 		constructTopologies_SP_NEW(argRoots);
 
-		// Generate Topologies sub_array views
+		// Generate Topologies sub_array views (bonds are sorted - not BONDS)
 		generateTopologiesSubarrays();
 
 		// Match Compounds configurations to atoms Cartesian coords
@@ -157,10 +162,139 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			topology.setBondList();
 		}
 
-		// std::cout 
-		// 	<< "Robosample in development mode. Delete return after print."
-		// 	<< eol;
-		// return false;
+
+		// ====================================================================
+		// TRANSFORMERS LAB
+
+		scout("Transformers table by atom: no dAIx topoIx cAIx mobods") << eol;
+		size_t cnt = 0;
+		for(auto &atom : atoms){
+
+			size_t topoIx = atom.getMoleculeIndex();
+			Topology& topology = topologies[topoIx];
+
+			const SimTK::Compound::AtomIndex cAIx = atom.getCompoundAtomIndex();
+
+			// Get dumm atom index (set in modelOneCompound Step 1)
+			SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(cAIx);
+
+			// Get vector of worlds mbxs which contain this atom
+			std::vector<SimTK::MobilizedBodyIndex> worldsMbxs;
+
+			size_t wIx = 0;
+			for(auto &world : worlds){
+				SimTK::DuMMForceFieldSubsystem& dumm = *(world.updForceField());
+				SimTK::MobilizedBodyIndex mbx = dumm.getAtomBody(dAIx);
+				worldsMbxs.push_back(mbx);
+				wIx++;
+			}
+
+			// What do we have so far
+			scout("atomEntry: ") 
+				<< cnt <<" "
+				<< dAIx <<" "
+				<< topoIx <<" "
+				<< cAIx <<" ";
+
+			scout(" ");	
+			for(auto mbx: worldsMbxs){
+				std::cout << mbx <<" ";
+			}
+			ceol;	
+
+			// Increase atom number
+			cnt++;
+		} // every atom
+
+		// --------------------------------------------------------------------
+
+		scout("Transformers table by bond: allCnt topoIx BOIx boIx BOchild BOparent child_cAIx parent_cAIx child_dAIx parent_dAIx childMbx parentMbx") << eol;
+
+		const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+		assert(allBONDS.size() == getNofMolecules() 
+			&& "internal coordinates nof molecules wrong");
+
+		size_t allCnt = 0;
+
+		for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
+			const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
+			Topology& topology = topologies[topoIx];
+
+			for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+
+				const BOND& currBOND = BONDS[BOIx];
+				size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+				bBond& bond = bonds[boIx];
+
+				bSpecificAtom& childAtom  = atoms[currBOND.first];
+				bSpecificAtom& parentAtom = atoms[currBOND.second];
+
+				SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+				SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+
+				SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+				SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+				bond.getBondMobility(0);
+
+				// What we have so far
+				scout("bondEntry: ")
+					<< allCnt <<" "
+					<< topoIx <<" "
+					<< BOIx <<" "
+					<< boIx <<" ";
+
+				BONDS[BOIx].Print();
+
+				scout(" ")
+					<< child_cAIx <<" "
+					<< parent_cAIx <<" "
+					<< child_dAIx <<" "
+					<< parent_dAIx <<" "
+				;
+
+				// Get vector of worlds mbxs which contain this atom
+				std::vector<std::pair<
+					SimTK::MobilizedBodyIndex, SimTK::MobilizedBodyIndex>> worldsMbxs;
+
+				size_t wIx = 0;
+				for(auto &world : worlds){
+					SimTK::DuMMForceFieldSubsystem& dumm = *(world.updForceField());
+					SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+					SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+					worldsMbxs.push_back(std::pair<
+						SimTK::MobilizedBodyIndex, SimTK::MobilizedBodyIndex>
+						{childMbx, parentMbx});
+
+					wIx++;
+				}
+
+				scout(" ");	
+				for(auto mbxPair: worldsMbxs){
+					std::cout << mbxPair.first <<" " << mbxPair.second <<" " 
+					;
+				}
+
+				ceol;
+
+				allCnt++;
+
+			} // every bond
+
+		} // every molecule
+		
+
+		// TRANSFORMERS LAB
+		// ====================================================================
+
+
+		std::cout 
+			<< "Robosample in development mode. Delete return after print."
+			<< eol;
+		return false;
 
 	}else{ // SP_OLD
 
@@ -229,13 +363,22 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			to_upper(setupReader.get("SAMPLERS")[worldIx]),
 			setupReader.get("INTEGRATORS")[worldIx],
 			setupReader.get("THERMOSTAT")[worldIx],
-			std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
 			std::stof(setupReader.get("TIMESTEPS")[worldIx]),
 			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
 			MDStepsPerSample,
-			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]),
-			(setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"),
-			std::stoi(setupReader.get("SEED")[worldIx]));
+			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE");
+
+		world.getSampler(0)->setNonequilibriumParameters(
+			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
+			0, 0);
+
+		// TODO 
+		world.getSampler(0)->setGuidanceHamiltonian(
+			std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
+			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx])
+		);
+
+		// setEvaluationHamiltonian(TEMPERATURE, );
 
 		// Tell OpenMM what masses we're going to use
 		// By default, OpenMM uses Molmodel masses which do not match Amber masses
@@ -250,7 +393,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 	}
 
-	// If there is any problem here, it might be because this block was above the previous one
+	// TODO If there is any problem here, it might be because this block was above the previous one
 	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("SPHERE_RADIUS")[0] != "ERROR_KEY_NOT_FOUND") {
@@ -1274,15 +1417,7 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 // timestep in ps
 void Context::addWorld(
 	bool fixmanTorque,
-	bool useOpenMM,
-	bool useOpenMMOnlyNonBonded,
-	bool useOpenMMIntegrator,
-	SimTK::Real boostTemp,
-	int boostMDSteps,
-	SimTK::Real timestep,
-	int mdSteps,
 	int samplesPerRound,
-	int distort,
 	bool visual,
 	SimTK::Real visualizerFrequency) {
 
@@ -1316,27 +1451,20 @@ void Context::addWorld(
 
 	// Set GBSA scaling and VdW mixing rule
 	worlds.back().setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
-	worlds.back().updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot); // GLOBAL
-
-	// Use OpenMM if requested
-	worlds.back().updForceField()->setUseOpenMMAcceleration(useOpenMM);
-	worlds.back().updForceField()->setUseOpenMMCalcOnlyNonBonded(useOpenMMOnlyNonBonded);
-
-	if (useOpenMMIntegrator) {
-		worlds.back().updForceField()->setUseOpenMMIntegration(true);
-		worlds.back().updForceField()->setDuMMTemperature(boostTemp);
-		worlds.back().updForceField()->setOpenMMstepsize(timestep);
-	}
+	worlds.back().updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot); // DuMMForceFieldSubsystem::WaldmanHagler
 
 	// Set how many times to run sample_iteration()
 	worlds.back().setSamplesPerRound(samplesPerRound);
 
-	worlds.back().setDistortOption(distort);
+	// Set temperatures for sampler and Fixman torque is applied to this world
 	worlds.back().setTemperature(tempIni);
 
 	rbSpecsFNs.push_back(std::vector<std::string>());
 	flexSpecsFNs.push_back(std::vector<std::string>());
 	regimens.push_back(std::vector<std::string>());
+
+	// Set seed for random number generators
+	worlds.back().setSeed(randomEngine());
 
 	// Store the number of worlds
 	nofWorlds = worlds.size();
@@ -3538,9 +3666,12 @@ std::size_t Context::getNofWorlds() const
 	return nofWorlds;
 }
 
-SimTK::DuMMForceFieldSubsystem * Context::updForceField(std::size_t whichWorld)
-{
-	return worlds[whichWorld].updForceField();
+std::vector<World>& Context::getWorlds() {
+	return worlds;
+}
+
+const std::vector<World>& Context::getWorlds() const {
+	return worlds;
 }
 
 int Context::getNofMolecules()
@@ -4566,11 +4697,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 // Exhange all replicas
 void Context::mixAllReplicas(int nSwapAttempts)
 {
-	// Get a random number generator
-	//std::random_device rd; // obtain a random number
-	//std::mt19937 randomEngine(rd()); // seed the generator
-	std::uniform_int_distribution<std::size_t>
-		randReplicaDistrib(0, nofReplicas-1);
+	std::uniform_int_distribution<std::size_t> randReplicaDistrib(0, nofReplicas-1);
 
 	// Try nSwapAttempts to swap between random replicas
 	for(size_t swap_k = 0; swap_k < nSwapAttempts; swap_k++){
@@ -5154,8 +5281,7 @@ SimTK::Real Context::distributeScalingFactor(
 			<< std::endl;
 
 		SimTK::Real randDir =
-			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
-				randomEngine);
+			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		scalefactor = (randDir > 0) ? scalefactor : (1.0/scalefactor) ;
 	}
 
@@ -5163,8 +5289,7 @@ SimTK::Real Context::distributeScalingFactor(
 	if(randSignOpt){
 		SimTK::Real randSign;
 		SimTK::Real randUni_m1_1 =
-			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(
-				randomEngine);
+			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
 		scalefactor *= randSign;
 	}
@@ -5209,7 +5334,7 @@ bool Context::RunWorld(int whichWorld)
 	// == SAMPLE == from the current world
 	bool validated = false;
 	const int numSamples = worlds[whichWorld].getSamplesPerRound();
-	const int distortOption = worlds[whichWorld].getDistortOption();
+	const int distortOption = worlds[whichWorld].getSampler(0)->getDistortOption(); // TODO
 
 	// Equilibrium world
 	if(distortOption == 0) {
@@ -5785,15 +5910,13 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 void Context::randomizeWorldIndexes()
 {
 	// Random int for random world order
-	std::random_device rd; // obtain a random number from hardware
-	std::mt19937 gen(rd()); // seed the generator
 	std::uniform_int_distribution<std::size_t>
 		randWorldDistrib(1, nofWorlds-1); // TODO between 1 and nOfWorlds-1?
 
 	if(getNofWorlds() >= 3){
 
 		// Swap world indeces between vector position 2 and random
-		auto randVecPos = randWorldDistrib(gen);
+		auto randVecPos = randWorldDistrib(randomEngine);
 		//std::cout << "Swapping position 1 with "
 		//	<< randVecPos << std::endl;
 
@@ -6009,19 +6132,6 @@ void Context::setNonbondedCutoff(std::size_t which, Real cutoffNm)
         std::cout<< "Negative cutoff requested. Default cutoff = 2.0 nm will be used instead" << endl;
     }
 }
-
-
-/** Get/Set seed for reproducibility. **/
-void Context::setSeed(std::size_t whichWorld, std::size_t whichSampler, uint32_t argSeed)
-{
-	worlds[whichWorld].updSampler(whichSampler)->setSeed(argSeed);
-}
-
-uint32_t Context::getSeed(std::size_t whichWorld, std::size_t whichSampler) const
-{
-	return worlds[whichWorld].getSampler(whichSampler)->getSeed();
-}
-
 
 //------------
 //------------
@@ -6664,12 +6774,12 @@ void Context::setNumThreads(int threads) {
 }
 
 void Context::setNonbonded(int method, SimTK::Real cutoff) {
-	if (method !=0 && method != 1) {
-        std::cerr << "Invalid nonbonded method (0 = nocutoff; 1 = cutoffNonPeriodic). Default NoCutoff method will be used." << std::endl;
-		nonbondedMethod = 0;
-    } else {
+	//if (method !=0 && method != 1) {
+    //    std::cerr << "Invalid nonbonded method (0 = nocutoff; 1 = cutoffNonPeriodic). Default NoCutoff method will be used." << std::endl;
+	//	nonbondedMethod = 0;
+    //} else {
 		nonbondedMethod = method;
-    }
+    //}
 
 	if (cutoff < 0) {
 		std::cerr << "Invalid cutoff requested (negative value). Default cutoff of 1.2 nm will be used instead." << std::endl;
@@ -6697,4 +6807,8 @@ void Context::setForceFieldScaleFactors(SimTK::Real globalScaleFactor) {
 	} else {
 		globalForceFieldScaleFactor = globalScaleFactor;
 	}
+}
+
+void Context::setSeed(uint32_t seed) {
+	randomEngine = buildRandom32(seed);
 }

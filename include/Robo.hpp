@@ -104,6 +104,7 @@
 #include "readAmberInput.hpp"
 #include "SetupReader.hpp"
 #include "trim.hpp"
+#include "pcg_random.hpp"
 
 //#ifndef DEBUG_ROBO
 //#define DEBUG_ROBO
@@ -114,6 +115,5 @@
 #else
 #define TRACE(STR)
 #endif
-
 
 #endif // __ROBO_HPP

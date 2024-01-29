@@ -567,6 +567,7 @@ SET(ROBOSAMPLE_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/format/inc
     ${CMAKE_SOURCE_DIR}/format/inc/mdtraj
+    ${CMAKE_SOURCE_DIR}/pcg-cpp/include
     ${OPENMM_INCLUDE_DIRS}
     ${SIMBODY_INCLUDE_DIRS}
     ${MOLMODEL_INCLUDE_DIRS}

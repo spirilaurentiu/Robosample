@@ -422,8 +422,7 @@ public:
 
 	// --- Simulation ---
 	/** Get/Set seed for reproducibility. **/
-	void setSeed(int whichSampler, uint32_t argSeed);
-	uint32_t getSeed(int whichSampler) const;
+	void setSeed(uint32_t argSeed);
 
 	/** Use the Fixman torque as an additional force subsystem.
 	Careful not have different temperatures for World and Fixman Torque. **/
@@ -477,13 +476,12 @@ public:
 		const std::string& generatorName,
 		const std::string& integratorName,
 		const std::string& thermostatName,
-		SimTK::Real boostTemperature,
 		SimTK::Real timestep,
 		int mdStepsPerSample,
-		int mdStepsPerSampleStd,
-		int boostMDSteps,
-		bool useFixmanPotential,
-		int seed);
+		int mdStepsPerSampleStd, 
+		bool useFixmanPotential);
+
+	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);
 
 	// TODO Use Sampler polymorphism
 	/** Get a sampler based on its position in the samplers vector **/
@@ -656,8 +654,6 @@ public:
 	ContactCliqueId clique1;
 	std::unique_ptr<MobilizedBody::Weld> membrane;
 	std::unique_ptr<Body::Rigid> memBody;
-
-	bool _useFixmanTorque;
 	//...............
 
 	// --- Statistics ---
@@ -755,8 +751,10 @@ private:
 	// Track the Stage of the system
 	SimTK::Stage currStage;
 
+	bool useFixmanTorque = false;
 	int samplesPerRound = 0;
-	int distortOption = 0;
+
+	Random32 randomEngine;
 };
 
 #endif /*WORLD_H_*/

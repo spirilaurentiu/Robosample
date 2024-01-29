@@ -37,7 +37,7 @@ try
   {
     getline(prmtop, line);
 
-    if (line.find("POINTERS") != std::string::npos)
+    if (line.find("FLAG POINTERS") != std::string::npos)
         readPointers();
     else if (line.find("CHARGE") != std::string::npos)
         readAtomsCharge();

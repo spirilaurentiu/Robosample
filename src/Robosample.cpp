@@ -27,9 +27,13 @@ int main(int argc, char **argv)
 	
 	Context c;
 
+	// c.setNumThreads(3);
+	// c.setSeed(42);
+	// c.useVisualizer(frequency); // GLOBAL?
+
 	bool singlePrmtop = false;
 
-	std:;string singlePrmtopOpt;
+	std::string singlePrmtopOpt;
 	if(argc >= 3){
 		singlePrmtopOpt = argv[2];
 	}
