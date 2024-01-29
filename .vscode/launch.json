@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: Current File",
             "type": "python",
@@ -16,11 +17,15 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/TestBAT",
-            "args": ["${workspaceFolder}/build/inp.2but"],
-            // "program": "${workspaceFolder}/build/TestGeometry",
+            "program": "${workspaceFolder}/build_debug/robosample.d",
+
+            // "symbolSearchPath": "${workspaceFolder}/build_debug/robosample.d",
+
+            
+
+            "args": ["${workspaceFolder}/build_debug/inp.1w.999", "multiplePrmtop"],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build/",
+            "cwd": "${workspaceFolder}/build_debug/",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

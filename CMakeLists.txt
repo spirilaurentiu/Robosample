@@ -15,7 +15,7 @@ SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 SET(COMMON_FLAGS "-msse4.1 -mavx")
 
 # -O2 is marginally slower than -O3
-SET(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O0 -g")
+SET(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O0 -g -ggdb")
 SET(EXTRA_COMPILE_FLAGS_RELEASE "${COMMON_FLAGS} -O3 -march=native -mtune=native")
 
 # set the profile guided optimization (pgo) flags
@@ -55,7 +55,8 @@ IF(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "Debug_Tests" OR
     # set the sanitizer flags
     # https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
     # https://clang.llvm.org/docs/AddressSanitizer.html
-    SET(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
+    #SET(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
+    SET(SANITIZER_FLAGS "-fsanitize=leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
 
     SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer ${SANITIZER_FLAGS}")
     SET(PREFIX ".d")
