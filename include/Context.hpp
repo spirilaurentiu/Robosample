@@ -35,7 +35,7 @@ public:
 	* @param singlePrmtop Read all molecules from a single prmtop
 	* @return succes of the function
 	*/	
-	bool initializeFromFile(const std::string& filename, bool singlePrmtop = false);
+	bool initializeFromFile(const std::string& filename);
 
 	void setNumThreads(int threads);
 	void setNonbonded(int method, SimTK::Real cutoff);
@@ -247,6 +247,7 @@ public:
 	// --- Main ---
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
+	void transferCoordinates_SP_NEW(int src, int dest);
 
 	// Print recommended timesteps
 	void PrintInitialRecommendedTimesteps(void);
@@ -516,6 +517,10 @@ public:
 
 	void PrintBonds(void);
 
+	// Transformers
+	void Print_TRANSFORMERS_Work(void);
+
+
 private:
 	bool CreateOutputDirectory(const std::string& outDir);
 	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
@@ -680,6 +685,43 @@ public:
 	/** Implicit membrane mimicked by half-space contacts */
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
+
+    std::vector<std::string> MobilityStr {
+		"Zero",
+        "Free",
+        "Torsion",
+        "Rigid", 
+        "BallF", 
+        "BallM", 
+        "Cylinder", 
+        "Translation", 
+        "FreeLine", 
+        "LineOrientationF", 
+        "LineOrientationM", 
+        "UniversalM", 
+        "Spherical", 
+        "AnglePin",
+        "BendStretch",
+        "Slider"   
+    };
+
+	BondMobility::Mobility getMobility(const std::string& mobilityStr) {
+		// Assume MobilityStr is a vector defined elsewhere in your code
+		// std::vector<std::string> MobilityStr = { ... };
+
+		auto it = std::find(MobilityStr.begin(), MobilityStr.end(), mobilityStr);
+		
+		if (it != MobilityStr.end()) {
+			// If the string is found, return the corresponding enum value
+			return static_cast<BondMobility::Mobility>(std::distance(MobilityStr.begin(), it) + 1);
+		} else {
+			// If the string is not found, return the default value
+			return BondMobility::Default;
+		}
+	}	
+
+
+	bool singlePrmtop = false;
 
 };
 

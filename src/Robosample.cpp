@@ -31,18 +31,16 @@ int main(int argc, char **argv)
 	// c.setSeed(42);
 	// c.useVisualizer(frequency); // GLOBAL?
 
-	bool singlePrmtop = false;
-
 	std::string singlePrmtopOpt;
 	if(argc >= 3){
 		singlePrmtopOpt = argv[2];
 	}
 
 	if(singlePrmtopOpt == "singlePrmtop"){
-		singlePrmtop = true;
+		c.singlePrmtop = true;
 	}
 
-	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
+	if (!c.initializeFromFile(argv[1])) {
 		return -1;
 	}
 

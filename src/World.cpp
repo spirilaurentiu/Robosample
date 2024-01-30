@@ -2446,6 +2446,8 @@ World::calcMobodToMobodTransforms(
 	SimTK::Compound::AtomIndex chemParentAIx =
 		topology.getChemicalParent_IfIAmRoot(matter.get(), rootAIx, *forceField);
 
+	//SimTK::Compound::AtomIndex chemParentAIx =
+	//	topology.getNeighbourWithSmallerAIx(rootAIx, *forceField);
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =

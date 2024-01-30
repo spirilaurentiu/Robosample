@@ -280,6 +280,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				if (nofProcesses == 2) {
 					if (baseSetFlag == 0) {
 						this->setBaseAtom(previousNode->getSingleAtom());
+						previousNode->setIsBase(true);
 						this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
 						this->convertInboardBondCenterToOutboard();
 						baseSetFlag = 1;
@@ -526,6 +527,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	// Build the graph
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
+		bAtomList[0].setIsBase(true);
 		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 		this->setAtomBiotype(bAtomList[0].getName(), (this->name), bAtomList[0].getName());
 	}else{
@@ -558,6 +560,7 @@ void Topology::buildAcyclicGraphWrap(bSpecificAtom* root)
 	// Build the graph
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
+		bAtomList[0].setIsBase(true);
 		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
 	}else{
@@ -2467,9 +2470,6 @@ Topology::getNeighbourWithSmallerAIx(
 	// Return
 	return chemParentAIx;
 }
-
-
-
 
 
 
