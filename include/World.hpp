@@ -258,7 +258,7 @@ public:
 
 	// These are no longer needed TODO: delete
 	/** Get MobilizedBody to AtomIndex map **/
-	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
+	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >&
 	getMbx2aIx();
 
 	/** Get the number of MobilizedBodies in this Compound **/
@@ -299,6 +299,10 @@ public:
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
 		getAtomsLocationsInGround(SimTK::State&
+	);
+	std::vector<std::vector<
+	std::pair<bSpecificAtom *, SimTK::Vec3> > >
+		getAtomsLocationsInGround_SP_NEW(SimTK::State&
 	);
 
 	/** Get the current Compound Cartesian coordinates using Simbody **/
@@ -361,6 +365,60 @@ public:
 		Topology& topology,
 		SimTK::Compound::AtomIndex aIx,
 		const SimTK::State& someState);
+
+
+// REFAC ----------------------------------------------------------------------
+
+void
+extractAtomTargets(
+	int topoIx,
+	const std::vector<std::vector<
+	std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
+
+SimTK::Transform
+setAtoms_Compound_Match(
+	int topoIx,
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
+
+
+void
+setAtoms_Compound_FramesInMobod(
+	int topoIx,
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
+	SimTK::Vec3* locs);
+
+void
+setAtoms_SetDuMMStations(
+	int topoIx,
+	SimTK::Vec3* locs
+);
+
+SimTK::State&
+setAtoms_XPF_XBM(
+	SimTK::State& someState,
+	int topoIx
+);
+
+SimTK::State&
+setAtoms_MassProperties(
+	SimTK::State& someState,
+	int topoIx
+);
+
+SimTK::State&
+setAtoms_XFM(
+	SimTK::State& someState,
+	int topoIx
+);
+
+SimTK::State&
+setAtomsLocationsInGround_REFAC(SimTK::State&,
+	const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+	otherWorldsAtomsLocations);
+
+// REFAC ----------------------------------------------------------------------
+
 
 	/** Set Compound, MultibodySystem and DuMM configurations according to
 	some other World's atoms **/

@@ -248,6 +248,59 @@ public:
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
 	void transferCoordinates_SP_NEW(int src, int dest);
+// SP_NEW_TRANSFER ============================================================
+
+SimTK::State&
+setAtoms_XPF_XBM(
+	int wIx,
+	int topoIx
+);
+
+SimTK::State&
+setAtoms_MassProperties(
+	int wIx,
+	int topoIx
+);
+
+SimTK::State&
+setAtoms_XFM(
+	int wIx,
+	int topoIx
+);
+
+std::vector<SimTK::Transform>
+calcMobodToMobodTransforms(
+	int wIx,
+	Topology& topology,
+	SimTK::Compound::AtomIndex& childNo,
+	SimTK::Compound::AtomIndex& parentNo,
+	const SimTK::State& someState
+);
+
+SimTK::Compound::AtomIndex
+getChemicalParent_IfIAmRoot(
+	int wIx,
+	int atomNo,
+	SimTK::DuMMForceFieldSubsystem &dumm
+);
+
+// X axis to Z axis switch
+const SimTK::Transform X_to_Z 
+	=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
+const SimTK::Transform Z_to_X = ~X_to_Z;
+
+// Y axis to Z axis switch
+const SimTK::Transform Y_to_Z =
+	SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
+const SimTK::Transform Z_to_Y = ~Y_to_Z;
+
+// X axis to X axis switch
+const SimTK::Transform Y_to_X =
+	SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
+const SimTK::Transform X_to_Y = ~Y_to_X;
+
+// SP_NEW_TRANSFER ------------------------------------------------------------
+
 
 	// Print recommended timesteps
 	void PrintInitialRecommendedTimesteps(void);

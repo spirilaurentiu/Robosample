@@ -442,6 +442,8 @@ void Topology::addRingClosingBonds() {
 	}
 }
 
+
+
 /** Match Default configuration with the coordinates loaded from
  * the input reader **/
 void Topology::matchDefaultConfigurationWithAtomList(
@@ -450,8 +452,12 @@ void Topology::matchDefaultConfigurationWithAtomList(
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
-		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
+		Vec3 vec(	bAtomList[ix].getX(),
+					bAtomList[ix].getY(),
+					bAtomList[ix].getZ());
+
+		atomTargets.insert(pair<AtomIndex, Vec3>
+			(bAtomList[ix].getCompoundAtomIndex(), vec));
 	}
 
 	matchDefaultConfiguration(atomTargets, matchStratagem, true, 150.0);
@@ -2128,6 +2134,14 @@ void Topology::calcTopTransforms()
 {
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
+		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
+	}
+}
+
+void Topology::calcTopTransforms_SP_NEW()
+{
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
 		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
 	}
 }
