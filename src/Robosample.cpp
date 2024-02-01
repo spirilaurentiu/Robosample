@@ -22,22 +22,38 @@ int main(int argc, char **argv)
 		}
 	}
 	
-	Context c;
+	Context c; // c = Context();
 
+	// all are optional. seed is set to random in context constructor
 	// c.setNumThreads(3);
 	// c.setSeed(42);
+	// c.setOutput("temp"); // the log file is created like log.[seed]
 	// c.useVisualizer(frequency); // GLOBAL?
 
-	bool singlePrmtop = false;
+	/*
+	c = Context()
 
-	std::string singlePrmtopOpt;
-	if(argc >= 3){
-		singlePrmtopOpt = argv[2];
-	}
+	for i in range(10):
+		c.addWorld(...)
+		c.getWorld(i).useOpenMM(...)
 
-	if(singlePrmtopOpt == "singlePrmtop"){
-		singlePrmtop = true;
-	}
+	c.loadAmberSystem()
+
+	for w in c.getWorlds():
+		w.addSampler(...)
+		w.world.getSampler(0).setNonequilibriumParameters(...)
+	*/
+
+	bool singlePrmtop = true;
+
+	// std::string singlePrmtopOpt;
+	// if(argc >= 3){
+	// 	singlePrmtopOpt = argv[2];
+	// }
+
+	// if(singlePrmtopOpt == "singlePrmtop"){
+	// 	singlePrmtop = true;
+	// }
 
 	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
 		return -1;

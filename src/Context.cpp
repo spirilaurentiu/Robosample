@@ -6,6 +6,53 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
+Context::Context()
+{
+	// Set default seed
+	std::random_device rd;
+	seed = rd();
+
+	// Alert user of CUDA environment variables
+	if constexpr (OPENMM_PLATFORM_CUDA) {
+		if (SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
+			std::cerr << cwar_prefix << "CUDA_ROOT not set." << std::endl;
+		} else {
+			std::cerr << cinf_prefix << "CUDA_ROOT set to " << SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
+		}
+	}
+}
+
+bool Context::setOutput(const std::string& outDir) {
+	// Set the log filename
+	std::string logFilename = outDir + "/log." + std::to_string(seed);
+
+	// Check if the log file already exists
+	if (SimTK::Pathname::fileExists(logFilename)) {
+		std::cerr << cerr_prefix << "Log file " << logFilename << " already exists." << std::endl;
+		return false;
+	}
+
+	// Open the log file
+	logFile = std::ofstream(logFilename);
+	if ( !logFile.is_open() ) {
+		std::cerr << cerr_prefix << "Failed to open log file " << logFilename << "." << std::endl;
+		return false;
+	}
+
+	// Set the directory where the logs and the trajectories are stored
+	if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
+		const int err = mkdir((outDir + "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (err == -1){
+			std::cerr << cerr_prefix << "Failed to create " << outDir + "/pdbs" << "." << std::endl;
+			return false;
+		}
+	}
+
+	setOutputDir(outDir);
+
+	return true;
+}
+
 /*!
  * <!-- -->
 */
@@ -15,45 +62,23 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	setupReader.ReadSetup(file);
 	setupReader.dump(true);
 
-	// Set random seed
+	// Set random seed - optional
 	setSeed(std::stoi(setupReader.get("SEED")[0]));
 
-	// Set the log filename
-	std::string logFilename = CreateLogfilename(setupReader.get("OUTPUT_DIR")[0],
-		std::stoi(setupReader.get("SEED")[0]));
-	logFile = std::ofstream(logFilename);
-	if ( !logFile.is_open() ) {
-		std::cerr << cerr_prefix << "Failed to open log file " << logFilename
-			<< std::endl;
+	// Set output directory and log file name based on seed - required
+	if (!setOutput(setupReader.get("OUTPUT_DIR")[0])) {
 		return false;
 	}
 
-	// Set the directory where the logs and the trajectories are stored
-	if ( !CreateOutputDirectory(setupReader.get("OUTPUT_DIR")[0]) ) {
-		return false;
-	}
-	setOutputDir(setupReader.get("OUTPUT_DIR")[0]);
-
+	// Will not be needed after we add the interface
 	if ( !CheckInputParameters(setupReader) ) {
 		return false;
 	}
 
-	// Get molecules directory
+	// Get molecules directory - what is this?
 	std::string molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
 	std::cout << "Molecule directory: " << molDir << std::endl << std::flush;
 	setPdbPrefix(molDir + setupReader.get("SEED")[0]);
-
-	// Alert user of CUDA environment variables
-	if(SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
-		std::cout << "CUDA_ROOT not set." << std::endl;
-	}else{
-		std::cout << "CUDA_ROOT set to " << SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
-	}
-
-	// Requested nof Worlds in input. We'll try to construct them all
-	// but we're not sure if we'll going to succesed.
-	const auto requestedNofMols = nofMols;
-	std::cout << "Requested " << nofMols << " molecules in " << nofWorlds << " worlds" << std::endl;
 
 	/////////// Add Worlds to context ////////////
 	// Add Worlds to the  Every World instantiates a:
@@ -85,11 +110,11 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 	}
 	
-	// Get how much available memory we have
-	struct sysinfo info;
-	if (sysinfo(&info) == 0) {
-        std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
-    }
+	// // Get how much available memory we have
+	// struct sysinfo info;
+	// if (sysinfo(&info) == 0) {
+    //     std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
+    // }
 
 	// Add molecules based on the setup reader
 	// amber -> robo
@@ -97,14 +122,14 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	if(singlePrmtop){ // SP_NEW
 
-		std::vector<std::string> argRoots = setupReader.get("ROOTS");
-		//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+		// std::vector<std::string> argRoots = setupReader.get("ROOTS");
+		// //std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
-		// Load all the roots here
-		for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
-			roots.push_back(std::stoi(argRoots[molIx]));
-			//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-		}
+		// // Load all the roots here
+		// for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
+		// 	roots.push_back(std::stoi(argRoots[molIx]));
+		// 	//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+		// }
 
 		// Get user requested Amber filenames
 		amberReader.resize(1);
@@ -123,7 +148,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
 
 		// Build graph and match coords
-		AddMolecules_SP_NEW(argRoots);
+		// AddMolecules_SP_NEW(argRoots);
+		AddMolecules_SP_NEW();
 
 		// Set the final number of molecules added
 		finalNofMols = getNofMolecules();
@@ -148,6 +174,11 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		// return false;
 
 	}else{ // SP_OLD
+
+		// Requested nof Worlds in input. We'll try to construct them all
+		// but we're not sure if we'll going to succesed.
+		const auto requestedNofMols = nofMols;
+		std::cout << "Requested " << nofMols << " molecules in " << nofWorlds << " worlds" << std::endl;
 
 		AddMolecules(requestedNofMols, setupReader);
 
@@ -214,7 +245,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			to_upper(setupReader.get("SAMPLERS")[worldIx]),
 			setupReader.get("INTEGRATORS")[worldIx],
 			setupReader.get("THERMOSTAT")[worldIx],
-			std::stof(setupReader.get("TIMESTEPS")[worldIx]),
+			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
 			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
 			MDStepsPerSample,
 			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE");
@@ -1012,24 +1043,6 @@ void Context::Run(int rounds) {
 	}
 }
 
-bool Context::CreateOutputDirectory(const std::string& outDir)
-{
-    if( !SimTK::Pathname::fileExists(outDir + "/pdbs") ){
-		const int err = mkdir((outDir + "/pdbs").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		if (err == -1){
-			std::cerr << cerr_prefix << "Failed to create " << outDir + "/pdbs" << std::endl;
-			return false;
-		}
-	}
-    
-	return true;
-}
-
-std::string Context::CreateLogfilename(const std::string& outDir, long long int seed) const
-{
-	return outDir + std::string("/log.") + std::to_string(seed);
-}
-
 std::string Context::GetMoleculeDirectoryShort(const std::string& path) const
 {
 	std::size_t lastSlashPos = path.find_last_of("/");
@@ -1663,7 +1676,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 		std::stringstream parentBondCenterPathName;
 		std::string parentBondCenterPathNameStr = "";
 		int parentNextAvailBondCenter = -111111;
-		std::string parentNextAvailBondCenterStr = "";
+		std::string parentNextAvailBondCenterStr = "1";
 		int parentNofBonds = parent.getNBonds();
 		int parentNofFreebonds = parent.getFreebonds();
 
@@ -1953,7 +1966,7 @@ void Context::passTopologiesToWorlds(void){
  * <!-- Load molecules based on loaded filenames -->
 */
 void Context::AddMolecules_SP_NEW(
-		std::vector<std::string>& argRoots
+		// std::vector<std::string>& argRoots
 ){
 
 	// ========================================================================
@@ -5900,58 +5913,6 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 	}
 
 
-}
-
-// Set number of threads
-void Context::setNumThreadsRequested(std::size_t which, int howMany)
-{
-	std::cout << "Robosample requested " << howMany << " threads " << std::endl;
-	if (howMany == 1){
-		worlds[which].updForceField()->setUseMultithreadedComputation(false);
-	}else{
-		worlds[which].updForceField()->setNumThreadsRequested(howMany);
-	}
-}
-
-void Context::setUseOpenMMAcceleration(bool arg)
-{
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		worlds[worldIx].updForceField()->setUseOpenMMAcceleration(arg);
-	}
-}
-
-
-void Context::setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize)
-{
-	worlds[which].updForceField()->setUseOpenMMIntegration(true);
-	worlds[which].updForceField()->setDuMMTemperature(temperature);
-	worlds[which].updForceField()->setOpenMMstepsize(stepsize);
-}
-
-void Context::setNonbondedMethod(std::size_t which, int methodInx)
-{
-    if (methodInx >= 0 && methodInx <= 1 ){
-        worlds[which].updForceField()->setNonbondedMethod(methodInx);
-    }else{
-        std::cout<< "Invalid nonbonded method. (0 = nocutoff; 1 = cutoffNonPeriodic). Default NoCutoff method will be used." << endl;
-    }
-}
-
-void Context::setUseOpenMMCalcOnlyNonBonded(bool arg)
-{
-
-    for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-        worlds[worldIx].updForceField()->setUseOpenMMCalcOnlyNonBonded(arg);
-    }
-}
-
-void Context::setNonbondedCutoff(std::size_t which, Real cutoffNm)
-{
-    if (cutoffNm >= 0 ){
-        worlds[which].updForceField()->setNonbondedCutoff(cutoffNm);
-    }else{
-        std::cout<< "Negative cutoff requested. Default cutoff = 2.0 nm will be used instead" << endl;
-    }
 }
 
 //------------

@@ -28,6 +28,7 @@ enum class RunType : int {
 class Context{
 
 public:
+	Context();
 
 	/**	
 	* @brief Read all parameters from an input file
@@ -42,6 +43,8 @@ public:
 	void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
 	void setSeed(uint32_t seed);
+
+	bool setOutput(const std::string& outDir);
 
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 
@@ -111,7 +114,7 @@ public:
 
 	/**  */
 	void AddMolecules_SP_NEW(
-		std::vector<std::string>& argRoots
+		// std::vector<std::string>& argRoots
 	);
 
 	// ------------- SP_NEW -------------
@@ -245,12 +248,6 @@ public:
 	void RunOneRound(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
-	void setNumThreadsRequested(std::size_t which, int howMany);
-	void setUseOpenMMAcceleration(bool arg);
-	void setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize);
-	void setUseOpenMMCalcOnlyNonBonded(bool arg);
-	void setNonbondedMethod(std::size_t whichWorld, int methodInx);
-	void setNonbondedCutoff(std::size_t whichWorld, Real cutoffNm);
 
 	SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector,
 		int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
@@ -507,8 +504,6 @@ public:
 	void PrintBonds(void);
 
 private:
-	bool CreateOutputDirectory(const std::string& outDir);
-	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
 	std::string GetMoleculeDirectoryShort(const std::string& path) const;
 	bool CheckInputParameters(const SetupReader& setupReader);
 
@@ -618,6 +613,8 @@ private:
 	std::vector<SimTK::Real> qScaleFactors;
 
 	std::string cerr_prefix = "[ERROR] ";
+	std::string cwar_prefix = "[WARNING] ";
+	std::string cinf_prefix = "[INFO] ";
 
 	RunType runType = RunType::Default;
 	SimTK::Real tempIni = 0,
@@ -655,6 +652,7 @@ private:
         return atoms;
     }
 
+	uint32_t seed = 0;
 	int numThreads = 0;
 	int nonbondedMethod = 0; // 0 = NoCutoff, 1 = CutoffNonPeriodic
 	SimTK::Real nonbondedCutoff = 1.2; // 1.2 nm, not used by default (no cutoff)
