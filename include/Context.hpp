@@ -83,7 +83,7 @@ public:
 	// ============================================================================
 
 	/**  */
-	void setBaseAtom(Topology& topology, int molIx);
+	void setRootAtom(Topology& topology, int molIx);
 
 	/**  */
 	void load_BONDS_to_bonds(const std::vector<std::vector<BOND>>& BATbonds);
@@ -274,6 +274,7 @@ calcMobodToMobodTransforms(
 	Topology& topology,
 	SimTK::Compound::AtomIndex& childNo,
 	SimTK::Compound::AtomIndex& parentNo,
+	SimTK::BondMobility::Mobility mobility,
 	const SimTK::State& someState
 );
 
