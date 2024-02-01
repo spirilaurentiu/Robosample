@@ -5966,7 +5966,7 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 
 
 			// Set mobods X_PFs and X_BMs for atoms in different bodies
-			if(int(childMbx) != int(parentMbx)){
+			//if(int(childMbx) != int(parentMbx)){
 				
 				if(bond.getBondMobility(destWIx) != SimTK::BondMobility::Mobility::Rigid){
 					
@@ -5977,15 +5977,15 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 							bond.getBondMobility(destWIx),
 							someState);
 
-					scout("mobod ") << childMbx <<" " << ("X_PF ") << eol;
-					PrintTransform(mobod.getDefaultInboardFrame(), 6, "X_PF");
-					scout("mobod ") << childMbx <<" " << ("X_BM ") << eol;
-					PrintTransform(mobod.getDefaultOutboardFrame(), 6, "X_BM");
+					// scout("mobod ") << childMbx <<" " << ("X_PF ") << eol;
+					// PrintTransform(mobod.getDefaultInboardFrame(), 6, "X_PF");
+					// scout("mobod ") << childMbx <<" " << ("X_BM ") << eol;
+					// PrintTransform(mobod.getDefaultOutboardFrame(), 6, "X_BM");
 
-					scout("NEW ") << childMbx <<" " << ("X_PF ") << eol;
-					PrintTransform(mobodTs[0], 6, "newX_PF");
-					scout("NEW ") << childMbx <<" " << ("X_BM ") << eol;
-					PrintTransform(mobodTs[1], 6, "newX_PF");
+					// scout("NEW ") << childMbx <<" " << ("X_PF ") << eol;
+					// PrintTransform(mobodTs[0], 6, "newX_PF");
+					// scout("NEW ") << childMbx <<" " << ("X_BM ") << eol;
+					// PrintTransform(mobodTs[1], 6, "newX_PF");
 
 					//mobod.setDefaultInboardFrame(mobodTs[0]);
 					//mobod.setDefaultOutboardFrame(mobodTs[1]);
@@ -5993,7 +5993,7 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 				} 
 
 
-			}
+			//}
 
 
 
