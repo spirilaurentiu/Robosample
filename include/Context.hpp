@@ -258,8 +258,7 @@ setAtoms_XPF_XBM(
 
 SimTK::State&
 setAtoms_MassProperties(
-	int wIx,
-	int topoIx
+	int wIx
 );
 
 SimTK::State&
