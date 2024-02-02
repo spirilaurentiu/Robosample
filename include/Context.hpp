@@ -123,7 +123,10 @@ public:
 	calcZMatrixTable(void);
 
 	void
-	calcZMatrix(int wIx, SimTK::State & someState);
+	calcZMatrixBAT(	int wIx,
+	const std::vector< std::vector<
+	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+		otherWorldsAtomsLocations);
 
 	/** Assign Compound coordinates by matching bAtomList coordinates */
 	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
@@ -612,26 +615,66 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
         for (const auto& row : zMatrixTable) {
 			scout("Zentry: ");
             for (int value : row) {
-                std::cout << std::setw(6) << value; 
+                std::cout << std::setw(6) << value <<" "; 
             }
             std::cout << std::endl; 
         }
     }
 
-// Function to find and return the value for a given AtomIndex
-SimTK::Vec3
-findAtomTarget(
-	const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
-	SimTK::Compound::AtomIndex searchIndex)
-{
-    auto it = atomTargets.find(searchIndex);
+    // Setter for a specific entry
+    void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) {
+        // Resize the vector if needed
+        // if (rowIndex >= zMatrixBAT.size()) {
+        //     zMatrixBAT.resize(rowIndex + 1, std::vector<SimTK::Real>(colIndex + 1, 0.0));
+        // } else if (colIndex >= zMatrixBAT[rowIndex].size()) {
+        //     zMatrixBAT[rowIndex].resize(colIndex + 1, 0.0);
+        //}
 
-    if (it != atomTargets.end()) {
-        return it->second;
-    } else {
-        return SimTK::Vec3(SimTK::NaN);
+        // Set the value at the specified position
+        zMatrixBAT[rowIndex][colIndex] = value;
     }
-}
+
+    // Function to get the value for a given row and column in zMatrixBAT
+    SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const {
+        // Check if the indices are within bounds
+        if (rowIndex < zMatrixBAT.size() && colIndex < zMatrixBAT[0].size()) {
+            // Return the value at the specified position
+            return zMatrixBAT[rowIndex][colIndex];
+        } else {
+            // Indices are out of bounds, handle this case accordingly
+            return SimTK::NaN; // Adjust the default value as needed
+        }
+    }
+
+    // Function to print the zMatrixBAT
+    void printZMatrixBAT() const {
+        for (const auto& row : zMatrixBAT) {
+            for (SimTK::Real value : row) {
+                std::cout << std::setw(6) << value << " ";
+            }
+            std::cout << std::endl; 
+        }
+    }
+
+    // Function to add a new row to the zMatrixBAT
+    void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
+        zMatrixBAT.push_back(newRow);
+    }
+	
+	// Function to find and return the value for a given AtomIndex
+	SimTK::Vec3
+	findAtomTarget(
+		const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
+		SimTK::Compound::AtomIndex searchIndex)
+	{
+		auto it = atomTargets.find(searchIndex);
+
+		if (it != atomTargets.end()) {
+			return it->second;
+		} else {
+			return SimTK::Vec3(SimTK::NaN);
+		}
+	}
 
 private:
 	bool CreateOutputDirectory(const std::string& outDir);
@@ -836,6 +879,7 @@ public:
 	bool singlePrmtop = false;
 
 	std::vector<std::vector<int>> zMatrixTable;
+	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
 };
 
