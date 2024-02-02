@@ -118,6 +118,13 @@ public:
 	/**  */
 	void generateTopologiesSubarrays(void);
 
+	/** Get Z-matrix indexes table */
+	void
+	calcZMatrixTable(void);
+
+	void
+	calcZMatrix(int wIx, SimTK::State & someState);
+
 	/** Assign Compound coordinates by matching bAtomList coordinates */
 	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
 
@@ -252,8 +259,7 @@ public:
 
 SimTK::State&
 setAtoms_XPF_XBM(
-	int wIx,
-	int topoIx
+	int wIx
 );
 
 SimTK::State&
@@ -261,11 +267,19 @@ setAtoms_MassProperties(
 	int wIx
 );
 
+SimTK::Transform
+calc_XFM(
+	int wIx,
+	Topology& topology,	
+	SimTK::Compound::AtomIndex& childAIx,
+	SimTK::Compound::AtomIndex& parentAIx,
+	SimTK::BondMobility::Mobility mobility,
+	const SimTK::State& someState) const;
+
 SimTK::State&
 setAtoms_XFM(
 	int wIx,
-	int topoIx
-);
+	SimTK::State& someState);
 
 std::vector<SimTK::Transform>
 calcMobodToMobodTransforms(
@@ -574,6 +588,51 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
 	void Print_TRANSFORMERS_Work(void);
 
 
+    // Function to add a new row to the zMatrixTable
+    void addZMatrixRow(const std::vector<int>& newRow) {
+        // Add bounds checking if needed
+        zMatrixTable.push_back(newRow);
+    }
+
+    // Getter for a specific entry
+    int getZMatrixEntry(int rowIndex, int colIndex) const {
+        // Add bounds checking if needed
+        return zMatrixTable[rowIndex][colIndex];
+    }
+
+    // Setter for a specific entry
+    void setZMatrixEntry(int rowIndex, int colIndex, int value) {
+        // Add bounds checking if needed
+        zMatrixTable[rowIndex][colIndex] = value;
+    }
+
+
+    // Print function for the zMatrixTable
+    void PrintZMatrixTable() const {
+        for (const auto& row : zMatrixTable) {
+			scout("Zentry: ");
+            for (int value : row) {
+                std::cout << std::setw(6) << value; 
+            }
+            std::cout << std::endl; 
+        }
+    }
+
+// Function to find and return the value for a given AtomIndex
+SimTK::Vec3
+findAtomTarget(
+	const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
+	SimTK::Compound::AtomIndex searchIndex)
+{
+    auto it = atomTargets.find(searchIndex);
+
+    if (it != atomTargets.end()) {
+        return it->second;
+    } else {
+        return SimTK::Vec3(SimTK::NaN);
+    }
+}
+
 private:
 	bool CreateOutputDirectory(const std::string& outDir);
 	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
@@ -775,6 +834,8 @@ public:
 
 
 	bool singlePrmtop = false;
+
+	std::vector<std::vector<int>> zMatrixTable;
 
 };
 
