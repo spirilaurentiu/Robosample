@@ -285,7 +285,7 @@ setAtoms_XFM(
 	SimTK::State& someState);
 
 std::vector<SimTK::Transform>
-calcMobodToMobodTransforms(
+calc_XPF_XBM(
 	int wIx,
 	Topology& topology,
 	SimTK::Compound::AtomIndex& childNo,

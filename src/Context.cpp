@@ -166,8 +166,8 @@ bool Context::initializeFromFile(const std::string &file)
 
 
 		// Get Z-matrix indexes table	
-		calcZMatrixTable();
-		PrintZMatrixTable();
+		//calcZMatrixTable();
+		//PrintZMatrixTable();
 		std::cout << std::flush;
 
 		// std::cout 
@@ -6014,7 +6014,7 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	worlds[srcWIx].getAtomsLocationsInGround_SP_NEW(lastAdvancedState);
 
 	// Get BAT coordinates
-	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
+	//calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
 	//printZMatrixBAT();
 
 	// Pass compounds to the new world
@@ -6083,8 +6083,12 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 
 	//Print_TRANSFORMERS_Work();
 
+	std::cout << "setAtoms_SetDuMMStations System Stage: " << someState.getSystemStage() << std::endl;
+
 	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
 	setAtoms_XPF_XBM(destWIx);
+
+	std::cout << "setAtoms_XPF_XBM System Stage: " << someState.getSystemStage() << std::endl;
 
 	// Recover the modified state (may not be necessary)
 	destWorld.compoundSystem->realizeTopology();
@@ -6093,8 +6097,12 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	// Set every mobod's mass properties
 	someState = setAtoms_MassProperties(destWIx);
 
+	std::cout << "setAtoms_MassProperties System Stage: " << someState.getSystemStage() << std::endl;
+
 	// Set X_FMs
 	someState = setAtoms_XFM(destWIx, someState);
+
+	std::cout << "setAtoms_XFM System Stage: " << someState.getSystemStage() << std::endl;
 
 	// Realize position
 	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
@@ -6347,7 +6355,7 @@ Context::setAtoms_XPF_XBM(
 			if(bond.getBondMobility(wIx) != SimTK::BondMobility::Mobility::Rigid){
 				
 				std::vector<SimTK::Transform> mobodTs =
-					calcMobodToMobodTransforms(
+					calc_XPF_XBM(
 						wIx, topology,
 						child_cAIx, parent_cAIx,
 						bond.getBondMobility(wIx),
@@ -6437,7 +6445,22 @@ Context::calc_XFM(
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
-	return SimTK::Transform();
+	
+	//
+	SimTK::Transform XXX(SimTK::Rotation(-45*SimTK::Deg2Rad, SimTK::YAxis));
+	SimTK::Transform XXXinv = ~XXX;
+
+	// New
+	SimTK::Transform X_FMspherical = SimTK::Transform()
+		* XXXinv
+	;
+
+	// Return
+	if(mobility == SimTK::BondMobility::Mobility::Spherical){
+		return X_FMspherical;
+	}else{
+		return Transform();
+	}
 
 }
 
@@ -6497,7 +6520,6 @@ Context::setAtoms_XFM(
 			SimTK::MobilizedBodyIndex parentMbx = constParentMobod.getMobilizedBodyIndex();
 			SimTK::MobilizedBody& parentMobod = matter.updMobilizedBody(parentMbx);
 
-
 			if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 
 				// Calculate
@@ -6507,8 +6529,35 @@ Context::setAtoms_XFM(
 					bond.getBondMobility(wIx),
 					someState);
 
-				// Set
-				mobod.setQToFitTransform(someState, X_FM);
+				//PrintTransform(X_FM, 6, "X_FMreceived");
+
+				//worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);				
+				//PrintTransform(mobod.getMobilizerTransform(someState), 6, "X_FMcurrent");
+
+
+				if(bond.getBondMobility(wIx) == SimTK::BondMobility::Mobility::Spherical)
+				{
+
+					//mobod.getMatterSubsystem().getSystem().getSystemGuts().getVersion();
+					//mobod.getMatterSubsystem().getSystem().getVersion();
+					mobod.getMatterSubsystem().getSystem().realize(someState, SimTK::Stage::Position);
+
+					//worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);
+
+					mobod.setQToFitTransform(someState, X_FM);
+					//someState.updQ()[1] = 0.1;
+					
+					worlds[wIx].compoundSystem->realize(
+						someState, SimTK::Stage::Position);
+
+					//PrintTransform(mobod.getMobilizerTransform(someState),
+					//	6, "X_FMafter");
+
+					scout("mobodQ= ") << mobod.getQAsVector(someState) << eol;
+					scout("stateQ= ") << someState.updQ() << eol;
+				
+				}				
+
 
 			}
 
@@ -6527,7 +6576,7 @@ Context::setAtoms_XFM(
  * <!--  -->
 */
 std::vector<SimTK::Transform>
-Context::calcMobodToMobodTransforms(
+Context::calc_XPF_XBM(
 	int wIx,
 	Topology& topology,
 	SimTK::Compound::AtomIndex& childAIx,
@@ -6559,7 +6608,8 @@ Context::calcMobodToMobodTransforms(
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
 	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(
-		childAIx, parentAIx);	
+		childAIx, parentAIx);
+	SimTK::Transform X_childBC_parentBC = ~X_parentBC_childBC;
 
 	// Get Top frame
 	SimTK::Transform T_X_root = topology.getTopTransform(childAIx);
@@ -6607,15 +6657,34 @@ Context::calcMobodToMobodTransforms(
 	SimTK::Transform P_X_F_pin 		= oldX_PB * B_X_M_pin;
 	SimTK::Transform P_X_F_univ 	= oldX_PB * B_X_M;
 
-	//SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z * InboardLength_mZAxis;
-	//SimTK::Transform B_X_M_spheric  = Transform();
-	//SimTK::Transform B_X_M_spheric = B_X_M_pin;
-	SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z;
-	
-	//SimTK::Transform P_X_F_spheric  = oldX_PB * B_X_M_pin;
-	//SimTK::Transform P_X_F_spheric = Transform();
-	//SimTK::Transform P_X_F_spheric = P_X_F_pin;
-	SimTK::Transform P_X_F_spheric = oldX_PB * B_X_M_pin;
+	//Spherical ===============================================================
+	SimTK::Transform XXX(SimTK::Rotation(-45*SimTK::Deg2Rad, SimTK::YAxis));
+	SimTK::Transform XXXinv = ~XXX;
+
+	// Proot -> root -> parentBC -> chilBC=X -> Z
+	SimTK::Transform P_X_F_spheric = SimTK::Transform()
+		* Proot_X_root 
+		* X_parentBC_childBC
+		* X_to_Y
+		* Y_to_Z
+		* XXX
+	;
+
+	// Z -> X=childBC -> parentBC
+	SimTK::Transform M_X_B_spheric = SimTK::Transform()
+		* Z_to_Y
+		* Y_to_X
+		* X_childBC_parentBC
+	;
+
+	SimTK::Transform B_X_M_spheric = ~M_X_B_spheric;
+	// SimTK::Transform B_X_M_spheric =
+	// 	X_parentBC_childBC
+	// 	* X_to_Z
+	// 	* XXXinv
+	// ;
+
+	// ------------------------------------------------------------------------
 
 	bool anglePin_OR = (
 		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
