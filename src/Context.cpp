@@ -166,7 +166,7 @@ bool Context::initializeFromFile(const std::string &file)
 
 		// Get Z-matrix indexes table	
 		calcZMatrixTable();
-		PrintZMatrixTable();
+		//PrintZMatrixTable();
 
 		zMatrixBAT.resize(zMatrixTable.size());
 		for (auto& row : zMatrixBAT) {
@@ -1663,9 +1663,9 @@ void Context::buildAcyclicGraph_SP_NEW(
 	// Iterate bonds from internal coordinates
 	for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
 
-		scout("internCoord bond first second ");
-		bIt->Print();
-		ceol;
+		// scout("internCoord bond first second ");
+		// bIt->Print();
+		// ceol;
 
 		// ===================== GET ATOMS IN THIS BOND ===================
 		// Child
@@ -1684,9 +1684,9 @@ void Context::buildAcyclicGraph_SP_NEW(
 		child.setMoleculeIndex(molIx);
 		parent.setMoleculeIndex(molIx);
 
-		// Print
-		scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
-			<< eol;
+		// // Print
+		// scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+		// 	<< eol;
 
 		// ====================== PARENT BOND CENTER ======================
 		
@@ -1715,13 +1715,13 @@ void Context::buildAcyclicGraph_SP_NEW(
 		// 	<< eol;
 
 		// ======================== ACTUAL BONDING ========================
-		scout("Bonding ")
-			<< "child " << child.getName() <<" " << child.getInName()
-			<<" " << child.getNumber() <<" "
-			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
-			<< parent.getNumber() <<" "
-			<< "with bond center name " << parentBondCenterPathNameStr
-			<< eol;
+		// scout("Bonding ")
+		// 	<< "child " << child.getName() <<" " << child.getInName()
+		// 	<<" " << child.getNumber() <<" "
+		// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+		// 	<< parent.getNumber() <<" "
+		// 	<< "with bond center name " << parentBondCenterPathNameStr
+		// 	<< eol;
 
 		// Bond
 		topology.bondAtom(child.getSingleAtom(),
@@ -1789,16 +1789,9 @@ void Context::addRingClosingBonds_SP_NEW(
 
 		bBond& bond = bonds[bCnt];
 
-	//for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
-
-		//bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
-		
-		//scout("bond first second ");
-		//bIt->Print();
-
 		if(bond.isVisited() == 0){
 
-			scout(" [RING CLOSING] ");
+			//scout(" [RING CLOSING] ");
 
 			// ===================== GET ATOMS IN THIS BOND ===================
 			// Child
@@ -1819,9 +1812,9 @@ void Context::addRingClosingBonds_SP_NEW(
 			child.setMoleculeIndex(molIx);
 			parent.setMoleculeIndex(molIx);
 
-			// Print
-			scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
-				<< eol;
+			// // Print
+			// scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+			// 	<< eol;
 
 			// ====================== PARENT BOND CENTER ======================
 			
@@ -1850,13 +1843,13 @@ void Context::addRingClosingBonds_SP_NEW(
 			// 	<< eol;
 
 			// ======================== ACTUAL BONDING ========================
-			scout("Bonding ")
-				<< "child " << child.getName() <<" " << child.getInName()
-				<<" " << child.getNumber() <<" "
-				<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
-				<< parent.getNumber() <<" "
-				<< "with bond center name " << parentBondCenterPathNameStr
-				<< eol;
+			// scout("Bonding ")
+			// 	<< "child " << child.getName() <<" " << child.getInName()
+			// 	<<" " << child.getNumber() <<" "
+			// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+			// 	<< parent.getNumber() <<" "
+			// 	<< "with bond center name " << parentBondCenterPathNameStr
+			// 	<< eol;
 
 			// Bond
 			bSpecificAtom &leftNode  = atoms[bonds[bCnt].i];
@@ -1913,7 +1906,7 @@ void Context::addRingClosingBonds_SP_NEW(
 
 		} // if is ring closing
 
-		ceol;
+		//ceol;
 
 	}
 
