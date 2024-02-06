@@ -318,6 +318,7 @@ private:
 	std::vector<std::vector<BOND>> perMolBonds; // Laurentiu
 	std::vector<std::vector<ANGLE>> perMolAngles; // Laurentiu
 	std::vector<std::vector<TORSION>> perMolTorsions; // Laurentiu
+	std::vector<std::vector<BOND>> perMolRingClosingBonds; // Laurentiu
 
 
 	std::vector<std::vector<BAT_ATOM>> levelGraph;

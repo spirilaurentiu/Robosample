@@ -3340,8 +3340,9 @@ std::vector<SimTK::Real>& scaleFactors)
  * standard deviations through BendStretch joint
 */
 SimTK::Real
-HMCSampler::setQToScaleBendStretchStdev(SimTK::State& someState,
-std::vector<SimTK::Real>& scaleFactors)
+HMCSampler::setQToScaleBendStretchStdev(
+	SimTK::State& someState,
+	std::vector<SimTK::Real>& scaleFactors)
 {
 
 	// Print the scale factor
@@ -3351,6 +3352,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	if (this->QScaleFactor == 1){
 		return 1;
 	}
+	
 	//world->traceBendStretch(someState);
 	//world->PrintAcosX_PFs();
 	//world->PrintNormX_BMs();
@@ -3393,6 +3395,7 @@ std::vector<SimTK::Real>& scaleFactors)
 	int mbxOffset = 2; // no internal coordinates for Ground and first mobod 
 	int sfIxOffset = world->normX_BMp.size(); 
 
+	// Iterate mobods
 	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
 		mbx < matter->getNumBodies();
 		++mbx){
@@ -3436,7 +3439,7 @@ std::vector<SimTK::Real>& scaleFactors)
 			}
 
 		}		
-	}
+	} // every mobod
 
 	//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
 

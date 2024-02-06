@@ -229,8 +229,8 @@ void Topology::bAddBiotypes(
 			SimTK::Ordinality::Any
 		);
 
-		std::cout << "SP_NEW_LAB Topology biotypeIndex "
-			<< biotypeIndex <<" " << std::endl;
+		// std::cout << "SP_NEW_LAB Topology biotypeIndex "
+		//	<< biotypeIndex <<" " << std::endl;
 
 		atom.setBiotypeIndex(biotypeIndex);
 

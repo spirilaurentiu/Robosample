@@ -97,6 +97,12 @@ public:
 		int rootAmberIx,
 		int molIx);
 
+	/**  */
+	void addRingClosingBonds_SP_NEW(
+		Topology& topology,
+		int rootAmberIx,
+		int molIx
+	);
 
 	/**  */
 	void generateSubAtomLists(void);
@@ -592,19 +598,19 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
 
 
     // Function to add a new row to the zMatrixTable
-    void addZMatrixRow(const std::vector<int>& newRow) {
+    void addZMatrixTableRow(const std::vector<int>& newRow) {
         // Add bounds checking if needed
         zMatrixTable.push_back(newRow);
     }
 
     // Getter for a specific entry
-    int getZMatrixEntry(int rowIndex, int colIndex) const {
+    int getZMatrixTableEntry(int rowIndex, int colIndex) const {
         // Add bounds checking if needed
         return zMatrixTable[rowIndex][colIndex];
     }
 
     // Setter for a specific entry
-    void setZMatrixEntry(int rowIndex, int colIndex, int value) {
+    void setZMatrixTableEntry(int rowIndex, int colIndex, int value) {
         // Add bounds checking if needed
         zMatrixTable[rowIndex][colIndex] = value;
     }
@@ -613,7 +619,7 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
     // Print function for the zMatrixTable
     void PrintZMatrixTable() const {
         for (const auto& row : zMatrixTable) {
-			scout("Zentry: ");
+			scout("ZTableEntry: ");
             for (int value : row) {
                 std::cout << std::setw(6) << value <<" "; 
             }
@@ -623,12 +629,6 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
 
     // Setter for a specific entry
     void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) {
-        // Resize the vector if needed
-        // if (rowIndex >= zMatrixBAT.size()) {
-        //     zMatrixBAT.resize(rowIndex + 1, std::vector<SimTK::Real>(colIndex + 1, 0.0));
-        // } else if (colIndex >= zMatrixBAT[rowIndex].size()) {
-        //     zMatrixBAT[rowIndex].resize(colIndex + 1, 0.0);
-        //}
 
         // Set the value at the specified position
         zMatrixBAT[rowIndex][colIndex] = value;
@@ -647,12 +647,12 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
     }
 
     // Function to print the zMatrixBAT
-    void printZMatrixBAT() const {
+    void PrintZMatrixBAT() const {
         for (const auto& row : zMatrixBAT) {
             for (SimTK::Real value : row) {
                 std::cout << std::setw(6) << value << " ";
             }
-            std::cout << std::endl; 
+            std::cout << std::endl;
         }
     }
 
