@@ -130,8 +130,8 @@ public:
     void setParentNumber(int n);
     int getParentNumber() const;
 
-    void setIsBase(bool argIsBase){this->isBase = argIsBase;}
-    const bool getIsBase() const {return this->isBase;}
+    void setIsRoot(bool argIsRoot){this->isRoot = argIsRoot;}
+    const bool getIsRoot() const {return this->isRoot;}
 
     // End of interface
     /**@}**/
@@ -195,7 +195,7 @@ private:
     std::string name; // combination of four letters that depends on the amber index
     std::string inName; // original name in the sdf file ("O1", "C1", "C2", "H1", "H10")
 
-    bool isBase = false; // specifies if this atom is a base atom
+    bool isRoot = false; // specifies if this atom is a base atom
 
 
 };

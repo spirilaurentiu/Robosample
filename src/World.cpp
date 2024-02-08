@@ -1506,7 +1506,6 @@ void World::setTransformsMeansToMin(readAmberInput &amberReader)
 		}
 	}	
 
-
 }
 
 /**

@@ -229,8 +229,8 @@ void Topology::bAddBiotypes(
 			SimTK::Ordinality::Any
 		);
 
-		std::cout << "SP_NEW_LAB Topology biotypeIndex "
-			<< biotypeIndex <<" " << std::endl;
+		// std::cout << "SP_NEW_LAB Topology biotypeIndex "
+		//	<< biotypeIndex <<" " << std::endl;
 
 		atom.setBiotypeIndex(biotypeIndex);
 
@@ -280,7 +280,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				if (nofProcesses == 2) {
 					if (baseSetFlag == 0) {
 						this->setBaseAtom(previousNode->getSingleAtom());
-						previousNode->setIsBase(true);
+						previousNode->setIsRoot(true);
 						this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
 						this->convertInboardBondCenterToOutboard();
 						baseSetFlag = 1;
@@ -533,7 +533,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	// Build the graph
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
-		bAtomList[0].setIsBase(true);
+		bAtomList[0].setIsRoot(true);
 		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 		this->setAtomBiotype(bAtomList[0].getName(), (this->name), bAtomList[0].getName());
 	}else{
@@ -566,7 +566,7 @@ void Topology::buildAcyclicGraphWrap(bSpecificAtom* root)
 	// Build the graph
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
-		bAtomList[0].setIsBase(true);
+		bAtomList[0].setIsRoot(true);
 		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
 	}else{
@@ -2347,7 +2347,7 @@ void Topology::writeAtomListPdb(std::string dirname,
 	}
 }
 
-/** Get bAtomList coordinates coordinates **/
+/** Get bAtomList coordinates **/
 void Topology::getCoordinates(
 		std::vector<SimTK::Real>& Xs,
 		std::vector<SimTK::Real>& Ys,

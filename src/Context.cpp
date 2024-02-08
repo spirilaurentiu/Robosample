@@ -163,12 +163,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		// Build graph (bondAtom)
 		constructTopologies_SP_NEW(argRoots);
 
-		// Generate Topologies sub_array views (bonds are sorted - not BONDS)
+		// Generate Topologies sub_array views (also sort bonds - not BONDS)
 		generateTopologiesSubarrays();
 
 		// Match Compounds configurations to atoms Cartesian coords
 		matchDefaultConfigurations_SP_NEW();
-
+		
 		// Set the final number of molecules added
 		finalNofMols = getNofMolecules();
 
@@ -187,7 +187,15 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 
 		// Transformers
-		//Print_TRANSFORMERS_Work();
+
+		// Get Z-matrix indexes table	
+		calcZMatrixTable();
+		//PrintZMatrixTable();
+
+		zMatrixBAT.resize(zMatrixTable.size());
+		for (auto& row : zMatrixBAT) {
+			row.resize(3, SimTK::NaN);
+		}		
 
 		// std::cout 
 		// 	<< "Robosample in development mode. Delete return after print."
@@ -375,8 +383,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// Check atom stations for debug purposes
 	checkAtomStationsThroughDumm();
 
-
-
 	if(singlePrmtop){ // SP_NEW
 		// Load/store Mobilized bodies joint types in samplers
 		//loadMbxsToMobilities_SP_NEW();
@@ -384,7 +390,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		// Load/store Mobilized bodies joint types in samplers
 		loadMbxsToMobilities();
 	}
-
 
 	// Setup task spaces
 	bool usingTaskSpace = false;
@@ -814,8 +819,8 @@ void Context::addBiotypes() {
 			SimTK::Ordinality::Any
 		);
 
-		std::cout << "SP_NEW_LAB Context biotypeIndex "
-			<< biotypeIndex <<" " << std::endl;
+		// std::cout << "SP_NEW_LAB Context biotypeIndex "
+		// 	<< biotypeIndex <<" " << std::endl;
 
 		atom.setBiotypeIndex(biotypeIndex);
 
@@ -823,9 +828,9 @@ void Context::addBiotypes() {
 		std::string biotype = atom.getResidueName() + atom.getName() + atom.getFftype();
 		atom.setBiotype(biotype);
 
-		std::cout << "SP_NEW_LAB  Context::bAddBiotypes " << atom.getBiotypeIndex() << " "
-			<< atom.getBiotype() << " with bonds = " << atom.getNBonds()
-			<< std::endl;
+		// std::cout << "SP_NEW_LAB  Context::bAddBiotypes " << atom.getBiotypeIndex() << " "
+		// 	<< atom.getBiotype() << " with bonds = " << atom.getNBonds()
+		// 	<< std::endl;
 	}
 }
 
@@ -1510,12 +1515,12 @@ void Context::AddMolecules(
 /*!
  * <!-- -->
 */
-void Context::setBaseAtom(Topology& topology, int rootAmberIx)
+void Context::setRootAtom(Topology& topology, int rootAmberIx)
 {
 	// Set Topology base atom
 	bSpecificAtom& rootAtom = atoms[rootAmberIx];
 
-	rootAtom.setIsBase(true);
+	rootAtom.setIsRoot(true);
 
 	const SimTK::Compound::SingleAtom& compoundRootAtom
 		= rootAtom.getSingleAtom();
@@ -1651,6 +1656,7 @@ void Context::reset_BONDS_to_bonds(
 
 }
 
+
 /*!
  * <!--  -->
 */
@@ -1668,9 +1674,9 @@ void Context::buildAcyclicGraph_SP_NEW(
 	// Iterate bonds from internal coordinates
 	for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
 
-		scout("internCoord bond first second ");
-		bIt->Print();
-		ceol;
+		// scout("internCoord bond first second ");
+		// bIt->Print();
+		// ceol;
 
 		// ===================== GET ATOMS IN THIS BOND ===================
 		// Child
@@ -1689,9 +1695,9 @@ void Context::buildAcyclicGraph_SP_NEW(
 		child.setMoleculeIndex(molIx);
 		parent.setMoleculeIndex(molIx);
 
-		// Print
-		scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
-			<< eol;
+		// // Print
+		// scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+		// 	<< eol;
 
 		// ====================== PARENT BOND CENTER ======================
 		
@@ -1720,13 +1726,13 @@ void Context::buildAcyclicGraph_SP_NEW(
 		// 	<< eol;
 
 		// ======================== ACTUAL BONDING ========================
-		scout("Bonding ")
-			<< "child " << child.getName() <<" " << child.getInName()
-			<<" " << child.getNumber() <<" "
-			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
-			<< parent.getNumber() <<" "
-			<< "with bond center name " << parentBondCenterPathNameStr
-			<< eol;
+		// scout("Bonding ")
+		// 	<< "child " << child.getName() <<" " << child.getInName()
+		// 	<<" " << child.getNumber() <<" "
+		// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+		// 	<< parent.getNumber() <<" "
+		// 	<< "with bond center name " << parentBondCenterPathNameStr
+		// 	<< eol;
 
 		// Bond
 		topology.bondAtom(child.getSingleAtom(),
@@ -1771,6 +1777,152 @@ void Context::buildAcyclicGraph_SP_NEW(
 	// topologies.push_back(topology);
 
 }
+
+
+
+/*!
+ * <!--  -->
+*/
+void Context::addRingClosingBonds_SP_NEW(
+	Topology& topology,
+	int rootAmberIx,
+	int molIx)
+{
+
+	const std::vector<BOND>& theseBonds = internCoords.getMoleculeBonds(molIx);
+	//const std::vector<BOND>& ringBonds = internCoords.getRingClosingBonds(); // don't know if it works
+
+	std::vector<BOND>::const_iterator bIt;
+	std::size_t bCnt = 0;
+
+	// Iterate bonds from internal coordinates
+	for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
+
+		bBond& bond = bonds[bCnt];
+
+		if(bond.isVisited() == 0){
+
+			//scout(" [RING CLOSING] ");
+
+			// ===================== GET ATOMS IN THIS BOND ===================
+			// Child
+			//int childAmberIx = bIt->first;
+			int childAmberIx = bond.i;
+			bSpecificAtom& child = (atoms[childAmberIx]);
+			const SimTK::Compound::SingleAtom& childCompoundAtom
+				= child.getSingleAtom();
+
+			// Parent
+			//int parentAmberIx = bIt->second;
+			int parentAmberIx = bond.j;
+			bSpecificAtom& parent = (atoms[parentAmberIx]);
+			const SimTK::Compound::SingleAtom& parentCompoundAtom
+				= parent.getSingleAtom();
+
+			// Set a molecule identifier
+			child.setMoleculeIndex(molIx);
+			parent.setMoleculeIndex(molIx);
+
+			// // Print
+			// scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+			// 	<< eol;
+
+			// ====================== PARENT BOND CENTER ======================
+			
+			// Convenient vars
+			std::stringstream parentBondCenterPathName;
+			std::string parentBondCenterPathNameStr = "";
+			int parentNextAvailBondCenter = -111111;
+			std::string parentNextAvailBondCenterStr = "";
+			int parentNofBonds = parent.getNBonds();
+			int parentNofFreebonds = parent.getFreebonds();
+
+			// Get next available BondCenter id
+			parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
+			//if((parentNofBonds != 1)){ // this decides if it's bond or bond1
+				parentNextAvailBondCenterStr =
+					std::to_string(parentNextAvailBondCenter);
+			//}
+
+			// Cook the parentBondCenterPathName
+			parentBondCenterPathName << parent.getName()
+				<< "/bond" 
+				<< parentNextAvailBondCenterStr;
+			parentBondCenterPathNameStr = parentBondCenterPathName.str();
+
+			// scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
+			// 	<< eol;
+
+			// ======================== ACTUAL BONDING ========================
+			// scout("Bonding ")
+			// 	<< "child " << child.getName() <<" " << child.getInName()
+			// 	<<" " << child.getNumber() <<" "
+			// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+			// 	<< parent.getNumber() <<" "
+			// 	<< "with bond center name " << parentBondCenterPathNameStr
+			// 	<< eol;
+
+			// Bond
+			bSpecificAtom &leftNode  = atoms[bonds[bCnt].i];
+			bSpecificAtom &rightNode = atoms[bonds[bCnt].j];
+
+			std::stringstream sbuff;
+			if(leftNode.getNumber() == topology.baseAtomNumber){
+				sbuff << leftNode.getName() << "/bond" << leftNode.getFreebonds();
+			}else{
+				sbuff << leftNode.getName() << "/bond"
+					<< (leftNode.getNBonds() - leftNode.getFreebonds() + 1);
+			}
+
+			std::stringstream otsbuff;
+			if(rightNode.getNumber() == topology.baseAtomNumber){
+				otsbuff << rightNode.getName() << "/bond" << rightNode.getFreebonds();
+			}else{
+				otsbuff << rightNode.getName() << "/bond"
+					<< (rightNode.getNBonds() - rightNode.getFreebonds() + 1);
+			}
+
+			topology.addRingClosingBond(
+					(sbuff.str()).c_str(),
+					(otsbuff.str()).c_str(),
+					0.14,
+					109*Deg2Rad,
+					BondMobility::Rigid);
+
+
+			// Set bBond Molmodel Compound::BondIndex
+			int currentCompoundBondIndex = topology.getNumBonds() - 1;
+			bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
+			bond.setAsRingClosing();
+
+			// Set the final Biotype
+			topology.setAtomBiotype(child.getName(),
+									child.getResidueName().c_str(),
+									child.getName());
+			topology.setAtomBiotype(parent.getName(),
+									parent.getResidueName().c_str(),
+									parent.getName());									
+
+			// Not sure where is useful
+			bond.setVisited(1);
+
+			// Also set it's molecule index
+			bond.setMoleculeIndex(molIx);
+
+			// ====================== RECORD MODIFICATION =====================
+
+			// Decrease freebonds
+			parent.decrFreebonds();
+			child.decrFreebonds();
+
+		} // if is ring closing
+
+		//ceol;
+
+	}
+
+}
+
 
 /*!
  * <!-- Pass newly created topologies to the worlds -->
@@ -1835,6 +1987,7 @@ void Context::constructTopologies_SP_NEW(
 		
 		// Compute the new molecule's BAT coordinates
 		internCoords.computeBAT( getAtoms() );
+		//internCoords.computeLevelsAndOffsets( getAtoms() );
 		internCoords.updateVisited(atoms);
 		//internCoords.PrintBAT();
 
@@ -1864,7 +2017,7 @@ void Context::constructTopologies_SP_NEW(
 		//  (1) findARoot 
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		const int rootAmberIx = internCoords.getRoot( molIx ).first;
-		setBaseAtom( topology, rootAmberIx );
+		setRootAtom( topology, rootAmberIx );
 
 		// --------------------------------------------------------------------
 		// (2) buildAcyclicGraph
@@ -1872,7 +2025,7 @@ void Context::constructTopologies_SP_NEW(
 
 		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
 
-		// topology.addRingClosingBonds();
+		addRingClosingBonds_SP_NEW(topology, rootAmberIx, molIx);
 
 		// --------------------------------------------------------------------
 		// (4) Add new topology 
@@ -1882,7 +2035,7 @@ void Context::constructTopologies_SP_NEW(
 		topologies.push_back(topology);
 
 	}
- }
+}
 
 
 /*!
@@ -2104,6 +2257,167 @@ void Context::generateTopologiesSubarrays(void){
 
 }
 
+/*!
+ * <!-- Get Z-matrix indexes table	 -->
+*/
+// 
+void
+Context::calcZMatrixTable(void)
+{
+	// Get bonds
+	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+	// Tag bonds that are checked 
+	std::vector<int> taggedBonds;
+
+	// Iterate molecules
+	int allCnt = 0;
+	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
+		// Get molecule and it's bonds
+		Topology& topology = topologies[topoIx];
+		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
+		addZMatrixTableRow(std::vector<int> {
+			BONDS[0].first,
+			BONDS[0].second,
+			-1, -2
+		});
+
+		addZMatrixTableRow(std::vector<int> {
+			BONDS[1].first,
+			BONDS[1].second,
+			BONDS[internCoords.findBondByFirst(topoIx, BONDS[1].second)].second,
+			-1
+		});
+
+		// Iterate molecule's bonds
+		for(size_t BOIx = 2; BOIx < BONDS.size(); BOIx++){
+
+			// Get current bond
+			const BOND& currBOND = BONDS[BOIx];
+
+			// Get bond's atoms
+			int childNo = currBOND.first;
+			int parentNo = currBOND.second;
+			int gparentNo = BONDS[internCoords.findBondByFirst(topoIx, parentNo)].second;
+			int ggparentNo = BONDS[internCoords.findBondByFirst(topoIx, gparentNo)].second;
+
+			bSpecificAtom& childAtom = atoms[childNo];
+			bSpecificAtom& parentAtom = atoms[parentNo];
+			bSpecificAtom& gparentAtom = atoms[gparentNo];
+			bSpecificAtom& ggparentAtom = atoms[ggparentNo];
+
+			int childTopoIx = childAtom.getMoleculeIndex();
+			int parentTopoIx = parentAtom.getMoleculeIndex();
+
+			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex gparent_cAIx = gparentAtom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex ggparent_cAIx = ggparentAtom.getCompoundAtomIndex();
+
+			addZMatrixTableRow(std::vector<int> {childNo, parentNo, gparentNo, ggparentNo});
+
+			// Next bond
+			allCnt++;
+
+		} // every bond
+
+	} // every molecule	
+}
+
+
+/*!
+ * <!-- Get Z-matrix -->
+*/
+// 
+void
+Context::calcZMatrixBAT(
+	int wIx,
+	const std::vector< std::vector<
+		std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+		otherWorldsAtomsLocations)
+{
+
+
+	// Iterate molecules
+	int allCnt = 0;
+
+	int topoIx = 0;
+
+	// Get locations of this molecule
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
+	worlds[wIx].extractAtomTargets(
+		topoIx, otherWorldsAtomsLocations, atomTargets);
+
+	int rowCnt = 0;
+	SimTK::Real bondLength, bondBend, bondTorsion;
+	for (const auto& row : zMatrixTable) {
+		
+		bondLength = SimTK::NaN;
+		bondBend = SimTK::NaN;
+		bondTorsion = SimTK::NaN;
+
+		SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
+		
+		// Calculate bond length
+		a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
+		a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
+		SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
+		SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
+
+		SimTK::Vec3 v_a0a1 = a0loc - a1loc;
+		SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
+
+		if(row[2] >= 0){
+
+			SimTK::Compound::AtomIndex a2_cAIx;
+			a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
+			SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
+
+			// scout("calc ZMatrix ") << rowCnt <<" : " 
+			// << row[0] <<" " << row[1] <<" " << row[2] <<" " << row[3] <<" : "
+			// << a0_cAIx <<" " << a1_cAIx <<" " << a2_cAIx <<" : "
+			// << a0loc[0] <<" " << a0loc[1] <<" " << a0loc[2] <<" "
+			// << a1loc[0] <<" " << a1loc[1] <<" " << a1loc[2] <<" "
+			// << a2loc[0] <<" " << a2loc[1] <<" " << a2loc[2] <<" "
+			// << eol << std::flush;
+
+			// Calculate angle
+			UnitVec3 v1(v_a0a1);
+			UnitVec3 v2(a2loc - a1loc);
+
+			Real dotProduct = SimTK::dot(v1, v2);
+			assert(dotProduct < 1.1);
+			assert(dotProduct > -1.1);
+			if (dotProduct > 1.0) dotProduct = 1.0;
+			if (dotProduct < -1.0) dotProduct = -1.0;
+			bondBend = std::acos(dotProduct);
+
+			if(row[3] >= 0){
+				SimTK::Compound::AtomIndex
+					a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
+				SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
+
+				bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
+			}
+
+		} // angle
+		
+		setZMatrixBATValue(rowCnt, 0, bondLength);
+		setZMatrixBATValue(rowCnt, 1, bondBend);
+		setZMatrixBATValue(rowCnt, 2, bondTorsion);
+
+		if(row[3] == -2){
+			topoIx++;
+		}
+
+		rowCnt++;
+
+	} // every zMatrix row
+			
+
+}
 
 /*!
  * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
@@ -3288,7 +3602,7 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		// Model each topology: build mobods
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
 
-			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Free");
+			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Cartesian");
 
 		} // every molecule
 
@@ -4892,7 +5206,8 @@ void Context::initializeReplica(int thisReplica)
 	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
 
 	// Get this world indexes from the corresponding thermoState
-	std::vector<int> replicaWorldIxs = thermodynamicStates[thisThermoStateIx].getWorldIndexes();
+	std::vector<int> replicaWorldIxs =
+		thermodynamicStates[thisThermoStateIx].getWorldIndexes();
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	// -------------
@@ -5852,28 +6167,36 @@ void Context::transferCoordinates(int src, int dest)
 /*!
  * <!-- Transfer coordinates -->
 */
-void Context::transferCoordinates_SP_NEW(int src, int dest)
+void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 {
 	// Get advanced states of the integrators
-	SimTK::State& lastAdvancedState = worlds[src].integ->updAdvancedState();
-	SimTK::State& currentAdvancedState = worlds[dest].integ->updAdvancedState();
+	SimTK::State& lastAdvancedState = worlds[srcWIx].integ->updAdvancedState();
+	SimTK::State& currentAdvancedState = worlds[destWIx].integ->updAdvancedState();
 
 	// Get coordinates from source
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		otherWorldsAtomsLocations =
-	worlds[src].getAtomsLocationsInGround_SP_NEW(lastAdvancedState);
+	worlds[srcWIx].getAtomsLocationsInGround_SP_NEW(lastAdvancedState);
+
+	// Get BAT coordinates
+	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
+	//PrintZMatrixBAT();
 
 	// Pass compounds to the new world
-	passTopologiesToNewWorld_SP_NEW(dest);
+	passTopologiesToNewWorld_SP_NEW(destWIx);
 
 	// Set coordinates to destination (reconstruct)
 	//currentAdvancedState = worlds[dest].setAtomsLocationsInGround_REFAC(
 	//	currentAdvancedState, otherWorldsAtomsLocations);
 
+	// Focus on destination world
+	World& destWorld = worlds[destWIx];
+	SimTK::State& someState = currentAdvancedState;
 
-	World& destWorld = worlds[dest];
-	SimTK::State& someState = currentAdvancedState;	
+	// Get dumm force field and matter
+	SimTK::DuMMForceFieldSubsystem &dumm = *destWorld.forceField;
+	SimTK::SimbodyMatterSubsystem& matter = *destWorld.matter;
 
 	// Arrays of Transforms
 	SimTK::Transform G_X_T;
@@ -5924,56 +6247,31 @@ void Context::transferCoordinates_SP_NEW(int src, int dest)
 		destWorld.setAtoms_SetDuMMStations(topoIx, locs);
 	}
 
-	Print_TRANSFORMERS_Work();
+	//Print_TRANSFORMERS_Work();
 
-	// All the bonds from all Compounds
-	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
-	assert(allBONDS.size() == getNofMolecules() 
-		&& "internal coordinates nof molecules wrong");
+	std::cout << "setAtoms_SetDuMMStations System Stage: " << someState.getSystemStage() << std::endl;
 
-	// Counter for all bonds
-	size_t allCnt = 0;
+	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
+	setAtoms_XPF_XBM(destWIx);
 
-	// Iterate molecules
-	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+	std::cout << "setAtoms_XPF_XBM System Stage: " << someState.getSystemStage() << std::endl;
 
-		// Get molecule and it's bonds
-		Topology& topology = topologies[topoIx];
-		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+	// Recover the modified state (may not be necessary)
+	destWorld.compoundSystem->realizeTopology();
+	someState = destWorld.compoundSystem->updDefaultState();
 
-		// Iterate molecule's bonds
-		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+	// Set every mobod's mass properties
+	someState = setAtoms_MassProperties(destWIx);
 
-			// Get current bond
-			const BOND& currBOND = BONDS[BOIx];
-			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
-			bBond& bond = bonds[boIx];
+	std::cout << "setAtoms_MassProperties System Stage: " << someState.getSystemStage() << std::endl;
 
-			// Get bond's atoms
-			int childNo = currBOND.first;
-			int parentNo = currBOND.second;
+	// Set X_FMs
+	someState = setAtoms_XFM(destWIx, someState);
 
-			bSpecificAtom& childAtom  = atoms[currBOND.first];
-			bSpecificAtom& parentAtom = atoms[currBOND.second];
+	std::cout << "setAtoms_XFM System Stage: " << someState.getSystemStage() << std::endl;
 
-			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
-			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
-
-			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
-			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
-
-
-// Set Mobilized bodies X_PFs and X_BMs
-calcMobodToMobodTransforms(dest, topology, child_cAIx, parent_cAIx, someState);
-
-
-			// Next bond
-			allCnt++;
-
-		} // every bond
-
-	} // every molecule
-
+	// Realize position
+	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
 
 }
 
@@ -6070,7 +6368,7 @@ void Context::Print_TRANSFORMERS_Work(void)
 				// const SimTK::Compound::SingleAtom &parentCompoundAtom = parentAtom.getSingleAtom();
 				// SimTK::Compound::AtomIndex parCAIx = parentAtom.getCompoundAtomIndex();
 				// const SimTK::Compound::AtomPathName parAtomPathName = parentCompoundAtom.getAtomName(parCAIx);
-				if(parentAtom.getIsBase() == true){
+				if(parentAtom.getIsRoot() == true){
 
 					scout("bondEntry: -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 ");
 
@@ -6137,13 +6435,125 @@ void Context::Print_TRANSFORMERS_Work(void)
 */
 SimTK::State&
 Context::setAtoms_XPF_XBM(
-	int wIx,
-	int topoIx
+	int wIx
 )
 {
+
 	SimTK::State& someState = worlds[wIx].integ->updAdvancedState();
-	
-	assert(!"Not implemented");
+
+	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
+	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
+	//SimTK::CompoundSystem& compoundSystem = *worlds[wIx].compoundSystem;
+
+	// All the bonds from all Compounds
+	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+	assert(allBONDS.size() == getNofMolecules() 
+		&& "internal coordinates nof molecules wrong");
+
+	// Counter for all bonds
+	size_t allCnt = 0;
+
+	// Iterate molecules
+	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
+// scout("Transformers table by bond: allCnt topoIx BOIx boIx BOchild BOparent childTopoIx parentTopoIx child_cAIx parent_cAIx child_dAIx parent_dAIx childMbx parentMbx flex flexStr") << eol;
+
+		// Get molecule and it's bonds
+		Topology& topology = topologies[topoIx];
+		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
+		// Iterate molecule's bonds
+		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+
+			// Get current bond
+			const BOND& currBOND = BONDS[BOIx];
+			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+			bBond& bond = bonds[boIx];
+
+			// Get bond's atoms
+			int childNo = currBOND.first;
+			int parentNo = currBOND.second;
+
+			bSpecificAtom& childAtom  = atoms[currBOND.first];
+			bSpecificAtom& parentAtom = atoms[currBOND.second];
+
+			int childTopoIx = childAtom.getMoleculeIndex();
+			int parentTopoIx = parentAtom.getMoleculeIndex();
+
+			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+
+			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+			// Get atoms' mobods
+			SimTK::MobilizedBodyIndex childMbx = topology.getAtomMobilizedBodyIndexThroughDumm(child_cAIx, dumm);
+			SimTK::MobilizedBody& mobod = matter.updMobilizedBody(childMbx);
+			const SimTK::MobilizedBody& constParentMobod =  mobod.getParentMobilizedBody();
+			SimTK::MobilizedBodyIndex parentMbx = constParentMobod.getMobilizedBodyIndex();
+			SimTK::MobilizedBody& parentMobod = matter.updMobilizedBody(parentMbx);
+
+
+// scout("bondEntry: ") << allCnt <<" " << topoIx <<" " << BOIx <<" " << boIx <<" "; BONDS[BOIx].Print();
+// scout(" ") << childTopoIx <<" " << parentTopoIx <<" "; 
+// scout(" ") << child_cAIx <<" " << parent_cAIx <<" " << child_dAIx <<" " << parent_dAIx <<" ";
+// std::cout << childMbx <<" " << parentMbx <<" " << bond.getBondMobility(destWIx) <<" " << MobilityStr[ bond.getBondMobility(destWIx) ] <<" ";
+
+
+			// Set mobods X_PFs and X_BMs for atoms
+			if(atoms[parentNo].getIsRoot()){
+
+				SimTK::Transform G_X_T = topology.getTopLevelTransform();
+				SimTK::Transform T_X_base =
+					topology.getTopTransform(parent_cAIx);
+				SimTK::Transform G_X_base = G_X_T * T_X_base;
+				parentMobod.setDefaultInboardFrame(G_X_base);
+				parentMobod.setDefaultOutboardFrame(SimTK::Transform());
+
+				// scout("base atom X_PF") << eol;
+				// PrintTransform(G_X_base, 6, "base_X_PF");
+				// scout("base atom X_B") << eol;
+				// PrintTransform(SimTK::Transform(), 6, "base_X_PF");
+
+			}
+
+			if(bond.getBondMobility(wIx) != SimTK::BondMobility::Mobility::Rigid){
+				
+				std::vector<SimTK::Transform> mobodTs =
+					calc_XPF_XBM(
+						wIx, topology,
+						child_cAIx, parent_cAIx,
+						bond.getBondMobility(wIx),
+						someState);
+
+				// scout("mobod ") << childMbx <<" " << ("X_PF ") << eol;
+				// PrintTransform(mobod.getDefaultInboardFrame(), 6, "X_PF");
+				// scout("mobod ") << childMbx <<" " << ("X_BM ") << eol;
+				// PrintTransform(mobod.getDefaultOutboardFrame(), 6, "X_BM");
+				// scout("NEW ") << childMbx <<" " << ("X_PF ") << eol;
+				// PrintTransform(mobodTs[0], 6, "newX_PF");
+				// scout("NEW ") << childMbx <<" " << ("X_BM ") << eol;
+				// PrintTransform(mobodTs[1], 6, "newX_PF");
+				
+				mobod.setDefaultInboardFrame(mobodTs[0]);
+				mobod.setDefaultOutboardFrame(mobodTs[1]);
+
+			}
+
+			// Next bond
+			allCnt++;
+
+		} // every bond
+
+	} // every molecule
+
+	// ------------------------------------------------------------------------
+
+
+	// Return
+	return someState;
+
 }
 
 /*!
@@ -6151,14 +6561,80 @@ Context::setAtoms_XPF_XBM(
 */
 SimTK::State&
 Context::setAtoms_MassProperties(
-	int wIx,
-	int topoIx
+	int wIx
 )
 {
 	SimTK::State& someState = worlds[wIx].integ->updAdvancedState();
 	
-	assert(!"Not implemented");
+	SimTK::SimbodyMatterSubsystem& currMatter = *worlds[wIx].matter;
+	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
+	SimTK::CompoundSystem& compoundSystem = *worlds[wIx].compoundSystem;
+
+	// Set mass properties for mobilized bodies
+	// Loop through mobilized bodies
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < currMatter.getNumBodies(); ++mbx)
+	{
+		SimTK::MobilizedBody& mobod = currMatter.updMobilizedBody(mbx);
+		DuMM::ClusterIndex clusterIx = dumm.bgetMobodClusterIndex(mbx);
+		SimTK::MassProperties massProperties = dumm.calcClusterMassProperties(clusterIx);
+		mobod.setDefaultMassProperties(massProperties);
+	}
+
+	// Recover the modified state (may not be necessary)
+	compoundSystem.realizeTopology();
+
+	return compoundSystem.updDefaultState();
+
 }
+
+
+/*!
+ * <!--  -->
+*/
+SimTK::Transform
+Context::calc_XFM(
+	int wIx,
+	Topology& topology,	
+	SimTK::Compound::AtomIndex& childAIx,
+	SimTK::Compound::AtomIndex& parentAIx,
+	SimTK::BondMobility::Mobility mobility,
+	const SimTK::State& someState) const
+{
+
+	// Get world's forcefield and matter
+	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
+	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
+
+	// Get body and parentBody
+	SimTK::MobilizedBodyIndex childMbx = topology.getAtomMobilizedBodyIndexThroughDumm(childAIx, dumm);
+	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(childMbx);
+	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+	
+	//
+	SimTK::Real bondBend = getZMatrixBATValue(6, 1);
+	//SimTK::Transform XXX(SimTK::Rotation(-1.0 * (bondBend - (SimTK::Pi / 2.0)), SimTK::YAxis));
+	SimTK::Transform XXX;
+
+
+
+	SimTK::Transform XXXinv = ~XXX;
+
+	// New
+	SimTK::Transform X_FMspherical = SimTK::Transform()
+		* XXXinv
+	;
+
+	// Return
+	if(mobility == SimTK::BondMobility::Mobility::Spherical){
+		return X_FMspherical;
+	}else{
+		return Transform();
+	}
+
+}
+
 
 /*!
  * <!--  -->
@@ -6166,45 +6642,150 @@ Context::setAtoms_MassProperties(
 SimTK::State&
 Context::setAtoms_XFM(
 	int wIx,
-	int topoIx
-)
+	SimTK::State& someState)
 {
-	SimTK::State& someState = worlds[wIx].integ->updAdvancedState();
-	
-	assert(!"Not implemented");
+
+	// Get world's forcefield and matter
+	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
+	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
+
+	// Get bonds
+	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+	// Iterate molecules
+	int allCnt = 0;
+	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
+		// Get molecule and it's bonds
+		Topology& topology = topologies[topoIx];
+		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
+		// Iterate molecule's bonds
+		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+
+			// Get current bond
+			const BOND& currBOND = BONDS[BOIx];
+			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+			bBond& bond = bonds[boIx];
+
+			// Get bond's atoms
+			int childNo = currBOND.first;
+			int parentNo = currBOND.second;
+			int gparentNo = BONDS[internCoords.findBondByFirst(topoIx, parentNo)].second;
+			int ggparentNo = BONDS[internCoords.findBondByFirst(topoIx, gparentNo)].second;			
+
+			bSpecificAtom& childAtom  = atoms[currBOND.first];
+			bSpecificAtom& parentAtom = atoms[currBOND.second];
+			//bSpecificAtom& gparentAtom = atoms[gparentNo];
+			//bSpecificAtom& ggparentAtom = atoms[ggparentNo];			
+
+			int childTopoIx = childAtom.getMoleculeIndex();
+			int parentTopoIx = parentAtom.getMoleculeIndex();
+
+			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+			//SimTK::Compound::AtomIndex gparent_cAIx = gparentAtom.getCompoundAtomIndex();
+			//SimTK::Compound::AtomIndex ggparent_cAIx = ggparentAtom.getCompoundAtomIndex();			
+
+			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+			// Get atoms' mobods
+			SimTK::MobilizedBodyIndex childMbx = topology.getAtomMobilizedBodyIndexThroughDumm(child_cAIx, dumm);
+			SimTK::MobilizedBody& mobod = matter.updMobilizedBody(childMbx);
+			const SimTK::MobilizedBody& constParentMobod =  mobod.getParentMobilizedBody();
+			SimTK::MobilizedBodyIndex parentMbx = constParentMobod.getMobilizedBodyIndex();
+			SimTK::MobilizedBody& parentMobod = matter.updMobilizedBody(parentMbx);
+
+			if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
+
+				// Calculate
+				SimTK::Transform X_FM =
+				calc_XFM(wIx, topology,
+					child_cAIx, parent_cAIx,
+					bond.getBondMobility(wIx),
+					someState);
+
+				//PrintTransform(X_FM, 6, "X_FMreceived");
+
+				//worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);				
+				//PrintTransform(mobod.getMobilizerTransform(someState), 6, "X_FMcurrent");
+
+
+				if(bond.getBondMobility(wIx) == SimTK::BondMobility::Mobility::Spherical)
+				{
+
+					//mobod.getMatterSubsystem().getSystem().getSystemGuts().getVersion();
+					//mobod.getMatterSubsystem().getSystem().getVersion();
+					mobod.getMatterSubsystem().getSystem().realize(someState, SimTK::Stage::Position);
+
+					//worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);
+
+					mobod.setQToFitTransform(someState, X_FM);
+					//someState.updQ()[1] = 0.1;
+					
+					worlds[wIx].compoundSystem->realize(
+						someState, SimTK::Stage::Position);
+
+					//PrintTransform(mobod.getMobilizerTransform(someState),
+					//	6, "X_FMafter");
+
+					scout("mobodQ= ") << mobod.getQAsVector(someState) << eol;
+					scout("stateQ= ") << someState.updQ() << eol;
+				
+				}				
+
+			}
+
+			// Next bond
+			allCnt++;
+
+		} // every bond
+
+	} // every molecule
+
+	return someState;
+
 }
 
 /*!
  * <!--  -->
 */
 std::vector<SimTK::Transform>
-Context::calcMobodToMobodTransforms(
+Context::calc_XPF_XBM(
 	int wIx,
 	Topology& topology,
 	SimTK::Compound::AtomIndex& childAIx,
 	SimTK::Compound::AtomIndex& parentAIx,
+	SimTK::BondMobility::Mobility mobility,
 	const SimTK::State& someState)
 {
-
+	// Get world's forcefield and matter
 	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
 	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
 
 	// Get body and parentBody
-	SimTK::MobilizedBodyIndex mbx =
-		topology.getAtomMobilizedBodyIndexThroughDumm(childAIx, dumm);
-	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
+	SimTK::MobilizedBodyIndex childMbx = topology.getAtomMobilizedBodyIndexThroughDumm(childAIx, dumm);
+	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(childMbx);
 	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+	// Bound to Ground
 	if(parentMbx == 0){
-		return std::vector<SimTK::Transform>{SimTK::Transform(), SimTK::Transform()};
+		SimTK::Transform G_X_T = topology.getTopLevelTransform();
+		SimTK::Transform T_X_base =
+			topology.getTopTransform(SimTK::Compound::AtomIndex(0));
+
+		return std::vector<SimTK::Transform>
+			{G_X_T * T_X_base,
+			SimTK::Transform()};
 	}
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
 	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(
-		childAIx, parentAIx);	
-
+		childAIx, parentAIx);
+	SimTK::Transform X_childBC_parentBC = ~X_parentBC_childBC;
 
 	// Get Top frame
 	SimTK::Transform T_X_root = topology.getTopTransform(childAIx);
@@ -6215,6 +6796,7 @@ Context::calcMobodToMobodTransforms(
 	// Origin of the parent mobod
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
+	SimTK::Transform Proot_X_root = Proot_X_T * T_X_root;
 	
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle =
@@ -6235,9 +6817,9 @@ Context::calcMobodToMobodTransforms(
 
 	// Get the old PxFxMxB transform
 	SimTK::Transform oldX_PB =
-		Proot_X_T * T_X_root
-		* InboardDihedral_XAxis * X_to_Z
-		* InboardDihedral_ZAxis * Z_to_X;
+		Proot_X_root
+		//* InboardDihedral_XAxis * X_to_Z * InboardDihedral_ZAxis * Z_to_X
+		;
 
 	// B_X_Ms
 	SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
@@ -6251,23 +6833,36 @@ Context::calcMobodToMobodTransforms(
 	SimTK::Transform P_X_F_pin 		= oldX_PB * B_X_M_pin;
 	SimTK::Transform P_X_F_univ 	= oldX_PB * B_X_M;
 
-	//SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z * InboardLength_mZAxis;
-	//SimTK::Transform B_X_M_spheric  = Transform();
-	//SimTK::Transform B_X_M_spheric = B_X_M_pin;
-	SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z;
-	
-	//SimTK::Transform P_X_F_spheric  = oldX_PB * B_X_M_pin;
-	//SimTK::Transform P_X_F_spheric = Transform();
-	//SimTK::Transform P_X_F_spheric = P_X_F_pin;
-	SimTK::Transform P_X_F_spheric = oldX_PB * B_X_M_pin;
-	
-	// Get mobility (joint type)
-	bSpecificAtom *atom = topology.updAtomByAtomIx(childAIx);
-	SimTK::BondMobility::Mobility mobility;
-	bBond bond = 	topology.getBond(topology.getNumber(childAIx),
-					topology.getNumber(parentAIx));
+	//Spherical ===============================================================
+	SimTK::Real bondBend = getZMatrixBATValue(6, 1);
+	SimTK::Transform XXX;
+	//SimTK::Transform XXX(SimTK::Rotation(-1.0 * (bondBend - (SimTK::Pi / 2.0)), SimTK::YAxis));
+	SimTK::Transform XXXinv = ~XXX;
 
-	mobility = bond.getBondMobility(wIx);
+	// Proot -> root -> parentBC -> chilBC=X -> Z
+	SimTK::Transform P_X_F_spheric = SimTK::Transform()
+		* Proot_X_root 
+		* X_parentBC_childBC
+		* X_to_Y
+		* Y_to_Z
+		* XXX
+	;
+
+	// Z -> X=childBC -> parentBC
+	SimTK::Transform M_X_B_spheric = SimTK::Transform()
+		* Z_to_Y
+		* Y_to_X
+		* X_childBC_parentBC
+	;
+
+	SimTK::Transform B_X_M_spheric = ~M_X_B_spheric;
+	// SimTK::Transform B_X_M_spheric =
+	// 	X_parentBC_childBC
+	// 	* X_to_Z
+	// 	* XXXinv
+	// ;
+
+	// ------------------------------------------------------------------------
 
 	bool anglePin_OR = (
 		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
@@ -6275,10 +6870,14 @@ Context::calcMobodToMobodTransforms(
 		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
 	);
 
-	if( (anglePin_OR) && ((atom->neighbors).size() == 1)){
+	if( (anglePin_OR)
+		//&& ((atom->neighbors).size() == 1)
+	){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
-	}else if( (anglePin_OR) && ((atom->neighbors).size() != 1)){
+	}else if( (anglePin_OR)
+		//&& ((atom->neighbors).size() != 1)
+	){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
 	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)

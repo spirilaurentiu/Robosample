@@ -244,6 +244,15 @@ public:
 	const std::vector<TORSION>& getTorsions() const;
 
 	/**	
+	* @brief 
+	* @return
+	*/
+	int
+	findBondByFirst(
+		int wIx,
+		int targetFirstValue);
+
+	/**	
 	* @brief Return the molecular graph in a level / offset format which
 	* contains a table of : level, offset, atom and parent
 	* @return 2D vector of BAT_ATOM (Amber index)
@@ -309,6 +318,7 @@ private:
 	std::vector<std::vector<BOND>> perMolBonds; // Laurentiu
 	std::vector<std::vector<ANGLE>> perMolAngles; // Laurentiu
 	std::vector<std::vector<TORSION>> perMolTorsions; // Laurentiu
+	std::vector<std::vector<BOND>> perMolRingClosingBonds; // Laurentiu
 
 
 	std::vector<std::vector<BAT_ATOM>> levelGraph;
