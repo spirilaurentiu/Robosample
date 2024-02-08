@@ -36,7 +36,7 @@ public:
 	* @param singlePrmtop Read all molecules from a single prmtop
 	* @return succes of the function
 	*/	
-	bool initializeFromFile(const std::string& filename, bool singlePrmtop = false);
+	bool initializeFromFile(const std::string& filename, bool singlePrmtop);
 
 	void setNumThreads(int threads);
 	void setNonbonded(int method, SimTK::Real cutoff);
@@ -100,8 +100,6 @@ public:
 		int rootAmberIx,
 		int molIx);
 
-	/** Assign Compound coordinates by matching bAtomList coordinates */
-	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
 
 	/**  */
 	void generateSubAtomLists(void);
@@ -112,10 +110,22 @@ public:
 	/** Pass Context topologies to all the worlds */
 	void passTopologiesToWorlds(void);
 
+	/** Read atoms and bonds from all the molecules */
+	void readMolecules_SP_NEW(void);
+	
 	/**  */
-	void AddMolecules_SP_NEW(
-		// std::vector<std::string>& argRoots
+	void constructTopologies_SP_NEW(
+		std::vector<std::string>& argRoots
 	);
+
+	/**  */
+	void generateTopologiesSubarrays(void);
+
+	/** Assign Compound coordinates by matching bAtomList coordinates */
+	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
+
+	/** Match Compounds configurations to atoms Cartesian coords */
+	void matchDefaultConfigurations_SP_NEW(void);
 
 	// ------------- SP_NEW -------------
 
@@ -240,6 +250,60 @@ public:
 	// --- Main ---
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
+	void transferCoordinates_SP_NEW(int src, int dest);
+// SP_NEW_TRANSFER ============================================================
+
+SimTK::State&
+setAtoms_XPF_XBM(
+	int wIx,
+	int topoIx
+);
+
+SimTK::State&
+setAtoms_MassProperties(
+	int wIx,
+	int topoIx
+);
+
+SimTK::State&
+setAtoms_XFM(
+	int wIx,
+	int topoIx
+);
+
+std::vector<SimTK::Transform>
+calcMobodToMobodTransforms(
+	int wIx,
+	Topology& topology,
+	SimTK::Compound::AtomIndex& childNo,
+	SimTK::Compound::AtomIndex& parentNo,
+	const SimTK::State& someState
+);
+
+SimTK::Compound::AtomIndex
+getChemicalParent_IfIAmRoot(
+	int wIx,
+	int atomNo,
+	SimTK::DuMMForceFieldSubsystem &dumm
+);
+
+// X axis to Z axis switch
+const SimTK::Transform X_to_Z 
+	=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
+const SimTK::Transform Z_to_X = ~X_to_Z;
+
+// Y axis to Z axis switch
+const SimTK::Transform Y_to_Z =
+	SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
+const SimTK::Transform Z_to_Y = ~Y_to_Z;
+
+// X axis to X axis switch
+const SimTK::Transform Y_to_X =
+	SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
+const SimTK::Transform X_to_Y = ~Y_to_X;
+
+// SP_NEW_TRANSFER ------------------------------------------------------------
+
 
 	// Print recommended timesteps
 	void PrintInitialRecommendedTimesteps(void);
@@ -503,6 +567,10 @@ public:
 
 	void PrintBonds(void);
 
+	// Transformers
+	void Print_TRANSFORMERS_Work(void);
+
+
 private:
 	std::string GetMoleculeDirectoryShort(const std::string& path) const;
 	bool CheckInputParameters(const SetupReader& setupReader);
@@ -669,5 +737,41 @@ public:
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
 
+    std::vector<std::string> MobilityStr {
+		"Zero",
+        "Free",
+        "Torsion",
+        "Rigid", 
+        "BallF", 
+        "BallM", 
+        "Cylinder", 
+        "Translation", 
+        "FreeLine", 
+        "LineOrientationF", 
+        "LineOrientationM", 
+        "UniversalM", 
+        "Spherical", 
+        "AnglePin",
+        "BendStretch",
+        "Slider"   
+    };
+
+	BondMobility::Mobility getMobility(const std::string& mobilityStr) {
+		// Assume MobilityStr is a vector defined elsewhere in your code
+		// std::vector<std::string> MobilityStr = { ... };
+
+		auto it = std::find(MobilityStr.begin(), MobilityStr.end(), mobilityStr);
+		
+		if (it != MobilityStr.end()) {
+			// If the string is found, return the corresponding enum value
+			return static_cast<BondMobility::Mobility>(std::distance(MobilityStr.begin(), it) + 1);
+		} else {
+			// If the string is not found, return the default value
+			return BondMobility::Default;
+		}
+	}	
+
+private:
+	bool singlePrmtop = false;
 };
 

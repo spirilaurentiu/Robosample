@@ -397,6 +397,7 @@ public:
 	calcDefaultAtomFrameInCompoundFrame multiple times. This has 
 	to be called every time the coordinates change though. **/
 	void calcTopTransforms(void);
+	void calcTopTransforms_SP_NEW(void);
 	
 	/**  **/
 	void printTopTransforms(void);

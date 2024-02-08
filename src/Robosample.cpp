@@ -4,8 +4,11 @@ int main(int argc, char **argv)
 {
 	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
-	std::string helpString = 
-	"Usage: ./robosample [options]\n Options:\n  -h, --help for help\nUsage: ./robosample [file]\n";
+	std::string helpString = "Usage: ./robosample [options]\n";
+	helpString +=
+		" Options:\n";
+	helpString +=
+		"  -h, --help for help\nUsage: ./robosample [file]\n";
 
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
@@ -46,14 +49,14 @@ int main(int argc, char **argv)
 
 	bool singlePrmtop = true;
 
-	// std::string singlePrmtopOpt;
-	// if(argc >= 3){
-	// 	singlePrmtopOpt = argv[2];
-	// }
+	std::string singlePrmtopOpt;
+	if(argc >= 3){
+		singlePrmtopOpt = argv[2];
+	}
 
-	// if(singlePrmtopOpt == "singlePrmtop"){
-	// 	singlePrmtop = true;
-	// }
+	if(singlePrmtopOpt == "singlePrmtop"){
+		singlePrmtop = true;
+	}
 
 	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
 		return -1;

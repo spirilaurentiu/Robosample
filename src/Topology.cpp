@@ -280,6 +280,7 @@ void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNod
 				if (nofProcesses == 2) {
 					if (baseSetFlag == 0) {
 						this->setBaseAtom(previousNode->getSingleAtom());
+						previousNode->setIsBase(true);
 						this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
 						this->convertInboardBondCenterToOutboard();
 						baseSetFlag = 1;
@@ -441,6 +442,8 @@ void Topology::addRingClosingBonds() {
 	}
 }
 
+
+
 /** Match Default configuration with the coordinates loaded from
  * the input reader **/
 void Topology::matchDefaultConfigurationWithAtomList(
@@ -449,8 +452,12 @@ void Topology::matchDefaultConfigurationWithAtomList(
 	// Assign Compound coordinates by matching bAtomList coordinates
 	std::map<AtomIndex, Vec3> atomTargets;
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
-		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
+		Vec3 vec(	bAtomList[ix].getX(),
+					bAtomList[ix].getY(),
+					bAtomList[ix].getZ());
+
+		atomTargets.insert(pair<AtomIndex, Vec3>
+			(bAtomList[ix].getCompoundAtomIndex(), vec));
 	}
 
 	matchDefaultConfiguration(atomTargets, matchStratagem, true, 150.0);
@@ -526,6 +533,7 @@ void Topology::buildGraphAndMatchCoords(int argRoot)
 	// Build the graph
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
+		bAtomList[0].setIsBase(true);
 		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 		this->setAtomBiotype(bAtomList[0].getName(), (this->name), bAtomList[0].getName());
 	}else{
@@ -558,6 +566,7 @@ void Topology::buildAcyclicGraphWrap(bSpecificAtom* root)
 	// Build the graph
 	if(bAtomList.size() == 1){
 		this->setBaseAtom(bAtomList[0].getSingleAtom());
+		bAtomList[0].setIsBase(true);
 		(bAtomList[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
 	}else{
@@ -2129,6 +2138,14 @@ void Topology::calcTopTransforms()
 	}
 }
 
+void Topology::calcTopTransforms_SP_NEW()
+{
+	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
+		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
+		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
+	}
+}
+
 /**  **/
 void Topology::printTopTransforms()
 {
@@ -2467,9 +2484,6 @@ Topology::getNeighbourWithSmallerAIx(
 	// Return
 	return chemParentAIx;
 }
-
-
-
 
 
 
