@@ -63,6 +63,7 @@ One iteration must include:
 
 **/
 
+#include "Context.hpp"
 #include "Sampler.hpp"
 #include "TaskSpace.hpp"
 #include <thread>
@@ -76,6 +77,7 @@ One iteration must include:
 // Other classes that we need
 class Topology;
 class IState;
+class Context;
 
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
 	const char *dirname, const char *prefix, int midlength,
@@ -378,11 +380,34 @@ public:
 		std::vector<SimTK::Real>& scaleFactors);
 
 	/**
-	 * Get the log of the Jacobian of a bond-angle strtch
+	 * Get the log of the Jacobian of a bond-angle stretch
 	*/
 	SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState,
 		std::vector<SimTK::Real> scaleFactors,
 		unsigned int startFromBody = 0);
+
+
+
+
+
+	// WORK Q PERTURB BEND STRETCH ============================================
+
+	// SimTK::Real
+	// calcBendStretchJacobianDetLog(std::vector<std::vector<SimTK::Real>>& zMatrixBAT)
+	// {
+	// 	assert(!"Not implemented");
+	// }
+
+	void
+	setQToScaleBendStretch(
+		std::vector<std::vector<SimTK::Real>>& zMatrixBATdiffs)
+	{
+		assert(!"Not implemented");
+	}
+
+	// WORK Q PERTURB BEND STRETCH --------------------------------------------
+
+
 
 
 	/** Set simulation temperature, 
@@ -559,6 +584,19 @@ public:
 	void setNonequilibriumParameters(int distort, int work, int flow);
 	int getDistortOption() const;
 	void setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps);
+
+
+	// BAT ====================================================================
+
+	SimTK::Real
+	calcBATDeviations(
+		SimTK::State& someState,
+		std::vector< std::pair< const std::vector<SimTK::Real>&,  SimTK::QIndex> >& worldBATs
+	);
+
+
+	// BAT --------------------------------------------------------------------
+
 
 protected:
 

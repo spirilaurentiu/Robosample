@@ -1606,6 +1606,7 @@ World::getMbx2aIx(){
 	return mbx2aIx;
 }
 
+
 std::size_t World::getNofMobilizedBodies() const{
 	return mbx2aIx.size();
 }

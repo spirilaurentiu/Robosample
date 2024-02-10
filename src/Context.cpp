@@ -95,7 +95,12 @@ bool Context::initializeFromFile(const std::string &file)
 		}
 
 	}
-	
+
+	// Victor - take a look
+	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		worlds[worldIx].setMyContext(this);
+	}
+
 	// Get how much available memory we have
 	struct sysinfo info;
 	if (sysinfo(&info) == 0) {
@@ -166,12 +171,19 @@ bool Context::initializeFromFile(const std::string &file)
 
 		// Get Z-matrix indexes table	
 		calcZMatrixTable();
-		//PrintZMatrixTable();
+		PrintZMatrixTable();
 
+		//
 		zMatrixBAT.resize(zMatrixTable.size());
 		for (auto& row : zMatrixBAT) {
 			row.resize(3, SimTK::NaN);
 		}		
+
+		//
+		zMatrixBATMean.resize(zMatrixTable.size());
+		for (auto& row : zMatrixBATMean) {
+			row.resize(3, SimTK::NaN);
+		}
 
 		// std::cout 
 		// 	<< "Robosample in development mode. Delete return after print."
@@ -2014,7 +2026,7 @@ void Context::constructTopologies_SP_NEW(
 
 		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
 
-		addRingClosingBonds_SP_NEW(topology, rootAmberIx, molIx);
+		//addRingClosingBonds_SP_NEW(topology, rootAmberIx, molIx);
 
 		// --------------------------------------------------------------------
 		// (4) Add new topology 
@@ -5599,6 +5611,9 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 		
 		if( singlePrmtop == true ){
 			transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
+
+
+
 		}else{
 			transferCoordinates(backWorldIx, frontWorldIx);
 		}
@@ -6258,7 +6273,127 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	// Realize position
 	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
 
+	if(destWIx == 1){
+		PrintZMatrixMobods(destWIx, someState);
+	}
+	
+	// Test on World Context relationship
+	//(worlds[srcWIx].getMyContext())->PrintZMatrixTable();
+
+
+
 }
+
+
+// Relationship BAT - mobod transforms
+void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
+{
+
+	// Get world
+	World& world = worlds[wIx];
+
+	// Get generalized coordinates
+	SimTK::Vector qVector = someState.getQ();
+	std::cout << "Q= " << qVector << eol;
+
+	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+	// Iterate ZMatrix and bonds
+	int prevMolIx = -1;
+	size_t zMatCnt = 0;
+	for (const auto& row : zMatrixTable) {
+
+		scout("ZTableEntry: ");
+
+		for (int value : row) {
+			std::cout << std::setw(6) << value <<" "; 
+		}
+
+		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
+		for (SimTK::Real BATvalue : BATrow) {
+			std::cout << std::setw(6) << BATvalue << " ";
+		}
+
+		// Get bond's atoms
+		bSpecificAtom& childAtom  = atoms[row[0]];
+		bSpecificAtom& parentAtom = atoms[row[1]];
+
+		// Get molecule
+		int childMolIx = childAtom.getMoleculeIndex();
+		int parentMolIx = parentAtom.getMoleculeIndex();
+		assert((childMolIx == parentMolIx) &&
+			"Atoms from different molecules");
+		Topology& topology = topologies[childMolIx];
+
+
+		// Get current bond
+		int BOIx;
+		if(prevMolIx != childMolIx){
+			BOIx = 0;
+		}
+
+		const std::vector<BOND>& BONDS = allBONDS[childMolIx];
+		const BOND& currBOND = BONDS[BOIx];
+		size_t boIx = BONDS_to_bonds[childMolIx][BOIx];
+		bBond& bond = bonds[boIx];
+
+		//scout(" ") << MobilityStr [ bond.getBondMobility(wIx) ] <<" ";
+		if(bond.getBondMobility(wIx) != SimTK::BondMobility::Rigid){
+
+						// Get Molmodel indexes
+						SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+						SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+
+						SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+						SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+						// Get child-parent mobods
+						SimTK::DuMMForceFieldSubsystem& dumm = *(world.updForceField());
+						
+						SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+						const SimTK::MobilizedBody &childMobod = world.matter->getMobilizedBody(childMbx);
+						SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+						const SimTK::MobilizedBody &parentMobod = world.matter->getMobilizedBody(parentMbx);
+
+						childMobod.getFirstQIndex(someState);
+
+						scout(" ") << childMbx <<" " << parentMbx <<" ";
+
+						scout("| ")
+							<< childMobod.getQAsVector(someState) <<" |" ;
+
+						//scout("| ")
+						//	<< parentMobod.getQAsVector(someState) <<" |";
+
+						// if(mbx != parentMbx){
+
+						// 	// Get default transforms
+						// 	const SimTK::Transform& X_PF = mobod.getInboardFrame(someState);
+						// 	const SimTK::Transform& X_BM = mobod.getOutboardFrame(someState);
+						// 	const SimTK::Transform& X_FM = mobod.getMobilizerTransform(someState);
+
+						// 	PrintTransform(X_PF, 6, "X_PF");
+						// 	PrintTransform(X_BM, 6, "X_BM");
+						// 	PrintTransform(X_FM, 6, "X_FM");
+
+						// }else{
+						// 	//ceol;
+						// }
+		}
+
+		ceol;
+
+		BOIx++;
+
+		if(prevMolIx != childMolIx){
+			prevMolIx = childMolIx;
+		}
+
+		zMatCnt++;
+	}
+
+}
+
 
 
 /*!
@@ -6656,8 +6791,8 @@ Context::setAtoms_XFM(
 			// Get bond's atoms
 			int childNo = currBOND.first;
 			int parentNo = currBOND.second;
-			int gparentNo = BONDS[internCoords.findBondByFirst(topoIx, parentNo)].second;
-			int ggparentNo = BONDS[internCoords.findBondByFirst(topoIx, gparentNo)].second;			
+			//int gparentNo = BONDS[internCoords.findBondByFirst(topoIx, parentNo)].second;
+			//int ggparentNo = BONDS[internCoords.findBondByFirst(topoIx, gparentNo)].second;			
 
 			bSpecificAtom& childAtom  = atoms[currBOND.first];
 			bSpecificAtom& parentAtom = atoms[currBOND.second];
@@ -6700,23 +6835,23 @@ Context::setAtoms_XFM(
 				if(bond.getBondMobility(wIx) == SimTK::BondMobility::Mobility::Spherical)
 				{
 
-					//mobod.getMatterSubsystem().getSystem().getSystemGuts().getVersion();
-					//mobod.getMatterSubsystem().getSystem().getVersion();
-					mobod.getMatterSubsystem().getSystem().realize(someState, SimTK::Stage::Position);
+					// //mobod.getMatterSubsystem().getSystem().getSystemGuts().getVersion();
+					// //mobod.getMatterSubsystem().getSystem().getVersion();
+					// mobod.getMatterSubsystem().getSystem().realize(someState, SimTK::Stage::Position);
 
-					//worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);
+					// //worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);
 
-					mobod.setQToFitTransform(someState, X_FM);
-					//someState.updQ()[1] = 0.1;
+					// mobod.setQToFitTransform(someState, X_FM);
+					// //someState.updQ()[1] = 0.1;
 					
-					worlds[wIx].compoundSystem->realize(
-						someState, SimTK::Stage::Position);
+					// worlds[wIx].compoundSystem->realize(
+					// 	someState, SimTK::Stage::Position);
 
-					//PrintTransform(mobod.getMobilizerTransform(someState),
-					//	6, "X_FMafter");
+					// //PrintTransform(mobod.getMobilizerTransform(someState),
+					// //	6, "X_FMafter");
 
-					scout("mobodQ= ") << mobod.getQAsVector(someState) << eol;
-					scout("stateQ= ") << someState.updQ() << eol;
+					// scout("mobodQ= ") << mobod.getQAsVector(someState) << eol;
+					// scout("stateQ= ") << someState.updQ() << eol;
 				
 				}				
 

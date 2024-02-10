@@ -264,6 +264,10 @@ public:
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
 	void transferCoordinates_SP_NEW(int src, int dest);
+	
+	// Relationship BAT - mobod transforms
+	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
+
 // SP_NEW_TRANSFER ============================================================
 
 SimTK::State&
@@ -634,6 +638,16 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
         zMatrixBAT[rowIndex][colIndex] = value;
     }
 
+    // Function to get a given row
+    const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) {
+
+		assert(rowIndex < zMatrixBAT.size());
+
+        // Check if the indices are within bounds
+        return zMatrixBAT[rowIndex];
+
+    }
+
     // Function to get the value for a given row and column in zMatrixBAT
     SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const {
         // Check if the indices are within bounds
@@ -642,7 +656,7 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
             return zMatrixBAT[rowIndex][colIndex];
         } else {
             // Indices are out of bounds, handle this case accordingly
-            return SimTK::NaN; // Adjust the default value as needed
+            return SimTK::NaN;
         }
     }
 
@@ -879,7 +893,143 @@ public:
 	bool singlePrmtop = false;
 
 	std::vector<std::vector<int>> zMatrixTable;
+	
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
+	std::vector<std::vector<SimTK::Real>> zMatrixBATMean;
+
+
+	// WORK Q PERTURB BEND STRETCH ============================================
+
+	// Get log of the Cartesian->BAT Jacobian
+	SimTK::Real
+	calcInternalBATJacobianLog(void)
+	{
+
+		// Get log of the Cartesian->BAT Jacobian
+		SimTK::Real logJacBAT = 0.0;
+
+		for(size_t zCnt = 0; zCnt = zMatrixBAT.size(); zCnt++){
+
+				// Get bond term
+				SimTK::Real currBond = zMatrixBAT[zCnt][0];
+				
+				if(currBond != SimTK::NaN){
+				
+					logJacBAT += 2.0 * std::log(currBond);
+				}
+
+				// Get the angle term
+				SimTK::Real currAngle = zMatrixBAT[zCnt][1];
+
+				if(currAngle != SimTK::NaN){
+
+					logJacBAT += std::log(std::sin(currAngle));
+					
+				}
+
+		}
+
+		return logJacBAT;
+
+	}
+
+
+	// Get BAT coordinates modifyable by a selected world
+	void
+	getWorldBATs(
+		int wIx,
+		SimTK::State& someState,
+		std::vector< std::pair< const std::vector<SimTK::Real>&,  SimTK::QIndex> >& worldBATs
+	)
+{
+	
+	// Get world
+	World& world = worlds[wIx];
+
+	// Get generalized coordinates
+	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+	// Iterate ZMatrix and bonds
+	int prevMolIx = -1;
+	size_t zMatCnt = 0;
+	for (const auto& row : zMatrixTable) {
+
+		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
+		//for (SimTK::Real BATvalue : BATrow) {
+		//	std::cout << std::setw(6) << BATvalue << " ";
+		//}
+
+		// Get bond's atoms
+		bSpecificAtom& childAtom  = atoms[row[0]];
+		bSpecificAtom& parentAtom = atoms[row[1]];
+
+		// Get molecule
+		int childMolIx = childAtom.getMoleculeIndex();
+		int parentMolIx = parentAtom.getMoleculeIndex();
+		assert((childMolIx == parentMolIx) &&
+			"Atoms from different molecules");
+		Topology& topology = topologies[childMolIx];
+
+		// Iterate BONDS and get bond // ======================================
+		int BOIx;
+		if(prevMolIx != childMolIx){
+			BOIx = 0;
+		}
+
+		// Get bond
+		const std::vector<BOND>& BONDS = allBONDS[childMolIx];
+		const BOND& currBOND = BONDS[BOIx];
+		size_t boIx = BONDS_to_bonds[childMolIx][BOIx];
+		bBond& bond = bonds[boIx];
+
+		//scout(" ") << MobilityStr [ bond.getBondMobility(wIx) ] <<" ";
+		if(bond.getBondMobility(wIx) != SimTK::BondMobility::Rigid){
+
+					// Get Molmodel indexes
+					SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+					SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+
+					SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+					SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+					// Get child-parent mobods
+					SimTK::DuMMForceFieldSubsystem& dumm = *(world.updForceField());
+					
+					SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+					const SimTK::MobilizedBody &childMobod = world.matter->getMobilizedBody(childMbx);
+					SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+					const SimTK::MobilizedBody &parentMobod = world.matter->getMobilizedBody(parentMbx);
+
+					SimTK::QIndex qIndex = childMobod.getFirstQIndex(someState);
+
+					std::pair<const std::vector<SimTK::Real>&, SimTK::QIndex> newEntry(BATrow, qIndex);
+
+					worldBATs.push_back(newEntry);
+		}
+
+		BOIx++;
+
+		if(prevMolIx != childMolIx){
+			prevMolIx = childMolIx;
+		} // every BOND -------------------------------------------------------
+
+		//ceol;
+
+		zMatCnt++;
+	}
+		
+}
+
+	// WORK Q PERTURB BEND STRETCH --------------------------------------------
+
+
 
 };
+
+
+
+
+
+
+
 

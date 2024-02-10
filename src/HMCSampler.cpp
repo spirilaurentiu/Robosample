@@ -4276,3 +4276,21 @@ void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostM
 	setBoostTemperature(boostTemperature); // used for OpenMM and other minor stuff
 	setBoostMDSteps(boostMDSteps); // not used
 }
+
+
+
+
+// Fill my BATs
+SimTK::Real
+HMCSampler::calcBATDeviations(
+	SimTK::State& someState,
+	std::vector< std::pair< const std::vector<SimTK::Real>&,  SimTK::QIndex> >& worldBATs
+	)
+{
+	Context& context = *(world->updMyContext());
+	const int wIx = world->getOwnIndex();
+
+	context.getWorldBATs(wIx, someState, worldBATs);
+
+	assert(!"Not implemented");
+}

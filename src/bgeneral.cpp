@@ -891,10 +891,13 @@ void PrintTransform(SimTK::Transform T, int decimal_places,
 {
     std::cout << header << std::endl;	
     const SimTK::Mat44 M = T.toMat44();
-    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+
     for(int i = 0; i < 4; i++){
         for(int k = 0; k < 4; k++){
-            std::cout << M(i, k) << " ";
+            std::cout
+				<< std::setw(6 + decimal_places) << std::fixed
+				<< std::setprecision(decimal_places)			
+				<< M(i, k) << " ";
         }
         std::cout << std::endl;
     }

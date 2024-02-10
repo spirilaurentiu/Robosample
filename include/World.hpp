@@ -82,6 +82,9 @@ private:
 /**
  *  Contains a Symbody system and additional data that define a regimen
  **/
+
+class Context;
+
 class World {
 public:
 	// --- Structural functions ---
@@ -794,6 +797,33 @@ public:
 	void setDistortOption(int distort);
 	int getDistortOption() const;
 
+
+
+	// BAT ====================================================================
+
+    // Getter for myContext
+    const Context* getMyContext() const {
+        return myContext;
+    }
+
+    // Setter for myContext
+    void setMyContext(Context* context) {
+        myContext = context;
+    }
+
+    // Updater for myContext
+    Context* updMyContext(void) {
+        return myContext;
+    }	
+
+
+	const int getOwnIndex(void) const{
+		return ownWorldIndex;
+	}
+
+	// BAT --------------------------------------------------------------------
+
+
 private:
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
@@ -813,6 +843,9 @@ private:
 	int samplesPerRound = 0;
 
 	Random32 randomEngine;
+
+	// Context
+	Context *myContext;
 };
 
 #endif /*WORLD_H_*/
