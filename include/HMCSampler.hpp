@@ -63,7 +63,7 @@ One iteration must include:
 
 **/
 
-#include "Context.hpp"
+//#include "Context.hpp"
 #include "Sampler.hpp"
 #include "TaskSpace.hpp"
 #include <thread>
@@ -588,13 +588,27 @@ public:
 
 	// BAT ====================================================================
 
-	SimTK::Real
+void PrintVariableBAT();
+
+	void
 	calcBATDeviations(
-		SimTK::State& someState,
-		std::vector< std::pair< const std::vector<SimTK::Real>&,  SimTK::QIndex> >& worldBATs
+		SimTK::State& someState
 	);
 
+	// Getter for the variableBATs map
+    const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getVariableBATs() const {
+        return variableBATs;
+    }
 
+	// Getter for the variableBATs map
+    std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& updVariableBATs() {
+        return variableBATs;
+    }
+
+	// Put in protected
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> variableBATs;
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> variableBATMeans;
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> variableBATDiffs;
 	// BAT --------------------------------------------------------------------
 
 

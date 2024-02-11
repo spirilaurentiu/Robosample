@@ -532,9 +532,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 		///////////////////////////////////////////////////
 
 		// Resize the scale factors vector to be handed further
-		std::vector<SimTK::Real> scaleFactors;
-		scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
-			1.0);
+		//std::vector<SimTK::Real> scaleFactors;
+		//scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		//	1.0);
 
 		// Scale bonds and angles
 		if(this->nofSamples >= 0){ // dont't take burn-in
@@ -549,13 +549,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			}
 
 			// Calculate X_PFs and X_BMs
-			world->getTransformsStatistics(someState);
-			world->updateTransformsMeans(someState);
-
+			//world->getTransformsStatistics(someState);
+			//world->updateTransformsMeans(someState);
+			//
 			//setQToScaleBendStretch(someState, scaleFactors);
-			setQToScaleBendStretchStdev(someState, scaleFactors);
-
-
+			//setQToScaleBendStretchStdev(someState, scaleFactors);
 			// DEBUG PRINT
 			// World& myWorld = *world;
 			// if(myWorld.ownWorldIndex == 1){
@@ -563,6 +561,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// 		false, false, false, true, false, false);
 			// }
 
+
+			calcBATDeviations(someState);
 
 			// Just for the Visualizer
 			if(world->visual){
@@ -4279,18 +4279,81 @@ void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostM
 
 
 
+	// BAT ====================================================================
+
+
+// Print BAT
+void HMCSampler::PrintVariableBAT() {
+
+    // Iterate over each key-value pair in the map
+    for (const auto& pair : variableBATs) {
+
+        // Print the MobilizedBodyIndex
+        std::cout << "MobilizedBodyIndex: " << pair.first <<" ";
+
+        // Print the vector of BAT values
+        std::cout << "BAT Values: ";
+        for (const auto& value : pair.second) {
+            std::cout << value << " ";
+        }
+
+        std::cout << std::endl;
+    }
+}
+
 
 // Fill my BATs
-SimTK::Real
+void
 HMCSampler::calcBATDeviations(
-	SimTK::State& someState,
-	std::vector< std::pair< const std::vector<SimTK::Real>&,  SimTK::QIndex> >& worldBATs
-	)
+	SimTK::State& someState)
 {
-	Context& context = *(world->updMyContext());
-	const int wIx = world->getOwnIndex();
 
-	context.getWorldBATs(wIx, someState, worldBATs);
+	scout("calcBATDeviations") << eol;
 
-	assert(!"Not implemented");
+	SimTK::Real N = nofSamples + 1;
+
+	// Calculate BAT means
+	if(nofSamples == 0){
+		
+		// Iterate bats
+		size_t bati = 0;
+    	for (const auto& pair : variableBATs) {
+        	
+			//scout("pair ") << bati <<eol;
+			//if(bati>1000000){scout("outofloop") << eol; return;}  
+
+			variableBATMeans.insert(pair);
+			variableBATDiffs.insert(std::make_pair(pair.first, std::vector<SimTK::Real> {0, 0, 0}));
+
+			bati++;
+		}
+
+	}else{
+
+		// Iterate bats
+		size_t bati = 0;
+    	for (const auto& pair : variableBATs) {
+
+			std::vector<SimTK::Real>& BAT      = variableBATs.at(pair.first);
+			std::vector<SimTK::Real>& BATmeans = variableBATMeans.at(pair.first);
+			std::vector<SimTK::Real>& BATdiffs = variableBATDiffs.at(pair.first);
+
+			// Get BAT means
+			SimTK::Real N_1_over_N = (N - 1.0) / N;
+			SimTK::Real Ninv = 1.0 / N;
+			
+			BATmeans[0] = (N_1_over_N * BATmeans[0]) + (Ninv * BAT[0]); 
+			BATmeans[1] = (N_1_over_N * BATmeans[1]) + (Ninv * BAT[1]); 
+			BATmeans[2] = (N_1_over_N * BATmeans[2]) + (Ninv * BAT[2]); 
+
+			// Get BAT deviations
+			BATdiffs[0] = BAT[0] - BATmeans[0];
+			BATdiffs[1] = BAT[1] - BATmeans[1];
+			BATdiffs[2] = BAT[2] - BATmeans[2];
+
+			bati++;
+		}
+
+	}
+
 }

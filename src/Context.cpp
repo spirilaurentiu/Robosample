@@ -179,12 +179,6 @@ bool Context::initializeFromFile(const std::string &file)
 			row.resize(3, SimTK::NaN);
 		}		
 
-		//
-		zMatrixBATMean.resize(zMatrixTable.size());
-		for (auto& row : zMatrixBATMean) {
-			row.resize(3, SimTK::NaN);
-		}
-
 		// std::cout 
 		// 	<< "Robosample in development mode. Delete return after print."
 		// 	<< eol;
@@ -264,6 +258,11 @@ bool Context::initializeFromFile(const std::string &file)
 		world.getSampler(0)->setNonequilibriumParameters(
 			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
 			0, 0);
+
+		// Add this worlds BAT coordinates to it's samplers
+		addWorldBATsToSampler(worldIx);
+		world.updSampler(0)->PrintVariableBAT();
+
 
 		// TODO 
 		world.getSampler(0)->setGuidanceHamiltonian(
@@ -457,7 +456,6 @@ bool Context::initializeFromFile(const std::string &file)
 	// -- Run --
 	
 	setThermostatesNonequilibrium();
-
 
 	// Add constraints
 	//context.addConstraints();
@@ -5974,6 +5972,10 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
+
+			updWorldBATsToSampler(worldCnt);
+			//PrintWorldBATsToSampler(worldCnt);
+			worlds[worldCnt].updSampler(0)->PrintVariableBAT();
 
 			// Run front world
 			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
