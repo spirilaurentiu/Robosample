@@ -563,6 +563,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 
 			calcBATDeviations(someState);
+			PrintBATDeviations(someState);
+			scaleBATDeviations(someState, SimTK::Real(500/300));
+			PrintBATDeviations(someState);
 
 			// Just for the Visualizer
 			if(world->visual){
@@ -4308,8 +4311,6 @@ HMCSampler::calcBATDeviations(
 	SimTK::State& someState)
 {
 
-	scout("calcBATDeviations") << eol;
-
 	SimTK::Real N = nofSamples + 1;
 
 	// Calculate BAT means
@@ -4318,9 +4319,6 @@ HMCSampler::calcBATDeviations(
 		// Iterate bats
 		size_t bati = 0;
     	for (const auto& pair : variableBATs) {
-        	
-			//scout("pair ") << bati <<eol;
-			//if(bati>1000000){scout("outofloop") << eol; return;}  
 
 			variableBATMeans.insert(pair);
 			variableBATDiffs.insert(std::make_pair(pair.first, std::vector<SimTK::Real> {0, 0, 0}));
@@ -4357,3 +4355,90 @@ HMCSampler::calcBATDeviations(
 	}
 
 }
+
+// Fill my BATs
+void
+HMCSampler::PrintBATDeviations(
+	SimTK::State& someState)
+{
+
+	scout("BATDeviations") << eol;
+
+	// Iterate bats
+	size_t bati = 0;
+	for (const auto& pair : variableBATs) {
+
+		std::vector<SimTK::Real>& BAT      = variableBATs.at(pair.first);
+		std::vector<SimTK::Real>& BATmeans = variableBATMeans.at(pair.first);
+		std::vector<SimTK::Real>& BATdiffs = variableBATDiffs.at(pair.first);
+
+		SimTK::MobilizedBodyIndex mbx = pair.first;
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+
+		// Print
+		scout("mbx BAT BATmean BATdiff ")
+			<< pair.first <<" " << mobod.getFirstQIndex(someState) <<" | "
+			<< BAT[0] <<" " << BAT[1] <<" " << BAT[2] <<" "
+			<< BATmeans[0] <<" " << BATmeans[1] <<" " << BATmeans[2] <<" "
+			<< BATdiffs[0] <<" " << BATdiffs[1] <<" " << BATdiffs[2] <<" "
+			<< eol;
+
+		bati++;
+
+
+		// 
+		for(int qCnt = mobod.getFirstQIndex(someState);
+		qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+		qCnt++){
+			scout("stateq ") << qCnt <<" " << someState.getQ()[qCnt] << eol;
+			scout("mododq ") << mobod.getOneQ(someState, 0) << eol;
+		}
+
+	} // every variableBAT
+
+
+}
+
+// Fill my BATs
+void
+HMCSampler::scaleBATDeviations(
+	SimTK::State& someState,
+		SimTK::Real scalingFactor)
+{
+
+	scout("Scale Qs") << someState.getQ() << eol;
+
+	// Iterate bats
+	size_t bati = 0;
+	for (const auto& pair : variableBATs) {
+
+		std::vector<SimTK::Real>& BAT      = variableBATs.at(pair.first);
+		std::vector<SimTK::Real>& BATmeans = variableBATMeans.at(pair.first);
+		std::vector<SimTK::Real>& BATdiffs = variableBATDiffs.at(pair.first);
+
+		SimTK::MobilizedBodyIndex mbx = pair.first;
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+		// scale
+		int mobodQCnt = 0;
+
+		for(int qCnt = mobod.getFirstQIndex(someState);
+		qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+		qCnt++){
+			
+			someState.updQ()[qCnt] = someState.updQ()[qCnt] + (BATdiffs[mobodQCnt] * (scalingFactor - 1.0));
+			
+			mobodQCnt++;
+		}
+
+		bati++;
+	}
+
+	system->realize(someState, SimTK::Stage::Position);
+
+	scout("Qs") << someState.getQ() << eol;
+
+}
+
+

@@ -594,6 +594,16 @@ void PrintVariableBAT();
 	calcBATDeviations(
 		SimTK::State& someState
 	);
+	void
+	PrintBATDeviations(
+		SimTK::State& someState
+	);
+	void
+	scaleBATDeviations(
+		SimTK::State& someState,
+		SimTK::Real scalingFactor
+	);
+
 
 	// Getter for the variableBATs map
     const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getVariableBATs() const {
