@@ -604,21 +604,17 @@ public:
 		SimTK::Real scalingFactor
 	);
 
+	// Getter for the variableBATs map
+    const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getSubZMatrixBATs() const ;
 
 	// Getter for the variableBATs map
-    const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getSubZMatrixBATs() const {
-        return subZMatrixBATs;
-    }
-
-	// Getter for the variableBATs map
-    std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& updSubZMatrixBATs() {
-        return subZMatrixBATs;
-    }
+    std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& updSubZMatrixBATs() ;
 
 	// Put in protected
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATs;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATMeans;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATDiffs;
+
 	// BAT --------------------------------------------------------------------
 
 

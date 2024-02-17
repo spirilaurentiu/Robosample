@@ -4282,10 +4282,30 @@ void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostM
 
 
 
-	// BAT ====================================================================
+// ===========================================================================
+// ===========================================================================
+// ZMatrix BAT
+// ===========================================================================
+// ===========================================================================
+/*!
+ * <!--	Getter for the variableBATs map -->
+*/
+const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
+HMCSampler::getSubZMatrixBATs() const {
+	return subZMatrixBATs;
+}
 
+/*!
+ * <!--	Getter for the variableBATs map -->
+*/
+std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
+HMCSampler::updSubZMatrixBATs() {
+	return subZMatrixBATs;
+}
 
-// Print BAT
+/*!
+ * <!--	Print BAT -->
+*/
 void HMCSampler::PrintSubZMatrixBAT() {
 
     // Iterate over each key-value pair in the map
@@ -4304,8 +4324,9 @@ void HMCSampler::PrintSubZMatrixBAT() {
     }
 }
 
-
-// Fill my BATs
+/*!
+ * <!--	 -->
+*/
 void
 HMCSampler::calcSubZMatrixBATDeviations(
 	SimTK::State& someState)
@@ -4356,7 +4377,9 @@ HMCSampler::calcSubZMatrixBATDeviations(
 
 }
 
-// Print BAT
+/*!
+ * <!--	Print BATs -->
+*/
 void
 HMCSampler::PrintSubZMatrixBATDeviations(
 	SimTK::State& someState)
@@ -4400,7 +4423,9 @@ HMCSampler::PrintSubZMatrixBATDeviations(
 
 }
 
-// Scale BATs
+/*!
+ * <!--	Scale BATs -->
+*/
 void
 HMCSampler::scaleSubZMatrixBATDeviations(
 	SimTK::State& someState,
@@ -4447,5 +4472,11 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 	scout("scaleBATDeviations state after") << std::setprecision(12) << someState.getQ() << eol;
 
 }
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ZMatrix BAT
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 
