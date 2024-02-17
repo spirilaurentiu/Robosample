@@ -260,8 +260,8 @@ bool Context::initializeFromFile(const std::string &file)
 			0, 0);
 
 		// Add this worlds BAT coordinates to it's samplers
-		addWorldBATsToSampler(worldIx);
-		world.updSampler(0)->PrintVariableBAT();
+		addSubZMatrixBATsToWorld(worldIx);
+		world.updSampler(0)->PrintSubZMatrixBAT();
 
 
 		// TODO 
@@ -5973,9 +5973,9 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
 
-			updWorldBATsToSampler(worldCnt);
+			updSubZMatrixBATsToWorld(worldCnt);
 			//PrintWorldBATsToSampler(worldCnt);
-			worlds[worldCnt].updSampler(0)->PrintVariableBAT();
+			worlds[worldCnt].updSampler(0)->PrintSubZMatrixBAT();
 
 			// Run front world
 			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);

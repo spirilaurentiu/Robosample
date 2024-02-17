@@ -948,7 +948,7 @@ public:
 
 	// Get BAT coordinates modifyable by a selected world
 	void
-	addWorldBATsToSampler(
+	addSubZMatrixBATsToWorld(
 		int wIx)
 {
 	
@@ -1005,7 +1005,7 @@ public:
 			// Insert key and value into the map
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
-				(pHMC((worlds[wIx].samplers[sami]))->variableBATs).insert(std::make_pair(childMbx, BATrow));
+				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs).insert(std::make_pair(childMbx, BATrow));
 
 			}
 
@@ -1028,7 +1028,7 @@ public:
 
 	// Get BAT coordinates modifyable by a selected world
 	void
-	updWorldBATsToSampler(
+	updSubZMatrixBATsToWorld(
 		int wIx)
 {
 	
@@ -1083,7 +1083,7 @@ public:
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
 				std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
-					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updVariableBATs();
+					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
 					
 				variableBATs.at(childMbx) = BATrow;
 
@@ -1107,7 +1107,7 @@ public:
 
 	// Get BAT coordinates modifyable by a selected world
 	void
-	PrintWorldBATsToSampler(
+	PrintWorldSubZMatrixBATs(
 		int wIx)
 {
 	
@@ -1162,7 +1162,7 @@ public:
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
 				std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
-					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updVariableBATs();
+					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
 					
 				scout("WorldBAT ") << wIx <<" "; 
 				for(auto varBAT : variableBATs.at(childMbx)){
