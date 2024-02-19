@@ -598,7 +598,7 @@ public:
 	PrintSubZMatrixBATDeviations(
 		SimTK::State& someState
 	);
-	void
+	SimTK::State&
 	scaleSubZMatrixBATDeviations(
 		SimTK::State& someState,
 		SimTK::Real scalingFactor

@@ -563,9 +563,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 
 			calcSubZMatrixBATDeviations(someState);
-			PrintSubZMatrixBATDeviations(someState);
-			scaleSubZMatrixBATDeviations(someState, SimTK::Real(500.0/300.0));
-			PrintSubZMatrixBATDeviations(someState);
+			//PrintSubZMatrixBATDeviations(someState);
+			scaleSubZMatrixBATDeviations(someState, SimTK::Real(313.0/300.0));
+			//PrintSubZMatrixBATDeviations(someState);
 
 			// Just for the Visualizer
 			if(world->visual){
@@ -4307,6 +4307,8 @@ HMCSampler::updSubZMatrixBATs() {
  * <!--	Print BAT -->
 */
 void HMCSampler::PrintSubZMatrixBAT() {
+ 
+	scout("HMCSampler::PrintSubZMatrixBAT ") << eol;
 
     // Iterate over each key-value pair in the map
     for (const auto& pair : subZMatrixBATs) {
@@ -4385,7 +4387,7 @@ HMCSampler::PrintSubZMatrixBATDeviations(
 	SimTK::State& someState)
 {
 
-	scout("PrintBATDeviations: ") << eol;
+	scout("HMCSampler::PrintBATDeviations: ") << eol;
 
 	// Iterate bats
 	size_t bati = 0;
@@ -4402,6 +4404,7 @@ HMCSampler::PrintSubZMatrixBATDeviations(
 		// Print
 		scout("PrintBATDeviations mbx qix BATs BATmeans BATdiffs ")
 			<< pair.first <<" " << mobod.getFirstQIndex(someState) <<" | "
+			<< std::setprecision(12)
 			<< BAT[0] <<" " << BAT[1] <<" " << BAT[2] <<" "
 			<< BATmeans[0] <<" " << BATmeans[1] <<" " << BATmeans[2] <<" "
 			<< BATdiffs[0] <<" " << BATdiffs[1] <<" " << BATdiffs[2] <<" "
@@ -4426,13 +4429,13 @@ HMCSampler::PrintSubZMatrixBATDeviations(
 /*!
  * <!--	Scale BATs -->
 */
-void
+SimTK::State&
 HMCSampler::scaleSubZMatrixBATDeviations(
 	SimTK::State& someState,
 	SimTK::Real scalingFactor)
 {
 
-	scout("scaleBATDeviations state before ") << std::setprecision(12) << someState.getQ() << eol;
+	//scout("scaleBATDeviations state before ") << std::setprecision(12) << someState.getQ() << eol;
 
 	// Iterate bats
 	size_t bati = 0;
@@ -4452,14 +4455,23 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 		qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 		qCnt++){
 
-			scout("scaleBATDeviations ")
-				<< qCnt <<" " 
-				<< BATdiffs[mobodQCnt] <<" "
-				<< scalingFactor - 1.0 <<" "
-				<< eol;
+			// scout("scaleBATDeviations ")
+			// 	<< qCnt <<" " 
+			// 	<< BATdiffs[mobodQCnt] <<" "
+			// 	<< scalingFactor - 1.0 <<" "
+			// 	<< eol;
 
 			SimTK::Real& qEntry = someState.updQ()[qCnt];
-			qEntry += (BATdiffs[mobodQCnt] * (scalingFactor - 1.0));
+
+			if( !(std::isnan(BATdiffs[mobodQCnt])) ){
+				qEntry += (BATdiffs[mobodQCnt] * (scalingFactor - 1.0));
+			}
+
+			// if(nofSamples % 2 == 0){
+			// 	qEntry += 0.01;
+			// }else{
+			// 	qEntry -= 0.01;
+			// }
 			
 			mobodQCnt++;
 		}
@@ -4467,9 +4479,10 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 		bati++;
 	}
 
-	system->realize(someState, SimTK::Stage::Position);
+	system->realize(someState, SimTK::Stage::Dynamics);
+	//scout("scaleBATDeviations state after") << std::setprecision(12) << someState.getQ() << eol;
 
-	scout("scaleBATDeviations state after") << std::setprecision(12) << someState.getQ() << eol;
+	return someState;
 
 }
 

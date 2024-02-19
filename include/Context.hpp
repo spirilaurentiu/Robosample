@@ -268,63 +268,70 @@ public:
 	// Relationship BAT - mobod transforms
 	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
 
-// SP_NEW_TRANSFER ============================================================
+	// SP_NEW_TRANSFER ============================================================
 
-SimTK::State&
-setAtoms_XPF_XBM(
-	int wIx
-);
+	SimTK::State&
+	setAtoms_SP_NEW(
+		int destWIx,
+		SimTK::State& someState,
+		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
+			otherWorldsAtomsLocations);
 
-SimTK::State&
-setAtoms_MassProperties(
-	int wIx
-);
+	SimTK::State&
+	setAtoms_XPF_XBM(
+		int wIx
+	);
 
-SimTK::Transform
-calc_XFM(
-	int wIx,
-	Topology& topology,	
-	SimTK::Compound::AtomIndex& childAIx,
-	SimTK::Compound::AtomIndex& parentAIx,
-	SimTK::BondMobility::Mobility mobility,
-	const SimTK::State& someState) const;
+	SimTK::State&
+	setAtoms_MassProperties(
+		int wIx
+	);
 
-SimTK::State&
-setAtoms_XFM(
-	int wIx,
-	SimTK::State& someState);
+	SimTK::Transform
+	calc_XFM(
+		int wIx,
+		Topology& topology,	
+		SimTK::Compound::AtomIndex& childAIx,
+		SimTK::Compound::AtomIndex& parentAIx,
+		SimTK::BondMobility::Mobility mobility,
+		const SimTK::State& someState) const;
 
-std::vector<SimTK::Transform>
-calc_XPF_XBM(
-	int wIx,
-	Topology& topology,
-	SimTK::Compound::AtomIndex& childNo,
-	SimTK::Compound::AtomIndex& parentNo,
-	SimTK::BondMobility::Mobility mobility,
-	const SimTK::State& someState
-);
+	SimTK::State&
+	setAtoms_XFM(
+		int wIx,
+		SimTK::State& someState);
 
-SimTK::Compound::AtomIndex
-getChemicalParent_IfIAmRoot(
-	int wIx,
-	int atomNo,
-	SimTK::DuMMForceFieldSubsystem &dumm
-);
+	std::vector<SimTK::Transform>
+	calc_XPF_XBM(
+		int wIx,
+		Topology& topology,
+		SimTK::Compound::AtomIndex& childNo,
+		SimTK::Compound::AtomIndex& parentNo,
+		SimTK::BondMobility::Mobility mobility,
+		const SimTK::State& someState
+	);
 
-// X axis to Z axis switch
-const SimTK::Transform X_to_Z 
-	=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
-const SimTK::Transform Z_to_X = ~X_to_Z;
+	SimTK::Compound::AtomIndex
+	getChemicalParent_IfIAmRoot(
+		int wIx,
+		int atomNo,
+		SimTK::DuMMForceFieldSubsystem &dumm
+	);
 
-// Y axis to Z axis switch
-const SimTK::Transform Y_to_Z =
-	SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
-const SimTK::Transform Z_to_Y = ~Y_to_Z;
+	// X axis to Z axis switch
+	const SimTK::Transform X_to_Z 
+		=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
+	const SimTK::Transform Z_to_X = ~X_to_Z;
 
-// X axis to X axis switch
-const SimTK::Transform Y_to_X =
-	SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
-const SimTK::Transform X_to_Y = ~Y_to_X;
+	// Y axis to Z axis switch
+	const SimTK::Transform Y_to_Z =
+		SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
+	const SimTK::Transform Z_to_Y = ~Y_to_Z;
+
+	// X axis to X axis switch
+	const SimTK::Transform Y_to_X =
+		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
+	const SimTK::Transform X_to_Y = ~Y_to_X;
 
 // SP_NEW_TRANSFER ------------------------------------------------------------
 
@@ -499,6 +506,7 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
 
 	// Load replica's atomLocations into it's front world. Returns world index
 	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
+	int restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica);
 
 	// Load replica's atomLocations into it's back world
     void restoreReplicaCoordinatesToBackWorld(int whichReplica);

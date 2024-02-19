@@ -513,7 +513,9 @@ const std::vector<TORSION>& InternalCoordinates::getTorsions() const {
 	return perMolTorsions.back();
 }
 
-// Function to search for a BOND with a specific 'second' value
+/*!
+ * <!-- Function to search for a BOND with a specific 'second' value -->
+*/
 int
 InternalCoordinates::findBondByFirst(
 	int wIx,
