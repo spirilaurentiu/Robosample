@@ -541,10 +541,10 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			
 			// Just for the Visualizer
 			if(world->visual){
-				this->world->ts->stepTo(
-					someState.getTime() + (0.00001));				
-				std::cout << "Sleeping... " << std::flush;
-				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+				//this->world->ts->stepTo(
+				//	someState.getTime() + (0.00001));				
+				std::cout << "Sleeping... before scaling " << std::flush;
+				std::this_thread::sleep_for(std::chrono::milliseconds(6000));
 				std::cout << "done.\n" << std::flush;
 			}
 
@@ -561,18 +561,20 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// 		false, false, false, true, false, false);
 			// }
 
-
 			calcSubZMatrixBATDeviations(someState);
 			//PrintSubZMatrixBATDeviations(someState);
-			scaleSubZMatrixBATDeviations(someState, SimTK::Real(313.0/300.0));
+
+			SimTK::Real sJac =
+				scaleSubZMatrixBATDeviations(someState, SimTK::Real(500.0/300.0));
+			setDistortJacobianDetLog(sJac);
 			//PrintSubZMatrixBATDeviations(someState);
 
 			// Just for the Visualizer
 			if(world->visual){
-				this->world->ts->stepTo(
-					someState.getTime() + (0.00001));				
-				std::cout << "Sleeping... " << std::flush;
-				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+				//this->world->ts->stepTo(
+				//	someState.getTime() + (0.00001));				
+				std::cout << "Sleeping... after scaling " << std::flush;
+				std::this_thread::sleep_for(std::chrono::milliseconds(6000));
 				std::cout << "done.\n" << std::flush;
 			}
 
@@ -2089,6 +2091,11 @@ SimTK::Real HMCSampler::getDistortJacobianDetLog(void) const
 
 	return retValue;
 }
+
+void HMCSampler::setDistortJacobianDetLog(SimTK::Real argJ)
+{
+	this->bendStretchJacobianDetLog = argJ;
+} 
 
 // Set/get Residual Embedded Potential
 void HMCSampler::setREP(SimTK::Real inp)
@@ -4429,13 +4436,17 @@ HMCSampler::PrintSubZMatrixBATDeviations(
 /*!
  * <!--	Scale BATs -->
 */
-SimTK::State&
+SimTK::Real
 HMCSampler::scaleSubZMatrixBATDeviations(
 	SimTK::State& someState,
-	SimTK::Real scalingFactor)
+	SimTK::Real scalingFactor,
+	std::vector<int> BATOrder
+	)
 {
 
-	//scout("scaleBATDeviations state before ") << std::setprecision(12) << someState.getQ() << eol;
+	SimTK::Real scaleJacobian = 0.0;
+
+	scout("scaleBATDeviations state before ") << std::setprecision(12) << someState.getQ() << eol;
 
 	// Iterate bats
 	size_t bati = 0;
@@ -4455,34 +4466,49 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 		qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 		qCnt++){
 
-			// scout("scaleBATDeviations ")
-			// 	<< qCnt <<" " 
-			// 	<< BATdiffs[mobodQCnt] <<" "
-			// 	<< scalingFactor - 1.0 <<" "
-			// 	<< eol;
+			int rearrMobodQCnt = BATOrder[mobodQCnt];
 
-			SimTK::Real& qEntry = someState.updQ()[qCnt];
+			if( !(std::isnan(BATdiffs[rearrMobodQCnt])) ){
 
-			if( !(std::isnan(BATdiffs[mobodQCnt])) ){
-				qEntry += (BATdiffs[mobodQCnt] * (scalingFactor - 1.0));
+				SimTK::Real& qEntry = someState.updQ()[qCnt];
+
+				//qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
+
+
+
+				// if(nofSamples % 2 == 0){
+				//     qEntry += 0.01;
+				// }else{
+				//     qEntry -= 0.01;
+				// }
+				qEntry += 0.01;
+
+
+
+				scaleJacobian += std::log( (BAT[rearrMobodQCnt] + BATdiffs[rearrMobodQCnt]) / (BAT[rearrMobodQCnt]) );
+
+				scout("scaleBATDeviations ")
+					<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
+					<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
+					<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
+					<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
+					<< "scalingFactor " << (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)) <<" "
+					<< " qEntry " << qEntry 
+					<< eol;
+
 			}
-
-			// if(nofSamples % 2 == 0){
-			// 	qEntry += 0.01;
-			// }else{
-			// 	qEntry -= 0.01;
-			// }
 			
 			mobodQCnt++;
-		}
+		} // every mobod q
 
 		bati++;
 	}
 
 	system->realize(someState, SimTK::Stage::Dynamics);
-	//scout("scaleBATDeviations state after") << std::setprecision(12) << someState.getQ() << eol;
+	scout("scaleBATDeviations state after") << std::setprecision(12) << someState.getQ() << eol;
 
-	return someState;
+	//return someState;
+	return scaleJacobian;
 
 }
 

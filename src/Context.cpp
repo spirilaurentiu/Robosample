@@ -122,6 +122,17 @@ bool Context::initializeFromFile(const std::string &file)
 			//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
 		}
 
+		for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+				
+				rootMobilities.push_back(std::vector<std::string>());
+				
+				for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
+
+					rootMobilities[worldIx].push_back("Rigid");
+
+			}
+		}
+
 		// Get user requested Amber filenames
 		amberReader.resize(1);
 
@@ -1390,7 +1401,7 @@ void Context::modelOneEmbeddedTopology(int whichTopology,
 	int whichWorld,
 	std::string rootMobilizer)
 {
-		this->rootMobilities.push_back(rootMobilizer);
+		//this->rootMobilities.push_back(rootMobilizer);
 
 		worlds[whichWorld].compoundSystem->modelOneCompound(
 			SimTK::CompoundSystem::CompoundIndex(whichTopology),
@@ -3269,6 +3280,23 @@ void Context::setFlexibility(
 				int index_2 = std::stoi(lineWords[1]);
 				std::string mobility =  lineWords[2];
 
+				// Add root mobilities
+				int molIx = -1;
+				if(index_1 == -1){
+					molIx++;
+					if(molIx < rootMobilities[whichWorld].size()){
+						rootMobilities[whichWorld][molIx] = mobility;
+						
+						// scout("Added rootMobility world ")
+						// 	<< whichWorld << " mol " << molIx <<" "
+						// 	<< rootMobilities[whichWorld][molIx] <<" "
+						// 	<< eol;
+
+					}else{
+						std::cerr << "[WARNING] Too many root mobilities\n";
+					}
+				}
+
 				// Iterate Gmolmodel bonds
 				for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
 
@@ -3366,12 +3394,13 @@ void Context::setFlexibility(
 */
 void Context::modelOneEmbeddedTopology_SP_NEW(
 	int whichTopology,
-	int whichWorld,
-	std::string rootMobilizer)
+	int whichWorld
+	//,std::string rootMobilizer
+	)
 {
 
 	// Add a root mobilizer
-	this->rootMobilities.push_back(rootMobilizer);
+	//this->rootMobilities.push_back(rootMobilizer);
 
 	// Call Molmodel to model Compound
 
@@ -3381,7 +3410,8 @@ void Context::modelOneEmbeddedTopology_SP_NEW(
 	worlds[whichWorld].compoundSystem->modelOneCompound(
 		SimTK::CompoundSystem::CompoundIndex(whichTopology),
 		atomFrameCache,
-		SimTK::String(rootMobilizer));
+		SimTK::String(rootMobilities[whichWorld][whichTopology])
+		);
 
 	// Get the forcefield within this world
 	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[whichWorld].forceField);
@@ -3458,7 +3488,9 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		// Model each topology: build mobods
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
 
-			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Cartesian");
+			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx
+			//, "Cartesian"
+			);
 
 		} // every molecule
 
@@ -3535,13 +3567,15 @@ void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizer
 			std::cout << "Model molecule " << molIx
 				<< " embedded in world " << worldIx << std::endl;
 
-			this->rootMobilities.push_back(
-				GroundToCompoundMobilizerTypes[(nofMols * worldIx) + molIx]);
+			//this->rootMobilities.push_back(
+			//	GroundToCompoundMobilizerTypes[(nofMols * worldIx) + molIx]);
 
 			worlds[worldIx].compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(molIx),
 				topologies[molIx].atomFrameCache,
-				rootMobilities[(nofMols * worldIx) + molIx]);
+				//rootMobilities[(nofMols * worldIx) + molIx]
+				rootMobilities[worldIx][molIx]
+				);
 
 			for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
 				SimTK::Compound::AtomIndex aIx =
@@ -8335,7 +8369,9 @@ void Context::Print_TRANSFORMERS_Work(void)
 						const SimTK::MobilizedBody &grandMobod = parentMobod.getParentMobilizedBody();
 						SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
 
-						std::cout << parentMbx <<" " << grandMbx <<" " << getMobility(rootMobilities[topoIx]) <<" " << rootMobilities[topoIx] <<" ";
+						std::cout << parentMbx <<" " << grandMbx <<" "
+							<< getMobility(rootMobilities[wIx][topoIx]) <<" "
+							<< rootMobilities[wIx][topoIx] <<" ";
 						
 						wIx++;
 					} ceol;

@@ -187,8 +187,9 @@ public:
 		int whichWorld);
 
 	void modelOneEmbeddedTopology_SP_NEW(int whichTopology,
-		int whichWorld,
-		std::string rootMobilizer);
+		int whichWorld
+		//,std::string rootMobilizer
+		);
 
 	void model_SP_NEW(SetupReader& setupReader);
 
@@ -641,7 +642,7 @@ private:
 	std::vector<std::vector<std::string>> rbSpecsFNs;
 	std::vector<std::vector<std::string>> flexSpecsFNs;
 	std::vector<std::vector<std::string>> regimens;
-	std::vector<std::string> rootMobilities; // WORLD CONFLICT
+	std::vector<std::vector<std::string>> rootMobilities;
 
 	// Nof molecules
 	int moleculeCount = -1;

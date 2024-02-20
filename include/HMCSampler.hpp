@@ -206,6 +206,7 @@ public:
 
 	// Get/set Jacobians
 	SimTK::Real getDistortJacobianDetLog(void) const;
+	void setDistortJacobianDetLog(SimTK::Real argJ);
 
 	// Set/get residual embedded potential energy: potential
 	// stored inside rigid bodies
@@ -598,10 +599,11 @@ public:
 	PrintSubZMatrixBATDeviations(
 		SimTK::State& someState
 	);
-	SimTK::State&
+	SimTK::Real
 	scaleSubZMatrixBATDeviations(
 		SimTK::State& someState,
-		SimTK::Real scalingFactor
+		SimTK::Real scalingFactor,
+		std::vector<int> BATOrder = {1, 0, 2}
 	);
 
 	// Getter for the variableBATs map
