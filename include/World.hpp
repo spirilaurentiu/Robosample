@@ -76,6 +76,23 @@ private:
 
 };
 
+
+
+enum class ROOT_MOBILITY : int {
+	FREE = 0,
+	CARTESIAN,
+	WELD,
+	FREE_LINE,
+	BALL,
+	PIN
+};
+
+struct BOND_FLEXIBILITY {
+	int i = -1;
+	int j = -1;
+	BondMobility::Mobility mobility = BondMobility::Default;
+};
+
 //==============================================================================
 //                   CLASS World
 //==============================================================================
@@ -90,6 +107,9 @@ public:
 					int requestedNofMols,
 					bool isVisual=true,
 					SimTK::Real visualizerFrequency = 0.0015);
+
+	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
+	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
 
 	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
@@ -530,16 +550,30 @@ setAtomsLocationsInGround_REFAC(SimTK::State&,
 	std::size_t getNofSamplers() const;
 
 	/** Add a sampler to the World **/
+	bool addSampler_py(SamplerName samplerName,
+		SampleGenerator generator,
+		IntegratorName integratorName,
+		ThermostatName thermostatName,
+		SimTK::Real timestep,
+		int mdStepsPerSample,
+		int mdStepsPerSampleStd,
+		SimTK::Real boostTemperature,
+		int boostMDSteps,
+		int distort,
+		int work,
+		int flow,
+		bool useFixmanPotential);
+
+	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);
+
 	bool addSampler(SamplerName samplerName,
-		const std::string& generatorName,
+		const std::string& generator,
 		const std::string& integratorName,
 		const std::string& thermostatName,
 		SimTK::Real timestep,
 		int mdStepsPerSample,
 		int mdStepsPerSampleStd, 
 		bool useFixmanPotential);
-
-	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);
 
 	// TODO Use Sampler polymorphism
 	/** Get a sampler based on its position in the samplers vector **/
@@ -794,6 +828,9 @@ public:
 	void setDistortOption(int distort);
 	int getDistortOption() const;
 
+	void setRootMobility(ROOT_MOBILITY rootMobility);
+	const SimTK::String& getRootMobility() const;
+
 private:
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
@@ -813,6 +850,10 @@ private:
 	int samplesPerRound = 0;
 
 	Random32 randomEngine;
+	SimTK::String rootMobilizer;
+
+	std::vector<BOND_FLEXIBILITY> flexibilities;
+
 };
 
 #endif /*WORLD_H_*/

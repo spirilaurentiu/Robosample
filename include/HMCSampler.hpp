@@ -260,6 +260,7 @@ public:
 	void storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState);
 
 	// Set the method of integration
+	void setSampleGenerator(SampleGenerator sampleGeneratorArg);
 	void setSampleGenerator(const std::string& samplerNameArg);
 
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);

@@ -221,6 +221,14 @@ World::World(int worldIndex,
 
 }
 
+void World::setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities) {
+	this->flexibilities = flexibilities;
+}
+
+const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const {
+	return flexibilities;
+}
+
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
  * adds parameters: defines Biotypes; - adds BAT parameters to DuMM. Also
  * creates decorations for visualizers **/
@@ -356,6 +364,9 @@ void World::SetBondFlexibilities(
 /** Adopts a topology **/
 void World::adoptTopology(int which)
 {
+	std::cout << "NUM TOPOLOGIES " << topologies->size() << std::endl;
+	std::cout << "REQUESTED " << which << std::endl;
+
 	// Add Topology to CompoundSystem and realize topology
 	scout("World: adopting ") << which <<" " << "topology" << eol;
 	compoundSystem->adoptCompound(((*topologies)[which]));
@@ -3435,8 +3446,97 @@ std::size_t World::getNofSamplers() const
  * <!-- Add a sampler to this World using the specialized struct
 for samplers names. -->
 */
+bool World::addSampler_py(SamplerName samplerName,
+	SampleGenerator generator,
+	IntegratorName integratorName,
+	ThermostatName thermostatName,
+	SimTK::Real timestep,
+	int mdStepsPerSample,
+	int mdStepsPerSampleStd,
+	SimTK::Real boostTemperature,
+	int boostMDSteps,
+	int distort,
+	int work,
+	int flow,
+	bool useFixmanPotential)
+{
+	if (integratorName == IntegratorName::OMMVV) {
+		forceField->setUseOpenMMIntegration(true);
+		forceField->setUseOpenMMCalcOnlyNonBonded(false);
+		forceField->setDuMMTemperature(boostTemperature);
+		forceField->setOpenMMstepsize(timestep);
+	} else {
+		forceField->setUseOpenMMCalcOnlyNonBonded(true);
+	}
+
+	// This is needed because each call to forceField invalidates the topology cache
+	// As far as I understand, you cannot modify forceField afther this call
+	realizeTopology();
+
+	// We only use HMCSampler for now
+	if(samplerName == SamplerName::HMC) {
+
+		// Construct a new sampler
+		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
+		
+		// Set sampler parameters
+		samplers.back()->setSampleGenerator(generator);
+		samplers.back()->setIntegratorName(integratorName);
+		samplers.back()->setThermostat(thermostatName);
+		samplers.back()->setTemperature(this->temperature); // TODO where???
+		samplers.back()->setTimestep(timestep); // TODO should error when negative
+		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
+		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
+		samplers.back()->setSeed(randomEngine);
+
+		samplers.back()->setGuidanceHamiltonian(boostTemperature, boostMDSteps);
+		samplers.back()->setNonequilibriumParameters(distort, work, flow);
+
+		// TODO should this be inherited from parent world?
+		if (useFixmanPotential) {
+			samplers.back()->useFixmanPotential();
+		}
+	} else {
+		std::cerr << "Unknown sampler name" << std::endl;
+		return false;
+	}
+
+	// Copy atom masses to OpenMM
+	if (integratorName == IntegratorName::OMMVV) {
+		for (const auto& t : *topologies) {
+			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
+				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
+				const SimTK::DuMM::NonbondAtomIndex nax(aix);
+				samplers.back()->setOMMmass(nax, mass);
+			}
+		}	
+	}
+
+	// Initialize the sampler
+	// This does not care about passed parameters
+	SimTK::State& worldAdvancedState = integ->updAdvancedState();
+	samplers.back()->initialize(worldAdvancedState);
+
+	return true;
+}
+
+void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
+	forceField->setUseOpenMMAcceleration(true);
+
+	if (ommvv) {
+		forceField->setUseOpenMMIntegration(true);
+		forceField->setUseOpenMMCalcOnlyNonBonded(false);
+		forceField->setDuMMTemperature(boostTemp);
+		forceField->setOpenMMstepsize(timestep);
+	} else {
+		forceField->setUseOpenMMCalcOnlyNonBonded(true);
+	}
+
+	realizeTopology();
+}
+
 bool World::addSampler(SamplerName samplerName,
-	const std::string& generatorName,
+	const std::string& generator,
 	const std::string& integratorName,
 	const std::string& thermostatName,
 	SimTK::Real timestep,
@@ -3451,7 +3551,7 @@ bool World::addSampler(SamplerName samplerName,
 		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
 		
 		// Set sampler parameters
-		samplers.back()->setSampleGenerator(generatorName);
+		samplers.back()->setSampleGenerator(generator);
 		samplers.back()->setIntegratorName(integratorName);
 		samplers.back()->setThermostat(thermostatName);
 		samplers.back()->setTemperature(this->temperature); // TODO where???
@@ -3475,19 +3575,6 @@ bool World::addSampler(SamplerName samplerName,
 	samplers.back()->initialize(worldAdvancedState);
 
 	return true;
-}
-
-void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
-	forceField->setUseOpenMMAcceleration(true);
-
-	if (ommvv) {
-		forceField->setUseOpenMMIntegration(true);
-		forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		forceField->setDuMMTemperature(boostTemp);
-		forceField->setOpenMMstepsize(timestep);
-	} else {
-		forceField->setUseOpenMMCalcOnlyNonBonded(true);
-	}
 }
 
 // Get a sampler based on its position in the samplers vector
@@ -3670,4 +3757,34 @@ int World::getSamplesPerRound() const {
 // int World::getDistortOption() const {
 // 	return distortOption;
 // }
+
+void World::setRootMobility(ROOT_MOBILITY rootMobility) {
+	switch (rootMobility)
+	{
+	case ROOT_MOBILITY::FREE:
+		rootMobilizer = "Free";
+		break;
+	case ROOT_MOBILITY::CARTESIAN:
+		rootMobilizer = "Cartesian";
+		break;
+	case ROOT_MOBILITY::WELD:
+		rootMobilizer = "Weld";
+		break;
+	case ROOT_MOBILITY::FREE_LINE:
+		rootMobilizer = "FreeLine";
+		break;
+	case ROOT_MOBILITY::BALL:
+		rootMobilizer = "Ball";
+		break;
+	case ROOT_MOBILITY::PIN:
+		rootMobilizer = "Pin";
+		break;
+	default:
+		break;
+	}
+}
+
+const SimTK::String& World::getRootMobility() const {
+	return rootMobilizer;
+}
 

@@ -18,17 +18,23 @@ enum class ReplicaMixingScheme : int {
 	neighboring = 1
 };
 
-enum class RunType : int {
-	Default = 0,
-	REMC = 1,
-	RENEMC = 2,
-	RENE = 3
+enum class RUN_TYPE : int {
+	DEFAULT = 0,
+	REMC,
+	RENEMC,
+	RENE
 };
 
 class Context{
 
 public:
-	Context();
+	/**
+	 * @brief Initialize simulation variables.
+	 * @param Ti Initial temperature. Cannot be 0.
+	 * @param Tf Final temperature. Cannot be 0. Must be greater than Ti.
+	 * @param seed Seed to use for random number generation. If 0, a random seed is used.
+	*/
+	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed = 0);
 
 	/**	
 	* @brief Read all parameters from an input file
@@ -42,14 +48,14 @@ public:
 	void setNonbonded(int method, SimTK::Real cutoff);
 	void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
-	void setSeed(uint32_t seed);
 
 	bool setOutput(const std::string& outDir);
 
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
+	void modelSystem();
 
 	// Experimental movements
-	bSpecificAtom* findARoot(Topology topology, int argRoot);
+	// bSpecificAtom* findARoot(Topology topology, int argRoot);
 	void buildAcyclicGraph(Topology topology,
 		bSpecificAtom *node, bSpecificAtom *previousNode);
 	void buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root);
@@ -120,9 +126,7 @@ public:
 	void readMolecules_SP_NEW(void);
 	
 	/**  */
-	void constructTopologies_SP_NEW(
-		std::vector<std::string>& argRoots
-	);
+	void constructTopologies_SP_NEW();
 
 	/**  */
 	void generateTopologiesSubarrays(void);
@@ -243,6 +247,8 @@ public:
 	void addWorld(
 		bool fixmanTorque,
 		int samplesPerRound,
+		ROOT_MOBILITY rootMobility,
+		bool useOpenMM = true,
 		bool visual = false,
 		SimTK::Real visualizerFrequency = 0);
 
@@ -548,9 +554,8 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
 	void updWorldsDistortOptions(int thisReplica);
 	void updQScaleFactors(int mixi);
 
-	RunType getRunType(void) const {return runType;}
-	void setRunType(const int runTypeArg){this->runType = RunType(runTypeArg);}
-	void setRunType(const RunType runTypeArg){this->runType = runTypeArg;}
+	RUN_TYPE getRunType(void) const;
+	void setRunType(RUN_TYPE runTypeArg);
 
 	// Run a particular world
 	bool RunWorld(int whichWorld);
@@ -786,7 +791,7 @@ private:
 	std::string cwar_prefix = "[WARNING] ";
 	std::string cinf_prefix = "[INFO] ";
 
-	RunType runType = RunType::Default;
+	RUN_TYPE runType = RUN_TYPE::DEFAULT;
 	SimTK::Real tempIni = 0,
 		tempFin = 0;
 

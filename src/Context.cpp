@@ -6,11 +6,28 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
-Context::Context()
+Context::Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed)
 {
-	// Set default seed
-	std::random_device rd;
-	seed = rd();
+	// Use a random seed if none is provided
+	if (seed == 0) {
+		std::random_device rd;
+		seed = rd();
+	}
+
+	// Set the random seed
+	randomEngine = buildRandom32(seed);
+
+	// Set the temperature range
+	tempIni = Ti;
+	tempFin = Tf;
+
+	// Check the temperature range
+	SimTK_ASSERT_ALWAYS(tempIni <= tempFin,
+		"Context::Context: Initial temperature must be less than or equal to the final temperature.");
+	SimTK_ASSERT_ALWAYS(tempIni > 0,
+		"Context::Context: Initial temperature must be greater than 0.");
+	SimTK_ASSERT_ALWAYS(tempFin > 0,
+		"Context::Context: Final temperature must be greater than 0.");
 
 	// Alert user of CUDA environment variables
 	if constexpr (OPENMM_PLATFORM_CUDA) {
@@ -62,9 +79,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	setupReader.ReadSetup(file);
 	setupReader.dump(true);
 
-	// Set random seed - optional
-	setSeed(std::stoi(setupReader.get("SEED")[0]));
-
 	// Set output directory and log file name based on seed - required
 	if (!setOutput(setupReader.get("OUTPUT_DIR")[0])) {
 		return false;
@@ -103,13 +117,40 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		addWorld(
 			setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE",
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]),
+			ROOT_MOBILITY::WELD,
+			setupReader.get("OPENMM")[worldIx] == "TRUE",
 			setupReader.get("VISUAL")[worldIx] == "TRUE",
 			visualizerFrequency);
 
-		getWorld(worldIx).useOpenMM(
-			setupReader.get("INTEGRATORS")[worldIx] == "OMMVV",
-			std::stod(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
-			std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+		// if (worldIx == 0) {
+		// 	std::vector<BOND_FLEXIBILITY> flexibilities = {
+		// 		{ 3, 1, BondMobility::Mobility::Translation },
+		// 		{ 1, 2, BondMobility::Mobility::Translation },
+		// 		{ 2, 4, BondMobility::Mobility::Translation },
+		// 		{ 1, 0, BondMobility::Mobility::Translation },
+		// 		{ 3, 8, BondMobility::Mobility::Translation },
+		// 		{ 3, 9, BondMobility::Mobility::Translation },
+		// 		{ 3, 10, BondMobility::Mobility::Translation },
+		// 		{ 0, 14, BondMobility::Mobility::Translation },
+		// 		{ 1, 5, BondMobility::Mobility::Translation },
+		// 		{ 2, 6, BondMobility::Mobility::Translation },
+		// 		{ 2, 7, BondMobility::Mobility::Translation },
+		// 		{ 4, 11, BondMobility::Mobility::Translation },
+		// 		{ 4, 12, BondMobility::Mobility::Translation },
+		// 		{ 4, 13, BondMobility::Mobility::Translation }
+		// 	};
+
+		// 	getWorld(worldIx).setFlexibilities(flexibilities);
+		// } else {
+		// 	std::vector<BOND_FLEXIBILITY> flexibilities = {
+		// 		{ 3, 1, BondMobility::Mobility::Torsion },
+		// 		{ 1, 2, BondMobility::Mobility::Torsion },
+		// 		{ 2, 4, BondMobility::Mobility::Torsion },
+		// 		{ 1, 0, BondMobility::Mobility::Torsion },
+		// 	};
+
+		// 	getWorld(worldIx).setFlexibilities(flexibilities);
+		// }
 	}
 	
 	// // Get how much available memory we have
@@ -124,14 +165,14 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	if(singlePrmtop){ // SP_NEW
 
-		std::vector<std::string> argRoots = setupReader.get("ROOTS");
-		//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+		// std::vector<std::string> argRoots = setupReader.get("ROOTS");
+		// //std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
-		// Load all the roots here
-		for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
-			roots.push_back(std::stoi(argRoots[molIx]));
-			//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-		}
+		// // Load all the roots here
+		// for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
+		// 	roots.push_back(std::stoi(argRoots[molIx]));
+		// 	//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+		// }
 
 		// Get user requested Amber filenames
 		amberReader.resize(1);
@@ -152,16 +193,10 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		// Read molecules from a reader
 		readMolecules_SP_NEW();
 
-		for (const auto& a : atoms) {
-			std::cout << "ATOM " << a.getName() << " " << a.getAtomicNumber() << " " << a.getMass() << a.getBiotype() << std::endl;
-		}
-
-		for (const auto& b : bonds) {
-			std::cout << "BOND " << atoms[b.i].getName() << " " << atoms[b.j].getName() << std::endl;
-		}
-
 		// Build graph (bondAtom)
-		constructTopologies_SP_NEW(argRoots);
+		constructTopologies_SP_NEW(
+			// argRoots
+		);
 
 		// Generate Topologies sub_array views (also sort bonds - not BONDS)
 		generateTopologiesSubarrays();
@@ -175,13 +210,13 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		// Loads parameters into DuMM
 		addDummParams_SP_NEW(amberReader[0]);
 
-		// Adopts compound by the CompoundSystem and loads maps of indexes
-		model_SP_NEW(setupReader);
+		// // Adopts compound by the CompoundSystem and loads maps of indexes
+		// model_SP_NEW(setupReader);
+		modelSystem();
 
 		realizeTopology();
 
-		for(size_t topoCnt = 0; topoCnt < topologies.size(); topoCnt++){
-			Topology& topology = topologies[topoCnt];
+		for(auto& topology : topologies) {
 			topology.setAtomList();
 			topology.setBondList();
 		}
@@ -482,31 +517,31 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	PrintInitialRecommendedTimesteps();
 
 	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
-		setRunType(0);
+		setRunType(RUN_TYPE::DEFAULT);
 		// Run(getRequiredNofRounds(),
 		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 			
 	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
-			setRunType(0);
+			setRunType(RUN_TYPE::DEFAULT);
 			// RunSimulatedTempering(getRequiredNofRounds(),
 			// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 			// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
-		setRunType(1);
+		setRunType(RUN_TYPE::REMC);
 		// RunREX();
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
-		setRunType(2);
+		setRunType(RUN_TYPE::RENEMC);
 		// RunREX();
 
 	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
-		setRunType(3);
+		setRunType(RUN_TYPE::RENE);
 		// RunREX();
 
 	}else{
-		setRunType(0);
+		setRunType(RUN_TYPE::DEFAULT);
 		// Run(getRequiredNofRounds(),
 		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
 		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
@@ -835,63 +870,83 @@ void Context::addBiotypes() {
 }
 
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
+	// Load Amber files
 	readAmberInput reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
-	// look at prmtop and create a mapping between atoms and molecule index. for each molecule:
-	// - create the final atomlist via internalcoordinates. this is where we read from files
-	// - add dumm parameters and classes now because we need molecule names
-	// - reorder all lists to bat (batomlist, bonds, flexibilitie etc)
-	// - pass to topology ????
-
-	// Read parameters from files
+	// Read molecules from a reader
 	loadAtoms(reader);
 	loadBonds(reader);
-	loadAngles(reader);
-	loadTorsions(reader);
 
-	// Create internal coordinates indexing
-	InternalCoordinates ic;
-	ic.compute(atoms);
+	// Build graph (bondAtom)
+	constructTopologies_SP_NEW();
 
-	return;
+	// Generate Topologies sub_array views (also sort bonds - not BONDS)
+	generateTopologiesSubarrays();
 
+	// Match Compounds configurations to atoms Cartesian coords
+	matchDefaultConfigurations_SP_NEW();
+		
+	// Loads parameters into DuMM
+	addDummParams_SP_NEW(reader);
 
-}
+	// Adopts compound by the CompoundSystem and loads maps of indexes
+	setupReader.ReadSetup("inp.2but");
+	model_SP_NEW(setupReader);
 
-
-/**
- * SP_NEW
- * Check if the provided atom is a possible root and if not find one
-*/
-bSpecificAtom* Context::findARoot(Topology topology, int argRoot)
-{
-
-	bSpecificAtom *root = nullptr;
-	
-	if ((static_cast<size_t>(argRoot) > atoms.size()) || (atoms[argRoot].getNBonds() > 1)) {
-		topology.baseAtomNumber = argRoot;
-		root = &(atoms[argRoot]);
-		topology.bSpecificAtomRootIndex = argRoot;
-	}else {
-		std::cout << "Root atom will be chosen by Gmolmodel...  ";
-		int baseAtomListIndex = 0;
-		for (int i = 0; i < natoms; i++) {
-			if (atoms[i].getNBonds() > 1) {
-				baseAtomListIndex = i;
-				std::cout << "done. Root chosen " << i << std::endl;
-				break;
-			}
-		}
-
-		root = &(atoms[baseAtomListIndex]);
-		topology.bSpecificAtomRootIndex = baseAtomListIndex;
-		topology.baseAtomNumber = root->getNumber();
+	for(auto& topology : topologies) {
+		topology.setAtomList();
+		topology.setBondList();
 	}
 
-	return root;
+	// Transformers
 
+	// Get Z-matrix indexes table	
+	calcZMatrixTable();
+	//PrintZMatrixTable();
+
+	zMatrixBAT.resize(zMatrixTable.size());
+	for (auto& row : zMatrixBAT) {
+		row.resize(3, SimTK::NaN);
+	}
+
+	// Allocate space for containers that keep statistics if we're doing any
+	allocWorldsStatsContainers();
 }
+
+
+// /**
+//  * SP_NEW
+//  * Check if the provided atom is a possible root and if not find one
+// */
+// bSpecificAtom* Context::findARoot(Topology topology, int argRoot)
+// {
+
+// 	bSpecificAtom *root = nullptr;
+	
+// 	if ((static_cast<size_t>(argRoot) > atoms.size()) || (atoms[argRoot].getNBonds() > 1)) {
+// 		topology.baseAtomNumber = argRoot;
+// 		root = &(atoms[argRoot]);
+// 		topology.bSpecificAtomRootIndex = argRoot;
+// 	}else {
+// 		std::cout << "Root atom will be chosen by Gmolmodel...  ";
+// 		int baseAtomListIndex = 0;
+// 		for (int i = 0; i < natoms; i++) {
+// 			if (atoms[i].getNBonds() > 1) {
+// 				baseAtomListIndex = i;
+// 				std::cout << "done. Root chosen " << i << std::endl;
+// 				break;
+// 			}
+// 		}
+
+// 		root = &(atoms[baseAtomListIndex]);
+// 		topology.bSpecificAtomRootIndex = baseAtomListIndex;
+// 		topology.baseAtomNumber = root->getNumber();
+// 	}
+
+// 	return root;
+
+// }
 
 /** SP_NEW */
 void Context::buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root)
@@ -1034,12 +1089,12 @@ void Context::buildAcyclicGraph(
  * Main run function
 */
 void Context::Run() {
-	if(getRunType() == RunType::Default) {
+	if(getRunType() == RUN_TYPE::DEFAULT) {
 		Run(getRequiredNofRounds(), tempIni, tempFin);
 
-	}else if(  (getRunType() == RunType::REMC)
-			|| (getRunType() == RunType::RENEMC)
-			|| (getRunType() == RunType::RENE)){
+	}else if(  (getRunType() == RUN_TYPE::REMC)
+			|| (getRunType() == RUN_TYPE::RENEMC)
+			|| (getRunType() == RUN_TYPE::RENE)){
 		RunREX();
 
 	}else{
@@ -1053,12 +1108,12 @@ void Context::Run() {
  * Main run function
 */
 void Context::Run(int rounds) {
-	if(getRunType() == RunType::Default) {
+	if(getRunType() == RUN_TYPE::DEFAULT) {
 		Run(rounds, tempIni, tempFin);
 
-	}else if(  (getRunType() == RunType::REMC)
-			|| (getRunType() == RunType::RENEMC)
-			|| (getRunType() == RunType::RENE)){
+	}else if(  (getRunType() == RUN_TYPE::REMC)
+			|| (getRunType() == RUN_TYPE::RENEMC)
+			|| (getRunType() == RUN_TYPE::RENE)){
 
 		RunREX();
 	}else{
@@ -1187,16 +1242,16 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 
 	// Set the type of simulation and temperatures
 	if ( setupReader.get("RUN_TYPE")[0] == "REMC" ) {
-		setRunType(RunType::REMC);
+		setRunType(RUN_TYPE::REMC);
 	} else if ( setupReader.get("RUN_TYPE")[0] == "RENEMC" ) {
-		setRunType(RunType::RENEMC);
+		setRunType(RUN_TYPE::RENEMC);
 	}else if ( setupReader.get("RUN_TYPE")[0] == "RENE" ) {
-		setRunType(RunType::RENE);
+		setRunType(RUN_TYPE::RENE);
 	} else {
 		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
 		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
 
-		setRunType(RunType::Default);
+		setRunType(RUN_TYPE::DEFAULT);
 	}
 	std::cout << "[CheckInput] " << "Im doing " << static_cast<int>(runType) << std::endl;
 
@@ -1307,6 +1362,8 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 void Context::addWorld(
 	bool fixmanTorque,
 	int samplesPerRound,
+	ROOT_MOBILITY rootMobility,
+	bool useOpenMM,
 	bool visual,
 	SimTK::Real visualizerFrequency) {
 
@@ -1355,8 +1412,16 @@ void Context::addWorld(
 	// Set seed for random number generators
 	worlds.back().setSeed(randomEngine());
 
+	// Propagate root mobility
+	worlds.back().setRootMobility(rootMobility);
+
 	// Store the number of worlds
 	nofWorlds = worlds.size();
+
+	// Prepare the world for OpenMM
+	if (useOpenMM) {
+		worlds.back().forceField->setUseOpenMMAcceleration(true);
+	}
 }
 
 // Use a SetupReader Object to read worlds information from a file
@@ -1962,7 +2027,7 @@ void Context::readMolecules_SP_NEW(void)
  * <!--  -->
 */
 void Context::constructTopologies_SP_NEW(
-	std::vector<std::string>& argRoots
+	// std::vector<std::string>& argRoots
 ){
 
 	// ========================================================================
@@ -2017,6 +2082,7 @@ void Context::constructTopologies_SP_NEW(
 		//  (1) findARoot 
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		const int rootAmberIx = internCoords.getRoot( molIx ).first;
+		topology.bSpecificAtomRootIndex = rootAmberIx;
 		setRootAtom( topology, rootAmberIx );
 
 		// --------------------------------------------------------------------
@@ -3383,6 +3449,18 @@ void Context::setFlexibility(
 	std::string flexFN,
 	int whichWorld)
 {
+	std::map<std::string, BondMobility::Mobility> mobilityMap = {
+		{ "Pin", BondMobility::Torsion },
+		{ "Torsion", BondMobility::Torsion },
+		{ "Translation", BondMobility::Translation },
+		{ "Cartesian", BondMobility::Translation },
+		{ "Rigid", BondMobility::Rigid },
+		{ "Weld", BondMobility::Rigid },
+		{ "Slider", BondMobility::Slider },
+		{ "AnglePin", BondMobility::AnglePin },
+		{ "BendStretch", BondMobility::BendStretch },
+		{ "Spherical", BondMobility::Spherical }
+	};
 
 	// Get flexible bonds from file. Numbering starts at 0 in prmtop
 	std::string line;
@@ -3421,74 +3499,17 @@ void Context::setFlexibility(
 					if(bond.isThisMe(index_1, index_2) ){
 
 						// Get this bond's topology and Comopund index
-						Topology& topology =
-							topologies[bond.getMoleculeIndex()];
-						SimTK::Compound::BondIndex compoundBondIx =
-							bond.getBondIndex();
-						
-						// --- Pin ---
-						if((mobility == "Pin") || (mobility == "Torsion")){
-							bond.setBondMobility(BondMobility::Torsion,
-								whichWorld);
-							topology.setBondMobility(BondMobility::Torsion,
-								compoundBondIx);
-							break;
+						Topology& topology = topologies[bond.getMoleculeIndex()];
+						SimTK::Compound::BondIndex compoundBondIx = bond.getBondIndex();
 
-						// --- Cartesian ---
-						}else if((mobility == "Translation") || (mobility == "Cartesian")){
-							bond.setBondMobility(BondMobility::Translation,
-								whichWorld);
-							topology.setBondMobility(BondMobility::Translation,
-								compoundBondIx);
+						// Get the bond mobility
+						auto it = mobilityMap.find(mobility);
+						BondMobility::Mobility bondMobility = (it != mobilityMap.end()) ? it->second : BondMobility::Rigid;
+						std::cout << "Setting bond mobility " << mobility << " " << bondMobility << std::endl;
 
-						// --- Weld ---
-						}else if((mobility == "Rigid") || (mobility == "Weld")){
-							bond.setBondMobility(BondMobility::Rigid,
-								whichWorld);
-							topology.setBondMobility(BondMobility::Rigid,
-								compoundBondIx);
-							break;
-
-						// --- Slider ---
-						}else if((mobility == "Slider") ){
-							bond.setBondMobility(BondMobility::Slider,
-								whichWorld);
-							topology.setBondMobility(BondMobility::Slider,
-								compoundBondIx);
-							break;
-
-						// --- AnglePin ---
-						}else if((mobility == "AnglePin") ){
-							bond.setBondMobility(BondMobility::AnglePin,
-								whichWorld);
-							topology.setBondMobility(BondMobility::AnglePin,
-								compoundBondIx);
-							break;
-
-						// --- BendStretch ---
-						}else if((mobility == "BendStretch") ){
-							bond.setBondMobility(BondMobility::BendStretch,
-								whichWorld);
-							topology.setBondMobility(BondMobility::BendStretch,
-								compoundBondIx);
-							break;
-
-						// --- Spherical ---
-						}else if((mobility == "Spherical") ){
-							bond.setBondMobility(BondMobility::Spherical,
-								whichWorld);
-							topology.setBondMobility(BondMobility::Spherical,
-								compoundBondIx);
-							break;
-
-						// --- Default ---	
-						}else{
-							bond.setBondMobility(BondMobility::Rigid,
-								whichWorld);
-							topology.setBondMobility(BondMobility::Rigid,
-								compoundBondIx);
-							break;							
-						}
+						// Set the bond mobility
+						bond.setBondMobility(bondMobility, whichWorld);
+						topology.setBondMobility(bondMobility, compoundBondIx);
 
 					} // found the bond
 
@@ -3525,7 +3546,7 @@ void Context::modelOneEmbeddedTopology_SP_NEW(
 	worlds[whichWorld].compoundSystem->modelOneCompound(
 		SimTK::CompoundSystem::CompoundIndex(whichTopology),
 		atomFrameCache,
-		SimTK::String(rootMobilizer));
+		worlds[whichWorld].getRootMobility());
 
 	// Get the forcefield within this world
 	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[whichWorld].forceField);
@@ -3602,7 +3623,8 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 		// Model each topology: build mobods
 		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
 
-			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Cartesian");
+			// Was "Cartesian"
+			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx, "Weld");
 
 		} // every molecule
 
@@ -3626,6 +3648,44 @@ void Context::model_SP_NEW(SetupReader& setupReader)
 }
 
 
+void Context::modelSystem() {
+
+	// Iterate worlds
+	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		
+		// Set flexibilities
+		for (auto& bond : bonds) {
+			Topology& topology = topologies[bond.getMoleculeIndex()];
+			SimTK::Compound::BondIndex compoundBondIx = bond.getBondIndex();
+
+			// Check if the user set the bond mobility
+			BondMobility::Mobility mobility = BondMobility::Mobility::Rigid;
+			for (const auto& flex : worlds[worldIx].getFlexibilities()) {
+				if (bond.isThisMe(flex.i, flex.j)) {
+					mobility = flex.mobility;
+					break;
+				}
+			}
+
+			bond.addBondMobility(mobility);
+			topology.setBondMobility(mobility, compoundBondIx);
+		}
+		
+		for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
+			// Add topologies to CompoundSystem and add it to the visualizer's vector of molecules
+			worlds[worldIx].adoptTopology(topologyIx);
+
+			// Was "Cartesian"
+			modelOneEmbeddedTopology_SP_NEW(topologyIx, worldIx, "Weld");
+
+			// This is many to one map
+			topologies[topologyIx].loadAIx2MbxMap_SP_NEW();
+		}
+
+		// This is one to many map
+		worlds[worldIx].loadMbx2AIxMap_SP_NEW();
+	}
+}
 
 
 // ============================================================================
@@ -4844,15 +4904,15 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		log_p_accept = ETerm_equil ;
 	} */
 
-	if(getRunType() == RunType::REMC){
+	if(getRunType() == RUN_TYPE::REMC){
 
 		log_p_accept = ETerm_equil ;
 
-	}else if(getRunType() == RunType::RENEMC){
+	}else if(getRunType() == RUN_TYPE::RENEMC){
 
 		log_p_accept = ETerm_nonequil + std::log(correctionTerm) ;
 
-	}else if( getRunType() == RunType::RENE){
+	}else if( getRunType() == RUN_TYPE::RENE){
 
 		log_p_accept = WTerm + std::log(correctionTerm) ;
 
@@ -5745,6 +5805,16 @@ void Context::updQScaleFactors(int mixi)
 
 }
 
+RUN_TYPE Context::getRunType(void) const
+{
+	return runType;
+}
+
+void Context::setRunType(RUN_TYPE runTypeArg)
+{
+	this->runType = runTypeArg;
+}
+
 // Print to log and write pdbs
 void Context::REXLog(int mixi, int replicaIx)
 {
@@ -5891,7 +5961,7 @@ void Context::RunREX()
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() != RunType::Default){                                                 // (9) + (10)
+		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
 			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 				if ((mixi % 2) == 0){
 					mixNeighboringReplicas(0);
@@ -7733,8 +7803,4 @@ void Context::setForceFieldScaleFactors(SimTK::Real globalScaleFactor) {
 	} else {
 		globalForceFieldScaleFactor = globalScaleFactor;
 	}
-}
-
-void Context::setSeed(uint32_t seed) {
-	randomEngine = buildRandom32(seed);
 }

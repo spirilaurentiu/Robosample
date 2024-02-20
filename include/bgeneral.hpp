@@ -426,13 +426,21 @@ SimTK::Real magSq(std::vector<SimTK::Real>& V);
 **/
 void normalize(std::vector<SimTK::Real>& V);
 
+/*
+ * Sampling
+ */
+
+enum class SampleGenerator : int {
+	EMPTY = 0,
+	MC
+};
 
 /*
  * Thermodynamics
  */
 
 enum struct ThermostatName : int { // Thermostats
-	NONE,
+	NONE = 0,
 	ANDERSEN,
 	BERENDSEN,
 	LANGEVIN,
@@ -444,7 +452,7 @@ enum struct ThermostatName : int { // Thermostats
  */
 
 enum struct IntegratorName : int { // Integrators
-	EMPTY,
+	EMPTY = 0,
 	VERLET,
 	EULER,
 	EULER2,
@@ -517,7 +525,7 @@ enum struct GmolRandDistributionType : int {
 
 // Samplers
 enum struct SamplerName : int {
-	EMPTY,
+	EMPTY = 0,
 	MC,
 	HMC,
 	LAHMC
