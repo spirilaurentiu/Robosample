@@ -343,12 +343,22 @@ public:
 	void loadTriples_SP_NEW(void);
 	SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
 	SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
-	SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATDistsMassesContribution(const SimTK::State&);
+	SimTK::Real calcLogDetMBAT(const SimTK::State&);
+
+	SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATAnglesContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATMassesContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATInternal(const SimTK::State& someState);
-	SimTK::Real calcLogDetMBAT(const SimTK::State&);
+
+	// SP_NEW
+
+	SimTK::Real calcLogDetMBATDistsContribution_SP_NEW(const SimTK::State&);
+	SimTK::Real calcLogDetMBATAnglesContribution_SP_NEW(const SimTK::State&);
+	SimTK::Real calcLogDetMBATMassesContribution_SP_NEW(const SimTK::State&);
+	SimTK::Real calcLogDetMBATInternal_SP_NEW(const SimTK::State& someState);
+
+	// SP_NEW
 
 	/** Get the number of atoms. **/
 	int getNAtoms() const;

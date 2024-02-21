@@ -2409,7 +2409,6 @@ void Context::generateSubBondLists(void){
 			subBondLists[sIx].set_view(
 				bonds.begin() + molRanges[cnt].first,
 				bonds.begin() + molRanges[cnt].second);
-
 		}
 	}
 
@@ -2497,7 +2496,21 @@ void Context::generateTopologiesSubarrays(void){
 
 	}
 
+	// Set offset for all subBondLists
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		Topology& topology = topologies[molIx];
+
+		auto minNumberAtomIt = std::min_element(topology.subAtomList.begin(), topology.subAtomList.end(),
+			[](const bSpecificAtom& lhs, const bSpecificAtom& rhs) {
+				return lhs.getNumber() < rhs.getNumber();
+			});
+		
+		topology.subBondList.set_offset( minNumberAtomIt->getNumber() );
+	}
+
 }
+
 
 /*!
  * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
@@ -5680,12 +5693,17 @@ bool Context::RunWorld(int whichWorld)
 	// == SAMPLE == from the current world
 	bool validated = false;
 	const int numSamples = worlds[whichWorld].getSamplesPerRound();
-	const int distortOption = worlds[whichWorld].getSampler(0)->getDistortOption(); // TODO
+	const int distortOption = worlds[whichWorld].getSampler(0)->getDistortOption();
 
 	// Equilibrium world
 	if(distortOption == 0) {
 
-		validated = worlds[whichWorld].generateSamples(numSamples);
+		// Generate samples
+		if(singlePrmtop == true){
+			validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples);
+		}else{
+			validated = worlds[whichWorld].generateSamples(numSamples);
+		}
 
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
@@ -5696,7 +5714,11 @@ bool Context::RunWorld(int whichWorld)
 		//worlds[whichWorld].updSampler(0)->PrintSubZMatrixBAT();
 
 		// Generate samples
-		validated = worlds[whichWorld].generateSamples(numSamples);
+		if(singlePrmtop == true){
+			validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples);
+		}else{
+			validated = worlds[whichWorld].generateSamples(numSamples);
+		}
 
 	}
 

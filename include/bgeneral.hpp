@@ -102,6 +102,8 @@ private:
     Iterator begin_;
     Iterator end_;
 
+	size_t offset = 0;
+
 public:
 
     // Constructor based on specific limits
@@ -122,6 +124,14 @@ public:
 
 	size_t size(void) const {
 		return std::distance(begin_, end_);
+	}
+
+	void set_offset(size_t argOffset){
+		offset = argOffset;
+	}
+
+	const size_t& get_offset(void) const{
+		return offset;
 	}
 
 };

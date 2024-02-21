@@ -2189,7 +2189,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 	//std::cout << "HMCSampler::calcFixman D0= "<< D0 << std::endl;
 
 	assert(RT > SimTK::TinyReal);
-	double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal(someState);
+	double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal_SP_NEW(someState);
 	//SimTK::Real result = 0.5 * RT * ( std::log(D0) - detMBAT ); // original
 	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
 	//std::cout << "detM detMBAT fixP " << D0 << " " << detMBAT << " " << result << std::endl;

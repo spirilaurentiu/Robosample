@@ -480,6 +480,7 @@ setAtomsLocationsInGround_REFAC(SimTK::State&,
 	Molmodel Compound which in turn relizes Position and uses matter
 	 to calculate locations. **/
 	void updateAtomListsFromCompound(const SimTK::State &state);
+	void updateAtomListsFromCompound_SP_NEW(const SimTK::State &state);
 
 	/** To be called before use of getXs, getYs or getZs **/
 	void updateCoordBuffers();
@@ -551,6 +552,7 @@ setAtomsLocationsInGround_REFAC(SimTK::State&,
 
 	/** Generate a number of samples **/
 	bool generateSamples(int howMany);
+	bool generateSamples_SP_NEW(int howMany);
 	//...............
 
 	//...................
