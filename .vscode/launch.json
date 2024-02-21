@@ -7,7 +7,7 @@
 
         {
             "name": "Python: Current File",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
@@ -18,12 +18,14 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build_debug/robosample.d",
+            //"program": "${workspaceFolder}/build/robosample",
+
 
             // "symbolSearchPath": "${workspaceFolder}/build_debug/robosample.d",
 
-            
+            //"args": ["${workspaceFolder}/build_debug/inp.merged.2w.999", "singlePrmtop"],
+            "args": ["${workspaceFolder}/build_debug/inp.merged.2w.999", "singlePrmtop"],
 
-            "args": ["${workspaceFolder}/build_debug/inp.1w.999", "multiplePrmtop"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build_debug/",
             "environment": [],
