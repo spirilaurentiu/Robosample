@@ -2210,7 +2210,6 @@ void Context::generateSubBondLists(void){
 			subBondLists[sIx].set_view(
 				bonds.begin() + molRanges[cnt].first,
 				bonds.begin() + molRanges[cnt].second);
-
 		}
 	}
 
@@ -2297,6 +2296,23 @@ void Context::generateTopologiesSubarrays(void){
 			subBondLists[molIx].end());
 
 	}
+
+	// Set offset for all subBondLists
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		Topology& topology = topologies[molIx];
+
+		topology.subAtomList.begin();
+		topology.subAtomList.end();
+
+		auto minNumberAtomIt = std::min_element(topology.subAtomList.begin(), topology.subAtomList.end(),
+			[](const bSpecificAtom& lhs, const bSpecificAtom& rhs) {
+				return lhs.getNumber() < rhs.getNumber();
+			});
+		
+		topology.subBondList.set_offset( minNumberAtomIt->getNumber() );
+	}
+
 
 }
 
@@ -5477,7 +5493,7 @@ bool Context::RunWorld(int whichWorld)
 	// == SAMPLE == from the current world
 	bool validated = false;
 	const int numSamples = worlds[whichWorld].getSamplesPerRound();
-	const int distortOption = worlds[whichWorld].getSampler(0)->getDistortOption(); // TODO
+	const int distortOption = worlds[whichWorld].getSampler(0)->getDistortOption();
 
 	// Equilibrium world
 	if(distortOption == 0) {
