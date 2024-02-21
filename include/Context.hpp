@@ -194,8 +194,9 @@ public:
 		int whichWorld);
 
 	void modelOneEmbeddedTopology_SP_NEW(int whichTopology,
-		int whichWorld,
-		std::string rootMobilizer);
+		int whichWorld
+		//,std::string rootMobilizer
+		);
 
 	void model_SP_NEW(SetupReader& setupReader);
 
@@ -252,6 +253,15 @@ public:
 		bool visual = false,
 		SimTK::Real visualizerFrequency = 0);
 
+	void addWorld_py(
+		bool fixmanTorque,
+		int samplesPerRound,
+		ROOT_MOBILITY rootMobility,
+		const std::vector<BOND_FLEXIBILITY>& flexibilities,
+		bool useOpenMM = true,
+		bool visual = false,
+		SimTK::Real visualizerFrequency = 0);
+
 	// Load/store Mobilized bodies joint types in samplers
 	void loadMbxsToMobilities(void);
 	void loadMbxsToMobilities_SP_NEW(void);
@@ -273,63 +283,74 @@ public:
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
 	void transferCoordinates_SP_NEW(int src, int dest);
-// SP_NEW_TRANSFER ============================================================
+	
+	// Relationship BAT - mobod transforms
+	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
 
-SimTK::State&
-setAtoms_XPF_XBM(
-	int wIx
-);
+	// SP_NEW_TRANSFER ============================================================
 
-SimTK::State&
-setAtoms_MassProperties(
-	int wIx
-);
+	SimTK::State&
+	setAtoms_SP_NEW(
+		int destWIx,
+		SimTK::State& someState,
+		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
+			otherWorldsAtomsLocations);
 
-SimTK::Transform
-calc_XFM(
-	int wIx,
-	Topology& topology,	
-	SimTK::Compound::AtomIndex& childAIx,
-	SimTK::Compound::AtomIndex& parentAIx,
-	SimTK::BondMobility::Mobility mobility,
-	const SimTK::State& someState) const;
+	SimTK::State&
+	setAtoms_XPF_XBM(
+		int wIx
+	);
 
-SimTK::State&
-setAtoms_XFM(
-	int wIx,
-	SimTK::State& someState);
+	SimTK::State&
+	setAtoms_MassProperties(
+		int wIx
+	);
 
-std::vector<SimTK::Transform>
-calc_XPF_XBM(
-	int wIx,
-	Topology& topology,
-	SimTK::Compound::AtomIndex& childNo,
-	SimTK::Compound::AtomIndex& parentNo,
-	SimTK::BondMobility::Mobility mobility,
-	const SimTK::State& someState
-);
+	SimTK::Transform
+	calc_XFM(
+		int wIx,
+		Topology& topology,	
+		SimTK::Compound::AtomIndex& childAIx,
+		SimTK::Compound::AtomIndex& parentAIx,
+		SimTK::BondMobility::Mobility mobility,
+		const SimTK::State& someState) const;
 
-SimTK::Compound::AtomIndex
-getChemicalParent_IfIAmRoot(
-	int wIx,
-	int atomNo,
-	SimTK::DuMMForceFieldSubsystem &dumm
-);
+	SimTK::State&
+	setAtoms_XFM(
+		int wIx,
+		SimTK::State& someState);
 
-// X axis to Z axis switch
-const SimTK::Transform X_to_Z 
-	=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
-const SimTK::Transform Z_to_X = ~X_to_Z;
+	std::vector<SimTK::Transform>
+	calc_XPF_XBM(
+		int wIx,
+		Topology& topology,
+		SimTK::Compound::AtomIndex& childNo,
+		SimTK::Compound::AtomIndex& parentNo,
+		SimTK::BondMobility::Mobility mobility,
+		const SimTK::State& someState
+	);
 
-// Y axis to Z axis switch
-const SimTK::Transform Y_to_Z =
-	SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
-const SimTK::Transform Z_to_Y = ~Y_to_Z;
+	SimTK::Compound::AtomIndex
+	getChemicalParent_IfIAmRoot(
+		int wIx,
+		int atomNo,
+		SimTK::DuMMForceFieldSubsystem &dumm
+	);
 
-// X axis to X axis switch
-const SimTK::Transform Y_to_X =
-	SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
-const SimTK::Transform X_to_Y = ~Y_to_X;
+	// X axis to Z axis switch
+	const SimTK::Transform X_to_Z 
+		=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
+	const SimTK::Transform Z_to_X = ~X_to_Z;
+
+	// Y axis to Z axis switch
+	const SimTK::Transform Y_to_Z =
+		SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
+	const SimTK::Transform Z_to_Y = ~Y_to_Z;
+
+	// X axis to X axis switch
+	const SimTK::Transform Y_to_X =
+		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
+	const SimTK::Transform X_to_Y = ~Y_to_X;
 
 // SP_NEW_TRANSFER ------------------------------------------------------------
 
@@ -498,6 +519,7 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
 
 	// Load replica's atomLocations into it's front world. Returns world index
 	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
+	int restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica);
 
 	// Load replica's atomLocations into it's back world
     void restoreReplicaCoordinatesToBackWorld(int whichReplica);
@@ -598,71 +620,6 @@ const SimTK::Transform X_to_Y = ~Y_to_X;
 	// Transformers
 	void Print_TRANSFORMERS_Work(void);
 
-
-    // Function to add a new row to the zMatrixTable
-    void addZMatrixTableRow(const std::vector<int>& newRow) {
-        // Add bounds checking if needed
-        zMatrixTable.push_back(newRow);
-    }
-
-    // Getter for a specific entry
-    int getZMatrixTableEntry(int rowIndex, int colIndex) const {
-        // Add bounds checking if needed
-        return zMatrixTable[rowIndex][colIndex];
-    }
-
-    // Setter for a specific entry
-    void setZMatrixTableEntry(int rowIndex, int colIndex, int value) {
-        // Add bounds checking if needed
-        zMatrixTable[rowIndex][colIndex] = value;
-    }
-
-
-    // Print function for the zMatrixTable
-    void PrintZMatrixTable() const {
-        for (const auto& row : zMatrixTable) {
-			scout("ZTableEntry: ");
-            for (int value : row) {
-                std::cout << std::setw(6) << value <<" "; 
-            }
-            std::cout << std::endl; 
-        }
-    }
-
-    // Setter for a specific entry
-    void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) {
-
-        // Set the value at the specified position
-        zMatrixBAT[rowIndex][colIndex] = value;
-    }
-
-    // Function to get the value for a given row and column in zMatrixBAT
-    SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const {
-        // Check if the indices are within bounds
-        if (rowIndex < zMatrixBAT.size() && colIndex < zMatrixBAT[0].size()) {
-            // Return the value at the specified position
-            return zMatrixBAT[rowIndex][colIndex];
-        } else {
-            // Indices are out of bounds, handle this case accordingly
-            return SimTK::NaN; // Adjust the default value as needed
-        }
-    }
-
-    // Function to print the zMatrixBAT
-    void PrintZMatrixBAT() const {
-        for (const auto& row : zMatrixBAT) {
-            for (SimTK::Real value : row) {
-                std::cout << std::setw(6) << value << " ";
-            }
-            std::cout << std::endl;
-        }
-    }
-
-    // Function to add a new row to the zMatrixBAT
-    void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
-        zMatrixBAT.push_back(newRow);
-    }
-	
 	// Function to find and return the value for a given AtomIndex
 	SimTK::Vec3
 	findAtomTarget(
@@ -694,7 +651,7 @@ private:
 	std::vector<std::vector<std::string>> rbSpecsFNs;
 	std::vector<std::vector<std::string>> flexSpecsFNs;
 	std::vector<std::vector<std::string>> regimens;
-	std::vector<std::string> rootMobilities; // WORLD CONFLICT
+	std::vector<std::vector<std::string>> rootMobilities;
 
 	// Nof molecules
 	int moleculeCount = -1;
@@ -884,5 +841,89 @@ private:
 	std::vector<std::vector<int>> zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
+
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+
+    // Function to add a new row to the zMatrixTable
+    void addZMatrixTableRow(const std::vector<int>& newRow) ;
+
+    // Getter for a specific entry
+    int getZMatrixTableEntry(int rowIndex, int colIndex) const ;
+
+    // Setter for a specific entry
+    void setZMatrixTableEntry(int rowIndex, int colIndex, int value) ;
+
+    // Print function for the zMatrixTable
+    void PrintZMatrixTable() const ;
+
+    // Setter for a specific entry
+    void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) ;
+
+    // Function to get a given row
+    const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) ;
+
+    // Function to get a given row
+    std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex) ;
+
+    // Function to get the value for a given row and column in zMatrixBAT
+    SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const ;
+
+    // Function to print the zMatrixBAT
+    void PrintZMatrixBAT() const ;
+
+    // Function to add a new row to the zMatrixBAT
+    void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);
+
+	// WORK Q PERTURB BEND STRETCH ============================================
+
+	/**
+	* @brief Get log of the Cartesian->BAT Jacobian
+	* @param
+	*/
+	SimTK::Real
+	calcInternalBATJacobianLog(void);
+
+	/**
+	* @brief Add BAT coordinates 
+	* @param
+	*/
+	void
+	addSubZMatrixBATsToWorld(
+		int wIx);
+
+	/**
+	* @brief Get BAT coordinates modifyable by a selected world
+	* @param
+	*/
+	void
+	updSubZMatrixBATsToWorld(
+		int wIx);
+
+	/**
+	* @brief Print BAT coordinates
+	* @param
+	*/
+	void
+	PrintWorldSubZMatrixBATs(
+		int wIx);
+
+	// WORK Q PERTURB BEND STRETCH --------------------------------------------
+
+
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+
+
+
 };
+
+
+
+
+
+
+
 

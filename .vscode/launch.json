@@ -7,7 +7,7 @@
 
         {
             "name": "Python: Current File",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
@@ -17,11 +17,11 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/robosample.d",
+            "program": "${workspaceFolder}/build/robosample_d",
             "args": ["${workspaceFolder}/build/inp.2mol3worlds"],
             // "program": "${workspaceFolder}/build/TestGeometry",
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build_debug/",
+            "cwd": "${workspaceFolder}/build/",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

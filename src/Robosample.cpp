@@ -40,8 +40,7 @@ int main(int argc, char **argv)
 	c.setRunType(RUN_TYPE::DEFAULT);
 
 	// World 0 OPENMM
-	c.addWorld(false, 1, ROOT_MOBILITY::WELD);
-	std::vector<BOND_FLEXIBILITY> flexibilities = {
+	std::vector<BOND_FLEXIBILITY> flexibilities_w0 = {
 		{ 3, 1, BondMobility::Mobility::Translation },
 		{ 1, 2, BondMobility::Mobility::Translation },
 		{ 2, 4, BondMobility::Mobility::Translation },
@@ -57,20 +56,21 @@ int main(int argc, char **argv)
 		{ 4, 12, BondMobility::Mobility::Translation },
 		{ 4, 13, BondMobility::Mobility::Translation }
 	};
-	c.getWorld(0).setFlexibilities(flexibilities);
+	c.addWorld_py(false, 1, ROOT_MOBILITY::WELD, flexibilities_w0);
 
 	// World 1
-	c.addWorld(true, 1, ROOT_MOBILITY::WELD);
-	flexibilities = {
+	std::vector<BOND_FLEXIBILITY> flexibilities_w1 = {
 		{ 3, 1, BondMobility::Mobility::Torsion },
 		{ 1, 2, BondMobility::Mobility::Torsion },
 		{ 2, 4, BondMobility::Mobility::Torsion },
 		{ 1, 0, BondMobility::Mobility::Torsion },
 	};
-	c.getWorld(1).setFlexibilities(flexibilities);
+	c.addWorld_py(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
 
-	// read files and create topologies
-	// move creating dumm atom types, charged atom types etc to addWorld
+	// read files and create topologies. this populates ```atoms``` and ```bonds```
+	// atoms must have a dumm index which is used by bonds, angles and torsions
+	// generate topologies
+	// addWorld will deal with adding generating dumm parameters
 	c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
 
 	// Does OMMVV have to be first?

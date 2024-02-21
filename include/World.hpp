@@ -99,6 +99,9 @@ struct BOND_FLEXIBILITY {
 /**
  *  Contains a Symbody system and additional data that define a regimen
  **/
+
+class Context;
+
 class World {
 public:
 	// --- Structural functions ---
@@ -110,6 +113,8 @@ public:
 
 	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
+
+	void generateDuMM
 
 	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
@@ -831,6 +836,32 @@ public:
 	void setRootMobility(ROOT_MOBILITY rootMobility);
 	const SimTK::String& getRootMobility() const;
 
+
+	// BAT ====================================================================
+
+    // Getter for myContext
+    const Context* getMyContext() const {
+        return myContext;
+    }
+
+    // Setter for myContext
+    void setMyContext(Context* context) {
+        myContext = context;
+    }
+
+    // Updater for myContext
+    Context* updMyContext(void) {
+        return myContext;
+    }	
+
+
+	const int getOwnIndex(void) const{
+		return ownWorldIndex;
+	}
+
+	// BAT --------------------------------------------------------------------
+
+
 private:
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
@@ -854,6 +885,9 @@ private:
 
 	std::vector<BOND_FLEXIBILITY> flexibilities;
 
+
+	// Context
+	Context *myContext;
 };
 
 #endif /*WORLD_H_*/

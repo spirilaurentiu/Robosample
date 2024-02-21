@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <cmath>
 #include <functional>
+#include <array>
 
 // Molmodel specific headers
 
