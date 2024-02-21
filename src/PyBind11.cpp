@@ -1,30 +1,13 @@
 #include <Python.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 #include "Context.hpp"
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(MODULE_NAME, m) {
     m.doc() = "Robosample bindings";
-
-    py::class_<Context>(m, "Context")
-        .def(py::init<SimTK::Real, SimTK::Real, uint32_t>())
-        .def("addWorld", &Context::addWorld, "Add an empty world")
-        .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, "Run the simulation")
-        .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system")
-        .def("Run", py::overload_cast<>(&Context::Run), "Run the simulation")
-        .def("setNumThreads", &Context::setNumThreads, "Set the number of threads")
-        .def("setPdbPrefix", &Context::setPdbPrefix, "Set the prefix for the PDB files")
-        .def("setOutput", &Context::setOutput, "Set the output directory")
-        .def("setNofRoundsTillReblock", &Context::setNofRoundsTillReblock, "Set the number of rounds until reblocking")
-        .def("setRequiredNofRounds", &Context::setRequiredNofRounds, "Set the required number of rounds")
-        .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency")
-        .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency")
-        .def("setRunType", &Context::setRunType, "Set the run type");
-
-    py::class_<World>(m, "World")
-        .def("setFlexibilities", &World::setFlexibilities, "Set the flexibilities of the bonds")
-        .def("addSampler", &World::addSampler_py, "Add a sampler to the world");
 
     py::enum_<ROOT_MOBILITY>(m, "RootMobility")
         .value("FREE", ROOT_MOBILITY::FREE)
@@ -90,4 +73,30 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("BERENDSEN", ThermostatName::BERENDSEN)
         .value("LANGEVIN", ThermostatName::LANGEVIN)
         .value("NOSE_HOOVER", ThermostatName::NOSE_HOOVER);
+
+    py::class_<BOND_FLEXIBILITY>(m, "BondFlexibility")
+        .def(py::init<>())
+        .def(py::init<int, int, BondMobility::Mobility>())
+        .def_readwrite("i", &BOND_FLEXIBILITY::i)
+        .def_readwrite("j", &BOND_FLEXIBILITY::j)
+        .def_readwrite("mobility", &BOND_FLEXIBILITY::mobility);
+
+    py::class_<Context>(m, "Context")
+        .def(py::init<SimTK::Real, SimTK::Real, uint32_t>())
+        .def("addWorld", &Context::addWorld_py, "Add an empty world")
+        .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Run the simulation")
+        .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system")
+        .def("Run", py::overload_cast<>(&Context::Run), "Run the simulation")
+        .def("setNumThreads", &Context::setNumThreads, "Set the number of threads")
+        .def("setPdbPrefix", &Context::setPdbPrefix, "Set the prefix for the PDB files")
+        .def("setOutput", &Context::setOutput, "Set the output directory")
+        .def("setNofRoundsTillReblock", &Context::setNofRoundsTillReblock, "Set the number of rounds until reblocking")
+        .def("setRequiredNofRounds", &Context::setRequiredNofRounds, "Set the required number of rounds")
+        .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency")
+        .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency")
+        .def("setRunType", &Context::setRunType, "Set the run type");
+
+    py::class_<World>(m, "World")
+        .def("setFlexibilities", &World::setFlexibilities, "Set the flexibilities of the bonds")
+        .def("addSampler", &World::addSampler_py, "Add a sampler to the world");
 }

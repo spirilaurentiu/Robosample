@@ -3616,7 +3616,9 @@ bool World::addSampler_py(SamplerName samplerName,
 	if (integratorName == IntegratorName::OMMVV) {
 		for (const auto& t : *topologies) {
 			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
+				// TODO is this correct?
 				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
+				std::cout << "mass = " << mass << std::endl;
 				const SimTK::DuMM::NonbondAtomIndex nax(aix);
 				samplers.back()->setOMMmass(nax, mass);
 			}

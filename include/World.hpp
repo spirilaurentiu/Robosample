@@ -88,6 +88,10 @@ enum class ROOT_MOBILITY : int {
 };
 
 struct BOND_FLEXIBILITY {
+	BOND_FLEXIBILITY() = default;
+	BOND_FLEXIBILITY(int i, int j, BondMobility::Mobility mobility)
+		: i(i), j(j), mobility(mobility) {}
+		
 	int i = -1;
 	int j = -1;
 	BondMobility::Mobility mobility = BondMobility::Default;
