@@ -4440,7 +4440,8 @@ SimTK::Real
 HMCSampler::scaleSubZMatrixBATDeviations(
 	SimTK::State& someState,
 	SimTK::Real scalingFactor,
-	std::vector<int> BATOrder
+	std::vector<int> BATOrder,
+	std::vector<SimTK::Real> BATSign
 	)
 {
 
@@ -4483,6 +4484,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				// }
 				qEntry += 0.01;
 
+
+				qEntry *= BATSign[rearrMobodQCnt];
 
 
 				scaleJacobian += std::log( (BAT[rearrMobodQCnt] + BATdiffs[rearrMobodQCnt]) / (BAT[rearrMobodQCnt]) );
