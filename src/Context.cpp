@@ -2302,9 +2302,6 @@ void Context::generateTopologiesSubarrays(void){
 
 		Topology& topology = topologies[molIx];
 
-		topology.subAtomList.begin();
-		topology.subAtomList.end();
-
 		auto minNumberAtomIt = std::min_element(topology.subAtomList.begin(), topology.subAtomList.end(),
 			[](const bSpecificAtom& lhs, const bSpecificAtom& rhs) {
 				return lhs.getNumber() < rhs.getNumber();
@@ -2313,8 +2310,8 @@ void Context::generateTopologiesSubarrays(void){
 		topology.subBondList.set_offset( minNumberAtomIt->getNumber() );
 	}
 
-
 }
+
 
 /*!
  * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
@@ -5498,7 +5495,12 @@ bool Context::RunWorld(int whichWorld)
 	// Equilibrium world
 	if(distortOption == 0) {
 
-		validated = worlds[whichWorld].generateSamples(numSamples);
+		// Generate samples
+		if(singlePrmtop == true){
+			validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples);
+		}else{
+			validated = worlds[whichWorld].generateSamples(numSamples);
+		}
 
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
@@ -5509,7 +5511,11 @@ bool Context::RunWorld(int whichWorld)
 		//worlds[whichWorld].updSampler(0)->PrintSubZMatrixBAT();
 
 		// Generate samples
-		validated = worlds[whichWorld].generateSamples(numSamples);
+		if(singlePrmtop == true){
+			validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples);
+		}else{
+			validated = worlds[whichWorld].generateSamples(numSamples);
+		}
 
 	}
 
