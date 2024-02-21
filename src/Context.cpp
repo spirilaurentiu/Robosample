@@ -1923,7 +1923,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 		child.setMoleculeIndex(molIx);
 		parent.setMoleculeIndex(molIx);
 
-		// // Print
+		// Print
 		// scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
 		// 	<< eol;
 
@@ -1959,7 +1959,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 		// 	<<" " << child.getNumber() <<" "
 		// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
 		// 	<< parent.getNumber() <<" "
-		// 	<< "with bond center name " << parentBondCenterPathNameStr
+		// 	<< "with bond center name " << parentBondCenterPathNameStr <<" "
 		// 	<< eol;
 
 		// Bond
@@ -2051,9 +2051,9 @@ void Context::addRingClosingBonds_SP_NEW(
 			child.setMoleculeIndex(molIx);
 			parent.setMoleculeIndex(molIx);
 
-			// // Print
-			// scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
-			// 	<< eol;
+			// Print
+			//scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+			//	<< eol;
 
 			// ====================== PARENT BOND CENTER ======================
 			
@@ -2256,8 +2256,6 @@ void Context::constructTopologies_SP_NEW(
 
 		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
 
-		addRingClosingBonds_SP_NEW(topology, rootAmberIx, molIx);
-
 		// --------------------------------------------------------------------
 		// (4) Add new topology 
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -2266,6 +2264,18 @@ void Context::constructTopologies_SP_NEW(
 		topologies.push_back(topology);
 
 	}
+
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+		
+		Topology& currTopology = topologies[molIx];
+
+		addRingClosingBonds_SP_NEW(
+			currTopology,
+			internCoords.getRoot( molIx ).first,
+			molIx);
+
+	}
+
 }
 
 
