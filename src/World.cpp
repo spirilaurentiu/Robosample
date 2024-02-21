@@ -73,6 +73,116 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN)
   fb.close();
 }
 
+
+void World::generateDummParams(const std::vector<bSpecificAtom>& atoms,
+		const std::vector<bBond>& bonds,
+		const std::vector<DUMM_ANGLE>& dummAngles,
+		const std::vector<DUMM_TORSION>& dummTorsions,
+		const ELEMENT_CACHE& elementCache) {
+
+	for (auto& atom : atoms) {
+		forceField->defineAtomClass(atom.getDummAtomClassIndex(),
+			atom.getName().c_str(),
+			atom.getAtomicNumber(),
+			atom.getNBonds(),
+			atom.getVdwRadius() / 10.0, // nm
+			atom.getLJWellDepth() * 4.184 // kcal to kJ
+		);
+
+		// Create charged atom type
+		forceField->defineChargedAtomType(
+			atom.getChargedAtomTypeIndex(),
+			atom.getName().c_str(),
+			atom.getDummAtomClassIndex(),
+			atom.charge
+		);
+
+		forceField->setBiotypeChargedAtomType(
+			atom.getChargedAtomTypeIndex(),
+			atom.getBiotypeIndex()
+		);
+	}
+
+	for (auto& bond : bonds) {
+		forceField->defineBondStretch_KA(atoms[bond.i].getDummAtomClassIndex(),
+			atoms[bond.j].getDummAtomClassIndex(),
+			bond.getForceK(),
+			bond.getForceEquil());
+	}
+
+	// Define angles
+	for (const auto& angle : dummAngles) {
+		forceField->defineBondBend_KA(
+			atoms[angle.first].getDummAtomClassIndex(),
+			atoms[angle.second].getDummAtomClassIndex(),
+			atoms[angle.third].getDummAtomClassIndex(),
+			angle.k,
+			angle.equil);
+	}
+
+	// Define torsions
+	for (const auto& torsion : dummTorsions) {
+		// Get atom class indices
+		const auto aCIx1 = atoms[torsion.first].getDummAtomClassIndex();
+		const auto aCIx2 = atoms[torsion.second].getDummAtomClassIndex();
+		const auto aCIx3 = atoms[torsion.third].getDummAtomClassIndex();
+		const auto aCIx4 = atoms[torsion.fourth].getDummAtomClassIndex();
+
+		// Define dihedrals
+		if (!torsion.improper) {
+			switch(torsion.num) {
+				case 1:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0]);
+					break;
+					
+				case 2:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1]);
+					break;
+
+				case 3:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2]);
+					break;
+
+				case 4:
+					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2],
+						torsion.period[3], torsion.k[3], torsion.phase[3]);
+					break;
+			}
+		} else {
+			// Define impropers
+			switch(torsion.num) {
+				case 1:
+					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0]);
+					break;
+					
+				case 2:
+					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1]);
+					break;
+
+				case 3:
+					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+						torsion.period[0], torsion.k[0], torsion.phase[0],
+						torsion.period[1], torsion.k[1], torsion.phase[1],
+						torsion.period[2], torsion.k[2], torsion.phase[2]);
+					break;
+			}
+		}
+	}
+}
+
+
 /** Print a Compound Cartesian coordinates as given by
 	 * Compound::calcAtomLocationInGroundFrame **/
 void World::printPoss(const SimTK::Compound& c, SimTK::State& advanced)

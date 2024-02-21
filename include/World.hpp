@@ -114,7 +114,11 @@ public:
 	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
 
-	void generateDuMM
+	void generateDummParams(const std::vector<bSpecificAtom>& atoms,
+		const std::vector<bBond>& bonds,
+		const std::vector<DUMM_ANGLE>& dummAngles,
+		const std::vector<DUMM_TORSION>& dummTorsions,
+		const ELEMENT_CACHE& elementCache);
 
 	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/

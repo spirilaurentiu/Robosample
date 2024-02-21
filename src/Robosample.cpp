@@ -39,6 +39,12 @@ int main(int argc, char **argv)
 	c.setPrintFreq(1); // PRINT_FREQ
 	c.setRunType(RUN_TYPE::DEFAULT);
 
+	// read files and create topologies. this populates ```atoms``` and ```bonds```
+	// atoms must have a dumm index which is used by bonds, angles and torsions
+	// generate topologies
+	// addWorld will deal with adding generating dumm parameters
+	c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
+
 	// World 0 OPENMM
 	std::vector<BOND_FLEXIBILITY> flexibilities_w0 = {
 		{ 3, 1, BondMobility::Mobility::Translation },
@@ -66,12 +72,6 @@ int main(int argc, char **argv)
 		{ 1, 0, BondMobility::Mobility::Torsion },
 	};
 	c.addWorld_py(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
-
-	// read files and create topologies. this populates ```atoms``` and ```bonds```
-	// atoms must have a dumm index which is used by bonds, angles and torsions
-	// generate topologies
-	// addWorld will deal with adding generating dumm parameters
-	c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
 
 	// Does OMMVV have to be first?
 

@@ -917,9 +917,13 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	readAmberInput reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
+	singlePrmtop = true;
+
 	// Read molecules from a reader
 	loadAtoms(reader);
 	loadBonds(reader);
+	loadAngles(reader);
+	loadTorsions(reader);
 
 	// Build graph (bondAtom)
 	constructTopologies_SP_NEW();
@@ -929,21 +933,21 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations_SP_NEW();
-		
-	// Loads parameters into DuMM
-	addDummParams_SP_NEW(reader);
 
-	for (int w = 0; w < worlds.size(); w++) {
-		rootMobilities.push_back(std::vector<std::string>());
-		for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
-			rootMobilities[w].push_back("Rigid");
-		}
-	}
+	// // Loads parameters into DuMM
+	// addDummParams_SP_NEW(reader);
 
-	// // Adopts compound by the CompoundSystem and loads maps of indexes
-	// setupReader.ReadSetup("inp.2but");
-	// model_SP_NEW(setupReader);
-	modelSystem();
+	// for (int w = 0; w < worlds.size(); w++) {
+	// 	rootMobilities.push_back(std::vector<std::string>());
+	// 	for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
+	// 		rootMobilities[w].push_back("Rigid");
+	// 	}
+	// }
+
+	// // // Adopts compound by the CompoundSystem and loads maps of indexes
+	// // setupReader.ReadSetup("inp.2but");
+	// // model_SP_NEW(setupReader);
+	// modelSystem();
 
 	for(auto& topology : topologies) {
 		topology.setAtomList();
@@ -1532,9 +1536,6 @@ void Context::addWorld_py(
 	// Propagate root mobility
 	worlds.back().setRootMobility(rootMobility);
 
-	// Save bond flexibilities
-	worlds.back().setFlexibilities(flexibilities);
-
 	// Store the number of worlds
 	nofWorlds = worlds.size();
 
@@ -1542,6 +1543,48 @@ void Context::addWorld_py(
 	if (useOpenMM) {
 		worlds.back().forceField->setUseOpenMMAcceleration(true);
 	}
+
+	// Generate DuMM parameters: DuMM atom types, charged atom types, bond types, angle types and torsion types
+	worlds.back().generateDummParams(atoms, bonds, dummAngles, dummTorsions, elementCache);
+
+	// Add root mobilities
+	rootMobilities.push_back({});
+	for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
+		rootMobilities.back().push_back("Rigid");
+	}
+
+	// Set flexibilities
+	for (auto& bond : bonds) {
+		Topology& topology = topologies[bond.getMoleculeIndex()];
+		SimTK::Compound::BondIndex compoundBondIx = bond.getBondIndex();
+
+		// Check if the user set the bond mobility
+		BondMobility::Mobility mobility = BondMobility::Mobility::Rigid;
+		for (const auto& flex : flexibilities) {
+			if (bond.isThisMe(flex.i, flex.j)) {
+				mobility = flex.mobility;
+				break;
+			}
+		}
+
+		bond.addBondMobility(mobility);
+		topology.setBondMobility(mobility, compoundBondIx);
+	}
+
+	worlds.back().topologies = &topologies;
+	for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
+		// Add topologies to CompoundSystem and add it to the visualizer's vector of molecules
+		worlds.back().adoptTopology(topologyIx);
+
+		// Was "Cartesian"
+		modelOneEmbeddedTopology_SP_NEW(topologyIx, worldIndexes.back());
+
+		// This is many to one map
+		topologies[topologyIx].loadAIx2MbxMap_SP_NEW();
+	}
+
+	// This is one to many map
+	worlds.back().loadMbx2AIxMap_SP_NEW();
 }
 
 // Use a SetupReader Object to read worlds information from a file
