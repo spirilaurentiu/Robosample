@@ -134,17 +134,17 @@ struct DUMM_ANGLE {
 };
 
 struct DUMM_TORSION {
+	// These values are filled according to num (see below)
+	std::array<int, 4> period { 0, 0, 0, 0 };
+	std::array<SimTK::Real, 4> k { 0, 0, 0, 0 };
+	std::array<SimTK::Real, 4> phase { 0, 0, 0, 0 };
+
+	// How many impropers with these four indices are present here
+	int num = 0; 
+
 	int first = std::numeric_limits<int>::min();
 	int second = std::numeric_limits<int>::min();
 	int third = std::numeric_limits<int>::min();
 	int fourth = std::numeric_limits<int>::min();
 	bool improper = false;
-
-	// How many impropers with these four indices are present here
-	int num = 0; 
-
-	// These values are filled according to num (see above)
-	int period[4] {};
-	SimTK::Real k[4] {};
-	SimTK::Real phase[4] {};
 };

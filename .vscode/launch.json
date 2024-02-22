@@ -27,7 +27,7 @@
             "args": ["${workspaceFolder}/build_debug/inp.merged.2w.999", "singlePrmtop"],
 
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build_debug/",
+            "cwd": "${workspaceFolder}/build/",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

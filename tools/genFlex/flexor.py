@@ -1,7 +1,8 @@
 import numpy as np
 import mdtraj as md
 import networkx as nx
-import json, sys
+import os
+import robopy_d as robosample
 
 
 class Flexor:
@@ -19,37 +20,13 @@ class Flexor:
         It uses the compute_contacts function of MDTraj to get inter-residue
         distances, for computing structural neighbors, useful when generating
         flexibility files.
+        We also remove the CYS-CYS bonds, since those trip up the 
+        check_cycle function.
         '''
         self._MDTrajObject = mdtraj_obj
         self._edges = list(self._MDTrajObject.topology.to_bondgraph().edges)
-        self._DB = {}
 
-    def loadFlexDB(self, FlexFN):
-        '''
-        Parameters
-        ----------
-        FlexFN: string
-            Path-like string pointing to file containing flexibility info of
-            residues.
-        Returns
-        ----------
-        None
-        Notes
-        ----------
-        The flexibility database files that are loaded are structured in a simple manner.
-        All names are based on the AMBER forcefields, since that is what Robosample currently
-        supports. Users can create their own databases for Glycans, DNA/RNA or custom residues
-        if they wish.
-        '''
-
-        with open(FlexFN) as f:
-            data = f.read()
-            js = json.loads(data)
-            #print("Flex DB containing \"{}\" loaded! ".format(js["TITLE"]))
-            js.pop("TITLE")
-            self._DB = {**self._DB, **js}
-
-    def addWorld(self, range, subset,jointType, FNOut, distanceCutoff=0, sasa_value=-1, rolling=False):
+    def create(self, range, subset,jointType, distanceCutoff=0, sasa_value=-1):
         '''
         Parameters
         ----------
@@ -61,7 +38,6 @@ class Flexor:
         subset: list of strings
             Defines what parts of the system to include in the flexibility file
             Options:
-                side: sidechains
                 phi: phi angle (N-CA)
                 psi: psi angle (CA-C)
                 omega: peptide bond (N-C)
@@ -69,36 +45,39 @@ class Flexor:
                 all: macro for all of the above.
                 coils: only selects coil regions of the protein, intersected with
                        whatever range the user made
-                ligand: special subset, used for ligands, or other small molecules.
+                
+                ligand: DEPRECATED - Automatically uses n_bonds to det. joint types.
+                        and check_cycle to determine wether to put a flexibility somewhere.
+
+                        special subset, used for ligands, or other small molecules.
                         made to be used with molecules with non-standard nomenclature,
-                        that use n_bonds to determine joint types.
+                        that use n_bonds to determine joint types. Also includes Glycans
+                        or DNA molecules.
+                
+                side: To be DEPRECATED - Use the "sidechain" keyword to the range to include
+                      or exclude the sidechain atoms.
+                    
         jointType: string
             Type of joint to use. Currently implemented:
                 pin, ball and cartesian
-        FNOut: string
-            Path-like string to a file where the flexibilities will be written.
         sasa_value: float
             If supplied, will filter atoms from range so that only atoms that have a higher
             SASA than this are kept.
-        rolling:  bool
-            if True, this world's flexibility will be split across multiple files (one joint
-            per file)
         Returns
         ----------
         None
         '''
 
         jointType = jointType.lower()
+        flexibilities = []
 
         ## Just so the names of the flex files are shorter 
         if (jointType == "cartesian"):
             jointType = "cart"
 
         jointCount = 0
-        if (rolling == False):
-            fileOut = open("{}.flex".format(FNOut), "w")
-        else:
-            fileCounter = 0
+        fileCounter = 0
+            
 
         selIx = list(self._MDTrajObject.topology.select(range))
         ## If sasa_value has been supplied, we do the filtering now.
@@ -106,9 +85,6 @@ class Flexor:
             print ("SASA filtering enabled.")
             ## Compute
             sasa = md.shrake_rupley(self._MDTrajObject)[0]
-
-            ## Normalize
-            ## sasa = (sasa - np.min(sasa))/(np.max(sasa) - np.min(sasa))
 
             ## Filter
             buried_ixs = []
@@ -128,8 +104,8 @@ class Flexor:
 
         if ("all" in subset):
             subset.remove("all")
-            subset.append("side")
             subset.append("rama")
+            subset.append("side")
         if ("rama" in subset):
             subset.remove("rama")
             subset.append("phi")
@@ -142,76 +118,51 @@ class Flexor:
                     if (dssp[edge[0].residue.index] != "C" and dssp[edge[1].residue.index] != "C"):
                         continue
                 if (jointType == "cart"):
-                    if (rolling == True):
-                        fileOut = open("{}.{}.flex".format(FNOut, fileCounter), "w")
-                        fileCounter += 1
-                    fileOut.write("{:5d} {:5d} Cartesian #{} {}\n".format(edge[0].index, edge[1].index, edge[0], edge[1]))
+                    flexibilities.append(robosample.BondFlexibility(edge[0].index, edge[1].index, robosample.BondMobility.Translation))
                     validJointAtoms.append(edge[0].index)
                     validJointAtoms.append(edge[1].index)
                     jointCount += 1
-                else:
-                    if ("ligand" in subset):
-                        subsetType = "ligand"
-                        if ((self.check_joint(edge[0], jointType, subsetType)  and
-                            self.check_joint(edge[1], jointType, subsetType)) and not
-                            (self.check_cycle(edge[0],edge[1]))):
-                            fileOut.write("{:5d} {:5d} {} #{} {}\n".format(edge[0].index, edge[1].index,
-                                                                              jointType.capitalize(),
-                                                                              edge[0], edge[1]))
-                            jointCount += 1
-                        
-                    else:
-                        for subsetType in subset:
-                            if (self.check_joint(edge[0], jointType, subsetType) and
-                                self.check_joint(edge[1], jointType, subsetType)):
-                                if (rolling == True):
-                                    fileOut = open("{}.{}.flex".format(FNOut, fileCounter), "w")
-                                    fileCounter += 1
-                                fileOut.write("{:5d} {:5d} {} #{} {}\n".format(edge[0].index, edge[1].index, jointType.capitalize(),
-                                                              edge[0], edge[1]))
-                                validJointAtoms.append(edge[0].index)
-                                validJointAtoms.append(edge[1].index)
-                                jointCount += 1
+                # else:        
+                #     for subsetType in subset:
+                #         if ((self.check_joint(edge[0], jointType, subsetType) and
+                #             self.check_joint(edge[1], jointType, subsetType)) and not
+                #             (self.check_cycle(edge[0],edge[1]))):
+                #             fileOut.write("{:5d} {:5d} {} #{} {}\n".format(edge[0].index, edge[1].index, jointType.capitalize(),
+                #                                             edge[0], edge[1]))
+                #             validJointAtoms.append(edge[0].index)
+                #             validJointAtoms.append(edge[1].index)
+                #             jointCount += 1
 
         if (distanceCutoff>0):
             # First we get all atoms that are within 'distanceCutoff' of atoms in joints
             nearbyAtoms = md.compute_neighbors(self._MDTrajObject, distanceCutoff, validJointAtoms)
+            
             # Then we remove the atoms that are already in the validJointAtoms selection
             validJointAtoms = list(set(validJointAtoms))
             for _ in validJointAtoms:
                 ix = np.argwhere(nearbyAtoms==_)
                 nearbyAtoms = np.delete(nearbyAtoms,ix)
+
             # Then we do the check we did above, but for the new selection
-            fileOut.write("### Neighboring Joints ###\n")
             for edge in self._edges:
                 if ((edge[0].index in nearbyAtoms) and (edge[1].index in nearbyAtoms)):
                     if (jointType == "cart"):
-                        fileOut.write(
-                            "{:5d} {:5d} Cartesian #{} {}\n".format(edge[0].index, edge[1].index, edge[0], edge[1]))
+                        flexibilities.append(robosample.BondFlexibility(edge[0].index, edge[1].index, robosample.BondMobility.Translation))
                         jointCount += 1
 
-                    else:
-                        if ("ligand" in subset):
-                            if ((self.check_joint(edge[0], jointType, subsetType) and
-                                self.check_joint(edge[1], jointType, subsetType)) and not
-                                (self.check_cycle(edge[0], edge[1]))):
-                                fileOut.write("{:5d} {:5d} {} #{} {}\n".format(edge[0].index, edge[1].index,
-                                                                                  jointType.capitalize(),
-                                                                                  edge[0], edge[1]))
-                                jointCount += 1
-  
-    
-                        else:
-                            for subsetType in subset:
-                                if (self.check_joint(edge[0], jointType, subsetType) and
-                                    self.check_joint(edge[1], jointType, subsetType)):
-                                    fileOut.write("{:5d} {:5d} {} #{} {}\n".format(edge[0].index, edge[1].index,
-                                                                                  jointType.capitalize(),
-                                                                                  edge[0], edge[1]))
-                                    jointCount += 1
+                    # else:
+                    #     for subsetType in subset:
+                    #         if ((self.check_joint(edge[0], jointType, subsetType) and
+                    #         self.check_joint(edge[1], jointType, subsetType)) and not
+                    #         (self.check_cycle(edge[0], edge[1]))):
+                    #             fileOut.write("{:5d} {:5d} {} #{} {}\n".format(edge[0].index, edge[1].index,
+                    #                                                             jointType.capitalize(),
+                    #                                                             edge[0], edge[1]))
+                    #             jointCount += 1
 
-        fileOut.close()
-        print ("Flex file {} generated! ({} joints)".format(fileOut.name, jointCount))
+        print ("Flex generated! ({} joints)".format(jointCount))
+        return flexibilities
+
 
     # Helper functions
     def check_joint(self, atom, jointType, subset):
@@ -229,30 +180,22 @@ class Flexor:
         bool
             True if supports the proposed joint type.
         '''
-    
-        try:
-            self._DB[str(atom.residue)[:3]]
-        except KeyError:
-            if (subset != "ligand"):
-                print ("Warning: Residue {} not found in database. (Atom: {}).".format(str(atom.residue)[:3], str(atom)))
-            ## Automatically determine if the proposed bond can be pin-jointed
-            if (atom.n_bonds > 1):
-                return True
-            else:
-                return False
 
-        if (subset == "side"):
-            if (atom.name in self._DB[str(atom.residue)[:3]]["SC_{}".format(jointType)]):
+        phi   = ["N", "CA"]
+        psi   = ["CA", "C"]
+        omega = ["N", "C"]
+
+ 
+        if (atom.n_bonds > 1):
+            if ((subset == "phi") and (atom.name in phi) and (atom.residue.name != "PRO")):
                 return True
-        if (subset == "phi"):
-            if (atom.name in self._DB[str(atom.residue)[:3]]["phi"]):
+            if ((subset == "psi") and (atom.name in psi)):
                 return True
-        if (subset == "psi"):
-            if (atom.name in self._DB[str(atom.residue)[:3]]["psi"]):
+            if ((subset == "omega") and (atom.name in omega)):
                 return True
-        if (subset == "omega"):
-            if (atom.name in self._DB[str(atom.residue)[:3]]["omega"]):
+            if ((subset == "side") and (atom.name not in ["N", "C"])):
                 return True
+        return False
 
     def check_cycle(self, atom1, atom2):
         '''
@@ -266,10 +209,18 @@ class Flexor:
         ----------
         bool
             True if atoms are in the same cycle, False if not.
+            
+        Notes
+        ---------
+        This function will get tripped up by cysteine bonds, since
+        those close a large cycle, via the backbone. As such, we check
+        if the cycles in the nx.cycle_basis contain ANY SG atoms before
+        doing any other check. If it does, we skip it.
 
         '''
         for cycle in nx.cycle_basis(self._MDTrajObject.topology.to_bondgraph()):
+            if ([x.name for x in cycle if x.name=='SG']):
+                continue
             if ((atom1 in cycle) and (atom2 in cycle)):
                 return True
-        
         return False

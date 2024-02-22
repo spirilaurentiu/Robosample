@@ -35,3 +35,12 @@ buildType:
       short: PGO Use
       long: Use the generated instrumentation data for Profile Guided Optimization
       buildType: PGO_Use
+
+    python-debug:
+      short: Python Debug
+      long: Build debug version of Robosample Python library
+      buildType: Python_Debug
+    python-release:
+      short: Python Release
+      long: Build optimized version of Robosample Python library
+      buildType: Python_Release

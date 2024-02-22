@@ -440,6 +440,16 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 }
 
 // Set the method of integration
+void HMCSampler::setSampleGenerator(SampleGenerator sampleGeneratorArg)
+{
+	if (SampleGenerator::EMPTY == sampleGeneratorArg) {
+		setAlwaysAccept(true);
+	}
+	else if (SampleGenerator::MC == sampleGeneratorArg) {
+		setAlwaysAccept(false);
+	}
+}
+
 void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
 {
 	if (generatorNameArg == "EMPTY"){

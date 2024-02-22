@@ -18,16 +18,23 @@ enum class ReplicaMixingScheme : int {
 	neighboring = 1
 };
 
-enum class RunType : int {
-	Default = 0,
-	REMC = 1,
-	RENEMC = 2,
-	RENE = 3
+enum class RUN_TYPE : int {
+	DEFAULT = 0,
+	REMC,
+	RENEMC,
+	RENE
 };
 
 class Context{
 
 public:
+	/**
+	 * @brief Initialize simulation variables.
+	 * @param Ti Initial temperature. Cannot be 0.
+	 * @param Tf Final temperature. Cannot be 0. Must be greater than Ti.
+	 * @param seed Seed to use for random number generation. If 0, a random seed is used.
+	*/
+	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed = 0);
 
 	/**	
 	* @brief Read all parameters from an input file
@@ -35,18 +42,20 @@ public:
 	* @param singlePrmtop Read all molecules from a single prmtop
 	* @return succes of the function
 	*/	
-	bool initializeFromFile(const std::string& filename);
+	bool initializeFromFile(const std::string& filename, bool singlePrmtop);
 
 	void setNumThreads(int threads);
 	void setNonbonded(int method, SimTK::Real cutoff);
 	void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
-	void setSeed(uint32_t seed);
+
+	bool setOutput(const std::string& outDir);
 
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
+	void modelSystem();
 
 	// Experimental movements
-	bSpecificAtom* findARoot(Topology topology, int argRoot);
+	// bSpecificAtom* findARoot(Topology topology, int argRoot);
 	void buildAcyclicGraph(Topology topology,
 		bSpecificAtom *node, bSpecificAtom *previousNode);
 	void buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root);
@@ -117,9 +126,7 @@ public:
 	void readMolecules_SP_NEW(void);
 	
 	/**  */
-	void constructTopologies_SP_NEW(
-		std::vector<std::string>& argRoots
-	);
+	void constructTopologies_SP_NEW();
 
 	/**  */
 	void generateTopologiesSubarrays(void);
@@ -241,6 +248,17 @@ public:
 	void addWorld(
 		bool fixmanTorque,
 		int samplesPerRound,
+		ROOT_MOBILITY rootMobility,
+		bool useOpenMM = true,
+		bool visual = false,
+		SimTK::Real visualizerFrequency = 0);
+
+	void addWorld_py(
+		bool fixmanTorque,
+		int samplesPerRound,
+		ROOT_MOBILITY rootMobility,
+		const std::vector<BOND_FLEXIBILITY>& flexibilities,
+		bool useOpenMM = true,
 		bool visual = false,
 		SimTK::Real visualizerFrequency = 0);
 
@@ -344,12 +362,6 @@ public:
 	void RunOneRound(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
-	void setNumThreadsRequested(std::size_t which, int howMany);
-	void setUseOpenMMAcceleration(bool arg);
-	void setUseOpenMMIntegration(std::size_t which, Real temperature, Real stepsize);
-	void setUseOpenMMCalcOnlyNonBonded(bool arg);
-	void setNonbondedMethod(std::size_t whichWorld, int methodInx);
-	void setNonbondedCutoff(std::size_t whichWorld, Real cutoffNm);
 
 	SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector,
 		int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
@@ -564,9 +576,8 @@ public:
 	void updWorldsDistortOptions(int thisReplica);
 	void updQScaleFactors(int mixi);
 
-	RunType getRunType(void) const {return runType;}
-	void setRunType(const int runTypeArg){this->runType = RunType(runTypeArg);}
-	void setRunType(const RunType runTypeArg){this->runType = runTypeArg;}
+	RUN_TYPE getRunType(void) const;
+	void setRunType(RUN_TYPE runTypeArg);
 
 	// Run a particular world
 	bool RunWorld(int whichWorld);
@@ -625,8 +636,6 @@ public:
 	}
 
 private:
-	bool CreateOutputDirectory(const std::string& outDir);
-	std::string CreateLogfilename(const std::string& outDir, long long int seed) const;
 	std::string GetMoleculeDirectoryShort(const std::string& path) const;
 	bool CheckInputParameters(const SetupReader& setupReader);
 
@@ -736,8 +745,10 @@ private:
 	std::vector<SimTK::Real> qScaleFactors;
 
 	std::string cerr_prefix = "[ERROR] ";
+	std::string cwar_prefix = "[WARNING] ";
+	std::string cinf_prefix = "[INFO] ";
 
-	RunType runType = RunType::Default;
+	RUN_TYPE runType = RUN_TYPE::DEFAULT;
 	SimTK::Real tempIni = 0,
 		tempFin = 0;
 
@@ -773,6 +784,7 @@ private:
         return atoms;
     }
 
+	uint32_t seed = 0;
 	int numThreads = 0;
 	int nonbondedMethod = 0; // 0 = NoCutoff, 1 = CutoffNonPeriodic
 	SimTK::Real nonbondedCutoff = 1.2; // 1.2 nm, not used by default (no cutoff)
@@ -823,7 +835,7 @@ public:
 		}
 	}	
 
-
+private:
 	bool singlePrmtop = false;
 
 	std::vector<std::vector<int>> zMatrixTable;

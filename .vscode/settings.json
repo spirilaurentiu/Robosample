@@ -89,7 +89,8 @@
         "stack": "cpp",
         "*.ipp": "cpp",
         "__functional_base": "cpp",
-        "__memory": "cpp"
+        "__memory": "cpp",
+        "queue": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "enabled",
     "cmake.configureOnOpen": false
