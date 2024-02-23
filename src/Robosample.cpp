@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 		singlePrmtop = true;
 	}
 
-	singlePrmtop = true;
+	// singlePrmtop = true;
 	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
 		return -1;
 	}

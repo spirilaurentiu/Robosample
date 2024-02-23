@@ -3438,6 +3438,8 @@ void Context::setFlexibility(
 	std::string line;
 	std::ifstream flexF(flexFN);
 
+	int molIx = -1;
+
 	while(flexF.good()){
 
 		// Get a line
@@ -3464,7 +3466,6 @@ void Context::setFlexibility(
 				std::string mobility =  lineWords[2];
 
 				// Add root mobilities
-				int molIx = -1;
 				if(index_1 == -1){
 					molIx++;
 					if(molIx < rootMobilities[whichWorld].size()){
