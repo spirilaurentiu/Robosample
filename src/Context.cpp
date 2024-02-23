@@ -2031,122 +2031,126 @@ void Context::addRingClosingBonds_SP_NEW(
 
 		bBond& bond = bonds[bCnt];
 
-		if(bond.isVisited() == 0){
+		if(bond.getMoleculeIndex() == molIx){
 
-			//scout(" [RING CLOSING] ");
+			if(bond.isVisited() == 0){
 
-			// ===================== GET ATOMS IN THIS BOND ===================
-			// Child
-			//int childAmberIx = bIt->first;
-			int childAmberIx = bond.i;
-			bSpecificAtom& child = (atoms[childAmberIx]);
-			const SimTK::Compound::SingleAtom& childCompoundAtom
-				= child.getSingleAtom();
+				//scout(" [RING CLOSING] ");
 
-			// Parent
-			//int parentAmberIx = bIt->second;
-			int parentAmberIx = bond.j;
-			bSpecificAtom& parent = (atoms[parentAmberIx]);
-			const SimTK::Compound::SingleAtom& parentCompoundAtom
-				= parent.getSingleAtom();
+				// ===================== GET ATOMS IN THIS BOND ===================
+				// Child
+				//int childAmberIx = bIt->first;
+				int childAmberIx = bond.i;
+				bSpecificAtom& child = (atoms[childAmberIx]);
+				const SimTK::Compound::SingleAtom& childCompoundAtom
+					= child.getSingleAtom();
 
-			// Set a molecule identifier
-			child.setMoleculeIndex(molIx);
-			parent.setMoleculeIndex(molIx);
+				// Parent
+				//int parentAmberIx = bIt->second;
+				int parentAmberIx = bond.j;
+				bSpecificAtom& parent = (atoms[parentAmberIx]);
+				const SimTK::Compound::SingleAtom& parentCompoundAtom
+					= parent.getSingleAtom();
 
-			// Print
-			//scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
-			//	<< eol;
+				// Set a molecule identifier
+				child.setMoleculeIndex(molIx);
+				parent.setMoleculeIndex(molIx);
 
-			// ====================== PARENT BOND CENTER ======================
-			
-			// Convenient vars
-			std::stringstream parentBondCenterPathName;
-			std::string parentBondCenterPathNameStr = "";
-			int parentNextAvailBondCenter = -111111;
-			std::string parentNextAvailBondCenterStr = "";
-			int parentNofBonds = parent.getNBonds();
-			int parentNofFreebonds = parent.getFreebonds();
+				// Print
+				//scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+				//	<< eol;
 
-			// Get next available BondCenter id
-			parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
-			//if((parentNofBonds != 1)){ // this decides if it's bond or bond1
-				parentNextAvailBondCenterStr =
-					std::to_string(parentNextAvailBondCenter);
-			//}
+				// ====================== PARENT BOND CENTER ======================
+				
+				// Convenient vars
+				std::stringstream parentBondCenterPathName;
+				std::string parentBondCenterPathNameStr = "";
+				int parentNextAvailBondCenter = -111111;
+				std::string parentNextAvailBondCenterStr = "";
+				int parentNofBonds = parent.getNBonds();
+				int parentNofFreebonds = parent.getFreebonds();
 
-			// Cook the parentBondCenterPathName
-			parentBondCenterPathName << parent.getName()
-				<< "/bond" 
-				<< parentNextAvailBondCenterStr;
-			parentBondCenterPathNameStr = parentBondCenterPathName.str();
+				// Get next available BondCenter id
+				parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
+				//if((parentNofBonds != 1)){ // this decides if it's bond or bond1
+					parentNextAvailBondCenterStr =
+						std::to_string(parentNextAvailBondCenter);
+				//}
 
-			// scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
-			// 	<< eol;
+				// Cook the parentBondCenterPathName
+				parentBondCenterPathName << parent.getName()
+					<< "/bond" 
+					<< parentNextAvailBondCenterStr;
+				parentBondCenterPathNameStr = parentBondCenterPathName.str();
 
-			// ======================== ACTUAL BONDING ========================
-			// scout("Bonding ")
-			// 	<< "child " << child.getName() <<" " << child.getInName()
-			// 	<<" " << child.getNumber() <<" "
-			// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
-			// 	<< parent.getNumber() <<" "
-			// 	<< "with bond center name " << parentBondCenterPathNameStr
-			// 	<< eol;
+				// scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
+				// 	<< eol;
 
-			// Bond
-			bSpecificAtom &leftNode  = atoms[bonds[bCnt].i];
-			bSpecificAtom &rightNode = atoms[bonds[bCnt].j];
+				// ======================== ACTUAL BONDING ========================
+				// scout("Bonding ")
+				// 	<< "child " << child.getName() <<" " << child.getInName()
+				// 	<<" " << child.getNumber() <<" "
+				// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+				// 	<< parent.getNumber() <<" "
+				// 	<< "with bond center name " << parentBondCenterPathNameStr
+				// 	<< eol;
 
-			std::stringstream sbuff;
-			if(leftNode.getNumber() == topology.baseAtomNumber){
-				sbuff << leftNode.getName() << "/bond" << leftNode.getFreebonds();
-			}else{
-				sbuff << leftNode.getName() << "/bond"
-					<< (leftNode.getNBonds() - leftNode.getFreebonds() + 1);
-			}
+				// Bond
+				bSpecificAtom &leftNode  = atoms[bonds[bCnt].i];
+				bSpecificAtom &rightNode = atoms[bonds[bCnt].j];
 
-			std::stringstream otsbuff;
-			if(rightNode.getNumber() == topology.baseAtomNumber){
-				otsbuff << rightNode.getName() << "/bond" << rightNode.getFreebonds();
-			}else{
-				otsbuff << rightNode.getName() << "/bond"
-					<< (rightNode.getNBonds() - rightNode.getFreebonds() + 1);
-			}
+				std::stringstream sbuff;
+				if(leftNode.getNumber() == topology.baseAtomNumber){
+					sbuff << leftNode.getName() << "/bond" << leftNode.getFreebonds();
+				}else{
+					sbuff << leftNode.getName() << "/bond"
+						<< (leftNode.getNBonds() - leftNode.getFreebonds() + 1);
+				}
 
-			topology.addRingClosingBond(
-					(sbuff.str()).c_str(),
-					(otsbuff.str()).c_str(),
-					0.14,
-					109*Deg2Rad,
-					BondMobility::Rigid);
+				std::stringstream otsbuff;
+				if(rightNode.getNumber() == topology.baseAtomNumber){
+					otsbuff << rightNode.getName() << "/bond" << rightNode.getFreebonds();
+				}else{
+					otsbuff << rightNode.getName() << "/bond"
+						<< (rightNode.getNBonds() - rightNode.getFreebonds() + 1);
+				}
+
+				topology.addRingClosingBond(
+						(sbuff.str()).c_str(),
+						(otsbuff.str()).c_str(),
+						0.14,
+						109*Deg2Rad,
+						BondMobility::Rigid);
 
 
-			// Set bBond Molmodel Compound::BondIndex
-			int currentCompoundBondIndex = topology.getNumBonds() - 1;
-			bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
-			bond.setAsRingClosing();
+				// Set bBond Molmodel Compound::BondIndex
+				int currentCompoundBondIndex = topology.getNumBonds() - 1;
+				bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
+				bond.setAsRingClosing();
 
-			// Set the final Biotype
-			topology.setAtomBiotype(child.getName(),
-									child.getResidueName().c_str(),
-									child.getName());
-			topology.setAtomBiotype(parent.getName(),
-									parent.getResidueName().c_str(),
-									parent.getName());									
+				// Set the final Biotype
+				topology.setAtomBiotype(child.getName(),
+										child.getResidueName().c_str(),
+										child.getName());
+				topology.setAtomBiotype(parent.getName(),
+										parent.getResidueName().c_str(),
+										parent.getName());									
 
-			// Not sure where is useful
-			bond.setVisited(1);
+				// Not sure where is useful
+				bond.setVisited(1);
 
-			// Also set it's molecule index
-			bond.setMoleculeIndex(molIx);
+				// Also set it's molecule index
+				bond.setMoleculeIndex(molIx);
 
-			// ====================== RECORD MODIFICATION =====================
+				// ====================== RECORD MODIFICATION =====================
 
-			// Decrease freebonds
-			parent.decrFreebonds();
-			child.decrFreebonds();
+				// Decrease freebonds
+				parent.decrFreebonds();
+				child.decrFreebonds();
 
-		} // if is ring closing
+			} // if is ring closing
+
+		} // if is molIx
 
 		//ceol;
 
