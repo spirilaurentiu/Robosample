@@ -383,9 +383,6 @@ public:
 	void addAngles(const std::vector<std::size_t>& angleIx);
 	void addDihedrals(const std::vector<std::size_t>& dihedralIx);
 
-	// Allocate space for containers that keep statistics if we're doing any
-	void allocWorldsStatsContainers(void);
-
 	// --- Output ---
 	void printThermodynamics(void);
 	void printStatus(void);

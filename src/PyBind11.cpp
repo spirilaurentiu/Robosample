@@ -34,7 +34,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("BendStretch", BondMobility::Mobility::BendStretch)
         .value("Slider", BondMobility::Mobility::Slider);
 
-    py::enum_<RUN_TYPE>(m, "RUN_TYPE")
+    py::enum_<RUN_TYPE>(m, "RunType")
         .value("DEFAULT", RUN_TYPE::DEFAULT)
         .value("REMC", RUN_TYPE::REMC)
         .value("RENEMC", RUN_TYPE::RENEMC)

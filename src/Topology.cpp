@@ -1686,7 +1686,7 @@ SimTK::Real Topology::calcLogDetMBATDistsContribution_SP_NEW(const SimTK::State&
 		int relativeBond_I = bond.i - subBondList.get_offset();
 		int relativeBond_J = bond.j - subBondList.get_offset();
 
-		scout("Topology::calcLogDetMBATDistsContribution_SP_NEW ") << bond.i <<" " << bond.j <<" " << subBondList.get_offset() <<" " << relativeBond_I <<" " << relativeBond_J <<" " << eol;
+		// scout("Topology::calcLogDetMBATDistsContribution_SP_NEW ") << bond.i <<" " << bond.j <<" " << subBondList.get_offset() <<" " << relativeBond_I <<" " << relativeBond_J <<" " << eol;
 
 		SimTK::Vec3 atom1pos = SimTK::Vec3(subAtomList[relativeBond_I].getX(), subAtomList[relativeBond_I].getY(), subAtomList[relativeBond_I].getZ());
 		SimTK::Vec3 atom2pos = SimTK::Vec3(subAtomList[relativeBond_J].getX(), subAtomList[relativeBond_J].getY(), subAtomList[relativeBond_J].getZ());

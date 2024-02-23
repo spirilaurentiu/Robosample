@@ -18,7 +18,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/robosample_d",
-            "args": ["${workspaceFolder}/build/inp.2mol3worlds"],
+            "args": ["${workspaceFolder}/build/inp.merged.2w.999"],
             // "program": "${workspaceFolder}/build/TestGeometry",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",

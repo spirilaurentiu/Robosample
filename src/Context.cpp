@@ -43,11 +43,11 @@ bool Context::setOutput(const std::string& outDir) {
 	// Set the log filename
 	std::string logFilename = outDir + "/log." + std::to_string(seed);
 
-	// Check if the log file already exists
-	if (SimTK::Pathname::fileExists(logFilename)) {
-		std::cerr << cerr_prefix << "Log file " << logFilename << " already exists." << std::endl;
-		return false;
-	}
+	// // Check if the log file already exists
+	// if (SimTK::Pathname::fileExists(logFilename)) {
+	// 	std::cerr << cerr_prefix << "Log file " << logFilename << " already exists." << std::endl;
+	// 	return false;
+	// }
 
 	// Open the log file
 	logFile = std::ofstream(logFilename);
@@ -75,6 +75,8 @@ bool Context::setOutput(const std::string& outDir) {
 */
 bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 {
+	this->singlePrmtop = singlePrmtop;
+
 	// Read input into a SetupReader object
 	setupReader.ReadSetup(file);
 	setupReader.dump(true);
@@ -105,52 +107,93 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		std::stoi(setupReader.get("NONBONDED_METHOD")[0]),
 		std::stod(setupReader.get("NONBONDED_CUTOFF")[0]));
 
+	if (singlePrmtop) {
+		std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
+		std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
+		
+		loadAmberSystem(prmtop, inpcrd);
+	}
+
+	std::map<std::string, BondMobility::Mobility> mobilityMap = {
+		{ "Pin", BondMobility::Torsion },
+		{ "Torsion", BondMobility::Torsion },
+		{ "Translation", BondMobility::Translation },
+		{ "Cartesian", BondMobility::Translation },
+		{ "Rigid", BondMobility::Rigid },
+		{ "Weld", BondMobility::Rigid },
+		{ "Slider", BondMobility::Slider },
+		{ "AnglePin", BondMobility::AnglePin },
+		{ "BendStretch", BondMobility::BendStretch },
+		{ "Spherical", BondMobility::Spherical }
+	};
+
 	// // Add Worlds
 	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
 
-		// Frequency of visualizer
-		SimTK::Real visualizerFrequency = 0;
-		if (setupReader.get("VISUAL")[worldIx] == "TRUE"){
-			visualizerFrequency = SimTK::Real(std::stod(setupReader.get("TIMESTEPS")[worldIx]));
+		std::vector<std::string> argRoots = setupReader.get("ROOTS");
+
+		rootMobilities.push_back({});
+		for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++) {
+			rootMobilities.back().push_back("Rigid");
 		}
 
-		addWorld(
+		std::string flexFileFN = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("FLEXFILE")[worldIx];
+
+		// Get flexible bonds from file. Numbering starts at 0 in prmtop
+		std::ifstream flexF(flexFileFN);
+		std::vector<BOND_FLEXIBILITY> flexibilities = {};
+		while(flexF.good()){
+
+			// Get a line
+			std::string line;
+			std::getline(flexF, line);
+			if(!line.empty()){
+
+				// Comment
+				if(line.at(0) == '#'){continue;}
+
+				// Get words
+				std::istringstream iss(line);
+				std::string word;
+				std::vector<std::string> lineWords;
+
+				while(iss >> word){
+					lineWords.push_back(std::move(word));
+				}
+
+				// Check the line
+				if(lineWords.size() >= 3 ){
+					int index_1 = std::stoi(lineWords[0]);
+					int index_2 = std::stoi(lineWords[1]);
+					std::string mobility =  lineWords[2];
+
+					// Add root mobilities
+					int molIx = -1;
+					if(index_1 == -1){
+						molIx++;
+						if(molIx < rootMobilities.back().size()) {
+							rootMobilities.back()[molIx] = mobility;
+						}else{
+							std::cerr << "[WARNING] Too many root mobilities\n";
+						}
+					}
+					
+					flexibilities.push_back({index_1, index_2, mobilityMap[mobility]});
+				}
+				else{
+					scout("Bad flex file format");
+				}
+			}
+		}
+
+		addWorld_py(
 			setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE",
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]),
 			ROOT_MOBILITY::WELD,
+			flexibilities,
 			setupReader.get("OPENMM")[worldIx] == "TRUE",
 			setupReader.get("VISUAL")[worldIx] == "TRUE",
-			visualizerFrequency);
-
-		// if (worldIx == 0) {
-		// 	std::vector<BOND_FLEXIBILITY> flexibilities = {
-		// 		{ 3, 1, BondMobility::Mobility::Translation },
-		// 		{ 1, 2, BondMobility::Mobility::Translation },
-		// 		{ 2, 4, BondMobility::Mobility::Translation },
-		// 		{ 1, 0, BondMobility::Mobility::Translation },
-		// 		{ 3, 8, BondMobility::Mobility::Translation },
-		// 		{ 3, 9, BondMobility::Mobility::Translation },
-		// 		{ 3, 10, BondMobility::Mobility::Translation },
-		// 		{ 0, 14, BondMobility::Mobility::Translation },
-		// 		{ 1, 5, BondMobility::Mobility::Translation },
-		// 		{ 2, 6, BondMobility::Mobility::Translation },
-		// 		{ 2, 7, BondMobility::Mobility::Translation },
-		// 		{ 4, 11, BondMobility::Mobility::Translation },
-		// 		{ 4, 12, BondMobility::Mobility::Translation },
-		// 		{ 4, 13, BondMobility::Mobility::Translation }
-		// 	};
-
-		// 	getWorld(worldIx).setFlexibilities(flexibilities);
-		// } else {
-		// 	std::vector<BOND_FLEXIBILITY> flexibilities = {
-		// 		{ 3, 1, BondMobility::Mobility::Torsion },
-		// 		{ 1, 2, BondMobility::Mobility::Torsion },
-		// 		{ 2, 4, BondMobility::Mobility::Torsion },
-		// 		{ 1, 0, BondMobility::Mobility::Torsion },
-		// 	};
-
-		// 	getWorld(worldIx).setFlexibilities(flexibilities);
-		// }
+			setupReader.get("VISUAL")[worldIx] == "TRUE" ? SimTK::Real(std::stod(setupReader.get("TIMESTEPS")[worldIx])) : 0);
 	}
 
 	// Victor - take a look
@@ -164,93 +207,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
         std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
     }
 
-	// Add molecules based on the setup reader
-	// amber -> robo
-	int finalNofMols = 0;
-
-	if(singlePrmtop){ // SP_NEW
-
-		std::vector<std::string> argRoots = setupReader.get("ROOTS");
-		// //std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
-
-		// // Load all the roots here
-		// for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
-		// 	roots.push_back(std::stoi(argRoots[molIx]));
-		// 	//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-		// }
-
-		for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
-				
-				rootMobilities.push_back(std::vector<std::string>());
-				
-				for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++){
-
-					rootMobilities[worldIx].push_back("Rigid");
-
-			}
-		}
-
-		// Get user requested Amber filenames
-		amberReader.resize(1);
-
-		std::string reqTopFNs(
-			setupReader.get("MOLECULES")[0] + std::string("/") +
-			setupReader.get("PRMTOP")[0]);
-
-		std::string reqCrdFNs(
-			setupReader.get("MOLECULES")[0] + std::string("/") +
-			setupReader.get("INPCRD")[0] + ".rst7");
-
-		loadTopologyFile( reqTopFNs );
-		loadCoordinatesFile( reqCrdFNs );
-
-		amberReader[0].readAmberFiles(crdFNs[0], topFNs[0]);
-
-		// Read molecules from a reader
-		readMolecules_SP_NEW();
-
-		// Build graph (bondAtom)
-		constructTopologies_SP_NEW(
-			// argRoots
-		);
-
-		// Generate Topologies sub_array views (also sort bonds - not BONDS)
-		generateTopologiesSubarrays();
-
-		// Match Compounds configurations to atoms Cartesian coords
-		matchDefaultConfigurations_SP_NEW();
-		
-		// Set the final number of molecules added
-		finalNofMols = getNofMolecules();
-
-		// Loads parameters into DuMM
-		addDummParams_SP_NEW(amberReader[0]);
-
-		// // Adopts compound by the CompoundSystem and loads maps of indexes
-		// model_SP_NEW(setupReader);
-		modelSystem();
-
-		realizeTopology();
-
-		for(auto& topology : topologies) {
-			topology.setAtomList();
-			topology.setBondList();
-		}
-
-		// Transformers
-
-		// Get Z-matrix indexes table	
-		calcZMatrixTable();
-		PrintZMatrixTable();
-
-		// Calculate every worlds BATs
-		zMatrixBAT.resize(zMatrixTable.size());
-		for (auto& row : zMatrixBAT) {
-			row.resize(3, SimTK::NaN);
-		}
-
-	}else{ // SP_OLD
-
+	// SP_OLD
+	if (!singlePrmtop) {
 		// Requested nof Worlds in input. We'll try to construct them all
 		// but we're not sure if we'll going to succesed.
 		const auto requestedNofMols = nofMols;
@@ -267,6 +225,10 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			return false;
 		}
 
+		// Add molecules based on the setup reader
+		// amber -> robo
+		int finalNofMols = 0;
+
 		std::cout << "Added " << finalNofMols << " molecules" << std::endl;
 
 		// Set the final number of molecules added
@@ -279,19 +241,20 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		// Adopts compound by the CompoundSystem and loads maps of indexes
 		model(finalNofMols, setupReader);
 
-	}
+		realizeTopology();
 
-	// Allocate space for containers that keep statistics if we're doing any
-	allocWorldsStatsContainers();
+		// Allocate space for containers that keep statistics if we're doing any
+		for (auto& w : worlds) {
+			w.allocateStatsContainers();
+		}
+
+	}
 
 	// Adaptive Gibbs blocking
 	setNofRoundsTillReblock(std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
 
 	// Only now we can allocate memory for reblocking Q vectors
 	//allocateReblockQsCacheQVectors();
-
-	// Is this necessary?
-	realizeTopology();
 
 	// Add membrane.
 	bool haveMembrane = (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND");
@@ -302,6 +265,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	}
 
 	//std::cout << "OS memory 3\n" << exec("free") << std::endl;
+
 	//////////////////////
 	// Thermodynamics
 	//////////////////////
@@ -309,76 +273,72 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// Add samplers
 	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 
-		// Read MD steps per sample
-		SimTK::Real MDStepsPerSample = 0;
-		if(setupReader.find("MDSTEPS_STD")){ // per world
-			MDStepsPerSample = std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]);
-		}
+		std::map<std::string, SampleGenerator> sampleGenerator = {
+			{ "EMPTY", SampleGenerator::EMPTY },
+			{ "MC", SampleGenerator::MC },
+		};
 
-		World& world = worlds[worldIx];
-		world.addSampler(SamplerName::HMC,
-			to_upper(setupReader.get("SAMPLERS")[worldIx]),
-			setupReader.get("INTEGRATORS")[worldIx],
-			setupReader.get("THERMOSTAT")[worldIx],
+		std::map<std::string, IntegratorName> integratorName = {
+			{ "EMPTY", IntegratorName::EMPTY },
+			{ "VERLET", IntegratorName::VERLET },
+			{ "EULER", IntegratorName::EULER },
+			{ "EULER2", IntegratorName::EULER2 },
+			{ "CPODES", IntegratorName::CPODES },
+			{ "RUNGEKUTTA", IntegratorName::RUNGEKUTTA },
+			{ "RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2 },
+			{ "RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3 },
+			{ "RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG },
+			{ "BENDSTRETCH", IntegratorName::BENDSTRETCH },
+			{ "OMMVV", IntegratorName::OMMVV },
+			{ "BOUND_WALK", IntegratorName::BOUND_WALK },
+			{ "BOUND_HMC", IntegratorName::BOUND_HMC },
+			{ "STATIONS_TASK", IntegratorName::STATIONS_TASK },
+			{ "NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS },
+		};
+
+		std::map<std::string, ThermostatName> thermsotatName = {
+			{ "NONE", ThermostatName::NONE },
+			{ "ANDERSEN", ThermostatName::ANDERSEN },
+			{ "BERENDSEN", ThermostatName::BERENDSEN },
+			{ "LANGEVIN", ThermostatName::LANGEVIN },
+			{ "NOSE_HOOVER", ThermostatName::NOSE_HOOVER },
+		};
+
+		worlds[worldIx].addSampler_py(
+			SamplerName::HMC,
+			sampleGenerator[setupReader.get("SAMPLERS")[worldIx]],
+			integratorName[setupReader.get("INTEGRATORS")[worldIx]],
+			thermsotatName[setupReader.get("THERMOSTAT")[worldIx]],
 			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
 			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
-			MDStepsPerSample,
-			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE");
-
-		world.getSampler(0)->setNonequilibriumParameters(
-			std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]),
-			0, 0);
-
-		// TODO 
-		world.getSampler(0)->setGuidanceHamiltonian(
+			setupReader.find("MDSTEPS_STD") ? std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]) : 0,
 			std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
-			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx])
+			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]),
+			setupReader.find("DISTORT_OPTION") ? std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]) : 0,
+			setupReader.find("FLOW_OPTION") ? std::stoi(setupReader.get("FLOW_OPTION")[worldIx]) : 0,
+			setupReader.find("WORK_OPTION") ? std::stoi(setupReader.get("WORK_OPTION")[worldIx]) : 0,
+			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"
 		);
-
-		// setEvaluationHamiltonian(TEMPERATURE, );
-
-		// Tell OpenMM what masses we're going to use
-		// By default, OpenMM uses Molmodel masses which do not match Amber masses
-		// This call is done here, after the sampler has been initialized
-		// The sampler also initializes the OpenMM context
-		for (const auto& t : topologies) {
-			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
-				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
-				const SimTK::DuMM::NonbondAtomIndex nax(aix);
-				world.updSampler(0)->setOMMmass(nax, mass);
-			}
-		}
-
 	} // every world
 
+	int firstWIx = 0;
+	SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
 
+	// Get coordinates from source
+	const std::vector<std::vector<std::pair<
+	bSpecificAtom *, SimTK::Vec3> > >& firstWorldsAtomsLocations =
+		worlds[firstWIx].getAtomsLocationsInGround_SP_NEW(lastAdvancedState);
 
+	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
+	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
 
-
-							int firstWIx = 0;
-							SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
-
-							// Get coordinates from source
-							const std::vector<std::vector<std::pair<
-							bSpecificAtom *, SimTK::Vec3> > >& firstWorldsAtomsLocations =
-								worlds[firstWIx].getAtomsLocationsInGround_SP_NEW(lastAdvancedState);
-
-							calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
-							//PrintZMatrixMobods(firstWIx, lastAdvancedState);
-
-							for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
-								World& world = worlds[worldIx];
-								// Add this worlds BAT coordinates to it's samplers
-								addSubZMatrixBATsToWorld(worldIx);
-								scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
-								world.updSampler(0)->PrintSubZMatrixBAT();
-							}
-
-							// std::cout 
-							// 	<< "Robosample in development mode. Delete return after print."
-							// 	<< eol;
-							// return false;
-
+	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		World& world = worlds[worldIx];
+		// Add this worlds BAT coordinates to it's samplers
+		addSubZMatrixBATsToWorld(worldIx);
+		scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
+		world.updSampler(0)->PrintSubZMatrixBAT();
+	}
 
 	// TODO If there is any problem here, it might be because this block was above the previous one
 	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
@@ -675,9 +635,9 @@ void Context::loadAtoms(const readAmberInput& reader) {
  		atoms[aCnt].setAtomicNumber(atomicNumber);
 		atoms[aCnt].setElem(elementCache.getSymbolByAtomicNumber(atomicNumber));
 
-		// // Assign a "unique" name. The generator is however limited.
-		// // Examples: AAAA, AAAB, AAAC, AAAD etc
-		atoms[aCnt].generateName(aCnt);
+		// // // Assign a "unique" name. The generator is however limited.
+		// // // Examples: AAAA, AAAB, AAAC, AAAD etc
+		// atoms[aCnt].generateName(aCnt);
 
 		// Store the initial name from prmtop
 		// Examples: "O1", "C1", "C2", "H1", "H10"
@@ -715,11 +675,11 @@ void Context::loadAtoms(const readAmberInput& reader) {
 
 		// Assign an unique atom name
 		// TODO add topology number - this is not unique
-		// atoms[i].setName(
-		// 	atoms[i].getResidueName() + std::to_string(atoms[i].residueIndex) + "_" +
-		// 	atoms[i].getFftype() + "_" +
-		// 	std::to_string(atoms[i].getNumber())
-		// );
+		atoms[aCnt].setName(
+			atoms[aCnt].getResidueName() + std::to_string(atoms[aCnt].residueIndex) + "_" +
+			atoms[aCnt].getFftype() + "_" +
+			std::to_string(atoms[aCnt].getNumber())
+		);
 
 		// Save
 		elementCache.addElement(atomicNumber, mass);
@@ -913,11 +873,13 @@ void Context::addBiotypes() {
 }
 
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
+
+	// TODO remove at some point
+	singlePrmtop = true;
+
 	// Load Amber files
 	readAmberInput reader;
 	reader.readAmberFiles(inpcrd, prmtop);
-
-	singlePrmtop = true;
 
 	// Read molecules from a reader
 	loadAtoms(reader);
@@ -934,21 +896,6 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations_SP_NEW();
 
-	// // Loads parameters into DuMM
-	// addDummParams_SP_NEW(reader);
-
-	// for (int w = 0; w < worlds.size(); w++) {
-	// 	rootMobilities.push_back(std::vector<std::string>());
-	// 	for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
-	// 		rootMobilities[w].push_back("Rigid");
-	// 	}
-	// }
-
-	// // // Adopts compound by the CompoundSystem and loads maps of indexes
-	// // setupReader.ReadSetup("inp.2but");
-	// // model_SP_NEW(setupReader);
-	// modelSystem();
-
 	for(auto& topology : topologies) {
 		topology.setAtomList();
 		topology.setBondList();
@@ -964,9 +911,6 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	for (auto& row : zMatrixBAT) {
 		row.resize(3, SimTK::NaN);
 	}
-
-	// Allocate space for containers that keep statistics if we're doing any
-	allocWorldsStatsContainers();
 }
 
 
@@ -1477,6 +1421,9 @@ void Context::addWorld(
 	if (useOpenMM) {
 		worlds.back().forceField->setUseOpenMMAcceleration(true);
 	}
+
+	// Allocate space for containers that keep statistics if we're doing any
+	worlds.back().allocateStatsContainers();
 }
 
 void Context::addWorld_py(
@@ -2016,139 +1963,135 @@ void Context::addRingClosingBonds_SP_NEW(
 	int rootAmberIx,
 	int molIx)
 {
+	for (const auto& b : internCoords.getRingClosingBonds()) {
+		for (int bCnt = 0; bCnt < bonds.size(); bCnt++) {
+			if (bonds[bCnt].isThisMe(b.first, b.second)) {
 
-	const std::vector<BOND>& theseBonds = internCoords.getMoleculeBonds(molIx);
-	//const std::vector<BOND>& ringBonds = internCoords.getRingClosingBonds(); // don't know if it works
+				// check if the bond is in this topology with internCoords.getMoleculeBonds( molIx )
+				// scout("Ring closing bond: ") << bCnt << " " << b.second << " " << b.first << "; ";
+				bool found = false;
+				for (const auto& molBond : internCoords.getMoleculeBonds(molIx)) {
+					if ((molBond.first == b.first && molBond.second == b.second) || (molBond.second == b.first && molBond.second == b.first)) {
+						// std::cout << "Ring closing bond: " << bCnt << " " << b.second << " " << b.first << "; ";
+						found = true;
+						break;
+					}
+				}
 
-	std::vector<BOND>::const_iterator bIt;
-	std::size_t bCnt = 0;
+				if (!found) {
+					continue;
+				}
 
-	// Iterate bonds from internal coordinates
-	for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
+				// std::cout << "Ring closing bond: " << bCnt << " " << b.second << " " << b.first << "; ";
 
-		bBond& bond = bonds[bCnt];
+				bBond& bond = bonds[bCnt];
 
-		if(bond.isVisited() == 0){
+				// ===================== GET ATOMS IN THIS BOND ===================
+				// Child
+				//int childAmberIx = bIt->first;
+				int childAmberIx = bond.i;
+				bSpecificAtom& child = (atoms[childAmberIx]);
+				const SimTK::Compound::SingleAtom& childCompoundAtom = child.getSingleAtom();
 
-			//scout(" [RING CLOSING] ");
+				// Parent
+				//int parentAmberIx = bIt->second;
+				int parentAmberIx = bond.j;
+				bSpecificAtom& parent = (atoms[parentAmberIx]);
+				const SimTK::Compound::SingleAtom& parentCompoundAtom = parent.getSingleAtom();
 
-			// ===================== GET ATOMS IN THIS BOND ===================
-			// Child
-			//int childAmberIx = bIt->first;
-			int childAmberIx = bond.i;
-			bSpecificAtom& child = (atoms[childAmberIx]);
-			const SimTK::Compound::SingleAtom& childCompoundAtom
-				= child.getSingleAtom();
+				// Set a molecule identifier
+				child.setMoleculeIndex(molIx);
+				parent.setMoleculeIndex(molIx);
 
-			// Parent
-			//int parentAmberIx = bIt->second;
-			int parentAmberIx = bond.j;
-			bSpecificAtom& parent = (atoms[parentAmberIx]);
-			const SimTK::Compound::SingleAtom& parentCompoundAtom
-				= parent.getSingleAtom();
+				// // Print
+				// scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
+				// 	<< eol;
 
-			// Set a molecule identifier
-			child.setMoleculeIndex(molIx);
-			parent.setMoleculeIndex(molIx);
+				// ====================== PARENT BOND CENTER ======================
+				
+				// // Convenient vars
+				
+				// int parentNofBonds = parent.getNBonds();
+				// int parentNofFreebonds = parent.getFreebonds();
 
-			// Print
-			//scout("bSpecificAtoms parent-child ") << parentAmberIx << " " <<  childAmberIx
-			//	<< eol;
+				// // Get next available BondCenter id
+				// int parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
+				// std::string parentNextAvailBondCenterStr = std::to_string(parentNextAvailBondCenter);
 
-			// ====================== PARENT BOND CENTER ======================
-			
-			// Convenient vars
-			std::stringstream parentBondCenterPathName;
-			std::string parentBondCenterPathNameStr = "";
-			int parentNextAvailBondCenter = -111111;
-			std::string parentNextAvailBondCenterStr = "";
-			int parentNofBonds = parent.getNBonds();
-			int parentNofFreebonds = parent.getFreebonds();
+				// // Cook the parentBondCenterPathName
+				// std::stringstream parentBondCenterPathName;
+				// parentBondCenterPathName << parent.getName() << "/bond" << parentNextAvailBondCenterStr;
+				// std::string parentBondCenterPathNameStr = parentBondCenterPathName.str();
 
-			// Get next available BondCenter id
-			parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
-			//if((parentNofBonds != 1)){ // this decides if it's bond or bond1
-				parentNextAvailBondCenterStr =
-					std::to_string(parentNextAvailBondCenter);
-			//}
+				// scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
+				// 	<< eol;
 
-			// Cook the parentBondCenterPathName
-			parentBondCenterPathName << parent.getName()
-				<< "/bond" 
-				<< parentNextAvailBondCenterStr;
-			parentBondCenterPathNameStr = parentBondCenterPathName.str();
+				// ======================== ACTUAL BONDING ========================
+				// scout("Bonding ")
+				// 	<< "child " << child.getName() <<" " << child.getInName()
+				// 	<<" " << child.getNumber() <<" "
+				// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+				// 	<< parent.getNumber() <<" "
+				// 	<< "with bond center name " << parentBondCenterPathNameStr
+				// 	<< eol;
 
-			// scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
-			// 	<< eol;
+				// Bond
+				bSpecificAtom &leftNode  = atoms[bond.i];
+				bSpecificAtom &rightNode = atoms[bond.j];
 
-			// ======================== ACTUAL BONDING ========================
-			// scout("Bonding ")
-			// 	<< "child " << child.getName() <<" " << child.getInName()
-			// 	<<" " << child.getNumber() <<" "
-			// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
-			// 	<< parent.getNumber() <<" "
-			// 	<< "with bond center name " << parentBondCenterPathNameStr
-			// 	<< eol;
+				std::stringstream sbuff;
+				if (leftNode.getNumber() == topology.baseAtomNumber) {
+					sbuff << leftNode.getName() << "/bond" << leftNode.getFreebonds();
+				} else {
+					sbuff << leftNode.getName() << "/bond" << leftNode.getNBonds() - leftNode.getFreebonds() + 1;
+				}
 
-			// Bond
-			bSpecificAtom &leftNode  = atoms[bonds[bCnt].i];
-			bSpecificAtom &rightNode = atoms[bonds[bCnt].j];
+				std::stringstream otsbuff;
+				if (rightNode.getNumber() == topology.baseAtomNumber) {
+					otsbuff << rightNode.getName() << "/bond" << rightNode.getFreebonds();
+				} else {
+					otsbuff << rightNode.getName() << "/bond" << rightNode.getNBonds() - rightNode.getFreebonds() + 1;
+				}
 
-			std::stringstream sbuff;
-			if(leftNode.getNumber() == topology.baseAtomNumber){
-				sbuff << leftNode.getName() << "/bond" << leftNode.getFreebonds();
-			}else{
-				sbuff << leftNode.getName() << "/bond"
-					<< (leftNode.getNBonds() - leftNode.getFreebonds() + 1);
+				// std::cout << "left: " << sbuff.str() << ", right: " << otsbuff.str() << std::endl;
+
+				topology.addRingClosingBond(
+						(sbuff.str()).c_str(),
+						(otsbuff.str()).c_str(),
+						0.14,
+						109*Deg2Rad,
+						BondMobility::Rigid);
+
+
+				// Set bBond Molmodel Compound::BondIndex
+				int currentCompoundBondIndex = topology.getNumBonds() - 1;
+				bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
+				bond.setAsRingClosing();
+
+				// Set the final Biotype
+				topology.setAtomBiotype(child.getName(),
+										child.getResidueName().c_str(),
+										child.getName());
+				topology.setAtomBiotype(parent.getName(),
+										parent.getResidueName().c_str(),
+										parent.getName());									
+
+				// Not sure where is useful
+				bond.setVisited(1);
+
+				// Also set it's molecule index
+				bond.setMoleculeIndex(molIx);
+
+				// ====================== RECORD MODIFICATION =====================
+
+				// Decrease freebonds
+				parent.decrFreebonds();
+				child.decrFreebonds();
+
+				break;
 			}
-
-			std::stringstream otsbuff;
-			if(rightNode.getNumber() == topology.baseAtomNumber){
-				otsbuff << rightNode.getName() << "/bond" << rightNode.getFreebonds();
-			}else{
-				otsbuff << rightNode.getName() << "/bond"
-					<< (rightNode.getNBonds() - rightNode.getFreebonds() + 1);
-			}
-
-			topology.addRingClosingBond(
-					(sbuff.str()).c_str(),
-					(otsbuff.str()).c_str(),
-					0.14,
-					109*Deg2Rad,
-					BondMobility::Rigid);
-
-
-			// Set bBond Molmodel Compound::BondIndex
-			int currentCompoundBondIndex = topology.getNumBonds() - 1;
-			bond.setBondIndex(Compound::BondIndex(currentCompoundBondIndex));
-			bond.setAsRingClosing();
-
-			// Set the final Biotype
-			topology.setAtomBiotype(child.getName(),
-									child.getResidueName().c_str(),
-									child.getName());
-			topology.setAtomBiotype(parent.getName(),
-									parent.getResidueName().c_str(),
-									parent.getName());									
-
-			// Not sure where is useful
-			bond.setVisited(1);
-
-			// Also set it's molecule index
-			bond.setMoleculeIndex(molIx);
-
-			// ====================== RECORD MODIFICATION =====================
-
-			// Decrease freebonds
-			parent.decrFreebonds();
-			child.decrFreebonds();
-
-		} // if is ring closing
-
-		//ceol;
-
+		}
 	}
-
 }
 
 
@@ -2221,6 +2164,8 @@ void Context::constructTopologies_SP_NEW(
 
 	}
 
+	internCoords.computeLevelsAndOffsets( getAtoms() );
+
 	// ========================================================================
 	// ======== (2) BAT bonds to bonds ========================================
 	// ========================================================================
@@ -2247,7 +2192,7 @@ void Context::constructTopologies_SP_NEW(
 		//  (1) findARoot 
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		const int rootAmberIx = internCoords.getRoot( molIx ).first;
-		topology.bSpecificAtomRootIndex = rootAmberIx;
+		// topology.bSpecificAtomRootIndex = rootAmberIx;
 		setRootAtom( topology, rootAmberIx );
 
 		// --------------------------------------------------------------------
@@ -2265,7 +2210,7 @@ void Context::constructTopologies_SP_NEW(
 
 	}
 
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	for(int molIx = nofMols - 1; molIx > -1; molIx--){
 		
 		Topology& currTopology = topologies[molIx];
 
@@ -2806,10 +2751,10 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 			const SimTK::String simtkstr(str);
 
 			founditInDuMM[aCnt] = dumm.hasAtomClass(simtkstr);
-			std::cout << "Context::generateDummAtomClasses_SP_NEW "
-				<< "world " << wCnt << " atom " << aCnt << " "
-				<< atoms[aCnt].getFftype() << " "
-				<< founditInDuMM[aCnt] << std::endl << std::flush;
+			// std::cout << "Context::generateDummAtomClasses_SP_NEW "
+			// 	<< "world " << wCnt << " atom " << aCnt << " "
+			// 	<< atoms[aCnt].getFftype() << " "
+			// 	<< founditInDuMM[aCnt] << std::endl << std::flush;
 
 			// Define the AtomClass
 			if (!founditInDuMM[aCnt]){ // We don't have this AtomClass
@@ -3620,12 +3565,12 @@ void Context::modelOneEmbeddedTopology_SP_NEW(
 		// 		aIx,
 		// 		dumm);
 
-		scout("world topology atom aIx")
-			<< whichWorld <<" " << whichTopology <<" "
-			<< aCnt <<" " << aIx <<" "
-			<< mbx <<" "
-			// << mbxCheck <<" " 
-			<< eol;
+		// scout("world topology atom aIx")
+		// 	<< whichWorld <<" " << whichTopology <<" "
+		// 	<< aCnt <<" " << aIx <<" "
+		// 	<< mbx <<" "
+		// 	// << mbxCheck <<" " 
+			// << eol;
 
 	}
 
@@ -3745,18 +3690,6 @@ void Context::modelSystem() {
 // ============================================================================
 // WORK
 // ============================================================================
-
-
-// Allocate space for containers that keep statistics if we're doing any
-void Context::allocWorldsStatsContainers()
-{
-
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		worlds[worldIx].allocateStatsContainers();
-	}
-
-}
-
 
 // Load/store Mobilized bodies joint types in samplers
 void Context::loadMbxsToMobilities()
@@ -7982,8 +7915,11 @@ Context::calcZMatrixBAT(
 
 	// Get locations of this molecule
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
-	worlds[wIx].extractAtomTargets(
-		topoIx, otherWorldsAtomsLocations, atomTargets);
+	for (int i = 0; i < topologies.size(); i++) {
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
+		worlds[wIx].extractAtomTargets(i, otherWorldsAtomsLocations, temp);
+		atomTargets.insert(temp.begin(), temp.end());
+	}
 
 	int rowCnt = 0;
 	SimTK::Real bondLength, bondBend, bondTorsion;

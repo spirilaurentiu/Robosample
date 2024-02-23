@@ -137,13 +137,13 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
     selectedAtoms.reserve(bAtomList.size());
     indexMap = std::vector<int>(bAtomList.size(), -1);
 
-    selectAtom(root.first);
-    selectAtom(root.second);
-    selectAtom(root.third);
+    selectAtom(roots.back().first);
+    selectAtom(roots.back().second);
+    selectAtom(roots.back().third);
 
-	bAtomList[root.first].setParentNumber(-1);
-	bAtomList[root.second].setParentNumber(root.first);
-	bAtomList[root.third].setParentNumber(root.second);
+	bAtomList[roots.back().first].setParentNumber(-1);
+	bAtomList[roots.back().second].setParentNumber(roots.back().first);
+	bAtomList[roots.back().third].setParentNumber(roots.back().second);
 
     perMolBonds.push_back(std::vector<BOND>());     // Laurentiu
     std::vector<BOND>& bonds = perMolBonds.back();  // Laurentiu
@@ -153,8 +153,8 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
     std::vector<TORSION>& torsions = perMolTorsions.back(); // Laurentiu
 
     // add root bonds
-    bonds.push_back({ root.second, root.first });
-    bonds.push_back({ root.third, root.second });
+    bonds.push_back({ roots.back().second, roots.back().first });
+    bonds.push_back({ roots.back().third, roots.back().second });
 
     std::size_t lastSelectedAtomsSize = 0;                      // Laurentiu
 
@@ -357,6 +357,11 @@ void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAto
 	// getOrderedAtoms() -> bAtomList indexing
 	// getOrderedBonds() -> order of bonds as in orderedAtoms; i and j are from bAtomList
 
+	std::vector<BOND> allBonds;
+	for(auto && v : perMolBonds){
+		allBonds.insert(allBonds.end(), v.begin(), v.end());
+	}
+
 	// iterate original bonds
 	for (int i = 0; i < bAtomList.size(); i++) {
 		for (const auto& b : bAtomList[i].neighbors) {
@@ -367,21 +372,26 @@ void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAto
 			BOND b1 = { i, j };
 			bool found = false;
 
-			for (const auto& b0 : perMolBonds.back()) {
+			for (const auto& b0 : allBonds) {
+				// std::cout << "comparing " << b0.first << " " << b0.second << " to " << b1.first << " " << b1.second << std::endl;
 				if (equal_bond(b0, b1)) {
 					found = true;
-					// cout << "bond " << b0.first << " " << b0.second << endl;
+					// cout << "found bond " << b0.first << " " << b0.second << endl;
 					break;
 				}
 			}
 
 			if (!found) {
 				ringClosingBonds.push_back(b1);
-				// missing bond
+				// // missing bond
 				// std::cout << "missing bond " << b1.first << " " << b1.second << std::endl;
 			}	
 		}
 	}
+
+	// for (const auto& b : ringClosingBonds) {
+	// 	std::cout << "ringClosingBonds " << b.first << " " << b.second << std::endl;
+	// }
 
 	// build adjacency lists for unordered graph
 	std::vector<std::vector<int>> adjacency(bAtomList.size());

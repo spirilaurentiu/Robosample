@@ -442,9 +442,15 @@ void normalize(std::vector<SimTK::Real>& V);
  */
 
 enum class SampleGenerator : int {
-	EMPTY = 0,
-	MC
+	EMPTY = 0, // MD
+	MC // MCMC
 };
+
+// TODO: remove this
+// enum class SamplingMethod : int {
+//     EMPTY = 0,  // Molecular Dynamics (MD)
+//     MC          // Markov Chain Monte Carlo (MCMC)
+// };
 
 /*
  * Thermodynamics

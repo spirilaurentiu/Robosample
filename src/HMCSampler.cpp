@@ -1729,6 +1729,8 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 
 void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
 {
+	std::cout << "HMCSampler::OMM_storeOMMConfiguration_X " << omm_locations_old.size() << " " << positions.size() << std::endl;
+
 		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
 
 		for (int i = 0; i < positions.size(); i++) {
