@@ -605,7 +605,7 @@ public:
 		SimTK::State& someState,
 		SimTK::Real scalingFactor,
 		std::vector<int> BATOrder = {1, 0, 2},
-		std::vector<SimTK::Real> BATSign = {-1, 1, 1}
+		std::vector<SimTK::Real> BATSign = {1, -1, 1}
 	);
 
 	// Getter for the variableBATs map

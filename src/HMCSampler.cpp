@@ -467,6 +467,24 @@ void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
 
 void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
 {
+
+	// scout("[KE0] HMCSampler Set integrator to ");
+    // switch (integratorNameArg) {
+    //     case IntegratorName::EMPTY:
+    //         std::cout << "EMPTY";
+    //         break;
+    //     case IntegratorName::VERLET:
+    //         std::cout << "VERLET";
+    //         break;
+    //     case IntegratorName::EULER:
+    //         std::cout << "EULER";
+    //         break;
+    //     // Add cases for other enum values here...
+    //     default:
+    //         std::cout << "Unknown";
+    //         break;
+    // }std::cout << eol;
+
 	this->integratorName = integratorNameArg;
 }
 
@@ -478,7 +496,7 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
  	if(integratorNameArg == "OMMVV"){
 		this->integratorName = IntegratorName::OMMVV;
 
-	}else if (integratorNameArg == "VV"){
+	}else if (integratorNameArg == "VERLET"){
 		integratorName = IntegratorName::VERLET;
 		
 	}else if (integratorNameArg == "BOUND_WALK"){
@@ -653,7 +671,6 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
  * */
 void HMCSampler::perturbVelocities(SimTK::State& someState,
 	VelocitiesPerturbMethod VPM){
-
 
 
 	if((VPM == VelocitiesPerturbMethod::TO_ZERO) || (this->boostRT == 0)){

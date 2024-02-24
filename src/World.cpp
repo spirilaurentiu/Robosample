@@ -290,6 +290,7 @@ World::World(int worldIndex,
 	// Visualizer
 	this->visual = isVisual;
 	if(visual){
+
 		decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
 		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
 		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
