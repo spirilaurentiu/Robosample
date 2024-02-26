@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 	// 	{ 4, 12, BondMobility::Mobility::Translation },
 	// 	{ 4, 13, BondMobility::Mobility::Translation }
 	// };
-	// c.addWorld_py(false, 1, ROOT_MOBILITY::WELD, flexibilities_w0);
+	// c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w0);
 
 	// // World 1
 	// std::vector<BOND_FLEXIBILITY> flexibilities_w1 = {
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	// 	{ 2, 4, BondMobility::Mobility::Torsion },
 	// 	{ 1, 0, BondMobility::Mobility::Torsion },
 	// };
-	// c.addWorld_py(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
+	// c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
 
 	// // Does OMMVV have to be first?
 

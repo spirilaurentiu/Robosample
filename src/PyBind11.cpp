@@ -83,7 +83,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<Context>(m, "Context")
         .def(py::init<SimTK::Real, SimTK::Real, uint32_t>())
-        .def("addWorld", &Context::addWorld_py, "Add an empty world")
+        .def("addWorld", &Context::addWorld, "Add an empty world")
         .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Run the simulation")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system")
         .def("Run", py::overload_cast<>(&Context::Run), "Run the simulation")
@@ -98,5 +98,5 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<World>(m, "World")
         .def("setFlexibilities", &World::setFlexibilities, "Set the flexibilities of the bonds")
-        .def("addSampler", &World::addSampler_py, "Add a sampler to the world");
+        .def("addSampler", &World::addSampler, "Add a sampler to the world");
 }

@@ -77,6 +77,50 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 {
 	this->singlePrmtop = singlePrmtop;
 
+	std::map<std::string, BondMobility::Mobility> mobilityMap = {
+		{ "Pin", BondMobility::Torsion },
+		{ "Torsion", BondMobility::Torsion },
+		{ "Translation", BondMobility::Translation },
+		{ "Cartesian", BondMobility::Translation },
+		{ "Rigid", BondMobility::Rigid },
+		{ "Weld", BondMobility::Rigid },
+		{ "Slider", BondMobility::Slider },
+		{ "AnglePin", BondMobility::AnglePin },
+		{ "BendStretch", BondMobility::BendStretch },
+		{ "Spherical", BondMobility::Spherical }
+	};
+
+	std::map<std::string, SampleGenerator> sampleGenerator = {
+		{ "EMPTY", SampleGenerator::EMPTY },
+		{ "MC", SampleGenerator::MC },
+	};
+
+	std::map<std::string, IntegratorName> integratorName = {
+		{ "EMPTY", IntegratorName::EMPTY },
+		{ "VERLET", IntegratorName::VERLET },
+		{ "EULER", IntegratorName::EULER },
+		{ "EULER2", IntegratorName::EULER2 },
+		{ "CPODES", IntegratorName::CPODES },
+		{ "RUNGEKUTTA", IntegratorName::RUNGEKUTTA },
+		{ "RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2 },
+		{ "RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3 },
+		{ "RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG },
+		{ "BENDSTRETCH", IntegratorName::BENDSTRETCH },
+		{ "OMMVV", IntegratorName::OMMVV },
+		{ "BOUND_WALK", IntegratorName::BOUND_WALK },
+		{ "BOUND_HMC", IntegratorName::BOUND_HMC },
+		{ "STATIONS_TASK", IntegratorName::STATIONS_TASK },
+		{ "NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS },
+	};
+
+	std::map<std::string, ThermostatName> thermsotatName = {
+		{ "NONE", ThermostatName::NONE },
+		{ "ANDERSEN", ThermostatName::ANDERSEN },
+		{ "BERENDSEN", ThermostatName::BERENDSEN },
+		{ "LANGEVIN", ThermostatName::LANGEVIN },
+		{ "NOSE_HOOVER", ThermostatName::NOSE_HOOVER },
+	};
+
 	// Read input into a SetupReader object
 	setupReader.ReadSetup(file);
 	setupReader.dump(true);
@@ -96,6 +140,26 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	std::cout << "Molecule directory: " << molDir << std::endl << std::flush;
 	setPdbPrefix(molDir + setupReader.get("SEED")[0]);
 
+	// Adaptive Gibbs blocking
+	setNofRoundsTillReblock(std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
+	setRequiredNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
+	setPdbRestartFreq( std::stoi(setupReader.get("WRITEPDBS")[0]) );
+	setPrintFreq( std::stoi(setupReader.get("PRINT_FREQ")[0]) );
+
+	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
+		setRunType(RUN_TYPE::DEFAULT);
+	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
+			setRunType(RUN_TYPE::DEFAULT);
+	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
+		setRunType(RUN_TYPE::REMC);
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
+		setRunType(RUN_TYPE::RENEMC);
+	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
+		setRunType(RUN_TYPE::RENE);
+	}else{
+		setRunType(RUN_TYPE::DEFAULT);
+	}
+
 	/////////// Add Worlds to context ////////////
 	// Add Worlds to the  Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
@@ -113,19 +177,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		
 		loadAmberSystem(prmtop, inpcrd);
 	}
-
-	std::map<std::string, BondMobility::Mobility> mobilityMap = {
-		{ "Pin", BondMobility::Torsion },
-		{ "Torsion", BondMobility::Torsion },
-		{ "Translation", BondMobility::Translation },
-		{ "Cartesian", BondMobility::Translation },
-		{ "Rigid", BondMobility::Rigid },
-		{ "Weld", BondMobility::Rigid },
-		{ "Slider", BondMobility::Slider },
-		{ "AnglePin", BondMobility::AnglePin },
-		{ "BendStretch", BondMobility::BendStretch },
-		{ "Spherical", BondMobility::Spherical }
-	};
 
 	// // Add Worlds
 	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
@@ -186,7 +237,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			}
 		}
 
-		addWorld_py(
+		addWorld(
 			setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE",
 			std::stoi(setupReader.get("SAMPLES_PER_ROUND")[worldIx]),
 			ROOT_MOBILITY::WELD,
@@ -201,11 +252,11 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		worlds[worldIx].setMyContext(this);
 	}
 
-	// Get how much available memory we have
-	struct sysinfo info;
-	if (sysinfo(&info) == 0) {
-        std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
-    }
+	// // Get how much available memory we have
+	// struct sysinfo info;
+	// if (sysinfo(&info) == 0) {
+    //     std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
+    // }
 
 	// SP_OLD
 	if (!singlePrmtop) {
@@ -250,12 +301,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	}
 
-	// Adaptive Gibbs blocking
-	setNofRoundsTillReblock(std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
-
-	// Only now we can allocate memory for reblocking Q vectors
-	//allocateReblockQsCacheQVectors();
-
 	// Add membrane.
 	bool haveMembrane = (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND");
 	if (haveMembrane){
@@ -272,39 +317,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	// Add samplers
 	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-
-		std::map<std::string, SampleGenerator> sampleGenerator = {
-			{ "EMPTY", SampleGenerator::EMPTY },
-			{ "MC", SampleGenerator::MC },
-		};
-
-		std::map<std::string, IntegratorName> integratorName = {
-			{ "EMPTY", IntegratorName::EMPTY },
-			{ "VERLET", IntegratorName::VERLET },
-			{ "EULER", IntegratorName::EULER },
-			{ "EULER2", IntegratorName::EULER2 },
-			{ "CPODES", IntegratorName::CPODES },
-			{ "RUNGEKUTTA", IntegratorName::RUNGEKUTTA },
-			{ "RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2 },
-			{ "RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3 },
-			{ "RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG },
-			{ "BENDSTRETCH", IntegratorName::BENDSTRETCH },
-			{ "OMMVV", IntegratorName::OMMVV },
-			{ "BOUND_WALK", IntegratorName::BOUND_WALK },
-			{ "BOUND_HMC", IntegratorName::BOUND_HMC },
-			{ "STATIONS_TASK", IntegratorName::STATIONS_TASK },
-			{ "NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS },
-		};
-
-		std::map<std::string, ThermostatName> thermsotatName = {
-			{ "NONE", ThermostatName::NONE },
-			{ "ANDERSEN", ThermostatName::ANDERSEN },
-			{ "BERENDSEN", ThermostatName::BERENDSEN },
-			{ "LANGEVIN", ThermostatName::LANGEVIN },
-			{ "NOSE_HOOVER", ThermostatName::NOSE_HOOVER },
-		};
-
-		worlds[worldIx].addSampler_py(
+		worlds[worldIx].addSampler(
 			SamplerName::HMC,
 			sampleGenerator[setupReader.get("SAMPLERS")[worldIx]],
 			integratorName[setupReader.get("INTEGRATORS")[worldIx]],
@@ -378,11 +391,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 	}
 
-	setRequiredNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
-
-	// Set pdb writing frequency
-	setPdbRestartFreq( std::stoi(setupReader.get("WRITEPDBS")[0]) );
-
 	// Get atom indeces for geometry calculations
 	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
 		std::vector<std::size_t> distanceIx;
@@ -403,30 +411,27 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		addDihedrals(dihedralIx);
 	}
 
-	// Get output printing frequency
-	setPrintFreq( std::stoi(setupReader.get("PRINT_FREQ")[0]) );
+	// // Realize topology for all the Worlds
+	// realizeTopology();
 
-	// Realize topology for all the Worlds
-	realizeTopology();
+	// // U Scale Factors uses maps stored in Topology
+	// for(auto& world : worlds){
+	// 	// world.setUScaleFactorsToMobods();
+	// }
+	// // Realize topology for all the Worlds
+	// realizeTopology();
 
-	// U Scale Factors uses maps stored in Topology
-	for(auto& world : worlds){
-		// world.setUScaleFactorsToMobods();
-	}
-	// Realize topology for all the Worlds
-	realizeTopology();
+	// //std::cout << "OS memory 4.\n" << exec("free") << std::endl;
+	// // Check atom stations for debug purposes
+	// checkAtomStationsThroughDumm();
 
-	//std::cout << "OS memory 4.\n" << exec("free") << std::endl;
-	// Check atom stations for debug purposes
-	checkAtomStationsThroughDumm();
-
-	if(singlePrmtop){ // SP_NEW
-		// Load/store Mobilized bodies joint types in samplers
-		//loadMbxsToMobilities_SP_NEW();
-	}else{
-		// Load/store Mobilized bodies joint types in samplers
-		loadMbxsToMobilities();
-	}
+	// if(singlePrmtop){ // SP_NEW
+	// 	// Load/store Mobilized bodies joint types in samplers
+	// 	//loadMbxsToMobilities_SP_NEW();
+	// }else{
+	// 	// Load/store Mobilized bodies joint types in samplers
+	// 	loadMbxsToMobilities();
+	// }
 
 	// Setup task spaces
 	bool usingTaskSpace = false;
@@ -516,37 +521,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	//context.addConstraints();
 
 	PrintInitialRecommendedTimesteps();
-
-	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
-		setRunType(RUN_TYPE::DEFAULT);
-		// Run(getRequiredNofRounds(),
-		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
-			
-	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
-			setRunType(RUN_TYPE::DEFAULT);
-			// RunSimulatedTempering(getRequiredNofRounds(),
-			// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-			// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
-
-	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
-		setRunType(RUN_TYPE::REMC);
-		// RunREX();
-
-	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
-		setRunType(RUN_TYPE::RENEMC);
-		// RunREX();
-
-	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
-		setRunType(RUN_TYPE::RENE);
-		// RunREX();
-
-	}else{
-		setRunType(RUN_TYPE::DEFAULT);
-		// Run(getRequiredNofRounds(),
-		// 	std::stof(setupReader.get("TEMPERATURE_INI")[0]),
-		// 	std::stof(setupReader.get("TEMPERATURE_FIN")[0]));
-	}
 
     return true;
 }
@@ -1356,77 +1330,7 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 	regimens[whichWorld].push_back(regimen);
 }
 
-// Add an empty world to the context
-// timestep in ps
 void Context::addWorld(
-	bool fixmanTorque,
-	int samplesPerRound,
-	ROOT_MOBILITY rootMobility,
-	bool useOpenMM,
-	bool visual,
-	SimTK::Real visualizerFrequency) {
-
-	// Create new world and add its index
-	worldIndexes.push_back(worldIndexes.size());
-	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
-
-	// Set force field scale factor.
-	if (useAmberForceFieldScaleFactors) {
-		worlds.back().setAmberForceFieldScaleFactors();
-	} else {
-		worlds.back().setGlobalForceFieldScaleFactor(globalForceFieldScaleFactor);
-	}
-
-	// Set the nonbonded method and cutoff
-	worlds.back().updForceField()->setNonbondedMethod(nonbondedMethod);
-	worlds.back().updForceField()->setNonbondedCutoff(nonbondedCutoff);
-
-	// If requested, add Fixman torque as an additional force subsystem
-	if (fixmanTorque) {
-		worlds.back().addFixmanTorque();
-		worlds.back().updFixmanTorque()->setScaleFactor(1);
-	}
-
-	// Set the number of threads for DuMM
-	if (numThreads == 1) {
-		worlds.back().updForceField()->setUseMultithreadedComputation(false);
-	} else {
-		worlds.back().updForceField()->setNumThreadsRequested(numThreads);
-	}
-
-	// Set GBSA scaling and VdW mixing rule
-	worlds.back().setGbsaGlobalScaleFactor(gbsaGlobalScaleFactor);
-	worlds.back().updForceField()->setVdwMixingRule(DuMMForceFieldSubsystem::LorentzBerthelot); // DuMMForceFieldSubsystem::WaldmanHagler
-
-	// Set how many times to run sample_iteration()
-	worlds.back().setSamplesPerRound(samplesPerRound);
-
-	// Set temperatures for sampler and Fixman torque is applied to this world
-	worlds.back().setTemperature(tempIni);
-
-	rbSpecsFNs.push_back(std::vector<std::string>());
-	flexSpecsFNs.push_back(std::vector<std::string>());
-	regimens.push_back(std::vector<std::string>());
-
-	// Set seed for random number generators
-	worlds.back().setSeed(randomEngine());
-
-	// Propagate root mobility
-	worlds.back().setRootMobility(rootMobility);
-
-	// Store the number of worlds
-	nofWorlds = worlds.size();
-
-	// Prepare the world for OpenMM
-	if (useOpenMM) {
-		worlds.back().forceField->setUseOpenMMAcceleration(true);
-	}
-
-	// Allocate space for containers that keep statistics if we're doing any
-	worlds.back().allocateStatsContainers();
-}
-
-void Context::addWorld_py(
 	bool fixmanTorque,
 	int samplesPerRound,
 	ROOT_MOBILITY rootMobility,

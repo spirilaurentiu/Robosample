@@ -565,7 +565,7 @@ setAtomsLocationsInGround_REFAC(SimTK::State&,
 	std::size_t getNofSamplers() const;
 
 	/** Add a sampler to the World **/
-	bool addSampler_py(SamplerName samplerName,
+	bool addSampler(SamplerName samplerName,
 		SampleGenerator generator,
 		IntegratorName integratorName,
 		ThermostatName thermostatName,
@@ -580,15 +580,6 @@ setAtomsLocationsInGround_REFAC(SimTK::State&,
 		bool useFixmanPotential);
 
 	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);
-
-	bool addSampler(SamplerName samplerName,
-		const std::string& generator,
-		const std::string& integratorName,
-		const std::string& thermostatName,
-		SimTK::Real timestep,
-		int mdStepsPerSample,
-		int mdStepsPerSampleStd, 
-		bool useFixmanPotential);
 
 	// TODO Use Sampler polymorphism
 	/** Get a sampler based on its position in the samplers vector **/

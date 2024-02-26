@@ -3582,7 +3582,7 @@ std::size_t World::getNofSamplers() const
  * <!-- Add a sampler to this World using the specialized struct
 for samplers names. -->
 */
-bool World::addSampler_py(SamplerName samplerName,
+bool World::addSampler(SamplerName samplerName,
 	SampleGenerator generator,
 	IntegratorName integratorName,
 	ThermostatName thermostatName,
@@ -3671,48 +3671,6 @@ void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
 	}
 
 	realizeTopology();
-}
-
-bool World::addSampler(SamplerName samplerName,
-	const std::string& generator,
-	const std::string& integratorName,
-	const std::string& thermostatName,
-	SimTK::Real timestep,
-	int mdStepsPerSample,
-	int mdStepsPerSampleStd, 
-	bool useFixmanPotential)
-{
-	// We only use HMCSampler for now
-	if(samplerName == SamplerName::HMC) {
-
-		// Construct a new sampler
-		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
-		
-		// Set sampler parameters
-		samplers.back()->setSampleGenerator(generator);
-		samplers.back()->setIntegratorName(integratorName);
-		samplers.back()->setThermostat(thermostatName);
-		samplers.back()->setTemperature(this->temperature); // TODO where???
-		samplers.back()->setTimestep(timestep); // TODO should error when negative
-		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
-		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
-		samplers.back()->setSeed(randomEngine);
-
-		// TODO should this be inherited from parent world?
-		if (useFixmanPotential) {
-			samplers.back()->useFixmanPotential();
-		}
-	} else {
-		std::cerr << "Unknown sampler name" << std::endl;
-		return false;
-	}
-
-	// Initialize the sampler
-	// This does not care about passed parameters
-	SimTK::State& worldAdvancedState = integ->updAdvancedState();
-	samplers.back()->initialize(worldAdvancedState);
-
-	return true;
 }
 
 // Get a sampler based on its position in the samplers vector
