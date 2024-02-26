@@ -487,19 +487,21 @@ enum struct IntegratorName : int { // Integrators
 };
 
 enum struct PositionsPerturbMethod : int {
-	EMPTY,
+	EMPTY = 0,
 	BENDSTRETCH,
 	NOF_
 };
 
 enum struct VelocitiesPerturbMethod : int {
-	TO_T,
+	TO_T = 0,
 	TO_ZERO,
 	NOF_
 };
 
+
+
 enum struct NMAOptions : int {
-	EMPTY,
+	EMPTY = 0,
 	NMA_ALT_SIGN,
 	NMA_BERNOULLI,
 	NMA_GAUSS,
@@ -510,7 +512,7 @@ enum struct NMAOptions : int {
 };
 
 enum struct ForcesPerturbMethod : int {
-	EMPTY,
+	EMPTY = 0,
 	NOF_
 };
 
@@ -536,7 +538,7 @@ IntegratorNameS{
  */
 /** The type of distribution to draw a random number from **/
 enum struct GmolRandDistributionType : int {
-	UNIFORM,
+	UNIFORM = 0,
 	NORMAL
 };
 
@@ -549,7 +551,7 @@ enum struct SamplerName : int {
 };
 
 enum struct JointType : int {
-	LINEAR,
+	LINEAR = 0,
 	ANGULAR180,
 	ANGULAR360,
 	QUATERNION_a,

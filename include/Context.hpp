@@ -106,12 +106,16 @@ public:
 		int rootAmberIx,
 		int molIx);
 
+	void closeARingWithThisBond(Topology& topology, bBond& bond, int molIx);
+
 	/**  */
 	void addRingClosingBonds_SP_NEW(
 		Topology& topology,
 		int rootAmberIx,
 		int molIx
 	);
+
+	void addRingClosingBonds_All(void);
 
 	/**  */
 	void generateSubAtomLists(void);
@@ -604,7 +608,9 @@ public:
 	//////////////////////////////////
 	void areAllDuMMsTheSame(void);
 
+	void PrintBond(bBond& bond);
 	void PrintBonds(void);
+	int checkBonds(void);
 
 	// Transformers
 	void Print_TRANSFORMERS_Work(void);
@@ -756,6 +762,7 @@ private:
 	int nbonds = std::numeric_limits<int>::min();
 	std::vector<bBond> bonds;
 	std::vector<std::vector<int>> BONDS_to_bonds; // correspondence
+	std::vector<std::pair<int, int>> bonds_to_BONDS;
 
 	std::vector<DUMM_ANGLE> dummAngles;
 	std::vector<DUMM_TORSION> dummTorsions;
