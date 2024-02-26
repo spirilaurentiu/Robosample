@@ -86,6 +86,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("addWorld", &Context::addWorld, "Add an empty world")
         .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Run the simulation")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system")
+        .def("appendDCDReporter", &Context::appendDCDReporter, "Create a DCD file")
         .def("Run", py::overload_cast<>(&Context::Run), "Run the simulation")
         .def("setNumThreads", &Context::setNumThreads, "Set the number of threads")
         .def("setPdbPrefix", &Context::setPdbPrefix, "Set the prefix for the PDB files")

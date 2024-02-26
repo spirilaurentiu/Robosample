@@ -13,8 +13,8 @@
 //   close_file_write(v);
 // }
 
-void TrajectoryObject::createTrajectory(std::string TrajectoryFile,
-                      std::string TrajectoryType,
+void TrajectoryObject::createTrajectory(const std::string& TrajectoryFile,
+                      const std::string& TrajectoryType,
                       int selectedatoms,
                       int selectedunitcell)
 {
@@ -52,8 +52,8 @@ catch(std::exception e){
 
 
 
-void TrajectoryObject::openTrajectory(std::string TrajectoryFile,
-                      std::string TrajectoryType)
+void TrajectoryObject::openTrajectory(const std::string& TrajectoryFile,
+                      const std::string& TrajectoryType)
 {
 
 try
@@ -82,10 +82,10 @@ catch(std::exception e){
 
 
 void TrajectoryObject::appendTimestep (
-                    std::string TrajectoryType,
-                    std::vector<TARGET_TYPE> AtomsXcoord,
-                    std::vector<TARGET_TYPE> AtomsYcoord,
-                    std::vector<TARGET_TYPE> AtomsZcoord
+                    const std::string& TrajectoryType,
+                    const std::vector<TARGET_TYPE>& AtomsXcoord,
+                    const std::vector<TARGET_TYPE>& AtomsYcoord,
+                    const std::vector<TARGET_TYPE>& AtomsZcoord
                     )
 {
 

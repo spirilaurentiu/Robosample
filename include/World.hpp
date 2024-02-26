@@ -156,7 +156,7 @@ public:
 	);
 
 	void BuildTopologyGraph(int which, std::string argRoot);
-	void AllocateCoordBuffers(int which);
+	void AllocateCoordBuffers(int natoms);
 
 	/** It sets Compound BondFlexibilities . Also
 	 * creates decorations for visualizers
@@ -482,13 +482,13 @@ setAtomsLocationsInGround_REFAC(SimTK::State&,
 	void updateAtomListsFromCompound(const SimTK::State &state);
 	void updateAtomListsFromCompound_SP_NEW(const SimTK::State &state);
 
-	/** To be called before use of getXs, getYs or getZs **/
-	void updateCoordBuffers();
+	// /** To be called before use of getXs, getYs or getZs **/
+	// void updateCoordBuffers();
 
 	/** Get the coordinates buffers **/
-	std::vector<SimTK::Real> getXs();
-	std::vector<SimTK::Real> getYs();
-	std::vector<SimTK::Real> getZs();
+	const std::vector<SimTK::Real>& getXs() const;
+	const std::vector<SimTK::Real>& getYs() const;
+	const std::vector<SimTK::Real>& getZs() const;
 
 	/** Access to molecule (Topology) objects
 	Get a readble reference of one of the molecules **/

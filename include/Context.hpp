@@ -7,6 +7,7 @@
 #include "ThermodynamicState.hpp"
 #include "Replica.hpp"
 #include "SetupReader.hpp"
+#include "TrajectoryObject.hpp"
 
 #include <fstream>
 
@@ -60,6 +61,7 @@ public:
 		bSpecificAtom *node, bSpecificAtom *previousNode);
 	void buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root);
 
+	void appendDCDReporter(const std::string& filename);
 
 	void Run();
 	void Run(int steps);
@@ -412,6 +414,7 @@ public:
 
 	//
 	void writePdbs(int someIndex, int thermodynamicStateIx = 0);
+	void writeDCDs();
 
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2, int a3, int a4);
@@ -837,6 +840,8 @@ private:
 	std::vector<std::vector<int>> zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
+	TrajectoryObject traj;
+	bool wantDCD = false;
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////

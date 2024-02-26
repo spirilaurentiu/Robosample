@@ -1098,7 +1098,10 @@ void Context::buildAcyclicGraph(
 }
 
 
-
+void Context::appendDCDReporter(const std::string& filename) {
+	traj.createTrajectory(filename, "dcd", natoms, 0);
+	wantDCD = true;
+}
 
 
 /** 
@@ -1464,6 +1467,8 @@ void Context::addWorld(
 		bond.addBondMobility(mobility);
 		topology.setBondMobility(mobility, compoundBondIx);
 	}
+
+	worlds.back().AllocateCoordBuffers(natoms);
 
 	worlds.back().topologies = &topologies;
 	for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
@@ -6223,6 +6228,20 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 
 }
 
+void Context::writeDCDs()
+{
+	// Writing the first world
+	auto& world = worlds[worldIndexes.front()];
+
+	// Update bAtomList in Topology
+	const SimTK::State& pdbState = world.integ->updAdvancedState();
+	world.updateAtomListsFromCompound_SP_NEW(pdbState);
+
+	// Actual write
+	traj.appendTimestep("dcd", world.getXs(), world.getYs(), world.getZs());
+
+}
+
 void Context::randomizeWorldIndexes()
 {
 	// Random int for random world order
@@ -6938,6 +6957,10 @@ void Context::RunOneRound()
 // Print to log and write pdbs
 void Context::RunLog(int round)
 {
+	if (wantDCD) {
+		writeDCDs();
+	}
+
 	// Write energy and geometric features to logfile
 	if(printFreq || pdbRestartFreq){
 
@@ -6985,6 +7008,7 @@ void Context::Run(int, SimTK::Real Ti, SimTK::Real Tf)
 		topologies[moli].writeAtomListPdb(outputDir,
 			"/pdbs/ini." + std::to_string(moli) + "." + setupReader.get("SEED")[0] + ".", ".pdb",
 			10, 0);
+		std::cout << "XXXXXXXXXXXXXXXXXXXx" << std::endl;
 	}
 
 	// Write pdb at time 0

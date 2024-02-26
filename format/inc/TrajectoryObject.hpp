@@ -38,20 +38,20 @@ class TrajectoryObject{
       // ~TrajectoryObject();
 
       // creates trajectory header
-      void createTrajectory(std::string TrajectoryFile,
-                            std::string TrajectoryType,
+      void createTrajectory(const std::string& TrajectoryFile,
+                            const std::string& TrajectoryType,
                             int selectedatoms,
                             int selectedunitcell);
 
       // opens existing trajectory
-      void openTrajectory(std::string TrajectoryFile, std::string TrajectoryType );
+      void openTrajectory(const std::string& TrajectoryFile, const std::string& TrajectoryType );
 
       // append timestep to created/opened trajectory
       void appendTimestep (
-                          std::string TrajectoryType,
-                          std::vector<TARGET_TYPE> AtomsXcoord,
-                          std::vector<TARGET_TYPE> AtomsYcoord,
-                          std::vector<TARGET_TYPE> AtomsZcoord
+                          const std::string& TrajectoryType,
+                          const std::vector<TARGET_TYPE>& AtomsXcoord,
+                          const std::vector<TARGET_TYPE>& AtomsYcoord,
+                          const std::vector<TARGET_TYPE>& AtomsZcoord
                           );
 
 

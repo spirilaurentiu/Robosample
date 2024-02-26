@@ -143,6 +143,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	// c.appendDCDReporter("2but.dcd");
+
 	// c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.inpcrd");
 
 	// c.PrintMolmodelAndDuMMTypes();
