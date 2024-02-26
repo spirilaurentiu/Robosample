@@ -169,7 +169,7 @@ void bBond::setBondIndex(SimTK::Compound::BondIndex otherIx){
 // Print bond variables
 void bBond::Print(void)
 {
-    std::cout << "indexes_ij " << i << " " << j ;
+    std::cout << "index " << myindex << " indexes_ij " << i << " " << j ;
 
 	scout(" mobilities ");
 	for(size_t cnt = 0; cnt < mobilities.size(); cnt++){
