@@ -55,6 +55,9 @@ public:
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 	void modelSystem();
 
+
+	void setRootMobilitiesFromFlexFiles(void);
+
 	// Experimental movements
 	// bSpecificAtom* findARoot(Topology topology, int argRoot);
 	void buildAcyclicGraph(Topology topology,
