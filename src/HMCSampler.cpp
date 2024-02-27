@@ -4502,20 +4502,16 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 				SimTK::Real& qEntry = someState.updQ()[qCnt];
 
-				//qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
-
-
+				qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
 
 				// if(nofSamples % 2 == 0){
 				//     qEntry += 0.01;
 				// }else{
 				//     qEntry -= 0.01;
 				// }
-				qEntry += 0.01;
-
+				//qEntry += 0.01;
 
 				qEntry *= BATSign[rearrMobodQCnt];
-
 
 				scaleJacobian += std::log( (BAT[rearrMobodQCnt] + BATdiffs[rearrMobodQCnt]) / (BAT[rearrMobodQCnt]) );
 
