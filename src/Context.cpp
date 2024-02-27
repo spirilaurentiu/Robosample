@@ -70,13 +70,6 @@ bool Context::setOutput(const std::string& outDir) {
 	return true;
 }
 
-/*!
- * <!-- -->
-*/
-bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
-{
-	this->singlePrmtop = singlePrmtop;
-
 	std::map<std::string, BondMobility::Mobility> mobilityMap = {
 		{ "Pin", BondMobility::Torsion },
 		{ "Torsion", BondMobility::Torsion },
@@ -89,6 +82,13 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		{ "BendStretch", BondMobility::BendStretch },
 		{ "Spherical", BondMobility::Spherical }
 	};
+
+/*!
+ * <!-- -->
+*/
+bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
+{
+	this->singlePrmtop = singlePrmtop;
 
 	std::map<std::string, SampleGenerator> sampleGenerator = {
 		{ "EMPTY", SampleGenerator::EMPTY },
@@ -178,15 +178,10 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		loadAmberSystem(prmtop, inpcrd);
 	}
 
-	// // Add Worlds
+	// Add Worlds
 	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
 
-		std::vector<std::string> argRoots = setupReader.get("ROOTS");
-
-		rootMobilities.push_back({});
-		for(unsigned int molIx = 0; molIx < argRoots.size(); molIx++) {
-			rootMobilities.back().push_back("Rigid");
-		}
+		//std::vector<std::string> argRoots = setupReader.get("ROOTS");
 
 		std::string flexFileFN = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("FLEXFILE")[worldIx];
 
@@ -218,17 +213,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 					int index_2 = std::stoi(lineWords[1]);
 					std::string mobility =  lineWords[2];
 
-					// Add root mobilities
-					int molIx = -1;
-					if(index_1 == -1){
-						molIx++;
-						if(molIx < rootMobilities.back().size()) {
-							rootMobilities.back()[molIx] = mobility;
-						}else{
-							std::cerr << "[WARNING] Too many root mobilities\n";
-						}
-					}
-					
 					flexibilities.push_back({index_1, index_2, mobilityMap[mobility]});
 				}
 				else{
@@ -899,9 +883,8 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// Close rings
 	addRingClosingBonds_All();
 
-	PrintAtoms(); // [BIGPROT]
-	PrintBonds(); // [BIGPROT]
-
+	//PrintAtoms();
+	//PrintBonds();
 	if(checkBonds() != 0){
 		std::cout << "[ERROR] " << "bonds checks failed. Exiting" << std::endl;
 		exit(1);
@@ -935,6 +918,59 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	Zs.resize(natoms);
 }
 
+/*!
+ * <!-- This must be called after the worlds are added and flexibility vector
+ * is loaded -->
+*/
+void Context::setRootMobilitiesFromFlexFiles(void)
+{
+
+	// Allocate space for root mobilities
+	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++){
+		rootMobilities.push_back({});
+		
+		for(unsigned int molIx = 0; molIx < getNofMolecules(); molIx++) {
+			rootMobilities.back().push_back("Rigid");
+		
+		}
+	}
+
+	// Set root mobilities
+	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		
+			for (const auto& flex : worlds[worldIx].getFlexibilities()) {
+
+				if(flex.i == -1){
+
+					assert("Set root mobilities: atom index fault." &&
+						((flex.j >= 0) && (flex.j < atoms.size())));
+
+					bSpecificAtom& userRootAtom = atoms[flex.j];
+
+					int molIx = userRootAtom.getMoleculeIndex();
+					if(molIx >= getNofMolecules()){
+						std::cerr << "Set root mobilities: molecule index fault." << std::endl;
+						break;
+					}
+
+					rootMobilities[worldIx][molIx] = flex.mobility;
+
+				} // found a root mobility
+		} // every flexibility
+	} // every world
+
+	// Allocate space for root mobilities
+	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++){
+		
+		for(unsigned int molIx = 0; molIx < getNofMolecules(); molIx++) {
+			scout("Set root mobility for world ") << worldIx <<" "
+				<< " molecule " << molIx <<" to "
+				<< rootMobilities[worldIx][molIx] << eol;
+		
+		}
+	}
+
+}
 
 // /**
 //  * SP_NEW
@@ -1449,11 +1485,47 @@ void Context::addWorld(
 	// Generate DuMM parameters: DuMM atom types, charged atom types, bond types, angle types and torsion types
 	worlds.back().generateDummParams(atoms, bonds, dummAngles, dummTorsions, elementCache);
 
-	// Add root mobilities
+
+
+
+	// Define the inverse map
+	std::map<BondMobility::Mobility, std::string> inverseMobilityMap;
+
+	// Populate the inverse map by swapping keys and values
+	for (const auto& pair : mobilityMap) {
+		inverseMobilityMap[pair.second] = pair.first;
+	}
+
+	// Allocate root mobilities
 	rootMobilities.push_back({});
 	for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
 		rootMobilities.back().push_back("Rigid");
 	}
+
+	for (const auto& flex : flexibilities) {
+
+		if(flex.i == -1){
+
+			assert("Set root mobilities: atom index fault." &&
+				((flex.j >= 0) && (flex.j < atoms.size())));
+
+			bSpecificAtom& userRootAtom = atoms[flex.j];
+
+			int molIx = userRootAtom.getMoleculeIndex();
+			if(molIx >= getNofMolecules()){
+				std::cerr << "Set root mobilities: molecule index fault." << std::endl;
+				break;
+			}
+
+			std::cout << "Set root mobilities -1=" << flex.i << " molecule " << molIx <<" at atom " << flex.j <<" to " << flex.mobility << std::endl;
+
+			(rootMobilities.back())[molIx] = inverseMobilityMap[flex.mobility];
+
+		} // found a root mobility
+	} // every flexibility
+
+
+
 
 	// Set flexibilities
 	for (auto& bond : bonds) {
@@ -1473,6 +1545,13 @@ void Context::addWorld(
 		topology.setBondMobility(mobility, compoundBondIx);
 	}
 
+
+
+
+
+
+
+
 	worlds.back().AllocateCoordBuffers(natoms);
 
 	worlds.back().topologies = &topologies;
@@ -1489,6 +1568,7 @@ void Context::addWorld(
 
 	// This is one to many map
 	worlds.back().loadMbx2AIxMap_SP_NEW();
+
 }
 
 // Use a SetupReader Object to read worlds information from a file
@@ -1952,13 +2032,13 @@ void Context::closeARingWithThisBond(Topology& topology, bBond& bond, int molIx)
 	}
 
 	// ======================== ACTUAL BONDING ========================
-	scout("Bonding ring ")
-		<< child.getName() <<" " << child.getInName()
-		<<" " << child.getNumber() <<" " << sbuff.str() <<" "
-		<< "to " << parent.getName() <<" " << parent.getInName() <<" "
-		<< parent.getNumber() <<" "
-		<< "with bond center name " << otsbuff.str() <<" "
-		<< eolf;
+	// scout("Bonding ring ")
+	// 	<< child.getName() <<" " << child.getInName()
+	// 	<<" " << child.getNumber() <<" " << sbuff.str() <<" "
+	// 	<< "to " << parent.getName() <<" " << parent.getInName() <<" "
+	// 	<< parent.getNumber() <<" "
+	// 	<< "with bond center name " << otsbuff.str() <<" "
+	// 	<< eolf;
 
 	topology.addRingClosingBond(
 			(sbuff.str()).c_str(),
@@ -2213,7 +2293,7 @@ void Context::addRingClosingBonds_All(void)
 
 			Topology& topology = topologies[molIx];
 
-			scout("Ring closing bond ") ; PrintBond(bond);
+			//scout("Ring closing bond ") ; PrintBond(bond);
 
 			closeARingWithThisBond(topology, bond, molIx);
 
@@ -3469,20 +3549,20 @@ void Context::setFlexibility(
 				std::string mobility =  lineWords[2];
 
 				// Add root mobilities
-				if(index_1 == -1){
-					molIx++;
-					if(molIx < rootMobilities[whichWorld].size()){
-						rootMobilities[whichWorld][molIx] = mobility;
+				// if(index_1 == -1){
+				// 	molIx++;
+				// 	if(molIx < rootMobilities[whichWorld].size()){
+				// 		rootMobilities[whichWorld][molIx] = mobility;
 						
-						// scout("Added rootMobility world ")
-						// 	<< whichWorld << " mol " << molIx <<" "
-						// 	<< rootMobilities[whichWorld][molIx] <<" "
-						// 	<< eol;
+				// 		// scout("Added rootMobility world ")
+				// 		// 	<< whichWorld << " mol " << molIx <<" "
+				// 		// 	<< rootMobilities[whichWorld][molIx] <<" "
+				// 		// 	<< eol;
 
-					}else{
-						std::cerr << "[WARNING] Too many root mobilities\n";
-					}
-				}
+				// 	}else{
+				// 		std::cerr << "[WARNING] Too many root mobilities\n";
+				// 	}
+				// }
 
 				// Iterate Gmolmodel bonds
 				for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
@@ -3536,13 +3616,6 @@ void Context::modelOneEmbeddedTopology_SP_NEW(
 
 	std::vector<SimTK::Transform>& atomFrameCache =
 		topologies[whichTopology].atomFrameCache;
-
-	std::cout << "rootMobilities.size() = " << rootMobilities.size() << std::endl;
-	for (int i = 0; i < rootMobilities.size(); i++) {
-		for (int j = 0; j < rootMobilities[i].size(); j++) {
-			std::cout << "rootMobilities[" << i << "][" << j << "] = " << rootMobilities[i][j] << std::endl;
-		}
-	}
 
 	worlds[whichWorld].compoundSystem->modelOneCompound(
 		SimTK::CompoundSystem::CompoundIndex(whichTopology),
@@ -3664,6 +3737,7 @@ void Context::modelSystem() {
 			// Check if the user set the bond mobility
 			BondMobility::Mobility mobility = BondMobility::Mobility::Rigid;
 			for (const auto& flex : worlds[worldIx].getFlexibilities()) {
+
 				if (bond.isThisMe(flex.i, flex.j)) {
 					mobility = flex.mobility;
 					break;
