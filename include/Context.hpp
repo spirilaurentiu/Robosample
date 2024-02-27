@@ -842,6 +842,7 @@ private:
 
 	TrajectoryObject traj;
 	bool wantDCD = false;
+	std::vector<SimTK::Real> Xs, Ys, Zs;
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
