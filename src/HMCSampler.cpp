@@ -4521,7 +4521,7 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 					<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
 					<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
 					<< "scalingFactor " << (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)) <<" "
-					<< " qEntry " << qEntry 
+					<< " qEntry " << qEntry
 					<< eol;
 
 			}
