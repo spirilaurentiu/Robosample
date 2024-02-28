@@ -559,22 +559,25 @@ void World::PrintInitialRecommendedTimesteps(void)
 	std::cout << M << " "; */
 
 	SimTK::Real CartesianTimestep = 0.001;
-	SimTK::Vector V(matter->getNumBodies() - 1, CartesianTimestep);
+	SimTK::Vector hydrogenTimesteps(nu, CartesianTimestep);
+	SimTK::Vector MxHydrogenTimesteps(nu, CartesianTimestep);
+
 
 	// Get Mobods mass properties
-	for (SimTK::MobilizedBodyIndex mbx(1);
-		mbx < matter->getNumBodies();
-		++mbx){
+	// for (SimTK::MobilizedBodyIndex mbx(1);
+	// 	mbx < matter->getNumBodies();
+	// 	++mbx){
+	// 	// Get mobod
+	// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	// 	SimTK::SpatialInertia sp = mobod.getBodySpatialInertiaInGround(someState);
+	// 	V[int(mbx) - 1] *= sp.getMass();
+	// }
 
-		// Get mobod
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		SimTK::SpatialInertia sp = mobod.getBodySpatialInertiaInGround(someState);
+	matter->multiplyByM(someState, hydrogenTimesteps, MxHydrogenTimesteps);
 
-		V[int(mbx) - 1] *= sp.getMass();
+	std::cout << MxHydrogenTimesteps << std::endl;
 
-	}
-
-	std::cout << SimTK::min(V) << " ";
+	std::cout << SimTK::min(MxHydrogenTimesteps) << " ";
 
 	/* for (SimTK::MobilizedBodyIndex mbx(1);
 		mbx < matter->getNumBodies();
