@@ -242,49 +242,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
     //     std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
     // }
 
-	// SP_OLD
-	if (!singlePrmtop) {
-		// Requested nof Worlds in input. We'll try to construct them all
-		// but we're not sure if we'll going to succesed.
-		const auto requestedNofMols = nofMols;
-		std::cout << "Requested " << nofMols << " molecules in " << nofWorlds << " worlds" << std::endl;
-
-		AddMolecules(requestedNofMols, setupReader);
-
-		if(requestedNofMols != getNofMolecules()){
-
-			std::cerr << cerr_prefix
-				<< "Something went wrong while adding the world" 
-				<< eol;
-
-			return false;
-		}
-
-		// Add molecules based on the setup reader
-		// amber -> robo
-		int finalNofMols = 0;
-
-		std::cout << "Added " << finalNofMols << " molecules" << std::endl;
-
-		// Set the final number of molecules added
-		finalNofMols = getNofMolecules();
-
-
-		// Loads parameters into DuMM
-		addDummParams(finalNofMols, setupReader);
-
-		// Adopts compound by the CompoundSystem and loads maps of indexes
-		model(finalNofMols, setupReader);
-
-		realizeTopology();
-
-		// Allocate space for containers that keep statistics if we're doing any
-		for (auto& w : worlds) {
-			w.allocateStatsContainers();
-		}
-
-	}
-
 	// Add membrane.
 	bool haveMembrane = (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND");
 	if (haveMembrane){
@@ -425,7 +382,11 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
-	if((runType[0] == 'R') || (runType[1] == 'E')){
+	if(	(runType == "REMC")   || 
+		(runType == "RENEMC") ||
+		(runType == "RENE") ){
+
+		int NRepl = getNofReplicas();
 
 		SetupReader rexReader;
 
@@ -478,8 +439,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 
 		// Add replicas
+		std::string crdPrefix = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0];
 		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k);
+			addReplica(k, crdPrefix);
 		}
 
 		// Consider renaming
@@ -863,7 +825,7 @@ void Context::addBiotypes() {
 }
 
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
-
+	
 	// TODO remove at some point
 	singlePrmtop = true;
 
@@ -4370,73 +4332,47 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
 
 // Adds a replica to the vector of Replica objects and sets the coordinates
 // of the replica's atomsLocations
-void Context::addReplica(int index)
+void Context::addReplica(int index, std::string crdPrefix)
 {
 	// Add replica and the vector of worlds
-	replicas.emplace_back(Replica(index
-		//argWorldIndexes,
-		//timestepsInThisReplica,
-		//mdstepsInThisReplica
-	));
+	replicas.emplace_back(Replica(index));
 
-	///* // EXPERIMENTAL
     std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		referenceAtomsLocationsFromFile;
 
-    // Iterate through molecules
-    for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-
-        // Coordinate file prefix
-        //std::string crdPrefix = crdFNs[molIx].substr(0, crdFNs[molIx].find("."));
-        std::string crdPrefix = crdFNs[molIx].substr(0, crdFNs[molIx].find_last_of('.'));
-        //std::string crdPrefix = crdFNs[molIx];
-
-		// Read files
-		readAmberInput amberReader;
-		std::string crdFN = crdPrefix + ".s" + std::to_string(index) + ".rst7";
-		std::cout << "Context::addReplica: " << "loading " << crdFN << std::endl << std::flush;
-		amberReader.readAmberFiles(crdFN,  topFNs[0]);
-
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
-		currentTopologyInfo.reserve( topologies[molIx].getNAtoms() );
-
-		// Add each atom's location from file
-		int i = -1;
-		for (auto& atom : topologies[molIx].bAtomList) {
-            i++;
-
-			SimTK::Vec3 location(
-                amberReader.getAtomsXcoord(i) / 10.0,
-                amberReader.getAtomsYcoord(i) / 10.0,
-                amberReader.getAtomsZcoord(i) / 10.0
-            );
-
-			currentTopologyInfo.emplace_back(&atom, location);
-		}
-
-		// Add topology to reference
-		referenceAtomsLocationsFromFile.emplace_back(currentTopologyInfo);
-
-    }//*/
-
+	// // Read files
+	// readAmberInput amberReader;
+	// std::string crdFN = crdPrefix + ".s" + std::to_string(index) + ".rst7";
+	// std::cout << "Context::addReplica: " << "loading " << crdFN << std::endl << std::flush;
+	// amberReader.readAmberFiles(crdFN,  topFNs[0]);
+    // // Iterate through molecules
+    // for(unsigned int molIx = 0; molIx < getNofMolecules(); molIx++){
+	// 	std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
+	// 	currentTopologyInfo.reserve( topologies[molIx].getNAtoms() );
+	// 	// Add each atom's location from file
+	// 	int i = -1;
+	// 	for (auto& atom : topologies[molIx].subAtomList) {
+    //         i++;
+	// 		SimTK::Vec3 location(
+    //             amberReader.getAtomsXcoord(i) / 10.0,
+    //             amberReader.getAtomsYcoord(i) / 10.0,
+    //             amberReader.getAtomsZcoord(i) / 10.0
+    //         );
+	// 		currentTopologyInfo.emplace_back(&atom, location);
+	// 	}
+	// 	// Add topology to reference
+	// 	referenceAtomsLocationsFromFile.emplace_back(currentTopologyInfo);
+    // }
 	// Set replicas coordinates
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		referenceAtomsLocations =
 		worlds[0].getCurrentAtomsLocationsInGround();
 
-	replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
+	//replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
+	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 
-	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
-
-    /* // EXPERIMENTAL
-	replicas.back().PrintCoordinates();
-    std::cout << "Context::addReplica world[0] reference coordinates\n" << std::flush;
-	for(auto molecule : referenceAtomsLocations){
-        for (auto atomPair : molecule){
-            std::cout << atomPair.first->atomIndex << " " << atomPair.second << std::endl;
-        }
-	}
-    */
+	//replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
+	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
 
 	// Done
 	nofReplicas++;
@@ -5790,11 +5726,7 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
 		
-		if( singlePrmtop == true ){
-			transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
-		}else{
-			transferCoordinates(backWorldIx, frontWorldIx);
-		}
+		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
 
 		if(validated){
 			std::cout << std::endl;
@@ -6409,7 +6341,9 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 
 
 /*!
- * <!-- Transfer coordinates -->
+ * <!-- Transfer geometry to a world
+ *	
+ *  -->
 */
 SimTK::State& Context::setAtoms_SP_NEW(
 	int destWIx,
@@ -6417,11 +6351,8 @@ SimTK::State& Context::setAtoms_SP_NEW(
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
 		otherWorldsAtomsLocations)
 {
-
+	// Get destination world
 	World& destWorld = worlds[destWIx];
-
-	//SimTK::State& currentAdvancedState = worlds[destWIx].integ->updAdvancedState();
-	//someState = currentAdvancedState;
 
 	// Get dumm force field and matter
 	SimTK::DuMMForceFieldSubsystem &dumm = *destWorld.forceField;
@@ -6476,11 +6407,9 @@ SimTK::State& Context::setAtoms_SP_NEW(
 		destWorld.setAtoms_SetDuMMStations(topoIx, locs);
 	} // every Topology
 
-	//std::cout << "transferCoordinates_SP_NEW setAtoms_SetDuMMStations System Stage: " << someState.getSystemStage() << std::endl;
-
 	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
+	// This method only uses internal coordinates per molecule bonds info
 	setAtoms_XPF_XBM(destWIx);
-	//std::cout << "transferCoordinates_SP_NEW setAtoms_XPF_XBM System Stage: " << someState.getSystemStage() << std::endl;
 
 	// Recover the modified state (may not be necessary)
 	destWorld.compoundSystem->realizeTopology();
@@ -6488,16 +6417,14 @@ SimTK::State& Context::setAtoms_SP_NEW(
 
 	// Set every mobod's mass properties
 	someState = setAtoms_MassProperties(destWIx);
-	//std::cout << "transferCoordinates_SP_NEW setAtoms_MassProperties System Stage: " << someState.getSystemStage() << std::endl;
 
 	// Set X_FMs
 	someState = setAtoms_XFM(destWIx, someState);
-	//std::cout << "transferCoordinates_SP_NEW setAtoms_XFM System Stage: " << someState.getSystemStage() << std::endl;
 
 	// Realize position
 	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
-	//std::cout << "transferCoordinates_SP_NEW return System Stage: " << someState.getSystemStage() << std::endl;
 
+	//std::cout << someState.getSystemStage() << std::endl;
 	return someState;
 	
 }
@@ -6511,12 +6438,12 @@ Context::setAtoms_XPF_XBM(
 	int wIx
 )
 {
-
+	// Get the advanced State
 	SimTK::State& someState = worlds[wIx].integ->updAdvancedState();
 
+	// 
 	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
 	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
-	//SimTK::CompoundSystem& compoundSystem = *worlds[wIx].compoundSystem;
 
 	// All the bonds from all Compounds
 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
@@ -6529,8 +6456,6 @@ Context::setAtoms_XPF_XBM(
 
 	// Iterate molecules
 	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
-
-// scout("Transformers table by bond: allCnt topoIx BOIx boIx BOchild BOparent childTopoIx parentTopoIx child_cAIx parent_cAIx child_dAIx parent_dAIx childMbx parentMbx flex flexStr") << eol;
 
 		// Get molecule and it's bonds
 		Topology& topology = topologies[topoIx];
@@ -6567,12 +6492,6 @@ Context::setAtoms_XPF_XBM(
 			SimTK::MobilizedBodyIndex parentMbx = constParentMobod.getMobilizedBodyIndex();
 			SimTK::MobilizedBody& parentMobod = matter.updMobilizedBody(parentMbx);
 
-// scout("bondEntry: ") << allCnt <<" " << topoIx <<" " << BOIx <<" " << boIx <<" "; BONDS[BOIx].Print();
-// scout(" ") << childTopoIx <<" " << parentTopoIx <<" "; 
-// scout(" ") << child_cAIx <<" " << parent_cAIx <<" " << child_dAIx <<" " << parent_dAIx <<" ";
-// std::cout << childMbx <<" " << parentMbx <<" " << bond.getBondMobility(destWIx) <<" " << MobilityStr[ bond.getBondMobility(destWIx) ] <<" ";
-
-
 			// Set mobods X_PFs and X_BMs for atoms
 			if(atoms[parentNo].getIsRoot()){
 
@@ -6582,11 +6501,6 @@ Context::setAtoms_XPF_XBM(
 				SimTK::Transform G_X_base = G_X_T * T_X_base;
 				parentMobod.setDefaultInboardFrame(G_X_base);
 				parentMobod.setDefaultOutboardFrame(SimTK::Transform());
-
-				// scout("base atom X_PF") << eol;
-				// PrintTransform(G_X_base, 6, "base_X_PF");
-				// scout("base atom X_B") << eol;
-				// PrintTransform(SimTK::Transform(), 6, "base_X_PF");
 
 			}
 
@@ -6598,15 +6512,6 @@ Context::setAtoms_XPF_XBM(
 						child_cAIx, parent_cAIx,
 						bond.getBondMobility(wIx),
 						someState);
-
-				// scout("mobod ") << childMbx <<" " << ("X_PF ") << eol;
-				// PrintTransform(mobod.getDefaultInboardFrame(), 6, "X_PF");
-				// scout("mobod ") << childMbx <<" " << ("X_BM ") << eol;
-				// PrintTransform(mobod.getDefaultOutboardFrame(), 6, "X_BM");
-				// scout("NEW ") << childMbx <<" " << ("X_PF ") << eol;
-				// PrintTransform(mobodTs[0], 6, "newX_PF");
-				// scout("NEW ") << childMbx <<" " << ("X_BM ") << eol;
-				// PrintTransform(mobodTs[1], 6, "newX_PF");
 				
 				mobod.setDefaultInboardFrame(mobodTs[0]);
 				mobod.setDefaultOutboardFrame(mobodTs[1]);
@@ -6832,7 +6737,7 @@ Context::calc_XPF_XBM(
 	SimTK::BondMobility::Mobility mobility,
 	const SimTK::State& someState)
 {
-	// Get world's forcefield and matter
+	// Get world's forcefield and matter ()
 	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
 	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
 
