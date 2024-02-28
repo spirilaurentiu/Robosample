@@ -51,10 +51,12 @@ int main(int argc, char **argv)
 	// // Does OMMVV have to be first?
 
 	// // Add samplers
-	// c.getWorld(0).addSampler_py(SamplerName::HMC, SampleGenerator::MC, IntegratorName::OMMVV, ThermostatName::ANDERSEN, 0.001, 200, 0, 300, 1, 0, 0, 0, false);
+	// c.getWorld(0).addSampler(SamplerName::HMC, SampleGenerator::MC, IntegratorName::OMMVV, ThermostatName::ANDERSEN, 0.001, 200, 0, 300, 1, 0, 0, 0, false);
 
-	// // Does not work if I set OMMVV instead of VV. How do I check if it is working?
-	// c.getWorld(1).addSampler_py(SamplerName::HMC, SampleGenerator::MC, IntegratorName::VERLET, ThermostatName::ANDERSEN, 0.001, 50, 0, 300, 1, 0, 0, 0, true);
+	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
+	// c.getWorld(1).addSampler(SamplerName::HMC, SampleGenerator::MC, IntegratorName::VERLET, ThermostatName::ANDERSEN, 0.001, 50, 0, 300, 1, 0, 0, 0, true);
+
+	// c.appendDCDReporter("2but.dcd");
 
 	// c.Run();
 
