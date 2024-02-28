@@ -2143,9 +2143,6 @@ void World::updateAtomListsFromCompound(const SimTK::State &state)
  * realizes Position and uses matter to calculate locations **/
 void World::updateAtomListsFromCompound_SP_NEW(const SimTK::State &state)
 {
-	// Coordinate buffer index
-	std::size_t aIx = 0;
-
 	// Iterate through topologies
 	for (auto& topology : (*topologies)){
 
@@ -2161,12 +2158,6 @@ void World::updateAtomListsFromCompound_SP_NEW(const SimTK::State &state)
 			atom.setY(location[1]);
 			atom.setZ(location[2]);
 			atom.setCartesians(location);
-
-			// Update coordinate buffers
-			Xs[aIx] = location[0];
-			Ys[aIx] = location[1];
-			Zs[aIx] = location[2];
-			aIx++;
 
 			// std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
 		}
@@ -3810,38 +3801,6 @@ void World::PrintSimbodyStateCache(SimTK::State& someState){
 			<< " Version: " << someState.getSubsystemVersion(SimTK::SubsystemIndex(i))
 			<< std::endl;
 	}
-}
-
-// /** Fill Worlds Cartesian coordinates buffers.
-// To be called before use of getXs, getYs or getZs **/
-// void World::updateCoordBuffers()
-// {
-// 	int allAtIx = -1;
-// 	for(std::size_t tIx = 0; tIx < topologies->size(); tIx++){
-// 		for(int aIx = 0; aIx < ((*topologies)[tIx]).getNAtoms(); aIx++){
-// 			allAtIx++;
-// 			Xs[allAtIx] = (((*topologies)[tIx]).bAtomList[aIx]).getX();
-// 			Ys[allAtIx] = (((*topologies)[tIx]).bAtomList[aIx]).getY();
-// 			Zs[allAtIx] = (((*topologies)[tIx]).bAtomList[aIx]).getZ();
-// 		}
-// 	}
-
-// }
-
-/** Get the coordinates from buffers **/
-const std::vector<SimTK::Real>& World::getXs() const
-{
-	return Xs;
-}
-
-const std::vector<SimTK::Real>& World::getYs() const
-{
-	return Ys;
-}
-
-const std::vector<SimTK::Real>& World::getZs() const
-{
-	return Zs;
 }
 
 /** Return own CompoundSystem **/

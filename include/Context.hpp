@@ -664,11 +664,6 @@ private:
 	//std::vector<std::string> rootMobilities;
 	InternalCoordinates internCoords;
 
-	/** Vectors of Cartesian coordinates **/
-	std::vector<SimTK::Real> Xs;
-	std::vector<SimTK::Real> Ys;
-	std::vector<SimTK::Real> Zs;
-
 	// WORLD END
 
 	// Simulation parameters
@@ -845,6 +840,7 @@ private:
 
 	TrajectoryObject traj;
 	bool wantDCD = false;
+	std::vector<SimTK::Real> Xs, Ys, Zs;
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////

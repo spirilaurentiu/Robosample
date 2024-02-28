@@ -911,6 +911,11 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	for (auto& row : zMatrixBAT) {
 		row.resize(3, SimTK::NaN);
 	}
+
+	// Allocate coordinate buffers
+	Xs.resize(natoms);
+	Ys.resize(natoms);
+	Zs.resize(natoms);
 }
 
 /*!
@@ -1135,7 +1140,7 @@ void Context::buildAcyclicGraph(
 
 
 void Context::appendDCDReporter(const std::string& filename) {
-	traj.createTrajectory(filename, "dcd", natoms, 0);
+	traj.createTrajectory(filename, "dcd", natoms, topologies.size());
 	wantDCD = true;
 }
 
@@ -6304,16 +6309,21 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 
 void Context::writeDCDs()
 {
-	// Writing the first world
+	// Write the DCD from the first world
 	auto& world = worlds[worldIndexes.front()];
 
 	// Update bAtomList in Topology
 	const SimTK::State& pdbState = world.integ->updAdvancedState();
 	world.updateAtomListsFromCompound_SP_NEW(pdbState);
 
-	// Actual write
-	traj.appendTimestep("dcd", world.getXs(), world.getYs(), world.getZs());
+	for (int i = 0; i < natoms; i++) {
+		Xs[i] = atoms[i].getX() * 10;
+		Ys[i] = atoms[i].getY() * 10;
+		Zs[i] = atoms[i].getZ() * 10;
+	}
 
+	// Actual write
+	traj.appendTimestep("dcd", Xs, Ys, Zs);
 }
 
 void Context::randomizeWorldIndexes()
