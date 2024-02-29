@@ -6,12 +6,14 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
-Context::Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed)
+Context::Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t argSeed)
 {
 	// Use a random seed if none is provided
-	if (seed == 0) {
+	if (argSeed == 0) {
 		std::random_device rd;
-		seed = rd();
+		this->seed = rd();
+	}else{
+		this->seed = argSeed;
 	}
 
 	// Set the random seed

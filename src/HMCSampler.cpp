@@ -4146,14 +4146,15 @@ void HMCSampler::update(SimTK::State& someState)
 }
 
 
-
-
-/** Push Cartesian coordinates into R vector stored in Sampler.
-Return the size of R **/
+// @todo : replace by q x JTJ x qDot ?
+/*!
+ * <!-- Push Cartesian coordinates into R vector stored in Sampler.
+Return the size of R -->
+*/
 std::size_t HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 {
 	for(const auto& topology : topologies){
-		for(const auto& AtomList : topology.bAtomList){
+		for(const auto& AtomList : topology.subAtomList){
 			const auto aIx = AtomList.getCompoundAtomIndex();
 			const auto& atomR = topology.calcAtomLocationInGroundFrame(someState, aIx);
 			R.insert(R.end(), { atomR[0], atomR[1], atomR[2] });
@@ -4173,7 +4174,6 @@ std::size_t HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 			// 	R[j] = R[j + ndofs];
 			// 	R.pop_back();
 			// }
-
 			// If stuff breaks, look up for the original code. This also compacts memory
 			// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
 			std::vector<decltype(R)::value_type>(R.begin() + ndofs, R.end()).swap(R);
@@ -4191,7 +4191,7 @@ Return the size of Rdot **/
 std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 {
 	for(const auto& topology : topologies){
-		for(const auto& AtomList : topology.bAtomList){
+		for(const auto& AtomList : topology.subAtomList){
 			const auto aIx = AtomList.getCompoundAtomIndex();
 			const auto& atomRdot = topology.calcAtomVelocityInGroundFrame(someState, aIx);
 			Rdot.insert(Rdot.end(), { atomRdot[0], atomRdot[1], atomRdot[2] });
@@ -4212,7 +4212,6 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 			// 	Rdot[j] = Rdot[j + ndofs];
 			// 	Rdot.pop_back();
 			// }
-
 			// If stuff breaks, look up for the original code. This also compacts memory
 			// See https://stackoverflow.com/questions/7351899/remove-first-n-elements-from-a-stdvector for more details
 			std::vector<decltype(Rdot)::value_type>(Rdot.begin() + ndofs, Rdot.end()).swap(Rdot);
@@ -4225,6 +4224,7 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 	return Rdot.size();
 }
 
+// @todo : replace by <q x JTJ x q> ?
 /** Calculate Mean Square Displacement based on stored R vectors **/
 SimTK::Real HMCSampler::calculateMSD()
 {
