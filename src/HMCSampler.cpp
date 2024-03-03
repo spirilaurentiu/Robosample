@@ -593,7 +593,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//PrintSubZMatrixBATDeviations(someState);
 
 			SimTK::Real sJac =
-				scaleSubZMatrixBATDeviations(someState, SimTK::Real(500.0/300.0));
+				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
 			setDistortJacobianDetLog(sJac);
 			//PrintSubZMatrixBATDeviations(someState);
 
@@ -4476,7 +4476,7 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 	SimTK::Real scaleJacobian = 0.0;
 
-	scout("scaleBATDeviations state before ") << std::setprecision(12) << someState.getQ() << eol;
+	scout("scaleBATDeviations state before ") << scalingFactor <<" " << std::setprecision(12) << someState.getQ() << eol;
 
 	// Iterate bats
 	size_t bati = 0;
@@ -4515,14 +4515,14 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 				scaleJacobian += std::log( (BAT[rearrMobodQCnt] + BATdiffs[rearrMobodQCnt]) / (BAT[rearrMobodQCnt]) );
 
-				scout("scaleBATDeviations ")
-					<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
-					<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
-					<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
-					<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
-					<< "scalingFactor " << (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)) <<" "
-					<< " qEntry " << qEntry
-					<< eol;
+				// scout("scaleBATDeviations ")
+				// 	<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
+				// 	<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
+				// 	<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
+				// 	<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
+				// 	<< "scalingFactor " << (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)) <<" "
+				// 	<< " qEntry " << qEntry
+				// 	<< eol;
 
 			}
 			

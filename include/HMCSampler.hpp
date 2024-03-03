@@ -621,7 +621,6 @@ public:
 
 	// BAT --------------------------------------------------------------------
 
-
 protected:
 
 	int equilNofRounds = 0;
@@ -738,6 +737,7 @@ protected:
 
 	// TODO explain what this does
 	SimTK::Vector sqrtMInvV;
+
 };
 
 #endif // __HAMMONTECARLOSAMPLER_HPP__
