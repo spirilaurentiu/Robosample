@@ -277,6 +277,11 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		);
 	} // every world
 
+	// Add temperature after adding samplers
+	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+		worlds[worldIx].setTemperature(tempIni);
+	}
+
 	int firstWIx = 0;
 	SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
 
@@ -1426,7 +1431,7 @@ void Context::addWorld(
 	worlds.back().setSamplesPerRound(samplesPerRound);
 
 	// Set temperatures for sampler and Fixman torque is applied to this world
-	worlds.back().setTemperature(tempIni);
+	//worlds.back().setTemperature(tempIni);
 
 	rbSpecsFNs.push_back(std::vector<std::string>());
 	flexSpecsFNs.push_back(std::vector<std::string>());
@@ -5615,8 +5620,8 @@ bool Context::RunWorld(int whichWorld)
 	} else if (distortOption == -1) {
 
 		// Update world's sampler's BAT coordinates
-		updSubZMatrixBATsToWorld(whichWorld);
-		scout("Context::RunWorld PrintSubZMatrixBAT: ") << eol;
+		//updSubZMatrixBATsToWorld(whichWorld);
+		//scout("Context::RunWorld PrintSubZMatrixBAT: ") << eol;
 		//worlds[whichWorld].updSampler(0)->PrintSubZMatrixBAT();
 
 		// Generate samples
@@ -8044,7 +8049,7 @@ Context::calcInternalBATJacobianLog(void)
 				
 				if(currBond != SimTK::NaN){
 				
-					logJacBAT += 2.0 * std::log(currBond);
+					logJacBAT += 4.0 * std::log(currBond);
 				}
 
 				// Get the angle term
@@ -8052,7 +8057,7 @@ Context::calcInternalBATJacobianLog(void)
 
 				if(currAngle != SimTK::NaN){
 
-					logJacBAT += std::log(std::sin(currAngle));
+					logJacBAT += 2.0 * std::log(std::sin(currAngle));
 					
 				}
 
@@ -8084,9 +8089,16 @@ Context::addSubZMatrixBATsToWorld(
 	for (const auto& row : zMatrixTable) {
 
 		std::vector<SimTK::Real> BATrow = updZMatrixBATRow(zMatCnt);
-		//for (SimTK::Real BATvalue : BATrow) {
-		//	std::cout << std::setw(6) << BATvalue << " ";
-		//}
+		std::vector<SimTK::Real>& BATrow_ref = updZMatrixBATRow(zMatCnt);
+
+		// scout("BATrow_ref") <<" ";
+		// for (SimTK::Real BATvalue : BATrow) {
+		// 	std::cout << std::setw(6) << BATvalue << " ";
+		// }
+		// for (SimTK::Real BATvalue : BATrow_ref) {
+		// 	std::cout << std::setw(6) << BATvalue << " ";
+		// }
+		// ceol;
 
 		// Get bond's atoms
 		bSpecificAtom& childAtom  = atoms[row[0]];
@@ -8126,6 +8138,7 @@ Context::addSubZMatrixBATsToWorld(
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
 				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs).insert(std::make_pair(childMbx, BATrow));
+				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).insert({childMbx, BATrow_ref});
 
 			}
 
@@ -8163,6 +8176,16 @@ Context::updSubZMatrixBATsToWorld(
 	for (const auto& row : zMatrixTable) {
 
 		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
+		//std::vector<SimTK::Real>& BATrow_ref = updZMatrixBATRow(zMatCnt);
+
+		// scout("BATrow_ref") <<" ";
+		// for (SimTK::Real BATvalue : BATrow) {
+		// 	std::cout << std::setw(6) << BATvalue << " ";
+		// }
+		// for (SimTK::Real BATvalue : BATrow_ref) {
+		// 	std::cout << std::setw(6) << BATvalue << " ";
+		// }
+		// ceol;
 
 		// Get bond's atoms
 		bSpecificAtom& childAtom  = atoms[row[0]];
@@ -8203,8 +8226,11 @@ Context::updSubZMatrixBATsToWorld(
 
 				std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
 					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
+				//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>&
+				//	variableBATs_ref = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs_ref();					
 					
 				variableBATs.at(childMbx) = BATrow;
+				//variableBATs_ref.at(childMbx) = BATrow_ref;
 
 			}
 

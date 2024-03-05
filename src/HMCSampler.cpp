@@ -592,9 +592,16 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			calcSubZMatrixBATDeviations(someState);
 			//PrintSubZMatrixBATDeviations(someState);
 
+			SimTK::Real JBATv = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
+
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
-			setDistortJacobianDetLog(sJac);
+
+			SimTK::Real JBATvPrime = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
+
+			setDistortJacobianDetLog(JBATv + sJac - JBATvPrime);
+			scout("BAT Jacobian terms ") << JBATv <<" " << sJac <<" " << JBATvPrime << eol;
+
 			//PrintSubZMatrixBATDeviations(someState);
 
 			// Just for the Visualizer
@@ -4377,7 +4384,7 @@ HMCSampler::calcSubZMatrixBATDeviations(
 		
 		// Iterate bats
 		size_t bati = 0;
-    	for (const auto& pair : subZMatrixBATs) {
+		for (const auto& pair : subZMatrixBATs_ref) {
 
 			subZMatrixBATMeans.insert(pair);
 			subZMatrixBATDiffs.insert(std::make_pair(pair.first, std::vector<SimTK::Real> {0, 0, 0}));
@@ -4389,9 +4396,9 @@ HMCSampler::calcSubZMatrixBATDeviations(
 
 		// Iterate bats
 		size_t bati = 0;
-    	for (const auto& pair : subZMatrixBATs) {
+		for (const auto& pair : subZMatrixBATs_ref) {
 
-			std::vector<SimTK::Real>& BAT      = subZMatrixBATs.at(pair.first);
+			std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
 			std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
 			std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
 
@@ -4476,20 +4483,22 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 	SimTK::Real scaleJacobian = 0.0;
 
-	scout("scaleBATDeviations state before ") << scalingFactor <<" " << std::setprecision(12) << someState.getQ() << eol;
+	scout("scaleBATDeviations state before ") << scalingFactor <<" "
+		//<< std::setprecision(12) << someState.getQ()
+		<< eol;
 
 	// Iterate bats
 	size_t bati = 0;
-	for (const auto& pair : subZMatrixBATs) {
+	for (const auto& pair : subZMatrixBATs_ref) {
 
-		std::vector<SimTK::Real>& BAT      = subZMatrixBATs.at(pair.first);
+		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
 		std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
 		std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
 
 		SimTK::MobilizedBodyIndex mbx = pair.first;
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
-		// scale
+		// Scale
 		int mobodQCnt = 0;
 
 		for(int qCnt = mobod.getFirstQIndex(someState);
@@ -4533,11 +4542,64 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 	}
 
 	system->realize(someState, SimTK::Stage::Dynamics);
-	scout("scaleBATDeviations state after") << std::setprecision(12) << someState.getQ() << eol;
+	scout("scaleBATDeviations state after")
+		//<< std::setprecision(12) << someState.getQ()
+		<< eol;
 
 	//return someState;
 	return scaleJacobian;
 
+}
+
+/*!
+ * <!--  -->
+*/
+SimTK::Real 
+HMCSampler::calcBATJacobianDetLog(
+	SimTK::State& someState,
+	SimTK::BondMobility::Mobility bondMobility,
+	std::vector<int> BATOrder,
+	std::vector<SimTK::Real> BATSign
+	)
+{
+
+	// Accumulate result here
+	SimTK::Real BATJacobian = 0.0;
+
+	// All bond mobilities are BendStretches
+	if (bondMobility == SimTK::BondMobility::Mobility::BendStretch){
+
+		// Iterate bats
+		size_t bati = 0;
+		for (const auto& pair : subZMatrixBATs_ref) {
+
+			std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
+			SimTK::MobilizedBodyIndex mbx = pair.first;
+
+			// scout("calcBATJacobianDetLog ")
+			// 	<< "mbx " << mbx << " "
+			// 	<< "BAT[mbx]["<< 0 << "] " << BAT[0] <<" "
+			// 	<< "BAT[mbx]["<< 1 << "] " << BAT[1] <<" "
+			// 	<< "BAT[mbx]["<< 2 << "] " << BAT[2] <<" "
+			// 	<< eol;
+
+			// Bond length to the fourth power
+			if( !(std::isnan(BAT[0])) ){
+				BATJacobian += 2.0 * std::log(BAT[0] * BAT[0]);
+			}
+
+			// ANgle sine squared
+			if( !(std::isnan(BAT[1])) ){
+				BATJacobian += std::log( std::sin(BAT[1]) * std::sin(BAT[1]) );
+			}
+
+			bati++;
+
+		} // every BAT
+
+	}
+
+	return BATJacobian;
 }
 
 // ---------------------------------------------------------------------------
