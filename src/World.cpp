@@ -3450,12 +3450,6 @@ SimTK::Real World::getTemperature()
 Fixman torque temperature. **/
 void World::setTemperature(SimTK::Real argTemperature)
 {
-	// Set the temperature for the samplers
-	// TODO unused
-	for (auto& sampler: samplers) {
-		sampler->setTemperature(argTemperature);
-	}
-
 	// Set the temperature for this World
 	this->temperature = argTemperature;
 

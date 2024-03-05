@@ -264,11 +264,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		);
 	} // every world
 
-	// Add temperature after adding samplers
-	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
-		worlds[worldIx].setTemperature(tempIni);
-	}
-
 	int firstWIx = 0;
 	SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
 
@@ -1416,7 +1411,7 @@ void Context::addWorld(
 	worlds.back().setSamplesPerRound(samplesPerRound);
 
 	// Set temperatures for sampler and Fixman torque is applied to this world
-	//worlds.back().setTemperature(tempIni);
+	worlds.back().setTemperature(tempIni);
 
 	rbSpecsFNs.push_back(std::vector<std::string>());
 	flexSpecsFNs.push_back(std::vector<std::string>());
