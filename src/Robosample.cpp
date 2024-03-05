@@ -1,5 +1,40 @@
 #include "Context.hpp"
 
+
+std::string extractValueFromInputFile(
+	const std::string& filename,
+	const std::string& keyword)
+{
+    std::ifstream file(filename);
+    std::string line;
+    std::string value;
+
+    if (file.is_open()) {
+
+        while (std::getline(file, line)) {
+            std::istringstream iss(line);
+            std::string word;
+
+            // Iterate over words in the line
+            while (iss >> word) {
+                if (word == keyword) {
+                    
+					// Check if there is another word after the keyword
+                    if (iss >> value) {
+                        return value;
+                    }
+                }
+            }
+        }
+        file.close();
+    } else {
+        std::cerr << "Error: Unable to open file " << filename << std::endl;
+    }
+
+    return value;
+}
+
+
 int main(int argc, char **argv)
 {
 	// Context c(300, 300, 42);
@@ -93,41 +128,14 @@ int main(int argc, char **argv)
 		}
 	}
 
-	Context c(300, 300, 42); // c = Context();
+	// Get the seed and pass it to the context
+	int seed = 0;
+	std::string seedStr = extractValueFromInputFile(argv[1], "SEED");
+	if (!seedStr.empty()) {
+		seed = std::stoi(seedStr);
+	}
 
-	// all are optional. seed is set to random in context constructor
-	// c.setNumThreads(3);
-	// c.setSeed(42);
-	// c.setPdbPrefix("2but42");
-	// c.setNonbonded(0, 1.2); // default
-	// c.setOutput("temp"); // the log file is created like log.[seed]
-	// c.setNofRoundsTillReblock(10); // per world?
-	// c.setRequiredNofRounds(100);
-	// c.setPdbRestartFreq(0); // WRITE_PDBS
-	// c.setPrintFreq(1); // PRINT_FREQ
-	// c.setRunType(RUN_TYPE::DEFAULT);
-
-	// TODO c.PrintInitialRecommendedTimesteps();
-
-
-	/*
-	c = Context()
-
-	for i in range(10):
-		c.addWorld(...)
-		c.getWorld(i).useOpenMM(...)
-		c.getWorld(i).setFlexibilities(...)
-
-	c.loadAmberSystem()
-
-	c.modelSystem()
-
-	
-
-	for w in c.getWorlds():
-		w.addSampler(...)
-		w.world.getSampler(0).setNonequilibriumParameters(...)
-	*/
+	Context c(300, 300, seed); // c = Context();
 
 	bool singlePrmtop = true;
 

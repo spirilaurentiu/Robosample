@@ -502,9 +502,8 @@ const std::vector<BOND>& InternalCoordinates::getMoleculeBonds( int which ) cons
 	return perMolBonds[which];
 }
 
-/**	
-* @brief Return the bond list
-* @return BOND vector
+/*!
+ * <!-- Return the BOND 2D vector -->
 */	
 const std::vector<std::vector<BOND>>& InternalCoordinates::getBonds() const
 {
