@@ -797,6 +797,18 @@ public:
 	/** Implicit membrane mimicked by half-space contacts */
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
+	std::map<std::string, BondMobility::Mobility> mobilityMap = {
+		{ "Pin", BondMobility::Torsion },
+		{ "Torsion", BondMobility::Torsion },
+		{ "Translation", BondMobility::Translation },
+		{ "Cartesian", BondMobility::Translation },
+		{ "Rigid", BondMobility::Rigid },
+		{ "Weld", BondMobility::Rigid },
+		{ "Slider", BondMobility::Slider },
+		{ "AnglePin", BondMobility::AnglePin },
+		{ "BendStretch", BondMobility::BendStretch },
+		{ "Spherical", BondMobility::Spherical }
+	};
 
     std::vector<std::string> MobilityStr {
 		"Zero",

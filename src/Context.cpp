@@ -72,19 +72,6 @@ bool Context::setOutput(const std::string& outDir) {
 	return true;
 }
 
-	std::map<std::string, BondMobility::Mobility> mobilityMap = {
-		{ "Pin", BondMobility::Torsion },
-		{ "Torsion", BondMobility::Torsion },
-		{ "Translation", BondMobility::Translation },
-		{ "Cartesian", BondMobility::Translation },
-		{ "Rigid", BondMobility::Rigid },
-		{ "Weld", BondMobility::Rigid },
-		{ "Slider", BondMobility::Slider },
-		{ "AnglePin", BondMobility::AnglePin },
-		{ "BendStretch", BondMobility::BendStretch },
-		{ "Spherical", BondMobility::Spherical }
-	};
-
 /*!
  * <!-- -->
 */
@@ -3473,18 +3460,6 @@ void Context::setFlexibility(
 	std::string flexFN,
 	int whichWorld)
 {
-	std::map<std::string, BondMobility::Mobility> mobilityMap = {
-		{ "Pin", BondMobility::Torsion },
-		{ "Torsion", BondMobility::Torsion },
-		{ "Translation", BondMobility::Translation },
-		{ "Cartesian", BondMobility::Translation },
-		{ "Rigid", BondMobility::Rigid },
-		{ "Weld", BondMobility::Rigid },
-		{ "Slider", BondMobility::Slider },
-		{ "AnglePin", BondMobility::AnglePin },
-		{ "BendStretch", BondMobility::BendStretch },
-		{ "Spherical", BondMobility::Spherical }
-	};
 
 	// Get flexible bonds from file. Numbering starts at 0 in prmtop
 	std::string line;

@@ -37,6 +37,74 @@ std::string extractValueFromInputFile(
 
 int main(int argc, char **argv)
 {
+	// Context c(300, 300, 42);
+	// // c.setNonbonded(0, 1.2); // default
+	// c.setNumThreads(0);
+	// c.setPdbPrefix("2but42");
+	// // c.setNonbonded(0, 1.2); // default
+	// c.setOutput("temp"); // the log file is created like log.[seed]
+	// c.setNofRoundsTillReblock(10); // per world?
+	// c.setRequiredNofRounds(1);
+	// c.setPdbRestartFreq(0); // WRITE_PDBS
+	// c.setPrintFreq(1); // PRINT_FREQ
+	// c.setRunType(RUN_TYPE::DEFAULT);
+
+	// // read files and create topologies. this populates ```atoms``` and ```bonds```
+	// // atoms must have a dumm index which is used by bonds, angles and torsions
+	// // generate topologies
+	// // addWorld will deal with adding generating dumm parameters
+	// c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
+
+	// // World 0 OPENMM
+	// std::vector<BOND_FLEXIBILITY> flexibilities_w0 = {
+	// 	{ 3, 1, BondMobility::Mobility::Translation },
+	// 	{ 1, 2, BondMobility::Mobility::Translation },
+	// 	{ 2, 4, BondMobility::Mobility::Translation },
+	// 	{ 1, 0, BondMobility::Mobility::Translation },
+	// 	{ 3, 8, BondMobility::Mobility::Translation },
+	// 	{ 3, 9, BondMobility::Mobility::Translation },
+	// 	{ 3, 10, BondMobility::Mobility::Translation },
+	// 	{ 0, 14, BondMobility::Mobility::Translation },
+	// 	{ 1, 5, BondMobility::Mobility::Translation },
+	// 	{ 2, 6, BondMobility::Mobility::Translation },
+	// 	{ 2, 7, BondMobility::Mobility::Translation },
+	// 	{ 4, 11, BondMobility::Mobility::Translation },
+	// 	{ 4, 12, BondMobility::Mobility::Translation },
+	// 	{ 4, 13, BondMobility::Mobility::Translation }
+	// };
+	// c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w0);
+
+	// // World 1
+	// std::vector<BOND_FLEXIBILITY> flexibilities_w1 = {
+	// 	{ 3, 1, BondMobility::Mobility::Torsion },
+	// 	{ 1, 2, BondMobility::Mobility::Torsion },
+	// 	{ 2, 4, BondMobility::Mobility::Torsion },
+	// 	{ 1, 0, BondMobility::Mobility::Torsion },
+	// };
+	// c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
+
+	// // Does OMMVV have to be first?
+
+	// // Add samplers
+	// c.getWorld(0).addSampler(SamplerName::HMC, SampleGenerator::MC, IntegratorName::OMMVV, ThermostatName::ANDERSEN, 0.001, 200, 0, 300, 1, 0, 0, 0, false);
+
+	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
+	// c.getWorld(1).addSampler(SamplerName::HMC, SampleGenerator::MC, IntegratorName::VERLET, ThermostatName::ANDERSEN, 0.001, 50, 0, 300, 1, 0, 0, 0, true);
+
+	// c.appendDCDReporter("2but.dcd");
+
+	// c.Run();
+
+	// return 0;
+
+
+	
+
+	/////////////////////////
+
+
+
+
 	std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
 	std::string helpString = "Usage: ./robosample [options]\n";
