@@ -608,6 +608,13 @@ public:
 		std::vector<SimTK::Real> BATSign = {1, -1, 1}
 	);
 
+	SimTK::Real calcBATJacobianDetLog(
+		SimTK::State& someState,
+		SimTK::BondMobility::Mobility bondMobility,
+		std::vector<int> BATOrder = {1, 0, 2},
+		std::vector<SimTK::Real> BATSign = {1, -1, 1}
+	);
+
 	// Getter for the variableBATs map
     const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getSubZMatrixBATs() const ;
 
@@ -618,6 +625,19 @@ public:
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATs;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATMeans;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATDiffs;
+
+
+    // Updater getter for the map
+    const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>& getSubZMatrixBATsRef() const {
+        return subZMatrixBATs_ref;
+    }
+	    std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>& updSubZMatrixBATsRef() {
+        return subZMatrixBATs_ref;
+    }
+
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATs_ref;
+	//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATMeans_ref;
+	//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATDiffs_ref;	
 
 	// BAT --------------------------------------------------------------------
 

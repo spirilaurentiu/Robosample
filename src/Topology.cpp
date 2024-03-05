@@ -1772,7 +1772,7 @@ SimTK::Real Topology::calcLogDetMBATInternal_SP_NEW(const SimTK::State& someStat
 	SimTK::Real massesContribution = calcLogDetMBATMassesContribution_SP_NEW(someState);
 
 	std::cout << std::setprecision(20) << std::fixed;
-	std::cout << "dists masses angles contributions: "
+	std::cout << "MBAT dists masses angles contributions: "
 	         << distsContribution << " "
 	         << massesContribution << " "
 	         << anglesContribution << std::endl;
