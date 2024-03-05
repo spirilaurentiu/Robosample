@@ -455,8 +455,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// Add constraints
 	//context.addConstraints();
 
-	PrintInitialRecommendedTimesteps();
-
     return true;
 }
 
@@ -6866,18 +6864,6 @@ void Context::RunLog(int round)
 
 	}
 
-}
-
-// Print recommended timesteps
-void Context::PrintInitialRecommendedTimesteps(void)
-{
-	std::cout << "Initial recommended timesteps ";
-	for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-		std::cout << "World " << worldIx << " " ;
-;
-		worlds[worldIx].PrintInitialRecommendedTimesteps();
-	}
-	std::cout << std::endl;
 }
 
 // Normal run
