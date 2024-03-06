@@ -544,26 +544,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 {
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
-		//std::cout << "Transforms before sample_iteration\n";
-		//world->PrintAcosX_PFs();
-		//world->PrintNormX_BMs();
-		//world->PrintAcosX_PFMeans();
-		//world->PrintNormX_BMMeans();
-		//
-		//world->traceBendStretch(someState);
-		//
-		// Set X_PF and X_BM means to whatever iti is now
-		///////////////////////////////////////////////////
-		// if(nofSamples == 0){
-		//	world->setTransformsMeansToCurrent(someState);
-		//}
-		///////////////////////////////////////////////////
-
-		// Resize the scale factors vector to be handed further
-		//std::vector<SimTK::Real> scaleFactors;
-		//scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
-		//	1.0);
-
 		// Scale bonds and angles
 		if(this->nofSamples >= 0){ // dont't take burn-in
 			
@@ -576,19 +556,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				std::cout << "done.\n" << std::flush;
 			}
 
-			// Calculate X_PFs and X_BMs
-			//world->getTransformsStatistics(someState);
-			//world->updateTransformsMeans(someState);
-			//
-			//setQToScaleBendStretch(someState, scaleFactors);
-			//setQToScaleBendStretchStdev(someState, scaleFactors);
-			// DEBUG PRINT
-			// World& myWorld = *world;
-			// if(myWorld.ownWorldIndex == 1){
-			// 	myWorld.PrintFullTransformationGeometry(someState,
-			// 		false, false, false, true, false, false);
-			// }
-
 			calcSubZMatrixBATDeviations(someState);
 			//PrintSubZMatrixBATDeviations(someState);
 
@@ -596,6 +563,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
+
+			updateSubZMatrixBAT(someState);
 
 			SimTK::Real JBATvPrime = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
@@ -4483,9 +4452,9 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 	SimTK::Real scaleJacobian = 0.0;
 
-	scout("scaleBATDeviations state before ") << scalingFactor <<" "
+	//scout("scaleBATDeviations state before ") << scalingFactor <<" "
 		//<< std::setprecision(12) << someState.getQ()
-		<< eol;
+		//<< eol;
 
 	// Iterate bats
 	size_t bati = 0;
@@ -4511,6 +4480,15 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 				SimTK::Real& qEntry = someState.updQ()[qCnt];
 
+				// scout("scaleBATDeviations before ")
+				// 	<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
+				// 	<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
+				// 	<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
+				// 	<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
+				// 	<< "scalingFactor-1 " << ((scalingFactor - 1.0)) <<" "
+				// 	<< " qEntry " << qEntry
+				// 	<< eol;
+
 				qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
 
 				// if(nofSamples % 2 == 0){
@@ -4522,16 +4500,20 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 				qEntry *= BATSign[rearrMobodQCnt];
 
-				scaleJacobian += std::log( (BAT[rearrMobodQCnt] + BATdiffs[rearrMobodQCnt]) / (BAT[rearrMobodQCnt]) );
+				// Update BAT entry after modifying q
+				//BAT[rearrMobodQCnt] += (qEntry * BATSign[rearrMobodQCnt]);
 
-				// scout("scaleBATDeviations ")
-				// 	<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
-				// 	<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
-				// 	<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
-				// 	<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
-				// 	<< "scalingFactor " << (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)) <<" "
-				// 	<< " qEntry " << qEntry
-				// 	<< eol;
+				scout("scaleBATDeviations after ")
+					<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
+					<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
+					<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
+					<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
+					<< "scalingFactor " << (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)) <<" "
+					<< " qEntry " << qEntry
+					<< eol;
+
+				// Accumulate for Jacobian
+				scaleJacobian += std::log( (BAT[rearrMobodQCnt] + BATdiffs[rearrMobodQCnt]) / (BAT[rearrMobodQCnt]) );
 
 			}
 			
@@ -4542,14 +4524,82 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 	}
 
 	system->realize(someState, SimTK::Stage::Dynamics);
-	scout("scaleBATDeviations state after")
+	//scout("scaleBATDeviations state after")
 		//<< std::setprecision(12) << someState.getQ()
-		<< eol;
+		//<< eol;
 
 	//return someState;
 	return scaleJacobian;
 
 }
+
+
+/*!
+ * <!--	Update BATs -->
+*/
+void
+HMCSampler::updateSubZMatrixBAT(
+	SimTK::State& someState,
+	std::vector<int> BATOrder,
+	std::vector<SimTK::Real> BATSign
+	)
+{
+
+	SimTK::Real scaleJacobian = 0.0;
+
+	scout("Update BAT before ")
+		//<< std::setprecision(12) << someState.getQ()
+		<< eol;
+
+	// Iterate bats
+	size_t bati = 0;
+	for (const auto& pair : subZMatrixBATs_ref) {
+
+		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
+		std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
+		std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
+
+		SimTK::MobilizedBodyIndex mbx = pair.first;
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+		// Scale
+		int mobodQCnt = 0;
+
+		for(int qCnt = mobod.getFirstQIndex(someState);
+		qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+		qCnt++){
+
+			int rearrMobodQCnt = BATOrder[mobodQCnt];
+
+			if( !(std::isnan(BATdiffs[rearrMobodQCnt])) ){
+
+				const SimTK::Real& qEntry = someState.getQ()[qCnt];
+
+				BAT[rearrMobodQCnt] += (qEntry * BATSign[rearrMobodQCnt]);
+
+				scout("Update BAT ")
+					<< "mbx " << mbx << " qCnt "	<< qCnt <<" "
+					<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
+					<< "BATmean[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" " 
+					<< " qEntry " << qEntry
+					<< eol;
+
+			}
+			
+			mobodQCnt++;
+		} // every mobod q
+
+		bati++;
+	}
+
+	//system->realize(someState, SimTK::Stage::Dynamics);
+
+	scout("Update BAT after")
+		//<< std::setprecision(12) << someState.getQ()
+		<< eol;
+
+}
+
 
 /*!
  * <!--  -->

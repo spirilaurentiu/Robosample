@@ -608,6 +608,13 @@ public:
 		std::vector<SimTK::Real> BATSign = {1, -1, 1}
 	);
 
+	void
+	updateSubZMatrixBAT(
+		SimTK::State& someState,
+		std::vector<int> BATOrder = {1, 0, 2},
+		std::vector<SimTK::Real> BATSign = {1, -1, 1}
+	);
+
 	SimTK::Real calcBATJacobianDetLog(
 		SimTK::State& someState,
 		SimTK::BondMobility::Mobility bondMobility,

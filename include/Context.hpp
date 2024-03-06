@@ -874,7 +874,7 @@ private:
     void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) ;
 
     // Function to get a given row
-    const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) ;
+    const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) const;
 
     // Function to get a given row
     std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex) ;
@@ -884,6 +884,8 @@ private:
 
     // Function to print the zMatrixBAT
     void PrintZMatrixBAT() const ;
+
+	void PrintZMatrixTableAndBAT() const;
 
     // Function to add a new row to the zMatrixBAT
     void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);

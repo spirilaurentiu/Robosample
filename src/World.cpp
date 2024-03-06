@@ -545,9 +545,23 @@ void World::PrintInitialRecommendedTimesteps(void)
 
 	matter->multiplyByM(someState, hydrogenTimesteps, MxHydrogenTimesteps);
 
-	std::cout << MxHydrogenTimesteps << std::endl;
+	//std::cout << MxHydrogenTimesteps << std::endl;
 
 	std::cout << SimTK::min(MxHydrogenTimesteps) << " ";
+
+	SimTK::Real minTimeStep;
+	SimTK::Real prevMinTimeStep = SimTK::Infinity;
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		minTimeStep = 0.0007 * std::sqrt(mobod.getBodyMass(someState));
+		if(minTimeStep < prevMinTimeStep){
+			prevMinTimeStep = minTimeStep;
+		}
+	}
+	std::cout << prevMinTimeStep << std::endl;
 
 }
 

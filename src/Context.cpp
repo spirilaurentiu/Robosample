@@ -6221,7 +6221,8 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
-	//scout("Context::transferCoordinates_SP_NEW ") << eol;
+	scout("Context::transferCoordinates_SP_NEW ") << eol;
+	PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
 
 	// Pass compounds to the new world
@@ -7675,7 +7676,7 @@ void Context::setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real v
 /*!
  * <!--	 -->
 */
-const std::vector<SimTK::Real>& Context::getZMatrixBATRow(size_t rowIndex) {
+const std::vector<SimTK::Real>& Context::getZMatrixBATRow(size_t rowIndex) const {
 
 	assert(rowIndex < zMatrixBAT.size());
 
@@ -7720,6 +7721,37 @@ void Context::PrintZMatrixBAT() const {
 		}
 		std::cout << std::endl;
 	}
+}
+
+/*!
+ * <!--	 -->
+*/
+void Context::PrintZMatrixTableAndBAT() const 
+{
+
+	size_t zMatCnt = 0;
+
+	for (const auto& row : zMatrixTable) {
+
+		scout("ZMatrixBATEntry: ");
+
+		// Print indexes
+		for (int value : row) {
+			std::cout << std::setw(6) << value <<" "; 
+		}
+
+		// Print BAT values
+		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
+		
+		for (SimTK::Real BATvalue : BATrow) {
+			std::cout << std::setw(6) << BATvalue << " ";
+		}
+
+		ceol;
+
+		zMatCnt++;
+	}
+
 }
 
 /*!
@@ -7921,10 +7953,12 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 
 		scout("ZMatrixBATEntry: ");
 
+		// Print indexes
 		for (int value : row) {
 			std::cout << std::setw(6) << value <<" "; 
 		}
 
+		// Print BAT values
 		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
 		for (SimTK::Real BATvalue : BATrow) {
 			std::cout << std::setw(6) << BATvalue << " ";
@@ -7956,41 +7990,41 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 		//scout(" ") << MobilityStr [ bond.getBondMobility(wIx) ] <<" ";
 		if(bond.getBondMobility(wIx) != SimTK::BondMobility::Rigid){
 
-						// Get Molmodel indexes
-						SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
-						SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+			// Get Molmodel indexes
+			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
 
-						SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
-						SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
 
-						// Get child-parent mobods
-						SimTK::DuMMForceFieldSubsystem& dumm = *(world.updForceField());
-						
-						SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
-						const SimTK::MobilizedBody &childMobod = world.matter->getMobilizedBody(childMbx);
-						SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
-						const SimTK::MobilizedBody &parentMobod = world.matter->getMobilizedBody(parentMbx);
+			// Get child-parent mobods
+			SimTK::DuMMForceFieldSubsystem& dumm = *(world.updForceField());
+			
+			SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+			const SimTK::MobilizedBody &childMobod = world.matter->getMobilizedBody(childMbx);
+			SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+			const SimTK::MobilizedBody &parentMobod = world.matter->getMobilizedBody(parentMbx);
 
-						childMobod.getFirstQIndex(someState);
+			childMobod.getFirstQIndex(someState);
 
-						scout(" ") << childMbx <<" " << parentMbx <<" ";
+			scout(" ") << childMbx <<" " << parentMbx <<" ";
 
-						scout("| ")
-							<< childMobod.getQAsVector(someState) <<" |" ;
+			scout("| ")
+				<< childMobod.getQAsVector(someState) <<" |" ;
 
-						//scout("| ")
-						//	<< parentMobod.getQAsVector(someState) <<" |";
-						// if(mbx != parentMbx){
-						// 	// Get default transforms
-						// 	const SimTK::Transform& X_PF = mobod.getInboardFrame(someState);
-						// 	const SimTK::Transform& X_BM = mobod.getOutboardFrame(someState);
-						// 	const SimTK::Transform& X_FM = mobod.getMobilizerTransform(someState);
-						// 	PrintTransform(X_PF, 6, "X_PF");
-						// 	PrintTransform(X_BM, 6, "X_BM");
-						// 	PrintTransform(X_FM, 6, "X_FM");
-						// }else{
-						// 	//ceol;
-						// }
+			//scout("| ")
+			//	<< parentMobod.getQAsVector(someState) <<" |";
+			// if(mbx != parentMbx){
+			// 	// Get default transforms
+			// 	const SimTK::Transform& X_PF = mobod.getInboardFrame(someState);
+			// 	const SimTK::Transform& X_BM = mobod.getOutboardFrame(someState);
+			// 	const SimTK::Transform& X_FM = mobod.getMobilizerTransform(someState);
+			// 	PrintTransform(X_PF, 6, "X_PF");
+			// 	PrintTransform(X_BM, 6, "X_BM");
+			// 	PrintTransform(X_FM, 6, "X_FM");
+			// }else{
+			// 	//ceol;
+			// }
 		}
 
 		ceol;
