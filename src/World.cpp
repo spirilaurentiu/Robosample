@@ -534,34 +534,23 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 }
 
 // Print recommended timesteps. We need and advanced State here
-void World::PrintInitialRecommendedTimesteps(void)
+SimTK::Real World::getRecommendedTimesteps(void)
 {
 	SimTK::State& someState = integ->updAdvancedState();
 	int nu = matter->getNU(someState);
 
-	SimTK::Real CartesianTimestep = 0.001;
-	SimTK::Vector hydrogenTimesteps(nu, CartesianTimestep);
-	SimTK::Vector MxHydrogenTimesteps(nu, CartesianTimestep);
-
-	matter->multiplyByM(someState, hydrogenTimesteps, MxHydrogenTimesteps);
-
-	//std::cout << MxHydrogenTimesteps << std::endl;
-
-	std::cout << SimTK::min(MxHydrogenTimesteps) << " ";
-
 	SimTK::Real minTimeStep;
-	SimTK::Real prevMinTimeStep = SimTK::Infinity;
-	for (SimTK::MobilizedBodyIndex mbx(1);
-		mbx < matter->getNumBodies();
-		++mbx){
-		// Get mobod
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		minTimeStep = 0.0007 * std::sqrt(mobod.getBodyMass(someState));
-		if(minTimeStep < prevMinTimeStep){
-			prevMinTimeStep = minTimeStep;
-		}
-	}
-	std::cout << prevMinTimeStep << std::endl;
+    SimTK::Real prevMinTimeStep = SimTK::Infinity;
+    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        // Get mobod
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+        minTimeStep = 0.0007 * std::sqrt(mobod.getBodyMass(someState));
+        if(minTimeStep < prevMinTimeStep){
+            prevMinTimeStep = minTimeStep;
+        }
+    }
+
+	return prevMinTimeStep;
 
 }
 
@@ -3402,12 +3391,6 @@ SimTK::Real World::getTemperature()
 Fixman torque temperature. **/
 void World::setTemperature(SimTK::Real argTemperature)
 {
-	// Set the temperature for the samplers
-	// TODO unused
-	for (auto& sampler: samplers) {
-		sampler->setTemperature(argTemperature);
-	}
-
 	// Set the temperature for this World
 	this->temperature = argTemperature;
 
@@ -3576,6 +3559,7 @@ bool World::addSampler(SamplerName samplerName,
 		forceField->setUseOpenMMCalcOnlyNonBonded(true);
 	}
 
+
 	// This is needed because each call to forceField invalidates the topology cache
 	// As far as I understand, you cannot modify forceField afther this call
 	realizeTopology();
@@ -3585,7 +3569,17 @@ bool World::addSampler(SamplerName samplerName,
 
 		// Construct a new sampler
 		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
-		
+
+		// Initialize the sampler
+		// This is independent of the sampler type, but we need it to be initialized before getting the recommended time step
+		SimTK::State& worldAdvancedState = integ->updAdvancedState();
+		samplers.back()->initialize(worldAdvancedState);
+
+		// If timestep is -1, use the recommended time step
+		if (timestep == -1) {
+			timestep = getRecommendedTimesteps();
+		}
+
 		// Set sampler parameters
 		samplers.back()->setSampleGenerator(generator);
 		samplers.back()->setIntegratorName(integratorName);
@@ -3620,11 +3614,6 @@ bool World::addSampler(SamplerName samplerName,
 			}
 		}	
 	}
-
-	// Initialize the sampler
-	// This does not care about passed parameters
-	SimTK::State& worldAdvancedState = integ->updAdvancedState();
-	samplers.back()->initialize(worldAdvancedState);
 
 	return true;
 }

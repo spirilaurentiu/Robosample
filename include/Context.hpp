@@ -355,10 +355,6 @@ public:
 
 // SP_NEW_TRANSFER ------------------------------------------------------------
 
-
-	// Print recommended timesteps
-	void PrintInitialRecommendedTimesteps(void);
-
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
