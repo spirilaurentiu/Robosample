@@ -7796,16 +7796,9 @@ Context::calcZMatrixTable(void)
 
 			bSpecificAtom& childAtom = atoms[childNo];
 			bSpecificAtom& parentAtom = atoms[parentNo];
-			// bSpecificAtom& gparentAtom = atoms[gparentNo];
-			// bSpecificAtom& ggparentAtom = atoms[ggparentNo];
 
 			int childTopoIx = childAtom.getMoleculeIndex();
 			int parentTopoIx = parentAtom.getMoleculeIndex();
-
-			// SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
-			// SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
-			// SimTK::Compound::AtomIndex gparent_cAIx = gparentAtom.getCompoundAtomIndex();
-			// SimTK::Compound::AtomIndex ggparent_cAIx = ggparentAtom.getCompoundAtomIndex();
 
 			addZMatrixTableRow(std::vector<int> {childNo, parentNo, gparentNo, ggparentNo});
 
@@ -7906,8 +7899,7 @@ Context::calcZMatrixBAT(
 
 		rowCnt++;
 
-	} // every zMatrix row
-			
+	} // every zMatrix row		
 
 }
 

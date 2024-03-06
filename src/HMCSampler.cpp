@@ -4498,10 +4498,15 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				// }
 				//qEntry += 0.01;
 
-				qEntry *= BATSign[rearrMobodQCnt];
+				//qEntry *= BATSign[rearrMobodQCnt];
 
 				// Update BAT entry after modifying q
-				//BAT[rearrMobodQCnt] += (qEntry * BATSign[rearrMobodQCnt]);
+				SimTK::Real tempValue = BAT[rearrMobodQCnt] + (qEntry * BATSign[rearrMobodQCnt]);
+
+				if (((scalingFactor > 1) && (tempValue < BAT[rearrMobodQCnt])) ||
+					 (scalingFactor < 1) && (tempValue > BAT[rearrMobodQCnt]) ){
+					qEntry *= -1.0;
+				}
 
 				scout("scaleBATDeviations after ")
 					<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
