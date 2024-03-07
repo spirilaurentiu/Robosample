@@ -357,6 +357,11 @@ void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAto
 	// getOrderedAtoms() -> bAtomList indexing
 	// getOrderedBonds() -> order of bonds as in orderedAtoms; i and j are from bAtomList
 
+	if (bAtomList.size() == 1) {
+		std::cerr << "[ERROR]: No atoms in the molecule" << std::endl;
+		return;
+	}
+
 	std::vector<BOND> allBonds;
 	for(auto && v : perMolBonds){
 		allBonds.insert(allBonds.end(), v.begin(), v.end());
