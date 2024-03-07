@@ -552,65 +552,6 @@ SimTK::Real World::getRecommendedTimesteps(void)
 
 	return prevMinTimeStep;
 
-	// /* SimTK::Real CartesianTimestepInv = 1.0 / 0.001; // ps
-	// SimTK::Vector V(nu, CartesianTimestepInv);
-	// SimTK::Vector timesteps(nu);
-
-	// matter->multiplyBySqrtMInv(someState, V, timesteps);
-
-	// for (int j=0; j < nu; ++j){
-	// 	timesteps[j] = 1.0 / timesteps[j];
-	// }
-
-	// for (int j=0; j < nu; ++j){
-	// 	std::cout << timesteps[j] << " ";
-	// }
-	// std::cout << std::endl; */
-
-	// /* SimTK::Matrix M;
-	// matter->calcM(someState, M);
-	// std::cout << M << " "; */
-
-	// SimTK::Real CartesianTimestep = 0.001;
-	// SimTK::Vector hydrogenTimesteps(nu, CartesianTimestep);
-	// SimTK::Vector MxHydrogenTimesteps(nu, CartesianTimestep);
-
-
-	// // Get Mobods mass properties
-	// // for (SimTK::MobilizedBodyIndex mbx(1);
-	// // 	mbx < matter->getNumBodies();
-	// // 	++mbx){
-	// // 	// Get mobod
-	// // 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	// // 	SimTK::SpatialInertia sp = mobod.getBodySpatialInertiaInGround(someState);
-	// // 	V[int(mbx) - 1] *= sp.getMass();
-	// // }
-
-	// matter->multiplyByM(someState, hydrogenTimesteps, MxHydrogenTimesteps);
-
-	// std::cout << "MxHydrogenTimesteps " << MxHydrogenTimesteps << std::endl;
-
-	// // // The derivative can be negative, so we take the absolute value
-	// // for (auto& ts : MxHydrogenTimesteps) {
-	// // 	ts = std::abs(ts);
-	// // }
-
-	// // std::cout << "MxHydrogenTimesteps" << SimTK::min(MxHydrogenTimesteps) << std::endl;
-
-	// // return 0.001;
-	// return SimTK::min(MxHydrogenTimesteps);
-
-	// /* for (SimTK::MobilizedBodyIndex mbx(1);
-	// 	mbx < matter->getNumBodies();
-	// 	++mbx){
-
-	// 	// Get mobod
-	// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	// 	SimTK::SpatialInertia sp = mobod.getBodySpatialInertiaInGround(someState);
-
-	// 	std::cout << sp.getMass() << " ";
-
-	// } */
 }
 
 

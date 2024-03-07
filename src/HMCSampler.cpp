@@ -546,26 +546,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 {
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
-		//std::cout << "Transforms before sample_iteration\n";
-		//world->PrintAcosX_PFs();
-		//world->PrintNormX_BMs();
-		//world->PrintAcosX_PFMeans();
-		//world->PrintNormX_BMMeans();
-		//
-		//world->traceBendStretch(someState);
-		//
-		// Set X_PF and X_BM means to whatever iti is now
-		///////////////////////////////////////////////////
-		// if(nofSamples == 0){
-		//	world->setTransformsMeansToCurrent(someState);
-		//}
-		///////////////////////////////////////////////////
-
-		// Resize the scale factors vector to be handed further
-		//std::vector<SimTK::Real> scaleFactors;
-		//scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
-		//	1.0);
-
 		// Scale bonds and angles
 		if(this->nofSamples >= 0){ // dont't take burn-in
 			
@@ -578,33 +558,21 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				std::cout << "done.\n" << std::flush;
 			}
 
-			// Calculate X_PFs and X_BMs
-			//world->getTransformsStatistics(someState);
-			//world->updateTransformsMeans(someState);
-			//
-			//setQToScaleBendStretch(someState, scaleFactors);
-			//setQToScaleBendStretchStdev(someState, scaleFactors);
-			// DEBUG PRINT
-			// World& myWorld = *world;
-			// if(myWorld.ownWorldIndex == 1){
-			// 	myWorld.PrintFullTransformationGeometry(someState,
-			// 		false, false, false, true, false, false);
-			// }
-
 			calcSubZMatrixBATDeviations(someState);
-			//PrintSubZMatrixBATDeviations(someState);
 
 			SimTK::Real JBATv = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
+			PrintSubZMatrixBATDeviations(someState);
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
+
+			updateSubZMatrixBAT(someState);
+			PrintSubZMatrixBATDeviations(someState);
 
 			SimTK::Real JBATvPrime = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
 			setDistortJacobianDetLog(JBATv + sJac - JBATvPrime);
 			scout("BAT Jacobian terms ") << JBATv <<" " << sJac <<" " << JBATvPrime << eol;
-
-			//PrintSubZMatrixBATDeviations(someState);
 
 			// Just for the Visualizer
 			if(world->visual){
@@ -4430,7 +4398,7 @@ HMCSampler::PrintSubZMatrixBATDeviations(
 	size_t bati = 0;
 	for (const auto& pair : subZMatrixBATs) {
 
-		std::vector<SimTK::Real>& BAT      = subZMatrixBATs.at(pair.first);
+		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
 		std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
 		std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
 
@@ -4449,14 +4417,13 @@ HMCSampler::PrintSubZMatrixBATDeviations(
 
 		bati++;
 
-
 		// 
-		for(int qCnt = mobod.getFirstQIndex(someState);
-		qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
-		qCnt++){
-			scout("PrintBATDeviations stateq ") << qCnt <<" " << someState.getQ()[qCnt] << eol;
-			scout("PrintBATDeviations mododq ") << mobod.getOneQ(someState, 0) << eol;
-		}
+		// for(int qCnt = mobod.getFirstQIndex(someState);
+		// qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+		// qCnt++){
+		// 	scout("PrintBATDeviations stateq ") << qCnt <<" " << someState.getQ()[qCnt] << eol;
+		// 	scout("PrintBATDeviations mododq ") << mobod.getOneQ(someState, 0) << eol;
+		// }
 
 	} // every variableBAT
 
@@ -4507,23 +4474,102 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 				qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
 
+				//qEntry += 0.01;
 				// if(nofSamples % 2 == 0){
 				//     qEntry += 0.01;
 				// }else{
 				//     qEntry -= 0.01;
 				// }
-				//qEntry += 0.01;
 
-				qEntry *= BATSign[rearrMobodQCnt];
+				// Update BAT entry after modifying q
+				//SimTK::Real tempValue = BAT[rearrMobodQCnt] + (qEntry * BATSign[rearrMobodQCnt]);
+				SimTK::Real tempNewBAT = BAT[rearrMobodQCnt] + qEntry;
+				SimTK::Real tempNewBATDiff_Sq = (tempNewBAT - BATmeans[rearrMobodQCnt]);
+				tempNewBATDiff_Sq *= tempNewBATDiff_Sq;
 
-				scaleJacobian += std::log( (BAT[rearrMobodQCnt] + BATdiffs[rearrMobodQCnt]) / (BAT[rearrMobodQCnt]) );
+				SimTK::Real BATDiff_Sq = BATdiffs[rearrMobodQCnt] * BATdiffs[rearrMobodQCnt];
 
-				// scout("scaleBATDeviations ")
+				if (((scalingFactor > 1) && (tempNewBATDiff_Sq < BATDiff_Sq)) ||
+					((scalingFactor < 1) && (tempNewBATDiff_Sq > BATDiff_Sq)) ){
+
+					qEntry *= -1.0;
+
+				}
+
+				// scout("scaleBATDeviations after ")
 				// 	<< "mbx " << mbx << " qCnt "	<< qCnt <<" " 
 				// 	<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
 				// 	<< "BATmeans[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" "
 				// 	<< "BATdiffs[mbx]["<< rearrMobodQCnt << "] " << BATdiffs[rearrMobodQCnt] <<" "
-				// 	<< "scalingFactor " << (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)) <<" "
+				// 	<< "scalingFactor " << scalingFactor <<" "
+				// 	<< " qEntry " << qEntry
+				// 	<< eol;
+
+				// Accumulate for Jacobian
+				scaleJacobian += std::log( (tempNewBAT / BAT[rearrMobodQCnt]) );
+
+			}
+			
+			mobodQCnt++;
+		} // every mobod q
+
+		bati++;
+	}
+
+	system->realize(someState, SimTK::Stage::Dynamics);
+
+	return scaleJacobian;
+
+}
+
+
+/*!
+ * <!--	Update BATs -->
+*/
+void
+HMCSampler::updateSubZMatrixBAT(
+	SimTK::State& someState,
+	std::vector<int> BATOrder,
+	std::vector<SimTK::Real> BATSign
+	)
+{
+
+	SimTK::Real scaleJacobian = 0.0;
+
+	//scout("Update BAT before ")
+		//<< std::setprecision(12) << someState.getQ()
+	//	<< eol;
+
+	// Iterate bats
+	size_t bati = 0;
+	for (const auto& pair : subZMatrixBATs_ref) {
+
+		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
+		std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
+		std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
+
+		SimTK::MobilizedBodyIndex mbx = pair.first;
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+		// Scale
+		int mobodQCnt = 0;
+
+		for(int qCnt = mobod.getFirstQIndex(someState);
+		qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+		qCnt++){
+
+			int rearrMobodQCnt = BATOrder[mobodQCnt];
+
+			if( !(std::isnan(BATdiffs[rearrMobodQCnt])) ){
+
+				const SimTK::Real& qEntry = someState.getQ()[qCnt];
+
+				BAT[rearrMobodQCnt] += qEntry;
+
+				// scout("Update BAT ")
+				// 	<< "mbx " << mbx << " qCnt "	<< qCnt <<" "
+				// 	<< "BAT[mbx]["<< rearrMobodQCnt << "] " << BAT[rearrMobodQCnt] <<" "
+				// 	<< "BATmean[mbx]["<< rearrMobodQCnt << "] " << BATmeans[rearrMobodQCnt] <<" " 
 				// 	<< " qEntry " << qEntry
 				// 	<< eol;
 
@@ -4535,15 +4581,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 		bati++;
 	}
 
-	system->realize(someState, SimTK::Stage::Dynamics);
-	scout("scaleBATDeviations state after")
-		//<< std::setprecision(12) << someState.getQ()
-		<< eol;
-
-	//return someState;
-	return scaleJacobian;
-
 }
+
 
 /*!
  * <!--  -->
