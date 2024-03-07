@@ -7744,7 +7744,7 @@ void Context::addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
 
 
 /*!
- * <!-- Get Z-matrix indexes table	 -->
+ * <!-- Get Z-matrix indexes table -->
 */
 void
 Context::calcZMatrixTable(void)
@@ -7820,7 +7820,6 @@ Context::calcZMatrixBAT(
 		std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations)
 {
-
 
 	// Iterate molecules
 	int allCnt = 0;
