@@ -92,6 +92,9 @@ HMCSampler::HMCSampler(World &argWorld,
 	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 	proposeExceptionCaught = false;
 
+	// shouldAdaptTimestep = true;
+	// acceptedStepsBufferSize = 500;
+
 	for(int i = 0; i < acceptedStepsBufferSize; i++){
 		acceptedStepsBuffer.push_back(0);
 	}
@@ -123,7 +126,6 @@ HMCSampler::HMCSampler(World &argWorld,
 
 	MDStepsPerSample = 0;
 	proposeExceptionCaught = false;
-	shouldAdaptTimestep = false;
 
 	dR.resize(ndofs, 0);
 	dRdot.resize(ndofs, 0);
@@ -496,7 +498,7 @@ void HMCSampler::setIntegratorName(const std::string integratorNameArg)
  	if(integratorNameArg == "OMMVV"){
 		this->integratorName = IntegratorName::OMMVV;
 
-	}else if (integratorNameArg == "VERLET"){
+	}else if (integratorNameArg == "VERLET" || integratorNameArg == "VERLET"){
 		integratorName = IntegratorName::VERLET;
 		
 	}else if (integratorNameArg == "BOUND_WALK"){
@@ -1054,6 +1056,7 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 	// Adapt timestep
+	// shouldAdaptTimestep = true;
 	if(shouldAdaptTimestep){
 		adaptTimestep(someState);
 	}
@@ -2728,17 +2731,9 @@ void HMCSampler::calcProposedKineticAndTotalEnergyOld(SimTK::State& someState){
 // Stochastic optimization of the timestep using gradient descent
 void HMCSampler::adaptTimestep(SimTK::State&)
 {
-
-	static int nofTimestepAdapt = 0;
-
 	if( (nofSamples % acceptedStepsBufferSize) == (acceptedStepsBufferSize-1) ){
 
-		nofTimestepAdapt += 1;
-
-		std::cout << "Adapt BEGIN " << nofTimestepAdapt << ": ";
-
-		//SimTK::Real idealAcceptance = 0.651;
-		SimTK::Real idealAcceptance = 0.8;
+		SimTK::Real idealAcceptance = 0.651;
 		SimTK::Real newTimestep = SimTK::NaN;
 
 		// Compute acceptance in the buffer
@@ -2751,7 +2746,7 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 		prevAcceptance = acceptance;
 		acceptance = newAcceptance;
 
-		std::cout << " ppAcc= " << prevPrevAcceptance
+		std::cout << "Adapt BEGIN ppAcc= " << prevPrevAcceptance
 			<< " pAcc= " << prevAcceptance
 			<< " acc= " << acceptance
 			<< " ppTs= " << prevPrevTimestep
@@ -2779,15 +2774,13 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 			SimTK::Real dF_n_1 = F_n_1   - F_n_2;
 			SimTK::Real dt_n = (t_n   - t_n_1);
 			SimTK::Real dt_n_1 = (t_n_1   - t_n_2);
-			SimTK::Real gradF_n   = dF_n / dt_n;
-			SimTK::Real gradF_n_1 = dF_n_1 / dt_n_1;
+			SimTK::Real gradF_n = (dt_n != 0) ? dF_n / dt_n : 0;
+			SimTK::Real gradF_n_1 = (dt_n_1 != 0) ? dF_n_1 / dt_n_1 : 0;
 
 			// Calculate gamma
-			SimTK::Real gamma;
-			SimTK::Real num, denom;
-			num = std::abs(dt_n * (gradF_n - gradF_n_1));
-			denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
-			gamma = num / denom;
+			SimTK::Real num = std::abs(dt_n * (gradF_n - gradF_n_1));
+			SimTK::Real denom = (gradF_n - gradF_n_1) * (gradF_n - gradF_n_1);
+			SimTK::Real gamma = (denom != 0) ? num / denom : 0;
 
 			// Generate a new timestep adaptedTimestep
 			SimTK::Real adaptedTimestep = t_n - (gamma * gradF_n);
@@ -2801,31 +2794,30 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 				<< std::endl;
 
 			// Acceptance is fine
-			if(	   (std::abs(f_n) < 0.1)
-				&& (std::abs(f_n_1) < 0.1)
-				&& (std::abs(f_n_2) < 0.1)
-			){
+			if ((std::abs(f_n) < 0.1) && (std::abs(f_n_1) < 0.1) && (std::abs(f_n_2) < 0.1)) {
 				std::cout << "Acceptance is nearly ideal.\n";
 
 				newTimestep = timestep;
 
 			// Not enough data to compute gradient
 			//}else if((dF_n == 0.0) || (dF_n_1 == 0.0)){
-			}else if(SimTK::isNaN(adaptedTimestep)){
-				std::cout << "Adding noise to newTimestep to become: ";
+			}else if(adaptedTimestep == timestep){
+				// std::cout << "Adding noise to newTimestep" << std::endl;
 
-				SimTK::Real r = uniformRealDistribution(randomEngine);
+				// SimTK::Real r = uniformRealDistribution(randomEngine);
 				if(acceptance < idealAcceptance){
-					newTimestep = timestep - (0.3*r * timestep);
+					// newTimestep = timestep - (0.3*r * timestep);
+					std::cout << "Decreasing timestep by 10%" << std::endl;
+					newTimestep = timestep / 1.1;
 				}else{
-					newTimestep = timestep + (0.3*r * timestep);
+					// newTimestep = timestep + (0.3*r * timestep);
+					std::cout << "Increasing timestep by 10%" << std::endl;
+					newTimestep = timestep * 1.1;
 				}
 
-				std::cout << newTimestep << "\n";
-
 			} else { // Take the new timestep
-				std::cout << "Setting newTimestep to adaptedTimestep.\n";
-				newTimestep = adaptedTimestep;
+				
+				newTimestep = adaptedTimestep;;
 			}
 
 		} else { // Alter the intial timesteps to get a valid dF_n next time
@@ -2839,6 +2831,8 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 				newTimestep = 0.0009; // smaller than H vibration
 			}
 		}
+
+		std::cout << "Setting timestep for world " << world->getOwnIndex() << " to " << newTimestep << std::endl;
 
 		// Advance timestep ruler
 		prevPrevTimestep = prevTimestep;

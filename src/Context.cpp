@@ -86,6 +86,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	std::map<std::string, IntegratorName> integratorName = {
 		{ "EMPTY", IntegratorName::EMPTY },
+		{ "VV", IntegratorName::VERLET },
 		{ "VERLET", IntegratorName::VERLET },
 		{ "EULER", IntegratorName::EULER },
 		{ "EULER2", IntegratorName::EULER2 },
