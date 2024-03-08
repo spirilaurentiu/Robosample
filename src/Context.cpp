@@ -8069,8 +8069,7 @@ Context::addSubZMatrixBATsToWorld(
 	size_t zMatCnt = 0;
 	for (const auto& row : zMatrixTable) {
 
-		std::vector<SimTK::Real> BATrow = updZMatrixBATRow(zMatCnt);
-		std::vector<SimTK::Real>& BATrow_ref = updZMatrixBATRow(zMatCnt);
+		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
 
 		// scout("BATrow_ref") <<" ";
 		// for (SimTK::Real BATvalue : BATrow) {
@@ -8118,8 +8117,7 @@ Context::addSubZMatrixBATsToWorld(
 			// Insert key and value into the map
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
-				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs).insert(std::make_pair(childMbx, BATrow));
-				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).insert({childMbx, BATrow_ref});
+				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).insert({childMbx, BATrow});
 
 			}
 
@@ -8157,7 +8155,6 @@ Context::updSubZMatrixBATsToWorld(
 	for (const auto& row : zMatrixTable) {
 
 		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
-		//std::vector<SimTK::Real>& BATrow_ref = updZMatrixBATRow(zMatCnt);
 
 		// scout("BATrow_ref") <<" ";
 		// for (SimTK::Real BATvalue : BATrow) {
@@ -8205,12 +8202,11 @@ Context::updSubZMatrixBATsToWorld(
 			// Insert key and value into the map
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
-				std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
-					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
+				//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
+				//	variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
 				//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>&
-				//	variableBATs_ref = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs_ref();					
-					
-				variableBATs.at(childMbx) = BATrow;
+				//	variableBATs_ref = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs_ref();										
+				//variableBATs.at(childMbx) = BATrow;
 				//variableBATs_ref.at(childMbx) = BATrow_ref;
 
 			}
@@ -8286,8 +8282,8 @@ Context::PrintWorldSubZMatrixBATs(
 			// Insert key and value into the map
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
-				std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
-					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
+				std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>&
+					variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATsRef();
 					
 				scout("WorldBAT ") << wIx <<" "; 
 				for(auto varBAT : variableBATs.at(childMbx)){
