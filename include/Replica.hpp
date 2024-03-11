@@ -3,10 +3,24 @@
 #include <vector>
 #include "Simbody.h"
 #include "bSpecificAtom.hpp"
+#include "Topology.hpp"
+#include "InternalCoordinates.hpp"
 
 class Replica{
 public:
-	Replica(int index);
+	Replica(int index,
+			std::vector<bSpecificAtom>& atoms_,
+			std::vector<int>& roots_,
+			std::vector<Topology>& topologies_,
+            InternalCoordinates& internCoords_,
+			std::vector<std::vector<int>>& zMatrixTable_
+			) :
+			  atoms(atoms_)
+			, roots(roots_)
+			, topologies(topologies_)
+			, internCoords(internCoords_)
+			, zMatrixTable(zMatrixTable_)
+	{}
 
 	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& getAtomsLocationsInGround() const;
 	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& get_WORK_AtomsLocationsInGround() const;
@@ -57,6 +71,92 @@ public:
 	void PrintRst7(void) const;
 	void WriteRst7(std::string FN) const;
 
+    /** @name Z Matrix and BAT functions
+	*/
+
+    /**@{**/
+	
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+
+	/**	
+	* @brief Takes coordinates from molecule topoIx and puts them into atomTargets
+	* @param otherWorldsAtomsLocations: Pairs of (atom, and its position) within
+	* 		 a vector of Topologies
+	* @param atomTargets: map of atoms' CompoundAtomIndex to their positions
+	* @return
+	*/
+	void
+	extractAtomTargets(
+		int topoIx,
+		const std::vector<std::vector<
+		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
+
+	// Function to find and return the value for a given AtomIndex
+	SimTK::Vec3
+	findAtomTarget(
+		const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
+		SimTK::Compound::AtomIndex searchIndex)
+	{
+		auto it = atomTargets.find(searchIndex);
+
+		if (it != atomTargets.end()) {
+			return it->second;
+		} else {
+			return SimTK::Vec3(SimTK::NaN);
+		}
+	}
+
+    // zmatrixbat_ Setter for a specific entry
+    void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) ;
+
+    // zmatrixbat_ Function to get a given row
+    const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) const;
+
+    // zmatrixbat_ Function to get a given row
+    std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex) ;
+
+
+	// Get Z-matrix indexes table 
+	//void
+	//calcZMatrixTable(void);
+
+	//
+	void
+	calcZMatrixBAT(	int wIx,
+	const std::vector< std::vector<
+	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+		otherWorldsAtomsLocations);
+
+    // zmatrixbat_ Function to get the value for a given row and column in zMatrixBAT
+    SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const ;
+
+    // zmatrixbat_ Function to print the zMatrixBAT
+    void PrintZMatrixBAT() const ;
+
+    // zmatrixbat_  Function to add a new row to the zMatrixBAT
+    void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);
+
+	// WORK Q PERTURB BEND STRETCH ============================================
+
+	/**
+	* @brief zmatrixbat_ Get log of the Cartesian->BAT Jacobian
+	* @param
+	*/
+	SimTK::Real
+	calcInternalBATJacobianLog(void);
+
+	// WORK Q PERTURB BEND STRETCH --------------------------------------------
+
+
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+
+	/**@}**/
+
 private:
 
 	int myIndex = 0;
@@ -64,7 +164,7 @@ private:
 	// Replica configurations
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> atomsLocations;
 
-		// Replica configurations
+	// Replica configurations
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> WORK_atomsLocations;
 
 	// Replica potential energy
@@ -75,4 +175,23 @@ private:
 	SimTK::Real workJacobiansContributions; // TODO: turn into a vector for worlds
 
 	SimTK::Real FixmanPotential; // TODO: turn into a vector for worlds
+
+
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+	std::vector<bSpecificAtom>& atoms;
+
+	std::vector<int>& roots;
+	std::vector<Topology>& topologies;
+	InternalCoordinates& internCoords;
+	std::vector<std::vector<int>>& zMatrixTable;
+
+	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
+	
+
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+
 };

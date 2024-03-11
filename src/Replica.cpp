@@ -1,9 +1,5 @@
 #include "Replica.hpp"
 
-Replica::Replica(int argIndex) : myIndex(argIndex)
-{
-}
-
 // Get coordinates from this replica
 const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>&
 	Replica::getAtomsLocationsInGround() const
@@ -286,3 +282,232 @@ void Replica::PrintRst7(void) const
 	}
 
 }
+
+
+
+
+// ===========================================================================
+// ===========================================================================
+// ZMatrix BAT
+// ===========================================================================
+// ===========================================================================
+
+/*!
+ * <!-- Takes coordinates from molecule topoIx and puts them into atomTargets
+ * otherWorldsAtomsLocations: Pairs of (atom, and its position) within
+ * a vector of Topologies
+ * atomTargets: a map of atoms' Comopund atom index to positions-->
+*/
+void
+Replica::extractAtomTargets(
+	int topoIx,
+	const std::vector<std::vector<std::pair
+		<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
+	std::map
+		<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
+)
+{
+	for(std::size_t j = 0; j < otherWorldsAtomsLocations[topoIx].size(); j++){
+		auto atomIndex = otherWorldsAtomsLocations[topoIx][j].first->getCompoundAtomIndex();
+		auto location = otherWorldsAtomsLocations[topoIx][j].second;
+		atomTargets.insert(std::make_pair(atomIndex, location));
+	}
+}
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+void Replica::setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) {
+
+	// Set the value at the specified position
+	zMatrixBAT[rowIndex][colIndex] = value;
+}
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+const std::vector<SimTK::Real>& Replica::getZMatrixBATRow(size_t rowIndex) const {
+
+	assert(rowIndex < zMatrixBAT.size());
+
+	// Check if the indices are within bounds
+	return zMatrixBAT[rowIndex];
+
+}
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+std::vector<SimTK::Real>& Replica::updZMatrixBATRow(size_t rowIndex) {
+
+	assert(rowIndex < zMatrixBAT.size());
+
+	// Check if the indices are within bounds
+	return zMatrixBAT[rowIndex];
+
+}
+
+
+/*!
+ * <!-- zmatrixbat_ Calculate Z-matrix -->
+*/
+void
+Replica::calcZMatrixBAT(
+	int wIx,
+	const std::vector< std::vector<
+		std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+		otherWorldsAtomsLocations)
+{
+
+	// Iterate molecules
+	int allCnt = 0;
+
+	int topoIx = 0;
+
+	// Get locations of this molecule
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
+	for (int i = 0; i < topologies.size(); i++) {
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
+		extractAtomTargets(i, otherWorldsAtomsLocations, temp);
+		atomTargets.insert(temp.begin(), temp.end());
+	}
+
+	int rowCnt = 0;
+	SimTK::Real bondLength, bondBend, bondTorsion;
+	for (const auto& row : zMatrixTable) {
+		
+		bondLength = SimTK::NaN;
+		bondBend = SimTK::NaN;
+		bondTorsion = SimTK::NaN;
+
+		SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
+		
+		// Calculate bond length
+		a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
+		a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
+		SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
+		SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
+
+		SimTK::Vec3 v_a0a1 = a0loc - a1loc;
+		SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
+
+		if(row[2] >= 0){
+
+			SimTK::Compound::AtomIndex a2_cAIx;
+			a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
+			SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
+
+			// Calculate angle
+			UnitVec3 v1(v_a0a1);
+			UnitVec3 v2(a2loc - a1loc);
+
+			Real dotProduct = SimTK::dot(v1, v2);
+			assert(dotProduct < 1.1);
+			assert(dotProduct > -1.1);
+			if (dotProduct > 1.0) dotProduct = 1.0;
+			if (dotProduct < -1.0) dotProduct = -1.0;
+			bondBend = std::acos(dotProduct);
+
+			if(row[3] >= 0){
+				SimTK::Compound::AtomIndex
+					a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
+				SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
+
+				bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
+			}
+
+		} // angle
+		
+		setZMatrixBATValue(rowCnt, 0, bondLength);
+		setZMatrixBATValue(rowCnt, 1, bondBend);
+		setZMatrixBATValue(rowCnt, 2, bondTorsion);
+
+		if(row[3] == -2){
+			topoIx++;
+		}
+
+		rowCnt++;
+
+	} // every zMatrix row		
+
+}
+
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+SimTK::Real Replica::getZMatrixBATValue(size_t rowIndex, size_t colIndex) const {
+	// Check if the indices are within bounds
+	if (rowIndex < zMatrixBAT.size() && colIndex < zMatrixBAT[0].size()) {
+		// Return the value at the specified position
+		return zMatrixBAT[rowIndex][colIndex];
+	} else {
+		// Indices are out of bounds, handle this case accordingly
+		return SimTK::NaN;
+	}
+}
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+void Replica::PrintZMatrixBAT() const {
+	for (const auto& row : zMatrixBAT) {
+		for (SimTK::Real value : row) {
+			std::cout << std::setw(6) << value << " ";
+		}
+		std::cout << std::endl;
+	}
+}
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+void Replica::addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
+	zMatrixBAT.push_back(newRow);
+}
+
+/*!
+ * <!-- zmatrixbat_ BAT JAcobian -->
+*/
+SimTK::Real
+Replica::calcInternalBATJacobianLog(void)
+	{
+
+		// Get log of the Cartesian->BAT Jacobian
+		SimTK::Real logJacBAT = 0.0;
+
+		for(size_t zCnt = 0; zCnt = zMatrixBAT.size(); zCnt++){
+
+				// Get bond term
+				SimTK::Real currBond = zMatrixBAT[zCnt][0];
+				
+				if(currBond != SimTK::NaN){
+				
+					logJacBAT += 4.0 * std::log(currBond);
+				}
+
+				// Get the angle term
+				SimTK::Real currAngle = zMatrixBAT[zCnt][1];
+
+				if(currAngle != SimTK::NaN){
+
+					logJacBAT += 2.0 * std::log(std::sin(currAngle));
+					
+				}
+
+		}
+
+		return logJacBAT;
+
+	}
+
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ZMatrix BAT
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+
+
+

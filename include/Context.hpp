@@ -140,16 +140,6 @@ public:
 	/**  */
 	void generateTopologiesSubarrays(void);
 
-	/** Get Z-matrix indexes table */
-	void
-	calcZMatrixTable(void);
-
-	void
-	calcZMatrixBAT(	int wIx,
-	const std::vector< std::vector<
-	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
-		otherWorldsAtomsLocations);
-
 	/** Assign Compound coordinates by matching bAtomList coordinates */
 	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
 
@@ -841,62 +831,87 @@ public:
 	}	
 
 private:
+
 	bool singlePrmtop = false;
 
-	std::vector<std::vector<int>> zMatrixTable;
-	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
 	TrajectoryObject traj;
 	bool wantDCD = false;
 	std::vector<SimTK::Real> Xs, Ys, Zs;
 
+    /** @name Z Matrix and BAT functions
+	*/
+
+    /**@{**/
+	
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
-    // Function to add a new row to the zMatrixTable
+	std::vector<std::vector<int>> zMatrixTable;
+	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
+
+	/**	
+	* @brief
+	* @param
+	* @return
+	*/
+    // zmatrixbat_ Function to add a new row to the zMatrixTable
     void addZMatrixTableRow(const std::vector<int>& newRow) ;
 
-    // Getter for a specific entry
+    // zmatrixbat_ Getter for a specific entry
     int getZMatrixTableEntry(int rowIndex, int colIndex) const ;
 
-    // Setter for a specific entry
+    // zmatrixbat_ Setter for a specific entry
     void setZMatrixTableEntry(int rowIndex, int colIndex, int value) ;
 
-    // Print function for the zMatrixTable
+    // zmatrixbat_ Print function for the zMatrixTable
     void PrintZMatrixTable() const ;
 
-    // Setter for a specific entry
+    // zmatrixbat_ Setter for a specific entry
     void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) ;
 
-    // Function to get a given row
+    // zmatrixbat_ Function to get a given row
     const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) const;
 
-    // Function to get a given row
+    // zmatrixbat_ Function to get a given row
     std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex) ;
 
-    // Function to get the value for a given row and column in zMatrixBAT
+
+	// Get Z-matrix indexes table 
+	void
+	calcZMatrixTable(void);
+
+	//
+	void
+	calcZMatrixBAT(	int wIx,
+	const std::vector< std::vector<
+	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+		otherWorldsAtomsLocations);
+
+    // zmatrixbat_ Function to get the value for a given row and column in zMatrixBAT
     SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const ;
 
-    // Function to print the zMatrixBAT
+    // zmatrixbat_ Function to print the zMatrixBAT
     void PrintZMatrixBAT() const ;
 
+	// zmatrixbat_ 
 	void PrintZMatrixTableAndBAT() const;
 
-    // Function to add a new row to the zMatrixBAT
+    // zmatrixbat_  Function to add a new row to the zMatrixBAT
     void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);
 
 	// WORK Q PERTURB BEND STRETCH ============================================
 
 	/**
-	* @brief Get log of the Cartesian->BAT Jacobian
+	* @brief zmatrixbat_ Get log of the Cartesian->BAT Jacobian
 	* @param
 	*/
 	SimTK::Real
 	calcInternalBATJacobianLog(void);
 
 	/**
-	* @brief Add BAT coordinates 
+	* @brief zmatrixbat_ Add BAT coordinates 
 	* @param
 	*/
 	void
@@ -904,7 +919,7 @@ private:
 		int wIx);
 
 	/**
-	* @brief Get BAT coordinates modifyable by a selected world
+	* @brief zmatrixbat_ Get BAT coordinates modifyable by a selected world
 	* @param
 	*/
 	void
@@ -912,7 +927,7 @@ private:
 		int wIx);
 
 	/**
-	* @brief Print BAT coordinates
+	* @brief zmatrixbat_ Print BAT coordinates
 	* @param
 	*/
 	void
@@ -926,7 +941,7 @@ private:
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
-
+	/**@}**/
 
 };
 
