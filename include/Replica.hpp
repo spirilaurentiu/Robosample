@@ -98,16 +98,9 @@ public:
 	SimTK::Vec3
 	findAtomTarget(
 		const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
-		SimTK::Compound::AtomIndex searchIndex)
-	{
-		auto it = atomTargets.find(searchIndex);
+		SimTK::Compound::AtomIndex searchIndex);
 
-		if (it != atomTargets.end()) {
-			return it->second;
-		} else {
-			return SimTK::Vec3(SimTK::NaN);
-		}
-	}
+    void setZMatrixTable(const std::vector<std::vector<int>>& newZMatrixTable);
 
     // zmatrixbat_ Setter for a specific entry
     void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) ;
@@ -118,15 +111,12 @@ public:
     // zmatrixbat_ Function to get a given row
     std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex) ;
 
-
-	// Get Z-matrix indexes table 
-	//void
-	//calcZMatrixTable(void);
+	// Allocate Z Matrix BAT
+	void reallocZMatrixBAT(void);
 
 	//
 	void
-	calcZMatrixBAT(	int wIx,
-	const std::vector< std::vector<
+	calcZMatrixBAT(const std::vector< std::vector<
 	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations);
 
@@ -139,16 +129,12 @@ public:
     // zmatrixbat_  Function to add a new row to the zMatrixBAT
     void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);
 
-	// WORK Q PERTURB BEND STRETCH ============================================
-
 	/**
 	* @brief zmatrixbat_ Get log of the Cartesian->BAT Jacobian
 	* @param
 	*/
 	SimTK::Real
 	calcInternalBATJacobianLog(void);
-
-	// WORK Q PERTURB BEND STRETCH --------------------------------------------
 
 
 	//////////////////////////////////

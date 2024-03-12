@@ -303,8 +303,7 @@ Replica::extractAtomTargets(
 	int topoIx,
 	const std::vector<std::vector<std::pair
 		<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
-	std::map
-		<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
 )
 {
 	for(std::size_t j = 0; j < otherWorldsAtomsLocations[topoIx].size(); j++){
@@ -312,6 +311,28 @@ Replica::extractAtomTargets(
 		auto location = otherWorldsAtomsLocations[topoIx][j].second;
 		atomTargets.insert(std::make_pair(atomIndex, location));
 	}
+}
+
+/*!
+ * <!--	zmatrixbat_ Function to find and return the value for a given 
+ * AtomIndex -->
+*/
+SimTK::Vec3
+Replica::findAtomTarget(
+	const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
+	SimTK::Compound::AtomIndex searchIndex)
+{
+	auto it = atomTargets.find(searchIndex);
+
+	if (it != atomTargets.end()) {
+		return it->second;
+	} else {
+		return SimTK::Vec3(SimTK::NaN);
+	}
+}
+
+void Replica::setZMatrixTable(const std::vector<std::vector<int>>& newZMatrixTable) {
+    zMatrixTable = newZMatrixTable;
 }
 
 /*!
@@ -347,13 +368,24 @@ std::vector<SimTK::Real>& Replica::updZMatrixBATRow(size_t rowIndex) {
 
 }
 
+/*!
+ * <!-- zmatrixbat_ Allocate Z Matrix BAT -->
+*/
+void Replica::reallocZMatrixBAT(void){
+
+	zMatrixBAT.resize(zMatrixTable.size());
+	for (auto& row : zMatrixBAT) {
+		row.resize(3, SimTK::NaN);
+	}
+
+}
+
 
 /*!
  * <!-- zmatrixbat_ Calculate Z-matrix -->
 */
 void
 Replica::calcZMatrixBAT(
-	int wIx,
 	const std::vector< std::vector<
 		std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations)

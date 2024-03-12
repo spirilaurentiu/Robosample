@@ -882,6 +882,9 @@ private:
 	void
 	calcZMatrixTable(void);
 
+	// Allocate Z Matrix BAT
+	void reallocZMatrixBAT(void);
+
 	//
 	void
 	calcZMatrixBAT(	int wIx,

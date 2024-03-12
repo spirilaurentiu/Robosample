@@ -166,6 +166,14 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
 		
 		loadAmberSystem(prmtop, inpcrd);
+
+
+		// Get Z-matrix indexes table	
+		calcZMatrixTable();
+		//PrintZMatrixTable();
+
+		reallocZMatrixBAT();
+
 	}
 
 	// Add Worlds
@@ -265,8 +273,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		);
 	} // every world
 
-
-	// MOVE REPLICAS
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
 	if(	(runType == "REMC")   || 
@@ -346,10 +352,22 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	PrepareNonEquilibriumParams_Q();
 	
 	setThermostatesNonequilibrium();
-	// MOVE REPLICAS
 
+	// --------------------------------
+	// END REPLICAS -------------------
 
+/* 	// ********************************
+	// rexnewfunc /////////////////////
+	// ********************************
+	// Set replicas' Z matrix table
+	for(int k = 0; k < nofReplicas; k++){
+		replicas[k].setZMatrixTable(zMatrixTable);
+	}
+	// ********************************
+	// END REPLICAS ///////////////////
+	// ******************************** */
 
+	//
 	int firstWIx = 0;
 	SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
 
@@ -360,6 +378,18 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
 	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
+
+	// ********************************
+	// rexnewfunc /////////////////////
+	// ********************************
+	for(int k = 0; k < nofReplicas; k++){
+		replicas[k].reallocZMatrixBAT();
+		replicas[k].calcZMatrixBAT(firstWorldsAtomsLocations);
+		replicas[k].PrintZMatrixBAT();
+	}
+	// ********************************
+	// END REPLICAS ///////////////////
+	// ********************************
 
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		World& world = worlds[worldIx];
@@ -909,17 +939,6 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	for(auto& topology : topologies) {
 		topology.setAtomList();
 		topology.setBondList();
-	}
-
-	// Transformers
-
-	// Get Z-matrix indexes table	
-	calcZMatrixTable();
-	//PrintZMatrixTable();
-
-	zMatrixBAT.resize(zMatrixTable.size());
-	for (auto& row : zMatrixBAT) {
-		row.resize(3, SimTK::NaN);
 	}
 
 	// Allocate coordinate buffers
@@ -7788,6 +7807,19 @@ Context::calcZMatrixTable(void)
 		} // every bond
 
 	} // every molecule	
+}
+
+
+/*!
+ * <!-- zmatrixbat_ Allocate Z Matrix BAT -->
+*/
+void Context::reallocZMatrixBAT(void){
+
+	zMatrixBAT.resize(zMatrixTable.size());
+	for (auto& row : zMatrixBAT) {
+		row.resize(3, SimTK::NaN);
+	}
+
 }
 
 /*!
