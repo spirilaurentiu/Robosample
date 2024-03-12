@@ -92,8 +92,8 @@ HMCSampler::HMCSampler(World &argWorld,
 	SetTVector = std::vector<SimTK::Transform>(matter->getNumBodies());
 	proposeExceptionCaught = false;
 
-	// shouldAdaptTimestep = true;
-	// acceptedStepsBufferSize = 500;
+	shouldAdaptTimestep = true;
+	acceptedStepsBufferSize = 50;
 
 	for(int i = 0; i < acceptedStepsBufferSize; i++){
 		acceptedStepsBuffer.push_back(0);
@@ -1065,8 +1065,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		try {
 
 			// Call Simbody TimeStepper to advance time
-			this->world->ts->stepTo(
-				someState.getTime() + (timestep*MDStepsPerSample));
+			this->world->ts->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
 			system->realize(someState, SimTK::Stage::Position);
 
@@ -1182,11 +1181,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			assignConfFromSetTVector(someState);
 
 		}
-
 	}
-
-
-
 }
 
 
@@ -2309,16 +2304,16 @@ SimTK::Transform * HMCSampler::getSetTVector(void)
 // Restores configuration from the internal set vector of transforms TVector
 void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
 {
-  system->realize(someState, SimTK::Stage::Position);
+	// system->realize(someState, SimTK::Stage::Position);
 
-  int i = 0;
-  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	mobod.setQToFitTransform(someState, SetTVector[i]);
-	i++;
-  }
+  	int i = 0;
+  	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.setQToFitTransform(someState, SetTVector[i]);
+		i++;
+  	}
 
-  system->realize(someState, SimTK::Stage::Position);
+  	system->realize(someState, SimTK::Stage::Position);
 }
 
 /** Calculate sqrt(M) using Eigen. For debug purposes. **/
@@ -2631,11 +2626,11 @@ SimTK::Real HMCSampler::getTimestep() const
 void HMCSampler::setTimestep(SimTK::Real argTimestep)
 {
 	if(argTimestep <= 0){
-		shouldAdaptTimestep = true;
+		// shouldAdaptTimestep = true;
 		timeStepper->updIntegrator().setFixedStepSize(-argTimestep);
 		this->timestep = -argTimestep;
 	}else{
-		shouldAdaptTimestep = false;
+		// shouldAdaptTimestep = false;
 		timeStepper->updIntegrator().setFixedStepSize(argTimestep);
 		this->timestep = argTimestep;
 	}
@@ -3663,56 +3658,58 @@ PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
  **/
 bool HMCSampler::propose(SimTK::State& someState)
 {
-
-	bool proposalValidation = true;
-
-	for (int i = 0; i < 10; i++){
-
-		// Adapt Gibbs blocks (Transformer)
-		bool shouldAdaptWorldBlocks = false;
-		if(shouldAdaptWorldBlocks){
-			adaptWorldBlocks(someState);
-		}
-
-		// Perturb positions 
-		perturbPositions(someState, positionsPerturbMethod());
-
-		// Perturb velocities
-		perturbVelocities(someState, velocitiesPerturbMethod());
-
-		// Perturb forces
-		/* perturbForces(someState,
-			forcePerturbationMethod(this->integratorName)); */
-
-		// Store the proposed energies
-		calcProposedKineticAndTotalEnergyOld(someState);
-
-		// Integrate trajectory
-		integrateTrajectory(someState);
-
-		// Get all new energies after integration
-		calcNewEnergies(someState);
-
-		// TODO: Any validation should be inserted here
-
-		// Check if any energies are nan
-		// or any exception during perturbations or integrations
-		proposalValidation = checkExceptionsAndEnergiesForNAN()
-			&& proposalValidation;
-
-		// Check if molecule was distorted during
-		// perturbations or integrations
-		proposalValidation = checkDistortionBasedOnE(pe_n - pe_o)
-			&& proposalValidation;
-
-		if(proposalValidation){
-			return true;
-		}
-
+	// Adapt Gibbs blocks (Transformer)
+	bool shouldAdaptWorldBlocks = false;
+	if(shouldAdaptWorldBlocks){
+		adaptWorldBlocks(someState);
 	}
 
-	return false;
+	// Perturb positions 
+	perturbPositions(someState, positionsPerturbMethod());
 
+	// Perturb velocities
+	perturbVelocities(someState, velocitiesPerturbMethod());
+
+	// Perturb forces
+	/* perturbForces(someState,
+		forcePerturbationMethod(this->integratorName)); */
+
+	// Store the proposed energies
+	calcProposedKineticAndTotalEnergyOld(someState);
+
+	// Integrate trajectory
+	integrateTrajectory(someState);
+
+	// Get all new energies after integration
+	if (!proposeExceptionCaught) {
+		calcNewEnergies(someState);
+	} else {
+			// Store new energies
+			pe_set = pe_n = SimTK::NaN;
+			ke_set = ke_n = SimTK::NaN;
+			fix_set = fix_n = SimTK::NaN;
+			logSineSqrGamma2_set = logSineSqrGamma2_n = SimTK::NaN;
+
+			// Set final total energies
+			etot_set = etot_n = SimTK::NaN;
+	}
+
+	// TODO: Any validation should be inserted here
+
+	// Check if any energies are nan
+	// or any exception during perturbations or integrations
+	bool proposalValidation = !proposeExceptionCaught;
+	if (proposalValidation) {
+		proposalValidation = checkExceptionsAndEnergiesForNAN() && proposalValidation;
+	}
+
+	// Check if molecule was distorted during
+	// perturbations or integrations
+	if (proposalValidation) {
+		proposalValidation = checkDistortionBasedOnE(pe_n - pe_o) && proposalValidation;
+	}
+
+	return proposalValidation;
 }
 
 /** Checks if the proposal is valid **/
