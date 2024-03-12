@@ -2222,7 +2222,10 @@ std::pair<int, SimTK::Real> World::maxAtomDeviation(
 
 
 /*!
- * <!--  -->
+ * <!-- Takes coordinates from molecule topoIx and puts them into atomTargets
+ * otherWorldsAtomsLocations: Pairs of (atom, and its position) within
+ * a vector of Topologies
+ * atomTargets: a map of atoms' Comopund atom index to positions-->
 */
 void
 World::extractAtomTargets(

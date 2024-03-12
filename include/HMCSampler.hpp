@@ -597,7 +597,7 @@ public:
 		SimTK::State& someState
 	);
 	void
-	PrintSubZMatrixBATDeviations(
+	PrintSubZMatrixBATAndRelated(
 		SimTK::State& someState
 	);
 	SimTK::Real
@@ -623,16 +623,16 @@ public:
 	);
 
 	// Getter for the variableBATs map
-    const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getSubZMatrixBATs() const ;
+    //const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getSubZMatrixBATs() const ;
 
 	// Getter for the variableBATs map
-    std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& updSubZMatrixBATs() ;
+    //std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& updSubZMatrixBATs() ;
 
 	// Put in protected
-	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATs;
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATs_ref;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATMeans;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATDiffs;
-
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATStds;
 
     // Updater getter for the map
     const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>& getSubZMatrixBATsRef() const {
@@ -642,9 +642,6 @@ public:
         return subZMatrixBATs_ref;
     }
 
-	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATs_ref;
-	//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATMeans_ref;
-	//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATDiffs_ref;	
 
 	// BAT --------------------------------------------------------------------
 

@@ -400,57 +400,63 @@ public:
 		const SimTK::State& someState);
 
 
-// REFAC ----------------------------------------------------------------------
+	// REFAC ----------------------------------------------------------------------
+	/**	
+	* @brief Takes coordinates from molecule topoIx and puts them into atomTargets
+	* @param otherWorldsAtomsLocations: Pairs of (atom, and its position) within
+	* 		 a vector of Topologies
+	* @param atomTargets: map of atoms' CompoundAtomIndex to their positions
+	* @return
+	*/
+	void
+	extractAtomTargets(
+		int topoIx,
+		const std::vector<std::vector<
+		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
 
-void
-extractAtomTargets(
-	int topoIx,
-	const std::vector<std::vector<
-	std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
-
-SimTK::Transform
-setAtoms_Compound_Match(
-	int topoIx,
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
+	SimTK::Transform
+	setAtoms_Compound_Match(
+		int topoIx,
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
 
 
-void
-setAtoms_Compound_FramesInMobod(
-	int topoIx,
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
-	SimTK::Vec3* locs);
+	void
+	setAtoms_Compound_FramesInMobod(
+		int topoIx,
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
+		SimTK::Vec3* locs);
 
-void
-setAtoms_SetDuMMStations(
-	int topoIx,
-	SimTK::Vec3* locs
-);
+	void
+	setAtoms_SetDuMMStations(
+		int topoIx,
+		SimTK::Vec3* locs
+	);
 
-SimTK::State&
-setAtoms_XPF_XBM(
-	SimTK::State& someState,
-	int topoIx
-);
+	SimTK::State&
+	setAtoms_XPF_XBM(
+		SimTK::State& someState,
+		int topoIx
+	);
 
-SimTK::State&
-setAtoms_MassProperties(
-	SimTK::State& someState,
-	int topoIx
-);
+	SimTK::State&
+	setAtoms_MassProperties(
+		SimTK::State& someState,
+		int topoIx
+	);
 
-SimTK::State&
-setAtoms_XFM(
-	SimTK::State& someState,
-	int topoIx
-);
+	SimTK::State&
+	setAtoms_XFM(
+		SimTK::State& someState,
+		int topoIx
+	);
 
-SimTK::State&
-setAtomsLocationsInGround_REFAC(SimTK::State&,
-	const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
-	otherWorldsAtomsLocations);
+	SimTK::State&
+	setAtomsLocationsInGround_REFAC(SimTK::State&,
+		const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+		otherWorldsAtomsLocations);
 
-// REFAC ----------------------------------------------------------------------
+	// REFAC ----------------------------------------------------------------------
 
 
 	/** Set Compound, MultibodySystem and DuMM configurations according to
