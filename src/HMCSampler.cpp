@@ -558,7 +558,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				std::cout << "done.\n" << std::flush;
 			}
 
-			calcSubZMatrixBATDeviations();
+			calcSubZMatrixBATDeviations(someState);
 
 			SimTK::Real JBATv = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
@@ -4331,9 +4331,7 @@ void HMCSampler::PrintSubZMatrixBAT() {
 /*!
  * <!--	 -->
 */
-void
-HMCSampler::calcSubZMatrixBATDeviations(
-	void)
+void HMCSampler::calcSubZMatrixBATDeviations(SimTK::State& someState)
 {
 
 	SimTK::Real N = nofSamples + 1;
