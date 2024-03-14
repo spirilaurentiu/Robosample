@@ -483,12 +483,22 @@ SimTK::Real Replica::getZMatrixBATValue(size_t rowIndex, size_t colIndex) const 
  * <!--	zmatrixbat_ -->
 */
 void Replica::PrintZMatrixBAT() const {
+
+	int bati = 0;
 	for (const auto& row : zMatrixBAT) {
+
+		for(const auto tabValue : zMatrixTable[bati]){
+			std::cout << tabValue << " ";
+		}
+
 		for (SimTK::Real value : row) {
 			std::cout << std::setw(6) << value << " ";
 		}
 		std::cout << std::endl;
+
+		bati++;
 	}
+
 }
 
 /*!
@@ -533,6 +543,12 @@ Replica::calcInternalBATJacobianLog(void)
 
 	}
 
+/*!
+ * <!--	zmatrixbat_ Incrementer function implementation -->
+*/
+void Replica::incrementNofSamples() {
+    ++nofSamples;
+}
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------

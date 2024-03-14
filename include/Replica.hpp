@@ -136,7 +136,9 @@ public:
 	SimTK::Real
 	calcInternalBATJacobianLog(void);
 
-
+    // Incrementer function for nofSamples
+    void incrementNofSamples();
+	
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
@@ -175,6 +177,9 @@ private:
 
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 	
+
+	// BAT
+	int nofSamples = 0;	
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////

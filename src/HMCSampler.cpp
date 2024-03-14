@@ -558,7 +558,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				std::cout << "done.\n" << std::flush;
 			}
 
-			calcSubZMatrixBATDeviations();
+			//calcSubZMatrixBATStats();
 
 			SimTK::Real JBATv = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
@@ -4335,7 +4335,7 @@ void HMCSampler::PrintSubZMatrixBAT() {
  * <!--	 -->
 */
 void
-HMCSampler::calcSubZMatrixBATDeviations(
+HMCSampler::calcSubZMatrixBATStats(
 	void)
 {
 
@@ -4389,9 +4389,92 @@ HMCSampler::calcSubZMatrixBATDeviations(
 			// Keep track of BAT pair
 			bati++;
 		}
-
 	}
 
+}
+
+/*!
+ * <!--	 -->
+*/
+void
+HMCSampler::setSubZMatrixBATStats(
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans,
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs,
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds)
+{
+
+	scout("Context::setSubZMatrixBATStats") << eol;
+	for (const auto& [key, value] : inBATmeans) {
+		std::cout << "cAIx: " << key << " ";
+		std::cout << "BAT: ";
+		for (const auto& val : value) {
+			std::cout << val << " ";
+		}
+		std::cout << std::endl;
+	}
+
+	// Iterate bats
+	size_t bati = 0;
+	for (const auto& mobodBATPair : subZMatrixBATs_ref) {
+
+		// Get mobod
+		SimTK::MobilizedBodyIndex mbx = mobodBATPair.first;
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+
+		// Get Compound AtomIndex and atom's Topology
+		const std::pair<int, SimTK::Compound::AtomIndex> topoIx_aIx_pair =
+			world->getAtomIndex(mbx);
+		int topoIx = topoIx_aIx_pair.first;
+		SimTK::Compound::AtomIndex aIx = topoIx_aIx_pair.second;
+
+		// Check if is root atom
+		SimTK::Vec3 station = topologies[topoIx].getAtomLocationInMobilizedBodyFrameThroughDumm(
+			aIx, *dumm);
+		assert(station[0] < 0.000001 && station[1] < 0.000001 && station[2] < 0.000001 &&
+		"HMCSampler::scaleSubZMatrixBATDeviations atom is not in the mobod center");
+
+		scout("Context::setSubZMatrixBATStats aIx ") << aIx << eolf;
+
+		// Simplify to easier variables
+		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(mobodBATPair.first);
+		
+		if(nofSamples == 0){
+
+			// Set BAT means
+			subZMatrixBATMeans.insert({mobodBATPair.first, inBATmeans.at(aIx)});
+
+			// Get BAT deviations
+			subZMatrixBATDiffs.insert({mobodBATPair.first, inBATdiffs.at(aIx)});
+
+			// Get BAT stds
+			subZMatrixBATStds.insert({mobodBATPair.first, inBATstds.at(aIx)});
+
+		}else{
+
+			std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(mobodBATPair.first);
+			std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(mobodBATPair.first);
+			std::vector<SimTK::Real>& BATstds  = subZMatrixBATStds.at(mobodBATPair.first);
+
+			// Set BAT means
+			BATmeans[0] = inBATmeans.at(aIx)[0];
+			BATmeans[1] = inBATmeans.at(aIx)[1];
+			BATmeans[2] = inBATmeans.at(aIx)[2];
+
+			// Get BAT deviations
+			BATdiffs[0] = inBATdiffs.at(aIx)[0];
+			BATdiffs[1] = inBATdiffs.at(aIx)[1];
+			BATdiffs[2] = inBATdiffs.at(aIx)[2];
+
+			// Get BAT stds
+			BATstds[0] = inBATstds.at(aIx)[0];
+			BATstds[1] = inBATstds.at(aIx)[1];
+			BATstds[2] = inBATstds.at(aIx)[2];
+		}
+
+
+		// Keep track of BAT pair
+		bati++;
+	}
 }
 
 /*!
@@ -4494,7 +4577,6 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				// }
 
 				// Update BAT entry after modifying q
-				//SimTK::Real tempValue = BAT[rearrMobodQCnt] + (qEntry * BATSign[rearrMobodQCnt]);
 				SimTK::Real tempNewBAT = BAT[rearrMobodQCnt] + qEntry;
 				SimTK::Real tempNewBATDiff_Sq = (tempNewBAT - BATmeans[rearrMobodQCnt]);
 				tempNewBATDiff_Sq *= tempNewBATDiff_Sq;

@@ -9,12 +9,13 @@ constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 class ThermodynamicState{
   public:
 	ThermodynamicState() = default;
-	ThermodynamicState(int index);
+	ThermodynamicState(int index, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_);
 
 	ThermodynamicState(int index, const SimTK::Real& T,
 		const std::vector<int>& argWorldIndexes,
 		const std::vector<SimTK::Real>& argTimesteps,
-		const std::vector<int>& argMdsteps
+		const std::vector<int>& argMdsteps,
+		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 	);
 
 	const int getIndex(){return myIndex;}
@@ -54,6 +55,31 @@ class ThermodynamicState{
 	// Print everything about thermostate
 	void Print();
 
+	// BAT
+
+    // Getter function for nofSamples
+    int getNofSamples() const;
+
+    // Setter function for nofSamples
+    void setNofSamples(int newNofSamples);
+
+    // Incrementer function for nofSamples
+    void incrementNofSamples();
+
+	void PrintZMatrixBAT() const ;
+
+	//
+	void calcZMatrixBATStats(void);
+
+	// Get a row from the BAT means
+	std::vector<SimTK::Real>& getBATMeansRow(int rowIndex);	
+
+	// Get a row from the BAT diffs
+	std::vector<SimTK::Real>& getBATDiffsRow(int rowIndex);	
+
+	// Get a row from the BAT stds
+	std::vector<SimTK::Real>& getBATStdsRow(int rowIndex);	
+
   private:
 
 	// Index
@@ -76,5 +102,14 @@ class ThermodynamicState{
 	std::vector<std::string> rexDistortArgs;
 	std::vector<int> rexFlowOptions;
 	std::vector<int> rexWorkOptions;
-	std::vector<std::string> rexIntegrators;	
+	std::vector<std::string> rexIntegrators;
+
+	// BAT
+	int nofSamples = 0;
+
+	std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref;
+	std::vector<std::vector<SimTK::Real>>  zMatrixBATMeans;
+	std::vector<std::vector<SimTK::Real>>  zMatrixBATDiffs;
+	std::vector<std::vector<SimTK::Real>>  zMatrixBATStds;
+
 };

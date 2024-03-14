@@ -1,6 +1,6 @@
 #include "ThermodynamicState.hpp"
 
-ThermodynamicState::ThermodynamicState(int index)
+ThermodynamicState::ThermodynamicState(int index, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_) : zMatrixBAT_ref(zMatrixBAT_ref_)
 {
 	myIndex = index;
 	temperature = 300;
@@ -14,8 +14,9 @@ ThermodynamicState::ThermodynamicState(int index)
 ThermodynamicState::ThermodynamicState(int index, const SimTK::Real& T,
 		const std::vector<int>& argWorldIndexes,
 		const std::vector<SimTK::Real>& argTimesteps,
-		const std::vector<int>& argMdsteps
-	)
+		const std::vector<int>& argMdsteps,
+		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
+	) : zMatrixBAT_ref(zMatrixBAT_ref_)
 {
 	// Own index
 	myIndex = index;
@@ -139,3 +140,142 @@ void ThermodynamicState::Print()
 	}
 	std::cout << std::endl;
 }
+
+
+// BAT
+/*!
+ * <!--	zmatrixbat_ Getter function implementation -->
+*/
+int ThermodynamicState::getNofSamples() const {
+    return nofSamples;
+}
+
+/*!
+ * <!--	zmatrixbat_ Setter function implementation -->
+*/
+void ThermodynamicState::setNofSamples(int newNofSamples) {
+    nofSamples = newNofSamples;
+}
+
+/*!
+ * <!--	zmatrixbat_ Incrementer function implementation -->
+*/
+void ThermodynamicState::incrementNofSamples() {
+    ++nofSamples;
+}
+
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+void ThermodynamicState::PrintZMatrixBAT() const {
+
+	int bati = 0;
+	for (const auto& row : zMatrixBAT_ref) {
+
+		// for(const auto tabValue : zMatrixTable[bati]){
+		// 	std::cout << tabValue << " ";
+		// }
+
+		for (const SimTK::Real value : row) {
+			std::cout << std::setw(6) << value << " ";
+		}
+		std::cout << std::endl;
+
+		bati++;
+	}
+
+}
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+void
+ThermodynamicState::calcZMatrixBATStats(void)
+{
+	SimTK::Real N = nofSamples + 1;
+
+	if(nofSamples == 0){
+
+        // Initialize zMatrixBATMeans, zMatrixBATDiffs, and zMatrixBATStds
+        zMatrixBATMeans.resize(zMatrixBAT_ref.size(), std::vector<SimTK::Real>(3, 0));
+        zMatrixBATDiffs.resize(zMatrixBAT_ref.size(), std::vector<SimTK::Real>(3, 0));
+        zMatrixBATStds.resize(zMatrixBAT_ref.size(), std::vector<SimTK::Real>(3, 0));
+
+	}else{
+
+		// Iterate bats
+	    for (size_t bati = 0; bati < zMatrixBAT_ref.size(); ++bati) {
+
+			std::vector<SimTK::Real>& BAT = zMatrixBAT_ref[bati];
+			std::vector<SimTK::Real>& BATmeans = zMatrixBATMeans[bati];
+			std::vector<SimTK::Real>& BATdiffs = zMatrixBATDiffs[bati];
+			std::vector<SimTK::Real>& BATstds = zMatrixBATStds[bati];			
+
+			// Usefull vars
+			SimTK::Real N_1_over_N = (N - 1.0) / N;
+			SimTK::Real Ninv = 1.0 / N;
+			
+			// Update BAT means
+			for (int i = 0; i < 3; ++i) {
+				BATmeans[i] = (N_1_over_N * BATmeans[i]) + (Ninv * BAT[i]);
+			}
+
+			// Update BAT differences
+			for (int i = 0; i < 3; ++i) {
+				BATdiffs[i] = BAT[i] - BATmeans[i];
+			}
+
+			// Update BAT standard deviations
+			for (int i = 0; i < 3; ++i) {
+				BATstds[i] = std::sqrt((N_1_over_N * BATstds[i]) + (Ninv * (BATdiffs[i] * BATdiffs[i])));
+			}
+
+			// Keep track of BAT
+			bati++;
+		}
+	}	
+}
+
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+std::vector<SimTK::Real>&
+ThermodynamicState::getBATMeansRow(int rowIndex) 
+{
+
+	assert(rowIndex >= 0 && rowIndex < zMatrixBATMeans.size()
+		&& "Invalid row index");
+
+	return zMatrixBATMeans[rowIndex];
+}
+
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+std::vector<SimTK::Real>&
+ThermodynamicState::getBATDiffsRow(int rowIndex) 
+{
+
+	assert(rowIndex >= 0 && rowIndex < zMatrixBATDiffs.size()
+		&& "Invalid row index");
+
+	return zMatrixBATDiffs[rowIndex];
+}
+
+
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+std::vector<SimTK::Real>&
+ThermodynamicState::getBATStdsRow(int rowIndex) 
+{
+
+	assert(rowIndex >= 0 && rowIndex < zMatrixBATStds.size()
+		&& "Invalid row index");
+
+	return zMatrixBATStds[rowIndex];
+}
+

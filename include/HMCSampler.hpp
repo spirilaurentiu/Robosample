@@ -593,9 +593,14 @@ public:
 	void PrintSubZMatrixBAT();
 
 	void
-	calcSubZMatrixBATDeviations(
-		SimTK::State& someState
+	calcSubZMatrixBATStats(void);
+
+	void setSubZMatrixBATStats(
+		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans,
+		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs,
+		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds
 	);
+
 	void
 	PrintSubZMatrixBATAndRelated(
 		SimTK::State& someState
@@ -622,11 +627,6 @@ public:
 		std::vector<SimTK::Real> BATSign = {1, -1, 1}
 	);
 
-	// Getter for the variableBATs map
-    //const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& getSubZMatrixBATs() const ;
-
-	// Getter for the variableBATs map
-    //std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>& updSubZMatrixBATs() ;
 
 	// Put in protected
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATs_ref;

@@ -175,13 +175,6 @@ public:
 
 	// -------------------------
 
-	// Adopts compound by the CompoundSystem
-	// and loads maps of indexes
-	void model(
-		int requestedNofMols,
-		SetupReader& setupReader
-	);
-
 	// ---------
 	/** Set all flexibilities for all the worlds to Rigid. */
 	void initializeFlexibility(void);
@@ -580,11 +573,16 @@ public:
 	void RunLog(int roundi);
 	void REXLog(int mixi, int replicaIx);
 
+	void incrementNofSamples(void);
+
+
 	void RunREX();
 
 	// Helper Functions for REX
 
 	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
+
+	void setSamplersBATStats(int thermoIx, int worldCnt);
 	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
 
 	void PrintReplicas(void);
