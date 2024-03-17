@@ -855,8 +855,12 @@ public:
 		return ownWorldIndex;
 	}
 
-    // Getter for 
-    const std::pair<int, SimTK::Compound::AtomIndex>& getAtomIndex(SimTK::MobilizedBodyIndex mbIndex) const {
+	/*!
+	* <!--	 -->
+	*/
+    const std::pair<int, SimTK::Compound::AtomIndex>&
+	getMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex) const
+	{
 
         auto it = mbx2aIx.find(mbIndex);
 
@@ -871,8 +875,12 @@ public:
         }
     }
 
-    //
-    std::pair<int, SimTK::Compound::AtomIndex>& updAtomIndex(SimTK::MobilizedBodyIndex mbIndex) {
+	/*!
+	* <!--	 -->
+	*/
+    std::pair<int, SimTK::Compound::AtomIndex>&
+	updMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex)
+	{
 
         auto it = mbx2aIx.find(mbIndex);
 

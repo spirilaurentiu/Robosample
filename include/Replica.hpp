@@ -114,7 +114,7 @@ public:
 	// Allocate Z Matrix BAT
 	void reallocZMatrixBAT(void);
 
-	//
+	// zmatrixbat_
 	void
 	calcZMatrixBAT(const std::vector< std::vector<
 	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&

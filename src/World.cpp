@@ -2331,7 +2331,7 @@ void World::setAtoms_Compound_FramesInMobod(
 			SimTK::MobilizedBodyIndex mbx =
 				currTopology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
-			const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getAtomIndex(mbx);
+			const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(mbx);
 
 			SimTK::Compound::AtomIndex mobodAIx = topoAtomPair.second;
 
@@ -2781,7 +2781,7 @@ SimTK::State& World::setAtomsLocationsInGround(
 							SimTK::MobilizedBodyIndex mbx =
 								currTopology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
-							const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getAtomIndex(mbx);
+							const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(mbx);
 
 							SimTK::Compound::AtomIndex mobodAIx = topoAtomPair.second;
 
@@ -3071,7 +3071,7 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
 
 	// Get Top to parent frame
-	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getAtomIndex(parentMbx);
+	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(parentMbx);
 	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
 
 	//SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
@@ -3215,7 +3215,7 @@ SimTK::Transform World::calcX_FMTransforms(
 
 	// Get Top to parent frame
 
-	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getAtomIndex(parentMbx);
+	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(parentMbx);
 	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
 
 	SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;

@@ -582,7 +582,7 @@ public:
 
 	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
 
-	void setSamplersBATStats(int thermoIx, int worldCnt);
+	void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
 	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
 
 	void PrintReplicas(void);

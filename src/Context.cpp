@@ -5967,8 +5967,11 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 }
 
-
-void Context::setSamplersBATStats(int thermoIx, int whichWorld)
+/*!
+ * <!--	zmatrixbat_ 
+ * very inefficient so far -->
+*/
+void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 {
 
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans;
@@ -5984,7 +5987,6 @@ void Context::setSamplersBATStats(int thermoIx, int whichWorld)
 		bSpecificAtom& atom0 = atoms[zRow[childPositionInZMat]];
 		SimTK::Compound::AtomIndex cAIx = atom0.getCompoundAtomIndex();
 
-		// Print indexes
 		// for (int bAtomIndex : zRow) {
 		// 	; 
 		// }
@@ -6010,21 +6012,22 @@ void Context::setSamplersBATStats(int thermoIx, int whichWorld)
 	} // ZMatrix row
 
 
-	scout("Context::setSamplersBATStats") << eol;
-	for (const auto& [key, value] : inBATmeans) {
-		std::cout << "cAIx: " << key << " ";
-		std::cout << "BAT: ";
-		for (const auto& val : value) {
-			std::cout << val << " ";
-		}
-		std::cout << std::endl;
-	}
+	// scout("Context::setSamplersBATStats") << eol;
+	// for (const auto& [key, value] : inBATmeans) {
+	// 	std::cout << "cAIx: " << key << " ";
+	// 	std::cout << "BAT: ";
+	// 	for (const auto& val : value) {
+	// 		std::cout << val << " ";
+	// 	}
+	// 	std::cout << std::endl;
+	// }
 
 	// Set samplers BAT stats
 	pHMC(worlds[whichWorld].updSampler(0))->setSubZMatrixBATStats(
 		inBATmeans, inBATdiffs, inBATstds);
 
 }
+
 
 int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
@@ -6049,7 +6052,7 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
 
-			setSamplersBATStats(thisThermoStateIx, worldCnt);
+			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, worldCnt);
 
 			// Run front world
 			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
@@ -6740,7 +6743,7 @@ Context::calc_XPF_XBM(
 
 	// Get Top to parent frame
 
-	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = worlds[wIx].getAtomIndex(parentMbx);
+	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = worlds[wIx].getMobodRootAtomIndex(parentMbx);
 	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
 
 	//SimTK::Compound::AtomIndex parentRootAIx = worlds[wIx].getMbx2aIx()[parentMbx];
