@@ -95,6 +95,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("setRequiredNofRounds", &Context::setRequiredNofRounds, "Set the required number of rounds")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency")
         .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency")
+        .def("setGBSA", &Context::setRunType, "Set the run type")
         .def("setRunType", &Context::setRunType, "Set the run type");
 
     py::class_<World>(m, "World")
