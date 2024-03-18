@@ -277,7 +277,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	std::string runType = setupReader.get("RUN_TYPE")[0];
 	if(	(runType == "REMC")   || 
 		(runType == "RENEMC") ||
-		(runType == "RENE") ){
+		(runType == "RENE") 
+		|| true)
+	{
 
 		int NRepl = getNofReplicas();
 
@@ -1178,7 +1180,8 @@ void Context::appendDCDReporter(const std::string& filename) {
 */
 void Context::Run() {
 	if(getRunType() == RUN_TYPE::DEFAULT) {
-		Run(getRequiredNofRounds(), tempIni, tempFin);
+		RunREX();
+		//Run(getRequiredNofRounds(), tempIni, tempFin);
 
 	}else if(  (getRunType() == RUN_TYPE::REMC)
 			|| (getRunType() == RUN_TYPE::RENEMC)
@@ -1197,7 +1200,8 @@ void Context::Run() {
 */
 void Context::Run(int rounds) {
 	if(getRunType() == RUN_TYPE::DEFAULT) {
-		Run(rounds, tempIni, tempFin);
+		RunREX();
+		//Run(rounds, tempIni, tempFin);
 
 	}else if(  (getRunType() == RUN_TYPE::REMC)
 			|| (getRunType() == RUN_TYPE::RENEMC)
