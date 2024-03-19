@@ -1069,6 +1069,8 @@ void World::loadCompoundRelatedMaps()
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 void World::loadMbx2AIxMap(){
 
+	int topoIx = 0;
+
 	for (auto& topology : (*topologies)){
 
 		// Iterate through atoms and get their MobilizedBodyIndeces
@@ -1082,22 +1084,34 @@ void World::loadMbx2AIxMap(){
 
 			if(!aIx.isValid() || !mbx.isValid())
 			{
-				std::cout << "[WARNING]: Tried adding invalid index in loadMbx2AIxMap() aIx: " << aIx << ", mbx: " << mbx << std::endl;
+				std::cout << "[WARNING]: Tried adding invalid index in loadMbx2AIxMap() aIx: "
+					<< aIx << ", mbx: " << mbx << std::endl;
 				continue;
 			}
 
 			// Map mbx2aIx contains only atoms at the origin of mobods
 			if (topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
-				mbx2aIx.insert(std::make_pair(mbx, aIx));
+
+				// Construct the pair to insert into the map
+                std::pair<int, SimTK::Compound::AtomIndex> topoAtomPair(topoIx, aIx);
+
+				// 
+				mbx2aIx.insert(std::make_pair(mbx, topoAtomPair));
+
 			}
 
 		} // atoms
-	} // topologies
+
+		topoIx++;
+
+	} // every topology
 
 }
 
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 void World::loadMbx2AIxMap_SP_NEW(){
+
+	int topoIx = 0;
 
 	for (auto& topology : (*topologies)){
 
@@ -1112,28 +1126,25 @@ void World::loadMbx2AIxMap_SP_NEW(){
 
 			if(!aIx.isValid() || !mbx.isValid())
 			{
-				std::cout << "[WARNING]: Tried adding invalid index in loadMbx2AIxMap() aIx: " << aIx << ", mbx: " << mbx << std::endl;
+				std::cout << "[WARNING]: Tried adding invalid index in loadMbx2AIxMap() aIx: "
+					<< aIx << ", mbx: " << mbx << std::endl;
 				continue;
 			}
 
 			// Map mbx2aIx contains only atoms at the origin of mobods
 			if (topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
-				mbx2aIx.insert(std::make_pair(mbx, aIx));
+
+				// Construct the pair to insert into the map
+                std::pair<int, SimTK::Compound::AtomIndex> topoAtomPair(topoIx, aIx);
+
+				// 
+				mbx2aIx.insert(std::make_pair(mbx, topoAtomPair));
+
 			}
 
 		} // atoms
 	} // topologies
 
-}
-
-void World::loadMobodsRelatedMaps()
-{
-	//for (auto& topology : topologies){ // SAFE
-	for (auto& topology : (*topologies)){ // DANGER
-		topology.loadAIx2MbxMap();
-		loadMbx2AIxMap();
-		// topology.printMaps();
-	}
 }
 
 // Allocate space for containers that keep statistics if we're doing any
@@ -1682,7 +1693,7 @@ int World::getNofMolecules() const
 }
 
 /** Get MobilizedBody to AtomIndex map **/
-std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >&
+std::map< SimTK::MobilizedBodyIndex, std::pair<int, SimTK::Compound::AtomIndex>>&
 World::getMbx2aIx(){
 	return mbx2aIx;
 }
@@ -2319,8 +2330,13 @@ void World::setAtoms_Compound_FramesInMobod(
 
 			SimTK::MobilizedBodyIndex mbx =
 				currTopology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
-				
-			SimTK::Transform G_X_root = G_X_T * currTopology.getTopTransform(mbx2aIx[mbx]);
+
+			const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(mbx);
+
+			SimTK::Compound::AtomIndex mobodAIx = topoAtomPair.second;
+
+			//SimTK::Transform G_X_root = G_X_T * currTopology.getTopTransform(mbx2aIx[mbx]);
+			SimTK::Transform G_X_root = G_X_T * currTopology.getTopTransform(mobodAIx);
 
 			SimTK::Vec3 G_vchild = atomTargets[aIx];
 
@@ -2764,7 +2780,13 @@ SimTK::State& World::setAtomsLocationsInGround(
 
 							SimTK::MobilizedBodyIndex mbx =
 								currTopology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
-							SimTK::Transform G_X_root = G_X_T * currTopology.getTopTransform(mbx2aIx[mbx]);
+
+							const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(mbx);
+
+							SimTK::Compound::AtomIndex mobodAIx = topoAtomPair.second;
+
+							//SimTK::Transform G_X_root = G_X_T * currTopology.getTopTransform(mbx2aIx[mbx]);
+							SimTK::Transform G_X_root = G_X_T * currTopology.getTopTransform(mobodAIx);
 
 							SimTK::Vec3 G_vchild = atomTargets[aIx];
 
@@ -3049,7 +3071,12 @@ World::calcMobodToMobodTransforms(
 	SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
 
 	// Get Top to parent frame
-	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
+	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(parentMbx);
+	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+
+	//SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
+	SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+
 	// Origin of the parent mobod
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
@@ -3187,7 +3214,12 @@ SimTK::Transform World::calcX_FMTransforms(
 	SimTK::Transform T_X_root = topology.getTopTransform(rootAIx);
 
 	// Get Top to parent frame
-	SimTK::Compound::AtomIndex parentRootAIx = mbx2aIx[parentMbx];
+
+	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(parentMbx);
+	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+
+	SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+	
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 

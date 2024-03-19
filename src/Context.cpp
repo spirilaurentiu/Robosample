@@ -73,7 +73,7 @@ bool Context::setOutput(const std::string& outDir) {
 }
 
 /*!
- * <!-- -->
+ * <!--  -->
 */
 bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 {
@@ -277,7 +277,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	std::string runType = setupReader.get("RUN_TYPE")[0];
 	if(	(runType == "REMC")   || 
 		(runType == "RENEMC") ||
-		(runType == "RENE") ){
+		(runType == "RENE") 
+		|| true)
+	{
 
 		int NRepl = getNofReplicas();
 
@@ -356,17 +358,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// --------------------------------
 	// END REPLICAS -------------------
 
-/* 	// ********************************
-	// rexnewfunc /////////////////////
-	// ********************************
-	// Set replicas' Z matrix table
-	for(int k = 0; k < nofReplicas; k++){
-		replicas[k].setZMatrixTable(zMatrixTable);
-	}
-	// ********************************
-	// END REPLICAS ///////////////////
-	// ******************************** */
-
 	//
 	int firstWIx = 0;
 	SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
@@ -385,10 +376,20 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	for(int k = 0; k < nofReplicas; k++){
 		replicas[k].reallocZMatrixBAT();
 		replicas[k].calcZMatrixBAT(firstWorldsAtomsLocations);
-		replicas[k].PrintZMatrixBAT();
+		//replicas[k].PrintZMatrixBAT();
 	}
+	
+	// Add BAT coordinates to thermodynamic states
+	for(size_t thermoState_k = 0;
+	thermoState_k < nofThermodynamicStates;
+	thermoState_k++){
+		thermodynamicStates[thermoState_k].calcZMatrixBATStats();
+	}
+
+	// thermodynamic states for(size_t thermoState_k = 0;thermoState_k < nofThermodynamicStates;thermoState_k++){}
+
 	// ********************************
-	// END REPLICAS ///////////////////
+	// END rexnewfunc ////////////////
 	// ********************************
 
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
@@ -1179,7 +1180,8 @@ void Context::appendDCDReporter(const std::string& filename) {
 */
 void Context::Run() {
 	if(getRunType() == RUN_TYPE::DEFAULT) {
-		Run(getRequiredNofRounds(), tempIni, tempFin);
+		RunREX();
+		//Run(getRequiredNofRounds(), tempIni, tempFin);
 
 	}else if(  (getRunType() == RUN_TYPE::REMC)
 			|| (getRunType() == RUN_TYPE::RENEMC)
@@ -1198,7 +1200,8 @@ void Context::Run() {
 */
 void Context::Run(int rounds) {
 	if(getRunType() == RUN_TYPE::DEFAULT) {
-		Run(rounds, tempIni, tempFin);
+		RunREX();
+		//Run(rounds, tempIni, tempFin);
 
 	}else if(  (getRunType() == RUN_TYPE::REMC)
 			|| (getRunType() == RUN_TYPE::RENEMC)
@@ -3417,85 +3420,6 @@ void Context::addDummParams_SP_NEW(readAmberInput& amberReader)
 // ============================================================================
 // MODEL
 // ============================================================================
-
-// Loads parameters into DuMM, adopts compound by the CompoundSystem
-// and loads maps of indexes
-void Context::model(
-	int requestedNofMols,
-	SetupReader& setupReader
-){
-	std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
-
-	// Iterate through molecules
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-
-		for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-
-			// TODO check if count rbfile == count flexfile
-			// does not use molIx, sets nofEmbeddedTopologies
-			// does push_back
-			loadRigidBodiesSpecs( worldIx, molIx,
-				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("RBFILE")[(requestedNofMols * worldIx) + molIx]
-			);
-
-			// does push_back
-			loadFlexibleBondsSpecs( worldIx,
-				setupReader.get("MOLECULES")[molIx] + std::string("/")
-				+ setupReader.get("FLEXFILE")[(requestedNofMols * worldIx) + molIx]
-			);
-
-			// TODO: delete from Topology
-			// does push_back
-			setRegimen( worldIx, molIx,
-				setupReader.get("WORLDS")[worldIx] );
-
-			std::cout << " Context::AddMolecule for world "<< worldIx << " "
-				<< std::endl;
-			std::cout << " Context::AddMolecule molIx "<< molIx << " "
-				<< std::endl;
-			std::cout << " Context::AddMolecule topFNs[molIx] "<< topFNs[molIx]
-				<< " " << crdFNs[molIx] << " " << rbSpecsFNs[worldIx][molIx]
-				<< std::endl << std::flush;
-
-			// Set BondFlexibilities in Compound
-			std::cout << "Context setting flexibility for mol "
-				<< molIx << " world " << worldIx
-				<< " regimenFN " << regimens[worldIx][molIx]
-				<< " flexSpecsFNs " << flexSpecsFNs[worldIx][molIx]
-				<< std::endl;
-
-			topologies[molIx].setFlexibility(regimens[worldIx][molIx],
-				flexSpecsFNs[worldIx][molIx], worldIx);
-
-			// Set UScale factors. TODO: move in World
-			topologies[molIx].setUScaleFactorsToBonds(flexSpecsFNs[worldIx][molIx]);
-
-			// Add topology by CompoundSystem and add it to the
-			//Visualizer's vector of molecules
-			worlds[worldIx].adoptTopology(molIx);
-
-			// Calls modelOneCompound from CompoundSystem
-			// amber (robo) -> dumm
-			modelOneEmbeddedTopology(molIx, worldIx,
-				argRootMobilities[(requestedNofMols * worldIx) + molIx]);
-
-			// Realize Topology Stage involvs all the SubSystems
-			//worlds[worldIx].getCompoundSystem()->realizeTopology();
-
-			topologies[molIx].loadAIx2MbxMap();
-			worlds[worldIx].loadMbx2AIxMap();
-		}
-
-	}
-
-	// Realize topology for all the worlds all subsystems
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-		worlds[worldIx].getCompoundSystem()->realizeTopology();
-	}
-
-}
-
 /*!
  * <!-- Set all flexibilities for all the worlds to Rigid. -->
 */
@@ -4433,7 +4357,10 @@ void Context::addThermodynamicState(int index,
 			T,
 			argWorldIndexes,
 			timestepsInThisReplica,
-			mdstepsInThisReplica
+			mdstepsInThisReplica,
+			atoms,			
+			zMatrixTable,
+			zMatrixBAT
 		)
 	);
 
@@ -5878,6 +5805,22 @@ void Context::REXLog(int mixi, int replicaIx)
 	} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 }
 
+// rexnewfunc
+void Context::incrementNofSamples(void){
+
+	for(size_t rk = 0;
+	rk < nofReplicas;
+	rk++){
+		replicas[rk].incrementNofSamples();
+	}
+
+	for(size_t tk = 0;
+	tk < nofThermodynamicStates;
+	tk++){
+		thermodynamicStates[tk].incrementNofSamples();
+	}
+
+}
 
 // Run replica exchange protocol
 void Context::RunREX()
@@ -5967,6 +5910,8 @@ void Context::RunREX()
 
 					if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 
+			incrementNofSamples();
+
 		} // end replicas simulations
 
 		// Mix replicas
@@ -6028,6 +5973,67 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 }
 
+/*!
+ * <!--	zmatrixbat_ 
+ * very inefficient so far -->
+*/
+void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
+{
+
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans;
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs;
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds;
+
+	size_t zMatCnt = 0;
+
+	for (const auto& zRow : zMatrixTable) {
+
+		// Get Compound AtomIndex
+		int childPositionInZMat = 0;
+		bSpecificAtom& atom0 = atoms[zRow[childPositionInZMat]];
+		SimTK::Compound::AtomIndex cAIx = atom0.getCompoundAtomIndex();
+
+		// for (int bAtomIndex : zRow) {
+		// 	; 
+		// }
+
+		// Print BAT values
+		//const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
+
+		// Get statistics from thermodynamic state
+		std::vector<SimTK::Real>& BATMeans = thermodynamicStates[thermoIx].getBATMeansRow(zMatCnt);
+		std::vector<SimTK::Real>& BATDiffs = thermodynamicStates[thermoIx].getBATDiffsRow(zMatCnt);
+		std::vector<SimTK::Real>& BATStds = thermodynamicStates[thermoIx].getBATStdsRow(zMatCnt);
+
+		inBATmeans.insert({cAIx, BATMeans});
+		inBATdiffs.insert({cAIx, BATDiffs});
+		inBATstds.insert({cAIx, BATStds});
+
+		// for (SimTK::Real BATvalue : BATrow) {
+		// 	;
+		// }
+
+		zMatCnt++;
+
+	} // ZMatrix row
+
+
+	scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
+	for (const auto& [key, value] : inBATmeans) {
+		std::cout << "cAIx: " << key << " ";
+		std::cout << "BAT: ";
+		for (const auto& val : value) {
+			std::cout << val << " ";
+		}
+		std::cout << std::endl;
+	}
+
+	// Set samplers BAT stats
+	pHMC(worlds[whichWorld].updSampler(0))->setSubZMatrixBATStats(
+		inBATmeans, inBATdiffs, inBATstds);
+
+}
+
 
 int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
@@ -6051,6 +6057,8 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
+
+			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, worldCnt);
 
 			// Run front world
 			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
@@ -6274,10 +6282,30 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
+
+	// ********************************
+	// rexnewfunc /////////////////////
+	// ********************************
+	// Add BAT coordinates to replicas
+	for(int rk = 0; rk < nofReplicas; rk++){
+		replicas[rk].calcZMatrixBAT(otherWorldsAtomsLocations);
+	}
+	
+	// Add BAT coordinates to thermodynamic states
+	for(size_t tk = 0; tk < nofThermodynamicStates; tk++){
+		thermodynamicStates[tk].calcZMatrixBATStats();
+	}
+
 	scout("Context::transferCoordinates_SP_NEW ") << eol;
 	PrintZMatrixTableAndBAT();
-	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
 
+	// ********************************
+	// END rexnewfunc ////////////////
+	// ********************************
+
+	//PrintZMatrixTableAndBAT();
+	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
+	
 	// Pass compounds to the new world
 	passTopologiesToNewWorld_SP_NEW(destWIx);
 
@@ -6723,7 +6751,12 @@ Context::calc_XPF_XBM(
 	SimTK::Transform T_X_root = topology.getTopTransform(childAIx);
 
 	// Get Top to parent frame
-	SimTK::Compound::AtomIndex parentRootAIx = worlds[wIx].getMbx2aIx()[parentMbx];
+
+	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = worlds[wIx].getMobodRootAtomIndex(parentMbx);
+	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+
+	//SimTK::Compound::AtomIndex parentRootAIx = worlds[wIx].getMbx2aIx()[parentMbx];
+	SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
 	
 	// Origin of the parent mobod
 	SimTK::Transform T_X_Proot = topology.getTopTransform(parentRootAIx);
@@ -7960,6 +7993,18 @@ void Context::PrintZMatrixTableAndBAT() const
 		zMatCnt++;
 	}
 
+	for(int rk = 0; rk < nofReplicas; rk++){
+		scout("Replica ") << rk <<" " <<"BAT " << eol;
+		replicas[rk].PrintZMatrixBAT();
+	}
+
+	for(size_t tk = 0;
+	tk < nofThermodynamicStates;
+	tk++){
+		scout("ThermoState ") << tk <<" " <<"BAT " << eol;
+		thermodynamicStates[tk].PrintZMatrixBAT();
+	}
+
 }
 
 /*!
@@ -7968,8 +8013,6 @@ void Context::PrintZMatrixTableAndBAT() const
 void Context::addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
 	zMatrixBAT.push_back(newRow);
 }
-
-
 
 /*!
  * <!-- zmatrixbat_ BAT JAcobian -->
@@ -8028,6 +8071,12 @@ Context::addSubZMatrixBATsToWorld(
 	for (const auto& row : zMatrixTable) {
 
 		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
+		std::vector<SimTK::Real>& replicaBATrow = replicas[0].updZMatrixBATRow(zMatCnt);
+
+		assert( (std::abs(BATrow[0] - replicaBATrow[0]) < 0.00001 || std::isnan(BATrow[0])) &&
+				(std::abs(BATrow[1] - replicaBATrow[1]) < 0.00001 || std::isnan(BATrow[1])) &&
+				(std::abs(BATrow[2] - replicaBATrow[2]) < 0.00001 || std::isnan(BATrow[2])) &&
+				"BATrow and replicaBATrow not equal.");
 
 		// scout("BATrow_ref") <<" ";
 		// for (SimTK::Real BATvalue : BATrow) {
@@ -8061,6 +8110,7 @@ Context::addSubZMatrixBATsToWorld(
 		size_t boIx = BONDS_to_bonds[childMolIx][BOIx];
 		bBond& bond = bonds[boIx];
 
+		// Insert reference to BAT entry into samplers if the bond is flexible
 		//scout(" ") << MobilityStr [ bond.getBondMobility(wIx) ] <<" ";
 		if(bond.getBondMobility(wIx) != SimTK::BondMobility::Rigid){
 
@@ -8075,11 +8125,11 @@ Context::addSubZMatrixBATsToWorld(
 			// Insert key and value into the map
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
-				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).insert({childMbx, BATrow});
-
+				//(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).insert({childMbx, BATrow});
+				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).insert({childMbx, replicaBATrow});
 			}
 
-		}
+		} // is bond rigid
 
 		BOIx++;
 

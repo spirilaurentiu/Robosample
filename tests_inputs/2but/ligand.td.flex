@@ -1,3 +1,6 @@
+# Root
+-1 0 Free
+
 # Main
 3 1  Pin 1
 1 2 Pin 1

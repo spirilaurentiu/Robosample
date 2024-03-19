@@ -175,13 +175,6 @@ public:
 
 	// -------------------------
 
-	// Adopts compound by the CompoundSystem
-	// and loads maps of indexes
-	void model(
-		int requestedNofMols,
-		SetupReader& setupReader
-	);
-
 	// ---------
 	/** Set all flexibilities for all the worlds to Rigid. */
 	void initializeFlexibility(void);
@@ -580,11 +573,16 @@ public:
 	void RunLog(int roundi);
 	void REXLog(int mixi, int replicaIx);
 
+	void incrementNofSamples(void);
+
+
 	void RunREX();
 
 	// Helper Functions for REX
 
 	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
+
+	void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
 	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
 
 	void PrintReplicas(void);
@@ -784,9 +782,8 @@ public:
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
 	std::map<std::string, BondMobility::Mobility> mobilityMap = {
+		{ "Free", BondMobility::Free },
 		{ "Pin", BondMobility::Torsion },
-		{ "Torsion", BondMobility::Torsion },
-		{ "Translation", BondMobility::Translation },
 		{ "Cartesian", BondMobility::Translation },
 		{ "Rigid", BondMobility::Rigid },
 		{ "Weld", BondMobility::Rigid },

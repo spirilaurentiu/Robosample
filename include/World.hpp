@@ -283,15 +283,12 @@ public:
 	void loadMbx2AIxMap();
 	void loadMbx2AIxMap_SP_NEW();
 
-	/**  **/
-	void loadMobodsRelatedMaps();
-
 	/** Get the number of molecules **/
 	int getNofMolecules() const;
 
 	// These are no longer needed TODO: delete
 	/** Get MobilizedBody to AtomIndex map **/
-	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >&
+	std::map< SimTK::MobilizedBodyIndex, std::pair<int, SimTK::Compound::AtomIndex>>&
 	getMbx2aIx();
 
 	/** Get the number of MobilizedBodies in this Compound **/
@@ -858,13 +855,65 @@ public:
 		return ownWorldIndex;
 	}
 
+	/*!
+	* <!--	 -->
+	*/
+    const std::pair<int, SimTK::Compound::AtomIndex>&
+	getMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex) const
+	{
+
+        auto it = mbx2aIx.find(mbIndex);
+
+        if (it != mbx2aIx.end()) {
+
+            return it->second;
+
+        } else { 
+            
+            return errorTopoAtomPair;
+
+        }
+    }
+
+	/*!
+	* <!--	 -->
+	*/
+    std::pair<int, SimTK::Compound::AtomIndex>&
+	updMobodRootAtomIndex(SimTK::MobilizedBodyIndex mbIndex)
+	{
+
+        auto it = mbx2aIx.find(mbIndex);
+
+        if (it != mbx2aIx.end()) {
+
+            return it->second;
+
+        } else {
+			
+        	return errorTopoAtomPair;
+        }
+    }
+
+    // Assign the atom index to the mobilized body index 
+    void setAtomIndex(
+		SimTK::MobilizedBodyIndex mbIndex,
+		int topoIx,
+		SimTK::Compound::AtomIndex aIndex) 
+	{
+        mbx2aIx[mbIndex] = std::pair<int, SimTK::Compound::AtomIndex> {topoIx, aIndex}; 
+    }
+
 	// BAT --------------------------------------------------------------------
 
 
 private:
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
-	std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
+	// topology index and atom index
+	std::map< SimTK::MobilizedBodyIndex, std::pair<int, SimTK::Compound::AtomIndex>> mbx2aIx;
+
+	// Map mbx2aIx contains only atoms at the origin of mobods
+	//std::map<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex> mbx2aIx;
 
 	// Maps a generalized velocity scale factor for every mobod
 	std::map< SimTK::MobilizedBodyIndex, SimTK::Real > mbx2uScale;
@@ -887,6 +936,10 @@ private:
 
 	// Context
 	Context *myContext;
+
+	// Default return value for non-existing topology atom, pair
+	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
+
 };
 
 #endif /*WORLD_H_*/
