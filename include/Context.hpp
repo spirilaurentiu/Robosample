@@ -782,9 +782,8 @@ public:
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
 	std::map<std::string, BondMobility::Mobility> mobilityMap = {
+		{ "Free", BondMobility::Free },
 		{ "Pin", BondMobility::Torsion },
-		{ "Torsion", BondMobility::Torsion },
-		{ "Translation", BondMobility::Translation },
 		{ "Cartesian", BondMobility::Translation },
 		{ "Rigid", BondMobility::Rigid },
 		{ "Weld", BondMobility::Rigid },

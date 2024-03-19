@@ -1,0 +1,259 @@
+OS memory 0.
+              total        used        free      shared  buff/cache   available
+Mem:        7994228     2342632     1106040       26488     4545556     5342336
+Swap:       2097152     1450536      646616
+
+Dumping input file:
+  BOOST_MDSTEPS : 1 1 
+  BOOST_TEMPERATURE : 300 300 
+  DISTORT_ARGS : Bernoulli Bernoulli 
+  DISTORT_OPTION : 0 0 
+  FFSCALE : AMBER AMBER 
+  FIXMAN_POTENTIAL : FALSE TRUE 
+  FIXMAN_TORQUE : FALSE TRUE 
+  FLEXFILE : ligand.cart.flex ligand.td.flex 
+  FLOW_OPTION : 0 0 
+  GBSA : 0.0 0.0 
+  GEOMETRY : FALSE FALSE 
+  INPCRD : ligand 
+  INTEGRATORS : OMMVV VV 
+  MDSTEPS : 200 50 
+  MOLECULES : 2but 
+  NONBONDED_CUTOFF : 1.2 1.2 
+  NONBONDED_METHOD : 0 0 
+  OPENMM : TRUE TRUE 
+  OPENMM_CalcOnlyNonbonded : FALSE TRUE 
+  OUTPUT_DIR : temp 
+  PRINT_FREQ : 1 0 
+  PRMTOP : ligand.prmtop 
+  RANDOM_WORLD_ORDER : FALSE FALSE 
+  RBFILE : ligand.rb ligand.rb 
+  REPRODUCIBLE : FALSE FALSE 
+  REX_FILE : trex.dat 
+  REX_SWAP_EVERY : 1 
+  REX_SWAP_FIXMAN : 0 0 
+  ROOTS : 0 0 
+  ROOT_MOBILITY : Weld Weld 
+  ROUNDS : 1 
+  ROUNDS_TILL_REBLOCK : 10 10 
+  RUN_TYPE : REMC 
+  SAMPLERS : MC MC 
+  SAMPLES_PER_ROUND : 1 1 
+  SEED : 123 456 
+  TEMPERATURE_FIN : 300 300 
+  TEMPERATURE_INI : 300 300 
+  THERMOSTAT : Andersen Andersen 
+  THREADS : 0 0 
+  TIMESTEPS : 0.001 0.001 
+  VISUAL : FALSE FALSE 
+  WORK_OPTION : 0 0 
+  WORLDS : R0 R1 
+  WRITEPDBS : 0 0 
+[CheckInput] Im doing 1
+Molecule directory: 2but
+BAT root
+torsion 14 0 1 -1
+ bonds BATbonds euqivalence 
+SP_NEW CompoundRep::setBaseAtom 
+
+[1,0,0,0]
+[0,1,0,0]
+[0,0,1,0]
+[0,0,0,1]
+rootAmberIx root MOL1_H10 14 H10 14
+ reset bonds BATbonds euqivalence 
+subBonds ranges
+0 14
+Topology bAtomLIst size 15
+Topology bonds size 14
+NUM TOPOLOGIES 1
+REQUESTED 0
+World: adopting 0 topology
+SP_NEW  CompoundSystem::adoptCompound Top transforms:
+
+[1,0,0,0]
+[0,1,0,0]
+[0,0,1,0]
+[0,0,0,1]
+
+[0.791078,-0.2233,-0.569502,-0.1287]
+[-0.452633,-0.839929,-0.299405,0.1796]
+[-0.411484,0.494628,-0.765522,0.0248]
+[0,0,0,1]
+First body implicitly Weld mobodIx 1
+ Trans Trans Trans Trans Trans Trans Trans Trans Trans Trans Trans Trans Trans Trans
+FixmanTorque::setScaleFactor(1)
+NUM TOPOLOGIES 1
+REQUESTED 0
+World: adopting 0 topology
+SP_NEW  CompoundSystem::adoptCompound Top transforms:
+
+[1,0,0,0]
+[0,1,0,0]
+[0,0,1,0]
+[0,0,0,1]
+
+[0.791078,-0.2233,-0.569502,-0.1287]
+[-0.452633,-0.839929,-0.299405,0.1796]
+[-0.411484,0.494628,-0.765522,0.0248]
+[0,0,0,1]
+First body implicitly Weld mobodIx 1
+ Pin Pin Pin Pin
+SetupReader::get() did not find 'MEMBRANE'. Returning ERROR_KEY_NOT_FOUND.
+0 1 0.0974 309281
+1 2 0.1426 262839
+2 3 0.1093 281081
+2 4 0.1535 253634
+2 11 0.1535 253634
+4 5 0.1092 282253
+4 6 0.1092 282253
+4 7 0.1535 253634
+7 8 0.1092 282253
+7 9 0.1092 282253
+7 10 0.1092 282253
+11 12 0.1092 282253
+11 13 0.1092 282253
+11 14 0.1092 282253
+OPENMM_EXPLORE Platform::createKernel CalcForcesAndEnergyKernel 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl CalcForcesAndEnergyKernel 
+OPENMM_EXPLORE Platform::createKernel UpdateTime 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl UpdateTime 
+OPENMM_EXPLORE Platform::createKernel ApplyConstraints 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl ApplyConstraints 
+OPENMM_EXPLORE Platform::createKernel VirtualSites 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl VirtualSites 
+OPENMM_EXPLORE Platform::createKernel CalcNonbondedForce 
+OPENMM_EXPLORE Platform::createKernel CalcHarmonicBondForce 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl CalcHarmonicBondForce 
+OPENMM_EXPLORE CalcHarmonicBondForceKernel CalcHarmonicBondForce 
+OPENMM_EXPLORE HarmonicBondForceImpl::initialize created kernel CalcHarmonicBondForce
+OPENMM_EXPLORE Platform::createKernel CalcHarmonicAngleForce 
+OPENMM_EXPLORE HarmonicAngleForceImpl::initialize created kernel CalcHarmonicAngleForce
+OPENMM_EXPLORE Platform::createKernel CalcPeriodicTorsionForce 
+OPENMM_EXPLORE Platform::createKernel ApplyAndersenThermostat 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl ApplyAndersenThermostat 
+OPENMM_EXPLORE Platform::createKernel IntegrateVerletStep 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl IntegrateVerletStep 
+NOTE: Created OpenMM context with CPU platform with relative speed 10
+OpenMMPluginInterface loaded CPU
+NOTE: DuMM: using OpenMM platform 'CPU'
+HMC: boost MD steps: 1
+mass = 1
+mass = 16
+mass = 12
+mass = 1
+mass = 12
+mass = 1
+mass = 1
+mass = 12
+mass = 1
+mass = 1
+mass = 1
+mass = 12
+mass = 1
+mass = 1
+mass = 1
+OPENMM_EXPLORE Platform::createKernel CalcForcesAndEnergyKernel 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl CalcForcesAndEnergyKernel 
+OPENMM_EXPLORE Platform::createKernel UpdateTime 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl UpdateTime 
+OPENMM_EXPLORE Platform::createKernel ApplyConstraints 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl ApplyConstraints 
+OPENMM_EXPLORE Platform::createKernel VirtualSites 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl VirtualSites 
+OPENMM_EXPLORE Platform::createKernel CalcNonbondedForce 
+OPENMM_EXPLORE Platform::createKernel ApplyAndersenThermostat 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl ApplyAndersenThermostat 
+OPENMM_EXPLORE Platform::createKernel IntegrateVerletStep 
+OPENMM_EXPLORE ReferenceKernelFactory::createKernelImpl IntegrateVerletStep 
+NOTE: Created OpenMM context with CPU platform with relative speed 10
+OpenMMPluginInterface loaded CPU
+NOTE: DuMM: using OpenMM platform 'CPU'
+HMC: boost MD steps: 1
+Number of replicas requested 1 
+REX FILE READING: 0|TEMPERATURE|300.0|
+Loaded thermodynamic state 0 
+REX FILE READING: 0|WORLD_INDEXES|0|1|
+REX FILE READING: 0|SAMPLERS|MC|MC|
+REX FILE READING: 0|DISTORT_OPTIONS|0|0|
+REX FILE READING: 0|FLOW_OPTIONS|0|0|
+REX FILE READING: 0|WORK_OPTIONS|0|0|
+REX FILE READING: 0|INTEGRATORS|VERLET|VERLET|
+REX FILE READING: 0|TIMESTEPS|0.0007|0.001|
+REX FILE READING: 0|MDSTEPS|20|20|
+REX FILE READING: 0|SAMPLES_PER_ROUND|1|1|
+All the timesteps that I got:
+0.0007 0.001 
+All the worldIndexes that I got:
+0 1 
+All the mdsteps that I got:
+20 20 
+All the samplesPerRound that I got:
+1 1 
+All the Samplers that I got:
+MC MC 
+All the temperatures that I got:
+300 
+ThermodynamicState::Print index T 0 300
+ThermodynamicState::Print index worldIndexes 0 0 1
+ScaleFactor even for thermoState 0 1
+ScaleFactor odd for thermoState 0 1
+Context::initializeFromFile PrintSubZMatrixBAT: 
+HMCSampler::PrintSubZMatrixBAT 
+MobilizedBodyIndex: 2 BAT Values: 0.0972091 nan nan 
+MobilizedBodyIndex: 3 BAT Values: 0.142523 1.8775 nan 
+MobilizedBodyIndex: 4 BAT Values: 0.109639 1.88365 -1.0388 
+MobilizedBodyIndex: 5 BAT Values: 0.153024 1.90547 -3.12251 
+MobilizedBodyIndex: 6 BAT Values: 0.109578 1.91729 -3.13944 
+MobilizedBodyIndex: 7 BAT Values: 0.109643 1.91637 -1.07867 
+MobilizedBodyIndex: 8 BAT Values: 0.15226 1.95873 1.0174 
+MobilizedBodyIndex: 9 BAT Values: 0.109417 1.93732 1.01622 
+MobilizedBodyIndex: 10 BAT Values: 0.109461 1.9459 -1.09449 
+MobilizedBodyIndex: 11 BAT Values: 0.109412 1.92136 3.1028 
+MobilizedBodyIndex: 12 BAT Values: 0.152272 1.8998 1.03888 
+MobilizedBodyIndex: 13 BAT Values: 0.10956 1.93672 1.02216 
+MobilizedBodyIndex: 14 BAT Values: 0.109404 1.94399 3.14046 
+MobilizedBodyIndex: 15 BAT Values: 0.10954 1.92789 -1.03665 
+Context::initializeFromFile PrintSubZMatrixBAT: 
+HMCSampler::PrintSubZMatrixBAT 
+MobilizedBodyIndex: 2 BAT Values: 0.142523 1.8775 nan 
+MobilizedBodyIndex: 3 BAT Values: 0.153024 1.90547 -3.12251 
+MobilizedBodyIndex: 4 BAT Values: 0.15226 1.95873 1.0174 
+MobilizedBodyIndex: 5 BAT Values: 0.152272 1.8998 1.03888 
+SetupReader::get() did not find 'BINDINGSITE_ATOMS'. Returning ERROR_KEY_NOT_FOUND.
+initialTss set to 0.0007 0.001 
+initialMDSs set to 20 20 
+ REX batch 0
+REX replica 0
+Temperature set to 300
+Timesteps set to 0.0007 0.001 
+Mdsteps set to 20 20 
+World 0, NU 42:
+DISTORT_OPTION 0
+	pe_o -23.02345, pe_n 1.87921, pe_nB 1.87921
+	ke_prop 54.32224, ke_n 29.78914
+	fix_o 0.00000, fix_n 0.00000
+	logSineSqrGamma2_o 0.00000, logSineSqrGamma2_n 0.00000
+	ts 0.00070
+	, etot_n 31.66836, etot_proposed 31.29880, JDetLog 0.00000
+	acc	 (MH) 
+Transfer from world 0 to 1
+World 1, NU 4:
+MBAT dists masses angles contributions: -119.31220595691860353327 38.13664596417534369266 -1.66818560019423278717
+Topology pitch -0.42408179851189276022
+MBAT dists masses angles contributions: -119.31220595691860353327 38.13664596417534369266 -1.66818560019423278717
+Topology pitch -0.42408179851189276022
+DISTORT_OPTION 0
+	pe_o -13.26258, pe_n -12.81900, pe_nB -12.81900
+	ke_prop 2.88668, ke_n 2.42062
+	fix_o 93.98709, fix_n 94.00983
+	logSineSqrGamma2_o -1.77597, logSineSqrGamma2_n -1.77597
+	ts 0.00100
+	, etot_n 85.82639, etot_proposed 85.82613, JDetLog 0.00000
+	acc	 (MH) 
+Transfer from world 1 to 0
+=== RUN FIRST WORLD NOT 0 === -1
+Number of accepted swaps matrix:
+0 
+Number of accepted swaps matrix:
+0 

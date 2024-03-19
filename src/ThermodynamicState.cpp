@@ -1,6 +1,15 @@
 #include "ThermodynamicState.hpp"
 
-ThermodynamicState::ThermodynamicState(int index, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_) : zMatrixBAT_ref(zMatrixBAT_ref_)
+ThermodynamicState::ThermodynamicState(
+		int index,
+
+		std::vector<bSpecificAtom>& atoms_,
+		std::vector<std::vector<int>>& zMatrixTable_,
+		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
+		) :
+	atoms(atoms_),
+	zMatrixTable(zMatrixTable_),
+	zMatrixBAT_ref(zMatrixBAT_ref_)
 {
 	myIndex = index;
 	temperature = 300;
@@ -11,12 +20,21 @@ ThermodynamicState::ThermodynamicState(int index, std::vector<std::vector<SimTK:
 	nonequilibrium = 0;
 }
 
-ThermodynamicState::ThermodynamicState(int index, const SimTK::Real& T,
+ThermodynamicState::ThermodynamicState(
+		int index,
+		const SimTK::Real& T,
 		const std::vector<int>& argWorldIndexes,
 		const std::vector<SimTK::Real>& argTimesteps,
 		const std::vector<int>& argMdsteps,
+
+		std::vector<bSpecificAtom>& atoms_,
+		std::vector<std::vector<int>>& zMatrixTable_,
 		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
-	) : zMatrixBAT_ref(zMatrixBAT_ref_)
+	) :
+	atoms(atoms_),
+	zMatrixTable(zMatrixTable_),
+	zMatrixBAT_ref(zMatrixBAT_ref_)
+	
 {
 	// Own index
 	myIndex = index;
@@ -173,9 +191,19 @@ void ThermodynamicState::PrintZMatrixBAT() const {
 	int bati = 0;
 	for (const auto& row : zMatrixBAT_ref) {
 
-		// for(const auto tabValue : zMatrixTable[bati]){
-		// 	std::cout << tabValue << " ";
-		// }
+		for(const auto tabValue : zMatrixTable[bati]){
+			std::cout << tabValue << " ";
+		}
+
+		scout("aIxs ");
+
+		for(const auto tabValue : zMatrixTable[bati]){
+			if( tabValue >= 0){
+				std::cout << atoms[tabValue].getCompoundAtomIndex() << " ";
+			}else{
+				std::cout << "dummy " ;
+			}
+		}
 
 		for (const SimTK::Real value : row) {
 			std::cout << std::setw(6) << value << " ";

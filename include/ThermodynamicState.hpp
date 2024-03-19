@@ -3,18 +3,29 @@
 #include <vector>
 #include <string>
 #include "Simbody.h"
+#include "bSpecificAtom.hpp"
 
 constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 
 class ThermodynamicState{
   public:
 	ThermodynamicState() = default;
-	ThermodynamicState(int index, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_);
+	
+	ThermodynamicState(
+		int index,
+
+		std::vector<bSpecificAtom>& atoms_,
+		std::vector<std::vector<int>>& zMatrixTable_,
+		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
+	);
 
 	ThermodynamicState(int index, const SimTK::Real& T,
 		const std::vector<int>& argWorldIndexes,
 		const std::vector<SimTK::Real>& argTimesteps,
 		const std::vector<int>& argMdsteps,
+
+		std::vector<bSpecificAtom>& atoms_,
+		std::vector<std::vector<int>>& zMatrixTable_,
 		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 	);
 
@@ -55,7 +66,11 @@ class ThermodynamicState{
 	// Print everything about thermostate
 	void Print();
 
-	// BAT
+
+    /** @name Z Matrix and BAT functions
+	*/
+
+    /**@{**/
 
     // Getter function for nofSamples
     int getNofSamples() const;
@@ -79,6 +94,8 @@ class ThermodynamicState{
 
 	// Get a row from the BAT stds
 	std::vector<SimTK::Real>& getBATStdsRow(int rowIndex);	
+
+	/**@}**/
 
   private:
 
@@ -104,12 +121,22 @@ class ThermodynamicState{
 	std::vector<int> rexWorkOptions;
 	std::vector<std::string> rexIntegrators;
 
-	// BAT
 	int nofSamples = 0;
 
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+
+	std::vector<bSpecificAtom>& atoms;
+
+	std::vector<std::vector<int>>& zMatrixTable;
 	std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref;
+
 	std::vector<std::vector<SimTK::Real>>  zMatrixBATMeans;
 	std::vector<std::vector<SimTK::Real>>  zMatrixBATDiffs;
 	std::vector<std::vector<SimTK::Real>>  zMatrixBATStds;
 
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
 };

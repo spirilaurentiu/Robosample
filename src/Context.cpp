@@ -73,7 +73,7 @@ bool Context::setOutput(const std::string& outDir) {
 }
 
 /*!
- * <!-- -->
+ * <!--  -->
 */
 bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 {
@@ -4358,6 +4358,8 @@ void Context::addThermodynamicState(int index,
 			argWorldIndexes,
 			timestepsInThisReplica,
 			mdstepsInThisReplica,
+			atoms,			
+			zMatrixTable,
 			zMatrixBAT
 		)
 	);
@@ -5808,7 +5810,9 @@ void Context::REXLog(int mixi, int replicaIx)
 // rexnewfunc
 void Context::incrementNofSamples(void){
 
-	for(int rk = 0; rk < nofReplicas; rk++){
+	for(size_t rk = 0;
+	rk < nofReplicas;
+	rk++){
 		replicas[rk].incrementNofSamples();
 	}
 
@@ -6016,15 +6020,15 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 	} // ZMatrix row
 
 
-	// scout("Context::setSamplersBATStats") << eol;
-	// for (const auto& [key, value] : inBATmeans) {
-	// 	std::cout << "cAIx: " << key << " ";
-	// 	std::cout << "BAT: ";
-	// 	for (const auto& val : value) {
-	// 		std::cout << val << " ";
-	// 	}
-	// 	std::cout << std::endl;
-	// }
+	scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
+	for (const auto& [key, value] : inBATmeans) {
+		std::cout << "cAIx: " << key << " ";
+		std::cout << "BAT: ";
+		for (const auto& val : value) {
+			std::cout << val << " ";
+		}
+		std::cout << std::endl;
+	}
 
 	// Set samplers BAT stats
 	pHMC(worlds[whichWorld].updSampler(0))->setSubZMatrixBATStats(
@@ -6284,6 +6288,7 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	// ********************************
 	// rexnewfunc /////////////////////
 	// ********************************
+	// Add BAT coordinates to replicas
 	for(int rk = 0; rk < nofReplicas; rk++){
 		replicas[rk].calcZMatrixBAT(otherWorldsAtomsLocations);
 	}
@@ -6293,11 +6298,13 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 		thermodynamicStates[tk].calcZMatrixBATStats();
 	}
 
+	scout("Context::transferCoordinates_SP_NEW ") << eol;
+	PrintZMatrixTableAndBAT();
+
 	// ********************************
 	// END rexnewfunc ////////////////
 	// ********************************
 
-	//scout("Context::transferCoordinates_SP_NEW ") << eol;
 	//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
 	
@@ -7996,6 +8003,7 @@ void Context::PrintZMatrixTableAndBAT() const
 	for(size_t tk = 0;
 	tk < nofThermodynamicStates;
 	tk++){
+		scout("ThermoState ") << tk <<" " <<"BAT " << eol;
 		thermodynamicStates[tk].PrintZMatrixBAT();
 	}
 
