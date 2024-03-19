@@ -567,21 +567,11 @@ ThermostatName MonteCarloSampler::getThermostat() const{
     return thermostat;
 }
 
-
-
-
 // Send configuration to an external evaluator
 
 void MonteCarloSampler::sendConfToEvaluator(){
     assert(!"Not implemented");
 }
-
-// Get the number of accpted conformations
-int MonteCarloSampler::getAcceptedSteps() const
-{
-    return acceptedSteps;
-}
-
 
 /** Modifies Q randomly
  **/
@@ -621,7 +611,4 @@ void MonteCarloSampler::perturbQ(SimTK::State& someState)
 	//someState.updQ()[1] = q1_vonMises;
 	system->realize(someState, SimTK::Stage::Position);
 	std::cout << "HMCSampler::perturbQ " << someState.getQ() << std::endl;
-
 }
-
-

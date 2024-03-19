@@ -5373,8 +5373,7 @@ void Context::initializeReplica(int thisReplica)
 		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
-			replicaTimesteps[i]);
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(replicaTimesteps[i], false);
 	}
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -5515,8 +5514,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
-			replicaTimesteps[i]);
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(replicaTimesteps[i], false);
 	}
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -7943,12 +7941,12 @@ void Context::PrintZMatrixTableAndBAT() const
 
 	for (const auto& row : zMatrixTable) {
 
-		scout("ZMatrixBATEntry: ");
+		// scout("ZMatrixBATEntry: ");
 
-		// Print indexes
-		for (int value : row) {
-			std::cout << std::setw(6) << value <<" "; 
-		}
+		// // Print indexes
+		// for (int value : row) {
+		// 	std::cout << std::setw(6) << value <<" "; 
+		// }
 
 		// Print BAT values
 		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
@@ -8290,12 +8288,12 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 	size_t zMatCnt = 0;
 	for (const auto& row : zMatrixTable) {
 
-		scout("ZMatrixBATEntry: ");
+		// scout("ZMatrixBATEntry: ");
 
-		// Print indexes
-		for (int value : row) {
-			std::cout << std::setw(6) << value <<" "; 
-		}
+		// // Print indexes
+		// for (int value : row) {
+		// 	std::cout << std::setw(6) << value <<" "; 
+		// }
 
 		// Print BAT values
 		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);

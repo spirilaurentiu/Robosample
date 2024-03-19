@@ -142,9 +142,6 @@ public:
     // Is the sampler always accepting the proposed moves
     //void setAlwaysAccept(bool);
 
-    // Get the number of accpted conformations
-    int getAcceptedSteps(void) const;
-
 protected:
     std::vector<SimTK::Transform> SetTVector; // Transform matrices
     std::vector<SimTK::Transform> TVector; // Transform matrices

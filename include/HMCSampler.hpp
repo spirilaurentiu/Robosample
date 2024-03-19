@@ -248,7 +248,7 @@ public:
 
 	/** Get/Set the timestep for integration **/
 	virtual SimTK::Real getTimestep() const;
-	virtual void setTimestep(SimTK::Real);
+	virtual void setTimestep(SimTK::Real ts, bool adaptive);
 
 	/** Get/Set boost temperature **/
 	SimTK::Real getBoostTemperature();
@@ -579,8 +579,6 @@ public:
  	*/
 	void testSOA(SimTK::State& someState);
 	
-	const int & getAcceptedSteps(void) const { return acceptedSteps; }
-
 	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
 
 	void setNonequilibriumParameters(int distort, int work, int flow);
@@ -670,14 +668,23 @@ protected:
 	    detmbat_n = 0.0;
 	SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
 
-	SimTK::Real logSineSqrGamma2_o = 0.0, logSineSqrGamma2_n = 0.0, logSineSqrGamma2_set = 0.0;
+	SimTK::Real logSineSqrGamma2_o = 0.0,
+		logSineSqrGamma2_n = 0.0,
+		logSineSqrGamma2_set = 0.0;
 
 	bool useFixman = false;
 	//bool alwaysAccept = false;
 
-	int acceptedSteps = 0;
-	int acceptedStepsBufferSize = 500;
+	int acceptedStepsBufferSize = 50;
 	std::deque<int> acceptedStepsBuffer;
+	SimTK::Real learningRate = 10e-6;
+	SimTK::Real idealAcceptance = 0.651;
+	SimTK::Real MDStepsPerSampleStd = 0.5;
+	SimTK::Real timestep = SimTK::NaN,
+		prevTimestep = SimTK::NaN;
+	int MDStepsPerSample = SimTK::NaN,
+		prevMDStepsPerSample = SimTK::NaN;
+	bool shouldAdaptTimestep = false;
 
 	int QsBufferSize = 300;
 	//std::list<SimTK::Vector> QsBuffer;
@@ -686,16 +693,15 @@ protected:
 	// Buffer to hold Q means
 	std::vector<SimTK::Real> QsMeans;
 
-	SimTK::Real acceptance;
-	SimTK::Real prevAcceptance;
-	SimTK::Real prevPrevAcceptance;
+	SimTK::Real acceptance = SimTK::NaN,
+		prevAcceptance = SimTK::NaN;
 
-	//
+	// Non-equilibrium options
 	int DistortOpt = 0;
 	int FlowOpt = 0;
 	int WorkOpt = 0;
 
-	bool proposeExceptionCaught;
+	bool proposeExceptionCaught = false;
 	// END MCSampler
 
 	std::vector<SimTK::Real> R;
@@ -706,8 +712,10 @@ protected:
 
 	// Integration
 	IntegratorName integratorName = IntegratorName::EMPTY;
+
+	// For RANDOM_WALK Docking Simulations
 	SimTK::Vec3 geometricCenter;
-	float sphereRadius;
+	float sphereRadius = SimTK::NaN;
 
 	// Sampling
 	int sampleGenerator = 0;
@@ -722,10 +730,6 @@ protected:
 
 	bMatrix NMARotation;
 
-	SimTK::Real timestep;
-	SimTK::Real prevTimestep;
-	SimTK::Real prevPrevTimestep;
-
 	SimTK::Real ke_set; // last accepted kinetic energy
 	SimTK::Real ke_o; // proposed kinetic energy
 	SimTK::Real ke_n; // new kinetic energy
@@ -736,12 +740,12 @@ protected:
 	SimTK::Real ke_prop_nma6;
 	SimTK::Real ke_n_nma6;
 
-	SimTK::Real bendStretchJacobianDetLog = 0;
+	SimTK::Real bendStretchJacobianDetLog = 0.0;
 
-	SimTK::Real boostT;
-	SimTK::Real boostRT;
-	SimTK::Real sqrtBoostRT; // vel init
-	SimTK::Real boostBeta;
+	SimTK::Real boostT = SimTK::NaN,
+		boostRT = SimTK::NaN,
+		sqrtBoostRT = SimTK::NaN, // vel init
+		boostBeta = SimTK::NaN;
 
 	SimTK::Real boostKEFactor;
 	SimTK::Real unboostKEFactor;
@@ -750,14 +754,8 @@ protected:
 	SimTK::Real unboostUFactor;
 	int boostMDSteps;
 
-	int MDStepsPerSample;
-	SimTK::Real MDStepsPerSampleStd;
-
-	bool shouldAdaptTimestep;
-
-	SimTK::Real NMAAltSign;
-
-	SimTK::Real QScaleFactor;
+	SimTK::Real NMAAltSign = 1.0;
+	SimTK::Real QScaleFactor = 1.0;
 
 	// TODO explain what this does
 	SimTK::Vector sqrtMInvV;

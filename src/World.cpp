@@ -3553,15 +3553,27 @@ bool World::addSampler(SamplerName samplerName,
 	int flow,
 	bool useFixmanPotential)
 {
+	// Check if the user wants adaptive time step
+	bool adaptiveTS = false;
+	if (timestep == -1) {
+		adaptiveTS = true;
+	}
+
+	std::cout << "adaptiveTS is " << adaptiveTS << std::endl;
+
 	if (integratorName == IntegratorName::OMMVV) {
 		forceField->setUseOpenMMIntegration(true);
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 		forceField->setDuMMTemperature(boostTemperature);
+
+		// TODO default value that does not care about hydrogen mass (1.something)
+		if (adaptiveTS) {
+			timestep = 0.0007;
+		}
 		forceField->setOpenMMstepsize(timestep);
 	} else {
 		forceField->setUseOpenMMCalcOnlyNonBonded(true);
 	}
-
 
 	// This is needed because each call to forceField invalidates the topology cache
 	// As far as I understand, you cannot modify forceField afther this call
@@ -3578,8 +3590,8 @@ bool World::addSampler(SamplerName samplerName,
 		SimTK::State& worldAdvancedState = integ->updAdvancedState();
 		samplers.back()->initialize(worldAdvancedState);
 
-		// If timestep is -1, use the recommended time step
-		if (timestep == -1) {
+		// Use the recommended time step
+		if (adaptiveTS) {
 			timestep = getRecommendedTimesteps();
 		}
 
@@ -3588,7 +3600,7 @@ bool World::addSampler(SamplerName samplerName,
 		samplers.back()->setIntegratorName(integratorName);
 		samplers.back()->setThermostat(thermostatName);
 		samplers.back()->setTemperature(this->temperature); // TODO where???
-		samplers.back()->setTimestep(timestep); // TODO should error when negative
+		samplers.back()->setTimestep(timestep, adaptiveTS); // TODO should error when negative
 		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
 		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
 		samplers.back()->setSeed(randomEngine);
@@ -3617,6 +3629,8 @@ bool World::addSampler(SamplerName samplerName,
 			}
 		}	
 	}
+
+	std::cout << "World " << ownWorldIndex << " using timestep " << timestep << std::endl;
 
 	return true;
 }

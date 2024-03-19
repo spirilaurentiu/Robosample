@@ -110,9 +110,6 @@ public:
     // to the appropriate conformation
     void update(SimTK::State&);
 
-    // Get the number of accpted conformations
-    int getAcceptedSteps(void);
-
 protected:
     std::vector<SimTK::Transform> SetTVector; // Transform matrices
     std::vector<SimTK::Transform> TVector; // Transform matrices
@@ -125,8 +122,6 @@ protected:
     SimTK::Real fix_set, fix_o, fix_n;
     SimTK::Real residualEmbeddedPotential = 0.0; // inside rigid bodies if weren't rigid
 
-    int acceptedSteps = 0;
- 
     // Random number generators - not sure if I need two
     // Needs testing
 
