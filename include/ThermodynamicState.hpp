@@ -134,7 +134,7 @@ class ThermodynamicState{
 
 	std::vector<std::vector<SimTK::Real>>  zMatrixBATMeans;
 	std::vector<std::vector<SimTK::Real>>  zMatrixBATDiffs;
-	std::vector<std::vector<SimTK::Real>>  zMatrixBATStds;
+	std::vector<std::vector<SimTK::Real>>  zMatrixBATVars;
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////

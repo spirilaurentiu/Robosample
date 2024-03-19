@@ -4413,15 +4413,15 @@ HMCSampler::setSubZMatrixBATStats(
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds)
 {
 
-	scout("HMCSampler::setSubZMatrixBATStats") << eol;
-	for (const auto& [key, value] : inBATmeans) {
-		std::cout << "cAIx: " << key << " ";
-		std::cout << "BAT: ";
-		for (const auto& val : value) {
-			std::cout << val << " ";
-		}
-		std::cout << std::endl;
-	}
+	// scout("HMCSampler::setSubZMatrixBATStats") << eol;
+	// for (const auto& [key, value] : inBATmeans) {
+	// 	std::cout << "cAIx: " << key << " ";
+	// 	std::cout << "BAT: ";
+	// 	for (const auto& val : value) {
+	// 		std::cout << val << " ";
+	// 	}
+	// 	std::cout << std::endl;
+	// }
 
 	// Iterate bats
 	size_t bati = 0;
@@ -4482,11 +4482,11 @@ HMCSampler::setSubZMatrixBATStats(
 			BATstds[1] = inBATstds.at(aIx)[1];
 			BATstds[2] = inBATstds.at(aIx)[2];
 
-			scout("HMCSampler::setSubZMatrixBATStats BAT BATmeans BATdiffs BATstds ") <<" ";
-			std::cout << BATmeans[0] <<" " << BATmeans[1] <<" " << BATmeans[2] <<" ";
-			std::cout << BATdiffs[0] <<" " << BATdiffs[1] <<" " << BATdiffs[2] <<" ";
-			std::cout << BATstds[0]  <<" " << BATstds[1]  <<" " << BATstds[2] <<" ";
-			ceol;
+			// scout("HMCSampler::setSubZMatrixBATStats BAT BATmeans BATdiffs BATstds ") <<" ";
+			// std::cout << BATmeans[0] <<" " << BATmeans[1] <<" " << BATmeans[2] <<" ";
+			// std::cout << BATdiffs[0] <<" " << BATdiffs[1] <<" " << BATdiffs[2] <<" ";
+			// std::cout << BATstds[0]  <<" " << BATstds[1]  <<" " << BATstds[2] <<" ";
+			// ceol;
 
 
 
@@ -4527,7 +4527,7 @@ HMCSampler::PrintSubZMatrixBATAndRelated(
 			<< BAT[0] <<" " << BAT[1] <<" " << BAT[2] <<" "
 			<< BATmeans[0] <<" " << BATmeans[1] <<" " << BATmeans[2] <<" "
 			<< BATdiffs[0] <<" " << BATdiffs[1] <<" " << BATdiffs[2] <<" "
-			<< std::sqrt(BATstds[0])  <<" " << std::sqrt(BATstds[1])  <<" " << std::sqrt(BATstds[2])  <<" "
+			<< BATstds[0]  <<" " << BATstds[1]  <<" " << BATstds[2]  <<" "
 			<< eol;
 
 		bati++;

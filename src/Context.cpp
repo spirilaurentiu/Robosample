@@ -5912,8 +5912,6 @@ void Context::RunREX()
 
 					if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 
-			incrementNofSamples();
-
 		} // end replicas simulations
 
 		// Mix replicas
@@ -5982,6 +5980,9 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 {
 
+	//scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
+	//PrintZMatrixTableAndBAT();
+
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans;
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs;
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds;
@@ -6020,15 +6021,15 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 	} // ZMatrix row
 
 
-	scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
-	for (const auto& [key, value] : inBATmeans) {
-		std::cout << "cAIx: " << key << " ";
-		std::cout << "BAT: ";
-		for (const auto& val : value) {
-			std::cout << val << " ";
-		}
-		std::cout << std::endl;
-	}
+	// scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
+	// for (const auto& [key, value] : inBATmeans) {
+	// 	std::cout << "cAIx: " << key << " ";
+	// 	std::cout << "BAT: ";
+	// 	for (const auto& val : value) {
+	// 		std::cout << val << " ";
+	// 	}
+	// 	std::cout << std::endl;
+	// }
 
 	// Set samplers BAT stats
 	pHMC(worlds[whichWorld].updSampler(0))->setSubZMatrixBATStats(
@@ -6288,6 +6289,9 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	// ********************************
 	// rexnewfunc /////////////////////
 	// ********************************
+	
+	incrementNofSamples();
+
 	// Add BAT coordinates to replicas
 	for(int rk = 0; rk < nofReplicas; rk++){
 		replicas[rk].calcZMatrixBAT(otherWorldsAtomsLocations);
@@ -6298,8 +6302,8 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 		thermodynamicStates[tk].calcZMatrixBATStats();
 	}
 
-	scout("Context::transferCoordinates_SP_NEW ") << eol;
-	PrintZMatrixTableAndBAT();
+	//scout("Context::transferCoordinates_SP_NEW ") << eol;
+	//PrintZMatrixTableAndBAT();
 
 	// ********************************
 	// END rexnewfunc ////////////////
@@ -7980,7 +7984,7 @@ void Context::PrintZMatrixTableAndBAT() const
 
 		// Print indexes
 		for (int value : row) {
-			std::cout << std::setw(6) << value <<" "; 
+			std::cout << std::setw(9) << value <<" "; 
 		}
 
 		// Print BAT values

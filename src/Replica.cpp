@@ -492,7 +492,7 @@ void Replica::PrintZMatrixBAT() const {
 		}
 
 		for (SimTK::Real value : row) {
-			std::cout << std::setw(6) << value << " ";
+			std::cout << std::setw(9) << value << " ";
 		}
 		std::cout << std::endl;
 
