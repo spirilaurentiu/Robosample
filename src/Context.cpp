@@ -319,6 +319,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			rexMdsteps,
 			rexSamplesPerRound);
 
+		// Add replicas
+		std::string crdPrefix = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0];
+		for(int k = 0; k < nofReplicas; k++){
+			addReplica(k, crdPrefix);
+		}
+
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
 			addThermodynamicState(k, temperatures[k],
@@ -331,12 +337,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 				rexIntegrators[k],
 
 				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
-		}
-
-		// Add replicas
-		std::string crdPrefix = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0];
-		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k, crdPrefix);
 		}
 
 		// Consider renaming
@@ -384,6 +384,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	thermoState_k < nofThermodynamicStates;
 	thermoState_k++){
 		thermodynamicStates[thermoState_k].calcZMatrixBATStats();
+		//thermodynamicStates[thermoState_k].PrintZMatrixBAT();
 	}
 
 	// thermodynamic states for(size_t thermoState_k = 0;thermoState_k < nofThermodynamicStates;thermoState_k++){}
@@ -392,10 +393,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// END rexnewfunc ////////////////
 	// ********************************
 
+	// They all start with replica 0 coordinates
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		World& world = worlds[worldIx];
+
 		// Add this worlds BAT coordinates to it's samplers
-		addSubZMatrixBATsToWorld(worldIx);
+		addSubZMatrixBATsToWorld(worldIx, 0);
 		scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
 		world.updSampler(0)->PrintSubZMatrixBAT();
 	}
@@ -4359,8 +4362,8 @@ void Context::addThermodynamicState(int index,
 			timestepsInThisReplica,
 			mdstepsInThisReplica,
 			atoms,			
-			zMatrixTable,
-			zMatrixBAT
+			zMatrixTable
+			//, zMatrixBAT
 		)
 	);
 
@@ -4425,9 +4428,7 @@ const size_t& Context::getNofThermodynamicStates() const
 void Context::loadReplica2ThermoIxs()
 {
 	// Set index of replicas the same as those of the thermodynamic states
-	for(size_t thermoState_k = 0;
-	thermoState_k < nofThermodynamicStates;
-	thermoState_k++){
+	for(size_t thermoState_k = 0; thermoState_k < nofThermodynamicStates; thermoState_k++){
 
 		replica2ThermoIxs.insert(
 			std::pair<int, int>
@@ -4435,15 +4436,21 @@ void Context::loadReplica2ThermoIxs()
 
 	}
 
-	for(size_t thermoState_k = 0;
-	thermoState_k < nofThermodynamicStates;
-	thermoState_k++){
+	for(size_t thermoState_k = 0; thermoState_k < nofThermodynamicStates; thermoState_k++){
 
 		thermo2ReplicaIxs.insert(
 			std::pair<int, int>
 			(thermoState_k, thermoState_k));
 
 	}
+
+	// Make thermodynamic state to point to replica's BAT
+	for(size_t thermoState_k = 0; thermoState_k < nofThermodynamicStates; thermoState_k++){
+		thermodynamicStates[thermoState_k].setZMatrixBATPointer(
+			(replicas[thermoState_k].getZMatrixBATPointer())
+		);		
+	}
+
 }
 
 void Context::setThermostatesNonequilibrium(){
@@ -4682,6 +4689,11 @@ void Context::swapThermodynamicStates(int replica_i, int replica_j){
 	temp = thermo2ReplicaIxs[thermoState_i];
 	thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
 	thermo2ReplicaIxs[thermoState_j] = temp;
+
+	// Swap the BAT pointers too
+	thermodynamicStates[thermoState_i].setZMatrixBATPointer(
+		(replicas[replica_j].getZMatrixBATPointer())
+	);	
 }
 
 void Context::swapPotentialEnergies(int replica_i, int replica_j)
@@ -4893,6 +4905,31 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 	// Accept or reject
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
+
+		// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		if( getRunType() == RUN_TYPE::RENE){
+
+			replicas[replica_X].incrementNofSamples();
+			replicas[replica_Y].incrementNofSamples();
+
+			thermodynamicStates[thermoState_C].incrementNofSamples();
+			thermodynamicStates[thermoState_H].incrementNofSamples();
+
+			// Calculate replica BAT
+			replicas[replica_X].calcZMatrixBAT_WORK();
+			replicas[replica_Y].calcZMatrixBAT_WORK();
+
+			// Calculate thermodynamic states BAT stats
+			thermodynamicStates[thermoState_C].calcZMatrixBATStats();
+			thermodynamicStates[thermoState_H].calcZMatrixBATStats();
+
+			//thermodynamicStates[thermoState_C].PrintZMatrixBAT();
+			//thermodynamicStates[thermoState_H].PrintZMatrixBAT();
+
+		}
+
+		// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 
 		// Update replicas coordinates from work generated coordinates
 		set_WORK_CoordinatesAsFinal(replica_X);
@@ -5175,6 +5212,23 @@ void Context::store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx)
 
 }
 
+// Store any WORK Jacobians contribution from back world
+void Context::store_WORK_JacobianFromBackWorld(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[replicaIx];
+
+    // Get the index of the back world
+	int backWorldIx =
+    thermodynamicStates[thermoIx].getWorldIndexes().back();
+
+    // Set this replica's WORK Jacobians potential
+	
+    SimTK::Real jac = (worlds[backWorldIx].updSampler(0))->getDistortJacobianDetLog();
+	replicas[replicaIx].set_WORK_Jacobian(jac);
+}
+
 // Get energy of the back world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromBackWorld(int replicaIx)
 {
@@ -5218,24 +5272,6 @@ void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 	replicas[replicaIx].setPotentialEnergy(energy);
 
 }
-
-// Store any WORK Jacobians contribution from back world
-void Context::store_WORK_JacobianFromBackWorld(int replicaIx)
-{
-	// Get thermoState corresponding to this replica
-	// KEYWORD = replica, VALUE = thermoState
-	int thermoIx = replica2ThermoIxs[replicaIx];
-
-    // Get the index of the back world
-	int backWorldIx =
-    thermodynamicStates[thermoIx].getWorldIndexes().back();
-
-    // Set this replica's WORK Jacobians potential
-	
-    SimTK::Real jac = (worlds[backWorldIx].updSampler(0))->getDistortJacobianDetLog();
-	replicas[replicaIx].set_WORK_Jacobian(jac);
-}
-
 
 // Get Fixman of the back world and store it in replica thisReplica
 void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
@@ -5860,6 +5896,10 @@ void Context::RunREX()
 			std::cout << "REX replica " << replicaIx << std::endl;
 
 			// ========================== LOAD ========================
+
+			// Update BAT map for all the replica's world
+			updSubZMatrixBATsToAllWorlds(replicaIx);
+
 			// Load the front world
 			currFrontWIx = restoreReplicaCoordinatesToFrontWorld_SP_NEW(replicaIx);           // (1)
 
@@ -5965,9 +6005,34 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 			// Run front world
 			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
-		
+
+			// Increment the nof samples for replica and thermostate
+			replicas[replicaIx].incrementNofSamples();
+			thermodynamicStates[thisThermoStateIx].incrementNofSamples();
+
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			// Get front world and it's state
+			World& currFrontWorld = worlds[currFrontWIx];
+			SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
+
+			// Calculate replica BAT
+			replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround_SP_NEW( currFrontState ));
+
+			// Calculate thermodynamic states BAT stats
+			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
+			//thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
+
+			// Transfer BAT statistics to sampler ????????????????????????????
+			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 		}
-	} // END iteration through worlds
+	} // every world
 
 	return currFrontWIx;
 
@@ -6055,21 +6120,53 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the non-equilibrium worlds
-	int frontWIx = -1;
+	int currFrontWIx = -1;
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
 
-			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, worldCnt);
+			// Transfer BAT statistics to sampler
+			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
 
 			// Run front world
-			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
-		
+			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			if( getRunType() != RUN_TYPE::RENE){
+
+				// Increment the nof samples for replica and thermostate
+				replicas[replicaIx].incrementNofSamples();
+				thermodynamicStates[thisThermoStateIx].incrementNofSamples();
+
+
+
+				// Get front world and it's state
+				World& currFrontWorld = worlds[currFrontWIx];
+				SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
+
+				// Calculate replica BAT
+				replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround_SP_NEW( currFrontState ));
+
+				// Calculate thermodynamic states BAT stats
+				thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
+				//thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
+
+			}else{
+				// Don't increment the number of samples. Leave it for attemptREXSwap
+				// if non-equilibrium switches are used
+				//replicas[replicaIx].incrementNofSamples();
+				//thermodynamicStates[thisThermoStateIx].incrementNofSamples();
+			}
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			
 		}
 	} // END iteration through worlds
 
-	return frontWIx;
+	return currFrontWIx;
 }
 
 SimTK::Real Context::calcReplicaTransferedEnergy(int replicaIx)
@@ -6285,29 +6382,6 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
-
-	// ********************************
-	// rexnewfunc /////////////////////
-	// ********************************
-	
-	incrementNofSamples();
-
-	// Add BAT coordinates to replicas
-	for(int rk = 0; rk < nofReplicas; rk++){
-		replicas[rk].calcZMatrixBAT(otherWorldsAtomsLocations);
-	}
-	
-	// Add BAT coordinates to thermodynamic states
-	for(size_t tk = 0; tk < nofThermodynamicStates; tk++){
-		thermodynamicStates[tk].calcZMatrixBATStats();
-	}
-
-	//scout("Context::transferCoordinates_SP_NEW ") << eol;
-	//PrintZMatrixTableAndBAT();
-
-	// ********************************
-	// END rexnewfunc ////////////////
-	// ********************************
 
 	//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
@@ -8062,7 +8136,8 @@ Context::calcInternalBATJacobianLog(void)
 */
 void
 Context::addSubZMatrixBATsToWorld(
-	int wIx)
+	int wIx
+	, int replicaIx)
 {
 	
 	// Get world
@@ -8077,7 +8152,7 @@ Context::addSubZMatrixBATsToWorld(
 	for (const auto& row : zMatrixTable) {
 
 		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
-		std::vector<SimTK::Real>& replicaBATrow = replicas[0].updZMatrixBATRow(zMatCnt);
+		std::vector<SimTK::Real>& replicaBATrow = replicas[replicaIx].updZMatrixBATRow(zMatCnt);
 
 		assert( (std::abs(BATrow[0] - replicaBATrow[0]) < 0.00001 || std::isnan(BATrow[0])) &&
 				(std::abs(BATrow[1] - replicaBATrow[1]) < 0.00001 || std::isnan(BATrow[1])) &&
@@ -8155,7 +8230,8 @@ Context::addSubZMatrixBATsToWorld(
 */
 void
 Context::updSubZMatrixBATsToWorld(
-	int wIx)
+	  int wIx
+	, int replicaIx)
 {
 	
 	// Get world
@@ -8169,16 +8245,7 @@ Context::updSubZMatrixBATsToWorld(
 	size_t zMatCnt = 0;
 	for (const auto& row : zMatrixTable) {
 
-		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
-
-		// scout("BATrow_ref") <<" ";
-		// for (SimTK::Real BATvalue : BATrow) {
-		// 	std::cout << std::setw(6) << BATvalue << " ";
-		// }
-		// for (SimTK::Real BATvalue : BATrow_ref) {
-		// 	std::cout << std::setw(6) << BATvalue << " ";
-		// }
-		// ceol;
+		std::vector<SimTK::Real>& replicaBATrow = replicas[replicaIx].updZMatrixBATRow(zMatCnt);
 
 		// Get bond's atoms
 		bSpecificAtom& childAtom  = atoms[row[0]];
@@ -8217,12 +8284,7 @@ Context::updSubZMatrixBATsToWorld(
 			// Insert key and value into the map
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
-				//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
-				//	variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
-				//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>&
-				//	variableBATs_ref = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs_ref();										
-				//variableBATs.at(childMbx) = BATrow;
-				//variableBATs_ref.at(childMbx) = BATrow_ref;
+				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).at(childMbx) = replicaBATrow;
 
 			}
 
@@ -8237,6 +8299,33 @@ Context::updSubZMatrixBATsToWorld(
 		zMatCnt++;
 	}
 		
+}
+
+
+/*!
+ * <!-- Go through the vector of worlds and if their equilibrium worlds run and 
+ * rotate. -->
+*/
+void Context::updSubZMatrixBATsToAllWorlds(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+
+	// Get this world indexes from the corresponding thermoState
+	std::vector<int>& replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+
+	// Get nof worlds in this replica
+	size_t replicaNofWorlds = replicaWorldIxs.size();
+
+	// Set BAT map for all replica's worlds
+	int currFrontWIx = -1;
+	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+		updSubZMatrixBATsToWorld( replicaWorldIxs[worldCnt], replicaIx);
+
+	} // every world
+
 }
 
 

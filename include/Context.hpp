@@ -916,7 +916,7 @@ private:
 	*/
 	void
 	addSubZMatrixBATsToWorld(
-		int wIx);
+		int wIx, int replicaIx);
 
 	/**
 	* @brief zmatrixbat_ Get BAT coordinates modifyable by a selected world
@@ -924,7 +924,13 @@ private:
 	*/
 	void
 	updSubZMatrixBATsToWorld(
-		int wIx);
+		int wIx, int replicaIx);
+
+	/**
+	* @brief zmatrixbat_ Set BAT coordinates modifyable to all worlds of a replica
+	* @param
+	*/
+	void updSubZMatrixBATsToAllWorlds(int replicaIx);
 
 	/**
 	* @brief zmatrixbat_ Print BAT coordinates

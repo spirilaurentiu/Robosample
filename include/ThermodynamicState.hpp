@@ -15,8 +15,8 @@ class ThermodynamicState{
 		int index,
 
 		std::vector<bSpecificAtom>& atoms_,
-		std::vector<std::vector<int>>& zMatrixTable_,
-		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
+		std::vector<std::vector<int>>& zMatrixTable_
+		//,std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 	);
 
 	ThermodynamicState(int index, const SimTK::Real& T,
@@ -25,8 +25,8 @@ class ThermodynamicState{
 		const std::vector<int>& argMdsteps,
 
 		std::vector<bSpecificAtom>& atoms_,
-		std::vector<std::vector<int>>& zMatrixTable_,
-		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
+		std::vector<std::vector<int>>& zMatrixTable_
+		//, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 	);
 
 	const int getIndex(){return myIndex;}
@@ -95,6 +95,12 @@ class ThermodynamicState{
 	// Get a row from the BAT stds
 	std::vector<SimTK::Real>& getBATStdsRow(int rowIndex);	
 
+    // Setter function to update the zMatrixBAT_poi member
+    void setZMatrixBATPointer(std::vector<std::vector<SimTK::Real>>& pointer) {
+        zMatrixBAT_poi = &pointer;
+		scout("zMatrixBAT_poi pointing to ") << zMatrixBAT_poi << eolf;
+    }
+
 	/**@}**/
 
   private:
@@ -130,7 +136,7 @@ class ThermodynamicState{
 	std::vector<bSpecificAtom>& atoms;
 
 	std::vector<std::vector<int>>& zMatrixTable;
-	std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref;
+	std::vector<std::vector<SimTK::Real>>* zMatrixBAT_poi;
 
 	std::vector<std::vector<SimTK::Real>>  zMatrixBATMeans;
 	std::vector<std::vector<SimTK::Real>>  zMatrixBATDiffs;

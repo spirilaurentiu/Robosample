@@ -4,12 +4,12 @@ ThermodynamicState::ThermodynamicState(
 		int index,
 
 		std::vector<bSpecificAtom>& atoms_,
-		std::vector<std::vector<int>>& zMatrixTable_,
-		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
+		std::vector<std::vector<int>>& zMatrixTable_
+		//, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 		) :
 	atoms(atoms_),
-	zMatrixTable(zMatrixTable_),
-	zMatrixBAT_ref(zMatrixBAT_ref_)
+	zMatrixTable(zMatrixTable_)
+	//, zMatrixBAT_poi(zMatrixBAT_ref_)
 {
 	myIndex = index;
 	temperature = 300;
@@ -28,12 +28,12 @@ ThermodynamicState::ThermodynamicState(
 		const std::vector<int>& argMdsteps,
 
 		std::vector<bSpecificAtom>& atoms_,
-		std::vector<std::vector<int>>& zMatrixTable_,
-		std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
+		std::vector<std::vector<int>>& zMatrixTable_
+		//, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 	) :
 	atoms(atoms_),
-	zMatrixTable(zMatrixTable_),
-	zMatrixBAT_ref(zMatrixBAT_ref_)
+	zMatrixTable(zMatrixTable_)
+	//, zMatrixBAT_poi(zMatrixBAT_ref_)
 	
 {
 	// Own index
@@ -190,9 +190,9 @@ void ThermodynamicState::PrintZMatrixBAT() const {
 
 	int bati = 0;
 
-	for (const auto& row : zMatrixBAT_ref) {
+	for (const auto& row : *zMatrixBAT_poi) {
 		
-		std::cout << "thermo ";
+		std::cout << "thermoIx|" << myIndex <<"| ";
 		for(const auto tabValue : zMatrixTable[bati]){
 			std::cout << tabValue << " ";
 		}
@@ -243,27 +243,27 @@ void
 ThermodynamicState::calcZMatrixBATStats(void)
 {
 
-	// scout("ThermodynamicState::calcZMatrixBATStats myIndex nofSamples ")
+	//scout("ThermodynamicState::calcZMatrixBATStats myIndex nofSamples ")
 	// 	<< myIndex <<" " << nofSamples << eol;
-	// PrintZMatrixBAT();
+	//PrintZMatrixBAT();
 
 	// Usefull vars
-	SimTK::Real N = nofSamples;
+	SimTK::Real N = nofSamples + 1;
 	SimTK::Real N_1_over_N = (N - 1.0) / N;
 	SimTK::Real Ninv = 1.0 / N;
 			
 	if(nofSamples == 0){
 
         // Initialize zMatrixBATMeans, zMatrixBATDiffs, and zMatrixBATStds
-        zMatrixBATMeans.resize(zMatrixBAT_ref.size(), std::vector<SimTK::Real>(3, 0));
-        zMatrixBATDiffs.resize(zMatrixBAT_ref.size(), std::vector<SimTK::Real>(3, 0));
-        zMatrixBATVars.resize(zMatrixBAT_ref.size(), std::vector<SimTK::Real>(3, 0));
+        zMatrixBATMeans.resize((*zMatrixBAT_poi).size(), std::vector<SimTK::Real>(3, 0));
+        zMatrixBATDiffs.resize((*zMatrixBAT_poi).size(), std::vector<SimTK::Real>(3, 0));
+        zMatrixBATVars.resize((*zMatrixBAT_poi).size(), std::vector<SimTK::Real>(3, 0));
 
-	    for (size_t bati = 0; bati < zMatrixBAT_ref.size(); ++bati) {
+	    for (size_t bati = 0; bati < (*zMatrixBAT_poi).size(); ++bati) {
 
-			zMatrixBATMeans[bati][0] = zMatrixBAT_ref[bati][0];
-			zMatrixBATMeans[bati][1] = zMatrixBAT_ref[bati][1];
-			zMatrixBATMeans[bati][2] = zMatrixBAT_ref[bati][2];
+			zMatrixBATMeans[bati][0] = (*zMatrixBAT_poi)[bati][0];
+			zMatrixBATMeans[bati][1] = (*zMatrixBAT_poi)[bati][1];
+			zMatrixBATMeans[bati][2] = (*zMatrixBAT_poi)[bati][2];
 
 			zMatrixBATDiffs[bati][0] = 0;
 			zMatrixBATDiffs[bati][1] = 0;
@@ -275,30 +275,25 @@ ThermodynamicState::calcZMatrixBATStats(void)
 
 		}
 
-	}else if(nofSamples == 1){
-
-	    for (size_t bati = 0; bati < zMatrixBAT_ref.size(); ++bati) {
-
-			zMatrixBATMeans[bati][0] = (zMatrixBATMeans[bati][0] + zMatrixBAT_ref[bati][0]) / 2.0;
-			zMatrixBATMeans[bati][1] = (zMatrixBATMeans[bati][1] + zMatrixBAT_ref[bati][1]) / 2.0;
-			zMatrixBATMeans[bati][2] = (zMatrixBATMeans[bati][2] + zMatrixBAT_ref[bati][2]) / 2.0;
-
-			zMatrixBATDiffs[bati][0] = (zMatrixBAT_ref[bati][0] - zMatrixBATMeans[bati][0]);
-			zMatrixBATDiffs[bati][1] = (zMatrixBAT_ref[bati][1] - zMatrixBATMeans[bati][1]);
-			zMatrixBATDiffs[bati][2] = (zMatrixBAT_ref[bati][2] - zMatrixBATMeans[bati][2]);
-
-			zMatrixBATVars[bati][0] = 0.5 * (zMatrixBATDiffs[bati][0]) * (zMatrixBATDiffs[bati][0]);
-			zMatrixBATVars[bati][1] = 0.5 * (zMatrixBATDiffs[bati][1]) * (zMatrixBATDiffs[bati][1]);
-			zMatrixBATVars[bati][2] = 0.5 * (zMatrixBATDiffs[bati][2]) * (zMatrixBATDiffs[bati][2]);
-
-		}
+	// }else if(nofSamples == 1){
+	//     for (size_t bati = 0; bati < (*zMatrixBAT_poi).size(); ++bati) {
+	// 		zMatrixBATMeans[bati][0] = (zMatrixBATMeans[bati][0] + (*zMatrixBAT_poi)[bati][0]) / 2.0;
+	// 		zMatrixBATMeans[bati][1] = (zMatrixBATMeans[bati][1] + (*zMatrixBAT_poi)[bati][1]) / 2.0;
+	// 		zMatrixBATMeans[bati][2] = (zMatrixBATMeans[bati][2] + (*zMatrixBAT_poi)[bati][2]) / 2.0;
+	// 		zMatrixBATDiffs[bati][0] = ((*zMatrixBAT_poi)[bati][0] - zMatrixBATMeans[bati][0]);
+	// 		zMatrixBATDiffs[bati][1] = ((*zMatrixBAT_poi)[bati][1] - zMatrixBATMeans[bati][1]);
+	// 		zMatrixBATDiffs[bati][2] = ((*zMatrixBAT_poi)[bati][2] - zMatrixBATMeans[bati][2]);
+	// 		zMatrixBATVars[bati][0] = 0.5 * (zMatrixBATDiffs[bati][0]) * (zMatrixBATDiffs[bati][0]);
+	// 		zMatrixBATVars[bati][1] = 0.5 * (zMatrixBATDiffs[bati][1]) * (zMatrixBATDiffs[bati][1]);
+	// 		zMatrixBATVars[bati][2] = 0.5 * (zMatrixBATDiffs[bati][2]) * (zMatrixBATDiffs[bati][2]);
+	// 	}
 
 	}else{ // nofSamples gt 2
 
 		// Iterate bats
-	    for (size_t bati = 0; bati < zMatrixBAT_ref.size(); ++bati) {
+	    for (size_t bati = 0; bati < (*zMatrixBAT_poi).size(); ++bati) {
 
-			std::vector<SimTK::Real>& BAT = zMatrixBAT_ref[bati];
+			std::vector<SimTK::Real>& BAT = (*zMatrixBAT_poi)[bati];
 
 			std::vector<SimTK::Real>& BATmeans = zMatrixBATMeans[bati];
 			std::vector<SimTK::Real>& BATdiffs = zMatrixBATDiffs[bati];
@@ -322,6 +317,8 @@ ThermodynamicState::calcZMatrixBATStats(void)
 		} // every BAT entry
 	} // nofSamples gt 2
 
+	//scout("ThermodynamicState::calcZMatrixBATStats END myIndex nofSamples ")
+	// 	<< myIndex <<" " << nofSamples << eol;
 	//PrintZMatrixBAT();
 
 }
