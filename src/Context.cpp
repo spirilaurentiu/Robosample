@@ -6024,9 +6024,6 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
 			//thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
 
-			// Transfer BAT statistics to sampler ????????????????????????????
-			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
-
 			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
