@@ -444,6 +444,19 @@ public:
 		std::vector<SimTK::Real>& timestepsInThisReplica,
 		std::vector<int>& mdstepsInThisReplica);
 
+	/**
+	* @brief zmatrixbat_
+	* @param
+	*/	
+	void setReplicaExchangePairs(unsigned int startingFrom);
+
+	/**
+	* @brief zmatrixbat_
+	* @param
+	*/
+	const int getThermoPair(int replicaIx);
+
+
 	// Prepare Q, U, and tau altering function parameters
 	void PrepareNonEquilibriumParams_Q(void);
 
@@ -482,11 +495,11 @@ public:
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
 
-	// We hold this for the moment 
-	void mixAllReplicas(int nSwapAttempts);
-
 	// startingFrom argument is for alternating odd and even neighbors
 	void mixNeighboringReplicas(unsigned int startingFrom);
+
+	// We hold this for the moment 
+	void mixAllReplicas(int nSwapAttempts);
 
 	// Mix replicas
 	void mixReplicas(void);
@@ -948,6 +961,9 @@ private:
 	//////////////////////////////////
 
 	/**@}**/
+
+	// Pairs of replicas to be exchanged
+	std::vector<int> exchangePairs;
 
 };
 

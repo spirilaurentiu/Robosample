@@ -339,6 +339,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 
+		// Set a vector of replica pairs for exchanges
+	    exchangePairs.resize(nofReplicas);
+
 		// Consider renaming
 		loadReplica2ThermoIxs();
 
@@ -4966,6 +4969,40 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 }
 
+
+// Mix neighboring replicas
+// Thermodyanmic states are fixed; replicas are variables
+void Context::mixNeighboringReplicas(unsigned int startingFrom)
+{
+	assert((startingFrom <= 1) &&
+	"Replica exchange scheme has to start from 0 or 1.");
+
+	int thermoState_i = 0;
+	int thermoState_j = 1;
+
+	// Go through neighboring thermodynamic states
+	for(size_t thermoState_k = startingFrom;
+	thermoState_k < (nofThermodynamicStates - 1);
+	thermoState_k += 2){
+
+		// Get thermodynamic states
+		thermoState_i = thermoState_k;
+		thermoState_j = thermoState_k + 1;
+
+		// Get replicas corresponding to the thermodynamic states
+		int replica_i = thermo2ReplicaIxs[thermoState_i];
+		int replica_j = thermo2ReplicaIxs[thermoState_j];
+
+		// Attempt to swap
+		bool swapped = false;
+		swapped = attemptREXSwap(replica_i, replica_j);
+	}
+
+
+
+}
+
+
 // Exhange all replicas
 void Context::mixAllReplicas(int nSwapAttempts)
 {
@@ -4995,54 +5032,25 @@ void Context::mixAllReplicas(int nSwapAttempts)
 	}
 }
 
-// Mix neighboring replicas
-// Thermodyanmic states are fixed; replicas are variables
-void Context::mixNeighboringReplicas(unsigned int startingFrom)
-{
-	int thermoState_i = 0;
-	int thermoState_j = 1;
-
-	// Go through neighboring thermodynamic states
-	for(size_t thermoState_k = startingFrom;
-	thermoState_k < (nofThermodynamicStates - 1);
-	thermoState_k += 2){
-		
-		// Get thermodynamic states
-		thermoState_i = thermoState_k;
-		thermoState_j = thermoState_k + 1;
-
-		// Get replicas corresponding to the thermodynamic states
-		int replica_i = thermo2ReplicaIxs[thermoState_i];
-		int replica_j = thermo2ReplicaIxs[thermoState_j];
-
-		/* std::cout << "mixNeighboringReplicas thermoStates "
-			<< thermoState_i << " " << thermoState_j << "\n";
-		std::cout << "Attempt to swap replicas " << replica_i
-			<< " and " << replica_j << std::endl << std::flush; */
-
-		// Attempt to swap
-		bool swapped = false;
-		/* if( getRunType() == 1 ){ // TODO make it enum
-			swapped = attemptREXSwap(replica_i, replica_j);
-
-		}else if ( getRunType() == 2 ){
-			swapped = attemptRENSSwap(replica_i, replica_j);
-		} */
-
-		swapped = attemptREXSwap(replica_i, replica_j);
-
-	}
-}
 
 // Mix replicas - hold it for the moment
 void Context::mixReplicas()
 {
-	assert(!"Not implemented"); throw std::exception();
-//	if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-//		mixNeighboringReplicas();
-//	}else{
-//		mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
-//	}
+	// Go through neighboring thermodynamic states
+	for(size_t thermoState_k = 0;
+	thermoState_k < (nofThermodynamicStates - 1);
+	thermoState_k += 1){
+
+		// Get replica corresponding to the thermodynamic state
+		int replica_i = thermo2ReplicaIxs[thermoState_k];
+		int replica_j = getThermoPair(replica_i);
+
+		// Attempt to swap
+		bool swapped = false;
+		if(replica_i != replica_j){
+			swapped = attemptREXSwap(replica_i, replica_j);
+		}
+	}
 }
 
 // Load replica's atomLocations into it's front world
@@ -5357,6 +5365,52 @@ void Context::initializeReplica(int thisReplica)
 	}
 	std::cout << std::endl;
 
+}
+
+/*!
+ * <!--	 -->
+*/
+void Context::setReplicaExchangePairs(unsigned int startingFrom)
+{
+	assert((startingFrom <= 1) &&
+	"Replica exchange scheme has to start from 0 or 1.");
+
+	int thermoState_i = 0;
+	int thermoState_j = 1;
+
+	// Odd scheme implies 0-N exchange
+	if(startingFrom == 1){
+		exchangePairs[0] = exchangePairs.size() - 1;
+	}
+
+	// Go through neighboring thermodynamic states
+	for(size_t thermoState_k = startingFrom;
+	thermoState_k < (nofThermodynamicStates - 1);
+	thermoState_k += 2)
+	{
+		
+		// Get thermodynamic states
+		thermoState_i = thermoState_k;
+		thermoState_j = thermoState_k + 1;
+
+		// Get replicas corresponding to the thermodynamic states
+		int replica_i = thermo2ReplicaIxs[thermoState_i];
+		int replica_j = thermo2ReplicaIxs[thermoState_j];
+
+		// Set the vector of exchange pairs
+        exchangePairs[replica_i] = replica_j;
+
+	}
+}
+
+/*!
+ * <!--	 -->
+*/
+const int Context::getThermoPair(int replicaIx)
+{
+	assert((exchangePairs.size() > 0) &&
+	"Replica exchange pairs not set.");
+	return exchangePairs[replicaIx];
 }
 
 // Prepare Q, U, and tau altering function parameters
@@ -5889,6 +5943,14 @@ void Context::RunREX()
 		std::cout << " REX batch " << mixi << std::endl;
 		nofRounds = mixi;
 
+		// Reset replica exchange pairs vector
+		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				setReplicaExchangePairs(mixi % 2);
+			}
+		}
+
+		// Update work scale factors
 		updQScaleFactors(mixi);
 
 		// SIMULATE EACH REPLICA --------------------------------------------->
@@ -5955,16 +6017,19 @@ void Context::RunREX()
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
-			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-				if ((mixi % 2) == 0){
-					mixNeighboringReplicas(0);
-				}else{
-					mixNeighboringReplicas(1);
-				}
-			}else{
-				mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
-			}
+		if(getRunType() != RUN_TYPE::DEFAULT){  // (9) + (10)
+			
+			mixReplicas();
+			                                               
+			//if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				//if ((mixi % 2) == 0){
+					//mixNeighboringReplicas(mixi % 2);
+				//}else{
+				//	mixNeighboringReplicas(1);
+				//}
+			//}else{
+			//	mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
+			//}
 
 			PrintNofAcceptedSwapsMatrix();
 		} 
@@ -6045,9 +6110,11 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 	//scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
 	//PrintZMatrixTableAndBAT();
 
+	// BAT stats containers to send to samplers
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans;
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs;
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds;
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds_Alien;
 
 	size_t zMatCnt = 0;
 
@@ -6058,26 +6125,22 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 		bSpecificAtom& atom0 = atoms[zRow[childPositionInZMat]];
 		SimTK::Compound::AtomIndex cAIx = atom0.getCompoundAtomIndex();
 
-		// for (int bAtomIndex : zRow) {
-		// 	; 
-		// }
-
-		// Print BAT values
-		//const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
-
 		// Get statistics from thermodynamic state
 		std::vector<SimTK::Real>& BATMeans = thermodynamicStates[thermoIx].getBATMeansRow(zMatCnt);
 		std::vector<SimTK::Real>& BATDiffs = thermodynamicStates[thermoIx].getBATDiffsRow(zMatCnt);
 		std::vector<SimTK::Real>& BATStds = thermodynamicStates[thermoIx].getBATStdsRow(zMatCnt);
 
+		// Get statistics from thermostate exchange pair
+		int alienThermoIx = getThermoPair(thermoIx);
+		std::vector<SimTK::Real>& BATStds_Alien = thermodynamicStates[alienThermoIx].getBATStdsRow(zMatCnt);
+
+		// Insert entry into sampler stats containers
 		inBATmeans.insert({cAIx, BATMeans});
 		inBATdiffs.insert({cAIx, BATDiffs});
 		inBATstds.insert({cAIx, BATStds});
+		inBATstds_Alien.insert({cAIx, BATStds_Alien});
 
-		// for (SimTK::Real BATvalue : BATrow) {
-		// 	;
-		// }
-
+		// Increment Z Matrix row
 		zMatCnt++;
 
 	} // ZMatrix row
@@ -6095,16 +6158,18 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 
 	// Set samplers BAT stats
 	pHMC(worlds[whichWorld].updSampler(0))->setSubZMatrixBATStats(
-		inBATmeans, inBATdiffs, inBATstds);
+		inBATmeans, inBATdiffs, inBATstds, inBATstds_Alien);
 
 }
 
 
 int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
-	/* std::cout << "Context::RunReplicaNonequilibriumWorlds\n"; */
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+
+	// Get thermostate exchange partner
+	int pairThermoState = getThermoPair(thisThermoStateIx);
 
 	// Get this world indexes from the corresponding thermoState
 	std::vector<int>& replicaWorldIxs = 
