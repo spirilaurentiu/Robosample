@@ -3139,10 +3139,10 @@ World::calcMobodToMobodTransforms(
 		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
 	);
 
-	if( (anglePin_OR) && ((atom->neighbors).size() == 1)){
+	if( (anglePin_OR) && ((atom->neighborsIndex).size() == 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
-	}else if( (anglePin_OR) && ((atom->neighbors).size() != 1)){
+	}else if( (anglePin_OR) && ((atom->neighborsIndex).size() != 1)){
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 
 	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
@@ -3313,12 +3313,12 @@ SimTK::Transform World::calcX_FMTransforms(
 	);
 
 	// Set X_FM value
-	if( (anglePin_OR) && ((atom->neighbors).size() == 1)){
+	if( (anglePin_OR) && ((atom->neighborsIndex).size() == 1)){
 
 		X_FM = Transform();
 		return X_FM;
 
-	}else if( (anglePin_OR) && ((atom->neighbors).size() != 1)){
+	}else if( (anglePin_OR) && ((atom->neighborsIndex).size() != 1)){
 
 		X_FM = Transform();
 		return X_FM;

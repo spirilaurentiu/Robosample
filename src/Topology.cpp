@@ -129,33 +129,33 @@ void Topology::SetGmolAtomPropertiesFromReader(readAmberInput *amberReader)
  **/
 void Topology::SetGmolBondingPropertiesFromReader(readAmberInput *amberReader)
 {
-	assert( (!bAtomList.empty()) && "Topology::loadAtomAndBondInfoFromReader: atom list empty.");
+	// assert( (!bAtomList.empty()) && "Topology::loadAtomAndBondInfoFromReader: atom list empty.");
 
-	// Alloc memory for bonds list
-	nbonds = amberReader->getNumberBonds();
-	bonds.resize(nbonds);
+	// // Alloc memory for bonds list
+	// nbonds = amberReader->getNumberBonds();
+	// bonds.resize(nbonds);
 
-	// Iterate bonds and get atom indeces
-	// This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
-	for(int i=0; i<nbonds; i++){
-		bonds[i].setIndex(i);
-		bonds[i].i = amberReader->getBondsAtomsIndex1(i);
-		bonds[i].j = amberReader->getBondsAtomsIndex2(i);
+	// // Iterate bonds and get atom indeces
+	// // This establishes a 1-to-1 correspondence between prmtop and Gmolmodel
+	// for(int i=0; i<nbonds; i++){
+	// 	bonds[i].setIndex(i);
+	// 	bonds[i].i = amberReader->getBondsAtomsIndex1(i);
+	// 	bonds[i].j = amberReader->getBondsAtomsIndex2(i);
 
-		// BAD! this will break if we invalidate the bonds vector
-		bAtomList[bonds[i].i].addNeighbor(&bAtomList[bonds[i].j]);
-		bAtomList[bonds[i].i].addBond(&bonds[i]);
+	// 	// BAD! this will break if we invalidate the bonds vector
+	// 	bAtomList[bonds[i].i].addNeighbor(&bAtomList[bonds[i].j]);
+	// 	bAtomList[bonds[i].i].addBond(&bonds[i]);
 
-		bAtomList[bonds[i].j].addNeighbor(&bAtomList[bonds[i].i]);
-		bAtomList[bonds[i].j].addBond(&bonds[i]);
-	}
+	// 	bAtomList[bonds[i].j].addNeighbor(&bAtomList[bonds[i].i]);
+	// 	bAtomList[bonds[i].j].addBond(&bonds[i]);
+	// }
 
-	// Assign the number of bonds an atom has and set the number of freebonds
-	// equal to the number of bonds for now
-	for(int i = 0; i < natoms ; i++) {
-		bAtomList[i].setNbonds(bAtomList[i].bondsInvolved.size());
-		bAtomList[i].setFreebonds(bAtomList[i].bondsInvolved.size());
-	}
+	// // Assign the number of bonds an atom has and set the number of freebonds
+	// // equal to the number of bonds for now
+	// for(int i = 0; i < natoms ; i++) {
+	// 	bAtomList[i].setNbonds(bAtomList[i].bondsInvolved.size());
+	// 	bAtomList[i].setFreebonds(bAtomList[i].bondsInvolved.size());
+	// }
 }
 
 /** Set atoms Molmodel types (Compound::SingleAtom derived) based on
@@ -252,121 +252,121 @@ information from bonds list and bondsInvolved list of each atom in bAtomList.
 /** The actual recursive function that builds the graph **/
 void Topology::buildAcyclicGraph(bSpecificAtom *node, bSpecificAtom *previousNode)
 {
-	// The base atom has to be set once Molmodel
-	baseSetFlag = 0;
+	// // The base atom has to be set once Molmodel
+	// baseSetFlag = 0;
 
-	// Only process unvisited nodes
-	if( node->wasVisited() ){
-		return;
-	}
+	// // Only process unvisited nodes
+	// if( node->wasVisited() ){
+	// 	return;
+	// }
 
-	// Mark the depth of the recursivity
-	++nofProcesses;
+	// // Mark the depth of the recursivity
+	// ++nofProcesses;
 
-	// Mark Gmolmodel bond and create bond in Molmodel
-	for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
-		bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
-	{
-		// Check if there is a bond between prevnode and node based on bonds
-		// read from amberReader
-		if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
-			(*bondsInvolvedIter)->setVisited(1);
+	// // Mark Gmolmodel bond and create bond in Molmodel
+	// for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
+	// 	bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
+	// {
+	// 	// Check if there is a bond between prevnode and node based on bonds
+	// 	// read from amberReader
+	// 	if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
+	// 		(*bondsInvolvedIter)->setVisited(1);
 
-			// Skip the first step as we don't have yet two atoms
-			if (nofProcesses != 1) {
+	// 		// Skip the first step as we don't have yet two atoms
+	// 		if (nofProcesses != 1) {
 
-				// The first bond is special in Molmodel and has to be
-				// treated differently. Set a base atom first
-				if (nofProcesses == 2) {
-					if (baseSetFlag == 0) {
-						this->setBaseAtom(previousNode->getSingleAtom());
-						previousNode->setIsRoot(true);
-						this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
-						this->convertInboardBondCenterToOutboard();
-						baseSetFlag = 1;
+	// 			// The first bond is special in Molmodel and has to be
+	// 			// treated differently. Set a base atom first
+	// 			if (nofProcesses == 2) {
+	// 				if (baseSetFlag == 0) {
+	// 					this->setBaseAtom(previousNode->getSingleAtom());
+	// 					previousNode->setIsRoot(true);
+	// 					this->setAtomBiotype(previousNode->getName(), (this->name), previousNode->getName());
+	// 					this->convertInboardBondCenterToOutboard();
+	// 					baseSetFlag = 1;
 
-						if(TRACE_GRAPH){
-							std::cout << "Topology::buildAcyclicGraph base " 
-								<< previousNode->compoundAtomIndex << std::endl;
-						}
+	// 					if(TRACE_GRAPH){
+	// 						std::cout << "Topology::buildAcyclicGraph base " 
+	// 							<< previousNode->compoundAtomIndex << std::endl;
+	// 					}
 
-					}
-				}
+	// 				}
+	// 			}
 
-				// Bond current node by the previous (Compound function)
-				std::stringstream parentBondCenterPathName;
-				if (previousNode->getNumber() == baseAtomNumber) {
-					parentBondCenterPathName << previousNode->getName()
-						<< "/bond" << previousNode->getFreebonds();
-				} else {
-					parentBondCenterPathName << previousNode->getName()
-						<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
-				}
+	// 			// Bond current node by the previous (Compound function)
+	// 			std::stringstream parentBondCenterPathName;
+	// 			if (previousNode->getNumber() == baseAtomNumber) {
+	// 				parentBondCenterPathName << previousNode->getName()
+	// 					<< "/bond" << previousNode->getFreebonds();
+	// 			} else {
+	// 				parentBondCenterPathName << previousNode->getName()
+	// 					<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
+	// 			}
 
-				std::cout << "Bonding " << node->getName() << " to " << previousNode->getName() << " with bond center name " << parentBondCenterPathName.str() << std::endl;
+	// 			std::cout << "Bonding " << node->getName() << " to " << previousNode->getName() << " with bond center name " << parentBondCenterPathName.str() << std::endl;
 
-				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
-				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
-				std::string debugString = parentBondCenterPathName.str();
-				this->bondAtom(node->getSingleAtom(),
-						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
+	// 			// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
+	// 			// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
+	// 			std::string debugString = parentBondCenterPathName.str();
+	// 			this->bondAtom(node->getSingleAtom(),
+	// 					(parentBondCenterPathName.str()).c_str(), 0.149, 0);
 
-				// Set the final Biotype
-				this->setAtomBiotype(node->getName(), (this->name).c_str(), node->getName());
+	// 			// Set the final Biotype
+	// 			this->setAtomBiotype(node->getName(), (this->name).c_str(), node->getName());
 
-				// Set bSpecificAtom atomIndex to the last atom added to bond
-				node->setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1));
+	// 			// Set bSpecificAtom atomIndex to the last atom added to bond
+	// 			node->setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 1));
 				
-				if(TRACE_GRAPH){
-					std::cout << "Topology::buildAcyclicGraph " 
-						<< previousNode->compoundAtomIndex << " " 
-						<< node->compoundAtomIndex << std::endl;
-				}
+	// 			if(TRACE_GRAPH){
+	// 				std::cout << "Topology::buildAcyclicGraph " 
+	// 					<< previousNode->compoundAtomIndex << " " 
+	// 					<< node->compoundAtomIndex << std::endl;
+	// 			}
 
-				// The only time we have to set atomIndex to the previous node
-				if (nofProcesses == 2) {
-					previousNode->setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0));
-				}
+	// 			// The only time we have to set atomIndex to the previous node
+	// 			if (nofProcesses == 2) {
+	// 				previousNode->setCompoundAtomIndex(getBondAtomIndex(Compound::BondIndex(getNumBonds() - 1), 0));
+	// 			}
 
-				// Set bBond Molmodel Compound::BondIndex
-				(*bondsInvolvedIter)->setBondIndex(Compound::BondIndex(getNumBonds() - 1));
-				std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
-						Compound::BondIndex(getNumBonds() - 1),
-						(*bondsInvolvedIter)->getIndex()
-				);
+	// 			// Set bBond Molmodel Compound::BondIndex
+	// 			(*bondsInvolvedIter)->setBondIndex(Compound::BondIndex(getNumBonds() - 1));
+	// 			std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
+	// 					Compound::BondIndex(getNumBonds() - 1),
+	// 					(*bondsInvolvedIter)->getIndex()
+	// 			);
 
-				bondIx2GmolBond.insert(pairToBeInserted);
+	// 			bondIx2GmolBond.insert(pairToBeInserted);
 
-				GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
-						(*bondsInvolvedIter)->getIndex(),
-						Compound::BondIndex(getNumBonds() - 1)
-				) );
+	// 			GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+	// 					(*bondsInvolvedIter)->getIndex(),
+	// 					Compound::BondIndex(getNumBonds() - 1)
+	// 			) );
 
-				// Drop the number of available bonds
-				/* --(previousNode->freebonds);
-				--(node->freebonds); */
+	// 			// Drop the number of available bonds
+	// 			/* --(previousNode->freebonds);
+	// 			--(node->freebonds); */
 
-				previousNode->decrFreebonds();
-				node->decrFreebonds();
+	// 			previousNode->decrFreebonds();
+	// 			node->decrFreebonds();
 
-				// Bond was inserted in Molmodel Compound. Get out and search
-				// the next bond
-				break;
+	// 			// Bond was inserted in Molmodel Compound. Get out and search
+	// 			// the next bond
+	// 			break;
 
-			}
-		}
-	}
+	// 		}
+	// 	}
+	// }
 
-	// Mark the node as visited
-	node->setVisited(1);
+	// // Mark the node as visited
+	// node->setVisited(1);
 
-	// Set the previous node to this node
-	previousNode = node;
+	// // Set the previous node to this node
+	// previousNode = node;
 
-	// Go to the next node. Choose it from his neighbours.
-	for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
-		buildAcyclicGraph((node->neighbors)[i], previousNode);
-	}
+	// // Go to the next node. Choose it from his neighbours.
+	// for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
+	// 	buildAcyclicGraph((node->neighbors)[i], previousNode);
+	// }
 
 }
 
@@ -1307,64 +1307,64 @@ bool Topology::checkIfTripleUnorderedAreEqual(
 // Finds all triple runs - TODO VERY INEFFICIENT
 void Topology::loadTriples()
 {
-	// Assign Compound coordinates by matching bAtomList coordinates
-	//std::cout << "Topology triples: " << std::endl ;
-	std::map<AtomIndex, Vec3> atomTargets;
-	for(int ix = 0; ix < getNumAtoms(); ++ix){
-		Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-		atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
-	}
-	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
-	getBondedAtomRuns(3, atomTargets);
+	// // Assign Compound coordinates by matching bAtomList coordinates
+	// //std::cout << "Topology triples: " << std::endl ;
+	// std::map<AtomIndex, Vec3> atomTargets;
+	// for(int ix = 0; ix < getNumAtoms(); ++ix){
+	// 	Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
+	// 	atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
+	// }
+	// std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
+	// getBondedAtomRuns(3, atomTargets);
 
-	// Find root bAtomList index
-	// int rootIx;
-	int ix = -1;
-	for(const auto& atom: bAtomList){
-		ix++;
-		// if(atom.getCompoundAtomIndex() == 0){
-		// 	rootIx = ix;
-		// 	break;
-		// }
-	}
+	// // Find root bAtomList index
+	// // int rootIx;
+	// int ix = -1;
+	// for(const auto& atom: bAtomList){
+	// 	ix++;
+	// 	// if(atom.getCompoundAtomIndex() == 0){
+	// 	// 	rootIx = ix;
+	// 	// 	break;
+	// 	// }
+	// }
 
-	// Find neighbour with maximum atomIndex
-	int maxAIx = -1;
-	Compound::AtomIndex aIx;
-	for(auto atom: bAtomList[ix].neighbors){
-		aIx = atom->getCompoundAtomIndex();
-		if(aIx > maxAIx){
-			maxAIx = aIx;
-		}
-	}
+	// // Find neighbour with maximum atomIndex
+	// int maxAIx = -1;
+	// Compound::AtomIndex aIx;
+	// for(auto atom: bAtomList[ix].neighbors){
+	// 	aIx = atom->getCompoundAtomIndex();
+	// 	if(aIx > maxAIx){
+	// 		maxAIx = aIx;
+	// 	}
+	// }
 
-	//std::cout << "==========================" << std::endl;
+	// //std::cout << "==========================" << std::endl;
 
-	int flag;
-	int bIx = -1;
-	for(auto bAR: bondedAtomRuns){ // Iterate bondedAtomRuns
-		//std::cout << "checking " ;
-		//for(auto aIx: bAR){std::cout << " " << aIx;}; std::cout << std::endl;
+	// int flag;
+	// int bIx = -1;
+	// for(auto bAR: bondedAtomRuns){ // Iterate bondedAtomRuns
+	// 	//std::cout << "checking " ;
+	// 	//for(auto aIx: bAR){std::cout << " " << aIx;}; std::cout << std::endl;
 
-		bIx++;
-		flag = 0;
-		for(auto tripleEntry: triples){ // Iterate triples gathered so far
-			if(checkIfTripleUnorderedAreEqual(bAR, tripleEntry)){
-				flag = 1;
-				break;
-			}
-		} // END Iterate triples gathered so far
+	// 	bIx++;
+	// 	flag = 0;
+	// 	for(auto tripleEntry: triples){ // Iterate triples gathered so far
+	// 		if(checkIfTripleUnorderedAreEqual(bAR, tripleEntry)){
+	// 			flag = 1;
+	// 			break;
+	// 		}
+	// 	} // END Iterate triples gathered so far
 
-		if(!flag){ // Not found in gathered triples
-			if((bAR[0] < bAR[1]) || (bAR[2] < bAR[1]) // Only level changing branches
-			|| ((bAR[1] == 0) && (bAR[2] == maxAIx)) // except for the root atom
-			){
-				triples.push_back(bAR);
-				//for(auto aIx: triples.back()){std::cout << " " << aIx;}; std::cout << std::endl;
-			}
-		}
+	// 	if(!flag){ // Not found in gathered triples
+	// 		if((bAR[0] < bAR[1]) || (bAR[2] < bAR[1]) // Only level changing branches
+	// 		|| ((bAR[1] == 0) && (bAR[2] == maxAIx)) // except for the root atom
+	// 		){
+	// 			triples.push_back(bAR);
+	// 			//for(auto aIx: triples.back()){std::cout << " " << aIx;}; std::cout << std::endl;
+	// 		}
+	// 	}
 
-	} // END Iterate bondedAtomRuns
+	// } // END Iterate bondedAtomRuns
 }
 
 
@@ -1372,60 +1372,60 @@ void Topology::loadTriples()
 // Finds all triple runs - TODO VERY INEFFICIENT
 void Topology::loadTriples_SP_NEW()
 {
-	// Assign Compound coordinates by matching bAtomList coordinates
-	std::map<AtomIndex, Vec3> atomTargets;
-	for(int ix = 0; ix < getNumAtoms(); ++ix){
+	// // Assign Compound coordinates by matching bAtomList coordinates
+	// std::map<AtomIndex, Vec3> atomTargets;
+	// for(int ix = 0; ix < getNumAtoms(); ++ix){
 
-		Vec3 vec(subAtomList[ix].getX(),
-				 subAtomList[ix].getY(),
-				 subAtomList[ix].getZ());
+	// 	Vec3 vec(subAtomList[ix].getX(),
+	// 			 subAtomList[ix].getY(),
+	// 			 subAtomList[ix].getZ());
 
-		atomTargets.insert(pair<AtomIndex, Vec3> (
-			subAtomList[ix].getCompoundAtomIndex(), vec));
+	// 	atomTargets.insert(pair<AtomIndex, Vec3> (
+	// 		subAtomList[ix].getCompoundAtomIndex(), vec));
 
-	}
+	// }
 
-	std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
-	getBondedAtomRuns(3, atomTargets);
+	// std::vector< std::vector<Compound::AtomIndex> > bondedAtomRuns =
+	// getBondedAtomRuns(3, atomTargets);
 
-	// Find root bAtomList index
-	int ix = -1;
-	for(const auto& atom: subAtomList){
-		ix++;
-	}
+	// // Find root bAtomList index
+	// int ix = -1;
+	// for(const auto& atom: subAtomList){
+	// 	ix++;
+	// }
 
-	// Find neighbour with maximum atomIndex
-	int maxAIx = -1;
-	Compound::AtomIndex aIx;
-	for(auto atom: subAtomList[ix].neighbors){
-		aIx = atom->getCompoundAtomIndex();
-		if(aIx > maxAIx){
-			maxAIx = aIx;
-		}
-	}
+	// // Find neighbour with maximum atomIndex
+	// int maxAIx = -1;
+	// Compound::AtomIndex aIx;
+	// for(auto atom: subAtomList[ix].neighbors){
+	// 	aIx = atom->getCompoundAtomIndex();
+	// 	if(aIx > maxAIx){
+	// 		maxAIx = aIx;
+	// 	}
+	// }
 
-	int flag;
-	int bIx = -1;
-	for(auto bAR: bondedAtomRuns){ // Iterate bondedAtomRuns
+	// int flag;
+	// int bIx = -1;
+	// for(auto bAR: bondedAtomRuns){ // Iterate bondedAtomRuns
 
-		bIx++;
-		flag = 0;
-		for(auto tripleEntry: triples){ // Iterate triples gathered so far
-			if(checkIfTripleUnorderedAreEqual(bAR, tripleEntry)){
-				flag = 1;
-				break;
-			}
-		} // END Iterate triples gathered so far
+	// 	bIx++;
+	// 	flag = 0;
+	// 	for(auto tripleEntry: triples){ // Iterate triples gathered so far
+	// 		if(checkIfTripleUnorderedAreEqual(bAR, tripleEntry)){
+	// 			flag = 1;
+	// 			break;
+	// 		}
+	// 	} // END Iterate triples gathered so far
 
-		if(!flag){ // Not found in gathered triples
-			if((bAR[0] < bAR[1]) || (bAR[2] < bAR[1]) // Only level changing branches
-			|| ((bAR[1] == 0) && (bAR[2] == maxAIx)) // except for the root atom
-			){
-				triples.push_back(bAR);
-			}
-		}
+	// 	if(!flag){ // Not found in gathered triples
+	// 		if((bAR[0] < bAR[1]) || (bAR[2] < bAR[1]) // Only level changing branches
+	// 		|| ((bAR[1] == 0) && (bAR[2] == maxAIx)) // except for the root atom
+	// 		){
+	// 			triples.push_back(bAR);
+	// 		}
+	// 	}
 
-	} // END Iterate bondedAtomRuns
+	// } // END Iterate bondedAtomRuns
 }
 
 // Numerically unstable around -pi, 0 and pi due to the log(0)
@@ -2574,29 +2574,22 @@ Topology::getNeighbourWithSmallerAIx(
 	originSpecAtom = updAtomByAtomIx(aIx);
 
 	// Loop through neighbor atoms (bSpecificAtom)
-	for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
+	for(auto k : originSpecAtom->neighborsIndex) {
 
 		// Loop through bonds that this atom is involved in (bBond);
-		for(std::vector<bBond *>::iterator
-			bondsInvolvedIter = (originSpecAtom->bondsInvolved).begin();
-			bondsInvolvedIter != (originSpecAtom->bondsInvolved).end();
-			++bondsInvolvedIter){
+		for(auto bondIndex : originSpecAtom->bondsInvolvedIndex){
 
 			// Check if this neighbor is involved in this bond
-			if( (*bondsInvolvedIter)->isThisMe(originSpecAtom->getNumber(),
-								originSpecAtom->neighbors[k]->getNumber()) )
+			if (bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), bAtomList[k].getNumber()) )
 			{
-
 				// Get Compound Atom Index
-				Compound::AtomIndex candidateChemParentAIx =
-					originSpecAtom->neighbors[k]->getCompoundAtomIndex();
+				Compound::AtomIndex candidateChemParentAIx = bAtomList[k].getCompoundAtomIndex();
 
 				// Smaller Atom Index 
 				if(candidateChemParentAIx < aIx){
 					chemParentAIx = candidateChemParentAIx;
 					break;
 				}
-
 			}
 		}
 
@@ -2631,30 +2624,27 @@ Topology::getChemicalParent_IfIAmRoot(
 
 		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 			// Find the true bSpecificAtom (CHEMICAL) parent
-			bSpecificAtom *originSpecAtom = nullptr;
-			originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
+			bSpecificAtom *originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
 
 			// TODO: Check is neighbors and bondsInvolved are redundant
 			// Loop through neighbor atoms (bSpecificAtom)
-			for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
+			for(auto k : originSpecAtom->neighborsIndex) {
 
 				// Loop through bonds that this atom is involved in (bBond);
-				for(std::vector<bBond *>::iterator bondsInvolvedIter = (originSpecAtom->bondsInvolved).begin();
-					bondsInvolvedIter != (originSpecAtom->bondsInvolved).end(); ++bondsInvolvedIter){
+				for (auto bondIndex : originSpecAtom->bondsInvolvedIndex) {
 
 					// Check if this neighbor is involved in this bond
-					if( (*bondsInvolvedIter)->isThisMe(
-						originSpecAtom->getNumber(), originSpecAtom->neighbors[k]->getNumber()
+					if( bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), bAtomList[k].getNumber()
 						) ){
 
-						Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
+						Compound::AtomIndex candidateChemParentAIx = bAtomList[k].getCompoundAtomIndex();
 
 						// Check if neighbor atom's mobod is a parent mobod
 						if(getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx){
 
-							if(!(*bondsInvolvedIter)->isRingClosing()){ // No ring atoms are allowed
+							if(!bonds[bondIndex].isRingClosing()){ // No ring atoms are allowed
 								chemParentAIx = candidateChemParentAIx;
-								gmolAtomIndex = originSpecAtom->neighbors[k]->getNumber();
+								gmolAtomIndex = bAtomList[k].getNumber();
 								break;
 							}
 						}
@@ -2665,13 +2655,12 @@ Topology::getChemicalParent_IfIAmRoot(
 		
 	}else{
 		std::cout << "Warning: requiring chemical parent for non-root atom\n";
-		bSpecificAtom *originSpecAtom = nullptr;
-		originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
-		for(unsigned int k = 0; k < (originSpecAtom->neighbors).size(); k++) {
-			Compound::AtomIndex candidateChemParentAIx = originSpecAtom->neighbors[k]->getCompoundAtomIndex();
+		bSpecificAtom *originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
+		for(auto k : originSpecAtom->neighborsIndex) {
+			Compound::AtomIndex candidateChemParentAIx = bAtomList[k].getCompoundAtomIndex();
 			if(getAtomLocationInMobilizedBodyFrameThroughDumm(candidateChemParentAIx, dumm) == 0){ // atom is at body's origin // DANGER
 				chemParentAIx = candidateChemParentAIx;
-				gmolAtomIndex = originSpecAtom->neighbors[k]->getNumber();
+				gmolAtomIndex = bAtomList[k].getNumber();
 				break;
 			}
 		}

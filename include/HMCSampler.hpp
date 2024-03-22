@@ -596,7 +596,8 @@ public:
 	void setSubZMatrixBATStats(
 		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans,
 		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs,
-		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds
+		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds,
+		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds_Alien
 	);
 
 	void
@@ -630,7 +631,9 @@ public:
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATs_ref;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATMeans;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATDiffs;
+
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATStds;
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATStds_Alien;
 
     // Updater getter for the map
     const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>& getSubZMatrixBATsRef() const {

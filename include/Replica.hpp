@@ -120,6 +120,8 @@ public:
 	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations);
 
+	void calcZMatrixBAT_WORK(void);
+
     // zmatrixbat_ Function to get the value for a given row and column in zMatrixBAT
     SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const ;
 
@@ -138,7 +140,13 @@ public:
 
     // Incrementer function for nofSamples
     void incrementNofSamples();
-	
+
+   std::vector<std::vector<SimTK::Real>>& getZMatrixBATPointer() {
+		scout("Address of zMatrixBAT ") << &zMatrixBAT << eolf;
+        return (zMatrixBAT);
+    }
+
+
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////

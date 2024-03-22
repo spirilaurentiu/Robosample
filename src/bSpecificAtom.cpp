@@ -239,17 +239,17 @@ int bSpecificAtom::getVisited() const
 
 /** Set the number of times this atom was visited during the construction of
  * the graph **/
-void bSpecificAtom::setVisited(const int& argVisited)
+void bSpecificAtom::setVisited(bool argVisited)
 {
     this->visited = argVisited;
 }
 
-void bSpecificAtom::setNbonds(const int& nbondsArg)
+void bSpecificAtom::setNbonds(std::size_t nbondsArg)
 {
      this->nbonds = nbondsArg;
 }
 
-void bSpecificAtom::setFreebonds(const int& freebondsArg)
+void bSpecificAtom::setFreebonds(std::size_t freebondsArg)
 {
      this->freebonds = freebondsArg;
 }
@@ -452,16 +452,28 @@ void bSpecificAtom::setBiotypeIndex(SimTK::BiotypeIndex argBiotypeIndex)
     this->biotypeIndex = argBiotypeIndex;
 }
 
-// Add an atom pointer to the vector of atom neighbors
-void bSpecificAtom::addNeighbor(bSpecificAtom *someNeighbor)
-{
-    neighbors.push_back(someNeighbor);
+// // Add an atom pointer to the vector of atom neighbors
+// void bSpecificAtom::addNeighbor(bSpecificAtom *someNeighbor)
+// {
+//     neighbors.push_back(someNeighbor);
+// }
+
+// // Add a bond this atom is involved in to the vector of bonds
+// void bSpecificAtom::addBond(bBond *someBond)
+// {
+//     bondsInvolved.push_back(someBond);
+// }
+
+void bSpecificAtom::addNeighborIndex(int index) {
+    neighborsIndex.push_back(index);
 }
 
-// Add a bond this atom is involved in to the vector of bonds
-void bSpecificAtom::addBond(bBond *someBond)
-{
-    bondsInvolved.push_back(someBond);
+void bSpecificAtom::addBondIndex(int index) {
+    bondsInvolvedIndex.push_back(index);
+}
+
+std::size_t bSpecificAtom::getNumBonds() const {
+    return bondsInvolvedIndex.size();
 }
 
 DuMM::ChargedAtomTypeIndex bSpecificAtom::getChargedAtomTypeIndex() const {

@@ -91,8 +91,8 @@ public:
     SimTK::BiotypeIndex getBiotypeIndex() const;
     void setBiotypeIndex(SimTK::BiotypeIndex);
 
-    void setNbonds(const int&);
-    void setFreebonds(const int&);
+    void setNbonds(std::size_t);
+    void setFreebonds(std::size_t);
     void incrFreebonds(void);
     void decrFreebonds(void);
 
@@ -115,10 +115,14 @@ public:
     void setBiotype(const std::string&);
     void setCompoundAtomIndex(SimTK::Compound::AtomIndex);
     void setCharge(SimTK::Real);
-    void setVisited(const int&);
+    void setVisited(bool);
 
-    void addNeighbor(bSpecificAtom *);
-    void addBond(bBond *);
+    // void addNeighbor(bSpecificAtom *);
+    // void addBond(bBond *);
+
+    void addNeighborIndex(int index);
+    void addBondIndex(int index);
+    std::size_t getNumBonds() const;
 
     // Getter and setter for the residueName property
     std::string getResidueName() const;
@@ -137,8 +141,8 @@ public:
     /**@}**/
 
     // Graph useful vars
-    std::vector<bSpecificAtom *> neighbors;
-    std::vector<bBond *> bondsInvolved;
+    // std::vector<bSpecificAtom *> neighbors;
+    // std::vector<bBond *> bondsInvolved;
 
     std::vector<int> neighborsIndex;
     std::vector<int> bondsInvolvedIndex;
@@ -159,8 +163,8 @@ public:
 
 private:
     //int nbonds = std::numeric_limits<int>::min(); // SP_OLD
-    int nbonds = 0; // SP_NEW
-    int freebonds = std::numeric_limits<int>::min();
+    std::size_t nbonds = 0; // SP_NEW
+    std::size_t freebonds = std::numeric_limits<std::size_t>::min();
     int number = std::numeric_limits<int>::min(); // amber index
     int parentNumber = std::numeric_limits<int>::min(); // amber index of parent atom
     int atomicNumber = std::numeric_limits<int>::min(); // atomic number

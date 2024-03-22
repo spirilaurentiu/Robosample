@@ -319,6 +319,11 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			rexMdsteps,
 			rexSamplesPerRound);
 
+		// Add replicas
+		for(int k = 0; k < nofReplicas; k++){
+			addReplica(k);
+		}
+
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
 			addThermodynamicState(k, temperatures[k],
@@ -337,6 +342,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		for(int k = 0; k < nofReplicas; k++){
 			addReplica(k);
 		}
+		// Set a vector of replica pairs for exchanges
+	    exchangePairs.resize(nofReplicas);
 
 		// Consider renaming
 		loadReplica2ThermoIxs();
@@ -383,6 +390,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	thermoState_k < nofThermodynamicStates;
 	thermoState_k++){
 		thermodynamicStates[thermoState_k].calcZMatrixBATStats();
+		//thermodynamicStates[thermoState_k].PrintZMatrixBAT();
 	}
 
 	// thermodynamic states for(size_t thermoState_k = 0;thermoState_k < nofThermodynamicStates;thermoState_k++){}
@@ -391,10 +399,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// END rexnewfunc ////////////////
 	// ********************************
 
+	// They all start with replica 0 coordinates
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		World& world = worlds[worldIx];
+
 		// Add this worlds BAT coordinates to it's samplers
-		addSubZMatrixBATsToWorld(worldIx);
+		addSubZMatrixBATsToWorld(worldIx, 0);
 		scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
 		world.updSampler(0)->PrintSubZMatrixBAT();
 	}
@@ -708,19 +718,25 @@ void Context::loadBonds(const readAmberInput& reader) {
 
 		bonds.push_back(bond);
 
-		// TODO BAD! this will break if we invalidate the bonds vector
-		atoms[bond.i].addNeighbor(&atoms[bonds[bCnt].j]);
-		atoms[bond.i].addBond(&bonds[bCnt]);
+		// // TODO BAD! this will break if we invalidate the bonds vector
+		// atoms[bond.i].addNeighbor(&atoms[bonds[bCnt].j]);
+		// atoms[bond.i].addBond(&bonds[bCnt]);
 
-		atoms[bond.j].addNeighbor(&atoms[bonds[bCnt].i]);
-		atoms[bond.j].addBond(&bonds[bCnt]);
+		// atoms[bond.j].addNeighbor(&atoms[bonds[bCnt].i]);
+		// atoms[bond.j].addBond(&bonds[bCnt]);
+
+		atoms[bond.i].addNeighborIndex(bonds[bCnt].j);
+		atoms[bond.i].addBondIndex(bCnt);
+
+		atoms[bond.j].addNeighborIndex(bonds[bCnt].i);
+		atoms[bond.j].addBondIndex(bCnt);
 	}
 
 	// Assign the number of bonds an atom has and set the number of freebonds
 	// equal to the number of bonds for now
 	for(auto& atom : atoms) {
-		atom.setNbonds(atom.bondsInvolved.size());
-		atom.setFreebonds(atom.bondsInvolved.size());
+		atom.setNbonds(atom.getNumBonds());
+		atom.setFreebonds(atom.getNumBonds());
 	}
 }
 
@@ -1057,112 +1073,112 @@ void Context::buildAcyclicGraph(
 	Topology topology,
 	bSpecificAtom *node, bSpecificAtom *previousNode)
 {
-	// The base atom has to be set once Molmodel
-	topology.baseSetFlag = 0;
+	// // The base atom has to be set once Molmodel
+	// topology.baseSetFlag = 0;
 
-	// Only process unvisited nodes
-	if( node->wasVisited() ){
-		return;
-	}
+	// // Only process unvisited nodes
+	// if( node->wasVisited() ){
+	// 	return;
+	// }
 
-	// Mark the depth of the recursivity
-	++topology.nofProcesses;
+	// // Mark the depth of the recursivity
+	// ++topology.nofProcesses;
 
-	// Mark Gmolmodel bond and create bond in Molmodel
-	for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
-		bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
-	{
-		// Check if there is a bond between prevnode and node based on bonds
-		// read from amberReader
-		if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
-			(*bondsInvolvedIter)->setVisited(1);
+	// // Mark Gmolmodel bond and create bond in Molmodel
+	// for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
+	// 	bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
+	// {
+	// 	// Check if there is a bond between prevnode and node based on bonds
+	// 	// read from amberReader
+	// 	if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
+	// 		(*bondsInvolvedIter)->setVisited(1);
 
-			// Skip the first step as we don't have yet two atoms
-			if (topology.nofProcesses != 1) {
+	// 		// Skip the first step as we don't have yet two atoms
+	// 		if (topology.nofProcesses != 1) {
 
-				// The first bond is special in Molmodel and has to be
-				// treated differently. Set a base atom first
-				if (topology.nofProcesses == 2) {
-					if (topology.baseSetFlag == 0) {
-						topology.setBaseAtom(previousNode->getSingleAtom());
-						topology.setAtomBiotype(previousNode->getName(), (topology.getName()),
-												previousNode->getName());
-						topology.convertInboardBondCenterToOutboard();
-						topology.baseSetFlag = 1;
+	// 			// The first bond is special in Molmodel and has to be
+	// 			// treated differently. Set a base atom first
+	// 			if (topology.nofProcesses == 2) {
+	// 				if (topology.baseSetFlag == 0) {
+	// 					topology.setBaseAtom(previousNode->getSingleAtom());
+	// 					topology.setAtomBiotype(previousNode->getName(), (topology.getName()),
+	// 											previousNode->getName());
+	// 					topology.convertInboardBondCenterToOutboard();
+	// 					topology.baseSetFlag = 1;
 
-					}
-				}
+	// 				}
+	// 			}
 
-				// Bond current node by the previous (Compound function)
-				std::stringstream parentBondCenterPathName;
-				if (previousNode->getNumber() == topology.baseAtomNumber) {
-					parentBondCenterPathName << previousNode->getName()
-						<< "/bond" << previousNode->getFreebonds();
-				} else {
-					parentBondCenterPathName << previousNode->getName()
-						<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
-				}
+	// 			// Bond current node by the previous (Compound function)
+	// 			std::stringstream parentBondCenterPathName;
+	// 			if (previousNode->getNumber() == topology.baseAtomNumber) {
+	// 				parentBondCenterPathName << previousNode->getName()
+	// 					<< "/bond" << previousNode->getFreebonds();
+	// 			} else {
+	// 				parentBondCenterPathName << previousNode->getName()
+	// 					<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
+	// 			}
 
-				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
-				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
-				std::string debugString = parentBondCenterPathName.str();
-				topology.bondAtom(node->getSingleAtom(),
-						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
+	// 			// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
+	// 			// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
+	// 			std::string debugString = parentBondCenterPathName.str();
+	// 			topology.bondAtom(node->getSingleAtom(),
+	// 					(parentBondCenterPathName.str()).c_str(), 0.149, 0);
 
-				// Set the final Biotype
-				topology.setAtomBiotype(node->getName(), (topology.getName()).c_str(), node->getName());
+	// 			// Set the final Biotype
+	// 			topology.setAtomBiotype(node->getName(), (topology.getName()).c_str(), node->getName());
 
-				// Set bSpecificAtom atomIndex to the last atom added to bond
-				node->setCompoundAtomIndex(
-					topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 1));
+	// 			// Set bSpecificAtom atomIndex to the last atom added to bond
+	// 			node->setCompoundAtomIndex(
+	// 				topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 1));
 				
 
-				// The only time we have to set atomIndex to the previous node
-				if (topology.nofProcesses == 2) {
-					previousNode->setCompoundAtomIndex(topology.getBondAtomIndex(
-						Compound::BondIndex(topology.getNumBonds() - 1), 0));
-				}
+	// 			// The only time we have to set atomIndex to the previous node
+	// 			if (topology.nofProcesses == 2) {
+	// 				previousNode->setCompoundAtomIndex(topology.getBondAtomIndex(
+	// 					Compound::BondIndex(topology.getNumBonds() - 1), 0));
+	// 			}
 
-				// Set bBond Molmodel Compound::BondIndex
-				(*bondsInvolvedIter)->setBondIndex(
-					Compound::BondIndex(topology.getNumBonds() - 1));
-				std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
-						Compound::BondIndex(topology.getNumBonds() - 1),
-						(*bondsInvolvedIter)->getIndex()
-				);
+	// 			// Set bBond Molmodel Compound::BondIndex
+	// 			(*bondsInvolvedIter)->setBondIndex(
+	// 				Compound::BondIndex(topology.getNumBonds() - 1));
+	// 			std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
+	// 					Compound::BondIndex(topology.getNumBonds() - 1),
+	// 					(*bondsInvolvedIter)->getIndex()
+	// 			);
 
-				topology.bondIx2GmolBond.insert(pairToBeInserted);
+	// 			topology.bondIx2GmolBond.insert(pairToBeInserted);
 
-				topology.GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
-						(*bondsInvolvedIter)->getIndex(),
-						Compound::BondIndex(topology.getNumBonds() - 1)
-				) );
+	// 			topology.GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+	// 					(*bondsInvolvedIter)->getIndex(),
+	// 					Compound::BondIndex(topology.getNumBonds() - 1)
+	// 			) );
 
-				// Drop the number of available bonds
-				/* --(previousNode->freebonds);
-				--(node->freebonds); */
+	// 			// Drop the number of available bonds
+	// 			/* --(previousNode->freebonds);
+	// 			--(node->freebonds); */
 
-				previousNode->decrFreebonds();
-				node->decrFreebonds();
+	// 			previousNode->decrFreebonds();
+	// 			node->decrFreebonds();
 
-				// Bond was inserted in Molmodel Compound. Get out and search
-				// the next bond
-				break;
+	// 			// Bond was inserted in Molmodel Compound. Get out and search
+	// 			// the next bond
+	// 			break;
 
-			}
-		}
-	}
+	// 		}
+	// 	}
+	// }
 
-	// Mark the node as visited
-	node->setVisited(1);
+	// // Mark the node as visited
+	// node->setVisited(1);
 
-	// Set the previous node to this node
-	previousNode = node;
+	// // Set the previous node to this node
+	// previousNode = node;
 
-	// Go to the next node. Choose it from his neighbours.
-	for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
-		buildAcyclicGraph(topology, (node->neighbors)[i], previousNode);
-	}
+	// // Go to the next node. Choose it from his neighbours.
+	// for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
+	// 	buildAcyclicGraph(topology, (node->neighbors)[i], previousNode);
+	// }
 
 }
 
@@ -1998,6 +2014,11 @@ void Context::buildAcyclicGraph_SP_NEW(
 				Compound::BondIndex(topology.getNumBonds() - 1), 0));
 		}
 
+		// print compound atom indices for child and parent
+		scout("child parent compound atom indices ")
+			<< child.getNumber() << " " << child.getCompoundAtomIndex() << " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
+			<< eol;
+
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
 		int currentCompoundBondIndex = topology.getNumBonds() - 1;
@@ -2016,6 +2037,12 @@ void Context::buildAcyclicGraph_SP_NEW(
 		parent.decrFreebonds();
 		child.decrFreebonds();
 
+	}
+
+	// Handle ions
+	if (internCoords.getRoot(molIx).second == -1) {
+		atoms[internCoords.getRoot(molIx).first].setMoleculeIndex(molIx);
+		atoms[internCoords.getRoot(molIx).first].setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 	}
 
 	// Add to the list of topologies
@@ -4349,8 +4376,8 @@ void Context::addThermodynamicState(int index,
 			timestepsInThisReplica,
 			mdstepsInThisReplica,
 			atoms,			
-			zMatrixTable,
-			zMatrixBAT
+			zMatrixTable
+			//, zMatrixBAT
 		)
 	);
 
@@ -4415,9 +4442,7 @@ const size_t& Context::getNofThermodynamicStates() const
 void Context::loadReplica2ThermoIxs()
 {
 	// Set index of replicas the same as those of the thermodynamic states
-	for(size_t thermoState_k = 0;
-	thermoState_k < nofThermodynamicStates;
-	thermoState_k++){
+	for(size_t thermoState_k = 0; thermoState_k < nofThermodynamicStates; thermoState_k++){
 
 		replica2ThermoIxs.insert(
 			std::pair<int, int>
@@ -4425,15 +4450,21 @@ void Context::loadReplica2ThermoIxs()
 
 	}
 
-	for(size_t thermoState_k = 0;
-	thermoState_k < nofThermodynamicStates;
-	thermoState_k++){
+	for(size_t thermoState_k = 0; thermoState_k < nofThermodynamicStates; thermoState_k++){
 
 		thermo2ReplicaIxs.insert(
 			std::pair<int, int>
 			(thermoState_k, thermoState_k));
 
 	}
+
+	// Make thermodynamic state to point to replica's BAT
+	for(size_t thermoState_k = 0; thermoState_k < nofThermodynamicStates; thermoState_k++){
+		thermodynamicStates[thermoState_k].setZMatrixBATPointer(
+			(replicas[thermoState_k].getZMatrixBATPointer())
+		);		
+	}
+
 }
 
 void Context::setThermostatesNonequilibrium(){
@@ -4672,6 +4703,11 @@ void Context::swapThermodynamicStates(int replica_i, int replica_j){
 	temp = thermo2ReplicaIxs[thermoState_i];
 	thermo2ReplicaIxs[thermoState_i] = thermo2ReplicaIxs[thermoState_j];
 	thermo2ReplicaIxs[thermoState_j] = temp;
+
+	// Swap the BAT pointers too
+	thermodynamicStates[thermoState_i].setZMatrixBATPointer(
+		(replicas[replica_j].getZMatrixBATPointer())
+	);	
 }
 
 void Context::swapPotentialEnergies(int replica_i, int replica_j)
@@ -4884,6 +4920,31 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Accept or reject
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
+		// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		if( getRunType() == RUN_TYPE::RENE){
+
+			replicas[replica_X].incrementNofSamples();
+			replicas[replica_Y].incrementNofSamples();
+
+			thermodynamicStates[thermoState_C].incrementNofSamples();
+			thermodynamicStates[thermoState_H].incrementNofSamples();
+
+			// Calculate replica BAT
+			replicas[replica_X].calcZMatrixBAT_WORK();
+			replicas[replica_Y].calcZMatrixBAT_WORK();
+
+			// Calculate thermodynamic states BAT stats
+			thermodynamicStates[thermoState_C].calcZMatrixBATStats();
+			thermodynamicStates[thermoState_H].calcZMatrixBATStats();
+
+			//thermodynamicStates[thermoState_C].PrintZMatrixBAT();
+			//thermodynamicStates[thermoState_H].PrintZMatrixBAT();
+
+		}
+
+		// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+
 		// Update replicas coordinates from work generated coordinates
 		set_WORK_CoordinatesAsFinal(replica_X);
 		set_WORK_CoordinatesAsFinal(replica_Y);
@@ -4919,6 +4980,40 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 }
 
+
+// Mix neighboring replicas
+// Thermodyanmic states are fixed; replicas are variables
+void Context::mixNeighboringReplicas(unsigned int startingFrom)
+{
+	assert((startingFrom <= 1) &&
+	"Replica exchange scheme has to start from 0 or 1.");
+
+	int thermoState_i = 0;
+	int thermoState_j = 1;
+
+	// Go through neighboring thermodynamic states
+	for(size_t thermoState_k = startingFrom;
+	thermoState_k < (nofThermodynamicStates - 1);
+	thermoState_k += 2){
+
+		// Get thermodynamic states
+		thermoState_i = thermoState_k;
+		thermoState_j = thermoState_k + 1;
+
+		// Get replicas corresponding to the thermodynamic states
+		int replica_i = thermo2ReplicaIxs[thermoState_i];
+		int replica_j = thermo2ReplicaIxs[thermoState_j];
+
+		// Attempt to swap
+		bool swapped = false;
+		swapped = attemptREXSwap(replica_i, replica_j);
+	}
+
+
+
+}
+
+
 // Exhange all replicas
 void Context::mixAllReplicas(int nSwapAttempts)
 {
@@ -4948,54 +5043,25 @@ void Context::mixAllReplicas(int nSwapAttempts)
 	}
 }
 
-// Mix neighboring replicas
-// Thermodyanmic states are fixed; replicas are variables
-void Context::mixNeighboringReplicas(unsigned int startingFrom)
-{
-	int thermoState_i = 0;
-	int thermoState_j = 1;
-
-	// Go through neighboring thermodynamic states
-	for(size_t thermoState_k = startingFrom;
-	thermoState_k < (nofThermodynamicStates - 1);
-	thermoState_k += 2){
-		
-		// Get thermodynamic states
-		thermoState_i = thermoState_k;
-		thermoState_j = thermoState_k + 1;
-
-		// Get replicas corresponding to the thermodynamic states
-		int replica_i = thermo2ReplicaIxs[thermoState_i];
-		int replica_j = thermo2ReplicaIxs[thermoState_j];
-
-		/* std::cout << "mixNeighboringReplicas thermoStates "
-			<< thermoState_i << " " << thermoState_j << "\n";
-		std::cout << "Attempt to swap replicas " << replica_i
-			<< " and " << replica_j << std::endl << std::flush; */
-
-		// Attempt to swap
-		bool swapped = false;
-		/* if( getRunType() == 1 ){ // TODO make it enum
-			swapped = attemptREXSwap(replica_i, replica_j);
-
-		}else if ( getRunType() == 2 ){
-			swapped = attemptRENSSwap(replica_i, replica_j);
-		} */
-
-		swapped = attemptREXSwap(replica_i, replica_j);
-
-	}
-}
 
 // Mix replicas - hold it for the moment
 void Context::mixReplicas()
 {
-	assert(!"Not implemented"); throw std::exception();
-//	if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-//		mixNeighboringReplicas();
-//	}else{
-//		mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
-//	}
+	// Go through neighboring thermodynamic states
+	for(size_t thermoState_k = 0;
+	thermoState_k < (nofThermodynamicStates - 1);
+	thermoState_k += 1){
+
+		// Get replica corresponding to the thermodynamic state
+		int replica_i = thermo2ReplicaIxs[thermoState_k];
+		int replica_j = getThermoPair(replica_i);
+
+		// Attempt to swap
+		bool swapped = false;
+		if(replica_i != replica_j){
+			swapped = attemptREXSwap(replica_i, replica_j);
+		}
+	}
 }
 
 // Load replica's atomLocations into it's front world
@@ -5165,6 +5231,23 @@ void Context::store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx)
 
 }
 
+// Store any WORK Jacobians contribution from back world
+void Context::store_WORK_JacobianFromBackWorld(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	// KEYWORD = replica, VALUE = thermoState
+	int thermoIx = replica2ThermoIxs[replicaIx];
+
+    // Get the index of the back world
+	int backWorldIx =
+    thermodynamicStates[thermoIx].getWorldIndexes().back();
+
+    // Set this replica's WORK Jacobians potential
+	
+    SimTK::Real jac = (worlds[backWorldIx].updSampler(0))->getDistortJacobianDetLog();
+	replicas[replicaIx].set_WORK_Jacobian(jac);
+}
+
 // Get energy of the back world and store it in replica thisReplica
 void Context::storeReplicaEnergyFromBackWorld(int replicaIx)
 {
@@ -5208,24 +5291,6 @@ void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 	replicas[replicaIx].setPotentialEnergy(energy);
 
 }
-
-// Store any WORK Jacobians contribution from back world
-void Context::store_WORK_JacobianFromBackWorld(int replicaIx)
-{
-	// Get thermoState corresponding to this replica
-	// KEYWORD = replica, VALUE = thermoState
-	int thermoIx = replica2ThermoIxs[replicaIx];
-
-    // Get the index of the back world
-	int backWorldIx =
-    thermodynamicStates[thermoIx].getWorldIndexes().back();
-
-    // Set this replica's WORK Jacobians potential
-	
-    SimTK::Real jac = (worlds[backWorldIx].updSampler(0))->getDistortJacobianDetLog();
-	replicas[replicaIx].set_WORK_Jacobian(jac);
-}
-
 
 // Get Fixman of the back world and store it in replica thisReplica
 void Context::storeReplicaFixmanFromBackWorld(int replicaIx)
@@ -5310,6 +5375,52 @@ void Context::initializeReplica(int thisReplica)
 	}
 	std::cout << std::endl;
 
+}
+
+/*!
+ * <!--	 -->
+*/
+void Context::setReplicaExchangePairs(unsigned int startingFrom)
+{
+	assert((startingFrom <= 1) &&
+	"Replica exchange scheme has to start from 0 or 1.");
+
+	int thermoState_i = 0;
+	int thermoState_j = 1;
+
+	// Odd scheme implies 0-N exchange
+	if(startingFrom == 1){
+		exchangePairs[0] = exchangePairs.size() - 1;
+	}
+
+	// Go through neighboring thermodynamic states
+	for(size_t thermoState_k = startingFrom;
+	thermoState_k < (nofThermodynamicStates - 1);
+	thermoState_k += 2)
+	{
+		
+		// Get thermodynamic states
+		thermoState_i = thermoState_k;
+		thermoState_j = thermoState_k + 1;
+
+		// Get replicas corresponding to the thermodynamic states
+		int replica_i = thermo2ReplicaIxs[thermoState_i];
+		int replica_j = thermo2ReplicaIxs[thermoState_j];
+
+		// Set the vector of exchange pairs
+        exchangePairs[replica_i] = replica_j;
+
+	}
+}
+
+/*!
+ * <!--	 -->
+*/
+const int Context::getThermoPair(int replicaIx)
+{
+	assert((exchangePairs.size() > 0) &&
+	"Replica exchange pairs not set.");
+	return exchangePairs[replicaIx];
 }
 
 // Prepare Q, U, and tau altering function parameters
@@ -5841,6 +5952,14 @@ void Context::RunREX()
 		std::cout << " REX batch " << mixi << std::endl;
 		nofRounds = mixi;
 
+		// Reset replica exchange pairs vector
+		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				setReplicaExchangePairs(mixi % 2);
+			}
+		}
+
+		// Update work scale factors
 		updQScaleFactors(mixi);
 
 		// SIMULATE EACH REPLICA --------------------------------------------->
@@ -5848,6 +5967,10 @@ void Context::RunREX()
 			std::cout << "REX replica " << replicaIx << std::endl;
 
 			// ========================== LOAD ========================
+
+			// Update BAT map for all the replica's world
+			updSubZMatrixBATsToAllWorlds(replicaIx);
+
 			// Load the front world
 			currFrontWIx = restoreReplicaCoordinatesToFrontWorld_SP_NEW(replicaIx);           // (1)
 
@@ -5900,21 +6023,22 @@ void Context::RunREX()
 
 					if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 
-			incrementNofSamples();
-
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
-			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-				if ((mixi % 2) == 0){
-					mixNeighboringReplicas(0);
-				}else{
-					mixNeighboringReplicas(1);
-				}
-			}else{
-				mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
-			}
+		if(getRunType() != RUN_TYPE::DEFAULT){  // (9) + (10)
+			
+			mixReplicas();
+			                                               
+			//if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				//if ((mixi % 2) == 0){
+					//mixNeighboringReplicas(mixi % 2);
+				//}else{
+				//	mixNeighboringReplicas(1);
+				//}
+			//}else{
+			//	mixAllReplicas(nofReplicas*nofReplicas*nofReplicas);
+			//}
 
 			PrintNofAcceptedSwapsMatrix();
 		} 
@@ -5955,9 +6079,31 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 			// Run front world
 			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
-		
+
+			// Increment the nof samples for replica and thermostate
+			replicas[replicaIx].incrementNofSamples();
+			thermodynamicStates[thisThermoStateIx].incrementNofSamples();
+
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			// Get front world and it's state
+			World& currFrontWorld = worlds[currFrontWIx];
+			SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
+
+			// Calculate replica BAT
+			replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround_SP_NEW( currFrontState ));
+
+			// Calculate thermodynamic states BAT stats
+			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
+			//thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 		}
-	} // END iteration through worlds
+	} // every world
 
 	return currFrontWIx;
 
@@ -5970,9 +6116,14 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 {
 
+	//scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
+	//PrintZMatrixTableAndBAT();
+
+	// BAT stats containers to send to samplers
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans;
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs;
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds;
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds_Alien;
 
 	size_t zMatCnt = 0;
 
@@ -5983,53 +6134,51 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 		bSpecificAtom& atom0 = atoms[zRow[childPositionInZMat]];
 		SimTK::Compound::AtomIndex cAIx = atom0.getCompoundAtomIndex();
 
-		// for (int bAtomIndex : zRow) {
-		// 	; 
-		// }
-
-		// Print BAT values
-		//const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
-
 		// Get statistics from thermodynamic state
 		std::vector<SimTK::Real>& BATMeans = thermodynamicStates[thermoIx].getBATMeansRow(zMatCnt);
 		std::vector<SimTK::Real>& BATDiffs = thermodynamicStates[thermoIx].getBATDiffsRow(zMatCnt);
 		std::vector<SimTK::Real>& BATStds = thermodynamicStates[thermoIx].getBATStdsRow(zMatCnt);
 
+		// Get statistics from thermostate exchange pair
+		int alienThermoIx = getThermoPair(thermoIx);
+		std::vector<SimTK::Real>& BATStds_Alien = thermodynamicStates[alienThermoIx].getBATStdsRow(zMatCnt);
+
+		// Insert entry into sampler stats containers
 		inBATmeans.insert({cAIx, BATMeans});
 		inBATdiffs.insert({cAIx, BATDiffs});
 		inBATstds.insert({cAIx, BATStds});
+		inBATstds_Alien.insert({cAIx, BATStds_Alien});
 
-		// for (SimTK::Real BATvalue : BATrow) {
-		// 	;
-		// }
-
+		// Increment Z Matrix row
 		zMatCnt++;
 
 	} // ZMatrix row
 
 
-	scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
-	for (const auto& [key, value] : inBATmeans) {
-		std::cout << "cAIx: " << key << " ";
-		std::cout << "BAT: ";
-		for (const auto& val : value) {
-			std::cout << val << " ";
-		}
-		std::cout << std::endl;
-	}
+	// scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
+	// for (const auto& [key, value] : inBATmeans) {
+	// 	std::cout << "cAIx: " << key << " ";
+	// 	std::cout << "BAT: ";
+	// 	for (const auto& val : value) {
+	// 		std::cout << val << " ";
+	// 	}
+	// 	std::cout << std::endl;
+	// }
 
 	// Set samplers BAT stats
 	pHMC(worlds[whichWorld].updSampler(0))->setSubZMatrixBATStats(
-		inBATmeans, inBATdiffs, inBATstds);
+		inBATmeans, inBATdiffs, inBATstds, inBATstds_Alien);
 
 }
 
 
 int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
-	/* std::cout << "Context::RunReplicaNonequilibriumWorlds\n"; */
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+
+	// Get thermostate exchange partner
+	int pairThermoState = getThermoPair(thisThermoStateIx);
 
 	// Get this world indexes from the corresponding thermoState
 	std::vector<int>& replicaWorldIxs = 
@@ -6042,21 +6191,53 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 	PrintCppVector(replicaWorldIxs, " | ", "|\n"); */
 
 	// Run the non-equilibrium worlds
-	int frontWIx = -1;
+	int currFrontWIx = -1;
 	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
 
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
 
-			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, worldCnt);
+			// Transfer BAT statistics to sampler
+			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
 
 			// Run front world
-			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
-		
+			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			if( getRunType() != RUN_TYPE::RENE){
+
+				// Increment the nof samples for replica and thermostate
+				replicas[replicaIx].incrementNofSamples();
+				thermodynamicStates[thisThermoStateIx].incrementNofSamples();
+
+
+
+				// Get front world and it's state
+				World& currFrontWorld = worlds[currFrontWIx];
+				SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
+
+				// Calculate replica BAT
+				replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround_SP_NEW( currFrontState ));
+
+				// Calculate thermodynamic states BAT stats
+				thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
+				//thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
+
+			}else{
+				// Don't increment the number of samples. Leave it for attemptREXSwap
+				// if non-equilibrium switches are used
+				//replicas[replicaIx].incrementNofSamples();
+				//thermodynamicStates[thisThermoStateIx].incrementNofSamples();
+			}
+
+			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			
 		}
 	} // END iteration through worlds
 
-	return frontWIx;
+	return currFrontWIx;
 }
 
 SimTK::Real Context::calcReplicaTransferedEnergy(int replicaIx)
@@ -6272,26 +6453,6 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
-
-	// ********************************
-	// rexnewfunc /////////////////////
-	// ********************************
-	// Add BAT coordinates to replicas
-	for(int rk = 0; rk < nofReplicas; rk++){
-		replicas[rk].calcZMatrixBAT(otherWorldsAtomsLocations);
-	}
-	
-	// Add BAT coordinates to thermodynamic states
-	for(size_t tk = 0; tk < nofThermodynamicStates; tk++){
-		thermodynamicStates[tk].calcZMatrixBATStats();
-	}
-
-	scout("Context::transferCoordinates_SP_NEW ") << eol;
-	PrintZMatrixTableAndBAT();
-
-	// ********************************
-	// END rexnewfunc ////////////////
-	// ********************************
 
 	//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
@@ -7783,6 +7944,11 @@ Context::calcZMatrixTable(void)
 		Topology& topology = topologies[topoIx];
 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
 
+		if (BONDS.size() == 0) {
+			continue;
+		}
+
+		std::cout << "BONDS " << BONDS[0].first << " " << BONDS[0].second << std::endl;
 		addZMatrixTableRow(std::vector<int> {
 			BONDS[0].first,
 			BONDS[0].second,
@@ -7966,10 +8132,10 @@ void Context::PrintZMatrixTableAndBAT() const
 
 		// scout("ZMatrixBATEntry: ");
 
-		// // Print indexes
-		// for (int value : row) {
-		// 	std::cout << std::setw(6) << value <<" "; 
-		// }
+		// Print indexes
+		for (int value : row) {
+			std::cout << std::setw(9) << value <<" "; 
+		}
 
 		// Print BAT values
 		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
@@ -8046,7 +8212,8 @@ Context::calcInternalBATJacobianLog(void)
 */
 void
 Context::addSubZMatrixBATsToWorld(
-	int wIx)
+	int wIx
+	, int replicaIx)
 {
 	
 	// Get world
@@ -8061,7 +8228,7 @@ Context::addSubZMatrixBATsToWorld(
 	for (const auto& row : zMatrixTable) {
 
 		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
-		std::vector<SimTK::Real>& replicaBATrow = replicas[0].updZMatrixBATRow(zMatCnt);
+		std::vector<SimTK::Real>& replicaBATrow = replicas[replicaIx].updZMatrixBATRow(zMatCnt);
 
 		assert( (std::abs(BATrow[0] - replicaBATrow[0]) < 0.00001 || std::isnan(BATrow[0])) &&
 				(std::abs(BATrow[1] - replicaBATrow[1]) < 0.00001 || std::isnan(BATrow[1])) &&
@@ -8139,7 +8306,8 @@ Context::addSubZMatrixBATsToWorld(
 */
 void
 Context::updSubZMatrixBATsToWorld(
-	int wIx)
+	  int wIx
+	, int replicaIx)
 {
 	
 	// Get world
@@ -8153,16 +8321,7 @@ Context::updSubZMatrixBATsToWorld(
 	size_t zMatCnt = 0;
 	for (const auto& row : zMatrixTable) {
 
-		std::vector<SimTK::Real>& BATrow = updZMatrixBATRow(zMatCnt);
-
-		// scout("BATrow_ref") <<" ";
-		// for (SimTK::Real BATvalue : BATrow) {
-		// 	std::cout << std::setw(6) << BATvalue << " ";
-		// }
-		// for (SimTK::Real BATvalue : BATrow_ref) {
-		// 	std::cout << std::setw(6) << BATvalue << " ";
-		// }
-		// ceol;
+		std::vector<SimTK::Real>& replicaBATrow = replicas[replicaIx].updZMatrixBATRow(zMatCnt);
 
 		// Get bond's atoms
 		bSpecificAtom& childAtom  = atoms[row[0]];
@@ -8201,12 +8360,7 @@ Context::updSubZMatrixBATsToWorld(
 			// Insert key and value into the map
 			for(size_t sami = 0; sami < worlds[wIx].samplers.size(); sami++){
 
-				//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>&
-				//	variableBATs = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs();
-				//std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>&
-				//	variableBATs_ref = pHMC((worlds[wIx].samplers[sami]))->updSubZMatrixBATs_ref();										
-				//variableBATs.at(childMbx) = BATrow;
-				//variableBATs_ref.at(childMbx) = BATrow_ref;
+				(pHMC((worlds[wIx].samplers[sami]))->subZMatrixBATs_ref).at(childMbx) = replicaBATrow;
 
 			}
 
@@ -8221,6 +8375,33 @@ Context::updSubZMatrixBATsToWorld(
 		zMatCnt++;
 	}
 		
+}
+
+
+/*!
+ * <!-- Go through the vector of worlds and if their equilibrium worlds run and 
+ * rotate. -->
+*/
+void Context::updSubZMatrixBATsToAllWorlds(int replicaIx)
+{
+	// Get thermoState corresponding to this replica
+	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+
+	// Get this world indexes from the corresponding thermoState
+	std::vector<int>& replicaWorldIxs = 
+		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+
+	// Get nof worlds in this replica
+	size_t replicaNofWorlds = replicaWorldIxs.size();
+
+	// Set BAT map for all replica's worlds
+	int currFrontWIx = -1;
+	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+		updSubZMatrixBATsToWorld( replicaWorldIxs[worldCnt], replicaIx);
+
+	} // every world
+
 }
 
 
