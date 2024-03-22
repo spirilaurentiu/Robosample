@@ -428,7 +428,7 @@ public:
 	void allocateSwapMatrices(void);
 
 	// Add one replica
-	void addReplica(int index, std::string crdPrefix);
+	void addReplica(int index);
 
 	// Add one thermodynamic state
 	void addThermodynamicState(int index, SimTK::Real T,

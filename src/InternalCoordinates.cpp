@@ -97,32 +97,42 @@ bool InternalCoordinates::computeRoot(
 		}
 	}
 
-	if(terminalAtoms.size() == 0){
-		return false;
+	std::cout << "computeRoot called with this bAtomList: " << std::endl;
+	for (const auto& b : bAtomList) {
+		std::cout << b.getNumber() << " " << b.getVisited() << std::endl;
 	}
 
-	// prioritize by mass and amber id
+	roots.push_back(root); // Laurentiu
+
+	// Select first root atom
+	roots.back().first = terminalAtoms[0].amberId;
+	if(bAtomList.size() == 1){
+		return true;
+	}
+
+	// Prioritize by mass and amber id for the second root atom
 	sortByMass(terminalAtoms, true);
+	roots.back().second = bAtomList[roots.back().first].neighbors[0]->getNumber();
+	if (bAtomList.size() == 2) {
+		return true;
+	}
 
-	// find root
-	root.first = terminalAtoms[0].amberId;
-	root.second = bAtomList[root.first].neighbors[0]->getNumber();
-
-	if (bAtomList[root.second].neighbors.size() == 1) {
-		root.third = bAtomList[root.second].neighbors[0]->getNumber();
+	if (bAtomList[roots.back().second].neighbors.size() == 1) {
+		if (bAtomList.size() != 3) {
+			return true;
+		}
+		roots.back().third = bAtomList[roots.back().second].neighbors[0]->getNumber();
 	} else {
 		std::vector<AmberAtom> candidates;
-		for (const auto& b : bAtomList[root.second].neighbors) {
+		for (const auto& b : bAtomList[roots.back().second].neighbors) {
 			AmberAtom a(b);
 			if (!isTerminal(a)) {
 				candidates.push_back(a);
 			}
 		}
 		sortByMass(candidates, true);
-		root.third = candidates[0].amberId;
+		roots.back().third = candidates[0].amberId;
 	}
-
-	roots.push_back(root); // Laurentiu
 
 	return true;
 }
@@ -137,14 +147,25 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
     selectedAtoms.reserve(bAtomList.size());
     indexMap = std::vector<int>(bAtomList.size(), -1);
 
-    selectAtom(roots.back().first);
-    selectAtom(roots.back().second);
-    selectAtom(roots.back().third);
+	if (roots.back().first != -1) {
+		selectAtom(roots.back().first);
+		bAtomList[roots.back().first].setParentNumber(-1);
+	}
+    
+	if (roots.back().second != -1) {
+		selectAtom(roots.back().second);
+		bAtomList[roots.back().second].setParentNumber(roots.back().first);
+	}
 
-	bAtomList[roots.back().first].setParentNumber(-1);
-	bAtomList[roots.back().second].setParentNumber(roots.back().first);
-	bAtomList[roots.back().third].setParentNumber(roots.back().second);
+	if (roots.back().third != -1) {
+		selectAtom(roots.back().third);
+		bAtomList[roots.back().third].setParentNumber(roots.back().second);
+	}
 
+	if (bAtomList.size() < 3) {
+		return;
+	}
+	
     perMolBonds.push_back(std::vector<BOND>());     // Laurentiu
     std::vector<BOND>& bonds = perMolBonds.back();  // Laurentiu
     perMolAngles.push_back(std::vector<ANGLE>());       // Laurentiu
@@ -631,5 +652,5 @@ void InternalCoordinates::selectAtom(int a) {
  * <!-- -->
 */
 bool InternalCoordinates::isTerminal(const AmberAtom& a) const {
-	return a.bonds == 1;
+	return a.bonds == 0  || a.bonds == 1;
 }

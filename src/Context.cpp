@@ -334,9 +334,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 
 		// Add replicas
-		std::string crdPrefix = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0];
 		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k, crdPrefix);
+			addReplica(k);
 		}
 
 		// Consider renaming
@@ -523,9 +522,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 
 		// Add replicas
-		std::string crdPrefix = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0];
 		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k, crdPrefix);
+			addReplica(k);
 		}
 
 		// Consider renaming
@@ -2384,6 +2382,8 @@ void Context::generateSubAtomLists(void){
 	// for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
 	// 	cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
 	// }
+
+	std::cout << molRanges.size() << " " << getNofMolecules() << std::endl;
 
 	assert("atoms molecule indexes different than nofMols" &&
 		(molRanges.size() == getNofMolecules()));
@@ -4311,28 +4311,18 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
 
 // Adds a replica to the vector of Replica objects and sets the coordinates
 // of the replica's atomsLocations
-void Context::addReplica(int index, std::string crdPrefix)
+void Context::addReplica(int index)
 {
 	// Add replica and the vector of worlds
-	replicas.emplace_back(Replica(index,
-				  atoms
-				, roots
-				, topologies
-				, internCoords
-				, zMatrixTable));
+	replicas.emplace_back(Replica(index, atoms, roots, topologies, internCoords, zMatrixTable));
 
-    std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		referenceAtomsLocationsFromFile;
+    // std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocationsFromFile;
+	// replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
+	// replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
 
 	// Set replicas coordinates
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		referenceAtomsLocations =
-		worlds[0].getCurrentAtomsLocationsInGround();
-
-	//replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
+	const auto& referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
-
-	//replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
 	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
 
 	// Done
