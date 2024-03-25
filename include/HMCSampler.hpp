@@ -632,8 +632,8 @@ public:
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATMeans;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATDiffs;
 
-	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATStds;
-	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATStds_Alien;
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATVars;
+	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATVars_Alien;
 
     // Updater getter for the map
     const std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&>& getSubZMatrixBATsRef() const {

@@ -483,7 +483,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 0){ // dont't take burn-in
+		if(this->nofSamples >= 50){ // dont't take burn-in
 			
 			// Just for the Visualizer
 			if(world->visual){
@@ -4275,8 +4275,8 @@ void
 HMCSampler::setSubZMatrixBATStats(
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans,
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs,
-	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds,
-	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds_Alien
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATvars,
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATvars_Alien
 	)
 {
 
@@ -4327,17 +4327,17 @@ HMCSampler::setSubZMatrixBATStats(
 			subZMatrixBATDiffs.insert({mbx, inBATdiffs.at(aIx)});
 
 			// Get BAT stds
-			subZMatrixBATStds.insert({mbx, inBATstds.at(aIx)});
+			subZMatrixBATVars.insert({mbx, inBATvars.at(aIx)});
 
 			// Get BAT stds of the alien world
-			subZMatrixBATStds_Alien.insert({mbx, inBATstds_Alien.at(aIx)});
+			subZMatrixBATVars_Alien.insert({mbx, inBATvars_Alien.at(aIx)});
 
 		}else{
 
 			std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(mbx);
 			std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(mbx);
-			std::vector<SimTK::Real>& BATstds  = subZMatrixBATStds.at(mbx);
-			std::vector<SimTK::Real>& BATstds_Alien  = subZMatrixBATStds_Alien.at(mbx);
+			std::vector<SimTK::Real>& BATvars  = subZMatrixBATVars.at(mbx);
+			std::vector<SimTK::Real>& BATvars_Alien  = subZMatrixBATVars_Alien.at(mbx);
 
 
 			// Set BAT means
@@ -4351,14 +4351,14 @@ HMCSampler::setSubZMatrixBATStats(
 			BATdiffs[2] = inBATdiffs.at(aIx)[2];
 
 			// Get BAT stds
-			BATstds[0] = inBATstds.at(aIx)[0];
-			BATstds[1] = inBATstds.at(aIx)[1];
-			BATstds[2] = inBATstds.at(aIx)[2];
+			BATvars[0] = inBATvars.at(aIx)[0];
+			BATvars[1] = inBATvars.at(aIx)[1];
+			BATvars[2] = inBATvars.at(aIx)[2];
 
 			// Get BAT stds
-			BATstds_Alien[0] = inBATstds_Alien.at(aIx)[0];
-			BATstds_Alien[1] = inBATstds_Alien.at(aIx)[1];
-			BATstds_Alien[2] = inBATstds_Alien.at(aIx)[2];
+			BATvars_Alien[0] = inBATvars_Alien.at(aIx)[0];
+			BATvars_Alien[1] = inBATvars_Alien.at(aIx)[1];
+			BATvars_Alien[2] = inBATvars_Alien.at(aIx)[2];
 
 		}
 
@@ -4384,7 +4384,7 @@ HMCSampler::PrintSubZMatrixBATAndRelated(
 		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
 		std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
 		std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
-		std::vector<SimTK::Real>& BATstds = subZMatrixBATStds.at(pair.first);
+		std::vector<SimTK::Real>& BATstds = subZMatrixBATVars.at(pair.first);
 
 		SimTK::MobilizedBodyIndex mbx = pair.first;
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -4430,8 +4430,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 	assert(	(subZMatrixBATs_ref.size() > 0) && "BAT not set.");
 	assert(	(subZMatrixBATMeans.size() > 0) && "BAT mean not set.");
 	assert(	(subZMatrixBATDiffs.size() > 0) && "BAT diffs not set.");
-	assert(	(subZMatrixBATStds.size() > 0) &&  "BAT statistics not set.");
-	assert(	(subZMatrixBATStds_Alien.size() > 0) &&
+	assert(	(subZMatrixBATVars.size() > 0) &&  "BAT statistics not set.");
+	assert(	(subZMatrixBATVars_Alien.size() > 0) &&
 			"Reference BAT statistics not set.");
 
 	// Accumulate Jacobian in here
@@ -4450,8 +4450,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 		std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
 		std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
 
-		std::vector<SimTK::Real>& BATstds  = subZMatrixBATStds.at(pair.first);
-		std::vector<SimTK::Real>& BATstds_Alien  = subZMatrixBATStds_Alien.at(pair.first);
+		std::vector<SimTK::Real>& BATvars  = subZMatrixBATVars.at(pair.first);
+		std::vector<SimTK::Real>& BATvars_Alien  = subZMatrixBATVars_Alien.at(pair.first);
 
 		// Get mobod
 		SimTK::MobilizedBodyIndex mbx = pair.first;
@@ -4468,14 +4468,18 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 			if( !(std::isnan(BATdiffs[rearrMobodQCnt])) ){
 
 				// Cook the scaling factor
-				scalingFactor = BATstds_Alien[rearrMobodQCnt] / BATstds[rearrMobodQCnt];
+				scalingFactor = std::sqrt(BATvars_Alien[rearrMobodQCnt] / BATvars[rearrMobodQCnt]);
 
- 				scout("HMCSampler::scaleSubZMatrixBATDeviations scalingFactor mbx ") << int(mbx) <<" qCnt " << qCnt <<" "
-					<< scalingFactor << eolf;	 			
+ 				scout("HMCSampler::scaleSubZMatrixBATDeviations scalingFactor mbx ")
+					<< int(mbx) <<" qCnt " << qCnt <<" "
+					<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
+					<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
+					<< scalingFactor <<" "
+					<< eolf;	 			
 
 				// Modify state Q entry
 				SimTK::Real& qEntry = someState.updQ()[qCnt];
-				//qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
+				qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
 
 				//qEntry += 0.01;
 				// if(nofSamples % 2 == 0){
@@ -4586,7 +4590,8 @@ HMCSampler::updateSubZMatrixBAT(
 
 
 /*!
- * <!--  -->
+ * <!-- This doesn't take into account all BAT coordinates, but only
+ * modifyable BATS -->
 */
 SimTK::Real 
 HMCSampler::calcBATJacobianDetLog(

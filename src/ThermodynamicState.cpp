@@ -356,7 +356,7 @@ ThermodynamicState::getBATDiffsRow(int rowIndex)
  * <!--	zmatrixbat_ -->
 */
 std::vector<SimTK::Real>&
-ThermodynamicState::getBATStdsRow(int rowIndex) 
+ThermodynamicState::getBATVarsRow(int rowIndex) 
 {
 
 	assert(rowIndex >= 0 && rowIndex < zMatrixBATVars.size()

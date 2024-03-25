@@ -93,7 +93,7 @@ class ThermodynamicState{
 	std::vector<SimTK::Real>& getBATDiffsRow(int rowIndex);	
 
 	// Get a row from the BAT stds
-	std::vector<SimTK::Real>& getBATStdsRow(int rowIndex);	
+	std::vector<SimTK::Real>& getBATVarsRow(int rowIndex);	
 
     // Setter function to update the zMatrixBAT_poi member
     void setZMatrixBATPointer(std::vector<std::vector<SimTK::Real>>& pointer) {

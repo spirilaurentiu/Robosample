@@ -4964,10 +4964,10 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	}else{
 
 		// Return to equilibrium worlds coordinates
-		// - no need because it is restored in RunRENS
+		// - no need because it is restored in RunREX
 
 		// Return to equilibrium worlds energies
-		// - no need because it is restored in RunRENS
+		// - no need because it is restored in RunREX
 
 		// Don't swap thermodynamics states nor energies
 
@@ -4981,7 +4981,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 }
 
 
-// Mix neighboring replicas
+// Mix neighboring replicas // TODO: delete
 // Thermodyanmic states are fixed; replicas are variables
 void Context::mixNeighboringReplicas(unsigned int startingFrom)
 {
@@ -5045,23 +5045,34 @@ void Context::mixAllReplicas(int nSwapAttempts)
 
 
 // Mix replicas - hold it for the moment
-void Context::mixReplicas()
+void Context::mixReplicas(int mixi)
 {
-	// Go through neighboring thermodynamic states
-	for(size_t thermoState_k = 0;
-	thermoState_k < (nofThermodynamicStates - 1);
-	thermoState_k += 1){
+	if((mixi % swapEvery) == 0){
 
-		// Get replica corresponding to the thermodynamic state
-		int replica_i = thermo2ReplicaIxs[thermoState_k];
-		int replica_j = getThermoPair(replica_i);
+		// Go through neighboring thermodynamic states
+		for(size_t thermoState_k = 0;
+		thermoState_k < (nofThermodynamicStates - 1);
+		thermoState_k += 1){
 
-		// Attempt to swap
-		bool swapped = false;
-		if(replica_i != replica_j){
-			swapped = attemptREXSwap(replica_i, replica_j);
+			// Get replica corresponding to the thermodynamic state
+			int replica_i = thermo2ReplicaIxs[thermoState_k];
+			int replica_j = getThermoPair(replica_i);
+
+			// Attempt to swap
+			bool swapped = false;
+			if(replica_i != replica_j){
+				swapped = attemptREXSwap(replica_i, replica_j);
+			}
+		}
+
+	}else{
+		if(getRunType() == RUN_TYPE::RENE){
+			// Do what you do when you reject RENE exchange
+			; // nothing
 		}
 	}
+
+
 }
 
 // Load replica's atomLocations into it's front world
@@ -5420,6 +5431,7 @@ const int Context::getThermoPair(int replicaIx)
 {
 	assert((exchangePairs.size() > 0) &&
 	"Replica exchange pairs not set.");
+	
 	return exchangePairs[replicaIx];
 }
 
@@ -5943,14 +5955,13 @@ void Context::RunREX()
 
 	bool givenTsMode = false;
 
-	int nofMixes = int(requiredNofRounds / swapEvery);
+	int nofMixes = requiredNofRounds;
 	int currFrontWIx = -1;
 
 	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
 	for(size_t mixi = 0; mixi < nofMixes; mixi++){
 
 		std::cout << " REX batch " << mixi << std::endl;
-		nofRounds = mixi;
 
 		// Reset replica exchange pairs vector
 		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
@@ -6026,13 +6037,13 @@ void Context::RunREX()
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() != RUN_TYPE::DEFAULT){  // (9) + (10)
+		if(getRunType() != RUN_TYPE::DEFAULT){  											// (9) + (10)
 			
-			mixReplicas();
+			mixReplicas(mixi); // check this
 			                                               
 			//if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 				//if ((mixi % 2) == 0){
-					//mixNeighboringReplicas(mixi % 2);
+				//	mixNeighboringReplicas(mixi % 2);
 				//}else{
 				//	mixNeighboringReplicas(1);
 				//}
@@ -6127,8 +6138,8 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 	// BAT stats containers to send to samplers
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans;
 	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATdiffs;
-	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds;
-	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATstds_Alien;
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATvars;
+	std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATvars_Alien;
 
 	size_t zMatCnt = 0;
 
@@ -6142,17 +6153,17 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 		// Get statistics from thermodynamic state
 		std::vector<SimTK::Real>& BATMeans = thermodynamicStates[thermoIx].getBATMeansRow(zMatCnt);
 		std::vector<SimTK::Real>& BATDiffs = thermodynamicStates[thermoIx].getBATDiffsRow(zMatCnt);
-		std::vector<SimTK::Real>& BATStds = thermodynamicStates[thermoIx].getBATStdsRow(zMatCnt);
+		std::vector<SimTK::Real>& BATVars = thermodynamicStates[thermoIx].getBATVarsRow(zMatCnt);
 
 		// Get statistics from thermostate exchange pair
 		int alienThermoIx = getThermoPair(thermoIx);
-		std::vector<SimTK::Real>& BATStds_Alien = thermodynamicStates[alienThermoIx].getBATStdsRow(zMatCnt);
+		std::vector<SimTK::Real>& BATVars_Alien = thermodynamicStates[alienThermoIx].getBATVarsRow(zMatCnt);
 
 		// Insert entry into sampler stats containers
 		inBATmeans.insert({cAIx, BATMeans});
 		inBATdiffs.insert({cAIx, BATDiffs});
-		inBATstds.insert({cAIx, BATStds});
-		inBATstds_Alien.insert({cAIx, BATStds_Alien});
+		inBATvars.insert({cAIx, BATVars});
+		inBATvars_Alien.insert({cAIx, BATVars_Alien});
 
 		// Increment Z Matrix row
 		zMatCnt++;
@@ -6172,7 +6183,7 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 
 	// Set samplers BAT stats
 	pHMC(worlds[whichWorld].updSampler(0))->setSubZMatrixBATStats(
-		inBATmeans, inBATdiffs, inBATstds, inBATstds_Alien);
+		inBATmeans, inBATdiffs, inBATvars, inBATvars_Alien);
 
 }
 
