@@ -56,6 +56,7 @@ void InternalCoordinates::compute(std::vector<bSpecificAtom>& bAtomList) {
 
 	computeBAT( bAtomList );
 
+	// TODO the results of this function are not used anywhere
 	computeLevelsAndOffsets(bAtomList);
 }
 
@@ -418,10 +419,29 @@ void InternalCoordinates::computeLevelsAndOffsets(const std::vector<bSpecificAto
 
 	// build adjacency lists for unordered graph
 	std::vector<std::vector<int>> adjacency(bAtomList.size());
-	adjacency[roots.front().first].push_back(roots.front().second);
-	adjacency[roots.front().second].push_back(roots.front().first);
-	adjacency[roots.front().second].push_back(roots.front().third);
-	adjacency[roots.front().third].push_back(roots.front().second);
+
+	// TODO
+	// for (const auto& root : roots) {
+	// }
+
+	const auto first = roots.front().first;
+	const auto second = roots.front().second;
+	const auto third = roots.front().third;
+
+	if (first != -1 && second != -1) {
+		adjacency[first].push_back(second);
+		adjacency[second].push_back(first);
+	}
+
+	if (second != -1 && third != -1) {
+		adjacency[second].push_back(third);
+		adjacency[third].push_back(second);
+	}
+
+	// adjacency[roots.front().first].push_back(roots.front().second);
+	// adjacency[roots.front().second].push_back(roots.front().first);
+	// adjacency[roots.front().second].push_back(roots.front().third);
+	// adjacency[roots.front().third].push_back(roots.front().second);
 
 	for (const auto& b : perMolBonds.back()) {
 		adjacency[b.first].push_back(b.second);

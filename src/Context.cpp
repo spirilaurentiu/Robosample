@@ -6043,6 +6043,11 @@ void Context::RunREX()
 			PrintNofAcceptedSwapsMatrix();
 		} 
 
+		if (wantDCD) {
+			// Write DCD
+			writeDCDs();
+		}
+
 	} // end rounds
 
 	//PrintNofAttemptedSwapsMatrix();

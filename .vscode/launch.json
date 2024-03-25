@@ -18,7 +18,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/robosample_d",
-            "args": ["${workspaceFolder}/build/inp.ca"],
+            "args": ["${workspaceFolder}/build/inp.ions"],
             // "program": "${workspaceFolder}/build/TestGeometry",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
