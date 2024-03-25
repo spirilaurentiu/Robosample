@@ -502,7 +502,7 @@ public:
 	void mixAllReplicas(int nSwapAttempts);
 
 	// Mix replicas
-	void mixReplicas(void);
+	void mixReplicas(int mixi);
 
 	// ========================================================================
 	// Configuration manipulation functions between worlds and replicas
