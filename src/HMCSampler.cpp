@@ -4443,16 +4443,18 @@ HMCSampler::setSubZMatrixBATStats(
 
 		// Check if is root atom
 		#ifndef NDEBUG
-		SimTK::Vec3 station = 
-			topologies[topoIx].getAtomLocationInMobilizedBodyFrameThroughDumm(
-			aIx, *dumm); 
-		assert(	(station[0] < 0.000001) && 
-				(station[1] < 0.000001) &&
-				(station[2] < 0.000001) &&
-				"HMCSampler: root atom is not in the mobod center");
+			SimTK::Vec3 station = 
+				topologies[topoIx].getAtomLocationInMobilizedBodyFrameThroughDumm(
+				aIx, *dumm); 
+			assert(	(station[0] < 0.000001) && 
+					(station[1] < 0.000001) &&
+					(station[2] < 0.000001) &&
+					"HMCSampler: root atom is not in the mobod center");
 		#endif
 
 		// Simplify to easier variables
+		assert((subZMatrixBATs_ref.size() != 0) && 
+			"HMCSampler BAT map size is 0.");
 		std::vector<SimTK::Real>& BAT = subZMatrixBATs_ref.at(mbx);
 		
 		if(nofSamples == 0){
@@ -4471,11 +4473,30 @@ HMCSampler::setSubZMatrixBATStats(
 
 		}else{
 
+		#ifndef NDEBUG
+			assert((subZMatrixBATMeans.size() != 0) && 
+				"HMCSampler BATmeans size is 0.");
+			assert((subZMatrixBATDiffs.size() != 0) && 
+				"HMCSampler BATdiffs size is 0.");
+			assert((subZMatrixBATVars.size() != 0) && 
+				"HMCSampler BATvars size is 0.");
+			assert((subZMatrixBATVars_Alien.size() != 0) && 
+				"HMCSampler BATvars_Alien size is 0.");
+
+			assert((subZMatrixBATMeans.find(mbx) != subZMatrixBATMeans.end()) &&
+				"HMCSampler BATmeans key not found");
+			assert((subZMatrixBATDiffs.find(mbx) != subZMatrixBATDiffs.end()) &&
+				"HMCSampler BATdiffs key not found");
+			assert((subZMatrixBATVars.find(mbx) != subZMatrixBATVars.end()) &&
+				"HMCSampler BATvars key not found");
+			assert((subZMatrixBATVars_Alien.find(mbx) != subZMatrixBATVars_Alien.end()) &&
+				"HMCSampler BATvars_Alien key not found");
+		#endif
+
 			std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(mbx);
 			std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(mbx);
 			std::vector<SimTK::Real>& BATvars  = subZMatrixBATVars.at(mbx);
 			std::vector<SimTK::Real>& BATvars_Alien  = subZMatrixBATVars_Alien.at(mbx);
-
 
 			// Set BAT means
 			BATmeans[0] = inBATmeans.at(aIx)[0];
