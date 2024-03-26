@@ -429,7 +429,6 @@ void ConformationalSearch::update(SimTK::State& someState){
     if ((pe_n < pe_o) or (rand_no < exp(-(pe_n - pe_o)/RT))){ // Accept
         setTVector(someState);
         setOldPE(pe_n);
-        ++acceptedSteps;
         this->acc = true;
     }else{ // Reject
         assignConfFromTVector(someState);
@@ -538,14 +537,3 @@ ThermostatName ConformationalSearch::getThermostat(void){
 void ConformationalSearch::sendConfToEvaluator(void){
     assert(!"Not implemented");
 }
-
-// Get the number of accpted conformations
-int ConformationalSearch::getAcceptedSteps(void)
-{
-    return acceptedSteps;
-}
-
-
-
-
-

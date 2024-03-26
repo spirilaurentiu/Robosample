@@ -74,7 +74,7 @@ public:
 
     /** Get/Set the timestep for integration **/
     //virtual SimTK::Real getTimestep() const;
-    //virtual void setTimestep(SimTK::Real);
+    //virtual void setTimestep(SimTK::Real, bool adaptive);
 
     /** Get/Set boost temperature **/
     //SimTK::Real getBoostTemperature();

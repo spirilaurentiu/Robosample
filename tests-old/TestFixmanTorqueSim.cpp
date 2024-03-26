@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	BaseSampler *pSampler = world->updSampler(0);
 
 	// Set timestep
-	(pHMC(pSampler))->setTimestep(timestep);
+	(pHMC(pSampler))->setTimestep(timestep, false);
 
 	//if(std::string(argv[5]) == "VV"){
 	(pHMC(pSampler))->setAlwaysAccept(true);

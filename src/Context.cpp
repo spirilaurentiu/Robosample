@@ -320,9 +320,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			rexSamplesPerRound);
 
 		// Add replicas
-		std::string crdPrefix = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0];
 		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k, crdPrefix);
+			addReplica(k);
 		}
 
 		// Add thermodynamic states
@@ -339,6 +338,10 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 
+		// Add replicas
+		for(int k = 0; k < nofReplicas; k++){
+			addReplica(k);
+		}
 		// Set a vector of replica pairs for exchanges
 	    exchangePairs.resize(nofReplicas);
 
@@ -529,9 +532,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		}
 
 		// Add replicas
-		std::string crdPrefix = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0];
 		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k, crdPrefix);
+			addReplica(k);
 		}
 
 		// Consider renaming
@@ -716,19 +718,25 @@ void Context::loadBonds(const readAmberInput& reader) {
 
 		bonds.push_back(bond);
 
-		// TODO BAD! this will break if we invalidate the bonds vector
-		atoms[bond.i].addNeighbor(&atoms[bonds[bCnt].j]);
-		atoms[bond.i].addBond(&bonds[bCnt]);
+		// // TODO BAD! this will break if we invalidate the bonds vector
+		// atoms[bond.i].addNeighbor(&atoms[bonds[bCnt].j]);
+		// atoms[bond.i].addBond(&bonds[bCnt]);
 
-		atoms[bond.j].addNeighbor(&atoms[bonds[bCnt].i]);
-		atoms[bond.j].addBond(&bonds[bCnt]);
+		// atoms[bond.j].addNeighbor(&atoms[bonds[bCnt].i]);
+		// atoms[bond.j].addBond(&bonds[bCnt]);
+
+		atoms[bond.i].addNeighborIndex(bonds[bCnt].j);
+		atoms[bond.i].addBondIndex(bCnt);
+
+		atoms[bond.j].addNeighborIndex(bonds[bCnt].i);
+		atoms[bond.j].addBondIndex(bCnt);
 	}
 
 	// Assign the number of bonds an atom has and set the number of freebonds
 	// equal to the number of bonds for now
 	for(auto& atom : atoms) {
-		atom.setNbonds(atom.bondsInvolved.size());
-		atom.setFreebonds(atom.bondsInvolved.size());
+		atom.setNbonds(atom.getNumBonds());
+		atom.setFreebonds(atom.getNumBonds());
 	}
 }
 
@@ -1065,112 +1073,112 @@ void Context::buildAcyclicGraph(
 	Topology topology,
 	bSpecificAtom *node, bSpecificAtom *previousNode)
 {
-	// The base atom has to be set once Molmodel
-	topology.baseSetFlag = 0;
+	// // The base atom has to be set once Molmodel
+	// topology.baseSetFlag = 0;
 
-	// Only process unvisited nodes
-	if( node->wasVisited() ){
-		return;
-	}
+	// // Only process unvisited nodes
+	// if( node->wasVisited() ){
+	// 	return;
+	// }
 
-	// Mark the depth of the recursivity
-	++topology.nofProcesses;
+	// // Mark the depth of the recursivity
+	// ++topology.nofProcesses;
 
-	// Mark Gmolmodel bond and create bond in Molmodel
-	for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
-		bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
-	{
-		// Check if there is a bond between prevnode and node based on bonds
-		// read from amberReader
-		if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
-			(*bondsInvolvedIter)->setVisited(1);
+	// // Mark Gmolmodel bond and create bond in Molmodel
+	// for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
+	// 	bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
+	// {
+	// 	// Check if there is a bond between prevnode and node based on bonds
+	// 	// read from amberReader
+	// 	if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
+	// 		(*bondsInvolvedIter)->setVisited(1);
 
-			// Skip the first step as we don't have yet two atoms
-			if (topology.nofProcesses != 1) {
+	// 		// Skip the first step as we don't have yet two atoms
+	// 		if (topology.nofProcesses != 1) {
 
-				// The first bond is special in Molmodel and has to be
-				// treated differently. Set a base atom first
-				if (topology.nofProcesses == 2) {
-					if (topology.baseSetFlag == 0) {
-						topology.setBaseAtom(previousNode->getSingleAtom());
-						topology.setAtomBiotype(previousNode->getName(), (topology.getName()),
-												previousNode->getName());
-						topology.convertInboardBondCenterToOutboard();
-						topology.baseSetFlag = 1;
+	// 			// The first bond is special in Molmodel and has to be
+	// 			// treated differently. Set a base atom first
+	// 			if (topology.nofProcesses == 2) {
+	// 				if (topology.baseSetFlag == 0) {
+	// 					topology.setBaseAtom(previousNode->getSingleAtom());
+	// 					topology.setAtomBiotype(previousNode->getName(), (topology.getName()),
+	// 											previousNode->getName());
+	// 					topology.convertInboardBondCenterToOutboard();
+	// 					topology.baseSetFlag = 1;
 
-					}
-				}
+	// 				}
+	// 			}
 
-				// Bond current node by the previous (Compound function)
-				std::stringstream parentBondCenterPathName;
-				if (previousNode->getNumber() == topology.baseAtomNumber) {
-					parentBondCenterPathName << previousNode->getName()
-						<< "/bond" << previousNode->getFreebonds();
-				} else {
-					parentBondCenterPathName << previousNode->getName()
-						<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
-				}
+	// 			// Bond current node by the previous (Compound function)
+	// 			std::stringstream parentBondCenterPathName;
+	// 			if (previousNode->getNumber() == topology.baseAtomNumber) {
+	// 				parentBondCenterPathName << previousNode->getName()
+	// 					<< "/bond" << previousNode->getFreebonds();
+	// 			} else {
+	// 				parentBondCenterPathName << previousNode->getName()
+	// 					<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
+	// 			}
 
-				// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
-				// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
-				std::string debugString = parentBondCenterPathName.str();
-				topology.bondAtom(node->getSingleAtom(),
-						(parentBondCenterPathName.str()).c_str(), 0.149, 0);
+	// 			// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
+	// 			// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
+	// 			std::string debugString = parentBondCenterPathName.str();
+	// 			topology.bondAtom(node->getSingleAtom(),
+	// 					(parentBondCenterPathName.str()).c_str(), 0.149, 0);
 
-				// Set the final Biotype
-				topology.setAtomBiotype(node->getName(), (topology.getName()).c_str(), node->getName());
+	// 			// Set the final Biotype
+	// 			topology.setAtomBiotype(node->getName(), (topology.getName()).c_str(), node->getName());
 
-				// Set bSpecificAtom atomIndex to the last atom added to bond
-				node->setCompoundAtomIndex(
-					topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 1));
+	// 			// Set bSpecificAtom atomIndex to the last atom added to bond
+	// 			node->setCompoundAtomIndex(
+	// 				topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 1));
 				
 
-				// The only time we have to set atomIndex to the previous node
-				if (topology.nofProcesses == 2) {
-					previousNode->setCompoundAtomIndex(topology.getBondAtomIndex(
-						Compound::BondIndex(topology.getNumBonds() - 1), 0));
-				}
+	// 			// The only time we have to set atomIndex to the previous node
+	// 			if (topology.nofProcesses == 2) {
+	// 				previousNode->setCompoundAtomIndex(topology.getBondAtomIndex(
+	// 					Compound::BondIndex(topology.getNumBonds() - 1), 0));
+	// 			}
 
-				// Set bBond Molmodel Compound::BondIndex
-				(*bondsInvolvedIter)->setBondIndex(
-					Compound::BondIndex(topology.getNumBonds() - 1));
-				std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
-						Compound::BondIndex(topology.getNumBonds() - 1),
-						(*bondsInvolvedIter)->getIndex()
-				);
+	// 			// Set bBond Molmodel Compound::BondIndex
+	// 			(*bondsInvolvedIter)->setBondIndex(
+	// 				Compound::BondIndex(topology.getNumBonds() - 1));
+	// 			std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
+	// 					Compound::BondIndex(topology.getNumBonds() - 1),
+	// 					(*bondsInvolvedIter)->getIndex()
+	// 			);
 
-				topology.bondIx2GmolBond.insert(pairToBeInserted);
+	// 			topology.bondIx2GmolBond.insert(pairToBeInserted);
 
-				topology.GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
-						(*bondsInvolvedIter)->getIndex(),
-						Compound::BondIndex(topology.getNumBonds() - 1)
-				) );
+	// 			topology.GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
+	// 					(*bondsInvolvedIter)->getIndex(),
+	// 					Compound::BondIndex(topology.getNumBonds() - 1)
+	// 			) );
 
-				// Drop the number of available bonds
-				/* --(previousNode->freebonds);
-				--(node->freebonds); */
+	// 			// Drop the number of available bonds
+	// 			/* --(previousNode->freebonds);
+	// 			--(node->freebonds); */
 
-				previousNode->decrFreebonds();
-				node->decrFreebonds();
+	// 			previousNode->decrFreebonds();
+	// 			node->decrFreebonds();
 
-				// Bond was inserted in Molmodel Compound. Get out and search
-				// the next bond
-				break;
+	// 			// Bond was inserted in Molmodel Compound. Get out and search
+	// 			// the next bond
+	// 			break;
 
-			}
-		}
-	}
+	// 		}
+	// 	}
+	// }
 
-	// Mark the node as visited
-	node->setVisited(1);
+	// // Mark the node as visited
+	// node->setVisited(1);
 
-	// Set the previous node to this node
-	previousNode = node;
+	// // Set the previous node to this node
+	// previousNode = node;
 
-	// Go to the next node. Choose it from his neighbours.
-	for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
-		buildAcyclicGraph(topology, (node->neighbors)[i], previousNode);
-	}
+	// // Go to the next node. Choose it from his neighbours.
+	// for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
+	// 	buildAcyclicGraph(topology, (node->neighbors)[i], previousNode);
+	// }
 
 }
 
@@ -2006,6 +2014,11 @@ void Context::buildAcyclicGraph_SP_NEW(
 				Compound::BondIndex(topology.getNumBonds() - 1), 0));
 		}
 
+		// print compound atom indices for child and parent
+		scout("child parent compound atom indices ")
+			<< child.getNumber() << " " << child.getCompoundAtomIndex() << " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
+			<< eol;
+
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
 		int currentCompoundBondIndex = topology.getNumBonds() - 1;
@@ -2024,6 +2037,12 @@ void Context::buildAcyclicGraph_SP_NEW(
 		parent.decrFreebonds();
 		child.decrFreebonds();
 
+	}
+
+	// Handle ions
+	if (internCoords.getRoot(molIx).second == -1) {
+		atoms[internCoords.getRoot(molIx).first].setMoleculeIndex(molIx);
+		atoms[internCoords.getRoot(molIx).first].setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
 	}
 
 	// Add to the list of topologies
@@ -2390,6 +2409,8 @@ void Context::generateSubAtomLists(void){
 	// for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
 	// 	cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
 	// }
+
+	std::cout << molRanges.size() << " " << getNofMolecules() << std::endl;
 
 	assert("atoms molecule indexes different than nofMols" &&
 		(molRanges.size() == getNofMolecules()));
@@ -4317,28 +4338,18 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
 
 // Adds a replica to the vector of Replica objects and sets the coordinates
 // of the replica's atomsLocations
-void Context::addReplica(int index, std::string crdPrefix)
+void Context::addReplica(int index)
 {
 	// Add replica and the vector of worlds
-	replicas.emplace_back(Replica(index,
-				  atoms
-				, roots
-				, topologies
-				, internCoords
-				, zMatrixTable));
+	replicas.emplace_back(Replica(index, atoms, roots, topologies, internCoords, zMatrixTable));
 
-    std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		referenceAtomsLocationsFromFile;
+    // std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocationsFromFile;
+	// replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
+	// replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
 
 	// Set replicas coordinates
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		referenceAtomsLocations =
-		worlds[0].getCurrentAtomsLocationsInGround();
-
-	//replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
+	const auto& referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
-
-	//replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
 	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
 
 	// Done
@@ -5355,8 +5366,7 @@ void Context::initializeReplica(int thisReplica)
 		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
-			replicaTimesteps[i]);
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(replicaTimesteps[i], false);
 	}
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -5544,8 +5554,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(
-			replicaTimesteps[i]);
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(replicaTimesteps[i], false);
 	}
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -6045,6 +6054,10 @@ void Context::RunREX()
 			PrintNofAcceptedSwapsMatrix();
 		} 
 
+		if (wantDCD) {
+			// Write DCD
+			writeDCDs();
+		}
 
 	} // end rounds
 
@@ -7947,6 +7960,11 @@ Context::calcZMatrixTable(void)
 		Topology& topology = topologies[topoIx];
 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
 
+		if (BONDS.size() == 0) {
+			continue;
+		}
+
+		std::cout << "BONDS " << BONDS[0].first << " " << BONDS[0].second << std::endl;
 		addZMatrixTableRow(std::vector<int> {
 			BONDS[0].first,
 			BONDS[0].second,
@@ -8128,7 +8146,7 @@ void Context::PrintZMatrixTableAndBAT() const
 
 	for (const auto& row : zMatrixTable) {
 
-		scout("ZMatrixBATEntry: ");
+		// scout("ZMatrixBATEntry: ");
 
 		// Print indexes
 		for (int value : row) {
@@ -8507,12 +8525,12 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 	size_t zMatCnt = 0;
 	for (const auto& row : zMatrixTable) {
 
-		scout("ZMatrixBATEntry: ");
+		// scout("ZMatrixBATEntry: ");
 
-		// Print indexes
-		for (int value : row) {
-			std::cout << std::setw(6) << value <<" "; 
-		}
+		// // Print indexes
+		// for (int value : row) {
+		// 	std::cout << std::setw(6) << value <<" "; 
+		// }
 
 		// Print BAT values
 		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);

@@ -74,7 +74,7 @@ struct TORSION {
 //==============================================================================
 struct AmberAtom {
 	SimTK::Real mass = -1.0;
-	int bonds = -1,
+	std::size_t bonds = -1,
 		amberId = -1,
 		parent = -1;
 

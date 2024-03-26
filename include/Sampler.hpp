@@ -136,11 +136,12 @@ public:
 	Topology *rootTopology;
 
 	std::vector<Topology>& topologies;
-	std::size_t natoms;
-	std::size_t ndofs;
+	std::size_t natoms = 0;
+	std::size_t ndofs = 0;
+	std::size_t acceptedSteps = 0;
 
 	// Total mass of the system
-	SimTK::Real totalMass;
+	SimTK::Real totalMass = 0;
 
 	/** Joint types **/
 	std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
@@ -153,14 +154,14 @@ public:
 	// Thermodynamics
 	bool alwaysAccept = false;
 	ThermostatName thermostat;
-	SimTK::Real temperature;
-	SimTK::Real RT;
-	SimTK::Real beta;
+	SimTK::Real temperature = SimTK::NaN;
+	SimTK::Real RT = SimTK::NaN;
+	SimTK::Real beta = SimTK::NaN;
 
 	// Sampling
-	int nofSamples;
+	int nofSamples = 0;
 	uint32_t seed;
-	bool acc;
+	bool acc = false;
 
 	// Random number generators
 	Random64 randomEngine;

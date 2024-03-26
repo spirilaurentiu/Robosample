@@ -21,7 +21,7 @@
             "args": ["${workspaceFolder}/build_debug/inp.333"],
             // "program": "${workspaceFolder}/build/TestGeometry",
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build_debug/",
+            "cwd": "${workspaceFolder}/build/",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
