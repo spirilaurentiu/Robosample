@@ -87,7 +87,9 @@
                 "${workspaceFolder}/Molmodel/include/molmodel",
                 "${workspaceFolder}/Molmodel/include/molmodel/internal",
                 "${workspaceFolder}/include",
-                "${workspaceFolder}/Simbody01/Simbody/Visualizer/include"
+                "${workspaceFolder}/Simbody01/Simbody/Visualizer/include",
+                "${workspaceFolder}/pcg-cpp/include",
+                "${workspaceFolder}/format/inc"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++",
