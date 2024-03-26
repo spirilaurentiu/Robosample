@@ -20,6 +20,7 @@ public:
 			, topologies(topologies_)
 			, internCoords(internCoords_)
 			, zMatrixTable(zMatrixTable_)
+			, zMatrixBAT()
 	{}
 
 	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& getAtomsLocationsInGround() const;

@@ -22,7 +22,11 @@ public:
 		std::vector<Topology> &argTopologies, 
 		SimTK::DuMMForceFieldSubsystem &argDumm,
 		SimTK::GeneralForceSubsystem &argForces,
-		SimTK::TimeStepper &argTimeStepper);
+		SimTK::TimeStepper &argTimeStepper) 
+
+
+
+			;
 
 	// Destructor
 	virtual ~Sampler();

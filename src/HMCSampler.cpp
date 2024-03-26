@@ -84,6 +84,17 @@ HMCSampler::HMCSampler(World &argWorld,
 	TVector.resize(matter->getNumBodies());
 	SetTVector.resize(matter->getNumBodies());
 	acceptedStepsBuffer.resize(acceptedStepsBufferSize, 0);
+
+	this->nofSamples = 0;
+
+	// BAT statistics initialization
+	subZMatrixBATMeans = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
+	subZMatrixBATDiffs = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
+	subZMatrixBATVars = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
+	subZMatrixBATVars_Alien = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
+
+
+
 }
 
 /** Destructor **/
@@ -4336,25 +4347,25 @@ HMCSampler::setSubZMatrixBATStats(
 
 		}else{
 
-		#ifndef NDEBUG
-			assert((subZMatrixBATMeans.size() != 0) && 
-				"HMCSampler BATmeans size is 0.");
-			assert((subZMatrixBATDiffs.size() != 0) && 
-				"HMCSampler BATdiffs size is 0.");
-			assert((subZMatrixBATVars.size() != 0) && 
-				"HMCSampler BATvars size is 0.");
-			assert((subZMatrixBATVars_Alien.size() != 0) && 
-				"HMCSampler BATvars_Alien size is 0.");
+			#ifndef NDEBUG
+				assert((subZMatrixBATMeans.size() != 0) && 
+					"HMCSampler BATmeans size is 0.");
+				assert((subZMatrixBATDiffs.size() != 0) && 
+					"HMCSampler BATdiffs size is 0.");
+				assert((subZMatrixBATVars.size() != 0) && 
+					"HMCSampler BATvars size is 0.");
+				assert((subZMatrixBATVars_Alien.size() != 0) && 
+					"HMCSampler BATvars_Alien size is 0.");
 
-			assert((subZMatrixBATMeans.find(mbx) != subZMatrixBATMeans.end()) &&
-				"HMCSampler BATmeans key not found");
-			assert((subZMatrixBATDiffs.find(mbx) != subZMatrixBATDiffs.end()) &&
-				"HMCSampler BATdiffs key not found");
-			assert((subZMatrixBATVars.find(mbx) != subZMatrixBATVars.end()) &&
-				"HMCSampler BATvars key not found");
-			assert((subZMatrixBATVars_Alien.find(mbx) != subZMatrixBATVars_Alien.end()) &&
-				"HMCSampler BATvars_Alien key not found");
-		#endif
+				assert((subZMatrixBATMeans.find(mbx) != subZMatrixBATMeans.end()) &&
+					"HMCSampler BATmeans key not found");
+				assert((subZMatrixBATDiffs.find(mbx) != subZMatrixBATDiffs.end()) &&
+					"HMCSampler BATdiffs key not found");
+				assert((subZMatrixBATVars.find(mbx) != subZMatrixBATVars.end()) &&
+					"HMCSampler BATvars key not found");
+				assert((subZMatrixBATVars_Alien.find(mbx) != subZMatrixBATVars_Alien.end()) &&
+					"HMCSampler BATvars_Alien key not found");
+			#endif
 
 			std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(mbx);
 			std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(mbx);
@@ -4510,6 +4521,7 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				// }
 
 				// Update BAT entry after modifying q
+
 				SimTK::Real tempNewBAT = BAT[rearrMobodQCnt] + qEntry;
 				SimTK::Real tempNewBATDiff_Sq = (tempNewBAT - BATmeans[rearrMobodQCnt]);
 				tempNewBATDiff_Sq *= tempNewBATDiff_Sq;

@@ -107,7 +107,8 @@ public:
 		std::vector<Topology> &argTopologies, 
 		SimTK::DuMMForceFieldSubsystem &argDumm,
 		SimTK::GeneralForceSubsystem &argForces,
-		SimTK::TimeStepper &argTimeStepper);
+		SimTK::TimeStepper &argTimeStepper) 
+			;
 
 	/** Destructor **/
 	virtual ~HMCSampler();
@@ -629,9 +630,9 @@ public:
 
 	// Put in protected
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATs_ref;
+
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATMeans;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATDiffs;
-
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATVars;
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>> subZMatrixBATVars_Alien;
 

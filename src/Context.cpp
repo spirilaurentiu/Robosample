@@ -338,10 +338,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
 		}
 
-		// Add replicas
-		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k);
-		}
 		// Set a vector of replica pairs for exchanges
 	    exchangePairs.resize(nofReplicas);
 
@@ -472,85 +468,6 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	if(usingTaskSpace){
 		addTaskSpacesLS();
 	}
-
-	/* // -- Setup REX --
-	std::string runType = setupReader.get("RUN_TYPE")[0];
-	if(	(runType == "REMC")   || 
-		(runType == "RENEMC") ||
-		(runType == "RENE") ){
-
-		int NRepl = getNofReplicas();
-
-		SetupReader rexReader;
-
-		// Storage for thermodynamic state temperatures
-		std::vector<SimTK::Real> temperatures;
-
-		// Storage for sampling details
-		std::vector<std::vector<std::string>> rexSamplers;
-		std::vector<std::vector<int>> rexDistortOptions;
-		std::vector<std::vector<std::string>> rexDistortArgs;
-		std::vector<std::vector<int>> rexFlowOptions;
-		std::vector<std::vector<int>> rexWorkOptions;
-
-		// Storage for each replica simulation parameters
-		std::vector<std::vector<std::string>> rexIntegrators;
-		std::vector<std::vector<SimTK::Real>> rexTimesteps;
-		std::vector<std::vector<int>> rexWorldIndexes;
-		std::vector<std::vector<int>> rexMdsteps;
-		std::vector<std::vector<int>> rexSamplesPerRound;
-
-		// Read REX config file
-		size_t nofReplicas = rexReader.readREXConfigFile(
-			setupReader.get("REX_FILE")[0],
-			temperatures,
-
-			rexSamplers,
-			rexDistortOptions,
-			rexDistortArgs,
-			rexFlowOptions,
-			rexWorkOptions,
-			rexIntegrators,
-
-			rexTimesteps,
-			rexWorldIndexes,
-			rexMdsteps,
-			rexSamplesPerRound);
-
-		// Add thermodynamic states
-		for(int k = 0; k < temperatures.size(); k++){
-			addThermodynamicState(k, temperatures[k],
-
-				rexSamplers[k],
-				rexDistortOptions[k],
-				rexDistortArgs[k],
-				rexFlowOptions[k],
-				rexWorkOptions[k],
-				rexIntegrators[k],
-
-				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
-		}
-
-		// Add replicas
-		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k);
-		}
-
-		// Consider renaming
-		loadReplica2ThermoIxs();
-
-		PrintReplicas();
-
-		// How many Gibbs rounds until replica swpas occurs
-		setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
-
-		setSwapFixman(std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]));
-
-	}
-
-	PrepareNonEquilibriumParams_Q();
-	
-	setThermostatesNonequilibrium(); */
 
 	// Add constraints
 	//context.addConstraints();
@@ -4336,23 +4253,31 @@ void Context::setNofReplicas(const size_t& argNofReplicas)
 //	nofReplicas++;
 //}
 
-// Adds a replica to the vector of Replica objects and sets the coordinates
-// of the replica's atomsLocations
+/*!
+ * <!-- Adds a replica to the vector of Replica objects and sets the coordinates
+ * of the replica's atomsLocations -->
+*/
 void Context::addReplica(int index)
 {
 	// Add replica and the vector of worlds
-	replicas.emplace_back(Replica(index, atoms, roots, topologies, internCoords, zMatrixTable));
+	replicas.emplace_back(Replica(index
+		, atoms
+		, roots
+		, topologies
+		, internCoords
+		, zMatrixTable));
+
+	// Set replicas coordinates
 
     // std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> referenceAtomsLocationsFromFile;
 	// replicas.back().setAtomsLocationsInGround(referenceAtomsLocationsFromFile);
 	// replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocationsFromFile);
 
-	// Set replicas coordinates
 	const auto& referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
 
-	// Done
+	// Increment nof replicas
 	nofReplicas++;
 }
 
@@ -6170,6 +6095,14 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 
 	} // ZMatrix row
 
+	assert((inBATmeans.size() != 0) && 
+		"Context BATmeans size is 0.");
+	assert((inBATdiffs.size() != 0) && 
+		"Context BATdiffs size is 0.");
+	assert((inBATvars.size() != 0) && 
+		"Context BATvars size is 0.");
+	assert((inBATvars_Alien.size() != 0) && 
+		"Context BATvars_Alien size is 0.");
 
 	// scout("Context::setSubZmatrixBATStatsToSamplers") << eol;
 	// for (const auto& [key, value] : inBATmeans) {
@@ -8146,7 +8079,7 @@ void Context::PrintZMatrixTableAndBAT() const
 
 	for (const auto& row : zMatrixTable) {
 
-		// scout("ZMatrixBATEntry: ");
+		scout("ZMatrixBATEntry: ");
 
 		// Print indexes
 		for (int value : row) {
@@ -8525,12 +8458,12 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 	size_t zMatCnt = 0;
 	for (const auto& row : zMatrixTable) {
 
-		// scout("ZMatrixBATEntry: ");
+		scout("ZMatrixBATEntry: ");
 
-		// // Print indexes
-		// for (int value : row) {
-		// 	std::cout << std::setw(6) << value <<" "; 
-		// }
+		// Print indexes
+		for (int value : row) {
+			std::cout << std::setw(6) << value <<" "; 
+		}
 
 		// Print BAT values
 		const std::vector<SimTK::Real>& BATrow = getZMatrixBATRow(zMatCnt);
