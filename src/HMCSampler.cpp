@@ -93,8 +93,6 @@ HMCSampler::HMCSampler(World &argWorld,
 	subZMatrixBATVars = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
 	subZMatrixBATVars_Alien = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
 
-
-
 }
 
 /** Destructor **/
@@ -4459,12 +4457,14 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 {
 
 	// Check BAT stats containers entries
-	assert(	(subZMatrixBATs_ref.size() > 0) && "BAT not set.");
-	assert(	(subZMatrixBATMeans.size() > 0) && "BAT mean not set.");
-	assert(	(subZMatrixBATDiffs.size() > 0) && "BAT diffs not set.");
-	assert(	(subZMatrixBATVars.size() > 0) &&  "BAT statistics not set.");
-	assert(	(subZMatrixBATVars_Alien.size() > 0) &&
-			"Reference BAT statistics not set.");
+	#ifdef NDEBUG
+		assert(	(subZMatrixBATs_ref.size() > 0) && "BAT not set.");
+		assert(	(subZMatrixBATMeans.size() > 0) && "BAT mean not set.");
+		assert(	(subZMatrixBATDiffs.size() > 0) && "BAT diffs not set.");
+		assert(	(subZMatrixBATVars.size() > 0) &&  "BAT statistics not set.");
+		assert(	(subZMatrixBATVars_Alien.size() > 0) &&
+				"Reference BAT statistics not set.");
+	#endif
 
 	// Accumulate Jacobian in here
 	SimTK::Real scaleJacobian = 0.0;
@@ -4501,6 +4501,16 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 				// Cook the scaling factor
 				scalingFactor = std::sqrt(BATvars_Alien[rearrMobodQCnt] / BATvars[rearrMobodQCnt]);
+
+				// Bernoulli trial convolution
+				SimTK::Real randomNumber_Unif;
+				int randomSign;
+
+				randomNumber_Unif = uniformRealDistribution(randomEngine);
+				randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
+				if(randomSign < 0){
+					scalingFactor = 1.0 / scalingFactor;
+				}
 
  				scout("HMCSampler::scaleSubZMatrixBATDeviations scalingFactor mbx ")
 					<< int(mbx) <<" qCnt " << qCnt <<" "

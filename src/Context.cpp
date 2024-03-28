@@ -4770,8 +4770,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real s_X_1 = 1.0 / s_X;
 	SimTK::Real s_Y_1 = 1.0 / s_Y;
 
+	// Correction term is 1 for now
 	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
-
 	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
 
 	// ----------------------------------------------------------------
