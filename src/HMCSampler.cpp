@@ -4512,12 +4512,15 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 					scalingFactor = 1.0 / scalingFactor;
 				}
 
- 				scout("HMCSampler::scaleSubZMatrixBATDeviations scalingFactor mbx ")
-					<< int(mbx) <<" qCnt " << qCnt <<" "
-					<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
-					<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
-					<< scalingFactor <<" "
-					<< eolf;	 			
+				if(this->nofSamples % 500){
+					scout("HMCSampler::scaleSubZMatrixBATDeviations scalingFactor mbx ")
+						<< int(mbx) <<" qCnt " << qCnt <<" "
+						<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
+						<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
+						<< scalingFactor <<" "
+						<< eolf;
+				}
+ 			
 
 				// Modify state Q entry
 				SimTK::Real& qEntry = someState.updQ()[qCnt];
@@ -4531,7 +4534,6 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				// }
 
 				// Update BAT entry after modifying q
-
 				SimTK::Real tempNewBAT = BAT[rearrMobodQCnt] + qEntry;
 				SimTK::Real tempNewBATDiff_Sq = (tempNewBAT - BATmeans[rearrMobodQCnt]);
 				tempNewBATDiff_Sq *= tempNewBATDiff_Sq;
