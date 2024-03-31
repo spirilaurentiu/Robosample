@@ -576,6 +576,8 @@ void Replica::PrintZMatrixBAT() const {
 	int bati = 0;
 	for (const auto& row : zMatrixBAT) {
 
+		scout("zm ") ; // indicator
+
 		for(const auto tabValue : zMatrixTable[bati]){
 			std::cout << tabValue << " ";
 		}

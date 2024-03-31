@@ -81,7 +81,7 @@ class ThermodynamicState{
     // Incrementer function for nofSamples
     void incrementNofSamples();
 
-	void PrintZMatrixBAT() const ;
+	void PrintZMatrixBAT(bool printBATStats = false) const ;
 
 	//
 	void calcZMatrixBATStats(void);

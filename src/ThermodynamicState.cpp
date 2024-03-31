@@ -186,7 +186,7 @@ void ThermodynamicState::incrementNofSamples() {
 /*!
  * <!--	zmatrixbat_ -->
 */
-void ThermodynamicState::PrintZMatrixBAT() const {
+void ThermodynamicState::PrintZMatrixBAT(bool printBATStats) const {
 
 	int bati = 0;
 
@@ -213,18 +213,28 @@ void ThermodynamicState::PrintZMatrixBAT() const {
 		}
 
 		if(nofSamples > 0){
-			// BAT means
+
+			// BAT values
 			for(size_t dimi = 0; dimi < 3; dimi++){
-				std::cout << zMatrixBATMeans[bati][dimi] <<" ";
+				std::cout << (*zMatrixBAT_poi)[bati][dimi] <<" ";
 			}
-			// BAT diffs
-			for(size_t dimi = 0; dimi < 3; dimi++){
-				std::cout << zMatrixBATDiffs[bati][dimi] <<" ";
+
+			if(printBATStats){
+				
+				// BAT means
+				for(size_t dimi = 0; dimi < 3; dimi++){
+					std::cout << zMatrixBATMeans[bati][dimi] <<" ";
+				}
+				// BAT diffs
+				for(size_t dimi = 0; dimi < 3; dimi++){
+					std::cout << zMatrixBATDiffs[bati][dimi] <<" ";
+				}
+				// BAT stds
+				for(size_t dimi = 0; dimi < 3; dimi++){
+					std::cout << zMatrixBATVars[bati][dimi] <<" ";
+				}
 			}
-			// BAT stds
-			for(size_t dimi = 0; dimi < 3; dimi++){
-				std::cout << zMatrixBATVars[bati][dimi] <<" ";
-			}
+
 		}
 
 		std::cout << std::endl;

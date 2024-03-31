@@ -4863,9 +4863,6 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			thermodynamicStates[thermoState_C].calcZMatrixBATStats();
 			thermodynamicStates[thermoState_H].calcZMatrixBATStats();
 
-			//thermodynamicStates[thermoState_C].PrintZMatrixBAT();
-			//thermodynamicStates[thermoState_H].PrintZMatrixBAT();
-
 		}
 
 		// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
@@ -6025,7 +6022,6 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 			replicas[replicaIx].incrementNofSamples();
 			thermodynamicStates[thisThermoStateIx].incrementNofSamples();
 
-
 			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 			// Get front world and it's state
@@ -6037,7 +6033,11 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 			// Calculate thermodynamic states BAT stats
 			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
-			//thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
+
+			if((thermodynamicStates[thisThermoStateIx].getNofSamples() % 10) == 0)
+			{
+				thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT(false);
+			}
 
 			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

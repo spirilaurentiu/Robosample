@@ -4512,6 +4512,7 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 					scalingFactor = 1.0 / scalingFactor;
 				}
 
+				// Print something
 				if(this->nofSamples % 500){
 					scout("HMCSampler::scaleSubZMatrixBATDeviations scalingFactor mbx ")
 						<< int(mbx) <<" qCnt " << qCnt <<" "
@@ -4520,7 +4521,6 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 						<< scalingFactor <<" "
 						<< eolf;
 				}
- 			
 
 				// Modify state Q entry
 				SimTK::Real& qEntry = someState.updQ()[qCnt];
@@ -4560,11 +4560,15 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 			}
 			
+			// Increment Q entry counter inside mobod
 			mobodQCnt++;
+
 		} // every mobod q
 
+		// Increment BAT entry
 		bati++;
-	}
+
+	} // every BAT entry
 
 	system->realize(someState, SimTK::Stage::Dynamics);
 
