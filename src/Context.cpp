@@ -5922,7 +5922,7 @@ void Context::RunREX()
 	std::stringstream rexOutput;
 	rexOutput.str("");
 
-	rexOutput << "REX, " << "replicaIx"
+	rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx"
 	<< ", " << "frontWIx" << ", " << "backWIx";
 
 	worlds[0].getSampler(0)->getMsg_Header(rexOutput);
@@ -5940,9 +5940,6 @@ void Context::RunREX()
 	// Useful vars
 	int nofMixes = requiredNofRounds;
 	int currFrontWIx = -1;
-
-
-
 
 	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
 	for(size_t mixi = 0; mixi < nofMixes; mixi++){
@@ -6081,7 +6078,8 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 		== 0){
 
 			// Print replica indicator
-			std::cout << "REX, " << replicaIx;
+			std::cout << "REX, " << replicaIx
+				<< ", " << thisThermoStateIx;
 
 			// Print transfer information
 			std::cout << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
@@ -6219,7 +6217,8 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 		!= 0){
 
 			// Print replica indicator
-			std::cout << "REX, " << replicaIx;
+			std::cout << "REX, " << replicaIx
+				<< ", " << thisThermoStateIx;
 
 			// Print transfer information
 			std::cout << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
