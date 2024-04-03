@@ -3429,6 +3429,11 @@ void World::setTemperature(SimTK::Real argTemperature)
 	// Set the temperature for this World
 	this->temperature = argTemperature;
 
+	// Set the boost temperature for the samplers
+	for (auto& sampler: samplers) {
+		sampler->setTemperature(argTemperature);
+	}
+
 	// Set the temperature for the Fixman torque also
 	if(useFixmanTorque){
 		FixmanTorqueImpl->setTemperature(this->temperature);
@@ -3441,7 +3446,7 @@ void World::setTemperature(SimTK::Real argTemperature)
 Fixman torque temperature. **/
 void World::setBoostTemperature(SimTK::Real argTemperature)
 {
-	// Set the temperature for the samplers
+	// Set the boost temperature for the samplers
 	for (auto& sampler: samplers) {
 		sampler->setBoostTemperature(argTemperature);
 	}
@@ -3745,12 +3750,16 @@ bool World::generateProposal(void)
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
 
+	// Prepare output
+	std::stringstream worldOutStream;
+	worldOutStream.str(""); // empty
+
 	// Print message to identify this World
-	std::cout << "World " << ownWorldIndex 
+	worldOutStream << "World " << ownWorldIndex 
 		<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
 	// GENERATE a proposal
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState);	
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream);	
 	validated = updSampler(0)->propose(currentAdvancedState) && validated;
 
 	return validated;
@@ -3761,43 +3770,53 @@ bool World::generateProposal(void)
  * */
 bool World::generateSamples(int howMany)
 {
-	// Update Robosample bAtomList
-	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromCompound(currentAdvancedState);
 
-	// Print message to identify this World
-	std::cout << "World " << ownWorldIndex 
-		<< ", NU " << currentAdvancedState.getNU() << ":\n";
+	// // Prepare output
+	// std::stringstream worldOutStream;
+	// worldOutStream.str(""); // empty
 
-	// GENERATE the requested number of samples
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState);
+	// // Update Robosample bAtomList
+	// SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	// updateAtomListsFromCompound(currentAdvancedState);
 
-	for(int k = 0; k < howMany; k++) {
-		validated = updSampler(0)->sample_iteration(currentAdvancedState) && validated;
-	}
+	// // Print message to identify this World
+	// std::cout << "World " << ownWorldIndex 
+	// 	<< ", NU " << currentAdvancedState.getNU() << ":\n";
 
-	// Return the number of accepted samples
-	return validated;
+	// // GENERATE the requested number of samples
+	// bool validated = updSampler(0)->reinitialize(currentAdvancedState);
+
+	// for(int k = 0; k < howMany; k++) {
+	// 	validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream) && validated;
+	// }
+
+	// // Return the number of accepted samples
+	// return validated;
 }
 
 /**
  *  Generate a number of samples
  * */
-bool World::generateSamples_SP_NEW(int howMany)
+bool World::generateSamples_SP_NEW(int howMany,
+	std::stringstream& worldOutStream)
 {
 	// Update Robosample bAtomList
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
 
 	// Print message to identify this World
-	std::cout << "World " << ownWorldIndex 
-		<< ", NU " << currentAdvancedState.getNU() << ":\n";
+	//worldOutStream //<< "W " 
+	//	<< ", " << ownWorldIndex 
+	//	<< ", " << currentAdvancedState.getNU();
 
 	// GENERATE the requested number of samples
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState);
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState,
+		worldOutStream);
 
 	for(int k = 0; k < howMany; k++) {
-		validated = updSampler(0)->sample_iteration(currentAdvancedState) && validated;
+		validated = updSampler(0)->sample_iteration(
+			currentAdvancedState, worldOutStream) 
+			&& validated;
 	}
 
 	// Return the number of accepted samples

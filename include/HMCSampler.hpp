@@ -422,7 +422,17 @@ public:
 
 	/** Same as initialize **/
 	virtual bool initialize(SimTK::State& advanced) ;
-	virtual bool reinitialize(SimTK::State& advanced) ;
+	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream) ;
+
+	void PrintInitialParams(void);
+	void getMsg_Header(std::stringstream& ss);
+	void getMsg_InitialParams(std::stringstream& ss);
+	void getMsg_EnergyDetails(
+		std::stringstream& ss,
+		const SimTK::State& someState,
+		bool isTheSampleValid,
+		bool isTheSampleAccepted
+	);
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 	void OMM_setDuMMTemperature(double HMCBoostTemperature);
@@ -493,7 +503,8 @@ public:
 	*/
 	bool checkDistortionBasedOnE(SimTK::Real deltaPE);
 
-	virtual bool sample_iteration(SimTK::State& someState);
+	virtual bool sample_iteration(SimTK::State& someState,
+		std::stringstream& samplerOutStream);
 
 	/**
 	 * Print everything after proposal generation

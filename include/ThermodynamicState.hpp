@@ -98,7 +98,6 @@ class ThermodynamicState{
     // Setter function to update the zMatrixBAT_poi member
     void setZMatrixBATPointer(std::vector<std::vector<SimTK::Real>>& pointer) {
         zMatrixBAT_poi = &pointer;
-		scout("zMatrixBAT_poi pointing to ") << zMatrixBAT_poi << eolf;
     }
 
 	/**@}**/

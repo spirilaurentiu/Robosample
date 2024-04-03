@@ -143,10 +143,8 @@ public:
     void incrementNofSamples();
 
    std::vector<std::vector<SimTK::Real>>& getZMatrixBATPointer() {
-		scout("Address of zMatrixBAT ") << &zMatrixBAT << eolf;
         return (zMatrixBAT);
     }
-
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////

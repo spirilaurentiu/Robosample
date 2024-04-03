@@ -490,6 +490,7 @@ public:
 	void swapPotentialEnergies(int replica_i, int replica_j);
 
 	// Exchanges thermodynamic states between replicas
+	void getMsg_RexDetHeader(std::stringstream& rexDetHeader);
 	bool attemptREXSwap(int replica_i, int replica_j);
 
 	const int getSwapEvery(void);

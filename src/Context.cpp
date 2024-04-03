@@ -4041,12 +4041,18 @@ void Context::RunSimulatedTempering(int, SimTK::Real, SimTK::Real) {
 			pHMC(worlds[currentWorldIx].updSampler(0))->setOldPE(
 					pHMC(worlds[lastWorldIx].updSampler(0))->getSetPE() );
 
+			// Prepare output
+			std::stringstream worldOutStream;
+			worldOutStream.str(""); // empty
+
 			// Reinitialize current sampler
-			worlds[currentWorldIx].updSampler(0)->reinitialize(currentAdvancedState);
+			worlds[currentWorldIx].updSampler(0)->reinitialize(currentAdvancedState,
+				worldOutStream);
 
 			// Update
 			for(int k = 0; k < worlds[currentWorldIx].getSamplesPerRound(); k++){ 
-				worlds[currentWorldIx].updSampler(0)->sample_iteration(currentAdvancedState);
+				worlds[currentWorldIx].updSampler(0)->sample_iteration(
+					currentAdvancedState, worldOutStream);
 			} // END for samples
 
 		} // for i in worlds
@@ -4799,20 +4805,27 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			<< std::endl;
 	}
 	if(printWithoutText){
-		std::cout << "REXdetails " << thermoState_C << " " << thermoState_H << " " 
-			<< replica_X << " " << replica_Y << " " 
-			<< thermodynamicStates[thermoState_C].getBeta() << " "
-			<< thermodynamicStates[thermoState_H].getBeta() << " "
-			<< eC_X0 << " " << eH_Y0 << " " << eH_X0 << " " << eC_Y0 << " "
-			<< lC_Xtau << " " << lH_Ytau << " " << lH_Xtau << " " << lC_Ytau << " "
-			<< replicas[replica_X].get_WORK_Jacobian() << " " 
-			<< replicas[replica_Y].get_WORK_Jacobian() << " "
-			<< replicas[replica_X].getTransferedEnergy() << " "
-			<< replicas[replica_Y].getTransferedEnergy() << " "
-			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1 << " "
-			<< " " << qC_s_X << " " << qH_s_Y << " " << qH_s_X_1 << " " << qC_s_Y_1 << " "
-			<< ETerm_equil << " " << WTerm << " " << correctionTerm << " "
-		<< std::endl;
+
+		std:;stringstream rexDetStream;
+		rexDetStream.str("");
+
+		rexDetStream 
+			<< "REXdetails " << thermoState_C << ", " << thermoState_H << ", "
+			<< replica_X << ", " << replica_Y << ", "
+			<< thermodynamicStates[thermoState_C].getBeta() << ", "
+			<< thermodynamicStates[thermoState_H].getBeta() << ", "
+			<< eC_X0 << ", " << eH_Y0 << ", " << eH_X0 << ", " << eC_Y0 << ", "
+			<< lC_Xtau << ", " << lH_Ytau << ", " << lH_Xtau << ", " << lC_Ytau << ", "
+			<< replicas[replica_X].get_WORK_Jacobian() << ", "
+			<< replicas[replica_Y].get_WORK_Jacobian() << ", "
+			<< replicas[replica_X].getTransferedEnergy() << ", "
+			<< replicas[replica_Y].getTransferedEnergy() << ", "
+			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
+			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 << ", "                                                                                                                                                 << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
+		;
+
+		std::cout << rexDetStream.str();		
+
 	}
 
 	// ----------------------------------------------------------------
@@ -4879,7 +4892,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		swapThermodynamicStates(replica_X, replica_Y);
 		swapPotentialEnergies(replica_X, replica_Y);
 
-		std::cout << "swapped\n" << endl;
+		std::cout << "1\n" << endl;
 
 		returnValue = true;
 
@@ -4893,7 +4906,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		// Don't swap thermodynamics states nor energies
 
-		std::cout << "left\n" << endl;
+		std::cout << "0\n" << endl;
 
 		returnValue = false;
 	}
@@ -4902,6 +4915,24 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 }
 
+/*!
+ * <!--	Get printing REX swap details -->
+*/
+void Context::getMsg_RexDetHeader(
+	std::stringstream& rexDetHeader)
+{
+	rexDetHeader 
+		<< "REXdetails " << "thermoState_C" << ", " << "thermoState_H" << ", "
+		<< "replica_X" << ", " << "replica_Y" << ", "
+		<< "betaC" << ", " << "beatH" << ", "
+		<< "eC_X0" << ", " << "eH_Y0" << ", " << "eH_X0" << ", " << "eC_Y0" << ", "
+		<< "lC_Xtau" << ", " << "lH_Ytau" << ", " << "lH_Xtau" << ", " << "lC_Ytau" << ", "
+		<< "wJ_X" << ", " << "wJ_Y" << ", " << "wE_X" << ", " << "wE_Y" << ", "
+		<< ", " << "s_X" << ", " << "s_Y" << ", " << "s_X_1" << ", " << "s_Y_1" << ", "
+		<< ", " << "qC_s_X" << ", " << "qH_s_Y" << ", " << "qH_s_X_1" << ", " << "qC_s_Y_1" << ", "
+		<< "ETerm_equil" << ", " << "WTerm" << ", " << "correctionTerm" << ", " << "swapped"
+	;
+}
 
 // Mix neighboring replicas // TODO: delete
 // Thermodyanmic states are fixed; replicas are variables
@@ -5445,7 +5476,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 		worlds[replicaWorldIxs[i]].setBoostTemperature( T );
 	}
 
-	std::cout << "Temperature set to " << T << std::endl << std::flush;
+	//std::cout << "Temperature set to " << T << std::endl << std::flush;
 
 	// -------------
 	// Set sampling parameters
@@ -5485,21 +5516,21 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	}
 
 	// Print info
-	std::cout << "Timesteps set to ";
-	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		std::cout
-			<< worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep()
-			<< " " ;
-	}
-	std::cout << std::endl;
+	// std::cout << "Timesteps set to ";
+	// for(std::size_t i = 0; i < replicaNofWorlds; i++){
+	// 	std::cout
+	// 		<< worlds[replicaWorldIxs[i]].getSampler(0)->getTimestep()
+	// 		<< " " ;
+	// }
+	// std::cout << std::endl;
 
-	std::cout << "Mdsteps set to ";
-	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		std::cout 
-			<< worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample()
-			<< " " ;
-	}
-	std::cout << std::endl;
+	// std::cout << "Mdsteps set to ";
+	// for(std::size_t i = 0; i < replicaNofWorlds; i++){
+	// 	std::cout 
+	// 		<< worlds[replicaWorldIxs[i]].getSampler(0)->getMDStepsPerSample()
+	// 		<< " " ;
+	// }
+	// std::cout << std::endl;
 	// =============
 
 }
@@ -5591,6 +5622,11 @@ void Context::updWorldsDistortOptions(int thisReplica)
 // Run a particular world
 bool Context::RunWorld(int whichWorld)
 {
+
+	// Prepare output
+	std::stringstream worldOutStream;
+	worldOutStream.str(""); // empty
+
 	// == SAMPLE == from the current world
 	bool validated = false;
 	const int numSamples = worlds[whichWorld].getSamplesPerRound();
@@ -5601,7 +5637,8 @@ bool Context::RunWorld(int whichWorld)
 
 		// Generate samples
 		if(singlePrmtop == true){
-			validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples);
+			validated = worlds[whichWorld].generateSamples_SP_NEW(
+				numSamples, worldOutStream);
 		}else{
 			validated = worlds[whichWorld].generateSamples(numSamples);
 		}
@@ -5616,12 +5653,16 @@ bool Context::RunWorld(int whichWorld)
 
 		// Generate samples
 		if(singlePrmtop == true){
-			validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples);
+			validated = worlds[whichWorld].generateSamples_SP_NEW(
+				numSamples, worldOutStream);
 		}else{
 			validated = worlds[whichWorld].generateSamples(numSamples);
 		}
 
 	}
+
+	// Print the world output stream
+	std::cout << worldOutStream.str() << std::endl;
 
 	return validated;
 }
@@ -5678,15 +5719,17 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 	if(worldIxs.size() > 1) {
 
-		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+		//std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
 		
 		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
 
-		if(validated){
-			std::cout << std::endl;
-		}else{
-			std::cout << " invalid sample." << std::endl;
-		}
+		#ifdef PRINTALOT 
+			if(validated){
+				std::cout << std::endl;
+			}else{
+				std::cout << " invalid sample." << std::endl;
+			}
+		#endif
 
 	}
 
@@ -5873,17 +5916,38 @@ void Context::RunREX()
 		// Set intial parameters
 		initializeReplica(replicaIx);
 
-	} // ===================================================================
+	} // ======================================================================
 
+	// Print a header =========================================================
+	std::stringstream rexOutput;
+	rexOutput.str("");
+
+	rexOutput << "REX, " << "replicaIx"
+	<< ", " << "frontWIx" << ", " << "backWIx";
+
+	worlds[0].getSampler(0)->getMsg_Header(rexOutput);
+	rexOutput << std::endl;
+
+	getMsg_RexDetHeader(rexOutput);
+
+	std::cout << rexOutput.str() << std::endl;
+	// ------------------------------------------------------------------------
+
+
+	// Internal debug studies
 	bool givenTsMode = false;
 
+	// Useful vars
 	int nofMixes = requiredNofRounds;
 	int currFrontWIx = -1;
+
+
+
 
 	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
 	for(size_t mixi = 0; mixi < nofMixes; mixi++){
 
-		std::cout << " REX batch " << mixi << std::endl;
+		//std::cout << " REX batch " << mixi << std::endl;
 
 		// Reset replica exchange pairs vector
 		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
@@ -5897,7 +5961,8 @@ void Context::RunREX()
 
 		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
-			std::cout << "REX replica " << replicaIx << std::endl;
+			
+			//std::cout << "REX, " << replicaIx;
 
 			// ========================== LOAD ========================
 
@@ -6015,6 +6080,13 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
 
+			// Print replica indicator
+			std::cout << "REX, " << replicaIx;
+
+			// Print transfer information
+			std::cout << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
+			// ----
+
 			// Run front world
 			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
 
@@ -6034,7 +6106,7 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 			// Calculate thermodynamic states BAT stats
 			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
 
-			if((thermodynamicStates[thisThermoStateIx].getNofSamples() % 10) == 0)
+			if((thermodynamicStates[thisThermoStateIx].getNofSamples() % 100) == 0)
 			{
 				thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT(false);
 			}
@@ -6145,6 +6217,13 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
+
+			// Print replica indicator
+			std::cout << "REX, " << replicaIx;
+
+			// Print transfer information
+			std::cout << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
+			// ----
 
 			// Transfer BAT statistics to sampler
 			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
@@ -6260,10 +6339,11 @@ void Context::PrintNofAcceptedSwapsMatrix(){
 
 	size_t M = nofAcceptedSwapsMatrix.size();
 
-	std::cout << "Number of accepted swaps matrix:\n";
+	//std::cout << "Number of accepted swaps matrix:\n";
 	for(size_t i = 0; i < M; i++){
+		std::cout << "RSM" ;
 		for(size_t j = 0; j < M; j++){
-			std::cout << nofAcceptedSwapsMatrix[i][j] << " ";
+			std::cout << ", " << nofAcceptedSwapsMatrix[i][j] ;
 		}
 		std::cout << "\n";
 	}

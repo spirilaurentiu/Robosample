@@ -207,17 +207,12 @@ void ThermodynamicState::PrintZMatrixBAT(bool printBATStats) const {
 			}
 		}
 
-		// BAT
+		// BAT values
 		for (const SimTK::Real value : row) {
 			std::cout << std::setprecision(12) << value << " ";
 		}
 
 		if(nofSamples > 0){
-
-			// BAT values
-			for(size_t dimi = 0; dimi < 3; dimi++){
-				std::cout << (*zMatrixBAT_poi)[bati][dimi] <<" ";
-			}
 
 			if(printBATStats){
 				

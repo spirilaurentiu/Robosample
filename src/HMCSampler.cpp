@@ -215,7 +215,7 @@ bool HMCSampler::initialize(SimTK::State& someState)
  * acception-rejection step. Also realize velocities and initialize
  * the timestepper.
  */
-bool HMCSampler::reinitialize(SimTK::State& someState)
+bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& samplerOutStream)
 {
 	// Set a validation flag
 	bool validated = true;
@@ -371,10 +371,76 @@ bool HMCSampler::reinitialize(SimTK::State& someState)
 	if(this->integratorName == IntegratorName::OMMVV){
 		OMM_setDuMMTemperature(boostT);
 	}
-	
+
+	getMsg_InitialParams(samplerOutStream);
 
 	return validated;
 
+}
+
+/*!
+ * <!--	Print initial parameters -->
+*/
+void HMCSampler::PrintInitialParams(void)
+{
+
+	// Print a header at the first sample for initial params
+	if(nofSamples == 0){
+		scout("T, boostT, ts, mdsteps, DISTORT_OPTION");
+	}
+
+	// Print a header at the first sample for detailed energy terms
+	if(nofSamples == 0){
+		scout(", pe_o, pe_n, pe_nB");
+		scout(", ke_prop, ke_n");
+		scout(", fix_o, fix_n");
+		scout(", logSineSqrGamma2_o, logSineSqrGamma2_n ");
+		scout(", etot_n, etot_proposed");
+		scout(", JDetLog ");
+		ceol;
+	}
+
+
+	std::cout
+		<< ", " << getTemperature() << ", " << getBoostTemperature()
+		<< ", " << getTimestep()
+		<< ", " << getMDStepsPerSample()
+		<<", " << getDistortOpt()
+		;
+
+}
+
+/*!
+ * <!--	Get printing header -->
+*/
+void HMCSampler::getMsg_Header(std::stringstream& ss)
+{
+
+	// Print a header at the first sample for initial params
+	ss << (", T, boostT, ts, mdsteps, DISTORT_OPTION");
+
+	// Print a header at the first sample for detailed energy terms
+	ss << (", NU");
+	ss << (", pe_o, pe_n, pe_nB");
+	ss << (", ke_prop, ke_n");
+	ss << (", fix_o, fix_n");
+	ss << (", logSineSqrGamma2_o, logSineSqrGamma2_n ");
+	ss << (", etot_n, etot_proposed");
+	ss << (", JDetLog ");
+
+}
+
+/*!
+ * <!--	Get printing initial parameters -->
+*/
+void HMCSampler::getMsg_InitialParams(std::stringstream& ss)
+{
+		ss
+		<< ", " << getTemperature() << ", " << getBoostTemperature()
+		<< ", " << getTimestep()
+		<< ", " << getMDStepsPerSample()
+		<<", " << getDistortOpt()
+		;
 }
 
 SimTK::Real HMCSampler::getMDStepsPerSampleStd() const
@@ -2589,7 +2655,7 @@ void HMCSampler::setTimestep(SimTK::Real argTimestep, bool adaptive)
 	timestep = argTimestep;
 	prevTimestep = argTimestep;
 
-	std::cout << "shouldAdaptTimestep is " << shouldAdaptTimestep << std::endl;
+	//std::cout << "shouldAdaptTimestep is " << shouldAdaptTimestep << std::endl;
 }
 
 /** Get/Set boost temperature **/
@@ -3766,6 +3832,13 @@ bool HMCSampler::checkDistortionBasedOnE(SimTK::Real deltaPE)
 
 }
 
+
+/** Print detailed energy information **/
+void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
+{
+
+}
+
 /**
  * Print everything after proposal generation
 */
@@ -3774,20 +3847,40 @@ void HMCSampler::Print(const SimTK::State& someState,
 {
 
 	// Set precision
-	std::cout << std::setprecision(10) << std::fixed;
+	std::cout << std::setprecision(5) << std::fixed;
 
-	// Do we distort? // TODO remove
-	std::cout << "DISTORT_OPTION " << this->DistortOpt << std::endl;
+	// std::cout 
+	// 	<< "pe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB "
+	// 	<< /*" turned off for time being"*/ getPEFromEvaluator(someState)
+	// 	<< "\n\tke_prop " << ke_o << ", ke_n " << ke_n
+	// 	<< "\n\tfix_o " << fix_o << ", fix_n " << fix_n
+	// 	<< "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o
+	// 	<< ", logSineSqrGamma2_n " << logSineSqrGamma2_n
+	// 	//<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
+	// 	<< "\n\tts " << timestep  //<< ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
+	// 	<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_o
+	// 	<< ", JDetLog " << bendStretchJacobianDetLog;
+
+	std::cout
+		<< ", " << nofSamples
+		<< ", " << pe_o << ", " << pe_n << ", " << getPEFromEvaluator(someState)
+		<< ", " << ke_o << ", " << ke_n
+		<< ", " << fix_o << ", " << fix_n
+		<< ", " << logSineSqrGamma2_o << ", " << logSineSqrGamma2_n
+		<< ", " << etot_n << ", " << etot_o
+		<< ", " << bendStretchJacobianDetLog;
+		;
 
 	// Print all the energy terms first
-	PrintDetailedEnergyInfo(someState);
+	//PrintDetailedEnergyInfo(someState);
 
 	//Print acc
 	if(isTheSampleAccepted){
-		std::cout << "\tacc";
+		std::cout << ", 1";
 	}else{
-		std::cout << "\trej";
+		std::cout << ", 0";
 	}
+	
 	
 	// Print simulation type
 	if(this->alwaysAccept == true){
@@ -3796,19 +3889,75 @@ void HMCSampler::Print(const SimTK::State& someState,
 		std::cout << "\t (MH)";
 	}
 
-	// Print validity
-	if(isTheSampleValid){
-		std::cout << " \n";
+	#ifdef PRINTALOT
+
+		// Print validity
+		if(isTheSampleValid){
+			std::cout << " ";
+		}else{
+			std::cout << " invalid";
+		}
+
+	#endif
+
+
+}
+
+
+/*!
+ * <!--	Get printing energy details (before acc-rej step) -->
+*/
+void HMCSampler::getMsg_EnergyDetails(
+	std::stringstream& ss,
+	const SimTK::State& someState,
+	bool isTheSampleValid,
+	bool isTheSampleAccepted)
+{
+
+	ss  << std::setprecision(5) << std::fixed
+
+		<< ", " << this->world->matter->getNU(someState)
+		<< ", " << nofSamples
+		<< ", " << pe_o << ", " << pe_n << ", " << getPEFromEvaluator(someState)
+		<< ", " << ke_o << ", " << ke_n
+		<< ", " << fix_o << ", " << fix_n
+		<< ", " << logSineSqrGamma2_o << ", " << logSineSqrGamma2_n
+		<< ", " << etot_n << ", " << etot_o
+		<< ", " << bendStretchJacobianDetLog;
+
+	//Print acc
+	if(isTheSampleAccepted){
+		ss << ", 1";
 	}else{
-		std::cout << " invalid\n";
+		ss << ", 0";
 	}
 	
+	// Print simulation type
+	if(this->alwaysAccept == true){
+		ss << ", (MD)";
+	}else{
+		ss << ", (MH)";
+	}
+
+	#ifdef PRINTALOT
+
+		// Print validity
+		if(isTheSampleValid){
+			ss << " ";
+		}else{
+			ss << " invalid";
+		}
+
+	#endif
+
 }
+
 
 /**
  * The main function that generates a sample
 */
-bool HMCSampler::sample_iteration(SimTK::State& someState)
+bool HMCSampler::sample_iteration(SimTK::State& someState,
+	std::stringstream& samplerOutStream)
 {
 
 	// Flag if anything goes wrong during simulation
@@ -3834,7 +3983,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 				storeAdaptiveData(someState); // PrintAdaptiveData();
 				
 				// Print
-				Print(someState, validated, getAcc());
+				//Print(someState, validated, getAcc());
+				getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
 
 	// --- valid --- //
 	}else{
@@ -3846,7 +3996,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 					setAcc(true);
 
 					// Print
-					Print(someState, validated, getAcc());
+					//Print(someState, validated, getAcc());
+					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
 
 					// UPDATE
 					update(someState);
@@ -3861,7 +4012,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState)
 					setAcc(false);
 
 					// Print
-					Print(someState, validated, getAcc());
+					//Print(someState, validated, getAcc());
+					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
 
 					// RESTORE
 					restore(someState);
@@ -4112,24 +4264,6 @@ int HMCSampler::getMDStepsPerSample() const {
 void HMCSampler::setMDStepsPerSample(int mdStepsPerSample) {
 	MDStepsPerSample = mdStepsPerSample;
 	prevMDStepsPerSample = mdStepsPerSample;
-}
-
-/** Print detailed energy information **/
-void HMCSampler::PrintDetailedEnergyInfo(const SimTK::State& someState) const
-{
-	std::cout << std::setprecision(5) << std::fixed;
-	std::cout
-		<< "\tpe_o " << pe_o << ", pe_n " << pe_n << ", pe_nB "
-		<< /*" turned off for time being"*/ getPEFromEvaluator(someState)
-		<< "\n\tke_prop " << ke_o << ", ke_n " << ke_n
-		<< "\n\tfix_o " << fix_o << ", fix_n " << fix_n
-		<< "\n\tlogSineSqrGamma2_o " << logSineSqrGamma2_o
-		<< ", logSineSqrGamma2_n " << logSineSqrGamma2_n
-		//<< " detmbat_n " << detmbat_n //<< " detmbat_o " << detmbat_o << " "
-		<< "\n\tts " << timestep  //<< ", exp(bdE) " << exp(-(etot_n - etot_proposed) / RT)
-		<< "\n\t, etot_n " << etot_n  << ", etot_proposed " << etot_o
-		<< ", JDetLog " << bendStretchJacobianDetLog
-		<< std::endl;
 }
 
 const bool& Sampler::getAcc(void) const
@@ -4440,7 +4574,6 @@ HMCSampler::PrintSubZMatrixBATAndRelated(
 		// }
 
 	} // every variableBAT
-
 
 }
 
