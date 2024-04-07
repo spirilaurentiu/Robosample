@@ -401,8 +401,8 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 		// Add this worlds BAT coordinates to it's samplers
 		addSubZMatrixBATsToWorld(worldIx, 0);
-		scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
-		world.updSampler(0)->PrintSubZMatrixBAT();
+		//scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
+		//world.updSampler(0)->PrintSubZMatrixBAT();
 	}
 
 	// TODO If there is any problem here, it might be because this block was above the previous one
@@ -1932,9 +1932,10 @@ void Context::buildAcyclicGraph_SP_NEW(
 		}
 
 		// print compound atom indices for child and parent
-		scout("child parent compound atom indices ")
-			<< child.getNumber() << " " << child.getCompoundAtomIndex() << " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
-			<< eol;
+		//scout("child parent compound atom indices ")
+		//	<< child.getNumber() << " " << child.getCompoundAtomIndex()
+		//	<< " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
+		//	<< eol;
 
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
@@ -6016,7 +6017,7 @@ void Context::RunREX()
 					// Store Fixman if required
 					storeReplicaFixmanFromBackWorld(replicaIx);
 
-					if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
+					//if(currFrontWIx != 0){std::cout << "=== RUN FIRST WORLD NOT 0 === " << currFrontWIx << std::endl;}
 
 		} // end replicas simulations
 

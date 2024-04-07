@@ -421,6 +421,7 @@ void HMCSampler::getMsg_Header(std::stringstream& ss)
 
 	// Print a header at the first sample for detailed energy terms
 	ss << (", NU");
+	ss << (", nofSamples");
 	ss << (", pe_o, pe_n, pe_nB");
 	ss << (", ke_prop, ke_n");
 	ss << (", fix_o, fix_n");
@@ -4622,6 +4623,11 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 		SimTK::MobilizedBodyIndex mbx = pair.first;
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
+						// Print something
+						if((this->nofSamples % 500) == 0){
+							ceol;
+						}
+
 		// Scale Q
 		int mobodQCnt = 0;
 		for(int qCnt = mobod.getFirstQIndex(someState);
@@ -4646,8 +4652,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				}
 
 				// Print something
-				if(this->nofSamples % 500){
-					scout("HMCSampler::scaleSubZMatrixBATDeviations scalingFactor mbx ")
+				if((this->nofSamples % 500) == 0){
+					scout("HMCSampler::scale sf mbx ")
 						<< int(mbx) <<" qCnt " << qCnt <<" "
 						<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
 						<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
