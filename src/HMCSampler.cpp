@@ -28,12 +28,12 @@ Implementation of HMCSampler class. **/
 
 #define CHECK_IF_NAN(n) \
 	if(std::isnan(n)) { \
-		std::cout << "\t[WARNING] invalid sample: " << #n << " is nan!\n"; \
+		std::cerr << "\t[WARNING] invalid sample: " << #n << " is nan!\n"; \
 		return false; \
 	}
 
 #define NAN_WARNING(n) \
-	std::cout << "\t[WARNING]: " << #n << " is nan!\n"; \
+	std::cerr << "\t[WARNING]: " << #n << " is nan!\n"; \
 	return false;
 
 bool NAN_TO_INF(SimTK::Real& someNumber)

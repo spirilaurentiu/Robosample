@@ -3681,7 +3681,7 @@ void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
 		forceField->setDuMMTemperature(boostTemp);
 		forceField->setOpenMMstepsize(timestep);
 	} else {
-		forceField->setUseOpenMMCalcOnlyNonBonded(true);
+		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 	}
 
 	realizeTopology();
