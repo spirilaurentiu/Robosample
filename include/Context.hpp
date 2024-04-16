@@ -963,6 +963,10 @@ private:
 
 	/**@}**/
 
+	// Gmolmodel to Molmodel (and inverse) bond mappings
+	std::map< SimTK::Compound::BondIndex, int > bondIx2GmolBond;
+	std::map< int,  SimTK::Compound::BondIndex> GmolBond2bondIx;
+
 	// Pairs of replicas to be exchanged
 	std::vector<int> exchangePairs;
 

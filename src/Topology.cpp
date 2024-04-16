@@ -1431,7 +1431,7 @@ void Topology::loadTriples_SP_NEW()
 // Numerically unstable around -pi, 0 and pi due to the log(0)
 SimTK::Real Topology::calcLogSineSqrGamma2(const SimTK::State &quatState)
 {
-	bSpecificAtom *root = &(subAtomList[bSpecificAtomRootIndex]);
+	bSpecificAtom *root = &(subAtomList[bSpecificAtomRootIndex]); // possibly - subAtomList.get_offset()
 	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
 	SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
 	SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();

@@ -1932,10 +1932,10 @@ void Context::buildAcyclicGraph_SP_NEW(
 		}
 
 		// print compound atom indices for child and parent
-		//scout("child parent compound atom indices ")
-		//	<< child.getNumber() << " " << child.getCompoundAtomIndex()
-		//	<< " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
-		//	<< eol;
+		// scout("child parent compound atom indices ")
+		// 	<< child.getNumber() << " " << child.getCompoundAtomIndex()
+		// 	<< " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
+		// 	<< eol;
 
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
@@ -2462,24 +2462,40 @@ void Context::generateTopologiesSubarrays(void){
 	reset_BONDS_to_bonds( internCoords.getBonds() );
 
 	// Record bond into topologies map
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-
-		Topology& topology = topologies[molIx];
+	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+		//
+	//	Topology& topology = topologies[molIx];
 		
 		for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
 
 			bBond& bond = bonds[bCnt];
 
 			SimTK::Compound::BondIndex bondIx = bond.getBondIndex();
+
 			int bIx = bond.getIndex();
 
-			topology.bondIx2GmolBond.insert(
+			// topology.bondIx2GmolBond.insert(
+			// std::pair<SimTK::Compound::BondIndex, int>(bondIx, bIx));
+
+			// topology.GmolBond2bondIx.insert(
+			// std::pair<int, SimTK::Compound::BondIndex>(bIx, bondIx));
+
+			bondIx2GmolBond.insert(
 			std::pair<SimTK::Compound::BondIndex, int>(bondIx, bIx));
 
-			topology.GmolBond2bondIx.insert(
-			std::pair<int, SimTK::Compound::BondIndex>(bIx, bondIx));
+			GmolBond2bondIx.insert(
+			std::pair<int, SimTK::Compound::BondIndex>(bIx, bondIx));	
 		}
-	}
+	//}
+
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		Topology& topology = topologies[molIx];
+
+		topology.setBondIx2GmolBond(bondIx2GmolBond);
+		topology.setGmolBond2bondIx(GmolBond2bondIx);
+
+	}	
 
 	// Generate array_views for bonds and bonds in every topology
 	generateSubBondLists();
@@ -4811,7 +4827,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		rexDetStream.str("");
 
 		rexDetStream 
-			<< "REXdetails " << thermoState_C << ", " << thermoState_H << ", "
+			<< "REXdetails " << ", " << thermoState_C << ", " << thermoState_H << ", "
 			<< replica_X << ", " << replica_Y << ", "
 			<< thermodynamicStates[thermoState_C].getBeta() << ", "
 			<< thermodynamicStates[thermoState_H].getBeta() << ", "
@@ -4923,7 +4939,7 @@ void Context::getMsg_RexDetHeader(
 	std::stringstream& rexDetHeader)
 {
 	rexDetHeader 
-		<< "REXdetails " << "thermoState_C" << ", " << "thermoState_H" << ", "
+		<< "REXdetails" << ", " << "thermoState_C" << ", " << "thermoState_H" << ", "
 		<< "replica_X" << ", " << "replica_Y" << ", "
 		<< "betaC" << ", " << "beatH" << ", "
 		<< "eC_X0" << ", " << "eH_Y0" << ", " << "eH_X0" << ", " << "eC_Y0" << ", "
