@@ -508,7 +508,27 @@ public:
 		std::vector<bBond>::iterator endArg);
 
 	void setBondList(void);
-	
+
+    // Getter for bondIx2GmolBond
+    std::map<SimTK::Compound::BondIndex, int>& getBondIx2GmolBond() {
+        return bondIx2GmolBond;
+    }
+
+    // Getter for GmolBond2bondIx
+    std::map<int, SimTK::Compound::BondIndex>& getGmolBond2bondIx() {
+        return GmolBond2bondIx;
+    }
+
+    // Setter for bondIx2GmolBond
+    void setBondIx2GmolBond(const std::map<SimTK::Compound::BondIndex, int>& bondIx2GmolBondArg) {
+        bondIx2GmolBond = bondIx2GmolBondArg;
+    }
+
+    // Setter for GmolBond2bondIx
+    void setGmolBond2bondIx(const std::map<int, SimTK::Compound::BondIndex>& GmolBond2bondIxArg) {
+        GmolBond2bondIx = GmolBond2bondIxArg;
+    }
+
 public:
 
 	void BAT();
@@ -579,6 +599,8 @@ private:
 	//std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
 
 	ELEMENT_CACHE elementCache;
+
+	std::size_t rootAtomIx = 0;
 };
 
 

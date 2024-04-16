@@ -3609,7 +3609,7 @@ bool World::addSampler(SamplerName samplerName,
 		}
 		forceField->setOpenMMstepsize(timestep);
 	} else {
-		forceField->setUseOpenMMCalcOnlyNonBonded(true);
+		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 	}
 
 	// This is needed because each call to forceField invalidates the topology cache

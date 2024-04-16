@@ -90,7 +90,9 @@
         "*.ipp": "cpp",
         "__functional_base": "cpp",
         "__memory": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "__hash_table": "cpp",
+        "__tree": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "enabled",
     "cmake.configureOnOpen": false,
