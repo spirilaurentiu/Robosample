@@ -2186,13 +2186,12 @@ void Context::constructTopologies_SP_NEW(
 		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
 		Topology topology(moleculeName);
 
-		topology.bSpecificAtomRootIndex = 0; //@@
-
 		// --------------------------------------------------------------------
 		//  (1) findARoot 
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		const int rootAmberIx = internCoords.getRoot( molIx ).first;
-		// topology.bSpecificAtomRootIndex = rootAmberIx;
+		topology.bSpecificAtomRootIndex = rootAmberIx;
+		topology.bSpecificAtomRootIndex = 0;
 		setRootAtom( topology, rootAmberIx );
 
 		// --------------------------------------------------------------------
