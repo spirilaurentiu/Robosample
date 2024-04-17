@@ -1,10 +1,6 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Python: Current File",
             "type": "debugpy",
@@ -19,9 +15,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/build_debug/robosample_d",
             "args": ["${workspaceFolder}/build_debug/inp.666"],
-            // "program": "${workspaceFolder}/build/TestGeometry",
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build/",
+            "cwd": "${workspaceFolder}/build_debug/",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

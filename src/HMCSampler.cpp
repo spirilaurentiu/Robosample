@@ -1097,7 +1097,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}catch(const std::exception&){
 
-			std::cout << "\t[WARNING] propose exception caught!\n";
 			proposeExceptionCaught = true;
 
 			assignConfFromSetTVector(someState);
@@ -1112,7 +1111,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}catch(const std::exception&){
 
-			std::cout << "\t[WARNING] propose exception caught!\n";
 			proposeExceptionCaught = true;
 
 			assignConfFromSetTVector(someState);
@@ -1127,7 +1125,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}catch(const std::exception&){
 
-			std::cout << "\t[WARNING] propose exception caught!\n";
 			proposeExceptionCaught = true;
 
 			assignConfFromSetTVector(someState);
@@ -1142,7 +1139,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}catch(const std::exception&){
 
-			std::cout << "\t[WARNING] propose exception caught!\n";
 			proposeExceptionCaught = true;
 
 			assignConfFromSetTVector(someState);
@@ -1168,7 +1164,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		}catch(const std::exception&){
 
 			// Send general message
-			std::cout << "\t[WARNING] propose exception caught!\n";
 			proposeExceptionCaught = true;
 
 			OMM_restoreConfiguration(someState);
@@ -1186,7 +1181,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}catch(const std::exception&){
 
-			std::cout << "\t[WARNING] propose exception caught!\n";
 			proposeExceptionCaught = true;
 
 			assignConfFromSetTVector(someState);
@@ -1201,7 +1195,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}catch(const std::exception&){
 
-			std::cout << "\t[WARNING] propose exception caught!\n";
 			proposeExceptionCaught = true;
 			
 			assignConfFromSetTVector(someState);
@@ -1240,7 +1233,6 @@ void HMCSampler::integrateVariableTrajectory(SimTK::State& someState){
 
 	}catch(const std::exception&){
 
-		std::cout << "\t[WARNING] propose exception caught!\n";
 		proposeExceptionCaught = true;
 
 		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -1374,7 +1366,7 @@ void HMCSampler::integrateTrajectoryOneStepAtATime(SimTK::State& someState
 		//}
 		//// Final function END ////
 	}catch(const std::exception&){
-		std::cout << "\t[WARNING] propose exception caught!\n";
+
 		proposeExceptionCaught = true;
 
 		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -3660,6 +3652,10 @@ bool HMCSampler::propose(SimTK::State& someState)
 	// Check if molecule was distorted during
 	// perturbations or integrations
 	if (proposalValidation) {
+		// if(! checkDistortionBasedOnE(pe_n - pe_o)){
+		// std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
+		// << deltaPE << "." << std::endl;
+		//}
 		proposalValidation = checkDistortionBasedOnE(pe_n - pe_o) && proposalValidation;
 	}
 
@@ -3824,8 +3820,6 @@ bool HMCSampler::checkDistortionBasedOnE(SimTK::Real deltaPE)
 	
 	// Apply
 	if((beta * deltaPE) > energyLimit){
-		std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
-			<< deltaPE << "." << std::endl;
 		return false;
 	}else{
 		return true;
@@ -3919,7 +3913,9 @@ void HMCSampler::getMsg_EnergyDetails(
 
 		<< ", " << this->world->matter->getNU(someState)
 		<< ", " << nofSamples
-		<< ", " << pe_o << ", " << pe_n << ", " << getPEFromEvaluator(someState)
+		<< ", " << pe_o << ", " << pe_n ;
+
+	ss	<< ", " << getPEFromEvaluator(someState)
 		<< ", " << ke_o << ", " << ke_n
 		<< ", " << fix_o << ", " << fix_n
 		<< ", " << logSineSqrGamma2_o << ", " << logSineSqrGamma2_n
@@ -3935,9 +3931,11 @@ void HMCSampler::getMsg_EnergyDetails(
 	
 	// Print simulation type
 	if(this->alwaysAccept == true){
-		ss << ", (MD)";
+		//ss << ", (MD)";
+		ss << ", 128";
 	}else{
-		ss << ", (MH)";
+		ss << ", 256";
+		//ss << ", (MH)";
 	}
 
 	#ifdef PRINTALOT
