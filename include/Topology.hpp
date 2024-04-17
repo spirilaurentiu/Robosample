@@ -599,6 +599,8 @@ private:
 	//std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
 
 	ELEMENT_CACHE elementCache;
+
+	std::size_t rootAtomIx = 0;
 };
 
 
