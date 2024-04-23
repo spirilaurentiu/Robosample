@@ -37,6 +37,8 @@ public:
 	*/
 	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed = 0);
 
+	void PrintAtomsDebugInfo(void);
+
 	/**	
 	* @brief Read all parameters from an input file
 	* @param filename input file name
@@ -267,6 +269,7 @@ public:
 	void randomizeWorldIndexes(void);
 	void transferCoordinates(int src, int dest);
 	void transferCoordinates_SP_NEW(int src, int dest);
+	SimTK::Real checkTransferCoordinates(int srcWIx, int destWIx);
 	
 	// Relationship BAT - mobod transforms
 	void PrintZMatrixMobods(int wIx, SimTK::State& someState);

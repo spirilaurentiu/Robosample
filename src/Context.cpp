@@ -72,6 +72,28 @@ bool Context::setOutput(const std::string& outDir) {
 	return true;
 }
 
+
+/*!
+ * <!--  -->
+*/
+void Context::PrintAtomsDebugInfo(void){
+
+	for(size_t prmIx = 0; prmIx < natoms; prmIx++){
+
+		bSpecificAtom& bAtom  = atoms[prmIx];
+
+		int topoIx = bAtom.getMoleculeIndex();
+
+		Topology& topology = topologies[topoIx];
+
+		SimTK::Compound::AtomIndex cAIx = bAtom.getCompoundAtomIndex();
+
+		SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(cAIx);
+			scout("prmIx cAIx dAIx  ") << prmIx << " " << cAIx << " " << dAIx << std::endl;
+	}
+}
+
+
 /*!
  * <!--  -->
 */
@@ -166,7 +188,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
 		
 		loadAmberSystem(prmtop, inpcrd);
-
+		//scout("Context PrintAtoms.\n"); PrintAtoms();
 
 		// Get Z-matrix indexes table	
 		calcZMatrixTable();
@@ -471,6 +493,9 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	// Add constraints
 	//context.addConstraints();
+
+	//scout("PrintAtomsDebugInfo") << eol;
+	//PrintAtomsDebugInfo();
 
     return true;
 }
@@ -2984,7 +3009,7 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 				const SimTK::DuMM::AtomIndex dAIx2 = topology2.getDuMMAtomIndex(cAIx2);
 
 				// LAB BEGIN
-				// SimTK::DuMM::IncludedAtomIndex inclAIx = a.getIncludedAtomIndex();
+				//SimTK::DuMM::IncludedAtomIndex inclAIx = a.getIncludedAtomIndex();
 				// dumm.getIncludedAtomIndexOfDummAtom(dAIx);
 				// SimTK::DuMM::AtomIndex	 dAIx = getAtomIndexOfNonbondAtom (SimTK::DuMM::NonbondAtomIndex nbDAIx);
 				// SimTK::DuMM::AtomIndex dAIx = dumm.getAtomIndexOfIncludedAtom(inclDAIx);
@@ -5737,6 +5762,11 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 		//std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
 		
 		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
+		
+		SimTK::Real vMaxComp = checkTransferCoordinates(backWorldIx, frontWorldIx);
+		if(vMaxComp > 0.001){
+			std::cout << "\nBad reconstruction " << vMaxComp << std::endl;
+		}
 
 		#ifdef PRINTALOT 
 			if(validated){
@@ -6480,7 +6510,7 @@ void Context::transferCoordinates(int src, int dest)
 }
 
 /*!
- * <!-- Transfer coordinates -->
+ * <!-- Coordinate transfer -->
 */
 void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 {
@@ -6512,6 +6542,77 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
 	
 }
+
+/*!
+ * <!-- Check coordinate transfer -->
+*/
+SimTK::Real Context::checkTransferCoordinates(int srcWIx, int destWIx)
+{
+
+	// Get advanced states of the integrators
+	SimTK::State& srcAdvancedState = worlds[srcWIx].integ->updAdvancedState();
+	SimTK::State& destAdvancedState = worlds[destWIx].integ->updAdvancedState();
+
+	// Get coordinates from source World
+	const std::vector<std::vector<std::pair<
+		bSpecificAtom *, SimTK::Vec3> > >&
+		srcWorldsAtomsLocations =
+	worlds[srcWIx].getAtomsLocationsInGround_SP_NEW(srcAdvancedState);
+
+	// Get coordinates from destintaion World
+	const std::vector<std::vector<std::pair<
+		bSpecificAtom *, SimTK::Vec3> > >&
+		destWorldsAtomsLocations =
+	worlds[destWIx].getAtomsLocationsInGround_SP_NEW(destAdvancedState);
+
+	if(srcWorldsAtomsLocations.size() != destWorldsAtomsLocations.size()){
+		std::cout << 
+		"Context::checkTransferCoordinates worldsAtomsLocations not the same size"
+		<< std::endl;
+		return 99999999;
+	}
+
+	for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
+		if(srcWorldsAtomsLocations[toIx].size() != destWorldsAtomsLocations[toIx].size()){
+			std::cout << 
+			"Context::checkTransferCoordinates worldsAtomsLocations " << toIx
+			<< " not the same size" << std::endl;
+			return 99999999;
+		}
+	}
+
+	// Get the max
+	SimTK::Real vMaxComp = 0;
+	SimTK::Real currDiff;
+	for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
+		for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){
+			// std::cout << "transfer " << toIx << " " << atIx
+			// 	<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
+			// 	<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
+			// 	<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
+			// 	<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
+			// 	<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
+			// 	<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])					
+			// << std::endl;
+
+			currDiff = std::abs((srcWorldsAtomsLocations[toIx][atIx]).second[0] - 
+					 			(destWorldsAtomsLocations[toIx][atIx]).second[0]);
+			if(currDiff > vMaxComp){vMaxComp = currDiff;}
+			currDiff = std::abs((srcWorldsAtomsLocations[toIx][atIx]).second[1] - 
+					 			(destWorldsAtomsLocations[toIx][atIx]).second[1]);
+			if(currDiff > vMaxComp){vMaxComp = currDiff;}
+			currDiff = std::abs((srcWorldsAtomsLocations[toIx][atIx]).second[2] - 
+					 			(destWorldsAtomsLocations[toIx][atIx]).second[2]);
+			if(currDiff > vMaxComp){vMaxComp = currDiff;}						
+		}
+	}
+
+	//scout("Transfer coordinates max comp diff ") << vMaxComp << std::endl;
+
+	return vMaxComp;
+
+}
+
 
 // SP_NEW_TRANSFER ============================================================
 
