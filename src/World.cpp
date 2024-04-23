@@ -387,6 +387,8 @@ void World::AddMolecule(
 // Add Biotypes
 void World::AddBiotypes(int which, readAmberInput *amberReader)
 {
+	assert(!"Deprecated function.");
+	
 /*
 	//topologies.back().bAddBiotypes(amberReader); // SAFE
 	topologies[which].bAddBiotypes(amberReader); // DANGER

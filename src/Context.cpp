@@ -396,6 +396,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// ********************************
 
 	// They all start with replica 0 coordinates
+	// TODO does not work in debug
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		World& world = worlds[worldIx];
 
@@ -1577,106 +1578,108 @@ void Context::AddMolecules(
 	int requestedNofMols,
 	SetupReader& setupReader
 ){
-	// const int molIx = 0;
-	// auto prmtop = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("PRMTOP")[molIx];
-	// auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
+	assert(!"Deprecated function. Use AddMoleculesFromSetup instead.");
 
-	// readAmberInput reader;
-	// reader.readAmberFiles(inpcrd, prmtop);
-	// loadAtoms(reader);
-	// loadBonds(reader);
-	// loadAngles(reader);
-	// loadTorsions(reader);
-	// setAtomCompoundTypes();
-	// addBiotypes();
+	// // const int molIx = 0;
+	// // auto prmtop = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("PRMTOP")[molIx];
+	// // auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
+
+	// // readAmberInput reader;
+	// // reader.readAmberFiles(inpcrd, prmtop);
+	// // loadAtoms(reader);
+	// // loadBonds(reader);
+	// // loadAngles(reader);
+	// // loadTorsions(reader);
+	// // setAtomCompoundTypes();
+	// // addBiotypes();
 
 
 
-	topologies.reserve(requestedNofMols);
-	moleculeCount = -1;
+	// topologies.reserve(requestedNofMols);
+	// moleculeCount = -1;
 
-	std::vector<std::string> argRoots = setupReader.get("ROOTS");
-	//std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
+	// std::vector<std::string> argRoots = setupReader.get("ROOTS");
+	// //std::vector<std::string> argRootMobilities = setupReader.get("ROOT_MOBILITY");
 
-	//std::vector<readAmberInput> amberReader(requestedNofMols);
-	amberReader.resize(requestedNofMols);
+	// //std::vector<readAmberInput> amberReader(requestedNofMols);
+	// amberReader.resize(requestedNofMols);
 
-	// Iterate through topology filenames vector
-	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
+	// // Iterate through topology filenames vector
+	// //for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+	// for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
 
-		// Add filenames to Context filenames vectors
-		// This has to be called before Worlds constructors so that
-		// reserve will be called for molecules and topologies
-		//int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
+	// 	// Add filenames to Context filenames vectors
+	// 	// This has to be called before Worlds constructors so that
+	// 	// reserve will be called for molecules and topologies
+	// 	//int nofMols = static_cast<int>(setupReader.get("MOLECULES").size());
 
-		std::string topFN =
-			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("PRMTOP")[molIx];
+	// 	std::string topFN =
+	// 		setupReader.get("MOLECULES")[molIx] + std::string("/")
+	// 		+ setupReader.get("PRMTOP")[molIx];
 
-		std::string crdFN =
-			setupReader.get("MOLECULES")[molIx] + std::string("/")
-			+ setupReader.get("INPCRD")[molIx] + ".rst7";
+	// 	std::string crdFN =
+	// 		setupReader.get("MOLECULES")[molIx] + std::string("/")
+	// 		+ setupReader.get("INPCRD")[molIx] + ".rst7";
 
-		// make amber reader create multiple molecule
-		// each molecule then generate one topology
-		// amber: vector<molecule info>
+	// 	// make amber reader create multiple molecule
+	// 	// each molecule then generate one topology
+	// 	// amber: vector<molecule info>
 
-		loadTopologyFile( topFN );
+	// 	loadTopologyFile( topFN );
 
-		loadCoordinatesFile( crdFN );
+	// 	loadCoordinatesFile( crdFN );
 
-		// Initialize an input reader
-		//readAmberInput amberReader;
-		amberReader[molIx].readAmberFiles(crdFNs[molIx], topFNs[molIx]);
+	// 	// Initialize an input reader
+	// 	//readAmberInput amberReader;
+	// 	amberReader[molIx].readAmberFiles(crdFNs[molIx], topFNs[molIx]);
 
-		// Keep track of the number of molecules
-		moleculeCount++; // Used for unique names of molecules // from world
-		std::string moleculeName = "MOL" + std::to_string(moleculeCount); 
-		roots.emplace_back(std::stoi(argRoots[molIx])); // from world
-		//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-		topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
+	// 	// Keep track of the number of molecules
+	// 	moleculeCount++; // Used for unique names of molecules // from world
+	// 	std::string moleculeName = "MOL" + std::to_string(moleculeCount); 
+	// 	roots.emplace_back(std::stoi(argRoots[molIx])); // from world
+	// 	//rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
+	// 	topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
 
-		// // topologies[molIx].setAtomList(atoms);
+	// 	// // topologies[molIx].setAtomList(atoms);
 
-		// Set Gmolmodel atoms properties from a reader: number, name, element
-		// initial name, force field type, charge, coordinates, mass,
-		// LJ parameters
-		// Also resizes atomFrameCache
-		topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]);
+	// 	// Set Gmolmodel atoms properties from a reader: number, name, element
+	// 	// initial name, force field type, charge, coordinates, mass,
+	// 	// LJ parameters
+	// 	// Also resizes atomFrameCache
+	// 	topologies[molIx].SetGmolAtomPropertiesFromReader(&amberReader[molIx]);
 
-		// Set bonds properties from reader: bond indeces, atom neighbours
-		topologies[molIx].SetGmolBondingPropertiesFromReader(&amberReader[molIx]);
+	// 	// Set bonds properties from reader: bond indeces, atom neighbours
+	// 	topologies[molIx].SetGmolBondingPropertiesFromReader(&amberReader[molIx]);
 
-		// Set atoms Molmodel types (Compound::SingleAtom derived) based on
-		// their valence // from world
-		topologies[molIx].SetGmolAtomsCompoundTypes();
+	// 	// Set atoms Molmodel types (Compound::SingleAtom derived) based on
+	// 	// their valence // from world
+	// 	topologies[molIx].SetGmolAtomsCompoundTypes();
 
-		// topologies[molIx].load(amberReader[molIx]);
+	// 	// topologies[molIx].load(amberReader[molIx]);
 
-		// Add Biotype indeces and Biotype names representing Biotypes
-		topologies[molIx].bAddBiotypes(//&amberReader[molIx]);
-		);
-		// topologies[molIx].BAT();
+	// 	// Add Biotype indeces and Biotype names representing Biotypes
+	// 	topologies[molIx].bAddBiotypes(//&amberReader[molIx]);
+	// 	);
+	// 	// topologies[molIx].BAT();
 
-		// Build Robosample graph and Compound graph.
-		// It also asigns atom indexes in Compound
-		// This is done only once and it needs
-		topologies[molIx].buildGraphAndMatchCoords(
-			//std::stoi(
-				roots.back()
-			//)
-			);
+	// 	// Build Robosample graph and Compound graph.
+	// 	// It also asigns atom indexes in Compound
+	// 	// This is done only once and it needs
+	// 	topologies[molIx].buildGraphAndMatchCoords(
+	// 		//std::stoi(
+	// 			roots.back()
+	// 		//)
+	// 		);
 
-		// Helper function for calc MBAT determinant
-		topologies[molIx].loadTriples();
+	// 	// Helper function for calc MBAT determinant
+	// 	topologies[molIx].loadTriples();
 
-		// Map of Compound atom indexes to Robosample atom indexes
-		topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
-		//std::cout << "Topology " << molIx << " info\n";
-		//topologies[molIx].printMaps();
+	// 	// Map of Compound atom indexes to Robosample atom indexes
+	// 	topologies[molIx].loadCompoundAtomIx2GmolAtomIx();
+	// 	//std::cout << "Topology " << molIx << " info\n";
+	// 	//topologies[molIx].printMaps();
 
-	}
+	// }
 
 
 }
@@ -2442,8 +2445,12 @@ void Context::generateTopologiesSubarrays(void){
 	// 	}
 	// );
 
+	std::cout << "generateTopologiesSubarrays memory 0.\n" << exec("free") << std::endl;
+
 	// Generate array_views for atoms in every topology
 	generateSubAtomLists();
+
+	std::cout << "generateTopologiesSubarrays memory 1.\n" << exec("free") << std::endl;
 
 	// scout("Loaded bonds") << eol;
 	// PrintBonds();
@@ -2456,47 +2463,44 @@ void Context::generateTopologiesSubarrays(void){
 		}
 	);
 
+	std::cout << "generateTopologiesSubarrays memory 2.\n" << exec("free") << std::endl;
+
 	// Keep a map of BONDS to bonds after sorting
 	reset_BONDS_to_bonds( internCoords.getBonds() );
 
-	// Record bond into topologies map
-	//for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-		//
-	//	Topology& topology = topologies[molIx];
+	std::cout << "generateTopologiesSubarrays memory 3.\n" << exec("free") << std::endl;
+
+	// Allocate space for bond mappings
+	bondMapping.reserve(bonds.size());
+
+	std::cout << "generateTopologiesSubarrays memory 4.\n" << exec("free") << std::endl;
+
+	// Create bond mappings
+	for (const auto& bond : bonds) {
 		
-		for(size_t bCnt = 0; bCnt < bonds.size(); bCnt++){
+		// Get Robosample bond index
+		const int rIx = bond.getIndex();
 
-			bBond& bond = bonds[bCnt];
+		// Get Molmodel bond index
+		const SimTK::Compound::BondIndex molmodelBIx = bond.getBondIndex();
 
-			SimTK::Compound::BondIndex bondIx = bond.getBondIndex();
+		// Map Robosample bond index to Molmodel bond index
+		bondMapping[rIx] = molmodelBIx;
+	}
 
-			int bIx = bond.getIndex();
+	std::cout << "generateTopologiesSubarrays memory 5.\n" << exec("free") << std::endl;
 
-			// topology.bondIx2GmolBond.insert(
-			// std::pair<SimTK::Compound::BondIndex, int>(bondIx, bIx));
+	// Pass bond mappings to all topologies (all molecules)
+	for (auto& topology : topologies) {
+		topology.setBondMappings(bondMapping);
+	}
 
-			// topology.GmolBond2bondIx.insert(
-			// std::pair<int, SimTK::Compound::BondIndex>(bIx, bondIx));
-
-			bondIx2GmolBond.insert(
-			std::pair<SimTK::Compound::BondIndex, int>(bondIx, bIx));
-
-			GmolBond2bondIx.insert(
-			std::pair<int, SimTK::Compound::BondIndex>(bIx, bondIx));	
-		}
-	//}
-
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-
-		Topology& topology = topologies[molIx];
-
-		topology.setBondIx2GmolBond(bondIx2GmolBond);
-		topology.setGmolBond2bondIx(GmolBond2bondIx);
-
-	}	
+	std::cout << "generateTopologiesSubarrays memory 6.\n" << exec("free") << std::endl;
 
 	// Generate array_views for bonds and bonds in every topology
 	generateSubBondLists();
+
+	std::cout << "generateTopologiesSubarrays memory 7.\n" << exec("free") << std::endl;
 
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
@@ -2515,6 +2519,8 @@ void Context::generateTopologiesSubarrays(void){
 
 	}
 
+	std::cout << "generateTopologiesSubarrays memory 8.\n" << exec("free") << std::endl;
+
 	// Set offset for all subBondLists
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
@@ -2527,6 +2533,8 @@ void Context::generateTopologiesSubarrays(void){
 		
 		topology.subBondList.set_offset( minNumberAtomIt->getNumber() );
 	}
+
+	std::cout << "generateTopologiesSubarrays memory 9.\n" << exec("free") << std::endl;
 
 }
 

@@ -956,26 +956,17 @@ private:
 
 	// WORK Q PERTURB BEND STRETCH --------------------------------------------
 
-
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
 	/**@}**/
 
-	// Gmolmodel to Molmodel (and inverse) bond mappings
-	std::map< SimTK::Compound::BondIndex, int > bondIx2GmolBond;
-	std::map< int,  SimTK::Compound::BondIndex> GmolBond2bondIx;
+	// Molmodel to Gmolmodel (and inverse) bond mappings
+	// bondMapping[gmolmodelBondIndex] = molmodelBondIndex (inverse mapping)
+	// bondMapping[molmodelBondIndex] = gmolmodelBondIndex (normal mapping)
+	std::unordered_map<int, SimTK::Compound::BondIndex> bondMapping;
 
 	// Pairs of replicas to be exchanged
 	std::vector<int> exchangePairs;
-
 };
-
-
-
-
-
-
-
-

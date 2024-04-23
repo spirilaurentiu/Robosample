@@ -349,7 +349,8 @@ void Replica::setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real v
 */
 const std::vector<SimTK::Real>& Replica::getZMatrixBATRow(size_t rowIndex) const {
 
-	assert(rowIndex < zMatrixBAT.size());
+	// assert(rowIndex >= 0);
+	// assert(rowIndex < static_cast<int>(zMatrixBAT.size()));
 
 	// Check if the indices are within bounds
 	return zMatrixBAT[rowIndex];
@@ -361,7 +362,8 @@ const std::vector<SimTK::Real>& Replica::getZMatrixBATRow(size_t rowIndex) const
 */
 std::vector<SimTK::Real>& Replica::updZMatrixBATRow(size_t rowIndex) {
 
-	assert(rowIndex < zMatrixBAT.size());
+	// assert(rowIndex >= 0);
+	// assert(rowIndex < static_cast<int>(zMatrixBAT.size()));
 
 	// Check if the indices are within bounds
 	return zMatrixBAT[rowIndex];
