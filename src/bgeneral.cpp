@@ -19,6 +19,30 @@ std::string exec(const char* cmd) {
     return result;
 }
 
+std::size_t getLinuxMemoryUsageFromProc() {
+    std::ifstream file("/proc/self/status");
+    std::string line;
+    std::size_t memoryUsage = 0;
+
+    while (std::getline(file, line)) {
+        if (line.find("VmRSS:") != std::string::npos) {
+            std::istringstream iss(line);
+            std::string ignore;
+            iss >> ignore >> memoryUsage;
+            break;
+        }
+    }
+
+    return memoryUsage; // Value in kB
+}
+
+
+long getResourceUsage() {
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    return usage.ru_maxrss;
+}
+
 /**************************************
  * 		General Functions             *
  **************************************/

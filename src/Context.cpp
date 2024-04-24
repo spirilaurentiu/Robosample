@@ -2182,7 +2182,7 @@ void Context::constructTopologies_SP_NEW(
 	while( internCoords.computeRoot( getAtoms() )){ // find a root
 
 		nofMols++;
-		internCoords.PrintRoot();
+		//internCoords.PrintRoot();
 		
 		// Compute the new molecule's BAT coordinates
 		internCoords.computeBAT( getAtoms() );
@@ -2426,10 +2426,10 @@ void Context::generateSubBondLists(void){
 			return bonds[lhs.first].getMoleculeIndex() < bonds[rhs.first].getMoleculeIndex();
 	});
 
-	scout("subBonds ranges\n");
-	for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
-		cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
-	}
+	// scout("subBonds ranges\n");
+	// for(size_t cnt = 0; cnt < molRanges.size(); cnt++){
+	// 	cout << molRanges[cnt].first << " " << molRanges[cnt].second << eol;
+	// }
 
 	// Set atom sublists for every Compound
 	int sIx = -1;
@@ -2470,12 +2470,16 @@ void Context::generateTopologiesSubarrays(void){
 	// 	}
 	// );
 
-	std::cout << "generateTopologiesSubarrays memory 0.\n" << exec("free") << std::endl;
-
+	std::cout << "generateTopologiesSubarrays memory 0.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 0.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 0.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	
 	// Generate array_views for atoms in every topology
 	generateSubAtomLists();
 
-	std::cout << "generateTopologiesSubarrays memory 1.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 1.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 1.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 1.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// scout("Loaded bonds") << eol;
 	// PrintBonds();
@@ -2488,17 +2492,23 @@ void Context::generateTopologiesSubarrays(void){
 		}
 	);
 
-	std::cout << "generateTopologiesSubarrays memory 2.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 2.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// Keep a map of BONDS to bonds after sorting
 	reset_BONDS_to_bonds( internCoords.getBonds() );
 
-	std::cout << "generateTopologiesSubarrays memory 3.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 3.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 3.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 3.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// Allocate space for bond mappings
 	bondMapping.reserve(bonds.size());
 
-	std::cout << "generateTopologiesSubarrays memory 4.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 4.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 4.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 4.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// Create bond mappings
 	for (const auto& bond : bonds) {
@@ -2513,19 +2523,25 @@ void Context::generateTopologiesSubarrays(void){
 		bondMapping[rIx] = molmodelBIx;
 	}
 
-	std::cout << "generateTopologiesSubarrays memory 5.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 5.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 5.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 5.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// Pass bond mappings to all topologies (all molecules)
 	for (auto& topology : topologies) {
 		topology.setBondMappings(bondMapping);
 	}
 
-	std::cout << "generateTopologiesSubarrays memory 6.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 6.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 6.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 6.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// Generate array_views for bonds and bonds in every topology
 	generateSubBondLists();
 
-	std::cout << "generateTopologiesSubarrays memory 7.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 7.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 7.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 7.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
@@ -2544,7 +2560,9 @@ void Context::generateTopologiesSubarrays(void){
 
 	}
 
-	std::cout << "generateTopologiesSubarrays memory 8.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 8.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 8.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 8.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// Set offset for all subBondLists
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
@@ -2559,7 +2577,9 @@ void Context::generateTopologiesSubarrays(void){
 		topology.subBondList.set_offset( minNumberAtomIt->getNumber() );
 	}
 
-	std::cout << "generateTopologiesSubarrays memory 9.\n" << exec("free") << std::endl;
+	std::cout << "generateTopologiesSubarrays memory 9.\n" << exec("free") << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 9.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << "generateTopologiesSubarrays memory 9.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 }
 
@@ -5771,9 +5791,9 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 		
 		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
 		
-		SimTK::Real vMaxComp = checkTransferCoordinates(backWorldIx, frontWorldIx);
-		if(vMaxComp > 0.001){
-			std::cout << "\nBad reconstruction " << vMaxComp << std::endl;
+		SimTK::Real cumulDiff = checkTransferCoordinates(backWorldIx, frontWorldIx);
+		if(cumulDiff > 0.001){
+			std::cout << "\nBad reconstruction " << cumulDiff << std::endl;
 		}
 
 		#ifdef PRINTALOT 
@@ -6579,7 +6599,6 @@ SimTK::Real Context::checkTransferCoordinates(int srcWIx, int destWIx)
 		<< std::endl;
 		return 99999999;
 	}
-
 	for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
 		if(srcWorldsAtomsLocations[toIx].size() != destWorldsAtomsLocations[toIx].size()){
 			std::cout << 
@@ -6592,32 +6611,46 @@ SimTK::Real Context::checkTransferCoordinates(int srcWIx, int destWIx)
 	// Get the max
 	SimTK::Real vMaxComp = 0;
 	SimTK::Real currDiff;
+	SimTK::Real cumulDiff = 0;
 	for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
 		for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){
-			// std::cout << "transfer " << toIx << " " << atIx
-			// 	<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
-			// 	<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
-			// 	<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
-			// 	<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
-			// 	<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
-			// 	<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])					
-			// << std::endl;
 
 			currDiff = std::abs((srcWorldsAtomsLocations[toIx][atIx]).second[0] - 
 					 			(destWorldsAtomsLocations[toIx][atIx]).second[0]);
 			if(currDiff > vMaxComp){vMaxComp = currDiff;}
+			cumulDiff += currDiff;
+
 			currDiff = std::abs((srcWorldsAtomsLocations[toIx][atIx]).second[1] - 
 					 			(destWorldsAtomsLocations[toIx][atIx]).second[1]);
 			if(currDiff > vMaxComp){vMaxComp = currDiff;}
+			cumulDiff += currDiff;
+
 			currDiff = std::abs((srcWorldsAtomsLocations[toIx][atIx]).second[2] - 
 					 			(destWorldsAtomsLocations[toIx][atIx]).second[2]);
-			if(currDiff > vMaxComp){vMaxComp = currDiff;}						
+			if(currDiff > vMaxComp){vMaxComp = currDiff;}
+			cumulDiff += currDiff;
+
 		}
 	}
 
-	//scout("Transfer coordinates max comp diff ") << vMaxComp << std::endl;
+	if(cumulDiff > 0.1){
+		for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
+			for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){		
+				std::cout << "transfer " << toIx << " " << atIx
+					<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
+					<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
+					<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
+					<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
+					<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
+					<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])					
+				<< std::endl;
+			}
+		}
+	}
 
-	return vMaxComp;
+	scout("Transfer coordinates vMaxComp cumulDiff ") << vMaxComp << " " << cumulDiff << std::endl;
+
+	return cumulDiff;
 
 }
 

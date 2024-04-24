@@ -509,8 +509,8 @@ public:
 
 	void setBondList(void);
 
-    void setBondMappings(const std::unordered_map<int, SimTK::Compound::BondIndex>& argBondMapping) {
-		bondMapping = argBondMapping;
+    void setBondMappings(std::unordered_map<int, SimTK::Compound::BondIndex>& argBondMapping) {
+		bondMapping = &argBondMapping;
 	}
 
 public:
@@ -553,7 +553,7 @@ public:
 	std::map< SimTK::Compound::AtomIndex, int > CompoundAtomIx2GmolAtomIx;
 
 	// Gmolmodel to Molmodel (and inverse) bond mappings
-	std::unordered_map<int, SimTK::Compound::BondIndex> bondMapping;
+	std::unordered_map<int, SimTK::Compound::BondIndex>* bondMapping;
 
 
 	int nofProcesses;

@@ -19,6 +19,7 @@
 #include <cmath>
 #include <functional>
 #include <array>
+#include <sys/resource.h>
 
 // Molmodel specific headers
 
@@ -183,6 +184,8 @@ enum struct VELOCITY_VERLET : int {
  **************************************/
 
 std::string exec(const char* cmd);
+std::size_t getLinuxMemoryUsageFromProc();
+long getResourceUsage();
 
 /**************************************
  * 		General Functions             *
