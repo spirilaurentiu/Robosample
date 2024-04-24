@@ -63,6 +63,7 @@ HMCSampler::HMCSampler(World &argWorld,
 		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 		//, MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
+
 	system = &argMatter.getSystem(); // TODO do we need this? was already defined in sampler.hpp
 
 	//this->rootTopology = argResidue;

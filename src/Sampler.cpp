@@ -33,6 +33,7 @@ Sampler::Sampler(World &argWorld,
 		system(&argMatter.getSystem()),
 		alwaysAccept(false)
 {
+
 	//this->rootTopology = argResidue;
 	assert(topologies.size() > 0);
 	rootTopology = &topologies[0];

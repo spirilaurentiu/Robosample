@@ -1001,7 +1001,20 @@ void World::addMembrane(const SimTK::Real halfThickness)
 /** Realize Topology for this World **/
 const SimTK::State& World::realizeTopology()
 {
+
+    if(MEMDEBUG){
+		std::cout << "World::realizeTopology memory 1\n" << exec("free") << std::endl << std::flush;
+		std::cout << "World::realizeTopology memory 1\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+		std::cout << "World::realizeTopology memory 1\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	}
+
 	const SimTK::State& returnState = compoundSystem->realizeTopology();
+
+    if(MEMDEBUG){
+		std::cout << "World::realizeTopology memory 2\n" << exec("free") << std::endl << std::flush;
+		std::cout << "World::realizeTopology memory 2\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+		std::cout << "World::realizeTopology memory 2\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	}
 
 	// for ( unsigned int i = 0; i < this->topologies.size(); i++){
 	//    ((this->topologies)[i])->loadMobodsRelatedMaps();
@@ -3614,9 +3627,21 @@ bool World::addSampler(SamplerName samplerName,
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 	}
 
+    if(MEMDEBUG){
+		std::cout << "World::addSampler memory 1\n" << exec("free") << std::endl << std::flush;
+		std::cout << "World::addSampler memory 1\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+		std::cout << "World::addSampler memory 1\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	}
+
 	// This is needed because each call to forceField invalidates the topology cache
 	// As far as I understand, you cannot modify forceField afther this call
 	realizeTopology();
+
+    if(MEMDEBUG){
+		std::cout << "World::addSampler memory 2.\n" << exec("free") << std::endl << std::flush;
+		std::cout << "World::addSampler memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+		std::cout << "World::addSampler memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	}
 
 	// We only use HMCSampler for now
 	if(samplerName == SamplerName::HMC) {

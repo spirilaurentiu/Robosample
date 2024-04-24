@@ -99,6 +99,7 @@ void Context::PrintAtomsDebugInfo(void){
 */
 bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 {
+
 	this->singlePrmtop = singlePrmtop;
 
 	std::map<std::string, SampleGenerator> sampleGenerator = {
@@ -276,6 +277,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// Thermodynamics
 	//////////////////////
 
+    if(MEMDEBUG){
+		std::cout << "initializeFromFile memory 1.\n" << exec("free") << std::endl << std::flush;
+		std::cout << "initializeFromFile memory 1.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+		std::cout << "initializeFromFile memory 1.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	}
+	
 	// Add samplers
 	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		worlds[worldIx].addSampler(
@@ -294,6 +301,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"
 		);
 	} // every world
+
+    if(MEMDEBUG){
+		std::cout << "initializeFromFile memory 2.\n" << exec("free") << std::endl << std::flush;
+		std::cout << "initializeFromFile memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+		std::cout << "initializeFromFile memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	}
 
 	// -- Setup REX --
 	std::string runType = setupReader.get("RUN_TYPE")[0];
@@ -497,6 +510,12 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 
 	//scout("PrintAtomsDebugInfo") << eol;
 	//PrintAtomsDebugInfo();
+
+    if(MEMDEBUG){
+		std::cout << "initializeFromFile memory \n" << exec("free") << std::endl << std::flush;
+		std::cout << "initializeFromFile memory \n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+		std::cout << "initializeFromFile memory \n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	}
 
     return true;
 }
@@ -1735,8 +1754,10 @@ void Context::setRootAtom(Topology& topology, int rootAmberIx)
 	topology.convertInboardBondCenterToOutboard();
 	topology.baseSetFlag = 1;
 
-	scout("rootAmberIx root ") << rootAtom.getName() <<" " << rootAtom.getInName() << " " << rootAmberIx 
-		<< eol;	
+	scout("rootAmberIx root ") 
+	// << rootAtom.getName() <<" " << rootAtom.getInName() 
+	<< " " << rootAmberIx 
+	<< eol;	
 }
 
 /*!
@@ -2469,17 +2490,9 @@ void Context::generateTopologiesSubarrays(void){
 	// 		return lhs.getMoleculeIndex() < rhs.getMoleculeIndex();
 	// 	}
 	// );
-
-	std::cout << "generateTopologiesSubarrays memory 0.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 0.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 0.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 	
 	// Generate array_views for atoms in every topology
 	generateSubAtomLists();
-
-	std::cout << "generateTopologiesSubarrays memory 1.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 1.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 1.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// scout("Loaded bonds") << eol;
 	// PrintBonds();
@@ -2492,23 +2505,11 @@ void Context::generateTopologiesSubarrays(void){
 		}
 	);
 
-	std::cout << "generateTopologiesSubarrays memory 2.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-
 	// Keep a map of BONDS to bonds after sorting
 	reset_BONDS_to_bonds( internCoords.getBonds() );
 
-	std::cout << "generateTopologiesSubarrays memory 3.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 3.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 3.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-
 	// Allocate space for bond mappings
 	bondMapping.reserve(bonds.size());
-
-	std::cout << "generateTopologiesSubarrays memory 4.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 4.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 4.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	// Create bond mappings
 	for (const auto& bond : bonds) {
@@ -2523,25 +2524,13 @@ void Context::generateTopologiesSubarrays(void){
 		bondMapping[rIx] = molmodelBIx;
 	}
 
-	std::cout << "generateTopologiesSubarrays memory 5.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 5.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 5.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-
 	// Pass bond mappings to all topologies (all molecules)
 	for (auto& topology : topologies) {
 		topology.setBondMappings(bondMapping);
 	}
 
-	std::cout << "generateTopologiesSubarrays memory 6.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 6.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 6.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-
 	// Generate array_views for bonds and bonds in every topology
 	generateSubBondLists();
-
-	std::cout << "generateTopologiesSubarrays memory 7.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 7.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 7.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
@@ -2560,10 +2549,6 @@ void Context::generateTopologiesSubarrays(void){
 
 	}
 
-	std::cout << "generateTopologiesSubarrays memory 8.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 8.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 8.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-
 	// Set offset for all subBondLists
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
@@ -2576,10 +2561,6 @@ void Context::generateTopologiesSubarrays(void){
 		
 		topology.subBondList.set_offset( minNumberAtomIt->getNumber() );
 	}
-
-	std::cout << "generateTopologiesSubarrays memory 9.\n" << exec("free") << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 9.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << "generateTopologiesSubarrays memory 9.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 
 }
 
