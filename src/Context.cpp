@@ -5771,11 +5771,12 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 		//std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
 		
 		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
-		
-		SimTK::Real cumulDiff = checkTransferCoordinates(backWorldIx, frontWorldIx);
-		if(cumulDiff > 0.001){
-			std::cout << "\nBad reconstruction " << cumulDiff << std::endl;
-		}
+
+		SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
+		SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
+		// if(cumulDiff_BAT > 0.001){
+		// 	std::cout << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
+		// }
 
 		#ifdef PRINTALOT 
 			if(validated){
@@ -6555,7 +6556,7 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 /*!
  * <!-- Check coordinate transfer -->
 */
-SimTK::Real Context::checkTransferCoordinates(int srcWIx, int destWIx)
+SimTK::Real Context::checkTransferCoordinates_Cart(int srcWIx, int destWIx)
 {
 
 	// Get advanced states of the integrators
@@ -6614,26 +6615,270 @@ SimTK::Real Context::checkTransferCoordinates(int srcWIx, int destWIx)
 		}
 	}
 
-	if(cumulDiff > 0.1){
-		for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
-			for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){		
-				std::cout << "transfer " << toIx << " " << atIx
-					<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
-					<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
-					<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
-					<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
-					<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
-					<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])					
-				<< std::endl;
-			}
-		}
-	}
+	// if(cumulDiff > 0.1){
+	// 	for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
+	// 		for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){		
+	// 			std::cout << "transfer " << toIx << " " << atIx
+	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
+	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])					
+	// 			<< std::endl;
+	// 		}
+	// 	}
+	// }
 
-	scout("Transfer coordinates vMaxComp cumulDiff ") << vMaxComp << " " << cumulDiff << std::endl;
+	scout("Check coords transfer Cart vMaxComp cumulDiff ") 
+		<< std::setprecision(10) << std::fixed
+		<< vMaxComp << " " << cumulDiff << std::endl;
 
 	return cumulDiff;
 
 }
+
+/*!
+ * <!-- Check coordinate transfer -->
+*/
+SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian)
+{
+
+	// Get advanced states of the integrators
+	SimTK::State& srcAdvancedState = worlds[srcWIx].integ->updAdvancedState();
+	SimTK::State& destAdvancedState = worlds[destWIx].integ->updAdvancedState();
+
+	// Get coordinates from source World
+	const std::vector<std::vector<std::pair<
+		bSpecificAtom *, SimTK::Vec3> > >&
+		srcWorldsAtomsLocations =
+	worlds[srcWIx].getAtomsLocationsInGround_SP_NEW(srcAdvancedState);
+
+	// Get coordinates from destintaion World
+	const std::vector<std::vector<std::pair<
+		bSpecificAtom *, SimTK::Vec3> > >&
+		destWorldsAtomsLocations =
+	worlds[destWIx].getAtomsLocationsInGround_SP_NEW(destAdvancedState);
+
+	// Iterate molecules
+	int allCnt = 0;
+	int topoIx = 0;
+
+	// Get locations of this molecule
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> srcAtomTargets;
+	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> destAtomTargets;
+	for (int i = 0; i < topologies.size(); i++) {
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
+		worlds[srcWIx].extractAtomTargets(i, srcWorldsAtomsLocations, temp);
+		srcAtomTargets.insert(temp.begin(), temp.end());
+	}
+	for (int i = 0; i < topologies.size(); i++) {
+		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
+		worlds[destWIx].extractAtomTargets(i, destWorldsAtomsLocations, temp);
+		destAtomTargets.insert(temp.begin(), temp.end());
+	}
+
+	int rowCnt = 0;
+	SimTK::Real bondLength_src, bondBend_src, bondTorsion_src;
+	SimTK::Real bondLength_des, bondBend_des, bondTorsion_des;
+	SimTK::Real cosTheta_src, cosTheta_des;
+	SimTK::Real vMaxComp = 0;
+	SimTK::Real currDiff;
+	SimTK::Real cumulDiff = 0;
+
+	for (const auto& row : zMatrixTable) {
+		
+		bondLength_src = SimTK::NaN; bondLength_des = SimTK::NaN;
+		cosTheta_src = SimTK::NaN; cosTheta_des = SimTK::NaN;
+		bondBend_src = SimTK::NaN; bondBend_des = SimTK::NaN;
+		bondTorsion_src = SimTK::NaN; bondTorsion_des = SimTK::NaN;
+
+		SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
+		
+		// Calculate source bond length
+		a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
+		a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
+		
+		SimTK::Vec3 a0loc = findAtomTarget(srcAtomTargets, a0_cAIx);
+		SimTK::Vec3 a1loc = findAtomTarget(srcAtomTargets, a1_cAIx);
+
+		SimTK::Vec3 v_a0a1 = a0loc - a1loc;
+		bondLength_src = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
+
+		if(row[2] >= 0){
+
+			SimTK::Compound::AtomIndex a2_cAIx;
+			a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
+			SimTK::Vec3 a2loc = findAtomTarget(srcAtomTargets, a2_cAIx);
+
+			// Calculate source angle
+			UnitVec3 v1(v_a0a1);
+			UnitVec3 v2(a2loc - a1loc);
+
+			cosTheta_src = SimTK::dot(v1, v2);
+			assert(cosTheta_src < 1.1);
+			assert(cosTheta_src > -1.1);
+			if (cosTheta_src > 1.0) cosTheta_src = 1.0;
+			if (cosTheta_src < -1.0) cosTheta_src = -1.0;
+			bondBend_src = std::acos(cosTheta_src);
+
+			if(row[3] >= 0){
+				SimTK::Compound::AtomIndex
+					a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
+				SimTK::Vec3 a3loc = findAtomTarget(srcAtomTargets, a3_cAIx);
+
+				bondTorsion_src = bDihedral(a0loc, a1loc, a2loc, a3loc);
+			}
+
+		} // angle
+
+		// Calculate dest bond length
+		a0loc = findAtomTarget(destAtomTargets, a0_cAIx);
+		a1loc = findAtomTarget(destAtomTargets, a1_cAIx);
+
+		v_a0a1 = a0loc - a1loc;
+		bondLength_des = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
+
+		if(row[2] >= 0){
+
+			SimTK::Compound::AtomIndex a2_cAIx;
+			a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
+			SimTK::Vec3 a2loc = findAtomTarget(destAtomTargets, a2_cAIx);
+
+			// Calculate source angle
+			UnitVec3 v1(v_a0a1);
+			UnitVec3 v2(a2loc - a1loc);
+
+			cosTheta_des = SimTK::dot(v1, v2);
+			assert(cosTheta_des < 1.1);
+			assert(cosTheta_des > -1.1);
+			if (cosTheta_des > 1.0) cosTheta_des = 1.0;
+			if (cosTheta_des < -1.0) cosTheta_des = -1.0;
+			bondBend_des = std::acos(cosTheta_des);
+
+			if(row[3] >= 0){
+				SimTK::Compound::AtomIndex
+					a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
+				SimTK::Vec3 a3loc = findAtomTarget(destAtomTargets, a3_cAIx);
+
+				bondTorsion_des = bDihedral(a0loc, a1loc, a2loc, a3loc);
+			}
+
+		} // angle
+
+		if(wantJacobian){
+			// Jacobians
+			SimTK::Real sinTheta_src = std::sqrt(1.0 - (cosTheta_src*cosTheta_src));
+			SimTK::Real sinTheta_des = std::sqrt(1.0 - (cosTheta_des*cosTheta_des));
+			SimTK::Real cosPhi_src = std::cos(bondTorsion_src);
+			SimTK::Real sinPhi_src = std::sqrt(1.0 - (cosPhi_src*cosPhi_src));
+			SimTK::Real cosPhi_des = std::cos(bondTorsion_des);
+			SimTK::Real sinPhi_des = std::sqrt(1.0 - (cosPhi_des*cosPhi_des));
+
+			std::vector<std::vector<SimTK::Real>> Jacobian_src(3, std::vector<SimTK::Real>(3));
+			std::vector<std::vector<SimTK::Real>> Jacobian_des(3, std::vector<SimTK::Real>(3));
+
+			Jacobian_src[0][0] = sinPhi_src * cosTheta_src;
+			Jacobian_src[0][1] = bondLength_src * cosPhi_src * cosTheta_src;
+			Jacobian_src[0][2] = -bondLength_src * sinPhi_src * sinTheta_src;
+
+			Jacobian_src[1][0] = sinPhi_src * sinTheta_src;
+			Jacobian_src[1][1] = bondLength_src * cosPhi_src * sinTheta_src;
+			Jacobian_src[1][2] = -bondLength_src * sinPhi_src * cosTheta_src;
+
+			Jacobian_src[2][0] = cosPhi_src;
+			Jacobian_src[2][1] = -bondLength_src * cosPhi_src;
+			Jacobian_src[2][2] = 0;		
+
+			Jacobian_des[0][0] = sinPhi_des * cosTheta_des;
+			Jacobian_des[0][1] = bondLength_des * cosPhi_des * cosTheta_des;
+			Jacobian_des[0][2] = -bondLength_des * sinPhi_des * sinTheta_des;
+
+			Jacobian_des[1][0] = sinPhi_des * sinTheta_des;
+			Jacobian_des[1][1] = bondLength_des * cosPhi_des * sinTheta_des;
+			Jacobian_des[1][2] = -bondLength_des * sinPhi_des * cosTheta_des;
+
+			Jacobian_des[2][0] = cosPhi_des;
+			Jacobian_des[2][1] = -bondLength_des * cosPhi_des;
+			Jacobian_des[2][2] = 0;	
+
+			std::vector<SimTK::Real> cartV_src(3, 0.0);
+			std::vector<SimTK::Real> BATV_src{bondLength_src, bondBend_src, bondTorsion_src};
+			std::vector<SimTK::Real> cartV_des(3, 0.0);
+			std::vector<SimTK::Real> BATV_des{bondLength_des, bondBend_des, bondTorsion_des};
+
+			for (size_t m_I = 0; m_I < Jacobian_src.size(); ++m_I) {
+				for (size_t m_J = 0; m_J < Jacobian_src[m_I].size(); ++m_J) {
+					cartV_src[m_I] += Jacobian_src[m_I][m_J] * BATV_src[m_J];
+				}
+			}
+
+			for (size_t m_I = 0; m_I < Jacobian_des.size(); ++m_I) {
+				for (size_t m_J = 0; m_J < Jacobian_des[m_I].size(); ++m_J) {
+					cartV_des[m_I] += Jacobian_des[m_I][m_J] * BATV_des[m_J];
+				}
+			}
+
+			// scout("checkTransfer ") 
+			// << " " << getZMatrixTableEntry(rowCnt, 0) << " " << getZMatrixTableEntry(rowCnt, 1)
+			// << " " << getZMatrixTableEntry(rowCnt, 2) << " " << getZMatrixTableEntry(rowCnt, 3)
+			// // 	<< " " << bondLength_src << " " << bondBend_src << " " << bondTorsion_src
+			// // 	<< " " << bondLength_des << " " << bondBend_des << " " << bondTorsion_des;
+			// // ceol;
+
+			// //scout("checkTransfer ") 
+			// 	<< " " << cartV_src[0] << " " << cartV_src[1] << " " << cartV_src[2]
+			// 	<< " " << cartV_des[0] << " " << cartV_des[1] << " " << cartV_des[2];
+			// ceol;
+
+			currDiff = std::abs(cartV_src[0] - cartV_des[0]);
+			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
+			cumulDiff += currDiff;
+			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+
+			currDiff = std::abs(cartV_src[1] - cartV_des[1]);
+			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
+			cumulDiff += currDiff;
+			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+
+			currDiff = std::abs(cartV_src[2] - cartV_des[2]);
+			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
+			cumulDiff += currDiff;
+			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+
+		}else{
+			currDiff = std::abs(bondLength_src - bondLength_des);
+			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
+			cumulDiff += currDiff;
+			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+
+			currDiff = std::abs(bondBend_src - bondBend_des);
+			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
+			cumulDiff += currDiff;
+			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+
+			currDiff = std::abs(bondTorsion_src - bondTorsion_des);
+			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
+			cumulDiff += currDiff;
+			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+		}
+
+		if(row[3] == -2){
+			topoIx++;
+		}
+
+		rowCnt++;
+
+	} // every zMatrix row
+
+	scout("Check coords transfer BAT vMaxComp cumulDiff ")
+		<< std::setprecision(10) << std::fixed
+		<< vMaxComp << " " << cumulDiff << std::endl;
+
+	return cumulDiff;
+
+}
+
 
 
 // SP_NEW_TRANSFER ============================================================
