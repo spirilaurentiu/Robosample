@@ -342,6 +342,9 @@ public:
 
 // SP_NEW_TRANSFER ------------------------------------------------------------
 
+	// Drilling drl
+	void newFunction(int whichWorld);
+
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);

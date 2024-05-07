@@ -5684,6 +5684,9 @@ bool Context::RunWorld(int whichWorld)
 	// Equilibrium world
 	if(distortOption == 0) {
 
+		// drl
+		newFunction(whichWorld);
+
 		// Generate samples
 		if(singlePrmtop == true){
 			validated = worlds[whichWorld].generateSamples_SP_NEW(
@@ -5694,6 +5697,9 @@ bool Context::RunWorld(int whichWorld)
 
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
+
+		// drl
+		newFunction(whichWorld);
 
 		// Update world's sampler's BAT coordinates
 		//updSubZMatrixBATsToWorld(whichWorld);
@@ -7452,7 +7458,55 @@ Context::getChemicalParent_IfIAmRoot(
 // SP_NEW_TRANSFER ------------------------------------------------------------
 
 
+void Context::newFunction(int whichWorld)
+{
+	worlds[whichWorld].newFunction();
 
+
+	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+
+	// Iterate molecules
+	int allCnt = 0;
+	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
+		// Get molecule and it's bonds
+		Topology& topology = topologies[topoIx];
+		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
+		// Iterate molecule's bonds
+		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+
+			// Get current bond
+			const BOND& currBOND = BONDS[BOIx];
+			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+			bBond& bond = bonds[boIx];
+
+			// Get bond's atoms
+			int childNo = currBOND.first;
+			int parentNo = currBOND.second;
+			//int gparentNo = BONDS[internCoords.findBondByFirst(topoIx, parentNo)].second;
+			//int ggparentNo = BONDS[internCoords.findBondByFirst(topoIx, gparentNo)].second;			
+
+			bSpecificAtom& childAtom  = atoms[currBOND.first];
+			bSpecificAtom& parentAtom = atoms[currBOND.second];
+			//bSpecificAtom& gparentAtom = atoms[gparentNo];
+			//bSpecificAtom& ggparentAtom = atoms[ggparentNo];			
+
+			int childTopoIx = childAtom.getMoleculeIndex();
+			int parentTopoIx = parentAtom.getMoleculeIndex();
+
+			// Get Compound atom indexes
+			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+			//SimTK::Compound::AtomIndex gparent_cAIx = gparentAtom.getCompoundAtomIndex();
+			//SimTK::Compound::AtomIndex ggparent_cAIx = ggparentAtom.getCompoundAtomIndex();			
+
+			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+		}
+	}
+
+}
 
 // Go through all the worlds and generate samples
 void Context::RunOneRound()

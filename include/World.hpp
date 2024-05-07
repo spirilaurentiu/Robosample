@@ -547,6 +547,8 @@ public:
 
 	/** Generate a number of samples **/
 	bool generateSamples(int howMany);
+
+	void newFunction(void);
 	bool generateSamples_SP_NEW(int howMany, std::stringstream& worldOutStream);
 	//...............
 

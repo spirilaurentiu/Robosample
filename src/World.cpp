@@ -3821,6 +3821,20 @@ bool World::generateSamples(int howMany)
 	// return validated;
 }
 
+void World::newFunction(void)
+{
+	for (DuMM::NonbondAtomIndex nax(0); nax < forceField->getNumNonbondAtoms(); ++nax) {
+		//const DuMM::DuMMAtom&        dummAtom = forceField->getAtom(dumm->getAtomIndexOfNonbondAtom(nax));
+		const SimTK::DuMM::AtomIndex dax = forceField->getAtomIndexOfNonbondAtom(nax);
+		//const DuMM::IncludedAtomIndex& iax = dummAtom.getIncludedAtomIndex();
+		std::cout << "drl World::newFunction dax nax"
+			<< " " << dax 
+			//<< " " << iax 
+			<< " " << nax 
+			<< std::endl;
+	}
+}
+
 /**
  *  Generate a number of samples
  * */
