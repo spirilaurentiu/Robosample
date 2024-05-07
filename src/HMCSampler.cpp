@@ -3953,8 +3953,8 @@ void HMCSampler::getMsg_EnergyDetails(
 }
 
 
-/**
- * The main function that generates a sample
+/*!
+ * <!--	The main function that generates a sample -->
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState,
 	std::stringstream& samplerOutStream)

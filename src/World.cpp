@@ -3828,9 +3828,7 @@ void World::newFunction(void)
 		const SimTK::DuMM::AtomIndex dax = forceField->getAtomIndexOfNonbondAtom(nax);
 		//const DuMM::IncludedAtomIndex& iax = dummAtom.getIncludedAtomIndex();
 		std::cout << "drl World::newFunction dax nax"
-			<< " " << dax 
-			//<< " " << iax 
-			<< " " << nax 
+			<< " " << dax << " " << nax //<< " " << iax 
 			<< std::endl;
 	}
 }

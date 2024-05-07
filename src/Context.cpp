@@ -7460,6 +7460,7 @@ Context::getChemicalParent_IfIAmRoot(
 
 void Context::newFunction(int whichWorld)
 {
+
 	worlds[whichWorld].newFunction();
 
 
@@ -7490,7 +7491,7 @@ void Context::newFunction(int whichWorld)
 			bSpecificAtom& childAtom  = atoms[currBOND.first];
 			bSpecificAtom& parentAtom = atoms[currBOND.second];
 			//bSpecificAtom& gparentAtom = atoms[gparentNo];
-			//bSpecificAtom& ggparentAtom = atoms[ggparentNo];			
+			//bSpecificAtom& ggparentAtom = atoms[ggparentNo];
 
 			int childTopoIx = childAtom.getMoleculeIndex();
 			int parentTopoIx = parentAtom.getMoleculeIndex();
@@ -7501,8 +7502,11 @@ void Context::newFunction(int whichWorld)
 			//SimTK::Compound::AtomIndex gparent_cAIx = gparentAtom.getCompoundAtomIndex();
 			//SimTK::Compound::AtomIndex ggparent_cAIx = ggparentAtom.getCompoundAtomIndex();			
 
+			// Get DuMM atom indezes
 			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
 			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+			scout("newFunc") <<" " << parentNo <<" " << childNo <<" "  << parent_dAIx <<" " << child_dAIx << eol; 	
 		}
 	}
 
