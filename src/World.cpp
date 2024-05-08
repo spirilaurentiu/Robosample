@@ -3831,6 +3831,17 @@ void World::newFunction(void)
 			<< " " << dax << " " << nax //<< " " << iax 
 			<< std::endl;
 	}
+
+	const std::vector<std::vector<double>>& drl_bon_Energies = forceField->getEnergies_drl_bon();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		printf("drl World bonE");
+		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
+			printf(" %f", drl_bon_Energies[fIx][fJx]);
+		}
+		printf("\n");
+	}
+
 }
 
 /**
