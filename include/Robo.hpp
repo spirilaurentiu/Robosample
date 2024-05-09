@@ -116,4 +116,8 @@
 #define TRACE(STR)
 #endif
 
+// #ifndef __DRILLING__
+// #define __DRILLING__
+// #endif
+
 #endif // __ROBO_HPP

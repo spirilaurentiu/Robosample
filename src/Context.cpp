@@ -5685,7 +5685,9 @@ bool Context::RunWorld(int whichWorld)
 	if(distortOption == 0) {
 
 		// drl
-		newFunction(whichWorld);
+		#ifdef __DRILLING__
+			newFunction(whichWorld);
+		#endif
 
 		// Generate samples
 		if(singlePrmtop == true){
@@ -5699,7 +5701,9 @@ bool Context::RunWorld(int whichWorld)
 	} else if (distortOption == -1) {
 
 		// drl
-		newFunction(whichWorld);
+		#ifdef __DRILLING__
+			newFunction(whichWorld);
+		#endif
 
 		// Update world's sampler's BAT coordinates
 		//updSubZMatrixBATsToWorld(whichWorld);
@@ -7457,12 +7461,13 @@ Context::getChemicalParent_IfIAmRoot(
 
 // SP_NEW_TRANSFER ------------------------------------------------------------
 
-
+/*!
+ * <!--  -->
+*/
 void Context::newFunction(int whichWorld)
 {
 
 	worlds[whichWorld].newFunction();
-
 
 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
 
