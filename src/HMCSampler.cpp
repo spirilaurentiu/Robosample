@@ -581,10 +581,12 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			//PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
 
-			// Scale BAT by adding values to Qs
+			// Scale BAT by adding values to Qs. It realizes Dynamics Stage
+			SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
-
+			SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			scout("[SCALING_PES]:") <<" " << pe_beforeScale <<" " << pe_afterScale << eolf;
 			// After scaling through Qs, we have to recalculate BAT values
 			updateSubZMatrixBAT(someState);
 

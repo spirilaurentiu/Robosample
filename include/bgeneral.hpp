@@ -93,6 +93,20 @@ void trace(Args &&... args)
 #define ceolf std::cout<<std::endl<<std::flush
 #endif
 
+
+// // Concatenate strings with spaces
+// std::string join_with_spaces() {
+//     return "";  // Base case for no arguments
+// }
+
+// template <typename T, typename... Args>
+// std::string join_with_spaces(T first, Args... args) {
+//     return first + (sizeof...(args) > 0 ? " " + join_with_spaces(args...) : ""); // Recursive concatenation with spaces
+// }
+
+// // Macro to concatenate strings with spaces
+// #define SPACED(...) join_with_spaces(__VA_ARGS__)
+
 // ----------
 
 /**************************************
