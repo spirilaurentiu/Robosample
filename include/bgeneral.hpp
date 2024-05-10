@@ -71,6 +71,20 @@ void trace(Args &&... args)
     std::cout << std::endl;
 }
 
+template <typename... Args>
+void warn(Args &&... args)
+{
+    std::cout << "[WARNING] ";
+    trace_impl(std::cout, std::forward<Args>(args)...);
+    std::cout << std::endl;
+}
+
+template <typename... Args>
+void spaced(Args &&... args)
+{
+    trace_impl(std::cout, std::forward<Args>(args)...);
+}
+
 // Less smart trace and print
 
 #ifndef  eolf
@@ -84,6 +98,8 @@ void trace(Args &&... args)
 #ifndef  scout
 #define scout(x) std::cout<<x
 # endif
+
+
 
 # ifndef ceol
 #define ceol std::cout<<std::endl

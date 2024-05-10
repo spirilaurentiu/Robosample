@@ -5684,18 +5684,47 @@ bool Context::RunWorld(int whichWorld)
 	// Equilibrium world
 	if(distortOption == 0) {
 
+		// Generate samples
+
 		// drl
 		#ifdef __DRILLING__
-			newFunction(whichWorld);
-		#endif
 
-		// Generate samples
-		if(singlePrmtop == true){
+			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
+
+			// validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples, worldOutStream){
+
+				scout("[WARNING]") <<" " << "under drilling conditions" << eol;
+
+				// Update Robosample bAtomList
+				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
+				(worlds[whichWorld]).updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
+
+				// Reinitialize the sampler
+				validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState,
+					worldOutStream);
+
+				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+				PrintCppVector(drl_bon_Energies);
+
+				// GENERATE the requested number of samples
+				for(int k = 0; k < numSamples; k++) {
+					validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(
+						currentAdvancedState, worldOutStream) && validated;
+				}
+
+				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				PrintCppVector(drl_bon_Energies);
+				
+			// }
+
+		#else
+
 			validated = worlds[whichWorld].generateSamples_SP_NEW(
-				numSamples, worldOutStream);
-		}else{
-			validated = worlds[whichWorld].generateSamples(numSamples);
-		}
+				numSamples, worldOutStream); // =
+
+		#endif
 
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
@@ -5704,11 +5733,6 @@ bool Context::RunWorld(int whichWorld)
 		#ifdef __DRILLING__
 			newFunction(whichWorld);
 		#endif
-
-		// Update world's sampler's BAT coordinates
-		//updSubZMatrixBATsToWorld(whichWorld);
-		//scout("Context::RunWorld PrintSubZMatrixBAT: ") << eol;
-		//worlds[whichWorld].updSampler(0)->PrintSubZMatrixBAT();
 
 		// Generate samples
 		if(singlePrmtop == true){
@@ -7467,7 +7491,7 @@ Context::getChemicalParent_IfIAmRoot(
 void Context::newFunction(int whichWorld)
 {
 
-	worlds[whichWorld].newFunction();
+	//worlds[whichWorld].newFunction();
 
 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
 

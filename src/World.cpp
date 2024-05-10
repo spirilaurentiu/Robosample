@@ -3753,7 +3753,7 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 SimTK::Real World::CalcPotentialEnergy(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromCompound(currentAdvancedState);
+	updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
 
 	// Set old potential energy of the new world via DuMM !!!
 	return forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
@@ -3763,7 +3763,7 @@ SimTK::Real World::CalcPotentialEnergy(void)
 SimTK::Real World::calcFixman(void)
 {
     SimTK::State& currentAdvancedState = integ->updAdvancedState();
-    updateAtomListsFromCompound(currentAdvancedState); // for det(MBAT)
+    updateAtomListsFromCompound_SP_NEW(currentAdvancedState); // for det(MBAT)
 	SimTK::Real Fixman = updSampler(0)->calcFixman(currentAdvancedState);
 	return Fixman;
 }
@@ -3821,111 +3821,6 @@ bool World::generateSamples(int howMany)
 	// return validated;
 }
 
-/*!
- * <!--  -->
-*/
-void World::newFunction(void)
-{
-
-#ifdef __DRILLING__
-
-	for (DuMM::NonbondAtomIndex nax(0); nax < forceField->getNumNonbondAtoms(); ++nax) {
-		//const DuMM::DuMMAtom&        dummAtom = forceField->getAtom(forceField->getAtomIndexOfNonbondAtom(nax));
-		const SimTK::DuMM::AtomIndex dax = forceField->getAtomIndexOfNonbondAtom(nax);
-		//const DuMM::IncludedAtomIndex& iax = dummAtom.getIncludedAtomIndex();
-		std::cout << "drl World::newFunction dax nax"
-			<< " " << dax << " " << nax //<< " " << iax 
-			<< std::endl;
-	}
-
-	const std::vector<std::vector<double>>& drl_bon_Energies = forceField->getEnergies_drl_bon();
-	printf("drl World::newFunction\n");
-	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-		printf("drl World bonE");
-		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
-			printf(" %f", drl_bon_Energies[fIx][fJx]);
-		}
-		printf("\n");
-	}
-        const std::vector<std::vector<double>>& drl_ang_Energies = forceField->getEnergies_drl_ang();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            printf("drl World angE");
-            for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
-                printf(" %f", drl_ang_Energies[fIx][fJx]);
-            }
-            printf("\n");
-        }        
-        const std::vector<std::vector<double>>& drl_tor_Energies = forceField->getEnergies_drl_tor();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            printf("drl World torE");
-            for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
-                printf(" %f", drl_tor_Energies[fIx][fJx]);
-            }
-            printf("\n");
-        }
-        const std::vector<std::vector<double>>& drl_n14_Energies = forceField->getEnergies_drl_n14();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            printf("drl World n14E");
-            for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
-                printf(" %f", drl_n14_Energies[fIx][fJx]);
-            }
-            printf("\n");
-        }             
-        const std::vector<std::vector<double>>& drl_vdw_Energies = forceField->getEnergies_drl_vdw();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            printf("drl World vdwE");
-            for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
-                printf(" %f", drl_vdw_Energies[fIx][fJx]);
-            }
-            printf("\n");
-        }             
-        const std::vector<std::vector<double>>& drl_cou_Energies = forceField->getEnergies_drl_cou();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            printf("drl World couE");
-            for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
-                printf(" %f", drl_cou_Energies[fIx][fJx]);
-            }
-            printf("\n");
-        }             
-
-        const std::vector<OpenMM::Vec3>& drl_bon_Forces = forceField->getForces_drl_bon();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            const OpenMM::Vec3& ommForce = drl_bon_Forces[fIx];
-            const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
-            printf("drl World bonF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
-        }
-        const std::vector<OpenMM::Vec3>& drl_ang_Forces = forceField->getForces_drl_ang();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            const OpenMM::Vec3& ommForce = drl_ang_Forces[fIx];
-            const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
-            printf("drl World angF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
-        }
-        const std::vector<OpenMM::Vec3>& drl_tor_Forces = forceField->getForces_drl_tor();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            const OpenMM::Vec3& ommForce = drl_tor_Forces[fIx];
-            const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
-            printf("drl World torF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
-        }
-        const std::vector<OpenMM::Vec3>& drl_n14_Forces = forceField->getForces_drl_n14();
-        printf("drl World::newFunction\n");
-        for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
-            const OpenMM::Vec3& ommForce = drl_n14_Forces[fIx];
-            const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
-            printf("drl OMMPlug n14F %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
-        }
-
-#endif // __DRILLING__ 
-
-}
-
 /**
  *  Generate a number of samples
  * */
@@ -3935,11 +3830,6 @@ bool World::generateSamples_SP_NEW(int howMany,
 	// Update Robosample bAtomList
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
-
-	// Print message to identify this World
-	//worldOutStream //<< "W " 
-	//	<< ", " << ownWorldIndex 
-	//	<< ", " << currentAdvancedState.getNU();
 
 	// GENERATE the requested number of samples
 	bool validated = updSampler(0)->reinitialize(currentAdvancedState,
@@ -4034,5 +3924,160 @@ void World::setRootMobility(ROOT_MOBILITY rootMobility) {
 
 const SimTK::String& World::getRootMobility() const {
 	return rootMobilizer;
+}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
+
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
+
+/*!
+ * <!--  -->
+*/
+void World::printDrilling(void)
+{
+
+#ifdef __DRILLING__
+
+	// for (DuMM::NonbondAtomIndex nax(0); nax < forceField->getNumNonbondAtoms(); ++nax) {
+	// 	//const DuMM::DuMMAtom&        dummAtom = forceField->getAtom(forceField->getAtomIndexOfNonbondAtom(nax));
+	// 	const SimTK::DuMM::AtomIndex dax = forceField->getAtomIndexOfNonbondAtom(nax);
+	// 	//const DuMM::IncludedAtomIndex& iax = dummAtom.getIncludedAtomIndex();
+	// 	std::cout << "drl World::newFunction dax nax"
+	// 		<< " " << dax << " " << nax //<< " " << iax 
+	// 		<< std::endl;
+	// }
+
+	const std::vector<std::vector<double>>& drl_bon_Energies = forceField->getEnergies_drl_bon();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		printf("drl World bonE");
+		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
+			printf(" %f", drl_bon_Energies[fIx][fJx]);
+		}
+		printf("\n");
+	}
+	const std::vector<std::vector<double>>& drl_ang_Energies = forceField->getEnergies_drl_ang();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		printf("drl World angE");
+		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
+			printf(" %f", drl_ang_Energies[fIx][fJx]);
+		}
+		printf("\n");
+	}        
+	const std::vector<std::vector<double>>& drl_tor_Energies = forceField->getEnergies_drl_tor();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		printf("drl World torE");
+		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
+			printf(" %f", drl_tor_Energies[fIx][fJx]);
+		}
+		printf("\n");
+	}
+	const std::vector<std::vector<double>>& drl_n14_Energies = forceField->getEnergies_drl_n14();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		printf("drl World n14E");
+		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
+			printf(" %f", drl_n14_Energies[fIx][fJx]);
+		}
+		printf("\n");
+	}             
+	const std::vector<std::vector<double>>& drl_vdw_Energies = forceField->getEnergies_drl_vdw();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		printf("drl World vdwE");
+		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
+			printf(" %f", drl_vdw_Energies[fIx][fJx]);
+		}
+		printf("\n");
+	}             
+	const std::vector<std::vector<double>>& drl_cou_Energies = forceField->getEnergies_drl_cou();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		printf("drl World couE");
+		for (int fJx = 0; fJx < forceField->getNumNonbondAtoms(); ++fJx){
+			printf(" %f", drl_cou_Energies[fIx][fJx]);
+		}
+		printf("\n");
+	}             
+
+	const std::vector<OpenMM::Vec3>& drl_bon_Forces = forceField->getForces_drl_bon();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		const OpenMM::Vec3& ommForce = drl_bon_Forces[fIx];
+		const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
+		printf("drl World bonF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
+	}
+	const std::vector<OpenMM::Vec3>& drl_ang_Forces = forceField->getForces_drl_ang();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		const OpenMM::Vec3& ommForce = drl_ang_Forces[fIx];
+		const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
+		printf("drl World angF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
+	}
+	const std::vector<OpenMM::Vec3>& drl_tor_Forces = forceField->getForces_drl_tor();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		const OpenMM::Vec3& ommForce = drl_tor_Forces[fIx];
+		const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
+		printf("drl World torF %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
+	}
+	const std::vector<OpenMM::Vec3>& drl_n14_Forces = forceField->getForces_drl_n14();
+	printf("drl World::newFunction\n");
+	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
+		const OpenMM::Vec3& ommForce = drl_n14_Forces[fIx];
+		const Vec3 simForce(ommForce[0], ommForce[1], ommForce[2]);
+		printf("drl OMMPlug n14F %f %f %f\n", ommForce[0], ommForce[1], ommForce[2]);
+	}
+
+#endif // __DRILLING__ 
+
 }
 

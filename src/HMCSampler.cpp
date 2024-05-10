@@ -560,7 +560,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 50){ // dont't take burn-in
+		if(this->nofSamples >= 0){ // dont't take burn-in
 			
 			// Just for the Visualizer
 			if(world->visual){
@@ -582,11 +582,17 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
 
 			// Scale BAT by adding values to Qs. It realizes Dynamics Stage
-			SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			//SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			//scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
+			//world->newFunction();
+
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
-			SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			scout("[SCALING_PES]:") <<" " << pe_beforeScale <<" " << pe_afterScale << eolf;
+
+			//SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			//scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
+			//world->newFunction();
+			
 			// After scaling through Qs, we have to recalculate BAT values
 			updateSubZMatrixBAT(someState);
 

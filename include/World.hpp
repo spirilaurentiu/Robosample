@@ -548,7 +548,6 @@ public:
 	/** Generate a number of samples **/
 	bool generateSamples(int howMany);
 
-	void newFunction(void);
 	bool generateSamples_SP_NEW(int howMany, std::stringstream& worldOutStream);
 	//...............
 
@@ -906,6 +905,77 @@ public:
     }
 
 	// BAT --------------------------------------------------------------------
+
+	//...........................
+	// --- Drilling functions ---
+	//...........................
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<std::vector<double>>& getEnergies_drl_bon();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<std::vector<double>>& getEnergies_drl_ang();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<std::vector<double>>& getEnergies_drl_tor();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<std::vector<double>>& getEnergies_drl_n14();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<std::vector<double>>& getEnergies_drl_vdw();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<std::vector<double>>& getEnergies_drl_cou();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<OpenMM::Vec3>& getForces_drl_bon();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<OpenMM::Vec3>& getForces_drl_ang();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<OpenMM::Vec3>& getForces_drl_tor();
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	const std::vector<OpenMM::Vec3>& getForces_drl_n14();
+
+	
+	/**	
+	* @brief Drill
+	* @param
+	*/
+	void printDrilling(void);
 
 
 private:
