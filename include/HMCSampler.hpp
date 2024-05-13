@@ -620,6 +620,8 @@ public:
 	scaleSubZMatrixBATDeviations(
 		SimTK::State& someState,
 		SimTK::Real scalingFactor,
+		bool BernoulliTrial = true,
+		bool varianceBasedScalingFactor = true,		
 		std::vector<int> BATOrder = {1, 0, 2},
 		std::vector<SimTK::Real> BATSign = {1, -1, 1}
 	);

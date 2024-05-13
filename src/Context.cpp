@@ -5493,7 +5493,9 @@ void Context::PrepareNonEquilibriumParams_Q(){
 
 }
 
-// Set world distort parameters
+/*!
+ * <!--	Set world distort parameters -->
+*/
 void Context::setWorldDistortParameters(int whichWorld, SimTK::Real scaleFactor)
 {
 		// Set the scaling factor
@@ -5712,10 +5714,9 @@ bool Context::RunWorld(int whichWorld)
 			// for (size_t i = 0; i < drl_bon_Energies.size(); ++i)
 			// 	drl_bon_Energies_Avg[i].resize(drl_bon_Energies[i].size(), 0.0);
 
-
 			// validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples, worldOutStream){
 
-				warn("under drilling conditions");
+				//warn("under drilling conditions");
 
 				// Update Robosample bAtomList
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
@@ -5725,9 +5726,9 @@ bool Context::RunWorld(int whichWorld)
 				validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState,
 					worldOutStream);
 
-				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				PrintCppVector(drl_bon_Energies);
+				// SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+				// scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+				// PrintCppVector(drl_tor_Energies);
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
@@ -5735,9 +5736,9 @@ bool Context::RunWorld(int whichWorld)
 						currentAdvancedState, worldOutStream) && validated;
 				}
 
-				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				PrintCppVector(drl_bon_Energies);
+				// SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+				// scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				// PrintCppVector(drl_tor_Energies);
 				
 			// }
 

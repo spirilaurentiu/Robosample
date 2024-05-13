@@ -560,7 +560,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 50){ // dont't take burn-in
+		if(this->nofSamples >= 9){ // dont't take burn-in
 			
 			// Just for the Visualizer
 			if(world->visual){
@@ -587,8 +587,14 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//world->newFunction();
 
 			scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
+			bool BernoulliTrial = true;
+			bool varianceBasedScalingFactor = false;
 			SimTK::Real sJac =
-				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
+				scaleSubZMatrixBATDeviations(
+					someState,
+					getBendStretchStdevScaleFactor(),
+					BernoulliTrial,
+					varianceBasedScalingFactor);
 
 			//SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
 			//scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
@@ -4591,10 +4597,12 @@ HMCSampler::PrintSubZMatrixBATAndRelated(
 */
 SimTK::Real
 HMCSampler::scaleSubZMatrixBATDeviations(
-	SimTK::State& someState,
-	SimTK::Real scalingFactor,
-	std::vector<int> BATOrder,
-	std::vector<SimTK::Real> BATSign
+		SimTK::State& someState,
+		SimTK::Real scalingFactor,
+		bool BernoulliTrial,
+		bool varianceBasedScalingFactor,		
+		std::vector<int> BATOrder,
+		std::vector<SimTK::Real> BATSign
 	)
 {
 
@@ -4615,6 +4623,17 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 	//	//<< std::setprecision(12) << someState.getQ()
 	//	<< eol;
 
+	// Bernoulli: get a random sign
+	SimTK::Real randomNumber_Unif = 0.5;
+	int randomSign = 1.0;
+	if(BernoulliTrial){
+		randomNumber_Unif = uniformRealDistribution(randomEngine);
+		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
+		if(randomSign < 0){
+			scalingFactor = 1.0 / scalingFactor;
+		}
+	}
+				
 	// Iterate BATs
 	size_t bati = 0;
 	for (const auto& pair : subZMatrixBATs_ref) {
@@ -4646,28 +4665,20 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 			if( !(std::isnan(BATdiffs[rearrMobodQCnt])) ){
 
-				// Cook the scaling factor
-				scalingFactor = std::sqrt(BATvars_Alien[rearrMobodQCnt] / BATvars[rearrMobodQCnt]);
-
-				// Bernoulli trial convolution
-				SimTK::Real randomNumber_Unif;
-				int randomSign;
-
-				randomNumber_Unif = uniformRealDistribution(randomEngine);
-				randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
-				if(randomSign < 0){
-					scalingFactor = 1.0 / scalingFactor;
+				// Cook the scaling factor if based on variance
+				if(varianceBasedScalingFactor){
+					scalingFactor = std::sqrt(BATvars_Alien[rearrMobodQCnt] / BATvars[rearrMobodQCnt]);
 				}
 
 				// Print something
-				if((this->nofSamples % 500) == 0){
-					scout("HMCSampler::scale sf mbx ")
-						<< int(mbx) <<" qCnt " << qCnt <<" "
-						<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
-						<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
-						<< scalingFactor <<" "
-						<< eolf;
-				}
+				// if((this->nofSamples % 1) == 0){
+				// 	scout("HMCSampler::scale sf mbx ")
+				// 		<< int(mbx) <<" qCnt " << qCnt <<" "
+				// 		<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
+				// 		<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
+				// 		<< scalingFactor <<" "
+				// 		<< eolf;
+				// }
 
 				// Modify state Q entry
 				SimTK::Real& qEntry = someState.updQ()[qCnt];

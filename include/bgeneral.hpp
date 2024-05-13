@@ -37,7 +37,6 @@
 //#define DEBUG 1
 //#endif
 
-
 #ifndef TARGET_TYPE
 #define TARGET_TYPE double
 #endif
@@ -47,7 +46,6 @@
 #endif
 
 using namespace std;
-
 
 // Smart trace
 template <typename T>
