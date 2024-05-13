@@ -560,7 +560,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 0){ // dont't take burn-in
+		if(this->nofSamples >= 50){ // dont't take burn-in
 			
 			// Just for the Visualizer
 			if(world->visual){
@@ -586,6 +586,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
 			//world->newFunction();
 
+			scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor());
 

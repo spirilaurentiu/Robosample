@@ -80,6 +80,14 @@ void warn(Args &&... args)
 }
 
 template <typename... Args>
+void warnflush(Args &&... args)
+{
+    std::cout << "[WARNING] ";
+    trace_impl(std::cout, std::forward<Args>(args)...);
+    std::cout << std::endl << std::flush;
+}
+
+template <typename... Args>
 void spaced(Args &&... args)
 {
     trace_impl(std::cout, std::forward<Args>(args)...);

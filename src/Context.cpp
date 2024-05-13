@@ -5685,15 +5685,37 @@ bool Context::RunWorld(int whichWorld)
 	if(distortOption == 0) {
 
 		// Generate samples
+		if(singlePrmtop == true){
+			validated = worlds[whichWorld].generateSamples_SP_NEW(
+				numSamples, worldOutStream);
+		}else{
+			validated = worlds[whichWorld].generateSamples(numSamples);
+		}
+				
+	// Non-equilibrium world
+	} else if (distortOption == -1) {
 
+		// Generate samples
+		
 		// drl
 		#ifdef __DRILLING__
 
+			// Get drl data
 			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
+			const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
+			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_ang();
+
+			// Drl stats
+			// double drl_bon_Energies_TotAvg = 0.0;
+			// std::vector<double> drl_bon_Energies_RowAvg(drl_bon_Energies.size());
+			// std::vector<std::vector<double>> drl_bon_Energies_Avg(drl_bon_Energies.size());
+			// for (size_t i = 0; i < drl_bon_Energies.size(); ++i)
+			// 	drl_bon_Energies_Avg[i].resize(drl_bon_Energies[i].size(), 0.0);
+
 
 			// validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples, worldOutStream){
 
-				scout("[WARNING]") <<" " << "under drilling conditions" << eol;
+				warn("under drilling conditions");
 
 				// Update Robosample bAtomList
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
@@ -5726,21 +5748,6 @@ bool Context::RunWorld(int whichWorld)
 
 		#endif
 
-	// Non-equilibrium world
-	} else if (distortOption == -1) {
-
-		// drl
-		#ifdef __DRILLING__
-			newFunction(whichWorld);
-		#endif
-
-		// Generate samples
-		if(singlePrmtop == true){
-			validated = worlds[whichWorld].generateSamples_SP_NEW(
-				numSamples, worldOutStream);
-		}else{
-			validated = worlds[whichWorld].generateSamples(numSamples);
-		}
 
 	}
 
