@@ -5707,7 +5707,7 @@ bool Context::RunWorld(int whichWorld)
 			const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
 			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_ang();
 
-			// Drl stats
+			// Print drl stats
 			// double drl_bon_Energies_TotAvg = 0.0;
 			// std::vector<double> drl_bon_Energies_RowAvg(drl_bon_Energies.size());
 			// std::vector<std::vector<double>> drl_bon_Energies_Avg(drl_bon_Energies.size());
@@ -5716,19 +5716,28 @@ bool Context::RunWorld(int whichWorld)
 
 			// validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples, worldOutStream){
 
-				//warn("under drilling conditions");
+				warn("under drilling conditions");
 
 				// Update Robosample bAtomList
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
 				(worlds[whichWorld]).updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
 
+
+				// ''''''''''''''''''''
+				coutspaced("SCALING_BAT before:");
+				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround_SP_NEW( (worlds[whichWorld]).integ->updAdvancedState() ));
+				thermodynamicStates[0].PrintZMatrixBAT();
+				// ''''''''''''''''''''
+
 				// Reinitialize the sampler
 				validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState,
 					worldOutStream);
 
-				// SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				// scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				// PrintCppVector(drl_tor_Energies);
+				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+				//PrintCppVector(drl_bon_Energies);
+				//PrintCppVector(drl_ang_Energies);
+				//PrintCppVector(drl_tor_Energies);
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
@@ -5736,10 +5745,19 @@ bool Context::RunWorld(int whichWorld)
 						currentAdvancedState, worldOutStream) && validated;
 				}
 
-				// SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				// scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				// PrintCppVector(drl_tor_Energies);
-				
+				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				//PrintCppVector(drl_bon_Energies);
+				//PrintCppVector(drl_ang_Energies);
+				//PrintCppVector(drl_tor_Energies);
+
+				// ''''''''''''''''''''
+				coutspaced("SCALING_BAT after:");
+				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround_SP_NEW( (worlds[whichWorld]).integ->updAdvancedState() ));
+				thermodynamicStates[0].PrintZMatrixBAT();
+				// ''''''''''''''''''''
+
+
 			// }
 
 		#else
@@ -6201,7 +6219,7 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 			// Calculate thermodynamic states BAT stats
 			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
 
-			if((thermodynamicStates[thisThermoStateIx].getNofSamples() % 100) == 0)
+			if((thermodynamicStates[thisThermoStateIx].getNofSamples() % 1) == 100)
 			{
 				thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT(false);
 			}

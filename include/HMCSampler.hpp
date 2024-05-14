@@ -622,8 +622,8 @@ public:
 		SimTK::Real scalingFactor,
 		bool BernoulliTrial = true,
 		bool varianceBasedScalingFactor = true,		
-		std::vector<int> BATOrder = {1, 0, 2},
-		std::vector<SimTK::Real> BATSign = {1, -1, 1}
+		std::vector<int> BATOrder = {1, 0, 2}, 					// bendstretch {1, 0, 2};  spherical {2, 1, 0}
+		std::vector<SimTK::Real> BATSign = {1, -1, 1}			// bendstretch {1, -1, 1}; spherical {1, 1, 1}
 	);
 
 	void

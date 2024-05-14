@@ -560,7 +560,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 9){ // dont't take burn-in
+		if(this->nofSamples > 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 			
 			// Just for the Visualizer
 			if(world->visual){
@@ -587,14 +587,23 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//world->newFunction();
 
 			scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
+
+			// Scale
 			bool BernoulliTrial = true;
 			bool varianceBasedScalingFactor = false;
+			//std::vector<int> BATOrder = {1, 0, 2};				// bendstretch
+			//std::vector<SimTK::Real> BATSign = {1, -1, 1};		// bendstretch
+			std::vector<int> BATOrder = {2, 1, 0};				// spherical
+			std::vector<SimTK::Real> BATSign = {-1, 1, 1};		// spherical			
+
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(
 					someState,
 					getBendStretchStdevScaleFactor(),
 					BernoulliTrial,
-					varianceBasedScalingFactor);
+					varianceBasedScalingFactor,
+					BATOrder,
+					BATSign);
 
 			//SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
 			//scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
@@ -4633,7 +4642,7 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 			scalingFactor = 1.0 / scalingFactor;
 		}
 	}
-				
+
 	// Iterate BATs
 	size_t bati = 0;
 	for (const auto& pair : subZMatrixBATs_ref) {
@@ -4650,10 +4659,10 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 		SimTK::MobilizedBodyIndex mbx = pair.first;
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
-						// Print something
-						if((this->nofSamples % 500) == 0){
-							ceol;
-						}
+		// Print something
+		// if((this->nofSamples % 500) == 0){
+		// 	ceol;
+		// }
 
 		// Scale Q
 		int mobodQCnt = 0;
@@ -4671,18 +4680,25 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				}
 
 				// Print something
-				// if((this->nofSamples % 1) == 0){
-				// 	scout("HMCSampler::scale sf mbx ")
-				// 		<< int(mbx) <<" qCnt " << qCnt <<" "
-				// 		<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
-				// 		<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
-				// 		<< scalingFactor <<" "
-				// 		<< eolf;
-				// }
+				if((this->nofSamples % 1) == 0){
+					scout("HMCSampler::scale sf mbx ")
+						<< int(mbx) <<" qCnt " << qCnt <<" "
+						<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
+						<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
+						<< scalingFactor <<" "
+						<< eolf;
+				}
 
 				// Modify state Q entry
 				SimTK::Real& qEntry = someState.updQ()[qCnt];
-				qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0));
+				//qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)); // PERICOL RESTORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+				if((mobodQCnt == 0) || (mobodQCnt == 1)){ // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					qEntry += 0.01; // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				} 					// PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+				qEntry *= BATSign[mobodQCnt];
 
 				//qEntry += 0.01;
 				// if(nofSamples % 2 == 0){
@@ -4701,7 +4717,7 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				if (((scalingFactor > 1) && (tempNewBATDiff_Sq < BATDiff_Sq)) ||
 					((scalingFactor < 1) && (tempNewBATDiff_Sq > BATDiff_Sq)) )
 				{
-					qEntry *= -1.0;
+					//qEntry *= -1.0; // PERICOL RESTORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				}
 
 				// scout("scaleBATDeviations after ")
