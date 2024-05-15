@@ -6921,8 +6921,6 @@ Context::setAtoms_XPF_XBM(
 				childAtomMobod.setDefaultOutboardFrame(SimTK::Transform());				
 			}
 
-			
-			
 			// Next bond
 			allBONDSCnt++;
 
@@ -7136,11 +7134,12 @@ Context::setAtoms_XFM(
 std::vector<SimTK::Transform>
 Context::calc_XPF_XBM(
 	int wIx, Topology& topology,
-	SimTK::Compound::AtomIndex& childAIx, SimTK::Compound::AtomIndex& parentAIx,
+	SimTK::Compound::AtomIndex& childAIx,
+	SimTK::Compound::AtomIndex& parentAIx,
 	SimTK::BondMobility::Mobility mobility,
 	const SimTK::State& someState)
 {
-	// Get world's forcefield and matter ()
+	// Get world's forcefield and matter
 	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
 	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
 
@@ -7156,7 +7155,6 @@ Context::calc_XPF_XBM(
 
 	// Bound to Ground
 	if(parentMobod.isGround()){
-		coutspaced("Context::calc_XPF_XBM BAU"); ceol;
 		SimTK::Transform G_X_T = topology.getTopLevelTransform();
 		SimTK::Transform T_X_base =
 			topology.getTopTransform_FromMap(SimTK::Compound::AtomIndex(0));
