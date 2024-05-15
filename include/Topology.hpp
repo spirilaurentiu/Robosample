@@ -394,31 +394,38 @@ public:
 		SimTK::Compound::AtomIndex aIx,
 		SimTK::DuMMForceFieldSubsystem& dumm);
 
-	/**  **/
-	//std::vector<SimTK::Transform>
-	//calcMobodToMobodTransforms(
-	//	SimTK::SimbodyMatterSubsystem *matter,
-	//	SimTK::Compound::AtomIndex aIx,
-	//	const SimTK::State& someState,
-	//	SimTK::DuMMForceFieldSubsystem& dumm,
-	//	int whichWorld);
-
-	/** Calculate all atom frames in top frame. It avoids calling 
-	calcDefaultAtomFrameInCompoundFrame multiple times. This has 
-	to be called every time the coordinates change though. **/
-	void calcTopTransforms(void);
-	void calcTopTransforms_SP_NEW(void);
+	/**	
+	* @brief Calculate all atom frames in top frame. It avoids calling 
+	* calcDefaultAtomFrameInCompoundFrame multiple times. This has to be called
+	* every time the coordinates change though.
+	* @param : 
+	* @return
+	*/
+	void calcAtomsTopTransforms_SP_NEW(void);
 	
-	/**  **/
+	/**	
+	* @brief 
+	* @return
+	*/
 	void printTopTransforms(void);
 
-	/**  **/
-	SimTK::Transform getTopTransform(SimTK::Compound::AtomIndex);
+	/**	
+	* @brief Get atom Top level transform from the existing Topology map
+	* @param cAIx: atom Compound AtomIndex
+	* @return Atom's Top level transform
+	*/
+	SimTK::Transform getTopTransform_FromMap(SimTK::Compound::AtomIndex cAIx);
 
-	/** **/
+	/**	
+	* @brief 
+	* @return
+	*/
 	bool checkBond(int, int);
 
-	/** **/
+	/**	
+	* @brief 
+	* @return
+	*/
 	const bBond& getBond(int, int) const;
 
 	/** Get bond order. **/

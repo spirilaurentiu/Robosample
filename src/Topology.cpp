@@ -2292,19 +2292,12 @@ int Topology::getNumber(SimTK::Compound::AtomIndex aIx)
 	return CompoundAtomIx2GmolAtomIx[aIx];
 }
 
-
-/** Calculate all atom frames in top frame. It avoids calling
-calcDefaultAtomFrameInCompoundFrame multiple times. This has
-to be called every time the coordinates change though. **/
-void Topology::calcTopTransforms()
-{
-	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
-		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
-	}
-}
-
-void Topology::calcTopTransforms_SP_NEW()
+/*!
+ * <!-- Calculate all atom frames in top frame. It avoids calling
+ * calcDefaultAtomFrameInCompoundFrame multiple times. This has
+ * to be called every time the coordinates change though. -->
+*/
+void Topology::calcAtomsTopTransforms_SP_NEW()
 {
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
@@ -2312,7 +2305,9 @@ void Topology::calcTopTransforms_SP_NEW()
 	}
 }
 
-/**  **/
+/*!
+ * <!--  -->
+*/
 void Topology::printTopTransforms()
 {
 	std::cout << "Topology TopTransforms " << std::endl;
@@ -2322,11 +2317,17 @@ void Topology::printTopTransforms()
 	}
 }
 
-SimTK::Transform Topology::getTopTransform(SimTK::Compound::AtomIndex aIx)
+/*!
+ * <!-- Get atom Top level transform from the existing Topology map -->
+*/
+SimTK::Transform Topology::getTopTransform_FromMap(SimTK::Compound::AtomIndex aIx)
 {
 	return aIx2TopTransform[aIx];
 }
 
+/*!
+ * <!--  -->
+*/
 SimTK::Transform Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
 	SimTK::Compound::AtomIndex aIx,
 	SimTK::DuMMForceFieldSubsystem& dumm,

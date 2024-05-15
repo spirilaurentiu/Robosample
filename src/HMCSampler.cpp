@@ -592,7 +592,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			bool BernoulliTrial = true;
 			bool varianceBasedScalingFactor = false;
 			//std::vector<int> BATOrder = {1, 0, 2};				// bendstretch
-			//std::vector<SimTK::Real> BATSign = {1, -1, 1};		// bendstretch
+			//std::vector<SimTK::Real> BATSign = {1, 1, 1};		// bendstretch
 			std::vector<int> BATOrder = {2, 1, 0};				// spherical
 			std::vector<SimTK::Real> BATSign = {-1, 1, 1};		// spherical			
 
@@ -4694,7 +4694,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				//qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)); // PERICOL RESTORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-				if((mobodQCnt == 0) || (mobodQCnt == 1)){ // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				if((mobodQCnt == 0) // || (mobodQCnt == 1) //|| (mobodQCnt == 2)
+				){ // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					qEntry += 0.01; // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				} 					// PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

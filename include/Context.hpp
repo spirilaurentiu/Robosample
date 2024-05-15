@@ -267,7 +267,6 @@ public:
 
 	// --- Main ---
 	void randomizeWorldIndexes(void);
-	void transferCoordinates(int src, int dest);
 	void transferCoordinates_SP_NEW(int src, int dest);
 	SimTK::Real checkTransferCoordinates_Cart(int srcWIx, int destWIx);
 	SimTK::Real checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian = false);
@@ -348,7 +347,6 @@ public:
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
 	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
-	void RunSimulatedTempering(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
 
 	SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector,
 		int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
@@ -517,7 +515,6 @@ public:
 	// This can be quite costly since they imply transfer between worlds
 
 	// Load replica's atomLocations into it's front world. Returns world index
-	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
 	int restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica);
 
 	// Load replica's atomLocations into it's back world

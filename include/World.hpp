@@ -398,6 +398,7 @@ public:
 
 
 	// REFAC ----------------------------------------------------------------------
+
 	/**	
 	* @brief Takes coordinates from molecule topoIx and puts them into atomTargets
 	* @param otherWorldsAtomsLocations: Pairs of (atom, and its position) within
@@ -412,14 +413,20 @@ public:
 		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
 
+	/*!
+	* <!-- Compound matchDefaultConfiguration for molecule topoIx -->
+	*/
 	SimTK::Transform
 	setAtoms_Compound_Match(
 		int topoIx,
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
 
-
+	/*!
+	* <!-- Set atoms' frames in mobods. Also get locations in mobods for 
+	* further use -->
+	*/
 	void
-	setAtoms_Compound_FramesInMobod(
+	setAtoms_Compound_FramesAndLocsInMobod(
 		int topoIx,
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
 		SimTK::Vec3* locs);
@@ -448,19 +455,14 @@ public:
 		int topoIx
 	);
 
+	/** Set Compound, MultibodySystem and DuMM configurations according to
+	some other World's atoms **/
 	SimTK::State&
 	setAtomsLocationsInGround_REFAC(SimTK::State&,
 		const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
 		otherWorldsAtomsLocations);
 
 	// REFAC ----------------------------------------------------------------------
-
-
-	/** Set Compound, MultibodySystem and DuMM configurations according to
-	some other World's atoms **/
-	SimTK::State& setAtomsLocationsInGround(SimTK::State&,
-        const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
-        otherWorldsAtomsLocations);
 
 	/**@}**/
 
