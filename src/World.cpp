@@ -2334,6 +2334,14 @@ void World::setAtoms_Compound_FramesAndLocsInMobod(
 		// replace with: (locInMobod.norm() < FLT_EPSILON);?
 		if((locInMobod == 0)){ // atom is at body's origin
 
+				currTopology.bsetFrameInMobilizedBodyFrame(aIx, Transform());
+
+				if(getOwnIndex() == 1){
+					const Transform& O_X_root = currTopology.getFrameInMobilizedBodyFrame(aIx);
+					trace("root_X_root");
+					PrintTransform(O_X_root, 3, "root_X_root");
+				}
+				
 				locs[int(aIx)] = SimTK::Vec3(0);
 		
 		}else{ // atom is not at body's origin
@@ -2345,7 +2353,16 @@ void World::setAtoms_Compound_FramesAndLocsInMobod(
 
 			SimTK::Compound::AtomIndex mobodRootAIx = topoRootAtomPair.second;
 
-			SimTK::Transform G_X_root = G_X_T * currTopology.getTopTransform_FromMap(mobodRootAIx);
+			SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(mobodRootAIx);
+
+			if(getOwnIndex() == 1){
+				trace("T_X_root");
+				PrintTransform(T_X_root, 3, "T_X_root");
+				//trace("G_X_T");
+				//PrintTransform(G_X_T, 3, "G_X_T");				
+			}
+
+			SimTK::Transform G_X_root = G_X_T * T_X_root;
 
 			SimTK::Vec3 G_vchild = atomTargets[aIx];
 

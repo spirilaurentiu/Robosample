@@ -64,7 +64,7 @@ void trace_impl(std::ostream &os, T &&t, Args &&... args)
 template <typename... Args>
 void trace(Args &&... args)
 {
-    std::cout << "[TRACE] ";
+    std::cout << "[TRACE "<< __FILE__<<":"<<__LINE__ << "] ";
     trace_impl(std::cout, std::forward<Args>(args)...);
     std::cout << std::endl;
 }
@@ -72,7 +72,7 @@ void trace(Args &&... args)
 template <typename... Args>
 void warn(Args &&... args)
 {
-    std::cout << "[WARNING] ";
+    std::cout << "[WARNING "<< __FILE__<<":"<<__LINE__ << "] ";
     trace_impl(std::cout, std::forward<Args>(args)...);
     std::cout << std::endl;
 }
@@ -80,7 +80,7 @@ void warn(Args &&... args)
 template <typename... Args>
 void warnflush(Args &&... args)
 {
-    std::cout << "[WARNING] ";
+    std::cout << "[WARNING "<< __FILE__<<":"<<__LINE__ << "] ";
     trace_impl(std::cout, std::forward<Args>(args)...);
     std::cout << std::endl << std::flush;
 }

@@ -591,7 +591,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// Scale
 			bool BernoulliTrial = true;
 			bool varianceBasedScalingFactor = false;
-			//std::vector<int> BATOrder = {1, 0, 2};				// bendstretch
+			//std::vector<int> BATOrder = {1, 0, 2};			// bendstretch
 			//std::vector<SimTK::Real> BATSign = {1, 1, 1};		// bendstretch
 			std::vector<int> BATOrder = {2, 1, 0};				// spherical
 			std::vector<SimTK::Real> BATSign = {-1, 1, 1};		// spherical			

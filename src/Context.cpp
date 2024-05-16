@@ -7143,13 +7143,15 @@ Context::calc_XPF_XBM(
 	SimTK::DuMMForceFieldSubsystem &dumm = *worlds[wIx].forceField;
 	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
 
-	// Get body and parentBody
+	// Get child atom's body
 	SimTK::MobilizedBodyIndex childAtomMbx = topology.getAtomMobilizedBodyIndexThroughDumm(childAIx, dumm);
 	const SimTK::MobilizedBody& childAtomMobod = matter.getMobilizedBody(childAtomMbx);
 
+	// Get parent atom's body
 	SimTK::MobilizedBodyIndex parentAtomMbx = topology.getAtomMobilizedBodyIndexThroughDumm(parentAIx, dumm);
 	const SimTK::MobilizedBody& parentAtomMobod = matter.getMobilizedBody(parentAtomMbx);
 
+	// Get parent body of the child atom's body
 	const SimTK::MobilizedBody& parentMobod =  childAtomMobod.getParentMobilizedBody();
 	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
@@ -7288,7 +7290,7 @@ Context::calc_XPF_XBM(
 		};
 
 	}else{
-		std::cout << "Warning: unknown mobility\n";
+		warn("Warning: unknown mobility");
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
 
