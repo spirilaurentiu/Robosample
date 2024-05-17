@@ -2309,7 +2309,7 @@ World::setAtoms_Compound_Match(
  * <!-- Set atoms' frames in mobods. Also get locations in mobods for 
  * further use -->
 */
-void World::setAtoms_Compound_FramesAndLocsInMobod(
+void World::setAtoms_Compound_FramesAndLocsInMobods(
 	int topoIx,
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
 	SimTK::Vec3* locs
@@ -2323,54 +2323,53 @@ void World::setAtoms_Compound_FramesAndLocsInMobod(
 	SimTK::Transform G_X_T = currTopology.getTopLevelTransform();
 
 	// Loop through atoms
-	for (SimTK::Compound::AtomIndex aIx(0); aIx < currNAtoms; ++aIx){
+	for (SimTK::Compound::AtomIndex cAIx(0); cAIx < currNAtoms; ++cAIx){
 		
-		// Get location in mobod
+		// Get previous location in mobod
 		const SimTK::Vec3 &locInMobod =
 			currTopology.getAtomLocationInMobilizedBodyFrameThroughDumm(
-				aIx, *forceField);
+				cAIx, *forceField);
 		
 		// Is it at origin
 		// replace with: (locInMobod.norm() < FLT_EPSILON);?
 		if((locInMobod == 0)){ // atom is at body's origin
 
-				currTopology.bsetFrameInMobilizedBodyFrame(aIx, Transform());
+				// Sets B_X_atom
+				//currTopology.bsetFrameInMobilizedBodyFrame(cAIx, Transform());
 
 				if(getOwnIndex() == 1){
-					const Transform& O_X_root = currTopology.getFrameInMobilizedBodyFrame(aIx);
+					const Transform& O_X_root = currTopology.getFrameInMobilizedBodyFrame(cAIx);
+					SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(cAIx);
 					trace("root_X_root");
-					PrintTransform(O_X_root, 3, "root_X_root");
+					PrintTransform(T_X_root, 3, "root_X_root " + std::to_string(int(-1)) + " " + std::to_string(int(cAIx)));
 				}
 				
-				locs[int(aIx)] = SimTK::Vec3(0);
+				locs[int(cAIx)] = SimTK::Vec3(0);
 		
 		}else{ // atom is not at body's origin
 
 			SimTK::MobilizedBodyIndex mbx =
-				currTopology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
+				currTopology.getAtomMobilizedBodyIndexThroughDumm(cAIx, *forceField);
 
 			const std::pair<int, SimTK::Compound::AtomIndex>& topoRootAtomPair = getMobodRootAtomIndex(mbx);
-
 			SimTK::Compound::AtomIndex mobodRootAIx = topoRootAtomPair.second;
 
 			SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(mobodRootAIx);
 
 			if(getOwnIndex() == 1){
 				trace("T_X_root");
-				PrintTransform(T_X_root, 3, "T_X_root");
-				//trace("G_X_T");
-				//PrintTransform(G_X_T, 3, "G_X_T");				
+				PrintTransform(T_X_root, 3, "T_X_root " + std::to_string(int(mobodRootAIx)) + " " + std::to_string(int(cAIx)));
 			}
 
 			SimTK::Transform G_X_root = G_X_T * T_X_root;
 
-			SimTK::Vec3 G_vchild = atomTargets[aIx];
+			SimTK::Vec3 G_vchild = atomTargets[cAIx];
 
 			SimTK::Transform root_X_child = alignFlipAndTranslateFrameAlongXAxis(G_X_root, G_vchild);
 
-			currTopology.bsetFrameInMobilizedBodyFrame(aIx, root_X_child);
+			currTopology.bsetFrameInMobilizedBodyFrame(cAIx, root_X_child);
 
-			locs[int(aIx)] = root_X_child.p();
+			locs[int(cAIx)] = root_X_child.p();
 		}
 	}
 
@@ -2636,7 +2635,7 @@ SimTK::State& World::setAtomsLocationsInGround_REFAC(
 		SimTK::Vec3 locs[currNAtoms];
 
 		// Set CompoundAtom frameInMobilizedFrame and get loc in mobod
-		setAtoms_Compound_FramesAndLocsInMobod(
+		setAtoms_Compound_FramesAndLocsInMobods(
 			topoIx, atomTargets, locs);
 
 		///////////////////////////////////////////////////////////

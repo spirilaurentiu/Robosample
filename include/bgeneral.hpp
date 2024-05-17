@@ -91,6 +91,12 @@ void coutspaced(Args &&... args)
     trace_impl(std::cout, std::forward<Args>(args)...);
 }
 
+template <typename... Args>
+void spacedcout(Args &&... args)
+{
+    trace_impl(std::cout, std::forward<Args>(args)...);
+}
+
 // Less smart trace and print
 
 #ifndef  eolf

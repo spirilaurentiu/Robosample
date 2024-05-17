@@ -472,7 +472,7 @@ bool IsTheSameTorsion(const std::vector<SimTK::DuMM::AtomClassIndex>& tar, const
 
 /*
  * Given a frame F1 expressed in another frame G and a station v1 expressed
- * in G return another frame F2 with origin in v1, aligne along F1 v1 vector
+ * in G return another frame F2 with origin in v1, align along F1 v1 vector
  * with the X axis and pointing towards F1
  */
 SimTK::Transform alignFlipAndTranslateFrameAlongXAxis(SimTK::Transform G_X_F1, SimTK::Vec3 G_v1)

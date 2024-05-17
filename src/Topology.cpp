@@ -2312,7 +2312,7 @@ void Topology::printTopTransforms()
 {
 	std::cout << "Topology TopTransforms " << std::endl;
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (bAtomList[i]).getCompoundAtomIndex();
+		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
 		std::cout << aIx << " " << aIx2TopTransform[aIx] << std::endl;
 	}
 }

@@ -426,7 +426,7 @@ public:
 	* further use -->
 	*/
 	void
-	setAtoms_Compound_FramesAndLocsInMobod(
+	setAtoms_Compound_FramesAndLocsInMobods(
 		int topoIx,
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
 		SimTK::Vec3* locs);
@@ -811,6 +811,11 @@ public:
 	 * Define some convenient transforms
 	*/
 
+	// SimTK::UnitVec3 constXAxis(1, 0, 0);
+	// SimTK::UnitVec3 constYAxis(0, 1, 0);
+	// SimTK::UnitVec3 constZAxis(0, 0, 1);
+	// SimTK::UnitVec3 constOriginVec(0, 0, 0);
+
 	// X axis to Z axis switch
 	const SimTK::Transform X_to_Z 
 		=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
@@ -826,6 +831,7 @@ public:
 		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
 	const SimTK::Transform X_to_Y = ~Y_to_X;
 
+	//
 	void setSamplesPerRound(int samples);
 	int getSamplesPerRound() const;
 

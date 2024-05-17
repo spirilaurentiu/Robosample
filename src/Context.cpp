@@ -6800,7 +6800,7 @@ SimTK::State& Context::setAtoms_SP_NEW(
 		SimTK::Vec3 locs[currNAtoms];
 
 		// Set CompoundAtom frameInMobilizedFrame and get loc in mobod
-		destWorld.setAtoms_Compound_FramesAndLocsInMobod(
+		destWorld.setAtoms_Compound_FramesAndLocsInMobods(
 			topoIx, atomTargets, locs);
 
 		// 2.2 DUMM
