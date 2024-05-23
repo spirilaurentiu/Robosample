@@ -2278,6 +2278,7 @@ World::setAtoms_Compound_Match(
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
 )
 {
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_Match\n";
 
 	// Gather Top transforms for all the Compounds
 	std::vector<SimTK::Transform> G_X_Ts;
@@ -2289,11 +2290,17 @@ World::setAtoms_Compound_Match(
 	Topology& currTopology = (*topologies)[topoIx];
 
 	bool flipAllChirality = false;
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultAtomChirality\n";
 	currTopology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondLengths\n";
 	currTopology.matchDefaultBondLengths(atomTargets);
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondAngles\n";
 	currTopology.matchDefaultBondAngles(atomTargets);
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDirections\n";
 	currTopology.matchDefaultDirections(atomTargets);
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDihedralAngles\n";
 	currTopology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchTopLevelTransform\n";
 	currTopology.matchDefaultTopLevelTransform(atomTargets);
 
 	// Get the Ground to Top Transform
@@ -2315,6 +2322,8 @@ void World::setAtoms_Compound_FramesAndLocsInMobods(
 	SimTK::Vec3* locs
 )
 {
+	std::cout << "[YDIRBUG] World::setAtoms_Compound_FramesAndLocsInMobods\n";
+
 	// Convenient vars
 	Topology& currTopology = (*topologies)[topoIx];
 	int currNAtoms = currTopology.getNumAtoms();

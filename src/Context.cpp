@@ -4956,6 +4956,7 @@ int Context::restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica)
 
 	//worlds[currWorldIx].setAtomsLocationsInGround(state,
 	//	replicas[whichReplica].getAtomsLocationsInGround());
+	std::cout << "[YDIRBUG] restoreReplicaCoordinatesToFrontWorld_SP_NEW\n";
 	state = setAtoms_SP_NEW(currWorldIx, state,
 		replicas[whichReplica].getAtomsLocationsInGround());		
 
@@ -5648,8 +5649,10 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 	if(worldIxs.size() > 1) {
 
-		//std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
-		
+		std::cout << "[YDIRBUG] ";
+		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+		std::cout << "[YDIRBUG]\n";
+
 		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
 
 		SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);

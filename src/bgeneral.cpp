@@ -910,12 +910,13 @@ void PrintMat33(SimTK::Mat33 M, int decimal_places,
  * Print Transform
  */
 void PrintTransform(SimTK::Transform T, int decimal_places,
-	std::string header)
+	std::string header, std::string rowPrefix)
 {
-    std::cout << header << std::endl;	
+    std::cout << header << std::endl;
     const SimTK::Mat44 M = T.toMat44();
 
     for(int i = 0; i < 4; i++){
+		std::cout << rowPrefix;
         for(int k = 0; k < 4; k++){
             std::cout
 				<< std::setw(6 + decimal_places) << std::fixed
@@ -926,9 +927,6 @@ void PrintTransform(SimTK::Transform T, int decimal_places,
     }
 
 }
-
-
-
 
 /*
  * Angle
