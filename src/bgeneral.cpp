@@ -925,7 +925,6 @@ void PrintTransform(SimTK::Transform T, int decimal_places,
         }
         std::cout << std::endl;
     }
-
 }
 
 /*

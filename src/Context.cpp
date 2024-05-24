@@ -1982,7 +1982,7 @@ void Context::buildAcyclicGraph_SP_NEW(
 
 		// print compound atom indices for child and parent
 		// scout("child parent compound atom indices ")
-		// 	<< child.getNumber() << " " << child.getCompoundAtomIndex()
+		//	<< child.getNumber() << " " << child.getCompoundAtomIndex()
 		// 	<< " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
 		// 	<< eol;
 

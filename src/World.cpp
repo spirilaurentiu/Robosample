@@ -2292,6 +2292,7 @@ World::setAtoms_Compound_Match(
 	bool flipAllChirality = false;
 	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultAtomChirality\n";
 	currTopology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	currTopology.PrintCompoundGeometry(atomTargets);
 	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondLengths\n";
 	currTopology.matchDefaultBondLengths(atomTargets);
 	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondAngles\n";
