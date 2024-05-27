@@ -1980,11 +1980,11 @@ void Context::buildAcyclicGraph_SP_NEW(
 				Compound::BondIndex(topology.getNumBonds() - 1), 0));
 		}
 
-		// print compound atom indices for child and parent
-		// scout("child parent compound atom indices ")
-		//	<< child.getNumber() << " " << child.getCompoundAtomIndex()
-		// 	<< " " << parent.getNumber() << " " << parent.getCompoundAtomIndex()
-		// 	<< eol;
+		// Print compound atom indices for child and parent
+		// spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
+		// 	child.getNumber(), child.getCompoundAtomIndex(),
+		// 	parent.getNumber(), parent.getCompoundAtomIndex());
+		// ceol;
 
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
@@ -4932,8 +4932,6 @@ void Context::mixReplicas(int mixi)
 int Context::restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica)
 {
 
-	//std::cout <<  "Context::restoreReplicaCoordinatesToFrontWorld " << whichReplica << ": " << std::flush;
-
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
 	int thermoIx = replica2ThermoIxs[whichReplica];
@@ -4956,11 +4954,8 @@ int Context::restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica)
 
 	//worlds[currWorldIx].setAtomsLocationsInGround(state,
 	//	replicas[whichReplica].getAtomsLocationsInGround());
-	std::cout << "[YDIRBUG] restoreReplicaCoordinatesToFrontWorld_SP_NEW\n";
 	state = setAtoms_SP_NEW(currWorldIx, state,
 		replicas[whichReplica].getAtomsLocationsInGround());		
-
-	//std::cout << "Context::restoreReplicaCoordinatesToFrontWorld worldIndexes.front() " << worldIndexes.front() << std::endl << std::flush;
 
 	return currWorldIx;
 
@@ -5543,7 +5538,7 @@ bool Context::RunWorld(int whichWorld)
 
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT before:");
+				coutspaced("SCALING_BAT init:"); ceol;
 				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround_SP_NEW( (worlds[whichWorld]).integ->updAdvancedState() ));
 				thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
@@ -5571,7 +5566,7 @@ bool Context::RunWorld(int whichWorld)
 				//PrintCppVector(drl_tor_Energies);
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT after:");
+				coutspaced("SCALING_BAT after:"); ceol;
 				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround_SP_NEW( (worlds[whichWorld]).integ->updAdvancedState() ));
 				thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
@@ -5649,14 +5644,14 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 	if(worldIxs.size() > 1) {
 
-		std::cout << "[YDIRBUG] ";
-		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
-		std::cout << "[YDIRBUG]\n";
+		// spacedcout("[YDIRBUG]");
+		// std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+		// spacedcout("[YDIRBUG]"); ceol;
 
 		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
 
-		SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
-		SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
+		//SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
+		//SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
 		// if(cumulDiff_BAT > 0.001){
 		// 	std::cout << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
 		// }

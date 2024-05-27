@@ -2508,7 +2508,7 @@ void Topology::writeAtomListPdb(std::string dirname,
 		}
 
 		fclose(oF);
-		std::cout << "\tTopology written to '" << ofilename << "'\n";
+		//std::cout << "\tTopology written to '" << ofilename << "'\n";
 	} else {
 		std::cout << "FAILED TO OPEN '" << ofilename << "' TO WRIE!\n";
 	}

@@ -594,7 +594,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//std::vector<int> BATOrder = {1, 0, 2};			// bendstretch
 			//std::vector<SimTK::Real> BATSign = {1, 1, 1};		// bendstretch
 			std::vector<int> BATOrder = {2, 1, 0};				// spherical
-			std::vector<SimTK::Real> BATSign = {-1, 1, 1};		// spherical			
+			std::vector<SimTK::Real> BATSign = {-1, -1, -1};		// spherical			
 
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(
@@ -4572,19 +4572,19 @@ HMCSampler::PrintSubZMatrixBATAndRelated(
 		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
 		std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
 		std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
-		std::vector<SimTK::Real>& BATstds = subZMatrixBATVars.at(pair.first);
+		std::vector<SimTK::Real>& BATvars = subZMatrixBATVars.at(pair.first);
 
 		SimTK::MobilizedBodyIndex mbx = pair.first;
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
 		// Print
-		scout("PrintBATDeviations mbx qix BATs BATmeans BATdiffs BATstds ")
+		scout("PrintBATDeviations mbx qix BATs BATmeans BATdiffs BATvars ")
 			<< pair.first <<" " << mobod.getFirstQIndex(someState) <<" | "
 			<< std::setprecision(12)
 			<< BAT[0] <<" " << BAT[1] <<" " << BAT[2] <<" "
 			<< BATmeans[0] <<" " << BATmeans[1] <<" " << BATmeans[2] <<" "
 			<< BATdiffs[0] <<" " << BATdiffs[1] <<" " << BATdiffs[2] <<" "
-			<< BATstds[0]  <<" " << BATstds[1]  <<" " << BATstds[2]  <<" "
+			<< BATvars[0]  <<" " << BATvars[1]  <<" " << BATvars[2]  <<" "
 			<< eol;
 
 		bati++;
@@ -4654,15 +4654,13 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 		std::vector<SimTK::Real>& BATvars  = subZMatrixBATVars.at(pair.first);
 		std::vector<SimTK::Real>& BATvars_Alien  = subZMatrixBATVars_Alien.at(pair.first);
-
+		
 		// Get mobod
 		SimTK::MobilizedBodyIndex mbx = pair.first;
 		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
 		// Print something
-		// if((this->nofSamples % 500) == 0){
-		// 	ceol;
-		// }
+		// if((this->nofSamples % 500) == 0){ceol;}
 
 		// Scale Q
 		int mobodQCnt = 0;
@@ -4672,6 +4670,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 
 			int rearrMobodQCnt = BATOrder[mobodQCnt];
 
+			//spacedcout("HMCSampler::scale mbx", mbx, "qCnt", qCnt);
+
 			if( !(std::isnan(BATdiffs[rearrMobodQCnt])) ){
 
 				// Cook the scaling factor if based on variance
@@ -4679,25 +4679,26 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 					scalingFactor = std::sqrt(BATvars_Alien[rearrMobodQCnt] / BATvars[rearrMobodQCnt]);
 				}
 
-				// Print something
-				if((this->nofSamples % 1) == 0){
-					scout("HMCSampler::scale sf mbx ")
-						<< int(mbx) <<" qCnt " << qCnt <<" "
-						<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
-						<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
-						<< scalingFactor <<" "
-						<< eolf;
-				}
+				// // Print something // PERICOL RESTORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				// if((this->nofSamples % 1) == 0){
+				// 	scout("HMCSampler::scale sf mbx ")
+				// 		<< int(mbx) <<" qCnt " << qCnt <<" "
+				// 		<< std::sqrt(BATvars[rearrMobodQCnt]) <<" "
+				// 		<< std::sqrt(BATvars_Alien[rearrMobodQCnt]) <<" "
+				// 		<< scalingFactor <<" "
+				// 		<< eolf;
+				// }
 
 				// Modify state Q entry
 				SimTK::Real& qEntry = someState.updQ()[qCnt];
 				//qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)); // PERICOL RESTORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-				if((mobodQCnt == 0) // || (mobodQCnt == 1) //|| (mobodQCnt == 2)
+				//spacedcout(" qEntry", qEntry, " "); // PERICOL COUT
+				if((mobodQCnt == 0) || (mobodQCnt == 1) || (mobodQCnt == 2)
 				){ // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					//spacedcout(" adding 0.01 mbx", mbx, "qCnt", qCnt, "qEntry", qEntry); // PERICOL COUT
 					qEntry += 0.01; // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				} 					// PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				} // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 				qEntry *= BATSign[mobodQCnt];
 
@@ -4737,6 +4738,8 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 			
 			// Increment Q entry counter inside mobod
 			mobodQCnt++;
+
+			//ceol; // PERICOL COUT
 
 		} // every mobod q
 

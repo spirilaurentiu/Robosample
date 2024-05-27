@@ -197,7 +197,7 @@ void ThermodynamicState::PrintZMatrixBAT(bool printBATStats) const {
 			std::cout << tabValue << " ";
 		}
 
-		scout("aIxs ");
+		scout("cAIxs ");
 
 		for(const auto tabValue : zMatrixTable[bati]){
 			if( tabValue >= 0){

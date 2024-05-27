@@ -2278,8 +2278,6 @@ World::setAtoms_Compound_Match(
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
 )
 {
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_Match\n";
-
 	// Gather Top transforms for all the Compounds
 	std::vector<SimTK::Transform> G_X_Ts;
 
@@ -2290,18 +2288,18 @@ World::setAtoms_Compound_Match(
 	Topology& currTopology = (*topologies)[topoIx];
 
 	bool flipAllChirality = false;
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultAtomChirality\n";
+	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultAtomChirality\n";
 	currTopology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
-	currTopology.PrintCompoundGeometry(atomTargets);
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondLengths\n";
+	//currTopology.PrintCompoundGeometry(atomTargets);
+	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondLengths\n";
 	currTopology.matchDefaultBondLengths(atomTargets);
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondAngles\n";
+	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultBondAngles\n";
 	currTopology.matchDefaultBondAngles(atomTargets);
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDirections\n";
+	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDirections\n";
 	currTopology.matchDefaultDirections(atomTargets);
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDihedralAngles\n";
+	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchDefaultDihedralAngles\n";
 	currTopology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchTopLevelTransform\n";
+	//std::cout << "[YDIRBUG] World::setAtoms_Compound_MatchTopLevelTransform\n";
 	currTopology.matchDefaultTopLevelTransform(atomTargets);
 
 	// Get the Ground to Top Transform
@@ -2323,7 +2321,6 @@ void World::setAtoms_Compound_FramesAndLocsInMobods(
 	SimTK::Vec3* locs
 )
 {
-	std::cout << "[YDIRBUG] World::setAtoms_Compound_FramesAndLocsInMobods\n";
 
 	// Convenient vars
 	Topology& currTopology = (*topologies)[topoIx];
@@ -2340,19 +2337,19 @@ void World::setAtoms_Compound_FramesAndLocsInMobods(
 			currTopology.getAtomLocationInMobilizedBodyFrameThroughDumm(
 				cAIx, *forceField);
 		
-		// Is it at origin
-		// replace with: (locInMobod.norm() < FLT_EPSILON);?
-		if((locInMobod == 0)){ // atom is at body's origin
+		// Set atom's location and frame in mobod
+		
+		if((locInMobod == 0)){ // atom is at body's origin // (locInMobod.norm() < FLT_EPSILON);?
 
 				// Sets B_X_atom
 				//currTopology.bsetFrameInMobilizedBodyFrame(cAIx, Transform());
 
-				if(getOwnIndex() == 1){
-					const Transform& O_X_root = currTopology.getFrameInMobilizedBodyFrame(cAIx);
-					SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(cAIx);
-					trace("root_X_root");
-					PrintTransform(T_X_root, 3, "root_X_root " + std::to_string(int(-1)) + " " + std::to_string(int(cAIx)));
-				}
+				// if(getOwnIndex() == 1){ // debug
+				// 	const Transform& O_X_root = currTopology.getFrameInMobilizedBodyFrame(cAIx);
+				// 	SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(cAIx);
+				// 	trace("root_X_root");
+				// 	PrintTransform(T_X_root, 3, "root_X_root " + std::to_string(int(-1)) + " " + std::to_string(int(cAIx)));
+				// }
 				
 				locs[int(cAIx)] = SimTK::Vec3(0);
 		
@@ -2366,10 +2363,10 @@ void World::setAtoms_Compound_FramesAndLocsInMobods(
 
 			SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(mobodRootAIx);
 
-			if(getOwnIndex() == 1){
-				trace("T_X_root");
-				PrintTransform(T_X_root, 3, "T_X_root " + std::to_string(int(mobodRootAIx)) + " " + std::to_string(int(cAIx)));
-			}
+			// if(getOwnIndex() == 1){ // debug
+			// 	trace("T_X_root");
+			// 	PrintTransform(T_X_root, 3, "T_X_root " + std::to_string(int(mobodRootAIx)) + " " + std::to_string(int(cAIx)));
+			// }
 
 			SimTK::Transform G_X_root = G_X_T * T_X_root;
 
