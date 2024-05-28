@@ -986,6 +986,12 @@ public:
 	void printDrilling(void);
 
 
+
+	void setDuMMAtomIndexes(void);
+
+	SimTK::Compound::AtomIndex getCompoundAtomIndex(SimTK::DuMM::AtomIndex);
+
+
 private:
 
 	// Map mbx2aIx contains only atoms at the origin of mobods

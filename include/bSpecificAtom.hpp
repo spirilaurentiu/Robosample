@@ -137,6 +137,10 @@ public:
     void setIsRoot(bool argIsRoot){this->isRoot = argIsRoot;}
     const bool getIsRoot() const {return this->isRoot;}
 
+    void setDuMMAtomIndex(SimTK::DuMM::AtomIndex dAIx_){this->dAIx = dAIx_;}
+    const SimTK::DuMM::AtomIndex& getDuMMAtomIndex(void){return this->dAIx;}
+
+
     // End of interface
     /**@}**/
 
@@ -174,6 +178,7 @@ private:
     SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
     SimTK::DuMM::ChargedAtomTypeIndex chargedAtomTypeIndex;
     SimTK::BiotypeIndex biotypeIndex;
+    SimTK::DuMM::AtomIndex dAIx;
 
 public:
     

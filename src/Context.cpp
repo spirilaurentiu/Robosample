@@ -252,10 +252,21 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 			setupReader.get("VISUAL")[worldIx] == "TRUE" ? SimTK::Real(std::stod(setupReader.get("TIMESTEPS")[worldIx])) : 0);
 	}
 
+	// Set DuMM atom indexes into atoms of bAtomList 
+	worlds[0].setDuMMAtomIndexes();
+	
+	scout("Correspondence cAIx dAIx\n");
+	int ix = -1;
+	for(auto atom: atoms){
+		ix++;
+		spacedcout("aIx cAIx dAIx", ix, atom.getCompoundAtomIndex(), atom.getDuMMAtomIndex(), "\n");
+	}
+
 	// Victor - take a look
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
 		worlds[worldIx].setMyContext(this);
 	}
+
 
 	// // Get how much available memory we have
 	// struct sysinfo info;
@@ -1981,10 +1992,10 @@ void Context::buildAcyclicGraph_SP_NEW(
 		}
 
 		// Print compound atom indices for child and parent
-		// spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
-		// 	child.getNumber(), child.getCompoundAtomIndex(),
-		// 	parent.getNumber(), parent.getCompoundAtomIndex());
-		// ceol;
+		spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
+			child.getNumber(), child.getCompoundAtomIndex(),
+			parent.getNumber(), parent.getCompoundAtomIndex());
+		ceol;
 
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
@@ -5519,7 +5530,7 @@ bool Context::RunWorld(int whichWorld)
 			// Get drl data
 			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
 			const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
-			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_ang();
+			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_tor();
 
 			// Print drl stats
 			// double drl_bon_Energies_TotAvg = 0.0;
@@ -5549,9 +5560,9 @@ bool Context::RunWorld(int whichWorld)
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				//PrintCppVector(drl_bon_Energies);
-				//PrintCppVector(drl_ang_Energies);
-				//PrintCppVector(drl_tor_Energies);
+				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
@@ -5560,10 +5571,6 @@ bool Context::RunWorld(int whichWorld)
 				}
 
 				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				//PrintCppVector(drl_bon_Energies);
-				//PrintCppVector(drl_ang_Energies);
-				//PrintCppVector(drl_tor_Energies);
 
 				// ''''''''''''''''''''
 				coutspaced("SCALING_BAT after:"); ceol;
@@ -5571,6 +5578,10 @@ bool Context::RunWorld(int whichWorld)
 				thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
+				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 			// }
 

@@ -2390,7 +2390,7 @@ void World::setAtoms_SetDuMMStations(
 	SimTK::Vec3* locs
 )
 {
-		// Convenient vars
+	// Convenient vars
 	Topology& currTopology = (*topologies)[topoIx];
 	int currNAtoms = currTopology.getNumAtoms();
 
@@ -2413,7 +2413,6 @@ void World::setAtoms_SetDuMMStations(
 
 		// Atom placements in clusters
 		forceField->bsetAtomPlacementStation(dAIx, mbx, locs[int(aIx)] );
-
 
 	}
 
@@ -3733,4 +3732,59 @@ void World::printDrilling(void)
 #endif // __DRILLING__ 
 
 }
+
+/*!
+ * <!--  -->
+*/
+void World::setDuMMAtomIndexes(void)
+{
+
+	// Iterate through topologies
+	for (auto& topology : (*topologies)){
+
+		// Iterate through atoms
+		for (auto& atom : topology.subAtomList) {
+
+			// Get Compound atom index
+			auto compoundAtomIndex = atom.getCompoundAtomIndex();
+
+			// Get DuMM atom index too for OpenMM
+			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
+
+			atom.setDuMMAtomIndex(dAIx);
+
+		}
+	}
+
+    //assert((this->chargedAtomTypeIndex).isValid());
+    //(this->dAIx) = dumm.getDuMMAtomIndex(chargedAtomTypeIndex);
+    //assert((this->dAIx).isValid());
+
+}
+
+/*!
+ * <!--  -->
+*/
+SimTK::Compound::AtomIndex World::getCompoundAtomIndex(SimTK::DuMM::AtomIndex dAIx_)
+{
+	// Iterate through topologies
+	for (auto& topology : (*topologies)){
+
+		// Iterate through atoms
+		for (auto& atom : topology.subAtomList) {
+
+			// Get DuMM atom index too for OpenMM
+			const SimTK::DuMM::AtomIndex dAIx = atom.getDuMMAtomIndex();
+
+			if(dAIx == dAIx_){
+				assert(dAIx.isValid());
+				return atom.getCompoundAtomIndex();
+			}
+
+		}
+	}
+
+	return 	SimTK::Compound::AtomIndex::Invalid();
+}
+
 

@@ -4694,11 +4694,11 @@ HMCSampler::scaleSubZMatrixBATDeviations(
 				//qEntry += (BATdiffs[rearrMobodQCnt] * (scalingFactor - 1.0)); // PERICOL RESTORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 				//spacedcout(" qEntry", qEntry, " "); // PERICOL COUT
-				if((mobodQCnt == 0) || (mobodQCnt == 1) || (mobodQCnt == 2)
-				){ // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				//if((mobodQCnt == 0))
+				//{ // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					//spacedcout(" adding 0.01 mbx", mbx, "qCnt", qCnt, "qEntry", qEntry); // PERICOL COUT
 					qEntry += 0.01; // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				} // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				//} // PERICOL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 				qEntry *= BATSign[mobodQCnt];
 
