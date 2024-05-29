@@ -138,34 +138,8 @@ public:
 	//
 	void AddBiotypes(int which, readAmberInput *amberReader);
 	
-	void generateDummParams(int which, readAmberInput *amberReader
-	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
-	);
-
-	void transferDummParams(int which, readAmberInput *amberReader
-	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
-
-	);
-
 	void BuildTopologyGraph(int which, std::string argRoot);
 	void AllocateCoordBuffers(int natoms);
-
-	/** It sets Compound BondFlexibilities . Also
-	 * creates decorations for visualizers
-	 **/
-	void SetBondFlexibilities(
-		std::string flexFN,
-		std::string regimenSpec,
-		std::string argRootMobility,
-		int which);
 
 	/** Adopts a topology **/
 	void adoptTopology(int which);
@@ -281,7 +255,6 @@ public:
 
 	/** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 	void loadMbx2AIxMap();
-	void loadMbx2AIxMap_SP_NEW();
 
 	/** Get the number of molecules **/
 	int getNofMolecules() const;
@@ -318,22 +291,19 @@ public:
 
 	float setSphereRadius (float argRadius);
 
-	/** Get the current Compound Cartesian coords.
-	* Return a 2D vector representing all the coordinates of this World.
+	/**
+	 * @brief Get the current Compound Cartesian coords.
+	 * @param state state.
+	 * @details Return a 2D vector representing all the coordinates of this World.
  	* The first dimension represents the molecules (topologies) and the second
  	* dimension (inner) represents the coordinates. The second inner dimension
  	* type is pair of bSpecificAtom* and a Vec3. Thus, besides coordinates, it
  	* contains all the information in bSpecificAtom as well. The bottleneck here
  	* is the calcAtomLocationInGroundFrame from Compound.
- 	**/
+	*/
 	std::vector<std::vector<
 	std::pair<bSpecificAtom *, SimTK::Vec3> > >
-		getAtomsLocationsInGround(SimTK::State&
-	);
-	std::vector<std::vector<
-	std::pair<bSpecificAtom *, SimTK::Vec3> > >
-		getAtomsLocationsInGround_SP_NEW(SimTK::State&
-	);
+		getAtomsLocationsInGround(SimTK::State&);
 
 	/** Get the current Compound Cartesian coordinates using Simbody **/
 	std::vector<std::vector<

@@ -395,34 +395,6 @@ void World::AddBiotypes(int which, readAmberInput *amberReader)
 */
 }
 
-void World::generateDummParams(int which, readAmberInput *amberReader
-	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs)
-
-{
-	// Add DuMM parameters from amberReader
-	((*topologies)[which]).generateDummParams(amberReader, *forceField,
-	aClassParams2aClassId,
-	allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
-}
-
-void World::transferDummParams(int which, readAmberInput *amberReader
-	, std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allBondsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allAnglesACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allDihedralsACIxs
-	, std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>& allImpropersACIxs
-	)
-{
-	// Add DuMM parameters from amberReader
-	((*topologies)[which]).transferDummParams(amberReader, *forceField,
-		aClassParams2aClassId,
-		allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
-}
-
 void World::BuildTopologyGraph(int which, std::string argRoot)
 {
 /*
@@ -440,33 +412,6 @@ void World::AllocateCoordBuffers(int natoms)
 	Xs.reserve(natoms);
 	Ys.reserve(natoms);
 	Zs.reserve(natoms);
-}
-
-/** It sets Compound BondFlexibilities . Also
- * creates decorations for visualizers
- **/
-void World::SetBondFlexibilities(
-		std::string flexFN,
-		std::string regimenSpec,
-		std::string argRootMobility,
-		int which)
-{
-	// Set flexibility according to the flexibility file
-	//((*topologies)[which]).PrintAtomList();
-	((*topologies)[which]).setFlexibility(regimenSpec, flexFN, ownWorldIndex);
-
-	rootMobilities[which] = argRootMobility; // NEW
-
-	// Set generalized velocities scale factors
-	((*topologies)[which]).setUScaleFactorsToBonds(flexFN);
-	// Print Molmodel types
-	//topologies.back().PrintMolmodelAndDuMMTypes(*forceField);
-
-	// Allocate the vector of coordinates (DCD)
-	// TODO: where is this supposed to be?
-	//Xs.resize(Xs.size() + topologies[which].getNAtoms());
-	//Ys.resize(Ys.size() + topologies[which].getNAtoms());
-	//Zs.resize(Zs.size() + topologies[which].getNAtoms());
 }
 
 /** Adopts a topology **/
@@ -1083,48 +1028,6 @@ void World::loadCompoundRelatedMaps()
 
 /** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
 void World::loadMbx2AIxMap(){
-
-	int topoIx = 0;
-
-	for (auto& topology : (*topologies)){
-
-		// Iterate through atoms and get their MobilizedBodyIndeces
-		for (unsigned int i = 0; i < topology.getNumAtoms(); ++i) {
-
-			// Get atomIndex from atomList
-			SimTK::Compound::AtomIndex aIx = (topology.bAtomList[i]).getCompoundAtomIndex();
-
-			// Get MobilizedBodyIndex from CompoundAtom
-			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
-
-			if(!aIx.isValid() || !mbx.isValid())
-			{
-				std::cout << "[WARNING]: Tried adding invalid index in loadMbx2AIxMap() aIx: "
-					<< aIx << ", mbx: " << mbx << std::endl;
-				continue;
-			}
-
-			// Map mbx2aIx contains only atoms at the origin of mobods
-			if (topology.getAtomLocationInMobilizedBodyFrame(aIx) == 0) {
-
-				// Construct the pair to insert into the map
-                std::pair<int, SimTK::Compound::AtomIndex> topoAtomPair(topoIx, aIx);
-
-				// 
-				mbx2aIx.insert(std::make_pair(mbx, topoAtomPair));
-
-			}
-
-		} // atoms
-
-		topoIx++;
-
-	} // every topology
-
-}
-
-/** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
-void World::loadMbx2AIxMap_SP_NEW(){
 
 	int topoIx = 0;
 
@@ -1840,57 +1743,9 @@ World::getGeometricCenterOfSelection(const SimTK::State & state
  * contains all the information in bSpecificAtom as well. The bottleneck here
  * is the calcAtomLocationInGroundFrame from Compound.
  **/
-
-
 std::vector< std::vector<
 std::pair <bSpecificAtom *, SimTK::Vec3 > > >
 World::getAtomsLocationsInGround(SimTK::State & state)
-{
-	// Return vector
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		returnVector;
-
-	// Iterate through topologies
-	for (auto& topology : (*topologies)){
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
-		currentTopologyInfo.reserve(topology.bAtomList.size());
-
-		// Iterate through atoms
-		for (auto& atom : topology.bAtomList) {
-
-			// Get Compound atom index
-			auto compoundAtomIndex = atom.getCompoundAtomIndex();
-
-			// Get DuMM atom index too for OpenMM
-			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
-
-			SimTK::Vec3 location;
-
-			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
-				// ELIZA
-				// location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
-				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
-			}else{
-				location = 
-				topology.calcAtomLocationInGroundFrameThroughSimbody(
-					compoundAtomIndex, *forceField, *matter, state);
-			}
-
-			// std::cout << "getAtomsLocationsInGround " << dAIx << " " << location << std::endl;
-
-			currentTopologyInfo.emplace_back(&atom, location);
-		}
-
-		returnVector.emplace_back(currentTopologyInfo);
-	}
-
-	return returnVector;
-}
-
-
-std::vector< std::vector<
-std::pair <bSpecificAtom *, SimTK::Vec3 > > >
-World::getAtomsLocationsInGround_SP_NEW(SimTK::State & state)
 {
 	// Return vector
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>

@@ -169,6 +169,11 @@ public:
 		return this->begin_[index];
 	}
 
+    // Const operator[]
+    typename std::iterator_traits<Iterator>::reference operator[](std::size_t index) const {
+        return begin_[index];
+    }
+
 	size_t size(void) const {
 		return std::distance(begin_, end_);
 	}

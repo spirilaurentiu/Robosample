@@ -413,7 +413,7 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 	// Get coordinates from source
 	const std::vector<std::vector<std::pair<
 	bSpecificAtom *, SimTK::Vec3> > >& firstWorldsAtomsLocations =
-		worlds[firstWIx].getAtomsLocationsInGround_SP_NEW(lastAdvancedState);
+		worlds[firstWIx].getAtomsLocationsInGround(lastAdvancedState);
 
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
 	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
@@ -858,10 +858,10 @@ void Context::setAtomCompoundTypes() {
 */
 void Context::addBiotypes() {
 
-	// 
+	// Set a residue name
 	std::string resName = "MOL0";
 
-	// Iterate atoms and define Biotypes with their indeces and names
+	// Define atoms' Biotypes and BiotypeIndexes with their indeces and names
 	int aCnt = -1;
 	for(auto& atom : atoms) {
 		aCnt++;
@@ -875,18 +875,12 @@ void Context::addBiotypes() {
 			SimTK::Ordinality::Any
 		);
 
-		// std::cout << "SP_NEW_LAB Context biotypeIndex "
-		// 	<< biotypeIndex <<" " << std::endl;
-
 		atom.setBiotypeIndex(biotypeIndex);
 
 		// Assign atom's biotype as a composed name: name + force field type
 		std::string biotype = atom.getResidueName() + atom.getName() + atom.getFftype();
 		atom.setBiotype(biotype);
 
-		// std::cout << "SP_NEW_LAB  Context::bAddBiotypes " << atom.getBiotypeIndex() << " "
-		// 	<< atom.getBiotype() << " with bonds = " << atom.getNBonds()
-		// 	<< std::endl;
 	}
 }
 
@@ -906,7 +900,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	loadTorsions(reader);
 
 	// Build graph (bondAtom)
-	constructTopologies_SP_NEW();
+	constructTopologies();
 
 	// Close rings
 	addRingClosingBonds_All();
@@ -922,7 +916,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	generateTopologiesSubarrays();
 
 	// Match Compounds configurations to atoms Cartesian coords
-	matchDefaultConfigurations_SP_NEW();
+	matchDefaultConfigurations();
 
 	for(auto& topology : topologies) {
 		topology.setAtomList();
@@ -988,173 +982,6 @@ void Context::setRootMobilitiesFromFlexFiles(void)
 	}
 
 }
-
-// /**
-//  * SP_NEW
-//  * Check if the provided atom is a possible root and if not find one
-// */
-// bSpecificAtom* Context::findARoot(Topology topology, int argRoot)
-// {
-
-// 	bSpecificAtom *root = nullptr;
-	
-// 	if ((static_cast<size_t>(argRoot) > atoms.size()) || (atoms[argRoot].getNBonds() > 1)) {
-// 		topology.baseAtomNumber = argRoot;
-// 		root = &(atoms[argRoot]);
-// 		topology.bSpecificAtomRootIndex = argRoot;
-// 	}else {
-// 		std::cout << "Root atom will be chosen by Gmolmodel...  ";
-// 		int baseAtomListIndex = 0;
-// 		for (int i = 0; i < natoms; i++) {
-// 			if (atoms[i].getNBonds() > 1) {
-// 				baseAtomListIndex = i;
-// 				std::cout << "done. Root chosen " << i << std::endl;
-// 				break;
-// 			}
-// 		}
-
-// 		root = &(atoms[baseAtomListIndex]);
-// 		topology.bSpecificAtomRootIndex = baseAtomListIndex;
-// 		topology.baseAtomNumber = root->getNumber();
-// 	}
-
-// 	return root;
-
-// }
-
-/** SP_NEW */
-void Context::buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root)
-{
-
-	// Build the graph
-	if(atoms.size() == 1){
-		topology.setBaseAtom(atoms[0].getSingleAtom());
-		(atoms[0]).setCompoundAtomIndex(SimTK::Compound::AtomIndex(0));
-		std::cout << "Topology::buildGraphAndMatcoords single atom done\n" << std::flush;
-	}else{
-		topology.nofProcesses = 0;
-		buildAcyclicGraph(topology, root, root);
-		std::cout << "Topology::buildGraphAndMatcoords buildAcyclicGraph done\n" << std::flush;
-	}
-
-}
-
-/** 
- * SP_NEW
- * The actual recursive function that builds the graph **/
-void Context::buildAcyclicGraph(
-	Topology topology,
-	bSpecificAtom *node, bSpecificAtom *previousNode)
-{
-	// // The base atom has to be set once Molmodel
-	// topology.baseSetFlag = 0;
-
-	// // Only process unvisited nodes
-	// if( node->wasVisited() ){
-	// 	return;
-	// }
-
-	// // Mark the depth of the recursivity
-	// ++topology.nofProcesses;
-
-	// // Mark Gmolmodel bond and create bond in Molmodel
-	// for(std::vector<bBond *>::iterator bondsInvolvedIter = (node->bondsInvolved).begin();
-	// 	bondsInvolvedIter != (node->bondsInvolved).end(); ++bondsInvolvedIter)
-	// {
-	// 	// Check if there is a bond between prevnode and node based on bonds
-	// 	// read from amberReader
-	// 	if ((*bondsInvolvedIter)->isThisMe(node->getNumber(), previousNode->getNumber()) ) {
-	// 		(*bondsInvolvedIter)->setVisited(1);
-
-	// 		// Skip the first step as we don't have yet two atoms
-	// 		if (topology.nofProcesses != 1) {
-
-	// 			// The first bond is special in Molmodel and has to be
-	// 			// treated differently. Set a base atom first
-	// 			if (topology.nofProcesses == 2) {
-	// 				if (topology.baseSetFlag == 0) {
-	// 					topology.setBaseAtom(previousNode->getSingleAtom());
-	// 					topology.setAtomBiotype(previousNode->getName(), (topology.getName()),
-	// 											previousNode->getName());
-	// 					topology.convertInboardBondCenterToOutboard();
-	// 					topology.baseSetFlag = 1;
-
-	// 				}
-	// 			}
-
-	// 			// Bond current node by the previous (Compound function)
-	// 			std::stringstream parentBondCenterPathName;
-	// 			if (previousNode->getNumber() == topology.baseAtomNumber) {
-	// 				parentBondCenterPathName << previousNode->getName()
-	// 					<< "/bond" << previousNode->getFreebonds();
-	// 			} else {
-	// 				parentBondCenterPathName << previousNode->getName()
-	// 					<< "/bond" << (previousNode->getNBonds() - previousNode->getFreebonds() + 1);
-	// 			}
-
-	// 			// THIS IS WHERE WE PERFORM THE ACTUAL BONDING
-	// 			// (Compound::SingleAtom&, BondCenterPathName, Length, Angle
-	// 			std::string debugString = parentBondCenterPathName.str();
-	// 			topology.bondAtom(node->getSingleAtom(),
-	// 					(parentBondCenterPathName.str()).c_str(), 0.149, 0);
-
-	// 			// Set the final Biotype
-	// 			topology.setAtomBiotype(node->getName(), (topology.getName()).c_str(), node->getName());
-
-	// 			// Set bSpecificAtom atomIndex to the last atom added to bond
-	// 			node->setCompoundAtomIndex(
-	// 				topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 1));
-				
-
-	// 			// The only time we have to set atomIndex to the previous node
-	// 			if (topology.nofProcesses == 2) {
-	// 				previousNode->setCompoundAtomIndex(topology.getBondAtomIndex(
-	// 					Compound::BondIndex(topology.getNumBonds() - 1), 0));
-	// 			}
-
-	// 			// Set bBond Molmodel Compound::BondIndex
-	// 			(*bondsInvolvedIter)->setBondIndex(
-	// 				Compound::BondIndex(topology.getNumBonds() - 1));
-	// 			std::pair<SimTK::Compound::BondIndex, int> pairToBeInserted(
-	// 					Compound::BondIndex(topology.getNumBonds() - 1),
-	// 					(*bondsInvolvedIter)->getIndex()
-	// 			);
-
-	// 			topology.bondIx2GmolBond.insert(pairToBeInserted);
-
-	// 			topology.GmolBond2bondIx.insert( std::pair<int, SimTK::Compound::BondIndex>(
-	// 					(*bondsInvolvedIter)->getIndex(),
-	// 					Compound::BondIndex(topology.getNumBonds() - 1)
-	// 			) );
-
-	// 			// Drop the number of available bonds
-	// 			/* --(previousNode->freebonds);
-	// 			--(node->freebonds); */
-
-	// 			previousNode->decrFreebonds();
-	// 			node->decrFreebonds();
-
-	// 			// Bond was inserted in Molmodel Compound. Get out and search
-	// 			// the next bond
-	// 			break;
-
-	// 		}
-	// 	}
-	// }
-
-	// // Mark the node as visited
-	// node->setVisited(1);
-
-	// // Set the previous node to this node
-	// previousNode = node;
-
-	// // Go to the next node. Choose it from his neighbours.
-	// for(unsigned int i = 0; i < (node->neighbors).size(); i++) {
-	// 	buildAcyclicGraph(topology, (node->neighbors)[i], previousNode);
-	// }
-
-}
-
 
 void Context::appendDCDReporter(const std::string& filename) {
 	traj.createTrajectory(filename, "dcd", natoms, topologies.size());
@@ -1579,14 +1406,14 @@ void Context::addWorld(
 		worlds.back().adoptTopology(topologyIx);
 
 		// Was "Cartesian"
-		modelOneEmbeddedTopology_SP_NEW(topologyIx, worldIndexes.back());
+		modelOneEmbeddedTopology(topologyIx, worldIndexes.back());
 
 		// This is many to one map
-		topologies[topologyIx].loadAIx2MbxMap_SP_NEW();
+		topologies[topologyIx].loadAIx2MbxMap();
 	}
 
 	// This is one to many map
-	worlds.back().loadMbx2AIxMap_SP_NEW();
+	worlds.back().loadMbx2AIxMap();
 
 }
 
@@ -1596,36 +1423,6 @@ void Context::LoadWorldsFromSetup(SetupReader&)
 	// function args were SetupReader& setupReader
 	assert(!"Not implemented.");
 	throw std::exception();
-}
-
-void Context::modelOneEmbeddedTopology(int whichTopology,
-	int whichWorld,
-	std::string rootMobilizer)
-{
-		//this->rootMobilities.push_back(rootMobilizer);
-
-		worlds[whichWorld].compoundSystem->modelOneCompound(
-			SimTK::CompoundSystem::CompoundIndex(whichTopology),
-			topologies[whichTopology].atomFrameCache,
-			SimTK::String(rootMobilizer));
-
-		SimTK::DuMMForceFieldSubsystem& dumm = *worlds[whichWorld].forceField;
-
-		for(std::size_t k = 0; k < topologies[whichTopology].getNumAtoms(); k++){
-			SimTK::Compound::AtomIndex aIx =
-				(topologies[whichTopology].bAtomList[k]).getCompoundAtomIndex();
-			SimTK::MobilizedBodyIndex mbx =
-				topologies[whichTopology].getAtomMobilizedBodyIndex(aIx);
-			//std::cout << "k aIx mbx " << k << " " << aIx << " " << mbx;
-
-			SimTK::MobilizedBodyIndex mbxCheck =
-				topologies[whichTopology].getAtomMobilizedBodyIndexThroughDumm(aIx,
-				dumm);
-
-			//std::cout << " mbxCheck " << mbxCheck ;
-			//std::cout << std::endl << std::flush;
-
-		}
 }
 
 /** Load molecules based on loaded filenames **/
@@ -1898,7 +1695,7 @@ void Context::reset_BONDS_to_bonds(
 /*!
  * <!--  -->
 */
-void Context::buildAcyclicGraph_SP_NEW(
+void Context::buildAcyclicGraph(
 	Topology& topology,
 	int rootAmberIx,
 	int molIx)
@@ -2114,7 +1911,7 @@ void Context::closeARingWithThisBond(Topology& topology, bBond& bond, int molIx)
 /*!
  * <!--  -->
 */
-void Context::addRingClosingBonds_SP_NEW(
+void Context::addRingClosingBonds(
 	Topology& topology,
 	int rootAmberIx,
 	int molIx)
@@ -2180,7 +1977,7 @@ void Context::passTopologiesToWorlds(void){
  * ========================================================================
   -->
 */
-void Context::readMolecules_SP_NEW(void)
+void Context::readMolecules(void)
 {
 
 	loadAtoms(amberReader[0]);
@@ -2192,7 +1989,7 @@ void Context::readMolecules_SP_NEW(void)
 /*!
  * <!--  -->
 */
-void Context::constructTopologies_SP_NEW(
+void Context::constructTopologies(
 	// std::vector<std::string>& argRoots
 ){
 
@@ -2257,7 +2054,7 @@ void Context::constructTopologies_SP_NEW(
 		// (2) buildAcyclicGraph
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-		buildAcyclicGraph_SP_NEW(topology, rootAmberIx, molIx);
+		buildAcyclicGraph(topology, rootAmberIx, molIx);
 
 		//addRingClosingBonds_SP_NEW(topology, rootAmberIx, molIx);
 
@@ -2579,7 +2376,7 @@ void Context::generateTopologiesSubarrays(void){
 /*!
  * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
 */
-void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
+void Context::matchDefaultConfiguration(Topology& topology, int molIx)
 {
 	// Convenient vars
 	std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets;
@@ -2601,11 +2398,6 @@ void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
 	}
 
 	// Match coordinates
-	// topology.matchDefaultConfiguration(
-	// 	atomTargets,
-	// 	SimTK::Compound::Match_Exact,
-	// 	true, 150.0);
-
 	//std::cout << "Match start." << "\n" << std::flush;
 	bool flipAllChirality = true;
 	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
@@ -2626,7 +2418,7 @@ void Context::matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx)
 /*!
  * <!-- Match Compounds configurations to atoms Cartesian coords -->
 */
-void Context::matchDefaultConfigurations_SP_NEW(void){
+void Context::matchDefaultConfigurations(void){
 
 	// --------------------------------------------------------------------
 	// matchDefaultConfiguration
@@ -2637,11 +2429,11 @@ void Context::matchDefaultConfigurations_SP_NEW(void){
 
 		Topology& topology = topologies[molIx];
 
-		matchDefaultConfiguration_SP_NEW(topology, molIx);
+		matchDefaultConfiguration(topology, molIx);
 		// PrintAtoms();
 	}
 
-	// Helper function for calc MBAT determinant
+	// Helper function for calc MBAT determinant // TO BE DELETED
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
 		Topology& topology = topologies[molIx];
@@ -2677,46 +2469,6 @@ void Context::PrintAtoms(void){
 		atom.Print(0);
 	}
 }
-
-/* // Loads parameters into DuMM, adopts compound by the CompoundSystem
-// and loads maps of indexes
-void Context::addDummParams(
-	int requestedNofMols,
-	SetupReader& setupReader
-){
-	//std::vector<std::string> argRoots = setupReader.get("ROOTS");
-
-	// Accumulate DuMM parameters in these vectors
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
-
-	// Iterate through molecules
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-
-		// Initialize an input reader
-		readAmberInput amberReader;
-		amberReader.readAmberFiles(crdFNs[molIx], topFNs[molIx]);
-		
-		// Pass current topology to the current world
-		worlds[0].topologies = &topologies;
-
-		// Add parameters in DuMM
-		worlds[0].generateDummParams(molIx, &amberReader,
-			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs);
-
-		for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
-
-			// Pass current topology to the current world
-			worlds[worldIx].topologies = &topologies;
-
-			// Add parameters in DuMM
-			worlds[worldIx].transferDummParams(molIx, &amberReader);
-		}
-
-	}
-
-} */
 
 // TODO: move to world
 /** It calls DuMMs defineAtomClass. These Molmodel functions contain
@@ -2760,74 +2512,6 @@ void Context::updDummAtomClasses(
 		}
 }
 
-// Loads parameters into DuMM, adopts compound by the CompoundSystem
-// and loads maps of indexes
-void Context::addDummParams(
-	int requestedNofMols,
-	SetupReader& setupReader
-){
-	//std::vector<std::string> argRoots = setupReader.get("ROOTS");
-
-	// Get an input reader
-	std::vector<readAmberInput> amberReader(requestedNofMols);
-
-	// Load Amber info for all molecules
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-		(amberReader[molIx]).readAmberFiles(crdFNs[molIx], topFNs[molIx]);
-	}
-
-	// Accumulate DuMM parameters in these vectors
-	std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allBondsACIxs;
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allAnglesACIxs;
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allDihedralsACIxs;
-	std::vector<std::vector<SimTK::DuMM::AtomClassIndex>> allImpropersACIxs;
-
-	// Load DuMM parameters for the first world
-	for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-		std::cout << "Context::addDummParams WORLD " << 0 << " topology " << molIx << std::endl << std::flush;
-
-		// Pass current topology to the current world
-		worlds[0].topologies = &topologies;
-
-		// Add parameters in DuMM
-		worlds[0].generateDummParams(molIx, &amberReader[molIx],
-			aClassParams2aClassId,
-			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
-	}
-
-	// Load DuMM params for the rest of the worlds
-	for(unsigned int worldIx = 1; worldIx < nofWorlds; worldIx++){
-
-		// Accumulate DuMM parameters in these vectors
-		//aClassParams2aClassId = std::map<AtomClassParams, AtomClassId>();
-		allBondsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
-		allAnglesACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
-		allDihedralsACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
-		allImpropersACIxs = (std::vector<std::vector<SimTK::DuMM::AtomClassIndex>>());
-
-
-		updDummAtomClasses(aClassParams2aClassId, worldIx);
-
-		// Iterate through molecules
-		for(unsigned int molIx = 0; molIx < requestedNofMols; molIx++){
-			std::cout << "Context::addDummParams WORLD " << worldIx << " topology " << molIx << std::endl << std::flush;
-
-			// Pass current topology to the current world
-			worlds[worldIx].topologies = &topologies;
-
-			// Add parameters in DuMM
-			worlds[worldIx].transferDummParams(molIx, &amberReader[molIx],
-			aClassParams2aClassId,
-			allBondsACIxs, allAnglesACIxs, allDihedralsACIxs, allImpropersACIxs);
-		}
-
-	}
-	
-}
-
-
-
 // ============================================================================
 // NEW WAY TO ADD PARAMS
 // ============================================================================
@@ -2836,7 +2520,7 @@ void Context::addDummParams(
  * setBiotypeChargedAtomType for every atom. These Molmodel functions contain
  * information regarding the force field parameters.-->
 */
-void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
+void Context::generateDummAtomClasses(readAmberInput& amberReader)
 {
 	// Iterate worlds
 	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
@@ -2968,7 +2652,7 @@ void Context::generateDummAtomClasses_SP_NEW(readAmberInput& amberReader)
 /*!
  * <!-- Calls DuMM defineBondStretch to define bonds parameters. -->
 */
-void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
+void Context::bAddDummBondParams(readAmberInput& amberReader)
 {
 
 	// Iterate worlds
@@ -3056,7 +2740,7 @@ void Context::bAddDummBondParams_SP_NEW(readAmberInput& amberReader)
 /*!
  * <!-- Calls DuMM defineBondBend to define angle parameters. -->
 */
-void Context::bAddDummAngleParams_SP_NEW(readAmberInput& amberReader)
+void Context::bAddDummAngleParams(readAmberInput& amberReader)
 {
 
 	// Iterate worlds
@@ -3144,7 +2828,7 @@ bool Context::checkBond(int a1, int a2)
 /*!
  * <!-- Calls DuMM defineBondTorsion. -->
 */
-void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
+void Context::bAddDummTorsionParams(readAmberInput& amberReader)
 {
 
 	// Iterate worlds
@@ -3400,23 +3084,23 @@ void Context::bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader)
  * setBiotypeChargedAtomType for every atom. These Molmodel functions contain
  * information regarding the force field parameters.-->
 */
-void Context::addDummParams_SP_NEW(readAmberInput& amberReader)
+void Context::addDummParams(readAmberInput& amberReader)
 {
 
 	// DANGER: BONDS WERE SORTED =>
 	// amberReader and bonds have no longer the same indeces
 
 	// Add atom types and charged atmo types
-	generateDummAtomClasses_SP_NEW(amberReader);
+	generateDummAtomClasses(amberReader);
 
 	// Add bonds parameters
-	bAddDummBondParams_SP_NEW(amberReader);
+	bAddDummBondParams(amberReader);
 
 	// Add angle parameters
-	bAddDummAngleParams_SP_NEW(amberReader);
+	bAddDummAngleParams(amberReader);
 
 	// Add torsion parameters
-	bAddDummTorsionParams_SP_NEW(amberReader);
+	bAddDummTorsionParams(amberReader);
 
 }
 
@@ -3547,7 +3231,7 @@ void Context::setFlexibility(
  * <!-- 
  * Careful: topology index comes first -->
 */
-void Context::modelOneEmbeddedTopology_SP_NEW(
+void Context::modelOneEmbeddedTopology(
 	int whichTopology,
 	int whichWorld
 	//,std::string rootMobilizer
@@ -3598,183 +3282,10 @@ void Context::modelOneEmbeddedTopology_SP_NEW(
 
 }
 
-/*!
- * <!--  -->
-*/
-void Context::model_SP_NEW(SetupReader& setupReader)
-{
-	// // Root mobilities
-	// std::vector<std::string> argRootMobilities =
-	// 	setupReader.get("ROOT_MOBILITY");
-
-	// Iterate worlds
-	for(size_t worldIx = 0; worldIx < worlds.size(); worldIx++){
-
-		scout("World ") << worldIx << eol;
-
-		// Get world and its force field
-		World& world = worlds[worldIx];
-		SimTK::DuMMForceFieldSubsystem& dumm = *(world.forceField);
-
-		// Get flexibility files
-		std::string flexFileFN
-			= setupReader.get("MOLECULES")[0] + std::string("/")
-			+ setupReader.get("FLEXFILE")[worldIx];
-
-		// Load 2d vector of flexibility filenames
-		loadFlexibleBondsSpecs(worldIx, flexFileFN);
-
-		// Set all flexibilities to Rigid
-		initializeFlexibility();
-
-		// Set flexibility from file
-		setFlexibility("noregimen", flexFileFN, worldIx);
-
-		scout("Loaded flexibilities for world ") << worldIx << eol;
-
-		// Add topologies to CompoundSystem and add it to the
-		// Visualizer's vector of molecules
-		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
-
-			worlds[worldIx].adoptTopology(topCnt);
-
-		} // every molecule
-
-		// Model each topology: build mobods
-		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
-
-			modelOneEmbeddedTopology_SP_NEW(topCnt, worldIx
-			//, "Cartesian"
-			);
-
-		} // every molecule
-
-		// Load maps
-		for(size_t topCnt = 0; topCnt < topologies.size(); topCnt++){
-
-			Topology& topology = topologies[topCnt];
-
-			// This is many to one map
-			topology.loadAIx2MbxMap_SP_NEW();
-
-		} // every molecule
-
-
-		// This is one to many map
-		worlds[worldIx].loadMbx2AIxMap_SP_NEW();
-
-	} // every world
-
-
-}
-
-
-void Context::modelSystem() {
-
-	// Iterate worlds
-	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++) {
-		
-		// Set flexibilities
-		for (auto& bond : bonds) {
-			Topology& topology = topologies[bond.getMoleculeIndex()];
-			SimTK::Compound::BondIndex compoundBondIx = bond.getBondIndex();
-
-			// Check if the user set the bond mobility
-			BondMobility::Mobility mobility = BondMobility::Mobility::Rigid;
-			for (const auto& flex : worlds[worldIx].getFlexibilities()) {
-
-				if (bond.isThisMe(flex.i, flex.j)) {
-					mobility = flex.mobility;
-					break;
-				}
-			}
-
-			bond.addBondMobility(mobility);
-			topology.setBondMobility(mobility, compoundBondIx);
-		}
-		
-		for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
-			// Add topologies to CompoundSystem and add it to the visualizer's vector of molecules
-			worlds[worldIx].adoptTopology(topologyIx);
-
-			// Was "Cartesian"
-			modelOneEmbeddedTopology_SP_NEW(topologyIx, worldIx);
-
-			// This is many to one map
-			topologies[topologyIx].loadAIx2MbxMap_SP_NEW();
-		}
-
-		// This is one to many map
-		worlds[worldIx].loadMbx2AIxMap_SP_NEW();
-	}
-}
-
 
 // ============================================================================
 // WORK
 // ============================================================================
-
-// Load/store Mobilized bodies joint types in samplers
-void Context::loadMbxsToMobilities()
-{
-	
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++){
-
-		for (int samplerIx = 0; samplerIx < worlds[worldIx].getNofSamplers();
-		samplerIx++)
-		{
-			std::cout << "Loading mbx2mobility" << std::endl;
-
-			// Pass compounds to the new world
-			passTopologiesToNewWorld(worldIx);
-
-			(worlds[worldIx].updSampler(samplerIx))->loadMbx2mobility(worldIx);
-		}
-	}
-
-}
-
-
-void Context::modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes)
-{
-
-	// Model molecules
-	std::cout << "Context::modelTopologies nof embedded Topologies "
-		<< nofEmbeddedTopologies << "\n" << std::flush;
-
-	for ( std::size_t molIx = 0; molIx < topologies.size(); molIx++){
-
-		for(unsigned int worldIx = 0; worldIx < worlds.size(); worldIx++){
-
-			std::cout << "Model molecule " << molIx
-				<< " embedded in world " << worldIx << std::endl;
-
-			//this->rootMobilities.push_back(
-			//	GroundToCompoundMobilizerTypes[(nofMols * worldIx) + molIx]);
-
-			worlds[worldIx].compoundSystem->modelOneCompound(
-				SimTK::CompoundSystem::CompoundIndex(molIx),
-				topologies[molIx].atomFrameCache,
-				//rootMobilities[(nofMols * worldIx) + molIx]
-				rootMobilities[worldIx][molIx]
-				);
-
-			for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
-				SimTK::Compound::AtomIndex aIx =
-					(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
-				SimTK::MobilizedBodyIndex mbx =
-					topologies[molIx].getAtomMobilizedBodyIndex(aIx);
-				//std::cout << "k aIx " << k << " " << aIx
-				//	<< " " << mbx << std::endl << std::flush;
-			}
-		}
-
-	}
-
-// ZONE
-
-
-}
 
 /** Add task spaces */
 void Context::addTaskSpacesLS(void)
@@ -4090,52 +3601,10 @@ SimTK::Real Context::Pearson(std::vector<std::vector<SimTK::Real>> inputVector, 
 	return result;
 }
 
-
 /**
  *  Pass compounds to the new world
  */
 void Context::passTopologiesToNewWorld(int newWorldIx)
-{
-
-	// Go through all the molecules
-	for(std::size_t molIx = 0; molIx < nofMols; molIx++){
-
-		// Aquire the CompoundSystem
-		topologies[molIx].setMultibodySystem(*worlds[newWorldIx].compoundSystem);
-
-		int presumNAtoms = topologies[molIx].getNumAtoms();
-
-		// Reset mobilized body indeces in Compound
-		for(std::size_t k = 0; k < presumNAtoms; k++){
-
-			// Get atom index
-			SimTK::Compound::AtomIndex aIx =
-				(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
-
-			// Get mobod
-			SimTK::MobilizedBodyIndex mbx =
-				topologies[molIx].getAtomMobilizedBodyIndexThroughDumm(aIx,
-				*(worlds[newWorldIx].forceField) );
-
-			// SimTK::MobilizedBodyIndex mbx =
-			// 	topologies[molIx].getAtomMobilizedBodyIndexFromMap(aIx,
-			// 	newWorldIx);
-
-			// Set the corresponding mobod
-			topologies[molIx].setAtomMobilizedBodyIndex(aIx, mbx);
-
-		}
-
-		// TODO Restante DANGER
-        //c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
-	}
-}
-
-
-/**
- *  Pass compounds to the new world
- */
-void Context::passTopologiesToNewWorld_SP_NEW(int newWorldIx)
 {
 
 	// Go through all the molecules
@@ -4936,11 +4405,10 @@ void Context::mixReplicas(int mixi)
 		}
 	}
 
-
 }
 
 // Load replica's atomLocations into it's front world
-int Context::restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica)
+int Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
 {
 
 	// Get thermoState corresponding to this replica
@@ -5550,7 +5018,7 @@ bool Context::RunWorld(int whichWorld)
 
 				// ''''''''''''''''''''
 				coutspaced("SCALING_BAT init:"); ceol;
-				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround_SP_NEW( (worlds[whichWorld]).integ->updAdvancedState() ));
+				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
@@ -5574,7 +5042,7 @@ bool Context::RunWorld(int whichWorld)
 
 				// ''''''''''''''''''''
 				coutspaced("SCALING_BAT after:"); ceol;
-				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround_SP_NEW( (worlds[whichWorld]).integ->updAdvancedState() ));
+				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
@@ -5619,7 +5087,7 @@ void Context::RewindBackWorld(int thisReplica)
 	int frontIx = replicaWorldIxs.front();
 	int backIx = replicaWorldIxs.back();
 	if(replicaWorldIxs.size() > 1) {
-		transferCoordinates_SP_NEW(frontIx, backIx);
+		transferCoordinates(frontIx, backIx);
 	}
 
 	// == ROTATE == worlds indices (translate from right to left)
@@ -5659,7 +5127,7 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 		// std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
 		// spacedcout("[YDIRBUG]"); ceol;
 
-		transferCoordinates_SP_NEW(backWorldIx, frontWorldIx);
+		transferCoordinates(backWorldIx, frontWorldIx);
 
 		//SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
 		//SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
@@ -5911,7 +5379,7 @@ void Context::RunREX()
 			updSubZMatrixBATsToAllWorlds(replicaIx);
 
 			// Load the front world
-			currFrontWIx = restoreReplicaCoordinatesToFrontWorld_SP_NEW(replicaIx);           // (1)
+			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);           // (1)
 
 			// Set non-equilibrium parameters: get scale factors
 			updWorldsDistortOptions(replicaIx);
@@ -6043,7 +5511,7 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 			SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
 
 			// Calculate replica BAT
-			replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround_SP_NEW( currFrontState ));
+			replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround( currFrontState ));
 
 			// Calculate thermodynamic states BAT stats
 			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
@@ -6190,7 +5658,7 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 				SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
 
 				// Calculate replica BAT
-				replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround_SP_NEW( currFrontState ));
+				replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround( currFrontState ));
 
 				// Calculate thermodynamic states BAT stats
 				thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
@@ -6389,7 +5857,7 @@ void Context::randomizeWorldIndexes()
 /*!
  * <!-- Coordinate transfer -->
 */
-void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
+void Context::transferCoordinates(int srcWIx, int destWIx)
 {
 	// Get advanced states of the integrators
 	SimTK::State& lastAdvancedState = worlds[srcWIx].integ->updAdvancedState();
@@ -6399,7 +5867,7 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		otherWorldsAtomsLocations =
-	worlds[srcWIx].getAtomsLocationsInGround_SP_NEW(lastAdvancedState);
+	worlds[srcWIx].getAtomsLocationsInGround(lastAdvancedState);
 
 	// Get BAT coordinates
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
@@ -6408,7 +5876,7 @@ void Context::transferCoordinates_SP_NEW(int srcWIx, int destWIx)
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
 	
 	// Pass compounds to the new world
-	passTopologiesToNewWorld_SP_NEW(destWIx);
+	passTopologiesToNewWorld(destWIx);
 
 	// Focus on destination world
 	World& destWorld = worlds[destWIx];
@@ -6434,13 +5902,13 @@ SimTK::Real Context::checkTransferCoordinates_Cart(int srcWIx, int destWIx)
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		srcWorldsAtomsLocations =
-	worlds[srcWIx].getAtomsLocationsInGround_SP_NEW(srcAdvancedState);
+	worlds[srcWIx].getAtomsLocationsInGround(srcAdvancedState);
 
 	// Get coordinates from destintaion World
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		destWorldsAtomsLocations =
-	worlds[destWIx].getAtomsLocationsInGround_SP_NEW(destAdvancedState);
+	worlds[destWIx].getAtomsLocationsInGround(destAdvancedState);
 
 	if(srcWorldsAtomsLocations.size() != destWorldsAtomsLocations.size()){
 		std::cout << 
@@ -6519,13 +5987,13 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		srcWorldsAtomsLocations =
-	worlds[srcWIx].getAtomsLocationsInGround_SP_NEW(srcAdvancedState);
+	worlds[srcWIx].getAtomsLocationsInGround(srcAdvancedState);
 
 	// Get coordinates from destintaion World
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		destWorldsAtomsLocations =
-	worlds[destWIx].getAtomsLocationsInGround_SP_NEW(destAdvancedState);
+	worlds[destWIx].getAtomsLocationsInGround(destAdvancedState);
 
 	// Iterate molecules
 	int allCnt = 0;
@@ -6750,14 +6218,11 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 
 // SP_NEW_TRANSFER ============================================================
 
-
-
 /*!
- * <!-- Transfer geometry to a world
- *	
+ * <!--
  *  -->
 */
-SimTK::State& Context::setAtoms_SP_NEW(
+SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 	int destWIx,
 	SimTK::State& someState,
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
@@ -6765,10 +6230,6 @@ SimTK::State& Context::setAtoms_SP_NEW(
 {
 	// Get destination world
 	World& destWorld = worlds[destWIx];
-
-	// Get dumm force field and matter
-	SimTK::DuMMForceFieldSubsystem &dumm = *destWorld.forceField;
-	SimTK::SimbodyMatterSubsystem& matter = *destWorld.matter;
 
 	// Arrays of Transforms
 	SimTK::Transform G_X_T;
@@ -6819,28 +6280,9 @@ SimTK::State& Context::setAtoms_SP_NEW(
 		destWorld.setAtoms_SetDuMMStations(topoIx, locs);
 	} // every Topology
 
-	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
-	// This method only uses internal coordinates per molecule bonds info
-	setAtoms_XPF_XBM(destWIx);
-
-	// Recover the modified state (may not be necessary)
-	destWorld.compoundSystem->realizeTopology();
-	someState = destWorld.compoundSystem->updDefaultState();
-
-	// Set every mobod's mass properties
-	someState = setAtoms_MassProperties(destWIx);
-
-	// Set X_FMs
-	someState = setAtoms_XFM(destWIx, someState);
-
-	// Realize position
-	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
-
-	//std::cout << someState.getSystemStage() << std::endl;
 	return someState;
-	
-}
 
+}
 
 /*!
  * <!--  -->
@@ -7305,6 +6747,50 @@ Context::calc_XPF_XBM(
 
 }
 
+
+/*!
+ * <!-- Transfer geometry to a world
+ *  -->
+*/
+SimTK::State& Context::setAtoms_SP_NEW(
+	int destWIx,
+	SimTK::State& someState,
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
+		otherWorldsAtomsLocations)
+{
+	// Get destination world
+	World& destWorld = worlds[destWIx];
+
+	// Get dumm force field and matter
+	SimTK::DuMMForceFieldSubsystem &dumm = *destWorld.forceField;
+	SimTK::SimbodyMatterSubsystem& matter = *destWorld.matter;
+
+	// Match Compound and DuMM coordinates
+	someState = setAtoms_CompoundsAndDuMM(destWIx, someState, otherWorldsAtomsLocations);
+
+	// Set default child mobod inboard (X_PF) and outboard (X_BM) frames
+	// This method only uses internal coordinates per molecule bonds info
+	setAtoms_XPF_XBM(destWIx);
+
+	// Recover the modified state (may not be necessary)
+	destWorld.compoundSystem->realizeTopology();
+	someState = destWorld.compoundSystem->updDefaultState();
+
+	// Set every mobod's mass properties
+	someState = setAtoms_MassProperties(destWIx);
+
+	// Set X_FMs
+	someState = setAtoms_XFM(destWIx, someState);
+
+	// Realize position
+	destWorld.compoundSystem->realize(someState, SimTK::Stage::Position);
+
+	//std::cout << someState.getSystemStage() << std::endl;
+	return someState;
+	
+}
+
+
 /*!
  * <!--  -->
 */
@@ -7326,7 +6812,7 @@ Context::getChemicalParent_IfIAmRoot(
 /*!
  * <!--  -->
 */
-void Context::newFunction(int whichWorld)
+void Context::passThroughBonds_template(int whichWorld)
 {
 
 	//worlds[whichWorld].newFunction();

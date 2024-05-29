@@ -55,16 +55,8 @@ public:
 	bool setOutput(const std::string& outDir);
 
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
-	void modelSystem();
-
 
 	void setRootMobilitiesFromFlexFiles(void);
-
-	// Experimental movements
-	// bSpecificAtom* findARoot(Topology topology, int argRoot);
-	void buildAcyclicGraph(Topology topology,
-		bSpecificAtom *node, bSpecificAtom *previousNode);
-	void buildAcyclicGraphWrap(Topology topology, bSpecificAtom* root);
 
 	void appendDCDReporter(const std::string& filename);
 
@@ -108,7 +100,7 @@ public:
 	void reset_BONDS_to_bonds(const std::vector<std::vector<BOND>>& BATbonds);
 
 	/**  */
-	void buildAcyclicGraph_SP_NEW(
+	void buildAcyclicGraph(
 		Topology& topology,
 		int rootAmberIx,
 		int molIx);
@@ -116,7 +108,7 @@ public:
 	void closeARingWithThisBond(Topology& topology, bBond& bond, int molIx);
 
 	/**  */
-	void addRingClosingBonds_SP_NEW(
+	void addRingClosingBonds(
 		Topology& topology,
 		int rootAmberIx,
 		int molIx
@@ -134,21 +126,21 @@ public:
 	void passTopologiesToWorlds(void);
 
 	/** Read atoms and bonds from all the molecules */
-	void readMolecules_SP_NEW(void);
+	void readMolecules(void);
 	
 	/**  */
-	void constructTopologies_SP_NEW();
+	void constructTopologies();
 
 	/**  */
 	void generateTopologiesSubarrays(void);
 
 	/** Assign Compound coordinates by matching bAtomList coordinates */
-	void matchDefaultConfiguration_SP_NEW(Topology& topology, int molIx);
+	void matchDefaultConfiguration(Topology& topology, int molIx);
 
 	/** Match Compounds configurations to atoms Cartesian coords */
-	void matchDefaultConfigurations_SP_NEW(void);
+	void matchDefaultConfigurations(void);
 
-	// ------------- SP_NEW -------------
+	// ------------- PARAMETERS -------------
 
 	/** Long print of all atoms properties */
 	void PrintAtoms(void);
@@ -160,20 +152,14 @@ public:
 		, int worldIx		
 	);
 
-	// Loads parameters into DuMM
-	void addDummParams(
-		int requestedNofMols,
-		SetupReader& setupReader
-	);
-
 	// Add Dumm params for single prmtop
-	void generateDummAtomClasses_SP_NEW(readAmberInput& amberReader);
-	void bAddDummBondParams_SP_NEW(readAmberInput& amberReader);
-	void bAddDummAngleParams_SP_NEW(readAmberInput& amberReader);
+	void generateDummAtomClasses(readAmberInput& amberReader);
+	void bAddDummBondParams(readAmberInput& amberReader);
+	void bAddDummAngleParams(readAmberInput& amberReader);
 	bool checkBond(int a1, int a2);
-	void bAddDummTorsionParams_SP_NEW(readAmberInput& amberReader);
+	void bAddDummTorsionParams(readAmberInput& amberReader);
 
-	void addDummParams_SP_NEW(readAmberInput& amberReader);
+	void addDummParams(readAmberInput& amberReader);
 
 	// -------------------------
 
@@ -187,17 +173,11 @@ public:
 		std::string flexFN,
 		int whichWorld);
 
-	void modelOneEmbeddedTopology_SP_NEW(int whichTopology,
+	void modelOneEmbeddedTopology(int whichTopology,
 		int whichWorld
 		//,std::string rootMobilizer
 		);
-
-	void model_SP_NEW(SetupReader& setupReader);
-
 	// ---------
-
-	void modelOneEmbeddedTopology(int whichTopology, int whichWorld, std::string rootMobilizer);
-	void modelTopologies(std::vector<std::string> GroundToCompoundMobilizerTypes);
 
 	// Add task spaces
 	void addTaskSpacesLS(void);
@@ -211,7 +191,6 @@ public:
 	void LoadWorldsFromSetup(SetupReader&);
 
 	void passTopologiesToNewWorld(int newWorldIx);
-	void passTopologiesToNewWorld_SP_NEW(int newWorldIx);
 
 	int getNofMolecules();
 	//------------
@@ -248,10 +227,6 @@ public:
 		bool visual = false,
 		SimTK::Real visualizerFrequency = 0);
 
-	// Load/store Mobilized bodies joint types in samplers
-	void loadMbxsToMobilities(void);
-	void loadMbxsToMobilities_SP_NEW(void);
-
 	std::size_t getNofWorlds() const;
 	World& getWorld(std::size_t which);
 	const World& getWorld(std::size_t which) const;
@@ -267,17 +242,17 @@ public:
 
 	// --- Main ---
 	void randomizeWorldIndexes(void);
-	void transferCoordinates_SP_NEW(int src, int dest);
+	void transferCoordinates(int src, int dest);
 	SimTK::Real checkTransferCoordinates_Cart(int srcWIx, int destWIx);
 	SimTK::Real checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian = false);
 	
 	// Relationship BAT - mobod transforms
 	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
 
-	// SP_NEW_TRANSFER ============================================================
+	// TRANSFER ============================================================
 
 	SimTK::State&
-	setAtoms_SP_NEW(
+	setAtoms_CompoundsAndDuMM(
 		int destWIx,
 		SimTK::State& someState,
 		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
@@ -317,6 +292,13 @@ public:
 		const SimTK::State& someState
 	);
 
+	SimTK::State&
+	setAtoms_SP_NEW(
+		int destWIx,
+		SimTK::State& someState,
+		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
+			otherWorldsAtomsLocations);
+
 	SimTK::Compound::AtomIndex
 	getChemicalParent_IfIAmRoot(
 		int wIx,
@@ -339,10 +321,10 @@ public:
 		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
 	const SimTK::Transform X_to_Y = ~Y_to_X;
 
-// SP_NEW_TRANSFER ------------------------------------------------------------
+	// TRANSFER ------------------------------------------------------------
 
 	// Drilling drl
-	void newFunction(int whichWorld);
+	void passThroughBonds_template(int whichWorld);
 
 	// Go through all the worlds and generate samples
 	void RunOneRound(void);
@@ -515,7 +497,7 @@ public:
 	// This can be quite costly since they imply transfer between worlds
 
 	// Load replica's atomLocations into it's front world. Returns world index
-	int restoreReplicaCoordinatesToFrontWorld_SP_NEW(int whichReplica);
+	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
 
 	// Load replica's atomLocations into it's back world
     void restoreReplicaCoordinatesToBackWorld(int whichReplica);
