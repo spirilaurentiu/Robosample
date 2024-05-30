@@ -455,7 +455,6 @@ public:
 	Molmodel Compound which in turn relizes Position and uses matter
 	 to calculate locations. **/
 	void updateAtomListsFromCompound(const SimTK::State &state);
-	void updateAtomListsFromCompound_SP_NEW(const SimTK::State &state);
 
 	/** Access to molecule (Topology) objects
 	Get a readble reference of one of the molecules **/
@@ -518,9 +517,7 @@ public:
 	bool generateProposal(void);
 
 	/** Generate a number of samples **/
-	bool generateSamples(int howMany);
-
-	bool generateSamples_SP_NEW(int howMany, std::stringstream& worldOutStream);
+	bool generateSamples(int howMany, std::stringstream& worldOutStream);
 	//...............
 
 	//...................

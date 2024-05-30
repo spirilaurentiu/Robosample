@@ -2349,7 +2349,7 @@ void Context::generateTopologiesSubarrays(void){
 			subAtomLists[molIx].end(),
 			elementCache);
 
-		topology.generateAIx2TopXMaps_SP_NEW();
+		topology.generateAIx2TopXMaps();
 
 		topology.setSubBondList(
 			subBondLists[molIx].begin(),
@@ -2447,7 +2447,7 @@ void Context::matchDefaultConfigurations(void){
 
 		Topology& topology = topologies[molIx];
 
-		topology.loadCompoundAtomIx2GmolAtomIx_SP_NEW();
+		topology.loadCompoundAtomIx2GmolAtomIx();
 
 	}
 	// ========================================================================
@@ -4981,10 +4981,10 @@ bool Context::RunWorld(int whichWorld)
 
 		// Generate samples
 		if(singlePrmtop == true){
-			validated = worlds[whichWorld].generateSamples_SP_NEW(
+			validated = worlds[whichWorld].generateSamples(
 				numSamples, worldOutStream);
 		}else{
-			validated = worlds[whichWorld].generateSamples(numSamples);
+			;
 		}
 				
 	// Non-equilibrium world
@@ -5013,7 +5013,7 @@ bool Context::RunWorld(int whichWorld)
 
 				// Update Robosample bAtomList
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
-				(worlds[whichWorld]).updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
+				(worlds[whichWorld]).updateAtomListsFromCompound(currentAdvancedState);
 
 
 				// ''''''''''''''''''''
@@ -5820,7 +5820,7 @@ void Context::writeDCDs()
 
 	// Update bAtomList in Topology
 	const SimTK::State& pdbState = world.integ->updAdvancedState();
-	world.updateAtomListsFromCompound_SP_NEW(pdbState);
+	world.updateAtomListsFromCompound(pdbState);
 
 	for (int i = 0; i < natoms; i++) {
 		Xs[i] = atoms[i].getX() * 10;

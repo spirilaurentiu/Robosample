@@ -1955,38 +1955,10 @@ void World::PrintFullTransformationGeometry(const SimTK::State& someState,
 	}
 }
 
-
-
 /** Put coordinates into bAtomLists of Topologies.
  * When provided with a State, calcAtomLocationInGroundFrame
  * realizes Position and uses matter to calculate locations **/
 void World::updateAtomListsFromCompound(const SimTK::State &state)
-{
-	// Iterate through topologies
-	for (auto& topology : (*topologies)){
-
-		// Iterate through atoms
-		for (auto& atom : topology.bAtomList) {
-
-			const auto compoundAtomIndex = atom.getCompoundAtomIndex();
-			SimTK::Vec3 location =
-				topology.calcAtomLocationInGroundFrameThroughSimbody(
-					compoundAtomIndex, *forceField, *matter, state);
-
-			atom.setX(location[0]);
-			atom.setY(location[1]);
-			atom.setZ(location[2]);
-			atom.setCartesians(location);
-
-			// std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
-		}
-	}
-}
-
-/** Put coordinates into bAtomLists of Topologies.
- * When provided with a State, calcAtomLocationInGroundFrame
- * realizes Position and uses matter to calculate locations **/
-void World::updateAtomListsFromCompound_SP_NEW(const SimTK::State &state)
 {
 	// Iterate through topologies
 	for (auto& topology : (*topologies)){
@@ -3260,7 +3232,7 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 SimTK::Real World::CalcPotentialEnergy(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
+	updateAtomListsFromCompound(currentAdvancedState);
 
 	// Set old potential energy of the new world via DuMM !!!
 	return forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
@@ -3270,7 +3242,7 @@ SimTK::Real World::CalcPotentialEnergy(void)
 SimTK::Real World::calcFixman(void)
 {
     SimTK::State& currentAdvancedState = integ->updAdvancedState();
-    updateAtomListsFromCompound_SP_NEW(currentAdvancedState); // for det(MBAT)
+    updateAtomListsFromCompound(currentAdvancedState); // for det(MBAT)
 	SimTK::Real Fixman = updSampler(0)->calcFixman(currentAdvancedState);
 	return Fixman;
 }
@@ -3302,41 +3274,12 @@ bool World::generateProposal(void)
 /**
  *  Generate a number of samples
  * */
-bool World::generateSamples(int howMany)
-{
-
-	// // Prepare output
-	// std::stringstream worldOutStream;
-	// worldOutStream.str(""); // empty
-
-	// // Update Robosample bAtomList
-	// SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	// updateAtomListsFromCompound(currentAdvancedState);
-
-	// // Print message to identify this World
-	// std::cout << "World " << ownWorldIndex 
-	// 	<< ", NU " << currentAdvancedState.getNU() << ":\n";
-
-	// // GENERATE the requested number of samples
-	// bool validated = updSampler(0)->reinitialize(currentAdvancedState);
-
-	// for(int k = 0; k < howMany; k++) {
-	// 	validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream) && validated;
-	// }
-
-	// // Return the number of accepted samples
-	// return validated;
-}
-
-/**
- *  Generate a number of samples
- * */
-bool World::generateSamples_SP_NEW(int howMany,
+bool World::generateSamples(int howMany,
 	std::stringstream& worldOutStream)
 {
 	// Update Robosample bAtomList
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromCompound_SP_NEW(currentAdvancedState);
+	updateAtomListsFromCompound(currentAdvancedState);
 
 	// GENERATE the requested number of samples
 	bool validated = updSampler(0)->reinitialize(currentAdvancedState,

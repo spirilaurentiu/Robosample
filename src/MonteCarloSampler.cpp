@@ -188,7 +188,7 @@ SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
     SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) );
     //SimTK::Real result = 0.5 * RT * std::log(D0);
     //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman 05kT logdetM: " << 0.5 * RT * std::log(D0) << std::endl;
-    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) << std::endl;
+    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)rootTopology)->calcLogDetMBATInternal_SP_NEW(someState) << std::endl;
 
     if(SimTK::isInf(result)){
         result = 0.0;

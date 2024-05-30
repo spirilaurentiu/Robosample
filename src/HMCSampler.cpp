@@ -593,8 +593,10 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			bool varianceBasedScalingFactor = false;
 			//std::vector<int> BATOrder = {1, 0, 2};			// bendstretch
 			//std::vector<SimTK::Real> BATSign = {1, 1, 1};		// bendstretch
-			std::vector<int> BATOrder = {2, 1, 0};				// spherical
-			std::vector<SimTK::Real> BATSign = {-1, -1, -1};		// spherical			
+			//std::vector<int> BATOrder = {2, 1, 0};				// spherical
+			//std::vector<SimTK::Real> BATSign = {-1, -1, -1};		// spherical
+			std::vector<int> BATOrder = {0, 1, 2};				// slider
+			std::vector<SimTK::Real> BATSign = {1, 1, 1};		// slider						
 
 			SimTK::Real sJac =
 				scaleSubZMatrixBATDeviations(
@@ -2224,7 +2226,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 	//std::cout << "HMCSampler::calcFixman D0= "<< D0 << std::endl;
 
 	assert(RT > SimTK::TinyReal);
-	double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal_SP_NEW(someState);
+	double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal(someState);
 	//SimTK::Real result = 0.5 * RT * ( std::log(D0) - detMBAT ); // original
 	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
 	//std::cout << "detM detMBAT fixP " << D0 << " " << detMBAT << " " << result << std::endl;

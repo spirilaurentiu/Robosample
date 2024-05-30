@@ -152,7 +152,7 @@ public:
 	/**
 	 * Generate an AtomIndex to Top Transforms map
 	*/
-	void generateAIx2TopXMaps_SP_NEW( void );
+	void generateAIx2TopXMaps( void );
 
 	// Set scale factors for U entries according to flexibility file
 	void setUScaleFactorsToBonds(std::string flexFN);
@@ -185,22 +185,17 @@ public:
 	// Helper function for calcLogDetMBATAnglesContribution
 	// Finds all triple runs - TODO VERY INEFFICIENT
 	void loadTriples_SP_NEW(void);
+
 	SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
 	SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATDistsMassesContribution(const SimTK::State&);
-	SimTK::Real calcLogDetMBAT(const SimTK::State&);
+
+	// SP_NEW
 
 	SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATAnglesContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATMassesContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATInternal(const SimTK::State& someState);
-
-	// SP_NEW
-
-	SimTK::Real calcLogDetMBATDistsContribution_SP_NEW(const SimTK::State&);
-	SimTK::Real calcLogDetMBATAnglesContribution_SP_NEW(const SimTK::State&);
-	SimTK::Real calcLogDetMBATMassesContribution_SP_NEW(const SimTK::State&);
-	SimTK::Real calcLogDetMBATInternal_SP_NEW(const SimTK::State& someState);
 
 	// SP_NEW
 
@@ -331,10 +326,9 @@ public:
 
         /** Compound AtomIndex to bAtomList number **/
 	void loadCompoundAtomIx2GmolAtomIx(void);
-	void loadCompoundAtomIx2GmolAtomIx_SP_NEW(void);
 	
 	/**  **/
-	int getNumber(SimTK::Compound::AtomIndex);
+	int getNumber(SimTK::Compound::AtomIndex cAIx);
         
 	/** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
 	 * maps **/
