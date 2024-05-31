@@ -143,25 +143,16 @@ public:
 	/** Print Molmodel specific types as introduced in Gmolmodel **/
 	void PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const;
 
-	std::vector<bSpecificAtom>::iterator findARoot(
-		std::vector<bSpecificAtom>::iterator bAtomListBeg,
-		std::vector<bSpecificAtom>::iterator bAtomListEnd);
-
-	void findARoot(std::vector<bSpecificAtom>& bAtomListArg);
-
 	/**
 	 * Generate an AtomIndex to Top Transforms map
 	*/
 	void generateAIx2TopXMaps( void );
 
-	// Set scale factors for U entries according to flexibility file
-	void setUScaleFactorsToBonds(std::string flexFN);
-
-	// Get regimen keyword
-	std::string getRegimen();
-
-	// Interface:
-	/** Get the name of this molecule **/
+	/**	
+	* @brief Get the name of this molecule
+	* @param 
+	* @return name of the molecule
+	*/
 	const std::string getName() const {return this->name;}
 
 	/** Set the name of this molecule **/
@@ -169,11 +160,21 @@ public:
 		this->name = nameOfThisMolecule;
 	}
 
-	/** Get own CompoundIndex in CompoundSystem **/
+	/**	
+	* @brief Get own CompoundIndex in CompoundSystem
+	* @param 
+	* @return CompoundIndex
+	*/
+	/**  **/
 	const SimTK::CompoundSystem::CompoundIndex &getCompoundIndex() const;
 
-	/** Set the compoundIndex which is the position in the vector of Compounds
- * of the CompoundSystem **/
+	/**	
+	* @brief Set the compoundIndex which is the position in the vector of
+	* Compounds of the CompoundSystem
+	* @param compoundIndex 
+	* @return
+	*/
+	/**  **/
 	void setCompoundIndex(const SimTK::CompoundSystem::CompoundIndex &compoundIndex);
 
 	/** Compute BAT determinant
@@ -194,16 +195,11 @@ public:
 	SimTK::Real calcLogDetMBATMassesContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATInternal(const SimTK::State& someState);
 
-
 	/** Get the number of atoms. **/
 	int getNAtoms() const;
 
 	/** Get the number of bonds. **/
 	int getNBonds() const;
-
-	/** Get a pointer to an atom object in the atom list inquiring
-	by number **/
-	bSpecificAtom * getAtomByNumber(int number) const;
 
 	/** Get a pointer to an atom object in the atom list inquiring
 	by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
@@ -217,12 +213,17 @@ public:
 	std::vector<bSpecificAtom *> getNeighbours(int) const;
 
 	/** Get the bonded upstream neighbor atom **/
-	SimTK::Compound::AtomIndex
-	getNeighbourWithSmallerAIx(
-		SimTK::Compound::AtomIndex aIx,
-		SimTK::DuMMForceFieldSubsystem& dumm);
+	// SimTK::Compound::AtomIndex
+	// getNeighbourWithSmallerAIx(
+	// 	SimTK::Compound::AtomIndex aIx,
+	// 	SimTK::DuMMForceFieldSubsystem& dumm);
 
-	/** Get the bonded neighbor atom in the parent mobilized body **/
+	/**	
+	* @brief Get the bonded neighbor atom in the parent mobilized body.
+	* @param aIx Compound Atom Index
+	* @return Compound atom index of the root
+	*/
+	/**  **/
 	SimTK::Compound::AtomIndex
 	getChemicalParent_IfIAmRoot(
 		SimTK::SimbodyMatterSubsystem *matter,
@@ -263,9 +264,6 @@ public:
 	*/
 	const bBond& getBond(int, int) const;
 
-	/** Get bond order. **/
-	int getBondOrder(int, int) const;
-
 	// Interface to access the maps
 	/** Get MobilizedBody to AtomIndex map **/
 	//std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
@@ -274,12 +272,12 @@ public:
 	//}
 
 	// Alternatives
-	SimTK::Transform 
-		calcDefaultAtomFrameInCompoundFrameThroughDuMM(
-		SimTK::Compound::AtomIndex aIx,
-		SimTK::DuMMForceFieldSubsystem& dumm,
-		SimTK::SimbodyMatterSubsystem& matter,
-		const SimTK::State& someState);
+	// SimTK::Transform 
+	// 	calcDefaultAtomFrameInCompoundFrameThroughDuMM(
+	// 	SimTK::Compound::AtomIndex aIx,
+	// 	SimTK::DuMMForceFieldSubsystem& dumm,
+	// 	SimTK::SimbodyMatterSubsystem& matter,
+	// 	const SimTK::State& someState);
 
 	// Retunr mbx by calling DuMM functions
 	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexThroughDumm(
@@ -287,9 +285,9 @@ public:
 		SimTK::DuMMForceFieldSubsystem& dumm);
 
 	// Retunr mbx from an olresdy saved map inside Topology
-	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexFromMap(
-		SimTK::Compound::AtomIndex aIx,
-		int whichWorld);
+	// SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexFromMap(
+	// 	SimTK::Compound::AtomIndex aIx,
+	// 	int whichWorld);
 
 	// Get atom location on mobod through DuMM functions
 	SimTK::Vec3 getAtomLocationInMobilizedBodyFrameThroughDumm(
@@ -409,8 +407,6 @@ public:
 
 private:
 
-
-	std::string regimen;
 	std::string name;
 
 	/** Every Compound has an index which is the position in the vector

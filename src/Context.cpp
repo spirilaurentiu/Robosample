@@ -1246,12 +1246,19 @@ bool Context::loadFlexibleBondsSpecs(
 	return true;
 }
 
+
+/*!
+ * <!--  -->
+*/
 void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 {
 	// function args were std::size_t whichWorld, int whichMolecule, std::string regimen
 	regimens[whichWorld].push_back(regimen);
 }
 
+/*!
+ * <!--  -->
+*/
 void Context::addWorld(
 	bool fixmanTorque,
 	int samplesPerRound,
@@ -1379,12 +1386,6 @@ void Context::addWorld(
 		bond.addBondMobility(mobility);
 		topology.setBondMobility(mobility, compoundBondIx);
 	}
-
-
-
-
-
-
 
 
 	worlds.back().AllocateCoordBuffers(natoms);

@@ -345,11 +345,7 @@ const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const {
  * creates decorations for visualizers **/
 void World::AddMolecule(
 		readAmberInput *amberReader,
-		//std::string rbFN,
-		//std::string flexFN,
-		//std::string regimenSpec,
 		std::string argRoot
-		//, std::string argRootMobility
 		)
 {
 /*
@@ -427,10 +423,6 @@ void World::adoptTopology(int which)
 	// Sets the
 	((*topologies)[which]).setCompoundIndex(
 		SimTK::CompoundSystem::CompoundIndex(which));
-
-	//topologies[which].setCompoundIndex(
-	//		SimTK::CompoundSystem::CompoundIndex(
-	//		 compoundSystem->getNumCompounds() - 1));
 
 	// Add the Topology object to Decorators's vector of molecules
 	if(visual){
