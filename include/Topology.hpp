@@ -119,13 +119,6 @@ objects **/
 class Topology : public SimTK::Compound{
 public:
 
-	// void setAtomList(
-	// 	std::vector<bSpecificAtom>& argAtomList)
-	// {		
-	// 	(this->bAtomList) = (argAtomList);
-	// 	natoms = (this->bAtomList).size();
-	// }
-
 	/** Default Constructor. Sets the name of this molecule to 'no_name '.
 	The name has no particular function and is not guaranteed to be unique.**/
 	Topology();
@@ -212,12 +205,6 @@ public:
 	/** Get the neighbours in the graph **/
 	std::vector<bSpecificAtom *> getNeighbours(int) const;
 
-	/** Get the bonded upstream neighbor atom **/
-	// SimTK::Compound::AtomIndex
-	// getNeighbourWithSmallerAIx(
-	// 	SimTK::Compound::AtomIndex aIx,
-	// 	SimTK::DuMMForceFieldSubsystem& dumm);
-
 	/**	
 	* @brief Get the bonded neighbor atom in the parent mobilized body.
 	* @param aIx Compound Atom Index
@@ -265,29 +252,11 @@ public:
 	const bBond& getBond(int, int) const;
 
 	// Interface to access the maps
-	/** Get MobilizedBody to AtomIndex map **/
-	//std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex >
-	//getMbx2aIx(){
-	//	return mbx2aIx;
-	//}
-
-	// Alternatives
-	// SimTK::Transform 
-	// 	calcDefaultAtomFrameInCompoundFrameThroughDuMM(
-	// 	SimTK::Compound::AtomIndex aIx,
-	// 	SimTK::DuMMForceFieldSubsystem& dumm,
-	// 	SimTK::SimbodyMatterSubsystem& matter,
-	// 	const SimTK::State& someState);
 
 	// Retunr mbx by calling DuMM functions
 	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexThroughDumm(
 		SimTK::Compound::AtomIndex aIx,
 		SimTK::DuMMForceFieldSubsystem& dumm);
-
-	// Retunr mbx from an olresdy saved map inside Topology
-	// SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexFromMap(
-	// 	SimTK::Compound::AtomIndex aIx,
-	// 	int whichWorld);
 
 	// Get atom location on mobod through DuMM functions
 	SimTK::Vec3 getAtomLocationInMobilizedBodyFrameThroughDumm(
@@ -316,9 +285,8 @@ public:
 	/** To be removed. *Create MobilizedBodyIndex vs Compound::AtomIndex
 	 * maps. **/
 	void loadAIx2MbxMap();
-	//void loadMbx2AIxMap();
 
-        /** Compound AtomIndex to bAtomList number **/
+    /** Compound AtomIndex to bAtomList number **/
 	void loadCompoundAtomIx2GmolAtomIx(void);
 	
 	/**  **/

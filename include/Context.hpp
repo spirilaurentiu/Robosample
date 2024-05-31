@@ -37,7 +37,14 @@ public:
 	*/
 	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed = 0);
 
+	/**
+	 * @brief Print atom's Compound and DuMM indexes.
+	*/
 	void PrintAtomsDebugInfo(void);
+
+ 	std::vector<BOND_FLEXIBILITY>& readFlexibility(
+		std::string flexFileFN,
+		std::vector<BOND_FLEXIBILITY>& flexibilities);
 
 	/**	
 	* @brief Read all parameters from an input file
@@ -951,4 +958,37 @@ private:
 
 	// Pairs of replicas to be exchanged
 	std::vector<int> exchangePairs;
+
+	std::map<std::string, SampleGenerator> sampleGenerator = {
+		{ "EMPTY", SampleGenerator::EMPTY },
+		{ "MC", SampleGenerator::MC },
+	};
+
+	std::map<std::string, IntegratorName> integratorName = {
+		{ "EMPTY", IntegratorName::EMPTY },
+		{ "VV", IntegratorName::VERLET },
+		{ "VERLET", IntegratorName::VERLET },
+		{ "EULER", IntegratorName::EULER },
+		{ "EULER2", IntegratorName::EULER2 },
+		{ "CPODES", IntegratorName::CPODES },
+		{ "RUNGEKUTTA", IntegratorName::RUNGEKUTTA },
+		{ "RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2 },
+		{ "RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3 },
+		{ "RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG },
+		{ "BENDSTRETCH", IntegratorName::BENDSTRETCH },
+		{ "OMMVV", IntegratorName::OMMVV },
+		{ "BOUND_WALK", IntegratorName::BOUND_WALK },
+		{ "BOUND_HMC", IntegratorName::BOUND_HMC },
+		{ "STATIONS_TASK", IntegratorName::STATIONS_TASK },
+		{ "NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS },
+	};
+
+	std::map<std::string, ThermostatName> thermostateName = {
+		{ "NONE", ThermostatName::NONE },
+		{ "ANDERSEN", ThermostatName::ANDERSEN },
+		{ "BERENDSEN", ThermostatName::BERENDSEN },
+		{ "LANGEVIN", ThermostatName::LANGEVIN },
+		{ "NOSE_HOOVER", ThermostatName::NOSE_HOOVER },
+	};
+	
 };

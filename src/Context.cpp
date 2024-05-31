@@ -6,6 +6,10 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
+/*!
+ * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT
+ * -->
+*/
 Context::Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t argSeed)
 {
 	// Use a random seed if none is provided
@@ -41,15 +45,13 @@ Context::Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t argSeed)
 	}
 }
 
+/*!
+ * <!--  -->
+*/
 bool Context::setOutput(const std::string& outDir) {
+
 	// Set the log filename
 	std::string logFilename = outDir + "/log." + std::to_string(seed);
-
-	// // Check if the log file already exists
-	// if (SimTK::Pathname::fileExists(logFilename)) {
-	// 	std::cerr << cerr_prefix << "Log file " << logFilename << " already exists." << std::endl;
-	// 	return false;
-	// }
 
 	// Open the log file
 	logFile = std::ofstream(logFilename);
@@ -73,7 +75,7 @@ bool Context::setOutput(const std::string& outDir) {
 }
 
 /*!
- * <!--  -->
+ * <!-- Print atom's Compound and DuMM indexes -->
 */
 void Context::PrintAtomsDebugInfo(void){
 
@@ -88,49 +90,65 @@ void Context::PrintAtomsDebugInfo(void){
 		SimTK::Compound::AtomIndex cAIx = bAtom.getCompoundAtomIndex();
 
 		SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(cAIx);
-			scout("prmIx cAIx dAIx  ") << prmIx << " " << cAIx << " " << dAIx << std::endl;
+		
+		scout("prmIx cAIx dAIx  ") << prmIx << " " << cAIx << " " << dAIx << std::endl;
 	}
 }
 
 /*!
- * <!--  -->
+ * <!-- Read flexibilities -->
 */
-bool Context::initializeFromFile(const std::string &file)
+ std::vector<BOND_FLEXIBILITY>& Context::readFlexibility(
+	std::string flexFileFN,
+ 	std::vector<BOND_FLEXIBILITY>& flexibilities) {
+
+	// Get flexible bonds from file. Numbering starts at 0 in prmtop
+	std::ifstream flexF(flexFileFN);
+	while(flexF.good()){
+
+		// Get a line
+		std::string line;
+		std::getline(flexF, line);
+		if(!line.empty()){
+
+			// Comment
+			if(line.at(0) == '#'){continue;}
+
+			// Get words
+			std::istringstream iss(line);
+			std::string word;
+			std::vector<std::string> lineWords;
+
+			while(iss >> word){
+				lineWords.push_back(std::move(word));
+			}
+
+			// Check the line
+			if(lineWords.size() >= 3 ){
+				int index_1 = std::stoi(lineWords[0]);
+				int index_2 = std::stoi(lineWords[1]);
+				std::string mobility =  lineWords[2];
+
+				flexibilities.push_back({index_1, index_2, mobilityMap[mobility]});
+			}
+			else{
+				scout("Bad flex file format");
+			}
+		}
+	}
+
+	return flexibilities;
+ }
+
+
+/*!
+ * <!-- Read values from input file -->
+*/
+bool Context::initializeFromFile(const std::string &inpFN)
 {
-	std::map<std::string, SampleGenerator> sampleGenerator = {
-		{ "EMPTY", SampleGenerator::EMPTY },
-		{ "MC", SampleGenerator::MC },
-	};
-
-	std::map<std::string, IntegratorName> integratorName = {
-		{ "EMPTY", IntegratorName::EMPTY },
-		{ "VV", IntegratorName::VERLET },
-		{ "VERLET", IntegratorName::VERLET },
-		{ "EULER", IntegratorName::EULER },
-		{ "EULER2", IntegratorName::EULER2 },
-		{ "CPODES", IntegratorName::CPODES },
-		{ "RUNGEKUTTA", IntegratorName::RUNGEKUTTA },
-		{ "RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2 },
-		{ "RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3 },
-		{ "RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG },
-		{ "BENDSTRETCH", IntegratorName::BENDSTRETCH },
-		{ "OMMVV", IntegratorName::OMMVV },
-		{ "BOUND_WALK", IntegratorName::BOUND_WALK },
-		{ "BOUND_HMC", IntegratorName::BOUND_HMC },
-		{ "STATIONS_TASK", IntegratorName::STATIONS_TASK },
-		{ "NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS },
-	};
-
-	std::map<std::string, ThermostatName> thermsotatName = {
-		{ "NONE", ThermostatName::NONE },
-		{ "ANDERSEN", ThermostatName::ANDERSEN },
-		{ "BERENDSEN", ThermostatName::BERENDSEN },
-		{ "LANGEVIN", ThermostatName::LANGEVIN },
-		{ "NOSE_HOOVER", ThermostatName::NOSE_HOOVER },
-	};
 
 	// Read input into a SetupReader object
-	setupReader.ReadSetup(file);
+	setupReader.ReadSetup(inpFN);
 	setupReader.dump(true);
 
 	// Set output directory and log file name based on seed - required
@@ -186,8 +204,7 @@ bool Context::initializeFromFile(const std::string &file)
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
 	// Get Z-matrix indexes table	
-	calcZMatrixTable();
-	//PrintZMatrixTable();
+	calcZMatrixTable(); // PrintZMatrixTable();
 
 	reallocZMatrixBAT();
 
@@ -198,41 +215,9 @@ bool Context::initializeFromFile(const std::string &file)
 
 		std::string flexFileFN = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("FLEXFILE")[worldIx];
 
-		// Get flexible bonds from file. Numbering starts at 0 in prmtop
-		std::ifstream flexF(flexFileFN);
 		std::vector<BOND_FLEXIBILITY> flexibilities = {};
-		while(flexF.good()){
 
-			// Get a line
-			std::string line;
-			std::getline(flexF, line);
-			if(!line.empty()){
-
-				// Comment
-				if(line.at(0) == '#'){continue;}
-
-				// Get words
-				std::istringstream iss(line);
-				std::string word;
-				std::vector<std::string> lineWords;
-
-				while(iss >> word){
-					lineWords.push_back(std::move(word));
-				}
-
-				// Check the line
-				if(lineWords.size() >= 3 ){
-					int index_1 = std::stoi(lineWords[0]);
-					int index_2 = std::stoi(lineWords[1]);
-					std::string mobility =  lineWords[2];
-
-					flexibilities.push_back({index_1, index_2, mobilityMap[mobility]});
-				}
-				else{
-					scout("Bad flex file format");
-				}
-			}
-		}
+		readFlexibility(flexFileFN, flexibilities);
 
 		addWorld(
 			setupReader.get("FIXMAN_TORQUE")[worldIx] == "TRUE",
@@ -242,17 +227,21 @@ bool Context::initializeFromFile(const std::string &file)
 			setupReader.get("OPENMM")[worldIx] == "TRUE",
 			setupReader.get("VISUAL")[worldIx] == "TRUE",
 			setupReader.get("VISUAL")[worldIx] == "TRUE" ? SimTK::Real(std::stod(setupReader.get("TIMESTEPS")[worldIx])) : 0);
+
+		flexibilities.clear();
 	}
 
 	// Set DuMM atom indexes into atoms of bAtomList 
 	worlds[0].setDuMMAtomIndexes();
 	
-	scout("Correspondence cAIx dAIx\n");
-	int ix = -1;
-	for(auto atom: atoms){
-		ix++;
-		spacedcout("aIx cAIx dAIx", ix, atom.getCompoundAtomIndex(), atom.getDuMMAtomIndex(), "\n");
-	}
+	#ifdef __DRILLING__
+		scout("Correspondence cAIx dAIx\n");
+		int ix = -1;
+		for(auto atom: atoms){
+			ix++;
+			spacedcout("aIx cAIx dAIx", ix, atom.getCompoundAtomIndex(), atom.getDuMMAtomIndex(), "\n");
+		}
+	#endif
 
 	// Victor - take a look
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
@@ -292,7 +281,7 @@ bool Context::initializeFromFile(const std::string &file)
 			SamplerName::HMC,
 			sampleGenerator[setupReader.get("SAMPLERS")[worldIx]],
 			integratorName[setupReader.get("INTEGRATORS")[worldIx]],
-			thermsotatName[setupReader.get("THERMOSTAT")[worldIx]],
+			thermostateName[setupReader.get("THERMOSTAT")[worldIx]],
 			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
 			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
 			setupReader.find("MDSTEPS_STD") ? std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]) : 0,
@@ -1246,7 +1235,6 @@ bool Context::loadFlexibleBondsSpecs(
 	return true;
 }
 
-
 /*!
  * <!--  -->
 */
@@ -1265,8 +1253,7 @@ void Context::addWorld(
 	ROOT_MOBILITY rootMobility,
 	const std::vector<BOND_FLEXIBILITY>& flexibilities,
 	bool useOpenMM,
-	bool visual,
-	SimTK::Real visualizerFrequency) {
+	bool visual, SimTK::Real visualizerFrequency) {
 
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());
@@ -1327,9 +1314,6 @@ void Context::addWorld(
 	// Generate DuMM parameters: DuMM atom types, charged atom types, bond types, angle types and torsion types
 	worlds.back().generateDummParams(atoms, bonds, dummAngles, dummTorsions, elementCache);
 
-
-
-
 	// Define the inverse map
 	std::map<BondMobility::Mobility, std::string> inverseMobilityMap;
 
@@ -1366,9 +1350,6 @@ void Context::addWorld(
 		} // found a root mobility
 	} // every flexibility
 
-
-
-
 	// Set flexibilities
 	for (auto& bond : bonds) {
 		Topology& topology = topologies[bond.getMoleculeIndex()];
@@ -1387,11 +1368,12 @@ void Context::addWorld(
 		topology.setBondMobility(mobility, compoundBondIx);
 	}
 
-
+	// 
 	worlds.back().AllocateCoordBuffers(natoms);
 
 	worlds.back().topologies = &topologies;
 	for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
+
 		// Add topologies to CompoundSystem and add it to the visualizer's vector of molecules
 		worlds.back().adoptTopology(topologyIx);
 

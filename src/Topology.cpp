@@ -9,31 +9,6 @@ using namespace SimTK;
 #define TRACE_GRAPH true
 #endif
 
-// void Topology::BAT() {
-// 	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT BEGIN" << std::endl;
-
-// 	// InternalCoordinates bat;
-// 	// bat.compute(bAtomList);
-
-// 	// for (const auto& b : bat.getBonds()) {
-// 	// 	std::cout << "bond " << b.first << " " << b.second << std::endl;
-// 	// }
-
-// 	// for (const auto& a : bat.getAngles()) {
-// 	// 	std::cout << "angle " << a.first << " " << a.second << " " << a.third << " " << std::endl;
-// 	// }
-
-// 	// for (const auto& t : bat.getTorsions()) {
-// 	// 	std::cout << "torsion " << t.first << " " << t.second << " " << t.third << " " << t.fourth << std::endl;
-// 	// }
-
-// 	// for (int i = 0; i < bAtomList.size(); i++) {
-// 	// 	std::cout << i << " " << bat.amber2BAT(i) << " " << bat.BAT2amber(bat.amber2BAT(i)) << std::endl;
-// 	// }
-
-// 	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT END" << std::endl;
-// }
-
 /** Default constructor.Sets the name of this molecule to 'no_name '.
 The name has no particular function and is not guaranteed to be unique **/
 Topology::Topology(){
@@ -533,37 +508,6 @@ SimTK::Transform Topology::getTopTransform_FromMap(SimTK::Compound::AtomIndex aI
 	return aIx2TopTransform[aIx];
 }
 
-/*!
- * <!--  -->
-*/
-// SimTK::Transform Topology::calcDefaultAtomFrameInCompoundFrameThroughDuMM(
-// 	SimTK::Compound::AtomIndex aIx,
-// 	SimTK::DuMMForceFieldSubsystem& dumm,
-// 	SimTK::SimbodyMatterSubsystem& matter,
-// 	const SimTK::State& someState)
-// {
-// 	// TODO
-// 	assert(!"Not implemented!");
-// 	return {};
-
-// 	// SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
-// 	// const  SimTK::MobilizedBodyIndex mbx = dumm.getAtomBody(dAIx);
-// 	// const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
-
-// 	// // Body transforms
-// 	// const Transform&    X_GB = mobod.getBodyTransform(someState);
-// 	// const Rotation&     R_GB = X_GB.R();
-// 	// const Vec3&         p_GB = X_GB.p();
-
-// 	// // Atom
-// 	// SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
-
-// 	// // return
-// 	// //const Vec3 p_BS_G = R_GB * station;
-// 	// //return X;
-
-// }
-
 // Return mbx by calling DuMM functions
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexThroughDumm(
 	SimTK::Compound::AtomIndex aIx,
@@ -601,27 +545,6 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 	return p_GB + p_BS_G;
 
 }
-
-// Retunr mbx from an olresdy saved map inside Topology
-// SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexFromMap(
-// 	SimTK::Compound::AtomIndex aIx, int whichWorld)
-// {
-// 	assert(!"Not implemented");
-// /* 	if(!aIx2mbx.empty()){
-// 		if(!((aIx2mbx[aIx]).empty())){
-// 			return (aIx2mbx[aIx])[whichWorld];
-// 		}else{
-// 			std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx for "
-// 				<< aIx <<  "atom not yet loaded.\n";
-// 			throw std::exception();
-// 			std::exit(1);
-// 		}
-// 	}else{
-// 		std::cerr << "Topology::getAtomMobilizedBodyIndexFromMap: aIx2mbx not yet loaded.\n";
-// 		throw std::exception();
-// 		std::exit(1);
-// 	} */
-// }
 
 /** Print maps **/
 void Topology::printMaps()
@@ -759,18 +682,6 @@ void Topology::setSubAtomList(
 /*!
  * <!--  -->
 */
-// void Topology::setAtomList(void){
-
-// 	for(size_t aCnt = 0; aCnt < subAtomList.size(); aCnt++){
-// 		bAtomList.push_back(subAtomList[aCnt]);
-// 	}
-
-// 	scout("Topology bAtomLIst size ") << bAtomList.size() << eol;
-// }
-
-/*!
- * <!--  -->
-*/
 void Topology::setSubBondList(
 	std::vector<bBond>::iterator beginArg,
 	std::vector<bBond>::iterator endArg)
@@ -780,18 +691,6 @@ void Topology::setSubBondList(
 
 	nbonds = (subBondList).size();
 }
-
-/*!
- * <!--  -->
-*/
-// void Topology::setBondList(void){
-
-// 	for(size_t aCnt = 0; aCnt < subBondList.size(); aCnt++){
-// 		bonds.push_back(subBondList[aCnt]);
-// 	}
-
-// 	scout("Topology bonds size ") << bonds.size() << eol;
-// }
 
 /** Get own CompoundIndex in CompoundSystem **/
 const CompoundSystem::CompoundIndex &Topology::getCompoundIndex() const
@@ -807,52 +706,6 @@ void Topology::setCompoundIndex(
 	//Topology::compoundIndex = compoundIndex;
 	this->compoundIndex = compoundIndex;
 }
-
-/*!
- * <!-- Get the chemical parent -->
-*/
-// SimTK::Compound::AtomIndex
-// Topology::getNeighbourWithSmallerAIx(
-// 	SimTK::Compound::AtomIndex aIx,
-// 	SimTK::DuMMForceFieldSubsystem& dumm)
-// {
-// 	assert( (int(aIx) > 0) &&
-// 		"Topology::getNeighbourWithSmallerAIx atomIx is 0." );
-
-// 	// Declare convenient vars
-// 	SimTK::Compound::AtomIndex chemParentAIx;
-
-// 	// Find the true bSpecificAtom (CHEMICAL) parent
-// 	bSpecificAtom *originSpecAtom = nullptr;
-// 	originSpecAtom = updAtomByAtomIx(aIx);
-
-// 	// Loop through neighbor atoms (bSpecificAtom)
-// 	for(auto k : originSpecAtom->neighborsIndex) {
-
-// 		// Loop through bonds that this atom is involved in (bBond);
-// 		for(auto bondIndex : originSpecAtom->bondsInvolvedIndex){
-
-// 			// Check if this neighbor is involved in this bond
-// 			if (bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[k].getNumber()) )
-// 			{
-// 				// Get Compound Atom Index
-// 				Compound::AtomIndex candidateChemParentAIx = subAtomList[k].getCompoundAtomIndex();
-
-// 				// Smaller Atom Index 
-// 				if(candidateChemParentAIx < aIx){
-// 					chemParentAIx = candidateChemParentAIx;
-// 					break;
-// 				}
-// 			}
-// 		}
-
-// 	}
-		
-// 	// Return
-// 	return chemParentAIx;
-// }
-
-
 
 /** Get the neighbor atom bonded to aIx atom in the parent mobilized body.
 TODO: No chemical parent for satelite atoms or first atom. **/
