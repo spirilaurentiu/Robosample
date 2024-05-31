@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 	helpString +=
 		" Options:\n";
 	helpString +=
-		"  -h, --help for help\nUsage: ./robosample [file]\n";
+		"  -h, --help for help\nUsage: ./robosample <file> [dcdfile]\n";
 
 	if(argc < 2) {
 		std::cout << "Error: not enough parameters to run. See help below.\n";
@@ -137,23 +137,13 @@ int main(int argc, char **argv)
 
 	Context c(300, 300, seed); // c = Context();
 
-	bool singlePrmtop = true;
-
-	std::string singlePrmtopOpt;
-	if(argc >= 3){
-		singlePrmtopOpt = argv[2];
-	}
-
-	if(singlePrmtopOpt == "singlePrmtop"){
-		singlePrmtop = true;
-	}
-
-	// singlePrmtop = true;
-	if (!c.initializeFromFile(argv[1], singlePrmtop)) {
+	if (!c.initializeFromFile(argv[1])) {
 		return -1;
 	}
 
-	c.appendDCDReporter("2but.dcd");
+	if(argc >=3){
+		c.appendDCDReporter(argv[2]);
+	}
 
 	// c.appendDCDReporter("2but.dcd");
 

@@ -42,10 +42,9 @@ public:
 	/**	
 	* @brief Read all parameters from an input file
 	* @param filename input file name
-	* @param singlePrmtop Read all molecules from a single prmtop
 	* @return succes of the function
 	*/	
-	bool initializeFromFile(const std::string& filename, bool singlePrmtop);
+	bool initializeFromFile(const std::string& filename);
 
 	void setNumThreads(int threads);
 	void setNonbonded(int method, SimTK::Real cutoff);
@@ -828,9 +827,6 @@ public:
 	}	
 
 private:
-
-	bool singlePrmtop = false;
-
 
 	TrajectoryObject traj;
 	bool wantDCD = false;

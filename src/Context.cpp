@@ -72,7 +72,6 @@ bool Context::setOutput(const std::string& outDir) {
 	return true;
 }
 
-
 /*!
  * <!--  -->
 */
@@ -93,15 +92,11 @@ void Context::PrintAtomsDebugInfo(void){
 	}
 }
 
-
 /*!
  * <!--  -->
 */
-bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
+bool Context::initializeFromFile(const std::string &file)
 {
-
-	this->singlePrmtop = singlePrmtop;
-
 	std::map<std::string, SampleGenerator> sampleGenerator = {
 		{ "EMPTY", SampleGenerator::EMPTY },
 		{ "MC", SampleGenerator::MC },
@@ -184,20 +179,17 @@ bool Context::initializeFromFile(const std::string &file, bool singlePrmtop)
 		std::stoi(setupReader.get("NONBONDED_METHOD")[0]),
 		std::stod(setupReader.get("NONBONDED_CUTOFF")[0]));
 
-	if (singlePrmtop) {
-		std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
-		std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
-		
-		loadAmberSystem(prmtop, inpcrd);
-		//scout("Context PrintAtoms.\n"); PrintAtoms();
+	std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
+	std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
+	
+	loadAmberSystem(prmtop, inpcrd);
+	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
-		// Get Z-matrix indexes table	
-		calcZMatrixTable();
-		//PrintZMatrixTable();
+	// Get Z-matrix indexes table	
+	calcZMatrixTable();
+	//PrintZMatrixTable();
 
-		reallocZMatrixBAT();
-
-	}
+	reallocZMatrixBAT();
 
 	// Add Worlds
 	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
@@ -886,9 +878,6 @@ void Context::addBiotypes() {
 
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
-	// TODO remove at some point
-	singlePrmtop = true;
-
 	// Load Amber files
 	readAmberInput reader;
 	reader.readAmberFiles(inpcrd, prmtop);
@@ -918,10 +907,10 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations();
 
-	for(auto& topology : topologies) {
-		topology.setAtomList();
-		topology.setBondList();
-	}
+	// for(auto& topology : topologies) {
+	// 	topology.setAtomList();
+	// 	topology.setBondList();
+	// }
 
 	// Allocate coordinate buffers
 	Xs.resize(natoms);
@@ -3418,7 +3407,7 @@ void Context::PrintSimbodyMobods(){
 
 			for(std::size_t i = 0; i < topology.getNumAtoms(); i++){
 				SimTK::Compound::AtomIndex aIx
-					= (topology.bAtomList[i]).getCompoundAtomIndex();
+					= (topology.subAtomList[i]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
 				std::cout << "i aIx mbx " << i << " " << aIx << " "
 					<< mbx << std::endl << std::flush;
@@ -4980,12 +4969,8 @@ bool Context::RunWorld(int whichWorld)
 	if(distortOption == 0) {
 
 		// Generate samples
-		if(singlePrmtop == true){
-			validated = worlds[whichWorld].generateSamples(
-				numSamples, worldOutStream);
-		}else{
-			;
-		}
+		validated = worlds[whichWorld].generateSamples(
+			numSamples, worldOutStream);
 				
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
@@ -7502,7 +7487,7 @@ void Context::areAllDuMMsTheSame(void)
 
 			// Get atom index
 			SimTK::Compound::AtomIndex aIx =
-				(topologies[molIx].bAtomList[k]).getCompoundAtomIndex();
+				(topologies[molIx].subAtomList[k]).getCompoundAtomIndex();
 
 			std::cout << aIx << " ";
 

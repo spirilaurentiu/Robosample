@@ -9,30 +9,30 @@ using namespace SimTK;
 #define TRACE_GRAPH true
 #endif
 
-void Topology::BAT() {
-	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT BEGIN" << std::endl;
+// void Topology::BAT() {
+// 	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT BEGIN" << std::endl;
 
-	// InternalCoordinates bat;
-	// bat.compute(bAtomList);
+// 	// InternalCoordinates bat;
+// 	// bat.compute(bAtomList);
 
-	// for (const auto& b : bat.getBonds()) {
-	// 	std::cout << "bond " << b.first << " " << b.second << std::endl;
-	// }
+// 	// for (const auto& b : bat.getBonds()) {
+// 	// 	std::cout << "bond " << b.first << " " << b.second << std::endl;
+// 	// }
 
-	// for (const auto& a : bat.getAngles()) {
-	// 	std::cout << "angle " << a.first << " " << a.second << " " << a.third << " " << std::endl;
-	// }
+// 	// for (const auto& a : bat.getAngles()) {
+// 	// 	std::cout << "angle " << a.first << " " << a.second << " " << a.third << " " << std::endl;
+// 	// }
 
-	// for (const auto& t : bat.getTorsions()) {
-	// 	std::cout << "torsion " << t.first << " " << t.second << " " << t.third << " " << t.fourth << std::endl;
-	// }
+// 	// for (const auto& t : bat.getTorsions()) {
+// 	// 	std::cout << "torsion " << t.first << " " << t.second << " " << t.third << " " << t.fourth << std::endl;
+// 	// }
 
-	// for (int i = 0; i < bAtomList.size(); i++) {
-	// 	std::cout << i << " " << bat.amber2BAT(i) << " " << bat.BAT2amber(bat.amber2BAT(i)) << std::endl;
-	// }
+// 	// for (int i = 0; i < bAtomList.size(); i++) {
+// 	// 	std::cout << i << " " << bat.amber2BAT(i) << " " << bat.BAT2amber(bat.amber2BAT(i)) << std::endl;
+// 	// }
 
-	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT END" << std::endl;
-}
+// 	// std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>BAT END" << std::endl;
+// }
 
 /** Default constructor.Sets the name of this molecule to 'no_name '.
 The name has no particular function and is not guaranteed to be unique **/
@@ -52,9 +52,9 @@ Topology::Topology(std::string nameOfThisMolecule){
 because we want to allow the valence to change during the simulation
 e.g. semi-grand canonical ensemble. **/
 Topology::~Topology() {
-	for (auto& atom : bAtomList) {
-		atom.destroy();
-	}
+	// for (auto& atom : bAtomList) {
+	// 	atom.destroy();
+	// }
 }
 
 /** Print atom and bonds list with details**/
@@ -221,7 +221,7 @@ SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatS
 	//std::cout << "calcLogDetMBATGamma2Contribution quaternionState " << quatState << std::endl;
 	//std::cout << "calcLogDetMBATGamma2Contribution	  eulerState " << eulerState << std::endl;
 
-	bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
+	bSpecificAtom *root = &(subAtomList[bSpecificAtomRootIndex]);
 	SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
 	SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
 	SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
@@ -248,41 +248,6 @@ SimTK::Real Topology::calcLogDetMBATGamma2Contribution(const SimTK::State& quatS
 		return -SimTK::Infinity;
 	}
 	SimTK::Real result = std::log(sinPitch * sinPitch);
-	return result;
-}
-
-
-SimTK::Real Topology::calcLogDetMBATDistsMassesContribution(const SimTK::State&)
-{
-
-	// function args were const SimTK::State& someState
-
-	// Assign Compound coordinates by matching bAtomList coordinates
-	std::map<AtomIndex, Vec3> atomTargets;
-	for(int ix = 0; ix < getNumAtoms(); ++ix){
-			Vec3 vec(bAtomList[ix].getX(), bAtomList[ix].getY(), bAtomList[ix].getZ());
-			atomTargets.insert(pair<AtomIndex, Vec3> (bAtomList[ix].getCompoundAtomIndex(), vec));
-	}
-
-	//std::cout << "Topology::calcLogDetMBATDistsMassesContribution dists squared: " ;
-	SimTK::Real result = 3.0*std::log(bAtomList[bonds[0].i].mass);
-	//std::cout << "atom " << bonds[0].i << " 1stlogmass " << std::log(bAtomList[bonds[0].i].mass) << " " ;
-	for(const auto& bond: bonds){
-		//SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
-		//SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
-		//SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);
-
-		SimTK::Vec3 atom1pos = SimTK::Vec3(bAtomList[bond.i].getX(), bAtomList[bond.i].getY(), bAtomList[bond.i].getZ());
-		SimTK::Vec3 atom2pos = SimTK::Vec3(bAtomList[bond.j].getX(), bAtomList[bond.j].getY(), bAtomList[bond.j].getZ());
-		SimTK::Real distSqr = (atom2pos - atom1pos).normSqr();
-
-		//std::cout << "atom " << bond.j << " 2*logDistSqr+mass " << std::log(distSqr) + std::log(distSqr) + std::log(bAtomList[bond.j].mass) << " " ;
-
-		result = result + std::log(distSqr) + std::log(distSqr) + (3.0*std::log(bAtomList[bond.j].mass));
-
-	}
-	//std::cout << std::endl;
-
 	return result;
 }
 
@@ -437,8 +402,8 @@ by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
 // TODO: Optimize use CompoundAtomIx2GmolAtomIx instead
 bSpecificAtom * Topology::updAtomByAtomIx(int aIx) {
 	for (int i = 0; i < natoms; i++){
-		if(bAtomList[i].getCompoundAtomIndex() == aIx){
-			return &bAtomList[i];
+		if(subAtomList[i].getCompoundAtomIndex() == aIx){
+			return &subAtomList[i];
 		}
 	}
 
@@ -605,7 +570,7 @@ int Topology::getNumber(SimTK::Compound::AtomIndex cAIx)
  * calcDefaultAtomFrameInCompoundFrame multiple times. This has
  * to be called every time the coordinates change though. -->
 */
-void Topology::calcAtomsTopTransforms_SP_NEW()
+void Topology::calcAtomsTopTransforms()
 {
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
 		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
@@ -803,13 +768,13 @@ void Topology::writeAtomListPdb(std::string dirname,
 			fprintf(oF, "%-6s%5d %4s %3s %c%4d    %8.3f%8.3f%8.3f  %4.2f%6.2f          %2s\n"
 				, "ATOM"                 // record
 				, i                      // index
-				, bAtomList[i].getInName().c_str()  // name
+				, subAtomList[i].getInName().c_str()  // name
 				, "UNK"                  // residue name
 				, 'A'                    // chain
 				, 1                      // residue index
-				, 10.0*bAtomList[i].getX()    // x in A
-				, 10.0*bAtomList[i].getY()    // y in A
-				, 10.0*bAtomList[i].getZ()    // z in A
+				, 10.0*subAtomList[i].getX()    // x in A
+				, 10.0*subAtomList[i].getY()    // y in A
+				, 10.0*subAtomList[i].getZ()    // z in A
 				, 1.0                    // occupancy
 				, 0.0                    // beta factor
 				, "  ");                 // element
@@ -832,9 +797,9 @@ void Topology::getCoordinates(
 	assert(Ys.size() == static_cast<size_t>(getNumAtoms()));
 	assert(Zs.size() == static_cast<size_t>(getNumAtoms()));
 	for(int ix = 0; ix < getNumAtoms(); ++ix){
-		Xs[ix] = bAtomList[ix].getX();
-		Ys[ix] = bAtomList[ix].getY();
-		Zs[ix] = bAtomList[ix].getZ();
+		Xs[ix] = subAtomList[ix].getX();
+		Ys[ix] = subAtomList[ix].getY();
+		Zs[ix] = subAtomList[ix].getZ();
 	}
 }
 
@@ -859,14 +824,14 @@ void Topology::setSubAtomList(
 /*!
  * <!--  -->
 */
-void Topology::setAtomList(void){
+// void Topology::setAtomList(void){
 
-	for(size_t aCnt = 0; aCnt < subAtomList.size(); aCnt++){
-		bAtomList.push_back(subAtomList[aCnt]);
-	}
+// 	for(size_t aCnt = 0; aCnt < subAtomList.size(); aCnt++){
+// 		bAtomList.push_back(subAtomList[aCnt]);
+// 	}
 
-	scout("Topology bAtomLIst size ") << bAtomList.size() << eol;
-}
+// 	scout("Topology bAtomLIst size ") << bAtomList.size() << eol;
+// }
 
 /*!
  * <!--  -->
@@ -884,14 +849,14 @@ void Topology::setSubBondList(
 /*!
  * <!--  -->
 */
-void Topology::setBondList(void){
+// void Topology::setBondList(void){
 
-	for(size_t aCnt = 0; aCnt < subBondList.size(); aCnt++){
-		bonds.push_back(subBondList[aCnt]);
-	}
+// 	for(size_t aCnt = 0; aCnt < subBondList.size(); aCnt++){
+// 		bonds.push_back(subBondList[aCnt]);
+// 	}
 
-	scout("Topology bonds size ") << bonds.size() << eol;
-}
+// 	scout("Topology bonds size ") << bonds.size() << eol;
+// }
 
 /** Get own CompoundIndex in CompoundSystem **/
 const CompoundSystem::CompoundIndex &Topology::getCompoundIndex() const
@@ -933,10 +898,10 @@ Topology::getNeighbourWithSmallerAIx(
 		for(auto bondIndex : originSpecAtom->bondsInvolvedIndex){
 
 			// Check if this neighbor is involved in this bond
-			if (bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), bAtomList[k].getNumber()) )
+			if (bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[k].getNumber()) )
 			{
 				// Get Compound Atom Index
-				Compound::AtomIndex candidateChemParentAIx = bAtomList[k].getCompoundAtomIndex();
+				Compound::AtomIndex candidateChemParentAIx = subAtomList[k].getCompoundAtomIndex();
 
 				// Smaller Atom Index 
 				if(candidateChemParentAIx < aIx){
@@ -987,17 +952,17 @@ Topology::getChemicalParent_IfIAmRoot(
 				for (auto bondIndex : originSpecAtom->bondsInvolvedIndex) {
 
 					// Check if this neighbor is involved in this bond
-					if( bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), bAtomList[k].getNumber()
+					if( bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[k].getNumber()
 						) ){
 
-						Compound::AtomIndex candidateChemParentAIx = bAtomList[k].getCompoundAtomIndex();
+						Compound::AtomIndex candidateChemParentAIx = subAtomList[k].getCompoundAtomIndex();
 
 						// Check if neighbor atom's mobod is a parent mobod
 						if(getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx){
 
 							if(!bonds[bondIndex].isRingClosing()){ // No ring atoms are allowed
 								chemParentAIx = candidateChemParentAIx;
-								gmolAtomIndex = bAtomList[k].getNumber();
+								gmolAtomIndex = subAtomList[k].getNumber();
 								break;
 							}
 						}
@@ -1010,10 +975,10 @@ Topology::getChemicalParent_IfIAmRoot(
 		std::cout << "Warning: requiring chemical parent for non-root atom\n";
 		bSpecificAtom *originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
 		for(auto k : originSpecAtom->neighborsIndex) {
-			Compound::AtomIndex candidateChemParentAIx = bAtomList[k].getCompoundAtomIndex();
+			Compound::AtomIndex candidateChemParentAIx = subAtomList[k].getCompoundAtomIndex();
 			if(getAtomLocationInMobilizedBodyFrameThroughDumm(candidateChemParentAIx, dumm) == 0){ // atom is at body's origin // DANGER
 				chemParentAIx = candidateChemParentAIx;
-				gmolAtomIndex = bAtomList[k].getNumber();
+				gmolAtomIndex = subAtomList[k].getNumber();
 				break;
 			}
 		}

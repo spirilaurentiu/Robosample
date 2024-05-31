@@ -119,12 +119,12 @@ objects **/
 class Topology : public SimTK::Compound{
 public:
 
-	void setAtomList(
-		std::vector<bSpecificAtom>& argAtomList)
-	{		
-		(this->bAtomList) = (argAtomList);
-		natoms = (this->bAtomList).size();
-	}
+	// void setAtomList(
+	// 	std::vector<bSpecificAtom>& argAtomList)
+	// {		
+	// 	(this->bAtomList) = (argAtomList);
+	// 	natoms = (this->bAtomList).size();
+	// }
 
 	/** Default Constructor. Sets the name of this molecule to 'no_name '.
 	The name has no particular function and is not guaranteed to be unique.**/
@@ -188,16 +188,12 @@ public:
 
 	SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
 	SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
-	SimTK::Real calcLogDetMBATDistsMassesContribution(const SimTK::State&);
-
-	// SP_NEW
 
 	SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATAnglesContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATMassesContribution(const SimTK::State&);
 	SimTK::Real calcLogDetMBATInternal(const SimTK::State& someState);
 
-	// SP_NEW
 
 	/** Get the number of atoms. **/
 	int getNAtoms() const;
@@ -240,7 +236,7 @@ public:
 	* @param : 
 	* @return
 	*/
-	void calcAtomsTopTransforms_SP_NEW(void);
+	void calcAtomsTopTransforms(void);
 	
 	/**	
 	* @brief 
@@ -345,13 +341,13 @@ public:
 		std::vector<bSpecificAtom>::iterator endArg,
 		ELEMENT_CACHE& elementCacheArg);
 
-	void setAtomList(void);		
+	//void setAtomList(void);		
 
 	void setSubBondList(
 		std::vector<bBond>::iterator beginArg,
 		std::vector<bBond>::iterator endArg);
 
-	void setBondList(void);
+	//void setBondList(void);
 
     void setBondMappings(std::unordered_map<int, SimTK::Compound::BondIndex>& argBondMapping) {
 		bondMapping = &argBondMapping;
@@ -360,11 +356,11 @@ public:
 
 public:
 
-	void BAT();
+	//void BAT();
 
 	// Atoms
 	int natoms;
-	std::vector<bSpecificAtom> bAtomList;
+	//std::vector<bSpecificAtom> bAtomList;
 	std::vector<bSpecificAtom>::iterator atomsBeg_It;
 	std::vector<bSpecificAtom>::iterator atomsEnd_It;
 	size_t atomsBeg_Ix;

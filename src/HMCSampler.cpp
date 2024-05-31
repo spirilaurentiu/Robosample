@@ -1974,7 +1974,7 @@ HMCSampler::calcMathJacobian(const SimTK::State& someState,
 	// Go through topologies
 	for(auto& topology : topologies){
 		// Go through atoms
-		for(const auto& AtomList : topology.bAtomList){
+		for(const auto& AtomList : topology.subAtomList){
 
 			// Get atom indeces in Compound and Simbody
 			const auto aIx = AtomList.getCompoundAtomIndex();
@@ -2021,7 +2021,7 @@ void HMCSampler::getCartesianMassMatrix(const SimTK::State& somestate,
 	// Go through topologies
 	for(auto& topology : topologies){
 		// Go through atoms
-		for(const auto& AtomList : topology.bAtomList){
+		for(const auto& AtomList : topology.subAtomList){
 			
 			// Get atom indeces in Compound and DuMM
 			const auto aIx = AtomList.getCompoundAtomIndex();

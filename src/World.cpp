@@ -465,7 +465,7 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 
 		//std::cout << "World::ModelTopologies " <<
 		for(std::size_t k = 0; k < (*topologies)[i].getNumAtoms(); k++){
-			SimTK::Compound::AtomIndex aIx = (((*topologies)[i]).bAtomList[k]).getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx = (((*topologies)[i]).subAtomList[k]).getCompoundAtomIndex();
 			SimTK::MobilizedBodyIndex mbx = ((*topologies)[i]).getAtomMobilizedBodyIndex(aIx);
 			std::cout << "k aIx " << k << " " << aIx << " " << mbx << std::endl << std::flush;
 		}
@@ -527,7 +527,7 @@ void World::addTaskSpaceLS(void)
 
 			// Guest atoms iteration
 			for (int bAtomIx : bAtomIxs_guest) {
-				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).getCompoundAtomIndex();
+				SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 
 				onBodyB.emplace_back(mbx);
@@ -566,7 +566,7 @@ void World::updateTaskSpace(const State& someState)
 			int tz = -1;
 			for (int bAtomIx : bAtomIxs_host) {
 				tz++;
-				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).getCompoundAtomIndex();
+				SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
@@ -588,7 +588,7 @@ void World::updateTaskSpace(const State& someState)
 			int tz = -1;
 			for (int bAtomIx : bAtomIxs_guest) {
 				tz++;
-				SimTK::Compound::AtomIndex aIx = (topology.bAtomList[bAtomIx]).getCompoundAtomIndex();
+				SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *forceField);
 				SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
@@ -796,7 +796,7 @@ void World::addContacts(const std::vector<int>& prmtopIndex, const int topologyI
 
 		// Map from AmberAtomIndex to CompoundAtomIndex 
 		SimTK::Compound::AtomIndex cAIx = ((*topologies)[topologyIx]).
-										bAtomList[prmtopIx].getCompoundAtomIndex();
+										subAtomList[prmtopIx].getCompoundAtomIndex();
 
 		SimTK::MobilizedBodyIndex
 		mbx = ((*topologies)[topologyIx]).getAtomMobilizedBodyIndexThroughDumm(
@@ -981,8 +981,8 @@ void World::setUScaleFactorsToMobods(void)
 
 		//for(const auto& AtomList : topology.bAtomList){
 		for(auto& Bond : topology.bonds){
-			SimTK::Compound::AtomIndex aIx1 = topology.bAtomList[Bond.i].getCompoundAtomIndex();
-			SimTK::Compound::AtomIndex aIx2 = topology.bAtomList[Bond.j].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx1 = topology.subAtomList[Bond.i].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx2 = topology.subAtomList[Bond.j].getCompoundAtomIndex();
 
 			// SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1, ownWorldIndex);
 			// SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2, ownWorldIndex);
@@ -1442,10 +1442,10 @@ void World::setTransformsMeansToMin(readAmberInput &amberReader)
 			//bSpecificAtom * gAtom = topology.bAtomList[prm_a_1];
 			bool rinClosing = topology.bonds[bondIndex].isRingClosing();
 
-			SimTK::Compound::AtomIndex aIx_1 = topology.bAtomList[prm_a_1].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].getCompoundAtomIndex();
 			SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
 			const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
-			SimTK::Compound::AtomIndex aIx_2 = topology.bAtomList[prm_a_2].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].getCompoundAtomIndex();
 			SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
 			const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
 
@@ -1484,13 +1484,13 @@ void World::setTransformsMeansToMin(readAmberInput &amberReader)
 
 		for (auto& topology : (*topologies)){
 
-			SimTK::Compound::AtomIndex aIx_1 = topology.bAtomList[prm_a_1].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].getCompoundAtomIndex();
 			SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
 			const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
-			SimTK::Compound::AtomIndex aIx_2 = topology.bAtomList[prm_a_2].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].getCompoundAtomIndex();
 			SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
 			const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
-			SimTK::Compound::AtomIndex aIx_3 = topology.bAtomList[prm_a_3].getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx_3 = topology.subAtomList[prm_a_3].getCompoundAtomIndex();
 			SimTK::DuMM::AtomIndex dAIx_3 = topology.getDuMMAtomIndex(aIx_3);
 			const SimTK::MobilizedBodyIndex mbx_3 = forceField->getAtomBody(dAIx_3);
 
@@ -1697,7 +1697,7 @@ World::getGeometricCenterOfSelection(const SimTK::State & state
 
 		// Iterate through atoms in said topology and check 	
 		// if they are in the list
-		for (auto& atom : topology.bAtomList) {
+		for (auto& atom : topology.subAtomList) {
 			if (std::find(atoms.begin(), atoms.end(), amberIx) != atoms.end()){
 				// found
 				// Get Compound atom index
@@ -1806,10 +1806,10 @@ World::getCurrentAtomsLocationsInGround(void)
 	// Iterate through topologies
 	for (auto& topology : (*topologies)){ 
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
-		currentTopologyInfo.reserve(topology.bAtomList.size());
+		currentTopologyInfo.reserve(topology.subAtomList.size());
 
 		// Iterate through atoms
-		for (auto& atom : topology.bAtomList) {
+		for (auto& atom : topology.subAtomList) {
 
 			// Get Compound atom index
 			auto compoundAtomIndex = atom.getCompoundAtomIndex();
@@ -1873,7 +1873,7 @@ void World::WriteRst7FromTopology(std::string FN)
 
 	int atomCnt = -1;
 	for(auto& topology : (*topologies)){
-		for (auto& atom : topology.bAtomList) {			++atomCnt;
+		for (auto& atom : topology.subAtomList) {			++atomCnt;
 			fprintf(File, "%12.7f%12.7f%12.7f", 
 				atom.getX() * 10.0, atom.getY() * 10.0, atom.getZ() * 10.0);
 
@@ -2133,7 +2133,7 @@ World::setAtoms_Compound_Match(
 	G_X_T = currTopology.getTopLevelTransform();
 
 	// Recalculate atom frames in top compound frame
-	currTopology.calcAtomsTopTransforms_SP_NEW();
+	currTopology.calcAtomsTopTransforms();
 
 	return G_X_T;
 }
