@@ -1760,11 +1760,13 @@ void Context::buildAcyclicGraph(
 				Compound::BondIndex(topology.getNumBonds() - 1), 0));
 		}
 
-		// Print compound atom indices for child and parent
-		spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
-			child.getNumber(), child.getCompoundAtomIndex(),
-			parent.getNumber(), parent.getCompoundAtomIndex());
-		ceol;
+		#ifdef __DRILLING__
+			// Print compound atom indices for child and parent
+			spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
+				child.getNumber(), child.getCompoundAtomIndex(),
+				parent.getNumber(), parent.getCompoundAtomIndex());
+			ceol;
+		#endif
 
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
@@ -4975,7 +4977,7 @@ bool Context::RunWorld(int whichWorld)
 			// for (size_t i = 0; i < drl_bon_Energies.size(); ++i)
 			// 	drl_bon_Energies_Avg[i].resize(drl_bon_Energies[i].size(), 0.0);
 
-			// validated = worlds[whichWorld].generateSamples_SP_NEW(numSamples, worldOutStream){
+			// validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
 
 				warn("under drilling conditions");
 
@@ -5023,7 +5025,7 @@ bool Context::RunWorld(int whichWorld)
 
 		#else
 
-			validated = worlds[whichWorld].generateSamples_SP_NEW(
+			validated = worlds[whichWorld].generateSamples(
 				numSamples, worldOutStream); // =
 
 		#endif
