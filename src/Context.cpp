@@ -208,7 +208,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	reallocZMatrixBAT();
 
-	// Add Worlds
+	// Add Worlds: add flexibilities and CompoundSystem model
 	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
 
 		//std::vector<std::string> argRoots = setupReader.get("ROOTS");
@@ -1245,7 +1245,7 @@ void Context::setRegimen (std::size_t whichWorld, int, std::string regimen)
 }
 
 /*!
- * <!--  -->
+ * <!-- Add flexibilities and CompoundSystem model -->
 */
 void Context::addWorld(
 	bool fixmanTorque,
@@ -4956,7 +4956,11 @@ bool Context::RunWorld(int whichWorld)
 		// Generate samples
 		validated = worlds[whichWorld].generateSamples(
 			numSamples, worldOutStream);
-				
+
+		// if(whichWorld == 1){
+		// 	worlds[whichWorld].PrintFullTransformationGeometry("r" + std::to_string(nofRounds) + "_", (worlds[whichWorld]).integ->updAdvancedState() ); // for scale
+		// }
+
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
 
@@ -4985,11 +4989,10 @@ bool Context::RunWorld(int whichWorld)
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
 				(worlds[whichWorld]).updateAtomListsFromCompound(currentAdvancedState);
 
-
 				// ''''''''''''''''''''
 				coutspaced("SCALING_BAT init:"); ceol;
-				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				thermodynamicStates[0].PrintZMatrixBAT();
+				//replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+				//thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
 				// Reinitialize the sampler
@@ -4997,10 +5000,10 @@ bool Context::RunWorld(int whichWorld)
 					worldOutStream);
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				// scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
@@ -5016,10 +5019,10 @@ bool Context::RunWorld(int whichWorld)
 				thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
-				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				// scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 			// }
 
@@ -5418,7 +5421,9 @@ void Context::RunREX()
 			//}
 
 			PrintNofAcceptedSwapsMatrix();
-		} 
+		}
+
+		this->nofRounds++; 
 
 		if (wantDCD) {
 			// Write DCD

@@ -561,7 +561,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	
 		// Scale bonds and angles
 		if(this->nofSamples > 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
-			
+
+			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
+
 			// Just for the Visualizer
 			if(world->visual){
 				//this->world->ts->stepTo(
@@ -570,63 +572,54 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				std::this_thread::sleep_for(std::chrono::milliseconds(6000));
 				std::cout << "done.\n" << std::flush;
 			}
-
-			// Calculate the bat Jacobian before any BAT work is done
-			SimTK::Real JBATv = calcBATJacobianDetLog(someState,
-				SimTK::BondMobility::Mobility::BendStretch);
-
+			
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			// BAT Scaling Work
+			// Scaling Work BEGIN
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-			//PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
-
-			// Scale BAT by adding values to Qs. It realizes Dynamics Stage
-			//SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			//scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
-			//world->newFunction();
-
+			// Scale. It realizes Dynamics Stage
+			SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
 			scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
 
-			// Scale
-			bool BernoulliTrial = true;
-			bool varianceBasedScalingFactor = false;
+			// :::::::::::: (1) Get initial Jacobian ::::::::::::::::::::::::::
+
+			//J_ini = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
+
+			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
+
+			////PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
+			//bool BernoulliTrial = true;
+			//bool varianceBasedScalingFactor = false;
 			//std::vector<int> BATOrder = {1, 0, 2};			// bendstretch
 			//std::vector<SimTK::Real> BATSign = {1, 1, 1};		// bendstretch
 			//std::vector<int> BATOrder = {2, 1, 0};				// spherical
 			//std::vector<SimTK::Real> BATSign = {-1, -1, -1};		// spherical
-			std::vector<int> BATOrder = {0, 1, 2};				// slider
-			std::vector<SimTK::Real> BATSign = {1, 1, 1};		// slider						
+			// std::vector<int> BATOrder = {0, 1, 2};				// slider
+			// std::vector<SimTK::Real> BATSign = {1, 1, 1};		// slider						
+			// J_scale =
+			// 	scaleSubZMatrixBATDeviations(
+			// 		someState,
+			// 		getBendStretchStdevScaleFactor(),
+			// 		BernoulliTrial,
+			// 		varianceBasedScalingFactor,
+			// 		BATOrder,
+			// 		BATSign);
+			//// After scaling through Qs, we have to recalculate BAT values
+			//updateSubZMatrixBAT(someState);
+			////PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
 
-			SimTK::Real sJac =
-				scaleSubZMatrixBATDeviations(
-					someState,
-					getBendStretchStdevScaleFactor(),
-					BernoulliTrial,
-					varianceBasedScalingFactor,
-					BATOrder,
-					BATSign);
-
-			//SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			//scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
-			//world->newFunction();
+			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			
-			// After scaling through Qs, we have to recalculate BAT values
-			updateSubZMatrixBAT(someState);
+			//J_fin = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
-			//PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
+			setDistortJacobianDetLog(J_ini + J_scale - J_fin);
+			scout("BAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
 
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			// BAT Scaling Work
+			// Scaling Work END
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-			// Recalculate BAT Jacobian after BAT work
-			SimTK::Real JBATvPrime = calcBATJacobianDetLog(someState,
-				SimTK::BondMobility::Mobility::BendStretch);
-
-			// Overall work Jacobian
-			setDistortJacobianDetLog(JBATv + sJac - JBATvPrime);
-			scout("BAT Jacobian terms ") << JBATv <<" " << sJac <<" " << JBATvPrime << eol;
+			SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
 
 			// Just for the Visualizer
 			if(world->visual){
@@ -3015,568 +3008,6 @@ void HMCSampler::setSetConfigurationAndEnergiesToNew(
 
 }
 
-
-const int HMCSampler::getDistortOpt(void)
-{
-	return this->DistortOpt;
-}
-
-void HMCSampler::setDistortOption(const int& distortOptArg)
-{
-	this->DistortOpt = distortOptArg;
-}
-
-const SimTK::Real& HMCSampler::getBendStretchStdevScaleFactor(void)
-{
-	return this->QScaleFactor;
-}
-
-void HMCSampler::setBendStretchStdevScaleFactor(const SimTK::Real& s)
-{
-	this->QScaleFactor = s;
-}
-
-/* // TODO revise param1 and param2
-SimTK::Real& HMCSampler::convoluteVariable(SimTK::Real& var,
-		std::string distrib, SimTK::Real param1, SimTK::Real param2)
-{
-	// Bernoulli trial between the var and its inverse
-	if(distrib == "BernoulliInverse"){
-		SimTK::Real randomNumber_Unif;
-		int randomSign;
-
-		randomNumber_Unif = uniformRealDistribution(randomEngine);
-		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
-		if(randomSign < 0){
-			var = 1.0 / var;
-		}
-	}
-	// Bernoulli trial between the var and its reciprocal
-	else if(distrib == "BernoulliReciprocal"){
-		SimTK::Real randomNumber_Unif;
-		int randomSign;
-
-		randomNumber_Unif = uniformRealDistribution(randomEngine);
-		randomSign = int(std::floor(randomNumber_Unif * 2.0) - 1.0);
-		if(randomSign < 0){
-			var = -1.0 * var;
-		}
-	}
-	// Run Gaussian distribution
-	else if(distrib == "normal"){
-
-		var = var + (gaurand(randomEngine) * param1);
-	}
-	// Run truncated Gaussian distribution
-	else if(distrib == "truncNormal"){
-
-		SimTK::Real mean = var;
-		var = var + (gaurand(randomEngine) * param1);
-
-		if(var <= 0){
-			var = mean;
-		}
-		if(var >= (2*mean)){
-			var = mean ;
-		}
-	}
-	// Run bimodal Gaussian distribution
-	else if(distrib == "bimodalNormal"){
-
-		var = convoluteVariable(var, "BernoulliInverse");
-		var = var + gaurand(randomEngine);
-
-	}
-	// Gamma distribution
-	else if(distrib == "gamma"){
-		var = gammarand(randomEngine);
-	}
-
-	return var;
-
-}
-
-SimTK::Real HMCSampler::calcDeformationPotential(
-		SimTK::Real& var,
-		std::string distrib,
-		SimTK::Real param1, SimTK::Real param2
-)
-{
-	SimTK::Real retVal = 0.0;
-
-	// Bernoulli trial between the var and its inverse
-	if(distrib == "BernoulliInverse"){
-		return 0;
-	}
-	// Bernoulli trial between the var and its reciprocal
-	else if(distrib == "BernoulliReciprocal"){
-		return 0;
-	}
-	// Run Gaussian distribution
-	else if(distrib == "normal"){
-		return 0;
-	}
-	// Run truncated Gaussian distribution
-	else if(distrib == "truncNormal"){
-		SimTK::Real var2 = var*var;
-
-		SimTK::Real firstTerm = 0.0;
-		SimTK::Real secondTerm = 0.0;
-
-		firstTerm = (1.0 / (var2)) - var2;
-		secondTerm = 2.0 * param1 * (var - (1.0/var));
-
-		SimTK::Real numerator = firstTerm + secondTerm;
-		SimTK::Real denominator = param2*param2;
-
-		retVal = (1.0 / this->beta) * 0.5 * (numerator / denominator);
-
-	}
-	// Run bimodal Gaussian distribution
-	else if(distrib == "bimodalNormal"){
-		return 0;
-	}
-	// Gamma distribution
-	else if(distrib == "gamma"){
-		return 0;
-	}
-
-	return retVal;
-	
-} */
-
-
-/*
- * Shift all the generalized coordinates to scale bonds and angles
- * through BendStretch joint
- */
-SimTK::Real HMCSampler::setQToScaleBendStretch(SimTK::State& someState,
-	std::vector<SimTK::Real>& scaleFactors)
-{
-	// Scaling factor is set by Context only in the begining
-	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
-	std::cout << "and turned it into " << this->QScaleFactor << "\n";
-
-	// Set the return scalingFactors to QScaleFactor
-	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
-		1.0);
-
-	// Ground and first mobod don't have internal coordinates
-	int mbxOffset = 2;
-	int sfIxOffset = world->normX_BMp.size();
-	SimTK::Real sf = 1.0;
-
-	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
-		mbx < matter->getNumBodies();
-		++mbx){
-
-		// Get mobilized body
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);	
-
-		// Set Q for angle
-		sf = this->QScaleFactor - 1.0;
-		scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = this->QScaleFactor;
-
-		mobod.setOneQ(someState, 0,
-			-1.0 * (sf * world->acosX_PF00[int(mbx) - 1])  );
-
-		// Set Q for bond
-		sf = this->QScaleFactor - 1.0;
-		scaleFactors[ (int(mbx) - 1) ] = this->QScaleFactor;
-		mobod.setOneQ(someState, 1,
-			sf * world->normX_BMp[int(mbx) - 1]  );
-
-	}
-
-	// Save changes by advancing to Position Stage
-	system->realize(someState, SimTK::Stage::Position);
-
-	// Test
-	std::cout << "shifted Q = " << someState.getQ() << std::endl;
-
-
-	// Set the Jacobian and return
-	unsigned int startFromBody = 2;
-	bendStretchJacobianDetLog =
-		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
-	return bendStretchJacobianDetLog;
-
-}
-
-
-/**
- * Calculate bond length and angle deviations from their means
-*/ 
-/* void HMCSampler::calcBendStretchDeviations(
-	SimTK::State& someState,
-	std::vector<SimTK::Real>& X_PFdiffs,
-	std::vector<SimTK::Real>& X_BMdiffs
-)
-{
-
-	// Make sure it has 
-	X_PFdiffs.resize(world->acosX_PF00_means.size(), 0.0);
-	X_BMdiffs.resize(world->normX_BMp_means.size(), 0.0);
-
-	// 
-	for(unsigned int k = 0; k < X_PFdiffs.size(); k++){
-		X_PFdiffs[k] = world->acosX_PF00[k] - world->acosX_PF00_means[k];
-	}
-	for(unsigned int k = 0; k < X_BMdiffs.size(); k++){
-		X_BMdiffs[k] = world->normX_BMp[k] - world->normX_BMp_means[k];
-	}
-
-} */
-
-/*
- * Shift all the generalized coordinates to scale bonds and angles
- * standard deviations through BendStretch joint
- */
-SimTK::Real HMCSampler::setQToShiftBendStretchStdev(SimTK::State& someState,
-std::vector<SimTK::Real>& scaleFactors)
-{
-	/* 	world->PrintX_PFs();
-	world->PrintX_BMs(); */
-		// Print the scale factor
-	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
-		<< std::endl;
-
-	// Prepare scaling factors for return
-	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
-		1.0);
-		
-	// 1. Get the deviations from their means
-	std::vector<SimTK::Real> X_PFdiffs;
-	std::vector<SimTK::Real> X_BMdiffs;
-	world->calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
-
-	// Scale the differences with QScale. -1 is only here because Q is always 0
-	int k = -1;
-	for(auto& diff : X_PFdiffs){
-		/* diff += QScaleFactor; */
-		//std::cout << "diff= " << diff << std::endl;
-	}
-	for(auto& diff : X_BMdiffs){
-		/* diff += QScaleFactor; */
-		//std::cout << "diff= " << diff << std::endl;
-	}
-
-	// Ground and first mobod don't have internal coordinates
-	int mbxOffset = 2;
-	int sfIxOffset = world->normX_BMp.size();
-
-	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
-		mbx < matter->getNumBodies();
-		++mbx){
-
-		// Get mobilized body
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		
-		// We only allocated  X_PFs for non-Ground bodies
-		//RESTORE RESTORE RESTORE Check X_FM assignment 0
-
-		// Get the scaleFactors too
-		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
-
-			mobod.setOneQ(someState, 1, this->QScaleFactor);
-
-			scaleFactors[ (int(mbx) - 1) ] = 
-			(world->normX_BMp[int(mbx) - 1] + this->QScaleFactor) /
-				world->normX_BMp[int(mbx) - 1];
-		}		
-
-		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
-
-			mobod.setOneQ(someState, 0, -1.0 * this->QScaleFactor);
-			
-			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
-			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * this->QScaleFactor)) /
-				world->acosX_PF00[int(mbx) - 1];
-		}	
-
-	}
-
-	// Save changes by advancing to Position Stage
-	system->realize(someState, SimTK::Stage::Position);
-
-	// Test
-	std::cout << "shifted Q = " << someState.getQ() << std::endl;
-
-
-	// Set the Jacobian and return
-	unsigned int startFromBody = 2;
-	bendStretchJacobianDetLog =
-		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
-	return bendStretchJacobianDetLog;
-
-}
-
-/**
- * Shift all the generalized coordinates to scale bonds and angles
- * standard deviations through BendStretch joint
-*/
-SimTK::Real
-HMCSampler::setQToScaleBendStretchStdev(
-	SimTK::State& someState,
-	std::vector<SimTK::Real>& scaleFactors)
-{
-
-	// Print the scale factor
-	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
-		<< std::endl;
-
-	if (this->QScaleFactor == 1){
-		return 1;
-	}
-	
-	//world->traceBendStretch(someState);
-	//world->PrintAcosX_PFs();
-	//world->PrintNormX_BMs();
-	//world->PrintAcosX_PFMeans();
-	//world->PrintNormX_BMMeans();
-
-	// Resize scaling factors
-	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
-		1.0);
-		
-	// 1. Get the deviations from their means
-	std::vector<SimTK::Real> Q_of_X_PFdiffs;
-	std::vector<SimTK::Real> Q_of_X_BMdiffs;
-	world->calcBendStretchDeviations(someState, Q_of_X_PFdiffs, Q_of_X_BMdiffs);
-
-	// Scale differences with QScale-1. (Solve s(X-miu) + miu = Q + X)
-	int k = -1;
-	for(auto& diff : Q_of_X_PFdiffs){
-		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
-		
-		diff *= (QScaleFactor - 1.0);
-		//diff *= -1.0;
-		
-		if(world->visual){
-			world->paraMolecularDecorator->updFCommVars(diff);
-		}
-	}
-	for(auto& diff : Q_of_X_BMdiffs){
-		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
-		
-		diff *= (QScaleFactor - 1.0);
-		//diff *= -1.0;
-		
-		if(world->visual){
-			world->paraMolecularDecorator->updBCommVars(diff);
-		}
-	}
-
-	// Now set Qs to the scaled differences
-	int mbxOffset = 2; // no internal coordinates for Ground and first mobod 
-	int sfIxOffset = world->normX_BMp.size(); 
-
-	// Iterate mobods
-	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
-		mbx < matter->getNumBodies();
-		++mbx){
-
-		// Get mobilized body
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		
-		// Previous mbx
-		int sfIx = (int(mbx) - 1);
-
-		// Set the stretch 
-		if(std::abs(world->normX_BMp[ sfIx ]) > 0.00000001){
-
-			// Set Q to scaled diff
-			if(mobod.getNumQ(someState) == 2){
-				mobod.setOneQ(someState, 1, (+1.0) * Q_of_X_BMdiffs[sfIx]);
-				//std::cout << "setQToScaleBendStretchStdev mobod.setOneQ 0\n";
-			}else{
-				mobod.setOneQ(someState, 0, (+1.0) * Q_of_X_BMdiffs[sfIx]);
-			}
-
-			// Record the scaleFactors too: (X + Q) / X
-			scaleFactors[ sfIx ] = 
-			(world->normX_BMp[ sfIx ] + ((+1.0) * Q_of_X_BMdiffs[ sfIx ])) /
-				world->normX_BMp[ sfIx ];
-		}
-
-		// Set the bend rotation
-		if(std::abs(world->acosX_PF00[ sfIx ]) > 0.00000001){
-
-			// Set Q to scaled diff
-			if(mobod.getNumQ(someState) == 2){
-				mobod.setOneQ(someState, 0, (-1.0) * Q_of_X_PFdiffs[ sfIx ]);
-			
-				// Record the scaleFactors too: (X + Q) / X
-				scaleFactors[ sfIxOffset + sfIx ] = 
-				(world->acosX_PF00[ sfIx ] + ((+1.0) * Q_of_X_PFdiffs[ sfIx ])) /
-					world->acosX_PF00[ sfIx ];
-			}else{
-				scaleFactors[ sfIxOffset + sfIx ] = 1.0;
-			}
-
-		}		
-	} // every mobod
-
-	//std::cout << "scaleFactors: "; PrintCppVector(scaleFactors);
-
-	// Save changes by advancing to Position Stage
-	system->realize(someState, SimTK::Stage::Topology);
-	system->realize(someState, SimTK::Stage::Position);
-
-	// Test
-	if(0){
-		matter->realizeArticulatedBodyInertias(someState);
-		SimTK::Vector v(someState.getNU());
-		SimTK::Vector MInvV(someState.getNU());
-		SimTK::Real detM = 0.0;
-		matter->calcDetM(someState, v, MInvV, &detM);
-		std::cout << "logDetM " << detM << std::endl;
-		/* //std::cout << "shifted Q = " << someState.getQ() << std::endl;
-		// Get bonds and angles values
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			const Transform& X_PF = mobod.getInboardFrame(someState);
-			const Transform& X_FM = mobod.getMobilizerTransform(someState);
-			const Transform& X_BM = mobod.getOutboardFrame(someState);
-
-			std::cout << "HMCSampler check world " << world->ownWorldIndex << " " 
-				<< "bond " << int(mbx) - 1 << " " << X_BM.p().norm() << " "
-				<< std::endl;
-		} */
-	}
-
-	// Set the Jacobian and return
-	unsigned int startFromBody = 2;
-	bendStretchJacobianDetLog =
-		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
-	return bendStretchJacobianDetLog;
-
-}
-
-/**
- * Get the log of the Jacobian of a bond-angle strtch
-*/
-SimTK::Real 
-HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
-	std::vector<SimTK::Real> scaleFactors,
-	unsigned int startFromBody)
-{
-
-	int x_pf_k = 0;
-
-	// Get log of the Cartesian->BAT Jacobian
-	SimTK::Real logJacBAT_0 = 0.0; // log space
-	startFromBody -= 1; // align with k (exclude Ground)
-	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
-
-			// scaleFactors index is shifted
-			x_pf_k = k + world->normX_BMp.size();
-
-			// Checks
-			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
-				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
-				<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
-				<< world->normX_BMp[k] * scaleFactors[k] << " "
-				<< std::endl << std::flush; */
-
-			// Get bond term
-			SimTK::Real d2 = world->normX_BMp[k];
-			if(d2 != 0){
-					d2 = 2.0 * std::log(d2); // log space
-			}
-			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
-
-			// Get the angle term
-			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k]);
-
-			if(sineTheta != 0){
-					sineTheta = std::log(std::sin(sineTheta)); // log space
-			}
-			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
-
-
-			// Accumulate result
-			logJacBAT_0 += (d2 + sineTheta); // log space
-	}
-
-	// Get log of the scaling Jacobian
-	// Although the method seems stupid for now, it has generality
-	// and allows insertion of new code
-	SimTK::Real logJacScale = 0.0; // log space
-	/* for(unsigned int k = startFromBody; k < scaleFactors.size(); k++){
-
-			// Accumulate result
-			if(scaleFactors[k] != 0){
-					logJacScale -= std::log(std::abs(scaleFactors[k])); // log space
-			}
-
-			//std::cout << "sf " << k << " " << scaleFactors[k] << std::endl; 
-	} */
-
-	int internNdofs = this->ndofs - 
-		matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1)).getNumU(someState);
-
-	logJacScale =  internNdofs * std::log( ( this->QScaleFactor ) );
-
-	// Get log of the BAT->Cartesian Jacobian after scaling
-	SimTK::Real logJacBAT_tau = 0.0; // log space
-	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
-
-			// scaleFactors index is shifted
-			x_pf_k = k + world->normX_BMp.size();
-
-			// Get bond term
-			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
-
-			if(d2 != 0){
-					d2 = 2.0 * std::log(d2); // log space
-			}
-			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
-
-			// Get the angle term
-			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k] * scaleFactors[x_pf_k]);
-
-			if(std::abs(sineTheta) > 0.0000001){
-					sineTheta = std::log(std::sin(sineTheta)); // log space
-  			}
-			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
-
-			// Accumulate result
-			logJacBAT_tau += (d2 + sineTheta); // log space
-	}
-
-	// Final result
-	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
-	//SimTK::Real logBendStretchJac = logJacScale;
-	//SimTK::Real logBendStretchJac = -1.0 * logJacScale;
-	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);
-	//SimTK::Real logBendStretchJac = logJacBAT_0 - logJacScale + (-1.0 * logJacBAT_tau);
-	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
-	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
-
-	std::cout << "logJacBAT " << logJacBAT_0
-			<< " logJacScale " << logJacScale
-			<< " logJacBATInv " << logJacBAT_tau
-			<< " logBendStretchJac " << logBendStretchJac
-            << std::endl;
-
-
-	//logBendStretchJac = std::log(this->QScaleFactor); 
-	//std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
-
-	return logBendStretchJac;
-
-}
-
-// Set Sphere Radius when doing RANDOM_WALK
-void HMCSampler::setSphereRadius(float argSphereRadius)
-{
-	sphereRadius = argSphereRadius;
-	std::cout 
-		<< "HMCSampler::setSphereRadius:  Radius Set: " 
-		<< sphereRadius << std::endl;
-}
-
 /** Returns the 'how' argument of initializeVelocities */
 VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
 {
@@ -4314,16 +3745,6 @@ void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass)
 	}
 }
 
-void HMCSampler::setNonequilibriumParameters(int distort, int work, int flow) {
-	DistortOpt = distort;
-	WorkOpt = work;
-	FlowOpt = flow;
-}
-
-int HMCSampler::getDistortOption() const {
-	return DistortOpt;
-}
-
 void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps) {
 	setBoostTemperature(boostTemperature); // used for OpenMM and other minor stuff
 	setBoostMDSteps(boostMDSteps); // not used
@@ -4331,9 +3752,451 @@ void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostM
 
 
 
+
+
+const int HMCSampler::getDistortOpt(void)
+{
+	return this->DistortOpt;
+}
+
+void HMCSampler::setDistortOption(const int& distortOptArg)
+{
+	this->DistortOpt = distortOptArg;
+}
+
+
 // ===========================================================================
 // ===========================================================================
-// ZMatrix BAT
+// Scaling Q BendStretch
+// ===========================================================================
+// ===========================================================================
+
+/*!
+ * <!--  -->
+*/
+const SimTK::Real& HMCSampler::getBendStretchStdevScaleFactor(void)
+{
+	return this->QScaleFactor;
+}
+
+
+/*!
+ * <!--  -->
+*/
+void HMCSampler::setBendStretchStdevScaleFactor(const SimTK::Real& s)
+{
+	this->QScaleFactor = s;
+}
+
+/*!
+ * <!-- Shift all the generalized coordinates to scale bonds and angles
+ * through BendStretch joint -->
+ */
+SimTK::Real HMCSampler::setQToScaleBendStretch(SimTK::State& someState,
+	std::vector<SimTK::Real>& scaleFactors)
+{
+	// Scaling factor is set by Context only in the begining
+	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor ";
+	std::cout << "and turned it into " << this->QScaleFactor << "\n";
+
+	// Set the return scalingFactors to QScaleFactor
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+
+	// Ground and first mobod don't have internal coordinates
+	int mbxOffset = 2;
+	int sfIxOffset = world->normX_BMp.size();
+	SimTK::Real sf = 1.0;
+
+	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobilized body
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);	
+
+		// Set Q for angle
+		sf = this->QScaleFactor - 1.0;
+		scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = this->QScaleFactor;
+
+		mobod.setOneQ(someState, 0,
+			-1.0 * (sf * world->acosX_PF00[int(mbx) - 1])  );
+
+		// Set Q for bond
+		sf = this->QScaleFactor - 1.0;
+		scaleFactors[ (int(mbx) - 1) ] = this->QScaleFactor;
+		mobod.setOneQ(someState, 1,
+			sf * world->normX_BMp[int(mbx) - 1]  );
+
+	}
+
+	// Save changes by advancing to Position Stage
+	system->realize(someState, SimTK::Stage::Position);
+
+	// Test
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+
+
+	// Set the Jacobian and return
+	unsigned int startFromBody = 2;
+	bendStretchJacobianDetLog =
+		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
+	return bendStretchJacobianDetLog;
+
+}
+
+/*!
+ * <!-- Shift all the generalized coordinates to scale bonds and angles
+ * standard deviations through BendStretch joint -->
+ */
+SimTK::Real HMCSampler::setQToShiftBendStretchStdev(SimTK::State& someState,
+std::vector<SimTK::Real>& scaleFactors)
+{
+	/* 	world->PrintX_PFs();
+	world->PrintX_BMs(); */
+		// Print the scale factor
+	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
+		<< std::endl;
+
+	// Prepare scaling factors for return
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+		
+	// 1. Get the deviations from their means
+	std::vector<SimTK::Real> X_PFdiffs;
+	std::vector<SimTK::Real> X_BMdiffs;
+	world->calcBendStretchDeviations(someState, X_PFdiffs, X_BMdiffs);
+
+	// Scale the differences with QScale. -1 is only here because Q is always 0
+	int k = -1;
+	for(auto& diff : X_PFdiffs){
+		/* diff += QScaleFactor; */
+		//std::cout << "diff= " << diff << std::endl;
+	}
+	for(auto& diff : X_BMdiffs){
+		/* diff += QScaleFactor; */
+		//std::cout << "diff= " << diff << std::endl;
+	}
+
+	// Ground and first mobod don't have internal coordinates
+	int mbxOffset = 2;
+	int sfIxOffset = world->normX_BMp.size();
+
+	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobilized body
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		
+		// We only allocated  X_PFs for non-Ground bodies
+		//RESTORE RESTORE RESTORE Check X_FM assignment 0
+
+		// Get the scaleFactors too
+		if(std::abs(world->normX_BMp[(int(mbx) - 1)]) > 0.00000001){
+
+			mobod.setOneQ(someState, 1, this->QScaleFactor);
+
+			scaleFactors[ (int(mbx) - 1) ] = 
+			(world->normX_BMp[int(mbx) - 1] + this->QScaleFactor) /
+				world->normX_BMp[int(mbx) - 1];
+		}		
+
+		if(std::abs(world->acosX_PF00[int(mbx) - 1]) > 0.00000001){
+
+			mobod.setOneQ(someState, 0, -1.0 * this->QScaleFactor);
+			
+			scaleFactors[ sfIxOffset + (int(mbx) - 1) ] = 
+			(world->acosX_PF00[int(mbx) - 1] + (-1.0 * this->QScaleFactor)) /
+				world->acosX_PF00[int(mbx) - 1];
+		}	
+
+	}
+
+	// Save changes by advancing to Position Stage
+	system->realize(someState, SimTK::Stage::Position);
+
+	// Test
+	std::cout << "shifted Q = " << someState.getQ() << std::endl;
+
+
+	// Set the Jacobian and return
+	unsigned int startFromBody = 2;
+	bendStretchJacobianDetLog =
+		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
+	return bendStretchJacobianDetLog;
+
+}
+
+/*!
+ * <!-- Shift all the generalized coordinates to scale bonds and angles
+ * standard deviations through BendStretch joint -->
+*/
+SimTK::Real
+HMCSampler::setQToScaleBendStretchStdev(
+	SimTK::State& someState,
+	std::vector<SimTK::Real>& scaleFactors)
+{
+
+	// Print the scale factor
+	std::cout << "shiftQ Got " << this->QScaleFactor << " scale factor "
+		<< std::endl;
+
+	if (this->QScaleFactor == 1){
+		return 1;
+	}
+	
+	//world->traceBendStretch(someState);
+	//world->PrintAcosX_PFs();
+	//world->PrintNormX_BMs();
+	//world->PrintAcosX_PFMeans();
+	//world->PrintNormX_BMMeans();
+
+	// Resize scaling factors
+	scaleFactors.resize(world->acosX_PF00.size() + world->normX_BMp.size(),
+		1.0);
+		
+	// 1. Get the deviations from their means
+	std::vector<SimTK::Real> Q_of_X_PFdiffs;
+	std::vector<SimTK::Real> Q_of_X_BMdiffs;
+	world->calcBendStretchDeviations(someState, Q_of_X_PFdiffs, Q_of_X_BMdiffs);
+
+	// Scale differences with QScale-1. (Solve s(X-miu) + miu = Q + X)
+	int k = -1;
+	for(auto& diff : Q_of_X_PFdiffs){
+		//std::cout << "Q(X_PFdiff)= " << diff << std::endl;
+		
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
+		
+		if(world->visual){
+			world->paraMolecularDecorator->updFCommVars(diff);
+		}
+	}
+	for(auto& diff : Q_of_X_BMdiffs){
+		//std::cout << "Q(X_BMdiff)= " << diff << std::endl;
+		
+		diff *= (QScaleFactor - 1.0);
+		//diff *= -1.0;
+		
+		if(world->visual){
+			world->paraMolecularDecorator->updBCommVars(diff);
+		}
+	}
+
+	// Now set Qs to the scaled differences
+	int mbxOffset = 2; // no internal coordinates for Ground and first mobod 
+	int sfIxOffset = world->normX_BMp.size(); 
+
+	// Iterate mobods
+	for (SimTK::MobilizedBodyIndex mbx(mbxOffset);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobilized body
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		
+		// Previous mbx
+		int sfIx = (int(mbx) - 1);
+
+		// Set the stretch 
+		if(std::abs(world->normX_BMp[ sfIx ]) > 0.00000001){
+
+			// Set Q to scaled diff
+			if(mobod.getNumQ(someState) == 2){
+				mobod.setOneQ(someState, 1, (+1.0) * Q_of_X_BMdiffs[sfIx]);
+			}else{
+				mobod.setOneQ(someState, 0, (+1.0) * Q_of_X_BMdiffs[sfIx]);
+			}
+
+			// Record the scaleFactors too: (X + Q) / X
+			scaleFactors[ sfIx ] = 
+			(world->normX_BMp[ sfIx ] + ((+1.0) * Q_of_X_BMdiffs[ sfIx ])) /
+				world->normX_BMp[ sfIx ];
+		}
+
+		// Set the bend rotation
+		if(std::abs(world->acosX_PF00[ sfIx ]) > 0.00000001){
+
+			// Set Q to scaled diff
+			if(mobod.getNumQ(someState) == 2){
+				mobod.setOneQ(someState, 0, (-1.0) * Q_of_X_PFdiffs[ sfIx ]);
+			
+				// Record the scaleFactors too: (X + Q) / X
+				scaleFactors[ sfIxOffset + sfIx ] = 
+				(world->acosX_PF00[ sfIx ] + ((+1.0) * Q_of_X_PFdiffs[ sfIx ])) /
+					world->acosX_PF00[ sfIx ];
+			}else{
+				scaleFactors[ sfIxOffset + sfIx ] = 1.0;
+			}
+
+		}		
+	} // every mobod
+
+	// Save changes by advancing to Position Stage
+	system->realize(someState, SimTK::Stage::Topology);
+	system->realize(someState, SimTK::Stage::Position);
+
+	// Test
+	if(0){
+		matter->realizeArticulatedBodyInertias(someState);
+		SimTK::Vector v(someState.getNU());
+		SimTK::Vector MInvV(someState.getNU());
+		SimTK::Real detM = 0.0;
+		matter->calcDetM(someState, v, MInvV, &detM);
+		std::cout << "logDetM " << detM << std::endl;
+		/* //std::cout << "shifted Q = " << someState.getQ() << std::endl;
+		// Get bonds and angles values
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			const Transform& X_PF = mobod.getInboardFrame(someState);
+			const Transform& X_FM = mobod.getMobilizerTransform(someState);
+			const Transform& X_BM = mobod.getOutboardFrame(someState);
+
+			std::cout << "HMCSampler check world " << world->ownWorldIndex << " " 
+				<< "bond " << int(mbx) - 1 << " " << X_BM.p().norm() << " "
+				<< std::endl;
+		} */
+	}
+
+	// Set the Jacobian and return
+	unsigned int startFromBody = 2;
+	bendStretchJacobianDetLog =
+		calcBendStretchJacobianDetLog(someState, scaleFactors, startFromBody);
+	return bendStretchJacobianDetLog;
+
+}
+
+/*!
+ * <!-- Get the log of the Jacobian of a bond-angle strtch -->
+*/
+SimTK::Real 
+HMCSampler::calcBendStretchJacobianDetLog(SimTK::State& someState,
+	std::vector<SimTK::Real> scaleFactors,
+	unsigned int startFromBody)
+{
+
+	int x_pf_k = 0;
+
+	// Get log of the Cartesian->BAT Jacobian
+	SimTK::Real logJacBAT_0 = 0.0; // log space
+	startFromBody -= 1; // align with k (exclude Ground)
+	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
+
+			// scaleFactors index is shifted
+			x_pf_k = k + world->normX_BMp.size();
+
+			// Checks
+			/* std::cout << " k acosPF normBM sacosPF snormBM  " << k << " "
+				<< world->acosX_PF00[k] << " " << world->normX_BMp[k] << " "
+				<< world->acosX_PF00[k] * scaleFactors[x_pf_k] << " "
+				<< world->normX_BMp[k] * scaleFactors[k] << " "
+				<< std::endl << std::flush; */
+
+			// Get bond term
+			SimTK::Real d2 = world->normX_BMp[k];
+			if(d2 != 0){
+					d2 = 2.0 * std::log(d2); // log space
+			}
+			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
+
+			// Get the angle term
+			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k]);
+
+			if(sineTheta != 0){
+					sineTheta = std::log(std::sin(sineTheta)); // log space
+			}
+			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
+
+
+			// Accumulate result
+			logJacBAT_0 += (d2 + sineTheta); // log space
+	}
+
+	// Get log of the scaling Jacobian
+	// Although the method seems stupid for now, it has generality
+	// and allows insertion of new code
+	SimTK::Real logJacScale = 0.0; // log space
+	/* for(unsigned int k = startFromBody; k < scaleFactors.size(); k++){
+
+			// Accumulate result
+			if(scaleFactors[k] != 0){
+					logJacScale -= std::log(std::abs(scaleFactors[k])); // log space
+			}
+
+			//std::cout << "sf " << k << " " << scaleFactors[k] << std::endl; 
+	} */
+
+	int internNdofs = this->ndofs - 
+		matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1)).getNumU(someState);
+
+	logJacScale =  internNdofs * std::log( ( this->QScaleFactor ) );
+
+	// Get log of the BAT->Cartesian Jacobian after scaling
+	SimTK::Real logJacBAT_tau = 0.0; // log space
+	for(unsigned int k = startFromBody; k < world->normX_BMp.size(); k++){
+
+			// scaleFactors index is shifted
+			x_pf_k = k + world->normX_BMp.size();
+
+			// Get bond term
+			SimTK::Real d2 = (world->normX_BMp[k] * scaleFactors[k]);
+
+			if(d2 != 0){
+					d2 = 2.0 * std::log(d2); // log space
+			}
+			//std::cout << "k d^2 " << k << " " << d2 << std::endl;
+
+			// Get the angle term
+			SimTK::Real sineTheta = std::abs(world->acosX_PF00[k] * scaleFactors[x_pf_k]);
+
+			if(std::abs(sineTheta) > 0.0000001){
+					sineTheta = std::log(std::sin(sineTheta)); // log space
+  			}
+			//std::cout << "k sinTh " << k << " " << sineTheta << std::endl;
+
+			// Accumulate result
+			logJacBAT_tau += (d2 + sineTheta); // log space
+	}
+
+	// Final result
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
+	//SimTK::Real logBendStretchJac = logJacScale;
+	//SimTK::Real logBendStretchJac = -1.0 * logJacScale;
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + (1.0 * logJacBAT_tau);
+	//SimTK::Real logBendStretchJac = logJacBAT_0 - logJacScale + (-1.0 * logJacBAT_tau);
+	//SimTK::Real logBendStretchJac = (-1.0 * logJacBAT_0) + logJacScale + logJacBAT_tau;
+	SimTK::Real logBendStretchJac = logJacBAT_0 + logJacScale + (-1.0 * logJacBAT_tau);
+
+	std::cout << "logJacBAT " << logJacBAT_0
+			<< " logJacScale " << logJacScale
+			<< " logJacBATInv " << logJacBAT_tau
+			<< " logBendStretchJac " << logBendStretchJac
+            << std::endl;
+
+
+	//logBendStretchJac = std::log(this->QScaleFactor); 
+	//std::cout << "LNJ_HARDCODED_s_lnJ " << this->QScaleFactor << " " <<  logBendStretchJac << std::endl;
+
+	return logBendStretchJac;
+
+}
+
+/*!
+ * <!-- Set Sphere Radius when doing RANDOM_WALK -->
+*/
+void HMCSampler::setSphereRadius(float argSphereRadius)
+{
+	sphereRadius = argSphereRadius;
+	std::cout 
+		<< "HMCSampler::setSphereRadius:  Radius Set: " 
+		<< sphereRadius << std::endl;
+}
+
+
+// ===========================================================================
+// ===========================================================================
+// Scaling ZMatrix BAT
 // ===========================================================================
 // ===========================================================================
 // /*!
@@ -4351,6 +4214,16 @@ void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostM
 // HMCSampler::updSubZMatrixBATs() {
 // 	return subZMatrixBATs;
 // }
+
+void HMCSampler::setNonequilibriumParameters(int distort, int work, int flow) {
+	DistortOpt = distort;
+	WorkOpt = work;
+	FlowOpt = flow;
+}
+
+int HMCSampler::getDistortOption() const {
+	return DistortOpt;
+}
 
 /*!
  * <!--	Print BAT -->
@@ -4373,68 +4246,6 @@ void HMCSampler::PrintSubZMatrixBAT() {
 
         std::cout << std::endl;
     }
-}
-
-/*!
- * <!--	 -->
-*/
-void
-HMCSampler::calcSubZMatrixBATStats(
-	void)
-{
-
-/* 	SimTK::Real N = nofSamples + 1;
-
-	// Calculate BAT means
-	if(nofSamples == 0){
-		
-		// Iterate bats
-		size_t bati = 0;
-		for (const auto& pair : subZMatrixBATs_ref) {
-
-			subZMatrixBATMeans.insert(pair);
-			subZMatrixBATDiffs.insert(std::make_pair(pair.first, std::vector<SimTK::Real> {0, 0, 0}));
-			subZMatrixBATStds.insert(std::make_pair(pair.first, std::vector<SimTK::Real> {0, 0, 0}));
-
-			// Keep track of BAT pair
-			bati++;
-		}
-
-	}else{
-
-		// Iterate bats
-		size_t bati = 0;
-		for (const auto& pair : subZMatrixBATs_ref) {
-
-			std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
-			std::vector<SimTK::Real>& BATmeans = subZMatrixBATMeans.at(pair.first);
-			std::vector<SimTK::Real>& BATdiffs = subZMatrixBATDiffs.at(pair.first);
-			std::vector<SimTK::Real>& BATstds  = subZMatrixBATStds.at(pair.first);
-
-			// Usefull vars
-			SimTK::Real N_1_over_N = (N - 1.0) / N;
-			SimTK::Real Ninv = 1.0 / N;
-			
-			// Get BAT means
-			BATmeans[0] = (N_1_over_N * BATmeans[0]) + (Ninv * BAT[0]); 
-			BATmeans[1] = (N_1_over_N * BATmeans[1]) + (Ninv * BAT[1]); 
-			BATmeans[2] = (N_1_over_N * BATmeans[2]) + (Ninv * BAT[2]); 
-
-			// Get BAT deviations
-			BATdiffs[0] = BAT[0] - BATmeans[0];
-			BATdiffs[1] = BAT[1] - BATmeans[1];
-			BATdiffs[2] = BAT[2] - BATmeans[2];
-
-			// Get BAT stds
-			BATstds[0] = (N_1_over_N * BATstds[0]) + (Ninv * (BATdiffs[0] * BATdiffs[0]));
-			BATstds[1] = (N_1_over_N * BATstds[1]) + (Ninv * (BATdiffs[1] * BATdiffs[1]));
-			BATstds[2] = (N_1_over_N * BATstds[2]) + (Ninv * (BATdiffs[2] * BATdiffs[2]));
-
-			// Keep track of BAT pair
-			bati++;
-		}
-	}
- */
 }
 
 /*!

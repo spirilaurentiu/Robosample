@@ -185,6 +185,8 @@ private:
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 	
 
+	//std::vector<SimTK::QIndex> QIxs;
+
 	// BAT
 	int nofSamples = 0;	
 

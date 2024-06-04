@@ -348,71 +348,6 @@ public:
 	int getJointTypeFromH(const SimTK::State& someState,
 		const SimTK::MobilizedBody& mobod);
 
-	// Are we performing work by modifying Q
-	const int getDistortOpt();
-	void setDistortOption(const int& distortOptArg);
-
-	const SimTK::Real& getBendStretchStdevScaleFactor(void);
-	void setBendStretchStdevScaleFactor(const SimTK::Real& s);
-
-	/**
-	 * Calculate bond length and angle deviations from their means
-	*/ 
-	/* void calcBendStretchDeviations(
-		SimTK::State& someState,
-		std::vector<SimTK::Real>& X_PFdiffs,
-		std::vector<SimTK::Real>& X_BMdiffs
-	); */
-
-	/** Shift all the generalized coordinates and
-	 * return the scale factors of angles and bonds
-	 **/
-	SimTK::Real setQToScaleBendStretch(SimTK::State& someState,
-		std::vector<SimTK::Real>& scaleFactors);
-
-	SimTK::Real setQToShiftBendStretchStdev(SimTK::State& someState,
-		std::vector<SimTK::Real>& scaleFactors);
-
-	/** Shift all the generalized coordinates and
-	 * return the scale factors of angles and bonds
-	 **/
-	SimTK::Real setQToScaleBendStretchStdev(SimTK::State& someState,
-		std::vector<SimTK::Real>& scaleFactors);
-
-	void setQToScaleBendStretchStdev_Old(SimTK::State& someState,
-		std::vector<SimTK::Real>& scaleFactors);
-
-	/**
-	 * Get the log of the Jacobian of a bond-angle stretch
-	*/
-	SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState,
-		std::vector<SimTK::Real> scaleFactors,
-		unsigned int startFromBody = 0);
-
-
-
-
-
-	// WORK Q PERTURB BEND STRETCH ============================================
-
-	// SimTK::Real
-	// calcBendStretchJacobianDetLog(std::vector<std::vector<SimTK::Real>>& zMatrixBAT)
-	// {
-	// 	assert(!"Not implemented");
-	// }
-
-	void
-	setQToScaleBendStretch(
-		std::vector<std::vector<SimTK::Real>>& zMatrixBATdiffs)
-	{
-		assert(!"Not implemented");
-	}
-
-	// WORK Q PERTURB BEND STRETCH --------------------------------------------
-
-
-
-
 	/** Set simulation temperature, 
 	velocities to desired temperature, variables that store the configuration
 	and variables that store the energies, both needed for the 
@@ -593,17 +528,72 @@ public:
 	
 	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
 
+	void setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps);
+	
+	//////////////////////////////////
+	//////       Scaling        //////
+	//////////////////////////////////
+
 	void setNonequilibriumParameters(int distort, int work, int flow);
 	int getDistortOption() const;
-	void setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps);
 
+	// Are we performing work by modifying Q
+	const int getDistortOpt();
+	
+	void setDistortOption(const int& distortOptArg);
 
-	// BAT ====================================================================
+	//------------------------------------------------------------------------------
+    /** @name Scaling Q Directly
+	*/
+
+    /**@{**/
+
+	/**@}**/
+
+	//------------------------------------------------------------------------------
+    /** @name Scaling Q BendStretch
+	*/
+
+    /**@{**/
+
+	const SimTK::Real& getBendStretchStdevScaleFactor(void);
+	void setBendStretchStdevScaleFactor(const SimTK::Real& s);
+
+	/** Shift all the generalized coordinates and
+	 * return the scale factors of angles and bonds
+	 **/
+	SimTK::Real setQToScaleBendStretch(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+
+	SimTK::Real setQToShiftBendStretchStdev(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+
+	/** Shift all the generalized coordinates and
+	 * return the scale factors of angles and bonds
+	 **/
+	SimTK::Real setQToScaleBendStretchStdev(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+
+	void setQToScaleBendStretchStdev_Old(SimTK::State& someState,
+		std::vector<SimTK::Real>& scaleFactors);
+
+	/**
+	 * Get the log of the Jacobian of a bond-angle stretch
+	*/
+	SimTK::Real calcBendStretchJacobianDetLog(SimTK::State& someState,
+		std::vector<SimTK::Real> scaleFactors,
+		unsigned int startFromBody = 0);
+
+	/**@}**/
+	// WORK Q PERTURB BEND STRETCH --------------------------------------------
+
+	//------------------------------------------------------------------------------
+    /** @name Z Matrix and BAT functions
+	*/
+
+    /**@{**/
 
 	void PrintSubZMatrixBAT();
-
-	void
-	calcSubZMatrixBATStats(void);
 
 	void setSubZMatrixBATStats(
 		std::map<SimTK::Compound::AtomIndex, std::vector<SimTK::Real>&> inBATmeans,
@@ -616,6 +606,7 @@ public:
 	PrintSubZMatrixBATAndRelated(
 		SimTK::State& someState
 	);
+
 	SimTK::Real
 	scaleSubZMatrixBATDeviations(
 		SimTK::State& someState,
@@ -658,6 +649,7 @@ public:
     }
 
 
+	/**@}**/
 	// BAT --------------------------------------------------------------------
 
 protected:

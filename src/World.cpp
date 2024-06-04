@@ -1884,7 +1884,7 @@ void World::WriteRst7FromTopology(std::string FN)
 }
 
 /** Print transformation geometries */
-void World::PrintFullTransformationGeometry(const SimTK::State& someState,
+void World::PrintFullTransformationGeometry(std::string indS, const SimTK::State& someState,
 		bool x_pf_r, bool x_fm_r, bool x_bm_r,
 		bool x_pf_p, bool x_fm_p, bool x_bm_p)
 {
@@ -1901,21 +1901,25 @@ void World::PrintFullTransformationGeometry(const SimTK::State& someState,
 			std::cout << "mobod " << int(mbx) << std::endl
 				<< std::fixed << std::setprecision(3);
 
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[0][0], X_PF.toMat44()[0][1], X_PF.toMat44()[0][2], X_PF.toMat44()[0][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[0][0], X_FM.toMat44()[0][1], X_FM.toMat44()[0][2], X_FM.toMat44()[0][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[0][0], X_MB.toMat44()[0][1], X_MB.toMat44()[0][2], X_MB.toMat44()[0][3]);
+			std::stringstream ss;
+			ss << indS << int(mbx);
+			std::string pref = ss.str();
 
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[1][0], X_PF.toMat44()[1][1], X_PF.toMat44()[1][2], X_PF.toMat44()[1][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[1][0], X_FM.toMat44()[1][1], X_FM.toMat44()[1][2], X_FM.toMat44()[1][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[1][0], X_MB.toMat44()[1][1], X_MB.toMat44()[1][2], X_MB.toMat44()[1][3]);
+			printf("%s %9.3f %9.3f %9.3f %9.3f ", pref.c_str(),  X_PF.toMat44()[0][0], X_PF.toMat44()[0][1], X_PF.toMat44()[0][2], X_PF.toMat44()[0][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f ",                X_FM.toMat44()[0][0], X_FM.toMat44()[0][1], X_FM.toMat44()[0][2], X_FM.toMat44()[0][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f\n",               X_MB.toMat44()[0][0], X_MB.toMat44()[0][1], X_MB.toMat44()[0][2], X_MB.toMat44()[0][3]);
 
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[2][0], X_PF.toMat44()[2][1], X_PF.toMat44()[2][2], X_PF.toMat44()[2][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[2][0], X_FM.toMat44()[2][1], X_FM.toMat44()[2][2], X_FM.toMat44()[2][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[2][0], X_MB.toMat44()[2][1], X_MB.toMat44()[2][2], X_MB.toMat44()[2][3]);
+			printf("%s %9.3f %9.3f %9.3f %9.3f ", pref.c_str(),  X_PF.toMat44()[1][0], X_PF.toMat44()[1][1], X_PF.toMat44()[1][2], X_PF.toMat44()[1][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f ",                X_FM.toMat44()[1][0], X_FM.toMat44()[1][1], X_FM.toMat44()[1][2], X_FM.toMat44()[1][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f\n",               X_MB.toMat44()[1][0], X_MB.toMat44()[1][1], X_MB.toMat44()[1][2], X_MB.toMat44()[1][3]);
 
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_PF.toMat44()[3][0], X_PF.toMat44()[3][1], X_PF.toMat44()[3][2], X_PF.toMat44()[3][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f ",  X_FM.toMat44()[3][0], X_FM.toMat44()[3][1], X_FM.toMat44()[3][2], X_FM.toMat44()[3][3]);
-			printf("%9.3f %9.3f %9.3f %9.3f\n", X_MB.toMat44()[3][0], X_MB.toMat44()[3][1], X_MB.toMat44()[3][2], X_MB.toMat44()[3][3]);
+			printf("%s %9.3f %9.3f %9.3f %9.3f ", pref.c_str(),  X_PF.toMat44()[2][0], X_PF.toMat44()[2][1], X_PF.toMat44()[2][2], X_PF.toMat44()[2][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f ",                X_FM.toMat44()[2][0], X_FM.toMat44()[2][1], X_FM.toMat44()[2][2], X_FM.toMat44()[2][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f\n",               X_MB.toMat44()[2][0], X_MB.toMat44()[2][1], X_MB.toMat44()[2][2], X_MB.toMat44()[2][3]);
+
+			printf("%s %9.3f %9.3f %9.3f %9.3f ", pref.c_str(),  X_PF.toMat44()[3][0], X_PF.toMat44()[3][1], X_PF.toMat44()[3][2], X_PF.toMat44()[3][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f ",                X_FM.toMat44()[3][0], X_FM.toMat44()[3][1], X_FM.toMat44()[3][2], X_FM.toMat44()[3][3]);
+			printf("   %9.3f %9.3f %9.3f %9.3f\n",               X_MB.toMat44()[3][0], X_MB.toMat44()[3][1], X_MB.toMat44()[3][2], X_MB.toMat44()[3][3]);
 			
 		}else if(x_pf_p && x_fm_p && x_bm_p){
 			std::cout << X_PF.p()[0] << " " << X_PF.p()[1] << " " << X_PF.p()[2] << " ";

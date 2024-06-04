@@ -326,7 +326,7 @@ public:
 
 	/**	Description **/
 
-	void PrintFullTransformationGeometry(const SimTK::State&,
+	void PrintFullTransformationGeometry(std::string indS, const SimTK::State&,
 		bool x_pf_r = true, bool x_fm_r = true, bool x_bm_r = true,
 		bool x_pf_p = true, bool x_fm_p = true, bool x_bm_p = true);
 	
