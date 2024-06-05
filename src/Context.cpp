@@ -4957,10 +4957,6 @@ bool Context::RunWorld(int whichWorld)
 		validated = worlds[whichWorld].generateSamples(
 			numSamples, worldOutStream);
 
-		// if(whichWorld == 1){
-		// 	worlds[whichWorld].PrintFullTransformationGeometry("r" + std::to_string(nofRounds) + "_", (worlds[whichWorld]).integ->updAdvancedState() ); // for scale
-		// }
-
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
 

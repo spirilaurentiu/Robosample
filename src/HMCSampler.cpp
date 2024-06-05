@@ -653,8 +653,9 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 
 }
 
-/** Set velocities according to the Maxwell-Boltzmann
-distribution.  **/
+/*!
+ * <!--	Set velocities according to the Maxwell-Boltzmann distribution. -->
+*/
 void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 {
 	if (this->integratorName == IntegratorName::OMMVV){
@@ -1114,6 +1115,22 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			this->world->ts->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
 			system->realize(someState, SimTK::Stage::Position);
+
+			// // Q STATS ################################################################################################################
+			// // Print temperature
+			// //std::cout << " T " << this->boostT << std::endl;
+			// // Print Q
+			// // scout("Q after stepTo");
+			// // for(int ix = 0; ix < someState.getNQ(); ix++){
+			// // 	std::cout <<" " << someState.getQ()[ix];
+			// // }
+			// // ceol;
+			// // Print transforms
+			// if(world->getOwnIndex() == 1){
+			// 	world->PrintFullTransformationGeometry("r" + std::to_string(nofSamples) + "_" + std::to_string(this->boostT) + " ", someState);
+			// }
+			// // Q STATS end ############################################################################################################
+
 
 		}catch(const std::exception&){
 
