@@ -704,17 +704,17 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 				(std::find(std::begin(chosenBodies), std::end(chosenBodies), int(mbx))
 				!= std::end(chosenBodies));
 
-			if(found) {
-			//if( (int(mbx) >= 1) ) {
+			//if(found) {
+			if( (int(mbx) >= 1) ) {
 			//if(false){
 
-				// // Frame P
-				// std::ostringstream streamObjP;
-				// streamObjP << std::string("P") + std::to_string(int(mbx));
-				// std::string textP = streamObjP.str();
-				// drawFrame(geometry, G_X_P,
-				// 	0.05, 4, SimTK::Vec3(0, 0, 0),
-				// 	streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
+				// Frame P
+				std::ostringstream streamObjP;
+				streamObjP << std::string("P") + std::to_string(int(mbx));
+				std::string textP = streamObjP.str();
+				drawFrame(geometry, G_X_P,
+					0.05, 4, SimTK::Vec3(0, 0, 0),
+					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
 				// Frame F
 				std::ostringstream streamObjF;
 				streamObjF << std::string("F") + std::to_string(int(mbx)); //+ " " + std::to_string(this->FCommVar)

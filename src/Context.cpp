@@ -408,13 +408,13 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		//replicas[k].PrintZMatrixBAT();
 	}
 	
-	// Add BAT coordinates to thermodynamic states
-	for(size_t thermoState_k = 0;
-	thermoState_k < nofThermodynamicStates;
-	thermoState_k++){
-		thermodynamicStates[thermoState_k].calcZMatrixBATStats();
-		//thermodynamicStates[thermoState_k].PrintZMatrixBAT();
-	}
+	// // Add BAT coordinates to thermodynamic states
+	// for(size_t thermoState_k = 0;
+	// thermoState_k < nofThermodynamicStates;
+	// thermoState_k++){
+	// 	thermodynamicStates[thermoState_k].calcZMatrixBATStats();
+	// 	//thermodynamicStates[thermoState_k].PrintZMatrixBAT();
+	// }
 
 	// thermodynamic states for(size_t thermoState_k = 0;thermoState_k < nofThermodynamicStates;thermoState_k++){}
 
@@ -4223,12 +4223,12 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			thermodynamicStates[thermoState_H].incrementNofSamples();
 
 			// Calculate replica BAT
-			replicas[replica_X].calcZMatrixBAT_WORK();
-			replicas[replica_Y].calcZMatrixBAT_WORK();
+			//replicas[replica_X].calcZMatrixBAT_WORK();
+			//replicas[replica_Y].calcZMatrixBAT_WORK();
 
 			// Calculate thermodynamic states BAT stats
-			thermodynamicStates[thermoState_C].calcZMatrixBATStats();
-			thermodynamicStates[thermoState_H].calcZMatrixBATStats();
+			//thermodynamicStates[thermoState_C].calcZMatrixBATStats();
+			//thermodynamicStates[thermoState_H].calcZMatrixBATStats();
 
 		}
 
@@ -4963,7 +4963,7 @@ bool Context::RunWorld(int whichWorld)
 		// Generate samples
 		
 		// drl
-		#ifdef __DRILLING__
+		#ifdef __DRILLING__ // SCALEQ
 
 			// Get drl data
 			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
@@ -4986,7 +4986,7 @@ bool Context::RunWorld(int whichWorld)
 				(worlds[whichWorld]).updateAtomListsFromCompound(currentAdvancedState);
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT init:"); ceol;
+				coutspaced("SCALING_BAT init:"); ceolf;
 				//replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				//thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
@@ -4996,10 +4996,10 @@ bool Context::RunWorld(int whichWorld)
 					worldOutStream);
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				// scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
@@ -5010,15 +5010,15 @@ bool Context::RunWorld(int whichWorld)
 				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT after:"); ceol;
+				coutspaced("SCALING_BAT after:"); ceolf;
 				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
-				// scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 			// }
 
@@ -5485,7 +5485,7 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 			replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround( currFrontState ));
 
 			// Calculate thermodynamic states BAT stats
-			thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
+			//thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
 
 			if((thermodynamicStates[thisThermoStateIx].getNofSamples() % 1) == 100)
 			{
@@ -5608,8 +5608,8 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 			std::cout << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
 			// ----
 
-			// Transfer BAT statistics to sampler
-			setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
+			//// Transfer BAT statistics to sampler
+			//setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
 
 			// Run front world
 			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
@@ -5631,9 +5631,9 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 				// Calculate replica BAT
 				replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround( currFrontState ));
 
-				// Calculate thermodynamic states BAT stats
-				thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
-				//thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
+				//// Calculate thermodynamic states BAT stats
+				//thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
+				////thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
 
 			}else{
 				// Don't increment the number of samples. Leave it for attemptREXSwap

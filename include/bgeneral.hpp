@@ -552,6 +552,11 @@ enum struct VelocitiesPerturbMethod : int {
 	NOF_
 };
 
+enum struct ForcesPerturbMethod : int {
+	EMPTY = 0,
+	NOT_IMPLEMENTED,
+	NOF_
+};
 
 
 enum struct NMAOptions : int {
@@ -565,10 +570,6 @@ enum struct NMAOptions : int {
 	NOF_
 };
 
-enum struct ForcesPerturbMethod : int {
-	EMPTY = 0,
-	NOF_
-};
 
 const std::unordered_map<std::string, IntegratorName>
 IntegratorNameS{

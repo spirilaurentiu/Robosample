@@ -566,20 +566,35 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			// Just for the Visualizer
 			if(world->visual){
-				//this->world->ts->stepTo(
-				//	someState.getTime() + (0.00001));				
+				this->world->ts->stepTo(
+					someState.getTime() + (0.00001));				
 				std::cout << "Sleeping... before scaling " << std::flush;
 				std::this_thread::sleep_for(std::chrono::milliseconds(6000));
 				std::cout << "done.\n" << std::flush;
 			}
 			
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			// Scaling Work BEGIN
+			// Scaling Work BEGIN SCALEQ
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			// Scale. It realizes Dynamics Stage
 			SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
 			scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
 			scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
+
+			// // SCALEQ_INFO ################################################################################################################
+			// // Print temperature
+			// //std::cout << " T " << this->boostT << std::endl;
+			// if(world->getOwnIndex() >= 0){ 
+			// 	// Print Q
+			// 	scout("\nstepToQ" + std::to_string(nofSamples) + "_" + std::to_string(this->boostT));
+			// 	for(int ix = 0; ix < someState.getNQ(); ix++){
+			// 		std::cout <<" " << someState.getQ()[ix];
+			// 	}
+			// 	ceol;
+			// 	// Print transforms
+			// 	world->PrintFullTransformationGeometry("r" + std::to_string(nofSamples) + "_" + std::to_string(this->boostT) + " ", someState);
+			// }
+			// // SCALEQ_INFO end ############################################################################################################
 
 			// :::::::::::: (1) Get initial Jacobian ::::::::::::::::::::::::::
 
@@ -596,17 +611,13 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//std::vector<SimTK::Real> BATSign = {-1, -1, -1};		// spherical
 			// std::vector<int> BATOrder = {0, 1, 2};				// slider
 			// std::vector<SimTK::Real> BATSign = {1, 1, 1};		// slider						
-			// J_scale =
-			// 	scaleSubZMatrixBATDeviations(
-			// 		someState,
-			// 		getBendStretchStdevScaleFactor(),
-			// 		BernoulliTrial,
-			// 		varianceBasedScalingFactor,
-			// 		BATOrder,
-			// 		BATSign);
+			// J_scale = scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor(), BernoulliTrial, varianceBasedScalingFactor, BATOrder, BATSign);
 			//// After scaling through Qs, we have to recalculate BAT values
 			//updateSubZMatrixBAT(someState);
 			////PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
+
+			someState.updQ() *= this->QScaleFactor;
+			system->realize(someState, SimTK::Stage::Position);
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			
@@ -616,15 +627,15 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			scout("BAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
 
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			// Scaling Work END
+			// Scaling Work END SCALEQ
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
 			scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
 
 			// Just for the Visualizer
 			if(world->visual){
-				//this->world->ts->stepTo(
-				//	someState.getTime() + (0.00001));				
+				this->world->ts->stepTo(
+					someState.getTime() + (0.00001));				
 				std::cout << "Sleeping... after scaling " << std::flush;
 				std::this_thread::sleep_for(std::chrono::milliseconds(6000));
 				std::cout << "done.\n" << std::flush;
@@ -661,14 +672,17 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 	if (this->integratorName == IntegratorName::OMMVV){
 		uint32_t seed = randomEngine() >> 32;
 		dumm->setOpenMMvelocities(this->boostT, seed);
+
 	} else {
 		// Check if we can use our cache
 		const int nu = someState.getNU();
+
 		if (nu != RandomCache.getNU()) {
 			// Rebuild the cache
 			// We also get here if the cache is not initialized
 			RandomCache.initialize(nu);
 			sqrtMInvV.resize(nu);
+
 		} else {
 			// Wait for random number generation to finish (should be done by this stage)
 			RandomCache.wait();
@@ -678,6 +692,7 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		matter->multiplyBySqrtMInv(someState, RandomCache.getV(), sqrtMInvV);
 
 		// Set stddev according to temperature
+spacedcout("[INITIALIZING VELOCITIES TO TEMPERATURE] ", ((this->sqrtBoostRT)*(this->sqrtBoostRT)) / SimTK_BOLTZMANN_CONSTANT_MD); ceol;
 		sqrtMInvV *= sqrtBoostRT;
 
 		// Raise the temperature
@@ -705,6 +720,7 @@ void HMCSampler::perturbVelocities(SimTK::State& someState,
 	
 	}else if(this->DistortOpt > 0){
 		setVelocitiesToNMA(someState);
+
 	}else{
 		// Set velocities to Gaussian
 		setVelocitiesToGaussian(someState);
@@ -715,6 +731,21 @@ void HMCSampler::perturbVelocities(SimTK::State& someState,
 
 	// Store kinetic and total energies
 	storeOldAndSetKineticAndTotalEnergies(someState);
+
+}
+
+void HMCSampler::perturbForces(SimTK::State& someState,
+	ForcesPerturbMethod FPM){
+
+	if((FPM == ForcesPerturbMethod::NOT_IMPLEMENTED)){
+		assert(!"Not implemented");
+		// Realize velocity
+		system->realize(someState, SimTK::Stage::Dynamics);
+	}else if(FPM == ForcesPerturbMethod::EMPTY){
+		; // do nothing
+	}
+
+
 
 }
 
@@ -1115,22 +1146,6 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			this->world->ts->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
 			system->realize(someState, SimTK::Stage::Position);
-
-			// // Q STATS ################################################################################################################
-			// // Print temperature
-			// //std::cout << " T " << this->boostT << std::endl;
-			// // Print Q
-			// // scout("Q after stepTo");
-			// // for(int ix = 0; ix < someState.getNQ(); ix++){
-			// // 	std::cout <<" " << someState.getQ()[ix];
-			// // }
-			// // ceol;
-			// // Print transforms
-			// if(world->getOwnIndex() == 1){
-			// 	world->PrintFullTransformationGeometry("r" + std::to_string(nofSamples) + "_" + std::to_string(this->boostT) + " ", someState);
-			// }
-			// // Q STATS end ############################################################################################################
-
 
 		}catch(const std::exception&){
 
@@ -3025,6 +3040,24 @@ void HMCSampler::setSetConfigurationAndEnergiesToNew(
 
 }
 
+
+/** Returns the 'how' argument of initializeVelocities */
+PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
+{
+	
+	PositionsPerturbMethod how = PositionsPerturbMethod::EMPTY;
+
+	if(this->DistortOpt < 0){
+		how = PositionsPerturbMethod::BENDSTRETCH;
+
+	}else{
+		how = PositionsPerturbMethod::EMPTY;
+
+	}
+
+	return how;
+}
+
 /** Returns the 'how' argument of initializeVelocities */
 VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
 {
@@ -3056,21 +3089,34 @@ VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
 
 }
 
+
 /** Returns the 'how' argument of initializeVelocities */
-PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
+ForcesPerturbMethod HMCSampler::forcesPerturbMethod(void)
 {
 	
-	PositionsPerturbMethod how = PositionsPerturbMethod::EMPTY;
+	return ForcesPerturbMethod::EMPTY;
+	// return ForcesPerturbMethod::NOT_IMPLEMENTED;
+}
 
-	if(this->DistortOpt < 0){
-		how = PositionsPerturbMethod::BENDSTRETCH;
 
-	}else{
-		how = PositionsPerturbMethod::EMPTY;
+/*!
+ * <!-- Perturb Q, QDot or QDotDot -->
+*/
+void HMCSampler::perturb_Q_QDot_QDotDot(
+	SimTK::State& someState
+	// , PositionsPerturbMethod
+	// , VelocitiesPerturbMethod
+	// , ForcesPerturbMethod
+	)
+{
+	// Perturb positions 
+	perturbPositions(someState, positionsPerturbMethod());
 
-	}
+	// Perturb velocities
+	perturbVelocities(someState, velocitiesPerturbMethod());
 
-	return how;
+	// Perturb forces
+	perturbForces(someState, forcesPerturbMethod());
 }
 
 /**
@@ -3085,21 +3131,17 @@ bool HMCSampler::propose(SimTK::State& someState)
 		adaptWorldBlocks(someState);
 	}
 
-	// Perturb positions 
-	perturbPositions(someState, positionsPerturbMethod());
-
-	// Perturb velocities
-	perturbVelocities(someState, velocitiesPerturbMethod());
-
-	// Perturb forces
-	/* perturbForces(someState,
-		forcePerturbationMethod(this->integratorName)); */
+	// Initialize velocities
+	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
 	// Integrate trajectory
 	integrateTrajectory(someState);
+
+	// Perturb Q, QDot or QDotDot
+	perturb_Q_QDot_QDotDot(someState);
 
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {

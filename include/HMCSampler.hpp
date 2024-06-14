@@ -281,6 +281,9 @@ public:
 
 	void setVelocitiesToNMA(SimTK::State& someState);
 
+	void perturbForces(SimTK::State& someState,
+		ForcesPerturbMethod FPM);
+
 	/** Store the proposed energies **/
 	virtual void calcProposedKineticAndTotalEnergyOld(SimTK::State& someState);
 
@@ -403,8 +406,13 @@ public:
 	/** Returns the 'how' argument of perturbPositions */
 	PositionsPerturbMethod positionsPerturbMethod(void);
 
-	/** Returns the 'how' argument of perturbVelocities */
 	VelocitiesPerturbMethod velocitiesPerturbMethod(void);
+
+	/** Returns the 'how' argument of perturbVelocities */
+	ForcesPerturbMethod forcesPerturbMethod(void);
+
+	// Perturb Q, QDot or QDotDot
+	void perturb_Q_QDot_QDotDot(SimTK::State& someState);
 
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
