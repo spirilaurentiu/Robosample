@@ -51,6 +51,9 @@ ThermodynamicState::ThermodynamicState(
 	mdsteps = argMdsteps;
 
 	nonequilibrium = 0;
+
+	allocQStatsFirstDimension();
+
 }
 
 void ThermodynamicState::setTemperature(SimTK::Real T)
@@ -248,10 +251,6 @@ void
 ThermodynamicState::calcZMatrixBATStats(void)
 {
 
-	//scout("ThermodynamicState::calcZMatrixBATStats myIndex nofSamples ")
-	// 	<< myIndex <<" " << nofSamples << eol;
-	//PrintZMatrixBAT();
-
 	// Usefull vars
 	SimTK::Real N = nofSamples + 1;
 	SimTK::Real N_1_over_N = (N - 1.0) / N;
@@ -279,19 +278,6 @@ ThermodynamicState::calcZMatrixBATStats(void)
 			zMatrixBATVars[bati][2] = 0;
 
 		}
-
-	// }else if(nofSamples == 1){
-	//     for (size_t bati = 0; bati < (*zMatrixBAT_poi).size(); ++bati) {
-	// 		zMatrixBATMeans[bati][0] = (zMatrixBATMeans[bati][0] + (*zMatrixBAT_poi)[bati][0]) / 2.0;
-	// 		zMatrixBATMeans[bati][1] = (zMatrixBATMeans[bati][1] + (*zMatrixBAT_poi)[bati][1]) / 2.0;
-	// 		zMatrixBATMeans[bati][2] = (zMatrixBATMeans[bati][2] + (*zMatrixBAT_poi)[bati][2]) / 2.0;
-	// 		zMatrixBATDiffs[bati][0] = ((*zMatrixBAT_poi)[bati][0] - zMatrixBATMeans[bati][0]);
-	// 		zMatrixBATDiffs[bati][1] = ((*zMatrixBAT_poi)[bati][1] - zMatrixBATMeans[bati][1]);
-	// 		zMatrixBATDiffs[bati][2] = ((*zMatrixBAT_poi)[bati][2] - zMatrixBATMeans[bati][2]);
-	// 		zMatrixBATVars[bati][0] = 0.5 * (zMatrixBATDiffs[bati][0]) * (zMatrixBATDiffs[bati][0]);
-	// 		zMatrixBATVars[bati][1] = 0.5 * (zMatrixBATDiffs[bati][1]) * (zMatrixBATDiffs[bati][1]);
-	// 		zMatrixBATVars[bati][2] = 0.5 * (zMatrixBATDiffs[bati][2]) * (zMatrixBATDiffs[bati][2]);
-	// 	}
 
 	}else{ // nofSamples gt 2
 
@@ -321,10 +307,6 @@ ThermodynamicState::calcZMatrixBATStats(void)
 
 		} // every BAT entry
 	} // nofSamples gt 2
-
-	//scout("ThermodynamicState::calcZMatrixBATStats END myIndex nofSamples ")
-	// 	<< myIndex <<" " << nofSamples << eol;
-	//PrintZMatrixBAT();
 
 }
 
@@ -368,5 +350,97 @@ ThermodynamicState::getBATVarsRow(int rowIndex)
 		&& "Invalid row index");
 
 	return zMatrixBATVars[rowIndex];
+}
+
+/*!
+ * <!--  -->
+*/
+void ThermodynamicState::allocQStatsFirstDimension(void)
+{
+        // Resize
+		Qmeans.resize(worldIndexes.size());
+		Qdiffs.resize(worldIndexes.size());
+		Qvars.resize(worldIndexes.size());
+}
+
+/*!
+ * <!--  -->
+*/
+bool ThermodynamicState::calcQStats(int whichWorld, const SimTK::Vector & worldQs)
+{
+
+	// Usefull vars
+	SimTK::Real N = nofSamples + 1;
+	SimTK::Real N_1_over_N = (N - 1.0) / N;
+	SimTK::Real Ninv = 1.0 / N;
+
+	bool found = false;
+	int vPosInVector = -1;
+	for(const auto wIx : worldIndexes){
+		vPosInVector++;
+
+		if(whichWorld == wIx){
+			vPosInVector = wIx;
+			break;
+			found = true;
+		}
+	}
+
+	if(found == false){
+		warnflush("ThermodynamicState::calcQStats: World not found.");
+		return false;
+	}
+
+	if(nofSamples == 0){
+
+		// Resize
+        Qmeans[vPosInVector].resize(worldQs.size());
+        Qdiffs[vPosInVector].resize(worldQs.size());
+        Qvars[vPosInVector].resize(worldQs.size());
+
+		for(int qIx = 0; qIx < worldQs.size(); qIx++){
+
+			Qmeans[vPosInVector][qIx] = worldQs[qIx];
+
+			zMatrixBATDiffs[vPosInVector][qIx] = 0;
+
+			zMatrixBATVars[vPosInVector][qIx] = 0;
+
+		}
+
+	}else{ // nofSamples gt 2
+
+		// Update Q means
+		for(int qIx = 0; qIx < worldQs.size(); qIx++){
+
+			Qmeans[vPosInVector][qIx] = (N_1_over_N * Qmeans[vPosInVector][qIx]) + (Ninv * worldQs[qIx]);
+		}
+
+		// Update Q differences
+		for(int qIx = 0; qIx < worldQs.size(); qIx++){
+			Qdiffs[vPosInVector][qIx] = worldQs[qIx] - Qmeans[vPosInVector][qIx];
+		}
+
+		// Update Q variances
+		for(int qIx = 0; qIx < worldQs.size(); qIx++){
+			Qvars[vPosInVector][qIx] = (N_1_over_N * Qvars[vPosInVector][qIx]) + (Ninv * (Qdiffs[vPosInVector][qIx] * Qdiffs[vPosInVector][qIx]));
+		}
+
+	} // nofSamples gt 2
+
+
+}
+
+void ThermodynamicState::printQStats(void)
+{
+	int wPosInVector = -1;
+	for(const auto wIx : worldIndexes){
+		wPosInVector++;
+
+		for(int qIx = 0; qIx < Qmeans[wPosInVector].size(); qIx++){
+			scout(Qmeans[wPosInVector][qIx]); ceol;
+		}
+
+	}
 }
 

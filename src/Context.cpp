@@ -3992,7 +3992,7 @@ void Context::swapThermodynamicStates(int replica_i, int replica_j){
 	// Swap the BAT pointers too
 	thermodynamicStates[thermoState_i].setZMatrixBATPointer(
 		(replicas[replica_j].getZMatrixBATPointer())
-	);	
+	);
 }
 
 void Context::swapPotentialEnergies(int replica_i, int replica_j)
@@ -4956,6 +4956,9 @@ bool Context::RunWorld(int whichWorld)
 		// Generate samples
 		validated = worlds[whichWorld].generateSamples(
 			numSamples, worldOutStream);
+
+//calcQStats();
+//printQStats();
 
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
@@ -8404,7 +8407,6 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 
 
 
-
 /*!
  * <!--  -->
 */
@@ -8555,4 +8557,86 @@ void Context::Print_TRANSFORMERS_Work(void)
 
 }
 // TRANSFORMERS LAB
-// ===========================================================================	
+// ===========================================================================
+
+//////////////////////////////////////////////////////
+//-------------         Q Stats        ---------------
+//////////////////////////////////////////////////////
+
+/*!
+ * <!--  -->
+*/
+void Context::reserveThermostatsQs(void)
+{
+	// // Iterate thermodynamic states
+	// for(size_t thIx = 0; thIx < nofThermodynamicStates; thIx++){
+	// 	const std::vector<int> & thermoWorldIxs = thermodynamicStates[thIx].getWorldIndexes();
+	// 	thermodynamicStates[thIx].allocateQStats(thermoWorldIxs.size());
+	// }
+}
+
+/*!
+ * <!--  -->
+*/
+void Context::setThermostatesQs(void)
+{
+
+	// // Iterate thermodynamic states
+	// for(size_t thIx = 0; thIx < nofThermodynamicStates; thIx++){
+	// 	const std::vector<int> & thermoWorldIxs = thermodynamicStates[thIx].getWorldIndexes();
+	// 	// Iterate worlds
+	// 	for(const auto worldIx : thermoWorldIxs){
+	// 		SimTK::State& worldCurrentState = worlds[worldIx].integ->updAdvancedState();
+	// 		//int NQ = (worlds[worldIx].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+	// 		thermodynamicStates[thIx].setWorldQs(worldIx, (getWorld(0).getSimbodyMatterSubsystem())->getQ(worldCurrentState));
+	// 	}
+	// }
+
+}
+
+/*!
+ * <!--  -->
+*/
+void Context::calcQStats(void)
+{
+	// Iterate thermodynamic states
+	for(size_t thIx = 0; thIx < nofThermodynamicStates; thIx++){
+		
+		// Get world indexes
+		const std::vector<int> & thermoWorldIxs = thermodynamicStates[thIx].getWorldIndexes();
+
+		// Iterate worlds
+		for(const auto worldIx : thermoWorldIxs){
+
+			// Get world's Qs
+			SimTK::State& worldCurrentState = worlds[worldIx].integ->updAdvancedState();
+			int NQ = (worlds[worldIx].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+			const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+			
+			// Calculate Q statistics
+			bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs);
+			if(!found){
+				warn("Context::calcQStats: World not found. Q statistics not calculated...");
+			}
+		}
+	}
+}
+
+/*!
+ * <!--  -->
+*/
+void Context::printQStats(void)
+{
+	// Iterate thermodynamic states
+	for(size_t thIx = 0; thIx < nofThermodynamicStates; thIx++){
+		
+		// Print
+		thermodynamicStates[thIx].printQStats();
+
+	}
+}
+
+
+//////////////////////////////////////////////////////
+//-------------         Q Stats        ---------------
+//////////////////////////////////////////////////////

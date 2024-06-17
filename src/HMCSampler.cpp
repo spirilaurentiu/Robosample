@@ -692,7 +692,6 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		matter->multiplyBySqrtMInv(someState, RandomCache.getV(), sqrtMInvV);
 
 		// Set stddev according to temperature
-spacedcout("[INITIALIZING VELOCITIES TO TEMPERATURE] ", ((this->sqrtBoostRT)*(this->sqrtBoostRT)) / SimTK_BOLTZMANN_CONSTANT_MD); ceol;
 		sqrtMInvV *= sqrtBoostRT;
 
 		// Raise the temperature
@@ -3137,11 +3136,13 @@ bool HMCSampler::propose(SimTK::State& someState)
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
-	// Integrate trajectory
-	integrateTrajectory(someState);
 
-	// Perturb Q, QDot or QDotDot
-	perturb_Q_QDot_QDotDot(someState);
+		// Integrate trajectory
+		integrateTrajectory(someState);
+
+		// Perturb Q, QDot or QDotDot
+		perturb_Q_QDot_QDotDot(someState);
+
 
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {

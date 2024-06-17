@@ -990,5 +990,21 @@ private:
 		{ "LANGEVIN", ThermostatName::LANGEVIN },
 		{ "NOSE_HOOVER", ThermostatName::NOSE_HOOVER },
 	};
+
+
+	//////////////////////////////////
+	//---         Q Stats        -----
+	//////////////////////////////////
+	void reserveThermostatsQs(void);
 	
+	void setThermostatesQs(void);
+
+	void calcQStats(void);
+
+	void printQStats(void);
+
+	//////////////////////////////////
+	//---         Q Stats        -----
+	//////////////////////////////////
+
 };

@@ -102,6 +102,31 @@ class ThermodynamicState{
 
 	/**@}**/
 
+    
+	/** @name Q Stats functions
+	*/
+
+    /**@{**/
+	
+	void allocateQStats(int nofWorlds){
+
+		//allQs.resize(nofWorlds);
+		
+	}
+
+	void setWorldQs(int whichWorld, const SimTK::Vector & worldQs){
+
+		//allQs[whichWorld] = worldQs;
+
+	}
+
+	void allocQStatsFirstDimension(void);
+	bool calcQStats(int whichWorld, const SimTK::Vector & worldQs);
+	void printQStats(void);
+
+	/**@}**/	
+  
+  
   private:
 
 	// Index
@@ -113,9 +138,9 @@ class ThermodynamicState{
 	SimTK::Real beta = 1.0 / RT;
 
 	// Worlds related parameters 
-	std::vector<int> worldIndexes; 
-	std::vector<SimTK::Real> timesteps; 
-	std::vector<int> mdsteps; 
+	std::vector<int> worldIndexes;
+	std::vector<SimTK::Real> timesteps;
+	std::vector<int> mdsteps;
 
 	int nonequilibrium = 0;
 
@@ -144,4 +169,19 @@ class ThermodynamicState{
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
+
+	//////////////////////////////////
+	//---         Q Stats        -----
+	//////////////////////////////////
+
+	//std::vector< SimTK::Vector & > allQs;
+
+	std::vector<std::vector<SimTK::Real>> Qdiffs; // vector[world][qindex]
+	std::vector<std::vector<SimTK::Real>> Qmeans; // vector[world][qindex]
+	std::vector<std::vector<SimTK::Real>> Qvars;  // vector[world][qindex]
+
+	//////////////////////////////////
+	//---         Q Stats        -----
+	//////////////////////////////////	
+
 };

@@ -658,6 +658,28 @@ public:
 	void setTopologyIXs(std::vector<int> topologyIXs);
 	void setAmberAtomIXs(std::vector<std::vector<int>> AmberAtomIXs);
 
+	// const std::vector<SimTK::Real&>& getCppQs(void){
+	// 	return CppQs;
+	// }
+	// std::vector<SimTK::Real&>& updCppQs(void){
+	// 	return CppQs;
+	// }
+
+	/** Get references to Qs **/
+	void initializeCppQs(void){
+
+		// // 
+		// SimTK::State& currentState = integ->updAdvancedState();
+		// const SimTK::Vector & allQs = matter->getQ(currentState);
+		// int NQ = matter->getNQ(currentState);
+		// // 
+		// for(int qIx = 0; qIx < NQ; qIx++){
+		// 	CppQs[qIx] = allQs[qIx];
+		// }
+
+	}
+
+
 public:
 
 	// --- The three S: Study, System and State related ---
@@ -678,7 +700,6 @@ public:
 
 	/** Nof molecules **/
 	int moleculeCount;
-
 
 	/** Molecules (topologies<-Compounds) objects **/
 	//std::vector<bMoleculeReader *> moleculeReaders;
@@ -724,6 +745,9 @@ public:
 	std::vector<SimTK::Real> normX_BMp;
 	std::vector<SimTK::Real> acosX_PF00_means;
 	std::vector<SimTK::Real> normX_BMp_means;
+
+	//std::vector<SimTK::Real> CppQs;
+
 	//...............
 
 	// // --- Graphics ---
