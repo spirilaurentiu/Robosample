@@ -121,7 +121,7 @@ class ThermodynamicState{
 	}
 
 	void allocQStatsFirstDimension(void);
-	bool calcQStats(int whichWorld, const SimTK::Vector & worldQs);
+	bool calcQStats(const int whichWorld, const SimTK::Vector & worldQs);
 	void printQStats(void);
 
 	/**@}**/	

@@ -18,6 +18,9 @@ ThermodynamicState::ThermodynamicState(
 	beta = 1.0 / RT;
 
 	nonequilibrium = 0;
+
+	allocQStatsFirstDimension();
+
 }
 
 ThermodynamicState::ThermodynamicState(
@@ -366,7 +369,7 @@ void ThermodynamicState::allocQStatsFirstDimension(void)
 /*!
  * <!--  -->
 */
-bool ThermodynamicState::calcQStats(int whichWorld, const SimTK::Vector & worldQs)
+bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldQs)
 {
 
 	// Usefull vars
@@ -374,20 +377,22 @@ bool ThermodynamicState::calcQStats(int whichWorld, const SimTK::Vector & worldQ
 	SimTK::Real N_1_over_N = (N - 1.0) / N;
 	SimTK::Real Ninv = 1.0 / N;
 
+	// Search the position in cpp vector
 	bool found = false;
 	int vPosInVector = -1;
+
 	for(const auto wIx : worldIndexes){
 		vPosInVector++;
 
 		if(whichWorld == wIx){
+
 			vPosInVector = wIx;
-			break;
 			found = true;
+			break;
 		}
 	}
 
 	if(found == false){
-		warnflush("ThermodynamicState::calcQStats: World not found.");
 		return false;
 	}
 
@@ -398,13 +403,14 @@ bool ThermodynamicState::calcQStats(int whichWorld, const SimTK::Vector & worldQ
         Qdiffs[vPosInVector].resize(worldQs.size());
         Qvars[vPosInVector].resize(worldQs.size());
 
+		// Initialize at the first sample
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
 
 			Qmeans[vPosInVector][qIx] = worldQs[qIx];
 
-			zMatrixBATDiffs[vPosInVector][qIx] = 0;
+			Qdiffs[vPosInVector][qIx] = 0;
 
-			zMatrixBATVars[vPosInVector][qIx] = 0;
+			Qvars[vPosInVector][qIx] = 0;
 
 		}
 
@@ -428,19 +434,25 @@ bool ThermodynamicState::calcQStats(int whichWorld, const SimTK::Vector & worldQ
 
 	} // nofSamples gt 2
 
-
+	return true;
+	
 }
 
+/*!
+ * <!--  -->
+*/
 void ThermodynamicState::printQStats(void)
 {
 	int wPosInVector = -1;
 	for(const auto wIx : worldIndexes){
 		wPosInVector++;
 
+		std::cout << "wIx " << wIx <<": ";
 		for(int qIx = 0; qIx < Qmeans[wPosInVector].size(); qIx++){
-			scout(Qmeans[wPosInVector][qIx]); ceol;
+			std::cout <<" " << Qmeans[wPosInVector][qIx];
 		}
-
+		std::cout << std::endl;
 	}
+
 }
 

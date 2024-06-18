@@ -97,13 +97,17 @@ void spacedcout(Args &&... args)
     trace_impl(std::cout, std::forward<Args>(args)...);
 }
 
+#ifndef spacecout
+#define spacecout spacedcout
+#endif
+
 // Less smart trace and print
 
-#ifndef  eolf
+#ifndef eolf
 #define eolf std::endl<<std::flush 
 # endif
 
-#ifndef  eol
+#ifndef eol
 #define eol std::endl 
 # endif
 
@@ -113,7 +117,7 @@ void spacedcout(Args &&... args)
 
 
 
-# ifndef ceol
+#ifndef ceol
 #define ceol std::cout<<std::endl
 #endif
 

@@ -4957,9 +4957,6 @@ bool Context::RunWorld(int whichWorld)
 		validated = worlds[whichWorld].generateSamples(
 			numSamples, worldOutStream);
 
-//calcQStats();
-//printQStats();
-
 	// Non-equilibrium world
 	} else if (distortOption == -1) {
 
@@ -4972,13 +4969,6 @@ bool Context::RunWorld(int whichWorld)
 			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
 			const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
 			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_tor();
-
-			// Print drl stats
-			// double drl_bon_Energies_TotAvg = 0.0;
-			// std::vector<double> drl_bon_Energies_RowAvg(drl_bon_Energies.size());
-			// std::vector<std::vector<double>> drl_bon_Energies_Avg(drl_bon_Energies.size());
-			// for (size_t i = 0; i < drl_bon_Energies.size(); ++i)
-			// 	drl_bon_Energies_Avg[i].resize(drl_bon_Energies[i].size(), 0.0);
 
 			// validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
 
@@ -5032,8 +5022,10 @@ bool Context::RunWorld(int whichWorld)
 
 		#endif
 
-
 	}
+
+	calcQStats();
+	printQStats();
 
 	// Print the world output stream
 	std::cout << worldOutStream.str() << std::endl;
@@ -8616,7 +8608,7 @@ void Context::calcQStats(void)
 			// Calculate Q statistics
 			bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs);
 			if(!found){
-				warn("Context::calcQStats: World not found. Q statistics not calculated...");
+				warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
 			}
 		}
 	}
@@ -8627,10 +8619,14 @@ void Context::calcQStats(void)
 */
 void Context::printQStats(void)
 {
+
+	std::cout << std::endl;
+
 	// Iterate thermodynamic states
 	for(size_t thIx = 0; thIx < nofThermodynamicStates; thIx++){
 		
 		// Print
+		std::cout << "thIx " << thIx << std::endl;
 		thermodynamicStates[thIx].printQStats();
 
 	}
