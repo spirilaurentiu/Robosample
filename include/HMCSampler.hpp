@@ -639,6 +639,9 @@ public:
 		std::vector<SimTK::Real> BATSign = {1, -1, 1}
 	);
 
+	// Calculate sub determinant of MBAT 
+	SimTK::Real calcSubMBATDetLog(
+		SimTK::State& someState);
 
 	// Put in protected
 	std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>&> subZMatrixBATs_ref;

@@ -5024,8 +5024,8 @@ bool Context::RunWorld(int whichWorld)
 
 	}
 
-	calcQStats();
-	printQStats();
+	// calcQStats();
+	// printQStats();
 
 	// Print the world output stream
 	std::cout << worldOutStream.str() << std::endl;

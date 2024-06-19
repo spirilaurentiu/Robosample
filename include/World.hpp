@@ -679,7 +679,6 @@ public:
 
 	}
 
-
 public:
 
 	// --- The three S: Study, System and State related ---
@@ -981,6 +980,21 @@ public:
 	void setDuMMAtomIndexes(void);
 
 	SimTK::Compound::AtomIndex getCompoundAtomIndex(SimTK::DuMM::AtomIndex);
+
+
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
+
+	//std::vector<std::vector<int>>& zMatrixTable;
+	//std::vector<std::vector<SimTK::Real>>& zMatrixBAT;
+
+	//setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value);
+	//void calcZMatrixBAT(SimTK::State& someState);
+
+	//////////////////////////////////
+	/////      Z Matrix BAT      /////
+	//////////////////////////////////
 
 
 private:

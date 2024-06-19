@@ -3582,3 +3582,29 @@ SimTK::Compound::AtomIndex World::getCompoundAtomIndex(SimTK::DuMM::AtomIndex dA
 }
 
 
+
+//////////////////////////////////
+/////      Z Matrix BAT      /////
+//////////////////////////////////
+/*!
+ * <!--	zmatrixbat_ -->
+*/
+// void World::setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) {
+// 	// Set the value at the specified position
+// 	zMatrixBAT[rowIndex][colIndex] = value;
+// }
+
+
+/*!
+ * <!-- zmatrixbat_ -->
+*/
+// void World::calcZMatrixBAT(SimTK::State& someState)
+// {
+// 	assert(!"Not implemented");
+// }
+
+//////////////////////////////////
+/////      Z Matrix BAT      /////
+//////////////////////////////////
+
+

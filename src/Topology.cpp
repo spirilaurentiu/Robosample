@@ -240,9 +240,6 @@ SimTK::Real Topology::calcLogDetMBATDistsContribution(const SimTK::State&){
 	SimTK::Real result = 0.0;
 
 	for(auto bond: subBondList){
-		//SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
-		//SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
-		//SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);
 
 		int relativeBond_I = bond.i - subBondList.get_offset();
 		int relativeBond_J = bond.j - subBondList.get_offset();
@@ -285,7 +282,7 @@ SimTK::Real Topology::calcLogDetMBATAnglesContribution(const SimTK::State&){
 	SimTK::Real result = 0.0;
 	for(auto triple: triples){
 
-		//spacedcout("triple:", triple[0], triple[1], triple[2]);
+		//spacecout("TRIPLE:", triple[0], triple[1], triple[2]);
 		//SimTK::Vec3 vec0 = calcAtomLocationInGroundFrame(someState, triple[0]);
 		//SimTK::Vec3 vec1 = calcAtomLocationInGroundFrame(someState, triple[1]);
 		//SimTK::Vec3 vec2 = calcAtomLocationInGroundFrame(someState, triple[2]);

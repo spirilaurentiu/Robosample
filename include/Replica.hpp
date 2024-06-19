@@ -180,8 +180,8 @@ private:
 	std::vector<int>& roots;
 	std::vector<Topology>& topologies;
 	InternalCoordinates& internCoords;
-	std::vector<std::vector<int>>& zMatrixTable;
 
+	std::vector<std::vector<int>>& zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 	
 

@@ -447,7 +447,7 @@ void ThermodynamicState::printQStats(void)
 	for(const auto wIx : worldIndexes){
 		wPosInVector++;
 
-		std::cout << "wIx " << wIx <<": ";
+		std::cout << "wIx " << wIx << " nq " << Qmeans[wPosInVector].size() <<": ";
 		for(int qIx = 0; qIx < Qmeans[wPosInVector].size(); qIx++){
 			std::cout <<" " << Qmeans[wPosInVector][qIx];
 		}

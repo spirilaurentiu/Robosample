@@ -566,11 +566,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			// Just for the Visualizer
 			if(world->visual){
-				this->world->ts->stepTo(
-					someState.getTime() + (0.00001));				
-				std::cout << "Sleeping... before scaling " << std::flush;
-				std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-				std::cout << "done.\n" << std::flush;
+				// this->world->ts->stepTo(
+				// 	someState.getTime() + (0.00001));				
+				// std::cout << "Sleeping... before scaling " << std::flush;
+				// std::this_thread::sleep_for(std::chrono::milliseconds(6000));
+				// std::cout << "done.\n" << std::flush;
 			}
 			
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -634,11 +634,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			// Just for the Visualizer
 			if(world->visual){
-				this->world->ts->stepTo(
-					someState.getTime() + (0.00001));				
-				std::cout << "Sleeping... after scaling " << std::flush;
-				std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-				std::cout << "done.\n" << std::flush;
+				// this->world->ts->stepTo(
+				// 	someState.getTime() + (0.00001));				
+				// std::cout << "Sleeping... after scaling " << std::flush;
+				// std::this_thread::sleep_for(std::chrono::milliseconds(6000));
+				// std::cout << "done.\n" << std::flush;
 			}
 
 		}
@@ -2245,15 +2245,16 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 	SimTK::Vector DetV(nu);
 	SimTK::Real D0 = 0.0;
 
-	// TODO: remove the request for Dynamics stage cache in SImbody files
+	// TODO: remove the request for Dynamics stage cache in Simbody files
 	matter->calcDetM(someState, V, DetV, &D0);
 	//std::cout << "HMCSampler::calcFixman D0= "<< D0 << std::endl;
 
 	assert(RT > SimTK::TinyReal);
-	double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal(someState);
-	//SimTK::Real result = 0.5 * RT * ( std::log(D0) - detMBAT ); // original
+	// double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal(someState); // RESTORE
+	double detMBAT = calcSubMBATDetLog(someState); // LAST ADDED
+
 	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
-	//std::cout << "detM detMBAT fixP " << D0 << " " << detMBAT << " " << result << std::endl;
+	//std::cout << "detM detMBAT pe_fix " << D0 << " " << detMBAT << " " << result << std::endl;
 
 	if(SimTK::isInf(result)){
 		std::cout << "Fixman potential is infinite!\n";
@@ -2987,6 +2988,9 @@ SimTK::Real HMCSampler::CartesianFixmanPotential(void){
 void HMCSampler::calcNewEnergies(SimTK::State& someState)
 {
 
+	//(world->updMyContext())->calcZMatrixBAT( (*world).getAtomsLocationsInGround( someState ) );
+	//world->calcZMatrixBAT( someState );
+
 	// Get new potential energy
 	if(this->integratorName == IntegratorName::OMMVV){
 		pe_n = OMM_calcPotentialEnergy();
@@ -3421,19 +3425,19 @@ void HMCSampler::Print(const SimTK::State& someState,
  * <!--	Get printing energy details (before acc-rej step) -->
 */
 void HMCSampler::getMsg_EnergyDetails(
-	std::stringstream& ss,
+	std::stringstream& energyDetailsStream,
 	const SimTK::State& someState,
 	bool isTheSampleValid,
 	bool isTheSampleAccepted)
 {
 
-	ss  << std::setprecision(5) << std::fixed
+	energyDetailsStream  << std::setprecision(5) << std::fixed
 
 		<< ", " << this->world->matter->getNU(someState)
 		<< ", " << nofSamples
 		<< ", " << pe_o << ", " << pe_n ;
 
-	ss	<< ", " << getPEFromEvaluator(someState)
+	energyDetailsStream	<< ", " << getPEFromEvaluator(someState)
 		<< ", " << ke_o << ", " << ke_n
 		<< ", " << fix_o << ", " << fix_n
 		<< ", " << logSineSqrGamma2_o << ", " << logSineSqrGamma2_n
@@ -3442,17 +3446,17 @@ void HMCSampler::getMsg_EnergyDetails(
 
 	//Print acc
 	if(isTheSampleAccepted){
-		ss << ", 1";
+		energyDetailsStream << ", 1";
 	}else{
-		ss << ", 0";
+		energyDetailsStream << ", 0";
 	}
 	
 	// Print simulation type
 	if(this->alwaysAccept == true){
 		//ss << ", (MD)";
-		ss << ", 128";
+		energyDetailsStream << ", 128";
 	}else{
-		ss << ", 256";
+		energyDetailsStream << ", 256";
 		//ss << ", (MH)";
 	}
 
@@ -4739,6 +4743,49 @@ HMCSampler::calcBATJacobianDetLog(
 	}
 
 	return BATJacobian;
+}
+
+// Calculate sub determinant of MBAT 
+SimTK::Real HMCSampler::calcSubMBATDetLog(
+	SimTK::State& someState)
+{
+	// Accumulate result here
+	SimTK::Real BATJacobian = 0.0;
+
+	// Iterate bats
+	size_t bati = 0;
+	for (const auto& pair : subZMatrixBATs_ref) {
+
+		std::vector<SimTK::Real>& BAT      = subZMatrixBATs_ref.at(pair.first);
+		SimTK::MobilizedBodyIndex mbx = pair.first;
+		SimTK::Real mobodMass = matter->getMobilizedBody(mbx).getBodyMass(someState);
+
+		if( !(std::isnan(BAT[0])) ){
+			BATJacobian += 3.0 * std::log(mobodMass);
+		}
+
+		// scout("calcSubMBATDetLog ")
+		// 	<< "mbx " << mbx << " "
+		// 	<< "BAT[mbx]["<< 0 << "] " << BAT[0] <<" "
+		// 	<< "BAT[mbx]["<< 1 << "] " << BAT[1] <<" "
+		// 	<< "BAT[mbx]["<< 2 << "] " << BAT[2] <<" "
+		// 	<< eol;
+
+		// Bond length to the fourth power
+		if( !(std::isnan(BAT[0])) ){
+			BATJacobian += 2.0 * std::log(BAT[0] * BAT[0]);
+		}
+
+		// ANgle sine squared
+		if( !(std::isnan(BAT[1])) ){
+			BATJacobian += std::log( std::sin(BAT[1]) * std::sin(BAT[1]) );
+		}
+
+		bati++;
+
+	} // every BAT
+
+	return BATJacobian;	
 }
 
 // ---------------------------------------------------------------------------
