@@ -96,10 +96,89 @@ int testContext(int argc, char **argv)
 }
 
 /*!
+ * <!-- Helpers -->
+*/
+void printInertia(std::string prefix, const SimTK::Inertia inertia, int precision, bool scientific = false)
+{
+	const SymMat33 inertia33 = inertia.asSymMat33();
+
+	if(scientific){
+		std::cout << std::scientific;
+	}
+
+	std::cout << prefix << std::fixed << std::setprecision(15) << std::endl
+		<<" " << inertia33[0][0] <<" " << inertia33[0][1] <<" " << inertia33[0][2] << std::endl
+		<<" " << inertia33[1][0] <<" " << inertia33[1][1] <<" " << inertia33[1][2] << std::endl
+		<<" " << inertia33[2][0] <<" " << inertia33[2][1] <<" " << inertia33[2][2] << std::endl
+		<< std::endl;	
+}
+
+/*!
+ * <!-- Test ground -->
+*/
+void testSOA(void)
+{
+	// Hydrogen example
+	const Real HydrogenRadius = 0.0000012; // 1.2e-6;
+	const Real Mass = 1;
+
+	// Get mass properrties for a cluster of atoms
+	std::vector<SimTK::Real> myMasses{1.0, 12.0};
+	std::vector<SimTK::Real> myRadii{0.0000012, 0.0000027473};
+	std::vector<SimTK::Vec3> myStations{SimTK::Vec3(1,1,1), SimTK::Vec3(0,1,0)};
+	
+	Real    mass = 0;
+    Vec3    com(0);
+    Inertia inertia(0);
+	Inertia inertia_Spheres(0);
+	int aIx = -1;
+    for(auto ma : myMasses) {
+		aIx++;
+
+		// Accumulate mass
+        mass    += ma;
+        com     += ma * myStations[aIx];
+
+		// Inertia as if the atoms are point masses
+		Inertia pointMass = Inertia(myStations[aIx], ma);
+		printInertia("inertia", pointMass , 15);
+        inertia += pointMass;
+
+		// Inertia as if the atoms are spheres of nucleus radius
+		Inertia sphericalInertia = UnitInertia::sphere(myRadii[aIx]);
+		printInertia("sphericalInertia unit ", sphericalInertia, 15);
+
+		sphericalInertia *= ma;
+		printInertia("sphericalInertia scaled ", sphericalInertia, 15);
+
+		sphericalInertia += pointMass;
+		printInertia("sphericalInertia shifted", sphericalInertia, 15);
+
+		inertia_Spheres += sphericalInertia;
+		std::cout << "---------" << std::endl;
+
+    }
+    com /= mass; // center of mass normalization
+
+	std::cout << "=========" << std::endl;
+	printInertia("inertia", inertia, 15, true);
+	printInertia("final inertia_Spheres", inertia_Spheres, 15, true);
+
+	//Transform IdentityT;
+	//MassProperties massProps_Transformed = MassProperties(mass,com,inertia).calcTransformedMassProps(IdentityT);
+
+
+}
+
+
+/*!
  * <!-- Main -->
 */
 int main(int argc, char **argv)
 {
+
+	//testSOA();
+	//exit(0);
 
 	std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
