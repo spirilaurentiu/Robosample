@@ -3064,7 +3064,7 @@ std::size_t World::getNofSamplers() const
 
 /*!
  * <!-- Add a sampler to this World using the specialized struct
-for samplers names. -->
+ * for samplers names. -->
 */
 bool World::addSampler(SamplerName samplerName,
 	SampleGenerator generator,

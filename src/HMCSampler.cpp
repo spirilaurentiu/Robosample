@@ -616,8 +616,23 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//updateSubZMatrixBAT(someState);
 			////PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
 
-			someState.updQ() *= this->QScaleFactor;
+
+			std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl;
+
+			SimTK::Vector &stateQs = someState.updQ();
+			for(int qIx = 0; qIx < someState.getNQ(); qIx++){
+				if(0
+					//|| ((qIx + 0) % 3 == 0) // torsion
+					|| ((qIx + 1) % 3 == 0) // dist
+					|| ((qIx + 2) % 3 == 0) // angle
+				){
+					//stateQs[qIx] *= (this->QScaleFactor);
+				}
+			}
+
 			system->realize(someState, SimTK::Stage::Position);
+
+			std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl;
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			

@@ -4972,14 +4972,14 @@ bool Context::RunWorld(int whichWorld)
 
 			// validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
 
-				warn("under drilling conditions");
+				////warn("under drilling conditions");
 
 				// Update Robosample bAtomList
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
 				(worlds[whichWorld]).updateAtomListsFromCompound(currentAdvancedState);
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT init:"); ceolf;
+				////coutspaced("SCALING_BAT init:"); ceolf;
 				//replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				//thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
@@ -4989,10 +4989,10 @@ bool Context::RunWorld(int whichWorld)
 					worldOutStream);
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				//// scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+				//// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				//// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				//// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
@@ -5003,15 +5003,15 @@ bool Context::RunWorld(int whichWorld)
 				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT after:"); ceolf;
-				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				thermodynamicStates[0].PrintZMatrixBAT();
+				////coutspaced("SCALING_BAT after:"); ceolf;
+				////replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+				////thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
-				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				////scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				////scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				////scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				////scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 			// }
 
@@ -5025,7 +5025,7 @@ bool Context::RunWorld(int whichWorld)
 	}
 
 	calcQStats();
-	printQStats();
+	////printQStats();
 
 	// Print the world output stream
 	std::cout << worldOutStream.str() << std::endl;
