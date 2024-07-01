@@ -571,9 +571,7 @@ public:
 
 	// Run front world, rotate and transfer. Return worldIxs.front
 	int RunFrontWorldAndRotate(std::vector<int> & worldIxs);
-
-	// Go through all of this replica's worlds and generate samples
-	int RunReplicaAllWorlds(int whichReplica, int howManyRounds);
+	void RunWorlds(std::vector<int>& specificWIxs);
 
 	// Print to log and write pdbs
 	void RunLog(int roundi);
@@ -584,12 +582,19 @@ public:
 
 	void RunREX();
 
+	void RunREXNew();
+
 	// Helper Functions for REX
 
 	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
 
 	void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
 	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
+
+	// Go through all of this replica's worlds and generate samples
+	int RunReplicaAllWorlds(int mixi, int replicaIx, int swapEvery);
+
+	void RunReplicaRefactor(int mixi, int replicaIx, std::vector<int>& equilWIxs, std::vector<int>& nonequilWIxs);
 
 	void PrintReplicas(void);
 	void PrintReplicaMaps(void);

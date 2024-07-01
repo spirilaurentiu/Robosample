@@ -972,13 +972,13 @@ void Context::appendDCDReporter(const std::string& filename) {
 */
 void Context::Run() {
 	if(getRunType() == RUN_TYPE::DEFAULT) {
-		RunREX();
+		RunREXNew();
 		//Run(getRequiredNofRounds(), tempIni, tempFin);
 
 	}else if(  (getRunType() == RUN_TYPE::REMC)
 			|| (getRunType() == RUN_TYPE::RENEMC)
 			|| (getRunType() == RUN_TYPE::RENE)){
-		RunREX();
+		RunREXNew();
 
 	}else{
 		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
@@ -992,14 +992,14 @@ void Context::Run() {
 */
 void Context::Run(int rounds) {
 	if(getRunType() == RUN_TYPE::DEFAULT) {
-		RunREX();
+		RunREXNew();
 		//Run(rounds, tempIni, tempFin);
 
 	}else if(  (getRunType() == RUN_TYPE::REMC)
 			|| (getRunType() == RUN_TYPE::RENEMC)
 			|| (getRunType() == RUN_TYPE::RENE)){
 
-		RunREX();
+		RunREXNew();
 	}else{
 		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
 		Run(rounds, tempIni, tempFin);
@@ -4186,11 +4186,6 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// EVALUATE
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	SimTK::Real log_p_accept = 1.0;
-	/* if(getRunType() > 0){
-		log_p_accept = ETerm_nonequil + std::log(correctionTerm);
-	}else{
-		log_p_accept = ETerm_equil ;
-	} */
 
 	if(getRunType() == RUN_TYPE::REMC){
 
@@ -4209,10 +4204,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	// Accept or reject
+	// Accept
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
-
-		// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 		if( getRunType() == RUN_TYPE::RENE){
 
@@ -4225,14 +4218,11 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			// Calculate replica BAT
 			//replicas[replica_X].calcZMatrixBAT_WORK();
 			//replicas[replica_Y].calcZMatrixBAT_WORK();
-
 			// Calculate thermodynamic states BAT stats
 			//thermodynamicStates[thermoState_C].calcZMatrixBATStats();
 			//thermodynamicStates[thermoState_H].calcZMatrixBATStats();
 
 		}
-
-		// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 
 		// Update replicas coordinates from work generated coordinates
 		set_WORK_CoordinatesAsFinal(replica_X);
@@ -4250,6 +4240,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		returnValue = true;
 
+	// Reject
 	}else{
 
 		// Return to equilibrium worlds coordinates
@@ -5113,41 +5104,6 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 }
 
-// Go through all of this replica's worlds and generate samples
-int Context::RunReplicaAllWorlds(int thisReplica, int howManyRounds)
-{
-	// Get thermoState corresponding to this replica
-	// KEYWORD = replica, VALUE = thermoState
-	int thisThermoStateIx = replica2ThermoIxs[thisReplica];
-
-	// Get this world indexes from the corresponding thermoState
-	std::vector<int> &replicaWorldIxs = 
-		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
-
-	// Get nof worlds in this replica
-	size_t replicaNofWorlds = replicaWorldIxs.size();
-
-	// Set thermo and simulation parameters for the worlds in this replica
-	setReplicasWorldsParameters(thisReplica);
-
-	// Go through the requested nof rounds
-	int frontWIx = -1;
-	for(size_t ri = 0; ri < howManyRounds; ri++){
-
-		// Go through each world of this replica
-		for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
-
-			// Run front world
-			frontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
-
-		} // END iteration through worlds
-
-	} // END iteration through rounds
-
-	return frontWIx;
-
-}
-
 /* vector<string> split(const string& i_str, const string& i_delim)
 {
     vector<string> result;
@@ -5429,20 +5385,192 @@ void Context::RunREX()
 
 }
 
+
+void Context::RunWorlds(std::vector<int>& specificWIxs)
+{
+	bool validated = true;
+
+	for(std::size_t spWCnt = 0; spWCnt < specificWIxs.size() - 1; spWCnt++){
+
+		validated = validated && RunWorld(specificWIxs[spWCnt]);
+
+		transferCoordinates(specificWIxs[spWCnt], specificWIxs[spWCnt + 1]);
+
+	}
+
+	validated = validated && RunWorld(specificWIxs.back());
+
+	#ifdef PRINTALOT 
+		if(validated){
+			std::cout << std::endl;
+		}else{
+			std::cout << " invalid sample." << std::endl;
+		}
+	#endif
+}
+
+void Context::RunReplicaRefactor(
+	int mixi,
+	int replicaIx,
+	std::vector<int>& equilWIxs,
+	std::vector<int>& nonequilWIxs)
+{
+
+	// std::cout << "Equil world indexes" ;
+	// for(int eWIx = 0 ; eWIx < equilWIxs.size() ; eWIx++){
+	// 	std::cout <<" " << equilWIxs[eWIx] ;
+	// }
+	// std::cout << std::endl << std::flush;
+
+	// std::cout << "Nonequil world indexes" ;
+	// for(int eWIx = 0 ; eWIx < nonequilWIxs.size() ; eWIx++){
+	// 	std::cout <<" " << nonequilWIxs[eWIx] ;
+	// }
+	// std::cout << std::endl;	
+
+	RunWorlds(equilWIxs);
+
+	transferCoordinates(equilWIxs.back(), nonequilWIxs.front());
+
+	replicas[replicaIx].updAtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround());
+
+	replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
+
+	REXLog(mixi, replicaIx);
+
+	RunWorlds(nonequilWIxs);
+
+	transferCoordinates(nonequilWIxs.back(), equilWIxs.front());
+
+	replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) ); // possibly not correct
+
+	replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
+
+	replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].CalcPotentialEnergy());
+
+    SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
+	replicas[replicaIx].set_WORK_Jacobian(jac);
+
+	SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
+	replicas[replicaIx].setFixman(fix_set_back);
+
+}
+
+// Run replica exchange protocol
+void Context::RunREXNew()
+{
+
+	// Is this necesary =======================================================
+	realizeTopology(); 
+
+	// Allocate space for swap matrices
+	allocateSwapMatrices();
+
+	// Initialize replicas
+	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+
+		// Set intial parameters
+		initializeReplica(replicaIx);
+
+	} // ======================================================================
+
+	// Print a header =========================================================
+	std::stringstream rexOutput;
+	rexOutput.str("");
+
+	rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx"
+	<< ", " << "frontWIx" << ", " << "backWIx";
+
+	worlds[0].getSampler(0)->getMsg_Header(rexOutput);
+	rexOutput << std::endl;
+
+	getMsg_RexDetHeader(rexOutput);
+
+	std::cout << rexOutput.str() << std::endl;
+	// ------------------------------------------------------------------------
+
+
+	// Internal debug studies
+	bool givenTsMode = false;
+
+	// Useful vars
+	int nofMixes = requiredNofRounds;
+	int currFrontWIx = -1;
+
+	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
+	for(size_t mixi = 0; mixi < nofMixes; mixi++){
+
+		//std::cout << " REX batch " << mixi << std::endl;
+
+		// Reset replica exchange pairs vector
+		if(getRunType() != RUN_TYPE::DEFAULT){                                                 // (9) + (10)
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				setReplicaExchangePairs(mixi % 2);
+			}
+		}
+
+		// Update work scale factors
+		updQScaleFactors(mixi);
+
+		// SIMULATE EACH REPLICA --------------------------------------------->
+		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+
+			std::vector<int> equilWIxs = {0, 1};
+			std::vector<int> nonequilWIxs = {2};
+
+			// Update BAT map for all the replica's world
+			updSubZMatrixBATsToAllWorlds(replicaIx);
+
+			// Load the front world
+			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);           // (1)
+
+			// Set non-equilibrium parameters: get scale factors
+			updWorldsDistortOptions(replicaIx);
+
+			// Set thermo and simulation parameters for the worlds in this replica
+			setReplicasWorldsParameters(replicaIx);
+
+			// ======================== SIMULATE ======================
+			// Includes worlds rotations
+			RunReplicaRefactor(mixi, replicaIx, equilWIxs, nonequilWIxs);         
+
+		} // end replicas simulations
+
+		// Mix replicas
+		if(getRunType() != RUN_TYPE::DEFAULT){
+			
+			mixReplicas(mixi); // check this
+			                                               
+			PrintNofAcceptedSwapsMatrix();
+		}
+
+		this->nofRounds++; 
+
+		if (wantDCD) {
+			writeDCDs();
+		}
+
+	} // end rounds
+
+	//PrintNofAttemptedSwapsMatrix();
+	PrintNofAcceptedSwapsMatrix();
+	//PrintReplicaMaps();
+
+}
+
+
 /**
- * Go through the vector of worlds and if their equilibrium worlds run and 
- * rotate. 
+ * Go through the vector of worlds and if they are equilibrium worlds
+ * run each one of them and rotate. 
 */
 int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 {
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
-	// Get this world indexes from the corresponding thermoState
+	// Get replica's world indexes
 	std::vector<int>& replicaWorldIxs = 
 		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
-
-	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	/* std::cout << "Context::RunReplicaEquilibriumWorlds replicaWorldIxs before ";
@@ -5455,13 +5583,9 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 		if( thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		== 0){
 
-			// Print replica indicator
-			std::cout << "REX, " << replicaIx
-				<< ", " << thisThermoStateIx;
-
-			// Print transfer information
+			// Print replica and worlds info
+			std::cout << "REX, " << replicaIx << ", " << thisThermoStateIx;
 			std::cout << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
-			// ----
 
 			// Run front world
 			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
@@ -5472,14 +5596,10 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 
 			// BAT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-			// Get front world and it's state
+			// Calculate replica BAT and BAT stats
 			World& currFrontWorld = worlds[currFrontWIx];
 			SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
-
-			// Calculate replica BAT
 			replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround( currFrontState ));
-
-			// Calculate thermodynamic states BAT stats
 			//thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
 
 			if((thermodynamicStates[thisThermoStateIx].getNofSamples() % 1) == 100)
@@ -5569,20 +5689,18 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 
 }
 
-
+/**
+ * Go through the vector of worlds and if they are equilibrium worlds
+ * run each one of them and rotate. 
+*/
 int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 {
 	// Get thermoState corresponding to this replica
 	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 
-	// Get thermostate exchange partner
-	int pairThermoState = getThermoPair(thisThermoStateIx);
-
-	// Get this world indexes from the corresponding thermoState
+	// Get replica's world indexes
 	std::vector<int>& replicaWorldIxs = 
 		thermodynamicStates[thisThermoStateIx].updWorldIndexes();
-
-	// Get nof worlds in this replica
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	/* std::cout << "Context::RunReplicaNonquilibriumWorlds replicaWorldIxs before ";
@@ -5595,13 +5713,9 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 		if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
 		!= 0){
 
-			// Print replica indicator
-			std::cout << "REX, " << replicaIx
-				<< ", " << thisThermoStateIx;
-
-			// Print transfer information
+			// Print replica and worlds info
+			std::cout << "REX, " << replicaIx << ", " << thisThermoStateIx;
 			std::cout << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
-			// ----
 
 			//// Transfer BAT statistics to sampler
 			//setSubZmatrixBATStatsToSamplers(thisThermoStateIx, replicaWorldIxs.front());
@@ -5617,18 +5731,11 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 				replicas[replicaIx].incrementNofSamples();
 				thermodynamicStates[thisThermoStateIx].incrementNofSamples();
 
-
-
-				// Get front world and it's state
+				// Calculate replica BAT and BAT stats
 				World& currFrontWorld = worlds[currFrontWIx];
 				SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
-
-				// Calculate replica BAT
 				replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround( currFrontState ));
-
-				//// Calculate thermodynamic states BAT stats
 				//thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
-				////thermodynamicStates[thisThermoStateIx].PrintZMatrixBAT();
 
 			}else{
 				// Don't increment the number of samples. Leave it for attemptREXSwap
@@ -5645,6 +5752,66 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 
 	return currFrontWIx;
 }
+
+/**
+ * Go through the vector of worlds and if they are equilibrium worlds
+ * run each one of them and rotate. 
+*/
+int Context::RunReplicaAllWorlds(int mixi, int replicaIx, int swapEvery)
+{
+	// Get replica's thermostate and world indexes
+	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+	std::vector<int>& replicaWorldIxs = thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+	int initial_frontWorldIx = replicaWorldIxs.front();
+
+	// Iterate worlds
+	int currFrontWIx = -1;
+	for(std::size_t wCnt = 0; wCnt < replicaWorldIxs.size(); wCnt++){
+
+		// Print replica and worlds info
+		std::cout << "REX, " << replicaIx << ", " << thisThermoStateIx << ", " << replicaWorldIxs.front() << ", " << replicaWorldIxs.back();
+
+		// Run front world, translate right to left and transfer back to front 
+		RunFrontWorldAndRotate(replicaWorldIxs);
+		int currFrontWIx = replicaWorldIxs.front();
+		int currBackWIx  = replicaWorldIxs.back();
+
+		if((thermodynamicStates[thisThermoStateIx].getDistortOptions()[wCnt] == 0)){
+			storeReplicaCoordinatesFromFrontWorld(replicaIx);
+			storeReplicaEnergyFromFrontWorldFull(replicaIx);
+		}else{
+			replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) );
+			store_WORK_CoordinatesFromFrontWorld(replicaIx);
+			store_WORK_ReplicaEnergyFromFrontWorldFull(replicaIx);
+			store_WORK_JacobianFromBackWorld(replicaIx);
+			storeReplicaFixmanFromBackWorld(replicaIx);
+		}
+
+		// End of the worlds' cycle
+		if((currFrontWIx == initial_frontWorldIx) && (getRunType() == RUN_TYPE::RENE)){
+
+			// do nothing
+
+		}else{
+
+			// Increment the nof samples for replica and thermostate
+			replicas[replicaIx].incrementNofSamples();
+			thermodynamicStates[thisThermoStateIx].incrementNofSamples();
+
+			// Calculate replica BAT and BAT stats
+			World& currFrontWorld = worlds[currFrontWIx];
+			SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
+			replicas[replicaIx].calcZMatrixBAT( currFrontWorld.getAtomsLocationsInGround( currFrontState ));
+			//thermodynamicStates[thisThermoStateIx].calcZMatrixBATStats();
+		}
+
+		if( getRunType() != RUN_TYPE::RENE){}
+
+	} // END iteration through worlds
+
+	return currFrontWIx;
+}
+
 
 SimTK::Real Context::calcReplicaTransferedEnergy(int replicaIx)
 {
