@@ -571,7 +571,7 @@ public:
 
 	// Run front world, rotate and transfer. Return worldIxs.front
 	int RunFrontWorldAndRotate(std::vector<int> & worldIxs);
-	void RunWorlds(std::vector<int>& specificWIxs);
+	void RunWorlds(std::vector<int>& specificWIxs, int replicaIx);
 
 	// Print to log and write pdbs
 	void RunLog(int roundi);
@@ -594,7 +594,7 @@ public:
 	// Go through all of this replica's worlds and generate samples
 	int RunReplicaAllWorlds(int mixi, int replicaIx, int swapEvery);
 
-	void RunReplicaRefactor(int mixi, int replicaIx, std::vector<int>& equilWIxs, std::vector<int>& nonequilWIxs);
+	void RunReplicaRefactor(int mixi, int replicaIx);
 
 	void PrintReplicas(void);
 	void PrintReplicaMaps(void);

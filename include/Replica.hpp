@@ -141,6 +141,7 @@ public:
 
     // Incrementer function for nofSamples
     void incrementNofSamples();
+	void incrementNofSamples(int howMany);
 
    std::vector<std::vector<SimTK::Real>>& getZMatrixBATPointer() {
         return (zMatrixBAT);

@@ -643,6 +643,13 @@ void Replica::incrementNofSamples() {
     ++nofSamples;
 }
 
+/*!
+ * <!--	zmatrixbat_ Incrementer function implementation -->
+*/
+void Replica::incrementNofSamples(int howMany) {
+    nofSamples += howMany;
+}
+
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // ZMatrix BAT

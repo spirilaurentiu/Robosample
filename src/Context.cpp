@@ -4209,11 +4209,10 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		if( getRunType() == RUN_TYPE::RENE){
 
-			replicas[replica_X].incrementNofSamples();
-			replicas[replica_Y].incrementNofSamples();
-
-			thermodynamicStates[thermoState_C].incrementNofSamples();
-			thermodynamicStates[thermoState_H].incrementNofSamples();
+			// replicas[replica_X].incrementNofSamples();
+			// replicas[replica_Y].incrementNofSamples();
+			// thermodynamicStates[thermoState_C].incrementNofSamples();
+			// thermodynamicStates[thermoState_H].incrementNofSamples();
 
 			// Calculate replica BAT
 			//replicas[replica_X].calcZMatrixBAT_WORK();
@@ -5015,7 +5014,7 @@ bool Context::RunWorld(int whichWorld)
 
 	}
 
-	calcQStats();
+	//calcQStats();
 	////printQStats();
 
 	// Print the world output stream
@@ -5385,20 +5384,53 @@ void Context::RunREX()
 
 }
 
-
-void Context::RunWorlds(std::vector<int>& specificWIxs)
+/**
+ * Run a vector of worlds
+ */ 
+void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 {
+	//std::cout << "\n RunWorlds "; PrintCppVector(specificWIxs); ceolf;
+
 	bool validated = true;
 
 	for(std::size_t spWCnt = 0; spWCnt < specificWIxs.size() - 1; spWCnt++){
 
-		validated = validated && RunWorld(specificWIxs[spWCnt]);
+		// Print replica and worlds info
+		std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx];
+		std::cout << " , " << specificWIxs[spWCnt];
+
+		validated = RunWorld(specificWIxs[spWCnt]) && validated;
+
+		if(false){
+			std::cout << "\n\n=========== HMCSampler\n" << std::flush;
+			worlds[specificWIxs[spWCnt]].updSampler(0)->Print(
+				worlds[specificWIxs[spWCnt]].integ->updAdvancedState(), false, false);
+			std::cout << "\n------------\n\n" << std::flush;
+		}
 
 		transferCoordinates(specificWIxs[spWCnt], specificWIxs[spWCnt + 1]);
 
+		// // Calculate replica BAT and BAT stats
+		// World& currWorld = worlds[specificWIxs[spWCnt]];
+		// SimTK::State& currState = currWorld.integ->updAdvancedState();
+		// replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
+
+
 	}
 
-	validated = validated && RunWorld(specificWIxs.back());
+	std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx];
+	std::cout << ", " << specificWIxs.back();
+
+	validated = RunWorld(specificWIxs.back()) && validated;
+
+	// Calculate replica BAT and BAT stats
+	World& currWorld = worlds[specificWIxs.back()];
+	SimTK::State& currState = currWorld.integ->updAdvancedState();
+	replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
+
+	// #ifndef PRINTALOT
+	// #define PRINTALOT
+	// #endif
 
 	#ifdef PRINTALOT 
 		if(validated){
@@ -5411,50 +5443,102 @@ void Context::RunWorlds(std::vector<int>& specificWIxs)
 
 void Context::RunReplicaRefactor(
 	int mixi,
-	int replicaIx,
-	std::vector<int>& equilWIxs,
-	std::vector<int>& nonequilWIxs)
+	int replicaIx)
 {
 
-	// std::cout << "Equil world indexes" ;
-	// for(int eWIx = 0 ; eWIx < equilWIxs.size() ; eWIx++){
-	// 	std::cout <<" " << equilWIxs[eWIx] ;
-	// }
-	// std::cout << std::endl << std::flush;
+	// Get equilibrium and non-equilibrium worlds
+	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+	std::vector<int>& replicaWorldIxs = thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+	size_t replicaNofWorlds = replicaWorldIxs.size();
+	std::vector<int> & distortOpts = thermodynamicStates[thisThermoStateIx].getDistortOptions();
 
-	// std::cout << "Nonequil world indexes" ;
-	// for(int eWIx = 0 ; eWIx < nonequilWIxs.size() ; eWIx++){
-	// 	std::cout <<" " << nonequilWIxs[eWIx] ;
-	// }
-	// std::cout << std::endl;	
+	std::vector<int> equilWIxs;
+	std::vector<int> nonequilWIxs;
+	equilWIxs.reserve(distortOpts.size());
+	nonequilWIxs.reserve(distortOpts.size());
 
-	RunWorlds(equilWIxs);
+	for(int dIx = 0; dIx < distortOpts.size(); dIx++){
+		if(distortOpts[dIx] == 0){
+			equilWIxs.push_back(dIx);
+		}else if(distortOpts[dIx] < 0){
+			nonequilWIxs.push_back(dIx);
+		}else{
+			warn("Unknown distort option");
+		}
+	}
 
-	transferCoordinates(equilWIxs.back(), nonequilWIxs.front());
+	//scout("\nEquil world indexes") ;if(equilWIxs.size() > 0){PrintCppVector(equilWIxs);}scout("\nNonequil world indexes") ;if(nonequilWIxs.size() > 0){PrintCppVector(nonequilWIxs);}ceolf;
 
-	replicas[replicaIx].updAtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround());
+	if((equilWIxs.size() == 0) && (nonequilWIxs.size() == 0)){
+		warn("No worlds");
+		return;
+	}
 
-	replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
+	if(!equilWIxs.empty()){ // Equilibrium
+	
+		RunWorlds(equilWIxs, replicaIx);
+		
+		replicas[replicaIx].updAtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround());
+	
+		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
 
-	REXLog(mixi, replicaIx);
+		REXLog(mixi, replicaIx);
 
-	RunWorlds(nonequilWIxs);
+		if(!nonequilWIxs.empty()){ // Non-Equilibrium
 
-	transferCoordinates(nonequilWIxs.back(), equilWIxs.front());
+			transferCoordinates(equilWIxs.back(), nonequilWIxs.front());
 
-	replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) ); // possibly not correct
+			RunWorlds(nonequilWIxs, replicaIx);
+		
+			replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) ); // possibly not correct
+		
+			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
+		
+			replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].CalcPotentialEnergy());
+		
+			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
+			replicas[replicaIx].set_WORK_Jacobian(jac);
+		
+			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
+			replicas[replicaIx].setFixman(fix_set_back);
 
-	replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
+			transferCoordinates(nonequilWIxs.back(), equilWIxs.front());
 
-	replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].CalcPotentialEnergy());
+		}else{
 
-    SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
-	replicas[replicaIx].set_WORK_Jacobian(jac);
+			transferCoordinates(equilWIxs.back(), equilWIxs.front());
+			
+		}
 
-	SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
-	replicas[replicaIx].setFixman(fix_set_back);
+		return;
+	}
+		
+	if(!nonequilWIxs.empty()){ // Only Non-Equilibrium
+
+		RunWorlds(nonequilWIxs, replicaIx);
+	
+		replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) ); // possibly not correct
+	
+		replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
+	
+		replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].CalcPotentialEnergy());
+	
+		SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
+		replicas[replicaIx].set_WORK_Jacobian(jac);
+	
+		SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
+		replicas[replicaIx].setFixman(fix_set_back);
+
+		transferCoordinates(nonequilWIxs.back(), nonequilWIxs.front());
+
+	}
+
+	// Increment the nof samples for replica and thermostate
+	replicas[replicaIx].incrementNofSamples(replicaNofWorlds);
+	thermodynamicStates[thisThermoStateIx].incrementNofSamples(replicaNofWorlds);
 
 }
+
 
 // Run replica exchange protocol
 void Context::RunREXNew()
@@ -5515,9 +5599,6 @@ void Context::RunREXNew()
 		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 
-			std::vector<int> equilWIxs = {0, 1};
-			std::vector<int> nonequilWIxs = {2};
-
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
 
@@ -5531,8 +5612,7 @@ void Context::RunREXNew()
 			setReplicasWorldsParameters(replicaIx);
 
 			// ======================== SIMULATE ======================
-			// Includes worlds rotations
-			RunReplicaRefactor(mixi, replicaIx, equilWIxs, nonequilWIxs);         
+			RunReplicaRefactor(mixi, replicaIx);         
 
 		} // end replicas simulations
 

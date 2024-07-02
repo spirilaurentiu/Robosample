@@ -188,6 +188,12 @@ void ThermodynamicState::incrementNofSamples() {
     ++nofSamples;
 }
 
+/*!
+ * <!--	zmatrixbat_ Incrementer function implementation -->
+*/
+void ThermodynamicState::incrementNofSamples(int howMany) {
+    nofSamples += howMany;
+}
 
 /*!
  * <!--	zmatrixbat_ -->
