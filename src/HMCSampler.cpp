@@ -577,9 +577,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// Scaling Work BEGIN SCALEQ
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			// Scale. It realizes Dynamics Stage
-			SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
-			scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
+			//SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			//scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
+			//scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
 
 			// // SCALEQ_INFO ################################################################################################################
 			// // Print temperature
@@ -602,7 +602,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
 
-			////PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
+			////PrintSubZMatrixBATAndRelated(someState); // OLD
 			//bool BernoulliTrial = true;
 			//bool varianceBasedScalingFactor = false;
 			//std::vector<int> BATOrder = {1, 0, 2};			// bendstretch
@@ -614,10 +614,10 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// J_scale = scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor(), BernoulliTrial, varianceBasedScalingFactor, BATOrder, BATSign);
 			//// After scaling through Qs, we have to recalculate BAT values
 			//updateSubZMatrixBAT(someState);
-			////PrintSubZMatrixBATAndRelated(someState); // &&&&&&&&&&&&&&&&&&&&&
+			////PrintSubZMatrixBATAndRelated(someState); // OLD
 
 
-			std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl;
+			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
 
 			SimTK::Vector &stateQs = someState.updQ();
 			for(int qIx = 0; qIx < someState.getNQ(); qIx++){
@@ -632,20 +632,20 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			system->realize(someState, SimTK::Stage::Position);
 
-			std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl;
+			//std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			
 			//J_fin = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
 			setDistortJacobianDetLog(J_ini + J_scale - J_fin);
-			scout("BAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
+			//scout("BAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
 
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			// Scaling Work END SCALEQ
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
+			//SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
+			//scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
 
 			// Just for the Visualizer
 			if(world->visual){

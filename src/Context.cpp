@@ -4209,10 +4209,10 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		if( getRunType() == RUN_TYPE::RENE){
 
-			// replicas[replica_X].incrementNofSamples();
-			// replicas[replica_Y].incrementNofSamples();
-			// thermodynamicStates[thermoState_C].incrementNofSamples();
-			// thermodynamicStates[thermoState_H].incrementNofSamples();
+			replicas[replica_X].incrementNofSamples();
+			replicas[replica_Y].incrementNofSamples();
+			thermodynamicStates[thermoState_C].incrementNofSamples();
+			thermodynamicStates[thermoState_H].incrementNofSamples();
 
 			// Calculate replica BAT
 			//replicas[replica_X].calcZMatrixBAT_WORK();
@@ -4962,16 +4962,16 @@ bool Context::RunWorld(int whichWorld)
 
 			// validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
 
-				warn("under drilling conditions");
+				//warn("under drilling conditions");
 
 				// Update Robosample bAtomList
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
 				(worlds[whichWorld]).updateAtomListsFromCompound(currentAdvancedState);
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT init:"); ceolf;
-				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				thermodynamicStates[0].PrintZMatrixBAT();
+				// coutspaced("SCALING_BAT init:"); ceolf;
+				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+				// thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
 				// Reinitialize the sampler
@@ -4979,10 +4979,10 @@ bool Context::RunWorld(int whichWorld)
 					worldOutStream);
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				// scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
@@ -4993,15 +4993,15 @@ bool Context::RunWorld(int whichWorld)
 				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
 				// ''''''''''''''''''''
-				coutspaced("SCALING_BAT after:"); ceolf;
-				replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				thermodynamicStates[0].PrintZMatrixBAT();
+				// coutspaced("SCALING_BAT after:"); ceolf;
+				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+				// thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
 
-				scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+				// scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
+				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
+				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
 
 			// }
 
@@ -5534,8 +5534,14 @@ void Context::RunReplicaRefactor(
 	}
 
 	// Increment the nof samples for replica and thermostate
-	replicas[replicaIx].incrementNofSamples(replicaNofWorlds);
-	thermodynamicStates[thisThermoStateIx].incrementNofSamples(replicaNofWorlds);
+	if(getRunType() != RUN_TYPE::RENE){
+		replicas[replicaIx].incrementNofSamples(replicaNofWorlds-1);
+		thermodynamicStates[thisThermoStateIx].incrementNofSamples(replicaNofWorlds-1);
+	}else{
+		replicas[replicaIx].incrementNofSamples(replicaNofWorlds);
+		thermodynamicStates[thisThermoStateIx].incrementNofSamples(replicaNofWorlds);		
+	}
+
 
 }
 
