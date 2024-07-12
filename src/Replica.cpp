@@ -639,15 +639,15 @@ Replica::calcInternalBATJacobianLog(void)
 /*!
  * <!--	zmatrixbat_ Incrementer function implementation -->
 */
-void Replica::incrementNofSamples() {
-    ++nofSamples;
+void Replica::incrementWorldsNofSamples() {
+    ++allWorldsNofSamples;
 }
 
 /*!
  * <!--	zmatrixbat_ Incrementer function implementation -->
 */
-void Replica::incrementNofSamples(int howMany) {
-    nofSamples += howMany;
+void Replica::incrementWorldsNofSamples(int howMany) {
+    allWorldsNofSamples += howMany;
 }
 
 // ---------------------------------------------------------------------------

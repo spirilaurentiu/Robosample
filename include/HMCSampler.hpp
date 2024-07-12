@@ -711,7 +711,9 @@ protected:
 	std::deque<SimTK::Real> QsBuffer;
 
 	// Buffer to hold Q means
-	std::vector<SimTK::Real> QsMeans;
+	// std::vector<SimTK::Real>& Qmeans;
+	// std::vector<SimTK::Real>& Qdiffs;
+	// std::vector<SimTK::Real>& Qstds;
 
 	SimTK::Real acceptance = SimTK::NaN,
 		prevAcceptance = SimTK::NaN;

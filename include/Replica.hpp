@@ -140,8 +140,10 @@ public:
 	calcInternalBATJacobianLog(void);
 
     // Incrementer function for nofSamples
-    void incrementNofSamples();
-	void incrementNofSamples(int howMany);
+    void incrementWorldsNofSamples();
+	void incrementWorldsNofSamples(int howMany);
+    void incrementNofSamples(){nofSamples++;}
+	void incrementNofSamples(int howMany){nofSamples += howMany;}
 
    std::vector<std::vector<SimTK::Real>>& getZMatrixBATPointer() {
         return (zMatrixBAT);
@@ -189,7 +191,9 @@ private:
 	//std::vector<SimTK::QIndex> QIxs;
 
 	// BAT
-	int nofSamples = 0;	
+	int allWorldsNofSamples = 0;
+	int nofSamples = 0;
+		
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////

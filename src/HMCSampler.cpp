@@ -178,9 +178,10 @@ bool HMCSampler::initialize(SimTK::State& someState)
 	}
 
 	// Buffer to hold Q means
-	if(this->nofSamples == 0){
-		QsMeans.resize(matter->getNQ(someState), 0);
-	}
+	// if(this->nofSamples == 0){
+	// 	Qmeans.resize(matter->getNQ(someState), 0);
+	// 	Qstds.resize(matter->getNQ(someState), 0);
+	// }
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
@@ -358,9 +359,10 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	loadUScaleFactors(someState);
 
 	// Buffer to hold Q means
-	if(this->nofSamples == 0){
-		QsMeans.resize(matter->getNQ(someState), 0);
-	}
+	// if(this->nofSamples == 0){
+	// 	Qmeans.resize(matter->getNQ(someState), 0);
+	// 	Qstds.resize(matter->getNQ(someState), 0);
+	// }
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);

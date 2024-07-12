@@ -1004,9 +1004,9 @@ private:
 	
 	void setThermostatesQs(void);
 
-	void calcQStats(void);
+	void calcQStats(int thIx);
 
-	void printQStats(void);
+	void printQStats(int thIx);
 
 	//////////////////////////////////
 	//---         Q Stats        -----
