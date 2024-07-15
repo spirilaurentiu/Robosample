@@ -170,29 +170,22 @@ void ThermodynamicState::Print()
 /*!
  * <!--	zmatrixbat_ Getter function implementation -->
 */
-int ThermodynamicState::getNofSamples() const {
-    return nofSamples;
-}
-
-/*!
- * <!--	zmatrixbat_ Setter function implementation -->
-*/
-void ThermodynamicState::setNofSamples(int newNofSamples) {
-    nofSamples = newNofSamples;
+int ThermodynamicState::getNofWorldsSamples() const {
+    return allWorldsNofSamples;
 }
 
 /*!
  * <!--	zmatrixbat_ Incrementer function implementation -->
 */
-void ThermodynamicState::incrementNofSamples() {
-    ++nofSamples;
+void ThermodynamicState::incrementWorldsNofSamples() {
+    ++allWorldsNofSamples;
 }
 
 /*!
  * <!--	zmatrixbat_ Incrementer function implementation -->
 */
-void ThermodynamicState::incrementNofSamples(int howMany) {
-    nofSamples += howMany;
+void ThermodynamicState::incrementWorldsNofSamples(int howMany) {
+    allWorldsNofSamples += howMany;
 }
 
 /*!
@@ -224,7 +217,7 @@ void ThermodynamicState::PrintZMatrixBAT(bool printBATStats) const {
 			std::cout << std::setprecision(12) << value << " ";
 		}
 
-		if(nofSamples > 0){
+		if(allWorldsNofSamples > 0){
 
 			if(printBATStats){
 				
@@ -261,11 +254,11 @@ ThermodynamicState::calcZMatrixBATStats(void)
 {
 
 	// Usefull vars
-	SimTK::Real N = nofSamples + 1;
+	SimTK::Real N = allWorldsNofSamples + 1;
 	SimTK::Real N_1_over_N = (N - 1.0) / N;
 	SimTK::Real Ninv = 1.0 / N;
 			
-	if(nofSamples == 0){
+	if(allWorldsNofSamples == 0){
 
         // Initialize zMatrixBATMeans, zMatrixBATDiffs, and zMatrixBATStds
         zMatrixBATMeans.resize((*zMatrixBAT_poi).size(), std::vector<SimTK::Real>(3, 0));
@@ -373,6 +366,18 @@ void ThermodynamicState::allocQStatsFirstDimension(void)
 }
 
 /*!
+ * <!-- 
+ * N starts at 1 -->
+*/
+double instantAverage(int N, double prevAvg, double currSam)
+{
+	SimTK_ASSERT(N>0, "N must be gt 0");
+	SimTK::Real N_1_over_N = (N - 1.0) / N;
+	SimTK::Real Ninv = 1.0 / N;
+	return (N_1_over_N * prevAvg) + (Ninv * currSam);
+}
+
+/*!
  * <!--  -->
 */
 bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldQs)
@@ -385,14 +390,14 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	// Search the position in cpp vector
 	bool found = false;
-	int vPosInVector = -1;
+	int wPosInVector = -1;
 
 	for(const auto wIx : worldIndexes){
-		vPosInVector++;
+		wPosInVector++;
 
 		if(whichWorld == wIx){
 
-			vPosInVector = wIx;
+			wPosInVector = wIx;
 			found = true;
 			break;
 		}
@@ -402,40 +407,53 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 		return false;
 	}
 
+	// Resize
+	if(Qmeans[wPosInVector].size() == 0){
+        Qmeans[wPosInVector].resize(worldQs.size());
+        Qdiffs[wPosInVector].resize(worldQs.size());
+        Qvars[wPosInVector].resize(worldQs.size());
+	}
+
 	if(nofSamples == 0){
 
-		// Resize
-        Qmeans[vPosInVector].resize(worldQs.size());
-        Qdiffs[vPosInVector].resize(worldQs.size());
-        Qvars[vPosInVector].resize(worldQs.size());
+		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+			std::cout << "thIx " << myIndex << " wIx " << whichWorld 
+			<< " nq " << worldQs.size() << " N " << N <<" qs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){
+				std::cout <<" " << worldQs[qIx];
+			}std::cout << std::endl; 
+		} // ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 		// Initialize at the first sample
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
-
-			Qmeans[vPosInVector][qIx] = worldQs[qIx];
-
-			Qdiffs[vPosInVector][qIx] = 0;
-
-			Qvars[vPosInVector][qIx] = 0;
-
+			Qmeans[wPosInVector][qIx] = worldQs[qIx];
+			Qdiffs[wPosInVector][qIx] = 0;
+			Qvars[wPosInVector][qIx] = 0;
 		}
 
 	}else{ // nofSamples gt 2
 
+		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+			std::cout << "thIx " << myIndex << " wIx " << whichWorld 
+			<< " nq " << worldQs.size() << " N " << N <<" qs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){
+				std::cout <<" " << worldQs[qIx];
+			}std::cout << std::endl; 
+		} // ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
 		// Update Q means
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
-
-			Qmeans[vPosInVector][qIx] = (N_1_over_N * Qmeans[vPosInVector][qIx]) + (Ninv * worldQs[qIx]);
+			Qmeans[wPosInVector][qIx] = instantAverage(N, Qmeans[wPosInVector][qIx], worldQs[qIx]);
 		}
 
 		// Update Q differences
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
-			Qdiffs[vPosInVector][qIx] = worldQs[qIx] - Qmeans[vPosInVector][qIx];
+			Qdiffs[wPosInVector][qIx] = worldQs[qIx] - Qmeans[wPosInVector][qIx];
 		}
 
 		// Update Q variances
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
-			Qvars[vPosInVector][qIx] = (N_1_over_N * Qvars[vPosInVector][qIx]) + (Ninv * (Qdiffs[vPosInVector][qIx] * Qdiffs[vPosInVector][qIx]));
+			Qvars[wPosInVector][qIx] = (N_1_over_N * Qvars[wPosInVector][qIx]) + (Ninv * (Qdiffs[wPosInVector][qIx] * Qdiffs[wPosInVector][qIx]));
 		}
 
 	} // nofSamples gt 2
@@ -453,7 +471,7 @@ void ThermodynamicState::printQStats(void)
 	for(const auto wIx : worldIndexes){
 		wPosInVector++;
 
-		std::cout << "wIx " << wIx << " nq " << Qmeans[wPosInVector].size() <<": ";
+		std::cout << "thIx " << myIndex << " wIx " << wIx << " nq " << Qmeans[wPosInVector].size() << " N " << nofSamples+1  <<" : ";
 		for(int qIx = 0; qIx < Qmeans[wPosInVector].size(); qIx++){
 			std::cout <<" " << Qmeans[wPosInVector][qIx];
 		}
@@ -462,3 +480,32 @@ void ThermodynamicState::printQStats(void)
 
 }
 
+/*!
+ * <!--  -->
+*/
+std::vector<SimTK::Real>& ThermodynamicState::getQmeans(const int whichWorld)
+{
+
+	// Search the position in cpp vector
+	bool found = false;
+	int wPosInVector = -1;
+
+	for(const auto wIx : worldIndexes){
+		wPosInVector++;
+
+		if(whichWorld == wIx){
+
+			wPosInVector = wIx;
+			found = true;
+			break;
+		}
+	}
+
+	if(found == false){
+		std::cerr << "Thermodynamic state " << myIndex << " world " << whichWorld << " not found. Exiting...\n";
+		exit(1);
+	}else{
+		return Qmeans[wPosInVector];
+	}
+
+}

@@ -73,15 +73,14 @@ class ThermodynamicState{
     /**@{**/
 
     // Getter function for nofSamples
-    int getNofSamples() const;
-
-    // Setter function for nofSamples
-    void setNofSamples(int newNofSamples);
+	int getNofWorldsSamples() const;
+    int getNofSamples() const {return nofSamples;};
 
     // Incrementer function for nofSamples
-    void incrementNofSamples();
-    void incrementNofSamples(int howMany);	
-
+    void incrementWorldsNofSamples();
+    void incrementWorldsNofSamples(int howMany);	
+    void incrementNofSamples(){nofSamples++;}
+	void incrementNofSamples(int howMany){nofSamples += howMany;}
 	void PrintZMatrixBAT(bool printBATStats = false) const ;
 
 	//
@@ -124,6 +123,7 @@ class ThermodynamicState{
 	void allocQStatsFirstDimension(void);
 	bool calcQStats(const int whichWorld, const SimTK::Vector & worldQs);
 	void printQStats(void);
+	std::vector<SimTK::Real>& getQmeans(const int whichWorld);
 
 	/**@}**/	
   
@@ -152,6 +152,7 @@ class ThermodynamicState{
 	std::vector<int> rexWorkOptions;
 	std::vector<std::string> rexIntegrators;
 
+	int allWorldsNofSamples = 0;
 	int nofSamples = 0;
 
 	//////////////////////////////////
@@ -175,8 +176,7 @@ class ThermodynamicState{
 	//---         Q Stats        -----
 	//////////////////////////////////
 
-	//std::vector< SimTK::Vector & > allQs;
-
+	//std::vector<std::vector<SimTK::Real>> Qs; 	// vector[world][qindex]
 	std::vector<std::vector<SimTK::Real>> Qdiffs; // vector[world][qindex]
 	std::vector<std::vector<SimTK::Real>> Qmeans; // vector[world][qindex]
 	std::vector<std::vector<SimTK::Real>> Qvars;  // vector[world][qindex]

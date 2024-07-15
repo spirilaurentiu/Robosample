@@ -178,9 +178,10 @@ bool HMCSampler::initialize(SimTK::State& someState)
 	}
 
 	// Buffer to hold Q means
-	if(this->nofSamples == 0){
-		QsMeans.resize(matter->getNQ(someState), 0);
-	}
+	// if(this->nofSamples == 0){
+	// 	Qmeans.resize(matter->getNQ(someState), 0);
+	// 	Qstds.resize(matter->getNQ(someState), 0);
+	// }
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
@@ -204,6 +205,10 @@ bool HMCSampler::initialize(SimTK::State& someState)
 	//for(int i = 0; i < ndofs; i++){
 	//	NMARotation[i][i] = 1.0;
 	//}
+
+	// Qmeans = new std::vector<SimTK::Real>;
+	// Qdiffs = new std::vector<SimTK::Real>;
+	// Qstds = new std::vector<SimTK::Real>;
 
 	return true;
 }
@@ -358,9 +363,10 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	loadUScaleFactors(someState);
 
 	// Buffer to hold Q means
-	if(this->nofSamples == 0){
-		QsMeans.resize(matter->getNQ(someState), 0);
-	}
+	// if(this->nofSamples == 0){
+	// 	Qmeans.resize(matter->getNQ(someState), 0);
+	// 	Qstds.resize(matter->getNQ(someState), 0);
+	// }
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
@@ -617,12 +623,17 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			////PrintSubZMatrixBATAndRelated(someState); // OLD
 
 
-			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			std::cout << "Qmeans received: " ;
+			if(Qmeans){
+				std::cout << (*Qmeans).size() << std::endl; // @@@@@@@@@@@@@
+			}
+			
 
 			SimTK::Vector &stateQs = someState.updQ();
 			for(int qIx = 0; qIx < someState.getNQ(); qIx++){
 				if(0
-					//|| ((qIx + 0) % 3 == 0) // torsion
+					|| ((qIx + 0) % 3 == 0) // torsion
 					|| ((qIx + 1) % 3 == 0) // dist
 					|| ((qIx + 2) % 3 == 0) // angle
 				){
@@ -639,7 +650,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//J_fin = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
 			setDistortJacobianDetLog(J_ini + J_scale - J_fin);
-			//scout("BAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
+			scout("BAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
 
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			// Scaling Work END SCALEQ

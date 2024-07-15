@@ -4175,7 +4175,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			<< replicas[replica_X].getTransferedEnergy() << ", "
 			<< replicas[replica_Y].getTransferedEnergy() << ", "
 			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
-			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 << ", "                                                                                                                                                 << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
+			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
+			<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
 		;
 
 		std::cout << rexDetStream.str();		
@@ -4208,6 +4209,11 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
 
 		if( getRunType() == RUN_TYPE::RENE){
+
+			replicas[replica_X].incrementWorldsNofSamples();
+			replicas[replica_Y].incrementWorldsNofSamples();
+			thermodynamicStates[thermoState_C].incrementWorldsNofSamples();
+			thermodynamicStates[thermoState_H].incrementWorldsNofSamples();
 
 			replicas[replica_X].incrementNofSamples();
 			replicas[replica_Y].incrementNofSamples();
@@ -5014,9 +5020,6 @@ bool Context::RunWorld(int whichWorld)
 
 	}
 
-	//calcQStats();
-	////printQStats();
-
 	// Print the world output stream
 	std::cout << worldOutStream.str() << std::endl;
 
@@ -5217,15 +5220,11 @@ void Context::REXLog(int mixi, int replicaIx)
 // rexnewfunc
 void Context::incrementNofSamples(void){
 
-	for(size_t rk = 0;
-	rk < nofReplicas;
-	rk++){
+	for(size_t rk = 0; rk < nofReplicas; rk++){
 		replicas[rk].incrementNofSamples();
 	}
 
-	for(size_t tk = 0;
-	tk < nofThermodynamicStates;
-	tk++){
+	for(size_t tk = 0; tk < nofThermodynamicStates; tk++){
 		thermodynamicStates[tk].incrementNofSamples();
 	}
 
@@ -5399,7 +5398,20 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx];
 		std::cout << " , " << specificWIxs[spWCnt];
 
+
 		validated = RunWorld(specificWIxs[spWCnt]) && validated;
+
+
+		// ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		//std::cout << "DEBUG begin ";
+		int debugWorldIndex = specificWIxs[spWCnt];
+		SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
+		//int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+		const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+		bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
+		//std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
+		// ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
 
 		if(false){
 			std::cout << "\n\n=========== HMCSampler\n" << std::flush;
@@ -5421,7 +5433,27 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx];
 	std::cout << ", " << specificWIxs.back();
 
+
+
+	// Pass previous Q statistics (((((((((((((((((((((((((((((((((((((((((((((
+	int whichWorld = specificWIxs.back();
+	worlds[whichWorld].updSampler(0)->setQmeans(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQmeans(1));
+	// )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+
 	validated = RunWorld(specificWIxs.back()) && validated;
+
+
+	// ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+	//std::cout << "DEBUG begin 2 ";
+	int debugWorldIndex = specificWIxs.back();
+	SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
+	//int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+	const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+	bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
+	//std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
+	// ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
 
 	// Calculate replica BAT and BAT stats
 	World& currWorld = worlds[specificWIxs.back()];
@@ -5467,6 +5499,12 @@ void Context::RunReplicaRefactor(
 		}
 	}
 
+	// Set world samples incrementation
+	int wSamIncr = 0;
+	int samIncr = 0;
+	(getRunType() == RUN_TYPE::RENE) ? wSamIncr = replicaNofWorlds - 1 : replicaNofWorlds;
+	(getRunType() == RUN_TYPE::RENE) ? samIncr = 0 : samIncr = 1;
+
 	//scout("\nEquil world indexes") ;if(equilWIxs.size() > 0){PrintCppVector(equilWIxs);}scout("\nNonequil world indexes") ;if(nonequilWIxs.size() > 0){PrintCppVector(nonequilWIxs);}ceolf;
 
 	if((equilWIxs.size() == 0) && (nonequilWIxs.size() == 0)){
@@ -5510,6 +5548,12 @@ void Context::RunReplicaRefactor(
 			
 		}
 
+		// Increment the nof samples for replica and thermostate
+		replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
+		thermodynamicStates[thisThermoStateIx].incrementWorldsNofSamples(wSamIncr);
+		replicas[replicaIx].incrementNofSamples(samIncr);
+		thermodynamicStates[thisThermoStateIx].incrementNofSamples(samIncr);		
+
 		return;
 	}
 		
@@ -5534,14 +5578,10 @@ void Context::RunReplicaRefactor(
 	}
 
 	// Increment the nof samples for replica and thermostate
-	if(getRunType() != RUN_TYPE::RENE){
-		replicas[replicaIx].incrementNofSamples(replicaNofWorlds-1);
-		thermodynamicStates[thisThermoStateIx].incrementNofSamples(replicaNofWorlds-1);
-	}else{
-		replicas[replicaIx].incrementNofSamples(replicaNofWorlds);
-		thermodynamicStates[thisThermoStateIx].incrementNofSamples(replicaNofWorlds);		
-	}
-
+	replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
+	thermodynamicStates[thisThermoStateIx].incrementWorldsNofSamples(wSamIncr);
+	replicas[replicaIx].incrementNofSamples(samIncr);
+	thermodynamicStates[thisThermoStateIx].incrementNofSamples(samIncr);
 
 }
 
@@ -5618,7 +5658,12 @@ void Context::RunREXNew()
 			setReplicasWorldsParameters(replicaIx);
 
 			// ======================== SIMULATE ======================
-			RunReplicaRefactor(mixi, replicaIx);         
+			RunReplicaRefactor(mixi, replicaIx);
+
+			int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+			//std::vector<int>& replicaWorldIxs = thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+			//calcQStats(thisThermoStateIx);
+			printQStats(thisThermoStateIx);         
 
 		} // end replicas simulations
 
@@ -5677,6 +5722,8 @@ int Context::RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery)
 			currFrontWIx = RunFrontWorldAndRotate(replicaWorldIxs);
 
 			// Increment the nof samples for replica and thermostate
+			replicas[replicaIx].incrementWorldsNofSamples();
+			thermodynamicStates[thisThermoStateIx].incrementWorldsNofSamples();
 			replicas[replicaIx].incrementNofSamples();
 			thermodynamicStates[thisThermoStateIx].incrementNofSamples();
 
@@ -5814,6 +5861,8 @@ int Context::RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery)
 			if( getRunType() != RUN_TYPE::RENE){
 
 				// Increment the nof samples for replica and thermostate
+				replicas[replicaIx].incrementWorldsNofSamples();
+				thermodynamicStates[thisThermoStateIx].incrementWorldsNofSamples();
 				replicas[replicaIx].incrementNofSamples();
 				thermodynamicStates[thisThermoStateIx].incrementNofSamples();
 
@@ -5881,9 +5930,11 @@ int Context::RunReplicaAllWorlds(int mixi, int replicaIx, int swapEvery)
 		}else{
 
 			// Increment the nof samples for replica and thermostate
+			replicas[replicaIx].incrementWorldsNofSamples();
+			thermodynamicStates[thisThermoStateIx].incrementWorldsNofSamples();
 			replicas[replicaIx].incrementNofSamples();
 			thermodynamicStates[thisThermoStateIx].incrementNofSamples();
-
+			
 			// Calculate replica BAT and BAT stats
 			World& currFrontWorld = worlds[currFrontWIx];
 			SimTK::State& currFrontState = currFrontWorld.integ->updAdvancedState();
@@ -8840,49 +8891,39 @@ void Context::setThermostatesQs(void)
 }
 
 /*!
- * <!--  -->
+ * <!-- Calculate Q statistics -->
 */
-void Context::calcQStats(void)
+void Context::calcQStats(int thIx)
 {
-	// Iterate thermodynamic states
-	for(size_t thIx = 0; thIx < nofThermodynamicStates; thIx++){
-		
-		// Get world indexes
-		const std::vector<int> & thermoWorldIxs = thermodynamicStates[thIx].getWorldIndexes();
 
-		// Iterate worlds
-		for(const auto worldIx : thermoWorldIxs){
+	// Get world indexes
+	const std::vector<int> & thermoWorldIxs = thermodynamicStates[thIx].getWorldIndexes();
 
-			// Get world's Qs
-			SimTK::State& worldCurrentState = worlds[worldIx].integ->updAdvancedState();
-			int NQ = (worlds[worldIx].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
-			const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
-			
-			// Calculate Q statistics
-			bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs);
-			if(!found){
-				warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
-			}
+	// Iterate worlds
+	for(const auto worldIx : thermoWorldIxs){
+
+		// Get world's Qs
+		SimTK::State& worldCurrentState = worlds[worldIx].integ->updAdvancedState();
+		int NQ = (worlds[worldIx].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+		const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+
+		// Get Q statistics
+		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs);
+		if(!found){
+			warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
 		}
+
 	}
+
+
 }
 
 /*!
  * <!--  -->
 */
-void Context::printQStats(void)
+void Context::printQStats(int thIx)
 {
-
-	std::cout << std::endl;
-
-	// Iterate thermodynamic states
-	for(size_t thIx = 0; thIx < nofThermodynamicStates; thIx++){
-		
-		// Print
-		std::cout << "thIx " << thIx << std::endl;
-		thermodynamicStates[thIx].printQStats();
-
-	}
+	thermodynamicStates[thIx].printQStats();
 }
 
 
