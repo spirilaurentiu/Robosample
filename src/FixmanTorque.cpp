@@ -211,15 +211,19 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		//	std::cout << "asin " << i << " " << std::asin(i) << std::endl;
 		//}
 
+		constexpr SimTK::Real epsilon = 1e-14;
+
 		// Fixman torque
 		//SimTK::Real sinPitch = -1.0 * R[2][0];
 		SimTK::Real sinPitch = 2*((w*y) - (z*x)); // SAME and FASTER
 		// std::cout << -1.0 * R[2][0] << " ?= " << *((w*y) - (z*x)); << std::endl;
 		SimTK::Real pitch = std::asin(sinPitch); 
 		SimTK::Real cosAsinPitch = std::cos(pitch);
-		SimTK::Real cotPitch = 1 / std::tan(pitch);
-		SimTK::Real torqueComponent = 0;
+		SimTK::Real tanPitch = std::tan(pitch);
 
+		// SimTK::Real cotPitch = 1 / std::tan(pitch);
+		SimTK::Real cotPitch = 1 / std::max(std::abs(tanPitch), epsilon);
+		if (tanPitch < 0) cotPitch = -cotPitch;
 
 		// Fixman potential
 		SimTK::Real extFixPot = std::log(sinPitch * sinPitch);
@@ -237,6 +241,8 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		// Angle is around 0
 		SimTK::Real torUppLim =  1000;
 		SimTK::Real torLowLim = -1000;
+		SimTK::Real torqueComponent = 0;
+
 		if((sinPitch > 0) && (sinPitch <= SimTK::TinyReal)){
 			torqueComponent = torUppLim;
 		}else if((sinPitch >= (-1 * SimTK::TinyReal)) && (sinPitch < 0)){
@@ -244,7 +250,8 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		}else{
 			//SimTK::Real torqueComponent = cosAsinPitch / sinPitch; // wrong
 			//SimTK::Real torqueComponent = 1 * cotPitch; // wrong
-			torqueComponent = cosAsinPitch / sinPitch; // wrong
+			// torqueComponent = cosAsinPitch / sinPitch; // wrong
+			torqueComponent = (sinPitch != 0) ? (cosAsinPitch / sinPitch) : 0; // wrong
 		}
 
 		if(HEAVY_PRINT){

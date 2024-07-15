@@ -1212,20 +1212,20 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		}
 
 	}else if(this->integratorName == IntegratorName::OMMVV){
-		try {
-			
-			// This code works for updating simbody bodies
-			// each body should be an atom
-			assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 
+		// This code works for updating simbody bodies
+		// each body should be an atom
+		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
+
+		try {
 			// Actual openmm integration
 			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
 
 			// Somewhere, the topology gets ruined
 			system->realizeTopology();
 
-			// Transfer back to Simbody (TODO: might be redundant)
-			OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
+			// // Transfer back to Simbody (TODO: might be redundant)
+			// OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
 
 		}catch(const std::exception&){
 
@@ -1234,8 +1234,8 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 			OMM_restoreConfiguration(someState);
 
-			// Transfer back to Simbody (TODO: might be redundant)
-			OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
+			// // Transfer back to Simbody (TODO: might be redundant)
+			// OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
 
 		}
 
