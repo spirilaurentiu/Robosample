@@ -443,7 +443,6 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 		// Update Q means
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
-			//Qmeans[wPosInVector][qIx] = (N_1_over_N * Qmeans[wPosInVector][qIx]) + (Ninv * worldQs[qIx]);
 			Qmeans[wPosInVector][qIx] = instantAverage(N, Qmeans[wPosInVector][qIx], worldQs[qIx]);
 		}
 

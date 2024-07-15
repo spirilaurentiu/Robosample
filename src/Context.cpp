@@ -5388,7 +5388,7 @@ void Context::RunREX()
  */ 
 void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 {
-	//std::cout << "\n RunWorlds "; PrintCppVector(specificWIxs); ceolf;
+	std::cout << "\n RunWorlds "; PrintCppVector(specificWIxs); ceolf;
 
 	bool validated = true;
 
@@ -5399,6 +5399,18 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		std::cout << " , " << specificWIxs[spWCnt];
 
 		validated = RunWorld(specificWIxs[spWCnt]) && validated;
+
+
+// ((((((((((((((((((((((((((((((((((((
+std::cout << "DEBUG begin ";
+int debugWorldIndex = specificWIxs[spWCnt];
+SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
+//int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
+std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
+// ))))))))))))))))))))))))))))))))))))
+
 
 		if(false){
 			std::cout << "\n\n=========== HMCSampler\n" << std::flush;
@@ -5629,7 +5641,7 @@ void Context::RunREXNew()
 
 			int thisThermoStateIx = replica2ThermoIxs[replicaIx];
 			//std::vector<int>& replicaWorldIxs = thermodynamicStates[thisThermoStateIx].updWorldIndexes();
-			calcQStats(thisThermoStateIx);
+			//calcQStats(thisThermoStateIx);
 			printQStats(thisThermoStateIx);         
 
 		} // end replicas simulations
