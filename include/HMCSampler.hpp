@@ -107,8 +107,10 @@ public:
 		std::vector<Topology> &argTopologies, 
 		SimTK::DuMMForceFieldSubsystem &argDumm,
 		SimTK::GeneralForceSubsystem &argForces,
-		SimTK::TimeStepper &argTimeStepper) 
-			;
+		SimTK::TimeStepper &argTimeStepper)
+		//:Qmeans(nullptr), Qdiffs(nullptr), Qstds(nullptr)
+
+;
 
 	/** Destructor **/
 	virtual ~HMCSampler();
@@ -659,11 +661,22 @@ public:
         return subZMatrixBATs_ref;
     }
 
-
 	/**@}**/
 	// BAT --------------------------------------------------------------------
 
+
+
+	void setQmeans(std::vector<SimTK::Real>& QmeansArg){ Qmeans = &QmeansArg; }
+
+
 protected:
+
+
+	// Buffers to hold Q statistics
+	std::vector<SimTK::Real>* Qmeans = nullptr;
+	std::vector<SimTK::Real>* Qdiffs = nullptr;
+	std::vector<SimTK::Real>* Qstds = nullptr;
+
 
 	int equilNofRounds = 0;
 
@@ -709,11 +722,6 @@ protected:
 	int QsBufferSize = 300;
 	//std::list<SimTK::Vector> QsBuffer;
 	std::deque<SimTK::Real> QsBuffer;
-
-	// Buffer to hold Q means
-	// std::vector<SimTK::Real>& Qmeans;
-	// std::vector<SimTK::Real>& Qdiffs;
-	// std::vector<SimTK::Real>& Qstds;
 
 	SimTK::Real acceptance = SimTK::NaN,
 		prevAcceptance = SimTK::NaN;

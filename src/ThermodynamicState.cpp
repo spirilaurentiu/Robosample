@@ -480,3 +480,32 @@ void ThermodynamicState::printQStats(void)
 
 }
 
+/*!
+ * <!--  -->
+*/
+std::vector<SimTK::Real>& ThermodynamicState::getQmeans(const int whichWorld)
+{
+
+	// Search the position in cpp vector
+	bool found = false;
+	int wPosInVector = -1;
+
+	for(const auto wIx : worldIndexes){
+		wPosInVector++;
+
+		if(whichWorld == wIx){
+
+			wPosInVector = wIx;
+			found = true;
+			break;
+		}
+	}
+
+	if(found == false){
+		std::cerr << "Thermodynamic state " << myIndex << " world " << whichWorld << " not found. Exiting...\n";
+		exit(1);
+	}else{
+		return Qmeans[wPosInVector];
+	}
+
+}

@@ -206,6 +206,10 @@ bool HMCSampler::initialize(SimTK::State& someState)
 	//	NMARotation[i][i] = 1.0;
 	//}
 
+	// Qmeans = new std::vector<SimTK::Real>;
+	// Qdiffs = new std::vector<SimTK::Real>;
+	// Qstds = new std::vector<SimTK::Real>;
+
 	return true;
 }
 
@@ -619,7 +623,12 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			////PrintSubZMatrixBATAndRelated(someState); // OLD
 
 
-			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			std::cout << "Qmeans received: " ;
+			if(Qmeans){
+				std::cout << (*Qmeans).size() << std::endl; // @@@@@@@@@@@@@
+			}
+			
 
 			SimTK::Vector &stateQs = someState.updQ();
 			for(int qIx = 0; qIx < someState.getNQ(); qIx++){
