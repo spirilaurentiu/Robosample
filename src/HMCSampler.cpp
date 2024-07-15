@@ -624,26 +624,35 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 
 			std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
-			std::cout << "Qmeans received: " ;
-			if(Qmeans){
-				std::cout << (*Qmeans).size() << std::endl; // @@@@@@@@@@@@@
-			}
-			
 
+			//std::cout << "scaleF " << this->QScaleFactor << "\n";
+
+			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
+			
 			SimTK::Vector &stateQs = someState.updQ();
+
 			for(int qIx = 0; qIx < someState.getNQ(); qIx++){
-				if(0
-					|| ((qIx + 0) % 3 == 0) // torsion
-					|| ((qIx + 1) % 3 == 0) // dist
-					|| ((qIx + 2) % 3 == 0) // angle
+				if(1
+					//|| ((qIx + 0) % 3 == 0) // torsion
+					//|| ((qIx + 1) % 3 == 0) // dist
+					//|| ((qIx + 2) % 3 == 0) // angle
 				){
-					//stateQs[qIx] *= (this->QScaleFactor);
+					// J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
+
+					stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+
 				}
 			}
 
+			//J_scale = someState.getNQ() * std::log((this->QScaleFactor)); // JACOBIAN
+
+			// for(int qIx = 0; qIx < someState.getNQ(); qIx++){ // JACOBIAN
+			// 	J_fin += (4.0 * std::log( std::abs((*Qmeans)[qIx] + stateQs[qIx]) ));
+			// }
+
 			system->realize(someState, SimTK::Stage::Position);
 
-			//std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			

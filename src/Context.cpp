@@ -5438,6 +5438,8 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	// Pass previous Q statistics (((((((((((((((((((((((((((((((((((((((((((((
 	int whichWorld = specificWIxs.back();
 	worlds[whichWorld].updSampler(0)->setQmeans(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQmeans(1));
+	worlds[whichWorld].updSampler(0)->setQdiffs(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQdiffs(1));
+	worlds[whichWorld].updSampler(0)->setQvars(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQvars(1));
 	// )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 

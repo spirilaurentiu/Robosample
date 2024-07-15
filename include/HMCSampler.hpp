@@ -666,7 +666,9 @@ public:
 
 
 
-	void setQmeans(std::vector<SimTK::Real>& QmeansArg){ Qmeans = &QmeansArg; }
+	void setQmeans(std::vector<SimTK::Real>& QArg){ Qmeans = &QArg; }
+	void setQdiffs(std::vector<SimTK::Real>& QArg){ Qdiffs = &QArg; }
+	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
 
 
 protected:
@@ -675,7 +677,7 @@ protected:
 	// Buffers to hold Q statistics
 	std::vector<SimTK::Real>* Qmeans = nullptr;
 	std::vector<SimTK::Real>* Qdiffs = nullptr;
-	std::vector<SimTK::Real>* Qstds = nullptr;
+	std::vector<SimTK::Real>* Qvars = nullptr;
 
 
 	int equilNofRounds = 0;
