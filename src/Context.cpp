@@ -5401,15 +5401,15 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		validated = RunWorld(specificWIxs[spWCnt]) && validated;
 
 
-// ((((((((((((((((((((((((((((((((((((
-std::cout << "DEBUG begin ";
-int debugWorldIndex = specificWIxs[spWCnt];
-SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
-//int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
-const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
-bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
-std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
-// ))))))))))))))))))))))))))))))))))))
+		// ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		// std::cout << "DEBUG begin ";
+		// int debugWorldIndex = specificWIxs[spWCnt];
+		// SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
+		// //int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+		// const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+		// bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
+		// std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
+		// ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 
 		if(false){
@@ -5433,6 +5433,18 @@ std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
 	std::cout << ", " << specificWIxs.back();
 
 	validated = RunWorld(specificWIxs.back()) && validated;
+
+
+		// ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		// std::cout << "DEBUG begin 2 ";
+		// int debugWorldIndex = specificWIxs.back();
+		// SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
+		// //int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
+		// const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+		// bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
+		// std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
+		// ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
 
 	// Calculate replica BAT and BAT stats
 	World& currWorld = worlds[specificWIxs.back()];
