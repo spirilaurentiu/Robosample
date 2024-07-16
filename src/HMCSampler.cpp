@@ -659,7 +659,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//J_fin = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
 			setDistortJacobianDetLog(J_ini + J_scale - J_fin);
-			scout("BAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
+			scout("\nBAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
 
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			// Scaling Work END SCALEQ

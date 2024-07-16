@@ -5538,6 +5538,8 @@ void Context::RunReplicaRefactor(
 		
 			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
 			replicas[replicaIx].set_WORK_Jacobian(jac);
+
+			std::cout << "[Set Jacobian for replica] " << replicaIx <<" to " <<  jac << std::endl;
 		
 			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
 			replicas[replicaIx].setFixman(fix_set_back);
