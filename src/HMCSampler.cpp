@@ -623,7 +623,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			////PrintSubZMatrixBATAndRelated(someState); // OLD
 
 
-			std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
 
 			//std::cout << "scaleF " << this->QScaleFactor << "\n";
 
@@ -637,22 +637,22 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					//|| ((qIx + 1) % 3 == 0) // dist
 					//|| ((qIx + 2) % 3 == 0) // angle
 				){
-					// J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
+					J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
 
 					stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
 
 				}
 			}
 
-			//J_scale = someState.getNQ() * std::log((this->QScaleFactor)); // JACOBIAN
+			J_scale = someState.getNQ() * std::log((this->QScaleFactor)); // JACOBIAN
 
-			// for(int qIx = 0; qIx < someState.getNQ(); qIx++){ // JACOBIAN
-			// 	J_fin += (4.0 * std::log( std::abs((*Qmeans)[qIx] + stateQs[qIx]) ));
-			// }
+			for(int qIx = 0; qIx < someState.getNQ(); qIx++){ // JACOBIAN
+				J_fin += (4.0 * std::log( std::abs((*Qmeans)[qIx] + stateQs[qIx]) ));
+			}
 
 			system->realize(someState, SimTK::Stage::Position);
 
-			std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			//std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			
