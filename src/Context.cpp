@@ -5392,59 +5392,34 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 
 	bool validated = true;
 
-	for(std::size_t spWCnt = 0; spWCnt < specificWIxs.size() - 1; spWCnt++){
+	for(std::size_t spWCnt = 0; spWCnt < specificWIxs.size() - 1; spWCnt++){ // -1 so we can transfer
 
 		// Print replica and worlds info
-		std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx];
-		std::cout << " , " << specificWIxs[spWCnt];
-
+		std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx] << " , " << specificWIxs[spWCnt];
 
 		validated = RunWorld(specificWIxs[spWCnt]) && validated;
 
-
-		// ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-		//std::cout << "DEBUG begin ";
-		int debugWorldIndex = specificWIxs[spWCnt];
-		SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
-		//int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
-		const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
-		bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
-		//std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
-		// ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-
-
-		if(false){
-			std::cout << "\n\n=========== HMCSampler\n" << std::flush;
-			worlds[specificWIxs[spWCnt]].updSampler(0)->Print(
-				worlds[specificWIxs[spWCnt]].integ->updAdvancedState(), false, false);
-			std::cout << "\n------------\n\n" << std::flush;
-		}
-
 		transferCoordinates(specificWIxs[spWCnt], specificWIxs[spWCnt + 1]);
+
+		// Calculate and transfer Q statistics (((((((((((((((((((((((((((((((((((((((((((((
+		int destStatsWIx = specificWIxs[spWCnt + 1];
+		int srcStatsWIx = specificWIxs[spWCnt];
+		bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
+		worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQmeans(srcStatsWIx));
+		worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQdiffs(srcStatsWIx));
+		worlds[destStatsWIx].updSampler(0)->setQvars(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQvars(srcStatsWIx));
+		// )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 		// // Calculate replica BAT and BAT stats
 		// World& currWorld = worlds[specificWIxs[spWCnt]];
 		// SimTK::State& currState = currWorld.integ->updAdvancedState();
 		// replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
 
-
 	}
 
-	std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx];
-	std::cout << ", " << specificWIxs.back();
-
-
-
-	// Pass previous Q statistics (((((((((((((((((((((((((((((((((((((((((((((
-	int whichWorld = specificWIxs.back();
-	worlds[whichWorld].updSampler(0)->setQmeans(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQmeans(1));
-	worlds[whichWorld].updSampler(0)->setQdiffs(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQdiffs(1));
-	worlds[whichWorld].updSampler(0)->setQvars(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQvars(1));
-	// )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-
+	std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx] << ", " << specificWIxs.back();
 
 	validated = RunWorld(specificWIxs.back()) && validated;
-
 
 	// ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
 	//std::cout << "DEBUG begin 2 ";
@@ -5452,6 +5427,7 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
 	//int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
 	const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
+
 	bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
 	//std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
 	// ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
@@ -5539,7 +5515,7 @@ void Context::RunReplicaRefactor(
 			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
 			replicas[replicaIx].set_WORK_Jacobian(jac);
 
-			std::cout << "[Set Jacobian for replica] " << replicaIx <<" to " <<  jac << std::endl;
+			std::cout << "Set Jacobian for replica " << replicaIx <<" to " <<  jac << std::endl;
 		
 			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
 			replicas[replicaIx].setFixman(fix_set_back);

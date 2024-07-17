@@ -1647,6 +1647,22 @@ SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::At
 //==============================================================================
 // Pass configurations between Worlds
 
+/*!
+ * <!--  -->
+*/
+const SimTK::Vector & World::getAdvancedQs()
+{
+	return matter->getQ(integ->updAdvancedState());
+}
+
+/*!
+ * <!--  -->
+*/
+const SimTK::Vector & World::getAdvancedUs()
+{
+	return matter->getU(integ->updAdvancedState());
+}
+
 
 // RANDOM_WALK functions
 void World::setTopologyIXs(std::vector<int> argTopologyIXs){

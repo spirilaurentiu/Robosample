@@ -679,6 +679,11 @@ public:
 
 	}
 
+	// Get Qs
+	const SimTK::Vector & getAdvancedQs();
+	const SimTK::Vector & getAdvancedUs();
+
+
 public:
 
 	// --- The three S: Study, System and State related ---
