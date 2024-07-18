@@ -4829,6 +4829,21 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 			replicaMdsteps[i]);
 	}
 
+	// SET NON_EQUIL PARAMS ------------------------- 
+	// Non-equilibrium params change with every replica / thermoState
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+
+		// Send DISTORT_OPTION from the input to the sampler
+		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
+			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
+		);		
+
+		// Set scale Q scale factor
+		setWorldDistortParameters(replicaWorldIxs[i],
+			qScaleFactors.at(thisThermoStateIx));
+
+	}
+
 	// Print info
 	// std::cout << "Timesteps set to ";
 	// for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -4837,7 +4852,6 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	// 		<< " " ;
 	// }
 	// std::cout << std::endl;
-
 	// std::cout << "Mdsteps set to ";
 	// for(std::size_t i = 0; i < replicaNofWorlds; i++){
 	// 	std::cout 
@@ -5383,32 +5397,38 @@ void Context::RunREX()
 
 }
 
-/**
- * Run a vector of worlds
- */ 
+
+/*!
+ * <!--  -->
+*/
+void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx)
+{
+	worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
+	worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
+	worlds[destStatsWIx].updSampler(0)->setQvars(thermodynamicStates[thermoIx].getQvars(srcStatsWIx));
+}
+
+/*!
+ * <!-- Run a vector of worlds -->
+*/ 
 void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 {
-	//std::cout << "\n RunWorlds "; PrintCppVector(specificWIxs); ceolf;
-
+	int thermoIx = replica2ThermoIxs[replicaIx];
 	bool validated = true;
-
 	for(std::size_t spWCnt = 0; spWCnt < specificWIxs.size() - 1; spWCnt++){ // -1 so we can transfer
 
-		// Print replica and worlds info
-		std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx] << " , " << specificWIxs[spWCnt];
+		// Run
+		int srcStatsWIx  = specificWIxs[spWCnt];
+		std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
+		validated = RunWorld(srcStatsWIx) && validated;
 
-		validated = RunWorld(specificWIxs[spWCnt]) && validated;
+		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
+		bool calcQStatsRet = thermodynamicStates[thermoIx].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
 
-		transferCoordinates(specificWIxs[spWCnt], specificWIxs[spWCnt + 1]);
-
-		// Calculate and transfer Q statistics (((((((((((((((((((((((((((((((((((((((((((((
+		// Transfer coordinates to the next world
 		int destStatsWIx = specificWIxs[spWCnt + 1];
-		int srcStatsWIx = specificWIxs[spWCnt];
-		bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
-		worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQmeans(srcStatsWIx));
-		worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQdiffs(srcStatsWIx));
-		worlds[destStatsWIx].updSampler(0)->setQvars(thermodynamicStates[ replica2ThermoIxs[replicaIx] ].getQvars(srcStatsWIx));
-		// )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+		transferCoordinates(srcStatsWIx, destStatsWIx);
+		transferQStatistics(thermoIx, srcStatsWIx, destStatsWIx);
 
 		// // Calculate replica BAT and BAT stats
 		// World& currWorld = worlds[specificWIxs[spWCnt]];
@@ -5417,26 +5437,19 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 
 	}
 
-	std::cout << "REX, " << replicaIx << ", " << replica2ThermoIxs[replicaIx] << ", " << specificWIxs.back();
+	// Run the last world
+	int srcStatsWIx = specificWIxs.back();
+	std::cout << "REX, " << replicaIx << ", " << thermoIx << ", " << specificWIxs.back();
+	validated = RunWorld(srcStatsWIx) && validated;
 
-	validated = RunWorld(specificWIxs.back()) && validated;
+	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
+	bool calcQStatsRet = thermodynamicStates[ thermoIx ].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
 
-	// ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-	//std::cout << "DEBUG begin 2 ";
-	int debugWorldIndex = specificWIxs.back();
-	SimTK::State& worldCurrentState = worlds[debugWorldIndex].integ->updAdvancedState();
-	//int NQ = (worlds[debugWorldIndex].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
-	const SimTK::Vector & worldQs = (getWorld(debugWorldIndex).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
-
-	bool calcQStatsRet = thermodynamicStates[ replica2ThermoIxs[replicaIx] ].calcQStats(debugWorldIndex, worldQs);
-	//std::cout << "\n" << calcQStatsRet << " DEBUG end\n";
-	// ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-
-
-	// Calculate replica BAT and BAT stats
-	World& currWorld = worlds[specificWIxs.back()];
-	SimTK::State& currState = currWorld.integ->updAdvancedState();
-	replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
+	if(true){
+		World& currWorld = worlds[specificWIxs.back()];
+		SimTK::State& currState = currWorld.integ->updAdvancedState();
+		replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
+	}
 
 	// #ifndef PRINTALOT
 	// #define PRINTALOT
@@ -5451,16 +5464,19 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	#endif
 }
 
+/*!
+ * <!--  -->
+*/
 void Context::RunReplicaRefactor(
 	int mixi,
 	int replicaIx)
 {
 
 	// Get equilibrium and non-equilibrium worlds
-	int thisThermoStateIx = replica2ThermoIxs[replicaIx];
-	std::vector<int>& replicaWorldIxs = thermodynamicStates[thisThermoStateIx].updWorldIndexes();
+	int thermoIx = replica2ThermoIxs[replicaIx];
+	std::vector<int>& replicaWorldIxs = thermodynamicStates[thermoIx].updWorldIndexes();
 	size_t replicaNofWorlds = replicaWorldIxs.size();
-	std::vector<int> & distortOpts = thermodynamicStates[thisThermoStateIx].getDistortOptions();
+	std::vector<int> & distortOpts = thermodynamicStates[thermoIx].getDistortOptions();
 
 	std::vector<int> equilWIxs;
 	std::vector<int> nonequilWIxs;
@@ -5490,8 +5506,12 @@ void Context::RunReplicaRefactor(
 		return;
 	}
 
+	// Transfer Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
+	transferQStatistics(thermoIx, replicaWorldIxs.back(), replicaWorldIxs.front());
+	// ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
+
 	if(!equilWIxs.empty()){ // Equilibrium
-	
+
 		RunWorlds(equilWIxs, replicaIx);
 		
 		replicas[replicaIx].updAtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround());
@@ -5503,6 +5523,7 @@ void Context::RunReplicaRefactor(
 		if(!nonequilWIxs.empty()){ // Non-Equilibrium
 
 			transferCoordinates(equilWIxs.back(), nonequilWIxs.front());
+			transferQStatistics(thermoIx, equilWIxs.back(), nonequilWIxs.front());
 
 			RunWorlds(nonequilWIxs, replicaIx);
 		
@@ -5515,24 +5536,26 @@ void Context::RunReplicaRefactor(
 			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
 			replicas[replicaIx].set_WORK_Jacobian(jac);
 
-			std::cout << "Set Jacobian for replica " << replicaIx <<" to " <<  jac << std::endl;
+			std::cout << "Set Jacobian for replica " << replicaIx <<" to " << jac << std::endl;
 		
 			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
 			replicas[replicaIx].setFixman(fix_set_back);
 
 			transferCoordinates(nonequilWIxs.back(), equilWIxs.front());
+			//transferQStatistics(thermoIx, nonequilWIxs.back(), equilWIxs.front());
 
 		}else{
 
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
+			//transferQStatistics(thermoIx, equilWIxs.back(), equilWIxs.front());
 			
 		}
 
 		// Increment the nof samples for replica and thermostate
 		replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
-		thermodynamicStates[thisThermoStateIx].incrementWorldsNofSamples(wSamIncr);
+		thermodynamicStates[thermoIx].incrementWorldsNofSamples(wSamIncr);
 		replicas[replicaIx].incrementNofSamples(samIncr);
-		thermodynamicStates[thisThermoStateIx].incrementNofSamples(samIncr);		
+		thermodynamicStates[thermoIx].incrementNofSamples(samIncr);		
 
 		return;
 	}
@@ -5554,14 +5577,15 @@ void Context::RunReplicaRefactor(
 		replicas[replicaIx].setFixman(fix_set_back);
 
 		transferCoordinates(nonequilWIxs.back(), nonequilWIxs.front());
+		//transferQStatistics(thermoIx, nonequilWIxs.back(), nonequilWIxs.front());
 
 	}
 
 	// Increment the nof samples for replica and thermostate
 	replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
-	thermodynamicStates[thisThermoStateIx].incrementWorldsNofSamples(wSamIncr);
+	thermodynamicStates[thermoIx].incrementWorldsNofSamples(wSamIncr);
 	replicas[replicaIx].incrementNofSamples(samIncr);
-	thermodynamicStates[thisThermoStateIx].incrementNofSamples(samIncr);
+	thermodynamicStates[thermoIx].incrementNofSamples(samIncr);
 
 }
 
@@ -5631,19 +5655,13 @@ void Context::RunREXNew()
 			// Load the front world
 			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);           // (1)
 
-			// Set non-equilibrium parameters: get scale factors
-			updWorldsDistortOptions(replicaIx);
-
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
 
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			int thisThermoStateIx = replica2ThermoIxs[replicaIx];
-			//std::vector<int>& replicaWorldIxs = thermodynamicStates[thisThermoStateIx].updWorldIndexes();
-			//calcQStats(thisThermoStateIx);
-			printQStats(thisThermoStateIx);         
+			printQStats(replica2ThermoIxs[replicaIx]);         
 
 		} // end replicas simulations
 

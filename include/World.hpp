@@ -682,7 +682,8 @@ public:
 	// Get Qs
 	const SimTK::Vector & getAdvancedQs();
 	const SimTK::Vector & getAdvancedUs();
-
+	int getNQs(void);
+	int getNUs(void);
 
 public:
 

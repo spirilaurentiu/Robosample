@@ -670,6 +670,8 @@ public:
 	void setQdiffs(std::vector<SimTK::Real>& QArg){ Qdiffs = &QArg; }
 	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
 
+	double calcMobodsMBAT(SimTK::State& someState);
+
 
 protected:
 

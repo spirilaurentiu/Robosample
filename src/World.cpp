@@ -1663,6 +1663,21 @@ const SimTK::Vector & World::getAdvancedUs()
 	return matter->getU(integ->updAdvancedState());
 }
 
+/*!
+ * <!--  -->
+*/
+int World::getNQs(void)
+{
+	return matter->getNQ(integ->updAdvancedState());
+}
+
+/*!
+ * <!--  -->
+*/
+int World::getNUs(void)
+{
+	return matter->getNU(integ->updAdvancedState());
+}
 
 // RANDOM_WALK functions
 void World::setTopologyIXs(std::vector<int> argTopologyIXs){

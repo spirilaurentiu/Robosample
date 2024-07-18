@@ -566,7 +566,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples > 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
+		if(this->nofSamples >= 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 
 			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
 
@@ -622,6 +622,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//updateSubZMatrixBAT(someState);
 			////PrintSubZMatrixBATAndRelated(someState); // OLD
 
+			//J_ini = calcMobodsMBAT(someState);
 
 			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
 
@@ -637,7 +638,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
 
 				stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
-
 
 			}
 
@@ -3515,6 +3515,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	// Generate a trial move in the stochastic chain
 	validated = propose(someState) && validated;
 
+	//calcMobodsMBAT(someState); // SCALEQ 
+
 	// --- invalid --- //
 	if ( !validated ){
 
@@ -4818,4 +4820,35 @@ SimTK::Real HMCSampler::calcSubMBATDetLog(
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
+{
+
+	for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const SimTK::MobilizedBody& parent = mobod.getParentMobilizedBody();
+		const SimTK::MobilizedBody& grandpa = parent.getParentMobilizedBody();
+
+		const SimTK::Transform& X_PF = mobod.getDefaultInboardFrame();
+		const SimTK::Transform& X_BM = mobod.getDefaultOutboardFrame();
+		const  SimTK::Transform& X_FM = mobod.getMobilizerTransform(someState);
+
+		const SimTK::Transform& parentX_PF = parent.getDefaultInboardFrame();
+		const SimTK::Transform& parentX_BM = parent.getDefaultOutboardFrame();
+		const  SimTK::Transform& parentX_FM = parent.getMobilizerTransform(someState);
+
+		std::cout << "MCSampler::calcMobodsMBAT" 
+		<<" X_PF " << X_PF
+		<<" X_BM " << X_BM 
+		<<" X_FM " << X_FM 
+		<<" " << SimTK::TinyReal << std::endl;
+
+		//SimTK::Real M = mobod.getBodyMass(someState);
+		//for(int qCnt = mobod.getFirstQIndex(someState); qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qCnt++){}
+
+	}
+
+	return 0;
+
+}
 
