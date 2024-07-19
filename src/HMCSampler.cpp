@@ -3515,7 +3515,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	// Generate a trial move in the stochastic chain
 	validated = propose(someState) && validated;
 
-	//calcMobodsMBAT(someState); // SCALEQ 
+	calcMobodsMBAT(someState); // SCALEQ 
 
 	// --- invalid --- //
 	if ( !validated ){
@@ -4837,11 +4837,17 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 		const SimTK::Transform& parentX_BM = parent.getDefaultOutboardFrame();
 		const  SimTK::Transform& parentX_FM = parent.getMobilizerTransform(someState);
 
-		std::cout << "MCSampler::calcMobodsMBAT" 
-		<<" X_PF " << X_PF
-		<<" X_BM " << X_BM 
-		<<" X_FM " << X_FM 
-		<<" " << SimTK::TinyReal << std::endl;
+		//std::cout << "MCSampler::calcMobodsMBAT" 
+		// <<" X_PF " << X_PF
+		// <<" X_BM " << X_BM 
+		// <<" X_FM " << X_FM 
+		//<<" " << SimTK::TinyReal << std::endl;
+		//PrintTransform(X_PF, 3, "X_PF", "X_PF");
+		//PrintTransform(X_BM, 3, "X_BM", "X_BM");
+		//PrintTransform(X_FM, 3, "X_FM", "X_FM");
+
+
+		mobod.getBodyOriginLocation();
 
 		//SimTK::Real M = mobod.getBodyMass(someState);
 		//for(int qCnt = mobod.getFirstQIndex(someState); qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qCnt++){}
