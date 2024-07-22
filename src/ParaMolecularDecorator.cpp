@@ -708,20 +708,20 @@ void ParaMolecularDecorator::generateDecorations(const State& someState,
 			if( (int(mbx) >= 1) ) {
 			//if(false){
 
-				// // Frame P
-				// std::ostringstream streamObjP;
-				// streamObjP << std::string("P") + std::to_string(int(mbx));
-				// std::string textP = streamObjP.str();
-				// drawFrame(geometry, G_X_P,
-				// 	0.05, 4, SimTK::Vec3(0, 0, 0),
-				// 	streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
-				// // Frame F
-				// std::ostringstream streamObjF;
-				// streamObjF << std::string("F") + std::to_string(int(mbx)); //+ " " + std::to_string(this->FCommVar)
-				// std::string textF = streamObjF.str();
-				// drawFrame(geometry, G_X_F,
-				// 	0.04, 4, SimTK::Vec3(0, 0, 1),
-				// 	streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0));
+				// Frame P
+				std::ostringstream streamObjP;
+				streamObjP << std::string("P") + std::to_string(int(mbx));
+				std::string textP = streamObjP.str();
+				drawFrame(geometry, G_X_P,
+					0.05, 4, SimTK::Vec3(0, 0, 0),
+					streamObjP.str(), 0.009, SimTK::Vec3(0, 0, 0), SimTK::Vec3(-0.02, 0.0, 0.0));
+				// Frame F
+				std::ostringstream streamObjF;
+				streamObjF << std::string("F") + std::to_string(int(mbx)); //+ " " + std::to_string(this->FCommVar)
+				std::string textF = streamObjF.str();
+				drawFrame(geometry, G_X_F,
+					0.04, 4, SimTK::Vec3(0, 0, 1),
+					streamObjF.str(), 0.008, SimTK::Vec3(0, 0, 1), SimTK::Vec3(-0.02, 0.0, 0.0));
 				// Frame M
 				std::ostringstream streamObjM;
 				std::setprecision(2);

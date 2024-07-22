@@ -3511,11 +3511,11 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	// Store old configuration
 	storeOldPotentialEnergies(someState);
 
+	calcMobodsMBAT(someState); // SCALEQ 
+
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
 	validated = propose(someState) && validated;
-
-	calcMobodsMBAT(someState); // SCALEQ 
 
 	// --- invalid --- //
 	if ( !validated ){
@@ -4831,24 +4831,62 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 
 		const SimTK::Transform& X_PF = mobod.getDefaultInboardFrame();
 		const SimTK::Transform& X_BM = mobod.getDefaultOutboardFrame();
+		SimTK::Transform X_MB = ~X_BM;
 		const  SimTK::Transform& X_FM = mobod.getMobilizerTransform(someState);
 
 		const SimTK::Transform& parentX_PF = parent.getDefaultInboardFrame();
 		const SimTK::Transform& parentX_BM = parent.getDefaultOutboardFrame();
 		const  SimTK::Transform& parentX_FM = parent.getMobilizerTransform(someState);
 
-		//std::cout << "MCSampler::calcMobodsMBAT" 
-		// <<" X_PF " << X_PF
-		// <<" X_BM " << X_BM 
-		// <<" X_FM " << X_FM 
+		//std::cout << "\nMCSampler::calcMobodsMBAT" 
+		// //<<" X_PF " << X_PF
+		// //<<" X_BM " << X_BM 
+		// //<<" X_FM " << X_FM 
 		//<<" " << SimTK::TinyReal << std::endl;
 		//PrintTransform(X_PF, 3, "X_PF", "X_PF");
-		//PrintTransform(X_BM, 3, "X_BM", "X_BM");
 		//PrintTransform(X_FM, 3, "X_FM", "X_FM");
+		//PrintTransform(X_BM, 3, "X_BM", "X_BM");
+		// SimTK::Vec4 X_MB_v4 = X_MB.R().convertRotationToAngleAxis();
+		// std::cout << "X_MB_v4 a v:" 
+		// 	<<" " << X_MB_v4[0] 
+		// 	<<" " << X_MB_v4[1] <<" " << X_MB_v4[2] <<" " << X_MB_v4[3]
+		// << std::endl; 
+		// SimTK::Transform R_XAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateAxis::XCoordinateAxis());
+		// SimTK::Transform R_YAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateAxis::YCoordinateAxis());
+		// SimTK::Transform R_ZAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateAxis::ZCoordinateAxis());
+		// SimTK::Transform R_mXAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateDirection::NegXDirection());
+		// SimTK::Transform R_mYAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateDirection::NegYDirection());
+		// SimTK::Transform R_mZAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateDirection::NegZDirection());
+		// PrintTransform(R_XAxis, 3, "R_XAxis", "R_XAxis");
+		// PrintTransform(R_YAxis, 3, "R_YAxis", "R_YAxis");
+		// PrintTransform(R_ZAxis, 3, "R_ZAxis", "R_ZAxis");
+		// PrintTransform(R_mXAxis, 3, "R_mXAxis", "R_mXAxis");
+		// PrintTransform(R_mYAxis, 3, "R_mYAxis", "R_mYAxis");
+		// PrintTransform(R_mZAxis, 3, "R_mZAxis", "R_mZAxis");
+		
+		if(X_BM.p().norm() == 0){ // Cartesian
 
+			std::cout << "\nMCSampler::calcMobodsMBAT " << " Cartesian" <<"\n";
 
-		mobod.getBodyOriginLocation();
+		}else{ // non-Cartesian
 
+			SimTK::Vec3 checkV = X_BM.R() * Vec3(1,0,0);
+			//std::cout << "\nX_BMxXAxis " << checkV[0] <<" " << checkV[1] <<" " << checkV[2] <<"\n";
+
+			if(std::abs((checkV[0] - 0.0)) < 0.00000001){ // Pin, Cylinder, Spherical, BallF 
+				
+				std::cout << "\nMCSampler::calcMobodsMBAT " << " Pin, Cylinder, Spherical, BallF" <<"\n";
+
+			}else{ // Slider, AnglePin, BendStretch
+
+				std::cout << "\nMCSampler::calcMobodsMBAT " << " Slider, AnglePin, BendStretch" <<"\n";
+
+			}
+
+		}
+
+		//mobod.getBodyOriginLocation(someState);
+		//mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(0));
 		//SimTK::Real M = mobod.getBodyMass(someState);
 		//for(int qCnt = mobod.getFirstQIndex(someState); qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qCnt++){}
 

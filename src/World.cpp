@@ -2702,6 +2702,67 @@ World::calcMobodToMobodTransforms(
 	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
 }
 
+/*!
+ * <!--	 -->
+*/
+SimTK::Real World::getRootAngle(
+	Topology& topology,
+	SimTK::Compound::AtomIndex rootAIx,
+	const SimTK::State& someState
+){
+	SimTK::Real bondAngle = SimTK::NaN;
+
+	// Get body and parentBody
+	SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(rootAIx, *forceField);
+	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+	SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+	// Get the neighbor atom in the parent mobilized body
+	SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter.get(), rootAIx, *forceField);
+
+	// Get parent-child BondCenters relationship
+	SimTK::Transform X_parentBC_childBC = topology.getDefaultBondCenterFrameInOtherBondCenterFrame(rootAIx, chemParentAIx);
+
+	// Get Top frame
+	SimTK::Transform T_X_root = topology.getTopTransform_FromMap(rootAIx);
+
+	// Get Top to parent frame
+	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(parentMbx);
+	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+	SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+	
+	SimTK::Transform T_X_Proot = topology.getTopTransform_FromMap(parentRootAIx);
+	SimTK::Transform Proot_X_T = ~T_X_Proot;
+
+	// chemical parent atom
+	SimTK::Transform T_X_chemProot = topology.getTopTransform_FromMap(chemParentAIx);
+
+	// BEGIN GET ANGLE
+	SimTK::Compound::AtomIndex chemGrandParentIx;
+	SimTK::Transform T_X_grand;
+
+	if(chemParentAIx > 0){
+
+		chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+
+		T_X_grand = topology.getTopTransform_FromMap(chemGrandParentIx);
+
+		SimTK::Vec3 V1 = (~(T_X_root.R())) * T_X_grand.p();
+		SimTK::Vec3 V2 = (~(T_X_root.R())) * T_X_chemProot.p();
+		SimTK::Vec3 V3 = (~(T_X_root.R())) * T_X_root.p();
+
+		bondAngle = bAngle(V2, V1, V3);
+
+		return bondAngle;
+	}
+
+	return bondAngle;
+
+}
+
+
+
 /**
  * Calc X_FM transforms for reconstruction for root atoms
 */
@@ -2713,7 +2774,6 @@ SimTK::Transform World::calcX_FMTransforms(
 
 	// X_FM return value
 	SimTK::Transform X_FM;
-
 
 	// Get body and parentBody
 	SimTK::MobilizedBodyIndex mbx =
@@ -2735,7 +2795,6 @@ SimTK::Transform World::calcX_FMTransforms(
 	SimTK::Transform T_X_root = topology.getTopTransform_FromMap(rootAIx);
 
 	// Get Top to parent frame
-
 	const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = getMobodRootAtomIndex(parentMbx);
 	SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
 
@@ -2744,11 +2803,8 @@ SimTK::Transform World::calcX_FMTransforms(
 	SimTK::Transform T_X_Proot = topology.getTopTransform_FromMap(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 
-
-
 	// chemical parent atom
 	SimTK::Transform T_X_chemProot = topology.getTopTransform_FromMap(chemParentAIx);
-	
 
 	// BEGIN GET ANGLE
 	SimTK::Compound::AtomIndex chemGrandParentIx;

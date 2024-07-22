@@ -359,6 +359,15 @@ public:
 		const SimTK::State& someState);
 
 	/**
+	 *
+	*/
+	SimTK::Real getRootAngle(
+		Topology& topology,
+		SimTK::Compound::AtomIndex rootAIx,
+		const SimTK::State& someState
+	);
+
+	/**
 	 * Calc X_FM transforms for reconstruction
 	*/
 	SimTK::Transform calcX_FMTransforms(
