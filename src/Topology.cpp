@@ -392,7 +392,7 @@ std::vector<bSpecificAtom *> Topology::getNeighbours(int) const {
 bool Topology::checkBond(int a1, int a2)
 {
 	for(int i = 0; i < nbonds; i++){
-		if( (bonds[i]).isThisMe(a1, a2) )
+		if( (subBondList[i]).isThisMe(a1, a2) )
 		{
 			return true;
 		}
@@ -404,11 +404,11 @@ bool Topology::checkBond(int a1, int a2)
 const bBond& Topology::getBond(int a1, int a2) const
 {
 	// TODO is this fast enough?
-	const auto bond = std::find_if(bonds.begin(), bonds.end(), [a1, a2](bBond b) { return b.isThisMe(a1, a2); });
+	const auto bond = std::find_if(subBondList.begin(), subBondList.end(), [a1, a2](bBond b) { return b.isThisMe(a1, a2); });
 
 	#ifndef NDEBUG
 		std::string assert_string("No bond with these atom indeces found: " + to_string(a1) + " " + to_string(a2));
-		assert(bond != bonds.end() && assert_string.size());
+		assert(bond != subBondList.end() && assert_string.size());
 	#endif
 
 	return *bond;
@@ -737,7 +737,7 @@ Topology::getChemicalParent_IfIAmRoot(
 				for (auto bondIndex : originSpecAtom->bondsInvolvedIndex) {
 
 					// Check if this neighbor is involved in this bond
-					if( bonds[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[k].getNumber()
+					if( subBondList[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[k].getNumber()
 						) ){
 
 						Compound::AtomIndex candidateChemParentAIx = subAtomList[k].getCompoundAtomIndex();
@@ -745,7 +745,7 @@ Topology::getChemicalParent_IfIAmRoot(
 						// Check if neighbor atom's mobod is a parent mobod
 						if(getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx){
 
-							if(!bonds[bondIndex].isRingClosing()){ // No ring atoms are allowed
+							if(!subBondList[bondIndex].isRingClosing()){ // No ring atoms are allowed
 								chemParentAIx = candidateChemParentAIx;
 								gmolAtomIndex = subAtomList[k].getNumber();
 								break;

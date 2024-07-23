@@ -335,7 +335,7 @@ public:
 
 	// Bonds
 	int nbonds;
-	std::vector<bBond> bonds;
+	//std::vector<bBond> bonds;
 	std::vector<bBond>::iterator bondsBeg_It;
 	std::vector<bBond>::iterator bondsEnd_It;
 	size_t bondsBeg_Ix;

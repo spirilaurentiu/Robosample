@@ -972,7 +972,7 @@ void World::setUScaleFactorsToMobods(void)
 		// Iterate bonds
 
 		//for(const auto& AtomList : topology.bAtomList){
-		for(auto& Bond : topology.bonds){
+		for(auto& Bond : topology.subBondList){
 			SimTK::Compound::AtomIndex aIx1 = topology.subAtomList[Bond.i].getCompoundAtomIndex();
 			SimTK::Compound::AtomIndex aIx2 = topology.subAtomList[Bond.j].getCompoundAtomIndex();
 
@@ -1432,7 +1432,7 @@ void World::setTransformsMeansToMin(readAmberInput &amberReader)
 		for (auto& topology : (*topologies)){
 
 			//bSpecificAtom * gAtom = topology.bAtomList[prm_a_1];
-			bool rinClosing = topology.bonds[bondIndex].isRingClosing();
+			bool rinClosing = topology.subBondList[bondIndex].isRingClosing();
 
 			SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].getCompoundAtomIndex();
 			SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
