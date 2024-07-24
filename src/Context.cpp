@@ -672,13 +672,6 @@ void Context::loadBonds(const readAmberInput& reader) {
 
 		bonds.push_back(bond);
 
-		// // TODO BAD! this will break if we invalidate the bonds vector
-		// atoms[bond.i].addNeighbor(&atoms[bonds[bCnt].j]);
-		// atoms[bond.i].addBond(&bonds[bCnt]);
-
-		// atoms[bond.j].addNeighbor(&atoms[bonds[bCnt].i]);
-		// atoms[bond.j].addBond(&bonds[bCnt]);
-
 		atoms[bond.i].addNeighborIndex(bonds[bCnt].j);
 		atoms[bond.i].addBondIndex(bCnt);
 
@@ -5661,7 +5654,7 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			printQStats(replica2ThermoIxs[replicaIx]);         
+			//printQStats(replica2ThermoIxs[replicaIx]);         
 
 		} // end replicas simulations
 

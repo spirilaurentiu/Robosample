@@ -731,24 +731,24 @@ Topology::getChemicalParent_IfIAmRoot(
 
 			// TODO: Check is neighbors and bondsInvolved are redundant
 			// Loop through neighbor atoms (bSpecificAtom)
-			for(auto k : originSpecAtom->neighborsIndex) {
+			for(auto neighborIx : originSpecAtom->neighborsIndex) {
 
 				// Loop through bonds that this atom is involved in (bBond);
 				for (auto bondIndex : originSpecAtom->bondsInvolvedIndex) {
 
 					// Check if this neighbor is involved in this bond
-					if( subBondList[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[k].getNumber()
+					if( subBondList[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[neighborIx].getNumber()
 						) ){
 
-						Compound::AtomIndex candidateChemParentAIx = subAtomList[k].getCompoundAtomIndex();
+						Compound::AtomIndex candidateChemParentAIx = subAtomList[neighborIx].getCompoundAtomIndex();
 
 						// Check if neighbor atom's mobod is a parent mobod
 						if(getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx){
 
 							if(!subBondList[bondIndex].isRingClosing()){ // No ring atoms are allowed
 								chemParentAIx = candidateChemParentAIx;
-								gmolAtomIndex = subAtomList[k].getNumber();
-								break;
+								gmolAtomIndex = subAtomList[neighborIx].getNumber();
+								return chemParentAIx;
 							}
 						}
 					}
@@ -764,7 +764,8 @@ Topology::getChemicalParent_IfIAmRoot(
 			if(getAtomLocationInMobilizedBodyFrameThroughDumm(candidateChemParentAIx, dumm) == 0){ // atom is at body's origin // DANGER
 				chemParentAIx = candidateChemParentAIx;
 				gmolAtomIndex = subAtomList[k].getNumber();
-				break;
+				std::cout << "FOUND " << chemParentAIx << std::endl; 
+				return chemParentAIx;
 			}
 		}
 	}

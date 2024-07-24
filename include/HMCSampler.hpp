@@ -671,6 +671,7 @@ public:
 	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
 
 	double calcMobodsMBAT(SimTK::State& someState);
+	double studyBATScale(SimTK::State& someState);
 
 
 protected:

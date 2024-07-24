@@ -2003,10 +2003,12 @@ void World::updateAtomListsFromCompound(const SimTK::State &state)
 			atom.setZ(location[2]);
 			atom.setCartesians(location);
 
-			// std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
+			//std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
 		}
 	}
 }
+
+
 
 /**
  * RMSD function

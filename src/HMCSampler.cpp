@@ -2283,7 +2283,8 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 
 	assert(RT > SimTK::TinyReal);
 	// double detMBAT = ((Topology *)rootTopology)->calcLogDetMBATInternal(someState); // RESTORE
-	double detMBAT = calcSubMBATDetLog(someState); // LAST ADDED
+	// double detMBAT = calcSubMBATDetLog(someState); // based on Replica (not useful)
+	double detMBAT = calcMobodsMBAT(someState); // LAST ADDED
 
 	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
 	//std::cout << "detM detMBAT pe_fix " << D0 << " " << detMBAT << " " << result << std::endl;
@@ -3512,8 +3513,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	storeOldPotentialEnergies(someState);
 	
 	// MBAT work
-	calcSubMBATDetLog(someState); // SCALEQ 
-	calcMobodsMBAT(someState); // SCALEQ 
+	//calcSubMBATDetLog(someState); // SCALEQ
+	//studyBATScale(someState);
+	//calcMobodsMBAT(someState); // SCALEQ 
 
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
@@ -4773,7 +4775,7 @@ HMCSampler::calcBATJacobianDetLog(
 	return BATJacobian;
 }
 
-// Calculate sub determinant of MBAT 
+// Calculate sub determinant of MBAT given replica coordinates
 SimTK::Real HMCSampler::calcSubMBATDetLog(
 	SimTK::State& someState)
 {
@@ -4822,75 +4824,159 @@ SimTK::Real HMCSampler::calcSubMBATDetLog(
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
+double HMCSampler::studyBATScale(SimTK::State& someState)
 {
+
+	// Accumulate result here
+	SimTK::Real logBATJacobian = 0.0;
+
+	system->realize(someState, SimTK::Stage::Position);
+
+	world->updateAtomListsFromCompound(someState);
 
 	// Molecules
 	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
 
 		Topology& topology = topologies[topoIx];
-		int currNAtoms = topology.getNumAtoms();
 
 		// Atoms
-		for (SimTK::Compound::AtomIndex aIx(0); aIx < currNAtoms; ++aIx){
+		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 
 			// Is this atom a root atom for a body
 			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0){
 
-				SimTK::Real bondDistance = SimTK::NaN;
+				SimTK::Real bondLength = SimTK::NaN;
 				SimTK::Real bondAngle = SimTK::NaN;
 
 				// Get body and parentBody
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+				const SimTK::Transform& X_PF = mobod.getDefaultInboardFrame();
+				const SimTK::Transform& X_BM = mobod.getDefaultOutboardFrame();
+				const SimTK::Transform& X_FM = mobod.getMobilizerTransform(someState);
+
 				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
-				if(parentMbx == 0){continue;} // Ground
 
-				// Get the neighbor atom in the parent mobilized body
-				SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
+				// // Use HCol to determine degrees of freedom
+				// for(SimTK::MobilizerUIndex uIx = SimTK::MobilizerUIndex(0); uIx < mobod.getNumU(someState); uIx++){
+				// 	//SimTK::SpatialVec HCol = mobod.getHCol(someState, SimTK::MobilizerUIndex(uIx));
+				// 	SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(uIx));
+				// 	std::cout <<"\n mbx uIx H_FMCol " << mbx <<" " << uIx <<"\n" 
+				// 		//<<" " << HCol[0][0] <<" " << HCol[0][1] <<" " << HCol[0][2]
+				// 		//<<" " << HCol[0][0] <<" " << HCol[0][1] <<" " << HCol[0][2] << std::endl
+				// 		<<" " << H_FMCol[0][0] <<" " << H_FMCol[0][1] <<" " << H_FMCol[0][2]
+				// 		<<" " << H_FMCol[0][0] <<" " << H_FMCol[0][1] <<" " << H_FMCol[0][2] << std::endl;
+				// }
 
-				if(chemParentAIx < 0){continue;} // no parent ??
+				// Rotations signs
+				SimTK::Transform X_GF = parentMobod.getBodyTransform(someState) * X_PF;
+				SimTK::UnitVec3 G_FZdir = X_GF.R() * SimTK::UnitVec3(0, 0, 1);
+				SimTK::UnitVec3 G_FYdir = X_GF.R() * SimTK::UnitVec3(0, 1, 0);
+				int ZSign = 1;
+				int YSign = 1;
 
-				// Get Top frame
-				SimTK::Transform T_X_root = topology.getTopTransform_FromMap(aIx);
+				if(X_BM.p().norm() < 0.00000001){ // Cartesian
 
-				// Get Top to parent frame
-				const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
-				SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
-				SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
-				
-				SimTK::Transform T_X_Proot = topology.getTopTransform_FromMap(parentRootAIx);
-				SimTK::Transform Proot_X_T = ~T_X_Proot;
+					//std::cout << "calcMobodsMBAT " << " Cartesian" <<"\n";
+					continue;
 
-				// chemical parent atom
-				SimTK::Transform T_X_chemProot = topology.getTopTransform_FromMap(chemParentAIx);
+				}else{ // non-Cartesian
 
-				// BEGIN GET ANGLE
-				SimTK::Compound::AtomIndex chemGrandParentIx;
-				SimTK::Transform T_X_grand;
+									// (### 1 ###) Accumulate initial BAT values 
+									if(parentMbx == 0){continue;} // Ground
 
-				if(chemParentAIx > 0){
+									// Get the neighbor atom in the parent mobilized body
+									SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
 
-					chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+									if(chemParentAIx < 0){continue;} // no parent ??
 
-					T_X_grand = topology.getTopTransform_FromMap(chemGrandParentIx);
+									// Get Top frame
+									SimTK::Transform G_X_root = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(aIx);
 
-					SimTK::Vec3 V1 = (~(T_X_root.R())) * T_X_grand.p();
-					SimTK::Vec3 V2 = (~(T_X_root.R())) * T_X_chemProot.p();
-					SimTK::Vec3 V3 = (~(T_X_root.R())) * T_X_root.p();
-					SimTK::Vec3 V3_V2 = V3 - V2;
+									// Get Top to parent frame
+									const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
+									SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+									SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+									
+									SimTK::Transform G_X_Proot = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(parentRootAIx);
 
-					bondDistance = std::sqrt((V3_V2[0]*V3_V2[0]) + (V3_V2[1]*V3_V2[1]) + (V3_V2[2]*V3_V2[2]));
-					bondAngle = bAngle(V2, V1, V3);
+									// chemical parent atom
+									SimTK::Transform G_X_chemProot = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(chemParentAIx);
 
-					scout("calcMobodsMBAT ")
-						<< "mbx " << mbx << " "
-						<< "bondDist " << bondDistance <<" "
-						<< "bondAngle " << bondAngle <<" "
-						<< eol;
-				}
+									// BEGIN GET ANGLE
+									SimTK::Compound::AtomIndex chemGrandParentIx;
+									SimTK::Transform G_X_grand;
+
+									if(chemParentAIx >= 1){
+
+										chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+
+										G_X_grand = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(chemGrandParentIx);
+
+										SimTK::Vec3 V1 = (~(G_X_root.R())) * G_X_grand.p();
+										SimTK::Vec3 V2 = (~(G_X_root.R())) * G_X_chemProot.p();
+										SimTK::Vec3 V3 = (~(G_X_root.R())) * G_X_root.p();
+										SimTK::Vec3 G_ParentRoot = V3 - V2;
+										SimTK::Vec3 G_GrandParent = V2 - V1;
+
+										SimTK::Vec3 crossDiffVec = G_ParentRoot % G_GrandParent;
+										SimTK::UnitVec3 crossDiff = SimTK::UnitVec3(crossDiffVec.normalize()[0], crossDiffVec.normalize()[1], crossDiffVec.normalize()[2]);
+
+										ZSign = (crossDiff[0] * G_FZdir[0]) 
+											  + (crossDiff[1] * G_FZdir[1])
+											  + (crossDiff[2] * G_FZdir[2]);
+										YSign = (crossDiff[0] * G_FYdir[0]) 
+											  + (crossDiff[1] * G_FYdir[1])
+											  + (crossDiff[2] * G_FYdir[2]);											  
+
+										bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
+										bondAngle = bAngle(V2, V1, V3);
+
+										// scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength <<" " << "bondAngle " << bondAngle
+										// <<" crossDiff " << crossDiff[0] <<" " << crossDiff[1] <<" " << crossDiff[2]
+										// <<" G_FZdir " << G_FZdir[0] <<" "  << G_FZdir[1] <<" " << G_FZdir[2]
+										// <<" ZSign "<< (crossDiff[0] * G_FZdir[0]) + (crossDiff[1] * G_FZdir[1]) + (crossDiff[2] * G_FZdir[2])
+										// <<" YSign "<< (crossDiff[0] * G_FYdir[0]) + (crossDiff[1] * G_FYdir[1]) + (crossDiff[2] * G_FYdir[2])
+										// << eol;
+											
+									} // atom has a grandParent
+
+									// (### 2 ###) Add any modifications from qs
+									SimTK::Vec3 checkV = X_BM.R() * Vec3(1,0,0);
+
+									if(std::abs((checkV[0] - 0.0)) < 0.00000001){ // Pin, Cylinder, Spherical, BallF 
+										
+										//std::cout << "calcMobodsMBAT " << " Pin, Cylinder, Spherical, BallF" <<"\n";
+
+										if(mobod.getNumQ(someState) >= 3){ // Spherical or Ball
+
+											//bondAngle += YSign * mobod.getOneQ(someState, 1); // direction ?
+
+										}
+
+									}else{ // Slider, AnglePin, BendStretch
+
+										//std::cout << "calcMobodsMBAT " << " Slider, AnglePin, BendStretch" <<"\n";
+
+										if(mobod.getNumQ(someState) == 2){ // BendStretch
+
+											//bondAngle += ZSign * mobod.getOneQ(someState, 0); // direction ?
+
+										}
+
+									}
+
+									// (### 3 ###) Cook Jacobian
+									if( !(std::isnan(bondLength)) ){
+										logBATJacobian += 4.0 * std::log(bondLength);
+									}
+									if( !(std::isnan(bondAngle)) ){
+										logBATJacobian += 2.0 * std::log( std::sin(bondAngle) );
+									}
+
+				} // non-Cartesian case
 
 			} // if atom is root
 
@@ -4898,79 +4984,105 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 
 	} // every topology
 
-
-	//world->getRootAngle(topology, rootAIx, someState);
-
-	/* for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		const SimTK::MobilizedBody& parent = mobod.getParentMobilizedBody();
-		const SimTK::MobilizedBody& grandpa = parent.getParentMobilizedBody();
-
-		const SimTK::Transform& X_PF = mobod.getDefaultInboardFrame();
-		const SimTK::Transform& X_BM = mobod.getDefaultOutboardFrame();
-		const SimTK::Transform X_MB = ~X_BM;
-		const SimTK::Transform& X_FM = mobod.getMobilizerTransform(someState);
-
-		const SimTK::Transform& parentX_PF = parent.getDefaultInboardFrame();
-		const SimTK::Transform& parentX_BM = parent.getDefaultOutboardFrame();
-		const SimTK::Transform& parentX_FM = parent.getMobilizerTransform(someState);
-
-		//std::cout << "\nMCSampler::calcMobodsMBAT" 
-		// //<<" X_PF " << X_PF
-		// //<<" X_BM " << X_BM 
-		// //<<" X_FM " << X_FM 
-		//<<" " << SimTK::TinyReal << std::endl;
-		//PrintTransform(X_PF, 3, "X_PF", "X_PF");
-		//PrintTransform(X_FM, 3, "X_FM", "X_FM");
-		//PrintTransform(X_BM, 3, "X_BM", "X_BM");
-		// SimTK::Vec4 X_MB_v4 = X_MB.R().convertRotationToAngleAxis();
-		// std::cout << "X_MB_v4 a v:" 
-		// 	<<" " << X_MB_v4[0] 
-		// 	<<" " << X_MB_v4[1] <<" " << X_MB_v4[2] <<" " << X_MB_v4[3]
-		// << std::endl; 
-		// SimTK::Transform R_XAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateAxis::XCoordinateAxis());
-		// SimTK::Transform R_YAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateAxis::YCoordinateAxis());
-		// SimTK::Transform R_ZAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateAxis::ZCoordinateAxis());
-		// SimTK::Transform R_mXAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateDirection::NegXDirection());
-		// SimTK::Transform R_mYAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateDirection::NegYDirection());
-		// SimTK::Transform R_mZAxis = SimTK::Rotation(60.0 * Deg2Rad, CoordinateDirection::NegZDirection());
-		// PrintTransform(R_XAxis, 3, "R_XAxis", "R_XAxis");
-		// PrintTransform(R_YAxis, 3, "R_YAxis", "R_YAxis");
-		// PrintTransform(R_ZAxis, 3, "R_ZAxis", "R_ZAxis");
-		// PrintTransform(R_mXAxis, 3, "R_mXAxis", "R_mXAxis");
-		// PrintTransform(R_mYAxis, 3, "R_mYAxis", "R_mYAxis");
-		// PrintTransform(R_mZAxis, 3, "R_mZAxis", "R_mZAxis");
-		
-		if(X_BM.p().norm() == 0){ // Cartesian
-
-			std::cout << "\nMCSampler::calcMobodsMBAT " << " Cartesian" <<"\n";
-
-		}else{ // non-Cartesian
-
-			SimTK::Vec3 checkV = X_BM.R() * Vec3(1,0,0);
-			//std::cout << "\nX_BMxXAxis " << checkV[0] <<" " << checkV[1] <<" " << checkV[2] <<"\n";
-
-			if(std::abs((checkV[0] - 0.0)) < 0.00000001){ // Pin, Cylinder, Spherical, BallF 
-				
-				std::cout << "\nMCSampler::calcMobodsMBAT " << " Pin, Cylinder, Spherical, BallF" <<"\n";
-
-			}else{ // Slider, AnglePin, BendStretch
-
-				std::cout << "\nMCSampler::calcMobodsMBAT " << " Slider, AnglePin, BendStretch" <<"\n";
-
-			}
-
-		}
-
-		//mobod.getBodyOriginLocation(someState);
-		//mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(0));
-		//SimTK::Real M = mobod.getBodyMass(someState);
-		//for(int qCnt = mobod.getFirstQIndex(someState); qCnt < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qCnt++){}
-
-	} */
-
-	return 0;
+	return logBATJacobian;
 
 }
 
+double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
+{
+
+	// Accumulate result here
+	SimTK::Real logBATJacobian = 0.0;
+
+	system->realize(someState, SimTK::Stage::Position);
+
+	world->updateAtomListsFromCompound(someState);
+
+	// Molecules
+	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
+
+		Topology& topology = topologies[topoIx];
+
+		// Atoms
+		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
+
+			// Is this atom a root atom for a body
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0){
+
+				SimTK::Real bondLength = SimTK::NaN;
+				SimTK::Real bondAngle = SimTK::NaN;
+
+				// Get body and parentBody
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+
+									// (### 1 ###) Accumulate initial BAT values 
+									if(parentMbx == 0){continue;} // Ground
+
+									// Get the neighbor atom in the parent mobilized body
+									SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
+
+									if(chemParentAIx < 0){continue;} // no parent ??
+
+									// Get Top frame
+									SimTK::Transform G_X_root = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(aIx);
+
+									// Get Top to parent frame
+									const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
+									SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+									SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+									
+									// BEGIN GET ANGLE
+									SimTK::Compound::AtomIndex chemGrandParentIx;
+
+									if(chemParentAIx >= 1){
+
+										chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+
+										SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
+										SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
+										SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
+
+										SimTK::Vec3 G_ParentRoot = V3 - V2;
+										SimTK::Vec3 G_GrandParent = V2 - V1;
+										
+										bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
+										bondAngle = bAngle(V2, V1, V3);
+
+										//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength <<" " << "bondAngle " << bondAngle << eol;
+											
+									} // atom has a grandParent
+
+									// (### 3 ###) Cook Jacobian
+									if( !(std::isnan(bondLength)) ){
+										logBATJacobian += 4.0 * std::log(bondLength);
+									}
+									if( !(std::isnan(bondAngle)) ){
+										logBATJacobian += 2.0 * std::log( std::sin(bondAngle) );
+									}
+
+
+			} // if atom is root
+
+		} // every atom
+
+	} // every topology
+
+	return logBATJacobian;
+
+}
+
+
+
+// SimTK::Transform G_X_root = topology.getTopLevelTransform() * T_X_root;
+// SimTK::Transform G_X_Proot = topology.getTopLevelTransform() * T_X_Proot;
+// SimTK::Transform X_GF = parentMobod.getBodyTransform(someState) * X_PF;
+// SimTK::Vec3 F_delta(mobod.getOneQ(someState, 0), mobod.getOneQ(someState, 1), mobod.getOneQ(someState, 2));
+// SimTK::Vec3 G_delta = X_GF.R() * F_delta;
+// SimTK::Vec3 G_rootFinal = G_X_root.p() + G_delta.p();
+// // Incorect : G_X_Proot is modified too
+// SimTK::Real bondLengthFinal = (G_rootFinal - G_X_Proot.p()).norm();
