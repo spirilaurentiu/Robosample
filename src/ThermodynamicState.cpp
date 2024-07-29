@@ -389,6 +389,21 @@ double instantAverage(int N, double prevAvg, double currSam)
 }
 
 /*!
+ * <!-- not found = -1 -->
+*/
+int ThermodynamicState::findWorld(const int whichWorld)
+{
+	int wPosInVector = -1;
+	for(const auto wIx : worldIndexes){
+		wPosInVector++;
+		if(whichWorld == wIx){
+			wPosInVector = wIx;
+			break;
+		}
+	}
+	return wPosInVector;
+}
+/*!
  * <!--  -->
 */
 bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldQs)
@@ -400,23 +415,8 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 	SimTK::Real Ninv = 1.0 / N;
 
 	// Search the position in cpp vector
-	bool found = false;
-	int wPosInVector = -1;
-
-	for(const auto wIx : worldIndexes){
-		wPosInVector++;
-
-		if(whichWorld == wIx){
-
-			wPosInVector = wIx;
-			found = true;
-			break;
-		}
-	}
-
-	if(found == false){
-		return false;
-	}
+	int wPosInVector = findWorld(whichWorld);
+	if(wPosInVector < 0){return false;}
 
 	// Resize
 	if(Qmeans[wPosInVector].size() == 0){
@@ -427,9 +427,8 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	if(nofSamples == 0){
 
-		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-			std::cout << "thIx " << myIndex << " wIx " << whichWorld 
-			<< " nq " << worldQs.size() << " N " << N <<" qs: ";
+		if(false){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+			std::cout << "thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" qs: ";
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){
 				std::cout <<" " << worldQs[qIx];
 			}std::cout << std::endl; 
@@ -444,7 +443,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	}else{ // nofSamples gt 2
 
-		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		if(false){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
 			std::cout << "thIx " << myIndex << " wIx " << whichWorld 
 			<< " nq " << worldQs.size() << " N " << N <<" qs: ";
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){
@@ -496,27 +495,39 @@ void ThermodynamicState::printQStats(void)
 */
 std::vector<SimTK::Real>& ThermodynamicState::getQmeans(const int whichWorld)
 {
-
-	// Search the position in cpp vector
-	bool found = false;
-	int wPosInVector = -1;
-
-	for(const auto wIx : worldIndexes){
-		wPosInVector++;
-
-		if(whichWorld == wIx){
-
-			wPosInVector = wIx;
-			found = true;
-			break;
-		}
-	}
-
-	if(found == false){
+	int wPosInVector = findWorld(whichWorld);
+	if(wPosInVector < 0){
 		std::cerr << "Thermodynamic state " << myIndex << " world " << whichWorld << " not found. Exiting...\n";
 		exit(1);
 	}else{
 		return Qmeans[wPosInVector];
 	}
+}
 
+/*!
+ * <!--  -->
+*/
+std::vector<SimTK::Real>& ThermodynamicState::getQdiffs(const int whichWorld)
+{
+	int wPosInVector = findWorld(whichWorld);
+	if(wPosInVector < 0){
+		std::cerr << "Thermodynamic state " << myIndex << " world " << whichWorld << " not found. Exiting...\n";
+		exit(1);
+	}else{
+		return Qdiffs[wPosInVector];
+	}
+}
+
+/*!
+ * <!--  -->
+*/
+std::vector<SimTK::Real>& ThermodynamicState::getQvars(const int whichWorld)
+{
+	int wPosInVector = findWorld(whichWorld);
+	if(wPosInVector < 0){
+		std::cerr << "Thermodynamic state " << myIndex << " world " << whichWorld << " not found. Exiting...\n";
+		exit(1);
+	}else{
+		return Qvars[wPosInVector];
+	}
 }

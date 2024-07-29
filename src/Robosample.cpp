@@ -47,7 +47,7 @@ int testContext()
 	// c.setNonbonded(0, 1.2); // default - set for each world
 	c.setPdbPrefix("2but42"); // will disappear
 	c.setOutput("temp"); // the log file is created like log.[seed] - needs refactoring
-	c.setRequiredNofRounds(1000); // per world? what does it do?
+	c.setRequiredNofRounds(2); // per world? what does it do?
 	c.setPdbRestartFreq(1); // WRITE_PDBS
 	c.setPrintFreq(1); // PRINT_FREQ
 
@@ -56,8 +56,8 @@ int testContext()
 	// generate topologies
 	// addWorld will deal with adding generating dumm parameters
 	// c.loadAmberSystem("diala_double/diala_double.prmtop", "diala_double/diala_double.rst7");
+	// c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
 	c.loadAmberSystem("ala10/ligand.prmtop", "ala10/ligand.rst7");
-	// c.loadAmberSystem("ala10/ligand.prmtop", "ala10/ligand.rst7");
 
 	// World 0 OPENMM
 	std::vector<BOND_FLEXIBILITY> flexibilities_w0 = {
@@ -208,7 +208,7 @@ int testContext()
 		{88, 90, BondMobility::Mobility::Torsion},
 		{98, 100, BondMobility::Mobility::Torsion},
 	};
-	c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
+	c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
 
 	// World 2
 	std::vector<BOND_FLEXIBILITY> flexibilities_w2 = {
@@ -233,17 +233,17 @@ int testContext()
 		{96, 98, BondMobility::Mobility::Torsion},
 		{98, 104, BondMobility::Mobility::Torsion},
 	};
-	c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w2);
+	c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w2);
 
 	// Does OMMVV have to be first?
 	// Add samplers
 	c.getWorld(0).addSampler(SamplerName::HMC, IntegratorName::OMMVV, ThermostatName::ANDERSEN, false);
 
 	// // Does not work if I set OMMVV instead of VV. How do I check if it is working?
-	c.getWorld(1).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, true);
+	c.getWorld(1).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, false);
 
 	// // Does not work if I set OMMVV instead of VV. How do I check if it is working?
-	c.getWorld(2).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, true);
+	c.getWorld(2).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, false);
 
 	// append a dcd reporter for each replica
 	// pass a path when initializing the replica and check if the containig folder exists
@@ -270,6 +270,18 @@ int testContext()
 	std::vector<std::string> distortArgs = { "0", "0", "0" };
 	std::vector<int> flow = { 0, 0, 0 };
 	std::vector<int> work = { 0, 0, 0 };
+
+	// acceptRejectModes.pop_back();
+	// timesteps.pop_back();
+	// worldIndexes.pop_back();
+	// mdsteps.pop_back();
+	// boostMDSteps.pop_back();
+	// samplesPerRound.pop_back();
+
+	// distortOptions.pop_back();
+	// distortArgs.pop_back();
+	// flow.pop_back();
+	// work.pop_back();
 
 	for (int i = 0; i < nofReplicas; i++) {
 		c.addReplica(i);

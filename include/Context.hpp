@@ -573,6 +573,8 @@ public:
 	// Go through all of this replica's worlds and generate samples
 	int RunReplicaAllWorlds(int mixi, int replicaIx, int swapEvery);
 
+	// Transfer Q statistics
+	void transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx);
 	void RunReplicaRefactor(int mixi, int replicaIx);
 
 	void PrintReplicas(void);
