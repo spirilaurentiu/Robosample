@@ -42,8 +42,8 @@ class ThermodynamicState{
 	const std::vector<int>& getMdsteps() const;
 
 	// Set the sampling method
-	void setSamplers(const std::vector<std::string>& rexSamplersArg);
-	const std::vector<std::string>& getSamplers() const;
+	void setAcceptRejectModes(const std::vector<AcceptRejectMode>& rexSamplersArg);
+	const std::vector<AcceptRejectMode>& getAcceptRejectModes() const;
 
 	// Next functions set Q, U, tau perturbing functions options
 	// for samplers
@@ -53,10 +53,16 @@ class ThermodynamicState{
 	std::vector<std::string>& getDistortArgs();
 	void setFlowOptions(const std::vector<int>& rexFlowOptionsArg);
 	void setWorkOptions(const std::vector<int>& rexWorkOptionsArg);
+	
 
-	// Set the integrating method
-	void setIntegrators(const std::vector<std::string>& rexIntegratorsArg);
-	const std::vector<std::string>& getIntegrators() const;
+	void setBoostMDSteps(const std::vector<int>& rexBoostMDStepsArg);
+	void setBoostTemperature(SimTK::Real rexBoostTemperatureArg);
+
+	const std::vector<int>& getBoostMDSteps() const;
+	SimTK::Real getBoostTemperature() const;
+
+	std::vector<int> boostMDSteps;
+	SimTK::Real boostTemperature;
 
 	// If any of the distort, flow or work options are active
 	const int hasNonequilibriumMoves(){
@@ -145,12 +151,11 @@ class ThermodynamicState{
 
 	int nonequilibrium = 0;
 
-	std::vector<std::string> rexSamplers;
+	std::vector<AcceptRejectMode> rexSamplers;
 	std::vector<int> rexDistortOptions;
 	std::vector<std::string> rexDistortArgs;
 	std::vector<int> rexFlowOptions;
 	std::vector<int> rexWorkOptions;
-	std::vector<std::string> rexIntegrators;
 
 	int allWorldsNofSamples = 0;
 	int nofSamples = 0;

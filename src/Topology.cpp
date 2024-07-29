@@ -671,6 +671,8 @@ void Topology::setSubAtomList(
 
 	natoms = subAtomList.size();
 
+	std::cout << "setSubAtomList natoms " << natoms << std::endl;
+
 	atomFrameCache.resize(natoms);
 
 	elementCache = elementCacheArg;

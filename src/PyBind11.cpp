@@ -46,13 +46,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("HMC", SamplerName::HMC)
         .value("LAHMC", SamplerName::LAHMC);
 
-    py::enum_<SampleGenerator>(m, "SampleGenerator")
-        .value("EMPTY", SampleGenerator::EMPTY)
-        .value("MC", SampleGenerator::MC);
+    py::enum_<AcceptRejectMode>(m, "AcceptRejectMode")
+        .value("AlwaysAccept", AcceptRejectMode::AlwaysAccept)
+        .value("MetropolisHastings", AcceptRejectMode::MetropolisHastings);
 
     py::enum_<IntegratorName>(m, "IntegratorName")
-        .value("EMPTY", IntegratorName::EMPTY)
-        .value("VERLET", IntegratorName::VERLET)
+        .value("EMPTY", IntegratorName::None)
+        .value("VERLET", IntegratorName::Verlet)
         .value("EULER", IntegratorName::EULER)
         .value("EULER2", IntegratorName::EULER2)
         .value("CPODES", IntegratorName::CPODES)
@@ -62,9 +62,9 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG)
         .value("BENDSTRETCH", IntegratorName::BENDSTRETCH)
         .value("OMMVV", IntegratorName::OMMVV)
-        .value("BOUND_WALK", IntegratorName::BOUND_WALK)
-        .value("BOUND_HMC", IntegratorName::BOUND_HMC)
-        .value("STATIONS_TASK", IntegratorName::STATIONS_TASK)
+        .value("BOUND_WALK", IntegratorName::BoundWalk)
+        .value("BOUND_HMC", IntegratorName::BoundHMC)
+        .value("STATIONS_TASK", IntegratorName::StationsTask)
         .value("NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS);
 
     py::enum_<ThermostatName>(m, "ThermostatName")

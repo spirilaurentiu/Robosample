@@ -1,5 +1,4 @@
-#ifndef BGENERAL_H_
-#define BGENERAL_H_
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -498,10 +497,9 @@ void normalize(std::vector<SimTK::Real>& V);
 /*
  * Sampling
  */
-
-enum class SampleGenerator : int {
-	EMPTY = 0, // MD
-	MC // MCMC
+enum class AcceptRejectMode : int {
+	AlwaysAccept = 0, // MD
+	MetropolisHastings, // MCMC
 };
 
 // TODO: remove this
@@ -525,23 +523,22 @@ enum struct ThermostatName : int { // Thermostats
 /*
  * Simulation
  */
-
-enum struct IntegratorName : int { // Integrators
-	EMPTY = 0,
-	VERLET,
-	EULER,
-	EULER2,
-	CPODES,
-	RUNGEKUTTA,
-	RUNGEKUTTA2,
-	RUNGEKUTTA3,
-	RUNGEKUTTAFELDBERG,
-	BENDSTRETCH,
-	OMMVV,
-	BOUND_WALK,
-	BOUND_HMC,
-	STATIONS_TASK,
-	NOF_INTEGRATORS
+enum class IntegratorName {
+	None = 0,
+    Verlet,
+    Euler,
+    Euler2,
+    Cpodes,
+    RungeKutta,
+    RungeKutta2,
+    RungeKutta3,
+    RungeKuttaFeldberg,
+    BendStretch,
+    OMMVV,
+    BoundWalk,
+    BoundHMC,
+    StationsTask,
+    NofIntegrators
 };
 
 enum struct PositionsPerturbMethod : int {
@@ -574,23 +571,6 @@ enum struct NMAOptions : int {
 	NOF_
 };
 
-
-const std::unordered_map<std::string, IntegratorName>
-IntegratorNameS{
-	{"EMPTY", IntegratorName::EMPTY},
-	{"VERLET", IntegratorName::VERLET},
-	{"EULER", IntegratorName::EULER},
-	{"EULER2", IntegratorName::EULER2},
-	{"CPODES", IntegratorName::CPODES},
-	{"RUNGEKUTTA", IntegratorName::RUNGEKUTTA},
-	{"RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2},
-	{"RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3},
-	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
-	{"OMMVV", IntegratorName::OMMVV},
-	{"RANDOM_WALK", IntegratorName::BOUND_WALK},
-	{"RANDOM_KICK", IntegratorName::BOUND_HMC},
-	{"STATIONS_TASK", IntegratorName::STATIONS_TASK}
-};
 
 /*
  * Statistics
@@ -729,5 +709,3 @@ SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& 
 #ifndef LOOKAHEADHMCSAMPLER
 #define LOOKAHEADHMCSAMPLER LAHMC
 #endif
-
-#endif /*BGENERAL_H_*/

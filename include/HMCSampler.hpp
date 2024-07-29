@@ -109,7 +109,6 @@ public:
 		SimTK::GeneralForceSubsystem &argForces,
 		SimTK::TimeStepper &argTimeStepper)
 		//:Qmeans(nullptr), Qdiffs(nullptr), Qstds(nullptr)
-
 ;
 
 	/** Destructor **/
@@ -142,7 +141,6 @@ public:
  
 	void setIntegratorName(IntegratorName);
 	const IntegratorName getIntegratorName(void){return integratorName;}
-	void setIntegratorName(const std::string integratorName);
 
  	/* 
 	* Compute mathematical, rather than robotic Jacobian.
@@ -266,8 +264,7 @@ public:
 	void storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState);
 
 	// Set the method of integration
-	void setSampleGenerator(SampleGenerator sampleGeneratorArg);
-	void setSampleGenerator(const std::string& samplerNameArg);
+	void setAcceptRejectMode(AcceptRejectMode sampleGeneratorArg);
 
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
 
@@ -741,14 +738,14 @@ protected:
 	std::vector<SimTK::Real> dRdot;
 
 	// Integration
-	IntegratorName integratorName = IntegratorName::EMPTY;
+	IntegratorName integratorName = IntegratorName::None;
 
 	// For RANDOM_WALK Docking Simulations
 	SimTK::Vec3 geometricCenter;
 	float sphereRadius = SimTK::NaN;
 
 	// Sampling
-	int sampleGenerator = 0;
+	AcceptRejectMode sampleGenerator = AcceptRejectMode::AlwaysAccept;
 
 	std::vector<SimTK::Real> UScaleFactors;
 	SimTK::Real UScaleFactorsNorm = 0.0;

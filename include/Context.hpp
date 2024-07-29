@@ -26,16 +26,18 @@ enum class RUN_TYPE : int {
 	RENE
 };
 
-class Context{
-
+class Context {
 public:
 	/**
 	 * @brief Initialize simulation variables.
 	 * @param Ti Initial temperature. Cannot be 0.
 	 * @param Tf Final temperature. Cannot be 0. Must be greater than Ti.
 	 * @param seed Seed to use for random number generation. If 0, a random seed is used.
+	 * @param threads Number of threads to use.
+	 * @param nofRoundsTillReblock Number of rounds until reblocking.
+	 * @param runType Type of simulation to run.
 	*/
-	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed = 0);
+	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq);
 
 	/**
 	 * @brief Print atom's Compound and DuMM indexes.
@@ -53,7 +55,6 @@ public:
 	*/	
 	bool initializeFromFile(const std::string& filename);
 
-	void setNumThreads(int threads);
 	void setNonbonded(int method, SimTK::Real cutoff);
 	void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
@@ -61,8 +62,7 @@ public:
 	bool setOutput(const std::string& outDir);
 
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
-
-	void setRootMobilitiesFromFlexFiles(void);
+	void initialize();
 
 	void appendDCDReporter(const std::string& filename);
 
@@ -70,7 +70,6 @@ public:
 	void Run(int steps);
 
 	// Input functions
-	bool loadTopologyFile(std::string topologyFilename);
 	bool loadCoordinatesFile(std::string coordinatesFilename);
 	void PrintCoordinates(const std::vector<std::vector
         <std::pair <bSpecificAtom *,
@@ -79,16 +78,6 @@ public:
 	bool loadRigidBodiesSpecs(std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN);
 	bool loadFlexibleBondsSpecs(std::size_t whichWorld, std::string FlexSpecsFN);
 	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
-
-	/** Load molecules based on loaded filenames. One molecule
-	creates a topology object and based on amberReader forcefield
-	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
-	void AddMolecules(
-		int requestedNofMols,
-		SetupReader& setupReader
-		//std::vector<std::string> argRoots,
-		//std::vector<std::string> argRootMobilities
-	);
 
 	// ============================================================================
 	// ============================================================================
@@ -209,10 +198,6 @@ public:
 	// Another way to do it is setting the number of rounds
 	int getRequiredNofRounds();
 	void setRequiredNofRounds(int argNofRounds);
-
-	int getNofRoundsTillReblock();
-	void setNofRoundsTillReblock(int nofRoundsTillReblock);
-	void updNofRoundsTillReblock(int nofRoundsTillReblock);
 
 	std::size_t getWorldIndex(std::size_t which) const;
 
@@ -424,18 +409,18 @@ public:
 	void addReplica(int index);
 
 	// Add one thermodynamic state
-	void addThermodynamicState(int index, SimTK::Real T,
-
-		std::vector<std::string>& rexSamplers,
+	void addThermodynamicState(int index,
+		SimTK::Real T,
+		SimTK::Real boostT,
+		std::vector<AcceptRejectMode>& rexSamplers,
 		std::vector<int>& rexDistortOptions,
 		std::vector<std::string>& rexDistortArgs,
 		std::vector<int>& rexFlowOptions,
 		std::vector<int>& rexWorkOptions,
-		std::vector<std::string>& rexIntegrators,
-
 		std::vector<int>& argWorldIndexes,
 		std::vector<SimTK::Real>& timestepsInThisReplica,
-		std::vector<int>& mdstepsInThisReplica);
+		std::vector<int>& mdSteps,
+		std::vector<int>& boostMDSteps);
 
 	/**
 	* @brief zmatrixbat_
@@ -469,9 +454,6 @@ public:
 	// Calculate Fixman potential of replica I in replica J's back world. Uj(X_i)
 	SimTK::Real calcFixman_IinJ(int replica_i, int replica_j);
 
-	const int& getSwapFixman(void){return swapFixman;}
-	void setSwapFixman(const int argSwapFixman){swapFixman = argSwapFixman;}
-
 	SimTK::Real calcReplicaTransferedEnergy(int replicaIx);
 	SimTK::Real calcReplicaWork(int replicaIx);
 
@@ -485,9 +467,6 @@ public:
 	// Exchanges thermodynamic states between replicas
 	void getMsg_RexDetHeader(std::stringstream& rexDetHeader);
 	bool attemptREXSwap(int replica_i, int replica_j);
-
-	const int getSwapEvery(void);
-	void setSwapEvery(const int& n);
 
 	// startingFrom argument is for alternating odd and even neighbors
 	void mixNeighboringReplicas(unsigned int startingFrom);
@@ -765,7 +744,6 @@ private:
 	
 	ELEMENT_CACHE elementCache;
 
-	std::vector<int> findMolecules(const readAmberInput& reader);
 	void loadAtoms(const readAmberInput& reader);
 	void loadBonds(const readAmberInput& reader);
 	void loadAngles(const readAmberInput& reader);
@@ -964,28 +942,28 @@ private:
 	// Pairs of replicas to be exchanged
 	std::vector<int> exchangePairs;
 
-	std::map<std::string, SampleGenerator> sampleGenerator = {
-		{ "EMPTY", SampleGenerator::EMPTY },
-		{ "MC", SampleGenerator::MC },
+	std::map<std::string, AcceptRejectMode> sampleGenerator = {
+		{ "EMPTY", AcceptRejectMode::AlwaysAccept },
+		{ "MC", AcceptRejectMode::MetropolisHastings },
 	};
 
 	std::map<std::string, IntegratorName> integratorName = {
-		{ "EMPTY", IntegratorName::EMPTY },
-		{ "VV", IntegratorName::VERLET },
-		{ "VERLET", IntegratorName::VERLET },
-		{ "EULER", IntegratorName::EULER },
-		{ "EULER2", IntegratorName::EULER2 },
-		{ "CPODES", IntegratorName::CPODES },
-		{ "RUNGEKUTTA", IntegratorName::RUNGEKUTTA },
-		{ "RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2 },
-		{ "RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3 },
-		{ "RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG },
-		{ "BENDSTRETCH", IntegratorName::BENDSTRETCH },
+		{ "EMPTY", IntegratorName::None },
+		{ "VV", IntegratorName::Verlet },
+		{ "VERLET", IntegratorName::Verlet },
+		{ "EULER", IntegratorName::Euler },
+		{ "EULER2", IntegratorName::Euler2 },
+		{ "CPODES", IntegratorName::Cpodes },
+		{ "RUNGEKUTTA", IntegratorName::RungeKutta },
+		{ "RUNGEKUTTA2", IntegratorName::RungeKutta2 },
+		{ "RUNGEKUTTA3", IntegratorName::RungeKutta3 },
+		{ "RUNGEKUTTAFELDBERG", IntegratorName::RungeKuttaFeldberg },
+		{ "BENDSTRETCH", IntegratorName::BendStretch },
 		{ "OMMVV", IntegratorName::OMMVV },
-		{ "BOUND_WALK", IntegratorName::BOUND_WALK },
-		{ "BOUND_HMC", IntegratorName::BOUND_HMC },
-		{ "STATIONS_TASK", IntegratorName::STATIONS_TASK },
-		{ "NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS },
+		{ "BOUND_WALK", IntegratorName::BoundWalk },
+		{ "BOUND_HMC", IntegratorName::BoundHMC },
+		{ "STATIONS_TASK", IntegratorName::StationsTask },
+		{ "NOF_INTEGRATORS", IntegratorName::NofIntegrators },
 	};
 
 	std::map<std::string, ThermostatName> thermostateName = {

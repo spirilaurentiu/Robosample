@@ -63,37 +63,9 @@ HMCSampler::HMCSampler(World &argWorld,
 		Sampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 		//, MonteCarloSampler(argWorld, argCompoundSystem, argMatter, argTopologies, argDumm, argForces, argTimeStepper)
 {
-
-	system = &argMatter.getSystem(); // TODO do we need this? was already defined in sampler.hpp
-
-	//this->rootTopology = argResidue;
-
-	// TODO do not throw in constructors
-	if( !(topologies.size() > 0) ){
-		std::cerr << "HMCSampler: No topologies found. Exiting...";
-		throw std::exception();
-		std::exit(1);
-	}
-
-	rootTopology = &topologies[0];
-
-	// Set total number of atoms and dofs
-	for (const auto& topology: topologies){
-		natoms += topology.getNumAtoms();
-	}
-
 	TVector.resize(matter->getNumBodies());
 	SetTVector.resize(matter->getNumBodies());
 	acceptedStepsBuffer.resize(acceptedStepsBufferSize, 0);
-
-	this->nofSamples = 0;
-
-	// BAT statistics initialization
-	subZMatrixBATMeans = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
-	subZMatrixBATDiffs = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
-	subZMatrixBATVars = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
-	subZMatrixBATVars_Alien = std::map<SimTK::MobilizedBodyIndex, std::vector<SimTK::Real>>();
-
 }
 
 /** Destructor **/
@@ -461,29 +433,16 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 }
 
 // Set the method of integration
-void HMCSampler::setSampleGenerator(SampleGenerator sampleGeneratorArg)
+void HMCSampler::setAcceptRejectMode(AcceptRejectMode sampleGeneratorArg)
 {
-	if (SampleGenerator::EMPTY == sampleGeneratorArg) {
+	if (AcceptRejectMode::AlwaysAccept == sampleGeneratorArg) {
 		setAlwaysAccept(true);
 	}
-	else if (SampleGenerator::MC == sampleGeneratorArg) {
+	else if (AcceptRejectMode::MetropolisHastings == sampleGeneratorArg) {
 		setAlwaysAccept(false);
 	}
-}
 
-void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
-{
-	if (generatorNameArg == "EMPTY"){
-		this->sampleGenerator = 0;
-		setAlwaysAccept(true);
-	}
-	else if(generatorNameArg == "MC"){
-		this->sampleGenerator = 1;
-		setAlwaysAccept(false);
-	}else{
-		std::cerr << "Unknown sampling method.\n";
-		throw std::exception(); std::exit(1);
-	}
+	this->sampleGenerator = sampleGeneratorArg;
 }
 
 void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
@@ -491,10 +450,10 @@ void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
 
 	// scout("[KE0] HMCSampler Set integrator to ");
     // switch (integratorNameArg) {
-    //     case IntegratorName::EMPTY:
+    //     case IntegratorName::None:
     //         std::cout << "EMPTY";
     //         break;
-    //     case IntegratorName::VERLET:
+    //     case IntegratorName::Verlet:
     //         std::cout << "VERLET";
     //         break;
     //     case IntegratorName::EULER:
@@ -507,33 +466,6 @@ void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
     // }std::cout << eol;
 
 	this->integratorName = integratorNameArg;
-}
-
-void HMCSampler::setIntegratorName(const std::string integratorNameArg)
-{
-
-	//this->integratorName = IntegratorNameS[integratorNameArg];
-
- 	if(integratorNameArg == "OMMVV"){
-		this->integratorName = IntegratorName::OMMVV;
-
-	}else if (integratorNameArg == "VERLET" || integratorNameArg == "VERLET"){
-		integratorName = IntegratorName::VERLET;
-		
-	}else if (integratorNameArg == "BOUND_WALK"){
-		integratorName = IntegratorName::BOUND_WALK;
-	
-	}else if (integratorNameArg == "BOUND_HMC"){
-		integratorName = IntegratorName::BOUND_HMC;
-
-	}else if(integratorNameArg == "STATIONS_TASK"){
-		integratorName = IntegratorName::STATIONS_TASK;
-
-	}else{
-		integratorName = IntegratorName::EMPTY;
-
-	}
-
 }
 
 /** Store old and set kinetic and total energies */
@@ -623,22 +555,31 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			////PrintSubZMatrixBATAndRelated(someState); // OLD
 
 
-			std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
-			std::cout << "Qmeans received: " ;
-			if(Qmeans){
-				std::cout << (*Qmeans).size() << std::endl; // @@@@@@@@@@@@@
-			}
-			
+			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
 
+			//std::cout << "scaleF " << this->QScaleFactor << "\n";
+
+			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
+			
 			SimTK::Vector &stateQs = someState.updQ();
+
 			for(int qIx = 0; qIx < someState.getNQ(); qIx++){
-				if(0
-					|| ((qIx + 0) % 3 == 0) // torsion
-					|| ((qIx + 1) % 3 == 0) // dist
-					|| ((qIx + 2) % 3 == 0) // angle
+				if(1
+					//|| ((qIx + 0) % 3 == 0) // torsion
+					//|| ((qIx + 1) % 3 == 0) // dist
+					//|| ((qIx + 2) % 3 == 0) // angle
 				){
-					//stateQs[qIx] *= (this->QScaleFactor);
+					J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
+
+					stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+
 				}
+			}
+
+			J_scale = someState.getNQ() * std::log((this->QScaleFactor)); // JACOBIAN
+
+			for(int qIx = 0; qIx < someState.getNQ(); qIx++){ // JACOBIAN
+				J_fin += (4.0 * std::log( std::abs((*Qmeans)[qIx] + stateQs[qIx]) ));
 			}
 
 			system->realize(someState, SimTK::Stage::Position);
@@ -762,7 +703,7 @@ void HMCSampler::perturbVelocities(SimTK::State& someState,
 void HMCSampler::perturbForces(SimTK::State& someState,
 	ForcesPerturbMethod FPM){
 
-	if((FPM == ForcesPerturbMethod::NOT_IMPLEMENTED)){
+	if(FPM == ForcesPerturbMethod::NOT_IMPLEMENTED){
 		assert(!"Not implemented");
 		// Realize velocity
 		system->realize(someState, SimTK::Stage::Dynamics);
@@ -1164,7 +1105,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		adaptTimestep(someState);
 	}
 
-	if(this->integratorName == IntegratorName::VERLET){
+	if(this->integratorName == IntegratorName::Verlet){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1180,7 +1121,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}
 
-	}else if(this->integratorName == IntegratorName::BOUND_WALK){
+	}else if(this->integratorName == IntegratorName::BoundWalk){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1194,7 +1135,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::BOUND_HMC){
+	}else if(this->integratorName == IntegratorName::BoundHMC){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1208,7 +1149,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::STATIONS_TASK){
+	}else if(this->integratorName == IntegratorName::StationsTask){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1250,7 +1191,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}
 
-	}else if(this->integratorName == IntegratorName::EMPTY){
+	}else if(this->integratorName == IntegratorName::None){
 		try {
 
 			// Advance to Position Stage
@@ -1814,7 +1755,7 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 
 void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
 {
-	std::cout << "HMCSampler::OMM_storeOMMConfiguration_X " << omm_locations_old.size() << " " << positions.size() << std::endl;
+	std::cout << "\nHMCSampler::OMM_storeOMMConfiguration_X " << omm_locations_old.size() << " " << positions.size() << std::endl;
 
 		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
 
@@ -3095,19 +3036,19 @@ VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
 	if(integratorName == IntegratorName::OMMVV){
 		return VelocitiesPerturbMethod::TO_T;
 
-	}else if (integratorName == IntegratorName::VERLET){
+	}else if (integratorName == IntegratorName::Verlet){
 		return VelocitiesPerturbMethod::TO_T;
 
-	}else if (integratorName == IntegratorName::BOUND_WALK){
+	}else if (integratorName == IntegratorName::BoundWalk){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if (integratorName == IntegratorName::BOUND_HMC){
+	}else if (integratorName == IntegratorName::BoundHMC){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if(integratorName == IntegratorName::STATIONS_TASK){
+	}else if(integratorName == IntegratorName::StationsTask){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if (integratorName == IntegratorName::EMPTY){
+	}else if (integratorName == IntegratorName::None){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
 	}else{
@@ -4819,5 +4760,3 @@ SimTK::Real HMCSampler::calcSubMBATDetLog(
 // ZMatrix BAT
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-
-

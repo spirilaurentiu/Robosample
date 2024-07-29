@@ -3067,40 +3067,18 @@ std::size_t World::getNofSamplers() const
  * for samplers names. -->
 */
 bool World::addSampler(SamplerName samplerName,
-	SampleGenerator generator,
 	IntegratorName integratorName,
 	ThermostatName thermostatName,
-	SimTK::Real timestep,
-	int mdStepsPerSample,
-	int mdStepsPerSampleStd,
-	SimTK::Real boostTemperature,
-	int boostMDSteps,
-	int distort,
-	int work,
-	int flow,
 	bool useFixmanPotential)
 {
-	// Check if the user wants adaptive time step
-	bool adaptiveTS = false;
-	if (timestep == -1) {
-		adaptiveTS = true;
-	}
-
-	std::cout << "adaptiveTS is " << adaptiveTS << std::endl;
-
+	// Integrate with OpenMM if the integrator is OpenMM Velocity Verlet (OMMVV)
 	if (integratorName == IntegratorName::OMMVV) {
 		forceField->setUseOpenMMIntegration(true);
-		forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		forceField->setDuMMTemperature(boostTemperature);
-
-		// TODO default value that does not care about hydrogen mass (1.something)
-		if (adaptiveTS) {
-			timestep = 0.0007;
-		}
-		forceField->setOpenMMstepsize(timestep);
-	} else {
-		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 	}
+
+	// Non-bonded forces will always be calculated with OpenMM regardless of the integrator type
+	// However, if the integrator is OMMVV, we want more that that so we set it to false
+	forceField->setUseOpenMMCalcOnlyNonBonded(integratorName != IntegratorName::OMMVV);
 
     if(MEMDEBUG){
 		std::cout << "World::addSampler memory 1\n" << exec("free") << std::endl << std::flush;
@@ -3123,70 +3101,40 @@ bool World::addSampler(SamplerName samplerName,
 
 		// Construct a new sampler
 		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
+		auto& sampler = dynamic_cast<HMCSampler&>(*samplers.back());
 
 		// Initialize the sampler
-		// This is independent of the sampler type, but we need it to be initialized before getting the recommended time step
 		SimTK::State& worldAdvancedState = integ->updAdvancedState();
-		samplers.back()->initialize(worldAdvancedState);
-
-		// Use the recommended time step
-		if (adaptiveTS) {
-			timestep = getRecommendedTimesteps();
-		}
+		sampler.initialize(worldAdvancedState);
 
 		// Set sampler parameters
-		samplers.back()->setSampleGenerator(generator);
-		samplers.back()->setIntegratorName(integratorName);
-		samplers.back()->setThermostat(thermostatName);
-		samplers.back()->setTemperature(this->temperature); // TODO where???
-		samplers.back()->setTimestep(timestep, adaptiveTS); // TODO should error when negative
-		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
-		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
-		samplers.back()->setSeed(randomEngine);
-
-		samplers.back()->setGuidanceHamiltonian(boostTemperature, boostMDSteps);
-		samplers.back()->setNonequilibriumParameters(distort, work, flow);
+		sampler.setIntegratorName(integratorName);
+		sampler.setThermostat(thermostatName);
+		sampler.setSeed(randomEngine);
 
 		// TODO should this be inherited from parent world?
 		if (useFixmanPotential) {
-			samplers.back()->useFixmanPotential();
+			sampler.useFixmanPotential();
+		}
+
+		// Copy atom masses to OpenMM
+		// TODO are those indices correct if using two molecules?
+		if (integratorName == IntegratorName::OMMVV) {
+			for (const auto& t : *topologies) {
+				for (int aix = 0; aix < t.getNumAtoms(); aix++) {
+					// SimTK::mdunits::Mass mass handles values in floating point fashion
+					const SimTK::mdunits::Mass mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
+					const SimTK::DuMM::NonbondAtomIndex nax(aix);
+					sampler.setOMMmass(nax, mass);
+				}
+			}	
 		}
 	} else {
 		std::cerr << "Unknown sampler name" << std::endl;
 		return false;
 	}
 
-	// Copy atom masses to OpenMM
-	if (integratorName == IntegratorName::OMMVV) {
-		for (const auto& t : *topologies) {
-			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
-				// TODO is this correct?
-				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
-				std::cout << "mass = " << mass << std::endl;
-				const SimTK::DuMM::NonbondAtomIndex nax(aix);
-				samplers.back()->setOMMmass(nax, mass);
-			}
-		}	
-	}
-
-	std::cout << "World " << ownWorldIndex << " using timestep " << timestep << std::endl;
-
 	return true;
-}
-
-void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
-	forceField->setUseOpenMMAcceleration(true);
-
-	if (ommvv) {
-		forceField->setUseOpenMMIntegration(true);
-		forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		forceField->setDuMMTemperature(boostTemp);
-		forceField->setOpenMMstepsize(timestep);
-	} else {
-		forceField->setUseOpenMMCalcOnlyNonBonded(false);
-	}
-
-	realizeTopology();
 }
 
 // Get a sampler based on its position in the samplers vector

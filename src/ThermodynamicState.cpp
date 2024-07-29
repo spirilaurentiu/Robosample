@@ -99,12 +99,12 @@ const std::vector<int>& ThermodynamicState::getMdsteps() const
 }
 
 // Set the sampling method
-void ThermodynamicState::setSamplers(const std::vector<std::string>& rexSamplersArg)
+void ThermodynamicState::setAcceptRejectModes(const std::vector<AcceptRejectMode>& rexSamplersArg)
 {
 	this->rexSamplers = rexSamplersArg;
 }
 
-const std::vector<std::string>& ThermodynamicState::getSamplers() const
+const std::vector<AcceptRejectMode>& ThermodynamicState::getAcceptRejectModes() const
 {
 	return this->rexSamplers;
 }
@@ -141,15 +141,26 @@ void ThermodynamicState::setWorkOptions(const std::vector<int>& rexWorkOptionsAr
 	this->rexWorkOptions = rexWorkOptionsArg;
 }
 
-// Set the integrating method
-void ThermodynamicState::setIntegrators(const std::vector<std::string>& rexIntegratorsArg)
+
+
+void ThermodynamicState::setBoostMDSteps(const std::vector<int>& rexBoostMDStepsArg)
 {
-	this->rexIntegrators = rexIntegratorsArg;
+	this->boostMDSteps = rexBoostMDStepsArg;
 }
 
-const std::vector<std::string>& ThermodynamicState::getIntegrators() const
+void ThermodynamicState::setBoostTemperature(SimTK::Real rexBoostTemperatureArg)
 {
-	return rexIntegrators;
+	this->boostTemperature = rexBoostTemperatureArg;
+}
+
+const std::vector<int>& ThermodynamicState::getBoostMDSteps() const
+{
+	return this->boostMDSteps;
+}
+
+SimTK::Real ThermodynamicState::getBoostTemperature() const
+{
+	return this->boostTemperature;
 }
 
 void ThermodynamicState::Print()

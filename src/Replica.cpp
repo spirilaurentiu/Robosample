@@ -208,6 +208,20 @@ void Replica::Print_WORK_Coordinates() const
 	}
 }
 
+std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replica::getCoordinates() const {
+	std::vector<double> x, y, z;
+	for(auto& topology : atomsLocations) {
+		for(auto& atomCoordinates : topology) {
+			x.push_back(atomCoordinates.second[0]);
+			y.push_back(atomCoordinates.second[1]);
+			z.push_back(atomCoordinates.second[2]);
+		}
+	}
+
+	return std::make_tuple(x, y, z);
+
+}
+
 /**
  * Write coordinates to a rst7 file
 */

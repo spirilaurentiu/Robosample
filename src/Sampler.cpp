@@ -33,25 +33,19 @@ Sampler::Sampler(World &argWorld,
 		system(&argMatter.getSystem()),
 		alwaysAccept(false)
 {
-
-	//this->rootTopology = argResidue;
 	assert(topologies.size() > 0);
 	rootTopology = &topologies[0];
 
+	system = &argMatter.getSystem(); // TODO do we need this? was already defined in sampler.hpp
+
 	// Set total number of atoms and dofs
-	natoms = 0;
 	for (const auto& topology: topologies){
 		natoms += topology.getNumAtoms();
 	}
 
-	// Set total mass of the system to non-realistic valaue
-	this->totalMass = 0;
-
-	int ThreeFrom3D = 3;
-	ndofs = natoms * ThreeFrom3D;
-
-	int test_dofs = 3;
-	gammarand = std::gamma_distribution<double>((test_dofs - 1.0) / 2.0, 1.0);
+	constexpr int dofs = 3;
+	ndofs = natoms * dofs;
+	gammarand = std::gamma_distribution<double>((dofs - 1.0) / 2.0, 1.0);
 
 }
 
