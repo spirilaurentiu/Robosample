@@ -5539,6 +5539,8 @@ void Context::RunReplicaRefactor(
 
 		}else{
 
+			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround()); // Victor bugfix
+
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
 			//transferQStatistics(thermoIx, equilWIxs.back(), equilWIxs.front());
 			
@@ -5654,7 +5656,7 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			//printQStats(replica2ThermoIxs[replicaIx]);         
+			printQStats(replica2ThermoIxs[replicaIx]);        
 
 		} // end replicas simulations
 

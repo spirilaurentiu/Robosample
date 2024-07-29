@@ -2704,6 +2704,29 @@ World::calcMobodToMobodTransforms(
 	//Transform oldX_PB = oldX_PF * oldX_FM * oldX_MB;
 }
 
+
+/*!
+ * <!--  -->
+*/
+SimTK::BondMobility::Mobility World::determineMobilityFrom_H(SimTK::MobilizedBodyIndex mbx, SimTK::State& someState)
+{
+
+	warn("Incomplete.");
+
+	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+	// Use HCol to determine degrees of freedom
+	for(SimTK::MobilizerUIndex uIx = SimTK::MobilizerUIndex(0); uIx < mobod.getNumU(someState); uIx++){
+		SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(uIx));
+		std::cout <<"mbx uIx " << mbx ;
+		std::cout <<" " << uIx <<" H_FMCol" 
+			<<" " << H_FMCol[0][0] <<" " << H_FMCol[0][1] <<" " << H_FMCol[0][2]
+			<<" " << H_FMCol[1][0] <<" " << H_FMCol[1][1] <<" " << H_FMCol[1][2] << std::endl;
+	}
+
+	return SimTK::BondMobility::Mobility::Rigid;
+}
+
 /*!
  * <!--	 -->
 */

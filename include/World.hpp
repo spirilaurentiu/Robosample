@@ -361,6 +361,11 @@ public:
 	/**
 	 *
 	*/
+	SimTK::BondMobility::Mobility determineMobilityFrom_H(SimTK::MobilizedBodyIndex mbx, SimTK::State& someState);
+
+	/**
+	 *
+	*/
 	SimTK::Real getRootAngle(
 		Topology& topology,
 		SimTK::Compound::AtomIndex rootAIx,
