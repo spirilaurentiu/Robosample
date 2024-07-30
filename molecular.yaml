@@ -1,0 +1,13 @@
+name: molecular
+channels:
+  - conda-forge
+  - defaults
+  - nvidia/label/cuda-12.3.0
+dependencies:
+  - python
+  - openmm
+  - numpy
+  - scipy
+  - mdtraj
+  - matplotlib
+  - cudatoolkit

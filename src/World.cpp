@@ -3143,8 +3143,10 @@ bool World::addSampler(SamplerName samplerName,
 	// Integrate with OpenMM if the integrator is OpenMM Velocity Verlet (OMMVV)
 	if (integratorName == IntegratorName::OMMVV) {
 		forceField->setUseOpenMMIntegration(true);
-	}
 
+		// the temperature has not been set at this point, but is needed to create the openmm system
+		// forceField->setDuMMTemperature(temperature);
+	}
 	// Non-bonded forces will always be calculated with OpenMM regardless of the integrator type
 	// However, if the integrator is OMMVV, we want more that that so we set it to false
 	forceField->setUseOpenMMCalcOnlyNonBonded(integratorName != IntegratorName::OMMVV);

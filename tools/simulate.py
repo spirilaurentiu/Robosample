@@ -1,16 +1,17 @@
-import robosample as robosample
+# import robosample as robosample
 import flexor
 import mdtraj as md
 
 # 1i42 2btg 2eej 2k9q 2kbt 2kyy 2l39 2m2f 2oa4 2obu
-prmtop = "ala10/ligand.prmtop"
-inpcrd = "ala10/ligand.rst7"
+prmtop = "../build/1i42/1i42.H.capped.prmtop"
+inpcrd = "../build/1i42/1i42.H.capped.rst7"
 
 # prepare flexor generator
 mdtrajObj = md.load(inpcrd, top=prmtop)
 flexorObj = flexor.Flexor(mdtrajObj)
 
 # flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
+# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
 flex = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
 for f in flex:
     print(f)

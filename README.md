@@ -18,7 +18,8 @@ Install the dependencies:
 
 ```bash
 sudo apt-get update
-sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build
+sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build gdb
+# intel-opencl-icd
 ```
 
 ### CMake
@@ -61,11 +62,45 @@ If used as intended further into the README, the executable must be run from the
 /home/myuser/ninja
 ```
 
-### Exports
+### CUDA on WSL2
+Update WSL2 if not updated by running Powershell as administrator:
+```bash
+wsl --update --pre-release
+```
+
+Then, create a WLS config file by pasting this in the the search bar of File Explorer:
+```bash
+%UserProfile%\.wslconfig
+```
+
+It will automatically open a file inside your Windows user folder. Paste:
+```bash
+[wsl2]
+memory=14GB
+# swap=14GB
+```
+
+Save your work and reboot Windows. Install the Nvidia drivers on Windows; this will also install the CUDA toolkit (assumed version 12.3). Open WSL2 and install the CUDA toolkit with the same version (12.3). Ensure you download the WSL-specific version, not the general Linux version. Verify the installation by running `nvidia-smi`, which should display the required toolkit version. Ensure the Nvidia driver installed on WSL supports this version.
+
+Create symbolic links to the CUDA toolkit:
+```bash
+sudo ln -s /usr/local/cuda-12.3 /usr/local/cuda
+sudo ln -s /usr/local/cuda/lib64/libcudart.so /usr/lib/libcudart.so
+sudo ln -s /usr/local/cuda/lib64/libcufft.so /usr/lib/libcufft.so
+```
+
+And check with:
+```bash
+nvcc --version
+```
+
+### CUDA Exports (assuming CUDA toolkit 12.3)
 
 ```bash
-export CUDA_INC_DIR=/usr/local/cuda
-export CUDA_ROOT=/usr/local/cuda
+export CUDA_HOME=/usr/local/cuda-12.3
+export CUDA_INC_DIR=/usr/local/cuda-12.3
+export CUDA_ROOT=/usr/local/cuda-12.3
+source ~/.bashrc
 ```
 
 ## Cloning the project
@@ -74,14 +109,8 @@ export CUDA_ROOT=/usr/local/cuda
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
 
-cd openmm
-git checkout master
-cd ../Molmodel
-git checkout master
-cd ../Simbody01
-git checkout master
-cd ../
-git checkout master
+git submodule foreach --recursive git checkout master
+git submodule foreach --recursive git pull
 ```
 
 For a specific branch (named `build` in this example):

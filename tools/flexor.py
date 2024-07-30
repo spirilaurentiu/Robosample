@@ -117,7 +117,7 @@ class Flexor:
                         continue
                 if (jointType == "cart"):
                     # flexibilities.append(robosample.BondFlexibility(edge[0].index, edge[1].index, robosample.BondMobility.Translation))
-                    flexibilities.append("{{{}, {}, BondMobility::Mobility::Translation}}".format(edge[0].index, edge[1].index))
+                    flexibilities.append("{{{}, {}, BondMobility::Mobility::Translation}},".format(edge[0].index, edge[1].index))
                     validJointAtoms.append(edge[0].index)
                     validJointAtoms.append(edge[1].index)
                     jointCount += 1
@@ -129,7 +129,7 @@ class Flexor:
 
                             if jointType.capitalize() == 'Pin':
                                 # flexibilities.append(robosample.BondFlexibility(edge[0].index, edge[1].index, robosample.BondMobility.Torsion))
-                                flexibilities.append("{{{}, {}, BondMobility::Mobility::Torsion}}".format(edge[0].index, edge[1].index))
+                                flexibilities.append("{{{}, {}, BondMobility::Mobility::Torsion}},".format(edge[0].index, edge[1].index))
                             else:
                                 raise ValueError("Joint type not implemented.")
                             # if jointType.capitalize() == 'Ball':
@@ -154,7 +154,7 @@ class Flexor:
                 if ((edge[0].index in nearbyAtoms) and (edge[1].index in nearbyAtoms)):
                     if (jointType == "cart"):
                         # flexibilities.append(robosample.BondFlexibility(edge[0].index, edge[1].index, robosample.BondMobility.Translation))
-                        flexibilities.append("{{{}, {}, BondMobility::Mobility::Translation}}".format(edge[0].index, edge[1].index))
+                        flexibilities.append("{{{}, {}, BondMobility::Mobility::Translation}},".format(edge[0].index, edge[1].index))
                         jointCount += 1
                     else:
                         for subsetType in subset:
@@ -163,10 +163,10 @@ class Flexor:
                             (self.check_cycle(edge[0], edge[1]))):
                                 if jointType.capitalize() == 'PIN':
                                     # flexibilities.append(robosample.BondFlexibility(edge[0].index, edge[1].index, robosample.BondMobility.Pin))
-                                    flexibilities.append("{{{}, {}, BondMobility::Mobility::Pin}}".format(edge[0].index, edge[1].index))
+                                    flexibilities.append("{{{}, {}, BondMobility::Mobility::Pin}},".format(edge[0].index, edge[1].index))
                                 if jointType.capitalize() == 'BALL':
                                     # flexibilities.append(robosample.BondFlexibility(edge[0].index, edge[1].index, robosample.BondMobility.Ball))
-                                    flexibilities.append("{{{}, {}, BondMobility::Mobility::Ball}}".format(edge[0].index, edge[1].index))
+                                    flexibilities.append("{{{}, {}, BondMobility::Mobility::Ball}},".format(edge[0].index, edge[1].index))
                                 jointCount += 1
 
         print ("Flex generated! ({} joints)".format(jointCount))

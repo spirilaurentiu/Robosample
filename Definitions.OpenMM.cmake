@@ -26,7 +26,7 @@ SET(OPENMM_DIRS
 # cpu will compile and run on any machine so it is a good starting point
 # to change it, run `cmake -DOPENMM_PLATFORM=CUDA`
 # SET(OPENMM_PLATFORM "CPU" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
-SET(OPENMM_PLATFORM "CPU")
+SET(OPENMM_PLATFORM "CUDA")
 # SET(OPENMM_PLATFORM "OPENCL")
 
 IF(OPENMM_PLATFORM MATCHES "CPU")
