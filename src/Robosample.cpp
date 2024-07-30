@@ -47,8 +47,8 @@ int testContext()
 	// c.setNonbonded(0, 1.2); // default - set for each world
 	c.setPdbPrefix("2but42"); // will disappear
 	c.setOutput("temp"); // the log file is created like log.[seed] - needs refactoring
-	c.setRequiredNofRounds(1000); // per world? what does it do?
-	c.setPdbRestartFreq(1); // WRITE_PDBS
+	c.setRequiredNofRounds(100); // per world? what does it do?
+	c.setPdbRestartFreq(0); // WRITE_PDBS
 	c.setPrintFreq(1); // PRINT_FREQ
 
 	// read files and create topologies. this populates ```atoms``` and ```bonds```
@@ -58,6 +58,7 @@ int testContext()
 	// c.loadAmberSystem("diala_double/diala_double.prmtop", "diala_double/diala_double.rst7");
 	c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
 	// c.loadAmberSystem("ala10/ligand.prmtop", "ala10/ligand.rst7");
+	// c.loadAmberSystem("cb8/ligand.prmtop", "cb8/ligand.rst7");
 
 	// World 0 OPENMM
 	std::vector<BOND_FLEXIBILITY> flexibilities_w0 = {
@@ -76,163 +77,22 @@ int testContext()
 		{ 4, 12, BondMobility::Mobility::Translation },
 		{ 4, 13, BondMobility::Mobility::Translation },
 		{-1, 0, BondMobility::Mobility::Translation }
-
-		// {0, 1, BondMobility::Mobility::Translation},
-		// {1, 2, BondMobility::Mobility::Translation},
-		// {1, 3, BondMobility::Mobility::Translation},
-		// {1, 4, BondMobility::Mobility::Translation},
-		// {4, 5, BondMobility::Mobility::Translation},
-		// {4, 6, BondMobility::Mobility::Translation},
-		// {6, 7, BondMobility::Mobility::Translation},
-		// {6, 8, BondMobility::Mobility::Translation},
-		// {8, 9, BondMobility::Mobility::Translation},
-		// {8, 10, BondMobility::Mobility::Translation},
-		// {8, 14, BondMobility::Mobility::Translation},
-		// {10, 11, BondMobility::Mobility::Translation},
-		// {10, 12, BondMobility::Mobility::Translation},
-		// {10, 13, BondMobility::Mobility::Translation},
-		// {14, 15, BondMobility::Mobility::Translation},
-		// {14, 16, BondMobility::Mobility::Translation},
-		// {16, 17, BondMobility::Mobility::Translation},
-		// {16, 18, BondMobility::Mobility::Translation},
-		// {18, 19, BondMobility::Mobility::Translation},
-		// {18, 20, BondMobility::Mobility::Translation},
-		// {18, 24, BondMobility::Mobility::Translation},
-		// {20, 21, BondMobility::Mobility::Translation},
-		// {20, 22, BondMobility::Mobility::Translation},
-		// {20, 23, BondMobility::Mobility::Translation},
-		// {24, 25, BondMobility::Mobility::Translation},
-		// {24, 26, BondMobility::Mobility::Translation},
-		// {26, 27, BondMobility::Mobility::Translation},
-		// {26, 28, BondMobility::Mobility::Translation},
-		// {28, 29, BondMobility::Mobility::Translation},
-		// {28, 30, BondMobility::Mobility::Translation},
-		// {28, 34, BondMobility::Mobility::Translation},
-		// {30, 31, BondMobility::Mobility::Translation},
-		// {30, 32, BondMobility::Mobility::Translation},
-		// {30, 33, BondMobility::Mobility::Translation},
-		// {34, 35, BondMobility::Mobility::Translation},
-		// {34, 36, BondMobility::Mobility::Translation},
-		// {36, 37, BondMobility::Mobility::Translation},
-		// {36, 38, BondMobility::Mobility::Translation},
-		// {38, 39, BondMobility::Mobility::Translation},
-		// {38, 40, BondMobility::Mobility::Translation},
-		// {38, 44, BondMobility::Mobility::Translation},
-		// {40, 41, BondMobility::Mobility::Translation},
-		// {40, 42, BondMobility::Mobility::Translation},
-		// {40, 43, BondMobility::Mobility::Translation},
-		// {44, 45, BondMobility::Mobility::Translation},
-		// {44, 46, BondMobility::Mobility::Translation},
-		// {46, 47, BondMobility::Mobility::Translation},
-		// {46, 48, BondMobility::Mobility::Translation},
-		// {48, 49, BondMobility::Mobility::Translation},
-		// {48, 50, BondMobility::Mobility::Translation},
-		// {48, 54, BondMobility::Mobility::Translation},
-		// {50, 51, BondMobility::Mobility::Translation},
-		// {50, 52, BondMobility::Mobility::Translation},
-		// {50, 53, BondMobility::Mobility::Translation},
-		// {54, 55, BondMobility::Mobility::Translation},
-		// {54, 56, BondMobility::Mobility::Translation},
-		// {56, 57, BondMobility::Mobility::Translation},
-		// {56, 58, BondMobility::Mobility::Translation},
-		// {58, 59, BondMobility::Mobility::Translation},
-		// {58, 60, BondMobility::Mobility::Translation},
-		// {58, 64, BondMobility::Mobility::Translation},
-		// {60, 61, BondMobility::Mobility::Translation},
-		// {60, 62, BondMobility::Mobility::Translation},
-		// {60, 63, BondMobility::Mobility::Translation},
-		// {64, 65, BondMobility::Mobility::Translation},
-		// {64, 66, BondMobility::Mobility::Translation},
-		// {66, 67, BondMobility::Mobility::Translation},
-		// {66, 68, BondMobility::Mobility::Translation},
-		// {68, 69, BondMobility::Mobility::Translation},
-		// {68, 70, BondMobility::Mobility::Translation},
-		// {68, 74, BondMobility::Mobility::Translation},
-		// {70, 71, BondMobility::Mobility::Translation},
-		// {70, 72, BondMobility::Mobility::Translation},
-		// {70, 73, BondMobility::Mobility::Translation},
-		// {74, 75, BondMobility::Mobility::Translation},
-		// {74, 76, BondMobility::Mobility::Translation},
-		// {76, 77, BondMobility::Mobility::Translation},
-		// {76, 78, BondMobility::Mobility::Translation},
-		// {78, 79, BondMobility::Mobility::Translation},
-		// {78, 80, BondMobility::Mobility::Translation},
-		// {78, 84, BondMobility::Mobility::Translation},
-		// {80, 81, BondMobility::Mobility::Translation},
-		// {80, 82, BondMobility::Mobility::Translation},
-		// {80, 83, BondMobility::Mobility::Translation},
-		// {84, 85, BondMobility::Mobility::Translation},
-		// {84, 86, BondMobility::Mobility::Translation},
-		// {86, 87, BondMobility::Mobility::Translation},
-		// {86, 88, BondMobility::Mobility::Translation},
-		// {88, 89, BondMobility::Mobility::Translation},
-		// {88, 90, BondMobility::Mobility::Translation},
-		// {88, 94, BondMobility::Mobility::Translation},
-		// {90, 91, BondMobility::Mobility::Translation},
-		// {90, 92, BondMobility::Mobility::Translation},
-		// {90, 93, BondMobility::Mobility::Translation},
-		// {94, 95, BondMobility::Mobility::Translation},
-		// {94, 96, BondMobility::Mobility::Translation},
-		// {96, 97, BondMobility::Mobility::Translation},
-		// {96, 98, BondMobility::Mobility::Translation},
-		// {98, 99, BondMobility::Mobility::Translation},
-		// {98, 100, BondMobility::Mobility::Translation},
-		// {98, 104, BondMobility::Mobility::Translation},
-		// {100, 101, BondMobility::Mobility::Translation},
-		// {100, 102, BondMobility::Mobility::Translation},
-		// {100, 103, BondMobility::Mobility::Translation},
-		// {104, 105, BondMobility::Mobility::Translation},
-		// {104, 106, BondMobility::Mobility::Translation},
-		// {106, 107, BondMobility::Mobility::Translation},
-		// {106, 108, BondMobility::Mobility::Translation},
-		// {108, 109, BondMobility::Mobility::Translation},
-		// {108, 110, BondMobility::Mobility::Translation},
-		// {108, 111, BondMobility::Mobility::Translation},
 	};
-	c.addWorld(false, 1, ROOT_MOBILITY::CARTESIAN, flexibilities_w0);
+	c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w0);
 
-	// // World 1
-	// std::vector<BOND_FLEXIBILITY> flexibilities_w1 = {
-	// 	// { 3, 1, BondMobility::Mobility::Torsion },
-	// 	// { 1, 2, BondMobility::Mobility::Torsion },
-	// 	// { 2, 4, BondMobility::Mobility::Torsion },
-	// 	// { 1, 0, BondMobility::Mobility::Torsion },
+	// World 1
+	std::vector<BOND_FLEXIBILITY> flexibilities_w1 = {
+		{ 3, 1, BondMobility::Mobility::Torsion },
+		{ 1, 2, BondMobility::Mobility::Torsion },
+		{ 2, 4, BondMobility::Mobility::Torsion },
+		{ 1, 0, BondMobility::Mobility::Torsion },
+	};
+	c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
 
-	// 	{8, 10, BondMobility::Mobility::Torsion},
-	// 	{18, 20, BondMobility::Mobility::Torsion},
-	// 	{28, 30, BondMobility::Mobility::Torsion},
-	// 	{38, 40, BondMobility::Mobility::Torsion},
-	// 	{48, 50, BondMobility::Mobility::Torsion},
-	// 	{58, 60, BondMobility::Mobility::Torsion},
-	// 	{68, 70, BondMobility::Mobility::Torsion},
-	// 	{78, 80, BondMobility::Mobility::Torsion},
-	// 	{88, 90, BondMobility::Mobility::Torsion},
-	// 	{98, 100, BondMobility::Mobility::Torsion},
-	// };
-	// c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
-
-	// // World 2
+	// World 2
 	// std::vector<BOND_FLEXIBILITY> flexibilities_w2 = {
-	// 	{6, 8, BondMobility::Mobility::Torsion},
-	// 	{8, 14, BondMobility::Mobility::Torsion},
-	// 	{16, 18, BondMobility::Mobility::Torsion},
-	// 	{18, 24, BondMobility::Mobility::Torsion},
-	// 	{26, 28, BondMobility::Mobility::Torsion},
-	// 	{28, 34, BondMobility::Mobility::Torsion},
-	// 	{36, 38, BondMobility::Mobility::Torsion},
-	// 	{38, 44, BondMobility::Mobility::Torsion},
-	// 	{46, 48, BondMobility::Mobility::Torsion},
-	// 	{48, 54, BondMobility::Mobility::Torsion},
-	// 	{56, 58, BondMobility::Mobility::Torsion},
-	// 	{58, 64, BondMobility::Mobility::Torsion},
-	// 	{66, 68, BondMobility::Mobility::Torsion},
-	// 	{68, 74, BondMobility::Mobility::Torsion},
-	// 	{76, 78, BondMobility::Mobility::Torsion},
-	// 	{78, 84, BondMobility::Mobility::Torsion},
-	// 	{86, 88, BondMobility::Mobility::Torsion},
-	// 	{88, 94, BondMobility::Mobility::Torsion},
-	// 	{96, 98, BondMobility::Mobility::Torsion},
-	// 	{98, 104, BondMobility::Mobility::Torsion},
+	// 	{ -1, 31, BondMobility::Mobility::Rigid },
+	// 	{ -1, 0, BondMobility::Mobility::Translation },
 	// };
 	// c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w2);
 
@@ -240,8 +100,8 @@ int testContext()
 	// Add samplers
 	c.getWorld(0).addSampler(SamplerName::HMC, IntegratorName::OMMVV, ThermostatName::ANDERSEN, false);
 
-	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
-	// c.getWorld(1).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, false);
+	// // Does not work if I set OMMVV instead of VV. How do I check if it is working?
+	c.getWorld(1).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, true);
 
 	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
 	// c.getWorld(2).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, false);
@@ -249,7 +109,7 @@ int testContext()
 	// append a dcd reporter for each replica
 	// pass a path when initializing the replica and check if the containig folder exists
 	// c.appendDCDReporter("diala.dcd");
-	c.appendDCDReporter("2but_cart.dcd");
+	c.appendDCDReporter("2but.dcd");
 
 	int nofReplicas = 1;
 	SimTK::Real temperature = 300;
@@ -259,7 +119,7 @@ int testContext()
 		boostTemperatures.push_back(temperature + (i * 10));
 	}
 
-	int scale = 10;
+	int scale = 1;
 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::AlwaysAccept, AcceptRejectMode::AlwaysAccept, AcceptRejectMode::AlwaysAccept };
 	std::vector<SimTK::Real> timesteps = { 0.001, 0.003, 0.004 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
@@ -278,23 +138,21 @@ int testContext()
 	mdsteps.pop_back();
 	boostMDSteps.pop_back();
 	samplesPerRound.pop_back();
-
 	distortOptions.pop_back();
 	distortArgs.pop_back();
 	flow.pop_back();
 	work.pop_back();
 
-	acceptRejectModes.pop_back();
-	timesteps.pop_back();
-	worldIndexes.pop_back();
-	mdsteps.pop_back();
-	boostMDSteps.pop_back();
-	samplesPerRound.pop_back();
-
-	distortOptions.pop_back();
-	distortArgs.pop_back();
-	flow.pop_back();
-	work.pop_back();
+	// acceptRejectModes.pop_back();
+	// timesteps.pop_back();
+	// worldIndexes.pop_back();
+	// mdsteps.pop_back();
+	// boostMDSteps.pop_back();
+	// samplesPerRound.pop_back();
+	// distortOptions.pop_back();
+	// distortArgs.pop_back();
+	// flow.pop_back();
+	// work.pop_back();
 
 	for (int i = 0; i < nofReplicas; i++) {
 		c.addReplica(i);
