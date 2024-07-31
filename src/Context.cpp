@@ -4537,6 +4537,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	size_t replicaNofWorlds = replicaWorldIxs.size();
 
 	SimTK::Real T = thermodynamicStates[thisThermoStateIx].getTemperature();
+	SimTK::Real boostT = thermodynamicStates[thisThermoStateIx].getBoostTemperature();
 	const auto& acceptRejectModes = thermodynamicStates[thisThermoStateIx].getAcceptRejectModes();
 	const auto& replicaTimesteps = thermodynamicStates[thisThermoStateIx].getTimesteps();
 	const auto& replicaMdsteps = thermodynamicStates[thisThermoStateIx].getMdsteps();
@@ -4548,12 +4549,17 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 		auto& world = worlds[replicaWorldIxs[i]];
 
 		world.setTemperature( T );
-		world.setBoostTemperature( T );
+		world.setBoostTemperature( boostT );
 		world.updSampler(0)->setAcceptRejectMode(acceptRejectModes[i]);
 		world.updSampler(0)->setTimestep(replicaTimesteps[i], false);
 		world.updSampler(0)->setMDStepsPerSample(replicaMdsteps[i]);
+		world.updSampler(0)->setTemperature( T );
+		world.updSampler(0)->setBoostTemperature( boostT );
 
-		world.updSampler(0)->getIntegratorName();
+		if (world.updSampler(0)->integratorName == IntegratorName::OMMVV) {
+			world.updSampler(0)->dumm->setOpenMMvelocities(T, randomEngine(seed));
+			world.updSampler(0)->dumm->setOpenMMTimestep(replicaTimesteps[i]);
+		}
 
 		// // Set integrator
 		// world.updSampler(0)->setIntegratorName(integrators[i]);
@@ -5259,7 +5265,8 @@ void Context::RunReplicaRefactor(
 
 		}else{
 
-			// why?
+			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround()); // Victor bugfix
+
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
 			//transferQStatistics(thermoIx, equilWIxs.back(), equilWIxs.front());
 			
@@ -5375,7 +5382,7 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			//printQStats(replica2ThermoIxs[replicaIx]);         
+			printQStats(replica2ThermoIxs[replicaIx]);
 
 		} // end replicas simulations
 
@@ -7045,6 +7052,7 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSam
 	const auto fix_o = pHMC((worlds[whichWorld].samplers[0]))->fix_o;
 	const auto fix_n = pHMC((worlds[whichWorld].samplers[0]))->fix_n;
 	const auto fix_set = pHMC((worlds[whichWorld].samplers[0]))->fix_set;
+	const auto acc = pHMC((worlds[whichWorld].samplers[0]))->acc;
 
 	// Write to a file instead of stdout
 	logFile
@@ -7060,7 +7068,8 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSam
 		<< ke_n << " "
 		<< fix_o << " "
 		<< fix_n << " "
-		<< fix_set << " ";
+		<< fix_set << " "
+		<< acc << " ";
 }
 
 // Print geometric parameters during simulation

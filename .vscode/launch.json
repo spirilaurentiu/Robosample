@@ -14,7 +14,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/robosample_d",
-            "args": ["${workspaceFolder}/build/inp.666"],
+            "args": ["42"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
             "environment": [],
