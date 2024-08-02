@@ -63,17 +63,21 @@ If used as intended further into the README, the executable must be run from the
 ```
 
 ### CUDA on WSL2
+
 Update WSL2 if not updated by running Powershell as administrator:
+
 ```bash
 wsl --update --pre-release
 ```
 
 Then, create a WLS config file by pasting this in the the search bar of File Explorer:
+
 ```bash
 %UserProfile%\.wslconfig
 ```
 
 It will automatically open a file inside your Windows user folder. Paste:
+
 ```bash
 [wsl2]
 memory=14GB
@@ -83,6 +87,7 @@ memory=14GB
 Save your work and reboot Windows. Install the Nvidia drivers on Windows; this will also install the CUDA toolkit (assumed version 12.3). Open WSL2 and install the CUDA toolkit with the same version (12.3). Ensure you download the WSL-specific version, not the general Linux version. Verify the installation by running `nvidia-smi`, which should display the required toolkit version. Ensure the Nvidia driver installed on WSL supports this version.
 
 Create symbolic links to the CUDA toolkit:
+
 ```bash
 sudo ln -s /usr/local/cuda-12.3 /usr/local/cuda
 sudo ln -s /usr/local/cuda/lib64/libcudart.so /usr/lib/libcudart.so
@@ -90,6 +95,7 @@ sudo ln -s /usr/local/cuda/lib64/libcufft.so /usr/lib/libcufft.so
 ```
 
 And check with:
+
 ```bash
 nvcc --version
 ```
@@ -325,3 +331,8 @@ To see all exported symbols, use:
 ```bash
 nm -an build/robosample | c++filt
 ```
+
+
+# CUDA compiler error 256
+
+There is not space left on the device.

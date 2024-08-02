@@ -1137,6 +1137,8 @@ void Context::addWorld(
 	worldIndexes.push_back(worldIndexes.size());
 	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
 
+	worlds.back().setMyContext(this);
+
 	// Set force field scale factor.
 	if (useAmberForceFieldScaleFactors) {
 		worlds.back().setAmberForceFieldScaleFactors();
@@ -1206,6 +1208,7 @@ void Context::addWorld(
 		rootMobilities.back().push_back("Rigid");
 	}
 
+	worlds.back().setFlexibilities(flexibilities);
 	for (const auto& flex : flexibilities) {
 
 		if(flex.i == -1){

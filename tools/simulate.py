@@ -1,104 +1,74 @@
-# import robosample as robosample
+import robosample as robosample
 import flexor
 import mdtraj as md
 
 # 1i42 2btg 2eej 2k9q 2kbt 2kyy 2l39 2m2f 2oa4 2obu
-prmtop = "../build/2eej/2eej.H.capped.prmtop"
-inpcrd = "../build/2eej/2eej.H.capped.rst7"
+seed = 42
+prmtop = "1i42/1i42.H.capped.prmtop"
+inpcrd = "1i42/1i42.H.capped.rst7"
+dcd = "1i42" + "_" + str(seed) + ".dcd"
 
 # prepare flexor generator
 mdtrajObj = md.load(inpcrd, top=prmtop)
 flexorObj = flexor.Flexor(mdtrajObj)
 
+# create robosample context
+c = robosample.Context(300, 300, 42, 0, 1, robosample.RunType.REMC, 1, 0)
+c.setRequiredNofRounds(2)
+c.setPdbRestartFreq(0) # WRITE_PDBS
+c.setPrintFreq(1) # PRINT_FREQ
+
+# load system
+c.loadAmberSystem(prmtop, inpcrd)
+c.appendDCDReporter(dcd)
+
+# openmm cartesian
 flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
-# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
-# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
-for f in flex:
-    print(f)
+c.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
-# # create robosample context
-# c = robosample.Context(300, 300, 42)
-# c.setNumThreads(0)
-# # c.setPdbPrefix("2but42")
-# # c.setOutput("temp") # the log file is created like log.[seed]
-# c.setNofRoundsTillReblock(10) # per world?
-# c.setRequiredNofRounds(2)
-# c.setPdbRestartFreq(0) # WRITE_PDBS
-# c.setPrintFreq(1) # PRINT_FREQ
-# c.setRunType(robosample.RunType.DEFAULT)
+# sidechains pins
+flex = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
+c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
-# # load system
-# c.loadAmberSystem(prmtop, inpcrd)
+# ramachandran pins
+flex = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
+c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
-# c.appendDCDReporter('pro10.dcd')
+# samplers
+sampler = robosample.SamplerName.HMC # rename to type
+thermostat = robosample.ThermostatName.ANDERSEN
 
-# # openmm cartesian
-# flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
-# c.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+c.getWorld(0).addSampler(sampler, robosample.IntegratorName.OMMVV, thermostat, False)
+c.getWorld(1).addSampler(sampler, robosample.IntegratorName.Verlet, thermostat, True)
+c.getWorld(2).addSampler(sampler, robosample.IntegratorName.Verlet, thermostat, True)
 
-# # sidechains pins
-# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["side"], jointType="Pin", sasa_value=-1.0)
-# c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+nof_replicas = 1
+temperature = 300
+temperatures = []
+boost_temperatures = []
+for i in range(nof_replicas):
+    temperatures.append(temperature + (i * 10))
+    boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
 
-# # roll
-# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["coils", "rama"], jointType="Pin", sasa_value=-1.0)
-# for f in flex:
-#     c.addWorld(True, 1, robosample.RootMobility.WELD, [f], True, False, 0)
+scale = 1
+accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings]
+timesteps = [0.001, 0.003, 0.004]
+world_indexes = [0, 1, 2]
+mdsteps = [25 * scale, 50 * scale, 50 * scale]
+boost_md_steps = [25 * scale, 50 * scale, 50 * scale]
+samples_per_round = [1, 1, 1]
 
-# # world temperature goes to replica
+distort_options = [0, 0, 0]
+distort_args = ["0", "0" , "0"]
+flow = [0, 0, 0]
+work = [0, 0, 0]
 
-# # samplers
-# sampler = robosample.SamplerName.HMC # rename to type
-# generator = robosample.AcceptRejectMode.MC # move to thermodynamic state # accept/reject type
-# thermostat = robosample.ThermostatName.ANDERSEN
+for i in range(nof_replicas):
+    c.addReplica(i)
+    c.addThermodynamicState(i, temperatures[i], boost_temperatures[i], accept_reject_modes, distort_options, distort_args, flow, work, world_indexes, timesteps, mdsteps, boost_md_steps)
 
-# # add defaults and move to thermodynamic state
-#     # x SimTK::Real timestep,
-# 	# x int mdStepsPerSample,
-# 	# int mdStepsPerSampleStd, - doar pentru noi
-# 	# SimTK::Real boostTemperature,
-# 	# int boostMDSteps,
-# 	# x int distort,
-# 	# x int work,
-# 	# x int flow,
-# 	# bool useFixmanPotential
-#     # x MC - EMPTY
-#     # x integrator
-# c.getWorld(0).addSampler(sampler, generator, robosample.IntegratorName.OMMVV, thermostat, 0.001, 200, 0, 300, 1, 0, 0, 0, False)
-# c.getWorld(1).addSampler(sampler, generator, robosample.IntegratorName.VERLET, thermostat, 0.001, 200, 0, 300, 1, 0, 0, 0, True)
+# initialize the simulation
+c.initialize()
 
-# for i in range(len(flex)):
-#     c.getWorld(2 + i).addSampler(sampler, generator, robosample.IntegratorName.VERLET, thermostat, 0.001, 200, 0, 300, 1, 0, 0, 0, True)
-
-# # start the simulation
-# c.Run()
-
-# numReplicas = 10
-# temperatures = []
-# for i in range(numReplicas):
-#     temperatures.append(300.0 + i * 10.0)
-
-# samplers = [0, 1, 2, 3]
-# distortOptions = [0]
-# distortArgs = [0]
-# flow = [0]
-# work = [0]
-# integrators = [0]
-
-# worlds = [0, 1, 2, 3]
-# timesteps = [0.001, 0.001, 0.001, 0.001]
-# mdsteps = [200, 200, 200, 200]
-
-# for i in range(numReplicas):
-#     c.addReplica(i)
-#     c.addThermodynamicState(i, temperatures[i], temperatures[i], samplers, distortOptions, distortArgs, flow, work, integrators, worlds, timesteps, mdsteps)
-
-
-
-# c.initializeZMatrix()
-
-
-# # addReplica empty
-# # add thermodynamic state with all the parameters - indices for sampler, distort options, distort args, flow, work, integrator, worlds, timesteps, mdsteps
-
-# # setReplicasWorldsParameters
+# start the simulation
+c.Run()

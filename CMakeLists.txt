@@ -15,7 +15,7 @@ SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 SET(COMMON_FLAGS "-msse4.1 -mavx -march=native -mtune=native")
 
 # -O2 is marginally slower than -O3
-SET(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O1 -g -ggdb")
+SET(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O0 -g -ggdb")
 SET(EXTRA_COMPILE_FLAGS_RELEASE "${COMMON_FLAGS} -O3")
 
 # set the profile guided optimization (pgo) flags

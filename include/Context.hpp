@@ -28,6 +28,9 @@ enum class RUN_TYPE : int {
 
 class Context {
 public:
+	int natoms = std::numeric_limits<int>::min();
+	std::vector<bSpecificAtom> atoms;
+
 	/**
 	 * @brief Initialize simulation variables.
 	 * @param Ti Initial temperature. Cannot be 0.
@@ -63,6 +66,10 @@ public:
 
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
 	void initialize();
+
+	int BAT2Amber(int batIndex) {
+		return internCoords.amber2BAT(batIndex);
+	}
 
 	void appendDCDReporter(const std::string& filename);
 
@@ -725,9 +732,6 @@ private:
 		tempFin = 0;
 
 	SetupReader setupReader;
-
-	int natoms = std::numeric_limits<int>::min();
-	std::vector<bSpecificAtom> atoms;
 
 	// Every molecule has an array_view for atoms and bonds
 	std::vector<array_view<std::vector<bSpecificAtom>::iterator>>

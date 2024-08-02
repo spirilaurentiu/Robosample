@@ -51,21 +51,21 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("MetropolisHastings", AcceptRejectMode::MetropolisHastings);
 
     py::enum_<IntegratorName>(m, "IntegratorName")
-        .value("EMPTY", IntegratorName::None)
-        .value("VERLET", IntegratorName::Verlet)
-        .value("EULER", IntegratorName::EULER)
-        .value("EULER2", IntegratorName::EULER2)
-        .value("CPODES", IntegratorName::CPODES)
-        .value("RUNGEKUTTA", IntegratorName::RUNGEKUTTA)
-        .value("RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2)
-        .value("RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3)
-        .value("RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG)
-        .value("BENDSTRETCH", IntegratorName::BENDSTRETCH)
+        .value("Empty", IntegratorName::None)
+        .value("Verlet", IntegratorName::Verlet)
+        .value("Euler", IntegratorName::Euler)
+        .value("Euler2", IntegratorName::Euler2)
+        .value("Cpodes", IntegratorName::Cpodes)
+        .value("RungeKutta", IntegratorName::RungeKutta)
+        .value("RungeKutta2", IntegratorName::RungeKutta2)
+        .value("RungeKutta3", IntegratorName::RungeKutta3)
+        .value("RungeKuttaFeldberg", IntegratorName::RungeKuttaFeldberg)
+        .value("BendStretch", IntegratorName::BendStretch)
         .value("OMMVV", IntegratorName::OMMVV)
-        .value("BOUND_WALK", IntegratorName::BoundWalk)
-        .value("BOUND_HMC", IntegratorName::BoundHMC)
-        .value("STATIONS_TASK", IntegratorName::StationsTask)
-        .value("NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS);
+        .value("BoundWalk", IntegratorName::BoundWalk)
+        .value("BoundHMC", IntegratorName::BoundHMC)
+        .value("StationsTask", IntegratorName::StationsTask)
+        .value("NofIntegrators", IntegratorName::NofIntegrators);
 
     py::enum_<ThermostatName>(m, "ThermostatName")
         .value("NONE", ThermostatName::NONE)
@@ -82,21 +82,22 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("mobility", &BOND_FLEXIBILITY::mobility);
 
     py::class_<Context>(m, "Context")
-        .def(py::init<SimTK::Real, SimTK::Real, uint32_t>())
+        .def(py::init<SimTK::Real, SimTK::Real, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t>())
         .def("addWorld", &Context::addWorld, "Add an empty world")
         .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Run the simulation")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system")
         .def("appendDCDReporter", &Context::appendDCDReporter, "Create a DCD file")
         .def("Run", py::overload_cast<>(&Context::Run), "Run the simulation")
-        .def("setNumThreads", &Context::setNumThreads, "Set the number of threads")
         .def("setPdbPrefix", &Context::setPdbPrefix, "Set the prefix for the PDB files")
         .def("setOutput", &Context::setOutput, "Set the output directory")
-        .def("setNofRoundsTillReblock", &Context::setNofRoundsTillReblock, "Set the number of rounds until reblocking")
         .def("setRequiredNofRounds", &Context::setRequiredNofRounds, "Set the required number of rounds")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency")
         .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency")
         .def("setGBSA", &Context::setRunType, "Set the run type")
-        .def("setRunType", &Context::setRunType, "Set the run type");
+        .def("setRunType", &Context::setRunType, "Set the run type")
+        .def("initialize", &Context::initialize, "Initialize the simulation")
+        .def("addReplica", &Context::addReplica, "Add a replica")
+        .def("addThermodynamicState", &Context::addThermodynamicState, "Add a thermodynamic state");
 
     py::class_<World>(m, "World")
         .def("setFlexibilities", &World::setFlexibilities, "Set the flexibilities of the bonds")

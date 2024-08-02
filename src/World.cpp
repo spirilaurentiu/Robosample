@@ -1,4 +1,5 @@
 #include "World.hpp"
+#include "Context.hpp"
 
 #define CHECK_RECONSTRUCTION false
 
@@ -3180,6 +3181,81 @@ bool World::addSampler(SamplerName samplerName,
 		std::cout << "World::addSampler memory 1\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 	}
 
+	// Set atom masses to OpenMM
+	// TODO are those indices correct if using two molecules?
+	// Find which atoms should be fixed
+	std::vector<SimTK::Real> masses(myContext->natoms, 0);
+
+	// std::vector<int> fixedAtoms;
+	// for (const auto& f: flexibilities) {
+	// 	if (f.mobility == BondMobility::Mobility::Rigid) {
+	// 		if (f.i == -1) fixedAtoms.push_back(f.j);
+	// 		else if (f.j == -1) fixedAtoms.push_back(f.i);
+	// 	}
+	// }
+
+	for (const auto& t : *topologies) {
+		for (int aix = 0; aix < t.getNumAtoms(); aix++) {
+			// Set mass to zero for fixed atoms
+			SimTK::mdunits::Mass mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
+
+			if (integratorName == IntegratorName::OMMVV) {
+				if (rootMobilizer == "Weld" && aix == 0) {
+					mass = 0;
+				}
+
+				// if (std::find(fixedAtoms.begin(), fixedAtoms.end(), aix) != fixedAtoms.end()) {
+				// 	mass = 0;
+				// }
+			}
+
+			masses[aix] = mass;
+
+			// // print masses
+			// std::cout << "masses[" << myContext->BAT2Amber(aix) << "] = " << mass << std::endl;
+
+			// // SimTK::mdunits::Mass mass handles values in floating point fashion
+			// masses[myContext->BAT2Amber(aix)] = mass;
+		}
+	}
+
+	// // print masses
+	// for (int i = 0; i < myContext->natoms; i++) {
+	// 	std::cout << "masses[" << i << "] = " << masses[i] << std::endl;
+	// }
+
+	forceField->setOpenMMMasses(masses);
+
+	// if (integratorName == IntegratorName::OMMVV) {
+
+	// 	// Prepare to set atom masses
+	// 	std::vector<SimTK::Real> masses(myContext->natoms, 0);
+
+	// 	// Find which atoms should be fixed
+	// 	std::vector<int> fixedAtoms;
+	// 	for (const auto& f: flexibilities) {
+	// 		if (f.mobility == BondMobility::Mobility::Rigid) {
+	// 			if (f.i == -1) fixedAtoms.push_back(f.j);
+	// 			else if (f.j == -1) fixedAtoms.push_back(f.i);
+	// 		}
+	// 	}
+
+	// 	for (int aix = 0; aix < myContext->natoms; aix++) {
+	// 		SimTK::mdunits::Mass mass = myContext->atoms[aix].getMass();
+	// 		if (std::find(fixedAtoms.begin(), fixedAtoms.end(), aix) != fixedAtoms.end()) {
+	// 			mass = 0;
+	// 		}
+	// 		masses[aix] = mass;
+	// 	}
+
+	// 	// print masses
+	// 	for (int i = 0; i < myContext->natoms; i++) {
+	// 		std::cout << "masses[" << i << "] = " << masses[i] << std::endl;
+	// 	}
+
+	// 	forceField->setOpenMMMasses(masses);
+	// }
+
 	// This is needed because each call to forceField invalidates the topology cache
 	// As far as I understand, you cannot modify forceField afther this call
 	realizeTopology();
@@ -3209,21 +3285,6 @@ bool World::addSampler(SamplerName samplerName,
 		// TODO should this be inherited from parent world?
 		if (useFixmanPotential) {
 			sampler.useFixmanPotential();
-		}
-
-		// Copy atom masses to OpenMM
-		// TODO are those indices correct if using two molecules?
-		if (integratorName == IntegratorName::OMMVV) {
-			for (const auto& t : *topologies) {
-				for (int aix = 0; aix < t.getNumAtoms(); aix++) {
-					// SimTK::mdunits::Mass mass handles values in floating point fashion
-					const SimTK::mdunits::Mass mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
-					const SimTK::DuMM::NonbondAtomIndex nax(aix);
-					sampler.setOMMmass(nax, mass);
-
-					// Set mass to zero here
-				}
-			}	
 		}
 	} else {
 		std::cerr << "Unknown sampler name" << std::endl;

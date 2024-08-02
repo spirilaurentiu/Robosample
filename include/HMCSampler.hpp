@@ -532,8 +532,6 @@ public:
  	* Test ground mostly for SOA
  	*/
 	void testSOA(SimTK::State& someState);
-	
-	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
 
 	void setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps);
 	
