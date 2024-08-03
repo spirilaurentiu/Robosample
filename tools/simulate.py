@@ -1,7 +1,7 @@
 import flexor
 import mdtraj as md
 import argparse
-import robosample as robosample
+import robosample
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Process PDB code and seed.')
@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser(description='Process PDB code and seed.')
 # 1i42 1w4k 2btg 2eej 2kes 2kyy 2l39 2oa4 2obu 5xf0
 parser.add_argument('PDBCode', type=str, help='The PDB code')
 parser.add_argument('Seed', type=int, help='The seed')
+parser.add_argument('MDSteps', type=int, help='The number of MD steps')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -17,6 +18,8 @@ args = parser.parse_args()
 # Set the variables
 pdb_code = args.PDBCode
 seed = args.Seed
+md_steps = args.MDSteps
+
 prmtop = pdb_code + "/" + pdb_code + ".H.capped.prmtop"
 inpcrd = pdb_code + "/" + pdb_code + ".H.capped.rst7"
 dcd = pdb_code + "_" + str(seed) + ".dcd"
@@ -27,7 +30,7 @@ flexorObj = flexor.Flexor(mdtrajObj)
 
 # create robosample context
 c = robosample.Context(300, 300, 42, 0, 1, robosample.RunType.REMC, 1, 0)
-c.setRequiredNofRounds(2)
+c.setRequiredNofRounds(md_steps)
 c.setPdbRestartFreq(0) # WRITE_PDBS
 c.setPrintFreq(1) # PRINT_FREQ
 
