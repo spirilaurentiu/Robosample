@@ -1,12 +1,25 @@
-import robosample as robosample
 import flexor
 import mdtraj as md
+import argparse
+import robosample as robosample
 
-# 1i42 2btg 2eej 2k9q 2kbt 2kyy 2l39 2m2f 2oa4 2obu
-seed = 42
-prmtop = "1i42/1i42.H.capped.prmtop"
-inpcrd = "1i42/1i42.H.capped.rst7"
-dcd = "1i42" + "_" + str(seed) + ".dcd"
+# Create the parser
+parser = argparse.ArgumentParser(description='Process PDB code and seed.')
+
+# Add the arguments
+# 1i42 1w4k 2btg 2eej 2kes 2kyy 2l39 2oa4 2obu 5xf0
+parser.add_argument('PDBCode', type=str, help='The PDB code')
+parser.add_argument('Seed', type=int, help='The seed')
+
+# Parse the arguments
+args = parser.parse_args()
+
+# Set the variables
+pdb_code = args.PDBCode
+seed = args.Seed
+prmtop = pdb_code + "/" + pdb_code + ".H.capped.prmtop"
+inpcrd = pdb_code + "/" + pdb_code + ".H.capped.rst7"
+dcd = pdb_code + "_" + str(seed) + ".dcd"
 
 # prepare flexor generator
 mdtrajObj = md.load(inpcrd, top=prmtop)

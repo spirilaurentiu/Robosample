@@ -199,6 +199,30 @@ Select the kit and then compile:
 
 ## Running Robosample
 
+Create a Python environment:
+
+2x cmake
+ninja robosample
+
+LOOK AT THE FILE AND CHECK WHAT PYTHON VERSION IT SELECTED
+only then you can
+mamba create -n robosample python=3.xx mdtraj networkx libstdcxx-ng=12 -c conda-forge -y
+mamba activate robosample
+
+dont know if we still need "libstdcxx-ng=12 gcc=12" since adding "import robosample as robosample" on the list line of imports
+perhaps it should just be "import robosample"
+
+conda activate robosample
+
+```basj
+conda install -c conda-forge mamba -y
+mamba create -n robosample python=3.8 mdtraj networkx libstdcxx-ng=12 gcc=12 -c conda-forge -y
+mamba activate robosample
+conda install -c conda-forge libstdcxx-ng=12
+```
+
+https://stackoverflow.com/a/74533050/3740613
+
 The executable is compiled in `build/`. Examples are available in the same folder. To see them, type:
 
 ```bash
