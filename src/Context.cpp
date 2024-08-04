@@ -10,19 +10,10 @@
  * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT
  * -->
 */
-Context::Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
+Context::Context(std::string baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
 {
-	// Set the temperature range
-	tempIni = Ti;
-	tempFin = Tf;
-
-	// Check the temperature range
-	SimTK_ASSERT_ALWAYS(tempIni <= tempFin,
-		"Context::Context: Initial temperature must be less than or equal to the final temperature.");
-	SimTK_ASSERT_ALWAYS(tempIni > 0,
-		"Context::Context: Initial temperature must be greater than 0.");
-	SimTK_ASSERT_ALWAYS(tempFin > 0,
-		"Context::Context: Final temperature must be greater than 0.");
+	// Set the base name of the simulation
+	this->baseName = baseName + "_" + std::to_string(seed);
 
 	// Alert user of CUDA environment variables
 	if constexpr (OPENMM_PLATFORM_CUDA) {
@@ -364,7 +355,8 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
-			addThermodynamicState(k, temperatures[k], temperatures[k],
+			addThermodynamicState(
+				k, temperatures[k], temperatures[k],
 
 				rexSamplers[k],
 				rexDistortOptions[k],
@@ -852,65 +844,6 @@ void Context::initialize() {
 	// Initialize non-equilibrium parameters
 	PrepareNonEquilibriumParams_Q();
 	setThermostatesNonequilibrium();
-}
-
-
-void Context::appendLog(const std::string& filename) {
-	// Open the log file
-	logFile = std::ofstream(filename);
-	if ( !logFile.is_open() ) {
-		std::cerr << cerr_prefix << "Failed to open log file " << filename << "." << std::endl;
-	}
-
-	// Write the header
-	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_set,ke_o,ke_n,fix_o,fix_n,fix_set,acc\n";
-}
-
-
-void Context::appendDCDReporter(const std::string& filename) {
-	traj.createTrajectory(filename, "dcd", natoms, topologies.size());
-	wantDCD = true;
-}
-
-
-/** 
- * Main run function
-*/
-void Context::Run() {
-	if(getRunType() == RUN_TYPE::DEFAULT) {
-		RunREXNew();
-		//Run(getRequiredNofRounds(), tempIni, tempFin);
-
-	}else if(  (getRunType() == RUN_TYPE::REMC)
-			|| (getRunType() == RUN_TYPE::RENEMC)
-			|| (getRunType() == RUN_TYPE::RENE)){
-		RunREXNew();
-
-	}else{
-		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
-		Run(getRequiredNofRounds(), tempIni, tempFin);
-
-	}
-}
-
-/** 
- * Main run function
-*/
-void Context::Run(int rounds) {
-	if(getRunType() == RUN_TYPE::DEFAULT) {
-		RunREXNew();
-		//Run(rounds, tempIni, tempFin);
-
-	}else if(  (getRunType() == RUN_TYPE::REMC)
-			|| (getRunType() == RUN_TYPE::RENEMC)
-			|| (getRunType() == RUN_TYPE::RENE)){
-
-		RunREXNew();
-	}else{
-		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
-		Run(rounds, tempIni, tempFin);
-
-	}
 }
 
 std::string Context::GetMoleculeDirectoryShort(const std::string& path) const
@@ -3439,6 +3372,8 @@ void Context::addReplica(int index)
 	const auto& referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
+	replicas.back().appendLog(baseName + "_" + std::to_string(index) + ".csv");
+	replicas.back().appendDCDReporter(baseName + "_" + std::to_string(index) + ".dcd", natoms, topologies.size());
 
 	// Increment nof replicas
 	nofReplicas++;
@@ -4541,7 +4476,7 @@ void Context::setWorldDistortParameters(int whichWorld, SimTK::Real scaleFactor)
 }
 
 // Set thermodynamic and simulation parameters for one replica
-void Context::setReplicasWorldsParameters(int thisReplica)
+void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -4565,7 +4500,13 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 
 		world.setTemperature( T );
 		world.setBoostTemperature( boostT );
-		world.updSampler(0)->setAcceptRejectMode(acceptRejectModes[i]);
+		
+		if (alwaysAccept) {
+			world.updSampler(0)->setAcceptRejectMode(AcceptRejectMode::AlwaysAccept);
+		} else {
+			world.updSampler(0)->setAcceptRejectMode(acceptRejectModes[i]);
+		}
+
 		world.updSampler(0)->setTimestep(replicaTimesteps[i], false);
 		world.updSampler(0)->setMDStepsPerSample(replicaMdsteps[i]);
 		world.updSampler(0)->setTemperature( T );
@@ -4965,7 +4906,12 @@ void Context::REXLog(int mixi, int replicaIx)
 
 void Context::writeLog(int mixi, int replicaIx) {
 	// Check if we want to write to log
-	if (!logFile.is_open()) {
+
+	int thermoIx = replica2ThermoIxs[replicaIx];
+	const auto& coords = replicas[replicaIx].getAtomsLocationsInGround();
+	const auto& replica = replicas[replicaIx];
+
+	if (!replicas[replicaIx].logFile.is_open()) {
 		return;
 	}
 
@@ -4988,7 +4934,7 @@ void Context::writeLog(int mixi, int replicaIx) {
 
 		// Write to log
 		// round_ix replica_ix temperature world_ix NU accepted_steps pe_o pe_set ke_o ke_n fix_o fix_n fix_set acc
-		logFile << mixi << ","
+		replicas[replicaIx].logFile << mixi << ","
                 << replicaIx << ","
                 << std::fixed << std::setprecision(3) << temperature << ","
                 << std::fixed << std::setprecision(0) << wIx << ","
@@ -5091,7 +5037,7 @@ void Context::RunREX()
 			updWorldsDistortOptions(replicaIx);
 
 			// Set thermo and simulation parameters for the worlds in this replica
-			setReplicasWorldsParameters(replicaIx);
+			setReplicasWorldsParameters(replicaIx, false);
 
 			// ----------------------------------------------------------------
 			// EQUILIBRIUM
@@ -5156,12 +5102,7 @@ void Context::RunREX()
 			PrintNofAcceptedSwapsMatrix();
 		}
 
-		this->nofRounds++; 
-
-		if (wantDCD) {
-			// Write DCD
-			writeDCDs();
-		}
+		this->nofRounds++;
 
 	} // end rounds
 
@@ -5370,9 +5311,8 @@ void Context::RunReplicaRefactor(
 
 
 // Run replica exchange protocol
-void Context::RunREXNew()
+void Context::RunREXNew(int equilRounds, int prodRounds)
 {
-
 	// Is this necesary =======================================================
 	realizeTopology(); 
 
@@ -5407,11 +5347,10 @@ void Context::RunREXNew()
 	bool givenTsMode = false;
 
 	// Useful vars
-	int nofMixes = requiredNofRounds;
 	int currFrontWIx = -1;
 
 	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
-	for(size_t mixi = 0; mixi < nofMixes; mixi++){
+	for(size_t mixi = 0; mixi < equilRounds + prodRounds; mixi++){
 
 		//std::cout << " REX batch " << mixi << std::endl;
 
@@ -5428,8 +5367,9 @@ void Context::RunREXNew()
 		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 
-			int thermoIx = replica2ThermoIxs[replicaIx];
 			// fiecare thermo are dcd ul ei
+			int thermoIx = replica2ThermoIxs[replicaIx];
+			replicas[replicaIx].writeDCD();
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
@@ -5438,7 +5378,11 @@ void Context::RunREXNew()
 			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);           // (1)
 
 			// Set thermo and simulation parameters for the worlds in this replica
-			setReplicasWorldsParameters(replicaIx);
+			if (mixi < equilRounds) {
+				setReplicasWorldsParameters(replicaIx, true);
+			} else {
+				setReplicasWorldsParameters(replicaIx, false);
+			}
 
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
@@ -5455,18 +5399,7 @@ void Context::RunREXNew()
 			PrintNofAcceptedSwapsMatrix();
 		}
 
-		this->nofRounds++; 
-
-		if (wantDCD) {
-			for (const auto& r : replicas) {
-				auto [x, y, z] = r.getCoordinates();
-				traj.appendTimestep("dcd", x, y, z);
-				break;
-			}
-
-			// // Write the first world
-			// writeDCDs();
-		}
+		this->nofRounds++;
 
 	} // end rounds
 
@@ -5860,25 +5793,6 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 
 	//}
 
-}
-
-void Context::writeDCDs()
-{
-	// Write the DCD from the first world
-	auto& world = worlds[worldIndexes.front()];
-
-	// Update bAtomList in Topology
-	const SimTK::State& pdbState = world.integ->updAdvancedState();
-	world.updateAtomListsFromCompound(pdbState);
-
-	for (int i = 0; i < natoms; i++) {
-		Xs[i] = atoms[i].getX() * 10;
-		Ys[i] = atoms[i].getY() * 10;
-		Zs[i] = atoms[i].getZ() * 10;
-	}
-
-	// Actual write
-	traj.appendTimestep("dcd", Xs, Ys, Zs);
 }
 
 void Context::randomizeWorldIndexes()
@@ -6956,11 +6870,6 @@ void Context::RunOneRound()
 // Print to log and write pdbs
 void Context::RunLog(int round)
 {
-	if (wantDCD) {
-		writeDCDs();
-		std::cout << "RunLog() wrote a DCD frame" << std::endl;
-	}
-
 	// Write energy and geometric features to logfile
 	if(printFreq || pdbRestartFreq){
 

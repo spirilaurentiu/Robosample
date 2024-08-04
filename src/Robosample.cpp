@@ -42,7 +42,7 @@ std::string extractValueFromInputFile(
 int testContext(int seed)
 {
 	// no need for tini tfin
-	Context c(300, 300, seed, 0, 1, RUN_TYPE::REMC, 1, 0);
+	Context c("2but", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
 
 	// c.setNonbonded(0, 1.2); // default - set for each world
 	c.setPdbPrefix("2but42"); // will disappear
@@ -2160,18 +2160,12 @@ int testContext(int seed)
 	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
 	// c.getWorld(2).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, true);
 
-	// append a dcd reporter for each replica
-	// pass a path when initializing the replica and check if the containig folder exists
-	std::string basename = "2but_" + std::to_string(seed);
-	c.appendDCDReporter(basename + ".dcd");
-	c.appendLog(basename + ".csv");
-
-	int nofReplicas = 1;
+	int nofReplicas = 3;
 	SimTK::Real temperature = 300;
 	std::vector<SimTK::Real> temperatures, boostTemperatures;
 	for (int i = 0; i < nofReplicas; i++) {
-		temperatures.push_back(temperature + (i * 10));
-		boostTemperatures.push_back(temperature + (i * 10)); // used for openmm velocities
+		temperatures.push_back(temperature + (i * 100));
+		boostTemperatures.push_back(temperature + (i * 100)); // used for openmm velocities
 	}
 
 	int scale = 1;
@@ -2229,7 +2223,7 @@ int testContext(int seed)
 	c.initialize();
 
 	// pas how many rounds to run for here
-	c.Run();
+	c.RunREXNew(10, 20);
 
 	return 0;
 }

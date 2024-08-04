@@ -2,7 +2,7 @@ import numpy as np
 import mdtraj as md
 import networkx as nx
 import os
-import robosample as robosample
+import robosample
 
 
 class Flexor:

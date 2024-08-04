@@ -1,10 +1,30 @@
 #include "Replica.hpp"
 
+void Replica::appendLog(const std::string& filename) {
+	// Open the log file
+	logFile = std::ofstream(filename);
+	if ( !logFile.is_open() ) {
+		std::cerr << "[ERROR] Failed to open log file " << filename << "." << std::endl;
+	}
+
+	// Write the header
+	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_set,ke_o,ke_n,fix_o,fix_n,fix_set,acc\n";
+}
+
+
+void Replica::appendDCDReporter(const std::string& filename, int natoms, int ntopologies) {
+	traj.createTrajectory(filename, "dcd", natoms, ntopologies);
+}
+
+void Replica::writeDCD() {
+	auto [x, y, z] = getCoordinates();
+	traj.appendTimestep("dcd", x, y, z);
+}
+
 // Get coordinates from this replica
 const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>&
 	Replica::getAtomsLocationsInGround() const
 {
-
 	return atomsLocations;
 }
 
