@@ -71,6 +71,7 @@ public:
 		return internCoords.amber2BAT(batIndex);
 	}
 
+	void appendLog(const std::string& filename);
 	void appendDCDReporter(const std::string& filename);
 
 	void Run();
@@ -562,6 +563,7 @@ public:
 	// Print to log and write pdbs
 	void RunLog(int roundi);
 	void REXLog(int mixi, int replicaIx);
+	void writeLog(int mixi, int replicaIx);
 
 	void incrementNofSamples(void);
 

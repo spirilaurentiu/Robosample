@@ -855,6 +855,18 @@ void Context::initialize() {
 }
 
 
+void Context::appendLog(const std::string& filename) {
+	// Open the log file
+	logFile = std::ofstream(filename);
+	if ( !logFile.is_open() ) {
+		std::cerr << cerr_prefix << "Failed to open log file " << filename << "." << std::endl;
+	}
+
+	// Write the header
+	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_set,ke_o,ke_n,fix_o,fix_n,fix_set,acc\n";
+}
+
+
 void Context::appendDCDReporter(const std::string& filename) {
 	traj.createTrajectory(filename, "dcd", natoms, topologies.size());
 	wantDCD = true;
@@ -4951,6 +4963,48 @@ void Context::REXLog(int mixi, int replicaIx)
 	} // wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 }
 
+void Context::writeLog(int mixi, int replicaIx) {
+	// Check if we want to write to log
+	if (!logFile.is_open()) {
+		return;
+	}
+
+	// Print stats for each world
+	for (const auto wIx : worldIndexes) {
+		SimTK::State& currentAdvancedState = worlds[wIx].integ->updAdvancedState();
+		const auto& sampler = pHMC((worlds[wIx].samplers[0]));
+
+		const auto temperature = sampler->getTemperature();
+		const auto NU = currentAdvancedState.getNU();
+		const auto acceptedSteps = sampler->acceptedSteps;
+		const auto pe_o = sampler->pe_o;
+		const auto pe_set = sampler->pe_set;
+		const auto ke_o = sampler->ke_o;
+		const auto ke_n = sampler->ke_n;
+		const auto fix_o = sampler->fix_o;
+		const auto fix_n = sampler->fix_n;
+		const auto fix_set = sampler->fix_set;
+		const auto acc = sampler->acc;
+
+		// Write to log
+		// round_ix replica_ix temperature world_ix NU accepted_steps pe_o pe_set ke_o ke_n fix_o fix_n fix_set acc
+		logFile << mixi << ","
+                << replicaIx << ","
+                << std::fixed << std::setprecision(3) << temperature << ","
+                << std::fixed << std::setprecision(0) << wIx << ","
+                << NU << ","
+                << acceptedSteps << ","
+                << std::fixed << std::setprecision(2) << pe_o << ","
+                << pe_set << ","
+                << ke_o << ","
+                << ke_n << ","
+                << fix_o << ","
+                << fix_n << ","
+                << fix_set << ","
+                << acc << "\n";
+	}
+}
+
 // rexnewfunc
 void Context::incrementNofSamples(void){
 
@@ -5240,7 +5294,8 @@ void Context::RunReplicaRefactor(
 	
 		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
 
-		REXLog(mixi, replicaIx);
+		// REXLog(mixi, replicaIx);
+		writeLog(mixi, replicaIx);
 
 		if(!nonequilWIxs.empty()){ // Non-Equilibrium
 
@@ -5372,6 +5427,9 @@ void Context::RunREXNew()
 
 		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+
+			int thermoIx = replica2ThermoIxs[replicaIx];
+			// fiecare thermo are dcd ul ei
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
