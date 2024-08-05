@@ -206,7 +206,7 @@ ninja robosample
 
 LOOK AT THE FILE AND CHECK WHAT PYTHON VERSION IT SELECTED
 only then you can
-mamba create -n robosample python=3.xx mdtraj networkx libstdcxx-ng=12 -c conda-forge -y
+mamba create -n robosample python=3.10 mdtraj networkx libstdcxx-ng=12 -c conda-forge -y
 mamba activate robosample
 
 dont know if we still need "libstdcxx-ng=12 gcc=12" since adding "import robosample as robosample" on the list line of imports

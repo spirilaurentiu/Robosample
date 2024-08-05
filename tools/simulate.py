@@ -10,7 +10,8 @@ parser = argparse.ArgumentParser(description='Process PDB code and seed.')
 # 1i42 1w4k 2btg 2eej 2kes 2kyy 2l39 2oa4 2obu 5xf0
 parser.add_argument('PDBCode', type=str, help='The PDB code')
 parser.add_argument('Seed', type=int, help='The seed')
-parser.add_argument('MDSteps', type=int, help='The number of MD steps')
+parser.add_argument('EquilSteps', type=int, help='The number of MD equilibration steps')
+parser.add_argument('ProdSteps', type=int, help='The number of MD production steps')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -18,7 +19,6 @@ args = parser.parse_args()
 # Set the variables
 pdb_code = args.PDBCode
 seed = args.Seed
-md_steps = args.MDSteps
 
 prmtop = pdb_code + "/" + pdb_code + ".H.capped.prmtop"
 inpcrd = pdb_code + "/" + pdb_code + ".H.capped.rst7"
@@ -29,14 +29,12 @@ mdtrajObj = md.load(inpcrd, top=prmtop)
 flexorObj = flexor.Flexor(mdtrajObj)
 
 # create robosample context
-c = robosample.Context(300, 300, 42, 0, 1, robosample.RunType.REMC, 1, 0)
-c.setRequiredNofRounds(md_steps)
+c = robosample.Context(pdb_code, seed, 0, 1, robosample.RunType.REMC, 1, 0)
 c.setPdbRestartFreq(0) # WRITE_PDBS
 c.setPrintFreq(1) # PRINT_FREQ
 
 # load system
 c.loadAmberSystem(prmtop, inpcrd)
-c.appendDCDReporter(dcd)
 
 # openmm cartesian
 flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
@@ -87,4 +85,4 @@ for i in range(nof_replicas):
 c.initialize()
 
 # start the simulation
-c.Run()
+c.RunREXNew(args.EquilSteps, args.ProdSteps)
