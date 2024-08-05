@@ -85,8 +85,4 @@ for i in range(nof_replicas):
 c.initialize()
 
 # start the simulation
-<<<<<<< HEAD
 c.RunREXNew(args.EquilSteps, args.ProdSteps)
-=======
-c.RunREXNew(args.EquilSteps, args.ProdSteps)
->>>>>>> 41d4870367988e996ee5efabedc70f4e5f5568c7
