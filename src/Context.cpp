@@ -4498,41 +4498,29 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept)
 		// Get current world
 		auto& world = worlds[replicaWorldIxs[i]];
 
-		world.setTemperature( T );
-		world.setBoostTemperature( boostT );
+		world.setTemperature(T);
+		world.setBoostTemperature(boostT);
+
+		auto ts = replicaTimesteps[i];
+		auto md_ts = replicaMdsteps[i];
 		
 		if (alwaysAccept) {
 			world.updSampler(0)->setAcceptRejectMode(AcceptRejectMode::AlwaysAccept);
+			ts /= 10.0;
+			md_ts /= 10;
 		} else {
 			world.updSampler(0)->setAcceptRejectMode(acceptRejectModes[i]);
 		}
 
-		world.updSampler(0)->setTimestep(replicaTimesteps[i], false);
-		world.updSampler(0)->setMDStepsPerSample(replicaMdsteps[i]);
-		world.updSampler(0)->setTemperature( T );
-		world.updSampler(0)->setBoostTemperature( boostT );
+		world.updSampler(0)->setTimestep(ts, false);
+		world.updSampler(0)->setMDStepsPerSample(md_ts);
+		world.updSampler(0)->setTemperature(T);
+		world.updSampler(0)->setBoostTemperature(boostT);
 
 		if (world.updSampler(0)->integratorName == IntegratorName::OMMVV) {
 			world.updSampler(0)->dumm->setOpenMMvelocities(T, randomEngine(seed));
-			world.updSampler(0)->dumm->setOpenMMTimestep(replicaTimesteps[i]);
+			world.updSampler(0)->dumm->setOpenMMTimestep(ts);
 		}
-
-		// // Set integrator
-		// world.updSampler(0)->setIntegratorName(integrators[i]);
-		
-		// const auto integratorName = thermodynamicStates[thisThermoStateIx].getIntegrators()[i];
-		// if (integratorName == IntegratorName::OMMVV) {
-		// 	world.forceField->setUseOpenMMIntegration(true);
-		// 	world.forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		// 	world.forceField->setDuMMTemperature(T);
-		// 	world.forceField->setOpenMMstepsize(replicaTimesteps[i]);
-		// } else {
-		// 	world.forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		// }
-
-		// // // This is needed because each call to forceField invalidates the topology cache
-		// // // As far as I understand, you cannot modify forceField afther this call
-		// // world.realizeTopology();
 	}
 }
 
