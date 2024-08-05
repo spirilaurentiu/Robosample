@@ -30,6 +30,7 @@ class Context {
 public:
 	int natoms = std::numeric_limits<int>::min();
 	std::vector<bSpecificAtom> atoms;
+	std::string baseName;
 
 	/**
 	 * @brief Initialize simulation variables.
@@ -40,7 +41,7 @@ public:
 	 * @param nofRoundsTillReblock Number of rounds until reblocking.
 	 * @param runType Type of simulation to run.
 	*/
-	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq);
+	Context(std::string baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq);
 
 	/**
 	 * @brief Print atom's Compound and DuMM indexes.
@@ -71,10 +72,8 @@ public:
 		return internCoords.amber2BAT(batIndex);
 	}
 
+	void appendLog(const std::string& filename);
 	void appendDCDReporter(const std::string& filename);
-
-	void Run();
-	void Run(int steps);
 
 	// Input functions
 	bool loadCoordinatesFile(std::string coordinatesFilename);
@@ -381,7 +380,6 @@ public:
 
 	//
 	void writePdbs(int someIndex, int thermodynamicStateIx = 0);
-	void writeDCDs();
 
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2, int a3, int a4);
@@ -532,7 +530,7 @@ public:
 	void initializeReplica(int whichReplica);
 
 	// Reset worlds parameters according to thermodynamic state
-	void setReplicasWorldsParameters(int thisReplica);
+	void setReplicasWorldsParameters(int thisReplica, bool alwaysAccept);
 
 	// Given a scaling factor
 	SimTK::Real distributeScalingFactor(
@@ -562,13 +560,14 @@ public:
 	// Print to log and write pdbs
 	void RunLog(int roundi);
 	void REXLog(int mixi, int replicaIx);
+	void writeLog(int mixi, int replicaIx);
 
 	void incrementNofSamples(void);
 
 
 	void RunREX();
 
-	void RunREXNew();
+	void RunREXNew(int equilRounds, int prodRounds);
 
 	// Helper Functions for REX
 
@@ -823,9 +822,6 @@ public:
 	}	
 
 private:
-
-	TrajectoryObject traj;
-	bool wantDCD = false;
 	std::vector<SimTK::Real> Xs, Ys, Zs;
 
     /** @name Z Matrix and BAT functions

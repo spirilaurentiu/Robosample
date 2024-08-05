@@ -82,12 +82,11 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("mobility", &BOND_FLEXIBILITY::mobility);
 
     py::class_<Context>(m, "Context")
-        .def(py::init<SimTK::Real, SimTK::Real, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t>())
+        .def(py::init<std::string, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t>())
         .def("addWorld", &Context::addWorld, "Add an empty world")
         .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Run the simulation")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system")
-        .def("appendDCDReporter", &Context::appendDCDReporter, "Create a DCD file")
-        .def("Run", py::overload_cast<>(&Context::Run), "Run the simulation")
+        .def("RunREXNew", &Context::RunREXNew, "Run the simulation")
         .def("setPdbPrefix", &Context::setPdbPrefix, "Set the prefix for the PDB files")
         .def("setOutput", &Context::setOutput, "Set the output directory")
         .def("setRequiredNofRounds", &Context::setRequiredNofRounds, "Set the required number of rounds")

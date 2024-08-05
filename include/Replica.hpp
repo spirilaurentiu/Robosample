@@ -5,6 +5,7 @@
 #include "bSpecificAtom.hpp"
 #include "Topology.hpp"
 #include "InternalCoordinates.hpp"
+#include "TrajectoryObject.hpp"
 
 class Replica{
 public:
@@ -22,6 +23,13 @@ public:
 			, zMatrixTable(zMatrixTable_)
 			, zMatrixBAT()
 	{}
+
+	void appendLog(const std::string& filename);
+	void appendDCDReporter(const std::string& filename, int natoms, int ntopologies);
+	void writeDCD();
+
+	std::ofstream logFile;
+	TrajectoryObject traj;
 
 	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& getAtomsLocationsInGround() const;
 	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& get_WORK_AtomsLocationsInGround() const;
