@@ -12,6 +12,7 @@ parser.add_argument('PDBCode', type=str, help='The PDB code')
 parser.add_argument('Seed', type=int, help='The seed')
 parser.add_argument('EquilSteps', type=int, help='The number of MD equilibration steps')
 parser.add_argument('ProdSteps', type=int, help='The number of MD production steps')
+parser.add_argument('WriteFreq', type=int, help='CSV and DCD write frequency')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -31,7 +32,7 @@ flexorObj = flexor.Flexor(mdtrajObj)
 # create robosample context
 c = robosample.Context(pdb_code, seed, 0, 1, robosample.RunType.REMC, 1, 0)
 c.setPdbRestartFreq(0) # WRITE_PDBS
-c.setPrintFreq(1) # PRINT_FREQ
+c.setPrintFreq(args.WriteFreq) # PRINT_FREQ
 
 # load system
 c.loadAmberSystem(prmtop, inpcrd)

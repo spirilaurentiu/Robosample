@@ -5224,7 +5224,9 @@ void Context::RunReplicaRefactor(
 		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
 
 		// REXLog(mixi, replicaIx);
-		writeLog(mixi, replicaIx);
+		if (mixi % printFreq == 0) {
+			writeLog(mixi, replicaIx);
+		}
 
 		if(!nonequilWIxs.empty()){ // Non-Equilibrium
 
@@ -5357,8 +5359,10 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 
 			// fiecare thermo are dcd ul ei
-			int thermoIx = replica2ThermoIxs[replicaIx];
-			replicas[replicaIx].writeDCD();
+			if (mixi % printFreq == 0) {
+				int thermoIx = replica2ThermoIxs[replicaIx];
+				replicas[replicaIx].writeDCD();
+			}
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
