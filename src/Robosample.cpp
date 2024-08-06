@@ -3560,7 +3560,7 @@ int testContext(int seed)
 	c.initialize();
 
 	// pas how many rounds to run for here
-	c.RunREXNew(10, 20);
+	c.RunREXNew(1, 1);
 
 	return 0;
 }
