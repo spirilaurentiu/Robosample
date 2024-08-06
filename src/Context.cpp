@@ -4935,7 +4935,7 @@ void Context::writeLog(int mixi, int replicaIx) {
                 << fix_o << ","
                 << fix_n << ","
                 << fix_set << ","
-                << acc << "\n";
+                << acc << std::endl;
 	}
 }
 
