@@ -866,7 +866,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Read molecules from a reader
 	loadAtoms(reader);
-	loadBonds(reader);
+	loadBonds(reader); // PrintBonds();
 	loadAngles(reader);
 	loadTorsions(reader);
 
@@ -4153,7 +4153,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	}
 	if(printWithoutText){
 
-		std:;stringstream rexDetStream;
+		std::stringstream rexDetStream;
 		rexDetStream.str("");
 
 		rexDetStream 

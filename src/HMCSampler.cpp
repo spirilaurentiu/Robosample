@@ -626,43 +626,51 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			J_ini = calcMobodsMBAT(someState);
 
 			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
-
 			//std::cout << "scaleF " << this->QScaleFactor << "\n";
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
+			bool T_Scale_Flag = true; // Are we doing temperature scaling
 			SimTK::Vector &stateQs = someState.updQ();
-
-			// Get random -1 or 1
-			SimTK::Real scaleFactorReference = 1.01;
-			SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
+			SimTK::Real scaleFactor = 1;
 			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-			SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;
-			SimTK::Real scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
+			SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
+
+			if(T_Scale_Flag){ // T-scaling factor
+				scaleFactor = this->QScaleFactor;
+
+			}else{ // Constant scaling factor
+				SimTK::Real scaleFactorReference = 1.01;
+				SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
+				scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
+			}
 
 			int nofScaledBMs = 0;
-
 			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-
 				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 					qIx++ ){
-
 					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
-					stateQs[qIx] = (X_BM.p().norm() * (scaleFactor - 1));
 
-					J_scale += std::log(scaleFactor);
+					if(T_Scale_Flag){ // T-scaling
+						stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
+
+					}else{ // Constant scaling of BMp(w3)
+						stateQs[qIx] = (X_BM.p().norm() * (scaleFactor - 1));
+						J_scale += std::log(scaleFactor);
+					}
 
 					nofScaledBMs++;
-
 				}
 			}
 
-			for(int qIx = 0; qIx < someState.getNQ(); qIx++){
-				//J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
-				//stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
-			}
+			// Scale state directly
+			//for(int qIx = 0; qIx < someState.getNQ(); qIx++){
+			//	J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
+			//	stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+			//}
 
 			//J_scale = someState.getNQ() * std::log((this->QScaleFactor)); // JACOBIAN
 			//std::cout << "\nJ_scale" << " " << J_scale << std::endl;
@@ -1310,6 +1318,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}
 	}
+
 }
 
 
@@ -3069,8 +3078,8 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 	if(this->integratorName == IntegratorName::OMMVV){
 		ke_n = OMM_calcKineticEnergy();
 	}else{
-		ke_n = matter->calcKineticEnergy(someState);
 		system->realize(someState, SimTK::Stage::Velocity);
+		ke_n = matter->calcKineticEnergy(someState);
 	}
 
 	ke_n *= (this->unboostKEFactor); // TODO: Check
@@ -3167,10 +3176,10 @@ void HMCSampler::perturb_Q_QDot_QDotDot(
 	perturbPositions(someState, positionsPerturbMethod());
 
 	// Perturb velocities
-	perturbVelocities(someState, velocitiesPerturbMethod());
+	//perturbVelocities(someState, velocitiesPerturbMethod());
 
 	// Perturb forces
-	perturbForces(someState, forcesPerturbMethod());
+	//perturbForces(someState, forcesPerturbMethod());
 }
 
 /**
@@ -3179,6 +3188,7 @@ void HMCSampler::perturb_Q_QDot_QDotDot(
  **/
 bool HMCSampler::propose(SimTK::State& someState)
 {
+
 	// Adapt Gibbs blocks (Transformer)
 	bool shouldAdaptWorldBlocks = false;
 	if(shouldAdaptWorldBlocks){
@@ -3191,7 +3201,6 @@ bool HMCSampler::propose(SimTK::State& someState)
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
-
 		// Integrate trajectory
 		integrateTrajectory(someState);
 
@@ -3202,6 +3211,7 @@ bool HMCSampler::propose(SimTK::State& someState)
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
+
 	} else {
 			// Store new energies
 			pe_set = pe_n = SimTK::NaN;
