@@ -749,7 +749,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Read molecules from a reader
 	loadAtoms(reader);
-	loadBonds(reader);
+	loadBonds(reader); // PrintBonds();
 	loadAngles(reader);
 	loadTorsions(reader);
 
@@ -3866,7 +3866,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	}
 	if(printWithoutText){
 
-		std:;stringstream rexDetStream;
+		std::stringstream rexDetStream;
 		rexDetStream.str("");
 
 		rexDetStream 
@@ -4498,41 +4498,29 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept)
 		// Get current world
 		auto& world = worlds[replicaWorldIxs[i]];
 
-		world.setTemperature( T );
-		world.setBoostTemperature( boostT );
+		world.setTemperature(T);
+		world.setBoostTemperature(boostT);
+
+		auto ts = replicaTimesteps[i];
+		auto md_ts = replicaMdsteps[i];
 		
 		if (alwaysAccept) {
 			world.updSampler(0)->setAcceptRejectMode(AcceptRejectMode::AlwaysAccept);
+			ts /= 10.0;
+			md_ts /= 10;
 		} else {
 			world.updSampler(0)->setAcceptRejectMode(acceptRejectModes[i]);
 		}
 
-		world.updSampler(0)->setTimestep(replicaTimesteps[i], false);
-		world.updSampler(0)->setMDStepsPerSample(replicaMdsteps[i]);
-		world.updSampler(0)->setTemperature( T );
-		world.updSampler(0)->setBoostTemperature( boostT );
+		world.updSampler(0)->setTimestep(ts, false);
+		world.updSampler(0)->setMDStepsPerSample(md_ts);
+		world.updSampler(0)->setTemperature(T);
+		world.updSampler(0)->setBoostTemperature(boostT);
 
 		if (world.updSampler(0)->integratorName == IntegratorName::OMMVV) {
 			world.updSampler(0)->dumm->setOpenMMvelocities(T, randomEngine(seed));
-			world.updSampler(0)->dumm->setOpenMMTimestep(replicaTimesteps[i]);
+			world.updSampler(0)->dumm->setOpenMMTimestep(ts);
 		}
-
-		// // Set integrator
-		// world.updSampler(0)->setIntegratorName(integrators[i]);
-		
-		// const auto integratorName = thermodynamicStates[thisThermoStateIx].getIntegrators()[i];
-		// if (integratorName == IntegratorName::OMMVV) {
-		// 	world.forceField->setUseOpenMMIntegration(true);
-		// 	world.forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		// 	world.forceField->setDuMMTemperature(T);
-		// 	world.forceField->setOpenMMstepsize(replicaTimesteps[i]);
-		// } else {
-		// 	world.forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		// }
-
-		// // // This is needed because each call to forceField invalidates the topology cache
-		// // // As far as I understand, you cannot modify forceField afther this call
-		// // world.realizeTopology();
 	}
 }
 
@@ -4947,7 +4935,7 @@ void Context::writeLog(int mixi, int replicaIx) {
                 << fix_o << ","
                 << fix_n << ","
                 << fix_set << ","
-                << acc << "\n";
+                << acc << std::endl;
 	}
 }
 
@@ -5236,7 +5224,9 @@ void Context::RunReplicaRefactor(
 		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
 
 		// REXLog(mixi, replicaIx);
-		writeLog(mixi, replicaIx);
+		if (mixi % printFreq == 0) {
+			writeLog(mixi, replicaIx);
+		}
 
 		if(!nonequilWIxs.empty()){ // Non-Equilibrium
 
@@ -5264,6 +5254,7 @@ void Context::RunReplicaRefactor(
 
 		}else{
 
+			// why?
 			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround()); // Victor bugfix
 
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
@@ -5368,8 +5359,10 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 
 			// fiecare thermo are dcd ul ei
-			int thermoIx = replica2ThermoIxs[replicaIx];
-			replicas[replicaIx].writeDCD();
+			if (mixi % printFreq == 0) {
+				int thermoIx = replica2ThermoIxs[replicaIx];
+				replicas[replicaIx].writeDCD();
+			}
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);

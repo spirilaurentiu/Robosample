@@ -8,7 +8,7 @@ void Replica::appendLog(const std::string& filename) {
 	}
 
 	// Write the header
-	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_set,ke_o,ke_n,fix_o,fix_n,fix_set,acc\n";
+	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_set,ke_o,ke_n,fix_o,fix_n,fix_set,acc" << std::endl;
 }
 
 
