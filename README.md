@@ -363,3 +363,85 @@ nm -an build/robosample | c++filt
 # CUDA compiler error 256
 
 There is not space left on the device.
+
+
+
+
+# docking
+cd tools
+mamba env create -f robo.yaml # edit the yaml and set the python version so that it mathces the version robosample is compiled against
+conda activate robo
+
+# add ace and nme
+now select the first amino acid and `center sele`. find the n atom (blue)
+select each of terminal h atoms (lctrl + middle mouse), r click on each of them -> atoms -> remove atom
+then select the n atom -> build -> residue -> acetyl
+
+pymol -> select last amino acid and `center sele`. `sele name OXT` -> `remove sele`.
+now select the carbon atom it's connected to -> build -> residue -> n-metyl
+
+now remove the hydrgen atoms of the caps
+inspect in pymol after exporting -> the last residue get doubled and floats around, just remove it in code
+
+# https://sourceforge.net/p/pymol/mailman/message/36314262/
+# https://mattermodeling.stackexchange.com/a/9580
+
+pdb2pqr -o 7 --ff=AMBER rage.capped.pdb rage.capped.H.pdb # does not work right now
+
+
+
+
+
+pdb4amber -i rage.B99990001.pdb -o rage.noh.pdb -y
+
+
+
+
+obabel -isdf elafibranor.sdf -omol2 > elafibranor.mol2
+antechamber -i elafibranor.mol2 -fi mol2 -o elafibranor.prepi -fo prepi -c gas
+parmchk2 -i elafibranor.prepi -f prepi -o elafibranor.frcmod
+
+
+
+# receptor
+## protonate
+pdb2pqr --with-ph=7 --ff=AMBER --ffout=AMBER rage.B99990001.pdb rage.H.pdb
+
+# add caps
+now select the first amino acid and `center sele`. find the n atom (blue)
+select each of terminal h atoms (lctrl + middle mouse), r click on each of them -> atoms -> remove atom
+then select the n atom -> build -> residue -> acetyl
+
+pymol -> select last amino acid and `center sele`. `sele name OXT` -> `remove sele`.
+now select the carbon atom it's connected to -> build -> residue -> n-metyl
+
+now remove the hydrgen atoms of the caps
+inspect in pymol after exporting -> the last residue get doubled and floats around, just remove it in code
+also remove all ter's between protein and caps, there should be none
+
+export as rage.capped.H.pdb
+
+pdb4amber -i rage.capped.H.pdb -o rage.tleap.pdb -y
+
+
+# ligand
+echo "C1CCC(CC1)N(CC2=CC=CC=C2)C(=O)C3=CC=C(C=C3)Cl" | obabel -ismi -omol2 --gen3d > fps.mol2
+antechamber -i fps.mol2 -fi mol2 -o fps.amber.mol2 -fo mol2 -c gas -at amber
+antechamber -i fps.amber.mol2 -fi mol2 -o fps.prepi -fo prepi -c gas -at amber
+parmchk2 -i fps.amber.mol2 -f mol2 -o fps.frcmod
+
+# tleap
+source leaprc.protein.ff19SB
+source leaprc.gaff
+loadamberprep fps.prepi
+loadamberparams fps.frcmod
+
+protein = loadpdb rage.tleap.pdb        # works with rage.noh.pdb
+ligand = loadmol2 fps.amber.mol2
+complex = combine {protein ligand}
+
+saveamberparm complex rage.fps.prmtop rage.fps.rst7
+quit
+
+## receptor
+pdb2pqr --with-ph=7 --ff=AMBER --ffout=AMBER rage.B99990001.pdb rage.H.pdb

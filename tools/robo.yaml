@@ -1,0 +1,24 @@
+name: robo
+channels:
+  - defaults
+  - conda-forge
+  - salilab
+dependencies:
+  - python=3.11
+  - pip
+  - networkx
+  - mdtraj
+  - salilab::modeller
+  - matplotlib
+  - scipy
+  - ambertools
+  - openbabel
+  - rdkit
+  # - libstdcxx-ng=12
+  # - gcc=12
+
+  - pip:
+      - pdb2pqr
+      - propka
+      # - pygamer
+      # - threevis

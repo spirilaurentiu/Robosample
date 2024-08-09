@@ -6328,6 +6328,9 @@ Context::setAtoms_XPF_XBM(
 				SimTK::Transform G_X_base = G_X_T * T_X_base;
 				parentAtomMobod.setDefaultInboardFrame(G_X_base);
 				parentAtomMobod.setDefaultOutboardFrame(SimTK::Transform());
+
+				std::cout << "T_X_base " << T_X_base << std::endl;
+				std::cout << "G_X_base " << G_X_base << std::endl;
 			}else if(atoms[childNo].getIsRoot()){
 				SimTK::Transform T_X_base = topology.getTopTransform_FromMap(parent_cAIx);
 				SimTK::Transform G_X_base = G_X_T * T_X_base;

@@ -14,7 +14,8 @@ SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 # OpenMM wants these set for some library
 SET(COMMON_FLAGS "-msse4.1 -mavx -march=native -mtune=native")
 
-# -O2 is marginally slower than -O3
+# Replace -g with -gdwarf-4 if you want to use perf
+# However, I understand that this has now been solved
 SET(EXTRA_COMPILE_FLAGS_DEBUG   "${COMMON_FLAGS} -O0 -g -ggdb")
 SET(EXTRA_COMPILE_FLAGS_RELEASE "${COMMON_FLAGS} -O3")
 
