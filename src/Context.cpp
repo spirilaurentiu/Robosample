@@ -4492,6 +4492,8 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept)
 	const auto& replicaTimesteps = thermodynamicStates[thisThermoStateIx].getTimesteps();
 	const auto& replicaMdsteps = thermodynamicStates[thisThermoStateIx].getMdsteps();
 
+	// check here if we need to update the timestep
+
 	// Set simulation parameters for each world
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 
@@ -4912,9 +4914,11 @@ void Context::writeLog(int mixi, int replicaIx) {
 		const auto NU = currentAdvancedState.getNU();
 		const auto acceptedSteps = sampler->acceptedSteps;
 		const auto pe_o = sampler->pe_o;
+		const auto pe_n = sampler->pe_n;
 		const auto pe_set = sampler->pe_set;
 		const auto ke_o = sampler->ke_o;
 		const auto ke_n = sampler->ke_n;
+		const auto ke_set = sampler->ke_set;
 		const auto fix_o = sampler->fix_o;
 		const auto fix_n = sampler->fix_n;
 		const auto fix_set = sampler->fix_set;
@@ -4928,10 +4932,13 @@ void Context::writeLog(int mixi, int replicaIx) {
                 << std::fixed << std::setprecision(0) << wIx << ","
                 << NU << ","
                 << acceptedSteps << ","
-                << std::fixed << std::setprecision(2) << pe_o << ","
+                << std::fixed << std::setprecision(2)
+				<< pe_o << ","
+				<< pe_n << ","
                 << pe_set << ","
                 << ke_o << ","
                 << ke_n << ","
+				<< ke_set << ","
                 << fix_o << ","
                 << fix_n << ","
                 << fix_set << ","

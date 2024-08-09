@@ -199,6 +199,9 @@ Select the kit and then compile:
 
 ## Running Robosample
 
+awk -F, 'NR>1 && $4==0 {count[$NF]++} END {print "0 count:", count[0], "1 count:", count[1]}' your_file.csv
+
+
 Create a Python environment:
 
 2x cmake
