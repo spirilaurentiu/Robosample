@@ -3372,8 +3372,6 @@ void Context::addReplica(int index)
 	const auto& referenceAtomsLocations = worlds[0].getCurrentAtomsLocationsInGround();
 	replicas.back().setAtomsLocationsInGround(referenceAtomsLocations);
 	replicas.back().set_WORK_AtomsLocationsInGround(referenceAtomsLocations);
-	replicas.back().appendLog(baseName + "_" + std::to_string(index) + ".csv");
-	replicas.back().appendDCDReporter(baseName + "_" + std::to_string(index) + ".dcd", natoms, topologies.size());
 
 	// Increment nof replicas
 	nofReplicas++;
@@ -3418,6 +3416,8 @@ void Context::addThermodynamicState(int index,
 	thermodynamicStates.back().setFlowOptions(rexFlowOptions);
 	thermodynamicStates.back().setWorkOptions(rexWorkOptions);
 	thermodynamicStates.back().setBoostMDSteps(boostMDSteps);
+	thermodynamicStates.back().appendLog(baseName + "." + std::to_string(index) + "K.csv");
+	thermodynamicStates.back().appendDCDReporter(baseName + "." + std::to_string(index) + "K.dcd", natoms, topologies.size());
 
 	// Done
 	nofThermodynamicStates++;
@@ -4901,7 +4901,8 @@ void Context::writeLog(int mixi, int replicaIx) {
 	const auto& coords = replicas[replicaIx].getAtomsLocationsInGround();
 	const auto& replica = replicas[replicaIx];
 
-	if (!replicas[replicaIx].logFile.is_open()) {
+	int whichLog = replica2ThermoIxs[replicaIx];
+	if (!thermodynamicStates[whichLog].logFile.is_open()) {
 		return;
 	}
 
@@ -4926,7 +4927,7 @@ void Context::writeLog(int mixi, int replicaIx) {
 
 		// Write to log
 		// round_ix replica_ix temperature world_ix NU accepted_steps pe_o pe_set ke_o ke_n fix_o fix_n fix_set acc
-		replicas[replicaIx].logFile << mixi << ","
+		thermodynamicStates[whichLog].logFile << mixi << ","
                 << replicaIx << ","
                 << std::fixed << std::setprecision(3) << temperature << ","
                 << std::fixed << std::setprecision(0) << wIx << ","
@@ -5367,8 +5368,14 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 
 			// fiecare thermo are dcd ul ei
 			if (mixi % printFreq == 0) {
-				int thermoIx = replica2ThermoIxs[replicaIx];
-				replicas[replicaIx].writeDCD();
+				int whichDCD = replica2ThermoIxs[replicaIx];
+				auto [x, y, z] = replicas[replicaIx].getCoordinates();
+				thermodynamicStates[whichDCD].writeDCD(x, y, z);
+
+				// writeDCD(replicaIx)
+				// whichDCD = replica2ThermoIxs[replicaIx];
+				// auto [x, y, z] = replicas[replicaIx].getCoordinates();
+				// dcds[whichDCD].writeDCD(x, y, z);
 			}
 
 			// Update BAT map for all the replica's world
@@ -6328,9 +6335,6 @@ Context::setAtoms_XPF_XBM(
 				SimTK::Transform G_X_base = G_X_T * T_X_base;
 				parentAtomMobod.setDefaultInboardFrame(G_X_base);
 				parentAtomMobod.setDefaultOutboardFrame(SimTK::Transform());
-
-				std::cout << "T_X_base " << T_X_base << std::endl;
-				std::cout << "G_X_base " << G_X_base << std::endl;
 			}else if(atoms[childNo].getIsRoot()){
 				SimTK::Transform T_X_base = topology.getTopTransform_FromMap(parent_cAIx);
 				SimTK::Transform G_X_base = G_X_T * T_X_base;

@@ -48,6 +48,8 @@ public:
 	*/
 	void PrintAtomsDebugInfo(void);
 
+	void writeDCD();
+
  	std::vector<BOND_FLEXIBILITY>& readFlexibility(
 		std::string flexFileFN,
 		std::vector<BOND_FLEXIBILITY>& flexibilities);

@@ -4,6 +4,7 @@
 #include <string>
 #include "Simbody.h"
 #include "bSpecificAtom.hpp"
+#include "TrajectoryObject.hpp"
 
 constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 
@@ -135,6 +136,13 @@ class ThermodynamicState{
 	std::vector<SimTK::Real>& getQdiffs(const int whichWorld);
 	std::vector<SimTK::Real>& getQvars(const int whichWorld);
 
+	void appendLog(const std::string& filename);
+	void appendDCDReporter(const std::string& filename, int natoms, int ntopologies);
+	void writeDCD(std::vector<SimTK::Real>& x, std::vector<SimTK::Real>& y, std::vector<SimTK::Real>& z);
+	
+	std::ofstream logFile;
+	TrajectoryObject traj;
+
 	/**@}**/	
   
   
@@ -192,6 +200,5 @@ class ThermodynamicState{
 
 	//////////////////////////////////
 	//---         Q Stats        -----
-	//////////////////////////////////	
-
+	//////////////////////////////////
 };
