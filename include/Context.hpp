@@ -532,7 +532,7 @@ public:
 	void initializeReplica(int whichReplica);
 
 	// Reset worlds parameters according to thermodynamic state
-	void setReplicasWorldsParameters(int thisReplica, bool alwaysAccept);
+	void setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bool adaptTimestep, int mixi);
 
 	// Given a scaling factor
 	SimTK::Real distributeScalingFactor(

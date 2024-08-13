@@ -10,6 +10,11 @@ constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 
 class ThermodynamicState{
   public:
+	std::vector<int> acceptedSteps;
+	std::vector<SimTK::Real> acceptance, prevAcceptance;
+	std::vector<SimTK::Real> timesteps, prevTimesteps;
+	std::vector<int> mdsteps, prevMdsteps;
+
 	ThermodynamicState() = default;
 	
 	ThermodynamicState(
@@ -158,8 +163,6 @@ class ThermodynamicState{
 
 	// Worlds related parameters 
 	std::vector<int> worldIndexes;
-	std::vector<SimTK::Real> timesteps;
-	std::vector<int> mdsteps;
 
 	int nonequilibrium = 0;
 
