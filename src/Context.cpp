@@ -4810,11 +4810,11 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 		transferCoordinates(backWorldIx, frontWorldIx);
 
-		SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
-		SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
-		if(cumulDiff_BAT > 0.001){
-			std::cerr << "\n[ERROR] Bad reconstruction " << cumulDiff_BAT << " between back " << backWorldIx << " and front " << frontWorldIx << std::endl;
-		}
+		// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
+		// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
+		// if(cumulDiff_BAT > 0.001){
+		// 	std::cerr << "\n[ERROR] Bad reconstruction " << cumulDiff_BAT << " between back " << backWorldIx << " and front " << frontWorldIx << std::endl;
+		// }
 
 		#ifdef PRINTALOT 
 			if(validated){
