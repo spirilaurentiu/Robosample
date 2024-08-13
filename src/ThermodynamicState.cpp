@@ -428,7 +428,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	if(nofSamples == 0){
 
-		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		if(false){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
 			std::cout << "thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" qs: ";
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){
 				std::cout <<" " << worldQs[qIx];
@@ -444,7 +444,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	}else{ // nofSamples gt 2
 
-		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		if(false){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
 			std::cout << "thIx " << myIndex << " wIx " << whichWorld 
 			<< " nq " << worldQs.size() << " N " << N <<" qs: ";
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){
