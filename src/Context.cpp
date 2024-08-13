@@ -4804,17 +4804,17 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 	if(worldIxs.size() > 1) {
 
-		// spacedcout("[YDIRBUG]");
-		// std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
-		// spacedcout("[YDIRBUG]"); ceol;
+		spacedcout("[YDIRBUG]");
+		std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
+		spacedcout("[YDIRBUG]"); ceol;
 
 		transferCoordinates(backWorldIx, frontWorldIx);
 
-		// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
-		// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
-		// if(cumulDiff_BAT > 0.001){
-		// 	std::cout << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
-		// }
+		SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
+		SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
+		if(cumulDiff_BAT > 0.001){
+			std::cerr << "\n[ERROR] Bad reconstruction " << cumulDiff_BAT << " between back " << backWorldIx << " and front " << frontWorldIx << std::endl;
+		}
 
 		#ifdef PRINTALOT 
 			if(validated){
@@ -5337,7 +5337,16 @@ void Context::RunReplicaRefactor(
 
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
 			//transferQStatistics(thermoIx, equilWIxs.back(), equilWIxs.front());
-			
+
+
+			// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(equilWIxs.back(), equilWIxs.front());
+			// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(equilWIxs.back(), equilWIxs.front(), false);
+			// scout("checkTransfer:") <<" " << cumulDiff_Cart <<" " << cumulDiff_BAT << eol;
+			// if(cumulDiff_BAT > 0.001){
+			// 	std::cout << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
+			// }
+
+
 		}
 
 		// Increment the nof samples for replica and thermostate
@@ -5464,7 +5473,7 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			printQStats(replica2ThermoIxs[replicaIx]);
+			//printQStats(replica2ThermoIxs[replicaIx]);        
 
 		} // end replicas simulations
 
@@ -5923,8 +5932,7 @@ void Context::transferCoordinates(int srcWIx, int destWIx)
 	SimTK::State& someState = currentAdvancedState;
 
 	// New setAtomsLocations
-	currentAdvancedState = 
-	setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
+	currentAdvancedState = setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
 	
 }
 
@@ -5990,18 +5998,19 @@ SimTK::Real Context::checkTransferCoordinates_Cart(int srcWIx, int destWIx)
 		}
 	}
 
-	// if(cumulDiff > 0.1){
-	// 	for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
-	// 		for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){		
-	// 			std::cout << "transfer " << toIx << " " << atIx
-	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
-	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
-	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
-	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
-	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
-	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])					
-	// 			<< std::endl;
-	// 		}
+	// for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
+	// 	for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){		
+	// 		std::cout << "transfer " << toIx << " " << atIx
+	// 			<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 			<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 			<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0]) - double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1]) - double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2]) - double((srcWorldsAtomsLocations[toIx][atIx]).second[2])									
+	// 		<< std::endl;
 	// 	}
 	// }
 
@@ -6194,14 +6203,12 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 				}
 			}
 
-			// scout("checkTransfer ") 
+			// scout("checkTransfer BAT") 
 			// << " " << getZMatrixTableEntry(rowCnt, 0) << " " << getZMatrixTableEntry(rowCnt, 1)
 			// << " " << getZMatrixTableEntry(rowCnt, 2) << " " << getZMatrixTableEntry(rowCnt, 3)
-			// // 	<< " " << bondLength_src << " " << bondBend_src << " " << bondTorsion_src
-			// // 	<< " " << bondLength_des << " " << bondBend_des << " " << bondTorsion_des;
-			// // ceol;
-
-			// //scout("checkTransfer ") 
+			// 	<< " " << bondLength_src << " " << bondBend_src << " " << bondTorsion_src
+			// 	<< " " << bondLength_des << " " << bondBend_des << " " << bondTorsion_des
+			// 	<< " " << bondLength_des - bondLength_src << " " << bondBend_des - bondBend_src << " " << bondTorsion_des - bondTorsion_src
 			// 	<< " " << cartV_src[0] << " " << cartV_src[1] << " " << cartV_src[2]
 			// 	<< " " << cartV_des[0] << " " << cartV_des[1] << " " << cartV_des[2];
 			// ceol;
@@ -6236,6 +6243,15 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
 			cumulDiff += currDiff;
 			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+
+			// scout("checkTransfer BAT") 
+			// << " " << getZMatrixTableEntry(rowCnt, 0) << " " << getZMatrixTableEntry(rowCnt, 1)
+			// << " " << getZMatrixTableEntry(rowCnt, 2) << " " << getZMatrixTableEntry(rowCnt, 3)
+			// 	<< " " << bondLength_src << " " << bondBend_src << " " << bondTorsion_src
+			// 	<< " " << bondLength_des << " " << bondBend_des << " " << bondTorsion_des
+			// 	<< " " << bondLength_des - bondLength_src << " " << bondBend_des - bondBend_src << " " << bondTorsion_des - bondTorsion_src
+			// 	;
+			// ceol;			
 		}
 
 		if(row[3] == -2){

@@ -104,7 +104,7 @@ int testContext(int seed)
 	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
 	// c.getWorld(2).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, true);
 
-	const int num_replicas = 20; // Number of replicas
+	const int num_replicas = 1; // Number of replicas
     const double T_min = 300.0;  // Starting temperature (Replica 0)
     const double T_max = 600.0;  // Ending temperature (Replica 19)
 
@@ -172,7 +172,7 @@ int testContext(int seed)
 	c.initialize();
 
 	// pas how many rounds to run for here
-	c.RunREXNew(0, 100);
+	c.RunREXNew(0, 1'000'000);
 
 	return 0;
 }
