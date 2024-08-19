@@ -4234,7 +4234,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		swapThermodynamicStates(replica_X, replica_Y);
 		swapPotentialEnergies(replica_X, replica_Y);
 
-		std::cout << "1\n" << endl;
+		std::cout << "1" 
+		<<", " << unifSample 
+		<< endl << endl;
 
 		returnValue = true;
 
@@ -4249,7 +4251,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		// Don't swap thermodynamics states nor energies
 
-		std::cout << "0\n" << endl;
+		std::cout << "0"
+		<<", " << unifSample 
+		<< endl << endl;
 
 		returnValue = false;
 	}
@@ -5413,6 +5417,7 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		// Run
 		int srcStatsWIx  = specificWIxs[spWCnt];
 		std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
+
 		validated = RunWorld(srcStatsWIx) && validated;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
@@ -5544,15 +5549,6 @@ void Context::RunReplicaRefactor(
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
 			//transferQStatistics(thermoIx, equilWIxs.back(), equilWIxs.front());
 
-
-			// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(equilWIxs.back(), equilWIxs.front());
-			// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(equilWIxs.back(), equilWIxs.front(), false);
-			// scout("checkTransfer:") <<" " << cumulDiff_Cart <<" " << cumulDiff_BAT << eol;
-			// if(cumulDiff_BAT > 0.001){
-			// 	std::cout << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
-			// }
-
-
 		}
 
 		// Increment the nof samples for replica and thermostate
@@ -5616,8 +5612,7 @@ void Context::RunREXNew()
 	std::stringstream rexOutput;
 	rexOutput.str("");
 
-	rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx"
-	<< ", " << "frontWIx" << ", " << "backWIx";
+	rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx" << ", " << "wIx" ;
 
 	worlds[0].getSampler(0)->getMsg_Header(rexOutput);
 	rexOutput << std::endl;
@@ -5665,7 +5660,7 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			//printQStats(replica2ThermoIxs[replicaIx]);        
+			printQStats(replica2ThermoIxs[replicaIx]);        
 
 		} // end replicas simulations
 
@@ -6156,7 +6151,14 @@ void Context::transferCoordinates(int srcWIx, int destWIx)
 
 	// New setAtomsLocations
 	currentAdvancedState = setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
-	
+
+	// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(srcWIx, destWIx);
+	// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(srcWIx, destWIx, false);
+	// scout("checkTransfer:") <<" " << cumulDiff_Cart <<" " << cumulDiff_BAT << eol;
+	// if(cumulDiff_BAT > 0.001){
+	// 	std::cout << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
+	// }
+
 }
 
 /*!

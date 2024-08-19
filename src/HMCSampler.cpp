@@ -435,6 +435,8 @@ void HMCSampler::getMsg_Header(std::stringstream& ss)
 	ss << (", logSineSqrGamma2_o, logSineSqrGamma2_n ");
 	ss << (", etot_n, etot_proposed");
 	ss << (", JDetLog ");
+	ss << (", acc ");
+	ss << (", MDorMC ");
 
 }
 
@@ -3350,6 +3352,7 @@ bool HMCSampler::acceptSample() {
 	}else{ // Markov-Chain Monte Carlo
 
 		const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+		debug_rand_no = rand_no; // DELETE
 
 		SimTK::Real prob = 0.0;
 
@@ -3519,6 +3522,9 @@ void HMCSampler::getMsg_EnergyDetails(
 		energyDetailsStream << ", 256";
 		//ss << ", (MH)";
 	}
+
+	// DELETE
+	energyDetailsStream << ", " << debug_rand_no;
 
 	#ifdef PRINTALOT
 

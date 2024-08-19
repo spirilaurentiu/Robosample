@@ -795,6 +795,9 @@ protected:
 	// TODO explain what this does
 	SimTK::Vector sqrtMInvV;
 
+	// DELETE
+	SimTK::Real debug_rand_no = 0.0;
+
 };
 
 #endif // __HAMMONTECARLOSAMPLER_HPP__
