@@ -349,8 +349,13 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 		// Add replicas
 		for(int k = 0; k < nofReplicas; k++){
-			inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".s" + std::to_string(k) + ".rst7";
+
+			inpcrd = setupReader.get("MOLECULES")[0] + "/" 
+				+ setupReader.get("INPCRD")[0]
+				+ ".s" + std::to_string(k) + ".rst7";
+
 			inpcrdFNs.push_back(inpcrd);
+
 		}
 
 		for(int k = 0; k < nofReplicas; k++){
@@ -5565,7 +5570,7 @@ void Context::RunReplicaRefactor(
 			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
 			replicas[replicaIx].set_WORK_Jacobian(jac);
 
-			std::cout << "Set Jacobian for replica " << replicaIx <<" to " << jac << std::endl;
+			//std::cout << "Set Jacobian for replica " << replicaIx <<" to " << jac << std::endl;
 		
 			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
 			replicas[replicaIx].setFixman(fix_set_back);
@@ -5691,7 +5696,7 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			printQStats(replica2ThermoIxs[replicaIx]);        
+			//printQStats(replica2ThermoIxs[replicaIx]);        
 
 		} // end replicas simulations
 

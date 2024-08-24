@@ -170,8 +170,12 @@ int SetupReader::readREXConfigFile(std::string FN,
 		std::getline(F, line);
 		if(line.length() > 0){
 			std::vector<std::string> words = split(line, " ");
-			if((words[0][0] != '#') && (words.size() >= 2) && (words[0] == "NOF_REPLICAS")){
-				nofReplicas = std::stoi(words[1]);
+			if((words[0][0] != '#') && (words.size() >= 2)){
+				if(words[0] == "NOF_REPLICAS"){
+					nofReplicas = std::stoi(words[1]);
+				}else if(words[0] == "RESTART_DIR"){
+					;
+				}
 			}
 		}
 	}
@@ -204,7 +208,10 @@ int SetupReader::readREXConfigFile(std::string FN,
 		if(line.length() > 0){
 			std::vector<std::string> words = split(line, " ");
 
-			if((words[0][0] != '#') && (words[0] != "NOF_REPLICAS")){
+			if((words[0][0] != '#') 
+				&& (words[0] != "NOF_REPLICAS")
+				&& (words[0] != "RESTART_DIR"))
+			{
 				std::cout << "REX FILE READING: ";
 				for (const auto& word: words){
 					std::cout << word << "|";
