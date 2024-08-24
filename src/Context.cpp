@@ -350,7 +350,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		// Add replicas
 		for(int k = 0; k < nofReplicas; k++){
 
-			inpcrd = setupReader.get("MOLECULES")[0] + "/" 
+			inpcrd = rexReader.getRestartDirectory() + "/" 
 				+ setupReader.get("INPCRD")[0]
 				+ ".s" + std::to_string(k) + ".rst7";
 
@@ -361,7 +361,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		for(int k = 0; k < nofReplicas; k++){
 
 			loadAtomsCoordinates(prmtop, inpcrdFNs[k]);
-			std::cout << "Loaded coordinates of replica " << k << "from" << inpcrdFNs[k] << std::endl;
+			std::cout << "Loaded coordinates of replica " << k << " from " << inpcrdFNs[k] << std::endl;
 
 			addReplica(k);
 		}

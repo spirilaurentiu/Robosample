@@ -174,7 +174,7 @@ int SetupReader::readREXConfigFile(std::string FN,
 				if(words[0] == "NOF_REPLICAS"){
 					nofReplicas = std::stoi(words[1]);
 				}else if(words[0] == "RESTART_DIR"){
-					;
+					restartDirectory = words[1];
 				}
 			}
 		}
@@ -308,4 +308,8 @@ int SetupReader::readREXConfigFile(std::string FN,
 	
 }
 
+std::string& SetupReader::getRestartDirectory(void)
+{
+	return restartDirectory;
+}
 

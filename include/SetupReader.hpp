@@ -61,6 +61,8 @@ public:
 		std::vector<std::vector<int>>& rexMdsteps,
 		std::vector<std::vector<int>>& rexSamplesPerRound);
 
+	std::string& getRestartDirectory(void);
+
 private:
 	std::map<std::string, std::vector<std::string>> Args;
 	std::vector<std::string> KeyNotFound = { "ERROR_KEY_NOT_FOUND" };
@@ -102,6 +104,6 @@ private:
 		SAMPLES_PER_ROUND
 	};
 	
-	
+	std::string restartDirectory = "";
 };
 
