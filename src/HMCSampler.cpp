@@ -628,7 +628,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			J_ini = calcMobodsMBAT(someState);
 
 			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
-			//std::cout << "scaleF " << this->QScaleFactor << "\n";
+			std::cout << "\nscaleF " << this->QScaleFactor << "\n";
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
@@ -683,7 +683,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			system->realize(someState, SimTK::Stage::Dynamics);
 
-			//std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			//std::cout << "\n[Qs_after_scaling]\n";
+			PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			

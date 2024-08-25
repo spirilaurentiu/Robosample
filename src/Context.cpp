@@ -5696,7 +5696,7 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			//printQStats(replica2ThermoIxs[replicaIx]);        
+			printQStats(replica2ThermoIxs[replicaIx]);        
 
 		} // end replicas simulations
 
