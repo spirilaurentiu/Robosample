@@ -769,6 +769,9 @@ private:
 
 	std::vector<int> findMolecules(const readAmberInput& reader);
 	void loadAtoms(const readAmberInput& reader);
+
+	void loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN);
+	
 	void loadBonds(const readAmberInput& reader);
 	void loadAngles(const readAmberInput& reader);
 	void loadTorsions(const readAmberInput& reader);
@@ -841,6 +844,8 @@ public:
 	}	
 
 private:
+
+	std::vector<std::string> inpcrdFNs;
 
 	TrajectoryObject traj;
 	bool wantDCD = false;

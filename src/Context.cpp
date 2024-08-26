@@ -199,7 +199,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
 	std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
-	
+
 	loadAmberSystem(prmtop, inpcrd);
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
@@ -346,8 +346,18 @@ bool Context::initializeFromFile(const std::string &inpFN)
 			rexMdsteps,
 			rexSamplesPerRound);
 
+
 		// Add replicas
 		for(int k = 0; k < nofReplicas; k++){
+			inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".s" + std::to_string(k) + ".rst7";
+			inpcrdFNs.push_back(inpcrd);
+		}
+
+		for(int k = 0; k < nofReplicas; k++){
+
+			loadAtomsCoordinates(prmtop, inpcrdFNs[k]);
+			std::cout << "Loaded coordinates of replica " << k << "from" << inpcrdFNs[k] << std::endl;
+
 			addReplica(k);
 		}
 
@@ -646,6 +656,32 @@ void Context::loadAtoms(const readAmberInput& reader) {
 		elementCache.addElement(atomicNumber, mass);
 	}
 }
+
+void Context::loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN) {
+
+	// Load Amber files
+	readAmberInput reader;
+	reader.readAmberFiles(inpcrdFN, prmtop);
+
+	// Check
+	//natoms = reader.getNumberAtoms();
+	//atoms.size();
+
+	// Iterate through atoms and set as much as possible from amberReader
+	for(int aCnt = 0; aCnt < natoms; aCnt++) {
+
+		// Set coordinates in nm (AMBER uses Angstroms)
+		atoms[aCnt].setX(reader.getAtomsXcoord(aCnt) / 10.0);
+		atoms[aCnt].setY(reader.getAtomsYcoord(aCnt) / 10.0);
+		atoms[aCnt].setZ(reader.getAtomsZcoord(aCnt) / 10.0);
+		atoms[aCnt].setCartesians(
+			reader.getAtomsXcoord(aCnt) / 10.0,
+			reader.getAtomsYcoord(aCnt) / 10.0,
+			reader.getAtomsZcoord(aCnt) / 10.0 );
+
+	}
+}
+
 
 /** Set bonds properties from reader: bond indeces, atom neighbours.
  *  1-to-1 correspondence between prmtop and Gmolmodel.
@@ -964,39 +1000,34 @@ void Context::appendDCDReporter(const std::string& filename) {
  * Main run function
 */
 void Context::Run() {
-	if(getRunType() == RUN_TYPE::DEFAULT) {
-		RunREXNew();
-		//Run(getRequiredNofRounds(), tempIni, tempFin);
-
-	}else if(  (getRunType() == RUN_TYPE::REMC)
-			|| (getRunType() == RUN_TYPE::RENEMC)
-			|| (getRunType() == RUN_TYPE::RENE)){
+	if(    (getRunType() == RUN_TYPE::DEFAULT) 
+		|| (getRunType() == RUN_TYPE::REMC)
+		|| (getRunType() == RUN_TYPE::RENEMC)
+		|| (getRunType() == RUN_TYPE::RENE)){
 		RunREXNew();
 
 	}else{
 		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
-		Run(getRequiredNofRounds(), tempIni, tempFin);
-
+		RunREXNew();
 	}
+
 }
 
 /** 
  * Main run function
 */
 void Context::Run(int rounds) {
-	if(getRunType() == RUN_TYPE::DEFAULT) {
-		RunREXNew();
-		//Run(rounds, tempIni, tempFin);
 
-	}else if(  (getRunType() == RUN_TYPE::REMC)
-			|| (getRunType() == RUN_TYPE::RENEMC)
-			|| (getRunType() == RUN_TYPE::RENE)){
+	if(    (getRunType() == RUN_TYPE::DEFAULT) 
+		|| (getRunType() == RUN_TYPE::REMC)
+		|| (getRunType() == RUN_TYPE::RENEMC)
+		|| (getRunType() == RUN_TYPE::RENE)){
 
 		RunREXNew();
+		
 	}else{
 		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
 		Run(rounds, tempIni, tempFin);
-
 	}
 }
 
