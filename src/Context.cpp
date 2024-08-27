@@ -5457,7 +5457,8 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		validated = RunWorld(srcStatsWIx) && validated;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-		bool calcQStatsRet = thermodynamicStates[thermoIx].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
+		worlds[srcStatsWIx].PrintXBMps();
+		bool calcQStatsRet = thermodynamicStates[thermoIx].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
 
 		// Transfer coordinates to the next world
 		int destStatsWIx = specificWIxs[spWCnt + 1];
@@ -5477,7 +5478,8 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	validated = RunWorld(srcStatsWIx) && validated;
 
 	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-	bool calcQStatsRet = thermodynamicStates[ thermoIx ].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
+	worlds[srcStatsWIx].PrintXBMps();
+	bool calcQStatsRet = thermodynamicStates[ thermoIx ].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
 
 	if(true){
 		World& currWorld = worlds[specificWIxs.back()];
@@ -5576,14 +5578,12 @@ void Context::RunReplicaRefactor(
 			replicas[replicaIx].setFixman(fix_set_back);
 
 			transferCoordinates(nonequilWIxs.back(), equilWIxs.front());
-			//transferQStatistics(thermoIx, nonequilWIxs.back(), equilWIxs.front());
 
 		}else{
 
 			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround()); // Victor bugfix
 
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
-			//transferQStatistics(thermoIx, equilWIxs.back(), equilWIxs.front());
 
 		}
 
@@ -5613,7 +5613,6 @@ void Context::RunReplicaRefactor(
 		replicas[replicaIx].setFixman(fix_set_back);
 
 		transferCoordinates(nonequilWIxs.back(), nonequilWIxs.front());
-		//transferQStatistics(thermoIx, nonequilWIxs.back(), nonequilWIxs.front());
 
 	}
 
@@ -5696,6 +5695,11 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
+			for(const auto wIx : worldIndexes){
+				std::cout << "BMps wIx " << wIx <<" ";
+				worlds[wIx].PrintXBMps();
+				std::cout << std::endl;
+			}
 			printQStats(replica2ThermoIxs[replicaIx]);        
 
 		} // end replicas simulations
@@ -8955,7 +8959,7 @@ void Context::calcQStats(int thIx)
 		const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
 
 		// Get Q statistics
-		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs);
+		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs, worlds[worldIx].getNofSamples());
 		if(!found){
 			warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
 		}

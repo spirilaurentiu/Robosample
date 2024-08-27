@@ -123,7 +123,7 @@ class ThermodynamicState{
 	int findWorld(const int whichWorld);
 
 	void allocQStatsFirstDimension(void);
-	bool calcQStats(const int whichWorld, const SimTK::Vector & worldQs);
+	bool calcQStats(const int whichWorld, const SimTK::Vector & worldQs, int worldNofSamples);
 	void printQStats(void);
 	std::vector<SimTK::Real>& getQmeans(const int whichWorld);
 	std::vector<SimTK::Real>& getQdiffs(const int whichWorld);

@@ -693,11 +693,14 @@ public:
 
 	}
 
+	void PrintDefaultTransforms() const;
+	void PrintXBMps() const;
+
 	// Get Qs
-	const SimTK::Vector & getAdvancedQs();
-	const SimTK::Vector & getAdvancedUs();
 	int getNQs(void);
 	int getNUs(void);
+	const SimTK::Vector & getAdvancedQs();
+	const SimTK::Vector & getAdvancedUs();
 
 public:
 

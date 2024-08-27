@@ -396,10 +396,11 @@ int ThermodynamicState::findWorld(const int whichWorld)
 /*!
  * <!--  -->
 */
-bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldQs)
+bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldQs, int worldNofSamples)
 {
 
 	// Usefull vars
+	//SimTK::Real N = worldNofSamples + 1;
 	SimTK::Real N = nofSamples + 1;
 	SimTK::Real N_1_over_N = (N - 1.0) / N;
 	SimTK::Real Ninv = 1.0 / N;
@@ -417,13 +418,6 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	if(nofSamples == 0){
 
-		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-			std::cout << "thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" qs: ";
-			for(int qIx = 0; qIx < worldQs.size(); qIx++){
-				std::cout <<" " << worldQs[qIx];
-			}std::cout << std::endl; 
-		} // ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-
 		// Initialize at the first sample
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
 			Qmeans[wPosInVector][qIx] = worldQs[qIx];
@@ -431,15 +425,20 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			Qvars[wPosInVector][qIx] = 0;
 		}
 
-	}else{ // nofSamples gt 2
-
 		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-			std::cout << "thIx " << myIndex << " wIx " << whichWorld 
-			<< " nq " << worldQs.size() << " N " << N <<" qs: ";
-			for(int qIx = 0; qIx < worldQs.size(); qIx++){
-				std::cout <<" " << worldQs[qIx];
-			}std::cout << std::endl; 
+			int decimal_places = 7;
+    		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" qs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << worldQs[qIx];}std::cout << std::endl;
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qmeans: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qmeans[wPosInVector][qIx];}std::cout << std::endl; 
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qdiffs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qdiffs[wPosInVector][qIx];}std::cout << std::endl; 
+			//std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qvars: ";
+			//for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qvars[wPosInVector][qIx];}std::cout << std::endl; 
 		} // ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+	}else{ // nofSamples gt 2
 
 		// Update Q means
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
@@ -455,6 +454,19 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
 			Qvars[wPosInVector][qIx] = (N_1_over_N * Qvars[wPosInVector][qIx]) + (Ninv * (Qdiffs[wPosInVector][qIx] * Qdiffs[wPosInVector][qIx]));
 		}
+
+		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+			int decimal_places = 7;
+    		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld << " nq " << worldQs.size() << " N " << N <<" qs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << worldQs[qIx];}std::cout << std::endl;
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qmeans: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qmeans[wPosInVector][qIx];}std::cout << std::endl; 
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qdiffs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qdiffs[wPosInVector][qIx];}std::cout << std::endl; 
+			//std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qvars: ";
+			//for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qvars[wPosInVector][qIx];}std::cout << std::endl; 			 
+		} // ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 	} // nofSamples gt 2
 

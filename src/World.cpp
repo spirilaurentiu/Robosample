@@ -1650,6 +1650,67 @@ SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::At
 /*!
  * <!--  -->
 */
+void World::PrintDefaultTransforms() const
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		std::cout << "mobod " << mbx << std::endl;
+
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(advState);
+		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(advState);
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(advState);
+		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+
+		PrintTransform(X_PF, 6, "X_PF");
+		PrintTransform(X_BM, 6, "X_BM");
+		PrintTransform(X_FM, 6, "X_FM");
+
+	}
+
+}
+
+/*!
+ * <!--  -->
+*/
+void World::PrintXBMps() const
+{
+	SimTK::State& advState = integ->updAdvancedState();
+
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		//std::cout << mbx;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(advState);
+		std::cout 
+			<<" " << X_BM.p()[0]
+			//<<" " << X_BM.p()[1]
+			//<<" " << X_BM.p()[2]
+		//<< std::endl
+		;
+	}
+
+}
+
+/*!
+ * <!--  -->
+*/
 const SimTK::Vector & World::getAdvancedQs()
 {
 	return matter->getQ(integ->updAdvancedState());

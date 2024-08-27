@@ -627,7 +627,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//scout("\nJ_ini\n");
 			J_ini = calcMobodsMBAT(someState);
 
-			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling"); // @@@@@@@@@@@@@
 			std::cout << "\nscaleF " << this->QScaleFactor << "\n";
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
@@ -646,6 +646,29 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
 				scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
 			}
+
+			// // Print Q stats
+			// std::cout << "\nQmeans";
+			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
+			// 		std::cout <<" " << (*Qmeans)[qIx] ;
+			// 	}
+			// }std::cout << std::endl;
+			// std::cout << "\nQdiffs";
+			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
+			// 		std::cout <<" " << (*Qdiffs)[qIx] ;
+			// 	}
+			// }std::cout << std::endl;
+			// std::cout << "\nQvars";
+			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
+			// 		std::cout <<" " << (*Qvars)[qIx] ;
+			// 	}
+			// }std::cout << std::endl;						
 
 			int nofScaledBMs = 0;
 			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -682,8 +705,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//}
 
 			system->realize(someState, SimTK::Stage::Dynamics);
-
-			//std::cout << "\n[Qs_after_scaling]\n";
 			PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
