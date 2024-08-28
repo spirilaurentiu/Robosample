@@ -4244,11 +4244,20 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			thermodynamicStates[thermoState_C].incrementWorldsNofSamples();
 			thermodynamicStates[thermoState_H].incrementWorldsNofSamples();
 
-			replicas[replica_X].incrementNofSamples();
-			replicas[replica_Y].incrementNofSamples();
-			thermodynamicStates[thermoState_C].incrementNofSamples();
-			thermodynamicStates[thermoState_H].incrementNofSamples();
+			bool onlyNonequilWorlds = true;
+			for(int wIx = 0; wIx < nofWorlds; wIx++){
+				if(worlds[wIx].getSampler(0)->getDistortOption() == 0){
+					onlyNonequilWorlds = false;
+					break;
+				}
+			}
 
+			if(onlyNonequilWorlds){
+				replicas[replica_X].incrementNofSamples();
+				replicas[replica_Y].incrementNofSamples();
+				thermodynamicStates[thermoState_C].incrementNofSamples();
+				thermodynamicStates[thermoState_H].incrementNofSamples();
+			}
 			// Calculate replica BAT
 			//replicas[replica_X].calcZMatrixBAT_WORK();
 			//replicas[replica_Y].calcZMatrixBAT_WORK();
@@ -5508,6 +5517,7 @@ void Context::RunReplicaRefactor(
 	int replicaIx)
 {
 
+	// MOVE THIS INTO THERMODYNAMIC STATES
 	// Get equilibrium and non-equilibrium worlds
 	int thermoIx = replica2ThermoIxs[replicaIx];
 	std::vector<int>& replicaWorldIxs = thermodynamicStates[thermoIx].updWorldIndexes();
@@ -5533,7 +5543,7 @@ void Context::RunReplicaRefactor(
 	int wSamIncr = 0;
 	int samIncr = 0;
 	(getRunType() == RUN_TYPE::RENE) ? wSamIncr = replicaNofWorlds - 1 : replicaNofWorlds;
-	(getRunType() == RUN_TYPE::RENE) ? samIncr = 0 : samIncr = 1;
+	(getRunType() == RUN_TYPE::RENE) ? samIncr = 1 : samIncr = 1; // Always increment replica's nof samples
 
 	//scout("\nEquil world indexes") ;if(equilWIxs.size() > 0){PrintCppVector(equilWIxs);}scout("\nNonequil world indexes") ;if(nonequilWIxs.size() > 0){PrintCppVector(nonequilWIxs);}ceolf;
 
@@ -5619,8 +5629,9 @@ void Context::RunReplicaRefactor(
 	// Increment the nof samples for replica and thermostate
 	replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
 	thermodynamicStates[thermoIx].incrementWorldsNofSamples(wSamIncr);
-	replicas[replicaIx].incrementNofSamples(samIncr);
-	thermodynamicStates[thermoIx].incrementNofSamples(samIncr);
+
+	replicas[replicaIx].incrementNofSamples(0); // Only non-equilibrium
+	thermodynamicStates[thermoIx].incrementNofSamples(0); // Only non-equilibrium
 
 }
 
