@@ -5706,8 +5706,10 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
+			
 			for(const auto wIx : worldIndexes){
-				std::cout << "BMps wIx " << wIx <<" ";
+				std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx] ;
+				std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
 				worlds[wIx].PrintXBMps();
 				std::cout << std::endl;
 			}
