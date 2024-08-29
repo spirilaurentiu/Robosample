@@ -568,7 +568,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
+		if(this->nofSamples >= 50){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 
 			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
 
@@ -627,8 +627,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//scout("\nJ_ini\n");
 			J_ini = calcMobodsMBAT(someState);
 
-			PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling"); // @@@@@@@@@@@@@
-			std::cout << "\nscaleF " << this->QScaleFactor << "\n";
+			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling"); // @@@@@@@@@@@@@
+			std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 

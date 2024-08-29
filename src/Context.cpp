@@ -5466,9 +5466,16 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		validated = RunWorld(srcStatsWIx) && validated;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-		worlds[srcStatsWIx].PrintXBMps();
-		bool calcQStatsRet = thermodynamicStates[thermoIx].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+		//worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
 
+		if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
+			thermodynamicStates[thermoIx].calcQStats(
+				srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+		}else{
+			thermodynamicStates[thermoIx].calcQStats(
+				srcStatsWIx, SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
+		}
+		
 		// Transfer coordinates to the next world
 		int destStatsWIx = specificWIxs[spWCnt + 1];
 		transferCoordinates(srcStatsWIx, destStatsWIx);
@@ -5487,8 +5494,15 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	validated = RunWorld(srcStatsWIx) && validated;
 
 	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-	worlds[srcStatsWIx].PrintXBMps();
-	bool calcQStatsRet = thermodynamicStates[ thermoIx ].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+	//worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+
+	if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
+		thermodynamicStates[thermoIx].calcQStats(
+			srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+	}else{
+		thermodynamicStates[thermoIx].calcQStats(
+			srcStatsWIx, SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
+	}
 
 	if(true){
 		World& currWorld = worlds[specificWIxs.back()];
@@ -5707,13 +5721,13 @@ void Context::RunREXNew()
 			RunReplicaRefactor(mixi, replicaIx);
 
 			
-			for(const auto wIx : worldIndexes){
-				std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx] ;
-				std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
-				worlds[wIx].PrintXBMps();
-				std::cout << std::endl;
-			}
-			printQStats(replica2ThermoIxs[replicaIx]);        
+			// for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
+			// 	std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
+			// 	std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
+			// 	worlds[wIx].PrintXBMps();
+			// 	std::cout << std::endl;
+			// }
+			// printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
 
 		} // end replicas simulations
 

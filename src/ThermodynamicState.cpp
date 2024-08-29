@@ -425,7 +425,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			Qvars[wPosInVector][qIx] = 0;
 		}
 
-		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" qs: ";
@@ -436,7 +436,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qdiffs[wPosInVector][qIx];}std::cout << std::endl; 
 			//std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qvars: ";
 			//for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qvars[wPosInVector][qIx];}std::cout << std::endl; 
-		} // ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+		} // )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) // @@@@@@@@@@@@@
 
 	}else{ // nofSamples gt 2
 
@@ -455,7 +455,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			Qvars[wPosInVector][qIx] = (N_1_over_N * Qvars[wPosInVector][qIx]) + (Ninv * (Qdiffs[wPosInVector][qIx] * Qdiffs[wPosInVector][qIx]));
 		}
 
-		if(true){ // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
+		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld << " nq " << worldQs.size() << " N " << N <<" qs: ";
@@ -466,7 +466,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qdiffs[wPosInVector][qIx];}std::cout << std::endl; 
 			//std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qvars: ";
 			//for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qvars[wPosInVector][qIx];}std::cout << std::endl; 			 
-		} // ))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+		} // )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) // @@@@@@@@@@@@@
 
 	} // nofSamples gt 2
 
