@@ -627,7 +627,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//scout("\nJ_ini\n");
 			J_ini = calcMobodsMBAT(someState);
 
-			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling"); // @@@@@@@@@@@@@
+			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
 			std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
@@ -679,7 +679,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 
 					if(T_Scale_Flag){ // T-scaling
-						stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+						//stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+						stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
 						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
 					}else{ // Constant scaling of BMp(w3)

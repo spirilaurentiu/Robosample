@@ -665,7 +665,7 @@ public:
 	// BAT --------------------------------------------------------------------
 
 
-
+	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
 	void setQmeans(std::vector<SimTK::Real>& QArg){ Qmeans = &QArg; }
 	void setQdiffs(std::vector<SimTK::Real>& QArg){ Qdiffs = &QArg; }
 	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
@@ -678,6 +678,7 @@ protected:
 
 
 	// Buffers to hold Q statistics
+	std::vector<SimTK::Real>* previousQs = nullptr;
 	std::vector<SimTK::Real>* Qmeans = nullptr;
 	std::vector<SimTK::Real>* Qdiffs = nullptr;
 	std::vector<SimTK::Real>* Qvars = nullptr;

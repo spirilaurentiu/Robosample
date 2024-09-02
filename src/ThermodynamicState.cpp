@@ -360,6 +360,7 @@ ThermodynamicState::getBATVarsRow(int rowIndex)
 void ThermodynamicState::allocQStatsFirstDimension(void)
 {
         // Resize
+		currQs.resize(worldIndexes.size());
 		Qmeans.resize(worldIndexes.size());
 		Qdiffs.resize(worldIndexes.size());
 		Qvars.resize(worldIndexes.size());
@@ -411,6 +412,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	// Resize
 	if(Qmeans[wPosInVector].size() == 0){
+		currQs[wPosInVector].resize(worldQs.size());
         Qmeans[wPosInVector].resize(worldQs.size());
         Qdiffs[wPosInVector].resize(worldQs.size());
         Qvars[wPosInVector].resize(worldQs.size());
@@ -420,14 +422,17 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 		// Initialize at the first sample
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
+			currQs[wPosInVector][qIx] = worldQs[qIx];
 			Qmeans[wPosInVector][qIx] = worldQs[qIx];
 			Qdiffs[wPosInVector][qIx] = 0;
 			Qvars[wPosInVector][qIx] = 0;
 		}
 
-		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
+		if(true){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" currQs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << currQs[wPosInVector][qIx];}std::cout << std::endl;
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" qs: ";
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << worldQs[qIx];}std::cout << std::endl;
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qmeans: ";
@@ -439,6 +444,11 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 		} // )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) // @@@@@@@@@@@@@
 
 	}else{ // nofSamples gt 2
+
+		// Update Q means
+		for(int qIx = 0; qIx < worldQs.size(); qIx++){
+			currQs[wPosInVector][qIx] = worldQs[qIx];
+		}
 
 		// Update Q means
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
@@ -455,9 +465,11 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			Qvars[wPosInVector][qIx] = (N_1_over_N * Qvars[wPosInVector][qIx]) + (Ninv * (Qdiffs[wPosInVector][qIx] * Qdiffs[wPosInVector][qIx]));
 		}
 
-		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
+		if(true){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" currQs: ";
+			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << currQs[wPosInVector][qIx];}std::cout << std::endl;
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld << " nq " << worldQs.size() << " N " << N <<" qs: ";
 			for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << worldQs[qIx];}std::cout << std::endl;
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qmeans: ";
@@ -490,6 +502,20 @@ void ThermodynamicState::printQStats(void)
 		std::cout << std::endl;
 	}
 
+}
+
+/*!
+ * <!--  -->
+*/
+std::vector<SimTK::Real>& ThermodynamicState::getCurrentQs(const int whichWorld)
+{
+	int wPosInVector = findWorld(whichWorld);
+	if(wPosInVector < 0){
+		std::cerr << "Thermodynamic state " << myIndex << " world " << whichWorld << " not found. Exiting...\n";
+		exit(1);
+	}else{
+		return currQs[wPosInVector];
+	}
 }
 
 /*!

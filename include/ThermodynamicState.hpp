@@ -125,6 +125,8 @@ class ThermodynamicState{
 	void allocQStatsFirstDimension(void);
 	bool calcQStats(const int whichWorld, const SimTK::Vector & worldQs, int worldNofSamples);
 	void printQStats(void);
+
+	std::vector<SimTK::Real>& getCurrentQs(const int whichWorld);
 	std::vector<SimTK::Real>& getQmeans(const int whichWorld);
 	std::vector<SimTK::Real>& getQdiffs(const int whichWorld);
 	std::vector<SimTK::Real>& getQvars(const int whichWorld);
@@ -180,7 +182,7 @@ class ThermodynamicState{
 	//---         Q Stats        -----
 	//////////////////////////////////
 
-	//std::vector<std::vector<SimTK::Real>> Qs; 	// vector[world][qindex]
+	std::vector<std::vector<SimTK::Real>> currQs; // vector[world][qindex] 
 	std::vector<std::vector<SimTK::Real>> Qdiffs; // vector[world][qindex]
 	std::vector<std::vector<SimTK::Real>> Qmeans; // vector[world][qindex]
 	std::vector<std::vector<SimTK::Real>> Qvars;  // vector[world][qindex]

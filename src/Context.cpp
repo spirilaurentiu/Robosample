@@ -5445,6 +5445,7 @@ void Context::RunREX()
 */
 void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx)
 {
+	worlds[destStatsWIx].updSampler(0)->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQvars(thermodynamicStates[thermoIx].getQvars(srcStatsWIx));
@@ -5466,7 +5467,7 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		validated = RunWorld(srcStatsWIx) && validated;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-		//worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+		worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
 
 		if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
 			thermodynamicStates[thermoIx].calcQStats(
@@ -5494,7 +5495,7 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	validated = RunWorld(srcStatsWIx) && validated;
 
 	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-	//worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+	worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
 
 	if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
 		thermodynamicStates[thermoIx].calcQStats(
@@ -5721,13 +5722,13 @@ void Context::RunREXNew()
 			RunReplicaRefactor(mixi, replicaIx);
 
 			
-			// for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
-			// 	std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
-			// 	std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
-			// 	worlds[wIx].PrintXBMps();
-			// 	std::cout << std::endl;
-			// }
-			// printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
+			for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
+				std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
+				std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
+				worlds[wIx].PrintXBMps();
+				std::cout << std::endl;
+			}
+			printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
 
 		} // end replicas simulations
 
