@@ -1057,20 +1057,6 @@ void World::loadMbx2AIxMap(){
 
 }
 
-// Allocate space for containers that keep statistics if we're doing any
-void World::allocateStatsContainers(void)
-{
-	// Arccos of the X_PF first entry which should contain 
-	// the angle of rotation on X for the BendStretch joint
-	acosX_PF00.resize(matter->getNumBodies() - 1);
-	acosX_PF00_means.resize(matter->getNumBodies() - 1);
-
-	// The norm of the translation vector of X_BM which should
-	// contain the bond length for the BendStretch joint
-	normX_BMp.resize(matter->getNumBodies() - 1);
-	normX_BMp_means.resize(matter->getNumBodies() - 1);
-}
-
 // Get the (potential) energy transfer
 // If any of the Q, U or tau is actively modifyied by the sampler
 // the Jacobian of that transformation will be included too
@@ -1683,6 +1669,25 @@ void World::PrintDefaultTransforms() const
 
 }
 
+
+
+// Allocate space for containers that keep statistics if we're doing any
+void World::allocateStatsContainers(void)
+{
+	// // Arccos of the X_PF first entry which should contain 
+	// // the angle of rotation on X for the BendStretch joint
+	// acosX_PF00.resize(matter->getNumBodies() - 1);
+	// acosX_PF00_means.resize(matter->getNumBodies() - 1);
+
+	// // The norm of the translation vector of X_BM which should
+	// // contain the bond length for the BendStretch joint
+	// normX_BMp.resize(matter->getNumBodies() - 1);
+	// normX_BMp_means.resize(matter->getNumBodies() - 1);
+
+
+}
+
+
 /*!
  * <!--  -->
 */
@@ -1698,14 +1703,38 @@ void World::PrintXBMps() const
 
 		// Get mobod inboard frame X_BM
 		const Transform& X_BM = mobod.getOutboardFrame(advState);
-		std::cout 
-			<<" " << X_BM.p()[0]
-			//<<" " << X_BM.p()[1]
-			//<<" " << X_BM.p()[2]
-		//<< std::endl
-		;
+		std::cout <<" " << X_BM.p()[0];
+	}
+}
+
+/*!
+ * <!--  -->
+*/
+const SimTK::Vector & World::getBMps()
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	if(BMps.size() == 0){
+		BMps.resize(matter->getNQ(advState));
 	}
 
+	int bIx = -1;
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
+			bIx++;
+
+			const Transform& X_BM = mobod.getOutboardFrame(advState);
+			BMps[bIx] = X_BM.p()[0];
+		}
+		
+	}
+
+	return BMps;
 }
 
 /*!

@@ -1416,6 +1416,9 @@ void Context::addWorld(
 	// This is one to many map
 	worlds.back().loadMbx2AIxMap();
 
+	// Allocate whatever needed Simbody dependent vectors from World here
+	worlds.back().allocateStatsContainers();
+
 }
 
 // Use a SetupReader Object to read worlds information from a file
@@ -5445,6 +5448,9 @@ void Context::RunREX()
 */
 void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx)
 {
+		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
+	worlds[destStatsWIx].updSampler(0)->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
+
 	worlds[destStatsWIx].updSampler(0)->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
@@ -5467,14 +5473,19 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		validated = RunWorld(srcStatsWIx) && validated;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-		worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+		// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
+		// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
+		// 	std::cout <<" " << BMps[mbx] ;
+		// }
+		// ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
 
 		if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
 			thermodynamicStates[thermoIx].calcQStats(
-				srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+				srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
 		}else{
 			thermodynamicStates[thermoIx].calcQStats(
-				srcStatsWIx, SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
+				srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
 		}
 		
 		// Transfer coordinates to the next world
@@ -5495,14 +5506,18 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	validated = RunWorld(srcStatsWIx) && validated;
 
 	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-	worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+	// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+	// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
+	// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
+	// 	std::cout <<" " << BMps[mbx] ;
+	// } // @@@@@@@@@@@@@
 
 	if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
 		thermodynamicStates[thermoIx].calcQStats(
-			srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+			srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
 	}else{
 		thermodynamicStates[thermoIx].calcQStats(
-			srcStatsWIx, SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
+			srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
 	}
 
 	if(true){
@@ -5728,6 +5743,7 @@ void Context::RunREXNew()
 				worlds[wIx].PrintXBMps();
 				std::cout << std::endl;
 			}
+
 			printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
 
 		} // end replicas simulations
@@ -8987,7 +9003,7 @@ void Context::calcQStats(int thIx)
 		const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
 
 		// Get Q statistics
-		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs, worlds[worldIx].getNofSamples());
+		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worlds[worldIx].getBMps(), worldQs, worlds[worldIx].getNofSamples());
 		if(!found){
 			warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
 		}
