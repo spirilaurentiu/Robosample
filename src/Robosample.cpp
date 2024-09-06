@@ -49,7 +49,7 @@ int testContext(int seed)
 	c.setOutput("temp"); // the log file is created like log.[seed] - needs refactoring
 	c.setRequiredNofRounds(10); // per world? what does it do?
 	c.setPdbRestartFreq(0); // WRITE_PDBS
-	c.setPrintFreq(1); // PRINT_FREQ
+	c.setPrintFreq(100); // PRINT_FREQ
 
 	// read files and create topologies. this populates ```atoms``` and ```bonds```
 	// atoms must have a dumm index which is used by bonds, angles and torsions
@@ -104,7 +104,7 @@ int testContext(int seed)
 	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
 	// c.getWorld(2).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, true);
 
-	int nofReplicas = 3;
+	int nofReplicas = 1;
 	SimTK::Real temperature = 300;
 	std::vector<SimTK::Real> temperatures, boostTemperatures;
 	for (int i = 0; i < nofReplicas; i++) {
@@ -112,12 +112,11 @@ int testContext(int seed)
 		boostTemperatures.push_back(temperature + (i * 100)); // used for openmm velocities
 	}
 
-	int scale = 1;
 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings };
-	std::vector<SimTK::Real> timesteps = { 0.001, 0.003, 0.004 };
+	std::vector<SimTK::Real> timesteps = { 0.001, 0.006, 0.008 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
-	std::vector<int> mdsteps = { 25 * scale, 50 * scale, 50 * scale };
-	std::vector<int> boostMDSteps = { 25 * scale, 50 * scale, 50 * scale };
+	std::vector<int> mdsteps = { 25, 100, 50 };
+	std::vector<int> boostMDSteps = { 25, 100, 50 };
 	std::vector<int> samplesPerRound = { 1, 1, 1 };
 
 	std::vector<int> distortOptions = { 0, 0, 0 };
@@ -167,7 +166,7 @@ int testContext(int seed)
 	c.initialize();
 
 	// pas how many rounds to run for here
-	c.RunREXNew(1, 1);
+	c.RunREXNew(0, 1000000);
 
 	return 0;
 }
