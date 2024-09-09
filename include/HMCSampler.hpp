@@ -664,7 +664,7 @@ public:
 	/**@}**/
 	// BAT --------------------------------------------------------------------
 
-	void set_dBMps(std::vector<SimTK::Real>& QArg){ prevBMps = &QArg; }
+	void set_dBMps(std::vector<SimTK::Real>& QArg){ prev_dBMps = &QArg; }
 
 	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
 	void setQmeans(std::vector<SimTK::Real>& QArg){ Qmeans = &QArg; }
@@ -679,7 +679,7 @@ protected:
 
 
 	// Buffers to hold Q statistics
-	std::vector<SimTK::Real>* prevBMps = nullptr;	
+	std::vector<SimTK::Real>* prev_dBMps = nullptr;	
 	std::vector<SimTK::Real>* previousQs = nullptr;
 	std::vector<SimTK::Real>* Qmeans = nullptr;
 	std::vector<SimTK::Real>* Qdiffs = nullptr;

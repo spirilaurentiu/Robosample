@@ -633,6 +633,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
 			bool T_Scale_Flag = true; // Are we doing temperature scaling
+			int scale_QDiffs = 0, scale_Qs = 1, scale_BMps = 2;
+			int scale_What = scale_BMps;
+
 			SimTK::Vector &stateQs = someState.updQ();
 			SimTK::Real scaleFactor = 1;
 			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
@@ -679,8 +682,18 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 
 					if(T_Scale_Flag){ // T-scaling
-						//stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
-						stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
+
+						if(scale_What == scale_QDiffs){
+							stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else if(scale_What == scale_Qs){
+							stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else if(scale_What == scale_BMps){
+							stateQs[qIx] = (*prev_dBMps)[qIx] * ((this->QScaleFactor) - 1);
+
+						}
+
 						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
 					}else{ // Constant scaling of BMp(w3)
