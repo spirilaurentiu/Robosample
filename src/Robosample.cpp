@@ -268,12 +268,18 @@ int testContext(int seed)
 	// // Does not work if I set OMMVV instead of VV. How do I check if it is working?
 	// c.getWorld(2).addSampler(SamplerName::HMC, IntegratorName::Verlet, ThermostatName::ANDERSEN, true);
 
-	int nofReplicas = 1;
+	const int num_replicas = 1; // Number of replicas
+    const double T_min = 300.0;  // Starting temperature (Replica 0)
+    const double T_max = 600.0;  // Ending temperature (Replica 19)
+
+    // Calculate the common ratio for geometric progression
+    double r = std::pow(T_max / T_min, 1.0 / (num_replicas - 1));
+
 	SimTK::Real temperature = 300;
-	std::vector<SimTK::Real> temperatures, boostTemperatures;
-	for (int i = 0; i < nofReplicas; i++) {
-		temperatures.push_back(temperature + (i * 100));
-		boostTemperatures.push_back(temperature + (i * 100)); // used for openmm velocities
+	std::vector<SimTK::Real> temperatures (num_replicas), boostTemperatures(num_replicas);
+	for (int i = 0; i < num_replicas; i++) {
+		temperatures[i] = T_min * std::pow(r, i);
+		boostTemperatures[i] = T_min * std::pow(r, i); // used for openmm velocities
 	}
 
 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings };
@@ -310,7 +316,7 @@ int testContext(int seed)
 	flow.pop_back();
 	work.pop_back();
 
-	for (int i = 0; i < nofReplicas; i++) {
+	for (int i = 0; i < num_replicas; i++) {
 		c.addReplica(i);
 		c.addThermodynamicState(i,
 			temperatures[i],

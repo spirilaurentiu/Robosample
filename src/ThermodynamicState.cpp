@@ -50,8 +50,16 @@ ThermodynamicState::ThermodynamicState(
 
 	// Worlds related parameters
 	worldIndexes = argWorldIndexes;
+
 	timesteps = argTimesteps;
+	prevTimesteps = argTimesteps;
+
 	mdsteps = argMdsteps;
+	prevMdsteps = argMdsteps;
+
+	acceptedSteps.resize(worldIndexes.size(), 0);
+	acceptance.resize(worldIndexes.size(), 0);
+	prevAcceptance.resize(worldIndexes.size(), 0);
 
 	nonequilibrium = 0;
 
