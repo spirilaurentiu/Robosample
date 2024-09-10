@@ -3830,7 +3830,7 @@ void Context::setThermostatesNonequilibrium(){
 		
 		for(auto distOpt : distortOptions){
 			
-			if(distOpt == -1){
+			if(distOpt != 0){
 				thermodynamicStates[thermoState_k].setNonequilibrium(1);
 				std::cout << "THERMO " << thermoState_k << " nonequil" << std::endl;
 			}
@@ -4881,7 +4881,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 		// Send DISTORT_OPTION from the input to the sampler
 		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
-		);		
+		);
 
 		// Set scale Q scale factor
 		setWorldDistortParameters(replicaWorldIxs[i],
@@ -5013,7 +5013,7 @@ bool Context::RunWorld(int whichWorld)
 			numSamples, worldOutStream);
 
 	// Non-equilibrium world
-	} else if (distortOption == -1) {
+	} else if (distortOption != 0) {
 
 		// Generate samples
 		
@@ -5562,10 +5562,8 @@ void Context::RunReplicaRefactor(
 	for(int dIx = 0; dIx < distortOpts.size(); dIx++){
 		if(distortOpts[dIx] == 0){
 			equilWIxs.push_back(dIx);
-		}else if(distortOpts[dIx] < 0){
-			nonequilWIxs.push_back(dIx);
 		}else{
-			warn("Unknown distort option");
+			nonequilWIxs.push_back(dIx);
 		}
 	}
 
@@ -5737,14 +5735,13 @@ void Context::RunREXNew()
 			RunReplicaRefactor(mixi, replicaIx);
 
 			
-			for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
-				std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
-				std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
-				worlds[wIx].PrintXBMps();
-				std::cout << std::endl;
-			}
-
-			printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
+			// for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
+			// 	std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
+			// 	std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
+			// 	worlds[wIx].PrintXBMps();
+			// 	std::cout << std::endl;
+			// }
+			// printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
 
 		} // end replicas simulations
 

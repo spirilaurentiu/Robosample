@@ -439,7 +439,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			Qvars[wPosInVector][qIx] = 0;
 		}
 
-		if(true){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
+		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps_means: ";
@@ -487,7 +487,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			Qvars[wPosInVector][qIx] = (N_1_over_N * Qvars[wPosInVector][qIx]) + (Ninv * (Qdiffs[wPosInVector][qIx] * Qdiffs[wPosInVector][qIx]));
 		}
 
-		if(true){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
+		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
 			std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps_means: ";
