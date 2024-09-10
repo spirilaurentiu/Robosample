@@ -71,7 +71,7 @@ public:
 	void initialize();
 
 	int BAT2Amber(int batIndex) {
-		return internCoords.amber2BAT(batIndex);
+		return internCoords.BAT2amber(batIndex);
 	}
 
 	void appendLog(const std::string& filename);
@@ -752,6 +752,9 @@ private:
 	ELEMENT_CACHE elementCache;
 
 	void loadAtoms(const readAmberInput& reader);
+
+	void loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN);
+	
 	void loadBonds(const readAmberInput& reader);
 	void loadAngles(const readAmberInput& reader);
 	void loadTorsions(const readAmberInput& reader);

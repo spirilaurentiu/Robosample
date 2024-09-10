@@ -240,7 +240,7 @@ private:
 
 
     // readAmberFiles internal field readers
-    void readInpcrd();
+    void readInpcrd(const std::string& inpcrdfile);
     void readPointers();
     void readAtomsName();
     void readAtomsTypes();

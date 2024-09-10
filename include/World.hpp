@@ -562,9 +562,6 @@ public:
 	/** Get pointer to FixmanTorque implementation **/
 	FixmanTorque * getFixmanTorque() const;
 
-	/** Allocate space for containers that keep statistics if we're doing any **/
-	void allocateStatsContainers(void);
-
 	// Get the (potential) energy transfer
 	// If any of the Q, U or tau is actively modifyied by the sampler
 	// the Jacobian of that transformation will be included too
@@ -682,13 +679,23 @@ public:
 
 	}
 
+
+	/** Allocate space for containers that keep statistics if we're doing any **/
+	void allocateStatsContainers(void);
+	
+	void PrintDefaultTransforms() const;
+	void PrintXBMps() const;
+	const SimTK::Vector & getBMps();
+
 	// Get Qs
-	const SimTK::Vector & getAdvancedQs();
-	const SimTK::Vector & getAdvancedUs();
 	int getNQs(void);
 	int getNUs(void);
+	const SimTK::Vector & getAdvancedQs();
+	const SimTK::Vector & getAdvancedUs();
 
 public:
+
+	SimTK::Vector BMps;
 
 	// --- The three S: Study, System and State related ---
 	/** System->MultibodySystem->MolecularMechanicsSystems->CompoundSystem **/

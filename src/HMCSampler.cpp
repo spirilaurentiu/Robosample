@@ -407,6 +407,8 @@ void HMCSampler::getMsg_Header(std::stringstream& ss)
 	ss << (", logSineSqrGamma2_o, logSineSqrGamma2_n ");
 	ss << (", etot_n, etot_proposed");
 	ss << (", JDetLog ");
+	ss << (", acc ");
+	ss << (", MDorMC ");
 
 }
 
@@ -498,7 +500,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
+		if(this->nofSamples >= 50){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 
 			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
 
@@ -557,8 +559,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//scout("\nJ_ini\n");
 			J_ini = calcMobodsMBAT(someState);
 
-			//std::cout << "[Qs_before_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
-			//std::cout << "scaleF " << this->QScaleFactor << "\n";
+			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
+			std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
@@ -577,6 +579,29 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
 			}
 
+			// // Print Q stats
+			// std::cout << "\nQmeans";
+			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
+			// 		std::cout <<" " << (*Qmeans)[qIx] ;
+			// 	}
+			// }std::cout << std::endl;
+			// std::cout << "\nQdiffs";
+			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
+			// 		std::cout <<" " << (*Qdiffs)[qIx] ;
+			// 	}
+			// }std::cout << std::endl;
+			// std::cout << "\nQvars";
+			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
+			// 		std::cout <<" " << (*Qvars)[qIx] ;
+			// 	}
+			// }std::cout << std::endl;						
+
 			int nofScaledBMs = 0;
 			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -586,7 +611,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 
 					if(T_Scale_Flag){ // T-scaling
-						stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+						//stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+						stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
 						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
 					}else{ // Constant scaling of BMp(w3)
@@ -612,8 +638,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//}
 
 			system->realize(someState, SimTK::Stage::Dynamics);
-
-			//std::cout << "[Qs_after_scaling] " << someState.getQ() << std::endl; // @@@@@@@@@@@@@
+			PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			
@@ -1201,25 +1226,12 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 
 		try {
-			// Actual openmm integration
 			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
-
-			// Somewhere, the topology gets ruined
 			system->realizeTopology();
-
-			// // Transfer back to Simbody (TODO: might be redundant)
-			// OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
-
-		}catch(const std::exception&){
-
-			// Send general message
-			proposeExceptionCaught = true;
-
+		}catch(const OpenMM::OpenMMException& e){
+			std::cerr << "[ERROR] OpenMM Exception caught: " << e.what() << std::endl;
 			OMM_restoreConfiguration(someState);
-
-			// // Transfer back to Simbody (TODO: might be redundant)
-			// OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
-
+			proposeExceptionCaught = true;
 		}
 
 	}else if(this->integratorName == IntegratorName::None){
@@ -3282,6 +3294,7 @@ bool HMCSampler::acceptSample() {
 	}else{ // Markov-Chain Monte Carlo
 
 		const SimTK::Real rand_no = uniformRealDistribution(randomEngine);
+		debug_rand_no = rand_no; // DELETE
 
 		SimTK::Real prob = 0.0;
 
@@ -3452,6 +3465,9 @@ void HMCSampler::getMsg_EnergyDetails(
 		//ss << ", (MH)";
 	}
 
+	// DELETE
+	energyDetailsStream << ", " << debug_rand_no;
+
 	#ifdef PRINTALOT
 
 		// Print validity
@@ -3487,6 +3503,17 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
 	validated = propose(someState) && validated;
+
+	// // generate numAtoms random coordinates in range 0 1000
+	// Random32 engine(randomEngine());
+	// std::uniform_real_distribution<SimTK::Real> dist(-10000000000, 10000000000);
+
+	// std::vector<SimTK::Vec3> randomCoordinates(dumm->OMM_getPositions().size());
+	// for (auto& coord : randomCoordinates) {
+	// 	coord = SimTK::Vec3(dist(engine), dist(engine), dist(engine));
+	// }
+
+	// dumm->OMM_setOpenMMPositions(randomCoordinates);
 
 	// --- invalid --- //
 	if ( !validated ){

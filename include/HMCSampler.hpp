@@ -659,8 +659,9 @@ public:
 	/**@}**/
 	// BAT --------------------------------------------------------------------
 
+	void set_dBMps(std::vector<SimTK::Real>& QArg){ prevBMps = &QArg; }
 
-
+	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
 	void setQmeans(std::vector<SimTK::Real>& QArg){ Qmeans = &QArg; }
 	void setQdiffs(std::vector<SimTK::Real>& QArg){ Qdiffs = &QArg; }
 	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
@@ -673,6 +674,8 @@ protected:
 
 
 	// Buffers to hold Q statistics
+	std::vector<SimTK::Real>* prevBMps = nullptr;	
+	std::vector<SimTK::Real>* previousQs = nullptr;
 	std::vector<SimTK::Real>* Qmeans = nullptr;
 	std::vector<SimTK::Real>* Qdiffs = nullptr;
 	std::vector<SimTK::Real>* Qvars = nullptr;
@@ -713,10 +716,10 @@ protected:
 	SimTK::Real learningRate = 10e-6;
 	SimTK::Real idealAcceptance = 0.651;
 	SimTK::Real MDStepsPerSampleStd = 0.5;
-	SimTK::Real timestep = SimTK::NaN,
-		prevTimestep = SimTK::NaN;
-	int MDStepsPerSample = SimTK::NaN,
-		prevMDStepsPerSample = SimTK::NaN;
+	SimTK::Real timestep = std::numeric_limits<SimTK::Real>::max(),
+		prevTimestep = std::numeric_limits<SimTK::Real>::max();
+	int MDStepsPerSample = std::numeric_limits<int>::max(),
+		prevMDStepsPerSample = std::numeric_limits<int>::max();
 	bool shouldAdaptTimestep = false;
 
 	int QsBufferSize = 300;
@@ -789,6 +792,9 @@ protected:
 
 	// TODO explain what this does
 	SimTK::Vector sqrtMInvV;
+
+	// DELETE
+	SimTK::Real debug_rand_no = 0.0;
 
 };
 

@@ -1058,20 +1058,6 @@ void World::loadMbx2AIxMap(){
 
 }
 
-// Allocate space for containers that keep statistics if we're doing any
-void World::allocateStatsContainers(void)
-{
-	// Arccos of the X_PF first entry which should contain 
-	// the angle of rotation on X for the BendStretch joint
-	acosX_PF00.resize(matter->getNumBodies() - 1);
-	acosX_PF00_means.resize(matter->getNumBodies() - 1);
-
-	// The norm of the translation vector of X_BM which should
-	// contain the bond length for the BendStretch joint
-	normX_BMp.resize(matter->getNumBodies() - 1);
-	normX_BMp_means.resize(matter->getNumBodies() - 1);
-}
-
 // Get the (potential) energy transfer
 // If any of the Q, U or tau is actively modifyied by the sampler
 // the Jacobian of that transformation will be included too
@@ -1651,6 +1637,110 @@ SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::At
 /*!
  * <!--  -->
 */
+void World::PrintDefaultTransforms() const
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	for (SimTK::MobilizedBodyIndex mbx(1);
+		mbx < matter->getNumBodies();
+		++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		std::cout << "mobod " << mbx << std::endl;
+
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(advState);
+		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(advState);
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(advState);
+		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
+
+		PrintTransform(X_PF, 6, "X_PF");
+		PrintTransform(X_BM, 6, "X_BM");
+		PrintTransform(X_FM, 6, "X_FM");
+
+	}
+
+}
+
+
+
+// Allocate space for containers that keep statistics if we're doing any
+void World::allocateStatsContainers(void)
+{
+	// // Arccos of the X_PF first entry which should contain 
+	// // the angle of rotation on X for the BendStretch joint
+	// acosX_PF00.resize(matter->getNumBodies() - 1);
+	// acosX_PF00_means.resize(matter->getNumBodies() - 1);
+
+	// // The norm of the translation vector of X_BM which should
+	// // contain the bond length for the BendStretch joint
+	// normX_BMp.resize(matter->getNumBodies() - 1);
+	// normX_BMp_means.resize(matter->getNumBodies() - 1);
+
+
+}
+
+
+/*!
+ * <!--  -->
+*/
+void World::PrintXBMps() const
+{
+	SimTK::State& advState = integ->updAdvancedState();
+
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		//std::cout << mbx;
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(advState);
+		std::cout <<" " << X_BM.p()[0];
+	}
+}
+
+/*!
+ * <!--  -->
+*/
+const SimTK::Vector & World::getBMps()
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	if(BMps.size() == 0){
+		BMps.resize(matter->getNQ(advState));
+	}
+
+	int bIx = -1;
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
+			bIx++;
+
+			const Transform& X_BM = mobod.getOutboardFrame(advState);
+			BMps[bIx] = X_BM.p()[0];
+		}
+		
+	}
+
+	return BMps;
+}
+
+/*!
+ * <!--  -->
+*/
 const SimTK::Vector & World::getAdvancedQs()
 {
 	return matter->getQ(integ->updAdvancedState());
@@ -1775,6 +1865,10 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
 		returnVector;
 
+	if (samplers[0]->getIntegratorName() == IntegratorName::OMMVV) {
+		forceField->updateOMMAtomLocationCache();
+	}
+
 	// Iterate through topologies
 	for (auto& topology : (*topologies)){
 		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
@@ -1788,17 +1882,18 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 
 			// Get DuMM atom index too for OpenMM
 			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
-
 			SimTK::Vec3 location;
 
 			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
 				// ELIZA
 				// location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
 				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
+				// std::cerr << "forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx)" << std::endl;
 			}else{
 				location = 
 				topology.calcAtomLocationInGroundFrameThroughSimbody(
 					compoundAtomIndex, *forceField, *matter, state);
+				// std::cerr << "topology.calcAtomLocationInGroundFrameThroughSimbody" << std::endl;
 			}
 
 			// std::cout << "getAtomsLocationsInGround " << dAIx << " " << location << std::endl;
@@ -3182,9 +3277,8 @@ bool World::addSampler(SamplerName samplerName,
 	}
 
 	// Set atom masses to OpenMM
-	// TODO are those indices correct if using two molecules?
-	// Find which atoms should be fixed
 	std::vector<SimTK::Real> masses(myContext->natoms, 0);
+	bool fixedRoot = false;
 
 	// std::vector<int> fixedAtoms;
 	// for (const auto& f: flexibilities) {
@@ -3194,37 +3288,17 @@ bool World::addSampler(SamplerName samplerName,
 	// 	}
 	// }
 
-	for (const auto& t : *topologies) {
-		for (int aix = 0; aix < t.getNumAtoms(); aix++) {
-			// Set mass to zero for fixed atoms
-			SimTK::mdunits::Mass mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
-
-			if (integratorName == IntegratorName::OMMVV) {
-				if (rootMobilizer == "Weld" && aix == 0) {
-					mass = 0;
-				}
-
-				// if (std::find(fixedAtoms.begin(), fixedAtoms.end(), aix) != fixedAtoms.end()) {
-				// 	mass = 0;
-				// }
+	for (const auto& topology : *topologies) {
+		for (const auto& atom : topology.subAtomList) {
+			SimTK::mdunits::Mass mass = atom.getMass();
+			if (rootMobilizer == "Weld" && !fixedRoot) {
+				mass = 0;
+				fixedRoot = true;
 			}
 
-			masses[aix] = mass;
-
-			// // print masses
-			// std::cout << "masses[" << myContext->BAT2Amber(aix) << "] = " << mass << std::endl;
-
-			// // SimTK::mdunits::Mass mass handles values in floating point fashion
-			// masses[myContext->BAT2Amber(aix)] = mass;
+			masses[atom.getNumber()] = mass;
 		}
 	}
-
-	// // print masses
-	// for (int i = 0; i < myContext->natoms; i++) {
-	// 	std::cout << "masses[" << i << "] = " << masses[i] << std::endl;
-	// }
-
-	forceField->setOpenMMMasses(masses);
 
 	// if (integratorName == IntegratorName::OMMVV) {
 
@@ -3255,6 +3329,12 @@ bool World::addSampler(SamplerName samplerName,
 
 	// 	forceField->setOpenMMMasses(masses);
 	// }
+
+	// for (int i = 0; i < myContext->natoms; i++) {
+	// 	std::cout << "masses[" << i << "] = " << masses[i] << std::endl;
+	// }
+
+	forceField->setOpenMMMasses(masses);
 
 	// This is needed because each call to forceField invalidates the topology cache
 	// As far as I understand, you cannot modify forceField afther this call

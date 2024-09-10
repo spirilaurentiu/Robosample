@@ -16,12 +16,7 @@ void readAmberInput::readAmberFiles(const std::string& inpcrdfile, const std::st
 try
 {
 
-  inpcrd.open(inpcrdfile.c_str());
-  if(!inpcrd.is_open())
-  {
-          printf("Error in inpcrd file : %s file not opened \n", inpcrdfile.c_str());
-          exit(1);
-  }
+  readInpcrd(inpcrdfile);
 
   prmtop.open(prmtopfile.c_str());
   if(!prmtop.is_open())
@@ -29,9 +24,6 @@ try
           printf("Error in prmtop file : %s file not opened \n", prmtopfile.c_str());
           exit(1);
   }
-
-
-  readInpcrd();
 
   while(!prmtop.eof())
   {
@@ -140,23 +132,39 @@ catch(std::exception e){
   }
 }
 
-void readAmberInput::readInpcrd() {
-  // Ignore the first line
-  getline(inpcrd, line);
+void readAmberInput::readInpcrd(const std::string& inpcrdfile) {
 
-  // Next line contains one or two values
-  // The first is the number of atoms present in this file
-  // The second, if present, stores the simulation time
-  // We ignore both values
-  getline(inpcrd, line);
+  try{
+    inpcrd.open(inpcrdfile.c_str());
+    if(!inpcrd.is_open())
+    {
+            printf("Error in inpcrd file : %s file not opened \n", inpcrdfile.c_str());
+            exit(1);
+    }
+      // Ignore the first line
+    getline(inpcrd, line);
 
-  // Read the coordinates
-  SimTK::Real x, y, z;
-  while(inpcrd >> x >> y >> z) {
-    AtomsXcoord.push_back(x);
-    AtomsYcoord.push_back(y);
-    AtomsZcoord.push_back(z);
+    // Next line contains one or two values
+    // The first is the number of atoms present in this file
+    // The second, if present, stores the simulation time
+    // We ignore both values
+    getline(inpcrd, line);
+
+    // Read the coordinates
+    SimTK::Real x, y, z;
+    while(inpcrd >> x >> y >> z) {
+      AtomsXcoord.push_back(x);
+      AtomsYcoord.push_back(y);
+      AtomsZcoord.push_back(z);
+    }
+
+    inpcrd.close();
+
+  }catch(std::exception e){
+    std::cout << "Error reading inpcrd file \n";
+    std::cout << e.what() << '\n';
   }
+
 }
 
 void readAmberInput::readPointers(){

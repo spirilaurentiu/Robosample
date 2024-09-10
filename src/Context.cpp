@@ -201,7 +201,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
 	std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
-	
+
 	loadAmberSystem(prmtop, inpcrd);
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
@@ -342,30 +342,39 @@ bool Context::initializeFromFile(const std::string &inpFN)
 			rexMdsteps,
 			rexSamplesPerRound);
 
-		// translate str to enum
-		std::vector<std::vector<AcceptRejectMode>> rexSamplers;
-		for (size_t i = 0; i < nofReplicas; i++) {
-			rexSamplers.push_back({});
-		}
 
-		// Add replicas
-		for(int k = 0; k < nofReplicas; k++){
-			addReplica(k);
-		}
+		// // Add replicas
+		// for(int k = 0; k < nofReplicas; k++){
 
-		// Add thermodynamic states
-		for(int k = 0; k < temperatures.size(); k++){
-			addThermodynamicState(
-				k, temperatures[k], temperatures[k],
+		// 	inpcrd = rexReader.getRestartDirectory() + "/" 
+		// 		+ setupReader.get("INPCRD")[0]
+		// 		+ ".s" + std::to_string(k) + ".rst7";
 
-				rexSamplers[k],
-				rexDistortOptions[k],
-				rexDistortArgs[k],
-				rexFlowOptions[k],
-				rexWorkOptions[k],
+		// 	inpcrdFNs.push_back(inpcrd);
 
-				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k], rexMdsteps[k]);
-		}
+		// }
+
+		// for(int k = 0; k < nofReplicas; k++){
+
+		// 	loadAtomsCoordinates(prmtop, inpcrdFNs[k]);
+		// 	std::cout << "Loaded coordinates of replica " << k << " from " << inpcrdFNs[k] << std::endl;
+
+		// 	addReplica(k);
+		// }
+
+		// // Add thermodynamic states
+		// for(int k = 0; k < temperatures.size(); k++){
+		// 	addThermodynamicState(
+		// 		k, temperatures[k], temperatures[k],
+
+		// 		rexSamplers[k],
+		// 		rexDistortOptions[k],
+		// 		rexDistortArgs[k],
+		// 		rexFlowOptions[k],
+		// 		rexWorkOptions[k],
+
+		// 		rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k], rexMdsteps[k]);
+		// }
 	}
 
 	// --------------------------------
@@ -529,6 +538,32 @@ void Context::loadAtoms(const readAmberInput& reader) {
 		elementCache.addElement(atomicNumber, mass);
 	}
 }
+
+void Context::loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN) {
+
+	// Load Amber files
+	readAmberInput reader;
+	reader.readAmberFiles(inpcrdFN, prmtop);
+
+	// Check
+	//natoms = reader.getNumberAtoms();
+	//atoms.size();
+
+	// Iterate through atoms and set as much as possible from amberReader
+	for(int aCnt = 0; aCnt < natoms; aCnt++) {
+
+		// Set coordinates in nm (AMBER uses Angstroms)
+		atoms[aCnt].setX(reader.getAtomsXcoord(aCnt) / 10.0);
+		atoms[aCnt].setY(reader.getAtomsYcoord(aCnt) / 10.0);
+		atoms[aCnt].setZ(reader.getAtomsZcoord(aCnt) / 10.0);
+		atoms[aCnt].setCartesians(
+			reader.getAtomsXcoord(aCnt) / 10.0,
+			reader.getAtomsYcoord(aCnt) / 10.0,
+			reader.getAtomsZcoord(aCnt) / 10.0 );
+
+	}
+}
+
 
 /** Set bonds properties from reader: bond indeces, atom neighbours.
  *  1-to-1 correspondence between prmtop and Gmolmodel.
@@ -1190,6 +1225,10 @@ void Context::addWorld(
 			}
 		}
 
+		// if (mobility == BondMobility::Mobility::Rigid) {
+		// 	std::cerr << "Bond " << bond.i << " - " << bond.j << " not specified, setting to rigid." << std::endl;
+		// }
+
 		bond.addBondMobility(mobility);
 		topology.setBondMobility(mobility, compoundBondIx);
 	}
@@ -1212,6 +1251,9 @@ void Context::addWorld(
 
 	// This is one to many map
 	worlds.back().loadMbx2AIxMap();
+
+	// Allocate whatever needed Simbody dependent vectors from World here
+	worlds.back().allocateStatsContainers();
 
 }
 
@@ -3921,11 +3963,20 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			thermodynamicStates[thermoState_C].incrementWorldsNofSamples();
 			thermodynamicStates[thermoState_H].incrementWorldsNofSamples();
 
-			replicas[replica_X].incrementNofSamples();
-			replicas[replica_Y].incrementNofSamples();
-			thermodynamicStates[thermoState_C].incrementNofSamples();
-			thermodynamicStates[thermoState_H].incrementNofSamples();
+			bool onlyNonequilWorlds = true;
+			for(int wIx = 0; wIx < nofWorlds; wIx++){
+				if(worlds[wIx].getSampler(0)->getDistortOption() == 0){
+					onlyNonequilWorlds = false;
+					break;
+				}
+			}
 
+			if(onlyNonequilWorlds){
+				replicas[replica_X].incrementNofSamples();
+				replicas[replica_Y].incrementNofSamples();
+				thermodynamicStates[thermoState_C].incrementNofSamples();
+				thermodynamicStates[thermoState_H].incrementNofSamples();
+			}
 			// Calculate replica BAT
 			//replicas[replica_X].calcZMatrixBAT_WORK();
 			//replicas[replica_Y].calcZMatrixBAT_WORK();
@@ -3947,7 +3998,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		swapThermodynamicStates(replica_X, replica_Y);
 		swapPotentialEnergies(replica_X, replica_Y);
 
-		std::cout << "1\n" << endl;
+		std::cout << "1" 
+		<<", " << unifSample 
+		<< endl << endl;
 
 		returnValue = true;
 
@@ -3962,7 +4015,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		// Don't swap thermodynamics states nor energies
 
-		std::cout << "0\n" << endl;
+		std::cout << "0"
+		<<", " << unifSample 
+		<< endl << endl;
 
 		returnValue = false;
 	}
@@ -4763,10 +4818,10 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 		transferCoordinates(backWorldIx, frontWorldIx);
 
-		//SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
-		//SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
+		// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
+		// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
 		// if(cumulDiff_BAT > 0.001){
-		// 	std::cout << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
+		// 	std::cerr << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
 		// }
 
 		#ifdef PRINTALOT 
@@ -5114,10 +5169,16 @@ void Context::RunREX()
 */
 void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx)
 {
+		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
+	worlds[destStatsWIx].updSampler(0)->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
+
+	worlds[destStatsWIx].updSampler(0)->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQvars(thermodynamicStates[thermoIx].getQvars(srcStatsWIx));
 }
+
+#include <chrono>
 
 /*!
  * <!-- Run a vector of worlds -->
@@ -5131,15 +5192,41 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		// Run
 		int srcStatsWIx  = specificWIxs[spWCnt];
 		std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
+
+		auto run_start = std::chrono::high_resolution_clock::now();
 		validated = RunWorld(srcStatsWIx) && validated;
+		auto run_end = std::chrono::high_resolution_clock::now();
+		auto run_duration = std::chrono::duration_cast<std::chrono::milliseconds>(run_end - run_start);
+		std::cerr << "RunWorlds NU " << worlds[srcStatsWIx].getNUs() << " run " << run_duration.count() << std::endl;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-		bool calcQStatsRet = thermodynamicStates[thermoIx].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
+		// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
+		// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
+		// 	std::cout <<" " << BMps[mbx] ;
+		// }
+		// ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
 
+		auto calc_start = std::chrono::high_resolution_clock::now();
+		if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
+			thermodynamicStates[thermoIx].calcQStats(
+				srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+		}else{
+			thermodynamicStates[thermoIx].calcQStats(
+				srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
+		}
+		auto calc_end = std::chrono::high_resolution_clock::now();
+		auto calc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(calc_end - calc_start);
+		std::cerr << "RunWorlds calc " << calc_duration.count() << std::endl;
+		
 		// Transfer coordinates to the next world
+		auto transfer_start = std::chrono::high_resolution_clock::now();
 		int destStatsWIx = specificWIxs[spWCnt + 1];
 		transferCoordinates(srcStatsWIx, destStatsWIx);
 		transferQStatistics(thermoIx, srcStatsWIx, destStatsWIx);
+		auto transfer_end = std::chrono::high_resolution_clock::now();
+		auto transfer_duration = std::chrono::duration_cast<std::chrono::milliseconds>(transfer_end - transfer_start);
+		std::cerr << "RunWorlds transfer " << transfer_duration.count() << std::endl;
 
 		// // Calculate replica BAT and BAT stats
 		// World& currWorld = worlds[specificWIxs[spWCnt]];
@@ -5149,18 +5236,42 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	}
 
 	// Run the last world
+	auto run_start = std::chrono::high_resolution_clock::now();
 	int srcStatsWIx = specificWIxs.back();
 	std::cout << "REX, " << replicaIx << ", " << thermoIx << ", " << specificWIxs.back();
 	validated = RunWorld(srcStatsWIx) && validated;
+	auto run_end = std::chrono::high_resolution_clock::now();
+	auto run_duration = std::chrono::duration_cast<std::chrono::milliseconds>(run_end - run_start);
+	std::cerr << "RunWorlds NU " << worlds[srcStatsWIx].getNUs() << " run " << run_duration.count() << std::endl;
 
 	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-	bool calcQStatsRet = thermodynamicStates[ thermoIx ].calcQStats(srcStatsWIx, worlds[srcStatsWIx].getAdvancedQs());
+	// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
+	// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
+	// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
+	// 	std::cout <<" " << BMps[mbx] ;
+	// } // @@@@@@@@@@@@@
 
+	auto calc_start = std::chrono::high_resolution_clock::now();
+	if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
+		thermodynamicStates[thermoIx].calcQStats(
+			srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
+	}else{
+		thermodynamicStates[thermoIx].calcQStats(
+			srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
+	}
+	auto calc_end = std::chrono::high_resolution_clock::now();
+	auto calc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(calc_end - calc_start);
+	std::cerr << "RunWorlds calc " << calc_duration.count() << std::endl;
+
+	auto zmatrix_start = std::chrono::high_resolution_clock::now();
 	if(true){
 		World& currWorld = worlds[specificWIxs.back()];
 		SimTK::State& currState = currWorld.integ->updAdvancedState();
 		replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
 	}
+	auto zmatrix_end = std::chrono::high_resolution_clock::now();
+	auto zmatrix_duration = std::chrono::duration_cast<std::chrono::milliseconds>(zmatrix_end - zmatrix_start);
+	std::cerr << "RunWorlds zmatrix " << zmatrix_duration.count() << std::endl;
 
 	// #ifndef PRINTALOT
 	// #define PRINTALOT
@@ -5182,7 +5293,9 @@ void Context::RunReplicaRefactor(
 	int mixi,
 	int replicaIx)
 {
+	auto replica_start = std::chrono::high_resolution_clock::now();
 
+	// MOVE THIS INTO THERMODYNAMIC STATES
 	// Get equilibrium and non-equilibrium worlds
 	int thermoIx = replica2ThermoIxs[replicaIx];
 	std::vector<int>& replicaWorldIxs = thermodynamicStates[thermoIx].updWorldIndexes();
@@ -5208,7 +5321,7 @@ void Context::RunReplicaRefactor(
 	int wSamIncr = 0;
 	int samIncr = 0;
 	(getRunType() == RUN_TYPE::RENE) ? wSamIncr = replicaNofWorlds - 1 : replicaNofWorlds;
-	(getRunType() == RUN_TYPE::RENE) ? samIncr = 0 : samIncr = 1;
+	(getRunType() == RUN_TYPE::RENE) ? samIncr = 1 : samIncr = 1; // Always increment replica's nof samples
 
 	//scout("\nEquil world indexes") ;if(equilWIxs.size() > 0){PrintCppVector(equilWIxs);}scout("\nNonequil world indexes") ;if(nonequilWIxs.size() > 0){PrintCppVector(nonequilWIxs);}ceolf;
 
@@ -5225,15 +5338,28 @@ void Context::RunReplicaRefactor(
 
 		std::cout << "mixi = " << mixi << " replicaIx = " << replicaIx << std::endl;
 	
+		auto worlds_start = std::chrono::high_resolution_clock::now();
 		RunWorlds(equilWIxs, replicaIx);
+		auto worlds_end = std::chrono::high_resolution_clock::now();
+		auto worlds_duration = std::chrono::duration_cast<std::chrono::milliseconds>(worlds_end - worlds_start);
+		std::cerr << "Worlds took " << worlds_duration.count() << " ms" << std::endl;
 		
+		auto locations_start = std::chrono::high_resolution_clock::now();
 		replicas[replicaIx].updAtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround());
+		auto locations_end = std::chrono::high_resolution_clock::now();
+		auto locations_duration = std::chrono::duration_cast<std::chrono::milliseconds>(locations_end - locations_start);
+		std::cerr << "Locations took " << locations_duration.count() << " ms" << std::endl;
 	
+		auto potential_start = std::chrono::high_resolution_clock::now();
 		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
+		auto potential_end = std::chrono::high_resolution_clock::now();
+		auto potential_duration = std::chrono::duration_cast<std::chrono::milliseconds>(potential_end - potential_start);
+		std::cerr << "Potential took " << potential_duration.count() << " ms" << std::endl;
 
 		// REXLog(mixi, replicaIx);
 		if (mixi % printFreq == 0) {
 			writeLog(mixi, replicaIx);
+			REXLog(mixi, replicaIx);
 		}
 
 		if(!nonequilWIxs.empty()){ // Non-Equilibrium
@@ -5252,29 +5378,39 @@ void Context::RunReplicaRefactor(
 			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
 			replicas[replicaIx].set_WORK_Jacobian(jac);
 
-			std::cout << "Set Jacobian for replica " << replicaIx <<" to " << jac << std::endl;
+			//std::cout << "Set Jacobian for replica " << replicaIx <<" to " << jac << std::endl;
 		
 			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
 			replicas[replicaIx].setFixman(fix_set_back);
 
 			transferCoordinates(nonequilWIxs.back(), equilWIxs.front());
-			//transferQStatistics(thermoIx, nonequilWIxs.back(), equilWIxs.front());
 
 		}else{
 
 			// why?
+			auto work_start = std::chrono::high_resolution_clock::now();
 			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround()); // Victor bugfix
+			auto work_end = std::chrono::high_resolution_clock::now();
+			auto work_duration = std::chrono::duration_cast<std::chrono::milliseconds>(work_end - work_start);
+			std::cerr << "Work took " << work_duration.count() << " ms" << std::endl;
 
+			auto transfer_start = std::chrono::high_resolution_clock::now();
 			transferCoordinates(equilWIxs.back(), equilWIxs.front());
-			//transferQStatistics(thermoIx, equilWIxs.back(), equilWIxs.front());
-			
+			auto transfer_end = std::chrono::high_resolution_clock::now();
+			auto transfer_duration = std::chrono::duration_cast<std::chrono::milliseconds>(transfer_end - transfer_start);
+			std::cerr << "Transfer took " << transfer_duration.count() << " ms" << std::endl;
+
 		}
 
 		// Increment the nof samples for replica and thermostate
 		replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
 		thermodynamicStates[thermoIx].incrementWorldsNofSamples(wSamIncr);
 		replicas[replicaIx].incrementNofSamples(samIncr);
-		thermodynamicStates[thermoIx].incrementNofSamples(samIncr);		
+		thermodynamicStates[thermoIx].incrementNofSamples(samIncr);
+
+		auto replica_end = std::chrono::high_resolution_clock::now();
+		auto replica_duration = std::chrono::duration_cast<std::chrono::milliseconds>(replica_end - replica_start);
+		std::cerr << "Replica " << replicaIx << " took " << replica_duration.count() << " ms" << std::endl;
 
 		return;
 	}
@@ -5296,15 +5432,19 @@ void Context::RunReplicaRefactor(
 		replicas[replicaIx].setFixman(fix_set_back);
 
 		transferCoordinates(nonequilWIxs.back(), nonequilWIxs.front());
-		//transferQStatistics(thermoIx, nonequilWIxs.back(), nonequilWIxs.front());
 
 	}
 
 	// Increment the nof samples for replica and thermostate
 	replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
 	thermodynamicStates[thermoIx].incrementWorldsNofSamples(wSamIncr);
-	replicas[replicaIx].incrementNofSamples(samIncr);
-	thermodynamicStates[thermoIx].incrementNofSamples(samIncr);
+
+	replicas[replicaIx].incrementNofSamples(0); // Only non-equilibrium
+	thermodynamicStates[thermoIx].incrementNofSamples(0); // Only non-equilibrium
+
+	auto replica_end = std::chrono::high_resolution_clock::now();
+	auto replica_duration = std::chrono::duration_cast<std::chrono::milliseconds>(replica_end - replica_start);
+	std::cerr << "Replica " << replicaIx << " took " << replica_duration.count() << " ms" << std::endl;
 
 }
 
@@ -5330,8 +5470,7 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 	std::stringstream rexOutput;
 	rexOutput.str("");
 
-	rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx"
-	<< ", " << "frontWIx" << ", " << "backWIx";
+	rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx" << ", " << "wIx" ;
 
 	worlds[0].getSampler(0)->getMsg_Header(rexOutput);
 	rexOutput << std::endl;
@@ -5394,7 +5533,15 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			printQStats(replica2ThermoIxs[replicaIx]);
+			
+			for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
+				std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
+				std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
+				worlds[wIx].PrintXBMps();
+				std::cout << std::endl;
+			}
+
+			printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
 
 		} // end replicas simulations
 
@@ -5834,28 +5981,48 @@ void Context::transferCoordinates(int srcWIx, int destWIx)
 	SimTK::State& currentAdvancedState = worlds[destWIx].integ->updAdvancedState();
 
 	// Get coordinates from source
+	auto get_start = std::chrono::high_resolution_clock::now();
 	const std::vector<std::vector<std::pair<
 		bSpecificAtom *, SimTK::Vec3> > >&
 		otherWorldsAtomsLocations =
 	worlds[srcWIx].getAtomsLocationsInGround(lastAdvancedState);
+	auto get_end = std::chrono::high_resolution_clock::now();
+	auto get_duration = std::chrono::duration_cast<std::chrono::milliseconds>(get_end - get_start);
+	std::cerr << "Get took " << get_duration.count() << " ms" << std::endl;
 
 	// Get BAT coordinates
+	auto zmatrix_start = std::chrono::high_resolution_clock::now();
 	calcZMatrixBAT(srcWIx, otherWorldsAtomsLocations);
+	auto zmatrix_end = std::chrono::high_resolution_clock::now();
+	auto zmatrix_duration = std::chrono::duration_cast<std::chrono::milliseconds>(zmatrix_end - zmatrix_start);
+	std::cerr << "Zmatrix took " << zmatrix_duration.count() << " ms" << std::endl;
 
 	//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
 	
 	// Pass compounds to the new world
+	auto pass_start = std::chrono::high_resolution_clock::now();
 	passTopologiesToNewWorld(destWIx);
+	auto pass_end = std::chrono::high_resolution_clock::now();
+	auto pass_duration = std::chrono::duration_cast<std::chrono::milliseconds>(pass_end - pass_start);
+	std::cerr << "Pass took " << pass_duration.count() << " ms" << std::endl;
 
 	// Focus on destination world
 	World& destWorld = worlds[destWIx];
 	SimTK::State& someState = currentAdvancedState;
 
 	// New setAtomsLocations
-	currentAdvancedState = 
-	setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
-	
+	auto set_start = std::chrono::high_resolution_clock::now();
+	currentAdvancedState = setAtoms_SP_NEW(destWIx, someState, otherWorldsAtomsLocations);
+	auto set_end = std::chrono::high_resolution_clock::now();
+	auto set_duration = std::chrono::duration_cast<std::chrono::milliseconds>(set_end - set_start);
+	std::cerr << "Set took " << set_duration.count() << " ms" << std::endl;
+
+	// SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(srcWIx, destWIx);
+	// SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(srcWIx, destWIx, false);
+	// if(cumulDiff_BAT > 0.001){
+	// 	std::cerr << "\nBad reconstruction " << cumulDiff_BAT << std::endl;
+	// }
 }
 
 /*!
@@ -5920,18 +6087,19 @@ SimTK::Real Context::checkTransferCoordinates_Cart(int srcWIx, int destWIx)
 		}
 	}
 
-	// if(cumulDiff > 0.1){
-	// 	for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
-	// 		for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){		
-	// 			std::cout << "transfer " << toIx << " " << atIx
-	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
-	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
-	// 				<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
-	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
-	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
-	// 				<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])					
-	// 			<< std::endl;
-	// 		}
+	// for(size_t toIx = 0; toIx < srcWorldsAtomsLocations.size(); toIx++){
+	// 	for(size_t atIx = 0; atIx < srcWorldsAtomsLocations[toIx].size(); atIx++){		
+	// 		std::cout << "transfer " << toIx << " " << atIx
+	// 			<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 			<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 			<< " " << double((srcWorldsAtomsLocations[toIx][atIx]).second[2])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[0]) - double((srcWorldsAtomsLocations[toIx][atIx]).second[0])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[1]) - double((srcWorldsAtomsLocations[toIx][atIx]).second[1])
+	// 			<< " " << double((destWorldsAtomsLocations[toIx][atIx]).second[2]) - double((srcWorldsAtomsLocations[toIx][atIx]).second[2])									
+	// 		<< std::endl;
 	// 	}
 	// }
 
@@ -6124,14 +6292,12 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 				}
 			}
 
-			// scout("checkTransfer ") 
+			// scout("checkTransfer BAT") 
 			// << " " << getZMatrixTableEntry(rowCnt, 0) << " " << getZMatrixTableEntry(rowCnt, 1)
 			// << " " << getZMatrixTableEntry(rowCnt, 2) << " " << getZMatrixTableEntry(rowCnt, 3)
-			// // 	<< " " << bondLength_src << " " << bondBend_src << " " << bondTorsion_src
-			// // 	<< " " << bondLength_des << " " << bondBend_des << " " << bondTorsion_des;
-			// // ceol;
-
-			// //scout("checkTransfer ") 
+			// 	<< " " << bondLength_src << " " << bondBend_src << " " << bondTorsion_src
+			// 	<< " " << bondLength_des << " " << bondBend_des << " " << bondTorsion_des
+			// 	<< " " << bondLength_des - bondLength_src << " " << bondBend_des - bondBend_src << " " << bondTorsion_des - bondTorsion_src
 			// 	<< " " << cartV_src[0] << " " << cartV_src[1] << " " << cartV_src[2]
 			// 	<< " " << cartV_des[0] << " " << cartV_des[1] << " " << cartV_des[2];
 			// ceol;
@@ -6166,6 +6332,15 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 			if(SimTK::isNaN(currDiff)){currDiff = 0.0;}
 			cumulDiff += currDiff;
 			if(vMaxComp < currDiff){vMaxComp = currDiff;}
+
+			// scout("checkTransfer BAT") 
+			// << " " << getZMatrixTableEntry(rowCnt, 0) << " " << getZMatrixTableEntry(rowCnt, 1)
+			// << " " << getZMatrixTableEntry(rowCnt, 2) << " " << getZMatrixTableEntry(rowCnt, 3)
+			// 	<< " " << bondLength_src << " " << bondBend_src << " " << bondTorsion_src
+			// 	<< " " << bondLength_des << " " << bondBend_des << " " << bondTorsion_des
+			// 	<< " " << bondLength_des - bondLength_src << " " << bondBend_des - bondBend_src << " " << bondTorsion_des - bondTorsion_src
+			// 	;
+			// ceol;			
 		}
 
 		if(row[3] == -2){
@@ -8597,7 +8772,7 @@ void Context::calcQStats(int thIx)
 		const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
 
 		// Get Q statistics
-		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worldQs);
+		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worlds[worldIx].getBMps(), worldQs, worlds[worldIx].getNofSamples());
 		if(!found){
 			warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
 		}
