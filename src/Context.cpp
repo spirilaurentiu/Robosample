@@ -4400,15 +4400,18 @@ void Context::mixReplicas(int mixi)
 		// Go through neighboring thermodynamic states
 		for(size_t thermoState_k = 0;
 		thermoState_k < (nofThermodynamicStates - 1);
-		thermoState_k += 1){
+		thermoState_k += 2){
 
 			// Get replica corresponding to the thermodynamic state
 			int replica_i = thermo2ReplicaIxs[thermoState_k];
-			int replica_j = getThermoPair(replica_i);
+			//int replica_j = getThermoPair(replica_i);
+			int replica_j = exchangePairs[replica_i];
 
 			// Attempt to swap
 			bool swapped = false;
 			if(replica_i != replica_j){
+
+
 				swapped = attemptREXSwap(replica_i, replica_j);
 			}
 		}
@@ -4421,6 +4424,23 @@ void Context::mixReplicas(int mixi)
 	}
 
 }
+
+void Context::mixReplicasNew(int mixi)
+{
+	if((mixi % swapEvery) == 0){
+
+		int startFrom = mixi % 2;
+
+		for(int thermoState_i = startFrom; thermoState_i <= (nofThermodynamicStates - 2); thermoState_i += 2){
+
+			int thermoState_j = thermoState_i + 1;
+
+			bool swapped = attemptREXSwap(thermo2ReplicaIxs[thermoState_i], thermo2ReplicaIxs[thermoState_j]);
+		}
+
+	}
+}
+
 
 // Load replica's atomLocations into it's front world
 int Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
@@ -5734,7 +5754,6 @@ void Context::RunREXNew()
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			
 			// for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
 			// 	std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
 			// 	std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
@@ -5748,7 +5767,7 @@ void Context::RunREXNew()
 		// Mix replicas
 		if(getRunType() != RUN_TYPE::DEFAULT){
 			
-			mixReplicas(mixi); // check this
+			mixReplicasNew(mixi); // check this
 			                                               
 			PrintNofAcceptedSwapsMatrix();
 		}
