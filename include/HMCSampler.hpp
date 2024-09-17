@@ -413,6 +413,9 @@ public:
 	/** Returns the 'how' argument of perturbVelocities */
 	ForcesPerturbMethod forcesPerturbMethod(void);
 
+	// Docking funcitons
+	void teleport(SimTK::State& someState);
+
 	// Perturb Q, QDot or QDotDot
 	void perturb_Q_QDot_QDotDot(SimTK::State& someState);
 

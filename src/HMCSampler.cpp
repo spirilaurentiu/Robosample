@@ -3212,6 +3212,53 @@ ForcesPerturbMethod HMCSampler::forcesPerturbMethod(void)
 	// return ForcesPerturbMethod::NOT_IMPLEMENTED;
 }
 
+/*!
+ * <!-- Docking search teleport-->
+*/
+void HMCSampler::teleport(SimTK::State& someState)
+{
+	if(matter->getNumBodies() == 3){
+
+		const SimTK::MobilizedBody& freeMobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
+
+		int numQ = freeMobod.getNumQ(someState);
+
+		if( numQ == 7){ // Free body
+
+			SimTK::Real constantFromOutput = 4; // 2 nm
+
+			//const SimTK::Transform& X_FM = freeMobod.getMobilizerTransform(someState);
+			SimTK::Vector &stateQs = someState.updQ();
+			SimTK::QIndex first_qIx = freeMobod.getFirstQIndex(someState);			
+
+			SimTK::Vector generalCoords = freeMobod.getQAsVector(someState);
+			SimTK::Real xCoord = generalCoords[4];
+			SimTK::Real yCoord = generalCoords[5];
+			SimTK::Real zCoord = generalCoords[6];
+			SimTK::Real distance = std::sqrt((xCoord*xCoord) + (yCoord*yCoord) + (zCoord*zCoord));
+
+			if(distance > constantFromOutput){
+
+				SimTK::Real someUnif_X = uniformRealDistribution(randomEngine);
+				SimTK::Real someUnif_Y = uniformRealDistribution(randomEngine);
+				SimTK::Real someUnif_Z = uniformRealDistribution(randomEngine);
+
+				SimTK::Vec3 randTranslation = SimTK::Vec3(someUnif_X, someUnif_Y, someUnif_Z);
+				//randTranslation += (constantFromOutput / 2.0);
+				
+				SimTK::Vec3 newVector = randTranslation;
+
+				stateQs[first_qIx + 4] = newVector[0];
+				stateQs[first_qIx + 5] = newVector[1];
+				stateQs[first_qIx + 6] = newVector[2];
+
+			}
+
+			system->realize(someState, SimTK::Stage::Position);
+		}
+
+	}	
+}
 
 /*!
  * <!-- Perturb Q, QDot or QDotDot -->
@@ -3231,6 +3278,10 @@ void HMCSampler::perturb_Q_QDot_QDotDot(
 
 	// Perturb forces
 	//perturbForces(someState, forcesPerturbMethod());
+
+	// Pentru_Victor
+	teleport(someState);
+
 }
 
 /**
