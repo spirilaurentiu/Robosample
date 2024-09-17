@@ -62,7 +62,10 @@ flow = [0, 0, 0]
 work = [0, 0, 0]
 
 # Calculate the common ratio for geometric progression
-r = (args.t_max / args.t_min) ** (1 / (args.num_replicas - 1))
+if args.num_replicas > 1:
+    r = (args.t_max / args.t_min) ** (1 / (args.num_replicas - 1))
+else:
+    r = 1
 
 # Generate the temperatures
 temperatures = [args.t_min * r ** i for i in range(args.num_replicas)]

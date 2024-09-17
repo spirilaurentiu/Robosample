@@ -1,0 +1,26 @@
+2024-09-16 08:52:47,838 INFO:main.py:240:print_splash_screen:PDB2PQR v3.6.2: biomolecular structure conversion software.
+2024-09-16 08:52:47,838 INFO:main.py:242:print_splash_screen:Please cite:  Jurrus E, et al.  Improvements to the APBS biomolecular solvation software suite.  Protein Sci 27 112-128 (2018).
+2024-09-16 08:52:47,838 INFO:main.py:242:print_splash_screen:Please cite:  Dolinsky TJ, et al.  PDB2PQR: expanding and upgrading automated preparation of biomolecular structures for molecular simulations. Nucleic Acids Res 35 W522-W525 (2007).
+2024-09-16 08:52:47,838 INFO:main.py:768:main_driver:Checking and transforming input arguments.
+2024-09-16 08:52:47,839 INFO:main.py:772:main_driver:Loading topology files.
+2024-09-16 08:52:47,881 INFO:main.py:774:main_driver:Loading molecule: rage.capped.pdb
+2024-09-16 08:52:47,893 INFO:main.py:779:main_driver:Setting up molecule.
+2024-09-16 08:52:47,893 WARNING:biomolecule.py:992:create_residue:Unable to find amino or nucleic acid definition for ACE.  Parsing as new residue.
+2024-09-16 08:52:47,905 WARNING:biomolecule.py:992:create_residue:Unable to find amino or nucleic acid definition for NME.  Parsing as new residue.
+2024-09-16 08:52:47,906 INFO:main.py:417:setup_molecule:Created biomolecule object with 226 residues and 3465 atoms.
+2024-09-16 08:52:47,906 INFO:main.py:783:main_driver:Setting termini states for biomolecule chains.
+2024-09-16 08:52:47,911 INFO:main.py:613:non_trivial:Loading forcefield.
+2024-09-16 08:52:47,930 INFO:main.py:617:non_trivial:Loading hydrogen topology definitions.
+2024-09-16 08:52:47,932 INFO:main.py:468:is_repairable:This biomolecule is clean.  No repair needed.
+2024-09-16 08:52:47,933 INFO:main.py:632:non_trivial:Updating disulfide bridges.
+2024-09-16 08:52:47,933 INFO:main.py:635:non_trivial:Debumping biomolecule.
+2024-09-16 08:52:47,995 INFO:main.py:658:non_trivial:Adding hydrogens to biomolecule.
+2024-09-16 08:52:47,996 INFO:main.py:661:non_trivial:Debumping biomolecule (again).
+2024-09-16 08:52:48,055 INFO:main.py:663:non_trivial:Optimizing hydrogen bonds
+2024-09-16 08:52:48,402 INFO:main.py:675:non_trivial:Applying force field to biomolecule states.
+2024-09-16 08:52:48,402 WARNING:biomolecule.py:741:apply_force_field:Residue ACE A 0 has non-integer charge: -0.3369 deviates by 0.3369 from integral, exceeding error tolerance 0.001. 
+2024-09-16 08:52:48,404 WARNING:biomolecule.py:741:apply_force_field:Residue NME A 225 has non-integer charge: -0.2928 deviates by 0.2928 from integral, exceeding error tolerance 0.001. 
+2024-09-16 08:52:48,404 WARNING:main.py:708:non_trivial:Residue ACE A 0 has non-integer charge:  -0.3369 deviates by 0.3369 from integral, exceeding error tolerance 0.001
+2024-09-16 08:52:48,404 WARNING:main.py:708:non_trivial:Residue NME A 225 has non-integer charge:  -0.2928 deviates by 0.2928 from integral, exceeding error tolerance 0.001
+2024-09-16 08:52:48,404 CRITICAL:main.py:809:main_driver:9.3703 deviates by 0.3703000000000003 from integral, exceeding error tolerance 0.001
+2024-09-16 08:52:48,404 CRITICAL:main.py:810:main_driver:Giving up.

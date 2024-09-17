@@ -231,14 +231,14 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// Set DuMM atom indexes into atoms of bAtomList 
 	worlds[0].setDuMMAtomIndexes();
 	
-	#ifdef __DRILLING__
-		scout("Correspondence cAIx dAIx\n");
-		int ix = -1;
-		for(auto atom: atoms){
-			ix++;
-			spacedcout("aIx cAIx dAIx", ix, atom.getCompoundAtomIndex(), atom.getDuMMAtomIndex(), "\n");
-		}
-	#endif
+	// #ifdef __DRILLING__
+	// 	scout("Correspondence cAIx dAIx\n");
+	// 	int ix = -1;
+	// 	for(auto atom: atoms){
+	// 		ix++;
+	// 		spacedcout("aIx cAIx dAIx", ix, atom.getCompoundAtomIndex(), atom.getDuMMAtomIndex(), "\n");
+	// 	}
+	// #endif
 
 	// Victor - take a look
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
@@ -1517,13 +1517,13 @@ void Context::buildAcyclicGraph(
 				Compound::BondIndex(topology.getNumBonds() - 1), 0));
 		}
 
-		#ifdef __DRILLING__
-			// Print compound atom indices for child and parent
-			spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
-				child.getNumber(), child.getCompoundAtomIndex(),
-				parent.getNumber(), parent.getCompoundAtomIndex());
-			ceol;
-		#endif
+		// #ifdef __DRILLING__
+		// 	// Print compound atom indices for child and parent
+		// 	spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
+		// 		child.getNumber(), child.getCompoundAtomIndex(),
+		// 		parent.getNumber(), parent.getCompoundAtomIndex());
+		// 	ceol;
+		// #endif
 
 		// Set bBond Molmodel Compound::BondIndex
 		bBond& bond = bonds[ BONDS_to_bonds[molIx][bCnt] ];
@@ -5428,6 +5428,20 @@ void Context::RunReplicaRefactor(
 
 			int whichDCD = replica2ThermoIxs[replicaIx];
 			auto [x, y, z] = replicas[replicaIx].getCoordinates();
+
+			// Convert from nm to Angstrom
+			for (auto& coord : x) {
+				coord *= 10;
+			}
+
+			for (auto& coord : y) {
+				coord *= 10;
+			}
+
+			for (auto& coord : z) {
+				coord *= 10;
+			}
+
 			thermodynamicStates[whichDCD].writeDCD(x, y, z);
 		}
 
@@ -5605,15 +5619,15 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 			RunReplicaRefactor(mixi, replicaIx);
 
 			
-			for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
-				std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
-				std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
-				worlds[wIx].PrintXBMps();
-				std::cout << std::endl;
-			}
+			// for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
+			// 	std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
+			// 	std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
+			// 	worlds[wIx].PrintXBMps();
+			// 	std::cout << std::endl;
+			// }
 
-			printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
-			//printQStats(replica2ThermoIxs[replicaIx]);        
+			// printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
+			// //printQStats(replica2ThermoIxs[replicaIx]);        
 
 		} // end replicas simulations
 

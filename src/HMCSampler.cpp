@@ -248,6 +248,8 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		OMM_storeOMMConfiguration_X(dumm->OMM_getPositions());
 	}
 
+	std::cout << "checkpoint 1" << std::endl;
+
 	// Print Simbody
 	//world->PrintFullTransformationGeometry(someState,
 	//	true, true, true, true, true, true);
@@ -262,6 +264,8 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
 	);
+
+	std::cout << "checkpoint 2" << std::endl;
 
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -286,11 +290,15 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		setOldLogSineSqrGamma2(0.0);
 	}
 
+	std::cout << "checkpoint 3" << std::endl;
+
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_SET   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Store potential energies
 	setSetPE(getOldPE());
+
+	std::cout << "checkpoint 4" << std::endl;
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_SET  &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -318,12 +326,16 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_ZERO);
 	// }
 
+	std::cout << "checkpoint 5" << std::endl;
+
 	// Reset ndofs
 	ndofs = nu;
 
 	// TODO replaced code beloe
 	std::fill(UScaleFactors.begin(), UScaleFactors.end(), 1);
 	std::fill(InvUScaleFactors.begin(), InvUScaleFactors.end(), 1);
+
+	std::cout << "checkpoint 6" << std::endl;
 
 	// // Initialize velocities to temperature
 	// for (int j=0; j < nu; ++j){
@@ -333,6 +345,8 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	// Set the generalized velocities scale factors
 	loadUScaleFactors(someState);
+
+	std::cout << "checkpoint 7" << std::endl;
 
 	// Buffer to hold Q means
 	// if(this->nofSamples == 0){
@@ -346,12 +360,18 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
 
+	std::cout << "checkpoint 8" << std::endl;
+
 	// Set DuMM temperature : TODO: should propagate to OpenMM
 	if(this->integratorName == IntegratorName::OMMVV){
 		OMM_setDuMMTemperature(boostT);
 	}
 
+	std::cout << "checkpoint 9" << std::endl;
+
 	getMsg_InitialParams(samplerOutStream);
+
+	std::cout << "checkpoint 10" << std::endl;
 
 	return validated;
 
@@ -1169,10 +1189,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 			system->realize(someState, SimTK::Stage::Position);
 
-		}catch(const std::exception&){
+		}catch(const std::exception& e){
 
 			proposeExceptionCaught = true;
-
+			std::cerr << "[ERROR] Verlet Exception caught: " << e.what() << std::endl;
 			assignConfFromSetTVector(someState);
 
 		}
@@ -1183,10 +1203,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			// Call Simbody TimeStepper to advance time
 			integrateTrajectory_Bounded(someState);
 
-		}catch(const std::exception&){
+		}catch(const std::exception& e){
 
 			proposeExceptionCaught = true;
-
+			std::cerr << "[ERROR] BoundWalk Exception caught: " << e.what() << std::endl;
 			assignConfFromSetTVector(someState);
 			
 		}
@@ -1197,10 +1217,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			// Call Simbody TimeStepper to advance time
 			integrateTrajectory_BoundHMC(someState);
 
-		}catch(const std::exception&){
+		}catch(const std::exception& e){
 
 			proposeExceptionCaught = true;
-
+			std::cerr << "[ERROR] BoundHMC Exception caught: " << e.what() << std::endl;
 			assignConfFromSetTVector(someState);
 			
 		}
@@ -1211,10 +1231,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			// Call Simbody TimeStepper to advance time
 			integrateTrajectory_TaskSpace(someState);
 
-		}catch(const std::exception&){
+		}catch(const std::exception& e){
 
 			proposeExceptionCaught = true;
-
+			std::cerr << "[ERROR] StationsTask Exception caught: " << e.what() << std::endl;
 			assignConfFromSetTVector(someState);
 			
 		}
@@ -1227,12 +1247,19 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		try {
 			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
-			system->realizeTopology();
+			// system->realizeTopology();
 		}catch(const OpenMM::OpenMMException& e){
+
+			// never gets called, openmm does not throw when a coordinate is nan
 			std::cerr << "[ERROR] OpenMM Exception caught: " << e.what() << std::endl;
 			OMM_restoreConfiguration(someState);
 			proposeExceptionCaught = true;
 		}
+
+		// const auto& pos = dumm->OMM_getPositions();
+		// for (const auto& p : pos) {
+		// 	std::cout << "positions after integrate " << p[0] << " " << p[1] << " " << p[2] << std::endl;
+		// }
 
 	}else if(this->integratorName == IntegratorName::None){
 		try {
@@ -1240,10 +1267,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			// Advance to Position Stage
 			system->realize(someState, SimTK::Stage::Dynamics);
 
-		}catch(const std::exception&){
+		}catch(const std::exception& e){
 
 			proposeExceptionCaught = true;
-
+			std::cerr << "[ERROR] None Exception caught: " << e.what() << std::endl;
 			assignConfFromSetTVector(someState);
 			
 		}
@@ -1254,10 +1281,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			// Advance to Position Stage
 			system->realize(someState, SimTK::Stage::Dynamics);
 
-		}catch(const std::exception&){
+		}catch(const std::exception& e){
 
 			proposeExceptionCaught = true;
-			
+			std::cerr << "[ERROR] Empty Exception caught: " << e.what() << std::endl;
 			assignConfFromSetTVector(someState);
 
 		}
@@ -1801,15 +1828,14 @@ void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& po
 {
 	std::cout << "\nHMCSampler::OMM_storeOMMConfiguration_X " << omm_locations_old.size() << " " << positions.size() << std::endl;
 
-		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
-
-		for (int i = 0; i < positions.size(); i++) {
-			omm_locations_old[i + 1] = SimTK::Vec3(
-				positions[i][0],
-				positions[i][1],
-				positions[i][2]);
-		}
-
+	// TODO is this supposed to be zero?
+	omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
+	for (int i = 0; i < positions.size(); i++) {
+		omm_locations_old[i + 1] = SimTK::Vec3(
+			positions[i][0],
+			positions[i][1],
+			positions[i][2]);
+	}
 }
 
 
@@ -3166,6 +3192,8 @@ bool HMCSampler::propose(SimTK::State& someState)
 			// Set final total energies
 			etot_set = etot_n = SimTK::NaN;
 	}
+
+	// std::cout << "pe_set=" << pe_set << ", ke_set=" << ke_set << ", fix_set=" << fix_set << ", logSineSqrGamma2_set=" << logSineSqrGamma2_set << ", etot_set=" << etot_set << std::endl;
 
 	// TODO: Any validation should be inserted here
 

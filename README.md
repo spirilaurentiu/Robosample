@@ -445,3 +445,56 @@ quit
 
 ## receptor
 pdb2pqr --with-ph=7 --ff=AMBER --ffout=AMBER rage.B99990001.pdb rage.H.pdb
+
+
+
+
+
+
+
+## receptor
+1. `python3 model.py`
+2. `pdb2pqr --with-ph=7 --ff=AMBER --ffout=AMBER rage.B99990001.pdb rage.h.pdb`
+3. hide everything, show as lines.
+
+go to seq -> select first amino acid -> `center sele`. 
+n atom is blue. h atoms are white. right click each h atom -> atoms -> remove atoms
+lctrl + wheel -> alt+b (build -> residue -> acetyl) ACE
+
+unselect the previous sele.
+```
+sele name OXT
+center sele
+remove sele
+```
+select the carbon atom (green) it's connected to: lctrl + wheel -> alt+z (build -> residue -> n methyl) NME
+Export structure -> Export molecules -> Save as `rage.capped.h.pdb`.
+4. `python3 minimize.py --input rage.capped.h.pdb --output rage.min.capped.h.pdb`
+5. `pdb4amber -i rage.capped.h.pdb -o rage.capped.noh.pdb -y`
+# 4. `python3 minimize.py --input rage.capped.amber.h.pdb --output rage.min.capped.amber.h.pdb`
+Manually edit the file. Replace `HETATM` with `ATOM  ` and `CH3` and `NME` with `C  ` [even though it look sketchy](http://archive.ambermd.org/202208/0025.html). Delete `TER` records.
+
+
+## ligand
+echo "C1CCC(CC1)N(CC2=CC=CC=C2)C(=O)C3=CC=C(C=C3)Cl" | obabel -ismi -omol2 --gen3d > fps.mol2
+antechamber -i fps.mol2 -fi mol2 -o fps.amber.mol2 -fo mol2 -c gas -at sybyl
+antechamber -i fps.amber.mol2 -fi mol2 -o fps.prepi -fo prepi -c gas -at sybyl
+parmchk2 -i fps.amber.mol2 -f mol2 -o fps.frcmod
+
+## what we need for robosample
+1. rage.capped.noh.pdb
+2. fps.amber.mol2
+3. fps.prepi
+4. fps.frcmod
+
+source leaprc.protein.ff19SB
+source leaprc.gaff
+loadamberprep fps.prepi
+loadamberparams fps.frcmod
+
+protein = loadpdb rage.capped.noh.pdb
+ligand = loadmol2 fps.amber.mol2
+complex = combine {protein ligand}
+
+saveamberparm complex rage.fps.prmtop rage.fps.rst7
+quit

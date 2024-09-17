@@ -283,7 +283,7 @@ int testContext(int seed)
 	}
 
 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings };
-	std::vector<SimTK::Real> timesteps = { 1000000000, 0.006, 0.008 };
+	std::vector<SimTK::Real> timesteps = { 100000000000000, 0.006, 0.008 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
 	std::vector<int> mdsteps = { 50, 50, 50 };
 	std::vector<int> boostMDSteps = { 50, 50, 50 };

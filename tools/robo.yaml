@@ -11,9 +11,12 @@ dependencies:
   - salilab::modeller
   - matplotlib
   - scipy
-  - ambertools
+  - ambertools=23
   - openbabel
   - rdkit
+  - openmm
+  - parmed
+  - cudatoolkit=11.8.0
   # - libstdcxx-ng=12
   # - gcc=12
 
