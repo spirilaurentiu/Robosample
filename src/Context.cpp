@@ -348,9 +348,13 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 
 		// Add replicas
+		std::string restartDir = rexReader.getRestartDirectory();
+		if(restartDir.length() == 0){
+			restartDir = ".";
+		}
 		for(int k = 0; k < nofReplicas; k++){
 
-			inpcrd = rexReader.getRestartDirectory() + "/" 
+			inpcrd = restartDir + "/"
 				+ setupReader.get("INPCRD")[0]
 				+ ".s" + std::to_string(k) + ".rst7";
 
@@ -1061,8 +1065,8 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 		return false;
 	}
 	
-	if ( std::stoi((setupReader.get("SEED"))[0]) < 0 ) {
-		std::cerr << cerr_prefix << std::stoi((setupReader.get("SEED"))[0]) << " must be positive" << std::endl;
+	if ( std::stoll((setupReader.get("SEED"))[0]) < 0 ) {
+		std::cerr << cerr_prefix << std::stoll((setupReader.get("SEED"))[0]) << " must be positive" << std::endl;
 		return false;
 	}
 

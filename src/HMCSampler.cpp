@@ -3219,13 +3219,20 @@ void HMCSampler::teleport(SimTK::State& someState)
 {
 	if(matter->getNumBodies() == 3){
 
-		const SimTK::MobilizedBody& freeMobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
+		const SimTK::MobilizedBody& freeMobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1));
 
 		int numQ = freeMobod.getNumQ(someState);
 
+		// std::cout << "\nteleport numQ"
+		// 	<<" " << matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1)).getNumQ(someState)
+		// 	<<" " << matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2)).getNumQ(someState)
+		// 	<<" | " << matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1)).getBodyMass(someState)
+		// 	<<" " << matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2)).getBodyMass(someState)
+		// << std::endl;
+
 		if( numQ == 7){ // Free body
 
-			SimTK::Real constantFromOutput = 4; // 2 nm
+			SimTK::Real constantFromOutput = 4.0; // 1 nm
 
 			//const SimTK::Transform& X_FM = freeMobod.getMobilizerTransform(someState);
 			SimTK::Vector &stateQs = someState.updQ();
@@ -3236,6 +3243,8 @@ void HMCSampler::teleport(SimTK::State& someState)
 			SimTK::Real yCoord = generalCoords[5];
 			SimTK::Real zCoord = generalCoords[6];
 			SimTK::Real distance = std::sqrt((xCoord*xCoord) + (yCoord*yCoord) + (zCoord*zCoord));
+
+			std::cout << "\nteleport coords" <<" " << xCoord <<" " << yCoord <<" " << zCoord <<" " << distance << std::endl;
 
 			if(distance > constantFromOutput){
 
