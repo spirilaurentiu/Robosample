@@ -248,8 +248,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		OMM_storeOMMConfiguration_X(dumm->OMM_getPositions());
 	}
 
-	std::cout << "checkpoint 1" << std::endl;
-
 	// Print Simbody
 	//world->PrintFullTransformationGeometry(someState,
 	//	true, true, true, true, true, true);
@@ -264,9 +262,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
 	);
-
-	std::cout << "checkpoint 2" << std::endl;
-
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_O &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -290,15 +285,11 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		setOldLogSineSqrGamma2(0.0);
 	}
 
-	std::cout << "checkpoint 3" << std::endl;
-
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_SET   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Store potential energies
 	setSetPE(getOldPE());
-
-	std::cout << "checkpoint 4" << std::endl;
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_SET  &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -326,16 +317,12 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_ZERO);
 	// }
 
-	std::cout << "checkpoint 5" << std::endl;
-
 	// Reset ndofs
 	ndofs = nu;
 
 	// TODO replaced code beloe
 	std::fill(UScaleFactors.begin(), UScaleFactors.end(), 1);
 	std::fill(InvUScaleFactors.begin(), InvUScaleFactors.end(), 1);
-
-	std::cout << "checkpoint 6" << std::endl;
 
 	// // Initialize velocities to temperature
 	// for (int j=0; j < nu; ++j){
@@ -345,8 +332,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	// Set the generalized velocities scale factors
 	loadUScaleFactors(someState);
-
-	std::cout << "checkpoint 7" << std::endl;
 
 	// Buffer to hold Q means
 	// if(this->nofSamples == 0){
@@ -360,18 +345,12 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
 
-	std::cout << "checkpoint 8" << std::endl;
-
 	// Set DuMM temperature : TODO: should propagate to OpenMM
 	if(this->integratorName == IntegratorName::OMMVV){
 		OMM_setDuMMTemperature(boostT);
 	}
 
-	std::cout << "checkpoint 9" << std::endl;
-
 	getMsg_InitialParams(samplerOutStream);
-
-	std::cout << "checkpoint 10" << std::endl;
 
 	return validated;
 
@@ -517,10 +496,13 @@ void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
 void HMCSampler::perturbPositions(SimTK::State& someState,
 	PositionsPerturbMethod PPM)
 {
-	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
+
+	if( (PPM == PositionsPerturbMethod::BENDSTRETCH_1) ||
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_2) ||
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_3)){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 50){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
+		if(this->nofSamples >= 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 
 			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
 
@@ -580,11 +562,12 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			J_ini = calcMobodsMBAT(someState);
 
 			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
-			std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
+			//std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
 			bool T_Scale_Flag = true; // Are we doing temperature scaling
+
 			SimTK::Vector &stateQs = someState.updQ();
 			SimTK::Real scaleFactor = 1;
 			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
@@ -631,8 +614,23 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 
 					if(T_Scale_Flag){ // T-scaling
-						//stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
-						stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
+
+						if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
+
+							stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_2){
+
+							stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_3){
+
+							stateQs[qIx] = (*prev_dBMps)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else{
+							warnflush("Unknown scaling method");
+						}
+
 						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
 					}else{ // Constant scaling of BMp(w3)
@@ -658,7 +656,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//}
 
 			system->realize(someState, SimTK::Stage::Dynamics);
-			PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
+			//PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			
@@ -3077,18 +3075,25 @@ void HMCSampler::setSetConfigurationAndEnergiesToNew(
 /** Returns the 'how' argument of initializeVelocities */
 PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
 {
-	
-	PositionsPerturbMethod how = PositionsPerturbMethod::EMPTY;
+    PositionsPerturbMethod how = PositionsPerturbMethod::EMPTY;
 
-	if(this->DistortOpt < 0){
-		how = PositionsPerturbMethod::BENDSTRETCH;
+    switch (this->DistortOpt) {
+        case -1:
+            how = PositionsPerturbMethod::BENDSTRETCH_1;
+            break;
+        case -2:
+            how = PositionsPerturbMethod::BENDSTRETCH_2;
+            break;
+        case -3:
+            how = PositionsPerturbMethod::BENDSTRETCH_3;
+            break;
+        default:
+            how = PositionsPerturbMethod::EMPTY;
+            break;
+    }
 
-	}else{
-		how = PositionsPerturbMethod::EMPTY;
+    return how;	
 
-	}
-
-	return how;
 }
 
 /** Returns the 'how' argument of initializeVelocities */
@@ -3131,6 +3136,56 @@ ForcesPerturbMethod HMCSampler::forcesPerturbMethod(void)
 	// return ForcesPerturbMethod::NOT_IMPLEMENTED;
 }
 
+/*!
+ * <!-- Docking search teleport-->
+*/
+void HMCSampler::teleport(SimTK::State& someState)
+{
+	if(matter->getNumBodies() == 3){
+
+		const SimTK::MobilizedBody& freeMobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1));
+
+		int numQ = freeMobod.getNumQ(someState);
+
+		if( numQ == 7){ // Free body
+
+			SimTK::Real constantFromOutput = 0.5; // 1 nm
+
+			//const SimTK::Transform& X_FM = freeMobod.getMobilizerTransform(someState);
+			SimTK::Vector &stateQs = someState.updQ();
+			SimTK::QIndex first_qIx = freeMobod.getFirstQIndex(someState);			
+
+			SimTK::Vector generalCoords = freeMobod.getQAsVector(someState);
+
+			SimTK::Real xCoord = generalCoords[4];
+			SimTK::Real yCoord = generalCoords[5];
+			SimTK::Real zCoord = generalCoords[6];
+			SimTK::Real distance = std::sqrt((xCoord * xCoord) + (yCoord * yCoord) + (zCoord * zCoord));
+
+			// print general coords
+			std::cerr << "generalCoords " << generalCoords << std::endl;
+			std::cout << "\nteleport coords" <<" " << xCoord <<" " << yCoord <<" " << zCoord <<" " << distance << std::endl;
+
+			while (distance > constantFromOutput) {
+				std::uniform_real_distribution<SimTK::Real> dist(-1.0, 1.0);
+				SimTK::Real newX = dist(randomEngine);
+				SimTK::Real newY = dist(randomEngine);
+				SimTK::Real newZ = dist(randomEngine);
+
+				distance = std::sqrt((newX * newX) + (newY * newY) + (newZ * newZ));
+
+				if (distance <= constantFromOutput) {
+					stateQs[first_qIx + 4] = newX;
+					stateQs[first_qIx + 5] = newY;
+					stateQs[first_qIx + 6] = newZ;
+				}
+			}
+
+			system->realize(someState, SimTK::Stage::Position);
+		}
+
+	}	
+}
 
 /*!
  * <!-- Perturb Q, QDot or QDotDot -->
@@ -3150,6 +3205,10 @@ void HMCSampler::perturb_Q_QDot_QDotDot(
 
 	// Perturb forces
 	//perturbForces(someState, forcesPerturbMethod());
+
+	// Pentru_Victor
+	teleport(someState);
+
 }
 
 /**
@@ -3176,7 +3235,6 @@ bool HMCSampler::propose(SimTK::State& someState)
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
-
 
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {
@@ -4325,13 +4383,13 @@ void HMCSampler::setSphereRadius(float argSphereRadius)
 // }
 
 void HMCSampler::setNonequilibriumParameters(int distort, int work, int flow) {
-	DistortOpt = distort;
+	this->DistortOpt = distort;
 	WorkOpt = work;
 	FlowOpt = flow;
 }
 
 int HMCSampler::getDistortOption() const {
-	return DistortOpt;
+	return this->DistortOpt;
 }
 
 /*!

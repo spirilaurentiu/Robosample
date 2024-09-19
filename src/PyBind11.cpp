@@ -92,7 +92,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("setRequiredNofRounds", &Context::setRequiredNofRounds, "Set the required number of rounds")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency")
         .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency")
-        .def("setGBSA", &Context::setRunType, "Set the run type")
+        .def("setGBSA", &Context::setGBSA, "Set the GBSA global scale factor (0 for vaccum, 1 for water - implicit solvent)")
         .def("setRunType", &Context::setRunType, "Set the run type")
         .def("initialize", &Context::initialize, "Initialize the simulation")
         .def("addReplica", &Context::addReplica, "Add a replica")

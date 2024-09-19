@@ -524,7 +524,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 		// 	//std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qvars: ";
 		// 	//for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qvars[wPosInVector][qIx];}std::cout << std::endl; 			 
 		// } // )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) // @@@@@@@@@@@@@
-
+		
 	} // nofSamples gt 2
 
 	return true;
@@ -641,7 +641,7 @@ void ThermodynamicState::appendLog(const std::string& filename) {
 	}
 
 	// Write the header
-	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_set,ke_o,ke_n,fix_o,fix_n,fix_set,acc" << std::endl;
+	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_n,pe_set,ke_o,ke_n,ke_set,fix_o,fix_n,fix_set,acc" << std::endl;
 }
 
 

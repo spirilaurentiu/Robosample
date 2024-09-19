@@ -3544,7 +3544,7 @@ void Context::setThermostatesNonequilibrium(){
 		
 		for(auto distOpt : distortOptions){
 			
-			if(distOpt == -1){
+			if(distOpt != 0){
 				thermodynamicStates[thermoState_k].setNonequilibrium(1);
 				std::cout << "THERMO " << thermoState_k << " nonequil" << std::endl;
 			}
@@ -3908,26 +3908,26 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	}
 	if(printWithoutText){
 
-		std::stringstream rexDetStream;
-		rexDetStream.str("");
+		// std::stringstream rexDetStream;
+		// rexDetStream.str("");
 
-		rexDetStream 
-			<< "REXdetails " << ", " << thermoState_C << ", " << thermoState_H << ", "
-			<< replica_X << ", " << replica_Y << ", "
-			<< thermodynamicStates[thermoState_C].getBeta() << ", "
-			<< thermodynamicStates[thermoState_H].getBeta() << ", "
-			<< eC_X0 << ", " << eH_Y0 << ", " << eH_X0 << ", " << eC_Y0 << ", "
-			<< lC_Xtau << ", " << lH_Ytau << ", " << lH_Xtau << ", " << lC_Ytau << ", "
-			<< replicas[replica_X].get_WORK_Jacobian() << ", "
-			<< replicas[replica_Y].get_WORK_Jacobian() << ", "
-			<< replicas[replica_X].getTransferedEnergy() << ", "
-			<< replicas[replica_Y].getTransferedEnergy() << ", "
-			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
-			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
-			<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
-		;
+		// rexDetStream 
+		// 	<< "REXdetails " << ", " << thermoState_C << ", " << thermoState_H << ", "
+		// 	<< replica_X << ", " << replica_Y << ", "
+		// 	<< thermodynamicStates[thermoState_C].getBeta() << ", "
+		// 	<< thermodynamicStates[thermoState_H].getBeta() << ", "
+		// 	<< eC_X0 << ", " << eH_Y0 << ", " << eH_X0 << ", " << eC_Y0 << ", "
+		// 	<< lC_Xtau << ", " << lH_Ytau << ", " << lH_Xtau << ", " << lC_Ytau << ", "
+		// 	<< replicas[replica_X].get_WORK_Jacobian() << ", "
+		// 	<< replicas[replica_Y].get_WORK_Jacobian() << ", "
+		// 	<< replicas[replica_X].getTransferedEnergy() << ", "
+		// 	<< replicas[replica_Y].getTransferedEnergy() << ", "
+		// 	<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
+		// 	<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
+		// 	<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
+		// ;
 
-		std::cout << rexDetStream.str();		
+		// std::cout << rexDetStream.str();		
 
 	}
 
@@ -3998,9 +3998,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		swapThermodynamicStates(replica_X, replica_Y);
 		swapPotentialEnergies(replica_X, replica_Y);
 
-		std::cout << "1" 
-		<<", " << unifSample 
-		<< endl << endl;
+		// std::cout << "1" 
+		// <<", " << unifSample 
+		// << endl << endl;
 
 		returnValue = true;
 
@@ -4015,9 +4015,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		// Don't swap thermodynamics states nor energies
 
-		std::cout << "0"
-		<<", " << unifSample 
-		<< endl << endl;
+		// std::cout << "0"
+		// <<", " << unifSample 
+		// << endl << endl;
 
 		returnValue = false;
 	}
@@ -4114,18 +4114,18 @@ void Context::mixReplicas(int mixi)
 	if((mixi % swapEvery) == 0){
 
 		// Go through neighboring thermodynamic states
-		for(size_t thermoState_k = 0; thermoState_k < (nofThermodynamicStates - 1); thermoState_k += 1){
+		for(size_t thermoState_k = 0; thermoState_k < (nofThermodynamicStates - 1); thermoState_k += 2){
 
 			// Get replica corresponding to the thermodynamic state
 			int replica_i = thermo2ReplicaIxs[thermoState_k];
-			int replica_j = getThermoPair(replica_i);
+			//int replica_j = getThermoPair(replica_i);
+			int replica_j = exchangePairs[replica_i];
 
 			std::cout << "inside mixReplicas " << replica_i << " " << replica_j << std::endl;
 
 			// Attempt to swap
 			bool swapped = false;
 			if(replica_i != replica_j){
-				std::cout << "attempt to swap " << replica_i << " " << replica_j << std::endl;
 				swapped = attemptREXSwap(replica_i, replica_j);
 			}
 		}
@@ -4138,6 +4138,23 @@ void Context::mixReplicas(int mixi)
 	}
 
 }
+
+void Context::mixReplicasNew(int mixi)
+{
+	// if((mixi % swapEvery) == 0){
+
+	// 	int startFrom = mixi % 2;
+
+	// 	for(int thermoState_i = startFrom; thermoState_i <= (nofThermodynamicStates - 2); thermoState_i += 2){
+
+	// 		int thermoState_j = thermoState_i + 1;
+
+	// 		bool swapped = attemptREXSwap(thermo2ReplicaIxs[thermoState_i], thermo2ReplicaIxs[thermoState_j]);
+	// 	}
+
+	// }
+}
+
 
 // Load replica's atomLocations into it's front world
 int Context::restoreReplicaCoordinatesToFrontWorld(int whichReplica)
@@ -4733,7 +4750,7 @@ bool Context::RunWorld(int whichWorld)
 			numSamples, worldOutStream);
 
 	// Non-equilibrium world
-	} else if (distortOption == -1) {
+	} else if (distortOption != 0) {
 
 		// Generate samples
 		
@@ -5368,10 +5385,8 @@ void Context::RunReplicaRefactor(
 	for(int dIx = 0; dIx < distortOpts.size(); dIx++){
 		if(distortOpts[dIx] == 0){
 			equilWIxs.push_back(dIx);
-		}else if(distortOpts[dIx] < 0){
-			nonequilWIxs.push_back(dIx);
 		}else{
-			warn("Unknown distort option");
+			nonequilWIxs.push_back(dIx);
 		}
 	}
 
@@ -5618,23 +5633,20 @@ void Context::RunREXNew(int equilRounds, int prodRounds)
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
 
-			
 			// for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
 			// 	std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];
 			// 	std::cout << " wIx " << wIx << " nq " << worlds[wIx].getNQs() << " wN " << worlds[wIx].getNofSamples() <<" : ";
 			// 	worlds[wIx].PrintXBMps();
 			// 	std::cout << std::endl;
 			// }
-
 			// printQStats(replica2ThermoIxs[replicaIx]); // @@@@@@@@@@@@@
-			// //printQStats(replica2ThermoIxs[replicaIx]);        
-
+			
 		} // end replicas simulations
 
 		// Mix replicas
 		if(getRunType() != RUN_TYPE::DEFAULT){
 			
-			mixReplicas(mixi); // check this
+			mixReplicasNew(mixi); // check this
 			                                               
 			PrintNofAcceptedSwapsMatrix();
 		}
