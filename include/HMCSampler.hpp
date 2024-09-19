@@ -414,6 +414,8 @@ public:
 	ForcesPerturbMethod forcesPerturbMethod(void);
 
 	// Docking funcitons
+	SimTK::Transform getRandomSphericalTransform(SimTK::Real radius);
+	SimTK::Transform getRandomFM(SimTK::State& someState, SimTK::Real minDist, SimTK::Real maxDist);
 	void teleport(SimTK::State& someState);
 
 	// Perturb Q, QDot or QDotDot
