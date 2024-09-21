@@ -517,10 +517,13 @@ void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
 void HMCSampler::perturbPositions(SimTK::State& someState,
 	PositionsPerturbMethod PPM)
 {
-	if(PPM == PositionsPerturbMethod::BENDSTRETCH){
+
+	if( (PPM == PositionsPerturbMethod::BENDSTRETCH_1) ||
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_2) ||
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_3)){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 50){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
+		if(this->nofSamples >= 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 
 			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
 
@@ -580,11 +583,12 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			J_ini = calcMobodsMBAT(someState);
 
 			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
-			std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
+			//std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
 			bool T_Scale_Flag = true; // Are we doing temperature scaling
+
 			SimTK::Vector &stateQs = someState.updQ();
 			SimTK::Real scaleFactor = 1;
 			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
@@ -631,8 +635,23 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 
 					if(T_Scale_Flag){ // T-scaling
-						//stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
-						stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
+
+						if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
+
+							stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_2){
+
+							stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_3){
+
+							stateQs[qIx] = (*prev_dBMps)[qIx] * ((this->QScaleFactor) - 1);
+
+						}else{
+							warnflush("Unknown scaling method");
+						}
+
 						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
 					}else{ // Constant scaling of BMp(w3)
@@ -658,7 +677,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//}
 
 			system->realize(someState, SimTK::Stage::Dynamics);
-			PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
+			//PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
 
 			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
 			
@@ -3077,18 +3096,25 @@ void HMCSampler::setSetConfigurationAndEnergiesToNew(
 /** Returns the 'how' argument of initializeVelocities */
 PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
 {
-	
-	PositionsPerturbMethod how = PositionsPerturbMethod::EMPTY;
+    PositionsPerturbMethod how = PositionsPerturbMethod::EMPTY;
 
-	if(this->DistortOpt < 0){
-		how = PositionsPerturbMethod::BENDSTRETCH;
+    switch (this->DistortOpt) {
+        case -1:
+            how = PositionsPerturbMethod::BENDSTRETCH_1;
+            break;
+        case -2:
+            how = PositionsPerturbMethod::BENDSTRETCH_2;
+            break;
+        case -3:
+            how = PositionsPerturbMethod::BENDSTRETCH_3;
+            break;
+        default:
+            how = PositionsPerturbMethod::EMPTY;
+            break;
+    }
 
-	}else{
-		how = PositionsPerturbMethod::EMPTY;
+    return how;	
 
-	}
-
-	return how;
 }
 
 /** Returns the 'how' argument of initializeVelocities */
@@ -3337,7 +3363,6 @@ bool HMCSampler::propose(SimTK::State& someState)
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
-
 
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {
@@ -4486,13 +4511,13 @@ void HMCSampler::setSphereRadius(float argSphereRadius)
 // }
 
 void HMCSampler::setNonequilibriumParameters(int distort, int work, int flow) {
-	DistortOpt = distort;
+	this->DistortOpt = distort;
 	WorkOpt = work;
 	FlowOpt = flow;
 }
 
 int HMCSampler::getDistortOption() const {
-	return DistortOpt;
+	return this->DistortOpt;
 }
 
 /*!

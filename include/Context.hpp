@@ -481,6 +481,7 @@ public:
 
 	// Mix replicas
 	void mixReplicas(int mixi);
+	void mixReplicasNew(int mixi);
 
 	// ========================================================================
 	// Configuration manipulation functions between worlds and replicas

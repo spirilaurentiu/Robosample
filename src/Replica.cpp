@@ -210,8 +210,7 @@ void Replica::Print_WORK_Coordinates() const
 std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replica::getCoordinates() const {
 	std::vector<double> x, y, z;
 
-	for (int t = atomsLocations.size() - 1; t >= 0; t--) {
-		const auto& topology = atomsLocations[t];
+	for (const auto& topology : atomsLocations) {
 		for(auto& atomCoordinates : topology) {
 			x.push_back(atomCoordinates.second[0]);
 			y.push_back(atomCoordinates.second[1]);

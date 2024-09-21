@@ -410,8 +410,9 @@ public:
 	/** Returns the 'how' argument of perturbVelocities */
 	ForcesPerturbMethod forcesPerturbMethod(void);
 
+	// Docking funcitons
 	SimTK::Real getComComDistance(SimTK::State&  someState, SimTK::MobilizedBodyIndex mbx1, SimTK::MobilizedBodyIndex mbx2);
-	SimTK::Transform getRandomSphericalTransform(SimTK::Real sphereRadius);
+	SimTK::Transform getRandomSphericalTransform(SimTK::Real radius);
 	SimTK::Transform getRandomFM(SimTK::State& someState, SimTK::Real minDist, SimTK::Real maxDist);
 	void teleport(SimTK::State& someState);
 
@@ -664,7 +665,7 @@ public:
 	/**@}**/
 	// BAT --------------------------------------------------------------------
 
-	void set_dBMps(std::vector<SimTK::Real>& QArg){ prevBMps = &QArg; }
+	void set_dBMps(std::vector<SimTK::Real>& QArg){ prev_dBMps = &QArg; }
 
 	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
 	void setQmeans(std::vector<SimTK::Real>& QArg){ Qmeans = &QArg; }
@@ -679,7 +680,7 @@ protected:
 
 
 	// Buffers to hold Q statistics
-	std::vector<SimTK::Real>* prevBMps = nullptr;	
+	std::vector<SimTK::Real>* prev_dBMps = nullptr;	
 	std::vector<SimTK::Real>* previousQs = nullptr;
 	std::vector<SimTK::Real>* Qmeans = nullptr;
 	std::vector<SimTK::Real>* Qdiffs = nullptr;

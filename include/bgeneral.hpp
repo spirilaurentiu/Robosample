@@ -546,7 +546,9 @@ enum class IntegratorName {
 
 enum struct PositionsPerturbMethod : int {
 	EMPTY = 0,
-	BENDSTRETCH,
+	BENDSTRETCH_1,
+	BENDSTRETCH_2,
+	BENDSTRETCH_3,
 	NOF_
 };
 
