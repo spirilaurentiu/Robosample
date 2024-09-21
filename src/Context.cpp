@@ -4118,19 +4118,18 @@ void Context::mixReplicas(int mixi)
 	if((mixi % swapEvery) == 0){
 
 		// Go through neighboring thermodynamic states
-		for(size_t thermoState_k = 0; thermoState_k < (nofThermodynamicStates - 1); thermoState_k += 1){
+		for(size_t thermoState_k = 0; thermoState_k < (nofThermodynamicStates - 1); thermoState_k += 2){
 
 			// Get replica corresponding to the thermodynamic state
 			int replica_i = thermo2ReplicaIxs[thermoState_k];
 			//int replica_j = getThermoPair(replica_i);
 			int replica_j = exchangePairs[replica_i];
 
-			std::cout << "inside mixReplicas " << replica_i << " " << replica_j << std::endl;
-
 			// Attempt to swap
 			bool swapped = false;
 			if(replica_i != replica_j){
-				std::cout << "attempt to swap " << replica_i << " " << replica_j << std::endl;
+
+
 				swapped = attemptREXSwap(replica_i, replica_j);
 			}
 		}

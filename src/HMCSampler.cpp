@@ -248,8 +248,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		OMM_storeOMMConfiguration_X(dumm->OMM_getPositions());
 	}
 
-	std::cout << "checkpoint 1" << std::endl;
-
 	// Print Simbody
 	//world->PrintFullTransformationGeometry(someState,
 	//	true, true, true, true, true, true);
@@ -264,9 +262,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
 	);
-
-	std::cout << "checkpoint 2" << std::endl;
-
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_O &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -290,15 +285,11 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		setOldLogSineSqrGamma2(0.0);
 	}
 
-	std::cout << "checkpoint 3" << std::endl;
-
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_SET   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Store potential energies
 	setSetPE(getOldPE());
-
-	std::cout << "checkpoint 4" << std::endl;
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_SET  &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -326,16 +317,12 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_ZERO);
 	// }
 
-	std::cout << "checkpoint 5" << std::endl;
-
 	// Reset ndofs
 	ndofs = nu;
 
 	// TODO replaced code beloe
 	std::fill(UScaleFactors.begin(), UScaleFactors.end(), 1);
 	std::fill(InvUScaleFactors.begin(), InvUScaleFactors.end(), 1);
-
-	std::cout << "checkpoint 6" << std::endl;
 
 	// // Initialize velocities to temperature
 	// for (int j=0; j < nu; ++j){
@@ -345,8 +332,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	// Set the generalized velocities scale factors
 	loadUScaleFactors(someState);
-
-	std::cout << "checkpoint 7" << std::endl;
 
 	// Buffer to hold Q means
 	// if(this->nofSamples == 0){
@@ -360,18 +345,12 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
 
-	std::cout << "checkpoint 8" << std::endl;
-
 	// Set DuMM temperature : TODO: should propagate to OpenMM
 	if(this->integratorName == IntegratorName::OMMVV){
 		OMM_setDuMMTemperature(boostT);
 	}
 
-	std::cout << "checkpoint 9" << std::endl;
-
 	getMsg_InitialParams(samplerOutStream);
-
-	std::cout << "checkpoint 10" << std::endl;
 
 	return validated;
 

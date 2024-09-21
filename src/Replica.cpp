@@ -218,6 +218,15 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replic
 		}
 	}
 
+	// for (int t = atomsLocations.size() - 1; t >= 0; t--) {
+	// 	const auto& topology = atomsLocations[t];
+	// 	for(auto& atomCoordinates : topology) {
+	// 		x.push_back(atomCoordinates.second[0]);
+	// 		y.push_back(atomCoordinates.second[1]);
+	// 		z.push_back(atomCoordinates.second[2]);
+	// 	}
+	// }
+
 	return std::make_tuple(x, y, z);
 }
 
