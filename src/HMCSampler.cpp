@@ -3133,6 +3133,163 @@ ForcesPerturbMethod HMCSampler::forcesPerturbMethod(void)
 
 
 /*!
+ * <!-- Get inter body distance between center of masses -->
+*/
+SimTK::Real HMCSampler::getComComDistance(SimTK::State&  someState, SimTK::MobilizedBodyIndex mbx1, SimTK::MobilizedBodyIndex mbx2)
+{
+	// Get bodies
+	const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(mbx1);
+	const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(mbx2);
+
+	// Get body transforms
+	const Transform& X_GB1 = mobod1.getBodyTransform(someState);
+	//const Transform& X_BG1 = ~X_GB1;
+
+	const Transform& X_GB2 = mobod2.getBodyTransform(someState);
+	//const Transform& X_BG2 = ~X_GB2;
+
+	// Get centers of mass
+	const Vec3& C1 = mobod1.getBodyMassCenterStation(someState);
+	const Vec3& C1_inG = X_GB1.R() * C1;
+	//const Transform& X_GC1 = X_GB1 * Transform(Rotation(), C1);
+
+	const Vec3& C2 = mobod2.getBodyMassCenterStation(someState);
+	const Vec3& C2_inG = X_GB2.R() * C2;
+	//const Transform& X_GC2 = X_GB2 * Transform(Rotation(), C2);
+
+	return (C2_inG - C1_inG).norm();
+	
+}
+
+
+/*!
+ * <!-- Generate a random spherical transform -->
+*/
+SimTK::Transform
+HMCSampler::getRandomSphericalTransform(SimTK::Real sphereRadius)
+{
+
+	// Random transform
+	SimTK::Quaternion randQuat = generateRandomQuaternion();
+
+	// Sample a random vector centered in 0 and expressed in G
+	SimTK::Real theta = uniformRealDistribution_0_2pi(randomEngine);
+	SimTK::Real phi = std::acos(2.0 * uniformRealDistribution(randomEngine) - 1.0);
+	SimTK::Vec3 randVec;
+
+	randVec[0] = sphereRadius * std::cos(theta) * std::sin(phi);
+	randVec[1] = sphereRadius * std::sin(theta) * std::sin(phi);
+	randVec[2] = sphereRadius * std::cos(phi);
+
+	return Transform(Rotation(randQuat), randVec);
+
+}
+
+/*!
+ * <!-- Generate a random transform for docking -->
+*/
+SimTK::Transform
+HMCSampler::getRandomFM(SimTK::State& someState, SimTK::Real minDist, SimTK::Real maxDist)
+{
+
+	// Get bodies
+	const SimTK::MobilizedBody& lig_Mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(1));
+	const SimTK::MobilizedBody& rec_Mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(2));
+
+	// Get body transforms X_GP, X_GB
+	const Transform& rec_GO = rec_Mobod.getBodyTransform(someState);
+	//const Transform& rec_OG = ~rec_GO;
+
+	const Transform& lig_GB = lig_Mobod.getBodyTransform(someState);
+	//const Transform& lig_BG = ~lig_GB;
+
+	// Get centers of mass
+	const Vec3& rec_C = rec_Mobod.getBodyMassCenterStation(someState);
+	//const Vec3& rec_C_inG = rec_GO.R() * rec_C;
+	const Transform& rec_GC = rec_GO * Transform(Rotation(), rec_C);
+
+	// const Vec3& lig_C = lig_Mobod.getBodyMassCenterStation(someState);
+	// const Vec3& lig_C_G = lig_GB.R() * lig_C;
+	// const Transform& lig_GC = lig_GB * Transform(Rotation(), lig_C);
+
+	// Get ligand transforms
+	const Transform& lig_PF = lig_Mobod.getInboardFrame(someState);
+	const Transform& lig_FP = ~lig_PF;
+	//const Transform& lig_FM = lig_Mobod.getMobilizerTransform(someState);
+	const Transform& lig_BM = lig_Mobod.getOutboardFrame(someState);
+	//const Transform& lig_MB = ~lig_BM;
+	//const Transform& lig_PB = lig_PF * lig_FM * lig_MB;
+
+	SimTK::Real randRadiusInShell = 0;
+	if(minDist == maxDist){
+		randRadiusInShell = minDist;
+	}else{
+		randRadiusInShell = (maxDist - minDist) * uniformRealDistribution(randomEngine) + minDist;
+	}
+	Transform X_CR = getRandomSphericalTransform(randRadiusInShell);
+	//PrintTransform(X_CR, 3, "X_CR", "X_CR");
+
+	// Solve for new X_FM
+	Transform X_FM_new = lig_FP * rec_GC * X_CR * lig_BM;
+
+	return X_FM_new;
+
+}
+
+
+/*!
+ * <!-- Docking search teleport-->
+*/
+void HMCSampler::teleport(SimTK::State& someState)
+{
+
+	if(matter->getNumBodies() == 3){
+
+		SimTK::MobilizedBody& lig_Mobod = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(1));
+		SimTK::MobilizedBody& rec_Mobod = matter->updMobilizedBody(SimTK::MobilizedBodyIndex(2));
+
+		int numQ = lig_Mobod.getNumQ(someState);
+
+		if( numQ == 7){ // Free body
+
+			SimTK::Real constantFromOutput = 5.0; // nm
+			SimTK::Real shellWidth = 0.5;
+			SimTK::Real minDist = constantFromOutput - shellWidth; 
+			SimTK::Real maxDist = constantFromOutput + shellWidth;
+
+			//const SimTK::Transform& X_FM = freeMobod.getMobilizerTransform(someState);
+			//const SimTK::Vector &stateQs = someState.getQ();
+			//SimTK::QIndex first_qIx = lig_Mobod.getFirstQIndex(someState);			
+			// SimTK::Vector generalCoords = lig_Mobod.getQAsVector(someState);
+			// SimTK::Real xCoord = generalCoords[4];
+			// SimTK::Real yCoord = generalCoords[5];
+			// SimTK::Real zCoord = generalCoords[6];
+			// SimTK::Real distance = std::sqrt((xCoord*xCoord) + (yCoord*yCoord) + (zCoord*zCoord));
+			//std::cout << "\nteleport coords" <<" " << xCoord <<" " << yCoord <<" " << zCoord <<" " << distance << std::endl;
+
+			SimTK::Real distance = getComComDistance(someState, rec_Mobod.getMobilizedBodyIndex(), lig_Mobod.getMobilizedBodyIndex());
+
+			if(distance > constantFromOutput){
+			//if(true){
+
+				// Move this
+				Transform X_FM_new = getRandomFM(someState, minDist, maxDist);
+
+				//PrintTransform(X_FM_new, 3, "X_FM_new", "X_FM_new"); std::cout << std::flush;
+
+				lig_Mobod.setQToFitTransform(someState, X_FM_new);
+
+				std::cout << "\n\nJUMPED\n\n";
+
+			}
+
+			system->realize(someState, SimTK::Stage::Position);
+		}
+
+	}	
+}
+
+/*!
  * <!-- Perturb Q, QDot or QDotDot -->
 */
 void HMCSampler::perturb_Q_QDot_QDotDot(
@@ -3150,6 +3307,10 @@ void HMCSampler::perturb_Q_QDot_QDotDot(
 
 	// Perturb forces
 	//perturbForces(someState, forcesPerturbMethod());
+
+	// Pentru_Victor
+	teleport(someState);
+
 }
 
 /**

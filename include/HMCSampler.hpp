@@ -410,6 +410,11 @@ public:
 	/** Returns the 'how' argument of perturbVelocities */
 	ForcesPerturbMethod forcesPerturbMethod(void);
 
+	SimTK::Real getComComDistance(SimTK::State&  someState, SimTK::MobilizedBodyIndex mbx1, SimTK::MobilizedBodyIndex mbx2);
+	SimTK::Transform getRandomSphericalTransform(SimTK::Real sphereRadius);
+	SimTK::Transform getRandomFM(SimTK::State& someState, SimTK::Real minDist, SimTK::Real maxDist);
+	void teleport(SimTK::State& someState);
+
 	// Perturb Q, QDot or QDotDot
 	void perturb_Q_QDot_QDotDot(SimTK::State& someState);
 
