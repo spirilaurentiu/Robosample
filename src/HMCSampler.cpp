@@ -1311,28 +1311,39 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		// This code works for updating simbody bodies
 		// each body should be an atom
 		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
-
 		try {
 			// Actual openmm integration
 			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
-
 			// Somewhere, the topology gets ruined
 			system->realizeTopology();
-
 			// // Transfer back to Simbody (TODO: might be redundant)
 			// OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
-
 		}catch(const std::exception&){
-
 			// Send general message
 			proposeExceptionCaught = true;
-
 			OMM_restoreConfiguration(someState);
-
 			// // Transfer back to Simbody (TODO: might be redundant)
 			// OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
-
 		}
+
+		// // This code works for updating simbody bodies
+        // // each body should be an atom
+        // assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
+        // // Save coordinates before integration
+        // omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
+        // const auto& positions = dumm->OMM_getPositions();
+        // for (int i = 0; i < positions.size(); i++) {
+        //     omm_locations_old[i + 1] = SimTK::Vec3(positions[i][0], positions[i][1], positions[i][2]);
+        // }
+        // try {
+        //     dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+        //     // system->realizeTopology();
+        // }catch(const OpenMM::OpenMMException& e){
+        //     // never gets called, openmm does not throw when a coordinate is nan
+        //     std::cerr << "[ERROR] OpenMM Exception caught: " << e.what() << std::endl;
+        //     OMM_restoreConfiguration(someState);
+        //     proposeExceptionCaught = true;
+        // }
 
 	}else if(this->integratorName == IntegratorName::EMPTY){
 		try {
@@ -3336,7 +3347,7 @@ void HMCSampler::teleport(SimTK::State& someState)
 
 		if( numQ == 7){ // Free body
 
-			SimTK::Real constantFromOutput = 5.0; // nm
+			SimTK::Real constantFromOutput = 4.5; // nm
 			SimTK::Real shellWidth = 0.5;
 			SimTK::Real minDist = constantFromOutput - shellWidth; 
 			SimTK::Real maxDist = constantFromOutput + shellWidth;
@@ -3363,7 +3374,7 @@ void HMCSampler::teleport(SimTK::State& someState)
 
 				lig_Mobod.setQToFitTransform(someState, X_FM_new);
 
-				std::cout << "\n\nJUMPED\n\n";
+				//std::cout << "\n\nJUMPED\n\n";
 
 			}
 
