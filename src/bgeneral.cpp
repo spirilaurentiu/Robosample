@@ -1476,7 +1476,23 @@ SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& 
 
 }
 
-
-
-
-
+std::string IntegratorName2String(IntegratorName name) {
+    switch (name) {
+        case IntegratorName::None: return "None";
+        case IntegratorName::Verlet: return "Verlet";
+        case IntegratorName::Euler: return "Euler";
+        case IntegratorName::Euler2: return "Euler2";
+        case IntegratorName::Cpodes: return "Cpodes";
+        case IntegratorName::RungeKutta: return "RungeKutta";
+        case IntegratorName::RungeKutta2: return "RungeKutta2";
+        case IntegratorName::RungeKutta3: return "RungeKutta3";
+        case IntegratorName::RungeKuttaFeldberg: return "RungeKuttaFeldberg";
+        case IntegratorName::BendStretch: return "BendStretch";
+        case IntegratorName::OMMVV: return "OMMVV";
+        case IntegratorName::BoundWalk: return "BoundWalk";
+        case IntegratorName::BoundHMC: return "BoundHMC";
+        case IntegratorName::StationsTask: return "StationsTask";
+        case IntegratorName::NofIntegrators: return "NofIntegrators";
+        default: return "Unknown";
+    }
+}

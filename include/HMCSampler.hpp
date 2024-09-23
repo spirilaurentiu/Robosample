@@ -287,7 +287,7 @@ public:
 	virtual void calcProposedKineticAndTotalEnergyOld(SimTK::State& someState);
 
 	/** Apply the L operator **/
-	virtual void integrateTrajectory(SimTK::State& someState);
+	virtual bool integrateTrajectory(SimTK::State& someState);
 	void integrateVariableTrajectory(SimTK::State& someState);
 
 	/** Integrate trajectory one step at a time to compute quantities instantly **/
@@ -389,12 +389,7 @@ public:
 
 	void OMM_PrintLocations(void);
 
-
-	void OMM_integrateTrajectory(SimTK::State&);
-
 	//void OMM_calcNewEnergies(void);
-
-	void OMM_restoreConfiguration(SimTK::State& someState);
 
 	void setSphereRadius(float argSphereRadius);
 

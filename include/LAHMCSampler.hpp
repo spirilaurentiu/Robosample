@@ -92,7 +92,7 @@ public:
     void calcProposedKineticAndTotalEnergy(SimTK::State& someState);
 
     /** Apply the L operator **/
-    void integrateTrajectory(SimTK::State& someState);
+    bool integrateTrajectory(SimTK::State& someState);
 
     /** Store new configuration and energy terms**/
     void calcNewConfigurationAndEnergies(SimTK::State& someState, int k);

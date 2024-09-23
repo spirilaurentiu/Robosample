@@ -381,12 +381,12 @@ void LAHMCSampler::calcProposedKineticAndTotalEnergy(SimTK::State& someState){
 }
     
 /** Apply the L operator **/
-void LAHMCSampler::integrateTrajectory(SimTK::State& someState){    
+bool LAHMCSampler::integrateTrajectory(SimTK::State& someState){    
     try {
         this->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
         system->realize(someState, SimTK::Stage::Position);
+        return true;
     }catch(const std::exception&){
-        proposeExceptionCaught = true;
         //std::cout << "HMC_stepTo_or_realizePosition_threw_exception";
         int i = 0;
         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -395,8 +395,8 @@ void LAHMCSampler::integrateTrajectory(SimTK::State& someState){
             i++;
         }
         system->realize(someState, SimTK::Stage::Position);
+        return false;
     }
-
 }
 
 /** Store new configuration and energy terms**/

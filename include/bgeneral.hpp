@@ -702,6 +702,8 @@ bMatrix& gram_schmidt(bMatrix& M, bMatrix& es);
 
 SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& Q2);
 
+std::string IntegratorName2String(IntegratorName name);
+
 
 #ifndef MONTECARLOSAMPLER
 #define MONTECARLOSAMPLER MC

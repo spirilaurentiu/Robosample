@@ -47,7 +47,6 @@ c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 flex = [robosample.BondFlexibility(-1, 0, robosample.BondMobility.Free),
         robosample.BondFlexibility(-1, 3466, robosample.BondMobility.Rigid)]
 c.addWorld(True, 1, robosample.RootMobility.FREE, flex, True, False, 0)
-c.addWorld(True, 1, robosample.RootMobility.FREE, flex, True, False, 0)
 
 # samplers
 sampler = robosample.SamplerName.HMC # rename to type
@@ -57,17 +56,16 @@ c.getWorld(0).addSampler(sampler, robosample.IntegratorName.OMMVV, thermostat, F
 c.getWorld(1).addSampler(sampler, robosample.IntegratorName.Verlet, thermostat, True)
 c.getWorld(2).addSampler(sampler, robosample.IntegratorName.Verlet, thermostat, True)
 c.getWorld(3).addSampler(sampler, robosample.IntegratorName.Verlet, thermostat, True)
-c.getWorld(4).addSampler(sampler, robosample.IntegratorName.Verlet, thermostat, True)
 
 # Sampler data
-accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings]
-timesteps = [0.001, 0.005, 0.01, 0.01, 3]
-world_indexes = [0, 1, 2, 3, 4]
-mdsteps = boost_md_steps = [50, 10, 10, 10, 1]
-distort_options = [0, 0, 0, 0, 0]
-distort_args = ["0", "0", "0", "0", "0"]
-flow = [0, 0, 0, 0, 0]
-work = [0, 0, 0, 0, 0]
+timesteps = [0.001, 0.005, 0.01, 1]
+world_indexes = [0, 1, 2, 3]
+mdsteps = boost_md_steps = [25, 10, 10, 2]
+distort_options = [0, 0, 0, 0]
+distort_args = ["0", "0", "0", "0"]
+flow = [0, 0, 0, 0]
+work = [0, 0, 0, 0]
+accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] * len(world_indexes)
 
 # Calculate the common ratio for geometric progression
 if args.num_replicas > 1:
@@ -89,7 +87,7 @@ c.initialize()
 # start the simulation
 c.RunREXNew(args.equil_steps, args.prod_steps)
 
-# cd build/ && python3 simulate.py rage.fps.0 rage.fps.0.prmtop rage.fps.0.min.rst7 42 1 499 1 1 300 600 && python3 simulate.py rage.fps.4 rage.fps.4.prmtop rage.fps.4.min.rst7 42 1 499 1 1 300 600
-# cd build/ && python3 simulate.py rage.fps.1 rage.fps.1.prmtop rage.fps.1.min.rst7 42 1 499 1 1 300 600 && python3 simulate.py rage.fps.5 rage.fps.5.prmtop rage.fps.5.min.rst7 42 1 499 1 1 300 600
-# cd build/ && python3 simulate.py rage.fps.2 rage.fps.2.prmtop rage.fps.2.min.rst7 42 1 499 1 1 300 600 && python3 simulate.py rage.fps.6 rage.fps.6.prmtop rage.fps.6.min.rst7 42 1 499 1 1 300 600
-# cd build/ && python3 simulate.py rage.fps.3 rage.fps.3.prmtop rage.fps.3.min.rst7 42 1 499 1 1 300 600 && python3 simulate.py rage.fps.7 rage.fps.7.prmtop rage.fps.7.min.rst7 42 1 499 1 1 300 600
+# cd build/ && python3 simulate.py rage.fps.0 rage.fps.0.prmtop rage.fps.0.min.rst7 42 1 999 1 1 300 600 && python3 simulate.py rage.fps.4 rage.fps.4.prmtop rage.fps.4.min.rst7 42 1 499 1 1 300 600
+# cd build/ && python3 simulate.py rage.fps.1 rage.fps.1.prmtop rage.fps.1.min.rst7 42 1 999 1 1 300 600 && python3 simulate.py rage.fps.5 rage.fps.5.prmtop rage.fps.5.min.rst7 42 1 499 1 1 300 600
+# cd build/ && python3 simulate.py rage.fps.2 rage.fps.2.prmtop rage.fps.2.min.rst7 42 1 999 1 1 300 600 && python3 simulate.py rage.fps.6 rage.fps.6.prmtop rage.fps.6.min.rst7 42 1 499 1 1 300 600
+# cd build/ && python3 simulate.py rage.fps.3 rage.fps.3.prmtop rage.fps.3.min.rst7 42 1 999 1 1 300 600 && python3 simulate.py rage.fps.7 rage.fps.7.prmtop rage.fps.7.min.rst7 42 1 499 1 1 300 600
