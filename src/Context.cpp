@@ -5743,6 +5743,8 @@ void Context::RunREXNew()
 		// Update work scale factors
 		updQScaleFactors(mixi);
 
+//Print_TRANSFORMERS_Work();
+
 		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 
