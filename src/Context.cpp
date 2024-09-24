@@ -5769,7 +5769,7 @@ void Context::RunREXNew()
 		} // end replicas simulations
 
 		// Mix replicas
-		if(getRunType() != RUN_TYPE::DEFAULT){
+		if((getRunType() != RUN_TYPE::DEFAULT) && (nofReplicas != 1)){
 			
 			mixReplicasNew(mixi); // check this
 			                                               

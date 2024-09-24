@@ -3336,7 +3336,7 @@ void HMCSampler::teleport(SimTK::State& someState)
 
 		if( numQ == 7){ // Free body
 
-			SimTK::Real constantFromOutput = 5.0; // nm
+			SimTK::Real constantFromOutput = 4.5; // nm
 			SimTK::Real shellWidth = 0.5;
 			SimTK::Real minDist = constantFromOutput - shellWidth; 
 			SimTK::Real maxDist = constantFromOutput + shellWidth;
@@ -3363,7 +3363,7 @@ void HMCSampler::teleport(SimTK::State& someState)
 
 				lig_Mobod.setQToFitTransform(someState, X_FM_new);
 
-				std::cout << "\n\nJUMPED\n\n";
+				std::cout << "\nJUMPED\n";
 
 			}
 
@@ -3397,6 +3397,77 @@ void HMCSampler::perturb_Q_QDot_QDotDot(
 
 }
 
+void HMCSampler::printDrilling(SimTK::State& someState)
+{
+	std::cout << "\n" ; // 
+	// SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+	// SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+	// SimTK::DuMMForceFieldSubsystem& dumm = *(world.updForceField());
+	// SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+
+	// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	// 	SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+	// 	int numQ = mobod.getNumQ(someState);
+	// 	SimTK::QIndex firstQIx = mobod.getFirstQIndex(someState);
+	// 	int qCnt = -1; for(int qIx = firstQIx; qIx < firstQIx + numQ; qIx++){++qCnt;
+	// 		std::cout << "drl mbx qIx qCnt QDot" <<" " << int(mbx) <<" " << qIx <<" " << qCnt <<" " << mobod.getOneQDot(someState, qCnt)<< std::endl;
+	// 	}
+	// }
+
+	if(this->nofSamples == 0){
+		std::cout << "drl mbx";
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			int numQ = mobod.getNumQ(someState);
+			SimTK::QIndex firstQIx = mobod.getFirstQIndex(someState);
+			int qCnt = -1; for(int qIx = firstQIx; qIx < firstQIx + numQ; qIx++){++qCnt;
+				std::cout <<" " << int(mbx);
+			}
+		} std::cout<<std::endl;
+
+		std::cout << "drl qIx";
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			int numQ = mobod.getNumQ(someState);
+			SimTK::QIndex firstQIx = mobod.getFirstQIndex(someState);
+			int qCnt = -1; for(int qIx = firstQIx; qIx < firstQIx + numQ; qIx++){++qCnt;
+				std::cout <<" " << qIx;
+			}
+		} std::cout<<std::endl;
+	}
+
+	std::cout << "drl Q";
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+		int numQ = mobod.getNumQ(someState);
+		SimTK::QIndex firstQIx = mobod.getFirstQIndex(someState);
+		int qCnt = -1; for(int qIx = firstQIx; qIx < firstQIx + numQ; qIx++){++qCnt;
+			std::cout <<" " << mobod.getOneQ(someState, qCnt);
+		}
+	} std::cout<<std::endl;
+
+	std::cout << "drl QDot";
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+		int numQ = mobod.getNumQ(someState);
+		SimTK::QIndex firstQIx = mobod.getFirstQIndex(someState);
+		int qCnt = -1; for(int qIx = firstQIx; qIx < firstQIx + numQ; qIx++){++qCnt;
+			std::cout <<" " << mobod.getOneQDot(someState, qCnt);
+		}
+	} std::cout<<std::endl;
+
+	std::cout << "drl QDotDot ";
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+		int numQ = mobod.getNumQ(someState);
+		SimTK::QIndex firstQIx = mobod.getFirstQIndex(someState);
+		int qCnt = -1; for(int qIx = firstQIx; qIx < firstQIx + numQ; qIx++){++qCnt;
+			std::cout <<" " << mobod.getOneQDotDot(someState, qCnt);
+		}
+	} std::cout<<std::endl;		
+		
+}
+
 /**
  * It implements the proposal move in the Hamiltonian Monte Carlo
  * algorithm. It essentially propagates the trajectory.
@@ -3421,6 +3492,11 @@ bool HMCSampler::propose(SimTK::State& someState)
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
+
+	// drl
+	#ifdef __DRILLING__
+		printDrilling(someState);
+	#endif
 
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {

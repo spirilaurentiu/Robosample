@@ -422,6 +422,8 @@ public:
 	// Perturb Q, QDot or QDotDot
 	void perturb_Q_QDot_QDotDot(SimTK::State& someState);
 
+	void printDrilling(SimTK::State& someState);
+	
 	/** It implements the proposal move in the Hamiltonian Monte Carlo
 	algorithm. It essentially propagates the trajectory after it stores
 	the configuration and energies. Returns true if the proposal is 
