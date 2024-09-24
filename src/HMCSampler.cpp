@@ -3374,11 +3374,7 @@ void HMCSampler::teleport(SimTK::State& someState)
 
 				lig_Mobod.setQToFitTransform(someState, X_FM_new);
 
-<<<<<<< HEAD
-				std::cout << "\nJUMPED\n";
-=======
-				//std::cout << "\n\nJUMPED\n\n";
->>>>>>> 998edc05cedaf480247f6a927ffd714b8f4ef5ae
+				//std::cout << "\nJUMPED\n";
 
 			}
 
