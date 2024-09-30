@@ -348,7 +348,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 
 		// Add replicas
-		std::string restartDir = rexReader.getRestartDirectory();
+		std::string restartDir = setupReader.get("RESTART_DIR")[0];
 		if(restartDir.length() == 0){
 			restartDir = ".";
 		}

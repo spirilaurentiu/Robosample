@@ -173,9 +173,10 @@ int SetupReader::readREXConfigFile(std::string FN,
 			if((words[0][0] != '#') && (words.size() >= 2)){
 				if(words[0] == "NOF_REPLICAS"){
 					nofReplicas = std::stoi(words[1]);
-				}else if(words[0] == "RESTART_DIR"){
-					restartDirectory = words[1];
 				}
+				// else if(words[0] == "RESTART_DIR"){
+				// 	restartDirectory = words[1];
+				// }
 			}
 		}
 	}
@@ -308,8 +309,10 @@ int SetupReader::readREXConfigFile(std::string FN,
 	
 }
 
-std::string& SetupReader::getRestartDirectory(void)
+const std::string& SetupReader::getRestartDirectory(void)
 {
-	return restartDirectory;
+	//return restartDirectory;
+
+	return get("RESTART_DIR")[0];
 }
 

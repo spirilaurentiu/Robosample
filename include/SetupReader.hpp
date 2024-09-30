@@ -61,7 +61,7 @@ public:
 		std::vector<std::vector<int>>& rexMdsteps,
 		std::vector<std::vector<int>>& rexSamplesPerRound);
 
-	std::string& getRestartDirectory(void);
+	const std::string& getRestartDirectory(void);
 
 private:
 	std::map<std::string, std::vector<std::string>> Args;
