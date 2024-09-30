@@ -565,7 +565,7 @@ public:
 	void setRunType(RUN_TYPE runTypeArg);
 
 	// Run a particular world
-	bool RunWorld(int whichWorld);
+	bool RunWorld(int whichWorld, const std::string& header);
 
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);

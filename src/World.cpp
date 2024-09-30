@@ -3453,8 +3453,9 @@ bool World::generateProposal(void)
  *  Generate a number of samples
  * */
 bool World::generateSamples(int howMany,
-	std::stringstream& worldOutStream)
+	std::stringstream& worldOutStream, const std::string& header)
 {
+
 	// Update Robosample bAtomList
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
@@ -3464,9 +3465,13 @@ bool World::generateSamples(int howMany,
 		worldOutStream);
 
 	for(int k = 0; k < howMany; k++) {
+		worldOutStream << header << " ";
+		updSampler(0)->getMsg_InitialParams(worldOutStream);
+
 		validated = updSampler(0)->sample_iteration(
 			currentAdvancedState, worldOutStream) 
 			&& validated;
+		worldOutStream << "\n";
 	}
 
 	// Return the number of accepted samples

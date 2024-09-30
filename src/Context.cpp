@@ -5017,7 +5017,7 @@ void Context::updWorldsDistortOptions(int thisReplica)
 }
 
 // Run a particular world
-bool Context::RunWorld(int whichWorld)
+bool Context::RunWorld(int whichWorld, const std::string& header)
 {
 
 	// Prepare output
@@ -5034,7 +5034,7 @@ bool Context::RunWorld(int whichWorld)
 
 		// Generate samples
 		validated = worlds[whichWorld].generateSamples(
-			numSamples, worldOutStream);
+			numSamples, worldOutStream, header);
 
 	// Non-equilibrium world
 	} else if (distortOption != 0) {
@@ -5075,8 +5075,10 @@ bool Context::RunWorld(int whichWorld)
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
+					std::cout << header;
 					validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(
 						currentAdvancedState, worldOutStream) && validated;
+					std::cout << "\n";
 				}
 
 				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
@@ -5104,7 +5106,7 @@ bool Context::RunWorld(int whichWorld)
 	}
 
 	// Print the world output stream
-	std::cout << worldOutStream.str() << std::endl;
+	std::cout << worldOutStream.str();
 
 	return validated;
 }
@@ -5147,7 +5149,7 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 
 	// == SAMPLE == from the front world
 	frontWorldIx = worldIxs.front();
-	validated = RunWorld(frontWorldIx);
+	validated = RunWorld(frontWorldIx, "");
 
 	// Write pdbs every world
 	//writePdbs(nofRounds, frontWorldIx);
@@ -5492,9 +5494,11 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 
 		// Run
 		int srcStatsWIx  = specificWIxs[spWCnt];
-		std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
 
-		validated = RunWorld(srcStatsWIx) && validated;
+		//std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
+		std::string headerToRunWorld = "REX, " + std::to_string(replicaIx) + ", " + std::to_string(thermoIx) + " , " + std::to_string(srcStatsWIx);
+
+		validated = RunWorld(srcStatsWIx, headerToRunWorld ) && validated;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
 		// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
@@ -5526,8 +5530,11 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 
 	// Run the last world
 	int srcStatsWIx = specificWIxs.back();
-	std::cout << "REX, " << replicaIx << ", " << thermoIx << ", " << specificWIxs.back();
-	validated = RunWorld(srcStatsWIx) && validated;
+
+	//std::cout << "REX, " << replicaIx << ", " << thermoIx << ", " << specificWIxs.back();
+	std::string headerToRunWorld = "REX, " + std::to_string(replicaIx) + ", " + std::to_string(thermoIx) + " , " + std::to_string(srcStatsWIx);
+
+	validated = RunWorld(srcStatsWIx, headerToRunWorld) && validated;
 
 	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
 	// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@

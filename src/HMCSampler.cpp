@@ -379,7 +379,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		OMM_setDuMMTemperature(boostT);
 	}
 
-	getMsg_InitialParams(samplerOutStream);
+	// getMsg_InitialParams(samplerOutStream);
 
 	return validated;
 
@@ -3506,7 +3506,8 @@ bool HMCSampler::propose(SimTK::State& someState)
 
 	// drl
 	#ifdef __DRILLING__
-		printDrilling(someState);
+		//printDrilling(someState);
+		;
 	#endif
 
 	// Get all new energies after integration

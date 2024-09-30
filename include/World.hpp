@@ -531,7 +531,7 @@ public:
 	bool generateProposal(void);
 
 	/** Generate a number of samples **/
-	bool generateSamples(int howMany, std::stringstream& worldOutStream);
+	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header);
 	//...............
 
 	//...................
