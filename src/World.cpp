@@ -3471,6 +3471,7 @@ bool World::generateSamples(int howMany,
 		validated = updSampler(0)->sample_iteration(
 			currentAdvancedState, worldOutStream) 
 			&& validated;
+			
 		worldOutStream << "\n";
 	}
 

@@ -3404,7 +3404,7 @@ void HMCSampler::perturb_Q_QDot_QDotDot(
 	//perturbForces(someState, forcesPerturbMethod());
 
 	// Pentru_Victor
-	teleport(someState);
+	//teleport(someState);
 
 }
 

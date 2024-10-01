@@ -5075,10 +5075,15 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 				// GENERATE the requested number of samples
 				for(int k = 0; k < numSamples; k++) {
-					std::cout << header;
+
+					worldOutStream << header << " ";
+					(worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
+
 					validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(
 						currentAdvancedState, worldOutStream) && validated;
-					std::cout << "\n";
+
+					worldOutStream << "\n";
+
 				}
 
 				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
@@ -5496,8 +5501,9 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		int srcStatsWIx  = specificWIxs[spWCnt];
 
 		//std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
-		std::string headerToRunWorld = "REX, " + std::to_string(replicaIx) + ", " + std::to_string(thermoIx) + " , " + std::to_string(srcStatsWIx);
-
+		std::string headerToRunWorld = "REX, " + std::to_string(replicaIx)
+					+ ", " + std::to_string(thermoIx)
+					+ " , " + std::to_string(srcStatsWIx);
 		validated = RunWorld(srcStatsWIx, headerToRunWorld ) && validated;
 
 		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
@@ -5532,8 +5538,9 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	int srcStatsWIx = specificWIxs.back();
 
 	//std::cout << "REX, " << replicaIx << ", " << thermoIx << ", " << specificWIxs.back();
-	std::string headerToRunWorld = "REX, " + std::to_string(replicaIx) + ", " + std::to_string(thermoIx) + " , " + std::to_string(srcStatsWIx);
-
+	std::string headerToRunWorld = "REX, " + std::to_string(replicaIx) 
+				+ ", " + std::to_string(thermoIx)
+				+ ", " + std::to_string(srcStatsWIx);
 	validated = RunWorld(srcStatsWIx, headerToRunWorld) && validated;
 
 	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
