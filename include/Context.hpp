@@ -67,7 +67,7 @@ public:
 	void appendDCDReporter(const std::string& filename);
 
 	void Run();
-	void Run(int steps);
+	//void Run(int steps);
 
 	// Input functions
 	bool loadTopologyFile(std::string topologyFilename);
@@ -193,8 +193,6 @@ public:
 
 	void realizeTopology();
 	void realizePosition();
-
-	void LoadWorldsFromSetup(SetupReader&);
 
 	void passTopologiesToNewWorld(int newWorldIx);
 
@@ -564,15 +562,11 @@ public:
 	RUN_TYPE getRunType(void) const;
 	void setRunType(RUN_TYPE runTypeArg);
 
-	// Run a particular world
-	bool RunWorld(int whichWorld, const std::string& header);
-
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);
 
 	// Run front world, rotate and transfer. Return worldIxs.front
 	int RunFrontWorldAndRotate(std::vector<int> & worldIxs);
-	void RunWorlds(std::vector<int>& specificWIxs, int replicaIx);
 
 	// Print to log and write pdbs
 	void RunLog(int roundi);
@@ -580,24 +574,28 @@ public:
 
 	void incrementNofSamples(void);
 
+    /** @name Replica exchange **/
+    /**@{**/
 
-	void RunREX();
-
+	// Run a particular world
+	bool RunWorld(int whichWorld, const std::string& header);
+	void RunWorlds(std::vector<int>& specificWIxs, int replicaIx);
+	void RunReplicaRefactor(int mixi, int replicaIx);
+	
+	/**	
+	* @brief Main function
+	* @param
+	* @return
+	*/
 	void RunREXNew();
 
-	// Helper Functions for REX
+	/**@}**/
 
-	int RunReplicaEquilibriumWorlds(int replicaIx, int swapEvery);
 
 	void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
-	int RunReplicaNonequilibriumWorlds(int replicaIx, int swapEvery);
-
-	// Go through all of this replica's worlds and generate samples
-	int RunReplicaAllWorlds(int mixi, int replicaIx, int swapEvery);
 
 	// Transfer Q statistics
 	void transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx);
-	void RunReplicaRefactor(int mixi, int replicaIx);
 
 	void PrintReplicas(void);
 	void PrintReplicaMaps(void);
