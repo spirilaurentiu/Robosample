@@ -5320,7 +5320,7 @@ void Context::incrementNofSamples(void){
 
 }
 
-// Run replica exchange protocol
+// Run replica exchange protocol   
 void Context::RunREX()
 {
 
@@ -5352,7 +5352,6 @@ void Context::RunREX()
 
 	std::cout << rexOutput.str() << std::endl;
 	// ------------------------------------------------------------------------
-
 
 	// Internal debug studies
 	bool givenTsMode = false;
