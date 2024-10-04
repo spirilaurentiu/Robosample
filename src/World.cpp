@@ -344,7 +344,7 @@ const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const {
  * adds parameters: defines Biotypes; - adds BAT parameters to DuMM. Also
  * creates decorations for visualizers **/
 void World::AddMolecule(
-		readAmberInput *amberReader,
+		AmberReader *amberReader,
 		std::string argRoot
 		)
 {
@@ -381,7 +381,7 @@ void World::AddMolecule(
 }
 
 // Add Biotypes
-void World::AddBiotypes(int which, readAmberInput *amberReader)
+void World::AddBiotypes(int which, AmberReader *amberReader)
 {
 	assert(!"Deprecated function.");
 	
@@ -1403,7 +1403,7 @@ void World::setTransformsMeansToCurrent(SimTK::State& someState)
 /**
  * Set bonds values
 */
-void World::setTransformsMeansToMin(readAmberInput &amberReader)
+void World::setTransformsMeansToMin(AmberReader &amberReader)
 {
 	const SimTK::State& defaultState = matter->getSystem().getDefaultState();
 

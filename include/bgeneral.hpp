@@ -547,6 +547,24 @@ enum struct IntegratorName : int { // Integrators
 	NOF_INTEGRATORS
 };
 
+
+const std::unordered_map<std::string, IntegratorName>
+IntegratorNameS{
+	{"EMPTY", IntegratorName::EMPTY},
+	{"VERLET", IntegratorName::VERLET},
+	{"EULER", IntegratorName::EULER},
+	{"EULER2", IntegratorName::EULER2},
+	{"CPODES", IntegratorName::CPODES},
+	{"RUNGEKUTTA", IntegratorName::RUNGEKUTTA},
+	{"RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2},
+	{"RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3},
+	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
+	{"OMMVV", IntegratorName::OMMVV},
+	{"RANDOM_WALK", IntegratorName::BOUND_WALK},
+	{"RANDOM_KICK", IntegratorName::BOUND_HMC},
+	{"STATIONS_TASK", IntegratorName::STATIONS_TASK}
+};
+
 enum struct PositionsPerturbMethod : int {
 	EMPTY = 0,
 	BENDSTRETCH_1,
@@ -577,24 +595,6 @@ enum struct NMAOptions : int {
 	NMA_LENPERT,
 	NMA_FINAL,
 	NOF_
-};
-
-
-const std::unordered_map<std::string, IntegratorName>
-IntegratorNameS{
-	{"EMPTY", IntegratorName::EMPTY},
-	{"VERLET", IntegratorName::VERLET},
-	{"EULER", IntegratorName::EULER},
-	{"EULER2", IntegratorName::EULER2},
-	{"CPODES", IntegratorName::CPODES},
-	{"RUNGEKUTTA", IntegratorName::RUNGEKUTTA},
-	{"RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2},
-	{"RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3},
-	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
-	{"OMMVV", IntegratorName::OMMVV},
-	{"RANDOM_WALK", IntegratorName::BOUND_WALK},
-	{"RANDOM_KICK", IntegratorName::BOUND_HMC},
-	{"STATIONS_TASK", IntegratorName::STATIONS_TASK}
 };
 
 /*

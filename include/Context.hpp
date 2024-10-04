@@ -26,7 +26,22 @@ enum class RUN_TYPE : int {
 	RENE
 };
 
+const std::unordered_map<std::string, RUN_TYPE>
+RUN_TYPE_MAP{
+	{"DEFAULT", RUN_TYPE::DEFAULT},
+	{"REMC", RUN_TYPE::REMC},
+	{"RENEMC", RUN_TYPE::RENEMC},
+	{"RENE", RUN_TYPE::RENE}
+};
+
+const std::vector<std::string> RUN_TYPE_Str = {"DEFAULT", "REMC", "RENEMC", "RENE"};
+
 class Context{
+
+    /** @name Constructor **/
+    /**@{**/
+	/**@}**/
+
 
 public:
 	/**
@@ -42,9 +57,67 @@ public:
 	*/
 	void PrintAtomsDebugInfo(void);
 
+
+
+    /** @name System and simulation setup.
+	 * 1. Read input file.
+	 * 2. Read Amber files and construct topologies.
+	 * 3. Add worlds.
+	 * 4. Add samplers to worlds.
+	 * 5. Read REX input and build replicas/thermostates. **/
+    /**@{**/
+
+	/**	
+	* @brief Read input file.
+	* @param var
+	* @return
+	*/	
+	bool setOutput(const std::string& outDir);
+	bool CheckInputParameters(const SetupReader& setupReader);
+	std::string GetMoleculeDirectoryShort(const std::string& path) const;
+	
+	void setNofRoundsTillReblock(int nofRoundsTillReblock);
+	void setRequiredNofRounds(int argNofRounds);
+
+	void setNonbonded(int method, SimTK::Real cutoff);
+
+	RUN_TYPE getRunType(void) const;
+	void setRunType(RUN_TYPE runTypeArg);
+	RUN_TYPE setRunType(const std::string& runTypeArgStr);
+	
+	/**	
+	* @brief Read Amber files and construct topologies.
+	* @param var
+	* @return
+	*/
+	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
+
+	/**	
+	* @brief Add worlds.
+	* @param var
+	* @return
+	*/
+
  	std::vector<BOND_FLEXIBILITY>& readFlexibility(
 		std::string flexFileFN,
 		std::vector<BOND_FLEXIBILITY>& flexibilities);
+		
+	void addWorld(
+		bool fixmanTorque,
+		int samplesPerRound,
+		ROOT_MOBILITY rootMobility,
+		const std::vector<BOND_FLEXIBILITY>& flexibilities,
+		bool useOpenMM = true,
+		bool visual = false,
+		SimTK::Real visualizerFrequency = 0);
+
+	/**	
+	* @brief Read REX input and build replicas/thermostates.
+	* @param var
+	* @return
+	*/
+
+
 
 	/**	
 	* @brief Read all parameters from an input file
@@ -53,21 +126,17 @@ public:
 	*/	
 	bool initializeFromFile(const std::string& filename);
 
+
+	/**@}**/
+
+
 	void setNumThreads(int threads);
-	void setNonbonded(int method, SimTK::Real cutoff);
 	void setGBSA(SimTK::Real globalScaleFactor);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
 
-	bool setOutput(const std::string& outDir);
-
-	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
-
-	void setRootMobilitiesFromFlexFiles(void);
+	//void setRootMobilitiesFromFlexFiles(void);
 
 	void appendDCDReporter(const std::string& filename);
-
-	void Run();
-	//void Run(int steps);
 
 	// Input functions
 	bool loadTopologyFile(std::string topologyFilename);
@@ -131,9 +200,6 @@ public:
 	/** Pass Context topologies to all the worlds */
 	void passTopologiesToWorlds(void);
 
-	/** Read atoms and bonds from all the molecules */
-	void readMolecules(void);
-	
 	/**  */
 	void constructTopologies();
 
@@ -159,13 +225,13 @@ public:
 	);
 
 	// Add Dumm params for single prmtop
-	void generateDummAtomClasses(readAmberInput& amberReader);
-	void bAddDummBondParams(readAmberInput& amberReader);
-	void bAddDummAngleParams(readAmberInput& amberReader);
+	void generateDummAtomClasses(AmberReader& amberReader);
+	void bAddDummBondParams(AmberReader& amberReader);
+	void bAddDummAngleParams(AmberReader& amberReader);
 	bool checkBond(int a1, int a2);
-	void bAddDummTorsionParams(readAmberInput& amberReader);
+	void bAddDummTorsionParams(AmberReader& amberReader);
 
-	void addDummParams(readAmberInput& amberReader);
+	void addDummParams(AmberReader& amberReader);
 
 	// -------------------------
 
@@ -206,10 +272,9 @@ public:
 	// --- Mixing parameters ---
 	// Another way to do it is setting the number of rounds
 	int getRequiredNofRounds();
-	void setRequiredNofRounds(int argNofRounds);
 
 	int getNofRoundsTillReblock();
-	void setNofRoundsTillReblock(int nofRoundsTillReblock);
+
 	void updNofRoundsTillReblock(int nofRoundsTillReblock);
 
 	std::size_t getWorldIndex(std::size_t which) const;
@@ -222,14 +287,6 @@ public:
 	void initializeMixingParamters();
 	//------------
 
-	void addWorld(
-		bool fixmanTorque,
-		int samplesPerRound,
-		ROOT_MOBILITY rootMobility,
-		const std::vector<BOND_FLEXIBILITY>& flexibilities,
-		bool useOpenMM = true,
-		bool visual = false,
-		SimTK::Real visualizerFrequency = 0);
 
 	std::size_t getNofWorlds() const;
 	World& getWorld(std::size_t which);
@@ -378,16 +435,34 @@ public:
 	void PrintToLog(std::size_t whichReplica,
 		std::size_t whichWorld, std::size_t whichSampler);
 
-	// Write intial/final pdb for reference
+    /** @name Write coordinates **/
+    /**@{**/
+
+	/**	
+	* @brief Write pdb file.
+	*/
 	void writeInitialPdb(void);
 	void writeFinalPdb(void);
-
-	//
-	void WritePdb(std::size_t whichWorld);
-
-	//
+	void writePdb(std::size_t whichWorld);
 	void writePdbs(int someIndex, int thermodynamicStateIx = 0);
+
+	// Output helpers
+	int getPdbRestartFreq();
+	void setPdbRestartFreq(int argFreq);
+
+	void setPdbPrefix(const std::string& argPdbPrefix);
+	std::string getPdbPrefix();
+
+	int getPrintFreq();
+	void setPrintFreq(int argFreq);
+
+	std::string getOutputDir();
+	void setOutputDir(std::string arg);
+
+	// Write dcd
 	void writeDCDs();
+
+	/**@}**/
 
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2, int a3, int a4);
@@ -395,17 +470,6 @@ public:
 		std::size_t whichSampler, int a1, int a2, int a3);
 	SimTK::Real Distance(std::size_t whichWorld, std::size_t whichCompound,
 		std::size_t whichSampler, int a1, int a2);
-
-	int getPdbRestartFreq();
-	void setPdbRestartFreq(int argFreq);
-	int getPrintFreq();
-	void setPrintFreq(int argFreq);
-
-	std::string getOutputDir();
-	void setOutputDir(std::string arg);
-	std::string getPdbPrefix();
-	void setPdbPrefix(std::string arg);
-	//------------
 
 	//////////////////////////////////
 	//// REPLICA EXCHANGE FUNCTIONS //
@@ -559,9 +623,6 @@ public:
 	void updWorldsDistortOptions(int thisReplica);
 	void updQScaleFactors(int mixi);
 
-	RUN_TYPE getRunType(void) const;
-	void setRunType(RUN_TYPE runTypeArg);
-
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);
 
@@ -587,7 +648,9 @@ public:
 	* @param
 	* @return
 	*/
-	void RunREXNew();
+	void RunREX();
+
+	void Run();
 
 	/**@}**/
 
@@ -633,13 +696,11 @@ public:
 	}
 
 private:
-	std::string GetMoleculeDirectoryShort(const std::string& path) const;
-	bool CheckInputParameters(const SetupReader& setupReader);
 
 	std::vector<int> TopologyIXs;
 	std::vector<std::vector<int>> AmberAtomIXs;
 	std::vector<World> worlds;
-	std::vector<readAmberInput> amberReader;
+	std::vector<AmberReader> amberReader;
 
 	std::vector<int> worldIndexes;
 	// Molecules files
@@ -676,7 +737,9 @@ private:
 	int pdbRestartFreq = false;
 	int printFreq = -1;
 
+	std::string molDir;
 	std::string outputDir;
+	std::string restartDir;
 	std::string pdbPrefix;
 
 	// Geometric features analysis
@@ -766,14 +829,14 @@ private:
 	
 	ELEMENT_CACHE elementCache;
 
-	std::vector<int> findMolecules(const readAmberInput& reader);
-	void loadAtoms(const readAmberInput& reader);
+	std::vector<int> findMolecules(const AmberReader& reader);
+	void loadAtoms(const AmberReader& reader);
 
 	void loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN);
 	
-	void loadBonds(const readAmberInput& reader);
-	void loadAngles(const readAmberInput& reader);
-	void loadTorsions(const readAmberInput& reader);
+	void loadBonds(const AmberReader& reader);
+	void loadAngles(const AmberReader& reader);
+	void loadTorsions(const AmberReader& reader);
 	void setAtomCompoundTypes();
 	void addBiotypes();
 	std::vector<bSpecificAtom>& getAtoms() {

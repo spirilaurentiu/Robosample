@@ -162,62 +162,45 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		return false;
 	}
 
-	// Get molecules directory - what is this?
-	std::string molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
-	std::cout << "Molecule directory: " << molDir << std::endl << std::flush;
-	setPdbPrefix(molDir + setupReader.get("SEED")[0]);
+	// Molecules directory
+	this->molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
+	this->pdbPrefix = (molDir + setupReader.get("SEED")[0]);
+	this->restartDir = setupReader.get("RESTART_DIR")[0];
+	if(restartDir.length() == 0){restartDir = ".";}
+	std::cout << "Molecule directory: " << molDir << std::endl
+			  << "Restart directory: " << restartDir << std::endl << std::flush;
 
-	// Adaptive Gibbs blocking
-	setNofRoundsTillReblock(std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]));
-	setRequiredNofRounds(std::stoi(setupReader.get("ROUNDS")[0]));
-	setPdbRestartFreq( std::stoi(setupReader.get("WRITEPDBS")[0]) );
-	setPrintFreq( std::stoi(setupReader.get("PRINT_FREQ")[0]) );
+	// 
+	this->requiredNofRounds = std::stoi(setupReader.get("ROUNDS")[0]);
+	this->roundsTillReblock = std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]);
+	this->pdbRestartFreq = std::stoi(setupReader.get("WRITEPDBS")[0]);
+	this->printFreq = std::stoi(setupReader.get("PRINT_FREQ")[0]);
 
-	if(setupReader.get("RUN_TYPE")[0] == "Normal"){
-		setRunType(RUN_TYPE::DEFAULT);
-	}else if(setupReader.get("RUN_TYPE")[0] == "SimulatedTempering") {
-			setRunType(RUN_TYPE::DEFAULT);
-	}else if(setupReader.get("RUN_TYPE")[0] == "REMC"){
-		setRunType(RUN_TYPE::REMC);
-	}else if(setupReader.get("RUN_TYPE")[0] == "RENEMC"){
-		setRunType(RUN_TYPE::RENEMC);
-	}else if(setupReader.get("RUN_TYPE")[0] == "RENE"){
-		setRunType(RUN_TYPE::RENE);
-	}else{
-		setRunType(RUN_TYPE::DEFAULT);
-	}
-
-	/////////// Add Worlds to context ////////////
-	// Add Worlds to the  Every World instantiates a:
-	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
-	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
-	// DecorationSubsystem, Visualizer, VisuzlizerReporter,
-	//  ParaMolecularDecorator
+	RUN_TYPE whatRunType = setRunType(setupReader.get("RUN_TYPE")[0]);
+	std::cout << "Run type " << RUN_TYPE_Str[int(whatRunType)] << std::endl;
 
 	setNonbonded(
 		std::stoi(setupReader.get("NONBONDED_METHOD")[0]),
 		std::stod(setupReader.get("NONBONDED_CUTOFF")[0]));
 
+	// Construct topologies based on what's read from an AmberReader
 	std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
 	std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
-
 	loadAmberSystem(prmtop, inpcrd);
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
 	// Get Z-matrix indexes table	
 	calcZMatrixTable(); // PrintZMatrixTable();
-
 	reallocZMatrixBAT();
 
-	// Add Worlds: add flexibilities and CompoundSystem model
-	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++) {
-
-		//std::vector<std::string> argRoots = setupReader.get("ROOTS");
+	// Add Worlds to the  Every World instantiates a:
+	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
+	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
+	// DecorationSubsystem, Visualizer, VisuzlizerReporter, ParaMolecularDecorator
+	for (int worldIx = 0; worldIx < setupReader.get("WORLDS").size(); worldIx++){
 
 		std::string flexFileFN = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("FLEXFILE")[worldIx];
-
 		std::vector<BOND_FLEXIBILITY> flexibilities = {};
-
 		readFlexibility(flexFileFN, flexibilities);
 
 		addWorld(
@@ -232,8 +215,8 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		flexibilities.clear();
 	}
 
-	// Set DuMM atom indexes into atoms of bAtomList 
-	worlds[0].setDuMMAtomIndexes();
+	// Set DuMM atom indexes into atoms of bAtomList
+	worlds[0].setDuMMAtomIndexes(); // REVISE
 	
 	#ifdef __DRILLING__
 		scout("Correspondence cAIx dAIx\n");
@@ -249,7 +232,6 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		worlds[worldIx].setMyContext(this);
 	}
 
-
 	// // Get how much available memory we have
 	// struct sysinfo info;
 	// if (sysinfo(&info) == 0) {
@@ -257,25 +239,10 @@ bool Context::initializeFromFile(const std::string &inpFN)
     // }
 
 	// Add membrane.
-	bool haveMembrane = (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND");
-	if (haveMembrane){
-		float memZWidth = std::stof(setupReader.get("MEMBRANE")[0]);
-		addContactImplicitMembrane(memZWidth, setupReader);
-	
-	}
+	// if (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND"){
+	// 	addContactImplicitMembrane(std::stof(setupReader.get("MEMBRANE")[0]), setupReader);
+	// }
 
-	//std::cout << "OS memory 3\n" << exec("free") << std::endl;
-
-	//////////////////////
-	// Thermodynamics
-	//////////////////////
-
-    if(MEMDEBUG){
-		std::cout << "initializeFromFile memory 1.\n" << exec("free") << std::endl << std::flush;
-		std::cout << "initializeFromFile memory 1.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-		std::cout << "initializeFromFile memory 1.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
-	}
-	
 	// Add samplers
 	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		worlds[worldIx].addSampler(
@@ -296,9 +263,9 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	} // every world
 
     if(MEMDEBUG){
-		std::cout << "initializeFromFile memory 2.\n" << exec("free") << std::endl << std::flush;
-		std::cout << "initializeFromFile memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-		std::cout << "initializeFromFile memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	 	std::cout << "initializeFromFile memory 2.\n" << exec("free") << std::endl << std::flush;
+	 	std::cout << "initializeFromFile memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	 	std::cout << "initializeFromFile memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 	}
 
 	// -- Setup REX --
@@ -309,7 +276,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		|| true)
 	{
 
-		int NRepl = getNofReplicas();
+		//int NRepl = this->nofReplicas;
 
 		SetupReader rexReader;
 
@@ -347,27 +314,15 @@ bool Context::initializeFromFile(const std::string &inpFN)
 			rexMdsteps,
 			rexSamplesPerRound);
 
-
 		// Add replicas
-		std::string restartDir = setupReader.get("RESTART_DIR")[0];
-		if(restartDir.length() == 0){
-			restartDir = ".";
-		}
 		for(int k = 0; k < nofReplicas; k++){
-
-			inpcrd = restartDir + "/"
-				+ setupReader.get("INPCRD")[0]
-				+ ".s" + std::to_string(k) + ".rst7";
-
+			inpcrd = restartDir + "/" + setupReader.get("INPCRD")[0] + ".s" + std::to_string(k) + ".rst7";
 			inpcrdFNs.push_back(inpcrd);
-
 		}
 
 		for(int k = 0; k < nofReplicas; k++){
-
 			loadAtomsCoordinates(prmtop, inpcrdFNs[k]);
 			std::cout << "Loaded coordinates of replica " << k << " from " << inpcrdFNs[k] << std::endl;
-
 			addReplica(k);
 		}
 
@@ -458,12 +413,10 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("SPHERE_RADIUS")[0] != "ERROR_KEY_NOT_FOUND") {
 		// Set binding site TopologyIx, AtomIx and Sphere Radius
-
 		// Generate Amber-style Atom Lists
 		std::vector<std::vector<int>> amberAtomIXs;
 		amberAtomIXs.push_back({});
 		int cur_topology = 0;
-
 		for (const auto& value : setupReader.get("BINDINGSITE_ATOMS")) {
 			if (value == ",") {
 				amberAtomIXs.push_back({});
@@ -473,16 +426,12 @@ bool Context::initializeFromFile(const std::string &inpFN)
 				amberAtomIXs[cur_topology].push_back(std::stoi(value));
 			}
 		}
-
 		std::vector<int> topologyIXs;
 		for (const auto& value : setupReader.get("BINDINGSITE_MOLECULES")) {
 			topologyIXs.push_back(std::stoi(value));
 		}
-
 		float sphere_radius = std::stod(setupReader.get("SPHERE_RADIUS")[0]);
-
 		std::cout << "Robosample Sphere Radius: " << sphere_radius << std::endl;
-
 		for (auto& world : worlds) {
 			world.setTopologyIXs(topologyIXs);
 			world.setAmberAtomIXs(amberAtomIXs);
@@ -491,7 +440,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		}
 	}
 
-	// Get atom indeces for geometry calculations
+	// Geometry calculations
 	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
 		std::vector<std::size_t> distanceIx;
 		std::vector<std::size_t> angleIx;
@@ -532,7 +481,10 @@ bool Context::initializeFromFile(const std::string &inpFN)
     return true;
 }
 
-std::vector<int> Context::findMolecules(const readAmberInput& reader) {
+/*!
+ * <!-- Find molecules -->
+*/
+std::vector<int> Context::findMolecules(const AmberReader& reader) {
 	// build adjacency list
 	std::vector<std::vector<int>> adjacency(natoms);
 	const int nbonds = reader.getNumberBonds();
@@ -591,7 +543,7 @@ std::vector<int> Context::findMolecules(const readAmberInput& reader) {
  * initial name, force field type, charge, coordinates, mass, LJ parameters.
  * 1-to-1 correspondence between prmtop and Gmolmodel.
  * This does not set anything in Compund or DuMM.  **/
-void Context::loadAtoms(const readAmberInput& reader) {
+void Context::loadAtoms(const AmberReader& reader) {
 	// Alloc memory for atoms and bonds list
 	natoms = reader.getNumberAtoms();
 	atoms.resize(natoms);
@@ -668,7 +620,7 @@ void Context::loadAtoms(const readAmberInput& reader) {
 void Context::loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN) {
 
 	// Load Amber files
-	readAmberInput reader;
+	AmberReader reader;
 	reader.readAmberFiles(inpcrdFN, prmtop);
 
 	// Check
@@ -693,7 +645,7 @@ void Context::loadAtomsCoordinates(const std::string& prmtop, const std::string&
 /** Set bonds properties from reader: bond indeces, atom neighbours.
  *  1-to-1 correspondence between prmtop and Gmolmodel.
  **/
-void Context::loadBonds(const readAmberInput& reader) {
+void Context::loadBonds(const AmberReader& reader) {
 	
 	assert( (!atoms.empty()) &&
 		"Context::loadBonds: atom list empty.");
@@ -770,7 +722,7 @@ int Context::checkBonds(void)
 	return 0;
 }
 
-void Context::loadAngles(const readAmberInput& reader) {
+void Context::loadAngles(const AmberReader& reader) {
 	dummAngles.reserve(reader.getNumberAngles());
 
 	for (int i = 0; i < reader.getNumberAngles(); i++) {
@@ -787,7 +739,7 @@ void Context::loadAngles(const readAmberInput& reader) {
 	}
 }
 
-void Context::loadTorsions(const readAmberInput& reader) {
+void Context::loadTorsions(const AmberReader& reader) {
 	// There are multiple torsions defined with the same four indices
 	// This vector shows us where each torsion begins (first) and how long it is (second)
 	std::vector<std::pair<int, int>> pairStartAndLens = reader.getPairStartAndLen();
@@ -902,7 +854,7 @@ void Context::addBiotypes() {
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
 	// Load Amber files
-	readAmberInput reader;
+	AmberReader reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
 	// Read molecules from a reader
@@ -945,7 +897,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
  * <!-- This must be called after the worlds are added and flexibility vector
  * is loaded -->
 */
-void Context::setRootMobilitiesFromFlexFiles(void)
+/* void Context::setRootMobilitiesFromFlexFiles(void)
 {
 
 	// Allocate space for root mobilities
@@ -992,8 +944,7 @@ void Context::setRootMobilitiesFromFlexFiles(void)
 		
 		}
 	}
-
-}
+} */
 
 void Context::appendDCDReporter(const std::string& filename) {
 	traj.createTrajectory(filename, "dcd", natoms, topologies.size());
@@ -1008,11 +959,11 @@ void Context::Run() {
 		|| (getRunType() == RUN_TYPE::REMC)
 		|| (getRunType() == RUN_TYPE::RENEMC)
 		|| (getRunType() == RUN_TYPE::RENE)){
-		RunREXNew();
+		RunREX();
 
 	}else{
 		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
-		RunREXNew();
+		RunREX();
 	}
 
 }
@@ -1134,20 +1085,19 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 		}
 	}
 
-	// Set the type of simulation and temperatures
-	if ( setupReader.get("RUN_TYPE")[0] == "REMC" ) {
-		setRunType(RUN_TYPE::REMC);
-	} else if ( setupReader.get("RUN_TYPE")[0] == "RENEMC" ) {
-		setRunType(RUN_TYPE::RENEMC);
-	}else if ( setupReader.get("RUN_TYPE")[0] == "RENE" ) {
-		setRunType(RUN_TYPE::RENE);
-	} else {
-		tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
-		tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
-
-		setRunType(RUN_TYPE::DEFAULT);
-	}
-	std::cout << "[CheckInput] " << "Im doing " << static_cast<int>(runType) << std::endl;
+	// // Set the type of simulation and temperatures
+	// if ( setupReader.get("RUN_TYPE")[0] == "REMC" ) {
+	// 	setRunType(RUN_TYPE::REMC);
+	// } else if ( setupReader.get("RUN_TYPE")[0] == "RENEMC" ) {
+	// 	setRunType(RUN_TYPE::RENEMC);
+	// }else if ( setupReader.get("RUN_TYPE")[0] == "RENE" ) {
+	// 	setRunType(RUN_TYPE::RENE);
+	// } else {
+	// 	tempIni = std::stof(setupReader.get("TEMPERATURE_INI")[0]);
+	// 	tempFin = std::stof(setupReader.get("TEMPERATURE_FIN")[0]);
+	// 	setRunType(RUN_TYPE::DEFAULT);
+	// }
+	// std::cout << "[CheckInput] " << "Im doing " << static_cast<int>(runType) << std::endl;
 
 	// If we got here we can set global variables
 	// Reserve memory
@@ -1956,14 +1906,6 @@ void Context::passTopologiesToWorlds(void){
  * ========================================================================
   -->
 */
-void Context::readMolecules(void)
-{
-
-	loadAtoms(amberReader[0]);
-	loadBonds(amberReader[0]);
-}
-
-
 
 /*!
  * <!--  -->
@@ -2499,7 +2441,7 @@ void Context::updDummAtomClasses(
  * setBiotypeChargedAtomType for every atom. These Molmodel functions contain
  * information regarding the force field parameters.-->
 */
-void Context::generateDummAtomClasses(readAmberInput& amberReader)
+void Context::generateDummAtomClasses(AmberReader& amberReader)
 {
 	// Iterate worlds
 	for(size_t wCnt = 0; wCnt < worlds.size(); wCnt++){
@@ -2631,7 +2573,7 @@ void Context::generateDummAtomClasses(readAmberInput& amberReader)
 /*!
  * <!-- Calls DuMM defineBondStretch to define bonds parameters. -->
 */
-void Context::bAddDummBondParams(readAmberInput& amberReader)
+void Context::bAddDummBondParams(AmberReader& amberReader)
 {
 
 	// Iterate worlds
@@ -2719,7 +2661,7 @@ void Context::bAddDummBondParams(readAmberInput& amberReader)
 /*!
  * <!-- Calls DuMM defineBondBend to define angle parameters. -->
 */
-void Context::bAddDummAngleParams(readAmberInput& amberReader)
+void Context::bAddDummAngleParams(AmberReader& amberReader)
 {
 
 	// Iterate worlds
@@ -2807,7 +2749,7 @@ bool Context::checkBond(int a1, int a2)
 /*!
  * <!-- Calls DuMM defineBondTorsion. -->
 */
-void Context::bAddDummTorsionParams(readAmberInput& amberReader)
+void Context::bAddDummTorsionParams(AmberReader& amberReader)
 {
 
 	// Iterate worlds
@@ -3063,7 +3005,7 @@ void Context::bAddDummTorsionParams(readAmberInput& amberReader)
  * setBiotypeChargedAtomType for every atom. These Molmodel functions contain
  * information regarding the force field parameters.-->
 */
-void Context::addDummParams(readAmberInput& amberReader)
+void Context::addDummParams(AmberReader& amberReader)
 {
 
 	// DANGER: BONDS WERE SORTED =>
@@ -5137,6 +5079,26 @@ void Context::setRunType(RUN_TYPE runTypeArg)
 	this->runType = runTypeArg;
 }
 
+RUN_TYPE Context::setRunType(const std::string& runTypeArgStr)
+{
+	if(runTypeArgStr == "Normal"){
+		this->runType = RUN_TYPE::DEFAULT;
+	}else if(runTypeArgStr == "SimulatedTempering") {
+		this->runType = RUN_TYPE::DEFAULT;
+	}else if(runTypeArgStr == "REMC"){
+		this->runType = RUN_TYPE::REMC;
+	}else if(runTypeArgStr == "RENEMC"){
+		this->runType = RUN_TYPE::RENEMC;
+	}else if(runTypeArgStr == "RENE"){
+		this->runType = RUN_TYPE::RENE;
+	}else{
+		this->runType = RUN_TYPE::DEFAULT;
+	}
+
+	return this->runType;
+
+}
+
 // Print to log and write pdbs
 void Context::REXLog(int mixi, int replicaIx)
 {
@@ -5503,7 +5465,7 @@ void Context::RunReplicaRefactor(
 /*!
  * <!-- Run replica exchange protocol -->
 */
-void Context::RunREXNew()
+void Context::RunREX()
 {
 
 	// Is this necesary =======================================================
@@ -7336,7 +7298,7 @@ void Context::setPdbRestartFreq(int argFreq)
 }
 
 // Write pdb
-void Context::WritePdb(std::size_t)
+void Context::writePdb(std::size_t)
 {
 	// function args were std::size_t whichWorld
 	assert(!"Not implemented"); throw std::exception();
@@ -7365,14 +7327,14 @@ void Context::setOutputDir(std::string arg)
 	this->outputDir = arg;
 }
 
+void Context::setPdbPrefix(const std::string& argPdbPrefix)
+{
+	this->pdbPrefix = argPdbPrefix;
+}
+
 std::string Context::getPdbPrefix()
 {
 	return this->pdbPrefix;
-}
-
-void Context::setPdbPrefix(std::string arg)
-{
-	this->pdbPrefix = arg;
 }
 
 SimTK::Real Context::Roboangle(std::size_t whichWorld,
@@ -7554,91 +7516,91 @@ void Context::areAllDuMMsTheSame(void)
 /** Implicit membrane mimicked by half-space contacts */
 void Context::addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader){
 
+
+	// Before adding the membrane, we add the contacts and join them
+	// to the appropiate Contact Cliques
+
+	// Each of the flags are formatted as such:
+	// CONTACTS_X  int1 int2 , int3 int4 int5
+	// X is one of {0,1,2,3}, the ints are atom indices (0-Based)
+	// and the comma separates the topologies. In the example given
+	// the contacts are set on atoms int1, int2 for topology 0,
+	// and on atoms int3, int4 and int5 for topology 1.
+	// If the user wishes to skip a topology, then they'd 
+	// input "-1" as the only atom index.
+
+	std::vector<std::vector<std::vector<int>>> cliqueAtomIxs;
+
 	
-		// Before adding the membrane, we add the contacts and join them
-		// to the appropiate Contact Cliques
+	for (int contactCliqueIx = 0; contactCliqueIx < 4; contactCliqueIx++){
 
-		// Each of the flags are formatted as such:
-		// CONTACTS_X  int1 int2 , int3 int4 int5
-		// X is one of {0,1,2,3}, the ints are atom indices (0-Based)
-		// and the comma separates the topologies. In the example given
-		// the contacts are set on atoms int1, int2 for topology 0,
-		// and on atoms int3, int4 and int5 for topology 1.
-		// If the user wishes to skip a topology, then they'd 
-		// input "-1" as the only atom index.
+		// Empty vector of prmtop atom indexes
+		cliqueAtomIxs.push_back({});
+		cliqueAtomIxs[contactCliqueIx].push_back({});
 
-		std::vector<std::vector<std::vector<int>>> cliqueAtomIxs;
-
+		// Get values for this contactCliqueIx
+		std::string contactClique_key = "CONTACTS_";
+		contactClique_key.append( std::to_string(contactCliqueIx) );
+		const std::vector<std::string>& contactClique_vals = setupReader.get(contactClique_key);
 		
-		for (int contactCliqueIx = 0; contactCliqueIx < 4; contactCliqueIx++){
+		int cur_topology = 0;
+		if (contactClique_vals.size() > 2) {
 
-			// Empty vector of prmtop atom indexes
-			cliqueAtomIxs.push_back({});
-			cliqueAtomIxs[contactCliqueIx].push_back({});
+			// Get atom indexes for this clique
+			for (const auto& value : contactClique_vals){
+				
+				if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
+					cliqueAtomIxs[contactCliqueIx].push_back({});
+					cur_topology++;
+				}
+				else {
+					cliqueAtomIxs[contactCliqueIx][cur_topology].push_back(std::stoi(value));
+				}
+			}
 
-			// Get values for this contactCliqueIx
-			std::string contactClique_key = "CONTACTS_";
-			contactClique_key.append( std::to_string(contactCliqueIx) );
-			const std::vector<std::string>& contactClique_vals = setupReader.get(contactClique_key);
-			
-			int cur_topology = 0;
-			if (contactClique_vals.size() > 2) {
+			// Check
+			if(cur_topology != topologies.size()){
+				std::cout << "[WARNING] " 
+					<< "Number of topologies in CONTACT_ keys don't match the actual number of topologies\n";
+			}
 
-				// Get atom indexes for this clique
-				for (const auto& value : contactClique_vals){
+			// Add contact atom indexes for all worlds
+			for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+				for (int topologyIx = 0;topologyIx < cliqueAtomIxs[contactCliqueIx].size(); topologyIx++){
 					
-					if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
-						cliqueAtomIxs[contactCliqueIx].push_back({});
-						cur_topology++;
-					}
-					else {
-						cliqueAtomIxs[contactCliqueIx][cur_topology].push_back(std::stoi(value));
-					}
-				}
-
-				// Check
-				if(cur_topology != topologies.size()){
-					std::cout << "[WARNING] " 
-						<< "Number of topologies in CONTACT_ keys don't match the actual number of topologies\n";
-				}
-
-				// Add contact atom indexes for all worlds
-				for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-					for (int topologyIx = 0;topologyIx < cliqueAtomIxs[contactCliqueIx].size(); topologyIx++){
-						
-						worlds[worldIx].addContacts(
-								cliqueAtomIxs[contactCliqueIx][topologyIx],
-								topologyIx,
-								SimTK::ContactCliqueId(contactCliqueIx));
-					}
+					worlds[worldIx].addContacts(
+							cliqueAtomIxs[contactCliqueIx][topologyIx],
+							topologyIx,
+							SimTK::ContactCliqueId(contactCliqueIx));
 				}
 			}
 		}
-
-		// Add membrane to all worlds.
-		for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-			worlds[worldIx].addMembrane(memZWidth);
-		}
-
-		// Print
-		std::cout << "\n########## MEMBRANE STATS ##########\n";
-		std::cout << "Atom cliques are: \n";
-		for (int contactClique=0; contactClique<4; contactClique++){
-			for (const auto& topologyIx : cliqueAtomIxs[contactClique]) {
-			for (int atomIx : topologyIx) {
-				std::cout << atomIx << " ";
-			}
-			std::cout << " / ";
-		}
-		std::cout << std::endl;
-		}
-		std::cout << "########## MEMBRANE STATS ##########\n\n";
-
-
-		// TODO: Do we need this here (looks like World's buissiness)
-		realizeTopology();
-
 	}
+
+	// Add membrane to all worlds.
+	for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+		worlds[worldIx].addMembrane(memZWidth);
+	}
+
+	// Print
+	std::cout << "\n########## MEMBRANE STATS ##########\n";
+	std::cout << "Atom cliques are: \n";
+	for (int contactClique=0; contactClique<4; contactClique++){
+		for (const auto& topologyIx : cliqueAtomIxs[contactClique]) {
+		for (int atomIx : topologyIx) {
+			std::cout << atomIx << " ";
+		}
+		std::cout << " / ";
+	}
+	std::cout << std::endl;
+	}
+	std::cout << "########## MEMBRANE STATS ##########\n\n";
+
+
+	// TODO: Do we need this here (looks like World's buissiness)
+	realizeTopology();
+
+}
 
 void Context::setNumThreads(int threads) {
 	if (threads < 0) {

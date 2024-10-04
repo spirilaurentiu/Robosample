@@ -127,7 +127,7 @@ public:
 	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
 	void AddMolecule(
-		readAmberInput *amberReader,
+		AmberReader *amberReader,
 		//std::string rbFN,
 		//std::string flexFN,
 		//std::string regimenSpec,
@@ -136,7 +136,7 @@ public:
 		);
 
 	//
-	void AddBiotypes(int which, readAmberInput *amberReader);
+	void AddBiotypes(int which, AmberReader *amberReader);
 	
 	void BuildTopologyGraph(int which, std::string argRoot);
 	void AllocateCoordBuffers(int natoms);
@@ -594,7 +594,7 @@ public:
 		const std::vector<SimTK::Real>& givenX_BM);
 
 	// Set X_PF and X_BM related values
-	void setTransformsMeansToMin(readAmberInput &amberReader);
+	void setTransformsMeansToMin(AmberReader &amberReader);
 
 	// Get X_PF and X_BM related values
 	void getTransformsStatistics(SimTK::State& someState);

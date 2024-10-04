@@ -55,7 +55,7 @@ private:
 // TO DO: impropers ?!?
 // Errors to be continued...
 // Epot calc & units
-class readAmberInput{
+class AmberReader{
 public:
     void readAmberFiles(const std::string& inpcrdfile, const std::string& prmtopfile);
 
