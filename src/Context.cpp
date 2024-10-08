@@ -4294,53 +4294,15 @@ void Context::mixAllReplicas(int nSwapAttempts)
 		// Attempt to swap
 		bool swapped = false;
 
-/* 		if( getRunType() == 1 ){ // TODO make it enum
-			swapped = attemptREXSwap(replica_i, replica_j);
-
-		}else if ( getRunType() == 2 ){
-			swapped = attemptRENSSwap(replica_i, replica_j);
-		} */
-
 		swapped = attemptREXSwap(replica_i, replica_j);
 
 	}
 }
 
-
-// Mix replicas - hold it for the moment
+/*!
+ * <!--  -->
+*/
 void Context::mixReplicas(int mixi)
-{
-	if((mixi % swapEvery) == 0){
-
-		// Go through neighboring thermodynamic states
-		for(size_t thermoState_k = 0;
-		thermoState_k < (nofThermodynamicStates - 1);
-		thermoState_k += 2){
-
-			// Get replica corresponding to the thermodynamic state
-			int replica_i = thermo2ReplicaIxs[thermoState_k];
-			//int replica_j = getThermoPair(replica_i);
-			int replica_j = exchangePairs[replica_i];
-
-			// Attempt to swap
-			bool swapped = false;
-			if(replica_i != replica_j){
-
-
-				swapped = attemptREXSwap(replica_i, replica_j);
-			}
-		}
-
-	}else{
-		if(getRunType() == RUN_TYPE::RENE){
-			// Do what you do when you reject RENE exchange
-			; // nothing
-		}
-	}
-
-}
-
-void Context::mixReplicasNew(int mixi)
 {
 	if((mixi % swapEvery) == 0){
 
@@ -5549,7 +5511,7 @@ void Context::RunREX()
 		// Mix replicas
 		if((getRunType() != RUN_TYPE::DEFAULT) && (nofReplicas != 1)){
 			
-			mixReplicasNew(mixi); // check this
+			mixReplicas(mixi); // check this
 			                                               
 			PrintNofAcceptedSwapsMatrix();
 		}

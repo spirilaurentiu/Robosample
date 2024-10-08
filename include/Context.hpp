@@ -537,7 +537,6 @@ public:
 	SimTK::Real calcReplicaTransferedEnergy(int replicaIx);
 	SimTK::Real calcReplicaWork(int replicaIx);
 
-
 	// SWaps replicas thermodynamic states
 	void swapThermodynamicStates(int replica_i, int replica_j);
 
@@ -551,15 +550,12 @@ public:
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
 
-	// startingFrom argument is for alternating odd and even neighbors
+	// StartingFrom argument is for alternating odd and even neighbors
 	void mixNeighboringReplicas(unsigned int startingFrom);
 
-	// We hold this for the moment 
-	void mixAllReplicas(int nSwapAttempts);
-
 	// Mix replicas
+	void mixAllReplicas(int nSwapAttempts);
 	void mixReplicas(int mixi);
-	void mixReplicasNew(int mixi);
 
 	// ========================================================================
 	// Configuration manipulation functions between worlds and replicas
