@@ -375,6 +375,9 @@ public:
 	);
 
 	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
+
+	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
+
 	void OMM_setDuMMTemperature(double HMCBoostTemperature);
 
 	// Update OpenMM position from a Simbody Cartesian world
@@ -391,7 +394,6 @@ public:
 	void OMM_To_Simbody_setAtomsLocations(SimTK::State& someState);
 
 	void OMM_PrintLocations(void);
-
 
 	void OMM_integrateTrajectory(SimTK::State&);
 
@@ -544,8 +546,6 @@ public:
  	*/
 	void testSOA(SimTK::State& someState);
 	
-	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
-
 	void setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps);
 	
 	//////////////////////////////////

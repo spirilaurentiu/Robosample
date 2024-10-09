@@ -26,6 +26,8 @@ enum class RUN_TYPE : int {
 	RENE
 };
 
+const std::vector<std::string> RUN_TYPE_Str = {"DEFAULT", "REMC", "RENEMC", "RENE"};
+
 const std::unordered_map<std::string, RUN_TYPE>
 RUN_TYPE_MAP{
 	{"DEFAULT", RUN_TYPE::DEFAULT},
@@ -34,14 +36,32 @@ RUN_TYPE_MAP{
 	{"RENE", RUN_TYPE::RENE}
 };
 
-const std::vector<std::string> RUN_TYPE_Str = {"DEFAULT", "REMC", "RENEMC", "RENE"};
-
+//==============================================================================
+//                           CLASS Context
+//==============================================================================
+/** 
+ * This defines the Context class.
+ 
+Topology 0:                                                      :       
+          :                                                      :
+Position 0:                                                      :
+          :          ┌─────────────────────────┐                 :
+                     │                         │                 :
+                     │       INITIALIZE        │                 :
+                     │                         │                 :
+                     └────────────┬────────────┘                 : 
+                                  │                              :
+                                  │                              :
+                            ┌─────▼─────┐                        :
+                            │    RUN    │                        :     
+                            └─────┬─────┘                        :
+                                  │                              :
+**/
 class Context{
 
     /** @name Constructor **/
     /**@{**/
 	/**@}**/
-
 
 public:
 	/**
@@ -112,15 +132,20 @@ public:
 		SimTK::Real visualizerFrequency = 0);
 
 	/**	
-	* @brief Read REX input and build replicas/thermostates.
-	* @param var
-	* @return
-	*/
-
-
-
-	/**	
-	* @brief Read all parameters from an input file
+	* @brief
+		* Initialize Context 
+		* 1.  Setup general input-output parameters
+		* 2.  Construct topologies based on what's read from an AmberReader
+		* 3.  Add Worlds 
+		* 4.  Add contacts: (Add membrane)
+		* 5.  Add samplers
+		* 6.  Replica exchange setup
+		* 7.  Non-equilibrium setup
+		* 8.  BAT and Z-matrix
+		* 9.  Binding site
+		* 10. Geometry calculations
+		* 11  Task spaces
+		* 12. Constraints
 	* @param filename input file name
 	* @return succes of the function
 	*/	

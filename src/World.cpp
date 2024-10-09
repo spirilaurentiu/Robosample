@@ -1882,7 +1882,6 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 
 			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
 				// ELIZA
-				// location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
 				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
 			}else{
 				location = 

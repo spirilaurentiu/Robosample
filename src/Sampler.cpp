@@ -43,6 +43,7 @@ Sampler::Sampler(World &argWorld,
 	for (const auto& topology: topologies){
 		natoms += topology.getNumAtoms();
 	}
+	std::cout << "OMMBUG Sampler::Sampler " << this->natoms << "\n" << std::flush;
 
 	// Set total mass of the system to non-realistic valaue
 	this->totalMass = 0;

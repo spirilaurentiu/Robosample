@@ -143,45 +143,45 @@ void Context::PrintAtomsDebugInfo(void){
  }
 
 /*!
- * <!-- Read values from input file -->
+ * <!-- Initialize Context 
+ * 1.  Setup general input-output parameters
+ * 2.  Construct topologies based on what's read from an AmberReader
+ * 3.  Add Worlds 
+ * 4.  Add contacts: (Add membrane)
+ * 5.  Add samplers
+ * 6.  Replica exchange setup
+ * 7.  Non-equilibrium setup
+ * 8.  BAT and Z-matrix
+ * 9.  Binding site
+ * 10. Geometry calculations
+ * 11  Task spaces
+ * 12. Constraints -->
 */
 bool Context::initializeFromFile(const std::string &inpFN)
 {
 
-	// Read input into a SetupReader object
+	// Input
 	setupReader.ReadSetup(inpFN);
 	setupReader.dump(true);
+	if ( !CheckInputParameters(setupReader) ) {return false;}
 
-	// Set output directory and log file name based on seed - required
-	if (!setOutput(setupReader.get("OUTPUT_DIR")[0])) {
-		return false;
-	}
-
-	// Will not be needed after we add the interface
-	if ( !CheckInputParameters(setupReader) ) {
-		return false;
-	}
-
-	// Molecules directory
+	// Output
+	if (!setOutput(setupReader.get("OUTPUT_DIR")[0])) {return false;}
 	this->molDir = GetMoleculeDirectoryShort(setupReader.get("MOLECULES")[0]);
 	this->pdbPrefix = (molDir + setupReader.get("SEED")[0]);
 	this->restartDir = setupReader.get("RESTART_DIR")[0];
 	if(restartDir.length() == 0){restartDir = ".";}
-	std::cout << "Molecule directory: " << molDir << std::endl
-			  << "Restart directory: " << restartDir << std::endl << std::flush;
+	std::cout << "Molecule directory: " << molDir << "\nRestart directory: " << restartDir << "\n";
 
-	// 
+	// Rounds
 	this->requiredNofRounds = std::stoi(setupReader.get("ROUNDS")[0]);
 	this->roundsTillReblock = std::stoi((setupReader.get("ROUNDS_TILL_REBLOCK"))[0]);
 	this->pdbRestartFreq = std::stoi(setupReader.get("WRITEPDBS")[0]);
 	this->printFreq = std::stoi(setupReader.get("PRINT_FREQ")[0]);
 
-	RUN_TYPE whatRunType = setRunType(setupReader.get("RUN_TYPE")[0]);
-	std::cout << "Run type " << RUN_TYPE_Str[int(whatRunType)] << std::endl;
-
-	setNonbonded(
-		std::stoi(setupReader.get("NONBONDED_METHOD")[0]),
-		std::stod(setupReader.get("NONBONDED_CUTOFF")[0]));
+	// // Run type (Needed in Run RunREX, RunReplicaRefactor and attemptREXSwap)
+	// RUN_TYPE whatRunType = setRunType(setupReader.get("RUN_TYPE")[0]);
+	// std::cout << "Run type " << RUN_TYPE_Str[int(whatRunType)] << std::endl;
 
 	// Construct topologies based on what's read from an AmberReader
 	std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
@@ -192,6 +192,13 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// Get Z-matrix indexes table	
 	calcZMatrixTable(); // PrintZMatrixTable();
 	reallocZMatrixBAT();
+
+
+
+	// Set nonbonded (needed for Add World)
+	setNonbonded(
+		std::stoi(setupReader.get("NONBONDED_METHOD")[0]),
+		std::stod(setupReader.get("NONBONDED_CUTOFF")[0]));
 
 	// Add Worlds to the  Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
@@ -238,7 +245,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
     //     std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
     // }
 
-	// Add membrane.
+	// Add contacts: (Add membrane).
 	// if (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND"){
 	// 	addContactImplicitMembrane(std::stof(setupReader.get("MEMBRANE")[0]), setupReader);
 	// }
@@ -268,11 +275,16 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	 	std::cout << "initializeFromFile memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 	}
 
-	// -- Setup REX --
-	std::string runType = setupReader.get("RUN_TYPE")[0];
-	if(	(runType == "REMC")   || 
-		(runType == "RENEMC") ||
-		(runType == "RENE") 
+	// -- REX: REPLICA EXCHANGE--
+
+	// Run type (Needed in Run RunREX, RunReplicaRefactor and attemptREXSwap)
+	RUN_TYPE whatRunType = setRunType(setupReader.get("RUN_TYPE")[0]);
+	std::string whatRunTypeStr = RUN_TYPE_Str[int(whatRunType)];
+	std::cout << "Run type " << whatRunTypeStr << std::endl;
+
+	if(	(whatRunTypeStr == "REMC")   || 
+		(whatRunTypeStr == "RENEMC") ||
+		(whatRunTypeStr == "RENE") 
 		|| true)
 	{
 
@@ -355,14 +367,13 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	}
 
+	// END REPLICA EXCHANGE -------------------
+
+	// Non-equilibrium
 	PrepareNonEquilibriumParams_Q();
-	
 	setThermostatesNonequilibrium();
 
-	// --------------------------------
-	// END REPLICAS -------------------
-
-	//
+	// BAT and Z-matrix
 	int firstWIx = 0;
 	SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
 
@@ -374,29 +385,12 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
 	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
 
-	// ********************************
-	// rexnewfunc /////////////////////
-	// ********************************
 	for(int k = 0; k < nofReplicas; k++){
 		replicas[k].reallocZMatrixBAT();
 		replicas[k].calcZMatrixBAT(firstWorldsAtomsLocations);
 		//replicas[k].PrintZMatrixBAT();
 	}
 	
-	// // Add BAT coordinates to thermodynamic states
-	// for(size_t thermoState_k = 0;
-	// thermoState_k < nofThermodynamicStates;
-	// thermoState_k++){
-	// 	thermodynamicStates[thermoState_k].calcZMatrixBATStats();
-	// 	//thermodynamicStates[thermoState_k].PrintZMatrixBAT();
-	// }
-
-	// thermodynamic states for(size_t thermoState_k = 0;thermoState_k < nofThermodynamicStates;thermoState_k++){}
-
-	// ********************************
-	// END rexnewfunc ////////////////
-	// ********************************
-
 	// They all start with replica 0 coordinates
 	// TODO does not work in debug
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
@@ -408,6 +402,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		//world.updSampler(0)->PrintSubZMatrixBAT();
 	}
 
+	// Binding site
 	// TODO If there is any problem here, it might be because this block was above the previous one
 	if (setupReader.get("BINDINGSITE_ATOMS")[0] != "ERROR_KEY_NOT_FOUND" &&
 		setupReader.get("BINDINGSITE_MOLECULES")[0] != "ERROR_KEY_NOT_FOUND" &&
@@ -460,13 +455,13 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		addDihedrals(dihedralIx);
 	}
 
-	// Setup task spaces
+	// Task spaces
 	bool usingTaskSpace = false;
 	if(usingTaskSpace){
 		addTaskSpacesLS();
 	}
 
-	// Add constraints
+	// Constraints
 	//context.addConstraints();
 
 	//scout("PrintAtomsDebugInfo") << eol;
@@ -851,6 +846,11 @@ void Context::addBiotypes() {
 	}
 }
 
+/*!
+ * <!--
+ * ___fill___
+ * -->
+*/
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
 	// Load Amber files
@@ -4135,6 +4135,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	SimTK::Real log_p_accept = 1.0;
 
+	// Calculate log_p_accept
 	if(getRunType() == RUN_TYPE::REMC){
 
 		log_p_accept = ETerm_equil ;
@@ -6694,10 +6695,8 @@ Context::calc_XPF_XBM(
  *  -->
 */
 SimTK::State& Context::setAtoms_SP_NEW(
-	int destWIx,
-	SimTK::State& someState,
-	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
-		otherWorldsAtomsLocations)
+	int destWIx, SimTK::State& someState,
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> & otherWorldsAtomsLocations)
 {
 	// Get destination world
 	World& destWorld = worlds[destWIx];
@@ -7574,12 +7573,8 @@ void Context::setNumThreads(int threads) {
 }
 
 void Context::setNonbonded(int method, SimTK::Real cutoff) {
-	//if (method !=0 && method != 1) {
-    //    std::cerr << "Invalid nonbonded method (0 = nocutoff; 1 = cutoffNonPeriodic). Default NoCutoff method will be used." << std::endl;
-	//	nonbondedMethod = 0;
-    //} else {
-		nonbondedMethod = method;
-    //}
+
+	nonbondedMethod = method;
 
 	if (cutoff < 0) {
 		std::cerr << "Invalid cutoff requested (negative value). Default cutoff of 1.2 nm will be used instead." << std::endl;

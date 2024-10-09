@@ -78,6 +78,7 @@ HMCSampler::HMCSampler(World &argWorld,
 	rootTopology = &topologies[0];
 
 	// Set total number of atoms and dofs
+	natoms = 0;
 	for (const auto& topology: topologies){
 		natoms += topology.getNumAtoms();
 	}
@@ -214,12 +215,12 @@ bool HMCSampler::initialize(SimTK::State& someState)
 }
 
 
-/**
- * Set simulation temperature,
+/*!
+ * <!-- Set simulation temperature,
  * velocities to desired temperature, variables that store the configuration
  * and variables that store the energies, both needed for the
  * acception-rejection step. Also realize velocities and initialize
- * the timestepper.
+ * the timestepper. -->
  */
 bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& samplerOutStream)
 {
@@ -1893,6 +1894,17 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState){
 
 // ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
 
+/*!
+ * <!--  -->
+*/
+void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass) {
+	// set if using openmm integrator
+	if(integratorName == IntegratorName::OMMVV) {
+		dumm->setOpenMMparticleMass(nax, mass);
+	}
+}
+
+
 // ELIZA: Insert code here
 void HMCSampler::OMM_setDuMMTemperature(double HMCBoostTemperature){
 	dumm->setDuMMTemperature(HMCBoostTemperature);
@@ -1910,7 +1922,6 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 
 void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
 {
-	std::cout << "HMCSampler::OMM_storeOMMConfiguration_X " << omm_locations_old.size() << " " << positions.size() << std::endl;
 
 		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
 
@@ -1963,12 +1974,12 @@ void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
 
 }
 
-
-/**
+/*! <!--
  * Order should be DuMM::NonbondedAtomIx 
- * Update OpenMM position from a Simbody Cartesian world
+ * Update OpenMM position from a Simbody Cartesian world -->
  * */
-void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someState,
+void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(
+	SimTK::State& someState,
 	bool throughDumm)
 {
 
@@ -4173,12 +4184,6 @@ void Sampler::setAcc(bool accArg)
 	this->acc = accArg;
 }
 
-void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass) {
-	// set if using openmm integrator
-	if(integratorName == IntegratorName::OMMVV) {
-		dumm->setOpenMMparticleMass(nax, mass);
-	}
-}
 
 void HMCSampler::setGuidanceHamiltonian(SimTK::Real boostTemperature, int boostMDSteps) {
 	setBoostTemperature(boostTemperature); // used for OpenMM and other minor stuff

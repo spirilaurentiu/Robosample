@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 	//testSOA();
 	//exit(0);
 
-	std::cout << "OS memory 0.\n" << exec("free") << std::endl;
+	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
 	std::string helpString = "Usage: ./robosample [options]\n";
 	helpString +=
