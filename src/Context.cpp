@@ -5200,7 +5200,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		#else
 
 			validated = worlds[whichWorld].generateSamples(
-				numSamples, worldOutStream); // =
+				numSamples, worldOutStream, header); // =
 
 		#endif
 
