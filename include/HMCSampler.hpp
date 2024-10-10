@@ -115,6 +115,16 @@ public:
 	/** Destructor **/
 	virtual ~HMCSampler();
 
+
+
+	/** Same as initialize **/
+	virtual bool initialize(SimTK::State& advanced) ;
+	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream) ;
+
+
+
+
+
 	/** ===============================
 	 * RANDOM NUMBERS
 		=============================== */
@@ -359,10 +369,6 @@ public:
 	acception-rejection step. Also realize velocities and initialize 
 	the timestepper. **/
 	//virtual void initialize(SimTK::State& advanced);
-
-	/** Same as initialize **/
-	virtual bool initialize(SimTK::State& advanced) ;
-	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream) ;
 
 	void PrintInitialParams(void);
 	void getMsg_Header(std::stringstream& ss);

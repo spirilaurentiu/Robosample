@@ -102,55 +102,8 @@ HMCSampler::~HMCSampler()
 {
 }
 
-/** ===============================
- * RANDOM NUMBERS
-    =============================== */
 
-/** Generate a random number from a uniform distribution
- * with limits L and R
-*/
-SimTK::Real HMCSampler::uniformRealDistributionRandTrunc(
-	SimTK::Real L, SimTK::Real R)
-{
-	SimTK::Real r = uniformRealDistribution(randomEngine);
-	
-	return r * (R - L) + L;
-}
 
-/** Get the PDF of a random number from a uniform distribution
- * with limits L and R
-*/
-SimTK::Real HMCSampler::uniformRealDistributionPDFTrunc(
-	SimTK::Real X, SimTK::Real L, SimTK::Real R)
-{
-	SimTK::Real pdf = SimTK::NaN;
-	
-	if ((X >= L) && (X <= R)){
-		pdf = 1.0 / (R - L);
-	}
-
-	return pdf;
-}
-
-/** Get the CDF of a random number from a uniform distribution
- * with limits L and R
-*/
-SimTK::Real HMCSampler::uniformRealDistributionCDFTrunc(
-	SimTK::Real X, SimTK::Real L, SimTK::Real R)
-{
-	SimTK::Real cdf = SimTK::NaN;
-	
-	if (X < L){
-		cdf = 0.0;
-	}
-	else if(X > R){
-		cdf = 1.0;
-	}else{
-		cdf = (X - L) / (R - L);
-	}
-
-	return cdf;
-}
 
 /** Set simulation temperature,
 velocities to desired temperature, variables that store the configuration
@@ -384,6 +337,59 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	return validated;
 
+}
+
+
+
+
+/** ===============================
+ * RANDOM NUMBERS
+    =============================== */
+
+/** Generate a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionRandTrunc(
+	SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real r = uniformRealDistribution(randomEngine);
+	
+	return r * (R - L) + L;
+}
+
+/** Get the PDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionPDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real pdf = SimTK::NaN;
+	
+	if ((X >= L) && (X <= R)){
+		pdf = 1.0 / (R - L);
+	}
+
+	return pdf;
+}
+
+/** Get the CDF of a random number from a uniform distribution
+ * with limits L and R
+*/
+SimTK::Real HMCSampler::uniformRealDistributionCDFTrunc(
+	SimTK::Real X, SimTK::Real L, SimTK::Real R)
+{
+	SimTK::Real cdf = SimTK::NaN;
+	
+	if (X < L){
+		cdf = 0.0;
+	}
+	else if(X > R){
+		cdf = 1.0;
+	}else{
+		cdf = (X - L) / (R - L);
+	}
+
+	return cdf;
 }
 
 /*!
@@ -1315,10 +1321,10 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		try {
 			// Actual openmm integration
 			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+
 			// Somewhere, the topology gets ruined
 			system->realizeTopology();
-			// // Transfer back to Simbody (TODO: might be redundant)
-			// OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
+
 		}catch(const std::exception&){
 			// Send general message
 			proposeExceptionCaught = true;
@@ -1987,8 +1993,8 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(
 		<< "someState.getTime() " << someState.getTime()
 		<< std::endl << std::flush; */
 
-	std::vector<SimTK::Vec3> startingPos;
-	startingPos.resize(this->natoms);
+	std::vector<SimTK::Vec3> includedAtomPos;
+	includedAtomPos.resize(this->natoms);
 
 	system->realize(someState, SimTK::Stage::Position);
 
@@ -1998,7 +2004,7 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(
 			dumm->getIncludedAtomPositionsInG(someState);
 
 		for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
-			startingPos[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
+			includedAtomPos[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
 		}
 
 		/* //for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
@@ -2034,12 +2040,12 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(
 
 		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
-			startingPos.push_back(mobod.getBodyOriginLocation(someState));
+			includedAtomPos.push_back(mobod.getBodyOriginLocation(someState));
 		}
 	}
 
 	// Apply
-	dumm->OMM_setOpenMMPositions(startingPos);
+	dumm->OMM_setOpenMMPositions(includedAtomPos);
 
 }
 
@@ -2071,15 +2077,20 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 			SimTK:DuMM::AtomIndex aix(i);
 			SimTK::MobilizedBodyIndex mbx = dumm->getAtomBody(aix);
 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
+			SimTK::MobilizedBodyIndex parentMbx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
 			
 			const auto location = omm_locations[i + 1];
-			const auto parent = omm_locations[mobod.getParentMobilizedBody().getMobilizedBodyIndex()];
+			const auto parent_location = omm_locations[parentMbx];
 
-			mobod.updateDefaultFrames(
-				Transform(Rotation(), location),
-				Transform(Rotation(), parent));
+			Transform X_PF = Transform(Rotation(), location);
+			Transform X_BM = Transform(Rotation(), parent_location);
+			Transform X_FM = Transform(Rotation());
 
-			mobod.setQToFitTransform(someState, Transform(Rotation()));
+			//std::cout << "OMMTEST location parent_location " << location <<" "<< parent_location <<"\n"<< std::flush;
+			//PrintTransform(X_PF, 3, "X_PF", "X_PF");
+
+			mobod.updateDefaultFrames(X_PF, X_BM);
+			mobod.setQToFitTransform(someState, X_FM);
 
 		}
 
@@ -3490,9 +3501,9 @@ void HMCSampler::printDrilling(SimTK::State& someState)
 		
 }
 
-/**
- * It implements the proposal move in the Hamiltonian Monte Carlo
- * algorithm. It essentially propagates the trajectory.
+/*!
+ * <!-- It implements the proposal move in the Hamiltonian Monte Carlo
+ * algorithm. It essentially propagates the trajectory. -->
  **/
 bool HMCSampler::propose(SimTK::State& someState)
 {
@@ -3976,7 +3987,7 @@ void HMCSampler::restoreConfiguration(
 
 	if(integratorName == IntegratorName::OMMVV){
 		OMM_restoreConfiguration(someState);
-		OMM_To_Simbody_setAtomsLocations(someState); // COMPLETE
+		OMM_To_Simbody_setAtomsLocations(someState);
 		
 	}else{
 		assignConfFromSetTVector(someState);
@@ -3998,7 +4009,11 @@ void HMCSampler::restoreEnergies(void){
 	etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
 }
 
-/** Restore */
+/*!
+ * <!--
+ * Restore
+ * --> 
+ */
 void HMCSampler::restore(SimTK::State& someState)
 {
 
