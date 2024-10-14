@@ -1470,7 +1470,7 @@ void Context::AddMolecules(
 // ============================================================================
 // ============================================================================
 /*!
- * <!-- -->
+ * <!-- Sets the root atom for a topology -->
 */
 void Context::setRootAtom(Topology& topology, int rootAmberIx)
 {
@@ -1483,7 +1483,10 @@ void Context::setRootAtom(Topology& topology, int rootAmberIx)
 		= rootAtom.getSingleAtom();
 
 	topology.baseAtomNumber = rootAmberIx;
-	topology.setBaseAtom( compoundRootAtom );
+
+	Transform location = Transform();
+	topology.setBaseAtom(compoundRootAtom, location);
+
 	topology.setAtomBiotype(rootAtom.getName(), rootAtom.getResidueName(),
 							rootAtom.getName());
 	topology.convertInboardBondCenterToOutboard();

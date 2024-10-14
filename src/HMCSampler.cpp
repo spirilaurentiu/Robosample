@@ -2505,12 +2505,25 @@ void HMCSampler::setTVector(SimTK::Transform *inpTVector)
 // Stores the set configuration into an internal vector of transforms TVector
 void HMCSampler::storeSimbodyConfiguration_XFMs(const SimTK::State& someState)
 {
-  int i = 0;
-  for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	SetTVector[i] = mobod.getMobilizerTransform(someState);
-	i++;
-  }
+    int i = 0;
+    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	    SetTVector[i] = mobod.getMobilizerTransform(someState);
+	    i++;
+    }
+	
+	std::cout << "OMMTEST" <<"\n"<<std::flush;
+  	int k = 0;
+  	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const Transform& X_PF = mobod.getInboardFrame(someState);
+		const Transform& X_FM = mobod.getMobilizerTransform(someState);
+		const Transform& X_BM = mobod.getOutboardFrame(someState);
+		PrintTransform(X_PF, 3, "X_PF", "X_PF");
+		PrintTransform(X_BM, 3, "X_BM", "X_BM");
+		PrintTransform(X_FM, 3, "X_FM", "X_FM");		
+		k++;
+	}  
 
 }
 
@@ -2525,6 +2538,7 @@ SimTK::Transform * HMCSampler::getSetTVector(void)
 void HMCSampler::assignConfFromSetTVector(SimTK::State& someState)
 {
 	// system->realize(someState, SimTK::Stage::Position);
+
 
   	int i = 0;
   	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -3997,10 +4011,10 @@ void HMCSampler::restoreConfiguration(
 
 	if(integratorName == IntegratorName::OMMVV){
 		OMM_restoreConfiguration(someState);
-		OMM_To_Simbody_setAtomsLocations(someState);
+		OMM_To_Simbody_setAtomsLocations(someState); // _clean_ seems redundant
 		
 	}else{
-		assignConfFromSetTVector(someState);
+		assignConfFromSetTVector(someState); // _clean_ try setting Q directly
 	}
 
 	proposeExceptionCaught = false;
