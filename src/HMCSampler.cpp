@@ -2086,8 +2086,13 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 			Transform X_BM = Transform(Rotation(), parent_location);
 			Transform X_FM = Transform(Rotation());
 
-			//std::cout << "OMMTEST location parent_location " << location <<" "<< parent_location <<"\n"<< std::flush;
-			//PrintTransform(X_PF, 3, "X_PF", "X_PF");
+			std::cout << "OMMTEST" <<"\n"<<std::flush;
+			std::cout << " parentMbx mbx "<< int(parentMbx) <<" "<< int(mbx) << std::endl;
+			PrintSimbodyVec(location, 3, "location");
+			PrintSimbodyVec(location, 3, "parent_location");
+			PrintTransform(X_PF, 3, "X_PF", "X_PF");
+			PrintTransform(X_BM, 3, "X_BM", "X_BM");
+			PrintTransform(X_FM, 3, "X_FM", "X_FM");
 
 			mobod.updateDefaultFrames(X_PF, X_BM);
 			mobod.setQToFitTransform(someState, X_FM);
@@ -3981,6 +3986,11 @@ void HMCSampler::PrintAdaptiveData(void)
 // RESTORE
 ///////////////////////////////////////////////////////
 
+/*!
+ * <!--
+ * Restore configuration
+ * --> 
+ */
 void HMCSampler::restoreConfiguration(
 	SimTK::State& someState)
 {
@@ -3996,8 +4006,11 @@ void HMCSampler::restoreConfiguration(
 	proposeExceptionCaught = false;
 }
 
-/** Restore energies */
-void HMCSampler::restoreEnergies(void){
+/*!
+ * <!--
+ * Restore energies
+ * --> 
+ */void HMCSampler::restoreEnergies(void){
 
 	// Set final energies to the precalculated old ones
 	pe_set = pe_o;

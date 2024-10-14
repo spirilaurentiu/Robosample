@@ -447,6 +447,7 @@ void SOA_SpatialMat2Mat66(const SimTK::SpatialMat& in, SimTK::Mat66& out);
 
 
 void PrintSimbodyVec(const SimTK::Vector& V, int decimal_places = 3, std::string header = "unknown");
+void PrintSimbodyVec(const SimTK::Vec3& V, int decimal_places = 3, std::string header = "unknown");
 
 /*
  * Print Big Matrices separated by spaces

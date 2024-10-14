@@ -763,6 +763,9 @@ SimTK::Matrix& SOA_GetHLikeElement(SimTK::Matrix inMatrix, int which, SimTK::Mat
     return outMatrix;
 }
 
+/*!
+ * <!-- Print Simbody type Vector -->
+ */
 void PrintSimbodyVec(const SimTK::Vector& V, int decimal_places, std::string header)
 {
     std::cout << header << " ";
@@ -773,8 +776,21 @@ void PrintSimbodyVec(const SimTK::Vector& V, int decimal_places, std::string hea
 	std::cout << std::endl;
 }
 
-/*
- * Print Big Matrices separated by spaces
+/*!
+ * <!-- Print Simbody type Vector -->
+ */
+void PrintSimbodyVec(const SimTK::Vec3& V, int decimal_places, std::string header)
+{
+    std::cout << header << " ";
+    std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+	for(int j = 0; j < V.size(); j++){
+        std::cout << V[j] << " ";
+	}
+	std::cout << std::endl;
+}
+
+/*!
+ * <!-- Print Big Matrices separated by spaces -->
  */
 void PrintBigMat(const SimTK::Matrix& M, int nrows, int ncols, int decimal_places, std::string header)
 {
