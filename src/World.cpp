@@ -960,9 +960,9 @@ const SimTK::State& World::realizeTopology()
 	return returnState;
 }
 
-/** 
- * Assign a scale factor for generalized velocities to every mobilized
- * body
+/*! 
+ * <!-- Assign a scale factor for generalized velocities to every mobilized
+ * body -->
  */
 void World::setUScaleFactorsToMobods(void)
 {
@@ -3343,7 +3343,7 @@ bool World::addSampler(SamplerName samplerName,
 			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
 				// TODO is this correct?
 				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
-				std::cout << "mass = " << mass << std::endl;
+				//std::cout << "mass = " << mass << std::endl;
 				const SimTK::DuMM::NonbondAtomIndex nax(aix);
 				samplers.back()->setOMMmass(nax, mass);
 			}
