@@ -2086,13 +2086,13 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 			Transform X_BM = Transform(Rotation(), parent_location);
 			Transform X_FM = Transform(Rotation());
 
-			std::cout << "OMMTEST" <<"\n"<<std::flush;
-			std::cout << " parentMbx mbx "<< int(parentMbx) <<" "<< int(mbx) << std::endl;
-			PrintSimbodyVec(location, 3, "location");
-			PrintSimbodyVec(location, 3, "parent_location");
-			PrintTransform(X_PF, 3, "X_PF", "X_PF");
-			PrintTransform(X_BM, 3, "X_BM", "X_BM");
-			PrintTransform(X_FM, 3, "X_FM", "X_FM");
+			// std::cout << "OMMTEST" <<"\n"<<std::flush;
+			// std::cout << " parentMbx mbx "<< int(parentMbx) <<" "<< int(mbx) << std::endl;
+			// PrintSimbodyVec(location, 3, "location");
+			// PrintSimbodyVec(location, 3, "parent_location");
+			// PrintTransform(X_PF, 3, "X_PF", "X_PF");
+			// PrintTransform(X_BM, 3, "X_BM", "X_BM");
+			// PrintTransform(X_FM, 3, "X_FM", "X_FM");
 
 			mobod.updateDefaultFrames(X_PF, X_BM);
 			mobod.setQToFitTransform(someState, X_FM);
@@ -2512,18 +2512,18 @@ void HMCSampler::storeSimbodyConfiguration_XFMs(const SimTK::State& someState)
 	    i++;
     }
 	
-	std::cout << "OMMTEST" <<"\n"<<std::flush;
-  	int k = 0;
-  	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		const Transform& X_PF = mobod.getInboardFrame(someState);
-		const Transform& X_FM = mobod.getMobilizerTransform(someState);
-		const Transform& X_BM = mobod.getOutboardFrame(someState);
-		PrintTransform(X_PF, 3, "X_PF", "X_PF");
-		PrintTransform(X_BM, 3, "X_BM", "X_BM");
-		PrintTransform(X_FM, 3, "X_FM", "X_FM");		
-		k++;
-	}  
+	// std::cout << "OMMTEST" <<"\n"<<std::flush;
+  	// int k = 0;
+  	// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	// 	const Transform& X_PF = mobod.getInboardFrame(someState);
+	// 	const Transform& X_FM = mobod.getMobilizerTransform(someState);
+	// 	const Transform& X_BM = mobod.getOutboardFrame(someState);
+	// 	PrintTransform(X_PF, 3, "X_PF", "X_PF");
+	// 	PrintTransform(X_BM, 3, "X_BM", "X_BM");
+	// 	PrintTransform(X_FM, 3, "X_FM", "X_FM");		
+	// 	k++;
+	// }  
 
 }
 

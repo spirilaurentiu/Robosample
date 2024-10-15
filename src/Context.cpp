@@ -200,6 +200,9 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		std::stoi(setupReader.get("NONBONDED_METHOD")[0]),
 		std::stod(setupReader.get("NONBONDED_CUTOFF")[0]));
 
+	// Set GBSA
+	setGBSA(std::stod(setupReader.get("GBSA")[0]));
+
 	// Add Worlds to the  Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
