@@ -185,15 +185,14 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	// Construct topologies based on what's read from an AmberReader
 	std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
-	std::string inpcrd = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("INPCRD")[0] + ".rst7";
+	std::string inpcrd = restartDir + "/" + setupReader.get("INPCRD")[0] + ".s0" + ".rst7";
+
 	loadAmberSystem(prmtop, inpcrd);
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
 	// Get Z-matrix indexes table	
 	calcZMatrixTable(); // PrintZMatrixTable();
 	reallocZMatrixBAT();
-
-
 
 	// Set nonbonded (needed for Add World)
 	setNonbonded(
@@ -1065,11 +1064,6 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 	// Topology specific paramters
 	for(std::size_t worldIx = 0; worldIx < inpNofWorlds; worldIx++) {
 		for(std::size_t molIx = 0; molIx < inpNofMols; molIx++) {
-
-			if(!SimTK::Pathname::fileExists(setupReader.get("MOLECULES")[molIx] + std::string("/") + setupReader.get("RBFILE")[molIx]) ){
-				std::cerr << cerr_prefix << "world " + std::to_string(worldIx) + " molecule " + std::to_string(molIx) + " rb not found" << std::endl;
-				return false;
-			}
 
 			if(!SimTK::Pathname::fileExists(setupReader.get("MOLECULES")[molIx] + std::string("/") + setupReader.get("FLEXFILE")[molIx]) ){
 				std::cerr << cerr_prefix << "world " + std::to_string(worldIx) + " molecule " + std::to_string(molIx) + " flex not found" << std::endl;
