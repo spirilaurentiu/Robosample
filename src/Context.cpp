@@ -1048,17 +1048,17 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 	// TODO please stop throwing in constructors
 	for(std::size_t molIx = 0; molIx < inpNofMols; molIx++) {
 		const auto prmtop = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("PRMTOP")[molIx];
-		const auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
+		//const auto inpcrd = setupReader.get("MOLECULES")[molIx] + "/" + setupReader.get("INPCRD")[molIx] + ".rst7";
 
 		if(!SimTK::Pathname::fileExists(prmtop)) {
 			std::cerr << cerr_prefix << "Molecule " + std::to_string(molIx) + " prmtop not found at " + prmtop << std::endl;
 			return false;
 		}
 
-		if(!SimTK::Pathname::fileExists(inpcrd)) {
-			std::cerr << cerr_prefix << "Molecule " + std::to_string(molIx) + " inpcrd not found at " + inpcrd << std::endl;
-			return false;
-		}
+		// if(!SimTK::Pathname::fileExists(inpcrd)) {
+		// 	std::cerr << cerr_prefix << "Molecule " + std::to_string(molIx) + " inpcrd not found at " + inpcrd << std::endl;
+		// 	return false;
+		// }
 	}
 
 	// Topology specific paramters
