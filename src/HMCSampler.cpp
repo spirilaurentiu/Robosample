@@ -2069,7 +2069,7 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 				positions[i][2]);
 		}
 
-		// Invalidate all statges
+		// Invalidate all statges (because Somewhere, the topology gets ruined)
 		matter->invalidateSubsystemTopologyCache();
 
 		for (int i = 0; i < dumm->getNumAtoms(); i++) {

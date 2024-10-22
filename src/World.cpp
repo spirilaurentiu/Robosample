@@ -3448,9 +3448,9 @@ bool World::generateProposal(void)
 	return validated;
 }
 
-/**
- *  Generate a number of samples
- * */
+/*! <--
+ *  Generate a number of samples -->
+ **/
 bool World::generateSamples(int howMany,
 	std::stringstream& worldOutStream, const std::string& header)
 {
