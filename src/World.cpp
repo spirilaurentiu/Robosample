@@ -3267,7 +3267,7 @@ bool World::addSampler(SamplerName samplerName,
 		adaptiveTS = true;
 	}
 
-	std::cout << "adaptiveTS is " << adaptiveTS << std::endl;
+	std::cout << " OMMDEBUG World::addSampler adaptiveTS is " << adaptiveTS << std::endl;
 
 	if (integratorName == IntegratorName::OMMVV) {
 		forceField->setUseOpenMMIntegration(true);
@@ -3278,8 +3278,11 @@ bool World::addSampler(SamplerName samplerName,
 		if (adaptiveTS) {
 			timestep = 0.0007;
 		}
-		forceField->setOpenMMstepsize(timestep);
-	} else {
+
+		std::cout << "trying to set timestep to " << timestep << std::endl << std::flush;
+		forceField->setDuMMTimestep(timestep);
+
+	}else{
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 	}
 
@@ -3362,7 +3365,7 @@ void World::useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep) {
 		forceField->setUseOpenMMIntegration(true);
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 		forceField->setDuMMTemperature(boostTemp);
-		forceField->setOpenMMstepsize(timestep);
+		forceField->setDuMMTimestep(timestep);
 	} else {
 		forceField->setUseOpenMMCalcOnlyNonBonded(false);
 	}
