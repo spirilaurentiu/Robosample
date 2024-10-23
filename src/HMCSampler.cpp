@@ -227,7 +227,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		omm_locations.resize(matter->getNumBodies());
 		omm_locations_old.resize(matter->getNumBodies());
 
-		OMM_storeOMMConfiguration_X(dumm->OMM_getPositions());
+		const std::vector<OpenMM::Vec3>& arg_omm_positions = dumm->OMM_getPositions();
+
+		OMM_storeOMMConfiguration_X(arg_omm_positions);
 	}
 
 	// Print Simbody
@@ -1928,6 +1930,12 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 
 void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
 {
+		std::cout << "HMCSampler::OMM_storeOMMConfiguration_X sizes "
+			<< "omm_locations.size OpenMM::Vec3 positions.size()"
+			<< omm_locations.size() <<" "<< positions.size() << std::endl << std::flush;
+			
+		assert("omm_locations size" && 
+			(omm_locations.size() == positions.size()));
 
 		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
 

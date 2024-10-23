@@ -3342,15 +3342,50 @@ bool World::addSampler(SamplerName samplerName,
 
 	// Copy atom masses to OpenMM
 	if (integratorName == IntegratorName::OMMVV) {
-		for (const auto& t : *topologies) {
-			for (int aix = 0; aix < t.getNumAtoms(); aix++) {
-				// TODO is this correct?
-				const auto mass = t.getAtomElement(Compound::AtomIndex(aix)).getMass();
-				//std::cout << "mass = " << mass << std::endl;
-				const SimTK::DuMM::NonbondAtomIndex nax(aix);
+
+		// Variant 1
+		for (auto& topology : (*topologies)){
+
+			for (auto& atom : topology.subAtomList) {
+
+				//auto cAIx = atom.getCompoundAtomIndex();
+				const SimTK::DuMM::AtomIndex dAIx = atom.getDuMMAtomIndex();
+				const SimTK::DuMM::NonbondAtomIndex nax = forceField->getNonbondAtomIndex(dAIx);
+
+				SimTK::Real mass = atom.getMass();
+
 				samplers.back()->setOMMmass(nax, mass);
+
+				const DuMM::IncludedAtomIndex iax = forceField->getIncludedAtomIndexOfNonbondAtom(nax);
+				std::cout << "OMMBUG World::addSampler inName name elem nax dAIx iax"
+					<<" "<< atom.getInName() <<" "<< atom.getName() <<" "<<  atom.getElem()
+					<<" "<< nax << " " << dAIx << " " << iax 
+					<<" "<< mass
+					<< std::endl;
+
 			}
-		}	
+		}
+
+		// // Variant 2: old way
+		// for (const auto& topology : *topologies) {
+		// 	for (int taix = 0; taix < topology.getNumAtoms(); taix++) {
+		// 		Compound::AtomIndex caix = Compound::AtomIndex(taix);
+		// 		const auto mass = topology.getAtomElement(caix).getMass();
+		// 		//std::cout << "mass = " << mass << std::endl;
+		// 		const SimTK::DuMM::NonbondAtomIndex nax(taix);
+		// 		samplers.back()->setOMMmass(nax, mass);
+		// 	}
+		// }
+
+		// // Variant 3
+		// for (DuMM::NonbondAtomIndex nax(0); nax < forceField->getNumNonbondAtoms(); ++nax) {
+		// 	const SimTK::DuMM::AtomIndex dax = forceField->getAtomIndexOfNonbondAtom(nax);
+		// 	const DuMM::IncludedAtomIndex iax = forceField->getIncludedAtomIndexOfNonbondAtom(nax);
+		// 	std::cout << "OMMBUG World::addSampler nax dax iax"
+		// 		<< " " << nax << " " << dax << " " << iax 
+		// 		<< std::endl;
+		// }
+
 	}
 
 	std::cout << "World " << ownWorldIndex << " using timestep " << timestep << std::endl;
