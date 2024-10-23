@@ -1930,9 +1930,9 @@ double HMCSampler::OMM_calcPotentialEnergy(void){
 
 void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
 {
-		std::cout << "HMCSampler::OMM_storeOMMConfiguration_X sizes "
-			<< "omm_locations.size OpenMM::Vec3 positions.size()"
-			<< omm_locations.size() <<" "<< positions.size() << std::endl << std::flush;
+		// std::cout << "HMCSampler::OMM_storeOMMConfiguration_X sizes "
+		// 	<< "omm_locations.size OpenMM::Vec3 positions.size()"
+		// 	<< omm_locations.size() <<" "<< positions.size() << std::endl << std::flush;
 			
 		assert("omm_locations size" && 
 			(omm_locations.size() == positions.size()));
