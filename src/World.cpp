@@ -3356,7 +3356,7 @@ bool World::addSampler(SamplerName samplerName,
 
 				samplers.back()->setOMMmass(nax, mass);
 
-				const DuMM::IncludedAtomIndex iax = forceField->getIncludedAtomIndexOfNonbondAtom(nax);
+				// const DuMM::IncludedAtomIndex iax = forceField->getIncludedAtomIndexOfNonbondAtom(nax);
 				// std::cout << "OMMBUG World::addSampler inName name elem nax dAIx iax"
 				// 	<<" "<< atom.getInName() <<" "<< atom.getName() <<" "<<  atom.getElem()
 				// 	<<" "<< nax << " " << dAIx << " " << iax 
