@@ -202,6 +202,10 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// Set GBSA
 	setGBSA(std::stod(setupReader.get("GBSA")[0]));
 
+    if(MEMDEBUG){
+		stdcout_memdebug("Context::initializeFromFile 1");
+	}
+
 	// Add Worlds to the  Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
@@ -246,7 +250,6 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// if (sysinfo(&info) == 0) {
     //     std::cout << "Free memory: " << info.freeram / (1024 * 1024) << " MB" << std::endl;
     // }
-
 	// Add contacts: (Add membrane).
 	// if (setupReader.get("MEMBRANE")[0] != "ERROR_KEY_NOT_FOUND"){
 	// 	addContactImplicitMembrane(std::stof(setupReader.get("MEMBRANE")[0]), setupReader);
@@ -272,9 +275,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	} // every world
 
     if(MEMDEBUG){
-	 	std::cout << "initializeFromFile memory 2.\n" << exec("free") << std::endl << std::flush;
-	 	std::cout << "initializeFromFile memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	 	std::cout << "initializeFromFile memory 2.\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+		stdcout_memdebug("Context::initializeFromFile 2");
 	}
 
 	// -- REX: REPLICA EXCHANGE--
@@ -371,6 +372,10 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	// END REPLICA EXCHANGE -------------------
 
+    if(MEMDEBUG){
+		stdcout_memdebug("Context::initializeFromFile 3");
+	}
+
 	// Non-equilibrium
 	PrepareNonEquilibriumParams_Q();
 	setThermostatesNonequilibrium();
@@ -386,6 +391,10 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
 	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
+
+    if(MEMDEBUG){
+		stdcout_memdebug("Context::initializeFromFile 4");
+	}
 
 	for(int k = 0; k < nofReplicas; k++){
 		replicas[k].reallocZMatrixBAT();
@@ -470,9 +479,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	//PrintAtomsDebugInfo();
 
     if(MEMDEBUG){
-		std::cout << "initializeFromFile memory \n" << exec("free") << std::endl << std::flush;
-		std::cout << "initializeFromFile memory \n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-		std::cout << "initializeFromFile memory \n" << getResourceUsage() << " kB" << std::endl << std::flush;
+		stdcout_memdebug("Context::initializeFromFile 4");
 	}
 
     return true;
@@ -5431,8 +5438,12 @@ void Context::RunReplicaRefactor(
 void Context::RunREX()
 {
 
+    if(MEMDEBUG){stdcout_memdebug("Context::RunREX 1");}
+
 	// Is this necesary =======================================================
-	realizeTopology(); 
+	realizeTopology();
+	
+    if(MEMDEBUG){stdcout_memdebug("Context::RunREX 2");}
 
 	// Allocate space for swap matrices
 	allocateSwapMatrices();
@@ -5444,6 +5455,8 @@ void Context::RunREX()
 		initializeReplica(replicaIx);
 
 	} // ======================================================================
+
+    if(MEMDEBUG){stdcout_memdebug("Context::RunREX 3");}
 
 	// Print a header =========================================================
 	std::stringstream rexOutput;
@@ -5484,11 +5497,15 @@ void Context::RunREX()
 
 		//Print_TRANSFORMERS_Work();
 
+    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
+
 		// SIMULATE EACH REPLICA --------------------------------------------->
 		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
+
+	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 5");}
 
 			// Load the front world
 			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);           // (1)
@@ -5496,8 +5513,12 @@ void Context::RunREX()
 			// Set thermo and simulation parameters for the worlds in this replica
 			setReplicasWorldsParameters(replicaIx);
 
+	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 6");}
+
 			// ======================== SIMULATE ======================
 			RunReplicaRefactor(mixi, replicaIx);
+
+	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 7");}
 
 			// for(const auto wIx : worldIndexes){ // @@@@@@@@@@@@@
 			// 	std::cout << "BMps thIx " << replica2ThermoIxs[replicaIx];

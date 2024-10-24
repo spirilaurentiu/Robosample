@@ -231,7 +231,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 			std::cerr << "OMMVV error: nofBodies not equal to nofAtoms: "
 				<< matter->getNumBodies() <<" "<< (natoms + 1)
 				<< std::endl;
-			throw std::exception(); std::exit(1);
+
+			throw std::exception();
+			std::exit(1);
 		}
 
 		omm_locations.resize(matter->getNumBodies());

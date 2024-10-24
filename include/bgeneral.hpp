@@ -242,6 +242,8 @@ std::string exec(const char* cmd);
 std::size_t getLinuxMemoryUsageFromProc();
 long getResourceUsage();
 
+void stdcout_memdebug(std::string header__);
+
 /**************************************
  * 		General Functions             *
  **************************************/
