@@ -111,11 +111,13 @@ void spacedcout(Args &&... args)
 #define eol std::endl 
 # endif
 
-#ifndef  scout
+#ifndef scout
 #define scout(x) std::cout<<x
-# endif
+#endif
 
-
+#ifndef scoutf
+#define scoutf(x) std::cout<<x<<std::endl<<std::flush
+#endif
 
 #ifndef ceol
 #define ceol std::cout<<std::endl

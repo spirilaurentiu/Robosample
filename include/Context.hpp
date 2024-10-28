@@ -104,13 +104,22 @@ public:
 	RUN_TYPE getRunType(void) const;
 	void setRunType(RUN_TYPE runTypeArg);
 	RUN_TYPE setRunType(const std::string& runTypeArgStr);
-	
+
+
+
 	/**	
-	* @brief Read Amber files and construct topologies.
+	* @brief Read Amber files.
 	* @param var
-	* @return
 	*/
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
+
+	/**	
+	* @brief Construct topologies.
+	* @param var
+	*/
+
+
+	//void constructTopologies
 
 	/**	
 	* @brief Add worlds.
@@ -226,7 +235,15 @@ public:
 	void passTopologiesToWorlds(void);
 
 	/**  */
-	void constructTopologies();
+	void build_GmolGraph_MolmodelAcyclicGraph();
+
+	void calc_Gmolmodel_Graph();
+	void build_Molmodel_AcyclicGraphs();
+	void new_build_GmolGraph_MolmodelAcyclicGraph();
+	//void matchDefault
+
+
+
 
 	/**  */
 	void generateTopologiesSubarrays(void);
@@ -851,13 +868,14 @@ private:
 	ELEMENT_CACHE elementCache;
 
 	std::vector<int> findMolecules(const AmberReader& reader);
-	void loadAtoms(const AmberReader& reader);
 
 	void loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN);
 	
+	void loadAtoms(const AmberReader& reader);
 	void loadBonds(const AmberReader& reader);
 	void loadAngles(const AmberReader& reader);
 	void loadTorsions(const AmberReader& reader);
+
 	void setAtomCompoundTypes();
 	void addBiotypes();
 	std::vector<bSpecificAtom>& getAtoms() {
@@ -947,56 +965,94 @@ private:
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
 	/**	
-	* @brief
+	* @brief Add a new row to the zMatrixTable
+	* @param
+	*/
+    void addZMatrixTableRow(const std::vector<int>& newRow) ;
+
+	/**	
+	* @brief Getter for a specific entry
 	* @param
 	* @return
 	*/
-    // zmatrixbat_ Function to add a new row to the zMatrixTable
-    void addZMatrixTableRow(const std::vector<int>& newRow) ;
-
-    // zmatrixbat_ Getter for a specific entry
     int getZMatrixTableEntry(int rowIndex, int colIndex) const ;
 
-    // zmatrixbat_ Setter for a specific entry
+	/**	
+	* @brief Setter for a specific entry
+	* @param
+	*/
     void setZMatrixTableEntry(int rowIndex, int colIndex, int value) ;
 
-    // zmatrixbat_ Print function for the zMatrixTable
+	/**	
+	* @brief Print function for the zMatrixTable
+	* @param
+	*/
     void PrintZMatrixTable() const ;
 
-    // zmatrixbat_ Setter for a specific entry
+	/**	
+	* @brief Setter for a specific entry
+	* @param
+	*/
     void setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) ;
 
-    // zmatrixbat_ Function to get a given row
+	/**	
+	* @brief Function to get a given row
+	* @param
+	*/
     const std::vector<SimTK::Real>& getZMatrixBATRow(size_t rowIndex) const;
 
-    // zmatrixbat_ Function to get a given row
+	/**	
+	* @brief Function to get a given row
+	* @param
+	* @return
+	*/
     std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex) ;
 
 
-	// Get Z-matrix indexes table 
-	void
-	calcZMatrixTable(void);
+	/**	
+	* @brief Get Z-matrix indexes table
+	* @param
+	*/
+	void calcZMatrixTable(void);
 
-	// Allocate Z Matrix BAT
+	/**	
+	* @brief Allocate Z Matrix BAT
+	* @param
+	*/
 	void reallocZMatrixBAT(void);
 
-	//
-	void
-	calcZMatrixBAT(	int wIx,
-	const std::vector< std::vector<
-	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
-		otherWorldsAtomsLocations);
+	/**	
+	* @brief 
+	* @param
+	*/
+	void calcZMatrixBAT(int wIx,
+		const std::vector< std::vector<
+			std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+				otherWorldsAtomsLocations);
 
-    // zmatrixbat_ Function to get the value for a given row and column in zMatrixBAT
+	/**	
+	* @brief Function to get the value for a given row and column in zMatrixBAT
+	* @param
+	* @return
+	*/
     SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const ;
 
-    // zmatrixbat_ Function to print the zMatrixBAT
+	/**	
+	* @brief Function to print the zMatrixBAT
+	* @param
+	*/
     void PrintZMatrixBAT() const ;
 
-	// zmatrixbat_ 
+	/**	
+	* @brief
+	* @param
+	*/
 	void PrintZMatrixTableAndBAT() const;
 
-    // zmatrixbat_  Function to add a new row to the zMatrixBAT
+	/**	
+	* @brief Function to add a new row to the zMatrixBAT
+	* @param
+	*/
     void addZMatrixBATRow(const std::vector<SimTK::Real>& newRow);
 
 	// WORK Q PERTURB BEND STRETCH ============================================

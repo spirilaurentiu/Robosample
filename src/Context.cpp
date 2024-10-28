@@ -202,9 +202,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// Set GBSA
 	setGBSA(std::stod(setupReader.get("GBSA")[0]));
 
-    if(MEMDEBUG){
-		stdcout_memdebug("Context::initializeFromFile 1");
-	}
+    if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1");}
 
 	// Add Worlds to the  Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
@@ -274,9 +272,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		);
 	} // every world
 
-    if(MEMDEBUG){
-		stdcout_memdebug("Context::initializeFromFile 2");
-	}
+    if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 2");}
 
 	// -- REX: REPLICA EXCHANGE--
 
@@ -372,9 +368,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	// END REPLICA EXCHANGE -------------------
 
-    if(MEMDEBUG){
-		stdcout_memdebug("Context::initializeFromFile 3");
-	}
+    if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 3");}
 
 	// Non-equilibrium
 	PrepareNonEquilibriumParams_Q();
@@ -392,9 +386,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
 	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
 
-    if(MEMDEBUG){
-		stdcout_memdebug("Context::initializeFromFile 4");
-	}
+    if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 4");}
 
 	for(int k = 0; k < nofReplicas; k++){
 		replicas[k].reallocZMatrixBAT();
@@ -478,9 +470,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	//scout("PrintAtomsDebugInfo") << eol;
 	//PrintAtomsDebugInfo();
 
-    if(MEMDEBUG){
-		stdcout_memdebug("Context::initializeFromFile 4");
-	}
+    if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 4");}
 
     return true;
 }
@@ -543,10 +533,39 @@ std::vector<int> Context::findMolecules(const AmberReader& reader) {
 	return moleculesBegin;
 }
 
-/** Set Gmolmodel atoms properties from a reader: number, name, element,
+/*!
+ * <!-- Set coordinates for bSpecific atom list from a Amber rst7 file -->
+*/
+void Context::loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN) {
+
+	// Load Amber files
+	AmberReader reader;
+	reader.readAmberFiles(inpcrdFN, prmtop);
+
+	// Check
+	//natoms = reader.getNumberAtoms();
+	//atoms.size();
+
+	// Iterate through atoms and set as much as possible from amberReader
+	for(int aCnt = 0; aCnt < natoms; aCnt++) {
+
+		// Set coordinates in nm (AMBER uses Angstroms)
+		atoms[aCnt].setX(reader.getAtomsXcoord(aCnt) / 10.0);
+		atoms[aCnt].setY(reader.getAtomsYcoord(aCnt) / 10.0);
+		atoms[aCnt].setZ(reader.getAtomsZcoord(aCnt) / 10.0);
+		atoms[aCnt].setCartesians(
+			reader.getAtomsXcoord(aCnt) / 10.0,
+			reader.getAtomsYcoord(aCnt) / 10.0,
+			reader.getAtomsZcoord(aCnt) / 10.0 );
+
+	}
+}
+
+/*! <!-- Set Gmolmodel atoms properties from a reader: number, name, element,
  * initial name, force field type, charge, coordinates, mass, LJ parameters.
  * 1-to-1 correspondence between prmtop and Gmolmodel.
- * This does not set anything in Compund or DuMM.  **/
+ * This does not set anything in Compund or DuMM. -->
+*/
 void Context::loadAtoms(const AmberReader& reader) {
 	// Alloc memory for atoms and bonds list
 	natoms = reader.getNumberAtoms();
@@ -621,33 +640,8 @@ void Context::loadAtoms(const AmberReader& reader) {
 	}
 }
 
-void Context::loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN) {
-
-	// Load Amber files
-	AmberReader reader;
-	reader.readAmberFiles(inpcrdFN, prmtop);
-
-	// Check
-	//natoms = reader.getNumberAtoms();
-	//atoms.size();
-
-	// Iterate through atoms and set as much as possible from amberReader
-	for(int aCnt = 0; aCnt < natoms; aCnt++) {
-
-		// Set coordinates in nm (AMBER uses Angstroms)
-		atoms[aCnt].setX(reader.getAtomsXcoord(aCnt) / 10.0);
-		atoms[aCnt].setY(reader.getAtomsYcoord(aCnt) / 10.0);
-		atoms[aCnt].setZ(reader.getAtomsZcoord(aCnt) / 10.0);
-		atoms[aCnt].setCartesians(
-			reader.getAtomsXcoord(aCnt) / 10.0,
-			reader.getAtomsYcoord(aCnt) / 10.0,
-			reader.getAtomsZcoord(aCnt) / 10.0 );
-
-	}
-}
-
-/** Set bonds properties from reader: bond indeces, atom neighbours.
- *  1-to-1 correspondence between prmtop and Gmolmodel.
+/*! <!-- Set bonds properties from reader: bond indeces, atom neighbours.
+ *  1-to-1 correspondence between prmtop and Gmolmodel. -->
  **/
 void Context::loadBonds(const AmberReader& reader) {
 	
@@ -686,46 +680,7 @@ void Context::loadBonds(const AmberReader& reader) {
 	}
 }
 
-void Context::PrintBond(bBond& bond)
-{
-	bond.Print();
-
-	scout(" ") << atoms[bond.i].getName() <<" ";
-	scout(" ") << atoms[bond.j].getName() <<" ";
-
-	ceol;	
-}
-
-void Context::PrintBonds(void){
-
-	for(size_t cnt = 0; cnt < nbonds; cnt++) {
-		bonds[cnt].Print();
-
-		scout(" ") << atoms[bonds[cnt].i].getName() <<" ";
-		scout(" ") << atoms[bonds[cnt].j].getName() <<" ";
-
-		ceol;
-	}
-
-}
-
-int Context::checkBonds(void)
-{
-	for(size_t cnt = 0; cnt < nbonds; cnt++) {
-
-		bBond& bond = bonds[cnt];
-		
-		if(bond.getMoleculeIndex() < 0){
-			std::cerr << "Bond did not set its molecule index." << std::endl;
-			PrintBond(bond);
-			return 1;
-		}
-
-	}
-
-	return 0;
-}
-
+/*! <!-- Set dumm angle list to be used in World generateDummParams. --> **/
 void Context::loadAngles(const AmberReader& reader) {
 	dummAngles.reserve(reader.getNumberAngles());
 
@@ -743,6 +698,7 @@ void Context::loadAngles(const AmberReader& reader) {
 	}
 }
 
+/*! <!-- Set dumm torsion list to be used in World generateDummParams. --> **/
 void Context::loadTorsions(const AmberReader& reader) {
 	// There are multiple torsions defined with the same four indices
 	// This vector shows us where each torsion begins (first) and how long it is (second)
@@ -806,6 +762,47 @@ void Context::loadTorsions(const AmberReader& reader) {
 	}
 }
 
+
+void Context::PrintBond(bBond& bond)
+{
+	bond.Print();
+
+	scout(" ") << atoms[bond.i].getName() <<" ";
+	scout(" ") << atoms[bond.j].getName() <<" ";
+
+	ceol;	
+}
+
+void Context::PrintBonds(void){
+
+	for(size_t cnt = 0; cnt < nbonds; cnt++) {
+		bonds[cnt].Print();
+
+		scout(" ") << atoms[bonds[cnt].i].getName() <<" ";
+		scout(" ") << atoms[bonds[cnt].j].getName() <<" ";
+
+		ceol;
+	}
+
+}
+
+int Context::checkBonds(void)
+{
+	for(size_t cnt = 0; cnt < nbonds; cnt++) {
+
+		bBond& bond = bonds[cnt];
+		
+		if(bond.getMoleculeIndex() < 0){
+			std::cerr << "Bond did not set its molecule index." << std::endl;
+			PrintBond(bond);
+			return 1;
+		}
+
+	}
+
+	return 0;
+}
+
 /*!
  * <!-- This is where we create a Comopund for each atom -->
 */
@@ -855,33 +852,33 @@ void Context::addBiotypes() {
 	}
 }
 
-/*!
- * <!--
- * ___fill___
- * -->
-*/
+/*! <!-- ___fill___ --> */
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
 	// Load Amber files
 	AmberReader reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
-	// Read molecules from a reader
-	loadAtoms(reader);
-	loadBonds(reader); // PrintBonds();
-	loadAngles(reader);
-	loadTorsions(reader);
+	// Read Amber and load Gmolmodel lists
+	loadAtoms(reader);     // bSpecificAtom list
+	loadBonds(reader);     // bBond list
+	loadAngles(reader);    // DUMM_ANGLE list for generateParams
+	loadTorsions(reader);  // DUMM_TORSIONlist for generateParams	
 
 	// Build graph (bondAtom)
-	constructTopologies();
+	//build_GmolGraph_MolmodelAcyclicGraph();
+	//new_build_GmolGraph_MolmodelAcyclicGraph();
 
-	// Close rings
-	addRingClosingBonds_All();
+	// Build molecular graphs in Gmolmodel and Molmodel
+	calc_Gmolmodel_Graph();
+	load_BONDS_to_bonds( internCoords.getBonds() );
+	build_Molmodel_AcyclicGraphs();
+	addRingClosingBonds_All(); // Close rings
 
 	//PrintAtoms();
 	//PrintBonds();
 	if(checkBonds() != 0){
-		std::cout << "[ERROR] " << "bonds checks failed. Exiting" << std::endl;
+		std::cerr << "[ERROR] " << "bonds checks failed. Exiting" << std::endl;
 		exit(1);
 	}
 
@@ -890,11 +887,6 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations();
-
-	// for(auto& topology : topologies) {
-	// 	topology.setAtomList();
-	// 	topology.setBondList();
-	// }
 
 	// Allocate coordinate buffers
 	Xs.resize(natoms);
@@ -1914,11 +1906,8 @@ void Context::passTopologiesToWorlds(void){
   -->
 */
 
-/*!
- * <!--  -->
-*/
-void Context::constructTopologies(
-	// std::vector<std::string>& argRoots
+/*! <!-- __fill__ --> */
+void Context::build_GmolGraph_MolmodelAcyclicGraph(
 ){
 
 	// ========================================================================
@@ -1943,7 +1932,6 @@ void Context::constructTopologies(
 		
 		// Compute the new molecule's BAT coordinates
 		internCoords.computeBAT( getAtoms() );
-		//internCoords.computeLevelsAndOffsets( getAtoms() );
 		internCoords.updateVisited(atoms);
 		//internCoords.PrintBAT();
 
@@ -1954,8 +1942,7 @@ void Context::constructTopologies(
 	// ========================================================================
 	// ======== (2) BAT bonds to bonds ========================================
 	// ========================================================================
-	const std::vector<std::vector<BOND>>& BATbonds =
-		internCoords.getBonds();
+	//const std::vector<std::vector<BOND>>& BATbonds = internCoords.getBonds();
 
 	load_BONDS_to_bonds( internCoords.getBonds() );
 
@@ -1994,8 +1981,125 @@ void Context::constructTopologies(
 		topologies.push_back(topology);
 
 	}
+}
+
+
+
+
+/*! <!-- __fill__ --> */
+void Context::calc_Gmolmodel_Graph()
+{
+
+	// ========================================================================
+	// ======== Construct a Compound for every atom ===========================
+	// ========================================================================		
+	setAtomCompoundTypes();
+
+	// Biotype will be used to look up molecular
+	// force field specific parameters for an atom type
+	addBiotypes();
+
+	// ========================================================================
+	// ======== (1) Get BAT graphs ============================================
+	// ========================================================================
+	
+	// Find a root in the unvisited atoms and build BAT graphs
+	nofMols = 0;
+	while( internCoords.computeRoot( getAtoms() )){ // find a root
+
+		nofMols++;
+		//internCoords.PrintRoot();
+		
+		// Compute the new molecule's BAT coordinates
+		internCoords.computeBAT( getAtoms() );
+		internCoords.updateVisited(atoms);
+		//internCoords.PrintBAT();
+
+	}
+
+	internCoords.computeLevelsAndOffsets( getAtoms() );
 
 }
+
+/*! <!-- __fill__ --> */
+void Context::build_Molmodel_AcyclicGraphs(void)
+{
+	// ========================================================================
+	// ======== (2) Build graphs with bondAtom ================================
+	// ========================================================================
+	topologies.reserve(nofMols);
+	moleculeCount = -1;
+
+	std::cout << "Context::build_Molmodel_AcyclicGraphs nofMols " <<" "<< nofMols <<std::endl<<std::flush;
+
+	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
+
+		// Add an empty topology
+		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
+		Topology topology(moleculeName);
+
+		// --------------------------------------------------------------------
+		//  (1) findARoot 
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		const int rootAmberIx = internCoords.getRoot( molIx ).first;
+		topology.bSpecificAtomRootIndex = rootAmberIx;
+
+		std::cout << "Context::build_Molmodel_AcyclicGraphs rootAmberIx " <<" "<< rootAmberIx <<std::endl<<std::flush;
+
+		setRootAtom( topology, rootAmberIx );
+
+		// --------------------------------------------------------------------
+		// (2) buildAcyclicGraph
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		buildAcyclicGraph(topology, rootAmberIx, molIx);
+
+		// --------------------------------------------------------------------
+		// (4) Add new topology 
+		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+		// Add to the list of topologies
+		topologies.push_back(topology);
+
+	}
+}
+
+
+/*! <!-- __fill__ --> */
+void Context::new_build_GmolGraph_MolmodelAcyclicGraph()
+{
+
+	calc_Gmolmodel_Graph();
+
+	load_BONDS_to_bonds( internCoords.getBonds() );
+
+	build_Molmodel_AcyclicGraphs();
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*!
  * <!-- Subarray view of atoms -->
@@ -2057,8 +2161,6 @@ void Context::addRingClosingBonds_All(void)
 
 		} // if is visited
 	} // every bBond
-
-
 
 }
 
@@ -7702,7 +7804,6 @@ std::vector<SimTK::Real>& Context::updZMatrixBATRow(size_t rowIndex) {
 	return zMatrixBAT[rowIndex];
 
 }
-
 
 
 /*!
