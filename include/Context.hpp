@@ -235,14 +235,18 @@ public:
 	void passTopologiesToWorlds(void);
 
 	/**  */
-	void build_GmolGraph_MolmodelAcyclicGraph();
+	void build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
+	void new_build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
 
+	/**	
+	* @brief Calculate BAT graphs
+	*/
 	void calc_Gmolmodel_Graph();
+
+	/**	
+	* @brief Build Molmodel Compound / graphs
+	*/
 	void build_Molmodel_AcyclicGraphs();
-	void new_build_GmolGraph_MolmodelAcyclicGraph();
-	//void matchDefault
-
-
 
 
 	/**  */
@@ -876,7 +880,7 @@ private:
 	void loadAngles(const AmberReader& reader);
 	void loadTorsions(const AmberReader& reader);
 
-	void setAtomCompoundTypes();
+	void setAtomsCompounds();
 	void addBiotypes();
 	std::vector<bSpecificAtom>& getAtoms() {
         return atoms;

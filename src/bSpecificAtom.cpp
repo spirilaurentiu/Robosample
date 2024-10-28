@@ -5,47 +5,10 @@ using namespace SimTK;
 /*!
  * <!-- This is where we create a Comopund for a specific atom -->
 */
-void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
+void bSpecificAtom::setAtomCompound(const SimTK::Element &element) {
 
     const std::string& atomName = getName();
 
-	// // NEW COMPOUND ATOM --------------------------------------------------
-    // const int numAtomBonds = getNBonds();
-    // switch (numAtomBonds) {
-    //     case 0: {
-    //         compoundSingleAtom = new SimTK::Compound::SingleAtom(
-    //             atomName, element);
-    //     } break;
-    //     case 1: {
-    //         compoundSingleAtom = new SimTK::UnivalentAtom(
-    //             atomName, element);
-    //     } break;
-    //     case 2: {
-    //         compoundSingleAtom = new SimTK::BivalentAtom(
-    //             atomName, element);
-    //     } break;
-    //     case 3: {
-    //         compoundSingleAtom = new SimTK::TrivalentAtom(
-    //             atomName, element); // 120 rad x 3
-    //     } break;
-    //     case 4: {
-    //         compoundSingleAtom = new SimTK::QuadrivalentAtom(
-    //             atomName, element); // 109.47 rad
-    //     } break;        
-    //     default: {
-    //         std::cerr << "[ERROR] Atom " << atomName
-    //             << " has " << numAtomBonds
-    //             << " bonds, which is not supported." << std::endl;
-    //         throw std::exception();
-    //     }
-    // }
-    // if (numAtomBonds > 0) {
-    //     compoundSingleAtom->setDefaultInboardBondLength(0.19);
-    // }
-	// // NEW COMPOUND ATOM --------------------------------------------------
-
-
-    // OLD COMPOUND ATOM --------------------------------------------------
     // Add BondCenters 
     compoundSingleAtom = new SimTK::Compound::SingleAtom(atomName, element);
     const int currAtomNBonds = getNBonds();
@@ -70,7 +33,6 @@ void bSpecificAtom::setAtomCompoundType(const SimTK::Element &element) {
         compoundSingleAtom->setInboardBondCenter("bond1");
         compoundSingleAtom->setDefaultInboardBondLength(0.19);
     }
-    // OLD COMPOUND ATOM ------------------------------------------------
 
     // Set the Compound name for the atom
     compoundSingleAtom->setCompoundName("SingleAtom");

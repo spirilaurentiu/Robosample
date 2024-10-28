@@ -37,7 +37,7 @@ public:
     /**@{**/
 
     /** TODO comment. **/
-    void setAtomCompoundType(const SimTK::Element &element);
+    void setAtomCompound(const SimTK::Element &element);
 
     /** TODO comment. **/
     void destroy();

@@ -184,6 +184,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// std::cout << "Run type " << RUN_TYPE_Str[int(whatRunType)] << std::endl;
 
 	// Construct topologies based on what's read from an AmberReader
+	// Build Gmolmodel and Molmodel Graphs
 	std::string prmtop = setupReader.get("MOLECULES")[0] + "/" + setupReader.get("PRMTOP")[0];
 	std::string inpcrd = restartDir + "/" + setupReader.get("INPCRD")[0] + ".s0" + ".rst7";
 
@@ -806,14 +807,14 @@ int Context::checkBonds(void)
 /*!
  * <!-- This is where we create a Comopund for each atom -->
 */
-void Context::setAtomCompoundTypes() {
+void Context::setAtomsCompounds() {
 	for(auto& atom : atoms) {
 		const std::string& currAtomName = atom.getName();
 		const int atomicNumber = atom.getAtomicNumber();
 		const int mass = atom.getMass();
 
 		// Create Compound
-		atom.setAtomCompoundType(
+		atom.setAtomCompound(
 			elementCache.getElement(atomicNumber, mass));
 
 	}
@@ -827,7 +828,7 @@ void Context::setAtomCompoundTypes() {
 void Context::addBiotypes() {
 
 	// Set a residue name
-	std::string resName = "MOL0";
+	std::string resName = "MOL0"; // TODO: delete
 
 	// Define atoms' Biotypes and BiotypeIndexes with their indeces and names
 	int aCnt = -1;
@@ -852,7 +853,21 @@ void Context::addBiotypes() {
 	}
 }
 
-/*! <!-- ___fill___ --> */
+/*!
+ * <!-- Load Amber System. Will load:
+ * 1.  bSpecificAtom list
+ * 2.  bBond list
+ * 3.  DUMM_ANGLE list for generateParams 
+ * 4.  DUMM_TORSIONlist for generateParams
+ * 5.  Compounds for every atoms first
+ * 6.  Biotypes to use in force field
+ * 7.  BAT and Z-matrix
+ * 8.  Molmodel Compound Graph
+ * 9.  Match Compounds configurations
+ * 10. Geometry calculations
+ * 11  Task spaces
+ * 12. Constraints -->
+*/
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
 	// Load Amber files
@@ -865,15 +880,27 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	loadAngles(reader);    // DUMM_ANGLE list for generateParams
 	loadTorsions(reader);  // DUMM_TORSIONlist for generateParams	
 
-	// Build graph (bondAtom)
-	//build_GmolGraph_MolmodelAcyclicGraph();
-	//new_build_GmolGraph_MolmodelAcyclicGraph();
+	//build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
+	//new_build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
 
-	// Build molecular graphs in Gmolmodel and Molmodel
+	// Construct a Compound for every atom
+	setAtomsCompounds();
+
+	// Biotype will be used to look up molecular
+	// force field specific parameters for an atom type
+	addBiotypes();
+
+	// Calculate BAT graphs
 	calc_Gmolmodel_Graph();
+
+	// bBonds to BAT / InternalCoordinates bonds map
 	load_BONDS_to_bonds( internCoords.getBonds() );
+
+	// Build Molmodel graphs with bondAtom
 	build_Molmodel_AcyclicGraphs();
-	addRingClosingBonds_All(); // Close rings
+
+	// Close rings
+	addRingClosingBonds_All(); 
 
 	//PrintAtoms();
 	//PrintBonds();
@@ -1913,7 +1940,7 @@ void Context::build_GmolGraph_MolmodelAcyclicGraph(
 	// ========================================================================
 	// ======== Construct a Compound for every atom ===========================
 	// ========================================================================		
-	setAtomCompoundTypes();
+	setAtomsCompounds();
 
 	// Biotype will be used to look up molecular
 	// force field specific parameters for an atom type
@@ -1986,23 +2013,10 @@ void Context::build_GmolGraph_MolmodelAcyclicGraph(
 
 
 
-/*! <!-- __fill__ --> */
+/*! <!-- Get BAT graphs --> */
 void Context::calc_Gmolmodel_Graph()
 {
 
-	// ========================================================================
-	// ======== Construct a Compound for every atom ===========================
-	// ========================================================================		
-	setAtomCompoundTypes();
-
-	// Biotype will be used to look up molecular
-	// force field specific parameters for an atom type
-	addBiotypes();
-
-	// ========================================================================
-	// ======== (1) Get BAT graphs ============================================
-	// ========================================================================
-	
 	// Find a root in the unvisited atoms and build BAT graphs
 	nofMols = 0;
 	while( internCoords.computeRoot( getAtoms() )){ // find a root
@@ -2021,12 +2035,10 @@ void Context::calc_Gmolmodel_Graph()
 
 }
 
-/*! <!-- __fill__ --> */
+/*! <!-- Build Molmodel graphs with bondAtom --> */
 void Context::build_Molmodel_AcyclicGraphs(void)
 {
-	// ========================================================================
-	// ======== (2) Build graphs with bondAtom ================================
-	// ========================================================================
+
 	topologies.reserve(nofMols);
 	moleculeCount = -1;
 
