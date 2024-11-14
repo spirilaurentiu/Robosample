@@ -2,8 +2,7 @@
 
 using namespace SimTK;
 
-/*!
- * <!-- This is where we create a Comopund for a specific atom -->
+/*! <!-- Create a Comopund for this specific atom -->
 */
 void bSpecificAtom::setAtomCompound(const SimTK::Element &element) {
 
@@ -39,13 +38,17 @@ void bSpecificAtom::setAtomCompound(const SimTK::Element &element) {
 
 }
 
-void bSpecificAtom::destroy() {
+/*! <!-- Delete this atom's Compound -->
+*/
+void bSpecificAtom::deleteAtomCompound() {
     if (compoundSingleAtom != nullptr) {
         delete compoundSingleAtom;
         compoundSingleAtom = nullptr;
     }
 }
 
+/*! <!-- Print info -->
+*/
 void bSpecificAtom::Print(int whichWorld) const
 {
     std::cout<<"bSpecificAtom Print: nbonds "<<nbonds<<" freebonds "<<freebonds<<" name "<< name <<" inName "<< inName

@@ -71,19 +71,17 @@ bool equal_bond(const BOND& lhs, const BOND& rhs) {
 		(lhs.first == rhs.second && lhs.second == rhs.first);
 }
 
-/*!
- * <!-- This function computes the root -->
+/*! <!-- Computes the root (heaviest terminal atom with the largest amber id) 
+ * The root consists of three atoms:
+ * first is the heaviest terminal atom with the largest amber id
+ * second is bonded to the first atom (there is only one bonded since first is terminal)
+ * third is the heaviest atom bonded to second.
+ * if there are more than three, it cannot be terminal -->
 */
 bool InternalCoordinates::computeRoot(
 	const std::vector<bSpecificAtom>& bAtomList)
 {
-	// the root consists of three atoms
-	// first is the heaviest terminal atom with the largest amber id
-	// second is bonded to the first atom (there is only one bonded since first is terminal)
-	// third is the heaviest atom bonded to second.
-	// if there are more than three, it cannot be terminal
-
-	// get terminal atoms
+	// Get terminal atoms
 	std::vector<AmberAtom> terminalAtoms;
 	terminalAtoms.reserve(bAtomList.size());
 
@@ -140,10 +138,9 @@ bool InternalCoordinates::computeRoot(
 }
 
 
-/*!
- * <!-- This function computes the BAT graph and calls computeLevelsAndOffsets
- * to calculate it into a level / offset format -->
-*/
+/*! <!-- This function computes the BAT graph and calls computeLevelsAndOffsets
+ * to calculate it into a level / offset format
+ --> */
 void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
 
     selectedAtoms.reserve(bAtomList.size());

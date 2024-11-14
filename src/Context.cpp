@@ -97,8 +97,8 @@ void Context::PrintAtomsDebugInfo(void){
 	}
 }
 
-/*!
- * <!-- Read flexibilities -->
+/*! <!-- Read flexibilities from a file and load it into
+ * our vector of BOND_FLEXIBILITY  -->
 */
  std::vector<BOND_FLEXIBILITY>& Context::readFlexibility(
 	std::string flexFileFN,
@@ -191,7 +191,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	loadAmberSystem(prmtop, inpcrd);
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
-	// Get Z-matrix indexes table	
+	// Get Z-matrix indexes table based on InternalCoordinates BONDS	
 	calcZMatrixTable(); // PrintZMatrixTable();
 	reallocZMatrixBAT();
 
@@ -473,6 +473,16 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
     if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 4");}
 
+	// scout("BiotypeIndex check\n");
+	// int ix = -1;
+	// for(auto atom: atoms){
+	// 	ix++;
+	// 	spacedcout("atom vs Compound BiotypeIndex" ,
+	// 		atom.getBiotypeIndex(),
+	// 		(topologies[atom.getMoleculeIndex()]).getAtomBiotypeIndex(atom.getCompoundAtomIndex()),
+	// 	"\n");
+	// }
+
     return true;
 }
 
@@ -641,7 +651,7 @@ void Context::loadAtoms(const AmberReader& reader) {
 	}
 }
 
-/*! <!-- Set bonds properties from reader: bond indeces, atom neighbours.
+/*! <!-- Build bBond list and BSpecificAtoms neighbors
  *  1-to-1 correspondence between prmtop and Gmolmodel. -->
  **/
 void Context::loadBonds(const AmberReader& reader) {
@@ -804,8 +814,7 @@ int Context::checkBonds(void)
 	return 0;
 }
 
-/*!
- * <!-- This is where we create a Comopund for each atom -->
+/*! <!-- Create a Comopund for each atom -->
 */
 void Context::setAtomsCompounds() {
 	for(auto& atom : atoms) {
@@ -820,10 +829,7 @@ void Context::setAtomsCompounds() {
 	}
 }
 
-/*!
- * <!--
- * Define biotypes for each atom
- * -->
+/*! <!-- Define biotypes for each atom -->
 */
 void Context::addBiotypes() {
 
@@ -890,13 +896,13 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// force field specific parameters for an atom type
 	addBiotypes();
 
-	// Calculate BAT graphs
+	// Calculate InternalCoordinates BONDS / BAT graphs
 	calc_Gmolmodel_Graph();
 
 	// bBonds to BAT / InternalCoordinates bonds map
 	load_BONDS_to_bonds( internCoords.getBonds() );
 
-	// Build Molmodel graphs with bondAtom
+	// InternalCoordinates -> Molmodel Compound graphs with bondAtom
 	build_Molmodel_AcyclicGraphs();
 
 	// Close rings
@@ -1645,9 +1651,11 @@ void Context::reset_BONDS_to_bonds(
 }
 
 
-/*!
- * <!--  -->
-*/
+/*! <!-- 
+ * A) Get child and parent bSpecificAtoms.
+ * B) Cook a parentBondCenterPathName = RESNAME + RESID + _ATOMNAME + bond int(next)
+ * C) Call Compound::bondAtom(childAtomCompund, BondCenterPathName
+ --> */
 void Context::buildAcyclicGraph(
 	Topology& topology,
 	int rootAmberIx,
@@ -1656,10 +1664,9 @@ void Context::buildAcyclicGraph(
 
 	const std::vector<BOND>& theseBonds = internCoords.getMoleculeBonds(molIx);
 
-	std::vector<BOND>::const_iterator bIt;
-	std::size_t bCnt = 0;
-
 	// Iterate bonds from internal coordinates
+	std::size_t bCnt = 0;
+	std::vector<BOND>::const_iterator bIt;
 	for(bIt = theseBonds.begin(); bIt != theseBonds.end(); bIt++, bCnt++){
 
 		// scout("internCoord bond first second ");
@@ -1693,7 +1700,7 @@ void Context::buildAcyclicGraph(
 		std::stringstream parentBondCenterPathName;
 		std::string parentBondCenterPathNameStr = "";
 		int parentNextAvailBondCenter = -111111;
-		std::string parentNextAvailBondCenterStr = "1";
+		std::string parentNextAvailBondCenterStr = "-111111";
 		int parentNofBonds = parent.getNBonds();
 		int parentNofFreebonds = parent.getFreebonds();
 
@@ -1704,25 +1711,23 @@ void Context::buildAcyclicGraph(
 				std::to_string(parentNextAvailBondCenter);
 		//}
 
-		// Cook the parentBondCenterPathName
+		// Cook the parentBondCenterPathName = RESNAME + RESID + _ATOMNAME + bond int(next)
 		parentBondCenterPathName << parent.getName()
 			<< "/bond" 
 			<< parentNextAvailBondCenterStr;
 		parentBondCenterPathNameStr = parentBondCenterPathName.str();
 
-		// scout("parentBondCenterPathName ") << parentBondCenterPathName.str()
-		// 	<< eol;
+		// ========================================= BOND
+		// @@@@@@@@@@@@@@@   BOND    @@@@@@@@@@@@@@@
+		// -----------------------------------------
+		scout("Bonding ")
+			<< "child " << child.getName() <<" " << child.getInName()
+			<<" " << child.getNumber() <<" "
+			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+			<< parent.getNumber() <<" "
+			<< "with bond center name " << parentBondCenterPathNameStr <<" "
+			<< eol;
 
-		// ======================== ACTUAL BONDING ========================
-		// scout("Bonding ")
-		// 	<< "child " << child.getName() <<" " << child.getInName()
-		// 	<<" " << child.getNumber() <<" "
-		// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
-		// 	<< parent.getNumber() <<" "
-		// 	<< "with bond center name " << parentBondCenterPathNameStr <<" "
-		// 	<< eol;
-
-		// Bond
 		topology.bondAtom(child.getSingleAtom(),
 				(parentBondCenterPathNameStr).c_str(), 0.149, 0);
 
@@ -7828,14 +7833,14 @@ Context::calcZMatrixTable(void)
 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
 
 	// Tag bonds that are checked 
-	std::vector<int> taggedBonds;
+	std::vector<int> taggedBonds; // TODO delete
 
 	// Iterate molecules
 	int allCnt = 0;
 	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
 
 		// Get molecule and it's bonds
-		Topology& topology = topologies[topoIx];
+		Topology& topology = topologies[topoIx]; // TODO delete
 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
 
 		if (BONDS.size() == 0) {
@@ -7874,11 +7879,10 @@ Context::calcZMatrixTable(void)
 				ggparentNo = BONDS[internCoords.findBondByFirst(topoIx, gparentNo)].second;
 			}
 
-			bSpecificAtom& childAtom = atoms[childNo];
-			bSpecificAtom& parentAtom = atoms[parentNo];
-
-			int childTopoIx = childAtom.getMoleculeIndex();
-			int parentTopoIx = parentAtom.getMoleculeIndex();
+			bSpecificAtom& childAtom = atoms[childNo]; // TODO delete
+			bSpecificAtom& parentAtom = atoms[parentNo]; // TODO delete
+			int childTopoIx = childAtom.getMoleculeIndex(); // TODO delete
+			int parentTopoIx = parentAtom.getMoleculeIndex(); // TODO delete
 
 			addZMatrixTableRow(std::vector<int> {childNo, parentNo, gparentNo, ggparentNo});
 

@@ -40,7 +40,7 @@ public:
     void setAtomCompound(const SimTK::Element &element);
 
     /** TODO comment. **/
-    void destroy();
+    void deleteAtomCompound();
 
 public:
     void Print(int whichWorld) const;

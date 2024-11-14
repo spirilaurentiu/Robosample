@@ -755,7 +755,7 @@ public:
 
 	// --- Simulation ---
 	std::unique_ptr<SimTK::VerletIntegrator> integ;
-	std::unique_ptr<SimTK::TimeStepper> ts;
+	std::unique_ptr<SimTK::TimeStepper> timeStepper;
 	std::vector<std::unique_ptr<BaseSampler>> samplers;
 
 	// Contact related

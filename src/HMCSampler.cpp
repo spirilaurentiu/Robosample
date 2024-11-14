@@ -1273,7 +1273,8 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		try {
 
 			// Call Simbody TimeStepper to advance time
-			this->world->ts->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+			std::cout << "HMCSampler::integrateTrajectory for "<< MDStepsPerSample <<" x  "<< timestep <<" at default boost T " << this->boostT << std::endl;
+			this->world->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
 			system->realize(someState, SimTK::Stage::Position);
 

@@ -281,7 +281,7 @@ World::World(int worldIndex,
 
 	// Intialize an integrator and a TimeStepper to manage it
 	integ = std::make_unique<SimTK::VerletIntegrator>(*compoundSystem);
-	ts = std::make_unique<SimTK::TimeStepper>(*compoundSystem, *integ);
+	timeStepper = std::make_unique<SimTK::TimeStepper>(*compoundSystem, *integ);
 
 	const SimTK::MultibodySystem& mbs = forces->getMultibodySystem();
 	
@@ -3306,7 +3306,7 @@ bool World::addSampler(SamplerName samplerName,
 	if(samplerName == SamplerName::HMC) {
 
 		// Construct a new sampler
-		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *ts));
+		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *timeStepper));
 
 		// Initialize the sampler
 		// This is independent of the sampler type, but we need it to be initialized before getting the recommended time step
