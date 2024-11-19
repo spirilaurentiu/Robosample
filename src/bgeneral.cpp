@@ -872,7 +872,7 @@ void PrintBigMat(SimTK::Mat66 M, int nrows, int ncols, int decimal_places, std::
     }
 }
 
-/*
+/*! <--
  * Print Spatial Matrix
  */
 void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header)
@@ -892,7 +892,7 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
     }
 }
 
-/*
+/*! <--
  * Print Spatial Vector
  */
 void PrintSpatialVec(SimTK::SpatialVec M, int decimal_places, std::string header)
@@ -907,7 +907,7 @@ void PrintSpatialVec(SimTK::SpatialVec M, int decimal_places, std::string header
     std::cout << std::endl;
 }
 
-/*
+/*! <--
  * Print Big Vector separated by spaces
  */
 void PrintBigMat(const SimTK::Vector& V, int nrows,
@@ -922,9 +922,9 @@ void PrintBigMat(const SimTK::Vector& V, int nrows,
 }
 
 
-/*
+/*! <--
  * Print 3D matrix
- */
+  --> */
 void PrintMat33(SimTK::Mat33 M, int decimal_places,
 	std::string header)
 {
@@ -939,30 +939,27 @@ void PrintMat33(SimTK::Mat33 M, int decimal_places,
 
 }
 
-/*
- * Print Transform
- */
-void PrintTransform(SimTK::Transform T, int decimal_places,
-	std::string header, std::string rowPrefix)
-{
-    std::cout << header << std::endl;
-    const SimTK::Mat44 M = T.toMat44();
+/*! <-- Print Transform
+  --> */
+// void PrintTransform(SimTK::Transform T, int decimal_places,
+// 	std::string header, std::string rowPrefix)
+// {
+//     std::cout << header << std::endl;
+//     const SimTK::Mat44 M = T.toMat44();
+//     for(int i = 0; i < 4; i++){
+// 		std::cout << rowPrefix;
+//         for(int k = 0; k < 4; k++){
+//             std::cout
+// 				<< std::setw(6 + decimal_places) << std::fixed
+// 				<< std::setprecision(decimal_places)			
+// 				<< M(i, k) << " ";
+//         }
+//         std::cout << std::endl;
+//     }
+// }
 
-    for(int i = 0; i < 4; i++){
-		std::cout << rowPrefix;
-        for(int k = 0; k < 4; k++){
-            std::cout
-				<< std::setw(6 + decimal_places) << std::fixed
-				<< std::setprecision(decimal_places)			
-				<< M(i, k) << " ";
-        }
-        std::cout << std::endl;
-    }
-}
-
-/*
- * Angle
- */
+/*! <-- Angle
+  --> */
 SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
 {
 	SimTK::Vec3 v01 = pos1 - pos0;
@@ -973,9 +970,9 @@ SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
 	return std::acos(angleCos);
 }
 
-/*
+/*! <--
  * Dihedral angle
- */
+  --> */
 SimTK::Real bDihedral(
 SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3)
 {

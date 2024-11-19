@@ -476,10 +476,10 @@ void PrintMat33(SimTK::Mat33 M, int decimal_places = 3,
 void PrintSpatialVec(SimTK::SpatialVec V, int decimal_places, std::string header = "unknown");
 void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header = "unknown");
 
-/*
- * Print Transform
+/**  @brief Print Transform
  */
-void PrintTransform(SimTK::Transform T, int decimal_places, std::string header = "unknown", std::string rowPrefix = "");
+//void PrintTransform(SimTK::Transform T, int decimal_places, std::string header = "unknown", std::string rowPrefix = "");
+
 /*
  * Angle
  */

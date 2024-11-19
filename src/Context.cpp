@@ -159,6 +159,14 @@ void Context::PrintAtomsDebugInfo(void){
 */
 bool Context::initializeFromFile(const std::string &inpFN)
 {
+	/*
+	// __new__
+	void __newFunction__(void){
+		std::cout << "__newFunction__\n";
+	}
+	// __end__ __new__
+	*/
+	//SimTK::Test::__newFunction__();
 
 	// Input
 	setupReader.ReadSetup(inpFN);
@@ -1720,7 +1728,7 @@ void Context::buildAcyclicGraph(
 		// ========================================= BOND
 		// @@@@@@@@@@@@@@@   BOND    @@@@@@@@@@@@@@@
 		// -----------------------------------------
-		scout("Bonding ")
+		scout("STUDY Bonding ")
 			<< "child " << child.getName() <<" " << child.getInName()
 			<<" " << child.getNumber() <<" "
 			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
@@ -2047,7 +2055,7 @@ void Context::build_Molmodel_AcyclicGraphs(void)
 	topologies.reserve(nofMols);
 	moleculeCount = -1;
 
-	std::cout << "Context::build_Molmodel_AcyclicGraphs nofMols " <<" "<< nofMols <<std::endl<<std::flush;
+	std::cout << "STUDY Context::build_Molmodel_AcyclicGraphs nofMols " <<" "<< nofMols <<std::endl<<std::flush;
 
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
@@ -2061,7 +2069,7 @@ void Context::build_Molmodel_AcyclicGraphs(void)
 		const int rootAmberIx = internCoords.getRoot( molIx ).first;
 		topology.bSpecificAtomRootIndex = rootAmberIx;
 
-		std::cout << "Context::build_Molmodel_AcyclicGraphs rootAmberIx " <<" "<< rootAmberIx <<std::endl<<std::flush;
+		std::cout << "STUDY Context::build_Molmodel_AcyclicGraphs rootAmberIx " <<" "<< rootAmberIx <<std::endl<<std::flush;
 
 		setRootAtom( topology, rootAmberIx );
 
@@ -2423,7 +2431,7 @@ void Context::generateTopologiesSubarrays(void){
 /*!
  * <!-- Assign Compound coordinates by matching bAtomList coordinates -->
 */
-void Context::matchDefaultConfiguration(Topology& topology, int molIx)
+void Context::matchDefaultConfigurationFromAtomsCoords(Topology& topology, int molIx)
 {
 	// Convenient vars
 	std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets;
@@ -2445,6 +2453,16 @@ void Context::matchDefaultConfiguration(Topology& topology, int molIx)
 	}
 
 	// Match coordinates
+
+	// Optimize superpose in matchDefaultTopLevelTransform
+	SimTK::Vec3 topLevelShift = SimTK::Vec3(
+		atoms[internCoords.getRoot(molIx).first].getX(),
+		atoms[internCoords.getRoot(molIx).first].getY(),
+		atoms[internCoords.getRoot(molIx).first].getZ()
+	);
+	topology.setTopLevelTransform(Transform(Rotation(), topLevelShift));
+	//PrintTransform(topology.getTopLevelTransform(), 3, topology.getName(), "Top");
+
 	//std::cout << "Match start." << "\n" << std::flush;
 	bool flipAllChirality = true;
 	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
@@ -2459,6 +2477,7 @@ void Context::matchDefaultConfiguration(Topology& topology, int molIx)
 	//std::cout << "matchDefaultDefaultDihedralAngles done. " << "\n" << std::flush;
 	topology.matchDefaultTopLevelTransform(atomTargets);
 	//std::cout << "matchDefaultDefaultTopLevelTransform done. " << "\n" << std::flush;
+	//PrintTransform(topology.getTopLevelTransform(), 3, topology.getName(), "Top");
 
 }
 
@@ -2476,7 +2495,7 @@ void Context::matchDefaultConfigurations(void){
 
 		Topology& topology = topologies[molIx];
 
-		matchDefaultConfiguration(topology, molIx);
+		matchDefaultConfigurationFromAtomsCoords(topology, molIx);
 		// PrintAtoms();
 	}
 
@@ -6345,6 +6364,8 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 		G_X_T = destWorld.setAtoms_Compound_Match(
 			topoIx, atomTargets);
 
+		//matchDefaultConfiguration(topoIx, atomTargets);
+
 		// 2.1 MORE COMPOUND FOR DUMM
 		///////////////////////////////////////////////////////////
 
@@ -6661,9 +6682,8 @@ Context::setAtoms_XFM(
 
 }
 
-/*!
- * <!--  -->
-*/
+/*! <!-- __no_desk__. 
+ * --> */
 std::vector<SimTK::Transform>
 Context::calc_XPF_XBM(
 	int wIx, Topology& topology,

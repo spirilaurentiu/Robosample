@@ -249,11 +249,13 @@ public:
 	void build_Molmodel_AcyclicGraphs();
 
 
-	/**  */
+	/** @brief __fill__ */
 	void generateTopologiesSubarrays(void);
 
 	/** Assign Compound coordinates by matching bAtomList coordinates */
-	void matchDefaultConfiguration(Topology& topology, int molIx);
+	void matchDefaultConfigurationFromAtomsCoords(Topology& topology, int molIx);
+
+	void matchDefaultConfiguration(int molIx, std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets){assert(!"Not implemented");}
 
 	/** Match Compounds configurations to atoms Cartesian coords */
 	void matchDefaultConfigurations(void);

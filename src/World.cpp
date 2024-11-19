@@ -1661,9 +1661,9 @@ void World::PrintDefaultTransforms() const
 		const Transform& X_BM = mobod.getOutboardFrame(advState);
 		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
 
-		PrintTransform(X_PF, 6, "X_PF");
-		PrintTransform(X_BM, 6, "X_BM");
-		PrintTransform(X_FM, 6, "X_FM");
+		SimTK::Test::PrintTransform(X_PF, 6, "X_PF");
+		SimTK::Test::PrintTransform(X_BM, 6, "X_BM");
+		SimTK::Test::PrintTransform(X_FM, 6, "X_FM");
 
 	}
 
@@ -2214,8 +2214,7 @@ World::extractAtomTargets(
 	}
 }
 
-/*!
- * <!-- Compound matchDefaultConfiguration for molecule topoIx -->
+/*! <!-- Compound matchDefaultConfiguration for molecule topoIx -->
 */
 SimTK::Transform
 World::setAtoms_Compound_Match(
