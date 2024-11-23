@@ -6387,14 +6387,10 @@ SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 
 }
 
-/*!
- * <!--  -->
+/*! <!--  -->
 */
 SimTK::State&
-Context::setAtoms_XPF_XBM(
-	int wIx
-)
-{
+Context::setAtoms_XPF_XBM( int wIx){
 	// Get world's Simbody
 	SimTK::State& someState = worlds[wIx].integ->updAdvancedState();
 	SimTK::SimbodyMatterSubsystem& matter = *worlds[wIx].matter;
@@ -6759,10 +6755,7 @@ Context::calc_XPF_XBM(
 		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
 
 	// Get the old PxFxMxB transform
-	SimTK::Transform oldX_PB =
-		Proot_X_root
-		//* InboardDihedral_XAxis * X_to_Z * InboardDihedral_ZAxis * Z_to_X
-		;
+	SimTK::Transform oldX_PB = Proot_X_root;
 
 	// B_X_Ms
 	SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
@@ -6771,10 +6764,10 @@ Context::calc_XPF_XBM(
 	SimTK::Transform B_X_M_univ 	= X_parentBC_childBC * Y_to_Z;
 
 	// P_X_Fs = old P_X_B * B_X_M
-	SimTK::Transform P_X_F 			= oldX_PB * B_X_M;
-	SimTK::Transform P_X_F_anglePin = oldX_PB * B_X_M_anglePin;
-	SimTK::Transform P_X_F_pin 		= oldX_PB * B_X_M_pin;
-	SimTK::Transform P_X_F_univ 	= oldX_PB * B_X_M;
+	SimTK::Transform P_X_F 			= Proot_X_root * B_X_M;
+	SimTK::Transform P_X_F_anglePin = Proot_X_root * B_X_M_anglePin;
+	SimTK::Transform P_X_F_pin 		= Proot_X_root * B_X_M_pin;
+	SimTK::Transform P_X_F_univ 	= Proot_X_root * B_X_M;
 
 	//Spherical ===============================================================
 	SimTK::Real bondBend = getZMatrixBATValue(6, 1);
@@ -6850,10 +6843,8 @@ Context::calc_XPF_XBM(
 }
 
 
-/*!
- * <!-- Transfer geometry to a world
- *  -->
-*/
+/*! <!-- Transfer geometry to a world
+ --> */
 SimTK::State& Context::setAtoms_SP_NEW(
 	int destWIx, SimTK::State& someState,
 	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> & otherWorldsAtomsLocations)
