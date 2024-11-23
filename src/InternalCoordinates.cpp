@@ -264,7 +264,7 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
  * <!-- This function computes the BAT graph and calls computeLevelsAndOffsets
  * to calculate it into a level / offset format -->
 */
-void InternalCoordinates::computeBATOld(std::vector<bSpecificAtom>& bAtomList) {
+//void InternalCoordinates::computeBATOld(std::vector<bSpecificAtom>& bAtomList) {
 
 	// selectedAtoms.reserve(bAtomList.size());
 	// indexMap = std::vector<int>(bAtomList.size(), -1);
@@ -346,7 +346,7 @@ void InternalCoordinates::computeBATOld(std::vector<bSpecificAtom>& bAtomList) {
 	// 	}
 	// }
 
-}
+//}
 
 void InternalCoordinates::updateVisited(std::vector<bSpecificAtom>& bAtomList)
 {
