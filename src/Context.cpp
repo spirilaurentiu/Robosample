@@ -2465,10 +2465,10 @@ void Context::matchDefaultConfigurationFromAtomsCoords(Topology& topology, int m
 
 	//std::cout << "Match start." << "\n" << std::flush;
 	bool flipAllChirality = true;
-	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
-	//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
 	topology.matchDefaultBondLengths(atomTargets);
 	//std::cout << "matchDefaultBondLengths done. " << "\n" << std::flush;
+	topology.matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	//std::cout << "matchDefaultAtomChirality done. " << "\n" << std::flush;
 	topology.matchDefaultBondAngles(atomTargets);
 	//std::cout << "matchDefaultBondAngles done. " << "\n" << std::flush;
 	topology.matchDefaultDirections(atomTargets);
