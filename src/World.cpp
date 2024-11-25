@@ -2712,8 +2712,9 @@ World::calcMobodToMobodTransforms(
 	// Get the old PxFxMxB transform
 	SimTK::Transform oldX_PB =
 		Proot_X_T * T_X_root
-		* InboardDihedral_XAxis * X_to_Z
-		* InboardDihedral_ZAxis * Z_to_X;
+		//* InboardDihedral_XAxis * X_to_Z
+		//* InboardDihedral_ZAxis * Z_to_X
+		;
 
 	// B_X_Ms
 	SimTK::Transform B_X_M = X_to_Z; // aka M_X_pin
