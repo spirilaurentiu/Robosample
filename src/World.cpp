@@ -3243,8 +3243,7 @@ std::size_t World::getNofSamplers() const
 	return samplers.size();
 }
 
-/*!
- * <!-- Add a sampler to this World using the specialized struct
+/*! <!-- Add a sampler to this World using the specialized struct
  * for samplers names. -->
 */
 bool World::addSampler(SamplerName samplerName,
@@ -3376,7 +3375,6 @@ bool World::addSampler(SamplerName samplerName,
 		// 		samplers.back()->setOMMmass(nax, mass);
 		// 	}
 		// }
-
 		// // Variant 3
 		// for (DuMM::NonbondAtomIndex nax(0); nax < forceField->getNumNonbondAtoms(); ++nax) {
 		// 	const SimTK::DuMM::AtomIndex dax = forceField->getAtomIndexOfNonbondAtom(nax);
