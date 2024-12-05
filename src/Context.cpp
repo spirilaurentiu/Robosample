@@ -894,8 +894,8 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	loadAngles(reader);    // DUMM_ANGLE list for generateParams
 	loadTorsions(reader);  // DUMM_TORSIONlist for generateParams	
 
-	//build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
-	//new_build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
+	// Calculate InternalCoordinates BONDS / BAT graphs
+	calc_Gmolmodel_Graph(); 
 
 	// Construct a Compound for every atom
 	setAtomsCompounds();
@@ -904,8 +904,8 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	// force field specific parameters for an atom type
 	addBiotypes();
 
-	// Calculate InternalCoordinates BONDS / BAT graphs
-	calc_Gmolmodel_Graph();
+	// // Calculate InternalCoordinates BONDS / BAT graphs
+	// calc_Gmolmodel_Graph();
 
 	// bBonds to BAT / InternalCoordinates bonds map
 	load_BONDS_to_bonds( internCoords.getBonds() );

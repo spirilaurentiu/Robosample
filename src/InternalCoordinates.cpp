@@ -90,9 +90,9 @@ bool InternalCoordinates::computeRoot(
 			continue;
 		}
 
-		AmberAtom a(atom);
-		if (isTerminal(a)) {
-			terminalAtoms.push_back(a);
+		AmberAtom amberAtom(atom);
+		if (isTerminal(amberAtom)) {
+			terminalAtoms.push_back(amberAtom);
 		}
 	}
 
