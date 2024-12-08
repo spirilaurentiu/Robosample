@@ -397,8 +397,7 @@ int ThermodynamicState::findWorld(const int whichWorld)
 	return wPosInVector;
 }
 
-/*!
- * <!--  -->
+/*! <!-- Compute various Q related quantities means and statistics -->
 */
 bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldBMps, const SimTK::Vector & worldQs, int worldNofSamples)
 {

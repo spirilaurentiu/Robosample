@@ -632,8 +632,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			//J_ini = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 
-			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
-
 			////PrintSubZMatrixBATAndRelated(someState); // OLD
 			//bool BernoulliTrial = true;
 			//bool varianceBasedScalingFactor = false;
@@ -651,6 +649,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			//scout("\nJ_ini\n");
 			J_ini = calcMobodsMBAT(someState);
 
+			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
+
 			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
 			//std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
@@ -659,14 +659,15 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			bool T_Scale_Flag = true; // Are we doing temperature scaling
 
 			SimTK::Vector &stateQs = someState.updQ();
-			SimTK::Real scaleFactor = 1;
-			SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-			SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
+			
+			SimTK::Real scaleFactor = 1;			
 
 			if(T_Scale_Flag){ // T-scaling factor
 				scaleFactor = this->QScaleFactor;
 
 			}else{ // Constant scaling factor
+				SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+				SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
 				SimTK::Real scaleFactorReference = 1.01;
 				SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
 				scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;

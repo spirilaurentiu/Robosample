@@ -681,6 +681,7 @@ public:
 	void set_dBMps(std::vector<SimTK::Real>& QArg){ prev_dBMps = &QArg; }
 
 	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
+	
 	void setQmeans(std::vector<SimTK::Real>& QArg){ Qmeans = &QArg; }
 	void setQdiffs(std::vector<SimTK::Real>& QArg){ Qdiffs = &QArg; }
 	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
