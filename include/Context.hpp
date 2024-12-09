@@ -351,10 +351,12 @@ public:
 
 	// --- Main ---
 	void randomizeWorldIndexes(void);
-	void transferCoordinates(int src, int dest);
+	void transferCoordinates_WorldToWorld(int src, int dest);
 	SimTK::Real checkTransferCoordinates_Cart(int srcWIx, int destWIx);
 	SimTK::Real checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian = false);
-	
+
+	void transferCoordinates_ReplicaToWorld(int replicaIx, int destWIx);
+
 	// Relationship BAT - mobod transforms
 	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
 

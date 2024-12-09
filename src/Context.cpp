@@ -4095,12 +4095,13 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 	replicas[replica_j].setPotentialEnergy(tempE);
 }
 
-// Attempt swap between replicas r_i and r_j
-// Code inspired from OpenmmTools
-// Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
-// as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
-//, 135:194110, 2011. DOI:10.1063/1.3660669
-// replica_i and replica_j are variable
+/*! <!-- Attempt swap between replicas r_i and r_j
+ * Code inspired from OpenmmTools
+ * Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
+ * as Gibbs multistate: Simple improvements for enhanced mixing. J. Chem. Phys.
+ * , 135:194110, 2011. DOI:10.1063/1.3660669
+ *  replica_i and replica_j are variable
+ * --> */
 bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
 	bool returnValue = false;
@@ -4140,19 +4141,19 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Replica i reduced potential in state i
 	SimTK::Real lC_Xtau = thermodynamicStates[thermoState_C].getBeta()
-		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getWORK());
 
 	// Replica j reduced potential in state j
 	SimTK::Real lH_Ytau = thermodynamicStates[thermoState_H].getBeta()
-		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getWORK());
 
 	// Replica i reduced potential in state j
 	SimTK::Real lH_Xtau = thermodynamicStates[thermoState_H].getBeta()
-		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getTransferedEnergy());
+		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getWORK());
 
 	// Replica j reduced potential in state i
 	SimTK::Real lC_Ytau = thermodynamicStates[thermoState_C].getBeta()
-		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getTransferedEnergy());
+		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getWORK());
 	// ========================================================================
 
 	// Include the Fixman term if indicated
@@ -4229,7 +4230,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// PRINT
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	bool printTerms = false, printWithoutText = true;
+	bool printTerms = true, printWithoutText = true;
 	if (printTerms){
 		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
 		std::cout << "replicaIxs " << replica_X << " " << replica_Y << std::endl;
@@ -4241,8 +4242,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			<< lH_Xtau << " " << lC_Ytau << std::endl;
 		std::cout << "EiiEjj " << eC_X0 << " " << eH_Y0 << " "
 			<< eH_X0 << " " << eC_Y0 << std::endl;
-		std::cout << "Transferred E i j " << replicas[replica_X].getTransferedEnergy()
-			<< " " << replicas[replica_Y].getTransferedEnergy() << std::endl;
+		std::cout << "Transferred E i j " << replicas[replica_X].getWORK()
+			<< " " << replicas[replica_Y].getWORK() << std::endl;
 		std::cout << "ETerm " << ETerm_equil << std::endl;
 		std::cout << "WTerm " << WTerm << std::endl;
 		std::cout << "correctionTerm s_i s_f " << correctionTerm 
@@ -4264,8 +4265,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			<< lC_Xtau << ", " << lH_Ytau << ", " << lH_Xtau << ", " << lC_Ytau << ", "
 			<< replicas[replica_X].get_WORK_Jacobian() << ", "
 			<< replicas[replica_Y].get_WORK_Jacobian() << ", "
-			<< replicas[replica_X].getTransferedEnergy() << ", "
-			<< replicas[replica_Y].getTransferedEnergy() << ", "
+			<< replicas[replica_X].getWORK() << ", "
+			<< replicas[replica_Y].getWORK() << ", "
 			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
 			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
 			<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
@@ -4587,7 +4588,7 @@ void Context::store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx)
 	// Get the front world energy
 	SimTK::Real energy =
 		//worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies();
-		worlds[frontWorldIx].CalcPotentialEnergy();
+		worlds[frontWorldIx].calcPotentialEnergy();
 
 
 	// Set this replica's energy
@@ -4646,7 +4647,7 @@ void Context::storeReplicaEnergyFromFrontWorldFull(int replicaIx)
 	// Get the front world energy
 	SimTK::Real energy =
 		//worlds[frontWorldIx].CalcFullPotentialEnergyIncludingRigidBodies(); // DOESN'T WORK with OPENMM
-		worlds[frontWorldIx].CalcPotentialEnergy();
+		worlds[frontWorldIx].calcPotentialEnergy();
 
 	// Add the Fixman potential to the energy (DANGEROUS)
 	//energy += pHMC((worlds[backWorldIx].samplers[0]))->fix_set;
@@ -5053,7 +5054,7 @@ void Context::RewindBackWorld(int thisReplica)
 	int frontIx = replicaWorldIxs.front();
 	int backIx = replicaWorldIxs.back();
 	if(replicaWorldIxs.size() > 1) {
-		transferCoordinates(frontIx, backIx);
+		transferCoordinates_WorldToWorld(frontIx, backIx);
 	}
 
 	// == ROTATE == worlds indices (translate from right to left)
@@ -5093,7 +5094,7 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 		// std::cout << "Transfer from world " << backWorldIx << " to " << frontWorldIx ;
 		// spacedcout("[YDIRBUG]"); ceol;
 
-		transferCoordinates(backWorldIx, frontWorldIx);
+		transferCoordinates_WorldToWorld(backWorldIx, frontWorldIx);
 
 		//SimTK::Real cumulDiff_Cart = checkTransferCoordinates_Cart(backWorldIx, frontWorldIx);
 		//SimTK::Real cumulDiff_BAT = checkTransferCoordinates_BAT(backWorldIx, frontWorldIx);
@@ -5393,7 +5394,7 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 		
 		// Transfer coordinates to the next world
 		int destStatsWIx = specificWIxs[spWCnt + 1];
-		transferCoordinates(srcStatsWIx, destStatsWIx);
+		transferCoordinates_WorldToWorld(srcStatsWIx, destStatsWIx);
 		transferQStatistics(thermoIx, srcStatsWIx, destStatsWIx);
 
 		// // Calculate replica BAT and BAT stats
@@ -5497,22 +5498,22 @@ void Context::RunReplicaRefactor(
 		
 		replicas[replicaIx].updAtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround());
 	
-		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].CalcPotentialEnergy());
+		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].calcPotentialEnergy());
 
 		REXLog(mixi, replicaIx);
 
 		if(!nonequilWIxs.empty()){ // Non-Equilibrium
 
-			transferCoordinates(equilWIxs.back(), nonequilWIxs.front());
+			transferCoordinates_WorldToWorld(equilWIxs.back(), nonequilWIxs.front());
 			transferQStatistics(thermoIx, equilWIxs.back(), nonequilWIxs.front());
 
 			RunWorlds(nonequilWIxs, replicaIx);
 		
-			replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) ); // possibly not correct
+			replicas[replicaIx].setWORK( calcReplicaWork(replicaIx) ); // possibly not correct
 		
 			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
 		
-			replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].CalcPotentialEnergy());
+			replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].calcPotentialEnergy());
 		
 			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
 			replicas[replicaIx].set_WORK_Jacobian(jac);
@@ -5522,13 +5523,13 @@ void Context::RunReplicaRefactor(
 			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
 			replicas[replicaIx].setFixman(fix_set_back);
 
-			transferCoordinates(nonequilWIxs.back(), equilWIxs.front());
+			transferCoordinates_WorldToWorld(nonequilWIxs.back(), equilWIxs.front());
 
 		}else{
 
 			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround()); // Victor bugfix
 
-			transferCoordinates(equilWIxs.back(), equilWIxs.front());
+			transferCoordinates_WorldToWorld(equilWIxs.back(), equilWIxs.front());
 
 		}
 
@@ -5545,11 +5546,11 @@ void Context::RunReplicaRefactor(
 
 		RunWorlds(nonequilWIxs, replicaIx);
 	
-		replicas[replicaIx].setTransferedEnergy( calcReplicaWork(replicaIx) ); // possibly not correct
+		replicas[replicaIx].setWORK( calcReplicaWork(replicaIx) ); // possibly not correct
 	
 		replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
 	
-		replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].CalcPotentialEnergy());
+		replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].calcPotentialEnergy());
 	
 		SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
 		replicas[replicaIx].set_WORK_Jacobian(jac);
@@ -5557,7 +5558,7 @@ void Context::RunReplicaRefactor(
 		SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
 		replicas[replicaIx].setFixman(fix_set_back);
 
-		transferCoordinates(nonequilWIxs.back(), nonequilWIxs.front());
+		transferCoordinates_WorldToWorld(nonequilWIxs.back(), nonequilWIxs.front());
 
 	}
 
@@ -5594,12 +5595,12 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		// Transfer coordinates to the next world
 		if(thWCnt == 0){ // from replica
-			SimTK::State& state = (worlds[worldIndexes.front()].integ)->updAdvancedState();
-			state = setAtoms_SP_NEW(thermoWorldIxs.front(), state, replica.getAtomsLocationsInGround());
+			//SimTK::State& state = (worlds[worldIndexes.front()].integ)->updAdvancedState();
+			//state = setAtoms_SP_NEW(thermoWorldIxs.front(), state, replica.getAtomsLocationsInGround());
+			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
 			transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
-
 		}else{ 			// from previous world
-			transferCoordinates(thermoWorldIxs[thWCnt - 1], wIx);
+			transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 			transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
 		}
 
@@ -5620,20 +5621,22 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 			thermoState.calcQStats(wIx, currWorld.getBMps(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 		}
 
-		if(distortIx == 0){ // Equilibrium
+		if(distortIx == 0){ ///// Equilibrium
 
 			replica.updAtomsLocationsInGround(currWorld.getCurrentAtomsLocationsInGround());
-			replica.setPotentialEnergy(currWorld.CalcPotentialEnergy());
-			REXLog(mixi, replicaIx);
 
-		}else{ // Nonquilibrium
+			replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 
-			replica.setTransferedEnergy( calcReplicaWork(replicaIx) ); // possibly not correct
+			REXLog(mixi, replicaIx); // why here ??
+
+		}else{ ////////////////// Nonquilibrium
+
+			replica.updWORK() += currWorld.getWork();  // TODO merge with Jacobians
+			replica.upd_WORK_Jacobian() += sampler_p->getDistortJacobianDetLog();
+
 			replica.upd_WORK_AtomsLocationsInGround(currWorld.getCurrentAtomsLocationsInGround());
-			replica.set_WORK_PotentialEnergy_New(currWorld.CalcPotentialEnergy());
-		
-			SimTK::Real jac = sampler_p->getDistortJacobianDetLog();
-			replica.set_WORK_Jacobian(jac);
+
+			replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
 		
 			replica.setFixman(sampler_p->fix_set);
 
@@ -5644,7 +5647,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	SimTK::State& state = worlds.back().integ->updAdvancedState();
 	replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
 
-	transferCoordinates(thermoWorldIxs.back(), thermoWorldIxs.front());
+	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
 	
 }
 
@@ -5733,7 +5736,8 @@ void Context::RunREX()
 	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 6");}
 
 			// ======================== SIMULATE ======================
-			RunReplicaRefactor(mixi, replicaIx);
+			//RunReplicaRefactor(mixi, replicaIx);
+			RunReplicaRefactor_SIMPLE(mixi, replicaIx);
 
 	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 7");}
 
@@ -5868,7 +5872,9 @@ SimTK::Real Context::calcReplicaTransferedEnergy(int replicaIx)
 
 }
 
-
+/*!
+ * <!-- Gather work contributions from all the worlds -->
+*/
 SimTK::Real Context::calcReplicaWork(int replicaIx)
 {
 	// Get thermoState corresponding to this replica
@@ -6023,7 +6029,7 @@ void Context::randomizeWorldIndexes()
 /*!
  * <!-- Coordinate transfer -->
 */
-void Context::transferCoordinates(int srcWIx, int destWIx)
+void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 {
 	// Get advanced states of the integrators
 	SimTK::State& lastAdvancedState = worlds[srcWIx].integ->updAdvancedState();
@@ -6395,12 +6401,16 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 }
 
 
+void Context::transferCoordinates_ReplicaToWorld(int replicaIx, int destWIx)
+{
+	SimTK::State& state = worlds[destWIx].integ->updAdvancedState();	
+	state = setAtoms_SP_NEW(destWIx, state, replicas[replicaIx].getAtomsLocationsInGround());	
+}
+
 
 // SP_NEW_TRANSFER ============================================================
 
-/*!
- * <!--
- *  -->
+/*! <!-- -->
 */
 SimTK::State& Context::setAtoms_CompoundsAndDuMM(
 	int destWIx,

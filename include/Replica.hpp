@@ -43,6 +43,8 @@ public:
 	void set_WORK_PotentialEnergy_New(SimTK::Real somePotential);
 
 	SimTK::Real get_WORK_Jacobian() const;
+	SimTK::Real& upd_WORK_Jacobian();
+
 	void set_WORK_Jacobian(SimTK::Real);
 
 	void setPotentialEnergy_FromWORK();
@@ -56,8 +58,9 @@ public:
 	SimTK::Real getPotentialEnergy() const;
 	void setPotentialEnergy(SimTK::Real somePotential);
 
-	SimTK::Real getTransferedEnergy() const;
-	void setTransferedEnergy(SimTK::Real workArg);
+	SimTK::Real getWORK() const;
+	void setWORK(SimTK::Real workArg);
+	SimTK::Real& updWORK();
 
 	SimTK::Real get_WORK_PotentialEnergy_New() const;
     // void set_WORK_LastPotentialEnergy(SimTK::Real wpArg);
@@ -169,7 +172,7 @@ private:
 	SimTK::Real potential; // TODO: turn into a vector for worlds
 	SimTK::Real WORK_potential; // TODO: turn into a vector for worlds
 
-	SimTK::Real transferedEnergy; // TODO: turn into a vector for worlds
+	SimTK::Real WORK; // TODO: turn into a vector for worlds
 	SimTK::Real workJacobiansContributions; // TODO: turn into a vector for worlds
 
 	SimTK::Real FixmanPotential; // TODO: turn into a vector for worlds

@@ -119,11 +119,20 @@ void Replica::upd_WORK_AtomsLocationsInGround(
 	}
 }
 
+SimTK::Real Replica::get_WORK_PotentialEnergy_New() const {
+	return this->WORK_potential;
+}
+
 void Replica::set_WORK_PotentialEnergy_New(SimTK::Real somePotential) {
     WORK_potential = somePotential;
 }
 
 SimTK::Real Replica::get_WORK_Jacobian() const
+{
+	return this->workJacobiansContributions;
+}
+
+SimTK::Real& Replica::upd_WORK_Jacobian()
 {
 	return this->workJacobiansContributions;
 }
@@ -153,17 +162,18 @@ void Replica::setPotentialEnergy(SimTK::Real somePotential) {
 	potential = somePotential;
 }
 
-SimTK::Real Replica::getTransferedEnergy() const {
-	return transferedEnergy;
+SimTK::Real Replica::getWORK() const {
+	return WORK;
 }
 
-void Replica::setTransferedEnergy(SimTK::Real workArg) {
-	this->transferedEnergy = workArg;
+SimTK::Real& Replica::updWORK() {
+	return WORK;
 }
 
-SimTK::Real Replica::get_WORK_PotentialEnergy_New() const {
-	return this->WORK_potential;
+void Replica::setWORK(SimTK::Real workArg) {
+	this->WORK = workArg;
 }
+
 
 // void Replica::set_WORK_LastPotentialEnergy(SimTK::Real wpArg) {
 //     this->WORK_potential = wpArg;

@@ -3432,7 +3432,7 @@ Topology& World::updTopology(std::size_t moleculeNumber){
 }
 
 // DOESN'T WORK WITH OPENMM
-SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
+SimTK::Real World::calcFullPotentialEnergyIncludingRigidBodies(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
@@ -3442,7 +3442,7 @@ SimTK::Real World::CalcFullPotentialEnergyIncludingRigidBodies(void)
 }
 
 // 
-SimTK::Real World::CalcPotentialEnergy(void)
+SimTK::Real World::calcPotentialEnergy(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromCompound(currentAdvancedState);
