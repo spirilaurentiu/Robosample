@@ -390,8 +390,9 @@ int ThermodynamicState::findWorld(const int whichWorld)
 	for(const auto wIx : worldIndexes){
 		wPosInVector++;
 		if(whichWorld == wIx){
-			wPosInVector = wIx;
-			break;
+			// wPosInVector = wIx;
+			// break;
+			return wPosInVector;
 		}
 	}
 	return wPosInVector;
@@ -436,6 +437,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			Qmeans[wPosInVector][qIx] = worldQs[qIx];
 			Qdiffs[wPosInVector][qIx] = 0;
 			Qvars[wPosInVector][qIx] = 0;
+
 		}
 
 		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
@@ -504,6 +506,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			//std::cout << "\ncalcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" Qvars: ";
 			//for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << Qvars[wPosInVector][qIx];}std::cout << std::endl; 			 
 		} // )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) // @@@@@@@@@@@@@
+
 
 	} // nofSamples gt 2
 

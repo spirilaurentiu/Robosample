@@ -592,17 +592,26 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_3)){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 0){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
+		if(this->nofSamples >= 1){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 
 			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
 
 			// Just for the Visualizer
 			if(world->visual){
-				// this->world->ts->stepTo(
-				// 	someState.getTime() + (0.00001));				
-				// std::cout << "Sleeping... before scaling " << std::flush;
-				// std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-				// std::cout << "done.\n" << std::flush;
+
+				someState.updQDot() = 0.0;
+				someState.updQDotDot() = 0.0;
+				this->world->timeStepper->stepTo( someState.getTime() + (0.001) );
+
+				std::cout << "Scaling SystemStage time after"
+					<<" "<< someState.getSystemStage()
+					<<" "<< someState.getTime()
+					<< std::endl;
+					
+				std::cout << "Sleeping... before scaling " << std::flush;
+				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+				std::cout << "done.\n" << std::flush;
+
 			}
 			
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -656,22 +665,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
-			bool T_Scale_Flag = true; // Are we doing temperature scaling
-
 			SimTK::Vector &stateQs = someState.updQ();
-			
-			SimTK::Real scaleFactor = 1;			
-
-			if(T_Scale_Flag){ // T-scaling factor
-				scaleFactor = this->QScaleFactor;
-
-			}else{ // Constant scaling factor
-				SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-				SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
-				SimTK::Real scaleFactorReference = 1.01;
-				SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
-				scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
-			}
 
 			// // Print Q stats
 			// std::cout << "\nQmeans";
@@ -695,6 +689,47 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// 		std::cout <<" " << (*Qvars)[qIx] ;
 			// 	}
 			// }std::cout << std::endl;						
+
+			bool T_Scale_Flag = false; // Are we doing temperature scaling
+			
+			SimTK::Real scaleFactor = 1;			
+
+			if(T_Scale_Flag){ // T-scaling factor
+				scaleFactor = this->QScaleFactor;
+
+			}else{
+
+				# pragma region REBAS_TEST
+
+				std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
+
+				enum TestingWay {CONSTANT, CONSTANT_BY_T, RANDOM, WORLD};
+
+				TestingWay testingWay = TestingWay::CONSTANT;						// CONSTANT
+
+				if(testingWay == TestingWay::CONSTANT){ 				
+					if(this->nofSamples % 2){scaleFactor = 0.80;}
+					else					{scaleFactor = 1.25;}
+
+				}else if(testingWay == TestingWay::CONSTANT_BY_T){
+					if(this->temperature == 300){scaleFactor = 1.25;}
+					else						{scaleFactor = 0.80;}
+
+				}else if(testingWay == TestingWay::RANDOM){
+					SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+					SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
+					SimTK::Real scaleFactorReference = 1.01;
+					SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
+					scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
+				}else if(testingWay == TestingWay::WORLD){
+					std::cout << "this->nofSamples % 2 = " << this->nofSamples % 2 <<" "<<  std::endl;
+					scaleFactor = 0.80;
+
+				}
+					
+				# pragma endregion REBAS_TEST
+
+			}
 
 			int nofScaledBMs = 0;
 			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
@@ -766,11 +801,21 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			// Just for the Visualizer
 			if(world->visual){
-				// this->world->ts->stepTo(
-				// 	someState.getTime() + (0.00001));				
-				// std::cout << "Sleeping... after scaling " << std::flush;
-				// std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-				// std::cout << "done.\n" << std::flush;
+
+				
+				someState.updQDot() = 0.0;
+				someState.updQDotDot() = 0.0;
+				this->world->timeStepper->stepTo(someState.getTime() + (0.001));
+
+				std::cout << "Scaling SystemStage tiem after"
+					<<" "<< someState.getSystemStage()
+					<<" "<< someState.getTime()
+					<< std::endl;
+
+				std::cout << "Sleeping... after scaling " << std::flush;
+				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+				std::cout << "done.\n" << std::flush;
+				
 			}
 
 		}
@@ -1274,7 +1319,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		try {
 
 			// Call Simbody TimeStepper to advance time
-			std::cout << "HMCSampler::integrateTrajectory for "<< MDStepsPerSample <<" x  "<< timestep <<" at default boost T " << this->boostT << std::endl;
+			//std::cout << "HMCSampler::integrateTrajectory for "<< MDStepsPerSample <<" x  "<< timestep <<" at default boost T " << this->boostT << std::endl;
 			this->world->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
 
 			system->realize(someState, SimTK::Stage::Position);
@@ -3924,6 +3969,10 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
 	validated = propose(someState) && validated;
+
+	#pragma region REBAS_TEST
+	validated = true;
+	#pragma endregion REBAS_TEST
 
 	// --- invalid --- //
 	if ( !validated ){

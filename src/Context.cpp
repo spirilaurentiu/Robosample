@@ -4232,6 +4232,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// CORRECTION TERM FOR REBAS
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	#pragma region correctionTerm
 	SimTK::Real correctionTerm = 1.0;
 	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
 	SimTK::Real miu_H = qScaleFactorsMiu.at(thermoState_H);
@@ -4246,6 +4247,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Correction term is 1 for now
 	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
 	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
+	#pragma endregion correctionTerm
 
 	// ----------------------------------------------------------------
 	// PRINT
@@ -4314,6 +4316,26 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
+
+	# pragma region REBAS_TEST
+
+		enum TestingWay {ALWAYS_ACCEPT, ALWAYS_REJECT, RANDOM};
+		
+		TestingWay testingWay = TestingWay::ALWAYS_ACCEPT;  				// ALWAYS_ACCEPT
+
+		if(testingWay == TestingWay::ALWAYS_ACCEPT){
+			log_p_accept = 1.0;
+			std::cerr << "TEST 1 " ; // STUDY 
+			std::cerr << "REX WARNING ALWAYS ACCEPT " << std::endl;
+
+		}else if(testingWay == TestingWay::ALWAYS_REJECT){
+			log_p_accept = -1.0; // std::exp(log_p_accept) = 0.3678794411714424
+			unifSample = 1.0;
+			std::cerr << "TEST 2 " ; // STUDY 
+			std::cerr << "REX WARNING ALWAYS REJECT " << std::endl;
+		}
+		
+	# pragma endregion REBAS_TEST
 
 	// Accept
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
@@ -4433,8 +4455,8 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 		// Attempt to swap
 		bool swapped = false;
 		swapped = attemptREXSwap(replica_i, replica_j);
-	}
 
+	}
 
 
 }
@@ -4451,6 +4473,7 @@ void Context::mixAllReplicas(int nSwapAttempts)
 		// Get two random replicas
 		auto replica_i = randReplicaDistrib(randomEngine);
 		auto replica_j = randReplicaDistrib(randomEngine);
+
 		std::cout << "Attempt to swap replicas " << replica_i
 			<< " and " << replica_j << std::endl;
 
