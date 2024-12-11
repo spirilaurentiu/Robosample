@@ -4022,9 +4022,7 @@ void HMCSampler::PrintAdaptiveData(void)
 // RESTORE
 ///////////////////////////////////////////////////////
 
-/*!
- * <!--
- * Restore configuration
+/*! <!-- Restore configuration
  * --> 
  */
 void HMCSampler::restoreConfiguration(
@@ -4042,11 +4040,9 @@ void HMCSampler::restoreConfiguration(
 	proposeExceptionCaught = false;
 }
 
-/*!
- * <!--
- * Restore energies
- * --> 
- */void HMCSampler::restoreEnergies(void){
+/*! <!-- Restore energies
+ * --> */
+void HMCSampler::restoreEnergies(void){
 
 	// Set final energies to the precalculated old ones
 	pe_set = pe_o;
@@ -4058,10 +4054,7 @@ void HMCSampler::restoreConfiguration(
 	etot_set = pe_set + fix_set + ke_o + logSineSqrGamma2_set;
 }
 
-/*!
- * <!--
- * Restore
- * --> 
+/*! <!-- Restore --> 
  */
 void HMCSampler::restore(SimTK::State& someState)
 {
@@ -4071,6 +4064,8 @@ void HMCSampler::restore(SimTK::State& someState)
 
 	// Restore energies
 	restoreEnergies();
+
+	// Restore WORK Jacobian
 
 	// Update acceptance rate buffer
 	acceptedStepsBuffer.push_back(0);
@@ -4109,7 +4104,9 @@ void HMCSampler::update(SimTK::State& someState)
 
 	// Set the final energies to the new ones
 	updateEnergies();
-	
+
+	// Update WORK Jacobian
+
 	// Acceptance rate buffer
 	++acceptedSteps;
 	acceptedStepsBuffer.push_back(1);

@@ -4095,6 +4095,18 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 	replicas[replica_j].setPotentialEnergy(tempE);
 }
 
+/*! <!-- restoreReplica --> */\
+void Context::rewindReplica(void){
+	assert(!"Not implemented");
+
+	// Return to equilibrium worlds coordinates
+	// - no need because it is restored in RunREX
+
+	// Return to equilibrium worlds energies
+	// - no need because it is restored in RunREX
+
+}
+
 /*! <!-- Attempt swap between replicas r_i and r_j
  * Code inspired from OpenmmTools
  * Chodera JD and Shirts MR. Replica exchange and expanded ensemble simulations
@@ -4106,6 +4118,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
 	bool returnValue = false;
 
+	#pragma region convienent_vars
 	// Get replicas' thermodynamic states indexes
 	int thermoState_C = replica2ThermoIxs[replica_X];
 	int thermoState_H = replica2ThermoIxs[replica_Y];
@@ -4118,46 +4131,58 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	auto genericSampler = worlds[0].updSampler(0);
 
 	// ----------------------------------------------------------------
-	// INITIAL PE x,y 0
+	// Convenient vars (Ballard-Jarzinski nomenclature)
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	// Replica i reduced potential in state i
-	SimTK::Real eC_X0 = thermodynamicStates[thermoState_C].getBeta()
-		* replicas[replica_X].getPotentialEnergy();
+	SimTK::Real beta_C = thermodynamicStates[thermoState_C].getBeta();
+	SimTK::Real beta_H = thermodynamicStates[thermoState_H].getBeta();
+	
+	SimTK::Real U_X0 = replicas[replica_X].getPotentialEnergy(); // last equil potential
+	SimTK::Real U_Y0 = replicas[replica_Y].getPotentialEnergy(); // last equil potential
 
-	// Replica j reduced potential in state j
-	SimTK::Real eH_Y0 = thermodynamicStates[thermoState_H].getBeta()
-		* replicas[replica_Y].getPotentialEnergy();
+	SimTK::Real W_X = replicas[replica_X].getWORK(); // work without Jacobian
+	SimTK::Real W_Y = replicas[replica_Y].getWORK(); // work without Jacobian
 
-	// Replica i reduced potential in state j
-	SimTK::Real eH_X0 = thermodynamicStates[thermoState_H].getBeta()
-		* replicas[replica_X].getPotentialEnergy();
+	SimTK::Real U_Xtau = replicas[replica_X].get_WORK_PotentialEnergy_New(); // last non-equil potential
+	SimTK::Real U_Ytau = replicas[replica_Y].get_WORK_PotentialEnergy_New(); // last non-equil potential
 
-	// Replica j reduced potential in state i
-	SimTK::Real eC_Y0 = thermodynamicStates[thermoState_C].getBeta()
-		* replicas[replica_Y].getPotentialEnergy();
+	SimTK::Real lnJac_X = replicas[replica_X].get_WORK_Jacobian(); // non-equil Jacobian
+	SimTK::Real lnJac_Y = replicas[replica_Y].get_WORK_Jacobian(); // non-equil Jacobian
+
+	std::cout <<" STUDY relationships"
+		<<" "<< "U_X0 U_Y0 W_X W_Y U_Xtau U_Ytau lnJac_X lnJAC_Y"
+		<<" "<< U_X0 <<" "<< U_Y0 <<" "<< W_X <<" "<< W_Y <<" "<< U_Xtau <<" "<< U_Ytau <<" "<< lnJac_X <<" "<< lnJac_Y
+		//<<" "<< (U_X0 + W_X) - U_Xtau <<" "<< (U_Y0 + W_Y) - U_Ytau
+		<< std::endl;
+
+	assert( ((std::abs((U_X0 + W_X) - U_Xtau) < 0.00001) &&
+			 (std::abs((U_Y0 + W_Y) - U_Ytau) < 0.00001)) &&
+			"Work seems incorrectly calculated");
+
+	if( ((std::abs((U_X0 + W_X) - U_Xtau) > 0.00001) ||
+		 (std::abs((U_Y0 + W_Y) - U_Ytau) > 0.00001)) ){
+		std::cerr << "Work seems incorrectly calculated\n";
+	}
+
+	#pragma endregion convienent_vars
 
 	// ----------------------------------------------------------------
-	// LAST PE x,y tau
+	// Reduced potentials X0
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	// Replica i reduced potential in state i
-	SimTK::Real lC_Xtau = thermodynamicStates[thermoState_C].getBeta()
-		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getWORK());
+	SimTK::Real uC_X0 = beta_C * U_X0; // Replica i reduced potential in state i
+	SimTK::Real uH_Y0 = beta_H * U_Y0; // Replica j reduced potential in state j
+	SimTK::Real uH_X0 = beta_H * U_X0; // Replica i reduced potential in state j
+	SimTK::Real uC_Y0 = beta_C * U_Y0; // Replica j reduced potential in state i
 
-	// Replica j reduced potential in state j
-	SimTK::Real lH_Ytau = thermodynamicStates[thermoState_H].getBeta()
-		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getWORK());
-
-	// Replica i reduced potential in state j
-	SimTK::Real lH_Xtau = thermodynamicStates[thermoState_H].getBeta()
-		* (replicas[replica_X].getPotentialEnergy() + replicas[replica_X].getWORK());
-
-	// Replica j reduced potential in state i
-	SimTK::Real lC_Ytau = thermodynamicStates[thermoState_C].getBeta()
-		* (replicas[replica_Y].getPotentialEnergy() + replicas[replica_Y].getWORK());
-	// ========================================================================
+	// ----------------------------------------------------------------
+	// Reduced potential Xtau
+	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	SimTK::Real uC_Xtau = beta_C * U_Xtau; // Replica i reduced potential in state i
+	SimTK::Real uH_Ytau = beta_H * U_Ytau; // Replica j reduced potential in state j
+	SimTK::Real uH_Xtau = beta_H * U_Xtau; // Replica i reduced potential in state j
+	SimTK::Real uC_Ytau = beta_C * U_Ytau; // Replica j reduced potential in state i
 
 	// Include the Fixman term if indicated
-	SimTK::Real Uii = 0, Ujj = 0, Uij = 0, Uji = 0;
+	SimTK::Real Fix_ii = 0, Fix_jj = 0, Fix_ij = 0, Fix_ji = 0;
 	if (swapFixman){
 
         if (thermoState_C == 0){
@@ -4165,52 +4190,47 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 				<< thermoState_H << " ";
 
             // Replica i reduced Fixman potential in state i
-            Uii = thermodynamicStates[thermoState_C].getBeta()
-                * calcFixman_IinJ(replica_X, replica_X);
+            Fix_ii = beta_C * calcFixman_IinJ(replica_X, replica_X);
 
             // Replica j reduced Fixman potential in state j
-            Ujj = thermodynamicStates[thermoState_H].getBeta()
-                * calcFixman_IinJ(replica_Y, replica_Y);
+            Fix_jj = beta_H * calcFixman_IinJ(replica_Y, replica_Y);
 
             // Replica i reduced Fixman potential in state j
-            Uij = thermodynamicStates[thermoState_H].getBeta()
-                * calcFixman_IinJ(replica_X, replica_Y);
+            Fix_ij = beta_H * calcFixman_IinJ(replica_X, replica_Y);
 
             // Replica j reduced Fixman potential in state i
-            Uji = thermodynamicStates[thermoState_C].getBeta()
-                * calcFixman_IinJ(replica_Y, replica_X); 
+            Fix_ji = beta_C * calcFixman_IinJ(replica_Y, replica_X); 
         }else{
-            Uii = Ujj = Uij = Uji = 0;
+            Fix_ii = Fix_jj = Fix_ij = Fix_ji = 0;
         }
 
-        std::cout << "Uii Ujj Uij Uji " << Uii << " " << Ujj
-            << " " << Uij << " " << Uji << std::endl;
+        std::cout << "Uii Ujj Uij Uji " << Fix_ii << " " << Fix_jj
+            << " " << Fix_ij << " " << Fix_ji << std::endl;
 	}
 
 	// ----------------------------------------------------------------
 	// LOGP ENERGY EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real ETerm_equil    = eH_X0 - eC_X0;
-	ETerm_equil               += eC_Y0 - eH_Y0;
-	ETerm_equil = -1.0 * ETerm_equil;
+	SimTK::Real ETerm_equil    = uH_X0 - uC_X0;
+				ETerm_equil   += uC_Y0 - uH_Y0;
+				ETerm_equil = -1.0 * ETerm_equil;
 
 	// ----------------------------------------------------------------
 	// LOGP ENERGY NON-EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real
-	ETerm_nonequil  = lH_Xtau - lC_Xtau;
-	ETerm_nonequil += lC_Ytau - lH_Ytau;
-	ETerm_nonequil = -1.0 * ETerm_nonequil;
+	SimTK::Real ETerm_nonequil  = uH_Xtau - uC_Xtau;
+			    ETerm_nonequil += uC_Ytau - uH_Ytau;
+				ETerm_nonequil = -1.0 * ETerm_nonequil;
 
 	// ----------------------------------------------------------------
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real Work_X = lH_Xtau - eC_X0 - replicas[replica_X].get_WORK_Jacobian();
-	SimTK::Real Work_Y = lC_Ytau - eH_Y0 - replicas[replica_Y].get_WORK_Jacobian();
+	SimTK::Real Work_X = uH_Xtau - uC_X0 - lnJac_X;
+	SimTK::Real Work_Y = uC_Ytau - uH_Y0 - lnJac_Y;
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// ----------------------------------------------------------------
-	// CORRECTION TERM FOR NON-EQUILIBRIUM
+	// CORRECTION TERM FOR REBAS
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	SimTK::Real correctionTerm = 1.0;
 	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
@@ -4234,16 +4254,12 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	if (printTerms){
 		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
 		std::cout << "replicaIxs " << replica_X << " " << replica_Y << std::endl;
-		std::cout << "bibjwiwj "
-			<< thermodynamicStates[thermoState_C].getBeta() << " "
-			<< thermodynamicStates[thermoState_H].getBeta() << " "
-			<< std::endl;
-		std::cout << "LiiLjj " << lC_Xtau << " " << lH_Ytau << " "
-			<< lH_Xtau << " " << lC_Ytau << std::endl;
-		std::cout << "EiiEjj " << eC_X0 << " " << eH_Y0 << " "
-			<< eH_X0 << " " << eC_Y0 << std::endl;
-		std::cout << "Transferred E i j " << replicas[replica_X].getWORK()
-			<< " " << replicas[replica_Y].getWORK() << std::endl;
+		std::cout << "bibjwiwj " << beta_C << " " << beta_H << " " << std::endl;
+		std::cout << "LiiLjj " << uC_Xtau << " " << uH_Ytau << " "
+							   << uH_Xtau << " " << uC_Ytau << std::endl;
+		std::cout << "EiiEjj " << uC_X0 << " " << uH_Y0 << " "
+							   << uH_X0 << " " << uC_Y0 << std::endl;
+		std::cout << "Transferred E i j " << W_X << " " << W_Y << std::endl;
 		std::cout << "ETerm " << ETerm_equil << std::endl;
 		std::cout << "WTerm " << WTerm << std::endl;
 		std::cout << "correctionTerm s_i s_f " << correctionTerm 
@@ -4259,14 +4275,14 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		rexDetStream 
 			<< "REXdetails " << ", " << thermoState_C << ", " << thermoState_H << ", "
 			<< replica_X << ", " << replica_Y << ", "
-			<< thermodynamicStates[thermoState_C].getBeta() << ", "
-			<< thermodynamicStates[thermoState_H].getBeta() << ", "
-			<< eC_X0 << ", " << eH_Y0 << ", " << eH_X0 << ", " << eC_Y0 << ", "
-			<< lC_Xtau << ", " << lH_Ytau << ", " << lH_Xtau << ", " << lC_Ytau << ", "
-			<< replicas[replica_X].get_WORK_Jacobian() << ", "
-			<< replicas[replica_Y].get_WORK_Jacobian() << ", "
-			<< replicas[replica_X].getWORK() << ", "
-			<< replicas[replica_Y].getWORK() << ", "
+			<< beta_C << ", "
+			<< beta_H << ", "
+			<< uC_X0 << ", " << uH_Y0 << ", " << uH_X0 << ", " << uC_Y0 << ", "
+			<< uC_Xtau << ", " << uH_Ytau << ", " << uH_Xtau << ", " << uC_Ytau << ", "
+			<< lnJac_X << ", "
+			<< lnJac_Y << ", "
+			<< W_X << ", "
+			<< W_Y << ", "
 			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
 			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
 			<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
@@ -4353,12 +4369,12 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Reject
 	}else{
 
+		rewindReplica();
+
 		// Return to equilibrium worlds coordinates
 		// - no need because it is restored in RunREX
-
 		// Return to equilibrium worlds energies
 		// - no need because it is restored in RunREX
-
 		// Don't swap thermodynamics states nor energies
 
 		std::cout << "0"
@@ -5585,6 +5601,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	size_t thermoNofWorlds = thermoWorldIxs.size();
 	assert((thermoWorldIxs.size() == distortOpts.size()));
 
+	replica.updWORK() = 0.0;  // TODO merge with Jacobians
+	replica.upd_WORK_Jacobian() = 0.0;
+
 	// Main loop
 	for(std::size_t thWCnt = 0; thWCnt < thermoNofWorlds; thWCnt++){
 
@@ -5594,12 +5613,10 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		HMCSampler* sampler_p = worlds[wIx].samplers[0].get();
 
 		// Transfer coordinates to the next world
-		if(thWCnt == 0){ // from replica
-			//SimTK::State& state = (worlds[worldIndexes.front()].integ)->updAdvancedState();
-			//state = setAtoms_SP_NEW(thermoWorldIxs.front(), state, replica.getAtomsLocationsInGround());
-			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
+		if(thWCnt == 0){
+			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front()); //state = setAtoms_SP_NEW(thermoWorldIxs.front(), state, replica.getAtomsLocationsInGround());
 			transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
-		}else{ 			// from previous world
+		}else{
 			transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 			transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
 		}
@@ -5621,7 +5638,8 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 			thermoState.calcQStats(wIx, currWorld.getBMps(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 		}
 
-		if(distortIx == 0){ ///// Equilibrium
+		// ======================== EQUILIBRIUM ======================
+		if(distortIx == 0){
 
 			replica.updAtomsLocationsInGround(currWorld.getCurrentAtomsLocationsInGround());
 
@@ -5629,7 +5647,8 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			REXLog(mixi, replicaIx); // why here ??
 
-		}else{ ////////////////// Nonquilibrium
+		// ======================== NON-EQUILIBRIUM ======================
+		}else{
 
 			replica.updWORK() += currWorld.getWork();  // TODO merge with Jacobians
 			replica.upd_WORK_Jacobian() += sampler_p->getDistortJacobianDetLog();
@@ -5642,7 +5661,14 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		} // __end__ Non/Equilibrium
 
+		// Increment the nof samples for replica and thermostate
+		replica.incrementWorldsNofSamples(1);
+		thermoState.incrementWorldsNofSamples(1);
+
 	} // __end__ Main loop
+
+	replica.incrementNofSamples(1);
+	thermoState.incrementNofSamples(1);
 
 	SimTK::State& state = worlds.back().integ->updAdvancedState();
 	replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
