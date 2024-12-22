@@ -587,12 +587,16 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	PositionsPerturbMethod PPM)
 {
 
+	//std::cout << "HMCSampler::perturbPositions" << " PPM " << (PositionsPerturbMethodS.find(PPM))->second << "\n";
+
 	if( (PPM == PositionsPerturbMethod::BENDSTRETCH_1) ||
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_2) ||
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_3)){
 	
 		// Scale bonds and angles
-		if(this->nofSamples >= 1){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
+		int burnIn = 1;
+		if(burnIn > 1){std::cerr << "WARNING: burnIn bigger than 1" << std::endl;}
+		if(this->nofSamples >= burnIn){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
 
 			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
 
@@ -656,12 +660,13 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			////PrintSubZMatrixBATAndRelated(someState); // OLD
 
 			//scout("\nJ_ini\n");
-			J_ini = calcMobodsMBAT(someState);
+			//J_ini = calcMobodsMBAT(someState);
+			J_ini = calcMobodsBATJacobianDetLog_NEW(someState);
 
 			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
 
 			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
-			//std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
+			// std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
@@ -690,30 +695,45 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// 	}
 			// }std::cout << std::endl;						
 
-			bool T_Scale_Flag = false; // Are we doing temperature scaling
-			
 			SimTK::Real scaleFactor = 1;			
 
-			if(T_Scale_Flag){ // T-scaling factor
-				scaleFactor = this->QScaleFactor;
+			bool testingMode = false; // Are we doing temperature scaling
 
-			}else{
-
+			if(testingMode){
 				# pragma region REBAS_TEST
-
 				std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
 
-				enum TestingWay {CONSTANT, CONSTANT_BY_T, RANDOM, WORLD};
+				enum TestingWay {
+					CONSTANT,
+					ALTERNATIVE,
+					BY_THERMO,
+					WORLD,
+					RANDOM};
 
-				TestingWay testingWay = TestingWay::CONSTANT;						// CONSTANT
+				TestingWay testingWay = TestingWay::BY_THERMO;						// BY_THERMO
 
-				if(testingWay == TestingWay::CONSTANT){ 				
+				if(testingWay == TestingWay::CONSTANT){
+					scaleFactor = 0.80;
+
+				}else if(testingWay == TestingWay::ALTERNATIVE){ 				
+
 					if(this->nofSamples % 2){scaleFactor = 0.80;}
 					else					{scaleFactor = 1.25;}
 
-				}else if(testingWay == TestingWay::CONSTANT_BY_T){
-					if(this->temperature == 300){scaleFactor = 1.25;}
-					else						{scaleFactor = 0.80;}
+				}else if(testingWay == TestingWay::BY_THERMO){
+
+					if(this->temperature == 300){scaleFactor = this->QScaleFactor;}
+					else						{scaleFactor = 1.0 / this->QScaleFactor;}
+
+					std::cout << " replIx thIx wIx T scaleFactor"
+						<<" "<< this->replicaIx <<" "<< this->thermoStateIx <<" "<< world->ownWorldIndex
+						<<" "<< this->temperature <<" "<< scaleFactor
+						<< std::endl;
+
+
+				}else if(testingWay == TestingWay::WORLD){
+					
+					;
 
 				}else if(testingWay == TestingWay::RANDOM){
 					SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
@@ -721,37 +741,65 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					SimTK::Real scaleFactorReference = 1.01;
 					SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
 					scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
-				}else if(testingWay == TestingWay::WORLD){
-					std::cout << "this->nofSamples % 2 = " << this->nofSamples % 2 <<" "<<  std::endl;
-					scaleFactor = 0.80;
-
 				}
-					
+
+
+				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+					int decimal_places = 7;
+					std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
+
+					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
+						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+						qIx++ ){
+							const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
+
+							//stateQs[qIx] = (X_BM.p().norm() * (scaleFactor - 1));
+
+							stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
+
+							std::cout << "stateQs[qIx] (*prev_dBMps)[qIx] (*prev_dBMps)[qIx]scaled"
+							<<" "<<  stateQs[qIx]
+							<<" "<< (*prev_dBMps)[qIx]
+							<<" "<< (*prev_dBMps)[qIx] * ((scaleFactor) - 1)
+							<< std::endl;
+							// std::cout << "qIx QScaleF scaleF prev_dBMps " << qIx
+							// 	<<" "<< this->QScaleFactor
+							// 	<<" "<< scaleFactor
+							// 	<<" "<< (*prev_dBMps)[qIx]
+							// 	<< "\n";							
+
+							J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
+
+						}
+				}
+
 				# pragma endregion REBAS_TEST
 
-			}
+			}else{ // __end__ testingMode
 
-			int nofScaledBMs = 0;
-			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
-					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
-					qIx++ ){
-					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
+				scaleFactor = this->QScaleFactor;
 
-					if(T_Scale_Flag){ // T-scaling
+				int nofScaledBMs = 0;
+				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
+						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+						qIx++ ){
+						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 
 						if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
 
-							stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
+							stateQs[qIx] = (*Qdiffs)[qIx] * ((scaleFactor) - 1);
 
 						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_2){
 
-							stateQs[qIx] = (*previousQs)[qIx] * ((this->QScaleFactor) - 1);
+							stateQs[qIx] = (*previousQs)[qIx] * ((scaleFactor) - 1);
 
 						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_3){
 
-							stateQs[qIx] = (*prev_dBMps)[qIx] * ((this->QScaleFactor) - 1);
+							stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
 
 						}else{
 							warnflush("Unknown scaling method");
@@ -759,12 +807,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
-					}else{ // Constant scaling of BMp(w3)
-						stateQs[qIx] = (X_BM.p().norm() * (scaleFactor - 1));
-						J_scale += std::log(scaleFactor);
-					}
 
-					nofScaledBMs++;
+						nofScaledBMs++;
+					}
 				}
 			}
 
@@ -788,10 +833,14 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			
 			//J_fin = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
 			//scout("\nJ_fin\n");
-			J_fin = calcMobodsMBAT(someState);
+			//J_fin = calcMobodsMBAT(someState);
+			J_fin = calcMobodsBATJacobianDetLog_NEW(someState);
 
-			setDistortJacobianDetLog(J_ini + J_scale - J_fin);
-			//scout("\nBAT Jacobian terms ") << J_ini <<" " << J_scale <<" " << J_fin << eol;
+			setDistortJacobianDetLog(J_ini + J_scale - J_fin); // RESTORE
+
+			//setDistortJacobianDetLog(J_scale);
+
+			//std::cout << "\nBAT Jacobian terms " << J_ini <<" " << J_scale <<" " << J_fin <<" "<< (J_ini + J_scale - J_fin) << std::endl;
 
 			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 			// Scaling Work END SCALEQ
@@ -3971,7 +4020,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	validated = propose(someState) && validated;
 
 	#pragma region REBAS_TEST
-	validated = true;
+	//validated = true;
 	#pragma endregion REBAS_TEST
 
 	// --- invalid --- //
@@ -5292,7 +5341,7 @@ double HMCSampler::studyBATScale(SimTK::State& someState)
 
 	system->realize(someState, SimTK::Stage::Position);
 
-	world->updateAtomListsFromCompound(someState);
+	world->updateAtomListsFromSimbody(someState);
 
 	// Molecules
 	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
@@ -5436,8 +5485,7 @@ double HMCSampler::studyBATScale(SimTK::State& someState)
 
 }
 
-/*!
- * <!--  -->
+/*! <!-- Doesn't take masses into account -->
 */
 double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 {
@@ -5447,7 +5495,7 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 
 	system->realize(someState, SimTK::Stage::Position);
 
-	world->updateAtomListsFromCompound(someState);
+	world->updateAtomListsFromSimbody(someState);
 
 	// Molecules
 	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
@@ -5528,7 +5576,95 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 
 }
 
+/*! <!-- Doesn't take masses into account -->
+*/
+double HMCSampler::calcMobodsBATJacobianDetLog_NEW(SimTK::State& someState)
+{
+	// Accumulate result here
+	SimTK::Real logBATJacobian = 0.0;
 
+	system->realize(someState, SimTK::Stage::Position);
+
+	world->updateAtomListsFromSimbody(someState);
+
+	// Molecules
+	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
+
+		Topology& topology = topologies[topoIx];
+
+		// Atoms
+		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
+
+			// Is this atom a root atom for a body
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0){
+
+				SimTK::Real bondLength = SimTK::NaN;
+				SimTK::Real bondAngle = SimTK::NaN;
+
+				// Get body and parentBody
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+
+						// (### 1 ###) Accumulate initial BAT values 
+						if(parentMbx == 0){continue;} // Ground
+
+						// Get the neighbor atom in the parent mobilized body
+						SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
+
+						if(chemParentAIx < 0){continue;} // no parent ??
+
+						// Get Top to parent frame
+						const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
+						SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+						SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+
+						SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
+						SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
+						SimTK::Vec3 G_ParentRoot = V3 - V2;
+
+						bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
+						//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
+
+						// GET ANGLE
+						if(chemParentAIx >= 1){
+
+							SimTK::Compound::AtomIndex chemGrandParentIx;
+
+							chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+
+							SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
+
+							SimTK::Vec3 G_GrandParent = V2 - V1;
+							
+							bondAngle = bAngle(V2, V1, V3);
+							//scout(" ") << "bondAngle " << bondAngle;
+								
+						} // atom has a grandParent
+
+						//scout(" ") << eol;
+
+						// (### 3 ###) Cook Jacobian
+						if( !(std::isnan(bondLength)) ){
+							logBATJacobian += 2.0 * std::log(bondLength);
+						}
+						if( !(std::isnan(bondAngle)) ){
+							logBATJacobian += std::log( std::sin(bondAngle) );
+						}
+
+
+			} // if atom is root
+
+		} // every atom
+
+	} // every topology
+
+	return logBATJacobian;
+
+}
 
 // SimTK::Transform G_X_root = topology.getTopLevelTransform() * T_X_root;
 // SimTK::Transform G_X_Proot = topology.getTopLevelTransform() * T_X_Proot;

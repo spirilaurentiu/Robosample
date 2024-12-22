@@ -578,6 +578,16 @@ enum struct PositionsPerturbMethod : int {
 	NOF_
 };
 
+const std::unordered_map<PositionsPerturbMethod, std::string>
+PositionsPerturbMethodS{
+	{PositionsPerturbMethod::EMPTY, "EMPTY"},
+	{PositionsPerturbMethod::BENDSTRETCH_1, "BENDSTRETCH_1"},
+	{PositionsPerturbMethod::BENDSTRETCH_2, "BENDSTRETCH_2"},
+	{PositionsPerturbMethod::BENDSTRETCH_3, "BENDSTRETCH_3"},
+	{PositionsPerturbMethod::NOF_, "NOF_"}
+
+};
+
 enum struct VelocitiesPerturbMethod : int {
 	TO_T = 0,
 	TO_ZERO,

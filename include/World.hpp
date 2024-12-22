@@ -468,7 +468,7 @@ public:
 	/** Update Gmolmodel bSpecificAtom Cartesian coordinates according to
 	Molmodel Compound which in turn relizes Position and uses matter
 	 to calculate locations. **/
-	void updateAtomListsFromCompound(const SimTK::State &state);
+	void updateAtomListsFromSimbody(const SimTK::State &state);
 
 	/** Access to molecule (Topology) objects
 	Get a readble reference of one of the molecules **/

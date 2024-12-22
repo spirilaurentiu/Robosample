@@ -686,12 +686,22 @@ public:
 	void setQdiffs(std::vector<SimTK::Real>& QArg){ Qdiffs = &QArg; }
 	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
 
+	// Doesn't take masses into account
 	double calcMobodsMBAT(SimTK::State& someState);
+	double calcMobodsBATJacobianDetLog_NEW(SimTK::State& someState);
 	double studyBATScale(SimTK::State& someState);
 
+	# pragma region REBAS_TEST
+	void setReplica( int thisReplica ){ this->replicaIx = thisReplica;}
+	void setThermodynamicState( int thisThermoStateIx ){this->thermoStateIx = thisThermoStateIx;}
+	# pragma endregion REBAS_TEST
 
 protected:
 
+	# pragma region REBAS_TEST
+	int replicaIx;
+	int thermoStateIx;
+	# pragma endregion REBAS_TEST
 
 	// Buffers to hold Q statistics
 	std::vector<SimTK::Real>* prev_dBMps = nullptr;	

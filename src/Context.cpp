@@ -4230,9 +4230,10 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// ----------------------------------------------------------------
-	// CORRECTION TERM FOR REBAS
+	// CORRECTION TERM FOR REBAS : probability of choosing
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	#pragma region correctionTerm
+
 	SimTK::Real correctionTerm = 1.0;
 	SimTK::Real miu_C = qScaleFactorsMiu.at(thermoState_C);
 	SimTK::Real miu_H = qScaleFactorsMiu.at(thermoState_H);
@@ -4247,6 +4248,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Correction term is 1 for now
 	SimTK::Real qC_s_X = 1.0, qH_s_Y = 1.0, qH_s_X_1 = 1.0, qC_s_Y_1 = 1.0;
 	correctionTerm = (qH_s_X_1 * qC_s_Y_1) / (qC_s_X * qH_s_Y);
+
 	#pragma endregion correctionTerm
 
 	// ----------------------------------------------------------------
@@ -4317,25 +4319,28 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	# pragma region REBAS_TEST
+	bool testingMode = false; 
 
-		enum TestingWay {ALWAYS_ACCEPT, ALWAYS_REJECT, RANDOM};
+	if(testingMode){
+		# pragma region REBAS_TEST
+		std::cerr << "WARNING: REX EXCHANGE IN TESTING MODE " << std::endl;
+
+		enum TestingWay {
+			ALWAYS_ACCEPT,
+			ALWAYS_REJECT};
 		
-		TestingWay testingWay = TestingWay::ALWAYS_ACCEPT;  				// ALWAYS_ACCEPT
+		TestingWay testingWay = TestingWay::ALWAYS_REJECT;  				// ALWAYS_REJECT
 
 		if(testingWay == TestingWay::ALWAYS_ACCEPT){
 			log_p_accept = 1.0;
-			std::cerr << "TEST 1 " ; // STUDY 
-			std::cerr << "REX WARNING ALWAYS ACCEPT " << std::endl;
 
 		}else if(testingWay == TestingWay::ALWAYS_REJECT){
 			log_p_accept = -1.0; // std::exp(log_p_accept) = 0.3678794411714424
 			unifSample = 1.0;
-			std::cerr << "TEST 2 " ; // STUDY 
-			std::cerr << "REX WARNING ALWAYS REJECT " << std::endl;
 		}
-		
-	# pragma endregion REBAS_TEST
+			
+		# pragma endregion REBAS_TEST
+	}
 
 	// Accept
 	if((log_p_accept >= 0.0) || (unifSample < std::exp(log_p_accept))){
@@ -4962,6 +4967,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 
 		// Send DISTORT_OPTION from the input to the sampler
+
 		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
 			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
 		);
@@ -4971,6 +4977,14 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 			qScaleFactors.at(thisThermoStateIx));
 
 	}
+
+	# pragma region REBAS_TEST
+	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+		worlds[replicaWorldIxs[i]].updSampler(0)->setReplica( thisReplica );
+		worlds[replicaWorldIxs[i]].updSampler(0)->setThermodynamicState( thisThermoStateIx );
+	}	
+	# pragma endregion REBAS_TEST
+
 
 	// Print info
 	// std::cout << "Timesteps set to ";
@@ -5494,6 +5508,9 @@ void Context::RunReplicaRefactor(
 	int replicaIx)
 {
 
+	assert(!"Context::RunReplicaRefactor function will be removed.");
+
+	/*
 	// MOVE THIS INTO THERMODYNAMIC STATES
 	// Get equilibrium and non-equilibrium worlds
 	int thermoIx = replica2ThermoIxs[replicaIx];
@@ -5607,6 +5624,7 @@ void Context::RunReplicaRefactor(
 
 	replicas[replicaIx].incrementNofSamples(0); // Only non-equilibrium
 	thermodynamicStates[thermoIx].incrementNofSamples(0); // Only non-equilibrium
+	*/
 
 }
 
@@ -5615,6 +5633,7 @@ void Context::RunReplicaRefactor(
 */
 void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 {
+	# pragma region CONVENIENT_VARS
 	// Get thermodynamic state and its' worlds
 	Replica& replica = replicas[replicaIx];
 	int thermoIx = replica2ThermoIxs[replicaIx];
@@ -5623,6 +5642,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	std::vector<int> & distortOpts = thermoState.getDistortOptions();
 	size_t thermoNofWorlds = thermoWorldIxs.size();
 	assert((thermoWorldIxs.size() == distortOpts.size()));
+	# pragma endregion CONVENIENT_VARS
 
 	replica.updWORK() = 0.0;  // TODO merge with Jacobians
 	replica.upd_WORK_Jacobian() = 0.0;
@@ -5668,8 +5688,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 
-			REXLog(mixi, replicaIx); // why here ??
-
 		// ======================== NON-EQUILIBRIUM ======================
 		}else{
 
@@ -5682,7 +5700,29 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		
 			replica.setFixman(sampler_p->fix_set);
 
-		} // __end__ Non/Equilibrium
+		} // __end__ Non/Equilibrium =======================================
+
+		# pragma region REBAS_TEST
+		const SimTK::State& pdbState = currWorld.integ->updAdvancedState();
+		currWorld.updateAtomListsFromSimbody(pdbState);
+
+		// std::string pdbMiddle = pdbPrefix + "." + std::to_string(0) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".";
+		// std::cout << "Writing " << pdbMiddle << std::endl;
+
+		// Write
+		if((mixi % pdbRestartFreq) == 0)
+		if(wIx == 0){
+			for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
+				topologies[mol_i].writeAtomListPdb(
+					outputDir,
+					"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".",
+						".pdb",
+						10,
+						mixi);
+			}
+		}	
+		# pragma endregion REBAS_TEST
+
 
 		// Increment the nof samples for replica and thermostate
 		replica.incrementWorldsNofSamples(1);
@@ -6011,7 +6051,7 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 		// Update bAtomList in Topology
 		const SimTK::State& pdbState =
 				worlds[worldIndexes.front()].integ->updAdvancedState();
-			worlds[worldIndexes.front()].updateAtomListsFromCompound(pdbState);
+			worlds[worldIndexes.front()].updateAtomListsFromSimbody(pdbState);
 
 		// const SimTK::State& pdbState =
 		// 	worlds[world_i].integ->updAdvancedState();
@@ -6041,7 +6081,7 @@ void Context::writeDCDs()
 
 	// Update bAtomList in Topology
 	const SimTK::State& pdbState = world.integ->updAdvancedState();
-	world.updateAtomListsFromCompound(pdbState);
+	world.updateAtomListsFromSimbody(pdbState);
 
 	for (int i = 0; i < natoms; i++) {
 		Xs[i] = atoms[i].getX() * 10;
@@ -7502,7 +7542,7 @@ void Context::writeInitialPdb()
 	passTopologiesToNewWorld(currentWorldIx);
 
 	// 
-	worlds[currentWorldIx].updateAtomListsFromCompound(advancedState);
+	worlds[currentWorldIx].updateAtomListsFromSimbody(advancedState);
 	std::cout << "Writing pdb initial" << mc_step << ".pdb" << std::endl;
 
 	// 
@@ -7520,7 +7560,7 @@ void Context::writeFinalPdb()
 	// Update bAtomList in Topology
 	const SimTK::State& pdbState =
 			worlds[worldIndexes.front()].integ->updAdvancedState();
-		worlds[worldIndexes.front()].updateAtomListsFromCompound(pdbState);
+		worlds[worldIndexes.front()].updateAtomListsFromSimbody(pdbState);
 
 	// Write
 	for(unsigned int mol_i = 0; mol_i < nofMols; mol_i++){
