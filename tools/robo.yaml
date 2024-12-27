@@ -19,6 +19,7 @@ dependencies:
   - seaborn
   - pandas
   - numpy
+  - modeller
   - pip:
     - rcsbsearchapi
     - pdb2pqr

@@ -162,6 +162,8 @@ Select the kit and then compile:
 >CMake: Build (F7)
 ```
 
+## Running from the Python interface
+
 ## Running Robosample
 
 The executable is compiled in `build/`. Examples are available in the same folder. To see them, type:
