@@ -545,17 +545,8 @@ public:
 
 	/** Add a sampler to the World **/
 	bool addSampler(SamplerName samplerName,
-		SampleGenerator generator,
-		IntegratorName integratorName,
+		IntegratorType integratorType,
 		ThermostatName thermostatName,
-		SimTK::Real timestep,
-		int mdStepsPerSample,
-		int mdStepsPerSampleStd,
-		SimTK::Real boostTemperature,
-		int boostMDSteps,
-		int distort,
-		int work,
-		int flow,
 		bool useFixmanPotential);
 
 	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);

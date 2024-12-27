@@ -1,0 +1,2 @@
+group1,group2,group3,group4,min_angle,max_angle
+(segid A and resid 2) and (name CA),(segid A and resid 2) and (name N),(segid A and resid 1) and (name C),(segid A and resid 1) and (name CA),170.0,190.0

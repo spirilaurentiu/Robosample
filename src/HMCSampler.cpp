@@ -187,7 +187,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		//timeStepper->initialize(compoundSystem->getDefaultState());
 		timeStepper->initialize(someState);
 
-		if(integratorName == IntegratorName::OMMVV){
+		if(integratorType == IntegratorType::OMMVV){
 		}
 	}
 
@@ -207,7 +207,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Copy coordinates to OpenMM
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		Simbody_To_OMM_setAtomsLocationsCartesian(someState);
 	}
 
@@ -223,7 +223,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	storeSimbodyConfiguration_XFMs(someState);
 
 	// Store OpenMM configuration
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 
 		assert("OMMVV nofBodies not equal to nofAtoms" && (matter->getNumBodies() == (natoms+1)));
 
@@ -343,7 +343,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	bendStretchJacobianDetLog = 0.0;
 
 	// Set DuMM temperature : TODO: should propagate to OpenMM
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		OMM_setDuMMTemperature(boostT);
 	}
 
@@ -484,23 +484,23 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 }
 
 // Set the method of integration
-void HMCSampler::setSampleGenerator(SampleGenerator sampleGeneratorArg)
+void HMCSampler::setAcceptRejectMode(AcceptRejectMode acceptRejectMode)
 {
-	if (SampleGenerator::EMPTY == sampleGeneratorArg) {
+	if (AcceptRejectMode::AlwaysAccept == acceptRejectMode) {
 		setAlwaysAccept(true);
 	}
-	else if (SampleGenerator::MC == sampleGeneratorArg) {
+	else if (AcceptRejectMode::MetropolisHastings == acceptRejectMode) {
 		setAlwaysAccept(false);
 	}
 }
 
-void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
+void HMCSampler::setAcceptRejectMode(const std::string& acceptRejectMode)
 {
-	if (generatorNameArg == "EMPTY"){
+	if (acceptRejectMode == "EMPTY"){
 		this->sampleGenerator = 0;
 		setAlwaysAccept(true);
 	}
-	else if(generatorNameArg == "MC"){
+	else if(acceptRejectMode == "MC"){
 		this->sampleGenerator = 1;
 		setAlwaysAccept(false);
 	}else{
@@ -509,18 +509,18 @@ void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
 	}
 }
 
-void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
+void HMCSampler::setIntegratorType(IntegratorType type)
 {
 
 	// scout("[KE0] HMCSampler Set integrator to ");
     // switch (integratorNameArg) {
-    //     case IntegratorName::EMPTY:
+    //     case IntegratorType::EMPTY:
     //         std::cout << "EMPTY";
     //         break;
-    //     case IntegratorName::VERLET:
+    //     case IntegratorType::VERLET:
     //         std::cout << "VERLET";
     //         break;
-    //     case IntegratorName::EULER:
+    //     case IntegratorType::EULER:
     //         std::cout << "EULER";
     //         break;
     //     // Add cases for other enum values here...
@@ -529,41 +529,38 @@ void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
     //         break;
     // }std::cout << eol;
 
-	this->integratorName = integratorNameArg;
+	this->integratorType = type;
 }
 
-void HMCSampler::setIntegratorName(const std::string integratorNameArg)
+void HMCSampler::setIntegratorType(const std::string type)
 {
+	//this->integratorType = IntegratorNameS[type];
 
-	//this->integratorName = IntegratorNameS[integratorNameArg];
+ 	if(type == "OMMVV"){
+		this->integratorType = IntegratorType::OMMVV;
 
- 	if(integratorNameArg == "OMMVV"){
-		this->integratorName = IntegratorName::OMMVV;
-
-	}else if (integratorNameArg == "VERLET" || integratorNameArg == "VERLET"){
-		integratorName = IntegratorName::VERLET;
+	}else if (type == "VERLET" || type == "VERLET"){
+		integratorType = IntegratorType::VERLET;
 		
-	}else if (integratorNameArg == "BOUND_WALK"){
-		integratorName = IntegratorName::BOUND_WALK;
+	}else if (type == "BOUND_WALK"){
+		integratorType = IntegratorType::BOUND_WALK;
 	
-	}else if (integratorNameArg == "BOUND_HMC"){
-		integratorName = IntegratorName::BOUND_HMC;
+	}else if (type == "BOUND_HMC"){
+		integratorType = IntegratorType::BOUND_HMC;
 
-	}else if(integratorNameArg == "STATIONS_TASK"){
-		integratorName = IntegratorName::STATIONS_TASK;
+	}else if(type == "STATIONS_TASK"){
+		integratorType = IntegratorType::STATIONS_TASK;
 
 	}else{
-		integratorName = IntegratorName::EMPTY;
-
+		integratorType = IntegratorType::EMPTY;
 	}
-
 }
 
 /** Store old and set kinetic and total energies */
 void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
 {
 	// Store kinetic energies
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		this->ke_o = OMM_calcKineticEnergy();
 	}else{
 		this->ke_o = matter->calcKineticEnergy(someState);		
@@ -881,7 +878,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 {	
 	// Set velocities to 0
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		uint32_t seed = randomEngine() >> 32;
 		dumm->setOpenMMvelocities(0, seed);
 	}else{
@@ -895,7 +892,7 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 */
 void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 {
-	if (this->integratorName == IntegratorName::OMMVV){
+	if (this->integratorType == IntegratorType::OMMVV){
 		uint32_t seed = randomEngine() >> 32;
 		dumm->setOpenMMvelocities(this->boostT, seed);
 
@@ -1364,7 +1361,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 		adaptTimestep(someState);
 	}
 
-	if(this->integratorName == IntegratorName::VERLET){
+	if(this->integratorType == IntegratorType::VERLET){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1381,7 +1378,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}
 
-	}else if(this->integratorName == IntegratorName::BOUND_WALK){
+	}else if(this->integratorType == IntegratorType::BOUND_WALK){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1395,7 +1392,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::BOUND_HMC){
+	}else if(this->integratorType == IntegratorType::BOUND_HMC){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1409,7 +1406,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::STATIONS_TASK){
+	}else if(this->integratorType == IntegratorType::STATIONS_TASK){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1423,7 +1420,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::OMMVV){
+	}else if(this->integratorType == IntegratorType::OMMVV){
 
 		// This code works for updating simbody bodies
 		// each body should be an atom
@@ -1462,7 +1459,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
         //     proposeExceptionCaught = true;
         // }
 
-	}else if(this->integratorName == IntegratorName::EMPTY){
+	}else if(this->integratorType == IntegratorType::EMPTY){
 		try {
 
 			// Advance to Position Stage
@@ -2015,7 +2012,7 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState){
 */
 void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass) {
 	// set if using openmm integrator
-	if(integratorName == IntegratorName::OMMVV) {
+	if(integratorType == IntegratorType::OMMVV) {
 		dumm->setOpenMMparticleMass(nax, mass);
 	}
 }
@@ -2042,9 +2039,7 @@ void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& po
 		// 	<< "omm_locations.size OpenMM::Vec3 positions.size()"
 		// 	<< omm_locations.size() <<" "<< positions.size() << std::endl << std::flush;
 			
-		assert("omm_locations size" && 
-			(omm_locations.size() == positions.size()));
-
+		// assert("omm_locations size" && (omm_locations.size() == positions.size()));
 		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
 
 		for (int i = 0; i < positions.size(); i++) {
@@ -2176,8 +2171,10 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 		omm_locations[0] = SimTK::Vec3(0, 0, 0);
 
+		// @TODO shouldn't this be +1 and one common type already?
 		const std::vector<OpenMM::Vec3>& positions = dumm->OMM_getPositions();
 
+		// @TODO omm_locations[i + 1] = positions[i]
 		for (int i = 0; i < positions.size(); i++) {
 			omm_locations[i + 1] = SimTK::Vec3(
 				positions[i][0],
@@ -2188,6 +2185,8 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 		// Invalidate all statges (because Somewhere, the topology gets ruined)
 		matter->invalidateSubsystemTopologyCache();
 
+		// @TODO can't we precompute the parent mapping?
+		// @TODO is there a way to minimize cache misses with this scheme?
 		for (int i = 0; i < dumm->getNumAtoms(); i++) {
 
 			SimTK:DuMM::AtomIndex aix(i);
@@ -2200,7 +2199,7 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 			Transform X_PF = Transform(Rotation(), location);
 			Transform X_BM = Transform(Rotation(), parent_location);
-			Transform X_FM = Transform(Rotation());
+			Transform X_FM = Transform(Rotation()); // @TODO can i declare this inside hmcsampler and just reuse it without reallocation on each call?
 
 			// std::cout << "OMMTEST" <<"\n"<<std::flush;
 			// std::cout << " parentMbx mbx "<< int(parentMbx) <<" "<< int(mbx) << std::endl;
@@ -2221,8 +2220,6 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 		/* std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations AFTER " << std::endl;
 		world->PrintFullTransformationGeometry(someState); */
-
-
 }
 
 
@@ -2267,26 +2264,23 @@ HMCSampler::calcMathJacobian(const SimTK::State& someState,
 
 			// Get atom indeces in Compound and Simbody
 			const auto aIx = AtomList.getCompoundAtomIndex();
-			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(
-				aIx, *dumm);
+			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
 
-				// Get atom station on mobod
-				SimTK::Vec3 station = 
-				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(
-				aIx, *dumm);
+			// Get atom station on mobod
+			SimTK::Vec3 station = topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
 				
-				// Get station Jacobian: 42*nt + 54*nb + 33*n flops
-				SimTK::Matrix stationJ;
-				matter->calcStationJacobian(someState, mbx, station, stationJ);
+			// Get station Jacobian: 42*nt + 54*nb + 33*n flops
+			SimTK::Matrix stationJ;
+			matter->calcStationJacobian(someState, mbx, station, stationJ);
 				
-				// Add new three rows corresponding to this atom
-				for(unsigned int j = 0; j < nu; j++){
-					mathJ(i + 0, j) = stationJ(0, j);
-					mathJ(i + 1, j) = stationJ(1, j);
-					mathJ(i + 2, j) = stationJ(2, j);
-				}
+			// Add new three rows corresponding to this atom
+			for (unsigned int j = 0; j < nu; j++) {
+				mathJ(i + 0, j) = stationJ(0, j);
+				mathJ(i + 1, j) = stationJ(1, j);
+				mathJ(i + 2, j) = stationJ(2, j);
+			}
 
-				i += 3; // increment row number - 3 rows per atom
+			i += 3; // increment row number - 3 rows per atom
 		}
 	}
 
@@ -2678,6 +2672,8 @@ denoted by Jain l = sqrt(D) * [I -JPsiK]. This is upper triangular matrix and it
 multipling a set of orthonormal vectors with the sqrt(MInv). **/
 void HMCSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const
 {
+	// @TODO what is this and why do have it?
+
 	const int nu = someState.getNU();
 	assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvU: passed matrix doesn't have nu x nu size.");
 
@@ -2711,6 +2707,8 @@ This is lower triangular matrix and it is computed by multipling a set of
  orthonormal vectors with the sqrt(MInv) and transpose it. **/
 void HMCSampler::calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const
 {
+	// @TODO what is this and why do have it?
+	
 	const int nu = someState.getNU();
 	assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvL: passed matrix doesn't have nu x nu size.");
 
@@ -3010,7 +3008,7 @@ void HMCSampler::setBoostTemperature(SimTK::Real argT)
 	this->unboostUFactor = 1 / boostUFactor;
 	//std::cout << "HMC: boost velocity scale factor: " << this->boostUFactor << std::endl;
 
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		OMM_setDuMMTemperature(this->boostT);
 	}
 
@@ -3045,7 +3043,7 @@ HMCSampler::storeOldPotentialEnergies(
 void HMCSampler::calcProposedKineticAndTotalEnergyOld(SimTK::State& someState){
 
 	// Get proposed kinetic energy
-	if(integratorName == IntegratorName::OMMVV){
+	if(integratorType == IntegratorType::OMMVV){
 		this->ke_o = OMM_calcKineticEnergy();
 
 	}else{
@@ -3071,7 +3069,7 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 	}
 
 	// Do not apply adaptive timesteps to OMMVV
-	if (integratorName == IntegratorName::OMMVV) {
+	if (integratorType == IntegratorType::OMMVV) {
 		return;
 	}
 
@@ -3264,7 +3262,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 	//world->calcZMatrixBAT( someState );
 
 	// Get new potential energy
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		pe_n = OMM_calcPotentialEnergy();
 	}else{
 		pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
@@ -3275,7 +3273,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 
 	// Get new Fixman potential
 	if(useFixman){
-		if(this->integratorName == IntegratorName::OMMVV){
+		if(this->integratorType == IntegratorType::OMMVV){
 			fix_n = CartesianFixmanPotential();
 		}else{
 			fix_n = calcFixman(someState);
@@ -3287,7 +3285,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 	}
 
 	// Get new kinetic energy
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		ke_n = OMM_calcKineticEnergy();
 	}else{
 		system->realize(someState, SimTK::Stage::Velocity);
@@ -3345,22 +3343,22 @@ VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
 {
 	// How do we initialize velocities
 
-	if(integratorName == IntegratorName::OMMVV){
+	if(integratorType == IntegratorType::OMMVV){
 		return VelocitiesPerturbMethod::TO_T;
 
-	}else if (integratorName == IntegratorName::VERLET){
+	}else if (integratorType == IntegratorType::VERLET){
 		return VelocitiesPerturbMethod::TO_T;
 
-	}else if (integratorName == IntegratorName::BOUND_WALK){
+	}else if (integratorType == IntegratorType::BOUND_WALK){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if (integratorName == IntegratorName::BOUND_HMC){
+	}else if (integratorType == IntegratorType::BOUND_HMC){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if(integratorName == IntegratorName::STATIONS_TASK){
+	}else if(integratorType == IntegratorType::STATIONS_TASK){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if (integratorName == IntegratorName::EMPTY){
+	}else if (integratorType == IntegratorType::EMPTY){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
 	}else{
@@ -4080,6 +4078,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 	// Increase the sample counter and return
 	++nofSamples;
 
+	numSamples_period++;
+	numAccepted_period += getAcc();
+
 	// Return accepted
 	return getAcc();
 
@@ -4127,7 +4128,7 @@ void HMCSampler::restoreConfiguration(
 	SimTK::State& someState)
 {
 
-	if(integratorName == IntegratorName::OMMVV){
+	if(integratorType == IntegratorType::OMMVV){
 		OMM_restoreConfiguration(someState);
 		OMM_To_Simbody_setAtomsLocations(someState); // _clean_ seems redundant
 		
@@ -4191,7 +4192,7 @@ void HMCSampler::updateEnergies(void)
 void HMCSampler::update(SimTK::State& someState)
 {
 
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		// Update Simbody too
 		OMM_To_Simbody_setAtomsLocations(someState);
 	}
@@ -5489,84 +5490,77 @@ double HMCSampler::studyBATScale(SimTK::State& someState)
 */
 double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 {
-
 	// Accumulate result here
 	SimTK::Real logBATJacobian = 0.0;
 
 	system->realize(someState, SimTK::Stage::Position);
-
 	world->updateAtomListsFromSimbody(someState);
 
 	// Molecules
-	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
-
-		Topology& topology = topologies[topoIx];
-
+	for(auto& topology : topologies)
+    {
 		// Atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 
 			// Is this atom a root atom for a body
-			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0){
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) != 0) {
+				continue;
+			}
 
-				SimTK::Real bondLength = SimTK::NaN;
-				SimTK::Real bondAngle = SimTK::NaN;
+			SimTK::Real bondLength = SimTK::NaN;
+			SimTK::Real bondAngle = SimTK::NaN;
 
-				// Get body and parentBody
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// Get body and parentBody
+			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+			// (### 1 ###) Accumulate initial BAT values 
+			if(parentMbx == 0) continue; // Ground
 
-						// (### 1 ###) Accumulate initial BAT values 
-						if(parentMbx == 0){continue;} // Ground
+			// Get the neighbor atom in the parent mobilized body
+			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
 
-						// Get the neighbor atom in the parent mobilized body
-						SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
+			// Skip if no parent
+			if (chemParentAIx.isValid() && chemParentAIx.isValidExtended()) {
+				if(chemParentAIx < 0) continue;
+			} else {
+				continue;
+			}
 
-						if(chemParentAIx < 0){continue;} // no parent ??
+			// Get Top to parent frame
+			const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
+			SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+			SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
 
-						// Get Top to parent frame
-						const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
-						SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
-						SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+			SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
+			SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
+			SimTK::Vec3 G_ParentRoot = V3 - V2;
 
-						SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
-						SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
-						SimTK::Vec3 G_ParentRoot = V3 - V2;
+			bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
+			//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
 
-						bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
-						//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
+			// GET ANGLE
+			if(chemParentAIx >= 1){
+				SimTK::Compound::AtomIndex chemGrandParentIx;
+				chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+				SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
+				SimTK::Vec3 G_GrandParent = V2 - V1;
+				bondAngle = bAngle(V2, V1, V3);
+				//scout(" ") << "bondAngle " << bondAngle;
+			} // atom has a grandParent
 
-						// GET ANGLE
-						if(chemParentAIx >= 1){
+			//scout(" ") << eol;
 
-							SimTK::Compound::AtomIndex chemGrandParentIx;
-
-							chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
-
-							SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
-
-							SimTK::Vec3 G_GrandParent = V2 - V1;
-							
-							bondAngle = bAngle(V2, V1, V3);
-							//scout(" ") << "bondAngle " << bondAngle;
-								
-						} // atom has a grandParent
-
-						//scout(" ") << eol;
-
-						// (### 3 ###) Cook Jacobian
-						if( !(std::isnan(bondLength)) ){
-							logBATJacobian += 4.0 * std::log(bondLength);
-						}
-						if( !(std::isnan(bondAngle)) ){
-							logBATJacobian += 2.0 * std::log( std::sin(bondAngle) );
-						}
-
-
-			} // if atom is root
+			// (### 3 ###) Cook Jacobian
+			if( !(std::isnan(bondLength)) ){
+				logBATJacobian += 4.0 * std::log(bondLength);
+			}
+			if( !(std::isnan(bondAngle)) ){
+				logBATJacobian += 2.0 * std::log( std::sin(bondAngle) );
+			}
 
 		} // every atom
 
@@ -5588,82 +5582,75 @@ double HMCSampler::calcMobodsBATJacobianDetLog_NEW(SimTK::State& someState)
 	world->updateAtomListsFromSimbody(someState);
 
 	// Molecules
-	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
-
-		Topology& topology = topologies[topoIx];
-
+	for(auto& topology : topologies)
+	{
 		// Atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 
 			// Is this atom a root atom for a body
-			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0){
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) != 0) {
+				continue;
+			}
 
-				SimTK::Real bondLength = SimTK::NaN;
-				SimTK::Real bondAngle = SimTK::NaN;
+			SimTK::Real bondLength = SimTK::NaN;
+			SimTK::Real bondAngle = SimTK::NaN;
 
-				// Get body and parentBody
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// Get body and parentBody
+			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+			// (### 1 ###) Accumulate initial BAT values 
+			if(parentMbx == 0) { continue; } // Ground
 
-						// (### 1 ###) Accumulate initial BAT values 
-						if(parentMbx == 0){continue;} // Ground
+			// Get the neighbor atom in the parent mobilized body
+			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
 
-						// Get the neighbor atom in the parent mobilized body
-						SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
+			if (chemParentAIx.isValid() && chemParentAIx.isValidExtended()) {
+				if(chemParentAIx < 0) continue;
+			} else {
+				continue;
+			}
 
-						if(chemParentAIx < 0){continue;} // no parent ??
+			// Get Top to parent frame
+			const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
+			SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+			SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
 
-						// Get Top to parent frame
-						const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
-						SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
-						SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+			SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
+			SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
+			SimTK::Vec3 G_ParentRoot = V3 - V2;
 
-						SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
-						SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
-						SimTK::Vec3 G_ParentRoot = V3 - V2;
+			bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
+			//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
 
-						bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
-						//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
+			// GET ANGLE
+			if(chemParentAIx >= 1){
+				SimTK::Compound::AtomIndex chemGrandParentIx;
+				chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+				SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
+				SimTK::Vec3 G_GrandParent = V2 - V1;
+				bondAngle = bAngle(V2, V1, V3);
+				//scout(" ") << "bondAngle " << bondAngle;
+			} // atom has a grandParent
 
-						// GET ANGLE
-						if(chemParentAIx >= 1){
+			//scout(" ") << eol;
 
-							SimTK::Compound::AtomIndex chemGrandParentIx;
-
-							chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
-
-							SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
-
-							SimTK::Vec3 G_GrandParent = V2 - V1;
-							
-							bondAngle = bAngle(V2, V1, V3);
-							//scout(" ") << "bondAngle " << bondAngle;
-								
-						} // atom has a grandParent
-
-						//scout(" ") << eol;
-
-						// (### 3 ###) Cook Jacobian
-						if( !(std::isnan(bondLength)) ){
-							logBATJacobian += 2.0 * std::log(bondLength);
-						}
-						if( !(std::isnan(bondAngle)) ){
-							logBATJacobian += std::log( std::sin(bondAngle) );
-						}
-
-
-			} // if atom is root
+			// (### 3 ###) Cook Jacobian
+			if( !(std::isnan(bondLength)) ){
+				logBATJacobian += 2.0 * std::log(bondLength);
+			}
+			if( !(std::isnan(bondAngle)) ){
+				logBATJacobian += std::log( std::sin(bondAngle) );
+			}
 
 		} // every atom
 
 	} // every topology
 
 	return logBATJacobian;
-
 }
 
 // SimTK::Transform G_X_root = topology.getTopLevelTransform() * T_X_root;

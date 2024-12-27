@@ -92,7 +92,11 @@
         "__memory": "cpp",
         "queue": "cpp",
         "__hash_table": "cpp",
-        "__tree": "cpp"
+        "__tree": "cpp",
+        "charconv": "cpp",
+        "source_location": "cpp",
+        "format": "cpp",
+        "span": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "enabled",
     "cmake.configureOnOpen": false,

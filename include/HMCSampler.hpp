@@ -150,9 +150,9 @@ public:
 	void setThermostat(const char *);
 	virtual ThermostatName getThermostat(void) const;
  
-	void setIntegratorName(IntegratorName);
-	const IntegratorName getIntegratorName(void){return integratorName;}
-	void setIntegratorName(const std::string integratorName);
+	void setIntegratorType(IntegratorType type);
+	void setIntegratorType(const std::string type);
+	const IntegratorType getIntegratorType(void) { return integratorType; }
 
  	/* 
 	* Compute mathematical, rather than robotic Jacobian.
@@ -276,8 +276,8 @@ public:
 	void storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState);
 
 	// Set the method of integration
-	void setSampleGenerator(SampleGenerator sampleGeneratorArg);
-	void setSampleGenerator(const std::string& samplerNameArg);
+	void setAcceptRejectMode(AcceptRejectMode acceptRejectMode);
+	void setAcceptRejectMode(const std::string& acceptRejectMode);
 
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
 
@@ -774,7 +774,7 @@ protected:
 	std::vector<SimTK::Real> dRdot;
 
 	// Integration
-	IntegratorName integratorName = IntegratorName::EMPTY;
+	IntegratorType integratorType = IntegratorType::EMPTY;
 
 	// For RANDOM_WALK Docking Simulations
 	SimTK::Vec3 geometricCenter;

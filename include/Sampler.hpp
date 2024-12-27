@@ -167,6 +167,9 @@ public:
 	uint32_t seed;
 	bool acc = false;
 
+	int numSamples_period = 0;
+	int numAccepted_period = 0;
+
 	// Random number generators
 	Random64 randomEngine;
 	RANDOM_CACHE RandomCache;

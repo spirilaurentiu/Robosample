@@ -1,0 +1,1794 @@
+group0,group1,avg_dist,min_dist,max_dist
+(segid A and resid 2) and (name H),(segid A and resid 2) and (name HA2),0.0,0.0,5.0
+(segid A and resid 2) and (name HA3),(segid A and resid 2) and (name H),0.0,0.0,5.0
+(segid A and resid 3) and (name HA),(segid A and resid 3) and (name CG1* or (name HG1*)),0.0,0.0,4.7
+(segid A and resid 3) and (name HA),(segid A and resid 3) and (name CG2* or (name HG2*)),0.0,0.0,4.7
+(segid A and resid 3) and (name HA),(segid A and resid 3) and (name HB),0.0,0.0,4.0
+(segid A and resid 3) and (name H),(segid A and resid 3) and (name CG1* or (name HG1*)),0.0,0.0,4.7
+(segid A and resid 3) and (name CG2* or (name HG2*)),(segid A and resid 3) and (name H),0.0,0.0,4.7
+(segid A and resid 3) and (name HB),(segid A and resid 3) and (name H),0.0,0.0,3.2
+(segid A and resid 3) and (name HA),(segid A and resid 3) and (name H),0.0,0.0,4.0
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HB),0.0,0.0,3.2
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HA),0.0,0.0,3.2
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name CG* or (name HG*)),0.0,0.0,5.0
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HG12),0.0,0.0,5.0
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HG13),0.0,0.0,5.0
+(segid A and resid 5) and (name H),(segid A and resid 5) and (name HG2),0.0,0.0,5.0
+(segid A and resid 5) and (name H),(segid A and resid 5) and (name HG3),0.0,0.0,5.0
+(segid A and resid 5) and (name H),(segid A and resid 5) and (name HA),0.0,0.0,4.0
+(segid A and resid 5) and (name H),(segid A and resid 5) and (name HB3),0.0,0.0,3.2
+(segid A and resid 6) and (name H),(segid A and resid 6) and (name HA),0.0,0.0,4.0
+(segid A and resid 6) and (name H),(segid A and resid 6) and (name HB3),0.0,0.0,4.0
+(segid A and resid 6) and (name H),(segid A and resid 6) and (name HB2),0.0,0.0,5.0
+(segid A and resid 7) and (name H),(segid A and resid 7) and (name HB2),0.0,0.0,4.0
+(segid A and resid 7) and (name H),(segid A and resid 7) and (name HB3),0.0,0.0,4.0
+(segid A and resid 7) and (name H),(segid A and resid 7) and (name HA),0.0,0.0,4.0
+(segid A and resid 7) and (name H),(segid A and resid 7) and (name HG2),0.0,0.0,5.0
+(segid A and resid 7) and (name H),(segid A and resid 7) and (name HG3),0.0,0.0,5.0
+(segid A and resid 8) and (name H),(segid A and resid 8) and (name HB3),0.0,0.0,4.0
+(segid A and resid 8) and (name H),(segid A and resid 8) and (name HA),0.0,0.0,3.2
+(segid A and resid 8) and (name H),(segid A and resid 8) and (name HB2),0.0,0.0,4.0
+(segid A and resid 9) and (name H),(segid A and resid 9) and (name HB2),0.0,0.0,3.2
+(segid A and resid 9) and (name H),(segid A and resid 9) and (name HA),0.0,0.0,5.0
+(segid A and resid 9) and (name H),(segid A and resid 9) and (name HB3),0.0,0.0,4.0
+(segid A and resid 10) and (name H),(segid A and resid 10) and (name HA),0.0,0.0,3.2
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HB3),0.0,0.0,3.2
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HB2),0.0,0.0,4.0
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HD2),0.0,0.0,5.8
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HD3),0.0,0.0,5.8
+(segid A and resid 13) and (name H),(segid A and resid 13) and (name HA),0.0,0.0,4.0
+(segid A and resid 15) and (name H),(segid A and resid 15) and (name HA),2.5,2.5,3.5
+(segid A and resid 15) and (name H),(segid A and resid 15) and (name HB2),0.0,0.0,4.0
+(segid A and resid 15) and (name H),(segid A and resid 15) and (name HB3),0.0,0.0,4.0
+(segid A and resid 16) and (name H),(segid A and resid 16) and (name HB),0.0,0.0,4.0
+(segid A and resid 16) and (name H),(segid A and resid 16) and (name CG1* or (name HG1*)),0.0,0.0,4.7
+(segid A and resid 16) and (name H),(segid A and resid 16) and (name CG2* or (name HG2*)),0.0,0.0,4.7
+(segid A and resid 16) and (name H),(segid A and resid 16) and (name HA),0.0,0.0,3.2
+(segid A and resid 17) and (name H),(segid A and resid 17) and (name HB2),0.0,0.0,3.2
+(segid A and resid 17) and (name H),(segid A and resid 17) and (name HB3),0.0,0.0,3.2
+(segid A and resid 17) and (name H),(segid A and resid 17) and (name HA),0.0,0.0,5.0
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name CD1* or (name HD1*)),0.0,0.0,5.0
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HB3),0.0,0.0,5.0
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HB2),0.0,0.0,3.2
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HA),0.0,0.0,5.0
+(segid A and resid 21) and (name H),(segid A and resid 21) and (name HB2),0.0,0.0,5.0
+(segid A and resid 21) and (name H),(segid A and resid 21) and (name HB3),0.0,0.0,4.0
+(segid A and resid 21) and (name H),(segid A and resid 21) and (name HA),0.0,0.0,3.2
+(segid A and resid 22) and (name H),(segid A and resid 22) and (name HA),0.0,0.0,3.2
+(segid A and resid 23) and (name H),(segid A and resid 23) and (name HB),0.0,0.0,3.2
+(segid A and resid 23) and (name H),(segid A and resid 23) and (name HA),0.0,0.0,4.0
+(segid A and resid 24) and (name H),(segid A and resid 24) and (name HA),0.0,0.0,3.2
+(segid A and resid 24) and (name H),(segid A and resid 24) and (name HB2),0.0,0.0,3.5
+(segid A and resid 24) and (name H),(segid A and resid 24) and (name HB3),0.0,0.0,3.5
+(segid A and resid 25) and (name H),(segid A and resid 25) and (name HB),0.0,0.0,2.7
+(segid A and resid 25) and (name H),(segid A and resid 25) and (name HA),0.0,0.0,4.0
+(segid A and resid 25) and (name H),(segid A and resid 25) and (name CG2* or (name HG2*)),0.0,0.0,4.2
+(segid A and resid 26) and (name H),(segid A and resid 26) and (name HA),0.0,0.0,4.0
+(segid A and resid 27) and (name HA),(segid A and resid 27) and (name HE),0.0,0.0,5.0
+(segid A and resid 27) and (name HA),(segid A and resid 27) and (name H),0.0,0.0,3.2
+(segid A and resid 27) and (name H),(segid A and resid 27) and (name HB2),0.0,0.0,2.7
+(segid A and resid 27) and (name H),(segid A and resid 27) and (name HB3),0.0,0.0,2.7
+(segid A and resid 28) and (name H),(segid A and resid 28) and (name HB),0.0,0.0,2.7
+(segid A and resid 28) and (name H),(segid A and resid 28) and (name HA),0.0,0.0,4.0
+(segid A and resid 28) and (name H),(segid A and resid 28) and (name HG13),0.0,0.0,4.0
+(segid A and resid 28) and (name H),(segid A and resid 28) and (name CD* or (name HD*)),0.0,0.0,5.0
+(segid A and resid 28) and (name H),(segid A and resid 28) and (name HG12),0.0,0.0,5.0
+(segid A and resid 29) and (name H),(segid A and resid 29) and (name HB2),0.0,0.0,3.5
+(segid A and resid 29) and (name H),(segid A and resid 29) and (name HB3),0.0,0.0,3.5
+(segid A and resid 29) and (name H),(segid A and resid 29) and (name HG2),0.0,0.0,3.5
+(segid A and resid 29) and (name H),(segid A and resid 29) and (name HG3),0.0,0.0,3.5
+(segid A and resid 29) and (name H),(segid A and resid 29) and (name HA),0.0,0.0,3.2
+(segid A and resid 30) and (name H),(segid A and resid 30) and (name HA),0.0,0.0,3.2
+(segid A and resid 30) and (name HA),(segid A and resid 30) and (name CD2* or (name HD2*)),0.0,0.0,4.0
+(segid A and resid 30) and (name H),(segid A and resid 30) and (name HB3),0.0,0.0,3.5
+(segid A and resid 30) and (name H),(segid A and resid 30) and (name HB2),0.0,0.0,3.5
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HA),0.0,0.0,3.2
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HB2),0.0,0.0,3.5
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HB3),0.0,0.0,3.5
+(segid A and resid 32) and (name H),(segid A and resid 32) and (name HA3),0.0,0.0,3.2
+(segid A and resid 32) and (name H),(segid A and resid 32) and (name HA2),0.0,0.0,3.2
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HA),0.0,0.0,3.2
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HB2),0.0,0.0,3.2
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HB3),0.0,0.0,4.0
+(segid A and resid 34) and (name H),(segid A and resid 34) and (name HA),0.0,0.0,4.0
+(segid A and resid 34) and (name H),(segid A and resid 34) and (name CG* or (name HG*)),0.0,0.0,5.0
+(segid A and resid 34) and (name H),(segid A and resid 34) and (name HB),0.0,0.0,3.2
+(segid A and resid 35) and (name H),(segid A and resid 35) and (name HA),0.0,0.0,4.0
+(segid A and resid 35) and (name H),(segid A and resid 35) and (name HB),0.0,0.0,4.0
+(segid A and resid 36) and (name H),(segid A and resid 36) and (name HG2),0.0,0.0,4.8
+(segid A and resid 36) and (name H),(segid A and resid 36) and (name HG3),0.0,0.0,4.8
+(segid A and resid 36) and (name H),(segid A and resid 36) and (name HB2),0.0,0.0,4.0
+(segid A and resid 36) and (name H),(segid A and resid 36) and (name HB3),0.0,0.0,4.0
+(segid A and resid 36) and (name H),(segid A and resid 36) and (name HA),0.0,0.0,4.0
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name CG* or (name HG*)),0.0,0.0,5.0
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name HB),0.0,0.0,2.7
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name HA),0.0,0.0,4.0
+(segid A and resid 38) and (name H),(segid A and resid 38) and (name HA3),0.0,0.0,3.2
+(segid A and resid 38) and (name H),(segid A and resid 38) and (name HA2),0.0,0.0,2.7
+(segid A and resid 39) and (name H),(segid A and resid 39) and (name HA),0.0,0.0,3.2
+(segid A and resid 39) and (name H),(segid A and resid 39) and (name HB2),0.0,0.0,2.7
+(segid A and resid 39) and (name H),(segid A and resid 39) and (name HB3),0.0,0.0,4.0
+(segid A and resid 40) and (name H),(segid A and resid 40) and (name CG2* or (name HG2*)),0.0,0.0,4.0
+(segid A and resid 40) and (name H),(segid A and resid 40) and (name HA),0.0,0.0,4.0
+(segid A and resid 40) and (name H),(segid A and resid 40) and (name HB),0.0,0.0,3.2
+(segid A and resid 40) and (name H),(segid A and resid 40) and (name CG1* or (name HG1*)),0.0,0.0,5.0
+(segid A and resid 41) and (name H),(segid A and resid 41) and (name CG* or (name HG*)),0.0,0.0,5.0
+(segid A and resid 41) and (name H),(segid A and resid 41) and (name HA),0.0,0.0,4.0
+(segid A and resid 41) and (name H),(segid A and resid 41) and (name HB),0.0,0.0,5.0
+(segid A and resid 42) and (name H),(segid A and resid 42) and (name HA2),0.0,0.0,4.0
+(segid A and resid 42) and (name H),(segid A and resid 42) and (name HA3),0.0,0.0,3.2
+(segid A and resid 43) and (name H),(segid A and resid 43) and (name HA),0.0,0.0,4.0
+(segid A and resid 43) and (name H),(segid A and resid 43) and (name CG* or (name HG*)),0.0,0.0,5.0
+(segid A and resid 43) and (name H),(segid A and resid 43) and (name HB),0.0,0.0,4.0
+(segid A and resid 44) and (name H),(segid A and resid 44) and (name HB2),0.0,0.0,4.0
+(segid A and resid 44) and (name H),(segid A and resid 44) and (name HB3),0.0,0.0,4.0
+(segid A and resid 44) and (name H),(segid A and resid 44) and (name HA),0.0,0.0,4.0
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name CD* or (name HD*)),0.0,0.0,5.0
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name HB),0.0,0.0,3.2
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name HA),0.0,0.0,4.0
+(segid A and resid 46) and (name H),(segid A and resid 46) and (name HA),0.0,0.0,4.0
+(segid A and resid 47) and (name H),(segid A and resid 47) and (name HA2),0.0,0.0,2.7
+(segid A and resid 47) and (name H),(segid A and resid 47) and (name HA3),2.7,2.7,3.7
+(segid A and resid 48) and (name H),(segid A and resid 48) and (name HG2),0.0,0.0,4.8
+(segid A and resid 48) and (name H),(segid A and resid 48) and (name HG3),0.0,0.0,4.8
+(segid A and resid 48) and (name H),(segid A and resid 48) and (name HA),0.0,0.0,3.2
+(segid A and resid 48) and (name H),(segid A and resid 48) and (name HB2),0.0,0.0,3.5
+(segid A and resid 48) and (name H),(segid A and resid 48) and (name HB3),0.0,0.0,3.5
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HA),0.0,0.0,4.0
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HB3),0.0,0.0,4.0
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HB2),0.0,0.0,4.0
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HG2),0.0,0.0,4.8
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HG3),0.0,0.0,4.8
+(segid A and resid 50) and (name H),(segid A and resid 50) and (name HB),0.0,0.0,3.2
+(segid A and resid 50) and (name H),(segid A and resid 50) and (name CG1* or (name HG1*)),0.0,0.0,4.0
+(segid A and resid 50) and (name H),(segid A and resid 50) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 50) and (name H),(segid A and resid 50) and (name HA),0.0,0.0,4.0
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HB3),0.0,0.0,4.0
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HB2),0.0,0.0,3.2
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HG2),0.0,0.0,4.8
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HG3),0.0,0.0,4.8
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HA),0.0,0.0,5.0
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name HB3),0.0,0.0,5.0
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name HD1),0.0,0.0,4.8
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name HD2),0.0,0.0,4.8
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name HB2),0.0,0.0,4.0
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name HA),0.0,0.0,4.0
+(segid A and resid 53) and (name H),(segid A and resid 53) and (name HB2),0.0,0.0,3.2
+(segid A and resid 53) and (name H),(segid A and resid 53) and (name HB3),0.0,0.0,3.2
+(segid A and resid 53) and (name H),(segid A and resid 53) and (name HA),0.0,0.0,4.0
+(segid A and resid 54) and (name H),(segid A and resid 54) and (name CG1* or (name HG1*)),0.0,0.0,5.8
+(segid A and resid 54) and (name H),(segid A and resid 54) and (name HA),0.0,0.0,4.0
+(segid A and resid 54) and (name H),(segid A and resid 54) and (name CG2* or (name HG2*)),0.0,0.0,4.0
+(segid A and resid 54) and (name H),(segid A and resid 54) and (name HB),0.0,0.0,3.2
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name CG1* or (name HG1*)),0.0,0.0,5.8
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name CG2* or (name HG2*)),0.0,0.0,4.0
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HA),0.0,0.0,4.0
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HB),0.0,0.0,3.2
+(segid A and resid 56) and (name H),(segid A and resid 56) and (name HA),0.0,0.0,3.2
+(segid A and resid 56) and (name H),(segid A and resid 56) and (name HG2),0.0,0.0,4.8
+(segid A and resid 56) and (name H),(segid A and resid 56) and (name HG3),0.0,0.0,4.8
+(segid A and resid 57) and (name H),(segid A and resid 57) and (name HA),0.0,0.0,4.0
+(segid A and resid 57) and (name H),(segid A and resid 57) and (name CB* or (name HB*)),0.0,0.0,4.0
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB2),0.0,0.0,4.0
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HA),0.0,0.0,5.0
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB3),0.0,0.0,5.0
+(segid A and resid 60) and (name H),(segid A and resid 60) and (name HA),0.0,0.0,3.2
+(segid A and resid 60) and (name H),(segid A and resid 60) and (name HB2),0.0,0.0,3.5
+(segid A and resid 60) and (name H),(segid A and resid 60) and (name HB3),0.0,0.0,3.5
+(segid A and resid 62) and (name H),(segid A and resid 62) and (name HB3),0.0,0.0,3.2
+(segid A and resid 62) and (name H),(segid A and resid 62) and (name HB2),0.0,0.0,4.0
+(segid A and resid 62) and (name H),(segid A and resid 62) and (name HA),0.0,0.0,4.0
+(segid A and resid 63) and (name H),(segid A and resid 63) and (name HB3),0.0,0.0,4.0
+(segid A and resid 63) and (name H),(segid A and resid 63) and (name HB2),0.0,0.0,3.2
+(segid A and resid 63) and (name H),(segid A and resid 63) and (name HA),0.0,0.0,4.0
+(segid A and resid 64) and (name H),(segid A and resid 64) and (name HA),0.0,0.0,4.0
+(segid A and resid 64) and (name H),(segid A and resid 64) and (name HB),0.0,0.0,3.2
+(segid A and resid 64) and (name H),(segid A and resid 64) and (name CG2* or (name HG2*)),0.0,0.0,3.5
+(segid A and resid 64) and (name H),(segid A and resid 64) and (name CG1* or (name HG1*)),0.0,0.0,4.8
+(segid A and resid 65) and (name H),(segid A and resid 65) and (name HA),0.0,0.0,3.2
+(segid A and resid 65) and (name H),(segid A and resid 65) and (name HG2),0.0,0.0,4.8
+(segid A and resid 65) and (name H),(segid A and resid 65) and (name HG3),0.0,0.0,4.8
+(segid A and resid 65) and (name H),(segid A and resid 65) and (name HB3),0.0,0.0,4.0
+(segid A and resid 65) and (name H),(segid A and resid 65) and (name HB2),0.0,0.0,4.0
+(segid A and resid 66) and (name H),(segid A and resid 66) and (name HA),0.0,0.0,4.0
+(segid A and resid 66) and (name H),(segid A and resid 66) and (name HB2),0.0,0.0,4.0
+(segid A and resid 66) and (name H),(segid A and resid 66) and (name HB3),0.0,0.0,4.0
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HA),0.0,0.0,3.2
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HD2),0.0,0.0,4.8
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HD3),0.0,0.0,4.8
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HB2),0.0,0.0,3.5
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HB3),0.0,0.0,3.5
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HG2),0.0,0.0,3.5
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HG3),0.0,0.0,3.5
+(segid A and resid 68) and (name H),(segid A and resid 68) and (name HA),0.0,0.0,3.2
+(segid A and resid 68) and (name H),(segid A and resid 68) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 68) and (name H),(segid A and resid 68) and (name HB),0.0,0.0,2.7
+(segid A and resid 69) and (name H),(segid A and resid 69) and (name HA),0.0,0.0,4.0
+(segid A and resid 69) and (name H),(segid A and resid 69) and (name HB2),0.0,0.0,3.5
+(segid A and resid 69) and (name H),(segid A and resid 69) and (name HB3),0.0,0.0,3.5
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HB),0.0,0.0,3.2
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HA),0.0,0.0,4.0
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HB),0.0,0.0,3.2
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HA),0.0,0.0,5.0
+(segid A and resid 72) and (name H),(segid A and resid 72) and (name HA),0.0,0.0,4.0
+(segid A and resid 78) and (name H),(segid A and resid 78) and (name HA),2.7,2.7,7.7
+(segid A and resid 79) and (name H),(segid A and resid 79) and (name HA),2.7,2.7,7.7
+(segid A and resid 80) and (name H),(segid A and resid 80) and (name HA),2.7,2.7,4.0
+(segid A and resid 81) and (name H),(segid A and resid 81) and (name HA),2.7,2.7,4.0
+(segid A and resid 82) and (name H),(segid A and resid 82) and (name HA),2.7,2.7,4.0
+(segid A and resid 84) and (name H),(segid A and resid 84) and (name HA),2.7,2.7,4.0
+(segid A and resid 87) and (name H),(segid A and resid 87) and (name HA),2.7,2.7,4.0
+(segid A and resid 88) and (name H),(segid A and resid 88) and (name HA),2.7,2.7,4.0
+(segid A and resid 89) and (name H),(segid A and resid 89) and (name HA),2.7,2.7,3.7
+(segid A and resid 90) and (name H),(segid A and resid 90) and (name HA),2.7,2.7,4.0
+(segid A and resid 91) and (name H),(segid A and resid 91) and (name HA),2.7,2.7,4.0
+(segid A and resid 92) and (name H),(segid A and resid 92) and (name HA),2.7,2.7,4.0
+(segid A and resid 94) and (name H),(segid A and resid 94) and (name HB2),0.0,0.0,3.2
+(segid A and resid 94) and (name H),(segid A and resid 94) and (name HB3),0.0,0.0,3.2
+(segid A and resid 96) and (name H),(segid A and resid 96) and (name HA),2.7,2.7,7.7
+(segid A and resid 97) and (name H),(segid A and resid 97) and (name HA),2.7,2.7,7.7
+(segid A and resid 98) and (name H),(segid A and resid 98) and (name HA),2.7,2.7,4.0
+(segid A and resid 99) and (name H),(segid A and resid 99) and (name HA),2.7,2.7,7.7
+(segid A and resid 100) and (name H),(segid A and resid 100) and (name HA),2.7,2.7,7.7
+(segid A and resid 102) and (name H),(segid A and resid 102) and (name HA),0.0,0.0,3.5
+(segid A and resid 104) and (name H),(segid A and resid 104) and (name HA),0.0,0.0,2.7
+(segid A and resid 105) and (name H),(segid A and resid 105) and (name HA),2.7,2.7,3.7
+(segid A and resid 106) and (name H),(segid A and resid 106) and (name HA),2.7,2.7,5.0
+(segid A and resid 107) and (name H),(segid A and resid 107) and (name HA),2.7,2.7,4.0
+(segid A and resid 108) and (name H),(segid A and resid 108) and (name HA),2.7,2.7,7.7
+(segid A and resid 109) and (name H),(segid A and resid 109) and (name HA),2.7,2.7,4.0
+(segid A and resid 110) and (name H),(segid A and resid 110) and (name HA),2.7,2.7,4.0
+(segid A and resid 111) and (name H),(segid A and resid 111) and (name HA),2.5,2.5,4.0
+(segid A and resid 112) and (name H),(segid A and resid 112) and (name HB3),0.0,0.0,3.0
+(segid A and resid 112) and (name H),(segid A and resid 112) and (name HB2),0.0,0.0,3.2
+(segid A and resid 112) and (name H),(segid A and resid 112) and (name HA),0.0,0.0,3.0
+(segid A and resid 113) and (name H),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 113) and (name H),(segid A and resid 113) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 113) and (name H),(segid A and resid 113) and (name HA),0.0,0.0,2.7
+(segid A and resid 114) and (name H),(segid A and resid 114) and (name HA),2.7,2.7,4.0
+(segid A and resid 115) and (name H),(segid A and resid 115) and (name HA),2.7,2.7,7.7
+(segid A and resid 116) and (name H),(segid A and resid 116) and (name HA),2.7,2.7,4.0
+(segid A and resid 117) and (name H),(segid A and resid 117) and (name HA),2.7,2.7,4.0
+(segid A and resid 118) and (name H),(segid A and resid 118) and (name HA),2.7,2.7,4.0
+(segid A and resid 121) and (name H),(segid A and resid 121) and (name HD2),0.0,0.0,4.0
+(segid A and resid 121) and (name H),(segid A and resid 121) and (name HA),2.7,2.7,4.0
+(segid A and resid 124) and (name H),(segid A and resid 124) and (name HA),2.7,2.7,4.0
+(segid A and resid 125) and (name H),(segid A and resid 125) and (name HA),2.7,2.7,4.0
+(segid A and resid 125) and (name H),(segid A and resid 125) and (name HB3),0.0,0.0,3.5
+(segid A and resid 125) and (name H),(segid A and resid 125) and (name HB2),0.0,0.0,3.5
+(segid A and resid 126) and (name H),(segid A and resid 126) and (name HB2),0.0,0.0,4.0
+(segid A and resid 126) and (name H),(segid A and resid 126) and (name HB3),0.0,0.0,4.0
+(segid A and resid 126) and (name H),(segid A and resid 126) and (name HA),0.0,0.0,3.2
+(segid A and resid 126) and (name H),(segid A and resid 126) and (name HE2),4.0,4.0,5.8
+(segid A and resid 126) and (name H),(segid A and resid 126) and (name HE3),4.0,4.0,5.8
+(segid A and resid 126) and (name H),(segid A and resid 126) and (name HD2),4.0,4.0,5.8
+(segid A and resid 126) and (name H),(segid A and resid 126) and (name HD3),4.0,4.0,5.8
+(segid A and resid 127) and (name H),(segid A and resid 127) and (name HA),2.7,2.7,4.0
+(segid A and resid 128) and (name H),(segid A and resid 128) and (name HA),2.7,2.7,4.0
+(segid A and resid 129) and (name H),(segid A and resid 129) and (name HA),2.7,2.7,4.0
+(segid A and resid 130) and (name H),(segid A and resid 130) and (name HA),2.7,2.7,7.7
+(segid A and resid 132) and (name H),(segid A and resid 132) and (name HA),2.7,2.7,7.7
+(segid A and resid 133) and (name H),(segid A and resid 133) and (name HA),2.7,2.7,7.7
+(segid A and resid 134) and (name H),(segid A and resid 134) and (name HA),2.7,2.7,7.7
+(segid A and resid 136) and (name H),(segid A and resid 136) and (name HA),2.7,2.7,4.0
+(segid A and resid 137) and (name H),(segid A and resid 137) and (name HA),2.7,2.7,4.0
+(segid A and resid 138) and (name H),(segid A and resid 138) and (name HA),2.7,2.7,4.0
+(segid A and resid 139) and (name H),(segid A and resid 139) and (name HB2),0.0,0.0,3.0
+(segid A and resid 139) and (name H),(segid A and resid 139) and (name HB3),0.0,0.0,3.0
+(segid A and resid 139) and (name H),(segid A and resid 139) and (name HG2),2.7,2.7,4.8
+(segid A and resid 139) and (name H),(segid A and resid 139) and (name HG3),2.7,2.7,4.8
+(segid A and resid 139) and (name H),(segid A and resid 139) and (name HA),0.0,0.0,3.2
+(segid A and resid 140) and (name H),(segid A and resid 140) and (name HA),2.7,2.7,7.7
+(segid A and resid 141) and (name H),(segid A and resid 141) and (name HE2),4.0,4.0,5.8
+(segid A and resid 141) and (name H),(segid A and resid 141) and (name HE3),4.0,4.0,5.8
+(segid A and resid 142) and (name H),(segid A and resid 142) and (name HA),2.7,2.7,4.0
+(segid A and resid 143) and (name H),(segid A and resid 143) and (name HA),2.7,2.7,4.0
+(segid A and resid 144) and (name H),(segid A and resid 144) and (name HA),2.7,2.7,4.0
+(segid A and resid 146) and (name H),(segid A and resid 146) and (name HA),2.7,2.7,4.0
+(segid A and resid 147) and (name H),(segid A and resid 147) and (name HA),2.7,2.7,4.0
+(segid A and resid 2) and (name HA3),(segid A and resid 3) and (name CG1* or (name HG1*)),0.0,0.0,6.3
+(segid A and resid 2) and (name HA2),(segid A and resid 3) and (name CG1* or (name HG1*)),0.0,0.0,6.3
+(segid A and resid 3) and (name CG2* or (name HG2*)),(segid A and resid 2) and (name HA2),0.0,0.0,6.3
+(segid A and resid 2) and (name HA3),(segid A and resid 3) and (name CG2* or (name HG2*)),0.0,0.0,6.3
+(segid A and resid 2) and (name H),(segid A and resid 3) and (name H),3.2,3.2,5.0
+(segid A and resid 3) and (name H),(segid A and resid 2) and (name HA2),0.0,0.0,3.2
+(segid A and resid 2) and (name HA3),(segid A and resid 3) and (name H),0.0,0.0,3.2
+(segid A and resid 3) and (name H),(segid A and resid 4) and (name H),3.2,3.2,8.2
+(segid A and resid 3) and (name HB),(segid A and resid 4) and (name H),0.0,0.0,5.0
+(segid A and resid 3) and (name HA),(segid A and resid 4) and (name H),0.0,0.0,3.2
+(segid A and resid 4) and (name H),(segid A and resid 3) and (name CG1* or (name HG1*)),0.0,0.0,4.7
+(segid A and resid 3) and (name CG2* or (name HG2*)),(segid A and resid 4) and (name H),0.0,0.0,4.7
+(segid A and resid 4) and (name HB),(segid A and resid 5) and (name H),0.0,0.0,5.0
+(segid A and resid 5) and (name H),(segid A and resid 6) and (name H),3.2,3.2,5.0
+(segid A and resid 4) and (name CG* or (name HG*)),(segid A and resid 5) and (name H),0.0,0.0,5.0
+(segid A and resid 4) and (name HA),(segid A and resid 5) and (name H),0.0,0.0,3.2
+(segid A and resid 6) and (name H),(segid A and resid 5) and (name HG2),0.0,0.0,5.8
+(segid A and resid 5) and (name HG3),(segid A and resid 6) and (name H),0.0,0.0,5.8
+(segid A and resid 6) and (name H),(segid A and resid 7) and (name H),3.2,3.2,5.0
+(segid A and resid 6) and (name H),(segid A and resid 5) and (name HB2),0.0,0.0,4.8
+(segid A and resid 6) and (name H),(segid A and resid 5) and (name HB3),0.0,0.0,4.8
+(segid A and resid 5) and (name HA),(segid A and resid 6) and (name H),0.0,0.0,2.7
+(segid A and resid 6) and (name HB2),(segid A and resid 7) and (name H),0.0,0.0,5.0
+(segid A and resid 6) and (name HB3),(segid A and resid 7) and (name H),0.0,0.0,4.0
+(segid A and resid 6) and (name HA),(segid A and resid 7) and (name H),0.0,0.0,2.7
+(segid A and resid 7) and (name HA),(segid A and resid 8) and (name H),0.0,0.0,2.7
+(segid A and resid 7) and (name H),(segid A and resid 8) and (name H),3.2,3.2,5.0
+(segid A and resid 8) and (name HA),(segid A and resid 9) and (name H),0.0,0.0,2.7
+(segid A and resid 9) and (name H),(segid A and resid 8) and (name HB3),0.0,0.0,5.0
+(segid A and resid 9) and (name H),(segid A and resid 8) and (name HB2),0.0,0.0,5.0
+(segid A and resid 9) and (name H),(segid A and resid 8) and (name CD1* or (name HD1*)),0.0,0.0,5.0
+(segid A and resid 9) and (name H),(segid A and resid 8) and (name CD2* or (name HD2*)),0.0,0.0,5.0
+(segid A and resid 9) and (name HA),(segid A and resid 10) and (name H),0.0,0.0,2.7
+(segid A and resid 10) and (name H),(segid A and resid 9) and (name HB2),0.0,0.0,4.0
+(segid A and resid 10) and (name H),(segid A and resid 9) and (name HB3),0.0,0.0,4.0
+(segid A and resid 10) and (name H),(segid A and resid 9) and (name HD2),0.0,0.0,5.8
+(segid A and resid 10) and (name H),(segid A and resid 9) and (name HD3),0.0,0.0,5.8
+(segid A and resid 10) and (name HA),(segid A and resid 11) and (name H),0.0,0.0,2.7
+(segid A and resid 11) and (name H),(segid A and resid 10) and (name CD2* or (name HD2*)),0.0,0.0,5.8
+(segid A and resid 11) and (name H),(segid A and resid 10) and (name HB2),0.0,0.0,4.0
+(segid A and resid 11) and (name H),(segid A and resid 10) and (name HB3),0.0,0.0,5.0
+(segid A and resid 10) and (name H),(segid A and resid 11) and (name H),3.2,3.2,5.0
+(segid A and resid 11) and (name HG3),(segid A and resid 12) and (name HD2),0.0,0.0,4.8
+(segid A and resid 12) and (name HD3),(segid A and resid 11) and (name HG2),0.0,0.0,4.8
+(segid A and resid 12) and (name HD3),(segid A and resid 11) and (name HG3),0.0,0.0,4.8
+(segid A and resid 11) and (name HG2),(segid A and resid 12) and (name HD2),0.0,0.0,4.8
+(segid A and resid 11) and (name HA),(segid A and resid 12) and (name HD2),0.0,0.0,3.2
+(segid A and resid 12) and (name HD3),(segid A and resid 11) and (name HA),0.0,0.0,3.2
+(segid A and resid 13) and (name H),(segid A and resid 14) and (name HD2),0.0,0.0,3.5
+(segid A and resid 13) and (name H),(segid A and resid 14) and (name HD3),0.0,0.0,3.5
+(segid A and resid 13) and (name H),(segid A and resid 12) and (name HB2),0.0,0.0,5.8
+(segid A and resid 13) and (name H),(segid A and resid 12) and (name HB3),0.0,0.0,5.8
+(segid A and resid 13) and (name H),(segid A and resid 12) and (name HA),0.0,0.0,3.2
+(segid A and resid 13) and (name HA),(segid A and resid 14) and (name HD3),0.0,0.0,5.0
+(segid A and resid 13) and (name HA),(segid A and resid 14) and (name HD2),0.0,0.0,4.0
+(segid A and resid 13) and (name HG),(segid A and resid 14) and (name HD2),0.0,0.0,4.8
+(segid A and resid 14) and (name HD3),(segid A and resid 13) and (name HG),0.0,0.0,4.8
+(segid A and resid 13) and (name HB3),(segid A and resid 14) and (name HD2),0.0,0.0,4.8
+(segid A and resid 14) and (name HD3),(segid A and resid 13) and (name HB3),0.0,0.0,4.8
+(segid A and resid 13) and (name HB2),(segid A and resid 14) and (name HD2),0.0,0.0,4.8
+(segid A and resid 14) and (name HD3),(segid A and resid 13) and (name HB2),0.0,0.0,4.8
+(segid A and resid 14) and (name HD3),(segid A and resid 13) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 13) and (name CD1* or (name HD1*)),(segid A and resid 14) and (name HD2),0.0,0.0,5.5
+(segid A and resid 15) and (name H),(segid A and resid 14) and (name HB2),0.0,0.0,4.8
+(segid A and resid 15) and (name H),(segid A and resid 14) and (name HB3),0.0,0.0,4.8
+(segid A and resid 15) and (name H),(segid A and resid 14) and (name HD2),3.2,3.2,8.2
+(segid A and resid 15) and (name H),(segid A and resid 14) and (name HD3),3.2,3.2,8.2
+(segid A and resid 15) and (name H),(segid A and resid 14) and (name HA),0.0,0.0,3.2
+(segid A and resid 15) and (name H),(segid A and resid 16) and (name H),3.5,3.5,8.5
+(segid A and resid 15) and (name HA),(segid A and resid 16) and (name H),0.0,0.0,2.7
+(segid A and resid 16) and (name H),(segid A and resid 15) and (name HB2),0.0,0.0,4.8
+(segid A and resid 15) and (name HB3),(segid A and resid 16) and (name H),0.0,0.0,4.8
+(segid A and resid 16) and (name HB),(segid A and resid 17) and (name H),0.0,0.0,5.0
+(segid A and resid 16) and (name HA),(segid A and resid 17) and (name H),0.0,0.0,2.7
+(segid A and resid 17) and (name H),(segid A and resid 16) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 16) and (name CG2* or (name HG2*)),(segid A and resid 17) and (name H),0.0,0.0,5.5
+(segid A and resid 16) and (name H),(segid A and resid 17) and (name H),3.2,3.2,8.2
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name HG2),0.0,0.0,5.8
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name HG3),0.0,0.0,5.8
+(segid A and resid 18) and (name HB3),(segid A and resid 19) and (name HD2),0.0,0.0,4.8
+(segid A and resid 18) and (name HB3),(segid A and resid 19) and (name HD3),0.0,0.0,4.8
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name HB2),0.0,0.0,5.0
+(segid A and resid 17) and (name HB3),(segid A and resid 18) and (name H),0.0,0.0,5.0
+(segid A and resid 17) and (name HA),(segid A and resid 18) and (name H),0.0,0.0,2.7
+(segid A and resid 17) and (name H),(segid A and resid 18) and (name H),3.2,3.2,8.2
+(segid A and resid 18) and (name HA),(segid A and resid 19) and (name HD2),0.0,0.0,3.2
+(segid A and resid 18) and (name HA),(segid A and resid 19) and (name HD3),0.0,0.0,3.2
+(segid A and resid 18) and (name CD2* or (name HD2*)),(segid A and resid 19) and (name HD2),0.0,0.0,5.6
+(segid A and resid 19) and (name HD3),(segid A and resid 18) and (name CD2* or (name HD2*)),0.0,0.0,5.6
+(segid A and resid 19) and (name HA),(segid A and resid 20) and (name HD2),0.0,0.0,3.2
+(segid A and resid 20) and (name HD3),(segid A and resid 19) and (name HA),0.0,0.0,3.2
+(segid A and resid 21) and (name H),(segid A and resid 20) and (name HB2),0.0,0.0,4.0
+(segid A and resid 21) and (name H),(segid A and resid 20) and (name HD2),0.0,0.0,4.8
+(segid A and resid 21) and (name H),(segid A and resid 20) and (name HD3),0.0,0.0,4.8
+(segid A and resid 21) and (name H),(segid A and resid 20) and (name HB3),0.0,0.0,5.0
+(segid A and resid 21) and (name H),(segid A and resid 20) and (name HA),0.0,0.0,3.5
+(segid A and resid 21) and (name H),(segid A and resid 20) and (name HG2),0.0,0.0,4.8
+(segid A and resid 21) and (name H),(segid A and resid 20) and (name HG3),0.0,0.0,4.8
+(segid A and resid 21) and (name H),(segid A and resid 22) and (name H),0.0,0.0,4.0
+(segid A and resid 21) and (name HB2),(segid A and resid 22) and (name H),0.0,0.0,5.0
+(segid A and resid 21) and (name HA),(segid A and resid 22) and (name H),0.0,0.0,4.0
+(segid A and resid 22) and (name HA),(segid A and resid 23) and (name H),0.0,0.0,5.0
+(segid A and resid 23) and (name HA),(segid A and resid 22) and (name HD2),0.0,0.0,5.8
+(segid A and resid 22) and (name H),(segid A and resid 23) and (name H),0.0,0.0,4.0
+(segid A and resid 23) and (name H),(segid A and resid 22) and (name HB3),0.0,0.0,4.8
+(segid A and resid 23) and (name H),(segid A and resid 22) and (name HB2),0.0,0.0,4.8
+(segid A and resid 23) and (name HA),(segid A and resid 24) and (name H),0.0,0.0,5.0
+(segid A and resid 23) and (name HB),(segid A and resid 24) and (name H),0.0,0.0,4.0
+(segid A and resid 23) and (name H),(segid A and resid 24) and (name H),0.0,0.0,3.2
+(segid A and resid 24) and (name HA),(segid A and resid 25) and (name H),0.0,0.0,5.0
+(segid A and resid 25) and (name H),(segid A and resid 24) and (name HB2),0.0,0.0,4.8
+(segid A and resid 24) and (name HB3),(segid A and resid 25) and (name H),0.0,0.0,4.8
+(segid A and resid 24) and (name H),(segid A and resid 25) and (name H),0.0,0.0,3.2
+(segid A and resid 25) and (name H),(segid A and resid 26) and (name H),0.0,0.0,3.2
+(segid A and resid 25) and (name HB),(segid A and resid 26) and (name H),0.0,0.0,3.2
+(segid A and resid 25) and (name HA),(segid A and resid 26) and (name H),0.0,0.0,5.0
+(segid A and resid 26) and (name HA),(segid A and resid 27) and (name H),0.0,0.0,5.0
+(segid A and resid 26) and (name H),(segid A and resid 27) and (name H),0.0,0.0,4.0
+(segid A and resid 27) and (name H),(segid A and resid 28) and (name H),0.0,0.0,3.2
+(segid A and resid 27) and (name HE),(segid A and resid 28) and (name HG13),0.0,0.0,4.0
+(segid A and resid 27) and (name HA),(segid A and resid 28) and (name H),0.0,0.0,5.0
+(segid A and resid 27) and (name HE),(segid A and resid 28) and (name HG12),0.0,0.0,5.0
+(segid A and resid 28) and (name H),(segid A and resid 29) and (name H),0.0,0.0,3.2
+(segid A and resid 29) and (name H),(segid A and resid 28) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 28) and (name HB),(segid A and resid 29) and (name H),0.0,0.0,3.2
+(segid A and resid 28) and (name HA),(segid A and resid 29) and (name H),0.0,0.0,5.0
+(segid A and resid 30) and (name H),(segid A and resid 29) and (name HB2),0.0,0.0,4.0
+(segid A and resid 29) and (name HB3),(segid A and resid 30) and (name H),0.0,0.0,4.0
+(segid A and resid 29) and (name HA),(segid A and resid 30) and (name H),0.0,0.0,5.0
+(segid A and resid 30) and (name HA),(segid A and resid 31) and (name H),0.0,0.0,4.0
+(segid A and resid 30) and (name H),(segid A and resid 31) and (name H),0.0,0.0,3.2
+(segid A and resid 31) and (name H),(segid A and resid 30) and (name HB3),0.0,0.0,4.8
+(segid A and resid 30) and (name HB2),(segid A and resid 31) and (name H),0.0,0.0,4.8
+(segid A and resid 31) and (name H),(segid A and resid 32) and (name H),3.2,3.2,5.0
+(segid A and resid 32) and (name H),(segid A and resid 31) and (name HB2),0.0,0.0,5.0
+(segid A and resid 31) and (name HB3),(segid A and resid 32) and (name H),0.0,0.0,5.0
+(segid A and resid 31) and (name HA),(segid A and resid 32) and (name H),0.0,0.0,3.2
+(segid A and resid 33) and (name H),(segid A and resid 32) and (name HA2),0.0,0.0,4.0
+(segid A and resid 33) and (name H),(segid A and resid 32) and (name HA3),0.0,0.0,4.0
+(segid A and resid 32) and (name H),(segid A and resid 33) and (name H),0.0,0.0,3.2
+(segid A and resid 33) and (name HB2),(segid A and resid 34) and (name H),0.0,0.0,5.0
+(segid A and resid 34) and (name H),(segid A and resid 35) and (name H),3.2,3.2,5.0
+(segid A and resid 33) and (name HB3),(segid A and resid 34) and (name H),0.0,0.0,3.2
+(segid A and resid 33) and (name HA),(segid A and resid 34) and (name H),0.0,0.0,2.7
+(segid A and resid 34) and (name H),(segid A and resid 33) and (name HG2),0.0,0.0,5.0
+(segid A and resid 34) and (name H),(segid A and resid 33) and (name HG3),0.0,0.0,5.0
+(segid A and resid 35) and (name H),(segid A and resid 36) and (name H),3.2,3.2,5.0
+(segid A and resid 34) and (name HA),(segid A and resid 35) and (name H),0.0,0.0,2.7
+(segid A and resid 34) and (name HB),(segid A and resid 35) and (name H),0.0,0.0,5.0
+(segid A and resid 35) and (name HA),(segid A and resid 36) and (name H),0.0,0.0,2.7
+(segid A and resid 35) and (name HB),(segid A and resid 36) and (name H),0.0,0.0,3.2
+(segid A and resid 37) and (name H),(segid A and resid 36) and (name HD2),0.0,0.0,5.8
+(segid A and resid 37) and (name H),(segid A and resid 36) and (name HD3),0.0,0.0,5.8
+(segid A and resid 37) and (name H),(segid A and resid 36) and (name HB2),0.0,0.0,4.8
+(segid A and resid 36) and (name HB3),(segid A and resid 37) and (name H),0.0,0.0,4.8
+(segid A and resid 36) and (name HA),(segid A and resid 37) and (name H),0.0,0.0,2.7
+(segid A and resid 37) and (name HB),(segid A and resid 38) and (name H),0.0,0.0,5.0
+(segid A and resid 37) and (name CG* or (name HG*)),(segid A and resid 38) and (name H),0.0,0.0,4.0
+(segid A and resid 37) and (name HA),(segid A and resid 38) and (name H),0.0,0.0,3.2
+(segid A and resid 37) and (name H),(segid A and resid 38) and (name H),3.2,3.2,5.0
+(segid A and resid 38) and (name H),(segid A and resid 39) and (name H),0.0,0.0,3.2
+(segid A and resid 38) and (name HA2),(segid A and resid 39) and (name H),2.7,2.7,7.7
+(segid A and resid 39) and (name H),(segid A and resid 40) and (name H),3.2,3.2,5.0
+(segid A and resid 39) and (name HB3),(segid A and resid 40) and (name H),0.0,0.0,3.2
+(segid A and resid 39) and (name HA),(segid A and resid 40) and (name H),0.0,0.0,2.7
+(segid A and resid 39) and (name HB2),(segid A and resid 40) and (name H),0.0,0.0,4.0
+(segid A and resid 41) and (name H),(segid A and resid 40) and (name CG1* or (name HG1*)),0.0,0.0,4.2
+(segid A and resid 41) and (name H),(segid A and resid 40) and (name CG2* or (name HG2*)),0.0,0.0,4.2
+(segid A and resid 40) and (name HA),(segid A and resid 41) and (name H),0.0,0.0,2.7
+(segid A and resid 40) and (name H),(segid A and resid 41) and (name H),3.2,3.2,5.0
+(segid A and resid 41) and (name CG* or (name HG*)),(segid A and resid 42) and (name H),0.0,0.0,5.0
+(segid A and resid 41) and (name HB),(segid A and resid 42) and (name H),0.0,0.0,4.0
+(segid A and resid 41) and (name HA),(segid A and resid 42) and (name H),0.0,0.0,2.7
+(segid A and resid 41) and (name H),(segid A and resid 42) and (name H),3.2,3.2,5.0
+(segid A and resid 42) and (name HA3),(segid A and resid 43) and (name H),0.0,0.0,4.0
+(segid A and resid 42) and (name HA2),(segid A and resid 43) and (name H),0.0,0.0,3.2
+(segid A and resid 42) and (name H),(segid A and resid 43) and (name H),3.2,3.2,5.0
+(segid A and resid 43) and (name HA),(segid A and resid 44) and (name H),0.0,0.0,2.7
+(segid A and resid 43) and (name H),(segid A and resid 44) and (name H),3.2,3.2,8.2
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 44) and (name H),0.0,0.0,5.0
+(segid A and resid 44) and (name HA),(segid A and resid 45) and (name H),0.0,0.0,2.7
+(segid A and resid 44) and (name H),(segid A and resid 45) and (name H),3.2,3.2,8.2
+(segid A and resid 45) and (name H),(segid A and resid 44) and (name HB2),0.0,0.0,4.8
+(segid A and resid 44) and (name HB3),(segid A and resid 45) and (name H),0.0,0.0,4.8
+(segid A and resid 46) and (name H),(segid A and resid 45) and (name CG* or (name HG*)),0.0,0.0,4.0
+(segid A and resid 45) and (name H),(segid A and resid 46) and (name H),3.2,3.2,8.2
+(segid A and resid 45) and (name HA),(segid A and resid 46) and (name H),0.0,0.0,3.2
+(segid A and resid 46) and (name H),(segid A and resid 47) and (name H),2.7,2.7,7.7
+(segid A and resid 47) and (name H),(segid A and resid 46) and (name HB2),4.0,4.0,9.0
+(segid A and resid 47) and (name H),(segid A and resid 46) and (name CD2* or (name HD2*)),4.8,4.8,9.8
+(segid A and resid 47) and (name H),(segid A and resid 46) and (name HB3),4.0,4.0,9.0
+(segid A and resid 47) and (name H),(segid A and resid 46) and (name CD1* or (name HD1*)),4.8,4.8,9.8
+(segid A and resid 46) and (name HA),(segid A and resid 47) and (name H),2.7,2.7,7.7
+(segid A and resid 47) and (name HA2),(segid A and resid 48) and (name H),2.7,2.7,4.0
+(segid A and resid 47) and (name H),(segid A and resid 48) and (name H),2.5,2.5,4.0
+(segid A and resid 47) and (name HA3),(segid A and resid 48) and (name H),0.0,0.0,3.5
+(segid A and resid 48) and (name H),(segid A and resid 49) and (name H),3.2,3.2,8.2
+(segid A and resid 48) and (name HA),(segid A and resid 49) and (name H),0.0,0.0,2.7
+(segid A and resid 49) and (name H),(segid A and resid 48) and (name HG2),0.0,0.0,5.8
+(segid A and resid 48) and (name HG3),(segid A and resid 49) and (name H),0.0,0.0,5.8
+(segid A and resid 49) and (name H),(segid A and resid 48) and (name HB2),0.0,0.0,4.8
+(segid A and resid 48) and (name HB3),(segid A and resid 49) and (name H),0.0,0.0,4.8
+(segid A and resid 50) and (name H),(segid A and resid 49) and (name HB3),0.0,0.0,4.8
+(segid A and resid 49) and (name HB2),(segid A and resid 50) and (name H),0.0,0.0,4.8
+(segid A and resid 49) and (name H),(segid A and resid 50) and (name H),3.2,3.2,8.2
+(segid A and resid 50) and (name H),(segid A and resid 49) and (name HG2),0.0,0.0,4.8
+(segid A and resid 49) and (name HG3),(segid A and resid 50) and (name H),0.0,0.0,4.8
+(segid A and resid 49) and (name HA),(segid A and resid 50) and (name H),0.0,0.0,2.7
+(segid A and resid 50) and (name H),(segid A and resid 51) and (name H),3.2,3.2,8.2
+(segid A and resid 50) and (name HA),(segid A and resid 51) and (name H),0.0,0.0,2.7
+(segid A and resid 50) and (name HB),(segid A and resid 51) and (name H),0.0,0.0,5.0
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 51) and (name H),0.0,0.0,4.8
+(segid A and resid 50) and (name CG1* or (name HG1*)),(segid A and resid 51) and (name H),0.0,0.0,5.8
+(segid A and resid 51) and (name HB2),(segid A and resid 52) and (name H),0.0,0.0,5.0
+(segid A and resid 51) and (name HA),(segid A and resid 52) and (name H),0.0,0.0,2.7
+(segid A and resid 51) and (name H),(segid A and resid 52) and (name H),3.2,3.2,5.0
+(segid A and resid 51) and (name HB3),(segid A and resid 52) and (name H),0.0,0.0,4.0
+(segid A and resid 53) and (name H),(segid A and resid 52) and (name HD1),0.0,0.0,5.0
+(segid A and resid 53) and (name H),(segid A and resid 52) and (name HD2),0.0,0.0,5.0
+(segid A and resid 52) and (name HB3),(segid A and resid 53) and (name H),0.0,0.0,4.0
+(segid A and resid 52) and (name H),(segid A and resid 53) and (name H),3.2,3.2,5.0
+(segid A and resid 52) and (name HA),(segid A and resid 53) and (name H),0.0,0.0,2.7
+(segid A and resid 52) and (name HB2),(segid A and resid 53) and (name H),0.0,0.0,5.0
+(segid A and resid 53) and (name HB3),(segid A and resid 54) and (name H),0.0,0.0,5.0
+(segid A and resid 53) and (name HB2),(segid A and resid 54) and (name H),0.0,0.0,5.0
+(segid A and resid 54) and (name H),(segid A and resid 53) and (name HG2),0.0,0.0,4.8
+(segid A and resid 54) and (name H),(segid A and resid 53) and (name HG3),0.0,0.0,4.8
+(segid A and resid 53) and (name H),(segid A and resid 54) and (name H),3.2,3.2,5.0
+(segid A and resid 53) and (name HA),(segid A and resid 54) and (name H),0.0,0.0,2.7
+(segid A and resid 54) and (name CG2* or (name HG2*)),(segid A and resid 55) and (name H),0.0,0.0,5.8
+(segid A and resid 54) and (name HB),(segid A and resid 55) and (name H),0.0,0.0,5.0
+(segid A and resid 54) and (name HA),(segid A and resid 55) and (name H),0.0,0.0,2.7
+(segid A and resid 54) and (name H),(segid A and resid 55) and (name H),3.2,3.2,8.2
+(segid A and resid 54) and (name CG1* or (name HG1*)),(segid A and resid 55) and (name H),0.0,0.0,4.8
+(segid A and resid 55) and (name HB),(segid A and resid 56) and (name H),0.0,0.0,2.7
+(segid A and resid 55) and (name H),(segid A and resid 56) and (name H),0.0,0.0,3.2
+(segid A and resid 55) and (name HA),(segid A and resid 56) and (name H),0.0,0.0,4.0
+(segid A and resid 56) and (name H),(segid A and resid 55) and (name CG1* or (name HG1*)),0.0,0.0,4.7
+(segid A and resid 56) and (name H),(segid A and resid 55) and (name CG2* or (name HG2*)),0.0,0.0,4.7
+(segid A and resid 57) and (name H),(segid A and resid 56) and (name HE21),4.0,4.0,9.0
+(segid A and resid 57) and (name H),(segid A and resid 56) and (name HE22),4.0,4.0,9.0
+(segid A and resid 56) and (name HA),(segid A and resid 57) and (name CB* or (name HB*)),0.0,0.0,5.8
+(segid A and resid 56) and (name H),(segid A and resid 57) and (name H),3.2,3.2,5.0
+(segid A and resid 57) and (name H),(segid A and resid 56) and (name HB2),0.0,0.0,5.8
+(segid A and resid 57) and (name H),(segid A and resid 56) and (name HB3),0.0,0.0,5.8
+(segid A and resid 57) and (name H),(segid A and resid 56) and (name HG2),0.0,0.0,4.0
+(segid A and resid 56) and (name HG3),(segid A and resid 57) and (name H),0.0,0.0,4.0
+(segid A and resid 56) and (name HA),(segid A and resid 57) and (name H),0.0,0.0,2.7
+(segid A and resid 57) and (name HA),(segid A and resid 58) and (name H),0.0,0.0,2.7
+(segid A and resid 58) and (name H),(segid A and resid 59) and (name HA),0.0,0.0,5.0
+(segid A and resid 57) and (name CB* or (name HB*)),(segid A and resid 58) and (name H),0.0,0.0,4.8
+(segid A and resid 57) and (name H),(segid A and resid 58) and (name H),3.2,3.2,5.0
+(segid A and resid 58) and (name HA),(segid A and resid 59) and (name HA),0.0,0.0,2.7
+(segid A and resid 59) and (name HA),(segid A and resid 58) and (name HD1),0.0,0.0,4.0
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HB2),0.0,0.0,3.2
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HA),0.0,0.0,3.2
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HB3),0.0,0.0,4.0
+(segid A and resid 60) and (name H),(segid A and resid 61) and (name HD2),3.2,3.2,8.2
+(segid A and resid 60) and (name H),(segid A and resid 61) and (name HD3),3.2,3.2,8.2
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HD2),3.2,3.2,8.2
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HD3),3.2,3.2,8.2
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name HB2),0.0,0.0,4.0
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name HB3),0.0,0.0,4.0
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name HA),0.0,0.0,2.7
+(segid A and resid 62) and (name HA),(segid A and resid 63) and (name H),0.0,0.0,2.7
+(segid A and resid 63) and (name H),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 63) and (name H),(segid A and resid 62) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 62) and (name HB3),(segid A and resid 63) and (name H),0.0,0.0,4.0
+(segid A and resid 62) and (name HB2),(segid A and resid 63) and (name H),0.0,0.0,5.0
+(segid A and resid 62) and (name H),(segid A and resid 63) and (name H),3.2,3.2,5.0
+(segid A and resid 63) and (name HA),(segid A and resid 64) and (name H),0.0,0.0,2.7
+(segid A and resid 63) and (name H),(segid A and resid 64) and (name H),3.2,3.2,8.2
+(segid A and resid 64) and (name HA),(segid A and resid 65) and (name HA),0.0,0.0,5.0
+(segid A and resid 64) and (name H),(segid A and resid 63) and (name HG2),0.0,0.0,4.0
+(segid A and resid 64) and (name H),(segid A and resid 63) and (name HG3),0.0,0.0,4.0
+(segid A and resid 64) and (name H),(segid A and resid 63) and (name HB3),0.0,0.0,4.3
+(segid A and resid 64) and (name H),(segid A and resid 63) and (name HB2),0.0,0.0,4.3
+(segid A and resid 64) and (name HB),(segid A and resid 65) and (name H),0.0,0.0,5.0
+(segid A and resid 64) and (name HA),(segid A and resid 65) and (name H),0.0,0.0,2.7
+(segid A and resid 64) and (name CG1* or (name HG1*)),(segid A and resid 65) and (name H),0.0,0.0,4.0
+(segid A and resid 64) and (name CG2* or (name HG2*)),(segid A and resid 65) and (name H),0.0,0.0,5.8
+(segid A and resid 64) and (name H),(segid A and resid 65) and (name H),3.2,3.2,8.2
+(segid A and resid 65) and (name HB2),(segid A and resid 66) and (name H),0.0,0.0,4.0
+(segid A and resid 66) and (name H),(segid A and resid 65) and (name HB3),0.0,0.0,4.0
+(segid A and resid 66) and (name HB3),(segid A and resid 67) and (name HG2),0.0,0.0,6.6
+(segid A and resid 67) and (name HG3),(segid A and resid 66) and (name HB2),0.0,0.0,6.6
+(segid A and resid 66) and (name HB3),(segid A and resid 67) and (name HG3),0.0,0.0,6.6
+(segid A and resid 66) and (name HB2),(segid A and resid 67) and (name HG2),0.0,0.0,6.6
+(segid A and resid 66) and (name H),(segid A and resid 65) and (name HG2),0.0,0.0,5.8
+(segid A and resid 65) and (name HG3),(segid A and resid 66) and (name H),0.0,0.0,5.8
+(segid A and resid 65) and (name HA),(segid A and resid 66) and (name H),0.0,0.0,3.2
+(segid A and resid 66) and (name H),(segid A and resid 67) and (name H),2.7,2.7,5.0
+(segid A and resid 66) and (name HA),(segid A and resid 67) and (name H),0.0,0.0,5.0
+(segid A and resid 67) and (name H),(segid A and resid 66) and (name HB2),0.0,0.0,4.8
+(segid A and resid 66) and (name HB3),(segid A and resid 67) and (name H),0.0,0.0,4.8
+(segid A and resid 68) and (name H),(segid A and resid 67) and (name HG2),0.0,0.0,4.8
+(segid A and resid 67) and (name HG3),(segid A and resid 68) and (name H),0.0,0.0,4.8
+(segid A and resid 67) and (name HA),(segid A and resid 68) and (name H),0.0,0.0,4.0
+(segid A and resid 68) and (name H),(segid A and resid 67) and (name HB2),0.0,0.0,4.8
+(segid A and resid 67) and (name HB3),(segid A and resid 68) and (name H),0.0,0.0,4.8
+(segid A and resid 68) and (name H),(segid A and resid 67) and (name HD2),0.0,0.0,5.8
+(segid A and resid 67) and (name HD3),(segid A and resid 68) and (name H),0.0,0.0,5.8
+(segid A and resid 68) and (name HB),(segid A and resid 69) and (name H),0.0,0.0,5.0
+(segid A and resid 68) and (name CG* or (name HG*)),(segid A and resid 69) and (name H),0.0,0.0,4.0
+(segid A and resid 68) and (name HA),(segid A and resid 69) and (name H),0.0,0.0,2.7
+(segid A and resid 70) and (name H),(segid A and resid 69) and (name HG2),0.0,0.0,4.8
+(segid A and resid 70) and (name H),(segid A and resid 69) and (name HG3),0.0,0.0,4.8
+(segid A and resid 69) and (name HA),(segid A and resid 70) and (name H),0.0,0.0,2.7
+(segid A and resid 70) and (name H),(segid A and resid 69) and (name HB2),0.0,0.0,4.8
+(segid A and resid 69) and (name HB3),(segid A and resid 70) and (name H),0.0,0.0,4.8
+(segid A and resid 70) and (name HB),(segid A and resid 71) and (name H),0.0,0.0,5.0
+(segid A and resid 70) and (name H),(segid A and resid 71) and (name H),3.2,3.2,5.0
+(segid A and resid 70) and (name HA),(segid A and resid 71) and (name H),0.0,0.0,2.7
+(segid A and resid 71) and (name H),(segid A and resid 70) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 71) and (name HB),(segid A and resid 72) and (name H),0.0,0.0,4.0
+(segid A and resid 71) and (name CG* or (name HG*)),(segid A and resid 72) and (name H),0.0,0.0,4.0
+(segid A and resid 71) and (name HA),(segid A and resid 72) and (name H),0.0,0.0,2.7
+(segid A and resid 78) and (name H),(segid A and resid 77) and (name H),3.2,3.2,8.2
+(segid A and resid 78) and (name H),(segid A and resid 77) and (name HA),0.0,0.0,2.7
+(segid A and resid 78) and (name H),(segid A and resid 79) and (name H),3.2,3.2,8.2
+(segid A and resid 79) and (name H),(segid A and resid 80) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 79) and (name H),(segid A and resid 80) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 78) and (name HA),(segid A and resid 79) and (name H),0.0,0.0,2.7
+(segid A and resid 79) and (name HA),(segid A and resid 80) and (name H),0.0,0.0,3.2
+(segid A and resid 80) and (name H),(segid A and resid 79) and (name HB),3.2,3.2,5.0
+(segid A and resid 79) and (name H),(segid A and resid 80) and (name H),3.2,3.2,8.2
+(segid A and resid 80) and (name H),(segid A and resid 81) and (name H),3.2,3.2,8.2
+(segid A and resid 81) and (name H),(segid A and resid 82) and (name CB* or (name HB*)),0.0,0.0,5.8
+(segid A and resid 80) and (name HA),(segid A and resid 81) and (name H),0.0,0.0,2.7
+(segid A and resid 82) and (name H),(segid A and resid 83) and (name HA),0.0,0.0,5.0
+(segid A and resid 81) and (name HA),(segid A and resid 82) and (name H),0.0,0.0,2.7
+(segid A and resid 81) and (name H),(segid A and resid 82) and (name H),3.2,3.2,8.2
+(segid A and resid 82) and (name H),(segid A and resid 83) and (name H),2.7,2.7,5.0
+(segid A and resid 84) and (name H),(segid A and resid 83) and (name HA),0.0,0.0,2.7
+(segid A and resid 87) and (name H),(segid A and resid 86) and (name HA2),2.5,2.5,4.0
+(segid A and resid 87) and (name H),(segid A and resid 86) and (name HA3),2.5,2.5,4.0
+(segid A and resid 87) and (name HA),(segid A and resid 88) and (name H),0.0,0.0,2.7
+(segid A and resid 87) and (name H),(segid A and resid 88) and (name H),3.2,3.2,8.2
+(segid A and resid 88) and (name H),(segid A and resid 87) and (name HB),3.2,3.2,8.2
+(segid A and resid 88) and (name HA),(segid A and resid 89) and (name H),3.2,3.2,4.0
+(segid A and resid 88) and (name H),(segid A and resid 89) and (name H),0.0,0.0,2.7
+(segid A and resid 89) and (name H),(segid A and resid 88) and (name HB2),0.0,0.0,3.5
+(segid A and resid 89) and (name H),(segid A and resid 88) and (name HB3),0.0,0.0,3.5
+(segid A and resid 90) and (name H),(segid A and resid 91) and (name HG12),0.0,0.0,5.8
+(segid A and resid 90) and (name H),(segid A and resid 91) and (name HG13),0.0,0.0,5.8
+(segid A and resid 89) and (name H),(segid A and resid 90) and (name H),3.2,3.2,5.0
+(segid A and resid 90) and (name H),(segid A and resid 91) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 89) and (name HA),(segid A and resid 90) and (name H),0.0,0.0,2.7
+(segid A and resid 90) and (name H),(segid A and resid 91) and (name H),3.2,3.2,8.2
+(segid A and resid 91) and (name HA),(segid A and resid 92) and (name H),0.0,0.0,2.7
+(segid A and resid 91) and (name H),(segid A and resid 92) and (name H),3.2,3.2,8.2
+(segid A and resid 92) and (name H),(segid A and resid 93) and (name H),3.2,3.2,8.2
+(segid A and resid 92) and (name HA),(segid A and resid 93) and (name H),0.0,0.0,3.2
+(segid A and resid 94) and (name H),(segid A and resid 93) and (name HA),2.3,2.3,7.3
+(segid A and resid 94) and (name H),(segid A and resid 93) and (name H),3.2,3.2,8.2
+(segid A and resid 96) and (name H),(segid A and resid 97) and (name H),2.7,2.7,7.7
+(segid A and resid 96) and (name HA),(segid A and resid 97) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 98) and (name HA),(segid A and resid 97) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 98) and (name H),(segid A and resid 97) and (name HB),3.2,3.2,5.0
+(segid A and resid 97) and (name H),(segid A and resid 98) and (name H),2.7,2.7,5.0
+(segid A and resid 97) and (name HA),(segid A and resid 98) and (name H),0.0,0.0,2.7
+(segid A and resid 98) and (name H),(segid A and resid 99) and (name H),3.2,3.2,5.0
+(segid A and resid 98) and (name HA),(segid A and resid 99) and (name H),0.0,0.0,3.2
+(segid A and resid 99) and (name H),(segid A and resid 98) and (name HB),3.2,3.2,8.2
+(segid A and resid 100) and (name H),(segid A and resid 99) and (name HB),3.2,3.2,8.2
+(segid A and resid 100) and (name CG* or (name HG*)),(segid A and resid 101) and (name CG* or (name HG*)),0.0,0.0,6.6
+(segid A and resid 99) and (name H),(segid A and resid 100) and (name H),3.2,3.2,5.0
+(segid A and resid 99) and (name HA),(segid A and resid 100) and (name H),0.0,0.0,2.7
+(segid A and resid 101) and (name H),(segid A and resid 100) and (name HB),3.2,3.2,8.2
+(segid A and resid 100) and (name H),(segid A and resid 101) and (name H),3.2,3.2,8.2
+(segid A and resid 102) and (name H),(segid A and resid 101) and (name H),3.2,3.2,8.2
+(segid A and resid 102) and (name H),(segid A and resid 101) and (name HA),0.0,0.0,3.2
+(segid A and resid 104) and (name H),(segid A and resid 103) and (name HB2),3.2,3.2,8.2
+(segid A and resid 104) and (name H),(segid A and resid 103) and (name HB3),3.2,3.2,8.2
+(segid A and resid 104) and (name H),(segid A and resid 103) and (name HA),2.7,2.7,4.0
+(segid A and resid 104) and (name H),(segid A and resid 105) and (name H),0.0,0.0,3.0
+(segid A and resid 105) and (name H),(segid A and resid 106) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 105) and (name H),(segid A and resid 104) and (name HB2),3.2,3.2,8.2
+(segid A and resid 105) and (name H),(segid A and resid 104) and (name HB3),3.2,3.2,8.2
+(segid A and resid 104) and (name HA),(segid A and resid 105) and (name H),2.7,2.7,3.7
+(segid A and resid 105) and (name H),(segid A and resid 106) and (name H),3.2,3.2,8.2
+(segid A and resid 106) and (name H),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 106) and (name H),(segid A and resid 107) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 105) and (name HA),(segid A and resid 106) and (name H),0.0,0.0,2.7
+(segid A and resid 106) and (name HA),(segid A and resid 107) and (name H),0.0,0.0,3.2
+(segid A and resid 106) and (name H),(segid A and resid 107) and (name H),2.7,2.7,5.0
+(segid A and resid 107) and (name H),(segid A and resid 108) and (name H),2.7,2.7,5.0
+(segid A and resid 107) and (name HA),(segid A and resid 108) and (name H),0.0,0.0,2.7
+(segid A and resid 108) and (name H),(segid A and resid 109) and (name H),3.2,3.2,8.2
+(segid A and resid 108) and (name HA),(segid A and resid 109) and (name H),0.0,0.0,2.7
+(segid A and resid 110) and (name H),(segid A and resid 109) and (name HD1),0.0,0.0,5.0
+(segid A and resid 109) and (name H),(segid A and resid 108) and (name HB),3.2,3.2,8.2
+(segid A and resid 109) and (name HA),(segid A and resid 110) and (name H),0.0,0.0,2.7
+(segid A and resid 109) and (name H),(segid A and resid 110) and (name H),3.2,3.2,8.2
+(segid A and resid 110) and (name HA),(segid A and resid 111) and (name H),2.7,2.7,4.0
+(segid A and resid 110) and (name H),(segid A and resid 111) and (name H),3.2,3.2,8.2
+(segid A and resid 112) and (name H),(segid A and resid 113) and (name HB2),0.0,0.0,5.8
+(segid A and resid 112) and (name H),(segid A and resid 113) and (name HB3),0.0,0.0,5.8
+(segid A and resid 111) and (name HA),(segid A and resid 112) and (name H),0.0,0.0,3.5
+(segid A and resid 111) and (name H),(segid A and resid 112) and (name H),2.5,2.5,5.0
+(segid A and resid 112) and (name H),(segid A and resid 111) and (name HB3),3.2,3.2,8.2
+(segid A and resid 112) and (name H),(segid A and resid 111) and (name HB2),3.2,3.2,8.2
+(segid A and resid 112) and (name HA),(segid A and resid 113) and (name H),2.7,2.7,4.0
+(segid A and resid 113) and (name H),(segid A and resid 114) and (name HB2),4.0,4.0,11.0
+(segid A and resid 113) and (name H),(segid A and resid 114) and (name HB3),4.0,4.0,11.0
+(segid A and resid 113) and (name H),(segid A and resid 114) and (name HG2),4.0,4.0,11.0
+(segid A and resid 113) and (name H),(segid A and resid 114) and (name HG3),4.0,4.0,11.0
+(segid A and resid 112) and (name H),(segid A and resid 113) and (name H),0.0,0.0,2.7
+(segid A and resid 113) and (name HA),(segid A and resid 114) and (name H),0.0,0.0,3.2
+(segid A and resid 113) and (name H),(segid A and resid 114) and (name H),0.0,0.0,3.2
+(segid A and resid 114) and (name H),(segid A and resid 115) and (name H),3.2,3.2,8.2
+(segid A and resid 114) and (name HA),(segid A and resid 115) and (name H),0.0,0.0,3.2
+(segid A and resid 115) and (name HA),(segid A and resid 116) and (name H),0.0,0.0,2.7
+(segid A and resid 116) and (name H),(segid A and resid 115) and (name HB2),3.2,3.2,8.2
+(segid A and resid 116) and (name H),(segid A and resid 115) and (name HB3),3.2,3.2,8.2
+(segid A and resid 115) and (name H),(segid A and resid 116) and (name H),3.2,3.2,8.2
+(segid A and resid 118) and (name HA),(segid A and resid 117) and (name HE1),0.0,0.0,5.0
+(segid A and resid 116) and (name HA),(segid A and resid 117) and (name H),2.7,2.7,4.0
+(segid A and resid 116) and (name H),(segid A and resid 117) and (name H),0.0,0.0,2.7
+(segid A and resid 117) and (name H),(segid A and resid 118) and (name HA),0.0,0.0,5.0
+(segid A and resid 118) and (name HA),(segid A and resid 117) and (name HD1),0.0,0.0,5.0
+(segid A and resid 117) and (name H),(segid A and resid 118) and (name H),3.2,3.2,8.2
+(segid A and resid 117) and (name HA),(segid A and resid 118) and (name H),0.0,0.0,2.7
+(segid A and resid 118) and (name HA),(segid A and resid 119) and (name H),0.0,0.0,2.7
+(segid A and resid 118) and (name H),(segid A and resid 119) and (name H),3.2,3.2,8.2
+(segid A and resid 121) and (name HD2),(segid A and resid 120) and (name HA),0.0,0.0,5.0
+(segid A and resid 121) and (name H),(segid A and resid 120) and (name HA),0.0,0.0,2.7
+(segid A and resid 124) and (name HA),(segid A and resid 125) and (name H),0.0,0.0,2.7
+(segid A and resid 124) and (name H),(segid A and resid 123) and (name HA),0.0,0.0,3.2
+(segid A and resid 125) and (name H),(segid A and resid 124) and (name HG),2.7,2.7,4.0
+(segid A and resid 124) and (name H),(segid A and resid 125) and (name H),3.2,3.2,8.2
+(segid A and resid 125) and (name H),(segid A and resid 124) and (name HB2),3.2,3.2,8.2
+(segid A and resid 125) and (name H),(segid A and resid 124) and (name HB3),3.2,3.2,8.2
+(segid A and resid 125) and (name H),(segid A and resid 126) and (name HB2),0.0,0.0,5.8
+(segid A and resid 125) and (name H),(segid A and resid 126) and (name HB3),0.0,0.0,5.8
+(segid A and resid 125) and (name HA),(segid A and resid 126) and (name H),2.7,2.7,4.0
+(segid A and resid 126) and (name H),(segid A and resid 125) and (name HB3),0.0,0.0,3.5
+(segid A and resid 125) and (name HB2),(segid A and resid 126) and (name H),0.0,0.0,3.5
+(segid A and resid 126) and (name H),(segid A and resid 127) and (name HA),0.0,0.0,5.0
+(segid A and resid 126) and (name H),(segid A and resid 127) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 125) and (name H),(segid A and resid 126) and (name H),0.0,0.0,2.7
+(segid A and resid 126) and (name H),(segid A and resid 127) and (name H),3.2,3.2,8.2
+(segid A and resid 126) and (name HA),(segid A and resid 127) and (name H),0.0,0.0,2.7
+(segid A and resid 127) and (name HA),(segid A and resid 128) and (name H),0.0,0.0,2.7
+(segid A and resid 127) and (name H),(segid A and resid 128) and (name H),3.2,3.2,8.2
+(segid A and resid 128) and (name H),(segid A and resid 129) and (name H),3.2,3.2,8.2
+(segid A and resid 128) and (name HA),(segid A and resid 129) and (name H),0.0,0.0,2.7
+(segid A and resid 129) and (name HA),(segid A and resid 130) and (name H),0.0,0.0,3.2
+(segid A and resid 129) and (name H),(segid A and resid 130) and (name H),3.2,3.2,8.2
+(segid A and resid 132) and (name H),(segid A and resid 131) and (name HA),2.7,2.7,7.7
+(segid A and resid 132) and (name H),(segid A and resid 131) and (name HB2),0.0,0.0,3.5
+(segid A and resid 132) and (name H),(segid A and resid 131) and (name HB3),0.0,0.0,3.5
+(segid A and resid 132) and (name HA),(segid A and resid 133) and (name H),2.7,2.7,7.7
+(segid A and resid 132) and (name H),(segid A and resid 133) and (name H),0.0,0.0,3.2
+(segid A and resid 133) and (name H),(segid A and resid 132) and (name HB2),3.2,3.2,8.2
+(segid A and resid 133) and (name H),(segid A and resid 132) and (name HB3),3.2,3.2,8.2
+(segid A and resid 134) and (name H),(segid A and resid 135) and (name HA),0.0,0.0,5.0
+(segid A and resid 133) and (name HA),(segid A and resid 134) and (name H),0.0,0.0,2.7
+(segid A and resid 133) and (name H),(segid A and resid 134) and (name H),3.2,3.2,8.2
+(segid A and resid 136) and (name HA),(segid A and resid 135) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 136) and (name HA),(segid A and resid 135) and (name CG2* or (name HG2*)),0.0,0.0,5.5
+(segid A and resid 137) and (name H),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 137) and (name HB),0.0,0.0,5.8
+(segid A and resid 136) and (name H),(segid A and resid 137) and (name H),2.7,2.7,5.0
+(segid A and resid 136) and (name HA),(segid A and resid 137) and (name H),0.0,0.0,2.7
+(segid A and resid 137) and (name HA),(segid A and resid 138) and (name H),0.0,0.0,2.7
+(segid A and resid 139) and (name H),(segid A and resid 138) and (name HB2),0.0,0.0,3.2
+(segid A and resid 138) and (name HA),(segid A and resid 139) and (name H),0.0,0.0,3.2
+(segid A and resid 138) and (name H),(segid A and resid 139) and (name H),3.2,3.2,8.2
+(segid A and resid 139) and (name H),(segid A and resid 140) and (name H),2.5,2.5,7.5
+(segid A and resid 141) and (name H),(segid A and resid 142) and (name CD1* or (name HD1*)),4.0,4.0,11.0
+(segid A and resid 141) and (name H),(segid A and resid 142) and (name CD2* or (name HD2*)),4.0,4.0,11.0
+(segid A and resid 141) and (name H),(segid A and resid 142) and (name H),3.2,3.2,8.2
+(segid A and resid 142) and (name H),(segid A and resid 141) and (name HA),0.0,0.0,2.7
+(segid A and resid 144) and (name H),(segid A and resid 143) and (name CG* or (name HG*)),0.0,0.0,3.5
+(segid A and resid 142) and (name HA),(segid A and resid 143) and (name H),0.0,0.0,2.7
+(segid A and resid 143) and (name H),(segid A and resid 142) and (name CD1* or (name HD1*)),2.7,2.7,9.7
+(segid A and resid 143) and (name H),(segid A and resid 142) and (name CD2* or (name HD2*)),2.7,2.7,9.7
+(segid A and resid 142) and (name H),(segid A and resid 143) and (name H),2.7,2.7,5.0
+(segid A and resid 144) and (name H),(segid A and resid 145) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 144) and (name HA),(segid A and resid 145) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 143) and (name HA),(segid A and resid 144) and (name H),0.0,0.0,2.7
+(segid A and resid 143) and (name H),(segid A and resid 144) and (name H),3.2,3.2,5.0
+(segid A and resid 144) and (name H),(segid A and resid 143) and (name HB),3.2,3.2,8.2
+(segid A and resid 144) and (name H),(segid A and resid 145) and (name HG12),0.0,0.0,5.8
+(segid A and resid 144) and (name H),(segid A and resid 145) and (name HG13),0.0,0.0,5.8
+(segid A and resid 146) and (name H),(segid A and resid 145) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 145) and (name CG* or (name HG*)),(segid A and resid 146) and (name HB2),0.0,0.0,6.6
+(segid A and resid 145) and (name CG* or (name HG*)),(segid A and resid 146) and (name HB3),0.0,0.0,6.6
+(segid A and resid 146) and (name HA),(segid A and resid 145) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 146) and (name H),(segid A and resid 145) and (name H),3.2,3.2,5.0
+(segid A and resid 146) and (name H),(segid A and resid 145) and (name HA),0.0,0.0,2.7
+(segid A and resid 146) and (name H),(segid A and resid 145) and (name HB),3.2,3.2,5.0
+(segid A and resid 146) and (name H),(segid A and resid 147) and (name H),3.2,3.2,5.0
+(segid A and resid 146) and (name HA),(segid A and resid 147) and (name H),0.0,0.0,2.7
+(segid A and resid 8) and (name CD2* or (name HD2*)),(segid A and resid 10) and (name CD2* or (name HD2*)),0.0,0.0,6.2
+(segid A and resid 8) and (name CD1* or (name HD1*)),(segid A and resid 10) and (name CD2* or (name HD2*)),0.0,0.0,6.2
+(segid A and resid 10) and (name CD1* or (name HD1*)),(segid A and resid 8) and (name CD1* or (name HD1*)),0.0,0.0,6.2
+(segid A and resid 8) and (name CD2* or (name HD2*)),(segid A and resid 10) and (name CD1* or (name HD1*)),0.0,0.0,6.2
+(segid A and resid 12) and (name HA),(segid A and resid 14) and (name HD2),0.0,0.0,4.0
+(segid A and resid 12) and (name HB3),(segid A and resid 16) and (name CG1* or (name HG1*)),0.0,0.0,4.8
+(segid A and resid 12) and (name HB2),(segid A and resid 16) and (name CG1* or (name HG1*)),0.0,0.0,4.8
+(segid A and resid 12) and (name HB3),(segid A and resid 14) and (name HD2),0.0,0.0,4.8
+(segid A and resid 12) and (name HB2),(segid A and resid 14) and (name HD2),0.0,0.0,4.8
+(segid A and resid 14) and (name HD3),(segid A and resid 12) and (name HB2),0.0,0.0,4.8
+(segid A and resid 14) and (name HD3),(segid A and resid 12) and (name HB3),0.0,0.0,4.8
+(segid A and resid 16) and (name H),(segid A and resid 12) and (name HG2),0.0,0.0,5.8
+(segid A and resid 16) and (name H),(segid A and resid 12) and (name HG3),0.0,0.0,5.8
+(segid A and resid 18) and (name HB3),(segid A and resid 22) and (name HB3),0.0,0.0,5.0
+(segid A and resid 18) and (name CD2* or (name HD2*)),(segid A and resid 22) and (name HE1),0.0,0.0,4.0
+(segid A and resid 18) and (name CD2* or (name HD2*)),(segid A and resid 22) and (name HZ),0.0,0.0,4.0
+(segid A and resid 18) and (name HB3),(segid A and resid 22) and (name HD1),0.0,0.0,5.8
+(segid A and resid 18) and (name HB3),(segid A and resid 22) and (name HD2),0.0,0.0,5.8
+(segid A and resid 18) and (name HB3),(segid A and resid 22) and (name HB3),0.0,0.0,5.8
+(segid A and resid 18) and (name HB3),(segid A and resid 22) and (name HB2),0.0,0.0,5.8
+(segid A and resid 22) and (name HD1),(segid A and resid 19) and (name HD2),0.0,0.0,5.8
+(segid A and resid 19) and (name HD3),(segid A and resid 22) and (name HD1),0.0,0.0,5.8
+(segid A and resid 21) and (name H),(segid A and resid 19) and (name HA),0.0,0.0,5.0
+(segid A and resid 21) and (name H),(segid A and resid 19) and (name HB2),0.0,0.0,4.0
+(segid A and resid 21) and (name H),(segid A and resid 19) and (name HB3),0.0,0.0,5.0
+(segid A and resid 22) and (name HA),(segid A and resid 25) and (name HB),0.0,0.0,4.0
+(segid A and resid 22) and (name H),(segid A and resid 20) and (name HA),0.0,0.0,4.0
+(segid A and resid 22) and (name HB2),(segid A and resid 26) and (name HG12),0.0,0.0,5.8
+(segid A and resid 22) and (name HB3),(segid A and resid 26) and (name HG12),0.0,0.0,5.8
+(segid A and resid 22) and (name H),(segid A and resid 19) and (name HB2),3.2,3.2,8.2
+(segid A and resid 18) and (name HB3),(segid A and resid 22) and (name H),4.0,4.0,9.0
+(segid A and resid 22) and (name HB2),(segid A and resid 26) and (name HG12),0.0,0.0,5.8
+(segid A and resid 22) and (name HB3),(segid A and resid 26) and (name HG12),0.0,0.0,5.8
+(segid A and resid 22) and (name H),(segid A and resid 19) and (name HG2),0.0,0.0,5.8
+(segid A and resid 22) and (name H),(segid A and resid 19) and (name HG3),0.0,0.0,5.8
+(segid A and resid 22) and (name H),(segid A and resid 19) and (name HD2),0.0,0.0,5.8
+(segid A and resid 22) and (name H),(segid A and resid 19) and (name HD3),0.0,0.0,5.8
+(segid A and resid 23) and (name HA),(segid A and resid 26) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 23) and (name HA),(segid A and resid 26) and (name HB),0.0,0.0,4.0
+(segid A and resid 23) and (name HA),(segid A and resid 26) and (name HG12),0.0,0.0,5.8
+(segid A and resid 23) and (name HA),(segid A and resid 26) and (name HG13),0.0,0.0,5.8
+(segid A and resid 23) and (name HA),(segid A and resid 26) and (name H),0.0,0.0,5.0
+(segid A and resid 21) and (name HA),(segid A and resid 24) and (name H),0.0,0.0,5.0
+(segid A and resid 22) and (name HA),(segid A and resid 24) and (name H),0.0,0.0,5.0
+(segid A and resid 24) and (name HA),(segid A and resid 27) and (name HE),0.0,0.0,5.0
+(segid A and resid 22) and (name HA),(segid A and resid 25) and (name H),0.0,0.0,5.0
+(segid A and resid 25) and (name HA),(segid A and resid 28) and (name HB),0.0,0.0,4.0
+(segid A and resid 26) and (name CG* or (name HG*)),(segid A and resid 30) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 26) and (name CG* or (name HG*)),(segid A and resid 30) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 23) and (name HA),(segid A and resid 26) and (name CG* or (name HG*)),0.0,0.0,5.3
+(segid A and resid 26) and (name HA),(segid A and resid 29) and (name HB2),0.0,0.0,4.0
+(segid A and resid 26) and (name HA),(segid A and resid 29) and (name HB3),0.0,0.0,4.0
+(segid A and resid 22) and (name HD2),(segid A and resid 26) and (name HG13),0.0,0.0,4.0
+(segid A and resid 22) and (name HA),(segid A and resid 26) and (name H),0.0,0.0,5.0
+(segid A and resid 22) and (name HD2),(segid A and resid 26) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 22) and (name HD2),(segid A and resid 26) and (name HG12),0.0,0.0,5.0
+(segid A and resid 26) and (name CD* or (name HD*)),(segid A and resid 22) and (name HE2),0.0,0.0,5.8
+(segid A and resid 27) and (name HA),(segid A and resid 30) and (name HB2),0.0,0.0,5.0
+(segid A and resid 24) and (name HA),(segid A and resid 27) and (name H),0.0,0.0,5.0
+(segid A and resid 27) and (name H),(segid A and resid 23) and (name CG1* or (name HG1*)),0.0,0.0,6.5
+(segid A and resid 27) and (name H),(segid A and resid 23) and (name CG2* or (name HG2*)),0.0,0.0,6.5
+(segid A and resid 27) and (name HA),(segid A and resid 30) and (name HB3),0.0,0.0,5.0
+(segid A and resid 28) and (name HA),(segid A and resid 31) and (name HE21),0.0,0.0,5.0
+(segid A and resid 28) and (name HA),(segid A and resid 31) and (name HG2),0.0,0.0,4.0
+(segid A and resid 28) and (name HA),(segid A and resid 31) and (name HG3),0.0,0.0,4.0
+(segid A and resid 25) and (name HA),(segid A and resid 28) and (name H),0.0,0.0,5.0
+(segid A and resid 28) and (name HA),(segid A and resid 31) and (name HB2),0.0,0.0,5.0
+(segid A and resid 28) and (name HA),(segid A and resid 31) and (name HB3),0.0,0.0,5.0
+(segid A and resid 25) and (name HA),(segid A and resid 29) and (name H),0.0,0.0,5.0
+(segid A and resid 26) and (name HA),(segid A and resid 29) and (name H),0.0,0.0,5.0
+(segid A and resid 27) and (name HA),(segid A and resid 30) and (name H),0.0,0.0,5.0
+(segid A and resid 31) and (name HE21),(segid A and resid 27) and (name HG2),0.0,0.0,4.8
+(segid A and resid 31) and (name HE21),(segid A and resid 27) and (name HG3),0.0,0.0,4.8
+(segid A and resid 28) and (name HA),(segid A and resid 31) and (name H),0.0,0.0,5.0
+(segid A and resid 31) and (name HA),(segid A and resid 33) and (name H),0.0,0.0,5.0
+(segid A and resid 36) and (name H),(segid A and resid 39) and (name HB2),0.0,0.0,4.0
+(segid A and resid 36) and (name H),(segid A and resid 39) and (name H),0.0,0.0,5.0
+(segid A and resid 36) and (name H),(segid A and resid 39) and (name HB3),0.0,0.0,5.0
+(segid A and resid 37) and (name HA),(segid A and resid 39) and (name H),0.0,0.0,5.0
+(segid A and resid 39) and (name H),(segid A and resid 36) and (name HB2),0.0,0.0,5.8
+(segid A and resid 36) and (name HB3),(segid A and resid 39) and (name H),0.0,0.0,5.8
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 45) and (name HG12),0.0,0.0,4.3
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 45) and (name HG13),0.0,0.0,4.3
+(segid A and resid 45) and (name H),(segid A and resid 48) and (name HB2),0.0,0.0,5.0
+(segid A and resid 45) and (name H),(segid A and resid 48) and (name HB3),0.0,0.0,5.0
+(segid A and resid 45) and (name H),(segid A and resid 49) and (name HA),0.0,0.0,5.0
+(segid A and resid 45) and (name H),(segid A and resid 48) and (name H),0.0,0.0,4.0
+(segid A and resid 48) and (name H),(segid A and resid 45) and (name CG* or (name HG*)),4.8,4.8,9.8
+(segid A and resid 48) and (name H),(segid A and resid 46) and (name HB3),0.0,0.0,5.0
+(segid A and resid 48) and (name H),(segid A and resid 46) and (name HB2),0.0,0.0,5.0
+(segid A and resid 46) and (name HA),(segid A and resid 48) and (name H),4.0,4.0,9.0
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 52) and (name HZ),0.0,0.0,5.8
+(segid A and resid 50) and (name HB),(segid A and resid 52) and (name HZ),0.0,0.0,5.0
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 52) and (name HD1),0.0,0.0,4.0
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 52) and (name HE1),0.0,0.0,6.6
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 52) and (name HE2),0.0,0.0,6.6
+(segid A and resid 54) and (name CG1* or (name HG1*)),(segid A and resid 56) and (name H),0.0,0.0,4.0
+(segid A and resid 54) and (name HA),(segid A and resid 56) and (name H),0.0,0.0,4.0
+(segid A and resid 57) and (name CB* or (name HB*)),(segid A and resid 60) and (name HB3),0.0,0.0,4.0
+(segid A and resid 57) and (name H),(segid A and resid 60) and (name HB3),0.0,0.0,5.0
+(segid A and resid 54) and (name CG1* or (name HG1*)),(segid A and resid 57) and (name H),0.0,0.0,5.8
+(segid A and resid 58) and (name H),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,4.8
+(segid A and resid 59) and (name HD2),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 59) and (name HD3),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 62) and (name CD1* or (name HD1*)),(segid A and resid 59) and (name HD2),0.0,0.0,5.5
+(segid A and resid 59) and (name HD3),(segid A and resid 62) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 62) and (name HB2),(segid A and resid 59) and (name HD2),0.0,0.0,4.8
+(segid A and resid 62) and (name HB2),(segid A and resid 59) and (name HD3),0.0,0.0,4.8
+(segid A and resid 62) and (name HG),(segid A and resid 59) and (name HD2),0.0,0.0,5.8
+(segid A and resid 59) and (name HD3),(segid A and resid 62) and (name HG),0.0,0.0,5.8
+(segid A and resid 60) and (name HA),(segid A and resid 62) and (name H),0.0,0.0,4.0
+(segid A and resid 64) and (name HA),(segid A and resid 68) and (name HB),0.0,0.0,4.0
+(segid A and resid 65) and (name H),(segid A and resid 68) and (name HB),0.0,0.0,4.0
+(segid A and resid 65) and (name H),(segid A and resid 68) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 66) and (name HA),(segid A and resid 68) and (name H),0.0,0.0,5.0
+(segid A and resid 67) and (name H),(segid A and resid 65) and (name HB3),0.0,0.0,4.8
+(segid A and resid 65) and (name HB2),(segid A and resid 67) and (name H),0.0,0.0,4.8
+(segid A and resid 65) and (name H),(segid A and resid 68) and (name H),2.7,2.7,5.0
+(segid A and resid 68) and (name H),(segid A and resid 65) and (name HB3),0.0,0.0,4.0
+(segid A and resid 65) and (name HB2),(segid A and resid 68) and (name H),0.0,0.0,4.0
+(segid A and resid 64) and (name HA),(segid A and resid 68) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 68) and (name HB),(segid A and resid 70) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 78) and (name HB3),(segid A and resid 80) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 80) and (name CD2* or (name HD2*)),(segid A and resid 78) and (name HB3),0.0,0.0,5.5
+(segid A and resid 90) and (name H),(segid A and resid 87) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 87) and (name HA),(segid A and resid 89) and (name H),0.0,0.0,4.5
+(segid A and resid 89) and (name HA),(segid A and resid 87) and (name CG* or (name HG*)),0.0,0.0,5.0
+(segid A and resid 89) and (name H),(segid A and resid 87) and (name CG* or (name HG*)),0.0,0.0,3.5
+(segid A and resid 97) and (name HA),(segid A and resid 93) and (name H),0.0,0.0,5.0
+(segid A and resid 93) and (name H),(segid A and resid 96) and (name HB3),0.0,0.0,5.0
+(segid A and resid 96) and (name H),(segid A and resid 93) and (name HB2),0.0,0.0,5.8
+(segid A and resid 96) and (name H),(segid A and resid 93) and (name HB3),0.0,0.0,5.8
+(segid A and resid 96) and (name H),(segid A and resid 94) and (name HB2),0.0,0.0,5.8
+(segid A and resid 94) and (name HB3),(segid A and resid 96) and (name H),0.0,0.0,5.8
+(segid A and resid 96) and (name H),(segid A and resid 94) and (name HA),0.0,0.0,5.0
+(segid A and resid 99) and (name H),(segid A and resid 97) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 97) and (name CG* or (name HG*)),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,6.3
+(segid A and resid 97) and (name CG* or (name HG*)),(segid A and resid 99) and (name CG2* or (name HG2*)),0.0,0.0,6.3
+(segid A and resid 104) and (name H),(segid A and resid 100) and (name CG* or (name HG*)),0.0,0.0,5.3
+(segid A and resid 104) and (name HA),(segid A and resid 100) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 105) and (name H),(segid A and resid 101) and (name HB),0.0,0.0,5.0
+(segid A and resid 105) and (name H),(segid A and resid 101) and (name H),0.0,0.0,3.5
+(segid A and resid 105) and (name H),(segid A and resid 101) and (name CG* or (name HG*)),0.0,0.0,5.3
+(segid A and resid 101) and (name CG* or (name HG*)),(segid A and resid 105) and (name HB2),0.0,0.0,4.8
+(segid A and resid 101) and (name CG* or (name HG*)),(segid A and resid 105) and (name HB3),0.0,0.0,4.8
+(segid A and resid 101) and (name H),(segid A and resid 105) and (name HG2),0.0,0.0,5.8
+(segid A and resid 101) and (name H),(segid A and resid 105) and (name HG3),0.0,0.0,5.8
+(segid A and resid 101) and (name H),(segid A and resid 105) and (name HB2),0.0,0.0,5.8
+(segid A and resid 101) and (name H),(segid A and resid 105) and (name HB3),0.0,0.0,5.8
+(segid A and resid 104) and (name H),(segid A and resid 101) and (name H),0.0,0.0,5.0
+(segid A and resid 102) and (name H),(segid A and resid 104) and (name H),0.0,0.0,5.0
+(segid A and resid 105) and (name HG2),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,7.3
+(segid A and resid 105) and (name HG3),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,7.3
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 105) and (name HG2),0.0,0.0,7.3
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 105) and (name HG3),0.0,0.0,7.3
+(segid A and resid 109) and (name HD2),(segid A and resid 107) and (name HB2),3.2,3.2,10.2
+(segid A and resid 107) and (name HB3),(segid A and resid 109) and (name HD2),3.2,3.2,10.2
+(segid A and resid 109) and (name HZ),(segid A and resid 107) and (name HB2),2.7,2.7,5.8
+(segid A and resid 107) and (name HB3),(segid A and resid 109) and (name HZ),2.7,2.7,5.8
+(segid A and resid 109) and (name HZ),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 109) and (name HZ),0.0,0.0,5.5
+(segid A and resid 109) and (name HD2),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 109) and (name HD2),0.0,0.0,6.5
+(segid A and resid 109) and (name HE2),(segid A and resid 107) and (name HB2),2.7,2.7,5.8
+(segid A and resid 107) and (name HB3),(segid A and resid 109) and (name HE2),2.7,2.7,5.8
+(segid A and resid 109) and (name HE2),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 109) and (name HE2),0.0,0.0,5.5
+(segid A and resid 108) and (name H),(segid A and resid 106) and (name CG1* or (name HG1*)),0.0,0.0,5.8
+(segid A and resid 113) and (name H),(segid A and resid 109) and (name HB3),0.0,0.0,5.8
+(segid A and resid 113) and (name H),(segid A and resid 109) and (name HB2),0.0,0.0,5.8
+(segid A and resid 109) and (name HA),(segid A and resid 113) and (name HA),0.0,0.0,5.0
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 109) and (name HB3),0.0,0.0,5.5
+(segid A and resid 109) and (name HB3),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 109) and (name HB2),0.0,0.0,6.5
+(segid A and resid 109) and (name HB2),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 109) and (name HD1),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 109) and (name HD1),0.0,0.0,6.5
+(segid A and resid 113) and (name HA),(segid A and resid 109) and (name HB2),0.0,0.0,5.0
+(segid A and resid 109) and (name HE1),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 109) and (name HE1),0.0,0.0,6.5
+(segid A and resid 113) and (name HA),(segid A and resid 109) and (name HD1),0.0,0.0,5.0
+(segid A and resid 113) and (name HA),(segid A and resid 109) and (name HB3),0.0,0.0,4.0
+(segid A and resid 110) and (name H),(segid A and resid 114) and (name HB2),4.0,4.0,11.0
+(segid A and resid 110) and (name H),(segid A and resid 114) and (name HB3),4.0,4.0,11.0
+(segid A and resid 110) and (name H),(segid A and resid 114) and (name HG2),4.0,4.0,5.8
+(segid A and resid 110) and (name H),(segid A and resid 114) and (name HG3),4.0,4.0,5.8
+(segid A and resid 110) and (name H),(segid A and resid 114) and (name H),0.0,0.0,3.5
+(segid A and resid 114) and (name H),(segid A and resid 110) and (name HB3),0.0,0.0,5.0
+(segid A and resid 110) and (name H),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,7.0
+(segid A and resid 110) and (name H),(segid A and resid 113) and (name CD1* or (name HD1*)),0.0,0.0,7.0
+(segid A and resid 110) and (name H),(segid A and resid 113) and (name H),0.0,0.0,5.0
+(segid A and resid 110) and (name HA),(segid A and resid 112) and (name H),4.0,4.0,11.0
+(segid A and resid 113) and (name H),(segid A and resid 111) and (name HB3),0.0,0.0,5.8
+(segid A and resid 113) and (name H),(segid A and resid 111) and (name HB2),0.0,0.0,5.8
+(segid A and resid 111) and (name HA),(segid A and resid 113) and (name H),0.0,0.0,4.0
+(segid A and resid 112) and (name HB3),(segid A and resid 114) and (name H),0.0,0.0,5.0
+(segid A and resid 112) and (name HB3),(segid A and resid 114) and (name HG2),0.0,0.0,5.8
+(segid A and resid 112) and (name HB3),(segid A and resid 114) and (name HG3),0.0,0.0,5.8
+(segid A and resid 112) and (name HB2),(segid A and resid 114) and (name HG2),0.0,0.0,4.8
+(segid A and resid 112) and (name HB2),(segid A and resid 114) and (name HG3),0.0,0.0,4.8
+(segid A and resid 112) and (name H),(segid A and resid 114) and (name HG2),0.0,0.0,5.8
+(segid A and resid 112) and (name H),(segid A and resid 114) and (name HG3),0.0,0.0,5.8
+(segid A and resid 112) and (name H),(segid A and resid 114) and (name HB2),4.0,4.0,11.0
+(segid A and resid 112) and (name H),(segid A and resid 114) and (name HB3),4.0,4.0,11.0
+(segid A and resid 112) and (name HA),(segid A and resid 114) and (name H),0.0,0.0,5.0
+(segid A and resid 112) and (name HB2),(segid A and resid 114) and (name H),0.0,0.0,5.0
+(segid A and resid 117) and (name H),(segid A and resid 115) and (name HB2),0.0,0.0,5.8
+(segid A and resid 117) and (name H),(segid A and resid 115) and (name HB3),0.0,0.0,5.8
+(segid A and resid 115) and (name HA),(segid A and resid 117) and (name H),0.0,0.0,4.0
+(segid A and resid 117) and (name HD1),(segid A and resid 119) and (name H),0.0,0.0,5.0
+(segid A and resid 117) and (name HE1),(segid A and resid 119) and (name H),0.0,0.0,5.0
+(segid A and resid 121) and (name H),(segid A and resid 124) and (name HB2),0.0,0.0,5.8
+(segid A and resid 121) and (name H),(segid A and resid 124) and (name HB3),0.0,0.0,5.8
+(segid A and resid 121) and (name H),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 121) and (name H),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 121) and (name HB3),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 124) and (name CD2* or (name HD2*)),(segid A and resid 121) and (name HB3),0.0,0.0,5.5
+(segid A and resid 121) and (name HB2),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,5.0
+(segid A and resid 124) and (name CD2* or (name HD2*)),(segid A and resid 121) and (name HB2),0.0,0.0,5.0
+(segid A and resid 121) and (name HD2),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.0
+(segid A and resid 121) and (name HD2),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.0
+(segid A and resid 124) and (name H),(segid A and resid 121) and (name HB3),0.0,0.0,5.0
+(segid A and resid 126) and (name H),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 126) and (name H),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 126) and (name HA),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 126) and (name HA),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 126) and (name H),(segid A and resid 124) and (name HB2),0.0,0.0,6.3
+(segid A and resid 126) and (name H),(segid A and resid 124) and (name HB3),0.0,0.0,6.3
+(segid A and resid 126) and (name H),(segid A and resid 124) and (name HG),0.0,0.0,4.0
+(segid A and resid 124) and (name HA),(segid A and resid 126) and (name H),0.0,0.0,4.5
+(segid A and resid 130) and (name H),(segid A and resid 133) and (name H),0.0,0.0,4.0
+(segid A and resid 130) and (name H),(segid A and resid 134) and (name HA),0.0,0.0,4.0
+(segid A and resid 138) and (name H),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 138) and (name H),(segid A and resid 142) and (name HA),0.0,0.0,4.0
+(segid A and resid 138) and (name H),(segid A and resid 142) and (name CD1* or (name HD1*)),4.0,4.0,6.5
+(segid A and resid 138) and (name H),(segid A and resid 142) and (name CD2* or (name HD2*)),4.0,4.0,6.5
+(segid A and resid 140) and (name HB3),(segid A and resid 138) and (name HB2),0.0,0.0,5.8
+(segid A and resid 138) and (name HB2),(segid A and resid 140) and (name HB2),0.0,0.0,5.8
+(segid A and resid 144) and (name H),(segid A and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 144) and (name H),(segid A and resid 142) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 143) and (name HB),0.0,0.0,5.8
+(segid A and resid 143) and (name CG* or (name HG*)),(segid A and resid 145) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 144) and (name CD2* or (name HD2*)),(segid A and resid 146) and (name HD2),0.0,0.0,5.5
+(segid A and resid 144) and (name CD2* or (name HD2*)),(segid A and resid 146) and (name HD3),0.0,0.0,5.5
+(segid A and resid 147) and (name HA),(segid A and resid 145) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 145) and (name CG* or (name HG*)),(segid A and resid 147) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 6) and (name HB2),(segid A and resid 68) and (name CG* or (name HG*)),0.0,0.0,4.0
+(segid A and resid 6) and (name HB2),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,4.7
+(segid A and resid 6) and (name HB2),(segid A and resid 62) and (name CD1* or (name HD1*)),0.0,0.0,4.7
+(segid A and resid 6) and (name H),(segid A and resid 59) and (name HD2),0.0,0.0,5.8
+(segid A and resid 6) and (name H),(segid A and resid 59) and (name HD3),0.0,0.0,5.8
+(segid A and resid 6) and (name HB3),(segid A and resid 59) and (name HD2),0.0,0.0,5.8
+(segid A and resid 6) and (name HB3),(segid A and resid 59) and (name HD3),0.0,0.0,5.8
+(segid A and resid 6) and (name HB3),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 6) and (name HB3),(segid A and resid 62) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 6) and (name H),(segid A and resid 69) and (name HE2),0.0,0.0,5.8
+(segid A and resid 6) and (name H),(segid A and resid 69) and (name HE3),0.0,0.0,5.8
+(segid A and resid 6) and (name HB2),(segid A and resid 59) and (name HD2),0.0,0.0,5.8
+(segid A and resid 6) and (name HB2),(segid A and resid 59) and (name HD3),0.0,0.0,5.8
+(segid A and resid 7) and (name H),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,5.0
+(segid A and resid 7) and (name H),(segid A and resid 62) and (name CD1* or (name HD1*)),0.0,0.0,5.0
+(segid A and resid 7) and (name H),(segid A and resid 58) and (name H),0.0,0.0,4.0
+(segid A and resid 7) and (name H),(segid A and resid 58) and (name HB3),0.0,0.0,4.0
+(segid A and resid 7) and (name H),(segid A and resid 68) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 7) and (name H),(segid A and resid 58) and (name HD2),0.0,0.0,5.0
+(segid A and resid 8) and (name H),(segid A and resid 70) and (name HA),0.0,0.0,3.2
+(segid A and resid 8) and (name H),(segid A and resid 68) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 8) and (name H),(segid A and resid 70) and (name CG* or (name HG*)),0.0,0.0,5.0
+(segid A and resid 71) and (name HB),(segid A and resid 9) and (name HG2),0.0,0.0,4.0
+(segid A and resid 71) and (name HB),(segid A and resid 9) and (name HG3),0.0,0.0,4.0
+(segid A and resid 56) and (name H),(segid A and resid 9) and (name HB3),0.0,0.0,5.0
+(segid A and resid 9) and (name H),(segid A and resid 57) and (name HA),0.0,0.0,4.0
+(segid A and resid 56) and (name H),(segid A and resid 9) and (name HB2),0.0,0.0,3.2
+(segid A and resid 9) and (name HA),(segid A and resid 71) and (name HB),0.0,0.0,3.5
+(segid A and resid 72) and (name HA),(segid A and resid 10) and (name HB2),0.0,0.0,5.0
+(segid A and resid 54) and (name HA),(segid A and resid 10) and (name HB3),4.0,4.0,9.0
+(segid A and resid 10) and (name HA),(segid A and resid 55) and (name CG2* or (name HG2*)),0.0,0.0,4.0
+(segid A and resid 55) and (name H),(segid A and resid 10) and (name HB2),4.0,4.0,9.0
+(segid A and resid 10) and (name H),(segid A and resid 72) and (name HA),0.0,0.0,3.5
+(segid A and resid 53) and (name H),(segid A and resid 10) and (name HB3),0.0,0.0,5.0
+(segid A and resid 10) and (name CD1* or (name HD1*)),(segid A and resid 52) and (name HD1),0.0,0.0,5.8
+(segid A and resid 10) and (name CD1* or (name HD1*)),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 10) and (name HB3),(segid A and resid 52) and (name HD1),0.0,0.0,4.8
+(segid A and resid 10) and (name HB3),(segid A and resid 52) and (name HD2),0.0,0.0,4.8
+(segid A and resid 54) and (name HA),(segid A and resid 10) and (name HB2),4.0,4.0,9.0
+(segid A and resid 10) and (name HB2),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 10) and (name HB2),(segid A and resid 52) and (name HD1),0.0,0.0,5.8
+(segid A and resid 52) and (name HB3),(segid A and resid 10) and (name HB3),0.0,0.0,5.0
+(segid A and resid 11) and (name H),(segid A and resid 52) and (name HB3),0.0,0.0,5.0
+(segid A and resid 11) and (name H),(segid A and resid 54) and (name HA),0.0,0.0,5.0
+(segid A and resid 11) and (name H),(segid A and resid 55) and (name H),0.0,0.0,5.0
+(segid A and resid 11) and (name H),(segid A and resid 55) and (name CG2* or (name HG2*)),0.0,0.0,5.0
+(segid A and resid 55) and (name CG2* or (name HG2*)),(segid A and resid 11) and (name HB2),0.0,0.0,3.5
+(segid A and resid 73) and (name HB),(segid A and resid 11) and (name HB2),0.0,0.0,3.2
+(segid A and resid 55) and (name CG2* or (name HG2*)),(segid A and resid 11) and (name HB3),0.0,0.0,4.0
+(segid A and resid 11) and (name HA),(segid A and resid 73) and (name HB),0.0,0.0,5.0
+(segid A and resid 52) and (name HD1),(segid A and resid 12) and (name HB2),0.0,0.0,5.8
+(segid A and resid 12) and (name HB3),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 12) and (name HB2),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 12) and (name HB3),(segid A and resid 52) and (name HD1),0.0,0.0,5.8
+(segid A and resid 12) and (name HA),(segid A and resid 52) and (name HD1),0.0,0.0,4.0
+(segid A and resid 12) and (name HA),(segid A and resid 52) and (name HD2),0.0,0.0,4.0
+(segid A and resid 52) and (name HA),(segid A and resid 12) and (name HA),0.0,0.0,3.2
+(segid A and resid 12) and (name HD3),(segid A and resid 72) and (name CD1* or (name HD1*)),0.0,0.0,6.3
+(segid A and resid 12) and (name HD2),(segid A and resid 72) and (name CD1* or (name HD1*)),0.0,0.0,6.3
+(segid A and resid 72) and (name CD2* or (name HD2*)),(segid A and resid 12) and (name HD2),0.0,0.0,6.3
+(segid A and resid 12) and (name HD3),(segid A and resid 72) and (name CD2* or (name HD2*)),0.0,0.0,6.3
+(segid A and resid 12) and (name HD2),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 12) and (name HD3),(segid A and resid 52) and (name HD1),0.0,0.0,5.8
+(segid A and resid 52) and (name HD1),(segid A and resid 12) and (name HD2),0.0,0.0,5.8
+(segid A and resid 12) and (name HD3),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 52) and (name HE2),(segid A and resid 12) and (name HB2),0.0,0.0,5.6
+(segid A and resid 12) and (name HB2),(segid A and resid 52) and (name HE1),0.0,0.0,5.6
+(segid A and resid 12) and (name HB3),(segid A and resid 52) and (name HE1),0.0,0.0,5.6
+(segid A and resid 12) and (name HB3),(segid A and resid 52) and (name HE2),0.0,0.0,5.6
+(segid A and resid 52) and (name HA),(segid A and resid 13) and (name HG),0.0,0.0,5.0
+(segid A and resid 13) and (name H),(segid A and resid 52) and (name HA),0.0,0.0,4.0
+(segid A and resid 50) and (name HA),(segid A and resid 14) and (name HD3),0.0,0.0,4.0
+(segid A and resid 18) and (name CD1* or (name HD1*)),(segid A and resid 52) and (name HE2),0.0,0.0,5.8
+(segid A and resid 18) and (name CD1* or (name HD1*)),(segid A and resid 52) and (name HZ),0.0,0.0,5.8
+(segid A and resid 23) and (name HA),(segid A and resid 70) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 27) and (name H),(segid A and resid 70) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 27) and (name HA),(segid A and resid 70) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 27) and (name HA),(segid A and resid 64) and (name CG1* or (name HG1*)),0.0,0.0,5.8
+(segid A and resid 27) and (name HA),(segid A and resid 70) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 66) and (name H),(segid A and resid 31) and (name HE21),4.0,4.0,9.0
+(segid A and resid 66) and (name H),(segid A and resid 31) and (name HE22),4.0,4.0,9.0
+(segid A and resid 31) and (name HA),(segid A and resid 64) and (name HB),0.0,0.0,3.2
+(segid A and resid 31) and (name HA),(segid A and resid 65) and (name HA),0.0,0.0,5.0
+(segid A and resid 65) and (name HA),(segid A and resid 31) and (name HG2),0.0,0.0,5.8
+(segid A and resid 65) and (name HA),(segid A and resid 31) and (name HG3),0.0,0.0,5.8
+(segid A and resid 31) and (name HA),(segid A and resid 64) and (name CG1* or (name HG1*)),0.0,0.0,4.0
+(segid A and resid 64) and (name CG1* or (name HG1*)),(segid A and resid 31) and (name HG2),0.0,0.0,6.6
+(segid A and resid 64) and (name CG1* or (name HG1*)),(segid A and resid 31) and (name HG3),0.0,0.0,6.6
+(segid A and resid 31) and (name H),(segid A and resid 64) and (name CG1* or (name HG1*)),0.0,0.0,5.0
+(segid A and resid 32) and (name H),(segid A and resid 64) and (name CG1* or (name HG1*)),0.0,0.0,5.0
+(segid A and resid 32) and (name H),(segid A and resid 64) and (name HB),0.0,0.0,4.0
+(segid A and resid 63) and (name HG3),(segid A and resid 32) and (name HA2),0.0,0.0,4.8
+(segid A and resid 32) and (name HA2),(segid A and resid 63) and (name HG2),0.0,0.0,4.8
+(segid A and resid 32) and (name H),(segid A and resid 64) and (name H),3.2,3.2,5.0
+(segid A and resid 32) and (name HA2),(segid A and resid 63) and (name HB3),4.0,4.0,9.0
+(segid A and resid 32) and (name H),(segid A and resid 65) and (name HA),0.0,0.0,5.0
+(segid A and resid 33) and (name H),(segid A and resid 64) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 33) and (name H),(segid A and resid 64) and (name HB),0.0,0.0,4.0
+(segid A and resid 34) and (name HA),(segid A and resid 63) and (name HG2),0.0,0.0,5.8
+(segid A and resid 34) and (name HA),(segid A and resid 63) and (name HG3),0.0,0.0,5.8
+(segid A and resid 34) and (name HA),(segid A and resid 63) and (name HA),0.0,0.0,2.7
+(segid A and resid 35) and (name H),(segid A and resid 62) and (name HG),0.0,0.0,5.0
+(segid A and resid 35) and (name H),(segid A and resid 63) and (name HA),0.0,0.0,4.0
+(segid A and resid 37) and (name HA),(segid A and resid 56) and (name HA),0.0,0.0,4.0
+(segid A and resid 37) and (name H),(segid A and resid 57) and (name CB* or (name HB*)),0.0,0.0,4.0
+(segid A and resid 37) and (name H),(segid A and resid 54) and (name CG1* or (name HG1*)),0.0,0.0,5.8
+(segid A and resid 37) and (name H),(segid A and resid 60) and (name HB2),0.0,0.0,4.0
+(segid A and resid 37) and (name H),(segid A and resid 60) and (name HB3),0.0,0.0,4.0
+(segid A and resid 37) and (name CG* or (name HG*)),(segid A and resid 56) and (name HA),0.0,0.0,3.2
+(segid A and resid 38) and (name HA3),(segid A and resid 53) and (name HE2),0.0,0.0,5.0
+(segid A and resid 38) and (name HA3),(segid A and resid 53) and (name HE3),0.0,0.0,5.0
+(segid A and resid 38) and (name H),(segid A and resid 54) and (name CG1* or (name HG1*)),0.0,0.0,4.8
+(segid A and resid 38) and (name H),(segid A and resid 54) and (name HB),0.0,0.0,3.2
+(segid A and resid 38) and (name H),(segid A and resid 54) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 38) and (name HA2),(segid A and resid 53) and (name HE2),0.0,0.0,4.0
+(segid A and resid 38) and (name HA2),(segid A and resid 53) and (name HE3),0.0,0.0,4.0
+(segid A and resid 39) and (name HB2),(segid A and resid 54) and (name CG2* or (name HG2*)),0.0,0.0,4.8
+(segid A and resid 39) and (name H),(segid A and resid 54) and (name H),0.0,0.0,5.0
+(segid A and resid 39) and (name H),(segid A and resid 54) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 39) and (name H),(segid A and resid 54) and (name CG1* or (name HG1*)),0.0,0.0,4.8
+(segid A and resid 39) and (name HB3),(segid A and resid 54) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 39) and (name H),(segid A and resid 54) and (name HB),0.0,0.0,3.2
+(segid A and resid 41) and (name H),(segid A and resid 53) and (name HA),0.0,0.0,4.0
+(segid A and resid 41) and (name H),(segid A and resid 52) and (name HB2),0.0,0.0,5.0
+(segid A and resid 52) and (name HB3),(segid A and resid 41) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 52) and (name HB2),(segid A and resid 41) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 43) and (name H),(segid A and resid 50) and (name H),0.0,0.0,4.0
+(segid A and resid 52) and (name HZ),(segid A and resid 43) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 43) and (name H),(segid A and resid 49) and (name HG2),0.0,0.0,5.0
+(segid A and resid 43) and (name H),(segid A and resid 49) and (name HG3),0.0,0.0,5.0
+(segid A and resid 43) and (name H),(segid A and resid 51) and (name HA),0.0,0.0,4.0
+(segid A and resid 43) and (name HB),(segid A and resid 52) and (name HZ),0.0,0.0,5.0
+(segid A and resid 43) and (name HB),(segid A and resid 52) and (name HD1),0.0,0.0,5.8
+(segid A and resid 43) and (name HB),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 43) and (name HG13),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 52) and (name HD1),(segid A and resid 43) and (name HG13),0.0,0.0,5.8
+(segid A and resid 52) and (name HD1),(segid A and resid 43) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 43) and (name CD* or (name HD*)),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 52) and (name HD1),(segid A and resid 43) and (name HG12),0.0,0.0,5.8
+(segid A and resid 43) and (name HG12),(segid A and resid 52) and (name HD2),0.0,0.0,5.8
+(segid A and resid 26) and (name HA),(segid A and resid 43) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 44) and (name HA),(segid A and resid 49) and (name HB2),4.0,4.0,9.0
+(segid A and resid 44) and (name HA),(segid A and resid 49) and (name HG2),4.0,4.0,9.0
+(segid A and resid 44) and (name HA),(segid A and resid 49) and (name HG3),4.0,4.0,9.0
+(segid A and resid 45) and (name H),(segid A and resid 50) and (name CG1* or (name HG1*)),0.0,0.0,4.8
+(segid A and resid 44) and (name HB3),(segid A and resid 49) and (name HG2),0.0,0.0,5.8
+(segid A and resid 44) and (name HB2),(segid A and resid 49) and (name HG2),0.0,0.0,5.8
+(segid A and resid 49) and (name HG3),(segid A and resid 44) and (name HB2),0.0,0.0,5.8
+(segid A and resid 44) and (name HB3),(segid A and resid 49) and (name HG3),0.0,0.0,5.8
+(segid A and resid 44) and (name HA),(segid A and resid 49) and (name HA),0.0,0.0,3.2
+(segid A and resid 42) and (name HA2),(segid A and resid 50) and (name H),0.0,0.0,5.5
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 14) and (name HG2),0.0,0.0,4.8
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 14) and (name HG3),0.0,0.0,4.8
+(segid A and resid 44) and (name HA),(segid A and resid 50) and (name H),0.0,0.0,5.0
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 50) and (name H),0.0,0.0,5.8
+(segid A and resid 43) and (name HB),(segid A and resid 50) and (name H),0.0,0.0,5.0
+(segid A and resid 50) and (name H),(segid A and resid 43) and (name HG12),0.0,0.0,6.5
+(segid A and resid 50) and (name H),(segid A and resid 43) and (name HG13),0.0,0.0,6.5
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 14) and (name HD2),0.0,0.0,4.8
+(segid A and resid 50) and (name CG2* or (name HG2*)),(segid A and resid 14) and (name HD3),0.0,0.0,4.8
+(segid A and resid 42) and (name HA3),(segid A and resid 51) and (name HA),0.0,0.0,5.0
+(segid A and resid 51) and (name HB3),(segid A and resid 13) and (name CD1* or (name HD1*)),0.0,0.0,4.3
+(segid A and resid 51) and (name HB2),(segid A and resid 13) and (name CD1* or (name HD1*)),0.0,0.0,4.0
+(segid A and resid 42) and (name HA2),(segid A and resid 51) and (name HA),0.0,0.0,2.7
+(segid A and resid 51) and (name H),(segid A and resid 14) and (name HD2),0.0,0.0,5.0
+(segid A and resid 51) and (name H),(segid A and resid 14) and (name HD3),0.0,0.0,4.0
+(segid A and resid 42) and (name HA2),(segid A and resid 52) and (name H),0.0,0.0,4.0
+(segid A and resid 52) and (name H),(segid A and resid 41) and (name CD* or (name HD*)),4.0,4.0,9.0
+(segid A and resid 40) and (name HA),(segid A and resid 52) and (name H),0.0,0.0,5.0
+(segid A and resid 52) and (name HB3),(segid A and resid 10) and (name CD2* or (name HD2*)),0.0,0.0,4.7
+(segid A and resid 52) and (name HB3),(segid A and resid 10) and (name CD1* or (name HD1*)),0.0,0.0,4.7
+(segid A and resid 52) and (name H),(segid A and resid 41) and (name HG13),4.0,4.0,9.0
+(segid A and resid 52) and (name H),(segid A and resid 40) and (name CG1* or (name HG1*)),0.0,0.0,5.0
+(segid A and resid 52) and (name H),(segid A and resid 41) and (name HG12),4.0,4.0,9.0
+(segid A and resid 52) and (name HB2),(segid A and resid 43) and (name CD* or (name HD*)),4.0,4.0,9.0
+(segid A and resid 53) and (name H),(segid A and resid 12) and (name HA),0.0,0.0,5.0
+(segid A and resid 53) and (name H),(segid A and resid 11) and (name HB2),0.0,0.0,5.0
+(segid A and resid 53) and (name H),(segid A and resid 11) and (name HB3),0.0,0.0,5.0
+(segid A and resid 53) and (name H),(segid A and resid 13) and (name CD2* or (name HD2*)),0.0,0.0,5.0
+(segid A and resid 53) and (name HB2),(segid A and resid 13) and (name CD2* or (name HD2*)),0.0,0.0,4.7
+(segid A and resid 53) and (name HB2),(segid A and resid 13) and (name CD1* or (name HD1*)),0.0,0.0,4.7
+(segid A and resid 13) and (name H),(segid A and resid 53) and (name H),4.0,4.0,9.0
+(segid A and resid 53) and (name HB3),(segid A and resid 13) and (name CD2* or (name HD2*)),0.0,0.0,4.7
+(segid A and resid 53) and (name HB3),(segid A and resid 13) and (name CD1* or (name HD1*)),0.0,0.0,4.7
+(segid A and resid 37) and (name HA),(segid A and resid 54) and (name HB),0.0,0.0,4.0
+(segid A and resid 38) and (name H),(segid A and resid 54) and (name H),0.0,0.0,5.0
+(segid A and resid 10) and (name HA),(segid A and resid 54) and (name HA),0.0,0.0,3.2
+(segid A and resid 38) and (name HA3),(segid A and resid 54) and (name HB),0.0,0.0,5.0
+(segid A and resid 10) and (name HA),(segid A and resid 55) and (name H),0.0,0.0,4.0
+(segid A and resid 9) and (name H),(segid A and resid 56) and (name H),0.0,0.0,4.0
+(segid A and resid 10) and (name HA),(segid A and resid 56) and (name H),0.0,0.0,5.0
+(segid A and resid 56) and (name H),(segid A and resid 9) and (name HG2),0.0,0.0,5.8
+(segid A and resid 56) and (name H),(segid A and resid 9) and (name HG3),0.0,0.0,5.8
+(segid A and resid 8) and (name HA),(segid A and resid 56) and (name H),0.0,0.0,5.0
+(segid A and resid 56) and (name H),(segid A and resid 9) and (name HD2),0.0,0.0,5.8
+(segid A and resid 56) and (name H),(segid A and resid 9) and (name HD3),0.0,0.0,5.8
+(segid A and resid 37) and (name CG* or (name HG*)),(segid A and resid 56) and (name H),0.0,0.0,5.8
+(segid A and resid 37) and (name HB),(segid A and resid 57) and (name H),0.0,0.0,5.0
+(segid A and resid 37) and (name CG* or (name HG*)),(segid A and resid 57) and (name H),0.0,0.0,4.0
+(segid A and resid 37) and (name HA),(segid A and resid 57) and (name CB* or (name HB*)),0.0,0.0,5.8
+(segid A and resid 37) and (name HA),(segid A and resid 57) and (name H),0.0,0.0,5.0
+(segid A and resid 58) and (name HB2),(segid A and resid 7) and (name HB2),0.0,0.0,4.8
+(segid A and resid 7) and (name HB3),(segid A and resid 58) and (name HB2),0.0,0.0,4.8
+(segid A and resid 58) and (name H),(segid A and resid 7) and (name HB2),0.0,0.0,5.8
+(segid A and resid 7) and (name HB3),(segid A and resid 58) and (name H),0.0,0.0,5.8
+(segid A and resid 7) and (name H),(segid A and resid 58) and (name HB2),0.0,0.0,5.0
+(segid A and resid 8) and (name HA),(segid A and resid 58) and (name H),0.0,0.0,4.0
+(segid A and resid 58) and (name HB3),(segid A and resid 7) and (name HB2),0.0,0.0,4.0
+(segid A and resid 7) and (name HB3),(segid A and resid 58) and (name HB3),0.0,0.0,4.0
+(segid A and resid 6) and (name HA),(segid A and resid 59) and (name HD2),0.0,0.0,4.0
+(segid A and resid 6) and (name HA),(segid A and resid 59) and (name HD3),0.0,0.0,4.0
+(segid A and resid 36) and (name HG3),(segid A and resid 61) and (name HB3),0.0,0.0,4.0
+(segid A and resid 61) and (name HB3),(segid A and resid 36) and (name HG2),0.0,0.0,4.0
+(segid A and resid 34) and (name CG* or (name HG*)),(segid A and resid 61) and (name HB3),0.0,0.0,4.0
+(segid A and resid 34) and (name CG* or (name HG*)),(segid A and resid 61) and (name HB2),0.0,0.0,3.5
+(segid A and resid 62) and (name H),(segid A and resid 62) and (name CD2* or (name HD2*)),0.0,0.0,5.8
+(segid A and resid 35) and (name H),(segid A and resid 62) and (name H),0.0,0.0,4.0
+(segid A and resid 64) and (name H),(segid A and resid 32) and (name HA2),0.0,0.0,5.8
+(segid A and resid 64) and (name H),(segid A and resid 32) and (name HA3),0.0,0.0,5.8
+(segid A and resid 34) and (name HA),(segid A and resid 64) and (name H),0.0,0.0,3.5
+(segid A and resid 33) and (name H),(segid A and resid 64) and (name H),0.0,0.0,5.0
+(segid A and resid 66) and (name HA),(segid A and resid 27) and (name HG2),0.0,0.0,4.8
+(segid A and resid 66) and (name HA),(segid A and resid 27) and (name HG3),0.0,0.0,4.8
+(segid A and resid 27) and (name HE),(segid A and resid 66) and (name HA),0.0,0.0,5.0
+(segid A and resid 66) and (name HA),(segid A and resid 27) and (name HD2),0.0,0.0,4.8
+(segid A and resid 66) and (name HA),(segid A and resid 27) and (name HD3),0.0,0.0,4.8
+(segid A and resid 7) and (name HA),(segid A and resid 68) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 7) and (name HA),(segid A and resid 69) and (name H),0.0,0.0,3.2
+(segid A and resid 8) and (name H),(segid A and resid 69) and (name H),0.0,0.0,5.0
+(segid A and resid 7) and (name HA),(segid A and resid 69) and (name HB2),0.0,0.0,4.0
+(segid A and resid 7) and (name HA),(segid A and resid 69) and (name HB3),0.0,0.0,4.0
+(segid A and resid 70) and (name HB),(segid A and resid 23) and (name CG1* or (name HG1*)),0.0,0.0,4.2
+(segid A and resid 70) and (name HB),(segid A and resid 23) and (name CG2* or (name HG2*)),0.0,0.0,4.2
+(segid A and resid 9) and (name HA),(segid A and resid 71) and (name H),0.0,0.0,4.0
+(segid A and resid 71) and (name H),(segid A and resid 8) and (name HB3),0.0,0.0,5.8
+(segid A and resid 71) and (name H),(segid A and resid 8) and (name HB2),0.0,0.0,5.8
+(segid A and resid 71) and (name HB),(segid A and resid 9) and (name HB3),0.0,0.0,5.0
+(segid A and resid 11) and (name HA),(segid A and resid 73) and (name H),0.0,0.0,5.0
+(segid A and resid 109) and (name HE1),(segid A and resid 84) and (name CD* or (name HD*)),0.0,0.0,6.0
+(segid A and resid 109) and (name HE2),(segid A and resid 84) and (name CD* or (name HD*)),0.0,0.0,6.0
+(segid A and resid 109) and (name HZ),(segid A and resid 84) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 80) and (name CD2* or (name HD2*)),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,7.0
+(segid A and resid 80) and (name CD1* or (name HD1*)),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,7.0
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 80) and (name CD1* or (name HD1*)),0.0,0.0,7.0
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 80) and (name CD2* or (name HD2*)),0.0,0.0,7.0
+(segid A and resid 80) and (name HA),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 80) and (name HA),(segid A and resid 113) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 81) and (name HA),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 81) and (name HA),(segid A and resid 113) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 81) and (name H),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 81) and (name H),(segid A and resid 113) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 82) and (name H),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.0
+(segid A and resid 82) and (name H),(segid A and resid 113) and (name CD1* or (name HD1*)),0.0,0.0,6.0
+(segid A and resid 82) and (name CB* or (name HB*)),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,7.3
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 82) and (name CB* or (name HB*)),0.0,0.0,7.3
+(segid A and resid 82) and (name CB* or (name HB*)),(segid A and resid 109) and (name HZ),0.0,0.0,5.8
+(segid A and resid 82) and (name CB* or (name HB*)),(segid A and resid 109) and (name HE1),0.0,0.0,6.3
+(segid A and resid 102) and (name H),(segid A and resid 86) and (name HA2),0.0,0.0,4.8
+(segid A and resid 102) and (name H),(segid A and resid 86) and (name HA3),0.0,0.0,4.8
+(segid A and resid 86) and (name HA2),(segid A and resid 102) and (name HB2),0.0,0.0,6.6
+(segid A and resid 86) and (name HA3),(segid A and resid 102) and (name HB2),0.0,0.0,6.6
+(segid A and resid 102) and (name HB3),(segid A and resid 86) and (name HA2),0.0,0.0,6.6
+(segid A and resid 86) and (name HA3),(segid A and resid 102) and (name HB3),0.0,0.0,6.6
+(segid A and resid 86) and (name HA2),(segid A and resid 102) and (name HG2),0.0,0.0,6.6
+(segid A and resid 86) and (name HA3),(segid A and resid 102) and (name HG2),0.0,0.0,6.6
+(segid A and resid 102) and (name HG3),(segid A and resid 86) and (name HA2),0.0,0.0,6.6
+(segid A and resid 86) and (name HA3),(segid A and resid 102) and (name HG3),0.0,0.0,6.6
+(segid A and resid 87) and (name HA),(segid A and resid 101) and (name HA),0.0,0.0,4.0
+(segid A and resid 87) and (name HA),(segid A and resid 102) and (name H),0.0,0.0,4.0
+(segid A and resid 87) and (name HA),(segid A and resid 101) and (name HB),0.0,0.0,5.0
+(segid A and resid 102) and (name H),(segid A and resid 87) and (name CG* or (name HG*)),0.0,0.0,6.3
+(segid A and resid 87) and (name HA),(segid A and resid 101) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 87) and (name CG* or (name HG*)),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,6.3
+(segid A and resid 87) and (name CG* or (name HG*)),(segid A and resid 99) and (name CG2* or (name HG2*)),0.0,0.0,6.3
+(segid A and resid 87) and (name CD* or (name HD*)),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 99) and (name CG2* or (name HG2*)),(segid A and resid 87) and (name CD* or (name HD*)),0.0,0.0,5.5
+(segid A and resid 88) and (name H),(segid A and resid 101) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 88) and (name H),(segid A and resid 100) and (name H),0.0,0.0,5.0
+(segid A and resid 100) and (name CG* or (name HG*)),(segid A and resid 88) and (name HE2),0.0,0.0,5.6
+(segid A and resid 100) and (name CG* or (name HG*)),(segid A and resid 88) and (name HE3),0.0,0.0,5.6
+(segid A and resid 100) and (name CD* or (name HD*)),(segid A and resid 88) and (name HE2),0.0,0.0,6.6
+(segid A and resid 88) and (name HE3),(segid A and resid 100) and (name CD* or (name HD*)),0.0,0.0,6.6
+(segid A and resid 88) and (name HA),(segid A and resid 102) and (name H),3.2,3.2,5.0
+(segid A and resid 102) and (name H),(segid A and resid 88) and (name HB2),0.0,0.0,4.8
+(segid A and resid 102) and (name H),(segid A and resid 88) and (name HB3),0.0,0.0,4.8
+(segid A and resid 102) and (name H),(segid A and resid 88) and (name HG2),0.0,0.0,5.8
+(segid A and resid 102) and (name H),(segid A and resid 88) and (name HG3),0.0,0.0,5.8
+(segid A and resid 88) and (name HD3),(segid A and resid 102) and (name HB2),0.0,0.0,6.6
+(segid A and resid 88) and (name HD2),(segid A and resid 102) and (name HB2),0.0,0.0,6.6
+(segid A and resid 102) and (name HB3),(segid A and resid 88) and (name HD2),0.0,0.0,6.6
+(segid A and resid 102) and (name HB3),(segid A and resid 88) and (name HD3),0.0,0.0,6.6
+(segid A and resid 88) and (name H),(segid A and resid 101) and (name HA),0.0,0.0,3.2
+(segid A and resid 89) and (name H),(segid A and resid 100) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 100) and (name CD* or (name HD*)),(segid A and resid 89) and (name HB3),0.0,0.0,4.8
+(segid A and resid 100) and (name CG* or (name HG*)),(segid A and resid 89) and (name HB3),0.0,0.0,5.8
+(segid A and resid 89) and (name H),(segid A and resid 100) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 100) and (name CG* or (name HG*)),(segid A and resid 89) and (name HB2),0.0,0.0,5.8
+(segid A and resid 89) and (name H),(segid A and resid 100) and (name HB),0.0,0.0,3.2
+(segid A and resid 89) and (name H),(segid A and resid 100) and (name HG12),0.0,0.0,5.8
+(segid A and resid 89) and (name H),(segid A and resid 100) and (name HG13),0.0,0.0,5.8
+(segid A and resid 89) and (name H),(segid A and resid 100) and (name H),0.0,0.0,3.5
+(segid A and resid 100) and (name CD* or (name HD*)),(segid A and resid 89) and (name HB2),0.0,0.0,4.8
+(segid A and resid 89) and (name H),(segid A and resid 101) and (name HA),0.0,0.0,4.5
+(segid A and resid 89) and (name H),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,6.5
+(segid A and resid 89) and (name H),(segid A and resid 99) and (name CG2* or (name HG2*)),0.0,0.0,6.5
+(segid A and resid 90) and (name HA),(segid A and resid 99) and (name HA),0.0,0.0,3.5
+(segid A and resid 100) and (name H),(segid A and resid 90) and (name CG2* or (name HG2*)),0.0,0.0,4.8
+(segid A and resid 90) and (name HA),(segid A and resid 100) and (name H),0.0,0.0,5.0
+(segid A and resid 100) and (name H),(segid A and resid 90) and (name CG1* or (name HG1*)),0.0,0.0,5.8
+(segid A and resid 98) and (name H),(segid A and resid 91) and (name HB),0.0,0.0,4.0
+(segid A and resid 98) and (name HB),(segid A and resid 91) and (name HB),0.0,0.0,4.0
+(segid A and resid 91) and (name H),(segid A and resid 98) and (name H),0.0,0.0,4.0
+(segid A and resid 91) and (name H),(segid A and resid 99) and (name HA),0.0,0.0,3.5
+(segid A and resid 129) and (name H),(segid A and resid 91) and (name CG* or (name HG*)),4.0,4.0,11.0
+(segid A and resid 91) and (name H),(segid A and resid 100) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 98) and (name H),(segid A and resid 92) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 98) and (name H),(segid A and resid 92) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 92) and (name HA),(segid A and resid 97) and (name HA),0.0,0.0,4.0
+(segid A and resid 92) and (name HA),(segid A and resid 98) and (name H),0.0,0.0,5.0
+(segid A and resid 96) and (name HA),(segid A and resid 110) and (name HA),0.0,0.0,4.0
+(segid A and resid 132) and (name H),(segid A and resid 96) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 132) and (name H),(segid A and resid 96) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 147) and (name HB),(segid A and resid 96) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 96) and (name CD2* or (name HD2*)),(segid A and resid 147) and (name HB),0.0,0.0,6.5
+(segid A and resid 132) and (name HA),(segid A and resid 96) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 132) and (name HA),(segid A and resid 96) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 97) and (name CD* or (name HD*)),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,5.0
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 97) and (name CD* or (name HD*)),0.0,0.0,5.0
+(segid A and resid 97) and (name HB),(segid A and resid 109) and (name HB3),0.0,0.0,5.0
+(segid A and resid 97) and (name CG* or (name HG*)),(segid A and resid 109) and (name HD2),0.0,0.0,5.8
+(segid A and resid 111) and (name HA),(segid A and resid 97) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 112) and (name H),(segid A and resid 97) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 97) and (name CD* or (name HD*)),(segid A and resid 109) and (name HB3),0.0,0.0,5.8
+(segid A and resid 97) and (name CG* or (name HG*)),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,5.8
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid A and resid 97) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 97) and (name H),(segid A and resid 110) and (name HA),0.0,0.0,5.0
+(segid A and resid 97) and (name CD* or (name HD*)),(segid A and resid 109) and (name HB2),0.0,0.0,4.8
+(segid A and resid 113) and (name H),(segid A and resid 97) and (name CD* or (name HD*)),4.0,4.0,11.0
+(segid A and resid 97) and (name HB),(segid A and resid 109) and (name HB2),0.0,0.0,4.0
+(segid A and resid 97) and (name CG* or (name HG*)),(segid A and resid 109) and (name HB2),0.0,0.0,5.8
+(segid A and resid 97) and (name CD* or (name HD*)),(segid A and resid 109) and (name HD2),0.0,0.0,6.3
+(segid A and resid 97) and (name H),(segid A and resid 109) and (name H),0.0,0.0,3.5
+(segid A and resid 97) and (name H),(segid A and resid 109) and (name HB2),0.0,0.0,5.0
+(segid A and resid 97) and (name CD* or (name HD*)),(segid A and resid 109) and (name HD2),0.0,0.0,5.8
+(segid A and resid 113) and (name HA),(segid A and resid 97) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 109) and (name H),(segid A and resid 98) and (name CG2* or (name HG2*)),0.0,0.0,4.8
+(segid A and resid 99) and (name H),(segid A and resid 108) and (name HA),0.0,0.0,4.0
+(segid A and resid 99) and (name H),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 99) and (name H),(segid A and resid 107) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 99) and (name H),(segid A and resid 107) and (name H),0.0,0.0,3.5
+(segid A and resid 99) and (name H),(segid A and resid 107) and (name HB2),0.0,0.0,4.8
+(segid A and resid 99) and (name H),(segid A and resid 107) and (name HB3),0.0,0.0,4.8
+(segid A and resid 109) and (name HD2),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 99) and (name CG2* or (name HG2*)),(segid A and resid 109) and (name HD2),0.0,0.0,5.5
+(segid A and resid 99) and (name HB),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 99) and (name HB),(segid A and resid 107) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid A and resid 109) and (name HZ),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,6.5
+(segid A and resid 99) and (name CG2* or (name HG2*)),(segid A and resid 109) and (name HZ),0.0,0.0,6.5
+(segid A and resid 109) and (name HE2),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 99) and (name CG2* or (name HG2*)),(segid A and resid 109) and (name HE2),0.0,0.0,5.5
+(segid A and resid 100) and (name HA),(segid A and resid 106) and (name HA),0.0,0.0,3.5
+(segid A and resid 105) and (name H),(segid A and resid 100) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 127) and (name H),(segid A and resid 100) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 127) and (name CG2* or (name HG2*)),(segid A and resid 100) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 100) and (name CD* or (name HD*)),(segid A and resid 127) and (name HB),0.0,0.0,4.8
+(segid A and resid 127) and (name HA),(segid A and resid 100) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 100) and (name HA),(segid A and resid 107) and (name H),0.0,0.0,3.6
+(segid A and resid 100) and (name HA),(segid A and resid 105) and (name H),0.0,0.0,5.0
+(segid A and resid 106) and (name HA),(segid A and resid 101) and (name H),0.0,0.0,4.5
+(segid A and resid 101) and (name H),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 101) and (name H),(segid A and resid 107) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 124) and (name H),(segid A and resid 104) and (name HB2),0.0,0.0,5.8
+(segid A and resid 124) and (name H),(segid A and resid 104) and (name HB3),0.0,0.0,5.8
+(segid A and resid 104) and (name HA),(segid A and resid 121) and (name H),0.0,0.0,5.0
+(segid A and resid 104) and (name HA),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 104) and (name HA),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 121) and (name H),(segid A and resid 104) and (name HB2),0.0,0.0,4.8
+(segid A and resid 121) and (name H),(segid A and resid 104) and (name HB3),0.0,0.0,4.8
+(segid A and resid 104) and (name H),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 104) and (name H),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 105) and (name HA),(segid A and resid 120) and (name HA),0.0,0.0,3.5
+(segid A and resid 105) and (name HA),(segid A and resid 120) and (name HG2),0.0,0.0,5.8
+(segid A and resid 105) and (name HA),(segid A and resid 120) and (name HG3),0.0,0.0,5.8
+(segid A and resid 119) and (name H),(segid A and resid 105) and (name HG2),0.0,0.0,5.8
+(segid A and resid 119) and (name H),(segid A and resid 105) and (name HG3),0.0,0.0,5.8
+(segid A and resid 105) and (name HA),(segid A and resid 121) and (name H),0.0,0.0,3.5
+(segid A and resid 105) and (name HG2),(segid A and resid 120) and (name HG2),0.0,0.0,5.6
+(segid A and resid 105) and (name HG3),(segid A and resid 120) and (name HG2),0.0,0.0,5.6
+(segid A and resid 120) and (name HG3),(segid A and resid 105) and (name HG2),0.0,0.0,5.6
+(segid A and resid 105) and (name HG3),(segid A and resid 120) and (name HG3),0.0,0.0,5.6
+(segid A and resid 119) and (name H),(segid A and resid 105) and (name HB2),0.0,0.0,6.3
+(segid A and resid 119) and (name H),(segid A and resid 105) and (name HB3),0.0,0.0,6.3
+(segid A and resid 121) and (name H),(segid A and resid 105) and (name HG2),0.0,0.0,5.8
+(segid A and resid 121) and (name H),(segid A and resid 105) and (name HG3),0.0,0.0,5.8
+(segid A and resid 105) and (name H),(segid A and resid 120) and (name HD2),0.0,0.0,5.8
+(segid A and resid 105) and (name H),(segid A and resid 120) and (name HD3),0.0,0.0,5.8
+(segid A and resid 105) and (name H),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 105) and (name H),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 121) and (name H),(segid A and resid 105) and (name HB2),0.0,0.0,5.8
+(segid A and resid 121) and (name H),(segid A and resid 105) and (name HB3),0.0,0.0,5.8
+(segid A and resid 106) and (name H),(segid A and resid 120) and (name HA),0.0,0.0,3.5
+(segid A and resid 106) and (name H),(segid A and resid 120) and (name HG2),0.0,0.0,5.8
+(segid A and resid 106) and (name H),(segid A and resid 120) and (name HG3),0.0,0.0,5.8
+(segid A and resid 106) and (name H),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 106) and (name H),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 106) and (name H),(segid A and resid 119) and (name H),0.0,0.0,3.5
+(segid A and resid 106) and (name H),(segid A and resid 121) and (name HD2),0.0,0.0,5.0
+(segid A and resid 121) and (name HD2),(segid A and resid 106) and (name CG2* or (name HG2*)),0.0,0.0,4.0
+(segid A and resid 106) and (name CG2* or (name HG2*)),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 106) and (name H),(segid A and resid 120) and (name HB2),0.0,0.0,5.8
+(segid A and resid 106) and (name H),(segid A and resid 120) and (name HB3),0.0,0.0,5.8
+(segid A and resid 106) and (name HB),(segid A and resid 121) and (name HZ),0.0,0.0,5.0
+(segid A and resid 121) and (name H),(segid A and resid 106) and (name CG2* or (name HG2*)),0.0,0.0,5.8
+(segid A and resid 121) and (name HD2),(segid A and resid 106) and (name HB),0.0,0.0,5.0
+(segid A and resid 106) and (name H),(segid A and resid 121) and (name H),0.0,0.0,5.0
+(segid A and resid 117) and (name HE1),(segid A and resid 106) and (name HB),0.0,0.0,5.0
+(segid A and resid 106) and (name HB),(segid A and resid 136) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 106) and (name HB),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 124) and (name CD2* or (name HD2*)),(segid A and resid 106) and (name HB),0.0,0.0,6.5
+(segid A and resid 119) and (name H),(segid A and resid 106) and (name HB),0.0,0.0,4.0
+(segid A and resid 118) and (name HD3),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 118) and (name HD3),0.0,0.0,6.5
+(segid A and resid 118) and (name HB3),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 118) and (name HB3),0.0,0.0,5.5
+(segid A and resid 118) and (name HB2),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 118) and (name HB2),0.0,0.0,5.5
+(segid A and resid 118) and (name HD2),(segid A and resid 107) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 107) and (name CD2* or (name HD2*)),(segid A and resid 118) and (name HD2),0.0,0.0,6.5
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 108) and (name CD* or (name HD*)),0.0,0.0,5.6
+(segid A and resid 108) and (name H),(segid A and resid 115) and (name HG2),0.0,0.0,5.8
+(segid A and resid 108) and (name H),(segid A and resid 115) and (name HG3),0.0,0.0,5.8
+(segid A and resid 108) and (name HB),(segid A and resid 96) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 108) and (name HB),(segid A and resid 96) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 117) and (name HE1),(segid A and resid 108) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 108) and (name H),(segid A and resid 117) and (name H),0.0,0.0,3.5
+(segid A and resid 117) and (name H),(segid A and resid 108) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 108) and (name H),(segid A and resid 117) and (name HD1),0.0,0.0,5.0
+(segid A and resid 117) and (name H),(segid A and resid 108) and (name HB),0.0,0.0,4.0
+(segid A and resid 117) and (name HD1),(segid A and resid 108) and (name CD* or (name HD*)),0.0,0.0,4.0
+(segid A and resid 117) and (name H),(segid A and resid 108) and (name CD* or (name HD*)),4.0,4.0,11.0
+(segid A and resid 108) and (name HB),(segid A and resid 117) and (name HB3),0.0,0.0,5.0
+(segid A and resid 108) and (name HB),(segid A and resid 117) and (name HD1),0.0,0.0,5.0
+(segid A and resid 108) and (name H),(segid A and resid 117) and (name HB3),0.0,0.0,4.0
+(segid A and resid 117) and (name HD1),(segid A and resid 108) and (name HG12),3.2,3.2,5.8
+(segid A and resid 117) and (name HD1),(segid A and resid 108) and (name HG13),3.2,3.2,5.8
+(segid A and resid 108) and (name H),(segid A and resid 118) and (name HA),0.0,0.0,4.0
+(segid A and resid 109) and (name HA),(segid A and resid 114) and (name H),0.0,0.0,5.0
+(segid A and resid 109) and (name HD1),(segid A and resid 115) and (name HG2),0.0,0.0,5.8
+(segid A and resid 109) and (name HD1),(segid A and resid 115) and (name HG3),0.0,0.0,5.8
+(segid A and resid 109) and (name HA),(segid A and resid 115) and (name HA),0.0,0.0,5.0
+(segid A and resid 109) and (name HE1),(segid A and resid 115) and (name HG2),0.0,0.0,5.8
+(segid A and resid 109) and (name HE1),(segid A and resid 115) and (name HG3),0.0,0.0,5.8
+(segid A and resid 109) and (name HA),(segid A and resid 117) and (name H),0.0,0.0,5.0
+(segid A and resid 114) and (name H),(segid A and resid 109) and (name HD1),0.0,0.0,4.0
+(segid A and resid 114) and (name H),(segid A and resid 109) and (name HB3),0.0,0.0,5.0
+(segid A and resid 109) and (name HE1),(segid A and resid 115) and (name HB2),0.0,0.0,5.8
+(segid A and resid 115) and (name HB3),(segid A and resid 109) and (name HE1),0.0,0.0,5.8
+(segid A and resid 109) and (name HA),(segid A and resid 116) and (name H),0.0,0.0,4.0
+(segid A and resid 116) and (name H),(segid A and resid 109) and (name HD1),0.0,0.0,5.0
+(segid A and resid 110) and (name HB3),(segid A and resid 116) and (name CD2* or (name HD2*)),4.0,4.0,11.0
+(segid A and resid 110) and (name H),(segid A and resid 115) and (name HA),0.0,0.0,5.0
+(segid A and resid 110) and (name H),(segid A and resid 116) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 110) and (name H),(segid A and resid 116) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 110) and (name HB3),(segid A and resid 116) and (name CD1* or (name HD1*)),0.0,0.0,4.0
+(segid A and resid 110) and (name H),(segid A and resid 116) and (name HG),0.0,0.0,5.0
+(segid A and resid 110) and (name H),(segid A and resid 96) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 110) and (name H),(segid A and resid 96) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 110) and (name HA),(segid A and resid 116) and (name CD1* or (name HD1*)),4.0,4.0,11.0
+(segid A and resid 116) and (name CD1* or (name HD1*)),(segid A and resid 110) and (name HB2),4.0,4.0,11.0
+(segid A and resid 110) and (name H),(segid A and resid 116) and (name H),0.0,0.0,5.0
+(segid A and resid 110) and (name HA),(segid A and resid 96) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 110) and (name HA),(segid A and resid 96) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 145) and (name CG* or (name HG*)),(segid A and resid 117) and (name HD2),0.0,0.0,6.3
+(segid A and resid 143) and (name CG* or (name HG*)),(segid A and resid 117) and (name HE2),4.0,4.0,11.0
+(segid A and resid 117) and (name HD1),(segid A and resid 145) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 117) and (name HB3),0.0,0.0,5.8
+(segid A and resid 117) and (name HE1),(segid A and resid 145) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 117) and (name HE1),(segid A and resid 136) and (name CD* or (name HD*)),0.0,0.0,4.8
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 117) and (name HB2),0.0,0.0,6.3
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 121) and (name HE2),0.0,0.0,6.3
+(segid A and resid 121) and (name HD2),(segid A and resid 136) and (name CD* or (name HD*)),0.0,0.0,6.3
+(segid A and resid 121) and (name HZ),(segid A and resid 136) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 121) and (name HZ),0.0,0.0,5.8
+(segid A and resid 136) and (name CD* or (name HD*)),(segid A and resid 121) and (name HE2),0.0,0.0,5.8
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 121) and (name HZ),0.0,0.0,5.8
+(segid A and resid 121) and (name HD2),(segid A and resid 138) and (name HB3),0.0,0.0,5.0
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 121) and (name HB2),0.0,0.0,5.8
+(segid A and resid 121) and (name HD2),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,5.3
+(segid A and resid 139) and (name H),(segid A and resid 123) and (name HB2),0.0,0.0,4.8
+(segid A and resid 139) and (name H),(segid A and resid 123) and (name HB3),0.0,0.0,4.8
+(segid A and resid 139) and (name HA),(segid A and resid 123) and (name HB2),0.0,0.0,5.8
+(segid A and resid 139) and (name HA),(segid A and resid 123) and (name HB3),0.0,0.0,5.8
+(segid A and resid 123) and (name HB2),(segid A and resid 139) and (name HG2),0.0,0.0,5.6
+(segid A and resid 123) and (name HB3),(segid A and resid 139) and (name HG2),0.0,0.0,5.6
+(segid A and resid 139) and (name HG3),(segid A and resid 123) and (name HB2),0.0,0.0,5.6
+(segid A and resid 139) and (name HG3),(segid A and resid 123) and (name HB3),0.0,0.0,5.6
+(segid A and resid 123) and (name HB2),(segid A and resid 139) and (name HB2),0.0,0.0,4.8
+(segid A and resid 123) and (name HB3),(segid A and resid 139) and (name HB2),0.0,0.0,4.8
+(segid A and resid 139) and (name HB3),(segid A and resid 123) and (name HB2),0.0,0.0,4.8
+(segid A and resid 139) and (name HB3),(segid A and resid 123) and (name HB3),0.0,0.0,4.8
+(segid A and resid 140) and (name H),(segid A and resid 123) and (name HB2),0.0,0.0,5.8
+(segid A and resid 140) and (name H),(segid A and resid 123) and (name HB3),0.0,0.0,5.8
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 124) and (name HB2),0.0,0.0,6.6
+(segid A and resid 124) and (name HB3),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,6.6
+(segid A and resid 124) and (name HA),(segid A and resid 139) and (name H),3.5,3.5,6.3
+(segid A and resid 136) and (name HA),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 136) and (name HA),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 137) and (name H),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 137) and (name H),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 124) and (name CD1* or (name HD1*)),0.0,0.0,5.0
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 124) and (name CD2* or (name HD2*)),0.0,0.0,5.0
+(segid A and resid 124) and (name HA),(segid A and resid 138) and (name HA),0.0,0.0,4.0
+(segid A and resid 125) and (name H),(segid A and resid 138) and (name HB2),4.0,4.0,5.8
+(segid A and resid 125) and (name HB2),(segid A and resid 139) and (name H),3.5,3.5,10.5
+(segid A and resid 138) and (name HA),(segid A and resid 125) and (name HB3),0.0,0.0,4.8
+(segid A and resid 125) and (name HB2),(segid A and resid 138) and (name HA),0.0,0.0,4.8
+(segid A and resid 125) and (name H),(segid A and resid 138) and (name HA),0.0,0.0,3.5
+(segid A and resid 137) and (name HB),(segid A and resid 125) and (name HB3),0.0,0.0,4.8
+(segid A and resid 125) and (name HB2),(segid A and resid 137) and (name HB),0.0,0.0,4.8
+(segid A and resid 139) and (name H),(segid A and resid 125) and (name HB3),4.0,4.0,11.0
+(segid A and resid 125) and (name H),(segid A and resid 137) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 125) and (name H),(segid A and resid 137) and (name HB),0.0,0.0,5.0
+(segid A and resid 126) and (name H),(segid A and resid 137) and (name HG12),0.0,0.0,5.8
+(segid A and resid 126) and (name H),(segid A and resid 137) and (name HG13),0.0,0.0,5.8
+(segid A and resid 126) and (name H),(segid A and resid 137) and (name H),0.0,0.0,4.0
+(segid A and resid 126) and (name H),(segid A and resid 137) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 126) and (name H),(segid A and resid 138) and (name HA),3.5,3.5,5.0
+(segid A and resid 126) and (name H),(segid A and resid 138) and (name HB3),4.0,4.0,9.0
+(segid A and resid 126) and (name H),(segid A and resid 138) and (name HB2),4.0,4.0,9.0
+(segid A and resid 126) and (name H),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 126) and (name H),(segid A and resid 137) and (name HB),0.0,0.0,3.0
+(segid A and resid 127) and (name HA),(segid A and resid 136) and (name HA),0.0,0.0,3.5
+(segid A and resid 127) and (name HA),(segid A and resid 137) and (name H),0.0,0.0,3.5
+(segid A and resid 127) and (name HA),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 128) and (name H),(segid A and resid 136) and (name HG12),0.0,0.0,5.8
+(segid A and resid 128) and (name H),(segid A and resid 136) and (name HG13),0.0,0.0,5.8
+(segid A and resid 128) and (name H),(segid A and resid 136) and (name HA),0.0,0.0,3.5
+(segid A and resid 128) and (name H),(segid A and resid 137) and (name CD* or (name HD*)),4.0,4.0,11.0
+(segid A and resid 133) and (name HA),(segid A and resid 147) and (name H),0.0,0.0,4.0
+(segid A and resid 134) and (name H),(segid A and resid 145) and (name H),0.0,0.0,4.0
+(segid A and resid 134) and (name H),(segid A and resid 145) and (name HB),0.0,0.0,5.0
+(segid A and resid 134) and (name H),(segid A and resid 146) and (name HA),0.0,0.0,5.0
+(segid A and resid 144) and (name HA),(segid A and resid 135) and (name HA),0.0,0.0,5.0
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 135) and (name CG1* or (name HG1*)),0.0,0.0,6.8
+(segid A and resid 135) and (name CG2* or (name HG2*)),(segid A and resid 145) and (name CD* or (name HD*)),0.0,0.0,6.8
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 143) and (name HB),0.0,0.0,5.8
+(segid A and resid 143) and (name HB),(segid A and resid 136) and (name HB),0.0,0.0,4.0
+(segid A and resid 143) and (name H),(segid A and resid 136) and (name HB),0.0,0.0,5.0
+(segid A and resid 136) and (name CG* or (name HG*)),(segid A and resid 143) and (name CG* or (name HG*)),0.0,0.0,6.6
+(segid A and resid 145) and (name CD* or (name HD*)),(segid A and resid 136) and (name CD* or (name HD*)),0.0,0.0,4.3
+(segid A and resid 136) and (name H),(segid A and resid 143) and (name H),0.0,0.0,3.5
+(segid A and resid 143) and (name H),(segid A and resid 136) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 143) and (name HB),(segid A and resid 136) and (name CD* or (name HD*)),0.0,0.0,5.8
+(segid A and resid 136) and (name H),(segid A and resid 143) and (name CG* or (name HG*)),0.0,0.0,4.8
+(segid A and resid 136) and (name H),(segid A and resid 145) and (name CD* or (name HD*)),4.0,4.0,5.8
+(segid A and resid 143) and (name H),(segid A and resid 137) and (name CD* or (name HD*)),4.0,4.0,6.3
+(segid A and resid 137) and (name HA),(segid A and resid 143) and (name H),0.0,0.0,4.0
+(segid A and resid 137) and (name CG* or (name HG*)),(segid A and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,6.3
+(segid A and resid 142) and (name CD2* or (name HD2*)),(segid A and resid 137) and (name CG* or (name HG*)),0.0,0.0,6.3
+(segid A and resid 143) and (name H),(segid A and resid 137) and (name CG* or (name HG*)),0.0,0.0,6.3
+(segid A and resid 138) and (name H),(segid A and resid 143) and (name H),0.0,0.0,5.0
+(segid A and resid 121) and (name HD1),(segid A and resid 141) and (name HE2),0.0,0.0,5.8
+(segid A and resid 141) and (name HE3),(segid A and resid 121) and (name HD1),0.0,0.0,5.8
+(segid A and resid 117) and (name HB3),(segid A and resid 145) and (name HG12),0.0,0.0,5.8
+(segid A and resid 145) and (name HG13),(segid A and resid 117) and (name HB3),0.0,0.0,5.8
+(segid F and resid 117) and (name HE2),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,6.0
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 117) and (name HE2),0.0,0.0,6.0
+(segid F and resid 117) and (name HB3),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,6.5
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 117) and (name HB3),0.0,0.0,6.5
+(segid F and resid 117) and (name HB2),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,6.5
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 117) and (name HB2),0.0,0.0,6.5
+(segid A and resid 77) and (name CG1* or (name HG1*)),(segid F and resid 116) and (name HB2),0.0,0.0,6.3
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 116) and (name HB2),0.0,0.0,6.3
+(segid F and resid 116) and (name HB3),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,6.3
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 116) and (name HB3),0.0,0.0,6.3
+(segid A and resid 77) and (name HB),(segid F and resid 116) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 77) and (name HB),(segid F and resid 116) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid F and resid 117) and (name HE2),(segid A and resid 79) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid F and resid 117) and (name HE2),(segid A and resid 79) and (name CG2* or (name HG2*)),0.0,0.0,5.5
+(segid F and resid 117) and (name HE2),(segid A and resid 79) and (name CG1* or (name HG1*)),0.0,0.0,5.0
+(segid F and resid 117) and (name HE2),(segid A and resid 79) and (name CG2* or (name HG2*)),0.0,0.0,5.0
+(segid A and resid 79) and (name HB),(segid F and resid 117) and (name HE2),3.2,3.2,10.2
+(segid A and resid 79) and (name HA),(segid F and resid 117) and (name HE2),3.2,3.2,10.2
+(segid F and resid 117) and (name HA),(segid A and resid 79) and (name CG1* or (name HG1*)),0.0,0.0,6.5
+(segid A and resid 79) and (name CG2* or (name HG2*)),(segid F and resid 117) and (name HA),0.0,0.0,6.5
+(segid A and resid 90) and (name H),(segid F and resid 126) and (name HD2),0.0,0.0,5.8
+(segid A and resid 90) and (name H),(segid F and resid 126) and (name HD3),0.0,0.0,5.8
+(segid A and resid 97) and (name CG* or (name HG*)),(segid F and resid 135) and (name CG1* or (name HG1*)),0.0,0.0,6.3
+(segid A and resid 97) and (name CG* or (name HG*)),(segid F and resid 135) and (name CG2* or (name HG2*)),0.0,0.0,6.3
+(segid A and resid 97) and (name CD* or (name HD*)),(segid F and resid 135) and (name CG1* or (name HG1*)),0.0,0.0,7.3
+(segid A and resid 97) and (name CD* or (name HD*)),(segid F and resid 135) and (name CG2* or (name HG2*)),0.0,0.0,7.3
+(segid A and resid 99) and (name HB),(segid F and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 99) and (name HB),(segid F and resid 142) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 99) and (name CG2* or (name HG2*)),(segid F and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,6.2
+(segid F and resid 142) and (name CD2* or (name HD2*)),(segid A and resid 99) and (name CG1* or (name HG1*)),0.0,0.0,6.2
+(segid A and resid 99) and (name CG2* or (name HG2*)),(segid F and resid 142) and (name CD2* or (name HD2*)),0.0,0.0,6.2
+(segid A and resid 99) and (name CG1* or (name HG1*)),(segid F and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,6.2
+(segid A and resid 109) and (name HD2),(segid F and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,7.0
+(segid A and resid 109) and (name HD2),(segid F and resid 142) and (name CD2* or (name HD2*)),0.0,0.0,7.0
+(segid A and resid 109) and (name HE2),(segid F and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,7.0
+(segid A and resid 109) and (name HE2),(segid F and resid 142) and (name CD2* or (name HD2*)),0.0,0.0,7.0
+(segid F and resid 144) and (name CD2* or (name HD2*)),(segid A and resid 111) and (name HG3),0.0,0.0,5.5
+(segid A and resid 111) and (name HG3),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid F and resid 144) and (name CD2* or (name HD2*)),(segid A and resid 111) and (name HG2),0.0,0.0,5.5
+(segid A and resid 111) and (name HG2),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid F and resid 144) and (name CD2* or (name HD2*)),(segid A and resid 111) and (name HB3),0.0,0.0,6.5
+(segid A and resid 111) and (name HB3),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 111) and (name HB2),(segid F and resid 144) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 111) and (name HB2),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 111) and (name HA),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,5.5
+(segid A and resid 111) and (name HA),(segid F and resid 144) and (name CD2* or (name HD2*)),0.0,0.0,5.5
+(segid F and resid 146) and (name HA),(segid A and resid 111) and (name HG3),0.0,0.0,5.8
+(segid A and resid 111) and (name HG2),(segid F and resid 146) and (name HA),0.0,0.0,5.8
+(segid A and resid 112) and (name H),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,6.0
+(segid A and resid 112) and (name H),(segid F and resid 144) and (name CD2* or (name HD2*)),0.0,0.0,6.0
+(segid F and resid 143) and (name HA),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.5
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid F and resid 143) and (name HA),0.0,0.0,6.5
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid F and resid 144) and (name H),3.2,3.2,5.8
+(segid F and resid 144) and (name H),(segid A and resid 113) and (name CD2* or (name HD2*)),3.2,3.2,5.8
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,6.2
+(segid A and resid 113) and (name CD2* or (name HD2*)),(segid F and resid 144) and (name CD1* or (name HD1*)),0.0,0.0,6.2
+(segid F and resid 144) and (name CD2* or (name HD2*)),(segid A and resid 113) and (name CD2* or (name HD2*)),0.0,0.0,6.2
+(segid A and resid 113) and (name CD1* or (name HD1*)),(segid F and resid 144) and (name CD2* or (name HD2*)),0.0,0.0,6.2
+(segid A and resid 77) and (name HB),(segid F and resid 145) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid A and resid 77) and (name HB),(segid F and resid 147) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid F and resid 146) and (name H),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,6.5
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 146) and (name H),0.0,0.0,6.5
+(segid A and resid 77) and (name CG1* or (name HG1*)),(segid F and resid 146) and (name HB2),0.0,0.0,7.3
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 146) and (name HB2),0.0,0.0,7.3
+(segid F and resid 146) and (name HB3),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,7.3
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 146) and (name HB3),0.0,0.0,7.3
+(segid F and resid 145) and (name CG* or (name HG*)),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 145) and (name CG* or (name HG*)),0.0,0.0,5.5
+(segid F and resid 145) and (name CD* or (name HD*)),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,7.3
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 145) and (name CD* or (name HD*)),0.0,0.0,7.3
+(segid F and resid 147) and (name HA),(segid A and resid 77) and (name CG1* or (name HG1*)),0.0,0.0,4.7
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 147) and (name HA),0.0,0.0,4.7
+(segid F and resid 147) and (name H),(segid A and resid 77) and (name CG1* or (name HG1*)),3.2,3.2,10.2
+(segid A and resid 77) and (name CG2* or (name HG2*)),(segid F and resid 147) and (name H),3.2,3.2,10.2
+(segid A and resid 78) and (name H),(segid F and resid 146) and (name H),0.0,0.0,3.5
+(segid A and resid 78) and (name H),(segid F and resid 146) and (name HB2),0.0,0.0,4.8
+(segid A and resid 78) and (name H),(segid F and resid 146) and (name HB3),0.0,0.0,4.8
+(segid A and resid 78) and (name H),(segid F and resid 146) and (name HG2),0.0,0.0,5.8
+(segid A and resid 78) and (name H),(segid F and resid 146) and (name HG3),0.0,0.0,5.8
+(segid A and resid 78) and (name H),(segid F and resid 145) and (name CG* or (name HG*)),0.0,0.0,5.8
+(segid F and resid 146) and (name H),(segid A and resid 78) and (name HB2),0.0,0.0,5.0
+(segid A and resid 78) and (name HB3),(segid F and resid 146) and (name H),0.0,0.0,4.0
+(segid A and resid 78) and (name HB2),(segid F and resid 146) and (name HB2),0.0,0.0,4.0
+(segid F and resid 146) and (name HB3),(segid A and resid 78) and (name HB2),0.0,0.0,4.0
+(segid A and resid 78) and (name HB3),(segid F and resid 146) and (name HB2),0.0,0.0,4.0
+(segid A and resid 78) and (name HB3),(segid F and resid 146) and (name HB3),0.0,0.0,4.0
+(segid F and resid 145) and (name CD* or (name HD*)),(segid A and resid 79) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 79) and (name CG2* or (name HG2*)),(segid F and resid 145) and (name CD* or (name HD*)),0.0,0.0,5.5
+(segid A and resid 79) and (name HA),(segid F and resid 146) and (name H),0.0,0.0,5.0
+(segid F and resid 146) and (name H),(segid A and resid 79) and (name CG1* or (name HG1*)),0.0,0.0,5.5
+(segid A and resid 79) and (name CG2* or (name HG2*)),(segid F and resid 146) and (name H),0.0,0.0,5.5
+(segid F and resid 146) and (name H),(segid A and resid 80) and (name CD1* or (name HD1*)),0.0,0.0,6.5
+(segid A and resid 80) and (name CD2* or (name HD2*)),(segid F and resid 146) and (name H),0.0,0.0,6.5
+(segid A and resid 81) and (name HA),(segid F and resid 144) and (name H),0.0,0.0,3.5
+(segid F and resid 144) and (name H),(segid A and resid 81) and (name HB2),0.0,0.0,5.8
+(segid F and resid 144) and (name H),(segid A and resid 81) and (name HB3),0.0,0.0,5.8
+(segid F and resid 144) and (name H),(segid A and resid 81) and (name HG2),4.0,4.0,5.8
+(segid F and resid 144) and (name H),(segid A and resid 81) and (name HG3),4.0,4.0,5.8
+(segid F and resid 143) and (name HA),(segid A and resid 81) and (name HG3),0.0,0.0,4.0
+(segid F and resid 143) and (name HA),(segid A and resid 81) and (name HG2),0.0,0.0,4.0
+(segid A and resid 81) and (name HA),(segid F and resid 143) and (name HA),0.0,0.0,4.0
+(segid A and resid 81) and (name HA),(segid F and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,7.0
+(segid A and resid 81) and (name HA),(segid F and resid 142) and (name CD2* or (name HD2*)),0.0,0.0,7.0
+(segid A and resid 82) and (name H),(segid F and resid 142) and (name H),0.0,0.0,4.0
+(segid A and resid 82) and (name CB* or (name HB*)),(segid F and resid 142) and (name H),0.0,0.0,4.8
+(segid A and resid 82) and (name H),(segid F and resid 143) and (name HA),0.0,0.0,4.0
+(segid A and resid 82) and (name H),(segid F and resid 142) and (name HB2),0.0,0.0,4.3
+(segid A and resid 82) and (name H),(segid F and resid 142) and (name HB3),0.0,0.0,4.3
+(segid A and resid 82) and (name H),(segid F and resid 142) and (name CD1* or (name HD1*)),0.0,0.0,5.8
+(segid A and resid 82) and (name H),(segid F and resid 142) and (name CD2* or (name HD2*)),0.0,0.0,5.8
+(segid A and resid 83) and (name HA),(segid F and resid 142) and (name H),0.0,0.0,4.0
+(segid A and resid 83) and (name HA),(segid F and resid 141) and (name HA),0.0,0.0,3.5
+(segid A and resid 84) and (name H),(segid F and resid 141) and (name HA),0.0,0.0,2.7
+(segid A and resid 84) and (name CD* or (name HD*)),(segid F and resid 141) and (name H),3.2,3.2,10.2
+(segid A and resid 84) and (name CD* or (name HD*)),(segid F and resid 142) and (name H),3.2,3.2,10.2
+(segid F and resid 141) and (name H),(segid A and resid 84) and (name HG12),4.0,4.0,11.0
+(segid F and resid 141) and (name H),(segid A and resid 84) and (name HG13),4.0,4.0,11.0
+(segid F and resid 142) and (name H),(segid A and resid 84) and (name CG* or (name HG*)),4.0,4.0,11.0
+(segid A and resid 84) and (name H),(segid F and resid 142) and (name H),0.0,0.0,4.0
+(segid A and resid 84) and (name H),(segid F and resid 141) and (name HB2),0.0,0.0,4.8
+(segid A and resid 84) and (name H),(segid F and resid 141) and (name HB3),0.0,0.0,4.8
+(segid A and resid 84) and (name H),(segid F and resid 141) and (name HG2),0.0,0.0,5.8
+(segid A and resid 84) and (name H),(segid F and resid 141) and (name HG3),0.0,0.0,5.8
+(segid A and resid 87) and (name CD* or (name HD*)),(segid F and resid 141) and (name H),3.2,3.2,10.2
+(segid A and resid 87) and (name CD* or (name HD*)),(segid F and resid 142) and (name H),3.2,3.2,10.2
+(segid A and resid 7) and (name H),(segid A and resid 58) and (name O),2.2,1.8,2.6
+(segid A and resid 8) and (name H),(segid A and resid 69) and (name O),2.2,1.8,2.6
+(segid A and resid 9) and (name H),(segid A and resid 56) and (name O),2.2,1.8,2.6
+(segid A and resid 10) and (name H),(segid A and resid 71) and (name O),2.2,1.8,2.6
+(segid A and resid 11) and (name H),(segid A and resid 53) and (name O),2.2,1.8,2.6
+(segid A and resid 13) and (name H),(segid A and resid 51) and (name O),2.2,1.8,2.6
+(segid A and resid 25) and (name H),(segid A and resid 21) and (name O),2.2,1.8,2.6
+(segid A and resid 26) and (name H),(segid A and resid 22) and (name O),2.2,1.8,2.6
+(segid A and resid 27) and (name H),(segid A and resid 23) and (name O),2.2,1.8,2.6
+(segid A and resid 28) and (name H),(segid A and resid 24) and (name O),2.2,1.8,2.6
+(segid A and resid 29) and (name H),(segid A and resid 25) and (name O),2.2,1.8,2.6
+(segid A and resid 30) and (name H),(segid A and resid 26) and (name O),2.2,1.8,2.6
+(segid A and resid 31) and (name H),(segid A and resid 27) and (name O),2.2,1.8,2.6
+(segid A and resid 32) and (name H),(segid A and resid 64) and (name O),2.2,1.8,2.6
+(segid A and resid 33) and (name H),(segid A and resid 30) and (name O),2.2,1.8,2.6
+(segid A and resid 35) and (name H),(segid A and resid 62) and (name O),2.2,1.8,2.6
+(segid A and resid 36) and (name H),(segid A and resid 39) and (name OD2),2.2,1.8,2.6
+(segid A and resid 38) and (name H),(segid A and resid 54) and (name O),2.2,1.8,2.6
+(segid A and resid 39) and (name H),(segid A and resid 36) and (name O),2.2,1.8,2.6
+(segid A and resid 41) and (name H),(segid A and resid 52) and (name O),2.2,1.8,2.6
+(segid A and resid 43) and (name H),(segid A and resid 50) and (name O),2.2,1.8,2.6
+(segid A and resid 45) and (name H),(segid A and resid 48) and (name O),2.2,1.8,2.6
+(segid A and resid 50) and (name H),(segid A and resid 43) and (name O),2.2,1.8,2.6
+(segid A and resid 52) and (name H),(segid A and resid 41) and (name O),2.2,1.8,2.6
+(segid A and resid 53) and (name H),(segid A and resid 11) and (name O),2.2,1.8,2.6
+(segid A and resid 54) and (name H),(segid A and resid 39) and (name O),2.2,1.8,2.6
+(segid A and resid 55) and (name H),(segid A and resid 9) and (name O),2.2,1.8,2.6
+(segid A and resid 56) and (name H),(segid A and resid 9) and (name O),2.2,1.8,2.6
+(segid A and resid 58) and (name H),(segid A and resid 7) and (name O),2.2,1.8,2.6
+(segid A and resid 62) and (name H),(segid A and resid 35) and (name O),2.2,1.8,2.6
+(segid A and resid 64) and (name H),(segid A and resid 33) and (name O),2.2,1.8,2.6
+(segid A and resid 69) and (name H),(segid A and resid 6) and (name O),2.2,1.8,2.6
+(segid A and resid 71) and (name H),(segid A and resid 8) and (name O),2.2,1.8,2.6
+(segid A and resid 73) and (name H),(segid A and resid 10) and (name O),2.2,1.8,2.6
+(segid A and resid 145) and (name H),(segid A and resid 134) and (name O),2.2,1.8,2.6
+(segid A and resid 134) and (name H),(segid A and resid 145) and (name O),2.2,1.8,2.6
+(segid A and resid 106) and (name H),(segid A and resid 119) and (name O),2.2,1.8,2.6
+(segid A and resid 91) and (name H),(segid A and resid 98) and (name O),2.2,1.8,2.6
+(segid A and resid 125) and (name H),(segid A and resid 137) and (name O),2.2,1.8,2.6
+(segid A and resid 102) and (name H),(segid A and resid 86) and (name O),2.2,1.8,2.6
+(segid A and resid 117) and (name H),(segid A and resid 108) and (name O),2.2,1.8,2.6
+(segid A and resid 130) and (name H),(segid A and resid 133) and (name O),2.2,1.8,2.6
+(segid A and resid 101) and (name H),(segid A and resid 105) and (name O),2.2,1.8,2.6
+(segid A and resid 135) and (name H),(segid A and resid 128) and (name O),2.2,1.8,2.6
+(segid A and resid 126) and (name H),(segid A and resid 137) and (name O),2.2,1.8,2.6
+(segid A and resid 128) and (name H),(segid A and resid 135) and (name O),2.2,1.8,2.6
+(segid A and resid 124) and (name H),(segid A and resid 121) and (name O),2.2,1.8,2.6
+(segid A and resid 119) and (name H),(segid A and resid 106) and (name O),2.2,1.8,2.6
+(segid A and resid 99) and (name H),(segid A and resid 107) and (name O),2.2,1.8,2.6
+(segid A and resid 137) and (name H),(segid A and resid 126) and (name O),2.2,1.8,2.6
+(segid A and resid 136) and (name H),(segid A and resid 143) and (name O),2.2,1.8,2.6
+(segid A and resid 109) and (name H),(segid A and resid 97) and (name O),2.2,1.8,2.6
+(segid A and resid 114) and (name H),(segid A and resid 110) and (name OD1),2.2,1.8,2.6
+(segid A and resid 121) and (name H),(segid A and resid 104) and (name O),2.2,1.8,2.6
+(segid A and resid 107) and (name H),(segid A and resid 99) and (name O),2.2,1.8,2.6
+(segid A and resid 133) and (name H),(segid A and resid 130) and (name O),2.2,1.8,2.6
+(segid A and resid 98) and (name H),(segid A and resid 91) and (name O),2.2,1.8,2.6
+(segid A and resid 141) and (name H),(segid A and resid 138) and (name O),2.2,1.8,2.6
+(segid A and resid 88) and (name H),(segid A and resid 100) and (name O),2.2,1.8,2.6
+(segid A and resid 93) and (name H),(segid A and resid 96) and (name O),2.2,1.8,2.6
+(segid A and resid 97) and (name H),(segid A and resid 109) and (name O),2.2,1.8,2.6
+(segid A and resid 104) and (name H),(segid A and resid 101) and (name O),2.2,1.8,2.6
+(segid A and resid 96) and (name H),(segid A and resid 93) and (name O),2.2,1.8,2.6
+(segid A and resid 100) and (name H),(segid A and resid 89) and (name O),2.2,1.8,2.6
+(segid A and resid 143) and (name H),(segid A and resid 136) and (name O),2.2,1.8,2.6
+(segid A and resid 138) and (name H),(segid A and resid 141) and (name O),2.2,1.8,2.6
+(segid A and resid 108) and (name H),(segid A and resid 117) and (name O),2.2,1.8,2.6
+(segid A and resid 104) and (name HD21),(segid A and resid 122) and (name O),2.2,1.8,2.6
+(segid A and resid 89) and (name H),(segid A and resid 100) and (name O),2.2,1.8,2.6
+(segid A and resid 86) and (name H),(segid F and resid 139) and (name O),2.2,1.8,2.6
+(segid A and resid 84) and (name H),(segid F and resid 140) and (name O),2.2,1.8,2.6
+(segid A and resid 82) and (name H),(segid F and resid 142) and (name O),2.2,1.8,2.6
+(segid A and resid 80) and (name H),(segid F and resid 144) and (name O),2.2,1.8,2.6
+(segid A and resid 78) and (name H),(segid F and resid 146) and (name O),2.2,1.8,2.6

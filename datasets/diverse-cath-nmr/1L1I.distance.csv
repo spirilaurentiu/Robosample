@@ -1,0 +1,874 @@
+group0,group1,avg_dist,min_dist,max_dist
+(segid A and resid 3) and (name CG* or (name HG*)),(segid A and resid 3) and (name H),4.968,1.700,4.968
+(segid A and resid 3) and (name H),(segid A and resid 3) and (name HA),4.203,1.700,4.203
+(segid A and resid 3) and (name H),(segid A and resid 3) and (name HB),3.932,1.700,3.932
+(segid A and resid 3) and (name HA),(segid A and resid 4) and (name H),3.668,1.700,3.668
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HA2),4.380,1.700,4.380
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HA3),4.380,1.700,4.380
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HA2),4.065,1.700,4.380
+(segid A and resid 4) and (name H),(segid A and resid 4) and (name HA3),4.065,1.700,4.380
+(segid A and resid 3) and (name CG* or (name HG*)),(segid A and resid 4) and (name H),5.000,1.700,5.000
+(segid A and resid 5) and (name H),(segid A and resid 5) and (name HA2),5.000,1.700,5.000
+(segid A and resid 5) and (name HA3),(segid A and resid 5) and (name H),5.000,1.700,5.000
+(segid A and resid 4) and (name HA2),(segid A and resid 5) and (name H),5.000,1.700,5.000
+(segid A and resid 4) and (name HA3),(segid A and resid 5) and (name H),5.000,1.700,5.000
+(segid A and resid 5) and (name H),(segid A and resid 5) and (name HA2),4.485,1.700,5.000
+(segid A and resid 5) and (name HA3),(segid A and resid 5) and (name H),4.485,1.700,5.000
+(segid A and resid 7) and (name H),(segid A and resid 7) and (name HB2),5.000,1.700,5.000
+(segid A and resid 7) and (name HB3),(segid A and resid 7) and (name H),5.000,1.700,5.000
+(segid A and resid 7) and (name H),(segid A and resid 6) and (name CB* or (name HB*)),5.000,1.700,5.000
+(segid A and resid 8) and (name H),(segid A and resid 8) and (name HB2),4.316,1.700,4.816
+(segid A and resid 8) and (name HB3),(segid A and resid 8) and (name H),4.316,1.700,4.816
+(segid A and resid 8) and (name H),(segid A and resid 20) and (name HB2),3.741,1.699,5.000
+(segid A and resid 8) and (name H),(segid A and resid 20) and (name HB3),3.741,1.699,5.000
+(segid A and resid 8) and (name H),(segid A and resid 9) and (name H),4.450,1.700,4.450
+(segid A and resid 8) and (name H),(segid A and resid 20) and (name H),4.830,1.700,4.830
+(segid A and resid 8) and (name H),(segid A and resid 7) and (name HA),3.152,1.700,3.152
+(segid A and resid 8) and (name H),(segid A and resid 8) and (name HA),4.312,1.700,4.312
+(segid A and resid 8) and (name H),(segid A and resid 20) and (name HB2),5.000,1.700,5.000
+(segid A and resid 8) and (name H),(segid A and resid 20) and (name HB3),5.000,1.700,5.000
+(segid A and resid 8) and (name H),(segid A and resid 9) and (name H),4.592,1.700,4.592
+(segid A and resid 9) and (name H),(segid A and resid 8) and (name HA),5.000,1.700,5.000
+(segid A and resid 9) and (name H),(segid A and resid 9) and (name HB),4.328,1.700,4.328
+(segid A and resid 9) and (name H),(segid A and resid 9) and (name CG* or (name HG*)),5.000,1.700,5.000
+(segid A and resid 8) and (name HA),(segid A and resid 11) and (name H),5.000,1.700,5.000
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HA),3.880,1.700,3.880
+(segid A and resid 11) and (name H),(segid A and resid 10) and (name HA),4.287,1.700,4.287
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HB2),3.357,1.700,3.440
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HB3),3.357,1.700,3.440
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HB2),3.440,1.700,3.440
+(segid A and resid 11) and (name H),(segid A and resid 11) and (name HB3),3.440,1.700,3.440
+(segid A and resid 12) and (name HB),(segid A and resid 12) and (name H),5.000,1.700,5.000
+(segid A and resid 12) and (name H),(segid A and resid 13) and (name H),3.752,1.700,3.752
+(segid A and resid 12) and (name H),(segid A and resid 12) and (name HA),3.878,1.700,3.878
+(segid A and resid 11) and (name HA),(segid A and resid 12) and (name H),3.215,1.700,3.215
+(segid A and resid 12) and (name H),(segid A and resid 12) and (name CG* or (name HG*)),4.133,1.700,4.133
+(segid A and resid 12) and (name H),(segid A and resid 13) and (name H),4.155,1.700,4.155
+(segid A and resid 13) and (name H),(segid A and resid 12) and (name HA),5.000,1.700,5.000
+(segid A and resid 13) and (name H),(segid A and resid 13) and (name HA2),4.715,1.700,4.715
+(segid A and resid 13) and (name H),(segid A and resid 13) and (name HA3),4.715,1.700,4.715
+(segid A and resid 11) and (name HA),(segid A and resid 13) and (name H),5.000,1.700,5.000
+(segid A and resid 13) and (name H),(segid A and resid 13) and (name HA2),4.320,1.700,4.716
+(segid A and resid 13) and (name H),(segid A and resid 13) and (name HA3),4.320,1.700,4.716
+(segid A and resid 13) and (name HA2),(segid A and resid 14) and (name H),3.163,1.700,3.832
+(segid A and resid 13) and (name HA3),(segid A and resid 14) and (name H),3.163,1.700,3.832
+(segid A and resid 14) and (name H),(segid A and resid 14) and (name HA),4.151,1.700,4.151
+(segid A and resid 13) and (name HA2),(segid A and resid 14) and (name H),3.832,1.700,3.832
+(segid A and resid 13) and (name HA3),(segid A and resid 14) and (name H),3.832,1.700,3.832
+(segid A and resid 14) and (name H),(segid A and resid 14) and (name CB* or (name HB*)),3.158,1.700,3.158
+(segid A and resid 15) and (name HA),(segid A and resid 15) and (name H),4.194,1.700,4.194
+(segid A and resid 14) and (name CB* or (name HB*)),(segid A and resid 15) and (name H),4.030,1.700,4.030
+(segid A and resid 15) and (name H),(segid A and resid 27) and (name HA),4.077,1.700,4.077
+(segid A and resid 14) and (name HA),(segid A and resid 15) and (name H),2.773,1.700,2.773
+(segid A and resid 15) and (name H),(segid A and resid 15) and (name HB2),3.293,1.700,4.262
+(segid A and resid 15) and (name H),(segid A and resid 15) and (name HB3),3.293,1.700,4.262
+(segid A and resid 15) and (name H),(segid A and resid 15) and (name HB2),4.262,1.700,4.262
+(segid A and resid 15) and (name H),(segid A and resid 15) and (name HB3),4.262,1.700,4.262
+(segid A and resid 15) and (name H),(segid A and resid 24) and (name CB* or (name HB*)),3.648,1.700,3.648
+(segid A and resid 15) and (name HA),(segid A and resid 16) and (name H),4.411,1.700,4.411
+(segid A and resid 16) and (name H),(segid A and resid 16) and (name HB),5.000,1.700,5.000
+(segid A and resid 16) and (name H),(segid A and resid 16) and (name CG* or (name HG*)),5.000,1.700,5.000
+(segid A and resid 3) and (name HA),(segid A and resid 16) and (name H),5.000,1.700,5.000
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name H),5.000,1.700,5.000
+(segid A and resid 17) and (name H),(segid A and resid 16) and (name HA),3.907,1.700,3.907
+(segid A and resid 17) and (name H),(segid A and resid 17) and (name HA2),4.353,1.700,4.582
+(segid A and resid 17) and (name H),(segid A and resid 17) and (name HA3),4.353,1.700,4.582
+(segid A and resid 17) and (name H),(segid A and resid 28) and (name HB),5.000,1.700,5.000
+(segid A and resid 17) and (name H),(segid A and resid 17) and (name HA2),4.581,1.700,4.581
+(segid A and resid 17) and (name H),(segid A and resid 17) and (name HA3),4.581,1.700,4.581
+(segid A and resid 17) and (name H),(segid A and resid 29) and (name HB2),5.000,1.700,5.000
+(segid A and resid 17) and (name H),(segid A and resid 29) and (name HB3),5.000,1.700,5.000
+(segid A and resid 17) and (name H),(segid A and resid 29) and (name HB2),4.995,1.700,5.000
+(segid A and resid 17) and (name H),(segid A and resid 29) and (name HB3),4.995,1.700,5.000
+(segid A and resid 16) and (name CG* or (name HG*)),(segid A and resid 17) and (name H),4.830,1.700,4.830
+(segid A and resid 18) and (name H),(segid A and resid 30) and (name HA),3.864,1.700,3.864
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HA),3.890,1.699,3.890
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name HA2),4.521,1.700,5.000
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name HA3),4.521,1.700,5.000
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name HA2),5.000,1.700,5.000
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name HA3),5.000,1.700,5.000
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HB2),3.851,1.700,4.050
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HB3),3.851,1.700,4.050
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HB2),4.050,1.700,4.050
+(segid A and resid 18) and (name H),(segid A and resid 18) and (name HB3),4.050,1.700,4.050
+(segid A and resid 18) and (name H),(segid A and resid 17) and (name H),5.000,1.700,5.000
+(segid A and resid 18) and (name HA),(segid A and resid 19) and (name H),4.367,1.700,4.367
+(segid A and resid 19) and (name H),(segid A and resid 6) and (name HA),5.000,1.700,5.000
+(segid A and resid 19) and (name H),(segid A and resid 19) and (name HA2),5.000,1.700,5.000
+(segid A and resid 19) and (name H),(segid A and resid 19) and (name HA3),5.000,1.700,5.000
+(segid A and resid 19) and (name H),(segid A and resid 19) and (name HA2),4.544,1.700,5.000
+(segid A and resid 19) and (name H),(segid A and resid 19) and (name HA3),4.544,1.700,5.000
+(segid A and resid 8) and (name H),(segid A and resid 20) and (name H),4.367,1.700,4.367
+(segid A and resid 20) and (name H),(segid A and resid 7) and (name HA),4.781,1.700,4.781
+(segid A and resid 20) and (name H),(segid A and resid 20) and (name HA),3.926,1.700,3.926
+(segid A and resid 20) and (name H),(segid A and resid 19) and (name HA2),4.872,1.700,4.939
+(segid A and resid 20) and (name H),(segid A and resid 19) and (name HA3),4.872,1.700,4.939
+(segid A and resid 20) and (name H),(segid A and resid 19) and (name HA2),4.938,1.700,4.938
+(segid A and resid 20) and (name H),(segid A and resid 19) and (name HA3),4.938,1.700,4.938
+(segid A and resid 20) and (name HB2),(segid A and resid 20) and (name H),4.422,1.700,4.477
+(segid A and resid 20) and (name HB3),(segid A and resid 20) and (name H),4.422,1.700,4.477
+(segid A and resid 20) and (name HB2),(segid A and resid 20) and (name H),4.477,1.700,4.477
+(segid A and resid 20) and (name HB3),(segid A and resid 20) and (name H),4.477,1.700,4.477
+(segid A and resid 21) and (name HA),(segid A and resid 21) and (name H),4.458,1.700,4.458
+(segid A and resid 20) and (name HA),(segid A and resid 21) and (name H),2.730,1.700,2.730
+(segid A and resid 21) and (name H),(segid A and resid 32) and (name HB2),4.130,1.700,4.630
+(segid A and resid 21) and (name H),(segid A and resid 32) and (name HB3),4.130,1.700,4.630
+(segid A and resid 21) and (name H),(segid A and resid 21) and (name HB2),4.288,1.700,4.288
+(segid A and resid 21) and (name H),(segid A and resid 21) and (name HB3),4.288,1.700,4.288
+(segid A and resid 21) and (name H),(segid A and resid 21) and (name HB2),2.934,1.700,4.287
+(segid A and resid 21) and (name H),(segid A and resid 21) and (name HB3),2.934,1.700,4.287
+(segid A and resid 24) and (name H),(segid A and resid 23) and (name H),2.869,1.700,2.869
+(segid A and resid 23) and (name H),(segid A and resid 23) and (name HA),4.233,1.700,4.233
+(segid A and resid 21) and (name HB2),(segid A and resid 23) and (name H),5.000,1.700,5.000
+(segid A and resid 21) and (name HB3),(segid A and resid 23) and (name H),5.000,1.700,5.000
+(segid A and resid 23) and (name H),(segid A and resid 23) and (name HB2),4.497,1.700,4.497
+(segid A and resid 23) and (name H),(segid A and resid 23) and (name HB3),4.497,1.700,4.497
+(segid A and resid 23) and (name H),(segid A and resid 23) and (name HB2),3.523,1.700,4.496
+(segid A and resid 23) and (name H),(segid A and resid 23) and (name HB3),3.523,1.700,4.496
+(segid A and resid 24) and (name H),(segid A and resid 23) and (name H),2.993,1.700,2.993
+(segid A and resid 24) and (name H),(segid A and resid 23) and (name HA),4.824,1.700,4.824
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 24) and (name H),3.080,1.700,3.080
+(segid A and resid 24) and (name H),(segid A and resid 24) and (name HA),3.971,1.700,3.971
+(segid A and resid 24) and (name H),(segid A and resid 23) and (name HB2),5.000,1.700,5.000
+(segid A and resid 24) and (name H),(segid A and resid 23) and (name HB3),5.000,1.700,5.000
+(segid A and resid 13) and (name HA2),(segid A and resid 25) and (name H),5.000,1.700,5.000
+(segid A and resid 13) and (name HA3),(segid A and resid 25) and (name H),5.000,1.700,5.000
+(segid A and resid 25) and (name H),(segid A and resid 26) and (name H),3.249,1.700,3.249
+(segid A and resid 25) and (name H),(segid A and resid 25) and (name HA),3.940,1.700,3.940
+(segid A and resid 24) and (name HA),(segid A and resid 25) and (name H),2.892,1.700,2.892
+(segid A and resid 25) and (name H),(segid A and resid 25) and (name HB),3.885,1.699,3.885
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 25) and (name H),3.638,1.700,3.638
+(segid A and resid 25) and (name H),(segid A and resid 25) and (name CG1* or (name HG1*)),3.143,1.700,3.143
+(segid A and resid 25) and (name H),(segid A and resid 25) and (name CG2* or (name HG2*)),3.143,1.700,3.143
+(segid A and resid 26) and (name H),(segid A and resid 26) and (name HA),3.941,1.700,3.941
+(segid A and resid 14) and (name HA),(segid A and resid 26) and (name H),3.717,1.700,3.717
+(segid A and resid 26) and (name H),(segid A and resid 25) and (name HA),5.000,1.700,5.000
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 26) and (name H),3.735,1.700,3.735
+(segid A and resid 26) and (name H),(segid A and resid 26) and (name CG* or (name HG*)),5.000,1.700,5.000
+(segid A and resid 26) and (name H),(segid A and resid 25) and (name CG1* or (name HG1*)),4.064,1.700,4.064
+(segid A and resid 26) and (name H),(segid A and resid 25) and (name CG2* or (name HG2*)),4.064,1.700,4.064
+(segid A and resid 25) and (name H),(segid A and resid 26) and (name H),3.373,1.700,3.373
+(segid A and resid 26) and (name H),(segid A and resid 26) and (name HB),4.698,1.700,4.698
+(segid A and resid 39) and (name HA),(segid A and resid 27) and (name H),3.771,1.700,3.771
+(segid A and resid 27) and (name H),(segid A and resid 27) and (name HB2),5.000,1.700,5.000
+(segid A and resid 27) and (name H),(segid A and resid 27) and (name HB3),5.000,1.700,5.000
+(segid A and resid 27) and (name HA),(segid A and resid 27) and (name H),4.042,1.700,4.042
+(segid A and resid 26) and (name HA),(segid A and resid 27) and (name H),2.887,1.700,2.887
+(segid A and resid 26) and (name HB),(segid A and resid 27) and (name H),3.607,1.700,3.607
+(segid A and resid 27) and (name H),(segid A and resid 27) and (name HB2),3.656,1.700,5.000
+(segid A and resid 27) and (name H),(segid A and resid 27) and (name HB3),3.656,1.700,5.000
+(segid A and resid 27) and (name H),(segid A and resid 36) and (name CB* or (name HB*)),3.671,1.700,3.671
+(segid A and resid 26) and (name CG* or (name HG*)),(segid A and resid 27) and (name H),3.775,1.700,3.775
+(segid A and resid 27) and (name HA),(segid A and resid 28) and (name H),4.396,1.700,4.396
+(segid A and resid 28) and (name HB),(segid A and resid 28) and (name H),5.000,1.700,5.000
+(segid A and resid 28) and (name H),(segid A and resid 28) and (name CG* or (name HG*)),5.000,1.700,5.000
+(segid A and resid 16) and (name HA),(segid A and resid 28) and (name H),5.000,1.700,5.000
+(segid A and resid 29) and (name H),(segid A and resid 41) and (name HA2),5.000,1.700,5.000
+(segid A and resid 41) and (name HA3),(segid A and resid 29) and (name H),5.000,1.700,5.000
+(segid A and resid 29) and (name H),(segid A and resid 30) and (name H),5.000,1.700,5.000
+(segid A and resid 29) and (name H),(segid A and resid 28) and (name HA),3.676,1.700,3.676
+(segid A and resid 29) and (name H),(segid A and resid 29) and (name HA),3.762,1.700,3.762
+(segid A and resid 29) and (name HB2),(segid A and resid 29) and (name H),5.000,1.700,5.000
+(segid A and resid 29) and (name HB3),(segid A and resid 29) and (name H),5.000,1.700,5.000
+(segid A and resid 28) and (name CG* or (name HG*)),(segid A and resid 29) and (name H),4.587,1.700,4.587
+(segid A and resid 30) and (name H),(segid A and resid 42) and (name HB2),4.811,1.700,5.000
+(segid A and resid 30) and (name H),(segid A and resid 42) and (name HB3),4.811,1.700,5.000
+(segid A and resid 29) and (name H),(segid A and resid 30) and (name H),4.203,1.700,4.203
+(segid A and resid 30) and (name H),(segid A and resid 42) and (name HA),3.321,1.700,3.321
+(segid A and resid 30) and (name HA),(segid A and resid 30) and (name H),4.325,1.700,4.325
+(segid A and resid 30) and (name H),(segid A and resid 29) and (name HA),3.465,1.700,3.465
+(segid A and resid 30) and (name H),(segid A and resid 30) and (name HB2),5.000,1.700,5.000
+(segid A and resid 30) and (name H),(segid A and resid 30) and (name HB3),5.000,1.700,5.000
+(segid A and resid 30) and (name H),(segid A and resid 30) and (name HB2),3.698,1.700,5.000
+(segid A and resid 30) and (name H),(segid A and resid 30) and (name HB3),3.698,1.700,5.000
+(segid A and resid 30) and (name HB2),(segid A and resid 31) and (name H),4.899,1.700,4.899
+(segid A and resid 30) and (name HB3),(segid A and resid 31) and (name H),4.899,1.700,4.899
+(segid A and resid 30) and (name HA),(segid A and resid 31) and (name H),3.460,1.700,3.460
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HA),3.896,1.700,3.896
+(segid A and resid 30) and (name HB2),(segid A and resid 31) and (name H),3.675,1.700,4.899
+(segid A and resid 30) and (name HB3),(segid A and resid 31) and (name H),3.675,1.700,4.899
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HB2),4.888,1.700,4.888
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HB3),4.888,1.700,4.888
+(segid A and resid 19) and (name HA2),(segid A and resid 31) and (name H),5.000,1.700,5.000
+(segid A and resid 19) and (name HA3),(segid A and resid 31) and (name H),5.000,1.700,5.000
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HG3),4.715,1.700,5.000
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HG2),4.715,1.700,5.000
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HB2),3.780,1.700,4.888
+(segid A and resid 31) and (name H),(segid A and resid 31) and (name HB3),3.780,1.700,4.888
+(segid A and resid 33) and (name H),(segid A and resid 32) and (name H),4.515,1.700,4.515
+(segid A and resid 31) and (name HA),(segid A and resid 32) and (name H),3.456,1.700,3.456
+(segid A and resid 32) and (name H),(segid A and resid 44) and (name HB2),4.735,1.700,5.000
+(segid A and resid 32) and (name H),(segid A and resid 44) and (name HB3),4.735,1.700,5.000
+(segid A and resid 31) and (name HB2),(segid A and resid 32) and (name H),5.000,1.700,5.000
+(segid A and resid 31) and (name HB3),(segid A and resid 32) and (name H),5.000,1.700,5.000
+(segid A and resid 31) and (name HB2),(segid A and resid 32) and (name H),4.174,1.700,5.000
+(segid A and resid 31) and (name HB3),(segid A and resid 32) and (name H),4.174,1.700,5.000
+(segid A and resid 32) and (name H),(segid A and resid 32) and (name HA),3.810,1.700,3.810
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HA),4.078,1.700,4.078
+(segid A and resid 33) and (name H),(segid A and resid 32) and (name HA),3.725,1.699,3.725
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HB2),3.289,1.700,4.062
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HB3),3.289,1.700,4.062
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HB2),4.062,1.700,4.062
+(segid A and resid 33) and (name H),(segid A and resid 33) and (name HB3),4.062,1.700,4.062
+(segid A and resid 33) and (name H),(segid A and resid 32) and (name H),3.541,1.700,3.541
+(segid A and resid 33) and (name H),(segid A and resid 44) and (name HB2),3.351,1.700,3.851
+(segid A and resid 33) and (name H),(segid A and resid 44) and (name HB3),3.351,1.700,3.851
+(segid A and resid 35) and (name H),(segid A and resid 34) and (name H),4.363,1.700,4.363
+(segid A and resid 33) and (name HA),(segid A and resid 34) and (name H),3.433,1.700,3.433
+(segid A and resid 34) and (name H),(segid A and resid 34) and (name HA),3.816,1.700,3.816
+(segid A and resid 34) and (name H),(segid A and resid 34) and (name HB),5.000,1.700,5.000
+(segid A and resid 34) and (name H),(segid A and resid 34) and (name CG1* or (name HG1*)),3.267,1.700,3.267
+(segid A and resid 34) and (name H),(segid A and resid 34) and (name CG2* or (name HG2*)),3.267,1.700,3.267
+(segid A and resid 33) and (name HA),(segid A and resid 35) and (name H),5.000,1.700,5.000
+(segid A and resid 35) and (name H),(segid A and resid 35) and (name HD3),4.479,1.700,4.979
+(segid A and resid 35) and (name H),(segid A and resid 35) and (name HD2),4.479,1.700,4.979
+(segid A and resid 35) and (name H),(segid A and resid 34) and (name CG1* or (name HG1*)),3.812,1.700,3.812
+(segid A and resid 35) and (name H),(segid A and resid 34) and (name CG2* or (name HG2*)),3.812,1.700,3.812
+(segid A and resid 35) and (name H),(segid A and resid 34) and (name H),4.120,1.700,4.120
+(segid A and resid 35) and (name H),(segid A and resid 36) and (name H),2.901,1.700,2.901
+(segid A and resid 35) and (name H),(segid A and resid 35) and (name HA),4.020,1.700,4.020
+(segid A and resid 35) and (name H),(segid A and resid 34) and (name HA),5.000,1.700,5.000
+(segid A and resid 35) and (name H),(segid A and resid 35) and (name HB3),3.340,1.700,3.840
+(segid A and resid 35) and (name H),(segid A and resid 35) and (name HB2),3.340,1.700,3.840
+(segid A and resid 36) and (name CB* or (name HB*)),(segid A and resid 35) and (name H),5.000,1.700,5.000
+(segid A and resid 35) and (name H),(segid A and resid 36) and (name H),3.030,1.700,3.030
+(segid A and resid 36) and (name H),(segid A and resid 35) and (name HA),4.326,1.700,4.326
+(segid A and resid 36) and (name H),(segid A and resid 36) and (name HA),3.827,1.700,3.827
+(segid A and resid 33) and (name HB2),(segid A and resid 36) and (name H),5.000,1.700,5.000
+(segid A and resid 33) and (name HB3),(segid A and resid 36) and (name H),5.000,1.700,5.000
+(segid A and resid 36) and (name H),(segid A and resid 35) and (name HB3),5.000,1.700,5.000
+(segid A and resid 36) and (name H),(segid A and resid 35) and (name HB2),5.000,1.700,5.000
+(segid A and resid 36) and (name CB* or (name HB*)),(segid A and resid 36) and (name H),3.076,1.700,3.076
+(segid A and resid 26) and (name HA),(segid A and resid 37) and (name H),5.000,1.700,5.000
+(segid A and resid 37) and (name H),(segid A and resid 38) and (name H),3.296,1.700,3.296
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name HA),3.924,1.700,3.924
+(segid A and resid 25) and (name HA),(segid A and resid 37) and (name H),3.730,1.700,3.730
+(segid A and resid 36) and (name HA),(segid A and resid 37) and (name H),2.897,1.700,2.897
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name HB2),3.877,1.700,4.056
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name HB3),3.877,1.700,4.056
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name HB2),4.056,1.700,4.056
+(segid A and resid 37) and (name H),(segid A and resid 37) and (name HB3),4.056,1.700,4.056
+(segid A and resid 36) and (name CB* or (name HB*)),(segid A and resid 37) and (name H),3.738,1.700,3.738
+(segid A and resid 37) and (name H),(segid A and resid 25) and (name CG1* or (name HG1*)),5.000,1.700,5.000
+(segid A and resid 37) and (name H),(segid A and resid 25) and (name CG2* or (name HG2*)),5.000,1.700,5.000
+(segid A and resid 38) and (name H),(segid A and resid 37) and (name HB2),5.000,1.700,5.000
+(segid A and resid 38) and (name H),(segid A and resid 37) and (name HB3),5.000,1.700,5.000
+(segid A and resid 37) and (name H),(segid A and resid 38) and (name H),3.546,1.700,3.546
+(segid A and resid 26) and (name HA),(segid A and resid 38) and (name H),3.407,1.700,3.407
+(segid A and resid 36) and (name HA),(segid A and resid 38) and (name H),5.000,1.700,5.000
+(segid A and resid 38) and (name H),(segid A and resid 37) and (name HB2),5.000,1.700,5.000
+(segid A and resid 38) and (name H),(segid A and resid 37) and (name HB3),5.000,1.700,5.000
+(segid A and resid 36) and (name CB* or (name HB*)),(segid A and resid 38) and (name H),3.777,1.700,3.777
+(segid A and resid 38) and (name H),(segid A and resid 37) and (name HA),4.997,1.700,4.997
+(segid A and resid 39) and (name H),(segid A and resid 39) and (name HB2),3.567,1.700,5.000
+(segid A and resid 39) and (name HB3),(segid A and resid 39) and (name H),3.567,1.700,5.000
+(segid A and resid 39) and (name H),(segid A and resid 50) and (name H),4.466,1.700,4.466
+(segid A and resid 39) and (name HA),(segid A and resid 39) and (name H),4.058,1.700,4.058
+(segid A and resid 39) and (name H),(segid A and resid 51) and (name HA),3.852,1.700,3.852
+(segid A and resid 39) and (name H),(segid A and resid 38) and (name HA),2.754,1.700,2.754
+(segid A and resid 39) and (name H),(segid A and resid 38) and (name HB),3.953,1.700,3.953
+(segid A and resid 39) and (name H),(segid A and resid 39) and (name HB2),5.000,1.700,5.000
+(segid A and resid 39) and (name HB3),(segid A and resid 39) and (name H),5.000,1.700,5.000
+(segid A and resid 39) and (name H),(segid A and resid 48) and (name CB* or (name HB*)),3.895,1.700,3.895
+(segid A and resid 39) and (name H),(segid A and resid 38) and (name CG* or (name HG*)),3.379,1.700,3.379
+(segid A and resid 39) and (name HA),(segid A and resid 40) and (name H),2.946,1.700,2.946
+(segid A and resid 28) and (name HA),(segid A and resid 40) and (name H),3.863,1.700,3.863
+(segid A and resid 40) and (name H),(segid A and resid 40) and (name HB),3.495,1.700,3.495
+(segid A and resid 40) and (name H),(segid A and resid 40) and (name HA),4.020,1.700,4.020
+(segid A and resid 39) and (name HB2),(segid A and resid 40) and (name H),5.000,1.700,5.000
+(segid A and resid 39) and (name HB3),(segid A and resid 40) and (name H),5.000,1.700,5.000
+(segid A and resid 40) and (name H),(segid A and resid 40) and (name CG* or (name HG*)),4.996,1.700,4.996
+(segid A and resid 41) and (name HA2),(segid A and resid 41) and (name H),4.628,1.700,4.628
+(segid A and resid 41) and (name HA3),(segid A and resid 41) and (name H),4.628,1.700,4.628
+(segid A and resid 41) and (name H),(segid A and resid 42) and (name H),5.000,1.700,5.000
+(segid A and resid 40) and (name HA),(segid A and resid 41) and (name H),3.732,1.700,3.732
+(segid A and resid 41) and (name HA2),(segid A and resid 41) and (name H),4.145,1.700,4.628
+(segid A and resid 41) and (name HA3),(segid A and resid 41) and (name H),4.145,1.700,4.628
+(segid A and resid 40) and (name HB),(segid A and resid 41) and (name H),5.000,1.700,5.000
+(segid A and resid 41) and (name H),(segid A and resid 53) and (name HB2),4.409,1.700,5.000
+(segid A and resid 41) and (name H),(segid A and resid 53) and (name HB3),4.409,1.700,5.000
+(segid A and resid 41) and (name H),(segid A and resid 53) and (name HB2),5.000,1.700,5.000
+(segid A and resid 41) and (name H),(segid A and resid 53) and (name HB3),5.000,1.700,5.000
+(segid A and resid 40) and (name CG* or (name HG*)),(segid A and resid 41) and (name H),4.433,1.700,4.433
+(segid A and resid 41) and (name HA2),(segid A and resid 42) and (name H),5.000,1.700,5.000
+(segid A and resid 41) and (name HA3),(segid A and resid 42) and (name H),5.000,1.700,5.000
+(segid A and resid 41) and (name H),(segid A and resid 42) and (name H),4.151,1.700,4.151
+(segid A and resid 42) and (name HA),(segid A and resid 42) and (name H),4.132,1.700,4.132
+(segid A and resid 42) and (name H),(segid A and resid 54) and (name HA),3.459,1.700,3.459
+(segid A and resid 42) and (name HB2),(segid A and resid 42) and (name H),4.347,1.700,4.347
+(segid A and resid 42) and (name HB3),(segid A and resid 42) and (name H),4.347,1.700,4.347
+(segid A and resid 39) and (name HB2),(segid A and resid 42) and (name H),5.000,1.700,5.000
+(segid A and resid 39) and (name HB3),(segid A and resid 42) and (name H),5.000,1.700,5.000
+(segid A and resid 42) and (name HB2),(segid A and resid 42) and (name H),3.696,1.700,4.347
+(segid A and resid 42) and (name HB3),(segid A and resid 42) and (name H),3.696,1.700,4.347
+(segid A and resid 42) and (name H),(segid A and resid 54) and (name HB2),4.454,1.700,5.000
+(segid A and resid 42) and (name H),(segid A and resid 54) and (name HB3),4.454,1.700,5.000
+(segid A and resid 42) and (name HA),(segid A and resid 43) and (name H),3.818,1.700,3.818
+(segid A and resid 31) and (name HA),(segid A and resid 43) and (name H),3.556,1.700,3.556
+(segid A and resid 42) and (name HB2),(segid A and resid 43) and (name H),4.108,1.700,4.608
+(segid A and resid 42) and (name HB3),(segid A and resid 43) and (name H),4.108,1.700,4.608
+(segid A and resid 43) and (name H),(segid A and resid 43) and (name CG* or (name HG*)),3.958,1.700,3.958
+(segid A and resid 43) and (name H),(segid A and resid 43) and (name HA),3.863,1.700,3.863
+(segid A and resid 45) and (name H),(segid A and resid 44) and (name H),4.837,1.700,4.837
+(segid A and resid 43) and (name HA),(segid A and resid 44) and (name H),4.156,1.700,4.156
+(segid A and resid 44) and (name H),(segid A and resid 43) and (name HB),3.682,1.700,3.682
+(segid A and resid 44) and (name H),(segid A and resid 44) and (name HA),3.740,1.700,3.740
+(segid A and resid 44) and (name HB2),(segid A and resid 44) and (name H),5.000,1.700,5.000
+(segid A and resid 44) and (name HB3),(segid A and resid 44) and (name H),5.000,1.700,5.000
+(segid A and resid 44) and (name H),(segid A and resid 56) and (name HB2),5.000,1.700,5.000
+(segid A and resid 44) and (name H),(segid A and resid 56) and (name HB3),5.000,1.700,5.000
+(segid A and resid 44) and (name H),(segid A and resid 55) and (name HB3),4.334,1.700,4.834
+(segid A and resid 44) and (name H),(segid A and resid 55) and (name HB2),4.334,1.700,4.834
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 44) and (name H),5.000,1.700,5.000
+(segid A and resid 45) and (name H),(segid A and resid 46) and (name H),5.000,1.700,5.000
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name HA),4.018,1.700,4.018
+(segid A and resid 45) and (name H),(segid A and resid 44) and (name H),3.752,1.699,3.752
+(segid A and resid 45) and (name H),(segid A and resid 44) and (name HA),3.527,1.700,3.527
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name HB2),3.171,1.700,3.737
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name HB3),3.171,1.700,3.737
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name HB2),3.737,1.700,3.737
+(segid A and resid 45) and (name H),(segid A and resid 45) and (name HB3),3.737,1.700,3.737
+(segid A and resid 45) and (name H),(segid A and resid 56) and (name HB2),5.000,1.700,5.000
+(segid A and resid 45) and (name H),(segid A and resid 56) and (name HB3),5.000,1.700,5.000
+(segid A and resid 45) and (name H),(segid A and resid 46) and (name H),5.000,1.700,5.000
+(segid A and resid 46) and (name H),(segid A and resid 47) and (name H),3.957,1.700,3.957
+(segid A and resid 46) and (name H),(segid A and resid 45) and (name HA),3.728,1.701,3.728
+(segid A and resid 34) and (name HA),(segid A and resid 46) and (name H),3.199,1.700,3.199
+(segid A and resid 46) and (name H),(segid A and resid 46) and (name HA),3.858,1.700,3.858
+(segid A and resid 46) and (name H),(segid A and resid 46) and (name HB2),4.512,1.700,4.512
+(segid A and resid 46) and (name H),(segid A and resid 46) and (name HB3),4.512,1.700,4.512
+(segid A and resid 46) and (name H),(segid A and resid 46) and (name HB2),3.668,1.700,4.512
+(segid A and resid 46) and (name H),(segid A and resid 46) and (name HB3),3.668,1.700,4.512
+(segid A and resid 46) and (name H),(segid A and resid 34) and (name CG1* or (name HG1*)),4.408,1.700,4.408
+(segid A and resid 46) and (name H),(segid A and resid 34) and (name CG2* or (name HG2*)),4.408,1.700,4.408
+(segid A and resid 46) and (name H),(segid A and resid 47) and (name H),4.678,1.700,4.678
+(segid A and resid 47) and (name H),(segid A and resid 48) and (name H),2.929,1.700,2.929
+(segid A and resid 45) and (name HA),(segid A and resid 47) and (name H),3.719,1.700,3.719
+(segid A and resid 47) and (name H),(segid A and resid 47) and (name HA),3.962,1.700,3.962
+(segid A and resid 35) and (name HA),(segid A and resid 47) and (name H),3.873,1.700,3.873
+(segid A and resid 47) and (name H),(segid A and resid 46) and (name HB2),5.000,1.700,5.000
+(segid A and resid 47) and (name H),(segid A and resid 46) and (name HB3),5.000,1.700,5.000
+(segid A and resid 47) and (name H),(segid A and resid 47) and (name CG* or (name HG*)),3.966,1.700,3.966
+(segid A and resid 34) and (name HA),(segid A and resid 47) and (name H),5.000,1.700,5.000
+(segid A and resid 47) and (name H),(segid A and resid 48) and (name H),3.129,1.700,3.129
+(segid A and resid 45) and (name HA),(segid A and resid 48) and (name H),3.699,1.700,3.699
+(segid A and resid 48) and (name H),(segid A and resid 48) and (name HA),3.788,1.700,3.788
+(segid A and resid 34) and (name HA),(segid A and resid 48) and (name H),5.000,1.700,5.000
+(segid A and resid 48) and (name CB* or (name HB*)),(segid A and resid 48) and (name H),3.244,1.700,3.244
+(segid A and resid 50) and (name H),(segid A and resid 49) and (name H),5.000,1.700,5.000
+(segid A and resid 37) and (name HA),(segid A and resid 49) and (name H),5.000,1.700,5.000
+(segid A and resid 48) and (name HA),(segid A and resid 49) and (name H),4.369,1.700,4.369
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HG3),5.000,1.700,5.000
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HG2),5.000,1.700,5.000
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HB3),5.000,1.700,5.000
+(segid A and resid 49) and (name H),(segid A and resid 49) and (name HB2),5.000,1.700,5.000
+(segid A and resid 48) and (name CB* or (name HB*)),(segid A and resid 49) and (name H),5.000,1.700,5.000
+(segid A and resid 39) and (name H),(segid A and resid 50) and (name H),5.000,1.700,5.000
+(segid A and resid 50) and (name H),(segid A and resid 50) and (name HA),4.006,1.700,4.006
+(segid A and resid 50) and (name H),(segid A and resid 50) and (name HB),3.323,1.700,3.323
+(segid A and resid 50) and (name H),(segid A and resid 50) and (name CG* or (name HG*)),3.446,1.700,3.446
+(segid A and resid 50) and (name H),(segid A and resid 49) and (name H),3.062,1.699,3.062
+(segid A and resid 50) and (name H),(segid A and resid 49) and (name HA),3.959,1.700,3.959
+(segid A and resid 50) and (name H),(segid A and resid 49) and (name HB3),4.062,1.700,4.562
+(segid A and resid 50) and (name H),(segid A and resid 49) and (name HB2),4.062,1.700,4.562
+(segid A and resid 50) and (name H),(segid A and resid 48) and (name CB* or (name HB*)),3.261,1.700,3.261
+(segid A and resid 51) and (name HA),(segid A and resid 51) and (name H),4.121,1.700,4.121
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HB2),4.862,1.700,4.862
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HB3),4.862,1.700,4.862
+(segid A and resid 50) and (name HB),(segid A and resid 51) and (name H),5.000,1.700,5.000
+(segid A and resid 51) and (name H),(segid A and resid 63) and (name HA),4.019,1.700,4.019
+(segid A and resid 50) and (name HA),(segid A and resid 51) and (name H),2.770,1.700,2.770
+(segid A and resid 51) and (name H),(segid A and resid 62) and (name HB),4.858,1.700,4.858
+(segid A and resid 51) and (name H),(segid A and resid 60) and (name CB* or (name HB*)),4.070,1.700,4.070
+(segid A and resid 50) and (name CG* or (name HG*)),(segid A and resid 51) and (name H),3.635,1.700,3.635
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HB2),3.727,1.700,4.862
+(segid A and resid 51) and (name H),(segid A and resid 51) and (name HB3),3.727,1.700,4.862
+(segid A and resid 40) and (name HA),(segid A and resid 52) and (name H),3.569,1.700,3.569
+(segid A and resid 51) and (name HA),(segid A and resid 52) and (name H),2.851,1.700,2.851
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name HA),4.136,1.700,4.136
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name HB),3.275,1.700,3.275
+(segid A and resid 51) and (name HB2),(segid A and resid 52) and (name H),5.000,1.700,5.000
+(segid A and resid 51) and (name HB3),(segid A and resid 52) and (name H),5.000,1.700,5.000
+(segid A and resid 52) and (name H),(segid A and resid 52) and (name CG* or (name HG*)),4.062,1.700,4.062
+(segid A and resid 53) and (name H),(segid A and resid 65) and (name HB2),4.363,1.700,4.863
+(segid A and resid 65) and (name HB3),(segid A and resid 53) and (name H),4.363,1.700,4.863
+(segid A and resid 53) and (name H),(segid A and resid 54) and (name H),5.000,1.700,5.000
+(segid A and resid 53) and (name H),(segid A and resid 53) and (name HA),3.768,1.700,3.768
+(segid A and resid 52) and (name HA),(segid A and resid 53) and (name H),3.664,1.700,3.664
+(segid A and resid 53) and (name HB2),(segid A and resid 53) and (name H),4.804,1.700,5.000
+(segid A and resid 53) and (name HB3),(segid A and resid 53) and (name H),4.804,1.700,5.000
+(segid A and resid 53) and (name HB2),(segid A and resid 53) and (name H),5.000,1.700,5.000
+(segid A and resid 53) and (name HB3),(segid A and resid 53) and (name H),5.000,1.700,5.000
+(segid A and resid 52) and (name CG* or (name HG*)),(segid A and resid 53) and (name H),4.435,1.700,4.435
+(segid A and resid 53) and (name H),(segid A and resid 54) and (name H),4.442,1.700,4.442
+(segid A and resid 54) and (name H),(segid A and resid 66) and (name HA),3.721,1.700,3.721
+(segid A and resid 54) and (name HA),(segid A and resid 54) and (name H),4.048,1.700,4.048
+(segid A and resid 54) and (name H),(segid A and resid 53) and (name HA),3.671,1.700,3.671
+(segid A and resid 54) and (name H),(segid A and resid 66) and (name HB2),4.729,1.700,5.000
+(segid A and resid 54) and (name H),(segid A and resid 66) and (name HB3),4.729,1.700,5.000
+(segid A and resid 54) and (name HB2),(segid A and resid 54) and (name H),4.009,1.700,5.000
+(segid A and resid 54) and (name HB3),(segid A and resid 54) and (name H),4.009,1.700,5.000
+(segid A and resid 54) and (name HB2),(segid A and resid 55) and (name H),4.692,1.700,4.692
+(segid A and resid 54) and (name HB3),(segid A and resid 55) and (name H),4.692,1.700,4.692
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HB3),3.428,1.700,3.928
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HB2),3.428,1.700,3.928
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HG2),4.730,1.700,4.730
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HG3),4.730,1.700,4.730
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 55) and (name H),4.526,1.700,4.526
+(segid A and resid 54) and (name HA),(segid A and resid 55) and (name H),3.283,1.700,3.283
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HA),4.004,1.700,4.004
+(segid A and resid 43) and (name HA),(segid A and resid 55) and (name H),3.828,1.700,3.828
+(segid A and resid 54) and (name HB2),(segid A and resid 55) and (name H),3.540,1.700,4.692
+(segid A and resid 54) and (name HB3),(segid A and resid 55) and (name H),3.540,1.700,4.692
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HG2),3.980,1.700,4.730
+(segid A and resid 55) and (name H),(segid A and resid 55) and (name HG3),3.980,1.700,4.730
+(segid A and resid 67) and (name H),(segid A and resid 56) and (name H),5.000,1.700,5.000
+(segid A and resid 56) and (name H),(segid A and resid 57) and (name H),4.558,1.700,4.558
+(segid A and resid 55) and (name HA),(segid A and resid 56) and (name H),3.348,1.700,3.348
+(segid A and resid 56) and (name H),(segid A and resid 56) and (name HA),3.768,1.699,3.768
+(segid A and resid 56) and (name H),(segid A and resid 68) and (name HB2),5.000,1.700,5.000
+(segid A and resid 56) and (name H),(segid A and resid 68) and (name HB3),5.000,1.700,5.000
+(segid A and resid 56) and (name H),(segid A and resid 55) and (name HB3),4.461,1.700,4.961
+(segid A and resid 56) and (name H),(segid A and resid 55) and (name HB2),4.461,1.700,4.961
+(segid A and resid 56) and (name H),(segid A and resid 57) and (name H),3.793,1.700,3.793
+(segid A and resid 57) and (name H),(segid A and resid 58) and (name H),5.000,1.700,5.000
+(segid A and resid 57) and (name H),(segid A and resid 57) and (name HA),3.902,1.700,3.902
+(segid A and resid 57) and (name H),(segid A and resid 57) and (name HB2),3.392,1.700,4.210
+(segid A and resid 57) and (name H),(segid A and resid 57) and (name HB3),3.392,1.700,4.210
+(segid A and resid 57) and (name H),(segid A and resid 56) and (name HA),3.471,1.700,3.471
+(segid A and resid 57) and (name H),(segid A and resid 57) and (name HB2),4.209,1.700,4.209
+(segid A and resid 57) and (name H),(segid A and resid 57) and (name HB3),4.209,1.700,4.209
+(segid A and resid 57) and (name H),(segid A and resid 68) and (name HB2),4.950,1.700,5.000
+(segid A and resid 57) and (name H),(segid A and resid 68) and (name HB3),4.950,1.700,5.000
+(segid A and resid 58) and (name H),(segid A and resid 59) and (name H),4.193,1.700,4.193
+(segid A and resid 57) and (name H),(segid A and resid 58) and (name H),3.868,1.700,3.868
+(segid A and resid 58) and (name H),(segid A and resid 57) and (name HA),3.292,1.700,3.292
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HA),3.815,1.700,3.815
+(segid A and resid 46) and (name HA),(segid A and resid 58) and (name H),3.423,1.700,3.423
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB2),4.396,1.700,4.396
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB3),4.396,1.700,4.396
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB2),3.959,1.700,4.396
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB3),3.959,1.700,4.396
+(segid A and resid 59) and (name H),(segid A and resid 60) and (name H),3.184,1.700,3.184
+(segid A and resid 59) and (name H),(segid A and resid 58) and (name HA),4.089,1.700,4.089
+(segid A and resid 59) and (name H),(segid A and resid 59) and (name HA),3.872,1.700,3.872
+(segid A and resid 59) and (name H),(segid A and resid 59) and (name HG3),5.000,1.700,5.000
+(segid A and resid 59) and (name H),(segid A and resid 59) and (name HG2),5.000,1.700,5.000
+(segid A and resid 59) and (name H),(segid A and resid 59) and (name HB2),4.111,1.700,4.111
+(segid A and resid 59) and (name H),(segid A and resid 59) and (name HB3),4.111,1.700,4.111
+(segid A and resid 59) and (name H),(segid A and resid 59) and (name HB2),3.749,1.700,4.111
+(segid A and resid 59) and (name H),(segid A and resid 59) and (name HB3),3.749,1.700,4.111
+(segid A and resid 58) and (name H),(segid A and resid 59) and (name H),5.000,1.700,5.000
+(segid A and resid 59) and (name H),(segid A and resid 58) and (name HB2),5.000,1.700,5.000
+(segid A and resid 59) and (name H),(segid A and resid 58) and (name HB3),5.000,1.700,5.000
+(segid A and resid 60) and (name CB* or (name HB*)),(segid A and resid 59) and (name H),5.000,1.700,5.000
+(segid A and resid 59) and (name H),(segid A and resid 60) and (name H),3.049,1.700,3.049
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HA),4.309,1.700,4.309
+(segid A and resid 60) and (name H),(segid A and resid 60) and (name HA),3.853,1.700,3.853
+(segid A and resid 57) and (name HB2),(segid A and resid 60) and (name H),5.000,1.700,5.000
+(segid A and resid 57) and (name HB3),(segid A and resid 60) and (name H),5.000,1.700,5.000
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HB2),5.000,1.700,5.000
+(segid A and resid 60) and (name H),(segid A and resid 59) and (name HB3),5.000,1.700,5.000
+(segid A and resid 60) and (name CB* or (name HB*)),(segid A and resid 60) and (name H),3.057,1.700,3.057
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name H),3.247,1.700,3.247
+(segid A and resid 61) and (name H),(segid A and resid 61) and (name HA),3.869,1.700,3.869
+(segid A and resid 49) and (name HA),(segid A and resid 61) and (name H),3.552,1.700,3.552
+(segid A and resid 60) and (name HA),(segid A and resid 61) and (name H),3.056,1.700,3.056
+(segid A and resid 61) and (name H),(segid A and resid 61) and (name HB3),3.591,1.700,4.091
+(segid A and resid 61) and (name H),(segid A and resid 61) and (name HB2),3.591,1.700,4.091
+(segid A and resid 60) and (name CB* or (name HB*)),(segid A and resid 61) and (name H),3.916,1.700,3.916
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name HB3),4.337,1.700,4.837
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name HB2),4.337,1.700,4.837
+(segid A and resid 62) and (name H),(segid A and resid 62) and (name HA),3.973,1.701,3.973
+(segid A and resid 60) and (name HA),(segid A and resid 62) and (name H),4.616,1.700,4.616
+(segid A and resid 50) and (name HA),(segid A and resid 62) and (name H),3.841,1.700,3.841
+(segid A and resid 62) and (name HB),(segid A and resid 62) and (name H),3.525,1.700,3.525
+(segid A and resid 50) and (name CG* or (name HG*)),(segid A and resid 62) and (name H),5.000,1.700,5.000
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name H),3.091,1.700,3.091
+(segid A and resid 62) and (name H),(segid A and resid 61) and (name HA),5.000,1.700,5.000
+(segid A and resid 60) and (name CB* or (name HB*)),(segid A and resid 62) and (name H),3.464,1.700,3.464
+(segid A and resid 62) and (name HA),(segid A and resid 63) and (name H),4.378,1.700,4.378
+(segid A and resid 63) and (name H),(segid A and resid 75) and (name HA),5.000,1.700,5.000
+(segid A and resid 63) and (name H),(segid A and resid 63) and (name HB2),5.000,1.700,5.000
+(segid A and resid 63) and (name H),(segid A and resid 63) and (name HB3),5.000,1.700,5.000
+(segid A and resid 63) and (name H),(segid A and resid 72) and (name CB* or (name HB*)),5.000,1.700,5.000
+(segid A and resid 63) and (name H),(segid A and resid 62) and (name CG* or (name HG*)),5.000,1.700,5.000
+(segid A and resid 63) and (name H),(segid A and resid 74) and (name CB* or (name HB*)),5.000,1.700,5.000
+(segid A and resid 64) and (name CG* or (name HG*)),(segid A and resid 64) and (name H),4.321,1.700,4.321
+(segid A and resid 63) and (name HA),(segid A and resid 64) and (name H),3.024,1.700,3.024
+(segid A and resid 64) and (name H),(segid A and resid 64) and (name HA),3.979,1.700,3.979
+(segid A and resid 52) and (name HA),(segid A and resid 64) and (name H),3.704,1.700,3.704
+(segid A and resid 64) and (name H),(segid A and resid 64) and (name HB),3.557,1.700,3.557
+(segid A and resid 63) and (name HB2),(segid A and resid 64) and (name H),5.000,1.700,5.000
+(segid A and resid 63) and (name HB3),(segid A and resid 64) and (name H),5.000,1.700,5.000
+(segid A and resid 66) and (name H),(segid A and resid 65) and (name H),5.000,1.700,5.000
+(segid A and resid 64) and (name HA),(segid A and resid 65) and (name H),3.707,1.700,3.707
+(segid A and resid 65) and (name H),(segid A and resid 65) and (name HA),3.744,1.700,3.744
+(segid A and resid 65) and (name H),(segid A and resid 76) and (name HB),5.000,1.700,5.000
+(segid A and resid 65) and (name HB2),(segid A and resid 65) and (name H),5.000,1.700,5.000
+(segid A and resid 65) and (name HB3),(segid A and resid 65) and (name H),5.000,1.700,5.000
+(segid A and resid 65) and (name HB2),(segid A and resid 65) and (name H),4.992,1.700,5.000
+(segid A and resid 65) and (name HB3),(segid A and resid 65) and (name H),4.992,1.700,5.000
+(segid A and resid 64) and (name CG* or (name HG*)),(segid A and resid 65) and (name H),4.622,1.700,4.622
+(segid A and resid 66) and (name HB2),(segid A and resid 66) and (name H),5.000,1.700,5.000
+(segid A and resid 66) and (name HB3),(segid A and resid 66) and (name H),5.000,1.700,5.000
+(segid A and resid 66) and (name H),(segid A and resid 65) and (name HA),3.749,1.700,3.749
+(segid A and resid 66) and (name HA),(segid A and resid 66) and (name H),4.132,1.700,4.132
+(segid A and resid 66) and (name H),(segid A and resid 78) and (name HA),3.634,1.700,3.634
+(segid A and resid 66) and (name H),(segid A and resid 78) and (name HB2),4.636,1.700,5.000
+(segid A and resid 66) and (name H),(segid A and resid 78) and (name HB3),4.636,1.700,5.000
+(segid A and resid 66) and (name HB2),(segid A and resid 66) and (name H),3.759,1.700,5.000
+(segid A and resid 66) and (name HB3),(segid A and resid 66) and (name H),3.759,1.700,5.000
+(segid A and resid 66) and (name H),(segid A and resid 65) and (name H),4.116,1.700,4.116
+(segid A and resid 67) and (name H),(segid A and resid 56) and (name H),5.000,1.700,5.000
+(segid A and resid 66) and (name HA),(segid A and resid 67) and (name H),3.346,1.700,3.346
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HA),4.194,1.700,4.194
+(segid A and resid 55) and (name HA),(segid A and resid 67) and (name H),3.257,1.700,3.257
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name HB),3.310,1.700,3.310
+(segid A and resid 66) and (name HB2),(segid A and resid 67) and (name H),4.555,1.700,5.000
+(segid A and resid 66) and (name HB3),(segid A and resid 67) and (name H),4.555,1.700,5.000
+(segid A and resid 67) and (name H),(segid A and resid 67) and (name CG* or (name HG*)),3.522,1.699,3.522
+(segid A and resid 69) and (name H),(segid A and resid 68) and (name H),4.943,1.700,4.943
+(segid A and resid 67) and (name HA),(segid A and resid 68) and (name H),3.455,1.700,3.455
+(segid A and resid 67) and (name HB),(segid A and resid 68) and (name H),4.060,1.700,4.060
+(segid A and resid 68) and (name H),(segid A and resid 68) and (name HA),3.748,1.700,3.748
+(segid A and resid 67) and (name CG* or (name HG*)),(segid A and resid 68) and (name H),5.000,1.700,5.000
+(segid A and resid 67) and (name HA),(segid A and resid 69) and (name H),5.000,1.700,5.000
+(segid A and resid 69) and (name H),(segid A and resid 69) and (name HA),3.978,1.700,3.978
+(segid A and resid 69) and (name H),(segid A and resid 68) and (name H),3.514,1.700,3.514
+(segid A and resid 69) and (name H),(segid A and resid 70) and (name H),5.000,1.700,5.000
+(segid A and resid 69) and (name H),(segid A and resid 80) and (name HA2),5.000,1.700,5.000
+(segid A and resid 69) and (name H),(segid A and resid 80) and (name HA3),5.000,1.700,5.000
+(segid A and resid 69) and (name H),(segid A and resid 80) and (name HA2),3.911,1.700,5.000
+(segid A and resid 69) and (name H),(segid A and resid 80) and (name HA3),3.911,1.700,5.000
+(segid A and resid 69) and (name H),(segid A and resid 68) and (name HA),2.941,1.700,2.941
+(segid A and resid 70) and (name H),(segid A and resid 71) and (name H),4.067,1.700,4.067
+(segid A and resid 69) and (name H),(segid A and resid 70) and (name H),5.000,1.700,5.000
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HD1),4.082,1.700,4.082
+(segid A and resid 69) and (name HA),(segid A and resid 70) and (name H),3.253,1.700,3.253
+(segid A and resid 58) and (name HA),(segid A and resid 70) and (name H),3.641,1.700,3.641
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HB2),4.424,1.700,4.424
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HB3),4.424,1.700,4.424
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HB2),3.733,1.700,4.424
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HB3),3.733,1.700,4.424
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HA),3.836,1.700,3.836
+(segid A and resid 71) and (name H),(segid A and resid 72) and (name H),3.146,1.700,3.146
+(segid A and resid 70) and (name H),(segid A and resid 71) and (name H),4.410,1.700,4.410
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HA),3.925,1.700,3.925
+(segid A and resid 71) and (name H),(segid A and resid 70) and (name HB2),5.000,1.700,5.000
+(segid A and resid 71) and (name H),(segid A and resid 70) and (name HB3),5.000,1.700,5.000
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HB2),4.842,1.700,4.842
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HB3),4.842,1.700,4.842
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HG2),5.000,1.700,5.000
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HG3),5.000,1.700,5.000
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HB2),3.434,1.700,4.842
+(segid A and resid 71) and (name H),(segid A and resid 71) and (name HB3),3.434,1.700,4.842
+(segid A and resid 71) and (name H),(segid A and resid 72) and (name H),3.082,1.700,3.082
+(segid A and resid 72) and (name H),(segid A and resid 81) and (name HA),4.874,1.700,4.874
+(segid A and resid 72) and (name H),(segid A and resid 71) and (name HA),4.272,1.700,4.272
+(segid A and resid 72) and (name H),(segid A and resid 72) and (name HA),3.860,1.700,3.860
+(segid A and resid 72) and (name H),(segid A and resid 82) and (name HD2),4.429,1.700,4.429
+(segid A and resid 72) and (name H),(segid A and resid 82) and (name HD3),4.429,1.700,4.429
+(segid A and resid 72) and (name H),(segid A and resid 82) and (name HD2),4.091,1.700,4.429
+(segid A and resid 72) and (name H),(segid A and resid 82) and (name HD3),4.091,1.700,4.429
+(segid A and resid 72) and (name H),(segid A and resid 69) and (name HB2),4.666,1.700,5.000
+(segid A and resid 72) and (name H),(segid A and resid 69) and (name HB3),4.666,1.700,5.000
+(segid A and resid 72) and (name H),(segid A and resid 82) and (name HG3),5.000,1.700,5.000
+(segid A and resid 72) and (name H),(segid A and resid 82) and (name HG2),5.000,1.700,5.000
+(segid A and resid 72) and (name CB* or (name HB*)),(segid A and resid 72) and (name H),3.037,1.700,3.037
+(segid A and resid 74) and (name H),(segid A and resid 73) and (name H),3.050,1.700,3.050
+(segid A and resid 61) and (name HA),(segid A and resid 73) and (name H),3.593,1.700,3.593
+(segid A and resid 72) and (name HA),(segid A and resid 73) and (name H),2.784,1.700,2.784
+(segid A and resid 72) and (name CB* or (name HB*)),(segid A and resid 73) and (name H),3.847,1.700,3.847
+(segid A and resid 73) and (name H),(segid A and resid 73) and (name CG* or (name HG*)),3.570,1.700,3.570
+(segid A and resid 73) and (name H),(segid A and resid 61) and (name HB3),5.000,1.700,5.000
+(segid A and resid 73) and (name H),(segid A and resid 61) and (name HB2),5.000,1.700,5.000
+(segid A and resid 73) and (name H),(segid A and resid 73) and (name HA),3.961,1.700,3.961
+(segid A and resid 74) and (name H),(segid A and resid 74) and (name HA),3.808,1.701,3.808
+(segid A and resid 74) and (name H),(segid A and resid 73) and (name H),3.441,1.700,3.441
+(segid A and resid 72) and (name HA),(segid A and resid 74) and (name H),4.383,1.700,4.383
+(segid A and resid 74) and (name H),(segid A and resid 73) and (name HA),4.997,1.700,4.997
+(segid A and resid 74) and (name CB* or (name HB*)),(segid A and resid 74) and (name H),3.648,1.700,3.648
+(segid A and resid 72) and (name CB* or (name HB*)),(segid A and resid 74) and (name H),4.383,1.700,4.383
+(segid A and resid 62) and (name HA),(segid A and resid 74) and (name H),4.274,1.700,4.274
+(segid A and resid 64) and (name HA),(segid A and resid 76) and (name H),4.138,1.700,4.138
+(segid A and resid 75) and (name HA),(segid A and resid 76) and (name H),3.067,1.700,3.067
+(segid A and resid 76) and (name H),(segid A and resid 76) and (name HA),3.889,1.700,3.889
+(segid A and resid 76) and (name HB),(segid A and resid 76) and (name H),3.577,1.700,3.577
+(segid A and resid 76) and (name H),(segid A and resid 76) and (name CG* or (name HG*)),4.978,1.700,4.978
+(segid A and resid 64) and (name CG* or (name HG*)),(segid A and resid 76) and (name H),5.000,1.700,5.000
+(segid A and resid 78) and (name HA),(segid A and resid 78) and (name H),4.044,1.700,4.044
+(segid A and resid 78) and (name H),(segid A and resid 77) and (name HA),3.394,1.700,3.394
+(segid A and resid 78) and (name HB2),(segid A and resid 78) and (name H),3.940,1.700,4.440
+(segid A and resid 78) and (name HB3),(segid A and resid 78) and (name H),3.940,1.700,4.440
+(segid A and resid 68) and (name H),(segid A and resid 79) and (name H),5.000,1.700,5.000
+(segid A and resid 78) and (name HA),(segid A and resid 79) and (name H),3.378,1.700,3.378
+(segid A and resid 67) and (name HA),(segid A and resid 79) and (name H),3.529,1.700,3.529
+(segid A and resid 79) and (name H),(segid A and resid 79) and (name HA),3.871,1.700,3.871
+(segid A and resid 79) and (name H),(segid A and resid 79) and (name HB2),5.000,1.700,5.000
+(segid A and resid 79) and (name H),(segid A and resid 79) and (name HB3),5.000,1.700,5.000
+(segid A and resid 79) and (name H),(segid A and resid 79) and (name HB2),4.076,1.700,5.000
+(segid A and resid 79) and (name H),(segid A and resid 79) and (name HB3),4.076,1.700,5.000
+(segid A and resid 78) and (name HB2),(segid A and resid 79) and (name H),4.044,1.700,5.000
+(segid A and resid 78) and (name HB3),(segid A and resid 79) and (name H),4.044,1.700,5.000
+(segid A and resid 78) and (name HB2),(segid A and resid 79) and (name H),5.000,1.700,5.000
+(segid A and resid 78) and (name HB3),(segid A and resid 79) and (name H),5.000,1.700,5.000
+(segid A and resid 67) and (name CG* or (name HG*)),(segid A and resid 79) and (name H),5.000,1.700,5.000
+(segid A and resid 81) and (name H),(segid A and resid 80) and (name H),5.000,1.700,5.000
+(segid A and resid 79) and (name HA),(segid A and resid 80) and (name H),4.460,1.700,4.460
+(segid A and resid 79) and (name HB2),(segid A and resid 80) and (name H),5.000,1.700,5.000
+(segid A and resid 79) and (name HB3),(segid A and resid 80) and (name H),5.000,1.700,5.000
+(segid A and resid 80) and (name HA2),(segid A and resid 80) and (name H),5.000,1.700,5.000
+(segid A and resid 80) and (name HA3),(segid A and resid 80) and (name H),5.000,1.700,5.000
+(segid A and resid 80) and (name HA2),(segid A and resid 80) and (name H),5.000,1.700,5.000
+(segid A and resid 80) and (name HA3),(segid A and resid 80) and (name H),5.000,1.700,5.000
+(segid A and resid 79) and (name HB2),(segid A and resid 81) and (name H),5.000,1.700,5.000
+(segid A and resid 79) and (name HB3),(segid A and resid 81) and (name H),5.000,1.700,5.000
+(segid A and resid 80) and (name HA2),(segid A and resid 81) and (name H),4.258,1.700,4.496
+(segid A and resid 80) and (name HA3),(segid A and resid 81) and (name H),4.258,1.700,4.496
+(segid A and resid 80) and (name HA2),(segid A and resid 81) and (name H),4.497,1.700,4.497
+(segid A and resid 80) and (name HA3),(segid A and resid 81) and (name H),4.497,1.700,4.497
+(segid A and resid 79) and (name HA),(segid A and resid 81) and (name H),4.660,1.700,4.660
+(segid A and resid 81) and (name H),(segid A and resid 80) and (name H),4.020,1.700,4.020
+(segid A and resid 81) and (name HA),(segid A and resid 81) and (name H),3.898,1.700,3.898
+(segid A and resid 81) and (name H),(segid A and resid 81) and (name HB2),3.244,1.700,3.744
+(segid A and resid 81) and (name H),(segid A and resid 81) and (name HB3),3.244,1.700,3.744
+(segid A and resid 82) and (name HA),(segid A and resid 83) and (name H),5.000,1.700,5.000
+(segid A and resid 4) and (name HA3),(segid A and resid 4) and (name HA2),3.4,1.8,3.4
+(segid A and resid 7) and (name HB3),(segid A and resid 7) and (name HB2),3.4,1.8,3.4
+(segid A and resid 8) and (name HB3),(segid A and resid 8) and (name HB2),5.0,1.8,5.0
+(segid A and resid 10) and (name HA),(segid A and resid 10) and (name HB3),3.4,1.8,3.4
+(segid A and resid 8) and (name HB3),(segid A and resid 11) and (name HB2),3.4,1.8,4.4
+(segid A and resid 17) and (name HA3),(segid A and resid 17) and (name HA2),5.0,1.8,5.0
+(segid A and resid 18) and (name HB3),(segid A and resid 18) and (name HB2),3.4,1.8,3.4
+(segid A and resid 19) and (name HA3),(segid A and resid 19) and (name HA2),5.0,1.8,5.0
+(segid A and resid 21) and (name HB3),(segid A and resid 21) and (name HB2),3.4,1.8,3.4
+(segid A and resid 8) and (name HB3),(segid A and resid 22) and (name HD3),3.4,1.8,3.4
+(segid A and resid 23) and (name HB3),(segid A and resid 23) and (name HB2),5.0,1.8,5.0
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 22) and (name HD3),5.0,1.8,5.0
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 22) and (name HD2),5.0,1.8,5.0
+(segid A and resid 25) and (name HB),(segid A and resid 25) and (name CG1* or (name HG1*)),3.4,1.8,3.4
+(segid A and resid 25) and (name HB),(segid A and resid 25) and (name CG2* or (name HG2*)),3.4,1.8,3.4
+(segid A and resid 27) and (name HB3),(segid A and resid 27) and (name HB2),3.4,1.8,3.4
+(segid A and resid 16) and (name HA),(segid A and resid 28) and (name HB),5.0,1.8,5.0
+(segid A and resid 28) and (name HB),(segid A and resid 28) and (name CG* or (name HG*)),3.4,1.8,3.4
+(segid A and resid 29) and (name HB3),(segid A and resid 29) and (name HB2),2.8,1.8,2.8
+(segid A and resid 27) and (name HB3),(segid A and resid 30) and (name HB3),5.0,1.8,5.0
+(segid A and resid 27) and (name HB3),(segid A and resid 30) and (name HB2),5.0,1.8,5.0
+(segid A and resid 31) and (name HB3),(segid A and resid 31) and (name HB2),2.8,1.8,3.8
+(segid A and resid 31) and (name HB2),(segid A and resid 31) and (name HG2),2.8,1.8,3.8
+(segid A and resid 31) and (name HB2),(segid A and resid 31) and (name HG3),2.8,1.8,3.8
+(segid A and resid 32) and (name HB2),(segid A and resid 31) and (name HG2),5.0,1.8,5.0
+(segid A and resid 32) and (name HB2),(segid A and resid 31) and (name HG3),5.0,1.8,5.0
+(segid A and resid 32) and (name HB3),(segid A and resid 32) and (name HB2),3.4,1.8,3.4
+(segid A and resid 33) and (name HB3),(segid A and resid 33) and (name HB2),3.4,1.8,3.4
+(segid A and resid 34) and (name HB),(segid A and resid 34) and (name CG1* or (name HG1*)),3.4,1.8,3.4
+(segid A and resid 34) and (name HB),(segid A and resid 34) and (name CG2* or (name HG2*)),3.4,1.8,3.4
+(segid A and resid 35) and (name HB2),(segid A and resid 34) and (name CG1* or (name HG1*)),5.0,1.8,5.0
+(segid A and resid 34) and (name CG2* or (name HG2*)),(segid A and resid 35) and (name HB2),5.0,1.8,5.0
+(segid A and resid 36) and (name CB* or (name HB*)),(segid A and resid 36) and (name HA),5.0,1.8,5.0
+(segid A and resid 38) and (name HB),(segid A and resid 38) and (name CG* or (name HG*)),3.4,1.8,3.4
+(segid A and resid 39) and (name HB3),(segid A and resid 39) and (name HB2),3.4,1.8,3.4
+(segid A and resid 29) and (name HB3),(segid A and resid 41) and (name HA3),5.0,1.8,5.0
+(segid A and resid 42) and (name HA),(segid A and resid 31) and (name HA),5.0,1.8,5.0
+(segid A and resid 42) and (name HB3),(segid A and resid 39) and (name HB3),5.0,1.8,5.0
+(segid A and resid 41) and (name HA3),(segid A and resid 42) and (name HA),3.4,1.8,4.4
+(segid A and resid 42) and (name HA),(segid A and resid 43) and (name CG* or (name HG*)),3.4,1.8,3.4
+(segid A and resid 44) and (name HB3),(segid A and resid 34) and (name CG1* or (name HG1*)),5.0,1.8,5.0
+(segid A and resid 44) and (name HB3),(segid A and resid 34) and (name CG2* or (name HG2*)),5.0,1.8,5.0
+(segid A and resid 39) and (name HB2),(segid A and resid 45) and (name HB2),5.0,1.8,5.0
+(segid A and resid 45) and (name HB3),(segid A and resid 45) and (name HB2),2.8,1.8,2.8
+(segid A and resid 46) and (name HB3),(segid A and resid 46) and (name HB2),2.8,1.8,2.8
+(segid A and resid 51) and (name HB3),(segid A and resid 51) and (name HB2),3.4,1.8,3.4
+(segid A and resid 40) and (name HA),(segid A and resid 52) and (name HB),5.0,1.8,5.0
+(segid A and resid 52) and (name HB),(segid A and resid 52) and (name CG* or (name HG*)),3.4,1.8,3.4
+(segid A and resid 41) and (name HA3),(segid A and resid 53) and (name HB2),5.0,1.8,5.0
+(segid A and resid 53) and (name HB3),(segid A and resid 53) and (name HA),5.0,1.8,5.0
+(segid A and resid 53) and (name HB3),(segid A and resid 53) and (name HB2),3.4,1.8,3.4
+(segid A and resid 54) and (name HA),(segid A and resid 43) and (name HB),3.4,1.8,3.4
+(segid A and resid 54) and (name HA),(segid A and resid 43) and (name CG* or (name HG*)),3.4,1.8,3.4
+(segid A and resid 54) and (name HA),(segid A and resid 54) and (name HB2),5.0,1.8,5.0
+(segid A and resid 54) and (name HB3),(segid A and resid 54) and (name HB2),5.0,1.8,5.0
+(segid A and resid 54) and (name HA),(segid A and resid 55) and (name HA),5.0,1.8,5.0
+(segid A and resid 54) and (name HA),(segid A and resid 55) and (name HG3),5.0,1.8,5.0
+(segid A and resid 55) and (name HG2),(segid A and resid 55) and (name HE2),5.0,1.8,5.0
+(segid A and resid 55) and (name HG2),(segid A and resid 55) and (name HE3),5.0,1.8,5.0
+(segid A and resid 56) and (name HB3),(segid A and resid 56) and (name HB2),3.4,1.8,3.4
+(segid A and resid 57) and (name HB3),(segid A and resid 57) and (name HB2),3.4,1.8,3.4
+(segid A and resid 46) and (name HA),(segid A and resid 58) and (name H),3.4,1.8,4.4
+(segid A and resid 56) and (name HB3),(segid A and resid 58) and (name HD*),3.4,1.8,4.4
+(segid A and resid 58) and (name H),(segid A and resid 57) and (name HA),3.4,1.8,3.4
+(segid A and resid 58) and (name HB3),(segid A and resid 58) and (name HB2),5.0,1.8,5.0
+(segid A and resid 58) and (name HA),(segid A and resid 58) and (name HE*),5.0,1.8,5.5
+(segid A and resid 58) and (name HB2),(segid A and resid 58) and (name HE*),5.0,1.8,5.5
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HA),3.4,1.8,4.4
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB3),5.0,1.8,5.0
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HB2),5.0,1.8,5.0
+(segid A and resid 58) and (name HB3),(segid A and resid 58) and (name HZ),5.0,1.8,5.5
+(segid A and resid 58) and (name HB2),(segid A and resid 58) and (name HZ),5.0,1.8,5.5
+(segid A and resid 59) and (name HB3),(segid A and resid 59) and (name HB2),3.4,1.8,3.4
+(segid A and resid 59) and (name HB2),(segid A and resid 59) and (name HG2),2.8,1.8,3.8
+(segid A and resid 59) and (name HB2),(segid A and resid 59) and (name HG3),2.8,1.8,3.8
+(segid A and resid 63) and (name HB3),(segid A and resid 63) and (name HB2),5.0,1.8,5.0
+(segid A and resid 64) and (name CG* or (name HG*)),(segid A and resid 64) and (name HB),5.0,1.8,5.0
+(segid A and resid 65) and (name HB3),(segid A and resid 65) and (name HB2),3.4,1.8,3.4
+(segid A and resid 66) and (name HA),(segid A and resid 66) and (name HB2),5.0,1.8,5.0
+(segid A and resid 66) and (name HB3),(segid A and resid 66) and (name HB2),5.0,1.8,5.0
+(segid A and resid 67) and (name CG* or (name HG*)),(segid A and resid 55) and (name HB3),5.0,1.8,5.0
+(segid A and resid 67) and (name CG* or (name HG*)),(segid A and resid 55) and (name HB2),5.0,1.8,5.0
+(segid A and resid 55) and (name HG2),(segid A and resid 67) and (name CG* or (name HG*)),5.0,1.8,5.0
+(segid A and resid 68) and (name HB2),(segid A and resid 58) and (name HE*),5.0,1.8,5.0
+(segid A and resid 68) and (name HB3),(segid A and resid 68) and (name HB2),3.4,1.8,3.4
+(segid A and resid 69) and (name HB3),(segid A and resid 69) and (name HB2),3.4,1.8,3.4
+(segid A and resid 58) and (name HA),(segid A and resid 70) and (name HD1),5.0,1.8,5.5
+(segid A and resid 58) and (name HA),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 58) and (name HB2),(segid A and resid 70) and (name HD1),5.0,1.8,5.5
+(segid A and resid 58) and (name HB2),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 70) and (name HD1),(segid A and resid 58) and (name HE*),5.0,1.8,5.5
+(segid A and resid 58) and (name HE*),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 58) and (name HA),(segid A and resid 70) and (name H),3.4,1.8,4.4
+(segid A and resid 69) and (name HA),(segid A and resid 70) and (name H),3.4,1.8,3.4
+(segid A and resid 70) and (name HB3),(segid A and resid 70) and (name HB2),3.4,1.8,3.4
+(segid A and resid 70) and (name HD1),(segid A and resid 70) and (name HA),5.0,1.8,5.5
+(segid A and resid 70) and (name HA),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 70) and (name HD1),(segid A and resid 70) and (name HB3),5.0,1.8,5.5
+(segid A and resid 70) and (name HB3),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 70) and (name HD1),(segid A and resid 70) and (name HB2),5.0,1.8,5.5
+(segid A and resid 70) and (name HB2),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 70) and (name HD1),(segid A and resid 70) and (name HE*),2.8,1.8,3.8
+(segid A and resid 70) and (name HE*),(segid A and resid 70) and (name HD2),2.8,1.8,3.8
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HB3),5.0,1.8,5.0
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HB2),5.0,1.8,5.0
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HD1),5.0,1.8,5.5
+(segid A and resid 70) and (name H),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 71) and (name HB3),(segid A and resid 71) and (name HB2),2.8,1.8,3.8
+(segid A and resid 71) and (name HD2),(segid A and resid 71) and (name HE2),3.4,1.8,4.4
+(segid A and resid 71) and (name HD3),(segid A and resid 71) and (name HE2),3.4,1.8,4.4
+(segid A and resid 71) and (name HE3),(segid A and resid 71) and (name HD2),3.4,1.8,4.4
+(segid A and resid 71) and (name HD3),(segid A and resid 71) and (name HE3),3.4,1.8,4.4
+(segid A and resid 75) and (name HB3),(segid A and resid 75) and (name HB2),3.4,1.8,3.4
+(segid A and resid 77) and (name HB3),(segid A and resid 77) and (name HB2),3.4,1.8,3.4
+(segid A and resid 78) and (name HA),(segid A and resid 78) and (name HB3),5.0,1.8,5.0
+(segid A and resid 78) and (name HA),(segid A and resid 78) and (name HB2),5.0,1.8,5.0
+(segid A and resid 78) and (name HB3),(segid A and resid 78) and (name HB2),5.0,1.8,5.0
+(segid A and resid 80) and (name HA3),(segid A and resid 70) and (name HD1),5.0,1.8,5.5
+(segid A and resid 80) and (name HA3),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 80) and (name HA2),(segid A and resid 70) and (name HD1),5.0,1.8,5.5
+(segid A and resid 80) and (name HA2),(segid A and resid 70) and (name HD2),5.0,1.8,5.5
+(segid A and resid 80) and (name HA3),(segid A and resid 80) and (name HA2),3.4,1.8,3.4
+(segid A and resid 81) and (name HB3),(segid A and resid 81) and (name HB2),3.4,1.8,3.4
+(segid A and resid 82) and (name HA),(segid A and resid 75) and (name HB3),5.0,1.8,5.0
+(segid A and resid 82) and (name HB3),(segid A and resid 82) and (name HB2),2.8,1.8,2.8
+(segid A and resid 82) and (name HB2),(segid A and resid 82) and (name HG3),3.4,1.8,3.4
+(segid A and resid 82) and (name HB2),(segid A and resid 82) and (name HG2),3.4,1.8,3.4
+(segid A and resid 82) and (name HD3),(segid A and resid 82) and (name HG3),5.0,1.8,5.0
+(segid A and resid 82) and (name HD3),(segid A and resid 82) and (name HG2),5.0,1.8,5.0
+(segid A and resid 82) and (name HD2),(segid A and resid 82) and (name HG3),5.0,1.8,5.0
+(segid A and resid 82) and (name HD2),(segid A and resid 82) and (name HG2),5.0,1.8,5.0
+(segid A and resid 16) and (name H),(segid A and resid 16) and (name HA),2.7,1.8,3.6
+(segid A and resid 20) and (name HB3),(segid A and resid 20) and (name HD21),3.1,1.9,4.3
+(segid A and resid 20) and (name HD21),(segid A and resid 20) and (name HD22),2.0,1.5,2.5
+(segid A and resid 23) and (name HB3),(segid A and resid 23) and (name HD21),2.8,1.8,3.8
+(segid A and resid 23) and (name HB3),(segid A and resid 23) and (name HD22),3.0,1.9,4.1
+(segid A and resid 23) and (name HB2),(segid A and resid 23) and (name HD21),3.1,1.9,4.3
+(segid A and resid 23) and (name HD21),(segid A and resid 23) and (name HD22),2.0,1.5,2.5
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 24) and (name HA),5.0,1.9,6.5
+(segid A and resid 29) and (name HD22),(segid A and resid 29) and (name HD21),1.9,1.4,2.4
+(segid A and resid 35) and (name HB2),(segid A and resid 35) and (name HD3),5.0,1.9,7.5
+(segid A and resid 35) and (name HB3),(segid A and resid 35) and (name HD3),5.0,1.9,7.5
+(segid A and resid 35) and (name HD2),(segid A and resid 35) and (name HB3),5.0,1.9,7.5
+(segid A and resid 35) and (name HB2),(segid A and resid 35) and (name HD2),5.0,1.9,7.5
+(segid A and resid 35) and (name HD2),(segid A and resid 35) and (name HG2),5.0,1.9,7.5
+(segid A and resid 35) and (name HD3),(segid A and resid 35) and (name HG2),5.0,1.9,7.5
+(segid A and resid 35) and (name HG3),(segid A and resid 35) and (name HD3),5.0,1.9,7.5
+(segid A and resid 35) and (name HD2),(segid A and resid 35) and (name HG3),5.0,1.9,7.5
+(segid A and resid 37) and (name HB3),(segid A and resid 37) and (name HD21),3.2,1.9,4.5
+(segid A and resid 37) and (name HD21),(segid A and resid 37) and (name HD22),1.8,1.4,2.2
+(segid A and resid 42) and (name HB3),(segid A and resid 42) and (name HB2),5.0,0.0,5.0
+(segid A and resid 42) and (name HB2),(segid A and resid 42) and (name HA),5.0,1.9,5.5
+(segid A and resid 49) and (name HB2),(segid A and resid 49) and (name HG2),5.0,1.9,7.5
+(segid A and resid 49) and (name HB3),(segid A and resid 49) and (name HG2),5.0,1.9,7.5
+(segid A and resid 49) and (name HG3),(segid A and resid 49) and (name HB3),5.0,1.9,7.5
+(segid A and resid 49) and (name HB2),(segid A and resid 49) and (name HG3),5.0,1.9,7.5
+(segid A and resid 53) and (name HD22),(segid A and resid 53) and (name HD21),1.8,1.4,2.2
+(segid A and resid 55) and (name HD3),(segid A and resid 55) and (name HE2),5.0,1.9,7.5
+(segid A and resid 55) and (name HD2),(segid A and resid 55) and (name HE2),5.0,1.9,7.5
+(segid A and resid 55) and (name HE3),(segid A and resid 55) and (name HD2),5.0,1.9,7.5
+(segid A and resid 55) and (name HE3),(segid A and resid 55) and (name HD3),5.0,1.9,7.5
+(segid A and resid 58) and (name H),(segid A and resid 58) and (name HE*),2.6,0.0,6.9
+(segid A and resid 58) and (name HE*),(segid A and resid 58) and (name HZ),5.0,1.9,7.9
+(segid A and resid 59) and (name HB3),(segid A and resid 59) and (name HG2),5.0,1.9,6.5
+(segid A and resid 59) and (name HB3),(segid A and resid 59) and (name HG3),5.0,1.9,6.5
+(segid A and resid 61) and (name HD21),(segid A and resid 61) and (name HB3),3.1,1.9,5.3
+(segid A and resid 61) and (name HB2),(segid A and resid 61) and (name HD21),3.1,1.9,5.3
+(segid A and resid 61) and (name HD21),(segid A and resid 61) and (name HD22),2.0,1.5,2.5
+(segid A and resid 69) and (name H),(segid A and resid 69) and (name HB3),2.8,1.8,3.8
+(segid A and resid 69) and (name H),(segid A and resid 69) and (name HB2),2.2,1.6,2.8
+(segid A and resid 71) and (name HB2),(segid A and resid 71) and (name HD2),5.0,1.9,6.5
+(segid A and resid 71) and (name HB2),(segid A and resid 71) and (name HD3),5.0,1.9,6.5
+(segid A and resid 71) and (name HB2),(segid A and resid 71) and (name HG3),5.0,1.9,6.5
+(segid A and resid 71) and (name HB2),(segid A and resid 71) and (name HG2),5.0,1.9,6.5
+(segid A and resid 77) and (name HA),(segid A and resid 77) and (name HB3),5.0,1.9,5.5
+(segid A and resid 79) and (name HB3),(segid A and resid 79) and (name HB2),5.0,0.0,5.0
+(segid A and resid 9) and (name HB),(segid A and resid 9) and (name CG* or (name HG*)),5.0,1.9,6.5
+(segid A and resid 12) and (name H),(segid A and resid 13) and (name HA2),3.2,1.9,4.5
+(segid A and resid 20) and (name HB2),(segid A and resid 21) and (name H),2.9,1.8,4.0
+(segid A and resid 23) and (name HD21),(segid A and resid 22) and (name HB3),3.2,1.9,4.5
+(segid A and resid 24) and (name H),(segid A and resid 23) and (name HD21),3.0,1.9,4.1
+(segid A and resid 42) and (name H),(segid A and resid 43) and (name HA),5.0,1.9,5.5
+(segid A and resid 51) and (name H),(segid A and resid 52) and (name H),5.0,1.9,5.5
+(segid A and resid 57) and (name H),(segid A and resid 58) and (name HD*),5.0,1.9,7.9
+(segid A and resid 74) and (name HA),(segid A and resid 75) and (name H),2.4,1.7,3.1
+(segid A and resid 78) and (name H),(segid A and resid 77) and (name H),5.0,1.9,5.5
+(segid A and resid 16) and (name H),(segid A and resid 18) and (name H),3.3,1.9,4.7
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 21) and (name HB3),5.0,1.9,6.5
+(segid A and resid 27) and (name HB3),(segid A and resid 30) and (name HB3),5.0,1.9,5.5
+(segid A and resid 36) and (name CB* or (name HB*)),(segid A and resid 33) and (name HB3),5.0,1.9,6.5
+(segid A and resid 48) and (name CB* or (name HB*)),(segid A and resid 45) and (name HB3),5.0,1.9,6.5
+(segid A and resid 56) and (name HA),(segid A and resid 58) and (name HZ),5.0,1.9,5.5
+(segid A and resid 60) and (name CB* or (name HB*)),(segid A and resid 57) and (name HB3),5.0,1.9,6.5
+(segid A and resid 68) and (name HA),(segid A and resid 70) and (name HE*),5.0,1.9,7.9
+(segid A and resid 68) and (name HB3),(segid A and resid 70) and (name HE*),5.0,1.9,7.9
+(segid A and resid 71) and (name H),(segid A and resid 69) and (name HB3),3.3,1.9,4.7
+(segid A and resid 72) and (name H),(segid A and resid 69) and (name HB3),3.0,1.9,4.1
+(segid A and resid 72) and (name CB* or (name HB*)),(segid A and resid 69) and (name HB3),5.0,1.9,6.5
+(segid A and resid 72) and (name CB* or (name HB*)),(segid A and resid 75) and (name HB3),5.0,1.9,6.5
+(segid A and resid 12) and (name CG* or (name HG*)),(segid A and resid 23) and (name HB2),5.0,1.9,6.5
+(segid A and resid 15) and (name H),(segid A and resid 26) and (name H),3.3,1.9,4.7
+(segid A and resid 20) and (name HB2),(segid A and resid 32) and (name HB3),5.0,1.9,5.5
+(segid A and resid 15) and (name HB2),(segid A and resid 24) and (name CB* or (name HB*)),5.0,1.9,6.5
+(segid A and resid 25) and (name CG2* or (name HG2*)),(segid A and resid 37) and (name HD22),3.4,2.0,7.2
+(segid A and resid 18) and (name HB2),(segid A and resid 30) and (name HB3),5.0,1.9,5.5
+(segid A and resid 19) and (name HA3),(segid A and resid 31) and (name HB2),5.0,1.9,5.5
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 35) and (name HG2),5.0,1.9,7.5
+(segid A and resid 24) and (name CB* or (name HB*)),(segid A and resid 35) and (name HG3),5.0,1.9,7.5
+(segid A and resid 36) and (name H),(segid A and resid 48) and (name H),3.3,1.9,4.7
+(segid A and resid 42) and (name HB3),(segid A and resid 33) and (name H),3.2,1.9,4.5
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 55) and (name HB3),5.0,1.9,7.5
+(segid A and resid 43) and (name CG* or (name HG*)),(segid A and resid 55) and (name HB2),5.0,1.9,7.5
+(segid A and resid 43) and (name H),(segid A and resid 55) and (name H),5.0,1.9,5.5
+(segid A and resid 44) and (name H),(segid A and resid 55) and (name H),3.3,1.9,4.7
+(segid A and resid 36) and (name H),(segid A and resid 45) and (name HA),2.5,0.0,4.5
+(segid A and resid 45) and (name HB2),(segid A and resid 56) and (name HA),5.0,1.9,5.5
+(segid A and resid 45) and (name H),(segid A and resid 57) and (name H),3.2,1.9,4.5
+(segid A and resid 46) and (name HA),(segid A and resid 58) and (name HE*),5.0,1.9,7.9
+(segid A and resid 46) and (name HB2),(segid A and resid 58) and (name HE*),5.0,1.9,7.9
+(segid A and resid 46) and (name HB2),(segid A and resid 58) and (name H),5.0,1.9,5.5
+(segid A and resid 46) and (name HB2),(segid A and resid 58) and (name HZ),5.0,1.9,5.5
+(segid A and resid 42) and (name H),(segid A and resid 51) and (name HB2),3.0,1.9,4.1
+(segid A and resid 41) and (name H),(segid A and resid 52) and (name HB),3.2,1.9,4.5
+(segid A and resid 40) and (name H),(segid A and resid 52) and (name H),5.0,1.9,5.5
+(segid A and resid 63) and (name HB2),(segid A and resid 69) and (name HB2),5.0,1.9,5.5
+(segid A and resid 68) and (name HB3),(segid A and resid 58) and (name HE*),5.0,1.9,7.9
+(segid A and resid 68) and (name HB3),(segid A and resid 58) and (name HZ),5.0,1.9,5.5
+(segid A and resid 56) and (name HA),(segid A and resid 68) and (name HB2),5.0,1.9,5.5
+(segid A and resid 68) and (name HB2),(segid A and resid 58) and (name HZ),5.0,1.9,5.5
+(segid A and resid 58) and (name HZ),(segid A and resid 70) and (name HE*),5.0,1.9,7.9
+(segid A and resid 58) and (name H),(segid A and resid 70) and (name H),5.0,1.9,5.5
+(segid A and resid 63) and (name HB3),(segid A and resid 72) and (name CB* or (name HB*)),5.0,1.9,6.5
+(segid A and resid 62) and (name HA),(segid A and resid 74) and (name CB* or (name HB*)),5.0,1.9,6.5
+(segid A and resid 68) and (name H),(segid A and resid 79) and (name HA),3.0,1.9,4.1
+(segid A and resid 68) and (name H),(segid A and resid 79) and (name HB2),3.3,1.9,4.7
+(segid A and resid 68) and (name H),(segid A and resid 80) and (name HA3),3.0,1.9,4.1
+(segid A and resid 68) and (name H),(segid A and resid 80) and (name HA2),2.9,1.8,4.0
+(segid A and resid 68) and (name H),(segid A and resid 80) and (name H),2.8,1.8,3.8

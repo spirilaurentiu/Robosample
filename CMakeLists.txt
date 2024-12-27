@@ -57,6 +57,7 @@ IF(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "Debug_Tests" OR
     # https://clang.llvm.org/docs/AddressSanitizer.html
     #SET(SANITIZER_FLAGS "-fsanitize=undefined,leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
     SET(SANITIZER_FLAGS "-fsanitize=leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
+    SET(SANITIZER_FLAGS "")
 
     SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer")
     SET(SUFFIX "_d")
@@ -98,7 +99,7 @@ ELSE()
     SET(USE_IPO FALSE)
 ENDIF()
 
-# SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_STANDARD 14)
 
 # link prerequisites
 find_package(BLAS REQUIRED)
