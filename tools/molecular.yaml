@@ -1,0 +1,24 @@
+name: robo
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pip
+  - openmm
+  - scipy
+  - mdtraj
+  - mdanalysis
+  - matplotlib
+  - ambertools
+  - tqdm
+  - rdkit
+  - parmed
+  - openbabel
+  - biopython
+  - seaborn
+  - pandas
+  - numpy
+  - pip:
+    - rcsbsearchapi
+    - pdb2pqr
