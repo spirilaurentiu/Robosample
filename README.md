@@ -164,6 +164,11 @@ Select the kit and then compile:
 
 ## Running from the Python interface
 
+```bash
+conda install -c conda-forge mamba
+mamba env create -f tools/robo.yaml
+```
+
 ## Running Robosample
 
 The executable is compiled in `build/`. Examples are available in the same folder. To see them, type:

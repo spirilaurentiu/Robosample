@@ -1,5 +1,7 @@
 name: robo
 channels:
+  - omnia
+  - salilab
   - conda-forge
   - defaults
 dependencies:
