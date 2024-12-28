@@ -42,6 +42,11 @@ ENDIF()
 
 set(BUILD_VISUALIZER ON)
 
+# Use C++14 as the standard, but disable the C++17 extensions warning
+# We intend to migrate to C++17 in the future
+SET(BUILD_FLAGS "-Wno-c++17-extensions")
+SET(CMAKE_CXX_STANDARD 14)
+
 # building tests requires us to rebuild the entire project as a shared object using different flags
 # default builds require only static libraries (different flags)
 # there are multiple build configurations
@@ -59,19 +64,19 @@ IF(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "Debug_Tests" OR
     SET(SANITIZER_FLAGS "-fsanitize=leak,address,float-divide-by-zero -fsanitize-address-use-after-scope -fsanitize-recover=address")
     SET(SANITIZER_FLAGS "")
 
-    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} -fno-omit-frame-pointer")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_DEBUG} ${BUILD_FLAGS} -fno-omit-frame-pointer")
     SET(SUFFIX "_d")
 
 ELSEIF(CMAKE_BUILD_TYPE MATCHES "Release" OR CMAKE_BUILD_TYPE MATCHES "Release_Tests" OR CMAKE_BUILD_TYPE MATCHES "Release_Full")
-    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE} ${BUILD_FLAGS}")
     SET(BOLT_FLAGS "-Wl,--emit-relocs")
 
 ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Train")
-    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE} ${BUILD_FLAGS}")
     SET(SUFFIX "_pgo_train")
 
 ELSEIF(CMAKE_BUILD_TYPE MATCHES "PGO_Use")
-    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE}")
+    SET(BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_COMPILE_FLAGS_RELEASE} ${BUILD_FLAGS}")
     SET(SUFFIX "_pgo_use")
     SET(BOLT_FLAGS "-Wl,--emit-relocs")
 ENDIF()
@@ -98,8 +103,6 @@ IF(NOT CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT CMAKE_BUILD_TYPE MATCHES "Debug_
 ELSE()
     SET(USE_IPO FALSE)
 ENDIF()
-
-SET(CMAKE_CXX_STANDARD 14)
 
 # link prerequisites
 find_package(BLAS REQUIRED)

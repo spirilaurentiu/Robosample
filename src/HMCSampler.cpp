@@ -959,11 +959,11 @@ void HMCSampler::perturbVelocities(SimTK::State& someState,
 void HMCSampler::perturbForces(SimTK::State& someState,
 	ForcesPerturbMethod FPM){
 
-	if((FPM == ForcesPerturbMethod::NOT_IMPLEMENTED)){
+	if (FPM == ForcesPerturbMethod::NOT_IMPLEMENTED) {
 		assert(!"Not implemented");
 		// Realize velocity
 		system->realize(someState, SimTK::Stage::Dynamics);
-	}else if(FPM == ForcesPerturbMethod::EMPTY){
+	} else if (FPM == ForcesPerturbMethod::EMPTY) {
 		; // do nothing
 	}
 

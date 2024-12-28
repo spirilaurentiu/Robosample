@@ -2741,38 +2741,24 @@ World::calcMobodToMobodTransforms(
 					topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
-	bool anglePin_OR = (
-		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-	);
-
-	if( (anglePin_OR) && ((atom->neighborsIndex).size() == 1)){
+	bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin ||
+					   mobility == SimTK::BondMobility::Mobility::Slider ||
+					   mobility == SimTK::BondMobility::Mobility::BendStretch;
+	
+	if (anglePin_OR && atom->neighborsIndex.size() == 1) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if( (anglePin_OR) && ((atom->neighborsIndex).size() != 1)){
+	} else if (anglePin_OR && atom->neighborsIndex.size() != 1) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
-			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
+			|| mobility == SimTK::BondMobility::Mobility::Cylinder) {
 		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
-
-	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
-	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
-	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::BallM
+			|| mobility == SimTK::BondMobility::Mobility::Rigid
+			|| mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
-
-	// Spherical
-	}else if((mobility == SimTK::BondMobility::Mobility::Spherical)
-	){
-		return std::vector<SimTK::Transform> {
-			P_X_F_spheric,
-			B_X_M_spheric
-		};
-
-	}else{
+	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
+		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else {
 		std::cout << "Warning: unknown mobility\n";
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
@@ -2973,47 +2959,32 @@ SimTK::Transform World::calcX_FMTransforms(
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	// Convenient bool
-	bool anglePin_OR = (
-		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-	);
-
+		bool anglePin_OR = 
+		   mobility == SimTK::BondMobility::Mobility::AnglePin
+		|| mobility == SimTK::BondMobility::Mobility::Slider
+		|| mobility == SimTK::BondMobility::Mobility::BendStretch;
+	
 	// Set X_FM value
-	if( (anglePin_OR) && ((atom->neighborsIndex).size() == 1)){
-
+	if (anglePin_OR && atom->neighborsIndex.size() == 1) {
 		X_FM = Transform();
 		return X_FM;
-
-	}else if( (anglePin_OR) && ((atom->neighborsIndex).size() != 1)){
-
+	} else if (anglePin_OR && atom->neighborsIndex.size() != 1) {
 		X_FM = Transform();
 		return X_FM;
-
-	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
-			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
-	){
-
+	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
+			|| mobility == SimTK::BondMobility::Mobility::Cylinder) {
 		X_FM = Transform();
 		return X_FM;
-
-	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
-	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
-	|| (mobility == SimTK::BondMobility::Mobility::Translation)
-	){
-		
+	} else if (mobility == SimTK::BondMobility::Mobility::BallM
+			|| mobility == SimTK::BondMobility::Mobility::Rigid
+			|| mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
 		X_FM = Transform();
 		return X_FM;
-
-	}else if((mobility == SimTK::BondMobility::Mobility::Spherical)
-	){
-
+	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
 		X_FM = Transform();
-		//X_FM = InboardLength_mZAxis;
+		// X_FM = InboardLength_mZAxis;
 		return X_FM;
-
-	}else{
-
+	} else {
 		X_FM = Transform();
 		std::cout << "Warning: unknown mobility\n";
 		return X_FM;

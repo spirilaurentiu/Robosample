@@ -437,10 +437,10 @@ void AmberReader::readPointers(){
       prmtop >> t5;
 
       DihedralsAtomsIndex.push_back(std::vector<int> {
-        abs(t1 / AMBER_INDEX_MULTIPLIER), // AmberIndexMultiplier=3
-        abs(t2 / AMBER_INDEX_MULTIPLIER),
-        abs(t3 / AMBER_INDEX_MULTIPLIER), 
-        abs(t4 / AMBER_INDEX_MULTIPLIER)});
+        std::abs(t1 / AMBER_INDEX_MULTIPLIER), // AmberIndexMultiplier=3
+        std::abs(t2 / AMBER_INDEX_MULTIPLIER),
+        std::abs(t3 / AMBER_INDEX_MULTIPLIER), 
+        std::abs(t4 / AMBER_INDEX_MULTIPLIER)});
 
       DihedralsForceK.push_back(
         tempDihedral_K[ t5 - AMBER_INDEX_DIFF]); // AmberIndexDiff=1
@@ -550,18 +550,14 @@ void AmberReader::readPointers(){
               SimTK::Real termA = ( pairA - (wij * pow(rij, 12) ) ) / pairA;
               SimTK::Real termB = ( pairB - ( 2* wij * pow(rij, 6) ) ) / pairB;
 
-              if ( abs(termA) > pow(10, -6) || abs(termB) > pow(10, -6) )
+              if ( std::abs(termA) > pow(10, -6) || std::abs(termB) > pow(10, -6) )
               {
                 printf("Error in prmtop file : Off-diagonal terms detected in LJ parameters - small \n");
                 exit(1);
               }
-
             }
-
-
         }
       }
-
     }
 
     void AmberReader::readNumberExcludedAtomsList(){

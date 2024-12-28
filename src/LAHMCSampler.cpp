@@ -264,7 +264,7 @@ bool LAHMCSampler::initialize(SimTK::State& someState )
     this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_o;
 
-  
+    return true;
 }
 
 /** Same as initialize **/

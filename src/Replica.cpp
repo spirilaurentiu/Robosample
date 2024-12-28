@@ -644,7 +644,7 @@ Replica::calcInternalBATJacobianLog(void)
 		// Get log of the Cartesian->BAT Jacobian
 		SimTK::Real logJacBAT = 0.0;
 
-		for(size_t zCnt = 0; zCnt = zMatrixBAT.size(); zCnt++){
+		for(size_t zCnt = 0; zCnt < zMatrixBAT.size(); zCnt++){
 
 				// Get bond term
 				SimTK::Real currBond = zMatrixBAT[zCnt][0];

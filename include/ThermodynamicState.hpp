@@ -10,8 +10,6 @@ constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 
 class ThermodynamicState{
   public:
-	ThermodynamicState() = default;
-	
 	ThermodynamicState(
 		int index,
 

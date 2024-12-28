@@ -7113,42 +7113,22 @@ Context::calc_XPF_XBM(
 
 	// ------------------------------------------------------------------------
 
-	bool anglePin_OR = (
-		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-	);
-
-	if( (anglePin_OR)
-		//&& ((atom->neighbors).size() == 1)
-	){
+	bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin || 
+					   mobility == SimTK::BondMobility::Mobility::Slider ||
+					   mobility == SimTK::BondMobility::Mobility::BendStretch;
+	
+	if (anglePin_OR) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if( (anglePin_OR)
-		//&& ((atom->neighbors).size() != 1)
-	){
-		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
-			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
+			|| mobility == SimTK::BondMobility::Mobility::Cylinder) {
 		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
-
-	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
-	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
-	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::BallM
+			|| mobility == SimTK::BondMobility::Mobility::Rigid
+			|| mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
-
-	// Spherical
-	}else if((mobility == SimTK::BondMobility::Mobility::Spherical)
-	){
-		return std::vector<SimTK::Transform> {
-			P_X_F_spheric,
-			B_X_M_spheric
-		};
-
-	}else{
+	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
+		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else {
 		warn("Warning: unknown mobility");
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
@@ -8398,7 +8378,7 @@ Context::calcInternalBATJacobianLog(void)
 		// Get log of the Cartesian->BAT Jacobian
 		SimTK::Real logJacBAT = 0.0;
 
-		for(size_t zCnt = 0; zCnt = zMatrixBAT.size(); zCnt++){
+		for(size_t zCnt = 0; zCnt < zMatrixBAT.size(); zCnt++){
 
 				// Get bond term
 				SimTK::Real currBond = zMatrixBAT[zCnt][0];

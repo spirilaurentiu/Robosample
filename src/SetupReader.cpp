@@ -122,7 +122,7 @@ const size_t SetupReader::getNofKeys(void) const
 
 bool SetupReader::IsPrintable(const std::string& s) const
 {
-	return std::all_of(s.begin(), s.end(), [](char c) { return c >= 0 && c <= 128; });
+    return std::all_of(s.begin(), s.end(), [](char c) { return std::isprint(static_cast<unsigned char>(c)); });
 }
 
 // TODO: Victor: Can we trust this function?
