@@ -5405,7 +5405,31 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 	}
 
+	// Print geometry to output stream too
+	# pragma region REBAS_TEST
+		worldOutStream << " ";
+
+									for (const auto& distanceIx : distanceIxs) {
+										if( distanceIx[0] == whichWorld ) {
+											worldOutStream << std::fixed << std::setprecision(3) << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << " ";
+										}
+									}
+
+									for (const auto& angleIx : angleIxs){
+										if( angleIx[0] == whichWorld ) {
+											worldOutStream << std::fixed << std::setprecision(3) << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << " ";
+										}
+									}
+
+									for (const auto& dihedralIx : dihedralIxs){
+										if( dihedralIx[0] == whichWorld ) {
+											worldOutStream << std::fixed << std::setprecision(3) << Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << " ";
+										}
+									}
+	# pragma endregion REBAS_TEST
+
 	// Print the world output stream
+	worldOutStream << "\n";
 	std::cout << worldOutStream.str();
 
 	return validated;
@@ -5709,7 +5733,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		// std::string pdbMiddle = pdbPrefix + "." + std::to_string(0) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".";
 		// std::cout << "Writing " << pdbMiddle << std::endl;
 
-		// Write
+		// Write pdb
 		if((mixi % pdbRestartFreq) == 0)
 		if(wIx == 0){
 			for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
@@ -7430,9 +7454,7 @@ void Context::PrintDihedralsToLog(std::size_t whichWorld, std::size_t whichSampl
 {
 	for (const auto& dihedralIx : dihedralIxs){
 		if( dihedralIx[0] == whichWorld ) {
-			logFile << std::fixed << std::setprecision(3) 
-				<< Dihedral(dihedralIx[0], dihedralIx[1], 0,
-				dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << " ";
+			logFile << std::fixed << std::setprecision(3) << Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << " ";
 		}
 	}
 }

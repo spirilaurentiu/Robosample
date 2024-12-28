@@ -3507,7 +3507,7 @@ bool World::generateSamples(int howMany,
 			currentAdvancedState, worldOutStream) 
 			&& validated;
 			
-		worldOutStream << "\n";
+		//worldOutStream << "\n";
 	}
 
 	// Return the number of accepted samples
