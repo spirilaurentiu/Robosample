@@ -14,6 +14,7 @@ parser.add_argument('seed', type=int, help='The seed.')
 parser.add_argument('equil_steps', type=int, help='The number of equilibration steps.')
 parser.add_argument('prod_steps', type=int, help='The number of production steps.')
 parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
+parser.add_argument('temperature_init', type=int, help='Temperature of the first replica.')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -53,7 +54,7 @@ c.getWorld(1).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, 
 c.getWorld(2).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 
 nof_replicas = 1
-temperature = 300
+temperature = args.temperature_init
 temperatures = []
 boost_temperatures = []
 for i in range(nof_replicas):
