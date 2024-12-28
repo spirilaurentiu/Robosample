@@ -60,12 +60,11 @@ for i in range(nof_replicas):
     temperatures.append(temperature + (i * 10))
     boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
 
-scale = 1
 accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings]
 timesteps = [0.0007, 0.035, 0.075]
 worldIndexes = [0, 1, 2]
 world_indexes = [0, 1, 2]
-mdsteps = [100, 20, 40] # [14286, 20, 20]
+mdsteps = [14286, 20, 40]
 boost_md_steps = mdsteps
 integrators = [robosample.IntegratorType.OMMVV, robosample.IntegratorType.VERLET, robosample.IntegratorType.VERLET]
 
