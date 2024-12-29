@@ -45,6 +45,7 @@ void testAlanineDipeptide(int seed) {
 	c.setPrintFreq(1); // PRINT_FREQ
 	c.setNonbonded(0, 1.2);
 	c.setGBSA(1);
+	c.setVerbose(false);
 
 	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
 
@@ -110,7 +111,7 @@ void testAlanineDipeptide(int seed) {
 	std::vector<IntegratorType> integrators = { IntegratorType::OMMVV, IntegratorType::VERLET, IntegratorType::VERLET };
 	std::vector<SimTK::Real> timesteps = { 0.0007, 0.002, 0.002 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
-	std::vector<int> mdsteps = { 14286, 10, 10 };
+	std::vector<int> mdsteps = { 10, 10, 10 };
 	// std::vector<int> boostMDSteps = mdsteps;
 	// std::vector<int> samplesPerRound = { 1, 1, 1 };
 

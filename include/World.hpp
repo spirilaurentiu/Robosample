@@ -525,13 +525,8 @@ public:
 	// Calculate Fixman potential
 	SimTK::Real calcFixman();
 
-	/**
-	 *  Generate a proposal
-	 * */
-	bool generateProposal(void);
-
 	/** Generate a number of samples **/
-	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header);
+	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 	//...............
 
 	//...................

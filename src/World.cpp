@@ -3377,35 +3377,10 @@ SimTK::Real World::calcFixman(void)
 	return Fixman;
 }
 
-/**
- *  Generate a proposal
- **/
-bool World::generateProposal(void)
-{
-	// Update Robosample bAtomList
-	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromSimbody(currentAdvancedState);
-
-	// Prepare output
-	std::stringstream worldOutStream;
-	worldOutStream.str(""); // empty
-
-	// Print message to identify this World
-	worldOutStream << "World " << ownWorldIndex 
-		<< ", NU " << currentAdvancedState.getNU() << ":\n";
-
-	// GENERATE a proposal
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream);	
-	validated = updSampler(0)->propose(currentAdvancedState) && validated;
-
-	return validated;
-}
-
 /*! <--
  *  Generate a number of samples -->
  **/
-bool World::generateSamples(int howMany,
-	std::stringstream& worldOutStream, const std::string& header)
+bool World::generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
 
 	// Update Robosample bAtomList
@@ -3413,16 +3388,15 @@ bool World::generateSamples(int howMany,
 	updateAtomListsFromSimbody(currentAdvancedState);
 
 	// GENERATE the requested number of samples
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState,
-		worldOutStream);
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
 	for(int k = 0; k < howMany; k++) {
-		worldOutStream << header << " ";
-		updSampler(0)->getMsg_InitialParams(worldOutStream);
+		if (verbose) {
+			worldOutStream << header << " ";
+			updSampler(0)->getMsg_InitialParams(worldOutStream);
+		}
 
-		validated = updSampler(0)->sample_iteration(
-			currentAdvancedState, worldOutStream) 
-			&& validated;
+		validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
 			
 		worldOutStream << "\n";
 	}

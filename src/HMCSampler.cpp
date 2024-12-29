@@ -175,7 +175,7 @@ bool HMCSampler::initialize(SimTK::State& someState)
  * acception-rejection step. Also realize velocities and initialize
  * the timestepper. -->
  */
-bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& samplerOutStream)
+bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose)
 {
 	// Set a validation flag
 	bool validated = true;
@@ -347,7 +347,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		OMM_setDuMMTemperature(boostT);
 	}
 
-	// getMsg_InitialParams(samplerOutStream);
+	// if (verbose) {
+	// 	getMsg_InitialParams(samplerOutStream);
+	// }
 
 	return validated;
 
@@ -3998,8 +4000,7 @@ void HMCSampler::getMsg_EnergyDetails(
 /*!
  * <!--	The main function that generates a sample -->
 */
-bool HMCSampler::sample_iteration(SimTK::State& someState,
-	std::stringstream& samplerOutStream)
+bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose)
 {
 
 	// Flag if anything goes wrong during simulation
@@ -4035,7 +4036,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 				
 				// Print
 				//Print(someState, validated, getAcc());
-				getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+				if (verbose) {
+					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+				}
 
 	// --- valid --- //
 	}else{
@@ -4048,7 +4051,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 
 					// Print
 					//Print(someState, validated, getAcc());
-					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					if (verbose) {
+						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					}
 
 					// UPDATE
 					update(someState);
@@ -4064,7 +4069,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 
 					// Print
 					//Print(someState, validated, getAcc());
-					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					if (verbose) {
+						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					}
 
 					// RESTORE
 					restore(someState);

@@ -324,3 +324,7 @@ endif()
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/temp/pdbs)
 file(GLOB INPUTS ${CMAKE_SOURCE_DIR}/tests_inputs/*)
 file(COPY ${INPUTS} DESTINATION ${CMAKE_BINARY_DIR})
+
+# Copy Python scripts
+file(COPY ${CMAKE_SOURCE_DIR}/tools/simulate.py DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/tools/flexor.py DESTINATION ${CMAKE_BINARY_DIR})

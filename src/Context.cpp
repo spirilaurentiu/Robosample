@@ -51,6 +51,10 @@ Context::Context(const std::string& baseName, uint32_t seed, uint32_t threads, u
 	this->swapFixman = swapFixmanFreq;
 }
 
+void Context::setVerbose(bool verbose){
+	this->verbose = verbose;
+}
+
 /*!
  * <!--  -->
 */
@@ -5399,8 +5403,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 	if(distortOption == 0) {
 
 		// Generate samples
-		validated = worlds[whichWorld].generateSamples(
-			numSamples, worldOutStream, header);
+		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
 
 	// Non-equilibrium world
 	} else if (distortOption != 0) {
@@ -5469,15 +5472,16 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 		#else
 
-			validated = worlds[whichWorld].generateSamples(
-				numSamples, worldOutStream, header); // =
+			validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose); // =
 
 		#endif
 
 	}
 
 	// Print the world output stream
-	std::cout << worldOutStream.str();
+	if (verbose) {
+		std::cout << worldOutStream.str();
+	}
 
 	return validated;
 }
@@ -5780,18 +5784,19 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		// std::string pdbMiddle = pdbPrefix + "." + std::to_string(0) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".";
 		// std::cout << "Writing " << pdbMiddle << std::endl;
 
-		// Write
-		if((mixi % pdbRestartFreq) == 0)
-		if(wIx == 0){
+		// @TODO should write rst7, not PDB
+		if (pdbRestartFreq != 0) {
+			if(mixi % pdbRestartFreq == 0 && wIx == 0) {
 			for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-				topologies[mol_i].writeAtomListPdb(
-					outputDir,
-					"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".",
-						".pdb",
-						10,
-						mixi);
+					topologies[mol_i].writeAtomListPdb(
+						outputDir,
+						"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".",
+							".pdb",
+							10,
+							mixi);
+				} 
 			}
-		}	
+		}
 		# pragma endregion REBAS_TEST
 
 
@@ -5896,11 +5901,6 @@ void Context::writeLog(int mixi, int replicaIx) {
 */
 void Context::RunREX(int equilRounds, int prodRounds)
 {
-	// @TODO remove when initializeFromFile() finnaly gets removed
-	if (pdbRestartFreq == 0) {
-		pdbRestartFreq = 1;
-	}
-
     if(MEMDEBUG){stdcout_memdebug("Context::RunREX 1");}
 
 	// Is this necesary =======================================================

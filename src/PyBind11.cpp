@@ -87,6 +87,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("addThermodynamicState", &Context::addThermodynamicState, "Add an empty themodynamic state to the context.")
         .def("Initialize", py::overload_cast<>(&Context::Initialize), "Initializes the context after all worlds and replicas have been set.")
         .def("RunREX", &Context::RunREX, "Run replica exchange.")
+        .def("setVerbose", &Context::setVerbose, "Control if you want extraneous output to cout.")
         .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency.")
         .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency.")
         .def("setNonbonded", &Context::setNonbonded, "Set nonbonded method and cutoff.")

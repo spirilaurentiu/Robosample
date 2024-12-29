@@ -64,6 +64,7 @@ class Context{
 	/**@}**/
 
 	std::string baseName;
+	bool verbose = true;
 
 public:
 	/**
@@ -83,7 +84,7 @@ public:
 	*/
 	void PrintAtomsDebugInfo(void);
 
-
+	void setVerbose(bool verbose);
 
     /** @name System and simulation setup.
 	 * 1. Read input file.

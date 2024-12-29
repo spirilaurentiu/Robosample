@@ -119,7 +119,7 @@ public:
 
 	/** Same as initialize **/
 	virtual bool initialize(SimTK::State& advanced) ;
-	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream) ;
+	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream, bool verbose) ;
 
 
 
@@ -464,8 +464,7 @@ public:
 	*/
 	bool checkDistortionBasedOnE(SimTK::Real deltaPE);
 
-	virtual bool sample_iteration(SimTK::State& someState,
-		std::stringstream& samplerOutStream);
+	virtual bool sample_iteration(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose);
 
 	/**
 	 * Print everything after proposal generation

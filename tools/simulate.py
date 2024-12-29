@@ -29,6 +29,7 @@ c.setPdbRestartFreq(0) # WRITE_PDBS
 c.setPrintFreq(args.write_freq) # PRINT_FREQ
 c.setNonbonded(0, 1.2)
 c.setGBSA(1)
+c.setVerbose(False)
 
 # load system
 c.loadAmberSystem(args.prmtop, args.rst7)
