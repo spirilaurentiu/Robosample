@@ -88,9 +88,19 @@ std::vector<int>& ThermodynamicState::updWorldIndexes()
 	return worldIndexes;
 }
 
+void ThermodynamicState::setTimesteps(const std::vector<SimTK::Real>& timesteps)
+{
+	this->timesteps = timesteps;
+}
+
 const std::vector<SimTK::Real>& ThermodynamicState::getTimesteps() const
 {
 	return timesteps;
+}
+
+void ThermodynamicState::setMdsteps(const std::vector<int>& mdsteps)
+{
+	this->mdsteps = mdsteps;
 }
 
 const std::vector<int>& ThermodynamicState::getMdsteps() const
@@ -625,7 +635,7 @@ void ThermodynamicState::appendLog(const std::string& filename) {
 	}
 
 	// Write the header
-	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_n,pe_set,ke_o,ke_n,ke_set,fix_o,fix_n,fix_set,acc" << std::endl;
+	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_n,pe_set,ke_o,ke_n,ke_set,fix_o,fix_n,fix_set,timestep,mdstep,acc" << std::endl;
 }
 
 

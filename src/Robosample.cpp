@@ -36,13 +36,14 @@ std::string extractValueFromInputFile(
     return value;
 }
 
+
 void testAlanineDipeptide(int seed) {
 	// no need for tini tfin
-	Context c("2but", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
+	Context c("ala2", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
 
 	// c.setNonbonded(0, 1.2); // default - set for each world
 	c.setPdbRestartFreq(0); // WRITE_PDBS
-	c.setPrintFreq(1); // PRINT_FREQ
+	c.setPrintFreq(50); // PRINT_FREQ
 	c.setNonbonded(0, 1.2);
 	c.setGBSA(1);
 	c.setVerbose(false);
@@ -109,7 +110,7 @@ void testAlanineDipeptide(int seed) {
 
 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings };
 	std::vector<IntegratorType> integrators = { IntegratorType::OMMVV, IntegratorType::VERLET, IntegratorType::VERLET };
-	std::vector<SimTK::Real> timesteps = { 0.0007, 0.002, 0.002 };
+	std::vector<SimTK::Real> timesteps = { 0.0007, 0.035, 0.07 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
 	std::vector<int> mdsteps = { 10, 10, 10 };
 	// std::vector<int> boostMDSteps = mdsteps;
@@ -139,7 +140,7 @@ void testAlanineDipeptide(int seed) {
 	c.Initialize();
 
 	// Run the simulation
-	c.RunREX(10, 10);
+	c.RunREX(0, 1000);
 }
 
 /*!

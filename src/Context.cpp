@@ -5829,9 +5829,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 	} // __end__ Main loop
 
-	if (mixi % printFreq == 0) {
-		writeLog(mixi, replicaIx);
-		REXLog(mixi, replicaIx);
+	if ((mixi + 1) % printFreq == 0) {
+		writeLog(mixi + 1, replicaIx);
+		REXLog(mixi + 1, replicaIx);
 
 		int whichDCD = replica2ThermoIxs[replicaIx];
 		auto [x, y, z] = replicas[replicaIx].getCoordinates();
@@ -5891,14 +5891,17 @@ void Context::writeLog(int mixi, int replicaIx) {
 		const auto fix_o = sampler->fix_o;
 		const auto fix_n = sampler->fix_n;
 		const auto fix_set = sampler->fix_set;
+		const auto timestep = sampler->getTimestep();
+		const auto mdstep = sampler->getMDStepsPerSample();
 		const SimTK::Real acc = sampler->numAccepted_period / static_cast<SimTK::Real>(sampler->numSamples_period);
 
 		sampler->numAccepted_period = 0;
 		sampler->numSamples_period = 0;
 
 		// Write to log
-		// round_ix replica_ix temperature world_ix NU accepted_steps pe_o pe_set ke_o ke_n fix_o fix_n fix_set acc
-		thermodynamicStates[whichLog].logFile << mixi << ","
+		// round_ix replica_ix temperature world_ix NU accepted_steps pe_o pe_set ke_o ke_n fix_o fix_n fix_set timestep mdstep acc
+		thermodynamicStates[whichLog].logFile
+				<< std::fixed << std::setprecision(0) << mixi << ","
                 << replicaIx << ","
                 << std::fixed << std::setprecision(3) << temperature << ","
                 << std::fixed << std::setprecision(0) << wIx << ","
@@ -5914,7 +5917,9 @@ void Context::writeLog(int mixi, int replicaIx) {
                 << fix_o << ","
                 << fix_n << ","
                 << fix_set << ","
-				<< std::fixed << std::setprecision(2) << acc << std::endl;
+				<< timestep << ","
+				<< mdstep << ","
+				<< acc << std::endl;
 	}
 }
 
@@ -6008,6 +6013,21 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// ======================== SIMULATE ======================
 			//RunReplicaRefactor(mixi, replicaIx);
 			RunReplicaRefactor_SIMPLE(mixi, replicaIx);
+
+			// Copy the new timestep and mdstep if we should be adapting
+			if (mixi >= equilRounds) {
+				std::vector<SimTK::Real> newTimesteps(worlds.size());
+				std::vector<int> newMDSteps(worlds.size());
+
+				for (std::size_t i = 0; i < worlds.size(); i++) {
+					newTimesteps[i] = worlds[i].getSampler(0)->getTimestep();
+					newMDSteps[i] = worlds[i].getSampler(0)->getMDStepsPerSample();
+				}
+
+				int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+				thermodynamicStates[thisThermoStateIx].setTimesteps(newTimesteps);
+				thermodynamicStates[thisThermoStateIx].setMdsteps(newMDSteps);
+			}
 
 	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 7");}
 

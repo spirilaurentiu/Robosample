@@ -37,7 +37,9 @@ class ThermodynamicState{
 
 	const std::vector<int>& getWorldIndexes() const;
 	std::vector<int>& updWorldIndexes();
+	void setTimesteps(const std::vector<SimTK::Real>& timesteps);
 	const std::vector<SimTK::Real>& getTimesteps() const;
+	void setMdsteps(const std::vector<int>& mdsteps);
 	const std::vector<int>& getMdsteps() const;
 
 	// Set the sampling method
