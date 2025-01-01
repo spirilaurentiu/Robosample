@@ -1445,6 +1445,24 @@ void Context::addWorld(
 	// Allocate whatever needed Simbody dependent vectors from World here
 	worlds.back().allocateStatsContainers();
 
+	// print the inertia tensors of all bodies
+	// PrintSimbodyMobods();
+	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
+		std::cout << "Context::PrintSimbodyMobods world " << worldIx << "\n";
+		for(std::size_t molIx = 0; molIx < nofMols; molIx++){
+			std::cout << "Context::PrintSimbodyMobods molecule " << molIx << "\n";
+			const Topology& topology = worlds[worldIx].getTopology(molIx);
+
+			for(std::size_t i = 0; i < topology.getNumAtoms(); i++){
+				SimTK::Compound::AtomIndex aIx = (topology.subAtomList[i]).getCompoundAtomIndex();
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				std::cout << "i = " << i << "; aIx = " << aIx << "; mbx = " << mbx << ";" << std::endl << std::flush;
+			}
+		}
+	}
+
+	std::cout << "pula mea" << std::endl;
+
 }
 
 /** Load molecules based on loaded filenames **/

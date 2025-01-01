@@ -1,0 +1,4 @@
+group1,group2,group3,group4,min_angle,max_angle
+(chainid A and resid 2) and (name CA),(chainid A and resid 2) and (name N),(chainid A and resid 1) and (name C),(chainid A and resid 1) and (name CA),170.0,190.0
+(chainid A and resid 86) and (name CA),(chainid A and resid 86) and (name N),(chainid A and resid 85) and (name C),(chainid A and resid 85) and (name CA),-10.0,10.0
+(chainid A and resid 131) and (name CA),(chainid A and resid 131) and (name N),(chainid A and resid 130) and (name C),(chainid A and resid 130) and (name CA),-10.0,10.0

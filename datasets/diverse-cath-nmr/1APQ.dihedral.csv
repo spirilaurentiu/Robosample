@@ -1,0 +1,8 @@
+group1,group2,group3,group4,min_angle,max_angle
+(chainid A and resid 26) and (name N),(chainid A and resid 26) and (name CA),(chainid A and resid 26) and (name CB),(chainid A and resid 26) and (name SG),-90.0,-30.0
+(chainid A and resid 35) and (name N),(chainid A and resid 35) and (name CA),(chainid A and resid 35) and (name CB),(chainid A and resid 35) and (name SG),-90.0,-30.0
+(chainid A and resid 37) and (name N),(chainid A and resid 37) and (name CA),(chainid A and resid 37) and (name CB),(chainid A and resid 37) and (name SG),-90.0,-30.0
+(chainid A and resid 50) and (name N),(chainid A and resid 50) and (name CA),(chainid A and resid 50) and (name CB),(chainid A and resid 50) and (name SG),-90.0,-30.0
+(chainid A and resid 27) and (name N),(chainid A and resid 27) and (name CA),(chainid A and resid 27) and (name CB),(chainid A and resid 27) and (name CG),-90.0,-30.0
+(chainid A and resid 24) and (name N),(chainid A and resid 24) and (name CA),(chainid A and resid 24) and (name CB),(chainid A and resid 24) and (name CG),150.0,330.0
+(chainid A and resid 48) and (name N),(chainid A and resid 48) and (name CA),(chainid A and resid 48) and (name CB),(chainid A and resid 48) and (name CG),150.0,330.0

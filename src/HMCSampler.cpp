@@ -3098,11 +3098,14 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 	if (dt == 0.0 || dm == 0.0) {
 		// Only this gets executed - prevTimestep is also set in HMCSampler::setTimestep()
 		if (acceptance > idealAcceptance) {
-			timestep *= 1.1;
+			timestep *= 1.05;
 			MDStepsPerSample += 1;
 		} else {
-			timestep /= 1.1;
+			timestep /= 1.05;
 			MDStepsPerSample -= 1;
+			if (MDStepsPerSample < 1) {
+				MDStepsPerSample = 1;
+			}
 		}
 	} else {
 		timestep -= learningRate * (da / dt);

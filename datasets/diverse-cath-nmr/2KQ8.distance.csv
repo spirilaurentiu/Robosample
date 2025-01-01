@@ -1,0 +1,723 @@
+group1,group2,avg_dist,min_dist,max_dist,resid1,resid2
+(chainid A and resid 3) and (name H),(chainid A and resid 4) and (name H),3.14,0.0,3.14,3,4
+(chainid A and resid 21) and (name H),(chainid A and resid 22) and (name H),4.32,0.0,4.32,21,22
+(chainid A and resid 22) and (name H),(chainid A and resid 21) and (name HB2),4.72,0.0,4.72,22,21
+(chainid A and resid 22) and (name H),(chainid A and resid 21) and (name HB3),4.72,0.0,4.72,22,21
+(chainid A and resid 23) and (name HB2),(chainid A and resid 24) and (name H),4.38,0.0,4.38,23,24
+(chainid A and resid 25) and (name HB),(chainid A and resid 26) and (name H),5.13,0.0,5.13,25,26
+(chainid A and resid 37) and (name H),(chainid A and resid 38) and (name H),3.98,0.0,3.98,37,38
+(chainid A and resid 38) and (name H),(chainid A and resid 37) and (name HB),3.17,0.0,3.17,38,37
+(chainid A and resid 38) and (name HA),(chainid A and resid 39) and (name H),3.11,0.0,3.11,38,39
+(chainid A and resid 39) and (name H),(chainid A and resid 38) and (name HB2),3.73,0.0,3.73,39,38
+(chainid A and resid 39) and (name H),(chainid A and resid 38) and (name HB3),3.73,0.0,3.73,39,38
+(chainid A and resid 39) and (name HA),(chainid A and resid 40) and (name H),2.77,0.0,2.77,39,40
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HB2),4.07,0.0,4.07,40,39
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HB3),4.07,0.0,4.07,40,39
+(chainid A and resid 40) and (name H),(chainid A and resid 41) and (name H),5.22,0.0,5.22,40,41
+(chainid A and resid 41) and (name H),(chainid A and resid 40) and (name HA),2.74,0.0,2.74,41,40
+(chainid A and resid 41) and (name H),(chainid A and resid 40) and (name HB3),4.35,0.0,4.35,41,40
+(chainid A and resid 41) and (name H),(chainid A and resid 42) and (name H),3.7,0.0,3.7,41,42
+(chainid A and resid 42) and (name H),(chainid A and resid 41) and (name HA),3.52,0.0,3.52,42,41
+(chainid A and resid 42) and (name H),(chainid A and resid 41) and (name HB2),4.72,0.0,4.72,42,41
+(chainid A and resid 42) and (name H),(chainid A and resid 41) and (name HB3),4.72,0.0,4.72,42,41
+(chainid A and resid 43) and (name HB2),(chainid A and resid 44) and (name H),5.5,0.0,5.5,43,44
+(chainid A and resid 44) and (name H),(chainid A and resid 43) and (name HB3),4.69,0.0,4.69,44,43
+(chainid A and resid 44) and (name HA),(chainid A and resid 45) and (name H),2.86,0.0,2.86,44,45
+(chainid A and resid 45) and (name H),(chainid A and resid 44) and (name HB2),4.26,0.0,4.26,45,44
+(chainid A and resid 45) and (name H),(chainid A and resid 44) and (name HB3),4.26,0.0,4.26,45,44
+(chainid A and resid 45) and (name HA),(chainid A and resid 46) and (name H),3.39,0.0,3.39,45,46
+(chainid A and resid 47) and (name HA),(chainid A and resid 48) and (name H),3.39,0.0,3.39,47,48
+(chainid A and resid 48) and (name H),(chainid A and resid 49) and (name H),5.5,0.0,5.5,48,49
+(chainid A and resid 49) and (name H),(chainid A and resid 48) and (name HA),3.11,0.0,3.11,49,48
+(chainid A and resid 49) and (name H),(chainid A and resid 48) and (name HB2),5.5,0.0,5.5,49,48
+(chainid A and resid 49) and (name HA),(chainid A and resid 50) and (name H),3.39,0.0,3.39,49,50
+(chainid A and resid 50) and (name H),(chainid A and resid 49) and (name HB2),4.91,0.0,4.91,50,49
+(chainid A and resid 50) and (name H),(chainid A and resid 49) and (name HB3),4.91,0.0,4.91,50,49
+(chainid A and resid 50) and (name H),(chainid A and resid 51) and (name H),3.3,0.0,3.3,50,51
+(chainid A and resid 51) and (name H),(chainid A and resid 52) and (name H),5.19,0.0,5.19,51,52
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HA),2.83,0.0,2.83,52,51
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HB2),3.86,0.0,3.86,52,51
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HB3),3.86,0.0,3.86,52,51
+(chainid A and resid 52) and (name H),(chainid A and resid 53) and (name H),4.97,0.0,4.97,52,53
+(chainid A and resid 53) and (name H),(chainid A and resid 52) and (name HA),2.93,0.0,2.93,53,52
+(chainid A and resid 53) and (name H),(chainid A and resid 52) and (name HB),4.91,0.0,4.91,53,52
+(chainid A and resid 54) and (name H),(chainid A and resid 55) and (name H),5.5,0.0,5.5,54,55
+(chainid A and resid 55) and (name H),(chainid A and resid 54) and (name HA),2.9,0.0,2.9,55,54
+(chainid A and resid 55) and (name H),(chainid A and resid 54) and (name HB2),3.98,0.0,3.98,55,54
+(chainid A and resid 55) and (name H),(chainid A and resid 54) and (name HB3),4.66,0.0,4.66,55,54
+(chainid A and resid 55) and (name H),(chainid A and resid 56) and (name H),5.13,0.0,5.13,55,56
+(chainid A and resid 56) and (name H),(chainid A and resid 55) and (name HA),3.11,0.0,3.11,56,55
+(chainid A and resid 56) and (name H),(chainid A and resid 55) and (name HB),3.39,0.0,3.39,56,55
+(chainid A and resid 56) and (name H),(chainid A and resid 57) and (name H),5.44,0.0,5.44,56,57
+(chainid A and resid 57) and (name H),(chainid A and resid 56) and (name HA2),3.42,0.0,3.42,57,56
+(chainid A and resid 57) and (name HB),(chainid A and resid 58) and (name H),3.58,0.0,3.58,57,58
+(chainid A and resid 59) and (name H),(chainid A and resid 58) and (name HB2),5.5,0.0,5.5,59,58
+(chainid A and resid 59) and (name H),(chainid A and resid 58) and (name HB3),5.5,0.0,5.5,59,58
+(chainid A and resid 59) and (name H),(chainid A and resid 60) and (name H),4.26,0.0,4.26,59,60
+(chainid A and resid 61) and (name HA),(chainid A and resid 62) and (name H),3.27,0.0,3.27,61,62
+(chainid A and resid 62) and (name H),(chainid A and resid 61) and (name HB2),5.19,0.0,5.19,62,61
+(chainid A and resid 62) and (name H),(chainid A and resid 61) and (name HB3),5.19,0.0,5.19,62,61
+(chainid A and resid 63) and (name H),(chainid A and resid 64) and (name H),5.5,0.0,5.5,63,64
+(chainid A and resid 37) and (name H),(chainid A and resid 37) and (name HB),3.83,0.0,3.83,37,37
+(chainid A and resid 40) and (name H),(chainid A and resid 40) and (name HB2),3.73,0.0,3.73,40,40
+(chainid A and resid 40) and (name H),(chainid A and resid 40) and (name HB3),3.73,0.0,3.73,40,40
+(chainid A and resid 41) and (name H),(chainid A and resid 41) and (name HA),2.83,0.0,2.83,41,41
+(chainid A and resid 41) and (name H),(chainid A and resid 41) and (name HB2),3.92,0.0,3.92,41,41
+(chainid A and resid 41) and (name H),(chainid A and resid 41) and (name HB3),3.92,0.0,3.92,41,41
+(chainid A and resid 43) and (name HB2),(chainid A and resid 43) and (name H),4.07,0.0,4.07,43,43
+(chainid A and resid 44) and (name H),(chainid A and resid 44) and (name HB2),4.01,0.0,4.01,44,44
+(chainid A and resid 44) and (name H),(chainid A and resid 44) and (name HB3),4.01,0.0,4.01,44,44
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HB2),3.33,0.0,3.33,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HB3),3.33,0.0,3.33,45,45
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HB2),3.79,0.0,3.79,51,51
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HB3),3.79,0.0,3.79,51,51
+(chainid A and resid 52) and (name H),(chainid A and resid 52) and (name HB),3.05,0.0,3.05,52,52
+(chainid A and resid 54) and (name H),(chainid A and resid 54) and (name HB3),4.07,0.0,4.07,54,54
+(chainid A and resid 57) and (name H),(chainid A and resid 57) and (name HB),3.27,0.0,3.27,57,57
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HB2),3.42,0.0,3.42,58,58
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HB3),3.42,0.0,3.42,58,58
+(chainid A and resid 59) and (name H),(chainid A and resid 59) and (name HB2),3.92,0.0,3.92,59,59
+(chainid A and resid 59) and (name H),(chainid A and resid 59) and (name HB3),3.45,0.0,3.45,59,59
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HB2),4.07,0.0,4.07,62,62
+(chainid A and resid 21) and (name H),(chainid A and resid 20) and (name H),2.96,0.0,2.96,21,20
+(chainid A and resid 38) and (name H),(chainid A and resid 39) and (name H),5.5,0.0,5.5,38,39
+(chainid A and resid 42) and (name H),(chainid A and resid 43) and (name H),3.45,0.0,3.45,42,43
+(chainid A and resid 46) and (name H),(chainid A and resid 47) and (name H),5.5,0.0,5.5,46,47
+(chainid A and resid 49) and (name H),(chainid A and resid 50) and (name H),3.92,0.0,3.92,49,50
+(chainid A and resid 53) and (name H),(chainid A and resid 54) and (name H),5.5,0.0,5.5,53,54
+(chainid A and resid 57) and (name H),(chainid A and resid 58) and (name H),3.58,0.0,3.58,57,58
+(chainid A and resid 58) and (name H),(chainid A and resid 59) and (name H),3.67,0.0,3.67,58,59
+(chainid A and resid 62) and (name H),(chainid A and resid 61) and (name H),4.35,0.0,4.35,62,61
+(chainid A and resid 62) and (name H),(chainid A and resid 63) and (name H),4.63,0.0,4.63,62,63
+(chainid A and resid 13) and (name H),(chainid A and resid 27) and (name HA),4.32,0.0,4.32,13,27
+(chainid A and resid 46) and (name H),(chainid A and resid 53) and (name H),3.79,0.0,3.79,46,53
+(chainid A and resid 44) and (name H),(chainid A and resid 55) and (name H),4.07,0.0,4.07,44,55
+(chainid A and resid 57) and (name H),(chainid A and resid 43) and (name HA),3.45,0.0,3.45,57,43
+(chainid A and resid 40) and (name H),(chainid A and resid 44) and (name HA),4.14,0.0,4.14,40,44
+(chainid A and resid 48) and (name H),(chainid A and resid 51) and (name H),3.7,0.0,3.7,48,51
+(chainid A and resid 13) and (name H),(chainid A and resid 14) and (name HA),5.5,0.0,5.5,13,14
+(chainid A and resid 14) and (name H),(chainid A and resid 14) and (name HB),3.67,0.0,3.67,14,14
+(chainid A and resid 26) and (name H),(chainid A and resid 14) and (name H),5.5,0.0,5.5,26,14
+(chainid A and resid 26) and (name H),(chainid A and resid 25) and (name HG12),5.41,0.0,5.41,26,25
+(chainid A and resid 26) and (name H),(chainid A and resid 25) and (name HG13),5.41,0.0,5.41,26,25
+(chainid A and resid 38) and (name H),(chainid A and resid 37) and (name HG12),5.5,0.0,5.5,38,37
+(chainid A and resid 38) and (name H),(chainid A and resid 37) and (name HG13),4.29,0.0,4.29,38,37
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HG2),5.41,0.0,5.41,40,39
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HG3),5.41,0.0,5.41,40,39
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HG3),5.5,0.0,5.5,52,51
+(chainid A and resid 55) and (name H),(chainid A and resid 54) and (name HD1),5.5,0.0,5.5,55,54
+(chainid A and resid 59) and (name H),(chainid A and resid 58) and (name HG2),5.5,0.0,5.5,59,58
+(chainid A and resid 59) and (name H),(chainid A and resid 58) and (name HG3),5.5,0.0,5.5,59,58
+(chainid A and resid 64) and (name H),(chainid A and resid 63) and (name HG),5.5,0.0,5.5,64,63
+(chainid A and resid 22) and (name H),(chainid A and resid 22) and (name HD2),5.31,0.0,5.31,22,22
+(chainid A and resid 24) and (name H),(chainid A and resid 24) and (name HG13),5.5,0.0,5.5,24,24
+(chainid A and resid 25) and (name H),(chainid A and resid 25) and (name HG12),5.41,0.0,5.41,25,25
+(chainid A and resid 25) and (name H),(chainid A and resid 25) and (name HG13),5.41,0.0,5.41,25,25
+(chainid A and resid 37) and (name H),(chainid A and resid 37) and (name HG13),5.41,0.0,5.41,37,37
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HG2),4.72,0.0,4.72,51,51
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HG3),4.72,0.0,4.72,51,51
+(chainid A and resid 54) and (name H),(chainid A and resid 54) and (name HD1),5.47,0.0,5.47,54,54
+(chainid A and resid 55) and (name H),(chainid A and resid 55) and (name HG12),4.07,0.0,4.07,55,55
+(chainid A and resid 55) and (name H),(chainid A and resid 55) and (name HG13),4.07,0.0,4.07,55,55
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HG2),4.76,0.0,4.76,58,58
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HG3),4.76,0.0,4.76,58,58
+(chainid A and resid 59) and (name H),(chainid A and resid 59) and (name HD2),5.38,0.0,5.38,59,59
+(chainid A and resid 60) and (name H),(chainid A and resid 60) and (name HG),5.31,0.0,5.31,60,60
+(chainid A and resid 51) and (name HE22),(chainid A and resid 51) and (name HB3),7.23,0.0,7.23,51,51
+(chainid A and resid 51) and (name HE22),(chainid A and resid 51) and (name HB2),7.23,0.0,7.23,51,51
+(chainid A and resid 47) and (name HA),(chainid A and resid 47) and (name HD21),5.5,0.0,5.5,47,47
+(chainid A and resid 25) and (name H),(chainid A and resid 24) and (name CG* or (name HG*)),5.4,0.0,5.4,25,24
+(chainid A and resid 26) and (name H),(chainid A and resid 25) and (name CG* or (name HG*)),5.09,0.0,5.09,26,25
+(chainid A and resid 26) and (name H),(chainid A and resid 25) and (name CD* or (name HD*)),5.9,0.0,5.9,26,25
+(chainid A and resid 38) and (name H),(chainid A and resid 37) and (name CG* or (name HG*)),4.13,0.0,4.13,38,37
+(chainid A and resid 38) and (name H),(chainid A and resid 37) and (name CD* or (name HD*)),4.6,0.0,4.6,38,37
+(chainid A and resid 47) and (name H),(chainid A and resid 46) and (name CG* or (name HG*)),6.08,0.0,6.08,47,46
+(chainid A and resid 47) and (name H),(chainid A and resid 46) and (name CD* or (name HD*)),6.33,0.0,6.33,47,46
+(chainid A and resid 53) and (name H),(chainid A and resid 52) and (name CG* or (name HG*)),3.45,0.0,3.45,53,52
+(chainid A and resid 56) and (name H),(chainid A and resid 55) and (name CG* or (name HG*)),5.71,0.0,5.71,56,55
+(chainid A and resid 56) and (name H),(chainid A and resid 55) and (name CD* or (name HD*)),4.16,0.0,4.16,56,55
+(chainid A and resid 58) and (name H),(chainid A and resid 57) and (name CG* or (name HG*)),5.4,0.0,5.4,58,57
+(chainid A and resid 13) and (name H),(chainid A and resid 27) and (name CB* or (name HB*)),5.12,0.0,5.12,13,27
+(chainid A and resid 13) and (name H),(chainid A and resid 14) and (name CG1* or (name HG1*)),6.52,0.0,6.52,13,14
+(chainid A and resid 13) and (name H),(chainid A and resid 14) and (name CG2* or (name HG2*)),6.52,0.0,6.52,13,14
+(chainid A and resid 25) and (name H),(chainid A and resid 25) and (name CG* or (name HG*)),4.72,0.0,4.72,25,25
+(chainid A and resid 25) and (name H),(chainid A and resid 25) and (name CD* or (name HD*)),6.24,0.0,6.24,25,25
+(chainid A and resid 37) and (name H),(chainid A and resid 37) and (name CD* or (name HD*)),6.3,0.0,6.3,37,37
+(chainid A and resid 46) and (name H),(chainid A and resid 46) and (name CG* or (name HG*)),4.84,0.0,4.84,46,46
+(chainid A and resid 46) and (name H),(chainid A and resid 46) and (name CD* or (name HD*)),5.31,0.0,5.31,46,46
+(chainid A and resid 52) and (name H),(chainid A and resid 52) and (name CG* or (name HG*)),4.44,0.0,4.44,52,52
+(chainid A and resid 55) and (name H),(chainid A and resid 55) and (name CG* or (name HG*)),3.79,0.0,3.79,55,55
+(chainid A and resid 55) and (name H),(chainid A and resid 55) and (name CD* or (name HD*)),4.16,0.0,4.16,55,55
+(chainid A and resid 57) and (name H),(chainid A and resid 57) and (name CG* or (name HG*)),4.57,0.0,4.57,57,57
+(chainid A and resid 26) and (name H),(chainid A and resid 27) and (name CB* or (name HB*)),6.52,0.0,6.52,26,27
+(chainid A and resid 55) and (name H),(chainid A and resid 46) and (name CD* or (name HD*)),6.52,0.0,6.52,55,46
+(chainid A and resid 21) and (name H),(chainid A and resid 21) and (name HB2),4.11,0.0,4.11,21,21
+(chainid A and resid 21) and (name H),(chainid A and resid 21) and (name HB3),4.11,0.0,4.11,21,21
+(chainid A and resid 24) and (name H),(chainid A and resid 24) and (name HB),3.95,0.0,3.95,24,24
+(chainid A and resid 25) and (name HB),(chainid A and resid 25) and (name HA),2.99,0.0,2.99,25,25
+(chainid A and resid 39) and (name H),(chainid A and resid 39) and (name HB2),4.14,0.0,4.14,39,39
+(chainid A and resid 39) and (name H),(chainid A and resid 39) and (name HB3),4.14,0.0,4.14,39,39
+(chainid A and resid 46) and (name HA),(chainid A and resid 46) and (name HB),2.99,0.0,2.99,46,46
+(chainid A and resid 47) and (name H),(chainid A and resid 47) and (name HB2),3.64,0.0,3.64,47,47
+(chainid A and resid 47) and (name H),(chainid A and resid 47) and (name HB3),3.64,0.0,3.64,47,47
+(chainid A and resid 48) and (name H),(chainid A and resid 48) and (name HB2),4.17,0.0,4.17,48,48
+(chainid A and resid 48) and (name H),(chainid A and resid 48) and (name HB3),4.17,0.0,4.17,48,48
+(chainid A and resid 54) and (name H),(chainid A and resid 54) and (name HB2),4.14,0.0,4.14,54,54
+(chainid A and resid 60) and (name H),(chainid A and resid 60) and (name HB2),3.89,0.0,3.89,60,60
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HB3),4.07,0.0,4.07,62,62
+(chainid A and resid 21) and (name H),(chainid A and resid 20) and (name HB),5.16,0.0,5.16,21,20
+(chainid A and resid 24) and (name H),(chainid A and resid 23) and (name HB3),4.38,0.0,4.38,24,23
+(chainid A and resid 41) and (name H),(chainid A and resid 40) and (name HB2),4.35,0.0,4.35,41,40
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HB2),4.54,0.0,4.54,46,45
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HB3),4.54,0.0,4.54,46,45
+(chainid A and resid 47) and (name H),(chainid A and resid 46) and (name HB),3.52,0.0,3.52,47,46
+(chainid A and resid 48) and (name H),(chainid A and resid 47) and (name HB2),4.57,0.0,4.57,48,47
+(chainid A and resid 48) and (name H),(chainid A and resid 47) and (name HB3),4.57,0.0,4.57,48,47
+(chainid A and resid 49) and (name H),(chainid A and resid 48) and (name HB3),5.5,0.0,5.5,49,48
+(chainid A and resid 57) and (name H),(chainid A and resid 56) and (name HA3),3.42,0.0,3.42,57,56
+(chainid A and resid 64) and (name H),(chainid A and resid 63) and (name HB2),5.22,0.0,5.22,64,63
+(chainid A and resid 64) and (name H),(chainid A and resid 63) and (name HB3),5.22,0.0,5.22,64,63
+(chainid A and resid 59) and (name HB3),(chainid A and resid 60) and (name HA),5.0,0.0,5.0,59,60
+(chainid A and resid 14) and (name HA),(chainid A and resid 13) and (name HA),5.5,0.0,5.5,14,13
+(chainid A and resid 40) and (name HA),(chainid A and resid 41) and (name HA),4.63,0.0,4.63,40,41
+(chainid A and resid 39) and (name HA),(chainid A and resid 44) and (name HA),5.5,0.0,5.5,39,44
+(chainid A and resid 44) and (name HA),(chainid A and resid 45) and (name HA),4.42,0.0,4.42,44,45
+(chainid A and resid 47) and (name HA),(chainid A and resid 52) and (name HA),3.48,0.0,3.48,47,52
+(chainid A and resid 45) and (name HA),(chainid A and resid 54) and (name HA),3.48,0.0,3.48,45,54
+(chainid A and resid 43) and (name HA),(chainid A and resid 56) and (name HA2),4.54,0.0,4.54,43,56
+(chainid A and resid 43) and (name HA),(chainid A and resid 56) and (name HA3),4.54,0.0,4.54,43,56
+(chainid A and resid 60) and (name HB2),(chainid A and resid 57) and (name HA),5.04,0.0,5.04,60,57
+(chainid A and resid 15) and (name HB2),(chainid A and resid 16) and (name H),5.5,0.0,5.5,15,16
+(chainid A and resid 16) and (name H),(chainid A and resid 15) and (name HB3),5.5,0.0,5.5,16,15
+(chainid A and resid 47) and (name HA),(chainid A and resid 53) and (name H),4.88,0.0,4.88,47,53
+(chainid A and resid 46) and (name H),(chainid A and resid 54) and (name HA),4.38,0.0,4.38,46,54
+(chainid A and resid 58) and (name H),(chainid A and resid 56) and (name HA2),5.16,0.0,5.16,58,56
+(chainid A and resid 59) and (name H),(chainid A and resid 56) and (name HA2),5.34,0.0,5.34,59,56
+(chainid A and resid 58) and (name H),(chainid A and resid 56) and (name HA3),5.16,0.0,5.16,58,56
+(chainid A and resid 59) and (name H),(chainid A and resid 56) and (name HA3),5.34,0.0,5.34,59,56
+(chainid A and resid 55) and (name HB),(chainid A and resid 56) and (name HA2),5.5,0.0,5.5,55,56
+(chainid A and resid 55) and (name HB),(chainid A and resid 56) and (name HA3),5.5,0.0,5.5,55,56
+(chainid A and resid 38) and (name HA),(chainid A and resid 39) and (name HB2),5.5,0.0,5.5,38,39
+(chainid A and resid 38) and (name HA),(chainid A and resid 39) and (name HB3),5.5,0.0,5.5,38,39
+(chainid A and resid 39) and (name HA),(chainid A and resid 45) and (name H),4.23,0.0,4.23,39,45
+(chainid A and resid 37) and (name H),(chainid A and resid 46) and (name HA),4.32,0.0,4.32,37,46
+(chainid A and resid 48) and (name H),(chainid A and resid 52) and (name HA),5.5,0.0,5.5,48,52
+(chainid A and resid 47) and (name HA),(chainid A and resid 46) and (name HB),5.5,0.0,5.5,47,46
+(chainid A and resid 45) and (name HA),(chainid A and resid 46) and (name HA),5.5,0.0,5.5,45,46
+(chainid A and resid 27) and (name HA),(chainid A and resid 13) and (name HA),5.5,0.0,5.5,27,13
+(chainid A and resid 14) and (name H),(chainid A and resid 60) and (name HA),5.5,0.0,5.5,14,60
+(chainid A and resid 25) and (name H),(chainid A and resid 15) and (name HA),5.5,0.0,5.5,25,15
+(chainid A and resid 15) and (name HA),(chainid A and resid 15) and (name HD2),5.5,0.0,5.5,15,15
+(chainid A and resid 15) and (name HA),(chainid A and resid 15) and (name HD3),5.5,0.0,5.5,15,15
+(chainid A and resid 22) and (name H),(chainid A and resid 22) and (name HD1),5.5,0.0,5.5,22,22
+(chainid A and resid 22) and (name HD1),(chainid A and resid 22) and (name HA),4.88,0.0,4.88,22,22
+(chainid A and resid 22) and (name HD2),(chainid A and resid 22) and (name HA),4.35,0.0,4.35,22,22
+(chainid A and resid 23) and (name H),(chainid A and resid 23) and (name HG2),5.5,0.0,5.5,23,23
+(chainid A and resid 23) and (name H),(chainid A and resid 23) and (name HG3),5.5,0.0,5.5,23,23
+(chainid A and resid 23) and (name HA),(chainid A and resid 23) and (name HD2),5.5,0.0,5.5,23,23
+(chainid A and resid 23) and (name HA),(chainid A and resid 23) and (name HD3),5.5,0.0,5.5,23,23
+(chainid A and resid 24) and (name H),(chainid A and resid 24) and (name HG12),5.5,0.0,5.5,24,24
+(chainid A and resid 37) and (name H),(chainid A and resid 37) and (name HG12),5.5,0.0,5.5,37,37
+(chainid A and resid 39) and (name H),(chainid A and resid 39) and (name HG2),5.5,0.0,5.5,39,39
+(chainid A and resid 39) and (name H),(chainid A and resid 39) and (name HG3),5.5,0.0,5.5,39,39
+(chainid A and resid 43) and (name H),(chainid A and resid 43) and (name HD1),5.5,0.0,5.5,43,43
+(chainid A and resid 43) and (name HA),(chainid A and resid 43) and (name HD1),5.5,0.0,5.5,43,43
+(chainid A and resid 43) and (name HA),(chainid A and resid 43) and (name HE3),5.5,0.0,5.5,43,43
+(chainid A and resid 43) and (name HB2),(chainid A and resid 43) and (name HZ3),5.5,0.0,5.5,43,43
+(chainid A and resid 45) and (name HA),(chainid A and resid 45) and (name HE2),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name HA),(chainid A and resid 45) and (name HE3),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HG2),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HG3),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HD2),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name HA),(chainid A and resid 45) and (name HD2),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HD3),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name HA),(chainid A and resid 45) and (name HD3),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HE2),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name HE2),(chainid A and resid 45) and (name HB2),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name HE2),(chainid A and resid 45) and (name HB3),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HE3),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name HE3),(chainid A and resid 45) and (name HB2),5.5,0.0,5.5,45,45
+(chainid A and resid 45) and (name HE3),(chainid A and resid 45) and (name HB3),5.5,0.0,5.5,45,45
+(chainid A and resid 46) and (name H),(chainid A and resid 46) and (name HG12),4.97,0.0,4.97,46,46
+(chainid A and resid 46) and (name H),(chainid A and resid 46) and (name HG13),4.97,0.0,4.97,46,46
+(chainid A and resid 47) and (name HA),(chainid A and resid 47) and (name HD22),5.5,0.0,5.5,47,47
+(chainid A and resid 48) and (name H),(chainid A and resid 48) and (name HD1),5.5,0.0,5.5,48,48
+(chainid A and resid 48) and (name HA),(chainid A and resid 48) and (name HD1),4.82,0.0,4.82,48,48
+(chainid A and resid 48) and (name H),(chainid A and resid 48) and (name HD2),5.5,0.0,5.5,48,48
+(chainid A and resid 48) and (name HA),(chainid A and resid 48) and (name HD2),4.97,0.0,4.97,48,48
+(chainid A and resid 54) and (name HA),(chainid A and resid 54) and (name HD1),5.5,0.0,5.5,54,54
+(chainid A and resid 54) and (name H),(chainid A and resid 54) and (name HD2),5.5,0.0,5.5,54,54
+(chainid A and resid 54) and (name HA),(chainid A and resid 54) and (name HD2),5.5,0.0,5.5,54,54
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HD2),5.5,0.0,5.5,58,58
+(chainid A and resid 58) and (name HA),(chainid A and resid 58) and (name HD2),5.5,0.0,5.5,58,58
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HD3),5.5,0.0,5.5,58,58
+(chainid A and resid 58) and (name HA),(chainid A and resid 58) and (name HD3),5.5,0.0,5.5,58,58
+(chainid A and resid 59) and (name H),(chainid A and resid 59) and (name HD1),5.5,0.0,5.5,59,59
+(chainid A and resid 59) and (name HD1),(chainid A and resid 59) and (name HA),4.48,0.0,4.48,59,59
+(chainid A and resid 59) and (name HA),(chainid A and resid 59) and (name HE1),5.5,0.0,5.5,59,59
+(chainid A and resid 59) and (name HA),(chainid A and resid 59) and (name HE2),5.5,0.0,5.5,59,59
+(chainid A and resid 59) and (name HD2),(chainid A and resid 59) and (name HA),4.85,0.0,4.85,59,59
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HG2),5.5,0.0,5.5,62,62
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HG3),5.5,0.0,5.5,62,62
+(chainid A and resid 62) and (name HA),(chainid A and resid 62) and (name HD2),4.48,0.0,4.48,62,62
+(chainid A and resid 62) and (name HA),(chainid A and resid 62) and (name HD3),4.48,0.0,4.48,62,62
+(chainid A and resid 62) and (name HE2),(chainid A and resid 62) and (name HB3),7.26,0.0,7.26,62,62
+(chainid A and resid 62) and (name HB3),(chainid A and resid 62) and (name HE3),7.26,0.0,7.26,62,62
+(chainid A and resid 63) and (name H),(chainid A and resid 63) and (name HG),5.19,0.0,5.19,63,63
+(chainid A and resid 22) and (name HD1),(chainid A and resid 23) and (name H),5.5,0.0,5.5,22,23
+(chainid A and resid 22) and (name HD2),(chainid A and resid 23) and (name H),5.5,0.0,5.5,22,23
+(chainid A and resid 24) and (name H),(chainid A and resid 23) and (name HG2),5.5,0.0,5.5,24,23
+(chainid A and resid 24) and (name H),(chainid A and resid 23) and (name HG3),5.5,0.0,5.5,24,23
+(chainid A and resid 44) and (name H),(chainid A and resid 43) and (name HE3),5.5,0.0,5.5,44,43
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HG2),5.5,0.0,5.5,46,45
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HG3),5.5,0.0,5.5,46,45
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HD2),5.5,0.0,5.5,46,45
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HD3),5.5,0.0,5.5,46,45
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HE2),5.5,0.0,5.5,46,45
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HE3),5.5,0.0,5.5,46,45
+(chainid A and resid 47) and (name H),(chainid A and resid 46) and (name HG12),5.5,0.0,5.5,47,46
+(chainid A and resid 47) and (name H),(chainid A and resid 46) and (name HG13),5.5,0.0,5.5,47,46
+(chainid A and resid 49) and (name H),(chainid A and resid 48) and (name HD1),5.5,0.0,5.5,49,48
+(chainid A and resid 49) and (name H),(chainid A and resid 48) and (name HD2),5.5,0.0,5.5,49,48
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HG2),5.5,0.0,5.5,52,51
+(chainid A and resid 60) and (name H),(chainid A and resid 59) and (name HD1),5.5,0.0,5.5,60,59
+(chainid A and resid 60) and (name H),(chainid A and resid 59) and (name HD2),5.5,0.0,5.5,60,59
+(chainid A and resid 63) and (name H),(chainid A and resid 62) and (name HG2),5.5,0.0,5.5,63,62
+(chainid A and resid 63) and (name H),(chainid A and resid 62) and (name HG3),5.5,0.0,5.5,63,62
+(chainid A and resid 48) and (name HB2),(chainid A and resid 53) and (name HA3),7.26,0.0,7.26,48,53
+(chainid A and resid 53) and (name HA3),(chainid A and resid 48) and (name HB3),7.26,0.0,7.26,53,48
+(chainid A and resid 54) and (name HD1),(chainid A and resid 45) and (name HG3),5.5,0.0,5.5,54,45
+(chainid A and resid 45) and (name HG2),(chainid A and resid 54) and (name HE1),5.5,0.0,5.5,45,54
+(chainid A and resid 54) and (name HE1),(chainid A and resid 45) and (name HB3),5.5,0.0,5.5,54,45
+(chainid A and resid 45) and (name HB2),(chainid A and resid 38) and (name HB2),7.26,0.0,7.26,45,38
+(chainid A and resid 44) and (name HA),(chainid A and resid 39) and (name HG2),5.5,0.0,5.5,44,39
+(chainid A and resid 44) and (name HA),(chainid A and resid 39) and (name HG3),5.5,0.0,5.5,44,39
+(chainid A and resid 43) and (name HB2),(chainid A and resid 54) and (name HB2),5.5,0.0,5.5,43,54
+(chainid A and resid 44) and (name HA),(chainid A and resid 39) and (name HB2),5.5,0.0,5.5,44,39
+(chainid A and resid 44) and (name HA),(chainid A and resid 39) and (name HB3),5.5,0.0,5.5,44,39
+(chainid A and resid 44) and (name HB2),(chainid A and resid 55) and (name HG12),5.5,0.0,5.5,44,55
+(chainid A and resid 55) and (name HG13),(chainid A and resid 44) and (name HB2),5.5,0.0,5.5,55,44
+(chainid A and resid 37) and (name HG13),(chainid A and resid 46) and (name HA),5.25,0.0,5.25,37,46
+(chainid A and resid 37) and (name HB),(chainid A and resid 46) and (name HA),5.5,0.0,5.5,37,46
+(chainid A and resid 46) and (name HG12),(chainid A and resid 48) and (name HB3),7.26,0.0,7.26,46,48
+(chainid A and resid 48) and (name HB2),(chainid A and resid 46) and (name HG12),7.26,0.0,7.26,48,46
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HB3),7.26,0.0,7.26,48,51
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HG2),7.26,0.0,7.26,48,51
+(chainid A and resid 46) and (name HG13),(chainid A and resid 48) and (name HB3),7.26,0.0,7.26,46,48
+(chainid A and resid 48) and (name HB3),(chainid A and resid 51) and (name HB3),7.26,0.0,7.26,48,51
+(chainid A and resid 51) and (name HG2),(chainid A and resid 48) and (name HB3),7.26,0.0,7.26,51,48
+(chainid A and resid 25) and (name HB),(chainid A and resid 48) and (name HD1),5.5,0.0,5.5,25,48
+(chainid A and resid 25) and (name HB),(chainid A and resid 48) and (name HE1),5.5,0.0,5.5,25,48
+(chainid A and resid 43) and (name HB3),(chainid A and resid 54) and (name HB2),5.13,0.0,5.13,43,54
+(chainid A and resid 43) and (name HB3),(chainid A and resid 54) and (name HB3),5.5,0.0,5.5,43,54
+(chainid A and resid 44) and (name HB3),(chainid A and resid 55) and (name HG12),5.5,0.0,5.5,44,55
+(chainid A and resid 44) and (name HB3),(chainid A and resid 55) and (name HG13),5.5,0.0,5.5,44,55
+(chainid A and resid 60) and (name HG),(chainid A and resid 57) and (name HA),4.76,0.0,4.76,60,57
+(chainid A and resid 55) and (name HA),(chainid A and resid 43) and (name HD1),5.5,0.0,5.5,55,43
+(chainid A and resid 45) and (name H),(chainid A and resid 54) and (name HE1),5.5,0.0,5.5,45,54
+(chainid A and resid 20) and (name HA),(chainid A and resid 43) and (name HZ2),5.5,0.0,5.5,20,43
+(chainid A and resid 20) and (name HA),(chainid A and resid 43) and (name HH2),5.04,0.0,5.04,20,43
+(chainid A and resid 22) and (name HD2),(chainid A and resid 20) and (name HA),5.5,0.0,5.5,22,20
+(chainid A and resid 20) and (name HB),(chainid A and resid 43) and (name HZ2),5.5,0.0,5.5,20,43
+(chainid A and resid 21) and (name H),(chainid A and resid 22) and (name HD2),5.5,0.0,5.5,21,22
+(chainid A and resid 20) and (name H),(chainid A and resid 43) and (name HZ2),5.5,0.0,5.5,20,43
+(chainid A and resid 45) and (name HA),(chainid A and resid 54) and (name HD1),5.22,0.0,5.22,45,54
+(chainid A and resid 45) and (name HA),(chainid A and resid 54) and (name HE1),5.5,0.0,5.5,45,54
+(chainid A and resid 38) and (name H),(chainid A and resid 45) and (name HB2),5.5,0.0,5.5,38,45
+(chainid A and resid 54) and (name HE1),(chainid A and resid 45) and (name HB2),5.5,0.0,5.5,54,45
+(chainid A and resid 38) and (name H),(chainid A and resid 45) and (name HB3),5.5,0.0,5.5,38,45
+(chainid A and resid 45) and (name HG3),(chainid A and resid 54) and (name HE1),5.5,0.0,5.5,45,54
+(chainid A and resid 53) and (name H),(chainid A and resid 46) and (name HG13),5.5,0.0,5.5,53,46
+(chainid A and resid 45) and (name HE2),(chainid A and resid 54) and (name HE1),5.5,0.0,5.5,45,54
+(chainid A and resid 53) and (name H),(chainid A and resid 46) and (name HG12),5.5,0.0,5.5,53,46
+(chainid A and resid 51) and (name HE21),(chainid A and resid 49) and (name HB2),7.23,0.0,7.23,51,49
+(chainid A and resid 51) and (name HE21),(chainid A and resid 49) and (name HB3),7.23,0.0,7.23,51,49
+(chainid A and resid 54) and (name HB2),(chainid A and resid 43) and (name HE3),4.48,0.0,4.48,54,43
+(chainid A and resid 54) and (name HB3),(chainid A and resid 43) and (name HD1),5.5,0.0,5.5,54,43
+(chainid A and resid 54) and (name HB3),(chainid A and resid 43) and (name HE3),5.5,0.0,5.5,54,43
+(chainid A and resid 43) and (name HD1),(chainid A and resid 56) and (name HA2),5.5,0.0,5.5,43,56
+(chainid A and resid 43) and (name HD1),(chainid A and resid 56) and (name HA3),5.5,0.0,5.5,43,56
+(chainid A and resid 43) and (name HB3),(chainid A and resid 54) and (name HD1),5.5,0.0,5.5,43,54
+(chainid A and resid 55) and (name H),(chainid A and resid 43) and (name HE3),5.5,0.0,5.5,55,43
+(chainid A and resid 53) and (name HA3),(chainid A and resid 46) and (name HG12),7.26,0.0,7.26,53,46
+(chainid A and resid 53) and (name HA3),(chainid A and resid 46) and (name HG13),7.26,0.0,7.26,53,46
+(chainid A and resid 54) and (name HD1),(chainid A and resid 45) and (name HG2),5.5,0.0,5.5,54,45
+(chainid A and resid 45) and (name HB2),(chainid A and resid 38) and (name HB3),7.26,0.0,7.26,45,38
+(chainid A and resid 45) and (name HE3),(chainid A and resid 54) and (name HE1),5.5,0.0,5.5,45,54
+(chainid A and resid 39) and (name HG3),(chainid A and resid 44) and (name HB2),7.26,0.0,7.26,39,44
+(chainid A and resid 38) and (name HA),(chainid A and resid 39) and (name HG3),5.5,0.0,5.5,38,39
+(chainid A and resid 41) and (name HB3),(chainid A and resid 40) and (name HB3),5.5,0.0,5.5,41,40
+(chainid A and resid 40) and (name HB3),(chainid A and resid 41) and (name HB2),5.5,0.0,5.5,40,41
+(chainid A and resid 39) and (name HG2),(chainid A and resid 44) and (name HB2),7.26,0.0,7.26,39,44
+(chainid A and resid 38) and (name HA),(chainid A and resid 39) and (name HG2),5.5,0.0,5.5,38,39
+(chainid A and resid 40) and (name HB2),(chainid A and resid 41) and (name HB3),5.5,0.0,5.5,40,41
+(chainid A and resid 40) and (name HB2),(chainid A and resid 41) and (name HB2),5.5,0.0,5.5,40,41
+(chainid A and resid 55) and (name H),(chainid A and resid 44) and (name HB2),5.5,0.0,5.5,55,44
+(chainid A and resid 55) and (name H),(chainid A and resid 44) and (name HB3),5.5,0.0,5.5,55,44
+(chainid A and resid 37) and (name HG12),(chainid A and resid 46) and (name HA),5.5,0.0,5.5,37,46
+(chainid A and resid 59) and (name HB3),(chainid A and resid 8) and (name HA),5.5,0.0,5.5,59,8
+(chainid A and resid 59) and (name HB3),(chainid A and resid 8) and (name H),5.5,0.0,5.5,59,8
+(chainid A and resid 26) and (name H),(chainid A and resid 14) and (name HB),5.5,0.0,5.5,26,14
+(chainid A and resid 14) and (name HB),(chainid A and resid 26) and (name HA3),5.5,0.0,5.5,14,26
+(chainid A and resid 25) and (name HB),(chainid A and resid 48) and (name HD2),5.5,0.0,5.5,25,48
+(chainid A and resid 25) and (name HB),(chainid A and resid 48) and (name HE2),5.5,0.0,5.5,25,48
+(chainid A and resid 14) and (name HB),(chainid A and resid 26) and (name HA2),5.5,0.0,5.5,14,26
+(chainid A and resid 24) and (name H),(chainid A and resid 24) and (name CD* or (name HD*)),6.52,0.0,6.52,24,24
+(chainid A and resid 46) and (name CG* or (name HG*)),(chainid A and resid 46) and (name CD* or (name HD*)),4.44,0.0,4.44,46,46
+(chainid A and resid 60) and (name HA),(chainid A and resid 60) and (name CD1* or (name HD1*)),6.52,0.0,6.52,60,60
+(chainid A and resid 60) and (name HA),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.52,0.0,6.52,60,60
+(chainid A and resid 63) and (name H),(chainid A and resid 63) and (name CD1* or (name HD1*)),6.52,0.0,6.52,63,63
+(chainid A and resid 63) and (name CD1* or (name HD1*)),(chainid A and resid 63) and (name HA),6.27,0.0,6.27,63,63
+(chainid A and resid 63) and (name H),(chainid A and resid 63) and (name CD2* or (name HD2*)),6.52,0.0,6.52,63,63
+(chainid A and resid 63) and (name HA),(chainid A and resid 63) and (name CD2* or (name HD2*)),6.27,0.0,6.27,63,63
+(chainid A and resid 21) and (name H),(chainid A and resid 20) and (name CG* or (name HG*)),6.52,0.0,6.52,21,20
+(chainid A and resid 53) and (name HA3),(chainid A and resid 34) and (name CG1* or (name HG1*)),9.62,0.0,9.62,53,34
+(chainid A and resid 14) and (name CG2* or (name HG2*)),(chainid A and resid 29) and (name HB3),9.22,0.0,9.22,14,29
+(chainid A and resid 25) and (name CG* or (name HG*)),(chainid A and resid 15) and (name HA),6.15,0.0,6.15,25,15
+(chainid A and resid 25) and (name CG* or (name HG*)),(chainid A and resid 15) and (name HD2),6.52,0.0,6.52,25,15
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 53) and (name HA3),5.56,0.0,5.56,25,53
+(chainid A and resid 27) and (name CB* or (name HB*)),(chainid A and resid 26) and (name HA2),6.52,0.0,6.52,27,26
+(chainid A and resid 27) and (name CB* or (name HB*)),(chainid A and resid 26) and (name HA3),6.52,0.0,6.52,27,26
+(chainid A and resid 37) and (name CD* or (name HD*)),(chainid A and resid 47) and (name HB3),5.34,0.0,5.34,37,47
+(chainid A and resid 37) and (name CD* or (name HD*)),(chainid A and resid 47) and (name HB2),5.34,0.0,5.34,37,47
+(chainid A and resid 39) and (name HA),(chainid A and resid 57) and (name CG* or (name HG*)),6.52,0.0,6.52,39,57
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 39) and (name HB2),6.52,0.0,6.52,57,39
+(chainid A and resid 43) and (name HZ2),(chainid A and resid 20) and (name CG* or (name HG*)),5.09,0.0,5.09,43,20
+(chainid A and resid 44) and (name HB2),(chainid A and resid 60) and (name CD2* or (name HD2*)),8.8,0.0,8.8,44,60
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 44) and (name HB2),6.52,0.0,6.52,57,44
+(chainid A and resid 46) and (name CG* or (name HG*)),(chainid A and resid 44) and (name HB2),6.52,0.0,6.52,46,44
+(chainid A and resid 45) and (name HA),(chainid A and resid 46) and (name CG* or (name HG*)),6.52,0.0,6.52,45,46
+(chainid A and resid 47) and (name HA),(chainid A and resid 46) and (name CD* or (name HD*)),6.21,0.0,6.21,47,46
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 48) and (name HB2),5.37,0.0,5.37,25,48
+(chainid A and resid 48) and (name HB2),(chainid A and resid 34) and (name CG1* or (name HG1*)),9.06,0.0,9.06,48,34
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 48) and (name HB3),5.37,0.0,5.37,25,48
+(chainid A and resid 34) and (name CG1* or (name HG1*)),(chainid A and resid 48) and (name HB3),9.06,0.0,9.06,34,48
+(chainid A and resid 48) and (name HD1),(chainid A and resid 34) and (name CG1* or (name HG1*)),6.52,0.0,6.52,48,34
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 51) and (name HG2),6.52,0.0,6.52,25,51
+(chainid A and resid 52) and (name CG* or (name HG*)),(chainid A and resid 53) and (name HA2),6.52,0.0,6.52,52,53
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 53) and (name HA2),5.56,0.0,5.56,25,53
+(chainid A and resid 34) and (name CG1* or (name HG1*)),(chainid A and resid 53) and (name HA2),9.62,0.0,9.62,34,53
+(chainid A and resid 54) and (name HA),(chainid A and resid 46) and (name CG* or (name HG*)),6.08,0.0,6.08,54,46
+(chainid A and resid 55) and (name HB),(chainid A and resid 60) and (name CD1* or (name HD1*)),6.52,0.0,6.52,55,60
+(chainid A and resid 60) and (name CD1* or (name HD1*)),(chainid A and resid 55) and (name HG12),6.52,0.0,6.52,60,55
+(chainid A and resid 55) and (name HG12),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.52,0.0,6.52,55,60
+(chainid A and resid 55) and (name HG13),(chainid A and resid 60) and (name CD1* or (name HD1*)),6.52,0.0,6.52,55,60
+(chainid A and resid 55) and (name HG13),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.52,0.0,6.52,55,60
+(chainid A and resid 55) and (name CD* or (name HD*)),(chainid A and resid 60) and (name CD1* or (name HD1*)),7.54,0.0,7.54,55,60
+(chainid A and resid 44) and (name HB3),(chainid A and resid 60) and (name CD2* or (name HD2*)),8.8,0.0,8.8,44,60
+(chainid A and resid 43) and (name HA),(chainid A and resid 57) and (name CG* or (name HG*)),6.52,0.0,6.52,43,57
+(chainid A and resid 52) and (name CG* or (name HG*)),(chainid A and resid 54) and (name HE2),5.74,0.0,5.74,52,54
+(chainid A and resid 48) and (name HD2),(chainid A and resid 34) and (name CG1* or (name HG1*)),6.52,0.0,6.52,48,34
+(chainid A and resid 48) and (name HD2),(chainid A and resid 34) and (name CG2* or (name HG2*)),6.52,0.0,6.52,48,34
+(chainid A and resid 48) and (name HE2),(chainid A and resid 34) and (name CG2* or (name HG2*)),6.52,0.0,6.52,48,34
+(chainid A and resid 43) and (name HH2),(chainid A and resid 20) and (name CG* or (name HG*)),6.52,0.0,6.52,43,20
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 48) and (name HD1),4.88,0.0,4.88,25,48
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 48) and (name HE1),6.52,0.0,6.52,25,48
+(chainid A and resid 37) and (name H),(chainid A and resid 46) and (name CG* or (name HG*)),6.52,0.0,6.52,37,46
+(chainid A and resid 54) and (name HA),(chainid A and resid 55) and (name CG* or (name HG*)),6.52,0.0,6.52,54,55
+(chainid A and resid 53) and (name H),(chainid A and resid 25) and (name CD* or (name HD*)),6.52,0.0,6.52,53,25
+(chainid A and resid 52) and (name CG* or (name HG*)),(chainid A and resid 53) and (name HA3),6.52,0.0,6.52,52,53
+(chainid A and resid 52) and (name CG* or (name HG*)),(chainid A and resid 54) and (name HD2),6.52,0.0,6.52,52,54
+(chainid A and resid 55) and (name CD* or (name HD*)),(chainid A and resid 44) and (name HB2),6.52,0.0,6.52,55,44
+(chainid A and resid 55) and (name CD* or (name HD*)),(chainid A and resid 44) and (name HB3),6.52,0.0,6.52,55,44
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 44) and (name HB3),6.52,0.0,6.52,57,44
+(chainid A and resid 60) and (name HG),(chainid A and resid 55) and (name CD* or (name HD*)),6.52,0.0,6.52,60,55
+(chainid A and resid 55) and (name CD* or (name HD*)),(chainid A and resid 60) and (name CD2* or (name HD2*)),7.54,0.0,7.54,55,60
+(chainid A and resid 44) and (name HA),(chainid A and resid 57) and (name CG* or (name HG*)),6.52,0.0,6.52,44,57
+(chainid A and resid 46) and (name CG* or (name HG*)),(chainid A and resid 44) and (name HB3),6.52,0.0,6.52,46,44
+(chainid A and resid 55) and (name H),(chainid A and resid 46) and (name CG* or (name HG*)),6.52,0.0,6.52,55,46
+(chainid A and resid 54) and (name H),(chainid A and resid 46) and (name CG* or (name HG*)),6.52,0.0,6.52,54,46
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 39) and (name HB3),6.52,0.0,6.52,57,39
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 60) and (name HB2),6.21,0.0,6.21,57,60
+(chainid A and resid 46) and (name CG* or (name HG*)),(chainid A and resid 55) and (name CG* or (name HG*)),6.11,0.0,6.11,46,55
+(chainid A and resid 55) and (name HB),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.52,0.0,6.52,55,60
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 16) and (name HB3),6.52,0.0,6.52,25,16
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 16) and (name HB2),6.52,0.0,6.52,25,16
+(chainid A and resid 25) and (name CG* or (name HG*)),(chainid A and resid 16) and (name HB2),6.52,0.0,6.52,25,16
+(chainid A and resid 25) and (name CG* or (name HG*)),(chainid A and resid 16) and (name HB3),6.52,0.0,6.52,25,16
+(chainid A and resid 29) and (name HB2),(chainid A and resid 14) and (name CG2* or (name HG2*)),9.22,0.0,9.22,29,14
+(chainid A and resid 24) and (name CD* or (name HD*)),(chainid A and resid 16) and (name HA),6.52,0.0,6.52,24,16
+(chainid A and resid 27) and (name CB* or (name HB*)),(chainid A and resid 13) and (name HA),6.52,0.0,6.52,27,13
+(chainid A and resid 48) and (name HD1),(chainid A and resid 34) and (name CG2* or (name HG2*)),6.52,0.0,6.52,48,34
+(chainid A and resid 48) and (name HE1),(chainid A and resid 34) and (name CG2* or (name HG2*)),6.52,0.0,6.52,48,34
+(chainid A and resid 48) and (name HE2),(chainid A and resid 34) and (name CG1* or (name HG1*)),6.52,0.0,6.52,48,34
+(chainid A and resid 48) and (name HE1),(chainid A and resid 34) and (name CG1* or (name HG1*)),6.52,0.0,6.52,48,34
+(chainid A and resid 25) and (name CG* or (name HG*)),(chainid A and resid 15) and (name HD3),6.52,0.0,6.52,25,15
+(chainid A and resid 24) and (name CG* or (name HG*)),(chainid A and resid 16) and (name HA),6.52,0.0,6.52,24,16
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 46) and (name HB),6.09,0.0,6.09,25,46
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 51) and (name HG3),6.52,0.0,6.52,25,51
+(chainid A and resid 13) and (name H),(chainid A and resid 13) and (name HD22),6.36,0.0,6.36,13,13
+(chainid A and resid 13) and (name H),(chainid A and resid 13) and (name HD21),6.36,0.0,6.36,13,13
+(chainid A and resid 14) and (name H),(chainid A and resid 14) and (name CG2* or (name HG2*)),4.32,0.0,4.32,14,14
+(chainid A and resid 14) and (name H),(chainid A and resid 14) and (name CG1* or (name HG1*)),4.32,0.0,4.32,14,14
+(chainid A and resid 14) and (name H),(chainid A and resid 26) and (name HA2),6.38,0.0,6.38,14,26
+(chainid A and resid 14) and (name H),(chainid A and resid 26) and (name HA3),6.38,0.0,6.38,14,26
+(chainid A and resid 14) and (name H),(chainid A and resid 29) and (name HB3),6.38,0.0,6.38,14,29
+(chainid A and resid 14) and (name H),(chainid A and resid 29) and (name HB2),6.38,0.0,6.38,14,29
+(chainid A and resid 14) and (name H),(chainid A and resid 29) and (name HG2),5.46,0.0,5.46,14,29
+(chainid A and resid 14) and (name H),(chainid A and resid 29) and (name HG3),5.46,0.0,5.46,14,29
+(chainid A and resid 14) and (name HA),(chainid A and resid 29) and (name HG2),6.39,0.0,6.39,14,29
+(chainid A and resid 14) and (name HA),(chainid A and resid 29) and (name HG3),6.39,0.0,6.39,14,29
+(chainid A and resid 26) and (name H),(chainid A and resid 14) and (name CG2* or (name HG2*)),8.07,0.0,8.07,26,14
+(chainid A and resid 26) and (name H),(chainid A and resid 14) and (name CG1* or (name HG1*)),8.07,0.0,8.07,26,14
+(chainid A and resid 27) and (name HA),(chainid A and resid 14) and (name CG2* or (name HG2*)),8.07,0.0,8.07,27,14
+(chainid A and resid 27) and (name HA),(chainid A and resid 14) and (name CG1* or (name HG1*)),8.07,0.0,8.07,27,14
+(chainid A and resid 14) and (name CG2* or (name HG2*)),(chainid A and resid 29) and (name HB3),7.55,0.0,7.55,14,29
+(chainid A and resid 14) and (name CG1* or (name HG1*)),(chainid A and resid 29) and (name HB3),7.55,0.0,7.55,14,29
+(chainid A and resid 29) and (name HB2),(chainid A and resid 14) and (name CG2* or (name HG2*)),7.55,0.0,7.55,29,14
+(chainid A and resid 14) and (name CG1* or (name HG1*)),(chainid A and resid 29) and (name HB2),7.55,0.0,7.55,14,29
+(chainid A and resid 14) and (name CG1* or (name HG1*)),(chainid A and resid 29) and (name HB2),9.22,0.0,9.22,14,29
+(chainid A and resid 14) and (name CG1* or (name HG1*)),(chainid A and resid 29) and (name HB3),9.22,0.0,9.22,14,29
+(chainid A and resid 60) and (name HA),(chainid A and resid 14) and (name CG2* or (name HG2*)),7.79,0.0,7.79,60,14
+(chainid A and resid 60) and (name HA),(chainid A and resid 14) and (name CG1* or (name HG1*)),7.79,0.0,7.79,60,14
+(chainid A and resid 16) and (name HA),(chainid A and resid 24) and (name HG12),6.38,0.0,6.38,16,24
+(chainid A and resid 16) and (name HA),(chainid A and resid 24) and (name HG13),6.38,0.0,6.38,16,24
+(chainid A and resid 24) and (name CG* or (name HG*)),(chainid A and resid 16) and (name HB2),7.21,0.0,7.21,24,16
+(chainid A and resid 24) and (name CG* or (name HG*)),(chainid A and resid 16) and (name HB3),7.21,0.0,7.21,24,16
+(chainid A and resid 25) and (name CG* or (name HG*)),(chainid A and resid 16) and (name HB2),6.15,0.0,6.15,25,16
+(chainid A and resid 25) and (name CG* or (name HG*)),(chainid A and resid 16) and (name HB3),6.15,0.0,6.15,25,16
+(chainid A and resid 22) and (name HD2),(chainid A and resid 19) and (name HA2),6.38,0.0,6.38,22,19
+(chainid A and resid 22) and (name HD2),(chainid A and resid 19) and (name HA3),6.38,0.0,6.38,22,19
+(chainid A and resid 21) and (name H),(chainid A and resid 21) and (name HB3),3.9,0.0,3.9,21,21
+(chainid A and resid 21) and (name H),(chainid A and resid 21) and (name HB2),3.9,0.0,3.9,21,21
+(chainid A and resid 22) and (name H),(chainid A and resid 21) and (name HB3),4.44,0.0,4.44,22,21
+(chainid A and resid 22) and (name H),(chainid A and resid 21) and (name HB2),4.44,0.0,4.44,22,21
+(chainid A and resid 24) and (name H),(chainid A and resid 24) and (name HG12),5.17,0.0,5.17,24,24
+(chainid A and resid 24) and (name H),(chainid A and resid 24) and (name HG13),5.17,0.0,5.17,24,24
+(chainid A and resid 25) and (name H),(chainid A and resid 25) and (name HG12),4.69,0.0,4.69,25,25
+(chainid A and resid 25) and (name H),(chainid A and resid 25) and (name HG13),4.69,0.0,4.69,25,25
+(chainid A and resid 26) and (name H),(chainid A and resid 25) and (name HG12),5.12,0.0,5.12,26,25
+(chainid A and resid 26) and (name H),(chainid A and resid 25) and (name HG13),5.12,0.0,5.12,26,25
+(chainid A and resid 48) and (name HD1),(chainid A and resid 25) and (name HG12),5.64,0.0,5.64,48,25
+(chainid A and resid 48) and (name HD1),(chainid A and resid 25) and (name HG13),5.64,0.0,5.64,48,25
+(chainid A and resid 48) and (name HE1),(chainid A and resid 25) and (name HG12),6.38,0.0,6.38,48,25
+(chainid A and resid 48) and (name HE1),(chainid A and resid 25) and (name HG13),6.38,0.0,6.38,48,25
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 48) and (name HB3),5.07,0.0,5.07,25,48
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 48) and (name HB2),5.07,0.0,5.07,25,48
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 53) and (name HA2),5.37,0.0,5.37,25,53
+(chainid A and resid 25) and (name CD* or (name HD*)),(chainid A and resid 53) and (name HA3),5.37,0.0,5.37,25,53
+(chainid A and resid 34) and (name CG1* or (name HG1*)),(chainid A and resid 48) and (name HB3),7.29,0.0,7.29,34,48
+(chainid A and resid 34) and (name CG2* or (name HG2*)),(chainid A and resid 48) and (name HB3),7.29,0.0,7.29,34,48
+(chainid A and resid 48) and (name HB2),(chainid A and resid 34) and (name CG2* or (name HG2*)),7.29,0.0,7.29,48,34
+(chainid A and resid 48) and (name HB2),(chainid A and resid 34) and (name CG1* or (name HG1*)),7.29,0.0,7.29,48,34
+(chainid A and resid 48) and (name HB2),(chainid A and resid 34) and (name CG2* or (name HG2*)),9.06,0.0,9.06,48,34
+(chainid A and resid 34) and (name CG2* or (name HG2*)),(chainid A and resid 48) and (name HB3),9.06,0.0,9.06,34,48
+(chainid A and resid 48) and (name HD1),(chainid A and resid 34) and (name CG2* or (name HG2*)),6.19,0.0,6.19,48,34
+(chainid A and resid 48) and (name HD1),(chainid A and resid 34) and (name CG1* or (name HG1*)),6.19,0.0,6.19,48,34
+(chainid A and resid 34) and (name CG1* or (name HG1*)),(chainid A and resid 53) and (name HA2),7.79,0.0,7.79,34,53
+(chainid A and resid 34) and (name CG2* or (name HG2*)),(chainid A and resid 53) and (name HA2),7.79,0.0,7.79,34,53
+(chainid A and resid 53) and (name HA3),(chainid A and resid 34) and (name CG2* or (name HG2*)),7.79,0.0,7.79,53,34
+(chainid A and resid 53) and (name HA3),(chainid A and resid 34) and (name CG1* or (name HG1*)),7.79,0.0,7.79,53,34
+(chainid A and resid 34) and (name CG2* or (name HG2*)),(chainid A and resid 53) and (name HA2),9.62,0.0,9.62,34,53
+(chainid A and resid 53) and (name HA3),(chainid A and resid 34) and (name CG2* or (name HG2*)),9.62,0.0,9.62,53,34
+(chainid A and resid 37) and (name H),(chainid A and resid 45) and (name HB3),6.38,0.0,6.38,37,45
+(chainid A and resid 37) and (name H),(chainid A and resid 45) and (name HB2),6.38,0.0,6.38,37,45
+(chainid A and resid 37) and (name HB),(chainid A and resid 45) and (name HB3),6.38,0.0,6.38,37,45
+(chainid A and resid 37) and (name HB),(chainid A and resid 45) and (name HB2),6.38,0.0,6.38,37,45
+(chainid A and resid 37) and (name CG* or (name HG*)),(chainid A and resid 45) and (name HB3),7.4,0.0,7.4,37,45
+(chainid A and resid 37) and (name CG* or (name HG*)),(chainid A and resid 45) and (name HB2),7.4,0.0,7.4,37,45
+(chainid A and resid 37) and (name HG13),(chainid A and resid 47) and (name HB3),6.38,0.0,6.38,37,47
+(chainid A and resid 37) and (name HG13),(chainid A and resid 47) and (name HB2),6.38,0.0,6.38,37,47
+(chainid A and resid 47) and (name HD21),(chainid A and resid 37) and (name CD* or (name HD*)),7.38,0.0,7.38,47,37
+(chainid A and resid 37) and (name CD* or (name HD*)),(chainid A and resid 47) and (name HD22),7.38,0.0,7.38,37,47
+(chainid A and resid 38) and (name H),(chainid A and resid 45) and (name HB3),5.14,0.0,5.14,38,45
+(chainid A and resid 38) and (name H),(chainid A and resid 45) and (name HB2),5.14,0.0,5.14,38,45
+(chainid A and resid 38) and (name H),(chainid A and resid 45) and (name HD3),6.38,0.0,6.38,38,45
+(chainid A and resid 38) and (name H),(chainid A and resid 45) and (name HD2),6.38,0.0,6.38,38,45
+(chainid A and resid 38) and (name HB2),(chainid A and resid 45) and (name HB3),6.32,0.0,6.32,38,45
+(chainid A and resid 38) and (name HB3),(chainid A and resid 45) and (name HB3),6.32,0.0,6.32,38,45
+(chainid A and resid 45) and (name HB2),(chainid A and resid 38) and (name HB2),6.32,0.0,6.32,45,38
+(chainid A and resid 45) and (name HB2),(chainid A and resid 38) and (name HB3),6.32,0.0,6.32,45,38
+(chainid A and resid 38) and (name HB2),(chainid A and resid 45) and (name HB3),7.26,0.0,7.26,38,45
+(chainid A and resid 38) and (name HB3),(chainid A and resid 45) and (name HB3),7.26,0.0,7.26,38,45
+(chainid A and resid 38) and (name HB3),(chainid A and resid 45) and (name HD3),7.26,0.0,7.26,38,45
+(chainid A and resid 38) and (name HB2),(chainid A and resid 45) and (name HD3),7.26,0.0,7.26,38,45
+(chainid A and resid 45) and (name HD2),(chainid A and resid 38) and (name HB2),7.26,0.0,7.26,45,38
+(chainid A and resid 45) and (name HD2),(chainid A and resid 38) and (name HB3),7.26,0.0,7.26,45,38
+(chainid A and resid 39) and (name HA),(chainid A and resid 44) and (name HB2),6.38,0.0,6.38,39,44
+(chainid A and resid 39) and (name HA),(chainid A and resid 44) and (name HB3),6.38,0.0,6.38,39,44
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HB2),3.79,0.0,3.79,40,39
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HB3),3.79,0.0,3.79,40,39
+(chainid A and resid 44) and (name HA),(chainid A and resid 39) and (name HB2),5.29,0.0,5.29,44,39
+(chainid A and resid 44) and (name HA),(chainid A and resid 39) and (name HB3),5.29,0.0,5.29,44,39
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HG2),5.08,0.0,5.08,40,39
+(chainid A and resid 40) and (name H),(chainid A and resid 39) and (name HG3),5.08,0.0,5.08,40,39
+(chainid A and resid 39) and (name HG2),(chainid A and resid 44) and (name HB2),6.32,0.0,6.32,39,44
+(chainid A and resid 44) and (name HB3),(chainid A and resid 39) and (name HG2),6.32,0.0,6.32,44,39
+(chainid A and resid 44) and (name HB3),(chainid A and resid 39) and (name HG3),6.32,0.0,6.32,44,39
+(chainid A and resid 39) and (name HG3),(chainid A and resid 44) and (name HB2),6.32,0.0,6.32,39,44
+(chainid A and resid 44) and (name HB3),(chainid A and resid 39) and (name HG2),7.26,0.0,7.26,44,39
+(chainid A and resid 44) and (name HB3),(chainid A and resid 39) and (name HG3),7.26,0.0,7.26,44,39
+(chainid A and resid 57) and (name HA),(chainid A and resid 39) and (name HG2),6.38,0.0,6.38,57,39
+(chainid A and resid 57) and (name HA),(chainid A and resid 39) and (name HG3),6.38,0.0,6.38,57,39
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 39) and (name HG2),5.85,0.0,5.85,57,39
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 39) and (name HG3),5.85,0.0,5.85,57,39
+(chainid A and resid 41) and (name H),(chainid A and resid 40) and (name HB3),4.15,0.0,4.15,41,40
+(chainid A and resid 41) and (name H),(chainid A and resid 40) and (name HB2),4.15,0.0,4.15,41,40
+(chainid A and resid 41) and (name H),(chainid A and resid 41) and (name HB2),3.72,0.0,3.72,41,41
+(chainid A and resid 41) and (name H),(chainid A and resid 41) and (name HB3),3.72,0.0,3.72,41,41
+(chainid A and resid 43) and (name HD1),(chainid A and resid 42) and (name HA2),6.38,0.0,6.38,43,42
+(chainid A and resid 43) and (name HD1),(chainid A and resid 42) and (name HA3),6.38,0.0,6.38,43,42
+(chainid A and resid 43) and (name HA),(chainid A and resid 56) and (name HA2),4.21,0.0,4.21,43,56
+(chainid A and resid 43) and (name HA),(chainid A and resid 56) and (name HA3),4.21,0.0,4.21,43,56
+(chainid A and resid 43) and (name HD1),(chainid A and resid 56) and (name HA2),4.91,0.0,4.91,43,56
+(chainid A and resid 43) and (name HD1),(chainid A and resid 56) and (name HA3),4.91,0.0,4.91,43,56
+(chainid A and resid 44) and (name H),(chainid A and resid 44) and (name HB2),3.76,0.0,3.76,44,44
+(chainid A and resid 44) and (name H),(chainid A and resid 44) and (name HB3),3.76,0.0,3.76,44,44
+(chainid A and resid 44) and (name H),(chainid A and resid 55) and (name HG12),6.38,0.0,6.38,44,55
+(chainid A and resid 44) and (name H),(chainid A and resid 55) and (name HG13),6.38,0.0,6.38,44,55
+(chainid A and resid 44) and (name HA),(chainid A and resid 45) and (name HB3),6.1,0.0,6.1,44,45
+(chainid A and resid 44) and (name HA),(chainid A and resid 45) and (name HB2),6.1,0.0,6.1,44,45
+(chainid A and resid 45) and (name H),(chainid A and resid 44) and (name HB2),4.04,0.0,4.04,45,44
+(chainid A and resid 45) and (name H),(chainid A and resid 44) and (name HB3),4.04,0.0,4.04,45,44
+(chainid A and resid 55) and (name CG* or (name HG*)),(chainid A and resid 44) and (name HB2),7.4,0.0,7.4,55,44
+(chainid A and resid 55) and (name CG* or (name HG*)),(chainid A and resid 44) and (name HB3),7.4,0.0,7.4,55,44
+(chainid A and resid 44) and (name HB2),(chainid A and resid 55) and (name HG12),4.79,0.0,4.79,44,55
+(chainid A and resid 44) and (name HB3),(chainid A and resid 55) and (name HG12),4.79,0.0,4.79,44,55
+(chainid A and resid 55) and (name HG13),(chainid A and resid 44) and (name HB2),4.79,0.0,4.79,55,44
+(chainid A and resid 44) and (name HB3),(chainid A and resid 55) and (name HG13),4.79,0.0,4.79,44,55
+(chainid A and resid 57) and (name HA),(chainid A and resid 44) and (name HB2),6.38,0.0,6.38,57,44
+(chainid A and resid 57) and (name HA),(chainid A and resid 44) and (name HB3),6.38,0.0,6.38,57,44
+(chainid A and resid 44) and (name HB2),(chainid A and resid 60) and (name CD2* or (name HD2*)),7.0,0.0,7.0,44,60
+(chainid A and resid 44) and (name HB3),(chainid A and resid 60) and (name CD2* or (name HD2*)),7.0,0.0,7.0,44,60
+(chainid A and resid 60) and (name CD1* or (name HD1*)),(chainid A and resid 44) and (name HB2),7.0,0.0,7.0,60,44
+(chainid A and resid 44) and (name HB3),(chainid A and resid 60) and (name CD1* or (name HD1*)),7.0,0.0,7.0,44,60
+(chainid A and resid 60) and (name CD1* or (name HD1*)),(chainid A and resid 44) and (name HB2),8.8,0.0,8.8,60,44
+(chainid A and resid 44) and (name HB3),(chainid A and resid 60) and (name CD1* or (name HD1*)),8.8,0.0,8.8,44,60
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HB3),3.15,0.0,3.15,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 45) and (name HB2),3.15,0.0,3.15,45,45
+(chainid A and resid 45) and (name H),(chainid A and resid 60) and (name CD2* or (name HD2*)),8.07,0.0,8.07,45,60
+(chainid A and resid 45) and (name H),(chainid A and resid 60) and (name CD1* or (name HD1*)),8.07,0.0,8.07,45,60
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HB3),4.27,0.0,4.27,46,45
+(chainid A and resid 46) and (name H),(chainid A and resid 45) and (name HB2),4.27,0.0,4.27,46,45
+(chainid A and resid 54) and (name HD1),(chainid A and resid 45) and (name HB3),6.38,0.0,6.38,54,45
+(chainid A and resid 54) and (name HD1),(chainid A and resid 45) and (name HB2),6.38,0.0,6.38,54,45
+(chainid A and resid 54) and (name HE1),(chainid A and resid 45) and (name HB3),5.18,0.0,5.18,54,45
+(chainid A and resid 54) and (name HE1),(chainid A and resid 45) and (name HB2),5.18,0.0,5.18,54,45
+(chainid A and resid 54) and (name HE1),(chainid A and resid 45) and (name HD3),6.38,0.0,6.38,54,45
+(chainid A and resid 54) and (name HE1),(chainid A and resid 45) and (name HD2),6.38,0.0,6.38,54,45
+(chainid A and resid 46) and (name H),(chainid A and resid 46) and (name HG12),4.71,0.0,4.71,46,46
+(chainid A and resid 46) and (name H),(chainid A and resid 46) and (name HG13),4.71,0.0,4.71,46,46
+(chainid A and resid 46) and (name HA),(chainid A and resid 47) and (name HB3),6.01,0.0,6.01,46,47
+(chainid A and resid 46) and (name HA),(chainid A and resid 47) and (name HB2),6.01,0.0,6.01,46,47
+(chainid A and resid 46) and (name HG13),(chainid A and resid 48) and (name HB3),5.79,0.0,5.79,46,48
+(chainid A and resid 46) and (name HG12),(chainid A and resid 48) and (name HB3),5.79,0.0,5.79,46,48
+(chainid A and resid 48) and (name HB2),(chainid A and resid 46) and (name HG12),5.79,0.0,5.79,48,46
+(chainid A and resid 48) and (name HB2),(chainid A and resid 46) and (name HG13),5.79,0.0,5.79,48,46
+(chainid A and resid 48) and (name HB2),(chainid A and resid 46) and (name HG13),7.26,0.0,7.26,48,46
+(chainid A and resid 46) and (name HG13),(chainid A and resid 53) and (name HA2),6.32,0.0,6.32,46,53
+(chainid A and resid 46) and (name HG12),(chainid A and resid 53) and (name HA2),6.32,0.0,6.32,46,53
+(chainid A and resid 53) and (name HA3),(chainid A and resid 46) and (name HG12),6.32,0.0,6.32,53,46
+(chainid A and resid 53) and (name HA3),(chainid A and resid 46) and (name HG13),6.32,0.0,6.32,53,46
+(chainid A and resid 46) and (name HG12),(chainid A and resid 53) and (name HA2),7.26,0.0,7.26,46,53
+(chainid A and resid 46) and (name HG13),(chainid A and resid 53) and (name HA2),7.26,0.0,7.26,46,53
+(chainid A and resid 47) and (name H),(chainid A and resid 47) and (name HB3),3.44,0.0,3.44,47,47
+(chainid A and resid 47) and (name H),(chainid A and resid 47) and (name HB2),3.44,0.0,3.44,47,47
+(chainid A and resid 48) and (name H),(chainid A and resid 48) and (name HB3),3.86,0.0,3.86,48,48
+(chainid A and resid 48) and (name H),(chainid A and resid 48) and (name HB2),3.86,0.0,3.86,48,48
+(chainid A and resid 48) and (name H),(chainid A and resid 51) and (name HB3),6.38,0.0,6.38,48,51
+(chainid A and resid 48) and (name H),(chainid A and resid 51) and (name HB2),6.38,0.0,6.38,48,51
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HB3),6.29,0.0,6.29,48,51
+(chainid A and resid 48) and (name HB3),(chainid A and resid 51) and (name HB3),6.29,0.0,6.29,48,51
+(chainid A and resid 51) and (name HB2),(chainid A and resid 48) and (name HB3),6.29,0.0,6.29,51,48
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HB2),6.29,0.0,6.29,48,51
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HB2),7.26,0.0,7.26,48,51
+(chainid A and resid 51) and (name HB2),(chainid A and resid 48) and (name HB3),7.26,0.0,7.26,51,48
+(chainid A and resid 48) and (name HB3),(chainid A and resid 51) and (name HG3),6.32,0.0,6.32,48,51
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HG3),6.32,0.0,6.32,48,51
+(chainid A and resid 51) and (name HG2),(chainid A and resid 48) and (name HB3),6.32,0.0,6.32,51,48
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HG2),6.32,0.0,6.32,48,51
+(chainid A and resid 48) and (name HB2),(chainid A and resid 51) and (name HG3),7.26,0.0,7.26,48,51
+(chainid A and resid 48) and (name HB3),(chainid A and resid 51) and (name HG3),7.26,0.0,7.26,48,51
+(chainid A and resid 48) and (name HB2),(chainid A and resid 53) and (name HA2),6.32,0.0,6.32,48,53
+(chainid A and resid 48) and (name HB3),(chainid A and resid 53) and (name HA2),6.32,0.0,6.32,48,53
+(chainid A and resid 53) and (name HA3),(chainid A and resid 48) and (name HB3),6.32,0.0,6.32,53,48
+(chainid A and resid 48) and (name HB2),(chainid A and resid 53) and (name HA3),6.32,0.0,6.32,48,53
+(chainid A and resid 48) and (name HB2),(chainid A and resid 53) and (name HA2),7.26,0.0,7.26,48,53
+(chainid A and resid 48) and (name HB3),(chainid A and resid 53) and (name HA2),7.26,0.0,7.26,48,53
+(chainid A and resid 48) and (name HD2),(chainid A and resid 49) and (name HB3),6.38,0.0,6.38,48,49
+(chainid A and resid 48) and (name HD2),(chainid A and resid 49) and (name HB2),6.38,0.0,6.38,48,49
+(chainid A and resid 49) and (name H),(chainid A and resid 49) and (name HD22),6.36,0.0,6.36,49,49
+(chainid A and resid 49) and (name H),(chainid A and resid 49) and (name HD21),6.36,0.0,6.36,49,49
+(chainid A and resid 51) and (name HE21),(chainid A and resid 49) and (name HB2),6.3,0.0,6.3,51,49
+(chainid A and resid 51) and (name HE21),(chainid A and resid 49) and (name HB3),6.3,0.0,6.3,51,49
+(chainid A and resid 51) and (name HE22),(chainid A and resid 49) and (name HB2),6.3,0.0,6.3,51,49
+(chainid A and resid 51) and (name HE22),(chainid A and resid 49) and (name HB3),6.3,0.0,6.3,51,49
+(chainid A and resid 51) and (name HE22),(chainid A and resid 49) and (name HB2),7.23,0.0,7.23,51,49
+(chainid A and resid 51) and (name HE22),(chainid A and resid 49) and (name HB3),7.23,0.0,7.23,51,49
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HB3),3.61,0.0,3.61,51,51
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HB2),3.61,0.0,3.61,51,51
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HG3),4.39,0.0,4.39,51,51
+(chainid A and resid 51) and (name H),(chainid A and resid 51) and (name HG2),4.39,0.0,4.39,51,51
+(chainid A and resid 51) and (name HE21),(chainid A and resid 51) and (name HB2),7.23,0.0,7.23,51,51
+(chainid A and resid 51) and (name HE21),(chainid A and resid 51) and (name HB3),7.23,0.0,7.23,51,51
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HB3),3.63,0.0,3.63,52,51
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HB2),3.63,0.0,3.63,52,51
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HG3),5.22,0.0,5.22,52,51
+(chainid A and resid 52) and (name H),(chainid A and resid 51) and (name HG2),5.22,0.0,5.22,52,51
+(chainid A and resid 54) and (name HE2),(chainid A and resid 53) and (name HA2),6.38,0.0,6.38,54,53
+(chainid A and resid 54) and (name HE2),(chainid A and resid 53) and (name HA3),6.38,0.0,6.38,54,53
+(chainid A and resid 54) and (name HD2),(chainid A and resid 53) and (name HA2),6.38,0.0,6.38,54,53
+(chainid A and resid 54) and (name HD2),(chainid A and resid 53) and (name HA3),6.38,0.0,6.38,54,53
+(chainid A and resid 54) and (name HA),(chainid A and resid 55) and (name HG12),6.38,0.0,6.38,54,55
+(chainid A and resid 54) and (name HA),(chainid A and resid 55) and (name HG13),6.38,0.0,6.38,54,55
+(chainid A and resid 55) and (name H),(chainid A and resid 55) and (name HG12),3.63,0.0,3.63,55,55
+(chainid A and resid 55) and (name H),(chainid A and resid 55) and (name HG13),3.63,0.0,3.63,55,55
+(chainid A and resid 55) and (name CG* or (name HG*)),(chainid A and resid 60) and (name CD2* or (name HD2*)),9.09,0.0,9.09,55,60
+(chainid A and resid 55) and (name CG* or (name HG*)),(chainid A and resid 60) and (name CD1* or (name HD1*)),9.09,0.0,9.09,55,60
+(chainid A and resid 56) and (name H),(chainid A and resid 55) and (name HG12),6.38,0.0,6.38,56,55
+(chainid A and resid 56) and (name H),(chainid A and resid 55) and (name HG13),6.38,0.0,6.38,56,55
+(chainid A and resid 55) and (name HG13),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.17,0.0,6.17,55,60
+(chainid A and resid 60) and (name CD1* or (name HD1*)),(chainid A and resid 55) and (name HG12),6.17,0.0,6.17,60,55
+(chainid A and resid 55) and (name HG13),(chainid A and resid 60) and (name CD1* or (name HD1*)),6.17,0.0,6.17,55,60
+(chainid A and resid 55) and (name HG12),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.17,0.0,6.17,55,60
+(chainid A and resid 55) and (name CD* or (name HD*)),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.99,0.0,6.99,55,60
+(chainid A and resid 55) and (name CD* or (name HD*)),(chainid A and resid 60) and (name CD1* or (name HD1*)),6.99,0.0,6.99,55,60
+(chainid A and resid 57) and (name H),(chainid A and resid 56) and (name HA2),3.06,0.0,3.06,57,56
+(chainid A and resid 57) and (name H),(chainid A and resid 56) and (name HA3),3.06,0.0,3.06,57,56
+(chainid A and resid 58) and (name H),(chainid A and resid 56) and (name HA2),4.9,0.0,4.9,58,56
+(chainid A and resid 58) and (name H),(chainid A and resid 56) and (name HA3),4.9,0.0,4.9,58,56
+(chainid A and resid 57) and (name HA),(chainid A and resid 60) and (name CD2* or (name HD2*)),6.33,0.0,6.33,57,60
+(chainid A and resid 57) and (name HA),(chainid A and resid 60) and (name CD1* or (name HD1*)),6.33,0.0,6.33,57,60
+(chainid A and resid 57) and (name HB),(chainid A and resid 60) and (name CD2* or (name HD2*)),8.07,0.0,8.07,57,60
+(chainid A and resid 57) and (name HB),(chainid A and resid 60) and (name CD1* or (name HD1*)),8.07,0.0,8.07,57,60
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 60) and (name CD2* or (name HD2*)),9.09,0.0,9.09,57,60
+(chainid A and resid 57) and (name CG* or (name HG*)),(chainid A and resid 60) and (name CD1* or (name HD1*)),9.09,0.0,9.09,57,60
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HB3),3.15,0.0,3.15,58,58
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HB2),3.15,0.0,3.15,58,58
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HG3),3.9,0.0,3.9,58,58
+(chainid A and resid 58) and (name H),(chainid A and resid 58) and (name HG2),3.9,0.0,3.9,58,58
+(chainid A and resid 59) and (name HB2),(chainid A and resid 58) and (name HB3),5.82,0.0,5.82,59,58
+(chainid A and resid 59) and (name HB2),(chainid A and resid 58) and (name HB2),5.82,0.0,5.82,59,58
+(chainid A and resid 59) and (name HE2),(chainid A and resid 58) and (name HB3),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HE2),(chainid A and resid 58) and (name HB2),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HD2),(chainid A and resid 58) and (name HB3),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HD2),(chainid A and resid 58) and (name HB2),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name H),(chainid A and resid 58) and (name HG3),5.17,0.0,5.17,59,58
+(chainid A and resid 59) and (name H),(chainid A and resid 58) and (name HG2),5.17,0.0,5.17,59,58
+(chainid A and resid 59) and (name HE2),(chainid A and resid 58) and (name HG3),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HE2),(chainid A and resid 58) and (name HG2),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HD2),(chainid A and resid 58) and (name HG3),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HD2),(chainid A and resid 58) and (name HG2),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HE2),(chainid A and resid 58) and (name HD3),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HE2),(chainid A and resid 58) and (name HD2),6.38,0.0,6.38,59,58
+(chainid A and resid 59) and (name HB3),(chainid A and resid 60) and (name CD2* or (name HD2*)),8.07,0.0,8.07,59,60
+(chainid A and resid 59) and (name HB3),(chainid A and resid 60) and (name CD1* or (name HD1*)),8.07,0.0,8.07,59,60
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HB3),3.9,0.0,3.9,62,62
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HB2),3.9,0.0,3.9,62,62
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HD3),5.48,0.0,5.48,62,62
+(chainid A and resid 62) and (name H),(chainid A and resid 62) and (name HD2),5.48,0.0,5.48,62,62
+(chainid A and resid 62) and (name HA),(chainid A and resid 62) and (name HD3),4.3,0.0,4.3,62,62
+(chainid A and resid 62) and (name HA),(chainid A and resid 62) and (name HD2),4.3,0.0,4.3,62,62
+(chainid A and resid 62) and (name HB3),(chainid A and resid 62) and (name HD3),3.46,0.0,3.46,62,62
+(chainid A and resid 62) and (name HB2),(chainid A and resid 62) and (name HD3),3.46,0.0,3.46,62,62
+(chainid A and resid 62) and (name HD2),(chainid A and resid 62) and (name HB3),3.46,0.0,3.46,62,62
+(chainid A and resid 62) and (name HB2),(chainid A and resid 62) and (name HD2),3.46,0.0,3.46,62,62
+(chainid A and resid 62) and (name HB2),(chainid A and resid 62) and (name HE3),6.32,0.0,6.32,62,62
+(chainid A and resid 62) and (name HB3),(chainid A and resid 62) and (name HE3),6.32,0.0,6.32,62,62
+(chainid A and resid 62) and (name HE2),(chainid A and resid 62) and (name HB3),6.32,0.0,6.32,62,62
+(chainid A and resid 62) and (name HB2),(chainid A and resid 62) and (name HE2),6.32,0.0,6.32,62,62
+(chainid A and resid 62) and (name HB2),(chainid A and resid 62) and (name HE2),7.26,0.0,7.26,62,62
+(chainid A and resid 62) and (name HB2),(chainid A and resid 62) and (name HE3),7.26,0.0,7.26,62,62
+(chainid A and resid 63) and (name H),(chainid A and resid 63) and (name HB3),3.86,0.0,3.86,63,63
+(chainid A and resid 63) and (name H),(chainid A and resid 63) and (name HB2),3.86,0.0,3.86,63,63

@@ -8,6 +8,7 @@ dependencies:
   - python
   - pip
   - openmm
+  - openmmtools
   - scipy
   - mdtraj
   - mdanalysis

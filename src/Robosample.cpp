@@ -139,6 +139,8 @@ void testAlanineDipeptide(int seed) {
 
 	c.Initialize();
 
+	c.PrintSimbodyMobods();
+
 	// Run the simulation
 	c.RunREX(0, 1000);
 }

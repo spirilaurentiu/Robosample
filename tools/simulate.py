@@ -66,7 +66,7 @@ accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosampl
 timesteps = [0.0007, 0.035, 0.075]
 worldIndexes = [0, 1, 2]
 world_indexes = [0, 1, 2]
-mdsteps = [14286, 10, 10]
+mdsteps = [1429, 10, 10] # 14286 - 1 ps instead of 10 ps
 boost_md_steps = mdsteps
 integrators = [robosample.IntegratorType.OMMVV, robosample.IntegratorType.VERLET, robosample.IntegratorType.VERLET]
 
