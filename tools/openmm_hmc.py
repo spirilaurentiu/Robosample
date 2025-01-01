@@ -46,20 +46,22 @@ def simulate(prmtop_file, rst7_file, dcd_file):
 
     system.addForce(gbsa)
 
-    # Set up an integrator with smaller timestep
-    temperature = 300 * kelvin
-    step_size = 0.0007 * picoseconds
-    steps_per_hmc_move = 1429
+    # # Set up an integrator with smaller timestep
+    # temperature = 300 * kelvin
+    # step_size = 0.0007 * picoseconds
+    # steps_per_hmc_move = 1429
 
-    # Define an HMC integrator
-    integrator = HMCIntegrator(
-        temperature=temperature,
-        nsteps=steps_per_hmc_move,
-        timestep=step_size
-    )
+    # # Define an HMC integrator
+    # integrator = HMCIntegrator(
+    #     temperature=temperature,
+    #     nsteps=steps_per_hmc_move,
+    #     timestep=step_size
+    # )
+
+    integrator = VerletIntegrator(0.0007 * picoseconds)
 
     # Create a simulation object with CPU platform
-    platform = Platform.getPlatformByName('CUDA') # OpenCL
+    platform = Platform.getPlatformByName('OpenCL') # OpenCL
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
     # Set the positions from the rst7 file
