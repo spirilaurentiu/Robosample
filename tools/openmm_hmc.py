@@ -114,3 +114,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     simulate(args.prmtop, args.rst7, args.dcd)
+
+
+# python3 openmm_hmc.py --prmtop ../datasets/diverse-cath-nmr/1A5E.prmtop --rst7 ../datasets/diverse-cath-nmr/1A5E_min.rst7 --dcd 1A5E.dcd
+# python3 openmm_hmc.py --prmtop ../datasets/alanine-dipeptide/alanine-dipeptide.prmtop --rst7 ../datasets/alanine-dipeptide/alanine-dipeptide.rst7 --dcd alanine-dipeptide.dcd
