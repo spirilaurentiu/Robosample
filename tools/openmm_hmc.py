@@ -59,7 +59,7 @@ def simulate(prmtop_file, rst7_file, dcd_file):
     )
 
     # Create a simulation object with CPU platform
-    platform = Platform.getPlatformByName('CPU') # OpenCL
+    platform = Platform.getPlatformByName('CUDA') # OpenCL
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
     # Set the positions from the rst7 file
