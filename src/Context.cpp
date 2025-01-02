@@ -5424,6 +5424,13 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 									for (const auto& dihedralIx : dihedralIxs){
 										if( dihedralIx[0] == whichWorld ) {
 											worldOutStream << std::fixed << std::setprecision(3) << Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << " ";
+
+											// std::cout <<"STUDY_Context::RunWorld" 
+											// <<" | "<< dihedralIx[0] <<" "<< dihedralIx[1] <<" "<< dihedralIx[2] <<" "<< dihedralIx[3] <<" "<< dihedralIx[4] <<" "<< dihedralIx[5]
+											// <<" | "<< atoms[dihedralIx[0]].getInName() <<" "<< atoms[dihedralIx[1]].getInName() <<" "<< atoms[dihedralIx[2]].getInName() <<" "<< atoms[dihedralIx[3]].getInName()
+											// <<" | "<< Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5])
+											// << std::endl;
+
 										}
 									}
 	# pragma endregion REBAS_TEST
@@ -7338,6 +7345,13 @@ void Context::addDihedrals(const std::vector<std::size_t>& dihedralIx)
 			addDihedral(worldIx, 0,
 				dihedralIx[4*ai + 0], dihedralIx[4*ai + 1],
 				dihedralIx[4*ai + 2], dihedralIx[4*ai + 3]);
+
+			// std::cout <<"STUDY_Context::addDihedrals"
+			// 	<<" | "<< dihedralIx[4*ai + 0] <<" "<< dihedralIx[4*ai + 1] <<" "<< dihedralIx[4*ai + 2] <<" "<< dihedralIx[4*ai + 3]
+			// 	<<" | "<< atoms[dihedralIx[4*ai + 0]].getNumber() <<" "<< atoms[dihedralIx[4*ai + 1]].getNumber() <<" "<< atoms[dihedralIx[4*ai + 2]].getNumber() <<" "<< atoms[dihedralIx[4*ai + 3]].getNumber()
+			// 	<<" | "<< atoms[dihedralIx[4*ai + 0]].getInName() <<" "<< atoms[dihedralIx[4*ai + 1]].getInName() <<" "<< atoms[dihedralIx[4*ai + 2]].getInName() <<" "<< atoms[dihedralIx[4*ai + 3]].getInName()
+			// 	<< std::endl;
+		
 		}
 	}
 }
@@ -7692,17 +7706,28 @@ SimTK::Real Context::Dihedral(std::size_t whichWorld,
 	SimTK::SimbodyMatterSubsystem& matter = *(worlds[whichWorld].matter);
 
 	SimTK::Vec3 a1pos, a2pos, a3pos, a4pos;
+
+	// std::cout <<"STUDY_Context::Dihedral" 
+	// 	<<" | "<< whichWorld <<" "<< whichCompound <<" "<< whichSampler <<" "<< a1 <<" "<< a2 <<" "<< a3 <<" "<< a4
+	// 	<<" | "<< atoms[a1].getInName() <<" "<< atoms[a2].getInName() <<" "<< atoms[a3].getInName() <<" "<< atoms[a4].getInName()
+	// << std::endl;
+
+	int cAIx_1 = atoms[a1].getCompoundAtomIndex();
+	int cAIx_2 = atoms[a2].getCompoundAtomIndex();
+	int cAIx_3 = atoms[a3].getCompoundAtomIndex();
+	int cAIx_4 = atoms[a4].getCompoundAtomIndex();
+
 	a1pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a1)),
+		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_1)),
 		dumm, matter, state);
 	a2pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a2)),
+		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_2)),
 		dumm, matter, state);
 	a3pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a3)),
+		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_3)),
 		dumm, matter, state);
 	a4pos = topology.calcAtomLocationInGroundFrameThroughSimbody(
-		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(a4)),
+		SimTK::Compound::AtomIndex(SimTK::Compound::AtomIndex(cAIx_4)),
 		dumm, matter, state);
 
 	return bDihedral(a1pos, a2pos, a3pos, a4pos);
