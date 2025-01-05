@@ -300,7 +300,7 @@ public:
 	virtual void calcProposedKineticAndTotalEnergyOld(SimTK::State& someState);
 
 	/** Apply the L operator **/
-	virtual void integrateTrajectory(SimTK::State& someState);
+	virtual void integrateTrajectory(SimTK::State& someState, bool useNUTS);
 	void integrateVariableTrajectory(SimTK::State& someState);
 
 	/** Integrate trajectory one step at a time to compute quantities instantly **/
@@ -437,7 +437,7 @@ public:
 	the configuration and energies. Returns true if the proposal is 
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
-	bool propose(SimTK::State& someState);
+	bool propose(SimTK::State& someState, bool useNUTS);
 
 	///////////////////////////////////////////////////////
 	// UPDATE

@@ -142,7 +142,7 @@ void testAlanineDipeptide(int seed) {
 	c.PrintSimbodyMobods();
 
 	// Run the simulation
-	c.RunREX(0, 1000);
+	c.RunREX(0, 100);
 }
 
 /*!

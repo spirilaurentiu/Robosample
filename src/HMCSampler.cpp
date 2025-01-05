@@ -1353,24 +1353,129 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 	RandomCache.generateGaussianVelocities();
 }
 
+struct Node {
+	SimTK::Vector Q;
+	SimTK::Vector U;
+};
+
+SimTK::Real CheckUTurn(const SimTK::Vector& Qforward, const SimTK::Vector& Qbackward, const SimTK::Vector& p) {
+	SimTK::Real dot = 0;
+	for (int i = 0; i < Qforward.size(); i++) {
+		dot += (Qforward[i] - Qbackward[i]) * p[i];
+	}
+	return dot;
+	// return dot < 0;
+}
+
 /*
 * Integrate trajectory
 */
-void HMCSampler::integrateTrajectory(SimTK::State& someState){
+void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 
-	// Adapt timestep
-	if(shouldAdaptTimestep){
-		adaptTimestep(someState);
-	}
+	// // Adapt timestep
+	// if(shouldAdaptTimestep){
+	// 	adaptTimestep(someState);
+	// }
 
 	if(this->integratorType == IntegratorType::VERLET){
+
+		if (!useNUTS) {
+			world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
+			system->realize(someState, SimTK::Stage::Position);
+			return;
+		}
+
 		try {
 
-			// Call Simbody TimeStepper to advance time
-			//std::cout << "HMCSampler::integrateTrajectory for "<< MDStepsPerSample <<" x  "<< timestep <<" at default boost T " << this->boostT << std::endl;
-			this->world->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+			// Set up random 0 to 1 generator
+			std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
 
-			system->realize(someState, SimTK::Stage::Position);
+			// Get initial momenta
+			SimTK::Vector p;
+			world->matter->multiplyByM(someState, someState.getU(), p);
+
+			Node CurrentNode;
+			CurrentNode.Q = someState.getQ();
+			CurrentNode.U = someState.getU();
+
+			int MaxDepth = 10;
+			std::map<int, Node> Trajectory; // Does not allow reserve
+			Trajectory[0] = CurrentNode;
+
+			bool found = false;
+
+			for (int depth = 0; depth < MaxDepth; depth++) {
+
+				bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
+				int endpoint = 0;
+				SimTK::Vector U, Q;
+
+				if (Direction == 0) {
+					// Forward
+					U = Trajectory.rbegin()->second.U;
+					Q = Trajectory.rbegin()->second.Q;
+
+					endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
+					// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
+				} else {
+					// Backward
+					U = Trajectory.begin()->second.U;
+					Q = Trajectory.begin()->second.Q;
+
+					endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
+					// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
+
+					if (Trajectory.begin()->first == 0) {
+						for (int i = 0; i < U.size(); i++) {
+							U[i] = -U[i];
+						}
+					}
+				}
+
+				// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+
+				someState.updQ() = Q;
+				someState.updU() = U;
+				world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
+				system->realize(someState, SimTK::Stage::Position);
+
+				// Check U-turn
+				const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
+				if (C < 0) {
+					// std::cout << "U-turn detected" << std::endl;
+					found = true;
+					break;
+				} else {
+					// std::cout << "No U-turn, C = " << C << std::endl;
+
+					Node NextNode;
+					NextNode.Q = someState.getQ();
+					NextNode.U = someState.getU();
+
+					// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
+					// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
+					// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+
+					Trajectory.insert(std::make_pair(endpoint, NextNode));
+				}
+			}
+
+			if (found) {
+				std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
+			} else {
+				std::cout << "No U-turn detected" << std::endl;
+			}
+
+			// Chose randomly from the trajectory
+			std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
+			int index = uniformIntDistribution(randomEngine);
+			auto it = Trajectory.begin();
+			std::advance(it, index);
+
+			someState.updQ() = it->second.Q;
+			someState.updU() = it->second.U;
+
+			system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
 
 		}catch(const std::exception&){
 
@@ -1932,7 +2037,7 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState){
 			perturbVelocities(someState);
 			calcProposedKineticAndTotalEnergyOld(someState);
 
-			integrateTrajectory(someState);
+			integrateTrajectory(someState, true);
 			system->realize(someState, SimTK::Stage::Dynamics);
 		}
 }
@@ -3644,7 +3749,7 @@ void HMCSampler::printDrilling(SimTK::State& someState)
  * <!-- It implements the proposal move in the Hamiltonian Monte Carlo
  * algorithm. It essentially propagates the trajectory. -->
  **/
-bool HMCSampler::propose(SimTK::State& someState)
+bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 {
 
 	// Adapt Gibbs blocks (Transformer)
@@ -3660,7 +3765,7 @@ bool HMCSampler::propose(SimTK::State& someState)
 	calcProposedKineticAndTotalEnergyOld(someState);
 
 		// Integrate trajectory
-		integrateTrajectory(someState);
+		integrateTrajectory(someState, useNUTS);
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
@@ -4000,12 +4105,87 @@ void HMCSampler::getMsg_EnergyDetails(
 
 }
 
+/*
+def tune_step_size(target_accept=0.75, n_warmup=1000, initial_e=0.1):
+    e = initial_e  # Initial step size
+    log_e_avg = np.log(e)
+    running_sum = 0
+    gamma = 0.05  # Controls step size adaptation rate
+    t0 = 10  # Stabilizes early iterations
+    kappa = 0.75  # Controls decay rate of adaptation
+    mu = np.log(10 * e)  # Initial value based on heuristic
+    
+    for n in range(1, n_warmup + 1):
+        # Simulate one HMC step and get acceptance (1 if accepted, 0 if not)
+        accepted = simulate_hmc_step(e)
+        accept_prob = min(1, accepted)
+        
+        # Update running average of log step size
+        running_sum += target_accept - accept_prob
+        log_e = mu - (running_sum / (t0 + n)) * np.sqrt(n) / gamma
+        
+        # Update step size
+        e = np.exp(log_e)
+        log_e_avg = (1 - n**(-kappa)) * log_e_avg + n**(-kappa) * log_e
+        
+        # Print progress
+        if n % 100 == 0:
+            print(f"Iteration {n}: Step size = {e:.4f}, Acceptance Rate = {accept_prob:.2f}")
+    
+    return np.exp(log_e_avg)
+
+# Dummy HMC simulation function (replace with your actual HMC simulation)
+def simulate_hmc_step(e):
+    # Assume acceptance probability decreases with larger step size
+    acceptance_threshold = 0.75 - 0.1 * (e - 0.1)
+    return np.random.rand() < acceptance_threshold
+
+*/
 
 /*!
  * <!--	The main function that generates a sample -->
 */
 bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose)
 {
+
+	// // Warm up
+	// bool warmup = true;
+
+	// SimTK::Real e = 0.002;          // Initial step size (2 fs)
+	// SimTK::Real log_e_avg = 0.0;    // Average log step size
+	// SimTK::Real running_sum = 0.0;  
+	// SimTK::Real gamma = 0.15;       // Increased adaptation damping
+	// SimTK::Real t0 = 50;           // Increased early iteration stability
+	// SimTK::Real kappa = 0.75;      // Keep decay rate the same
+	// SimTK::Real mu = std::log(10 * e); // Initial value based on heuristic
+	// SimTK::Real target_accept = 0.651; // Target acceptance rate
+	// int n_warmup = 1000;
+
+	// for (int i = 0; i < n_warmup; i++) {
+	// 	if (!warmup || integratorType != IntegratorType::VERLET) {
+	// 		break;
+	// 	}
+		
+	// 	// Simulate one HMC step and get acceptance probability
+	// 	setTimestep(e, false);
+	// 	SimTK::Real accept_prob = propose(someState, false); // You'll need this function
+	// 	bool accepted = propose(someState, false);
+		
+	// 	// Update running average using actual acceptance probability
+	// 	running_sum += target_accept - accept_prob;
+		
+	// 	// Updated dual averaging formula without sqrt(i)
+	// 	SimTK::Real log_e = mu - (running_sum / (t0 + i)) / gamma;
+		
+	// 	// Update step size
+	// 	e = std::exp(log_e);
+	// 	log_e_avg = (1 - std::pow(i, -kappa)) * log_e_avg + std::pow(i, -kappa) * log_e;
+		
+	// 	if (i % 10 == 0) {
+	// 		std::cout << "Iteration " << i << ": Step size = " << e 
+	// 				<< ", Acceptance Rate = " << accept_prob << std::endl;
+	// 	}
+	// }
 
 	// Flag if anything goes wrong during simulation
 	bool validated = true;
@@ -4020,7 +4200,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
-	validated = propose(someState) && validated;
+	validated = propose(someState, true) && validated;
 
 	#pragma region REBAS_TEST
 	//validated = true;
@@ -4083,7 +4263,6 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
 				}
-
 	}
 
 	// Increase the sample counter and return

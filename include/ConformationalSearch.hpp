@@ -58,7 +58,7 @@ public:
     void assignConfFromTVector(SimTK::State& advanced);
 
     // Assign a random conformation
-    bool propose(SimTK::State& advanced);
+    bool propose(SimTK::State& advanced, bool useNUTS);
 
     // Get/set set potential energy
     SimTK::Real getSetPE(void);
