@@ -5209,8 +5209,7 @@ void Context::updQScaleFactors(int mixi)
 				// Set the way the scaling factors are distributed
 				if(  thermodynamicStates[thermoIx].getDistortArgs().size()  ){
 
-					how = split(thermodynamicStates[thermoIx].getDistortArgs()[
-						worldCnt], "_");
+					how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
 
 				}else{
 					

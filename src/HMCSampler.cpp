@@ -666,7 +666,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
 
 			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
-			// std::cout << "\nscaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
+			std::cout << "\n" 
+				<< " w " << this->world->getOwnIndex()
+				<< " scaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
 			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
@@ -708,7 +710,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					ALTERNATIVE,
 					BY_THERMO,
 					WORLD,
-					RANDOM};
+					BERNOULLI};
 
 				TestingWay testingWay = TestingWay::BY_THERMO;						// BY_THERMO
 
@@ -730,12 +732,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 						<<" "<< this->temperature <<" "<< scaleFactor
 						<< std::endl;
 
-
 				}else if(testingWay == TestingWay::WORLD){
 					
 					;
 
-				}else if(testingWay == TestingWay::RANDOM){
+				}else if(testingWay == TestingWay::BERNOULLI){
 					SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
 					SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
 					SimTK::Real scaleFactorReference = 1.01;
