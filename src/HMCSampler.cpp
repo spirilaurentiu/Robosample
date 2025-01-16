@@ -4200,7 +4200,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
-	validated = propose(someState, true) && validated;
+	validated = propose(someState, false) && validated;
 
 	#pragma region REBAS_TEST
 	//validated = true;
