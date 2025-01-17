@@ -1,7 +1,6 @@
 import argparse
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.unit import *
+from simtk.openmm import app, Platform, unit
+from simtk.openmm import LangevinIntegrator, AndersenThermostat
 from sys import stdout
 
 def run_simulation(prmtop_file, rst7_file, dcd_file, simulation_time_hours):
@@ -11,25 +10,31 @@ def run_simulation(prmtop_file, rst7_file, dcd_file, simulation_time_hours):
 
     # Create the system with HBonds constraints
     system = prmtop.createSystem(
-        nonbondedMethod=CutoffNonPeriodic,
-        nonbondedCutoff=1.2*nanometers,
-        constraints=HBonds,
+        nonbondedMethod=app.CutoffNonPeriodic,
+        nonbondedCutoff=1.2 * unit.nanometers,
+        constraints=app.HBonds,
         implicitSolvent=app.OBC2
     )
 
-    timestep = 2*femtoseconds
-    equil_time = 5*nanoseconds
-    write_time = 10*picoseconds
+    # Add the Andersen thermostat to the system
+    temperature = 300 * unit.kelvin
+    collision_frequency = 1 / unit.picoseconds
+    andersen_thermostat = AndersenThermostat(temperature, collision_frequency)
+    system.addForce(andersen_thermostat)
+
+    timestep = 2 * unit.femtoseconds
+    equil_time = 5 * unit.nanoseconds
+    write_time = 10 * unit.picoseconds
 
     integrator = LangevinIntegrator(
-        300 * kelvin,      # Temperature
-        1 / picosecond,    # Friction coefficient
-        timestep           # Time step
+        temperature,        # Temperature
+        1 / unit.picoseconds,  # Friction coefficient
+        timestep            # Time step
     )
 
     # Set up the simulation
     platform = Platform.getPlatformByName('CUDA')
-    simulation = Simulation(prmtop.topology, system, integrator, platform)
+    simulation = app.Simulation(prmtop.topology, system, integrator, platform)
     simulation.context.setPositions(inpcrd.positions)
 
     # Minimize the energy
@@ -44,7 +49,8 @@ def run_simulation(prmtop_file, rst7_file, dcd_file, simulation_time_hours):
     simulation.reporters.append(app.DCDReporter(dcd_file, write_interval))
 
     # Main simulation
-    simulation.runForClockTime(simulation_time_hours * hour)
+    simulation.runForClockTime(simulation_time_hours * unit.hour)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run OpenMM simulation with implicit solvent.')
