@@ -237,7 +237,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	// Set DuMM atom indexes into atoms of bAtomList
 	worlds[0].setDuMMAtomIndexes(); // REVISE
-	
+
 	#ifdef __DRILLING__
 		scout("Correspondence cAIx dAIx\n");
 		int ix = -1;
@@ -635,7 +635,7 @@ void Context::loadAtoms(const AmberReader& reader) {
 			reader.getAtomsZcoord(aCnt) / 10.0 );
 
 		// Set mass
-		const int mass = reader.getAtomsMass(aCnt);
+		SimTK::Real mass = reader.getAtomsMass(aCnt);
 		atoms[aCnt].setMass(mass);
 
 		// Set Lennard-Jones parameters
@@ -655,6 +655,8 @@ void Context::loadAtoms(const AmberReader& reader) {
 		);
 
 		// Save
+		std::cout << std::fixed << std::setprecision(6);
+		std::cout <<"STUDY_Context::loadAtoms" <<" atomicNumber "<< atomicNumber <<" mass "<< mass << std::endl;
 		elementCache.addElement(atomicNumber, mass);
 	}
 }
@@ -5778,6 +5780,21 @@ void Context::RunREX()
 {
 
     if(MEMDEBUG){stdcout_memdebug("Context::RunREX 1");}
+
+
+	// desk_mass_related
+	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		for (auto& atom : atoms) {
+			
+			World& currWorld = worlds[worldIx];
+			//SimTK::DuMMForceFieldSubsystem dumm = *(currWorld.forceField);
+
+			SimTK::DuMM::AtomIndex dAIx = atom.updDuMMAtomIndex();
+			SimTK::mdunits::Mass atomMass = atom.getMass();
+
+			currWorld.forceField->setDuMMAtomMass(dAIx, atomMass);
+		}	
+	}
 
 	// Is this necesary =======================================================
 	realizeTopology();

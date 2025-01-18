@@ -81,7 +81,8 @@ void World::generateDummParams(const std::vector<bSpecificAtom>& atoms,
 		const ELEMENT_CACHE& elementCache) {
 
 	for (auto& atom : atoms) {
-		forceField->defineAtomClass(atom.getDummAtomClassIndex(),
+		forceField->defineAtomClass(
+			atom.getDummAtomClassIndex(),
 			atom.getName().c_str(),
 			atom.getAtomicNumber(),
 			atom.getNBonds(),

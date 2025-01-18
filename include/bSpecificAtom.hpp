@@ -139,6 +139,7 @@ public:
 
     void setDuMMAtomIndex(SimTK::DuMM::AtomIndex dAIx_){this->dAIx = dAIx_;}
     const SimTK::DuMM::AtomIndex& getDuMMAtomIndex(void){return this->dAIx;}
+    SimTK::DuMM::AtomIndex updDuMMAtomIndex(void) const {return this->dAIx;}
 
 
     // End of interface
