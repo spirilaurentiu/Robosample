@@ -659,8 +659,8 @@ public:
 	void setReplicasWorldsParameters(int thisReplica);
 
 	// Given a scaling factor
-	SimTK::Real distributeScalingFactor(
-		std::vector<std::string> how, SimTK::Real sf,
+	SimTK::Real perturbScalingFactor(
+		std::string how, SimTK::Real sf,
 		bool randSignOpt = false);
 
 	// Set world distort parameters
@@ -668,7 +668,7 @@ public:
 
 	// Set nonequilibrium parameters for one replica
 	void updWorldsDistortOptions(int thisReplica);
-	void updQScaleFactors(int mixi);
+	void updThermostatesQScaleFactors(int mixi);
 
 	// Rewind back world
 	void RewindBackWorld(int thisReplica);

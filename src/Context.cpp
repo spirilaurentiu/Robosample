@@ -4966,19 +4966,34 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 
 	// SET NON_EQUIL PARAMS ------------------------- 
 	// Non-equilibrium params change with every replica / thermoState
-	for(std::size_t i = 0; i < replicaNofWorlds; i++){
+	for(std::size_t worldCnt = 0; worldCnt < replicaNofWorlds; worldCnt++){
+
+			std::string how;
+			bool randSignOpt = false;
+			if(thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt] != 0){
+				if(  thermodynamicStates[thisThermoStateIx].getDistortArgs().size()  ){
+					how = thermodynamicStates[thisThermoStateIx].getDistortArgs()[worldCnt];
+				}else{
+					how = std::string("deterministic");
+				}
+			}
 
 		// Send DISTORT_OPTION from the input to the sampler
+		// std::cout <<"STUDY_Context::setReplicasWorldsParameters"
+		// 	<<" world "<< replicaWorldIxs[worldCnt]
+		// 	<<" DISTORT_OPT "<< thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]
+		// 	<<" DISTORT_ARGS "<< thermodynamicStates[thisThermoStateIx].getDistortArgs()[worldCnt]
+		// 	<<" QScaleFactor "<< qScaleFactorsMiu.at(thisThermoStateIx)
+		// 	<< std::endl << std::flush;
 
-		worlds[replicaWorldIxs[i]].updSampler(0)->setDistortOption(
-			thermodynamicStates[thisThermoStateIx].getDistortOptions()[i]
-		);
+		worlds[replicaWorldIxs[worldCnt]].updSampler(0)->setDistortOption(
+			thermodynamicStates[thisThermoStateIx].getDistortOptions()[worldCnt]);
 
-		// Set scale Q scale factor
-		setWorldDistortParameters(replicaWorldIxs[i],
-			qScaleFactors.at(thisThermoStateIx));
+		// Perturb and set scale Q scale factor
+		worlds[replicaWorldIxs[worldCnt]].updSampler(0)->setBendStretchStdevScaleFactor(
+			perturbScalingFactor( how, qScaleFactorsMiu.at(thisThermoStateIx), randSignOpt) );
 
-	}
+	} // _end_ Non-equil parameters
 
 	# pragma region REBAS_TEST
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
@@ -5008,17 +5023,17 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 }
 
 // TODO turn strings into enum
-SimTK::Real Context::distributeScalingFactor(
-	std::vector<std::string> how, SimTK::Real scalefactor, bool randSignOpt)
+SimTK::Real Context::perturbScalingFactor(
+	std::string how, SimTK::Real scalefactor, bool randSignOpt)
 {
 
 	// Deterministic
-	if (std::find(how.begin(), how.end(), "deterministic") != how.end()){
+	if (how == "deterministic"){
 		// Do nothing
 	}
 	
 	// Truncated normal
-	if (std::find(how.begin(), how.end(), "Gauss") != how.end()){
+	if (how == "Gauss"){
 		SimTK::Real scaleFactorStd = 0.3;
 		SimTK::Real  leftLimit = -5;
 		SimTK::Real rightLimit = +5;
@@ -5032,20 +5047,22 @@ SimTK::Real Context::distributeScalingFactor(
 	}
 
 	// Uniform distribution
-	if (std::find(how.begin(), how.end(), "uniform") != how.end()){
+	if (how == "uniform"){
 		scalefactor = 
 			worlds[0].updSampler(0)->uniformRealDistributionRandTrunc(
 				0.8, 1.25); //0.625, 1.600);
 	}
 
 	// Assign a random direction: stretch or compress
-	if (std::find(how.begin(), how.end(), "Bernoulli") != how.end()){
-		std::cout << "SFdistrib Bernoulli "
-			<< std::endl;
+	if (how == "Bernoulli"){
 
-		SimTK::Real randDir =
-			worlds[0].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
+		SimTK::Real randDir = worlds[0].updSampler(0)->uniformRealDistribution_m1_1(randomEngine);
 		scalefactor = (randDir > 0) ? scalefactor : (1.0/scalefactor) ;
+
+		// std::cout <<"STUDY_Context::perturbScalingFactor"
+		// 	<<" randDir " << randDir
+		// 	<<" scalefactor " << scalefactor
+		// 	<< std::endl << std::flush;
 	}
 
 	// Assign a random sign (optional)
@@ -5174,7 +5191,7 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
 /**
  * Update the scale factors
  */ 
-void Context::updQScaleFactors(int mixi)
+void Context::updThermostatesQScaleFactors(int mixi)
 {
 
 	// Prepare non-equilibrium scale factors
@@ -5188,47 +5205,33 @@ void Context::updQScaleFactors(int mixi)
 	qScaleFactors = qScaleFactorsMiu;
 
 	// Random sign for the scaling factors
-	bool randSignOpt = false;
-
+	// bool randSignOpt = false;
 	// The names of the probability distributions operators
-	std::vector<std::string> how;
-
+	//std::vector<std::string> how;
 	// Go through all thermodynamic states which should correspond to
 	// scale factors
-	for(size_t thermoIx = 0; thermoIx < qScaleFactors.size(); thermoIx++){
-
-		// Get thermoState world indexes 
-		std::vector<int>& worldIxs = 
-			thermodynamicStates[thermoIx].updWorldIndexes();
-		size_t thermoNofWorlds = worldIxs.size();
-
-		// Go through all the worlds this thermostate should go through
-		for(std::size_t worldCnt = 0; worldCnt < thermoNofWorlds; worldCnt++){
-
-			// Assign distribution from the first nonequilibrium world FOR NOW
-			if(thermodynamicStates[thermoIx].getDistortOptions()[worldCnt] != 0){
-
-				// Set the way the scaling factors are distributed
-				if(  thermodynamicStates[thermoIx].getDistortArgs().size()  ){
-
-					how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
-
-				}else{
-					
-					how = {"deterministic"};
-				}
-
-				break;
-			}
-
-			// Distribute scale factor
-			if(qScaleFactors.at(thermoIx) != 1){ // This is questionable
-				qScaleFactors.at(thermoIx) = distributeScalingFactor(
-					how, qScaleFactorsMiu.at(thermoIx), randSignOpt);
-			}
-
-		}
-	}
+	// for(size_t thermoIx = 0; thermoIx < qScaleFactors.size(); thermoIx++){
+	// 	std::vector<int>& worldIxs =  thermodynamicStates[thermoIx].updWorldIndexes();
+	// 	size_t thermoNofWorlds = worldIxs.size();
+	// 	for(std::size_t worldCnt = 0; worldCnt < thermoNofWorlds; worldCnt++){
+	// 		if(thermodynamicStates[thermoIx].getDistortOptions()[worldCnt] != 0){
+	// 			if(  thermodynamicStates[thermoIx].getDistortArgs().size()  ){
+	// 				how = split(thermodynamicStates[thermoIx].getDistortArgs()[worldCnt], "_");
+	// 			}else{
+	// 				how = {"deterministic"};
+	// 			}
+	// 			break;
+	// 		}
+	// 		// Distribute scale factor
+	// 		if(qScaleFactors.at(thermoIx) != 1){ // This is questionable
+	// 			qScaleFactors.at(thermoIx) = perturbScalingFactor( how, qScaleFactorsMiu.at(thermoIx), randSignOpt);
+	// 			std::cout <<"STUDY_Context::updQScaleFactors"
+	// 				<<" thermoIx "<< thermoIx
+	// 				<<" qScaleFactors.at(thermoIx) "<< qScaleFactors.at(thermoIx)
+	// 				<< std::endl;
+	// 		}
+	// 	} // _end_ for worldCnt
+	// } // _end_ for thermoIx
 
 }
 
@@ -5742,15 +5745,18 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		// std::cout << "Writing " << pdbMiddle << std::endl;
 
 		// Write pdb
-		if((mixi % pdbRestartFreq) == 0)
-		if(wIx == 0){
-			for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
-				topologies[mol_i].writeAtomListPdb(
-					outputDir,
-					"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".",
-						".pdb",
-						10,
-						mixi);
+		if(pdbRestartFreq){
+			if((mixi % pdbRestartFreq) == 0){
+				if(wIx == 0){
+					for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
+						topologies[mol_i].writeAtomListPdb(
+							outputDir,
+							"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".",
+								".pdb",
+								10,
+								mixi);
+					}
+				}
 			}
 		}	
 		# pragma endregion REBAS_TEST
@@ -5849,7 +5855,7 @@ void Context::RunREX()
 		}
 
 		// Update work scale factors
-		updQScaleFactors(mixi);
+		updThermostatesQScaleFactors(mixi);
 
 		//Print_TRANSFORMERS_Work();
 
@@ -7201,9 +7207,9 @@ void Context::RunOneRound()
 			SimTK::Real qScaleFactor = std::sqrt(Tj / Ti);
 			
 			// Distribute the scale factor
-			std::vector<std::string> how = { "deterministic", "Bernoulli"};
+			std::string how = "deterministic";
 			bool randSignOpt = false;
-			qScaleFactor = distributeScalingFactor(how, qScaleFactor, randSignOpt);
+			qScaleFactor = perturbScalingFactor(how, qScaleFactor, randSignOpt);
 
 			// Send the scale factor to the world's samplers
 			if(qScaleFactor != 1){
@@ -7362,7 +7368,7 @@ void Context::addDihedrals(const std::vector<std::size_t>& dihedralIx)
 				dihedralIx[4*ai + 0], dihedralIx[4*ai + 1],
 				dihedralIx[4*ai + 2], dihedralIx[4*ai + 3]);
 
-			// std::cout <<"STUDY_Context::addDihedrals"
+			// std::cout <<"Context::addDihedrals"
 			// 	<<" | "<< dihedralIx[4*ai + 0] <<" "<< dihedralIx[4*ai + 1] <<" "<< dihedralIx[4*ai + 2] <<" "<< dihedralIx[4*ai + 3]
 			// 	<<" | "<< atoms[dihedralIx[4*ai + 0]].getNumber() <<" "<< atoms[dihedralIx[4*ai + 1]].getNumber() <<" "<< atoms[dihedralIx[4*ai + 2]].getNumber() <<" "<< atoms[dihedralIx[4*ai + 3]].getNumber()
 			// 	<<" | "<< atoms[dihedralIx[4*ai + 0]].getInName() <<" "<< atoms[dihedralIx[4*ai + 1]].getInName() <<" "<< atoms[dihedralIx[4*ai + 2]].getInName() <<" "<< atoms[dihedralIx[4*ai + 3]].getInName()
@@ -7727,7 +7733,7 @@ SimTK::Real Context::Dihedral(std::size_t whichWorld,
 
 	SimTK::Vec3 a1pos, a2pos, a3pos, a4pos;
 
-	// std::cout <<"STUDY_Context::Dihedral" 
+	// std::cout <<"Context::Dihedral" 
 	// 	<<" | "<< whichWorld <<" "<< whichCompound <<" "<< whichSampler <<" "<< a1 <<" "<< a2 <<" "<< a3 <<" "<< a4
 	// 	<<" | "<< atoms[a1].getInName() <<" "<< atoms[a2].getInName() <<" "<< atoms[a3].getInName() <<" "<< atoms[a4].getInName()
 	// << std::endl;

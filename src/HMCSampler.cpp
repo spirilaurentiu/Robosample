@@ -666,7 +666,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
 
 			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
-			std::cout << "\n" 
+			std::cout << "" 
 				<< " w " << this->world->getOwnIndex()
 				<< " scaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
 
