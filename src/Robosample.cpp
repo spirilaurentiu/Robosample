@@ -39,73 +39,73 @@ std::string extractValueFromInputFile(
 
 void testAlanineDipeptide(int seed) {
 
-	auto ommvv = [](int seed) {
-		// no need for tini tfin
-		Context c("ala2", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
+	// auto ommvv = [](int seed) {
+	// 	// no need for tini tfin
+	// 	Context c("ala2", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
 
-		// c.setNonbonded(0, 1.2); // default - set for each world
-		c.setPdbRestartFreq(0); // WRITE_PDBS
-		c.setPrintFreq(1); // PRINT_FREQ
-		c.setNonbonded(0, 1.2);
-		c.setGBSA(1);
-		c.setVerbose(false);
+	// 	// c.setNonbonded(0, 1.2); // default - set for each world
+	// 	c.setPdbRestartFreq(0); // WRITE_PDBS
+	// 	c.setPrintFreq(1); // PRINT_FREQ
+	// 	c.setNonbonded(0, 1.2);
+	// 	c.setGBSA(1);
+	// 	c.setVerbose(false);
 
-		c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
+	// 	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
 
-		// Fully flexible for OpenMM
-		std::vector<BOND_FLEXIBILITY> allFlexibilities = {
-			{ 0, 1, BondMobility::Mobility::Translation },
-			{ 1, 2, BondMobility::Mobility::Translation },
-			{ 1, 3, BondMobility::Mobility::Translation },
-			{ 1, 4, BondMobility::Mobility::Translation },
-			{ 4, 5, BondMobility::Mobility::Translation },
-			{ 4, 6, BondMobility::Mobility::Translation },
-			{ 6, 7, BondMobility::Mobility::Translation },
-			{ 6, 8, BondMobility::Mobility::Translation },
-			{ 8, 9, BondMobility::Mobility::Translation },
-			{ 8, 10, BondMobility::Mobility::Translation },
-			{ 8, 14, BondMobility::Mobility::Translation },
-			{ 10, 11, BondMobility::Mobility::Translation },
-			{ 10, 12, BondMobility::Mobility::Translation },
-			{ 10, 13, BondMobility::Mobility::Translation },
-			{ 14, 15, BondMobility::Mobility::Translation },
-			{ 14, 16, BondMobility::Mobility::Translation },
-			{ 16, 17, BondMobility::Mobility::Translation },
-			{ 16, 18, BondMobility::Mobility::Translation },
-			{ 18, 19, BondMobility::Mobility::Translation },
-			{ 18, 20, BondMobility::Mobility::Translation },
-			{ 18, 21, BondMobility::Mobility::Translation },
-		};
-		c.addWorld(false, 1, ROOT_MOBILITY::WELD, allFlexibilities);
+	// 	// Fully flexible for OpenMM
+	// 	std::vector<BOND_FLEXIBILITY> allFlexibilities = {
+	// 		{ 0, 1, BondMobility::Mobility::Translation },
+	// 		{ 1, 2, BondMobility::Mobility::Translation },
+	// 		{ 1, 3, BondMobility::Mobility::Translation },
+	// 		{ 1, 4, BondMobility::Mobility::Translation },
+	// 		{ 4, 5, BondMobility::Mobility::Translation },
+	// 		{ 4, 6, BondMobility::Mobility::Translation },
+	// 		{ 6, 7, BondMobility::Mobility::Translation },
+	// 		{ 6, 8, BondMobility::Mobility::Translation },
+	// 		{ 8, 9, BondMobility::Mobility::Translation },
+	// 		{ 8, 10, BondMobility::Mobility::Translation },
+	// 		{ 8, 14, BondMobility::Mobility::Translation },
+	// 		{ 10, 11, BondMobility::Mobility::Translation },
+	// 		{ 10, 12, BondMobility::Mobility::Translation },
+	// 		{ 10, 13, BondMobility::Mobility::Translation },
+	// 		{ 14, 15, BondMobility::Mobility::Translation },
+	// 		{ 14, 16, BondMobility::Mobility::Translation },
+	// 		{ 16, 17, BondMobility::Mobility::Translation },
+	// 		{ 16, 18, BondMobility::Mobility::Translation },
+	// 		{ 18, 19, BondMobility::Mobility::Translation },
+	// 		{ 18, 20, BondMobility::Mobility::Translation },
+	// 		{ 18, 21, BondMobility::Mobility::Translation },
+	// 	};
+	// 	c.addWorld(false, 1, ROOT_MOBILITY::WELD, allFlexibilities);
 
-		// Add samplers
-		c.getWorld(0).addSampler(SamplerName::HMC, IntegratorType::OMMVV, ThermostatName::ANDERSEN, false);
+	// 	// Add samplers
+	// 	c.getWorld(0).addSampler(SamplerName::HMC, IntegratorType::OMMVV, ThermostatName::ANDERSEN, false);
 
-		// IntegratorType::VERLET
-		std::vector<SimTK::Real> temperatures = { 300 }, boostTemperatures = { 300 };
-		std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::AlwaysAccept };
-		std::vector<IntegratorType> integrators = { IntegratorType::OMMVV };
-		std::vector<SimTK::Real> timesteps = { 0 };
-		std::vector<int> worldIndexes = { 0 };
-		std::vector<int> mdsteps = { 10 };
-		std::vector<int> distortOptions = { 0 };
-		std::vector<std::string> distortArgs = { "0" };
-		std::vector<int> flow = { 0 };
-		std::vector<int> work = { 0 };
+	// 	// IntegratorType::VERLET
+	// 	std::vector<SimTK::Real> temperatures = { 300 }, boostTemperatures = { 300 };
+	// 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::AlwaysAccept };
+	// 	std::vector<IntegratorType> integrators = { IntegratorType::OMMVV };
+	// 	std::vector<SimTK::Real> timesteps = { 0 };
+	// 	std::vector<int> worldIndexes = { 0 };
+	// 	std::vector<int> mdsteps = { 10 };
+	// 	std::vector<int> distortOptions = { 0 };
+	// 	std::vector<std::string> distortArgs = { "0" };
+	// 	std::vector<int> flow = { 0 };
+	// 	std::vector<int> work = { 0 };
 
-		c.addReplica(0);
-		c.addThermodynamicState(0, temperatures[0], acceptRejectModes, distortOptions, distortArgs, flow, work, integrators, worldIndexes, timesteps, mdsteps);
+	// 	c.addReplica(0);
+	// 	c.addThermodynamicState(0, temperatures[0], acceptRejectModes, distortOptions, distortArgs, flow, work, integrators, worldIndexes, timesteps, mdsteps);
 
-		c.Initialize();
+	// 	c.Initialize();
 
-		c.PrintSimbodyMobods();
+	// 	c.PrintSimbodyMobods();
 
-		// Run the simulation
-		c.RunREX(0, 1);
-	};
+	// 	// Run the simulation
+	// 	c.RunREX(0, 1);
+	// };
 
-	ommvv(42);
-	return;
+	// ommvv(42);
+	// return;
 
 
 	// no need for tini tfin
@@ -116,7 +116,7 @@ void testAlanineDipeptide(int seed) {
 	c.setPrintFreq(50); // PRINT_FREQ
 	c.setNonbonded(0, 1.2);
 	c.setGBSA(1);
-	c.setVerbose(false);
+	c.setVerbose(true);
 
 	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
 

@@ -77,16 +77,16 @@ for i in range(nof_replicas):
 
 accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] + [robosample.AcceptRejectMode.MetropolisHastings] * len(clusters)
 timesteps = [0.0007] + [0.02] * len(clusters)
-worldIndexes = [i for i in range(len(clusters))]
-world_indexes = [i for i in range(len(clusters))]
+worldIndexes = [0] + [i+1 for i in range(len(clusters))]
+world_indexes = [0] + [i+1 for i in range(len(clusters))]
 mdsteps = [1429] + [10] * len(clusters) # 14286 - 1 ps instead of 10 ps
 boost_md_steps = mdsteps
 integrators = [robosample.IntegratorType.OMMVV] + [robosample.IntegratorType.VERLET] * len(clusters)
 
-distort_options = [0] * len(clusters)
-distort_args = ["0"] * len(clusters)
-flow = [0] * len(clusters)
-work = [0] * len(clusters)
+distort_options = [0] + [0] * len(clusters)
+distort_args = ["0"] + ["0"] * len(clusters)
+flow = [0] + [0] * len(clusters)
+work = [0] + [0] * len(clusters)
 
 for i in range(nof_replicas):
     context.addReplica(i)
