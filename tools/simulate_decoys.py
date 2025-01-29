@@ -55,26 +55,15 @@ for c in clusters:
 	for aix1, aix2, dihedral_type in c:
 		bond_list.append((aix1, aix2))
         
+	decoy_bonds = stats.chose_decoy_bonds(bond_list)
 	flex = flexorObj.create_from_list(bond_list, robosample.BondMobility.Torsion)
 	c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
-
-# # sidechains pins
-# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
-# c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
-
-# # ramachandran pins
-# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
-# c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
 # samplers
 sampler = robosample.SamplerName.HMC # rename to type
 thermostat = robosample.ThermostatName.ANDERSEN
 
 c.getWorld(0).addSampler(sampler, robosample.IntegratorType.OMMVV, thermostat, False)
-
-# c.getWorld(1).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
-# c.getWorld(2).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
-
 for i in range(len(clusters)):
 	c.getWorld(i).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 
@@ -86,18 +75,18 @@ for i in range(nof_replicas):
     temperatures.append(temperature + (i * 10))
     boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
 
-accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings]
-timesteps = [0.0007, 0.02, 0.075]
-worldIndexes = [0, 1, 2]
-world_indexes = [0, 1, 2]
-mdsteps = [1429, 10, 10] # 14286 - 1 ps instead of 10 ps
+accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] + [robosample.AcceptRejectMode.MetropolisHastings] * len(clusters)
+timesteps = [0.0007] + [0.02] * len(clusters)
+worldIndexes = [i for i in range(len(clusters))]
+world_indexes = [i for i in range(len(clusters))]
+mdsteps = [1429] + [10] * len(clusters) # 14286 - 1 ps instead of 10 ps
 boost_md_steps = mdsteps
-integrators = [robosample.IntegratorType.OMMVV, robosample.IntegratorType.VERLET, robosample.IntegratorType.VERLET]
+integrators = [robosample.IntegratorType.OMMVV] + [robosample.IntegratorType.VERLET] * len(clusters)
 
-distort_options = [0, 0, 0]
-distort_args = ["0", "0" , "0"]
-flow = [0, 0, 0]
-work = [0, 0, 0]
+distort_options = [0] * len(clusters)
+distort_args = ["0"] * len(clusters)
+flow = [0] * len(clusters)
+work = [0] * len(clusters)
 
 for i in range(nof_replicas):
     c.addReplica(i)

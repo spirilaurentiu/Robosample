@@ -3,7 +3,7 @@ import mdtraj as md
 import networkx as nx
 import os
 import robosample as robosample
-
+import batstat
 
 class Flexor:
     def __init__(self, mdtraj_obj):
@@ -165,6 +165,27 @@ class Flexor:
                                 jointCount += 1
 
         print ("Flex generated! ({} joints)".format(jointCount))
+        return flexibilities
+    
+    def create_from_list(self, bond_list, jointType):
+        '''
+        Parameters
+        ----------
+        bond_list: list of tuples
+            List of tuples, where each tuple contains two atom indices
+            that are to be joined by a flexibility bond.
+        jointType: robosample.BondMobility
+            Type of joint to use. Currently implemented:
+                Pin, Ball and Cartesian
+        Returns
+        ----------
+        list of robosample.BondFlexibility
+            List of BondFlexibility objects, representing the flexibility
+            bonds to be added to the system.
+        '''
+        flexibilities = []
+        for bond in bond_list:
+            flexibilities.append(robosample.BondFlexibility(bond[0], bond[1], jointType))
         return flexibilities
 
 
