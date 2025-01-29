@@ -49,7 +49,7 @@ corr = stats.compute_correlations()
 
 abs_corr = np.abs(corr)
 max_corr = np.max(abs_corr, axis=0)
-clusters = flexor.cluster(max_corr)
+clusters = stats.cluster(max_corr)
 for c in clusters:
 	bond_list = []
 	for aix1, aix2, dihedral_type in c:
