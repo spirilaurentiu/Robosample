@@ -44,7 +44,7 @@ c.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
 # Cluster the previous simulations
 dcd_files = [f"{args.pdbid}_{i}.dcd" for i in range(5)]
-stats = batstat.BATCorrelations(args.prmtop, dcd_files)
+stats = batstat.BATCorrelations(dcd_files, args.prmtop)
 corr = stats.compute_correlations()
 
 abs_corr = np.abs(corr)
