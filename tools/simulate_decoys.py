@@ -43,7 +43,7 @@ flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
 c.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
 # Cluster the previous simulations
-dcd_files = [f"{args.pdbid}_6000_{i}.dcd" for i in range(5)]
+dcd_files = [f"{args.pdbid}_{i}.dcd" for i in range(5)]
 stats = batstat.BATCorrelations(args.prmtop, dcd_files)
 corr = stats.compute_correlations()
 
