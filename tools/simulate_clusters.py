@@ -1,7 +1,7 @@
 import flexor
 import mdtraj as md
 import argparse
-import robosample
+import robosample_d as robosample
 import batstat
 import numpy as np
 
@@ -64,7 +64,7 @@ thermostat = robosample.ThermostatName.ANDERSEN
 
 context.getWorld(0).addSampler(sampler, robosample.IntegratorType.OMMVV, thermostat, False)
 for i in range(len(clusters)):
-	context.getWorld(i).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
+	context.getWorld(i + 1).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 
 nof_replicas = 1
 temperature = args.temperature_init
@@ -75,7 +75,7 @@ for i in range(nof_replicas):
     boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
 
 accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] + [robosample.AcceptRejectMode.MetropolisHastings] * len(clusters)
-timesteps = [0.0007] + [0.02] * len(clusters)
+timesteps = [0.0007] + [0.005] * len(clusters)
 worldIndexes = [0] + [i+1 for i in range(len(clusters))]
 world_indexes = [0] + [i+1 for i in range(len(clusters))]
 mdsteps = [1429] + [10] * len(clusters) # 14286 - 1 ps instead of 10 ps
