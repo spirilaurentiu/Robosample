@@ -1,7 +1,7 @@
 import flexor
 import mdtraj as md
 import argparse
-import robosample_d as robosample
+import robosample as robosample
 import batstat
 import numpy as np
 
