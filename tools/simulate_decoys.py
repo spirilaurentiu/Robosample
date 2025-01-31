@@ -57,7 +57,7 @@ else:
 abs_corr = np.abs(corr)
 max_corr = np.max(abs_corr, axis=0)
 clusters = stats.cluster(max_corr)
-clusters = [clusters[0]] # only one cluster
+# clusters = [clusters[0]] # only one cluster
 for cluster in clusters:
 	bond_list = []
 	for aix1, aix2, dihedral_type in cluster:
