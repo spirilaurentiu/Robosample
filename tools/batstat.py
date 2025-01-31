@@ -174,9 +174,14 @@ class BATCorrelations:
             }
         }
 
-        self.prmtop_file = prmtop_file
+        # Load the PDB file once
+        self.universe = mda.Universe(prmtop_file)
 
-        # will hold (dihedral_type, atom_group, atom_indices, residue_name)
+        # Build and store the full molecular graph
+        self.base_graph = self._build_graph()
+        self.atom_masses = np.array([atom.mass for atom in self.universe.atoms])
+
+        # Store dihedral information
         self.dihedral_types = []
         self.atom_indices = []
         self.residue_names = []
@@ -298,42 +303,31 @@ class BATCorrelations:
 
         return filtered_clusters
 
-    def compute_protein_cut_masses(self, cut_bonds=None):
-        # Load the PDB file
-        universe = mda.Universe(self.prmtop_file)
-        
-        # Build graph from protein structure, excluding cut bonds
+    def _build_graph(self):
+        """Precomputes the molecular graph without any cuts."""
         G = nx.Graph()
-
-        # Add all atoms as nodes
-        for atom in universe.atoms:
-            G.add_node(atom.index, mass=atom.mass)
-
-        # Convert cut_bonds to set of tuples for faster lookup
-        cut_bonds_set = set()
-        if cut_bonds is not None:
-            cut_bonds_set = set((min(a, b), max(a, b)) for a, b in cut_bonds)
-        
-        # Add bonds as edges, excluding cut bonds
-        for bond in universe.bonds:
+        for atom in self.universe.atoms:
+            G.add_node(atom.index)
+        for bond in self.universe.bonds:
             idx1, idx2 = bond[0].index, bond[1].index
-            bond_tuple = (min(idx1, idx2), max(idx1, idx2))
+            G.add_edge(idx1, idx2)
+        return G
 
-            if bond_tuple in cut_bonds_set:
-                continue
-            else:
-                G.add_edge(idx1, idx2)
-        
-        # Find separate parts
+    def compute_protein_cut_masses(self, cut_bonds, num_components=None):
+        # Create a copy of the base graph (shallow copy, preserving structure)
+        G = self.base_graph = self._build_graph()
+
+        # Remove cut bonds
+        if cut_bonds:
+            G.remove_edges_from(cut_bonds)
+
+        # Find connected components
         parts = list(nx.connected_components(G))
-        
-        # Calculate masses
-        masses = []
-        for part in parts:
-            total_mass = sum(G.nodes[atom]['mass'] for atom in part)
-            masses.append(total_mass)
-
-        return np.array(masses)
+        if num_components and len(parts) != num_components:
+            return None
+        else:
+            # Compute masses using NumPy
+            return np.array([self.atom_masses[list(part)].sum() for part in parts])
 
     def chose_random_bonds(self, n=10):
         random_dihedrals = np.random.choice(len(self.atom_indices), n, replace=False)
@@ -345,7 +339,6 @@ class BATCorrelations:
 
         # sort in ascending order by first index
         random_bonds = sorted(random_bonds, key=lambda x: x[0])
-
         return random_bonds
 
     def chose_decoy_bonds(self, ref_bonds, steps=3000):
@@ -358,24 +351,13 @@ class BATCorrelations:
 
         for i in range(steps):
 
-            while True:
-                random_bonds = self.chose_random_bonds()
-                random_masses = self.compute_protein_cut_masses(random_bonds)
-                np.ndarray.sort(random_masses)
-
-                # Check that we have the same number of masses
-                if random_masses.shape[0] != ref_masses.shape[0]:
-                    continue
-
-                # Check that we have different bonds
-                same_bonds = False
-                for r, b in zip(ref_bonds, random_bonds):
-                    if r == b:
-                        same_bonds = True
-                        break
-
-                if not same_bonds:
-                    break
+            # Check that we have the same number of masses
+            random_bonds = self.chose_random_bonds(len(ref_bonds))
+            random_masses = self.compute_protein_cut_masses(random_bonds, len(ref_masses))
+            while random_masses is None:
+                random_bonds = self.chose_random_bonds(len(ref_bonds))
+                random_masses = self.compute_protein_cut_masses(random_bonds, len(ref_masses))
+            np.ndarray.sort(random_masses)
 
             # Check that we have the same minimum mass
             if np.min(ref_masses) != np.min(random_masses):

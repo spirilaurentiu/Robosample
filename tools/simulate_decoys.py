@@ -63,7 +63,7 @@ for cluster in clusters:
 	for aix1, aix2, dihedral_type in cluster:
 		bond_list.append((aix1, aix2))
         
-	decoy_bonds = stats.chose_decoy_bonds(bond_list, steps=1)
+	decoy_bonds = stats.chose_decoy_bonds(bond_list, steps=3000)
 	flex = flexorObj.create_from_list(decoy_bonds, robosample.BondMobility.Torsion)
 	context.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 	
