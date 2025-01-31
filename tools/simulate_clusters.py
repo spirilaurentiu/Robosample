@@ -4,6 +4,7 @@ import argparse
 import robosample as robosample
 import batstat
 import numpy as np
+import os
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Process PDB code and seed.')
@@ -45,7 +46,13 @@ context.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 # Cluster the previous simulations
 dcd_files = [f"{args.pdbid}_{i}.dcd" for i in range(5)]
 stats = batstat.BATCorrelations(dcd_files, args.prmtop)
-corr = stats.compute_correlations()
+
+corr_path = f"{args.pdbid}_correlations.npy"
+if os.path.exists(corr_path):
+	corr = np.load(corr_path)
+else:
+	corr = stats.compute_correlations()
+	np.save(corr_path, corr)
 
 abs_corr = np.abs(corr)
 max_corr = np.max(abs_corr, axis=0)
