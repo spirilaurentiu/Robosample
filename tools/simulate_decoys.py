@@ -50,15 +50,16 @@ corr = stats.compute_correlations()
 abs_corr = np.abs(corr)
 max_corr = np.max(abs_corr, axis=0)
 clusters = stats.cluster(max_corr)
+clusters = [clusters[0]] # only one cluster
 for cluster in clusters:
 	bond_list = []
 	for aix1, aix2, dihedral_type in cluster:
 		bond_list.append((aix1, aix2))
         
-	decoy_bonds = stats.chose_decoy_bonds(bond_list)
+	decoy_bonds = stats.chose_decoy_bonds(bond_list, steps=1)
 	flex = flexorObj.create_from_list(decoy_bonds, robosample.BondMobility.Torsion)
 	context.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
-
+	
 # samplers
 sampler = robosample.SamplerName.HMC # rename to type
 thermostat = robosample.ThermostatName.ANDERSEN
