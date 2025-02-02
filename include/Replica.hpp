@@ -68,6 +68,9 @@ public:
     SimTK::Real getFixman() const;
 	void setFixman(SimTK::Real somePotential);
 
+    SimTK::Real get_WORK_Fixman() const;
+	void set_WORK_Fixman(SimTK::Real somePotential);
+
 	void Print() const;
 	void PrintCoordinates() const;
 	void Print_WORK_Coordinates() const;
@@ -176,6 +179,7 @@ private:
 	SimTK::Real workJacobiansContributions; // TODO: turn into a vector for worlds
 
 	SimTK::Real FixmanPotential; // TODO: turn into a vector for worlds
+	SimTK::Real WORK_FixmanPotential; // TODO: turn into a vector for worlds
 
 
 	//////////////////////////////////

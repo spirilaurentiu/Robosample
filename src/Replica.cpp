@@ -187,6 +187,15 @@ void Replica::setFixman(SimTK::Real somePotential) {
 	FixmanPotential = somePotential;
 }
 
+SimTK::Real Replica::get_WORK_Fixman() const {
+	return this->WORK_FixmanPotential;
+}
+
+void Replica::set_WORK_Fixman(SimTK::Real somePotential) {
+	this->WORK_FixmanPotential = somePotential;
+}
+
+
 void Replica::Print() const {
 }
 

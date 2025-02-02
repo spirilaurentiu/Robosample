@@ -744,7 +744,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
 				}
 
-
+				// Scale
 				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
@@ -760,16 +760,18 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 							stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
 
-							std::cout << "stateQs[qIx] (*prev_dBMps)[qIx] (*prev_dBMps)[qIx]scaled"
-							<<" "<<  stateQs[qIx]
-							<<" "<< (*prev_dBMps)[qIx]
-							<<" "<< (*prev_dBMps)[qIx] * ((scaleFactor) - 1)
-							<< std::endl;
-							// std::cout << "qIx QScaleF scaleF prev_dBMps " << qIx
-							// 	<<" "<< this->QScaleFactor
-							// 	<<" "<< scaleFactor
-							// 	<<" "<< (*prev_dBMps)[qIx]
-							// 	<< "\n";							
+							if("printStuff"){
+								std::cout << "stateQs[qIx] (*prev_dBMps)[qIx] (*prev_dBMps)[qIx]scaled"
+									<<" "<<  stateQs[qIx]
+									<<" "<< (*prev_dBMps)[qIx]
+									<<" "<< (*prev_dBMps)[qIx] * ((scaleFactor) - 1)
+									<< std::endl;
+								// std::cout << "qIx QScaleF scaleF prev_dBMps " << qIx
+								// 	<<" "<< this->QScaleFactor
+								// 	<<" "<< scaleFactor
+								// 	<<" "<< (*prev_dBMps)[qIx]
+								// 	<< "\n";
+							}							
 
 							J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 

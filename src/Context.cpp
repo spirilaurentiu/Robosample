@@ -4227,8 +4227,19 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+	// DID_I_REALLY
+	SimTK::Real Fix_Xtau = replicas[replica_X].get_WORK_Fixman();
+	SimTK::Real Fix_Ytau = replicas[replica_Y].get_WORK_Fixman();
+	
+	SimTK::Real Fix_X0 = replicas[replica_X].getFixman();
+	SimTK::Real Fix_Y0 = replicas[replica_Y].getFixman();
+
+	SimTK::Real fixH_Xtau = beta_H * Fix_Xtau;
+	SimTK::Real fixC_Ytau = beta_C * Fix_Ytau;
+
 	SimTK::Real Work_X = uH_Xtau - uC_X0 - lnJac_X;
 	SimTK::Real Work_Y = uC_Ytau - uH_Y0 - lnJac_Y;
+
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// ----------------------------------------------------------------
@@ -5413,30 +5424,30 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 	# pragma region REBAS_TEST
 		worldOutStream << " ";
 
-									for (const auto& distanceIx : distanceIxs) {
-										if( distanceIx[0] == whichWorld ) {
-											worldOutStream << std::fixed << std::setprecision(3) << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << " ";
-										}
-									}
+						for (const auto& distanceIx : distanceIxs) {
+							if( distanceIx[0] == whichWorld ) {
+								worldOutStream << std::fixed << std::setprecision(3) << Distance(distanceIx[0], distanceIx[1], 0, distanceIx[2], distanceIx[3]) << " ";
+							}
+						}
 
-									for (const auto& angleIx : angleIxs){
-										if( angleIx[0] == whichWorld ) {
-											worldOutStream << std::fixed << std::setprecision(3) << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << " ";
-										}
-									}
+						for (const auto& angleIx : angleIxs){
+							if( angleIx[0] == whichWorld ) {
+								worldOutStream << std::fixed << std::setprecision(3) << Roboangle(angleIx[0], angleIx[1], 0, angleIx[2], angleIx[3], angleIx[4]) << " ";
+							}
+						}
 
-									for (const auto& dihedralIx : dihedralIxs){
-										if( dihedralIx[0] == whichWorld ) {
-											worldOutStream << std::fixed << std::setprecision(3) << Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << " ";
+						for (const auto& dihedralIx : dihedralIxs){
+							if( dihedralIx[0] == whichWorld ) {
+								worldOutStream << std::fixed << std::setprecision(3) << Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5]) << " ";
 
-											// std::cout <<"STUDY_Context::RunWorld" 
-											// <<" | "<< dihedralIx[0] <<" "<< dihedralIx[1] <<" "<< dihedralIx[2] <<" "<< dihedralIx[3] <<" "<< dihedralIx[4] <<" "<< dihedralIx[5]
-											// <<" | "<< atoms[dihedralIx[0]].getInName() <<" "<< atoms[dihedralIx[1]].getInName() <<" "<< atoms[dihedralIx[2]].getInName() <<" "<< atoms[dihedralIx[3]].getInName()
-											// <<" | "<< Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5])
-											// << std::endl;
+								// std::cout <<"STUDY_Context::RunWorld" 
+								// <<" | "<< dihedralIx[0] <<" "<< dihedralIx[1] <<" "<< dihedralIx[2] <<" "<< dihedralIx[3] <<" "<< dihedralIx[4] <<" "<< dihedralIx[5]
+								// <<" | "<< atoms[dihedralIx[0]].getInName() <<" "<< atoms[dihedralIx[1]].getInName() <<" "<< atoms[dihedralIx[2]].getInName() <<" "<< atoms[dihedralIx[3]].getInName()
+								// <<" | "<< Dihedral(dihedralIx[0], dihedralIx[1], 0, dihedralIx[2], dihedralIx[3], dihedralIx[4], dihedralIx[5])
+								// << std::endl;
 
-										}
-									}
+							}
+						}
 	# pragma endregion REBAS_TEST
 
 	// Print the world output stream
@@ -5723,6 +5734,8 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 
+			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
+
 		// ======================== NON-EQUILIBRIUM ======================
 		}else{
 
@@ -5733,7 +5746,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
 		
-			replica.setFixman(sampler_p->fix_set);
+			replica.set_WORK_Fixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
 
 		} // __end__ Non/Equilibrium =======================================
 
