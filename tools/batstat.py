@@ -8,7 +8,7 @@ from MDAnalysis.analysis import dihedrals
 
 
 class BATCorrelations:
-    def __init__(self, dcd_files, prmtop_file):
+    def __init__(self, dcd_files, prmtop_file, inpcrd_file):
 
         dihedral_sele = {
             'ALA': {
@@ -175,13 +175,16 @@ class BATCorrelations:
         }
 
         # Load the PDB file once
-        self.universe = mda.Universe(prmtop_file)
+        self.universe = mda.Universe(prmtop_file, inpcrd_file)
 
         # Build and store the full molecular graph
         self.base_graph = self._build_graph()
         self.atom_masses = np.array([atom.mass for atom in self.universe.atoms])
 
-        # Store dihedral information
+            
+
+
+        # will hold (dihedral_type, atom_group, atom_indices, residue_name)
         self.dihedral_types = []
         self.atom_indices = []
         self.residue_names = []
@@ -190,11 +193,11 @@ class BATCorrelations:
         populated = False
 
         for dcd in dcd_files:
-            u = mda.Universe(prmtop_file, dcd)
+            universe = mda.Universe(prmtop_file, dcd)
             atom_groups = []
             
             # Get the dihedrals
-            for res in u.residues:
+            for res in universe.residues:
                 # Not present on N-terminus (first residue)
                 phi = res.phi_selection()
                 if phi:
@@ -232,7 +235,7 @@ class BATCorrelations:
                         continue
 
                     sele = f"resid {res.resid} and ({chi_names})"
-                    chi_dihedral = u.select_atoms(sele)
+                    chi_dihedral = universe.select_atoms(sele)
                     atom_groups.append(chi_dihedral)
                     if not populated:
                         self.dihedral_types.append(chi)
@@ -243,9 +246,11 @@ class BATCorrelations:
             populated = True
 
             # Compute dihedrals
-            values = dihedrals.Dihedral(atom_groups).run().angles
+            values = dihedrals.Dihedral(atom_groups).run().angles + 180
             values = np.deg2rad(values)
             values = values.astype(np.float32)
+
+            # [num_dcds, num_dihedrals, num_frames]
             self.dihedral_values.append(values)
 
         self.numDihedrals = len(self.atom_indices)
@@ -253,14 +258,16 @@ class BATCorrelations:
     def calculate_correlation(self, dihs, pair):
         """Calculates circular correlation coefficient for a single pair of dihedrals."""
         ix, jx = pair
-        corr = circstats.circcorrcoef(dihs[:, ix], dihs[:, jx])
+
+        corr = self.dihedralsCorrelation_claude(dihs[:, ix], dihs[:, jx])
         return (ix, jx, corr)
 
 
     def compute_correlations(self):
-        
+                
         correlation_matrices = []
 
+        # Compute the correlations for each DCD
         for dihedrals in self.dihedral_values:
 
             # Create argument list (pairs of dihedral indices)
@@ -271,7 +278,8 @@ class BATCorrelations:
 
             correlation_matrix = np.ones((self.numDihedrals, self.numDihedrals))
             with ThreadPoolExecutor() as executor:
-                futures = [executor.submit(self.calculate_correlation, dihedrals, pair) for pair in arg_list]
+                futures = [executor.submit(self.calculate_correlation, 
+                dihedrals, pair) for pair in arg_list]
                 for future in as_completed(futures):
                     ix, jx, corr = future.result()
                     correlation_matrix[ix][jx] = corr
@@ -324,9 +332,11 @@ class BATCorrelations:
         # Find connected components
         parts = list(nx.connected_components(G))
         if num_components and len(parts) != num_components:
+            # print(f"Warning: found {len(parts)} components, expected {num_components}")
             return None
         else:
             # Compute masses using NumPy
+            # print(f"Found {len(parts)} components")
             return np.array([self.atom_masses[list(part)].sum() for part in parts])
 
     def chose_random_bonds(self, n=10):
@@ -340,6 +350,30 @@ class BATCorrelations:
         # sort in ascending order by first index
         random_bonds = sorted(random_bonds, key=lambda x: x[0])
         return random_bonds
+    
+    def dihedralsCorrelation_claude(self, x, y, variance_threshold=1e-5):
+        """Circular correlation between two dihedral series"""
+
+        # Unwrap angles to handle discontinuities
+        x = np.unwrap(x)
+        y = np.unwrap(y)
+        
+        # Calculate circular variance for each series
+        x_var = circstats.circvar(x)
+        y_var = circstats.circvar(y)
+        
+        # Filter out series with low variance (high noise)
+        if x_var < variance_threshold or y_var < variance_threshold:
+            return 0  # Not enough meaningful variation
+        
+        # Compute circular correlation
+        x_centered = x - np.mean(x)
+        y_centered = y - np.mean(y)
+        
+        numerator = np.sum(np.sin(x_centered) * np.sin(y_centered))
+        denominator = np.sqrt(np.sum(np.sin(x_centered)**2) * np.sum(np.sin(y_centered)**2))
+        
+        return numerator / denominator
 
     def chose_decoy_bonds(self, ref_bonds, steps=3000):
         ref_masses = self.compute_protein_cut_masses(ref_bonds)
