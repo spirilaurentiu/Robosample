@@ -4183,6 +4183,21 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real uH_Xtau = beta_H * U_Xtau; // Replica i reduced potential in state j
 	SimTK::Real uC_Ytau = beta_C * U_Ytau; // Replica j reduced potential in state i
 
+	// Get Fixman potential for the work coordinates
+	SimTK::Real Fix_Xtau = replicas[replica_X].get_WORK_Fixman();
+	SimTK::Real Fix_Ytau = replicas[replica_Y].get_WORK_Fixman();
+
+	// Get Fixman potential for the equilibrium coordinates
+	SimTK::Real Fix_X0 = replicas[replica_X].getFixman();
+	SimTK::Real Fix_Y0 = replicas[replica_Y].getFixman();
+
+	// Get reduced Fixman potentials
+	SimTK::Real fixH_Xtau = beta_H * Fix_Xtau;
+	SimTK::Real fixC_Ytau = beta_C * Fix_Ytau;
+
+	SimTK::Real fixC_X0 = beta_C * Fix_X0;
+	SimTK::Real fixH_Y0 = beta_H * Fix_Y0;
+
 	// Include the Fixman term if indicated
 	SimTK::Real Fix_ii = 0, Fix_jj = 0, Fix_ij = 0, Fix_ji = 0;
 	if (swapFixman){
@@ -4227,28 +4242,13 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	// DID_I_REALLY
-	SimTK::Real Fix_Xtau = replicas[replica_X].get_WORK_Fixman();
-	SimTK::Real Fix_Ytau = replicas[replica_Y].get_WORK_Fixman();
-	
-	SimTK::Real Fix_X0 = replicas[replica_X].getFixman();
-	SimTK::Real Fix_Y0 = replicas[replica_Y].getFixman();
+	// Get work from X replica
+	SimTK::Real Work_X = (uH_Xtau - uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X;
 
-	SimTK::Real fixH_Xtau = beta_H * Fix_Xtau;
-	SimTK::Real fixC_Ytau = beta_C * Fix_Ytau;
+	// Get work from Y replica
+	SimTK::Real Work_Y = (uC_Ytau - uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y;
 
-	// SimTK::Real fixH_X0 = beta_H * Fix_X0;
-	// SimTK::Real fixC_Y0 = beta_C * Fix_Y0; 
-
-	SimTK::Real fixC_X0 = beta_C * Fix_X0;
-	SimTK::Real fixH_Y0 = beta_H * Fix_Y0;
-
-	SimTK::Real Work_X = (uH_Xtau - uC_X0) - lnJac_X;
-	Work_X            += (fixH_Xtau - fixC_X0);
-
-	SimTK::Real Work_Y = (uC_Ytau - uH_Y0) - lnJac_Y;
-	Work_Y            += (fixC_Ytau - fixH_Y0);
-
+	// Get total work
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
 	// ----------------------------------------------------------------
