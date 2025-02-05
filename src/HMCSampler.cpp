@@ -2533,7 +2533,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 	// Get M
 	//SimTK::Matrix M(nu, nu); // TODO: DELETE
 	//matter->calcM(someState, M); // TODO: DELETE
-    	//PrintBigMat(M, nu, nu, 12, "M");  // TODO: DELETE
+    //PrintBigMat(M, nu, nu, 12, "M");  // TODO: DELETE
 
 	return result;
 }

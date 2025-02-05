@@ -4237,8 +4237,17 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real fixH_Xtau = beta_H * Fix_Xtau;
 	SimTK::Real fixC_Ytau = beta_C * Fix_Ytau;
 
-	SimTK::Real Work_X = uH_Xtau - uC_X0 - lnJac_X;
-	SimTK::Real Work_Y = uC_Ytau - uH_Y0 - lnJac_Y;
+	// SimTK::Real fixH_X0 = beta_H * Fix_X0;
+	// SimTK::Real fixC_Y0 = beta_C * Fix_Y0; 
+
+	SimTK::Real fixC_X0 = beta_C * Fix_X0;
+	SimTK::Real fixH_Y0 = beta_H * Fix_Y0;
+
+	SimTK::Real Work_X = (uH_Xtau - uC_X0) - lnJac_X;
+	Work_X            += (fixH_Xtau - fixC_X0);
+
+	SimTK::Real Work_Y = (uC_Ytau - uH_Y0) - lnJac_Y;
+	Work_Y            += (fixC_Ytau - fixH_Y0);
 
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
 
