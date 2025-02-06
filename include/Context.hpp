@@ -91,7 +91,7 @@ public:
 	* @brief Read input file.
 	* @param var
 	* @return
-	*/	
+	*/
 	bool setOutput(const std::string& outDir);
 	bool CheckInputParameters(const SetupReader& setupReader);
 	std::string GetMoleculeDirectoryShort(const std::string& path) const;
