@@ -213,6 +213,20 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
     if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1");}
 
+	// desk_mass_related
+	for (auto& topology : (topologies)){
+
+		// Iterate through atoms
+		for (auto& atom : topology.subAtomList) {
+
+			// Set masses
+			SimTK::Compound::AtomIndex cAIx = atom.getCompoundAtomIndex();
+			SimTK::mdunits::Mass atomMass = atom.getMass();
+			topology.setAtomMass(cAIx, atomMass);
+
+		}
+	}
+
 	// Add Worlds to the  Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
@@ -235,6 +249,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		flexibilities.clear();
 	}
 
+	// desk_mass_related
 	// Set DuMM atom indexes into atoms of bAtomList
 	worlds[0].setDuMMAtomIndexes(); // REVISE
 
@@ -1370,6 +1385,13 @@ void Context::addWorld(
 	// 
 	worlds.back().AllocateCoordBuffers(natoms);
 
+	// desk_mass_related
+	// for (auto& atom : atoms) {
+	// 	SimTK::DuMM::AtomIndex dAIx = atom.updDuMMAtomIndex();
+	// 	SimTK::mdunits::Mass atomMass = atom.getMass();
+	// 	worlds.back().forceField->setDuMMAtomMass(dAIx, atomMass);
+	// } // every atom
+
 	worlds.back().topologies = &topologies;
 	for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
 
@@ -2037,7 +2059,7 @@ void Context::calc_Gmolmodel_Graph()
 	while( internCoords.computeRoot( getAtoms() )){ // find a root
 
 		nofMols++;
-		//internCoords.PrintRoot();
+		internCoords.PrintRoot();
 		
 		// Compute the new molecule's BAT coordinates
 		internCoords.computeBAT( getAtoms() );
