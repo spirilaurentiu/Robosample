@@ -8,181 +8,119 @@ from MDAnalysis.analysis import dihedrals
 
 
 class BATCorrelations:
-    def __init__(self, dcd_files, prmtop_file, inpcrd_file):
+    def __init__(self, dcd_files, prmtop_file):
 
         dihedral_sele = {
             'ALA': {
-                'chi1': '',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'HB1'],
             },
             'ARG': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD',
-                'chi3': 'name CB or name CG or name CD or name NE',
-                'chi4': 'name CG or name CD or name NE or name CZ',
-                'chi5': 'name CD or name NE or name CZ or name NH1'
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD'],
+                'chi3': ['CB', 'CG', 'CD', 'NE'],
+                'chi4': ['CG', 'CD', 'NE', 'CZ'],
+                'chi5': ['CD', 'NE', 'CZ', 'NH1'],
             },
             'ASN': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name OD1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'ND2'],
+                'chi3': ['CB', 'CG', 'ND2', 'HD21'],
             },
             'ASP': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name OD1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'OD1'],
             },
             'CYS': {
-                'chi1': 'name N or name CA or name CB or name SG',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'SG'],
+                'chi2': ['CA', 'CB', 'SG', 'HG'],
             },
             'CYX': {
-                'chi1': 'name N or name CA or name CB or name SG',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'SG'],
             },
             'GLN': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD',
-                'chi3': 'name CB or name CG or name CD or name OE1',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD'],
+                'chi3': ['CB', 'CG', 'CD', 'NE2'],
+                'chi4': ['CG', 'CD', 'NE2', 'HE21'],
             },
             'GLU': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD',
-                'chi3': 'name CB or name CG or name CD or name OE1',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD'],
+                'chi3': ['CB', 'CG', 'CD', 'OE1'],
             },
-            'GLY': {
-                'chi1': '',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
-            },
+            'GLY': {},
             'HIP': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name ND1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'ND1'],
             },
             'HIE': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name ND1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'ND1'],
             },
             'HID': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name ND1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'ND1'],
             },
             'ILE': {
-                'chi1': 'name N or name CA or name CB or name CG1',
-                'chi2': 'name CA or name CB or name CG1 or name CD1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG1'],
+                'chi2.1': ['CA', 'CB', 'CG1', 'CD1'],
+                'chi2.2': ['CA', 'CB', 'CG2', 'HG21'],
+                'chi3': ['CB', 'CG1', 'CD1', 'HD11'],
             },
             'LEU': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD1'],
+                'chi3.1': ['CB', 'CG', 'CD1', 'HD11'],
+                'chi3.2': ['CB', 'CG', 'CD2', 'HD21'],
             },
             'LYS': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD',
-                'chi3': 'name CB or name CG or name CD or name CE',
-                'chi4': 'name CG or name CD or name CE or name NZ',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD'],
+                'chi3': ['CB', 'CG', 'CD', 'CE'],
+                'chi4': ['CG', 'CD', 'CE', 'NZ'],
+                'chi5': ['CD', 'CE', 'NZ', 'HZ1']
             },
             'MET': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name SD',
-                'chi3': 'name CB or name CG or name SD or name CE',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'SD'],
+                'chi3': ['CB', 'CG', 'SD', 'CE'],
+                'chi4': ['CG', 'SD', 'CE', 'HE1'],
             },
             'PHE': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD1'],
             },
             'PRO': {
-                'chi1': '',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD'],
+                'chi3': ['CB', 'CG', 'CD', 'N'],
             },
             'SER': {
-                'chi1': 'name N or name CA or name CB or name OG',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'OG'],
+                'chi2': ['CA', 'CB', 'OG', 'HG'],
             },
             'THR': {
-                'chi1': 'name N or name CA or name CB or name OG1',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'OG1'],
+                'chi2.1': ['CA', 'CB', 'OG1', 'HG1'],
+                'chi2.2': ['CA', 'CB', 'CG2', 'HG21'],
             },
             'TRP': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD1'],
             },
             'TYR': {
-                'chi1': 'name N or name CA or name CB or name CG',
-                'chi2': 'name CA or name CB or name CG or name CD1',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG'],
+                'chi2': ['CA', 'CB', 'CG', 'CD1'],
+                'chi3': ['CE1', 'CZ', 'OH', 'HH'],
             },
             'VAL': {
-                'chi1': 'name N or name CA or name CB or name CG1',
-                'chi2': '',
-                'chi3': '',
-                'chi4': '',
-                'chi5': ''
+                'chi1': ['N', 'CA', 'CB', 'CG1'],
+                'chi2.1': ['CA', 'CB', 'CG1', 'HG11'],
+                'chi2.2': ['CA', 'CB', 'CG2', 'HG21'],
             }
         }
 
-        # Load the PDB file once
-        self.universe = mda.Universe(prmtop_file, inpcrd_file)
-
-        # Build and store the full molecular graph
-        self.base_graph = self._build_graph()
-        self.atom_masses = np.array([atom.mass for atom in self.universe.atoms])
-
-            
-
+        # @TODO asp glu arg lys - protonated
 
         # will hold (dihedral_type, atom_group, atom_indices, residue_name)
         self.dihedral_types = []
@@ -193,30 +131,49 @@ class BATCorrelations:
         populated = False
 
         for dcd in dcd_files:
+
             universe = mda.Universe(prmtop_file, dcd)
-            atom_groups = []
+            if not populated:
+                # Build and store the full molecular graph
+                self.universe = universe
+                self.base_graph = self._build_graph()
+                self.atom_masses = np.array([atom.mass for atom in self.universe.atoms])
             
             # Get the dihedrals
+            atom_groups = []
             for res in universe.residues:
-                # Not present on N-terminus (first residue)
-                phi = res.phi_selection()
-                if phi:
-                    atom_groups.append(phi)
-                    if not populated:
-                        self.dihedral_types.append('phi')
-                        self.atom_indices.append(phi.indices)
-                        self.residue_names.append(res.resname)
-                        self.residue_ids.append(res.resid)
 
-                # Not present on C-terminus (last residue)
+                # The phi angle of the first residue is not defined
+                phi = res.phi_selection()
+                if not phi:
+                    h1 = universe.select_atoms(f"resid {res.resid} and name H1")
+                    n = universe.select_atoms(f"resid {res.resid} and name N")
+                    ca = universe.select_atoms(f"resid {res.resid} and name CA")
+                    c = universe.select_atoms(f"resid {res.resid} and name C")
+                    phi = mda.AtomGroup([h1.ix[0], n.ix[0], ca.ix[0], c.ix[0]], universe)
+
+                atom_groups.append(phi)
+                if not populated:
+                    self.dihedral_types.append('phi')
+                    self.atom_indices.append(phi.indices)
+                    self.residue_names.append(res.resname)
+                    self.residue_ids.append(res.resid)
+
+                # The psi angle of the last residue is not defined
                 psi = res.psi_selection()
-                if psi:
-                    atom_groups.append(psi)
-                    if not populated:
-                        self.dihedral_types.append('psi')
-                        self.atom_indices.append(psi.indices)
-                        self.residue_names.append(res.resname)
-                        self.residue_ids.append(res.resid)
+                if not psi:
+                    n = universe.select_atoms(f"resid {res.resid} and name N")
+                    ca = universe.select_atoms(f"resid {res.resid} and name CA")
+                    c = universe.select_atoms(f"resid {res.resid} and name C")
+                    oxt = universe.select_atoms(f"resid {res.resid} and name OXT")
+                    psi = mda.AtomGroup([n.ix[0], ca.ix[0], c.ix[0], oxt.ix[0]], universe)
+
+                atom_groups.append(psi)
+                if not populated:
+                    self.dihedral_types.append('psi')
+                    self.atom_indices.append(psi.indices)
+                    self.residue_names.append(res.resname)
+                    self.residue_ids.append(res.resid)
 
                 # Present in all residues
                 omega = res.omega_selection()
@@ -229,20 +186,44 @@ class BATCorrelations:
                         self.residue_ids.append(res.resid)
 
                 # Chi angles
-                for chi in ['chi1', 'chi2', 'chi3', 'chi4', 'chi5']:
-                    chi_names = dihedral_sele[res.resname][chi]
-                    if not chi_names:
-                        continue
-
-                    sele = f"resid {res.resid} and ({chi_names})"
-                    chi_dihedral = universe.select_atoms(sele)
+                for chi_name, chi_atoms in dihedral_sele[res.resname].items():
+                    chi_atom_ix = [universe.select_atoms(f"resid {res.resid} and name {atom_name}").ix[0] for atom_name in chi_atoms]
+                    chi_dihedral = mda.AtomGroup(chi_atom_ix, universe)
                     atom_groups.append(chi_dihedral)
                     if not populated:
-                        self.dihedral_types.append(chi)
+                        self.dihedral_types.append(chi_name)
                         self.atom_indices.append(chi_dihedral.indices)
                         self.residue_names.append(res.resname)
                         self.residue_ids.append(res.resid)
-            
+
+            # Find the disulfide bonds
+            disulfide_bonds = set()
+            for sg in self.universe.select_atoms("resname CYX and name SG"):
+                for b in sg.bonds:
+                    if b.atoms[0].name == 'SG' and b.atoms[1].name == 'SG':
+                        disulfide_bonds.add(tuple(sorted(b.indices)))
+            disulfide_bonds = list(disulfide_bonds)
+
+            # print the atoms in the disulfide bonds
+            for bond in disulfide_bonds:
+                sg0_atom = self.universe.atoms[bond[0]]
+                sg1_atom = self.universe.atoms[bond[1]]
+
+                sg_atom_pairs = [(sg0_atom, sg1_atom), (sg1_atom, sg0_atom)]
+                for sg_atom_0, sg_atom_1 in sg_atom_pairs:
+                    sg0_selection = self.universe.select_atoms(f"resid {sg_atom_0.resid} and name SG")
+                    sg1_selection = self.universe.select_atoms(f"resid {sg_atom_1.resid} and name SG")
+                    cb_selection = self.universe.select_atoms(f"resid {sg_atom_1.resid} and name CB")
+                    ca_selection = self.universe.select_atoms(f"resid {sg_atom_1.resid} and name CA")
+
+                    atom_group = mda.AtomGroup([sg0_selection.atoms[0], sg1_selection.atoms[0], cb_selection.atoms[0], ca_selection.atoms[0]])
+                    atom_groups.append(atom_group)
+
+                    if not populated:
+                        self.dihedral_types.append('chi2')
+                        self.atom_indices.append(atom_group.indices)
+                        self.residue_names.append('CYX')
+                        self.residue_ids.append(sg_atom_1.resid)
             populated = True
 
             # Compute dihedrals
@@ -254,6 +235,12 @@ class BATCorrelations:
             self.dihedral_values.append(values)
 
         self.numDihedrals = len(self.atom_indices)
+
+    def get_dihedral_atom_indices(self):
+        indices = []
+        for aix0, aix1, aix2, aix3 in self.atom_indices:
+            indices.append((aix1, aix2))
+        return indices
 
     def calculate_correlation(self, dihs, pair):
         """Calculates circular correlation coefficient for a single pair of dihedrals."""
