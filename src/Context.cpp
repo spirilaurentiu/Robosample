@@ -671,7 +671,6 @@ void Context::loadAtoms(const AmberReader& reader) {
 
 		// Save
 		std::cout << std::fixed << std::setprecision(6);
-		std::cout <<"STUDY_Context::loadAtoms" <<" atomicNumber "<< atomicNumber <<" mass "<< mass << std::endl;
 		elementCache.addElement(atomicNumber, mass);
 	}
 }
@@ -1752,13 +1751,13 @@ void Context::buildAcyclicGraph(
 		// ========================================= BOND
 		// @@@@@@@@@@@@@@@   BOND    @@@@@@@@@@@@@@@
 		// -----------------------------------------
-		scout("STUDY Bonding ")
-			<< "child " << child.getName() <<" " << child.getInName()
-			<<" " << child.getNumber() <<" "
-			<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
-			<< parent.getNumber() <<" "
-			<< "with bond center name " << parentBondCenterPathNameStr <<" "
-			<< eol;
+		// scout("STUDY Bonding ")
+		// 	<< "child " << child.getName() <<" " << child.getInName()
+		// 	<<" " << child.getNumber() <<" "
+		// 	<< "to parent " << parent.getName() <<" " << parent.getInName() <<" "
+		// 	<< parent.getNumber() <<" "
+		// 	<< "with bond center name " << parentBondCenterPathNameStr <<" "
+		// 	<< eol;
 
 		topology.bondAtom(child.getSingleAtom(),
 				(parentBondCenterPathNameStr).c_str(), 0.149, 0);
@@ -2079,8 +2078,6 @@ void Context::build_Molmodel_AcyclicGraphs(void)
 	topologies.reserve(nofMols);
 	moleculeCount = -1;
 
-	std::cout << "STUDY Context::build_Molmodel_AcyclicGraphs nofMols " <<" "<< nofMols <<std::endl<<std::flush;
-
 	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
 
 		// Add an empty topology
@@ -2092,8 +2089,6 @@ void Context::build_Molmodel_AcyclicGraphs(void)
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		const int rootAmberIx = internCoords.getRoot( molIx ).first;
 		topology.bSpecificAtomRootIndex = rootAmberIx;
-
-		std::cout << "STUDY Context::build_Molmodel_AcyclicGraphs rootAmberIx " <<" "<< rootAmberIx <<std::endl<<std::flush;
 
 		setRootAtom( topology, rootAmberIx );
 
@@ -4172,21 +4167,6 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real lnJac_X = replicas[replica_X].get_WORK_Jacobian(); // non-equil Jacobian
 	SimTK::Real lnJac_Y = replicas[replica_Y].get_WORK_Jacobian(); // non-equil Jacobian
 
-	std::cout <<" STUDY relationships"
-		<<" "<< "U_X0 U_Y0 W_X W_Y U_Xtau U_Ytau lnJac_X lnJAC_Y"
-		<<" "<< U_X0 <<" "<< U_Y0 <<" "<< W_X <<" "<< W_Y <<" "<< U_Xtau <<" "<< U_Ytau <<" "<< lnJac_X <<" "<< lnJac_Y
-		//<<" "<< (U_X0 + W_X) - U_Xtau <<" "<< (U_Y0 + W_Y) - U_Ytau
-		<< std::endl;
-
-	assert( ((std::abs((U_X0 + W_X) - U_Xtau) < 0.00001) &&
-			 (std::abs((U_Y0 + W_Y) - U_Ytau) < 0.00001)) &&
-			"Work seems incorrectly calculated");
-
-	if( ((std::abs((U_X0 + W_X) - U_Xtau) > 0.00001) ||
-		 (std::abs((U_Y0 + W_Y) - U_Ytau) > 0.00001)) ){
-		std::cerr << "Work seems incorrectly calculated\n";
-	}
-
 	#pragma endregion convienent_vars
 
 	// ----------------------------------------------------------------
@@ -4298,7 +4278,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// PRINT
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	bool printTerms = true, printWithoutText = true;
+	bool printTerms = false, printWithoutText = true;
 	if (printTerms){
 		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
 		std::cout << "replicaIxs " << replica_X << " " << replica_Y << std::endl;
@@ -4309,6 +4289,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 							   << uH_X0 << " " << uC_Y0 << std::endl;
 		std::cout << "Transferred E i j " << W_X << " " << W_Y << std::endl;
 		std::cout << "ETerm " << ETerm_equil << std::endl;
+		std::cout << "ETerm_noneq " << ETerm_nonequil << std::endl;
 		std::cout << "WTerm " << WTerm << std::endl;
 		std::cout << "correctionTerm s_i s_f " << correctionTerm 
 			<< " " << s_X << " " << s_Y << " " << s_X_1 << " " << s_Y_1
@@ -4419,13 +4400,16 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 
 		}
 
-		// Update replicas coordinates from work generated coordinates
-		set_WORK_CoordinatesAsFinal(replica_X);
-		set_WORK_CoordinatesAsFinal(replica_Y);
+		if((getRunType() == RUN_TYPE::RENE) || (getRunType() == RUN_TYPE::RENEMC)){
+			
+			// Update replicas coordinates from work generated coordinates
+			set_WORK_CoordinatesAsFinal(replica_X);
+			set_WORK_CoordinatesAsFinal(replica_Y);
 
-		// Update replica's energy from work last potential energy
-		set_WORK_PotentialAsFinal(replica_X);
-		set_WORK_PotentialAsFinal(replica_Y);
+			// Update replica's energy from work last potential energy
+			set_WORK_PotentialAsFinal(replica_X);
+			set_WORK_PotentialAsFinal(replica_Y);
+		}
 
 		// Swap thermodynamic states
 		swapThermodynamicStates(replica_X, replica_Y);
@@ -5734,7 +5718,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		// Transfer coordinates to the next world
 		if(thWCnt == 0){
-			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front()); //state = setAtoms_SP_NEW(thermoWorldIxs.front(), state, replica.getAtomsLocationsInGround());
+			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
 			transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
 		}else{
 			transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);

@@ -3960,7 +3960,8 @@ void HMCSampler::getMsg_EnergyDetails(
 		<< ", " << nofSamples
 		<< ", " << pe_o << ", " << pe_n ;
 
-	energyDetailsStream	<< ", " << getPEFromEvaluator(someState)
+	// energyDetailsStream	<< ", " << getPEFromEvaluator(someState)
+		energyDetailsStream	<< ", " << pe_set
 		<< ", " << ke_o << ", " << ke_n
 		<< ", " << fix_o << ", " << fix_n
 		<< ", " << logSineSqrGamma2_o << ", " << logSineSqrGamma2_n
@@ -4040,7 +4041,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 				
 				// Print
 				//Print(someState, validated, getAcc());
-				getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+				getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
 
 	// --- valid --- //
 	}else{
@@ -4051,12 +4052,12 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 					// Set status
 					setAcc(true);
 
-					// Print
-					//Print(someState, validated, getAcc());
-					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
-
 					// UPDATE
 					update(someState);
+
+					// Print
+					//Print(someState, validated, getAcc());
+					getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
 
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
@@ -4067,12 +4068,12 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 					// Set status
 					setAcc(false);
 
-					// Print
-					//Print(someState, validated, getAcc());
-					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
-
 					// RESTORE
 					restore(someState);
+
+					// Print
+					//Print(someState, validated, getAcc());
+					getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
 
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();

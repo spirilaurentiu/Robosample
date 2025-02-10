@@ -27,6 +27,7 @@ const SimTK::Element::Symbol& ELEMENT_CACHE::getSymbolByAtomicNumber(int atomicN
 }
 
 const SimTK::Element& ELEMENT_CACHE::getElement(int atomicNumber, SimTK::mdunits::Mass atomicMass) const {
+	std::cout << "ELEMENT_CACHE::getElement atomicNumber " << atomicNumber << " atomicMass " << atomicMass << std::endl << std::flush;
 	return cache.at(key(atomicNumber, atomicMass));
 }
 

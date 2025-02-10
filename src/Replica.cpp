@@ -110,8 +110,7 @@ void Replica::upd_WORK_AtomsLocationsInGround(
 		for(auto& otherAtom : topology){
 			j += 1;
 
-			std::pair<bSpecificAtom *, SimTK::Vec3>&
-			myAtom = myTopology[j];
+			std::pair<bSpecificAtom *, SimTK::Vec3>& myAtom = myTopology[j];
 
 			myAtom.first  = otherAtom.first;
 			myAtom.second = otherAtom.second;
