@@ -44,9 +44,9 @@ long getResourceUsage() {
 
 void stdcout_memdebug(std::string header__){
 	std::string startLine_ = "memdebug ";
-	std::cout << startLine_ + header__ + "\n" << exec("free") << std::endl << std::flush;
-	std::cout << startLine_ + header__ + "\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
-	std::cout << startLine_ + header__ + "\n" << getResourceUsage() << " kB" << std::endl << std::flush;
+	std::cout << startLine_ + header__ + " free " << exec("free") << std::endl << std::flush;
+	std::cout << startLine_ + header__ + " LinuxMem " << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
+	std::cout << startLine_ + header__ + " RUsage " << getResourceUsage() << " kB" << std::endl << std::flush;
 }
 
 /**************************************

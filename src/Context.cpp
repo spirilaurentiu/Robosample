@@ -227,6 +227,8 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		}
 	}
 
+	if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1.1");}
+
 	// Add Worlds to the  Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
@@ -246,8 +248,12 @@ bool Context::initializeFromFile(const std::string &inpFN)
 			setupReader.get("VISUAL")[worldIx] == "TRUE",
 			setupReader.get("VISUAL")[worldIx] == "TRUE" ? SimTK::Real(std::stod(setupReader.get("TIMESTEPS")[worldIx])) : 0);
 
+		if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1.1." + std::to_string(worldIx));}
+
 		flexibilities.clear();
 	}
+
+	if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1.2");}
 
 	// desk_mass_related
 	// Set DuMM atom indexes into atoms of bAtomList
@@ -1073,15 +1079,15 @@ bool Context::CheckInputParameters(const SetupReader& setupReader) {
 	std::size_t inpNofMols = setupReader.get("MOLECULES").size();
 	std::size_t inpNofEmbeddedTopologies = inpNofWorlds * inpNofMols;
 
-	if(setupReader.get("ROOTS").size() != inpNofEmbeddedTopologies){
-		std::cerr << cerr_prefix << "Must have the same no. of root atoms as the no. of Topologies = nofWorlds x nofMolecules.\n" << std::endl;
-		return false;
-	}
+	// if(setupReader.get("ROOTS").size() != inpNofEmbeddedTopologies){
+	// 	std::cerr << cerr_prefix << "Must have the same no. of root atoms as the no. of Topologies = nofWorlds x nofMolecules.\n" << std::endl;
+	// 	return false;
+	// }
 
-	if(setupReader.get("ROOT_MOBILITY").size() != setupReader.get("ROOTS").size()){
-		std::cerr << cerr_prefix << "Must have the same no. of root mobilities as the no. of root atoms.\n" << std::endl;
-		return false;
-	}
+	// if(setupReader.get("ROOT_MOBILITY").size() != setupReader.get("ROOTS").size()){
+	// 	std::cerr << cerr_prefix << "Must have the same no. of root mobilities as the no. of root atoms.\n" << std::endl;
+	// 	return false;
+	// }
 
 	// World Samplers specific parameters
 	if(setupReader.get("SAMPLERS").size() != inpNofWorlds){

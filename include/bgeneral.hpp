@@ -42,7 +42,7 @@
 #endif
 
 #ifndef MEMDEBUG
-#define MEMDEBUG 0
+#define MEMDEBUG 1
 #endif
 
 using namespace std;
