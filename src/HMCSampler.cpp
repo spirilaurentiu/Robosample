@@ -175,7 +175,7 @@ bool HMCSampler::initialize(SimTK::State& someState)
  * acception-rejection step. Also realize velocities and initialize
  * the timestepper. -->
  */
-bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& samplerOutStream)
+bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose)
 {
 	// Set a validation flag
 	bool validated = true;
@@ -187,7 +187,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		//timeStepper->initialize(compoundSystem->getDefaultState());
 		timeStepper->initialize(someState);
 
-		if(integratorName == IntegratorName::OMMVV){
+		if(integratorType == IntegratorType::OMMVV){
 		}
 	}
 
@@ -207,7 +207,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	system->realize(someState, SimTK::Stage::Position);
 
 	// Copy coordinates to OpenMM
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		Simbody_To_OMM_setAtomsLocationsCartesian(someState);
 	}
 
@@ -223,7 +223,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	storeSimbodyConfiguration_XFMs(someState);
 
 	// Store OpenMM configuration
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 
 		assert("OMMVV nofBodies not equal to nofAtoms" && (matter->getNumBodies() == (natoms+1)));
 
@@ -343,11 +343,13 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	bendStretchJacobianDetLog = 0.0;
 
 	// Set DuMM temperature : TODO: should propagate to OpenMM
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		OMM_setDuMMTemperature(boostT);
 	}
 
-	// getMsg_InitialParams(samplerOutStream);
+	// if (verbose) {
+	// 	getMsg_InitialParams(samplerOutStream);
+	// }
 
 	return validated;
 
@@ -484,23 +486,23 @@ void HMCSampler::setMDStepsPerSampleStd(SimTK::Real mdstd){
 }
 
 // Set the method of integration
-void HMCSampler::setSampleGenerator(SampleGenerator sampleGeneratorArg)
+void HMCSampler::setAcceptRejectMode(AcceptRejectMode acceptRejectMode)
 {
-	if (SampleGenerator::EMPTY == sampleGeneratorArg) {
+	if (AcceptRejectMode::AlwaysAccept == acceptRejectMode) {
 		setAlwaysAccept(true);
 	}
-	else if (SampleGenerator::MC == sampleGeneratorArg) {
+	else if (AcceptRejectMode::MetropolisHastings == acceptRejectMode) {
 		setAlwaysAccept(false);
 	}
 }
 
-void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
+void HMCSampler::setAcceptRejectMode(const std::string& acceptRejectMode)
 {
-	if (generatorNameArg == "EMPTY"){
+	if (acceptRejectMode == "EMPTY"){
 		this->sampleGenerator = 0;
 		setAlwaysAccept(true);
 	}
-	else if(generatorNameArg == "MC"){
+	else if(acceptRejectMode == "MC"){
 		this->sampleGenerator = 1;
 		setAlwaysAccept(false);
 	}else{
@@ -509,18 +511,18 @@ void HMCSampler::setSampleGenerator(const std::string& generatorNameArg)
 	}
 }
 
-void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
+void HMCSampler::setIntegratorType(IntegratorType type)
 {
 
 	// scout("[KE0] HMCSampler Set integrator to ");
     // switch (integratorNameArg) {
-    //     case IntegratorName::EMPTY:
+    //     case IntegratorType::EMPTY:
     //         std::cout << "EMPTY";
     //         break;
-    //     case IntegratorName::VERLET:
+    //     case IntegratorType::VERLET:
     //         std::cout << "VERLET";
     //         break;
-    //     case IntegratorName::EULER:
+    //     case IntegratorType::EULER:
     //         std::cout << "EULER";
     //         break;
     //     // Add cases for other enum values here...
@@ -529,41 +531,38 @@ void HMCSampler::setIntegratorName(IntegratorName integratorNameArg)
     //         break;
     // }std::cout << eol;
 
-	this->integratorName = integratorNameArg;
+	this->integratorType = type;
 }
 
-void HMCSampler::setIntegratorName(const std::string integratorNameArg)
+void HMCSampler::setIntegratorType(const std::string type)
 {
+	//this->integratorType = IntegratorNameS[type];
 
-	//this->integratorName = IntegratorNameS[integratorNameArg];
+ 	if(type == "OMMVV"){
+		this->integratorType = IntegratorType::OMMVV;
 
- 	if(integratorNameArg == "OMMVV"){
-		this->integratorName = IntegratorName::OMMVV;
-
-	}else if (integratorNameArg == "VERLET" || integratorNameArg == "VERLET"){
-		integratorName = IntegratorName::VERLET;
+	}else if (type == "VERLET" || type == "VERLET"){
+		integratorType = IntegratorType::VERLET;
 		
-	}else if (integratorNameArg == "BOUND_WALK"){
-		integratorName = IntegratorName::BOUND_WALK;
+	}else if (type == "BOUND_WALK"){
+		integratorType = IntegratorType::BOUND_WALK;
 	
-	}else if (integratorNameArg == "BOUND_HMC"){
-		integratorName = IntegratorName::BOUND_HMC;
+	}else if (type == "BOUND_HMC"){
+		integratorType = IntegratorType::BOUND_HMC;
 
-	}else if(integratorNameArg == "STATIONS_TASK"){
-		integratorName = IntegratorName::STATIONS_TASK;
+	}else if(type == "STATIONS_TASK"){
+		integratorType = IntegratorType::STATIONS_TASK;
 
 	}else{
-		integratorName = IntegratorName::EMPTY;
-
+		integratorType = IntegratorType::EMPTY;
 	}
-
 }
 
 /** Store old and set kinetic and total energies */
 void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
 {
 	// Store kinetic energies
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		this->ke_o = OMM_calcKineticEnergy();
 	}else{
 		this->ke_o = matter->calcKineticEnergy(someState);		
@@ -884,7 +883,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 {	
 	// Set velocities to 0
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		uint32_t seed = randomEngine() >> 32;
 		dumm->setOpenMMvelocities(0, seed);
 	}else{
@@ -898,7 +897,7 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 */
 void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 {
-	if (this->integratorName == IntegratorName::OMMVV){
+	if (this->integratorType == IntegratorType::OMMVV){
 		uint32_t seed = randomEngine() >> 32;
 		dumm->setOpenMMvelocities(this->boostT, seed);
 
@@ -965,11 +964,11 @@ void HMCSampler::perturbVelocities(SimTK::State& someState,
 void HMCSampler::perturbForces(SimTK::State& someState,
 	ForcesPerturbMethod FPM){
 
-	if((FPM == ForcesPerturbMethod::NOT_IMPLEMENTED)){
+	if (FPM == ForcesPerturbMethod::NOT_IMPLEMENTED) {
 		assert(!"Not implemented");
 		// Realize velocity
 		system->realize(someState, SimTK::Stage::Dynamics);
-	}else if(FPM == ForcesPerturbMethod::EMPTY){
+	} else if (FPM == ForcesPerturbMethod::EMPTY) {
 		; // do nothing
 	}
 
@@ -1357,24 +1356,129 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 	RandomCache.generateGaussianVelocities();
 }
 
+struct Node {
+	SimTK::Vector Q;
+	SimTK::Vector U;
+};
+
+SimTK::Real CheckUTurn(const SimTK::Vector& Qforward, const SimTK::Vector& Qbackward, const SimTK::Vector& p) {
+	SimTK::Real dot = 0;
+	for (int i = 0; i < Qforward.size(); i++) {
+		dot += (Qforward[i] - Qbackward[i]) * p[i];
+	}
+	return dot;
+	// return dot < 0;
+}
+
 /*
 * Integrate trajectory
 */
-void HMCSampler::integrateTrajectory(SimTK::State& someState){
+void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 
-	// Adapt timestep
-	if(shouldAdaptTimestep){
-		adaptTimestep(someState);
-	}
+	// // Adapt timestep
+	// if(shouldAdaptTimestep){
+	// 	adaptTimestep(someState);
+	// }
 
-	if(this->integratorName == IntegratorName::VERLET){
+	if(this->integratorType == IntegratorType::VERLET){
+
+		if (!useNUTS) {
+			world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
+			system->realize(someState, SimTK::Stage::Position);
+			return;
+		}
+
 		try {
 
-			// Call Simbody TimeStepper to advance time
-			//std::cout << "HMCSampler::integrateTrajectory for "<< MDStepsPerSample <<" x  "<< timestep <<" at default boost T " << this->boostT << std::endl;
-			this->world->timeStepper->stepTo(someState.getTime() + (timestep*MDStepsPerSample));
+			// Set up random 0 to 1 generator
+			std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
 
-			system->realize(someState, SimTK::Stage::Position);
+			// Get initial momenta
+			SimTK::Vector p;
+			world->matter->multiplyByM(someState, someState.getU(), p);
+
+			Node CurrentNode;
+			CurrentNode.Q = someState.getQ();
+			CurrentNode.U = someState.getU();
+
+			int MaxDepth = 10;
+			std::map<int, Node> Trajectory; // Does not allow reserve
+			Trajectory[0] = CurrentNode;
+
+			bool found = false;
+
+			for (int depth = 0; depth < MaxDepth; depth++) {
+
+				bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
+				int endpoint = 0;
+				SimTK::Vector U, Q;
+
+				if (Direction == 0) {
+					// Forward
+					U = Trajectory.rbegin()->second.U;
+					Q = Trajectory.rbegin()->second.Q;
+
+					endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
+					// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
+				} else {
+					// Backward
+					U = Trajectory.begin()->second.U;
+					Q = Trajectory.begin()->second.Q;
+
+					endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
+					// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
+
+					if (Trajectory.begin()->first == 0) {
+						for (int i = 0; i < U.size(); i++) {
+							U[i] = -U[i];
+						}
+					}
+				}
+
+				// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+
+				someState.updQ() = Q;
+				someState.updU() = U;
+				world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
+				system->realize(someState, SimTK::Stage::Position);
+
+				// Check U-turn
+				const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
+				if (C < 0) {
+					// std::cout << "U-turn detected" << std::endl;
+					found = true;
+					break;
+				} else {
+					// std::cout << "No U-turn, C = " << C << std::endl;
+
+					Node NextNode;
+					NextNode.Q = someState.getQ();
+					NextNode.U = someState.getU();
+
+					// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
+					// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
+					// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+
+					Trajectory.insert(std::make_pair(endpoint, NextNode));
+				}
+			}
+
+			if (found) {
+				std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
+			} else {
+				std::cout << "No U-turn detected" << std::endl;
+			}
+
+			// Chose randomly from the trajectory
+			std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
+			int index = uniformIntDistribution(randomEngine);
+			auto it = Trajectory.begin();
+			std::advance(it, index);
+
+			someState.updQ() = it->second.Q;
+			someState.updU() = it->second.U;
+
+			system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
 
 		}catch(const std::exception&){
 
@@ -1384,7 +1488,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 
 		}
 
-	}else if(this->integratorName == IntegratorName::BOUND_WALK){
+	}else if(this->integratorType == IntegratorType::BOUND_WALK){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1398,7 +1502,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::BOUND_HMC){
+	}else if(this->integratorType == IntegratorType::BOUND_HMC){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1412,7 +1516,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::STATIONS_TASK){
+	}else if(this->integratorType == IntegratorType::STATIONS_TASK){
 		try {
 
 			// Call Simbody TimeStepper to advance time
@@ -1426,7 +1530,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
 			
 		}
 
-	}else if(this->integratorName == IntegratorName::OMMVV){
+	}else if(this->integratorType == IntegratorType::OMMVV){
 
 		// This code works for updating simbody bodies
 		// each body should be an atom
@@ -1465,7 +1569,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState){
         //     proposeExceptionCaught = true;
         // }
 
-	}else if(this->integratorName == IntegratorName::EMPTY){
+	}else if(this->integratorType == IntegratorType::EMPTY){
 		try {
 
 			// Advance to Position Stage
@@ -1936,7 +2040,7 @@ void HMCSampler::integrateTrajectory_BoundHMC(SimTK::State& someState){
 			perturbVelocities(someState);
 			calcProposedKineticAndTotalEnergyOld(someState);
 
-			integrateTrajectory(someState);
+			integrateTrajectory(someState, true);
 			system->realize(someState, SimTK::Stage::Dynamics);
 		}
 }
@@ -2018,7 +2122,7 @@ void HMCSampler::integrateTrajectory_TaskSpace(SimTK::State& someState){
 */
 void HMCSampler::setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass) {
 	// set if using openmm integrator
-	if(integratorName == IntegratorName::OMMVV) {
+	if(integratorType == IntegratorType::OMMVV) {
 		dumm->setOpenMMparticleMass(nax, mass);
 	}
 }
@@ -2045,9 +2149,7 @@ void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& po
 		// 	<< "omm_locations.size OpenMM::Vec3 positions.size()"
 		// 	<< omm_locations.size() <<" "<< positions.size() << std::endl << std::flush;
 			
-		assert("omm_locations size" && 
-			(omm_locations.size() == positions.size()));
-
+		// assert("omm_locations size" && (omm_locations.size() == positions.size()));
 		omm_locations_old[0] = SimTK::Vec3(0, 0, 0);
 
 		for (int i = 0; i < positions.size(); i++) {
@@ -2179,8 +2281,10 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 		omm_locations[0] = SimTK::Vec3(0, 0, 0);
 
+		// @TODO shouldn't this be +1 and one common type already?
 		const std::vector<OpenMM::Vec3>& positions = dumm->OMM_getPositions();
 
+		// @TODO omm_locations[i + 1] = positions[i]
 		for (int i = 0; i < positions.size(); i++) {
 			omm_locations[i + 1] = SimTK::Vec3(
 				positions[i][0],
@@ -2191,6 +2295,8 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 		// Invalidate all statges (because Somewhere, the topology gets ruined)
 		matter->invalidateSubsystemTopologyCache();
 
+		// @TODO can't we precompute the parent mapping?
+		// @TODO is there a way to minimize cache misses with this scheme?
 		for (int i = 0; i < dumm->getNumAtoms(); i++) {
 
 			SimTK:DuMM::AtomIndex aix(i);
@@ -2203,7 +2309,7 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 			Transform X_PF = Transform(Rotation(), location);
 			Transform X_BM = Transform(Rotation(), parent_location);
-			Transform X_FM = Transform(Rotation());
+			Transform X_FM = Transform(Rotation()); // @TODO can i declare this inside hmcsampler and just reuse it without reallocation on each call?
 
 			// std::cout << "OMMTEST" <<"\n"<<std::flush;
 			// std::cout << " parentMbx mbx "<< int(parentMbx) <<" "<< int(mbx) << std::endl;
@@ -2224,8 +2330,6 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 		/* std::cout << "HMCSampler::OMM_To_Simbody_setAtomsLocations AFTER " << std::endl;
 		world->PrintFullTransformationGeometry(someState); */
-
-
 }
 
 
@@ -2270,26 +2374,23 @@ HMCSampler::calcMathJacobian(const SimTK::State& someState,
 
 			// Get atom indeces in Compound and Simbody
 			const auto aIx = AtomList.getCompoundAtomIndex();
-			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(
-				aIx, *dumm);
+			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
 
-				// Get atom station on mobod
-				SimTK::Vec3 station = 
-				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(
-				aIx, *dumm);
+			// Get atom station on mobod
+			SimTK::Vec3 station = topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
 				
-				// Get station Jacobian: 42*nt + 54*nb + 33*n flops
-				SimTK::Matrix stationJ;
-				matter->calcStationJacobian(someState, mbx, station, stationJ);
+			// Get station Jacobian: 42*nt + 54*nb + 33*n flops
+			SimTK::Matrix stationJ;
+			matter->calcStationJacobian(someState, mbx, station, stationJ);
 				
-				// Add new three rows corresponding to this atom
-				for(unsigned int j = 0; j < nu; j++){
-					mathJ(i + 0, j) = stationJ(0, j);
-					mathJ(i + 1, j) = stationJ(1, j);
-					mathJ(i + 2, j) = stationJ(2, j);
-				}
+			// Add new three rows corresponding to this atom
+			for (unsigned int j = 0; j < nu; j++) {
+				mathJ(i + 0, j) = stationJ(0, j);
+				mathJ(i + 1, j) = stationJ(1, j);
+				mathJ(i + 2, j) = stationJ(2, j);
+			}
 
-				i += 3; // increment row number - 3 rows per atom
+			i += 3; // increment row number - 3 rows per atom
 		}
 	}
 
@@ -2681,6 +2782,8 @@ denoted by Jain l = sqrt(D) * [I -JPsiK]. This is upper triangular matrix and it
 multipling a set of orthonormal vectors with the sqrt(MInv). **/
 void HMCSampler::calcSqrtMInvU(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const
 {
+	// @TODO what is this and why do have it?
+
 	const int nu = someState.getNU();
 	assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvU: passed matrix doesn't have nu x nu size.");
 
@@ -2714,6 +2817,8 @@ This is lower triangular matrix and it is computed by multipling a set of
  orthonormal vectors with the sqrt(MInv) and transpose it. **/
 void HMCSampler::calcSqrtMInvL(SimTK::State& someState, SimTK::Matrix& SqrtMInv) const
 {
+	// @TODO what is this and why do have it?
+	
 	const int nu = someState.getNU();
 	assert((SqrtMInv.nrow() == nu) && (SqrtMInv.ncol() == nu) && "calcSqrtMInvL: passed matrix doesn't have nu x nu size.");
 
@@ -3013,7 +3118,7 @@ void HMCSampler::setBoostTemperature(SimTK::Real argT)
 	this->unboostUFactor = 1 / boostUFactor;
 	//std::cout << "HMC: boost velocity scale factor: " << this->boostUFactor << std::endl;
 
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		OMM_setDuMMTemperature(this->boostT);
 	}
 
@@ -3048,7 +3153,7 @@ HMCSampler::storeOldPotentialEnergies(
 void HMCSampler::calcProposedKineticAndTotalEnergyOld(SimTK::State& someState){
 
 	// Get proposed kinetic energy
-	if(integratorName == IntegratorName::OMMVV){
+	if(integratorType == IntegratorType::OMMVV){
 		this->ke_o = OMM_calcKineticEnergy();
 
 	}else{
@@ -3074,7 +3179,7 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 	}
 
 	// Do not apply adaptive timesteps to OMMVV
-	if (integratorName == IntegratorName::OMMVV) {
+	if (integratorType == IntegratorType::OMMVV) {
 		return;
 	}
 
@@ -3099,12 +3204,16 @@ void HMCSampler::adaptTimestep(SimTK::State&)
 	prevMDStepsPerSample = MDStepsPerSample;
 
 	if (dt == 0.0 || dm == 0.0) {
+		// Only this gets executed - prevTimestep is also set in HMCSampler::setTimestep()
 		if (acceptance > idealAcceptance) {
-			timestep *= 1.25;
-			MDStepsPerSample *= 1.25;
+			timestep *= 1.05;
+			MDStepsPerSample += 1;
 		} else {
-			timestep /= 1.25;
-			MDStepsPerSample /= 1.25;
+			timestep /= 1.05;
+			MDStepsPerSample -= 1;
+			if (MDStepsPerSample < 1) {
+				MDStepsPerSample = 1;
+			}
 		}
 	} else {
 		timestep -= learningRate * (da / dt);
@@ -3267,7 +3376,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 	//world->calcZMatrixBAT( someState );
 
 	// Get new potential energy
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		pe_n = OMM_calcPotentialEnergy();
 	}else{
 		pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
@@ -3278,7 +3387,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 
 	// Get new Fixman potential
 	if(useFixman){
-		if(this->integratorName == IntegratorName::OMMVV){
+		if(this->integratorType == IntegratorType::OMMVV){
 			fix_n = CartesianFixmanPotential();
 		}else{
 			fix_n = calcFixman(someState);
@@ -3290,7 +3399,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 	}
 
 	// Get new kinetic energy
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		ke_n = OMM_calcKineticEnergy();
 	}else{
 		system->realize(someState, SimTK::Stage::Velocity);
@@ -3348,22 +3457,22 @@ VelocitiesPerturbMethod HMCSampler::velocitiesPerturbMethod(void)
 {
 	// How do we initialize velocities
 
-	if(integratorName == IntegratorName::OMMVV){
+	if(integratorType == IntegratorType::OMMVV){
 		return VelocitiesPerturbMethod::TO_T;
 
-	}else if (integratorName == IntegratorName::VERLET){
+	}else if (integratorType == IntegratorType::VERLET){
 		return VelocitiesPerturbMethod::TO_T;
 
-	}else if (integratorName == IntegratorName::BOUND_WALK){
+	}else if (integratorType == IntegratorType::BOUND_WALK){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if (integratorName == IntegratorName::BOUND_HMC){
+	}else if (integratorType == IntegratorType::BOUND_HMC){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if(integratorName == IntegratorName::STATIONS_TASK){
+	}else if(integratorType == IntegratorType::STATIONS_TASK){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
-	}else if (integratorName == IntegratorName::EMPTY){
+	}else if (integratorType == IntegratorType::EMPTY){
 		return VelocitiesPerturbMethod::TO_ZERO;
 
 	}else{
@@ -3643,7 +3752,7 @@ void HMCSampler::printDrilling(SimTK::State& someState)
  * <!-- It implements the proposal move in the Hamiltonian Monte Carlo
  * algorithm. It essentially propagates the trajectory. -->
  **/
-bool HMCSampler::propose(SimTK::State& someState)
+bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 {
 
 	// Adapt Gibbs blocks (Transformer)
@@ -3659,7 +3768,7 @@ bool HMCSampler::propose(SimTK::State& someState)
 	calcProposedKineticAndTotalEnergyOld(someState);
 
 		// Integrate trajectory
-		integrateTrajectory(someState);
+		integrateTrajectory(someState, useNUTS);
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
@@ -4000,13 +4109,87 @@ void HMCSampler::getMsg_EnergyDetails(
 
 }
 
+/*
+def tune_step_size(target_accept=0.75, n_warmup=1000, initial_e=0.1):
+    e = initial_e  # Initial step size
+    log_e_avg = np.log(e)
+    running_sum = 0
+    gamma = 0.05  # Controls step size adaptation rate
+    t0 = 10  # Stabilizes early iterations
+    kappa = 0.75  # Controls decay rate of adaptation
+    mu = np.log(10 * e)  # Initial value based on heuristic
+    
+    for n in range(1, n_warmup + 1):
+        # Simulate one HMC step and get acceptance (1 if accepted, 0 if not)
+        accepted = simulate_hmc_step(e)
+        accept_prob = min(1, accepted)
+        
+        # Update running average of log step size
+        running_sum += target_accept - accept_prob
+        log_e = mu - (running_sum / (t0 + n)) * np.sqrt(n) / gamma
+        
+        # Update step size
+        e = np.exp(log_e)
+        log_e_avg = (1 - n**(-kappa)) * log_e_avg + n**(-kappa) * log_e
+        
+        # Print progress
+        if n % 100 == 0:
+            print(f"Iteration {n}: Step size = {e:.4f}, Acceptance Rate = {accept_prob:.2f}")
+    
+    return np.exp(log_e_avg)
+
+# Dummy HMC simulation function (replace with your actual HMC simulation)
+def simulate_hmc_step(e):
+    # Assume acceptance probability decreases with larger step size
+    acceptance_threshold = 0.75 - 0.1 * (e - 0.1)
+    return np.random.rand() < acceptance_threshold
+
+*/
 
 /*!
  * <!--	The main function that generates a sample -->
 */
-bool HMCSampler::sample_iteration(SimTK::State& someState,
-	std::stringstream& samplerOutStream)
+bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose)
 {
+
+	// // Warm up
+	// bool warmup = true;
+
+	// SimTK::Real e = 0.002;          // Initial step size (2 fs)
+	// SimTK::Real log_e_avg = 0.0;    // Average log step size
+	// SimTK::Real running_sum = 0.0;  
+	// SimTK::Real gamma = 0.15;       // Increased adaptation damping
+	// SimTK::Real t0 = 50;           // Increased early iteration stability
+	// SimTK::Real kappa = 0.75;      // Keep decay rate the same
+	// SimTK::Real mu = std::log(10 * e); // Initial value based on heuristic
+	// SimTK::Real target_accept = 0.651; // Target acceptance rate
+	// int n_warmup = 1000;
+
+	// for (int i = 0; i < n_warmup; i++) {
+	// 	if (!warmup || integratorType != IntegratorType::VERLET) {
+	// 		break;
+	// 	}
+		
+	// 	// Simulate one HMC step and get acceptance probability
+	// 	setTimestep(e, false);
+	// 	SimTK::Real accept_prob = propose(someState, false); // You'll need this function
+	// 	bool accepted = propose(someState, false);
+		
+	// 	// Update running average using actual acceptance probability
+	// 	running_sum += target_accept - accept_prob;
+		
+	// 	// Updated dual averaging formula without sqrt(i)
+	// 	SimTK::Real log_e = mu - (running_sum / (t0 + i)) / gamma;
+		
+	// 	// Update step size
+	// 	e = std::exp(log_e);
+	// 	log_e_avg = (1 - std::pow(i, -kappa)) * log_e_avg + std::pow(i, -kappa) * log_e;
+		
+	// 	if (i % 10 == 0) {
+	// 		std::cout << "Iteration " << i << ": Step size = " << e 
+	// 				<< ", Acceptance Rate = " << accept_prob << std::endl;
+	// 	}
+	// }
 
 	// Flag if anything goes wrong during simulation
 	bool validated = true;
@@ -4021,7 +4204,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
-	validated = propose(someState) && validated;
+	validated = propose(someState, false) && validated;
 
 	#pragma region REBAS_TEST
 	//validated = true;
@@ -4041,7 +4224,9 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 				
 				// Print
 				//Print(someState, validated, getAcc());
-				getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
+				if (verbose) {
+					getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+				}
 
 	// --- valid --- //
 	}else{
@@ -4051,6 +4236,12 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 
 					// Set status
 					setAcc(true);
+
+					// Print
+					//Print(someState, validated, getAcc());
+					if (verbose) {
+						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					}
 
 					// UPDATE
 					update(someState);
@@ -4068,6 +4259,12 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 					// Set status
 					setAcc(false);
 
+					// Print
+					//Print(someState, validated, getAcc());
+					if (verbose) {
+						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					}
+
 					// RESTORE
 					restore(someState);
 
@@ -4078,11 +4275,13 @@ bool HMCSampler::sample_iteration(SimTK::State& someState,
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
 				}
-
 	}
 
 	// Increase the sample counter and return
 	++nofSamples;
+
+	numSamples_period++;
+	numAccepted_period += getAcc();
 
 	// Return accepted
 	return getAcc();
@@ -4131,7 +4330,7 @@ void HMCSampler::restoreConfiguration(
 	SimTK::State& someState)
 {
 
-	if(integratorName == IntegratorName::OMMVV){
+	if(integratorType == IntegratorType::OMMVV){
 		OMM_restoreConfiguration(someState);
 		OMM_To_Simbody_setAtomsLocations(someState); // _clean_ seems redundant
 		
@@ -4195,7 +4394,7 @@ void HMCSampler::updateEnergies(void)
 void HMCSampler::update(SimTK::State& someState)
 {
 
-	if(this->integratorName == IntegratorName::OMMVV){
+	if(this->integratorType == IntegratorType::OMMVV){
 		// Update Simbody too
 		OMM_To_Simbody_setAtomsLocations(someState);
 	}
@@ -5493,84 +5692,77 @@ double HMCSampler::studyBATScale(SimTK::State& someState)
 */
 double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 {
-
 	// Accumulate result here
 	SimTK::Real logBATJacobian = 0.0;
 
 	system->realize(someState, SimTK::Stage::Position);
-
 	world->updateAtomListsFromSimbody(someState);
 
 	// Molecules
-	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
-
-		Topology& topology = topologies[topoIx];
-
+	for(auto& topology : topologies)
+    {
 		// Atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 
 			// Is this atom a root atom for a body
-			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0){
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) != 0) {
+				continue;
+			}
 
-				SimTK::Real bondLength = SimTK::NaN;
-				SimTK::Real bondAngle = SimTK::NaN;
+			SimTK::Real bondLength = SimTK::NaN;
+			SimTK::Real bondAngle = SimTK::NaN;
 
-				// Get body and parentBody
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// Get body and parentBody
+			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+			// (### 1 ###) Accumulate initial BAT values 
+			if(parentMbx == 0) continue; // Ground
 
-						// (### 1 ###) Accumulate initial BAT values 
-						if(parentMbx == 0){continue;} // Ground
+			// Get the neighbor atom in the parent mobilized body
+			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
 
-						// Get the neighbor atom in the parent mobilized body
-						SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
+			// Skip if no parent
+			if (chemParentAIx.isValid() && chemParentAIx.isValidExtended()) {
+				if(chemParentAIx < 0) continue;
+			} else {
+				continue;
+			}
 
-						if(chemParentAIx < 0){continue;} // no parent ??
+			// Get Top to parent frame
+			const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
+			SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+			SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
 
-						// Get Top to parent frame
-						const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
-						SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
-						SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+			SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
+			SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
+			SimTK::Vec3 G_ParentRoot = V3 - V2;
 
-						SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
-						SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
-						SimTK::Vec3 G_ParentRoot = V3 - V2;
+			bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
+			//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
 
-						bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
-						//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
+			// GET ANGLE
+			if(chemParentAIx >= 1){
+				SimTK::Compound::AtomIndex chemGrandParentIx;
+				chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+				SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
+				SimTK::Vec3 G_GrandParent = V2 - V1;
+				bondAngle = bAngle(V2, V1, V3);
+				//scout(" ") << "bondAngle " << bondAngle;
+			} // atom has a grandParent
 
-						// GET ANGLE
-						if(chemParentAIx >= 1){
+			//scout(" ") << eol;
 
-							SimTK::Compound::AtomIndex chemGrandParentIx;
-
-							chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
-
-							SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
-
-							SimTK::Vec3 G_GrandParent = V2 - V1;
-							
-							bondAngle = bAngle(V2, V1, V3);
-							//scout(" ") << "bondAngle " << bondAngle;
-								
-						} // atom has a grandParent
-
-						//scout(" ") << eol;
-
-						// (### 3 ###) Cook Jacobian
-						if( !(std::isnan(bondLength)) ){
-							logBATJacobian += 4.0 * std::log(bondLength);
-						}
-						if( !(std::isnan(bondAngle)) ){
-							logBATJacobian += 2.0 * std::log( std::sin(bondAngle) );
-						}
-
-
-			} // if atom is root
+			// (### 3 ###) Cook Jacobian
+			if( !(std::isnan(bondLength)) ){
+				logBATJacobian += 4.0 * std::log(bondLength);
+			}
+			if( !(std::isnan(bondAngle)) ){
+				logBATJacobian += 2.0 * std::log( std::sin(bondAngle) );
+			}
 
 		} // every atom
 
@@ -5592,82 +5784,75 @@ double HMCSampler::calcMobodsBATJacobianDetLog_NEW(SimTK::State& someState)
 	world->updateAtomListsFromSimbody(someState);
 
 	// Molecules
-	for(std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++){
-
-		Topology& topology = topologies[topoIx];
-
+	for(auto& topology : topologies)
+	{
 		// Atoms
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 
 			// Is this atom a root atom for a body
-			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) == 0){
+			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) != 0) {
+				continue;
+			}
 
-				SimTK::Real bondLength = SimTK::NaN;
-				SimTK::Real bondAngle = SimTK::NaN;
+			SimTK::Real bondLength = SimTK::NaN;
+			SimTK::Real bondAngle = SimTK::NaN;
 
-				// Get body and parentBody
-				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			// Get body and parentBody
+			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-				const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
-				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+			// (### 1 ###) Accumulate initial BAT values 
+			if(parentMbx == 0) { continue; } // Ground
 
-						// (### 1 ###) Accumulate initial BAT values 
-						if(parentMbx == 0){continue;} // Ground
+			// Get the neighbor atom in the parent mobilized body
+			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
 
-						// Get the neighbor atom in the parent mobilized body
-						SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
+			if (chemParentAIx.isValid() && chemParentAIx.isValidExtended()) {
+				if(chemParentAIx < 0) continue;
+			} else {
+				continue;
+			}
 
-						if(chemParentAIx < 0){continue;} // no parent ??
+			// Get Top to parent frame
+			const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
+			SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
+			SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
 
-						// Get Top to parent frame
-						const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
-						SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
-						SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
+			SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
+			SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
+			SimTK::Vec3 G_ParentRoot = V3 - V2;
 
-						SimTK::Vec3 V3 = topology.calcAtomLocationInGroundFrameThroughSimbody(aIx, *dumm, *matter, someState);
-						SimTK::Vec3 V2 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemParentAIx, *dumm, *matter, someState);
-						SimTK::Vec3 G_ParentRoot = V3 - V2;
+			bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
+			//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
 
-						bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
-						//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
+			// GET ANGLE
+			if(chemParentAIx >= 1){
+				SimTK::Compound::AtomIndex chemGrandParentIx;
+				chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
+				SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
+				SimTK::Vec3 G_GrandParent = V2 - V1;
+				bondAngle = bAngle(V2, V1, V3);
+				//scout(" ") << "bondAngle " << bondAngle;
+			} // atom has a grandParent
 
-						// GET ANGLE
-						if(chemParentAIx >= 1){
+			//scout(" ") << eol;
 
-							SimTK::Compound::AtomIndex chemGrandParentIx;
-
-							chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
-
-							SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
-
-							SimTK::Vec3 G_GrandParent = V2 - V1;
-							
-							bondAngle = bAngle(V2, V1, V3);
-							//scout(" ") << "bondAngle " << bondAngle;
-								
-						} // atom has a grandParent
-
-						//scout(" ") << eol;
-
-						// (### 3 ###) Cook Jacobian
-						if( !(std::isnan(bondLength)) ){
-							logBATJacobian += 2.0 * std::log(bondLength);
-						}
-						if( !(std::isnan(bondAngle)) ){
-							logBATJacobian += std::log( std::sin(bondAngle) );
-						}
-
-
-			} // if atom is root
+			// (### 3 ###) Cook Jacobian
+			if( !(std::isnan(bondLength)) ){
+				logBATJacobian += 2.0 * std::log(bondLength);
+			}
+			if( !(std::isnan(bondAngle)) ){
+				logBATJacobian += std::log( std::sin(bondAngle) );
+			}
 
 		} // every atom
 
 	} // every topology
 
 	return logBATJacobian;
-
 }
 
 // SimTK::Transform G_X_root = topology.getTopLevelTransform() * T_X_root;

@@ -1,0 +1,32 @@
+name: robo
+channels:
+  - omnia
+  - nvidia/label/cuda-12.2.0 XXXXXXX
+  - salilab
+  - conda-forge
+  - defaults
+dependencies:
+  - python XXXXXXX
+  - pip
+  - openmm
+  - openmmtools
+  - cuda-toolkit
+  - scipy
+  - astropy
+  - networkx
+  - mdtraj
+  - mdanalysis
+  - matplotlib
+  - ambertools
+  - tqdm
+  - rdkit
+  - parmed
+  - openbabel
+  - biopython
+  - seaborn
+  - pandas
+  - numpy
+  - modeller
+  - pip:
+    - rcsbsearchapi
+    - pdb2pqr

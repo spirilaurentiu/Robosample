@@ -119,7 +119,7 @@ public:
 	virtual void setAcc(bool);
 
 	/** Propose a move **/
-	virtual bool propose(SimTK::State& someState) = 0;
+	virtual bool propose(SimTK::State& someState, bool useNUTS) = 0;
 	//virtual eval() = 0;
 	virtual void update(SimTK::State& someState) = 0;
 
@@ -166,6 +166,9 @@ public:
 	int nofSamples = 0;
 	uint32_t seed;
 	bool acc = false;
+
+	int numSamples_period = 0;
+	int numAccepted_period = 0;
 
 	// Random number generators
 	Random64 randomEngine;

@@ -1880,14 +1880,10 @@ World::getAtomsLocationsInGround(SimTK::State & state)
 			const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
 
 			SimTK::Vec3 location;
-
-			if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
-				// ELIZA
+			if(samplers[0]->getIntegratorType() == IntegratorType::OMMVV){
 				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
 			}else{
-				location = 
-				topology.calcAtomLocationInGroundFrameThroughSimbody(
-					compoundAtomIndex, *forceField, *matter, state);
+				location = topology.calcAtomLocationInGroundFrameThroughSimbody(compoundAtomIndex, *forceField, *matter, state);
 			}
 
 			// std::cout << "getAtomsLocationsInGround " << dAIx << " " << location << std::endl;
@@ -1933,7 +1929,7 @@ World::getCurrentAtomsLocationsInGround(void)
 			// Calculate atom location in Ground
 			SimTK::Vec3 location;
 
-			// if(samplers[0]->getIntegratorName() == IntegratorName::OMMVV){
+			// if(samplers[0]->getIntegratorName() == IntegratorType::OMMVV){
 			// 	// ELIZA
 			// 	location = calcAtomLocationInGroundFrameThroughOMM(dAIx);
 			// }else{
@@ -2637,7 +2633,7 @@ SimTK::State& World::setAtomsLocationsInGround_REFAC(
 	this->compoundSystem->realize(someState, SimTK::Stage::Position);
 
 	// Copy everything to OpenMM too
-	if(getSampler(0)->getIntegratorName() == IntegratorName::OMMVV){
+	if(getSampler(0)->getIntegratorType() == IntegratorType::OMMVV){
 		updSampler(0)->Simbody_To_OMM_setAtomsLocationsCartesian(someState); // COMPLETE
 	}
 
@@ -2746,38 +2742,24 @@ World::calcMobodToMobodTransforms(
 					topology.getNumber(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
-	bool anglePin_OR = (
-		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-	);
-
-	if( (anglePin_OR) && ((atom->neighborsIndex).size() == 1)){
+	bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin ||
+					   mobility == SimTK::BondMobility::Mobility::Slider ||
+					   mobility == SimTK::BondMobility::Mobility::BendStretch;
+	
+	if (anglePin_OR && atom->neighborsIndex.size() == 1) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if( (anglePin_OR) && ((atom->neighborsIndex).size() != 1)){
+	} else if (anglePin_OR && atom->neighborsIndex.size() != 1) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
-			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
+			|| mobility == SimTK::BondMobility::Mobility::Cylinder) {
 		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
-
-	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
-	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
-	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::BallM
+			|| mobility == SimTK::BondMobility::Mobility::Rigid
+			|| mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
-
-	// Spherical
-	}else if((mobility == SimTK::BondMobility::Mobility::Spherical)
-	){
-		return std::vector<SimTK::Transform> {
-			P_X_F_spheric,
-			B_X_M_spheric
-		};
-
-	}else{
+	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
+		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else {
 		std::cout << "Warning: unknown mobility\n";
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
@@ -2978,47 +2960,32 @@ SimTK::Transform World::calcX_FMTransforms(
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	// Convenient bool
-	bool anglePin_OR = (
-		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-	);
-
+		bool anglePin_OR = 
+		   mobility == SimTK::BondMobility::Mobility::AnglePin
+		|| mobility == SimTK::BondMobility::Mobility::Slider
+		|| mobility == SimTK::BondMobility::Mobility::BendStretch;
+	
 	// Set X_FM value
-	if( (anglePin_OR) && ((atom->neighborsIndex).size() == 1)){
-
+	if (anglePin_OR && atom->neighborsIndex.size() == 1) {
 		X_FM = Transform();
 		return X_FM;
-
-	}else if( (anglePin_OR) && ((atom->neighborsIndex).size() != 1)){
-
+	} else if (anglePin_OR && atom->neighborsIndex.size() != 1) {
 		X_FM = Transform();
 		return X_FM;
-
-	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
-			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
-	){
-
+	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
+			|| mobility == SimTK::BondMobility::Mobility::Cylinder) {
 		X_FM = Transform();
 		return X_FM;
-
-	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
-	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
-	|| (mobility == SimTK::BondMobility::Mobility::Translation)
-	){
-		
+	} else if (mobility == SimTK::BondMobility::Mobility::BallM
+			|| mobility == SimTK::BondMobility::Mobility::Rigid
+			|| mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
 		X_FM = Transform();
 		return X_FM;
-
-	}else if((mobility == SimTK::BondMobility::Mobility::Spherical)
-	){
-
+	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
 		X_FM = Transform();
-		//X_FM = InboardLength_mZAxis;
+		// X_FM = InboardLength_mZAxis;
 		return X_FM;
-
-	}else{
-
+	} else {
 		X_FM = Transform();
 		std::cout << "Warning: unknown mobility\n";
 		return X_FM;
@@ -3248,49 +3215,61 @@ std::size_t World::getNofSamplers() const
  * for samplers names. -->
 */
 bool World::addSampler(SamplerName samplerName,
-	SampleGenerator generator,
-	IntegratorName integratorName,
+	IntegratorType integratorType,
 	ThermostatName thermostatName,
-	SimTK::Real timestep,
-	int mdStepsPerSample,
-	int mdStepsPerSampleStd,
-	SimTK::Real boostTemperature,
-	int boostMDSteps,
-	int distort,
-	int work,
-	int flow,
 	bool useFixmanPotential)
 {
-	// Check if the user wants adaptive time step
-	bool adaptiveTS = false;
-	if (timestep == -1) {
-		adaptiveTS = true;
-	}
-
-	std::cout << " OMMDEBUG World::addSampler adaptiveTS is " << adaptiveTS << std::endl;
-
-	if (integratorName == IntegratorName::OMMVV) {
+	// Integrate with OpenMM if the integrator is OpenMM Velocity Verlet (OMMVV)
+	if (integratorType == IntegratorType::OMMVV) {
 		forceField->setUseOpenMMIntegration(true);
-		forceField->setUseOpenMMCalcOnlyNonBonded(false);
-		forceField->setDuMMTemperature(boostTemperature);
 
-		// TODO default value that does not care about hydrogen mass (1.something)
-		if (adaptiveTS) {
-			timestep = 0.0007;
-		}
-
-		std::cout << "trying to set timestep to " << timestep << std::endl << std::flush;
-		forceField->setDuMMTimestep(timestep);
-
-	}else{
-		forceField->setUseOpenMMCalcOnlyNonBonded(false);
+		// the temperature has not been set at this point, but is needed to create the openmm system
+		// forceField->setDuMMTemperature(temperature);
 	}
+	// Non-bonded forces will always be calculated with OpenMM regardless of the integrator type
+	// However, if the integrator is OMMVV, we want more that that so we set it to false
+	forceField->setUseOpenMMCalcOnlyNonBonded(integratorType != IntegratorType::OMMVV);
 
     if(MEMDEBUG){
 		std::cout << "World::addSampler memory 1\n" << exec("free") << std::endl << std::flush;
 		std::cout << "World::addSampler memory 1\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
 		std::cout << "World::addSampler memory 1\n" << getResourceUsage() << " kB" << std::endl << std::flush;
 	}
+
+	// Set atom masses to OpenMM
+	int natoms = 0;
+	for (const auto& t : *topologies) {
+		natoms += t.natoms;
+	}
+
+	std::vector<SimTK::Real> masses(natoms, 0);
+	bool fixedRoot = false;
+
+	// std::vector<int> fixedAtoms;
+	// for (const auto& f: flexibilities) {
+	// 	if (f.mobility == BondMobility::Mobility::Rigid) {
+	// 		if (f.i == -1) fixedAtoms.push_back(f.j);
+	// 		else if (f.j == -1) fixedAtoms.push_back(f.i);
+	// 	}
+	// }
+
+	for (const auto& topology : *topologies) {
+		for (const auto& atom : topology.subAtomList) {
+			SimTK::mdunits::Mass mass = atom.getMass();
+			if (rootMobilizer == "Weld" && !fixedRoot) {
+				mass = 0;
+				fixedRoot = true;
+			}
+
+			masses[atom.getNumber()] = mass;
+		}
+	}
+
+	// for (int i = 0; i < myContext->natoms; i++) {
+	// 	std::cout << "masses[" << i << "] = " << masses[i] << std::endl;
+	// }
+
+	forceField->setOpenMMMasses(masses);
 
 	// This is needed because each call to forceField invalidates the topology cache
 	// As far as I understand, you cannot modify forceField afther this call
@@ -3307,87 +3286,25 @@ bool World::addSampler(SamplerName samplerName,
 
 		// Construct a new sampler
 		samplers.emplace_back(std::make_unique<HMCSampler>(*this, *compoundSystem, *matter, *topologies, *forceField, *forces, *timeStepper));
+		auto& sampler = dynamic_cast<HMCSampler&>(*samplers.back());
 
 		// Initialize the sampler
-		// This is independent of the sampler type, but we need it to be initialized before getting the recommended time step
 		SimTK::State& worldAdvancedState = integ->updAdvancedState();
-		samplers.back()->initialize(worldAdvancedState);
-
-		// Use the recommended time step
-		if (adaptiveTS) {
-			timestep = getRecommendedTimesteps();
-		}
+		sampler.initialize(worldAdvancedState);
 
 		// Set sampler parameters
-		samplers.back()->setSampleGenerator(generator);
-		samplers.back()->setIntegratorName(integratorName);
-		samplers.back()->setThermostat(thermostatName);
-		samplers.back()->setTemperature(this->temperature); // TODO where???
-		samplers.back()->setTimestep(timestep, adaptiveTS); // TODO should error when negative
-		samplers.back()->setMDStepsPerSample(mdStepsPerSample);
-		samplers.back()->setMDStepsPerSampleStd(mdStepsPerSampleStd);
-		samplers.back()->setSeed(randomEngine);
-
-		samplers.back()->setGuidanceHamiltonian(boostTemperature, boostMDSteps);
-		samplers.back()->setNonequilibriumParameters(distort, work, flow);
+		sampler.setIntegratorType(integratorType);
+		sampler.setThermostat(thermostatName);
+		sampler.setSeed(randomEngine);
 
 		// TODO should this be inherited from parent world?
 		if (useFixmanPotential) {
-			samplers.back()->useFixmanPotential();
+			sampler.useFixmanPotential();
 		}
 	} else {
 		std::cerr << "Unknown sampler name" << std::endl;
 		return false;
 	}
-
-	// Copy atom masses to OpenMM
-	if (integratorName == IntegratorName::OMMVV) {
-
-		// Variant 1
-		for (auto& topology : (*topologies)){
-
-			for (auto& atom : topology.subAtomList) {
-
-				//auto cAIx = atom.getCompoundAtomIndex();
-				const SimTK::DuMM::AtomIndex dAIx = atom.getDuMMAtomIndex();
-				const SimTK::DuMM::NonbondAtomIndex nax = forceField->getNonbondAtomIndex(dAIx);
-
-				SimTK::Real mass = atom.getMass();
-
-				samplers.back()->setOMMmass(nax, mass);
-
-				// const DuMM::IncludedAtomIndex iax = forceField->getIncludedAtomIndexOfNonbondAtom(nax);
-				// std::cout << "OMMBUG World::addSampler inName name elem nax dAIx iax"
-				// 	<<" "<< atom.getInName() <<" "<< atom.getName() <<" "<<  atom.getElem()
-				// 	<<" "<< nax << " " << dAIx << " " << iax 
-				// 	<<" "<< mass
-				// 	<< std::endl;
-
-			}
-		}
-
-		// // Variant 2: old way
-		// for (const auto& topology : *topologies) {
-		// 	for (int taix = 0; taix < topology.getNumAtoms(); taix++) {
-		// 		Compound::AtomIndex caix = Compound::AtomIndex(taix);
-		// 		const auto mass = topology.getAtomElement(caix).getMass();
-		// 		//std::cout << "mass = " << mass << std::endl;
-		// 		const SimTK::DuMM::NonbondAtomIndex nax(taix);
-		// 		samplers.back()->setOMMmass(nax, mass);
-		// 	}
-		// }
-		// // Variant 3
-		// for (DuMM::NonbondAtomIndex nax(0); nax < forceField->getNumNonbondAtoms(); ++nax) {
-		// 	const SimTK::DuMM::AtomIndex dax = forceField->getAtomIndexOfNonbondAtom(nax);
-		// 	const DuMM::IncludedAtomIndex iax = forceField->getIncludedAtomIndexOfNonbondAtom(nax);
-		// 	std::cout << "OMMBUG World::addSampler nax dax iax"
-		// 		<< " " << nax << " " << dax << " " << iax 
-		// 		<< std::endl;
-		// }
-
-	}
-
-	std::cout << "World " << ownWorldIndex << " using timestep " << timestep << std::endl;
 
 	return true;
 }
@@ -3461,35 +3378,10 @@ SimTK::Real World::calcFixman(void)
 	return Fixman;
 }
 
-/**
- *  Generate a proposal
- **/
-bool World::generateProposal(void)
-{
-	// Update Robosample bAtomList
-	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromSimbody(currentAdvancedState);
-
-	// Prepare output
-	std::stringstream worldOutStream;
-	worldOutStream.str(""); // empty
-
-	// Print message to identify this World
-	worldOutStream << "World " << ownWorldIndex 
-		<< ", NU " << currentAdvancedState.getNU() << ":\n";
-
-	// GENERATE a proposal
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream);	
-	validated = updSampler(0)->propose(currentAdvancedState) && validated;
-
-	return validated;
-}
-
 /*! <--
  *  Generate a number of samples -->
  **/
-bool World::generateSamples(int howMany,
-	std::stringstream& worldOutStream, const std::string& header)
+bool World::generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
 
 	// Update Robosample bAtomList
@@ -3497,16 +3389,15 @@ bool World::generateSamples(int howMany,
 	updateAtomListsFromSimbody(currentAdvancedState);
 
 	// GENERATE the requested number of samples
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState,
-		worldOutStream);
+	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
 	for(int k = 0; k < howMany; k++) {
-		worldOutStream << header << " ";
-		updSampler(0)->getMsg_InitialParams(worldOutStream);
+		if (verbose) {
+			worldOutStream << header << " ";
+			updSampler(0)->getMsg_InitialParams(worldOutStream);
+		}
 
-		validated = updSampler(0)->sample_iteration(
-			currentAdvancedState, worldOutStream) 
-			&& validated;
+		validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
 			
 		//worldOutStream << "\n";
 	}
@@ -3596,55 +3487,55 @@ const SimTK::String& World::getRootMobility() const {
 	return rootMobilizer;
 }
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
 
-/*!
- * <!-- Drill -->
-*/
-const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
+// /*!
+//  * <!-- Drill -->
+// */
+// const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
 
 /*!
  * <!--  -->

@@ -1,50 +1,120 @@
-import robosample as robosample
 import flexor
 import mdtraj as md
+import argparse
+import robosample
+import batstat
+import numpy as np
 
-# 1i42 2btg 2eej 2k9q 2kbt 2kyy 2l39 2m2f 2oa4 2obu
-prmtop = "pro10/pro10.2.prmtop"
-inpcrd = "pro10/pro10.2.rst7"
+# Create the parser
+parser = argparse.ArgumentParser(description='Process PDB code and seed.')
+
+# Add the arguments
+parser.add_argument('name', type=str, help='Name of the simulation.')
+parser.add_argument('prmtop', type=str, help='Relative path to the .prmtop file.')
+parser.add_argument('rst7', type=str, help='Relative path to the .rst7 file.')
+parser.add_argument('seed', type=int, help='The seed.')
+parser.add_argument('equil_steps', type=int, help='The number of equilibration steps.')
+parser.add_argument('prod_steps', type=int, help='The number of production steps.')
+parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
+parser.add_argument('temperature_init', type=int, help='Temperature of the first replica.')
+parser.add_argument('pdbid', type=str, help='pdbid')
+
+# Parse the arguments
+args = parser.parse_args()
 
 # prepare flexor generator
-mdtrajObj = md.load(inpcrd, top=prmtop)
+mdtrajObj = md.load(args.rst7, top=args.prmtop)
 flexorObj = flexor.Flexor(mdtrajObj)
 
 # create robosample context
-c = robosample.Context(300, 300, 42)
-c.setNumThreads(0)
-# c.setPdbPrefix("2but42")
-# c.setOutput("temp") # the log file is created like log.[seed]
-c.setNofRoundsTillReblock(10) # per world?
-c.setRequiredNofRounds(2)
+# PDBID: 1APQ -> 1APQ_6000_0.dcd, 1APQ_6000_1.dcd, 1APQ_6000_2.dcd
+c = robosample.Context(args.name, args.seed, 0, 1, robosample.RunType.REMC, 1, 0)
 c.setPdbRestartFreq(0) # WRITE_PDBS
-c.setPrintFreq(1) # PRINT_FREQ
-c.setRunType(robosample.RunType.DEFAULT)
+c.setPrintFreq(args.write_freq) # PRINT_FREQ
+c.setNonbonded(0, 1.2)
+c.setGBSA(1)
+c.setVerbose(False)
 
 # load system
-c.loadAmberSystem(prmtop, inpcrd)
-
-c.appendDCDReporter('pro10.dcd')
+c.loadAmberSystem(args.prmtop, args.rst7)
 
 # openmm cartesian
 flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
 c.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
-# sidechains pins
-flex = flexorObj.create(range="all", distanceCutoff=0, subset=["side"], jointType="Pin", sasa_value=-1.0)
-c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+# Cluster the previous simulations
+dcd_files = [f"{args.pdbid}_6000_{i}.dcd" for i in range(5)]
+stats = batstat.BATCorrelations(dcd_files, args.prmtop_file)
+corr = stats.compute_correlations()
 
-# roll
-flex = flexorObj.create(range="all", distanceCutoff=0, subset=["coils", "rama"], jointType="Pin", sasa_value=-1.0)
-for f in flex:
-    c.addWorld(True, 1, robosample.RootMobility.WELD, [f], True, False, 0)
+abs_corr = np.abs(corr)
+max_corr = np.max(abs_corr, axis=0)
+clusters = flexor.cluster(max_corr)
+for c in clusters:
+	bond_list = []
+	for aix1, aix2, dihedral_type in c:
+		bond_list.append((aix1, aix2))
+        
+	flex = flexorObj.create_from_list(bond_list, robosample.BondMobility.Torsion)
+	c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+
+# # sidechains pins
+# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
+# c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+
+# # ramachandran pins
+# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
+# c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
 # samplers
-c.getWorld(0).addSampler(robosample.SamplerName.HMC, robosample.SampleGenerator.MC, robosample.IntegratorName.OMMVV, robosample.ThermostatName.ANDERSEN, 0.001, 200, 0, 300, 1, 0, 0, 0, False)
-c.getWorld(1).addSampler(robosample.SamplerName.HMC, robosample.SampleGenerator.MC, robosample.IntegratorName.VERLET, robosample.ThermostatName.ANDERSEN, 0.001, 200, 0, 300, 1, 0, 0, 0, True)
+sampler = robosample.SamplerName.HMC # rename to type
+thermostat = robosample.ThermostatName.ANDERSEN
 
-for i in range(len(flex)):
-    c.getWorld(2 + i).addSampler(robosample.SamplerName.HMC, robosample.SampleGenerator.MC, robosample.IntegratorName.VERLET, robosample.ThermostatName.ANDERSEN, 0.001, 200, 0, 300, 1, 0, 0, 0, True)
+c.getWorld(0).addSampler(sampler, robosample.IntegratorType.OMMVV, thermostat, False)
+
+# c.getWorld(1).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
+# c.getWorld(2).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
+
+for i in range(len(clusters)):
+	c.getWorld(i).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
+
+nof_replicas = 1
+temperature = args.temperature_init
+temperatures = []
+boost_temperatures = []
+for i in range(nof_replicas):
+    temperatures.append(temperature + (i * 10))
+    boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
+
+accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings]
+timesteps = [0.0007, 0.02, 0.075]
+worldIndexes = [0, 1, 2]
+world_indexes = [0, 1, 2]
+mdsteps = [1429, 10, 10] # 14286 - 1 ps instead of 10 ps
+boost_md_steps = mdsteps
+integrators = [robosample.IntegratorType.OMMVV, robosample.IntegratorType.VERLET, robosample.IntegratorType.VERLET]
+
+distort_options = [0, 0, 0]
+distort_args = ["0", "0" , "0"]
+flow = [0, 0, 0]
+work = [0, 0, 0]
+
+for i in range(nof_replicas):
+    c.addReplica(i)
+    c.addThermodynamicState(i,
+		temperatures[i],
+		accept_reject_modes,
+		distort_options,
+		distort_args,
+		flow,
+		work,
+        integrators,
+        worldIndexes,
+		timesteps,
+		mdsteps)
+
+# initialize the simulation
+c.Initialize()
 
 # start the simulation
-c.Run()
+c.RunREX(args.equil_steps, args.prod_steps)

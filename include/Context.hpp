@@ -63,21 +63,28 @@ class Context{
     /**@{**/
 	/**@}**/
 
+	std::string baseName;
+	bool verbose = true;
+
 public:
 	/**
 	 * @brief Initialize simulation variables.
+	 * @param baseName Base name for output files.
 	 * @param Ti Initial temperature. Cannot be 0.
 	 * @param Tf Final temperature. Cannot be 0. Must be greater than Ti.
 	 * @param seed Seed to use for random number generation. If 0, a random seed is used.
+	 * @param threads Number of threads to use.
+	 * @param nofRoundsTillReblock Number of rounds until reblocking.
+	 * @param runType Type of simulation to run.
 	*/
-	Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t seed = 0);
+	Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq);
 
 	/**
 	 * @brief Print atom's Compound and DuMM indexes.
 	*/
 	void PrintAtomsDebugInfo(void);
 
-
+	void setVerbose(bool verbose);
 
     /** @name System and simulation setup.
 	 * 1. Read input file.
@@ -112,6 +119,8 @@ public:
 	* @param var
 	*/
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
+	
+	void Initialize();
 
 	/**	
 	* @brief Construct topologies.
@@ -169,8 +178,6 @@ public:
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
 
 	//void setRootMobilitiesFromFlexFiles(void);
-
-	void appendDCDReporter(const std::string& filename);
 
 	// Input functions
 	bool loadTopologyFile(std::string topologyFilename);
@@ -536,18 +543,19 @@ public:
 	void addReplica(int index);
 
 	// Add one thermodynamic state
-	void addThermodynamicState(int index, SimTK::Real T,
-
-		std::vector<std::string>& rexSamplers,
-		std::vector<int>& rexDistortOptions,
-		std::vector<std::string>& rexDistortArgs,
-		std::vector<int>& rexFlowOptions,
-		std::vector<int>& rexWorkOptions,
-		std::vector<std::string>& rexIntegrators,
-
-		std::vector<int>& argWorldIndexes,
-		std::vector<SimTK::Real>& timestepsInThisReplica,
-		std::vector<int>& mdstepsInThisReplica);
+	void addThermodynamicState(
+		int index,
+		SimTK::Real T,
+		const std::vector<AcceptRejectMode>& acceptRejectModes,
+		const std::vector<int>& rexDistortOptions,
+		const std::vector<std::string>& rexDistortArgs,
+		const std::vector<int>& rexFlowOptions,
+		const std::vector<int>& rexWorkOptions,
+		const std::vector<IntegratorType>& rexIntegrators,
+		const std::vector<int>& argWorldIndexes,
+		const std::vector<SimTK::Real>& timestepsInThisReplica,
+		const std::vector<int>& mdstepsInThisReplica
+	);
 
 	/**
 	* @brief zmatrixbat_
@@ -656,7 +664,7 @@ public:
 	void initializeReplica(int whichReplica);
 
 	// Reset worlds parameters according to thermodynamic state
-	void setReplicasWorldsParameters(int thisReplica);
+	void setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bool adaptTimestep, int mixi);
 
 	// Given a scaling factor
 	SimTK::Real perturbScalingFactor(
@@ -680,6 +688,8 @@ public:
 	void RunLog(int roundi);
 	void REXLog(int mixi, int replicaIx);
 
+	void writeLog(int mixi, int replicaIx);
+
 	void incrementNofSamples(void);
 
     /** @name Replica exchange **/
@@ -695,7 +705,7 @@ public:
 	* @param
 	* @return
 	*/
-	void RunREX();
+	void RunREX(int equilRounds, int prodRounds);
 
 	void Run();
 
@@ -957,10 +967,6 @@ private:
 
 	std::vector<std::string> inpcrdFNs;
 
-	TrajectoryObject traj;
-	bool wantDCD = false;
-	std::vector<SimTK::Real> Xs, Ys, Zs;
-
     /** @name Z Matrix and BAT functions
 	*/
 
@@ -1119,28 +1125,28 @@ private:
 	// Pairs of replicas to be exchanged
 	std::vector<int> exchangePairs;
 
-	std::map<std::string, SampleGenerator> sampleGenerator = {
-		{ "EMPTY", SampleGenerator::EMPTY },
-		{ "MC", SampleGenerator::MC },
+	std::map<std::string, AcceptRejectMode> acceptRejectModes = {
+		{ "EMPTY", AcceptRejectMode::AlwaysAccept },
+		{ "MC", AcceptRejectMode::MetropolisHastings },
 	};
 
-	std::map<std::string, IntegratorName> integratorName = {
-		{ "EMPTY", IntegratorName::EMPTY },
-		{ "VV", IntegratorName::VERLET },
-		{ "VERLET", IntegratorName::VERLET },
-		{ "EULER", IntegratorName::EULER },
-		{ "EULER2", IntegratorName::EULER2 },
-		{ "CPODES", IntegratorName::CPODES },
-		{ "RUNGEKUTTA", IntegratorName::RUNGEKUTTA },
-		{ "RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2 },
-		{ "RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3 },
-		{ "RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG },
-		{ "BENDSTRETCH", IntegratorName::BENDSTRETCH },
-		{ "OMMVV", IntegratorName::OMMVV },
-		{ "BOUND_WALK", IntegratorName::BOUND_WALK },
-		{ "BOUND_HMC", IntegratorName::BOUND_HMC },
-		{ "STATIONS_TASK", IntegratorName::STATIONS_TASK },
-		{ "NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS },
+	std::map<std::string, IntegratorType> integratorTypes = {
+		{ "EMPTY", IntegratorType::EMPTY },
+		{ "VV", IntegratorType::VERLET },
+		{ "VERLET", IntegratorType::VERLET },
+		{ "EULER", IntegratorType::EULER },
+		{ "EULER2", IntegratorType::EULER2 },
+		{ "CPODES", IntegratorType::CPODES },
+		{ "RUNGEKUTTA", IntegratorType::RUNGEKUTTA },
+		{ "RUNGEKUTTA2", IntegratorType::RUNGEKUTTA2 },
+		{ "RUNGEKUTTA3", IntegratorType::RUNGEKUTTA3 },
+		{ "RUNGEKUTTAFELDBERG", IntegratorType::RUNGEKUTTAFELDBERG },
+		{ "BENDSTRETCH", IntegratorType::BENDSTRETCH },
+		{ "OMMVV", IntegratorType::OMMVV },
+		{ "BOUND_WALK", IntegratorType::BOUND_WALK },
+		{ "BOUND_HMC", IntegratorType::BOUND_HMC },
+		{ "STATIONS_TASK", IntegratorType::STATIONS_TASK },
+		{ "NOF_INTEGRATORS", IntegratorType::NOF_INTEGRATORS },
 	};
 
 	std::map<std::string, ThermostatName> thermostateName = {

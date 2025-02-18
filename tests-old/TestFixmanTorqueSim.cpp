@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 	SimTK::SimbodyMatterSubsystem *matter = world->matter.get();
 	SimTK::GeneralForceSubsystem *generalForceSubsystem = world->forces.get();
 	SimTK::DuMMForceFieldSubsystem *dumm = world->forceField.get();
-	SimTK::TimeStepper *timeStepper = world->ts.get();
+	SimTK::TimeStepper *timeStepper = world->timeStepper.get();
 	const SimTK::System *system = &(matter->getSystem());
 
 	readAmberInput amberReader;

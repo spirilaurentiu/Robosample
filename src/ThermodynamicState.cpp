@@ -88,9 +88,19 @@ std::vector<int>& ThermodynamicState::updWorldIndexes()
 	return worldIndexes;
 }
 
+void ThermodynamicState::setTimesteps(const std::vector<SimTK::Real>& timesteps)
+{
+	this->timesteps = timesteps;
+}
+
 const std::vector<SimTK::Real>& ThermodynamicState::getTimesteps() const
 {
 	return timesteps;
+}
+
+void ThermodynamicState::setMdsteps(const std::vector<int>& mdsteps)
+{
+	this->mdsteps = mdsteps;
 }
 
 const std::vector<int>& ThermodynamicState::getMdsteps() const
@@ -99,14 +109,14 @@ const std::vector<int>& ThermodynamicState::getMdsteps() const
 }
 
 // Set the sampling method
-void ThermodynamicState::setSamplers(const std::vector<std::string>& rexSamplersArg)
+void ThermodynamicState::setAcceptRejectModes(const std::vector<AcceptRejectMode>& acceptRejectModes)
 {
-	this->rexSamplers = rexSamplersArg;
+	this->rexAcceptRejectModes = acceptRejectModes;
 }
 
-const std::vector<std::string>& ThermodynamicState::getSamplers() const
+const std::vector<AcceptRejectMode>& ThermodynamicState::getAcceptRejectModes() const
 {
-	return this->rexSamplers;
+	return this->rexAcceptRejectModes;
 }
 
 // Next functions set Q, U, tau perturbing functions options for samplers
@@ -125,7 +135,7 @@ void ThermodynamicState::setDistortArgs(const std::vector<std::string>& rexDisto
 	this->rexDistortArgs = rexDistortOptionsArg;
 }
 
-std::vector<std::string>& ThermodynamicState::getDistortArgs()
+const std::vector<std::string>& ThermodynamicState::getDistortArgs() const
 {
 	return this->rexDistortArgs;
 }
@@ -142,12 +152,12 @@ void ThermodynamicState::setWorkOptions(const std::vector<int>& rexWorkOptionsAr
 }
 
 // Set the integrating method
-void ThermodynamicState::setIntegrators(const std::vector<std::string>& rexIntegratorsArg)
+void ThermodynamicState::setIntegrators(const std::vector<IntegratorType>& rexIntegratorsArg)
 {
 	this->rexIntegrators = rexIntegratorsArg;
 }
 
-const std::vector<std::string>& ThermodynamicState::getIntegrators() const
+const std::vector<IntegratorType>& ThermodynamicState::getIntegrators() const
 {
 	return rexIntegrators;
 }
@@ -615,4 +625,24 @@ std::vector<SimTK::Real>& ThermodynamicState::getQvars(const int whichWorld)
 	}else{
 		return Qvars[wPosInVector];
 	}
+}
+
+void ThermodynamicState::appendLog(const std::string& filename) {
+	// Open the log file
+	logFile = std::ofstream(filename);
+	if ( !logFile.is_open() ) {
+		std::cerr << "[ERROR] Failed to open log file " << filename << "." << std::endl;
+	}
+
+	// Write the header
+	logFile << "round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_n,pe_set,ke_o,ke_n,ke_set,fix_o,fix_n,fix_set,timestep,mdstep,acc" << std::endl;
+}
+
+
+void ThermodynamicState::appendDCDReporter(const std::string& filename, int natoms, int ntopologies) {
+	traj.createTrajectory(filename, "dcd", natoms, ntopologies);
+}
+
+void ThermodynamicState::writeDCD(std::vector<SimTK::Real>& x, std::vector<SimTK::Real>& y, std::vector<SimTK::Real>& z) {
+	traj.appendTimestep("dcd", x, y, z);
 }

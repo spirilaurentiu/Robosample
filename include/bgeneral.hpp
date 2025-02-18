@@ -506,10 +506,9 @@ void normalize(std::vector<SimTK::Real>& V);
 /*
  * Sampling
  */
-
-enum class SampleGenerator : int {
-	EMPTY = 0, // MD
-	MC // MCMC
+enum class AcceptRejectMode : int {
+	AlwaysAccept = 0, // MD
+	MetropolisHastings, // MCMC
 };
 
 // TODO: remove this
@@ -534,7 +533,7 @@ enum struct ThermostatName : int { // Thermostats
  * Simulation
  */
 
-enum struct IntegratorName : int { // Integrators
+enum struct IntegratorType : int { // Integrators
 	EMPTY = 0,
 	VERLET,
 	EULER,
@@ -553,21 +552,21 @@ enum struct IntegratorName : int { // Integrators
 };
 
 
-const std::unordered_map<std::string, IntegratorName>
+const std::unordered_map<std::string, IntegratorType>
 IntegratorNameS{
-	{"EMPTY", IntegratorName::EMPTY},
-	{"VERLET", IntegratorName::VERLET},
-	{"EULER", IntegratorName::EULER},
-	{"EULER2", IntegratorName::EULER2},
-	{"CPODES", IntegratorName::CPODES},
-	{"RUNGEKUTTA", IntegratorName::RUNGEKUTTA},
-	{"RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2},
-	{"RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3},
-	{"RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG},
-	{"OMMVV", IntegratorName::OMMVV},
-	{"RANDOM_WALK", IntegratorName::BOUND_WALK},
-	{"RANDOM_KICK", IntegratorName::BOUND_HMC},
-	{"STATIONS_TASK", IntegratorName::STATIONS_TASK}
+	{"EMPTY", IntegratorType::EMPTY},
+	{"VERLET", IntegratorType::VERLET},
+	{"EULER", IntegratorType::EULER},
+	{"EULER2", IntegratorType::EULER2},
+	{"CPODES", IntegratorType::CPODES},
+	{"RUNGEKUTTA", IntegratorType::RUNGEKUTTA},
+	{"RUNGEKUTTA2", IntegratorType::RUNGEKUTTA2},
+	{"RUNGEKUTTA3", IntegratorType::RUNGEKUTTA3},
+	{"RUNGEKUTTAFELDBERG", IntegratorType::RUNGEKUTTAFELDBERG},
+	{"OMMVV", IntegratorType::OMMVV},
+	{"RANDOM_WALK", IntegratorType::BOUND_WALK},
+	{"RANDOM_KICK", IntegratorType::BOUND_HMC},
+	{"STATIONS_TASK", IntegratorType::STATIONS_TASK}
 };
 
 enum struct PositionsPerturbMethod : int {

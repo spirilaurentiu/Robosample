@@ -119,7 +119,7 @@ public:
 
 	/** Same as initialize **/
 	virtual bool initialize(SimTK::State& advanced) ;
-	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream) ;
+	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream, bool verbose) ;
 
 
 
@@ -150,9 +150,9 @@ public:
 	void setThermostat(const char *);
 	virtual ThermostatName getThermostat(void) const;
  
-	void setIntegratorName(IntegratorName);
-	const IntegratorName getIntegratorName(void){return integratorName;}
-	void setIntegratorName(const std::string integratorName);
+	void setIntegratorType(IntegratorType type);
+	void setIntegratorType(const std::string type);
+	const IntegratorType getIntegratorType(void) { return integratorType; }
 
  	/* 
 	* Compute mathematical, rather than robotic Jacobian.
@@ -276,8 +276,8 @@ public:
 	void storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState);
 
 	// Set the method of integration
-	void setSampleGenerator(SampleGenerator sampleGeneratorArg);
-	void setSampleGenerator(const std::string& samplerNameArg);
+	void setAcceptRejectMode(AcceptRejectMode acceptRejectMode);
+	void setAcceptRejectMode(const std::string& acceptRejectMode);
 
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
 
@@ -300,7 +300,7 @@ public:
 	virtual void calcProposedKineticAndTotalEnergyOld(SimTK::State& someState);
 
 	/** Apply the L operator **/
-	virtual void integrateTrajectory(SimTK::State& someState);
+	virtual void integrateTrajectory(SimTK::State& someState, bool useNUTS);
 	void integrateVariableTrajectory(SimTK::State& someState);
 
 	/** Integrate trajectory one step at a time to compute quantities instantly **/
@@ -437,7 +437,7 @@ public:
 	the configuration and energies. Returns true if the proposal is 
 	validatedTODO: break in two functions:initializeVelocities and 
 	propagate/integrate **/
-	bool propose(SimTK::State& someState);
+	bool propose(SimTK::State& someState, bool useNUTS);
 
 	///////////////////////////////////////////////////////
 	// UPDATE
@@ -464,8 +464,7 @@ public:
 	*/
 	bool checkDistortionBasedOnE(SimTK::Real deltaPE);
 
-	virtual bool sample_iteration(SimTK::State& someState,
-		std::stringstream& samplerOutStream);
+	virtual bool sample_iteration(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose);
 
 	/**
 	 * Print everything after proposal generation
@@ -774,7 +773,7 @@ protected:
 	std::vector<SimTK::Real> dRdot;
 
 	// Integration
-	IntegratorName integratorName = IntegratorName::EMPTY;
+	IntegratorType integratorType = IntegratorType::EMPTY;
 
 	// For RANDOM_WALK Docking Simulations
 	SimTK::Vec3 geometricCenter;

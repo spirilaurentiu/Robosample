@@ -12,39 +12,47 @@
  * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT
  * -->
 */
-Context::Context(SimTK::Real Ti, SimTK::Real Tf, uint32_t argSeed)
+Context::Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
 {
-	// Use a random seed if none is provided
-	if (argSeed == 0) {
-		std::random_device rd;
-		this->seed = rd();
-	}else{
-		this->seed = argSeed;
-	}
-
-	// Set the random seed
-	randomEngine = buildRandom32(seed);
-
-	// Set the temperature range
-	tempIni = Ti;
-	tempFin = Tf;
-
-	// Check the temperature range
-	SimTK_ASSERT_ALWAYS(tempIni <= tempFin,
-		"Context::Context: Initial temperature must be less than or equal to the final temperature.");
-	SimTK_ASSERT_ALWAYS(tempIni > 0,
-		"Context::Context: Initial temperature must be greater than 0.");
-	SimTK_ASSERT_ALWAYS(tempFin > 0,
-		"Context::Context: Final temperature must be greater than 0.");
+	// Set the base name of the simulation
+	this->baseName = baseName + "_" + std::to_string(seed);
 
 	// Alert user of CUDA environment variables
 	if constexpr (OPENMM_PLATFORM_CUDA) {
 		if (SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
 			std::cerr << cwar_prefix << "CUDA_ROOT not set." << std::endl;
 		} else {
-			std::cerr << cinf_prefix << "CUDA_ROOT set to " << SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
+			std::cout << cinf_prefix << "CUDA_ROOT set to " << SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT") << std::endl;
 		}
 	}
+
+	// Use a random seed if none is provided
+	if (seed == 0) {
+		std::random_device rd;
+		this->seed = rd();
+	}else{
+		this->seed = seed;
+	}
+
+	// Set the random seed
+	randomEngine = buildRandom32(seed);
+
+	// Set the number of threads
+	if (threads < 0) {
+		std::cerr << "Invalid number of threads (negative value). Default number (0) of threads will be used." << std::endl;
+		numThreads = 0;
+	} else {
+		numThreads = threads;
+	}
+
+	this->roundsTillReblock = nofRoundsTillReblock;
+	this->runType = runType;
+	this->swapEvery = swapFreq;
+	this->swapFixman = swapFixmanFreq;
+}
+
+void Context::setVerbose(bool verbose){
+	this->verbose = verbose;
 }
 
 /*!
@@ -287,17 +295,8 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	for (int worldIx = 0; worldIx < nofWorlds; worldIx++) {
 		worlds[worldIx].addSampler(
 			SamplerName::HMC,
-			sampleGenerator[setupReader.get("SAMPLERS")[worldIx]],
-			integratorName[setupReader.get("INTEGRATORS")[worldIx]],
+			integratorTypes[setupReader.get("INTEGRATORS")[worldIx]],
 			thermostateName[setupReader.get("THERMOSTAT")[worldIx]],
-			std::stod(setupReader.get("TIMESTEPS")[worldIx]),
-			std::stoi(setupReader.get("MDSTEPS")[worldIx]),
-			setupReader.find("MDSTEPS_STD") ? std::stoi(setupReader.get("MDSTEPS_STD")[worldIx]) : 0,
-			std::stof(setupReader.get("BOOST_TEMPERATURE")[worldIx]),
-			std::stoi(setupReader.get("BOOST_MDSTEPS")[worldIx]),
-			setupReader.find("DISTORT_OPTION") ? std::stoi(setupReader.get("DISTORT_OPTION")[worldIx]) : 0,
-			setupReader.find("FLOW_OPTION") ? std::stoi(setupReader.get("FLOW_OPTION")[worldIx]) : 0,
-			setupReader.find("WORK_OPTION") ? std::stoi(setupReader.get("WORK_OPTION")[worldIx]) : 0,
 			setupReader.get("FIXMAN_POTENTIAL")[worldIx] == "TRUE"
 		);
 	} // every world
@@ -369,16 +368,27 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
-			addThermodynamicState(k, temperatures[k],
+			std::vector<AcceptRejectMode> modes;
+			for(const auto& m : rexSamplers[k]){
+				modes.push_back(acceptRejectModes[m]);
+			}
 
-				rexSamplers[k],
+			std::vector<IntegratorType> integrators;
+			for(const auto& i : rexIntegrators[k]){
+				integrators.push_back(integratorTypes[i]);
+			}
+
+			addThermodynamicState(k,
+				temperatures[k],
+				modes,
 				rexDistortOptions[k],
 				rexDistortArgs[k],
 				rexFlowOptions[k],
 				rexWorkOptions[k],
-				rexIntegrators[k],
-
-				rexWorldIndexes[k], rexTimesteps[k], rexMdsteps[k]);
+				integrators,
+				rexWorldIndexes[k],
+				rexTimesteps[k],
+				rexMdsteps[k]);
 		}
 
 		// Set a vector of replica pairs for exchanges
@@ -950,11 +960,58 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations();
+}
 
-	// Allocate coordinate buffers
-	Xs.resize(natoms);
-	Ys.resize(natoms);
-	Zs.resize(natoms);
+
+void Context::Initialize() {
+
+	worlds[0].setDuMMAtomIndexes(); // REVISE
+
+	// @TODO take a look
+	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		worlds[worldIx].setMyContext(this);
+	}
+
+	// Initialize the Z matrix
+	int firstWIx = 0;
+	SimTK::State& lastAdvancedState = worlds[firstWIx].integ->updAdvancedState();
+
+	// Get coordinates from source
+	const auto& firstWorldsAtomsLocations = worlds[firstWIx].getAtomsLocationsInGround(lastAdvancedState);
+
+	// Get Z-matrix indexes table	
+	calcZMatrixTable(); // PrintZMatrixTable();
+	reallocZMatrixBAT();
+	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
+	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
+
+	for(int k = 0; k < nofReplicas; k++){
+		replicas[k].reallocZMatrixBAT();
+		replicas[k].calcZMatrixBAT(firstWorldsAtomsLocations);
+		//replicas[k].PrintZMatrixBAT();
+	}
+	
+	// They all start with replica 0 coordinates
+	// TODO does not work in debug
+	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		World& world = worlds[worldIx];
+
+		// Add this worlds BAT coordinates to it's samplers
+		addSubZMatrixBATsToWorld(worldIx, 0);
+		//scout("Context::initializeFromFile PrintSubZMatrixBAT: ") << eol;
+		//world.updSampler(0)->PrintSubZMatrixBAT();
+	}
+
+	// Set a vector of replica pairs for exchanges
+	exchangePairs.resize(nofReplicas);
+
+	// Consider renaming
+	loadReplica2ThermoIxs();
+	PrintReplicas();
+
+	// Initialize non-equilibrium parameters
+	PrepareNonEquilibriumParams_Q();
+	setThermostatesNonequilibrium();
 }
 
 /*!
@@ -1010,11 +1067,6 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	}
 } */
 
-void Context::appendDCDReporter(const std::string& filename) {
-	traj.createTrajectory(filename, "dcd", natoms, topologies.size());
-	wantDCD = true;
-}
-
 /*!
  * <!-- Main run function -->
 */
@@ -1023,11 +1075,11 @@ void Context::Run() {
 		|| (getRunType() == RUN_TYPE::REMC)
 		|| (getRunType() == RUN_TYPE::RENEMC)
 		|| (getRunType() == RUN_TYPE::RENE)){
-		RunREX();
+		RunREX(0, requiredNofRounds);
 
 	}else{
 		std::cout << "[WARNING] " << "Unknown run type. Running default.\n" ;
-		RunREX();
+		RunREX(0, requiredNofRounds);
 	}
 
 }
@@ -1278,6 +1330,9 @@ void Context::addWorld(
 	worldIndexes.push_back(worldIndexes.size());
 	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
 
+	// @TODO should only pass natoms to worlds
+	worlds.back().setMyContext(this);
+
 	// Set force field scale factor.
 	if (useAmberForceFieldScaleFactors) {
 		worlds.back().setAmberForceFieldScaleFactors();
@@ -1312,6 +1367,7 @@ void Context::addWorld(
 	// Set temperatures for sampler and Fixman torque is applied to this world
 	worlds.back().setTemperature(tempIni);
 
+	// @TODO remove
 	rbSpecsFNs.push_back(std::vector<std::string>());
 	flexSpecsFNs.push_back(std::vector<std::string>());
 	regimens.push_back(std::vector<std::string>());
@@ -1319,6 +1375,7 @@ void Context::addWorld(
 	// Set seed for random number generators
 	worlds.back().setSeed(randomEngine());
 
+	// @TODO what does it do? how does it work if we have multiple molecules?
 	// Propagate root mobility
 	worlds.back().setRootMobility(rootMobility);
 
@@ -1347,6 +1404,7 @@ void Context::addWorld(
 		rootMobilities.back().push_back("Rigid");
 	}
 
+	// @TODO waddey doo 2 dis
 	for (const auto& flex : flexibilities) {
 
 		if(flex.i == -1){
@@ -1415,6 +1473,24 @@ void Context::addWorld(
 
 	// Allocate whatever needed Simbody dependent vectors from World here
 	worlds.back().allocateStatsContainers();
+
+	// print the inertia tensors of all bodies
+	// PrintSimbodyMobods();
+	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
+		std::cout << "Context::PrintSimbodyMobods world " << worldIx << "\n";
+		for(std::size_t molIx = 0; molIx < nofMols; molIx++){
+			std::cout << "Context::PrintSimbodyMobods molecule " << molIx << "\n";
+			const Topology& topology = worlds[worldIx].getTopology(molIx);
+
+			for(std::size_t i = 0; i < topology.getNumAtoms(); i++){
+				SimTK::Compound::AtomIndex aIx = (topology.subAtomList[i]).getCompoundAtomIndex();
+				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
+				std::cout << "i = " << i << "; aIx = " << aIx << "; mbx = " << mbx << ";" << std::endl << std::flush;
+			}
+		}
+	}
+
+	std::cout << "pula mea" << std::endl;
 
 }
 
@@ -3792,17 +3868,18 @@ void Context::addReplica(int index)
 	nofReplicas++;
 }
 
-void Context::addThermodynamicState(int index,
-		SimTK::Real T,
-		std::vector<std::string>& rexSamplers,
-		std::vector<int>& rexDistortOptions,
-		std::vector<std::string>& rexDistortArgs,
-		std::vector<int>& rexFlowOptions,
-		std::vector<int>& rexWorkOptions,
-		std::vector<std::string>& rexIntegrators,
-		std::vector<int>& argWorldIndexes,
-		std::vector<SimTK::Real>& timestepsInThisReplica,
-		std::vector<int>& mdstepsInThisReplica)
+void Context::addThermodynamicState(
+	int index,
+	SimTK::Real T,
+	const std::vector<AcceptRejectMode>& acceptRejectModes,
+	const std::vector<int>& rexDistortOptions,
+	const std::vector<std::string>& rexDistortArgs,
+	const std::vector<int>& rexFlowOptions,
+	const std::vector<int>& rexWorkOptions,
+	const std::vector<IntegratorType>& rexIntegrators,
+	const std::vector<int>& argWorldIndexes,
+	const std::vector<SimTK::Real>& timestepsInThisReplica,
+	const std::vector<int>& mdstepsInThisReplica)
 {
 	// Allocate and construct
 	thermodynamicStates.emplace_back(
@@ -3821,13 +3898,15 @@ void Context::addThermodynamicState(int index,
 	thermodynamicStates.back().setTemperature(T); // seems redundant
 
 	// Set the sampling methods
-	thermodynamicStates.back().setSamplers(rexSamplers);
+	thermodynamicStates.back().setAcceptRejectModes(acceptRejectModes);
 
 	// Set non-equilibrium params
 	thermodynamicStates.back().setDistortOptions(rexDistortOptions);
 	thermodynamicStates.back().setDistortArgs(rexDistortArgs);
 	thermodynamicStates.back().setFlowOptions(rexFlowOptions);
 	thermodynamicStates.back().setWorkOptions(rexWorkOptions);
+	thermodynamicStates.back().appendLog(baseName + "." + std::to_string(index) + "K.csv");
+	thermodynamicStates.back().appendDCDReporter(baseName + "." + std::to_string(index) + "K.dcd", natoms, topologies.size());
 
 	// Set integrating method
 	thermodynamicStates.back().setIntegrators(rexIntegrators);
@@ -4935,7 +5014,7 @@ void Context::setWorldDistortParameters(int whichWorld, SimTK::Real scaleFactor)
 }
 
 // Set thermodynamic and simulation parameters for one replica
-void Context::setReplicasWorldsParameters(int thisReplica)
+void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bool adaptTimestep, int mixi)
 {
 	// Get thermoState corresponding to this replica
 	// KEYWORD = replica, VALUE = thermoState
@@ -4964,8 +5043,8 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	// =============
 	// Set sampler names
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updSampler(0)->setSampleGenerator(
-			thermodynamicStates[thisThermoStateIx].getSamplers()[i]
+		worlds[replicaWorldIxs[i]].updSampler(0)->setAcceptRejectMode(
+			thermodynamicStates[thisThermoStateIx].getAcceptRejectModes()[i]
 		);
 	}
 
@@ -4976,7 +5055,7 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 	// Set integrator
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
 
-		worlds[replicaWorldIxs[i]].updSampler(0)->setIntegratorName(
+		worlds[replicaWorldIxs[i]].updSampler(0)->setIntegratorType(
 			thermodynamicStates[thisThermoStateIx].getIntegrators()[i]
 		);
 	}
@@ -4988,13 +5067,27 @@ void Context::setReplicasWorldsParameters(int thisReplica)
 		thermodynamicStates[thisThermoStateIx].getMdsteps();
 
 	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(replicaTimesteps[i], false);
+		AcceptRejectMode acceptRejectMode = thermodynamicStates[thisThermoStateIx].getAcceptRejectModes()[i];
+		int MDStepsPerSample = replicaMdsteps[i];
+		SimTK::Real timestep = replicaTimesteps[i];
+		bool adaptiveTimestep = adaptTimestep;
+
+		if (alwaysAccept) {
+			acceptRejectMode = AcceptRejectMode::AlwaysAccept;
+			MDStepsPerSample /= 10;
+			timestep /= 10;
+			adaptiveTimestep = false;
+		}
+
+		worlds[replicaWorldIxs[i]].updSampler(0)->setAcceptRejectMode(acceptRejectMode);
+		worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(MDStepsPerSample);
+
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(timestep, adaptiveTimestep);
+		if (worlds[replicaWorldIxs[i]].updSampler(0)->integratorType == IntegratorType::OMMVV) {
+			worlds[replicaWorldIxs[i]].updSampler(0)->dumm->setOpenMMTimestep(timestep / 10);
+		}
 	}
 
-	for(std::size_t i = 0; i < replicaNofWorlds; i++){
-		worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(
-			replicaMdsteps[i]);
-	}
 
 	// SET NON_EQUIL PARAMS ------------------------- 
 	// Non-equilibrium params change with every replica / thermoState
@@ -5364,8 +5457,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 	if(distortOption == 0) {
 
 		// Generate samples
-		validated = worlds[whichWorld].generateSamples(
-			numSamples, worldOutStream, header);
+		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
 
 	// Non-equilibrium world
 	} else if (distortOption != 0) {
@@ -5434,8 +5526,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 		#else
 
-			validated = worlds[whichWorld].generateSamples(
-				numSamples, worldOutStream, header); // =
+			validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose); // =
 
 		#endif
 
@@ -5472,8 +5563,9 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 	# pragma endregion REBAS_TEST
 
 	// Print the world output stream
-	worldOutStream << "\n";
-	std::cout << worldOutStream.str();
+	if (verbose) {
+		std::cout << worldOutStream.str();
+	}
 
 	return validated;
 }
@@ -5792,7 +5884,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 					}
 				}
 			}
-		}	
+		}
 		# pragma endregion REBAS_TEST
 
 
@@ -5801,6 +5893,29 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		thermoState.incrementWorldsNofSamples(1);
 
 	} // __end__ Main loop
+
+	if ((mixi + 1) % printFreq == 0) {
+		writeLog(mixi + 1, replicaIx);
+		REXLog(mixi + 1, replicaIx);
+
+		int whichDCD = replica2ThermoIxs[replicaIx];
+		auto [x, y, z] = replicas[replicaIx].getCoordinates();
+
+		// Convert from nm to Angstrom
+		for (auto& coord : x) {
+			coord *= 10;
+		}
+
+		for (auto& coord : y) {
+			coord *= 10;
+		}
+
+		for (auto& coord : z) {
+			coord *= 10;
+		}
+
+		thermodynamicStates[whichDCD].writeDCD(x, y, z);
+	}
 
 	replica.incrementNofSamples(1);
 	thermoState.incrementNofSamples(1);
@@ -5812,13 +5927,73 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	
 }
 
+void Context::writeLog(int mixi, int replicaIx) {
+	// Check if we want to write to log
+
+	int thermoIx = replica2ThermoIxs[replicaIx];
+	const auto& coords = replicas[replicaIx].getAtomsLocationsInGround();
+	const auto& replica = replicas[replicaIx];
+
+	int whichLog = replica2ThermoIxs[replicaIx];
+	if (!thermodynamicStates[whichLog].logFile.is_open()) {
+		return;
+	}
+
+	// Print stats for each world
+	for (const auto wIx : worldIndexes) {
+		SimTK::State& currentAdvancedState = worlds[wIx].integ->updAdvancedState();
+		const auto& sampler = pHMC((worlds[wIx].samplers[0]));
+
+		const auto temperature = sampler->getTemperature();
+		const auto NU = currentAdvancedState.getNU();
+		const auto acceptedSteps = sampler->acceptedSteps;
+		const auto pe_o = sampler->pe_o;
+		const auto pe_n = sampler->pe_n;
+		const auto pe_set = sampler->pe_set;
+		const auto ke_o = sampler->ke_o;
+		const auto ke_n = sampler->ke_n;
+		const auto ke_set = sampler->ke_set;
+		const auto fix_o = sampler->fix_o;
+		const auto fix_n = sampler->fix_n;
+		const auto fix_set = sampler->fix_set;
+		const auto timestep = sampler->getTimestep();
+		const auto mdstep = sampler->getMDStepsPerSample();
+		const SimTK::Real acc = sampler->numAccepted_period / static_cast<SimTK::Real>(sampler->numSamples_period);
+
+		sampler->numAccepted_period = 0;
+		sampler->numSamples_period = 0;
+
+		// Write to log
+		// round_ix replica_ix temperature world_ix NU accepted_steps pe_o pe_set ke_o ke_n fix_o fix_n fix_set timestep mdstep acc
+		thermodynamicStates[whichLog].logFile
+				<< std::fixed << std::setprecision(0) << mixi << ","
+                << replicaIx << ","
+                << std::fixed << std::setprecision(3) << temperature << ","
+                << std::fixed << std::setprecision(0) << wIx << ","
+                << NU << ","
+                << acceptedSteps << ","
+                << std::fixed << std::setprecision(2)
+				<< pe_o << ","
+				<< pe_n << ","
+                << pe_set << ","
+                << ke_o << ","
+                << ke_n << ","
+				<< ke_set << ","
+                << fix_o << ","
+                << fix_n << ","
+                << fix_set << ","
+				<< timestep << ","
+				<< mdstep << ","
+				<< acc << std::endl;
+	}
+}
+
 
 /*!
  * <!-- Run replica exchange protocol -->
 */
-void Context::RunREX()
+void Context::RunREX(int equilRounds, int prodRounds)
 {
-
     if(MEMDEBUG){stdcout_memdebug("Context::RunREX 1");}
 
 
@@ -5877,7 +6052,7 @@ void Context::RunREX()
 	int currFrontWIx = -1;
 
 	// REPLICA EXCHANGE MAIN LOOP -------------------------------------------->
-	for(size_t mixi = 0; mixi < nofMixes; mixi++){
+	for(size_t mixi = 0; mixi < equilRounds + prodRounds; mixi++) {
 
 		//std::cout << " REX batch " << mixi << std::endl;
 
@@ -5907,13 +6082,32 @@ void Context::RunREX()
 			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);           // (1)
 
 			// Set thermo and simulation parameters for the worlds in this replica
-			setReplicasWorldsParameters(replicaIx);
+			if (mixi < equilRounds) {
+				setReplicasWorldsParameters(replicaIx, true, false, mixi);
+			} else {
+				setReplicasWorldsParameters(replicaIx, false, true, mixi);
+			}
 
 	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 6");}
 
 			// ======================== SIMULATE ======================
 			//RunReplicaRefactor(mixi, replicaIx);
 			RunReplicaRefactor_SIMPLE(mixi, replicaIx);
+
+			// Copy the new timestep and mdstep if we should be adapting
+			if (mixi >= equilRounds) {
+				std::vector<SimTK::Real> newTimesteps(worlds.size());
+				std::vector<int> newMDSteps(worlds.size());
+
+				for (std::size_t i = 0; i < worlds.size(); i++) {
+					newTimesteps[i] = worlds[i].getSampler(0)->getTimestep();
+					newMDSteps[i] = worlds[i].getSampler(0)->getMDStepsPerSample();
+				}
+
+				int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+				thermodynamicStates[thisThermoStateIx].setTimesteps(newTimesteps);
+				thermodynamicStates[thisThermoStateIx].setMdsteps(newMDSteps);
+			}
 
 	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 7");}
 
@@ -5936,10 +6130,6 @@ void Context::RunREX()
 		}
 
 		this->nofRounds++; 
-
-		if (wantDCD) {
-			writeDCDs();
-		}
 
 	} // end rounds
 
@@ -6159,25 +6349,6 @@ void Context::writePdbs(int someIndex, int thermodynamicStateIx)
 
 	//}
 
-}
-
-void Context::writeDCDs()
-{
-	// Write the DCD from the first world
-	auto& world = worlds[worldIndexes.front()];
-
-	// Update bAtomList in Topology
-	const SimTK::State& pdbState = world.integ->updAdvancedState();
-	world.updateAtomListsFromSimbody(pdbState);
-
-	for (int i = 0; i < natoms; i++) {
-		Xs[i] = atoms[i].getX() * 10;
-		Ys[i] = atoms[i].getY() * 10;
-		Zs[i] = atoms[i].getZ() * 10;
-	}
-
-	// Actual write
-	traj.appendTimestep("dcd", Xs, Ys, Zs);
 }
 
 void Context::randomizeWorldIndexes()
@@ -7065,42 +7236,22 @@ Context::calc_XPF_XBM(
 
 	// ------------------------------------------------------------------------
 
-	bool anglePin_OR = (
-		   (mobility == SimTK::BondMobility::Mobility::AnglePin)
-		|| (mobility == SimTK::BondMobility::Mobility::Slider)
-		|| (mobility == SimTK::BondMobility::Mobility::BendStretch)
-	);
-
-	if( (anglePin_OR)
-		//&& ((atom->neighbors).size() == 1)
-	){
+	bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin || 
+					   mobility == SimTK::BondMobility::Mobility::Slider ||
+					   mobility == SimTK::BondMobility::Mobility::BendStretch;
+	
+	if (anglePin_OR) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if( (anglePin_OR)
-		//&& ((atom->neighbors).size() != 1)
-	){
-		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-
-	}else if(	(mobility == SimTK::BondMobility::Mobility::Torsion)
-			||	(mobility == SimTK::BondMobility::Mobility::Cylinder)
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
+			|| mobility == SimTK::BondMobility::Mobility::Cylinder) {
 		return std::vector<SimTK::Transform> {P_X_F_pin, B_X_M_pin};
-
-	}else if((mobility == SimTK::BondMobility::Mobility::BallM)
-	|| (mobility == SimTK::BondMobility::Mobility::Rigid)
-	|| (mobility == SimTK::BondMobility::Mobility::Translation) // Cartesian
-	){
+	} else if (mobility == SimTK::BondMobility::Mobility::BallM
+			|| mobility == SimTK::BondMobility::Mobility::Rigid
+			|| mobility == SimTK::BondMobility::Mobility::Translation) { // Cartesian
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
-
-	// Spherical
-	}else if((mobility == SimTK::BondMobility::Mobility::Spherical)
-	){
-		return std::vector<SimTK::Transform> {
-			P_X_F_spheric,
-			B_X_M_spheric
-		};
-
-	}else{
+	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
+		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else {
 		warn("Warning: unknown mobility");
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	}
@@ -7263,10 +7414,6 @@ void Context::RunOneRound()
 // Print to log and write pdbs
 void Context::RunLog(int round)
 {
-	if (wantDCD) {
-		writeDCDs();
-	}
-
 	// Write energy and geometric features to logfile
 	if(printFreq || pdbRestartFreq){
 
@@ -8377,7 +8524,7 @@ Context::calcInternalBATJacobianLog(void)
 		// Get log of the Cartesian->BAT Jacobian
 		SimTK::Real logJacBAT = 0.0;
 
-		for(size_t zCnt = 0; zCnt = zMatrixBAT.size(); zCnt++){
+		for(size_t zCnt = 0; zCnt < zMatrixBAT.size(); zCnt++){
 
 				// Get bond term
 				SimTK::Real currBond = zMatrixBAT[zCnt][0];

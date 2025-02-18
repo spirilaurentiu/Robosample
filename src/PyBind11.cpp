@@ -46,26 +46,26 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("HMC", SamplerName::HMC)
         .value("LAHMC", SamplerName::LAHMC);
 
-    py::enum_<SampleGenerator>(m, "SampleGenerator")
-        .value("EMPTY", SampleGenerator::EMPTY)
-        .value("MC", SampleGenerator::MC);
+    py::enum_<AcceptRejectMode>(m, "AcceptRejectMode")
+        .value("AlwaysAccept", AcceptRejectMode::AlwaysAccept)
+        .value("MetropolisHastings", AcceptRejectMode::MetropolisHastings);
 
-    py::enum_<IntegratorName>(m, "IntegratorName")
-        .value("EMPTY", IntegratorName::EMPTY)
-        .value("VERLET", IntegratorName::VERLET)
-        .value("EULER", IntegratorName::EULER)
-        .value("EULER2", IntegratorName::EULER2)
-        .value("CPODES", IntegratorName::CPODES)
-        .value("RUNGEKUTTA", IntegratorName::RUNGEKUTTA)
-        .value("RUNGEKUTTA2", IntegratorName::RUNGEKUTTA2)
-        .value("RUNGEKUTTA3", IntegratorName::RUNGEKUTTA3)
-        .value("RUNGEKUTTAFELDBERG", IntegratorName::RUNGEKUTTAFELDBERG)
-        .value("BENDSTRETCH", IntegratorName::BENDSTRETCH)
-        .value("OMMVV", IntegratorName::OMMVV)
-        .value("BOUND_WALK", IntegratorName::BOUND_WALK)
-        .value("BOUND_HMC", IntegratorName::BOUND_HMC)
-        .value("STATIONS_TASK", IntegratorName::STATIONS_TASK)
-        .value("NOF_INTEGRATORS", IntegratorName::NOF_INTEGRATORS);
+    py::enum_<IntegratorType>(m, "IntegratorType")
+        .value("EMPTY", IntegratorType::EMPTY)
+        .value("VERLET", IntegratorType::VERLET)
+        .value("EULER", IntegratorType::EULER)
+        .value("EULER2", IntegratorType::EULER2)
+        .value("CPODES", IntegratorType::CPODES)
+        .value("RUNGEKUTTA", IntegratorType::RUNGEKUTTA)
+        .value("RUNGEKUTTA2", IntegratorType::RUNGEKUTTA2)
+        .value("RUNGEKUTTA3", IntegratorType::RUNGEKUTTA3)
+        .value("RUNGEKUTTAFELDBERG", IntegratorType::RUNGEKUTTAFELDBERG)
+        .value("BENDSTRETCH", IntegratorType::BENDSTRETCH)
+        .value("OMMVV", IntegratorType::OMMVV)
+        .value("BOUND_WALK", IntegratorType::BOUND_WALK)
+        .value("BOUND_HMC", IntegratorType::BOUND_HMC)
+        .value("STATIONS_TASK", IntegratorType::STATIONS_TASK)
+        .value("NOF_INTEGRATORS", IntegratorType::NOF_INTEGRATORS);
 
     py::enum_<ThermostatName>(m, "ThermostatName")
         .value("NONE", ThermostatName::NONE)
@@ -82,23 +82,21 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("mobility", &BOND_FLEXIBILITY::mobility);
 
     py::class_<Context>(m, "Context")
-        .def(py::init<SimTK::Real, SimTK::Real, uint32_t>())
-        .def("addWorld", &Context::addWorld, "Add an empty world")
-        .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Run the simulation")
-        .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system")
-        .def("appendDCDReporter", &Context::appendDCDReporter, "Create a DCD file")
-        .def("Run", py::overload_cast<>(&Context::Run), "Run the simulation")
-        .def("setNumThreads", &Context::setNumThreads, "Set the number of threads")
-        .def("setPdbPrefix", &Context::setPdbPrefix, "Set the prefix for the PDB files")
-        .def("setOutput", &Context::setOutput, "Set the output directory")
-        .def("setNofRoundsTillReblock", &Context::setNofRoundsTillReblock, "Set the number of rounds until reblocking")
-        .def("setRequiredNofRounds", &Context::setRequiredNofRounds, "Set the required number of rounds")
-        .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency")
-        .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency")
-        .def("setGBSA", &Context::setRunType, "Set the run type")
-        .def("setRunType", &Context::setRunType, "Set the run type");
+        .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t>())
+        .def("addReplica", &Context::addReplica, "Add an empty replica to the context.")
+        .def("addThermodynamicState", &Context::addThermodynamicState, "Add an empty themodynamic state to the context.")
+        .def("Initialize", py::overload_cast<>(&Context::Initialize), "Initializes the context after all worlds and replicas have been set.")
+        .def("RunREX", &Context::RunREX, "Run replica exchange.")
+        .def("setVerbose", &Context::setVerbose, "Control if you want extraneous output to cout.")
+        .def("setPdbRestartFreq", &Context::setPdbRestartFreq, "Set the PDB restart frequency.")
+        .def("setPrintFreq", &Context::setPrintFreq, "Set the print frequency.")
+        .def("setNonbonded", &Context::setNonbonded, "Set nonbonded method and cutoff.")
+        .def("setGBSA", &Context::setGBSA, "Set GBSA.")
+        .def("loadAmberSystem", &Context::loadAmberSystem, "Load an Amber system.")
+        .def("addWorld", &Context::addWorld, "Add an empty world.")
+        .def("getWorld", (World& (Context::*)(std::size_t which)) &Context::getWorld, py::return_value_policy::reference, "Gets the world at the specified index.");
 
     py::class_<World>(m, "World")
-        .def("setFlexibilities", &World::setFlexibilities, "Set the flexibilities of the bonds")
-        .def("addSampler", &World::addSampler, "Add a sampler to the world");
+        .def("setFlexibilities", &World::setFlexibilities, "Set the flexibilities of the bonds.")
+        .def("addSampler", &World::addSampler, "Add a sampler to the world.");
 }

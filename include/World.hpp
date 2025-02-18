@@ -525,13 +525,8 @@ public:
 	// Calculate Fixman potential
 	SimTK::Real calcFixman();
 
-	/**
-	 *  Generate a proposal
-	 * */
-	bool generateProposal(void);
-
 	/** Generate a number of samples **/
-	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header);
+	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 	//...............
 
 	//...................
@@ -545,17 +540,8 @@ public:
 
 	/** Add a sampler to the World **/
 	bool addSampler(SamplerName samplerName,
-		SampleGenerator generator,
-		IntegratorName integratorName,
+		IntegratorType integratorType,
 		ThermostatName thermostatName,
-		SimTK::Real timestep,
-		int mdStepsPerSample,
-		int mdStepsPerSampleStd,
-		SimTK::Real boostTemperature,
-		int boostMDSteps,
-		int distort,
-		int work,
-		int flow,
 		bool useFixmanPotential);
 
 	void useOpenMM(bool ommvv, SimTK::Real boostTemp, SimTK::Real timestep);

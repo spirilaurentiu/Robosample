@@ -36,27 +36,210 @@ std::string extractValueFromInputFile(
     return value;
 }
 
+
+void testAlanineDipeptide(int seed) {
+
+	// auto ommvv = [](int seed) {
+	// 	// no need for tini tfin
+	// 	Context c("ala2", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
+
+	// 	// c.setNonbonded(0, 1.2); // default - set for each world
+	// 	c.setPdbRestartFreq(0); // WRITE_PDBS
+	// 	c.setPrintFreq(1); // PRINT_FREQ
+	// 	c.setNonbonded(0, 1.2);
+	// 	c.setGBSA(1);
+	// 	c.setVerbose(false);
+
+	// 	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
+
+	// 	// Fully flexible for OpenMM
+	// 	std::vector<BOND_FLEXIBILITY> allFlexibilities = {
+	// 		{ 0, 1, BondMobility::Mobility::Translation },
+	// 		{ 1, 2, BondMobility::Mobility::Translation },
+	// 		{ 1, 3, BondMobility::Mobility::Translation },
+	// 		{ 1, 4, BondMobility::Mobility::Translation },
+	// 		{ 4, 5, BondMobility::Mobility::Translation },
+	// 		{ 4, 6, BondMobility::Mobility::Translation },
+	// 		{ 6, 7, BondMobility::Mobility::Translation },
+	// 		{ 6, 8, BondMobility::Mobility::Translation },
+	// 		{ 8, 9, BondMobility::Mobility::Translation },
+	// 		{ 8, 10, BondMobility::Mobility::Translation },
+	// 		{ 8, 14, BondMobility::Mobility::Translation },
+	// 		{ 10, 11, BondMobility::Mobility::Translation },
+	// 		{ 10, 12, BondMobility::Mobility::Translation },
+	// 		{ 10, 13, BondMobility::Mobility::Translation },
+	// 		{ 14, 15, BondMobility::Mobility::Translation },
+	// 		{ 14, 16, BondMobility::Mobility::Translation },
+	// 		{ 16, 17, BondMobility::Mobility::Translation },
+	// 		{ 16, 18, BondMobility::Mobility::Translation },
+	// 		{ 18, 19, BondMobility::Mobility::Translation },
+	// 		{ 18, 20, BondMobility::Mobility::Translation },
+	// 		{ 18, 21, BondMobility::Mobility::Translation },
+	// 	};
+	// 	c.addWorld(false, 1, ROOT_MOBILITY::WELD, allFlexibilities);
+
+	// 	// Add samplers
+	// 	c.getWorld(0).addSampler(SamplerName::HMC, IntegratorType::OMMVV, ThermostatName::ANDERSEN, false);
+
+	// 	// IntegratorType::VERLET
+	// 	std::vector<SimTK::Real> temperatures = { 300 }, boostTemperatures = { 300 };
+	// 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::AlwaysAccept };
+	// 	std::vector<IntegratorType> integrators = { IntegratorType::OMMVV };
+	// 	std::vector<SimTK::Real> timesteps = { 0 };
+	// 	std::vector<int> worldIndexes = { 0 };
+	// 	std::vector<int> mdsteps = { 10 };
+	// 	std::vector<int> distortOptions = { 0 };
+	// 	std::vector<std::string> distortArgs = { "0" };
+	// 	std::vector<int> flow = { 0 };
+	// 	std::vector<int> work = { 0 };
+
+	// 	c.addReplica(0);
+	// 	c.addThermodynamicState(0, temperatures[0], acceptRejectModes, distortOptions, distortArgs, flow, work, integrators, worldIndexes, timesteps, mdsteps);
+
+	// 	c.Initialize();
+
+	// 	c.PrintSimbodyMobods();
+
+	// 	// Run the simulation
+	// 	c.RunREX(0, 1);
+	// };
+
+	// ommvv(42);
+	// return;
+
+
+	// no need for tini tfin
+	Context c("ala2", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
+
+	// c.setNonbonded(0, 1.2); // default - set for each world
+	c.setPdbRestartFreq(0); // WRITE_PDBS
+	c.setPrintFreq(50); // PRINT_FREQ
+	c.setNonbonded(0, 1.2);
+	c.setGBSA(1);
+	c.setVerbose(true);
+
+	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
+
+	// Fully flexible for OpenMM
+	std::vector<BOND_FLEXIBILITY> allFlexibilities = {
+		{ 0, 1, BondMobility::Mobility::Translation },
+		{ 1, 2, BondMobility::Mobility::Translation },
+		{ 1, 3, BondMobility::Mobility::Translation },
+		{ 1, 4, BondMobility::Mobility::Translation },
+		{ 4, 5, BondMobility::Mobility::Translation },
+		{ 4, 6, BondMobility::Mobility::Translation },
+		{ 6, 7, BondMobility::Mobility::Translation },
+		{ 6, 8, BondMobility::Mobility::Translation },
+		{ 8, 9, BondMobility::Mobility::Translation },
+		{ 8, 10, BondMobility::Mobility::Translation },
+		{ 8, 14, BondMobility::Mobility::Translation },
+		{ 10, 11, BondMobility::Mobility::Translation },
+		{ 10, 12, BondMobility::Mobility::Translation },
+		{ 10, 13, BondMobility::Mobility::Translation },
+		{ 14, 15, BondMobility::Mobility::Translation },
+		{ 14, 16, BondMobility::Mobility::Translation },
+		{ 16, 17, BondMobility::Mobility::Translation },
+		{ 16, 18, BondMobility::Mobility::Translation },
+		{ 18, 19, BondMobility::Mobility::Translation },
+		{ 18, 20, BondMobility::Mobility::Translation },
+		{ 18, 21, BondMobility::Mobility::Translation },
+	};
+	c.addWorld(false, 1, ROOT_MOBILITY::WELD, allFlexibilities);
+
+	// Sidechain fleibilities
+	std::vector<BOND_FLEXIBILITY> sidechainFlexibilities = {
+		{ 8, 10, BondMobility::Mobility::Torsion },
+	};
+	c.addWorld(true, 1, ROOT_MOBILITY::WELD, sidechainFlexibilities);
+
+	// Ramachandran fleibilities
+	std::vector<BOND_FLEXIBILITY> ramachandranFlexibilities = {
+		{ 6, 8, BondMobility::Mobility::Torsion },
+		{ 8, 14, BondMobility::Mobility::Torsion },
+	};
+	c.addWorld(true, 1, ROOT_MOBILITY::WELD, ramachandranFlexibilities);
+
+	// Add samplers
+	c.getWorld(0).addSampler(SamplerName::HMC, IntegratorType::OMMVV, ThermostatName::ANDERSEN, false);
+	c.getWorld(1).addSampler(SamplerName::HMC, IntegratorType::VERLET, ThermostatName::ANDERSEN, true);
+	c.getWorld(2).addSampler(SamplerName::HMC, IntegratorType::VERLET, ThermostatName::ANDERSEN, true);
+
+	const int num_replicas = 1; // Number of replicas
+    const double T_min = 300.0;  // Starting temperature (Replica 0)
+    const double T_max = 600.0;  // Ending temperature (Replica 19)
+
+    // Calculate the common ratio for geometric progression
+    double r = std::pow(T_max / T_min, 1.0 / (num_replicas - 1));
+
+	SimTK::Real temperature = 300;
+	std::vector<SimTK::Real> temperatures (num_replicas), boostTemperatures(num_replicas);
+	for (int i = 0; i < num_replicas; i++) {
+		temperatures[i] = T_min * std::pow(r, i);
+		boostTemperatures[i] = T_min * std::pow(r, i); // used for openmm velocities
+	}
+
+	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings };
+	std::vector<IntegratorType> integrators = { IntegratorType::OMMVV, IntegratorType::VERLET, IntegratorType::VERLET };
+	std::vector<SimTK::Real> timesteps = { 0.0007, 0.035, 0.07 };
+	std::vector<int> worldIndexes = { 0, 1, 2 };
+	std::vector<int> mdsteps = { 10, 10, 10 };
+	// std::vector<int> boostMDSteps = mdsteps;
+	// std::vector<int> samplesPerRound = { 1, 1, 1 };
+
+	std::vector<int> distortOptions = { 0, 0, 0 };
+	std::vector<std::string> distortArgs = { "0", "0", "0" };
+	std::vector<int> flow = { 0, 0, 0 };
+	std::vector<int> work = { 0, 0, 0 };
+
+	for (int i = 0; i < num_replicas; i++) {
+		c.addReplica(i);
+		c.addThermodynamicState(i,
+			temperatures[i],
+			acceptRejectModes,
+			distortOptions,
+			distortArgs,
+			flow,
+			work,
+			integrators,
+			worldIndexes,
+			timesteps,
+			mdsteps
+		);
+	}
+
+	c.Initialize();
+
+	c.PrintSimbodyMobods();
+
+	// Run the simulation
+	c.RunREX(0, 100);
+}
+
 /*!
  * <!-- Victor's Context test -->
 */
-int testContext(int argc, char **argv)
+int testContext(int seed)
 {
-	Context c(300, 300, 42);
-	// c.setNonbonded(0, 1.2); // default
-	c.setNumThreads(0);
-	c.setPdbPrefix("2but42");
-	// c.setNonbonded(0, 1.2); // default
-	c.setOutput("temp"); // the log file is created like log.[seed]
-	c.setNofRoundsTillReblock(10); // per world?
-	c.setRequiredNofRounds(1);
+	// no need for tini tfin
+	Context c("2but", seed, 0, 1, RUN_TYPE::REMC, 1, 0);
+
+	// c.setNonbonded(0, 1.2); // default - set for each world
+	c.setPdbPrefix("rage"); // will disappear
+	c.setOutput("temp"); // the log file is created like log.[seed] - needs refactoring
+	c.setRequiredNofRounds(10); // per world? what does it do?
 	c.setPdbRestartFreq(0); // WRITE_PDBS
 	c.setPrintFreq(1); // PRINT_FREQ
-	c.setRunType(RUN_TYPE::DEFAULT);
+
 	// read files and create topologies. this populates ```atoms``` and ```bonds```
 	// atoms must have a dumm index which is used by bonds, angles and torsions
 	// generate topologies
 	// addWorld will deal with adding generating dumm parameters
+	// c.loadAmberSystem("diala_double/diala_double.prmtop", "diala_double/diala_double.rst7");
 	c.loadAmberSystem("2but/ligand.prmtop", "2but/ligand.rst7");
+	// c.loadAmberSystem("2kyy/2kyy.H.capped.prmtop", "2kyy/2kyy.H.capped.rst7");
+	// c.loadAmberSystem("ala10/ligand.prmtop", "ala10/ligand.rst7");
+	// c.loadAmberSystem("rage.fps.0.prmtop", "rage.fps.0.rst7");
+
 	// World 0 OPENMM
 	std::vector<BOND_FLEXIBILITY> flexibilities_w0 = {
 		{ 3, 1, BondMobility::Mobility::Translation },
@@ -72,9 +255,10 @@ int testContext(int argc, char **argv)
 		{ 2, 7, BondMobility::Mobility::Translation },
 		{ 4, 11, BondMobility::Mobility::Translation },
 		{ 4, 12, BondMobility::Mobility::Translation },
-		{ 4, 13, BondMobility::Mobility::Translation }
+		{ 4, 13, BondMobility::Mobility::Translation },
 	};
 	c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w0);
+
 	// World 1
 	std::vector<BOND_FLEXIBILITY> flexibilities_w1 = {
 		{ 3, 1, BondMobility::Mobility::Torsion },
@@ -83,16 +267,94 @@ int testContext(int argc, char **argv)
 		{ 1, 0, BondMobility::Mobility::Torsion },
 	};
 	c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
+
+	// // World 2
+	// std::vector<BOND_FLEXIBILITY> flexibilities_w2 = {
+	// };
+	// c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w2);
+
 	// Does OMMVV have to be first?
 	// Add samplers
-	c.getWorld(0).addSampler(SamplerName::HMC, SampleGenerator::MC, IntegratorName::OMMVV, ThermostatName::ANDERSEN, 0.001, 200, 0, 300, 1, 0, 0, 0, false);
-	// // Does not work if I set OMMVV instead of VV. How do I check if it is working?
-	c.getWorld(1).addSampler(SamplerName::HMC, SampleGenerator::MC, IntegratorName::VERLET, ThermostatName::ANDERSEN, 0.001, 50, 0, 300, 1, 0, 0, 0, true);
-	c.appendDCDReporter("2but.dcd");
-	c.Run();
-	return 0;
-	/////////////////////////
+	c.getWorld(0).addSampler(SamplerName::HMC, IntegratorType::OMMVV, ThermostatName::ANDERSEN, false);
 
+	// // Does not work if I set OMMVV instead of VV. How do I check if it is working?
+	c.getWorld(1).addSampler(SamplerName::HMC, IntegratorType::VERLET, ThermostatName::ANDERSEN, true);
+
+	// // // Does not work if I set OMMVV instead of VV. How do I check if it is working?
+	// c.getWorld(2).addSampler(SamplerName::HMC, IntegratorType::Verlet, ThermostatName::ANDERSEN, true);
+
+	const int num_replicas = 1; // Number of replicas
+    const double T_min = 300.0;  // Starting temperature (Replica 0)
+    const double T_max = 600.0;  // Ending temperature (Replica 19)
+
+    // Calculate the common ratio for geometric progression
+    double r = std::pow(T_max / T_min, 1.0 / (num_replicas - 1));
+
+	SimTK::Real temperature = 300;
+	std::vector<SimTK::Real> temperatures (num_replicas), boostTemperatures(num_replicas);
+	for (int i = 0; i < num_replicas; i++) {
+		temperatures[i] = T_min * std::pow(r, i);
+		boostTemperatures[i] = T_min * std::pow(r, i); // used for openmm velocities
+	}
+
+	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings };
+	std::vector<IntegratorType> integrators = { IntegratorType::OMMVV, IntegratorType::VERLET };
+	std::vector<SimTK::Real> timesteps = { 0.0007, 0.002, 0.002 };
+	std::vector<int> worldIndexes = { 0, 1, 2 };
+	std::vector<int> mdsteps = { 25, 100, 50 };
+	std::vector<int> boostMDSteps = { 25, 100, 50 };
+	std::vector<int> samplesPerRound = { 1, 1, 1 };
+
+	std::vector<int> distortOptions = { 0, 0, 0 };
+	std::vector<std::string> distortArgs = { "0", "0", "0" };
+	std::vector<int> flow = { 0, 0, 0 };
+	std::vector<int> work = { 0, 0, 0 };
+
+	acceptRejectModes.pop_back();
+	timesteps.pop_back();
+	worldIndexes.pop_back();
+	mdsteps.pop_back();
+	boostMDSteps.pop_back();
+	samplesPerRound.pop_back();
+	distortOptions.pop_back();
+	distortArgs.pop_back();
+	flow.pop_back();
+	work.pop_back();
+
+	// acceptRejectModes.pop_back();
+	// timesteps.pop_back();
+	// worldIndexes.pop_back();
+	// mdsteps.pop_back();
+	// boostMDSteps.pop_back();
+	// samplesPerRound.pop_back();
+	// distortOptions.pop_back();
+	// distortArgs.pop_back();
+	// flow.pop_back();
+	// work.pop_back();
+
+	for (int i = 0; i < num_replicas; i++) {
+		c.addReplica(i);
+		c.addThermodynamicState(i,
+			temperatures[i],
+			acceptRejectModes,
+			distortOptions,
+			distortArgs,
+			flow,
+			work,
+			integrators,
+			worldIndexes,
+			timesteps,
+			mdsteps
+		);
+	}
+
+	c.Initialize();
+
+	// pas how many rounds to run for here
+	// c.RunREXNew(0, 1'000'000);
+	c.RunREX(10, 10);
+
+	return 0;
 }
 
 /*!
@@ -176,58 +438,61 @@ void testSOA(void)
 */
 int main(int argc, char **argv)
 {
+	int seed = std::stoi(argv[1]);
+	// testContext(seed);
+	testAlanineDipeptide(seed);
 
-	//testSOA();
-	//exit(0);
+	// //testSOA();
+	// //exit(0);
 
-	//std::cout << "OS memory 0.\n" << exec("free") << std::endl;
+	// //std::cout << "OS memory 0.\n" << exec("free") << std::endl;
 	
-	std::string helpString = "Usage: ./robosample [options]\n";
-	helpString +=
-		" Options:\n";
-	helpString +=
-		"  -h, --help for help\nUsage: ./robosample <file> [dcdfile]\n";
+	// std::string helpString = "Usage: ./robosample [options]\n";
+	// helpString +=
+	// 	" Options:\n";
+	// helpString +=
+	// 	"  -h, --help for help\nUsage: ./robosample <file> [dcdfile]\n";
 
-	if(argc < 2) {
-		std::cout << "Error: not enough parameters to run. See help below.\n";
-		std::cout << helpString;
+	// if(argc < 2) {
+	// 	std::cout << "Error: not enough parameters to run. See help below.\n";
+	// 	std::cout << helpString;
 
-		return -1;
-	}
-	else {
-		auto arg = std::string(argv[1]);
-		if("-h" == arg || "--help" == arg) {
-		std::cout << helpString;
+	// 	return -1;
+	// }
+	// else {
+	// 	auto arg = std::string(argv[1]);
+	// 	if("-h" == arg || "--help" == arg) {
+	// 	std::cout << helpString;
 
-			return -1;
-		}
-	}
+	// 		return -1;
+	// 	}
+	// }
 
-	// Get the seed and pass it to the context
-	int seed = 0;
-	std::string seedStr = extractValueFromInputFile(argv[1], "SEED");
-	if (!seedStr.empty()) {
-		seed = std::stoi(seedStr);
-	}
+	// // Get the seed and pass it to the context
+	// int seed = 0;
+	// std::string seedStr = extractValueFromInputFile(argv[1], "SEED");
+	// if (!seedStr.empty()) {
+	// 	seed = std::stoi(seedStr);
+	// }
 
-	Context context(300, 300, seed);
+	// Context context(300, 300, seed);
 
-	if (!context.initializeFromFile(argv[1])) {
-		return -1;
-	}
+	// if (!context.initializeFromFile(argv[1])) {
+	// 	return -1;
+	// }
 
-	if(argc >=3){
-		context.appendDCDReporter(argv[2]);
-	}
+	// if(argc >=3){
+	// 	context.appendDCDReporter(argv[2]);
+	// }
 
-	// -- Run --
-	context.Run();
+	// // -- Run --
+	// context.Run();
 		
-	std::cout << "OS memory 5.\n" << exec("free") << std::endl;
+	// std::cout << "OS memory 5.\n" << exec("free") << std::endl;
 	
-	// Write final pdbs
-	//c.writeFinalPdb();
-	//c.printStatus();
+	// // Write final pdbs
+	// //c.writeFinalPdb();
+	// //c.printStatus();
 
-	return 0;
+	// return 0;
 }

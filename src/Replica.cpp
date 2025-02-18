@@ -226,6 +226,29 @@ void Replica::Print_WORK_Coordinates() const
 	}
 }
 
+std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replica::getCoordinates() const {
+	std::vector<double> x, y, z;
+
+	for (const auto& topology : atomsLocations) {
+		for(auto& atomCoordinates : topology) {
+			x.push_back(atomCoordinates.second[0]);
+			y.push_back(atomCoordinates.second[1]);
+			z.push_back(atomCoordinates.second[2]);
+		}
+	}
+
+	// for (int t = atomsLocations.size() - 1; t >= 0; t--) {
+	// 	const auto& topology = atomsLocations[t];
+	// 	for(auto& atomCoordinates : topology) {
+	// 		x.push_back(atomCoordinates.second[0]);
+	// 		y.push_back(atomCoordinates.second[1]);
+	// 		z.push_back(atomCoordinates.second[2]);
+	// 	}
+	// }
+
+	return std::make_tuple(x, y, z);
+}
+
 /**
  * Write coordinates to a rst7 file
 */
@@ -629,7 +652,7 @@ Replica::calcInternalBATJacobianLog(void)
 		// Get log of the Cartesian->BAT Jacobian
 		SimTK::Real logJacBAT = 0.0;
 
-		for(size_t zCnt = 0; zCnt = zMatrixBAT.size(); zCnt++){
+		for(size_t zCnt = 0; zCnt < zMatrixBAT.size(); zCnt++){
 
 				// Get bond term
 				SimTK::Real currBond = zMatrixBAT[zCnt][0];
