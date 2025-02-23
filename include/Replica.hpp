@@ -76,7 +76,7 @@ public:
 	void Print_WORK_Coordinates() const;
 
 	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> getCoordinates() const;
-	
+
 	void PrintRst7(void) const;
 	void WriteRst7(std::string FN) const;
 

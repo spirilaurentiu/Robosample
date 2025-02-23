@@ -30,12 +30,12 @@ try
 
     // printf("selectedatoms %i ; natoms %i \n", selectedatoms, natoms);
 
-    v = open_dcd_write(TrajectoryFile.c_str(), "dcd", natoms, unitcell);
-    if (!v) {
+    dcdhandle_po = open_dcd_write(TrajectoryFile.c_str(), "dcd", natoms, unitcell);
+    if (!dcdhandle_po) {
       fprintf(stderr, "Error in writing DCD header \n");
     }
 
-    dcd = (dcdhandle *)v;
+    dcd = (dcdhandle *)dcdhandle_po;
 
   }
   else{
@@ -60,12 +60,12 @@ try
 {
   if (TrajectoryType == "dcd")
   {
-    v = open_dcd_read(TrajectoryFile.c_str(), "dcd", &natoms, &nsets);
-    if (!v) {
+    dcdhandle_po = open_dcd_read(TrajectoryFile.c_str(), "dcd", &natoms, &nsets);
+    if (!dcdhandle_po) {
       fprintf(stderr, "Error in opening DCD file \n");
     }
 
-    dcd = (dcdhandle *)v;
+    dcd = (dcdhandle *)dcdhandle_po;
   }
   else{
     fprintf(stderr, "Only dcd format is supported - for now ...\n");
@@ -81,7 +81,7 @@ catch(std::exception e){
 }
 
 
-void TrajectoryObject::appendTimestep (
+void TrajectoryObject::appendFrame (
                     const std::string& TrajectoryType,
                     const std::vector<TARGET_TYPE>& AtomsXcoord,
                     const std::vector<TARGET_TYPE>& AtomsYcoord,

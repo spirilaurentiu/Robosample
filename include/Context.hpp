@@ -77,7 +77,13 @@ public:
 	 * @param nofRoundsTillReblock Number of rounds until reblocking.
 	 * @param runType Type of simulation to run.
 	*/
-	Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq);
+	Context(const std::string& baseName, 
+			uint32_t seed,
+			uint32_t threads,
+			uint32_t nofRoundsTillReblock,
+			RUN_TYPE runType,
+			uint32_t swapFreq,
+			uint32_t swapFixmanFreq);
 
 	/**
 	 * @brief Print atom's Compound and DuMM indexes.
@@ -119,7 +125,15 @@ public:
 	* @param var
 	*/
 	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
-	
+
+	/**
+	 * @brief Set Molmodel atom masses from out list of atoms
+	*/
+	void setAtomMasses();
+
+	/**
+	 * @brief Calc Z matrix and BAT load replicas and nonequil
+	*/
 	void Initialize();
 
 	/**	
@@ -148,6 +162,14 @@ public:
 		bool useOpenMM = true,
 		bool visual = false,
 		SimTK::Real visualizerFrequency = 0);
+
+	/**
+	 * @brief Load coordinates into atoms, add replicas and pass coordinates.
+	 * @param prmtop Amber prmtop file.
+	 * @param restartDir Restart directory.
+	 * @param nofReplicas Number of replicas.
+	*/
+	void addReplicasAndLoadCoordinates(const std::string& name, const std::string& prmtop, const std::string& restartDir, int nofReplicas);
 
 	/**	
 	* @brief
@@ -507,6 +529,9 @@ public:
 	int getPdbRestartFreq();
 	void setPdbRestartFreq(int argFreq);
 
+	const std::string& getRestartDir() const;
+	void setRestartDir(const std::string& argRestartDir);
+
 	void setPdbPrefix(const std::string& argPdbPrefix);
 	std::string getPdbPrefix();
 
@@ -698,7 +723,6 @@ public:
 	// Run a particular world
 	bool RunWorld(int whichWorld, const std::string& header);
 	void RunWorlds(std::vector<int>& specificWIxs, int replicaIx);
-	//void RunReplicaRefactor(int mixi, int replicaIx);
 	void RunReplicaRefactor_SIMPLE(int mixi, int replicaIx);	
 	/**	
 	* @brief Main function
@@ -963,6 +987,40 @@ public:
 		}
 	}	
 
+	
+	/**	
+	* @brief Get Z-matrix indexes table
+	* @param
+	*/
+	void calcZMatrixTable(void);
+
+	/**	
+	* @brief Allocate Z Matrix BAT
+	* @param
+	*/
+	void reallocZMatrixBAT(void);
+
+	
+	/**	
+	* @brief Print function for the zMatrixTable
+	* @param
+	*/
+	void PrintZMatrixTable() const ;
+
+	
+	/**	
+	* @brief Function to print the zMatrixBAT
+	* @param
+	*/
+	void PrintZMatrixBAT() const ;
+
+	/**	
+	* @brief
+	* @param
+	*/
+	void PrintZMatrixTableAndBAT() const;
+
+
 private:
 
 	std::vector<std::string> inpcrdFNs;
@@ -999,12 +1057,6 @@ private:
     void setZMatrixTableEntry(int rowIndex, int colIndex, int value) ;
 
 	/**	
-	* @brief Print function for the zMatrixTable
-	* @param
-	*/
-    void PrintZMatrixTable() const ;
-
-	/**	
 	* @brief Setter for a specific entry
 	* @param
 	*/
@@ -1024,17 +1076,6 @@ private:
     std::vector<SimTK::Real>& updZMatrixBATRow(size_t rowIndex) ;
 
 
-	/**	
-	* @brief Get Z-matrix indexes table
-	* @param
-	*/
-	void calcZMatrixTable(void);
-
-	/**	
-	* @brief Allocate Z Matrix BAT
-	* @param
-	*/
-	void reallocZMatrixBAT(void);
 
 	/**	
 	* @brief 
@@ -1051,18 +1092,6 @@ private:
 	* @return
 	*/
     SimTK::Real getZMatrixBATValue(size_t rowIndex, size_t colIndex) const ;
-
-	/**	
-	* @brief Function to print the zMatrixBAT
-	* @param
-	*/
-    void PrintZMatrixBAT() const ;
-
-	/**	
-	* @brief
-	* @param
-	*/
-	void PrintZMatrixTableAndBAT() const;
 
 	/**	
 	* @brief Function to add a new row to the zMatrixBAT

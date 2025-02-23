@@ -225,7 +225,10 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Store OpenMM configuration
 	if(this->integratorType == IntegratorType::OMMVV){
 
-		assert("OMMVV nofBodies not equal to nofAtoms" && (matter->getNumBodies() == (natoms+1)));
+		//assert(("OMMVV nofBodies not equal to nofAtoms" + 
+		//			std::to_string(matter->getNumBodies()) +
+		//			std::to_string(natoms+1)).c_str()
+		//	&& (matter->getNumBodies() == (natoms+1)) );
 
 		if((matter->getNumBodies() != (natoms+1))){
 			std::cerr << "OMMVV error: nofBodies not equal to nofAtoms: "

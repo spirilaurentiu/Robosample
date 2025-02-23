@@ -47,7 +47,7 @@ class TrajectoryObject{
       void openTrajectory(const std::string& TrajectoryFile, const std::string& TrajectoryType );
 
       // append timestep to created/opened trajectory
-      void appendTimestep (
+      void appendFrame (
                           const std::string& TrajectoryType,
                           const std::vector<TARGET_TYPE>& AtomsXcoord,
                           const std::vector<TARGET_TYPE>& AtomsYcoord,
@@ -56,7 +56,7 @@ class TrajectoryObject{
 
 
       // for DCD type
-      void * v;
+      void * dcdhandle_po;
       dcdhandle *dcd;
       molfile_timestep_t timestep;
 

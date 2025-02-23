@@ -1,0 +1,45 @@
+# External DOF
+-1 0 Weld
+
+# 2but
+# Main
+3 1  BendStretch
+1 2 BendStretch
+2 4 BendStretch
+1 0 BendStretch
+
+# Hydrogens
+3 8 BendStretch
+3 9 BendStretch
+3 10 BendStretch
+0 14 BendStretch
+1 5 BendStretch
+2 6 BendStretch
+2 7 BendStretch
+4 11 BendStretch
+4 12 BendStretch
+4 13 BendStretch
+
+# ala1
+# Main
+16 19 BendStretch
+19 21 BendStretch
+21 23 BendStretch
+23 29 BendStretch
+29 31 BendStretch
+31 33 BendStretch
+
+# Rest BendStretch
+16 15 BendStretch
+16 17 BendStretch
+16 18 BendStretch
+21 22 BendStretch
+23 24 BendStretch
+25 26 BendStretch
+25 27 BendStretch
+25 28 BendStretch
+29 30 BendStretch
+31 32 BendStretch
+33 34 BendStretch
+33 35 BendStretch
+33 36 BendStretch

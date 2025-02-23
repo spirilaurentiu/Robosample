@@ -4,6 +4,11 @@
  * 		Debugging Functions   *
  **************************************/
 
+bool fileExists(const std::string& filename) {
+    std::ifstream file(filename);
+    return file.good(); // Returns true if file exists and is accessible
+}
+
 std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
     std::string result;

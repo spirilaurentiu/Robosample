@@ -644,5 +644,5 @@ void ThermodynamicState::appendDCDReporter(const std::string& filename, int nato
 }
 
 void ThermodynamicState::writeDCD(std::vector<SimTK::Real>& x, std::vector<SimTK::Real>& y, std::vector<SimTK::Real>& z) {
-	traj.appendTimestep("dcd", x, y, z);
+	traj.appendFrame("dcd", x, y, z);
 }

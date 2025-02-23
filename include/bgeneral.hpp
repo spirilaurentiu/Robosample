@@ -20,6 +20,7 @@
 #include <functional>
 #include <array>
 #include <sys/resource.h>
+#include <fstream>
 
 // Molmodel specific headers
 
@@ -239,6 +240,7 @@ enum struct VELOCITY_VERLET : int {
 /**************************************
  * 		Debugging Functions   *
  **************************************/
+bool fileExists(const std::string& filename);
 
 std::string exec(const char* cmd);
 std::size_t getLinuxMemoryUsageFromProc();

@@ -150,6 +150,28 @@ void Context::PrintAtomsDebugInfo(void){
 	return flexibilities;
  }
 
+ void Context::addReplicasAndLoadCoordinates(const std::string& name, const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
+    std::vector<std::string> inpcrdFNs;
+
+    // Add replicas
+    for (int replCnt = 0; replCnt < nofReplicas; replCnt++) {
+        std::string inpcrd = restartDir + "/ligand.s" + std::to_string(replCnt) + ".rst7";
+        inpcrdFNs.push_back(inpcrd);
+    }
+
+    for (int replCnt = 0; replCnt < nofReplicas; replCnt++) {
+        // Check if the inpcrd file exists
+        if (!fileExists(inpcrdFNs[replCnt])) {
+            std::cerr << "Error: File does not exist: " << inpcrdFNs[replCnt] << std::endl;
+            return;
+        }
+
+        loadAtomsCoordinates(prmtop, inpcrdFNs[replCnt]);
+        std::cout << "Loaded coordinates of replica " << replCnt << " from " << inpcrdFNs[replCnt] << std::endl;
+        addReplica(replCnt);
+    }
+}
+
 /*!
  * <!-- Initialize Context 
  * 1.  Setup general input-output parameters
@@ -167,15 +189,6 @@ void Context::PrintAtomsDebugInfo(void){
 */
 bool Context::initializeFromFile(const std::string &inpFN)
 {
-	/*
-	// __new__
-	void __newFunction__(void){
-		std::cout << "__newFunction__\n";
-	}
-	// __end__ __new__
-	*/
-	//SimTK::Test::__newFunction__();
-
 	// Input
 	setupReader.ReadSetup(inpFN);
 	setupReader.dump(true);
@@ -222,18 +235,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
     if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1");}
 
 	// desk_mass_related
-	for (auto& topology : (topologies)){
-
-		// Iterate through atoms
-		for (auto& atom : topology.subAtomList) {
-
-			// Set masses
-			SimTK::Compound::AtomIndex cAIx = atom.getCompoundAtomIndex();
-			SimTK::mdunits::Mass atomMass = atom.getMass();
-			topology.setAtomMass(cAIx, atomMass);
-
-		}
-	}
+	setAtomMasses();
 
 	if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1.1");}
 
@@ -355,16 +357,17 @@ bool Context::initializeFromFile(const std::string &inpFN)
 			rexSamplesPerRound);
 
 		// Add replicas
-		for(int k = 0; k < nofReplicas; k++){
-			inpcrd = restartDir + "/" + setupReader.get("INPCRD")[0] + ".s" + std::to_string(k) + ".rst7";
-			inpcrdFNs.push_back(inpcrd);
-		}
+		// for(int k = 0; k < nofReplicas; k++){
+		// 	inpcrd = restartDir + "/" + setupReader.get("INPCRD")[0] + ".s" + std::to_string(k) + ".rst7";
+		// 	inpcrdFNs.push_back(inpcrd);
+		// }
+		// for(int k = 0; k < nofReplicas; k++){
+		// 	loadAtomsCoordinates(prmtop, inpcrdFNs[k]);
+		// 	std::cout << "Loaded coordinates of replica " << k << " from " << inpcrdFNs[k] << std::endl;
+		// 	addReplica(k);
+		// }
 
-		for(int k = 0; k < nofReplicas; k++){
-			loadAtomsCoordinates(prmtop, inpcrdFNs[k]);
-			std::cout << "Loaded coordinates of replica " << k << " from " << inpcrdFNs[k] << std::endl;
-			addReplica(k);
-		}
+		addReplicasAndLoadCoordinates(setupReader.get("MOLECULES")[0], prmtop, restartDir, nofReplicas);
 
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){
@@ -401,7 +404,6 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 		// How many Gibbs rounds until replica swpas occurs
 		setSwapEvery(std::stoi(setupReader.get("REX_SWAP_EVERY")[0]));
-
 		setSwapFixman(std::stoi(setupReader.get("REX_SWAP_FIXMAN")[0]));
 
 	}
@@ -917,6 +919,7 @@ void Context::addBiotypes() {
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
 	// Load Amber files
+	std::cout << "Context: Loading Amber files: " << prmtop << " " << inpcrd << std::endl;
 	AmberReader reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
@@ -962,6 +965,19 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 	matchDefaultConfigurations();
 }
 
+/*! <!-- Set atom masses --> */
+void Context::setAtomMasses() {
+    for (auto& topology : topologies) {
+        // Iterate through atoms
+        for (auto& atom : topology.subAtomList) {
+            // Set masses
+            SimTK::Compound::AtomIndex cAIx = atom.getCompoundAtomIndex();
+            SimTK::mdunits::Mass atomMass = atom.getMass();
+            topology.setAtomMass(cAIx, atomMass);
+        }
+    }
+}
+
 
 void Context::Initialize() {
 
@@ -980,10 +996,14 @@ void Context::Initialize() {
 	const auto& firstWorldsAtomsLocations = worlds[firstWIx].getAtomsLocationsInGround(lastAdvancedState);
 
 	// Get Z-matrix indexes table	
-	calcZMatrixTable(); // PrintZMatrixTable();
+	calcZMatrixTable();
+	PrintZMatrixTable();
 	reallocZMatrixBAT();
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
-	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
+	PrintZMatrixBAT();
+	PrintZMatrixMobods(firstWIx, lastAdvancedState);
+	
+	std::cout << "DEBUG nofReplicas " << nofReplicas << std::endl << std::flush;
 
 	for(int k = 0; k < nofReplicas; k++){
 		replicas[k].reallocZMatrixBAT();
@@ -1404,7 +1424,15 @@ void Context::addWorld(
 		rootMobilities.back().push_back("Rigid");
 	}
 
-	// @TODO waddey doo 2 dis
+	// 
+	bool printMobilities = true;
+	if(printMobilities){
+		for (const auto& flex : flexibilities) {
+			std::cout << "Mobility" << flex.i << " " << flex.j <<" to " << flex.mobility << std::endl;
+		}	
+	}
+	
+	// Set root mobilities
 	for (const auto& flex : flexibilities) {
 
 		if(flex.i == -1){
@@ -3808,7 +3836,7 @@ void Context::passTopologiesToNewWorld(int newWorldIx)
 // Set the number of replicas. This could be dangerous
 void Context::setNofReplicas(const size_t& argNofReplicas)
 {
-	nofReplicas = argNofReplicas;
+	this->nofReplicas = argNofReplicas;
 }
 
 // Adds a replica to the vector of Replica objects and
@@ -3916,7 +3944,7 @@ void Context::addThermodynamicState(
 // Get the number of replicas
 const size_t& Context::getNofReplicas() const
 {
-	return nofReplicas;
+	return this->nofReplicas;
 }
 
 // Set the number of thermodynamic states
@@ -5657,92 +5685,6 @@ void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
 	#endif
 }
 
-/*!
- * <!--  -->
-*/
-// void Context::RunReplicaRefactor(
-// 	int mixi,
-// 	int replicaIx)
-// {
-// 	assert(!"Context::RunReplicaRefactor function will be removed.");
-// 	/*
-// 	// MOVE THIS INTO THERMODYNAMIC STATES
-// 	// Get equilibrium and non-equilibrium worlds
-// 	int thermoIx = replica2ThermoIxs[replicaIx];
-// 	std::vector<int>& replicaWorldIxs = thermodynamicStates[thermoIx].updWorldIndexes();
-// 	size_t replicaNofWorlds = replicaWorldIxs.size();
-// 	std::vector<int> & distortOpts = thermodynamicStates[thermoIx].getDistortOptions();
-// 	std::vector<int> equilWIxs;
-// 	std::vector<int> nonequilWIxs;
-// 	equilWIxs.reserve(distortOpts.size());
-// 	nonequilWIxs.reserve(distortOpts.size());
-// 	for(int dIx = 0; dIx < distortOpts.size(); dIx++){
-// 		if(distortOpts[dIx] == 0){
-// 			equilWIxs.push_back(dIx);
-// 		}else{
-// 			nonequilWIxs.push_back(dIx);
-// 		}
-// 	}
-// 	// Set world samples incrementation
-// 	int wSamIncr = 0;
-// 	int samIncr = 0;
-// 	(getRunType() == RUN_TYPE::RENE) ? wSamIncr = replicaNofWorlds - 1 : replicaNofWorlds;
-// 	(getRunType() == RUN_TYPE::RENE) ? samIncr = 1 : samIncr = 1; // Always increment replica's nof samples
-// 	//scout("\nEquil world indexes") ;if(equilWIxs.size() > 0){PrintCppVector(equilWIxs);}scout("\nNonequil world indexes") ;if(nonequilWIxs.size() > 0){PrintCppVector(nonequilWIxs);}ceolf;
-// 	if((equilWIxs.size() == 0) && (nonequilWIxs.size() == 0)){
-// 		warn("No worlds");
-// 		return;
-// 	}
-// 	// Transfer Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-// 	transferQStatistics(thermoIx, replicaWorldIxs.back(), replicaWorldIxs.front());
-// 	// ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-// 	if(!equilWIxs.empty()){ // Equilibrium
-// 		RunWorlds(equilWIxs, replicaIx);
-// 		replicas[replicaIx].updAtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround());
-// 		replicas[replicaIx].setPotentialEnergy(worlds[equilWIxs.back()].calcPotentialEnergy());
-// 		REXLog(mixi, replicaIx);
-// 		if(!nonequilWIxs.empty()){ // Non-Equilibrium
-// 			transferCoordinates_WorldToWorld(equilWIxs.back(), nonequilWIxs.front());
-// 			transferQStatistics(thermoIx, equilWIxs.back(), nonequilWIxs.front());
-// 			RunWorlds(nonequilWIxs, replicaIx);
-// 			replicas[replicaIx].setWORK( calcReplicaWork(replicaIx) ); // possibly not correct
-// 			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
-// 			replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].calcPotentialEnergy());
-// 			SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
-// 			replicas[replicaIx].set_WORK_Jacobian(jac);
-// 			//std::cout << "Set Jacobian for replica " << replicaIx <<" to " << jac << std::endl;
-// 			SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
-// 			replicas[replicaIx].setFixman(fix_set_back);
-// 			transferCoordinates_WorldToWorld(nonequilWIxs.back(), equilWIxs.front());
-// 		}else{
-// 			replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[equilWIxs.back()].getCurrentAtomsLocationsInGround()); // Victor bugfix
-// 			transferCoordinates_WorldToWorld(equilWIxs.back(), equilWIxs.front());
-// 		}
-// 		// Increment the nof samples for replica and thermostate
-// 		replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
-// 		thermodynamicStates[thermoIx].incrementWorldsNofSamples(wSamIncr);
-// 		replicas[replicaIx].incrementNofSamples(samIncr);
-// 		thermodynamicStates[thermoIx].incrementNofSamples(samIncr);		
-// 		return;
-// 	}
-// 	if(!nonequilWIxs.empty()){ // Only Non-Equilibrium
-// 		RunWorlds(nonequilWIxs, replicaIx);
-// 		replicas[replicaIx].setWORK( calcReplicaWork(replicaIx) ); // possibly not correct
-// 		replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[nonequilWIxs.back()].getCurrentAtomsLocationsInGround());
-// 		replicas[replicaIx].set_WORK_PotentialEnergy_New(worlds[nonequilWIxs.back()].calcPotentialEnergy());
-// 		SimTK::Real jac = (worlds[nonequilWIxs.back()].updSampler(0))->getDistortJacobianDetLog();
-// 		replicas[replicaIx].set_WORK_Jacobian(jac);
-// 		SimTK::Real fix_set_back = pHMC((worlds[nonequilWIxs.back()].samplers[0]))->fix_set;
-// 		replicas[replicaIx].setFixman(fix_set_back);
-// 		transferCoordinates_WorldToWorld(nonequilWIxs.back(), nonequilWIxs.front());
-// 	}
-// 	// Increment the nof samples for replica and thermostate
-// 	replicas[replicaIx].incrementWorldsNofSamples(wSamIncr);
-// 	thermodynamicStates[thermoIx].incrementWorldsNofSamples(wSamIncr);
-// 	replicas[replicaIx].incrementNofSamples(0); // Only non-equilibrium
-// 	thermodynamicStates[thermoIx].incrementNofSamples(0); // Only non-equilibrium
-// 	*/
-// }
 
 
 /*! <!--  -->*/
@@ -7772,6 +7714,16 @@ int Context::getPdbRestartFreq()
 void Context::setPdbRestartFreq(int argFreq)
 {
 	this->pdbRestartFreq = argFreq;
+}
+
+const std::string& Context::getRestartDir() const
+{
+	return this->restartDir;
+}
+
+void Context::setRestartDir(const std::string& argRestartDir)
+{
+	this->restartDir = argRestartDir;
 }
 
 // Write pdb

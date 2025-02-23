@@ -1,0 +1,11 @@
+source leaprc.protein.ff14SB
+source leaprc.gaff
+
+ala1 = loadpdb ala1.pdb
+2but = loadmol2 2but.mol2
+
+2butala1 = combine {2but ala1}
+
+saveAmberParm 2butala1 ligand.prmtop ligand.rst7
+
+quit

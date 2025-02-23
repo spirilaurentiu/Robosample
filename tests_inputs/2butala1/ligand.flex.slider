@@ -1,0 +1,45 @@
+# External DOF
+-1 0 Weld
+
+# 2but
+# Main
+3 1  Slider
+1 2 Slider
+2 4 Slider
+1 0 Slider
+
+# Hydrogens
+3 8 Slider
+3 9 Slider
+3 10 Slider
+0 14 Slider
+1 5 Slider
+2 6 Slider
+2 7 Slider
+4 11 Slider
+4 12 Slider
+4 13 Slider
+
+# ala1
+# Main
+16 19 Slider
+19 21 Slider
+21 23 Slider
+23 29 Slider
+29 31 Slider
+31 33 Slider
+
+# Rest Slider
+16 15 Slider
+16 17 Slider
+16 18 Slider
+21 22 Slider
+23 24 Slider
+25 26 Slider
+25 27 Slider
+25 28 Slider
+29 30 Slider
+31 32 Slider
+33 34 Slider
+33 35 Slider
+33 36 Slider
