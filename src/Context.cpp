@@ -2077,85 +2077,6 @@ void Context::passTopologiesToWorlds(void){
   -->
 */
 
-/*! <!-- __fill__ --> */
-void Context::build_GmolGraph_MolmodelAcyclicGraph(
-){
-
-	// ========================================================================
-	// ======== Construct a Compound for every atom ===========================
-	// ========================================================================		
-	setAtomsCompounds();
-
-	// Biotype will be used to look up molecular
-	// force field specific parameters for an atom type
-	addBiotypes();
-
-	// ========================================================================
-	// ======== (1) Get BAT graphs ============================================
-	// ========================================================================
-
-	// Find a root in the unvisited atoms and build BAT graphs
-	nofMols = 0;
-	while( internCoords.computeRoot( getAtoms() )){ // find a root
-
-		nofMols++;
-		//internCoords.PrintRoot();
-		
-		// Compute the new molecule's BAT coordinates
-		internCoords.computeBAT( getAtoms() );
-		internCoords.updateVisited(atoms);
-		//internCoords.PrintBAT();
-
-	}
-
-	internCoords.computeLevelsAndOffsets( getAtoms() );
-
-	// ========================================================================
-	// ======== (2) BAT bonds to bonds ========================================
-	// ========================================================================
-	//const std::vector<std::vector<BOND>>& BATbonds = internCoords.getBonds();
-
-	load_BONDS_to_bonds( internCoords.getBonds() );
-
-	// ========================================================================
-	// ======== (2) Build graphs with bondAtom ================================
-	// ========================================================================
-	topologies.reserve(nofMols);
-	moleculeCount = -1;
-
-	for(unsigned int molIx = 0; molIx < nofMols; molIx++){
-
-		// Add an empty topology
-		std::string moleculeName = "MOL" + std::to_string(++moleculeCount);
-		Topology topology(moleculeName);
-
-		// --------------------------------------------------------------------
-		//  (1) findARoot 
-		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-		const int rootAmberIx = internCoords.getRoot( molIx ).first;
-		topology.bSpecificAtomRootIndex = rootAmberIx;
-		setRootAtom( topology, rootAmberIx );
-
-		// --------------------------------------------------------------------
-		// (2) buildAcyclicGraph
-		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-		buildAcyclicGraph(topology, rootAmberIx, molIx);
-
-		//addRingClosingBonds_SP_NEW(topology, rootAmberIx, molIx);
-
-		// --------------------------------------------------------------------
-		// (4) Add new topology 
-		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-		// Add to the list of topologies
-		topologies.push_back(topology);
-
-	}
-}
-
-
-
 
 /*! <!-- Get BAT graphs --> */
 void Context::calc_Gmolmodel_Graph()
@@ -2164,6 +2085,7 @@ void Context::calc_Gmolmodel_Graph()
 	// Find a root in the unvisited atoms and build BAT graphs
 	nofMols = 0;
 	while( internCoords.computeRoot( getAtoms() )){ // find a root
+
 
 		nofMols++;
 		internCoords.PrintRoot();

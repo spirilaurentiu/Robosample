@@ -136,6 +136,7 @@ public:
 	* @param bAtomList Atom list read from Amber.
 	*/
 	void computeBAT(std::vector<bSpecificAtom>& bAtomList);
+	void computeBAT_old(std::vector<bSpecificAtom>& bAtomList);
 
 	/**
 	* @brief This function prints the BAT graph
@@ -189,6 +190,7 @@ public:
 	* @param bAtomList Atom list read from Amber.
 	*/
 	void computeLevelsAndOffsets(const std::vector<bSpecificAtom>& bAtomList);
+	void computeLevelsAndOffsets_old(const std::vector<bSpecificAtom>& bAtomList);
     
 	/**@}**/
 
@@ -293,6 +295,7 @@ public:
 	/**@}**/
 
     bool computeRoot(const std::vector<bSpecificAtom>& bAtomList);
+    bool computeRoot_old(const std::vector<bSpecificAtom>& bAtomList);
 
 private:
 
@@ -303,6 +306,7 @@ private:
 	* @return
 	*/
 	void sortByMass(std::vector<AmberAtom>& v, bool reverse);
+	void sortByIndex(std::vector<AmberAtom>& v, bool reverse);
 
 	bool isSelected(const AmberAtom& a) const;
 	void selectAtom(const AmberAtom& a);

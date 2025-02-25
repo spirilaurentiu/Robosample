@@ -264,7 +264,6 @@ public:
 	void passTopologiesToWorlds(void);
 
 	/**  */
-	void build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
 	void new_build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
 
 	/**	

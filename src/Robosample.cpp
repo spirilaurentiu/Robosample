@@ -435,10 +435,10 @@ void testSOA(void)
 /*! <!-- Main --> */
 int main(int argc, char **argv)
 {
-    // if (argc < 10) {
-    //     std::cerr << "Usage: " << argv[0] << " <name> <top> <rst7> <equilRounds> <prodRounds> <writeFreq> <baseTemperature> <runType> <seed>" << std::endl;
-    //     return -1;
-    // }	
+    if (argc < 10) {
+        std::cerr << "Usage: " << argv[0] << " <name> <top> <rst7> <equilRounds> <prodRounds> <writeFreq> <baseTemperature> <runType> <seed>" << std::endl;
+        return -1;
+    }	
 	std::string name = (argv[1]); std::cout << "name: " << name << std::endl;
 	std::string top = (argv[2]); std::cout << "top: " << top << std::endl;
 	std::string rst7 = (argv[3]); std::cout << "rst7: " << rst7 << std::endl;
