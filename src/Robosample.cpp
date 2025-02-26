@@ -432,9 +432,15 @@ void testSOA(void)
 
 }
 
+
+#ifndef TRACELOC
+#define TRACELOC(msg) std::cout<<"TRACELOC:"<<__FILE__<<":"<<__LINE__<<" "<<msg<< std::endl<<std::flush;
+#endif
+
 /*! <!-- Main --> */
 int main(int argc, char **argv)
 {
+	TRACELOC(0);
     if (argc < 10) {
         std::cerr << "Usage: " << argv[0] << " <name> <top> <rst7> <equilRounds> <prodRounds> <writeFreq> <baseTemperature> <runType> <seed>" << std::endl;
         return -1;
@@ -446,14 +452,6 @@ int main(int argc, char **argv)
 	int prodRounds = std::stoi(argv[5]); std::cout << "prodRounds: " << prodRounds << std::endl;
 	int writeFreq = std::stoi(argv[6]); std::cout << "writeFreq: " << writeFreq << std::endl;
 	float baseTemperature = std::stof(argv[7]); std::cout << "baseTemperature: " << baseTemperature << std::endl;
-	
-	std::string runTypeStr = argv[8];
-	if (RUN_TYPE_MAP.find(runTypeStr) == RUN_TYPE_MAP.end()) {
-        std::cerr << "Error: Invalid run type '" << runTypeStr 
-			<< "'. Valid options are: DEFAULT, REMC, RENEMC, RENE." << std::endl;
-        return -1;
-    }
-    RUN_TYPE runType = RUN_TYPE_MAP.at(runTypeStr); std::cout << "runType: " << runTypeStr << std::endl;
 
     #pragma region checkArgs //Check if the necessary files exist
 	if (!fileExists(top)) {
@@ -464,7 +462,15 @@ int main(int argc, char **argv)
 		std::cerr << "Error: File does not exist: " << rst7 << std::endl;
 		return -1;
 	}
+	if (RUN_TYPE_MAP.find(argv[8]) == RUN_TYPE_MAP.end()) {
+        std::cerr << "Error: Invalid run type '" << argv[8] 
+			<< "'. Valid options are: DEFAULT, REMC, RENEMC, RENE." << std::endl;
+        return -1;
+    }	
 	#pragma endregion // checkArgs
+
+	std::string runTypeStr = argv[8];
+    RUN_TYPE runType = RUN_TYPE_MAP.at(argv[8]); std::cout << "runType: " << argv[8] << std::endl;
 
 	int seed = std::stoi(argv[9]); std::cout << "seed: " << seed << std::endl;
 
@@ -478,14 +484,16 @@ int main(int argc, char **argv)
 	// Setup general input-output parameters
 	context.setOutputDir("temp/");
 	context.setPdbPrefix(name);
-
 	context.setPdbRestartFreq(1);
 	context.setPrintFreq(writeFreq);
 
 	// Set nonbonded method and cutoff
 	context.setNonbonded(0, 1.2);
+
 	context.setGBSA(0.0);
+
 	context.setAtomMasses();
+
 	context.setVerbose(true);
 
 	context.loadAmberSystem(top, rst7);
@@ -494,51 +502,79 @@ int main(int argc, char **argv)
 	// context.PrintZMatrixTable();
 	// context.reallocZMatrixBAT();
 
-	// Fully flexible world
-	std::string flexFileFN = "../tests_inputs/" + name + "/ligand.cart.flex";
-	if (!fileExists(flexFileFN)) {
-		std::cerr << "Error: File does not exist: " << flexFileFN << std::endl;
-		return -1;
-	}	
-	std::vector<BOND_FLEXIBILITY> flexibilities = {};
-	context.readFlexibility(flexFileFN, flexibilities);
-	context.addWorld(false, 1, ROOT_MOBILITY::CARTESIAN, flexibilities, true, false, 0);
+	// Add worlds
+	int nofWorlds = 3;
+	std::vector<ROOT_MOBILITY> rootMobilities = {
+		ROOT_MOBILITY::CARTESIAN,
+		ROOT_MOBILITY::WELD,
+		ROOT_MOBILITY::WELD };
 
-	SamplerName sampler = SamplerName::HMC;
-	ThermostatName thermostat = ThermostatName::ANDERSEN;
-	IntegratorType integrator = IntegratorType::OMMVV;
+	std::vector<std::string> flexFileFNs = {
+		"../tests_inputs/" + name + "/ligand.cart.flex",
+		"../tests_inputs/" + name + "/ligand.td.flex",
+		"../tests_inputs/" + name + "/ligand.flex.slider"};
 
-	context.getWorld(0).addSampler(sampler, integrator, thermostat, false);
+	std::vector<IntegratorType> integrators = {
+		IntegratorType::OMMVV,
+		IntegratorType::VERLET,
+		IntegratorType::VERLET};
 
-	std::vector<SimTK::Real> temperatures = { baseTemperature };
+	std::vector<SamplerName> samplers = {
+		SamplerName::HMC,
+		SamplerName::HMC,
+		SamplerName::HMC};
+
+	for(int wIx = 0; wIx < nofWorlds; wIx++){
+		if (!fileExists(flexFileFNs[wIx])) {
+			std::cerr << "Error: File does not exist: " << flexFileFNs[wIx] << std::endl;
+			return -1;
+		}	
+		std::vector<BOND_FLEXIBILITY> flexibilities = {};
+		context.readFlexibility(flexFileFNs[wIx], flexibilities);
+		context.addWorld(false, 1, rootMobilities[wIx], flexibilities, true, false, 0);
+	}
+
+	// Add samplers
+	std::vector<bool> FixPots = {
+		false,
+		true,
+		true };
+	for(int wIx = 0; wIx < nofWorlds; wIx++){
+		ThermostatName thermostat = ThermostatName::ANDERSEN;
+		context.getWorld(wIx).addSampler(samplers[wIx], integrators[wIx], thermostat, FixPots[wIx]);
+	}
+
+	// Add replicas
+	size_t nofReplicas = 2;
+	std::vector<SimTK::Real> temperatures = { 300.00, 400.00 };
 	std::vector<SimTK::Real> boostTemperatures = { baseTemperature };
-	std::vector<AcceptRejectMode> accept_reject_modes = { AcceptRejectMode::MetropolisHastings };
-	std::vector<int> distort_options = { 0 };
-	std::vector<std::string> distort_args = { "0" };
-	std::vector<int> flow = { 0 };
-	std::vector<int> work = { 0 };
-	std::vector<IntegratorType> integrators = { integrator };
-	std::vector<int> worldIndexes = { 0 };
-	std::vector<double> timesteps = { 0.007 };
-	std::vector<int> mdsteps = { 10 };
+
+	std::vector<AcceptRejectMode> accept_reject_modes = { AcceptRejectMode::MetropolisHastings,  AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings};
+	std::vector<int> distort_options = { 0, 0, 0 };
+	std::vector<std::string> distort_args = { "0", "0", "0" };
+	std::vector<int> flow = { 0, 0, 0 };
+	std::vector<int> work = { 0, 0, 0 };
+	std::vector<int> worldIndexes = { 0, 1, 2 };
+	std::vector<double> timesteps = { 0.0007, 0.004, 0.0007 };
+	std::vector<int> mdsteps = { 10, 10, 10 };
 	
-	// Restart directory
 	std::string restartDir = "rest." + name + "." + std::to_string(seed);
-	context.setRestartDir(restartDir);
-	if (!fileExists(top)) {
+	if (!fileExists(restartDir)) {
 		std::cerr << "Error: File does not exist: " << restartDir << std::endl;
 		return -1;
 	}
+	context.setRestartDir(restartDir);
 
-	size_t nofReplicas = 1;
-	context.addReplicasAndLoadCoordinates(name, top, restartDir, nofReplicas);
+	if(!context.addReplicasAndLoadCoordinates(name, top, restartDir, nofReplicas)){
+		std::cerr << "Error: Could not load coordinates from " << restartDir << std::endl;
+		return -1;
+	}
 
 	for(int replIx = 0; replIx < nofReplicas; replIx++){
 
 		std::cout << "Adding thermo state " << replIx << std::endl;
-
 		context.addThermodynamicState(replIx,
-			300.00,
+			temperatures[replIx],
 			accept_reject_modes,
 			distort_options,
 			distort_args,
@@ -552,18 +588,11 @@ int main(int argc, char **argv)
 
 	// Initialize
 	context.Initialize();
-
 	context.setSwapEvery(1);
 	context.setSwapFixman(0);
 
 	// -- Run --
 	context.RunREX(equilRounds, prodRounds);
-		
-	std::cout << "OS memory 5.\n" << exec("free") << std::endl;
-	
-	// Write final pdbs
-	//c.writeFinalPdb();
-	//c.printStatus();
 
 	return 0;	
 

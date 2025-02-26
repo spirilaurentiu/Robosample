@@ -977,16 +977,13 @@ void World::setUScaleFactorsToMobods(void)
 			SimTK::Compound::AtomIndex aIx1 = topology.subAtomList[Bond.i].getCompoundAtomIndex();
 			SimTK::Compound::AtomIndex aIx2 = topology.subAtomList[Bond.j].getCompoundAtomIndex();
 
-			// SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexFromMap(aIx1, ownWorldIndex);
-			// SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexFromMap(aIx2, ownWorldIndex);
-
 			SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx1, *forceField);
 			SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx2, *forceField);
 
-			//std::cout
-			//<< "World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 "
-			//<< aIx1 << " " << aIx2 << " "
-			//<< mbx1 << " " << mbx2 << std::endl;
+			std::cout
+			<< "DEBUG World::setUScaleFactorsToMobods aIx1 aIx2 mbx1 mbx2 "
+			<< aIx1 << " " << aIx2 << " "
+			<< mbx1 << " " << mbx2 << std::endl;
 
 			const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(mbx1);
 			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(mbx2);
@@ -1000,7 +997,7 @@ void World::setUScaleFactorsToMobods(void)
 				mbx2uScale.insert( std::pair< SimTK::MobilizedBodyIndex, float > (mbx2, Bond.getUScaleFactor(ownWorldIndex)));
 			}else{
 				if(Bond.getUScaleFactor(ownWorldIndex) != 0){
-					//std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n";
+					std::cout << "World::setUScaleFactorsToMobods Warning: Trying to scale a bond inside a rigid body\n";
 				}
 			}
 
@@ -3226,9 +3223,11 @@ bool World::addSampler(SamplerName samplerName,
 		// the temperature has not been set at this point, but is needed to create the openmm system
 		// forceField->setDuMMTemperature(temperature);
 	}
+
 	// Non-bonded forces will always be calculated with OpenMM regardless of the integrator type
 	// However, if the integrator is OMMVV, we want more that that so we set it to false
-	forceField->setUseOpenMMCalcOnlyNonBonded(integratorType != IntegratorType::OMMVV);
+	// forceField->setUseOpenMMCalcOnlyNonBonded(integratorType != IntegratorType::OMMVV);
+	forceField->setUseOpenMMCalcOnlyNonBonded(false);
 
     if(MEMDEBUG){
 		std::cout << "World::addSampler memory 1\n" << exec("free") << std::endl << std::flush;

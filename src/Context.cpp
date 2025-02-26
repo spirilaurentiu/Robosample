@@ -150,7 +150,7 @@ void Context::PrintAtomsDebugInfo(void){
 	return flexibilities;
  }
 
- void Context::addReplicasAndLoadCoordinates(const std::string& name, const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
+ bool Context::addReplicasAndLoadCoordinates(const std::string& name, const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
     std::vector<std::string> inpcrdFNs;
 
     // Add replicas
@@ -163,13 +163,15 @@ void Context::PrintAtomsDebugInfo(void){
         // Check if the inpcrd file exists
         if (!fileExists(inpcrdFNs[replCnt])) {
             std::cerr << "Error: File does not exist: " << inpcrdFNs[replCnt] << std::endl;
-            return;
+            return false;
         }
 
         loadAtomsCoordinates(prmtop, inpcrdFNs[replCnt]);
         std::cout << "Loaded coordinates of replica " << replCnt << " from " << inpcrdFNs[replCnt] << std::endl;
         addReplica(replCnt);
     }
+
+	return true;
 }
 
 /*!
@@ -1428,7 +1430,7 @@ void Context::addWorld(
 	bool printMobilities = true;
 	if(printMobilities){
 		for (const auto& flex : flexibilities) {
-			std::cout << "Mobility" << flex.i << " " << flex.j <<" to " << flex.mobility << std::endl;
+			std::cout << "Mobility " << flex.i << " " << flex.j <<" to " << flex.mobility << std::endl;
 		}	
 	}
 	
@@ -3853,8 +3855,8 @@ void Context::addThermodynamicState(
 	thermodynamicStates.back().setDistortArgs(rexDistortArgs);
 	thermodynamicStates.back().setFlowOptions(rexFlowOptions);
 	thermodynamicStates.back().setWorkOptions(rexWorkOptions);
-	thermodynamicStates.back().appendLog(baseName + "." + std::to_string(index) + "K.csv");
-	thermodynamicStates.back().appendDCDReporter(baseName + "." + std::to_string(index) + "K.dcd", natoms, topologies.size());
+	thermodynamicStates.back().appendLog(baseName + ".repl" + std::to_string(index) + ".csv");
+	thermodynamicStates.back().appendDCDReporter(baseName + ".repl" + std::to_string(index) + ".dcd", natoms, topologies.size());
 
 	// Set integrating method
 	thermodynamicStates.back().setIntegrators(rexIntegrators);
@@ -4149,7 +4151,7 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 
 /*! <!-- restoreReplica --> */\
 void Context::rewindReplica(void){
-	assert(!"Not implemented");
+	//assert(!"Not implemented");
 
 	// Return to equilibrium worlds coordinates
 	// - no need because it is restored in RunREX
@@ -5512,7 +5514,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 	// Print the world output stream
 	if (verbose) {
-		std::cout << worldOutStream.str();
+		std::cout << worldOutStream.str() << std::endl;
 	}
 
 	return validated;
@@ -5939,6 +5941,15 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			mixReplicas(mixi); // check this
 			                                               
 			PrintNofAcceptedSwapsMatrix();
+		}else{
+
+			// float unifSampleDummy = 1.0;
+			// std::cout << "0"
+			// <<", " << unifSampleDummy
+			// << endl << endl;
+
+			PrintNofAcceptedSwapsMatrix();
+
 		}
 
 		this->nofRounds++; 
