@@ -9,6 +9,12 @@
 #include "SetupReader.hpp"
 #include "TrajectoryObject.hpp"
 
+#include "OpenMM.h"
+#include "openmm/Platform.h"
+#include "openmm/System.h"
+#include "openmm/internal/ThreadPool.h"
+#include "openmm/common/windowsExportCommon.h"
+
 #include <fstream>
 
 class Sampler;
@@ -775,7 +781,34 @@ public:
 		}
 	}
 
+    /**	
+	* @brief Initialize OpenMM with general data
+	* @param allowReferencePlatform Allow OpenMM reference platform
+	* @return OpenMM context's platform's name
+	*/ 
+	std::string OMMRef_initialize(void);
+
+	SimTK::Real OMMRef_calcPotential(bool wantEnergy, bool wantForces);
+
 private:
+
+	//OpenMMPluginInterface refOpenMMPlugin; // __refOMM__
+	std::unique_ptr<OpenMM::Platform> platform; // __refOMM__
+	std::unique_ptr<OpenMM::Context> openMMContext; // __refOMM__
+	std::unique_ptr<OpenMM::System> openMMSystem; // __refOMM__
+
+	std::unique_ptr<OpenMM::NonbondedForce> ommNonbondedForce; // __refOMM__
+	std::unique_ptr<OpenMM::GBSAOBCForce> ommGBSAOBCForce; // __refOMM__
+	std::unique_ptr<OpenMM::HarmonicBondForce> ommHarmonicBondStretch; // __refOMM__
+	std::unique_ptr<OpenMM::HarmonicAngleForce> ommHarmonicAngleForce; // __refOMM__
+	std::unique_ptr<OpenMM::PeriodicTorsionForce> ommPeriodicTorsionForce; // __refOMM__
+
+	std::unique_ptr<OpenMM::AndersenThermostat> openMMThermostat;
+	std::unique_ptr<OpenMM::Integrator> openMMIntegrator;
+
+	mutable OpenMM::State openMMState;
+
+	// end __refOMM__
 
 	std::vector<int> TopologyIXs;
 	std::vector<std::vector<int>> AmberAtomIXs;
@@ -926,8 +959,9 @@ private:
 
 	uint32_t seed = 0;
 	int numThreads = 0;
-	int nonbondedMethod = 0; // 0 = NoCutoff, 1 = CutoffNonPeriodic
+	int nonbondedMethod = 0; // 0 = NoCutoff, 1 = CutoffNonPeriodic, 2 = CutoffPeriodic .. TODO: implement enum
 	SimTK::Real nonbondedCutoff = 1.2; // 1.2 nm, not used by default (no cutoff)
+	SimTK::Real vdwGlobalScaleFactor = 1.0; // Default is 1.0
 	SimTK::Real gbsaGlobalScaleFactor = 0.0; // Default is 0 (vacuum). Use 1 for water
 
 	bool useAmberForceFieldScaleFactors = true;

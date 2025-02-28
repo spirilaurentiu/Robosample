@@ -556,7 +556,7 @@ int main(int argc, char **argv)
 	std::vector<int> work = { 0, 0, 0 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
 	std::vector<double> timesteps = { 0.0007, 0.004, 0.0007 };
-	std::vector<int> mdsteps = { 10, 10, 10 };
+	std::vector<int> mdsteps = { 1, 1, 1 };
 	
 	std::string restartDir = "rest." + name + "." + std::to_string(seed);
 	if (!fileExists(restartDir)) {
@@ -593,6 +593,8 @@ int main(int argc, char **argv)
 
 	// -- Run --
 	context.RunREX(equilRounds, prodRounds);
+
+	context.OMMRef_calcPotential(true, true);
 
 	return 0;	
 

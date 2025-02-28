@@ -3383,6 +3383,10 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 		pe_n = OMM_calcPotentialEnergy();
 	}else{
 		pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
+
+		//SimTK::Real pe_temp = dumm->calcFullPotentialEnergyOpenMM(someState);
+		//std::cout<<"DEBUG pe_n pe_temp " << pe_n <<" "<< pe_temp << std::endl;
+		
 		//pe_n = dumm->CalcFullPotEnergyIncludingRigidBodies(someState);// DOESN'T WORK WITH OPENMM
 		// TODO: replace with the following after checking is the same thing
 		//pe_n = compoundSystem->calcPotentialEnergy(someState);
@@ -4157,7 +4161,6 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 	// // Warm up
 	// bool warmup = true;
-
 	// SimTK::Real e = 0.002;          // Initial step size (2 fs)
 	// SimTK::Real log_e_avg = 0.0;    // Average log step size
 	// SimTK::Real running_sum = 0.0;  
@@ -4167,27 +4170,21 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 	// SimTK::Real mu = std::log(10 * e); // Initial value based on heuristic
 	// SimTK::Real target_accept = 0.651; // Target acceptance rate
 	// int n_warmup = 1000;
-
 	// for (int i = 0; i < n_warmup; i++) {
 	// 	if (!warmup || integratorType != IntegratorType::VERLET) {
 	// 		break;
 	// 	}
-		
 	// 	// Simulate one HMC step and get acceptance probability
 	// 	setTimestep(e, false);
 	// 	SimTK::Real accept_prob = propose(someState, false); // You'll need this function
 	// 	bool accepted = propose(someState, false);
-		
 	// 	// Update running average using actual acceptance probability
 	// 	running_sum += target_accept - accept_prob;
-		
 	// 	// Updated dual averaging formula without sqrt(i)
 	// 	SimTK::Real log_e = mu - (running_sum / (t0 + i)) / gamma;
-		
 	// 	// Update step size
 	// 	e = std::exp(log_e);
 	// 	log_e_avg = (1 - std::pow(i, -kappa)) * log_e_avg + std::pow(i, -kappa) * log_e;
-		
 	// 	if (i % 10 == 0) {
 	// 		std::cout << "Iteration " << i << ": Step size = " << e 
 	// 				<< ", Acceptance Rate = " << accept_prob << std::endl;

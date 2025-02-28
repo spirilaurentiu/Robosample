@@ -170,12 +170,16 @@ SimTK::Compound::AtomIndex bSpecificAtom:: getCompoundAtomIndex() const
     return this->compoundAtomIndex;
 }
 
+
+// Set charge
+void bSpecificAtom::setCharge(SimTK::Real inpCharge){
+    this->charge = inpCharge;
+}
+
+
 //
 SimTK::Real bSpecificAtom::getCharge() const {
-    assert(!"Not implemented");
-    throw std::exception();
-
-    return SimTK::NaN;
+    return charge;
 }
 
 //
@@ -350,11 +354,6 @@ void bSpecificAtom::setBiotype(const std::string& biotype)
 void bSpecificAtom::setCompoundAtomIndex(SimTK::Compound::AtomIndex inpAtomIndex)
 {
     this->compoundAtomIndex = inpAtomIndex;
-}
-
-// Set charge
-void bSpecificAtom::setCharge(SimTK::Real inpCharge){
-    this->charge = inpCharge;
 }
 
 // Get the atom class index
