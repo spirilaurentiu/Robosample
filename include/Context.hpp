@@ -798,7 +798,7 @@ private:
 	std::unique_ptr<OpenMM::System> openMMSystem; // __refOMM__
 
 	std::unique_ptr<OpenMM::NonbondedForce> ommNonbondedForce; // __refOMM__
-	std::unique_ptr<OpenMM::GBSAOBCForce> ommGBSAOBCForce; // __refOMM__
+	//std::unique_ptr<OpenMM::GBSAOBCForce> ommGBSAOBCForce; // __refOMM__
 	std::unique_ptr<OpenMM::HarmonicBondForce> ommHarmonicBondStretch; // __refOMM__
 	std::unique_ptr<OpenMM::HarmonicAngleForce> ommHarmonicAngleForce; // __refOMM__
 	std::unique_ptr<OpenMM::PeriodicTorsionForce> ommPeriodicTorsionForce; // __refOMM__

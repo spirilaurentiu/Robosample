@@ -1037,7 +1037,7 @@ void Context::Initialize() {
 
 	// Initialize OpenMM
 	OMMRef_initialize();
-	OMMRef_calcPotential(true, true);
+	//OMMRef_calcPotential(true, true);
 }
 
 /*! __refOMM__
@@ -1052,31 +1052,28 @@ void Context::Initialize() {
 std::string Context::OMMRef_initialize(void)
 {
 	
-		// Allocate positions cache
-		// TODO OMM These are memory consuming because repeatedly calling delete becomes slow due to memory fragmentation
+		// TODO DELETE
 		std::vector<OpenMM::Vec3> NonbondAtomsPositionsCache = std::vector<OpenMM::Vec3>(atoms.size());
 		std::vector<OpenMM::Vec3> PositionsCache = std::vector<OpenMM::Vec3>(atoms.size());
 	
 		// Allocate OpenMM forces
-		auto ommNonbondedForce = std::make_unique<OpenMM::NonbondedForce>();
+		ommNonbondedForce = std::make_unique<OpenMM::NonbondedForce>();
 		//auto ommGBSAOBCForce = std::make_unique<OpenMM::GBSAOBCForce>(); // TODO
-		auto ommHarmonicBondStretch = std::make_unique<OpenMM::HarmonicBondForce>();
-		auto ommHarmonicAngleForce = std::make_unique<OpenMM::HarmonicAngleForce>();
-		auto ommPeriodicTorsionForce = std::make_unique<OpenMM::PeriodicTorsionForce>();
+		ommHarmonicBondStretch = std::make_unique<OpenMM::HarmonicBondForce>();
+		ommHarmonicAngleForce = std::make_unique<OpenMM::HarmonicAngleForce>();
+		ommPeriodicTorsionForce = std::make_unique<OpenMM::PeriodicTorsionForce>();
 
 		// Instantiate the thermostat with adjusted temperature
 		//Real temperature = 300.0;
 		//if(dumm->wantOpenMMIntegration){temperature = dumm->temperature;}
-		//openMMThermostat = std::make_unique<OpenMM::AndersenThermostat>(temperature, 1);
-		//openMMThermostat = new OpenMM::AndersenThermostat(temperature, 1);
-		auto openMMThermostat = std::make_unique<OpenMM::AndersenThermostat>(300.0, 1);
+		openMMThermostat = std::make_unique<OpenMM::AndersenThermostat>(300.0, 1);
 		openMMThermostat->setRandomNumberSeed(seed);
 	
 		// Allocate OpenMM system and add particles to it
 		openMMSystem = std::make_unique<OpenMM::System>();
 		for (auto atom : atoms) {
 			openMMSystem->addParticle(atom.getMass());
-			tracerefOMM("System added particle with mass " << atom.getMass());
+			//tracerefOMM("System added particle with mass " << atom.getMass());
 		}
 	
 		// Nonbonded forces
@@ -1088,17 +1085,23 @@ std::string Context::OMMRef_initialize(void)
 		// scale linearly.
 		const Real sqrtCoulombScale = std::sqrt(1.0);
 
-		// Add atoms
+		// TOPOLOGY: ADD ATOMS
+		int aCnt = -1;
 		for (auto atom : atoms){   
-
+			aCnt++;
 			SimTK::Real charge = atom.getCharge();
-			const SimTK::Real sigma = 2.0 * atom.getVdwRadius() * DuMM::Radius2Sigma;
-			const SimTK::Real wellDepth = atom.getLJWellDepth();
+			const SimTK::Real sigma = 2.0 * (atom.getVdwRadius() / 10.0) * DuMM::Radius2Sigma;
+			const SimTK::Real wellDepth = atom.getLJWellDepth() * 4.184;
 
 			ommNonbondedForce->addParticle(sqrtCoulombScale*charge, sigma, vdwGlobalScaleFactor*wellDepth);
+			// std::cout << "OMMRef_initialize added particle "
+			// 	<< aCnt <<" " << sqrtCoulombScale <<" "
+			// 	<< charge <<" " << sigma <<" " 
+			// 	<< vdwGlobalScaleFactor <<" " << wellDepth <<" "
+			// 	<< std::endl;			
 		}
 
-		// Add bonds
+		// TOPOLOGY: ADD BONDS (1-2)
 		std::vector< std::pair<int, int> > ommBonds;
 		for (auto bond : bonds) {
 			ommBonds.emplace_back(std::make_pair(bond.i, bond.j));
@@ -1107,10 +1110,6 @@ std::string Context::OMMRef_initialize(void)
 		// Register all the 1-2 bonds between nonbond atoms for scaling.
 		// World::setAmberForceFieldScaleFactors(0.0, 0.0, 0.5, 1.0, 0.0, 0.0, 0.8333333333, 1.0);
 		ommNonbondedForce->createExceptionsFromBonds(ommBonds, 0.8333333333, 0.5);
-	
-		// System takes over heap ownership of the force.
-		openMMSystem->addForce(ommNonbondedForce.get());
-		ommNonbondedForce.release();
 	
 		// GBSA
 		// When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -1132,37 +1131,41 @@ std::string Context::OMMRef_initialize(void)
 		//openMMSystem.addForce(ommGBSAOBCForce.get());
 		//ommGBSAOBCForce.release();
 				
-		// Add bonded forces
-		// TODO: As it is now, it should work only with a fully flexible setup (nonbonded index)
-
-		// ADD BONDS (1-2)
+		// FORCES: ADD BONDS (1-2)
 		for (auto bond : bonds) {
-			SimTK::Real bondEquil = bond.getForceEquil();
-			SimTK::Real bondK = bond.getForceK();
+			SimTK::Real bondEquil = bond.getForceEquil() * DuMM::Ang2Nm;
+			SimTK::Real bondK = bond.getForceK() * 2.0 * DuMM::Kcal2KJ/square(DuMM::Ang2Nm);
 
 			// Ang and KcalPerAngstrom2
 			ommHarmonicBondStretch->addBond(bond.i, bond.j,
-									bondEquil, // * OpenMM::NmPerAngstrom,
-									bondK * 2.0); // * OpenMM::KJPerKcal OR * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
+									bondEquil , // * OpenMM::NmPerAngstrom,
+									bondK ); // * OpenMM::KJPerKcal OR * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
+			
+			// std::cout << "OMMRef_initialize addBond: " << bond.i <<" " << bond.j <<" "
+			// 	<< bondEquil <<" " << bondK
+			// 	<< std::endl;
 		} // _end_ bonds
 
-		// ADD ANGLES (1-2-3)
+		// FORCES: ADD ANGLES (1-2-3)
 		for (auto dummAngle : dummAngles) {
 			const int a1num = dummAngle.first;
 			const int a2num = dummAngle.second;
 			const int a3num = dummAngle.third;
 
-			SimTK::Real theta0 = dummAngle.equil;
-			SimTK::Real forceKt = dummAngle.k;
+			SimTK::Real theta0 = dummAngle.equil * DuMM::Deg2Rad;
+			SimTK::Real forceKt = dummAngle.k * DuMM::Kcal2KJ * 2.0;
 
 			// degreess and kcal/rad2 ??
 			ommHarmonicAngleForce->addAngle(a1num, a2num, a3num,
 								theta0,
-								forceKt * 2 ); // * OpenMM::KJPerKcal);
-
+								forceKt);
+			
+			// std::cout << "OMMRef_initialize addAngle: " << a1num <<" " << a2num <<" "<< a3num
+			// 	<<" "<< theta0 <<" "<< forceKt
+			// 	<< std::endl;
 		} // _end_ angles
 
-		// ADD DIHEDRALS (1-2-3-4)
+		// FORCES: ADD DIHEDRALS (1-2-3-4)
 		for (auto dummTorsion : dummTorsions) {
 
 			const int a1num = dummTorsion.first;
@@ -1170,45 +1173,43 @@ std::string Context::OMMRef_initialize(void)
 			const int a3num = dummTorsion.third;
 			const int a4num = dummTorsion.fourth;
 			
-			int periodicity = dummTorsion.num;
-			double phase = dummTorsion.phase[0];
-			double forceKt = dummTorsion.k[0];
+			for(int pIx = 0; pIx < dummTorsion.period.size(); pIx++){
 
-			if(!dummTorsion.improper){
-				ommPeriodicTorsionForce->addTorsion(a1num, a2num, a3num, a4num,
-					periodicity,
-					phase,
-					forceKt);
-			}else{
-				ommPeriodicTorsionForce->addTorsion(a1num, a2num, a3num, a4num,
-					periodicity,
-					phase,
-					forceKt);				
+				int periodicity = dummTorsion.period[pIx];
+				double phase = dummTorsion.phase[pIx] * DuMM::Deg2Rad;
+				double forceKt = dummTorsion.k[pIx] * DuMM::Kcal2KJ;
+
+				std::cout << "OMMRef_initialize addTorsion: " << a1num <<" " << a2num <<" "<< a3num <<" "<< a4num
+					<<" "<< periodicity <<" "<< phase <<" "<< forceKt
+					<< std::endl;
+
+				if(!dummTorsion.improper){
+					ommPeriodicTorsionForce->addTorsion(a1num, a2num, a3num, a4num,
+						periodicity,
+						phase,
+						forceKt); 
+				}else{
+					ommPeriodicTorsionForce->addTorsion(a1num, a2num, a3num, a4num,
+						periodicity,
+						phase,
+						forceKt);
+				}
 			}
                                                       
 		} // _end_ dihedrals
 
-		openMMSystem->addForce(ommHarmonicBondStretch.get());
-		ommHarmonicBondStretch.release();
-		
-		openMMSystem->addForce(ommHarmonicAngleForce.get());
-		ommHarmonicAngleForce.release();
-		
-		openMMSystem->addForce(ommPeriodicTorsionForce.get());
-		ommPeriodicTorsionForce.release();
-
+		openMMSystem->addForce(ommHarmonicBondStretch.get()); ommHarmonicBondStretch.release();
+		openMMSystem->addForce(ommHarmonicAngleForce.get()); ommHarmonicAngleForce.release();
+		openMMSystem->addForce(ommPeriodicTorsionForce.get()); ommPeriodicTorsionForce.release();
+		openMMSystem->addForce(ommNonbondedForce.get()); ommNonbondedForce.release();		
 		// _end_ Add bonded forces
 
 		// Get the thermostat
-		openMMSystem->addForce(openMMThermostat.get());
-		openMMThermostat.release();
-	
-		//std::cout << "OpenMM System number of forces " <<  openMMSystem->getNumForces() << std::endl;
-	
+		openMMSystem->addForce(openMMThermostat.get()); openMMThermostat.release();
+		
 		// Get the integrator
 		openMMIntegrator = std::make_unique<OpenMM::VerletIntegrator>(0.0007); // TODO should release?
 		
-
     // Get the platform
     // By default, OpenMM builds a .so for each platform (CPU, OpenCL and CUDA)
     // When loading that .so, two functions get called
@@ -1241,10 +1242,10 @@ std::string Context::OMMRef_initialize(void)
     }
     constexpr auto PLATFORM_NAME = "OpenCL";
     
-#endif
+	#endif
 
-bool allowReferencePlatform = true;
-    // Create the context
+	bool allowReferencePlatform = true;
+    // CREATE OPENMM CONTEXT based on PLATFORM
     try {
         auto& platform = OpenMM::Platform::getPlatformByName(PLATFORM_NAME);
         openMMContext = std::make_unique<OpenMM::Context>(*openMMSystem, *openMMIntegrator, platform);
@@ -1265,13 +1266,31 @@ bool allowReferencePlatform = true;
         return "";
     }
 
-    std::cout << "Robosample Context reference OpenMM loaded "
-        << openMMContext->getPlatform().getName()
-        << std::endl;
+    std::cout << "Robosample Context reference OpenMM loaded " << openMMContext->getPlatform().getName() << std::endl;
 
-    return openMMContext->getPlatform().getName();	
+
+////////////////////////////////////////////////////////////////////////////////
+if("checkPotential"){
+	std::vector<OpenMM::Vec3> atomsPositions = std::vector<OpenMM::Vec3>(atoms.size());
+	int aCnt = -1;
+	for (auto atom : atoms){
+		aCnt++;
+		atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
+	}
+	openMMContext->setPositions(atomsPositions);
+	OpenMM::State openMMState = openMMContext->getState(
+		(true?OpenMM::State::Forces:0) | (true?OpenMM::State::Energy:0)
+	);
+	std::cout << "\nROBO_OpenMM POTENTIAL " << openMMState.getPotentialEnergy() << std::endl << std::flush;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+    return openMMContext->getPlatform().getName();
 	
 }
+
 
 /*! __refOMM__
  * <!-- Calculate OpenMM energy -->
@@ -1280,16 +1299,14 @@ SimTK::Real Context::OMMRef_calcPotential(bool wantEnergy, bool wantForces)
 {
 
 	SimTK::Real refPotential = 0.0;
-
 	std::vector<OpenMM::Vec3> atomsPositions = std::vector<OpenMM::Vec3>(atoms.size());
 	
 	// 	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& 
 	// atomLocs = replicas[0].getAtomsLocationsInGround();
-
 	int aCnt = -1;
     for (auto atom : atoms){
 		aCnt++;
-        atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
+        atomsPositions[aCnt] = OpenMM::Vec3(atom.getX() * 10.0, atom.getY() * 10.0, atom.getZ() * 10.0);
     }
 
     // Pass the converted positions to OpenMM
@@ -1316,64 +1333,14 @@ SimTK::Real Context::OMMRef_calcPotential(bool wantEnergy, bool wantForces)
 		refPotential += openMMState.getPotentialEnergy();
 	}
 
+
+	//openMMState.getEnergies_drl_bon();
+
 	std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
 
 	return refPotential;
 
 }
-
-/*!
- * <!-- This must be called after the worlds are added and flexibility vector
- * is loaded -->
-*/
-/* void Context::setRootMobilitiesFromFlexFiles(void)
-{
-
-	// Allocate space for root mobilities
-	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++){
-		rootMobilities.push_back({});
-		
-		for(unsigned int molIx = 0; molIx < getNofMolecules(); molIx++) {
-			rootMobilities.back().push_back("Rigid");
-		
-		}
-	}
-
-	// Set root mobilities
-	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++) {
-		
-			for (const auto& flex : worlds[worldIx].getFlexibilities()) {
-
-				if(flex.i == -1){
-
-					assert("Set root mobilities: atom index fault." &&
-						((flex.j >= 0) && (flex.j < atoms.size())));
-
-					bSpecificAtom& userRootAtom = atoms[flex.j];
-
-					int molIx = userRootAtom.getMoleculeIndex();
-					if(molIx >= getNofMolecules()){
-						std::cerr << "Set root mobilities: molecule index fault." << std::endl;
-						break;
-					}
-
-					rootMobilities[worldIx][molIx] = flex.mobility;
-
-				} // found a root mobility
-		} // every flexibility
-	} // every world
-
-	// Allocate space for root mobilities
-	for(std::size_t worldIx = 0; worldIx < worlds.size(); worldIx++){
-		
-		for(unsigned int molIx = 0; molIx < getNofMolecules(); molIx++) {
-			scout("Set root mobility for world ") << worldIx <<" "
-				<< " molecule " << molIx <<" to "
-				<< rootMobilities[worldIx][molIx] << eol;
-		
-		}
-	}
-} */
 
 /*!
  * <!-- Main run function -->
@@ -6025,6 +5992,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
 	
+
+	OMMRef_calcPotential(true, true);
+
 }
 
 void Context::writeLog(int mixi, int replicaIx) {
