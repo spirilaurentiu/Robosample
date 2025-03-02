@@ -58,6 +58,9 @@ public:
 	SimTK::Real getPotentialEnergy() const;
 	void setPotentialEnergy(SimTK::Real somePotential);
 
+	SimTK::Real getReferencePotentialEnergy() const;
+	void setReferencePotentialEnergy(SimTK::Real somePotential);
+
 	SimTK::Real getWORK() const;
 	void setWORK(SimTK::Real workArg);
 	SimTK::Real& updWORK();
@@ -175,6 +178,7 @@ private:
 
 	// Replica potential energy
 	SimTK::Real potential; // TODO: turn into a vector for worlds
+	SimTK::Real referencePotential;
 	SimTK::Real WORK_potential; // TODO: turn into a vector for worlds
 
 	SimTK::Real WORK; // TODO: turn into a vector for worlds

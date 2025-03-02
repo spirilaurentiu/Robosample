@@ -161,6 +161,14 @@ void Replica::setPotentialEnergy(SimTK::Real somePotential) {
 	potential = somePotential;
 }
 
+SimTK::Real Replica::getReferencePotentialEnergy() const {
+	return referencePotential;
+}
+
+void Replica::setReferencePotentialEnergy(SimTK::Real somePotential) {
+	referencePotential = somePotential;
+}
+
 SimTK::Real Replica::getWORK() const {
 	return WORK;
 }

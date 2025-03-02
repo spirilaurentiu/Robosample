@@ -1313,13 +1313,20 @@ SimTK::Real Context::OMMRef_calcPotential(bool wantEnergy, bool wantForces)
 	SimTK::Real refPotential = 0.0;
 	std::vector<OpenMM::Vec3> atomsPositions = std::vector<OpenMM::Vec3>(atoms.size());
 	
-	// 	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& 
-	// atomLocs = replicas[0].getAtomsLocationsInGround();
+	// // 	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& 
+	// // atomLocs = replicas[0].getAtomsLocationsInGround();
+	// int aCnt = -1;
+    // for (auto atom : atoms){
+	// 	aCnt++;
+    //     atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
+    // }
 	int aCnt = -1;
-    for (auto atom : atoms){
-		aCnt++;
-        atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
-    }
+	for (auto& topology : (topologies)){
+		for (auto& atom : topology.subAtomList) {
+			aCnt++;
+			atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
+		}
+	}
 
     // Pass the converted positions to OpenMM
     openMMContext->setPositions(atomsPositions);
@@ -4414,6 +4421,14 @@ void Context::swapPotentialEnergies(int replica_i, int replica_j)
 	replicas[replica_j].setPotentialEnergy(tempE);
 }
 
+void Context::swapReferencePotentialEnergies(int replica_i, int replica_j)
+{
+	// Exchange reference potential energies (not necessary)
+	SimTK::Real tempE = replicas[replica_i].getReferencePotentialEnergy();
+	replicas[replica_i].setReferencePotentialEnergy(replicas[replica_j].getReferencePotentialEnergy());
+	replicas[replica_j].setReferencePotentialEnergy(tempE);
+}
+
 /*! <!-- restoreReplica --> */\
 void Context::rewindReplica(void){
 	//assert(!"Not implemented");
@@ -4714,6 +4729,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		// Swap thermodynamic states
 		swapThermodynamicStates(replica_X, replica_Y);
 		swapPotentialEnergies(replica_X, replica_Y);
+		swapReferencePotentialEnergies(replica_X, replica_Y);
 
 		std::cout << "1" 
 		<<", " << unifSample 
@@ -5932,9 +5948,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.updAtomsLocationsInGround(currWorld.getCurrentAtomsLocationsInGround());
 
-			//OMMRef_initialize();
-			OMMRef_calcPotential(true, true);
-
 			replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 
 			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
@@ -5952,6 +5965,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 			replica.set_WORK_Fixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
 
 		} // __end__ Non/Equilibrium =======================================
+
+
+		replica.setReferencePotentialEnergy(OMMRef_calcPotential(true, true));
 
 		# pragma region REBAS_TEST
 		const SimTK::State& pdbState = currWorld.integ->updAdvancedState();

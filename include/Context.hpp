@@ -630,6 +630,7 @@ public:
 
 	// Swap replicas' potential energies
 	void swapPotentialEnergies(int replica_i, int replica_j);
+	void swapReferencePotentialEnergies(int replica_i, int replica_j);
 
 	// Exchanges thermodynamic states between replicas
 	void getMsg_RexDetHeader(std::stringstream& rexDetHeader);
