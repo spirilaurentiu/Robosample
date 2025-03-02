@@ -547,8 +547,8 @@ int main(int argc, char **argv)
 
 	// Add replicas
 	size_t nofReplicas = 2;
-	std::vector<SimTK::Real> temperatures = { 0.01, 0.01 };
-	std::vector<SimTK::Real> boostTemperatures = { 0.01 };
+	std::vector<SimTK::Real> temperatures = { 300.00, 400.00 };
+	std::vector<SimTK::Real> boostTemperatures = { 300.00, 400.00 };
 
 	std::vector<AcceptRejectMode> accept_reject_modes = { AcceptRejectMode::MetropolisHastings,  AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings};
 	std::vector<int> distort_options = { 0, 0, 0 };

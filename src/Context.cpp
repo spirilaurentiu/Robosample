@@ -1179,9 +1179,9 @@ std::string Context::OMMRef_initialize(void)
 				double phase = dummTorsion.phase[pIx] * DuMM::Deg2Rad;
 				double forceKt = dummTorsion.k[pIx] * DuMM::Kcal2KJ;
 
-				std::cout << "OMMRef_initialize addTorsion: " << a1num <<" " << a2num <<" "<< a3num <<" "<< a4num
-					<<" "<< periodicity <<" "<< phase <<" "<< forceKt
-					<< std::endl;
+				// std::cout << "OMMRef_initialize addTorsion: " << a1num <<" " << a2num <<" "<< a3num <<" "<< a4num
+				// 	<<" "<< periodicity <<" "<< phase <<" "<< forceKt
+				// 	<< std::endl;
 
 				if(!dummTorsion.improper){
 					ommPeriodicTorsionForce->addTorsion(a1num, a2num, a3num, a4num,
@@ -1201,7 +1201,7 @@ std::string Context::OMMRef_initialize(void)
 		openMMSystem->addForce(ommHarmonicBondStretch.get()); ommHarmonicBondStretch.release();
 		openMMSystem->addForce(ommHarmonicAngleForce.get()); ommHarmonicAngleForce.release();
 		openMMSystem->addForce(ommPeriodicTorsionForce.get()); ommPeriodicTorsionForce.release();
-		openMMSystem->addForce(ommNonbondedForce.get()); ommNonbondedForce.release();		
+		openMMSystem->addForce(ommNonbondedForce.get()); ommNonbondedForce.release();
 		// _end_ Add bonded forces
 
 		// Get the thermostat
@@ -1298,6 +1298,18 @@ if("checkPotential"){
 SimTK::Real Context::OMMRef_calcPotential(bool wantEnergy, bool wantForces)
 {
 
+	if (!openMMContext) {
+        std::cerr << "ERROR: OpenMM Context is not initialized!" << std::endl;
+        return 0.0;
+    }
+
+    if (atoms.size() != openMMContext->getSystem().getNumParticles()) {
+        std::cerr << "ERROR: Mismatch between atoms vector size (" << atoms.size()
+                  << ") and OpenMM system particles (" 
+                  << openMMContext->getSystem().getNumParticles() << ")!" << std::endl;
+        return 0.0;
+    }
+
 	SimTK::Real refPotential = 0.0;
 	std::vector<OpenMM::Vec3> atomsPositions = std::vector<OpenMM::Vec3>(atoms.size());
 	
@@ -1306,7 +1318,7 @@ SimTK::Real Context::OMMRef_calcPotential(bool wantEnergy, bool wantForces)
 	int aCnt = -1;
     for (auto atom : atoms){
 		aCnt++;
-        atomsPositions[aCnt] = OpenMM::Vec3(atom.getX() * 10.0, atom.getY() * 10.0, atom.getZ() * 10.0);
+        atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
     }
 
     // Pass the converted positions to OpenMM
@@ -5920,6 +5932,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.updAtomsLocationsInGround(currWorld.getCurrentAtomsLocationsInGround());
 
+			//OMMRef_initialize();
+			OMMRef_calcPotential(true, true);
+
 			replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 
 			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
@@ -5992,9 +6007,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
 	
-
-	OMMRef_calcPotential(true, true);
-
 }
 
 void Context::writeLog(int mixi, int replicaIx) {
