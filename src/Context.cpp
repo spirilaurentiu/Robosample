@@ -4473,6 +4473,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real U_X0 = replicas[replica_X].getPotentialEnergy(); // last equil potential
 	SimTK::Real U_Y0 = replicas[replica_Y].getPotentialEnergy(); // last equil potential
 
+	SimTK::Real refU_X0 = replicas[replica_X].getReferencePotentialEnergy(); // last equil reference potential
+	SimTK::Real refU_Y0 = replicas[replica_Y].getReferencePotentialEnergy(); // last equil reference potential
+
 	SimTK::Real W_X = replicas[replica_X].getWORK(); // work without Jacobian
 	SimTK::Real W_Y = replicas[replica_Y].getWORK(); // work without Jacobian
 
@@ -4491,6 +4494,11 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real uH_Y0 = beta_H * U_Y0; // Replica j reduced potential in state j
 	SimTK::Real uH_X0 = beta_H * U_X0; // Replica i reduced potential in state j
 	SimTK::Real uC_Y0 = beta_C * U_Y0; // Replica j reduced potential in state i
+
+	SimTK::Real ref_uC_X0 = beta_C * refU_X0; // Replica i reduced potential in state i
+	SimTK::Real ref_uH_Y0 = beta_H * refU_Y0; // Replica j reduced potential in state j
+	SimTK::Real ref_uH_X0 = beta_H * refU_X0; // Replica i reduced potential in state j
+	SimTK::Real ref_uC_Y0 = beta_C * refU_Y0; // Replica j reduced potential in state i
 
 	// ----------------------------------------------------------------
 	// Reduced potential Xtau
@@ -4545,8 +4553,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// LOGP ENERGY EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real ETerm_equil    = uH_X0 - uC_X0;
-				ETerm_equil   += uC_Y0 - uH_Y0;
+	SimTK::Real ETerm_equil    = ref_uH_X0 - ref_uC_X0;
+				ETerm_equil   += ref_uC_Y0 - ref_uH_Y0;
 				ETerm_equil = -1.0 * ETerm_equil;
 
 	// ----------------------------------------------------------------
