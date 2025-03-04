@@ -1049,6 +1049,7 @@ void Context::Initialize() {
 
 //#include "../Molmodel/src/gbsa/cpuObcInterface.h"
 # include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
+# include "../openmm/platforms/cuda/include/CudaPlatform.h"
 std::string Context::OMMRef_initialize(void)
 {
 	
@@ -5968,7 +5969,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
 
-			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(true, true));
+			replica.setReferencePotentialEnergy(OMMRef_calcPotential(true, true));
 
 		// ======================== NON-EQUILIBRIUM ======================
 		}else{
