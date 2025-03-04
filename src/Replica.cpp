@@ -126,6 +126,16 @@ void Replica::set_WORK_PotentialEnergy_New(SimTK::Real somePotential) {
     WORK_potential = somePotential;
 }
 
+
+SimTK::Real Replica::get_WORK_ReferencePotentialEnergy_New() const {
+	return this->referenceWORK_potential;
+}
+
+void Replica::set_WORK_ReferencePotentialEnergy_New(SimTK::Real somePotential) {
+    referenceWORK_potential = somePotential;
+}
+
+
 SimTK::Real Replica::get_WORK_Jacobian() const
 {
 	return this->workJacobiansContributions;

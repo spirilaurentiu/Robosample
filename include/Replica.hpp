@@ -40,7 +40,6 @@ public:
 
 	void upd_WORK_AtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations);
 
-	void set_WORK_PotentialEnergy_New(SimTK::Real somePotential);
 
 	SimTK::Real get_WORK_Jacobian() const;
 	SimTK::Real& upd_WORK_Jacobian();
@@ -66,6 +65,11 @@ public:
 	SimTK::Real& updWORK();
 
 	SimTK::Real get_WORK_PotentialEnergy_New() const;
+	void set_WORK_PotentialEnergy_New(SimTK::Real somePotential);
+
+	SimTK::Real get_WORK_ReferencePotentialEnergy_New() const;
+	void set_WORK_ReferencePotentialEnergy_New(SimTK::Real somePotential);
+
     // void set_WORK_LastPotentialEnergy(SimTK::Real wpArg);
 
     SimTK::Real getFixman() const;
@@ -177,9 +181,11 @@ private:
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> WORK_atomsLocations;
 
 	// Replica potential energy
-	SimTK::Real potential; // TODO: turn into a vector for worlds
+	SimTK::Real potential;
 	SimTK::Real referencePotential;
-	SimTK::Real WORK_potential; // TODO: turn into a vector for worlds
+
+	SimTK::Real WORK_potential;
+	SimTK::Real referenceWORK_potential;
 
 	SimTK::Real WORK; // TODO: turn into a vector for worlds
 	SimTK::Real workJacobiansContributions; // TODO: turn into a vector for worlds

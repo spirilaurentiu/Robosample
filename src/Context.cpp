@@ -4482,6 +4482,9 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real U_Xtau = replicas[replica_X].get_WORK_PotentialEnergy_New(); // last non-equil potential
 	SimTK::Real U_Ytau = replicas[replica_Y].get_WORK_PotentialEnergy_New(); // last non-equil potential
 
+	SimTK::Real refU_Xtau = replicas[replica_X].get_WORK_ReferencePotentialEnergy_New(); // last non-equil potential
+	SimTK::Real refU_Ytau = replicas[replica_Y].get_WORK_ReferencePotentialEnergy_New(); // last non-equil potential
+
 	SimTK::Real lnJac_X = replicas[replica_X].get_WORK_Jacobian(); // non-equil Jacobian
 	SimTK::Real lnJac_Y = replicas[replica_Y].get_WORK_Jacobian(); // non-equil Jacobian
 
@@ -4495,10 +4498,10 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real uH_X0 = beta_H * U_X0; // Replica i reduced potential in state j
 	SimTK::Real uC_Y0 = beta_C * U_Y0; // Replica j reduced potential in state i
 
-	SimTK::Real ref_uC_X0 = beta_C * refU_X0; // Replica i reduced potential in state i
-	SimTK::Real ref_uH_Y0 = beta_H * refU_Y0; // Replica j reduced potential in state j
-	SimTK::Real ref_uH_X0 = beta_H * refU_X0; // Replica i reduced potential in state j
-	SimTK::Real ref_uC_Y0 = beta_C * refU_Y0; // Replica j reduced potential in state i
+	SimTK::Real ref_uC_X0 = beta_C * refU_X0; // Replica i reduced reference potential in state i
+	SimTK::Real ref_uH_Y0 = beta_H * refU_Y0; // Replica j reduced reference potential in state j
+	SimTK::Real ref_uH_X0 = beta_H * refU_X0; // Replica i reduced reference potential in state j
+	SimTK::Real ref_uC_Y0 = beta_C * refU_Y0; // Replica j reduced reference potential in state i
 
 	// ----------------------------------------------------------------
 	// Reduced potential Xtau
@@ -4507,6 +4510,11 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	SimTK::Real uH_Ytau = beta_H * U_Ytau; // Replica j reduced potential in state j
 	SimTK::Real uH_Xtau = beta_H * U_Xtau; // Replica i reduced potential in state j
 	SimTK::Real uC_Ytau = beta_C * U_Ytau; // Replica j reduced potential in state i
+
+	SimTK::Real ref_uC_Xtau = beta_C * refU_Xtau; // Replica i reduced reference potential in state i
+	SimTK::Real ref_uH_Ytau = beta_H * refU_Ytau; // Replica j reduced reference potential in state j
+	SimTK::Real ref_uH_Xtau = beta_H * refU_Xtau; // Replica i reduced reference potential in state j
+	SimTK::Real ref_uC_Ytau = beta_C * refU_Ytau; // Replica j reduced reference potential in state i
 
 	// Get Fixman potential for the work coordinates
 	SimTK::Real Fix_Xtau = replicas[replica_X].get_WORK_Fixman();
@@ -4560,18 +4568,18 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// ----------------------------------------------------------------
 	// LOGP ENERGY NON-EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real ETerm_nonequil  = uH_Xtau - uC_Xtau;
-			    ETerm_nonequil += uC_Ytau - uH_Ytau;
+	SimTK::Real ETerm_nonequil  = ref_uH_Xtau - ref_uC_Xtau;
+			    ETerm_nonequil += ref_uC_Ytau - ref_uH_Ytau;
 				ETerm_nonequil = -1.0 * ETerm_nonequil;
 
 	// ----------------------------------------------------------------
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Get work from X replica
-	SimTK::Real Work_X = (uH_Xtau - uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X;
+	SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X;
 
 	// Get work from Y replica
-	SimTK::Real Work_Y = (uC_Ytau - uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y;
+	SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y;
 
 	// Get total work
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
@@ -5960,6 +5968,8 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
 
+			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(true, true));
+
 		// ======================== NON-EQUILIBRIUM ======================
 		}else{
 
@@ -5972,10 +5982,10 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		
 			replica.set_WORK_Fixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
 
+			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(true, true));
+
 		} // __end__ Non/Equilibrium =======================================
 
-
-		replica.setReferencePotentialEnergy(OMMRef_calcPotential(true, true));
 
 		# pragma region REBAS_TEST
 		const SimTK::State& pdbState = currWorld.integ->updAdvancedState();
