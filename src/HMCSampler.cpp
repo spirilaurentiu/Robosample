@@ -455,7 +455,7 @@ void HMCSampler::getMsg_Header(std::stringstream& ss)
 	// Print a header at the first sample for detailed energy terms
 	ss << (", NU");
 	ss << (", nofSamples");
-	ss << (", pe_o, pe_n, pe_nB");
+	ss << (", pe_o, pe_n, pe_set");
 	ss << (", ke_prop, ke_n");
 	ss << (", fix_o, fix_n");
 	ss << (", logSineSqrGamma2_o, logSineSqrGamma2_n ");
@@ -4248,7 +4248,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 					// Print
 					//Print(someState, validated, getAcc());
-					getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
+					//getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
 
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
@@ -4270,7 +4270,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 					// Print
 					//Print(someState, validated, getAcc());
-					getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
+					//getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
 
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();

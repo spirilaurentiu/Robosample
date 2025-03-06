@@ -789,7 +789,9 @@ public:
 	*/ 
 	std::string OMMRef_initialize(void);
 
-	SimTK::Real OMMRef_calcPotential(bool wantEnergy, bool wantForces);
+	SimTK::Real OMMRef_calcPotential(
+		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> & atomsLocations,
+		bool wantEnergy, bool wantForces);
 
 private:
 

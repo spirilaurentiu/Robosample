@@ -1296,7 +1296,7 @@ if("checkPotential"){
 /*! __refOMM__
  * <!-- Calculate OpenMM energy -->
 */
-SimTK::Real Context::OMMRef_calcPotential(bool wantEnergy, bool wantForces)
+SimTK::Real Context::OMMRef_calcPotential(const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> & atomsLocations, bool wantEnergy, bool wantForces)
 {
 
 	if (!openMMContext) {
@@ -1312,25 +1312,40 @@ SimTK::Real Context::OMMRef_calcPotential(bool wantEnergy, bool wantForces)
     }
 
 	SimTK::Real refPotential = 0.0;
-	std::vector<OpenMM::Vec3> atomsPositions = std::vector<OpenMM::Vec3>(atoms.size());
+	std::vector<OpenMM::Vec3> ommAtomsPositions = std::vector<OpenMM::Vec3>(atoms.size());
 	
-	// // 	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& 
-	// // atomLocs = replicas[0].getAtomsLocationsInGround();
+	// // Variant 1
 	// int aCnt = -1;
     // for (auto atom : atoms){
 	// 	aCnt++;
     //     atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
     // }
+	// Varaint 2
+	// int aCnt = -1;
+	// for (auto& topology : (topologies)){
+	// 	for (auto& atom : topology.subAtomList) {
+	// 		aCnt++;
+	// 		atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
+	// 	}
+	// }
+
+	// Variant 3
 	int aCnt = -1;
-	for (auto& topology : (topologies)){
-		for (auto& atom : topology.subAtomList) {
+	for(auto& topology : atomsLocations){
+		for(auto& atomCoordinates : topology){
 			aCnt++;
-			atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
+			// std::cout
+			// //<< (atomCoordinates.first)->inName
+			// << (atomCoordinates.first)->getCompoundAtomIndex() << " "
+			// << atomCoordinates.second[0] << " "
+			// << atomCoordinates.second[1] << " "
+			// << atomCoordinates.second[2] << std::endl;
+			ommAtomsPositions[aCnt] = OpenMM::Vec3(atomCoordinates.second[0], atomCoordinates.second[1], atomCoordinates.second[2]);
 		}
 	}
 
     // Pass the converted positions to OpenMM
-    openMMContext->setPositions(atomsPositions);
+    openMMContext->setPositions(ommAtomsPositions);
 
     // Ask for energy, forces, or both.
     OpenMM::State openMMState = openMMContext->getState(
@@ -4454,6 +4469,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	bool returnValue = false;
 
 	#pragma region convienent_vars
+
 	// Get replicas' thermodynamic states indexes
 	int thermoState_C = replica2ThermoIxs[replica_X];
 	int thermoState_H = replica2ThermoIxs[replica_Y];
@@ -4636,14 +4652,16 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		rexDetStream 
 			<< "REXdetails " << ", " << thermoState_C << ", " << thermoState_H << ", "
 			<< replica_X << ", " << replica_Y << ", "
-			<< beta_C << ", "
-			<< beta_H << ", "
+			<< beta_C << ", " << beta_H << ", "
+
 			<< uC_X0 << ", " << uH_Y0 << ", " << uH_X0 << ", " << uC_Y0 << ", "
 			<< uC_Xtau << ", " << uH_Ytau << ", " << uH_Xtau << ", " << uC_Ytau << ", "
-			<< lnJac_X << ", "
-			<< lnJac_Y << ", "
-			<< W_X << ", "
-			<< W_Y << ", "
+
+			<< ref_uC_X0 << ", " << ref_uH_Y0 << ", " << ref_uH_X0 << ", " << ref_uC_Y0 << ", "
+			<< ref_uC_Xtau << ", " << ref_uH_Ytau << ", " << ref_uH_Xtau << ", " << ref_uC_Ytau << ", "
+			
+			<< lnJac_X << ", " << lnJac_Y << ", "
+			<< W_X << ", " << W_Y << ", "
 			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
 			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
 			<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
@@ -4782,17 +4800,28 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 void Context::getMsg_RexDetHeader(
 	std::stringstream& rexDetHeader)
 {
-	rexDetHeader 
-		<< "REXdetails" << ", " << "thermoState_C" << ", " << "thermoState_H" << ", "
-		<< "replica_X" << ", " << "replica_Y" << ", "
-		<< "betaC" << ", " << "beatH" << ", "
-		<< "eC_X0" << ", " << "eH_Y0" << ", " << "eH_X0" << ", " << "eC_Y0" << ", "
-		<< "lC_Xtau" << ", " << "lH_Ytau" << ", " << "lH_Xtau" << ", " << "lC_Ytau" << ", "
-		<< "wJ_X" << ", " << "wJ_Y" << ", " << "wE_X" << ", " << "wE_Y" << ", "
-		<< ", " << "s_X" << ", " << "s_Y" << ", " << "s_X_1" << ", " << "s_Y_1" << ", "
-		<< ", " << "qC_s_X" << ", " << "qH_s_Y" << ", " << "qH_s_X_1" << ", " << "qC_s_Y_1" << ", "
-		<< "ETerm_equil" << ", " << "WTerm" << ", " << "correctionTerm" << ", " << "swapped"
+
+	rexDetHeader << "REXdetails"
+		<< ", "<< "thermoState_C" << ", "<< "thermoState_H" << ", "<< "replica_X" << ", "<< "replica_Y" << ", "<< "beta_C" << ", "<< "beta_H"                                                                                                                                                                                                                                                                                           << ", "<< "uC_X0" << ", "<< "uH_Y0" << ", "<< "uH_X0" << ", "<< "uC_Y0"
+		<< ", "<< "uC_Xtau" << ", "<< "uH_Ytau" << ", "<< "uH_Xtau" << ", "<< "uC_Ytau"                                                                                                                                                                                                                                                                                                                                                 << ", "<< "ref_uC_X0" << ", "<< "ref_uH_Y0" << ", "<< "ref_uH_X0" << ", "<< "ref_uC_Y0"
+		<< ", "<< "ref_uC_Xtau" << ", "<< "ref_uH_Ytau" << ", "<< "ref_uH_Xtau" << ", "<< "ref_uC_Ytau"
+		<< ", "<< "lnJac_X" << ", "<< "lnJac_Y"
+		<< ", "<< "W_X" << ", "<< "W_Y"
+		<< ", "<< "s_X" << ", "<< "s_Y" << ", "<< "s_X_1" << ", "<< "s_Y_1"
+		<< ", "<< "qC_s_X" << ", "<< "qH_s_Y" << ", "<< "qH_s_X_1" << ", "<< "qC_s_Y_1"
+		<< ", "<< "ETerm_equil" << ", "<< "WTerm" << ", "<< "correctionTerm"
+		<< ", "<< "acc" << ", "<< "unif"
 	;
+
+	// rexDetHeader 
+	// 	<< "REXdetails" << ", " << "thermoState_C" << ", " << "thermoState_H" << ", " << "replica_X" << ", " << "replica_Y" << ", " << "betaC" << ", " << "beatH" << ", "
+	// 	<< "eC_X0" << ", " << "eH_Y0" << ", " << "eH_X0" << ", " << "eC_Y0" << ", "
+	// 	<< "lC_Xtau" << ", " << "lH_Ytau" << ", " << "lH_Xtau" << ", " << "lC_Ytau" << ", "
+	// 	<< "wJ_X" << ", " << "wJ_Y" << ", " << "wE_X" << ", " << "wE_Y" << ", "
+	// 	<< ", " << "s_X" << ", " << "s_Y" << ", " << "s_X_1" << ", " << "s_Y_1" << ", "
+	// 	<< ", " << "qC_s_X" << ", " << "qH_s_Y" << ", " << "qH_s_X_1" << ", " << "qC_s_Y_1" << ", "
+	// 	<< "ETerm_equil" << ", " << "WTerm" << ", " << "correctionTerm" << ", " << "swapped"
+	//;
 }
 
 // Mix neighboring replicas // TODO: delete
@@ -5183,8 +5212,7 @@ void Context::setReplicaExchangePairs(unsigned int startingFrom)
 	}
 }
 
-/*!
- * <!--	 -->
+/*! <!--	 -->
 */
 const int Context::getThermoPair(int replicaIx)
 {
@@ -5930,9 +5958,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	for(std::size_t thWCnt = 0; thWCnt < thermoNofWorlds; thWCnt++){
 
 		int wIx  = thermoWorldIxs[thWCnt];
-		int distortIx = distortOpts[thWCnt];
 		World& currWorld = worlds[wIx];
 		HMCSampler* sampler_p = worlds[wIx].samplers[0].get();
+		int distortIx = distortOpts[thWCnt];
 
 		// Transfer coordinates to the next world
 		if(thWCnt == 0){
@@ -5969,7 +5997,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
 
-			replica.setReferencePotentialEnergy(OMMRef_calcPotential(true, true));
+			replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
 
 		// ======================== NON-EQUILIBRIUM ======================
 		}else{
@@ -5983,7 +6011,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		
 			replica.set_WORK_Fixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
 
-			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(true, true));
+			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
 
 		} // __end__ Non/Equilibrium =======================================
 

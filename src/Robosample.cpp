@@ -511,7 +511,7 @@ int main(int argc, char **argv)
 
 	std::vector<std::string> flexFileFNs = {
 		"../tests_inputs/" + name + "/ligand.cart.flex",
-		"../tests_inputs/" + name + "/ligand.td.flex",
+		"../tests_inputs/" + name + "/ligand.flex.2td",
 		"../tests_inputs/" + name + "/ligand.flex.slider"};
 
 	std::vector<IntegratorType> integrators = {
@@ -547,8 +547,8 @@ int main(int argc, char **argv)
 
 	// Add replicas
 	size_t nofReplicas = 2;
-	std::vector<SimTK::Real> temperatures = { 300.00, 400.00 };
-	std::vector<SimTK::Real> boostTemperatures = { 300.00, 400.00 };
+	std::vector<SimTK::Real> temperatures = { 0.01, 0.01 };
+	std::vector<SimTK::Real> boostTemperatures = { 0.01, 0.01 };
 
 	std::vector<AcceptRejectMode> accept_reject_modes = { AcceptRejectMode::MetropolisHastings,  AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings};
 	std::vector<int> distort_options = { 0, 0, 0 };
@@ -556,8 +556,8 @@ int main(int argc, char **argv)
 	std::vector<int> flow = { 0, 0, 0 };
 	std::vector<int> work = { 0, 0, 0 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
-	std::vector<double> timesteps = { 0.0007, 0.004, 0.0007 };
-	std::vector<int> mdsteps = { 10, 10, 10 };
+	std::vector<double> timesteps = { 0.00007, 0.00007, 0.00007 };
+	std::vector<int> mdsteps = { 0, 0, 0 };
 	
 	std::string restartDir = "rest." + name + "." + std::to_string(seed);
 	if (!fileExists(restartDir)) {
@@ -595,7 +595,7 @@ int main(int argc, char **argv)
 	// -- Run --
 	context.RunREX(equilRounds, prodRounds);
 
-	context.OMMRef_calcPotential(true, true);
+	//context.OMMRef_calcPotential(true, true);
 
 	return 0;	
 

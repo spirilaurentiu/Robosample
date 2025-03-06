@@ -176,8 +176,6 @@ private:
 
 	// Replica configurations
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> atomsLocations;
-
-	// Replica configurations
 	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> WORK_atomsLocations;
 
 	// Replica potential energy
