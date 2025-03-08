@@ -1906,8 +1906,7 @@ World::getCurrentAtomsLocationsInGround(void)
 	SimTK::State& state = integ->updAdvancedState();
 
 	// Return vector
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>
-		returnVector;
+	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> returnVector;
 
 	// Iterate through topologies
 	for (auto& topology : (*topologies)){ 
@@ -3398,7 +3397,6 @@ bool World::generateSamples(int howMany, std::stringstream& worldOutStream, cons
 
 		validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
 			
-		//worldOutStream << "\n";
 	}
 
 	// Return the number of accepted samples

@@ -547,8 +547,8 @@ int main(int argc, char **argv)
 
 	// Add replicas
 	size_t nofReplicas = 2;
-	std::vector<SimTK::Real> temperatures = { 0.01, 0.01 };
-	std::vector<SimTK::Real> boostTemperatures = { 0.01, 0.01 };
+	std::vector<SimTK::Real> temperatures = { 300.0, 350.0 };
+	std::vector<SimTK::Real> boostTemperatures = { 300.0, 350.0 };
 
 	std::vector<AcceptRejectMode> accept_reject_modes = { AcceptRejectMode::MetropolisHastings,  AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings};
 	std::vector<int> distort_options = { 0, 0, 0 };
@@ -556,8 +556,8 @@ int main(int argc, char **argv)
 	std::vector<int> flow = { 0, 0, 0 };
 	std::vector<int> work = { 0, 0, 0 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
-	std::vector<double> timesteps = { 0.00007, 0.00007, 0.00007 };
-	std::vector<int> mdsteps = { 0, 0, 0 };
+	std::vector<double> timesteps = { 0.0007, 0.007, 0.0007 };
+	std::vector<int> mdsteps = { 10, 10, 10 };
 	
 	std::string restartDir = "rest." + name + "." + std::to_string(seed);
 	if (!fileExists(restartDir)) {

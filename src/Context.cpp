@@ -1370,8 +1370,7 @@ SimTK::Real Context::OMMRef_calcPotential(const std::vector<std::vector<std::pai
 
 
 	//openMMState.getEnergies_drl_bon();
-
-	std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
+	//std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
 
 	return refPotential;
 
@@ -4813,15 +4812,6 @@ void Context::getMsg_RexDetHeader(
 		<< ", "<< "acc" << ", "<< "unif"
 	;
 
-	// rexDetHeader 
-	// 	<< "REXdetails" << ", " << "thermoState_C" << ", " << "thermoState_H" << ", " << "replica_X" << ", " << "replica_Y" << ", " << "betaC" << ", " << "beatH" << ", "
-	// 	<< "eC_X0" << ", " << "eH_Y0" << ", " << "eH_X0" << ", " << "eC_Y0" << ", "
-	// 	<< "lC_Xtau" << ", " << "lH_Ytau" << ", " << "lH_Xtau" << ", " << "lC_Ytau" << ", "
-	// 	<< "wJ_X" << ", " << "wJ_Y" << ", " << "wE_X" << ", " << "wE_Y" << ", "
-	// 	<< ", " << "s_X" << ", " << "s_Y" << ", " << "s_X_1" << ", " << "s_Y_1" << ", "
-	// 	<< ", " << "qC_s_X" << ", " << "qH_s_Y" << ", " << "qH_s_X_1" << ", " << "qC_s_Y_1" << ", "
-	// 	<< "ETerm_equil" << ", " << "WTerm" << ", " << "correctionTerm" << ", " << "swapped"
-	//;
 }
 
 // Mix neighboring replicas // TODO: delete

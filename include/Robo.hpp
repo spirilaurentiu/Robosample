@@ -110,10 +110,14 @@
 #define DEBUG_ROBO
 #endif
 
-#ifdef DEBUG_ROBO
-#define TRACE(STR) printf("%s", STR);
-#else
-#define TRACE(STR)
+// #ifdef DEBUG_ROBO
+// #define TRACE(STR) printf("%s", STR);
+// #else
+// #define TRACE(STR)
+// #endif
+
+#ifndef TRACE
+#define TRACE(STR) std::cout<<__FILE__<<":"<<__LINE__<<":"<<STR<<std::endl;
 #endif
 
 // #ifndef __DRILLING__

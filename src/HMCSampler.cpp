@@ -194,10 +194,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Get no of degrees of freedom
 	const int nu = someState.getNU();
 
-	// Convenient variable to use for distortion detection
-	pe_init = pe_set;
-
-
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   X_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -4077,7 +4073,8 @@ void HMCSampler::getMsg_EnergyDetails(
 		<< ", " << pe_o << ", " << pe_n ;
 
 	// energyDetailsStream	<< ", " << getPEFromEvaluator(someState)
-		energyDetailsStream	<< ", " << pe_set
+
+	energyDetailsStream	<< ", " << pe_set
 		<< ", " << ke_o << ", " << ke_n
 		<< ", " << fix_o << ", " << fix_n
 		<< ", " << logSineSqrGamma2_o << ", " << logSineSqrGamma2_n
@@ -4237,21 +4234,17 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 					// Set status
 					setAcc(true);
 
-					// Print
-					//Print(someState, validated, getAcc());
-					if (verbose) {
-						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
-					}
-
 					// UPDATE
 					update(someState);
 
-					// Print
-					//Print(someState, validated, getAcc());
-					//getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
-
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
+
+					// Print
+					if (verbose) {
+						//Print(someState, validated, getAcc());
+						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					}
 
 				// --- reject --- //
 				}else{
@@ -4259,21 +4252,17 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 					// Set status
 					setAcc(false);
 
-					// Print
-					//Print(someState, validated, getAcc());
-					if (verbose) {
-						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
-					}
-
 					// RESTORE
 					restore(someState);
 
-					// Print
-					//Print(someState, validated, getAcc());
-					//getMsg_EnergyDetails(samplerOutStream, someState, validated, this->acc);
-
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
+					
+					// Print
+					if (verbose) {
+						//Print(someState, validated, getAcc());
+						getMsg_EnergyDetails(samplerOutStream, someState, validated, getAcc());
+					}					
 				}
 	}
 
@@ -4359,7 +4348,6 @@ void HMCSampler::restoreEnergies(void){
  */
 void HMCSampler::restore(SimTK::State& someState)
 {
-
 	// Restore old configuration
 	restoreConfiguration(someState);
 
@@ -4393,7 +4381,6 @@ void HMCSampler::updateEnergies(void)
 /** Update **/
 void HMCSampler::update(SimTK::State& someState)
 {
-
 	if(this->integratorType == IntegratorType::OMMVV){
 		// Update Simbody too
 		OMM_To_Simbody_setAtomsLocations(someState);
