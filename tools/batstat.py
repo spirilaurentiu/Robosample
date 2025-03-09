@@ -9,11 +9,11 @@ import scipy.stats as stats
 from scipy import linalg
 
 class BATCorrelations:
-    def __init__(self, dcd_files, prmtop_file, inpcrd_file):
+    def __init__(self, prmtop_file, inpcrd_file):
 
         self.tol = 1e-6
 
-        dihedral_sele = {
+        self.dihedral_sele = {
             'ALA': {
                 'chi1': ['N', 'CA', 'CB', 'HB1'],
             },
@@ -126,136 +126,127 @@ class BATCorrelations:
         # @TODO asp glu arg lys - protonated
 
         # Load the PDB file once
-        self.universe = mda.Universe(prmtop_file) #, inpcrd_file
+        self.prmtop_file = prmtop_file
+        self.inpcrd_file = inpcrd_file
+
+        self.universe = mda.Universe(prmtop_file, inpcrd_file)
 
         # Build and store the full molecular graph
         self.base_graph = self._build_graph()
         self.atom_masses = np.array([atom.mass for atom in self.universe.atoms])
 
         # will hold (dihedral_type, atom_group, atom_indices, residue_name)
-        self.dihedral_types = []
-        self.atom_indices = []
-        self.residue_names = []
-        self.residue_ids = []
-        self.dihedral_values = []
-        populated = False
+        atom_groups, dihedral_types, atom_indices, residue_names, residue_ids, numDihedrals = self.build_dihedral_atom_groups(self.universe)
+        self.dihedral_types = dihedral_types
+        self.atom_indices = atom_indices
+        self.residue_names = residue_names
+        self.residue_ids = residue_ids
+        self.num_dihe = numDihedrals
 
+    def compute_dihedrals_from_dcd(self, dcd_files):
         for dcd in dcd_files:
-            universe = mda.Universe(prmtop_file, dcd)
-            # universe = mda.Universe(prmtop_file, inpcrd_file)
-            atom_groups = []
-            
-            # Get the dihedrals
-            for res in universe.residues:
-
-                # The phi angle of the first residue is not defined
-                phi = res.phi_selection()
-                if not phi:
-                    h1 = universe.select_atoms(f"resid {res.resid} and name H1")
-                    n = universe.select_atoms(f"resid {res.resid} and name N")
-                    ca = universe.select_atoms(f"resid {res.resid} and name CA")
-                    c = universe.select_atoms(f"resid {res.resid} and name C")
-                    phi = mda.AtomGroup([h1.ix[0], n.ix[0], ca.ix[0], c.ix[0]], universe)
-
-                atom_groups.append(phi)
-                if not populated:
-                    self.dihedral_types.append('phi')
-                    self.atom_indices.append(phi.indices)
-                    self.residue_names.append(res.resname)
-                    self.residue_ids.append(res.resid)
-
-                # The psi angle of the last residue is not defined
-                psi = res.psi_selection()
-                if not psi:
-                    n = universe.select_atoms(f"resid {res.resid} and name N")
-                    ca = universe.select_atoms(f"resid {res.resid} and name CA")
-                    c = universe.select_atoms(f"resid {res.resid} and name C")
-                    oxt = universe.select_atoms(f"resid {res.resid} and name OXT")
-                    psi = mda.AtomGroup([n.ix[0], ca.ix[0], c.ix[0], oxt.ix[0]], universe)
-
-                atom_groups.append(psi)
-                if not populated:
-                    self.dihedral_types.append('psi')
-                    self.atom_indices.append(psi.indices)
-                    self.residue_names.append(res.resname)
-                    self.residue_ids.append(res.resid)
-
-                # Present in all residues
-                omega = res.omega_selection()
-                if omega:
-                    atom_groups.append(omega)
-                    if not populated:
-                        self.dihedral_types.append('omega')
-                        self.atom_indices.append(omega.indices)
-                        self.residue_names.append(res.resname)
-                        self.residue_ids.append(res.resid)
-
-                # Chi angles
-                for chi_name, chi_atoms in dihedral_sele[res.resname].items():
-                    chi_atom_ix = [universe.select_atoms(f"resid {res.resid} and name {atom_name}").ix[0] for atom_name in chi_atoms]
-                    chi_dihedral = mda.AtomGroup(chi_atom_ix, universe)
-                    atom_groups.append(chi_dihedral)
-                    if not populated:
-                        self.dihedral_types.append(chi_name)
-                        self.atom_indices.append(chi_dihedral.indices)
-                        self.residue_names.append(res.resname)
-                        self.residue_ids.append(res.resid)
-
-            # Find the disulfide bonds
-            disulfide_bonds = set()
-            for sg in self.universe.select_atoms("resname CYX and name SG"):
-                for b in sg.bonds:
-                    if b.atoms[0].name == 'SG' and b.atoms[1].name == 'SG':
-                        disulfide_bonds.add(tuple(sorted(b.indices)))
-            disulfide_bonds = list(disulfide_bonds)
-
-            # print the atoms in the disulfide bonds
-            for bond in disulfide_bonds:
-                sg0_atom = self.universe.atoms[bond[0]]
-                sg1_atom = self.universe.atoms[bond[1]]
-
-                sg_atom_pairs = [(sg0_atom, sg1_atom), (sg1_atom, sg0_atom)]
-                for sg_atom_0, sg_atom_1 in sg_atom_pairs:
-                    sg0_selection = self.universe.select_atoms(f"resid {sg_atom_0.resid} and name SG")
-                    sg1_selection = self.universe.select_atoms(f"resid {sg_atom_1.resid} and name SG")
-                    cb_selection = self.universe.select_atoms(f"resid {sg_atom_1.resid} and name CB")
-                    ca_selection = self.universe.select_atoms(f"resid {sg_atom_1.resid} and name CA")
-
-                    atom_group = mda.AtomGroup([sg0_selection.atoms[0], sg1_selection.atoms[0], cb_selection.atoms[0], ca_selection.atoms[0]])
-                    atom_groups.append(atom_group)
-
-                    if not populated:
-                        self.dihedral_types.append('chi2')
-                        self.atom_indices.append(atom_group.indices)
-                        self.residue_names.append('CYX')
-                        self.residue_ids.append(sg_atom_1.resid)
-
-            if not populated:
-                self.numDihedrals = len(self.atom_indices)
-            populated = True
+            universe = mda.Universe(self.prmtop_file, dcd)
+            atom_groups, dihedral_types, atom_indices, residue_names, residue_ids, numDihedrals = self.build_dihedral_atom_groups(universe)
 
             # Compute dihedrals
-            values = dihedrals.Dihedral(atom_groups).run().angles # + 180
+            values = dihedrals.Dihedral(atom_groups).run().angles
             values = np.deg2rad(values)
             values = values.astype(np.float32)
 
             # [num_dcds, num_dihedrals, num_frames]
             self.dihedral_values.append(values)
 
-            # break
-
-            # # print atom indices and dihedral values
-            # for i in range(len(self.atom_indices)):
-            #     aix0 = self.atom_indices[i][0]
-            #     aix1 = self.atom_indices[i][1]
-            #     aix2 = self.atom_indices[i][2]
-            #     aix3 = self.atom_indices[i][3]
-            #     val = np.rad2deg(values[0][i]) - 180
-            #     t = self.dihedral_types[i]
-            #     print(f"measure dihed {{{aix0} {aix1} {aix2} {aix3}}} \t {val} \t {t}")
-
         # self.dihedrals_to_pdb()
-        # exit()
+
+    def build_dihedral_atom_groups(self, universe):
+        atom_groups = []
+        dihedral_types = []
+        atom_indices = []
+        residue_names = []
+        residue_ids = []
+
+        for res in universe.residues:
+
+            # The phi angle of the first residue is not defined
+            phi = res.phi_selection()
+            if not phi:
+                h1 = universe.select_atoms(f"resid {res.resid} and name H1")
+                n = universe.select_atoms(f"resid {res.resid} and name N")
+                ca = universe.select_atoms(f"resid {res.resid} and name CA")
+                c = universe.select_atoms(f"resid {res.resid} and name C")
+                phi = mda.AtomGroup([h1.ix[0], n.ix[0], ca.ix[0], c.ix[0]], universe)
+
+            atom_groups.append(phi)
+            dihedral_types.append('phi')
+            atom_indices.append(phi.indices)
+            residue_names.append(res.resname)
+            residue_ids.append(res.resid)
+
+            # The psi angle of the last residue is not defined
+            psi = res.psi_selection()
+            if not psi:
+                n = universe.select_atoms(f"resid {res.resid} and name N")
+                ca = universe.select_atoms(f"resid {res.resid} and name CA")
+                c = universe.select_atoms(f"resid {res.resid} and name C")
+                oxt = universe.select_atoms(f"resid {res.resid} and name OXT")
+                psi = mda.AtomGroup([n.ix[0], ca.ix[0], c.ix[0], oxt.ix[0]], universe)
+
+            atom_groups.append(psi)
+            dihedral_types.append('psi')
+            atom_indices.append(psi.indices)
+            residue_names.append(res.resname)
+            residue_ids.append(res.resid)
+
+            # Present in all residues
+            omega = res.omega_selection()
+            if omega:
+                atom_groups.append(omega)
+                dihedral_types.append('omega')
+                atom_indices.append(omega.indices)
+                residue_names.append(res.resname)
+                residue_ids.append(res.resid)
+
+            # Chi angles
+            for chi_name, chi_atoms in self.dihedral_sele[res.resname].items():
+                chi_atom_ix = [universe.select_atoms(f"resid {res.resid} and name {atom_name}").ix[0] for atom_name in chi_atoms]
+                chi_dihedral = mda.AtomGroup(chi_atom_ix, universe)
+
+                atom_groups.append(chi_dihedral)
+                dihedral_types.append(chi_name)
+                atom_indices.append(chi_dihedral.indices)
+                residue_names.append(res.resname)
+                residue_ids.append(res.resid)
+
+        # Find the disulfide bonds
+        disulfide_bonds = set()
+        for sg in universe.select_atoms("resname CYX and name SG"):
+            for b in sg.bonds:
+                if b.atoms[0].name == 'SG' and b.atoms[1].name == 'SG':
+                    disulfide_bonds.add(tuple(sorted(b.indices)))
+        disulfide_bonds = list(disulfide_bonds)
+
+        # print the atoms in the disulfide bonds
+        for bond in disulfide_bonds:
+            sg0_atom = universe.atoms[bond[0]]
+            sg1_atom = universe.atoms[bond[1]]
+
+            sg_atom_pairs = [(sg0_atom, sg1_atom), (sg1_atom, sg0_atom)]
+            for sg_atom_0, sg_atom_1 in sg_atom_pairs:
+                sg0_selection = universe.select_atoms(f"resid {sg_atom_0.resid} and name SG")
+                sg1_selection = universe.select_atoms(f"resid {sg_atom_1.resid} and name SG")
+                cb_selection = universe.select_atoms(f"resid {sg_atom_1.resid} and name CB")
+                ca_selection = universe.select_atoms(f"resid {sg_atom_1.resid} and name CA")
+
+                atom_group = mda.AtomGroup([sg0_selection.atoms[0], sg1_selection.atoms[0], cb_selection.atoms[0], ca_selection.atoms[0]])
+                atom_groups.append(atom_group)
+                dihedral_types.append('chi2')
+                atom_indices.append(atom_group.indices)
+                residue_names.append('CYX')
+                residue_ids.append(sg_atom_1.resid)
+
+        numDihedrals = len(atom_indices)
+
+        return atom_groups, dihedral_types, atom_indices, residue_names, residue_ids, numDihedrals
 
     def get_dihedral_atom_indices(self):
         indices = []
