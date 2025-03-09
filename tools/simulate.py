@@ -4,6 +4,7 @@ import argparse
 import robosample
 import batstat
 import numpy as np
+import os
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Process PDB code and seed.')
@@ -27,36 +28,49 @@ mdtrajObj = md.load(args.rst7, top=args.prmtop)
 flexorObj = flexor.Flexor(mdtrajObj)
 
 # create robosample context
-# PDBID: 1APQ -> 1APQ_6000_0.dcd, 1APQ_6000_1.dcd, 1APQ_6000_2.dcd
-c = robosample.Context(args.name, args.seed, 0, 1, robosample.RunType.REMC, 1, 0)
-c.setPdbRestartFreq(0) # WRITE_PDBS
-c.setPrintFreq(args.write_freq) # PRINT_FREQ
-c.setNonbonded(0, 1.2)
-c.setGBSA(1)
-c.setVerbose(False)
+context = robosample.Context(args.name, args.seed, 0, 1, robosample.RunType.REMC, 1, 0)
+context.setPdbRestartFreq(0) # WRITE_PDBS
+context.setPrintFreq(args.write_freq) # PRINT_FREQ
+context.setNonbonded(0, 1.2)
+context.setGBSA(1)
+context.setVerbose(False)
 
 # load system
-c.loadAmberSystem(args.prmtop, args.rst7)
+context.loadAmberSystem(args.prmtop, args.rst7)
 
 # openmm cartesian
 flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
-c.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+context.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
 # Cluster the previous simulations
-dcd_files = [f"{args.pdbid}_6000_{i}.dcd" for i in range(5)]
-stats = batstat.BATCorrelations(dcd_files, args.prmtop_file)
-corr = stats.compute_correlations()
+dcd_files = [f"{args.pdbid}_{i}.dcd" for i in range(5)]
+stats = batstat.BATCorrelations(dcd_files, args.prmtop, args.rst7)
+correlation_file = f"{args.pdbid}_6000_correlation.npy"
 
-abs_corr = np.abs(corr)
-max_corr = np.max(abs_corr, axis=0)
-clusters = flexor.cluster(max_corr)
-for c in clusters:
+print(correlation_file)
+
+if os.path.exists(correlation_file):
+	corr = np.load(correlation_file)
+else:
+	corr = stats.compute_correlations()
+	np.save(correlation_file, corr)
+
+blocks, collapsed = stats.dynamic_partitioning(np.mean(np.abs(corr), axis=0))
+blocks.append(collapsed)
+
+samples_per_round = [10] * len(blocks)
+samples_per_round.append(1)
+
+print(len(blocks))
+
+for block, num_samples in zip(blocks, samples_per_round):
 	bond_list = []
-	for aix1, aix2, dihedral_type in c:
+	print(block)
+	for (aix1, aix2) in block:
 		bond_list.append((aix1, aix2))
         
 	flex = flexorObj.create_from_list(bond_list, robosample.BondMobility.Torsion)
-	c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+	context.addWorld(True, num_samples, robosample.RootMobility.WELD, flex, True, False, 0)
 
 # # sidechains pins
 # flex = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
@@ -70,13 +84,13 @@ for c in clusters:
 sampler = robosample.SamplerName.HMC # rename to type
 thermostat = robosample.ThermostatName.ANDERSEN
 
-c.getWorld(0).addSampler(sampler, robosample.IntegratorType.OMMVV, thermostat, False)
+context.getWorld(0).addSampler(sampler, robosample.IntegratorType.OMMVV, thermostat, False)
 
 # c.getWorld(1).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 # c.getWorld(2).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 
-for i in range(len(clusters)):
-	c.getWorld(i).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
+for i in range(len(blocks) + 1):
+	context.getWorld(i).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 
 nof_replicas = 1
 temperature = args.temperature_init
@@ -87,21 +101,21 @@ for i in range(nof_replicas):
     boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
 
 accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings]
-timesteps = [0.0007, 0.02, 0.075]
-worldIndexes = [0, 1, 2]
-world_indexes = [0, 1, 2]
-mdsteps = [1429, 10, 10] # 14286 - 1 ps instead of 10 ps
+timesteps = [0.0007] + [0.0075] * len(blocks)
+worldIndexes = range(len(blocks) + 1)
+world_indexes = range(len(blocks) + 1)
+mdsteps = [1429] + [10] * len(blocks) # 14286 - 1 ps instead of 10 ps
 boost_md_steps = mdsteps
 integrators = [robosample.IntegratorType.OMMVV, robosample.IntegratorType.VERLET, robosample.IntegratorType.VERLET]
 
-distort_options = [0, 0, 0]
-distort_args = ["0", "0" , "0"]
-flow = [0, 0, 0]
-work = [0, 0, 0]
+distort_options = [0] * (len(blocks) + 1)
+distort_args = ["0"] * (len(blocks) + 1)
+flow = [0] * (len(blocks) + 1)
+work = [0] * (len(blocks) + 1)
 
 for i in range(nof_replicas):
-    c.addReplica(i)
-    c.addThermodynamicState(i,
+    context.addReplica(i)
+    context.addThermodynamicState(i,
 		temperatures[i],
 		accept_reject_modes,
 		distort_options,
@@ -114,7 +128,10 @@ for i in range(nof_replicas):
 		mdsteps)
 
 # initialize the simulation
-c.Initialize()
+context.Initialize()
 
 # start the simulation
-c.RunREX(args.equil_steps, args.prod_steps)
+context.RunREX(args.equil_steps, args.prod_steps)
+
+
+# python3 simulate.py 1APQ_clusters_0 ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.rst7 6000 10 100 10 300 1APQ
