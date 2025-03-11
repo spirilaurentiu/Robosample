@@ -5834,7 +5834,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 	// Print the world output stream
 	if (verbose) {
-		std::cout << worldOutStream.str() << std::endl;
+		std::cout << worldOutStream.str(); //  << std::endl;
 	}
 
 	return validated;

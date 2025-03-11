@@ -3396,6 +3396,10 @@ bool World::generateSamples(int howMany, std::stringstream& worldOutStream, cons
 		}
 
 		validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
+
+		if (verbose) {
+			worldOutStream << std::endl;
+		}
 			
 	}
 
