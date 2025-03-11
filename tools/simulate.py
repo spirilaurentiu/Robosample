@@ -20,6 +20,7 @@ parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
 parser.add_argument('temperature_init', type=int, help='Temperature of the first replica.')
 parser.add_argument('pdbid', type=str, help='pdbid')
 parser.add_argument('type', type=str, help='type of simulation')
+parser.add_argument('spr_method', type=str, help='samples per round method')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -93,7 +94,9 @@ elif args.type == 'tdc':
 
 	# Partition the dihedrals into blocks
 	blocks, samples_per_round = stats.dynamic_partitioning(np.mean(np.abs(corr), axis=0))
-	print("samples_per_round", samples_per_round)
+	if args.spr_method == 'fixed':
+		samples_per_round = [1] * len(blocks)
+	# print("samples_per_round", samples_per_round)
 
 	# Create the flexors from the blocks
 	for block, num_samples in zip(blocks, samples_per_round):
@@ -148,4 +151,5 @@ else:
 	pass
 
 
-# python3 simulate.py 1APQ_clusters_0 ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdnr
+# python3 simulate.py 1APQ_tdc_auto ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdc auto
+# python3 simulate.py 1APQ_tdc_fixed ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdc fixed
