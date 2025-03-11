@@ -673,27 +673,13 @@ class BATCorrelations:
                 refined_blocks.append(block)
 
         return refined_blocks, collapsed
-
-    def print_block_correlations(self, blocks, collapsed, corr_matrix):
-        def mean_corr(block):
-            indices = list(block)
-            if len(indices) < 2:
-                return 0
-            pairwise_corrs = [corr_matrix[i, j] for i in block for j in block if i < j]
-            return np.mean(pairwise_corrs) if pairwise_corrs else 0
-
-        print("\nBlock intra-correlations:")
-        for idx, block in enumerate(blocks):
-            print(f"  Block {idx}: mean intra-correlation = {mean_corr(block):.4f} with {len(block)} variables")
-
-        collapsed_list = list(collapsed)
-        if len(collapsed_list) > 1:
-            pairwise_corrs = [corr_matrix[i, j] for i in collapsed for j in collapsed if i < j]
-            collapsed_intra_corr = np.mean(pairwise_corrs) if pairwise_corrs else 0
-        else:
-            collapsed_intra_corr = 0
-
-        print(f"\nCollapsed intra-correlation: {collapsed_intra_corr:.4f} with {len(collapsed)} variables")
+    
+    def mean_corr(self, block, corr_matrix):
+        indices = list(block)
+        if len(indices) < 2:
+            return 0
+        pairwise_corrs = [corr_matrix[i, j] for i in block for j in block if i < j]
+        return np.mean(pairwise_corrs) if pairwise_corrs else 0
     
     def dynamic_partitioning(self, corr_matrix):
         """
@@ -723,8 +709,29 @@ class BATCorrelations:
         all_vars -= collapsed
         assert not all_vars, f"Error: {len(all_vars)} variables not included in blocks or collapsed set"
 
-        self.print_block_correlations(blocks, collapsed, corr_matrix)
+        # compute intra-block correlations and samples per round
+        samples_per_round = []
 
+        print("Block intra-correlations:")
+        for idx, block in enumerate(blocks):
+            mean_corr = self.mean_corr(block, corr_matrix)
+            samples_per_round.append(mean_corr)
+            print(f"  Block {idx}: mean intra-correlation = {mean_corr:.4f} with {len(block)} variables")
+
+        collapsed_list = list(collapsed)
+        if len(collapsed_list) > 1:
+            pairwise_corrs = [corr_matrix[i, j] for i in collapsed for j in collapsed if i < j]
+            collapsed_intra_corr = np.mean(pairwise_corrs) if pairwise_corrs else 0
+        else:
+            collapsed_intra_corr = 0
+        samples_per_round.append(collapsed_intra_corr)
+
+        print(f"\nCollapsed intra-correlation: {collapsed_intra_corr:.4f} with {len(collapsed)} variables")
+
+        samples_per_round = np.array(samples_per_round)
+        samples_per_round = np.round(samples_per_round / np.min(samples_per_round)).astype(int)
+
+        # extract atom indices
         blocks_atom_list = []
         for block in blocks:
             atom_list = []
@@ -739,8 +746,10 @@ class BATCorrelations:
             aix1 = self.atom_indices[dihedral_index][1]
             aix2 = self.atom_indices[dihedral_index][2]
             collapsed_atom_list.append((aix1, aix2))
+        
+        blocks_atom_list.append(collapsed_atom_list)
 
-        return blocks_atom_list, collapsed_atom_list
+        return blocks_atom_list, samples_per_round
 
     def chose_decoy_bonds(self, ref_bonds, steps=3000):
         ref_masses = self.compute_protein_cut_masses(ref_bonds)
