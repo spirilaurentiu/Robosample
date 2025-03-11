@@ -524,6 +524,10 @@ int main(int argc, char **argv)
 		SamplerName::HMC,
 		SamplerName::HMC};
 
+	std::vector<int> samplesPerRound = {
+		1, 1, 1
+	};
+
 	for(int wIx = 0; wIx < nofWorlds; wIx++){
 		if (!fileExists(flexFileFNs[wIx])) {
 			std::cerr << "Error: File does not exist: " << flexFileFNs[wIx] << std::endl;
@@ -531,7 +535,7 @@ int main(int argc, char **argv)
 		}	
 		std::vector<BOND_FLEXIBILITY> flexibilities = {};
 		context.readFlexibility(flexFileFNs[wIx], flexibilities);
-		context.addWorld(false, 1, rootMobilities[wIx], flexibilities, true, false, 0);
+		context.addWorld(false, samplesPerRound[wIx], rootMobilities[wIx], flexibilities, true, false, 0);
 	}
 
 	// Add samplers

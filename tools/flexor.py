@@ -3,7 +3,7 @@ import mdtraj as md
 import networkx as nx
 import os
 import robosample as robosample
-import batstat
+#import batstat
 
 class Flexor:
     def __init__(self, mdtraj_obj):

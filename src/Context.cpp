@@ -1370,7 +1370,7 @@ SimTK::Real Context::OMMRef_calcPotential(const std::vector<std::vector<std::pai
 
 
 	//openMMState.getEnergies_drl_bon();
-	//std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
+	std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
 
 	return refPotential;
 
@@ -1794,15 +1794,18 @@ void Context::addWorld(
 	// print the inertia tensors of all bodies
 	// PrintSimbodyMobods();
 	for(std::size_t worldIx = 0; worldIx < nofWorlds; worldIx++){
-		std::cout << "Context::PrintSimbodyMobods world " << worldIx << "\n";
+		//TRACE("Context::PrintSimbodyMobods world " << worldIx);
+
 		for(std::size_t molIx = 0; molIx < nofMols; molIx++){
-			std::cout << "Context::PrintSimbodyMobods molecule " << molIx << "\n";
+
+			//TRACE("Context::PrintSimbodyMobods molecule " << molIx);
 			const Topology& topology = worlds[worldIx].getTopology(molIx);
 
 			for(std::size_t i = 0; i < topology.getNumAtoms(); i++){
 				SimTK::Compound::AtomIndex aIx = (topology.subAtomList[i]).getCompoundAtomIndex();
 				SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
-				std::cout << "i = " << i << "; aIx = " << aIx << "; mbx = " << mbx << ";" << std::endl << std::flush;
+
+				//TRACE("i = " << i << "; aIx = " << aIx << "; mbx = " << mbx << ";");
 			}
 		}
 	}
@@ -4445,7 +4448,8 @@ void Context::swapReferencePotentialEnergies(int replica_i, int replica_j)
 }
 
 /*! <!-- restoreReplica --> */\
-void Context::rewindReplica(void){
+void Context::rewindReplica(void)
+{
 	//assert(!"Not implemented");
 
 	// Return to equilibrium worlds coordinates
@@ -5830,7 +5834,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 	// Print the world output stream
 	if (verbose) {
-		std::cout << worldOutStream.str() << std::endl;
+		std::cout << worldOutStream.str();
 	}
 
 	return validated;

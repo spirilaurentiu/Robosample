@@ -7,6 +7,43 @@ import robosample
 #import batstat
 import numpy as np
 
+
+mobilityMap = {
+	"Cartesian": robosample.BondMobility.Translation,
+	"Pin": robosample.BondMobility.Torsion,
+	"Torsion": robosample.BondMobility.Torsion,
+	"Slider": robosample.BondMobility.Slider,
+}
+
+# Read the flexibilities from a file
+def getFlexibilitiesFromFile(flexFile):
+	"""
+	Backward compatibility: Reads the flexibilities from a file.
+	"""
+	flexibilities = []
+	with open(flexFile, 'r') as f:
+		for line in f:
+			if line[0] == '#':
+				continue
+			tokens = line.split()
+			if(len(tokens) >= 3):
+				if(tokens[2] != "Weld"):
+					aIx_1 = int(tokens[0])
+					aIx_2 = int(tokens[1])
+					mobility = mobilityMap[tokens[2]]
+					flexibilities.append( robosample.BondFlexibility(aIx_1, aIx_2, mobility) )
+	return flexibilities
+#
+
+# Print the flexibilities
+def printFlexibilities(flexibilities):
+	"""
+	Prints the flexibilities.
+	"""
+	for flexIx, flex in enumerate(flexibilities):
+		print(flexibilities[flexIx].i, flexibilities[flexIx].j, flexibilities[flexIx].mobility)
+#
+
 #region: Parse the arguments
 # python simulate.py baseName prmtop rst7 equil_steps prod_steps write_freq temperature_init seed
 # python simulate.py 1a1p ../data/1a1p/1a1p.prmtop ../data/1a1p/1a1p.rst7 1000 10000 300.00 666
@@ -20,6 +57,7 @@ parser.add_argument('--writeFreq', type=int, help='CSV and DCD write frequency.'
 parser.add_argument('--baseTemperature', type=float, help='Temperature of the first replica.')
 parser.add_argument('--runType', type=str, help='Run type: DEFAULT, REMC, RENEMC, RENE.')
 parser.add_argument('--seed', type=int, help='The seed.')
+parser.add_argument('--flexFNs', type=str, nargs='+', default=[], help='The flexFNs.')
 args = parser.parse_args()
 #endregion
 
@@ -31,7 +69,7 @@ context = robosample.Context(args.name, args.seed, 0, 1, run_type, 1, 0)
 context.setPdbRestartFreq(0) # WRITE_PDBS
 context.setPrintFreq(args.writeFreq) # PRINT_FREQ
 context.setNonbonded(0, 1.2)
-context.setGBSA(1)
+context.setGBSA(0)
 context.setVerbose(True)
 
 # Load system
@@ -42,16 +80,28 @@ mdtrajObj = md.load(args.rst7, top=args.top)
 flexorObj = flexor.Flexor(mdtrajObj)
 
 # Openmm Cartesian
-flexibilities = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
-context.addWorld(False, 1, robosample.RootMobility.WELD, flexibilities, True, False, 0)
+# void addWorld(
+# 	bool fixmanTorque,
+# 	int samplesPerRound,
+# 	ROOT_MOBILITY rootMobility,
+# 	const std::vector<BOND_FLEXIBILITY>& flexibilities,
+# 	bool useOpenMM = true,
+# 	bool visual = false,
+# 	SimTK::Real visualizerFrequency = 0);
 
-# Ramachandran pins
-flexibilities = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
-context.addWorld(False, 1, robosample.RootMobility.WELD, flexibilities, True, False, 0)
+flexes_Cart = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
+context.addWorld(False, 1, robosample.RootMobility.CARTESIAN, flexes_Cart, True, False, 0)
+# # Ramachandran pins
+# flexibilities = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
+# context.addWorld(False, 1, robosample.RootMobility.WELD, flexibilities, True, False, 0)
+# # Sidechains pins
+# flexibilities = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
+# context.addWorld(False, 1, robosample.RootMobility.WELD, flexibilities, True, False, 0)
 
-# Sidechains pins
-flexibilities = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
-context.addWorld(False, 1, robosample.RootMobility.WELD, flexibilities, True, False, 0)
+for flexFNIx, flexFN in enumerate(args.flexFNs):
+	flexibilities = getFlexibilitiesFromFile(flexFN)
+	printFlexibilities(flexibilities)
+	context.addWorld(False, 1, robosample.RootMobility.WELD, flexibilities, True, False, 0)
 
 # Samplers
 sampler = robosample.SamplerName.HMC # rename to type
@@ -66,18 +116,20 @@ nof_replicas = 2
 temperatures = np.zeros(nof_replicas, dtype=np.float64)
 boost_temperatures = np.zeros(nof_replicas, dtype=np.float64)
 for replIx in range(nof_replicas):
-    temperatures[replIx] = args.baseTemperature + (replIx * 10)
-    boost_temperatures[replIx] = args.baseTemperature + (replIx * 10)  # used for openmm velocities
+    temperatures[replIx] = args.baseTemperature + (replIx * 50)
+    boost_temperatures[replIx] = args.baseTemperature + (replIx * 50)  # used for openmm velocities
 
 accept_reject_modes = [ robosample.AcceptRejectMode.MetropolisHastings,
 						robosample.AcceptRejectMode.MetropolisHastings,
 						robosample.AcceptRejectMode.MetropolisHastings]
 
-timesteps = [0.0007, 0.002, 0.0075]
+timesteps = [0.0007, 0.007, 0.0007]
 worldIndexes = [0, 1, 2]
 mdsteps = [10, 10, 10]
 boost_md_steps = mdsteps
-integrators = [robosample.IntegratorType.OMMVV, robosample.IntegratorType.VERLET, robosample.IntegratorType.VERLET]
+integrators = [robosample.IntegratorType.OMMVV, 
+			   robosample.IntegratorType.VERLET,
+			   robosample.IntegratorType.VERLET]
 
 distort_options = [0, 0, 0]
 distort_args = ["0", "0" , "0"]
