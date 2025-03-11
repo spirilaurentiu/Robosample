@@ -333,13 +333,29 @@ World::World(int worldIndex,
 
 }
 
-void World::setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities) {
+void World::setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities)
+{
 	this->flexibilities = flexibilities;
 }
 
-const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const {
+const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const
+{
 	return flexibilities;
 }
+
+
+void World::setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities)
+{
+	this->rollFlexibilities = argRollFlexibilities;
+}
+
+
+const std::vector<std::vector<BOND_FLEXIBILITY>>& World::getRollFlexibilities() const
+{
+	return this->rollFlexibilities;
+}
+
+
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
  * adds parameters: defines Biotypes; - adds BAT parameters to DuMM. Also

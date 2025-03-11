@@ -118,6 +118,9 @@ public:
 	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
 
+	void setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities);
+	const std::vector<std::vector<BOND_FLEXIBILITY>>& getRollFlexibilities() const ;
+
 	void generateDummParams(const std::vector<bSpecificAtom>& atoms,
 		const std::vector<bBond>& bonds,
 		const std::vector<DUMM_ANGLE>& dummAngles,
@@ -1036,7 +1039,7 @@ private:
 	SimTK::String rootMobilizer;
 
 	std::vector<BOND_FLEXIBILITY> flexibilities;
-
+	std::vector<std::vector<BOND_FLEXIBILITY>> rollFlexibilities;
 
 	// Context
 	Context *myContext;
