@@ -20,7 +20,7 @@ parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
 parser.add_argument('temperature_init', type=int, help='Temperature of the first replica.')
 parser.add_argument('pdbid', type=str, help='pdbid')
 parser.add_argument('type', type=str, help='type of simulation')
-parser.add_argument('tdc_spr', type=int, help='torsional dynamics correlated samples per round in blocks')
+parser.add_argument('spr_method', type=str, help='samples per round method')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -79,9 +79,6 @@ if args.type == 'tdnr':
 
 elif args.type == 'tdc':
 	# Do torsional dynamics - correlated dihedrals
-	# OpenMM cartesian
-	flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
-	context.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
 	# Cluster the previous simulations
 	stats = batstat.BATCorrelations(args.prmtop, args.inpcrd)
@@ -95,22 +92,18 @@ elif args.type == 'tdc':
 		corr = stats.compute_correlations()
 		np.save(correlation_file, corr)
 
-	blocks, collapsed = stats.dynamic_partitioning(np.mean(np.abs(corr), axis=0))
-	blocks.append(collapsed)
+	# Partition the dihedrals into blocks
+	blocks, samples_per_round = stats.dynamic_partitioning(np.mean(np.abs(corr), axis=0))
+	if args.spr_method == 'fixed':
+		samples_per_round = [1] * len(blocks)
+	# print("samples_per_round", samples_per_round)
 
-	samples_per_round = [args.tdc_spr] * len(blocks)
-	samples_per_round.append(1)
-
+	# Create the flexors from the blocks
 	for block, num_samples in zip(blocks, samples_per_round):
-		bond_list = []
-		for (aix1, aix2) in block:
-			bond_list.append((aix1, aix2))
-			
-		flex = flexorObj.create_from_list(bond_list, robosample.BondMobility.Torsion)
+		flex = flexorObj.create_from_list(block, robosample.BondMobility.Torsion)
 		context.addWorld(True, num_samples, robosample.RootMobility.WELD, flex, True, False, 0)
 
-	context.getWorld(0).addSampler(robosample.SamplerName.HMC, robosample.IntegratorType.OMMVV, robosample.ThermostatName.ANDERSEN, False)
-	for i in range(len(blocks) + 1):
+	for i in range(len(blocks)):
 		context.getWorld(i).addSampler(robosample.SamplerName.HMC, robosample.IntegratorType.VERLET, robosample.ThermostatName.ANDERSEN, True)
 
 	nof_replicas = 1
@@ -121,18 +114,18 @@ elif args.type == 'tdc':
 		temperatures.append(temperature + (i * 10))
 		boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
 
-	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] * (len(blocks) + 1)
-	timesteps = [0.0007] + [0.0075] * len(blocks)
-	worldIndexes = range(len(blocks) + 1)
-	world_indexes = range(len(blocks) + 1)
-	mdsteps = [1429] + [10] * len(blocks) # 14286 - 1 ps instead of 10 ps
+	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] * (len(blocks))
+	timesteps = [0.0075] * len(blocks)
+	worldIndexes = range(len(blocks))
+	world_indexes = range(len(blocks))
+	mdsteps = [10] * len(blocks)
 	boost_md_steps = mdsteps
-	integrators = [robosample.IntegratorType.OMMVV] + [robosample.IntegratorType.VERLET] * len(blocks)
+	integrators = [robosample.IntegratorType.VERLET] * len(blocks)
 
-	distort_options = [0] * (len(blocks) + 1)
-	distort_args = ["0"] * (len(blocks) + 1)
-	flow = [0] * (len(blocks) + 1)
-	work = [0] * (len(blocks) + 1)
+	distort_options = [0] * (len(blocks))
+	distort_args = ["0"] * (len(blocks))
+	flow = [0] * (len(blocks))
+	work = [0] * (len(blocks))
 
 	for i in range(nof_replicas):
 		context.addReplica(i)
@@ -158,4 +151,5 @@ else:
 	pass
 
 
-# python3 simulate.py 1APQ_clusters_0 ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdnr
+# python3 simulate.py 1APQ_tdc_auto ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdc auto
+# python3 simulate.py 1APQ_tdc_fixed ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdc fixed
