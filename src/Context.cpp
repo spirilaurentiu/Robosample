@@ -314,7 +314,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	std::string whatRunTypeStr = RUN_TYPE_Str[int(whatRunType)];
 	std::cout << "Run type " << whatRunTypeStr << std::endl;
 
-	if(	(whatRunTypeStr == "REMC")   || 
+	if(	(whatRunTypeStr == "REMC")   ||
 		(whatRunTypeStr == "RENEMC") ||
 		(whatRunTypeStr == "RENE") 
 		|| true)
@@ -1049,8 +1049,9 @@ void Context::Initialize() {
 #endif
 
 //#include "../Molmodel/src/gbsa/cpuObcInterface.h"
-# include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
-# include "../openmm/platforms/cuda/include/CudaPlatform.h"
+# include "../openmm/platforms/cpu/include/CpuPlatform.h"
+//# include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
+//# include "../openmm/platforms/cuda/include/CudaPlatform.h"
 std::string Context::OMMRef_initialize(void)
 {
 	

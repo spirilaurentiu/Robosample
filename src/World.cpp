@@ -3307,11 +3307,6 @@ bool World::addSampler(SamplerName samplerName,
 	// As far as I understand, you cannot modify forceField afther this call
 	realizeTopology();
 
-
-	if(isRollFlexibilities){
-		lockAllMobilizers();
-	}
-
     if(MEMDEBUG){
 		std::cout << "World::addSampler memory 2.\n" << exec("free") << std::endl << std::flush;
 		std::cout << "World::addSampler memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
@@ -3426,24 +3421,15 @@ bool World::generateSamples(int howMany, std::stringstream& worldOutStream, cons
 	updateAtomListsFromSimbody(currentAdvancedState);
 
 	// Roll
+	this->isRollFlexibilities = true;
 	if(isRollFlexibilities){
-		SimTK::MobilizedBodyIndex mbx(0);
-		while (mbx < matter->getNumBodies() - 1){
-			++mbx;
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			if(!mobod.isLocked(currentAdvancedState)){
-				mobod.lock(currentAdvancedState);
-				break;
-			}
-		}
+		lockAllMobilizers();
 
-		if(mbx == (matter->getNumBodies() - 1)){
-			mbx = SimTK::MobilizedBodyIndex(1);
-		}else{
-			++mbx;
-		}
+		// int whichMobodToUnlock = matter->getNumBodies() - 1;
+		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		// }
 
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(5));
 		mobod.unlock(currentAdvancedState);
 
 	}else{
