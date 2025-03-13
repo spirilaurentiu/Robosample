@@ -981,6 +981,7 @@ void Context::setAtomMasses() {
 }
 
 
+/*! <!--  --> */
 void Context::Initialize() {
 
 	worlds[0].setDuMMAtomIndexes(); // REVISE
@@ -1713,7 +1714,7 @@ void Context::addWorld(
 		rootMobilities.back().push_back("Rigid");
 	}
 
-	// 
+	// Print mobilities
 	bool printMobilities = true;
 	if(printMobilities){
 		for (const auto& flex : flexibilities) {
@@ -2158,9 +2159,9 @@ void Context::buildAcyclicGraph(
 		// 	<< parent.getNumber() <<" "
 		// 	<< "with bond center name " << parentBondCenterPathNameStr <<" "
 		// 	<< eol;
-
+		
 		topology.bondAtom(child.getSingleAtom(),
-				(parentBondCenterPathNameStr).c_str(), 0.149, 0);
+				(parentBondCenterPathNameStr).c_str(), 0.149, 0); // SimTK::BondMobility::Mobility = SimTK::BondMobility::Default
 
 		// Set the final Biotype
 		topology.setAtomBiotype(child.getName(),
@@ -2415,7 +2416,7 @@ void Context::build_Molmodel_AcyclicGraphs(void)
 		setRootAtom( topology, rootAmberIx );
 
 		// --------------------------------------------------------------------
-		// (2) buildAcyclicGraph
+		// (2) buildAcyclicGraph // topology.bondAtom
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		buildAcyclicGraph(topology, rootAmberIx, molIx);
 

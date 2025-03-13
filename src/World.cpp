@@ -344,17 +344,35 @@ const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const
 }
 
 
-void World::setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities)
+// void World::setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities)
+// {
+// 	this->rollFlexibilities = argRollFlexibilities;
+// 	this->isRollFlexibilities = true;
+// }
+
+// const std::vector<std::vector<BOND_FLEXIBILITY>>& World::getRollFlexibilities() const
+// {
+// 	return this->rollFlexibilities;
+// }
+
+void World::setRollFlexibilities(bool argRollFlexibilities)
 {
-	this->rollFlexibilities = argRollFlexibilities;
+	this->isRollFlexibilities = argRollFlexibilities;
 }
 
-
-const std::vector<std::vector<BOND_FLEXIBILITY>>& World::getRollFlexibilities() const
+bool World::getRollFlexibilities() const
 {
-	return this->rollFlexibilities;
+	return this->isRollFlexibilities;
 }
 
+void World::lockAllMobilizers(void)
+{
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.lock(currentAdvancedState);
+    }
+}
 
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
@@ -3289,6 +3307,11 @@ bool World::addSampler(SamplerName samplerName,
 	// As far as I understand, you cannot modify forceField afther this call
 	realizeTopology();
 
+
+	if(isRollFlexibilities){
+		lockAllMobilizers();
+	}
+
     if(MEMDEBUG){
 		std::cout << "World::addSampler memory 2.\n" << exec("free") << std::endl << std::flush;
 		std::cout << "World::addSampler memory 2.\n" << getLinuxMemoryUsageFromProc() << " kB" << std::endl << std::flush;
@@ -3397,10 +3420,35 @@ SimTK::Real World::calcFixman(void)
  **/
 bool World::generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
-
+	
 	// Update Robosample bAtomList
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	updateAtomListsFromSimbody(currentAdvancedState);
+
+	// Roll
+	if(isRollFlexibilities){
+		SimTK::MobilizedBodyIndex mbx(0);
+		while (mbx < matter->getNumBodies() - 1){
+			++mbx;
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			if(!mobod.isLocked(currentAdvancedState)){
+				mobod.lock(currentAdvancedState);
+				break;
+			}
+		}
+
+		if(mbx == (matter->getNumBodies() - 1)){
+			mbx = SimTK::MobilizedBodyIndex(1);
+		}else{
+			++mbx;
+		}
+
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.unlock(currentAdvancedState);
+
+	}else{
+		;
+	}
 
 	// GENERATE the requested number of samples
 	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);

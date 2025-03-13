@@ -4330,8 +4330,7 @@ void HMCSampler::restoreConfiguration(
 	proposeExceptionCaught = false;
 }
 
-/*! <!-- Restore energies
- * --> */
+/*! <!-- Restore energies --> */
 void HMCSampler::restoreEnergies(void){
 
 	// Set final energies to the precalculated old ones

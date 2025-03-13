@@ -118,8 +118,11 @@ public:
 	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
 
-	void setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities);
-	const std::vector<std::vector<BOND_FLEXIBILITY>>& getRollFlexibilities() const ;
+	//void setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities);
+	//const std::vector<std::vector<BOND_FLEXIBILITY>>& getRollFlexibilities() const ;
+	void setRollFlexibilities(bool argRollFlexibilities);
+	bool getRollFlexibilities() const ;
+	void lockAllMobilizers(void);
 
 	void generateDummParams(const std::vector<bSpecificAtom>& atoms,
 		const std::vector<bBond>& bonds,
@@ -1040,6 +1043,7 @@ private:
 
 	std::vector<BOND_FLEXIBILITY> flexibilities;
 	std::vector<std::vector<BOND_FLEXIBILITY>> rollFlexibilities;
+	bool isRollFlexibilities = false;
 
 	// Context
 	Context *myContext;
