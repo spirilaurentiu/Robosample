@@ -3424,20 +3424,19 @@ bool World::generateSamples(int howMany, std::stringstream& worldOutStream, cons
 	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
 	// Roll
-	if(this->ownWorldIndex == 0){
-		this->isRollFlexibilities = false;
-	}else{
-		this->isRollFlexibilities = true;
-	}
+	// if(this->ownWorldIndex == 1){
+	// 	this->isRollFlexibilities = true;
+	// }else{
+	// 	this->isRollFlexibilities = false;
+	// }
 	
 	if(isRollFlexibilities){
 		lockAllMobilizers();
-		int whichMobodToUnlock = (samplers[0])->getNofSamples() % (matter->getNumBodies() - 1);
-		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-		// }
+		int whichMobodToUnlock = (samplers[0])->getNofSamples() % (matter->getNumBodies() - 1) + 1;
+		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){}
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(whichMobodToUnlock));
 		mobod.unlock(currentAdvancedState);
-		TRACE("World::generateSamples: Unlocking mobilizer " << whichMobodToUnlock << " at stage " << currentAdvancedState.getSystemStage() << std::endl);
+		TRACE("World::generateSamples: Unlocking mobilizer " << whichMobodToUnlock << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
 	}else{
 		;
 	}

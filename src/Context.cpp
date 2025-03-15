@@ -965,6 +965,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations();
+	TRACE("Context::loadAmberSystem: END");
 }
 
 /*! <!-- Set atom masses --> */
@@ -1636,6 +1637,8 @@ void Context::addWorld(
 	const std::vector<BOND_FLEXIBILITY>& flexibilities,
 	bool useOpenMM,
 	bool visual, SimTK::Real visualizerFrequency) {
+
+	TRACE("Context::addWorld");
 
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());

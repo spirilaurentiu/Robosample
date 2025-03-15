@@ -2624,7 +2624,7 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 
 	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
 
-	TRACE("detM detMBAT pe_fix " + std::to_string(D0) + " " + std::to_string(detMBAT) + " " + std::to_string(result));
+	//TRACE("detM detMBAT pe_fix " + std::to_string(D0) + " " + std::to_string(detMBAT) + " " + std::to_string(result));
 
 	if(SimTK::isInf(result)){
 		std::cout << "Fixman potential is infinite!\n";
