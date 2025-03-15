@@ -601,6 +601,6 @@ int main(int argc, char **argv)
 
 	//context.OMMRef_calcPotential(true, true);
 
-	return 0;	
+	return 0;
 
 }
