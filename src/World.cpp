@@ -3413,47 +3413,65 @@ SimTK::Real World::calcFixman(void)
 /*! <--
  *  Generate a number of samples -->
  **/
-bool World::generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose)
+bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
 	
-	// Update Robosample bAtomList
-	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromSimbody(currentAdvancedState);
+	bool validated = false;
 
-	// GENERATE the requested number of samples
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
-
-	// Roll
-	// if(this->ownWorldIndex == 1){
-	// 	this->isRollFlexibilities = true;
-	// }else{
-	// 	this->isRollFlexibilities = false;
-	// }
-	
 	if(isRollFlexibilities){
-		lockAllMobilizers();
-		int whichMobodToUnlock = (samplers[0])->getNofSamples() % (matter->getNumBodies() - 1) + 1;
-		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){}
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(whichMobodToUnlock));
-		mobod.unlock(currentAdvancedState);
-		TRACE("World::generateSamples: Unlocking mobilizer " << whichMobodToUnlock << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
+
+		for(int mobIntIx = 1; mobIntIx < matter->getNumBodies(); mobIntIx++){
+
+			// Update Robosample bAtomList and Reinitialize the sampler
+			SimTK::State& currentAdvancedState = integ->updAdvancedState();
+			updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+			validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+
+			lockAllMobilizers();
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+			mobod.unlock(currentAdvancedState);
+			TRACE("World::generateSamples: Unlocking mobilizer " << mobIntIx << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
+
+			for(int sampleIx = 0; sampleIx < howManySamplesPerRound; sampleIx++) {
+				if (verbose) {
+					worldOutStream << header << " ";
+					updSampler(0)->getMsg_InitialParams(worldOutStream);
+				}
+	
+				validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
+	
+				if (verbose) {
+					worldOutStream << std::endl;
+				}
+					
+			} // __end__ howManySamplesPerRound
+
+		} // __end__ mobIntIx to unlock
+
 	}else{
-		;
-	}
 
-	for(int k = 0; k < howMany; k++) {
-		if (verbose) {
-			worldOutStream << header << " ";
-			updSampler(0)->getMsg_InitialParams(worldOutStream);
-		}
+		// Update Robosample bAtomList and Reinitialize the sampler
+		SimTK::State& currentAdvancedState = integ->updAdvancedState();
+		updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+		validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
-		validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
+		for(int sampleIx = 0; sampleIx < howManySamplesPerRound; sampleIx++) {
+			if (verbose) {
+				worldOutStream << header << " ";
+				updSampler(0)->getMsg_InitialParams(worldOutStream);
+			}
 
-		if (verbose) {
-			worldOutStream << std::endl;
-		}
-			
-	}
+			validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
+
+			if (verbose) {
+				worldOutStream << std::endl;
+			}
+				
+		} // __end__ howManySamplesPerRound
+
+	} // __end__ isRollFlexibilities else
+
+
 
 	// Return the number of accepted samples
 	return validated;

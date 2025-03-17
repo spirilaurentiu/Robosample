@@ -8,7 +8,7 @@ import robosample
 #import batstat
 import numpy as np
 
-
+# Map the mobility types
 mobilityMap = {
 	"Cartesian": robosample.BondMobility.Translation,
 	"Pin": robosample.BondMobility.Torsion,
@@ -20,6 +20,8 @@ mobilityMap = {
 def getFlexibilitiesFromFile(flexFile):
 	"""
 	Backward compatibility: Reads the flexibilities from a file.
+	:param flexFile: The file containing the flexibilities.
+	:return: The list of flexibilities.
 	"""
 	flexibilities = []
 	with open(flexFile, 'r') as f:
@@ -40,6 +42,7 @@ def getFlexibilitiesFromFile(flexFile):
 def printFlexibilities(flexibilities):
 	"""
 	Prints the flexibilities.
+	:param flexibilities: The list of flexibilities.
 	"""
 	for flexIx, flex in enumerate(flexibilities):
 		print(flexibilities[flexIx].i, flexibilities[flexIx].j, flexibilities[flexIx].mobility)
@@ -80,32 +83,46 @@ context.loadAmberSystem(args.top, args.rst7)
 mdtrajObj = md.load(args.rst7, top=args.top)
 flexorObj = flexor.Flexor(mdtrajObj)
 
+# Worlds
+# region cpp
+# void addWorld(
+# 	bool fixmanTorque,
+# 	int samplesPerRound,
+# 	ROOT_MOBILITY rootMobility,
+# 	const std::vector<BOND_FLEXIBILITY>& flexibilities,
+# 	bool useOpenMM = true,
+# 	bool visual = false,
+# 	SimTK::Real visualizerFrequency = 0);
+# endregion cpp
 nofWorlds = 0
+
+flexes_Cart = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
+context.addWorld(False, 1, robosample.RootMobility.CARTESIAN, flexes_Cart, True, False, 0)
+nofWorlds += 1
 
 flexes_Rama = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
 context.addWorld(False, 1, robosample.RootMobility.WELD, flexes_Rama, True, False, 0)
 nofWorlds += 1
 
-#region transformers
-flex_Roll = []
-flex_Roll.append(flexorObj.create(range="index 0 to 20", subset=["all"], jointType="Pin"))
-flex_Roll.append(flexorObj.create(range="index 21 to 40", subset=["all"], jointType="Pin"))
-print("[")
-for roIx, roll in enumerate(flex_Roll):
-	print("[")
-	printFlexibilities(roll)
-	print("]")
-print("]")
-print(flex_Roll)
-#context.getWorld(0) 
-context.getWorld(0).setRollFlexibilities(True)
-#exit(0)
-#endregion transformers _end_
+context.getWorld(1).setRollFlexibilities(True)
+
+flexes_Rama = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
+context.addWorld(False, 1, robosample.RootMobility.WELD, flexes_Rama, True, False, 0)
+nofWorlds += 1
 
 # Samplers
+# region cpp
+# bool addSampler(SamplerName samplerName,
+# 	IntegratorType integratorType,
+# 	ThermostatName thermostatName,
+# 	bool useFixmanPotential);
+# endregion cpp
 sampler = robosample.SamplerName.HMC # rename to type
 thermostat = robosample.ThermostatName.ANDERSEN
-context.getWorld(0).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
+context.getWorld(0).addSampler(sampler, robosample.IntegratorType.OMMVV, thermostat, False)
+
+for wIx in range(1, nofWorlds):
+	context.getWorld(wIx).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 
 # Replica exchange
 nof_replicas = 2
@@ -115,19 +132,20 @@ for replIx in range(nof_replicas):
     temperatures[replIx] = args.baseTemperature + (replIx * 50)
     boost_temperatures[replIx] = args.baseTemperature + (replIx * 50)  # used for openmm velocities
 
-accept_reject_modes = [ 
-						robosample.AcceptRejectMode.MetropolisHastings]
+accept_reject_modes = nofWorlds * [robosample.AcceptRejectMode.MetropolisHastings]
 
-timesteps = [0.007]
-worldIndexes = [0]
-mdsteps = [10]
+timesteps = nofWorlds * [0.0007]
+timesteps[1] = 0.1
+
+worldIndexes = range(nofWorlds)
+mdsteps = nofWorlds * [10]
 boost_md_steps = mdsteps
-integrators = [robosample.IntegratorType.VERLET]
+integrators = [robosample.IntegratorType.OMMVV] + ((nofWorlds - 1) * [robosample.IntegratorType.VERLET])
 
-distort_options = [0]
-distort_args = ["0"]
-flow = [0]
-work = [0]
+distort_options = nofWorlds * [0]
+distort_args = nofWorlds * ["0"]
+flow = nofWorlds * [0]
+work = nofWorlds * [0]
 
 for replIx in range(nof_replicas):
     context.addReplica(replIx)
