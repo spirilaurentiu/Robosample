@@ -222,7 +222,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	loadAmberSystem(prmtop, inpcrd);
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
-	// Get Z-matrix indexes table based on InternalCoordinates BONDS	
+	// Get Z-matrix indexes table based on InternalCoordinates BONDS
 	calcZMatrixTable(); // PrintZMatrixTable();
 	reallocZMatrixBAT();
 
@@ -241,7 +241,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1.1");}
 
-	// Add Worlds to the  Every World instantiates a:
+	// Add Worlds to the Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter, ParaMolecularDecorator
@@ -4601,10 +4601,12 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Get work from X replica
-	SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X;
+	//SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X; // variant 1
+	SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) - lnJac_X;                           // variant 2
 
 	// Get work from Y replica
-	SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y;
+	//SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y; // variant 1
+	SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) - lnJac_Y;                           // variant 2
 
 	// Get total work
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
