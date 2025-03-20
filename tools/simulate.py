@@ -153,3 +153,65 @@ else:
 
 # python3 simulate.py 1APQ_tdc_auto ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdc auto
 # python3 simulate.py 1APQ_tdc_fixed ../../robocath/data-raw/1APQ.prmtop ../../robocath/data-raw/1APQ_min.inpcrd 6000 10 100 10 300 1APQ tdc fixed
+
+################ SALIERI ################
+# nohup python3 simulate.py 1APQ_tdc_auto data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6002 100 1000000 100 300 1APQ tdc auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 1APQ_tdc_auto data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6003 100 1000000 100 300 1APQ tdc auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 1APQ_tdc_auto data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6006 100 1000000 100 300 1APQ tdc auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 1APQ_tdc_fixed data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6004 100 1000000 100 300 1APQ tdc fixed > /dev/null 2>&1 &
+# nohup python3 simulate.py 1APQ_tdc_fixed data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6005 100 1000000 100 300 1APQ tdc fixed > /dev/null 2>&1 &
+# nohup python3 simulate.py 1APQ_tdc_fixed data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6007 100 1000000 100 300 1APQ tdc fixed > /dev/null 2>&1 &		NU A MERS
+################ SALIERI ################
+
+
+################ ALBICASTRO ################
+# for file in *.rst7; do mv "$file" "${file%.rst7}.inpcrd"; done
+# nohup python3 simulate.py 2JR6_tdnr data-raw/2JR6.prmtop data-raw/2JR6_min.inpcrd 6000 100 1000000 100 300 2JR6 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2JR6_tdnr data-raw/2JR6.prmtop data-raw/2JR6_min.inpcrd 6001 100 1000000 100 300 2JR6 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2JR6_tdnr data-raw/2JR6.prmtop data-raw/2JR6_min.inpcrd 6002 100 1000000 100 300 2JR6 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2JR6_tdnr data-raw/2JR6.prmtop data-raw/2JR6_min.inpcrd 6003 100 1000000 100 300 2JR6 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2JR6_tdnr data-raw/2JR6.prmtop data-raw/2JR6_min.inpcrd 6004 100 1000000 100 300 2JR6 tdnr auto > /dev/null 2>&1 &
+
+# nohup python3 simulate.py 2KTA_tdnr data-raw/2KTA.prmtop data-raw/2KTA_min.inpcrd 6000 100 1000000 100 300 2KTA tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KTA_tdnr data-raw/2KTA.prmtop data-raw/2KTA_min.inpcrd 6001 100 1000000 100 300 2KTA tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KTA_tdnr data-raw/2KTA.prmtop data-raw/2KTA_min.inpcrd 6002 100 1000000 100 300 2KTA tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KTA_tdnr data-raw/2KTA.prmtop data-raw/2KTA_min.inpcrd 6003 100 1000000 100 300 2KTA tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KTA_tdnr data-raw/2KTA.prmtop data-raw/2KTA_min.inpcrd 6004 100 1000000 100 300 2KTA tdnr auto > /dev/null 2>&1 &
+################ ALBICASTRO ################
+
+################ MONTEVERDI ################
+# for file in *.rst7; do mv "$file" "${file%.rst7}.inpcrd"; done
+# nohup python3 simulate.py 2KQ8_tdnr data-raw/2KQ8.prmtop data-raw/2KQ8_min.inpcrd 6000 100 1000000 100 300 2KQ8 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KQ8_tdnr data-raw/2KQ8.prmtop data-raw/2KQ8_min.inpcrd 6001 100 1000000 100 300 2KQ8 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KQ8_tdnr data-raw/2KQ8.prmtop data-raw/2KQ8_min.inpcrd 6002 100 1000000 100 300 2KQ8 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KQ8_tdnr data-raw/2KQ8.prmtop data-raw/2KQ8_min.inpcrd 6003 100 1000000 100 300 2KQ8 tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2KQ8_tdnr data-raw/2KQ8.prmtop data-raw/2KQ8_min.inpcrd 6004 100 1000000 100 300 2KQ8 tdnr auto > /dev/null 2>&1 &
+
+# nohup python3 simulate.py 2HHI_tdnr data-raw/2HHI.prmtop data-raw/2HHI_min.inpcrd 6000 100 1000000 100 300 2HHI tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2HHI_tdnr data-raw/2HHI.prmtop data-raw/2HHI_min.inpcrd 6001 100 1000000 100 300 2HHI tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2HHI_tdnr data-raw/2HHI.prmtop data-raw/2HHI_min.inpcrd 6002 100 1000000 100 300 2HHI tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2HHI_tdnr data-raw/2HHI.prmtop data-raw/2HHI_min.inpcrd 6003 100 1000000 100 300 2HHI tdnr auto > /dev/null 2>&1 &
+# nohup python3 simulate.py 2HHI_tdnr data-raw/2HHI.prmtop data-raw/2HHI_min.inpcrd 6004 100 1000000 100 300 2HHI tdnr auto > /dev/null 2>&1 &
+################ MONTEVERDI ################
+
+# -rw-rw-r-- 1 victor victor  639K Jan  1 18:54 ../robocath/data-raw/2KTA.prmtop #
+# -rw-rw-r-- 1 victor victor  567K Jan  1 18:54 ../robocath/data-raw/2KQ8.prmtop #
+# -rw-rw-r-- 1 victor victor  1.4M Jan  1 18:53 ../robocath/data-raw/2HHI.prmtop #		EXCEPTION
+# -rw-rw-r-- 1 victor victor  1.1M Jan  1 18:53 ../robocath/data-raw/2KNQ.prmtop
+# -rw-rw-r-- 1 victor victor  1.8M Jan  1 18:53 ../robocath/data-raw/2EZA.prmtop
+# -rw-rw-r-- 1 victor victor  1.3M Jan  1 18:52 ../robocath/data-raw/2LGJ.prmtop
+# -rw-rw-r-- 1 victor victor  1.7M Jan  1 18:52 ../robocath/data-raw/6V88.prmtop
+# -rw-rw-r-- 1 victor victor  1.2M Jan  1 18:52 ../robocath/data-raw/2KCU.prmtop
+# -rw-rw-r-- 1 victor victor  1.1M Jan  1 18:52 ../robocath/data-raw/2LT2.prmtop
+# -rw-rw-r-- 1 victor victor  749K Jan  1 18:52 ../robocath/data-raw/2KPU.prmtop
+# -rw-rw-r-- 1 victor victor  557K Jan  1 18:51 ../robocath/data-raw/1L1I.prmtop
+# -rw-rw-r-- 1 victor victor  1.2M Jan  1 18:51 ../robocath/data-raw/1BLA.prmtop
+# -rw-rw-r-- 1 victor victor  1.5M Jan  1 18:50 ../robocath/data-raw/2L29.prmtop
+# -rw-rw-r-- 1 victor victor  990K Jan  1 18:50 ../robocath/data-raw/2L3B.prmtop
+# -rw-rw-r-- 1 victor victor 1010K Jan  1 18:50 ../robocath/data-raw/2JOZ.prmtop
+# -rw-rw-r-- 1 victor victor  1.2M Jan  1 18:50 ../robocath/data-raw/2LTD.prmtop
+# -rw-rw-r-- 1 victor victor  592K Jan  1 18:49 ../robocath/data-raw/2JR6.prmtop #
+# -rw-rw-r-- 1 victor victor  423K Jan  1 18:49 ../robocath/data-raw/1APQ.prmtop #
+# -rw-rw-r-- 1 victor victor  1.1M Jan  1 18:49 ../robocath/data-raw/1A5E.prmtop
+# -rw-rw-r-- 1 victor victor  1.1M Jan  1 18:49 ../robocath/data-raw/2N9B.prmtop
+# -rw-rw-r-- 1 victor victor  2.7M Jan  1 18:48 ../robocath/data-raw/2KB1.prmtop
