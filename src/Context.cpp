@@ -222,7 +222,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	loadAmberSystem(prmtop, inpcrd);
 	//scout("Context PrintAtoms.\n"); PrintAtoms();
 
-	// Get Z-matrix indexes table based on InternalCoordinates BONDS	
+	// Get Z-matrix indexes table based on InternalCoordinates BONDS
 	calcZMatrixTable(); // PrintZMatrixTable();
 	reallocZMatrixBAT();
 
@@ -241,7 +241,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 
 	if(MEMDEBUG){stdcout_memdebug("Context::initializeFromFile 1.1");}
 
-	// Add Worlds to the  Every World instantiates a:
+	// Add Worlds to the Every World instantiates a:
 	// CompoundSystem, SimbodyMatterSubsystem, GeneralForceSubsystem,
 	// DuMMForceSubsystem, Integrator, TimeStepper and optionally:
 	// DecorationSubsystem, Visualizer, VisuzlizerReporter, ParaMolecularDecorator
@@ -314,7 +314,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	std::string whatRunTypeStr = RUN_TYPE_Str[int(whatRunType)];
 	std::cout << "Run type " << whatRunTypeStr << std::endl;
 
-	if(	(whatRunTypeStr == "REMC")   || 
+	if(	(whatRunTypeStr == "REMC")   ||
 		(whatRunTypeStr == "RENEMC") ||
 		(whatRunTypeStr == "RENE") 
 		|| true)
@@ -965,6 +965,7 @@ void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpc
 
 	// Match Compounds configurations to atoms Cartesian coords
 	matchDefaultConfigurations();
+	TRACE("Context::loadAmberSystem: END");
 }
 
 /*! <!-- Set atom masses --> */
@@ -981,6 +982,7 @@ void Context::setAtomMasses() {
 }
 
 
+/*! <!--  --> */
 void Context::Initialize() {
 
 	worlds[0].setDuMMAtomIndexes(); // REVISE
@@ -1048,8 +1050,9 @@ void Context::Initialize() {
 #endif
 
 //#include "../Molmodel/src/gbsa/cpuObcInterface.h"
+//# include "../openmm/platforms/cpu/include/CpuPlatform.h"
 # include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
-# include "../openmm/platforms/cuda/include/CudaPlatform.h"
+//# include "../openmm/platforms/cuda/include/CudaPlatform.h"
 std::string Context::OMMRef_initialize(void)
 {
 	
@@ -1635,6 +1638,8 @@ void Context::addWorld(
 	bool useOpenMM,
 	bool visual, SimTK::Real visualizerFrequency) {
 
+	TRACE("Context::addWorld");
+
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());
 	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
@@ -1713,7 +1718,7 @@ void Context::addWorld(
 		rootMobilities.back().push_back("Rigid");
 	}
 
-	// 
+	// Print mobilities
 	bool printMobilities = true;
 	if(printMobilities){
 		for (const auto& flex : flexibilities) {
@@ -2158,9 +2163,9 @@ void Context::buildAcyclicGraph(
 		// 	<< parent.getNumber() <<" "
 		// 	<< "with bond center name " << parentBondCenterPathNameStr <<" "
 		// 	<< eol;
-
+		
 		topology.bondAtom(child.getSingleAtom(),
-				(parentBondCenterPathNameStr).c_str(), 0.149, 0);
+				(parentBondCenterPathNameStr).c_str(), 0.149, 0); // SimTK::BondMobility::Mobility = SimTK::BondMobility::Default
 
 		// Set the final Biotype
 		topology.setAtomBiotype(child.getName(),
@@ -2415,7 +2420,7 @@ void Context::build_Molmodel_AcyclicGraphs(void)
 		setRootAtom( topology, rootAmberIx );
 
 		// --------------------------------------------------------------------
-		// (2) buildAcyclicGraph
+		// (2) buildAcyclicGraph // topology.bondAtom
 		// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 		buildAcyclicGraph(topology, rootAmberIx, molIx);
 
@@ -4596,10 +4601,12 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Get work from X replica
-	SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X;
+	//SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X; // variant 1
+	SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) - lnJac_X;                           // variant 2
 
 	// Get work from Y replica
-	SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y;
+	//SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y; // variant 1
+	SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) - lnJac_Y;                           // variant 2
 
 	// Get total work
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);

@@ -13,7 +13,7 @@
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/internal/ThreadPool.h"
-#include "openmm/common/windowsExportCommon.h"
+//#include "openmm/common/windowsExportCommon.h"
 
 #include <fstream>
 

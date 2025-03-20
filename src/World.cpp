@@ -344,17 +344,35 @@ const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const
 }
 
 
-void World::setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities)
+// void World::setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities)
+// {
+// 	this->rollFlexibilities = argRollFlexibilities;
+// 	this->isRollFlexibilities = true;
+// }
+
+// const std::vector<std::vector<BOND_FLEXIBILITY>>& World::getRollFlexibilities() const
+// {
+// 	return this->rollFlexibilities;
+// }
+
+void World::setRollFlexibilities(bool argRollFlexibilities)
 {
-	this->rollFlexibilities = argRollFlexibilities;
+	this->isRollFlexibilities = argRollFlexibilities;
 }
 
-
-const std::vector<std::vector<BOND_FLEXIBILITY>>& World::getRollFlexibilities() const
+bool World::getRollFlexibilities() const
 {
-	return this->rollFlexibilities;
+	return this->isRollFlexibilities;
 }
 
+void World::lockAllMobilizers(void)
+{
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.lock(currentAdvancedState);
+    }
+}
 
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
@@ -3395,29 +3413,65 @@ SimTK::Real World::calcFixman(void)
 /*! <--
  *  Generate a number of samples -->
  **/
-bool World::generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose)
+bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
+	
+	bool validated = false;
 
-	// Update Robosample bAtomList
-	SimTK::State& currentAdvancedState = integ->updAdvancedState();
-	updateAtomListsFromSimbody(currentAdvancedState);
+	if(isRollFlexibilities){
 
-	// GENERATE the requested number of samples
-	bool validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+		for(int mobIntIx = 1; mobIntIx < matter->getNumBodies(); mobIntIx++){
 
-	for(int k = 0; k < howMany; k++) {
-		if (verbose) {
-			worldOutStream << header << " ";
-			updSampler(0)->getMsg_InitialParams(worldOutStream);
-		}
+			// Update Robosample bAtomList and Reinitialize the sampler
+			SimTK::State& currentAdvancedState = integ->updAdvancedState();
+			updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+			validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
-		validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
+			lockAllMobilizers();
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+			mobod.unlock(currentAdvancedState);
+			TRACE("World::generateSamples: Unlocking mobilizer " << mobIntIx << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
 
-		if (verbose) {
-			worldOutStream << std::endl;
-		}
-			
-	}
+			for(int sampleIx = 0; sampleIx < howManySamplesPerRound; sampleIx++) {
+				if (verbose) {
+					worldOutStream << header << " ";
+					updSampler(0)->getMsg_InitialParams(worldOutStream);
+				}
+	
+				validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
+	
+				if (verbose) {
+					worldOutStream << std::endl;
+				}
+					
+			} // __end__ howManySamplesPerRound
+
+		} // __end__ mobIntIx to unlock
+
+	}else{
+
+		// Update Robosample bAtomList and Reinitialize the sampler
+		SimTK::State& currentAdvancedState = integ->updAdvancedState();
+		updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+		validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+
+		for(int sampleIx = 0; sampleIx < howManySamplesPerRound; sampleIx++) {
+			if (verbose) {
+				worldOutStream << header << " ";
+				updSampler(0)->getMsg_InitialParams(worldOutStream);
+			}
+
+			validated = updSampler(0)->sample_iteration(currentAdvancedState, worldOutStream, verbose) && validated;
+
+			if (verbose) {
+				worldOutStream << std::endl;
+			}
+				
+		} // __end__ howManySamplesPerRound
+
+	} // __end__ isRollFlexibilities else
+
+
 
 	// Return the number of accepted samples
 	return validated;

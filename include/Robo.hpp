@@ -117,7 +117,7 @@
 // #endif
 
 #ifndef TRACE
-#define TRACE(STR) std::cout<<__FILE__<<":"<<__LINE__<<":"<<STR<<std::endl;
+#define TRACE(STR) std::cout<<__FILE__<<":"<<__LINE__<<":"<<STR<<std::endl<<std::flush;
 #endif
 
 // #ifndef __DRILLING__

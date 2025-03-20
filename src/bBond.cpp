@@ -93,25 +93,30 @@ bool bBond::isRigid() const {
 }
 */
 
+/*! <!--  --> */
 SimTK::BondMobility::Mobility bBond::getBondMobility(int which) const {
   return mobilities[which];
 }
 
+/*! <!--  --> */
 void bBond::addBondMobility(SimTK::BondMobility::Mobility argmobility)
 {
 	mobilities.emplace_back(argmobility);
 }
 
+/*! <!--  --> */
 void bBond::setBondMobility(SimTK::BondMobility::Mobility argmobility, int which)
 {
 	mobilities[which] = argmobility;
 }
 
+/*! <!--  --> */
 void bBond::updBondMobility(SimTK::BondMobility::Mobility argmobility, int which)
 {
 	mobilities[which] = argmobility;
 }
 
+/*! <!--  --> */
 float bBond::getUScaleFactor(int which) const
 {
   if(which >= uScaleFactors.size()){
@@ -122,41 +127,23 @@ float bBond::getUScaleFactor(int which) const
   }
 }
 
+/*! <!--  --> */
 void bBond::addUScaleFactor(float argUScaleFactor)
 {
 	uScaleFactors.emplace_back(argUScaleFactor);
 }
 
+/*! <!--  --> */
 void bBond::setUScaleFactor(int which, float argUScaleFactor)
 {
 	uScaleFactors[which] = argUScaleFactor;
 }
 
-// void bBond::updUScaleFactor(int which, float argUScaleFactor)
-// {
-// 	uScaleFactors[which] = argUScaleFactor;
-// }
 
-
-// int bBond::ringNo() const{
-//   return this->ring_no;
-// }
-
-// void bBond::setInRing(){
-//   this->inring = true;
-// }
-
+/*! <!--  --> */
 void bBond::setAsRingClosing(){
   this->ring_closing = true;
 }
-/*
-void bBond::setAsRigid(){
-  this->rigid = 1;
-}
-*/
-// void bBond::setRingNo(int rn){
-//   this->ring_no = rn;
-// }
 
 SimTK::Compound::BondIndex bBond::getBondIndex() const {
   return bondIndex;
