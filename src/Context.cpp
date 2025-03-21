@@ -1049,13 +1049,8 @@ void Context::Initialize() {
 #define tracerefOMM(msg) std::cout<<__FILE__<<":"<<__LINE__<<" __refOMM__ "<<msg<<std::endl<<std::flush;
 #endif
 
-//#include "../Molmodel/src/gbsa/cpuObcInterface.h"
-//# include "../openmm/platforms/cpu/include/CpuPlatform.h"
-# include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
-//# include "../openmm/platforms/cuda/include/CudaPlatform.h"
 std::string Context::OMMRef_initialize(void)
 {
-	
 		// TODO DELETE
 		std::vector<OpenMM::Vec3> NonbondAtomsPositionsCache = std::vector<OpenMM::Vec3>(atoms.size());
 		std::vector<OpenMM::Vec3> PositionsCache = std::vector<OpenMM::Vec3>(atoms.size());

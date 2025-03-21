@@ -17,6 +17,15 @@
 
 #include <fstream>
 
+#if OPENMM_PLATFORM_CPU
+	#include "../Molmodel/src/gbsa/cpuObcInterface.h"
+	#include "../openmm/platforms/cpu/include/CpuPlatform.h"
+#elif OPENMM_PLATFORM_OPENCL
+	#include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
+#elif OPENMM_PLATFORM_CUDA
+	#include "../openmm/platforms/cuda/include/CudaPlatform.h"
+#endif
+
 class Sampler;
 class World;
 
