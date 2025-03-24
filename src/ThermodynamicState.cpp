@@ -640,7 +640,11 @@ void ThermodynamicState::appendLog(const std::string& filename) {
 
 
 void ThermodynamicState::appendDCDReporter(const std::string& filename, int natoms, int ntopologies) {
-	traj.createTrajectory(filename, "dcd", natoms, ntopologies);
+	// void TrajectoryObject::createTrajectory(const std::string& TrajectoryFile,
+	// 	const std::string& TrajectoryType,
+	// 	int selectedatoms,
+	// 	int selectedunitcell)	
+	traj.createTrajectory(filename, "dcd", natoms, 0);
 }
 
 void ThermodynamicState::writeDCD(std::vector<SimTK::Real>& x, std::vector<SimTK::Real>& y, std::vector<SimTK::Real>& z) {
