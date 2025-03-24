@@ -9,8 +9,8 @@ import scipy.stats as stats
 from scipy import linalg
 
 class BATCorrelations:
-    def __init__(self, prmtop_file, inpcrd_file):
-
+    def __init__(self, prmtop_file, inpcrd_file, include_omega=False):
+        self.include_omega = include_omega
         self.tol = 1e-6
 
         self.dihedral_sele = {
@@ -170,11 +170,11 @@ class BATCorrelations:
             # The phi angle of the first residue is not defined
             phi = res.phi_selection()
             if not phi:
-                h1 = universe.select_atoms(f"resid {res.resid} and name H1")
+                h2 = universe.select_atoms(f"resid {res.resid} and name H2")
                 n = universe.select_atoms(f"resid {res.resid} and name N")
                 ca = universe.select_atoms(f"resid {res.resid} and name CA")
                 c = universe.select_atoms(f"resid {res.resid} and name C")
-                phi = mda.AtomGroup([h1.ix[0], n.ix[0], ca.ix[0], c.ix[0]], universe)
+                phi = mda.AtomGroup([h2.ix[0], n.ix[0], ca.ix[0], c.ix[0]], universe)
 
             atom_groups.append(phi)
             dihedral_types.append('phi')
@@ -198,13 +198,14 @@ class BATCorrelations:
             residue_ids.append(res.resid)
 
             # Present in all residues
-            omega = res.omega_selection()
-            if omega:
-                atom_groups.append(omega)
-                dihedral_types.append('omega')
-                atom_indices.append(omega.indices)
-                residue_names.append(res.resname)
-                residue_ids.append(res.resid)
+            if self.include_omega:
+                omega = res.omega_selection()
+                if omega:
+                    atom_groups.append(omega)
+                    dihedral_types.append('omega')
+                    atom_indices.append(omega.indices)
+                    residue_names.append(res.resname)
+                    residue_ids.append(res.resid)
 
             # Chi angles
             for chi_name, chi_atoms in self.dihedral_sele[res.resname].items():
