@@ -9,7 +9,7 @@ import scipy.stats as stats
 from scipy import linalg
 
 class BATCorrelations:
-    def __init__(self, prmtop_file, inpcrd_file, include_omega=False):
+    def __init__(self, prmtop_file, inpcrd_file, include_omega=False, include_chi3=False, include_chi4=False, include_chi5=False):
         self.include_omega = include_omega
         self.tol = 1e-6
 
@@ -123,6 +123,19 @@ class BATCorrelations:
             }
         }
 
+        # remove unwanted dihedrals
+        for res in self.dihedral_sele:
+            if 'chi3' in self.dihedral_sele[res] and not include_chi3:
+                del self.dihedral_sele[res]['chi3']
+            if 'chi3.1' in self.dihedral_sele[res] and not include_chi3:
+                del self.dihedral_sele[res]['chi3.1']
+            if 'chi3.2' in self.dihedral_sele[res] and not include_chi3:
+                del self.dihedral_sele[res]['chi3.2']
+            if 'chi4' in self.dihedral_sele[res] and not include_chi4:
+                del self.dihedral_sele[res]['chi4']
+            if 'chi5' in self.dihedral_sele[res] and not include_chi5:
+                del self.dihedral_sele[res]['chi5']
+                
         # @TODO asp glu arg lys - protonated
 
         # Load the PDB file once
@@ -142,6 +155,11 @@ class BATCorrelations:
         self.residue_names = residue_names
         self.residue_ids = residue_ids
         self.num_dihe = numDihedrals
+
+        for d in self.dihedral_types:
+            print(d)
+        print(len (self.dihedral_types))
+        exit()
 
     def compute_dihedrals_from_dcd(self, dcd_files):
         for dcd in dcd_files:
