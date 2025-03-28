@@ -156,11 +156,6 @@ class BATCorrelations:
         self.residue_ids = residue_ids
         self.num_dihe = numDihedrals
 
-        for d in self.dihedral_types:
-            print(d)
-        print(len (self.dihedral_types))
-        exit()
-
     def compute_dihedrals_from_dcd(self, dcd_files):
         for dcd in dcd_files:
             universe = mda.Universe(self.prmtop_file, dcd)
