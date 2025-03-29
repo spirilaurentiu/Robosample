@@ -9,7 +9,7 @@ import scipy.stats as stats
 from scipy import linalg
 
 class BATCorrelations:
-    def __init__(self, prmtop_file, inpcrd_file, include_omega=False, include_chi3=False, include_chi4=False, include_chi5=False):
+    def __init__(self, prmtop_file, inpcrd_file, include_omega=False, include_chi3=True, include_chi4=True, include_chi5=True):
         self.include_omega = include_omega
         self.tol = 1e-6
 
