@@ -689,6 +689,7 @@ public:
 	void PrintDefaultTransforms() const;
 	void PrintXBMps() const;
 	const SimTK::Vector & getBMps();
+	const SimTK::Vector & getPFrs();
 
 	// Get Qs
 	int getNQs(void);
@@ -699,6 +700,7 @@ public:
 public:
 
 	SimTK::Vector BMps;
+	SimTK::Vector PFrs;
 
 	// --- The three S: Study, System and State related ---
 	/** System->MultibodySystem->MolecularMechanicsSystems->CompoundSystem **/

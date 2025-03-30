@@ -737,7 +737,6 @@ public:
 
 	// Run a particular world
 	bool RunWorld(int whichWorld, const std::string& header);
-	void RunWorlds(std::vector<int>& specificWIxs, int replicaIx);
 	void RunReplicaRefactor_SIMPLE(int mixi, int replicaIx);	
 	/**	
 	* @brief Main function
@@ -1238,8 +1237,6 @@ private:
 	void reserveThermostatsQs(void);
 	
 	void setThermostatesQs(void);
-
-	void calcQStats(int thIx);
 
 	void printQStats(int thIx);
 

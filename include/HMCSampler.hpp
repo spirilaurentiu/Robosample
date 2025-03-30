@@ -678,6 +678,9 @@ public:
 	// BAT --------------------------------------------------------------------
 
 	void set_dBMps(std::vector<SimTK::Real>& QArg){ prev_dBMps = &QArg; }
+	const std::vector<SimTK::Real>& get_dBMps() const { return *prev_dBMps; }
+	void set_dPFrs(std::vector<SimTK::Real>& QArg){ prev_dPFrs = &QArg; }
+	const std::vector<SimTK::Real>& get_dPFrs() const { return *prev_dPFrs; }
 
 	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
 	
@@ -703,7 +706,9 @@ protected:
 	# pragma endregion REBAS_TEST
 
 	// Buffers to hold Q statistics
-	std::vector<SimTK::Real>* prev_dBMps = nullptr;	
+	std::vector<SimTK::Real>* prev_dBMps = nullptr;
+	std::vector<SimTK::Real>* prev_dPFrs = nullptr;
+
 	std::vector<SimTK::Real>* previousQs = nullptr;
 	std::vector<SimTK::Real>* Qmeans = nullptr;
 	std::vector<SimTK::Real>* Qdiffs = nullptr;

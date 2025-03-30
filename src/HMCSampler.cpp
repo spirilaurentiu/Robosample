@@ -788,6 +788,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 						qIx++ ){
+							
 						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 
 						if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
@@ -802,11 +803,21 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 							stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
 
+						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_4){
+
+							stateQs[qIx] = (*prev_dPFrs)[qIx] * ((scaleFactor) - 1);
+
 						}else{
 							warnflush("Unknown scaling method");
 						}
 
-						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
+						SimTK::Real bondLength = X_BM.p().norm();
+						SimTK::Real bondLengthScaled = bondLength + stateQs[qIx];
+						J_scale += std::log( (bondLengthScaled) / (bondLength) );
+
+						SimTK::Real angle = X_BM.R()(0)(0);
+						SimTK::Real angleScaled = std::acos(X_BM.R()(0)(0) + stateQs[qIx]);
+						J_scale += std::log( (angleScaled) / (angle) );
 
 
 						nofScaledBMs++;

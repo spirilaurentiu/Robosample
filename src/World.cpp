@@ -1739,9 +1739,7 @@ void World::PrintXBMps() const
 	}
 }
 
-/*!
- * <!--  -->
-*/
+/*! <!--  --> */
 const SimTK::Vector & World::getBMps()
 {
 
@@ -1767,6 +1765,34 @@ const SimTK::Vector & World::getBMps()
 	}
 
 	return BMps;
+}
+
+/*! <!--  --> */
+const SimTK::Vector & World::getPFrs()
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	if(PFrs.size() == 0){
+		PFrs.resize(matter->getNQ(advState));
+	}
+
+	int bIx = -1;
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
+			bIx++;
+
+			const Transform& X_PF = mobod.getInboardFrame(advState);
+			PFrs[bIx] = std::acos(X_PF.R()(0)(0));
+		}
+		
+	}
+
+	return PFrs;
 }
 
 /*!

@@ -5703,6 +5703,7 @@ void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWI
 {
 		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
 	worlds[destStatsWIx].updSampler(0)->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
+	worlds[destStatsWIx].updSampler(0)->set_dPFrs(thermodynamicStates[thermoIx].get_dPFrs(srcStatsWIx));
 
 	worlds[destStatsWIx].updSampler(0)->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
 	worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
@@ -5842,96 +5843,6 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 	return validated;
 }
 
-/*!
- * <!-- Run a vector of worlds -->
-*/ 
-void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
-{
-	int thermoIx = replica2ThermoIxs[replicaIx];
-	bool validated = true;
-	for(std::size_t spWCnt = 0; spWCnt < specificWIxs.size() - 1; spWCnt++){ // -1 so we can transfer
-
-		// Run
-		int srcStatsWIx  = specificWIxs[spWCnt];
-
-		//std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
-		std::string headerToRunWorld = "REX, " + std::to_string(replicaIx)
-					+ ", " + std::to_string(thermoIx)
-					+ " , " + std::to_string(srcStatsWIx);
-		validated = RunWorld(srcStatsWIx, headerToRunWorld ) && validated;
-
-		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-		// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
-		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
-		// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
-		// 	std::cout <<" " << BMps[mbx] ;
-		// }
-		// ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-
-		if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
-			thermodynamicStates[thermoIx].calcQStats(
-				srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
-		}else{
-			thermodynamicStates[thermoIx].calcQStats(
-				srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
-		}
-		
-		// Transfer coordinates to the next world
-		int destStatsWIx = specificWIxs[spWCnt + 1];
-		transferCoordinates_WorldToWorld(srcStatsWIx, destStatsWIx);
-		transferQStatistics(thermoIx, srcStatsWIx, destStatsWIx);
-
-		// // Calculate replica BAT and BAT stats
-		// World& currWorld = worlds[specificWIxs[spWCnt]];
-		// SimTK::State& currState = currWorld.integ->updAdvancedState();
-		// replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
-
-	}
-
-	// Run the last world
-	int srcStatsWIx = specificWIxs.back();
-
-	//std::cout << "REX, " << replicaIx << ", " << thermoIx << ", " << specificWIxs.back();
-	std::string headerToRunWorld = "REX, " + std::to_string(replicaIx) 
-				+ ", " + std::to_string(thermoIx)
-				+ ", " + std::to_string(srcStatsWIx);
-	validated = RunWorld(srcStatsWIx, headerToRunWorld) && validated;
-
-	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-	// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
-	// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
-	// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
-	// 	std::cout <<" " << BMps[mbx] ;
-	// } // @@@@@@@@@@@@@
-
-	if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
-		thermodynamicStates[thermoIx].calcQStats(
-			srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
-	}else{
-		thermodynamicStates[thermoIx].calcQStats(
-			srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
-	}
-
-	if(true){
-		World& currWorld = worlds[specificWIxs.back()];
-		SimTK::State& currState = currWorld.integ->updAdvancedState();
-		replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
-	}
-
-	// #ifndef PRINTALOT
-	// #define PRINTALOT
-	// #endif
-
-	#ifdef PRINTALOT 
-		if(validated){
-			std::cout << std::endl;
-		}else{
-			std::cout << " invalid sample." << std::endl;
-		}
-	#endif
-}
-
-
 
 /*! <!--  -->*/
 void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
@@ -5979,9 +5890,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		// Calculate Q statistics
 		if( sampler_p->getAcc() == true){
-			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
+			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
 		}else{
-			thermoState.calcQStats(wIx, currWorld.getBMps(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
+			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 		}
 
 		// ======================== EQUILIBRIUM ======================
@@ -9302,33 +9213,6 @@ void Context::setThermostatesQs(void)
 
 }
 
-/*!
- * <!-- Calculate Q statistics -->
-*/
-void Context::calcQStats(int thIx)
-{
-
-	// Get world indexes
-	const std::vector<int> & thermoWorldIxs = thermodynamicStates[thIx].getWorldIndexes();
-
-	// Iterate worlds
-	for(const auto worldIx : thermoWorldIxs){
-
-		// Get world's Qs
-		SimTK::State& worldCurrentState = worlds[worldIx].integ->updAdvancedState();
-		int NQ = (worlds[worldIx].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
-		const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
-
-		// Get Q statistics
-		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worlds[worldIx].getBMps(), worldQs, worlds[worldIx].getNofSamples());
-		if(!found){
-			warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
-		}
-
-	}
-
-
-}
 
 /*!
  * <!--  -->
