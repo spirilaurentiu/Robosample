@@ -51,6 +51,14 @@ RUN_TYPE_MAP{
 	{"RENE", RUN_TYPE::RENE}
 };
 
+const std::unordered_map<RUN_TYPE, std::string>
+RUN_TYPE_MAP_INV{
+	{RUN_TYPE::DEFAULT, "DEFAULT"},
+	{RUN_TYPE::REMC, "REMC"},
+	{RUN_TYPE::RENEMC, "RENEMC"},
+	{RUN_TYPE::RENE, "RENE"}
+};
+
 //==============================================================================
 //                           CLASS Context
 //==============================================================================

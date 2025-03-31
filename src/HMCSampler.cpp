@@ -589,7 +589,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 	if( (PPM == PositionsPerturbMethod::BENDSTRETCH_1) ||
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_2) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_3)){
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_3) ||
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_4) ){
 	
 		// Scale bonds and angles
 		int burnIn = 1;
@@ -785,11 +786,13 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				int nofScaledBMs = 0;
 				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+					
 					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 						qIx++ ){
 							
 						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
+						const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
 
 						if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
 
@@ -813,15 +816,31 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 						SimTK::Real bondLength = X_BM.p().norm();
 						SimTK::Real bondLengthScaled = bondLength + stateQs[qIx];
-						J_scale += std::log( (bondLengthScaled) / (bondLength) );
+						SimTK::Real bondLengthRatio = bondLengthScaled / bondLength;
+						J_scale += std::log( bondLengthRatio );
 
-						SimTK::Real angle = X_BM.R()(0)(0);
-						SimTK::Real angleScaled = std::acos(X_BM.R()(0)(0) + stateQs[qIx]);
-						J_scale += std::log( (angleScaled) / (angle) );
+						SimTK::Real angle = std::acos(X_PF.R()(0)(0));
+						SimTK::Real angleScaled = std::acos(X_PF.R()(0)(0) + stateQs[qIx]);
+						SimTK::Real angleScaledRatio = 1.0;
+						if(std::abs(angle) < 0.000001){
+							angleScaledRatio = 1.0;
+						}else{
+							angleScaledRatio = angleScaled / angle;
+						}
+						J_scale += std::log( angleScaledRatio );
 
+						// std::cout << "check J_Scale "
+						// 	<< " bondLength " << bondLength
+						// 	<< " bondLengthScaled " << bondLengthScaled
+						// 	<< " bondLengthRatio " << bondLengthRatio
+						// 	<< " angle " << angle
+						// 	<< " angleScaled " << angleScaled
+						// 	<< " angleScaledRatio " << angleScaledRatio
+						// 	<< std::endl;
 
 						nofScaledBMs++;
-					}
+
+					}  // __end__ for qIx
 				}
 			}
 
@@ -3458,6 +3477,9 @@ PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
         case -3:
             how = PositionsPerturbMethod::BENDSTRETCH_3;
             break;
+		case -4:
+            how = PositionsPerturbMethod::BENDSTRETCH_4;
+            break;			
         default:
             how = PositionsPerturbMethod::EMPTY;
             break;

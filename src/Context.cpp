@@ -47,6 +47,7 @@ Context::Context(const std::string& baseName, uint32_t seed, uint32_t threads, u
 
 	this->roundsTillReblock = nofRoundsTillReblock;
 	this->runType = runType;
+	std::cout << "Context::Context runType " << RUN_TYPE_MAP_INV.at(this->runType) << std::endl;
 	this->swapEvery = swapFreq;
 	this->swapFixman = swapFixmanFreq;
 }
@@ -5837,7 +5838,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 	// Print the world output stream
 	if (verbose) {
-		std::cout << worldOutStream.str();
+		std::cout << worldOutStream.str() << std::flush;
 	}
 
 	return validated;
@@ -5883,10 +5884,12 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 					headerToRunWorld += ", " + std::to_string(replicaIx);
 					headerToRunWorld += ", " + std::to_string(thermoIx);
 					headerToRunWorld += ", " + std::to_string(wIx);
-
+				
 		// Run
 		bool validated = true;
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
+
+		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
 
 		// Calculate Q statistics
 		if( sampler_p->getAcc() == true){
@@ -5902,7 +5905,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 
-			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
+			replica.setFixman(sampler_p->fix_set);
 
 			replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
 
@@ -5916,12 +5919,13 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
 		
-			replica.set_WORK_Fixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
+			replica.set_WORK_Fixman(sampler_p->fix_set);
 
 			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
 
 		} // __end__ Non/Equilibrium =======================================
 
+		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.6");}
 
 		# pragma region REBAS_TEST
 		const SimTK::State& pdbState = currWorld.integ->updAdvancedState();
@@ -5946,7 +5950,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 			}
 		}
 		# pragma endregion REBAS_TEST
-
 
 		// Increment the nof samples for replica and thermostate
 		replica.incrementWorldsNofSamples(1);
@@ -5975,8 +5978,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	SimTK::State& state = worlds.back().integ->updAdvancedState();
 	replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
 
+
 	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
-	
+
 }
 
 void Context::writeLog(int mixi, int replicaIx) {

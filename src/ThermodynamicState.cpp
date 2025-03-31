@@ -373,6 +373,9 @@ void ThermodynamicState::allocQStatsFirstDimension(void)
 		BMps_diffs.resize(worldIndexes.size());
 		BMps_means.resize(worldIndexes.size());
 
+		PFrs_diffs.resize(worldIndexes.size());
+		PFrs_means.resize(worldIndexes.size());
+
 		currQs.resize(worldIndexes.size());
 		Qmeans.resize(worldIndexes.size());
 		Qdiffs.resize(worldIndexes.size());
@@ -442,8 +445,11 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 	// Resize
 	if(Qmeans[wPosInVector].size() == 0){
-		BMps_diffs[wPosInVector].resize(worldBMps.size());
 		BMps_means[wPosInVector].resize(worldBMps.size());
+		BMps_diffs[wPosInVector].resize(worldBMps.size());
+
+		PFrs_means[wPosInVector].resize(worldPFrs.size());
+		PFrs_diffs[wPosInVector].resize(worldPFrs.size());
 
 		currQs[wPosInVector].resize(worldQs.size());
         Qmeans[wPosInVector].resize(worldQs.size());
@@ -457,6 +463,11 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 		for(int qIx = 0; qIx < worldBMps.size(); qIx++){
 			BMps_means[wPosInVector][qIx] = worldBMps[qIx];
 			BMps_diffs[wPosInVector][qIx] = 0;
+		}
+
+		for(int qIx = 0; qIx < worldPFrs.size(); qIx++){
+			PFrs_means[wPosInVector][qIx] = worldPFrs[qIx];
+			PFrs_diffs[wPosInVector][qIx] = 0;
 		}
 
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
@@ -495,6 +506,15 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 			BMps_means[wPosInVector][mbx] = (N_1_over_N * BMps_means[wPosInVector][mbx]) + (Ninv * worldBMps[mbx]); // running mean
 
 		}
+
+		for(int mbx = 0; mbx < worldPFrs.size(); mbx++){
+
+			PFrs_diffs[wPosInVector][mbx] = worldPFrs[mbx] - PFrs_means[wPosInVector][mbx];
+
+			PFrs_means[wPosInVector][mbx] = (N_1_over_N * PFrs_means[wPosInVector][mbx]) + (Ninv * worldPFrs[mbx]); // running mean
+
+		}		
+
 		// Update Q means
 		for(int qIx = 0; qIx < worldQs.size(); qIx++){
 			currQs[wPosInVector][qIx] = worldQs[qIx];
