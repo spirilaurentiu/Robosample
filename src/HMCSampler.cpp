@@ -590,7 +590,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 	if( (PPM == PositionsPerturbMethod::BENDSTRETCH_1) ||
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_2) ||
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_3) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_4) ){
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_4) ||
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_5) ){
 	
 		// Scale bonds and angles
 		int burnIn = 1;
@@ -787,10 +788,12 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 					
+					int localQIndex = -1;
 					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 						qIx++ ){
-							
+						localQIndex++;
+
 						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 						const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
 
@@ -809,6 +812,20 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_4){
 
 							stateQs[qIx] = (*prev_dPFrs)[qIx] * ((scaleFactor) - 1);
+
+						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_5){
+
+							// std::cout << "BENDSTRETCH_5 "
+							// 	<< int(mbx) <<" "<< localQIndex <<" "<< qIx <<" "<< int(int(qIx) / 2)
+							// 	<< " " << (*prev_dPFrs)[int(int(qIx) / 2)]
+							// 	<< " " << (*prev_dBMps)[int(int(qIx) / 2)]
+							//  << std::endl;
+
+							if(localQIndex == 0){
+								stateQs[qIx] = (*prev_dPFrs)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
+							}else{
+								stateQs[qIx] = (*prev_dBMps)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
+							}
 
 						}else{
 							warnflush("Unknown scaling method");
@@ -3479,7 +3496,10 @@ PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
             break;
 		case -4:
             how = PositionsPerturbMethod::BENDSTRETCH_4;
-            break;			
+            break;
+		case -5:
+            how = PositionsPerturbMethod::BENDSTRETCH_5;
+            break;				
         default:
             how = PositionsPerturbMethod::EMPTY;
             break;

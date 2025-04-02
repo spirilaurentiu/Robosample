@@ -12,10 +12,11 @@
  * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT
  * -->
 */
-Context::Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
+Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
 {
 	// Set the base name of the simulation
-	this->baseName = baseName + "_" + std::to_string(seed);
+	std::cout << "Context with base name: " << baseName + "_" + std::to_string(seed) << std::endl << std::flush;
+	this->baseName = baseName_arg + "_" + std::to_string(seed);
 
 	// Alert user of CUDA environment variables
 	if constexpr (OPENMM_PLATFORM_CUDA) {
@@ -47,7 +48,7 @@ Context::Context(const std::string& baseName, uint32_t seed, uint32_t threads, u
 
 	this->roundsTillReblock = nofRoundsTillReblock;
 	this->runType = runType;
-	std::cout << "Context::Context runType " << RUN_TYPE_MAP_INV.at(this->runType) << std::endl;
+	std::cout << "Context::Context runType " << RUN_TYPE_MAP_INV.at(this->runType) << std::endl << std::flush;
 	this->swapEvery = swapFreq;
 	this->swapFixman = swapFixmanFreq;
 }
@@ -922,7 +923,7 @@ void Context::addBiotypes() {
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
 	// Load Amber files
-	std::cout << "Context: Loading Amber files: " << prmtop << " " << inpcrd << std::endl;
+	std::cout << "Context: Loading Amber files: " << prmtop << " " << inpcrd << std::endl << std::flush;
 	AmberReader reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
@@ -5702,14 +5703,14 @@ void Context::incrementNofSamples(void){
 */
 void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx)
 {
-		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
-	worlds[destStatsWIx].updSampler(0)->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
-	worlds[destStatsWIx].updSampler(0)->set_dPFrs(thermodynamicStates[thermoIx].get_dPFrs(srcStatsWIx));
+	auto* sampler = worlds[destStatsWIx].updSampler(0);
 
-	worlds[destStatsWIx].updSampler(0)->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
-	worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
-	worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
-	worlds[destStatsWIx].updSampler(0)->setQvars(thermodynamicStates[thermoIx].getQvars(srcStatsWIx));
+	sampler->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
+	sampler->set_dPFrs(thermodynamicStates[thermoIx].get_dPFrs(srcStatsWIx));
+	sampler->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
+	sampler->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
+	sampler->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
+	sampler->setQvars(thermodynamicStates[thermoIx].getQvars(srcStatsWIx));
 }
 
 /*!
