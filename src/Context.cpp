@@ -1044,6 +1044,43 @@ void Context::Initialize() {
 	//OMMRef_calcPotential(true, true);
 }
 
+
+const double TOL = 1e-6;
+
+std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(double a_length, double b_length, double c_length,
+                                                        double alpha, double beta, double gamma) {
+    // Compute the box vectors
+    OpenMM::Vec3 a(a_length, 0.0, 0.0);
+
+    OpenMM::Vec3 b(b_length * std::cos(gamma),
+           b_length * std::sin(gamma),
+           0.0);
+
+    double cx = c_length * std::cos(beta);
+    double cy = c_length * (std::cos(alpha) - std::cos(beta) * std::cos(gamma)) / std::sin(gamma);
+    double cz = std::sqrt(c_length * c_length - cx * cx - cy * cy);
+
+    OpenMM::Vec3 c(cx, cy, cz);
+
+    // Zero out small components
+    for (int i = 0; i < 3; i++) {
+        if (std::abs(a[i]) < TOL) a[i] = 0.0;
+        if (std::abs(b[i]) < TOL) b[i] = 0.0;
+        if (std::abs(c[i]) < TOL) c[i] = 0.0;
+    }
+
+    // Reduced form (OpenMM requirement)
+    if (b[1] != 0.0)
+        c -= b * std::round(c[1] / b[1]);
+    if (a[0] != 0.0)
+        c -= a * std::round(c[0] / a[0]);
+    if (a[0] != 0.0)
+        b -= a * std::round(b[0] / a[0]);
+
+    return std::make_tuple(a, b, c);
+}
+
+
 /*! __refOMM__
  * <!-- Initialize OpenMM -->
 */
@@ -1072,6 +1109,25 @@ std::string Context::OMMRef_initialize(void)
 	
 		// Allocate OpenMM system and add particles to it
 		openMMSystem = std::make_unique<OpenMM::System>();
+
+		double angle_alpha = 1.5708;
+		double angle_beta = 1.5708;
+		double angle_gamma = 1.5708;
+
+		double boxLength_X = 10; // Example box length in angstroms
+		double boxLength_Y = 10; // Example box length in angstroms
+		double boxLength_Z = 10; // Example box length in angstroms
+
+		auto periodicBoxVectors = computePeriodicBoxVectors_Context(
+			boxLength_X, boxLength_Y, boxLength_Z,
+			angle_alpha, angle_beta, angle_gamma);
+
+		OpenMM::Vec3 pbcVector_X = std::get<0>(periodicBoxVectors);
+		OpenMM::Vec3 pbcVector_Y = std::get<1>(periodicBoxVectors);
+		OpenMM::Vec3 pbcVector_Z = std::get<2>(periodicBoxVectors);
+
+		openMMSystem->setDefaultPeriodicBoxVectors(pbcVector_X, pbcVector_Y, pbcVector_Z);
+
 		for (auto atom : atoms) {
 			openMMSystem->addParticle(atom.getMass());
 			//tracerefOMM("System added particle with mass " << atom.getMass());
@@ -1079,6 +1135,7 @@ std::string Context::OMMRef_initialize(void)
 	
 		// Nonbonded forces
 		ommNonbondedForce->setNonbondedMethod( OpenMM::NonbondedForce::NonbondedMethod( nonbondedMethod ) );
+		std::cout<<"Context::OMMRef_initialize setNonbondedMethod "<<nonbondedMethod<<std::endl<<std::flush;
 		ommNonbondedForce->setCutoffDistance( nonbondedCutoff );
 		// nonbondedForce->setUseSwitchingFunction( 0 );
 
