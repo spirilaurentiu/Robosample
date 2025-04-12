@@ -1045,11 +1045,18 @@ void Context::Initialize() {
 }
 
 
+#ifndef tracerefOMM
+#define tracerefOMM(msg) std::cout<<__FILE__<<":"<<__LINE__<<" __refOMM__ "<<msg<<std::endl<<std::flush;
+#endif
+
 const double TOL = 1e-6;
 
-std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(double a_length, double b_length, double c_length,
-                                                        double alpha, double beta, double gamma) {
-    // Compute the box vectors
+std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(
+	double a_length, double b_length, double c_length,
+    double alpha, double beta, double gamma)
+{
+    
+		// Compute the box vectors
     OpenMM::Vec3 a(a_length, 0.0, 0.0);
 
     OpenMM::Vec3 b(b_length * std::cos(gamma),
@@ -1081,13 +1088,8 @@ std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_C
 }
 
 
-/*! __refOMM__
- * <!-- Initialize OpenMM -->
-*/
-#ifndef tracerefOMM
-#define tracerefOMM(msg) std::cout<<__FILE__<<":"<<__LINE__<<" __refOMM__ "<<msg<<std::endl<<std::flush;
-#endif
 
+/*! __refOMM__ <!-- Initialize OpenMM --> */
 std::string Context::OMMRef_initialize(void)
 {
 		// TODO DELETE
@@ -1110,23 +1112,34 @@ std::string Context::OMMRef_initialize(void)
 		// Allocate OpenMM system and add particles to it
 		openMMSystem = std::make_unique<OpenMM::System>();
 
-		double angle_alpha = 1.5708;
-		double angle_beta = 1.5708;
-		double angle_gamma = 1.5708;
+                    // ----------------------------------------------
+                    // PBC - Periodic Boundary Conditions __begin__
+                    // ----------------------------------------------
+                    #ifdef __PBC__ // _pbc_
 
-		double boxLength_X = 10; // Example box length in angstroms
-		double boxLength_Y = 10; // Example box length in angstroms
-		double boxLength_Z = 10; // Example box length in angstroms
+						double angle_alpha = 1.5708;
+						double angle_beta = 1.5708;
+						double angle_gamma = 1.5708;
 
-		auto periodicBoxVectors = computePeriodicBoxVectors_Context(
-			boxLength_X, boxLength_Y, boxLength_Z,
-			angle_alpha, angle_beta, angle_gamma);
+						double boxLength_X = 10; // Example box length in angstroms
+						double boxLength_Y = 10; // Example box length in angstroms
+						double boxLength_Z = 10; // Example box length in angstroms
 
-		OpenMM::Vec3 pbcVector_X = std::get<0>(periodicBoxVectors);
-		OpenMM::Vec3 pbcVector_Y = std::get<1>(periodicBoxVectors);
-		OpenMM::Vec3 pbcVector_Z = std::get<2>(periodicBoxVectors);
+						auto periodicBoxVectors = computePeriodicBoxVectors_Context(
+							boxLength_X, boxLength_Y, boxLength_Z,
+							angle_alpha, angle_beta, angle_gamma);
 
-		openMMSystem->setDefaultPeriodicBoxVectors(pbcVector_X, pbcVector_Y, pbcVector_Z);
+						OpenMM::Vec3 pbcVector_X = std::get<0>(periodicBoxVectors);
+						OpenMM::Vec3 pbcVector_Y = std::get<1>(periodicBoxVectors);
+						OpenMM::Vec3 pbcVector_Z = std::get<2>(periodicBoxVectors);
+
+						openMMSystem->setDefaultPeriodicBoxVectors(pbcVector_X, pbcVector_Y, pbcVector_Z);
+
+					# endif
+					// ----------------------------------------------
+					// PBC - Periodic Boundary Conditions __end__
+					// ----------------------------------------------		
+
 
 		for (auto atom : atoms) {
 			openMMSystem->addParticle(atom.getMass());
@@ -1427,7 +1440,7 @@ SimTK::Real Context::OMMRef_calcPotential(const std::vector<std::vector<std::pai
 
 
 	//openMMState.getEnergies_drl_bon();
-	std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
+	//std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
 
 	return refPotential;
 
@@ -6180,7 +6193,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		//Print_TRANSFORMERS_Work();
+		//Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 

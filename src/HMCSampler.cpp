@@ -784,16 +784,26 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 				scaleFactor = this->QScaleFactor;
 
+				// // Print transforms _begin_ // BENDSTRETCH_5
+				// const SimTK::Vector &currBMps = world->getBMps();
+				// const SimTK::Vector &currPFrs = world->getPFrs();
+				// std::cout << "c c c c c c c c c currPFrs ";
+				// for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){std::cout<< "  " << currPFrs[mbx];}
+				// std::cout<<std::endl<<std::flush;
+				// std::cout << "c c c c c c c c c currBMps ";
+				// for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){std::cout<< "  " << currBMps[mbx];}
+				// std::cout<<std::endl<<std::flush;
+				// // _end_ print transforms // BENDSTRETCH_5
+
 				int nofScaledBMs = 0;
 				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-					
+
 					int localQIndex = -1;
 					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 						qIx++ ){
 						localQIndex++;
-
 						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 						const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
 
@@ -815,17 +825,27 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_5){
 
-							// std::cout << "BENDSTRETCH_5 "
-							// 	<< int(mbx) <<" "<< localQIndex <<" "<< qIx <<" "<< int(int(qIx) / 2)
-							// 	<< " " << (*prev_dPFrs)[int(int(qIx) / 2)]
-							// 	<< " " << (*prev_dBMps)[int(int(qIx) / 2)]
-							//  << std::endl;
+							// std::cout << "BENDSTRETCH_5"
+							// 	<<" mbx_locQIx_qIx_qIx2 "<< int(mbx) <<" "<< localQIndex <<" "<< qIx <<" "<< int(int(qIx) / 2)
+							// 	<<" prevQs " << (*previousQs)[qIx];
 
 							if(localQIndex == 0){
-								stateQs[qIx] = (*prev_dPFrs)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
+
+								//std::cout<< " prev_dPFrs " << (*prev_dPFrs)[int(mbx)]; // BENDSTRETCH_5
+
+								//stateQs[qIx] = (*prev_dPFrs)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
+								stateQs[qIx] = (*prev_dPFrs)[int(mbx)] * ((scaleFactor) - 1);
+
 							}else{
-								stateQs[qIx] = (*prev_dBMps)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
+
+								//std::cout<< " prev_dBMps " << (*prev_dBMps)[int(mbx)]; // BENDSTRETCH_5
+
+								//stateQs[qIx] = (*prev_dBMps)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
+								stateQs[qIx] = (*prev_dBMps)[int(mbx)] * ((scaleFactor) - 1);
+
 							}
+
+							//std:cout<<std::endl<<std::flush; // BENDSTRETCH_5
 
 						}else{
 							warnflush("Unknown scaling method");

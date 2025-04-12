@@ -1746,21 +1746,22 @@ const SimTK::Vector & World::getBMps()
 	SimTK::State& advState = integ->updAdvancedState();
 
 	if(BMps.size() == 0){
-		BMps.resize(matter->getNQ(advState));
+		//BMps.resize(matter->getNQ(advState));
+		BMps.resize(matter->getNumBodies());
 	}
 
 	int bIx = -1;
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
 
 		// Get mobod
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-		for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
+		//for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
 			bIx++;
 
 			const Transform& X_BM = mobod.getOutboardFrame(advState);
-			BMps[bIx] = X_BM.p()[0];
-		}
+			BMps[int(mbx)] = X_BM.p()[0];
+		//}
 		
 	}
 
@@ -1774,21 +1775,22 @@ const SimTK::Vector & World::getPFrs()
 	SimTK::State& advState = integ->updAdvancedState();
 
 	if(PFrs.size() == 0){
-		PFrs.resize(matter->getNQ(advState));
+		//PFrs.resize(matter->getNQ(advState));
+		PFrs.resize(matter->getNumBodies());
 	}
 
 	int bIx = -1;
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
 
 		// Get mobod
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-		for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
+		//for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
 			bIx++;
 
 			const Transform& X_PF = mobod.getInboardFrame(advState);
-			PFrs[bIx] = std::acos(X_PF.R()(0)(0));
-		}
+			PFrs[int(mbx)] = std::acos(X_PF.R()(0)(0));
+		//}
 		
 	}
 

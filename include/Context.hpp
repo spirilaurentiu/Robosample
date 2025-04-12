@@ -26,6 +26,10 @@
 	#include "../openmm/platforms/cuda/include/CudaPlatform.h"
 #endif
 
+#ifndef __PBC__ // _pbc_
+#define __PBC__ 0
+#endif
+
 class Sampler;
 class World;
 

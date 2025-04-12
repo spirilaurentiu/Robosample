@@ -538,14 +538,16 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 		}
 
-		if(false){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
+		if(false && ((whichWorld == 3) || (whichWorld == 4))){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
 			std::cout << std::endl;
-			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps_means: ";
-			for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << BMps_means[wPosInVector][mbx];}std::cout << std::endl;	
-			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" dBMps: ";
-			for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << BMps_diffs[wPosInVector][mbx];}std::cout << std::endl;			
+			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldPFrs.size() << " N " << N <<" PFrs: ";
+			for(int mbx = 0; mbx < worldPFrs.size(); mbx++){std::cout <<" " << worldPFrs[mbx];}std::cout << std::endl;
+			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps: ";
+			for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << worldBMps[mbx];}std::cout << std::endl;	
+			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" dBMps: ";
+			// for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << BMps_diffs[wPosInVector][mbx];}std::cout << std::endl;			
 			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" currQs: ";
 			// for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << currQs[wPosInVector][qIx];}std::cout << std::endl;
 			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld << " nq " << worldQs.size() << " N " << N <<" qs: ";
