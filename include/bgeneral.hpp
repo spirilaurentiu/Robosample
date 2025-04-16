@@ -578,6 +578,7 @@ enum struct PositionsPerturbMethod : int {
 	BENDSTRETCH_3,
 	BENDSTRETCH_4,
 	BENDSTRETCH_5,
+	BENDSTRETCH_6,
 	NOF_
 };
 
@@ -589,6 +590,7 @@ PositionsPerturbMethodS{
 	{PositionsPerturbMethod::BENDSTRETCH_3, "BENDSTRETCH_3"},
 	{PositionsPerturbMethod::BENDSTRETCH_4, "BENDSTRETCH_4"},
 	{PositionsPerturbMethod::BENDSTRETCH_5, "BENDSTRETCH_5"},
+	{PositionsPerturbMethod::BENDSTRETCH_6, "BENDSTRETCH_6"},
 	{PositionsPerturbMethod::NOF_, "NOF_"}
 
 };

@@ -591,7 +591,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_2) ||
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_3) ||
 		(PPM == PositionsPerturbMethod::BENDSTRETCH_4) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_5) ){
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_5) ||
+		(PPM == PositionsPerturbMethod::BENDSTRETCH_6) ){
 	
 		// Scale bonds and angles
 		int burnIn = 1;
@@ -699,7 +700,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 			SimTK::Real scaleFactor = 1;			
 
-			bool testingMode = false; // Are we doing temperature scaling
+			bool testingMode = true; // Are we doing temperature scaling
 
 			if(testingMode){
 				# pragma region REBAS_TEST
@@ -712,10 +713,10 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 					WORLD,
 					BERNOULLI};
 
-				TestingWay testingWay = TestingWay::BY_THERMO;						// BY_THERMO
+				TestingWay testingWay = TestingWay::CONSTANT;						// BY_THERMO
 
 				if(testingWay == TestingWay::CONSTANT){
-					scaleFactor = 0.80;
+					scaleFactor = 1.0;
 
 				}else if(testingWay == TestingWay::ALTERNATIVE){ 				
 
@@ -758,7 +759,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState,
 
 							//stateQs[qIx] = (X_BM.p().norm() * (scaleFactor - 1));
 
-							stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
+							//stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
 
 							if("printStuff"){
 								std::cout << "stateQs[qIx] (*prev_dBMps)[qIx] (*prev_dBMps)[qIx]scaled"
@@ -3519,7 +3520,10 @@ PositionsPerturbMethod HMCSampler::positionsPerturbMethod(void)
             break;
 		case -5:
             how = PositionsPerturbMethod::BENDSTRETCH_5;
-            break;				
+            break;
+		case -6:
+        	how = PositionsPerturbMethod::BENDSTRETCH_6;
+            break;								
         default:
             how = PositionsPerturbMethod::EMPTY;
             break;
