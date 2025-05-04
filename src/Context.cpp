@@ -5962,6 +5962,16 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
 
+		if(wIx != 0){
+			worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH_
+			//worlds[wIx].PrintAllTransforms(); // BENDSTRETCH_
+			//worlds[wIx].PrintDefaultTransforms(); // BENDSTRETCH_
+			//worlds[wIx].PrintXFMs(); // BENDSTRETCH_
+			PrintZMatrixTableAndBAT();
+			std::cout<<"Qs:"; worlds[wIx].PrintAdvancedQs();
+		}
+
+
 		// Calculate Q statistics
 		if( sampler_p->getAcc() == true){
 			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());

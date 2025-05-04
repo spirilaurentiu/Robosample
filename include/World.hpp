@@ -687,6 +687,10 @@ public:
 	void allocateStatsContainers(void);
 	
 	void PrintDefaultTransforms() const;
+	void PrintBATFromSimbody() const;
+	void PrintAllTransforms() const;
+	void PrintXFMs() const;
+
 	void PrintXBMps() const;
 	const SimTK::Vector & getBMps();
 	const SimTK::Vector & getPFrs();
@@ -695,6 +699,8 @@ public:
 	int getNQs(void);
 	int getNUs(void);
 	const SimTK::Vector & getAdvancedQs();
+	const void PrintAdvancedQs() const;
+
 	const SimTK::Vector & getAdvancedUs();
 
 public:
