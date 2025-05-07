@@ -5963,12 +5963,12 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
 
 		if(wIx != 0){
-			worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH_
-			//worlds[wIx].PrintAllTransforms(); // BENDSTRETCH_
-			//worlds[wIx].PrintDefaultTransforms(); // BENDSTRETCH_
-			//worlds[wIx].PrintXFMs(); // BENDSTRETCH_
-			PrintZMatrixTableAndBAT();
-			std::cout<<"Qs:"; worlds[wIx].PrintAdvancedQs();
+			// worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH_
+			// //worlds[wIx].PrintAllTransforms(); // BENDSTRETCH_
+			// //worlds[wIx].PrintDefaultTransforms(); // BENDSTRETCH_
+			// //worlds[wIx].PrintXFMs(); // BENDSTRETCH_
+			// PrintZMatrixTableAndBAT();
+			// std::cout<<"Qs:"; worlds[wIx].PrintAdvancedQs();
 		}
 
 
@@ -6203,7 +6203,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		// Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
