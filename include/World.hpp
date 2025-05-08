@@ -687,7 +687,6 @@ public:
 	void allocateStatsContainers(void);
 	
 	void PrintDefaultTransforms() const;
-	void PrintBATFromSimbody() const;
 	void PrintAllTransforms() const;
 	void PrintXFMs() const;
 
@@ -702,6 +701,11 @@ public:
 	const void PrintAdvancedQs() const;
 
 	const SimTK::Vector & getAdvancedUs();
+
+	void PrintBATFromSimbody() const;
+	void calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
+
+
 
 public:
 
@@ -743,6 +747,10 @@ public:
 
 	/** This vector stores a configuration if is needed for later use **/
 	SimTK::Transform *TVector;
+
+	// 
+	std::vector<std::vector<int>> zMatrixTable;
+	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
 	/** Topologies graphs as tables - to be removed **/
 	int **mbxTreeMat;    // tree representing the bonding

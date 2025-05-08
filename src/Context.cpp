@@ -5962,13 +5962,21 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
 
-		if(wIx != 0){
-			// worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH_
-			// //worlds[wIx].PrintAllTransforms(); // BENDSTRETCH_
-			// //worlds[wIx].PrintDefaultTransforms(); // BENDSTRETCH_
-			// //worlds[wIx].PrintXFMs(); // BENDSTRETCH_
-			// PrintZMatrixTableAndBAT();
-			// std::cout<<"Qs:"; worlds[wIx].PrintAdvancedQs();
+		if(wIx == 2){
+			//worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH_
+
+			std::vector<std::vector<int>> ZMatrix;
+			std::vector<SimTK::Real> BONDLengths;
+			std::vector<SimTK::Real> ANGLEBends;
+			std::vector<SimTK::Real> TORSIONAngles;		
+
+			worlds[wIx].calcSimbodyBAT(ZMatrix, BONDLengths, ANGLEBends, TORSIONAngles);
+
+			//worlds[wIx].PrintAllTransforms(); // BENDSTRETCH_
+			//worlds[wIx].PrintDefaultTransforms(); // BENDSTRETCH_
+			//worlds[wIx].PrintXFMs(); // BENDSTRETCH_
+			//PrintZMatrixTableAndBAT();
+			//std::cout<<"Qs:"; worlds[wIx].PrintAdvancedQs();
 		}
 
 
