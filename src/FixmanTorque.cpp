@@ -14,62 +14,42 @@ FixmanTorque::FixmanTorque(SimTK::SimbodyMatterSubsystem* argMatter) : matter(ar
 void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>&,
 						   SimTK::Vector_<SimTK::Vec3>&, SimTK::Vector& mobilityForces) const  
 {
-	// function args were
-	// const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>& bodyForces, SimTK::Vector_<SimTK::Vec3>& particleForces, SimTK::Vector& mobilityForces
 
 	// Compute Fixman torque
 	int nu = state.getNU();
-	SimTK::Vector V3(nu);
-	SimTK::Vector V4(nu);
+	SimTK::Vector helperV(nu);
+	SimTK::Vector fixTorqV(nu);
 	SimTK::Real D0 = 1.0;
-	matter->calcFixmanTorque(state, V3, V4, &D0);
-	// end - Compute Fixman torque
+	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0);
 
-	// Calculate geometric features fast
-	//xstd::cout << " 1 " ;
-	//xfor (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-	//x    const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	//x    const SimTK::MobilizedBody *p_mobod = &mobod;
-	//x    std::cout << std::setprecision(10) << std::fixed <<  ((SimTK::MobilizedBody::Pin *)(p_mobod))->getAngle(state) << ' ' ;
-	//x}
-
-	//std::cout << " FT " ;
+	// Apply Fixman torque
+	std::cout << "FixmanTorque_" << RT; // print Fixman torque
+	
 	int uslot = -1;
 	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-		for(int k = 0; k < mobod.getNumU(state); k++){
+		std::cout <<" "<< int(mbx); // print Fixman torque
+
+		for(int uIx = 0; uIx < mobod.getNumU(state); uIx++){
+						
 			uslot++;
 
-			//mobod.applyOneMobilityForce(state, k, scaleFactor * V4[uslot], mobilityForces);
+			std::cout <<" "<< uIx <<" "<< (-1.0) * RT * fixTorqV[uslot]; // print Fixman torque
 
-			mobod.applyOneMobilityForce(state, k, (-1.0) * RT * V4[uslot], mobilityForces);
-			//mobod.applyOneMobilityForce(state, k, (-1.0) * V4[uslot], mobilityForces);
-
-			    //std::cout << "FT " << std::setprecision(6) << std::fixed << (-1.0) * RT * V4[uslot] 
-			    //<< " to mbx " << std::setprecision(0) << int(mbx) << " slot " << uslot << std::endl;
-
-			//xif(int(mbx) == 2){
-			//    std::cout << std::setprecision(6) << std::fixed << (-1.0) * RT * V4[uslot] << ' '; 
-			//x}
-			//    << " to mbx " << std::setprecision(0) << int(mbx) << " slot " << uslot << " ";
-
-			//std::cout << "Fixman torque scaleFactor " << scaleFactor << " " ;
-			//std::cout << " temperature " << temperature << " -RT " << (-1.0) * RT << std::endl ;
+			mobod.applyOneMobilityForce(state, uIx, (-1.0) * RT * fixTorqV[uslot], mobilityForces);
 		}
-	}
-	//std::cout << std::endl ;
 
-	//const SimTK::Real q = knee.getOneQ(state, 0);
-	//const SimTK::Real x = q < low ? q-low : (q > high ? q-high : 0);
-	//knee.applyOneMobilityForce(state, 0, -k*x, mobilityForces);
+		std::cout << std::endl; // print Fixman torque
+
+	}
+
 }
 
 FixmanTorque::~FixmanTorque(){}
 
 // This should be carefully analyzed. Intended to be taken from somewhere else.
 SimTK::Real FixmanTorque::calcPotentialEnergy(const SimTK::State&) const {
-	// function args were const SimTK::State& state
 	SimTK::Real energy = 0.0;
 	return energy;
 }
