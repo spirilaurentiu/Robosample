@@ -279,6 +279,7 @@ public:
 	void setAcceptRejectMode(AcceptRejectMode acceptRejectMode);
 	void setAcceptRejectMode(const std::string& acceptRejectMode);
 
+	void perturbPositions_Old(SimTK::State& someState, PositionsPerturbMethod);
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
 
 	/** Set velocities to zero.  **/

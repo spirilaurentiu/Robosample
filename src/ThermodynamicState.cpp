@@ -538,7 +538,7 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 		}
 
-		if(true && ((whichWorld == 2) || (whichWorld == 3) || (whichWorld == 4))){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
+		if(false && ((whichWorld == 2) || (whichWorld == 3) || (whichWorld == 4))){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
 			std::cout << std::endl;

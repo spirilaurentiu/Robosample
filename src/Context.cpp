@@ -4771,7 +4771,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	bool testingMode = false; 
+	bool testingMode = true; 
 
 	if(testingMode){
 		# pragma region REBAS_TEST
@@ -4781,7 +4781,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			ALWAYS_ACCEPT,
 			ALWAYS_REJECT};
 		
-		TestingWay testingWay = TestingWay::ALWAYS_REJECT;  				// ALWAYS_REJECT
+		TestingWay testingWay = TestingWay::ALWAYS_ACCEPT;  				// ALWAYS_REJECT
 
 		if(testingWay == TestingWay::ALWAYS_ACCEPT){
 			log_p_accept = 1.0;
@@ -5962,24 +5962,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
 
-		if(wIx == 2){
-			//worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH_
-
-			std::vector<std::vector<int>> ZMatrix;
-			std::vector<SimTK::Real> BONDLengths;
-			std::vector<SimTK::Real> ANGLEBends;
-			std::vector<SimTK::Real> TORSIONAngles;		
-
-			worlds[wIx].calcSimbodyBAT(ZMatrix, BONDLengths, ANGLEBends, TORSIONAngles);
-
-			//worlds[wIx].PrintAllTransforms(); // BENDSTRETCH_
-			//worlds[wIx].PrintDefaultTransforms(); // BENDSTRETCH_
-			//worlds[wIx].PrintXFMs(); // BENDSTRETCH_
-			//PrintZMatrixTableAndBAT();
-			//std::cout<<"Qs:"; worlds[wIx].PrintAdvancedQs();
-		}
-
-
 		// Calculate Q statistics
 		if( sampler_p->getAcc() == true){
 			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
@@ -6066,7 +6048,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 	SimTK::State& state = worlds.back().integ->updAdvancedState();
 	replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
-
 
 	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
 

@@ -1959,8 +1959,8 @@ void World::calcSimbodyBAT(
 
 		// BOND ==============
 		const Transform& B_X_Fb = childMobod.getInboardFrame(advState);
-		const Transform& C_X_Mb = childMobod.getOutboardFrame(advState);
 		const Transform& Fb_X_Mb = childMobod.getMobilizerTransform(advState);
+		const Transform& C_X_Mb = childMobod.getOutboardFrame(advState);
 
 		BONDLengths[int(childMbx) - 1] = C_X_Mb.p().norm(); // correct correct
 		
@@ -1975,6 +1975,13 @@ void World::calcSimbodyBAT(
 			const Transform& B_X_Ma = parentMobod.getOutboardFrame(advState); // B_X_Ma
 			const Transform& Fa_X_Ma = parentMobod.getMobilizerTransform(advState); // Fa_X_Ma
 			Transform A_X_B = A_X_Fa * Fa_X_Ma * (~B_X_Ma);
+
+			// STATS
+			// Transform B_X_C = B_X_Fb * Fb_X_Mb * (~C_X_Mb);
+			// SimTK::Vec4 angAx_BXC = B_X_C.R().convertRotationToAngleAxis(); // [a vx vy vz] angle-axis; -Pi < a <= Pi and |v|=1
+			// SimTK::Real ang_BXC = angAx_BXC[0]; // [a] angle
+			// Vec3 ax_BXC = Vec3(angAx_BXC[1], angAx_BXC[2], angAx_BXC[3]); // [vx vy vz] axis
+			// std::cout << "angle-axis: " << int(childMbx) <<" "<< ang_BXC <<" "<< SimTK::dot(ax_BXC, B_X_C.p()) << std::endl;
 
 			// WORK ==========================================
 			Vec3 xAXB_A = A_X_B.R()(0);
