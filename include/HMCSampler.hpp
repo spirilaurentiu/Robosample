@@ -280,6 +280,8 @@ public:
 	void setAcceptRejectMode(const std::string& acceptRejectMode);
 
 	void perturbPositions_Old(SimTK::State& someState, PositionsPerturbMethod);
+	std::vector<double>& dihedralSegmenter(int nofIntervals, double segHalfDiff, std::vector<double>& segLims);
+	int findSegmentIndex(double value, const std::vector<double>& segLims);	
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
 
 	/** Set velocities to zero.  **/

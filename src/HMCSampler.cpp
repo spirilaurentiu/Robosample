@@ -949,6 +949,57 @@ void HMCSampler::perturbPositions_Old(SimTK::State& someState,
 
 
 
+std::vector<double>& HMCSampler::dihedralSegmenter(int nofIntervals, double segHalfDiff, std::vector<double>& segLims){
+    const double PI = M_PI;
+
+    double dihSpan = 2.0 * PI;
+    double nofModes = 3.0;
+    double segWidth_2 = dihSpan / nofModes;
+    double segWidth = segWidth_2 / 2.0;
+
+    // Alternating sign array
+    std::vector<double> altSign(nofIntervals, 1.0);
+    for (int i = 0; i < nofIntervals; i += 2) {
+        altSign[i] *= -1.0;
+    }
+    for (int i = 0; i < nofIntervals; ++i) {
+        altSign[i] *= -1.0;
+    }
+
+    // Segment width array
+    std::vector<double> segWidthArr(nofIntervals);
+    for (int i = 0; i < nofIntervals; ++i) {
+        segWidthArr[i] = segWidth + (altSign[i] * segHalfDiff);
+    }
+
+    // Adjust first and last elements
+    segWidthArr[0] /= 2.0;
+    segWidthArr[nofIntervals - 1] /= 2.0;
+
+    // Segment limits: needs to be nofIntervals + 1 entries
+    segLims[0] = -PI;
+    for (int i = 1; i <= nofIntervals; ++i) {
+        segLims[i] = segLims[i - 1] + segWidthArr[i - 1];
+    }
+
+    return segLims;
+}
+
+int HMCSampler::findSegmentIndex(double value, const std::vector<double>& segLims) {
+    for (size_t i = 0; i < segLims.size() - 1; ++i) {
+        if (value >= segLims[i] && value < segLims[i + 1]) {
+            return static_cast<int>(i);
+        }
+    }
+
+    // Handle edge case: exactly equal to last limit
+    if (value == segLims.back()) {
+        return static_cast<int>(segLims.size() - 2);
+    }
+
+    // Not found
+    return -1;
+}
 
 
 /*! <!-- Perturb positions of the system
@@ -957,12 +1008,18 @@ void HMCSampler::perturbPositions_Old(SimTK::State& someState,
 void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMethod PPM)
 {
 	if( PPM != PositionsPerturbMethod::EMPTY ){
-	
+
+		
+
+    	int nofDihModesIntervals = 7;
+    	double segHalfDiff = M_PI / 9.0;
+		std::vector<double> dihModesLims(nofDihModesIntervals + 1);
+		dihModesLims = dihedralSegmenter(nofDihModesIntervals, segHalfDiff, dihModesLims);
+
 		std::vector<std::vector<int>> ZMatrix;
 		std::vector<SimTK::Real> BONDLengths;
 		std::vector<SimTK::Real> ANGLEBends;
 		std::vector<SimTK::Real> TORSIONAngles;
-
 		this->world->calcSimbodyBAT(ZMatrix, BONDLengths, ANGLEBends, TORSIONAngles);
 
 		// :::::::::::: (1) Get initial Jacobian ::::::::::::::::::::::::::
@@ -981,17 +1038,17 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		SimTK::Real scaleFactor = 1;			
 
-		bool testingMode = true; // Are we doing temperature scaling
+		bool testingMode = false; // Are we doing temperature scaling
 		enum TestingWays {
 			CONSTANT,
 			ALTERNATIVE,
 			BY_THERMO,
-			WORLD,
+			CONDITIONAL,
 			BERNOULLI};
 
 		if(testingMode){
 			# pragma region REBAS_TEST
-			TestingWays testingWay = TestingWays::CONSTANT;						// BY_THERMO
+			TestingWays testingWay = TestingWays::CONDITIONAL;						// BY_THERMO
 			std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
 
 			if(testingWay == TestingWays::CONSTANT){
@@ -1012,9 +1069,15 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 					<<" "<< this->temperature <<" "<< scaleFactor
 					<< std::endl;
 
-			}else if(testingWay == TestingWays::WORLD){
-				
-				;
+			}else if(testingWay == TestingWays::CONDITIONAL){
+
+				int zMatRow = 3;
+				int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
+				if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
+					scaleFactor = 1.2;
+				}else{
+					scaleFactor = 1.0;
+				}
 
 			}else if(testingWay == TestingWays::BERNOULLI){
 				SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
@@ -1036,7 +1099,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 						
 						int zMatRow = int(mbx) - 1;
 
-						// std::cout << "mbx zMatRow qIx B A T"
+						// std::cout << "scaling at mbx zMatRow qIx B A T"
 						// 	<<" "<< int(mbx) <<" "<< zMatRow <<" "<< qIx
 						// 	<<" "<<BONDLengths[zMatRow]
 						// 	<<" "<<ANGLEBends[zMatRow]
@@ -1109,6 +1172,18 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 						}
 
 						std:cout<<std::endl<<std::flush; // BENDSTRETCH_5
+
+					}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_6){
+
+						int zMatRow = 3;
+						int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
+						if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
+							;
+						}else{
+							scaleFactor = 1.0;
+						}
+
+						stateQs[qIx] += BONDLengths[zMatRow] * ((scaleFactor) - 1);
 
 					}else{
 						warnflush("Unknown scaling method");

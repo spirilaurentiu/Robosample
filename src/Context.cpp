@@ -4771,7 +4771,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	bool testingMode = true; 
+	bool testingMode = false; 
 
 	if(testingMode){
 		# pragma region REBAS_TEST
