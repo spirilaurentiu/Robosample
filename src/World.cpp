@@ -1999,9 +1999,9 @@ void World::calcSimbodyBAT(
 				const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
 
 				const Transform& T_X_Ft = grandMobod.getInboardFrame(advState); // T_X_Ft
+				const Transform& Ft_X_Mt = grandMobod.getMobilizerTransform(advState); // Ft_X_Mt
 				const Transform& A_X_Mt = grandMobod.getOutboardFrame(advState); // A_X_Mt
 				const Transform& G_X_T = grandGrandMobod.getBodyTransform(advState); // G_X_T
-				const Transform& Ft_X_Mt = grandMobod.getMobilizerTransform(advState); // Ft_X_Mt
 				Transform T_X_A = T_X_Ft * Ft_X_Mt * (~A_X_Mt);
 
 				// WORK ==========================================

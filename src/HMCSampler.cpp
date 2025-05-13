@@ -1183,7 +1183,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 							scaleFactor = 1.0;
 						}
 
-						stateQs[qIx] += BONDLengths[zMatRow] * ((scaleFactor) - 1);
+						stateQs[qIx] += (*prev_dBMps)[int(mbx)] * ((scaleFactor) - 1);
 
 					}else{
 						warnflush("Unknown scaling method");
