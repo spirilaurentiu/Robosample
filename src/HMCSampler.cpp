@@ -948,7 +948,11 @@ void HMCSampler::perturbPositions_Old(SimTK::State& someState,
 
 
 
-
+/*! <!-- Segment dihedral angles into intervals
+ * @param nofIntervals Number of intervals to segment into
+ * @param segHalfDiff Half difference for segment width adjustment
+ * @param segLims Vector to store the segment limits
+ * @return Vector with segment limits --> */
 std::vector<double>& HMCSampler::dihedralSegmenter(int nofIntervals, double segHalfDiff, std::vector<double>& segLims){
     const double PI = M_PI;
 
@@ -985,6 +989,10 @@ std::vector<double>& HMCSampler::dihedralSegmenter(int nofIntervals, double segH
     return segLims;
 }
 
+/*! <!-- Find the segment index for a given value
+ * @param value Value to find the segment for
+ * @param segLims Segment limits
+ * @return Index of the segment containing the value, or -1 if not found --> */
 int HMCSampler::findSegmentIndex(double value, const std::vector<double>& segLims) {
     for (size_t i = 0; i < segLims.size() - 1; ++i) {
         if (value >= segLims[i] && value < segLims[i + 1]) {
@@ -1175,15 +1183,20 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 					}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_6){
 
-						int zMatRow = 3;
-						int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
-						if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
-							;
-						}else{
-							scaleFactor = 1.0;
-						}
+						int zMatRow = int(mbx) - 1;
+						if(zMatRow == 3){
 
-						stateQs[qIx] += (*prev_dBMps)[int(mbx)] * ((scaleFactor) - 1);
+							std::cout << "B prevdBM" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_dBMps)[int(mbx)] << std::endl;
+
+							int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
+							if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
+								;
+							}else{
+								scaleFactor = 1.0;
+							}
+
+							stateQs[qIx] = (*prev_dBMps)[int(mbx)] * ((scaleFactor - 1));
+						}
 
 					}else{
 						warnflush("Unknown scaling method");
