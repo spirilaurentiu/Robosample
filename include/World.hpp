@@ -532,7 +532,9 @@ public:
 	SimTK::Real calcFixman();
 
 	/** Generate a number of samples **/
+	bool generateSamples_old(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
+
 	//...............
 
 	//...................
@@ -1031,6 +1033,8 @@ public:
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
+    bool getIsRollFlexibilities() const {return isRollFlexibilities;};
+    void setIsRollFlexibilities(bool value) {isRollFlexibilities = value;};
 
 private:
 

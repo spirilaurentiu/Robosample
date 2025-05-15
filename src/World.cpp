@@ -3882,7 +3882,7 @@ SimTK::Real World::calcFixman(void)
 /*! <--
  *  Generate a number of samples -->
  **/
-bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
+bool World::generateSamples_old(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
 	
 	bool validated = false;
@@ -3899,7 +3899,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			lockAllMobilizers();
 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
 			mobod.unlock(currentAdvancedState);
-			TRACE("World::generateSamples: Unlocking mobilizer " << mobIntIx << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
+			//TRACE("World::generateSamples: Unlocking mobilizer " << mobIntIx << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
 
 			for(int sampleIx = 0; sampleIx < howManySamplesPerRound; sampleIx++) {
 				if (verbose) {
@@ -3940,10 +3940,46 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
 	} // __end__ isRollFlexibilities else
 
-
-
 	// Return the number of accepted samples
 	return validated;
+}
+
+
+bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
+{
+    bool validated = false;
+    SimTK::State& currentAdvancedState = integ->updAdvancedState();
+    updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+
+    validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+
+    auto runSamplingLoop = [&](SimTK::State& state) {
+        for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+            if (verbose) {
+                worldOutStream << header << " ";
+                updSampler(0)->getMsg_InitialParams(worldOutStream);
+            }
+
+            validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+
+            if (verbose) {
+                worldOutStream << std::endl;
+            }
+        }
+    };
+
+    if (isRollFlexibilities) {
+        for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
+            lockAllMobilizers();
+            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+            mobod.unlock(currentAdvancedState);
+            runSamplingLoop(currentAdvancedState);
+        }
+    } else {
+        runSamplingLoop(currentAdvancedState);
+    }
+
+    return validated;	
 }
 
 /** Print information about Simbody systems. For debugging purpose. **/
@@ -4027,55 +4063,46 @@ const SimTK::String& World::getRootMobility() const {
 	return rootMobilizer;
 }
 
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
 
 /*!
  * <!--  -->
