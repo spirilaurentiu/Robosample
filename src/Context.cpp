@@ -5775,6 +5775,9 @@ void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWI
 {
 	auto* sampler = worlds[destStatsWIx].updSampler(0);
 
+	sampler->set_BMps_means(thermodynamicStates[thermoIx].getBMps_means(srcStatsWIx));
+	sampler->set_PFrs_means(thermodynamicStates[thermoIx].getPFrs_means(srcStatsWIx));
+
 	sampler->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
 	sampler->set_dPFrs(thermodynamicStates[thermoIx].get_dPFrs(srcStatsWIx));
 	sampler->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
@@ -5836,7 +5839,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-				if(true || (whichWorld == 3)){
+				if(false || ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
 					scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
 					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
 					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
@@ -5875,7 +5878,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				// thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
-				if(true || (whichWorld == 3)){
+				if(false || ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
 					scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
 					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
 					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
@@ -5975,6 +5978,11 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 				
 		// Run
 		bool validated = true;
+
+		// if(true || (wIx == 3) && (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)){
+		// 	std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
+		// }
+
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
 
 		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}

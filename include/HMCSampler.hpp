@@ -685,6 +685,11 @@ public:
 	void set_dPFrs(std::vector<SimTK::Real>& QArg){ prev_dPFrs = &QArg; }
 	const std::vector<SimTK::Real>& get_dPFrs() const { return *prev_dPFrs; }
 
+	void set_BMps_means(std::vector<SimTK::Real>& QArg){ prev_BMps_means = &QArg; }
+	const std::vector<SimTK::Real>& get_BMps_means() const { return *prev_BMps_means; }
+	void set_PFrs_means(std::vector<SimTK::Real>& QArg){ prev_PFrs_means = &QArg; }
+	const std::vector<SimTK::Real>& get_PFrs_means() const { return *prev_PFrs_means; }
+
 	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
 	
 	void setQmeans(std::vector<SimTK::Real>& QArg){ Qmeans = &QArg; }
@@ -709,6 +714,8 @@ protected:
 	# pragma endregion REBAS_TEST
 
 	// Buffers to hold Q statistics
+	std::vector<SimTK::Real>* prev_BMps_means = nullptr;
+	std::vector<SimTK::Real>* prev_PFrs_means = nullptr;	
 	std::vector<SimTK::Real>* prev_dBMps = nullptr;
 	std::vector<SimTK::Real>* prev_dPFrs = nullptr;
 
