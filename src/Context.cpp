@@ -5979,16 +5979,16 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		// Run
 		bool validated = true;
 
-		// if(true || (wIx == 3) && (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)){
-		// 	std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
-		// }
+		if(true || (wIx == 3) && (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)){
+			std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
+		}
 
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
 
 		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
 
 		// Calculate Q statistics
-		if( sampler_p->getAcc() == true){
+		if(sampler_p->getAcc() == true){
 			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
 		}else{
 			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
