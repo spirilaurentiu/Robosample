@@ -1186,15 +1186,15 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 						int zMatRow = int(mbx) - 1;
 						if(zMatRow == 3){
 
-							std::cout << "B Bmean prevdBM" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< (*prev_dBMps)[int(mbx)] << std::endl << std::flush;
 							SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
+							//std::cout << "B Bmean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl << std::flush;
 
 							int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
-							if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
-								;
-							}else{
-								scaleFactor = 1.0;
-							}
+							// if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
+							// 	;
+							// }else{
+							// 	scaleFactor = 1.0;
+							// }
 
 							stateQs[qIx] = dBMp_local * ((scaleFactor - 1));
 						}
