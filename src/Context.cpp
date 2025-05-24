@@ -5839,7 +5839,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-				if(false || ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
+				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
 					scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
 					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
 					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
@@ -5878,7 +5878,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				// thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
-				if(false || ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
+				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
 					scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
 					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
 					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
@@ -5979,9 +5979,9 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		// Run
 		bool validated = true;
 
-		if(true || (wIx == 3) && (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)){
-			std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
-		}
+		// if(true || (wIx == 3) && (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)){
+		// 	std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
+		// }
 
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
 
