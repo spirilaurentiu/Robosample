@@ -1184,7 +1184,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 					}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_6){
 
 						int zMatRow = int(mbx) - 1;
-						if(zMatRow == 3){
+
+						if((zMatRow == 3) || (zMatRow == 4) || (zMatRow == 5) || // hydrogens
+						   (zMatRow == 6) || (zMatRow == 7) || (zMatRow == 1) || // hydrogens
+						   (zMatRow == 2) // carbons
+							){
 
 							SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
 							//std::cout << "B Bmean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl << std::flush;

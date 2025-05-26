@@ -5980,7 +5980,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		bool validated = true;
 
 		// if(true || (wIx == 3) && (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)){
-		// 	std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
+		//     std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
 		// }
 
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
@@ -6218,7 +6218,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		//Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		// Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
