@@ -1183,29 +1183,41 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 					}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_6){
 
+						bool do_SliderStretch = false;
+						bool do_TorsionMapping = true;
+
 						int zMatRow = int(mbx) - 1;
 
-						if((zMatRow == 3) || (zMatRow == 4) || (zMatRow == 5) || // hydrogens
-						   (zMatRow == 6) || (zMatRow == 7) || (zMatRow == 1) || // hydrogens
-						   (zMatRow == 2) // carbons
-							){
+						// All Slider stretch hardcoded for ethane
+						if(do_SliderStretch && (matter->getNumBodies() == 9)){
+							if((zMatRow == 3) || (zMatRow == 4) || (zMatRow == 5) || // hydrogens
+							   (zMatRow == 6) || (zMatRow == 7) || (zMatRow == 1) || // hydrogens
+							   (zMatRow == 2) // carbons
+								){
 
-							SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
-							//std::cout << "B Bmean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl << std::flush;
+								SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
+								//std::cout << "B Bmean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl << std::flush;
 
-							int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
-							// if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
-							// 	;
-							// }else{
-							// 	scaleFactor = 1.0;
-							// }
-
-							stateQs[qIx] = dBMp_local * ((scaleFactor - 1));
+								stateQs[qIx] = dBMp_local * ((scaleFactor - 1));
+							}
 						}
 
-					}else{
+						// Torsion mapping
+						if(do_TorsionMapping && (matter->getNumBodies() == 3)){
+							if((zMatRow == 1)){
+								int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
+								if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){ // favorable region
+									;
+								}else{
+									;
+								}
+							}
+						}
+
+
+					}else{ // __end__ BENDSTRETCH_6
 						warnflush("Unknown scaling method");
-					}
+					} // __end__ PPM
 
 					SimTK::Real bondLength = X_BM.p().norm();
 					SimTK::Real bondLengthScaled = bondLength + stateQs[qIx];

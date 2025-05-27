@@ -5979,7 +5979,8 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		// Run
 		bool validated = true;
 
-		// if(true || (wIx == 3) && (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)){
+		// if(false || (wIx == 3) //&& (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)
+		// ){
 		//     std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
 		// }
 

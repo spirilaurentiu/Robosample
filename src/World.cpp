@@ -2035,7 +2035,7 @@ void World::calcSimbodyBAT(
 	
 	} // _end_ for mbx
 
-	// Print
+	// // Print
 	// for (int BOIx = 0; BOIx < BONDLengths.size(); BOIx++){
 	// 	std::cout << "ZMatrixBATSimbody:"
 	// 		<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
