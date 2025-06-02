@@ -845,7 +845,7 @@ private:
 	std::vector<std::vector<std::string>> rbSpecsFNs;
 	std::vector<std::vector<std::string>> flexSpecsFNs;
 	std::vector<std::vector<std::string>> regimens;
-	std::vector<std::vector<std::string>> rootMobilities;
+	std::vector<std::vector<std::string>> rootMobilitiesStr;
 
 	// Nof molecules
 	int moleculeCount = -1;
@@ -1006,7 +1006,8 @@ public:
 		{ "Slider", BondMobility::Slider },
 		{ "AnglePin", BondMobility::AnglePin },
 		{ "BendStretch", BondMobility::BendStretch },
-		{ "Spherical", BondMobility::Spherical }
+		{ "Spherical", BondMobility::Spherical },
+		{ "OrthoSpherical", BondMobility::OrthoSpherical }
 	};
 
     std::vector<std::string> MobilityStr {
@@ -1025,7 +1026,8 @@ public:
         "Spherical", 
         "AnglePin",
         "BendStretch",
-        "Slider"   
+        "Slider",
+		"OrthoSpherical"
     };
 
 	BondMobility::Mobility getMobility(const std::string& mobilityStr) {

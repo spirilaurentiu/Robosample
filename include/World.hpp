@@ -737,7 +737,7 @@ public:
 	//std::vector<bMoleculeReader *> moleculeReaders;
 	std::vector<Topology>* topologies = nullptr;
 	std::vector<std::string> roots;
-	std::vector<std::string> rootMobilities;
+	std::vector<std::string> rootMobilitiesStr;
 
 	/** Joint types **/
 	//std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;

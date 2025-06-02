@@ -485,10 +485,10 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 			compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(i),
 				topology.atomFrameCache,
-				rootMobilities[i]);
+				rootMobilitiesStr[i]);
 
 		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
-		         << " grounded with mobilizer " << rootMobilities[i] << std::endl;
+		         << " grounded with mobilizer " << rootMobilitiesStr[i] << std::endl;
 
 		//std::cout << "World::ModelTopologies " <<
 		for(std::size_t k = 0; k < (*topologies)[i].getNumAtoms(); k++){
@@ -2783,7 +2783,6 @@ void World::setAtoms_Compound_FramesAndLocsInMobods(
 
 				// Sets B_X_atom
 				//currTopology.bsetFrameInMobilizedBodyFrame(cAIx, Transform());
-
 				// if(getOwnIndex() == 1){ // debug
 				// 	const Transform& O_X_root = currTopology.getFrameInMobilizedBodyFrame(cAIx);
 				// 	SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(cAIx);
@@ -3228,11 +3227,13 @@ World::calcMobodToMobodTransforms(
 	//SimTK::Transform B_X_M_spheric  = Transform();
 	//SimTK::Transform B_X_M_spheric = B_X_M_pin;
 	SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z;
+	SimTK::Transform B_X_M_orthospheric = X_parentBC_childBC * X_to_Z;
 	
 	//SimTK::Transform P_X_F_spheric  = oldX_PB * B_X_M_pin;
 	//SimTK::Transform P_X_F_spheric = Transform();
 	//SimTK::Transform P_X_F_spheric = P_X_F_pin;
 	SimTK::Transform P_X_F_spheric = oldX_PB * B_X_M_pin;
+	SimTK::Transform P_X_F_orthospheric = oldX_PB * B_X_M_pin;
 	
 	// Get mobility (joint type)
 	bSpecificAtom *atom = topology.updAtomByAtomIx(rootAIx);
@@ -3258,6 +3259,8 @@ World::calcMobodToMobodTransforms(
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
 		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // OrthoSpherical
+		return std::vector<SimTK::Transform> {P_X_F_orthospheric, B_X_M_orthospheric};		
 	} else {
 		std::cout << "Warning: unknown mobility\n";
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
@@ -3484,6 +3487,10 @@ SimTK::Transform World::calcX_FMTransforms(
 		X_FM = Transform();
 		// X_FM = InboardLength_mZAxis;
 		return X_FM;
+	} else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // Spherical
+		X_FM = Transform();
+		// X_FM = InboardLength_mZAxis;
+		return X_FM;		
 	} else {
 		X_FM = Transform();
 		std::cout << "Warning: unknown mobility\n";

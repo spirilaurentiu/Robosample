@@ -1017,8 +1017,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 {
 	if( PPM != PositionsPerturbMethod::EMPTY ){
 
-		
-
     	int nofDihModesIntervals = 7;
     	double segHalfDiff = M_PI / 9.0;
 		std::vector<double> dihModesLims(nofDihModesIntervals + 1);
@@ -1046,7 +1044,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		SimTK::Real scaleFactor = 1;			
 
-		bool testingMode = false; // Are we doing temperature scaling
+		bool testingMode = true; // Are we doing temperature scaling
 		enum TestingWays {
 			CONSTANT,
 			ALTERNATIVE,
@@ -1056,11 +1054,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		if(testingMode){
 			# pragma region REBAS_TEST
-			TestingWays testingWay = TestingWays::CONDITIONAL;						// BY_THERMO
+			TestingWays testingWay = TestingWays::ALTERNATIVE;						// BY_THERMO
 			std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
 
 			if(testingWay == TestingWays::CONSTANT){
-				scaleFactor = 1.1;
+				scaleFactor = 1.25;
 
 			}else if(testingWay == TestingWays::ALTERNATIVE){ 				
 
@@ -1098,27 +1096,69 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 			// Scale
 			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+				int numUs = mobod.getNumU(someState);
 
+				// world->getMyContext()->getMobility(rootMobilities[wIx][topoIx]) <<" "
+				// 			<< rootMobilities[wIx][topoIx];
+
+				int localQIndex = -1;
 				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 					qIx++ ){
-
+						localQIndex++;
 						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
+						const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
 						
-						int zMatRow = int(mbx) - 1;
+						bool do_SliderStretch = false;
+						bool do_AngleStretch = false;
+						bool doTorsionStretch = false;
+						bool do_TorsionMapping = false;
 
-						// std::cout << "scaling at mbx zMatRow qIx B A T"
-						// 	<<" "<< int(mbx) <<" "<< zMatRow <<" "<< qIx
-						// 	<<" "<<BONDLengths[zMatRow]
-						// 	<<" "<<ANGLEBends[zMatRow]
-						// 	<<" "<<TORSIONAngles[zMatRow]
-						// 	<< std::endl;
-
-						if(ZMatrix[zMatRow][0] == 4){
-							stateQs[qIx] += BONDLengths[zMatRow] * ((scaleFactor) - 1);
+						if(numUs > 0){
+							do_SliderStretch = true;
+						}
+						if(numUs > 1){
+							do_AngleStretch = true;
 						}
 
-						J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
+						int zMatRow = int(mbx) - 1;
+
+						if(
+							   (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6)
+							|| (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2)   
+						  ){ // zMatRow == 3
+
+							if(do_SliderStretch){
+								if(numUs == 3){
+									if(localQIndex == 2){
+										stateQs[qIx] += BONDLengths[zMatRow] * ((scaleFactor) - 1);
+									}
+								}else if(numUs == 2){
+									if(localQIndex == 1){
+										stateQs[qIx] += BONDLengths[zMatRow] * ((scaleFactor) - 1);
+									}
+								}else if(numUs == 1){
+									if(localQIndex == 0){
+										stateQs[qIx] += BONDLengths[zMatRow] * ((scaleFactor) - 1);
+									}
+								}
+
+								J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
+							}
+
+							if(do_AngleStretch){
+								if(numUs == 3){
+									if(localQIndex == 0){
+										stateQs[qIx] += ANGLEBends[zMatRow] * ((scaleFactor) - 1);
+									}
+								}else if(numUs == 0){
+									if(localQIndex == 0){
+										stateQs[qIx] += ANGLEBends[zMatRow] * ((scaleFactor) - 1);
+									}
+								}
+							}
+
+						}
 
 					}
 			}
@@ -1159,27 +1199,13 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 					}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_5){
 
-						std::cout << "BENDSTRETCH_5"
-							<<" mbx_locQIx_qIx_qIx2 "<< int(mbx) <<" "<< localQIndex <<" "<< qIx <<" "<< int(int(qIx) / 2)
-							<<" prevQs " << (*previousQs)[qIx];
+						// std::cout << "BENDSTRETCH_5"
+						// 	<<" mbx_locQIx_qIx_qIx2 "<< int(mbx) <<" "<< localQIndex <<" "<< qIx <<" "<< int(int(qIx) / 2)
+						// 	<<" prevQs " << (*prev_BMps_means)[qIx];
 
-						if(localQIndex == 0){
+						std::cout << "BENDSTRETCH_5\n" << std::flush;
 
-							std::cout<< " prev_dPFrs " << (*prev_dPFrs)[int(mbx)]; // BENDSTRETCH_5
-
-							//stateQs[qIx] = (*prev_dPFrs)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
-							stateQs[qIx] = (*prev_dPFrs)[int(mbx)] * ((scaleFactor) - 1);
-
-						}else{
-
-							std::cout<< " prev_dBMps " << (*prev_dBMps)[int(mbx)]; // BENDSTRETCH_5
-
-							//stateQs[qIx] = (*prev_dBMps)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
-							stateQs[qIx] = (*prev_dBMps)[int(mbx)] * ((scaleFactor) - 1);
-
-						}
-
-						std:cout<<std::endl<<std::flush; // BENDSTRETCH_5
+						//std:cout<<std::endl<<std::flush; // BENDSTRETCH_5
 
 					}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_6){
 

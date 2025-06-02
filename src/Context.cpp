@@ -1780,9 +1780,9 @@ void Context::addWorld(
 	}
 
 	// Allocate root mobilities
-	rootMobilities.push_back({});
+	rootMobilitiesStr.push_back({});
 	for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
-		rootMobilities.back().push_back("Rigid");
+		rootMobilitiesStr.back().push_back("Rigid");
 	}
 
 	// Print mobilities
@@ -1811,7 +1811,7 @@ void Context::addWorld(
 
 			std::cout << "Set root mobilities -1=" << flex.i << " molecule " << molIx <<" at atom " << flex.j <<" to " << flex.mobility << std::endl;
 
-			(rootMobilities.back())[molIx] = inverseMobilityMap[flex.mobility];
+			(rootMobilitiesStr.back())[molIx] = inverseMobilityMap[flex.mobility];
 
 		} // found a root mobility
 	} // every flexibility
@@ -3728,7 +3728,7 @@ void Context::modelOneEmbeddedTopology(
 	worlds[whichWorld].compoundSystem->modelOneCompound(
 		SimTK::CompoundSystem::CompoundIndex(whichTopology),
 		atomFrameCache,
-		SimTK::String(rootMobilities[whichWorld][whichTopology])
+		SimTK::String(rootMobilitiesStr[whichWorld][whichTopology])
 		);
 
 	// Get the forcefield within this world
@@ -4771,7 +4771,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	bool testingMode = false; 
+	bool testingMode = true; 
 
 	if(testingMode){
 		# pragma region REBAS_TEST
@@ -5963,9 +5963,11 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		// Transfer coordinates to the next world
 		if(thWCnt == 0){
+			std::cout << "Transfer coordinates from replica " << replicaIx << " thermoState " << thermoIx << " to world " << thermoWorldIxs.front() << std::endl;
 			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
 			transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
 		}else{
+			std::cout << "Transfer coordinates from world " << thermoWorldIxs[thWCnt - 1] << " to world " << wIx << std::endl;
 			transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 			transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
 		}
@@ -5979,10 +5981,11 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		// Run
 		bool validated = true;
 
-		// if(false || (wIx == 3) //&& (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)
-		// ){
-		//     std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
-		// }
+		if(false || (wIx == 2) //&& (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)
+		){
+		    //std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
+			worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH
+		}
 
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
 
@@ -6219,7 +6222,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		// Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
@@ -7144,19 +7147,22 @@ Context::calc_XFM(
 	SimTK::Real bondBend = getZMatrixBATValue(6, 1);
 	//SimTK::Transform XXX(SimTK::Rotation(-1.0 * (bondBend - (SimTK::Pi / 2.0)), SimTK::YAxis));
 	SimTK::Transform XXX;
-
-
-
 	SimTK::Transform XXXinv = ~XXX;
-
-	// New
 	SimTK::Transform X_FMspherical = SimTK::Transform()
 		* XXXinv
+	;
+
+	SimTK::Transform XXX_orthospherical;
+	SimTK::Transform XXXinv_orthospherical = ~XXX_orthospherical;
+	SimTK::Transform X_FMorthospherical = SimTK::Transform()
+		* XXXinv_orthospherical
 	;
 
 	// Return
 	if(mobility == SimTK::BondMobility::Mobility::Spherical){
 		return X_FMspherical;
+	}else if(mobility == SimTK::BondMobility::Mobility::OrthoSpherical){
+		return X_FMorthospherical;
 	}else{
 		return Transform();
 	}
@@ -7239,29 +7245,27 @@ Context::setAtoms_XFM(
 				//worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);				
 				//PrintTransform(mobod.getMobilizerTransform(someState), 6, "X_FMcurrent");
 
-
 				if(bond.getBondMobility(wIx) == SimTK::BondMobility::Mobility::Spherical)
 				{
 
 					// //mobod.getMatterSubsystem().getSystem().getSystemGuts().getVersion();
 					// //mobod.getMatterSubsystem().getSystem().getVersion();
 					// mobod.getMatterSubsystem().getSystem().realize(someState, SimTK::Stage::Position);
-
 					// //worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);
-
 					// mobod.setQToFitTransform(someState, X_FM);
 					// //someState.updQ()[1] = 0.1;
-					
 					// worlds[wIx].compoundSystem->realize(
 					// 	someState, SimTK::Stage::Position);
-
 					// //PrintTransform(mobod.getMobilizerTransform(someState),
 					// //	6, "X_FMafter");
-
 					// scout("mobodQ= ") << mobod.getQAsVector(someState) << eol;
 					// scout("stateQ= ") << someState.updQ() << eol;
 				
-				}				
+				}
+				
+				if(bond.getBondMobility(wIx) == SimTK::BondMobility::Mobility::OrthoSpherical){
+
+				}
 
 			}
 
@@ -7276,8 +7280,7 @@ Context::setAtoms_XFM(
 
 }
 
-/*! <!-- __no_desk__. 
- * --> */
+/*! <!-- __no_desk__. --> */
 std::vector<SimTK::Transform>
 Context::calc_XPF_XBM(
 	int wIx, Topology& topology,
@@ -7315,9 +7318,14 @@ Context::calc_XPF_XBM(
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
-	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(
-		childAIx, parentAIx);
+	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(childAIx, parentAIx);
 	SimTK::Transform X_childBC_parentBC = ~X_parentBC_childBC;
+
+	// Get parent-child BC transform
+	SimTK::Transform X_parentAtom_BC = topology.calcDefaultBondCenterFrameInParentAtomFrame(parentAIx, childAIx);
+	SimTK::Transform X_childAtom_BC = topology.calcDefaultBondCenterFrameInChildAtomFrame(parentAIx, childAIx);
+	SimTK::Transform X_BC_childAtom = ~X_childAtom_BC;
+
 
 	// Get Top frame
 	SimTK::Transform T_X_root = topology.getTopTransform_FromMap(childAIx);
@@ -7334,7 +7342,14 @@ Context::calc_XPF_XBM(
 	SimTK::Transform T_X_Proot = topology.getTopTransform_FromMap(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 	SimTK::Transform Proot_X_root = Proot_X_T * T_X_root;
-	
+
+	// Print parent-child BC transforms
+	std::string bondMbxs = std::to_string(int(parentAtomMbx)) + ":" + std::to_string(int(childAtomMbx));
+	SimTK::Test::PrintTransform(X_parentAtom_BC, 6, "parAt_BC:" + bondMbxs, "X_parAt_BC:" + bondMbxs);
+	SimTK::Test::PrintTransform(X_parentBC_childBC, 6, "parBC_chiBC:" + bondMbxs, "X_parBC_chiBC:" + bondMbxs);
+	SimTK::Test::PrintTransform(X_BC_childAtom, 6, "BC_chiAt:" + bondMbxs, "BC_chiAt:" + bondMbxs);
+	SimTK::Test::PrintTransform(Proot_X_root, 6, "Proot_X_root:" + bondMbxs, "Proot_X_root:" + bondMbxs);
+
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle =
 		topology.bgetDefaultInboardDihedralAngle(childAIx);
@@ -7371,6 +7386,7 @@ Context::calc_XPF_XBM(
 	SimTK::Real bondBend = getZMatrixBATValue(6, 1);
 	SimTK::Transform XXX;
 	//SimTK::Transform XXX(SimTK::Rotation(-1.0 * (bondBend - (SimTK::Pi / 2.0)), SimTK::YAxis));
+	SimTK::Transform XXXorthospherical;
 	SimTK::Transform XXXinv = ~XXX;
 
 	// Proot -> root -> parentBC -> chilBC=X -> Z
@@ -7381,6 +7397,14 @@ Context::calc_XPF_XBM(
 		* Y_to_Z
 		* XXX
 	;
+	// SimTK::Transform P_X_F_orthospheric = SimTK::Transform()
+	// 	* Proot_X_root 
+	// 	* X_parentBC_childBC
+	// 	//* X_to_Y
+	// 	//* Y_to_Z
+	// 	* XXXorthospherical
+	// ;
+	SimTK::Transform P_X_F_orthospheric = X_parentAtom_BC; // BAT from Compound
 
 	// Z -> X=childBC -> parentBC
 	SimTK::Transform M_X_B_spheric = SimTK::Transform()
@@ -7388,13 +7412,16 @@ Context::calc_XPF_XBM(
 		* Y_to_X
 		* X_childBC_parentBC
 	;
+	// SimTK::Transform M_X_B_orthospheric = SimTK::Transform()
+	// 	//* Z_to_Y
+	// 	//* Y_to_X
+	// 	* X_childBC_parentBC
+	// ;
+	SimTK::Transform M_X_B_orthospheric = X_parentBC_childBC * X_BC_childAtom; // BAT from Compound
+
 
 	SimTK::Transform B_X_M_spheric = ~M_X_B_spheric;
-	// SimTK::Transform B_X_M_spheric =
-	// 	X_parentBC_childBC
-	// 	* X_to_Z
-	// 	* XXXinv
-	// ;
+	SimTK::Transform B_X_M_orthospheric = ~M_X_B_orthospheric; 
 
 	// ------------------------------------------------------------------------
 
@@ -7413,6 +7440,8 @@ Context::calc_XPF_XBM(
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
 		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // OrthoSpherical
+		return std::vector<SimTK::Transform> {P_X_F_orthospheric, B_X_M_orthospheric};
 	} else {
 		warn("Warning: unknown mobility");
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
@@ -9231,8 +9260,8 @@ void Context::Print_TRANSFORMERS_Work(void)
 						SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
 
 						std::cout << parentMbx <<" " << grandMbx <<" "
-							<< getMobility(rootMobilities[wIx][topoIx]) <<" "
-							<< rootMobilities[wIx][topoIx] <<" ";
+							<< getMobility(rootMobilitiesStr[wIx][topoIx]) <<" "
+							<< rootMobilitiesStr[wIx][topoIx] <<" ";
 						
 						wIx++;
 					} ceol;
