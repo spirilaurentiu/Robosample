@@ -1098,9 +1098,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				int numUs = mobod.getNumU(someState);
 
-				// world->getMyContext()->getMobility(rootMobilities[wIx][topoIx]) <<" "
-				// 			<< rootMobilities[wIx][topoIx];
-
 				int localQIndex = -1;
 				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
@@ -1123,12 +1120,12 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 						int zMatRow = int(mbx) - 1;
 
-						if(
-							   (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6)
-							|| (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2)   
-						  ){ // zMatRow == 3
+						if(do_SliderStretch){
 
-							if(do_SliderStretch){
+							if(		(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6)
+								||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2)
+								){ // zMatRow == 3
+
 								if(numUs == 3){
 									if(localQIndex == 2){
 										stateQs[qIx] += BONDLengths[zMatRow] * ((scaleFactor) - 1);
@@ -1144,9 +1141,17 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 								}
 
 								J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
-							}
 
-							if(do_AngleStretch){
+							} // __end__ which bodies do we stretch
+
+						} // __end__ bond stretch
+
+						if(do_AngleStretch){
+
+							if(		(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6)
+								||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2)
+								){ // zMatRow == 3
+
 								if(numUs == 3){
 									if(localQIndex == 0){
 										stateQs[qIx] += ANGLEBends[zMatRow] * ((scaleFactor) - 1);
@@ -1156,12 +1161,13 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 										stateQs[qIx] += ANGLEBends[zMatRow] * ((scaleFactor) - 1);
 									}
 								}
-							}
 
-						}
+							} // __end__ which bodies do we stretch
 
-					}
-			}
+						} // __end__ angle stretch
+
+					} // __end__ qIx
+			} // __end__ mbx
 
 			# pragma endregion REBAS_TEST
 
