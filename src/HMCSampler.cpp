@@ -1054,16 +1054,16 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		if(testingMode){
 			# pragma region REBAS_TEST
-			TestingWays testingWay = TestingWays::ALTERNATIVE;						// BY_THERMO
+			TestingWays testingWay = TestingWays::ALTERNATIVE;						// ALTERNATIVE
 			std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
 
 			if(testingWay == TestingWays::CONSTANT){
 				scaleFactor = 1.25;
 
-			}else if(testingWay == TestingWays::ALTERNATIVE){ 				
+			}else if(testingWay == TestingWays::ALTERNATIVE){
 
-				if(this->nofSamples % 2){scaleFactor = 0.80;}
-				else					{scaleFactor = 1.25;}
+				if(this->nofSamples % 2){scaleFactor = 1.0;}
+				else					{scaleFactor = 1.0;}
 
 			}else if(testingWay == TestingWays::BY_THERMO){
 
@@ -1098,13 +1098,15 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				int numUs = mobod.getNumU(someState);
 
+				const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
+				const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
+			
 				int localQIndex = -1;
 				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 					qIx++ ){
 						localQIndex++;
-						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
-						const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
+
 						
 						bool do_SliderStretch = false;
 						bool do_AngleStretch = false;

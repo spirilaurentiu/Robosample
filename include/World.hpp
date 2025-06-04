@@ -705,6 +705,7 @@ public:
 	const SimTK::Vector & getAdvancedUs();
 
 	void PrintBATFromSimbody() const;
+	void calcSimbodyBAT_TODEL(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
 	void calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
 
 

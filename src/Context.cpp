@@ -5984,7 +5984,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		if(false || (wIx == 2) //&& (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)
 		){
 		    //std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
-			worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH
+			//worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH
 		}
 
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
