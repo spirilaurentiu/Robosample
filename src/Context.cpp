@@ -4771,7 +4771,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	bool testingMode = true; 
+	bool testingMode = false; 
 
 	if(testingMode){
 		# pragma region REBAS_TEST
@@ -5963,11 +5963,11 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		// Transfer coordinates to the next world
 		if(thWCnt == 0){
-			std::cout << "Transfer coordinates from replica " << replicaIx << " thermoState " << thermoIx << " to world " << thermoWorldIxs.front() << std::endl;
+			//std::cout << "Transfer coordinates from replica " << replicaIx << " thermoState " << thermoIx << " to world " << thermoWorldIxs.front() << std::endl;
 			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
 			transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
 		}else{
-			std::cout << "Transfer coordinates from world " << thermoWorldIxs[thWCnt - 1] << " to world " << wIx << std::endl;
+			//std::cout << "Transfer coordinates from world " << thermoWorldIxs[thWCnt - 1] << " to world " << wIx << std::endl;
 			transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 			transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
 		}
@@ -6222,7 +6222,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		// Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
@@ -7322,10 +7322,9 @@ Context::calc_XPF_XBM(
 	SimTK::Transform X_childBC_parentBC = ~X_parentBC_childBC;
 
 	// Get parent-child BC transform
-	SimTK::Transform X_parentAtom_BC = topology.calcDefaultBondCenterFrameInParentAtomFrame(parentAIx, childAIx);
-	SimTK::Transform X_childAtom_BC = topology.calcDefaultBondCenterFrameInChildAtomFrame(parentAIx, childAIx);
-	SimTK::Transform X_BC_childAtom = ~X_childAtom_BC;
-
+	SimTK::Transform X_parentAtom_BCpar = topology.calcDefaultBondCenterFrameInParentAtomFrame(parentAIx, childAIx);
+	SimTK::Transform X_childAtom_BCchi = topology.calcDefaultBondCenterFrameInChildAtomFrame(parentAIx, childAIx);
+	SimTK::Transform X_BCchi_childAtom = ~X_childAtom_BCchi;
 
 	// Get Top frame
 	SimTK::Transform T_X_root = topology.getTopTransform_FromMap(childAIx);
@@ -7345,10 +7344,10 @@ Context::calc_XPF_XBM(
 
 	// Print parent-child BC transforms
 	std::string bondMbxs = std::to_string(int(parentAtomMbx)) + ":" + std::to_string(int(childAtomMbx));
-	SimTK::Test::PrintTransform(X_parentAtom_BC, 6, "parAt_BC:" + bondMbxs, "X_parAt_BC:" + bondMbxs);
-	SimTK::Test::PrintTransform(X_parentBC_childBC, 6, "parBC_chiBC:" + bondMbxs, "X_parBC_chiBC:" + bondMbxs);
-	SimTK::Test::PrintTransform(X_BC_childAtom, 6, "BC_chiAt:" + bondMbxs, "BC_chiAt:" + bondMbxs);
-	SimTK::Test::PrintTransform(Proot_X_root, 6, "Proot_X_root:" + bondMbxs, "Proot_X_root:" + bondMbxs);
+	// SimTK::Test::PrintTransform(X_parentAtom_BCpar, 6, "parAt_BC:" + bondMbxs, "X_parAt_BC:" + bondMbxs);
+	// SimTK::Test::PrintTransform(X_parentBC_childBC, 6, "parBC_chiBC:" + bondMbxs, "X_parBC_chiBC:" + bondMbxs);
+	// SimTK::Test::PrintTransform(X_BCchi_childAtom, 6, "BC_chiAt:" + bondMbxs, "BC_chiAt:" + bondMbxs);
+	// SimTK::Test::PrintTransform(Proot_X_root, 6, "Proot_X_root:" + bondMbxs, "Proot_X_root:" + bondMbxs);
 
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle =
@@ -7397,31 +7396,20 @@ Context::calc_XPF_XBM(
 		* Y_to_Z
 		* XXX
 	;
-	// SimTK::Transform P_X_F_orthospheric = SimTK::Transform()
-	// 	* Proot_X_root 
-	// 	* X_parentBC_childBC
-	// 	//* X_to_Y
-	// 	//* Y_to_Z
-	// 	* XXXorthospherical
-	// ;
-	SimTK::Transform P_X_F_orthospheric = X_parentAtom_BC; // BAT from Compound
-
+	
 	// Z -> X=childBC -> parentBC
 	SimTK::Transform M_X_B_spheric = SimTK::Transform()
 		* Z_to_Y
 		* Y_to_X
 		* X_childBC_parentBC
 	;
-	// SimTK::Transform M_X_B_orthospheric = SimTK::Transform()
-	// 	//* Z_to_Y
-	// 	//* Y_to_X
-	// 	* X_childBC_parentBC
-	// ;
-	SimTK::Transform M_X_B_orthospheric = X_parentBC_childBC * X_BC_childAtom; // BAT from Compound
-
 
 	SimTK::Transform B_X_M_spheric = ~M_X_B_spheric;
-	SimTK::Transform B_X_M_orthospheric = ~M_X_B_orthospheric; 
+
+	// OrthoSpherical ==========================================================
+	SimTK::Transform P_X_F_orthospheric = X_parentAtom_BCpar; // BAT from Compound
+	SimTK::Transform M_X_B_orthospheric = X_parentBC_childBC * X_BCchi_childAtom; // BAT from Compound
+	SimTK::Transform B_X_M_orthospheric = ~M_X_B_orthospheric; // X_childAtom_BC * X_childBC_parentBC;
 
 	// ------------------------------------------------------------------------
 

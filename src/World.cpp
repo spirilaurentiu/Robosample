@@ -1931,7 +1931,7 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 		ZMatrix.resize(matter->getNumBodies() - 1, std::vector<int>(4, -1));
 	}
 
-	bool printTransforms = true;
+	bool printTransforms = false;
 
 	for (SimTK::MobilizedBodyIndex childMbx(1); childMbx < matter->getNumBodies(); ++childMbx){
 		childIx = int(childMbx);
@@ -1954,7 +1954,9 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 		}
 
 		// Print out the indices
-		std::cout << "World " << ownWorldIndex << " " << "child " << childIx << " " << "parent " << parentIx << " " << "parPar " << grandIx << " " << "grandGrandIx " << grandGrandIx << " " << std::endl << std::flush;
+		if(printTransforms){
+			std::cout << "World " << ownWorldIndex << " " << "child " << childIx << " " << "parent " << parentIx << " " << "parPar " << grandIx << " " << "grandGrandIx " << grandGrandIx << " " << std::endl << std::flush;
+		}
 
 		// BOND ==============
 		const Transform& B_X_Fb = childMobod.getInboardFrame(advState);
@@ -1982,8 +1984,6 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 			SimTK::Test::PrintTransform(Fb_X_Mb, 6, "Fb_X_Mb", "Fb_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
 			SimTK::Test::PrintTransform(C_X_Mb, 6, "C_X_Mb", "C_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
 		}
-
-std::cout << std::flush;
 
 		if(int(childMbx) > 1){ // ANGLE ========================
 			const SimTK::MobilizedBody& grandMobod = parentMobod.getParentMobilizedBody();
@@ -2020,7 +2020,6 @@ std::cout << std::flush;
 				SimTK::Test::PrintTransform(Fa_X_Ma, 6, "Fa_X_Ma", "Fa_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandMbx)));
 				SimTK::Test::PrintTransform(B_X_Ma, 6, "B_X_Ma", "B_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
 			}
-std::cout << std::flush;
 
 			if(int(childMbx) > 2){ // TORSION =======================
 				const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
@@ -2073,8 +2072,6 @@ std::cout << std::flush;
 					SimTK::Test::PrintTransform(A_X_Mt, 6, "A_X_Mt", "A_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
 				}
 
-std::cout << std::flush;
-
 			}
 		}
 
@@ -2084,12 +2081,13 @@ std::cout << std::flush;
 	} // _end_ for mbx
 
 	// Print
-	for (int BOIx = 0; BOIx < BONDLengths.size(); BOIx++){
-		std::cout << "ZMatrixBATSimbody:"
-			<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
-			<<" "<< BONDLengths[BOIx] << " " << ANGLEBends[BOIx] << " " << TORSIONAngles[BOIx] << std::endl;
+	if(printTransforms){
+		for (int BOIx = 0; BOIx < BONDLengths.size(); BOIx++){
+			std::cout << "ZMatrixBATSimbody:"
+				<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
+				<<" "<< BONDLengths[BOIx] << " " << ANGLEBends[BOIx] << " " << TORSIONAngles[BOIx] << std::endl;
+		}
 	}
-std::cout << std::flush;
 
 
 }
@@ -2103,6 +2101,7 @@ void World::calcSimbodyBAT_TODEL(
 	std::vector<SimTK::Real>& TORSIONAngles)
 {
 
+	/*
 	SimTK::State& advState = integ->updAdvancedState();
 
 	bool parFlag = false;
@@ -2227,7 +2226,7 @@ void World::calcSimbodyBAT_TODEL(
 	// 		<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
 	// 		<<" "<< BONDLengths[BOIx] << " " << ANGLEBends[BOIx] << " " << TORSIONAngles[BOIx] << std::endl;
 	// }
-
+	*/
 }
 
 

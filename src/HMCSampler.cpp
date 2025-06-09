@@ -992,7 +992,9 @@ std::vector<double>& HMCSampler::dihedralSegmenter(int nofIntervals, double segH
 /*! <!-- Find the segment index for a given value
  * @param value Value to find the segment for
  * @param segLims Segment limits
- * @return Index of the segment containing the value, or -1 if not found --> */
+ * @return Index of the segment containing the value, or -1 if not found
+ * ((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)) // favorable segments
+ * --> */
 int HMCSampler::findSegmentIndex(double value, const std::vector<double>& segLims) {
     for (size_t i = 0; i < segLims.size() - 1; ++i) {
         if (value >= segLims[i] && value < segLims[i + 1]) {
@@ -1044,7 +1046,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		SimTK::Real scaleFactor = 1;			
 
-		bool testingMode = true; // Are we doing temperature scaling
+		bool testingMode = false; // Are we doing temperature scaling
 		enum TestingWays {
 			CONSTANT,
 			ALTERNATIVE,
@@ -1062,8 +1064,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 			}else if(testingWay == TestingWays::ALTERNATIVE){
 
-				if(this->nofSamples % 2){scaleFactor = 1.0;}
-				else					{scaleFactor = 1.0;}
+				if(this->nofSamples % 2){scaleFactor = 1.25;}
+				else					{scaleFactor = 0.80;}
 
 			}else if(testingWay == TestingWays::BY_THERMO){
 
@@ -1107,7 +1109,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 					qIx++ ){
 						localQIndex++;
 
-						
 						bool do_SliderStretch = false;
 						bool do_AngleStretch = false;
 						bool doTorsionStretch = false;
@@ -1124,9 +1125,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 						if(do_SliderStretch){
 
-							if(		(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6)
-								||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2)
-								){ // zMatRow == 3
+							if(	(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) ||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2) 
+							){
+								SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
+								std::cout << "check bond " << BONDLengths[zMatRow] <<" "<< X_BM.p().norm() << std::endl;
+								std::cout << "B Bmean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl;
 
 								if(numUs == 3){
 									if(localQIndex == 2){
@@ -1145,27 +1148,28 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 								J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
 							} // __end__ which bodies do we stretch
-
 						} // __end__ bond stretch
 
 						if(do_AngleStretch){
 
-							if(		(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6)
-								||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2)
-								){ // zMatRow == 3
+							if( (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) 
+							||  (int(mbx) == 7) || (int(mbx) == 8) // || (int(mbx) == 2)
+							){
+								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (*prev_PFrs_means)[int(mbx)];
+								std::cout << "check angle " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
+								std::cout << "A Amean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< SimTK::Pi - (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
 
 								if(numUs == 3){
 									if(localQIndex == 0){
 										stateQs[qIx] += ANGLEBends[zMatRow] * ((scaleFactor) - 1);
 									}
-								}else if(numUs == 0){
+								}else if(numUs == 2){
 									if(localQIndex == 0){
 										stateQs[qIx] += ANGLEBends[zMatRow] * ((scaleFactor) - 1);
 									}
 								}
 
 							} // __end__ which bodies do we stretch
-
 						} // __end__ angle stretch
 
 					} // __end__ qIx
@@ -1180,14 +1184,16 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 			int nofScaledBMs = 0;
 			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+				int numUs = mobod.getNumU(someState);
+				const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
+				const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
 
 				int localQIndex = -1;
 				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
 					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 					qIx++ ){
 					localQIndex++;
-					const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
-					const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
+
 
 					if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
 
@@ -1218,36 +1224,67 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 					}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_6){
 
 						bool do_SliderStretch = false;
-						bool do_TorsionMapping = true;
+						bool do_AngleStretch = false;
+						bool doTorsionStretch = false;
+						bool do_TorsionMapping = false;
+
+						if(numUs > 0){
+							do_SliderStretch = true;
+						}
+						if(numUs > 1){
+							do_AngleStretch = true;
+						}
 
 						int zMatRow = int(mbx) - 1;
 
-						// All Slider stretch hardcoded for ethane
-						if(do_SliderStretch && (matter->getNumBodies() == 9)){
-							if((zMatRow == 3) || (zMatRow == 4) || (zMatRow == 5) || // hydrogens
-							   (zMatRow == 6) || (zMatRow == 7) || (zMatRow == 1) || // hydrogens
-							   (zMatRow == 2) // carbons
-								){
+						if(do_SliderStretch){
 
+							if(	(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) ||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2) 
+							){
 								SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
-								//std::cout << "B Bmean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl << std::flush;
+								// std::cout << "check bond " << BONDLengths[zMatRow] <<" "<< X_BM.p().norm() << std::endl;
+								// std::cout << "B Bmean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl;
 
-								stateQs[qIx] = dBMp_local * ((scaleFactor - 1));
-							}
-						}
-
-						// Torsion mapping
-						if(do_TorsionMapping && (matter->getNumBodies() == 3)){
-							if((zMatRow == 1)){
-								int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
-								if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){ // favorable region
-									;
-								}else{
-									;
+								if(numUs == 3){
+									if(localQIndex == 2){
+										stateQs[qIx] = dBMp_local * ((scaleFactor - 1));
+									}
+								}else if(numUs == 2){
+									if(localQIndex == 1){
+										stateQs[qIx] = dBMp_local * ((scaleFactor - 1));
+									}
+								}else if(numUs == 1){
+									if(localQIndex == 0){
+										stateQs[qIx] = dBMp_local * ((scaleFactor - 1));
+									}
 								}
-							}
-						}
 
+								J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
+
+							} // __end__ which bodies do we stretch
+						} // __end__ bond stretch
+
+						if(do_AngleStretch){
+
+							if( (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) 
+							||  (int(mbx) == 7) || (int(mbx) == 8) // || (int(mbx) == 2)
+							){
+								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (*prev_PFrs_means)[int(mbx)];
+								// std::cout << "check angle " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
+								// std::cout << "A Amean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< SimTK::Pi - (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
+
+								if(numUs == 3){
+									if(localQIndex == 0){
+										stateQs[qIx] = dPFr_local * ((scaleFactor - 1));
+									}
+								}else if(numUs == 2){
+									if(localQIndex == 0){
+										stateQs[qIx] = dPFr_local * ((scaleFactor - 1));
+									}
+								}
+
+							} // __end__ which bodies do we stretch
+						} // __end__ angle stretch
 
 					}else{ // __end__ BENDSTRETCH_6
 						warnflush("Unknown scaling method");
