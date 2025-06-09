@@ -1038,7 +1038,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
 
-		// std::cout << " w " << this->world->getOwnIndex() << " scaleF " << this->QScaleFactor << "\n";
+		//std::cout << " w " << this->world->getOwnIndex() << " scaleF " << this->QScaleFactor << "\n";
 
 		if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
 
@@ -1228,9 +1228,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 						bool doTorsionStretch = false;
 						bool do_TorsionMapping = false;
 
-						if(numUs > 0){
-							do_SliderStretch = true;
-						}
+						//if(numUs > 0){
+						//	do_SliderStretch = true;
+						//}
 						if(numUs > 1){
 							do_AngleStretch = true;
 						}
@@ -1266,10 +1266,12 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 						if(do_AngleStretch){
 
-							if( (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) 
-							||  (int(mbx) == 7) || (int(mbx) == 8) // || (int(mbx) == 2)
+							if( (int(mbx) == 4) 
+							//			|| (int(mbx) == 5) || (int(mbx) == 6) 
+							//||  (int(mbx) == 7)
+							//			|| (int(mbx) == 8) // || (int(mbx) == 2)
 							){
-								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (*prev_PFrs_means)[int(mbx)];
+								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (SimTK::Pi - (*prev_PFrs_means)[int(mbx)]);
 								// std::cout << "check angle " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
 								// std::cout << "A Amean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< SimTK::Pi - (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
 
