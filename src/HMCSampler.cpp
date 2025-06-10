@@ -1046,7 +1046,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		SimTK::Real scaleFactor = 1;			
 
-		bool testingMode = false; // Are we doing temperature scaling
+		bool testingMode = true; // Are we doing temperature scaling
 		enum TestingWays {
 			CONSTANT,
 			ALTERNATIVE,
@@ -1125,7 +1125,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 						if(do_SliderStretch){
 
-							if(	(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) ||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2) 
+							//if(	(int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) ||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2) 
+							if(true
 							){
 								SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
 								std::cout << "check bond " << BONDLengths[zMatRow] <<" "<< X_BM.p().norm() << std::endl;
@@ -1152,8 +1153,9 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 						if(do_AngleStretch){
 
-							if( (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) 
-							||  (int(mbx) == 7) || (int(mbx) == 8) // || (int(mbx) == 2)
+							// if( (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) 
+							// ||  (int(mbx) == 7) || (int(mbx) == 8) // || (int(mbx) == 2)
+							if(true
 							){
 								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (*prev_PFrs_means)[int(mbx)];
 								std::cout << "check angle " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
@@ -1849,9 +1851,15 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 	if(this->integratorType == IntegratorType::VERLET){
 
 		if (!useNUTS) {
-			world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
-			system->realize(someState, SimTK::Stage::Position);
-			return;
+
+			try{
+				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
+				system->realize(someState, SimTK::Stage::Position);
+				return;
+			}catch(const std::exception&){
+				proposeExceptionCaught = true;
+				assignConfFromSetTVector(someState);
+        	}
 		}
 
 		try {

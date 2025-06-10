@@ -4771,7 +4771,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	bool testingMode = false; 
+	bool testingMode = true; 
 
 	if(testingMode){
 		# pragma region REBAS_TEST
@@ -6222,7 +6222,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		// Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		//Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
