@@ -1811,8 +1811,6 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 
 		//std::cout << "ke_prop_nma6 " << ke_prop_nma6 << "\n";
 
-
-
 	}
 
 	// Set state velocities
@@ -6170,7 +6168,8 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms(); ++aIx){
 
 			// Is this atom a root atom for a body
-			if(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm) != 0) {
+			//if(std::abs(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm).norm()) > 0.000001) {
+			if((topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm)) != 0) {
 				continue;
 			}
 
@@ -6188,7 +6187,9 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 			if(parentMbx == 0) continue; // Ground
 
 			// Get the neighbor atom in the parent mobilized body
-			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
+			//std::cout << "HMCSampler::calcMobodsMBAT aIx " << int(aIx) << std::flush;
+			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
+			//std::cout << " chemParentAIx " << int(chemParentAIx) << std::endl << std::flush;
 
 			// Skip if no parent
 			if (chemParentAIx.isValid() && chemParentAIx.isValidExtended()) {
