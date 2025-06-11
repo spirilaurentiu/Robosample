@@ -1931,7 +1931,7 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 		ZMatrix.resize(matter->getNumBodies() - 1, std::vector<int>(4, -1));
 	}
 
-	bool printTransforms = false;
+	bool printTransforms = true;
 
 	for (SimTK::MobilizedBodyIndex childMbx(1); childMbx < matter->getNumBodies(); ++childMbx){
 		childIx = int(childMbx);
