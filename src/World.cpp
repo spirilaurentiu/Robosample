@@ -1979,10 +1979,10 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 			//SimTK::Test::PrintTransform(G_X_Mb, 6, "G_X_Mb", "G_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
 			//SimTK::Test::PrintTransform(G_X_Fb, 6, "G_X_Fb", "G_X_Fb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
 			SimTK::Test::PrintTransform(G_X_B, 6, "G_X_B", "G_X_B:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
-			SimTK::Test::PrintTransform(B_X_C, 6, "B_X_C", "B_X_C:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
-			SimTK::Test::PrintTransform(B_X_Fb, 6, "B_X_Fb", "B_X_Fb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
-			SimTK::Test::PrintTransform(Fb_X_Mb, 6, "Fb_X_Mb", "Fb_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
-			SimTK::Test::PrintTransform(C_X_Mb, 6, "C_X_Mb", "C_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(B_X_C, 6, "B_X_C", "B_X_C:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(B_X_Fb, 6, "B_X_Fb", "B_X_Fb:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(Fb_X_Mb, 6, "Fb_X_Mb", "Fb_X_Mb:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(C_X_Mb, 6, "C_X_Mb", "C_X_Mb:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
 		}
 
 		if(int(childMbx) > 1){ // ANGLE ========================
@@ -2015,10 +2015,10 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 				// SimTK::Test::PrintTransform(G_X_Ma, 6, "G_X_Ma", "G_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
 				// SimTK::Test::PrintTransform(G_X_Fa, 6, "G_X_Fa", "G_X_Fa:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
 				SimTK::Test::PrintTransform(G_X_A, 6, "G_X_A", "G_X_A:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandIx)));
-				SimTK::Test::PrintTransform(A_X_B, 6, "A_X_B", "A_X_B:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
-				SimTK::Test::PrintTransform(A_X_Fa, 6, "A_X_Fa", "A_X_Fa:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandMbx)));
-				SimTK::Test::PrintTransform(Fa_X_Ma, 6, "Fa_X_Ma", "Fa_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandMbx)));
-				SimTK::Test::PrintTransform(B_X_Ma, 6, "B_X_Ma", "B_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(A_X_B, 6, "A_X_B", "A_X_B:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(A_X_Fa, 6, "A_X_Fa", "A_X_Fa:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(Fa_X_Ma, 6, "Fa_X_Ma", "Fa_X_Ma:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(B_X_Ma, 6, "B_X_Ma", "B_X_Ma:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
 			}
 
 			if(int(childMbx) > 2){ // TORSION =======================
@@ -2066,10 +2066,10 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 					//SimTK::Test::PrintTransform(G_X_Mt, 6, "G_X_Mt", "G_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
 					//SimTK::Test::PrintTransform(G_X_Ft, 6, "G_X_Ft", "G_X_Ft:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
 					SimTK::Test::PrintTransform(G_X_T, 6, "G_X_T", "G_X_T:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
-					SimTK::Test::PrintTransform(T_X_A, 6, "T_X_A", "T_X_A:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
-					SimTK::Test::PrintTransform(T_X_Ft, 6, "T_X_Ft", "T_X_Ft:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
-					SimTK::Test::PrintTransform(Ft_X_Mt, 6, "Ft_X_Mt", "Ft_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
-					SimTK::Test::PrintTransform(A_X_Mt, 6, "A_X_Mt", "A_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(T_X_A, 6, "T_X_A", "T_X_A:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
+					SimTK::Test::PrintTransform(T_X_Ft, 6, "T_X_Ft", "T_X_Ft:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
+					SimTK::Test::PrintTransform(Ft_X_Mt, 6, "Ft_X_Mt", "Ft_X_Mt:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
+					SimTK::Test::PrintTransform(A_X_Mt, 6, "A_X_Mt", "A_X_Mt:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
 				}
 
 			}
