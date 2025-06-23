@@ -80,30 +80,89 @@ if args.type == 'tdnr':
 elif args.type == 'tdc':
 	# Do torsional dynamics - correlated dihedrals
 
-	# Cluster the previous simulations
+	# # Cluster the previous simulations
 	stats = batstat.BATCorrelations(args.prmtop, args.inpcrd)
-	correlation_file = f"{args.pdbid}_6000_correlation.npy"
+	atom_indices = stats.get_dihedral_atom_indices()
+	# correlation_file = f"{args.pdbid}_6000_correlation.npy"
 
-	if os.path.exists(correlation_file):
-		corr = np.load(correlation_file)
-	else:
-		dcd_files = [f"{args.pdbid}_{i}.dcd" for i in range(5)]
-		stats.compute_dihedrals_from_dcd(dcd_files)
-		corr = stats.compute_correlations()
-		np.save(correlation_file, corr)
+	# if os.path.exists(correlation_file):
+	# 	corr = np.load(correlation_file)
+	# else:
+	# 	dcd_files = [f"{args.pdbid}_{i}.dcd" for i in range(5)]
+	# 	stats.compute_dihedrals_from_dcd(dcd_files)
+	# 	corr = stats.compute_correlations()
+	# 	np.save(correlation_file, corr)
 
-	# Partition the dihedrals into blocks
-	blocks, samples_per_round = stats.dynamic_partitioning(np.mean(np.abs(corr), axis=0))
-	if args.spr_method == 'fixed':
-		samples_per_round = [1] * len(blocks)
-	# print("samples_per_round", samples_per_round)
+	# # Partition the dihedrals into blocks
+	# blocks, samples_per_round = stats.dynamic_partitioning(np.mean(np.abs(corr), axis=0))
+	# if args.spr_method == 'fixed':
+	# 	samples_per_round = [1] * len(blocks)
+	# # print("samples_per_round", samples_per_round)
+
+	# python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6000 10 100 1 300 1APQ tdc auto
+	blocks = [
+		# high correlation blocks
+		[0, 2, 3, 4, 8, 10, 11, 12, 13, 53, 55, 57, 58, 64, 65, 66, 89],
+		[73, 74, 75, 77, 78, 79, 80, 81, 82, 83, 85, 86, 87, 91, 92, 93, 94, 96, 97, 98, 99, 110],
+		[14, 15, 16, 18, 20, 21, 25, 28, 30, 31, 33, 34, 38, 40, 41, 42, 103, 107],
+		[49, 50, 51, 52, 67, 68, 71, 108, 109],
+
+		# low correlation block
+		[1, 5, 6, 9, 54, 56, 59, 60, 61, 62, 63, 76, 84, 88, 90, 95, 100, 101, 102, 104, 111, 7, 17, 19, 22, 23, 24, 26, 27, 29, 32, 35, 36, 37, 39, 43, 44, 45, 46, 47, 48, 69, 70, 72, 106]
+	]
+
+	# # flatten the blocks
+
+	# # add another block that contins all the non-correlated dihedrals
+	# uncorrelated_block = []
+	# for i in range(stats.num_dihe):
+	# 	if i not in [item for sublist in blocks for item in sublist]:
+	# 		uncorrelated_block.append(i)
+
+	blocks_as_bond_list = []
+	for block in blocks:
+		l = []
+		for b in block:
+			aix1 = stats.atom_indices[b][1]
+			aix2 = stats.atom_indices[b][2]
+			l.append([aix1, aix2])
+		blocks_as_bond_list.append(l)
+	blocks = blocks_as_bond_list
+
+	samples_per_round = [
+		0.3291,
+		0.1206,
+		0.3612,
+		0.1587,
+		0.1206*0.5 # adjust, this is for the non-correlated pairs
+	]
+
+	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6000 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
+	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6001 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
+	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6002 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
+	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6003 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
+	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6004 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
+	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6005 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
+
+	# normalize such that min(samples_per_round) = 1
+	min_samples = min(samples_per_round)
+	samples_per_round = [int(round(x / min_samples)) for x in samples_per_round]
+
+	# Add Cartesian flexors (OpenMM)
+	flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
+	context.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
 
 	# Create the flexors from the blocks
 	for block, num_samples in zip(blocks, samples_per_round):
 		flex = flexorObj.create_from_list(block, robosample.BondMobility.Torsion)
 		context.addWorld(True, num_samples, robosample.RootMobility.WELD, flex, True, False, 0)
 
-	for i in range(len(blocks)):
+	non_correlated_world_index = len(blocks) + 1
+	context.getWorld(1).setRollFlexibilities(True)
+
+	# Add samplers
+	context.getWorld(0).addSampler(robosample.SamplerName.HMC, robosample.IntegratorType.OMMVV, robosample.ThermostatName.ANDERSEN, False)
+	for i in range(1, len(blocks) + 1):
 		context.getWorld(i).addSampler(robosample.SamplerName.HMC, robosample.IntegratorType.VERLET, robosample.ThermostatName.ANDERSEN, True)
 
 	nof_replicas = 1
@@ -114,18 +173,18 @@ elif args.type == 'tdc':
 		temperatures.append(temperature + (i * 10))
 		boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
 
-	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] * (len(blocks))
-	timesteps = [0.0075] * len(blocks)
-	worldIndexes = range(len(blocks))
-	world_indexes = range(len(blocks))
-	mdsteps = [10] * len(blocks)
+	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] * (len(blocks) + 1)
+	timesteps = [0.0007] + [0.0075] * len(blocks)
+	worldIndexes = range(len(blocks) + 1)
+	world_indexes = range(len(blocks) + 1)
+	mdsteps = [10000] + [150] * len(blocks)
 	boost_md_steps = mdsteps
-	integrators = [robosample.IntegratorType.VERLET] * len(blocks)
+	integrators = [robosample.IntegratorType.OMMVV] + [robosample.IntegratorType.VERLET] * len(blocks)
 
-	distort_options = [0] * (len(blocks))
-	distort_args = ["0"] * (len(blocks))
-	flow = [0] * (len(blocks))
-	work = [0] * (len(blocks))
+	distort_options = [0] * (len(blocks) + 1)
+	distort_args = ["0"] * (len(blocks) + 1)
+	flow = [0] * (len(blocks) + 1)
+	work = [0] * (len(blocks) + 1)
 
 	for i in range(nof_replicas):
 		context.addReplica(i)

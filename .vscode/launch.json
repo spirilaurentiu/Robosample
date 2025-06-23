@@ -2,24 +2,40 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: Current File (Debug Robosample Library)",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/build",
+                "ROBOSAMPLE_DEBUG": "1"
+            },
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "1APQ.debug",
+                "1APQ.prmtop",
+                "1APQ_min.inpcrd",
+                "42",
+                "10",
+                "10",
+                "1",
+                "300",
+                "1APQ",
+                "tdnr",
+                "auto"
+            ],
+            "cwd": "${workspaceFolder}/build",
         },
         {
-            "name": "(gdb) Launch",
+            "name": "(gdb) Attach to Python",
             "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/robosample_d",
-            "args": ["12"],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build/",
-            "environment": [],
-            "externalConsole": false,
+            "request": "attach",
+            "program": "${env:CONDA_PREFIX}/bin/python",
+            "processId": "${command:pickProcess}",
             "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -31,7 +47,9 @@
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            "cwd": "${workspaceFolder}/build",
+            "stopAtEntry": false
         }
     ]
 }

@@ -1368,10 +1368,11 @@ SimTK::Real Context::OMMRef_calcPotential(const std::vector<std::vector<std::pai
 
 
 	//openMMState.getEnergies_drl_bon();
-	std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
+	if (verbose) {
+		std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
+	}
 
 	return refPotential;
-
 }
 
 /*!

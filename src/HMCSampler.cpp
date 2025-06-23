@@ -1380,111 +1380,108 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 	// }
 
 	if(this->integratorType == IntegratorType::VERLET){
-
-		if (!useNUTS) {
-			world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
-			system->realize(someState, SimTK::Stage::Position);
-			return;
-		}
-
 		try {
-
-			// Set up random 0 to 1 generator
-			std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
-
-			// Get initial momenta
-			SimTK::Vector p;
-			world->matter->multiplyByM(someState, someState.getU(), p);
-
-			Node CurrentNode;
-			CurrentNode.Q = someState.getQ();
-			CurrentNode.U = someState.getU();
-
-			int MaxDepth = 10;
-			std::map<int, Node> Trajectory; // Does not allow reserve
-			Trajectory[0] = CurrentNode;
-
-			bool found = false;
-
-			for (int depth = 0; depth < MaxDepth; depth++) {
-
-				bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
-				int endpoint = 0;
-				SimTK::Vector U, Q;
-
-				if (Direction == 0) {
-					// Forward
-					U = Trajectory.rbegin()->second.U;
-					Q = Trajectory.rbegin()->second.Q;
-
-					endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
-					// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
-				} else {
-					// Backward
-					U = Trajectory.begin()->second.U;
-					Q = Trajectory.begin()->second.Q;
-
-					endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
-					// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
-
-					if (Trajectory.begin()->first == 0) {
-						for (int i = 0; i < U.size(); i++) {
-							U[i] = -U[i];
-						}
-					}
-				}
-
-				// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
-
-				someState.updQ() = Q;
-				someState.updU() = U;
-				world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
+			if (!useNUTS) {
+				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
 				system->realize(someState, SimTK::Stage::Position);
 
-				// Check U-turn
-				const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
-				if (C < 0) {
-					// std::cout << "U-turn detected" << std::endl;
-					found = true;
-					break;
-				} else {
-					// std::cout << "No U-turn, C = " << C << std::endl;
 
-					Node NextNode;
-					NextNode.Q = someState.getQ();
-					NextNode.U = someState.getU();
-
-					// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
-					// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
-					// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
-
-					Trajectory.insert(std::make_pair(endpoint, NextNode));
-				}
+				// return;
 			}
 
-			if (found) {
-				std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
-			} else {
-				std::cout << "No U-turn detected" << std::endl;
-			}
+			// // Set up random 0 to 1 generator
+			// std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
 
-			// Chose randomly from the trajectory
-			std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
-			int index = uniformIntDistribution(randomEngine);
-			auto it = Trajectory.begin();
-			std::advance(it, index);
+			// // Get initial momenta
+			// SimTK::Vector p;
+			// world->matter->multiplyByM(someState, someState.getU(), p);
 
-			someState.updQ() = it->second.Q;
-			someState.updU() = it->second.U;
+			// Node CurrentNode;
+			// CurrentNode.Q = someState.getQ();
+			// CurrentNode.U = someState.getU();
 
-			system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
+			// int MaxDepth = 10;
+			// std::map<int, Node> Trajectory; // Does not allow reserve
+			// Trajectory[0] = CurrentNode;
+
+			// bool found = false;
+
+			// for (int depth = 0; depth < MaxDepth; depth++) {
+
+			// 	bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
+			// 	int endpoint = 0;
+			// 	SimTK::Vector U, Q;
+
+			// 	if (Direction == 0) {
+			// 		// Forward
+			// 		U = Trajectory.rbegin()->second.U;
+			// 		Q = Trajectory.rbegin()->second.Q;
+
+			// 		endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
+			// 		// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
+			// 	} else {
+			// 		// Backward
+			// 		U = Trajectory.begin()->second.U;
+			// 		Q = Trajectory.begin()->second.Q;
+
+			// 		endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
+			// 		// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
+
+			// 		if (Trajectory.begin()->first == 0) {
+			// 			for (int i = 0; i < U.size(); i++) {
+			// 				U[i] = -U[i];
+			// 			}
+			// 		}
+			// 	}
+
+			// 	// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+
+			// 	someState.updQ() = Q;
+			// 	someState.updU() = U;
+			// 	world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
+			// 	system->realize(someState, SimTK::Stage::Position);
+
+			// 	// Check U-turn
+			// 	const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
+			// 	if (C < 0) {
+			// 		// std::cout << "U-turn detected" << std::endl;
+			// 		found = true;
+			// 		break;
+			// 	} else {
+			// 		// std::cout << "No U-turn, C = " << C << std::endl;
+
+			// 		Node NextNode;
+			// 		NextNode.Q = someState.getQ();
+			// 		NextNode.U = someState.getU();
+
+			// 		// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
+			// 		// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
+			// 		// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+
+			// 		Trajectory.insert(std::make_pair(endpoint, NextNode));
+			// 	}
+			// }
+
+			// if (found) {
+			// 	std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
+			// } else {
+			// 	std::cout << "No U-turn detected" << std::endl;
+			// }
+
+			// // Chose randomly from the trajectory
+			// std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
+			// int index = uniformIntDistribution(randomEngine);
+			// auto it = Trajectory.begin();
+			// std::advance(it, index);
+
+			// someState.updQ() = it->second.Q;
+			// someState.updU() = it->second.U;
+
+			// system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
 
 		}catch(const std::exception&){
-
 			proposeExceptionCaught = true;
-
 			assignConfFromSetTVector(someState);
-
 		}
 
 	}else if(this->integratorType == IntegratorType::BOUND_WALK){
