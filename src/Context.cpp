@@ -12,10 +12,11 @@
  * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT
  * -->
 */
-Context::Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
+Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq)
 {
 	// Set the base name of the simulation
-	this->baseName = baseName + "_" + std::to_string(seed);
+	std::cout << "Context with base name: " << baseName + "_" + std::to_string(seed) << std::endl << std::flush;
+	this->baseName = baseName_arg + "_" + std::to_string(seed);
 
 	// Alert user of CUDA environment variables
 	if constexpr (OPENMM_PLATFORM_CUDA) {
@@ -47,6 +48,7 @@ Context::Context(const std::string& baseName, uint32_t seed, uint32_t threads, u
 
 	this->roundsTillReblock = nofRoundsTillReblock;
 	this->runType = runType;
+	std::cout << "Context::Context runType " << RUN_TYPE_MAP_INV.at(this->runType) << std::endl << std::flush;
 	this->swapEvery = swapFreq;
 	this->swapFixman = swapFixmanFreq;
 }
@@ -921,7 +923,7 @@ void Context::addBiotypes() {
 void Context::loadAmberSystem(const std::string& prmtop, const std::string& inpcrd) {
 	
 	// Load Amber files
-	std::cout << "Context: Loading Amber files: " << prmtop << " " << inpcrd << std::endl;
+	std::cout << "Context: Loading Amber files: " << prmtop << " " << inpcrd << std::endl << std::flush;
 	AmberReader reader;
 	reader.readAmberFiles(inpcrd, prmtop);
 
@@ -1042,13 +1044,52 @@ void Context::Initialize() {
 	//OMMRef_calcPotential(true, true);
 }
 
-/*! __refOMM__
- * <!-- Initialize OpenMM -->
-*/
+
 #ifndef tracerefOMM
 #define tracerefOMM(msg) std::cout<<__FILE__<<":"<<__LINE__<<" __refOMM__ "<<msg<<std::endl<<std::flush;
 #endif
 
+const double TOL = 1e-6;
+
+std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(
+	double a_length, double b_length, double c_length,
+    double alpha, double beta, double gamma)
+{
+    
+		// Compute the box vectors
+    OpenMM::Vec3 a(a_length, 0.0, 0.0);
+
+    OpenMM::Vec3 b(b_length * std::cos(gamma),
+           b_length * std::sin(gamma),
+           0.0);
+
+    double cx = c_length * std::cos(beta);
+    double cy = c_length * (std::cos(alpha) - std::cos(beta) * std::cos(gamma)) / std::sin(gamma);
+    double cz = std::sqrt(c_length * c_length - cx * cx - cy * cy);
+
+    OpenMM::Vec3 c(cx, cy, cz);
+
+    // Zero out small components
+    for (int i = 0; i < 3; i++) {
+        if (std::abs(a[i]) < TOL) a[i] = 0.0;
+        if (std::abs(b[i]) < TOL) b[i] = 0.0;
+        if (std::abs(c[i]) < TOL) c[i] = 0.0;
+    }
+
+    // Reduced form (OpenMM requirement)
+    if (b[1] != 0.0)
+        c -= b * std::round(c[1] / b[1]);
+    if (a[0] != 0.0)
+        c -= a * std::round(c[0] / a[0]);
+    if (a[0] != 0.0)
+        b -= a * std::round(b[0] / a[0]);
+
+    return std::make_tuple(a, b, c);
+}
+
+
+
+/*! __refOMM__ <!-- Initialize OpenMM --> */
 std::string Context::OMMRef_initialize(void)
 {
 		// TODO DELETE
@@ -1070,6 +1111,36 @@ std::string Context::OMMRef_initialize(void)
 	
 		// Allocate OpenMM system and add particles to it
 		openMMSystem = std::make_unique<OpenMM::System>();
+
+                    // ----------------------------------------------
+                    // PBC - Periodic Boundary Conditions __begin__
+                    // ----------------------------------------------
+                    #ifdef __PBC__ // _pbc_
+
+						double angle_alpha = 1.5708;
+						double angle_beta = 1.5708;
+						double angle_gamma = 1.5708;
+
+						double boxLength_X = 10; // Example box length in angstroms
+						double boxLength_Y = 10; // Example box length in angstroms
+						double boxLength_Z = 10; // Example box length in angstroms
+
+						auto periodicBoxVectors = computePeriodicBoxVectors_Context(
+							boxLength_X, boxLength_Y, boxLength_Z,
+							angle_alpha, angle_beta, angle_gamma);
+
+						OpenMM::Vec3 pbcVector_X = std::get<0>(periodicBoxVectors);
+						OpenMM::Vec3 pbcVector_Y = std::get<1>(periodicBoxVectors);
+						OpenMM::Vec3 pbcVector_Z = std::get<2>(periodicBoxVectors);
+
+						openMMSystem->setDefaultPeriodicBoxVectors(pbcVector_X, pbcVector_Y, pbcVector_Z);
+
+					# endif
+					// ----------------------------------------------
+					// PBC - Periodic Boundary Conditions __end__
+					// ----------------------------------------------		
+
+
 		for (auto atom : atoms) {
 			openMMSystem->addParticle(atom.getMass());
 			//tracerefOMM("System added particle with mass " << atom.getMass());
@@ -1077,6 +1148,7 @@ std::string Context::OMMRef_initialize(void)
 	
 		// Nonbonded forces
 		ommNonbondedForce->setNonbondedMethod( OpenMM::NonbondedForce::NonbondedMethod( nonbondedMethod ) );
+		std::cout<<"Context::OMMRef_initialize setNonbondedMethod "<<nonbondedMethod<<std::endl<<std::flush;
 		ommNonbondedForce->setCutoffDistance( nonbondedCutoff );
 		// nonbondedForce->setUseSwitchingFunction( 0 );
 
@@ -1709,9 +1781,9 @@ void Context::addWorld(
 	}
 
 	// Allocate root mobilities
-	rootMobilities.push_back({});
+	rootMobilitiesStr.push_back({});
 	for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
-		rootMobilities.back().push_back("Rigid");
+		rootMobilitiesStr.back().push_back("Rigid");
 	}
 
 	// Print mobilities
@@ -1740,7 +1812,7 @@ void Context::addWorld(
 
 			std::cout << "Set root mobilities -1=" << flex.i << " molecule " << molIx <<" at atom " << flex.j <<" to " << flex.mobility << std::endl;
 
-			(rootMobilities.back())[molIx] = inverseMobilityMap[flex.mobility];
+			(rootMobilitiesStr.back())[molIx] = inverseMobilityMap[flex.mobility];
 
 		} // found a root mobility
 	} // every flexibility
@@ -3657,7 +3729,7 @@ void Context::modelOneEmbeddedTopology(
 	worlds[whichWorld].compoundSystem->modelOneCompound(
 		SimTK::CompoundSystem::CompoundIndex(whichTopology),
 		atomFrameCache,
-		SimTK::String(rootMobilities[whichWorld][whichTopology])
+		SimTK::String(rootMobilitiesStr[whichWorld][whichTopology])
 		);
 
 	// Get the forcefield within this world
@@ -4700,7 +4772,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	bool testingMode = false; 
+	bool testingMode = true; 
 
 	if(testingMode){
 		# pragma region REBAS_TEST
@@ -4710,7 +4782,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 			ALWAYS_ACCEPT,
 			ALWAYS_REJECT};
 		
-		TestingWay testingWay = TestingWay::ALWAYS_REJECT;  				// ALWAYS_REJECT
+		TestingWay testingWay = TestingWay::ALWAYS_ACCEPT;  				// ALWAYS_REJECT
 
 		if(testingWay == TestingWay::ALWAYS_ACCEPT){
 			log_p_accept = 1.0;
@@ -5702,13 +5774,17 @@ void Context::incrementNofSamples(void){
 */
 void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWIx)
 {
-		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
-	worlds[destStatsWIx].updSampler(0)->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
+	auto* sampler = worlds[destStatsWIx].updSampler(0);
 
-	worlds[destStatsWIx].updSampler(0)->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
-	worlds[destStatsWIx].updSampler(0)->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
-	worlds[destStatsWIx].updSampler(0)->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
-	worlds[destStatsWIx].updSampler(0)->setQvars(thermodynamicStates[thermoIx].getQvars(srcStatsWIx));
+	sampler->set_BMps_means(thermodynamicStates[thermoIx].getBMps_means(srcStatsWIx));
+	sampler->set_PFrs_means(thermodynamicStates[thermoIx].getPFrs_means(srcStatsWIx));
+
+	sampler->set_dBMps(thermodynamicStates[thermoIx].get_dBMps(srcStatsWIx));
+	sampler->set_dPFrs(thermodynamicStates[thermoIx].get_dPFrs(srcStatsWIx));
+	sampler->setPreviousQs(thermodynamicStates[thermoIx].getCurrentQs(srcStatsWIx));
+	sampler->setQmeans(thermodynamicStates[thermoIx].getQmeans(srcStatsWIx));
+	sampler->setQdiffs(thermodynamicStates[thermoIx].getQdiffs(srcStatsWIx));
+	sampler->setQvars(thermodynamicStates[thermoIx].getQvars(srcStatsWIx));
 }
 
 /*!
@@ -5744,6 +5820,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
 			const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
 			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_tor();
+			const std::vector<std::vector<double>>& drl_n14_Energies = worlds[whichWorld].getEnergies_drl_n14();
 
 			// validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
 
@@ -5751,8 +5828,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 				// Update Robosample bAtomList
 				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
-				(worlds[whichWorld]).updateAtomListsFromCompound(currentAdvancedState);
-
+				(worlds[whichWorld]).updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
 				// ''''''''''''''''''''
 				// coutspaced("SCALING_BAT init:"); ceolf;
 				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
@@ -5760,26 +5836,40 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 				// ''''''''''''''''''''
 
 				// Reinitialize the sampler
-				validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState,
-					worldOutStream);
+				validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
 				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-				// scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
+
+				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
+					scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
+					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
+					scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
+					scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
+					std::cout<<std::flush;
+				} // __end__ choose a world to print drilling
+
+				auto runSamplingLoop = [&](SimTK::State& state) {
+					for (int sampleIx = 0; sampleIx < numSamples; ++sampleIx) {
+						if (verbose) {
+							worldOutStream << header << " ";
+							(worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
+						}
+						validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+						if (verbose) {worldOutStream << std::endl;}
+					}
+				};				
 
 				// GENERATE the requested number of samples
-				for(int k = 0; k < numSamples; k++) {
-
-					worldOutStream << header << " ";
-					(worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
-
-					validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(
-						currentAdvancedState, worldOutStream) && validated;
-
-					worldOutStream << "\n";
-
+				if ((worlds[whichWorld]).getIsRollFlexibilities()) {
+					for (int mobIntIx = 1; mobIntIx < (worlds[whichWorld]).matter->getNumBodies(); ++mobIntIx) {
+						(worlds[whichWorld]).lockAllMobilizers();
+						const SimTK::MobilizedBody& mobod = (worlds[whichWorld]).matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+						mobod.unlock(currentAdvancedState);
+						runSamplingLoop(currentAdvancedState);
+					}
+				} else {
+					runSamplingLoop(currentAdvancedState);
 				}
 
 				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
@@ -5789,12 +5879,15 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
 				// thermodynamicStates[0].PrintZMatrixBAT();
 				// ''''''''''''''''''''
-
-				// scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-				// scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies);
-				// scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies);
-				// scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies);
-
+				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
+					scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
+					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
+					scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
+					scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
+					std::cout<<std::flush;
+				} // __end__ choose a world to print drilling
+				
 			// }
 
 		#else
@@ -5837,101 +5930,11 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
 	// Print the world output stream
 	if (verbose) {
-		std::cout << worldOutStream.str();
+		std::cout << worldOutStream.str() << std::flush;
 	}
 
 	return validated;
 }
-
-/*!
- * <!-- Run a vector of worlds -->
-*/ 
-void Context::RunWorlds(std::vector<int>& specificWIxs, int replicaIx)
-{
-	int thermoIx = replica2ThermoIxs[replicaIx];
-	bool validated = true;
-	for(std::size_t spWCnt = 0; spWCnt < specificWIxs.size() - 1; spWCnt++){ // -1 so we can transfer
-
-		// Run
-		int srcStatsWIx  = specificWIxs[spWCnt];
-
-		//std::cout << "REX, " << replicaIx << ", " << thermoIx << " , " << srcStatsWIx;
-		std::string headerToRunWorld = "REX, " + std::to_string(replicaIx)
-					+ ", " + std::to_string(thermoIx)
-					+ " , " + std::to_string(srcStatsWIx);
-		validated = RunWorld(srcStatsWIx, headerToRunWorld ) && validated;
-
-		// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-		// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
-		// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
-		// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
-		// 	std::cout <<" " << BMps[mbx] ;
-		// }
-		// ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-
-		if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
-			thermodynamicStates[thermoIx].calcQStats(
-				srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
-		}else{
-			thermodynamicStates[thermoIx].calcQStats(
-				srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
-		}
-		
-		// Transfer coordinates to the next world
-		int destStatsWIx = specificWIxs[spWCnt + 1];
-		transferCoordinates_WorldToWorld(srcStatsWIx, destStatsWIx);
-		transferQStatistics(thermoIx, srcStatsWIx, destStatsWIx);
-
-		// // Calculate replica BAT and BAT stats
-		// World& currWorld = worlds[specificWIxs[spWCnt]];
-		// SimTK::State& currState = currWorld.integ->updAdvancedState();
-		// replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
-
-	}
-
-	// Run the last world
-	int srcStatsWIx = specificWIxs.back();
-
-	//std::cout << "REX, " << replicaIx << ", " << thermoIx << ", " << specificWIxs.back();
-	std::string headerToRunWorld = "REX, " + std::to_string(replicaIx) 
-				+ ", " + std::to_string(thermoIx)
-				+ ", " + std::to_string(srcStatsWIx);
-	validated = RunWorld(srcStatsWIx, headerToRunWorld) && validated;
-
-	// Calculate Q statistics ^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&
-	// worlds[srcStatsWIx].PrintXBMps(); // @@@@@@@@@@@@@
-	// const SimTK::Vector & BMps = worlds[srcStatsWIx].getBMps();
-	// for(int mbx = 1; mbx < worlds[srcStatsWIx].matter->getNumBodies(); mbx++){
-	// 	std::cout <<" " << BMps[mbx] ;
-	// } // @@@@@@@@@@@@@
-
-	if( pHMC((worlds[srcStatsWIx].samplers[0]))->getAcc() == true){
-		thermodynamicStates[thermoIx].calcQStats(
-			srcStatsWIx, worlds[srcStatsWIx].getBMps(), worlds[srcStatsWIx].getAdvancedQs(), worlds[srcStatsWIx].getNofSamples());
-	}else{
-		thermodynamicStates[thermoIx].calcQStats(
-			srcStatsWIx, worlds[srcStatsWIx].getBMps(), SimTK::Vector(worlds[srcStatsWIx].getNQs(), SimTK::Real(0)), worlds[srcStatsWIx].getNofSamples());
-	}
-
-	if(true){
-		World& currWorld = worlds[specificWIxs.back()];
-		SimTK::State& currState = currWorld.integ->updAdvancedState();
-		replicas[replicaIx].calcZMatrixBAT( currWorld.getAtomsLocationsInGround( currState ));
-	}
-
-	// #ifndef PRINTALOT
-	// #define PRINTALOT
-	// #endif
-
-	#ifdef PRINTALOT 
-		if(validated){
-			std::cout << std::endl;
-		}else{
-			std::cout << " invalid sample." << std::endl;
-		}
-	#endif
-}
-
 
 
 /*! <!--  -->*/
@@ -5961,9 +5964,11 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		// Transfer coordinates to the next world
 		if(thWCnt == 0){
+			//std::cout << "Transfer coordinates from replica " << replicaIx << " thermoState " << thermoIx << " to world " << thermoWorldIxs.front() << std::endl;
 			transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
 			transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
 		}else{
+			//std::cout << "Transfer coordinates from world " << thermoWorldIxs[thWCnt - 1] << " to world " << wIx << std::endl;
 			transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 			transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
 		}
@@ -5973,16 +5978,25 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 					headerToRunWorld += ", " + std::to_string(replicaIx);
 					headerToRunWorld += ", " + std::to_string(thermoIx);
 					headerToRunWorld += ", " + std::to_string(wIx);
-
+				
 		// Run
 		bool validated = true;
+
+		if(false || (wIx == 2) //&& (std::abs(sampler_p->QScaleFactor - 1.0) > 0.00001)
+		){
+		    //std::cout<<"BMps_means "; PrintCppVector(thermoState.getBMps_means(wIx));
+			//worlds[wIx].PrintBATFromSimbody(); // BENDSTRETCH
+		}
+
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
 
+		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
+
 		// Calculate Q statistics
-		if( sampler_p->getAcc() == true){
-			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
+		if(sampler_p->getAcc() == true){
+			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
 		}else{
-			thermoState.calcQStats(wIx, currWorld.getBMps(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
+			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 		}
 
 		// ======================== EQUILIBRIUM ======================
@@ -5992,7 +6006,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 
-			replica.setFixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
+			replica.setFixman(sampler_p->fix_set);
 
 			replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
 
@@ -6006,12 +6020,13 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 			replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
 		
-			replica.set_WORK_Fixman(sampler_p->fix_set); // DID_I_REALLY_FORGET
+			replica.set_WORK_Fixman(sampler_p->fix_set);
 
 			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
 
 		} // __end__ Non/Equilibrium =======================================
 
+		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.6");}
 
 		# pragma region REBAS_TEST
 		const SimTK::State& pdbState = currWorld.integ->updAdvancedState();
@@ -6037,7 +6052,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 		}
 		# pragma endregion REBAS_TEST
 
-
 		// Increment the nof samples for replica and thermostate
 		replica.incrementWorldsNofSamples(1);
 		thermoState.incrementWorldsNofSamples(1);
@@ -6047,6 +6061,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	if ((mixi + 1) % printFreq == 0) {
 		writeLog(mixi + 1, replicaIx);
 		REXLog(mixi + 1, replicaIx);
+		std::cout << std::flush;
 
 		int whichDCD = replica2ThermoIxs[replicaIx];
 		auto [x, y, z] = replicas[replicaIx].getCoordinates();
@@ -6066,7 +6081,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
 
 	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
-	
+
 }
 
 void Context::writeLog(int mixi, int replicaIx) {
@@ -6208,7 +6223,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		//Print_TRANSFORMERS_Work();
+		//Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
@@ -7133,19 +7148,22 @@ Context::calc_XFM(
 	SimTK::Real bondBend = getZMatrixBATValue(6, 1);
 	//SimTK::Transform XXX(SimTK::Rotation(-1.0 * (bondBend - (SimTK::Pi / 2.0)), SimTK::YAxis));
 	SimTK::Transform XXX;
-
-
-
 	SimTK::Transform XXXinv = ~XXX;
-
-	// New
 	SimTK::Transform X_FMspherical = SimTK::Transform()
 		* XXXinv
+	;
+
+	SimTK::Transform XXX_orthospherical;
+	SimTK::Transform XXXinv_orthospherical = ~XXX_orthospherical;
+	SimTK::Transform X_FMorthospherical = SimTK::Transform()
+		* XXXinv_orthospherical
 	;
 
 	// Return
 	if(mobility == SimTK::BondMobility::Mobility::Spherical){
 		return X_FMspherical;
+	}else if(mobility == SimTK::BondMobility::Mobility::OrthoSpherical){
+		return X_FMorthospherical;
 	}else{
 		return Transform();
 	}
@@ -7228,29 +7246,27 @@ Context::setAtoms_XFM(
 				//worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);				
 				//PrintTransform(mobod.getMobilizerTransform(someState), 6, "X_FMcurrent");
 
-
 				if(bond.getBondMobility(wIx) == SimTK::BondMobility::Mobility::Spherical)
 				{
 
 					// //mobod.getMatterSubsystem().getSystem().getSystemGuts().getVersion();
 					// //mobod.getMatterSubsystem().getSystem().getVersion();
 					// mobod.getMatterSubsystem().getSystem().realize(someState, SimTK::Stage::Position);
-
 					// //worlds[wIx].compoundSystem->realize(someState, SimTK::Stage::Position);
-
 					// mobod.setQToFitTransform(someState, X_FM);
 					// //someState.updQ()[1] = 0.1;
-					
 					// worlds[wIx].compoundSystem->realize(
 					// 	someState, SimTK::Stage::Position);
-
 					// //PrintTransform(mobod.getMobilizerTransform(someState),
 					// //	6, "X_FMafter");
-
 					// scout("mobodQ= ") << mobod.getQAsVector(someState) << eol;
 					// scout("stateQ= ") << someState.updQ() << eol;
 				
-				}				
+				}
+				
+				if(bond.getBondMobility(wIx) == SimTK::BondMobility::Mobility::OrthoSpherical){
+
+				}
 
 			}
 
@@ -7265,8 +7281,7 @@ Context::setAtoms_XFM(
 
 }
 
-/*! <!-- __no_desk__. 
- * --> */
+/*! <!-- __no_desk__. --> */
 std::vector<SimTK::Transform>
 Context::calc_XPF_XBM(
 	int wIx, Topology& topology,
@@ -7304,9 +7319,13 @@ Context::calc_XPF_XBM(
 
 	// Get parent-child BondCenters relationship
 	SimTK::Transform X_parentBC_childBC =
-	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(
-		childAIx, parentAIx);
+	  topology.getDefaultBondCenterFrameInOtherBondCenterFrame(childAIx, parentAIx);
 	SimTK::Transform X_childBC_parentBC = ~X_parentBC_childBC;
+
+	// Get parent-child BC transform
+	SimTK::Transform X_parentAtom_BCpar = topology.calcDefaultBondCenterFrameInParentAtomFrame(parentAIx, childAIx);
+	SimTK::Transform X_childAtom_BCchi = topology.calcDefaultBondCenterFrameInChildAtomFrame(parentAIx, childAIx);
+	SimTK::Transform X_BCchi_childAtom = ~X_childAtom_BCchi;
 
 	// Get Top frame
 	SimTK::Transform T_X_root = topology.getTopTransform_FromMap(childAIx);
@@ -7323,7 +7342,14 @@ Context::calc_XPF_XBM(
 	SimTK::Transform T_X_Proot = topology.getTopTransform_FromMap(parentRootAIx);
 	SimTK::Transform Proot_X_T = ~T_X_Proot;
 	SimTK::Transform Proot_X_root = Proot_X_T * T_X_root;
-	
+
+	// Print parent-child BC transforms
+	std::string bondMbxs = std::to_string(int(parentAtomMbx)) + ":" + std::to_string(int(childAtomMbx));
+	// SimTK::Test::PrintTransform(X_parentAtom_BCpar, 6, "parAt_BC:" + bondMbxs, "X_parAt_BC:" + bondMbxs);
+	// SimTK::Test::PrintTransform(X_parentBC_childBC, 6, "parBC_chiBC:" + bondMbxs, "X_parBC_chiBC:" + bondMbxs);
+	// SimTK::Test::PrintTransform(X_BCchi_childAtom, 6, "BC_chiAt:" + bondMbxs, "BC_chiAt:" + bondMbxs);
+	// SimTK::Test::PrintTransform(Proot_X_root, 6, "Proot_X_root:" + bondMbxs, "Proot_X_root:" + bondMbxs);
+
 	// Get inboard dihedral angle
 	SimTK::Angle inboardBondDihedralAngle =
 		topology.bgetDefaultInboardDihedralAngle(childAIx);
@@ -7360,6 +7386,7 @@ Context::calc_XPF_XBM(
 	SimTK::Real bondBend = getZMatrixBATValue(6, 1);
 	SimTK::Transform XXX;
 	//SimTK::Transform XXX(SimTK::Rotation(-1.0 * (bondBend - (SimTK::Pi / 2.0)), SimTK::YAxis));
+	SimTK::Transform XXXorthospherical;
 	SimTK::Transform XXXinv = ~XXX;
 
 	// Proot -> root -> parentBC -> chilBC=X -> Z
@@ -7370,7 +7397,7 @@ Context::calc_XPF_XBM(
 		* Y_to_Z
 		* XXX
 	;
-
+	
 	// Z -> X=childBC -> parentBC
 	SimTK::Transform M_X_B_spheric = SimTK::Transform()
 		* Z_to_Y
@@ -7379,11 +7406,11 @@ Context::calc_XPF_XBM(
 	;
 
 	SimTK::Transform B_X_M_spheric = ~M_X_B_spheric;
-	// SimTK::Transform B_X_M_spheric =
-	// 	X_parentBC_childBC
-	// 	* X_to_Z
-	// 	* XXXinv
-	// ;
+
+	// OrthoSpherical ==========================================================
+	SimTK::Transform P_X_F_orthospheric = X_parentAtom_BCpar; // BAT from Compound
+	SimTK::Transform M_X_B_orthospheric = X_parentBC_childBC * X_BCchi_childAtom; // BAT from Compound
+	SimTK::Transform B_X_M_orthospheric = ~M_X_B_orthospheric; // X_childAtom_BC * X_childBC_parentBC;
 
 	// ------------------------------------------------------------------------
 
@@ -7402,6 +7429,8 @@ Context::calc_XPF_XBM(
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
 		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // OrthoSpherical
+		return std::vector<SimTK::Transform> {P_X_F_orthospheric, B_X_M_orthospheric};
 	} else {
 		warn("Warning: unknown mobility");
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
@@ -9220,8 +9249,8 @@ void Context::Print_TRANSFORMERS_Work(void)
 						SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
 
 						std::cout << parentMbx <<" " << grandMbx <<" "
-							<< getMobility(rootMobilities[wIx][topoIx]) <<" "
-							<< rootMobilities[wIx][topoIx] <<" ";
+							<< getMobility(rootMobilitiesStr[wIx][topoIx]) <<" "
+							<< rootMobilitiesStr[wIx][topoIx] <<" ";
 						
 						wIx++;
 					} ceol;
@@ -9303,33 +9332,6 @@ void Context::setThermostatesQs(void)
 
 }
 
-/*!
- * <!-- Calculate Q statistics -->
-*/
-void Context::calcQStats(int thIx)
-{
-
-	// Get world indexes
-	const std::vector<int> & thermoWorldIxs = thermodynamicStates[thIx].getWorldIndexes();
-
-	// Iterate worlds
-	for(const auto worldIx : thermoWorldIxs){
-
-		// Get world's Qs
-		SimTK::State& worldCurrentState = worlds[worldIx].integ->updAdvancedState();
-		int NQ = (worlds[worldIx].getSimbodyMatterSubsystem())->getNQ(worldCurrentState);
-		const SimTK::Vector & worldQs = (getWorld(worldIx).getSimbodyMatterSubsystem())->getQ(worldCurrentState);
-
-		// Get Q statistics
-		bool found = thermodynamicStates[thIx].calcQStats(worldIx, worlds[worldIx].getBMps(), worldQs, worlds[worldIx].getNofSamples());
-		if(!found){
-			warn("Context::calcQStats: World not " + std::to_string(worldIx) + " found. Q statistics not calculated...");
-		}
-
-	}
-
-
-}
 
 /*!
  * <!--  -->

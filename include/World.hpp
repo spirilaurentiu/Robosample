@@ -532,7 +532,9 @@ public:
 	SimTK::Real calcFixman();
 
 	/** Generate a number of samples **/
+	bool generateSamples_old(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
+
 	//...............
 
 	//...................
@@ -687,18 +689,31 @@ public:
 	void allocateStatsContainers(void);
 	
 	void PrintDefaultTransforms() const;
+	void PrintAllTransforms() const;
+	void PrintXFMs() const;
+
 	void PrintXBMps() const;
 	const SimTK::Vector & getBMps();
+	const SimTK::Vector & getPFrs();
 
 	// Get Qs
 	int getNQs(void);
 	int getNUs(void);
 	const SimTK::Vector & getAdvancedQs();
+	const void PrintAdvancedQs() const;
+
 	const SimTK::Vector & getAdvancedUs();
+
+	void PrintBATFromSimbody() const;
+	void calcSimbodyBAT_TODEL(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
+	void calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
+
+
 
 public:
 
 	SimTK::Vector BMps;
+	SimTK::Vector PFrs;
 
 	// --- The three S: Study, System and State related ---
 	/** System->MultibodySystem->MolecularMechanicsSystems->CompoundSystem **/
@@ -723,7 +738,7 @@ public:
 	//std::vector<bMoleculeReader *> moleculeReaders;
 	std::vector<Topology>* topologies = nullptr;
 	std::vector<std::string> roots;
-	std::vector<std::string> rootMobilities;
+	std::vector<std::string> rootMobilitiesStr;
 
 	/** Joint types **/
 	//std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
@@ -735,6 +750,10 @@ public:
 
 	/** This vector stores a configuration if is needed for later use **/
 	SimTK::Transform *TVector;
+
+	// 
+	std::vector<std::vector<int>> zMatrixTable;
+	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
 	/** Topologies graphs as tables - to be removed **/
 	int **mbxTreeMat;    // tree representing the bonding
@@ -1015,6 +1034,8 @@ public:
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
+    bool getIsRollFlexibilities() const {return isRollFlexibilities;};
+    void setIsRollFlexibilities(bool value) {isRollFlexibilities = value;};
 
 private:
 

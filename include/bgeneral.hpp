@@ -418,21 +418,52 @@ void PrintCppVector(const vector<S>& vec,
 
 }
 
-template <typename S>
-void PrintCppVector(const vector < vector <S>>& vec,
-	std::string sep = " ",
-	std::string ending = "\n") 
-{
-    // Iterating over all elements of vector
-    for (const auto &v : vec) {
-		for(const auto &elem : v){
-			std::cout << sep << elem;
-		}
-		std::cout << std::endl;
+// template <typename S>
+// void PrintCppVector(const vector < vector <S>>& vec,
+// 	std::string sep = " ",
+// 	std::string ending = "\n") 
+// {
+//     // Iterating over all elements of vector
+//     for (const auto &v : vec) {
+// 		for(const auto &elem : v){
+// 			std::cout << sep << elem;
+// 		}
+// 		std::cout << std::endl;
         
+//     }
+// 	std::cout << ending;
+// }
+
+
+template <typename S>
+void PrintCppVector(const std::vector<std::vector<S>>& vec,
+                    int decimal_places = 6,
+                    std::string header = "unknown",
+                    std::string rowPrefix = "")
+{
+    // Print header
+    //std::cout << header << std::endl;
+
+    // Set output format for fixed precision
+    std::cout << std::fixed << std::setprecision(decimal_places);
+
+    // Iterate over all elements
+    for (const auto& row : vec) {
+        std::cout << rowPrefix;
+        for (const auto& elem : row) {
+            std::cout << " " << elem;
+        }
+        std::cout << std::endl;
     }
-	std::cout << ending;
+
+    // Reset formatting if needed (optional)
+    std::cout.unsetf(std::ios::fixed);
+    //std::cout << std::setprecision(6);  // Reset to default precision
 }
+
+
+
+
 
 /*
  * Get the block corresponding to a body from an H-like matrix
@@ -576,6 +607,9 @@ enum struct PositionsPerturbMethod : int {
 	BENDSTRETCH_1,
 	BENDSTRETCH_2,
 	BENDSTRETCH_3,
+	BENDSTRETCH_4,
+	BENDSTRETCH_5,
+	BENDSTRETCH_6,
 	NOF_
 };
 
@@ -585,6 +619,9 @@ PositionsPerturbMethodS{
 	{PositionsPerturbMethod::BENDSTRETCH_1, "BENDSTRETCH_1"},
 	{PositionsPerturbMethod::BENDSTRETCH_2, "BENDSTRETCH_2"},
 	{PositionsPerturbMethod::BENDSTRETCH_3, "BENDSTRETCH_3"},
+	{PositionsPerturbMethod::BENDSTRETCH_4, "BENDSTRETCH_4"},
+	{PositionsPerturbMethod::BENDSTRETCH_5, "BENDSTRETCH_5"},
+	{PositionsPerturbMethod::BENDSTRETCH_6, "BENDSTRETCH_6"},
 	{PositionsPerturbMethod::NOF_, "NOF_"}
 
 };

@@ -26,6 +26,10 @@
 	#include "../openmm/platforms/cuda/include/CudaPlatform.h"
 #endif
 
+// #ifndef __PBC__ // _pbc_
+// #define __PBC__ 0
+// #endif
+
 class Sampler;
 class World;
 
@@ -49,6 +53,14 @@ RUN_TYPE_MAP{
 	{"REMC", RUN_TYPE::REMC},
 	{"RENEMC", RUN_TYPE::RENEMC},
 	{"RENE", RUN_TYPE::RENE}
+};
+
+const std::unordered_map<RUN_TYPE, std::string>
+RUN_TYPE_MAP_INV{
+	{RUN_TYPE::DEFAULT, "DEFAULT"},
+	{RUN_TYPE::REMC, "REMC"},
+	{RUN_TYPE::RENEMC, "RENEMC"},
+	{RUN_TYPE::RENE, "RENE"}
 };
 
 //==============================================================================
@@ -737,7 +749,6 @@ public:
 
 	// Run a particular world
 	bool RunWorld(int whichWorld, const std::string& header);
-	void RunWorlds(std::vector<int>& specificWIxs, int replicaIx);
 	void RunReplicaRefactor_SIMPLE(int mixi, int replicaIx);	
 	/**	
 	* @brief Main function
@@ -834,7 +845,7 @@ private:
 	std::vector<std::vector<std::string>> rbSpecsFNs;
 	std::vector<std::vector<std::string>> flexSpecsFNs;
 	std::vector<std::vector<std::string>> regimens;
-	std::vector<std::vector<std::string>> rootMobilities;
+	std::vector<std::vector<std::string>> rootMobilitiesStr;
 
 	// Nof molecules
 	int moleculeCount = -1;
@@ -995,7 +1006,8 @@ public:
 		{ "Slider", BondMobility::Slider },
 		{ "AnglePin", BondMobility::AnglePin },
 		{ "BendStretch", BondMobility::BendStretch },
-		{ "Spherical", BondMobility::Spherical }
+		{ "Spherical", BondMobility::Spherical },
+		{ "OrthoSpherical", BondMobility::OrthoSpherical }
 	};
 
     std::vector<std::string> MobilityStr {
@@ -1014,7 +1026,8 @@ public:
         "Spherical", 
         "AnglePin",
         "BendStretch",
-        "Slider"   
+        "Slider",
+		"OrthoSpherical"
     };
 
 	BondMobility::Mobility getMobility(const std::string& mobilityStr) {
@@ -1238,8 +1251,6 @@ private:
 	void reserveThermostatsQs(void);
 	
 	void setThermostatesQs(void);
-
-	void calcQStats(int thIx);
 
 	void printQStats(int thIx);
 

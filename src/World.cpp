@@ -485,10 +485,10 @@ void World::modelTopologies(std::string GroundToCompoundMobilizerType)
 			compoundSystem->modelOneCompound(
 				SimTK::CompoundSystem::CompoundIndex(i),
 				topology.atomFrameCache,
-				rootMobilities[i]);
+				rootMobilitiesStr[i]);
 
 		 std::cout<<"World::ModelTopologies call to CompoundSystem::modelCompound " << i
-		         << " grounded with mobilizer " << rootMobilities[i] << std::endl;
+		         << " grounded with mobilizer " << rootMobilitiesStr[i] << std::endl;
 
 		//std::cout << "World::ModelTopologies " <<
 		for(std::size_t k = 0; k < (*topologies)[i].getNumAtoms(); k++){
@@ -1665,17 +1665,612 @@ SimTK::Vec3 World::calcAtomLocationInGroundFrameThroughOMM(const SimTK::DuMM::At
 //==============================================================================
 // Pass configurations between Worlds
 
-/*!
- * <!--  -->
-*/
+/*! <!--  --> */
+void World::PrintBATFromSimbody() const
+{
+	SimTK::State& advState = integ->updAdvancedState();
+
+	bool parFlag = false;
+	bool parParFlag = false;
+	int childIx = -1, parentIx = -1, grandIx = -1, grandGrandIx = -2;
+	bool printTransforms = true;
+
+	std::vector<SimTK::Real> BONDLengths(matter->getNumBodies() - 1, -99999);
+	std::vector<SimTK::Real> ANGLEBends(matter->getNumBodies() - 1, -99999);
+	std::vector<SimTK::Real> TORSIONAngles(matter->getNumBodies() - 1, -99999);
+	std::vector<std::vector<int>> ZMatrix(matter->getNumBodies() - 1, std::vector<int>(4, -99999));
+
+	for (SimTK::MobilizedBodyIndex childMbx(1); childMbx < matter->getNumBodies(); ++childMbx){
+		childIx = int(childMbx);
+
+		const SimTK::MobilizedBody& childMobod = matter->getMobilizedBody(childMbx);
+		const SimTK::MobilizedBody& parentMobod = childMobod.getParentMobilizedBody();
+		const SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+		parentIx = int(parentMbx);
+
+		if(int(childMbx) > 1){
+			const SimTK::MobilizedBody& grandMobod = parentMobod.getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
+			grandIx = int(grandMbx);
+		}
+
+		if(int(childMbx) > 2){
+			const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandGrandMbx = grandGrandMobod.getMobilizedBodyIndex();
+			grandGrandIx = int(grandGrandMbx);
+		}
+
+		// Print out the indices
+		std::cout << "World " << ownWorldIndex << " " << "child " << childIx << " " << "parent " << parentIx << " " << "parPar " << grandIx << " " << "grandGrandIx " << grandGrandIx << " " << std::endl;
+
+		// BOND ==============
+		const Transform& B_X_Fb = childMobod.getInboardFrame(advState);
+		const Transform& C_X_Mb = childMobod.getOutboardFrame(advState);
+		const Transform& Fb_X_Mb = childMobod.getMobilizerTransform(advState);
+
+		const Transform& G_X_C = childMobod.getBodyTransform(advState);
+		const Transform& G_X_B = parentMobod.getBodyTransform(advState);
+		Transform G_X_Fb = G_X_B * B_X_Fb;
+		Transform G_X_Mb = G_X_C * C_X_Mb;
+
+		Transform B_X_C = B_X_Fb * Fb_X_Mb * (~C_X_Mb);
+		//BONDLengths[int(childMbx) - 1] = B_X_C.p().norm(); // correct
+		BONDLengths[int(childMbx) - 1] = C_X_Mb.p().norm(); // correct correct
+		
+		ZMatrix[int(childMbx) - 1][0] = int(childMbx);
+		ZMatrix[int(childMbx) - 1][1] = int(parentMbx);
+
+		if(printTransforms){
+			//SimTK::Test::PrintTransform(G_X_C, 6, "G_X_C", "G_X_C:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			// SimTK::Test::PrintTransform(G_X_Mb, 6, "G_X_Mb", "G_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			// SimTK::Test::PrintTransform(G_X_Fb, 6, "G_X_Fb", "G_X_Fb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(G_X_B, 6, "G_X_B", "G_X_B:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+			SimTK::Test::PrintTransform(B_X_C, 6, "B_X_C", "B_X_C:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(B_X_Fb, 6, "B_X_Fb", "B_X_Fb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+			SimTK::Test::PrintTransform(Fb_X_Mb, 6, "Fb_X_Mb", "Fb_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+			SimTK::Test::PrintTransform(C_X_Mb, 6, "C_X_Mb", "C_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+		}
+
+		if(int(childMbx) > 1){ // ANGLE ========================
+			const SimTK::MobilizedBody& grandMobod = parentMobod.getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
+
+			const Transform& A_X_Fa = parentMobod.getInboardFrame(advState); // A_X_Fa
+			const Transform& B_X_Ma = parentMobod.getOutboardFrame(advState); // B_X_Ma
+			const Transform& Fa_X_Ma = parentMobod.getMobilizerTransform(advState); // Fa_X_Ma
+			Transform A_X_B = A_X_Fa * Fa_X_Ma * (~B_X_Ma);
+			Transform A_X_C = A_X_B * B_X_C;
+
+			const Transform& G_X_A = grandMobod.getBodyTransform(advState); // G_X_A
+			Transform G_X_Fa = G_X_A * A_X_Fa;
+			Transform G_X_Ma = G_X_B * B_X_Ma;
+
+			// Checks
+			Vec3 pAXB_A = A_X_B.p();
+			Vec3 pAXB_B = ~(A_X_B.R()) * pAXB_A;
+			Vec3 pBXC_B = B_X_C.p();
+
+
+			Vec3 pAXB_G = ~(G_X_A.R()) * pAXB_A;
+			Vec3 pBXC_G = ~(G_X_B.R()) * pBXC_B;
+
+			// WORK ==========================================
+			Vec3 xAXB_A = A_X_B.R()(0);
+			Vec3 xAXB_G = ~(G_X_A.R()) * xAXB_A;
+
+			Vec3 xBXC_B = B_X_C.R()(0);
+			Vec3 xBXC_G = ~(G_X_B.R()) * xBXC_B;
+
+			// std::cout << "check: " << int(childMbx)
+			// 	<<" "<< std::acos(SimTK::dot(pAXB_A.normalize(), pBXC_B.normalize()))
+			// 	<<" "<< std::acos(SimTK::dot(xAXB_G, xBXC_G))
+			// 	<<std::endl;
+
+			Vec3 xBXFb_B = (B_X_Fb.R())(0);
+			Vec3 xBXMa_B = (B_X_Ma.R())(0);
+			Vec3 _xBXMa_B = -1 * xBXMa_B;
+
+			//ANGLEBends[int(childMbx) - 1] = std::acos(SimTK::dot(pAXB_A.normalize(), pBXC_B.normalize()));
+			//ANGLEBends[int(childMbx) - 1] = std::acos(SimTK::dot(pAXB_G.normalize(), pBXC_G.normalize()));
+			ANGLEBends[int(childMbx) - 1] = std::acos(SimTK::dot((-1 * pAXB_B).normalize(), pBXC_B.normalize())); // correct
+			//ANGLEBends[int(childMbx) - 1] = std::acos(SimTK::dot( xBXFb_B, _xBXMa_B )); // correct correct
+			//ANGLEBends[int(childMbx) - 1] = std::acos(SimTK::dot(xAXB_G, xBXC_G));
+			// ================================================
+
+			ZMatrix[int(childMbx) - 1][2] = int(grandMbx);
+
+			if(printTransforms){
+				// SimTK::Test::PrintTransform(G_X_Ma, 6, "G_X_Ma", "G_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				// SimTK::Test::PrintTransform(G_X_Fa, 6, "G_X_Fa", "G_X_Fa:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(G_X_A, 6, "G_X_A", "G_X_A:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandIx)));
+				SimTK::Test::PrintTransform(A_X_B, 6, "A_X_B", "A_X_B:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(A_X_Fa, 6, "A_X_Fa", "A_X_Fa:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandMbx)));
+				SimTK::Test::PrintTransform(Fa_X_Ma, 6, "Fa_X_Ma", "Fa_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandMbx)));
+				SimTK::Test::PrintTransform(B_X_Ma, 6, "B_X_Ma", "B_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+			}
+
+			if(int(childMbx) > 2){ // TORSION =======================
+				const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
+
+				const Transform& T_X_Ft = grandMobod.getInboardFrame(advState); // T_X_Ft
+				const Transform& A_X_Mt = grandMobod.getOutboardFrame(advState); // A_X_Mt
+				const Transform& G_X_T = grandGrandMobod.getBodyTransform(advState); // G_X_T
+				const Transform& Ft_X_Mt = grandMobod.getMobilizerTransform(advState); // Ft_X_Mt
+				Transform T_X_A = T_X_Ft * Ft_X_Mt * (~A_X_Mt);
+
+				Transform G_X_Ft = G_X_T * T_X_Ft;
+				Transform G_X_Mt = G_X_A * A_X_Mt;
+
+				// Checks
+
+				// WORK ==========================================
+
+				Vec3 xAXFa_A = (A_X_Fa.R())(0);
+				Vec3 xAXMt_A = (A_X_Mt.R())(0);
+				
+				Vec3 v2_B = SimTK::cross(xBXFb_B, xBXMa_B);
+				Vec3 v1_A = SimTK::cross(xAXFa_A, xAXMt_A);
+
+				Vec3 v2_B_hat = v2_B.normalize();
+				Vec3 v1_A_hat = v1_A.normalize();
+
+				Vec3 v1_B_hat = (~(A_X_B.R())) * v1_A_hat;
+
+				Vec3 v3_B = SimTK::cross(v2_B_hat, v1_B_hat);
+				Vec3 v3_B_hat = v3_B.normalize();
+
+				SimTK::Real tors_cos = SimTK::dot(v1_B_hat, v2_B_hat);
+				SimTK::Real tors_sin = SimTK::dot(v3_B, _xBXMa_B);
+
+				// SimTK::Test::PrintVec3(v1_A, 6, "v1_A", "v1_A:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				// SimTK::Test::PrintVec3(v2_B, 6, "v2_B", "v2_B:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				// SimTK::Test::PrintVec3(v3_B, 6, "v3_B", "v3_B:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+
+				// SimTK::Test::PrintVec3(v1_B_hat, 6, "v1_B_hat", "v1_B_hat:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				// SimTK::Test::PrintVec3(v2_B_hat, 6, "v2_B_hat", "v2_B_hat:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				// SimTK::Test::PrintVec3(v3_B_hat, 6, "v3_B_hat", "v3_B_hat:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+
+				//std::cout << " tors cos sin " << tors_cos <<" "<< tors_sin << std::endl;
+
+				TORSIONAngles[int(childMbx) - 1] = std::atan2(tors_sin, tors_cos);
+				// ==============================================
+
+				ZMatrix[int(childMbx) - 1][3] = int(grandGrandIx);
+
+				if(printTransforms){
+					//SimTK::Test::PrintTransform(G_X_Mt, 6, "G_X_Mt", "G_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					//SimTK::Test::PrintTransform(G_X_Ft, 6, "G_X_Ft", "G_X_Ft:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(G_X_T, 6, "G_X_T", "G_X_T:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(T_X_A, 6, "T_X_A", "T_X_A:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(T_X_Ft, 6, "T_X_Ft", "T_X_Ft:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(Ft_X_Mt, 6, "Ft_X_Mt", "Ft_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(A_X_Mt, 6, "A_X_Mt", "A_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+				}
+
+
+			}
+		}
+
+		childIx = -1, parentIx = -1, grandIx = -1, grandGrandIx = -2;
+
+		/*
+		const Transform& X_PF = mobod.getInboardFrame(advState);
+		const Transform& X_BM = mobod.getOutboardFrame(advState);
+		SimTK::Test::PrintTransform(X_PF, 6, "X_PF", "X_PF:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+		SimTK::Test::PrintTransform(X_BM, 6, "X_BM", "X_BM:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+
+		const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
+		const SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+		if(int(parentMbx) != 0){
+			parFlag = true;
+
+			const Transform& parX_PF = parentMobod.getInboardFrame(advState);
+			const Transform& parX_BM = parentMobod.getOutboardFrame(advState);
+			SimTK::Test::PrintTransform(parX_PF, 6, "parX_PF", "parX_PF:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+			SimTK::Test::PrintTransform(parX_BM, 6, "parX_BM", "parX_BM:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+
+			const SimTK::MobilizedBody& parParMobod = parentMobod.getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex parParMbx = parParMobod.getMobilizedBodyIndex();
+
+			if(int(parParMbx) != 0){
+				parParFlag = true;
+
+				const Transform& parParX_PF = parParMobod.getInboardFrame(advState);
+				const Transform& parParX_BM = parParMobod.getOutboardFrame(advState);
+				SimTK::Test::PrintTransform(parParX_PF, 6, "parParX_PF", "parParX_PF:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parParMbx)));
+				SimTK::Test::PrintTransform(parParX_BM, 6, "parParX_BM", "parParX_BM:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parParMbx)));
+
+				const SimTK::MobilizedBody& parParParMobod = parParMobod.getParentMobilizedBody();
+				const SimTK::MobilizedBodyIndex parParParMbx = parParParMobod.getMobilizedBodyIndex();
+
+			}else{ // _end_ if parent parent
+				;
+			} // _end_ if parent parent else
+
+		}else{ // _end_ if parent
+			;
+		} // _end_ if parent else
+
+		parFlag = false;
+		parParFlag = false;
+		child = -1, parent = -1, parPar = -1, grandGrandIx = -2; */
+
+	} // _end_ for mbx
+
+	// Print
+	for (int BOIx = 0; BOIx < BONDLengths.size(); BOIx++){
+		std::cout << "ZMatrixBATSimbody:"
+			<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
+			<<" "<< BONDLengths[BOIx] << " " << ANGLEBends[BOIx] << " " << TORSIONAngles[BOIx] << std::endl;
+	}
+
+
+}
+
+
+/*! <!--  --> */
+void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles)
+{
+	SimTK::State& advState = integ->updAdvancedState();
+
+	bool parFlag = false;
+	bool parParFlag = false;
+	int childIx = -1, parentIx = -1, grandIx = -1, grandGrandIx = -2;
+
+	if(BONDLengths.size() != matter->getNumBodies() -1){
+		BONDLengths.resize(matter->getNumBodies() - 1, SimTK::NaN);
+	}
+	if(ANGLEBends.size() != matter->getNumBodies() -1){
+		ANGLEBends.resize(matter->getNumBodies() - 1, SimTK::NaN);
+	}
+	if(TORSIONAngles.size() != matter->getNumBodies() -1){
+		TORSIONAngles.resize(matter->getNumBodies() - 1, SimTK::NaN);
+	}
+	if(ZMatrix.size() != matter->getNumBodies() -1){
+		ZMatrix.resize(matter->getNumBodies() - 1, std::vector<int>(4, -1));
+	}
+
+	bool printTransforms = true;
+
+	for (SimTK::MobilizedBodyIndex childMbx(1); childMbx < matter->getNumBodies(); ++childMbx){
+		childIx = int(childMbx);
+
+		const SimTK::MobilizedBody& childMobod = matter->getMobilizedBody(childMbx);
+		const SimTK::MobilizedBody& parentMobod = childMobod.getParentMobilizedBody();
+		const SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+		parentIx = int(parentMbx);
+
+		if(int(childMbx) > 1){
+			const SimTK::MobilizedBody& grandMobod = parentMobod.getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
+			grandIx = int(grandMbx);
+		}
+
+		if(int(childMbx) > 2){
+			const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandGrandMbx = grandGrandMobod.getMobilizedBodyIndex();
+			grandGrandIx = int(grandGrandMbx);
+		}
+
+		// Print out the indices
+		if(printTransforms){
+			std::cout << "World " << ownWorldIndex << " " << "child " << childIx << " " << "parent " << parentIx << " " << "parPar " << grandIx << " " << "grandGrandIx " << grandGrandIx << " " << std::endl << std::flush;
+		}
+
+		// BOND ==============
+		const Transform& B_X_Fb = childMobod.getInboardFrame(advState);
+		const Transform& C_X_Mb = childMobod.getOutboardFrame(advState);
+		const Transform& Fb_X_Mb = childMobod.getMobilizerTransform(advState);
+
+		const Transform& G_X_C = childMobod.getBodyTransform(advState);
+		const Transform& G_X_B = parentMobod.getBodyTransform(advState);
+		Transform G_X_Fb = G_X_B * B_X_Fb;
+		Transform G_X_Mb = G_X_C * C_X_Mb;
+
+		Transform B_X_C = B_X_Fb * Fb_X_Mb * (~C_X_Mb);
+		BONDLengths[int(childMbx) - 1] = B_X_C.p().norm(); // correct
+		
+		ZMatrix[int(childMbx) - 1][0] = int(childMbx);
+		ZMatrix[int(childMbx) - 1][1] = int(parentMbx);
+
+		if(printTransforms){
+			//SimTK::Test::PrintTransform(G_X_C, 6, "G_X_C", "G_X_C:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			//SimTK::Test::PrintTransform(G_X_Mb, 6, "G_X_Mb", "G_X_Mb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			//SimTK::Test::PrintTransform(G_X_Fb, 6, "G_X_Fb", "G_X_Fb:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(G_X_B, 6, "G_X_B", "G_X_B:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+			SimTK::Test::PrintTransform(B_X_C, 6, "B_X_C", "B_X_C:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(B_X_Fb, 6, "B_X_Fb", "B_X_Fb:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(Fb_X_Mb, 6, "Fb_X_Mb", "Fb_X_Mb:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
+			SimTK::Test::PrintTransform(C_X_Mb, 6, "C_X_Mb", "C_X_Mb:" + std::to_string(int(parentMbx)) + ":" + std::to_string(int(childMbx)));
+		}
+
+		if(int(childMbx) > 1){ // ANGLE ========================
+			const SimTK::MobilizedBody& grandMobod = parentMobod.getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
+
+			const Transform& A_X_Fa = parentMobod.getInboardFrame(advState); // A_X_Fa
+			const Transform& B_X_Ma = parentMobod.getOutboardFrame(advState); // B_X_Ma
+			const Transform& Fa_X_Ma = parentMobod.getMobilizerTransform(advState); // Fa_X_Ma
+			Transform A_X_B = A_X_Fa * Fa_X_Ma * (~B_X_Ma);
+			Transform B_X_A = ~A_X_B;
+			Transform A_X_C = A_X_B * B_X_C;
+
+			const Transform& G_X_A = grandMobod.getBodyTransform(advState); // G_X_A
+			Transform G_X_Fa = G_X_A * A_X_Fa;
+			Transform G_X_Ma = G_X_B * B_X_Ma;
+
+			// Checks
+			Vec3 pAXB_A = A_X_B.p();
+			//Vec3 pAXB_B = ~(A_X_B.R()) * pAXB_A;
+			Vec3 pBXA_B = B_X_A.p();
+			Vec3 pBXC_B = B_X_C.p();
+
+			ANGLEBends[int(childMbx) - 1] = std::acos(SimTK::dot((-1 * pBXA_B).normalize(), pBXC_B.normalize())); // correct
+			// ================================================
+
+			ZMatrix[int(childMbx) - 1][2] = int(grandMbx);
+
+			if(printTransforms){
+				// SimTK::Test::PrintTransform(G_X_Ma, 6, "G_X_Ma", "G_X_Ma:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				// SimTK::Test::PrintTransform(G_X_Fa, 6, "G_X_Fa", "G_X_Fa:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(G_X_A, 6, "G_X_A", "G_X_A:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandIx)));
+				SimTK::Test::PrintTransform(A_X_B, 6, "A_X_B", "A_X_B:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(A_X_Fa, 6, "A_X_Fa", "A_X_Fa:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(Fa_X_Ma, 6, "Fa_X_Ma", "Fa_X_Ma:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
+				SimTK::Test::PrintTransform(B_X_Ma, 6, "B_X_Ma", "B_X_Ma:" + std::to_string(int(grandMbx)) + ":" + std::to_string(int(parentMbx)));
+			}
+
+			if(int(childMbx) > 2){ // TORSION =======================
+				const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
+
+				const Transform& T_X_Ft = grandMobod.getInboardFrame(advState); // T_X_Ft
+				const Transform& A_X_Mt = grandMobod.getOutboardFrame(advState); // A_X_Mt
+				const Transform& G_X_T = grandGrandMobod.getBodyTransform(advState); // G_X_T
+				const Transform& Ft_X_Mt = grandMobod.getMobilizerTransform(advState); // Ft_X_Mt
+				Transform T_X_A = T_X_Ft * Ft_X_Mt * (~A_X_Mt);
+				Transform T_X_B = T_X_A * A_X_B;
+
+				//Transform G_X_Ft = G_X_T * T_X_Ft;
+				//Transform G_X_Mt = G_X_A * A_X_Mt;
+
+				// Checks
+
+				// WORK ==========================================
+				Vec3 b1_B = (T_X_B.R()) * T_X_A.p();
+				Vec3 b2_B = -1.0 * B_X_A.p();
+				Vec3 b3_B = B_X_C.p();
+
+				Vec3 b1_B_hat = b1_B.normalize();
+				Vec3 b2_B_hat = b2_B.normalize();
+				Vec3 b3_B_hat = b3_B.normalize();
+
+				Vec3 n1_B_hat = (SimTK::cross(b1_B, b2_B)).normalize();
+				Vec3 n2_B_hat = (SimTK::cross(b2_B, b3_B)).normalize();
+
+				// tors_cos
+				SimTK::Real tors_cos = SimTK::dot(n1_B_hat, n2_B_hat);
+
+				//tors_sin
+				Vec3 m1_B = SimTK::cross(n1_B_hat, b2_B_hat);
+				SimTK::Real tors_sin = SimTK::dot(m1_B, n2_B_hat);
+
+				//std::cout << " tors cos sin " << tors_cos <<" "<< tors_sin << std::endl;
+
+				TORSIONAngles[int(childMbx) - 1] = std::atan2(tors_sin, tors_cos);
+				// ==============================================
+
+				ZMatrix[int(childMbx) - 1][3] = int(grandGrandIx);
+
+				if(printTransforms){
+					//SimTK::Test::PrintTransform(G_X_Mt, 6, "G_X_Mt", "G_X_Mt:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					//SimTK::Test::PrintTransform(G_X_Ft, 6, "G_X_Ft", "G_X_Ft:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(G_X_T, 6, "G_X_T", "G_X_T:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(grandGrandIx)));
+					SimTK::Test::PrintTransform(T_X_A, 6, "T_X_A", "T_X_A:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
+					SimTK::Test::PrintTransform(T_X_Ft, 6, "T_X_Ft", "T_X_Ft:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
+					SimTK::Test::PrintTransform(Ft_X_Mt, 6, "Ft_X_Mt", "Ft_X_Mt:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
+					SimTK::Test::PrintTransform(A_X_Mt, 6, "A_X_Mt", "A_X_Mt:" + std::to_string(int(grandGrandIx)) + ":" + std::to_string(int(grandMbx)));
+				}
+
+			}
+		}
+
+		childIx = -1, parentIx = -1, grandIx = -1, grandGrandIx = -2;
+
+
+	} // _end_ for mbx
+
+	// Print
+	if(printTransforms){
+		for (int BOIx = 0; BOIx < BONDLengths.size(); BOIx++){
+			std::cout << "ZMatrixBATSimbody:"
+				<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
+				<<" "<< BONDLengths[BOIx] << " " << ANGLEBends[BOIx] << " " << TORSIONAngles[BOIx] << std::endl;
+		}
+	}
+
+
+}
+
+
+/*! <!--  --> */
+void World::calcSimbodyBAT_TODEL(
+	std::vector<std::vector<int>>& ZMatrix,
+	std::vector<SimTK::Real>& BONDLengths,
+	std::vector<SimTK::Real>& ANGLEBends,
+	std::vector<SimTK::Real>& TORSIONAngles)
+{
+
+	/*
+	SimTK::State& advState = integ->updAdvancedState();
+
+	bool parFlag = false;
+	bool parParFlag = false;
+	int childIx = -1, parentIx = -1, grandIx = -1, grandGrandIx = -2;
+
+	if(BONDLengths.size() != matter->getNumBodies() -1){
+		BONDLengths.resize(matter->getNumBodies() - 1, SimTK::NaN);
+	}
+	if(ANGLEBends.size() != matter->getNumBodies() -1){
+		ANGLEBends.resize(matter->getNumBodies() - 1, SimTK::NaN);
+	}
+	if(TORSIONAngles.size() != matter->getNumBodies() -1){
+		TORSIONAngles.resize(matter->getNumBodies() - 1, SimTK::NaN);
+	}
+	if(ZMatrix.size() != matter->getNumBodies() -1){
+		ZMatrix.resize(matter->getNumBodies() - 1, std::vector<int>(4, -1));
+	}
+
+	for (SimTK::MobilizedBodyIndex childMbx(1); childMbx < matter->getNumBodies(); ++childMbx){
+		childIx = int(childMbx);
+
+		const SimTK::MobilizedBody& childMobod = matter->getMobilizedBody(childMbx);
+		const SimTK::MobilizedBody& parentMobod = childMobod.getParentMobilizedBody();
+		const SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+		parentIx = int(parentMbx);
+
+		if(int(childMbx) > 1){
+			const SimTK::MobilizedBody& grandMobod = parentMobod.getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
+			grandIx = int(grandMbx);
+		}
+
+		if(int(childMbx) > 2){
+			const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandGrandMbx = grandGrandMobod.getMobilizedBodyIndex();
+			grandGrandIx = int(grandGrandMbx);
+		}
+
+
+		// BOND ==============
+		const Transform& B_X_Fb = childMobod.getInboardFrame(advState);
+		const Transform& Fb_X_Mb = childMobod.getMobilizerTransform(advState);
+		const Transform& C_X_Mb = childMobod.getOutboardFrame(advState);
+
+		BONDLengths[int(childMbx) - 1] = C_X_Mb.p().norm(); // correct correct
+		
+		ZMatrix[int(childMbx) - 1][0] = int(childMbx);
+		ZMatrix[int(childMbx) - 1][1] = int(parentMbx);
+
+		if(int(childMbx) > 1){ // ANGLE ========================
+			const SimTK::MobilizedBody& grandMobod = parentMobod.getParentMobilizedBody();
+			const SimTK::MobilizedBodyIndex grandMbx = grandMobod.getMobilizedBodyIndex();
+
+			const Transform& A_X_Fa = parentMobod.getInboardFrame(advState); // A_X_Fa
+			const Transform& B_X_Ma = parentMobod.getOutboardFrame(advState); // B_X_Ma
+			const Transform& Fa_X_Ma = parentMobod.getMobilizerTransform(advState); // Fa_X_Ma
+			Transform A_X_B = A_X_Fa * Fa_X_Ma * (~B_X_Ma);
+			Transform B_X_A = ~A_X_B;
+
+			// STATS
+			//Transform B_X_C = B_X_Fb * Fb_X_Mb * (~C_X_Mb);
+			// SimTK::Vec4 angAx_BXC = B_X_C.R().convertRotationToAngleAxis(); // [a vx vy vz] angle-axis; -Pi < a <= Pi and |v|=1
+			// SimTK::Real ang_BXC = angAx_BXC[0]; // [a] angle
+			// Vec3 ax_BXC = Vec3(angAx_BXC[1], angAx_BXC[2], angAx_BXC[3]); // [vx vy vz] axis
+			// std::cout << "angle-axis: " << int(childMbx) <<" "<< ang_BXC <<" "<< SimTK::dot(ax_BXC, B_X_C.p()) << std::endl;
+
+			// WORK ==========================================
+			Vec3 xAXB_A = A_X_B.R()(0);
+			Vec3 xBXFb_B = (B_X_Fb.R())(0);
+			Vec3 xBXMa_B = (B_X_Ma.R())(0);
+			Vec3 _xBXMa_B = -1 * xBXMa_B;
+
+			ANGLEBends[int(childMbx) - 1] = std::acos(SimTK::dot( xBXFb_B, _xBXMa_B )); // correct correct
+			// ================================================
+
+			ZMatrix[int(childMbx) - 1][2] = int(grandMbx);
+
+			if(int(childMbx) > 2){ // TORSION =======================
+				const SimTK::MobilizedBody& grandGrandMobod = parentMobod.getParentMobilizedBody().getParentMobilizedBody();
+
+				const Transform& T_X_Ft = grandMobod.getInboardFrame(advState); // T_X_Ft
+				const Transform& Ft_X_Mt = grandMobod.getMobilizerTransform(advState); // Ft_X_Mt
+				const Transform& A_X_Mt = grandMobod.getOutboardFrame(advState); // A_X_Mt
+				const Transform& G_X_T = grandGrandMobod.getBodyTransform(advState); // G_X_T
+				Transform T_X_A = T_X_Ft * Ft_X_Mt * (~A_X_Mt);
+
+				// WORK ==========================================
+
+				Vec3 xAXFa_A = (A_X_Fa.R())(0);
+				Vec3 xAXMt_A = (A_X_Mt.R())(0);
+				
+				Vec3 v2_B = SimTK::cross(xBXFb_B, xBXMa_B);
+				Vec3 v1_A = SimTK::cross(xAXFa_A, xAXMt_A);
+
+				Vec3 v2_B_hat = v2_B.normalize();
+				Vec3 v1_A_hat = v1_A.normalize();
+
+				Vec3 v1_B_hat = (~(A_X_B.R())) * v1_A_hat;
+
+				Vec3 v3_B = SimTK::cross(v2_B_hat, v1_B_hat);
+				Vec3 v3_B_hat = v3_B.normalize();
+
+				SimTK::Real tors_cos = SimTK::dot(v1_B_hat, v2_B_hat);
+				SimTK::Real tors_sin = SimTK::dot(v3_B, _xBXMa_B);
+
+				TORSIONAngles[int(childMbx) - 1] = std::atan2(tors_sin, tors_cos);
+				// ==============================================
+
+				ZMatrix[int(childMbx) - 1][3] = int(grandGrandIx);
+
+			}
+		}
+
+		childIx = -1, parentIx = -1, grandIx = -1, grandGrandIx = -2;
+	
+	} // _end_ for mbx
+
+	// // Print
+	// for (int BOIx = 0; BOIx < BONDLengths.size(); BOIx++){
+	// 	std::cout << "ZMatrixBATSimbody:"
+	// 		<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
+	// 		<<" "<< BONDLengths[BOIx] << " " << ANGLEBends[BOIx] << " " << TORSIONAngles[BOIx] << std::endl;
+	// }
+	*/
+}
+
+
+/*! <!--  --> */
+void World::PrintAllTransforms() const
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
+		const SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+		const Transform& X_GpP = parentMobod.getBodyTransform(advState);
+		const Transform& X_GP = mobod.getBodyTransform(advState);
+
+		const Transform X_PP = (~X_GpP) * X_GP;
+		// Get mobod inboard frame X_PF
+		const Transform& X_PF = mobod.getInboardFrame(advState);
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(advState);
+
+		// Get mobod inboard frame X_BM
+		const Transform& X_BM = mobod.getOutboardFrame(advState);
+
+		SimTK::Test::PrintTransform(X_PP, 6, "X_PP", "X_PP:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+		SimTK::Test::PrintTransform(X_PF, 6, "X_PF", "X_PF:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+		SimTK::Test::PrintTransform(X_FM, 6, "X_FM", "X_FM:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+		SimTK::Test::PrintTransform(X_BM, 6, "X_BM", "X_BM:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+
+	}
+}
+
+/*! <!--  --> */
 void World::PrintDefaultTransforms() const
 {
 
 	SimTK::State& advState = integ->updAdvancedState();
 
-	for (SimTK::MobilizedBodyIndex mbx(1);
-		mbx < matter->getNumBodies();
-		++mbx){
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 
 		// Get mobod
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
@@ -1685,21 +2280,37 @@ void World::PrintDefaultTransforms() const
 		const Transform& X_PF = mobod.getInboardFrame(advState);
 		//std::cout << "mobod " << mbx << " X_PF\n" << X_PF << std::endl;
 
-		// Get mobod inboard frame X_FM measured and expressed in P
-		const Transform& X_FM = mobod.getMobilizerTransform(advState);
-		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
-
 		// Get mobod inboard frame X_BM
 		const Transform& X_BM = mobod.getOutboardFrame(advState);
 		//std::cout << "mobod " << mbx << " X_BM\n" << X_BM << std::endl;
 
-		SimTK::Test::PrintTransform(X_PF, 6, "X_PF");
-		SimTK::Test::PrintTransform(X_BM, 6, "X_BM");
-		SimTK::Test::PrintTransform(X_FM, 6, "X_FM");
+		SimTK::Test::PrintTransform(X_PF, 6, "X_PF", "X_PF:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+		SimTK::Test::PrintTransform(X_BM, 6, "X_BM", "X_BM:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
 
 	}
-
 }
+
+/*! <!--  --> */
+void World::PrintXFMs() const
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		std::cout << "mobod " << mbx << std::endl;
+
+		// Get mobod inboard frame X_FM measured and expressed in P
+		const Transform& X_FM = mobod.getMobilizerTransform(advState);
+		//std::cout << "mobod " << mbx << " X_FM\n" << X_FM << std::endl;
+
+		SimTK::Test::PrintTransform(X_FM, 6, "X_FM", "X_FM:" + std::to_string(ownWorldIndex) + ":" + std::to_string(int(mbx)));
+
+	}
+}
+
 
 
 
@@ -1739,34 +2350,62 @@ void World::PrintXBMps() const
 	}
 }
 
-/*!
- * <!--  -->
-*/
+/*! <!--  --> */
 const SimTK::Vector & World::getBMps()
 {
 
 	SimTK::State& advState = integ->updAdvancedState();
 
 	if(BMps.size() == 0){
-		BMps.resize(matter->getNQ(advState));
+		//BMps.resize(matter->getNQ(advState));
+		BMps.resize(matter->getNumBodies());
 	}
 
 	int bIx = -1;
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
 
 		// Get mobod
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-		for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
+		//for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
 			bIx++;
 
 			const Transform& X_BM = mobod.getOutboardFrame(advState);
-			BMps[bIx] = X_BM.p()[0];
-		}
+			BMps[int(mbx)] = X_BM.p()[0];
+		//}
 		
 	}
 
 	return BMps;
+}
+
+/*! <!--  --> */
+const SimTK::Vector & World::getPFrs()
+{
+
+	SimTK::State& advState = integ->updAdvancedState();
+
+	if(PFrs.size() == 0){
+		//PFrs.resize(matter->getNQ(advState));
+		PFrs.resize(matter->getNumBodies());
+	}
+
+	int bIx = -1;
+	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
+
+		// Get mobod
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+
+		//for(int moQIx = 0; moQIx < mobod.getNumQ(advState); moQIx++){
+			bIx++;
+
+			const Transform& X_PF = mobod.getInboardFrame(advState);
+			PFrs[int(mbx)] = std::acos(X_PF.R()(0)(0));
+		//}
+		
+	}
+
+	return PFrs;
 }
 
 /*!
@@ -1776,6 +2415,21 @@ const SimTK::Vector & World::getAdvancedQs()
 {
 	return matter->getQ(integ->updAdvancedState());
 }
+
+/*!
+ * <!--  -->
+*/
+const void World::PrintAdvancedQs() const
+{
+	const SimTK::Vector &Qs = matter->getQ(integ->updAdvancedState());
+	std::cout << ownWorldIndex;
+	for(int i = 0; i < Qs.size(); i++){
+		std::cout << " " << Qs[i];
+	}
+	std::cout << std::endl;
+}
+
+
 
 /*!
  * <!--  -->
@@ -2314,7 +2968,6 @@ void World::setAtoms_Compound_FramesAndLocsInMobods(
 
 				// Sets B_X_atom
 				//currTopology.bsetFrameInMobilizedBodyFrame(cAIx, Transform());
-
 				// if(getOwnIndex() == 1){ // debug
 				// 	const Transform& O_X_root = currTopology.getFrameInMobilizedBodyFrame(cAIx);
 				// 	SimTK::Transform T_X_root = currTopology.getTopTransform_FromMap(cAIx);
@@ -2759,11 +3412,13 @@ World::calcMobodToMobodTransforms(
 	//SimTK::Transform B_X_M_spheric  = Transform();
 	//SimTK::Transform B_X_M_spheric = B_X_M_pin;
 	SimTK::Transform B_X_M_spheric  = X_parentBC_childBC * X_to_Z;
+	SimTK::Transform B_X_M_orthospheric = X_parentBC_childBC * X_to_Z;
 	
 	//SimTK::Transform P_X_F_spheric  = oldX_PB * B_X_M_pin;
 	//SimTK::Transform P_X_F_spheric = Transform();
 	//SimTK::Transform P_X_F_spheric = P_X_F_pin;
 	SimTK::Transform P_X_F_spheric = oldX_PB * B_X_M_pin;
+	SimTK::Transform P_X_F_orthospheric = oldX_PB * B_X_M_pin;
 	
 	// Get mobility (joint type)
 	bSpecificAtom *atom = topology.updAtomByAtomIx(rootAIx);
@@ -2789,6 +3444,8 @@ World::calcMobodToMobodTransforms(
 		return std::vector<SimTK::Transform> {P_X_F, B_X_M};
 	} else if (mobility == SimTK::BondMobility::Mobility::Spherical) { // Spherical
 		return std::vector<SimTK::Transform> {P_X_F_spheric, B_X_M_spheric};
+	} else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // OrthoSpherical
+		return std::vector<SimTK::Transform> {P_X_F_orthospheric, B_X_M_orthospheric};		
 	} else {
 		std::cout << "Warning: unknown mobility\n";
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
@@ -3015,6 +3672,10 @@ SimTK::Transform World::calcX_FMTransforms(
 		X_FM = Transform();
 		// X_FM = InboardLength_mZAxis;
 		return X_FM;
+	} else if (mobility == SimTK::BondMobility::Mobility::OrthoSpherical) { // Spherical
+		X_FM = Transform();
+		// X_FM = InboardLength_mZAxis;
+		return X_FM;		
 	} else {
 		X_FM = Transform();
 		std::cout << "Warning: unknown mobility\n";
@@ -3413,7 +4074,7 @@ SimTK::Real World::calcFixman(void)
 /*! <--
  *  Generate a number of samples -->
  **/
-bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
+bool World::generateSamples_old(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
 	
 	bool validated = false;
@@ -3430,7 +4091,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			lockAllMobilizers();
 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
 			mobod.unlock(currentAdvancedState);
-			TRACE("World::generateSamples: Unlocking mobilizer " << mobIntIx << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
+			//TRACE("World::generateSamples: Unlocking mobilizer " << mobIntIx << " at stage " << currentAdvancedState.getSystemStage() << std::endl << std::flush);
 
 			for(int sampleIx = 0; sampleIx < howManySamplesPerRound; sampleIx++) {
 				if (verbose) {
@@ -3471,10 +4132,46 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
 	} // __end__ isRollFlexibilities else
 
-
-
 	// Return the number of accepted samples
 	return validated;
+}
+
+
+bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
+{
+    bool validated = false;
+    SimTK::State& currentAdvancedState = integ->updAdvancedState();
+    updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+
+    validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+
+    auto runSamplingLoop = [&](SimTK::State& state) {
+        for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+            if (verbose) {
+                worldOutStream << header << " ";
+                updSampler(0)->getMsg_InitialParams(worldOutStream);
+            }
+
+            validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+
+            if (verbose) {
+                worldOutStream << std::endl;
+            }
+        }
+    };
+
+    if (isRollFlexibilities) {
+        for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
+            lockAllMobilizers();
+            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+            mobod.unlock(currentAdvancedState);
+            runSamplingLoop(currentAdvancedState);
+        }
+    } else {
+        runSamplingLoop(currentAdvancedState);
+    }
+
+    return validated;	
 }
 
 /** Print information about Simbody systems. For debugging purpose. **/
@@ -3558,55 +4255,46 @@ const SimTK::String& World::getRootMobility() const {
 	return rootMobilizer;
 }
 
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
-
-// /*!
-//  * <!-- Drill -->
-// */
-// const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_bon(){return forceField->getForces_drl_bon();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_ang(){return forceField->getForces_drl_ang();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_tor(){return forceField->getForces_drl_tor();}
+/*!
+ * <!-- Drill -->
+*/
+const std::vector<OpenMM::Vec3>& World::getForces_drl_n14(){return forceField->getForces_drl_n14();}
 
 /*!
  * <!--  -->

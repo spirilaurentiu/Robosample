@@ -144,6 +144,8 @@ set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES POSITION_INDEPENDENT_COD
 # Apply PGO and BOLT flags conditionally
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${DEBUG_FLAGS})
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS})
 elseif(CMAKE_BUILD_TYPE STREQUAL "PGO_Train")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS} ${PGO_TRAIN_FLAGS})
     target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${PGO_TRAIN_FLAGS})

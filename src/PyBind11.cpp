@@ -32,7 +32,8 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("Spherical", BondMobility::Mobility::Spherical)
         .value("AnglePin", BondMobility::Mobility::AnglePin)
         .value("BendStretch", BondMobility::Mobility::BendStretch)
-        .value("Slider", BondMobility::Mobility::Slider);
+        .value("Slider", BondMobility::Mobility::Slider)
+        .value("OrthoSpherical", BondMobility::Mobility::OrthoSpherical);
 
     py::enum_<RUN_TYPE>(m, "RunType")
         .value("DEFAULT", RUN_TYPE::DEFAULT)

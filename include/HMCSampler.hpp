@@ -279,6 +279,9 @@ public:
 	void setAcceptRejectMode(AcceptRejectMode acceptRejectMode);
 	void setAcceptRejectMode(const std::string& acceptRejectMode);
 
+	void perturbPositions_Old(SimTK::State& someState, PositionsPerturbMethod);
+	std::vector<double>& dihedralSegmenter(int nofIntervals, double segHalfDiff, std::vector<double>& segLims);
+	int findSegmentIndex(double value, const std::vector<double>& segLims);	
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
 
 	/** Set velocities to zero.  **/
@@ -678,6 +681,14 @@ public:
 	// BAT --------------------------------------------------------------------
 
 	void set_dBMps(std::vector<SimTK::Real>& QArg){ prev_dBMps = &QArg; }
+	const std::vector<SimTK::Real>& get_dBMps() const { return *prev_dBMps; }
+	void set_dPFrs(std::vector<SimTK::Real>& QArg){ prev_dPFrs = &QArg; }
+	const std::vector<SimTK::Real>& get_dPFrs() const { return *prev_dPFrs; }
+
+	void set_BMps_means(std::vector<SimTK::Real>& QArg){ prev_BMps_means = &QArg; }
+	const std::vector<SimTK::Real>& get_BMps_means() const { return *prev_BMps_means; }
+	void set_PFrs_means(std::vector<SimTK::Real>& QArg){ prev_PFrs_means = &QArg; }
+	const std::vector<SimTK::Real>& get_PFrs_means() const { return *prev_PFrs_means; }
 
 	void setPreviousQs(std::vector<SimTK::Real>& QArg){ previousQs = &QArg; }
 	
@@ -703,7 +714,11 @@ protected:
 	# pragma endregion REBAS_TEST
 
 	// Buffers to hold Q statistics
-	std::vector<SimTK::Real>* prev_dBMps = nullptr;	
+	std::vector<SimTK::Real>* prev_BMps_means = nullptr;
+	std::vector<SimTK::Real>* prev_PFrs_means = nullptr;	
+	std::vector<SimTK::Real>* prev_dBMps = nullptr;
+	std::vector<SimTK::Real>* prev_dPFrs = nullptr;
+
 	std::vector<SimTK::Real>* previousQs = nullptr;
 	std::vector<SimTK::Real>* Qmeans = nullptr;
 	std::vector<SimTK::Real>* Qdiffs = nullptr;
