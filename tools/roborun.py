@@ -105,8 +105,7 @@ if args.type == 'tdnr':
 
 	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings, robosample.AcceptRejectMode.MetropolisHastings]
 	timesteps = [TIMESTEP_CARTESIAN, TIMESTEP_TD]
-	worldIndexes = [0, 0]
-	world_indexes = [0, 0]
+	worldIndexes = [0, 1]
 	mdsteps = [MDSTEPS_CARTESIAN, MDSTEPS_TD]
 	boost_md_steps = mdsteps
 	integrators = [robosample.IntegratorType.OMMVV, robosample.IntegratorType.VERLET]
@@ -162,7 +161,6 @@ elif args.type == 'tdc':
 	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] * (len(blocks) + 1)
 	timesteps = [TIMESTEP_CARTESIAN] + [TIMESTEP_TD] * len(blocks)
 	worldIndexes = range(len(blocks) + 1)
-	world_indexes = range(len(blocks) + 1)
 	mdsteps = [MDSTEPS_CARTESIAN] + [MDSTEPS_TD] * len(blocks)
 	boost_md_steps = mdsteps
 	integrators = [robosample.IntegratorType.OMMVV] + [robosample.IntegratorType.VERLET] * len(blocks)

@@ -15,16 +15,14 @@
             "envFile": "${workspaceFolder}/.env",
             "args": [
                 "1APQ.debug",
-                "1APQ.prmtop",
-                "1APQ_min.inpcrd",
+                "data-raw/1APQ.prmtop",
+                "data-raw/1APQ_min.inpcrd",
                 "42",
                 "10",
                 "10",
                 "1",
-                "300",
-                "1APQ",
                 "tdnr",
-                "auto"
+                "[]"
             ],
             "cwd": "${workspaceFolder}/build",
         },

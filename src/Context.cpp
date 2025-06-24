@@ -5426,6 +5426,7 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bo
 
 		worlds[replicaWorldIxs[i]].updSampler(0)->setAcceptRejectMode(acceptRejectMode);
 		worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(MDStepsPerSample);
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTemperature(T);
 
 		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(timestep, adaptiveTimestep);
 		if (worlds[replicaWorldIxs[i]].updSampler(0)->integratorType == IntegratorType::OMMVV) {
