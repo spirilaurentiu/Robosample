@@ -1056,7 +1056,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		if(testingMode){
 			# pragma region REBAS_TEST
-			TestingWays testingWay = TestingWays::CONSTANT;						// CONSTANT
+			TestingWays testingWay = TestingWays::ALTERNATIVE;						// ALTERNATIVE
 			std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
 
 			if(testingWay == TestingWays::CONSTANT){
@@ -1071,11 +1071,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 				if(this->temperature == 300){scaleFactor = this->QScaleFactor;}
 				else						{scaleFactor = 1.0 / this->QScaleFactor;}
-
-				std::cout << " replIx thIx wIx T scaleFactor"
-					<<" "<< this->replicaIx <<" "<< this->thermoStateIx <<" "<< world->ownWorldIndex
-					<<" "<< this->temperature <<" "<< scaleFactor
-					<< std::endl;
 
 			}else if(testingWay == TestingWays::CONDITIONAL){
 
@@ -1095,7 +1090,14 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 				scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
 			}
 
+
 			// Scale
+
+				std::cout << " replIx thIx wIx T scaleFactor"
+					<<" "<< this->replicaIx <<" "<< this->thermoStateIx <<" "<< world->ownWorldIndex
+					<<" "<< this->temperature <<" "<< scaleFactor
+					<< std::endl;
+
 			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				int numUs = mobod.getNumU(someState);
@@ -1130,10 +1132,10 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 							//    //|| (int(mbx) == 7) || (int(mbx) == 8) //|| (int(mbx) == 2) // ETHANE perpe bonds
 							// ){ // ethane
 							if( false
-								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)    || (int(mbx) == 12) // ALA1 side methyl
-								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)    || (int(mbx) == 14) // ALA1 C-ter methyl
-								// || (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
-								// || (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // ALA1 C-ter peptide bond
+								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)   || (int(mbx) == 12) // ALA1 side methyl
+								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)   || (int(mbx) == 14) // ALA1 C-ter methyl
+								|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
+								|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // ALA1 C-ter peptide bond
 							  ){
 								SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
 								std::cout << "BONDLengths X_BM_p_norm " << BONDLengths[zMatRow] <<" "<< X_BM.p().norm() << std::endl;
@@ -1141,15 +1143,18 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 								if(numUs == 3){
 									if(localQIndex == 2){
-										stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1);
+										//stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
+										stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
 									}
 								}else if(numUs == 2){
 									if(localQIndex == 1){
-										stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1);
+										//stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
+										stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
 									}
 								}else if(numUs == 1){
 									if(localQIndex == 0){
-										stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1);
+										//stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
+										stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
 									}
 								}
 
@@ -1167,8 +1172,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 							if( false 
 								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)    //|| (int(mbx) == 12) // ALA1 methyl
 								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)    //|| (int(mbx) == 14) // ALA1 methyl
-								// || (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
-								// || (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // C-ter peptide bond
+								 //|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) //|| (int(mbx) == 10) // ALA1 N-ter peptide bond
+								 //|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) //|| (int(mbx) == 22) // C-ter peptide bond
 							  ){								
 								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (SimTK::Pi - (*prev_PFrs_means)[int(mbx)]);
 								std::cout << "ANGLEBends pi_PFrs " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
@@ -1177,7 +1182,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 								if(false || (localQIndex == 0) // || (localQIndex == 1)
 								){
 									//stateQs[qIx] = (SimTK::Pi - ANGLEBends[zMatRow]) * ((scaleFactor) - 1);
-									stateQs[qIx] = -1.0 * (std::acos(X_PF.R()(0)(0))) * ((scaleFactor) - 1);
+									// stateQs[qIx] = -1.0 * (std::acos(X_PF.R()(0)(0))) * ((scaleFactor) - 1); // visualize
+									stateQs[qIx] = -1.0 * (dPFr_local) * ((scaleFactor) - 1); // check energy
 								}
 
 							} // __end__ which bodies do we stretch
