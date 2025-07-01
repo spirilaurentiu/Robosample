@@ -2,7 +2,7 @@ import flexor
 import mdtraj as md
 import argparse
 import robosample
-import batstat
+import robobatstat
 import numpy as np
 import os
 import argparse
@@ -57,10 +57,10 @@ NOF_REPLICAS = 1
 # 10 kcal/mol - nanoseconds or longer (high barrier, ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
 TIMESTEP_TD = 0.005 # Torsional dymaics time step is 5 fs
-MDSTEPS_TD = 400 # Torsional dynamics block trajectory length 2 ps
+MDSTEPS_TD = 200 # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.0007 # Cartesian time step is 0.7 fs since we don't use contraints (e.g. SHAKE)
-MDSTEPS_CARTESIAN = 715 # Cartesian block trajectory length 500 fs
+MDSTEPS_CARTESIAN = 357 # Cartesian block trajectory length 250 fs
 
 # prepare flexor generator
 mdtrajObj = md.load(args.inpcrd, top=args.prmtop)
@@ -82,7 +82,7 @@ if args.type == 'tdnr':
 	# We add two worlds:
     # 1. Cartesian dynamics for the entire protein
     # 2: Torsional dynamics for phi and psi dihedrals
-	stats = batstat.BATCorrelations(args.prmtop, args.inpcrd)
+	stats = robobatstat.BATCorrelations(args.prmtop, args.inpcrd, args.seed, include_omega=False, include_chi1=True, include_chi2=True, include_chi3=True, include_chi4=True, include_chi5=True)
 	atom_indices = stats.get_dihedral_atom_indices()
 	
     # Add Cartesian flexors (OpenMM)
@@ -127,7 +127,7 @@ elif args.type == 'tdc':
 
 	# # Cluster the previous simulations
 	stats = batstat.BATCorrelations(args.prmtop, args.inpcrd)
-	atom_indices = stats.get_dihedral_atom_indices()
+	stats = robobatstat.BATCorrelations(args.prmtop, args.inpcrd, args.seed, include_omega=False, include_chi1=True, include_chi2=True, include_chi3=True, include_chi4=True, include_chi5=True)
 	blocks_as_bond_list = []
 	for block in args.blocks:
 		l = []

@@ -1875,8 +1875,16 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 		if (!useNUTS) {
 
 			try{
+
+				UCache = someState.getU();
+
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
-				system->realize(someState, SimTK::Stage::Position);
+				// system->realize(someState, SimTK::Stage::Position);
+				system->realize(someState, SimTK::Stage::Acceleration);
+
+				UDotCache = someState.getUDot();
+				// std::cout << "UDotCache size " << uDot.size() << std::endl;
+
 				return;
 			}catch(const std::exception&){
 				proposeExceptionCaught = true;
@@ -2896,6 +2904,33 @@ HMCSampler::calcMathJacobian(const SimTK::State& someState,
 
 	return mathJ;
 
+}
+
+void HMCSampler::PrintUDot(const SimTK::State& someState)
+{
+	// Get generalized accelerations
+	const SimTK::Vector& uDot = someState.getUDot();
+
+	// Mathematical Jacobian is 3N x nu dimensional
+	unsigned int nu = someState.getNU();
+
+	// Go through topologies
+	for(auto& topology : topologies){
+		// Go through atoms
+		for(const auto& AtomList : topology.subAtomList){
+
+			// Get atom indeces in Compound and Simbody
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+
+			std::cout << "aix= " << aIx << "uDot=" << uDot[int(mbx)-1] << std::endl;
+		}
+	}
+}
+
+const SimTK::Vector& HMCSampler::GetUDot(const SimTK::State& someState) {
+	system->realize(someState, SimTK::Stage::Acceleration);
+	return someState.getUDot();
 }
 
 /*
@@ -4751,6 +4786,10 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
 
+					// if (integratorType == IntegratorType::OMMVV) {
+					// 	PrintUDot(someState);
+					// }
+
 					// Print
 					if (verbose) {
 						//Print(someState, validated, getAcc());
@@ -4894,6 +4933,7 @@ void HMCSampler::update(SimTK::State& someState)
 	if(this->integratorType == IntegratorType::OMMVV){
 		// Update Simbody too
 		OMM_To_Simbody_setAtomsLocations(someState);
+		// system->realize(someState, SimTK::Stage::Acceleration);
 	}
 	
 	// Store final configuration and energy

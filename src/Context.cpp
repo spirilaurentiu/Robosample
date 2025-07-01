@@ -51,6 +51,9 @@ Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t thread
 	std::cout << "Context::Context runType " << RUN_TYPE_MAP_INV.at(this->runType) << std::endl << std::flush;
 	this->swapEvery = swapFreq;
 	this->swapFixman = swapFixmanFreq;
+
+	foutU = std::ofstream(baseName + "_U.bin", std::ios::binary | std::ios::app);
+	foutUDot = std::ofstream(baseName + "_U_dot.bin", std::ios::binary | std::ios::app);
 }
 
 void Context::setVerbose(bool verbose){
@@ -5809,6 +5812,57 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// Generate samples
 		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
 
+		size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
+		if (validated && whichWorld == wIx) {
+			SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[wIx].updForceField());
+			const auto& U = worlds[wIx].updSampler(0)->UCache;
+			const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
+			// std::cout << "U.size() = " << U.size() << std::endl;
+			// std::cout << "UDot.size() = " << UDot.size() << std::endl;
+			const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+			assert(allBONDS.size() == getNofMolecules() && "internal coordinates nof molecules wrong");
+			// Iterate molecules
+			for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+				// Get molecule and it's bonds
+				Topology& topology = topologies[topoIx];
+				const std::vector<BOND>& BONDS = allBONDS[topoIx];
+				// Iterate molecule's bonds
+				for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+					// Get current bond
+					const BOND& currBOND = BONDS[BOIx];
+					size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+					bBond& bond = bonds[boIx];
+					// Get bond's atoms
+					bSpecificAtom& childAtom  = atoms[currBOND.first];
+					bSpecificAtom& parentAtom = atoms[currBOND.second];
+					SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+					SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+					SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+					SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+					SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+					SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+					if (childMbx != parentMbx) {
+						int min_aix = std::min(currBOND.first, currBOND.second);
+						int max_aix = std::max(currBOND.first, currBOND.second);
+						std::string key = std::to_string(min_aix) + "-" + std::to_string(max_aix);
+						// std::cout << "key " << key << " childMbx " << childMbx - 2 << std::endl;
+						// MobilizedBodyIndex starts from 1, so we subtract 1 to match our indexing
+						// I think the first one is the ground, so we subtract 2 to get the correct index
+						const auto& u = U[childMbx - 2];
+						UCache[key] = u;
+						const auto& uDot = UDot[childMbx - 2];
+						UDotCache[key] = uDot;
+					}
+				} // every bond
+			} // every molecule
+
+			// std::cout << "Writing U and UDot to cache for world " << wIx << std::endl;
+			writeU(UCache, foutU);
+			writeU(UDotCache, foutUDot);
+		}
+
+	// Non-equilibrium world
+
 	// Non-equilibrium world
 	} else if (distortOption != 0) {
 
@@ -6224,12 +6278,15 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		//Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		// Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		// if (mixi >= equilRounds) {
+		// 	PrintUDot();
+		// }
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
 		// SIMULATE EACH REPLICA --------------------------------------------->
-		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ 
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
@@ -6304,7 +6361,33 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	PrintNofAcceptedSwapsMatrix();
 	//PrintReplicaMaps();
 
+	foutU.close();
+	foutUDot.close();
+
 }
+
+void Context::writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary) {
+    for (const auto& item : cache) {
+        std::istringstream keyStream(item.first);
+        std::string token;
+        std::getline(keyStream, token, '-');
+        int atom1 = std::stoi(token);
+        std::getline(keyStream, token);
+        int atom2 = std::stoi(token);
+        float a1 = static_cast<float>(atom1);  // Ensure consistency
+        float a2 = static_cast<float>(atom2);
+        float uDot = static_cast<float>(item.second);
+
+		std::cout << "Writing: " << a1 << " " << a2 << " " << uDot << std::endl;
+
+        foutBinary.write(reinterpret_cast<const char*>(&a1), sizeof(float));
+        foutBinary.write(reinterpret_cast<const char*>(&a2), sizeof(float));
+        foutBinary.write(reinterpret_cast<const char*>(&uDot), sizeof(float));
+    }
+
+    foutBinary.flush(); // Ensure data is immediately written to disk
+}
+
 
 
 /*!
@@ -9293,8 +9376,69 @@ void Context::Print_TRANSFORMERS_Work(void)
 			} // every bond
 
 		} // every molecule
-
 }
+
+// void Context::PrintUDot(void)
+// {
+// 	size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
+// 	const auto& currentAdvancedState = worlds[wIx].integ->updAdvancedState();
+// 	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[wIx].updForceField());
+
+// 	const auto& U = worlds[wIx].updSampler(0)->UCache;
+// 	const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
+
+// 	// std::cout << "U.size() = " << U.size() << std::endl;
+// 	// std::cout << "UDot.size() = " << UDot.size() << std::endl;
+
+// 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+// 	assert(allBONDS.size() == getNofMolecules() && "internal coordinates nof molecules wrong");
+
+// 	// Iterate molecules
+// 	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
+// 		// Get molecule and it's bonds
+// 		Topology& topology = topologies[topoIx];
+// 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
+// 		// Iterate molecule's bonds
+// 		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+
+// 			// Get current bond
+// 			const BOND& currBOND = BONDS[BOIx];
+// 			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+// 			bBond& bond = bonds[boIx];
+
+// 			// Get bond's atoms
+// 			bSpecificAtom& childAtom  = atoms[currBOND.first];
+// 			bSpecificAtom& parentAtom = atoms[currBOND.second];
+
+// 			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+// 			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+
+// 			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+// 			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+// 			SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+// 			SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+
+// 			if (childMbx != parentMbx) {
+// 				int min_aix = std::min(currBOND.first, currBOND.second);
+// 				int max_aix = std::max(currBOND.first, currBOND.second);
+// 				std::string key = std::to_string(min_aix) + "-" + std::to_string(max_aix);
+// 				// std::cout << "key " << key << " childMbx " << childMbx - 2 << std::endl;
+
+// 				// MobilizedBodyIndex starts from 1, so we subtract 1 to match our indexing
+// 				// I think the first one is the ground, so we subtract 2 to get the correct index
+// 				const auto& u = U[childMbx - 2];
+// 				uCache[key].push_back(u);
+
+// 				const auto& uDot = UDot[childMbx - 2];
+// 				uDotCache[key].push_back(uDot);
+// 			}
+// 		} // every bond
+// 	} // every molecule
+
+// }
 // TRANSFORMERS LAB
 // ===========================================================================
 

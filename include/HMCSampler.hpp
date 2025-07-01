@@ -100,6 +100,8 @@ class HMCSampler : virtual public Sampler
 friend class Context;
 public:
 
+	SimTK::Vector UCache, UDotCache;
+
 	/** Constructor **/
 	HMCSampler(World &argWorld,
 		SimTK::CompoundSystem &argCompoundSystem,
@@ -162,6 +164,9 @@ public:
 	SimTK::Matrix& 
 	calcMathJacobian(const SimTK::State& someState,
 		SimTK::Matrix& mathJ);
+
+	void PrintUDot(const SimTK::State& someState);
+	const SimTK::Vector& GetUDot(const SimTK::State& someState);
 
 	/*
 	* Get the diagonal 3Nx3N matrix containing the atoms masses
