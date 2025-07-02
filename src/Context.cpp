@@ -6249,7 +6249,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// ======================== SIMULATE ======================
 			//RunReplicaRefactor(mixi, replicaIx);
 			RunReplicaRefactor_SIMPLE(mixi, replicaIx);
-
+				
 			// Copy the new timestep and mdstep if we should be adapting
 			if (mixi >= equilRounds) {
 				std::vector<SimTK::Real> newTimesteps(worlds.size());
@@ -9141,8 +9141,6 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 // ===========================================================================
 // TRANSFORMERS LAB
 // ===========================================================================
-
-
 
 /*!
  * <!--  -->

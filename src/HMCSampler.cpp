@@ -1056,11 +1056,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		if(testingMode){
 			# pragma region REBAS_TEST
-			TestingWays testingWay = TestingWays::CONSTANT;						// CONSTANT
+			TestingWays testingWay = TestingWays::ALTERNATIVE;						// ALTERNATIVE
 			std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
 
 			if(testingWay == TestingWays::CONSTANT){
-				scaleFactor = 1.0;
+				scaleFactor = 1.25;
 
 			}else if(testingWay == TestingWays::ALTERNATIVE){
 
@@ -1165,19 +1165,26 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 							//    //|| (int(mbx) == 7) || (int(mbx) == 8) //|| (int(mbx) == 2) // ETHANE perpe bonds
 							// ){ // ethane
 							if( false 
-								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)    //|| (int(mbx) == 12) // ALA1 methyl
-								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)    //|| (int(mbx) == 14) // ALA1 methyl
-								// || (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
-								// || (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // C-ter peptide bond
+								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)    || (int(mbx) == 12) // ALA1 methyl
+								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)    || (int(mbx) == 14) // ALA1 methyl
+								|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
+								|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // C-ter peptide bond
 							  ){								
-								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (SimTK::Pi - (*prev_PFrs_means)[int(mbx)]);
-								std::cout << "ANGLEBends pi_PFrs " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
-								std::cout << "ANGLEBends PFrs_mean pi_PFrs_mean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< (*prev_PFrs_means)[int(mbx)] <<" "<< SimTK::Pi - (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
+								SimTK::Real dTheta = ANGLEBends[zMatRow] - (SimTK::Pi - (*prev_PFrs_means)[int(mbx)]);
+								SimTK::Real PFr_local = std::acos(X_PF.R()(0)(0));
+								SimTK::Real dPFr_local = PFr_local - (*prev_PFrs_means)[int(mbx)];
+
+								if(int(mbx) == 16){
+									std::cout << "ANGLEBends acosXPFR00 " << ANGLEBends[zMatRow] <<" "<< PFr_local << std::endl;
+									std::cout << "ANGLEBends PFrs_mean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
+								}
 
 								if(false || (localQIndex == 0) // || (localQIndex == 1)
 								){
 									//stateQs[qIx] = (SimTK::Pi - ANGLEBends[zMatRow]) * ((scaleFactor) - 1);
-									stateQs[qIx] = -1.0 * (std::acos(X_PF.R()(0)(0))) * ((scaleFactor) - 1);
+									//stateQs[qIx] = -1.0 * (PFr_local) * ((scaleFactor) - 1);
+									//stateQs[qIx] = 0.027777778; // 5 degrees
+									stateQs[qIx] = dPFr_local * ((scaleFactor) - 1);
 								}
 
 							} // __end__ which bodies do we stretch
@@ -4271,17 +4278,27 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 		adaptWorldBlocks(someState);
 	}
 
+//std::cout << "DRILLING Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
+
+//std::cout << "DRILLING perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
+//std::cout << "DRILLING calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 
+//std::cout << "DRILLING integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
+
+//std::cout << "DRILLING perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
 
 	// drl
 	#ifdef __DRILLING__
@@ -4292,6 +4309,8 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
+
+//std::cout << "DRILLING calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
 
 	} else {
 			// Store new energies
