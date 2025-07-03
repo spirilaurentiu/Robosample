@@ -180,7 +180,7 @@ void testAlanineDipeptide(int seed) {
 
 	std::vector<AcceptRejectMode> acceptRejectModes = { AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings, AcceptRejectMode::MetropolisHastings };
 	std::vector<IntegratorType> integrators = { IntegratorType::OMMVV, IntegratorType::VERLET, IntegratorType::VERLET };
-	std::vector<SimTK::Real> timesteps = { 0.0007, 0.035, 0.07 };
+	std::vector<SimTK::Real> timesteps = { 10, 10, 10 };
 	std::vector<int> worldIndexes = { 0, 1, 2 };
 	std::vector<int> mdsteps = { 10, 10, 10 };
 	// std::vector<int> boostMDSteps = mdsteps;
@@ -212,7 +212,7 @@ void testAlanineDipeptide(int seed) {
 	c.PrintSimbodyMobods();
 
 	// Run the simulation
-	c.RunREX(0, 100);
+	c.RunREX(5, 5);
 }
 
 /*!
@@ -440,6 +440,9 @@ void testSOA(void)
 /*! <!-- Main --> */
 int main(int argc, char **argv)
 {
+	testAlanineDipeptide(42);
+	return 0;
+	
 	TRACELOC(0);
     if (argc < 10) {
         std::cerr << "Usage: " << argv[0] << " <name> <top> <rst7> <equilRounds> <prodRounds> <writeFreq> <baseTemperature> <runType> <seed>" << std::endl;
@@ -494,7 +497,7 @@ int main(int argc, char **argv)
 
 	context.setAtomMasses();
 
-	context.setVerbose(true);
+	//context.setVerbose(true);
 
 	context.loadAmberSystem(top, rst7);
 

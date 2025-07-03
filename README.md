@@ -169,19 +169,7 @@ conda install -c conda-forge mamba
 mamba env create -f tools/robo.yaml
 ```
 
-## Running Robosample
-
-The executable is compiled in `build/`. Examples are available in the same folder. To see them, type:
-
-```bash
-ll inp.*
-```
-
-To run any of them, execute:
-
-```bash
-./robosample inp.2but
-```
+In order to run the program under VSCode debugger, place breakpoints in `simulate.py` and run with `Python: Current File (Debug Robosample Libraries)`. After it stops, run start `(gdb) Attach to Python`, enter the PID of the `python` instance (usually, it has `-X frozen_modules=OFF` as arguments) and press the `Continue (F5)` button of the VSCode debugger. Look in the `CALL STACK` section on the left side of the screen and press `(gdb) Attach to Python` and it should take you to the breakpoint placed inside a `.cpp` file. For more details, see [this](https://nadiah.org/2020/03/01/example-debug-mixed-python-c-in-visual-studio-code/).
 
 ## BOLT
 
@@ -191,7 +179,7 @@ We have applied [LLVM-BOLT](https://github.com/llvm/llvm-project/tree/main/bolt)
 
 ```bash
 sudo apt-get update
-sudo apt-get installlinux-tools-common linux-tools-generic linux-tools-`uname -r`
+sudo apt-get install linux-tools-common linux-tools-generic linux-tools-`uname -r`
 ```
 
 ### Installing BOLT
@@ -200,9 +188,10 @@ Downlad BOLT and compile it. A docker file is also available.
 
 ```bash
 git clone https://github.com/llvm/llvm-project.git
+cd llvm-project
 mkdir build
 cd build
-cmake -G Ninja ../llvm-project/llvm -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS="bolt"
+cmake -G Ninja ../llvm -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS="bolt"
 ninja bolt
 ```
 
@@ -303,3 +292,14 @@ To see all exported symbols, use:
 ```bash
 nm -an build/robosample | c++filt
 ```
+ 
+
+bash```
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
+ninja robosample
+```
+
+
+
+
+

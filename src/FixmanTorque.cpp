@@ -22,25 +22,25 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	SimTK::Real D0 = 1.0;
 	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0);
 
-	// Apply Fixman torque
-	std::cout << "FixmanTorque_" << RT; // print Fixman torque
+	// // Apply Fixman torque
+	// std::cout << "FixmanTorque_" << RT; // print Fixman torque
 	
 	int uslot = -1;
 	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-		std::cout <<" "<< int(mbx); // print Fixman torque
+		// std::cout <<" "<< int(mbx); // print Fixman torque
 
 		for(int uIx = 0; uIx < mobod.getNumU(state); uIx++){
 						
 			uslot++;
 
-			std::cout <<" "<< uIx <<" "<< (-1.0) * RT * fixTorqV[uslot]; // print Fixman torque
+			// std::cout <<" "<< uIx <<" "<< (-1.0) * RT * fixTorqV[uslot]; // print Fixman torque
 
 			mobod.applyOneMobilityForce(state, uIx, (-1.0) * RT * fixTorqV[uslot], mobilityForces);
 		}
 
-		std::cout << std::endl; // print Fixman torque
+		// std::cout << std::endl; // print Fixman torque
 
 	}
 

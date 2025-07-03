@@ -582,372 +582,6 @@ void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
 }
 
 
-
-
-void HMCSampler::perturbPositions_Old(SimTK::State& someState,
-	PositionsPerturbMethod PPM)
-{
-
-	//std::cout << "HMCSampler::perturbPositions" << " PPM " << (PositionsPerturbMethodS.find(PPM))->second << "\n";
-
-	if( (PPM == PositionsPerturbMethod::BENDSTRETCH_1) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_2) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_3) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_4) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_5) ||
-		(PPM == PositionsPerturbMethod::BENDSTRETCH_6) ){
-	
-		// Scale bonds and angles
-		int burnIn = 1;
-		if(burnIn > 1){std::cerr << "WARNING: burnIn bigger than 1" << std::endl;}
-		if(this->nofSamples >= burnIn){ // dont't take burn-in // PERICOL !!!!!!!!!!!!!!
-
-			SimTK::Real J_ini = 0, J_fin = 0, J_scale = 0;
-
-			// Just for the Visualizer
-			if(world->visual){
-
-				someState.updQDot() = 0.0;
-				someState.updQDotDot() = 0.0;
-				this->world->timeStepper->stepTo( someState.getTime() + (0.001) );
-
-				std::cout << "Scaling SystemStage time after"
-					<<" "<< someState.getSystemStage()
-					<<" "<< someState.getTime()
-					<< std::endl;
-					
-				std::cout << "Sleeping... before scaling " << std::flush;
-				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-				std::cout << "done.\n" << std::flush;
-
-			}
-			
-			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			// Scaling Work BEGIN SCALEQ
-			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			// Scale. It realizes Dynamics Stage
-			//SimTK::Real pe_beforeScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			//scout("[SCALING_PES]:") <<" " << pe_beforeScale << eolf;
-			//scout("REBAS scaling with") <<" " << getBendStretchStdevScaleFactor() << eol;
-
-			// // SCALEQ_INFO ################################################################################################################
-			// // Print temperature
-			// //std::cout << " T " << this->boostT << std::endl;
-			// if(world->getOwnIndex() >= 0){ 
-			// 	// Print Q
-			// 	scout("\nstepToQ" + std::to_string(nofSamples) + "_" + std::to_string(this->boostT));
-			// 	for(int ix = 0; ix < someState.getNQ(); ix++){
-			// 		std::cout <<" " << someState.getQ()[ix];
-			// 	}
-			// 	ceol;
-			// 	// Print transforms
-			// 	world->PrintFullTransformationGeometry("r" + std::to_string(nofSamples) + "_" + std::to_string(this->boostT) + " ", someState);
-			// }
-			// // SCALEQ_INFO end ############################################################################################################
-
-			// :::::::::::: (1) Get initial Jacobian ::::::::::::::::::::::::::
-
-			//J_ini = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
-
-			////PrintSubZMatrixBATAndRelated(someState); // OLD
-			//bool BernoulliTrial = true;
-			//bool varianceBasedScalingFactor = false;
-			//std::vector<int> BATOrder = {1, 0, 2};			// bendstretch
-			//std::vector<SimTK::Real> BATSign = {1, 1, 1};		// bendstretch
-			//std::vector<int> BATOrder = {2, 1, 0};				// spherical
-			//std::vector<SimTK::Real> BATSign = {-1, -1, -1};		// spherical
-			// std::vector<int> BATOrder = {0, 1, 2};				// slider
-			// std::vector<SimTK::Real> BATSign = {1, 1, 1};		// slider						
-			// J_scale = scaleSubZMatrixBATDeviations(someState, getBendStretchStdevScaleFactor(), BernoulliTrial, varianceBasedScalingFactor, BATOrder, BATSign);
-			//// After scaling through Qs, we have to recalculate BAT values
-			//updateSubZMatrixBAT(someState);
-			////PrintSubZMatrixBATAndRelated(someState); // OLD
-
-			//scout("\nJ_ini\n");
-			//J_ini = calcMobodsMBAT(someState);
-			J_ini = calcMobodsBATJacobianDetLog_NEW(someState);
-
-			// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
-
-			// PrintSimbodyVec(someState.getQ(), 6, "\nQs_before_scaling");
-			std::cout << "" 
-				<< " w " << this->world->getOwnIndex()
-				<< " scaleF " << this->QScaleFactor << "\n"; // @@@@@@@@@@@@@
-
-			if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
-
-			SimTK::Vector &stateQs = someState.updQ();
-
-			// // Print Q stats
-			// std::cout << "\nQmeans";
-			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
-			// 		std::cout <<" " << (*Qmeans)[qIx] ;
-			// 	}
-			// }std::cout << std::endl;
-			// std::cout << "\nQdiffs";
-			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
-			// 		std::cout <<" " << (*Qdiffs)[qIx] ;
-			// 	}
-			// }std::cout << std::endl;
-			// std::cout << "\nQvars";
-			// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			// 	for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState); qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState); qIx++ ){
-			// 		std::cout <<" " << (*Qvars)[qIx] ;
-			// 	}
-			// }std::cout << std::endl;						
-
-			SimTK::Real scaleFactor = 1;			
-
-			bool testingMode = true; // Are we doing temperature scaling
-
-			if(testingMode){
-				# pragma region REBAS_TEST
-				std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
-
-				enum TestingWay {
-					CONSTANT,
-					ALTERNATIVE,
-					BY_THERMO,
-					WORLD,
-					BERNOULLI};
-
-				TestingWay testingWay = TestingWay::CONSTANT;						// BY_THERMO
-
-				if(testingWay == TestingWay::CONSTANT){
-					scaleFactor = 1.0;
-
-				}else if(testingWay == TestingWay::ALTERNATIVE){ 				
-
-					if(this->nofSamples % 2){scaleFactor = 0.80;}
-					else					{scaleFactor = 1.25;}
-
-				}else if(testingWay == TestingWay::BY_THERMO){
-
-					if(this->temperature == 300){scaleFactor = this->QScaleFactor;}
-					else						{scaleFactor = 1.0 / this->QScaleFactor;}
-
-					std::cout << " replIx thIx wIx T scaleFactor"
-						<<" "<< this->replicaIx <<" "<< this->thermoStateIx <<" "<< world->ownWorldIndex
-						<<" "<< this->temperature <<" "<< scaleFactor
-						<< std::endl;
-
-				}else if(testingWay == TestingWay::WORLD){
-					
-					;
-
-				}else if(testingWay == TestingWay::BERNOULLI){
-					SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-					SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
-					SimTK::Real scaleFactorReference = 1.01;
-					SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
-					scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
-				}
-
-				// Scale
-				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-
-					int decimal_places = 7;
-					std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
-
-					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
-						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
-						qIx++ ){
-							const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
-
-							//stateQs[qIx] = (X_BM.p().norm() * (scaleFactor - 1));
-
-							//stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
-
-							if("printStuff"){
-								std::cout << "stateQs[qIx] (*prev_dBMps)[qIx] (*prev_dBMps)[qIx]scaled"
-									<<" "<<  stateQs[qIx]
-									<<" "<< (*prev_dBMps)[qIx]
-									<<" "<< (*prev_dBMps)[qIx] * ((scaleFactor) - 1)
-									<< std::endl;
-								// std::cout << "qIx QScaleF scaleF prev_dBMps " << qIx
-								// 	<<" "<< this->QScaleFactor
-								// 	<<" "<< scaleFactor
-								// 	<<" "<< (*prev_dBMps)[qIx]
-								// 	<< "\n";
-							}							
-
-							J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
-
-						}
-				}
-
-				# pragma endregion REBAS_TEST
-
-			}else{ // __end__ testingMode
-
-				scaleFactor = this->QScaleFactor;
-
-				// Print transforms _begin_ // BENDSTRETCH_5
-				const SimTK::Vector &currBMps = world->getBMps();
-				const SimTK::Vector &currPFrs = world->getPFrs();
-				std::cout << "c c c c c c c c c currPFrs ";
-				for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){std::cout<< "  " << currPFrs[mbx];}
-				std::cout<<std::endl<<std::flush;
-				std::cout << "c c c c c c c c c currBMps ";
-				for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){std::cout<< "  " << currBMps[mbx];}
-				std::cout<<std::endl<<std::flush;
-				// _end_ print transforms // BENDSTRETCH_5
-
-				int nofScaledBMs = 0;
-				for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-					const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-
-					int localQIndex = -1;
-					for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
-						qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
-						qIx++ ){
-						localQIndex++;
-						const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
-						const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
-
-						if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
-
-							stateQs[qIx] = (*Qdiffs)[qIx] * ((scaleFactor) - 1);
-
-						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_2){
-
-							stateQs[qIx] = (*previousQs)[qIx] * ((scaleFactor) - 1);
-
-						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_3){
-
-							stateQs[qIx] = (*prev_dBMps)[qIx] * ((scaleFactor) - 1);
-
-						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_4){
-
-							stateQs[qIx] = (*prev_dPFrs)[qIx] * ((scaleFactor) - 1);
-
-						}else if(PPM == PositionsPerturbMethod::BENDSTRETCH_5){
-
-							std::cout << "BENDSTRETCH_5"
-								<<" mbx_locQIx_qIx_qIx2 "<< int(mbx) <<" "<< localQIndex <<" "<< qIx <<" "<< int(int(qIx) / 2)
-								<<" prevQs " << (*previousQs)[qIx];
-
-							if(localQIndex == 0){
-
-								std::cout<< " prev_dPFrs " << (*prev_dPFrs)[int(mbx)]; // BENDSTRETCH_5
-
-								//stateQs[qIx] = (*prev_dPFrs)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
-								stateQs[qIx] = (*prev_dPFrs)[int(mbx)] * ((scaleFactor) - 1);
-
-							}else{
-
-								std::cout<< " prev_dBMps " << (*prev_dBMps)[int(mbx)]; // BENDSTRETCH_5
-
-								//stateQs[qIx] = (*prev_dBMps)[int(int(qIx) / 2)] * ((scaleFactor) - 1);
-								stateQs[qIx] = (*prev_dBMps)[int(mbx)] * ((scaleFactor) - 1);
-
-							}
-
-							std:cout<<std::endl<<std::flush; // BENDSTRETCH_5
-
-						}else{
-							warnflush("Unknown scaling method");
-						}
-
-						SimTK::Real bondLength = X_BM.p().norm();
-						SimTK::Real bondLengthScaled = bondLength + stateQs[qIx];
-						SimTK::Real bondLengthRatio = bondLengthScaled / bondLength;
-						J_scale += std::log( bondLengthRatio );
-
-						SimTK::Real angle = std::acos(X_PF.R()(0)(0));
-						SimTK::Real angleScaled = std::acos(X_PF.R()(0)(0) + stateQs[qIx]);
-						SimTK::Real angleScaledRatio = 1.0;
-						if(std::abs(angle) < 0.000001){
-							angleScaledRatio = 1.0;
-						}else{
-							angleScaledRatio = angleScaled / angle;
-						}
-						J_scale += std::log( angleScaledRatio );
-
-						// std::cout << "check J_Scale "
-						// 	<< " bondLength " << bondLength
-						// 	<< " bondLengthScaled " << bondLengthScaled
-						// 	<< " bondLengthRatio " << bondLengthRatio
-						// 	<< " angle " << angle
-						// 	<< " angleScaled " << angleScaled
-						// 	<< " angleScaledRatio " << angleScaledRatio
-						// 	<< std::endl;
-
-						nofScaledBMs++;
-
-					}  // __end__ for qIx
-				}
-			}
-
-			// Scale state directly
-			//for(int qIx = 0; qIx < someState.getNQ(); qIx++){
-			//	J_ini += (4.0 * std::log( std::abs((*Qmeans)[qIx] + (*Qdiffs)[qIx]) )) ; // JACOBIAN
-			//	stateQs[qIx] = (*Qdiffs)[qIx] * ((this->QScaleFactor) - 1);
-			//}
-
-			//J_scale = someState.getNQ() * std::log((this->QScaleFactor)); // JACOBIAN
-			//std::cout << "\nJ_scale" << " " << J_scale << std::endl;
-
-			//for(int qIx = 0; qIx < someState.getNQ(); qIx++){ // JACOBIAN
-			//	J_fin += (4.0 * std::log( std::abs((*Qmeans)[qIx] + stateQs[qIx]) ));
-			//}
-
-			system->realize(someState, SimTK::Stage::Dynamics);
-			//PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@
-
-			// :::::::::::: (3) Get final Jacobian ::::::::::::::::::::::::::::
-			
-			//J_fin = calcBATJacobianDetLog(someState, SimTK::BondMobility::Mobility::BendStretch);
-			//scout("\nJ_fin\n");
-			//J_fin = calcMobodsMBAT(someState);
-			J_fin = calcMobodsBATJacobianDetLog_NEW(someState);
-
-			setDistortJacobianDetLog(J_ini + J_scale - J_fin); // RESTORE
-
-			//setDistortJacobianDetLog(J_scale);
-
-			//std::cout << "\nBAT Jacobian terms " << J_ini <<" " << J_scale <<" " << J_fin <<" "<< (J_ini + J_scale - J_fin) << std::endl;
-
-			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			// Scaling Work END SCALEQ
-			// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-			//SimTK::Real pe_afterScale = forces->getMultibodySystem().calcPotentialEnergy(someState);
-			//scout("[SCALING_PES]:") <<" " << pe_afterScale << eolf;
-
-			// Just for the Visualizer
-			if(world->visual){
-
-				
-				someState.updQDot() = 0.0;
-				someState.updQDotDot() = 0.0;
-				this->world->timeStepper->stepTo(someState.getTime() + (0.001));
-
-				std::cout << "Scaling SystemStage tiem after"
-					<<" "<< someState.getSystemStage()
-					<<" "<< someState.getTime()
-					<< std::endl;
-
-				std::cout << "Sleeping... after scaling " << std::flush;
-				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-				std::cout << "done.\n" << std::flush;
-				
-			}
-
-		}
-
-	}else{
-		// Do nothing
-	}
-}
-
-
-
 /*! <!-- Segment dihedral angles into intervals
  * @param nofIntervals Number of intervals to segment into
  * @param segHalfDiff Half difference for segment width adjustment
@@ -1011,6 +645,28 @@ int HMCSampler::findSegmentIndex(double value, const std::vector<double>& segLim
     return -1;
 }
 
+/*! <!-- Check if the mobilized body index is part of the REBAS experiments
+ * @param molName Molecule name
+ * @param mbx Mobilized body index
+ * @return True if the mobilized body index is part of the REBAS experiments, false otherwise --> */
+bool HMCSampler::REBAS_Scale_Mbx(REBAS_MoleculeName_Ix molName, SimTK::MobilizedBodyIndex mbx){
+
+	std::vector<bool> MoleculeConditions{
+		( false // ETHANE
+		|| (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) // ETHANE BAT bonds
+		|| (int(mbx) == 7) || (int(mbx) == 8) //|| (int(mbx) == 2) // ETHANE perpe bonds
+		),
+		( false // ALA1
+		|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)   || (int(mbx) == 12) // ALA1 side methyl
+		|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)   || (int(mbx) == 14) // ALA1 C-ter methyl
+		|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
+		|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // ALA1 C-ter peptide bond
+		)
+	};
+
+	return MoleculeConditions[molName];
+}
+
 
 /*! <!-- Perturb positions of the system
  * @param someState State of the system
@@ -1019,10 +675,10 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 {
 	if( PPM != PositionsPerturbMethod::EMPTY ){
 
-    	int nofDihModesIntervals = 7;
-    	double segHalfDiff = M_PI / 9.0;
-		std::vector<double> dihModesLims(nofDihModesIntervals + 1);
-		dihModesLims = dihedralSegmenter(nofDihModesIntervals, segHalfDiff, dihModesLims);
+    	// int nofDihModesIntervals = 7;
+    	// double segHalfDiff = M_PI / 9.0;
+		// std::vector<double> dihModesLims(nofDihModesIntervals + 1);
+		// dihModesLims = dihedralSegmenter(nofDihModesIntervals, segHalfDiff, dihModesLims);
 
 		std::vector<std::vector<int>> ZMatrix;
 		std::vector<SimTK::Real> BONDLengths;
@@ -1040,13 +696,13 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		//std::cout << " w " << this->world->getOwnIndex() << " scaleF " << this->QScaleFactor << "\n";
 
-		if(!Qmeans){std::cout << "Empty Q statistics\n" ;}
-
 		SimTK::Vector &stateQs = someState.updQ();
 
 		SimTK::Real scaleFactor = 1;			
 
-		bool testingMode = true; // Are we doing temperature scaling
+		REBAS_MoleculeName_Ix MOLECULE_NAME_Ix = REBAS_MoleculeName_Ix::ALA1;
+
+		bool testingMode = false; // Are we doing temperature scaling
 		enum TestingWays {
 			CONSTANT,
 			ALTERNATIVE,
@@ -1055,144 +711,120 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 			BERNOULLI};
 
 		if(testingMode){
-			# pragma region REBAS_TEST
-			TestingWays testingWay = TestingWays::ALTERNATIVE;						// ALTERNATIVE
-			std::cerr << "WARNING: SCALING IN TESTING MODE" << std::endl;
 
-			if(testingWay == TestingWays::CONSTANT){
-				scaleFactor = 1.0;
+            # pragma region REBAS_TEST
+            TestingWays testingWay = TestingWays::ALTERNATIVE; // ALTERNATIVE
+            std::cerr << "WARNING: SCALING IN TESTING MODE: " << REBAS_MoleculeNames[MOLECULE_NAME_Ix] << std::endl;
+            if(testingWay == TestingWays::CONSTANT){
+                scaleFactor = 1.0;
 
-			}else if(testingWay == TestingWays::ALTERNATIVE){
+            }else if(testingWay == TestingWays::ALTERNATIVE){
 
-				if(this->nofSamples % 2){scaleFactor = 1.25;}
-				else					{scaleFactor = 0.80;}
+                if(this->nofSamples % 2){scaleFactor = 1.25;}
+                else                    {scaleFactor = 0.80;}
 
-			}else if(testingWay == TestingWays::BY_THERMO){
+            }else if(testingWay == TestingWays::BY_THERMO){
 
-				if(this->temperature == 300){scaleFactor = this->QScaleFactor;}
-				else						{scaleFactor = 1.0 / this->QScaleFactor;}
+                if(this->temperature == 300){scaleFactor = this->QScaleFactor;}
+                else                        {scaleFactor = 1.0 / this->QScaleFactor;}
 
-			}else if(testingWay == TestingWays::CONDITIONAL){
+            }else if(testingWay == TestingWays::CONDITIONAL){
 
-				int zMatRow = 3;
-				int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
-				if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
-					scaleFactor = 1.2;
-				}else{
-					scaleFactor = 1.0;
-				}
+                // int zMatRow = 3;
+                // int dihSegIx = findSegmentIndex(TORSIONAngles[zMatRow], dihModesLims);
+                // if((dihSegIx == 0) || (dihSegIx == 2) || (dihSegIx == 4) || (dihSegIx == 6)){
+                //     scaleFactor = 1.2;
+                // }else{
+                //     scaleFactor = 1.0;
+                // }
 
-			}else if(testingWay == TestingWays::BERNOULLI){
-				SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
-				SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;			
-				SimTK::Real scaleFactorReference = 1.01;
-				SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
-				scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
-			}
+            }else if(testingWay == TestingWays::BERNOULLI){
+                SimTK::Real randUni_m1_1 = uniformRealDistribution_m1_1(randomEngine);
+                SimTK::Real randSign = (randUni_m1_1 > 0) ? 1 : -1 ;            
+                SimTK::Real scaleFactorReference = 1.01;
+                SimTK::Real scaleFactorReference_inv = 1.0 / scaleFactorReference;
+                scaleFactor = (randSign > 0) ? scaleFactorReference : scaleFactorReference_inv;
+            }
 
+            // Scale
+			std::cout << " replIx thIx wIx T scaleFactor" <<" "<< this->replicaIx <<" "<< this->thermoStateIx <<" "<< world->ownWorldIndex <<" "<< this->temperature <<" "<< scaleFactor << std::endl;
+            for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+                const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+                int numUs = mobod.getNumU(someState);
+                const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
+                const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
+            
+                int localQIndex = -1;
+                for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
+                    qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
+                    qIx++ ){
+                        localQIndex++;
 
-			// Scale
+                        bool do_SliderStretch = false;
+                        bool do_AngleStretch = false;
+                        bool doTorsionStretch = false;
+                        bool do_TorsionMapping = false;
 
-				std::cout << " replIx thIx wIx T scaleFactor"
-					<<" "<< this->replicaIx <<" "<< this->thermoStateIx <<" "<< world->ownWorldIndex
-					<<" "<< this->temperature <<" "<< scaleFactor
-					<< std::endl;
+                        if(numUs > 0){
+                            do_SliderStretch = true;
+                        }
+                        if(numUs > 1){
+                            do_AngleStretch = true;
+                        }
 
-			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-				int numUs = mobod.getNumU(someState);
+                        int zMatRow = int(mbx) - 1;
 
-				const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
-				const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
-			
-				int localQIndex = -1;
-				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
-					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
-					qIx++ ){
-						localQIndex++;
+                        if(do_SliderStretch){
 
-						bool do_SliderStretch = false;
-						bool do_AngleStretch = false;
-						bool doTorsionStretch = false;
-						bool do_TorsionMapping = false;
+							if(REBAS_Scale_Mbx(MOLECULE_NAME_Ix, mbx)){
 
-						if(numUs > 0){
-							do_SliderStretch = true;
-						}
-						if(numUs > 1){
-							do_AngleStretch = true;
-						}
+                                SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
+                                // std::cout << "BONDLengths X_BM_p_norm " << BONDLengths[zMatRow] <<" "<< X_BM.p().norm() << std::endl;
+                                // std::cout << "BONDLengths BMps_mean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl;
 
-						int zMatRow = int(mbx) - 1;
+                                if(numUs == 3){ // (Ortho)Spherical
+                                    if(localQIndex == 2){
+                                        //stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
+                                        stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
+                                    }
+                                }else if(numUs == 2){ // BendStretch
+                                    if(localQIndex == 1){
+                                        //stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
+                                        stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
+                                    }
+                                }else if(numUs == 1){ // Slider
+                                    if(localQIndex == 0){
+                                        //stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
+                                        stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
+                                    }
+                                }
 
-						if(do_SliderStretch){
+                                J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
 
-							// if( false
-							//    || (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) // ETHANE BAT bonds
-							//    //|| (int(mbx) == 7) || (int(mbx) == 8) //|| (int(mbx) == 2) // ETHANE perpe bonds
-							// ){ // ethane
-							if( false
-								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)   || (int(mbx) == 12) // ALA1 side methyl
-								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)   || (int(mbx) == 14) // ALA1 C-ter methyl
-								|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
-								|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // ALA1 C-ter peptide bond
-							  ){
-								SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
-								std::cout << "BONDLengths X_BM_p_norm " << BONDLengths[zMatRow] <<" "<< X_BM.p().norm() << std::endl;
-								std::cout << "BONDLengths BMps_mean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl;
+                            } // __end__ which bodies do we stretch
+                        } // __end__ bond stretch
 
-								if(numUs == 3){
-									if(localQIndex == 2){
-										//stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
-										stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
-									}
-								}else if(numUs == 2){
-									if(localQIndex == 1){
-										//stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
-										stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
-									}
-								}else if(numUs == 1){
-									if(localQIndex == 0){
-										//stateQs[qIx] = BONDLengths[zMatRow] * ((scaleFactor) - 1); // visualize
-										stateQs[qIx] = dBMp_local * ((scaleFactor) - 1); // check energy
-									}
-								}
+                        if(do_AngleStretch){
 
-								J_scale += std::log( (X_BM.p().norm() + stateQs[qIx]) / (X_BM.p().norm()) );
+							if(REBAS_Scale_Mbx(MOLECULE_NAME_Ix, mbx)){
+                              
+                                SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (SimTK::Pi - (*prev_PFrs_means)[int(mbx)]);
+                                // std::cout << "ANGLEBends pi_PFrs " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
+                                // std::cout << "ANGLEBends PFrs_mean pi_PFrs_mean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< (*prev_PFrs_means)[int(mbx)] <<" "<< SimTK::Pi - (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
 
-							} // __end__ which bodies do we stretch
-						} // __end__ bond stretch
+                                if(false || (localQIndex == 0) // || (localQIndex == 1)
+                                ){
+                                    // stateQs[qIx] = -1.0 * (std::acos(X_PF.R()(0)(0))) * ((scaleFactor) - 1); // visualize
+                                    stateQs[qIx] = +1.0 * (dPFr_local) * ((scaleFactor) - 1); // check energy
+                                }
 
-						if(do_AngleStretch){
+                            } // __end__ which bodies do we stretch
+                        } // __end__ angle stretch
 
-							// if( false
-							//    || (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) // ETHANE BAT bonds
-							//    //|| (int(mbx) == 7) || (int(mbx) == 8) //|| (int(mbx) == 2) // ETHANE perpe bonds
-							// ){ // ethane
-							if( false 
-								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)    //|| (int(mbx) == 12) // ALA1 methyl
-								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)    //|| (int(mbx) == 14) // ALA1 methyl
-								 //|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) //|| (int(mbx) == 10) // ALA1 N-ter peptide bond
-								 //|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) //|| (int(mbx) == 22) // C-ter peptide bond
-							  ){								
-								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (SimTK::Pi - (*prev_PFrs_means)[int(mbx)]);
-								std::cout << "ANGLEBends pi_PFrs " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
-								std::cout << "ANGLEBends PFrs_mean pi_PFrs_mean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< (*prev_PFrs_means)[int(mbx)] <<" "<< SimTK::Pi - (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
+                    } // __end__ qIx
+            } // __end__ mbx
 
-								if(false || (localQIndex == 0) // || (localQIndex == 1)
-								){
-									//stateQs[qIx] = (SimTK::Pi - ANGLEBends[zMatRow]) * ((scaleFactor) - 1);
-									// stateQs[qIx] = -1.0 * (std::acos(X_PF.R()(0)(0))) * ((scaleFactor) - 1); // visualize
-									stateQs[qIx] = -1.0 * (dPFr_local) * ((scaleFactor) - 1); // check energy
-								}
-
-							} // __end__ which bodies do we stretch
-						} // __end__ angle stretch
-
-					} // __end__ qIx
-			} // __end__ mbx
-
-			# pragma endregion REBAS_TEST
+            # pragma endregion REBAS_TEST
 
 		}else{ // __end__ testingMode
 
@@ -1210,7 +842,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 					qIx < mobod.getFirstQIndex(someState) + mobod.getNumQ(someState);
 					qIx++ ){
 					localQIndex++;
-
 
 					if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
 
@@ -1256,16 +887,8 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 						if(do_SliderStretch){
 
-							//if( false
-							//    || (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) // ETHANE BAT bonds
-							//	||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2) // ETHANE perpe bonds
-							//){ // ethane
-							if( false
-								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)    || (int(mbx) == 12) // ALA1 side methyl
-								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)    || (int(mbx) == 14) // ALA1 C-ter methyl
-								|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
-								|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // ALA1 C-ter peptide bond
-							  ){
+							if(REBAS_Scale_Mbx(MOLECULE_NAME_Ix, mbx)){
+
 								SimTK::Real dBMp_local = BONDLengths[zMatRow] - (*prev_BMps_means)[int(mbx)];
 								//std::cout << "BONDLengths X_BM_p_norm " << BONDLengths[zMatRow] <<" "<< X_BM.p().norm() << std::endl;
 								//std::cout << "BONDLengths BMps_mean dBMp_local" <<" "<< BONDLengths[zMatRow] <<" "<< (*prev_BMps_means)[int(mbx)] <<" "<< dBMp_local << std::endl;
@@ -1291,27 +914,19 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 						if(do_AngleStretch){
 
-							//if( false
-							//    || (int(mbx) == 4) || (int(mbx) == 5) || (int(mbx) == 6) // ETHANE BAT bonds
-							//	||  (int(mbx) == 7) || (int(mbx) == 8) || (int(mbx) == 2) // ETHANE perpe bonds
-							//){ // ethane
-							if( false 
-								|| (int(mbx) == 16) || (int(mbx) == 17) || (int(mbx) == 18)    //|| (int(mbx) == 12) // ALA1 methyl
-								|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)    //|| (int(mbx) == 14) // ALA1 methyl
-								|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
-								|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // C-ter peptide bond
-							  ){
+							if(REBAS_Scale_Mbx(MOLECULE_NAME_Ix, mbx)){
+
 								SimTK::Real dPFr_local = ANGLEBends[zMatRow] - (SimTK::Pi - (*prev_PFrs_means)[int(mbx)]);
 								//std::cout << "ANGLEBends pi_PFrs " << ANGLEBends[zMatRow] <<" "<< SimTK::Pi - std::acos(X_PF.R()(0)(0)) << std::endl;
 								//std::cout << "ANGLEBends PFrs_mean pi_PFrs_mean dPFr_local" <<" "<< ANGLEBends[zMatRow] <<" "<< (*prev_PFrs_means)[int(mbx)] <<" "<< SimTK::Pi - (*prev_PFrs_means)[int(mbx)] <<" "<< dPFr_local << std::endl;
 
 								if(numUs == 3){
 									if(localQIndex == 0){
-										stateQs[qIx] = dPFr_local * ((scaleFactor - 1));
+										stateQs[qIx] = +1.0 * (dPFr_local) * ((scaleFactor) - 1);
 									}
 								}else if(numUs == 2){
 									if(localQIndex == 0){
-										stateQs[qIx] = dPFr_local * ((scaleFactor - 1));
+										stateQs[qIx] = +1.0 * (dPFr_local) * ((scaleFactor) - 1);
 									}
 								}
 
@@ -1881,8 +1496,16 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 		if (!useNUTS) {
 
 			try{
+
+				UCache = someState.getU();
+
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
-				system->realize(someState, SimTK::Stage::Position);
+				// system->realize(someState, SimTK::Stage::Position);
+				system->realize(someState, SimTK::Stage::Acceleration);
+
+				UDotCache = someState.getUDot();
+				// std::cout << "UDotCache size " << uDot.size() << std::endl;
+
 				return;
 			}catch(const std::exception&){
 				proposeExceptionCaught = true;
@@ -1890,105 +1513,109 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
         	}
 		}
 
-		try {
+		// try {
+		// 	if (!useNUTS) {
+		// 		world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
+		// 		system->realize(someState, SimTK::Stage::Position);
 
-			// Set up random 0 to 1 generator
-			std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
 
-			// Get initial momenta
-			SimTK::Vector p;
-			world->matter->multiplyByM(someState, someState.getU(), p);
+		// 		// return;
+		// 	}
 
-			Node CurrentNode;
-			CurrentNode.Q = someState.getQ();
-			CurrentNode.U = someState.getU();
+		// 	// // Set up random 0 to 1 generator
+		// 	// std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
 
-			int MaxDepth = 10;
-			std::map<int, Node> Trajectory; // Does not allow reserve
-			Trajectory[0] = CurrentNode;
+		// 	// // Get initial momenta
+		// 	// SimTK::Vector p;
+		// 	// world->matter->multiplyByM(someState, someState.getU(), p);
 
-			bool found = false;
+		// 	// Node CurrentNode;
+		// 	// CurrentNode.Q = someState.getQ();
+		// 	// CurrentNode.U = someState.getU();
 
-			for (int depth = 0; depth < MaxDepth; depth++) {
+		// 	// int MaxDepth = 10;
+		// 	// std::map<int, Node> Trajectory; // Does not allow reserve
+		// 	// Trajectory[0] = CurrentNode;
 
-				bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
-				int endpoint = 0;
-				SimTK::Vector U, Q;
+		// 	// bool found = false;
 
-				if (Direction == 0) {
-					// Forward
-					U = Trajectory.rbegin()->second.U;
-					Q = Trajectory.rbegin()->second.Q;
+		// 	// for (int depth = 0; depth < MaxDepth; depth++) {
 
-					endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
-					// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
-				} else {
-					// Backward
-					U = Trajectory.begin()->second.U;
-					Q = Trajectory.begin()->second.Q;
+		// 	// 	bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
+		// 	// 	int endpoint = 0;
+		// 	// 	SimTK::Vector U, Q;
 
-					endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
-					// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
+		// 	// 	if (Direction == 0) {
+		// 	// 		// Forward
+		// 	// 		U = Trajectory.rbegin()->second.U;
+		// 	// 		Q = Trajectory.rbegin()->second.Q;
 
-					if (Trajectory.begin()->first == 0) {
-						for (int i = 0; i < U.size(); i++) {
-							U[i] = -U[i];
-						}
-					}
-				}
+		// 	// 		endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
+		// 	// 		// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
+		// 	// 	} else {
+		// 	// 		// Backward
+		// 	// 		U = Trajectory.begin()->second.U;
+		// 	// 		Q = Trajectory.begin()->second.Q;
 
-				// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+		// 	// 		endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
+		// 	// 		// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
 
-				someState.updQ() = Q;
-				someState.updU() = U;
-				world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
-				system->realize(someState, SimTK::Stage::Position);
+		// 	// 		if (Trajectory.begin()->first == 0) {
+		// 	// 			for (int i = 0; i < U.size(); i++) {
+		// 	// 				U[i] = -U[i];
+		// 	// 			}
+		// 	// 		}
+		// 	// 	}
 
-				// Check U-turn
-				const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
-				if (C < 0) {
-					// std::cout << "U-turn detected" << std::endl;
-					found = true;
-					break;
-				} else {
-					// std::cout << "No U-turn, C = " << C << std::endl;
+		// 	// 	// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
 
-					Node NextNode;
-					NextNode.Q = someState.getQ();
-					NextNode.U = someState.getU();
+		// 	// 	someState.updQ() = Q;
+		// 	// 	someState.updU() = U;
+		// 	// 	world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
+		// 	// 	system->realize(someState, SimTK::Stage::Position);
 
-					// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
-					// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
-					// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+		// 	// 	// Check U-turn
+		// 	// 	const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
+		// 	// 	if (C < 0) {
+		// 	// 		// std::cout << "U-turn detected" << std::endl;
+		// 	// 		found = true;
+		// 	// 		break;
+		// 	// 	} else {
+		// 	// 		// std::cout << "No U-turn, C = " << C << std::endl;
 
-					Trajectory.insert(std::make_pair(endpoint, NextNode));
-				}
-			}
+		// 	// 		Node NextNode;
+		// 	// 		NextNode.Q = someState.getQ();
+		// 	// 		NextNode.U = someState.getU();
 
-			if (found) {
-				std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
-			} else {
-				std::cout << "No U-turn detected" << std::endl;
-			}
+		// 	// 		// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
+		// 	// 		// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
+		// 	// 		// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
 
-			// Chose randomly from the trajectory
-			std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
-			int index = uniformIntDistribution(randomEngine);
-			auto it = Trajectory.begin();
-			std::advance(it, index);
+		// 	// 		Trajectory.insert(std::make_pair(endpoint, NextNode));
+		// 	// 	}
+		// 	// }
 
-			someState.updQ() = it->second.Q;
-			someState.updU() = it->second.U;
+		// 	// if (found) {
+		// 	// 	std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
+		// 	// } else {
+		// 	// 	std::cout << "No U-turn detected" << std::endl;
+		// 	// }
 
-			system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
+		// 	// // Chose randomly from the trajectory
+		// 	// std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
+		// 	// int index = uniformIntDistribution(randomEngine);
+		// 	// auto it = Trajectory.begin();
+		// 	// std::advance(it, index);
 
-		}catch(const std::exception&){
+		// 	// someState.updQ() = it->second.Q;
+		// 	// someState.updU() = it->second.U;
 
-			proposeExceptionCaught = true;
+		// 	// system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
 
-			assignConfFromSetTVector(someState);
-
-		}
+		// }catch(const std::exception&){
+		// 	proposeExceptionCaught = true;
+		// 	assignConfFromSetTVector(someState);
+		// }
 
 	}else if(this->integratorType == IntegratorType::BOUND_WALK){
 		try {
@@ -2898,6 +2525,33 @@ HMCSampler::calcMathJacobian(const SimTK::State& someState,
 
 	return mathJ;
 
+}
+
+void HMCSampler::PrintUDot(const SimTK::State& someState)
+{
+	// Get generalized accelerations
+	const SimTK::Vector& uDot = someState.getUDot();
+
+	// Mathematical Jacobian is 3N x nu dimensional
+	unsigned int nu = someState.getNU();
+
+	// Go through topologies
+	for(auto& topology : topologies){
+		// Go through atoms
+		for(const auto& AtomList : topology.subAtomList){
+
+			// Get atom indeces in Compound and Simbody
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+
+			std::cout << "aix= " << aIx << "uDot=" << uDot[int(mbx)-1] << std::endl;
+		}
+	}
+}
+
+const SimTK::Vector& HMCSampler::GetUDot(const SimTK::State& someState) {
+	system->realize(someState, SimTK::Stage::Acceleration);
+	return someState.getUDot();
 }
 
 /*
@@ -4277,17 +3931,27 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 		adaptWorldBlocks(someState);
 	}
 
+//std::cout << "DRILLING Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
+
+//std::cout << "DRILLING perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
+//std::cout << "DRILLING calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 
+//std::cout << "DRILLING integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
+
+//std::cout << "DRILLING perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
 
 	// drl
 	#ifdef __DRILLING__
@@ -4298,6 +3962,8 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	// Get all new energies after integration
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
+
+//std::cout << "DRILLING calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
 
 	} else {
 			// Store new energies
@@ -4613,6 +4279,9 @@ void HMCSampler::getMsg_EnergyDetails(
 	// DELETE
 	energyDetailsStream << ", " << debug_rand_no;
 
+	energyDetailsStream	<< ", " << "HARDMOLNAME";
+
+
 	#ifdef PRINTALOT
 
 		// Print validity
@@ -4752,6 +4421,10 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
+
+					// if (integratorType == IntegratorType::OMMVV) {
+					// 	PrintUDot(someState);
+					// }
 
 					// Print
 					if (verbose) {
@@ -4896,6 +4569,7 @@ void HMCSampler::update(SimTK::State& someState)
 	if(this->integratorType == IntegratorType::OMMVV){
 		// Update Simbody too
 		OMM_To_Simbody_setAtomsLocations(someState);
+		// system->realize(someState, SimTK::Stage::Acceleration);
 	}
 	
 	// Store final configuration and energy

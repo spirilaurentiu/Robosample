@@ -51,6 +51,9 @@ Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t thread
 	std::cout << "Context::Context runType " << RUN_TYPE_MAP_INV.at(this->runType) << std::endl << std::flush;
 	this->swapEvery = swapFreq;
 	this->swapFixman = swapFixmanFreq;
+
+	foutU = std::ofstream(baseName + "_U.bin", std::ios::binary | std::ios::app);
+	foutUDot = std::ofstream(baseName + "_U_dot.bin", std::ios::binary | std::ios::app);
 }
 
 void Context::setVerbose(bool verbose){
@@ -1440,10 +1443,11 @@ SimTK::Real Context::OMMRef_calcPotential(const std::vector<std::vector<std::pai
 
 
 	//openMMState.getEnergies_drl_bon();
-	//std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
+	if (verbose) {
+		//std::cout << "Robosample reference OpenMM energy " << refPotential << std::endl;
+	}
 
 	return refPotential;
-
 }
 
 /*!
@@ -4771,7 +4775,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Draw from uniform distribution
 	SimTK::Real unifSample = uniformRealDistribution(randomEngine);
 
-	bool testingMode = true; 
+	bool testingMode = false; 
 
 	if(testingMode){
 		# pragma region REBAS_TEST
@@ -4844,7 +4848,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		swapReferencePotentialEnergies(replica_X, replica_Y);
 
 		std::cout << "1" 
-		<<", " << unifSample 
+		<<", " << unifSample
 		<< endl << endl;
 
 		returnValue = true;
@@ -5425,6 +5429,7 @@ void Context::setReplicasWorldsParameters(int thisReplica, bool alwaysAccept, bo
 
 		worlds[replicaWorldIxs[i]].updSampler(0)->setAcceptRejectMode(acceptRejectMode);
 		worlds[replicaWorldIxs[i]].updSampler(0)->setMDStepsPerSample(MDStepsPerSample);
+		worlds[replicaWorldIxs[i]].updSampler(0)->setTemperature(T);
 
 		worlds[replicaWorldIxs[i]].updSampler(0)->setTimestep(timestep, adaptiveTimestep);
 		if (worlds[replicaWorldIxs[i]].updSampler(0)->integratorType == IntegratorType::OMMVV) {
@@ -5807,6 +5812,56 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// Generate samples
 		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
 
+		// size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
+		// if (validated && whichWorld == wIx) {
+		// 	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[wIx].updForceField());
+		// 	const auto& U = worlds[wIx].updSampler(0)->UCache;
+		// 	const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
+		// 	// std::cout << "U.size() = " << U.size() << std::endl;
+		// 	// std::cout << "UDot.size() = " << UDot.size() << std::endl;
+		// 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+		// 	assert(allBONDS.size() == getNofMolecules() && "internal coordinates nof molecules wrong");
+		// 	// Iterate molecules
+		// 	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+		// 		// Get molecule and it's bonds
+		// 		Topology& topology = topologies[topoIx];
+		// 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+		// 		// Iterate molecule's bonds
+		// 		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+		// 			// Get current bond
+		// 			const BOND& currBOND = BONDS[BOIx];
+		// 			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+		// 			bBond& bond = bonds[boIx];
+		// 			// Get bond's atoms
+		// 			bSpecificAtom& childAtom  = atoms[currBOND.first];
+		// 			bSpecificAtom& parentAtom = atoms[currBOND.second];
+		// 			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+		// 			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+		// 			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+		// 			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+		// 			SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+		// 			SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+		// 			if (childMbx != parentMbx) {
+		// 				int min_aix = std::min(currBOND.first, currBOND.second);
+		// 				int max_aix = std::max(currBOND.first, currBOND.second);
+		// 				std::string key = std::to_string(min_aix) + "-" + std::to_string(max_aix);
+		// 				// std::cout << "key " << key << " childMbx " << childMbx - 2 << std::endl;
+		// 				// MobilizedBodyIndex starts from 1, so we subtract 1 to match our indexing
+		// 				// I think the first one is the ground, so we subtract 2 to get the correct index
+		// 				const auto& u = U[childMbx - 2];
+		// 				UCache[key] = u;
+		// 				const auto& uDot = UDot[childMbx - 2];
+		// 				UDotCache[key] = uDot;
+		// 			}
+		// 		} // every bond
+		// 	} // every molecule
+		// 	// std::cout << "Writing U and UDot to cache for world " << wIx << std::endl;
+		// 	writeU(UCache, foutU);
+		// 	writeU(UDotCache, foutUDot);
+		// } // __end__ Victor if (validated && whichWorld == wIx)
+
+	// Non-equilibrium world
+
 	// Non-equilibrium world
 	} else if (distortOption != 0) {
 
@@ -5815,79 +5870,89 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// drl
 		#ifdef __DRILLING__ // SCALEQ
 
-			// Get drl data
-			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
-			const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
-			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_tor();
-			const std::vector<std::vector<double>>& drl_n14_Energies = worlds[whichWorld].getEnergies_drl_n14();
+            // Get drl data
+            const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
+            const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
+            const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_tor();
+            const std::vector<std::vector<double>>& drl_n14_Energies = worlds[whichWorld].getEnergies_drl_n14();
+            const std::vector<std::vector<double>>& drl_vdw_Energies = worlds[whichWorld].getEnergies_drl_vdw();
+            const std::vector<std::vector<double>>& drl_cou_Energies = worlds[whichWorld].getEnergies_drl_cou();
 
-			// validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
+            // validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
 
-				//warn("under drilling conditions");
+                //warn("under drilling conditions");
 
-				// Update Robosample bAtomList
-				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
-				(worlds[whichWorld]).updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
-				// ''''''''''''''''''''
-				// coutspaced("SCALING_BAT init:"); ceolf;
-				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				// thermodynamicStates[0].PrintZMatrixBAT();
-				// ''''''''''''''''''''
+                // Update Robosample bAtomList
+                SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
+                (worlds[whichWorld]).updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+                // ''''''''''''''''''''
+                // coutspaced("SCALING_BAT init:"); ceolf;
+                // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+                // thermodynamicStates[0].PrintZMatrixBAT();
+                // ''''''''''''''''''''
 
-				// Reinitialize the sampler
-				validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+                // Reinitialize the sampler
+                validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
-				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+                SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
-					scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
-					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
-					scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
-					scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
-					std::cout<<std::flush;
-				} // __end__ choose a world to print drilling
+                if(false && ((whichWorld == 3)
+                        //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
+                )){ 
+                    scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+                    scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
+                    scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
+                    scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
+                    scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
+                    scout("drl_vdw_E"); ceol; PrintCppVector(drl_vdw_Energies, 6, "vdwE", "vdwE");
+                    scout("drl_cou_E"); ceol; PrintCppVector(drl_cou_Energies, 6, "couE", "couE");
+                    std::cout<<std::flush;
+                } // __end__ choose a world to print drilling
 
-				auto runSamplingLoop = [&](SimTK::State& state) {
-					for (int sampleIx = 0; sampleIx < numSamples; ++sampleIx) {
-						if (verbose) {
-							worldOutStream << header << " ";
-							(worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
-						}
-						validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
-						if (verbose) {worldOutStream << std::endl;}
-					}
-				};				
+                auto runSamplingLoop = [&](SimTK::State& state) {
+                    for (int sampleIx = 0; sampleIx < numSamples; ++sampleIx) {
+                        if (verbose) {
+                            worldOutStream << header << " ";
+                            (worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
+                        }
+                        validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+                        if (verbose) {worldOutStream << std::endl;}
+                    }
+                };              
 
-				// GENERATE the requested number of samples
-				if ((worlds[whichWorld]).getIsRollFlexibilities()) {
-					for (int mobIntIx = 1; mobIntIx < (worlds[whichWorld]).matter->getNumBodies(); ++mobIntIx) {
-						(worlds[whichWorld]).lockAllMobilizers();
-						const SimTK::MobilizedBody& mobod = (worlds[whichWorld]).matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-						mobod.unlock(currentAdvancedState);
-						runSamplingLoop(currentAdvancedState);
-					}
-				} else {
-					runSamplingLoop(currentAdvancedState);
-				}
+                // GENERATE the requested number of samples
+                if ((worlds[whichWorld]).getIsRollFlexibilities()) {
+                    for (int mobIntIx = 1; mobIntIx < (worlds[whichWorld]).matter->getNumBodies(); ++mobIntIx) {
+                        (worlds[whichWorld]).lockAllMobilizers();
+                        const SimTK::MobilizedBody& mobod = (worlds[whichWorld]).matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+                        mobod.unlock(currentAdvancedState);
+                        runSamplingLoop(currentAdvancedState);
+                    }
+                } else {
+                    runSamplingLoop(currentAdvancedState);
+                }
 
-				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+                SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-				// ''''''''''''''''''''
-				// coutspaced("SCALING_BAT after:"); ceolf;
-				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				// thermodynamicStates[0].PrintZMatrixBAT();
-				// ''''''''''''''''''''
-				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
-					scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
-					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
-					scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
-					scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
-					std::cout<<std::flush;
-				} // __end__ choose a world to print drilling
-				
-			// }
+                // ''''''''''''''''''''
+                // coutspaced("SCALING_BAT after:"); ceolf;
+                // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+                // thermodynamicStates[0].PrintZMatrixBAT();
+                // ''''''''''''''''''''
+                if(false && ((whichWorld == 3)
+                        //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
+                )){
+                    scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+                    scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
+                    scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
+                    scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
+                    scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
+                    scout("drl_vdw_E"); ceol; PrintCppVector(drl_vdw_Energies, 6, "vdwE", "vdwE");
+                    scout("drl_cou_E"); ceol; PrintCppVector(drl_cou_Energies, 6, "couE", "couE");
+                    std::cout<<std::flush;
+                } // __end__ choose a world to print drilling
+                
+            // }
 
 		#else
 
@@ -6222,12 +6287,15 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
 
-		//Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		// Print_TRANSFORMERS_Work(); // BENDSTRETCH_5
+		// if (mixi >= equilRounds) {
+		// 	PrintUDot();
+		// }
 
     	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 4");}
 
 		// SIMULATE EACH REPLICA --------------------------------------------->
-		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ 
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
@@ -6249,7 +6317,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// ======================== SIMULATE ======================
 			//RunReplicaRefactor(mixi, replicaIx);
 			RunReplicaRefactor_SIMPLE(mixi, replicaIx);
-
+				
 			// Copy the new timestep and mdstep if we should be adapting
 			if (mixi >= equilRounds) {
 				std::vector<SimTK::Real> newTimesteps(worlds.size());
@@ -6302,7 +6370,33 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	PrintNofAcceptedSwapsMatrix();
 	//PrintReplicaMaps();
 
+	foutU.close();
+	foutUDot.close();
+
 }
+
+void Context::writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary) {
+    for (const auto& item : cache) {
+        std::istringstream keyStream(item.first);
+        std::string token;
+        std::getline(keyStream, token, '-');
+        int atom1 = std::stoi(token);
+        std::getline(keyStream, token);
+        int atom2 = std::stoi(token);
+        float a1 = static_cast<float>(atom1);  // Ensure consistency
+        float a2 = static_cast<float>(atom2);
+        float uDot = static_cast<float>(item.second);
+
+		std::cout << "Writing: " << a1 << " " << a2 << " " << uDot << std::endl;
+
+        foutBinary.write(reinterpret_cast<const char*>(&a1), sizeof(float));
+        foutBinary.write(reinterpret_cast<const char*>(&a2), sizeof(float));
+        foutBinary.write(reinterpret_cast<const char*>(&uDot), sizeof(float));
+    }
+
+    foutBinary.flush(); // Ensure data is immediately written to disk
+}
+
 
 
 /*!
@@ -9142,8 +9236,6 @@ void Context::PrintZMatrixMobods(int wIx, SimTK::State& someState)
 // TRANSFORMERS LAB
 // ===========================================================================
 
-
-
 /*!
  * <!--  -->
 */
@@ -9291,8 +9383,69 @@ void Context::Print_TRANSFORMERS_Work(void)
 			} // every bond
 
 		} // every molecule
-
 }
+
+// void Context::PrintUDot(void)
+// {
+// 	size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
+// 	const auto& currentAdvancedState = worlds[wIx].integ->updAdvancedState();
+// 	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[wIx].updForceField());
+
+// 	const auto& U = worlds[wIx].updSampler(0)->UCache;
+// 	const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
+
+// 	// std::cout << "U.size() = " << U.size() << std::endl;
+// 	// std::cout << "UDot.size() = " << UDot.size() << std::endl;
+
+// 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+// 	assert(allBONDS.size() == getNofMolecules() && "internal coordinates nof molecules wrong");
+
+// 	// Iterate molecules
+// 	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
+// 		// Get molecule and it's bonds
+// 		Topology& topology = topologies[topoIx];
+// 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
+// 		// Iterate molecule's bonds
+// 		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+
+// 			// Get current bond
+// 			const BOND& currBOND = BONDS[BOIx];
+// 			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+// 			bBond& bond = bonds[boIx];
+
+// 			// Get bond's atoms
+// 			bSpecificAtom& childAtom  = atoms[currBOND.first];
+// 			bSpecificAtom& parentAtom = atoms[currBOND.second];
+
+// 			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+// 			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+
+// 			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+// 			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
+// 			SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+// 			SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+
+// 			if (childMbx != parentMbx) {
+// 				int min_aix = std::min(currBOND.first, currBOND.second);
+// 				int max_aix = std::max(currBOND.first, currBOND.second);
+// 				std::string key = std::to_string(min_aix) + "-" + std::to_string(max_aix);
+// 				// std::cout << "key " << key << " childMbx " << childMbx - 2 << std::endl;
+
+// 				// MobilizedBodyIndex starts from 1, so we subtract 1 to match our indexing
+// 				// I think the first one is the ground, so we subtract 2 to get the correct index
+// 				const auto& u = U[childMbx - 2];
+// 				uCache[key].push_back(u);
+
+// 				const auto& uDot = UDot[childMbx - 2];
+// 				uDotCache[key].push_back(uDot);
+// 			}
+// 		} // every bond
+// 	} // every molecule
+
+// }
 // TRANSFORMERS LAB
 // ===========================================================================
 

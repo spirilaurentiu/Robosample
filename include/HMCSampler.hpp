@@ -100,6 +100,8 @@ class HMCSampler : virtual public Sampler
 friend class Context;
 public:
 
+	SimTK::Vector UCache, UDotCache;
+
 	/** Constructor **/
 	HMCSampler(World &argWorld,
 		SimTK::CompoundSystem &argCompoundSystem,
@@ -162,6 +164,9 @@ public:
 	SimTK::Matrix& 
 	calcMathJacobian(const SimTK::State& someState,
 		SimTK::Matrix& mathJ);
+
+	void PrintUDot(const SimTK::State& someState);
+	const SimTK::Vector& GetUDot(const SimTK::State& someState);
 
 	/*
 	* Get the diagonal 3Nx3N matrix containing the atoms masses
@@ -279,10 +284,26 @@ public:
 	void setAcceptRejectMode(AcceptRejectMode acceptRejectMode);
 	void setAcceptRejectMode(const std::string& acceptRejectMode);
 
-	void perturbPositions_Old(SimTK::State& someState, PositionsPerturbMethod);
+	
+	# pragma region REBAS_TEST
+	
+	enum REBAS_MoleculeName_Ix{
+		ETHANE,
+		ALA1
+	};
+	std::vector<std::string> REBAS_MoleculeNames = {
+		"ETHANE",
+		"ALA1"
+	};
+
 	std::vector<double>& dihedralSegmenter(int nofIntervals, double segHalfDiff, std::vector<double>& segLims);
-	int findSegmentIndex(double value, const std::vector<double>& segLims);	
+	int findSegmentIndex(double value, const std::vector<double>& segLims);
+	
+	bool REBAS_Scale_Mbx(REBAS_MoleculeName_Ix molName, SimTK::MobilizedBodyIndex mbx);
 	void perturbPositions(SimTK::State& someState, PositionsPerturbMethod);
+
+	# pragma endregion REBAS_TEST
+
 
 	/** Set velocities to zero.  **/
 	void setVelocitiesToZero(SimTK::State& someState);
