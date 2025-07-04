@@ -787,6 +787,13 @@ public:
 	// Transformers
 	void Print_TRANSFORMERS_Work(void);
 
+	std::unordered_map<std::string, SimTK::Real> UDotCache;
+	std::unordered_map<std::string, SimTK::Real> UCache;
+
+	std::ofstream foutU, foutUDot;
+
+	void writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary);
+
 	// Function to find and return the value for a given AtomIndex
 	SimTK::Vec3
 	findAtomTarget(

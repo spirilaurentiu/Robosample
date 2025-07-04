@@ -27,6 +27,8 @@ dependencies:
   - pandas
   - numpy
   - modeller
+  - MDAnalysis
+  - astropy
   - pip:
     - rcsbsearchapi
     - pdb2pqr

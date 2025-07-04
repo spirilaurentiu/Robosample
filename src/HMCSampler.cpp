@@ -1497,8 +1497,16 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 		if (!useNUTS) {
 
 			try{
+
+				UCache = someState.getU();
+
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
-				system->realize(someState, SimTK::Stage::Position);
+				// system->realize(someState, SimTK::Stage::Position);
+				system->realize(someState, SimTK::Stage::Acceleration);
+
+				UDotCache = someState.getUDot();
+				// std::cout << "UDotCache size " << uDot.size() << std::endl;
+
 				return;
 			}catch(const std::exception&){
 				proposeExceptionCaught = true;
@@ -1506,105 +1514,109 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
         	}
 		}
 
-		try {
+		// try {
+		// 	if (!useNUTS) {
+		// 		world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
+		// 		system->realize(someState, SimTK::Stage::Position);
 
-			// Set up random 0 to 1 generator
-			std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
 
-			// Get initial momenta
-			SimTK::Vector p;
-			world->matter->multiplyByM(someState, someState.getU(), p);
+		// 		// return;
+		// 	}
 
-			Node CurrentNode;
-			CurrentNode.Q = someState.getQ();
-			CurrentNode.U = someState.getU();
+		// 	// // Set up random 0 to 1 generator
+		// 	// std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
 
-			int MaxDepth = 10;
-			std::map<int, Node> Trajectory; // Does not allow reserve
-			Trajectory[0] = CurrentNode;
+		// 	// // Get initial momenta
+		// 	// SimTK::Vector p;
+		// 	// world->matter->multiplyByM(someState, someState.getU(), p);
 
-			bool found = false;
+		// 	// Node CurrentNode;
+		// 	// CurrentNode.Q = someState.getQ();
+		// 	// CurrentNode.U = someState.getU();
 
-			for (int depth = 0; depth < MaxDepth; depth++) {
+		// 	// int MaxDepth = 10;
+		// 	// std::map<int, Node> Trajectory; // Does not allow reserve
+		// 	// Trajectory[0] = CurrentNode;
 
-				bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
-				int endpoint = 0;
-				SimTK::Vector U, Q;
+		// 	// bool found = false;
 
-				if (Direction == 0) {
-					// Forward
-					U = Trajectory.rbegin()->second.U;
-					Q = Trajectory.rbegin()->second.Q;
+		// 	// for (int depth = 0; depth < MaxDepth; depth++) {
 
-					endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
-					// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
-				} else {
-					// Backward
-					U = Trajectory.begin()->second.U;
-					Q = Trajectory.begin()->second.Q;
+		// 	// 	bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
+		// 	// 	int endpoint = 0;
+		// 	// 	SimTK::Vector U, Q;
 
-					endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
-					// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
+		// 	// 	if (Direction == 0) {
+		// 	// 		// Forward
+		// 	// 		U = Trajectory.rbegin()->second.U;
+		// 	// 		Q = Trajectory.rbegin()->second.Q;
 
-					if (Trajectory.begin()->first == 0) {
-						for (int i = 0; i < U.size(); i++) {
-							U[i] = -U[i];
-						}
-					}
-				}
+		// 	// 		endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
+		// 	// 		// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
+		// 	// 	} else {
+		// 	// 		// Backward
+		// 	// 		U = Trajectory.begin()->second.U;
+		// 	// 		Q = Trajectory.begin()->second.Q;
 
-				// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+		// 	// 		endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
+		// 	// 		// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
 
-				someState.updQ() = Q;
-				someState.updU() = U;
-				world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
-				system->realize(someState, SimTK::Stage::Position);
+		// 	// 		if (Trajectory.begin()->first == 0) {
+		// 	// 			for (int i = 0; i < U.size(); i++) {
+		// 	// 				U[i] = -U[i];
+		// 	// 			}
+		// 	// 		}
+		// 	// 	}
 
-				// Check U-turn
-				const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
-				if (C < 0) {
-					// std::cout << "U-turn detected" << std::endl;
-					found = true;
-					break;
-				} else {
-					// std::cout << "No U-turn, C = " << C << std::endl;
+		// 	// 	// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
 
-					Node NextNode;
-					NextNode.Q = someState.getQ();
-					NextNode.U = someState.getU();
+		// 	// 	someState.updQ() = Q;
+		// 	// 	someState.updU() = U;
+		// 	// 	world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
+		// 	// 	system->realize(someState, SimTK::Stage::Position);
 
-					// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
-					// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
-					// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
+		// 	// 	// Check U-turn
+		// 	// 	const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
+		// 	// 	if (C < 0) {
+		// 	// 		// std::cout << "U-turn detected" << std::endl;
+		// 	// 		found = true;
+		// 	// 		break;
+		// 	// 	} else {
+		// 	// 		// std::cout << "No U-turn, C = " << C << std::endl;
 
-					Trajectory.insert(std::make_pair(endpoint, NextNode));
-				}
-			}
+		// 	// 		Node NextNode;
+		// 	// 		NextNode.Q = someState.getQ();
+		// 	// 		NextNode.U = someState.getU();
 
-			if (found) {
-				std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
-			} else {
-				std::cout << "No U-turn detected" << std::endl;
-			}
+		// 	// 		// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
+		// 	// 		// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
+		// 	// 		// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
 
-			// Chose randomly from the trajectory
-			std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
-			int index = uniformIntDistribution(randomEngine);
-			auto it = Trajectory.begin();
-			std::advance(it, index);
+		// 	// 		Trajectory.insert(std::make_pair(endpoint, NextNode));
+		// 	// 	}
+		// 	// }
 
-			someState.updQ() = it->second.Q;
-			someState.updU() = it->second.U;
+		// 	// if (found) {
+		// 	// 	std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
+		// 	// } else {
+		// 	// 	std::cout << "No U-turn detected" << std::endl;
+		// 	// }
 
-			system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
+		// 	// // Chose randomly from the trajectory
+		// 	// std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
+		// 	// int index = uniformIntDistribution(randomEngine);
+		// 	// auto it = Trajectory.begin();
+		// 	// std::advance(it, index);
 
-		}catch(const std::exception&){
+		// 	// someState.updQ() = it->second.Q;
+		// 	// someState.updU() = it->second.U;
 
-			proposeExceptionCaught = true;
+		// 	// system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
 
-			assignConfFromSetTVector(someState);
-
-		}
+		// }catch(const std::exception&){
+		// 	proposeExceptionCaught = true;
+		// 	assignConfFromSetTVector(someState);
+		// }
 
 	}else if(this->integratorType == IntegratorType::BOUND_WALK){
 		try {
@@ -2514,6 +2526,33 @@ HMCSampler::calcMathJacobian(const SimTK::State& someState,
 
 	return mathJ;
 
+}
+
+void HMCSampler::PrintUDot(const SimTK::State& someState)
+{
+	// Get generalized accelerations
+	const SimTK::Vector& uDot = someState.getUDot();
+
+	// Mathematical Jacobian is 3N x nu dimensional
+	unsigned int nu = someState.getNU();
+
+	// Go through topologies
+	for(auto& topology : topologies){
+		// Go through atoms
+		for(const auto& AtomList : topology.subAtomList){
+
+			// Get atom indeces in Compound and Simbody
+			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+
+			std::cout << "aix= " << aIx << "uDot=" << uDot[int(mbx)-1] << std::endl;
+		}
+	}
+}
+
+const SimTK::Vector& HMCSampler::GetUDot(const SimTK::State& someState) {
+	system->realize(someState, SimTK::Stage::Acceleration);
+	return someState.getUDot();
 }
 
 /*
@@ -4384,6 +4423,10 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
 
+					// if (integratorType == IntegratorType::OMMVV) {
+					// 	PrintUDot(someState);
+					// }
+
 					// Print
 					if (verbose) {
 						//Print(someState, validated, getAcc());
@@ -4527,6 +4570,7 @@ void HMCSampler::update(SimTK::State& someState)
 	if(this->integratorType == IntegratorType::OMMVV){
 		// Update Simbody too
 		OMM_To_Simbody_setAtomsLocations(someState);
+		// system->realize(someState, SimTK::Stage::Acceleration);
 	}
 	
 	// Store final configuration and energy
