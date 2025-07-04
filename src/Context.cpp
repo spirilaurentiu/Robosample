@@ -4844,7 +4844,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 		swapReferencePotentialEnergies(replica_X, replica_Y);
 
 		std::cout << "1" 
-		<<", " << unifSample 
+		<<", " << unifSample
 		<< endl << endl;
 
 		returnValue = true;
@@ -5815,79 +5815,89 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// drl
 		#ifdef __DRILLING__ // SCALEQ
 
-			// Get drl data
-			const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
-			const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
-			const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_tor();
-			const std::vector<std::vector<double>>& drl_n14_Energies = worlds[whichWorld].getEnergies_drl_n14();
+            // Get drl data
+            const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
+            const std::vector<std::vector<double>>& drl_ang_Energies = worlds[whichWorld].getEnergies_drl_ang();
+            const std::vector<std::vector<double>>& drl_tor_Energies = worlds[whichWorld].getEnergies_drl_tor();
+            const std::vector<std::vector<double>>& drl_n14_Energies = worlds[whichWorld].getEnergies_drl_n14();
+            const std::vector<std::vector<double>>& drl_vdw_Energies = worlds[whichWorld].getEnergies_drl_vdw();
+            const std::vector<std::vector<double>>& drl_cou_Energies = worlds[whichWorld].getEnergies_drl_cou();
 
-			// validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
+            // validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
 
-				//warn("under drilling conditions");
+                //warn("under drilling conditions");
 
-				// Update Robosample bAtomList
-				SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
-				(worlds[whichWorld]).updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
-				// ''''''''''''''''''''
-				// coutspaced("SCALING_BAT init:"); ceolf;
-				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				// thermodynamicStates[0].PrintZMatrixBAT();
-				// ''''''''''''''''''''
+                // Update Robosample bAtomList
+                SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
+                (worlds[whichWorld]).updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+                // ''''''''''''''''''''
+                // coutspaced("SCALING_BAT init:"); ceolf;
+                // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+                // thermodynamicStates[0].PrintZMatrixBAT();
+                // ''''''''''''''''''''
 
-				// Reinitialize the sampler
-				validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+                // Reinitialize the sampler
+                validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
 
-				SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+                SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
-					scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
-					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
-					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
-					scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
-					scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
-					std::cout<<std::flush;
-				} // __end__ choose a world to print drilling
+                if(false && ((whichWorld == 3)
+                        //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
+                )){ 
+                    scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
+                    scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
+                    scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
+                    scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
+                    scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
+                    scout("drl_vdw_E"); ceol; PrintCppVector(drl_vdw_Energies, 6, "vdwE", "vdwE");
+                    scout("drl_cou_E"); ceol; PrintCppVector(drl_cou_Energies, 6, "couE", "couE");
+                    std::cout<<std::flush;
+                } // __end__ choose a world to print drilling
 
-				auto runSamplingLoop = [&](SimTK::State& state) {
-					for (int sampleIx = 0; sampleIx < numSamples; ++sampleIx) {
-						if (verbose) {
-							worldOutStream << header << " ";
-							(worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
-						}
-						validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
-						if (verbose) {worldOutStream << std::endl;}
-					}
-				};				
+                auto runSamplingLoop = [&](SimTK::State& state) {
+                    for (int sampleIx = 0; sampleIx < numSamples; ++sampleIx) {
+                        if (verbose) {
+                            worldOutStream << header << " ";
+                            (worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
+                        }
+                        validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+                        if (verbose) {worldOutStream << std::endl;}
+                    }
+                };              
 
-				// GENERATE the requested number of samples
-				if ((worlds[whichWorld]).getIsRollFlexibilities()) {
-					for (int mobIntIx = 1; mobIntIx < (worlds[whichWorld]).matter->getNumBodies(); ++mobIntIx) {
-						(worlds[whichWorld]).lockAllMobilizers();
-						const SimTK::MobilizedBody& mobod = (worlds[whichWorld]).matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-						mobod.unlock(currentAdvancedState);
-						runSamplingLoop(currentAdvancedState);
-					}
-				} else {
-					runSamplingLoop(currentAdvancedState);
-				}
+                // GENERATE the requested number of samples
+                if ((worlds[whichWorld]).getIsRollFlexibilities()) {
+                    for (int mobIntIx = 1; mobIntIx < (worlds[whichWorld]).matter->getNumBodies(); ++mobIntIx) {
+                        (worlds[whichWorld]).lockAllMobilizers();
+                        const SimTK::MobilizedBody& mobod = (worlds[whichWorld]).matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+                        mobod.unlock(currentAdvancedState);
+                        runSamplingLoop(currentAdvancedState);
+                    }
+                } else {
+                    runSamplingLoop(currentAdvancedState);
+                }
 
-				SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
+                SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-				// ''''''''''''''''''''
-				// coutspaced("SCALING_BAT after:"); ceolf;
-				// replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
-				// thermodynamicStates[0].PrintZMatrixBAT();
-				// ''''''''''''''''''''
-				if(false && ((whichWorld == 3) && (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001))){
-					scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
-					scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
-					scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
-					scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
-					scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
-					std::cout<<std::flush;
-				} // __end__ choose a world to print drilling
-				
-			// }
+                // ''''''''''''''''''''
+                // coutspaced("SCALING_BAT after:"); ceolf;
+                // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
+                // thermodynamicStates[0].PrintZMatrixBAT();
+                // ''''''''''''''''''''
+                if(false && ((whichWorld == 3)
+                        //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
+                )){
+                    scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
+                    scout("drl_bon_E"); ceol; PrintCppVector(drl_bon_Energies, 6, "bonE", "bonE");
+                    scout("drl_ang_E"); ceol; PrintCppVector(drl_ang_Energies, 6, "angE", "angE");
+                    scout("drl_tor_E"); ceol; PrintCppVector(drl_tor_Energies, 6, "torE", "torE");
+                    scout("drl_n14_E"); ceol; PrintCppVector(drl_n14_Energies, 6, "n14E", "n14E");
+                    scout("drl_vdw_E"); ceol; PrintCppVector(drl_vdw_Energies, 6, "vdwE", "vdwE");
+                    scout("drl_cou_E"); ceol; PrintCppVector(drl_cou_Energies, 6, "couE", "couE");
+                    std::cout<<std::flush;
+                } // __end__ choose a world to print drilling
+                
+            // }
 
 		#else
 
