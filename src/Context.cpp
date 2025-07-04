@@ -5812,54 +5812,53 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// Generate samples
 		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
 
-		size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
-		if (validated && whichWorld == wIx) {
-			SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[wIx].updForceField());
-			const auto& U = worlds[wIx].updSampler(0)->UCache;
-			const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
-			// std::cout << "U.size() = " << U.size() << std::endl;
-			// std::cout << "UDot.size() = " << UDot.size() << std::endl;
-			const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
-			assert(allBONDS.size() == getNofMolecules() && "internal coordinates nof molecules wrong");
-			// Iterate molecules
-			for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
-				// Get molecule and it's bonds
-				Topology& topology = topologies[topoIx];
-				const std::vector<BOND>& BONDS = allBONDS[topoIx];
-				// Iterate molecule's bonds
-				for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
-					// Get current bond
-					const BOND& currBOND = BONDS[BOIx];
-					size_t boIx = BONDS_to_bonds[topoIx][BOIx];
-					bBond& bond = bonds[boIx];
-					// Get bond's atoms
-					bSpecificAtom& childAtom  = atoms[currBOND.first];
-					bSpecificAtom& parentAtom = atoms[currBOND.second];
-					SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
-					SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
-					SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
-					SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
-					SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
-					SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
-					if (childMbx != parentMbx) {
-						int min_aix = std::min(currBOND.first, currBOND.second);
-						int max_aix = std::max(currBOND.first, currBOND.second);
-						std::string key = std::to_string(min_aix) + "-" + std::to_string(max_aix);
-						// std::cout << "key " << key << " childMbx " << childMbx - 2 << std::endl;
-						// MobilizedBodyIndex starts from 1, so we subtract 1 to match our indexing
-						// I think the first one is the ground, so we subtract 2 to get the correct index
-						const auto& u = U[childMbx - 2];
-						UCache[key] = u;
-						const auto& uDot = UDot[childMbx - 2];
-						UDotCache[key] = uDot;
-					}
-				} // every bond
-			} // every molecule
-
-			// std::cout << "Writing U and UDot to cache for world " << wIx << std::endl;
-			writeU(UCache, foutU);
-			writeU(UDotCache, foutUDot);
-		}
+		// size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
+		// if (validated && whichWorld == wIx) {
+		// 	SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[wIx].updForceField());
+		// 	const auto& U = worlds[wIx].updSampler(0)->UCache;
+		// 	const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
+		// 	// std::cout << "U.size() = " << U.size() << std::endl;
+		// 	// std::cout << "UDot.size() = " << UDot.size() << std::endl;
+		// 	const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
+		// 	assert(allBONDS.size() == getNofMolecules() && "internal coordinates nof molecules wrong");
+		// 	// Iterate molecules
+		// 	for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+		// 		// Get molecule and it's bonds
+		// 		Topology& topology = topologies[topoIx];
+		// 		const std::vector<BOND>& BONDS = allBONDS[topoIx];
+		// 		// Iterate molecule's bonds
+		// 		for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+		// 			// Get current bond
+		// 			const BOND& currBOND = BONDS[BOIx];
+		// 			size_t boIx = BONDS_to_bonds[topoIx][BOIx];
+		// 			bBond& bond = bonds[boIx];
+		// 			// Get bond's atoms
+		// 			bSpecificAtom& childAtom  = atoms[currBOND.first];
+		// 			bSpecificAtom& parentAtom = atoms[currBOND.second];
+		// 			SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
+		// 			SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+		// 			SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
+		// 			SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+		// 			SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
+		// 			SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+		// 			if (childMbx != parentMbx) {
+		// 				int min_aix = std::min(currBOND.first, currBOND.second);
+		// 				int max_aix = std::max(currBOND.first, currBOND.second);
+		// 				std::string key = std::to_string(min_aix) + "-" + std::to_string(max_aix);
+		// 				// std::cout << "key " << key << " childMbx " << childMbx - 2 << std::endl;
+		// 				// MobilizedBodyIndex starts from 1, so we subtract 1 to match our indexing
+		// 				// I think the first one is the ground, so we subtract 2 to get the correct index
+		// 				const auto& u = U[childMbx - 2];
+		// 				UCache[key] = u;
+		// 				const auto& uDot = UDot[childMbx - 2];
+		// 				UDotCache[key] = uDot;
+		// 			}
+		// 		} // every bond
+		// 	} // every molecule
+		// 	// std::cout << "Writing U and UDot to cache for world " << wIx << std::endl;
+		// 	writeU(UCache, foutU);
+		// 	writeU(UDotCache, foutUDot);
+		// } // __end__ Victor if (validated && whichWorld == wIx)
 
 	// Non-equilibrium world
 
