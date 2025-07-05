@@ -497,7 +497,7 @@ int main(int argc, char **argv)
 
 	context.setAtomMasses();
 
-	context.setVerbose(true);
+	//context.setVerbose(true);
 
 	context.loadAmberSystem(top, rst7);
 

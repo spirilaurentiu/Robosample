@@ -91,7 +91,7 @@ class Context{
 	/**@}**/
 
 	std::string baseName;
-	bool verbose = true;
+	bool verbose = false;
 
 public:
 	/**

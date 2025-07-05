@@ -702,7 +702,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		REBAS_MoleculeName_Ix MOLECULE_NAME_Ix = REBAS_MoleculeName_Ix::ALA1;
 
-		bool testingMode = true; // Are we doing temperature scaling
+		bool testingMode = false; // Are we doing temperature scaling
 		enum TestingWays {
 			CONSTANT,
 			ALTERNATIVE,
@@ -713,7 +713,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 		if(testingMode){
 
             # pragma region REBAS_TEST
-            TestingWays testingWay = TestingWays::ALTERNATIVE;                      // ALTERNATIVE
+            TestingWays testingWay = TestingWays::ALTERNATIVE; // ALTERNATIVE
             std::cerr << "WARNING: SCALING IN TESTING MODE: " << REBAS_MoleculeNames[MOLECULE_NAME_Ix] << std::endl;
             if(testingWay == TestingWays::CONSTANT){
                 scaleFactor = 1.0;
@@ -843,7 +843,6 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 					qIx++ ){
 					localQIndex++;
 
-
 					if(PPM == PositionsPerturbMethod::BENDSTRETCH_1){
 
 						stateQs[qIx] = (*Qdiffs)[qIx] * ((scaleFactor) - 1);
@@ -923,11 +922,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 								if(numUs == 3){
 									if(localQIndex == 0){
-										stateQs[qIx] = dPFr_local * ((scaleFactor - 1));
+										stateQs[qIx] = +1.0 * (dPFr_local) * ((scaleFactor) - 1);
 									}
 								}else if(numUs == 2){
 									if(localQIndex == 0){
-										stateQs[qIx] = dPFr_local * ((scaleFactor - 1));
+										stateQs[qIx] = +1.0 * (dPFr_local) * ((scaleFactor) - 1);
 									}
 								}
 
