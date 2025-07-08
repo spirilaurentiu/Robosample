@@ -661,6 +661,9 @@ bool HMCSampler::REBAS_Scale_Mbx(REBAS_MoleculeName_Ix molName, SimTK::Mobilized
 		|| (int(mbx) == 19) || (int(mbx) == 20) || (int(mbx) == 21)   || (int(mbx) == 14) // ALA1 C-ter methyl
 		|| (int(mbx) == 3) || (int(mbx) == 8)       || (int(mbx) == 4) || (int(mbx) == 10) // ALA1 N-ter peptide bond
 		|| (int(mbx) == 9) || (int(mbx) == 15)       || (int(mbx) == 11) || (int(mbx) == 22) // ALA1 C-ter peptide bond
+		),
+		( false // TRPCH
+		|| ((int(mbx) != 1) && (int(mbx) != 2) && (int(mbx) != 5) && (int(mbx) != 6))
 		)
 	};
 
@@ -700,7 +703,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		SimTK::Real scaleFactor = 1;			
 
-		REBAS_MoleculeName_Ix MOLECULE_NAME_Ix = REBAS_MoleculeName_Ix::ALA1;
+		REBAS_MoleculeName_Ix MOLECULE_NAME_Ix = REBAS_MoleculeName_Ix::TRPCH;
 
 		bool testingMode = false; // Are we doing temperature scaling
 		enum TestingWays {
