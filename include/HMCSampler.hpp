@@ -289,11 +289,13 @@ public:
 	
 	enum REBAS_MoleculeName_Ix{
 		ETHANE,
-		ALA1
+		ALA1,
+		TRPCH
 	};
 	std::vector<std::string> REBAS_MoleculeNames = {
 		"ETHANE",
-		"ALA1"
+		"ALA1",
+		"TRPCH"
 	};
 
 	std::vector<double>& dihedralSegmenter(int nofIntervals, double segHalfDiff, std::vector<double>& segLims);
