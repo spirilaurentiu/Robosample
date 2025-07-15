@@ -1035,6 +1035,51 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		// Scale by square root of the inverse mass matrix
 		matter->multiplyBySqrtMInv(someState, RandomCache.getV(), sqrtMInvV);
 
+		// __begin__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		// SimTK::Vector SOA_refV(nu, 1.0);
+		// SimTK::Vector SOA_testV_bef(nu, 1.0);
+		// SimTK::Vector SOA_testV_aft(nu, 1.0);
+		// SOA_testV_aft = SOA_refV;
+		// matter->multiplyByM(someState, SOA_testV_bef, SOA_testV_aft);			// multiply by M
+		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian M*1";
+		// for(int vIx = 0; vIx < SOA_testV_aft.size(); vIx++){
+		// 	std::cout <<" "<< SOA_testV_aft[vIx];
+		// } std::cout << std::endl;
+		// SOA_testV_aft = SOA_refV;
+		// Vector_<SpatialVec> SOA_testSpaV(nu, SpatialVec(Vec3(0, 0, 0), Vec3(0, 0, 0)));
+		// matter->multiplyBySystemJacobian(someState, SOA_testV_bef, SOA_testSpaV); 
+		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian J*1" << std::endl;
+		// for(int vIx = 0; vIx < SOA_testSpaV.size(); vIx++){
+		// 	PrintSpatialVec(SOA_testSpaV[vIx], 3, "DRILLING");
+		// 	//std::cout <<" "<< SOA_testSpaV[vIx][0];
+		// } std::cout << std::endl;
+		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian MCart" << " ";
+		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		// 	std::cout <<" "<< mobod.getBodyMass(someState);
+		// } std::cout << std::endl;
+		// // mobod.getH_FMCol will give [0, 0, 1] for Pin
+
+		someState.updU() = 0; // SET VELOCITIES TO ZERO
+		system->realize(someState, SimTK::Stage::Acceleration);
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			SimTK::MobilizedBodyIndex parentMbx = mobod.getParentMobilizedBody();
+			const SimTK::MobilizedBody& parentMobod = matter->getMobilizedBody(parentMbx);
+
+			const SimTK::Vec3 b_GB = mobod.getBodyAngularAcceleration(someState);
+			Vec3 b_PB_G = mobod.findBodyAngularAccelerationInAnotherBody(someState, parentMobod);
+			Transform X_GB = mobod.getBodyTransform(someState);
+			Transform X_BG = ~X_GB;
+			Vec3 b_PB_B = X_BG * b_PB_G;
+
+			std::cout <<"DRILL b_PB_B "<< b_PB_B << std::endl;
+			std::cout <<"DRILL b_GB " << b_GB << std::endl;
+
+		} std::cout << std::endl;
+
+		// __end__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
 		// Set stddev according to temperature
 		sqrtMInvV *= sqrtBoostRT;
 
