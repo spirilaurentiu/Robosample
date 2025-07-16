@@ -155,7 +155,7 @@ void Context::PrintAtomsDebugInfo(void){
 	return flexibilities;
  }
 
- bool Context::addReplicasAndLoadCoordinates(const std::string& name, const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
+ bool Context::addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
     std::vector<std::string> inpcrdFNs;
 
     // Add replicas
@@ -374,7 +374,8 @@ bool Context::initializeFromFile(const std::string &inpFN)
 		// 	addReplica(k);
 		// }
 
-		addReplicasAndLoadCoordinates(setupReader.get("MOLECULES")[0], prmtop, restartDir, nofReplicas);
+		//addReplicasAndLoadCoordinates(setupReader.get("MOLECULES")[0], prmtop, restartDir, nofReplicas);
+		addReplicasAndLoadCoordinates(prmtop, restartDir, nofReplicas);
 
 		// Add thermodynamic states
 		for(int k = 0; k < temperatures.size(); k++){

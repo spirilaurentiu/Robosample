@@ -196,7 +196,7 @@ public:
 	 * @param restartDir Restart directory.
 	 * @param nofReplicas Number of replicas.
 	*/
-	bool addReplicasAndLoadCoordinates(const std::string& name, const std::string& prmtop, const std::string& restartDir, int nofReplicas);
+	bool addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas);
 
 	/**	
 	* @brief
