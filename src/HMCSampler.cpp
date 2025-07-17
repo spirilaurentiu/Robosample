@@ -1060,23 +1060,26 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		// } std::cout << std::endl;
 		// // mobod.getH_FMCol will give [0, 0, 1] for Pin
 
-		// someState.updU() = 0; // SET VELOCITIES TO ZERO
-		// system->realize(someState, SimTK::Stage::Acceleration);
-		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-		// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		// 	SimTK::MobilizedBodyIndex parentMbx = mobod.getParentMobilizedBody();
-		// 	const SimTK::MobilizedBody& parentMobod = matter->getMobilizedBody(parentMbx);
+		someState.updU() = 0; // SET VELOCITIES TO ZERO
+		system->realize(someState, SimTK::Stage::Acceleration);
+		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			SimTK::MobilizedBodyIndex parentMbx = mobod.getParentMobilizedBody();
+			const SimTK::MobilizedBody& parentMobod = matter->getMobilizedBody(parentMbx);
 
-		// 	const SimTK::Vec3 b_GB = mobod.getBodyAngularAcceleration(someState);
-		// 	Vec3 b_PB_G = mobod.findBodyAngularAccelerationInAnotherBody(someState, parentMobod);
-		// 	Transform X_GB = mobod.getBodyTransform(someState);
-		// 	Transform X_BG = ~X_GB;
-		// 	Vec3 b_PB_B = X_BG * b_PB_G;
+			const SimTK::Vec3 b_GB = mobod.getBodyAngularAcceleration(someState);
+			Vec3 b_PB_P = mobod.findBodyAngularAccelerationInAnotherBody(someState, parentMobod);
 
-		// 	std::cout <<"DRILL b_PB_B "<< b_PB_B << std::endl;
-		// 	std::cout <<"DRILL b_GB " << b_GB << std::endl;
+			Transform X_PF = parentMobod.getInboardFrame(someState);
+			SpatialVec A_GF = parentMobod.findFrameAccelerationInGround(someState, X_PF);
 
-		// } std::cout << std::endl;
+			Transform X_GB = mobod.getBodyTransform(someState);
+			Transform X_BG = ~X_GB;
+			Vec3 b_PB_B = X_BG * b_PB_P;
+
+			std::cout <<"DRILL b_PB_B "<< b_PB_B << std::endl;
+			std::cout <<"DRILL b_GB " << b_GB << std::endl;
+		} std::cout << std::endl;
 
 		// __end__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
