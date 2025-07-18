@@ -1036,50 +1036,56 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		matter->multiplyBySqrtMInv(someState, RandomCache.getV(), sqrtMInvV);
 
 		// __begin__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-		// SimTK::Vector SOA_refV(nu, 1.0);
-		// SimTK::Vector SOA_testV_bef(nu, 1.0);
-		// SimTK::Vector SOA_testV_aft(nu, 1.0);
-		// SOA_testV_aft = SOA_refV;
-		// matter->multiplyByM(someState, SOA_testV_bef, SOA_testV_aft);			// multiply by M
-		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian M*1";
-		// for(int vIx = 0; vIx < SOA_testV_aft.size(); vIx++){
-		// 	std::cout <<" "<< SOA_testV_aft[vIx];
-		// } std::cout << std::endl;
-		// SOA_testV_aft = SOA_refV;
-		// Vector_<SpatialVec> SOA_testSpaV(nu, SpatialVec(Vec3(0, 0, 0), Vec3(0, 0, 0)));
-		// matter->multiplyBySystemJacobian(someState, SOA_testV_bef, SOA_testSpaV); 
-		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian J*1" << std::endl;
-		// for(int vIx = 0; vIx < SOA_testSpaV.size(); vIx++){
-		// 	PrintSpatialVec(SOA_testSpaV[vIx], 3, "DRILLING");
-		// 	//std::cout <<" "<< SOA_testSpaV[vIx][0];
-		// } std::cout << std::endl;
-		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian MCart" << " ";
-		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-		// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		// 	std::cout <<" "<< mobod.getBodyMass(someState);
-		// } std::cout << std::endl;
-		// // mobod.getH_FMCol will give [0, 0, 1] for Pin
 
-		someState.updU() = 0; // SET VELOCITIES TO ZERO
-		system->realize(someState, SimTK::Stage::Acceleration);
+		someState.updU() = 1.0; // SET VELOCITIES TO ONE
+		system->realize(someState, SimTK::Stage::Velocity);
+
 		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			SimTK::MobilizedBodyIndex parentMbx = mobod.getParentMobilizedBody();
-			const SimTK::MobilizedBody& parentMobod = matter->getMobilizedBody(parentMbx);
+		 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+			if(mobod.getNumU(someState) > 0){
+				int local_which_uIx = 0;
+				MobilizerUIndex local_mobUIx(0);				
+				for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+					int which_uIx = int(uIx);
+					MobilizerUIndex mobUIx = MobilizerUIndex(uIx);
 
-			const SimTK::Vec3 b_GB = mobod.getBodyAngularAcceleration(someState);
-			Vec3 b_PB_P = mobod.findBodyAngularAccelerationInAnotherBody(someState, parentMobod);
+					// Angular velocity measured relative to G and expressed in G
+					Vec3 w_GB_G = mobod.getBodyAngularVelocity(someState);
+					Vec3 v_GBo_G = mobod.getBodyOriginVelocity(someState);
 
-			Transform X_PF = parentMobod.getInboardFrame(someState);
-			SpatialVec A_GF = parentMobod.findFrameAccelerationInGround(someState, X_PF);
+					PrintSimbodyVec(w_GB_G, 3, "w_GB_G " + std::to_string(int(mbx)));
+					PrintSimbodyVec(v_GBo_G, 3, "v_GBo_G " + std::to_string(int(mbx)));
 
-			Transform X_GB = mobod.getBodyTransform(someState);
-			Transform X_BG = ~X_GB;
-			Vec3 b_PB_B = X_BG * b_PB_P;
+					Real mobod_u = mobod.getOneU(someState, local_which_uIx);
+					SpatialVec H_FMCol = mobod.getH_FMCol(someState, local_mobUIx);
+					SpatialVec V_FM = H_FMCol * mobod_u;
+					Vec3 w_FM = V_FM[0];
+					Vec3 v_FM = V_FM[1];
 
-			std::cout <<"DRILL b_PB_B "<< b_PB_B << std::endl;
-			std::cout <<"DRILL b_GB " << b_GB << std::endl;
-		} std::cout << std::endl;
+					PrintSimbodyVec(w_FM, 3, "w_FM " + std::to_string(int(mbx)));
+					PrintSimbodyVec(v_FM, 3, "v_FM " + std::to_string(int(mbx)));
+
+					std::cout << "u " + std::to_string(int(mbx)) <<" " << mobod_u << std::endl;
+					PrintSpatialVec(H_FMCol, 3, "H_FMCol " + std::to_string(int(mbx)));
+					PrintSpatialVec(V_FM, 3, "V_FM " + std::to_string(int(mbx)));
+
+					// Relative velocity of B in P (==H*u), expr. in G
+					SpatialVec HCol_G = mobod.getHCol(someState, local_mobUIx);
+					SpatialVec V_PB_G = HCol_G * mobod_u;
+					PrintSpatialVec(HCol_G, 3, "HCol_G " + std::to_string(int(mbx)));
+					PrintSpatialVec(V_PB_G, 3, "V_PB_G " + std::to_string(int(mbx)));
+
+					Real mass = mobod.getBodyMass(someState);
+					std::cout << "mass " + std::to_string(int(mbx)) <<" " << mass << std::endl;
+					// mobod.getBodySpatialInertiaInGround(someState);
+					// mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
+					// mobod.getBodyMassProperties(someState);
+
+					local_which_uIx++;
+					local_mobUIx++;
+				} // __end__ mobods uixes
+			}
+		}
 
 		// __end__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
