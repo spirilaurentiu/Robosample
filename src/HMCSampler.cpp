@@ -1008,6 +1008,10 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 
 }
 
+
+
+
+
 /*!
  * <!--	Set velocities according to the Maxwell-Boltzmann distribution. -->
 */
@@ -1036,56 +1040,193 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		matter->multiplyBySqrtMInv(someState, RandomCache.getV(), sqrtMInvV);
 
 		// __begin__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		
+		enum DrillingWay {
+			VELOCITIES,
+			ACCELERATIONS,
+			FORCES,
+			ALLVELOCITIES,
+			ALLACCELERATIONS,
+			ALLFORCES
+		};
 
-		someState.updU() = 1.0; // SET VELOCITIES TO ONE
-		system->realize(someState, SimTK::Stage::Velocity);
+        DrillingWay drillWay = DrillingWay::ALLFORCES; // ALLFORCES
 
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-		 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			if(mobod.getNumU(someState) > 0){
-				int local_which_uIx = 0;
-				MobilizerUIndex local_mobUIx(0);				
-				for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
-					int which_uIx = int(uIx);
-					MobilizerUIndex mobUIx = MobilizerUIndex(uIx);
+		#pragma region DRILL_VELOCITIES
+		if(drillWay == DrillingWay::VELOCITIES){
+			someState.updU() = 1.0; // SET VELOCITIES TO ONE
+			system->realize(someState, SimTK::Stage::Velocity);
 
-					// Angular velocity measured relative to G and expressed in G
-					Vec3 w_GB_G = mobod.getBodyAngularVelocity(someState);
-					Vec3 v_GBo_G = mobod.getBodyOriginVelocity(someState);
+			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+					int local_which_uIx = 0;
+					MobilizerUIndex local_mobUIx(0);				
+					for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+						int which_uIx = int(uIx);
+						MobilizerUIndex mobUIx = MobilizerUIndex(uIx);
 
-					PrintSimbodyVec(w_GB_G, 3, "w_GB_G " + std::to_string(int(mbx)));
-					PrintSimbodyVec(v_GBo_G, 3, "v_GBo_G " + std::to_string(int(mbx)));
+						// Angular velocity measured relative to G and expressed in G
+						Vec3 w_GB_G = mobod.getBodyAngularVelocity(someState);
+						Vec3 v_GBo_G = mobod.getBodyOriginVelocity(someState);
 
-					Real mobod_u = mobod.getOneU(someState, local_which_uIx);
-					SpatialVec H_FMCol = mobod.getH_FMCol(someState, local_mobUIx);
-					SpatialVec V_FM = H_FMCol * mobod_u;
-					Vec3 w_FM = V_FM[0];
-					Vec3 v_FM = V_FM[1];
+						PrintSimbodyVec(w_GB_G, 3, "w_GB_G " + std::to_string(int(mbx)));
+						PrintSimbodyVec(v_GBo_G, 3, "v_GBo_G " + std::to_string(int(mbx)));
 
-					PrintSimbodyVec(w_FM, 3, "w_FM " + std::to_string(int(mbx)));
-					PrintSimbodyVec(v_FM, 3, "v_FM " + std::to_string(int(mbx)));
+						Real mobod_u = mobod.getOneU(someState, local_which_uIx);
+						SpatialVec H_FMCol = mobod.getH_FMCol(someState, local_mobUIx);
+						SpatialVec V_FM = H_FMCol * mobod_u;
+						Vec3 w_FM = V_FM[0];
+						Vec3 v_FM = V_FM[1];
 
-					std::cout << "u " + std::to_string(int(mbx)) <<" " << mobod_u << std::endl;
-					PrintSpatialVec(H_FMCol, 3, "H_FMCol " + std::to_string(int(mbx)));
-					PrintSpatialVec(V_FM, 3, "V_FM " + std::to_string(int(mbx)));
+						PrintSimbodyVec(w_FM, 3, "w_FM " + std::to_string(int(mbx)));
+						PrintSimbodyVec(v_FM, 3, "v_FM " + std::to_string(int(mbx)));
 
-					// Relative velocity of B in P (==H*u), expr. in G
-					SpatialVec HCol_G = mobod.getHCol(someState, local_mobUIx);
-					SpatialVec V_PB_G = HCol_G * mobod_u;
-					PrintSpatialVec(HCol_G, 3, "HCol_G " + std::to_string(int(mbx)));
-					PrintSpatialVec(V_PB_G, 3, "V_PB_G " + std::to_string(int(mbx)));
+						std::cout << "u " + std::to_string(int(mbx)) <<" " << mobod_u << std::endl;
+						PrintSpatialVec(H_FMCol, 3, "H_FMCol " + std::to_string(int(mbx)));
+						PrintSpatialVec(V_FM, 3, "V_FM " + std::to_string(int(mbx)));
+
+						// Relative velocity of B in P (==H*u), expr. in G
+						SpatialVec HCol_G = mobod.getHCol(someState, local_mobUIx);
+						SpatialVec V_PB_G = HCol_G * mobod_u;
+						PrintSpatialVec(HCol_G, 3, "HCol_G " + std::to_string(int(mbx)));
+						PrintSpatialVec(V_PB_G, 3, "V_PB_G " + std::to_string(int(mbx)));
+
+						Real mass = mobod.getBodyMass(someState);
+						std::cout << "mass " + std::to_string(int(mbx)) <<" " << mass << std::endl;
+						// mobod.getBodySpatialInertiaInGround(someState);
+						// mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
+						// mobod.getBodyMassProperties(someState);
+
+						local_which_uIx++;
+						local_mobUIx++;
+					} // __end__ mobods uixes
+			}
+		} // __end__ drillWay velocities
+		#pragma endregion DRILL_VELOCITIES
+
+		#pragma region DRILL_ACCELERATIONS
+		else if(drillWay == DrillingWay::ACCELERATIONS){
+			someState.updU() = 0.0; // SET VELOCITIES TO ONE
+			system->realize(someState, SimTK::Stage::Acceleration);
+
+			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+					int local_which_uIx = 0;
+					MobilizerUIndex local_mobUIx(0);
+
+					Transform X_GB = mobod.getBodyTransform(someState);
+					Transform X_PF = mobod.getInboardFrame(someState);
+					Transform X_BM = mobod.getOutboardFrame(someState);
+					SimTK::Test::PrintTransform(X_GB, 3, "X_GB " + std::to_string(int(mbx)), "X_GB " + std::to_string(int(mbx)));
+					SimTK::Test::PrintTransform(X_PF, 3, "X_PF " + std::to_string(int(mbx)), "X_PF " + std::to_string(int(mbx)));
+					SimTK::Test::PrintTransform(X_BM, 3, "X_BM " + std::to_string(int(mbx)), "X_BM " + std::to_string(int(mbx)));
+					
+					Real mass = mobod.getBodyMass(someState);
+					std::cout << "mass " + std::to_string(int(mbx)) <<" " << mass << std::endl;
+
+					for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+						int which_uIx = int(uIx);
+						MobilizerUIndex mobUIx = MobilizerUIndex(uIx);
+
+						Real mobod_u = mobod.getOneU(someState, local_which_uIx);
+						Real mobod_udot = mobod.getOneUDot(someState, local_mobUIx);
+
+						std::cout << "u " + std::to_string(int(mbx)) <<" " << mobod_u << std::endl;
+						std::cout << "udot " + std::to_string(int(mbx)) <<" " << mobod_udot << std::endl;
+
+						local_which_uIx++;
+						local_mobUIx++;
+					} // __end__ mobods uixes
+			}
+		} // __end__ drillWay forces
+		#pragma endregion DRILL_ACCELERATIONS
+
+		#pragma region DRILL_FORCES
+		else if(drillWay == DrillingWay::FORCES){
+			someState.updU() = 0.0; // SET VELOCITIES TO ZERO
+			system->realize(someState, SimTK::Stage::Acceleration);
+
+			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+					int local_which_uIx = 0;
+					MobilizerUIndex local_mobUIx(0);
+
+					Transform X_GB = mobod.getBodyTransform(someState);
+					Transform X_PF = mobod.getInboardFrame(someState);
+					Transform X_FM = mobod.getMobilizerTransform(someState);
+					Transform X_BM = mobod.getOutboardFrame(someState);
+					// SimTK::Test::PrintTransform(X_GB, 3, "X_GB " + std::to_string(int(mbx)), "X_GB " + std::to_string(int(mbx)));
+					// SimTK::Test::PrintTransform(X_PF, 3, "X_PF " + std::to_string(int(mbx)), "X_PF " + std::to_string(int(mbx)));
+					// SimTK::Test::PrintTransform(X_BM, 3, "X_BM " + std::to_string(int(mbx)), "X_BM " + std::to_string(int(mbx)));
+					Transform X_BG = ~X_GB;
+					Transform X_PB = X_PF * X_FM * (~X_BM);
+					Transform X_BP = ~X_PB;
+
+					const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+					SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+					Transform X_GP = parentMobod.getBodyTransform(someState);
+					Transform X_PG = ~X_GP;
 
 					Real mass = mobod.getBodyMass(someState);
 					std::cout << "mass " + std::to_string(int(mbx)) <<" " << mass << std::endl;
-					// mobod.getBodySpatialInertiaInGround(someState);
-					// mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
-					// mobod.getBodyMassProperties(someState);
 
-					local_which_uIx++;
-					local_mobUIx++;
-				} // __end__ mobods uixes
+					for(SimTK::UIndex uIx = mobod.getFirstUIndex(someState); uIx < mobod.getFirstUIndex(someState) + mobod.getNumU(someState); uIx++ ){
+						int which_uIx = int(uIx);
+						MobilizerUIndex mobUIx = MobilizerUIndex(uIx);
+
+						Real mobod_udot = mobod.getOneUDot(someState, local_mobUIx);
+						std::cout << "udot " + std::to_string(int(mbx)) <<" " << mobod_udot << std::endl;
+
+						//Inertia m_BBc_B = mobod.calcBodyCentralInertia(someState, mbx); // don't understand why pass mbx
+
+						//Vec3 aboutM = X_BM.p();
+						//Inertia I_MB_B = mobod.calcBodyInertiaAboutAnotherBodyStation(someState, mobod, aboutM);
+						Inertia I_PB_P = mobod.calcBodyInertiaAboutAnotherBodyStation(someState, parentMobod, Vec3(0, 0, 0));
+						Inertia I_PB_G = I_PB_P.reexpress(X_GP.R());
+
+						Vec3 b_GB_G = mobod.getBodyAngularAcceleration(someState);
+						Vec3 b_GP_G = parentMobod.getBodyAngularAcceleration(someState);
+						Vec3 b_PB_G = b_GB_G - b_GP_G;
+
+						PrintSimbodyVec(b_PB_G, 3, "b_PB_G " + std::to_string(int(mbx)));
+
+						Vec3 torq_PB_G = I_PB_G * b_PB_G;
+						PrintSimbodyVec(torq_PB_G, 3, "torq_PB_G " + std::to_string(int(mbx)));
+
+						local_which_uIx++;
+						local_mobUIx++;
+					} // __end__ mobods uixes
 			}
-		}
+		} // __end__ drillWay forces
+		#pragma endregion DRILL_FORCES
+
+		#pragma region DRILL_ALLFORCES
+		else if(drillWay == DrillingWay::ALLFORCES){
+			someState.updU() = 0.0; // SET VELOCITIES TO ZERO
+			system->realize(someState, SimTK::Stage::Acceleration);
+
+			Vector udot = someState.getUDot();
+			Vector genForces;
+			genForces.resize(someState.getNU());
+			matter->multiplyByM(someState, udot, genForces);
+
+			Vector_<SpatialVec> spatialForces;
+			spatialForces.resize(matter->getNumBodies());
+			matter->multiplyBySystemJacobian(someState, genForces, spatialForces);
+
+			PrintSimbodyVec(udot, 3, "udot ");
+			PrintSimbodyVec(genForces, 3, "genForces ");
+
+			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+				Real mass =  matter->getMobilizedBody(mbx).getBodyMass(someState);
+				std::cout << "mass " + std::to_string(int(mbx)) <<" " << mass << std::endl;				
+				PrintSimbodyVec(spatialForces[int(mbx)][0], 3, "spatialForces_w " + std::to_string(int(mbx)));
+				PrintSimbodyVec(spatialForces[int(mbx)][1], 3, "spatialForces_v " + std::to_string(int(mbx)));
+			}
+		
+		} // __end__ drillWay allforces
+		#pragma endregion DRILL_ALLFORCES
 
 		// __end__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
@@ -1093,7 +1234,8 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		sqrtMInvV *= sqrtBoostRT;
 
 		// Raise the temperature
-		someState.updU() = sqrtMInvV;
+		//someState.updU() = sqrtMInvV;
+		std::cerr << "[WARNING] NO VELOCITIES SET" << std::endl;
 
 		// Ask for a number of random numbers and check if we are done the next
 		// time we hit this function
