@@ -52,8 +52,8 @@ Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t thread
 	this->swapEvery = swapFreq;
 	this->swapFixman = swapFixmanFreq;
 
-	foutU = std::ofstream(baseName + "_U.bin", std::ios::binary | std::ios::app);
-	foutUDot = std::ofstream(baseName + "_U_dot.bin", std::ios::binary | std::ios::app);
+	foutU = std::string(baseName + "_U.bin");
+	foutUDot = std::string(baseName + "_U_dot.bin");
 }
 
 void Context::setVerbose(bool verbose){
@@ -5796,7 +5796,6 @@ void Context::transferQStatistics(int thermoIx, int srcStatsWIx, int destStatsWI
 */
 bool Context::RunWorld(int whichWorld, const std::string& header)
 {
-
 	// Prepare output
 	std::stringstream worldOutStream;
 	worldOutStream.str(""); // empty
@@ -5813,56 +5812,124 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
 
 		size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
-		if (validated && whichWorld == wIx) {
+		if (whichWorld == wIx) {
 			SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[wIx].updForceField());
-			const auto& U = worlds[wIx].updSampler(0)->UCache;
-			const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
-			// std::cout << "U.size() = " << U.size() << std::endl;
-			// std::cout << "UDot.size() = " << UDot.size() << std::endl;
+			SimTK::SimbodyMatterSubsystem& matter = *(worlds[wIx].matter);
+			auto& someState = (worlds[whichWorld]).integ->updAdvancedState();
+
+			SimTK::Vector udot = someState.getUDot();
+            SimTK::Vector torques;
+            torques.resize(someState.getNU());
+            matter.multiplyByM(someState, udot, torques);
+
+			std::cout << "Torsional dynamics world UDot: " << std::endl;
+			std::cout << torques.sum() << std::endl;
+			std::cout << "Torsional dynamics world torques: " << std::endl;
+
+			// UDotCache = std::vector<SimTK::Real>(torques.size());
+			// for (size_t i = 0; i < torques.size(); i++) {
+			// 	UDotCache[i] = torques[i];
+			// 	UCache.push_back(0); // U is not used in this case, so we just push 0
+			// }
+
+			const auto& backupU = someState.getU();
+			someState.updU() = 0; // SET VELOCITIES TO ZERO
+			worlds[wIx].updSampler(0)->system->realize(someState, SimTK::Stage::Acceleration);
+
+			// const auto& U = worlds[wIx].updSampler(0)->UCache;
+			// const auto& UDot = worlds[wIx].updSampler(0)->UDotCache;
+
 			const std::vector<std::vector<BOND>> &allBONDS = internCoords.getBonds();
-			assert(allBONDS.size() == getNofMolecules() && "internal coordinates nof molecules wrong");
+
 			// Iterate molecules
 			for(size_t topoIx = 0; topoIx < getNofMolecules(); topoIx++){
+
 				// Get molecule and it's bonds
 				Topology& topology = topologies[topoIx];
 				const std::vector<BOND>& BONDS = allBONDS[topoIx];
+
 				// Iterate molecule's bonds
 				for(size_t BOIx = 0; BOIx < BONDS.size(); BOIx++){
+
 					// Get current bond
 					const BOND& currBOND = BONDS[BOIx];
 					size_t boIx = BONDS_to_bonds[topoIx][BOIx];
 					bBond& bond = bonds[boIx];
+
 					// Get bond's atoms
 					bSpecificAtom& childAtom  = atoms[currBOND.first];
 					bSpecificAtom& parentAtom = atoms[currBOND.second];
+
 					SimTK::Compound::AtomIndex child_cAIx = childAtom.getCompoundAtomIndex();
 					SimTK::Compound::AtomIndex parent_cAIx = parentAtom.getCompoundAtomIndex();
+
 					SimTK::DuMM::AtomIndex child_dAIx = topology.getDuMMAtomIndex(child_cAIx);
 					SimTK::DuMM::AtomIndex parent_dAIx = topology.getDuMMAtomIndex(parent_cAIx);
+
 					SimTK::MobilizedBodyIndex childMbx = dumm.getAtomBody(child_dAIx);
 					SimTK::MobilizedBodyIndex parentMbx = dumm.getAtomBody(parent_dAIx);
+
+					const SimTK::MobilizedBody& childMobod = matter.getMobilizedBody(childMbx);
+					const SimTK::MobilizedBody& parentMobod = matter.getMobilizedBody(parentMbx);
+
 					if (childMbx != parentMbx) {
-						int min_aix = std::min(currBOND.first, currBOND.second);
-						int max_aix = std::max(currBOND.first, currBOND.second);
-						std::string key = std::to_string(min_aix) + "-" + std::to_string(max_aix);
-						// std::cout << "key " << key << " childMbx " << childMbx - 2 << std::endl;
-						// MobilizedBodyIndex starts from 1, so we subtract 1 to match our indexing
-						// I think the first one is the ground, so we subtract 2 to get the correct index
-						const auto& u = U[childMbx - 2];
-						UCache[key] = u;
-						const auto& uDot = UDot[childMbx - 2];
-						UDotCache[key] = uDot;
+						if (!binaryFileIsInitialized) {
+							int min_aix = std::min(currBOND.first, currBOND.second);
+							AtomIndex0.push_back(min_aix);
+
+							int max_aix = std::max(currBOND.first, currBOND.second);
+							AtomIndex1.push_back(max_aix);
+
+							// if (min_aix == 4 && max_aix == 6) {
+							// 	std::cout << "childMbx - 2: " << childMbx - 2 << std::endl;
+							// }
+						}
+
+						const SimTK::Transform X_GP = parentMobod.getBodyTransform(someState); // Transform from G to P
+						const SimTK::Transform X_PG = ~X_GP; // Transform from P to G
+
+						const SimTK::Transform X_GB = childMobod.getBodyTransform(someState); // Transform from G to B
+						const SimTK::Transform X_BG = ~X_GB; // Transform from B to G
+
+						const SimTK::Inertia I_PB_P = childMobod.calcBodyInertiaAboutAnotherBodyStation(someState, parentMobod, Vec3(0, 0, 0)); // Inertia expressed in P
+						const SimTK::Vec3 b_PB_P = childMobod.findBodyAngularAccelerationInAnotherBody(someState, parentMobod); // In P
+
+						const SimTK::Vec3 Torque_P = I_PB_P * b_PB_P; // Torque in P
+
+						const SimTK::Transform& X_PM = parentMobod.getInboardFrame(someState); // Mobilizer frame M, expressed in P
+						const SimTK::UnitVec3 pinAxis_G = X_PM.R().z(); // z-axis of frame M, expressed in P
+
+						const SimTK::Real u_dot = dot(Torque_P, pinAxis_G); // Angular acceleration projected onto pin axis
+
+						UCache.push_back(0);
+						UDotCache.push_back(u_dot);
 					}
 				} // every bond
 			} // every molecule
 
-			// std::cout << "Writing U and UDot to cache for world " << wIx << std::endl;
-			writeU(UCache, foutU);
-			writeU(UDotCache, foutUDot);
+			// Print two rows for atom indices
+			// The last column in each row is whether it was accepted
+			// Since this is not simulation, it will write 0
+			if (!binaryFileIsInitialized) {
+				initializeBinaryFile(foutU, AtomIndex0.size() + 1);
+				writeRowToBinaryFile(foutU, AtomIndex0, false, false);
+				writeRowToBinaryFile(foutU, AtomIndex1, false, false);
+
+				initializeBinaryFile(foutUDot, AtomIndex0.size() + 1);
+				writeRowToBinaryFile(foutUDot, AtomIndex0, false, false);
+				writeRowToBinaryFile(foutUDot, AtomIndex1, false, false);
+
+				binaryFileIsInitialized = true;
+			}
+
+			writeRowToBinaryFile(foutU, UCache, true, validated);
+			writeRowToBinaryFile(foutUDot, UDotCache, true, validated);
+
+			UCache.clear();
+			UDotCache.clear();
+
+			someState.updU() = backupU; // Restore velocities
 		}
-
-	// Non-equilibrium world
-
 	// Non-equilibrium world
 	} else if (distortOption != 0) {
 
@@ -6361,31 +6428,60 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	PrintNofAcceptedSwapsMatrix();
 	//PrintReplicaMaps();
 
-	foutU.close();
-	foutUDot.close();
+	// foutU.close();
+	// foutUDot.close();
 
 }
 
-void Context::writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary) {
-    for (const auto& item : cache) {
-        std::istringstream keyStream(item.first);
-        std::string token;
-        std::getline(keyStream, token, '-');
-        int atom1 = std::stoi(token);
-        std::getline(keyStream, token);
-        int atom2 = std::stoi(token);
-        float a1 = static_cast<float>(atom1);  // Ensure consistency
-        float a2 = static_cast<float>(atom2);
-        float uDot = static_cast<float>(item.second);
-
-		std::cout << "Writing: " << a1 << " " << a2 << " " << uDot << std::endl;
-
-        foutBinary.write(reinterpret_cast<const char*>(&a1), sizeof(float));
-        foutBinary.write(reinterpret_cast<const char*>(&a2), sizeof(float));
-        foutBinary.write(reinterpret_cast<const char*>(&uDot), sizeof(float));
+void Context::initializeBinaryFile(const std::string &filename, uint32_t num_columns) {
+    std::ofstream ofs(filename, std::ios::binary | std::ios::trunc); // overwrite file
+    if (!ofs) {
+        throw std::runtime_error("Cannot create file: " + filename);
     }
 
-    foutBinary.flush(); // Ensure data is immediately written to disk
+	std::cout << "Created binary file " << filename 
+			  << " with " << num_columns << " columns." << std::endl;
+
+    uint32_t num_rows = 0; // initially zero rows
+    ofs.write(reinterpret_cast<const char *>(&num_columns), sizeof(num_columns));
+    ofs.write(reinterpret_cast<const char *>(&num_rows), sizeof(num_rows));
+    ofs.close();
+}
+
+// Append a row and update the row count in header
+void Context::writeRowToBinaryFile(const std::string &filename, const std::vector<SimTK::Real> &row, bool has_acceptance, bool accepted) {
+    std::fstream file(filename, std::ios::binary | std::ios::in | std::ios::out);
+    if (!file) {
+        throw std::runtime_error("File does not exist: " + filename);
+    }
+
+    uint32_t num_columns = 0, num_rows = 0;
+    file.read(reinterpret_cast<char *>(&num_columns), sizeof(num_columns));
+    file.read(reinterpret_cast<char *>(&num_rows), sizeof(num_rows));
+
+    if (row.size() != (num_columns - 1)) { // -1 for acceptance column
+		std::cout << "Row size: " << row.size() << " does not match expected number of columns: " << (num_columns - 1) << std::endl;
+        throw std::runtime_error("Row size does not match expected number of columns.");
+    }
+
+    // Increment row count
+    ++num_rows;
+    file.seekp(sizeof(num_columns), std::ios::beg);
+    file.write(reinterpret_cast<const char *>(&num_rows), sizeof(num_rows));
+
+    // Seek to end to append
+    file.seekp(0, std::ios::end);
+
+    // Write row data
+    file.write(reinterpret_cast<const char *>(row.data()), row.size() * sizeof(SimTK::Real));
+
+    // Append acceptance column
+    // SimTK::Real value_to_write = has_acceptance ? (accepted ? 1.0 : 0.0)
+    //                                        : std::numeric_limits<SimTK::Real>::quiet_NaN();
+	SimTK::Real value_to_write = (has_acceptance & accepted) ? 1.0 : 0.0;
+    file.write(reinterpret_cast<const char *>(&value_to_write), sizeof(SimTK::Real));
+
+    file.close();
 }
 
 

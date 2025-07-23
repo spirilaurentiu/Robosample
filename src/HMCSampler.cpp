@@ -1394,6 +1394,85 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		dumm->setOpenMMvelocities(this->boostT, seed);
 
 	} else {
+
+		// __begin__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+		// SimTK::Vector SOA_refV(nu, 1.0);
+		// SimTK::Vector SOA_testV_bef(nu, 1.0);
+		// SimTK::Vector SOA_testV_aft(nu, 1.0);
+		// SOA_testV_aft = SOA_refV;
+		// matter->multiplyByM(someState, SOA_testV_bef, SOA_testV_aft);			// multiply by M
+		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian M*1";
+		// for(int vIx = 0; vIx < SOA_testV_aft.size(); vIx++){
+		// 	std::cout <<" "<< SOA_testV_aft[vIx];
+		// } std::cout << std::endl;
+		// SOA_testV_aft = SOA_refV;
+		// Vector_<SpatialVec> SOA_testSpaV(nu, SpatialVec(Vec3(0, 0, 0), Vec3(0, 0, 0)));
+		// matter->multiplyBySystemJacobian(someState, SOA_testV_bef, SOA_testSpaV); 
+		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian J*1" << std::endl;
+		// for(int vIx = 0; vIx < SOA_testSpaV.size(); vIx++){
+		// 	PrintSpatialVec(SOA_testSpaV[vIx], 3, "DRILLING");
+		// 	//std::cout <<" "<< SOA_testSpaV[vIx][0];
+		// } std::cout << std::endl;
+		// std::cout << "DRILLING HMCSampler::setVelocitiesToGaussian MCart" << " ";
+		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		// 	std::cout <<" "<< mobod.getBodyMass(someState);
+		// } std::cout << std::endl;
+		// // mobod.getH_FMCol will give [0, 0, 1] for Pin
+
+		// someState.updU() = 0; // SET VELOCITIES TO ZERO
+		// system->realize(someState, SimTK::Stage::Acceleration);
+		// for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		// 	const SimTK::MobilizedBody& childMobod = matter->getMobilizedBody(mbx);
+		// 	SimTK::MobilizedBodyIndex parentMbx = childMobod.getParentMobilizedBody();
+		// 	const SimTK::MobilizedBody& parentMobod = matter->getMobilizedBody(parentMbx);
+
+		// 	const SimTK::Transform X_GP = parentMobod.getBodyTransform(someState); // Transform from G to P
+		// 	const SimTK::Transform X_PG = ~X_GP; // Transform from P to G
+
+		// 	const SimTK::Transform X_GB = childMobod.getBodyTransform(someState); // Transform from G to B
+		// 	const SimTK::Transform X_BG = ~X_GB; // Transform from B to G
+
+		// 	const SimTK::Inertia I_PB_P = childMobod.calcBodyInertiaAboutAnotherBodyStation(someState, parentMobod, Vec3(0, 0, 0)); // Inertia expressed in P
+		// 	const SimTK::Vec3 b_PB_P = childMobod.findBodyAngularAccelerationInAnotherBody(someState, parentMobod); // In P
+
+		// 	const SimTK::Vec3 Torque_P = I_PB_P * b_PB_P; // Torque in P
+
+		// 	const SimTK::Transform& X_PM = parentMobod.getInboardFrame(someState); // Mobilizer frame M, expressed in P
+		// 	const SimTK::UnitVec3 pinAxis_G = X_PM.R().z(); // z-axis of frame M, expressed in P
+
+		// 	const SimTK::Real u_dot = dot(Torque_P, pinAxis_G); // Angular acceleration projected onto pin axis
+
+		// 	// SimTK::UnitVec3 pinAxis_B = X_BM.R().z(); // z-axis of frame M, expressed in B
+		// 	std::cout << "DRILL UDOT " << u_dot << std::endl;
+
+
+		// 	// const SimTK::Vec3 b_GB = mobod.getBodyAngularAcceleration(someState); // In ground
+		// 	// Vec3 b_PB_P = mobod.findBodyAngularAccelerationInAnotherBody(someState, parentMobod); // In P
+
+		// 	// Transform X_PF = parentMobod.getInboardFrame(someState);
+		// 	// SpatialVec A_GF = parentMobod.findFrameAccelerationInGround(someState, X_PF);
+
+		// 	// Transform X_GB = mobod.getBodyTransform(someState);
+		// 	// Transform X_BG = ~X_GB;
+		// 	// Vec3 b_PB_B = X_BG * b_PB_P;
+
+		// 	// SimTK::Inertia inertia = mobod.getBodyMassProperties(someState).calcInertia();
+		// 	// Vec3 b_PB_G = inertia * b_PB_B; // Body angular acceleration in ground frame
+
+		// 	// const SimTK::Transform& X_BM = childMobod.getOutboardFrame(state);
+		// 	// SimTK::UnitVec3 pinAxis_B = X_BM.R().z(); // z-axis of frame M, expressed in B
+		// 	// const SimTK::Real u_dot = dot(alpha_BP_P, pinAxis_P);
+
+
+		// 	// std::cout <<"DRILL b_GB " << b_GB << std::endl;
+		// 	// std::cout << "DRILL inertia " << mobod.getBodyMassProperties(someState).calcInertia() << std::endl;
+		// 	// const auto c = b_GB * mobod.getBodyMassProperties(someState).calcInertia().asSymMat33();
+		// 	// std::cout << "DRILL " << mbx << " " << b_GB * mobod.getBodyMassProperties(someState).calcInertia().asSymMat33() << std::endl;
+		// } std::cout << std::endl;
+
+		// __end__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
 		// Check if we can use our cache
 		const int nu = someState.getNU();
 
@@ -1876,7 +1955,11 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 
 			try{
 
-				UCache = someState.getU();
+				// UCache = someState.getU();
+				
+				// // multiply by mass matrix
+				// world->matter->multiplyBySqrtMInv(someState, UCache, UCache);
+				// world->matter->multiplyByM(someState, UCache, UCache);
 
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
 				// system->realize(someState, SimTK::Stage::Position);

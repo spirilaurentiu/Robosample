@@ -787,12 +787,13 @@ public:
 	// Transformers
 	void Print_TRANSFORMERS_Work(void);
 
-	std::unordered_map<std::string, SimTK::Real> UDotCache;
-	std::unordered_map<std::string, SimTK::Real> UCache;
+	std::vector<SimTK::Real> AtomIndex0, AtomIndex1, UDotCache, UCache;
+	bool binaryFileIsInitialized = false;
 
-	std::ofstream foutU, foutUDot;
+	std::string foutU, foutUDot;
 
-	void writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary);
+	void initializeBinaryFile(const std::string &filename, uint32_t num_columns);
+	void writeRowToBinaryFile(const std::string &filename, const std::vector<SimTK::Real> &row, bool has_acceptance, bool accepted);
 
 	// Function to find and return the value for a given AtomIndex
 	SimTK::Vec3
