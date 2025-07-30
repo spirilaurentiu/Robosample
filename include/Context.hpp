@@ -139,6 +139,11 @@ public:
 	void setNofRoundsTillReblock(int nofRoundsTillReblock);
 	void setRequiredNofRounds(int argNofRounds);
 
+	/**	
+	* @brief Set nonbonded method and cutoff distance.
+	* @param method NoCutoff = 0, CutoffNonPeriodic = 1, CutoffPeriodic = 2, Ewald = 3, PME = 4, LJPME = 5
+	* @param cutoff Cutoff distance in nanometers.
+	*/
 	void setNonbonded(int method, SimTK::Real cutoff);
 
 	RUN_TYPE getRunType(void) const;

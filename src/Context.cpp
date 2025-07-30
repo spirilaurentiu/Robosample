@@ -5897,7 +5897,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
                 SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-                if(false && ((whichWorld == 3)
+                if(true && ((whichWorld == 3)
                         //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
                 )){ 
                     scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
@@ -5940,7 +5940,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
                 // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
                 // thermodynamicStates[0].PrintZMatrixBAT();
                 // ''''''''''''''''''''
-                if(false && ((whichWorld == 3)
+                if(true && ((whichWorld == 3)
                         //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
                 )){
                     scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
@@ -8442,6 +8442,11 @@ void Context::setNumThreads(int threads) {
 	}
 }
 
+/*! <!--
+* @brief Set nonbonded method and cutoff distance.
+* @param method NoCutoff = 0, CutoffNonPeriodic = 1, CutoffPeriodic = 2, Ewald = 3, PME = 4, LJPME = 5
+* @param cutoff Cutoff distance in nanometers.
+ --> */
 void Context::setNonbonded(int method, SimTK::Real cutoff) {
 
 	nonbondedMethod = method;

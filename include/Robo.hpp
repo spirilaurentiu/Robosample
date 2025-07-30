@@ -121,7 +121,7 @@
 #endif
 
 #ifndef __DRILLING__
-#define __DRILLING__
+#define __DRILLING__ 1
 #endif
 
 #endif // __ROBO_HPP
