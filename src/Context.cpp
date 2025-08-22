@@ -5281,8 +5281,14 @@ void Context::setReplicaExchangePairs(unsigned int startingFrom)
 
 		// Set the vector of exchange pairs
         exchangePairs[replica_i] = replica_j;
-
 	}
+
+	std::cout << "Context::setReplicaExchangePairs:";
+	for (size_t i = 0; i < exchangePairs.size(); i++) {
+		std::cout << " " << i << " " << exchangePairs[i];
+	}
+	std::cout << std::endl;
+
 }
 
 /*! <!--	 -->
@@ -5679,6 +5685,12 @@ void Context::updThermostatesQScaleFactors(int mixi)
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
+	std::cout << "Context::updThermostatesQScaleFactors:";
+	for(const auto& curr_qScaleFactor : qScaleFactors){
+		std::cout <<" "<<curr_qScaleFactor;
+	}
+	std::cout << std::endl;
+
 	// Random sign for the scaling factors
 	// bool randSignOpt = false;
 	// The names of the probability distributions operators
@@ -5897,7 +5909,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
                 SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
 
-                if(true && ((whichWorld == 3)
+                if(false && ((whichWorld == 3)
                         //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
                 )){ 
                     scout("[SCALING_PES]: before") <<" " << pe_beforeScale << eolf;
@@ -5940,7 +5952,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
                 // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
                 // thermodynamicStates[0].PrintZMatrixBAT();
                 // ''''''''''''''''''''
-                if(true && ((whichWorld == 3)
+                if(false && ((whichWorld == 3)
                         //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
                 )){
                     scout("[SCALING_PES]: after") <<" " << pe_afterScale << eolf;
