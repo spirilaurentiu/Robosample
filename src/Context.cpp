@@ -4553,6 +4553,8 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	// Get replicas' thermodynamic states indexes
 	int thermoState_C = replica2ThermoIxs[replica_X];
 	int thermoState_H = replica2ThermoIxs[replica_Y];
+	
+	std::cout << "Context::attemptREXSwap: thermoStates" <<" "<< thermoState_C <<" "<< thermoState_H <<std::endl;
 
 	// Record this attempt
 	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
@@ -4901,6 +4903,19 @@ void Context::getMsg_RexDetHeader(
 // Thermodyanmic states are fixed; replicas are variables
 void Context::mixNeighboringReplicas(unsigned int startingFrom)
 {
+
+	std::cout <<"Context::mixNeighboringReplicas replica2ThermoIxs";
+	for (const auto& pair : replica2ThermoIxs) {
+		std::cout <<" "<< pair.first <<" "<< pair.second ;
+	}
+	std::cout << std::endl;
+	std::cout <<"Context::mixNeighboringReplicas thermo2ReplicaIxs";
+	for (const auto& pair : thermo2ReplicaIxs) {
+		std::cout <<" "<<pair.first <<" "<< pair.second ;
+	}
+	std::cout << std::endl;
+
+
 	assert((startingFrom <= 1) &&
 	"Replica exchange scheme has to start from 0 or 1.");
 
@@ -5281,6 +5296,7 @@ void Context::setReplicaExchangePairs(unsigned int startingFrom)
 
 		// Set the vector of exchange pairs
         exchangePairs[replica_i] = replica_j;
+		//exchangePairs[replica_j] = replica_i;
 	}
 
 	std::cout << "Context::setReplicaExchangePairs:";
