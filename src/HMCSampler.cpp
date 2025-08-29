@@ -1047,10 +1047,11 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 			FORCES,
 			ALLVELOCITIES,
 			ALLACCELERATIONS,
-			ALLFORCES
+			ALLFORCES,
+			EMPTY
 		};
 
-        DrillingWay drillWay = DrillingWay::ALLFORCES; // ALLFORCES
+        DrillingWay drillWay = DrillingWay::EMPTY; // EMPTY
 
 		#pragma region DRILL_VELOCITIES
 		if(drillWay == DrillingWay::VELOCITIES){
@@ -1228,14 +1229,20 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		} // __end__ drillWay allforces
 		#pragma endregion DRILL_ALLFORCES
 
+		#pragma region DRILL_EMPTY
+		else{ // EMPTY
+				; // do nothing
+		}
+		#pragma endregion DRILL_EMPTY
+
 		// __end__ DRILLING // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 		// Set stddev according to temperature
 		sqrtMInvV *= sqrtBoostRT;
 
 		// Raise the temperature
-		//someState.updU() = sqrtMInvV;
-		std::cerr << "[WARNING] NO VELOCITIES SET" << std::endl;
+		someState.updU() = sqrtMInvV;
+		//std::cerr << "[WARNING] NO VELOCITIES SET" << std::endl;
 
 		// Ask for a number of random numbers and check if we are done the next
 		// time we hit this function

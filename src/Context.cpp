@@ -4554,7 +4554,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	int thermoState_C = replica2ThermoIxs[replica_X];
 	int thermoState_H = replica2ThermoIxs[replica_Y];
 	
-	std::cout << "Context::attemptREXSwap: thermoStates" <<" "<< thermoState_C <<" "<< thermoState_H <<std::endl;
+	//std::cout << "REBASContext::attemptREXSwap: thermoStates" <<" "<< thermoState_C <<" "<< thermoState_H <<std::endl;
 
 	// Record this attempt
 	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
@@ -4825,6 +4825,7 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 				thermodynamicStates[thermoState_C].incrementNofSamples();
 				thermodynamicStates[thermoState_H].incrementNofSamples();
 			}
+			
 			// Calculate replica BAT
 			//replicas[replica_X].calcZMatrixBAT_WORK();
 			//replicas[replica_Y].calcZMatrixBAT_WORK();
@@ -4904,18 +4905,6 @@ void Context::getMsg_RexDetHeader(
 void Context::mixNeighboringReplicas(unsigned int startingFrom)
 {
 
-	std::cout <<"Context::mixNeighboringReplicas replica2ThermoIxs";
-	for (const auto& pair : replica2ThermoIxs) {
-		std::cout <<" "<< pair.first <<" "<< pair.second ;
-	}
-	std::cout << std::endl;
-	std::cout <<"Context::mixNeighboringReplicas thermo2ReplicaIxs";
-	for (const auto& pair : thermo2ReplicaIxs) {
-		std::cout <<" "<<pair.first <<" "<< pair.second ;
-	}
-	std::cout << std::endl;
-
-
 	assert((startingFrom <= 1) &&
 	"Replica exchange scheme has to start from 0 or 1.");
 
@@ -4974,6 +4963,18 @@ void Context::mixAllReplicas(int nSwapAttempts)
 void Context::mixReplicas(int mixi)
 {
 	if((mixi % swapEvery) == 0){
+
+
+		// std::cout <<"REBASContext::mixReplicas replica2ThermoIxs";
+		// for (const auto& pair : replica2ThermoIxs) {
+		// 	std::cout <<" "<< pair.second;
+		// }
+		// std::cout << std::endl;
+		// std::cout <<"REBASContext::mixReplicas thermo2ReplicaIxs";
+		// for (const auto& pair : thermo2ReplicaIxs) {
+		// 	std::cout <<" "<< pair.second;
+		// }
+		// std::cout << std::endl;		
 
 		int startFrom = mixi % 2;
 
@@ -5299,12 +5300,6 @@ void Context::setReplicaExchangePairs(unsigned int startingFrom)
 		//exchangePairs[replica_j] = replica_i;
 	}
 
-	std::cout << "Context::setReplicaExchangePairs:";
-	for (size_t i = 0; i < exchangePairs.size(); i++) {
-		std::cout << " " << i << " " << exchangePairs[i];
-	}
-	std::cout << std::endl;
-
 }
 
 /*! <!--	 -->
@@ -5331,7 +5326,7 @@ void Context::PrepareNonEquilibriumParams_Q(){
 
 	// Set the even scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
 		// s_i = T_j
 		qScaleFactorsEven.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
 		qScaleFactorsEven.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
@@ -5347,7 +5342,7 @@ void Context::PrepareNonEquilibriumParams_Q(){
 
 	// Set the odd scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 4){
+	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
 
 		// s_i = T_j
 		qScaleFactorsOdd.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
@@ -5362,14 +5357,14 @@ void Context::PrepareNonEquilibriumParams_Q(){
 		qScaleFactorsOdd.at(thermoIx + 1) = std::sqrt(qScaleFactorsOdd.at(thermoIx + 1));
 	}
 
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
-		std::cout << "ScaleFactor even for thermoState " << thermoIx << " "
-			<< qScaleFactorsEven.at(thermoIx) << std::endl;
-	}
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
-		std::cout << "ScaleFactor odd for thermoState " << thermoIx << " "
-			<< qScaleFactorsOdd.at(thermoIx) << std::endl;
-	}
+	// for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
+	// 	std::cout << "REBASScaleFactor even for thermoState " << thermoIx << " "
+	// 		<< qScaleFactorsEven.at(thermoIx) << std::endl;
+	// }
+	// for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
+	// 	std::cout << "REBASScaleFactor odd for thermoState " << thermoIx << " "
+	// 		<< qScaleFactorsOdd.at(thermoIx) << std::endl;
+	// }
 
 }
 
@@ -5701,11 +5696,11 @@ void Context::updThermostatesQScaleFactors(int mixi)
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
-	std::cout << "Context::updThermostatesQScaleFactors:";
-	for(const auto& curr_qScaleFactor : qScaleFactors){
-		std::cout <<" "<<curr_qScaleFactor;
-	}
-	std::cout << std::endl;
+	// std::cout << "REBASContext::updThermostatesQScaleFactors:";
+	// for(const auto& curr_qScaleFactor : qScaleFactors){
+	// 	std::cout <<" "<<curr_qScaleFactor;
+	// }
+	// std::cout << std::endl;
 
 	// Random sign for the scaling factors
 	// bool randSignOpt = false;
