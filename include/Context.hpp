@@ -63,6 +63,15 @@ RUN_TYPE_MAP_INV{
 	{RUN_TYPE::RENE, "RENE"}
 };
 
+// struct ROBO_ATOM {
+// 	size_t prmtopIndex = 0; // Index in the prmtop file
+
+// };
+
+// class BOND {
+// public:
+// };
+
 //==============================================================================
 //                           CLASS Context
 //==============================================================================
@@ -91,9 +100,12 @@ class Context{
 	/**@}**/
 
 	std::string baseName;
-	bool verbose = true;
+	bool verbose = false;
 
 public:
+// vector<vector<ATOM>> for each molecule
+	// void createSystem(std::vector<ATOM> atoms, std::vector<BOND> bonds);
+
 	/**
 	 * @brief Initialize simulation variables.
 	 * @param baseName Base name for output files.
@@ -196,7 +208,7 @@ public:
 	 * @param restartDir Restart directory.
 	 * @param nofReplicas Number of replicas.
 	*/
-	bool addReplicasAndLoadCoordinates(const std::string& name, const std::string& prmtop, const std::string& restartDir, int nofReplicas);
+	bool addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas);
 
 	/**	
 	* @brief
@@ -327,16 +339,7 @@ public:
 		, int worldIx		
 	);
 
-	// Add Dumm params for single prmtop
-	void generateDummAtomClasses(AmberReader& amberReader);
-	void bAddDummBondParams(AmberReader& amberReader);
-	void bAddDummAngleParams(AmberReader& amberReader);
 	bool checkBond(int a1, int a2);
-	void bAddDummTorsionParams(AmberReader& amberReader);
-
-	void addDummParams(AmberReader& amberReader);
-
-	// -------------------------
 
 	// ---------
 	/** Set all flexibilities for all the worlds to Rigid. */
@@ -790,7 +793,7 @@ public:
 	std::vector<SimTK::Real> AtomIndex0, AtomIndex1, UDotCache, UCache;
 	bool binaryFileIsInitialized = false;
 
-	std::string foutU, foutUDot;
+	std::string foutU, foutUDot, foutTorque;
 
 	void initializeBinaryFile(const std::string &filename, uint32_t num_columns);
 	void writeRowToBinaryFile(const std::string &filename, const std::vector<SimTK::Real> &row, bool has_acceptance, bool accepted);

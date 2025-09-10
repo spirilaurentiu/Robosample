@@ -184,18 +184,11 @@ void bBond::Print(void)
 // }
 
 // Check if this bond contains the arguments. If they are swapped return -1
-int bBond::isThisMe(int argFirst, int argSecond) const
+bool bBond::isThisMe(int aix0, int aix1) const
 {
-	if( (argFirst == this->i) && (argSecond == this->j) ){
-		return 1;
-	}
-	else if( (argSecond == this->i) && (argFirst == this->j) ){
-		return -1;
-	}
-	else{
-		return 0;
-	}
-	return 0;
+	if (aix0 == i && aix1 == j) return true;
+	if (aix0 == j && aix1 == i) return true;
+	return false;
 }
 
 // Set the number of times this bond was visited

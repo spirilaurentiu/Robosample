@@ -85,6 +85,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t>())
         .def("addReplica", &Context::addReplica, "Add an empty replica to the context.")
+        .def("addReplicasAndLoadCoordinates", &Context::addReplicasAndLoadCoordinates, "Add a series of replicas from a directories containing rst7.")
         .def("addThermodynamicState", &Context::addThermodynamicState, "Add an empty themodynamic state to the context.")
         .def("Initialize", py::overload_cast<>(&Context::Initialize), "Initializes the context after all worlds and replicas have been set.")
         .def("RunREX", &Context::RunREX, "Run replica exchange.")

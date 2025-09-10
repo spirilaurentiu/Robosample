@@ -530,12 +530,13 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
 	const SimTK::State& someState)
 {
 	const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
-	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
+	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx); // vector
 
 	const Transform&    X_GB = mobod.getBodyTransform(someState);
 	const Rotation&     R_GB = X_GB.R();
 	const Vec3&         p_GB = X_GB.p();
 
+	 // ROBOFACTOR this is part of a vector and should accessed in sequence
 	SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
 
 	const Vec3 p_BS_G = R_GB * station;

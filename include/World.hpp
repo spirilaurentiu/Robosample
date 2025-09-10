@@ -108,6 +108,12 @@ class Context;
 
 class World {
 public:
+
+	Compound::AtomTargetLocations atomTargetLocaltionsCache;
+
+	void updateAtomTargetLocaltionsCache(SimTK::State& state);
+	const Compound::AtomTargetLocations& getAtomTargetLocaltionsCache() const;
+
 	// --- Structural functions ---
 	/** Constructor **/
 	explicit World(	int worldIndex,

@@ -83,7 +83,7 @@ class bBond /* : public intpair */ {
 		// bool isFirst() const;
 		// void setAsFirst();
 
-		int isThisMe(int argFirst, int argSecond) const;
+		bool isThisMe(int aix0, int aix1) const;
 
 		void setVisited(int);
 		int isVisited() const;

@@ -1931,7 +1931,7 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 		ZMatrix.resize(matter->getNumBodies() - 1, std::vector<int>(4, -1));
 	}
 
-	bool printTransforms = true;
+	bool printTransforms = false;
 
 	for (SimTK::MobilizedBodyIndex childMbx(1); childMbx < matter->getNumBodies(); ++childMbx){
 		childIx = int(childMbx);
@@ -2081,7 +2081,8 @@ void World::calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<S
 	} // _end_ for mbx
 
 	// Print
-	if(printTransforms){
+	bool printZmatBAT = false;
+	if(printZmatBAT){
 		for (int BOIx = 0; BOIx < BONDLengths.size(); BOIx++){
 			std::cout << "ZMatrixBATSimbody:"
 				<<" " << ZMatrix[BOIx][0] << " " << ZMatrix[BOIx][1] << " " << ZMatrix[BOIx][2] << " " << ZMatrix[BOIx][3]
@@ -2872,6 +2873,34 @@ std::pair<int, SimTK::Real> World::maxAtomDeviation(
 
 }
 
+void World::updateAtomTargetLocaltionsCache(SimTK::State& state) {
+
+	// Iterate through topologies
+	for (auto& topology : (*topologies)){
+
+		// Iterate through atoms
+		for (auto& atom : topology.subAtomList) {
+
+			// Get Compound atom index
+			auto compoundAtomIndex = atom.getCompoundAtomIndex();
+
+			// Get location at this Compound atom index
+			SimTK::Vec3 location;
+			if(samplers[0]->getIntegratorType() == IntegratorType::OMMVV){
+				const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
+				location = forceField->calcAtomLocationInGroundFrameThroughOMM(dAIx);
+			}else{
+				location = topology.calcAtomLocationInGroundFrameThroughSimbody(compoundAtomIndex, *forceField, *matter, state);
+			}
+
+			atomTargetLocaltionsCache[compoundAtomIndex] = location;
+		}
+	}
+}
+
+const Compound::AtomTargetLocations& World::getAtomTargetLocaltionsCache() const {
+	return atomTargetLocaltionsCache;
+}
 
 /*!
  * <!-- Takes coordinates from molecule topoIx and puts them into atomTargets
@@ -2888,6 +2917,7 @@ World::extractAtomTargets(
 		<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
 )
 {
+	std::cout << "World::extractAtomTargets" << std::endl;
 	for(std::size_t j = 0; j < otherWorldsAtomsLocations[topoIx].size(); j++){
 		auto atomIndex = otherWorldsAtomsLocations[topoIx][j].first->getCompoundAtomIndex();
 		auto location = otherWorldsAtomsLocations[topoIx][j].second;

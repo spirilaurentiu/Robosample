@@ -35,6 +35,11 @@ void bSpecificAtom::setAtomCompound(const SimTK::Element &element) {
 
     // Set the Compound name for the atom
     compoundSingleAtom->setCompoundName("SingleAtom");
+    
+
+    std::cout << "bSpecificAtom::setAtomCompound: "
+        << "Created Compound::SingleAtom for atom " << atomName
+        << " with " << currAtomNBonds << " bonds." << std::endl;
 
 }
 

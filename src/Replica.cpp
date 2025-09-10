@@ -359,6 +359,7 @@ Replica::extractAtomTargets(
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
 )
 {
+	std::cout << "Replica::extractAtomTargets" << std::endl;
 	for(std::size_t j = 0; j < otherWorldsAtomsLocations[topoIx].size(); j++){
 		auto atomIndex = otherWorldsAtomsLocations[topoIx][j].first->getCompoundAtomIndex();
 		auto location = otherWorldsAtomsLocations[topoIx][j].second;
