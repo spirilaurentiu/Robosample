@@ -4592,7 +4592,8 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 	validated = propose(someState, false) && validated;
 
 	#pragma region REBAS_TEST
-	//validated = true;
+	//validated = true;	
+	std::cout << "HMCSampler sample_iteration END State time " << (world->integ)->getAdvancedTime()<< std::endl;
 	#pragma endregion REBAS_TEST
 
 	// --- invalid --- //

@@ -39,7 +39,8 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .value("DEFAULT", RUN_TYPE::DEFAULT)
         .value("REMC", RUN_TYPE::REMC)
         .value("RENEMC", RUN_TYPE::RENEMC)
-        .value("RENE", RUN_TYPE::RENE);
+        .value("RENE", RUN_TYPE::RENE)
+        .value("REBASONTOP", RUN_TYPE::REBASONTOP);
 
     py::enum_<SamplerName>(m, "SamplerName")
         .value("EMPTY", SamplerName::EMPTY)

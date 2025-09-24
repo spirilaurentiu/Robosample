@@ -42,17 +42,19 @@ enum class RUN_TYPE : int {
 	DEFAULT = 0,
 	REMC,
 	RENEMC,
-	RENE
+	RENE,
+	REBASONTOP
 };
 
-const std::vector<std::string> RUN_TYPE_Str = {"DEFAULT", "REMC", "RENEMC", "RENE"};
+const std::vector<std::string> RUN_TYPE_Str = {"DEFAULT", "REMC", "RENEMC", "RENE", "REBASONTOP"};
 
 const std::unordered_map<std::string, RUN_TYPE>
 RUN_TYPE_MAP{
 	{"DEFAULT", RUN_TYPE::DEFAULT},
 	{"REMC", RUN_TYPE::REMC},
 	{"RENEMC", RUN_TYPE::RENEMC},
-	{"RENE", RUN_TYPE::RENE}
+	{"RENE", RUN_TYPE::RENE},
+	{"REBASONTOP", RUN_TYPE::REBASONTOP}
 };
 
 const std::unordered_map<RUN_TYPE, std::string>
@@ -60,7 +62,8 @@ RUN_TYPE_MAP_INV{
 	{RUN_TYPE::DEFAULT, "DEFAULT"},
 	{RUN_TYPE::REMC, "REMC"},
 	{RUN_TYPE::RENEMC, "RENEMC"},
-	{RUN_TYPE::RENE, "RENE"}
+	{RUN_TYPE::RENE, "RENE"},
+	{RUN_TYPE::REBASONTOP, "REBASONTOP"}
 };
 
 //==============================================================================
@@ -412,10 +415,17 @@ public:
 	// --- Main ---
 	void randomizeWorldIndexes(void);
 	void transferCoordinates_WorldToWorld(int src, int dest);
+	
 	SimTK::Real checkTransferCoordinates_Cart(int srcWIx, int destWIx);
 	SimTK::Real checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian = false);
 
 	void transferCoordinates_ReplicaToWorld(int replicaIx, int destWIx);
+	void transferCoordinates_WorldToReplica(int srcWIx, int replicaIx);
+
+	void transferCoordinates_WorldToReplica_WORK(int srcWIx, int replicaIx);
+	const SimTK::Real checkCoordinates_Difference(
+		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>& atomsLocations1,
+		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>& atomsLocations2) const;
 
 	// Relationship BAT - mobod transforms
 	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
@@ -524,6 +534,7 @@ public:
 	// --- Output ---
 	void printThermodynamics(void);
 	void printStatus(void);
+	void printStatus(int worldIx);
 
 	// Print Molmodel related information
 	void PrintMolmodelAndDuMMTypes(void);
@@ -761,6 +772,7 @@ public:
 	* @return
 	*/
 	void RunREX(int equilRounds, int prodRounds);
+	//void RunREX_Gibbs(int equilRounds, int prodRounds);
 
 	void Run();
 

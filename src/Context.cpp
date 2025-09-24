@@ -1455,10 +1455,12 @@ SimTK::Real Context::OMMRef_calcPotential(const std::vector<std::vector<std::pai
  * <!-- Main run function -->
 */
 void Context::Run() {
+
 	if(    (getRunType() == RUN_TYPE::DEFAULT) 
 		|| (getRunType() == RUN_TYPE::REMC)
 		|| (getRunType() == RUN_TYPE::RENEMC)
-		|| (getRunType() == RUN_TYPE::RENE)){
+		|| (getRunType() == RUN_TYPE::RENE)
+		|| (getRunType() == RUN_TYPE::REBASONTOP)){
 		RunREX(0, requiredNofRounds);
 
 	}else{
@@ -3790,67 +3792,81 @@ void Context::addConstraints(void)
 }
 
 // Print status
-void Context::printStatus(void){
-	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+void Context::printStatus(int worldIx){
+
 		if (worlds[worldIx].integ  == nullptr ){
 			std::cout << "Context: integrator is null" << std::endl;
-			break;
+			return;
 		}
 		SimTK::VerletIntegrator& checkIntegrator = *worlds[worldIx].integ;
 		const SimTK::State& checkState = checkIntegrator.getState();
 		const SimTK::Stage& checkStage = checkState.getSystemStage();
-		std::cout << "Context world " << worldIx << " integ state stage "
-			<< checkStage << std::endl << std::flush;
-		std::cout << "Context world " << worldIx << " integ state nof Subsystems "
-			<< checkState.getNumSubsystems() << ":" << std::endl << std::flush;
-		for(int i = 0; i < checkState.getNumSubsystems(); i++){
-			std::cout
-				<< " Subsystem Name: "
-				<< checkState.getSubsystemName(SimTK::SubsystemIndex(i))
-				<< " Stage: "
-				<< checkState.getSubsystemStage(SimTK::SubsystemIndex(i))
-				<< " Version: "
-				<< checkState.getSubsystemVersion(SimTK::SubsystemIndex(i))
-				<< std::endl << std::flush;
-		}
-		//SimTK::State& checkAdvState = checkIntegrator.updAdvancedState();
-		//const SimTK::Stage& checkAdvStage = checkAdvState.getSystemStage();
-		//std::cout << "Context world " << worldIx << " integ advState stage "
-		//	<< checkAdvStage << std::endl << std::flush;
+		// std::cout << "Context world " << worldIx << " integ state stage "
+		// 	<< checkStage << std::endl << std::flush;
+		// std::cout << "Context world " << worldIx << " integ state nof Subsystems "
+		// 	<< checkState.getNumSubsystems() << ":" << std::endl << std::flush;
+		// for(int i = 0; i < checkState.getNumSubsystems(); i++){
+		// 	std::cout
+		// 		<< " Subsystem Name: "
+		// 		<< checkState.getSubsystemName(SimTK::SubsystemIndex(i))
+		// 		<< " Stage: "
+		// 		<< checkState.getSubsystemStage(SimTK::SubsystemIndex(i))
+		// 		<< " Version: "
+		// 		<< checkState.getSubsystemVersion(SimTK::SubsystemIndex(i))
+		// 		<< std::endl << std::flush;
+		// }
+		SimTK::State& checkAdvState = checkIntegrator.updAdvancedState();
+		const SimTK::Stage& checkAdvStage = checkAdvState.getSystemStage();
+		std::cout << "Context world " << worldIx << " integ advState stage "
+			<< checkAdvStage << std::endl << std::flush;
 
+		std::cout << "Context world " << worldIx << " Integrator time "
+		//<< ((worlds[worldIx]).timeStepper)->getTime() 
+		<< checkIntegrator.getAdvancedTime()
+		<< std::endl << std::flush;
 
-		// CompoundSystem <- MolecularMechanicsSystem <- MultibodySystem <- System
+		// // CompoundSystem <- MolecularMechanicsSystem <- MultibodySystem <- System
 		SimTK::CompoundSystem& compoundSystem = *(worlds[worldIx].getCompoundSystem());
-		std::cout << "Context world " << worldIx << " compoundSystem nof compounds "
-			<< compoundSystem.getNumCompounds() << std::endl;
+		// std::cout << "Context world " << worldIx << " compoundSystem nof compounds "
+		// 	<< compoundSystem.getNumCompounds() << std::endl;
 		std::cout << "Context world " << worldIx << " System Topology realized "
 			<< compoundSystem.getNumRealizationsOfThisStage(SimTK::Stage::Topology)
 			<< " times.\n" << std::flush;
 
-		// Matter
-		////const SimTK::System& checkSystem = (worlds[worldIx].matter)->getSystem();
-		SimTK::SimbodyMatterSubsystem& matter = *(worlds[worldIx].matter);
-		std::cout << "Context world " << worldIx
-			<< " matter nofBodies " << matter.getNumBodies()
-			<< " nofConstraints " << matter.getNumConstraints()
-			<< "\n" << std::flush;
+		// // Matter
+		// ////const SimTK::System& checkSystem = (worlds[worldIx].matter)->getSystem();
+		// SimTK::SimbodyMatterSubsystem& matter = *(worlds[worldIx].matter);
+		// std::cout << "Context world " << worldIx
+		// 	<< " matter nofBodies " << matter.getNumBodies()
+		// 	<< " nofConstraints " << matter.getNumConstraints()
+		// 	<< "\n" << std::flush;
 
-		// GeneralForceSubsystem
-		SimTK::GeneralForceSubsystem& gfs = *(worlds[worldIx].forces);
-		std::cout << "Context world " << worldIx
-			<< " gfs nofForces " << gfs.getNumForces()
-			<< "\n" << std::flush;
+		// // GeneralForceSubsystem
+		// SimTK::GeneralForceSubsystem& gfs = *(worlds[worldIx].forces);
+		// std::cout << "Context world " << worldIx
+		// 	<< " gfs nofForces " << gfs.getNumForces()
+		// 	<< "\n" << std::flush;
 
-		SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[worldIx].forceField);
-		std::cout << "Context world " << worldIx
-			<< " dumm nofThreads " << dumm.getNumThreadsRequested()
-			<< " useOpenMM " << dumm.getUseOpenMMAcceleration()
-			<< " " << dumm.isUsingOpenMM()
-			<< "\n" << std::flush;
+		// SimTK::DuMMForceFieldSubsystem& dumm = *(worlds[worldIx].forceField);
+		// std::cout << "Context world " << worldIx
+		// 	<< " dumm nofThreads " << dumm.getNumThreadsRequested()
+		// 	<< " useOpenMM " << dumm.getUseOpenMMAcceleration()
+		// 	<< " " << dumm.isUsingOpenMM()
+		// 	<< "\n" << std::flush;
 
+
+}
+
+// Print status
+void Context::printStatus(void){
+	for(unsigned int worldIx = 0; worldIx < nofWorlds; worldIx++) {
+
+		printStatus(worldIx);
 
 	}
 }
+
+
 
 // Print thermodynamics
 void Context::printThermodynamics()
@@ -4984,6 +5000,7 @@ void Context::mixReplicas(int mixi)
 
 			bool swapped = attemptREXSwap(thermo2ReplicaIxs[thermoState_i], thermo2ReplicaIxs[thermoState_j]);
 		}
+
 
 	}
 }
@@ -6168,7 +6185,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 	SimTK::State& state = worlds.back().integ->updAdvancedState();
 	replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
 
-	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
+	transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front()); // RESTORE_FROM_REBASONTOP
 
 }
 
@@ -6237,6 +6254,7 @@ void Context::writeLog(int mixi, int replicaIx) {
 /*!
  * <!-- Run replica exchange protocol -->
 */
+/*
 void Context::RunREX(int equilRounds, int prodRounds)
 {
     if(MEMDEBUG){stdcout_memdebug("Context::RunREX 1");}
@@ -6339,8 +6357,21 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	    	if(MEMDEBUG){stdcout_memdebug("Context::RunREX 6");}
 
 			// ======================== SIMULATE ======================
-			//RunReplicaRefactor(mixi, replicaIx);
 			RunReplicaRefactor_SIMPLE(mixi, replicaIx);
+
+			// int thermoIx = replica2ThermoIxs[replicaIx]; // REBASONTOP
+			// ThermodynamicState& thermoState = thermodynamicStates[thermoIx]; // REBASONTOP
+			// std::vector<int>& thermoWorldIxs = thermoState.updWorldIndexes(); // REBASONTOP	
+			// if(){ // REBASONTOP
+			// 	if((mixi % swapEvery) == 0){
+			// 		int startFrom = mixi % 2;
+			// 		for(int thermoState_i = startFrom; thermoState_i <= (nofThermodynamicStates - 2); thermoState_i += 2){
+			// 			int thermoState_j = thermoState_i + 1;
+			// 			bool swapped = attemptREXSwap(thermo2ReplicaIxs[thermoState_i], thermo2ReplicaIxs[thermoState_j]);
+			// 		}
+			// 	}
+			// } // __end__ if() REBASONTOP
+			// transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front()); // REBASONTOP
 				
 			// Copy the new timestep and mdstep if we should be adapting
 			if (mixi >= equilRounds) {
@@ -6398,6 +6429,389 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	foutUDot.close();
 
 }
+
+*/
+
+
+
+
+
+
+
+
+
+
+/*!
+ * <!-- Run replica exchange protocol -->
+*/
+void Context::RunREX(int equilRounds, int prodRounds)
+{
+
+	// desk_mass_related
+	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
+		for (auto& atom : atoms) {
+			
+			World& currWorld = worlds[worldIx];
+			//SimTK::DuMMForceFieldSubsystem dumm = *(currWorld.forceField);
+
+			SimTK::DuMM::AtomIndex dAIx = atom.updDuMMAtomIndex();
+			SimTK::mdunits::Mass atomMass = atom.getMass();
+
+			currWorld.forceField->setDuMMAtomMass(dAIx, atomMass);
+		}	
+	}
+
+	// Is this necesary =======================================================
+	realizeTopology();
+	
+	// Allocate space for swap matrices
+	allocateSwapMatrices();
+
+	// Initialize replicas: set intial parameters
+	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+		initializeReplica(replicaIx);
+	} // ======================================================================
+
+	// Print a header =========================================================
+	#pragma region print_REX_header
+	std::stringstream rexOutput;
+	rexOutput.str("");
+	rexOutput << "REX, " << "replicaIx" << ", " << "thermoIx" << ", " << "wIx" ;
+	worlds[0].getSampler(0)->getMsg_Header(rexOutput);
+	rexOutput << std::endl;
+	getMsg_RexDetHeader(rexOutput);
+	std::cout << rexOutput.str() << std::endl;
+	#pragma endregion print_REX_header
+	// ------------------------------------------------------------------------
+
+	// Useful vars
+	int nofMixes = requiredNofRounds;
+	int currFrontWIx = -1;
+
+	// @@@@@@@@@@ LOOP THROUGH ROUNDS --------------------------------------------------------->
+	for(size_t mixi = 0; mixi < equilRounds + prodRounds; mixi++) {
+
+		// Reset replica exchange pairs vector
+		if(getRunType() != RUN_TYPE::DEFAULT){
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				setReplicaExchangePairs(mixi % 2);
+			}
+		}
+
+		// Update work scale factors
+		updThermostatesQScaleFactors(mixi);
+
+		// @@@@@@@@@@ LOOP THROUGH REPLICAS --------------------------------------------------->
+		for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+
+
+			# pragma region CONVENIENT_VARS_REPLICA
+			// Get thermodynamic state and its' worlds
+			Replica& replica = replicas[replicaIx];
+			int thermoIx = replica2ThermoIxs[replicaIx];
+			ThermodynamicState& thermoState = thermodynamicStates[thermoIx];
+			std::vector<int>& thermoWorldIxs = thermoState.updWorldIndexes();
+			std::vector<int> & distortOpts = thermoState.getDistortOptions();
+			size_t thermoNofWorlds = thermoWorldIxs.size();
+			assert((thermoWorldIxs.size() == distortOpts.size()));
+			# pragma endregion CONVENIENT_VARS_REPLICA
+
+			// Update BAT map for all the replica's world
+			updSubZMatrixBATsToAllWorlds(replicaIx);
+
+			// Load the front world
+			currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx);
+
+#pragma CHECK_COORDS
+if("CHECK_COORDS"){
+Replica& checkCoords_replica = replicas[replicaIx];
+int checkCoords_wIx = thermoWorldIxs.front();
+World& checkCoords_world = worlds[checkCoords_wIx];
+HMCSampler* sampler_p = checkCoords_world.samplers[0].get();
+SimTK::State& checkCoords_state = checkCoords_world.integ->updAdvancedState();
+
+//checkCoords_world.compoundSystem->realize(checkCoords_state, SimTK::Stage::Velocity);
+
+std::cout << "CHECK_COORDS 0 "
+	<< checkCoordinates_Difference(
+		checkCoords_world.getAtomsLocationsInGround(checkCoords_state),
+		checkCoords_replica.getAtomsLocationsInGround())
+	<< std::endl;
+}
+
+printStatus(thermoWorldIxs.front());
+
+#pragma endregion CHECK_COORDS
+
+
+
+			// setReplicasWorldsParameters
+			if (mixi < equilRounds) {
+				setReplicasWorldsParameters(replicaIx, true, false, mixi);
+			} else {
+				setReplicasWorldsParameters(replicaIx, false, true, mixi);
+			}
+
+			// ======================== RunReplicaRefactor_SIMPLE ======================
+			//RunReplicaRefactor_SIMPLE(mixi, replicaIx);
+			// if("RunReplicaRefactor_SIMPLE REBASONTOP"){ std::cout<<"\nRunReplicaRefactor_SIMPLE REBASONTOP"<<std::endl<<std::flush;
+
+				replica.updWORK() = 0.0;
+				replica.upd_WORK_Jacobian() = 0.0;
+
+				// @@@@@@@@@@ LOOP THROUGH WORLDS --------------------------------------------->
+				for(std::size_t thWCnt = 0; thWCnt < thermoNofWorlds; thWCnt++){
+
+					#pragma region CONVENIENT_VARS_WORLD
+					int wIx  = thermoWorldIxs[thWCnt];
+					World& currWorld = worlds[wIx];
+					HMCSampler* sampler_p = worlds[wIx].samplers[0].get();
+					int distortIx = distortOpts[thWCnt];
+					#pragma endregion CONVENIENT_VARS_WORLD
+
+					// Transfer coordinates to the next world
+					if(thWCnt == 0){
+						transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
+
+#pragma region CHECK_COORDS
+if("CHECK_COORDS"){
+Replica& checkCoords_replica = replicas[replicaIx];
+int checkCoords_wIx = thermoWorldIxs.front();
+World& checkCoords_world = worlds[checkCoords_wIx];
+HMCSampler* sampler_p = checkCoords_world.samplers[0].get();
+SimTK::State& checkCoords_state = checkCoords_world.integ->updAdvancedState();
+
+//checkCoords_world.compoundSystem->realize(checkCoords_state, SimTK::Stage::Velocity);
+
+std::cout << "CHECK_COORDS 1 "
+	<< checkCoordinates_Difference(
+		checkCoords_world.getAtomsLocationsInGround(checkCoords_state),
+		checkCoords_replica.getAtomsLocationsInGround())
+	<< std::endl;
+
+printStatus(thermoWorldIxs.front());
+}
+#pragma endregion CHECK_COORDS
+
+						transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
+					}else{
+						transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
+
+#pragma region CHECK_COORDS
+if("CHECK_COORDS"){
+Replica& checkCoords_replica = replicas[replicaIx];
+int checkCoords_wIx = thermoWorldIxs.front();
+World& checkCoords_world = worlds[checkCoords_wIx];
+HMCSampler* sampler_p = checkCoords_world.samplers[0].get();
+SimTK::State& checkCoords_state = checkCoords_world.integ->updAdvancedState();
+
+//checkCoords_world.compoundSystem->realize(checkCoords_state, SimTK::Stage::Velocity);
+
+std::cout << "CHECK_COORDS 1 "
+	<< checkCoordinates_Difference(
+		checkCoords_world.getAtomsLocationsInGround(checkCoords_state),
+		checkCoords_replica.getAtomsLocationsInGround())
+	<< std::endl;
+
+printStatus(wIx);
+}
+#pragma endregion CHECK_COORDS
+
+						transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
+					}
+
+					#pragma region WORLD_header
+					// Header
+					std::string headerToRunWorld = "REX";
+								headerToRunWorld += ", " + std::to_string(replicaIx);
+								headerToRunWorld += ", " + std::to_string(thermoIx);
+								headerToRunWorld += ", " + std::to_string(wIx);
+					#pragma endregion WORLD_header
+							
+					// Run
+					bool validated = true;
+					validated = RunWorld(wIx, headerToRunWorld ) && validated;
+
+#pragma region CHECK_COORDS
+if("CHECK_COORDS"){
+Replica& checkCoords_replica = replicas[replicaIx];
+int checkCoords_wIx = wIx;
+World& checkCoords_world = worlds[checkCoords_wIx];
+HMCSampler* sampler_p = checkCoords_world.samplers[0].get();
+SimTK::State& checkCoords_state = checkCoords_world.integ->updAdvancedState();
+
+//checkCoords_world.compoundSystem->realize(checkCoords_state, SimTK::Stage::Velocity);
+
+std::cout << "CHECK_COORDS 2 "
+	<< checkCoordinates_Difference(
+		checkCoords_world.getAtomsLocationsInGround(checkCoords_state),
+		checkCoords_replica.getAtomsLocationsInGround())
+	<< std::endl;
+
+printStatus(wIx);
+}
+#pragma endregion CHECK_COORDS
+
+
+
+					// Calculate Q statistics
+					if(sampler_p->getAcc() == true){
+						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
+					}else{
+						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
+					}
+
+					// ======================== EQUILIBRIUM ======================
+					if(distortIx == 0){
+
+						// replica.updAtomsLocationsInGround(currWorld.getCurrentAtomsLocationsInGround()); // RESTORE_FROM_REBASONTOP
+						transferCoordinates_WorldToReplica(wIx, replicaIx); // REBASONTOP
+
+						replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
+						replica.setFixman(sampler_p->fix_set);
+						replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
+
+					// ======================== NON-EQUILIBRIUM ======================
+					}else{
+
+						replica.updWORK() += currWorld.getWork();  // TODO merge with Jacobians
+						replica.upd_WORK_Jacobian() += sampler_p->getDistortJacobianDetLog();
+
+						// replica.upd_WORK_AtomsLocationsInGround(currWorld.getCurrentAtomsLocationsInGround()); // RESTORE_FROM_REBASONTOP
+						transferCoordinates_WorldToReplica_WORK(wIx, replicaIx); // REBASONTOP
+
+						replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
+						replica.set_WORK_Fixman(sampler_p->fix_set);
+						replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
+
+					} // __end__ Non/Equilibrium =======================================
+
+
+					# pragma region REBAS_TEST
+					const SimTK::State& pdbState = currWorld.integ->updAdvancedState();
+					currWorld.updateAtomListsFromSimbody(pdbState);
+
+					// Write pdb
+					if(pdbRestartFreq){
+						if((mixi % pdbRestartFreq) == 0){
+							if(wIx == 0){
+								for(int mol_i = 0; mol_i < getNofMolecules(); mol_i++){
+									topologies[mol_i].writeAtomListPdb(
+										outputDir,
+										"/pdbs/sb." + pdbPrefix + "." + std::to_string(mol_i) + "." + "s" + std::to_string(thermoIx) + "." + "w" + std::to_string(wIx) + ".",
+											".pdb",
+											10,
+											mixi);
+								}
+							}
+						}
+					}
+					# pragma endregion REBAS_TEST
+
+					// Increment the nof samples for replica and thermostate
+					replica.incrementWorldsNofSamples(1);
+					thermoState.incrementWorldsNofSamples(1);
+
+				} // __end__ Loop through all worlds
+
+
+				if ((mixi + 1) % printFreq == 0) {
+					writeLog(mixi + 1, replicaIx);
+					REXLog(mixi + 1, replicaIx);
+					std::cout << std::flush;
+
+					int whichDCD = replica2ThermoIxs[replicaIx];
+					auto [x, y, z] = replicas[replicaIx].getCoordinates();
+
+					// Convert from nm to Angstrom
+					for (auto& coord : x) coord *= 10;
+					for (auto& coord : y) coord *= 10;
+					for (auto& coord : z) coord *= 10;
+
+					thermodynamicStates[whichDCD].writeDCD(x, y, z);
+				} // _end_ write log
+
+				replica.incrementNofSamples(1);
+				thermoState.incrementNofSamples(1);
+
+				SimTK::State& state = worlds.back().integ->updAdvancedState();
+				replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
+
+				transferCoordinates_WorldToWorld(thermoWorldIxs.back(), thermoWorldIxs.front());
+
+#pragma region CHECK_COORDS
+if("CHECK_COORDS"){
+Replica& checkCoords_replica = replicas[replicaIx];
+int checkCoords_wIx = thermoWorldIxs.front();
+World& checkCoords_world = worlds[checkCoords_wIx];
+HMCSampler* sampler_p = checkCoords_world.samplers[0].get();
+SimTK::State& checkCoords_state = checkCoords_world.integ->updAdvancedState();
+
+//checkCoords_world.compoundSystem->realize(checkCoords_state, SimTK::Stage::Velocity);
+
+std::cout << "CHECK_COORDS 2 "
+	<< checkCoordinates_Difference(
+		checkCoords_world.getAtomsLocationsInGround(checkCoords_state),
+		checkCoords_replica.getAtomsLocationsInGround())
+	<< std::endl;
+	
+printStatus(thermoWorldIxs.front());
+}
+#pragma endregion CHECK_COORDS
+
+			// } // _end_ RunReplicaRefactor_SIMPLE REBASONTOP
+				
+			// Copy the new timestep and mdstep if we should be adapting
+			if (mixi >= equilRounds) {
+				std::vector<SimTK::Real> newTimesteps(worlds.size());
+				std::vector<int> newMDSteps(worlds.size());
+
+				for (std::size_t i = 0; i < worlds.size(); i++) {
+					newTimesteps[i] = worlds[i].getSampler(0)->getTimestep();
+					newMDSteps[i] = worlds[i].getSampler(0)->getMDStepsPerSample();
+				}
+
+				int thisThermoStateIx = replica2ThermoIxs[replicaIx];
+				thermodynamicStates[thisThermoStateIx].setTimesteps(newTimesteps);
+				thermodynamicStates[thisThermoStateIx].setMdsteps(newMDSteps);
+			}
+
+		} // _end_ loop through replicas
+
+		// Mix replicas
+		if((getRunType() != RUN_TYPE::DEFAULT) && (nofReplicas != 1)){
+			
+			mixReplicas(mixi); // check this
+			                                               
+			PrintNofAcceptedSwapsMatrix();
+		}else{
+
+			PrintNofAcceptedSwapsMatrix();
+
+		}
+
+		this->nofRounds++; 
+
+	} // end rounds
+
+	PrintNofAcceptedSwapsMatrix();
+
+	foutU.close();
+	foutUDot.close();
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 void Context::writeU(const std::unordered_map<std::string, SimTK::Real>& cache, std::ofstream& foutBinary) {
     for (const auto& item : cache) {
@@ -6656,9 +7070,7 @@ void Context::randomizeWorldIndexes()
 	}
 }
 
-/*!
- * <!-- Coordinate transfer -->
-*/
+/*! <!-- Coordinate transfer: world to world --> */
 void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 {
 	// Get advanced states of the integrators
@@ -6696,9 +7108,7 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 
 }
 
-/*!
- * <!-- Check coordinate transfer -->
-*/
+/*! <!-- Check coordinate transfer --> */
 SimTK::Real Context::checkTransferCoordinates_Cart(int srcWIx, int destWIx)
 {
 
@@ -6782,9 +7192,7 @@ SimTK::Real Context::checkTransferCoordinates_Cart(int srcWIx, int destWIx)
 
 }
 
-/*!
- * <!-- Check coordinate transfer -->
-*/
+/*! <!-- Check coordinate transfer --> */
 SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian)
 {
 
@@ -7030,11 +7438,44 @@ SimTK::Real Context::checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool 
 
 }
 
-
+/*! <!-- Coordinate transfer: replica to world --> */
 void Context::transferCoordinates_ReplicaToWorld(int replicaIx, int destWIx)
 {
 	SimTK::State& state = worlds[destWIx].integ->updAdvancedState();	
 	state = setAtoms_SP_NEW(destWIx, state, replicas[replicaIx].getAtomsLocationsInGround());	
+}
+
+/*! <!-- Coordinate transfer: world to replica --> */
+void Context::transferCoordinates_WorldToReplica(int srcWIx, int replicaIx)
+{
+	//SimTK::State& state = worlds[srcWIx].integ->updAdvancedState();
+	replicas[replicaIx].updAtomsLocationsInGround(worlds[srcWIx].getCurrentAtomsLocationsInGround());
+}
+
+/*! <!-- Coordinate transfer: world to replica WORK coordinates --> */
+void Context::transferCoordinates_WorldToReplica_WORK(int srcWIx, int replicaIx)
+{
+	replicas[replicaIx].upd_WORK_AtomsLocationsInGround(worlds[srcWIx].getCurrentAtomsLocationsInGround());
+}
+
+const SimTK::Real Context::checkCoordinates_Difference(
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>& A,
+	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>& B) const 
+{
+    assert(A.size() == B.size());
+
+    SimTK::Real totalDiff = 0.0;
+
+    for (size_t i = 0; i < A.size(); ++i) {
+        assert(A[i].size() == B[i].size());
+
+        for (size_t j = 0; j < A[i].size(); ++j) {
+            SimTK::Vec3 diff = B[i][j].second - A[i][j].second;
+            totalDiff += diff.norm();
+        }
+    }
+
+    return totalDiff;
 }
 
 
