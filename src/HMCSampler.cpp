@@ -970,7 +970,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 			}
 		}
 
-		system->realize(someState, SimTK::Stage::Dynamics);
+		system->realize(someState, SimTK::Stage::Acceleration);
 		
 		// PrintSimbodyVec(someState.getQ(), 6, "\nQs_after_scaling"); // @@@@@@@@@@@@@ 
 
@@ -4593,7 +4593,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 	#pragma region REBAS_TEST
 	//validated = true;	
-	std::cout << "HMCSampler sample_iteration END State time " << (world->integ)->getAdvancedTime()<< std::endl;
+	//std::cout << "HMCSampler sample_iteration END State time " << (world->integ)->getAdvancedTime()<< std::endl;
 	#pragma endregion REBAS_TEST
 
 	// --- invalid --- //
