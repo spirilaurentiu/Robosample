@@ -14,7 +14,7 @@
  * not use this file except                                                   *
  * You may obtain a copy of the License at                                    *
  * -------------------------------------------------------------------------- */
-
+ 
 
 /** @file
 Implementation of HMCSampler class. **/
