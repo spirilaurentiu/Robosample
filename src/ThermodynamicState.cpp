@@ -151,6 +151,47 @@ void ThermodynamicState::setWorkOptions(const std::vector<int>& rexWorkOptionsAr
 	this->rexWorkOptions = rexWorkOptionsArg;
 }
 
+void ThermodynamicState::computeNonequilPartitioning() {
+    const auto& distortOpts = getDistortOptions();
+    const auto& worldIxs    = getWorldIndexes();
+
+    size_t nWorlds = worldIxs.size();
+    assert(distortOpts.size() == nWorlds);
+
+    Partitioning part;
+    part.N1_wCnt = -1;
+    part.N2_wCnt = -1;
+
+    // Find first distorted world
+    for (size_t i = 0; i < nWorlds; ++i) {
+        if (distortOpts[i] != 0) {
+            part.N1_wCnt = static_cast<int>(i);
+            break;
+        }
+    }
+
+    if (part.N1_wCnt == -1) {
+        // all equilibrium
+        part.equilRounds = static_cast<int>(nWorlds);
+        part.nonEquilRounds = 0;
+        part.N2_wCnt = static_cast<int>(nWorlds) - 1; // fallback to last world
+    } else {
+        part.equilRounds = part.N1_wCnt;
+        part.nonEquilRounds = static_cast<int>(nWorlds) - part.N1_wCnt;
+        part.N2_wCnt = (part.N1_wCnt > 0) ? (part.N1_wCnt - 1) : 0;
+    }
+
+    this->nonequilPartitioning = part;
+}
+
+void ThermodynamicState::printPartitioning(std::ostream& os) const {
+    os << "Partitioning for ThermodynamicState:" << std::endl;
+    os << "  N1_wCnt (first non-equil world): " << nonequilPartitioning.N1_wCnt << std::endl;
+    os << "  N2_wCnt (equil world before N1): " << nonequilPartitioning.N2_wCnt << std::endl;
+    os << "  Equilibrium rounds: " << nonequilPartitioning.equilRounds << std::endl;
+    os << "  Non-equilibrium rounds: " << nonequilPartitioning.nonEquilRounds << std::endl;
+}
+
 // Set the integrating method
 void ThermodynamicState::setIntegrators(const std::vector<IntegratorType>& rexIntegratorsArg)
 {

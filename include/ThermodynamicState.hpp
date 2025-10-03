@@ -8,6 +8,14 @@
 
 constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 
+
+struct Partitioning {
+    int N1_wCnt = -1;        // first distorted world index
+    int N2_wCnt = -1;        // world just before N1
+    int equilRounds = 0;     // number of equilibrium worlds
+    int nonEquilRounds = 0;  // number of non-equilibrium worlds
+};
+
 class ThermodynamicState{
   public:
 	ThermodynamicState(
@@ -37,6 +45,9 @@ class ThermodynamicState{
 
 	const std::vector<int>& getWorldIndexes() const;
 	std::vector<int>& updWorldIndexes();
+
+
+
 	void setTimesteps(const std::vector<SimTK::Real>& timesteps);
 	const std::vector<SimTK::Real>& getTimesteps() const;
 	void setMdsteps(const std::vector<int>& mdsteps);
@@ -54,6 +65,10 @@ class ThermodynamicState{
 	const std::vector<std::string>& getDistortArgs() const;
 	void setFlowOptions(const std::vector<int>& rexFlowOptionsArg);
 	void setWorkOptions(const std::vector<int>& rexWorkOptionsArg);
+
+    void computeNonequilPartitioning();
+	void printPartitioning(std::ostream& os) const;	
+    const Partitioning& getNonequilPartitioning() const { return nonequilPartitioning; }
 
 	// Set the integrating method
 	void setIntegrators(const std::vector<IntegratorType>& rexIntegratorsArg);
@@ -170,6 +185,10 @@ class ThermodynamicState{
 	std::vector<std::string> rexDistortArgs;
 	std::vector<int> rexFlowOptions;
 	std::vector<int> rexWorkOptions;
+
+    Partitioning nonequilPartitioning;
+
+
 	std::vector<IntegratorType> rexIntegrators;
 
 	int allWorldsNofSamples = 0;

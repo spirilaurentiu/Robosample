@@ -66,6 +66,8 @@ RUN_TYPE_MAP_INV{
 	{RUN_TYPE::REBASONTOP, "REBASONTOP"}
 };
 
+struct Partitioning;
+
 //==============================================================================
 //                           CLASS Context
 //==============================================================================
@@ -765,7 +767,14 @@ public:
 
 	// Run a particular world
 	bool RunWorld(int whichWorld, const std::string& header);
-	void RunReplicaRefactor_SIMPLE(int mixi, int replicaIx);	
+	void RunReplicaRefactor_SIMPLE(int mixi, int replicaIx); // OBSOLETE
+
+	void writeReplicaLogAndDCD(int mixi, int replicaIx, int printFreq);
+	void runReplicaWorldRange(
+		int replicaIx, int thermoIx,
+		int startWorldCnt, int endWorldCnt,
+		bool isNonEquilibrium);
+
 	/**	
 	* @brief Main function
 	* @param

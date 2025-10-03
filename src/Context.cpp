@@ -5255,6 +5255,9 @@ void Context::initializeReplica(int thisReplica)
 	}
 	std::cout << std::endl;
 
+	// Let the thermodynamic state compute and store its equil-nonequil partitioning
+	thermodynamicStates[thisThermoStateIx].computeNonequilPartitioning();	
+	thermodynamicStates[thisThermoStateIx].printPartitioning(std::cout);
 }
 
 /*!
@@ -6735,10 +6738,42 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 */
 
+/*! <!-- HELPER(RunREX) Write replica and log --> */
+void Context::writeReplicaLogAndDCD(int mixi, int replicaIx, int printFreq) {
+
+    if ((mixi + 1) % printFreq != 0) return;
+    writeLog(mixi + 1, replicaIx);
+    REXLog(mixi + 1, replicaIx);
+    std::cout << std::flush;
+
+    int whichDCD = replica2ThermoIxs[replicaIx];
+    auto [x, y, z] = replicas[replicaIx].getCoordinates();
+
+    for (auto& coord : x) coord *= 10;
+    for (auto& coord : y) coord *= 10;
+    for (auto& coord : z) coord *= 10;
+
+    thermodynamicStates[whichDCD].writeDCD(x, y, z);
+}
+
+/*! <!-- HELPER(RunREX) Run a range of worlds for a replica --> */
+void Context::runReplicaWorldRange(
+		int replicaIx, int thermoIx,
+		int startWorldCnt, int endWorldCnt,
+		bool isNonEquilibrium)
+{
 
 
+
+}
+
+/*!
+ * <!-- Run -->
+*/
 void Context::RunREX(int equilRounds, int prodRounds)
 {
+
+	#pragma region SHOULDNT_BELONG_HERE
 
 	// desk_mass_related
 	for (int worldIx = 0; worldIx < worlds.size(); worldIx++) {
@@ -6764,6 +6799,8 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 		initializeReplica(replicaIx);
 	} // ======================================================================
+
+	#pragma endregion SHOULDNT_BELONG_HERE
 
 	// Print a header =========================================================
 	#pragma region print_REX_header
@@ -6810,23 +6847,13 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			int N_1_wCnt = -1, N_2_wCnt = -1;
             int equilRounds = -1, nonEquilRounds = -1;
 
-			for(std::size_t thWCnt = 0; thWCnt < thermoNofWorlds; thWCnt++){
-				if(distortOpts[thWCnt] != 0){
-					N_1_wCnt = thWCnt;
-					break;
-				}
-			}
-			if((N_1_wCnt != -1) && (N_1_wCnt != 0)){
-				N_2_wCnt = N_1_wCnt - 1;
-			}
+			const Partitioning& thermoNonequilPart = thermoState.getNonequilPartitioning();
 
-            if(N_1_wCnt == -1){
-                equilRounds = thermoNofWorlds;
-                nonEquilRounds = 0;
-            }else{
-                equilRounds = N_1_wCnt;
-                nonEquilRounds = thermoNofWorlds - N_1_wCnt;
-            }
+			N_1_wCnt = thermoNonequilPart.N1_wCnt;
+			N_2_wCnt = thermoNonequilPart.N2_wCnt;
+			equilRounds = thermoNonequilPart.equilRounds;
+			nonEquilRounds = thermoNonequilPart.nonEquilRounds;
+
 			# pragma endregion CONVENIENT_VARS_REPLICA
 
 			// Update BAT map for all the replica's world
@@ -6848,6 +6875,8 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			replica.upd_WORK_Jacobian() = 0.0;
 
 			// @@@@@@@@@@ LOOP THROUGH EQUILIBRIUM WORLDS --------------------------------------------->
+			//runReplicaWorldRange();
+
 			for(int thWCnt = 0; thWCnt < equilRounds; thWCnt++){
 				#pragma region CONVENIENT_VARS_WORLD
 				int wIx  = thermoWorldIxs[thWCnt];
@@ -6855,7 +6884,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				HMCSampler* sampler_p = worlds[wIx].samplers[0].get();
 				int distortIx = distortOpts[thWCnt];
 				#pragma endregion CONVENIENT_VARS_WORLD
-
 				// Transfer coordinates to the next world
 				if(thWCnt == 0){
 					transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
@@ -6864,7 +6892,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 					transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
 					transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
 				}
-
 				#pragma region WORLD_header
 				// Header
 				std::string headerToRunWorld = "REX";
@@ -6872,7 +6899,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 							headerToRunWorld += ", " + std::to_string(thermoIx);
 							headerToRunWorld += ", " + std::to_string(wIx);
 				#pragma endregion WORLD_header
-						
 				// Run
 				bool validated = true;
 				validated = RunWorld(wIx, headerToRunWorld ) && validated;
@@ -6882,7 +6908,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				}else{
 					thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
 				}
-
 				// ======================== EQUILIBRIUM ======================
 				if(distortIx == 0){
 					transferCoordinates_WorldToReplica(wIx, replicaIx); // REBASONTOP
@@ -6890,29 +6915,30 @@ void Context::RunREX(int equilRounds, int prodRounds)
 					replica.setFixman(sampler_p->fix_set);
 					replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
 				} // __end__ Equilibrium =======================================
-
 				// Increment the nof samples for replica and thermostate
 				replica.incrementWorldsNofSamples(1);
 				thermoState.incrementWorldsNofSamples(1);
-
 			} // _end_ loop through worlds (EQUILIBRIUM)
 
+
+
+
+
+
 			// Write log and DCD
-			if ((mixi + 1) % printFreq == 0) {
-				writeLog(mixi + 1, replicaIx);
-				REXLog(mixi + 1, replicaIx);
-				std::cout << std::flush;
-
-				int whichDCD = replica2ThermoIxs[replicaIx];
-				auto [x, y, z] = replicas[replicaIx].getCoordinates();
-
-				// Convert from nm to Angstrom
-				for (auto& coord : x) coord *= 10;
-				for (auto& coord : y) coord *= 10;
-				for (auto& coord : z) coord *= 10;
-
-				thermodynamicStates[whichDCD].writeDCD(x, y, z);
-			} // _end_ write log
+			writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+			// if ((mixi + 1) % printFreq == 0) {
+			// 	writeLog(mixi + 1, replicaIx);
+			// 	REXLog(mixi + 1, replicaIx);
+			// 	std::cout << std::flush;
+			// 	int whichDCD = replica2ThermoIxs[replicaIx];
+			// 	auto [x, y, z] = replicas[replicaIx].getCoordinates();
+			// 	Convert from nm to Angstrom
+			// 	for (auto& coord : x) coord *= 10;
+			// 	for (auto& coord : y) coord *= 10;
+			// 	for (auto& coord : z) coord *= 10;
+			// 	thermodynamicStates[whichDCD].writeDCD(x, y, z);
+			// } // _end_ write log
 
 			replica.incrementNofSamples(1);
 			thermoState.incrementNofSamples(1);
@@ -6965,23 +6991,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			int N_1_wCnt = -1, N_2_wCnt = -1;
 			int equilRounds = -1, nonEquilRounds = -1;
 
-			for(std::size_t thWCnt = 0; thWCnt < thermoNofWorlds; thWCnt++){
-				if(distortOpts[thWCnt] != 0){
-					N_1_wCnt = thWCnt;
-					break;
-				}
-			}
-			if((N_1_wCnt != -1) && (N_1_wCnt != 0)){
-				N_2_wCnt = N_1_wCnt - 1;
-			}
+			const Partitioning& thermoNonequilPart = thermoState.getNonequilPartitioning();
 
-			if(N_1_wCnt == -1){
-				equilRounds = thermoNofWorlds;
-				nonEquilRounds = 0;
-			}else{
-				equilRounds = N_1_wCnt;
-				nonEquilRounds = thermoNofWorlds - N_1_wCnt;
-			}
+			N_1_wCnt = thermoNonequilPart.N1_wCnt;
+			N_2_wCnt = thermoNonequilPart.N2_wCnt;
+			equilRounds = thermoNonequilPart.equilRounds;
+			nonEquilRounds = thermoNonequilPart.nonEquilRounds;
 			# pragma endregion CONVENIENT_VARS_REPLICA
 
 			// Update BAT map for all the replica's world
@@ -7063,21 +7078,19 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				} // _end_ loop through worlds (NON-EQUILIBRIUM)
 
 				// Write log and DCD
-				if ((mixi + 1) % printFreq == 0) {
-					writeLog(mixi + 1, replicaIx);
-					REXLog(mixi + 1, replicaIx);
-					std::cout << std::flush;
-
-					int whichDCD = replica2ThermoIxs[replicaIx];
-					auto [x, y, z] = replicas[replicaIx].getCoordinates();
-
-					// Convert from nm to Angstrom
-					for (auto& coord : x) coord *= 10;
-					for (auto& coord : y) coord *= 10;
-					for (auto& coord : z) coord *= 10;
-
-					thermodynamicStates[whichDCD].writeDCD(x, y, z);
-				} // _end_ write log
+				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+				// if ((mixi + 1) % printFreq == 0) {
+				// 	writeLog(mixi + 1, replicaIx);
+				// 	REXLog(mixi + 1, replicaIx);
+				// 	std::cout << std::flush;
+				// 	int whichDCD = replica2ThermoIxs[replicaIx];
+				// 	auto [x, y, z] = replicas[replicaIx].getCoordinates();
+				// 	// Convert from nm to Angstrom
+				// 	for (auto& coord : x) coord *= 10;
+				// 	for (auto& coord : y) coord *= 10;
+				// 	for (auto& coord : z) coord *= 10;
+				// 	thermodynamicStates[whichDCD].writeDCD(x, y, z);
+				// } // _end_ write log
 
 				replica.incrementNofSamples(1);
 				thermoState.incrementNofSamples(1);
