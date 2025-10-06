@@ -171,13 +171,12 @@ void ThermodynamicState::computeNonequilPartitioning() {
     }
 
     if (part.N1_wCnt == -1) {
-        // all equilibrium
-        part.equilRounds = static_cast<int>(nWorlds);
-        part.nonEquilRounds = 0;
+        part.nofEquilibriumWorlds = static_cast<int>(nWorlds);
+        part.nofNonequilibriumWorlds = 0;
         part.N2_wCnt = static_cast<int>(nWorlds) - 1; // fallback to last world
     } else {
-        part.equilRounds = part.N1_wCnt;
-        part.nonEquilRounds = static_cast<int>(nWorlds) - part.N1_wCnt;
+        part.nofEquilibriumWorlds = part.N1_wCnt;
+        part.nofNonequilibriumWorlds = static_cast<int>(nWorlds) - part.N1_wCnt;
         part.N2_wCnt = (part.N1_wCnt > 0) ? (part.N1_wCnt - 1) : 0;
     }
 
@@ -187,9 +186,9 @@ void ThermodynamicState::computeNonequilPartitioning() {
 void ThermodynamicState::printPartitioning(std::ostream& os) const {
     os << "Partitioning for ThermodynamicState:" << std::endl;
     os << "  N1_wCnt (first non-equil world): " << nonequilPartitioning.N1_wCnt << std::endl;
-    os << "  N2_wCnt (equil world before N1): " << nonequilPartitioning.N2_wCnt << std::endl;
-    os << "  Equilibrium rounds: " << nonequilPartitioning.equilRounds << std::endl;
-    os << "  Non-equilibrium rounds: " << nonequilPartitioning.nonEquilRounds << std::endl;
+    os << "  N2_wCnt (equilibrium world before N1): " << nonequilPartitioning.N2_wCnt << std::endl;
+    os << "  Nof equilibrium worlds: " << nonequilPartitioning.nofEquilibriumWorlds << std::endl;
+    os << "  Nof nonequilibrium rounds: " << nonequilPartitioning.nofNonequilibriumWorlds << std::endl;
 }
 
 // Set the integrating method

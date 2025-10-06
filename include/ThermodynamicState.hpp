@@ -12,8 +12,8 @@ constexpr SimTK::Real DEFAULT_TEMPERATURE = 300.0;
 struct Partitioning {
     int N1_wCnt = -1;        // first distorted world index
     int N2_wCnt = -1;        // world just before N1
-    int equilRounds = 0;     // number of equilibrium worlds
-    int nonEquilRounds = 0;  // number of non-equilibrium worlds
+    int nofEquilibriumWorlds = 0;     // number of equilibrium worlds
+    int nofNonequilibriumWorlds = 0;  // number of non-equilibrium worlds
 };
 
 class ThermodynamicState{

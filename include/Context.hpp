@@ -771,7 +771,7 @@ public:
 
 	void writeReplicaLogAndDCD(int mixi, int replicaIx, int printFreq);
 	void runReplicaWorldRange(
-		int replicaIx, int thermoIx,
+		int replicaIx,
 		int startWorldCnt, int endWorldCnt,
 		bool isNonEquilibrium);
 
