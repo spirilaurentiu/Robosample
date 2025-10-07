@@ -276,7 +276,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// Set DuMM atom indexes into atoms of bAtomList
 	worlds[0].setDuMMAtomIndexes(); // REVISE
 
-	#ifdef __DRILLING__
+	#if __DRILLING__ == 1
 		scout("Correspondence cAIx dAIx\n");
 		int ix = -1;
 		for(auto atom: atoms){
@@ -2242,7 +2242,7 @@ void Context::buildAcyclicGraph(
 				Compound::BondIndex(topology.getNumBonds() - 1), 0));
 		}
 
-		#ifdef __DRILLING__
+		#if __DRILLING__ == 1
 			// Print compound atom indices for child and parent
 			spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
 				child.getNumber(), child.getCompoundAtomIndex(),
@@ -5865,7 +5865,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// Generate samples
 		
 		// drl
-		#ifdef __DRILLING__ // SCALEQ
+		#if __DRILLING__ == 1 // SCALEQ
 
             // Get drl data
             const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
