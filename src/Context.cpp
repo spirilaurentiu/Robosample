@@ -4548,6 +4548,9 @@ void Context::rewindReplica(void)
  * --> */
 bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
+
+	//std::cout << "Context::attemptREXSwap " << RUN_TYPE_MAP_INV.at(getRunType()) << std::endl;
+
 	bool returnValue = false;
 
 	// Extract information only from Replica and ThermodynamicState objects
@@ -6418,9 +6421,9 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			updSubZMatrixBATsToAllWorlds(replicaIx);
 
 			// Load the front world if the first is equilibrium
-			if(N_1_wCnt != 0){
-				currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx); // we need this for the net command
-			}
+			// if(N_1_wCnt != 0){
+			// 	currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx); // we need this for the net command
+			// }
 
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
 
@@ -6440,7 +6443,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			replica.calcZMatrixBAT( worlds[thermoWorldIxs[N_2_wCnt]].getAtomsLocationsInGround( state ));
 
 		} // _end_ loop through replicas (EQUILIBRIUM)
-
 
 
 		if((getRunType() == RUN_TYPE::REBASONTOP) && (nofReplicas != 1)){
@@ -6479,11 +6481,11 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			updSubZMatrixBATsToAllWorlds(replicaIx);
 
 			// Load the front world if the first is non-equilibrium
-			if(N_1_wCnt == 0){
-				currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx); // we need this for the net command
-			}else{
-				currFrontWIx = thermoWorldIxs[N_1_wCnt];
-			}
+			// if(N_1_wCnt == 0){
+			// 	currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx); // we need this for the net command
+			// }else{
+			// 	currFrontWIx = thermoWorldIxs[N_1_wCnt];
+			// }
 
 			if(nofNonequilibriumWorlds){
 
@@ -6495,7 +6497,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				// @@@@@@@@@@ LOOP THROUGH NON-EQUILIBRIUM WORLDS --------------------------------------------->
 				runReplicaWorldRange(replicaIx, N_1_wCnt, thermoNofWorlds, true);
 
-				// for(int thWCnt = N_1_wCnt; thWCnt < thermoNofWorlds; thWCnt++){
+				/*// for(int thWCnt = N_1_wCnt; thWCnt < thermoNofWorlds; thWCnt++){
 				// 	#pragma region CONVENIENT_VARS_WORLD
 				// 	int wIx  = thermoWorldIxs[thWCnt];
 				// 	World& currWorld = worlds[wIx];
@@ -6533,7 +6535,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				// 	// Increment the nof samples for replica and thermostate
 				// 	replica.incrementWorldsNofSamples(1);
 				// 	thermoState.incrementWorldsNofSamples(1);
-				// } // _end_ loop through worlds (NON-EQUILIBRIUM)
+				// } // _end_ loop through worlds (NON-EQUILIBRIUM)*/
 
 				// Write log and DCD
 				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
@@ -6543,7 +6545,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 				SimTK::State& state = worlds.back().integ->updAdvancedState();
 				replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
-
 			
 			}
 
