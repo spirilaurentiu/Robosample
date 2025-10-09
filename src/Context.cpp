@@ -6284,11 +6284,13 @@ void Context::runReplicaWorldRange(
 
 				// Transfer coordinates to the next world
 				if(thWCnt == 0){
-					transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
-					transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
+					transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs[thWCnt]);
+std::cout<<"Transfer replica"<<" "<<replicaIx<<" "<<thermoWorldIxs[thWCnt]<<std::endl;
+					transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs[thWCnt]);
 				}else{
-					transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
-					transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx);
+					transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], thermoWorldIxs[thWCnt]);
+std::cout<<"Transfer"<<" "<<thermoWorldIxs[thWCnt - 1]<<" "<<thermoWorldIxs[thWCnt]<<std::endl;
+					transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], thermoWorldIxs[thWCnt]);
 				}				
 
 				// Run
@@ -6304,7 +6306,8 @@ void Context::runReplicaWorldRange(
 
 				// ======================== EQUILIBRIUM ======================
 				if(distortIx == 0){
-					transferCoordinates_WorldToReplica(wIx, replicaIx); // REBASONTOP
+					transferCoordinates_WorldToReplica(wIx, replicaIx);
+std::cout<<"Transfer"<<" "<<wIx<<" replica "<<replicaIx<<std::endl;
 					replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 					replica.setFixman(sampler_p->fix_set);
 					replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
@@ -6315,7 +6318,8 @@ void Context::runReplicaWorldRange(
 					replica.updWORK() += currWorld.getWork();  // TODO merge with Jacobians
 					replica.upd_WORK_Jacobian() += sampler_p->getDistortJacobianDetLog();
 
-					transferCoordinates_WorldToReplica_WORK(wIx, replicaIx); // REBASONTOP
+					transferCoordinates_WorldToReplica_WORK(wIx, replicaIx);
+					std::cout<<"Transfer"<<" "<<wIx<<" replica "<<replicaIx<<" WORK "<<std::endl;
 					replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
 					replica.set_WORK_Fixman(sampler_p->fix_set);
 					replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
@@ -6383,11 +6387,11 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	for(size_t mixi = 0; mixi < equilRounds + prodRounds; mixi++) {
 
 		// Reset replica exchange pairs vector
-		if(getRunType() != RUN_TYPE::DEFAULT){
-			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-				setReplicaExchangePairs(mixi % 2);
-			}
-		}
+		// if(getRunType() != RUN_TYPE::DEFAULT){
+		// 	if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+		// 		setReplicaExchangePairs(mixi % 2);
+		// 	}
+		// }
 
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
@@ -6454,6 +6458,10 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		}
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
+
+		// Update work scale factors
+		updThermostatesQScaleFactors(mixi);	
+
 		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 
 			# pragma region CONVENIENT_VARS_REPLICA
