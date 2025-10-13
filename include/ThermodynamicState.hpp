@@ -139,6 +139,8 @@ class ThermodynamicState{
 	int findWorld(const int whichWorld);
 
 	void allocQStatsFirstDimension(void);
+	//void allocQStatsSecondDimension( needs rethinking);
+
 	bool calcQStats(const int whichWorld, const SimTK::Vector & worldBMps, const SimTK::Vector & worldPFrs, const SimTK::Vector & worldQs, int worldNofSamples);
 	void printQStats(void);
 

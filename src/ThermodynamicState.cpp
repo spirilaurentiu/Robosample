@@ -423,6 +423,34 @@ void ThermodynamicState::allocQStatsFirstDimension(void)
 }
 
 /*!
+ * <!-- Realize position is necessary -->
+*/
+// void ThermodynamicState::allocQStatsSecondDimension( needs rethinking)
+// {
+
+// 	for(const auto wIx : worldIndexes){
+
+// 		int wPosInVector = findWorld(wIx);
+
+// 		//currWorld.getBMps(), currWorld.getPFrs()
+
+// 		BMps_means[wPosInVector].resize(worldBMps.size());
+// 		BMps_diffs[wPosInVector].resize(worldBMps.size());
+
+// 		PFrs_means[wPosInVector].resize(worldPFrs.size());
+// 		PFrs_diffs[wPosInVector].resize(worldPFrs.size());
+
+// 		currQs[wPosInVector].resize(worldQs.size());
+// 		Qmeans[wPosInVector].resize(worldQs.size());
+// 		Qdiffs[wPosInVector].resize(worldQs.size());
+// 		Qvars[wPosInVector].resize(worldQs.size());
+
+// 	}
+
+// }
+
+
+/*!
  * <!-- 
  * N starts at 1 -->
 */
@@ -464,7 +492,6 @@ int ThermodynamicState::findWorld(const int whichWorld)
 */
 bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldBMps, const SimTK::Vector & worldPFrs, const SimTK::Vector & worldQs, int worldNofSamples)
 {
-
 	// Usefull vars
 	//SimTK::Real N = worldNofSamples + 1;
 	SimTK::Real N = nofSamples + 1;

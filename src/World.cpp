@@ -4137,7 +4137,7 @@ bool World::generateSamples_old(int howManySamplesPerRound, std::stringstream& w
 	return validated;
 }
 
-
+/*! <!-- Generate howManySamplesPerRound samples --> */
 bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
     bool validated = false;
@@ -4155,9 +4155,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
             validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
 
-            if (verbose) {
-                worldOutStream << std::endl;
-            }
+            if (verbose) {worldOutStream << std::endl;}
         }
     };
 

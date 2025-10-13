@@ -676,6 +676,7 @@ bool HMCSampler::REBAS_Scale_Mbx(REBAS_MoleculeName_Ix molName, SimTK::Mobilized
  * @param PPM Perturbation method --> */
 void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMethod PPM)
 {
+
 	if( PPM != PositionsPerturbMethod::EMPTY ){
 
     	// int nofDihModesIntervals = 7;
@@ -697,11 +698,11 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
 
-		//std::cout << " w " << this->world->getOwnIndex() << " scaleF " << this->QScaleFactor << "\n";
+		//std::cout << " w " << this->world->getOwnIndex() << " scaleF " << this->QScaleFactor << "\n" << std::flush;
 
 		SimTK::Vector &stateQs = someState.updQ();
 
-		SimTK::Real scaleFactor = 1;			
+		SimTK::Real scaleFactor = 1;
 
 		REBAS_MoleculeName_Ix MOLECULE_NAME_Ix = REBAS_MoleculeName_Ix::TRPCH;
 
@@ -839,6 +840,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 				int numUs = mobod.getNumU(someState);
 				const SimTK::Transform X_BM = mobod.getOutboardFrame(someState);
 				const SimTK::Transform X_PF = mobod.getInboardFrame(someState);
+
 
 				int localQIndex = -1;
 				for(SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
@@ -4137,27 +4139,27 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 		adaptWorldBlocks(someState);
 	}
 
-//std::cout << "DRILLING Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+//std::cout << "DRILLING Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
 
-//std::cout << "DRILLING perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+//std::cout << "DRILLING perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
-//std::cout << "DRILLING calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+//std::cout << "DRILLING calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 
-//std::cout << "DRILLING integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+//std::cout << "DRILLING integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
 
-//std::cout << "DRILLING perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+//std::cout << "DRILLING perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// drl
 	#ifdef __DRILLING__
@@ -4169,7 +4171,7 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
 
-//std::cout << "DRILLING calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl;
+//std::cout << "DRILLING calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	} else {
 			// Store new energies

@@ -276,7 +276,7 @@ bool Context::initializeFromFile(const std::string &inpFN)
 	// Set DuMM atom indexes into atoms of bAtomList
 	worlds[0].setDuMMAtomIndexes(); // REVISE
 
-	#if __DRILLING__ == 1
+	#ifdef __DRILLING__
 		scout("Correspondence cAIx dAIx\n");
 		int ix = -1;
 		for(auto atom: atoms){
@@ -2242,7 +2242,7 @@ void Context::buildAcyclicGraph(
 				Compound::BondIndex(topology.getNumBonds() - 1), 0));
 		}
 
-		#if __DRILLING__ == 1
+		#ifdef __DRILLING__
 			// Print compound atom indices for child and parent
 			spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
 				child.getNumber(), child.getCompoundAtomIndex(),
@@ -4548,9 +4548,6 @@ void Context::rewindReplica(void)
  * --> */
 bool Context::attemptREXSwap(int replica_X, int replica_Y)
 {
-
-	//std::cout << "Context::attemptREXSwap " << RUN_TYPE_MAP_INV.at(getRunType()) << std::endl;
-
 	bool returnValue = false;
 
 	// Extract information only from Replica and ThermodynamicState objects
@@ -5868,7 +5865,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// Generate samples
 		
 		// drl
-		#if __DRILLING__ == 1 // SCALEQ
+		#ifdef __DRILLING__ // SCALEQ
 
             // Get drl data
             const std::vector<std::vector<double>>& drl_bon_Energies = worlds[whichWorld].getEnergies_drl_bon();
@@ -5878,14 +5875,13 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
             const std::vector<std::vector<double>>& drl_vdw_Energies = worlds[whichWorld].getEnergies_drl_vdw();
             const std::vector<std::vector<double>>& drl_cou_Energies = worlds[whichWorld].getEnergies_drl_cou();
 
-            // validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream){
-
-                //warn("under drilling conditions");
+			#pragma region generateSamples_DRILL //warn("under drilling conditions");
 
                 // Update Robosample bAtomList
                 SimTK::State& currentAdvancedState = (worlds[whichWorld]).integ->updAdvancedState();
                 (worlds[whichWorld]).updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
-                // ''''''''''''''''''''
+                
+				// ''''''''''''''''''''
                 // coutspaced("SCALING_BAT init:"); ceolf;
                 // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
                 // thermodynamicStates[0].PrintZMatrixBAT();
@@ -5893,9 +5889,7 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 
                 // Reinitialize the sampler
                 validated = (worlds[whichWorld]).updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
-
                 SimTK::Real pe_beforeScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-
                 if(false && ((whichWorld == 3)
                         //&& (std::abs((worlds[whichWorld]).updSampler(0)->QScaleFactor - 1.0) > 0.00001)
                 )){ 
@@ -5915,10 +5909,12 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
                             worldOutStream << header << " ";
                             (worlds[whichWorld]).updSampler(0)->getMsg_InitialParams(worldOutStream);
                         }
+
                         validated = (worlds[whichWorld]).updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
-                        if (verbose) {worldOutStream << std::endl;}
+                        
+						if (verbose) {worldOutStream << std::endl;}
                     }
-                };              
+                };
 
                 // GENERATE the requested number of samples
                 if ((worlds[whichWorld]).getIsRollFlexibilities()) {
@@ -5933,7 +5929,6 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
                 }
 
                 SimTK::Real pe_afterScale = (worlds[whichWorld]).forces->getMultibodySystem().calcPotentialEnergy((worlds[whichWorld]).integ->updAdvancedState());
-
                 // ''''''''''''''''''''
                 // coutspaced("SCALING_BAT after:"); ceolf;
                 // replicas[0].calcZMatrixBAT( (worlds[whichWorld]).getAtomsLocationsInGround( (worlds[whichWorld]).integ->updAdvancedState() ));
@@ -5951,8 +5946,8 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
                     scout("drl_cou_E"); ceol; PrintCppVector(drl_cou_Energies, 6, "couE", "couE");
                     std::cout<<std::flush;
                 } // __end__ choose a world to print drilling
-                
-            // }
+			
+				#pragma endregion generateSamples_DRILL
 
 		#else
 
@@ -5996,7 +5991,6 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 	if (verbose) {
 		std::cout << worldOutStream.str() << std::flush;
 	}
-
 	return validated;
 }
 
@@ -6054,8 +6048,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 		validated = RunWorld(wIx, headerToRunWorld ) && validated;
 
-		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.5");}
-
 		// Calculate Q statistics
 		if(sampler_p->getAcc() == true){
 			thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
@@ -6089,8 +6081,6 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 			replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
 
 		} // __end__ Non/Equilibrium =======================================
-
-		if(MEMDEBUG){stdcout_memdebug("Context::RunReplicaRefactor_SIMPLE 6.6");}
 
 		# pragma region REBAS_TEST
 		const SimTK::State& pdbState = currWorld.integ->updAdvancedState();
@@ -6148,6 +6138,7 @@ void Context::RunReplicaRefactor_SIMPLE(int mixi, int replicaIx)
 
 }
 
+/*! <!--  -->*/
 void Context::writeLog(int mixi, int replicaIx) {
 	// Check if we want to write to log
 
@@ -6256,7 +6247,6 @@ void Context::runReplicaWorldRange(
 		int startWorldCnt, int nofWorldsCounted,
 		bool isNonEquilibrium)
 {
-
 			if(isNonEquilibrium){
 				if(startWorldCnt == 0){
 					std::cout << "REBASONTOP NON-EQUILIBRIUM FRONT " << std::endl << std::flush;
@@ -6282,21 +6272,17 @@ void Context::runReplicaWorldRange(
 				int distortIx = distortOpts[thWCnt];
 				#pragma endregion CONVENIENT_VARS_WORLD
 
-				// Transfer coordinates to the next world
-				if(thWCnt == 0){
-					transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs[thWCnt]);
-std::cout<<"Transfer replica"<<" "<<replicaIx<<" "<<thermoWorldIxs[thWCnt]<<std::endl;
-					transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs[thWCnt]);
-				}else{
-					transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], thermoWorldIxs[thWCnt]);
-std::cout<<"Transfer"<<" "<<thermoWorldIxs[thWCnt - 1]<<" "<<thermoWorldIxs[thWCnt]<<std::endl;
-					transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], thermoWorldIxs[thWCnt]);
+				if(thWCnt != startWorldCnt){ // don't transfer if it's the first world in the range
+					if(thWCnt != 0){ // don't transfer if it's the first world in the range and it's also the first world overall
+						transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
+						transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx); // 
+					}
 				}				
 
 				// Run
 				bool validated = true;
 				validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
-				
+
 				// Calculate Q statistics
 				if(sampler_p->getAcc() == true){
 					thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
@@ -6306,24 +6292,25 @@ std::cout<<"Transfer"<<" "<<thermoWorldIxs[thWCnt - 1]<<" "<<thermoWorldIxs[thWC
 
 				// ======================== EQUILIBRIUM ======================
 				if(distortIx == 0){
+
 					transferCoordinates_WorldToReplica(wIx, replicaIx);
-std::cout<<"Transfer"<<" "<<wIx<<" replica "<<replicaIx<<std::endl;
+
 					replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 					replica.setFixman(sampler_p->fix_set);
 					replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
-				} // __end__ Equilibrium =======================================
-				
+				} // __end__ Equilibrium 
+
 				// ======================== NON-EQUILIBRIUM ======================
-				else{
+				else{ // (distortIx != 0)
 					replica.updWORK() += currWorld.getWork();  // TODO merge with Jacobians
 					replica.upd_WORK_Jacobian() += sampler_p->getDistortJacobianDetLog();
 
 					transferCoordinates_WorldToReplica_WORK(wIx, replicaIx);
-					std::cout<<"Transfer"<<" "<<wIx<<" replica "<<replicaIx<<" WORK "<<std::endl;
+
 					replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
 					replica.set_WORK_Fixman(sampler_p->fix_set);
 					replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
-				} // __end__ Non/Equilibrium =======================================
+				} // __end__ Non/Equilibrium
 
 				// Increment the nof samples for replica and thermostate
 				replica.incrementWorldsNofSamples(1);
@@ -6365,6 +6352,17 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		initializeReplica(replicaIx);
 	} // ======================================================================
 
+
+	// Allocate and calculate initial Q statistics for all thermodynamic states
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
+		ThermodynamicState& currThermoState = thermodynamicStates[thermoIx];
+		std::vector<int>& thermoWorldIxs = currThermoState.updWorldIndexes();
+		for(auto worldIx : thermoWorldIxs){
+			World& currWorld = worlds[worldIx];
+			currThermoState.calcQStats(worldIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
+		}
+	}
+
 	#pragma endregion SHOULDNT_BELONG_HERE
 
 	// Print a header =========================================================
@@ -6387,11 +6385,11 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	for(size_t mixi = 0; mixi < equilRounds + prodRounds; mixi++) {
 
 		// Reset replica exchange pairs vector
-		// if(getRunType() != RUN_TYPE::DEFAULT){
-		// 	if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-		// 		setReplicaExchangePairs(mixi % 2);
-		// 	}
-		// }
+		if(getRunType() != RUN_TYPE::DEFAULT){
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				setReplicaExchangePairs(mixi % 2);
+			}
+		}
 
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);
@@ -6431,6 +6429,9 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
 
+			transferCoordinates_ReplicaToWorld(replicaIx, 0);
+			transferQStatistics(thermoIx, thermoWorldIxs.back(), 0);
+
 			replica.updWORK() = 0.0;
 			replica.upd_WORK_Jacobian() = 0.0;
 
@@ -6449,6 +6450,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		} // _end_ loop through replicas (EQUILIBRIUM)
 
 
+
 		if((getRunType() == RUN_TYPE::REBASONTOP) && (nofReplicas != 1)){
 			setRunType(RUN_TYPE::REMC);
 			mixReplicas(mixi);
@@ -6456,6 +6458,8 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			mixi++;
 			setRunType(RUN_TYPE::REBASONTOP);
 		}
+
+
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
 
@@ -6499,51 +6503,14 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 				setReplicasWorldsParameters(replicaIx, false, true, mixi);
 
+				transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs[N_1_wCnt]);
+				transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs[N_1_wCnt]);
+
 				replica.updWORK() = 0.0;
 				replica.upd_WORK_Jacobian() = 0.0;
 
 				// @@@@@@@@@@ LOOP THROUGH NON-EQUILIBRIUM WORLDS --------------------------------------------->
 				runReplicaWorldRange(replicaIx, N_1_wCnt, thermoNofWorlds, true);
-
-				/*// for(int thWCnt = N_1_wCnt; thWCnt < thermoNofWorlds; thWCnt++){
-				// 	#pragma region CONVENIENT_VARS_WORLD
-				// 	int wIx  = thermoWorldIxs[thWCnt];
-				// 	World& currWorld = worlds[wIx];
-				// 	HMCSampler* sampler_p = worlds[wIx].samplers[0].get();
-				// 	int distortIx = distortOpts[thWCnt];
-				// 	#pragma endregion CONVENIENT_VARS_WORLD
-				// 	// Transfer coordinates to the next world
-				// 	if(thWCnt == 0){
-				// 		std::cout << "REBASONTOP NON-EQUILIBRIUM FRONT " << std::endl << std::flush;
-				// 		std::cerr << "REBASONTOP NON-EQUILIBRIUM FRONT " << std::endl << std::flush;
-				// 		transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs.front());
-				// 		transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs.front());
-				// 	}else{
-				// 		transferCoordinates_ReplicaToWorld(replicaIx, wIx);
-				// 		transferQStatistics(thermoIx, thermoWorldIxs[N_2_wCnt], wIx);
-				// 	}
-				// 	// Run
-				// 	bool validated = true;
-				// 	validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
-				// 	// Calculate Q statistics
-				// 	if(sampler_p->getAcc() == true){
-				// 		thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
-				// 	}else{
-				// 		thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
-				// 	}
-				// 	// ======================== NON-EQUILIBRIUM ======================
-				// 	if(distortIx != 0){
-				// 		replica.updWORK() += currWorld.getWork();  // TODO merge with Jacobians
-				// 		replica.upd_WORK_Jacobian() += sampler_p->getDistortJacobianDetLog();
-				// 		transferCoordinates_WorldToReplica_WORK(wIx, replicaIx); // REBASONTOP
-				// 		replica.set_WORK_PotentialEnergy_New(currWorld.calcPotentialEnergy());
-				// 		replica.set_WORK_Fixman(sampler_p->fix_set);
-				// 		replica.set_WORK_ReferencePotentialEnergy_New(OMMRef_calcPotential(replica.get_WORK_AtomsLocationsInGround(), true, true));
-				// 	} // __end__ Non/Equilibrium =======================================				
-				// 	// Increment the nof samples for replica and thermostate
-				// 	replica.incrementWorldsNofSamples(1);
-				// 	thermoState.incrementWorldsNofSamples(1);
-				// } // _end_ loop through worlds (NON-EQUILIBRIUM)*/
 
 				// Write log and DCD
 				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
