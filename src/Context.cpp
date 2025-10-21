@@ -4546,7 +4546,7 @@ void Context::rewindReplica(void)
  * , 135:194110, 2011. DOI:10.1063/1.3660669
  *  replica_i and replica_j are variable
  * --> */
-bool Context::attemptREXSwap(int replica_X, int replica_Y)
+bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 {
 	bool returnValue = false;
 
@@ -4555,8 +4555,11 @@ bool Context::attemptREXSwap(int replica_X, int replica_Y)
 	#pragma region CONVENIENT_VARS
 
 	// Get replicas' thermodynamic states indexes
-	int thermoState_C = replica2ThermoIxs[replica_X];
-	int thermoState_H = replica2ThermoIxs[replica_Y];
+	//int thermoState_C = replica2ThermoIxs[replica_X];
+	//int thermoState_H = replica2ThermoIxs[replica_Y];
+
+	int replica_X = thermo2ReplicaIxs[thermoState_C];
+	int replica_Y = thermo2ReplicaIxs[thermoState_H];
 	
 	// Record this attempt
 	nofAttemptedSwapsMatrix[thermoState_C][thermoState_H] += 1;
@@ -4929,7 +4932,9 @@ void Context::mixNeighboringReplicas(unsigned int startingFrom)
 
 		// Attempt to swap
 		bool swapped = false;
-		swapped = attemptREXSwap(replica_i, replica_j);
+		//swapped = attemptREXSwap(replica_i, replica_j);
+		swapped = attemptREXSwap(thermoState_i, thermoState_j);
+
 
 	}
 
@@ -4946,16 +4951,19 @@ void Context::mixAllReplicas(int nSwapAttempts)
 	for(size_t swap_k = 0; swap_k < nSwapAttempts; swap_k++){
 
 		// Get two random replicas
-		auto replica_i = randReplicaDistrib(randomEngine);
-		auto replica_j = randReplicaDistrib(randomEngine);
+		//auto replica_i = randReplicaDistrib(randomEngine);
+		//auto replica_j = randReplicaDistrib(randomEngine);
+		auto thermoState_i = randReplicaDistrib(randomEngine);
+		auto thermoState_j = randReplicaDistrib(randomEngine);
 
-		std::cout << "Attempt to swap replicas " << replica_i
-			<< " and " << replica_j << std::endl;
+		std::cout << "Attempt to swap thermoStates " << thermoState_i
+			<< " and " << thermoState_j << std::endl;
 
 		// Attempt to swap
 		bool swapped = false;
 
-		swapped = attemptREXSwap(replica_i, replica_j);
+		//swapped = attemptREXSwap(replica_i, replica_j);
+		swapped = attemptREXSwap(thermoState_i, thermoState_j);
 
 	}
 }
@@ -4973,7 +4981,8 @@ void Context::mixReplicas(int mixi)
 
 			int thermoState_j = thermoState_i + 1;
 
-			bool swapped = attemptREXSwap(thermo2ReplicaIxs[thermoState_i], thermo2ReplicaIxs[thermoState_j]);
+			//bool swapped = attemptREXSwap(thermo2ReplicaIxs[thermoState_i], thermo2ReplicaIxs[thermoState_j]);
+			bool swapped = attemptREXSwap(thermoState_i, thermoState_j);
 		}
 
 
@@ -6422,11 +6431,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
 
-			// Load the front world if the first is equilibrium
-			// if(N_1_wCnt != 0){
-			// 	currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx); // we need this for the net command
-			// }
-
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
 
 			transferCoordinates_ReplicaToWorld(replicaIx, 0);
@@ -6491,13 +6495,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 			// Update BAT map for all the replica's world
 			updSubZMatrixBATsToAllWorlds(replicaIx);
-
-			// Load the front world if the first is non-equilibrium
-			// if(N_1_wCnt == 0){
-			// 	currFrontWIx = restoreReplicaCoordinatesToFrontWorld(replicaIx); // we need this for the net command
-			// }else{
-			// 	currFrontWIx = thermoWorldIxs[N_1_wCnt];
-			// }
 
 			if(nofNonequilibriumWorlds){
 

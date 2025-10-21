@@ -674,7 +674,8 @@ public:
 	// Exchanges thermodynamic states between replicas
 	void getMsg_RexDetHeader(std::stringstream& rexDetHeader);
 	void rewindReplica(void);
-	bool attemptREXSwap(int replica_i, int replica_j);
+	//bool attemptREXSwap(int replica_i, int replica_j);
+	bool attemptREXSwap(int thermoState_C, int thermoState_H);
 
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
