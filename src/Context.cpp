@@ -6404,12 +6404,15 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		updThermostatesQScaleFactors(mixi);
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (EQUILIBRIUM) ------------------------------------->
-		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ // BY_REPLICA
+		//for(int thermoIx = 0; thermoIx < nofReplicas; thermoIx){ // BY_THERMO
 
 			# pragma region CONVENIENT_VARS_REPLICA
 			// Get thermodynamic state and its' worlds
+			int thermoIx = replica2ThermoIxs[replicaIx]; // BY_REPLICA
+			//int replicaIx = thermo2ReplicaIxs[thermoIx]; // BY_THERMO
+
 			Replica& replica = replicas[replicaIx];
-			int thermoIx = replica2ThermoIxs[replicaIx];
 			ThermodynamicState& thermoState = thermodynamicStates[thermoIx];
 			std::vector<int>& thermoWorldIxs = thermoState.updWorldIndexes();
 			std::vector<int> & distortOpts = thermoState.getDistortOptions();
@@ -6459,7 +6462,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			setRunType(RUN_TYPE::REMC);
 			mixReplicas(mixi);
 			PrintNofAcceptedSwapsMatrix();
-			mixi++;
+			//mixi++;
 			setRunType(RUN_TYPE::REBASONTOP);
 		}
 
@@ -6470,12 +6473,15 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Update work scale factors
 		updThermostatesQScaleFactors(mixi);	
 
-		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ // BY_REPLICA
+		//for(int thermoIx = 0; thermoIx < nofReplicas; thermoIx){ // BY_THERMO
 
 			# pragma region CONVENIENT_VARS_REPLICA
 			// Get thermodynamic state and its' worlds
+			int thermoIx = replica2ThermoIxs[replicaIx]; // BY_REPLICA
+			//int replicaIx = thermo2ReplicaIxs[thermoIx]; // BY_THERMO
+
 			Replica& replica = replicas[replicaIx];
-			int thermoIx = replica2ThermoIxs[replicaIx];
 			ThermodynamicState& thermoState = thermodynamicStates[thermoIx];
 			std::vector<int>& thermoWorldIxs = thermoState.updWorldIndexes();
 			std::vector<int> & distortOpts = thermoState.getDistortOptions();
