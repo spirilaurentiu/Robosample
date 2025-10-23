@@ -157,12 +157,15 @@ void Context::PrintAtomsDebugInfo(void){
 
  bool Context::addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas) {
     std::vector<std::string> inpcrdFNs;
+    if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 0");}
 
     // Add replicas
     for (int replCnt = 0; replCnt < nofReplicas; replCnt++) {
         std::string inpcrd = restartDir + "/ligand.s" + std::to_string(replCnt) + ".rst7";
         inpcrdFNs.push_back(inpcrd);
     }
+
+    if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 1");}
 
     for (int replCnt = 0; replCnt < nofReplicas; replCnt++) {
         // Check if the inpcrd file exists
@@ -172,8 +175,14 @@ void Context::PrintAtomsDebugInfo(void){
         }
 
         loadAtomsCoordinates(prmtop, inpcrdFNs[replCnt]);
+
+    	if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 2");}
+
         std::cout << "Loaded coordinates of replica " << replCnt << " from " << inpcrdFNs[replCnt] << std::endl;
         addReplica(replCnt);
+
+		if(MEMDEBUG){stdcout_memdebug("Context::addReplicasAndLoadCoordinates 3");}
+
     }
 
 	return true;
@@ -1700,9 +1709,12 @@ void Context::addWorld(
 
 	TRACE("Context::addWorld");
 
+    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 0");}
+
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());
 	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);
+    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 1");}
 
 	// @TODO should only pass natoms to worlds
 	worlds.back().setMyContext(this);
@@ -1829,6 +1841,7 @@ void Context::addWorld(
 
 	// 
 	worlds.back().AllocateCoordBuffers(natoms);
+    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 2");}
 
 	// desk_mass_related
 	// for (auto& atom : atoms) {
@@ -1849,12 +1862,14 @@ void Context::addWorld(
 		// This is many to one map
 		topologies[topologyIx].loadAIx2MbxMap();
 	}
+    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 3");}
 
 	// This is one to many map
 	worlds.back().loadMbx2AIxMap();
 
 	// Allocate whatever needed Simbody dependent vectors from World here
 	worlds.back().allocateStatsContainers();
+    if(MEMDEBUG){stdcout_memdebug("Context::addWorld 4");}
 
 	// print the inertia tensors of all bodies
 	// PrintSimbodyMobods();

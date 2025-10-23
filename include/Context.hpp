@@ -1292,4 +1292,6 @@ private:
 	//---         Q Stats        -----
 	//////////////////////////////////
 
+	bool MEMDEBUG_LOCAL = true;
+
 };
