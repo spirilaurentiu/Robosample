@@ -6461,7 +6461,9 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			runReplicaWorldRange(replicaIx, 0, nofEquilibriumWorlds, false);
 
 			// Write log and DCD
-			writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+			if(nofNonequilibriumWorlds == 0){
+				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+			}
 
 			replica.incrementNofSamples(1);
 			thermoState.incrementNofSamples(1);
