@@ -38,8 +38,8 @@ JOINT_COLORS = {
 JOINT_NAMES = {
     "Rigid"     : "Rigid Joint",
     "Pin"       : "Pin Joint",
-    "BallF"      : "Ball Joint (Fixed Body)",
-    "BallM"      : "Ball Joint (Mobile Body)",
+    "BallF"     : "Ball Joint (Fixed Body)",
+    "BallM"     : "Ball Joint (Mobile Body)",
     "Cartesian" : "Cartesian Joint"
 }
 
@@ -271,8 +271,6 @@ class JointControlWindow(QtWidgets.QWidget):
         angle = self.angles[idx]
         cmd.set_dihedral(f"id {a1}", f"id {a2}", f"id {a3}", f"id {a4}", float(angle))
 
-
-
 class FlexManager:
     """
     Keeps track of flexible bonds for multiple 'worlds',
@@ -301,6 +299,7 @@ class FlexManager:
                     self.joints[bond][0] = "Rigid"
                     return False
             else: 
+                self.joints[bond][0] = jointData[0]
                 return True
         else:
             ## Set the entire jointData
