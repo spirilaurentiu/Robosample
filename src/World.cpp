@@ -448,11 +448,11 @@ void World::AllocateCoordBuffers(int natoms)
 /** Adopts a topology **/
 void World::adoptTopology(int which)
 {
-	std::cout << "NUM TOPOLOGIES " << topologies->size() << std::endl;
-	std::cout << "REQUESTED " << which << std::endl;
+	//std::cout << "NUM TOPOLOGIES " << topologies->size() << std::endl;
+	//std::cout << "REQUESTED " << which << std::endl;
 
 	// Add Topology to CompoundSystem and realize topology
-	scout("World: adopting ") << which <<" " << "topology" << eol;
+	//scout("World: adopting ") << which <<" " << "topology" << eol;
 	compoundSystem->adoptCompound(((*topologies)[which]));
 
 	// Sets the

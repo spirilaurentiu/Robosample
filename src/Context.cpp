@@ -1791,7 +1791,7 @@ void Context::addWorld(
 	}
 
 	// Print mobilities
-	bool printMobilities = true;
+	bool printMobilities = false;
 	if(printMobilities){
 		for (const auto& flex : flexibilities) {
 			std::cout << "Mobility " << flex.i << " " << flex.j <<" to " << flex.mobility << std::endl;
@@ -1854,6 +1854,8 @@ void Context::addWorld(
 	for(std::size_t topologyIx = 0; topologyIx < topologies.size(); topologyIx++) {
 
 		// Add topologies to CompoundSystem and add it to the visualizer's vector of molecules
+		std::cout << "NUM TOPOLOGIES " << worlds.back().topologies->size() << std::endl;
+		std::cout << "REQUESTED " << topologyIx << std::endl;
 		worlds.back().adoptTopology(topologyIx);
 
 		// Was "Cartesian"
@@ -2259,10 +2261,10 @@ void Context::buildAcyclicGraph(
 
 		#ifdef __DRILLING__
 			// Print compound atom indices for child and parent
-			spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
-				child.getNumber(), child.getCompoundAtomIndex(),
-				parent.getNumber(), parent.getCompoundAtomIndex());
-			ceol;
+			// spacedcout("chiNo", "chi_cAIx", "parNo", "par_cAIx",
+			// 	child.getNumber(), child.getCompoundAtomIndex(),
+			// 	parent.getNumber(), parent.getCompoundAtomIndex());
+			// ceol;
 		#endif
 
 		// Set bBond Molmodel Compound::BondIndex
@@ -2460,7 +2462,7 @@ void Context::calc_Gmolmodel_Graph()
 
 
 		nofMols++;
-		internCoords.PrintRoot();
+		//internCoords.PrintRoot();
 		
 		// Compute the new molecule's BAT coordinates
 		internCoords.computeBAT( getAtoms() );

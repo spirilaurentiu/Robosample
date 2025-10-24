@@ -258,9 +258,9 @@ void InternalCoordinates::computeBAT(std::vector<bSpecificAtom>& bAtomList) {
 		angles.push_back({gparent, parent, child});
 		torsions.push_back({ggparent, gparent, parent, child});
 
-		std::cout << "BAT pushed "
-			<< ggparent << " " << gparent << " " << parent << " "   << child 
-		<< eol;
+		// std::cout << "BAT pushed "
+		// 	<< ggparent << " " << gparent << " " << parent << " "   << child 
+		// << eol;
 
 	}
 
