@@ -2,43 +2,49 @@
 
 #include <vector>
 #include "Simbody.h"
-#include "bSpecificAtom.hpp"
 #include "Topology.hpp"
-#include "InternalCoordinates.hpp"
+#include "TopologyElements.hpp"
 
 class Replica{
 public:
 	Replica(int index,
-			std::vector<bSpecificAtom>& atoms_,
+			std::vector<Atom>& atoms_,
 			std::vector<int>& roots_,
 			std::vector<Topology>& topologies_,
-            InternalCoordinates& internCoords_,
 			std::vector<std::vector<int>>& zMatrixTable_
 			) :
 			  atoms(atoms_)
 			, roots(roots_)
 			, topologies(topologies_)
-			, internCoords(internCoords_)
+			// , internCoords(internCoords_)
 			, zMatrixTable(zMatrixTable_)
 			, zMatrixBAT()
-	{}
+	{
+		for (const auto& t : topologies) {
+			for (const auto& a : t.getAtoms()) {
+				atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoords()));
+				WORK_atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoords()));
+			}
+		}
 
-	const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>& getAtomsLocationsInGround() const;
-	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& get_WORK_AtomsLocationsInGround() const;
+	}
+
+	const SimTK::Compound::AtomTargetLocations& getAtomsLocationsInGround() const;
+	const SimTK::Compound::AtomTargetLocations& get_WORK_AtomsLocationsInGround() const;
 
 	// Reserve memory and set values
-	void setAtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations);
+	void setAtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	// Reserve memory and set values
-	void set_WORK_AtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations);
+	void set_WORK_AtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	// This assumes allocation has been done already
-	void updAtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations);
+	void updAtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	// Transfers work coordinates into regular cooordinates
 	void updAtomsLocationsInGround_FromWORK();
 
-	void upd_WORK_AtomsLocationsInGround(const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>& otherAtomsLocations);
+	void upd_WORK_AtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 
 	SimTK::Real get_WORK_Jacobian() const;
@@ -107,14 +113,11 @@ public:
 	extractAtomTargets(
 		int topoIx,
 		const std::vector<std::vector<
-		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
+		std::pair<Atom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
 
 	// Function to find and return the value for a given AtomIndex
-	SimTK::Vec3
-	findAtomTarget(
-		const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
-		SimTK::Compound::AtomIndex searchIndex);
+	SimTK::Vec3 findAtomTarget(const SimTK::Compound::AtomTargetLocations& atomTargets, SimTK::Compound::AtomIndex searchIndex) const;
 
     void setZMatrixTable(const std::vector<std::vector<int>>& newZMatrixTable);
 
@@ -133,7 +136,7 @@ public:
 	// zmatrixbat_
 	void
 	calcZMatrixBAT(const std::vector< std::vector<
-	std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+	std::pair <Atom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations);
 
 	void calcZMatrixBAT_WORK(void);
@@ -175,8 +178,8 @@ private:
 	int myIndex = 0;
 
 	// Replica configurations
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> atomsLocations;
-	std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>> WORK_atomsLocations;
+	SimTK::Compound::AtomTargetLocations atomsLocations;
+	SimTK::Compound::AtomTargetLocations WORK_atomsLocations;
 
 	// Replica potential energy
 	SimTK::Real potential;
@@ -195,11 +198,11 @@ private:
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
-	std::vector<bSpecificAtom>& atoms;
+	std::vector<Atom>& atoms;
 
 	std::vector<int>& roots;
 	std::vector<Topology>& topologies;
-	InternalCoordinates& internCoords;
+	// InternalCoordinates& internCoords;
 
 	std::vector<std::vector<int>>& zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;

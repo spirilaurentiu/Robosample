@@ -122,7 +122,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		const SimTK::MobilizedBody* mobod1ptr = &mobod1;
 		
 		// Get quaternion from root atom
-		//bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
+		//Atom *root = &(bAtomList[bSpecificAtomRootIndex]);
 		//SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
 		//SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
 		//SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();

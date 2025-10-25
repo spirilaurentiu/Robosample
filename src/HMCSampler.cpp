@@ -1570,8 +1570,8 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 		//proj(U, V, W);
 
 		// Generate unit Von Mises Fisher around [1, 0, 0...]
-		vector<double> X;
-		vector<double> U;
+		std::vector<double> X;
+		std::vector<double> U;
 		X.resize(ndofs, 0.0);
 		U.resize(ndofs, 0.0);
 		double concentration = 100;
@@ -2788,10 +2788,10 @@ HMCSampler::calcMathJacobian(const SimTK::State& someState,
 	// Go through topologies
 	for(auto& topology : topologies){
 		// Go through atoms
-		for(const auto& AtomList : topology.subAtomList){
+		for(const auto& atom : topology.getAtoms()) {
 
 			// Get atom indeces in Compound and Simbody
-			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto aIx = atom.getCompoundAtomIndex();
 			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
 
 			// Get atom station on mobod
@@ -2827,10 +2827,10 @@ void HMCSampler::PrintUDot(const SimTK::State& someState)
 	// Go through topologies
 	for(auto& topology : topologies){
 		// Go through atoms
-		for(const auto& AtomList : topology.subAtomList){
+		for(const auto& atom : topology.getAtoms()) {
 
 			// Get atom indeces in Compound and Simbody
-			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto aIx = atom.getCompoundAtomIndex();
 			const auto mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
 
 			std::cout << "aix= " << aIx << "uDot=" << uDot[int(mbx)-1] << std::endl;
@@ -2859,10 +2859,10 @@ void HMCSampler::getCartesianMassMatrix(const SimTK::State& somestate,
 	// Go through topologies
 	for(auto& topology : topologies){
 		// Go through atoms
-		for(const auto& AtomList : topology.subAtomList){
+		for(const auto& atom : topology.getAtoms()) {
 			
 			// Get atom indeces in Compound and DuMM
-			const auto aIx = AtomList.getCompoundAtomIndex();
+			const auto aIx = atom.getCompoundAtomIndex();
 			const auto dAIx = topology.getDuMMAtomIndex(aIx);
 
 			// Put atom mass on the diagonal
@@ -3698,7 +3698,7 @@ void HMCSampler::adaptWorldBlocks(SimTK::State& someState){
 		//}
 
 		//std::cout << "Print by column: \n";
-		std::vector<std::vector<SimTK::Real>> QsBufferVec(nq, vector<SimTK::Real>(QsBufferSize));
+		std::vector<std::vector<SimTK::Real>> QsBufferVec(nq, std::vector<SimTK::Real>(QsBufferSize));
 		for(int qi = 0; qi < nq; qi++){
 
 			std::vector<SimTK::Real> thisQ(QsBufferSize);
@@ -4885,8 +4885,8 @@ Return the size of R -->
 std::size_t HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 {
 	for(const auto& topology : topologies){
-		for(const auto& AtomList : topology.subAtomList){
-			const auto aIx = AtomList.getCompoundAtomIndex();
+		for(const auto& atom : topology.getAtoms()) {
+			const auto aIx = atom.getCompoundAtomIndex();
 			const auto& atomR = topology.calcAtomLocationInGroundFrame(someState, aIx);
 			R.insert(R.end(), { atomR[0], atomR[1], atomR[2] });
 		}
@@ -4911,7 +4911,7 @@ std::size_t HMCSampler::pushCoordinatesInR(SimTK::State& someState)
 		}
 	} else {
 		std::cout << "integer overflow at " << __LINE__ << " in " << __FILE__ << std::endl;
-		throw exception();
+		throw std::exception();
 	}
 
 	return R.size();
@@ -4922,8 +4922,8 @@ Return the size of Rdot **/
 std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 {
 	for(const auto& topology : topologies){
-		for(const auto& AtomList : topology.subAtomList){
-			const auto aIx = AtomList.getCompoundAtomIndex();
+		for(const auto& atom : topology.getAtoms()) {
+			const auto aIx = atom.getCompoundAtomIndex();
 			const auto& atomRdot = topology.calcAtomVelocityInGroundFrame(someState, aIx);
 			Rdot.insert(Rdot.end(), { atomRdot[0], atomRdot[1], atomRdot[2] });
 		}
@@ -4949,7 +4949,7 @@ std::size_t HMCSampler::pushVelocitiesInRdot(SimTK::State& someState)
 		}
 	} else {
 		std::cout << "integer overflow at " << __LINE__ << " in " << __FILE__ << std::endl;
-		throw exception();
+		throw std::exception();
 	}
 
 	return Rdot.size();
@@ -6052,22 +6052,22 @@ double HMCSampler::studyBATScale(SimTK::State& someState)
 					if(parentMbx == 0){continue;} // Ground
 
 					// Get the neighbor atom in the parent mobilized body
-					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
+					SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParentOfMobodRootAtom(aIx, *matter, *dumm);
 
 					if(chemParentAIx < 0){continue;} // no parent ??
 
 					// Get Top frame
-					SimTK::Transform G_X_root = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(aIx);
+					SimTK::Transform G_X_root = topology.getTopLevelTransform() * topology.getTopTransform(aIx);
 
 					// Get Top to parent frame
 					const std::pair<int, SimTK::Compound::AtomIndex>& topoAtomPair = world->getMobodRootAtomIndex(parentMbx);
 					SimTK::Compound::AtomIndex parentMobodAIx = topoAtomPair.second;
 					SimTK::Compound::AtomIndex parentRootAIx = parentMobodAIx;
 					
-					SimTK::Transform G_X_Proot = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(parentRootAIx);
+					SimTK::Transform G_X_Proot = topology.getTopLevelTransform() * topology.getTopTransform(parentRootAIx);
 
 					// chemical parent atom
-					SimTK::Transform G_X_chemProot = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(chemParentAIx);
+					SimTK::Transform G_X_chemProot = topology.getTopLevelTransform() * topology.getTopTransform(chemParentAIx);
 
 					SimTK::Vec3 V3 = (~(G_X_root.R())) * G_X_root.p();
 					SimTK::Vec3 V2 = (~(G_X_root.R())) * G_X_chemProot.p();
@@ -6081,7 +6081,7 @@ double HMCSampler::studyBATScale(SimTK::State& someState)
 
 						chemGrandParentIx = topology.getInboardAtomIndex(chemParentAIx);
 
-						G_X_grand = topology.getTopLevelTransform() * topology.getTopTransform_FromMap(chemGrandParentIx);
+						G_X_grand = topology.getTopLevelTransform() * topology.getTopTransform(chemGrandParentIx);
 
 						SimTK::Vec3 V1 = (~(G_X_root.R())) * G_X_grand.p();
 
@@ -6187,7 +6187,7 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 
 			// Get the neighbor atom in the parent mobilized body
 			//std::cout << "HMCSampler::calcMobodsMBAT aIx " << int(aIx) << std::flush;
-			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
+			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParentOfMobodRootAtom(aIx, *matter, *dumm);
 			//std::cout << " chemParentAIx " << int(chemParentAIx) << std::endl << std::flush;
 
 			// Skip if no parent
@@ -6273,7 +6273,7 @@ double HMCSampler::calcMobodsBATJacobianDetLog_NEW(SimTK::State& someState)
 			if(parentMbx == 0) { continue; } // Ground
 
 			// Get the neighbor atom in the parent mobilized body
-			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm); // Victor bug fix
+			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParentOfMobodRootAtom(aIx, *matter, *dumm); // Victor bug fix
 
 			if (chemParentAIx.isValid() && chemParentAIx.isValidExtended()) {
 				if(chemParentAIx < 0) continue;

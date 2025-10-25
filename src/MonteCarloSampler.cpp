@@ -150,51 +150,54 @@ bool MonteCarloSampler::isUsingFixmanPotential() const
 
 // Compute Fixman potential (should have been calcDetMInv ??)
 SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
-    int nu = someState.getNU();
-    SimTK::Vector V(nu);
-
-    //for (int i=0; i < nu; ++i){
-    //   V[i] = i;
-    //}
-    system->realize(someState, SimTK::Stage::Position);
-    matter->realizeArticulatedBodyInertias(someState); // Move in calcDetM ?
-
-    // Get M
-    //SimTK::Matrix M(nu, nu);
-    //matter->calcM(someState, M);
-
-    // Get detM
-    SimTK::Vector DetV(nu);
-    SimTK::Real D0 = 1.0;
-
-    // TODO: remove the request for Dynamics stage cache in SImbody files
-    //std::cout << "MonteCarloSampler::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
-    matter->calcDetM(someState, V, DetV, &D0);
-
-    //std::cout << "FixmanTorque: " << "MonteCarloSampler::calcFixman logdetM: " << std::setprecision(10) << std::log(D0) << std::setprecision(2) << std::endl;
-    //std::cout << "MonteCarloSampler::calcFixman RT: " << RT << std::endl;
-    // ---- Verify with Eigen ----------
-    // Eigen M determinant
-    //Eigen::MatrixXd EiM(nu, nu);
-    //for(int i=0; i<nu; i++){
-    //    for(int j=0; j<nu; j++){
-    //        EiM(i, j) = M(i, j);
-    //    }
-    //}
-    //SimTK::Real EiDetM = EiM.determinant();
-    //std::cout << "EiDetM= " << EiDetM << std::endl;
-    assert(RT > SimTK::TinyReal);
-    //SimTK::Real result = 0.5 * RT * (((Topology *)rootTopology)->calcLogDetMBAT(someState) - std::log(D0));
-    SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal(someState) );
-    //SimTK::Real result = 0.5 * RT * std::log(D0);
-    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman 05kT logdetM: " << 0.5 * RT * std::log(D0) << std::endl;
-    //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)rootTopology)->calcLogDetMBATInternal_SP_NEW(someState) << std::endl;
-
-    if(SimTK::isInf(result)){
-        result = 0.0;
-    }
+    SimTK_ASSERT_ALWAYS(true, "MonteCarloSampler::calcFixman: Not implemented correctly yet.");
+    return 0;
     
-    return result;
+    // int nu = someState.getNU();
+    // SimTK::Vector V(nu);
+
+    // //for (int i=0; i < nu; ++i){
+    // //   V[i] = i;
+    // //}
+    // system->realize(someState, SimTK::Stage::Position);
+    // matter->realizeArticulatedBodyInertias(someState); // Move in calcDetM ?
+
+    // // Get M
+    // //SimTK::Matrix M(nu, nu);
+    // //matter->calcM(someState, M);
+
+    // // Get detM
+    // SimTK::Vector DetV(nu);
+    // SimTK::Real D0 = 1.0;
+
+    // // TODO: remove the request for Dynamics stage cache in SImbody files
+    // //std::cout << "MonteCarloSampler::calcFixman Stage: "<< matter->getStage(someState) << std::endl;
+    // matter->calcDetM(someState, V, DetV, &D0);
+
+    // //std::cout << "FixmanTorque: " << "MonteCarloSampler::calcFixman logdetM: " << std::setprecision(10) << std::log(D0) << std::setprecision(2) << std::endl;
+    // //std::cout << "MonteCarloSampler::calcFixman RT: " << RT << std::endl;
+    // // ---- Verify with Eigen ----------
+    // // Eigen M determinant
+    // //Eigen::MatrixXd EiM(nu, nu);
+    // //for(int i=0; i<nu; i++){
+    // //    for(int j=0; j<nu; j++){
+    // //        EiM(i, j) = M(i, j);
+    // //    }
+    // //}
+    // //SimTK::Real EiDetM = EiM.determinant();
+    // //std::cout << "EiDetM= " << EiDetM << std::endl;
+    // assert(RT > SimTK::TinyReal);
+    // //SimTK::Real result = 0.5 * RT * (((Topology *)rootTopology)->calcLogDetMBAT(someState) - std::log(D0));
+    // SimTK::Real result = 0.5 * RT * ( std::log(D0) - ((Topology *)rootTopology)->calcLogDetMBATInternal());
+    // //SimTK::Real result = 0.5 * RT * std::log(D0);
+    // //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman 05kT logdetM: " << 0.5 * RT * std::log(D0) << std::endl;
+    // //std::cout << std::setprecision(5) << std::fixed << "MonteCarloSampler::calcFixman -05kT logdetMBATi: " << -0.5 * RT * ((Topology *)rootTopology)->calcLogDetMBATInternal_SP_NEW(someState) << std::endl;
+
+    // if(SimTK::isInf(result)){
+    //     result = 0.0;
+    // }
+    
+    // return result;
 }
 
 // Compute Fixman potential numerically

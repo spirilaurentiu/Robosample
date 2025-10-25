@@ -1,13 +1,14 @@
 #include <Python.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-
 #include "Context.hpp"
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(MODULE_NAME, m) {
     m.doc() = "Robosample bindings";
+
+
 
     py::enum_<ROOT_MOBILITY>(m, "RootMobility")
         .value("FREE", ROOT_MOBILITY::FREE)
@@ -82,10 +83,31 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("j", &BOND_FLEXIBILITY::j)
         .def_readwrite("mobility", &BOND_FLEXIBILITY::mobility);
 
+    py::class_<Atom>(m, "Atom")
+        .def(py::init<>())
+        .def(py::init<int, int, int, SimTK::Real, SimTK::mdunits::Mass, SimTK::Real, SimTK::Real, const std::string&, int, SimTK::Real, SimTK::Real, SimTK::Real, const std::string&, bool>(),
+             py::arg("globalIndex"), py::arg("molIx"), py::arg("atomicNumber"), py::arg("charge"), py::arg("mass"), py::arg("vdw"), py::arg("lj"), py::arg("resName"), py::arg("resIx"), py::arg("x"), py::arg("y"), py::arg("z"), py::arg("name"), py::arg("root"))
+        .def("addNeighborGlobalIndex", &Atom::addNeighborGlobalIndex, "Add a neighboring atom's global index to this atom.")
+        .def("addInvolvedBondGlobalIndex", &Atom::addInvolvedBondGlobalIndex, "Add a bond's global index that involves this atom.");
+
+    py::class_<BondLink>(m, "BondLink")
+        .def(py::init<>())
+        .def(py::init<int, int, int, int, bool, SimTK::Real, SimTK::Real>(), 
+             py::arg("parentAtomGlobalIndex"), py::arg("childAtomGlobalIndex"), py::arg("bondGlobalIndex"), py::arg("moleculeIndex"), py::arg("ringClosing"), py::arg("forceK"), py::arg("forceEquil"));
+
+    py::class_<BondAngle>(m, "BondAngle")
+        .def(py::init<>())
+        .def(py::init<int, int, int, SimTK::Real, SimTK::Real>(), 
+             py::arg("firstGlobalIndex"), py::arg("secondGlobalIndex"), py::arg("thirdGlobalIndex"), py::arg("k"), py::arg("equil"));
+
+    py::class_<BondTorsion>(m, "BondTorsion")
+        .def(py::init<>())
+        .def(py::init<int, int, int, int, bool, const std::array<SimTK::Real, 4>&, const std::array<SimTK::Real, 4>&, const std::array<int, 4>&>(), 
+             py::arg("firstGlobalIndex"), py::arg("secondGlobalIndex"), py::arg("thirdGlobalIndex"), py::arg("fourthGlobalIndex"), py::arg("improper"), py::arg("k"), py::arg("phase"), py::arg("period"));
+
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t>())
         .def("addReplica", &Context::addReplica, "Add an empty replica to the context.")
-        .def("addReplicasAndLoadCoordinates", &Context::addReplicasAndLoadCoordinates, "Add a series of replicas from a directories containing rst7.")
         .def("addThermodynamicState", &Context::addThermodynamicState, "Add an empty themodynamic state to the context.")
         .def("Initialize", py::overload_cast<>(&Context::Initialize), "Initializes the context after all worlds and replicas have been set.")
         .def("RunREX", &Context::RunREX, "Run replica exchange.")

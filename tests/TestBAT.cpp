@@ -1,5 +1,4 @@
-#include "InternalCoordinates.hpp"
-#include "bSpecificAtom.hpp"
+#include "TopologyElements.hpp"
 #include "readAmberInput.hpp"
 #include "Context.hpp"
 
@@ -8,7 +7,7 @@
 
 class TEST_CONTEXT : public Context {
 public:
-    std::vector<bSpecificAtom> getAtoms() {
+    std::vector<Atom> getAtoms() {
         return atoms;
     }
 };

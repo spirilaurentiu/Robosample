@@ -45,54 +45,6 @@ enum class RUN_TYPE : int {
 	RENE
 };
 
-const std::vector<std::string> RUN_TYPE_Str = {"DEFAULT", "REMC", "RENEMC", "RENE"};
-
-const std::unordered_map<std::string, RUN_TYPE>
-RUN_TYPE_MAP{
-	{"DEFAULT", RUN_TYPE::DEFAULT},
-	{"REMC", RUN_TYPE::REMC},
-	{"RENEMC", RUN_TYPE::RENEMC},
-	{"RENE", RUN_TYPE::RENE}
-};
-
-const std::unordered_map<RUN_TYPE, std::string>
-RUN_TYPE_MAP_INV{
-	{RUN_TYPE::DEFAULT, "DEFAULT"},
-	{RUN_TYPE::REMC, "REMC"},
-	{RUN_TYPE::RENEMC, "RENEMC"},
-	{RUN_TYPE::RENE, "RENE"}
-};
-
-// struct ROBO_ATOM {
-// 	size_t prmtopIndex = 0; // Index in the prmtop file
-
-// };
-
-// class BOND {
-// public:
-// };
-
-//==============================================================================
-//                           CLASS Context
-//==============================================================================
-/** 
- * This defines the Context class.
- 
-Topology 0:                                                      :       
-          :                                                      :
-Position 0:                                                      :
-          :          ┌─────────────────────────┐                 :
-                     │                         │                 :
-                     │       INITIALIZE        │                 :
-                     │                         │                 :
-                     └────────────┬────────────┘                 : 
-                                  │                              :
-                                  │                              :
-                            ┌─────▼─────┐                        :
-                            │    RUN    │                        :     
-                            └─────┬─────┘                        :
-                                  │                              :
-**/
 class Context{
 
     /** @name Constructor **/
@@ -116,246 +68,26 @@ public:
 	 * @param nofRoundsTillReblock Number of rounds until reblocking.
 	 * @param runType Type of simulation to run.
 	*/
-	Context(const std::string& baseName, 
-			uint32_t seed,
-			uint32_t threads,
-			uint32_t nofRoundsTillReblock,
-			RUN_TYPE runType,
-			uint32_t swapFreq,
-			uint32_t swapFixmanFreq);
-
-	/**
-	 * @brief Print atom's Compound and DuMM indexes.
-	*/
-	void PrintAtomsDebugInfo(void);
+	Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq);
 
 	void setVerbose(bool verbose);
-
-    /** @name System and simulation setup.
-	 * 1. Read input file.
-	 * 2. Read Amber files and construct topologies.
-	 * 3. Add worlds.
-	 * 4. Add samplers to worlds.
-	 * 5. Read REX input and build replicas/thermostates. **/
-    /**@{**/
-
-	/**	
-	* @brief Read input file.
-	* @param var
-	* @return
-	*/
+	void setNumThreads(int threads);
+	void setGBSA(SimTK::Real globalScaleFactor);
+	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
 	bool setOutput(const std::string& outDir);
-	bool CheckInputParameters(const SetupReader& setupReader);
-	std::string GetMoleculeDirectoryShort(const std::string& path) const;
 	
 	void setNofRoundsTillReblock(int nofRoundsTillReblock);
 	void setRequiredNofRounds(int argNofRounds);
 
 	void setNonbonded(int method, SimTK::Real cutoff);
 
-	RUN_TYPE getRunType(void) const;
-	void setRunType(RUN_TYPE runTypeArg);
-	RUN_TYPE setRunType(const std::string& runTypeArgStr);
+	std::vector<TopologyRange> findMoleculeRnages() const;
 
+	void loadAmberSystem(const std::vector<int>& inRoots, const std::vector<Atom>& inAtoms, const std::vector<BondLink>& inBonds, const std::vector<BondAngle>& inAngles, const std::vector<BondTorsion>& inTorsions);
 
-
-	/**	
-	* @brief Read Amber files.
-	* @param var
-	*/
-	void loadAmberSystem(const std::string& prmtop, const std::string& inpcrd);
-
-	/**
-	 * @brief Set Molmodel atom masses from out list of atoms
-	*/
-	void setAtomMasses();
-
-	/**
-	 * @brief Calc Z matrix and BAT load replicas and nonequil
-	*/
 	void Initialize();
 
-	/**	
-	* @brief Construct topologies.
-	* @param var
-	*/
-
-
-	//void constructTopologies
-
-	/**	
-	* @brief Add worlds.
-	* @param var
-	* @return
-	*/
-
- 	std::vector<BOND_FLEXIBILITY>& readFlexibility(
-		std::string flexFileFN,
-		std::vector<BOND_FLEXIBILITY>& flexibilities);
-		
-	void addWorld(
-		bool fixmanTorque,
-		int samplesPerRound,
-		ROOT_MOBILITY rootMobility,
-		const std::vector<BOND_FLEXIBILITY>& flexibilities,
-		bool useOpenMM = true,
-		bool visual = false,
-		SimTK::Real visualizerFrequency = 0);
-
-	/**
-	 * @brief Load coordinates into atoms, add replicas and pass coordinates.
-	 * @param prmtop Amber prmtop file.
-	 * @param restartDir Restart directory.
-	 * @param nofReplicas Number of replicas.
-	*/
-	bool addReplicasAndLoadCoordinates(const std::string& prmtop, const std::string& restartDir, int nofReplicas);
-
-	/**	
-	* @brief
-		* Initialize Context 
-		* 1.  Setup general input-output parameters
-		* 2.  Construct topologies based on what's read from an AmberReader
-		* 3.  Add Worlds 
-		* 4.  Add contacts: (Add membrane)
-		* 5.  Add samplers
-		* 6.  Replica exchange setup
-		* 7.  Non-equilibrium setup
-		* 8.  BAT and Z-matrix
-		* 9.  Binding site
-		* 10. Geometry calculations
-		* 11  Task spaces
-		* 12. Constraints
-	* @param filename input file name
-	* @return succes of the function
-	*/	
-	bool initializeFromFile(const std::string& filename);
-
-
-	/**@}**/
-
-
-	void setNumThreads(int threads);
-	void setGBSA(SimTK::Real globalScaleFactor);
-	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
-
-	//void setRootMobilitiesFromFlexFiles(void);
-
-	// Input functions
-	bool loadTopologyFile(std::string topologyFilename);
-	bool loadCoordinatesFile(std::string coordinatesFilename);
-	void PrintCoordinates(const std::vector<std::vector
-        <std::pair <bSpecificAtom *,
-		SimTK::Vec3>>>& atomsLocations);
-
-	bool loadRigidBodiesSpecs(std::size_t whichWorld, int whichMolecule, std::string RBSpecsFN);
-	bool loadFlexibleBondsSpecs(std::size_t whichWorld, std::string FlexSpecsFN);
-	void setRegimen (std::size_t whichWorld, int whichMolecule, std::string regimen);
-
-	/** Load molecules based on loaded filenames. One molecule
-	creates a topology object and based on amberReader forcefield
-	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
-	void AddMolecules(
-		int requestedNofMols,
-		SetupReader& setupReader
-		//std::vector<std::string> argRoots,
-		//std::vector<std::string> argRootMobilities
-	);
-
-	// ============================================================================
-	// ============================================================================
-	// ==========================   SINGLE PRMTOP    ==============================
-	// ============================================================================
-	// ============================================================================
-
-	/**  */
-	void setRootAtom(Topology& topology, int molIx);
-
-	/**  */
-	void load_BONDS_to_bonds(const std::vector<std::vector<BOND>>& BATbonds);
-
-	/** If bonds are resorted */
-	void reset_BONDS_to_bonds(const std::vector<std::vector<BOND>>& BATbonds);
-
-	/**  */
-	void buildAcyclicGraph(
-		Topology& topology,
-		int rootAmberIx,
-		int molIx);
-
-	void closeARingWithThisBond(Topology& topology, bBond& bond, int molIx);
-
-	/**  */
-	void addRingClosingBonds(
-		Topology& topology,
-		int rootAmberIx,
-		int molIx
-	);
-
-	void addRingClosingBonds_All(void);
-
-	/**  */
-	void generateSubAtomLists(void);
-
-	/**  */
-	void generateSubBondLists(void);
-
-	/** Pass Context topologies to all the worlds */
-	void passTopologiesToWorlds(void);
-
-	/**  */
-	void new_build_GmolGraph_MolmodelAcyclicGraph(); // TODO delete
-
-	/**	
-	* @brief Calculate BAT graphs
-	*/
-	void calc_Gmolmodel_Graph();
-
-	/**	
-	* @brief Build Molmodel Compound / graphs
-	*/
-	void build_Molmodel_AcyclicGraphs();
-
-
-	/** @brief __fill__ */
-	void generateTopologiesSubarrays(void);
-
-	/** Assign Compound coordinates by matching bAtomList coordinates */
-	void matchDefaultConfigurationFromAtomsCoords(Topology& topology, int molIx);
-
-	void matchDefaultConfiguration(int molIx, std::map<Compound::AtomIndex, SimTK::Vec3> atomTargets){assert(!"Not implemented");}
-
-	/** Match Compounds configurations to atoms Cartesian coords */
-	void matchDefaultConfigurations(void);
-
-	// ------------- PARAMETERS -------------
-
-	/** Long print of all atoms properties */
-	void PrintAtoms(void);
-
-	/** It calls DuMMs defineAtomClass. These Molmodel functions contain
-	information regarding the force field parameters. **/
-	void updDummAtomClasses(
-		std::map<AtomClassParams, AtomClassId>& aClassParams2aClassId
-		, int worldIx		
-	);
-
-	bool checkBond(int a1, int a2);
-
-	// ---------
-	/** Set all flexibilities for all the worlds to Rigid. */
-	void initializeFlexibility(void);
-
-	/** Set flexibilities. */
-	void setFlexibility(
-		std::string argRegimen,
-		std::string flexFN,
-		int whichWorld);
-
-	void modelOneEmbeddedTopology(int whichTopology,
-		int whichWorld
-		//,std::string rootMobilizer
-		);
-	// ---------
+	void addWorld(bool fixmanTorque, int samplesPerRound, ROOT_MOBILITY rootMobility, const std::vector<BOND_FLEXIBILITY>& flexibilities, bool useOpenMM = true, bool visual = false, SimTK::Real visualizerFrequency = 0);
 
 	// Add task spaces
 	void addTaskSpacesLS(void);
@@ -420,60 +152,23 @@ public:
 
 	// TRANSFER ============================================================
 
-	SimTK::State&
-	setAtoms_CompoundsAndDuMM(
-		int destWIx,
-		SimTK::State& someState,
-		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
-			otherWorldsAtomsLocations);
+	SimTK::State& setAtoms_CompoundsAndDuMM(int destWIx, SimTK::State& someState, const SimTK::Compound::AtomTargetLocations& atomTargets);
 
-	SimTK::State&
-	setAtoms_XPF_XBM(
-		int wIx
-	);
+	void setAtoms_XPF_XBM(int wIx);
 
 	SimTK::State&
 	setAtoms_MassProperties(
 		int wIx
 	);
 
-	SimTK::Transform
-	calc_XFM(
-		int wIx,
-		Topology& topology,	
-		SimTK::Compound::AtomIndex& childAIx,
-		SimTK::Compound::AtomIndex& parentAIx,
-		SimTK::BondMobility::Mobility mobility,
-		const SimTK::State& someState) const;
+	SimTK::Transform calc_XFM(int wIx, const Topology& topology, SimTK::Compound::AtomIndex& childAIx, SimTK::Compound::AtomIndex& parentAIx, SimTK::BondMobility::Mobility mobility, const SimTK::State& someState) const;
 
 	SimTK::State&
 	setAtoms_XFM(
 		int wIx,
 		SimTK::State& someState);
 
-	std::vector<SimTK::Transform>
-	calc_XPF_XBM(
-		int wIx,
-		Topology& topology,
-		SimTK::Compound::AtomIndex& childNo,
-		SimTK::Compound::AtomIndex& parentNo,
-		SimTK::BondMobility::Mobility mobility,
-		const SimTK::State& someState
-	);
-
-	SimTK::State&
-	setAtoms_SP_NEW(
-		int destWIx,
-		SimTK::State& someState,
-		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> &
-			otherWorldsAtomsLocations);
-
-	SimTK::Compound::AtomIndex
-	getChemicalParent_IfIAmRoot(
-		int wIx,
-		int atomNo,
-		SimTK::DuMMForceFieldSubsystem &dumm
-	);
+	SimTK::State& setAtoms_SP_NEW(int destWIx, SimTK::State& someState, const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	// X axis to Z axis switch
 	const SimTK::Transform X_to_Z 
@@ -495,15 +190,7 @@ public:
 	// Drilling drl
 	void passThroughBonds_template(int whichWorld);
 
-	// Go through all the worlds and generate samples
-	void RunOneRound(void);
-	void Run(int howManyRounds, SimTK::Real Ti, SimTK::Real Tf);
-
-	SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector,
-		int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
-
-	/** Print the number of threads each World got **/
-	void PrintNumThreads();
+	SimTK::Real Pearson(std::vector<std::vector<SimTK::Real>> someVector, int QIx1, int QIx2); // 2D roundsTillReblock; 3D nofQs
 
 	//------------
 
@@ -522,9 +209,6 @@ public:
 	// --- Output ---
 	void printThermodynamics(void);
 	void printStatus(void);
-
-	// Print Molmodel related information
-	void PrintMolmodelAndDuMMTypes(void);
 
 	// Print DuMM atoms stations in mobilized body frame
 	void checkAtomStationsThroughDumm(void);
@@ -551,7 +235,6 @@ public:
 	*/
 	void writeInitialPdb(void);
 	void writeFinalPdb(void);
-	void writePdb(std::size_t whichWorld);
 	void writePdbs(int someIndex, int thermodynamicStateIx = 0);
 
 	// Output helpers
@@ -664,11 +347,6 @@ public:
 	const int getSwapEvery(void);
 	void setSwapEvery(const int& n);
 
-	// StartingFrom argument is for alternating odd and even neighbors
-	void mixNeighboringReplicas(unsigned int startingFrom);
-
-	// Mix replicas
-	void mixAllReplicas(int nSwapAttempts);
 	void mixReplicas(int mixi);
 
 	// ========================================================================
@@ -760,11 +438,6 @@ public:
 	*/
 	void RunREX(int equilRounds, int prodRounds);
 
-	void Run();
-
-	/**@}**/
-
-
 	void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
 
 	// Transfer Q statistics
@@ -782,10 +455,6 @@ public:
 	/////     TEST FUNCTIONS     /////
 	//////////////////////////////////
 	void areAllDuMMsTheSame(void);
-
-	void PrintBond(bBond& bond);
-	void PrintBonds(void);
-	int checkBonds(void);
 
 	// Transformers
 	void Print_TRANSFORMERS_Work(void);
@@ -820,9 +489,7 @@ public:
 	*/ 
 	std::string OMMRef_initialize(void);
 
-	SimTK::Real OMMRef_calcPotential(
-		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>> & atomsLocations,
-		bool wantEnergy, bool wantForces);
+	SimTK::Real OMMRef_calcPotential(const SimTK::Compound::AtomTargetLocations& atomTargets, bool wantEnergy, bool wantForces);
 
 private:
 
@@ -850,36 +517,16 @@ private:
 	std::vector<AmberReader> amberReader;
 
 	std::vector<int> worldIndexes;
-	// Molecules files
-	std::vector<std::string> topFNs;
-	std::vector<std::string> crdFNs;
-	std::vector<std::vector<std::string>> rbSpecsFNs;
-	std::vector<std::vector<std::string>> flexSpecsFNs;
-	std::vector<std::vector<std::string>> regimens;
 	std::vector<std::vector<std::string>> rootMobilitiesStr;
 
-	// Nof molecules
 	int moleculeCount = -1;
-
-	// Molecules (topologies<-Compounds) objects
-	//std::vector<bMoleculeReader *> moleculeReaders;
-	std::vector<Topology> topologies;
-	std::vector<int> roots;
-	//std::vector<std::string> rootMobilities;
-	InternalCoordinates internCoords;
-
-	// WORLD END
 
 	// Simulation parameters
 	int requiredNofRounds = -1;
 	int nofRounds = -1;
-	//int total_mcsteps;
 
 	std::size_t nofWorlds = 0;
 	bool isWorldsOrderRandom = false;
-
-	std::size_t nofMols = 0;
-	std::size_t nofEmbeddedTopologies = 0; // nofWorlds x nofMols
 
 	int pdbRestartFreq = false;
 	int printFreq = -1;
@@ -954,43 +601,17 @@ private:
 	SimTK::Real tempIni = 0,
 		tempFin = 0;
 
-	SetupReader setupReader;
+	// SetupReader setupReader;
 
-	int natoms = std::numeric_limits<int>::min();
-	std::vector<bSpecificAtom> atoms;
+	std::vector<Atom> atoms;
+	std::vector<BondLink> bonds;
+	std::vector<BondAngle> angles;
+	std::vector<BondTorsion> torsions;
+	int numMolecules = 0;
 
-	// Every molecule has an array_view for atoms and bonds
-	std::vector<array_view<std::vector<bSpecificAtom>::iterator>>
-		subAtomLists;
-	std::vector<array_view<std::vector<bBond>::iterator>>
-		subBondLists;
-
+	std::vector<Topology> topologies;
+	std::vector<int> roots;
 	
-	int nbonds = std::numeric_limits<int>::min();
-	std::vector<bBond> bonds;
-	std::vector<std::vector<int>> BONDS_to_bonds; // correspondence
-	std::vector<std::pair<int, int>> bonds_to_BONDS;
-
-	std::vector<DUMM_ANGLE> dummAngles;
-	std::vector<DUMM_TORSION> dummTorsions;
-	
-	ELEMENT_CACHE elementCache;
-
-	std::vector<int> findMolecules(const AmberReader& reader);
-
-	void loadAtomsCoordinates(const std::string& prmtop, const std::string& inpcrdFN);
-	
-	void loadAtoms(const AmberReader& reader);
-	void loadBonds(const AmberReader& reader);
-	void loadAngles(const AmberReader& reader);
-	void loadTorsions(const AmberReader& reader);
-
-	void setAtomsCompounds();
-	void addBiotypes();
-	std::vector<bSpecificAtom>& getAtoms() {
-        return atoms;
-    }
-
 	uint32_t seed = 0;
 	int numThreads = 0;
 	int nonbondedMethod = 0; // 0 = NoCutoff, 1 = CutoffNonPeriodic, 2 = CutoffPeriodic .. TODO: implement enum
@@ -1152,7 +773,7 @@ private:
 	*/
 	void calcZMatrixBAT(int wIx,
 		const std::vector< std::vector<
-			std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+			std::pair <Atom *, SimTK::Vec3 > > >&
 				otherWorldsAtomsLocations);
 
 	/**	

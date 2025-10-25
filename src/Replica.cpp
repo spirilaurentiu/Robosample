@@ -1,87 +1,32 @@
 #include "Replica.hpp"
 
 // Get coordinates from this replica
-const std::vector<std::vector<std::pair <bSpecificAtom*, SimTK::Vec3>>>&
-	Replica::getAtomsLocationsInGround() const
+const SimTK::Compound::AtomTargetLocations& Replica::getAtomsLocationsInGround() const
 {
-
 	return atomsLocations;
 }
 
 // Get coordinates from this replica
-const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
-	Replica::get_WORK_AtomsLocationsInGround() const
+const SimTK::Compound::AtomTargetLocations& Replica::get_WORK_AtomsLocationsInGround() const
 {
 	return WORK_atomsLocations;
 }
 
 // Set the coordinates of this replica
-// Also allocate memory
-void Replica::setAtomsLocationsInGround(
-	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
-		otherAtomsLocations)
-{
-	for (auto& topology : otherAtomsLocations){
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
-		currentTopologyInfo.reserve(topology.size());
-
-		for(auto& otherAtom : topology){
-			bSpecificAtom* batom = otherAtom.first;
-			SimTK::Vec3 location = otherAtom.second;
-			std::pair<bSpecificAtom*, SimTK::Vec3> atomLocationPair(batom, location);
-			currentTopologyInfo.push_back(atomLocationPair);
-		}
-
-		atomsLocations.emplace_back(currentTopologyInfo);
-	}
-
-	//atomsLocations = otherAtomsLocations;
+void Replica::setAtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets) {
+	atomsLocations = atomTargets;
 }
 
 // Set the coordinates of this replica
 // Also allocate memory
-void Replica::set_WORK_AtomsLocationsInGround(
-	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
-		otherAtomsLocations)
-{
-	for (auto& topology : otherAtomsLocations){
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>> currentTopologyInfo;
-		currentTopologyInfo.reserve(topology.size());
-
-		for(auto& otherAtom : topology){
-			bSpecificAtom* batom = otherAtom.first;
-			SimTK::Vec3 location = otherAtom.second;
-			std::pair<bSpecificAtom*, SimTK::Vec3> atomLocationPair(batom, location);
-			currentTopologyInfo.push_back(atomLocationPair);
-		}
-
-		WORK_atomsLocations.emplace_back(currentTopologyInfo);
-	}
+void Replica::set_WORK_AtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets) {
+	WORK_atomsLocations = atomTargets;
 }
 
 // Update the coordinates of this replica
-void Replica::updAtomsLocationsInGround(
-	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
-		otherAtomsLocations)
+void Replica::updAtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets)
 {
-	int i = -1;
-	for (auto& topology : otherAtomsLocations){
-		i += 1;
-
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>& myTopology =
-			atomsLocations[i];
-
-		int j = -1;
-		for(auto& otherAtom : topology){
-			j += 1;
-
-			std::pair<bSpecificAtom *, SimTK::Vec3>& myAtom = myTopology[j];
-
-			myAtom.first  = otherAtom.first;
-			myAtom.second = otherAtom.second;
-
-		}
-	}
+	atomsLocations = atomTargets;
 }
 
 void Replica::updAtomsLocationsInGround_FromWORK()
@@ -95,27 +40,9 @@ void Replica::updAtomsLocationsInGround_FromWORK()
 }
 
 // Update the coordinates of this replica
-void Replica::upd_WORK_AtomsLocationsInGround(
-	const std::vector<std::vector<std::pair <bSpecificAtom *, SimTK::Vec3>>>&
-		otherAtomsLocations)
+void Replica::upd_WORK_AtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets)
 {
-	int i = -1;
-	for (auto& topology : otherAtomsLocations){
-		i += 1;
-
-		std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>& myTopology =
-			WORK_atomsLocations[i];
-
-		int j = -1;
-		for(auto& otherAtom : topology){
-			j += 1;
-
-			std::pair<bSpecificAtom *, SimTK::Vec3>& myAtom = myTopology[j];
-
-			myAtom.first  = otherAtom.first;
-			myAtom.second = otherAtom.second;
-		}
-	}
+	WORK_atomsLocations = atomTargets;
 }
 
 SimTK::Real Replica::get_WORK_PotentialEnergy_New() const {
@@ -218,42 +145,44 @@ void Replica::Print() const {
 
 void Replica::PrintCoordinates() const
 {
-	for(auto& topology : atomsLocations) {
-		for(auto& atomCoordinates : topology) {
-			std::cout
-			//<< (atomCoordinates.first)->inName
-			<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
-			<< atomCoordinates.second[0] << " "
-			<< atomCoordinates.second[1] << " "
-			<< atomCoordinates.second[2] << std::endl;
-		}
-	}
+	SimTK_ASSERT_ALWAYS(true, "Replica::PrintCoordinates not implemented yet.");
+
+	// for(auto& topology : atomsLocations) {
+	// 	for(auto& atomCoordinates : topology) {
+	// 		std::cout
+	// 		//<< (atomCoordinates.first)->inName
+	// 		<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
+	// 		<< atomCoordinates.second[0] << " "
+	// 		<< atomCoordinates.second[1] << " "
+	// 		<< atomCoordinates.second[2] << std::endl;
+	// 	}
+	// }
 }
 
 void Replica::Print_WORK_Coordinates() const
 {
-	for(auto& topology : WORK_atomsLocations) {
-		for(auto& atomCoordinates : topology) {
-			std::cout
-			//<< (atomCoordinates.first)->inName
-			<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
-			<< atomCoordinates.second[0] << " "
-			<< atomCoordinates.second[1] << " "
-			<< atomCoordinates.second[2] << std::endl;
-		}
-	}
+	SimTK_ASSERT_ALWAYS(true, "Replica::Print_WORK_Coordinates not implemented yet.");
+
+	// for(auto& topology : WORK_atomsLocations) {
+	// 	for(auto& atomCoordinates : topology) {
+	// 		std::cout
+	// 		//<< (atomCoordinates.first)->inName
+	// 		<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
+	// 		<< atomCoordinates.second[0] << " "
+	// 		<< atomCoordinates.second[1] << " "
+	// 		<< atomCoordinates.second[2] << std::endl;
+	// 	}
+	// }
 }
 
 std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replica::getCoordinates() const {
 	
 	std::vector<double> x, y, z;
 
-	for (const auto& topology : atomsLocations) {
-		for(auto& atomCoordinates : topology) {
-			x.push_back(atomCoordinates.second[0]);
-			y.push_back(atomCoordinates.second[1]);
-			z.push_back(atomCoordinates.second[2]);
-		}
+	for (const auto& locations : atomsLocations) {
+		x.push_back(locations.second[0]);
+		y.push_back(locations.second[1]);
+		z.push_back(locations.second[2]);
 	}
 
 	return std::make_tuple(x, y, z);
@@ -265,40 +194,41 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replic
  * Write coordinates to a rst7 file
 */
 void Replica::WriteRst7(std::string FN) const
-
 {
-	FILE *File = fopen(FN.c_str(), "w+");
+	SimTK_ASSERT_ALWAYS(true, "Replica::WriteRst7 not implemented yet.");
 
-	int Natoms = 0;
-	for(auto& topology : atomsLocations){
-		Natoms += topology.size();
-	}
+	// FILE *File = fopen(FN.c_str(), "w+");
 
-	fprintf(File, "TITLE: Created by Robosample with %d atoms\n", Natoms);
-	fprintf(File, "%6d\n", Natoms);
+	// int Natoms = 0;
+	// for(auto& topology : atomsLocations){
+	// 	Natoms += topology.size();
+	// }
 
-	int atomCnt = -1;
-	for(auto& topology : atomsLocations){
-		for(auto& atomCoordinates : topology){
-			++atomCnt;
-			fprintf(File, "%12.7f%12.7f%12.7f", 
-				atomCoordinates.second[0] * 10.0,
-				atomCoordinates.second[1] * 10.0,
-				atomCoordinates.second[2] * 10.0);
+	// fprintf(File, "TITLE: Created by Robosample with %d atoms\n", Natoms);
+	// fprintf(File, "%6d\n", Natoms);
 
-			if(atomCnt % 2 == 1){
-				fprintf(File, "\n");
-			}
+	// int atomCnt = -1;
+	// for(auto& topology : atomsLocations){
+	// 	for(auto& atomCoordinates : topology){
+	// 		++atomCnt;
+	// 		fprintf(File, "%12.7f%12.7f%12.7f", 
+	// 			atomCoordinates.second[0] * 10.0,
+	// 			atomCoordinates.second[1] * 10.0,
+	// 			atomCoordinates.second[2] * 10.0);
 
-		}
-	}
+	// 		if(atomCnt % 2 == 1){
+	// 			fprintf(File, "\n");
+	// 		}
 
-	if(atomCnt % 2 == 0){
-		fprintf(File, "\n");
-	}
+	// 	}
+	// }
 
-	fflush(File);
-	fclose(File);
+	// if(atomCnt % 2 == 0){
+	// 	fprintf(File, "\n");
+	// }
+
+	// fflush(File);
+	// fclose(File);
 }
 
 /**
@@ -306,33 +236,35 @@ void Replica::WriteRst7(std::string FN) const
  */
 void Replica::PrintRst7(void) const
 {
-	int Natoms = 0;
-	for(auto& topology : atomsLocations){
-		Natoms += topology.size();
-	}
+	SimTK_ASSERT_ALWAYS(true, "Replica::PrintRst7 not implemented yet.");
 
-	printf("TITLE: Created by Robosample with %d atoms\n", Natoms);
-	printf("%6d\n", Natoms);
+	// int Natoms = 0;
+	// for(auto& topology : atomsLocations){
+	// 	Natoms += topology.size();
+	// }
 
-	int atomCnt = -1;
-	for(auto& topology : atomsLocations){
-		for(auto& atomCoordinates : topology){
-			++atomCnt;
-			printf("%12.7f%12.7f%12.7f", 
-				atomCoordinates.second[0],
-				atomCoordinates.second[1],
-				atomCoordinates.second[2]);
+	// printf("TITLE: Created by Robosample with %d atoms\n", Natoms);
+	// printf("%6d\n", Natoms);
 
-			if(atomCnt % 2 == 1){
-				printf("\n");
-			}
+	// int atomCnt = -1;
+	// for(auto& topology : atomsLocations){
+	// 	for(auto& atomCoordinates : topology){
+	// 		++atomCnt;
+	// 		printf("%12.7f%12.7f%12.7f", 
+	// 			atomCoordinates.second[0],
+	// 			atomCoordinates.second[1],
+	// 			atomCoordinates.second[2]);
 
-		}
-	}
+	// 		if(atomCnt % 2 == 1){
+	// 			printf("\n");
+	// 		}
 
-	if(atomCnt % 2 == 0){
-		printf("\n");
-	}
+	// 	}
+	// }
+
+	// if(atomCnt % 2 == 0){
+	// 	printf("\n");
+	// }
 
 }
 
@@ -355,27 +287,25 @@ void
 Replica::extractAtomTargets(
 	int topoIx,
 	const std::vector<std::vector<std::pair
-		<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
+		<Atom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
 )
 {
-	std::cout << "Replica::extractAtomTargets" << std::endl;
-	for(std::size_t j = 0; j < otherWorldsAtomsLocations[topoIx].size(); j++){
-		auto atomIndex = otherWorldsAtomsLocations[topoIx][j].first->getCompoundAtomIndex();
-		auto location = otherWorldsAtomsLocations[topoIx][j].second;
-		atomTargets.insert(std::make_pair(atomIndex, location));
-	}
+	SimTK_ASSERT_ALWAYS(true, "Replica::extractAtomTargets not implemented yet.");
+
+	// std::cout << "Replica::extractAtomTargets" << std::endl;
+	// for(std::size_t j = 0; j < otherWorldsAtomsLocations[topoIx].size(); j++){
+	// 	auto atomIndex = otherWorldsAtomsLocations[topoIx][j].first->getCompoundAtomIndex();
+	// 	auto location = otherWorldsAtomsLocations[topoIx][j].second;
+	// 	atomTargets.insert(std::make_pair(atomIndex, location));
+	// }
 }
 
 /*!
  * <!--	zmatrixbat_ Function to find and return the value for a given 
  * AtomIndex -->
 */
-SimTK::Vec3
-Replica::findAtomTarget(
-	const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
-	SimTK::Compound::AtomIndex searchIndex)
-{
+SimTK::Vec3 Replica::findAtomTarget(const SimTK::Compound::AtomTargetLocations& atomTargets, SimTK::Compound::AtomIndex searchIndex) const {
 	auto it = atomTargets.find(searchIndex);
 
 	if (it != atomTargets.end()) {
@@ -451,76 +381,71 @@ void
 Replica::calcZMatrixBAT_WORK(void)
 {
 
-	// Iterate molecules
-	int allCnt = 0;
+	// // Iterate molecules
+	// int allCnt = 0;
 
-	int topoIx = 0;
+	// int topoIx = 0;
 
-	// Get locations of this molecule
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
-	for (int i = 0; i < topologies.size(); i++) {
-		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> temp;
-		extractAtomTargets(i, get_WORK_AtomsLocationsInGround(), temp);
-		atomTargets.insert(temp.begin(), temp.end());
-	}
+	// // Get locations of this molecule
+	// const std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets = get_WORK_AtomsLocationsInGround();
 
-	int rowCnt = 0;
-	SimTK::Real bondLength, bondBend, bondTorsion;
-	for (const auto& row : zMatrixTable) {
+	// int rowCnt = 0;
+	// SimTK::Real bondLength, bondBend, bondTorsion;
+	// for (const auto& row : zMatrixTable) {
 		
-		bondLength = SimTK::NaN;
-		bondBend = SimTK::NaN;
-		bondTorsion = SimTK::NaN;
+	// 	bondLength = SimTK::NaN;
+	// 	bondBend = SimTK::NaN;
+	// 	bondTorsion = SimTK::NaN;
 
-		SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
+	// 	SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
 		
-		// Calculate bond length
-		a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
-		a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
-		SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
-		SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
+	// 	// Calculate bond length
+	// 	a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
+	// 	a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
+	// 	SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
+	// 	SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
 
-		SimTK::Vec3 v_a0a1 = a0loc - a1loc;
-		SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
+	// 	SimTK::Vec3 v_a0a1 = a0loc - a1loc;
+	// 	SimTK::Real bondLength = std::sqrt(SimTK::dot(v_a0a1, v_a0a1));
 
-		if(row[2] >= 0){
+	// 	if(row[2] >= 0){
 
-			SimTK::Compound::AtomIndex a2_cAIx;
-			a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
-			SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
+	// 		SimTK::Compound::AtomIndex a2_cAIx;
+	// 		a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
+	// 		SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
 
-			// Calculate angle
-			UnitVec3 v1(v_a0a1);
-			UnitVec3 v2(a2loc - a1loc);
+	// 		// Calculate angle
+	// 		SimTK::UnitVec3 v1(v_a0a1);
+	// 		SimTK::UnitVec3 v2(a2loc - a1loc);
 
-			Real dotProduct = SimTK::dot(v1, v2);
-			assert(dotProduct < 1.1);
-			assert(dotProduct > -1.1);
-			if (dotProduct > 1.0) dotProduct = 1.0;
-			if (dotProduct < -1.0) dotProduct = -1.0;
-			bondBend = std::acos(dotProduct);
+	// 		SimTK::Real dotProduct = SimTK::dot(v1, v2);
+	// 		assert(dotProduct < 1.1);
+	// 		assert(dotProduct > -1.1);
+	// 		if (dotProduct > 1.0) dotProduct = 1.0;
+	// 		if (dotProduct < -1.0) dotProduct = -1.0;
+	// 		bondBend = std::acos(dotProduct);
 
-			if(row[3] >= 0){
-				SimTK::Compound::AtomIndex
-					a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
-				SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
+	// 		if(row[3] >= 0){
+	// 			SimTK::Compound::AtomIndex
+	// 				a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
+	// 			SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
 
-				bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
-			}
+	// 			bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
+	// 		}
 
-		} // angle
+	// 	} // angle
 		
-		setZMatrixBATValue(rowCnt, 0, bondLength);
-		setZMatrixBATValue(rowCnt, 1, bondBend);
-		setZMatrixBATValue(rowCnt, 2, bondTorsion);
+	// 	setZMatrixBATValue(rowCnt, 0, bondLength);
+	// 	setZMatrixBATValue(rowCnt, 1, bondBend);
+	// 	setZMatrixBATValue(rowCnt, 2, bondTorsion);
 
-		if(row[3] == -2){
-			topoIx++;
-		}
+	// 	if(row[3] == -2){
+	// 		topoIx++;
+	// 	}
 
-		rowCnt++;
+	// 	rowCnt++;
 
-	} // every zMatrix row		
+	// } // every zMatrix row		
 
 }
 
@@ -532,7 +457,7 @@ Replica::calcZMatrixBAT_WORK(void)
 void
 Replica::calcZMatrixBAT(
 	const std::vector< std::vector<
-		std::pair <bSpecificAtom *, SimTK::Vec3 > > >&
+		std::pair <Atom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations)
 {
 
@@ -575,10 +500,10 @@ Replica::calcZMatrixBAT(
 			SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
 
 			// Calculate angle
-			UnitVec3 v1(v_a0a1);
-			UnitVec3 v2(a2loc - a1loc);
+			SimTK::UnitVec3 v1(v_a0a1);
+			SimTK::UnitVec3 v2(a2loc - a1loc);
 
-			Real dotProduct = SimTK::dot(v1, v2);
+			SimTK::Real dotProduct = SimTK::dot(v1, v2);
 			assert(dotProduct < 1.1);
 			assert(dotProduct > -1.1);
 			if (dotProduct > 1.0) dotProduct = 1.0;

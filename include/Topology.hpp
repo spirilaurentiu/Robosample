@@ -1,108 +1,14 @@
-#ifndef TOPOLOGY_H_
-#define TOPOLOGY_H_
+#pragma once
 
-/* -------------------------------------------------------------------------- *
- *			         Robosampling                                 *
- * -------------------------------------------------------------------------- *
- * This is part of Robosampling	                                              *
- */
-
-#include "ElementCache.hpp"
-#include "InternalCoordinates.hpp"
 #include "TrivalentAtomTetra.hpp"
-#include "bSpecificAtom.hpp"
-#include "bBond.hpp"
+#include "TopologyElements.hpp"
 #include "server.hpp"
 
+using CompoundAtomIndexPair = std::pair<SimTK::Compound::AtomIndex, SimTK::Compound::AtomIndex>;
 
-/** Helper class for Topology class, used as a key in an AtomClass related
-map **/
-class AtomClassParams {
-
-  public:
-	// Parameters
-	int atomicNumber = 0;
-	int valence = 0;
-	SimTK::Real vdwRadius = 0;
-	SimTK::Real LJWellDepth = 0;
-
-	// Constructor
-	AtomClassParams(int a, int v, SimTK::Real vdw, SimTK::Real l) :
-		atomicNumber(a), valence(v), vdwRadius(vdw), LJWellDepth(l) {}
-
-	// Dump function
-	const void dump(void) const { std::cout 
-		<< " atomicNumber " << atomicNumber 
-		<< " valence " << valence 
-		<< " vdwRadius " << vdwRadius 
-		<< " LJWellDepth " << LJWellDepth << std::endl;
-	}
-
-	// Equal operator
-	bool operator==(const AtomClassParams& other) const {
-
-		if ( 	( atomicNumber == other.atomicNumber ) &&
-			( valence == other.valence ) &&
-			( std::abs(vdwRadius - other.vdwRadius) < 0.0000001 ) &&
-			( std::abs(LJWellDepth - other.LJWellDepth) < 0.0000001) ){
-			
-			return true;
-		}else{
-			return false;
-		}
-	}
-
-	// Sort operator
-	bool operator<(const AtomClassParams& other) const {
-		if ( atomicNumber < other.atomicNumber ){
-			return true;
-		}else if ( atomicNumber == other.atomicNumber ){
-		
-			if( valence < other.valence){
-				return true;
-			}else if( valence == other.valence ){
-
-
-				if( vdwRadius < other.vdwRadius ){
-					return true;
-				}else if( vdwRadius == other.vdwRadius ){
-
-
-					if( LJWellDepth < other.LJWellDepth ){
-						return true;
-					}else if( LJWellDepth == other.LJWellDepth ){
-						// Should throw an error ?
-						return true;
-					}else{
-						return false; // LJWellDepth
-					}			
-
-				}else{
-					return false; // vdwRadius
-				}			
-
-			}else{
-				return false; // valence
-			}			
-
-		}else{
-			return false; // atomicNumber
-		}
-	}
-
-};
-
-/** Helper class for Topology class, used as a value in an AtomClass related
-map **/
-class AtomClassId {
-
-  public:
-	SimTK::DuMM::AtomClassIndex dummAtomClassIndex;
-	std::string name = "noName";
-
-	AtomClassId(int i, std::string s) :
-		dummAtomClassIndex(i), name(s) {}
-};
+inline CompoundAtomIndexPair canonical(SimTK::Compound::AtomIndex a, SimTK::Compound::AtomIndex b) {
+	return (a < b) ? std::make_pair(a, b) : std::make_pair(b, a);
+}
 
 /** Topological information (bonds graph) for one molecule.
 It maps to one compound in Molmodel thus it is derived 
@@ -111,111 +17,102 @@ It does the following things:
    - loads information from input files such as Amber input prmtop / inpcrd
    - adds parameters to a DuMM force field which belongs to the World class
 	 because one DuMM class should be used for multiple molecules
-   - contructs the graph based on a list of bSpecificAtom objects each of 
+   - contructs the graph based on a list of Atom objects each of 
 	 which already contains bonding information from the input files
    - defines the rigid bodies based on imput files provided by the users.
-Contains a list of atoms bAtomList which consists of bSpecificAtom 
+Contains a list of atoms bAtomList which consists of Atom 
 objects **/
-class Topology : public SimTK::Compound{
+class Topology : public SimTK::Compound {
 public:
 
-	/** Default Constructor. Sets the name of this molecule to 'no_name '.
-	The name has no particular function and is not guaranteed to be unique.**/
-	Topology();
+	Topology(const SimTK::Compound::Name& name, SimTK::CompoundSystem::CompoundIndex compoundIndex, int rootGlobalAtomIx);
 
-	/** Constructor that sets the name of the molecule. The name has no 
-	particular function and is not guaranteed to be unique. **/
-	explicit Topology(std::string nameOfThisMolecule);
+	~Topology() override = default;
 
-	/** Default Destructor. **/
-	virtual ~Topology();
+	void setAtoms(Span<Atom> atoms) { subAtomList = atoms; }
+	const Span<Atom> getAtoms() const { return subAtomList; }
+	Span<Atom> updAtoms() { return subAtomList; }
 
-	/** Print atom list **/
-	void PrintAtomList(int whichWorld);
+	void setBonds(Span<BondLink> bonds) { subBondList = bonds; }
+	const Span<BondLink> getBonds() const { return subBondList; }
+	Span<BondLink> updBonds() { return subBondList; }
 
-	/** Print Molmodel specific types as introduced in Gmolmodel **/
-	void PrintMolmodelAndDuMMTypes(SimTK::DuMMForceFieldSubsystem& dumm) const;
+	void setAngles(Span<BondAngle> angles) { subAngleList = angles; }
+	const Span<BondAngle> getAngles() const { return subAngleList; }
+	Span<BondAngle> updAngles() { return subAngleList; }
 
-	/**
-	 * Generate an AtomIndex to Top Transforms map
-	*/
-	void generateAIx2TopXMaps( void );
+	void setTorsions(Span<BondTorsion> torsions) { subTorsionList = torsions; }
+	const Span<BondTorsion> getTorsions() const { return subTorsionList; }
+	Span<BondTorsion> updTorsions() { return subTorsionList; }
 
 	/**	
 	* @brief Get the name of this molecule
-	* @param 
 	* @return name of the molecule
 	*/
 	const std::string getName() const {return this->name;}
 
-	/** Set the name of this molecule **/
-	void setName(std::string nameOfThisMolecule){
-		this->name = nameOfThisMolecule;
-	}
-
 	/**	
 	* @brief Get own CompoundIndex in CompoundSystem
-	* @param 
+	* 
+	* This is equivalent to the index of the molecule in the CompoundSystem's vector of Compounds.
+	* 
 	* @return CompoundIndex
 	*/
-	/**  **/
-	const SimTK::CompoundSystem::CompoundIndex &getCompoundIndex() const;
+	inline SimTK::CompoundSystem::CompoundIndex getCompoundIndex() const {
+		return compoundIndex;
+	}
 
-	/**	
-	* @brief Set the compoundIndex which is the position in the vector of
-	* Compounds of the CompoundSystem
-	* @param compoundIndex 
-	* @return
+	/**
+	* @brief Computes log(sin^2(pitch)) for the root atom's orientation in ground frame.
+	* 
+	* Extracts the pitch angle from the atom’s quaternion orientation.
+	* The result is numerically stabilized near pitch ≈ 0 or ±π,
+	* where sin(pitch) → 0 and log(sin²(pitch)) would diverge.
+	* 
+	* @note This quantity may represent an orientation regularization term.
+	* @return log(sin²(pitch)), computed safely with analytic limits near singularities.
 	*/
-	/**  **/
-	void setCompoundIndex(const SimTK::CompoundSystem::CompoundIndex &compoundIndex);
+	SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState) const;
 
-	/** Compute BAT determinant
-	**/
-	bool checkIfTripleUnorderedAreEqual(
-			std::vector<Compound::AtomIndex> &first,
-			std::vector<Compound::AtomIndex> &second);
+	SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State& quatState) const;
 
-	// Helper function for calcLogDetMBATAnglesContribution
-	// Finds all triple runs - TODO VERY INEFFICIENT
-	void loadTriples_SP_NEW(void);
+	/**
+	 * @brief Get a reference to the atom object in the atom list of this Compound.
+	 * 
+	 * @param cAIx Compound Atom Index. This is in range [0, num_atoms-1] for this Compound. Not to confuse with the global atom index.
+	 * @return Reference to the Atom object.
+	 */
+	const Atom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
 
-	SimTK::Real calcLogSineSqrGamma2(const SimTK::State &quatState);
-	SimTK::Real calcLogDetMBATGamma2Contribution(const SimTK::State&);
+	/**
+	 * @brief Get a reference to the bond object in the bond list of this Compound.
+	 * 
+	 * This is not the Compound Atom Index but the global atom index.
+	 * 
+	 * @param aIx0 Global Atom Index of one atom in the bond.
+	 * @param aIx1 Global Atom Index of the other atom in the bond.
+	 * @return Reference to the BondLink object.
+	 */
+	const BondLink& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
 
-	SimTK::Real calcLogDetMBATDistsContribution(const SimTK::State&);
-	SimTK::Real calcLogDetMBATAnglesContribution(const SimTK::State&);
-	SimTK::Real calcLogDetMBATMassesContribution(const SimTK::State&);
-	SimTK::Real calcLogDetMBATInternal(const SimTK::State& someState);
-
-	/** Get the number of atoms. **/
-	int getNAtoms() const;
-
-	/** Get the number of bonds. **/
-	int getNBonds() const;
-
-	/** Get a pointer to an atom object in the atom list inquiring
-	by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
-	bSpecificAtom * updAtomByAtomIx(int aIx);
-
-	/** Get a pointer to an atom object in the atom list inquiring
-	by atom name **/
-	bSpecificAtom * getAtomByName(std::string name) const;
-
-	/** Get the neighbours in the graph **/
-	std::vector<bSpecificAtom *> getNeighbours(int) const;
+	/**
+	 * @brief Get a reference to the bond object in the bond list of this compound using Compound Atom Indices.
+	 * 
+	 * This is not the global atom index but the local Compound Atom Index.
+	 * 
+	 * @param cAIx0 Compound Atom Index of one atom in the bond.
+	 * @param cAIx1 Compound Atom Index of the other atom in the bond.
+	 * 
+	 * @return Reference to the BondLink object.
+	 */
+	const BondLink& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
 
 	/**	
 	* @brief Get the bonded neighbor atom in the parent mobilized body.
 	* @param aIx Compound Atom Index
 	* @return Compound atom index of the root
 	*/
-	/**  **/
-	SimTK::Compound::AtomIndex
-	getChemicalParent_IfIAmRoot(
-		SimTK::SimbodyMatterSubsystem *matter,
-		SimTK::Compound::AtomIndex aIx,
-		SimTK::DuMMForceFieldSubsystem& dumm);
+	SimTK::Compound::AtomIndex getChemicalParentOfMobodRootAtom(SimTK::Compound::AtomIndex aIx, const SimTK::SimbodyMatterSubsystem& matter, const SimTK::DuMMForceFieldSubsystem& dumm) const;
 
 	/**	
 	* @brief Calculate all atom frames in top frame. It avoids calling 
@@ -224,57 +121,30 @@ public:
 	* @param : 
 	* @return
 	*/
-	void calcAtomsTopTransforms(void);
+	void calcAtomsTopTransforms();
 	
 	/**	
 	* @brief 
 	* @return
 	*/
-	void printTopTransforms(void);
+	void printTopTransforms();
 
 	/**	
 	* @brief Get atom Top level transform from the existing Topology map
 	* @param cAIx: atom Compound AtomIndex
 	* @return Atom's Top level transform
 	*/
-	SimTK::Transform getTopTransform_FromMap(SimTK::Compound::AtomIndex cAIx);
-
-	/**	
-	* @brief 
-	* @return
-	*/
-	bool checkBond(int, int);
-
-	/**	
-	* @brief 
-	* @return
-	*/
-	const bBond& getBond(int, int) const;
+	const SimTK::Transform& getTopTransform(SimTK::Compound::AtomIndex cAIx) const;
 
 	// Interface to access the maps
 
 	// Retunr mbx by calling DuMM functions
-	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexThroughDumm(
-		SimTK::Compound::AtomIndex aIx,
-		SimTK::DuMMForceFieldSubsystem& dumm);
+	SimTK::MobilizedBodyIndex getAtomMobilizedBodyIndexThroughDumm(SimTK::Compound::AtomIndex aIx, const SimTK::DuMMForceFieldSubsystem& dumm) const;
 
 	// Get atom location on mobod through DuMM functions
-	SimTK::Vec3 getAtomLocationInMobilizedBodyFrameThroughDumm(
-		SimTK::Compound::AtomIndex aIx,
-		SimTK::DuMMForceFieldSubsystem& dumm);
+	SimTK::Vec3 getAtomLocationInMobilizedBodyFrameThroughDumm(SimTK::Compound::AtomIndex aIx, const SimTK::DuMMForceFieldSubsystem& dumm) const;
 
-	// 
-	SimTK::Vec3 calcAtomLocationInGroundFrameThroughSimbody(
-		SimTK::Compound::AtomIndex aIx,
-		SimTK::DuMMForceFieldSubsystem& dumm,
-		SimTK::SimbodyMatterSubsystem& matter,
-		const SimTK::State& someState);
-
-	/** Get AtomIndex to MobilizedBodyIndex map **/
-	std::map< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> >
-	getAIx2mbx(){
-		return aIx2mbx;
-	}
+	SimTK::Vec3 calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compound::AtomIndex aIx, const SimTK::DuMMForceFieldSubsystem& dumm, const SimTK::SimbodyMatterSubsystem& matter, const SimTK::State& someState) const;
 
 	void writeAtomListPdb(std::string dirname,
 			              std::string prefix,
@@ -282,116 +152,58 @@ public:
 			              int maxNofDigits,
 			              int index) const;
 
-	/** To be removed. *Create MobilizedBodyIndex vs Compound::AtomIndex
-	 * maps. **/
-	void loadAIx2MbxMap();
-
-    /** Compound AtomIndex to bAtomList number **/
-	void loadCompoundAtomIx2GmolAtomIx(void);
+    /**
+	 * @brief Create a mapping between the local compound atom indices and the global atom indices.
+	 */
+	void loadIndicesMaps(void);
 	
-	/**  **/
-	int getNumber(SimTK::Compound::AtomIndex cAIx);
+	/**
+	 * @brief Get the global atom index from the local compound atom index.
+	 * @param cAIx Compound Atom Index
+	 * @return Global Atom Index
+	 */
+	int getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx);
         
 	/** Print atom to MobilizedBodyIndex and bond to Compound::Bond index
 	 * maps **/
 	void printMaps();
 
-	/** Get coordinates **/
-	void getCoordinates(
-			std::vector<SimTK::Real>& Xs,
-			std::vector<SimTK::Real>& Ys,
-			std::vector<SimTK::Real>& Zs);
+	const std::vector<SimTK::Transform>& getAtomFrameCache() const { return atomFrameCache; }
+	std::vector<SimTK::Transform>& updAtomFrameCache() { return atomFrameCache; }
 
-	void setSubAtomList(
-		std::vector<bSpecificAtom>::iterator beginArg,
-		std::vector<bSpecificAtom>::iterator endArg,
-		ELEMENT_CACHE& elementCacheArg);
+private:
+	/// @brief Numerically stable computation of log(sin^2(pitch))
+	/// using a Taylor expansion near pitch = 0 for smoothness.
+	///
+	/// This avoids log(0) and ensures continuous derivatives,
+	/// useful for energy/gradient computations.
+	SimTK::Real safeLogSineSqr(SimTK::Real pitch) const;
 
-	//void setAtomList(void);		
-
-	void setSubBondList(
-		std::vector<bBond>::iterator beginArg,
-		std::vector<bBond>::iterator endArg);
-
-	//void setBondList(void);
-
-    void setBondMappings(std::unordered_map<int, SimTK::Compound::BondIndex>& argBondMapping) {
-		bondMapping = &argBondMapping;
-	}
-
-
-public:
-
-	//void BAT();
-
-	// Atoms
-	int natoms;
-	//std::vector<bSpecificAtom> bAtomList;
-	std::vector<bSpecificAtom>::iterator atomsBeg_It;
-	std::vector<bSpecificAtom>::iterator atomsEnd_It;
-	size_t atomsBeg_Ix;
-	size_t atomsEnd_Ix;
-	array_view<std::vector<bSpecificAtom>::iterator> subAtomList;
-
-	// Bonds
-	int nbonds;
-	//std::vector<bBond> bonds;
-	std::vector<bBond>::iterator bondsBeg_It;
-	std::vector<bBond>::iterator bondsEnd_It;
-	size_t bondsBeg_Ix;
-	size_t bondsEnd_Ix;
-	array_view<std::vector<bBond>::iterator> subBondList;
-
-
-	// Triples
-	int nTriples;
-	std::vector< std::vector<Compound::AtomIndex> > triples;
-
-	// Map mbx2aIx contains only atoms at the origin of mobods
-	//std::map< SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex > mbx2aIx;
-
-	// Map aIx is redundant in MobilizedBodyIndeces // TODO remove 
-	std::map< SimTK::Compound::AtomIndex, std::vector<SimTK::MobilizedBodyIndex> > aIx2mbx;
+	Span<Atom> subAtomList;
+	Span<BondLink> subBondList;
+	Span<BondAngle> subAngleList;
+	Span<BondTorsion> subTorsionList;
 
 	// Map aIx to its Transform Default top transform
-	std::map< SimTK::Compound::AtomIndex, SimTK::Transform > aIx2TopTransform;
+	std::vector<SimTK::Transform> aIx2TopTransform;
 
-	// Map bSpecificAtom number to aIx
-	std::map< SimTK::Compound::AtomIndex, int > CompoundAtomIx2GmolAtomIx;
-
-	// Gmolmodel to Molmodel (and inverse) bond mappings
-	std::unordered_map<int, SimTK::Compound::BondIndex>* bondMapping;
+	// Map Atom number to aIx
+	std::vector<int> compound2GlobalAtomIndex;
+	std::vector<std::pair<int, SimTK::Compound::AtomIndex>> global2CompoundAtomIndex;
 
 
-	int nofProcesses;
-	int baseSetFlag;
-	int baseAtomNumber;
-
-	int bSpecificAtomRootIndex;
+	std::vector<std::pair<CompoundAtomIndexPair, int>> aIxPair2Bonds;
 
 	// Atom frames in Top frame
 	std::vector<SimTK::Transform> atomFrameCache;
 
-
-private:
-
 	std::string name;
 
-	/** Every Compound has an index which is the position in the vector
+	/** Every Compound has an index which is the position in the dvector
 	 * of Compounds in CompoundSystem
 	 */
 	SimTK::CompoundSystem::CompoundIndex compoundIndex;
 
-
-
-	//std::map<AtomClassParams, AtomClassId> aClassParams2aClassId;
-
-	ELEMENT_CACHE elementCache;
-
-	std::size_t rootAtomIx = 0;
+	std::size_t rootGlobalAtomIx = 0; // in global atom index
+	SimTK::Compound::AtomIndex rootCompoundAtomIx; // in subAtomList index
 };
-
-
-
-
-#endif //TOPOLOGY_H_

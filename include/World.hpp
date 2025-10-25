@@ -130,11 +130,10 @@ public:
 	bool getRollFlexibilities() const ;
 	void lockAllMobilizers(void);
 
-	void generateDummParams(const std::vector<bSpecificAtom>& atoms,
-		const std::vector<bBond>& bonds,
-		const std::vector<DUMM_ANGLE>& dummAngles,
-		const std::vector<DUMM_TORSION>& dummTorsions,
-		const ELEMENT_CACHE& elementCache);
+	void generateDummParams(const std::vector<Atom>& atoms,
+		const std::vector<BondLink>& bonds,
+		const std::vector<BondAngle>& dummAngles,
+		const std::vector<BondTorsion>& dummTorsions);
 
 	/** Creates a topology object and based on amberReader forcefield
 	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
@@ -296,35 +295,17 @@ public:
 
 	// Get geometric center of a subset of atoms
 	// TEODOR
-	SimTK::Vec3 getGeometricCenterOfSelection(
-		const SimTK::State & state);
+	SimTK::Vec3 getGeometricCenterOfSelection(const SimTK::State & state);
 
 
 
 	float setSphereRadius (float argRadius);
-
-	/**
-	 * @brief Get the current Compound Cartesian coords.
-	 * @param state state.
-	 * @details Return a 2D vector representing all the coordinates of this World.
- 	* The first dimension represents the molecules (topologies) and the second
- 	* dimension (inner) represents the coordinates. The second inner dimension
- 	* type is pair of bSpecificAtom* and a Vec3. Thus, besides coordinates, it
- 	* contains all the information in bSpecificAtom as well. The bottleneck here
- 	* is the calcAtomLocationInGroundFrame from Compound.
-	*/
-	std::vector<std::vector<
-	std::pair<bSpecificAtom *, SimTK::Vec3> > >
-		getAtomsLocationsInGround(SimTK::State&);
-
-	/** Get the current Compound Cartesian coordinates using Simbody **/
-	std::vector<std::vector<
-	std::pair<bSpecificAtom *, SimTK::Vec3> > >
-		getCurrentAtomsLocationsInGround(void);
+	
+	const SimTK::Compound::AtomTargetLocations& getAtomsLocationsInGround(SimTK::State& state);
+	const SimTK::Compound::AtomTargetLocations& getCurrentAtomsLocationsInGround();
 
 	/** Nice print helper for get/setAtomsLocations */
-	void PrintAtomsLocations(const std::vector<std::vector<
-		std::pair<bSpecificAtom *, SimTK::Vec3> > >& someAtomsLocations);
+	void PrintAtomsLocations(const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >& someAtomsLocations);
 	void WriteRst7FromTopology(std::string FN);
 
 
@@ -346,9 +327,9 @@ public:
 	 * RMSD function
 	*/
 	SimTK::Real RMSD(
-	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
 		 srcWorldsAtomsLocations,
-	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
 		destWorldsAtomsLocations	
 	) const ;
 
@@ -356,9 +337,9 @@ public:
 	 * Maximum distance between two corresponding atoms
 	*/
 	std::pair<int, SimTK::Real> maxAtomDeviation(
-	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
 		 srcWorldsAtomsLocations,
-	const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
 		destWorldsAtomsLocations	
 	) const ;
 
@@ -406,32 +387,21 @@ public:
 	extractAtomTargets(
 		int topoIx,
 		const std::vector<std::vector<
-		std::pair<bSpecificAtom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
+		std::pair<Atom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
 
 	/*!
 	* <!-- Compound matchDefaultConfiguration for molecule topoIx -->
 	*/
-	SimTK::Transform
-	setAtoms_Compound_Match(
-		int topoIx,
-		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
+	SimTK::Transform setAtoms_Compound_Match(int topoIx, const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	/*!
 	* <!-- Set atoms' frames in mobods. Also get locations in mobods for 
 	* further use -->
 	*/
-	void
-	setAtoms_Compound_FramesAndLocsInMobods(
-		int topoIx,
-		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets,
-		SimTK::Vec3* locs);
+	void setAtoms_Compound_FramesAndLocsInMobods(int topoIx, const SimTK::Compound::AtomTargetLocations& atomTargets, std::vector<Vec3>& locationInMobds);
 
-	void
-	setAtoms_SetDuMMStations(
-		int topoIx,
-		SimTK::Vec3* locs
-	);
+	void setAtoms_SetDuMMStations(int topoIx, const std::vector<SimTK::Vec3>& locationInMobds);
 
 	SimTK::State&
 	setAtoms_XPF_XBM(
@@ -453,10 +423,7 @@ public:
 
 	/** Set Compound, MultibodySystem and DuMM configurations according to
 	some other World's atoms **/
-	SimTK::State&
-	setAtomsLocationsInGround_REFAC(SimTK::State&,
-		const std::vector< std::vector< std::pair<bSpecificAtom *, SimTK::Vec3> > >&
-		otherWorldsAtomsLocations);
+	SimTK::State& setAtomsLocationsInGround_REFAC(SimTK::State& state, const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	// REFAC ----------------------------------------------------------------------
 
@@ -477,7 +444,7 @@ public:
 	// TODO find a solution for the old one
 	void setCompoundSystem(CompoundSystem *compoundSystem);
 
-	/** Update Gmolmodel bSpecificAtom Cartesian coordinates according to
+	/** Update Gmolmodel Atom Cartesian coordinates according to
 	Molmodel Compound which in turn relizes Position and uses matter
 	 to calculate locations. **/
 	void updateAtomListsFromSimbody(const SimTK::State &state);

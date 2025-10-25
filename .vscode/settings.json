@@ -102,6 +102,7 @@
     "C_Cpp.intelliSenseEngineFallback": "enabled",
     "cmake.configureOnOpen": false,
     "python.autoComplete.extraPaths": [
+        "./",
         "${workspaceFolder}/build/",
         "${workspaceFolder}/build/stubs",
     ],

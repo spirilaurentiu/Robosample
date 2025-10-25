@@ -82,7 +82,7 @@ public:
 	//~ParaMolecularDecorator(void);
 
 	// 
-	void setAtomTargets(std::vector<std::pair<bSpecificAtom *,
+	void setAtomTargets(std::vector<std::pair<Atom *,
 		SimTK::Vec3>> residueAtomLocations);
 
 	void updPCommVars(SimTK::Real argCommVar);

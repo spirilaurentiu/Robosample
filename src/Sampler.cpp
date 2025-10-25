@@ -238,190 +238,191 @@ void Sampler::checkAtomStationsThroughDumm(void)
 // a Mobility name
 void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 {
+	SimTK_ASSERT_ALWAYS(true, "Sampler::loadMbx2mobility not implemented");
 
-	// Lop through topologies
-	for(auto& topology : topologies){
+	// // Lop through topologies
+	// for(auto& topology : topologies){
 
-		// Loop through atoms
-		for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms();
-		++aIx)
-		{
+	// 	// Loop through atoms
+	// 	for (SimTK::Compound::AtomIndex aIx(0); aIx < topology.getNumAtoms();
+	// 	++aIx)
+	// 	{
 
-			// Get atom location in mobod
-			SimTK::Vec3 atomLoc =
-				topology.getAtomLocationInMobilizedBodyFrameThroughDumm(
-					aIx, *dumm);
+	// 		// Get atom location in mobod
+	// 		SimTK::Vec3 atomLoc =
+	// 			topology.getAtomLocationInMobilizedBodyFrameThroughDumm(
+	// 				aIx, *dumm);
 
-			// Mobod origin atom
-			if(atomLoc == 0){
+	// 		// Mobod origin atom
+	// 		if(atomLoc == 0){
 
-				// Get body, parentBody
-				const SimTK::MobilizedBodyIndex mbx = 
-					topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-				const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
-				SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+	// 			// Get body, parentBody
+	// 			const SimTK::MobilizedBodyIndex mbx = 
+	// 				topology.getAtomMobilizedBodyIndexThroughDumm(aIx, *dumm);
+	// 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	// 			const SimTK::MobilizedBody& parentMobod = mobod.getParentMobilizedBody();
+	// 			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
-				// Parent is not Ground
-				if(parentMbx != 0){
+	// 			// Parent is not Ground
+	// 			if(parentMbx != 0){
 
-					// Get the neighbor atom in the parent mobilized body
-					SimTK::Compound::AtomIndex chemParentAIx =
-						topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
+	// 				// Get the neighbor atom in the parent mobilized body
+	// 				SimTK::Compound::AtomIndex chemParentAIx =
+	// 					topology.getChemicalParentOfMobodRootAtom(aIx, *matter, *dumm);
 
-					// Get mobility (joint type)
-					const auto& bond = topology.getBond(
-						topology.getNumber(aIx),
-						topology.getNumber(chemParentAIx));
+	// 				// Get mobility (joint type)
+	// 				const auto& bond = topology.getBond(
+	// 					topology.getNumber(aIx),
+	// 					topology.getNumber(chemParentAIx));
 
-					auto mobility = bond.getBondMobility(whichWorld);
+	// 				auto mobility = bond.getBondMobility(whichWorld);
 
-					// Insert mobility into the map
-					mbx2mobility.insert(std::make_pair(mbx, mobility));
+	// 				// Insert mobility into the map
+	// 				mbx2mobility.insert(std::make_pair(mbx, mobility));
 
-					//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
-					//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
-					//	<< " mobility " << mobility
-					//	<< std::endl;
+	// 				//std::cout << "mbx= " << mbx << " parentMbx= " << parentMbx
+	// 				//	<< " aIx= " << aIx << " chemParentAIx= " << chemParentAIx
+	// 				//	<< " mobility " << mobility
+	// 				//	<< std::endl;
 
-				} // parent is not Ground
+	// 			} // parent is not Ground
 
-			} // if is a root atom
+	// 		} // if is a root atom
 
-		} // every atom
+	// 	} // every atom
 
-	} // every topology
+	// } // every topology
 
-    for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
-        // const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        // SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
-        // int mobodNQ = mobod.getNumQ(someState);
-        // int mobodNU = mobod.getNumU(someState);
+    // for (SimTK::MobilizedBodyIndex mbx(2); mbx < matter->getNumBodies(); ++mbx){
+    //     // const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+    //     // SimTK::QIndex qIx = mobod.getFirstQIndex(someState);
+    //     // int mobodNQ = mobod.getNumQ(someState);
+    //     // int mobodNU = mobod.getNumU(someState);
 
-        //const SimTK::Transform T = mobod.getMobilizerTransform(someState);
-        //const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
-        //const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
-        //std::cout << "mbx= " << mbx << " mobility= " << mbx2mobility[mbx]
-        //      << std::endl
-        //;
+    //     //const SimTK::Transform T = mobod.getMobilizerTransform(someState);
+    //     //const SimTK::MassProperties mp = mobod.getBodyMassProperties(someState);
+    //     //const SimTK::UnitInertia unitInertia = mobod.getBodyUnitInertiaAboutBodyOrigin(someState);
+    //     //std::cout << "mbx= " << mbx << " mobility= " << mbx2mobility[mbx]
+    //     //      << std::endl
+    //     //;
 
-		SimTK::BondMobility::Mobility mobility = mbx2mobility[mbx];
-		int qi = 1; // TODO what value?
-		switch(mobility) {
+	// 	SimTK::BondMobility::Mobility mobility = mbx2mobility[mbx];
+	// 	int qi = 1; // TODO what value?
+	// 	switch(mobility) {
 
-			///< Unrestricted bond, permitting changes in stretch, bend, and torsion modes
-			case SimTK::BondMobility::Mobility::Free:
-				//int internQIx = -1;
-				//for(qi = qIx; qi < (mobodNQ + qIx); qi++){internQIx++;}
+	// 		///< Unrestricted bond, permitting changes in stretch, bend, and torsion modes
+	// 		case SimTK::BondMobility::Mobility::Free:
+	// 			//int internQIx = -1;
+	// 			//for(qi = qIx; qi < (mobodNQ + qIx); qi++){internQIx++;}
 
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_a));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_b));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_c));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_d));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_a));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_b));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_c));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_d));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Bond has fixed length and angles, but permits rotation about the bond axis
-			case SimTK::BondMobility::Mobility::Torsion:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				break;
+	// 		///< Bond has fixed length and angles, but permits rotation about the bond axis
+	// 		case SimTK::BondMobility::Mobility::Torsion:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			break;
 
-			///< Bond links both atoms to the same rigid unit
-			case SimTK::BondMobility::Mobility::Rigid:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Bond links both atoms to the same rigid unit
+	// 		case SimTK::BondMobility::Mobility::Rigid:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Three rotational dofs. It allows  angle flexibility besides torsion.
-			case SimTK::BondMobility::Mobility::BallF:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_a));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_b));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_c));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_d));
-				break;
+	// 		///< Three rotational dofs. It allows  angle flexibility besides torsion.
+	// 		case SimTK::BondMobility::Mobility::BallF:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_a));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_b));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_c));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_d));
+	// 			break;
 
-			///< Three rotational dofs. It allows  angle flexibility besides torsion.
-			case SimTK::BondMobility::Mobility::BallM:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_a));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_b));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_c));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_d));
-				break;
+	// 		///< Three rotational dofs. It allows  angle flexibility besides torsion.
+	// 		case SimTK::BondMobility::Mobility::BallM:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_a));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_b));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_c));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::QUATERNION_d));
+	// 			break;
 
-			///< Torsion plus translation along the bond
-			case SimTK::BondMobility::Mobility::Cylinder:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Torsion plus translation along the bond
+	// 		case SimTK::BondMobility::Mobility::Cylinder:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Torsion and translation
-			case SimTK::BondMobility::Mobility::BendStretch:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Torsion and translation
+	// 		case SimTK::BondMobility::Mobility::BendStretch:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Three translational mobilities (Cartesian). // NEWMOB
-			case SimTK::BondMobility::Mobility::Translation:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Three translational mobilities (Cartesian). // NEWMOB
+	// 		case SimTK::BondMobility::Mobility::Translation:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Three translational mobilities (Cartesian). // NEWMOB
-			case SimTK::BondMobility::Mobility::FreeLine:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Three translational mobilities (Cartesian). // NEWMOB
+	// 		case SimTK::BondMobility::Mobility::FreeLine:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Two rotational mobilities // NEWMOB
-			case SimTK::BondMobility::Mobility::LineOrientationF:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Two rotational mobilities // NEWMOB
+	// 		case SimTK::BondMobility::Mobility::LineOrientationF:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Two rotational mobilities // NEWMOB
-			case SimTK::BondMobility::Mobility::LineOrientationM:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Two rotational mobilities // NEWMOB
+	// 		case SimTK::BondMobility::Mobility::LineOrientationM:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			///< Cap de bara
-			case SimTK::BondMobility::Mobility::UniversalM:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				break;
+	// 		///< Cap de bara
+	// 		case SimTK::BondMobility::Mobility::UniversalM:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			break;
 
-			///< BAT coordinates
-			case SimTK::BondMobility::Mobility::Spherical:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR180));
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< BAT coordinates
+	// 		case SimTK::BondMobility::Mobility::Spherical:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR180));
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			case SimTK::BondMobility::Mobility::AnglePin:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
-				break;
+	// 		case SimTK::BondMobility::Mobility::AnglePin:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::ANGULAR360));
+	// 			break;
 
-			///< Translation along bond
-			case SimTK::BondMobility::Mobility::Slider:
-				qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
-				break;
+	// 		///< Translation along bond
+	// 		case SimTK::BondMobility::Mobility::Slider:
+	// 			qIndex2jointType.insert(std::make_pair(SimTK::QIndex(qi), JointType::LINEAR));
+	// 			break;
 
-			default:
-				std::cout << "Warning: unknown joint type" << std::endl;
-		}
+	// 		default:
+	// 			std::cout << "Warning: unknown joint type" << std::endl;
+	// 	}
 
-		// Loop through body's Us
-		// for(int ui = 0; ui < mobodNU; ui++){
-		// 	SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
-		// 	std::cout << "H_FMCol= " << H_FMCol << std::endl;
-		// }
+	// 	// Loop through body's Us
+	// 	// for(int ui = 0; ui < mobodNU; ui++){
+	// 	// 	SimTK::SpatialVec H_FMCol = mobod.getH_FMCol(someState, SimTK::MobilizerUIndex(ui));
+	// 	// 	std::cout << "H_FMCol= " << H_FMCol << std::endl;
+	// 	// }
 
-    }
+    // }
 
 }
 

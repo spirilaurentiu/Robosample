@@ -132,13 +132,13 @@ void ParaMolecularDecorator::clearLines(void)
 
 // Gmolmodel specific
 void ParaMolecularDecorator::setAtomTargets(
-	std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>
+	std::vector<std::pair<Atom *, SimTK::Vec3>>
 	residueAtomLocations)
 {
 	atomTargets.clear();
 	for(unsigned int j = 0; j < residueAtomLocations.size(); j++){
 		SimTK::Compound::AtomIndex atomIndex =
-		((residueAtomLocations[j]).first)->compoundAtomIndex;
+		((residueAtomLocations[j]).first)->getCompoundAtomIndex();
 		SimTK::Vec3 location = ((residueAtomLocations[j]).second);
 		atomTargets.insert(std::pair<
 		SimTK::Compound::AtomIndex, SimTK::Vec3>(atomIndex, location));

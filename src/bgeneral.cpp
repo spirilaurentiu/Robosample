@@ -373,59 +373,18 @@ std::string to_upper(std::string str) {
 }
 
 /*
- * Python like split
- */
-// TODO: Victor: Can we trust this function?
-std::vector<std::string> split(const std::string& i_str, const std::string& i_delim)
-{
-    std::vector<std::string> result;
-    
-    size_t found = i_str.find(i_delim);
-    size_t startIndex = 0;
-
-    while(found != std::string::npos)
-    {
-        result.push_back(std::string(i_str.begin()+startIndex, i_str.begin()+found));
-        startIndex = found + i_delim.size();
-        found = i_str.find(i_delim, startIndex);
-    }
-    if(startIndex != i_str.size())
-        result.push_back(std::string(i_str.begin()+startIndex, i_str.end()));
-    return result;      
-}
-
-/*
- * SEQRES line to 1-letter code aa
- * ?????????????????????
- * ?????????????????????
- *
-int seqres321(char *dest, const char *src){
-	int i;
-	char *buffer = new char[4];
-	char ter[1];
-	for(i=19;i<=70;i+=4){
-		bSubstr(buffer,src,i,3);
-		ter[1]=aa321(buffer);
-		strcat(dest, ter);
-	}
-	delete buffer;
-	return 0;
-}
-*/
-
-/*
  * Decimal prefix of zeros to limit
  */
-string decimal_prefix(double inp_no, long int limit)
+std::string decimal_prefix(double inp_no, long int limit)
 {
   if(abs(limit) > 1E+20){
-    return string("");
+    return std::string("");
   }
   if((inp_no > (limit/10)) || (inp_no < 0)){
-    return string("");
+    return std::string("");
   }
 
-  ostringstream ss;
+  std::ostringstream ss;
 
   int digits = 0;
   long int num = limit;
@@ -434,7 +393,7 @@ string decimal_prefix(double inp_no, long int limit)
     ++digits;
   }
 
-  string prefix(digits, '\0');
+  std::string prefix(digits, '\0');
   if(int(inp_no) == 0){
       ss << (limit/10);
       prefix = ss.str();
