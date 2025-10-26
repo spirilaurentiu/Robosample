@@ -4733,6 +4733,21 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 	// ----------------------------------------------------------------
 	// PRINT
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+
+    cout << "th_C, th_H, re_X, re_Y, beta_C, beta_H, U0_X, U0_Y, Uset_X, Uset_Y "
+         << thermoState_C << " " << thermoState_H << " "
+         << replica_X << " " << replica_Y << " "
+         << beta_C << " " << beta_H << " "
+         << refU_X0 << " "
+         << refU_Y0 << " "
+         << refU_Xtau << " "
+         << refU_Ytau << " "
+		 << Work_X << " "
+		 << Work_Y << " "
+         << endl;
+
+
 	bool printTerms = false, printWithoutText = true;
 	if (printTerms){
 		std::cout << "thermoIxs " << thermoState_C << " " << thermoState_H << std::endl;
@@ -4768,7 +4783,7 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 			<< ref_uC_Xtau << ", " << ref_uH_Ytau << ", " << ref_uH_Xtau << ", " << ref_uC_Ytau << ", "
 			
 			<< lnJac_X << ", " << lnJac_Y << ", "
-			<< W_X << ", " << W_Y << ", "
+			<< Work_X << ", " << Work_Y << ", "
 			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
 			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
 			<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
@@ -4871,8 +4886,8 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 
 		// Swap thermodynamic states
 		swapThermodynamicStates(replica_X, replica_Y);
-		swapPotentialEnergies(replica_X, replica_Y);
-		swapReferencePotentialEnergies(replica_X, replica_Y);
+		//swapPotentialEnergies(replica_X, replica_Y);
+		//swapReferencePotentialEnergies(replica_X, replica_Y);
 
 		std::cout << "1" 
 		<<", " << unifSample
@@ -6273,7 +6288,8 @@ void Context::runReplicaWorldRange(
 		int startWorldCnt, int nofWorldsCounted,
 		bool isNonEquilibrium)
 {
-			if(isNonEquilibrium){
+
+			if(isNonEquilibrium){ // Warn if a nonequil world is in front
 				if(startWorldCnt == 0){
 					std::cout << "REBASONTOP NON-EQUILIBRIUM FRONT " << std::endl << std::flush;
 					std::cerr << "REBASONTOP NON-EQUILIBRIUM FRONT " << std::endl << std::flush;
@@ -6475,8 +6491,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		} // _end_ loop through replicas (EQUILIBRIUM)
 
-
-
 		if((getRunType() == RUN_TYPE::REBASONTOP) && (nofReplicas != 1)){
 			setRunType(RUN_TYPE::REMC);
 			mixReplicas(mixi);
@@ -6484,8 +6498,6 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			//mixi++;
 			setRunType(RUN_TYPE::REBASONTOP);
 		}
-
-
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
 
