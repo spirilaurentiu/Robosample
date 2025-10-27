@@ -79,104 +79,116 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 		const std::vector<BondAngle>& dummAngles,
 		const std::vector<BondTorsion>& dummTorsions) {
 
+	// Make a counter that checks if the atom class index already exists
+	std::vector<bool> atomClassDefined(10000, false);
+	std::vector<bool> chargedAtomTypeDefined(10000, false);
+
 	for (auto& atom : atoms) {
-		forceField->defineAtomClass(
-			atom.getDummAtomClassIndex(),
-			atom.getName().c_str(),
-			atom.getAtomicNumber(),
-			atom.getNumBondsInvolved(),
-			atom.getVdwRadius() / 10.0, // nm
-			atom.getLJWellDepth() * 4.184 // kcal to kJ
-		);
+		if (!atomClassDefined[atom.getAtomClassIndex()]) {
+			atomClassDefined[atom.getAtomClassIndex()] = true;
 
-		// Create charged atom type
-		forceField->defineChargedAtomType(
-			atom.getChargedAtomTypeIndex(),
-			atom.getName().c_str(),
-			atom.getDummAtomClassIndex(),
-			atom.getCharge()
-		);
+			forceField->defineAtomClass(
+				atom.getAtomClassIndex(),
+				atom.getAtomClassName().c_str(),
+				atom.getAtomicNumber(),
+				atom.getNumBondsInvolved(),
+				atom.getVdwRadiusInNm(),
+				atom.getVdwWellDepthInKJ()
+			);
+		}
 
-		forceField->setBiotypeChargedAtomType(atom.getChargedAtomTypeIndex(), SimTK::BiotypeIndex(atom.getGlobalIndex()));
+		if (!chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()]) {
+			chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()] = true;
+
+			// Create charged atom type
+			forceField->defineChargedAtomType(
+				atom.getChargedAtomTypeIndex(),
+				atom.getChargedAtomName().c_str(),
+				atom.getAtomClassIndex(),
+				atom.getChargeInE()
+			);
+
+			forceField->setBiotypeChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getBiotypeIndex());
+		}
 	}
 
 	for (auto& bond : bonds) {
-		forceField->defineBondStretch_KA(atoms[bond.getParentAtomGlobalIndex()].getDummAtomClassIndex(),
-			atoms[bond.getChildAtomGlobalIndex()].getDummAtomClassIndex(),
+		forceField->defineBondStretch_KA(atoms[bond.getParentAtomGlobalIndex()].getAtomClassIndex(),
+			atoms[bond.getChildAtomGlobalIndex()].getAtomClassIndex(),
 			bond.getForceK(),
 			bond.getForceEquil());
 	}
 
-	// Define angles
-	for (const auto& angle : dummAngles) {
-		forceField->defineBondBend_KA(
-			atoms[angle.getFirstGlobalIndex()].getDummAtomClassIndex(),
-			atoms[angle.getSecondGlobalIndex()].getDummAtomClassIndex(),
-			atoms[angle.getThirdGlobalIndex()].getDummAtomClassIndex(),
-			angle.getK(),
-			angle.getEquil());
-	}
+	// // Define angles
+	// for (const auto& angle : dummAngles) {
+	// 	forceField->defineBondBend_KA(
+	// 		atoms[angle.getFirstGlobalIndex()].getAtomClassIndex(),
+	// 		atoms[angle.getSecondGlobalIndex()].getAtomClassIndex(),
+	// 		atoms[angle.getThirdGlobalIndex()].getAtomClassIndex(),
+	// 		angle.getK(),
+	// 		angle.getEquil());
+	// }
 
-	// Define torsions
-	for (const auto& torsion : dummTorsions) {
-		// Get atom class indices
-		const auto aCIx1 = atoms[torsion.getFirstGlobalIndex()].getDummAtomClassIndex();
-		const auto aCIx2 = atoms[torsion.getSecondGlobalIndex()].getDummAtomClassIndex();
-		const auto aCIx3 = atoms[torsion.getThirdGlobalIndex()].getDummAtomClassIndex();
-		const auto aCIx4 = atoms[torsion.getFourthGlobalIndex()].getDummAtomClassIndex();
+	// // Define torsions
+	// for (const auto& torsion : dummTorsions) {
+	// 	// Get atom class indices
+	// 	const auto aCIx1 = atoms[torsion.getFirstGlobalIndex()].getAtomClassIndex();
+	// 	const auto aCIx2 = atoms[torsion.getSecondGlobalIndex()].getAtomClassIndex();
+	// 	const auto aCIx3 = atoms[torsion.getThirdGlobalIndex()].getAtomClassIndex();
+	// 	const auto aCIx4 = atoms[torsion.getFourthGlobalIndex()].getAtomClassIndex();
 
-		// Define dihedrals
-		if (!torsion.isImproper()) {
-			switch(torsion.getNum()) {
-				case 1:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0]);
-					break;
+	// 	// Define dihedrals
+	// 	if (!torsion.isImproper()) {
+	// 		switch(torsion.getNum()) {
+	// 			case 1:
+	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0]);
+	// 				break;
 					
-				case 2:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-						torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1]);
-					break;
+	// 			case 2:
+	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
+	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1]);
+	// 				break;
 
-				case 3:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-						torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
-						torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2]);
-					break;
+	// 			case 3:
+	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
+	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
+	// 					torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2]);
+	// 				break;
 
-				case 4:
-					forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-						torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
-						torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2],
-						torsion.getPeriod()[3], torsion.getK()[3], torsion.getPhase()[3]);
-					break;
-			}
-		} else {
-			// Define impropers
-			switch(torsion.getNum()) {
-				case 1:
-					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0]);
-					break;
+	// 			case 4:
+	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
+	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
+	// 					torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2],
+	// 					torsion.getPeriod()[3], torsion.getK()[3], torsion.getPhase()[3]);
+	// 				break;
+	// 		}
+	// 	} else {
+	// 		// Define impropers
+	// 		switch(torsion.getNum()) {
+	// 			case 1:
+	// 				forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0]);
+	// 				break;
 					
-				case 2:
-					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-						torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1]);
-					break;
+	// 			case 2:
+	// 				forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
+	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1]);
+	// 				break;
 
-				case 3:
-					forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-						torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-						torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
-						torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2]);
-					break;
-			}
-		}
-	}
+	// 			case 3:
+	// 				forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
+	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
+	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
+	// 					torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2]);
+	// 				break;
+	// 		}
+	// 	}
+	// }
 }
 
 
@@ -282,38 +294,38 @@ World::World(int worldIndex,
 
 	const SimTK::MultibodySystem& mbs = forces->getMultibodySystem();
 	
-	// Set the visual flag and if true initialize a Decorations Subsystem,
-	// a Visualizer and a Simbody EventReporter which interacts with the
-	// Visualizer
-	this->visual = isVisual;
-	if(visual){
+	// // Set the visual flag and if true initialize a Decorations Subsystem,
+	// // a Visualizer and a Simbody EventReporter which interacts with the
+	// // Visualizer
+	// this->visual = isVisual;
+	// if(visual){
 
-		decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
-		visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
-		visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
-			*visualizer, std::abs(visualizerFrequency));
+	// 	decorations = std::make_unique<SimTK::DecorationSubsystem>(*compoundSystem);
+	// 	visualizer = std::make_unique<SimTK::Visualizer>(*compoundSystem);
+	// 	visualizerReporter = std::make_unique<SimTK::Visualizer::Reporter>(
+	// 		*visualizer, std::abs(visualizerFrequency));
 
-		compoundSystem->addEventReporter(visualizerReporter.get());
+	// 	compoundSystem->addEventReporter(visualizerReporter.get());
 
-		if(contactForces){
-			std::cout << "[WARNING] Victor check Teodor's contacts." << std::endl;
-			visualizer->addDecorationGenerator(
-				new ForceArrowGenerator(mbs, *contactForces));
-		}else{
-			std::cout << "[WARNING] Teodor's contacts." << std::endl;
-		}
+	// 	if(contactForces){
+	// 		std::cout << "[WARNING] Victor check Teodor's contacts." << std::endl;
+	// 		visualizer->addDecorationGenerator(
+	// 			new ForceArrowGenerator(mbs, *contactForces));
+	// 	}else{
+	// 		std::cout << "[WARNING] Teodor's contacts." << std::endl;
+	// 	}
 		
 
-		// Initialize a DecorationGenerator
-		paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
-			compoundSystem.get(),
-			matter.get(),
-			forceField.get(),
-			forces.get()
-		);
+	// 	// Initialize a DecorationGenerator
+	// 	paraMolecularDecorator = std::make_unique<ParaMolecularDecorator>(
+	// 		compoundSystem.get(),
+	// 		matter.get(),
+	// 		forceField.get(),
+	// 		forces.get()
+	// 	);
 
-		visualizer->addDecorationGenerator(paraMolecularDecorator.get());
-	}
+	// 	visualizer->addDecorationGenerator(paraMolecularDecorator.get());
+	// }
 
 	// Statistics
 	moleculeCount = -1;
@@ -370,68 +382,6 @@ void World::lockAllMobilizers(void)
     }
 }
 
-/** Creates Gmolmodel topologies objects and based on amberReader forcefield
- * adds parameters: defines Biotypes; - adds BAT parameters to DuMM. Also
- * creates decorations for visualizers **/
-void World::AddMolecule(
-		AmberReader *amberReader,
-		std::string argRoot
-		)
-{
-/*
-	// Statistics
-	moleculeCount++; // Used for unique names of molecules
-
-	// Add a new molecule (Topology object which inherits Compound)
-	// to the vector of molecules.
-	// TODO: Why resName and moleculeName have to be the same?
-	// TODO store molecule name in vector maybe
-	//std::string moleculeName = regimenSpec + std::to_string(moleculeCount);
-	std::string moleculeName = "MOL" + std::to_string(moleculeCount);
-
-	roots.emplace_back(argRoot);
-
-	//rootMobilities.emplace_back(argRootMobility); // TODO: move to setflexibilities
-	rootMobilities.emplace_back("Pin"); // TODO: move to setflexibilities
-
-	topologies.emplace_back(Topology{moleculeName}); // TODO is this ok?
-
-	// Set atoms properties from a reader: number, name, element, initial
-	// name, force field type, charge, coordinates, mass, LJ parameters
-	topologies.back().SetGmolAtomPropertiesFromReader(amberReader);
-
-	// Set bonds properties from reader: bond indeces, atom neighbours
-	topologies.back().SetGmolBondingPropertiesFromReader(amberReader);
-
-	// Set atoms Molmodel types (Compound::SingleAtom derived) based on
-	// their valence
-	//topologies.back().SetGmolAtomsMolmodelTypes();
-	topologies.back().SetGmolAtomsMolmodelTypesTrial();
-*/
-}
-
-// Add Biotypes
-void World::AddBiotypes(int which, AmberReader *amberReader)
-{
-	assert(!"Deprecated function.");
-	
-/*
-	//topologies.back().bAddBiotypes(amberReader); // SAFE
-	topologies[which].bAddBiotypes(amberReader); // DANGER
-*/
-}
-
-void World::BuildTopologyGraph(int which, std::string argRoot)
-{
-/*
-	// Build the graph representing molecule's topology
-	//topologies.back().buildGraphAndMatchCoords(std::stoi(argRoot)); // SAFE
-	//topologies.back().loadTriples(); // SAFE
-	topologies[which].buildGraphAndMatchCoords(std::stoi(argRoot)); // DANGER
-	topologies[which].loadTriples(); // DANGER
-*/
-}
-
 void World::AllocateCoordBuffers(int natoms)
 {
 	// All ocate the vector of coordinates (DCD)
@@ -451,13 +401,12 @@ void World::adoptTopology(int which)
 	compoundSystem->adoptCompound(((*topologies)[which]));
 
 	// Add the Topology object to Decorators's vector of molecules
-	SimTK_ASSERT_ALWAYS(visual, "World::adoptTopology: visualizer not supported");
-	if(visual){
-		// We need copy here.
-		//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
-		paraMolecularDecorator->AddMolecule( &((*topologies)[which]) ); // DANGER
-	}
-
+	// SimTK_ASSERT_ALWAYS(visual, "World::adoptTopology: visualizer not supported");
+	// if(visual){
+	// 	// We need copy here.
+	// 	//paraMolecularDecorator->AddMolecule(&(topologies[which])); // SAFE
+	// 	paraMolecularDecorator->AddMolecule( &((*topologies)[which]) ); // DANGER
+	// }
 }
 
 /** Calls CompoundSystem.modelOneCompound which links the Compounds to the
@@ -944,13 +893,13 @@ void World::addMembrane(const SimTK::Real halfThickness)
 			);
 
 
-	if (visual == true) {
-		DecorativeFrame contactGeometryDecoFrame;
-		matter->Ground().updBody().addDecoration(
-		Transform(),
-        DecorativeBrick(Vec3(10,10,halfThickness)).setColor(Orange).setOpacity(0.25));
+	// if (visual == true) {
+	// 	DecorativeFrame contactGeometryDecoFrame;
+	// 	matter->Ground().updBody().addDecoration(
+	// 	Transform(),
+    //     DecorativeBrick(Vec3(10,10,halfThickness)).setColor(Orange).setOpacity(0.25));
 		
-	}
+	// }
 
 }
 
@@ -3901,7 +3850,7 @@ bool World::addSampler(SamplerName samplerName,
 
 	for (const auto& topology : *topologies) {
 		for (const auto& atom : topology.getAtoms()) {
-			SimTK::mdunits::Mass mass = atom.getMass();
+			SimTK::mdunits::Mass mass = atom.getMassInDaltons();
 			if (rootMobilizer == "Weld" && !fixedRoot) {
 				mass = 0;
 				fixedRoot = true;

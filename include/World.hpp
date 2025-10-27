@@ -134,22 +134,7 @@ public:
 		const std::vector<BondLink>& bonds,
 		const std::vector<BondAngle>& dummAngles,
 		const std::vector<BondTorsion>& dummTorsions);
-
-	/** Creates a topology object and based on amberReader forcefield
-	 parameters - defines Biotypes; - adds BAT parameters to DuMM **/
-	void AddMolecule(
-		AmberReader *amberReader,
-		//std::string rbFN,
-		//std::string flexFN,
-		//std::string regimenSpec,
-		std::string argRoot
-		//, std::string argRootMobility
-		);
-
-	//
-	void AddBiotypes(int which, AmberReader *amberReader);
 	
-	void BuildTopologyGraph(int which, std::string argRoot);
 	void AllocateCoordBuffers(int natoms);
 
 	/** Adopts a topology **/

@@ -5,17 +5,17 @@ constexpr double DefaultBondLength = 0.19; // nm
 constexpr double Cos120 = -0.5; // cos(120 degrees)
 constexpr double Sin120 = 0.866025; // sin(120 degrees)
 
-void Atom::setSingleAtom(const SimTK::Element &element) {
+void Atom::setSingleAtom() {
 	// Create a new SingleAtom compound representing this atom.
 	// SingleAtom is a building block in Molmodel that can hold multiple
 	// "bond centers" (points in 3D where other atoms can attach).
-	compoundSingleAtom = new SimTK::Compound::SingleAtom(name, element);
+	compoundSingleAtom = new SimTK::Compound::SingleAtom(atomSpec.atomName, element);
 
 	const int currAtomNBonds = getNumBondsInvolved();
 	if (currAtomNBonds > 0) {
 		if (currAtomNBonds == 1) {
 			// For an atom with a single bond (e.g. hydrogen), define only one bond center.
-			compoundSingleAtom->addFirstBondCenter("bond1", name);
+			compoundSingleAtom->addFirstBondCenter("bond1", atomSpec.atomName);
 		} else {
 			// Tetrahedral bond angle (109.47 degrees) in radians.
 			// This is the ideal angle between bonds in sp3 hybridized atoms (like carbon).
@@ -29,7 +29,7 @@ void Atom::setSingleAtom(const SimTK::Element &element) {
 			//
 			// Together, these form a "V" in the XY plane, like the two bonds in water.
 			compoundSingleAtom->addFirstTwoBondCenters(
-				"bond1", "bond2", name,
+				"bond1", "bond2", atomSpec.atomName,
 				SimTK::UnitVec3(1, 0, 0),             // Along +X
 				SimTK::UnitVec3(Cos120, Sin120, 0.0)  // 120 degrees rotated in XY
 			);
@@ -41,7 +41,7 @@ void Atom::setSingleAtom(const SimTK::Element &element) {
 				//
 				// "Left-handed" means that if you curl your left hand from bond1 to bond2,
 				// your thumb points in the direction of this bond. This sets a chirality.
-				compoundSingleAtom->addLeftHandedBondCenter( "bond3", name, TetrahedralAngle, TetrahedralAngle
+				compoundSingleAtom->addLeftHandedBondCenter( "bond3", atomSpec.atomName, TetrahedralAngle, TetrahedralAngle
 				);
 			}
 
@@ -57,7 +57,7 @@ void Atom::setSingleAtom(const SimTK::Element &element) {
 				// - bond1 and bond2 in XY plane
 				// - bond3 pointing up (left-handed)
 				// - bond4 pointing down (right-handed)
-				compoundSingleAtom->addRightHandedBondCenter("bond4", name, TetrahedralAngle, TetrahedralAngle
+				compoundSingleAtom->addRightHandedBondCenter("bond4", atomSpec.atomName, TetrahedralAngle, TetrahedralAngle
 				);
 			}
 		}
@@ -71,11 +71,11 @@ void Atom::setSingleAtom(const SimTK::Element &element) {
 	}
 
 	// Give this SingleAtom a unique compound name within the molecule.
-	compoundSingleAtom->setCompoundName(name);
+	compoundSingleAtom->setCompoundName(atomSpec.atomName);
 }
 
 std::string Atom::getElementName() const {
-	switch (atomicNumber)
+	switch (atomSpec.atomicNumber)
 	{
 		case 1: return "hydrogen";
 		case 2: return "helium";
@@ -197,7 +197,7 @@ std::string Atom::getElementName() const {
 	}
 }
 std::string Atom::getElementSymbol() const {
-	switch (atomicNumber)
+	switch (atomSpec.atomicNumber)
 	{
 		case 1: return "H";
 		case 2: return "He";

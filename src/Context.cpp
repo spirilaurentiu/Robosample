@@ -93,12 +93,12 @@ std::vector<TopologyRange> Context::findMoleculeRnages() const {
 	std::vector<TopologyRange> ranges;
 
 	// Create molecule index-based spans for atoms, bonds, angles and torsions
-	for (std::size_t molIx = 0; molIx < bonds.size(); molIx++) {
+	for (std::size_t molIx = 0; molIx < roots.size(); molIx++) {
 
 		TopologyRange r;
 
-		std::size_t begin = atoms.size();
-		std::size_t end   = 0;
+		std::size_t begin = std::numeric_limits<std::size_t>::max();
+		std::size_t end   = std::numeric_limits<std::size_t>::min();
 		bool found = false;
 
 		// Search atom
@@ -112,12 +112,12 @@ std::vector<TopologyRange> Context::findMoleculeRnages() const {
 		SimTK_ASSERT_ALWAYS(found && end >= begin, std::string("No atoms found for molecule index " + std::to_string(molIx)).c_str());
 		SimTK_ASSERT_ALWAYS(end < atoms.size(), std::string("Atom index out of range for molecule " + std::to_string(molIx)).c_str());
 
-		r.angleRange.begin = begin;
-		r.angleRange.end = end + 1; // end is exclusive
+		r.atomRange.begin = begin;
+		r.atomRange.end = end + 1; // end is exclusive
 
 		// Search bonds
-		begin = bonds.size();
-		end   = 0;
+		begin = std::numeric_limits<std::size_t>::max();
+		end   = std::numeric_limits<std::size_t>::min();
 		found = false;
 
 		for (std::size_t i = 0; i < bonds.size(); ++i) {
@@ -167,6 +167,7 @@ std::vector<TopologyRange> Context::findMoleculeRnages() const {
 		// r.torsionRange.begin = begin;
 		// r.torsionRange.end = end + 1; // end is exclusive
 
+		ranges.push_back(r);
 	}
 
 	return ranges;
@@ -180,12 +181,10 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 	torsions = inTorsions;
 
 	numMolecules = roots.size();
-	
-	// Construct a Compound for every atom 
+
+	// Construct a Compound for every atom
 	for(auto& atom : atoms) {
-		// WON'T WORK: NUM BONDS IS NOT SET AT THIS POINT, BUT AFTER ADDING ALL BONDS
-		SimTK::Element element(atom.getAtomicNumber(), atom.getElementName(), atom.getElementSymbol(), atom.getMass());
-		atom.setSingleAtom(element);
+		atom.setSingleAtom();
 	}
 
 	// Create spans based on molecule index
@@ -193,7 +192,7 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 
 	// Add new topologies
 	topologies.reserve(numMolecules);
-	for(std::size_t molIx = 0; molIx < bonds.size(); molIx++) {
+	for(std::size_t molIx = 0; molIx < roots.size(); molIx++) {
 
 		// New empty topology
 		SimTK::Compound::Name name = "MOL_" + std::to_string(molIx);
@@ -209,7 +208,6 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 		int rootAtomGlobalIndex = roots[molIx];
 		Atom& rootAtom = atoms[rootAtomGlobalIndex];
 		topology.setBaseAtom(rootAtom.getSingleAtom(), Transform());
-		topology.setAtomBiotype(rootAtom.getName(), rootAtom.getResidueName(), rootAtom.getName());
 		topology.convertInboardBondCenterToOutboard();
 
 		// Add non-ring closing bonds first
@@ -226,7 +224,7 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 			int parentNextAvailBondCenter = parentNofBonds - parentNofFreebonds + 1;
 
 			// Cook the parentBondCenterPathName = RESNAME + RESID + _ATOMNAME + bond int(next)
-			SimTK::Compound::BondCenterPathName parentBondCenterPathName = parent.getName() + "/bond" + std::to_string(parentNextAvailBondCenter);
+			SimTK::Compound::BondCenterPathName parentBondCenterPathName = parent.getAtomName() + "/bond" + std::to_string(parentNextAvailBondCenter);
 
 			// Actual bonding with default mobility (torsion)
 			topology.bondAtom(child.getSingleAtom(), parentBondCenterPathName, 0.149, 0); // SimTK::BondMobility::Mobility = SimTK::BondMobility::Default
@@ -235,13 +233,13 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 			// 1 is child, 0 is for parent
 			SimTK::Compound::AtomIndex childCAIx = topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 1);
 			child.setCompoundAtomIndex(childCAIx);
-			topology.setAtomMass(childCAIx, child.getMass());
+			topology.setAtomMass(childCAIx, child.getMassInDaltons());
 
 			// Set the local compound atom index for the parent if it is the root
 			if(bond.getParentAtomGlobalIndex() == rootAtomGlobalIndex) {
 				SimTK::Compound::AtomIndex parentCAIx = topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 0);
 				parent.setCompoundAtomIndex(parentCAIx);
-				topology.setAtomMass(parentCAIx, parent.getMass());
+				topology.setAtomMass(parentCAIx, parent.getMassInDaltons());
 			}
 
 			// // Handle ions
@@ -252,9 +250,6 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 
 			parent.decrementAvailableBonds();
 			child.decrementAvailableBonds();
-
-			topology.setAtomBiotype(child.getName(), child.getResidueName().c_str(), child.getName());
-			topology.setAtomBiotype(parent.getName(), parent.getResidueName().c_str(), parent.getName());
 		}
 
 		// Add ring closing bonds
@@ -267,22 +262,42 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 
 			SimTK::Compound::BondCenterPathName bondCenterName1;
 			if (child.getGlobalIndex() == rootAtomGlobalIndex) {
-				bondCenterName1 = child.getName() + "/bond" + std::to_string(child.getNumAvailableBonds());
+				bondCenterName1 = child.getAtomName() + "/bond" + std::to_string(child.getNumAvailableBonds());
 			} else {
-				bondCenterName1 = child.getName() + "/bond" + std::to_string(child.getNumBondsInvolved() - child.getNumAvailableBonds() + 1);
+				bondCenterName1 = child.getAtomName() + "/bond" + std::to_string(child.getNumBondsInvolved() - child.getNumAvailableBonds() + 1);
 			}
 
 			SimTK::Compound::BondCenterPathName bondCenterName2;
 			if (parent.getGlobalIndex() == rootAtomGlobalIndex) {
-				bondCenterName2 = parent.getName() + "/bond" + std::to_string(parent.getNumAvailableBonds());
+				bondCenterName2 = parent.getAtomName() + "/bond" + std::to_string(parent.getNumAvailableBonds());
 			} else {
-				bondCenterName2 = parent.getName() + "/bond" + std::to_string(parent.getNumBondsInvolved() - parent.getNumAvailableBonds() + 1);
+				bondCenterName2 = parent.getAtomName() + "/bond" + std::to_string(parent.getNumBondsInvolved() - parent.getNumAvailableBonds() + 1);
 			}
 
 			topology.addRingClosingBond(bondCenterName1, bondCenterName2, 0.14, 109*Deg2Rad, BondMobility::Rigid);					
 
 			parent.decrementAvailableBonds();
 			child.decrementAvailableBonds();
+		}
+
+		// Define the biotype of the atom
+		for (auto& atom: topology.getAtoms()) {
+			// Biotype valence is set to the number of bonds involved
+			int valence = atom.getNumBondsInvolved();
+
+			// Residue name: ALA, ARG etc
+			const char* residueName = atom.getResidueName().c_str();
+
+			// Atom class name (as defined by the force field): N, CA, C, O etc
+			const char* atomClassName = atom.getAtomClassName().c_str();
+
+			// Check if the biotype exists
+			SimTK::BiotypeIndex biotypeIndex;
+
+			// For future reference, this is how it's called: "ALA10_C:4_23", "ALA", "C"
+			// It calls SimTK::Biotype::defineBiotype and checks if it already exists
+			topology.setAtomBiotype(atom.getAtomName(), atom.getResidueName().c_str(), atom.getAtomClassName().c_str());
+			atom.setBiotypeIndex(topology.getAtomBiotypeIndex(atom.getCompoundAtomIndex()));
 		}
 
 		// Get coordinates
@@ -481,7 +496,7 @@ std::string Context::OMMRef_initialize(void)
 
 
 		for (auto atom : atoms) {
-			openMMSystem->addParticle(atom.getMass());
+			openMMSystem->addParticle(atom.getMassInDaltons());
 			//tracerefOMM("System added particle with mass " << atom.getMass());
 		}
 	
@@ -499,9 +514,9 @@ std::string Context::OMMRef_initialize(void)
 		int aCnt = -1;
 		for (auto atom : atoms){   
 			aCnt++;
-			SimTK::Real charge = atom.getCharge();
-			const SimTK::Real sigma = 2.0 * (atom.getVdwRadius() / 10.0) * DuMM::Radius2Sigma;
-			const SimTK::Real wellDepth = atom.getLJWellDepth() * 4.184;
+			SimTK::Real charge = atom.getChargeInE();
+			const SimTK::Real sigma = 2.0 * (atom.getVdwRadiusInNm() / 10.0) * DuMM::Radius2Sigma;
+			const SimTK::Real wellDepth = atom.getVdwWellDepthInKJ() * 4.184;
 
 			ommNonbondedForce->addParticle(sqrtCoulombScale*charge, sigma, vdwGlobalScaleFactor*wellDepth);
 			// std::cout << "OMMRef_initialize added particle "
@@ -528,7 +543,7 @@ std::string Context::OMMRef_initialize(void)
 		// Watch the units here. OpenMM works exclusively in MD (nm, kJ/mol). 
 		// CPU GBSA uses Angstrom, kCal/mol.
 		// for (auto atom : atoms) {
-		// 	SimTK::Real charge = atom.getCharge();
+		// 	SimTK::Real charge = atom.getChargeInE();
 		// 	getGbsaRadii(int numberOfAtoms, const int* atomicNumber, 
 		// 				const int* numberOfCovalentPartners, 
 		// 				const int* atomicNumberOfHCovalentPartner, 
@@ -826,27 +841,11 @@ void Context::addWorld(bool fixmanTorque, int samplesPerRound, ROOT_MOBILITY roo
 	// Generate DuMM parameters: DuMM atom types, charged atom types, bond types, angle types and torsion types
 	worlds.back().generateDummParams(atoms, bonds, angles, torsions);
 
-	// // Define the inverse map
-	// std::map<BondMobility::Mobility, std::string> inverseMobilityMap;
-
-	// // Populate the inverse map by swapping keys and values
-	// for (const auto& pair : mobilityMap) {
-	// 	inverseMobilityMap[pair.second] = pair.first;
-	// }
-
 	// Allocate root mobilities
 	rootMobilitiesStr.push_back({});
 	for(unsigned int molIx = 0; molIx < topologies.size(); molIx++){
 		rootMobilitiesStr.back().push_back("Rigid");
 	}
-
-	// Print mobilities
-	// bool printMobilities = true;
-	// if(printMobilities){	
-	// 	for (const auto& flex : flexibilities) {
-	// 		std::cout << "Mobility " << flex.i << " " << flex.j <<" to " << flex.mobility << std::endl;
-	// 	}	
-	// }
 
 	// Set root mobilities
 	for (const auto& flex : flexibilities) {
@@ -865,8 +864,6 @@ void Context::addWorld(bool fixmanTorque, int samplesPerRound, ROOT_MOBILITY roo
 			}
 
 			std::cout << "Set root mobilities -1=" << flex.i << " molecule " << molIx <<" at atom " << flex.j <<" to " << flex.mobility << std::endl;
-
-			// (rootMobilitiesStr.back())[molIx] = inverseMobilityMap[flex.mobility];
 
 		} // found a root mobility
 	} // every flexibility
@@ -3396,7 +3393,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			//SimTK::DuMMForceFieldSubsystem dumm = *(currWorld.forceField);
 
 			SimTK::DuMM::AtomIndex dAIx = atom.getDuMMAtomIndex();
-			SimTK::mdunits::Mass atomMass = atom.getMass();
+			SimTK::mdunits::Mass atomMass = atom.getMassInDaltons();
 
 			currWorld.forceField->setDuMMAtomMass(dAIx, atomMass);
 		}	

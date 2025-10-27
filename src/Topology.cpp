@@ -135,7 +135,7 @@ void Topology::loadIndicesMaps()
 	}
 
 	compound2GlobalAtomIndex = std::vector<int>(subAtomList.size(), -1);
-	global2CompoundAtomIndex = std::vector<std::pair<int, SimTK::Compound::AtomIndex>>(subAtomList.size(), std::make_pair(-1, SimTK::Compound::AtomIndex(-1)));
+	global2CompoundAtomIndex = std::vector<std::pair<int, SimTK::Compound::AtomIndex>>(subAtomList.size(), std::make_pair(1, SimTK::Compound::AtomIndex(1))); // needs to be initialized to a valid (positive) Compound Atom Index
 	for (const auto& a : subAtomList) {
 		SimTK::Compound::AtomIndex aIx = a.getCompoundAtomIndex();
 		int globalAtomIndex = a.getGlobalIndex();
@@ -176,7 +176,10 @@ void Topology::loadIndicesMaps()
 	}
 
 	// Sort the vector of pairs
-	std::sort(aIxPair2Bonds.begin(), aIxPair2Bonds.end());
+	std::sort(aIxPair2Bonds.begin(), aIxPair2Bonds.end()); // ?????????????????????????????????????????????????/
+
+
+	atomFrameCache = std::vector<SimTK::Transform>(subAtomList.size(), SimTK::Transform());
 }
 
 int Topology::getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx)

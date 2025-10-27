@@ -83,17 +83,44 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("j", &BOND_FLEXIBILITY::j)
         .def_readwrite("mobility", &BOND_FLEXIBILITY::mobility);
 
-    py::class_<Atom>(m, "Atom")
+    py::class_<AtomSpec>(m, "AtomSpec")
         .def(py::init<>())
-        .def(py::init<int, int, int, SimTK::Real, SimTK::mdunits::Mass, SimTK::Real, SimTK::Real, const std::string&, int, SimTK::Real, SimTK::Real, SimTK::Real, const std::string&, bool>(),
-             py::arg("globalIndex"), py::arg("molIx"), py::arg("atomicNumber"), py::arg("charge"), py::arg("mass"), py::arg("vdw"), py::arg("lj"), py::arg("resName"), py::arg("resIx"), py::arg("x"), py::arg("y"), py::arg("z"), py::arg("name"), py::arg("root"))
-        .def("addNeighborGlobalIndex", &Atom::addNeighborGlobalIndex, "Add a neighboring atom's global index to this atom.")
-        .def("addInvolvedBondGlobalIndex", &Atom::addInvolvedBondGlobalIndex, "Add a bond's global index that involves this atom.");
+        .def_readwrite("globalIndex", &AtomSpec::globalIndex)
+        .def_readwrite("moleculeIndex", &AtomSpec::moleculeIndex)
+        .def_readwrite("residueIndex", &AtomSpec::residueIndex)
+        .def_readwrite("atomClassIndex", &AtomSpec::atomClassIndex)
+        .def_readwrite("chargedAtomTypeIndex", &AtomSpec::chargedAtomTypeIndex)
+        .def_readwrite("atomName", &AtomSpec::atomName)
+        .def_readwrite("residueName", &AtomSpec::residueName)
+        .def_readwrite("atomClassName", &AtomSpec::atomClassName)
+        .def_readwrite("chargedAtomName", &AtomSpec::chargedAtomName)
+        .def_readwrite("neighborsGlobalIndices", &AtomSpec::neighborsGlobalIndices)
+        .def_readwrite("availableBonds", &AtomSpec::availableBonds)
+        .def_readwrite("root", &AtomSpec::root)
+        .def_readwrite("atomicNumber", &AtomSpec::atomicNumber)
+        .def_readwrite("chargeInE", &AtomSpec::chargeInE)
+        .def_readwrite("massInDaltons", &AtomSpec::massInDaltons)
+        .def_readwrite("vdwRadiusInNm", &AtomSpec::vdwRadiusInNm)
+        .def_readwrite("vdwWellDepthInKJ", &AtomSpec::vdwWellDepthInKJ)
+        .def_readwrite("x", &AtomSpec::x)
+        .def_readwrite("y", &AtomSpec::y)
+        .def_readwrite("z", &AtomSpec::z);
+
+    py::class_<BondLinkSpec>(m, "BondLinkSpec")
+        .def(py::init<>())
+        .def_readwrite("parentAtomGlobalIndex", &BondLinkSpec::parentAtomGlobalIndex)
+        .def_readwrite("childAtomGlobalIndex", &BondLinkSpec::childAtomGlobalIndex)
+        .def_readwrite("bondGlobalIndex", &BondLinkSpec::bondGlobalIndex)
+        .def_readwrite("moleculeIndex", &BondLinkSpec::moleculeIndex)
+        .def_readwrite("ringClosing", &BondLinkSpec::ringClosing)
+        .def_readwrite("forceK", &BondLinkSpec::forceK)
+        .def_readwrite("forceEquil", &BondLinkSpec::forceEquil);
+
+    py::class_<Atom>(m, "Atom")
+        .def(py::init<const AtomSpec&>(), py::arg("spec"));
 
     py::class_<BondLink>(m, "BondLink")
-        .def(py::init<>())
-        .def(py::init<int, int, int, int, bool, SimTK::Real, SimTK::Real>(), 
-             py::arg("parentAtomGlobalIndex"), py::arg("childAtomGlobalIndex"), py::arg("bondGlobalIndex"), py::arg("moleculeIndex"), py::arg("ringClosing"), py::arg("forceK"), py::arg("forceEquil"));
+        .def(py::init<const BondLinkSpec&>(), py::arg("spec"));
 
     py::class_<BondAngle>(m, "BondAngle")
         .def(py::init<>())
