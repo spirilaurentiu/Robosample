@@ -33,13 +33,13 @@ public:
 	const Span<Atom> getAtoms() const { return subAtomList; }
 	Span<Atom> updAtoms() { return subAtomList; }
 
-	void setBonds(Span<BondLink> bonds) { subBondList = bonds; }
-	const Span<BondLink> getBonds() const { return subBondList; }
-	Span<BondLink> updBonds() { return subBondList; }
+	void setBonds(Span<BondStretch> bonds) { subBondList = bonds; }
+	const Span<BondStretch> getBonds() const { return subBondList; }
+	Span<BondStretch> updBonds() { return subBondList; }
 
-	void setAngles(Span<BondAngle> angles) { subAngleList = angles; }
-	const Span<BondAngle> getAngles() const { return subAngleList; }
-	Span<BondAngle> updAngles() { return subAngleList; }
+	void setAngles(Span<BondBend> angles) { subAngleList = angles; }
+	const Span<BondBend> getAngles() const { return subAngleList; }
+	Span<BondBend> updAngles() { return subAngleList; }
 
 	void setTorsions(Span<BondTorsion> torsions) { subTorsionList = torsions; }
 	const Span<BondTorsion> getTorsions() const { return subTorsionList; }
@@ -93,7 +93,7 @@ public:
 	 * @param aIx1 Global Atom Index of the other atom in the bond.
 	 * @return Reference to the BondLink object.
 	 */
-	const BondLink& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
+	const BondStretch& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
 
 	/**
 	 * @brief Get a reference to the bond object in the bond list of this compound using Compound Atom Indices.
@@ -105,7 +105,7 @@ public:
 	 * 
 	 * @return Reference to the BondLink object.
 	 */
-	const BondLink& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
+	const BondStretch& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
 
 	/**	
 	* @brief Get the bonded neighbor atom in the parent mobilized body.
@@ -180,8 +180,8 @@ private:
 	SimTK::Real safeLogSineSqr(SimTK::Real pitch) const;
 
 	Span<Atom> subAtomList;
-	Span<BondLink> subBondList;
-	Span<BondAngle> subAngleList;
+	Span<BondStretch> subBondList;
+	Span<BondBend> subAngleList;
 	Span<BondTorsion> subTorsionList;
 
 	// Map aIx to its Transform Default top transform

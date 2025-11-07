@@ -83,7 +83,7 @@ public:
 
 	std::vector<TopologyRange> findMoleculeRnages() const;
 
-	void loadAmberSystem(const std::vector<int>& inRoots, const std::vector<Atom>& inAtoms, const std::vector<BondLink>& inBonds, const std::vector<BondAngle>& inAngles, const std::vector<BondTorsion>& inTorsions);
+	void loadAmberSystem(const std::vector<int>& inRoots, const std::vector<Atom>& inAtoms, const std::vector<BondStretch>& inBonds, const std::vector<BondBend>& inAngles, const std::vector<BondTorsion>& inTorsions);
 
 	void Initialize();
 
@@ -604,8 +604,8 @@ private:
 	// SetupReader setupReader;
 
 	std::vector<Atom> atoms;
-	std::vector<BondLink> bonds;
-	std::vector<BondAngle> angles;
+	std::vector<BondStretch> bonds;
+	std::vector<BondBend> angles;
 	std::vector<BondTorsion> torsions;
 	int numMolecules = 0;
 

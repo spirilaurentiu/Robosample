@@ -131,8 +131,8 @@ public:
 	void lockAllMobilizers(void);
 
 	void generateDummParams(const std::vector<Atom>& atoms,
-		const std::vector<BondLink>& bonds,
-		const std::vector<BondAngle>& dummAngles,
+		const std::vector<BondStretch>& bonds,
+		const std::vector<BondBend>& dummAngles,
 		const std::vector<BondTorsion>& dummTorsions);
 	
 	void AllocateCoordBuffers(int natoms);

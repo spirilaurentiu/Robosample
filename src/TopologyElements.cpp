@@ -5,7 +5,7 @@ constexpr double DefaultBondLength = 0.19; // nm
 constexpr double Cos120 = -0.5; // cos(120 degrees)
 constexpr double Sin120 = 0.866025; // sin(120 degrees)
 
-void Atom::setSingleAtom() {
+void Atom::createSingleAtom() {
 	// Create a new SingleAtom compound representing this atom.
 	// SingleAtom is a building block in Molmodel that can hold multiple
 	// "bond centers" (points in 3D where other atoms can attach).

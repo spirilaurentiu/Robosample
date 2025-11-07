@@ -79,18 +79,18 @@ if args.type == 'tdnr':
 	# context.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
      
 	context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN)
-     
-	# print worlds
-	for w in context.worlds:
-		print(w.samplers)
-          
-	exit()
+    
+	bonds = context.getNonRundantBonds() # [[atom1, atom2, joint_type], [atom3, atom4, joint_type], ...]
+	context.addTorsionalWorld(bonds).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
      
 	temperatures = []
 	for i in range(NOF_REPLICAS):
 		temperatures.append(INITIAL_TEMPERATURE + (i * 10))
 
 	context.initialize(temperatures)
+     
+	exit()
+
 	context.RunREX(args.equil_steps, args.prod_steps)
 	
 elif args.type == 'tdc':

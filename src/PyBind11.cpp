@@ -83,54 +83,113 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("j", &BOND_FLEXIBILITY::j)
         .def_readwrite("mobility", &BOND_FLEXIBILITY::mobility);
 
-    py::class_<AtomSpec>(m, "AtomSpec")
-        .def(py::init<>())
-        .def_readwrite("globalIndex", &AtomSpec::globalIndex)
-        .def_readwrite("moleculeIndex", &AtomSpec::moleculeIndex)
-        .def_readwrite("residueIndex", &AtomSpec::residueIndex)
-        .def_readwrite("atomClassIndex", &AtomSpec::atomClassIndex)
-        .def_readwrite("chargedAtomTypeIndex", &AtomSpec::chargedAtomTypeIndex)
-        .def_readwrite("atomName", &AtomSpec::atomName)
-        .def_readwrite("residueName", &AtomSpec::residueName)
-        .def_readwrite("atomClassName", &AtomSpec::atomClassName)
-        .def_readwrite("chargedAtomName", &AtomSpec::chargedAtomName)
-        .def_readwrite("neighborsGlobalIndices", &AtomSpec::neighborsGlobalIndices)
-        .def_readwrite("availableBonds", &AtomSpec::availableBonds)
-        .def_readwrite("root", &AtomSpec::root)
-        .def_readwrite("atomicNumber", &AtomSpec::atomicNumber)
-        .def_readwrite("chargeInE", &AtomSpec::chargeInE)
-        .def_readwrite("massInDaltons", &AtomSpec::massInDaltons)
-        .def_readwrite("vdwRadiusInNm", &AtomSpec::vdwRadiusInNm)
-        .def_readwrite("vdwWellDepthInKJ", &AtomSpec::vdwWellDepthInKJ)
-        .def_readwrite("x", &AtomSpec::x)
-        .def_readwrite("y", &AtomSpec::y)
-        .def_readwrite("z", &AtomSpec::z);
+    // py::class_<AtomClassDefinition>(m, "AtomClassDefinition")
+    //     .def(py::init<>())
+    //     .def_readwrite("atomTypeName", &AtomClassDefinition::atomTypeName)
+    //     .def_readwrite("vdwRadiusInNm", &AtomClassDefinition::vdwRadiusInNm)
+    //     .def_readwrite("vdwWellDepthInKJ", &AtomClassDefinition::vdwWellDepthInKJ)
+    //     .def_readwrite("atomClassIndex", &AtomClassDefinition::atomClassIndex)
+    //     .def_readwrite("atomicNumber", &AtomClassDefinition::atomicNumber)
+    //     .def_readwrite("expectedValence", &AtomClassDefinition::expectedValence);
 
-    py::class_<BondLinkSpec>(m, "BondLinkSpec")
+    // py::class_<ChargedAtomTypeDefinition>(m, "ChargedAtomTypeDefinition")
+    //     .def(py::init<>())
+    //     .def_readwrite("biotypeAtomName", &ChargedAtomTypeDefinition::biotypeAtomName)
+    //     .def_readwrite("biotypeResidueName", &ChargedAtomTypeDefinition::biotypeResidueName)
+    //     .def_readwrite("partialChargeInE", &ChargedAtomTypeDefinition::partialChargeInE)
+    //     .def_readwrite("chargedAtomTypeIndex", &ChargedAtomTypeDefinition::chargedAtomTypeIndex)
+    //     .def_readwrite("atomClassIndex", &ChargedAtomTypeDefinition::atomClassIndex);
+
+    // py::class_<BondStretchDefinition>(m, "BondStretchDefinition")
+    //     .def(py::init<>())
+    //     .def_readwrite("atomClassIndex1", &BondStretchDefinition::atomClassIndex1)
+    //     .def_readwrite("atomClassIndex2", &BondStretchDefinition::atomClassIndex2)
+    //     .def_readwrite("stiffnessInKJperNmSq", &BondStretchDefinition::stiffnessInKJperNmSq)
+    //     .def_readwrite("nominalLengthInNm", &BondStretchDefinition::nominalLengthInNm);
+
+    // py::class_<BondBendDefinition>(m, "BondBendDefinition")
+    //     .def(py::init<>())
+    //     .def_readwrite("atomClassIndex1", &BondBendDefinition::atomClassIndex1)
+    //     .def_readwrite("atomClassIndex1", &BondBendDefinition::atomClassIndex2)
+    //     .def_readwrite("atomClassIndex1", &BondBendDefinition::atomClassIndex3)
+    //     .def_readwrite("atomClassIndex1", &BondBendDefinition::stiffnessInKJPerRadSq)
+    //     .def_readwrite("atomClassIndex1", &BondBendDefinition::nominalAngleInDeg);
+
+    // py::class_<BondTorsionDefinition>(m, "BondTorsionDefinition")
+    //     .def(py::init<>())
+    //     .def_readwrite("atomClassIndex1", &BondTorsionDefinition::atomClassIndex1)
+    //     .def_readwrite("atomClassIndex2", &BondTorsionDefinition::atomClassIndex2)
+    //     .def_readwrite("atomClassIndex3", &BondTorsionDefinition::atomClassIndex3)
+    //     .def_readwrite("atomClassIndex4", &BondTorsionDefinition::atomClassIndex4)
+    //     .def_readwrite("ampInKJ", &BondTorsionDefinition::ampInKJ)
+    //     .def_readwrite("phaseInDegrees", &BondTorsionDefinition::phaseInDegrees)
+    //     .def_readwrite("periodicity", &BondTorsionDefinition::periodicity)
+    //     .def_readwrite("improper", &BondTorsionDefinition::improper);
+
+    py::class_<AtomDefinition>(m, "AtomDefinition")
         .def(py::init<>())
-        .def_readwrite("parentAtomGlobalIndex", &BondLinkSpec::parentAtomGlobalIndex)
-        .def_readwrite("childAtomGlobalIndex", &BondLinkSpec::childAtomGlobalIndex)
-        .def_readwrite("bondGlobalIndex", &BondLinkSpec::bondGlobalIndex)
-        .def_readwrite("moleculeIndex", &BondLinkSpec::moleculeIndex)
-        .def_readwrite("ringClosing", &BondLinkSpec::ringClosing)
-        .def_readwrite("forceK", &BondLinkSpec::forceK)
-        .def_readwrite("forceEquil", &BondLinkSpec::forceEquil);
+        .def_readwrite("globalIndex", &AtomDefinition::globalIndex)
+        .def_readwrite("moleculeIndex", &AtomDefinition::moleculeIndex)
+        .def_readwrite("residueIndex", &AtomDefinition::residueIndex)
+        .def_readwrite("atomClassIndex", &AtomDefinition::atomClassIndex)
+        .def_readwrite("chargedAtomTypeIndex", &AtomDefinition::chargedAtomTypeIndex)
+        .def_readwrite("atomName", &AtomDefinition::atomName)
+        .def_readwrite("atomClassName", &AtomDefinition::atomClassName)
+        .def_readwrite("chargedAtomName", &AtomDefinition::chargedAtomName)
+        .def_readwrite("residueName", &AtomDefinition::residueName)
+        .def_readwrite("uniqueAtomName", &AtomDefinition::uniqueAtomName)
+        .def_readwrite("neighborsGlobalIndices", &AtomDefinition::neighborsGlobalIndices)
+        .def_readwrite("root", &AtomDefinition::root)
+        .def_readwrite("atomicNumber", &AtomDefinition::atomicNumber)
+        .def_readwrite("chargeInE", &AtomDefinition::chargeInE)
+        .def_readwrite("massInDaltons", &AtomDefinition::massInDaltons)
+        .def_readwrite("vdwRadiusInNm", &AtomDefinition::vdwRadiusInNm)
+        .def_readwrite("sigmaInNm", &AtomDefinition::sigmaInNm)
+        .def_readwrite("vdwWellDepthInKJ", &AtomDefinition::vdwWellDepthInKJ)
+        .def_readwrite("x", &AtomDefinition::x)
+        .def_readwrite("y", &AtomDefinition::y)
+        .def_readwrite("z", &AtomDefinition::z);
+
+    py::class_<BondStretchDefinition>(m, "BondStretchDefinition")
+        .def(py::init<>())
+        .def_readwrite("parentAtomGlobalIndex", &BondStretchDefinition::parentAtomGlobalIndex)
+        .def_readwrite("childAtomGlobalIndex", &BondStretchDefinition::childAtomGlobalIndex)
+        .def_readwrite("bondGlobalIndex", &BondStretchDefinition::bondGlobalIndex)
+        .def_readwrite("moleculeIndex", &BondStretchDefinition::moleculeIndex)
+        .def_readwrite("ringClosing", &BondStretchDefinition::ringClosing)
+        .def_readwrite("stiffnessInKJPerNmSq", &BondStretchDefinition::stiffnessInKJPerNmSq)
+        .def_readwrite("nominalLengthInNm", &BondStretchDefinition::nominalLengthInNm);
+
+    py::class_<BondBendDefinition>(m, "BondBendDefinition")
+        .def(py::init<>())
+        .def_readwrite("globalIndex1", &BondBendDefinition::globalIndex1)
+        .def_readwrite("globalIndex2", &BondBendDefinition::globalIndex2)
+        .def_readwrite("globalIndex3", &BondBendDefinition::globalIndex3)
+        .def_readwrite("stiffnessInKJPerRadSq", &BondBendDefinition::stiffnessInKJPerRadSq)
+        .def_readwrite("nominalAngleInDeg", &BondBendDefinition::nominalAngleInDeg);
+
+    py::class_<BondTorsionDefinition>(m, "BondTorsionDefinition")
+        .def(py::init<>())
+        .def_readwrite("globalIndex1", &BondTorsionDefinition::globalIndex1)
+        .def_readwrite("globalIndex2", &BondTorsionDefinition::globalIndex2)
+        .def_readwrite("globalIndex3", &BondTorsionDefinition::globalIndex3)
+        .def_readwrite("globalIndex4", &BondTorsionDefinition::globalIndex4)
+        .def_readwrite("ampInKJ", &BondTorsionDefinition::ampInKJ)
+        .def_readwrite("phaseInDegrees", &BondTorsionDefinition::phaseInDegrees)
+        .def_readwrite("periodicity", &BondTorsionDefinition::periodicity)
+        .def_readwrite("improper", &BondTorsionDefinition::improper);
 
     py::class_<Atom>(m, "Atom")
-        .def(py::init<const AtomSpec&>(), py::arg("spec"));
+        .def(py::init<const AtomDefinition&>(), py::arg("spec"));
 
-    py::class_<BondLink>(m, "BondLink")
-        .def(py::init<const BondLinkSpec&>(), py::arg("spec"));
-
-    py::class_<BondAngle>(m, "BondAngle")
-        .def(py::init<>())
-        .def(py::init<int, int, int, SimTK::Real, SimTK::Real>(), 
-             py::arg("firstGlobalIndex"), py::arg("secondGlobalIndex"), py::arg("thirdGlobalIndex"), py::arg("k"), py::arg("equil"));
+    py::class_<BondStretch>(m, "BondStretch")
+        .def(py::init<const BondStretchDefinition&>(), py::arg("spec"));
+        
+    py::class_<BondBend>(m, "BondBend")
+        .def(py::init<const BondBendDefinition&>(), py::arg("spec"));
 
     py::class_<BondTorsion>(m, "BondTorsion")
-        .def(py::init<>())
-        .def(py::init<int, int, int, int, bool, const std::array<SimTK::Real, 4>&, const std::array<SimTK::Real, 4>&, const std::array<int, 4>&>(), 
-             py::arg("firstGlobalIndex"), py::arg("secondGlobalIndex"), py::arg("thirdGlobalIndex"), py::arg("fourthGlobalIndex"), py::arg("improper"), py::arg("k"), py::arg("phase"), py::arg("period"));
+        .def(py::init<const BondTorsionDefinition&>(), py::arg("spec"));
 
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t>())

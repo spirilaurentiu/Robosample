@@ -75,8 +75,8 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN)
 
 
 void World::generateDummParams(const std::vector<Atom>& atoms,
-		const std::vector<BondLink>& bonds,
-		const std::vector<BondAngle>& dummAngles,
+		const std::vector<BondStretch>& bonds,
+		const std::vector<BondBend>& dummAngles,
 		const std::vector<BondTorsion>& dummTorsions) {
 
 	// Make a counter that checks if the atom class index already exists
@@ -87,108 +87,57 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 		if (!atomClassDefined[atom.getAtomClassIndex()]) {
 			atomClassDefined[atom.getAtomClassIndex()] = true;
 
-			forceField->defineAtomClass(
-				atom.getAtomClassIndex(),
-				atom.getAtomClassName().c_str(),
-				atom.getAtomicNumber(),
-				atom.getNumBondsInvolved(),
-				atom.getVdwRadiusInNm(),
-				atom.getVdwWellDepthInKJ()
-			);
+			forceField->defineAtomClass(atom.getAtomClassIndex(), atom.getAtomClassName().c_str(), atom.getAtomicNumber(), atom.getNumBondsInvolved(), atom.getVdwRadiusInNm(), atom.getVdwWellDepthInKJ());
 		}
 
 		if (!chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()]) {
 			chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()] = true;
 
 			// Create charged atom type
-			forceField->defineChargedAtomType(
-				atom.getChargedAtomTypeIndex(),
-				atom.getChargedAtomName().c_str(),
-				atom.getAtomClassIndex(),
-				atom.getChargeInE()
-			);
+			forceField->defineChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getChargedAtomName().c_str(), atom.getAtomClassIndex(), atom.getChargeInE());
 
 			forceField->setBiotypeChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getBiotypeIndex());
 		}
 	}
 
+	// Define bonds
 	for (auto& bond : bonds) {
-		forceField->defineBondStretch_KA(atoms[bond.getParentAtomGlobalIndex()].getAtomClassIndex(),
-			atoms[bond.getChildAtomGlobalIndex()].getAtomClassIndex(),
-			bond.getForceK(),
-			bond.getForceEquil());
+		auto aCIx1 = atoms[bond.getParentAtomGlobalIndex()].getAtomClassIndex();
+		auto aCIx2 = atoms[bond.getChildAtomGlobalIndex()].getAtomClassIndex();
+		SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
+		SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
+
+		forceField->defineBondStretch(aCIx1, aCIx2, stiffnessInKJPerNmSq, nominalLengthInNm);
 	}
 
-	// // Define angles
-	// for (const auto& angle : dummAngles) {
-	// 	forceField->defineBondBend_KA(
-	// 		atoms[angle.getFirstGlobalIndex()].getAtomClassIndex(),
-	// 		atoms[angle.getSecondGlobalIndex()].getAtomClassIndex(),
-	// 		atoms[angle.getThirdGlobalIndex()].getAtomClassIndex(),
-	// 		angle.getK(),
-	// 		angle.getEquil());
-	// }
+	// Define angles
+	for (const auto& angle : dummAngles) {
+		auto aCIx1 = atoms[angle.getGlobalIndex1()].getAtomClassIndex();
+		auto aCIx2 = atoms[angle.getGlobalIndex2()].getAtomClassIndex();
+		auto aCIx3 = atoms[angle.getGlobalIndex3()].getAtomClassIndex();
+		SimTK::Real stiffnessInKJPerRadSq = angle.getStiffnessInKJPerRadSq();
+		SimTK::Real nominalAngleInDeg = angle.getNominalAngleInDeg();
+		
+		forceField->defineBondBend(aCIx1, aCIx2, aCIx3, stiffnessInKJPerRadSq, nominalAngleInDeg);
+	}
 
-	// // Define torsions
-	// for (const auto& torsion : dummTorsions) {
-	// 	// Get atom class indices
-	// 	const auto aCIx1 = atoms[torsion.getFirstGlobalIndex()].getAtomClassIndex();
-	// 	const auto aCIx2 = atoms[torsion.getSecondGlobalIndex()].getAtomClassIndex();
-	// 	const auto aCIx3 = atoms[torsion.getThirdGlobalIndex()].getAtomClassIndex();
-	// 	const auto aCIx4 = atoms[torsion.getFourthGlobalIndex()].getAtomClassIndex();
+	// Define 1 Fourrier terms dihedrals
+	for (const auto& torsion : dummTorsions) {
+		auto aCIx1 = atoms[torsion.getGlobalIndex1()].getAtomClassIndex();
+		auto aCIx2 = atoms[torsion.getGlobalIndex2()].getAtomClassIndex();
+		auto aCIx3 = atoms[torsion.getGlobalIndex3()].getAtomClassIndex();
+		auto aCIx4 = atoms[torsion.getGlobalIndex4()].getAtomClassIndex();
+		int periodicity1 = torsion.getPeriodicity();
+		SimTK::Real amp1InKJ = torsion.getAmpInKJ();
+		SimTK::Real phase1InDegrees = torsion.getPhaseInDegrees();
 
-	// 	// Define dihedrals
-	// 	if (!torsion.isImproper()) {
-	// 		switch(torsion.getNum()) {
-	// 			case 1:
-	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0]);
-	// 				break;
-					
-	// 			case 2:
-	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1]);
-	// 				break;
-
-	// 			case 3:
-	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
-	// 					torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2]);
-	// 				break;
-
-	// 			case 4:
-	// 				forceField->defineBondTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
-	// 					torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2],
-	// 					torsion.getPeriod()[3], torsion.getK()[3], torsion.getPhase()[3]);
-	// 				break;
-	// 		}
-	// 	} else {
-	// 		// Define impropers
-	// 		switch(torsion.getNum()) {
-	// 			case 1:
-	// 				forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0]);
-	// 				break;
-					
-	// 			case 2:
-	// 				forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1]);
-	// 				break;
-
-	// 			case 3:
-	// 				forceField->defineAmberImproperTorsion_KA(aCIx1, aCIx2, aCIx3, aCIx4,
-	// 					torsion.getPeriod()[0], torsion.getK()[0], torsion.getPhase()[0],
-	// 					torsion.getPeriod()[1], torsion.getK()[1], torsion.getPhase()[1],
-	// 					torsion.getPeriod()[2], torsion.getK()[2], torsion.getPhase()[2]);
-	// 				break;
-	// 		}
-	// 	}
-	// }
+		// Define dihedrals
+		if (torsion.isImproper()) {
+			forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4, periodicity1, amp1InKJ, phase1InDegrees);
+		} else {
+			forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4, periodicity1, amp1InKJ, phase1InDegrees);
+		}
+	}
 }
 
 
@@ -3327,7 +3276,7 @@ World::calcMobodToMobodTransforms(
 	// Get mobility (joint type)
 	const auto& atom = topology.getAtom(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	BondLink bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
+	BondStretch bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin ||
@@ -3545,7 +3494,7 @@ SimTK::Transform World::calcX_FMTransforms(
 	// Get mobility (joint type)
 	const Atom& atom = topology.getAtom(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	BondLink bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
+	BondStretch bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	// Convenient bool

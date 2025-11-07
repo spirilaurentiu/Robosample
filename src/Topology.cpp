@@ -95,7 +95,7 @@ const Atom& Topology::getAtom(SimTK::Compound::AtomIndex cAIx) const {
 
 
 /** **/
-const BondLink& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const
+const BondStretch& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const
 {
 	for (const auto& b : subBondList) {
 		if (b.getParentAtomGlobalIndex() == aIx0 && b.getChildAtomGlobalIndex() == aIx1) {
@@ -109,7 +109,7 @@ const BondLink& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const
 	SimTK_ASSERT_ALWAYS(false, "Topology::getBondByGlobalAtomIndex(): No bond with specified atom indices found.");
 }
 
-const BondLink& Topology::getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const {
+const BondStretch& Topology::getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const {
 	CompoundAtomIndexPair pair = canonical(cAIx0, cAIx1);
 
 	auto it = std::lower_bound(aIxPair2Bonds.begin(), aIxPair2Bonds.end(), std::make_pair(pair, 0));
