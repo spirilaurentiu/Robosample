@@ -4591,11 +4591,11 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 	SimTK::Real beta_C = thermodynamicStates[thermoState_C].getBeta();
 	SimTK::Real beta_H = thermodynamicStates[thermoState_H].getBeta();
 	
-	SimTK::Real U_X0 = replicas[replica_X].getPotentialEnergy(); // last equil potential
-	SimTK::Real U_Y0 = replicas[replica_Y].getPotentialEnergy(); // last equil potential
+	SimTK::Real U_Xset = replicas[replica_X].getPotentialEnergy(); // last equil potential
+	SimTK::Real U_Yset = replicas[replica_Y].getPotentialEnergy(); // last equil potential
 
-	SimTK::Real refU_X0 = replicas[replica_X].getReferencePotentialEnergy(); // last equil reference potential
-	SimTK::Real refU_Y0 = replicas[replica_Y].getReferencePotentialEnergy(); // last equil reference potential
+	SimTK::Real refU_Xset = replicas[replica_X].getReferencePotentialEnergy(); // last equil reference potential
+	SimTK::Real refU_Yset = replicas[replica_Y].getReferencePotentialEnergy(); // last equil reference potential
 
 	SimTK::Real W_X = replicas[replica_X].getWORK(); // work without Jacobian
 	SimTK::Real W_Y = replicas[replica_Y].getWORK(); // work without Jacobian
@@ -4613,15 +4613,15 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 	// ----------------------------------------------------------------
 	// Reduced potentials X0
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real uC_X0 = beta_C * U_X0; // Replica i reduced potential in state i
-	SimTK::Real uH_Y0 = beta_H * U_Y0; // Replica j reduced potential in state j
-	SimTK::Real uH_X0 = beta_H * U_X0; // Replica i reduced potential in state j
-	SimTK::Real uC_Y0 = beta_C * U_Y0; // Replica j reduced potential in state i
+	SimTK::Real uC_Xset = beta_C * U_Xset; // Replica i reduced potential in state i
+	SimTK::Real uH_Yset = beta_H * U_Yset; // Replica j reduced potential in state j
+	SimTK::Real uH_Xset = beta_H * U_Xset; // Replica i reduced potential in state j
+	SimTK::Real uC_Yset = beta_C * U_Yset; // Replica j reduced potential in state i
 
-	SimTK::Real ref_uC_X0 = beta_C * refU_X0; // Replica i reduced reference potential in state i
-	SimTK::Real ref_uH_Y0 = beta_H * refU_Y0; // Replica j reduced reference potential in state j
-	SimTK::Real ref_uH_X0 = beta_H * refU_X0; // Replica i reduced reference potential in state j
-	SimTK::Real ref_uC_Y0 = beta_C * refU_Y0; // Replica j reduced reference potential in state i
+	SimTK::Real ref_uC_Xset = beta_C * refU_Xset; // Replica i reduced reference potential in state i
+	SimTK::Real ref_uH_Yset = beta_H * refU_Yset; // Replica j reduced reference potential in state j
+	SimTK::Real ref_uH_Xset = beta_H * refU_Xset; // Replica i reduced reference potential in state j
+	SimTK::Real ref_uC_Yset = beta_C * refU_Yset; // Replica j reduced reference potential in state i
 
 	// ----------------------------------------------------------------
 	// Reduced potential Xtau
@@ -4641,15 +4641,15 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 	SimTK::Real Fix_Ytau = replicas[replica_Y].get_WORK_Fixman();
 
 	// Get Fixman potential for the equilibrium coordinates
-	SimTK::Real Fix_X0 = replicas[replica_X].getFixman();
-	SimTK::Real Fix_Y0 = replicas[replica_Y].getFixman();
+	SimTK::Real Fix_Xset = replicas[replica_X].getFixman();
+	SimTK::Real Fix_Yset = replicas[replica_Y].getFixman();
 
 	// Get reduced Fixman potentials
 	SimTK::Real fixH_Xtau = beta_H * Fix_Xtau;
 	SimTK::Real fixC_Ytau = beta_C * Fix_Ytau;
 
-	SimTK::Real fixC_X0 = beta_C * Fix_X0;
-	SimTK::Real fixH_Y0 = beta_H * Fix_Y0;
+	SimTK::Real fixC_Xset = beta_C * Fix_Xset;
+	SimTK::Real fixH_Yset = beta_H * Fix_Yset;
 
 	#pragma endregion CONVENIENT_VARS
 
@@ -4683,8 +4683,8 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 	// ----------------------------------------------------------------
 	// LOGP ENERGY EQUILIBRIUM
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-	SimTK::Real ETerm_equil    = ref_uH_X0 - ref_uC_X0;
-				ETerm_equil   += ref_uC_Y0 - ref_uH_Y0;
+	SimTK::Real ETerm_equil    = ref_uH_Xset - ref_uC_Xset;
+				ETerm_equil   += ref_uC_Yset - ref_uH_Yset;
 				ETerm_equil = -1.0 * ETerm_equil;
 
 	// ----------------------------------------------------------------
@@ -4698,12 +4698,12 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 	// LOGP WORK
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Get work from X replica
-	//SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) + (fixH_Xtau - fixC_X0) - lnJac_X; // variant 1
-	SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_X0) - lnJac_X;                           // variant 2
+	//SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_Xset) + (fixH_Xtau - fixC_Xset) - lnJac_X; // variant 1
+	SimTK::Real Work_X = (ref_uH_Xtau - ref_uC_Xset) - lnJac_X;                           // variant 2
 
 	// Get work from Y replica
-	//SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) + (fixC_Ytau - fixH_Y0) - lnJac_Y; // variant 1
-	SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Y0) - lnJac_Y;                           // variant 2
+	//SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Yset) + (fixC_Ytau - fixH_Yset) - lnJac_Y; // variant 1
+	SimTK::Real Work_Y = (ref_uC_Ytau - ref_uH_Yset) - lnJac_Y;                           // variant 2
 
 	// Get total work
 	SimTK::Real WTerm = -1.0 * (Work_X + Work_Y);
@@ -4734,18 +4734,18 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 	// PRINT
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-
-    cout << "th_C, th_H, re_X, re_Y, beta_C, beta_H, U0_X, U0_Y, Uset_X, Uset_Y "
-         << thermoState_C << " " << thermoState_H << " "
-         << replica_X << " " << replica_Y << " "
-         << beta_C << " " << beta_H << " "
-         << refU_X0 << " "
-         << refU_Y0 << " "
-         << refU_Xtau << " "
-         << refU_Ytau << " "
-		 << Work_X << " "
-		 << Work_Y << " "
-         << endl;
+	// Just for DEBUG
+    // cout << "th_C, th_H, re_X, re_Y, beta_C, beta_H, U_Xset, U_Yset, U_Xtau, U_Ytau "
+    //      << thermoState_C << " " << thermoState_H << " "
+    //      << replica_X << " " << replica_Y << " "
+    //      << beta_C << " " << beta_H << " "
+    //      << refU_Xset << " "
+    //      << refU_Yset << " "
+    //      << refU_Xtau << " "
+    //      << refU_Ytau << " "
+	// 	 << Work_X << " "
+	// 	 << Work_Y << " "
+    //      << endl;
 
 
 	bool printTerms = false, printWithoutText = true;
@@ -4755,8 +4755,8 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 		std::cout << "bibjwiwj " << beta_C << " " << beta_H << " " << std::endl;
 		std::cout << "LiiLjj " << uC_Xtau << " " << uH_Ytau << " "
 							   << uH_Xtau << " " << uC_Ytau << std::endl;
-		std::cout << "EiiEjj " << uC_X0 << " " << uH_Y0 << " "
-							   << uH_X0 << " " << uC_Y0 << std::endl;
+		std::cout << "EiiEjj " << uC_Xset << " " << uH_Yset << " "
+							   << uH_Xset << " " << uC_Yset << std::endl;
 		std::cout << "Transferred E i j " << W_X << " " << W_Y << std::endl;
 		std::cout << "ETerm " << ETerm_equil << std::endl;
 		std::cout << "ETerm_noneq " << ETerm_nonequil << std::endl;
@@ -4772,21 +4772,21 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 		rexDetStream.str("");
 
 		rexDetStream 
-			<< "REXdetails " << ", " << thermoState_C << ", " << thermoState_H << ", "
+			<< "REXdetails" << ", " << thermoState_C << ", " << thermoState_H << ", "
 			<< replica_X << ", " << replica_Y << ", "
 			<< beta_C << ", " << beta_H << ", "
 
-			<< uC_X0 << ", " << uH_Y0 << ", " << uH_X0 << ", " << uC_Y0 << ", "
+			<< uC_Xset << ", " << uH_Yset << ", " << uH_Xset << ", " << uC_Yset << ", "
 			<< uC_Xtau << ", " << uH_Ytau << ", " << uH_Xtau << ", " << uC_Ytau << ", "
 
-			<< ref_uC_X0 << ", " << ref_uH_Y0 << ", " << ref_uH_X0 << ", " << ref_uC_Y0 << ", "
+			<< ref_uC_Xset << ", " << ref_uH_Yset << ", " << ref_uH_Xset << ", " << ref_uC_Yset << ", "
 			<< ref_uC_Xtau << ", " << ref_uH_Ytau << ", " << ref_uH_Xtau << ", " << ref_uC_Ytau << ", "
 			
 			<< lnJac_X << ", " << lnJac_Y << ", "
 			<< Work_X << ", " << Work_Y << ", "
-			<< ", " << s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
-			<< ", " << qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 
-			<< ", " << ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
+			<< s_X << ", " << s_Y << ", " << s_X_1 << ", " << s_Y_1 << ", "
+			<< qC_s_X << ", " << qH_s_Y << ", " << qH_s_X_1 << ", " << qC_s_Y_1 << ", "
+			<< ETerm_equil << ", " << WTerm << ", " << correctionTerm << ", "   
 		;
 
 		std::cout << rexDetStream.str();		
@@ -4807,7 +4807,7 @@ bool Context::attemptREXSwap(int thermoState_C, int thermoState_H)
 
 		log_p_accept = ETerm_nonequil + std::log(correctionTerm) ;
 
-	}else if( getRunType() == RUN_TYPE::RENE){
+	}else if((getRunType() == RUN_TYPE::RENE) || (getRunType() == RUN_TYPE::REBASONTOP)){
 
 		log_p_accept = WTerm + std::log(correctionTerm) ;
 
@@ -4925,8 +4925,10 @@ void Context::getMsg_RexDetHeader(
 {
 
 	rexDetHeader << "REXdetails"
-		<< ", "<< "thermoState_C" << ", "<< "thermoState_H" << ", "<< "replica_X" << ", "<< "replica_Y" << ", "<< "beta_C" << ", "<< "beta_H"                                                                                                                                                                                                                                                                                           << ", "<< "uC_X0" << ", "<< "uH_Y0" << ", "<< "uH_X0" << ", "<< "uC_Y0"
-		<< ", "<< "uC_Xtau" << ", "<< "uH_Ytau" << ", "<< "uH_Xtau" << ", "<< "uC_Ytau"                                                                                                                                                                                                                                                                                                                                                 << ", "<< "ref_uC_X0" << ", "<< "ref_uH_Y0" << ", "<< "ref_uH_X0" << ", "<< "ref_uC_Y0"
+		<< ", "<< "thermoState_C" << ", "<< "thermoState_H" << ", "<< "replica_X" << ", "<< "replica_Y" << ", "<< "beta_C" << ", "<< "beta_H"
+		<< ", "<< "uC_Xset" << ", "<< "uH_Yset" << ", "<< "uH_Xset" << ", "<< "uC_Yset"
+		<< ", "<< "uC_Xtau" << ", "<< "uH_Ytau" << ", "<< "uH_Xtau" << ", "<< "uC_Ytau"                                                                                                                                                                                                                                                                                                                                                 
+		<< ", "<< "ref_uC_Xset" << ", "<< "ref_uH_Yset" << ", "<< "ref_uH_Xset" << ", "<< "ref_uC_Yset"
 		<< ", "<< "ref_uC_Xtau" << ", "<< "ref_uH_Ytau" << ", "<< "ref_uH_Xtau" << ", "<< "ref_uC_Ytau"
 		<< ", "<< "lnJac_X" << ", "<< "lnJac_Y"
 		<< ", "<< "W_X" << ", "<< "W_Y"
@@ -6317,7 +6319,7 @@ void Context::runReplicaWorldRange(
 				if(thWCnt != startWorldCnt){ // don't transfer if it's the first world in the range
 					if(thWCnt != 0){ // don't transfer if it's the first world in the range and it's also the first world overall
 						transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
-						transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx); // 
+						//transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx); //
 					}
 				}				
 
@@ -6325,14 +6327,14 @@ void Context::runReplicaWorldRange(
 				bool validated = true;
 				validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
 
-				// Calculate Q statistics
-				if(sampler_p->getAcc() == true){
-					thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
-				}else{
-					thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
-				}
+				// // Calculate Q statistics
+				// if(sampler_p->getAcc() == true){
+				// 	thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
+				// }else{
+				// 	thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
+				// }
 
-				// ======================== EQUILIBRIUM ======================
+				// ========================  EQUILIBRIUM TRANSFER TO REPLICA  ======================
 				if(distortIx == 0){
 
 					transferCoordinates_WorldToReplica(wIx, replicaIx);
@@ -6340,9 +6342,17 @@ void Context::runReplicaWorldRange(
 					replica.setPotentialEnergy(currWorld.calcPotentialEnergy());
 					replica.setFixman(sampler_p->fix_set);
 					replica.setReferencePotentialEnergy(OMMRef_calcPotential(replica.getAtomsLocationsInGround(), true, true));
+
+					// Calculate Q statistics
+					if(sampler_p->getAcc() == true){
+						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
+					}else{
+						thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
+					}
+
 				} // __end__ Equilibrium 
 
-				// ======================== NON-EQUILIBRIUM ======================
+				// ======================== NON-EQUILIBRIUM TRANSFER TO REPLICA ======================
 				else{ // (distortIx != 0)
 					replica.updWORK() += currWorld.getWork();  // TODO merge with Jacobians
 					replica.upd_WORK_Jacobian() += sampler_p->getDistortJacobianDetLog();
@@ -6470,7 +6480,11 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
 
 			transferCoordinates_ReplicaToWorld(replicaIx, 0);
-			transferQStatistics(thermoIx, thermoWorldIxs.back(), 0);
+
+			transferQStatistics(thermoIx, thermoWorldIxs[nofEquilibriumWorlds - 1], thermoWorldIxs[nofEquilibriumWorlds - 1]);
+			// std::cout << "Thermodynamic state " << thermoIx << " Transfering statistics from world "
+			// 	<< thermoWorldIxs[nofEquilibriumWorlds - 1] << " to world " << thermoWorldIxs[nofEquilibriumWorlds - 1]
+			// 	<< std::endl << std::flush;
 
 			replica.updWORK() = 0.0;
 			replica.upd_WORK_Jacobian() = 0.0;
@@ -6538,7 +6552,11 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				setReplicasWorldsParameters(replicaIx, false, true, mixi);
 
 				transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs[N_1_wCnt]);
-				transferQStatistics(thermoIx, thermoWorldIxs.back(), thermoWorldIxs[N_1_wCnt]);
+
+				transferQStatistics(thermoIx, thermoWorldIxs[N_2_wCnt], thermoWorldIxs[N_1_wCnt]);
+				// std::cout << "Thermodynamic state " << thermoIx << " Transfering statistics from world "
+				// 	<< thermoWorldIxs[N_2_wCnt] << " to world " << thermoWorldIxs[N_1_wCnt]
+				// 	<< std::endl << std::flush;
 
 				replica.updWORK() = 0.0;
 				replica.upd_WORK_Jacobian() = 0.0;
