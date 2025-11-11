@@ -1042,7 +1042,20 @@ void Context::Initialize() {
 	}
 
 	// Set a vector of replica pairs for exchanges
-	exchangePairs.resize(nofReplicas);
+	//exchangePairs.resize(nofReplicas);
+
+    // Ensure correct sizes and clear any old data
+    exchangePairList.clear();
+    exchangePairs.clear();
+
+    // Allocate the lookup vector with one slot per thermodynamic state (or replica)
+    exchangePairs.resize(nofReplicas, 0);
+
+    // Preallocate space for the pair list
+    exchangePairList.reserve(nofReplicas / 2);
+
+    // If you want an initial valid exchange configuration (e.g., round 0)
+    setReplicaExchangePairs(0, 0);
 
 	// Consider renaming
 	loadReplica2ThermoIxs();
@@ -5007,20 +5020,25 @@ void Context::mixAllReplicas(int nSwapAttempts)
 */
 void Context::mixReplicas(int mixi)
 {
-	if((mixi % swapEvery) == 0){
+	// if((mixi % swapEvery) == 0){
+	// 	int startFrom = mixi % 2;
+	// 	for(int thermoState_i = startFrom; thermoState_i <= (nofThermodynamicStates - 2); thermoState_i += 2){
+	// 		int thermoState_j = thermoState_i + 1;
+	// 		bool swapped = attemptREXSwap(thermoState_i, thermoState_j);
+	// 	}
+	// }
 
-		int startFrom = mixi % 2;
+    // Only attempt swaps every 'swapEvery' steps
+    if ((mixi % swapEvery) != 0) return;
+    // Iterate over the explicit pair list
+    for (const auto& pair : exchangePairList)
+    {
+        int thermoState_i = pair.first;
+        int thermoState_j = pair.second;
+        // Attempt the swap
+        bool swapped = attemptREXSwap(thermoState_i, thermoState_j);
+    }
 
-		for(int thermoState_i = startFrom; thermoState_i <= (nofThermodynamicStates - 2); thermoState_i += 2){
-
-			int thermoState_j = thermoState_i + 1;
-
-			//bool swapped = attemptREXSwap(thermo2ReplicaIxs[thermoState_i], thermo2ReplicaIxs[thermoState_j]);
-			bool swapped = attemptREXSwap(thermoState_i, thermoState_j);
-		}
-
-
-	}
 }
 
 
@@ -5303,51 +5321,122 @@ void Context::initializeReplica(int thisReplica)
 	thermodynamicStates[thisThermoStateIx].printPartitioning(std::cout);
 }
 
-/*!
- * <!--	 -->
-*/
-void Context::setReplicaExchangePairs(unsigned int startingFrom)
+/*! <!--Set replica exchange pairs --> */
+void Context::setReplicaExchangePairs(int rexRound, int oddity)
 {
-	assert((startingFrom <= 1) &&
-	"Replica exchange scheme has to start from 0 or 1.");
 
-	int thermoState_i = 0;
-	int thermoState_j = 1;
+    // Determine phase in 4-step cyclic scheme
+    int doubleRexRound = rexRound * 2 + oddity;
+    int phase = doubleRexRound % 4;
 
-	// Odd scheme implies 0-N exchange
-	if(startingFrom == 1){
-		exchangePairs[0] = exchangePairs.size() - 1;
-	}
+    exchangePairList.clear();
+    std::fill(exchangePairs.begin(), exchangePairs.end(), -1);
 
-	// Go through neighboring thermodynamic states
-	for(size_t thermoState_k = startingFrom;
-	thermoState_k < (nofThermodynamicStates - 1);
-	thermoState_k += 2)
-	{
-		
-		// Get thermodynamic states
-		thermoState_i = thermoState_k;
-		thermoState_j = thermoState_k + 1;
+    const size_t K = nofThermodynamicStates;
+    size_t start, end;
 
-		// Get replicas corresponding to the thermodynamic states
-		int replica_i = thermo2ReplicaIxs[thermoState_i];
-		int replica_j = thermo2ReplicaIxs[thermoState_j];
+    if (phase == 0 || phase == 3) {
+        start = 0;
+        end = (K >= 2) ? K - 2 : 0;
+    } else {
+        start = 1;
+        end = (K >= 1) ? K - 1 : 0;
+    }
 
-		// Set the vector of exchange pairs
-        exchangePairs[replica_i] = replica_j;
-		//exchangePairs[replica_j] = replica_i;
-	}
+    // std::cout << " rexRound " << rexRound
+    //           << " doubleRexRound " << doubleRexRound
+    //           << " phase " << phase
+    //           << " start " << start
+    //           << " end " << end
+    //           << std::endl;
+
+    for (size_t thermoState_k = start; thermoState_k < end; thermoState_k += 2)
+    {
+        size_t thermoState_i = thermoState_k;
+        size_t thermoState_j = thermoState_k + 1;
+
+        // // Make sure thermo2ReplicaIxs has correct size
+        // if (thermoState_i >= thermo2ReplicaIxs.size() || thermoState_j >= thermo2ReplicaIxs.size()) {
+        //     std::cerr << "Error: thermo2ReplicaIxs not properly initialized." << std::endl;
+        //     continue;
+        // }
+        // int replica_i = thermo2ReplicaIxs[thermoState_i];
+        // int replica_j = thermo2ReplicaIxs[thermoState_j];
+
+        // Store explicit pair
+        exchangePairList.emplace_back(thermoState_i, thermoState_j);
+
+        // Store fast lookup
+        exchangePairs[thermoState_i] = thermoState_j;
+        // Optional: symmetric mapping if needed
+        exchangePairs[thermoState_j] = thermoState_i;
+    }
+
+	// assert((startingFrom <= 1) &&
+	// "Replica exchange scheme has to start from 0 or 1.");
+	// int thermoState_i = 0;
+	// int thermoState_j = 1;
+	// // Odd scheme implies 0-N exchange
+	// if(startingFrom == 1){
+	// 	exchangePairs[0] = exchangePairs.size() - 1;
+	// }
+	// // Go through neighboring thermodynamic states
+	// for(size_t thermoState_k = startingFrom;
+	// thermoState_k < (nofThermodynamicStates - 1);
+	// thermoState_k += 2)
+	// {
+	// 	// Get thermodynamic states
+	// 	thermoState_i = thermoState_k;
+	// 	thermoState_j = thermoState_k + 1;
+	// 	// Get replicas corresponding to the thermodynamic states
+	// 	int replica_i = thermo2ReplicaIxs[thermoState_i];
+	// 	int replica_j = thermo2ReplicaIxs[thermoState_j];
+	// 	// Set the vector of exchange pairs
+    //     exchangePairs[replica_i] = replica_j;
+	// 	//exchangePairs[replica_j] = replica_i;
+	// }
 
 }
 
 /*! <!--	 -->
 */
-const int Context::getThermoPair(int replicaIx)
+const int Context::getReplicaExchangePair(int thermoIx)
 {
 	assert((exchangePairs.size() > 0) &&
 	"Replica exchange pairs not set.");
 	
-	return exchangePairs[replicaIx];
+	return exchangePairs[thermoIx];
+}
+
+
+void Context::printReplicaExchangePairs(void)
+{
+
+    assert(!exchangePairs.empty() && "Replica exchange pairs not set.");
+
+    std::cout << "=== Replica Exchange Pairs ===\n";
+
+    // 1️⃣ Print the explicit list of pairs first (if available)
+    if (!exchangePairList.empty()) {
+        std::cout << "Pair list (thermo_i - thermo_j): ";
+        for (size_t i = 0; i < exchangePairList.size(); ++i) {
+            auto [ri, rj] = exchangePairList[i];
+            if (i != 0) std::cout << ", ";
+            std::cout << "(" << ri << "," << rj << ")";
+        }
+        std::cout << std::endl;
+	}
+
+
+	// assert((exchangePairs.size() > 0) &&
+	// "Replica exchange pairs not set.");
+	// std::cout << "Replica Exchange Pairs: ";
+	// for(size_t pIx = 0; pIx < exchangePairs.size(); pIx++){
+	// 	if (pIx != 0){std::cout << ", ";}
+	// 	std::cout << "[" << pIx << " " << exchangePairs[pIx] << "]";
+	// }
+	// std::cout << std::endl;
+
 }
 
 // Prepare Q, U, and tau altering function parameters
@@ -5364,44 +5453,47 @@ void Context::PrepareNonEquilibriumParams_Q(){
 
 	// Set the even scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
-		// s_i = T_j
-		qScaleFactorsEven.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
-		qScaleFactorsEven.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
+	// std::cout << "Context::PrepareNonEquilibriumParams_Q nofThermodynamicStates " << nofThermodynamicStates << std::endl << std::flush;
+	// std::cout << "Context::PrepareNonEquilibriumParams_Q exchangePairs.size() " << exchangePairs.size() << std::endl << std::flush;
+	// std::cout << "Context::PrepareNonEquilibriumParams_Q thermodynamicStates.size() " << thermodynamicStates.size() << std::endl << std::flush;
 
-		// s_i /= T_i
-		qScaleFactorsEven.at(thermoIx)     /= thermodynamicStates[thermoIx].getTemperature();
-		qScaleFactorsEven.at(thermoIx + 1) /= thermodynamicStates[thermoIx + 1].getTemperature();
+	printReplicaExchangePairs();
 
-		// s_i = sqrt(s_i)
-		qScaleFactorsEven.at(thermoIx) = std::sqrt(qScaleFactorsEven.at(thermoIx));
-		qScaleFactorsEven.at(thermoIx + 1) = std::sqrt(qScaleFactorsEven.at(thermoIx + 1));
+	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx += 1){
+
+		if(exchangePairs[thermoIx] != -1){
+			// s_i = T_j
+			qScaleFactorsEven.at(thermoIx)                = thermodynamicStates[exchangePairs[thermoIx]].getTemperature();
+			qScaleFactorsEven.at(exchangePairs[thermoIx]) = thermodynamicStates[thermoIx].getTemperature();
+
+			// s_i /= T_i
+			qScaleFactorsEven.at(thermoIx)                /=  thermodynamicStates[thermoIx].getTemperature();
+			qScaleFactorsEven.at(exchangePairs[thermoIx]) /= thermodynamicStates[exchangePairs[thermoIx]].getTemperature();
+
+			// s_i = sqrt(s_i)
+			qScaleFactorsEven.at(thermoIx) = std::sqrt(qScaleFactorsEven.at(thermoIx));
+			qScaleFactorsEven.at(exchangePairs[thermoIx]) = std::sqrt(qScaleFactorsEven.at(exchangePairs[thermoIx]));
+
+		}else{
+			qScaleFactorsEven.at(thermoIx) = 1.0;
+		}
 	}
 
 	// Set the odd scale factors equal to the sqrt(Ti/Tj)
 	// and distribute it according the some distribution
-	for(size_t thermoIx = 1; thermoIx < nofThermodynamicStates - 1; thermoIx += 2){
+	for(size_t qSFIx = 0; qSFIx < qScaleFactorsOdd.size(); qSFIx += 1){
 
-		// s_i = T_j
-		qScaleFactorsOdd.at(thermoIx)     = thermodynamicStates[thermoIx + 1].getTemperature();
-		qScaleFactorsOdd.at(thermoIx + 1) = thermodynamicStates[thermoIx].getTemperature();
+		qScaleFactorsOdd.at(qSFIx) = qScaleFactorsEven.at(qSFIx);
 
-		// s_i /= T_i
-		qScaleFactorsOdd.at(thermoIx)     /= thermodynamicStates[thermoIx].getTemperature();
-		qScaleFactorsOdd.at(thermoIx + 1) /= thermodynamicStates[thermoIx + 1].getTemperature();
-
-		// s_i = sqrt(s_i)
-		qScaleFactorsOdd.at(thermoIx) = std::sqrt(qScaleFactorsOdd.at(thermoIx));
-		qScaleFactorsOdd.at(thermoIx + 1) = std::sqrt(qScaleFactorsOdd.at(thermoIx + 1));
 	}
 
 	// for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
 	// 	std::cout << "REBASScaleFactor even for thermoState " << thermoIx << " "
-	// 		<< qScaleFactorsEven.at(thermoIx) << std::endl;
+	// 		<< qScaleFactorsEven.at(thermoIx) << std::endl << std::flush;
 	// }
 	// for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx++){
 	// 	std::cout << "REBASScaleFactor odd for thermoState " << thermoIx << " "
-	// 		<< qScaleFactorsOdd.at(thermoIx) << std::endl;
+	// 		<< qScaleFactorsOdd.at(thermoIx) << std::endl << std::flush;
 	// }
 
 }
@@ -5710,11 +5802,11 @@ void Context::updThermostatesQScaleFactors(int mixi)
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
-	// std::cout << "REBASContext::updThermostatesQScaleFactors:";
-	// for(const auto& curr_qScaleFactor : qScaleFactors){
-	// 	std::cout <<" "<<curr_qScaleFactor;
-	// }
-	// std::cout << std::endl;
+	std::cout << "REBASContext::updThermostatesQScaleFactors:";
+	for(const auto& curr_qScaleFactor : qScaleFactors){
+		std::cout <<" "<<curr_qScaleFactor;
+	}
+	std::cout << std::endl;
 
 	// Random sign for the scaling factors
 	// bool randSignOpt = false;
@@ -6327,13 +6419,6 @@ void Context::runReplicaWorldRange(
 				bool validated = true;
 				validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
 
-				// // Calculate Q statistics
-				// if(sampler_p->getAcc() == true){
-				// 	thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), currWorld.getAdvancedQs(), currWorld.getNofSamples());
-				// }else{
-				// 	thermoState.calcQStats(wIx, currWorld.getBMps(), currWorld.getPFrs(), SimTK::Vector(currWorld.getNQs(), SimTK::Real(0)), currWorld.getNofSamples());
-				// }
-
 				// ========================  EQUILIBRIUM TRANSFER TO REPLICA  ======================
 				if(distortIx == 0){
 
@@ -6439,11 +6524,13 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		// Reset replica exchange pairs vector
 		if(getRunType() != RUN_TYPE::DEFAULT){
 			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-				setReplicaExchangePairs(mixi % 2);
+				setReplicaExchangePairs(mixi, 0);
+				//printReplicaExchangePairs();
 			}
 		}
 
 		// Update work scale factors
+		PrepareNonEquilibriumParams_Q();
 		updThermostatesQScaleFactors(mixi);
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (EQUILIBRIUM) ------------------------------------->
@@ -6515,8 +6602,17 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
 
+		// Reset replica exchange pairs vector
+		if(getRunType() != RUN_TYPE::DEFAULT){
+			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
+				setReplicaExchangePairs(mixi, 1);
+				//printReplicaExchangePairs();
+			}
+		}
+
 		// Update work scale factors
-		updThermostatesQScaleFactors(mixi);	
+		PrepareNonEquilibriumParams_Q();
+		updThermostatesQScaleFactors(mixi);
 
 		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ // BY_REPLICA
 		//for(int thermoIx = 0; thermoIx < nofReplicas; thermoIx){ // BY_THERMO
@@ -6657,7 +6753,7 @@ void Context::setSubZmatrixBATStatsToSamplers(int thermoIx, int whichWorld)
 		std::vector<SimTK::Real>& BATVars = thermodynamicStates[thermoIx].getBATVarsRow(zMatCnt);
 
 		// Get statistics from thermostate exchange pair
-		int alienThermoIx = getThermoPair(thermoIx);
+		int alienThermoIx = getReplicaExchangePair(thermoIx);
 		std::vector<SimTK::Real>& BATVars_Alien = thermodynamicStates[alienThermoIx].getBATVarsRow(zMatCnt);
 
 		// Insert entry into sampler stats containers

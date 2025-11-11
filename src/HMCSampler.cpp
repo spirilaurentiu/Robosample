@@ -4432,7 +4432,7 @@ void HMCSampler::Print(const SimTK::State& someState,
 
 		// Print validity
 		if(isTheSampleValid){
-			std::cout << " ";
+			;
 		}else{
 			std::cout << " invalid";
 		}
@@ -4494,7 +4494,7 @@ void HMCSampler::getMsg_EnergyDetails(
 
 		// Print validity
 		if(isTheSampleValid){
-			ss << " ";
+			;
 		}else{
 			ss << " invalid";
 		}

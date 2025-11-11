@@ -627,17 +627,21 @@ public:
 	);
 
 	/**
-	* @brief zmatrixbat_
+	* @brief Set the replica exchange pairs
 	* @param
 	*/	
-	void setReplicaExchangePairs(unsigned int startingFrom);
+	void setReplicaExchangePairs(int rexRounds, int oddity);
 
 	/**
-	* @brief zmatrixbat_
-	* @param
+	* @brief Get a specific replica exchange pair
+	* @param 
 	*/
-	const int getThermoPair(int replicaIx);
+	const int getReplicaExchangePair(int replicaIx);
 
+	/**
+	* @brief Get a specific replica exchange pair
+	*/
+	void printReplicaExchangePairs(void);
 
 	// Prepare Q, U, and tau altering function parameters
 	void PrepareNonEquilibriumParams_Q(void);
@@ -1244,7 +1248,12 @@ private:
 	std::unordered_map<int, SimTK::Compound::BondIndex> bondMapping;
 
 	// Pairs of replicas to be exchanged
-	std::vector<int> exchangePairs;
+	//std::vector<int> exchangePairs;
+
+
+    std::vector<std::pair<int, int>> exchangePairList; // explicit pairs (replica_i, replica_j)
+    std::vector<int> exchangePairs;                    // quick lookup: exchangePairs[i] = j or -1
+
 
 	std::map<std::string, AcceptRejectMode> acceptRejectModes = {
 		{ "EMPTY", AcceptRejectMode::AlwaysAccept },
