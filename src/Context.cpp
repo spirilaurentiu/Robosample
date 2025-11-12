@@ -1056,6 +1056,7 @@ void Context::Initialize() {
 
     // If you want an initial valid exchange configuration (e.g., round 0)
     setReplicaExchangePairs(0, 0);
+	//printReplicaExchangePairs();
 
 	// Consider renaming
 	loadReplica2ThermoIxs();
@@ -5457,8 +5458,6 @@ void Context::PrepareNonEquilibriumParams_Q(){
 	// std::cout << "Context::PrepareNonEquilibriumParams_Q exchangePairs.size() " << exchangePairs.size() << std::endl << std::flush;
 	// std::cout << "Context::PrepareNonEquilibriumParams_Q thermodynamicStates.size() " << thermodynamicStates.size() << std::endl << std::flush;
 
-	printReplicaExchangePairs();
-
 	for(size_t thermoIx = 0; thermoIx < nofThermodynamicStates; thermoIx += 1){
 
 		if(exchangePairs[thermoIx] != -1){
@@ -5802,11 +5801,11 @@ void Context::updThermostatesQScaleFactors(int mixi)
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
 
-	std::cout << "REBASContext::updThermostatesQScaleFactors:";
-	for(const auto& curr_qScaleFactor : qScaleFactors){
-		std::cout <<" "<<curr_qScaleFactor;
-	}
-	std::cout << std::endl;
+	// std::cout << "REBASContext::updThermostatesQScaleFactors:";
+	// for(const auto& curr_qScaleFactor : qScaleFactors){
+	// 	std::cout <<" "<<curr_qScaleFactor;
+	// }
+	// std::cout << std::endl;
 
 	// Random sign for the scaling factors
 	// bool randSignOpt = false;
@@ -6598,17 +6597,15 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			PrintNofAcceptedSwapsMatrix();
 			//mixi++;
 			setRunType(RUN_TYPE::REBASONTOP);
-		}
 
-		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
-
-		// Reset replica exchange pairs vector
-		if(getRunType() != RUN_TYPE::DEFAULT){
+			// Reset replica exchange pairs vector
 			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 				setReplicaExchangePairs(mixi, 1);
 				//printReplicaExchangePairs();
-			}
+			}			
 		}
+
+		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
 
 		// Update work scale factors
 		PrepareNonEquilibriumParams_Q();
