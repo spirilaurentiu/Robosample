@@ -133,7 +133,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("residueIndex", &AtomDefinition::residueIndex)
         .def_readwrite("atomClassIndex", &AtomDefinition::atomClassIndex)
         .def_readwrite("chargedAtomTypeIndex", &AtomDefinition::chargedAtomTypeIndex)
-        .def_readwrite("atomName", &AtomDefinition::atomName)
+        .def_readwrite("biotypeAtomName", &AtomDefinition::biotypeAtomName)
         .def_readwrite("atomClassName", &AtomDefinition::atomClassName)
         .def_readwrite("chargedAtomName", &AtomDefinition::chargedAtomName)
         .def_readwrite("residueName", &AtomDefinition::residueName)

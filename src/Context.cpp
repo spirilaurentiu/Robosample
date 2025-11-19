@@ -235,6 +235,8 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 			child.setCompoundAtomIndex(childCAIx);
 			topology.setAtomMass(childCAIx, child.getMassInDaltons());
 
+			std::cout << "STEP_1: Set compound atom index for atom " << child.getGlobalIndex() << " to " << childCAIx << std::endl;
+
 			// Set the local compound atom index for the parent if it is the root
 			if(bond.getParentAtomGlobalIndex() == rootAtomGlobalIndex) {
 				SimTK::Compound::AtomIndex parentCAIx = topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 0);
@@ -283,7 +285,8 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 		// Define the biotype of the atom
 		for (auto& atom: topology.getAtoms()) {
 			// It calls SimTK::Biotype::defineBiotype and checks if it already exists
-			topology.setAtomBiotype(atom.getUniqueAtomName().c_str(), atom.getResidueName().c_str(), atom.getAtomName().c_str());
+			// topology.setAtomBiotype(atom.getUniqueAtomName().c_str(), atom.getResidueName().c_str(), atom.getAtomName().c_str());
+			topology.setAtomBiotype(atom.getUniqueAtomName().c_str(), "", atom.getChargedAtomName().c_str());
 			atom.setBiotypeIndex(topology.getAtomBiotypeIndex(atom.getCompoundAtomIndex()));
 		}
 

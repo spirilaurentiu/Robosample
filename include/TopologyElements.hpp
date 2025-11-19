@@ -52,7 +52,7 @@ struct AtomDefinition {
     int chargedAtomTypeIndex = 0;
 
     // Names
-    std::string atomName; // AMBER atom name (eg N, CA, C, O, C1, C2, H1 etc)
+    std::string biotypeAtomName; // AMBER atom name (eg N, CA, C, O, C1, C2, H1 etc) + ':' + valence (number of actual bonds, not typical valence)
     std::string atomClassName; // AMBER atom type name (eg CT C CA CM CC CV CW CR etc)
     std::string chargedAtomName; // Biotype name for charged atom type
     std::string residueName; // AMBER residue name (eg ALA, GLY, SER, THR etc)
@@ -113,7 +113,7 @@ public:
     SimTK::DuMM::AtomClassIndex getAtomClassIndex() const { return SimTK::DuMM::AtomClassIndex(atomSpec.atomClassIndex); }
     SimTK::DuMM::ChargedAtomTypeIndex getChargedAtomTypeIndex() const { return SimTK::DuMM::ChargedAtomTypeIndex(atomSpec.chargedAtomTypeIndex); }
 
-    SimTK::Compound::AtomPathName getAtomName() const { return atomSpec.atomName; }
+    SimTK::Compound::AtomPathName getAtomName() const { return atomSpec.biotypeAtomName; }
     const std::string& getAtomClassName() const { return atomSpec.atomClassName; }
     const std::string& getChargedAtomName() const { return atomSpec.chargedAtomName; }
     const std::string& getResidueName() const { return atomSpec.residueName; }

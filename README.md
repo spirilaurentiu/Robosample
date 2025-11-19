@@ -303,3 +303,38 @@ ninja robosample
 
 
 
+
+
+# Cleanup
+```
+sudo apt purge 'nvidia-*'
+sudo apt autoremove --purge
+
+sudo rm -rf /usr/local/cuda*
+sudo rm -rf /usr/lib/nvidia
+sudo rm -rf /usr/lib/x86_64-linux-gnu/libcuda.so*
+sudo rm -rf /usr/lib/x86_64-linux-gnu/libnvidia-*
+
+sudo reboot
+```
+
+# Reboot
+```
+
+```
+
+
+# Nvidia Driver - this queries Linux about the install GPU and installs the recommended driver.
+```
+sudo apt update
+sudo ubuntu-drivers autoinstall
+```
+
+
+# Reboot
+```
+sudo reboot
+```
+
+
+

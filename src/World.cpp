@@ -87,11 +87,22 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 		if (!atomClassDefined[atom.getAtomClassIndex()]) {
 			atomClassDefined[atom.getAtomClassIndex()] = true;
 
+			std::cout << "[DEBUG] Defining atom class " << atom.getAtomClassIndex()
+				<< " (" << atom.getAtomClassName() << ") with atomic number "
+				<< atom.getAtomicNumber() << ", VdW radius " << atom.getVdwRadiusInNm()
+				<< " nm, VdW well depth " << atom.getVdwWellDepthInKJ()
+				<< " kJ, involved in " << atom.getNumBondsInvolved() << " bonds." << std::endl;
+
 			forceField->defineAtomClass(atom.getAtomClassIndex(), atom.getAtomClassName().c_str(), atom.getAtomicNumber(), atom.getNumBondsInvolved(), atom.getVdwRadiusInNm(), atom.getVdwWellDepthInKJ());
 		}
 
 		if (!chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()]) {
 			chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()] = true;
+
+			std::cout << "[DEBUG] Defining charged atom type " << atom.getChargedAtomTypeIndex()
+				<< " (" << atom.getChargedAtomName() << ") with atom class index "
+				<< atom.getAtomClassIndex() << " and charge "
+				<< atom.getChargeInE() << " e." << std::endl;
 
 			// Create charged atom type
 			forceField->defineChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getChargedAtomName().c_str(), atom.getAtomClassIndex(), atom.getChargeInE());
@@ -107,8 +118,18 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 		SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
 		SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
 
+		std::cout << "[DEBUG] Defining bond between atom classes " << aCIx1 << " and " << aCIx2
+			<< " with stiffness " << stiffnessInKJPerNmSq << " KJ/(nm^2) and nominal length "
+			<< nominalLengthInNm << " nm; atoms: "
+			<< atoms[bond.getParentAtomGlobalIndex()].getUniqueAtomName() << " (index "
+			<< bond.getParentAtomGlobalIndex() << "), "
+			<< atoms[bond.getChildAtomGlobalIndex()].getUniqueAtomName() << " (index "
+			<< bond.getChildAtomGlobalIndex() << ")." << std::endl;
+
 		forceField->defineBondStretch(aCIx1, aCIx2, stiffnessInKJPerNmSq, nominalLengthInNm);
 	}
+
+	std::cout << "[INFO] Defined " << bonds.size() << " bonds." << std::endl;
 
 	// Define angles
 	for (const auto& angle : dummAngles) {
@@ -117,9 +138,15 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 		auto aCIx3 = atoms[angle.getGlobalIndex3()].getAtomClassIndex();
 		SimTK::Real stiffnessInKJPerRadSq = angle.getStiffnessInKJPerRadSq();
 		SimTK::Real nominalAngleInDeg = angle.getNominalAngleInDeg();
+
+		std::cout << "[DEBUG] Defining angle between atom classes " << aCIx1 << ", " << aCIx2 << ", " << aCIx3
+			<< " with stiffness " << stiffnessInKJPerRadSq << " KJ/(rad^2) and nominal angle "
+			<< nominalAngleInDeg << " degrees." << std::endl;
 		
 		forceField->defineBondBend(aCIx1, aCIx2, aCIx3, stiffnessInKJPerRadSq, nominalAngleInDeg);
 	}
+
+	std::cout << "[INFO] Defined " << dummAngles.size() << " angles." << std::endl;
 
 	// Define 1 Fourrier terms dihedrals
 	for (const auto& torsion : dummTorsions) {
@@ -131,6 +158,14 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 		SimTK::Real amp1InKJ = torsion.getAmpInKJ();
 		SimTK::Real phase1InDegrees = torsion.getPhaseInDegrees();
 
+		std::cout << "[DEBUG] Defining dihedral between atom classes " << aCIx1 << ", " << aCIx2 << ", " << aCIx3 << ", " << aCIx4
+			<< " with periodicity " << periodicity1 << ", amplitude " << amp1InKJ
+			<< " KJ and phase " << phase1InDegrees << " degrees for atoms: " << atoms[torsion.getGlobalIndex1()].getUniqueAtomName() << " (index "
+			<< torsion.getGlobalIndex1() << "), " << atoms[torsion.getGlobalIndex2()].getUniqueAtomName() << " (index "
+			<< torsion.getGlobalIndex2() << "), " << atoms[torsion.getGlobalIndex3()].getUniqueAtomName() << " (index "
+			<< torsion.getGlobalIndex3() << "), " << atoms[torsion.getGlobalIndex4()].getUniqueAtomName() << " (index "
+			<< torsion.getGlobalIndex4() << ")." << std::endl;
+
 		// Define dihedrals
 		if (torsion.isImproper()) {
 			forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4, periodicity1, amp1InKJ, phase1InDegrees);
@@ -138,6 +173,8 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 			forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4, periodicity1, amp1InKJ, phase1InDegrees);
 		}
 	}
+
+	std::cout << "[INFO] DUMM parameters generated." << std::endl;
 }
 
 
