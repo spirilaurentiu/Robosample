@@ -14,6 +14,10 @@ FixmanTorque::FixmanTorque(SimTK::SimbodyMatterSubsystem* argMatter) : matter(ar
 void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::SpatialVec>&,
 						   SimTK::Vector_<SimTK::Vec3>&, SimTK::Vector& mobilityForces) const  
 {
+	
+	//system->realize(state, SimTK::Stage::Dynamics);
+	//(matter->getSystem()).realize(state, SimTK::Stage::Dynamics);
+	state.advanceSystemToStage(SimTK::Stage::Dynamics);
 
 	// Compute Fixman torque
 	int nu = state.getNU();
@@ -22,27 +26,28 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	SimTK::Real D0 = 1.0;
 	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0);
 
-	// // Apply Fixman torque
-	// std::cout << "FixmanTorque_" << RT; // print Fixman torque
+	// Apply Fixman torque
+	std::cout << "FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque
 	
 	int uslot = -1;
 	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
+
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-		// std::cout <<" "<< int(mbx); // print Fixman torque
+		std::cout <<" "<< int(mbx) << std::flush; // print Fixman torque
 
 		for(int uIx = 0; uIx < mobod.getNumU(state); uIx++){
 						
 			uslot++;
 
-			// std::cout <<" "<< uIx <<" "<< (-1.0) * RT * fixTorqV[uslot]; // print Fixman torque
+			std::cout <<" "<< uIx <<" "<< (-1.0) * RT * fixTorqV[uslot] << std::flush; // print Fixman torque
 
 			mobod.applyOneMobilityForce(state, uIx, (-1.0) * RT * fixTorqV[uslot], mobilityForces);
 		}
 
-		// std::cout << std::endl; // print Fixman torque
+		std::cout << std::endl << std::flush; // print Fixman torque
 
-	}
+	} // _end_ mbx
 
 }
 
@@ -100,7 +105,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 {
 	// function args were
 
-	bool HEAVY_PRINT = false;
+	bool HEAVY_PRINT = true;
 
 	// Compute Fixman torque
 	int nu = state.getNU();
@@ -117,7 +122,6 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 	}
 
 	if((extnu == 6) || (extnu == 3)){ // Free or Ball mobilizer
-
 
 		const SimTK::MobilizedBody* mobod1ptr = &mobod1;
 		
@@ -174,17 +178,14 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		//SimTK::Real s1 = std::sin(phi);   SimTK::Real c1 = std::cos(phi);
 		//SimTK::Real s2 = std::sin(theta); SimTK::Real c2 = std::cos(theta);
 		//SimTK::Real s3 = std::sin(psi);   SimTK::Real c3 = std::cos(psi);
-
 		//std::cout << "Fixman torque Rotation Tait–Bryan Z1Y2X3 " << std::endl;
 		//std::cout << c1*c2 << " " << (c1*s2*s3) - (c3*s1) << " " << (s1*s3) + (c1*c3*s2) << std::endl;
 		//std::cout << c2*s1 << " " << (c1*c3) + (s1*s2*s3) << " " << (c3*s1*s2) - (c1*s3) << std::endl;
 		//std::cout << -1*s2 << " " << c2*s3 << " " << c2*c3 << std::endl;
-
 		//std::cout << "Fixman torque Rotation" << R << std::endl;
 		//std::cout << "Fixman torque Rotation matrix " << R[2][2] << " " << R[1][2] << " " << R[0][2] << std::endl;
 		//std::cout << "Fixman torque Rotation matrix " << R[2][1] << " " << R[1][1] << " " << R[0][1] << std::endl;
 		//std::cout << "Fixman torque Rotation matrix " << R[2][0] << " " << R[1][0] << " " << R[0][0] << std::endl;
-
 		// Test tan function
 		//std::cout << "Test asin function\n";
 		//for (float i = -1; i <= 1; i += 0.1){
@@ -314,7 +315,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 
 		////std::cout << "mobod " << i << " Q " << mobod.getQAsVector(state) << std::endl;
 		if(HEAVY_PRINT){
-			std::cout << "mobod " << i << " Q " << ((SimTK::MobilizedBody::Pin *)mobodptr)->getAngle(state) << std::endl;
+			std::cout << "mobod " << i << " Q " << ((SimTK::MobilizedBody::Pin *)mobodptr)->getAngle(state) << std::endl << std::flush;
 		}
 	}
 

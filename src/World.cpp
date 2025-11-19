@@ -3707,13 +3707,8 @@ void World::addFixmanTorque()
 	FixmanTorqueImpl = new FixmanTorque(matter.get());
 	FixmanTorqueForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueImpl);
 
-	FixmanTorqueExtImpl = new FixmanTorqueExt(matter.get());
-	FixmanTorqueExtForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueExtImpl);
-
-	// FixmanTorqueImpl = new FixmanTorque(matter.get());			//	
-	// FixmanTorqueForce = new Force::Custom(*forces, FixmanTorqueImpl);			//
-	// FixmanTorqueExtImpl = new FixmanTorqueExt(matter.get());	//
-	// FixmanTorqueExtForce = new Force::Custom(*forces, FixmanTorqueExtImpl);		//
+	//FixmanTorqueExtImpl = new FixmanTorqueExt(matter.get());
+	//FixmanTorqueExtForce = std::make_unique<Force::Custom>(*forces, FixmanTorqueExtImpl);
 
 	// for (int i = 0; i < 10; i++) {
 	// 	controller.push_back(std::make_unique<SimTK::ConformationalController>(*forces, *matter, SimTK::MobilizedBodyIndex(i), SimTK::Vec3(0,0,0)));
@@ -3768,7 +3763,7 @@ void World::setTemperature(SimTK::Real argTemperature)
 	// Set the temperature for the Fixman torque also
 	if(useFixmanTorque){
 		FixmanTorqueImpl->setTemperature(this->temperature);
-		FixmanTorqueExtImpl->setTemperature(this->temperature);
+		//FixmanTorqueExtImpl->setTemperature(this->temperature);
 	}
 }
 //...............
@@ -4161,13 +4156,23 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
     if (isRollFlexibilities) {
         for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
+
             lockAllMobilizers();
+			std::cout << "lockAllMobilizers() done." << std::endl << std::flush;
+
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-            mobod.unlock(currentAdvancedState);
-            runSamplingLoop(currentAdvancedState);
-        }
+			std::cout << "mobIntIx " << mobIntIx << std::endl << std::flush;
+            
+			mobod.unlock(currentAdvancedState);
+			std::cout << "mobod.unlock" << std::endl << std::flush;
+            
+			runSamplingLoop(currentAdvancedState); // sample_iteration
+			std::cout << "runSamplingLoop" << std::endl << std::flush;
+        
+		
+		}
     } else {
-        runSamplingLoop(currentAdvancedState);
+        runSamplingLoop(currentAdvancedState); // sample_iteration
     }
 
     return validated;	
