@@ -17,7 +17,8 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	
 	//system->realize(state, SimTK::Stage::Dynamics);
 	//(matter->getSystem()).realize(state, SimTK::Stage::Dynamics);
-	state.advanceSystemToStage(SimTK::Stage::Dynamics);
+	//state.advanceSystemToStage(SimTK::Stage::Dynamics);
+	std::cout << "FixmanTorque::calcForce Stage " << state.getSystemStage();
 
 	// Compute Fixman torque
 	int nu = state.getNU();
