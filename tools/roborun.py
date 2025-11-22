@@ -8,6 +8,8 @@ import numpy as np
 import argparse
 import json
 
+# python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 10 10 1 tdnr "[[]]"
+
 def parse_nested_list(arg):
     """
     Custom type function to parse a JSON string into a Python nested list.
