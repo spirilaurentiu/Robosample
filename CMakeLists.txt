@@ -15,14 +15,10 @@ SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 # link prerequisites
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
-find_library(DL_LIBRARY dl REQUIRED)
-find_library(MATH_LIBRARY m REQUIRED)
-find_library(RT_LIBRARY rt REQUIRED) # wants -lrt
 
 SET(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
-set(BUILD_VISUALIZER ON)
 if(BUILD_VISUALIZER)
     set(OpenGL_GL_PREFERENCE LEGACY)
     find_package(OpenGL REQUIRED)
@@ -120,9 +116,11 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-
-
 # Create the Python module
+set(Python3_FIND_VIRTUALENV FIRST)
+set(Python3_FIND_STRATEGY LOCATION)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
 add_subdirectory(pybind11)
 pybind11_add_module(${ROBOSAMPLE_LIB_NAME}
     ${CMAKE_SOURCE_DIR}/src/PyBind11.cpp
@@ -163,7 +161,7 @@ endif()
 
 # Link with external libraries
 target_link_libraries(${ROBOSAMPLE_LIB_NAME}
-    PRIVATE
+    PRIVATE dl m rt
         ${LIBRARIES}
         ${OPENMM_LIBRARIES}
 )
@@ -189,6 +187,7 @@ endif()
 
 
 
+install(TARGETS ${ROBOSAMPLE_LIB_NAME} LIBRARY DESTINATION "robosample")
 
 
 

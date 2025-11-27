@@ -755,11 +755,12 @@ public:
 	std::unique_ptr<SimTK::DecorationSubsystem> decorations;
 
 	// Visualizer
+#ifdef BUILD_VISUALIZER
 	std::unique_ptr<SimTK::Visualizer> visualizer;
 
 	// Visualizer reporter
 	std::unique_ptr<SimTK::Visualizer::Reporter> visualizerReporter;
-	//...............
+#endif
 
 	// --- Mixing data ---
 	int ownWorldIndex;

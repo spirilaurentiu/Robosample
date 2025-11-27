@@ -1,12 +1,12 @@
 name: robo
 channels:
   - omnia
-  - nvidia/label/cuda-12.2.0 XXXXXXX
+  - nvidia/label/cuda-12.2.0
   - salilab
   - conda-forge
   - defaults
 dependencies:
-  - python XXXXXXX
+  - python=3.12
   - pip
   - openmm
   - openmmtools
@@ -25,53 +25,10 @@ dependencies:
   - biopython
   - seaborn
   - pandas
-  - numpy
+  - numpy<2.0 # Parmed forces this
   - modeller
   - MDAnalysis
   - astropy
   - pip:
     - rcsbsearchapi
     - pdb2pqr
-
-
-
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6000 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6001 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6002 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6003 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6004 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6005 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6006 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6007 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6008 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6009 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6010 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6011 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6012 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6013 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6014 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6015 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6016 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6017 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6018 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6019 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6020 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6021 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6022 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6023 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6024 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6025 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6026 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6027 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6028 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6029 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6030 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6031 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6032 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6033 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6034 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6035 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6036 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6037 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6038 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &
-nohup python3 roborun.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6039 0 1000000 1 tdnr "[]" > /dev/null 2>&1 &

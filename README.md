@@ -14,11 +14,64 @@ Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed
 
 ## Installing dependencies
 
-Install the dependencies:
+### Installing the Nvidia driver
+The only working driver is `proprietary`, not `open`. Remove the `open` driver and all CUDA Toolkit installations:
+```bash
+sudo apt --fix-broken install
+sudo apt-get purge 'nvidia-*' 'cuda*'
+sudo apt-get autoremove
+sudo rm -rf /usr/local/cuda*
+```
 
+First, check what the recommended version is for your machine. To my knowledge, the last supported kernel is 6.14 (check with `uname -r`).
+```
+ubuntu-drivers devices
+```
+
+Install the recommended one (`nvidia-smi` will not work before you `sudo reboot`):
+```
+sudo apt install nvidia-driver-580
+sudo reboot
+```
+
+### Installing CUDA Toolkit 12.8
+Only this exact version can be used and is hard-coded inside the build files. It is forward compatible with any future CUDA toolkit versions. Download and follow instructions from [here](https://developer.nvidia.com/cuda-12-8-0-download-archive):
+```bash
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+sudo apt-get update
+sudo apt-get -y install cuda-toolkit-12-8
+```
+
+At this point, you should have working `nvidia-smi`. However, `nvcc` is not available at the terminal since nothing from the CUDA Toolkit is in `$PATH`.
+It can still be accessed via the absolute path: `/usr/local/cuda/bin/nvcc --version`.
+This is no problem since Robosample references absolute pathways to this installation.
+
+### Installing OpenGL (visualizer) and OpenCL (hardware acceleration)
+Straightforward installation that does not interfere with CUDA:
+```bash
+sudo update
+sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-dev libxi-dev ocl-icd-opencl-dev
+```
+
+### Miniconda
+Download and install from their [official website](https://www.anaconda.com/download) and install using:
+```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+bash ./Miniconda3-latest-Linux-x86_64.sh
+```
+
+Install the minimum packages:
+```bash
+conda install mamba conda-build -c conda-forge
+```
+
+### Other dependencies
+Install the dependencies:
 ```bash
 sudo apt-get update
-sudo apt-get install git cmake graphviz gfortran libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig ocl-icd-opencl-dev fftw2 libxmu-dev libxi-dev clang ninja-build
+sudo apt-get install git cmake graphviz gfortran libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig fftw2 clang ninja-build
 ```
 
 ### CMake
@@ -59,13 +112,6 @@ If used as intended further into the README, the executable must be run from the
 
 ```bash
 /home/myuser/ninja
-```
-
-### Exports
-
-```bash
-export CUDA_INC_DIR=/usr/local/cuda
-export CUDA_ROOT=/usr/local/cuda
 ```
 
 ## Cloning the project
@@ -294,7 +340,8 @@ nm -an build/robosample | c++filt
 ```
  
 
-bash```
+bash
+```
 cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
 ninja robosample
 ```
@@ -336,5 +383,7 @@ sudo ubuntu-drivers autoinstall
 sudo reboot
 ```
 
+
+# Machine set-up for developers
 
 

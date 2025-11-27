@@ -1,0 +1,64 @@
+{% set name = "robosample" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  path: ..   # build from local repo (relative to recipe/). Alternatively use git_url & git_rev.
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - cmake
+    - ninja
+    - pkg-config
+    - python
+    - blas
+    - lapack
+  host:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - cmake
+    - ninja
+    - pkg-config
+    - python
+    - blas
+    - lapack
+  run:
+    - python
+    - blas
+    - lapack
+    - numpy
+    - scipy
+    - pandas
+    - matplotlib
+    - openmm
+    - openmmtools
+    - mdtraj
+    - mdanalysis
+    - ambertools
+    - parmed
+    - rdkit
+#    - openbabel
+    - biopython
+    - seaborn
+    - astropy
+    - networkx
+    - tqdm
+    - modeller
+
+about:
+  home: "https://your.repo/url"
+  license: "BSD-3-Clause"
+  summary: "RoboSample C++/pybind11 Python bindings"
+
+#test:
+#  requires:
+#    - python
+#  commands:
+#    - bash ./recipe/run_test.sh
+
+# conda build recipe --channel omnia --channel salilab --channel conda-forge --channel defaults
