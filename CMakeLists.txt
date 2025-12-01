@@ -117,8 +117,6 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 # Create the Python module
-set(Python3_FIND_VIRTUALENV FIRST)
-set(Python3_FIND_STRATEGY LOCATION)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
 add_subdirectory(pybind11)
@@ -187,9 +185,16 @@ endif()
 
 
 
-install(TARGETS ${ROBOSAMPLE_LIB_NAME} LIBRARY DESTINATION "robosample")
+## Install extension module into site-packages/robosample
+#install(TARGETS ${ROBOSAMPLE_LIB_NAME} LIBRARY DESTINATION ${Python3_SITEARCH}/robosample) # ${CMAKE_INSTALL_LIBDIR}
+#
+## Install pure Python files
+#install(DIRECTORY python/robosample DESTINATION ${Python3_SITEARCH})
 
+install(TARGETS ${ROBOSAMPLE_LIB_NAME} DESTINATION lib)
 
+#install(DIRECTORY ${CMAKE_SOURCE_DIR}/python/robosample
+#        DESTINATION ${Python3_SITEARCH})
 
 
 
@@ -333,18 +338,18 @@ install(TARGETS ${ROBOSAMPLE_LIB_NAME} LIBRARY DESTINATION "robosample")
 #     ENDIF ()
 # endif()
 
-# add example inputs
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/temp/pdbs)
-file(GLOB INPUTS ${CMAKE_SOURCE_DIR}/tests_inputs/*)
-file(COPY ${INPUTS} DESTINATION ${CMAKE_BINARY_DIR})
-
-# Copy Python scripts
-file(COPY ${CMAKE_SOURCE_DIR}/tools/simulate.py DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/tools/simulate_clusters.py DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/tools/simulate_decoys.py DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/tools/flexor.py DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/tools/openmm_hmc.py DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/tools/batstat.py DESTINATION ${CMAKE_BINARY_DIR})
+## add example inputs
+#file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/temp/pdbs)
+#file(GLOB INPUTS ${CMAKE_SOURCE_DIR}/tests_inputs/*)
+#file(COPY ${INPUTS} DESTINATION ${CMAKE_BINARY_DIR})
+#
+## Copy Python scripts
+#file(COPY ${CMAKE_SOURCE_DIR}/tools/simulate.py DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY ${CMAKE_SOURCE_DIR}/tools/simulate_clusters.py DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY ${CMAKE_SOURCE_DIR}/tools/simulate_decoys.py DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY ${CMAKE_SOURCE_DIR}/tools/flexor.py DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY ${CMAKE_SOURCE_DIR}/tools/openmm_hmc.py DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY ${CMAKE_SOURCE_DIR}/tools/batstat.py DESTINATION ${CMAKE_BINARY_DIR})
 
 # file(COPY ${CMAKE_SOURCE_DIR}/tools/roborun.py DESTINATION ${CMAKE_BINARY_DIR})
 # file(COPY ${CMAKE_SOURCE_DIR}/tools/robobatstat.py DESTINATION ${CMAKE_BINARY_DIR})

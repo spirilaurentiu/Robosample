@@ -79,102 +79,159 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 		const std::vector<BondBend>& dummAngles,
 		const std::vector<BondTorsion>& dummTorsions) {
 
-	// Make a counter that checks if the atom class index already exists
-	std::vector<bool> atomClassDefined(10000, false);
-	std::vector<bool> chargedAtomTypeDefined(10000, false);
+	// Make a counter that checks if the atom class index already exists since Molmodel does not check for and does not allow re-definitions
+	std::vector<bool> atomClassDefined(atoms.size(), false);
+	std::vector<bool> chargedAtomTypeDefined(atoms.size(), false);
 
 	for (auto& atom : atoms) {
 		if (!atomClassDefined[atom.getAtomClassIndex()]) {
 			atomClassDefined[atom.getAtomClassIndex()] = true;
 
-			std::cout << "[DEBUG] Defining atom class " << atom.getAtomClassIndex()
-				<< " (" << atom.getAtomClassName() << ") with atomic number "
-				<< atom.getAtomicNumber() << ", VdW radius " << atom.getVdwRadiusInNm()
-				<< " nm, VdW well depth " << atom.getVdwWellDepthInKJ()
-				<< " kJ, involved in " << atom.getNumBondsInvolved() << " bonds." << std::endl;
-
+			// Create atom class
 			forceField->defineAtomClass(atom.getAtomClassIndex(), atom.getAtomClassName().c_str(), atom.getAtomicNumber(), atom.getNumBondsInvolved(), atom.getVdwRadiusInNm(), atom.getVdwWellDepthInKJ());
 		}
 
 		if (!chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()]) {
 			chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()] = true;
 
-			std::cout << "[DEBUG] Defining charged atom type " << atom.getChargedAtomTypeIndex()
-				<< " (" << atom.getChargedAtomName() << ") with atom class index "
-				<< atom.getAtomClassIndex() << " and charge "
-				<< atom.getChargeInE() << " e." << std::endl;
-
 			// Create charged atom type
-			forceField->defineChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getChargedAtomName().c_str(), atom.getAtomClassIndex(), atom.getChargeInE());
-
+			forceField->defineChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getChargedAtomTypeName().c_str(), atom.getAtomClassIndex(), atom.getChargeInE());
 			forceField->setBiotypeChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getBiotypeIndex());
 		}
 	}
 
 	// Define bonds
 	for (auto& bond : bonds) {
-		auto aCIx1 = atoms[bond.getParentAtomGlobalIndex()].getAtomClassIndex();
-		auto aCIx2 = atoms[bond.getChildAtomGlobalIndex()].getAtomClassIndex();
+		const auto aCIx1 = atoms[bond.getParentAtomGlobalIndex()].getAtomClassIndex();
+		const auto aCIx2 = atoms[bond.getChildAtomGlobalIndex()].getAtomClassIndex();
 		SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
 		SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
-
-		std::cout << "[DEBUG] Defining bond between atom classes " << aCIx1 << " and " << aCIx2
-			<< " with stiffness " << stiffnessInKJPerNmSq << " KJ/(nm^2) and nominal length "
-			<< nominalLengthInNm << " nm; atoms: "
-			<< atoms[bond.getParentAtomGlobalIndex()].getUniqueAtomName() << " (index "
-			<< bond.getParentAtomGlobalIndex() << "), "
-			<< atoms[bond.getChildAtomGlobalIndex()].getUniqueAtomName() << " (index "
-			<< bond.getChildAtomGlobalIndex() << ")." << std::endl;
 
 		forceField->defineBondStretch(aCIx1, aCIx2, stiffnessInKJPerNmSq, nominalLengthInNm);
 	}
 
-	std::cout << "[INFO] Defined " << bonds.size() << " bonds." << std::endl;
-
 	// Define angles
 	for (const auto& angle : dummAngles) {
-		auto aCIx1 = atoms[angle.getGlobalIndex1()].getAtomClassIndex();
-		auto aCIx2 = atoms[angle.getGlobalIndex2()].getAtomClassIndex();
-		auto aCIx3 = atoms[angle.getGlobalIndex3()].getAtomClassIndex();
+		const auto aCIx1 = atoms[angle.getGlobalIndex1()].getAtomClassIndex();
+		const auto aCIx2 = atoms[angle.getGlobalIndex2()].getAtomClassIndex();
+		const auto aCIx3 = atoms[angle.getGlobalIndex3()].getAtomClassIndex();
 		SimTK::Real stiffnessInKJPerRadSq = angle.getStiffnessInKJPerRadSq();
 		SimTK::Real nominalAngleInDeg = angle.getNominalAngleInDeg();
-
-		std::cout << "[DEBUG] Defining angle between atom classes " << aCIx1 << ", " << aCIx2 << ", " << aCIx3
-			<< " with stiffness " << stiffnessInKJPerRadSq << " KJ/(rad^2) and nominal angle "
-			<< nominalAngleInDeg << " degrees." << std::endl;
 		
 		forceField->defineBondBend(aCIx1, aCIx2, aCIx3, stiffnessInKJPerRadSq, nominalAngleInDeg);
 	}
 
-	std::cout << "[INFO] Defined " << dummAngles.size() << " angles." << std::endl;
-
 	// Define 1 Fourrier terms dihedrals
 	for (const auto& torsion : dummTorsions) {
-		auto aCIx1 = atoms[torsion.getGlobalIndex1()].getAtomClassIndex();
-		auto aCIx2 = atoms[torsion.getGlobalIndex2()].getAtomClassIndex();
-		auto aCIx3 = atoms[torsion.getGlobalIndex3()].getAtomClassIndex();
-		auto aCIx4 = atoms[torsion.getGlobalIndex4()].getAtomClassIndex();
-		int periodicity1 = torsion.getPeriodicity();
-		SimTK::Real amp1InKJ = torsion.getAmpInKJ();
-		SimTK::Real phase1InDegrees = torsion.getPhaseInDegrees();
+		const auto aCIx1 = atoms[torsion.getGlobalIndex1()].getAtomClassIndex();
+		const auto aCIx2 = atoms[torsion.getGlobalIndex2()].getAtomClassIndex();
+		const auto aCIx3 = atoms[torsion.getGlobalIndex3()].getAtomClassIndex();
+		const auto aCIx4 = atoms[torsion.getGlobalIndex4()].getAtomClassIndex();
 
-		std::cout << "[DEBUG] Defining dihedral between atom classes " << aCIx1 << ", " << aCIx2 << ", " << aCIx3 << ", " << aCIx4
-			<< " with periodicity " << periodicity1 << ", amplitude " << amp1InKJ
-			<< " KJ and phase " << phase1InDegrees << " degrees for atoms: " << atoms[torsion.getGlobalIndex1()].getUniqueAtomName() << " (index "
-			<< torsion.getGlobalIndex1() << "), " << atoms[torsion.getGlobalIndex2()].getUniqueAtomName() << " (index "
-			<< torsion.getGlobalIndex2() << "), " << atoms[torsion.getGlobalIndex3()].getUniqueAtomName() << " (index "
-			<< torsion.getGlobalIndex3() << "), " << atoms[torsion.getGlobalIndex4()].getUniqueAtomName() << " (index "
-			<< torsion.getGlobalIndex4() << ")." << std::endl;
+		// Determine the number of terms by checking which amplitudes are defined
+		int num_terms = 0;
+		if (torsion.getPeriodicity_1() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_1() << std::endl << std::flush;
+		if (torsion.getPeriodicity_2() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_2() << std::endl << std::flush;
+		if (torsion.getPeriodicity_3() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_3() << std::endl << std::flush;
+		if (torsion.getPeriodicity_4() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_4() << std::endl << std::flush;
+		if (torsion.getPeriodicity_5() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_5() << std::endl << std::flush;
+		std::cout << "Added " << (torsion.isImproper()?"improper":"proper") << " torsion with " << num_terms << " terms" << std::endl << std::endl << std::flush;
+
 
 		// Define dihedrals
 		if (torsion.isImproper()) {
-			forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4, periodicity1, amp1InKJ, phase1InDegrees);
+
+			SimTK_ASSERT_ALWAYS(num_terms <= 3,
+				"Error in World::generateDummParams: Unsupported number of improper torsion terms (max 3 allowed).");
+
+			switch (num_terms)
+			{
+			case 1: {
+				forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4, torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1());
+				break;
+			}
+
+			case 2: {
+				forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
+					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2());
+				break;
+			}
+
+			case 3: {
+				forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
+					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
+					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3());
+				break;
+			}
+
+			default:
+				std::string message = "Unreachable code in World::generateDummParams for improper torsion between atoms ";
+				message += std::to_string(torsion.getGlobalIndex1()) + ", ";
+				message += std::to_string(torsion.getGlobalIndex2()) + ", ";
+				message += std::to_string(torsion.getGlobalIndex3()) + ", ";
+				message += std::to_string(torsion.getGlobalIndex4()) + " , num_terms=";
+				message += std::to_string(num_terms) + ".";
+				throw std::runtime_error(message);
+			}
 		} else {
-			forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4, periodicity1, amp1InKJ, phase1InDegrees);
+			SimTK_ASSERT_ALWAYS(num_terms <= 5,
+				"Error in World::generateDummParams: Unsupported number of torsion terms (max 5 allowed).");
+
+			switch (num_terms)
+			{
+			case 1: {
+				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1());
+				break;
+			}
+
+			case 2: {
+				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
+					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2());
+				break;
+			}
+
+			case 3: {
+				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
+					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
+					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3());
+				break;
+			}
+
+			case 4: {
+				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
+					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
+					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3(),
+					torsion.getPeriodicity_4(), torsion.getAmpInKJ_4(), torsion.getPhaseInDegrees_4());
+				break;
+			}
+
+			case 5: {
+				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
+					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
+					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3(),
+					torsion.getPeriodicity_4(), torsion.getAmpInKJ_4(), torsion.getPhaseInDegrees_4(),
+					torsion.getPeriodicity_5(), torsion.getAmpInKJ_5(), torsion.getPhaseInDegrees_5());
+				break;
+			}
+
+			default:
+				std::string message = "Unreachable code in World::generateDummParams for torsion between atoms ";
+				message += std::to_string(torsion.getGlobalIndex1()) + ", ";
+				message += std::to_string(torsion.getGlobalIndex2()) + ", ";
+				message += std::to_string(torsion.getGlobalIndex3()) + ", ";
+				message += std::to_string(torsion.getGlobalIndex4()) + " , num_terms=";
+				message += std::to_string(num_terms) + ".";
+				throw std::runtime_error(message);
+			}
 		}
 	}
-
-	std::cout << "[INFO] DUMM parameters generated." << std::endl;
 }
 
 
@@ -2672,9 +2729,9 @@ void World::updateAtomListsFromSimbody(const SimTK::State &state)
 				topology.calcAtomLocationInGroundFrameThroughSimbody(
 					compoundAtomIndex, *forceField, *matter, state);
 
-			atom.setX(location[0]);
-			atom.setY(location[1]);
-			atom.setZ(location[2]);
+			atom.setXInNm(location[0]);
+			atom.setYInNm(location[1]);
+			atom.setZInNm(location[2]);
 
 			//std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
 		}

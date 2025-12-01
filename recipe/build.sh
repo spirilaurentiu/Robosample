@@ -1,29 +1,21 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-## conda-build provides $PYTHON (host python)
-#echo "Using build Python: $PYTHON"
-#INC=$($PYTHON - <<'PY'
-#import sysconfig
-#print(sysconfig.get_paths()["include"])
-#PY
-#)
-#
-#LIBDIR=$($PYTHON - <<'PY'
-#import sysconfig
-#print(sysconfig.get_config_var("LIBDIR") or "")
-#PY
-#)
+mkdir -p build
+cd build
 
-export CC=clang
-export CXX=clang++
-
-cmake ${SRC_DIR} \
+cmake .. \
     -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$PREFIX \
     -DPython3_EXECUTABLE=$PYTHON \
     -DCUDAToolkit_ROOT=/usr/local/cuda-12.8 \
-    -DOPENMM_PLATFORM=CUDA
+    -DOPENMM_PLATFORM=CUDA \
+    -DBUILD_VISUALIZER=OFF
 
 ninja
+ninja install
+
+## Now install the pure Python wrapper
+#cd ../python
+#$PYTHON -m pip install . --no-deps --ignore-installed -vv

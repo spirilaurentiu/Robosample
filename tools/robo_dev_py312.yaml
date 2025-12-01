@@ -1,7 +1,7 @@
-name: robo
+name: robo_dev_py312
 channels:
   - omnia
-  - nvidia/label/cuda-12.2.0
+  - nvidia/label/cuda-12.8.0
   - salilab
   - conda-forge
   - defaults

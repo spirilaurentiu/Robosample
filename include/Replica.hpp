@@ -22,8 +22,8 @@ public:
 	{
 		for (const auto& t : topologies) {
 			for (const auto& a : t.getAtoms()) {
-				atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoords()));
-				WORK_atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoords()));
+				atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoordsInNm()));
+				WORK_atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoordsInNm()));
 			}
 		}
 

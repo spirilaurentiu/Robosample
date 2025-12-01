@@ -235,8 +235,6 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 			child.setCompoundAtomIndex(childCAIx);
 			topology.setAtomMass(childCAIx, child.getMassInDaltons());
 
-			std::cout << "STEP_1: Set compound atom index for atom " << child.getGlobalIndex() << " to " << childCAIx << std::endl;
-
 			// Set the local compound atom index for the parent if it is the root
 			if(bond.getParentAtomGlobalIndex() == rootAtomGlobalIndex) {
 				SimTK::Compound::AtomIndex parentCAIx = topology.getBondAtomIndex(Compound::BondIndex(topology.getNumBonds() - 1), 0);
@@ -285,20 +283,21 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 		// Define the biotype of the atom
 		for (auto& atom: topology.getAtoms()) {
 			// It calls SimTK::Biotype::defineBiotype and checks if it already exists
-			// topology.setAtomBiotype(atom.getUniqueAtomName().c_str(), atom.getResidueName().c_str(), atom.getAtomName().c_str());
-			topology.setAtomBiotype(atom.getUniqueAtomName().c_str(), "", atom.getChargedAtomName().c_str());
+			// This expects three parameters: the unique name of the atom (combination of residue name, residue id, force field atom type name and global id), the residue name and the force field atom type name
+			// However, we skip the residue name e.g N from ALA_1 and N from ALA_2 are different atoms because of the valence (N terminus vs backbone valence)
+			// Thus, we rely solely on the unique atom name and a custom atom type name (see exactly in the Python wrapper how this is set)
+			topology.setAtomBiotype(atom.getUniqueAtomName().c_str(), "", atom.getChargedAtomTypeName().c_str());
 			atom.setBiotypeIndex(topology.getAtomBiotypeIndex(atom.getCompoundAtomIndex()));
 		}
 
 		// Get coordinates
 		Compound::AtomTargetLocations atomTargets;
 		for (const auto& a : topology.getAtoms()) {
-			SimTK::Vec3 atomCoords(a.getX(), a.getY(), a.getZ());
+			SimTK::Vec3 atomCoords(a.getXInNm(), a.getYInNm(), a.getZInNm());
 			atomTargets.insert(std::make_pair(a.getCompoundAtomIndex(), atomCoords));
 		}
 
-		// Top level shift corresponds to the root atom's position
-		SimTK::Vec3 topLevelShift = SimTK::Vec3(rootAtom.getX(), rootAtom.getY(), rootAtom.getZ());
+		SimTK::Vec3 topLevelShift = SimTK::Vec3(rootAtom.getXInNm(), rootAtom.getYInNm(), rootAtom.getZInNm());
 		topology.setTopLevelTransform(Transform(Rotation(), topLevelShift));
 
 		bool flipAllChirality = true;
@@ -308,6 +307,11 @@ void Context::loadAmberSystem(const std::vector<int>& inRoots, const std::vector
 		topology.matchDefaultDirections(atomTargets);
 		topology.matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
 		topology.matchDefaultTopLevelTransform(atomTargets);
+
+		// // Unfortunately, this is unstable (nan) when we have a perfect match between target and calculated positions
+		// Real residual = topology.getTransformAndResidual(atomTargets).residual;
+		// std::cout << "residual = " << residual << " nanometers" << std::endl;
+		// SimTK_ASSERT_ALWAYS(residual < 0.02, "Structure matching was too inaccurate");
 
 		topology.loadIndicesMaps();
 
@@ -437,12 +441,12 @@ std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_C
 std::string Context::OMMRef_initialize(void)
 {
 	// Allocate OpenMM forces
-	ommNonbondedForce = std::make_unique<OpenMM::NonbondedForce>();
-	//auto ommGBSAOBCForce = std::make_unique<OpenMM::GBSAOBCForce>(); // TODO
 	ommHarmonicBondStretch = std::make_unique<OpenMM::HarmonicBondForce>();
 	ommHarmonicAngleForce = std::make_unique<OpenMM::HarmonicAngleForce>();
 	ommPeriodicTorsionForce = std::make_unique<OpenMM::PeriodicTorsionForce>();
-
+	// ommGBSAOBCForce = std::make_unique<OpenMM::GBSAOBCForce>();
+	ommNonbondedForce = std::make_unique<OpenMM::NonbondedForce>();
+	
 	// Instantiate the thermostat with adjusted temperature
 	//Real temperature = 300.0;
 	//if(dumm->wantOpenMMIntegration){temperature = dumm->temperature;}
@@ -477,32 +481,41 @@ std::string Context::OMMRef_initialize(void)
 # endif
 	
 	// Nonbonded forces
-	ommNonbondedForce->setNonbondedMethod( OpenMM::NonbondedForce::NonbondedMethod( nonbondedMethod ) );
-	ommNonbondedForce->setCutoffDistance( nonbondedCutoff );
+	// ommNonbondedForce->setNonbondedMethod( OpenMM::NonbondedForce::NonbondedMethod( nonbondedMethod ) );
+	// ommNonbondedForce->setCutoffDistance( nonbondedCutoff );
+	ommNonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::NonbondedMethod::NoCutoff);
+	ommNonbondedForce->setCutoffDistance(1.0); // in nm
+	ommNonbondedForce->setUseDispersionCorrection(false);
 	// nonbondedForce->setUseSwitchingFunction( 0 );
 
 	// Scale charges by sqrt of scale factor so that products of charges scale linearly.
 	const Real sqrtCoulombScale = std::sqrt(1.0);
+	vdwGlobalScaleFactor = 1;
 
 	// Add atoms
-	for (auto atom : atoms) {   
-		SimTK::Real charge = atom.getChargeInE() * sqrtCoulombScale;
+	for (const auto& atom : atoms) {
+		const SimTK::Real charge = atom.getChargeInE() * sqrtCoulombScale;
 		const SimTK::Real sigma = atom.getSigmaInNm();
-		const SimTK::Real epsilon = atom.getVdwWellDepthInKJ() * DuMM::KJ2Kcal * vdwGlobalScaleFactor;
+		const SimTK::Real epsilon = atom.getVdwWellDepthInKJ() * vdwGlobalScaleFactor;
 
 		openMMSystem->addParticle(atom.getMassInDaltons());
 		ommNonbondedForce->addParticle(charge, sigma, epsilon);
+		// ommGBSAOBCForce->addParticle(charge, )
+
+		// std::cout << "Atom " << atom.getUniqueAtomName() << ": charge = " << charge << " e, sigma = " << sigma << " nm, epsilon = " << epsilon << " kJ/mol" << std::endl;
 	}
 
 	// Add bonds
 	std::vector<std::pair<int, int>> ommBonds;
-	for (auto bond : bonds) {
+	for (const auto& bond : bonds) {
 		ommBonds.emplace_back(std::make_pair(bond.getParentAtomGlobalIndex(), bond.getChildAtomGlobalIndex()));
 	}
 
 	// Register all the 1-2 bonds between nonbond atoms for scaling.
 	// World::setAmberForceFieldScaleFactors(0.0, 0.0, 0.5, 1.0, 0.0, 0.0, 0.8333333333, 1.0);
-	ommNonbondedForce->createExceptionsFromBonds(ommBonds, 0.8333333333, 0.5);
+	SimTK::Real coulomb14Scale = 1/1.2; // From Amber force fields
+	SimTK::Real lj14Scale = 0.5 * vdwGlobalScaleFactor; // From Amber force fields
+	ommNonbondedForce->createExceptionsFromBonds(ommBonds, coulomb14Scale, lj14Scale);
 	
 	// GBSA
 	// When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -524,36 +537,61 @@ std::string Context::OMMRef_initialize(void)
 	//openMMSystem.addForce(ommGBSAOBCForce.get());
 	//ommGBSAOBCForce.release();
 				
-	for (auto bond : bonds) {
-		SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
-		SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
+	for (const auto& bond : bonds) {
+		const SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
+		const SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
 
-		ommHarmonicBondStretch->addBond(bond.getParentAtomGlobalIndex(), bond.getChildAtomGlobalIndex(), nominalLengthInNm, stiffnessInKJPerNmSq);
+		// force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
+		ommHarmonicBondStretch->addBond(bond.getParentAtomGlobalIndex(), bond.getChildAtomGlobalIndex(), nominalLengthInNm, stiffnessInKJPerNmSq * 2);
 	}
 
 	// FORCES: ADD ANGLES (1-2-3)
-	for (const auto& dummAngle : angles) {
-		const int a1num = dummAngle.getGlobalIndex1();
-		const int a2num = dummAngle.getGlobalIndex2();
-		const int a3num = dummAngle.getGlobalIndex3();
-		SimTK::Real theta0 = dummAngle.getNominalAngleInDeg() * DuMM::Deg2Rad;
-		SimTK::Real forceKt = dummAngle.getStiffnessInKJPerRadSq() * DuMM::Kcal2KJ * 2.0;
+	for (const auto& angle : angles) {
+		const int a1num = angle.getGlobalIndex1();
+		const int a2num = angle.getGlobalIndex2();
+		const int a3num = angle.getGlobalIndex3();
+		const SimTK::Real theta0 = angle.getNominalAngleInDeg() * DuMM::Deg2Rad;
+		const SimTK::Real forceKt = angle.getStiffnessInKJPerRadSq();
 
-		ommHarmonicAngleForce->addAngle(a1num, a2num, a3num, theta0, forceKt);
+		// force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
+		ommHarmonicAngleForce->addAngle(a1num, a2num, a3num, theta0, forceKt * 2);
 	}
 
 	// Add dihedrals. OpenMM does not distinguish between proper and improper dihedrals.
 	for (const auto& t : torsions) {
-		int a1 = t.getGlobalIndex1();
-		int a2 = t.getGlobalIndex2();
-		int a3 = t.getGlobalIndex3();
-		int a4 = t.getGlobalIndex4();
-		int per = t.getPeriodicity();
-		SimTK::Real phaseInRad = t.getPhaseInDegrees() * DuMM::Deg2Rad;
-		SimTK::Real k_kJ = t.getAmpInKJ();
-
-		ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, per, phaseInRad, k_kJ);
+		const int a1 = t.getGlobalIndex1();
+		const int a2 = t.getGlobalIndex2();
+		const int a3 = t.getGlobalIndex3();
+		const int a4 = t.getGlobalIndex4();
+		
+		if (t.getPhaseInDegrees_1() != -1) {
+			ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_1(), t.getPhaseInDegrees_1() * DuMM::Deg2Rad, t.getAmpInKJ_1());
+		}
+		if (t.getPhaseInDegrees_2() != -1) {
+			ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_2(), t.getPhaseInDegrees_2() * DuMM::Deg2Rad, t.getAmpInKJ_2());
+		}
+		if (t.getPhaseInDegrees_3() != -1) {
+			ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_3(), t.getPhaseInDegrees_3() * DuMM::Deg2Rad, t.getAmpInKJ_3());
+		}
+		if (t.getPhaseInDegrees_4() != -1) {
+			ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_4(), t.getPhaseInDegrees_4() * DuMM::Deg2Rad, t.getAmpInKJ_4());
+		}
+		if (t.getPhaseInDegrees_5() != -1) {
+			ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_5(), t.getPhaseInDegrees_5() * DuMM::Deg2Rad, t.getAmpInKJ_5());
+		}
 	}
+
+	const int group0 = 0;
+	const int group1 = 1;
+	const int group2 = 2;
+	const int group3 = 3;
+	const int group4 = 4;
+
+	ommHarmonicBondStretch->setForceGroup(group0);
+	ommHarmonicAngleForce->setForceGroup(group1);
+	ommPeriodicTorsionForce->setForceGroup(group2);
+	ommNonbondedForce->setForceGroup(group3);
+	openMMThermostat->setForceGroup(group4);
 
 	openMMSystem->addForce(ommHarmonicBondStretch.get()); ommHarmonicBondStretch.release();
 	openMMSystem->addForce(ommHarmonicAngleForce.get()); ommHarmonicAngleForce.release();
@@ -621,29 +659,60 @@ std::string Context::OMMRef_initialize(void)
         return "";
     }
 
-    std::cout << "Robosample Context reference OpenMM loaded " << openMMContext->getPlatform().getName() << std::endl;
+	std::cout << "Robosample Context reference OpenMM loaded " << openMMContext->getPlatform().getName() << std::endl;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-if("checkPotential"){
+if("checkPotential") {
 	std::vector<OpenMM::Vec3> atomsPositions = std::vector<OpenMM::Vec3>(atoms.size());
 	int aCnt = -1;
 	for (auto atom : atoms){
 		aCnt++;
-		atomsPositions[aCnt] = OpenMM::Vec3(atom.getX(), atom.getY(), atom.getZ());
+		atomsPositions[aCnt] = OpenMM::Vec3(atom.getXInNm(), atom.getYInNm(), atom.getZInNm());
 	}
 	openMMContext->setPositions(atomsPositions);
 	OpenMM::State openMMState = openMMContext->getState(
 		(true?OpenMM::State::Forces:0) | (true?OpenMM::State::Energy:0)
 	);
 	std::cout << "\nROBO_OpenMM POTENTIAL " << openMMState.getPotentialEnergy() << std::endl << std::flush;
+
+	// calculate total potential energy manually
+	OpenMM::State state = openMMContext->getState(OpenMM::State::Energy);
+	std::cout << "Total energy is " << state.getPotentialEnergy() << std::endl;
 }
-/////////////////////////////////////////////////////////////////////////////////////////////
 
+	SimTK_ASSERT_ALWAYS(true, "Reached here");
 
+	OpenMM::State state = openMMContext->getState(OpenMM::State::Energy, false, 1<<group0);
+	std::cout << "HarmonicBondForce is " << state.getPotentialEnergy() << std::endl;
+
+	state = openMMContext->getState(OpenMM::State::Energy, false, 1<<group1);
+	std::cout << "HarmonicAngleForce is " << state.getPotentialEnergy() << std::endl;
+
+	state = openMMContext->getState(OpenMM::State::Energy, false, 1<<group2);
+	std::cout << "PeriodicTorsionForce is " << state.getPotentialEnergy() << std::endl;
+
+	state = openMMContext->getState(OpenMM::State::Energy, false, 1<<group3);
+	std::cout << "NonbondedForce is " << state.getPotentialEnergy() << std::endl;
+
+	state = openMMContext->getState(OpenMM::State::Energy, false, 1<<group4);
+	std::cout << "AndersenThermostat is " << state.getPotentialEnergy() << std::endl;
+
+	// for (int i = 0; i < 1000; i++) {
+	// 	openMMIntegrator->step(1000);
+	// 	const auto& state = openMMContext->getState(OpenMM::State::Energy);
+	// 	std::cout << "Step " << i * 1000 << " energy is " << state.getPotentialEnergy() << std::endl;
+	// }
+
+	// for (int step = 0; step < 1000; step++) {
+	// 	openMMIntegrator->step(1000);
+
+	// 	int group = step % 4;
+	// 	OpenMM::State state = openMMContext->getState(OpenMM::State::Energy, group);
+	// 	std::cout << "Step " << step * 1000 << " energy (group " << group << ") is " << state.getPotentialEnergy() << std::endl;
+	// }
 
     return openMMContext->getPlatform().getName();
-	
 }
 
 
@@ -855,7 +924,7 @@ void Context::addWorld(bool fixmanTorque, int samplesPerRound, ROOT_MOBILITY roo
 		// Initialize the cache
 		for (const auto& atom : topologies[topologyIx].getAtoms()) {
 			SimTK::Compound::AtomIndex aIx = atom.getCompoundAtomIndex();
-			worlds.back().atomTargetLocaltionsCache.insert(std::make_pair(atom.getCompoundAtomIndex(), atom.getCoords()));
+			worlds.back().atomTargetLocaltionsCache.insert(std::make_pair(atom.getCompoundAtomIndex(), atom.getCoordsInNm()));
 		}
 	}
 

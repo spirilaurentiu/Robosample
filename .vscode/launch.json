@@ -48,6 +48,50 @@
             ],
             "cwd": "${workspaceFolder}/build",
             "stopAtEntry": false
+        },
+
+
+
+        {
+            "name": "Python + C++ (.so) Debug (lldb)",
+            "type": "cppdbg", // is this lldb?
+            "request": "launch",
+
+            // Run python as the main process
+            "program": "/home/victor/miniforge3/envs/robo_dev_py312/bin/python3",
+            "args": [
+                "${workspaceFolder}/build/roborun.py",
+                "1apq_test",
+                "${workspaceFolder}/build/data-raw/1APQ.prmtop",
+                "${workspaceFolder}/build/data-raw/1APQ_min.inpcrd",
+                "6000",
+                "10",
+                "10",
+                "1",
+                "tdnr",
+                "\"[[]]\"",
+            ],
+
+            // Required: stop when .so is loaded, so breakpoints become active
+            "stopOnSharedLibraryLoad": true,
+
+            // Ensure debug symbols are used
+            "env": {
+                "LD_LIBRARY_PATH": "${workspaceFolder}/build",
+                "ROBOSAMPLE_DEBUG": "1"
+            },
+
+            "console": "integratedTerminal",
+            "justMyCode": false,
+
+            // Working directory
+            "cwd": "${workspaceFolder}",
+
+            // If Python loads the .so dynamically, lldb will catch it
+            "initCommands": [
+                "settings set target.inline-breakpoint-strategy always",
+                "settings set target.process.stop-on-sharedlibrary-load true"
+            ]
         }
     ]
 }

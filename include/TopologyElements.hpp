@@ -5,62 +5,27 @@
 #include "Simbody.h"
 #include "Molmodel.h"
 
-// struct AtomClassDefinition {
-//     std::string atomTypeName; // Equivalent to AMBER atom type name (eg CT C CA CM CC CV CW CR etc), not AMBER atom name (eg N, CA, C, O, C1, C2, H1 etc)
-//     SimTK::Real vdwRadiusInNm = 0.0;
-//     SimTK::Real vdwWellDepthInKJ = 0.0;
-//     int atomClassIndex = 0;
-//     int atomicNumber = 0;
-//     int expectedValence = 0;
-// };
-
-// struct ChargedAtomTypeDefinition {
-//     std::string biotypeAtomName, biotypeResidueName;
-//     SimTK::Real partialChargeInE = 0.0;
-//     int chargedAtomTypeIndex = 0;
-//     int atomClassIndex = 0;
-// };
-
-// struct BondStretchDefinition {
-//     int atomClassIndex1 = 0, atomClassIndex2 = 0;
-//     SimTK::Real stiffnessInKJperNmSq = 0.0;
-// 	SimTK::Real nominalLengthInNm = 0.0;
-// };
-
-// struct BondBendDefinition {
-//     
-//     SimTK::Real stiffnessInKJPerRadSq = 0.0;
-//     SimTK::Real nominalAngleInDeg = 0.0;
-// };
-
-// struct BondTorsionDefinition {
-//     int atomClassIndex1 = 0, atomClassIndex2 = 0, atomClassIndex3 = 0, atomClassIndex4 = 0;
-//     SimTK::Real ampInKJ = 0.0;
-//     SimTK::Real phaseInDegrees = 0.0;
-//     int periodicity = 0;
-//     bool improper = false;
-// };
-
-
 
 struct AtomDefinition {
     // Indices
     int globalIndex = 0;
     int moleculeIndex = 0;
     int residueIndex = 0;
+
+    // Atom class identifiers
+    std::string atomClassName;
     int atomClassIndex = 0;
+
+    // Charged atom class identifiers
+    std::string chargedAtomTypeName;
     int chargedAtomTypeIndex = 0;
 
     // Names
-    std::string biotypeAtomName; // AMBER atom name (eg N, CA, C, O, C1, C2, H1 etc) + ':' + valence (number of actual bonds, not typical valence)
-    std::string atomClassName; // AMBER atom type name (eg CT C CA CM CC CV CW CR etc)
-    std::string chargedAtomName; // Biotype name for charged atom type
-    std::string residueName; // AMBER residue name (eg ALA, GLY, SER, THR etc)
-    std::string uniqueAtomName; // LYS2_NZ_23:3 (23 is the atom index in the entire molecule as specified by the prmtop file, :3 is the valence)
+    std::string residueName;
+    std::string uniqueAtomName;
 
     // Connectivity
     std::vector<int> neighborsGlobalIndices;
-    
     bool root = false;
 
     // Physical properties
@@ -69,7 +34,7 @@ struct AtomDefinition {
     SimTK::Real massInDaltons = 0.0;
     SimTK::Real vdwRadiusInNm = 0.0, sigmaInNm = 0.0;
     SimTK::Real vdwWellDepthInKJ = 0.0;
-    SimTK::Real x = 0.0, y = 0.0, z = 0.0;
+    SimTK::Real x_nm = 0.0, y_nm = 0.0, z_nm = 0.0;
 };
 
 struct BondStretchDefinition {
@@ -91,11 +56,14 @@ struct BondBendDefinition {
 };
 
 struct BondTorsionDefinition {
-    int globalIndex1 = 0, globalIndex2 = 0, globalIndex3 = 0, globalIndex4 = 0;
-    SimTK::Real ampInKJ = 0.0;
-    SimTK::Real phaseInDegrees = 0.0;
-    int periodicity = 0;
+    int globalIndex1 = -1, globalIndex2 = -1, globalIndex3 = -1, globalIndex4 = -1;
     bool improper = false;
+
+    SimTK::Real ampInKJ_1 = -1.0, phaseInDegrees_1 = -1.0, periodicity_1 = -1;
+    SimTK::Real ampInKJ_2 = -1.0, phaseInDegrees_2 = -1.0, periodicity_2 = -1;
+    SimTK::Real ampInKJ_3 = -1.0, phaseInDegrees_3 = -1.0, periodicity_3 = -1;
+    SimTK::Real ampInKJ_4 = -1.0, phaseInDegrees_4 = -1.0, periodicity_4 = -1;
+    SimTK::Real ampInKJ_5 = -1.0, phaseInDegrees_5 = -1.0, periodicity_5 = -1;
 };
 
 class Atom {
@@ -103,19 +71,19 @@ public:
     Atom() = default;
     
     Atom(const AtomDefinition& spec) : atomSpec(spec) {
-        coords = SimTK::Vec3(atomSpec.x, atomSpec.y, atomSpec.z);
+        CoordsInNm = SimTK::Vec3(atomSpec.x_nm, atomSpec.y_nm, atomSpec.z_nm);
         availableBonds = atomSpec.neighborsGlobalIndices.size();
         element = SimTK::Element(getAtomicNumber(), getElementName(), getElementSymbol(), getMassInDaltons());
     }
 
     int getGlobalIndex() const { return atomSpec.globalIndex; }
 
+    const std::string& getAtomClassName() const { return atomSpec.atomClassName; }
     SimTK::DuMM::AtomClassIndex getAtomClassIndex() const { return SimTK::DuMM::AtomClassIndex(atomSpec.atomClassIndex); }
+
+    const std::string& getChargedAtomTypeName() const { return atomSpec.chargedAtomTypeName; }
     SimTK::DuMM::ChargedAtomTypeIndex getChargedAtomTypeIndex() const { return SimTK::DuMM::ChargedAtomTypeIndex(atomSpec.chargedAtomTypeIndex); }
 
-    SimTK::Compound::AtomPathName getAtomName() const { return atomSpec.biotypeAtomName; }
-    const std::string& getAtomClassName() const { return atomSpec.atomClassName; }
-    const std::string& getChargedAtomName() const { return atomSpec.chargedAtomName; }
     const std::string& getResidueName() const { return atomSpec.residueName; }
     const std::string& getUniqueAtomName() const { return atomSpec.uniqueAtomName; }
 
@@ -148,17 +116,17 @@ public:
     std::string getElementName() const;
     std::string getElementSymbol() const;
 
-    SimTK::Real getX() const { return coords[0]; }
-    void setX(SimTK::Real x) { coords[0] = x; }
+    SimTK::Real getXInNm() const { return CoordsInNm[0]; }
+    void setXInNm(SimTK::Real x_nm) { CoordsInNm[0] = x_nm; }
 
-    SimTK::Real getY() const { return coords[1]; }
-    void setY(SimTK::Real y) { coords[1] = y; }
+    SimTK::Real getYInNm() const { return CoordsInNm[1]; }
+    void setYInNm(SimTK::Real y_nm) { CoordsInNm[1] = y_nm; }
 
-    SimTK::Real getZ() const { return coords[2]; }
-    void setZ(SimTK::Real z) { coords[2] = z; }
+    SimTK::Real getZInNm() const { return CoordsInNm[2]; }
+    void setZInNm(SimTK::Real z_nm) { CoordsInNm[2] = z_nm; }
 
-    const SimTK::Vec3& getCoords() const { return coords; }
-    void setCoords(const SimTK::Vec3& c) { coords = c; }
+    const SimTK::Vec3& getCoordsInNm() const { return CoordsInNm; }
+    void setCoordsInNm(const SimTK::Vec3& c) { CoordsInNm = c; }
 
     SimTK::Compound::AtomIndex getCompoundAtomIndex() const { return compoundAtomIndex; }
     void setCompoundAtomIndex(SimTK::Compound::AtomIndex cIdx) { compoundAtomIndex = cIdx; }
@@ -180,7 +148,7 @@ private:
     SimTK::BiotypeIndex biotypeIndex;
     SimTK::DuMM::AtomIndex dAIx; // ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
-    SimTK::Vec3 coords = SimTK::Vec3(SimTK::NaN);
+    SimTK::Vec3 CoordsInNm = SimTK::Vec3(SimTK::NaN);
 
     // wasted 6 hours trying to make this unique_ptr or allocated on the stack
     // after more hours wasted, i read this article: https://www.cppstories.com/2014/05/vector-of-objects-vs-vector-of-pointers/
@@ -255,11 +223,27 @@ public:
     int getGlobalIndex2() const { return torsionSpec.globalIndex2; }
     int getGlobalIndex3() const { return torsionSpec.globalIndex3; }
     int getGlobalIndex4() const { return torsionSpec.globalIndex4; }
-
-    int getPeriodicity() const { return torsionSpec.periodicity; }
-    SimTK::Real getAmpInKJ() const { return torsionSpec.ampInKJ; }
-    SimTK::Real getPhaseInDegrees() const { return torsionSpec.phaseInDegrees; }
     bool isImproper() const { return torsionSpec.improper; }
+
+    SimTK::Real getAmpInKJ_1() const { return torsionSpec.ampInKJ_1; }
+    SimTK::Real getPhaseInDegrees_1() const { return torsionSpec.phaseInDegrees_1; }
+    int getPeriodicity_1() const { return torsionSpec.periodicity_1; }
+
+    SimTK::Real getAmpInKJ_2() const { return torsionSpec.ampInKJ_2; }
+    SimTK::Real getPhaseInDegrees_2() const { return torsionSpec.phaseInDegrees_2; }
+    int getPeriodicity_2() const { return torsionSpec.periodicity_2; }
+
+    SimTK::Real getAmpInKJ_3() const { return torsionSpec.ampInKJ_3; }
+    SimTK::Real getPhaseInDegrees_3() const { return torsionSpec.phaseInDegrees_3; }
+    int getPeriodicity_3() const { return torsionSpec.periodicity_3; }
+
+    SimTK::Real getAmpInKJ_4() const { return torsionSpec.ampInKJ_4; }
+    SimTK::Real getPhaseInDegrees_4() const { return torsionSpec.phaseInDegrees_4; }
+    int getPeriodicity_4() const { return torsionSpec.periodicity_4; }
+
+    SimTK::Real getAmpInKJ_5() const { return torsionSpec.ampInKJ_5; }
+    SimTK::Real getPhaseInDegrees_5() const { return torsionSpec.phaseInDegrees_5; }
+    int getPeriodicity_5() const { return torsionSpec.periodicity_5; }
 
 private:
     BondTorsionDefinition torsionSpec;

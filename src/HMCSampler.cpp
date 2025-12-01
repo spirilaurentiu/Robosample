@@ -1185,7 +1185,7 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		#pragma endregion DRILL_VELOCITIES
 
 		#pragma region DRILL_ACCELERATIONS
-		else if(drillWay == DrillingWay::ACCELERATIONS){
+		if(drillWay == DrillingWay::ACCELERATIONS){
 			someState.updU() = 0.0; // SET VELOCITIES TO ONE
 			system->realize(someState, SimTK::Stage::Acceleration);
 
@@ -1229,7 +1229,7 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		#pragma endregion DRILL_ACCELERATIONS
 
 		#pragma region DRILL_FORCES
-		else if(drillWay == DrillingWay::FORCES){
+		if(drillWay == DrillingWay::FORCES){
 			someState.updU() = 0.0; // SET VELOCITIES TO ZERO
 			system->realize(someState, SimTK::Stage::Acceleration);
 
@@ -1299,7 +1299,7 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 		#pragma endregion DRILL_FORCES
 
 		#pragma region DRILL_ALLFORCES
-		else if(drillWay == DrillingWay::ALLFORCES){
+		if(drillWay == DrillingWay::ALLFORCES){
 			someState.updU() = 0.0; // SET VELOCITIES TO ZERO
 			system->realize(someState, SimTK::Stage::Acceleration);
 

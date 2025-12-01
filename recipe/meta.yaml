@@ -15,7 +15,7 @@ requirements:
     - cmake
     - ninja
     - pkg-config
-    - python
+    - python=3.12 # requested by boa
     - blas
     - lapack
   host:
@@ -24,11 +24,11 @@ requirements:
     - cmake
     - ninja
     - pkg-config
-    - python
+    - python=3.12 # requested by boa
     - blas
     - lapack
   run:
-    - python
+    - python=3.12 # requested by boa
     - blas
     - lapack
     - numpy
@@ -61,4 +61,7 @@ about:
 #  commands:
 #    - bash ./recipe/run_test.sh
 
-# conda build recipe --channel omnia --channel salilab --channel conda-forge --channel defaults
+# conda mambabuild recipe --channel omnia --channel salilab --channel conda-forge --channel defaults
+# conda install --use-local robosample
+
+# conda mambabuild --output recipe
