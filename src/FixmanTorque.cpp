@@ -18,7 +18,7 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	//system->realize(state, SimTK::Stage::Dynamics);
 	//(matter->getSystem()).realize(state, SimTK::Stage::Dynamics);
 	//state.advanceSystemToStage(SimTK::Stage::Dynamics);
-	std::cout << "FixmanTorque::calcForce Stage " << state.getSystemStage();
+	std::cout << "FIXTORROLL FixmanTorque::calcForce Stage " << state.getSystemStage();
 
 	// Compute Fixman torque
 	int nu = state.getNU();
@@ -28,7 +28,7 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0);
 
 	// Apply Fixman torque
-	std::cout << "FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque
+	std::cout << "FIXTORROLL FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque
 	
 	int uslot = -1;
 	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){

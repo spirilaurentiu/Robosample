@@ -4158,16 +4158,16 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
         for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
 
             lockAllMobilizers();
-			std::cout << "lockAllMobilizers() done." << std::endl << std::flush;
+			std::cout << "FIXTORROLL lockAllMobilizers() done." << std::endl << std::flush;
 
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-			std::cout << "mobIntIx " << mobIntIx << std::endl << std::flush;
+			std::cout << "FIXTORROLL mobIntIx " << mobIntIx << std::endl << std::flush;
             
 			mobod.unlock(currentAdvancedState);
-			std::cout << "mobod.unlock" << std::endl << std::flush;
+			std::cout << "FIXTORROLL mobod.unlock" << std::endl << std::flush;
             
 			runSamplingLoop(currentAdvancedState); // sample_iteration
-			std::cout << "runSamplingLoop" << std::endl << std::flush;
+			std::cout << "FIXTORROLL runSamplingLoop" << std::endl << std::flush;
         
 		
 		}

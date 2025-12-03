@@ -1707,21 +1707,21 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 
 				UCache = someState.getU();
 
-//std::cout << "DRILLING integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
 
-//std::cout << "DRILLING integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				// system->realize(someState, SimTK::Stage::Position);
 				system->realize(someState, SimTK::Stage::Acceleration);
 
-//std::cout << "DRILLING integrateTrajectory: " <<" realizeAcceleration "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL integrateTrajectory: " <<" realizeAcceleration "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				UDotCache = someState.getUDot();
 				// std::cout << "UDotCache size " << uDot.size() << std::endl;
 				
-//std::cout << "DRILLING integrateTrajectory: " <<" someState.getUDot() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL integrateTrajectory: " <<" someState.getUDot() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				return;
 			}catch(const std::exception&){
@@ -4148,27 +4148,27 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 		adaptWorldBlocks(someState);
 	}
 
-//std::cout << "DRILLING Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
 
-//std::cout << "DRILLING perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
-//std::cout << "DRILLING calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 
-//std::cout << "DRILLING integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
 
-//std::cout << "DRILLING perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// drl
 	#ifdef __DRILLING__
@@ -4180,7 +4180,7 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
 
-//std::cout << "DRILLING calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLL calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	} else {
 			// Store new energies
