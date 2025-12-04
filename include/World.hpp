@@ -122,6 +122,10 @@ public:
 	//const std::vector<std::vector<BOND_FLEXIBILITY>>& getRollFlexibilities() const ;
 	void setRollFlexibilities(bool argRollFlexibilities);
 	bool getRollFlexibilities() const ;
+
+	/**
+	* @brief Lock all mobilizers at default level Position
+	*/
 	void lockAllMobilizers(void);
 
 	void generateDummParams(const std::vector<bSpecificAtom>& atoms,

@@ -365,12 +365,13 @@ bool World::getRollFlexibilities() const
 	return this->isRollFlexibilities;
 }
 
+/*! <!-- Lock all mobilizers at default level Position --> */
 void World::lockAllMobilizers(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		mobod.lock(currentAdvancedState);
+		mobod.lock(currentAdvancedState); // Motion::Level level=Motion::Position
     }
 }
 
@@ -4139,7 +4140,9 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
     SimTK::State& currentAdvancedState = integ->updAdvancedState();
     updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
 
-    validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose);
+	validated = true;
+
+    validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose); // FIXTOR_RESTORE
 
     auto runSamplingLoop = [&](SimTK::State& state) {
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
@@ -4147,6 +4150,8 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
                 worldOutStream << header << " ";
                 updSampler(0)->getMsg_InitialParams(worldOutStream);
             }
+
+			// validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose) && validated; // FIXTOR_COPY
 
             validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
 
@@ -4158,16 +4163,17 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
         for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
 
             lockAllMobilizers();
-			std::cout << "FIXTORROLL lockAllMobilizers() done." << std::endl << std::flush;
+			std::cout << "FIXTORROLLWorld::generateSamples lockAllMobilizers() done." << std::endl << std::flush;
+			PrintSimbodyStateCache(currentAdvancedState);			
 
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-			std::cout << "FIXTORROLL mobIntIx " << mobIntIx << std::endl << std::flush;
+			std::cout << "FIXTORROLLWorld::generateSamples mobIntIx " << mobIntIx << std::endl << std::flush;
             
 			mobod.unlock(currentAdvancedState);
-			std::cout << "FIXTORROLL mobod.unlock" << std::endl << std::flush;
+			std::cout << "FIXTORROLLWorld::generateSamples mobod.unlock" << std::endl << std::flush;
             
 			runSamplingLoop(currentAdvancedState); // sample_iteration
-			std::cout << "FIXTORROLL runSamplingLoop" << std::endl << std::flush;
+			std::cout << "FIXTORROLLWorld::generateSamples runSamplingLoop" << std::endl << std::flush;
         
 		
 		}

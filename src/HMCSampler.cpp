@@ -180,6 +180,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Set a validation flag
 	bool validated = true;
 
+std::cout << "FIXTORROLLHMCSampler::reinitialize start: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+world->PrintSimbodyStateCache(someState);
+
 	// After an event handler has made a discontinuous change to the
 	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
@@ -191,8 +194,14 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		}
 	}
 
+std::cout << "FIXTORROLLHMCSampler::reinitialize timeStepper->initialize: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+world->PrintSimbodyStateCache(someState);
+
 	// Get no of degrees of freedom
 	const int nu = someState.getNU();
+
+std::cout << "FIXTORROLLHMCSampler::reinitialize someState.getNU: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+world->PrintSimbodyStateCache(someState);
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   X_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -201,6 +210,9 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	// Calculate Simbody configuration
 	system->realize(someState, SimTK::Stage::Position);
+
+std::cout << "FIXTORROLLHMCSampler::reinitialize realizePosition: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+world->PrintSimbodyStateCache(someState);
 
 	// Copy coordinates to OpenMM
 	if(this->integratorType == IntegratorType::OMMVV){
@@ -349,6 +361,10 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// if (verbose) {
 	// 	getMsg_InitialParams(samplerOutStream);
 	// }
+
+std::cout << "FIXTORROLLHMCSampler::reinitialize final: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+world->PrintSimbodyStateCache(someState);
+
 
 	return validated;
 
@@ -1707,21 +1723,22 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 
 				UCache = someState.getU();
 
-std::cout << "FIXTORROLL integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+world->PrintSimbodyStateCache(someState);
 
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
 
-std::cout << "FIXTORROLL integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				// system->realize(someState, SimTK::Stage::Position);
 				system->realize(someState, SimTK::Stage::Acceleration);
 
-std::cout << "FIXTORROLL integrateTrajectory: " <<" realizeAcceleration "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" realizeAcceleration "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				UDotCache = someState.getUDot();
 				// std::cout << "UDotCache size " << uDot.size() << std::endl;
 				
-std::cout << "FIXTORROLL integrateTrajectory: " <<" someState.getUDot() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getUDot() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				return;
 			}catch(const std::exception&){
@@ -1734,63 +1751,47 @@ std::cout << "FIXTORROLL integrateTrajectory: " <<" someState.getUDot() "<< some
 		// 	if (!useNUTS) {
 		// 		world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
 		// 		system->realize(someState, SimTK::Stage::Position);
-
-
 		// 		// return;
 		// 	}
-
 		// 	// // Set up random 0 to 1 generator
 		// 	// std::uniform_real_distribution<double> uniformRealDistribution_0_1(0, 1);
-
 		// 	// // Get initial momenta
 		// 	// SimTK::Vector p;
 		// 	// world->matter->multiplyByM(someState, someState.getU(), p);
-
 		// 	// Node CurrentNode;
 		// 	// CurrentNode.Q = someState.getQ();
 		// 	// CurrentNode.U = someState.getU();
-
 		// 	// int MaxDepth = 10;
 		// 	// std::map<int, Node> Trajectory; // Does not allow reserve
 		// 	// Trajectory[0] = CurrentNode;
-
 		// 	// bool found = false;
-
 		// 	// for (int depth = 0; depth < MaxDepth; depth++) {
-
 		// 	// 	bool Direction = uniformRealDistribution_0_1(randomEngine) < 0.5;
 		// 	// 	int endpoint = 0;
 		// 	// 	SimTK::Vector U, Q;
-
 		// 	// 	if (Direction == 0) {
 		// 	// 		// Forward
 		// 	// 		U = Trajectory.rbegin()->second.U;
 		// 	// 		Q = Trajectory.rbegin()->second.Q;
-
 		// 	// 		endpoint = Trajectory.rbegin()->first + static_cast<int>(std::pow(2, depth));
 		// 	// 		// std::cout << "Depth = " << depth << " Forward to " << endpoint << std::endl;
 		// 	// 	} else {
 		// 	// 		// Backward
 		// 	// 		U = Trajectory.begin()->second.U;
 		// 	// 		Q = Trajectory.begin()->second.Q;
-
 		// 	// 		endpoint = Trajectory.begin()->first - static_cast<int>(std::pow(2, depth));
 		// 	// 		// std::cout << "Depth = " << depth << " Backward to " << endpoint << std::endl;
-
 		// 	// 		if (Trajectory.begin()->first == 0) {
 		// 	// 			for (int i = 0; i < U.size(); i++) {
 		// 	// 				U[i] = -U[i];
 		// 	// 			}
 		// 	// 		}
 		// 	// 	}
-
 		// 	// 	// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
-
 		// 	// 	someState.updQ() = Q;
 		// 	// 	someState.updU() = U;
 		// 	// 	world->timeStepper->stepTo(someState.getTime() + timestep * std::pow(2, depth));
 		// 	// 	system->realize(someState, SimTK::Stage::Position);
-
 		// 	// 	// Check U-turn
 		// 	// 	const auto C = CheckUTurn(Trajectory.rbegin()->second.Q, Trajectory.begin()->second.Q, p);
 		// 	// 	if (C < 0) {
@@ -1799,36 +1800,28 @@ std::cout << "FIXTORROLL integrateTrajectory: " <<" someState.getUDot() "<< some
 		// 	// 		break;
 		// 	// 	} else {
 		// 	// 		// std::cout << "No U-turn, C = " << C << std::endl;
-
 		// 	// 		Node NextNode;
 		// 	// 		NextNode.Q = someState.getQ();
 		// 	// 		NextNode.U = someState.getU();
-
 		// 	// 		// std::cout << "LenQ state = " << someState.getQ().size() << std::endl;
 		// 	// 		// std::cout << "LenQ next = " << NextNode.Q.size() << std::endl;
 		// 	// 		// std::cout << "Len Q = " << Q.size() << " Len U = " << U.size() << std::endl;
-
 		// 	// 		Trajectory.insert(std::make_pair(endpoint, NextNode));
 		// 	// 	}
 		// 	// }
-
 		// 	// if (found) {
 		// 	// 	std::cout << "U-turn detected after " << Trajectory.size() << " steps" << std::endl;
 		// 	// } else {
 		// 	// 	std::cout << "No U-turn detected" << std::endl;
 		// 	// }
-
 		// 	// // Chose randomly from the trajectory
 		// 	// std::uniform_int_distribution<int> uniformIntDistribution(0, Trajectory.size() - 1);
 		// 	// int index = uniformIntDistribution(randomEngine);
 		// 	// auto it = Trajectory.begin();
 		// 	// std::advance(it, index);
-
 		// 	// someState.updQ() = it->second.Q;
 		// 	// someState.updU() = it->second.U;
-
 		// 	// system->realize(someState, SimTK::Stage::Position); // Or velocities? who knows
-
 		// }catch(const std::exception&){
 		// 	proposeExceptionCaught = true;
 		// 	assignConfFromSetTVector(someState);
@@ -4148,27 +4141,27 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 		adaptWorldBlocks(someState);
 	}
 
-std::cout << "FIXTORROLL Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::propose Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
 
-std::cout << "FIXTORROLL perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::propose perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
-std::cout << "FIXTORROLL calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::propose calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 
-std::cout << "FIXTORROLL integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::propose integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
 
-std::cout << "FIXTORROLL perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::propose perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	// drl
 	#ifdef __DRILLING__
@@ -4180,7 +4173,7 @@ std::cout << "FIXTORROLL perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemSt
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
 
-std::cout << "FIXTORROLL calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+std::cout << "FIXTORROLLHMCSampler::propose calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 	} else {
 			// Store new energies

@@ -18,7 +18,7 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	//system->realize(state, SimTK::Stage::Dynamics);
 	//(matter->getSystem()).realize(state, SimTK::Stage::Dynamics);
 	//state.advanceSystemToStage(SimTK::Stage::Dynamics);
-	std::cout << "FIXTORROLL FixmanTorque::calcForce Stage " << state.getSystemStage();
+	std::cout << "FIXTORROLLFixmanTorque::calcForce FixmanTorque::calcForce Stage " << state.getSystemStage();
 
 	// Compute Fixman torque
 	int nu = state.getNU();
@@ -28,7 +28,7 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0);
 
 	// Apply Fixman torque
-	std::cout << "FIXTORROLL FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque
+	std::cout << "FIXTORROLLFixmanTorque::calcForce FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque
 	
 	int uslot = -1;
 	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
@@ -49,6 +49,9 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 		std::cout << std::endl << std::flush; // print Fixman torque
 
 	} // _end_ mbx
+
+	std::cout << "FIXTORROLLFixmanTorque::calcForce FixmanTorque::calcForce final " << std::endl << std::flush;
+	PrintSimbodyStateCache(state);
 
 }
 
@@ -87,6 +90,17 @@ void FixmanTorque::setScaleFactor(SimTK::Real argScaleFactor)
 }
 
 
+/** Print information about Simbody systems. For debugging purpose. **/
+void FixmanTorque::PrintSimbodyStateCache(const SimTK::State& someState) const{
+	std::cout << " System Stage: " << someState.getSystemStage() << std::endl;
+	for(int i = 0; i < someState.getNumSubsystems(); i++){
+		std::cout << " Subsystem " << i
+			<< " Name: " << someState.getSubsystemName(SimTK::SubsystemIndex(i))
+			<< " Stage: " << someState.getSubsystemStage(SimTK::SubsystemIndex(i))
+			<< " Version: " << someState.getSubsystemVersion(SimTK::SubsystemIndex(i))
+			<< std::endl;
+	}
+}
 
 ///////////////////////////////
 ////// END FIXMAN TORQUE //////

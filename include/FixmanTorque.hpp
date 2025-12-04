@@ -30,6 +30,9 @@ public:
     SimTK::Real getTemperature(void);
     void setTemperature(SimTK::Real);
 
+	/** Print information about Simbody systems **/
+	void PrintSimbodyStateCache(const SimTK::State&) const;    
+
 private:
     // std::shared_ptr<SimTK::SimbodyMatterSubsystem> matter;
     SimTK::SimbodyMatterSubsystem* matter = nullptr;
