@@ -206,7 +206,7 @@ DIHEDRAL_SELECTIONS = {
 @dataclass
 class AtomClassIndexPair:
     universeIndex: int
-    parmIndex: int
+    parmIndices: List[int]
 
 @dataclass
 class Sampler:
@@ -280,7 +280,7 @@ class Context(rb.Context):
                  threads: int = 0,
                  nofRoundsTillReblock: int = 1,
                  nonbonded_method: int = 0,
-                 nonbonded_cutoff: float = 1.2,
+                 nonbonded_cutoff: float = 1,
                  gbsa: bool = True,
                  verbose: bool = False,
                  include_omega: bool = False,
@@ -347,13 +347,13 @@ class Context(rb.Context):
             a.charge = round(a.charge, 4)
 
         # DuMM atom classes are defined by their atom type (XC, C8, N3 etc), not atom name (N, CA, C, O etc)
-        atom_types = set([a.type for a in self.parm.atoms])
-        atom_types = sorted(atom_types) # Sort to ensure consistent ordering, set() does not guarantee order
-        atom_types_indices = {atom_type: i for i, atom_type in enumerate(atom_types)}
+        atom_classes = set([a.type for a in self.parm.atoms])
+        atom_classes = sorted(atom_classes) # Sort to ensure consistent ordering, set() does not guarantee order
+        atom_class_indices = {atom_type: i for i, atom_type in enumerate(atom_classes)}
 
         # DuMM charged atom types are AMBER atom types plus their partial charge
         # DuMMForceFieldSubsystemRep::setBiotypeChargedAtomType - there is 1:1 correspondence between biotype and charged atom type
-        charged_atom_types = set([a.name + ':' + str(len(a.bond_partners)) + ':' + str(a.charge) for a in self.parm.atoms])
+        charged_atom_types = set([self.create_charged_atom_type_name(a) for a in self.parm.atoms])
         charged_atom_types = sorted(charged_atom_types) # Sort to ensure consistent ordering, set() does not guarantee order
         charged_atom_type_indices = {atom_type: i for i, atom_type in enumerate(charged_atom_types)}
 
@@ -385,36 +385,6 @@ class Context(rb.Context):
 
             # The root is the first N atom of the protein
             root_index = molecule.select_atoms("resid 1 and name N")[0].index
-            self.root_indices.append(root_index)
-
-            # Add atoms of this molecule
-            for i, atom in enumerate(molecule.atoms):
-                a = self.parm.atoms[atom.index]
-                spec = rb.AtomDefinition()
-                spec.globalIndex = a.idx
-                spec.moleculeIndex = moleculeIndex
-                spec.residueIndex = a.residue.idx
-                spec.atomClassIndex = atom_types_indices[a.type]
-                spec.chargedAtomTypeIndex = charged_atom_type_indices[a.name + ':' + str(len(a.bond_partners)) + ':' + str(a.charge)]
-                spec.biotypeAtomName = a.name + ':' + str(len(a.bond_partners)) + ':' + str(a.charge)  # AMBER atom name + ':' + valence (number of actual bonds, not typical valence)
-                spec.atomClassName = a.type
-                spec.chargedAtomName = a.name + ':' + str(len(a.bond_partners)) + ':' + str(a.charge)
-                spec.residueName = a.residue.name
-                spec.uniqueAtomName = a.residue.name + str(a.residue.idx) + '_' + a.name + '_' + str(a.idx)
-                spec.neighborsGlobalIndices = [n.idx for n in a.bond_partners]
-                spec.root = root_index == a.idx
-                spec.atomicNumber = a.atomic_number
-                spec.chargeInE = a.charge # The partial atomic charge of this atom in fractions of an electron
-                spec.massInDaltons = a.mass # The atomic mass of this atom in daltons
-                spec.vdwRadiusInNm = a.rmin * 2 / 10 # rmin is actually radius/2. We then convert from Angstroms to nm
-                spec.sigmaInNm = (a.rmin * 2 / 10) / (2 ** (1/6))  # Convert rmin/2 to sigma in nm
-                spec.vdwWellDepthInKJ = a.epsilon * 4.184 # Convert from kcal/mol to kJ/mol
-                spec.x = a.xx
-                spec.y = a.xy
-                spec.z = a.xz
-                self.atoms.append(rb.Atom(spec))
-                
-                print(f"Assigned to atom name {a.name} (global index {a.idx}) atom class index {spec.atomClassIndex} ({spec.atomClassName}) and charged atom class index {spec.chargedAtomTypeIndex} ({spec.chargedAtomName})", flush=True)
 
             # Find redundant (ring closing) dihedrals and build non-redundant set
             atom_groups, dihedral_types, atom_indices, residue_names, residue_ids, num_dihedrals, ring_closing_dihedrals = self.buildNonRedundantTorsions(self.universe)
@@ -436,13 +406,77 @@ class Context(rb.Context):
             tree_edges, ring_only = self.bfs_and_ring_edges(G, root=0, ring_edges=pre_ring_closing_bonds)
             all_edges = [(parent, child, False) for parent, child in tree_edges] + [(parent, child, True)  for parent, child in ring_only]
 
+            # create atom index mapping between global index and local index in this molecule
+            # this occurs after BFS to ensure only atoms in the spanning tree are included
+            global_to_local_index = {}
+            for local_i, (parent, child, is_ring) in enumerate(all_edges):
+                if parent not in global_to_local_index:
+
+                    assert parent == root_index, f"First atom in the edge should be the root index {root_index}, but got {parent}"
+                    global_to_local_index[parent] = len(global_to_local_index)
+
+                    a = self.parm.atoms[parent]
+                    spec = rb.AtomDefinition()
+                    spec.global_index = global_to_local_index[parent] # a.idx
+                    spec.molecule_index = moleculeIndex
+                    spec.residue_index = a.residue.idx
+                    spec.atom_class_name = a.type
+                    spec.atom_class_index = atom_class_indices[a.type]
+                    spec.charged_atom_type_name = self.create_charged_atom_type_name(a)
+                    spec.charged_atom_type_index = charged_atom_type_indices[self.create_charged_atom_type_name(a)]
+                    spec.residue_name = a.residue.name # ALA
+                    spec.unique_atom_name = a.residue.name + str(a.residue.idx) + '_' + a.name + '_' + str(a.idx) + '_ROOT' # e.g. ALA1_N_4_ROOT
+                    spec.neighbors_global_indices = [n.idx for n in a.bond_partners]
+                    spec.root = True
+                    spec.atomic_number = a.atomic_number
+                    spec.charge_in_e = a.charge # The partial atomic charge of this atom in fractions of an electron
+                    spec.mass_in_daltons = a.mass # The atomic mass of this atom in daltons
+                    spec.vdw_radius_nm = a.rmin * 2 / 10 # rmin is actually radius/2. We then convert from Angstroms to nm
+                    spec.sigma_nm = (a.rmin * 2 / 10) / (2 ** (1/6))  # Convert rmin/2 to sigma in nm
+                    spec.vdw_well_depth_kj = a.epsilon * 4.184 # Convert from kcal/mol to kJ/mol
+                    spec.x_nm = a.xx / 10 # Convert from A to nm
+                    spec.y_nm = a.xy / 10 # Convert from A to nm
+                    spec.z_nm = a.xz / 10 # Convert from A to nm
+                    self.atoms.append(rb.Atom(spec))
+                    
+                if child not in global_to_local_index:
+                    global_to_local_index[child] = len(global_to_local_index)
+
+                    a = self.parm.atoms[child]
+                    spec = rb.AtomDefinition()
+                    spec.global_index = global_to_local_index[a.idx] # a.idx
+                    spec.molecule_index = moleculeIndex
+                    spec.residue_index = a.residue.idx
+                    spec.atom_class_name = a.type
+                    spec.atom_class_index = atom_class_indices[a.type]
+                    spec.charged_atom_type_name = self.create_charged_atom_type_name(a)
+                    spec.charged_atom_type_index = charged_atom_type_indices[self.create_charged_atom_type_name(a)]
+                    spec.residue_name = a.residue.name # ALA
+                    spec.unique_atom_name = a.residue.name + str(a.residue.idx) + '_' + a.name + '_' + str(a.idx) # e.g. ALA1_N_4
+                    spec.neighbors_global_indices = [n.idx for n in a.bond_partners]
+                    spec.root = False
+                    spec.atomic_number = a.atomic_number
+                    spec.charge_in_e = a.charge # The partial atomic charge of this atom in fractions of an electron
+                    spec.mass_in_daltons = a.mass # The atomic mass of this atom in daltons
+                    spec.vdw_radius_nm = a.rmin * 2 / 10 # rmin is actually radius/2. We then convert from Angstroms to nm
+                    spec.sigma_nm = (a.rmin * 2 / 10) / (2 ** (1/6))  # Convert rmin/2 to sigma in nm
+                    spec.vdw_well_depth_kj = a.epsilon * 4.184 # Convert from kcal/mol to kJ/mol
+                    spec.x_nm = a.xx / 10 # Convert from A to nm
+                    spec.y_nm = a.xy / 10 # Convert from A to nm
+                    spec.z_nm = a.xz / 10 # Convert from A to nm
+                    self.atoms.append(rb.Atom(spec))
+
+            self.root_indices.append(global_to_local_index[root_index])
+            
+
             for parent, child, is_ring in all_edges:
                 pair = self.bond_indices[(parent, child)]
-                bond = self.parm.bonds[pair.parmIndex]
-                
+                assert(len(pair.parmIndices) == 1), f"Multiple bond parameters found for bond between atoms {parent} and {child}"
+                bond = self.parm.bonds[pair.parmIndices[0]]
+
                 spec = rb.BondStretchDefinition()
-                spec.parentAtomGlobalIndex = parent
-                spec.childAtomGlobalIndex = child
+                spec.parentAtomGlobalIndex = global_to_local_index[parent]
+                spec.childAtomGlobalIndex = global_to_local_index[child]
                 spec.bondGlobalIndex = pair.universeIndex
                 spec.moleculeIndex = moleculeIndex
                 spec.ringClosing = is_ring
@@ -453,45 +487,61 @@ class Context(rb.Context):
             # Find angles in the molecule
             for mol_angle in molecule.angles:
                 pair = self.angle_indices[(mol_angle.atoms[0].index, mol_angle.atoms[1].index, mol_angle.atoms[2].index)]
-                angle = self.parm.angles[pair.parmIndex]
+                assert(len(pair.parmIndices) == 1), f"Multiple angle parameters found for angle between atoms {mol_angle.atoms[0].index}, {mol_angle.atoms[1].index}, {mol_angle.atoms[2].index}"
+                angle = self.parm.angles[pair.parmIndices[0]]
                 
                 spec = rb.BondBendDefinition()
-                spec.globalIndex1 = angle.atom1.idx
-                spec.globalIndex2 = angle.atom2.idx
-                spec.globalIndex3 = angle.atom3.idx
+                spec.globalIndex1 = global_to_local_index[mol_angle.atoms[0].index]
+                spec.globalIndex2 = global_to_local_index[mol_angle.atoms[1].index]
+                spec.globalIndex3 = global_to_local_index[mol_angle.atoms[2].index]
                 spec.stiffnessInKJPerRadSq = angle.type.k * 4.184
                 spec.nominalAngleInDeg = angle.type.theteq
                 self.bond_bends.append(rb.BondBend(spec))
 
             # Find torsions in the molecule
-            for mol_torsion in molecule.dihedrals:
-                pair = self.dihedral_indices[(mol_torsion.atoms[0].index, mol_torsion.atoms[1].index, mol_torsion.atoms[2].index, mol_torsion.atoms[3].index)]
-                torsion = self.parm.dihedrals[pair.parmIndex]
+            propers_and_impropers = [(dihedral, True) for dihedral in molecule.impropers] + [(dihedral, False) for dihedral in molecule.dihedrals]
+            for mol_torsion, is_improper in propers_and_impropers:
+                if is_improper:
+                    pair = self.improper_indices[(mol_torsion.atoms[0].index, mol_torsion.atoms[1].index, mol_torsion.atoms[2].index, mol_torsion.atoms[3].index)]
+                    assert (len(pair.parmIndices) > 0), f"No improper dihedral parameters found for improper between atoms {mol_torsion.atoms[0].index}, {mol_torsion.atoms[1].index}, {mol_torsion.atoms[2].index}, {mol_torsion.atoms[3].index}"
+                else:
+                    pair = self.dihedral_indices[(mol_torsion.atoms[0].index, mol_torsion.atoms[1].index, mol_torsion.atoms[2].index, mol_torsion.atoms[3].index)]
+                    assert(len(pair.parmIndices) > 0), f"No dihedral parameters found for dihedral between atoms {mol_torsion.atoms[0].index}, {mol_torsion.atoms[1].index}, {mol_torsion.atoms[2].index}, {mol_torsion.atoms[3].index}"
 
                 spec = rb.BondTorsionDefinition()
-                spec.globalIndex1 = torsion.atom1.idx
-                spec.globalIndex2 = torsion.atom2.idx
-                spec.globalIndex3 = torsion.atom3.idx
-                spec.globalIndex4 = torsion.atom4.idx
-                spec.ampInKJ = torsion.type.phi_k * 4.184 # Convert from kcal/mol to kJ/mol
-                spec.phaseInDegrees = torsion.type.phase
-                spec.periodicity = torsion.type.per
-                spec.improper = False
-                self.bond_torsions.append(rb.BondTorsion(spec))
-                
-            for mol_improper in molecule.impropers:
-                pair = self.improper_indices[(mol_improper.atoms[0].index, mol_improper.atoms[1].index, mol_improper.atoms[2].index, mol_improper.atoms[3].index)]
-                improper = self.parm.dihedrals[pair.parmIndex]
+                spec.globalIndex1 = global_to_local_index[mol_torsion.atoms[0].index]
+                spec.globalIndex2 = global_to_local_index[mol_torsion.atoms[1].index]
+                spec.globalIndex3 = global_to_local_index[mol_torsion.atoms[2].index]
+                spec.globalIndex4 = global_to_local_index[mol_torsion.atoms[3].index]
+                spec.improper = is_improper
 
-                spec = rb.BondTorsionDefinition()
-                spec.globalIndex1 = improper.atom1.idx
-                spec.globalIndex2 = improper.atom2.idx
-                spec.globalIndex3 = improper.atom3.idx
-                spec.globalIndex4 = improper.atom4.idx
-                spec.ampInKJ = improper.type.phi_k * 4.184 # Convert from kcal/mol to kJ/mol
-                spec.phaseInDegrees = improper.type.phase
-                spec.periodicity = improper.type.per
-                spec.improper = True
+                num_terms = len(pair.parmIndices)
+                if (num_terms > 0):
+                    torsion = self.parm.dihedrals[pair.parmIndices[0]]
+                    spec.ampInKJ_1 = torsion.type.phi_k * 4.184 # Convert from kcal/mol to kJ/mol
+                    spec.phaseInDegrees_1 = torsion.type.phase
+                    spec.periodicity_1 = torsion.type.per
+                if (num_terms > 1):
+                    torsion = self.parm.dihedrals[pair.parmIndices[1]]
+                    spec.ampInKJ_2 = torsion.type.phi_k * 4.184 # Convert from kcal/mol to kJ/mol
+                    spec.phaseInDegrees_2 = torsion.type.phase
+                    spec.periodicity_2 = torsion.type.per
+                if (num_terms > 2):
+                    torsion = self.parm.dihedrals[pair.parmIndices[2]]
+                    spec.ampInKJ_3 = torsion.type.phi_k * 4.184 # Convert from kcal/mol to kJ/mol
+                    spec.phaseInDegrees_3 = torsion.type.phase
+                    spec.periodicity_3 = torsion.type.per
+                if (num_terms > 3):
+                    torsion = self.parm.dihedrals[pair.parmIndices[3]]
+                    spec.ampInKJ_4 = torsion.type.phi_k * 4.184 # Convert from kcal/mol to kJ/mol
+                    spec.phaseInDegrees_4 = torsion.type.phase
+                    spec.periodicity_4 = torsion.type.per
+                if (num_terms > 4):
+                    torsion = self.parm.dihedrals[pair.parmIndices[4]]
+                    spec.ampInKJ_5 = torsion.type.phi_k * 4.184 # Convert from kcal/mol to kJ/mol
+                    spec.phaseInDegrees_5 = torsion.type.phase
+                    spec.periodicity_5 = torsion.type.per
+
                 self.bond_torsions.append(rb.BondTorsion(spec))
 
             # assert len(self.ordered_bonds) == G.number_of_edges(), f"Number of BFS bonds {len(self.ordered_bonds)} doesn't match number of edges {G.number_of_edges()}"
@@ -705,6 +755,8 @@ class Context(rb.Context):
 
     def addCartesianWorld(self, samplesPerRound: int = 1) -> World:
 
+        # self.bond_stretches, self.bond_bends, self.bond_torsions
+
         # Create a list of all bonds in the system with full flexibility
         flex = []
         for b in self.universe.bonds:
@@ -722,20 +774,75 @@ class Context(rb.Context):
         self.worlds.append(w)
         return self.worlds[-1]
     
-    def addTorsionalWorld(self, flex, samplesperRound: int = 1):
+    def addTorsionalWorld(self, torsional_bonds: list[rb.BondFlexibility], samplesperRound: int = 1):
+
+        # Create a mapping of all bonds that are flexible (i.e. torsional)
+        torsional_bonds_map = {}
+
+        # Determine which bonds are non-bonded (are inside rigid bodies) and save them as indices
+        # This is equivalent to being non-rigid bonds
+        included_bonds_indices = []
+
+        for b in torsional_bonds:
+            assert b.mobility == rb.BondMobility.Torsion, "Only torsional flexibilities are supported in torsional world. Rigid bonds are implicitly defined by the absence of a flexibility."
+
+            # This map holds (a,b) and (b,a)
+            id = self.bond_indices.get((b.i, b.j))
+            assert id is not None, f"Bond between atoms {b.i} and {b.j} not found in bond indices"
+            included_bonds_indices.append(id.universeIndex)
+
+            # We add this bond to our local map since the the previous one does not store flexiblity info
+            torsional_bonds_map[(b.i, b.j)] = True
+            torsional_bonds_map[(b.j, b.i)] = True
+
+        # Determine which angles are non-bonded (are inside rigid bodies) and save them as indices
+        # This means that both bonds forming the angle are in included_bonds_indices
+        included_angles_indices = []
+        for i, angle in enumerate(self.universe.angles):
+            a1 = angle.atoms[0].index
+            a2 = angle.atoms[1].index
+            a3 = angle.atoms[2].index
+
+            bond_1_rigid = not torsional_bonds_map.get((a1, a2), False)
+            bond_2_rigid = not torsional_bonds_map.get((a2, a3), False)
+
+            if bond_1_rigid and bond_2_rigid:
+                id = self.angle_indices.get((a1, a2, a3))
+                assert id is not None, f"Angle between atoms {a1}, {a2}, {a3} not found in angle indices"
+                included_angles_indices.append(id.universeIndex)
+
+        # Determine which dihedrals are non-bonded (are inside rigid bodies) and save them as indices
+        # This means that all three bonds forming the dihedral are in included_bonds_indices
+        included_dihedrals_indices = []
+        for i, dihedral in enumerate(self.universe.dihedrals):
+            a1 = dihedral.atoms[0].index
+            a2 = dihedral.atoms[1].index
+            a3 = dihedral.atoms[2].index
+            a4 = dihedral.atoms[3].index
+
+            bond_1_rigid = not torsional_bonds_map.get((a1, a2), False)
+            bond_2_rigid = not torsional_bonds_map.get((a2, a3), False)
+            bond_3_rigid = not torsional_bonds_map.get((a3, a4), False)
+
+            if bond_1_rigid and bond_2_rigid and bond_3_rigid:
+                id = self.dihedral_indices.get((a1, a2, a3, a4))
+                assert id is not None, f"Dihedral between atoms {a1}, {a2}, {a3}, {a4} not found in dihedral indices"
+                included_dihedrals_indices.append(id.universeIndex)
+            
         w = World(fixmanTorque=True,
                   samplesPerRound=samplesperRound,
                   rootMobility=rb.RootMobility.WELD,
-                  flexibilities=flex,
+                  flexibilities=torsional_bonds,
                   useOpenMM=True,
                   visual=False,
                   visualizerFrequency=0,
                   isCartesian=False,
                   samplers=list[Sampler]())
         self.worlds.append(w)
+
         return self.worlds[-1]
     
-    def getNonRundantBonds(self) -> list[Tuple[int, int, rb.BondMobility]]:
+    def getNonRundantBonds(self) -> list[rb.BondFlexibility]:
         flexibilities = []
         for bond in self.non_redundant_bonds:
             flexibilities.append(rb.BondFlexibility(bond[0], bond[1], rb.BondMobility.Torsion))
@@ -824,52 +931,51 @@ class Context(rb.Context):
         for i, bond in enumerate(self.universe.bonds):
             a1, a2 = bond.atoms[0].index, bond.atoms[1].index
             for key in ((a1, a2), (a2, a1)):
-                self.bond_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndex=-1)
+                self.bond_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndices=[])
 
         for i, bond in enumerate(self.parm.bonds):
             a1, a2 = bond.atom1.idx, bond.atom2.idx
             for key in ((a1, a2), (a2, a1)):
                 assert key in self.bond_indices, f"Bond between atoms {a1} and {a2} not found in universe bonds"
-                self.bond_indices[key].parmIndex = i
+                self.bond_indices[key].parmIndices.append(i)
+
                     
         # Fill MD Analysis Universe angle indices
         for i, angle in enumerate(self.universe.angles):
             a1, a2, a3 = angle.atoms[0].index, angle.atoms[1].index, angle.atoms[2].index
             for key in ((a1, a2, a3), (a3, a2, a1)):
-                self.angle_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndex=-1)
+                self.angle_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndices=[])
                 
         for i, angle in enumerate(self.parm.angles):
             a1, a2, a3 = angle.atom1.idx, angle.atom2.idx, angle.atom3.idx
             for key in ((a1, a2, a3), (a3, a2, a1)):
                 assert key in self.angle_indices, f"Angle between atoms {a1}, {a2}, {a3} not found in universe angles"
-                self.angle_indices[key].parmIndex = i
-                    
+                self.angle_indices[key].parmIndices.append(i)
+                
+
         # Fill MD Analysis Universe dihedral indices
         for i, dihedral in enumerate(self.universe.dihedrals):
             a1, a2, a3, a4 = dihedral.atoms[0].index, dihedral.atoms[1].index, dihedral.atoms[2].index, dihedral.atoms[3].index
-            print(f"MDanalysis defined dihedral ({a1}, {a2}, {a3}, {a4}) or ({a4}, {a3}, {a2}, {a1}) at index {i}", flush=True)
             for key in ((a1, a2, a3, a4), (a4, a3, a2, a1)):
-                self.dihedral_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndex=-1)
-                
-        for i, dihedral in enumerate(self.parm.dihedrals):
-            a1, a2, a3, a4 = dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx, dihedral.atom4.idx
-            print(f"Parmed defined dihedral ({a1}, {a2}, {a3}, {a4}) or ({a4}, {a3}, {a2}, {a1}) at index {i}", flush=True)
-            for key in ((a1, a2, a3, a4), (a4, a3, a2, a1)):
-                # skip if this dihedral is actually an improper
-                if key in self.dihedral_indices:
-                    self.dihedral_indices[key].parmIndex = i
+                self.dihedral_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndices=[])
                 
         # Fill MD Analysis Universe improper dihedral indices
         for i, dihedral in enumerate(self.universe.impropers):
             a1, a2, a3, a4 = dihedral.atoms[0].index, dihedral.atoms[1].index, dihedral.atoms[2].index, dihedral.atoms[3].index
-            print(f"MDanalysis defined improper dihedral ({a1}, {a2}, {a3}, {a4}) or ({a4}, {a3}, {a2}, {a1}) at index {i}", flush=True)
+            # print('Improper in universe:', a1, a2, a3, a4)
             for key in ((a1, a2, a3, a4), (a4, a3, a2, a1)):
-                self.improper_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndex=-1)
-                
-        for i, dihedral in enumerate(self.parm.impropers):
+                self.improper_indices[key] = AtomClassIndexPair(universeIndex=i, parmIndices=[])
+
+        for i, dihedral in enumerate(self.parm.dihedrals):
             a1, a2, a3, a4 = dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx, dihedral.atom4.idx
-            print(f"Parmed defined improper dihedral ({a1}, {a2}, {a3}, {a4}) or ({a4}, {a3}, {a2}, {a1}) at index {i}", flush=True)
             for key in ((a1, a2, a3, a4), (a4, a3, a2, a1)):
-                assert key in self.improper_indices, f"Improper dihedral between atoms {a1}, {a2}, {a3}, {a4} not found in universe dihedrals"
-                self.improper_indices[key].parmIndex = i
-                    
+                # skip if this dihedral is actually an improper
+                if key in self.dihedral_indices:
+                    self.dihedral_indices[key].parmIndices.append(i)
+                elif key in self.improper_indices:
+                    self.improper_indices[key].parmIndices.append(i)
+                else:
+                    assert False, f"Dihedral between atoms {a1}, {a2}, {a3}, {a4} not found in universe dihedrals or impropers"
+
+    def create_charged_atom_type_name(self, a: pmd.Atom) -> str:
+        return a.name + ':' + str(len(a.bond_partners)) + ':' + str(a.charge)

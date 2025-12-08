@@ -91,8 +91,6 @@ if args.type == 'tdnr':
 
 	context.initialize(temperatures)
      
-	# exit()
-
 	context.RunREX(args.equil_steps, args.prod_steps)
 	
 elif args.type == 'tdc':
