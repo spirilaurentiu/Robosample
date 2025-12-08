@@ -8,27 +8,7 @@
 #include "Replica.hpp"
 #include "SetupReader.hpp"
 #include "TrajectoryObject.hpp"
-
-#include "OpenMM.h"
-#include "openmm/Platform.h"
-#include "openmm/System.h"
-#include "openmm/internal/ThreadPool.h"
-//#include "openmm/common/windowsExportCommon.h"
-
-#include <fstream>
-
-#if OPENMM_PLATFORM_CPU
-	#include "../Molmodel/src/gbsa/cpuObcInterface.h"
-	#include "../openmm/platforms/cpu/include/CpuPlatform.h"
-#elif OPENMM_PLATFORM_OPENCL
-	#include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
-#elif OPENMM_PLATFORM_CUDA
-	#include "../openmm/platforms/cuda/include/CudaPlatform.h"
-#endif
-
-// #ifndef __PBC__ // _pbc_
-// #define __PBC__ 0
-// #endif
+#include "OpenMM.hpp"
 
 class Sampler;
 class World;
@@ -152,7 +132,7 @@ public:
 
 	// TRANSFER ============================================================
 
-	SimTK::State& setAtoms_CompoundsAndDuMM(int destWIx, SimTK::State& someState, const SimTK::Compound::AtomTargetLocations& atomTargets);
+	void setAtoms_CompoundsAndDuMM(int destWIx, const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	void setAtoms_XPF_XBM(int wIx);
 
@@ -161,29 +141,31 @@ public:
 		int wIx
 	);
 
-	SimTK::Transform calc_XFM(int wIx, const Topology& topology, SimTK::Compound::AtomIndex& childAIx, SimTK::Compound::AtomIndex& parentAIx, SimTK::BondMobility::Mobility mobility, const SimTK::State& someState) const;
+	SimTK::Transform calc_XFM(int wIx, const Topology& topology, SimTK::Compound::AtomIndex& childAIx, SimTK::Compound::AtomIndex& parentAIx, SimTK::BondMobility::Mobility mobility) const;
 
-	SimTK::State&
-	setAtoms_XFM(
-		int wIx,
-		SimTK::State& someState);
+	void setAtoms_XFM(int wIx);
 
 	SimTK::State& setAtoms_SP_NEW(int destWIx, SimTK::State& someState, const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	// X axis to Z axis switch
-	const SimTK::Transform X_to_Z 
-		=  SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
+	const SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
 	const SimTK::Transform Z_to_X = ~X_to_Z;
 
 	// Y axis to Z axis switch
-	const SimTK::Transform Y_to_Z =
-		SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
+	const SimTK::Transform Y_to_Z = SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
 	const SimTK::Transform Z_to_Y = ~Y_to_Z;
 
 	// X axis to X axis switch
-	const SimTK::Transform Y_to_X =
-		SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
+	const SimTK::Transform Y_to_X = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
 	const SimTK::Transform X_to_Y = ~Y_to_X;
+
+
+	std::vector<SimTK::Transform> calc_XPF_XBM(
+		int wIx, Topology& topology,
+		SimTK::Compound::AtomIndex& childAIx,
+		SimTK::Compound::AtomIndex& parentAIx,
+		SimTK::BondMobility::Mobility mobility,
+		const SimTK::State& someState);
 
 	// TRANSFER ------------------------------------------------------------
 
@@ -482,34 +464,7 @@ public:
 		}
 	}
 
-    /**	
-	* @brief Initialize OpenMM with general data
-	* @param allowReferencePlatform Allow OpenMM reference platform
-	* @return OpenMM context's platform's name
-	*/ 
-	std::string OMMRef_initialize(void);
-
-	SimTK::Real OMMRef_calcPotential(const SimTK::Compound::AtomTargetLocations& atomTargets, bool wantEnergy, bool wantForces);
-
 private:
-
-	//OpenMMPluginInterface refOpenMMPlugin; // __refOMM__
-	std::unique_ptr<OpenMM::Platform> platform; // __refOMM__
-	std::unique_ptr<OpenMM::Context> openMMContext; // __refOMM__
-	std::unique_ptr<OpenMM::System> openMMSystem; // __refOMM__
-
-	std::unique_ptr<OpenMM::NonbondedForce> ommNonbondedForce; // __refOMM__
-	std::unique_ptr<OpenMM::GBSAOBCForce> ommGBSAOBCForce; // __refOMM__
-	std::unique_ptr<OpenMM::HarmonicBondForce> ommHarmonicBondStretch; // __refOMM__
-	std::unique_ptr<OpenMM::HarmonicAngleForce> ommHarmonicAngleForce; // __refOMM__
-	std::unique_ptr<OpenMM::PeriodicTorsionForce> ommPeriodicTorsionForce; // __refOMM__
-
-	std::unique_ptr<OpenMM::AndersenThermostat> openMMThermostat;
-	std::unique_ptr<OpenMM::Integrator> openMMIntegrator;
-
-	mutable OpenMM::State openMMState;
-
-	// end __refOMM__
 
 	std::vector<int> TopologyIXs;
 	std::vector<std::vector<int>> AmberAtomIXs;

@@ -238,7 +238,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		omm_locations.resize(matter->getNumBodies());
 		omm_locations_old.resize(matter->getNumBodies());
 
-		const std::vector<OpenMM::Vec3>& arg_omm_positions = dumm->OMM_getPositions();
+		const std::vector<OpenMM::Vec3>& arg_omm_positions = OPENMM::get().getPositions();
 
 		OMM_storeOMMConfiguration_X(arg_omm_positions);
 	}
@@ -562,7 +562,7 @@ void HMCSampler::storeOldAndSetKineticAndTotalEnergies(SimTK::State& someState)
 {
 	// Store kinetic energies
 	if(this->integratorType == IntegratorType::OMMVV){
-		this->ke_o = OMM_calcKineticEnergy();
+		this->ke_o = OPENMM::get().getKineticEnergy();
 	}else{
 		this->ke_o = matter->calcKineticEnergy(someState);		
 	}
@@ -1001,7 +1001,7 @@ void HMCSampler::setVelocitiesToZero(SimTK::State& someState)
 	// Set velocities to 0
 	if(this->integratorType == IntegratorType::OMMVV){
 		uint32_t seed = randomEngine() >> 32;
-		dumm->setOpenMMvelocities(0, seed);
+		OPENMM::get().setVelocitiesToTemperature(0, seed);
 	}else{
 		someState.updU() = 0;
 	}
@@ -1019,7 +1019,7 @@ void HMCSampler::setVelocitiesToGaussian(SimTK::State& someState)
 {
 	if (this->integratorType == IntegratorType::OMMVV){
 		uint32_t seed = randomEngine() >> 32;
-		dumm->setOpenMMvelocities(this->boostT, seed);
+		OPENMM::get().setVelocitiesToTemperature(this->boostT, seed);
 
 	} else {
 
@@ -1955,7 +1955,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 		assert(matter->getNumBodies() == dumm->getNumAtoms() + 1);
 		try {
 			// Actual openmm integration
-			dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+			OPENMM::get().integrateTrajectory(this->MDStepsPerSample);
 
 			// Somewhere, the topology gets ruined
 			system->realizeTopology();
@@ -1978,7 +1978,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
         //     omm_locations_old[i + 1] = SimTK::Vec3(positions[i][0], positions[i][1], positions[i][2]);
         // }
         // try {
-        //     dumm->OMM_integrateTrajectory(this->MDStepsPerSample);
+        //     OPENMM::get().integrateTrajectory(this->MDStepsPerSample);
         //     // system->realizeTopology();
         // }catch(const OpenMM::OpenMMException& e){
         //     // never gets called, openmm does not throw when a coordinate is nan
@@ -2553,12 +2553,22 @@ void HMCSampler::OMM_setDuMMTemperature(double HMCBoostTemperature){
 
 // ELIZA: Insert code here
 double HMCSampler::OMM_calcKineticEnergy(void){
-	return dumm->OMM_calcKineticEnergy();
+	SimTK_ASSERT_ALWAYS(
+		!"HMCSampler::OMM_calcKineticEnergy not implemented",
+		"HMCSampler::OMM_calcKineticEnergy not implemented");
+	return 0;
+
+	// return dumm->OMM_calcKineticEnergy();
 }
 
 // ELIZA: Insert code here
 double HMCSampler::OMM_calcPotentialEnergy(void){
-	return dumm->OMM_calcPotentialEnergy();
+	SimTK_ASSERT_ALWAYS(
+		!"HMCSampler::OMM_calcPotentialEnergy not implemented",
+		"HMCSampler::OMM_calcPotentialEnergy not implemented");
+	return 0;
+
+	// return dumm->OMM_calcPotentialEnergy();
 }
 
 void HMCSampler::OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions)
@@ -2592,7 +2602,9 @@ void HMCSampler::OMM_restoreConfiguration(SimTK::State& someState)
 
 	const std::vector<SimTK::Vec3> omm_locations_old_1(it_begin, it_end);
 
-	dumm->OMM_setOpenMMPositions(omm_locations_old_1);
+	std::cout << "HMCSampler::OMM_restoreConfiguration: Restoring OpenMM positions" << std::endl << std::flush;
+
+	OPENMM::get().setPositions(omm_locations_old_1);
 
 	// Reset Simbody (may not be necessary)
 	OMM_To_Simbody_setAtomsLocations(someState);
@@ -2644,6 +2656,12 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(
 
 		for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
 			includedAtomPos[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
+
+			std::cout << "atomCnt " << atomCnt << " "
+				<< includedAtomPos[atomCnt][0] << " "
+				<< includedAtomPos[atomCnt][1] << " "
+				<< includedAtomPos[atomCnt][2] << " "
+				<< std::endl;
 		}
 
 		/* //for(int atomCnt = 0; atomCnt < this->natoms; atomCnt++){
@@ -2684,7 +2702,10 @@ void HMCSampler::Simbody_To_OMM_setAtomsLocationsCartesian(
 	}
 
 	// Apply
-	dumm->OMM_setOpenMMPositions(includedAtomPos);
+	OPENMM::get().setPositions(includedAtomPos);
+
+	std::cout << "HMCSampler::Simbody_To_OMM done"
+		<< std::endl << std::flush;
 
 }
 
@@ -2700,7 +2721,7 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 		omm_locations[0] = SimTK::Vec3(0, 0, 0);
 
 		// @TODO shouldn't this be +1 and one common type already?
-		const std::vector<OpenMM::Vec3>& positions = dumm->OMM_getPositions();
+		const std::vector<OpenMM::Vec3>& positions = OPENMM::get().getPositions();
 
 		// @TODO omm_locations[i + 1] = positions[i]
 		for (int i = 0; i < positions.size(); i++) {
@@ -2753,7 +2774,7 @@ void HMCSampler::OMM_To_Simbody_setAtomsLocations(SimTK::State& someState)
 
 void HMCSampler::OMM_PrintLocations(void)
 {
-	const auto positions = dumm->OMM_getPositions();
+	const auto positions = OPENMM::get().getPositions();
 
 	std::cout << "OMM locations" << std::endl;
 
@@ -3600,7 +3621,7 @@ void HMCSampler::calcProposedKineticAndTotalEnergyOld(SimTK::State& someState){
 
 	// Get proposed kinetic energy
 	if(integratorType == IntegratorType::OMMVV){
-		this->ke_o = OMM_calcKineticEnergy();
+		this->ke_o = OPENMM::get().getKineticEnergy();
 
 	}else{
 		this->ke_o = matter->calcKineticEnergy(someState);
@@ -3823,7 +3844,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 
 	// Get new potential energy
 	if(this->integratorType == IntegratorType::OMMVV){
-		pe_n = OMM_calcPotentialEnergy();
+		pe_n = OPENMM::get().getPotentialEnergy();
 	}else{
 		pe_n = forces->getMultibodySystem().calcPotentialEnergy(someState);
 
@@ -3850,7 +3871,7 @@ void HMCSampler::calcNewEnergies(SimTK::State& someState)
 
 	// Get new kinetic energy
 	if(this->integratorType == IntegratorType::OMMVV){
-		ke_n = OMM_calcKineticEnergy();
+		ke_n = OPENMM::get().getKineticEnergy();
 	}else{
 		system->realize(someState, SimTK::Stage::Velocity);
 		ke_n = matter->calcKineticEnergy(someState);

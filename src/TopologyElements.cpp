@@ -6,6 +6,29 @@ constexpr double Cos120 = -0.5; // cos(120 degrees)
 constexpr double Sin120 = 0.866025; // sin(120 degrees)
 
 void Atom::createSingleAtom() {
+
+	// SimTK_ASSERT_ALWAYS(getNumBondsInvolved() <= 4,
+	// 	"Atom::createSingleAtom(): Atoms with more than 4 bonds are not supported.");
+
+	// switch (getNumBondsInvolved())
+	// {
+	// case 1:
+	// 	compoundSingleAtom = new SimTK::UnivalentAtom(atomSpec.uniqueAtomName, element);
+	// 	break;
+	// case 2:
+	// 	compoundSingleAtom = new SimTK::BivalentAtom(atomSpec.uniqueAtomName, element);
+	// 	break;
+	// case 3:
+	// 	compoundSingleAtom = new SimTK::TrivalentAtom(atomSpec.uniqueAtomName, element);
+	// 	break;
+	// case 4:
+	// 	compoundSingleAtom = new SimTK::QuadrivalentAtom(atomSpec.uniqueAtomName, element);
+	// 	break;
+
+	// default:
+	// 	break;
+	// }
+
 	// Create a new SingleAtom compound representing this atom.
 	// SingleAtom is a building block in Molmodel that can hold multiple
 	// "bond centers" (points in 3D where other atoms can attach).

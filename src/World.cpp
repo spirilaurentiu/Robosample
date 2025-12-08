@@ -130,13 +130,11 @@ void World::generateDummParams(const std::vector<Atom>& atoms,
 
 		// Determine the number of terms by checking which amplitudes are defined
 		int num_terms = 0;
-		if (torsion.getPeriodicity_1() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_1() << std::endl << std::flush;
-		if (torsion.getPeriodicity_2() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_2() << std::endl << std::flush;
-		if (torsion.getPeriodicity_3() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_3() << std::endl << std::flush;
-		if (torsion.getPeriodicity_4() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_4() << std::endl << std::flush;
-		if (torsion.getPeriodicity_5() != -1) num_terms++; std::cout << "\tPeriodicity: " << torsion.getPeriodicity_5() << std::endl << std::flush;
-		std::cout << "Added " << (torsion.isImproper()?"improper":"proper") << " torsion with " << num_terms << " terms" << std::endl << std::endl << std::flush;
-
+		if (torsion.getPeriodicity_1() != -1) num_terms++;
+		if (torsion.getPeriodicity_2() != -1) num_terms++;
+		if (torsion.getPeriodicity_3() != -1) num_terms++;
+		if (torsion.getPeriodicity_4() != -1) num_terms++;
+		if (torsion.getPeriodicity_5() != -1) num_terms++;
 
 		// Define dihedrals
 		if (torsion.isImproper()) {

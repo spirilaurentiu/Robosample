@@ -66,6 +66,7 @@ One iteration must include:
 //#include "Context.hpp"
 #include "Sampler.hpp"
 #include "TaskSpace.hpp"
+#include "OpenMM.hpp"
 #include <thread>
 
 // Just to remove the long syntax requirement
