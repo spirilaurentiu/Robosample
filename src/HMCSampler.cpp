@@ -181,27 +181,31 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	bool validated = true;
 
 std::cout << "FIXTORROLLHMCSampler::reinitialize start: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-world->PrintSimbodyStateCache(someState);
+//world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 	// After an event handler has made a discontinuous change to the
 	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
 	if(this->nofSamples == 0){
 		//timeStepper->initialize(compoundSystem->getDefaultState());
-		timeStepper->initialize(someState);
+
+
+
+
+		timeStepper->initialize(someState); // updIntegrator().initialize(initState);
 
 		if(integratorType == IntegratorType::OMMVV){
 		}
 	}
 
 std::cout << "FIXTORROLLHMCSampler::reinitialize timeStepper->initialize: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-world->PrintSimbodyStateCache(someState);
+//world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 	// Get no of degrees of freedom
 	const int nu = someState.getNU();
 
 std::cout << "FIXTORROLLHMCSampler::reinitialize someState.getNU: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-world->PrintSimbodyStateCache(someState);
+//world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   X_O   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -212,7 +216,7 @@ world->PrintSimbodyStateCache(someState);
 	system->realize(someState, SimTK::Stage::Position);
 
 std::cout << "FIXTORROLLHMCSampler::reinitialize realizePosition: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-world->PrintSimbodyStateCache(someState);
+//world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 	// Copy coordinates to OpenMM
 	if(this->integratorType == IntegratorType::OMMVV){
@@ -363,7 +367,7 @@ world->PrintSimbodyStateCache(someState);
 	// }
 
 std::cout << "FIXTORROLLHMCSampler::reinitialize final: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-world->PrintSimbodyStateCache(someState);
+//world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 
 	return validated;
@@ -1724,7 +1728,7 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 				UCache = someState.getU();
 
 std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-world->PrintSimbodyStateCache(someState);
+//world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
 
