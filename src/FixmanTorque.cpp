@@ -25,7 +25,7 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	SimTK::Vector helperV(nu);
 	SimTK::Vector fixTorqV(nu);
 	SimTK::Real D0 = 1.0;
-	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0);
+	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0); // ERROR ON LOCK
 
 	// Apply Fixman torque
 	std::cout << "FIXTORROLLFixmanTorque::calcForce FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque

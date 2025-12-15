@@ -460,6 +460,7 @@ public:
 
 	/**@}**/
 
+	const void PrintStages(void) const {compoundSystem->PrintStages();}; // FIXTORROLL
 
 	/** Return own CompoundSystem **/
 	CompoundSystem *getCompoundSystem() const;
