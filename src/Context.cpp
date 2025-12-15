@@ -6415,10 +6415,10 @@ void Context::runReplicaWorldRange(
 				}				
 
 				// Run
-				currWorld.PrintStages(); // FIXTORROLL
+				std::cout << "Before Context::runReplicaWorldRange RunWorld" << std::endl << std::flush; currWorld.PrintStages(); // FIXTORROLL
 				bool validated = true;
 				validated = RunWorld(wIx, string("REX, ") + to_string(replicaIx) + string(", ") + to_string(thermoIx) + ", " + to_string(wIx)) && validated;
-				currWorld.PrintStages(); // FIXTORROLL
+				std::cout << "After  Context::runReplicaWorldRange RunWorld" << std::endl << std::flush; currWorld.PrintStages(); // FIXTORROLL
 				// ========================  EQUILIBRIUM TRANSFER TO REPLICA  ======================
 				if(distortIx == 0){
 
@@ -6566,9 +6566,9 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 			setReplicasWorldsParameters(replicaIx, false, true, mixi);
 
-			worlds[0].PrintStages(); // FIXTORROLL
+			std::cout << "Before Context::RunREX transferCoordinates_ReplicaToWorld" << std::endl << std::flush; worlds[0].PrintStages(); // FIXTORROLL
 			transferCoordinates_ReplicaToWorld(replicaIx, 0);
-			worlds[0].PrintStages(); // FIXTORROLL
+			std::cout << "After  Context::RunREX transferCoordinates_ReplicaToWorld" << std::endl << std::flush; worlds[0].PrintStages(); // FIXTORROLL
 
 			transferQStatistics(thermoIx, thermoWorldIxs[nofEquilibriumWorlds - 1], thermoWorldIxs[nofEquilibriumWorlds - 1]);
 			// std::cout << "Thermodynamic state " << thermoIx << " Transfering statistics from world "
