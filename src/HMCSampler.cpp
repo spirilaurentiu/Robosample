@@ -188,8 +188,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	if(this->nofSamples == 0){
 		//timeStepper->initialize(compoundSystem->getDefaultState());
 
-		std::cout << "Before HMCSampler::reinitialize ts->initialize" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
-
 		timeStepper->initialize(someState); // updIntegrator().initialize(initState);
 
 		std::cout << "After  HMCSampler::reinitialize ts->initialize" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
@@ -208,7 +206,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Calculate and set old configurationthis->natoms
 
 	// Calculate Simbody configuration
-	std::cout << "Before HMCSampler::reinitialize system->realize(Instance)" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 	system->realize(someState, SimTK::Stage::Instance);
 	std::cout << "After  HMCSampler::reinitialize system->realize(Instance)" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 	system->realize(someState, SimTK::Stage::Time);

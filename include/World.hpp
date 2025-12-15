@@ -460,7 +460,10 @@ public:
 
 	/**@}**/
 
-	const void PrintStages(void) const {compoundSystem->PrintStages();}; // FIXTORROLL
+	const void PrintStages(void) const {
+		compoundSystem->PrintStages();
+		timeStepper->PrintStages();
+	}; // FIXTORROLL
 
 	/** Return own CompoundSystem **/
 	CompoundSystem *getCompoundSystem() const;

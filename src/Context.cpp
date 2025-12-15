@@ -6409,7 +6409,10 @@ void Context::runReplicaWorldRange(
 
 				if(thWCnt != startWorldCnt){ // don't transfer if it's the first world in the range
 					if(thWCnt != 0){ // don't transfer if it's the first world in the range and it's also the first world overall
+
+						std::cout << "Before Context::runReplicaWorldRange transferCoordinates_WorldToWorld" << std::endl << std::flush; currWorld.PrintStages(); // FIXTORROLL
 						transferCoordinates_WorldToWorld(thermoWorldIxs[thWCnt - 1], wIx);
+						std::cout << "After  Context::runReplicaWorldRange transferCoordinates_WorldToWorld" << std::endl << std::flush; currWorld.PrintStages(); // FIXTORROLL
 						//transferQStatistics(thermoIx, thermoWorldIxs[thWCnt - 1], wIx); //
 					}
 				}				
