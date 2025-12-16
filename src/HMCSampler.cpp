@@ -180,8 +180,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// Set a validation flag
 	bool validated = true;
 
-	std::cout << "Before HMCSampler::reinitialize begin" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
-
 	// After an event handler has made a discontinuous change to the
 	// Integrator's "advanced state", this method must be called to
 	// reinitialize the Integrator.
@@ -265,11 +263,12 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// Calculate and set old potential energy. This should call OpenMMPlugin to 
 	// calculate energy and forces
+
 	setOldPE(
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
 	);
-
+	std::cout << "After  HMCSampler::reinitialize MultibodySystem.calcPotentialEnergy" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_O &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -292,6 +291,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		// External Fixman potential
 		setOldLogSineSqrGamma2(0.0);
 	}
+	std::cout << "After  HMCSampler::reinitialize calcFixman" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_SET   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -349,6 +349,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
+	std::cout << "After  HMCSampler::reinitialize matter->calcSystemMass" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 	
 	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
@@ -361,10 +362,6 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 	// if (verbose) {
 	// 	getMsg_InitialParams(samplerOutStream);
 	// }
-
-std::cout << "FIXTORROLLHMCSampler::reinitialize final: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-//world->PrintSimbodyStateCache(someState); // FIXTORROLL
-
 
 	return validated;
 
@@ -4141,27 +4138,25 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 		adaptWorldBlocks(someState);
 	}
 
-std::cout << "FIXTORROLLHMCSampler::propose Propose: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
-
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
 
-std::cout << "FIXTORROLLHMCSampler::propose perturbVelocities: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+	std::cout << "After  HMCSampler::propose perturbVelocities" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
-std::cout << "FIXTORROLLHMCSampler::propose calcProposedKineticAndTotalEnergyOld: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+	std::cout << "After  HMCSampler::propose calcProposedKineticAndTotalEnergyOld" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 
-std::cout << "FIXTORROLLHMCSampler::propose integrateTrajectory: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+		std::cout << "After  HMCSampler::propose integrateTrajectory" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
 
-std::cout << "FIXTORROLLHMCSampler::propose perturb_Q_QDot_QDotDot: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+		std::cout << "After  HMCSampler::propose perturb_Q_QDot_QDotDot" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 	// drl
 	#ifdef __DRILLING__
@@ -4173,7 +4168,7 @@ std::cout << "FIXTORROLLHMCSampler::propose perturb_Q_QDot_QDotDot: " <<" "<< so
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
 
-std::cout << "FIXTORROLLHMCSampler::propose calcNewEnergies: " <<" "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+		std::cout << "After  HMCSampler::propose calcNewEnergies" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 	} else {
 			// Store new energies
@@ -4585,6 +4580,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 	// Store old configuration
 	storeOldPotentialEnergies(someState);
+	std::cout << "After  HMCSampler::sample_iteration storeOldPotentialEnergies_realizePos" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 	
 	// MBAT work
 	//calcSubMBATDetLog(someState); // SCALEQ
@@ -4594,6 +4590,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
 	validated = propose(someState, false) && validated;
+	std::cout << "After  HMCSampler::sample_iteration propose" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 	#pragma region REBAS_TEST
 	//validated = true;	
@@ -4608,6 +4605,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 				// RESTORE
 				restore(someState);
+				std::cout << "After  HMCSampler::sample_iteration restore" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 				// Deal with adaptive data
 				storeAdaptiveData(someState); // PrintAdaptiveData();
@@ -4629,6 +4627,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 					// UPDATE
 					update(someState);
+					std::cout << "After  HMCSampler::sample_iteration update" << std::endl << std::flush; world->PrintStages(); // FIXTORROLL
 
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
