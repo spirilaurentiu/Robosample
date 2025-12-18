@@ -465,6 +465,26 @@ public:
 		timeStepper->PrintStages();
 	}; // FIXTORROLL
 
+	const void PrintSystemDefaultStateStages(void) const
+	{
+		compoundSystem->PrintDefaultStateStages();
+	};
+
+	const void PrintSubsystemsStages(void) const
+	{
+		compoundSystem->PrintSubsystemsStages();
+	};
+
+
+	const void PrintTimestepperAdvancedStages(void) const
+	{
+		timeStepper->PrintAdvancedStateStages();
+	};
+
+	const void PrintTimestepperInterpolatedStages(void) const
+	{
+		timeStepper->PrintInterpolatedStateStages();
+	};	
 
 
 	/** Return own CompoundSystem **/

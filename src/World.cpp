@@ -4143,12 +4143,12 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
     bool validated = false;
     SimTK::State& currentAdvancedState = integ->updAdvancedState();
     updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
-	std::cout << "After  World::generateSamples updateAtomListsFromSimbody" << std::endl << std::flush; this->PrintStages(); // FIXTORROLL
+	std::cout << "After  World::generateSamples updateAtomListsFromSimbody" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	validated = true;
 
     validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose); // FIXTOR_RESTORE
-	std::cout << "After  World::generateSamples sampler.reinitialize" << std::endl << std::flush; this->PrintStages(); // FIXTORROLL
+	std::cout << "After  World::generateSamples sampler.reinitialize" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
     auto runSamplingLoop = [&](SimTK::State& state) {
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
@@ -4168,15 +4168,15 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
     if (isRollFlexibilities) {
         for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
 
-			std::cout << "Before World::generateSamples lockAllMobilizers" << std::endl << std::flush; this->PrintStages(); // FIXTORROLL
+			std::cout << "Before World::generateSamples lockAllMobilizers" << std::endl << std::flush; this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
             lockAllMobilizers();
-			std::cout << "After  World::generateSamples lockAllMobilizers" << std::endl << std::flush; this->PrintStages(); // FIXTORROLL
+			std::cout << "After  World::generateSamples lockAllMobilizers" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
             const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
 			std::cout << "FIXTORROLLWorld::generateSamples mobIntIx " << mobIntIx << currentAdvancedState.getSystemStage() << std::endl << std::flush;
             
 			mobod.unlock(currentAdvancedState);
-			std::cout << "After  World::generateSamples mobod.unlock" << std::endl << std::flush; this->PrintStages(); // FIXTORROLL
+			std::cout << "After  World::generateSamples mobod.unlock" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 			//currentAdvancedState.invalidateAllCacheAtOrAbove(SimTK::Stage::Position); // FIXTOR_TRY
 			//compoundSystem->realize(currentAdvancedState, SimTK::Stage::Position); // FIXTOR_TRY
@@ -4187,7 +4187,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			//std::cout << "FIXTORROLLWorld::generateSamples mobod.unlock " << currentAdvancedState.getSystemStage() << std::endl << std::flush; // FIXTOR_TRY
 
 			runSamplingLoop(currentAdvancedState); // sample_iteration
-			std::cout << "After  World::generateSamples runSamplingLoop" << std::endl << std::flush; this->PrintStages(); // FIXTORROLL
+			std::cout << "After  World::generateSamples runSamplingLoop" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
         
 		
 		}
