@@ -188,7 +188,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 		timeStepper->initialize(someState); // updIntegrator().initialize(initState);
 
-		std::cout << "After  HMCSampler::reinitialize ts->initialize" << std::endl << std::flush;  world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+		//std::cout << "After  HMCSampler::reinitialize ts->initialize" << std::endl << std::flush;  world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 		if(integratorType == IntegratorType::OMMVV){
 		}
@@ -205,12 +205,12 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	// Calculate Simbody configuration
 	system->realize(someState, SimTK::Stage::Instance);
-	std::cout << "After  HMCSampler::reinitialize system->realize(Instance)" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::reinitialize system->realize(Instance)" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 	system->realize(someState, SimTK::Stage::Time);
-	std::cout << "After  HMCSampler::reinitialize system->realize(Time)" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::reinitialize system->realize(Time)" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	system->realize(someState, SimTK::Stage::Position);
-	std::cout << "After  HMCSampler::reinitialize system->realize(Position)" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::reinitialize system->realize(Position)" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	// Copy coordinates to OpenMM
 	if(this->integratorType == IntegratorType::OMMVV){
@@ -268,7 +268,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		forces->getMultibodySystem().calcPotentialEnergy(someState)
 		//dumm->CalcFullPotEnergyIncludingRigidBodies(someState) // NO OPENMM
 	);
-	std::cout << "After  HMCSampler::reinitialize MultibodySystem.calcPotentialEnergy" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::reinitialize MultibodySystem.calcPotentialEnergy" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  FIX_O &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -291,7 +291,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 		// External Fixman potential
 		setOldLogSineSqrGamma2(0.0);
 	}
-	std::cout << "After  HMCSampler::reinitialize calcFixman" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::reinitialize calcFixman" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	// HMC: &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 	// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   PE_SET   &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -349,7 +349,7 @@ bool HMCSampler::reinitialize(SimTK::State& someState, std::stringstream& sample
 
 	// Total mass of the system
 	this->totalMass = matter->calcSystemMass(someState);
-	std::cout << "After  HMCSampler::reinitialize matter->calcSystemMass" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::reinitialize matter->calcSystemMass" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 	
 	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
@@ -1720,22 +1720,22 @@ void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS) {
 
 				UCache = someState.getU();
 
-std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getU() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 //world->PrintSimbodyStateCache(someState); // FIXTORROLL
 
 				world->timeStepper->stepTo(someState.getTime() + timestep * MDStepsPerSample);
 
-std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" world->timeStepper->stepTo "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				// system->realize(someState, SimTK::Stage::Position);
 				system->realize(someState, SimTK::Stage::Acceleration);
 
-std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" realizeAcceleration "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" realizeAcceleration "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				UDotCache = someState.getUDot();
 				// std::cout << "UDotCache size " << uDot.size() << std::endl;
 				
-std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getUDot() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
+//std::cout << "FIXTORROLLHMCSampler::integrateTrajectory integrateTrajectory: " <<" someState.getUDot() "<< someState.getSystemStage() <<" "<< someState.getTime() << std::endl << std::flush;
 
 				return;
 			}catch(const std::exception&){
@@ -4141,22 +4141,22 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	// Initialize velocities
 	perturbVelocities(someState, VelocitiesPerturbMethod::TO_T);
 
-	std::cout << "After  HMCSampler::propose perturbVelocities" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::propose perturbVelocities" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	// Store the proposed energies
 	calcProposedKineticAndTotalEnergyOld(someState);
 
-	std::cout << "After  HMCSampler::propose calcProposedKineticAndTotalEnergyOld" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::propose calcProposedKineticAndTotalEnergyOld" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 		// Integrate trajectory
 		integrateTrajectory(someState, useNUTS);
 
-		std::cout << "After  HMCSampler::propose integrateTrajectory" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+		//std::cout << "After  HMCSampler::propose integrateTrajectory" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 		// Perturb Q, QDot or QDotDot
 		perturb_Q_QDot_QDotDot(someState);
 
-		std::cout << "After  HMCSampler::propose perturb_Q_QDot_QDotDot" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+		//std::cout << "After  HMCSampler::propose perturb_Q_QDot_QDotDot" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	// drl
 	#ifdef __DRILLING__
@@ -4168,7 +4168,7 @@ bool HMCSampler::propose(SimTK::State& someState, bool useNUTS)
 	if (!proposeExceptionCaught) {
 		calcNewEnergies(someState);
 
-		std::cout << "After  HMCSampler::propose calcNewEnergies" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+		//std::cout << "After  HMCSampler::propose calcNewEnergies" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	} else {
 			// Store new energies
@@ -4580,7 +4580,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 	// Store old configuration
 	storeOldPotentialEnergies(someState);
-	std::cout << "After  HMCSampler::sample_iteration storeOldPotentialEnergies_realizePos" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::sample_iteration storeOldPotentialEnergies_realizePos" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 	
 	// MBAT work
 	//calcSubMBATDetLog(someState); // SCALEQ
@@ -4590,7 +4590,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 	// PROPOSE
 	// Generate a trial move in the stochastic chain
 	validated = propose(someState, false) && validated;
-	std::cout << "After  HMCSampler::sample_iteration propose" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+	//std::cout << "After  HMCSampler::sample_iteration propose" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 	#pragma region REBAS_TEST
 	//validated = true;	
@@ -4605,7 +4605,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 				// RESTORE
 				restore(someState);
-				std::cout << "After  HMCSampler::sample_iteration restore" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+				//std::cout << "After  HMCSampler::sample_iteration restore" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 				// Deal with adaptive data
 				storeAdaptiveData(someState); // PrintAdaptiveData();
@@ -4627,7 +4627,7 @@ bool HMCSampler::sample_iteration(SimTK::State& someState, std::stringstream& sa
 
 					// UPDATE
 					update(someState);
-					std::cout << "After  HMCSampler::sample_iteration update" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
+					//std::cout << "After  HMCSampler::sample_iteration update" << std::endl << std::flush; world->PrintSubsystemsStages(); world->PrintTimestepperAdvancedStages(); // world->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 					// Deal with adaptive data
 					storeAdaptiveData(someState); // PrintAdaptiveData();
