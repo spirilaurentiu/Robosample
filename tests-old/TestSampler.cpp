@@ -21,7 +21,7 @@ public:
     DerivedSampler (World *argWorld,
             SimTK::CompoundSystem *argCompoundSystem,
             SimTK::SimbodyMatterSubsystem *argMatter,
-            std::vector<Topology> &argTopologies,
+            Span<Topology> argTopologies,
             SimTK::DuMMForceFieldSubsystem *argDumm,
             SimTK::GeneralForceSubsystem *argForces,
             SimTK::TimeStepper *argTimeStepper)

@@ -9,6 +9,7 @@
 struct AtomDefinition {
     // Indices
     int globalIndex = 0;
+    int prmtopIndex = 0;
     int moleculeIndex = 0;
     int residueIndex = 0;
 
@@ -77,6 +78,7 @@ public:
     }
 
     int getGlobalIndex() const { return atomSpec.globalIndex; }
+    int getPrmtopIndex() const { return atomSpec.prmtopIndex; }
 
     const std::string& getAtomClassName() const { return atomSpec.atomClassName; }
     SimTK::DuMM::AtomClassIndex getAtomClassIndex() const { return SimTK::DuMM::AtomClassIndex(atomSpec.atomClassIndex); }

@@ -2,6 +2,26 @@
 
 // #define __PBC__
 
+void OPENMM::destroy() {
+	ensureInitialized();
+
+	// Order matters
+    openMMContext.reset();
+    openMMIntegrator.reset();
+    openMMThermostat.reset();
+
+    ommNonbondedForce.reset();
+    ommGBSAOBCForce.reset();
+    ommHarmonicBondStretch.reset();
+    ommHarmonicAngleForce.reset();
+    ommPeriodicTorsionForce.reset();
+
+    openMMSystem.reset();
+    platform.reset();
+
+	//ommGBSAOBCForce.release();
+}
+
 bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real vdwGlobalScaleFactor, const std::vector<Atom>& atoms, const std::vector<BondStretch>& bonds, const std::vector<BondBend>& angles, const std::vector<BondTorsion>& torsions) {
 
     // Instantiate
@@ -9,7 +29,8 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 
 	// Set up variables
 	omm.numAtoms = atoms.size();
-	omm.ommAtomsPositions = std::vector<OpenMM::Vec3>(omm.numAtoms);
+	omm.ommAtomsPositionsCache = std::vector<OpenMM::Vec3>(omm.numAtoms);
+	omm.simbodyAtomsPositionsCache = std::vector<SimTK::Vec3>(omm.numAtoms);
 
     // Allocate OpenMM forces
 	omm.ommHarmonicBondStretch = std::make_unique<OpenMM::HarmonicBondForce>();
@@ -62,7 +83,12 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 		const SimTK::Real sigma = atom.getSigmaInNm();
 		const SimTK::Real epsilon = atom.getVdwWellDepthInKJ() * vdwGlobalScaleFactor;
 
-		omm.openMMSystem->addParticle(atom.getMassInDaltons());
+		if (atom.isRoot()) {
+			omm.openMMSystem->addParticle(0.0); // massless root
+		} else {
+			omm.openMMSystem->addParticle(atom.getMassInDaltons());
+		}
+
 		omm.ommNonbondedForce->addParticle(charge, sigma, epsilon);
 		// ommGBSAOBCForce->addParticle(charge, )
 
@@ -96,7 +122,7 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 	// }
 	//// System takes over heap ownership of the force.
 	//openMMSystem.addForce(ommGBSAOBCForce.get());
-	//ommGBSAOBCForce.release();
+	
 				
 	for (const auto& bond : bonds) {
 		const SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
@@ -227,10 +253,10 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 // 	bool checkPotentialEnergyManually = true;
 // 	if (checkPotentialEnergyManually){
 // 		for (const auto& atom : atoms) {
-// 			omm.ommAtomsPositions[atom.getGlobalIndex()] = OpenMM::Vec3(atom.getXInNm(), atom.getYInNm(), atom.getZInNm());
+// 			omm.ommAtomsPositionsCache[atom.getGlobalIndex()] = OpenMM::Vec3(atom.getXInNm(), atom.getYInNm(), atom.getZInNm());
 // 		}
 
-// 		omm.openMMContext->setPositions(omm.ommAtomsPositions);
+// 		omm.openMMContext->setPositions(omm.ommAtomsPositionsCache);
 		
 // 		// calculate total potential energy manually
 // 		omm.state = omm.openMMContext->getState(OpenMM::State::Energy);
@@ -270,18 +296,22 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 	return true;
 }
 
-SimTK::Real OPENMM::getPotentialEnergy(const SimTK::Compound::AtomTargetLocations& atomTargets) {
+SimTK::Real OPENMM::getPotentialEnergy(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
 
 	ensureInitialized();
 	
 	// Convert SimTK::Vec3 to OpenMM::Vec3
-	for (const auto& atomTarget : atomTargets) {
-		const SimTK::Vec3& coords = atomTarget.second;
-		ommAtomsPositions[atomTarget.first] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
+	int i = 0;
+	for (const auto& topology : atomTargets) {
+		for (const auto& atomTarget : topology) {
+			const SimTK::Vec3& coords = atomTarget.second;
+			ommAtomsPositionsCache[i] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
+			i++;
+		}
 	}
 
 	// Set positions in OpenMM context
-	openMMContext->setPositions(ommAtomsPositions);
+	openMMContext->setPositions(ommAtomsPositionsCache);
 	
 	// Get state with energy
     return openMMContext->getState(OpenMM::State::Energy).getPotentialEnergy();
@@ -289,19 +319,23 @@ SimTK::Real OPENMM::getPotentialEnergy(const SimTK::Compound::AtomTargetLocation
 
 void OPENMM::setVelocitiesToTemperature(SimTK::Real temperature, uint32_t seed) {
 	ensureInitialized();
+	openMMContext->setVelocitiesToTemperature(temperature);
 
+	// TODO this will affect any new Contexts you create, but not ones that already exist.
 	// openMMThermostat->setDefaultTemperature(temperature);
-	// openMMContext->setVelocitiesToTemperature(temperature);
+
 }
 
 SimTK::Real OPENMM::getPotentialEnergy() const {
 	ensureInitialized();
-	return openMMContext->getState(OpenMM::State::Energy).getPotentialEnergy();
+	return pe;
+	// return openMMContext->getState(OpenMM::State::Energy).getPotentialEnergy();
 }
 
 SimTK::Real OPENMM::getKineticEnergy() const {
 	ensureInitialized();
-	return openMMContext->getState(OpenMM::State::Energy).getKineticEnergy();
+	return ke;
+	// return openMMContext->getState(OpenMM::State::Energy).getKineticEnergy();
 }
 
 void OPENMM::setPositions(const std::vector<SimTK::Vec3> &positions) {
@@ -310,32 +344,88 @@ void OPENMM::setPositions(const std::vector<SimTK::Vec3> &positions) {
 	// Convert SimTK::Vec3 to OpenMM::Vec3
 	for (std::size_t i = 0; i < positions.size(); ++i) {
 		const SimTK::Vec3& coords = positions[i];
-		ommAtomsPositions[i] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
+		ommAtomsPositionsCache[i] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
 
 		// std::cout << "OPENMM::setPositions(): Setting position of atom " << i << " to (" << coords[0] << ", " << coords[1] << ", " << coords[2] << ")" << std::endl;
 	}
 	// Set positions in OpenMM context
-	openMMContext->setPositions(ommAtomsPositions);
+	openMMContext->setPositions(ommAtomsPositionsCache);
 }
 
-const std::vector<OpenMM::Vec3>& OPENMM::getPositions() const {
+const std::vector<SimTK::Vec3>& OPENMM::getPositions() const {
 	ensureInitialized();
 
-	// Get state with positions
-	OpenMM::State state = openMMContext->getState(OpenMM::State::Positions, enforcePeriodicBox);
-	return state.getPositions();
+	// // Get state with positions
+	// OpenMM::State state = openMMContext->getState(OpenMM::State::Positions);
+	// ommAtomsPositionsCache = state.getPositions();
+
+	// // print positions for debugging
+	// for (std::size_t i = 0; i < ommAtomsPositionsCache.size(); ++i) {
+	// 	std::cout << "OPENMM::getPositions(): Retrieved position of atom " << i << " as (" << ommAtomsPositionsCache[i][0] << ", " << ommAtomsPositionsCache[i][1] << ", " << ommAtomsPositionsCache[i][2] << ")" << std::endl;
+	// }
+
+	// for (std::size_t i = 0; i < simbodyAtomsPositionsCache.size(); ++i) {
+	// 	simbodyAtomsPositionsCache[i] = SimTK::Vec3(
+	// 		state.getPositions()[i][0],
+	// 		state.getPositions()[i][1],
+	// 		state.getPositions()[i][2]
+	// 	);
+
+	// 	std::cout << "OPENMM::getPositions(): Retrieved position of atom " << i << " as (" << simbodyAtomsPositionsCache[i][0] << ", " << simbodyAtomsPositionsCache[i][1] << ", " << simbodyAtomsPositionsCache[i][2] << ")" << std::endl;
+	// }
+
+	return simbodyAtomsPositionsCache;
 }
 
 void OPENMM::integrateTrajectory(int steps) {
 	ensureInitialized();
 
-	// Prin kinetic and potential energy before step
-	std::cout << "Before step: Potential Energy = " << getPotentialEnergy() << " kJ/mol, Kinetic Energy = " << getKineticEnergy() << " kJ/mol" << std::endl;
+	// // Prin kinetic and potential energy before step
+	// std::cout << "Before step: Potential Energy = " << getPotentialEnergy() << " kJ/mol, Kinetic Energy = " << getKineticEnergy() << " kJ/mol" << std::endl;
+
+	// // get first 10 positions before step
+	// OpenMM::State state_before = openMMContext->getState(OpenMM::State::Positions);
+	// auto positions_before = state_before.getPositions();
+	// for (size_t i = 0; i < std::min(size_t(10), positions_before.size()); ++i) {
+	// 	std::cout << "Atom " << i << " position before step: (" << positions_before[i][0] << ", " << positions_before[i][1] << ", " << positions_before[i][2] << ")" << std::endl;
+	// }
 
 	openMMIntegrator->step(steps);
 
-	// Print kinetic and potential energy after step
-	std::cout << "After step: Potential Energy = " << getPotentialEnergy() << " kJ/mol, Kinetic Energy = " << getKineticEnergy() << " kJ/mol" << std::endl;
+	// // Print kinetic and potential energy after step
+	// std::cout << "After step: Potential Energy = " << getPotentialEnergy() << " kJ/mol, Kinetic Energy = " << getKineticEnergy() << " kJ/mol" << std::endl;
+
+	// // get first 10 positions after step
+	// OpenMM::State state_after = openMMContext->getState(OpenMM::State::Positions);
+	// auto positions_after = state_after.getPositions();
+	// for (size_t i = 0; i < std::min(size_t(10), positions_after.size()); ++i) {
+	// 	std::cout << "Atom " << i << " position after step: (" << positions_after[i][0] << ", " << positions_after[i][1] << ", " << positions_after[i][2] << ")" << std::endl;
+	// }
+
+
+	// Cache the results
+	state = openMMContext->getState(OpenMM::State::Positions | OpenMM::State::Energy, enforcePeriodicBox);
+
+	// Save the energies
+	pe = state.getPotentialEnergy();
+	ke = state.getKineticEnergy();
+
+	// Save the positions
+	for (std::size_t i = 0; i < simbodyAtomsPositionsCache.size(); ++i) {
+		simbodyAtomsPositionsCache[i] = SimTK::Vec3(
+			state.getPositions()[i][0],
+			state.getPositions()[i][1],
+			state.getPositions()[i][2]
+		);
+	}
+
+	// Prin final pe, ke and first 10 positions
+	std::cout << "After integration: Potential Energy = " << pe << " kJ/mol, Kinetic Energy = " << ke << " kJ/mol" << std::endl;
+	for (size_t i = 0; i < std::min(size_t(10), simbodyAtomsPositionsCache.size()); ++i) {
+		std::cout << "Atom " << i << " position after integration: (" << simbodyAtomsPositionsCache[i][0] << ", " << simbodyAtomsPositionsCache[i][1] << ", " << simbodyAtomsPositionsCache[i][2] << ")" << std::endl;
+	}
+
+	return;
 }
 
 // dumm->setOpenMMvelocities

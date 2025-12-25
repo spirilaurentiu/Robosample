@@ -10,7 +10,7 @@ public:
 	Replica(int index,
 			std::vector<Atom>& atoms_,
 			std::vector<int>& roots_,
-			std::vector<Topology>& topologies_,
+			Span<Topology> topologies_,
 			std::vector<std::vector<int>>& zMatrixTable_
 			) :
 			  atoms(atoms_)
@@ -20,31 +20,24 @@ public:
 			, zMatrixTable(zMatrixTable_)
 			, zMatrixBAT()
 	{
-		for (const auto& t : topologies) {
-			for (const auto& a : t.getAtoms()) {
-				atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoordsInNm()));
-				WORK_atomsLocations.insert(std::make_pair(a.getCompoundAtomIndex(), a.getCoordsInNm()));
-			}
-		}
-
 	}
 
-	const SimTK::Compound::AtomTargetLocations& getAtomsLocationsInGround() const;
-	const SimTK::Compound::AtomTargetLocations& get_WORK_AtomsLocationsInGround() const;
+	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomsLocationsInGround() const;
+	const std::vector<SimTK::Compound::AtomTargetLocations>& get_WORK_AtomsLocationsInGround() const;
 
 	// Reserve memory and set values
-	void setAtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
+	void setAtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 	// Reserve memory and set values
-	void set_WORK_AtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
+	void set_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 	// This assumes allocation has been done already
-	void updAtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
+	void updAtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 	// Transfers work coordinates into regular cooordinates
 	void updAtomsLocationsInGround_FromWORK();
 
-	void upd_WORK_AtomsLocationsInGround(const SimTK::Compound::AtomTargetLocations& atomTargets);
+	void upd_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 
 	SimTK::Real get_WORK_Jacobian() const;
@@ -178,8 +171,8 @@ private:
 	int myIndex = 0;
 
 	// Replica configurations
-	SimTK::Compound::AtomTargetLocations atomsLocations;
-	SimTK::Compound::AtomTargetLocations WORK_atomsLocations;
+	std::vector<SimTK::Compound::AtomTargetLocations> atomsLocations;
+	std::vector<SimTK::Compound::AtomTargetLocations> WORK_atomsLocations;
 
 	// Replica potential energy
 	SimTK::Real potential;
@@ -201,7 +194,7 @@ private:
 	std::vector<Atom>& atoms;
 
 	std::vector<int>& roots;
-	std::vector<Topology>& topologies;
+	Span<Topology> topologies;
 	// InternalCoordinates& internCoords;
 
 	std::vector<std::vector<int>>& zMatrixTable;

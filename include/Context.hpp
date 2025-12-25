@@ -145,7 +145,7 @@ public:
 
 	void setAtoms_XFM(int wIx);
 
-	SimTK::State& setAtoms_SP_NEW(int destWIx, SimTK::State& someState, const SimTK::Compound::AtomTargetLocations& atomTargets);
+	SimTK::State& setAtoms_SP_NEW(int destWIx, SimTK::State& someState, const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 	// X axis to Z axis switch
 	const SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
@@ -667,6 +667,8 @@ public:
 
 
 private:
+
+	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCache;
 
 	std::vector<std::string> inpcrdFNs;
 

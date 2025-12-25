@@ -146,6 +146,8 @@ public:
 
 	SimTK::Vec3 calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compound::AtomIndex aIx, const SimTK::DuMMForceFieldSubsystem& dumm, const SimTK::SimbodyMatterSubsystem& matter, const SimTK::State& someState) const;
 
+	SimTK::Transform matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets);
+
 	void writeAtomListPdb(std::string dirname,
 			              std::string prefix,
 			              std::string sufix,
@@ -206,4 +208,6 @@ private:
 
 	std::size_t rootGlobalAtomIx = 0; // in global atom index
 	SimTK::Compound::AtomIndex rootCompoundAtomIx; // in subAtomList index
+
+	bool flipAllChirality = false;
 };

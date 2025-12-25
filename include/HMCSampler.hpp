@@ -107,7 +107,7 @@ public:
 	HMCSampler(World &argWorld,
 		SimTK::CompoundSystem &argCompoundSystem,
 		SimTK::SimbodyMatterSubsystem &argMatter,
-		std::vector<Topology> &argTopologies, 
+		Span<Topology> argTopologies, 
 		SimTK::DuMMForceFieldSubsystem &argDumm,
 		SimTK::GeneralForceSubsystem &argForces,
 		SimTK::TimeStepper &argTimeStepper)
@@ -424,9 +424,7 @@ public:
 
 	void OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions);
 
-	void OMM_To_Simbody_setAtomsLocations(SimTK::State& someState);
-
-	void OMM_PrintLocations(void);
+	void rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someState);
 
 	void OMM_integrateTrajectory(SimTK::State&);
 
@@ -863,6 +861,11 @@ protected:
 
 	// DELETE
 	SimTK::Real debug_rand_no = 0.0;
+
+
+
+
+	std::vector<SimTK::Vec3> includedAtomPositionsCache;
 
 };
 

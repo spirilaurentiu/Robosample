@@ -19,14 +19,10 @@ public:
 	Sampler(World &argWorld,
 		SimTK::CompoundSystem &argCompoundSystem,
 		SimTK::SimbodyMatterSubsystem &argMatter,
-		std::vector<Topology> &argTopologies, 
+		Span<Topology> argTopologies, 
 		SimTK::DuMMForceFieldSubsystem &argDumm,
 		SimTK::GeneralForceSubsystem &argForces,
-		SimTK::TimeStepper &argTimeStepper) 
-
-
-
-			;
+		SimTK::TimeStepper &argTimeStepper);
 
 	// Destructor
 	virtual ~Sampler();
@@ -139,7 +135,7 @@ public:
 	//SimTK::Compound *rootTopology;
 	Topology *rootTopology;
 
-	std::vector<Topology>& topologies;
+	Span<Topology> topologies;
 	std::size_t natoms = 0;
 	std::size_t ndofs = 0;
 	std::size_t acceptedSteps = 0;

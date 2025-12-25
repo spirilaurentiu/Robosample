@@ -86,6 +86,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
     py::class_<AtomDefinition>(m, "AtomDefinition")
         .def(py::init<>())
         .def_readwrite("global_index", &AtomDefinition::globalIndex)
+        .def_readwrite("prmtop_index", &AtomDefinition::prmtopIndex)
         .def_readwrite("molecule_index", &AtomDefinition::moleculeIndex)
         .def_readwrite("residue_index", &AtomDefinition::residueIndex)
         .def_readwrite("atom_class_name", &AtomDefinition::atomClassName)

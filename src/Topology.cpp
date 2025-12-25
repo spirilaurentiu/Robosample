@@ -128,7 +128,7 @@ void Topology::loadIndicesMaps()
 
 	// Find the root atom index in the subAtomList
 	for (const auto& a : subAtomList) {
-		if (a.getGlobalIndex() == rootGlobalAtomIx) {
+		if (a.isRoot()) {
 			rootCompoundAtomIx = a.getCompoundAtomIndex();
 			break;
 		}
@@ -248,7 +248,46 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compoun
 
 	const SimTK::Vec3 p_BS_G = R_GB * station;
 	return p_GB + p_BS_G;
+}
 
+SimTK::Transform Topology::matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets) {
+	matchDefaultBondLengths(atomTargets);
+	matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
+	matchDefaultBondAngles(atomTargets);
+	matchDefaultDirections(atomTargets);
+	matchDefaultDihedralAngles(atomTargets, SimTK::Compound::DistortPlanarBonds);
+	matchDefaultTopLevelTransform(atomTargets);
+
+	// Get the Ground to Top Transform
+	SimTK::Transform G_X_T = getTopLevelTransform();
+
+	// Recalculate atom frames in top compound frame
+	calcAtomsTopTransforms();
+
+	// bool verbose_local = true;
+	// if (verbose_local) {
+		
+	// 	std::vector<SimTK::Transform> atomSourceFrames(getNumAtoms());
+	// 	invalidateAtomFrameCache(atomSourceFrames, getNumAtoms());
+	// 	calcDefaultAtomFramesInCompoundFrame(atomSourceFrames);
+
+	// 	std::cout << "Topology::setAtoms_Compound_Match residual " << getTransformAndResidual(atomTargets).residual << std::endl;
+	// 	std::cout << "	After Topology::setAtoms_Compound_Match, atom targets vs sources:" << std::endl;
+		
+	// 	for (const auto& tI : atomTargets)
+	// 	{
+	// 		Compound::AtomIndex atomIndex = tI.first;
+	// 		const SimTK::Vec3& target = tI.second;
+			
+	// 		const SimTK::Vec3 source = getTopLevelTransform() * atomSourceFrames[atomIndex].T();
+	// 		std::cout << "	CompoundRep::getTransformAndResidual cAIx " << atomIndex << " source " << source << " target " << target << std::endl;
+	// 	}
+	// }
+	
+	// // Ensure residual is low enough only on debug builds
+	// assert(getTransformAndResidual(atomTargets).residual < 1e-5 && "After setAtoms_Compound_Match, residual too high");
+
+	return G_X_T;
 }
 
 /** Print maps **/

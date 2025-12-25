@@ -109,17 +109,14 @@ class Context;
 class World {
 public:
 
-	Compound::AtomTargetLocations atomTargetLocaltionsCache;
+	explicit World(int worldIndex, Span<Topology> topo, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
+
+
+	SimTK::State setAtoms(const SimTK::Compound::AtomTargetLocations& atomTargets, const std::vector<Atom>& atoms);
 
 	void updateAtomTargetLocaltionsCache(SimTK::State& state);
-	const Compound::AtomTargetLocations& getAtomTargetLocaltionsCache() const;
+	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocaltionsCache() const;
 
-	// --- Structural functions ---
-	/** Constructor **/
-	explicit World(	int worldIndex,
-					int requestedNofMols,
-					bool isVisual=true,
-					SimTK::Real visualizerFrequency = 0.0015);
 
 	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
@@ -286,8 +283,8 @@ public:
 
 	float setSphereRadius (float argRadius);
 	
-	const SimTK::Compound::AtomTargetLocations& getAtomsLocationsInGround(SimTK::State& state);
-	const SimTK::Compound::AtomTargetLocations& getCurrentAtomsLocationsInGround();
+	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomsLocationsInGround(SimTK::State& state);
+	const std::vector<SimTK::Compound::AtomTargetLocations>& getCurrentAtomsLocationsInGround();
 
 	/** Nice print helper for get/setAtomsLocations */
 	void PrintAtomsLocations(const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >& someAtomsLocations);
@@ -376,11 +373,6 @@ public:
 		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
 
 	/*!
-	* <!-- Compound matchDefaultConfiguration for molecule topoIx -->
-	*/
-	SimTK::Transform setAtoms_Compound_Match(int topoIx, const SimTK::Compound::AtomTargetLocations& atomTargets);
-
-	/*!
 	* <!-- Set atoms' frames in mobods. Also get locations in mobods for 
 	* further use -->
 	*/
@@ -408,26 +400,7 @@ public:
 
 	/** Set Compound, MultibodySystem and DuMM configurations according to
 	some other World's atoms **/
-	SimTK::State& setAtomsLocationsInGround_REFAC(SimTK::State& state, const SimTK::Compound::AtomTargetLocations& atomTargets);
-
-	// REFAC ----------------------------------------------------------------------
-
-	/**@}**/
-
-
-	/** Return own CompoundSystem **/
-	CompoundSystem *getCompoundSystem() const;
-
-	SimTK::GeneralForceSubsystem* getGeneralForceSubsystem() const {
-		return forces.get();
-	}
-	SimTK::SimbodyMatterSubsystem* getSimbodyMatterSubsystem() const {
-		return matter.get();
-	}
-
-	/** Set own Compound system **/
-	// TODO find a solution for the old one
-	void setCompoundSystem(CompoundSystem *compoundSystem);
+	SimTK::State& setAtomsLocationsInGround_REFAC(SimTK::State& state, const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 	/** Update Gmolmodel Atom Cartesian coordinates according to
 	Molmodel Compound which in turn relizes Position and uses matter
@@ -473,10 +446,23 @@ public:
 	/** Set GBSA implicit solvent scale factor **/
 	void setGbsaGlobalScaleFactor(SimTK::Real);
 
-	SimTK::DuMMForceFieldSubsystem& getForceField();
+	const SimTK::CompoundSystem& getCompoundSystem() const { return *compoundSystem; }
+	SimTK::CompoundSystem& updCompoundSystem() { return *compoundSystem; }
 
-	/** Get a writeble pointer to the DuMM force field **/
-	SimTK::DuMMForceFieldSubsystem * updForceField();
+	const SimTK::SimbodyMatterSubsystem& getMatterSubsystem() const { return *matter; }
+	SimTK::SimbodyMatterSubsystem& updMatterSubsystem() { return *matter; }
+
+	const SimTK::GeneralForceSubsystem& getForces() const { return *forces; }
+	SimTK::GeneralForceSubsystem& updForces() { return *forces; }
+
+	const SimTK::DuMMForceFieldSubsystem& getForceField() const { return *forceField; }
+	SimTK::DuMMForceFieldSubsystem& updForceField() { return *forceField; }
+
+	const SimTK::VerletIntegrator& getIntegrator() const { return *integrator; }
+	SimTK::VerletIntegrator& updIntegrator() { return *integrator; }
+
+	const SimTK::TimeStepper& getTimeStepper() const { return *timeStepper; }
+	SimTK::TimeStepper& updTimeStepper() { return *timeStepper; }
 
 	/** Return true if the Fixman torque flag is set **/
 	bool isUsingFixmanTorque() const;
@@ -490,7 +476,7 @@ public:
 	SimTK::Real calcFixman();
 
 	/** Generate a number of samples **/
-	bool generateSamples_old(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
+	// bool generateSamples_old(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 
 	//...............
@@ -670,21 +656,39 @@ public:
 
 public:
 
+	// The three S: Study, System and State related.
+	
+	// System->MultibodySystem->MolecularMechanicsSystems->CompoundSystem
+	// This is non-copyable and non-movable, so we use a unique_ptr because World needs to be copyable/movable.
+	std::unique_ptr<SimTK::CompoundSystem> compoundSystem;
+
+	// Subsystem->SimbodyMatterSubsystem
+	// This is non-copyable and non-movable, so we use a unique_ptr because World needs to be copyable/movable.
+	std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter;
+
+	// Subsystem->ForceSubsystem->GeneralForceSubsystem
+	// This is non-copyable and non-movable, so we use a unique_ptr because World needs to be copyable/movable.
+	std::unique_ptr<SimTK::GeneralForceSubsystem> forces;
+
+	// Subsystem->ForceSubsystem->DuMMForceFieldSubsystem
+	// This is non-copyable and non-movable, so we use a unique_ptr because World needs to be copyable/movable.
+	std::unique_ptr<SimTK::DuMMForceFieldSubsystem> forceField;
+
+	// --- Simulation ---
+	std::unique_ptr<SimTK::VerletIntegrator> integrator;
+	std::unique_ptr<SimTK::TimeStepper> timeStepper;
+
+
+	std::vector<std::unique_ptr<BaseSampler>> samplers;
+
+
+
+
+
+
 	SimTK::Vector BMps;
 	SimTK::Vector PFrs;
 
-	// --- The three S: Study, System and State related ---
-	/** System->MultibodySystem->MolecularMechanicsSystems->CompoundSystem **/
-	std::unique_ptr<SimTK::CompoundSystem> compoundSystem;
-
-	/** Subsystem->SimbodyMatterSubsystem **/
-	std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter;
-
-	/** Subsystem->ForceSubsystem->GeneralForceSubsystem **/
-	std::unique_ptr<SimTK::GeneralForceSubsystem> forces;
-
-	/** Subsystem->ForceSubsystem->DuMMForceFieldSubsystem **/
-	std::unique_ptr<SimTK::DuMMForceFieldSubsystem> forceField;
 
 	// std::vector<std::unique_ptr<SimTK::ConformationalController>> controller;
 	// std::vector<std::unique_ptr<SimTK::Force::Custom>> controlForce;
@@ -693,8 +697,7 @@ public:
 	int moleculeCount;
 
 	/** Molecules (topologies<-Compounds) objects **/
-	//std::vector<bMoleculeReader *> moleculeReaders;
-	std::vector<Topology>* topologies = nullptr;
+	Span<Topology> topologies;
 	std::vector<std::string> roots;
 	std::vector<std::string> rootMobilitiesStr;
 
@@ -713,19 +716,8 @@ public:
 	std::vector<std::vector<int>> zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 
-	/** Topologies graphs as tables - to be removed **/
-	int **mbxTreeMat;    // tree representing the bonding
-	SimTK::Real *branchMassVec; // branch masses self body included
-	//...............
-
 	// --- Thermodynamics ---
 	SimTK::Real temperature;
-	//...............
-
-	// --- Simulation ---
-	std::unique_ptr<SimTK::VerletIntegrator> integ;
-	std::unique_ptr<SimTK::TimeStepper> timeStepper;
-	std::vector<std::unique_ptr<BaseSampler>> samplers;
 
 	// Contact related
 	std::unique_ptr<ContactTrackerSubsystem> tracker;
@@ -827,25 +819,6 @@ public:
 
 	void setRootMobility(ROOT_MOBILITY rootMobility);
 	const SimTK::String& getRootMobility() const;
-
-
-	// BAT ====================================================================
-
-    // Getter for myContext
-    const Context* getMyContext() const {
-        return myContext;
-    }
-
-    // Setter for myContext
-    void setMyContext(Context* context) {
-        myContext = context;
-    }
-
-    // Updater for myContext
-    Context* updMyContext(void) {
-        return myContext;
-    }	
-
 
 	const int getOwnIndex(void) const{
 		return ownWorldIndex;
@@ -998,6 +971,8 @@ public:
 
 private:
 
+	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCache;
+
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	// topology index and atom index
 	std::map< SimTK::MobilizedBodyIndex, std::pair<int, SimTK::Compound::AtomIndex>> mbx2aIx;
@@ -1025,12 +1000,10 @@ private:
 	std::vector<std::vector<BOND_FLEXIBILITY>> rollFlexibilities;
 	bool isRollFlexibilities = false;
 
-	// Context
-	Context *myContext;
-
 	// Default return value for non-existing topology atom, pair
 	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
 
+	SimTK::State stateCache;
 };
 
 #endif /*WORLD_H_*/
