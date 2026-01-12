@@ -8,7 +8,7 @@
 class Replica{
 public:
 	Replica(int index,
-			std::vector<Atom>& atoms_,
+			std::vector<RoboAtom>& atoms_,
 			std::vector<int>& roots_,
 			Span<Topology> topologies_,
 			std::vector<std::vector<int>>& zMatrixTable_
@@ -95,20 +95,6 @@ public:
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
-	/**	
-	* @brief Takes coordinates from molecule topoIx and puts them into atomTargets
-	* @param otherWorldsAtomsLocations: Pairs of (atom, and its position) within
-	* 		 a vector of Topologies
-	* @param atomTargets: map of atoms' CompoundAtomIndex to their positions
-	* @return
-	*/
-	void
-	extractAtomTargets(
-		int topoIx,
-		const std::vector<std::vector<
-		std::pair<Atom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
-		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
-
 	// Function to find and return the value for a given AtomIndex
 	SimTK::Vec3 findAtomTarget(const SimTK::Compound::AtomTargetLocations& atomTargets, SimTK::Compound::AtomIndex searchIndex) const;
 
@@ -129,7 +115,7 @@ public:
 	// zmatrixbat_
 	void
 	calcZMatrixBAT(const std::vector< std::vector<
-	std::pair <Atom *, SimTK::Vec3 > > >&
+	std::pair <RoboAtom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations);
 
 	void calcZMatrixBAT_WORK(void);
@@ -191,7 +177,7 @@ private:
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
-	std::vector<Atom>& atoms;
+	std::vector<RoboAtom>& atoms;
 
 	std::vector<int>& roots;
 	Span<Topology> topologies;

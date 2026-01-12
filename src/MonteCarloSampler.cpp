@@ -150,7 +150,7 @@ bool MonteCarloSampler::isUsingFixmanPotential() const
 
 // Compute Fixman potential (should have been calcDetMInv ??)
 SimTK::Real MonteCarloSampler::calcFixman(SimTK::State& someState){
-    SimTK_ASSERT_ALWAYS(true, "MonteCarloSampler::calcFixman: Not implemented correctly yet.");
+    SimTK_ASSERT_ALWAYS(false, "MonteCarloSampler::calcFixman: Not implemented correctly yet.");
     return 0;
     
     // int nu = someState.getNU();

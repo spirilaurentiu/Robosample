@@ -3,50 +3,48 @@
 // #define __PBC__
 
 void OPENMM::destroy() {
-	ensureInitialized();
+    ensureInitialized();
 
-	// Order matters
-    openMMContext.reset();
-    openMMIntegrator.reset();
-    openMMThermostat.reset();
-
-    ommNonbondedForce.reset();
-    ommGBSAOBCForce.reset();
-    ommHarmonicBondStretch.reset();
-    ommHarmonicAngleForce.reset();
-    ommPeriodicTorsionForce.reset();
-
-    openMMSystem.reset();
-    platform.reset();
-
-	//ommGBSAOBCForce.release();
+	// integrator.reset();
+	// context.reset();
+	// system.reset();
 }
 
-bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real vdwGlobalScaleFactor, const std::vector<Atom>& atoms, const std::vector<BondStretch>& bonds, const std::vector<BondBend>& angles, const std::vector<BondTorsion>& torsions) {
+bool OPENMM::initialize(uint32_t seed,
+						SimTK::Real sqrtCoulombScale,
+						SimTK::Real vdwGlobalScaleFactor,
+						const std::vector<RoboAtom>& atoms,
+						const std::vector<RoboBondStretch>& bonds,
+						const std::vector<RoboBondBend>& angles,
+						const std::vector<RoboBondTorsion>& torsions,
+						bool testing) {
 
     // Instantiate
     OPENMM& omm = get();
 
 	// Set up variables
+	omm.testing = testing;
 	omm.numAtoms = atoms.size();
 	omm.ommAtomsPositionsCache = std::vector<OpenMM::Vec3>(omm.numAtoms);
 	omm.simbodyAtomsPositionsCache = std::vector<SimTK::Vec3>(omm.numAtoms);
 
     // Allocate OpenMM forces
-	omm.ommHarmonicBondStretch = std::make_unique<OpenMM::HarmonicBondForce>();
-	omm.ommHarmonicAngleForce = std::make_unique<OpenMM::HarmonicAngleForce>();
-	omm.ommPeriodicTorsionForce = std::make_unique<OpenMM::PeriodicTorsionForce>();
-	// omm.ommGBSAOBCForce = std::make_unique<OpenMM::GBSAOBCForce>();
-	omm.ommNonbondedForce = std::make_unique<OpenMM::NonbondedForce>();
+	auto* harmonicBondStretch = new OpenMM::HarmonicBondForce();
+	auto* harmonicAngleForce = new OpenMM::HarmonicAngleForce();
+	auto* periodicTorsionForce = new OpenMM::PeriodicTorsionForce();
+	auto* GBSAOBCForce = new OpenMM::GBSAOBCForce();
+	auto* nonbondedForce = new OpenMM::NonbondedForce();
 	
 	// Instantiate the thermostat with adjusted temperature
 	//Real temperature = 300.0;
 	//if(dumm->wantOpenMMIntegration){temperature = dumm->temperature;}
-	omm.openMMThermostat = std::make_unique<OpenMM::AndersenThermostat>(300.0, 1);
-	omm.openMMThermostat->setRandomNumberSeed(seed);
-	
+	auto* thermostat = new OpenMM::AndersenThermostat(300.0, 1);
+	thermostat->setDefaultTemperature(300.0);
+	thermostat->setDefaultCollisionFrequency(1.0);
+	thermostat->setRandomNumberSeed(seed);
+
 	// Allocate OpenMM system and add particles to it
-	omm.openMMSystem = std::make_unique<OpenMM::System>();
+	omm.system = std::make_unique<OpenMM::System>();
 
 #ifdef __PBC__ // _pbc_
 
@@ -66,15 +64,15 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 	OpenMM::Vec3 pbcVector_Y = std::get<1>(periodicBoxVectors);
 	OpenMM::Vec3 pbcVector_Z = std::get<2>(periodicBoxVectors);
 
-	openMMSystem->setDefaultPeriodicBoxVectors(pbcVector_X, pbcVector_Y, pbcVector_Z);
+	system->setDefaultPeriodicBoxVectors(pbcVector_X, pbcVector_Y, pbcVector_Z);
 # endif
 	
 	// Nonbonded forces
-	// ommNonbondedForce->setNonbondedMethod( OpenMM::NonbondedForce::NonbondedMethod( nonbondedMethod ) );
-	// ommNonbondedForce->setCutoffDistance( nonbondedCutoff );
-	omm.ommNonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::NonbondedMethod::NoCutoff);
-	omm.ommNonbondedForce->setCutoffDistance(1.0); // in nm
-	omm.ommNonbondedForce->setUseDispersionCorrection(false);
+	// nonbondedForce->setNonbondedMethod( OpenMM::NonbondedForce::NonbondedMethod( nonbondedMethod ) );
+	// nonbondedForce->setCutoffDistance( nonbondedCutoff );
+	nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::NonbondedMethod::NoCutoff);
+	nonbondedForce->setCutoffDistance(1.0); // in nm
+	nonbondedForce->setUseDispersionCorrection(false);
 	// nonbondedForce->setUseSwitchingFunction( 0 );
 
 	// Add atoms
@@ -82,17 +80,17 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 		const SimTK::Real charge = atom.getChargeInE() * sqrtCoulombScale;
 		const SimTK::Real sigma = atom.getSigmaInNm();
 		const SimTK::Real epsilon = atom.getVdwWellDepthInKJ() * vdwGlobalScaleFactor;
+		const SimTK::Real solventRadiusInNm = atom.getSolventRadiusInNm();
+		const SimTK::Real screen = atom.getScreen();
 
 		if (atom.isRoot()) {
-			omm.openMMSystem->addParticle(0.0); // massless root
+			omm.system->addParticle(0.0); // massless root
 		} else {
-			omm.openMMSystem->addParticle(atom.getMassInDaltons());
+			omm.system->addParticle(atom.getMassInDaltons());
 		}
 
-		omm.ommNonbondedForce->addParticle(charge, sigma, epsilon);
-		// ommGBSAOBCForce->addParticle(charge, )
-
-		// std::cout << "Atom " << atom.getUniqueAtomName() << ": charge = " << charge << " e, sigma = " << sigma << " nm, epsilon = " << epsilon << " kJ/mol" << std::endl;
+		nonbondedForce->addParticle(charge, sigma, epsilon);
+		GBSAOBCForce->addParticle(charge, solventRadiusInNm, screen);
 	}
 
 	// Add bonds
@@ -102,34 +100,14 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 	}
 
 	// Register all the 1-2 bonds between nonbond atoms for scaling.
-	omm.ommNonbondedForce->createExceptionsFromBonds(ommBonds, omm.coulomb14Scale * sqrtCoulombScale, omm.lj14Scale * vdwGlobalScaleFactor);
+	nonbondedForce->createExceptionsFromBonds(ommBonds, omm.coulomb14Scale * sqrtCoulombScale, omm.lj14Scale * vdwGlobalScaleFactor);
 	
-	// GBSA
-	// When it is called for the i'th time, it specifies the parameters for the i'th particle.
-	//ommGBSAOBCForce->setSolventDielectric(80.0);
-	//ommGBSAOBCForce->setSoluteDielectric(1.0);
-	// Watch the units here. OpenMM works exclusively in MD (nm, kJ/mol). 
-	// CPU GBSA uses Angstrom, kCal/mol.
-	// for (auto atom : atoms) {
-	// 	SimTK::Real charge = atom.getChargeInE();
-	// 	getGbsaRadii(int numberOfAtoms, const int* atomicNumber, 
-	// 				const int* numberOfCovalentPartners, 
-	// 				const int* atomicNumberOfHCovalentPartner, 
-	// 				RealOpenMM* gbsaRadii);
-	// 	ommGBSAOBCForce.addParticle((worlds[0].forceField)->gbsaAtomicPartialCharges[nax],
-	// 								(worlds[0].forceField)->gbsaRadii[nax]*OpenMM::NmPerAngstrom,
-	// 								(worlds[0].forceField)->gbsaObcScaleFactors[nax]); 
-	// }
-	//// System takes over heap ownership of the force.
-	//openMMSystem.addForce(ommGBSAOBCForce.get());
-	
-				
 	for (const auto& bond : bonds) {
 		const SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
 		const SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
 
 		// force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
-		omm.ommHarmonicBondStretch->addBond(bond.getParentAtomGlobalIndex(), bond.getChildAtomGlobalIndex(), nominalLengthInNm, stiffnessInKJPerNmSq * 2);
+		harmonicBondStretch->addBond(bond.getParentAtomGlobalIndex(), bond.getChildAtomGlobalIndex(), nominalLengthInNm, stiffnessInKJPerNmSq * 2);
 	}
 
 	// FORCES: ADD ANGLES (1-2-3)
@@ -140,8 +118,8 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 		const SimTK::Real theta0 = angle.getNominalAngleInDeg() * SimTK::DuMM::Deg2Rad;
 		const SimTK::Real forceKt = angle.getStiffnessInKJPerRadSq();
 
-		// force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
-		omm.ommHarmonicAngleForce->addAngle(a1num, a2num, a3num, theta0, forceKt * 2);
+		// Force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
+		harmonicAngleForce->addAngle(a1num, a2num, a3num, theta0, forceKt * 2);
 	}
 
 	// Add dihedrals. OpenMM does not distinguish between proper and improper dihedrals.
@@ -152,148 +130,130 @@ bool OPENMM::initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real
 		const int a4 = t.getGlobalIndex4();
 		
 		if (t.getPhaseInDegrees_1() != -1) {
-			omm.ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_1(), t.getPhaseInDegrees_1() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_1());
+			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_1(), t.getPhaseInDegrees_1() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_1());
 		}
 		if (t.getPhaseInDegrees_2() != -1) {
-			omm.ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_2(), t.getPhaseInDegrees_2() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_2());
+			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_2(), t.getPhaseInDegrees_2() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_2());
 		}
 		if (t.getPhaseInDegrees_3() != -1) {
-			omm.ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_3(), t.getPhaseInDegrees_3() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_3());
+			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_3(), t.getPhaseInDegrees_3() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_3());
 		}
 		if (t.getPhaseInDegrees_4() != -1) {
-			omm.ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_4(), t.getPhaseInDegrees_4() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_4());
+			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_4(), t.getPhaseInDegrees_4() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_4());
 		}
 		if (t.getPhaseInDegrees_5() != -1) {
-			omm.ommPeriodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_5(), t.getPhaseInDegrees_5() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_5());
+			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_5(), t.getPhaseInDegrees_5() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_5());
 		}
 	}
 
-	// const int group0 = 0;
-	// const int group1 = 1;
-	// const int group2 = 2;
-	// const int group3 = 3;
-	// const int group4 = 4;
+	// Set force groups so that we can recover energy components later 
+	if (omm.testing) {
+		harmonicBondStretch->setForceGroup(omm.groupHarmonicBondStretch);
+		harmonicAngleForce->setForceGroup(omm.groupHarmonicAngleForce);
+		periodicTorsionForce->setForceGroup(omm.groupPeriodicTorsionForce);
+		nonbondedForce->setForceGroup(omm.groupNonbondedForce);
+		thermostat->setForceGroup(omm.groupThermostat);
+		GBSAOBCForce->setForceGroup(omm.groupGBSAOBCForce);
+	}
 
-	// omm.ommHarmonicBondStretch->setForceGroup(group0);
-	// omm.ommHarmonicAngleForce->setForceGroup(group1);
-	// omm.ommPeriodicTorsionForce->setForceGroup(group2);
-	// omm.ommNonbondedForce->setForceGroup(group3);
-	// omm.openMMThermostat->setForceGroup(group4);
+	// Add forces to system
+	omm.system->addForce(harmonicBondStretch);
+	omm.system->addForce(harmonicAngleForce);
+	omm.system->addForce(periodicTorsionForce);
+	omm.system->addForce(nonbondedForce);
+	omm.system->addForce(thermostat);
+	omm.system->addForce(GBSAOBCForce);
 
-	omm.openMMSystem->addForce(omm.ommHarmonicBondStretch.get()); omm.ommHarmonicBondStretch.release();
-	omm.openMMSystem->addForce(omm.ommHarmonicAngleForce.get()); omm.ommHarmonicAngleForce.release();
-	omm.openMMSystem->addForce(omm.ommPeriodicTorsionForce.get()); omm.ommPeriodicTorsionForce.release();
-	omm.openMMSystem->addForce(omm.ommNonbondedForce.get()); omm.ommNonbondedForce.release();
-
-	// Get the thermostat
-	omm.openMMSystem->addForce(omm.openMMThermostat.get()); omm.openMMThermostat.release();
-		
 	// Get the integrator
-	omm.openMMIntegrator = std::make_unique<OpenMM::VerletIntegrator>(0.0007); // TODO should release?
+	omm.integrator = std::make_unique<OpenMM::VerletIntegrator>(0.0007); // TODO should release?
 		
     // Get the platform
-    // By default, OpenMM builds a .so for each platform (CPU, OpenCL and CUDA)
-    // When loading that .so, two functions get called
-    // 1. registerPlatform() which does what you see below
-    // 2. registerKernelFactories() which is used for Drude, Pme, Rpmd and other plugins (which we do not need as of right now)
+	OpenMM::Platform* platform = nullptr;
+
 #if OPENMM_PLATFORM_CPU
     // if(OpenMM::Platform::getNumPlatforms() == 1)
     {
-        omm.platform = std::make_unique<OpenMM::CpuPlatform>();
-        OpenMM::Platform::registerPlatform(omm.platform.get());
-        platform.release();
+        platform = new OpenMM::CpuPlatform();
+        OpenMM::Platform::registerPlatform(platform);
     }
     constexpr auto PLATFORM_NAME = "CPU";
 
 #elif OPENMM_PLATFORM_CUDA
     // if(OpenMM::Platform::getNumPlatforms() == 1)
     {
-        omm.platform = std::make_unique<OpenMM::CudaPlatform>();
-        OpenMM::Platform::registerPlatform(omm.platform.get());
-        omm.platform.release();
+        platform = new OpenMM::CudaPlatform();
+        OpenMM::Platform::registerPlatform(platform);
     }
     constexpr auto PLATFORM_NAME = "CUDA";
 
 #elif OPENMM_PLATFORM_OPENCL
     // if(OpenMM::Platform::getNumPlatforms() == 1)
     {
-        omm.platform = std::make_unique<OpenMM::OpenCLPlatform>();
-        OpenMM::Platform::registerPlatform(omm.platform.get());
-        omm.platform.release();
+        platform = new OpenMM::OpenCLPlatform();
+        OpenMM::Platform::registerPlatform(platform);
     }
     constexpr auto PLATFORM_NAME = "OpenCL";
 #endif
 
-	bool allowReferencePlatform = true;
-    // CREATE OPENMM CONTEXT based on PLATFORM
     try {
-        auto& platform = OpenMM::Platform::getPlatformByName(PLATFORM_NAME);
-        omm.openMMContext = std::make_unique<OpenMM::Context>(*omm.openMMSystem, *omm.openMMIntegrator, platform);
-        const double speed = omm.openMMContext->getPlatform().getSpeed();
+        omm.context = std::make_unique<OpenMM::Context>(*omm.system, *omm.integrator, *platform);
 
-        if (speed <= 1 && !allowReferencePlatform) {
-            std::cout << "ERROR: OpenMM not used: best available platform was " << PLATFORM_NAME << " with relative speed " << speed << std::endl;
-            std::cout << "ERROR: Call setAllowOpenMMReference() if you want to use this anyway." << std::endl;
-            return "";
-        }
-
-        std::cout << "NOTE: Created OpenMM context with " << PLATFORM_NAME << " platform with relative speed " << speed << std::endl;
-
+        const double speed = omm.context->getPlatform().getSpeed();
+        std::cout << "Created OpenMM context with " << PLATFORM_NAME << " platform with relative speed " << speed << std::endl;
 
     } catch (const std::exception& e) {
-        // Could not create this platform so log and try the next one
         std::cout << "ERROR: OpenMM error during initialization: " << e.what() << std::endl;
-        return "";
+        return false;
     }
 
-// 	std::cout << "Robosample Context reference OpenMM loaded " << omm.openMMContext->getPlatform().getName() << std::endl;
-
-
-// ////////////////////////////////////////////////////////////////////////////////
-// 	bool checkPotentialEnergyManually = true;
-// 	if (checkPotentialEnergyManually){
-// 		for (const auto& atom : atoms) {
-// 			omm.ommAtomsPositionsCache[atom.getGlobalIndex()] = OpenMM::Vec3(atom.getXInNm(), atom.getYInNm(), atom.getZInNm());
-// 		}
-
-// 		omm.openMMContext->setPositions(omm.ommAtomsPositionsCache);
-		
-// 		// calculate total potential energy manually
-// 		omm.state = omm.openMMContext->getState(OpenMM::State::Energy);
-// 		std::cout << "Total energy is " << omm.state.getPotentialEnergy() << std::endl;
-
-// 		omm.state = omm.openMMContext->getState(OpenMM::State::Energy, omm.enforcePeriodicBox, 1<<group0);
-// 		std::cout << "HarmonicBondForce is " << omm.state.getPotentialEnergy() << std::endl;
-
-// 		omm.state = omm.openMMContext->getState(OpenMM::State::Energy, omm.enforcePeriodicBox, 1<<group1);
-// 		std::cout << "HarmonicAngleForce is " << omm.state.getPotentialEnergy() << std::endl;
-
-// 		omm.state = omm.openMMContext->getState(OpenMM::State::Energy, omm.enforcePeriodicBox, 1<<group2);
-// 		std::cout << "PeriodicTorsionForce is " << omm.state.getPotentialEnergy() << std::endl;
-
-// 		omm.state = omm.openMMContext->getState(OpenMM::State::Energy, omm.enforcePeriodicBox, 1<<group3);
-// 		std::cout << "NonbondedForce is " << omm.state.getPotentialEnergy() << std::endl;
-
-// 		omm.state = omm.openMMContext->getState(OpenMM::State::Energy, omm.enforcePeriodicBox, 1<<group4);
-// 		std::cout << "AndersenThermostat is " << omm.state.getPotentialEnergy() << std::endl;
-// 	}
-
-// 	// for (int i = 0; i < 1000; i++) {
-// 	// 	openMMIntegrator->step(1000);
-// 	// 	const auto& state = openMMContext->getState(OpenMM::State::Energy);
-// 	// 	std::cout << "Step " << i * 1000 << " energy is " << state.getPotentialEnergy() << std::endl;
-// 	// }
-
-// 	// for (int step = 0; step < 1000; step++) {
-// 	// 	openMMIntegrator->step(1000);
-
-// 	// 	int group = step % 4;
-// 	// 	OpenMM::State state = openMMContext->getState(OpenMM::State::Energy, group);
-// 	// 	std::cout << "Step " << step * 1000 << " energy (group " << group << ") is " << state.getPotentialEnergy() << std::endl;
-// 	// }
-
+	// All OpenMM components initialized successfully
 	omm.initialized = true;
+
+	// Set initial positions
+	for (const auto& atom : atoms) {
+		omm.ommAtomsPositionsCache[atom.getGlobalIndex()] = OpenMM::Vec3(atom.getXInNm(), atom.getYInNm(), atom.getZInNm());
+	}
+	omm.context->setPositions(omm.ommAtomsPositionsCache);
+
 	return true;
+}
+
+OpenMMEnergyComponents OPENMM::getEnergyComponents() {
+	ensureInitialized();
+
+	SimTK_ASSERT_ALWAYS(testing, "OPENMM::getEnergyComponents() can only be called in testing mode.");
+
+	OpenMMEnergyComponents components;
+
+	// Total energy
+	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox);
+	components.totalEnergy = state.getPotentialEnergy();
+
+	// Harmonic Bond Force
+	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicBondStretch);
+	components.harmonicBondForce = state.getPotentialEnergy();
+
+	// Harmonic Angle Force
+	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicAngleForce);
+	components.harmonicAngleForce = state.getPotentialEnergy();
+
+	// Periodic Torsion Force
+	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupPeriodicTorsionForce);
+	components.periodicTorsionForce = state.getPotentialEnergy();
+
+	// Nonbonded Force
+	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupNonbondedForce);
+	components.nonbondedForce = state.getPotentialEnergy();
+
+	// Thermostat
+	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupThermostat);
+	components.andersenThermostat = state.getPotentialEnergy();
+
+	// GBSA OBC Force
+	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupGBSAOBCForce);
+	components.gbsaObcForce = state.getPotentialEnergy();
+
+	return components;
 }
 
 SimTK::Real OPENMM::getPotentialEnergy(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
@@ -311,31 +271,26 @@ SimTK::Real OPENMM::getPotentialEnergy(const std::vector<SimTK::Compound::AtomTa
 	}
 
 	// Set positions in OpenMM context
-	openMMContext->setPositions(ommAtomsPositionsCache);
+	context->setPositions(ommAtomsPositionsCache);
 	
 	// Get state with energy
-    return openMMContext->getState(OpenMM::State::Energy).getPotentialEnergy();
+    return context->getState(OpenMM::State::Energy).getPotentialEnergy();
 }
 
 void OPENMM::setVelocitiesToTemperature(SimTK::Real temperature, uint32_t seed) {
 	ensureInitialized();
-	openMMContext->setVelocitiesToTemperature(temperature);
-
-	// TODO this will affect any new Contexts you create, but not ones that already exist.
-	// openMMThermostat->setDefaultTemperature(temperature);
-
+	context->setVelocitiesToTemperature(temperature, seed);
+	context->setParameter(OpenMM::AndersenThermostat::Temperature(), temperature);
 }
 
 SimTK::Real OPENMM::getPotentialEnergy() const {
 	ensureInitialized();
 	return pe;
-	// return openMMContext->getState(OpenMM::State::Energy).getPotentialEnergy();
 }
 
 SimTK::Real OPENMM::getKineticEnergy() const {
 	ensureInitialized();
 	return ke;
-	// return openMMContext->getState(OpenMM::State::Energy).getKineticEnergy();
 }
 
 void OPENMM::setPositions(const std::vector<SimTK::Vec3> &positions) {
@@ -345,66 +300,24 @@ void OPENMM::setPositions(const std::vector<SimTK::Vec3> &positions) {
 	for (std::size_t i = 0; i < positions.size(); ++i) {
 		const SimTK::Vec3& coords = positions[i];
 		ommAtomsPositionsCache[i] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
-
-		// std::cout << "OPENMM::setPositions(): Setting position of atom " << i << " to (" << coords[0] << ", " << coords[1] << ", " << coords[2] << ")" << std::endl;
 	}
+
 	// Set positions in OpenMM context
-	openMMContext->setPositions(ommAtomsPositionsCache);
+	context->setPositions(ommAtomsPositionsCache);
 }
 
 const std::vector<SimTK::Vec3>& OPENMM::getPositions() const {
 	ensureInitialized();
-
-	// // Get state with positions
-	// OpenMM::State state = openMMContext->getState(OpenMM::State::Positions);
-	// ommAtomsPositionsCache = state.getPositions();
-
-	// // print positions for debugging
-	// for (std::size_t i = 0; i < ommAtomsPositionsCache.size(); ++i) {
-	// 	std::cout << "OPENMM::getPositions(): Retrieved position of atom " << i << " as (" << ommAtomsPositionsCache[i][0] << ", " << ommAtomsPositionsCache[i][1] << ", " << ommAtomsPositionsCache[i][2] << ")" << std::endl;
-	// }
-
-	// for (std::size_t i = 0; i < simbodyAtomsPositionsCache.size(); ++i) {
-	// 	simbodyAtomsPositionsCache[i] = SimTK::Vec3(
-	// 		state.getPositions()[i][0],
-	// 		state.getPositions()[i][1],
-	// 		state.getPositions()[i][2]
-	// 	);
-
-	// 	std::cout << "OPENMM::getPositions(): Retrieved position of atom " << i << " as (" << simbodyAtomsPositionsCache[i][0] << ", " << simbodyAtomsPositionsCache[i][1] << ", " << simbodyAtomsPositionsCache[i][2] << ")" << std::endl;
-	// }
-
 	return simbodyAtomsPositionsCache;
 }
 
 void OPENMM::integrateTrajectory(int steps) {
 	ensureInitialized();
 
-	// // Prin kinetic and potential energy before step
-	// std::cout << "Before step: Potential Energy = " << getPotentialEnergy() << " kJ/mol, Kinetic Energy = " << getKineticEnergy() << " kJ/mol" << std::endl;
-
-	// // get first 10 positions before step
-	// OpenMM::State state_before = openMMContext->getState(OpenMM::State::Positions);
-	// auto positions_before = state_before.getPositions();
-	// for (size_t i = 0; i < std::min(size_t(10), positions_before.size()); ++i) {
-	// 	std::cout << "Atom " << i << " position before step: (" << positions_before[i][0] << ", " << positions_before[i][1] << ", " << positions_before[i][2] << ")" << std::endl;
-	// }
-
-	openMMIntegrator->step(steps);
-
-	// // Print kinetic and potential energy after step
-	// std::cout << "After step: Potential Energy = " << getPotentialEnergy() << " kJ/mol, Kinetic Energy = " << getKineticEnergy() << " kJ/mol" << std::endl;
-
-	// // get first 10 positions after step
-	// OpenMM::State state_after = openMMContext->getState(OpenMM::State::Positions);
-	// auto positions_after = state_after.getPositions();
-	// for (size_t i = 0; i < std::min(size_t(10), positions_after.size()); ++i) {
-	// 	std::cout << "Atom " << i << " position after step: (" << positions_after[i][0] << ", " << positions_after[i][1] << ", " << positions_after[i][2] << ")" << std::endl;
-	// }
-
+	integrator->step(steps);
 
 	// Cache the results
-	state = openMMContext->getState(OpenMM::State::Positions | OpenMM::State::Energy, enforcePeriodicBox);
+	state = context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
 
 	// Save the energies
 	pe = state.getPotentialEnergy();
@@ -419,20 +332,135 @@ void OPENMM::integrateTrajectory(int steps) {
 		);
 	}
 
-	// Prin final pe, ke and first 10 positions
-	std::cout << "After integration: Potential Energy = " << pe << " kJ/mol, Kinetic Energy = " << ke << " kJ/mol" << std::endl;
-	for (size_t i = 0; i < std::min(size_t(10), simbodyAtomsPositionsCache.size()); ++i) {
-		std::cout << "Atom " << i << " position after integration: (" << simbodyAtomsPositionsCache[i][0] << ", " << simbodyAtomsPositionsCache[i][1] << ", " << simbodyAtomsPositionsCache[i][2] << ")" << std::endl;
-	}
-
-	return;
+	// Save the forces
+	ommForcesCache = state.getForces();
 }
 
-// dumm->setOpenMMvelocities
-// OMM_calcKineticEnergy
-// dumm->OMM_integrateTrajectory
-// OMM_calcPotentialEnergy
-// dumm->OMM_getPositions()
-// dumm->OMM_setOpenMMPositions()
+void OPENMM::getEnergyAndForces(
+        const std::vector<std::size_t>& nax2daix,
+        const std::vector<std::size_t>& nax2iax,
+        const std::vector<std::size_t>& nax2ibx,
+        const SimTK::Vector_<SimTK::Vec3>& includedAtomStation_G,
+        const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
+        SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
+        SimTK::Real &energy)
+{
+	ensureInitialized();
+	SimTK_ASSERT_ALWAYS(nax2iax.size() == nax2ibx.size(),
+		"OPENMM::getEnergyAndForces(): nax2iax and nax2ibx must have the same size.");
+	SimTK_ASSERT_ALWAYS(includedAtomPos_G.size() == numAtoms,
+		"OPENMM::getEnergyAndForces(): includedAtomPos_G size must match number of atoms.");
 
-// OMM_*
+	// std::cout << "\tOPENMM::getEnergyAndForces(): numAtoms = " << numAtoms << ", nax2iax.size() = " << nax2iax.size() << std::endl;
+
+	// Set positions in OpenMM context
+	for (std::size_t nax = 0; nax < nax2iax.size(); ++nax) {
+		const std::size_t dAIx = nax2daix[nax];
+		const std::size_t iax = nax2iax[nax];
+		const SimTK::Vec3& pos_G = includedAtomPos_G[iax];
+
+		// std::cout << "\tnax " << nax << ": dAIx = " << dAIx << ", iax = " << iax
+		// 	<< ", pos_G = (" << pos_G[0] << ", " << pos_G[1] << ", " << pos_G[2] << ")" << std::endl;
+
+		ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
+	}
+	context->setPositions(ommAtomsPositionsCache);
+
+	// bool checkPotentialEnergyManually = true;
+	// if (checkPotentialEnergyManually){
+	// 	const int groupHarmonicBondStretch = 0;
+	// 	const int groupHarmonicAngleForce = 1;
+	// 	const int groupPeriodicTorsionForce = 2;
+	// 	const int groupNonbondedForce = 3;
+	// 	const int groupThermostat = 4;
+	// 	const int groupGBSAOBCForce = 5;
+		
+	// 	// calculate total potential energy manually
+	// 	state = context->getState(OpenMM::State::Energy);
+	// 	std::cout << "Total energy is " << state.getPotentialEnergy() << std::endl;
+
+	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicBondStretch);
+	// 	std::cout << "HarmonicBondForce is " << state.getPotentialEnergy() << std::endl;
+
+	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicAngleForce);
+	// 	std::cout << "HarmonicAngleForce is " << state.getPotentialEnergy() << std::endl;
+
+	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupPeriodicTorsionForce);
+	// 	std::cout << "PeriodicTorsionForce is " << state.getPotentialEnergy() << std::endl;
+
+	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupNonbondedForce);
+	// 	std::cout << "NonbondedForce is " << state.getPotentialEnergy() << std::endl;
+
+	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupThermostat);
+	// 	std::cout << "AndersenThermostat is " << state.getPotentialEnergy() << std::endl;
+
+	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupGBSAOBCForce);
+	// 	std::cout << "GBSAOBCForce is " << state.getPotentialEnergy() << std::endl;
+	// }
+
+	// SimTK_ASSERT_ALWAYS(false, "checkpoint set positions");
+
+
+	// Get state with energy and forces
+	state = context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
+	pe = state.getPotentialEnergy();
+	ommForcesCache = state.getForces();
+
+	// Return energy
+	energy += pe;
+
+	// Map forces from atoms to bodies
+    for (std::size_t nax = 0; nax < nax2ibx.size(); ++nax)
+    {
+		const std::size_t dAIx = nax2daix[nax];
+		const std::size_t iax = nax2iax[nax];
+		const std::size_t ibx = nax2ibx[nax];
+
+    	const SimTK::Vec3 simForce(ommForcesCache[dAIx][0], ommForcesCache[dAIx][1], ommForcesCache[dAIx][2]);
+    	includedBodyForces_G[ibx] += SimTK::SpatialVec(includedAtomStation_G[iax] % simForce, simForce);
+    }
+}
+
+std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> OPENMM::computePeriodicBoxVectors_Context(
+	double a_length, double b_length, double c_length,
+    double alpha, double beta, double gamma)
+{
+	ensureInitialized();
+	
+	const double TOL = 1e-6;
+
+	// // Convert angles from degrees to radians
+	// alpha = SimTK::Deg2Rad * alpha;
+	// beta  = SimTK::Deg2Rad * beta;
+	// gamma = SimTK::Deg2Rad * gamma;
+    
+		// Compute the box vectors
+    OpenMM::Vec3 a(a_length, 0.0, 0.0);
+
+    OpenMM::Vec3 b(b_length * std::cos(gamma),
+           b_length * std::sin(gamma),
+           0.0);
+
+    double cx = c_length * std::cos(beta);
+    double cy = c_length * (std::cos(alpha) - std::cos(beta) * std::cos(gamma)) / std::sin(gamma);
+    double cz = std::sqrt(c_length * c_length - cx * cx - cy * cy);
+
+    OpenMM::Vec3 c(cx, cy, cz);
+
+    // Zero out small components
+    for (int i = 0; i < 3; i++) {
+        if (std::abs(a[i]) < TOL) a[i] = 0.0;
+        if (std::abs(b[i]) < TOL) b[i] = 0.0;
+        if (std::abs(c[i]) < TOL) c[i] = 0.0;
+    }
+
+    // Reduced form (OpenMM requirement)
+    if (b[1] != 0.0)
+        c -= b * std::round(c[1] / b[1]);
+    if (a[0] != 0.0)
+        c -= a * std::round(c[0] / a[0]);
+    if (a[0] != 0.0)
+        b -= a * std::round(b[0] / a[0]);
+
+    return std::make_tuple(a, b, c);
+}

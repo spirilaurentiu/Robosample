@@ -510,15 +510,40 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
 /*
  * Angle
  */
-SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2);
+SimTK::Real bAngle(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2);
 
 /*
  * Dihedral angle
  */
-SimTK::Real bDihedral(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3);
+SimTK::Real bDihedral(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2, const SimTK::Vec3& pos3);
 
-/**  Get a unique name based on number **/
-std::string GetUniqueName(int key);
+/**
+ * @brief Compute the signed minimal difference between two angles on the circle.
+ *
+ * This function returns the geodesic (shortest-arc) angular difference
+ * between angles @p a and @p b, correctly accounting for periodicity.
+ * The result is wrapped to the interval (-pi, pi].
+ *
+ * Mathematically:
+ *   d = wrap_{(-pi,pi]}(b - a)
+ *
+ * Implementation uses the identity:
+ *   atan2(sin(d), cos(d))
+ * which is numerically stable and avoids branch logic.
+ *
+ * @param a Reference angle (radians)
+ * @param b Comparison angle (radians)
+ * @return Signed angular difference (radians), in (-pi, pi]
+ *
+ * Notes:
+ * - The magnitude |d| is the physically meaningful angular error.
+ * - The sign indicates direction of rotation from a to b.
+ * - Suitable for RMS angular drift, constraint drift, and kinematic validation.
+ */
+inline SimTK::Real circularAngleDiffSigned(SimTK::Real a, SimTK::Real b) {
+    SimTK::Real d = b - a;
+    return std::atan2(std::sin(d), std::cos(d));
+}
 
 /** Magnitude (norm) of a vector of reals **/
 SimTK::Real magnitude(std::vector<SimTK::Real>& V);
@@ -782,10 +807,6 @@ SimTK::Quaternion multiplyQuaternions(SimTK::Quaternion& Q1, SimTK::Quaternion& 
 #define LOOKAHEADHMCSAMPLER LAHMC
 #endif
 
-
-
-
-
 // Replacement for std::clamp (C++14 and earlier)
 template <typename T>
 inline constexpr const T& clamp(const T& v, const T& lo, const T& hi)
@@ -794,6 +815,25 @@ inline constexpr const T& clamp(const T& v, const T& lo, const T& hi)
     return (v < lo) ? lo : (hi < v ? hi : v);
 }
 
+/// @brief Numerically stable computation of log(sin^2(pitch))
+/// using a Taylor expansion near pitch = 0 for smoothness.
+///
+/// This avoids log(0) and ensures continuous derivatives,
+/// useful for energy/gradient computations (e.g., orientation penalties).
+inline constexpr SimTK::Real safeLogSineSqr(SimTK::Real pitch)
+{
+    constexpr SimTK::Real delta = 1e-6; // threshold for small angles
+
+    if (std::abs(pitch) < delta) {
+        // Use series expansion: log(sin^2(x)) ≈ 2log|x| - x^2/3.
+        // Here we replace |x| by δ to ensure continuity at ±δ,
+        // and subtract a quadratic correction for smooth derivative.
+        return 2.0 * std::log(delta) - (pitch * pitch - delta * delta) / (3.0 * delta * delta);
+    } else {
+        const SimTK::Real s = std::sin(pitch);
+        return 2.0 * std::log(std::abs(s));
+    }
+}
 
 #include <cstddef>   // for size_t, ptrdiff_t
 #include <iterator>  // for begin(), end()

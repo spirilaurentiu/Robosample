@@ -900,31 +900,11 @@ void PrintMat33(SimTK::Mat33 M, int decimal_places,
         }
         std::cout << std::endl;
     }
-
 }
 
-/*! <-- Print Transform
-  --> */
-// void PrintTransform(SimTK::Transform T, int decimal_places,
-// 	std::string header, std::string rowPrefix)
-// {
-//     std::cout << header << std::endl;
-//     const SimTK::Mat44 M = T.toMat44();
-//     for(int i = 0; i < 4; i++){
-// 		std::cout << rowPrefix;
-//         for(int k = 0; k < 4; k++){
-//             std::cout
-// 				<< std::setw(6 + decimal_places) << std::fixed
-// 				<< std::setprecision(decimal_places)			
-// 				<< M(i, k) << " ";
-//         }
-//         std::cout << std::endl;
-//     }
-// }
 
-/*! <-- Angle
-  --> */
-SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
+// Calculate angle in radians between three positions.
+SimTK::Real bAngle(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2)
 {
 	SimTK::Vec3 v01 = pos1 - pos0;
 	SimTK::Vec3 v02 = pos2 - pos0;
@@ -934,15 +914,9 @@ SimTK::Real bAngle(SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2)
 	return std::acos(angleCos);
 }
 
-/*! <--
- * Dihedral angle
-  --> */
-SimTK::Real bDihedral(
-SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3)
+// Calculate dihedral angle in radians between four positions.
+SimTK::Real bDihedral(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2, const SimTK::Vec3& pos3)
 {
- 
-  //std::cout << "bDihedral pos " << pos0 << ' ' << pos1 << ' ' << pos2 << ' ' << pos3 << std::endl;
- 
   SimTK::Vec3 diffs[3];
   SimTK::Vec3 normals[2];
   double dots[2];
@@ -961,50 +935,8 @@ SimTK::Vec3& pos0, SimTK::Vec3& pos1, SimTK::Vec3& pos2, SimTK::Vec3& pos3)
   psin = dots[0] * std::sqrt(dots[1]);
   pcos = (normals[0][0] * normals[1][0]) + (normals[0][1] * normals[1][1]) + (normals[0][2] * normals[1][2]);
 
-  //std::cout << "bDihedral diffs " << diffs[0] << ' ' << diffs[1] << ' ' << diffs[2] << std::endl;
-  //std::cout << "bDihedral normals " << normals[0] << ' ' << normals[1] << std::endl;
-  //std::cout << "bDihedral dots " << dots[0] << ' ' << dots[1] << std::endl;
-  //std::cout << "bDihedral psin pcos " << psin << ' ' << pcos << std::endl;
-  //std::cout << " bDihedral return " << atan2(psin, pcos) << "  ==========" << std::endl; 
-  
-
   return atan2(psin, pcos);
 }
-
-/**  Get a unique name based on number **/
-// Assign a unique name specific to Gmolmodel. There are 60 available
-// ASCII readble characters: 0-9, A-Z and a-z. This gives a 12.960.000
-// of possible 4 character combinations in a number of the form
-// a*60^3 + b*60^2 + c*60^1 + d. However the readble characters do not
-// form a continuous interval in the ASCII table so they have to be
-// spread.
-std::string GetUniqueName(int nameCounter) {
-
-    std::string string_name;
-    std::string aStr, bStr, cStr, dStr;
-    int a=65, b=65, c=65, d=65;
-    int aRest=0, bRest=0, cRest=0;
-
-    a = int(nameCounter / std::pow(25, 3));
-    aStr = (char)(a + 65);
-    aRest = nameCounter % int(std::pow(25, 3));
-
-    b = int(aRest / std::pow(25, 2));
-    bStr = (char)(b + 65);
-    bRest = aRest % int(std::pow(25, 2));
-
-    c = int(bRest / std::pow(25, 1));
-    cStr = (char)(c + 65);
-    cRest = bRest % int(std::pow(25, 1));
-
-    d = int(cRest / std::pow(25, 0));
-    dStr = (char)(d + 65);
-
-    string_name = aStr + bStr + cStr + dStr;
-
-    return string_name;
-}
-
 
 /** Magnitude (norm) of a vector of reals **/
 SimTK::Real magnitude(std::vector<SimTK::Real>& V) {

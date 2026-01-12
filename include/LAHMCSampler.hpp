@@ -62,10 +62,10 @@ public:
     and variables that store the energies, both needed for the 
     acception-rejection step. Also realize velocities and initialize 
     the timestepper. **/
-    virtual bool initialize(SimTK::State& advanced);
+    virtual void initialize();
 
     /** Same as initialize **/
-    virtual bool reinitialize(SimTK::State& advanced) ;
+    virtual void reinitialize(SimTK::State& advanced) ;
 
     /** Get the TimeStepper that manages the integrator **/
     //const SimTK::TimeStepper * getTimeStepper();
@@ -144,7 +144,7 @@ public:
     /** Accetion rejection step **/
     virtual bool accRejStep(SimTK::State& someState);
 
-    bool sample_iteration(SimTK::State& someState);
+    bool sample_iteration();
 
     /** Modifies Q randomly
      **/

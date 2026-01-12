@@ -5,7 +5,7 @@ constexpr double DefaultBondLength = 0.19; // nm
 constexpr double Cos120 = -0.5; // cos(120 degrees)
 constexpr double Sin120 = 0.866025; // sin(120 degrees)
 
-void Atom::createSingleAtom() {
+void RoboAtom::createSingleAtom() {
 
 	// SimTK_ASSERT_ALWAYS(getNumBondsInvolved() <= 4,
 	// 	"Atom::createSingleAtom(): Atoms with more than 4 bonds are not supported.");
@@ -97,7 +97,7 @@ void Atom::createSingleAtom() {
 	compoundSingleAtom->setCompoundName(atomSpec.uniqueAtomName);
 }
 
-std::string Atom::getElementName() const {
+std::string RoboAtom::getElementName() const {
 	switch (atomSpec.atomicNumber)
 	{
 		case 1: return "hydrogen";
@@ -219,7 +219,7 @@ std::string Atom::getElementName() const {
 		default: return "unknown";
 	}
 }
-std::string Atom::getElementSymbol() const {
+std::string RoboAtom::getElementSymbol() const {
 	switch (atomSpec.atomicNumber)
 	{
 		case 1: return "H";

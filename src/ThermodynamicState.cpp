@@ -3,7 +3,7 @@
 ThermodynamicState::ThermodynamicState(
 		int index,
 
-		std::vector<Atom>& atoms_,
+		std::vector<RoboAtom>& atoms_,
 		std::vector<std::vector<int>>& zMatrixTable_
 		//, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 		) :
@@ -30,7 +30,7 @@ ThermodynamicState::ThermodynamicState(
 		const std::vector<SimTK::Real>& argTimesteps,
 		const std::vector<int>& argMdsteps,
 
-		std::vector<Atom>& atoms_,
+		std::vector<RoboAtom>& atoms_,
 		std::vector<std::vector<int>>& zMatrixTable_
 		//, std::vector<std::vector<SimTK::Real>>& zMatrixBAT_ref_
 	) :

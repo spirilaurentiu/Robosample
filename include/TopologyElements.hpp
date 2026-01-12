@@ -6,10 +6,11 @@
 #include "Molmodel.h"
 
 
-struct AtomDefinition {
+struct RoboAtomDefinition {
     // Indices
     int globalIndex = 0;
     int prmtopIndex = 0;
+    int compoundAtomIndex = 0;
     int moleculeIndex = 0;
     int residueIndex = 0;
 
@@ -35,12 +36,15 @@ struct AtomDefinition {
     SimTK::Real massInDaltons = 0.0;
     SimTK::Real vdwRadiusInNm = 0.0, sigmaInNm = 0.0;
     SimTK::Real vdwWellDepthInKJ = 0.0;
+    SimTK::Real solventRadiusInNm = 0.0;
+    SimTK::Real screen = 0.0;
     SimTK::Real x_nm = 0.0, y_nm = 0.0, z_nm = 0.0;
 };
 
-struct BondStretchDefinition {
-    int parentAtomGlobalIndex = 0;
-	int childAtomGlobalIndex = 0;
+struct RoboBondStretchDefinition {
+    int parentAtomGlobalIndex = 0, childAtomGlobalIndex = 0;
+    int parentCompoundAtomIndex = 0, childCompoundAtomIndex = 0;
+
     int bondGlobalIndex = 0;
     int moleculeIndex = 0;
 	bool ringClosing = false;
@@ -49,17 +53,19 @@ struct BondStretchDefinition {
 	SimTK::Real nominalLengthInNm = 0.0;
 };
 
-struct BondBendDefinition {
+struct RoboBondBendDefinition {
     int globalIndex1 = 0, globalIndex2 = 0, globalIndex3 = 0;
-
+    int compoundAtomIndex1 = 0, compoundAtomIndex2 = 0, compoundAtomIndex3 = 0;
+    int moleculeIndex = 0;
 	SimTK::Real stiffnessInKJPerRadSq = 0.0;
     SimTK::Real nominalAngleInDeg = 0.0;
 };
 
-struct BondTorsionDefinition {
+struct RoboBondTorsionDefinition {
     int globalIndex1 = -1, globalIndex2 = -1, globalIndex3 = -1, globalIndex4 = -1;
+    int compoundAtomIndex1 = -1, compoundAtomIndex2 = -1, compoundAtomIndex3 = -1, compoundAtomIndex4 = -1;
+    int moleculeIndex = 0;
     bool improper = false;
-
     SimTK::Real ampInKJ_1 = -1.0, phaseInDegrees_1 = -1.0, periodicity_1 = -1;
     SimTK::Real ampInKJ_2 = -1.0, phaseInDegrees_2 = -1.0, periodicity_2 = -1;
     SimTK::Real ampInKJ_3 = -1.0, phaseInDegrees_3 = -1.0, periodicity_3 = -1;
@@ -67,11 +73,11 @@ struct BondTorsionDefinition {
     SimTK::Real ampInKJ_5 = -1.0, phaseInDegrees_5 = -1.0, periodicity_5 = -1;
 };
 
-class Atom {
+class RoboAtom {
 public:
-    Atom() = default;
+    RoboAtom() = default;
     
-    Atom(const AtomDefinition& spec) : atomSpec(spec) {
+    RoboAtom(const RoboAtomDefinition& spec) : atomSpec(spec) {
         CoordsInNm = SimTK::Vec3(atomSpec.x_nm, atomSpec.y_nm, atomSpec.z_nm);
         availableBonds = atomSpec.neighborsGlobalIndices.size();
         element = SimTK::Element(getAtomicNumber(), getElementName(), getElementSymbol(), getMassInDaltons());
@@ -79,6 +85,7 @@ public:
 
     int getGlobalIndex() const { return atomSpec.globalIndex; }
     int getPrmtopIndex() const { return atomSpec.prmtopIndex; }
+    SimTK::Compound::AtomIndex getCompoundAtomIndex() const { return SimTK::Compound::AtomIndex(atomSpec.compoundAtomIndex); }
 
     const std::string& getAtomClassName() const { return atomSpec.atomClassName; }
     SimTK::DuMM::AtomClassIndex getAtomClassIndex() const { return SimTK::DuMM::AtomClassIndex(atomSpec.atomClassIndex); }
@@ -105,15 +112,14 @@ public:
     SimTK::BiotypeIndex getBiotypeIndex() const { return biotypeIndex; }
     void setBiotypeIndex(SimTK::BiotypeIndex bIdx) { biotypeIndex = bIdx; }
 
-    SimTK::DuMM::AtomIndex getDuMMAtomIndex() const { return dAIx; }
-    void setDuMMAtomIndex(SimTK::DuMM::AtomIndex dIdx) { dAIx = dIdx; }
-
     int getAtomicNumber() const { return atomSpec.atomicNumber; }
     SimTK::Real getChargeInE() const { return atomSpec.chargeInE; }
     SimTK::mdunits::Mass getMassInDaltons() const { return atomSpec.massInDaltons; }
     SimTK::Real getVdwRadiusInNm() const { return atomSpec.vdwRadiusInNm; }
     SimTK::Real getSigmaInNm() const { return atomSpec.sigmaInNm; }
     SimTK::Real getVdwWellDepthInKJ() const { return atomSpec.vdwWellDepthInKJ; }
+    SimTK::Real getSolventRadiusInNm() const { return atomSpec.solventRadiusInNm; }
+    SimTK::Real getScreen() const { return atomSpec.screen; }
 
     std::string getElementName() const;
     std::string getElementSymbol() const;
@@ -130,9 +136,6 @@ public:
     const SimTK::Vec3& getCoordsInNm() const { return CoordsInNm; }
     void setCoordsInNm(const SimTK::Vec3& c) { CoordsInNm = c; }
 
-    SimTK::Compound::AtomIndex getCompoundAtomIndex() const { return compoundAtomIndex; }
-    void setCompoundAtomIndex(SimTK::Compound::AtomIndex cIdx) { compoundAtomIndex = cIdx; }
-
     const SimTK::Compound::SingleAtom& getSingleAtom() const { return *compoundSingleAtom; }
     void createSingleAtom();
 
@@ -142,13 +145,12 @@ public:
 
 private:
 
-    AtomDefinition atomSpec;
+    RoboAtomDefinition atomSpec;
     SimTK::Element element;
 
     int availableBonds = 0;
 
     SimTK::BiotypeIndex biotypeIndex;
-    SimTK::DuMM::AtomIndex dAIx; // ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
     SimTK::Vec3 CoordsInNm = SimTK::Vec3(SimTK::NaN);
 
@@ -160,17 +162,16 @@ private:
     // in the first case, the calls are sequential, so we waste some time
     // in the second case, the calls are random and the article shows that it is actually better to have the objects allocated on the heap
     SimTK::Compound::SingleAtom* compoundSingleAtom = nullptr;
-    SimTK::Compound::AtomIndex compoundAtomIndex; // this is the local index in the compound, not the global index. it's different from globalIndex
 };
 
 
-class BondStretch {
+class RoboBondStretch {
 public:
-    BondStretch() = default;
+    RoboBondStretch() = default;
 
-    BondStretch(const BondStretchDefinition& spec) : bondSpec(spec) {}
+    RoboBondStretch(const RoboBondStretchDefinition& spec) : bondSpec(spec) {}
 
-    bool operator==(const BondStretch& other) const {
+    bool operator==(const RoboBondStretch& other) const {
         return (bondSpec.parentAtomGlobalIndex == other.bondSpec.parentAtomGlobalIndex && bondSpec.childAtomGlobalIndex == other.bondSpec.childAtomGlobalIndex) ||
                (bondSpec.parentAtomGlobalIndex == other.bondSpec.childAtomGlobalIndex && bondSpec.childAtomGlobalIndex == other.bondSpec.parentAtomGlobalIndex);
     }
@@ -185,6 +186,10 @@ public:
 
     int getParentAtomGlobalIndex() const { return bondSpec.parentAtomGlobalIndex; }
     int getChildAtomGlobalIndex() const { return bondSpec.childAtomGlobalIndex; }
+
+    SimTK::Compound::AtomIndex getParentCompoundAtomIndex() const { return SimTK::Compound::AtomIndex(bondSpec.parentCompoundAtomIndex); }
+    SimTK::Compound::AtomIndex getChildCompoundAtomIndex() const { return SimTK::Compound::AtomIndex(bondSpec.childCompoundAtomIndex); }
+
     int getBondGlobalIndex() const { return bondSpec.bondGlobalIndex; }
     int getMoleculeIndex() const { return bondSpec.moleculeIndex; }
     bool isRingClosing() const { return bondSpec.ringClosing; }
@@ -193,38 +198,53 @@ public:
     SimTK::Real getNominalLengthInNm() const { return bondSpec.nominalLengthInNm; }
 
 private:
-    BondStretchDefinition bondSpec;
+    RoboBondStretchDefinition bondSpec;
 
 	std::vector<SimTK::BondMobility::Mobility> mobilities;
 	// std::vector<SimTK::Real> uScaleFactors = { 1.0f };
 };
 
-class BondBend {
+class RoboBondBend {
 public:
-    BondBend() = default;
+    RoboBondBend() = default;
 
-    BondBend(const BondBendDefinition & spec) : angleSpec(spec) {}
+    RoboBondBend(const RoboBondBendDefinition & spec) : angleSpec(spec) {}
 
     int getGlobalIndex1() const { return angleSpec.globalIndex1; }
     int getGlobalIndex2() const { return angleSpec.globalIndex2; }
     int getGlobalIndex3() const { return angleSpec.globalIndex3; }
+
+    SimTK::Compound::AtomIndex getCompoundAtomIndex1() const { return SimTK::Compound::AtomIndex(angleSpec.compoundAtomIndex1); }
+    SimTK::Compound::AtomIndex getCompoundAtomIndex2() const { return SimTK::Compound::AtomIndex(angleSpec.compoundAtomIndex2); }
+    SimTK::Compound::AtomIndex getCompoundAtomIndex3() const { return SimTK::Compound::AtomIndex(angleSpec.compoundAtomIndex3); }
+
+    int getMoleculeIndex() const { return angleSpec.moleculeIndex; }
+
     SimTK::Real getStiffnessInKJPerRadSq() const { return angleSpec.stiffnessInKJPerRadSq; }
     SimTK::Real getNominalAngleInDeg() const { return angleSpec.nominalAngleInDeg; }
 
 private:
-	BondBendDefinition angleSpec;
+	RoboBondBendDefinition angleSpec;
 };
 
-class BondTorsion {
+class RoboBondTorsion {
 public:
-    BondTorsion() = default;
+    RoboBondTorsion() = default;
 
-    BondTorsion(const BondTorsionDefinition& spec) : torsionSpec(spec) {}
+    RoboBondTorsion(const RoboBondTorsionDefinition& spec) : torsionSpec(spec) {}
 
     int getGlobalIndex1() const { return torsionSpec.globalIndex1; }
     int getGlobalIndex2() const { return torsionSpec.globalIndex2; }
     int getGlobalIndex3() const { return torsionSpec.globalIndex3; }
     int getGlobalIndex4() const { return torsionSpec.globalIndex4; }
+
+    SimTK::Compound::AtomIndex getCompoundAtomIndex1() const { return SimTK::Compound::AtomIndex(torsionSpec.compoundAtomIndex1); }
+    SimTK::Compound::AtomIndex getCompoundAtomIndex2() const { return SimTK::Compound::AtomIndex(torsionSpec.compoundAtomIndex2); }
+    SimTK::Compound::AtomIndex getCompoundAtomIndex3() const { return SimTK::Compound::AtomIndex(torsionSpec.compoundAtomIndex3); }
+    SimTK::Compound::AtomIndex getCompoundAtomIndex4() const { return SimTK::Compound::AtomIndex(torsionSpec.compoundAtomIndex4); }
+
+    int getMoleculeIndex() const { return torsionSpec.moleculeIndex; }
+
     bool isImproper() const { return torsionSpec.improper; }
 
     SimTK::Real getAmpInKJ_1() const { return torsionSpec.ampInKJ_1; }
@@ -248,5 +268,5 @@ public:
     int getPeriodicity_5() const { return torsionSpec.periodicity_5; }
 
 private:
-    BondTorsionDefinition torsionSpec;
+    RoboBondTorsionDefinition torsionSpec;
 };

@@ -14,7 +14,7 @@
 using namespace SimTK;
 
 /****
- *  Trivalent Atom Class with tetrahedral geometry.
+ *  Trivalent RoboAtom Class with tetrahedral geometry.
  *  Bond centers are named "bond1", "bond2", and "bond3"
  ****/
 TrivalentAtomTetra::TrivalentAtomTetra(

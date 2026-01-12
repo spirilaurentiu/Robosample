@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File (Debug Robosample Library)",
+            "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
@@ -14,44 +14,16 @@
             },
             "envFile": "${workspaceFolder}/.env",
             "args": [
-                "1APQ.debug",
-                "data-raw/1APQ.prmtop",
-                "data-raw/1APQ_min.inpcrd",
-                "42",
-                "10",
-                "10",
+                "2ala.2ala.test",
+                "data-raw/2ala.2ala.prmtop",
+                "data-raw/2ala.2ala.inpcrd",
+                "6000",
+                "0",
                 "1",
-                "tdnr",
-                "[]"
+                "1",
             ],
             "cwd": "${workspaceFolder}/build",
         },
-        {
-            "name": "(gdb) Attach to Python",
-            "type": "cppdbg",
-            "request": "attach",
-            "program": "${env:CONDA_PREFIX}/bin/python",
-            "processId": "${command:pickProcess}",
-            "MIMode": "gdb",
-            "miDebuggerPath": "/usr/bin/gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ],
-            "cwd": "${workspaceFolder}/build",
-            "stopAtEntry": false
-        },
-
-
-
         {
             "name": "Python + C++ (.so) Debug (lldb)",
             "type": "cppdbg", // is this lldb?
@@ -61,15 +33,13 @@
             "program": "/home/victor/miniforge3/envs/robo_dev_py312/bin/python3",
             "args": [
                 "${workspaceFolder}/build/roborun.py",
-                "1apq_test",
-                "${workspaceFolder}/build/data-raw/1APQ.prmtop",
-                "${workspaceFolder}/build/data-raw/1APQ_min.inpcrd",
+                "2ala.2ala.test",
+                "${workspaceFolder}/build/data-raw/2ala.2ala.prmtop",
+                "${workspaceFolder}/build/data-raw/2ala.2ala.inpcrd",
                 "6000",
-                "2",
-                "2",
+                "0",
                 "1",
-                "tdnr",
-                "\"[[]]\"",
+                "1",
             ],
 
             // Required: stop when .so is loaded, so breakpoints become active

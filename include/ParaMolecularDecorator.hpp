@@ -7,107 +7,107 @@
  * This is part of Robosampling                                               *
  */
 
-#include "Robo.hpp"
-#include "Topology.hpp"
+// #include "Robo.hpp"
+// #include "Topology.hpp"
 
-using namespace SimTK;
+// using namespace SimTK;
 
-class ForceArrowGenerator : public DecorationGenerator {
+// class ForceArrowGenerator : public DecorationGenerator {
 
-public:
-    ForceArrowGenerator(const MultibodySystem& system,
-                        const CompliantContactSubsystem& complCont) 
-    :   m_system(system), m_compliant(complCont) {}
+// public:
+//     ForceArrowGenerator(const MultibodySystem& system,
+//                         const CompliantContactSubsystem& complCont) 
+//     :   m_system(system), m_compliant(complCont) {}
 
-    virtual void generateDecorations(const State& state, Array_<DecorativeGeometry>& geometry);
+//     virtual void generateDecorations(const State& state, Array_<DecorativeGeometry>& geometry);
 
-private:
-    const MultibodySystem&              m_system;
-    const CompliantContactSubsystem&    m_compliant;
+// private:
+//     const MultibodySystem&              m_system;
+//     const CompliantContactSubsystem&    m_compliant;
 
-};
+// };
 
 
-class ParaMolecularDecorator : public DecorationGenerator {
-public:
-	ParaMolecularDecorator(SimTK::CompoundSystem *argCompoundSystem,
-		SimTK::SimbodyMatterSubsystem *argMatter,
-		SimTK::DuMMForceFieldSubsystem *argDumm,
-		SimTK::GeneralForceSubsystem *argForces
-	);
+// class ParaMolecularDecorator : public DecorationGenerator {
+// public:
+// 	ParaMolecularDecorator(SimTK::CompoundSystem *argCompoundSystem,
+// 		SimTK::SimbodyMatterSubsystem *argMatter,
+// 		SimTK::DuMMForceFieldSubsystem *argDumm,
+// 		SimTK::GeneralForceSubsystem *argForces
+// 	);
 
-	void AddMolecule(Topology *argMolecule);
+// 	void AddMolecule(Topology *argMolecule);
 
-	void loadPoint(const Vec3 point);
+// 	void loadPoint(const Vec3 point);
 
-	void loadLine(const Vec3 p1, const Vec3 p2);
+// 	void loadLine(const Vec3 p1, const Vec3 p2);
 
-	void loadArrow(const Vec3 p1, const Vec3 p2);
+// 	void loadArrow(const Vec3 p1, const Vec3 p2);
 
-	void updateArrow(int which, const Vec3 p1, const Vec3 p2);
+// 	void updateArrow(int which, const Vec3 p1, const Vec3 p2);
 
-	void clearPoints(void);
+// 	void clearPoints(void);
 
-	void clearLines(void);
+// 	void clearLines(void);
 
-	// Draw a frame
-	void drawFrame(
-		Array_<DecorativeGeometry>& geometry, SimTK::Transform G_X_F,
-		SimTK::Real scaleFactor, SimTK::Real lineThickness, SimTK::Vec3 color,
-		std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor,
-		SimTK::Vec3 textOffset
-	);
+// 	// Draw a frame
+// 	void drawFrame(
+// 		Array_<DecorativeGeometry>& geometry, SimTK::Transform G_X_F,
+// 		SimTK::Real scaleFactor, SimTK::Real lineThickness, SimTK::Vec3 color,
+// 		std::string text, SimTK::Real textScaleFactor, SimTK::Vec3 textColor,
+// 		SimTK::Vec3 textOffset
+// 	);
 
-	// Draw a line
-	void drawLine(Array_<DecorativeGeometry>& geometry,
-		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
-		int numOfDofs, SimTK::Real lineThickness
-	);
+// 	// Draw a line
+// 	void drawLine(Array_<DecorativeGeometry>& geometry,
+// 		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
+// 		int numOfDofs, SimTK::Real lineThickness
+// 	);
 
-	// Draw a line
-	void drawArrow(Array_<DecorativeGeometry>& geometry,
-		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
-		int numOfDofs, SimTK::Real lineThickness
-	);
+// 	// Draw a line
+// 	void drawArrow(Array_<DecorativeGeometry>& geometry,
+// 		SimTK::Transform G_X_B, SimTK::Transform G_X_M,
+// 		int numOfDofs, SimTK::Real lineThickness
+// 	);
 
-	void drawLoadedArrows(Array_<DecorativeGeometry>& geometry);
+// 	void drawLoadedArrows(Array_<DecorativeGeometry>& geometry);
 
-	// Draw DuMM based geometry
-	void drawDummBasedGeometry(Array_<DecorativeGeometry>& geometry,
-		const State& someState);
+// 	// Draw DuMM based geometry
+// 	void drawDummBasedGeometry(Array_<DecorativeGeometry>& geometry,
+// 		const State& someState);
 
-	void generateDecorations(const State& state,
-		Array_<DecorativeGeometry>& geometry);
+// 	void generateDecorations(const State& state,
+// 		Array_<DecorativeGeometry>& geometry);
 
-	//~ParaMolecularDecorator(void);
+// 	//~ParaMolecularDecorator(void);
 
-	// 
-	void setAtomTargets(std::vector<std::pair<Atom *,
-		SimTK::Vec3>> residueAtomLocations);
+// 	// 
+// 	void setAtomTargets(std::vector<std::pair<Atom *,
+// 		SimTK::Vec3>> residueAtomLocations);
 
-	void updPCommVars(SimTK::Real argCommVar);
-	void updFCommVars(SimTK::Real argCommVar);
-	void updMCommVars(SimTK::Real argCommVar);
-	void updBCommVars(SimTK::Real argCommVar);
+// 	void updPCommVars(SimTK::Real argCommVar);
+// 	void updFCommVars(SimTK::Real argCommVar);
+// 	void updMCommVars(SimTK::Real argCommVar);
+// 	void updBCommVars(SimTK::Real argCommVar);
 	
 
-private:
-	SimTK::CompoundSystem *compoundSystem;
-	SimTK::SimbodyMatterSubsystem *matter;
-	SimTK::DuMMForceFieldSubsystem *dumm;
-	SimTK::GeneralForceSubsystem *forces;
+// private:
+// 	SimTK::CompoundSystem *compoundSystem;
+// 	SimTK::SimbodyMatterSubsystem *matter;
+// 	SimTK::DuMMForceFieldSubsystem *dumm;
+// 	SimTK::GeneralForceSubsystem *forces;
 
-	std::vector<Topology *> molecules;
+// 	std::vector<Topology *> molecules;
 
-	Array_< Vec3 >  points;
-	Array_< std::pair< Vec3, Vec3 > > lines;
-	Array_< std::pair< Vec3, Vec3 > > arrows;
+// 	Array_< Vec3 >  points;
+// 	Array_< std::pair< Vec3, Vec3 > > lines;
+// 	Array_< std::pair< Vec3, Vec3 > > arrows;
 
-	// Gmolmodel specific
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
+// 	// Gmolmodel specific
+// 	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3> atomTargets;
 
-	SimTK::Real PCommVar, FCommVar, MCommVar, BCommVar;
+// 	SimTK::Real PCommVar, FCommVar, MCommVar, BCommVar;
 
-};
+// };
 
 #endif // __PARAMOLECULARDECORATOR_HPP__

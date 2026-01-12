@@ -9,6 +9,10 @@ buildType:
       short: Release
       long: Build release (no PGO and no LLVM-BOLT) version of Robosample Python library
       buildType: Release
+    RelWithDebInfo:
+      short: Release with Debug Info
+      long: Build release version of Robosample Python library with debug symbols and frame pointers
+      buildType: RelWithDebInfo
     pgo-train:
       short: PGO Train
       long: Run the instrumentation for Profile Guided Optimization

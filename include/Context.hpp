@@ -25,6 +25,14 @@ enum class RUN_TYPE : int {
 	RENE
 };
 
+// [begin, last], not [begin, end)
+struct IteratorPair {
+	IteratorPair() = default;
+	
+	std::size_t begin = 0;
+	std::size_t last = 0;
+};
+
 class Context{
 
     /** @name Constructor **/
@@ -34,7 +42,14 @@ class Context{
 	std::string baseName;
 	bool verbose = false;
 
+	OpenMMEnergyComponents initialOpenMMEnergyComponents;
+
 public:
+
+	OpenMMEnergyComponents getInitialOpenMMEnergyComponents() const {
+		return initialOpenMMEnergyComponents;
+	}
+
 // vector<vector<ATOM>> for each molecule
 	// void createSystem(std::vector<ATOM> atoms, std::vector<BOND> bonds);
 
@@ -48,7 +63,7 @@ public:
 	 * @param nofRoundsTillReblock Number of rounds until reblocking.
 	 * @param runType Type of simulation to run.
 	*/
-	Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq);
+	Context(const std::string& baseName, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq, bool testing);
 
 	void setVerbose(bool verbose);
 	void setNumThreads(int threads);
@@ -61,9 +76,15 @@ public:
 
 	void setNonbonded(int method, SimTK::Real cutoff);
 
-	std::vector<TopologyRange> findMoleculeRnages() const;
-
-	void loadAmberSystem(const std::vector<int>& inRoots, const std::vector<Atom>& inAtoms, const std::vector<BondStretch>& inBonds, const std::vector<BondBend>& inAngles, const std::vector<BondTorsion>& inTorsions);
+	void loadAmberSystem(const std::vector<int>& inRoots,
+						 const std::vector<RoboAtom>& inAtoms,
+						 const std::vector<RoboBondStretch>& inBonds,
+						 const std::vector<RoboBondBend>& inAngles,
+						 const std::vector<RoboBondTorsion>& inTorsions,
+						 const std::vector<IteratorPair>& atomRanges,
+						 const std::vector<IteratorPair>& bondRanges,
+						 const std::vector<IteratorPair>& angleRanges,
+						 const std::vector<IteratorPair>& torsionRanges);
 
 	void Initialize();
 
@@ -79,9 +100,6 @@ public:
 	void realizePosition();
 
 	void passTopologiesToNewWorld(int newWorldIx);
-
-	int getNofMolecules();
-	//------------
 
 	// --- Simulation parameters ---
 
@@ -105,13 +123,25 @@ public:
 	void initializeMixingParamters();
 	//------------
 
+	std::size_t getNofWorlds() const {
+		return worlds.size();
+	}
 
-	std::size_t getNofWorlds() const;
-	World& getWorld(std::size_t which);
-	const World& getWorld(std::size_t which) const;
+	World& getWorld(std::size_t which) {
+		return worlds[which];
+	}
 
-	std::vector<World>& getWorlds();
-	const std::vector<World>& getWorlds() const;
+	const World& getWorld(std::size_t which) const {
+		return worlds[which];
+	}
+
+	std::vector<World>& getWorlds() {
+		return worlds;
+	}
+
+	const std::vector<World>& getWorlds() const {
+		return worlds;
+	}
 
 	// Writeble reference to a samplers advanced state
 	SimTK::State& updAdvancedState(std::size_t whichWorld, std::size_t whichSampler);
@@ -122,52 +152,11 @@ public:
 	// --- Main ---
 	void randomizeWorldIndexes(void);
 	void transferCoordinates_WorldToWorld(int src, int dest);
-	SimTK::Real checkTransferCoordinates_Cart(int srcWIx, int destWIx);
-	SimTK::Real checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian = false);
 
 	void transferCoordinates_ReplicaToWorld(int replicaIx, int destWIx);
 
 	// Relationship BAT - mobod transforms
 	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
-
-	// TRANSFER ============================================================
-
-	void setAtoms_CompoundsAndDuMM(int destWIx, const SimTK::Compound::AtomTargetLocations& atomTargets);
-
-	void setAtoms_XPF_XBM(int wIx);
-
-	SimTK::State&
-	setAtoms_MassProperties(
-		int wIx
-	);
-
-	SimTK::Transform calc_XFM(int wIx, const Topology& topology, SimTK::Compound::AtomIndex& childAIx, SimTK::Compound::AtomIndex& parentAIx, SimTK::BondMobility::Mobility mobility) const;
-
-	void setAtoms_XFM(int wIx);
-
-	SimTK::State& setAtoms_SP_NEW(int destWIx, SimTK::State& someState, const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-
-	// X axis to Z axis switch
-	const SimTK::Transform X_to_Z = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::YAxis);
-	const SimTK::Transform Z_to_X = ~X_to_Z;
-
-	// Y axis to Z axis switch
-	const SimTK::Transform Y_to_Z = SimTK::Transform(SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::XAxis));
-	const SimTK::Transform Z_to_Y = ~Y_to_Z;
-
-	// X axis to X axis switch
-	const SimTK::Transform Y_to_X = SimTK::Rotation(-90*SimTK::Deg2Rad, SimTK::ZAxis);
-	const SimTK::Transform X_to_Y = ~Y_to_X;
-
-
-	std::vector<SimTK::Transform> calc_XPF_XBM(
-		int wIx, Topology& topology,
-		SimTK::Compound::AtomIndex& childAIx,
-		SimTK::Compound::AtomIndex& parentAIx,
-		SimTK::BondMobility::Mobility mobility,
-		const SimTK::State& someState);
-
-	// TRANSFER ------------------------------------------------------------
 
 	// Drilling drl
 	void passThroughBonds_template(int whichWorld);
@@ -235,9 +224,6 @@ public:
 	std::string getOutputDir();
 	void setOutputDir(std::string arg);
 
-	// Write dcd
-	void writeDCDs();
-
 	/**@}**/
 
 	SimTK::Real Dihedral(std::size_t whichWorld, std::size_t whichCompound,
@@ -301,10 +287,6 @@ public:
 	// Get Fixman potential already calculated from replica
 	SimTK::Real getFixman(int replica_i);
 
-	// Calculate Fixman potential of replica J in replica I's back world. Ui(X_j)
-	SimTK::Real calcFixman(int replica_i, int replica_j);
-	// Calculate Fixman potential of replica J in replica I's back world. Ui(X_j)
-	SimTK::Real calcFixman_JinI(int replica_i, int replica_j);
 	// Calculate Fixman potential of replica I in replica J's back world. Uj(X_i)
 	SimTK::Real calcFixman_IinJ(int replica_i, int replica_j);
 
@@ -330,43 +312,6 @@ public:
 	void setSwapEvery(const int& n);
 
 	void mixReplicas(int mixi);
-
-	// ========================================================================
-	// Configuration manipulation functions between worlds and replicas
-	// This can be quite costly since they imply transfer between worlds
-
-	// Load replica's atomLocations into it's front world. Returns world index
-	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
-
-	// Load replica's atomLocations into it's back world
-    void restoreReplicaCoordinatesToBackWorld(int whichReplica);
-
-	// Stores replica's front world's coordinates into it's atomsLocations
-
-	// This should always be a fully flexible world
-	void storeReplicaCoordinatesFromFrontWorld(int whichReplica);
-
-	// Store work world coordinates into the replica
-	void store_WORK_CoordinatesFromFrontWorld(int replicaIx);
-
-	// Store work world energy into the replica 
-	void store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx);
-
-	// ========================================================================
-	// Energy manipulation functions between worlds and replicas
-	// This can be quite costly - energy calculation (O^2)
-
-	// Get ennergy of the back world and store it in replica thisReplica
-	void storeReplicaEnergyFromBackWorld(int thisReplica);
-
-    	// Get ennergy of the front world and store it in replica thisReplica
-	void storeReplicaEnergyFromFrontWorldFull(int thisReplica);
-
-	// Store any WORK Jacobians contribution from back world
-	void store_WORK_JacobianFromBackWorld(int replicaIx);
-
-	// Get Fixman of the back world and store it in replica thisReplica
-    void storeReplicaFixmanFromBackWorld(int replicaIx);
 
 	// Update replicas coordinates from work generated coordinates
 	void set_WORK_CoordinatesAsFinal(int replicaIx);
@@ -412,7 +357,7 @@ public:
 
 	// Run a particular world
 	bool RunWorld(int whichWorld, const std::string& header);
-	void RunReplicaRefactor_SIMPLE(int mixi, int replicaIx);	
+	void RunReplica(int mixi, int replicaIx);	
 	/**	
 	* @brief Main function
 	* @param
@@ -465,6 +410,9 @@ public:
 	}
 
 private:
+
+	// Run in testing mode
+	bool testing = false;
 
 	std::vector<int> TopologyIXs;
 	std::vector<std::vector<int>> AmberAtomIXs;
@@ -558,10 +506,10 @@ private:
 
 	// SetupReader setupReader;
 
-	std::vector<Atom> atoms;
-	std::vector<BondStretch> bonds;
-	std::vector<BondBend> angles;
-	std::vector<BondTorsion> torsions;
+	std::vector<RoboAtom> atoms;
+	std::vector<RoboBondStretch> bonds;
+	std::vector<RoboBondBend> angles;
+	std::vector<RoboBondTorsion> torsions;
 	int numMolecules = 0;
 
 	std::vector<Topology> topologies;
@@ -584,17 +532,17 @@ public:
 	/** Implicit membrane mimicked by half-space contacts */
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
-	std::map<std::string, BondMobility::Mobility> mobilityMap = {
-		{ "Free", BondMobility::Free },
-		{ "Pin", BondMobility::Torsion },
-		{ "Cartesian", BondMobility::Translation },
-		{ "Rigid", BondMobility::Rigid },
-		{ "Weld", BondMobility::Rigid },
-		{ "Slider", BondMobility::Slider },
-		{ "AnglePin", BondMobility::AnglePin },
-		{ "BendStretch", BondMobility::BendStretch },
-		{ "Spherical", BondMobility::Spherical },
-		{ "OrthoSpherical", BondMobility::OrthoSpherical }
+	std::map<std::string, SimTK::BondMobility::Mobility> mobilityMap = {
+		{ "Free", SimTK::BondMobility::Free },
+		{ "Pin", SimTK::BondMobility::Torsion },
+		{ "Cartesian", SimTK::BondMobility::Translation },
+		{ "Rigid", SimTK::BondMobility::Rigid },
+		{ "Weld", SimTK::BondMobility::Rigid },
+		{ "Slider", SimTK::BondMobility::Slider },
+		{ "AnglePin", SimTK::BondMobility::AnglePin },
+		{ "BendStretch", SimTK::BondMobility::BendStretch },
+		{ "Spherical", SimTK::BondMobility::Spherical },
+		{ "OrthoSpherical", SimTK::BondMobility::OrthoSpherical }
 	};
 
     std::vector<std::string> MobilityStr {
@@ -617,7 +565,7 @@ public:
 		"OrthoSpherical"
     };
 
-	BondMobility::Mobility getMobility(const std::string& mobilityStr) {
+	SimTK::BondMobility::Mobility getMobility(const std::string& mobilityStr) {
 		// Assume MobilityStr is a vector defined elsewhere in your code
 		// std::vector<std::string> MobilityStr = { ... };
 
@@ -625,10 +573,10 @@ public:
 		
 		if (it != MobilityStr.end()) {
 			// If the string is found, return the corresponding enum value
-			return static_cast<BondMobility::Mobility>(std::distance(MobilityStr.begin(), it) + 1);
+			return static_cast<SimTK::BondMobility::Mobility>(std::distance(MobilityStr.begin(), it) + 1);
 		} else {
 			// If the string is not found, return the default value
-			return BondMobility::Default;
+			return SimTK::BondMobility::Default;
 		}
 	}	
 
@@ -730,7 +678,7 @@ private:
 	*/
 	void calcZMatrixBAT(int wIx,
 		const std::vector< std::vector<
-			std::pair <Atom *, SimTK::Vec3 > > >&
+			std::pair <RoboAtom *, SimTK::Vec3 > > >&
 				otherWorldsAtomsLocations);
 
 	/**	

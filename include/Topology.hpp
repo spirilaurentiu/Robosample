@@ -29,21 +29,21 @@ public:
 
 	~Topology() override = default;
 
-	void setAtoms(Span<Atom> atoms) { subAtomList = atoms; }
-	const Span<Atom> getAtoms() const { return subAtomList; }
-	Span<Atom> updAtoms() { return subAtomList; }
+	void setAtoms(Span<RoboAtom> atoms) { subAtomList = atoms; }
+	const Span<RoboAtom> getAtoms() const { return subAtomList; }
+	Span<RoboAtom> updAtoms() { return subAtomList; }
 
-	void setBonds(Span<BondStretch> bonds) { subBondList = bonds; }
-	const Span<BondStretch> getBonds() const { return subBondList; }
-	Span<BondStretch> updBonds() { return subBondList; }
+	void setBonds(Span<RoboBondStretch> bonds) { subBondList = bonds; }
+	const Span<RoboBondStretch> getBonds() const { return subBondList; }
+	Span<RoboBondStretch> updBonds() { return subBondList; }
 
-	void setAngles(Span<BondBend> angles) { subAngleList = angles; }
-	const Span<BondBend> getAngles() const { return subAngleList; }
-	Span<BondBend> updAngles() { return subAngleList; }
+	void setAngles(Span<RoboBondBend> angles) { subAngleList = angles; }
+	const Span<RoboBondBend> getAngles() const { return subAngleList; }
+	Span<RoboBondBend> updAngles() { return subAngleList; }
 
-	void setTorsions(Span<BondTorsion> torsions) { subTorsionList = torsions; }
-	const Span<BondTorsion> getTorsions() const { return subTorsionList; }
-	Span<BondTorsion> updTorsions() { return subTorsionList; }
+	void setTorsions(Span<RoboBondTorsion> torsions) { subTorsionList = torsions; }
+	const Span<RoboBondTorsion> getTorsions() const { return subTorsionList; }
+	Span<RoboBondTorsion> updTorsions() { return subTorsionList; }
 
 	/**	
 	* @brief Get the name of this molecule
@@ -82,7 +82,7 @@ public:
 	 * @param cAIx Compound Atom Index. This is in range [0, num_atoms-1] for this Compound. Not to confuse with the global atom index.
 	 * @return Reference to the Atom object.
 	 */
-	const Atom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
+	const RoboAtom& getAtom(SimTK::Compound::AtomIndex cAIx) const;
 
 	/**
 	 * @brief Get a reference to the bond object in the bond list of this Compound.
@@ -93,7 +93,7 @@ public:
 	 * @param aIx1 Global Atom Index of the other atom in the bond.
 	 * @return Reference to the BondLink object.
 	 */
-	const BondStretch& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
+	const RoboBondStretch& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
 
 	/**
 	 * @brief Get a reference to the bond object in the bond list of this compound using Compound Atom Indices.
@@ -105,7 +105,7 @@ public:
 	 * 
 	 * @return Reference to the BondLink object.
 	 */
-	const BondStretch& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
+	const RoboBondStretch& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
 
 	/**	
 	* @brief Get the bonded neighbor atom in the parent mobilized body.
@@ -147,6 +147,7 @@ public:
 	SimTK::Vec3 calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compound::AtomIndex aIx, const SimTK::DuMMForceFieldSubsystem& dumm, const SimTK::SimbodyMatterSubsystem& matter, const SimTK::State& someState) const;
 
 	SimTK::Transform matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets);
+	SimTK::Real getMatchError(const SimTK::Compound::AtomTargetLocations& atomTargets);
 
 	void writeAtomListPdb(std::string dirname,
 			              std::string prefix,
@@ -174,17 +175,10 @@ public:
 	std::vector<SimTK::Transform>& updAtomFrameCache() { return atomFrameCache; }
 
 private:
-	/// @brief Numerically stable computation of log(sin^2(pitch))
-	/// using a Taylor expansion near pitch = 0 for smoothness.
-	///
-	/// This avoids log(0) and ensures continuous derivatives,
-	/// useful for energy/gradient computations.
-	SimTK::Real safeLogSineSqr(SimTK::Real pitch) const;
-
-	Span<Atom> subAtomList;
-	Span<BondStretch> subBondList;
-	Span<BondBend> subAngleList;
-	Span<BondTorsion> subTorsionList;
+	Span<RoboAtom> subAtomList;
+	Span<RoboBondStretch> subBondList;
+	Span<RoboBondBend> subAngleList;
+	Span<RoboBondTorsion> subTorsionList;
 
 	// Map aIx to its Transform Default top transform
 	std::vector<SimTK::Transform> aIx2TopTransform;

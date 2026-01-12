@@ -1,5 +1,6 @@
 name: robo_dev_py312
 channels:
+  - dacase
   - omnia
   - nvidia/label/cuda-12.8.0
   - salilab
@@ -17,7 +18,7 @@ dependencies:
   - mdtraj
   - mdanalysis
   - matplotlib
-  - ambertools
+  - ambertools-dac=25
   - tqdm
   - rdkit
   - parmed
@@ -25,10 +26,10 @@ dependencies:
   - biopython
   - seaborn
   - pandas
-  - numpy<2.0 # Parmed forces this
   - modeller
   - MDAnalysis
   - astropy
+  - pymol-open-source
   - pip:
     - rcsbsearchapi
     - pdb2pqr

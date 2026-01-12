@@ -28,7 +28,7 @@
 //                           CLASS TrivalentAtomTetra
 //==============================================================================
 /** 
- * Trivalent Atom Class with tetrahedral geometry (ex. positive N)
+ * Trivalent RoboAtom Class with tetrahedral geometry (ex. positive N)
  * Bond centers are named "bond1", "bond2", and "bond3"
 **/
 

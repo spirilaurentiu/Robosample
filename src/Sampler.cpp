@@ -238,7 +238,7 @@ void Sampler::checkAtomStationsThroughDumm(void)
 // a Mobility name
 void Sampler::loadMbx2mobility(int whichWorld) // DANGER
 {
-	SimTK_ASSERT_ALWAYS(true, "Sampler::loadMbx2mobility not implemented");
+	SimTK_ASSERT_ALWAYS(false, "Sampler::loadMbx2mobility not implemented");
 
 	// // Lop through topologies
 	// for(auto& topology : topologies){

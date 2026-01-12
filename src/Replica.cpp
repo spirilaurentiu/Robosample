@@ -141,12 +141,12 @@ void Replica::set_WORK_Fixman(SimTK::Real somePotential) {
 
 
 void Replica::Print() const {
-	SimTK_ASSERT_ALWAYS(true, "Replica::Print not implemented yet.");
+	// SimTK_ASSERT_ALWAYS(false, "Replica::Print not implemented yet.");
 }
 
 void Replica::PrintCoordinates() const
 {
-	SimTK_ASSERT_ALWAYS(true, "Replica::PrintCoordinates not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::PrintCoordinates not implemented yet.");
 
 	// for(auto& topology : atomsLocations) {
 	// 	for(auto& atomCoordinates : topology) {
@@ -162,7 +162,7 @@ void Replica::PrintCoordinates() const
 
 void Replica::Print_WORK_Coordinates() const
 {
-	SimTK_ASSERT_ALWAYS(true, "Replica::Print_WORK_Coordinates not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::Print_WORK_Coordinates not implemented yet.");
 
 	// for(auto& topology : WORK_atomsLocations) {
 	// 	for(auto& atomCoordinates : topology) {
@@ -198,7 +198,7 @@ std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replic
 */
 void Replica::WriteRst7(std::string FN) const
 {
-	SimTK_ASSERT_ALWAYS(true, "Replica::WriteRst7 not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::WriteRst7 not implemented yet.");
 
 	// FILE *File = fopen(FN.c_str(), "w+");
 
@@ -239,7 +239,7 @@ void Replica::WriteRst7(std::string FN) const
  */
 void Replica::PrintRst7(void) const
 {
-	SimTK_ASSERT_ALWAYS(true, "Replica::PrintRst7 not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::PrintRst7 not implemented yet.");
 
 	// int Natoms = 0;
 	// for(auto& topology : atomsLocations){
@@ -281,36 +281,12 @@ void Replica::PrintRst7(void) const
 // ===========================================================================
 
 /*!
- * <!-- Takes coordinates from molecule topoIx and puts them into atomTargets
- * otherWorldsAtomsLocations: Pairs of (atom, and its position) within
- * a vector of Topologies
- * atomTargets: a map of atoms' Comopund atom index to positions-->
-*/
-void
-Replica::extractAtomTargets(
-	int topoIx,
-	const std::vector<std::vector<std::pair
-		<Atom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
-	std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets
-)
-{
-	SimTK_ASSERT_ALWAYS(true, "Replica::extractAtomTargets not implemented yet.");
-
-	// std::cout << "Replica::extractAtomTargets" << std::endl;
-	// for(std::size_t j = 0; j < otherWorldsAtomsLocations[topoIx].size(); j++){
-	// 	auto atomIndex = otherWorldsAtomsLocations[topoIx][j].first->getCompoundAtomIndex();
-	// 	auto location = otherWorldsAtomsLocations[topoIx][j].second;
-	// 	atomTargets.insert(std::make_pair(atomIndex, location));
-	// }
-}
-
-/*!
  * <!--	zmatrixbat_ Function to find and return the value for a given 
  * AtomIndex -->
 */
 SimTK::Vec3 Replica::findAtomTarget(const SimTK::Compound::AtomTargetLocations& atomTargets, SimTK::Compound::AtomIndex searchIndex) const {
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::findAtomTarget not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::findAtomTarget not implemented yet.");
 
 	// auto it = atomTargets.find(searchIndex);
 
@@ -323,7 +299,7 @@ SimTK::Vec3 Replica::findAtomTarget(const SimTK::Compound::AtomTargetLocations& 
 
 void Replica::setZMatrixTable(const std::vector<std::vector<int>>& newZMatrixTable) {
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::setZMatrixTable not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::setZMatrixTable not implemented yet.");
 
     // zMatrixTable = newZMatrixTable;
 }
@@ -333,7 +309,7 @@ void Replica::setZMatrixTable(const std::vector<std::vector<int>>& newZMatrixTab
 */
 void Replica::setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value) {
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::setZMatrixBATValue not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::setZMatrixBATValue not implemented yet.");
 
 	// // Set the value at the specified position
 	// zMatrixBAT[rowIndex][colIndex] = value;
@@ -344,7 +320,7 @@ void Replica::setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real v
 */
 const std::vector<SimTK::Real>& Replica::getZMatrixBATRow(size_t rowIndex) const {
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::getZMatrixBATRow not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::getZMatrixBATRow not implemented yet.");
 
 	// assert(rowIndex >= 0);
 	// assert(rowIndex < static_cast<int>(zMatrixBAT.size()));
@@ -359,7 +335,7 @@ const std::vector<SimTK::Real>& Replica::getZMatrixBATRow(size_t rowIndex) const
 */
 std::vector<SimTK::Real>& Replica::updZMatrixBATRow(size_t rowIndex) {
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::updZMatrixBATRow not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::updZMatrixBATRow not implemented yet.");
 
 	// assert(rowIndex >= 0);
 	// assert(rowIndex < static_cast<int>(zMatrixBAT.size()));
@@ -379,7 +355,7 @@ std::vector<SimTK::Real>& Replica::updZMatrixBATRow(size_t rowIndex) {
 */
 void Replica::reallocZMatrixBAT(void){
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::reallocZMatrixBAT not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::reallocZMatrixBAT not implemented yet.");
 
 	// zMatrixBAT.resize(zMatrixTable.size());
 	// for (auto& row : zMatrixBAT) {
@@ -397,7 +373,7 @@ void Replica::reallocZMatrixBAT(void){
 void
 Replica::calcZMatrixBAT_WORK(void)
 {
-	SimTK_ASSERT_ALWAYS(true, "Replica::calcZMatrixBAT_WORK not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::calcZMatrixBAT_WORK not implemented yet.");
 
 	// // Iterate molecules
 	// int allCnt = 0;
@@ -475,10 +451,10 @@ Replica::calcZMatrixBAT_WORK(void)
 void
 Replica::calcZMatrixBAT(
 	const std::vector< std::vector<
-		std::pair <Atom *, SimTK::Vec3 > > >&
+		std::pair <RoboAtom *, SimTK::Vec3 > > >&
 		otherWorldsAtomsLocations)
 {
-	SimTK_ASSERT_ALWAYS(true, "Replica::calcZMatrixBAT not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::calcZMatrixBAT not implemented yet.");
 
 	// // Iterate molecules
 	// int allCnt = 0;
@@ -566,6 +542,8 @@ SimTK::Real Replica::getZMatrixBATValue(size_t rowIndex, size_t colIndex) const 
 	// 	// Indices are out of bounds, handle this case accordingly
 	// 	return SimTK::NaN;
 	// }
+
+	return -1;
 }
 
 /*!
@@ -573,7 +551,7 @@ SimTK::Real Replica::getZMatrixBATValue(size_t rowIndex, size_t colIndex) const 
 */
 void Replica::PrintZMatrixBAT() const {
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::PrintZMatrixBAT not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::PrintZMatrixBAT not implemented yet.");
 
 	// int bati = 0;
 	// for (const auto& row : zMatrixBAT) {
@@ -599,7 +577,7 @@ void Replica::PrintZMatrixBAT() const {
 */
 void Replica::addZMatrixBATRow(const std::vector<SimTK::Real>& newRow) {
 
-	SimTK_ASSERT_ALWAYS(true, "Replica::addZMatrixBATRow not implemented yet.");
+	SimTK_ASSERT_ALWAYS(false, "Replica::addZMatrixBATRow not implemented yet.");
 
 	// zMatrixBAT.push_back(newRow);
 }

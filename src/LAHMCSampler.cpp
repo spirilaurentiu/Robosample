@@ -183,93 +183,91 @@ velocities to desired temperature, variables that store the configuration
 and variables that store the energies, both needed for the
 acception-rejection step. Also realize velocities and initialize
 the timestepper. **/
-bool LAHMCSampler::initialize(SimTK::State& someState )
+void LAHMCSampler::initialize()
 {
-    // After an event handler has made a discontinuous change to the
-    // Integrator's "advanced state", this method must be called to 
-    // reinitialize the Integrator.
-    timeStepper->initialize(compoundSystem->getDefaultState());
+//     // After an event handler has made a discontinuous change to the
+//     // Integrator's "advanced state", this method must be called to 
+//     // reinitialize the Integrator.
+//     timeStepper->initialize(compoundSystem->getDefaultState());
 
-    // Set the simulation temperature
-//r    setTemperature(argTemperature); // Needed for Fixman
+//     // Set the simulation temperature
+// //r    setTemperature(argTemperature); // Needed for Fixman
 
-    int nu = someState.getNU();
+//     int nu = someState.getNU();
 
-    // Randomize configuration
-    //if(randomizeConformation == true){
-    //    system->realize(someState, SimTK::Stage::Position);
-    //    int nq = someState.getNQ();
-    //    SimTK::Vector QV(nq);
-    //    for (int j=7; j < nq; ++j){
-    //        QV[j] = uniformRealDistribution_mpi_pi(randomEngine);
-    //    }
-    //    someState.updQ() = QV;
-    //}
-    //
+//     // Randomize configuration
+//     //if(randomizeConformation == true){
+//     //    system->realize(someState, SimTK::Stage::Position);
+//     //    int nq = someState.getNQ();
+//     //    SimTK::Vector QV(nq);
+//     //    for (int j=7; j < nq; ++j){
+//     //        QV[j] = uniformRealDistribution_mpi_pi(randomEngine);
+//     //    }
+//     //    someState.updQ() = QV;
+//     //}
+//     //
 
-    // Store the configuration
-    system->realize(someState, SimTK::Stage::Position);
-    for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-        const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-        SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
-    }
+//     // Store the configuration
+//     system->realize(someState, SimTK::Stage::Position);
+//     for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+//         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+//         SetTVector[mbx - 1] = TVector[mbx - 1] = mobod.getMobilizerTransform(someState);
+//     }
 
-	// Initialize QsBuffer with zeros
-	int nq = matter->getNQ(someState);
-	int totSize = QsBufferSize * nq;
-	for(int i = 0; i < totSize; i++){ 
-		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
-		QsBuffer.push_back(SimTK::Real(0));
-	}
+// 	// Initialize QsBuffer with zeros
+// 	int nq = matter->getNQ(someState);
+// 	int totSize = QsBufferSize * nq;
+// 	for(int i = 0; i < totSize; i++){ 
+// 		//QsBuffer.push_back(SimTK::Vector(nq, SimTK::Real(0)));
+// 		QsBuffer.push_back(SimTK::Real(0));
+// 	}
 
-    // Store potential energies
-    setOldPE(getPEFromEvaluator(someState));
-    setSetPE(getOldPE());
+//     // Store potential energies
+//     setOldPE(getPEFromEvaluator(someState));
+//     setSetPE(getOldPE());
 
-    // Store Fixman potential
-//r    this->useFixman = argUseFixman;
-    if(useFixman){
-        std::cout << "Look Ahead Hamiltonian Monte Carlo sampler: using Fixman potential." << std::endl;
-        setOldFixman(calcFixman(someState));
-        setSetFixman(getOldFixman());
+//     // Store Fixman potential
+// //r    this->useFixman = argUseFixman;
+//     if(useFixman){
+//         std::cout << "Look Ahead Hamiltonian Monte Carlo sampler: using Fixman potential." << std::endl;
+//         setOldFixman(calcFixman(someState));
+//         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }else{
-        setOldFixman(0.0);
-        setSetFixman(getOldFixman());
+//         setOldLogSineSqrGamma2( ((Topology *)rootTopology)->calcLogSineSqrGamma2(someState));
+//         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+//     }else{
+//         setOldFixman(0.0);
+//         setSetFixman(getOldFixman());
 
-        setOldLogSineSqrGamma2(0.0);
-        setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
-    }
+//         setOldLogSineSqrGamma2(0.0);
+//         setSetLogSineSqrGamma2(getOldLogSineSqrGamma2());
+//     }
 
-    // Initialize velocities to temperature
-    // TODO Shouldn't be here
-    double sqrtRT = std::sqrt(RT);
-    SimTK::Vector V(nu);
-    SimTK::Vector SqrtMInvV(nu);
-    for (int j=0; j < nu; ++j){
-        V[j] = gaurand(randomEngine);
-    }
-    matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
-    SqrtMInvV *= sqrtRT; // Set stddev according to temperature
-    someState.updU() = SqrtMInvV;
-    system->realize(someState, SimTK::Stage::Velocity);
+//     // Initialize velocities to temperature
+//     // TODO Shouldn't be here
+//     double sqrtRT = std::sqrt(RT);
+//     SimTK::Vector V(nu);
+//     SimTK::Vector SqrtMInvV(nu);
+//     for (int j=0; j < nu; ++j){
+//         V[j] = gaurand(randomEngine);
+//     }
+//     matter->multiplyBySqrtMInv(someState, V, SqrtMInvV);
+//     SqrtMInvV *= sqrtRT; // Set stddev according to temperature
+//     someState.updU() = SqrtMInvV;
+//     system->realize(someState, SimTK::Stage::Velocity);
 
-    // Store kinetic energies
-    setProposedKE(matter->calcKineticEnergy(someState));
-    setLastAcceptedKE(getProposedKE());
+//     // Store kinetic energies
+//     setProposedKE(matter->calcKineticEnergy(someState));
+//     setLastAcceptedKE(getProposedKE());
 
-    // Store total energies
-    this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
-    this->etot_set = this->etot_o;
-
-    return true;
+//     // Store total energies
+//     this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
+//     this->etot_set = this->etot_o;
 }
 
 /** Same as initialize **/
 //r void LAHMCSampler::reinitialize(SimTK::State& someState, SimTK::Real timestep, int nosteps, SimTK::Real argTemperature) 
-bool LAHMCSampler::reinitialize(SimTK::State& someState)
+void LAHMCSampler::reinitialize(SimTK::State& someState)
 {
      // After an event handler has made a discontinuous change to the
     // Integrator's "advanced state", this method must be called to 
@@ -331,8 +329,6 @@ bool LAHMCSampler::reinitialize(SimTK::State& someState)
     // Store total energies
     this->etot_o = getOldPE() + getProposedKE() + getOldFixman() + getOldLogSineSqrGamma2();
     this->etot_set = this->etot_o;
-
-    return true;
 }
 
 /** Store configuration **/
@@ -789,19 +785,17 @@ void LAHMCSampler::update(SimTK::State& someState)
 	acceptedStepsBuffer.pop_front();
 }
 
-bool LAHMCSampler::sample_iteration(SimTK::State& someState)
+bool LAHMCSampler::sample_iteration()
 {
-	propose(someState, true);
+	SimTK_ASSERT_ALWAYS(false, "LAHMCSampler::sample_iteration not implemented yet.");
+	return false;
 
-	accRejStep(someState);
-    
-	++nofSamples;
-
-	pushCoordinatesInR(someState);
-
-	pushVelocitiesInRdot(someState);
-
-	return this->acc;
+	// propose(someState, true);
+	// accRejStep(someState);
+	// ++nofSamples;
+	// pushCoordinatesInR(someState);
+	// pushVelocitiesInRdot(someState);
+	// return this->acc;
 }
 
 int LAHMCSampler::getMDStepsPerSample() const {

@@ -86,6 +86,9 @@ separate_arguments(DEBUG_FLAGS UNIX_COMMAND "${DEBUG_FLAGS}")
 set(RELEASE_FLAGS "-O3 -march=native -mtune=native")
 separate_arguments(RELEASE_FLAGS UNIX_COMMAND "${RELEASE_FLAGS}")
 
+set(RELWITHDEBINFO_FLAGS "-O3 -g3 -ggdb3 -fno-lto -fvisibility=default -fno-omit-frame-pointer -march=native -mtune=native")
+separate_arguments(RELWITHDEBINFO_FLAGS UNIX_COMMAND "${RELWITHDEBINFO_FLAGS}")
+
 set(CMAKE_CXX_STANDARD 14)
 
 # Define BOLT flags
@@ -109,11 +112,13 @@ endif()
 separate_arguments(PGO_TRAIN_FLAGS UNIX_COMMAND "${PGO_TRAIN_FLAGS}")
 separate_arguments(PGO_USE_FLAGS UNIX_COMMAND "${PGO_USE_FLAGS} -g")
 
-# Enable IPO (LTO) for Release builds
+# Check if we can use IPO (Interprocedural Optimization) aka LTO (Link Time Optimization)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED)
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "PGO_Train" OR CMAKE_BUILD_TYPE STREQUAL "PGO_Use")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
 endif()
 
 # Create the Python module
@@ -142,6 +147,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${DEBUG_FLAGS})
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS})
+
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+
+    target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${RELWITHDEBINFO_FLAGS})
+    target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${RELWITHDEBINFO_FLAGS})
+
 elseif(CMAKE_BUILD_TYPE STREQUAL "PGO_Train")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS} ${PGO_TRAIN_FLAGS})
     target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${PGO_TRAIN_FLAGS})
@@ -191,7 +202,9 @@ endif()
 ## Install pure Python files
 #install(DIRECTORY python/robosample DESTINATION ${Python3_SITEARCH})
 
-install(TARGETS ${ROBOSAMPLE_LIB_NAME} DESTINATION lib)
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+# # # # # # # # # # # # # # # # # # # install(TARGETS ${ROBOSAMPLE_LIB_NAME} DESTINATION lib)
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
 #install(DIRECTORY ${CMAKE_SOURCE_DIR}/python/robosample
 #        DESTINATION ${Python3_SITEARCH})

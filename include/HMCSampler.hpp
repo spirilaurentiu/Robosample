@@ -110,23 +110,15 @@ public:
 		Span<Topology> argTopologies, 
 		SimTK::DuMMForceFieldSubsystem &argDumm,
 		SimTK::GeneralForceSubsystem &argForces,
-		SimTK::TimeStepper &argTimeStepper)
+		SimTK::TimeStepper &argTimeStepper);
 		//:Qmeans(nullptr), Qdiffs(nullptr), Qstds(nullptr)
-
-;
 
 	/** Destructor **/
 	virtual ~HMCSampler();
 
-
-
 	/** Same as initialize **/
-	virtual bool initialize(SimTK::State& advanced) ;
-	virtual bool reinitialize(SimTK::State& advanced, std::stringstream& samplerOutStream, bool verbose) ;
-
-
-
-
+	virtual void initialize() ;
+	virtual void reinitialize(std::stringstream& samplerOutStream, bool verbose) ;
 
 	/** ===============================
 	 * RANDOM NUMBERS
@@ -180,10 +172,10 @@ public:
 	bool isUsingFixmanPotential(void) const;
 
 	// Compute Fixman potential
-	SimTK::Real calcFixman(SimTK::State& someState);
+	SimTK::Real calcFixman(const SimTK::State& someState);
 
 	// Compute Fixman potential numerically
-	SimTK::Real calcNumFixman(SimTK::State& someState);
+	SimTK::Real calcNumFixman(const SimTK::State& someState);
 
 	// Set/get Fixman potential
 	void setOldFixman(SimTK::Real);
@@ -258,7 +250,7 @@ public:
 	/** Helper function for initialize velocities. Put generalized velocities
 	scale factors into a fixed size array to avoid searching for them into a 
 	map every time the velocities are intialized **/
-	void loadUScaleFactors(SimTK::State& someState);
+	void loadUScaleFactors(const SimTK::State& someState);
 
 	/** Get the TimeStepper that manages the integrator **/
 	const SimTK::TimeStepper * getTimeStepper();
@@ -283,8 +275,6 @@ public:
 
 	// Set the method of integration
 	void setAcceptRejectMode(AcceptRejectMode acceptRejectMode);
-	void setAcceptRejectMode(const std::string& acceptRejectMode);
-
 	
 	# pragma region REBAS_TEST
 	
@@ -407,28 +397,9 @@ public:
 		bool isTheSampleAccepted
 	);
 
-	// ELIZA OPENMM FULLY FLEXIBLE INTEGRATION CODE
-
-	void setOMMmass(SimTK::DuMM::NonbondAtomIndex nax, SimTK::Real mass);
-
-	void OMM_setDuMMTemperature(double HMCBoostTemperature);
-
-	// Update OpenMM position from a Simbody Cartesian world
-	void Simbody_To_OMM_setAtomsLocationsCartesian(SimTK::State& someState,
-		bool throughDumm = true);
-
-
-	double OMM_calcPotentialEnergy(void);
-
-	double OMM_calcKineticEnergy(void);
-
 	void OMM_storeOMMConfiguration_X(const std::vector<OpenMM::Vec3>& positions);
 
 	void rebuildSimbodyTopologyFromOpenMMPositions(SimTK::State& someState);
-
-	void OMM_integrateTrajectory(SimTK::State&);
-
-	//void OMM_calcNewEnergies(void);
 
 	void OMM_restoreConfiguration(SimTK::State& someState);
 
@@ -489,7 +460,7 @@ public:
 	*/
 	bool checkDistortionBasedOnE(SimTK::Real deltaPE);
 
-	virtual bool sample_iteration(SimTK::State& someState, std::stringstream& samplerOutStream, bool verbose);
+	virtual bool sample_iteration(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose);
 
 	/**
 	 * Print everything after proposal generation
@@ -719,9 +690,9 @@ public:
 	void setQvars(std::vector<SimTK::Real>& QArg){ Qvars = &QArg; }
 
 	// Doesn't take masses into account
-	double calcMobodsMBAT(SimTK::State& someState);
-	double calcMobodsBATJacobianDetLog_NEW(SimTK::State& someState);
-	double studyBATScale(SimTK::State& someState);
+	double calcMobodsMBAT(const SimTK::State& someState);
+	double calcMobodsBATJacobianDetLog_NEW(const SimTK::State& someState);
+	double studyBATScale(const SimTK::State& someState);
 
 	# pragma region REBAS_TEST
 	void setReplica( int thisReplica ){ this->replicaIx = thisReplica;}
@@ -839,6 +810,7 @@ protected:
 	SimTK::Real ke_prop_nma6;
 	SimTK::Real ke_n_nma6;
 
+	// Transform Jacobian
 	SimTK::Real bendStretchJacobianDetLog = 0.0;
 
 	SimTK::Real boostT = SimTK::NaN,

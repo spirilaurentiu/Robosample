@@ -1,5 +1,4 @@
-#ifndef WORLD_H_
-#define WORLD_H_
+#pragma once
 
 /* -------------------------------------------------------------------------- *
  *		                       Robosampling                           *
@@ -15,20 +14,10 @@
 #include <time.h>
 #include <thread>
 #include <array>
-//#include <random>
 #include <math.h>
-
-//#include <Eigen/Dense>
-//#include <unsupported/Eigen/MatrixFunctions>
-//#include <Eigen/Eigenvalues>
-//#include <Eigen/LU>
-//using Eigen::MatrixXd;
 
 #include "Simbody.h"
 #include "Molmodel.h"
-
-#include "readAmberInput.hpp"
-
 #include "ParaMolecularDecorator.hpp"
 #include "FixmanTorque.hpp"
 
@@ -38,7 +27,6 @@
 
 #include "server.hpp"
 #include "Topology.hpp"
-//#include "LAHMCSampler.hpp"
 #include "HMCSampler.hpp"
 #include "ConformationalSearch.hpp"
 
@@ -59,6 +47,8 @@ void writePdb(	  SimTK::Compound& c, SimTK::State& advanced,
 
 void writePdb(SimTK::PdbStructure pdb, const char *FN);
 
+class Context;
+
 //==============================================================================
 //                   CLASS TaskSpace
 //==============================================================================
@@ -76,7 +66,53 @@ private:
 
 };
 
+// Describes bonds involving a root atom
+struct RootAtomBond {
+	std::size_t topologyIndex = 0;
 
+	SimTK::Compound::AtomIndex childCAIx;
+	SimTK::Compound::AtomIndex parentCAIx;
+
+	SimTK::MobilizedBodyIndex childMBIx;
+	SimTK::MobilizedBodyIndex parentMBIx;
+};
+
+// Describes atom bonds and angles between two linked rigid bodies
+struct RigidBodyAtomBond {
+	std::size_t topologyIndex = 0;
+	SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Default;
+
+	std::size_t childAtomGlobalIndex = -1;
+	std::size_t parentAtomGlobalIndex = -1;
+	std::size_t grandParentAtomGlobalIndex = -1;
+
+	SimTK::Compound::AtomIndex childCAIx;
+	SimTK::Compound::AtomIndex parentCAIx;
+	SimTK::Compound::AtomIndex grandParentCAIx;
+
+	// Compound atom index of the root atom in the parent rigid body
+	SimTK::Compound::AtomIndex parentMobodRootCAIx;
+
+	SimTK::MobilizedBodyIndex childMBIx;
+	SimTK::MobilizedBodyIndex parentMBIx;
+	SimTK::MobilizedBodyIndex grandParentMBIx;
+};
+
+struct RigidBond {
+	std::size_t topologyIndex = 0;
+	SimTK::Compound::AtomIndex childCAIx;
+	SimTK::Compound::AtomIndex parentCAIx;
+};
+
+struct RigidAngle {
+	std::size_t topologyIndex = 0;
+	SimTK::Compound::AtomIndex cAIx1, cAIx2, cAIx3;
+};
+
+struct RigidTorsion {
+	std::size_t topologyIndex = 0;
+	SimTK::Compound::AtomIndex cAIx1, cAIx2, cAIx3, cAIx4;
+};
 
 enum class ROOT_MOBILITY : int {
 	FREE = 0,
@@ -89,12 +125,12 @@ enum class ROOT_MOBILITY : int {
 
 struct BOND_FLEXIBILITY {
 	BOND_FLEXIBILITY() = default;
-	BOND_FLEXIBILITY(int i, int j, BondMobility::Mobility mobility)
+	BOND_FLEXIBILITY(int i, int j, SimTK::BondMobility::Mobility mobility)
 		: i(i), j(j), mobility(mobility) {}
 		
 	int i = -1;
 	int j = -1;
-	BondMobility::Mobility mobility = BondMobility::Default;
+	SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Default;
 };
 
 //==============================================================================
@@ -103,20 +139,17 @@ struct BOND_FLEXIBILITY {
 /**
  *  Contains a Symbody system and additional data that define a regimen
  **/
-
-class Context;
-
 class World {
 public:
 
-	explicit World(int worldIndex, Span<Topology> topo, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
+	void setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
+	void updateFramesFromTopologies();
 
+	explicit World(int worldIndex, Span<Topology> topo, bool testing, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
-	SimTK::State setAtoms(const SimTK::Compound::AtomTargetLocations& atomTargets, const std::vector<Atom>& atoms);
-
-	void updateAtomTargetLocaltionsCache(SimTK::State& state);
-	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocaltionsCache() const;
-
+	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocaltionsCache() const {
+		return atomTargetLocaltionsCache;
+	}
 
 	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
@@ -125,21 +158,13 @@ public:
 	//const std::vector<std::vector<BOND_FLEXIBILITY>>& getRollFlexibilities() const ;
 	void setRollFlexibilities(bool argRollFlexibilities);
 	bool getRollFlexibilities() const ;
-	void lockAllMobilizers(void);
 
-	void generateDummParams(const std::vector<Atom>& atoms,
-		const std::vector<BondStretch>& bonds,
-		const std::vector<BondBend>& dummAngles,
-		const std::vector<BondTorsion>& dummTorsions);
+	void generateDummParams(const std::vector<RoboAtom>& atoms,
+		const std::vector<RoboBondStretch>& bonds,
+		const std::vector<RoboBondBend>& dummAngles,
+		const std::vector<RoboBondTorsion>& dummTorsions);
 	
-	void AllocateCoordBuffers(int natoms);
-
-	/** Adopts a topology **/
-	void adoptTopology(int which);
-
-	/** Calls CompoundSystem.modelCompounds and realizes Topology
-	To be called after loading all Compounds. **/
-	void modelTopologies(std::string GroundToCompoundMobilizerType);
+	void modelTopologies();
 
 	SimTK::Real getRecommendedTimesteps(void);
 
@@ -148,7 +173,7 @@ public:
 	//=========================================================================
 
 	/** Add contact constraints to specific bodies **/
-	void addRodConstraint(State& someState);
+	void addRodConstraint(SimTK::State& someState);
 
 	/** Add contact constraints to specific bodies **/
 	const SimTK::State& addSpeedConstraint(int prmtopIndex);
@@ -164,7 +189,7 @@ public:
 	void addTaskSpaceLS(void);
 
 	/** Update target task space */
-	void updateTaskSpace(const State& someState);
+	void updateTaskSpace(const SimTK::State& someState);
 
 	/** Get delta stationP */
 	SimTK::Array_<SimTK::Vec3>& 
@@ -179,7 +204,7 @@ public:
 	getTaskSpaceDeltaStationP(void);
 
 	/** Calc station Jacobian */
-	void calcStationJacobian(const State& someState,
+	void calcStationJacobian(const SimTK::State& someState,
         SimTK::Matrix_<SimTK::Vec3>& JS) const;
 
 
@@ -234,20 +259,9 @@ public:
 		const SimTK::ContactCliqueId cliqueId);	/**@}**/
 	//-------------------------------------------------------------------------
 
-
-
-	/** Realize Topology for this World **/
-	const SimTK::State& realizeTopology();
-
 	/** Assign a scale factor for generalized velocities to every mobilized
 	body **/
 	void setUScaleFactorsToMobods(void);
-
-	/** Load CompoundAtomIndex to Gmolmodel atom index map **/
-	void loadCompoundRelatedMaps();
-
-	/** Create MobilizedBodyIndex vs Compound::AtomIndex maps **/
-	void loadMbx2AIxMap();
 
 	/** Get the number of molecules **/
 	int getNofMolecules() const;
@@ -279,17 +293,9 @@ public:
 	// TEODOR
 	SimTK::Vec3 getGeometricCenterOfSelection(const SimTK::State & state);
 
-
-
-	float setSphereRadius (float argRadius);
-	
-	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomsLocationsInGround(SimTK::State& state);
-	const std::vector<SimTK::Compound::AtomTargetLocations>& getCurrentAtomsLocationsInGround();
-
 	/** Nice print helper for get/setAtomsLocations */
-	void PrintAtomsLocations(const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >& someAtomsLocations);
+	void PrintAtomsLocations(const std::vector<std::vector<std::pair<RoboAtom *, SimTK::Vec3> > >& someAtomsLocations);
 	void WriteRst7FromTopology(std::string FN);
-
 
 	//=========================================================================
 	//                   RECONSTRUCTION-Related Functions
@@ -309,9 +315,9 @@ public:
 	 * RMSD function
 	*/
 	SimTK::Real RMSD(
-	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<RoboAtom *, SimTK::Vec3> > >&
 		 srcWorldsAtomsLocations,
-	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<RoboAtom *, SimTK::Vec3> > >&
 		destWorldsAtomsLocations	
 	) const ;
 
@@ -319,9 +325,9 @@ public:
 	 * Maximum distance between two corresponding atoms
 	*/
 	std::pair<int, SimTK::Real> maxAtomDeviation(
-	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<RoboAtom *, SimTK::Vec3> > >&
 		 srcWorldsAtomsLocations,
-	const std::vector<std::vector<std::pair<Atom *, SimTK::Vec3> > >&
+	const std::vector<std::vector<std::pair<RoboAtom *, SimTK::Vec3> > >&
 		destWorldsAtomsLocations	
 	) const ;
 
@@ -354,53 +360,6 @@ public:
 		Topology& topology,
 		SimTK::Compound::AtomIndex aIx,
 		const SimTK::State& someState);
-
-
-	// REFAC ----------------------------------------------------------------------
-
-	/**	
-	* @brief Takes coordinates from molecule topoIx and puts them into atomTargets
-	* @param otherWorldsAtomsLocations: Pairs of (atom, and its position) within
-	* 		 a vector of Topologies
-	* @param atomTargets: map of atoms' CompoundAtomIndex to their positions
-	* @return
-	*/
-	void
-	extractAtomTargets(
-		int topoIx,
-		const std::vector<std::vector<
-		std::pair<Atom *, SimTK::Vec3> > >& otherWorldsAtomsLocations,
-		std::map<SimTK::Compound::AtomIndex, SimTK::Vec3>& atomTargets);
-
-	/*!
-	* <!-- Set atoms' frames in mobods. Also get locations in mobods for 
-	* further use -->
-	*/
-	void setAtoms_Compound_FramesAndLocsInMobods(int topoIx, const SimTK::Compound::AtomTargetLocations& atomTargets, std::vector<Vec3>& locationInMobds);
-
-	void setAtoms_SetDuMMStations(int topoIx, const std::vector<SimTK::Vec3>& locationInMobds);
-
-	SimTK::State&
-	setAtoms_XPF_XBM(
-		SimTK::State& someState,
-		int topoIx
-	);
-
-	SimTK::State&
-	setAtoms_MassProperties(
-		SimTK::State& someState,
-		int topoIx
-	);
-
-	SimTK::State&
-	setAtoms_XFM(
-		SimTK::State& someState,
-		int topoIx
-	);
-
-	/** Set Compound, MultibodySystem and DuMM configurations according to
-	some other World's atoms **/
-	SimTK::State& setAtomsLocationsInGround_REFAC(SimTK::State& state, const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 	/** Update Gmolmodel Atom Cartesian coordinates according to
 	Molmodel Compound which in turn relizes Position and uses matter
@@ -476,7 +435,6 @@ public:
 	SimTK::Real calcFixman();
 
 	/** Generate a number of samples **/
-	// bool generateSamples_old(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
 
 	//...............
@@ -575,9 +533,9 @@ public:
 	// REORIENT
 
 	SimTK::Transform& getReorientTransformInAnotherBody(
-		const State &someState,
-		const MobilizedBody &inBodyA,
-		const MobilizedBody &ofBodyB,
+		const SimTK::State &someState,
+		const SimTK::MobilizedBody &inBodyA,
+		const SimTK::MobilizedBody &ofBodyB,
 		const SimTK::Transform &reorientAB,
 		SimTK::Transform& X_FMprim);
 
@@ -628,10 +586,6 @@ public:
 
 	}
 
-
-	/** Allocate space for containers that keep statistics if we're doing any **/
-	void allocateStatsContainers(void);
-	
 	void PrintDefaultTransforms() const;
 	void PrintAllTransforms() const;
 	void PrintXFMs() const;
@@ -651,8 +605,6 @@ public:
 	void PrintBATFromSimbody() const;
 	void calcSimbodyBAT_TODEL(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
 	void calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
-
-
 
 public:
 
@@ -677,6 +629,7 @@ public:
 	// --- Simulation ---
 	std::unique_ptr<SimTK::VerletIntegrator> integrator;
 	std::unique_ptr<SimTK::TimeStepper> timeStepper;
+	// TODO they belong to Sampler, not World
 
 
 	std::vector<std::unique_ptr<BaseSampler>> samplers;
@@ -694,7 +647,9 @@ public:
 	// std::vector<std::unique_ptr<SimTK::Force::Custom>> controlForce;
 
 	/** Nof molecules **/
-	int moleculeCount;
+	std::size_t numMolecules = 0;
+	std::size_t numAtoms = 0;
+
 
 	/** Molecules (topologies<-Compounds) objects **/
 	Span<Topology> topologies;
@@ -704,14 +659,6 @@ public:
 	/** Joint types **/
 	//std::map< SimTK::MobilizedBodyIndex, SimTK::BondMobility::Mobility> mbx2mobility;
 
-	/** Vectors of Cartesian coordinates **/
-	std::vector<SimTK::Real> Xs;
-	std::vector<SimTK::Real> Ys;
-	std::vector<SimTK::Real> Zs;
-
-	/** This vector stores a configuration if is needed for later use **/
-	SimTK::Transform *TVector;
-
 	// 
 	std::vector<std::vector<int>> zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
@@ -719,13 +666,13 @@ public:
 	// --- Thermodynamics ---
 	SimTK::Real temperature;
 
-	// Contact related
-	std::unique_ptr<ContactTrackerSubsystem> tracker;
-	std::unique_ptr<CompliantContactSubsystem> contactForces;
-	ContactCliqueId clique1;
-	std::unique_ptr<MobilizedBody::Weld> membrane;
-	std::unique_ptr<Body::Rigid> memBody;
-	//...............
+	// // Contact related
+	// std::unique_ptr<ContactTrackerSubsystem> tracker;
+	// std::unique_ptr<CompliantContactSubsystem> contactForces;
+	// ContactCliqueId clique1;
+	// std::unique_ptr<MobilizedBody::Weld> membrane;
+	// std::unique_ptr<Body::Rigid> memBody;
+	// //...............
 
 	// --- Statistics ---
 	std::vector<SimTK::Real> acosX_PF00;
@@ -740,8 +687,8 @@ public:
 	// // --- Graphics ---
 	bool visual;
 
-	// Our decorations
-	std::unique_ptr<ParaMolecularDecorator> paraMolecularDecorator;
+	// // Our decorations
+	// std::unique_ptr<ParaMolecularDecorator> paraMolecularDecorator;
 
 	// Decoration subsystem
 	std::unique_ptr<SimTK::DecorationSubsystem> decorations;
@@ -822,6 +769,14 @@ public:
 
 	const int getOwnIndex(void) const{
 		return ownWorldIndex;
+	}
+
+	const std::vector<RootAtomBond>& getRootAtomBonds() const {
+		return rootAtomBonds;
+	}
+
+	const std::vector<RigidBodyAtomBond>& getRigidBodyAtomBonds() const {
+		return rigidBodyAtomBonds;
 	}
 
 	/*!
@@ -945,13 +900,6 @@ public:
 	*/
 	void printDrilling(void);
 
-
-
-	void setDuMMAtomIndexes(void);
-
-	SimTK::Compound::AtomIndex getCompoundAtomIndex(SimTK::DuMM::AtomIndex);
-
-
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
@@ -969,13 +917,86 @@ public:
     bool getIsRollFlexibilities() const {return isRollFlexibilities;};
     void setIsRollFlexibilities(bool value) {isRollFlexibilities = value;};
 
+	const std::vector<std::vector<SimTK::Real>>& getMatchAtomTargetLocationsResiduals() const {
+		SimTK_ASSERT_ALWAYS(testing, "getMatchAtomTargetLocationsResiduals called outside testing mode");
+		return matchAtomTargetLocationsResiduals;
+	}
+
+	const std::vector<SimTK::Real>& getCumulativeCartesianDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getCumulativeCartesianDisplacements called outside testing mode");
+		return cumulativeCartesianDisplacements;
+	}
+
+	const std::vector<SimTK::Real>& getCumulativeBondDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getCumulativeBondDisplacements called outside testing mode");
+		return cumulativeBondDisplacements;
+	}
+
+	const std::vector<SimTK::Real>& getCumulativeAngleDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getCumulativeAngleDisplacements called outside testing mode");
+		return cumulativeAngleDisplacements;
+	}
+
+	const std::vector<SimTK::Real>& getCumulativeTorsionDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getCumulativeTorsionDisplacements called outside testing mode");
+		return cumulativeTorsionDisplacements;
+	}
+
+	const std::vector<std::pair<bool, SimTK::Real>>& getAcceptanceRMSD() const {
+		SimTK_ASSERT_ALWAYS(testing, "getRMSD called outside testing mode");
+		return acceptanceRMSD;
+	}
+
+	const std::vector<SimTK::Real>& getRigidBodyBondRMSDInNm() const {
+		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyBondRMSDInNm called outside testing mode");
+		return rigidBodyBondRMSDInNm;
+	}
+
+	const std::vector<SimTK::Real>& getRigidBodyAngleDriftInRad() const {
+		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyAngleDriftInRad called outside testing mode");
+		return rigidBodyAngleDriftInRad;
+	}
+
+	const std::vector<SimTK::Real>& getRigidBodyProperTorsionDriftInRad() const {
+		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyProperTorsionDriftInRad called outside testing mode");
+		return rigidBodyProperTorsionDriftInRad;
+	}
+
+	const std::vector<SimTK::Real>& getRigidBodyImproperTorsionDriftInRad() const {
+		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyImproperTorsionDriftInRad called outside testing mode");
+		return rigidBodyImproperTorsionDriftInRad;
+	}
+
 private:
 
+	bool testing = false;
+
+	void checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
+
+	std::vector<std::vector<SimTK::Real>> matchAtomTargetLocationsResiduals;
+	std::vector<SimTK::Real> cumulativeCartesianDisplacements;
+	std::vector<SimTK::Real> cumulativeBondDisplacements;
+	std::vector<SimTK::Real> cumulativeAngleDisplacements;
+	std::vector<SimTK::Real> cumulativeTorsionDisplacements;
+
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCache;
+	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCacheOld;
+	std::vector<std::pair<bool, SimTK::Real>> acceptanceRMSD;
+
+	std::vector<RigidBond> rigidBonds;
+	std::vector<SimTK::Real> rigidBodyBondRMSDInNm;
+
+	std::vector<RigidAngle> rigidAngles;
+	std::vector<SimTK::Real> rigidBodyAngleDriftInRad;
+
+	std::vector<RigidTorsion> rigidProperTorsions, rigidImproperTorsions;
+	std::vector<SimTK::Real> rigidBodyProperTorsionDriftInRad, rigidBodyImproperTorsionDriftInRad;
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	// topology index and atom index
 	std::map< SimTK::MobilizedBodyIndex, std::pair<int, SimTK::Compound::AtomIndex>> mbx2aIx;
+	std::vector<RootAtomBond> rootAtomBonds;
+	std::vector<RigidBodyAtomBond> rigidBodyAtomBonds;
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	//std::map<SimTK::MobilizedBodyIndex, SimTK::Compound::AtomIndex> mbx2aIx;
@@ -1002,8 +1023,4 @@ private:
 
 	// Default return value for non-existing topology atom, pair
 	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
-
-	SimTK::State stateCache;
 };
-
-#endif /*WORLD_H_*/
