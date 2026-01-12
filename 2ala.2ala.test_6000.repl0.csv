@@ -1,3 +1,0 @@
-round_ix,replica_ix,temperature,world_ix,NU,accepted_steps,pe_o,pe_n,pe_set,ke_o,ke_n,ke_set,fix_o,fix_n,fix_set,timestep,mdstep,acc
-1,0,300.000,0,186,1,-250.66,-244.61,-244.61,0.00,207.27,207.27,0.00,0.00,0.00,0.00,357,1.00
-1,0,300.000,1,16,1,-244.61,-242.18,-242.18,23.17,21.40,21.40,142.90,142.28,142.28,0.01,200,1.00
