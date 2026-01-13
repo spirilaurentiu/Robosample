@@ -886,7 +886,6 @@ void PrintSpatialMat(SimTK::SpatialMat M, int decimal_places, std::string header
     std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
     for(int i = 0; i < 2; i++){
         for(int j = 0; j < 2; j++){
-
             for(int k = 0; k < 3; k++){
                 for(int l = 0; l < 3; l++){
                     std::cout << M[i][j][k][l] << " ";

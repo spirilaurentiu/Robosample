@@ -1017,10 +1017,12 @@ void Context::Initialize() {
 	// Get Z-matrix indexes table	
 	calcZMatrixTable();
 	PrintZMatrixTable();
+
 	reallocZMatrixBAT();
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
 	PrintZMatrixBAT();
 	PrintZMatrixMobods(firstWIx, lastAdvancedState);
+	Print_TRANSFORMERS_Work();
 	
 	std::cout << "DEBUG nofReplicas " << nofReplicas << std::endl << std::flush;
 
@@ -6976,6 +6978,7 @@ void Context::transferCoordinates_WorldToWorld(int srcWIx, int destWIx)
 
 	//PrintZMatrixTableAndBAT();
 	//PrintZMatrixMobods(srcWIx, lastAdvancedState);
+	//Print_TRANSFORMERS_Work();
 	
 	// Pass compounds to the new world
 	passTopologiesToNewWorld(destWIx);
@@ -8868,7 +8871,7 @@ void Context::setZMatrixTableEntry(int rowIndex, int colIndex, int value) {
 */
 void Context::PrintZMatrixTable() const {
 	for (const auto& row : zMatrixTable) {
-		scout("ZMatrinxTableEntry: ");
+		scout("ZMatrixTableEntry: ");
 		for (int value : row) {
 			std::cout << std::setw(6) << value <<" "; 
 		}

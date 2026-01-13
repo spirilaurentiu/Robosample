@@ -376,8 +376,8 @@ void World::lockAllMobilizers(void)
 		//std::cout << "FIXTORROLLWorld::lockAllMobilizers lockAllMobilizers() mbx "<< int(mbx) << " locked. " << currentAdvancedState.getSystemStage() << std::endl << std::flush;
     }
 	// currentAdvancedState.invalidateAllCacheAtOrAbove(SimTK::Stage::Position);
-	// compoundSystem->realize(currentAdvancedState, SimTK::Stage::Position);
 }
+
 
 
 /** Creates Gmolmodel topologies objects and based on amberReader forcefield
