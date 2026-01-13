@@ -4166,17 +4166,20 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
     };
 
     if (isRollFlexibilities) {
-        for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
+        //for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
+		for (int mobIntIx = 1; (mobIntIx+1) < matter->getNumBodies(); mobIntIx += 2) {
 
 			//std::cout << "Before World::generateSamples lockAllMobilizers" << std::endl << std::flush; this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
             lockAllMobilizers();
 			//std::cout << "After  World::generateSamples lockAllMobilizers" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
-            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+            const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx + 1));
 			//std::cout << "FIXTORROLLWorld::generateSamples mobIntIx " << mobIntIx << currentAdvancedState.getSystemStage() << std::endl << std::flush;
             
-			mobod.unlock(currentAdvancedState);
-			//std::cout << "After  World::generateSamples mobod.unlock" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
+			mobod1.unlock(currentAdvancedState);
+			mobod2.unlock(currentAdvancedState);
+			//std::cout << "After  World::generateSamples mobod1.unlock" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 			//currentAdvancedState.invalidateAllCacheAtOrAbove(SimTK::Stage::Position); // FIXTOR_TRY
 			//compoundSystem->realize(currentAdvancedState, SimTK::Stage::Position); // FIXTOR_TRY
@@ -4184,7 +4187,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			// // Realize Position // FIXTOR_TRY
 			//this->compoundSystem->realize(currentAdvancedState, SimTK::Stage::Position); // FIXTOR_TRY
 			//matter->realizeArticulatedBodyInertias(currentAdvancedState); // FIXTOR_TRY
-			//std::cout << "FIXTORROLLWorld::generateSamples mobod.unlock " << currentAdvancedState.getSystemStage() << std::endl << std::flush; // FIXTOR_TRY
+			//std::cout << "FIXTORROLLWorld::generateSamples mobod1.unlock " << currentAdvancedState.getSystemStage() << std::endl << std::flush; // FIXTOR_TRY
 
 			runSamplingLoop(currentAdvancedState); // sample_iteration
 			//std::cout << "After  World::generateSamples runSamplingLoop" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
