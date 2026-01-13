@@ -4171,26 +4171,35 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
 			//std::cout << "Before World::generateSamples lockAllMobilizers" << std::endl << std::flush; this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
             lockAllMobilizers();
-			//std::cout << "After  World::generateSamples lockAllMobilizers" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
             const SimTK::MobilizedBody& mobod1 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
 			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx + 1));
-			//std::cout << "FIXTORROLLWorld::generateSamples mobIntIx " << mobIntIx << currentAdvancedState.getSystemStage() << std::endl << std::flush;
+
+			auto mbx1 = SimTK::MobilizedBodyIndex(mobIntIx);
+			auto mbx2 = SimTK::MobilizedBodyIndex(mobIntIx + 1);
+
+			auto& topoAtomPair1 = mbx2aIx.at(mbx1);
+			auto& topoAtomPair2 = mbx2aIx.at(mbx2);
+
+			const int topoIx1 = topoAtomPair1.first;
+			const int topoIx2 = topoAtomPair2.first;
+
+			const SimTK::Compound::AtomIndex cAIx1 = topoAtomPair1.second;
+			const SimTK::Compound::AtomIndex cAIx2 = topoAtomPair2.second;
+
+			std::cout << "mbx1 mbx2 topoIx1 topoIx2 cAIx1 cAIx2 "
+					<< int(mbx1) << " " << int(mbx2) << " "
+					<< topoIx1 << " " << topoIx2 << " "
+					<< cAIx1 << " " << cAIx2
+					<< std::endl;
+
             
 			mobod1.unlock(currentAdvancedState);
 			mobod2.unlock(currentAdvancedState);
-			//std::cout << "After  World::generateSamples mobod1.unlock" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
 			//currentAdvancedState.invalidateAllCacheAtOrAbove(SimTK::Stage::Position); // FIXTOR_TRY
-			//compoundSystem->realize(currentAdvancedState, SimTK::Stage::Position); // FIXTOR_TRY
-
-			// // Realize Position // FIXTOR_TRY
-			//this->compoundSystem->realize(currentAdvancedState, SimTK::Stage::Position); // FIXTOR_TRY
-			//matter->realizeArticulatedBodyInertias(currentAdvancedState); // FIXTOR_TRY
-			//std::cout << "FIXTORROLLWorld::generateSamples mobod1.unlock " << currentAdvancedState.getSystemStage() << std::endl << std::flush; // FIXTOR_TRY
 
 			runSamplingLoop(currentAdvancedState); // sample_iteration
-			//std::cout << "After  World::generateSamples runSamplingLoop" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
         
 		
 		}
