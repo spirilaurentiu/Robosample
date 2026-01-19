@@ -1727,6 +1727,14 @@ void Context::addWorld(
 
     if(MEMDEBUG){stdcout_memdebug("Context::addWorld 0");}
 
+	std::cout << "Flexibilities from CPP\n";
+	for (const auto& f : flexibilities) {
+	std::cout << "i=" << f.i
+				<< ", j=" << f.j
+				<< ", mobility=" << static_cast<int>(f.mobility)
+				<< '\n';
+    }
+
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());
 	worlds.emplace_back(worldIndexes.back(), nofMols, visual, visualizerFrequency);

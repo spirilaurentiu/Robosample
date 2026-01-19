@@ -118,10 +118,23 @@ public:
 	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
 
-	//void setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities);
-	//const std::vector<std::vector<BOND_FLEXIBILITY>>& getRollFlexibilities() const ;
-	void setRollFlexibilities(bool argRollFlexibilities);
-	bool getRollFlexibilities() const ;
+	
+	#pragma region ROLL
+
+	std::vector<int> rollMbxs{}; // initialized to empty
+	std::vector<BOND_FLEXIBILITY> flexibilities;
+	std::vector<BOND_FLEXIBILITY> rollFlexibilities;
+	bool isRollFlexibilities = false;
+
+	void addMbxToRoll(int mobIntIxs);
+	void PrintRollMbxs();
+
+	void setRollFlexibilities(const std::vector<BOND_FLEXIBILITY>& argRollFlexibilities);
+	const std::vector<BOND_FLEXIBILITY>& getRollFlexibilities() const ;
+	//void setRollFlexibilities(bool argRollFlexibilities);
+	//bool getRollFlexibilities() const ;
+
+	#pragma endregion ROLL
 
 	/**
 	* @brief Lock all mobilizers at default level Position
@@ -1092,9 +1105,6 @@ private:
 	Random32 randomEngine;
 	SimTK::String rootMobilizer;
 
-	std::vector<BOND_FLEXIBILITY> flexibilities;
-	std::vector<std::vector<BOND_FLEXIBILITY>> rollFlexibilities;
-	bool isRollFlexibilities = false;
 
 	// Context
 	Context *myContext;
