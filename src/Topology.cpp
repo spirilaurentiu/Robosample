@@ -725,6 +725,8 @@ Topology::getChemicalParent_IfIAmRoot(
 		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+		std::cout << "Topology::getChemicalParent_IfIAmRoot mbx parentMbx " << int(mbx) <<" "<< int(parentMbx) << std::endl << std::flush;
+
 		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 			// Find the true bSpecificAtom (CHEMICAL) parent
 			bSpecificAtom *originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
@@ -733,12 +735,16 @@ Topology::getChemicalParent_IfIAmRoot(
 			// Loop through neighbor atoms (bSpecificAtom)
 			for(auto neighborIx : originSpecAtom->neighborsIndex) {
 
+				std::cout << "\t\tTopology::getChemicalParent_IfIAmRoot aIx neighborIx " << aIx <<" "<< neighborIx << std::endl << std::flush;
+
 				// Loop through bonds that this atom is involved in (bBond);
 				for (auto bondIndex : originSpecAtom->bondsInvolvedIndex) {
 
 					// Check if this neighbor is involved in this bond
 					if( subBondList[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[neighborIx].getNumber()
 						) ){
+
+						std::cout << "\t\tTopology::getChemicalParent_IfIAmRoot bondIndex " << bondIndex << std::endl << std::flush;
 
 						Compound::AtomIndex candidateChemParentAIx = subAtomList[neighborIx].getCompoundAtomIndex();
 

@@ -2988,10 +2988,10 @@ SimTK::Real HMCSampler::calcFixman(SimTK::State& someState){
 
 	SimTK::Real result = 0.5 * RT * ( D0 - detMBAT ); // log space already
 
-	std::cout << "HMCSampler::calcFixman detM detMBAT pe_fix "
-		<< std::to_string(D0) <<" "
-		<<std::to_string(detMBAT) <<" "
-		<< std::to_string(result)
+	std::cout << "HMCSampler::calcFixman detM detMBAT pe_fix"
+		<<" "<< D0
+		<<" "<< detMBAT
+		<<" "<< result
 		<< std::endl;
 
 	if(SimTK::isInf(result)){
@@ -6079,6 +6079,7 @@ double HMCSampler::studyBATScale(SimTK::State& someState)
 */
 double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 {
+	std::cout << "HMCSampler::calcMobodsMBAT BEGIN" << std::endl << std::flush;
 	// Accumulate result here
 	SimTK::Real logBATJacobian = 0.0;
 
@@ -6093,8 +6094,14 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 
 			// Is this atom a root atom for a body
 			//if(std::abs(topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm).norm()) > 0.000001) {
-			if((topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm)) != 0) {
+
+			SimTK::Vec3 atomMbxLoc = topology.getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, *dumm);
+
+			if(atomMbxLoc != 0) {
 				continue;
+			}
+			else{
+				std::cout << "HMCSampler::calcMobodsMBAT aIx atomMbxLoc " << int(aIx) <<" "<< atomMbxLoc << std::endl << std::flush;
 			}
 
 			SimTK::Real bondLength = SimTK::NaN;
@@ -6107,13 +6114,14 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 			const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 			SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
 
+			std::cout << "HMCSampler::calcMobodsMBAT mbx parentMbx " << int(mbx) <<" "<< int(parentMbx) << std::endl << std::flush;
+
 			// (### 1 ###) Accumulate initial BAT values 
 			if(parentMbx == 0) continue; // Ground
 
 			// Get the neighbor atom in the parent mobilized body
-			//std::cout << "HMCSampler::calcMobodsMBAT aIx " << int(aIx) << std::flush;
 			SimTK::Compound::AtomIndex chemParentAIx = topology.getChemicalParent_IfIAmRoot(matter, aIx, *dumm);
-			//std::cout << " chemParentAIx " << int(chemParentAIx) << std::endl << std::flush;
+			std::cout << "HMCSampler::calcMobodsMBAT chemParentAIx " << int(chemParentAIx) << std::endl << std::flush;
 
 			// Skip if no parent
 			if (chemParentAIx.isValid() && chemParentAIx.isValidExtended()) {
@@ -6132,7 +6140,7 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 			SimTK::Vec3 G_ParentRoot = V3 - V2;
 
 			bondLength = std::sqrt((G_ParentRoot[0]*G_ParentRoot[0]) + (G_ParentRoot[1]*G_ParentRoot[1]) + (G_ParentRoot[2]*G_ParentRoot[2]));
-			//scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
+			scout("calcMobodsMBAT ") << "mbx " << mbx << " " << "bondDist " << bondLength;
 
 			// GET ANGLE
 			if(chemParentAIx >= 1){
@@ -6141,7 +6149,7 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 				SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
 				SimTK::Vec3 G_GrandParent = V2 - V1;
 				bondAngle = bAngle(V2, V1, V3);
-				//scout(" ") << "bondAngle " << bondAngle;
+				scout(" ") << "bondAngle " << bondAngle;
 			} // atom has a grandParent
 
 			//scout(" ") << eol;
