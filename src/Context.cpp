@@ -1016,15 +1016,15 @@ void Context::Initialize() {
 
 	// Get Z-matrix indexes table	
 	calcZMatrixTable();
-	PrintZMatrixTable();
+	//PrintZMatrixTable();
 
 	reallocZMatrixBAT();
 	calcZMatrixBAT(firstWIx, firstWorldsAtomsLocations);
-	PrintZMatrixBAT();
-	PrintZMatrixMobods(firstWIx, lastAdvancedState);
-	Print_TRANSFORMERS_Work();
+	//PrintZMatrixBAT();
+	//PrintZMatrixMobods(firstWIx, lastAdvancedState);
+	//Print_TRANSFORMERS_Work();
 	
-	std::cout << "DEBUG nofReplicas " << nofReplicas << std::endl << std::flush;
+	//std::cout << "DEBUG nofReplicas " << nofReplicas << std::endl << std::flush;
 
 	for(int k = 0; k < nofReplicas; k++){
 		replicas[k].reallocZMatrixBAT();
@@ -1727,13 +1727,13 @@ void Context::addWorld(
 
     if(MEMDEBUG){stdcout_memdebug("Context::addWorld 0");}
 
-	std::cout << "Flexibilities from CPP\n";
-	for (const auto& f : flexibilities) {
-	std::cout << "i=" << f.i
-				<< ", j=" << f.j
-				<< ", mobility=" << static_cast<int>(f.mobility)
-				<< '\n';
-    }
+	// std::cout << "Flexibilities from CPP\n";
+	// for (const auto& f : flexibilities) {
+	// std::cout << "i=" << f.i
+	// 			<< ", j=" << f.j
+	// 			<< ", mobility=" << static_cast<int>(f.mobility)
+	// 			<< '\n';
+    // }
 
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());

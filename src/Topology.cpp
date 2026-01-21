@@ -363,6 +363,7 @@ int Topology::getNBonds() const{
 by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
 // TODO: Optimize use CompoundAtomIx2GmolAtomIx instead
 bSpecificAtom * Topology::updAtomByAtomIx(int cAIx) {
+
 	for (int aix = 0; aix < natoms; aix++){
 		if(subAtomList[aix].getCompoundAtomIndex() == cAIx){
 			return &subAtomList[aix];
@@ -492,8 +493,8 @@ void Topology::printTopTransforms()
 {
 	std::cout << "Topology TopTransforms " << std::endl;
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
-		std::cout << aIx << " " << aIx2TopTransform[aIx] << std::endl;
+		SimTK::Compound::AtomIndex cAIx = (subAtomList[i]).getCompoundAtomIndex();
+		std::cout << cAIx << " " << aIx2TopTransform[cAIx] << std::endl;
 	}
 }
 
@@ -507,36 +508,36 @@ SimTK::Transform Topology::getTopTransform_FromMap(SimTK::Compound::AtomIndex aI
 
 // Return mbx by calling DuMM functions
 SimTK::MobilizedBodyIndex Topology::getAtomMobilizedBodyIndexThroughDumm(
-	SimTK::Compound::AtomIndex aIx,
+	SimTK::Compound::AtomIndex cAIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
-	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
+	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(cAIx);
 	return dumm.getAtomBody(dAIx);
 }
 
 // Get atom location on mobod through DuMM functions
 SimTK::Vec3 Topology::getAtomLocationInMobilizedBodyFrameThroughDumm(
-	SimTK::Compound::AtomIndex aIx,
+	SimTK::Compound::AtomIndex cAIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
-	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(aIx);
+	SimTK::DuMM::AtomIndex dAIx = getDuMMAtomIndex(cAIx);
 	return dumm.getAtomStationOnBody(dAIx);
 }
 
 SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(
-	SimTK::Compound::AtomIndex aIx,
+	SimTK::Compound::AtomIndex cAIx,
 	SimTK::DuMMForceFieldSubsystem& dumm,
 	SimTK::SimbodyMatterSubsystem& matter,
 	const SimTK::State& someState)
 {
-	const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
+	const SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(cAIx, dumm);
 	const SimTK::MobilizedBody& mobod = matter.getMobilizedBody(mbx);
 
 	const Transform&    X_GB = mobod.getBodyTransform(someState);
 	const Rotation&     R_GB = X_GB.R();
 	const Vec3&         p_GB = X_GB.p();
 
-	SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm);
+	SimTK::Vec3 station = getAtomLocationInMobilizedBodyFrameThroughDumm(cAIx, dumm);
 
 	const Vec3 p_BS_G = R_GB * station;
 	return p_GB + p_BS_G;
@@ -706,21 +707,23 @@ void Topology::setCompoundIndex(
 
 /** Get the neighbor atom bonded to aIx atom in the parent mobilized body.
 TODO: No chemical parent for satelite atoms or first atom. **/
+
+/*
 SimTK::Compound::AtomIndex
 Topology::getChemicalParent_IfIAmRoot(
 	SimTK::SimbodyMatterSubsystem *matter,
 	//std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter,
-	SimTK::Compound::AtomIndex aIx,
+	SimTK::Compound::AtomIndex cAIx,
 	SimTK::DuMMForceFieldSubsystem& dumm)
 {
 
 	SimTK::Compound::AtomIndex chemParentAIx;
 	int gmolAtomIndex = -111111;
 
-	if(getAtomLocationInMobilizedBodyFrameThroughDumm(aIx, dumm) == 0){
+	if(getAtomLocationInMobilizedBodyFrameThroughDumm(cAIx, dumm) == 0){
 
 		// Get body, parentBody, parentAtom
-		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(aIx, dumm);
+		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(cAIx, dumm);
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
 		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
@@ -729,20 +732,25 @@ Topology::getChemicalParent_IfIAmRoot(
 
 		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
 			// Find the true bSpecificAtom (CHEMICAL) parent
-			bSpecificAtom *originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
+			bSpecificAtom *originSpecAtom = updAtomByAtomIx(cAIx); //@TODO: optimize
 
 			// TODO: Check is neighbors and bondsInvolved are redundant
-			// Loop through neighbor atoms (bSpecificAtom)
+			// Loop through neighbor atoms (bSpecificAtom) : prmtop indexes
 			for(auto neighborIx : originSpecAtom->neighborsIndex) {
 
-				std::cout << "\t\tTopology::getChemicalParent_IfIAmRoot aIx neighborIx " << aIx <<" "<< neighborIx << std::endl << std::flush;
+				std::cout << "\t\tTopology::getChemicalParent_IfIAmRoot aIx neighborIx cAIx neighborCAIx "
+					<< originSpecAtom->getNumber() <<" "<< neighborIx
+					<<" "<< cAIx <<" "<< subAtomList[neighborIx].getCompoundAtomIndex()
+					<< std::endl << std::flush;
 
 				// Loop through bonds that this atom is involved in (bBond);
 				for (auto bondIndex : originSpecAtom->bondsInvolvedIndex) {
 
+					std::cout << "\t\t\tTopology::getChemicalParent_IfIAmRoot bondIndex "
+						<<" "<< bondIndex<<" "<< subBondList[bondIndex].i <<" "<< subBondList[bondIndex].j << std::endl << std::flush;
+
 					// Check if this neighbor is involved in this bond
-					if( subBondList[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[neighborIx].getNumber()
-						) ){
+					if( subBondList[bondIndex].isThisMe(originSpecAtom->getNumber(), subAtomList[neighborIx].getNumber()) != 0){
 
 						std::cout << "\t\tTopology::getChemicalParent_IfIAmRoot bondIndex " << bondIndex << std::endl << std::flush;
 
@@ -757,14 +765,14 @@ Topology::getChemicalParent_IfIAmRoot(
 								return chemParentAIx;
 							}
 						}
-					}
-				}
-			}
-		}
+					} // __end__ isThisMe
+				} // __end__ bondsInvolvedIndex
+			} // __end__ neighborsIndex
+		} // __end__ parent not Ground
 		
 	}else{
 		std::cout << "Warning: requiring chemical parent for non-root atom\n";
-		bSpecificAtom *originSpecAtom = updAtomByAtomIx(aIx); //TODO: optimize
+		bSpecificAtom *originSpecAtom = updAtomByAtomIx(cAIx); //TODO: optimize
 		for(auto k : originSpecAtom->neighborsIndex) {
 			Compound::AtomIndex candidateChemParentAIx = subAtomList[k].getCompoundAtomIndex();
 			if(getAtomLocationInMobilizedBodyFrameThroughDumm(candidateChemParentAIx, dumm) == 0){ // atom is at body's origin // DANGER
@@ -778,6 +786,71 @@ Topology::getChemicalParent_IfIAmRoot(
 
 	return chemParentAIx;
 }
+*/
 
+SimTK::Compound::AtomIndex
+Topology::getChemicalParent_IfIAmRoot(
+	SimTK::SimbodyMatterSubsystem *matter,
+	//std::unique_ptr<SimTK::SimbodyMatterSubsystem> matter,
+	SimTK::Compound::AtomIndex cAIx,
+	SimTK::DuMMForceFieldSubsystem& dumm)
+{
+	SimTK::Compound::AtomIndex chemParentAIx;
+	int gmolAtomIndex = -111111;
 
+	if(getAtomLocationInMobilizedBodyFrameThroughDumm(cAIx, dumm) == 0){
+
+		// Get body, parentBody, parentAtom
+		SimTK::MobilizedBodyIndex mbx = getAtomMobilizedBodyIndexThroughDumm(cAIx, dumm);
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		const SimTK::MobilizedBody& parentMobod =  mobod.getParentMobilizedBody();
+		SimTK::MobilizedBodyIndex parentMbx = parentMobod.getMobilizedBodyIndex();
+
+		//std::cout << "Topology::getChemicalParent_IfIAmRoot mbx parentMbx " << int(mbx) <<" "<< int(parentMbx) << std::endl << std::flush;
+
+		if(parentMobod.getMobilizedBodyIndex() != 0){ // parent not Ground
+
+			// Get bSpecificAtom
+			bSpecificAtom *originSpecAtom = updAtomByAtomIx(cAIx); //@TODO: optimize
+
+			// TODO: Check is neighbors and bondsInvolved are redundant
+			// Loop through neighbor atoms (bSpecificAtom) : prmtop indexes
+			for(auto neighborIx : originSpecAtom->neighborsIndex) {
+
+				Compound::AtomIndex candidateChemParentCAIx = subAtomList[neighborIx].getCompoundAtomIndex();
+
+				SimTK::MobilizedBodyIndex candidateParentMbx = getAtomMobilizedBodyIndexThroughDumm(candidateChemParentCAIx, dumm);
+				const SimTK::MobilizedBody& candidateParentMobod = matter->getMobilizedBody(candidateParentMbx);
+
+				// Check if neighbor atom's mobod is a parent mobod
+				if(candidateParentMbx == parentMbx){
+
+					// std::cout << "\t\tTopology::getChemicalParent_IfIAmRoot aIx neighborIx cAIx candidateChemParentCAIx candidateParentMbx parentMbx"
+					// 	<<" "<< originSpecAtom->getNumber() <<" "<< neighborIx
+					// 	<<" "<< cAIx <<" "<< candidateChemParentCAIx
+					// 	<<" "<< int(candidateParentMbx) <<" "<< int(parentMbx)
+					// 	<< std::endl << std::flush;
+
+					return candidateChemParentCAIx;
+				}
+
+			} // __end__ neighborsIndex
+		} // __end__ parent not Ground
+		
+	}else{
+		std::cout << "Warning: requiring chemical parent for non-root atom\n";
+		bSpecificAtom *originSpecAtom = updAtomByAtomIx(cAIx); //TODO: optimize
+		for(auto k : originSpecAtom->neighborsIndex) {
+			Compound::AtomIndex candidateChemParentCAIx = subAtomList[k].getCompoundAtomIndex();
+			if(getAtomLocationInMobilizedBodyFrameThroughDumm(candidateChemParentCAIx, dumm) == 0){ // atom is at body's origin // DANGER
+				chemParentAIx = candidateChemParentCAIx;
+				gmolAtomIndex = subAtomList[k].getNumber();
+				std::cout << "FOUND " << chemParentAIx << std::endl; 
+				return chemParentAIx;
+			}
+		}
+	}
+
+	return chemParentAIx;	
+}
 
