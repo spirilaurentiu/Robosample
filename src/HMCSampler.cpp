@@ -6148,7 +6148,7 @@ double HMCSampler::calcMobodsMBAT(SimTK::State& someState)
 				SimTK::Vec3 V1 = topology.calcAtomLocationInGroundFrameThroughSimbody(chemGrandParentIx, *dumm, *matter, someState);
 				SimTK::Vec3 G_GrandParent = V2 - V1;
 				bondAngle = bAngle(V2, V1, V3);
-				//scout(" ") << "bondAngle " << bondAngle <<" ";
+				///scout(" ") << "bondAngle " << bondAngle <<" ";
 			} // atom has a grandParent
 
 			//scout(" ") << eol;

@@ -28,25 +28,25 @@ void FixmanTorque::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK::Sp
 	matter->calcFixmanTorque(state, helperV, fixTorqV, &D0); // ERROR ON LOCK
 
 	// Apply Fixman torque
-	std::cout << "FIXTORROLLFixmanTorque::calcForce FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque
+	//std::cout << "FIXTORROLLFixmanTorque::calcForce FixmanTorque_" << RT << "_" << matter->getNumBodies() << std::flush; // print Fixman torque
 	
 	int uslot = -1;
 	for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx){
 
 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 
-		std::cout <<" "<< int(mbx) << std::flush; // print Fixman torque
+		//std::cout <<" "<< int(mbx) << std::flush; // print Fixman torque
 
 		for(int uIx = 0; uIx < mobod.getNumU(state); uIx++){
 						
 			uslot++;
 
-			std::cout <<" "<< uIx <<" "<< (-1.0) * RT * fixTorqV[uslot] << std::flush; // print Fixman torque
+			//std::cout <<" "<< uIx <<" "<< (-1.0) * RT * fixTorqV[uslot] << std::flush; // print Fixman torque
 
 			mobod.applyOneMobilityForce(state, uIx, (-1.0) * RT * fixTorqV[uslot], mobilityForces);
 		}
 
-		std::cout << std::endl << std::flush; // print Fixman torque
+		//std::cout << std::endl << std::flush; // print Fixman torque
 
 	} // _end_ mbx
 

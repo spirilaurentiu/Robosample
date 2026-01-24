@@ -4150,26 +4150,27 @@ void World::setRollFlexibilities(const std::vector<BOND_FLEXIBILITY>& argRollFle
 					 ((bond.i == rollBond.j) && (bond.j == rollBond.i))
 				){
 
-					SimTK::Compound::AtomIndex aIx1 = topology.subAtomList[bond.i].getCompoundAtomIndex();
-					SimTK::Compound::AtomIndex aIx2 = topology.subAtomList[bond.j].getCompoundAtomIndex();
+					SimTK::Compound::AtomIndex cAIx1 = topology.subAtomList[bond.i].getCompoundAtomIndex();
+					SimTK::Compound::AtomIndex cAIx2 = topology.subAtomList[bond.j].getCompoundAtomIndex();
 
-					SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx1, *forceField);
-					SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx2, *forceField);
-
+					SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(cAIx1, *forceField);
+					SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(cAIx2, *forceField);
 					if(mbx1 == mbx2){throw std::runtime_error("World::setRollFlexibilities: bond is in the same body.");}
 
-					if( ((matter->getMobilizedBody(mbx2)).getParentMobilizedBody()).getMobilizedBodyIndex() == mbx1){
-						(this->rollMbxs).push_back(mbx2);
-					}else{
-						(this->rollMbxs).push_back(mbx1);
-					}
+					//std::cout << "World::setRollFlexibilities:_pushed_bond i j cAIx1 cAIx2 mbx " << bond.i <<" "<< bond.j <<" "<< cAIx1 << " " << cAIx2;
 
-					std::cout << "World::setRollFlexibilities: pushed bond " << bond.i <<" "<< bond.j <<" "<< rollBond.i <<" "<< rollBond.j << std::endl;
+					if( ((matter->getMobilizedBody(mbx2)).getParentMobilizedBody()).getMobilizedBodyIndex() == mbx1){
+						(this->rollMbxs).push_back(int(mbx2));
+						//std::cout <<" "<< mbx2 << std::endl;
+					}else{
+						(this->rollMbxs).push_back(int(mbx1));
+						//std::cout <<" "<< mbx1 << std::endl;
+					}
 
 				}
 			}
 		}
-	}	
+	}
 
 }
 
@@ -4187,8 +4188,7 @@ const std::vector<BOND_FLEXIBILITY>& World::getRollFlexibilities() const
 // 	return this->isRollFlexibilities;
 // }
 
-/*! <!-- Lock all mobilizers at default level Position.
---> */
+/*! <!-- Lock all mobilizers at default level Position. --> */
 void World::lockAllMobilizers(void)
 {
 	SimTK::State& currentAdvancedState = integ->updAdvancedState();
@@ -4230,9 +4230,10 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
     };
 
     if (isRollFlexibilities) {
-        //for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
-		//for (int mobIntIx = 1; (mobIntIx+1) < matter->getNumBodies(); mobIntIx += 2) {
-		for(int intIx = rollMbxs[0]; (intIx + 1) < rollMbxs.size(); intIx++){
+
+		if (rollMbxs.empty()) return false;
+
+		for (size_t intIx = 0; intIx + 1 < rollMbxs.size(); intIx += 2) {
 
 			int mobIntIx1 = rollMbxs[intIx];
 			int mobIntIx2 = rollMbxs[intIx + 1];
@@ -4244,7 +4245,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			const SimTK::MobilizedBody& mobod2 = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx2));
 
 			auto mbx1 = SimTK::MobilizedBodyIndex(mobIntIx1);
-			auto mbx2 = SimTK::MobilizedBodyIndex(mobIntIx1);
+			auto mbx2 = SimTK::MobilizedBodyIndex(mobIntIx2);
 
 			auto& topoAtomPair1 = mbx2aIx.at(mbx1);
 			auto& topoAtomPair2 = mbx2aIx.at(mbx2);
@@ -4258,12 +4259,12 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			mobod1.unlock(currentAdvancedState);
 			mobod2.unlock(currentAdvancedState);
 
-			std::cout << "mbx1 mbx2 topoIx1 topoIx2 cAIx1 cAIx2 level "
-					<< int(mbx1) << " " << int(mbx2) << " "
-					<< topoIx1 << " " << topoIx2 << " "
-					<< cAIx1 << " " << cAIx2
-					<<" "<< mobod1.getLevelInMultibodyTree()
-					<< std::endl;
+			// std::cout << "mbx1 mbx2 topoIx1 topoIx2 cAIx1 cAIx2 level "
+			// 		<< int(mbx1) << " " << int(mbx2) << " "
+			// 		<< topoIx1 << " " << topoIx2 << " "
+			// 		<< cAIx1 << " " << cAIx2
+			// 		<<" "<< mobod1.getLevelInMultibodyTree()
+			// 		<< std::endl;
 
 			//currentAdvancedState.invalidateAllCacheAtOrAbove(SimTK::Stage::Position); // FIXTOR_TRY
 
