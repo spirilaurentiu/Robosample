@@ -4142,6 +4142,13 @@ void World::setRollFlexibilities(const std::vector<BOND_FLEXIBILITY>& argRollFle
 
 	for(auto& rollBond : argRollFlexibilities){
 
+		// std::cout << "World::setRollFlexibilities:_processing_bond wIx i j mobility"
+		// 	<<" "<< ownWorldIndex
+		// 	<<" " << rollBond.i <<" "<< rollBond.j
+		// 	<<" "<< int(rollBond.mobility)
+		// 	<< std::endl << std::flush
+		// ;
+
 		for(auto& topology : (*topologies)){
 
 			for(auto& bond : topology.subBondList){
@@ -4155,16 +4162,28 @@ void World::setRollFlexibilities(const std::vector<BOND_FLEXIBILITY>& argRollFle
 
 					SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(cAIx1, *forceField);
 					SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(cAIx2, *forceField);
+
+					std::cout << "World::setRollFlexibilities:_pushed_bond wIx i j cAIx1 cAIx2 mbx1 mbx2"
+						<<" "<< ownWorldIndex
+						<<" " << bond.i <<" "<< bond.j
+						<<" "<< cAIx1 << " " << cAIx2
+						//<<" " << mbx1 <<" "<< mbx2 << std::endl << std::flush
+					;
+
 					if(mbx1 == mbx2){throw std::runtime_error("World::setRollFlexibilities: bond is in the same body.");}
 
-					//std::cout << "World::setRollFlexibilities:_pushed_bond i j cAIx1 cAIx2 mbx " << bond.i <<" "<< bond.j <<" "<< cAIx1 << " " << cAIx2;
-
 					if( ((matter->getMobilizedBody(mbx2)).getParentMobilizedBody()).getMobilizedBodyIndex() == mbx1){
+
 						(this->rollMbxs).push_back(int(mbx2));
-						//std::cout <<" "<< mbx2 << std::endl;
+
+						std::cout <<" "<< mbx2 << std::endl;
+					
 					}else{
+
 						(this->rollMbxs).push_back(int(mbx1));
-						//std::cout <<" "<< mbx1 << std::endl;
+
+						std::cout <<" "<< mbx1 << std::endl;
+					
 					}
 
 				}
@@ -4200,6 +4219,16 @@ void World::lockAllMobilizers(void)
 	// currentAdvancedState.invalidateAllCacheAtOrAbove(SimTK::Stage::Position);
 }
 
+/*! <!-- Unlock all mobilizers --> */
+void World::unlockAllMobilizers(void)
+{
+	SimTK::State& currentAdvancedState = integ->updAdvancedState();
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		mobod.unlock(currentAdvancedState); // unlock
+	}
+}
+
 
 /*! <!-- Generate howManySamplesPerRound samples --> */
 bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
@@ -4229,7 +4258,9 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
         }
     };
 
-    if (isRollFlexibilities) {
+	//std::cout << "Before World::generateSamples isRollFlexibilities check" <<" " << this->isRollFlexibilities << std::endl << std::flush; // FIXTORROLL
+
+    if (this->isRollFlexibilities == true) {
 
 		if (rollMbxs.empty()) return false;
 
@@ -4272,6 +4303,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
         
 		}
     } else {
+		//unlockAllMobilizers();
         runSamplingLoop(currentAdvancedState); // sample_iteration
     }
 

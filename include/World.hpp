@@ -131,8 +131,18 @@ public:
 
 	void setRollFlexibilities(const std::vector<BOND_FLEXIBILITY>& argRollFlexibilities);
 	const std::vector<BOND_FLEXIBILITY>& getRollFlexibilities() const ;
-	//void setRollFlexibilities(bool argRollFlexibilities);
-	//bool getRollFlexibilities() const ;
+	
+	void setIsRoll(bool argIsRoll) {this->isRollFlexibilities = argIsRoll; };
+	
+	void updIsRoll(bool argIsRoll) {
+		this->isRollFlexibilities = argIsRoll;
+
+		if(this->isRollFlexibilities == false){
+			unlockAllMobilizers();
+		}
+		
+	};
+	const bool getIsRoll() const { return this->isRollFlexibilities; };
 
 	#pragma endregion ROLL
 
@@ -140,6 +150,7 @@ public:
 	* @brief Lock all mobilizers at default level Position
 	*/
 	void lockAllMobilizers(void);
+	void unlockAllMobilizers(void);
 
 	void generateDummParams(const std::vector<bSpecificAtom>& atoms,
 		const std::vector<bBond>& bonds,

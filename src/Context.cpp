@@ -1727,12 +1727,14 @@ void Context::addWorld(
 
     if(MEMDEBUG){stdcout_memdebug("Context::addWorld 0");}
 
-	std::cout << "Flexibilities from CPP\n";
+	int tz = -1;
 	for (const auto& f : flexibilities) {
-	std::cout << "i=" << f.i
-				<< ", j=" << f.j
-				<< ", mobility=" << static_cast<int>(f.mobility)
-				<< '\n';
+		tz +=1;
+		if(tz > 5){break;} // limit output
+		std::cout << "Context::addWorld_flex_CPP i=" << f.i
+					<< ", j=" << f.j
+					<< ", mobility=" << static_cast<int>(f.mobility)
+					<< '\n';
     }
 
 	// Create new world and add its index
@@ -6583,6 +6585,30 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			transferCoordinates_ReplicaToWorld(replicaIx, 0);
 			//std::cout << "After  Context::RunREX transferCoordinates_ReplicaToWorld" << std::endl << std::flush; worlds[0].PrintStages(); // FIXTORROLL
 
+			// HARDCODED ROLLING // @TODO DELETE 
+			int HARDCODED_ROLL_WIX = 1;
+			SimTK::Real roll_ts = thermoState.getTimesteps()[HARDCODED_ROLL_WIX];
+			World& roll_world = worlds[thermoWorldIxs[HARDCODED_ROLL_WIX]];
+			int roll_world_NU = roll_world.getNUs();
+
+			if(thermoIx == 0){
+				roll_world.updIsRoll(true);
+				(roll_world.updSampler(0))->setTimestep(roll_ts, false); ;
+
+				// std::cout << "Context::RunREX Thermodynamic state " << thermoIx << " Setting world "
+				// 	<< thermoWorldIxs[HARDCODED_ROLL_WIX] << " to ROLL" 
+				// 	<< std::endl << std::flush;
+
+			}else{
+				roll_world.updIsRoll(false);
+				(roll_world.updSampler(0))->setTimestep(roll_ts / roll_world_NU, false); ;
+
+				// std::cout << "Context::RunREX Thermodynamic state " << thermoIx << " Setting world "
+				// 	<< thermoWorldIxs[1] << " to NOT ROLL with timestep " << roll_ts / roll_world_NU
+				// 	<< std::endl << std::flush;
+
+			} // @TODO DELETE
+
 			transferQStatistics(thermoIx, thermoWorldIxs[nofEquilibriumWorlds - 1], thermoWorldIxs[nofEquilibriumWorlds - 1]);
 			// std::cout << "Thermodynamic state " << thermoIx << " Transfering statistics from world "
 			// 	<< thermoWorldIxs[nofEquilibriumWorlds - 1] << " to world " << thermoWorldIxs[nofEquilibriumWorlds - 1]
@@ -6618,7 +6644,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
 				setReplicaExchangePairs(mixi, 1);
 				//printReplicaExchangePairs();
-			}			
+			}
 		}
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
