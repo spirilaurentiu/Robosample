@@ -1,228 +1,251 @@
+#region: Imports
+import sys
+sys.path.append("/home/laurentiu/git6/Robosample/bin")
 import flexor
 import mdtraj as md
 import argparse
 import robosample
-import batstat
+#import batstat
 import numpy as np
-import os
+#endregion
 
-# Create the parser
+mobilityMap = {
+	"Cartesian": robosample.BondMobility.Translation,
+	"Pin": robosample.BondMobility.Torsion,
+	"Torsion": robosample.BondMobility.Torsion,
+	"Slider": robosample.BondMobility.Slider,
+	"AnglePin": robosample.BondMobility.AnglePin,
+	"BendStretch": robosample.BondMobility.BendStretch,
+	"Spherical": robosample.BondMobility.Spherical,
+	"Cylinder": robosample.BondMobility.Cylinder,
+	"OrthoSpherical": robosample.BondMobility.OrthoSpherical
+}
+
+# Read the flexibilities from a file
+def getFlexibilitiesFromFile(flexFile):
+	"""
+	Backward compatibility: Reads the flexibilities from a file.
+	"""
+	flexibilities = []
+	with open(flexFile, 'r') as f:
+		for line in f:
+			if line[0] == '#':
+				continue
+			tokens = line.split()
+			if(len(tokens) >= 3):
+				if(tokens[2] != "Weld"):
+					aIx_1 = int(tokens[0])
+					aIx_2 = int(tokens[1])
+					mobility = mobilityMap[tokens[2]]
+					flexibilities.append( robosample.BondFlexibility(aIx_1, aIx_2, mobility) )
+	return flexibilities
+#
+
+# Print the flexibilities
+def printFlexibilities(flexibilities):
+	"""
+	Prints the flexibilities.
+	"""
+	for flexIx, flex in enumerate(flexibilities):
+		print(flexibilities[flexIx].i, flexibilities[flexIx].j, flexibilities[flexIx].mobility)
+#
+
+#region: Parse the arguments
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+	
 parser = argparse.ArgumentParser(description='Process PDB code and seed.')
-
-# Add the arguments
-parser.add_argument('name', type=str, help='Name of the simulation.')
-parser.add_argument('prmtop', type=str, help='Relative path to the .prmtop file.')
-parser.add_argument('inpcrd', type=str, help='Relative path to the .inpcrd file.')
-parser.add_argument('seed', type=int, help='The seed.')
-parser.add_argument('equil_steps', type=int, help='The number of equilibration steps.')
-parser.add_argument('prod_steps', type=int, help='The number of production steps.')
-parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
-parser.add_argument('temperature_init', type=int, help='Temperature of the first replica.')
-parser.add_argument('pdbid', type=str, help='pdbid')
-parser.add_argument('type', type=str, help='type of simulation')
-parser.add_argument('spr_method', type=str, help='samples per round method')
-
-# Parse the arguments
+parser.add_argument('--name', type=str, help='Name of the simulation.')
+parser.add_argument('--top', type=str, help='Relative path to the .prmtop file.')
+parser.add_argument('--rst7', type=str, help='Relative path to the .rst7 file.')
+parser.add_argument('--rstDir', type=str, help='Restart directory.')
+parser.add_argument('--equilSteps', type=int, help='The number of equilibration steps.')
+parser.add_argument('--prodSteps', type=int, help='The number of production steps.')
+parser.add_argument('--writeFreq', type=int, help='CSV and DCD write frequency.')
+parser.add_argument('--baseTemperature', default=300.00, type=float, help='Temperature of the first replica.')
+parser.add_argument('--baseTdiff', type=float, default=10.0, help='Temperature difference between the first two replicas.')
+parser.add_argument('--nofReplicas', type=int, default=1, help='Number of replicas.')
+parser.add_argument('--runType', type=str, help='Run type: DEFAULT, REMC, RENEMC, RENE, REBAS.')
+parser.add_argument('--seed', type=int, help='The seed.')
+parser.add_argument('--flexFNs', type=str, nargs='+', default=[], help='The flexFNs.')
+parser.add_argument('--FixmanTorque', type=str2bool, nargs='+', default=[], 
+                    help='Enable Fixman Torque per world')
+parser.add_argument('--roll', type=str2bool, nargs='+', default=[],
+					help='Roll over.')
 args = parser.parse_args()
+#endregion
 
-# prepare flexor generator
-mdtrajObj = md.load(args.inpcrd, top=args.prmtop)
-flexorObj = flexor.Flexor(mdtrajObj)
+# Create robosample context
+run_type = getattr(robosample.RunType, args.runType)
+context = robosample.Context(args.name, args.seed, 0, 1, run_type, 1, 0)
 
-# create robosample context
-context = robosample.Context(args.name, args.seed, 0, 1, robosample.RunType.REMC, 1, 0)
+# Set parameters
 context.setPdbRestartFreq(0) # WRITE_PDBS
-context.setPrintFreq(args.write_freq) # PRINT_FREQ
+context.setPrintFreq(args.writeFreq) # PRINT_FREQ
 context.setNonbonded(0, 1.2)
 context.setGBSA(1)
-context.setVerbose(False)
+context.setVerbose(True)
 
-# load system
-context.loadAmberSystem(args.prmtop, args.inpcrd)
+# Load system
+context.loadAmberSystem(args.top, args.rst7)
 
-if args.type == 'tdnr':
-	# Do torsional dynamics - non-redundant dihedrals
-	stats = batstat.BATCorrelations(args.prmtop, args.inpcrd)
-	atom_indices = stats.get_dihedral_atom_indices()
+# Prepare flexor generator
+mdtrajObj = md.load(args.rst7, top=args.top)
+flexorObj = flexor.Flexor(mdtrajObj)
 
-	flex = flexorObj.create_from_list(atom_indices, robosample.BondMobility.Torsion)
-	context.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
-	context.getWorld(0).addSampler(robosample.SamplerName.HMC, robosample.IntegratorType.OMMVV, robosample.ThermostatName.ANDERSEN, False)
+nofWorlds = 1 + len(args.flexFNs)
+worldIndexes = range(nofWorlds)
 
-	nof_replicas = 1
-	temperature = args.temperature_init
-	temperatures = []
-	boost_temperatures = []
-	for i in range(nof_replicas):
-		temperatures.append(temperature + (i * 10))
-		boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
+# -----------------------------------------------------------
+# ------------------ TIMESTEPS and MDSTEPS ------------------
+# -----------------------------------------------------------
+# region sensitive parameters
 
-	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings]
-	timesteps = [0.0075]
-	worldIndexes = [0]
-	world_indexes = [0]
-	mdsteps = [10]
-	boost_md_steps = mdsteps
-	integrators = [robosample.IntegratorType.VERLET]
+nof_replicas = args.nofReplicas
 
-	distort_options = [0]
-	distort_args = ["0"]
-	flow = [0]
-	work = [0]
+timesteps = [[0.0007 for _ in range(nofWorlds)] for _ in range(nof_replicas)]
+mdsteps = [[10 for _ in range(nofWorlds)] for _ in range(nof_replicas)]
+samples_per_round = [[1 for _ in range(nofWorlds)] for _ in range(nof_replicas)]
+distort_options = [[0 for _ in range(nofWorlds)] for _ in range(nof_replicas)]
+distort_args = [["0" for _ in range(nofWorlds)] for _ in range(nof_replicas)]
+flow = [[0 for _ in range(nofWorlds)] for _ in range(nof_replicas)]
+work = [[0 for _ in range(nofWorlds)] for _ in range(nof_replicas)]
+accept_reject_modes = [[robosample.AcceptRejectMode.MetropolisHastings for _ in range(nofWorlds)] for _ in range(nof_replicas)]
 
-	for i in range(nof_replicas):
-		context.addReplica(i)
-		context.addThermodynamicState(i, temperatures[i], accept_reject_modes, distort_options, distort_args, flow, work, integrators, worldIndexes, timesteps, mdsteps)
+# World 0 # Cartesian
+if nofWorlds > 0:
+	for replIx in range(nof_replicas):
+		timesteps[replIx][0] = 0.0007
+		mdsteps[replIx][0] = 1000
+		samples_per_round[replIx][0] = 1
 
-	context.Initialize()
-	context.RunREX(args.equil_steps, args.prod_steps)
+# World 1 # Roll
+if nofWorlds > 1:
+	for replIx in range(nof_replicas):
+		timesteps[replIx][1] = 0.05
+		mdsteps[replIx][1] = 5
+		samples_per_round[replIx][1] = 1
 
-elif args.type == 'tdc':
-	# Do torsional dynamics - correlated dihedrals
+# World 2 # BAT stats
+if nofWorlds > 2:
+	for replIx in range(nof_replicas):
+		timesteps[replIx][2] = 0.0007
+		mdsteps[replIx][2] = 0
+		samples_per_round[replIx][2] = 1
 
-	# # Cluster the previous simulations
-	stats = batstat.BATCorrelations(args.prmtop, args.inpcrd)
-	atom_indices = stats.get_dihedral_atom_indices()
-	# correlation_file = f"{args.pdbid}_6000_correlation.npy"
+# World 3 # BAT REBAS
+if nofWorlds > 3:
+	for replIx in range(nof_replicas):
+		timesteps[replIx][3] = 0.0007
+		mdsteps[replIx][3] = 0
+		samples_per_round[replIx][3] = 1
+		accept_reject_modes[replIx][3] = robosample.AcceptRejectMode.AlwaysAccept
+		distort_options[replIx][3] = -6
+		distort_args[replIx][3] = "deterministic"
 
-	# if os.path.exists(correlation_file):
-	# 	corr = np.load(correlation_file)
-	# else:
-	# 	dcd_files = [f"{args.pdbid}_{i}.dcd" for i in range(5)]
-	# 	stats.compute_dihedrals_from_dcd(dcd_files)
-	# 	corr = stats.compute_correlations()
-	# 	np.save(correlation_file, corr)
+#endregion
+# -----------------------------------------------------------
 
-	# # Partition the dihedrals into blocks
-	# blocks, samples_per_round = stats.dynamic_partitioning(np.mean(np.abs(corr), axis=0))
-	# if args.spr_method == 'fixed':
-	# 	samples_per_round = [1] * len(blocks)
-	# # print("samples_per_round", samples_per_round)
+#region EXPERIMENT SETUP
+print("=== EXPERIMENT SETUP ===")
+print("Number of worlds:", nofWorlds)
+print("Number of replicas:", nof_replicas)
+print("Timesteps:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", timesteps[replIx])
+print("MD Steps:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", mdsteps[replIx])
+print("Samples per round:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", samples_per_round[replIx])
+print("Distort options:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", distort_options[replIx])
+print("Distort args:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", distort_args[replIx])
+print("Flow:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", flow[replIx])
+print("Work:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", work[replIx])
+print("Accept reject modes:")
+for replIx in range(nof_replicas):
+	print(" Replica", replIx, ":", accept_reject_modes[replIx])
+print("=========================", flush=True)
+#endregion EXPERIMENT SETUP
 
-	# python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6000 10 100 1 300 1APQ tdc auto
-	blocks = [
-		# high correlation blocks
-		[0, 2, 3, 4, 8, 10, 11, 12, 13, 53, 55, 57, 58, 64, 65, 66, 89],
-		[73, 74, 75, 77, 78, 79, 80, 81, 82, 83, 85, 86, 87, 91, 92, 93, 94, 96, 97, 98, 99, 110],
-		[14, 15, 16, 18, 20, 21, 25, 28, 30, 31, 33, 34, 38, 40, 41, 42, 103, 107],
-		[49, 50, 51, 52, 67, 68, 71, 108, 109],
+FIXMAN_TORQ = args.FixmanTorque
+ROLL = args.roll
+addedSoFar = 0
 
-		# low correlation block
-		[1, 5, 6, 9, 54, 56, 59, 60, 61, 62, 63, 76, 84, 88, 90, 95, 100, 101, 102, 104, 111, 7, 17, 19, 22, 23, 24, 26, 27, 29, 32, 35, 36, 37, 39, 43, 44, 45, 46, 47, 48, 69, 70, 72, 106]
-	]
+# Add default Openmm Cartesian world
+flexes_Cart = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
+context.addWorld(FIXMAN_TORQ[addedSoFar], samples_per_round[0][addedSoFar], robosample.RootMobility.CARTESIAN, flexes_Cart, True, False, 0)
+addedSoFar += 1
 
-	# # flatten the blocks
+# Add worlds
+for flexFNIx, flexFN in enumerate(args.flexFNs):
+	flexibilities = getFlexibilitiesFromFile(flexFN)
+	#printFlexibilities(flexibilities)
 
-	# # add another block that contins all the non-correlated dihedrals
-	# uncorrelated_block = []
-	# for i in range(stats.num_dihe):
-	# 	if i not in [item for sublist in blocks for item in sublist]:
-	# 		uncorrelated_block.append(i)
+	if FIXMAN_TORQ[addedSoFar] == False:
+		print(" === NO FIXMAN TOQRUE FOR WORLD", addedSoFar," ===", file=sys.stderr)
 
-	blocks_as_bond_list = []
-	for block in blocks:
-		l = []
-		for b in block:
-			aix1 = stats.atom_indices[b][1]
-			aix2 = stats.atom_indices[b][2]
-			l.append([aix1, aix2])
-		blocks_as_bond_list.append(l)
-	blocks = blocks_as_bond_list
+	context.addWorld(FIXMAN_TORQ[addedSoFar], samples_per_round[0][addedSoFar], robosample.RootMobility.WELD, flexibilities, True, False, 0)
+	addedSoFar += 1
 
-	samples_per_round = [
-		0.3291,
-		0.1206,
-		0.3612,
-		0.1587,
-		0.1206*0.5 # adjust, this is for the non-correlated pairs
-	]
+	if ROLL[addedSoFar - 1] == True:
+		print("Setting Roll for world", addedSoFar - 1, "to", ROLL[addedSoFar - 1], file=sys.stderr)
+		context.getWorld(addedSoFar - 1).setRollFlexibilities(flexibilities)
+	else:
+		print(" === NO ROLL FOR WORLD", addedSoFar - 1," ===", file=sys.stderr)
 
-	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6000 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
-	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6001 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
-	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6002 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
-	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6003 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
-	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6004 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
-	# nohup python3 simulate.py 1APQ_new data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6005 1 100000 1 300 1APQ tdc auto > /dev/null 2>&1 &
+# Add samplers
+sampler = robosample.SamplerName.HMC # rename to type
+thermostat = robosample.ThermostatName.ANDERSEN
+context.getWorld(0).addSampler(sampler, robosample.IntegratorType.OMMVV, thermostat, False)
 
-	# normalize such that min(samples_per_round) = 1
-	min_samples = min(samples_per_round)
-	samples_per_round = [int(round(x / min_samples)) for x in samples_per_round]
+for worldIx in range(1, nofWorlds):
+	context.getWorld(worldIx).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
 
-	# Add Cartesian flexors (OpenMM)
-	flex = flexorObj.create(range="all", subset=["all"], jointType="Cartesian")
-	context.addWorld(False, 1, robosample.RootMobility.WELD, flex, True, False, 0)
+# Replica exchange
+temperatures = np.zeros(nof_replicas, dtype=np.float64)
+Tratio = (args.baseTemperature + args.baseTdiff) / args.baseTemperature
+for replIx in range(nof_replicas):
+    temperatures[replIx] = args.baseTemperature * (Tratio**replIx)
 
-	# Create the flexors from the blocks
-	for block, num_samples in zip(blocks, samples_per_round):
-		flex = flexorObj.create_from_list(block, robosample.BondMobility.Torsion)
-		context.addWorld(True, num_samples, robosample.RootMobility.WELD, flex, True, False, 0)
+# Add replicas
+integrators = [robosample.IntegratorType.OMMVV] + ((nofWorlds - 1) * [robosample.IntegratorType.VERLET])
 
-	non_correlated_world_index = len(blocks) + 1
-	context.getWorld(1).setRollFlexibilities(True)
+# Add replicas with coordinates
+context.addReplicasAndLoadCoordinates(args.top, args.rstDir, nof_replicas)
 
-	# Add samplers
-	context.getWorld(0).addSampler(robosample.SamplerName.HMC, robosample.IntegratorType.OMMVV, robosample.ThermostatName.ANDERSEN, False)
-	for i in range(1, len(blocks) + 1):
-		context.getWorld(i).addSampler(robosample.SamplerName.HMC, robosample.IntegratorType.VERLET, robosample.ThermostatName.ANDERSEN, True)
+# Add thermodynamic states
+for replIx in range(nof_replicas):
+    context.addThermodynamicState(replIx,
+		temperatures[replIx],
+		accept_reject_modes[replIx],
+		distort_options[replIx],
+		distort_args[replIx],
+		flow[replIx],
+		work[replIx],
+		integrators,
+		worldIndexes,
+		timesteps[replIx],
+		mdsteps[replIx])
 
-	nof_replicas = 1
-	temperature = args.temperature_init
-	temperatures = []
-	boost_temperatures = []
-	for i in range(nof_replicas):
-		temperatures.append(temperature + (i * 10))
-		boost_temperatures.append(temperature + (i * 10))  # used for openmm velocities
+# Initialize
+context.Initialize()
 
-	accept_reject_modes = [robosample.AcceptRejectMode.MetropolisHastings] * (len(blocks) + 1)
-	timesteps = [0.0007] + [0.0075] * len(blocks)
-	worldIndexes = range(len(blocks) + 1)
-	world_indexes = range(len(blocks) + 1)
-	mdsteps = [10000] + [150] * len(blocks)
-	boost_md_steps = mdsteps
-	integrators = [robosample.IntegratorType.OMMVV] + [robosample.IntegratorType.VERLET] * len(blocks)
-
-	distort_options = [0] * (len(blocks) + 1)
-	distort_args = ["0"] * (len(blocks) + 1)
-	flow = [0] * (len(blocks) + 1)
-	work = [0] * (len(blocks) + 1)
-
-	for i in range(nof_replicas):
-		context.addReplica(i)
-		context.addThermodynamicState(i, temperatures[i], accept_reject_modes, distort_options, distort_args, flow, work, integrators, worldIndexes, timesteps, mdsteps)
-
-	context.Initialize()
-	context.RunREX(args.equil_steps, args.prod_steps)
-
-else:
-	# # sidechains pins
-	# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["all"], jointType="Pin", sasa_value=-1.0)
-	# c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
-
-	# # ramachandran pins
-	# flex = flexorObj.create(range="all", distanceCutoff=0, subset=["rama"], jointType="Pin", sasa_value=-1.0)
-	# c.addWorld(True, 1, robosample.RootMobility.WELD, flex, True, False, 0)
-
-
-
-	# c.getWorld(1).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
-	# c.getWorld(2).addSampler(sampler, robosample.IntegratorType.VERLET, thermostat, True)
-
-	pass
-
-
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6000 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6001 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6002 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6003 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6004 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6005 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6006 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6007 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6008 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6009 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6010 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6011 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6012 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6013 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6014 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
-# nohup python3 simulate.py 1APQ_tdnr data-raw/1APQ.prmtop data-raw/1APQ_min.inpcrd 6015 100 1000000 100 300 1APQ tdnr auto > /dev/null 2>&1 &
+# Run
+context.RunREX(args.equilSteps, args.prodSteps)

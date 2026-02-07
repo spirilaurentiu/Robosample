@@ -422,9 +422,9 @@ public:
 	SimTK::Real checkTransferCoordinates_BAT(int srcWIx, int destWIx, bool wantJacobian = false);
 
 	void transferCoordinates_ReplicaToWorld(int replicaIx, int destWIx);
-	void transferCoordinates_WorldToReplica(int srcWIx, int replicaIx);
+	void transferCoordinates_WorldToReplica(int srcWIx, int replicaIx, bool intoWORK = false);
+	//void transferCoordinates_WorldToReplica_WORK(int srcWIx, int replicaIx);
 
-	void transferCoordinates_WorldToReplica_WORK(int srcWIx, int replicaIx);
 	const SimTK::Real checkCoordinates_Difference(
 		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>& atomsLocations1,
 		const std::vector<std::vector<std::pair<bSpecificAtom *, SimTK::Vec3>>>& atomsLocations2) const;
@@ -689,7 +689,9 @@ public:
 
 	// Mix replicas
 	void mixAllReplicas(int nSwapAttempts);
-	void mixReplicas(int mixi);
+	
+	void prepareExchangePairs(int rexRound, int oddity);
+	void mixReplicas(int mixi, int oddity = 0);
 
 	// ========================================================================
 	// Configuration manipulation functions between worlds and replicas
@@ -772,7 +774,6 @@ public:
 
 	// Run a particular world
 	bool RunWorld(int whichWorld, const std::string& header);
-	void RunReplicaRefactor_SIMPLE(int mixi, int replicaIx); // OBSOLETE
 
 	void writeReplicaLogAndDCD(int mixi, int replicaIx, int printFreq);
 	void runReplicaWorldRange(
@@ -852,6 +853,8 @@ public:
 		bool wantEnergy, bool wantForces);
 
 private:
+
+	std::vector<int> worldsRolls;
 
 	//OpenMMPluginInterface refOpenMMPlugin; // __refOMM__
 	std::unique_ptr<OpenMM::Platform> platform; // __refOMM__

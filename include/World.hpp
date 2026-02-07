@@ -137,9 +137,9 @@ public:
 	void updIsRoll(bool argIsRoll) {
 		this->isRollFlexibilities = argIsRoll;
 
-		if(this->isRollFlexibilities == false){
-			unlockAllMobilizers();
-		}
+		// if(this->isRollFlexibilities == false){
+		// 	unlockAllMobilizers();
+		// }
 		
 	};
 	const bool getIsRoll() const { return this->isRollFlexibilities; };

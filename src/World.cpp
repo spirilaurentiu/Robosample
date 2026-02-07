@@ -4214,9 +4214,7 @@ void World::lockAllMobilizers(void)
 	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
         const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 		mobod.lock(currentAdvancedState); // lock at Motion::Level level=Motion::Position
-		//std::cout << "FIXTORROLLWorld::lockAllMobilizers lockAllMobilizers() mbx "<< int(mbx) << " locked. " << currentAdvancedState.getSystemStage() << std::endl << std::flush;
     }
-	// currentAdvancedState.invalidateAllCacheAtOrAbove(SimTK::Stage::Position);
 }
 
 /*! <!-- Unlock all mobilizers --> */
@@ -4235,11 +4233,11 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 {
     bool validated = false;
     SimTK::State& currentAdvancedState = integ->updAdvancedState();
-    updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
-	//std::cout << "After  World::generateSamples updateAtomListsFromSimbody" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
+	//std::cout << "Before World::generateSamples updateAtomListsFromSimbody" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
+	updateAtomListsFromSimbody(currentAdvancedState); // Update Robosample bAtomList
+	
 	validated = true;
-
     validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose); // FIXTOR_RESTORE
 	//std::cout << "After  World::generateSamples sampler.reinitialize" << std::endl << std::flush;  this->PrintSubsystemsStages(); this->PrintTimestepperAdvancedStages(); // this->PrintSystemDefaultStateStages(); // FIXTORROLL
 
@@ -4249,8 +4247,6 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
                 worldOutStream << header << " ";
                 updSampler(0)->getMsg_InitialParams(worldOutStream);
             }
-
-			//validated = updSampler(0)->reinitialize(currentAdvancedState, worldOutStream, verbose) && validated; // FIXTOR_TRY
 
             validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
 
@@ -4302,8 +4298,8 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			runSamplingLoop(currentAdvancedState); // sample_iteration
         
 		}
-    } else {
-		//unlockAllMobilizers();
+    } else {		
+		unlockAllMobilizers();
         runSamplingLoop(currentAdvancedState); // sample_iteration
     }
 
