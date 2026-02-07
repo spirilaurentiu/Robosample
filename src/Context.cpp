@@ -5053,22 +5053,7 @@ void Context::prepareExchangePairs(int rexRound, int oddity)
     }
 }
 
-/*!
- * <!--  -->
-*/
-// void Context::mixReplicas(int mixi)
-// {
-//     // Only attempt swaps every 'swapEvery' steps
-//     if ((mixi % swapEvery) != 0) return;
-//     // Iterate over the explicit pair list
-//     for (const auto& pair : exchangePairList)
-//     {
-//         int thermoState_i = pair.first;
-//         int thermoState_j = pair.second;
-//         // Attempt the swap
-//         bool swapped = attemptREXSwap(thermoState_i, thermoState_j);
-//     }
-// }
+
 void Context::mixReplicas(int mixi, int oddity)
 {
     if ((mixi % swapEvery) != 0) return;
@@ -5076,10 +5061,7 @@ void Context::mixReplicas(int mixi, int oddity)
 	// 1. Unified Guard Clause
     // If it's DEFAULT, we don't mix. If it's only 1 replica, we can't mix.
     if (getRunType() == RUN_TYPE::DEFAULT || nofReplicas <= 1) return;
-	
-    // 1. Generate the pairs on-the-fly (or refresh the list)
-    // This removes the need to call setReplicaExchangePairs separately in your main loop
-    prepareExchangePairs(mixi, oddity);
+
 
     // 2. Perform the swaps
     for (const auto& [thermoState_i, thermoState_j] : exchangePairList)
@@ -5820,16 +5802,31 @@ int Context::RunFrontWorldAndRotate(std::vector<int> & worldIxs)
  */ 
 void Context::updThermostatesQScaleFactors(int mixi)
 {
-	// Prepare non-equilibrium scale factors
-	if(mixi % 2){ // odd batch
-		qScaleFactorsMiu = qScaleFactorsOdd;
-	}else{ // even batch
-		qScaleFactorsMiu = qScaleFactorsEven;
-	}
+if (nofThermodynamicStates == 0) return;
+
+    // 1. Default all factors to 1.0 (no scaling)
+    std::fill(qScaleFactorsMiu.begin(), qScaleFactorsMiu.end(), 1.0);
+
+    // 2. Only update pairs that are actually being swapped
+    // This automatically avoids the double-processing bug
+    for (const auto& pair : exchangePairList) {
+        int i = pair.first;
+        int j = pair.second;
+
+        double Ti = thermodynamicStates[i].getTemperature();
+        double Tj = thermodynamicStates[j].getTemperature();
+
+        // Calculate scaling factors: mu_i = sqrt(Tj/Ti), mu_j = sqrt(Ti/Tj)
+        qScaleFactorsMiu.at(i) = std::sqrt(Tj / Ti);
+        qScaleFactorsMiu.at(j) = std::sqrt(Ti / Tj);
+        
+        // Debugging
+        //std::cout << "Round: " << mixi << " | Pair (" << i << "," << j << ") "
+        //          << "Scale Factors: [" << qScaleFactorsMiu[i] << ", " << qScaleFactorsMiu[j] << "]\n";
+    }
 
 	// Get scaling factor
 	qScaleFactors = qScaleFactorsMiu;
-
 
 	// for(const auto& pair: exchangePairList){
 	// 	int thermo_i = pair.first;
@@ -6408,18 +6405,12 @@ void Context::RunREX(int equilRounds, int prodRounds)
 	int currFrontWIx = -1;
 
 	// @@@@@@@@@@ LOOP THROUGH ROUNDS --------------------------------------------------------->
-	for(size_t mixi = 0; mixi < equilRounds + prodRounds; mixi++) {
-
-		// Reset replica exchange pairs vector
-		// if(getRunType() != RUN_TYPE::DEFAULT){
-		// 	if(replicaMixingScheme == ReplicaMixingScheme::neighboring){
-		// 		setReplicaExchangePairs(mixi, 0);
-		// 		//printReplicaExchangePairs();
-		// 	}
-		// }
+	int mixi = 0;
+	for(size_t cyclIx = 0; cyclIx < equilRounds + prodRounds; cyclIx++) {
 
 		// Update work scale factors
-		updThermostatesQScaleFactors(mixi);
+		//prepareExchangePairs(mixi, 0);
+		//updThermostatesQScaleFactors(mixi);
 
 		// @@@@@@@@@@ LOOP THROUGH REPLICAS (EQUILIBRIUM) ------------------------------------->
 		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ // BY_REPLICA
@@ -6481,18 +6472,21 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		if(getRunType() == RUN_TYPE::REBASONTOP) {
 			setRunType(RUN_TYPE::REMC);
-			for(int remcIx = 0; remcIx < 1; remcIx++){
+			for(int remcIx = 0; remcIx < 6; remcIx++){
+				prepareExchangePairs(mixi, 0);
         		mixReplicas(mixi, 0);
 				mixi++;
 				//PrintNofAcceptedSwapsMatrix();
 			}
+			PrintNofAcceptedSwapsMatrix();
 			setRunType(RUN_TYPE::REBASONTOP);
     	}
 
-		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------------------------->
+		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------- RUN A ----------->
 
 		// Update work scale factors
-		updThermostatesQScaleFactors(mixi);
+		prepareExchangePairs(mixi, 0);
+		updThermostatesQScaleFactors(mixi); // depends on exchange pairs, so needs to be updated after prepareExchangePairs !!!
 
 		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ // BY_REPLICA
 
@@ -6531,9 +6525,60 @@ void Context::RunREX(int equilRounds, int prodRounds)
 			
 			}
 
-		} // _end_ loop through replicas (NON-EQUILIBRIUM)
+		} // _end_ loop through replicas (NON-EQUILIBRIUM) RUN A
 
 		mixReplicas(mixi, 0);
+		mixi++;
+    	//PrintNofAcceptedSwapsMatrix();
+
+
+		// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------- RUN B ----------->
+
+		// Update work scale factors
+		prepareExchangePairs(mixi, 0);
+		updThermostatesQScaleFactors(mixi); // depends on exchange pairs, so needs to be updated after prepareExchangePairs !!!
+
+		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){ // BY_REPLICA
+
+			# pragma region CONVENIENT_VARS_REPLICA
+			int thermoIx = replica2ThermoIxs[replicaIx];
+			Replica& replica = replicas[replicaIx];
+			ThermodynamicState& thermoState = thermodynamicStates[thermoIx];
+			std::vector<int>& thermoWorldIxs = thermoState.updWorldIndexes();
+			std::vector<int> & distortOpts = thermoState.getDistortOptions();
+			size_t thermoNofWorlds = thermoWorldIxs.size();
+			assert((thermoWorldIxs.size() == distortOpts.size()));
+			const Partitioning& wPart = thermoState.getNonequilPartitioning();
+			# pragma endregion CONVENIENT_VARS_REPLICA
+
+			// Update BAT map for all the replica's world
+			updSubZMatrixBATsToAllWorlds(replicaIx);
+
+			if(wPart.nofNonequilibriumWorlds){
+
+				setReplicasWorldsParameters(replicaIx, false, true, mixi);
+
+				transferCoordinates_ReplicaToWorld(replicaIx, thermoWorldIxs[wPart.N1_wCnt]);
+
+				transferQStatistics(thermoIx, thermoWorldIxs[wPart.N2_wCnt], thermoWorldIxs[wPart.N1_wCnt]);
+
+				runReplicaWorldRange(replicaIx, wPart.N1_wCnt, thermoNofWorlds, true);
+
+				// Write log and DCD
+				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+
+				replica.incrementNofSamples(1);
+				thermoState.incrementNofSamples(1);
+
+				SimTK::State& state = worlds.back().integ->updAdvancedState();
+				replica.calcZMatrixBAT( worlds.back().getAtomsLocationsInGround( state ));
+			
+			}
+
+		} // _end_ loop through replicas (NON-EQUILIBRIUM) RUN B
+
+		mixReplicas(mixi, 0);
+		mixi++;
     	PrintNofAcceptedSwapsMatrix();
 
 		this->nofRounds++; 
