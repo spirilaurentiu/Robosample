@@ -6459,7 +6459,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 			// Write log and DCD
 			if(wPart.nofNonequilibriumWorlds == 0){
-				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+				//writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
 			}
 
 			replica.incrementNofSamples(1);
@@ -6515,7 +6515,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				runReplicaWorldRange(replicaIx, wPart.N1_wCnt, thermoNofWorlds, true);
 
 				// Write log and DCD
-				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+				//writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
 
 				replica.incrementNofSamples(1);
 				thermoState.incrementNofSamples(1);
@@ -6565,7 +6565,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 				runReplicaWorldRange(replicaIx, wPart.N1_wCnt, thermoNofWorlds, true);
 
 				// Write log and DCD
-				writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+				//writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
 
 				replica.incrementNofSamples(1);
 				thermoState.incrementNofSamples(1);
@@ -6580,6 +6580,10 @@ void Context::RunREX(int equilRounds, int prodRounds)
 		mixReplicas(mixi, 0);
 		mixi++;
     	PrintNofAcceptedSwapsMatrix();
+
+		for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
+			writeReplicaLogAndDCD(mixi, replicaIx, printFreq);
+		}
 
 		this->nofRounds++; 
 
