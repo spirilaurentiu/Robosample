@@ -2,6 +2,7 @@
 build
 build_debug
 buildpy
+buildpy_debug/
 buildpyvic
 doc/html
 doc/html/*

@@ -1,0 +1,18 @@
+-1 0 Weld
+# Main
+3 1  Slider
+1 2 Slider
+2 4 Slider
+1 0 Slider
+
+# Hydrogens
+3 8 Slider
+3 9 Slider
+3 10 Slider
+0 14 Slider
+1 5 Slider
+2 6 Slider
+2 7 Slider
+4 11 Slider
+4 12 Slider
+4 13 Slider
