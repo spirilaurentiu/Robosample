@@ -6484,7 +6484,14 @@ void Context::RunREX(int equilRounds, int prodRounds, int nofREXes)
 			}
 			PrintNofAcceptedSwapsMatrix();
 			setRunType(RUN_TYPE::REBASONTOP);
-    	}
+    	}else{
+			for(int remcIx = 0; remcIx < nofREXes; remcIx++){
+				prepareExchangePairs(mixi, 2, (mixi % 2)); // divisor=2, oddity=alt swaps: (0,1), (2,3), (4,5)...
+        		mixReplicas(mixi, 0);
+				mixi++;
+			}
+			PrintNofAcceptedSwapsMatrix();			
+		}
 
 		if(getRunType() == RUN_TYPE::REBASONTOP) {
 			// @@@@@@@@@@ LOOP THROUGH REPLICAS (NON-EQUILIBRIUM) ------------------- RUN A ----------->
