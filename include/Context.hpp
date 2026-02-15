@@ -690,7 +690,7 @@ public:
 	// Mix replicas
 	void mixAllReplicas(int nSwapAttempts);
 	
-	void prepareExchangePairs(int rexRound, int oddity);
+	void prepareExchangePairs(int rexRound, int divisor = 2, int oddity = 0);
 	void mixReplicas(int mixi, int oddity = 0);
 
 	// ========================================================================
@@ -783,11 +783,12 @@ public:
 
 	/**	
 	* @brief Main function
-	* @param
+	* @param equilRounds Number of equilibration rounds
+	* @param prodRounds Number of production rounds
+	* @param nofREXes Number of replica exchange attempts
 	* @return
 	*/
-	void RunREX(int equilRounds, int prodRounds);
-	//void RunREX_Gibbs(int equilRounds, int prodRounds);
+	void RunREX(int equilRounds, int prodRounds, int nofREXes);
 
 	void Run();
 
