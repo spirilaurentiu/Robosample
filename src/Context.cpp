@@ -5047,7 +5047,7 @@ void Context::prepareExchangePairs(int rexRound, int divisor, int oddity)
 	if(startIdx >= nofThermodynamicStates) return; // No pairs to exchange
 
 	int div_1 = divisor - 1;
-    for (int thIx = startIdx; (thIx + div_1) < K; thIx += divisor)
+    for (int thIx = startIdx; (thIx + div_1) < K; thIx += 1)
     {
         exchangePairList.emplace_back(thIx, thIx + div_1);
         
@@ -5055,6 +5055,13 @@ void Context::prepareExchangePairs(int rexRound, int divisor, int oddity)
         exchangePairs[thIx] = thIx + div_1;
         exchangePairs[thIx + div_1] = thIx;
     }
+
+	// for(const auto& [thermoState_i, thermoState_j] : exchangePairList)
+	// {
+	// 	std::cout << "Prepared exchange pair: " << thermoState_i
+	// 		<< " and " << thermoState_j << std::endl;
+	// }
+
 }
 
 
