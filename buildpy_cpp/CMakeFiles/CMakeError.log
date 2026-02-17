@@ -1,0 +1,40 @@
+Determining if the function sgemm_ exists failed with the following output:
+Change Dir: /home/laurentiu/git6/Robosample/buildpy_cpp/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_30369 && [1/2] Building C object CMakeFiles/cmTC_30369.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_30369
+FAILED: cmTC_30369 
+: && /usr/bin/clang -DCHECK_FUNCTION_EXISTS=sgemm_  CMakeFiles/cmTC_30369.dir/CheckFunctionExists.c.o -o cmTC_30369   && :
+/usr/bin/ld: CMakeFiles/cmTC_30369.dir/CheckFunctionExists.c.o: in function `main':
+CheckFunctionExists.c:(.text+0x17): undefined reference to `sgemm_'
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function cheev_ exists failed with the following output:
+Change Dir: /home/laurentiu/git6/Robosample/buildpy_cpp/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_e2680 && [1/2] Building C object CMakeFiles/cmTC_e2680.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_e2680
+FAILED: cmTC_e2680 
+: && /usr/bin/clang -DCHECK_FUNCTION_EXISTS=cheev_  CMakeFiles/cmTC_e2680.dir/CheckFunctionExists.c.o -o cmTC_e2680  /usr/lib/x86_64-linux-gnu/libblas.so  -lm  -ldl && :
+/usr/bin/ld: CMakeFiles/cmTC_e2680.dir/CheckFunctionExists.c.o: in function `main':
+CheckFunctionExists.c:(.text+0x17): undefined reference to `cheev_'
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function cheev_ exists failed with the following output:
+Change Dir: /home/laurentiu/git6/Robosample/buildpy_cpp/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_55bfa && [1/2] Building C object CMakeFiles/cmTC_55bfa.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_55bfa
+FAILED: cmTC_55bfa 
+: && /usr/bin/clang -DCHECK_FUNCTION_EXISTS=cheev_  CMakeFiles/cmTC_55bfa.dir/CheckFunctionExists.c.o -o cmTC_55bfa  /usr/lib/x86_64-linux-gnu/liblapack.so  /usr/lib/x86_64-linux-gnu/libblas.so  -fortranlibs && :
+clang: error: unknown argument: '-fortranlibs'
+ninja: build stopped: subcommand failed.
+
+
+
