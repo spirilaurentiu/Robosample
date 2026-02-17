@@ -21,3 +21,24 @@ buildType:
       short: PGO Use
       long: Use the generated instrumentation data for Profile Guided Optimization
       buildType: PGO_Use
+
+openmmPlatform:
+  default: cpu
+  choices:
+    cpu:
+      short: CPU
+      long: OpenMM CPU platform
+      settings:
+        OPENMM_PLATFORM: CPU
+    cuda:
+      short: CUDA
+      long: OpenMM CUDA platform
+      settings:
+        OPENMM_PLATFORM: CUDA
+        CMAKE_CUDA_ARCHITECTURES: native
+        CMAKE_CUDA_COMPILER: /usr/local/cuda/bin/nvcc
+    opencl:
+      short: OpenCL
+      long: OpenMM OpenCL platform
+      settings:
+        OPENMM_PLATFORM: OPENCL

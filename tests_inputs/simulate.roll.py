@@ -89,7 +89,7 @@ flexorObj = flexor.Flexor(mdtrajObj)
 # 	bool fixmanTorque,
 # 	int samplesPerRound,
 # 	ROOT_MOBILITY rootMobility,
-# 	const std::vector<BOND_FLEXIBILITY>& flexibilities,
+# 	const std::vector<BondFlexibility>& flexibilities,
 # 	bool useOpenMM = true,
 # 	bool visual = false,
 # 	SimTK::Real visualizerFrequency = 0);

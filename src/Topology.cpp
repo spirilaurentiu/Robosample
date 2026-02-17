@@ -66,7 +66,7 @@ by its Molmodel assigned atom index (SimTK::Compound::AtomIndex) .**/
 // TODO: Optimize use CompoundAtomIx2GmolAtomIx instead
 const RoboAtom& Topology::getAtom(SimTK::Compound::AtomIndex cAIx) const {
     for (const auto& atom : subAtomList)
-        if (atom.getCompoundAtomIndex() == cAIx)
+        if (atom.identity.compoundAtomIndex == cAIx)
             return atom;
 
     // This should never trigger, but just in case
@@ -75,12 +75,12 @@ const RoboAtom& Topology::getAtom(SimTK::Compound::AtomIndex cAIx) const {
 
 
 /** **/
-const RoboBondStretch& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const
+const RoboBond& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const
 {
 	// for (const auto& b : subBondList) {
-	// 	if (b.getParentAtomGlobalIndex() == aIx0 && b.getChildAtomGlobalIndex() == aIx1) {
+	// 	if (b.bond.globalIndices[0] == aIx0 && b.bond.globalIndices[1] == aIx1) {
 	// 		return b;
-	// 	} else if (b.getParentAtomGlobalIndex() == aIx1 && b.getChildAtomGlobalIndex() == aIx0) {
+	// 	} else if (b.bond.globalIndices[0] == aIx1 && b.bond.globalIndices[1] == aIx0) {
 	// 		return b;
 	// 	}
 	// }
@@ -89,7 +89,7 @@ const RoboBondStretch& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) co
 	SimTK_ASSERT_ALWAYS(false, "Topology::getBondByGlobalAtomIndex(): No bond with specified atom indices found.");
 }
 
-const RoboBondStretch& Topology::getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const {
+const RoboBond& Topology::getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const {
 	CompoundAtomIndexPair pair = canonical(cAIx0, cAIx1);
 
 	// auto it = std::lower_bound(aIxPair2Bonds.begin(), aIxPair2Bonds.end(), std::make_pair(pair, 0));
@@ -107,11 +107,11 @@ void Topology::loadIndicesMaps()
 {
 	// // print spans
 	// for (const auto& a : subAtomList) {
-	// 	std::cout << "Topology::loadIndicesMaps(): Atom " << a.getUniqueAtomName() << std::endl;
+	// 	std::cout << "Topology::loadIndicesMaps(): Atom " << a.identity.uniqueAtomName << std::endl;
 	// }
 	// for (const auto& b : subBondList) {
 	// 	std::cout << "Topology::loadIndicesMaps(): Bond between global atom indices "
-	// 		<< b.getParentAtomGlobalIndex() << " and " << b.getChildAtomGlobalIndex() << std::endl;
+	// 		<< b.bond.globalIndices[0] << " and " << b.bond.globalIndices[1] << std::endl;
 	// }
 	// for (const auto& angle : subAngleList) {
 	// 	std::cout << "Topology::loadIndicesMaps(): Angle between global atom indices "
@@ -127,21 +127,21 @@ void Topology::loadIndicesMaps()
 
 	// Find the root atom index in the subAtomList
 	for (const auto& a : subAtomList) {
-		if (a.isRoot()) {
-			rootCompoundAtomIx = a.getCompoundAtomIndex();
+		if (a.connectivity.root) {
+			rootCompoundAtomIx = a.identity.compoundAtomIndex;
 			break;
 		}
 	}
 
-	compound2GlobalAtomIndex = std::vector<int>(subAtomList.size(), -1);
-	global2CompoundAtomIndex = std::vector<std::pair<int, SimTK::Compound::AtomIndex>>(subAtomList.size(), std::make_pair(1, SimTK::Compound::AtomIndex(1))); // needs to be initialized to a valid (positive) Compound Atom Index
-	for (const auto& a : subAtomList) {
-		SimTK::Compound::AtomIndex aIx = a.getCompoundAtomIndex();
-		int globalAtomIndex = a.getGlobalIndex();
+	// compound2GlobalAtomIndex = std::vector<int>(subAtomList.size(), -1);
+	// global2CompoundAtomIndex = std::vector<std::pair<int, SimTK::Compound::AtomIndex>>(subAtomList.size(), std::make_pair(1, SimTK::Compound::AtomIndex(1))); // needs to be initialized to a valid (positive) Compound Atom Index
+	// for (const auto& a : subAtomList) {
+	// 	SimTK::Compound::AtomIndex aIx = a.identity.compoundAtomIndex;
+	// 	int globalAtomIndex = a.getGlobalIndex();
 
-		compound2GlobalAtomIndex[aIx] = globalAtomIndex;
-		global2CompoundAtomIndex[globalAtomIndex] = std::make_pair(globalAtomIndex, aIx);
-	}
+	// 	compound2GlobalAtomIndex[aIx] = globalAtomIndex;
+	// 	global2CompoundAtomIndex[globalAtomIndex] = std::make_pair(globalAtomIndex, aIx);
+	// }
 
 	// // TODO Doesn't work for two molecules and i don't understand why this code exists in the first place
 	// // Traverse all bonds and save their indices
@@ -150,10 +150,10 @@ void Topology::loadIndicesMaps()
 
 	// 	// Highly inefficient way to get the Compound::AtomIndex from the global atom index
 	// 	SimTK::Compound::AtomIndex cAIx0;
-	// 	int aIx0 = b.getChildAtomGlobalIndex();
+	// 	int aIx0 = b.bond.globalIndices[1];
 	// 	for (const auto& a : subAtomList) {
 	// 		if (a.getGlobalIndex() == aIx0) {
-	// 			cAIx0 = a.getCompoundAtomIndex();
+	// 			cAIx0 = a.identity.compoundAtomIndex;
 	// 			break;
 	// 		}
 	// 	}
@@ -161,10 +161,10 @@ void Topology::loadIndicesMaps()
 
 	// 	// Another inefficient way to get the Compound::AtomIndex from the global atom index
 	// 	SimTK::Compound::AtomIndex cAIx1;
-	// 	int aIx1 = b.getParentAtomGlobalIndex();
+	// 	int aIx1 = b.bond.globalIndices[0];
 	// 	for (const auto& a : subAtomList) {
 	// 		if (a.getGlobalIndex() == aIx1) {
-	// 			cAIx1 = a.getCompoundAtomIndex();
+	// 			cAIx1 = a.identity.compoundAtomIndex;
 	// 			break;
 	// 		}
 	// 	}
@@ -184,7 +184,8 @@ void Topology::loadIndicesMaps()
 
 int Topology::getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx)
 {
-	return compound2GlobalAtomIndex[cAIx];
+	SimTK_ASSERT_ALWAYS(false, "Topology::getGlobalAtomIndex(): Not implemented yet.");
+	// return compound2GlobalAtomIndex[cAIx];
 }
 
 /*!
@@ -194,8 +195,8 @@ int Topology::getGlobalAtomIndex(SimTK::Compound::AtomIndex cAIx)
 */
 void Topology::calcAtomsTopTransforms()
 {
-	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
+	for (const auto& a : subAtomList) {
+		SimTK::Compound::AtomIndex aIx = a.identity.compoundAtomIndex;
 		aIx2TopTransform[aIx] = calcDefaultAtomFrameInCompoundFrame(aIx);
 	}
 }
@@ -207,7 +208,7 @@ void Topology::printTopTransforms()
 {
 	std::cout << "Topology TopTransforms " << std::endl;
 	for (unsigned int i = 0; i < getNumAtoms(); ++i) {
-		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).getCompoundAtomIndex();
+		SimTK::Compound::AtomIndex aIx = (subAtomList[i]).identity.compoundAtomIndex;
 		std::cout << aIx << " " << aIx2TopTransform[aIx] << std::endl;
 	}
 }
@@ -251,6 +252,17 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compoun
 }
 
 SimTK::Transform Topology::matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets) {
+	
+	// for (const auto& bond : subBondList) {
+	// 	const SimTK::Compound::AtomIndex parentCAIx = bond.getParentCompoundAtomIndex();
+	// 	const SimTK::Compound::AtomIndex childCAIx = bond.getChildCompoundAtomIndex();
+	// 	const SimTK::Compound::BondIndex compoundBondIx = bond.getCompoundBondIndex();
+		
+	// 	// Calculate new bond length in nm
+	// 	SimTK::Real newBondLength = (atomTargets.at(childCAIx) - atomTargets.at(parentCAIx)).norm();
+	// 	updBondLength(compoundBondIx, newBondLength);
+	// }
+		
 	matchDefaultBondLengths(atomTargets);
 	matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
 	matchDefaultBondAngles(atomTargets);
@@ -367,22 +379,22 @@ SimTK::Compound::AtomIndex Topology::getChemicalParentOfMobodRootAtom(SimTK::Com
 	const RoboAtom& origin = getAtom(aIx);
 
 	// Traverse all neighbors and check if both bonded aatoms are in the parent mobod
-	for (auto neighborGlobalIx : origin.getNeighborsGlobalIndices()) {
+	for (auto neighborGlobalIx : origin.connectivity.neighborsGlobalIndices) {
 		// Get this bond
 		for (const auto& b : subBondList) {
-			if ((b.getChildAtomGlobalIndex() == origin.getGlobalIndex() && b.getParentAtomGlobalIndex() == neighborGlobalIx) ||
-				(b.getParentAtomGlobalIndex() == origin.getGlobalIndex() && b.getChildAtomGlobalIndex() == neighborGlobalIx)) {
+			if ((b.globalIndices[1] == origin.identity.globalIndex && b.globalIndices[0] == neighborGlobalIx) ||
+				(b.globalIndices[0] == origin.identity.globalIndex && b.globalIndices[1] == neighborGlobalIx)) {
 
 				// We found the bond, now get the neighbor atom
 				for (const auto& neighbor : subAtomList) {
-					if (neighbor.getGlobalIndex() == neighborGlobalIx) {
+					if (neighbor.identity.globalIndex == neighborGlobalIx) {
 
 						// We found the neighbor atom
-						Compound::AtomIndex candidateChemParentAIx = neighbor.getCompoundAtomIndex();
+						Compound::AtomIndex candidateChemParentAIx = neighbor.identity.compoundAtomIndex;
 
 						// Check if neighbor atom's mobod is a parent mobod
 						if (getAtomMobilizedBodyIndexThroughDumm(candidateChemParentAIx, dumm) == parentMbx) {
-							if (!b.isRingClosing()) { // No ring subAtomList are allowed
+							if (!b.ringClosing) { // No ring subAtomList are allowed
 								chemParentAIx = candidateChemParentAIx;
 								return chemParentAIx;
 							}

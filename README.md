@@ -1,3 +1,51 @@
+# PERF
+GPU time will not show in perf; use:
+nsys / nvprof for CUDA
+perf only for CPU-side OpenMM / Simbody code
+compile with perf
+
+# reboot resets them
+sudo sysctl -w kernel.kptr_restrict=0
+sudo sysctl -w kernel.perf_event_paranoid=0
+
+
+perf record -F 999 -g -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
+
+
+perf record -g -e L1-dcache-load-misses,L1-dcache-loads --call-graph dwarf -F 999 -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
+
+
+
+
+AbstractIntegrator.cpp std::cout << "internal steps taken: " << internalStepsTaken << std::endl
+
+
+perf list | grep -i cache
+
+
+
+
+perf stat -e \
+    cache-misses,cache-references,\
+    L1-dcache-load-misses,L1-dcache-loads,\
+    l2_cache.all_l2_cache_accesses,l2_cache.all_l2_cache_hits,l2_cache.all_l2_cache_misses,\
+    LLC-load-misses,LLC-loads\
+    -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
+
+
+
+# must be on a single row, no `\`z
+perf stat -e cache-references,cache-misses,L1-dcache-load-misses,L1-dcache-loads,cycles,instructions,branches,faults,migrations \
+          -M all_l2_cache_accesses,all_l2_cache_hits,all_l2_cache_misses,op_cache_fetch_miss_ratio \
+          -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
+
+perf stat -B \
+  -e cycles,instructions,branches,branch-misses \
+  -e L1-dcache-loads,L1-dcache-load-misses \
+  -e LLC-loads,LLC-load-misses \
+  -M op_cache_fetch_miss_ratio \
+  -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
+
 # Robosample: Generalized Coordinates Molecular Simulation Coupled with Gibbs Sampling (GCHMC)
 
 Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed robotics algorithms imlemented in Simbody and molecular modelling facilities in Molmodel to generate Markov Chain Monte Carlo moves coupled with Gibbs sampling able to reproduce the atomistic level detailed distribution of molecular systems.
@@ -17,7 +65,7 @@ sudo apt-get autoremove
 sudo rm -rf /usr/local/cuda*
 ```
 
-First, check what the recommended version is for your machine. To my knowledge, the last supported kernel is 6.14 (check with `uname -r`).
+First, check what the recommended version is for your machine. To my knowledge, the last supported kernel is `6.14` (check with `uname -r`).
 ```
 ubuntu-drivers devices
 ```
@@ -38,8 +86,8 @@ sudo apt-get -y install cuda-toolkit-12-8
 ```
 
 At this point, you should have working `nvidia-smi`. However, `nvcc` is not available at the terminal since nothing from the CUDA Toolkit is in `$PATH`.
-It can still be accessed via the absolute path: `/usr/local/cuda/bin/nvcc --version`.
-This is no problem since Robosample references absolute pathways to this installation.
+It can still be accessed via the absolute path e.g. `/usr/local/cuda/bin/nvcc --version`.
+This is no problem since Robosample CMake configuration references absolute pathways to `/usr/local/cuda/bin/`.
 
 ### Installing OpenGL (visualizer) and OpenCL (hardware acceleration)
 Straightforward installation that does not interfere with CUDA:
@@ -49,7 +97,6 @@ sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-de
 ```
 
 ### Miniforge
-
 We will use `miniforge`, a variant of `miniconda` that comes with `mamba` installed (`conda` but with a faster solver).
 To my knowledge, `miniconda` and `miniforge` are theoretically compatible and can run concurrently on the same machine.
 However, uncertainty still looms over this, so we prefer so remove any `miniconda` installations before doing anything else.
@@ -132,6 +179,28 @@ OpenMM can use hardware acceleration. Robosample defaults with OpenCL. To set th
 * `OPENMM_PLATFORM=CPU` for CPU.
 * `OPENMM_PLATFORM=CUDA` for CUDA.
 * `OPENMM_PLATFORM=OPENCL` for OpenCL.
+
+
+### VS Code setup
+????? File → Preferences → Settings → Open Settings (JSON)
+clangd - we turn off `cpptools` IntelliSense in settings.json
+codelldb - we need lddb? idk
+
+Check: when i run "Open any .cpp file, then":
+ - Press Ctrl + Shift + P
+ - Run: Developer: Show Running Extensions
+
+
+
+ca sa nu schimbe la niciun calculator kernelul la update, trebuie trecut urmatorul rand in /etc/default/grub :
+
+GRUB_SAVEDEFAULT=true
+GRUB_DEFAULT=saved
+
+astfel, se va pastra ultimul kernel care a mers
+
+
+
 
 ```bash
 mkdir -p build

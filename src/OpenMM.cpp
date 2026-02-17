@@ -10,14 +10,59 @@ void OPENMM::destroy() {
 	// system.reset();
 }
 
-bool OPENMM::initialize(uint32_t seed,
-						SimTK::Real sqrtCoulombScale,
-						SimTK::Real vdwGlobalScaleFactor,
-						const std::vector<RoboAtom>& atoms,
-						const std::vector<RoboBondStretch>& bonds,
-						const std::vector<RoboBondBend>& angles,
-						const std::vector<RoboBondTorsion>& torsions,
-						bool testing) {
+void addExclusionsToSet(const std::vector<std::set<int>>& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) {
+    for (int i : bonded12[fromParticle]) {
+        if (i != baseParticle)
+            exclusions.insert(i);
+        if (currentLevel > 0)
+            addExclusionsToSet(bonded12, exclusions, baseParticle, i, currentLevel-1);
+    }
+}
+
+bool OPENMM::initialize(
+        uint32_t seed,
+		const std::vector<RoboAtom>& atoms,
+		const std::vector<RoboBond>& bonds,
+		const std::vector<RoboAngle>& angles,
+		const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
+		const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions,
+		const std::vector<CMAPGrid>& cmapGrids,
+		const std::vector<CMAPTorsion>& cmapTorsions,
+        const std::vector<UreyBradley>& ureyBradleys,
+		bool hasNBfix,
+		int numTypes,
+		const std::vector<SimTK::Real>& acoef,
+		const std::vector<SimTK::Real>& bcoef,
+		const std::vector<Exclusion>& exclusions,
+        const std::vector<Scaling14>& scaling14s,
+        bool useGBSAOBC2,
+        SimTK::Real gbsaSolventDielectric,
+        SimTK::Real gbsaSoluteDielectric,
+        NonbondedMethod nonbondedMethod,
+        SimTK::Real nonbondedCutoffInNm,
+        SimTK::Real thermostatTemperature,
+        SimTK::Real collisionFrequency,
+        bool testing) {
+
+	OpenMM::NonbondedForce::NonbondedMethod nonbondedForceMethod;
+	OpenMM::CustomNonbondedForce::NonbondedMethod customNonbondedForceMethod;
+	OpenMM::GBSAOBCForce::NonbondedMethod gbsaForceMethod;
+
+	switch (nonbondedMethod)
+	{
+	case NonbondedMethod::NoCutoff:
+		nonbondedForceMethod = OpenMM::NonbondedForce::NoCutoff;
+		customNonbondedForceMethod = OpenMM::CustomNonbondedForce::NoCutoff;
+		gbsaForceMethod = OpenMM::GBSAOBCForce::NoCutoff;
+		break;
+	case NonbondedMethod::CutoffNonPeriodic:
+		nonbondedForceMethod = OpenMM::NonbondedForce::CutoffNonPeriodic;
+		customNonbondedForceMethod = OpenMM::CustomNonbondedForce::CutoffNonPeriodic;
+		gbsaForceMethod = OpenMM::GBSAOBCForce::CutoffNonPeriodic;
+		break;
+	default:
+		SimTK_ASSERT_ALWAYS(false, "OPENMM::initialize: Unsupported nonbonded method.");
+	}
 
     // Instantiate
     OPENMM& omm = get();
@@ -26,172 +71,261 @@ bool OPENMM::initialize(uint32_t seed,
 	omm.testing = testing;
 	omm.numAtoms = atoms.size();
 	omm.ommAtomsPositionsCache = std::vector<OpenMM::Vec3>(omm.numAtoms);
+	omm.ommAtomsPositionsCacheOld = std::vector<OpenMM::Vec3>(omm.numAtoms);
 	omm.simbodyAtomsPositionsCache = std::vector<SimTK::Vec3>(omm.numAtoms);
-
-    // Allocate OpenMM forces
-	auto* harmonicBondStretch = new OpenMM::HarmonicBondForce();
-	auto* harmonicAngleForce = new OpenMM::HarmonicAngleForce();
-	auto* periodicTorsionForce = new OpenMM::PeriodicTorsionForce();
-	auto* GBSAOBCForce = new OpenMM::GBSAOBCForce();
-	auto* nonbondedForce = new OpenMM::NonbondedForce();
-	
-	// Instantiate the thermostat with adjusted temperature
-	//Real temperature = 300.0;
-	//if(dumm->wantOpenMMIntegration){temperature = dumm->temperature;}
-	auto* thermostat = new OpenMM::AndersenThermostat(300.0, 1);
-	thermostat->setDefaultTemperature(300.0);
-	thermostat->setDefaultCollisionFrequency(1.0);
-	thermostat->setRandomNumberSeed(seed);
 
 	// Allocate OpenMM system and add particles to it
 	omm.system = std::make_unique<OpenMM::System>();
 
-#ifdef __PBC__ // _pbc_
-
-	double angle_alpha = 1.5708;
-	double angle_beta = 1.5708;
-	double angle_gamma = 1.5708;
-
-	double boxLength_X = 10; // Example box length in angstroms
-	double boxLength_Y = 10; // Example box length in angstroms
-	double boxLength_Z = 10; // Example box length in angstroms
-
-	auto periodicBoxVectors = computePeriodicBoxVectors_Context(
-		boxLength_X, boxLength_Y, boxLength_Z,
-		angle_alpha, angle_beta, angle_gamma);
-
-	OpenMM::Vec3 pbcVector_X = std::get<0>(periodicBoxVectors);
-	OpenMM::Vec3 pbcVector_Y = std::get<1>(periodicBoxVectors);
-	OpenMM::Vec3 pbcVector_Z = std::get<2>(periodicBoxVectors);
-
-	system->setDefaultPeriodicBoxVectors(pbcVector_X, pbcVector_Y, pbcVector_Z);
-# endif
+	// Instantiate the thermostat with adjusted temperature
+	auto* thermostat = new OpenMM::AndersenThermostat(thermostatTemperature, collisionFrequency);
+	thermostat->setRandomNumberSeed(seed);
+	omm.registerForce({thermostat, ForceGroup::Thermostat});
 	
 	// Nonbonded forces
-	// nonbondedForce->setNonbondedMethod( OpenMM::NonbondedForce::NonbondedMethod( nonbondedMethod ) );
-	// nonbondedForce->setCutoffDistance( nonbondedCutoff );
-	nonbondedForce->setNonbondedMethod(OpenMM::NonbondedForce::NonbondedMethod::NoCutoff);
-	nonbondedForce->setCutoffDistance(1.0); // in nm
-	nonbondedForce->setUseDispersionCorrection(false);
-	// nonbondedForce->setUseSwitchingFunction( 0 );
+	auto* nonbondedForce = new OpenMM::NonbondedForce();
+	nonbondedForce->setNonbondedMethod(nonbondedForceMethod);
+	nonbondedForce->setCutoffDistance(nonbondedCutoffInNm);
+
+	if (nonbondedForceMethod == OpenMM::NonbondedForce::CutoffNonPeriodic) {
+		nonbondedForce->setUseDispersionCorrection(true);
+	} else {
+		nonbondedForce->setUseDispersionCorrection(false);
+	}
+
+	// 1-4 VdW Correction (Bond-based so we can target specific pairs)
+	OpenMM::CustomNonbondedForce* customNonbonded = nullptr;
+	if (hasNBfix) {
+		customNonbonded = new OpenMM::CustomNonbondedForce("(a/r6)^2-b/r6; r6=r^6; a=acoef(type1, type2); b=bcoef(type1, type2);");
+		customNonbonded->addTabulatedFunction("acoef", new OpenMM::Discrete2DFunction(numTypes, numTypes, acoef));
+		customNonbonded->addTabulatedFunction("bcoef", new OpenMM::Discrete2DFunction(numTypes, numTypes, bcoef));
+		customNonbonded->addPerParticleParameter("type");
+
+		customNonbonded->setNonbondedMethod(customNonbondedForceMethod);
+		customNonbonded->setCutoffDistance(nonbondedCutoffInNm);
+
+		customNonbonded->setUseSwitchingFunction(nonbondedForce->getUseSwitchingFunction());
+		customNonbonded->setSwitchingDistance(nonbondedForce->getSwitchingDistance());
+	}
+
+	// GBSA OBC Force
+	// implicitSolventKappa
+	OpenMM::GBSAOBCForce* GBSAOBCForce = nullptr;
+	if (useGBSAOBC2) {
+		GBSAOBCForce = new OpenMM::GBSAOBCForce();
+		GBSAOBCForce->setSolventDielectric(gbsaSolventDielectric);
+		GBSAOBCForce->setSoluteDielectric(gbsaSoluteDielectric);
+		GBSAOBCForce->setNonbondedMethod(gbsaForceMethod);
+		GBSAOBCForce->setCutoffDistance(nonbondedCutoffInNm);
+
+		/*
+		 * The following comment is copy-pasted from the OpenMM documentation for GBSAOBCForce (note that we only support CutoffNonPeriodic):
+		 * When using GBSAOBCForce, the System should also include a NonbondedForce, and both objects must specify
+		 * identical charges for all particles. Otherwise, the results will not be correct. Furthermore, if the
+		 * nonbonded method is set to CutoffNonPeriodic or CutoffPeriodic, you should call setReactionFieldDielectric(1.0)
+		 * on the NonbondedForce to turn off the reaction field approximation, which does not produce correct results
+		 * when combined with GBSA.
+		 */
+		if (nonbondedForceMethod == OpenMM::NonbondedForce::CutoffNonPeriodic) {
+			nonbondedForce->setReactionFieldDielectric(1.0);
+			nonbondedForce->setUseDispersionCorrection(false);
+		}
+	}
 
 	// Add atoms
 	for (const auto& atom : atoms) {
-		const SimTK::Real charge = atom.getChargeInE() * sqrtCoulombScale;
-		const SimTK::Real sigma = atom.getSigmaInNm();
-		const SimTK::Real epsilon = atom.getVdwWellDepthInKJ() * vdwGlobalScaleFactor;
-		const SimTK::Real solventRadiusInNm = atom.getSolventRadiusInNm();
-		const SimTK::Real screen = atom.getScreen();
+		const SimTK::Real charge = atom.physics.chargeInE;
+		const SimTK::Real sigma = atom.physics.sigmaInNm;
+		const SimTK::Real epsilon = atom.physics.vdwWellDepthInKJ;
 
-		if (atom.isRoot()) {
+		bool finiteCharge = std::isfinite(charge);
+		if (!finiteCharge) {
+			std::string errorMsg = "Atom " + atom.identity.uniqueAtomName + " has non-finite charge: " + std::to_string(charge);
+			SimTK_ASSERT_ALWAYS(finiteCharge, errorMsg.c_str());
+		}
+
+		bool finiteSigma = std::isfinite(sigma);
+		if (!finiteSigma) {
+			std::string errorMsg = "Atom " + atom.identity.uniqueAtomName + " has non-finite sigma: " + std::to_string(sigma);
+			SimTK_ASSERT_ALWAYS(finiteSigma, errorMsg.c_str());
+		}
+
+		bool finiteEpsilon = std::isfinite(epsilon);
+		if (!finiteEpsilon) {
+			std::string errorMsg = "Atom " + atom.identity.uniqueAtomName + " has non-finite epsilon: " + std::to_string(epsilon);
+			SimTK_ASSERT_ALWAYS(finiteEpsilon, errorMsg.c_str());
+		}
+
+		if (atom.connectivity.root) {
 			omm.system->addParticle(0.0); // massless root
 		} else {
-			omm.system->addParticle(atom.getMassInDaltons());
+			omm.system->addParticle(atom.physics.massInDaltons);
 		}
 
-		nonbondedForce->addParticle(charge, sigma, epsilon);
-		GBSAOBCForce->addParticle(charge, solventRadiusInNm, screen);
+		if (hasNBfix) {
+			nonbondedForce->addParticle(charge, 1.0, 0.0);
+			customNonbonded->addParticle({static_cast<SimTK::Real>(atom.identity.nonbondedIndex)});
+		} else {
+			nonbondedForce->addParticle(charge, sigma, epsilon);
+		}
+
+		if (useGBSAOBC2) {
+			const SimTK::Real solventRadiusInNm = atom.physics.solventRadiusInNm;
+			bool validSolventRadius = std::isfinite(solventRadiusInNm) && solventRadiusInNm > 0.0;
+			if (!validSolventRadius) {
+				std::string errorMsg = "Atom " + atom.identity.uniqueAtomName + " has invalid solvent radius: " + std::to_string(solventRadiusInNm);
+				SimTK_ASSERT_ALWAYS(validSolventRadius, errorMsg.c_str());
+			}
+
+			const SimTK::Real screen = atom.physics.screen;
+			bool validScreen = std::isfinite(screen) && screen >= 0.0 && screen <= 1.0;
+			if (!validScreen) {
+				std::string errorMsg = "Atom " + atom.identity.uniqueAtomName + " has invalid screen value: " + std::to_string(screen);
+				SimTK_ASSERT_ALWAYS(validScreen, errorMsg.c_str());
+			}
+			
+			GBSAOBCForce->addParticle(charge, solventRadiusInNm, screen);
+		}
 	}
 
-	// Add bonds
-	std::vector<std::pair<int, int>> ommBonds;
-	for (const auto& bond : bonds) {
-		ommBonds.emplace_back(std::make_pair(bond.getParentAtomGlobalIndex(), bond.getChildAtomGlobalIndex()));
+	if (GBSAOBCForce) {
+		omm.registerForce({GBSAOBCForce, ForceGroup::GBSAOBC});
 	}
 
-	// Register all the 1-2 bonds between nonbond atoms for scaling.
-	nonbondedForce->createExceptionsFromBonds(ommBonds, omm.coulomb14Scale * sqrtCoulombScale, omm.lj14Scale * vdwGlobalScaleFactor);
+	for (const auto& scaling14 : scaling14s) {
+		bool validChargeProduct = std::isfinite(scaling14.chargeProduct);
+		if (!validChargeProduct) {
+			std::string errorMsg = "Scaling 1-4 between atoms " + std::to_string(scaling14.a1) + " and " + std::to_string(scaling14.a4) + " has non-finite charge product: " + std::to_string(scaling14.chargeProduct);
+			SimTK_ASSERT_ALWAYS(validChargeProduct, errorMsg.c_str());
+		}
+
+		bool validSigma = std::isfinite(scaling14.sigma);
+		if (!validSigma) {
+			std::string errorMsg = "Scaling 1-4 between atoms " + std::to_string(scaling14.a1) + " and " + std::to_string(scaling14.a4) + " has non-finite sigma: " + std::to_string(scaling14.sigma);
+			SimTK_ASSERT_ALWAYS(validSigma, errorMsg.c_str());
+		}
+
+		bool validEpsilon = std::isfinite(scaling14.epsilon);
+		if (!validEpsilon) {
+			std::string errorMsg = "Scaling 1-4 between atoms " + std::to_string(scaling14.a1) + " and " + std::to_string(scaling14.a4) + " has non-finite epsilon: " + std::to_string(scaling14.epsilon);
+			SimTK_ASSERT_ALWAYS(validEpsilon, errorMsg.c_str());
+		}
+
+		nonbondedForce->addException(scaling14.a1, scaling14.a4, scaling14.chargeProduct, scaling14.sigma, scaling14.epsilon);
+		if (hasNBfix) {
+			customNonbonded->addExclusion(scaling14.a1, scaling14.a4);
+		}
+	}
+
+	for (const auto& exclusion : exclusions) {
+		nonbondedForce->addException(exclusion.a1, exclusion.a2, 0.0, 0.1, 0.0);
+		if (hasNBfix) {
+			customNonbonded->addExclusion(exclusion.a1, exclusion.a2);
+		}
+	}
 	
+	// Register non-bonded forces
+	omm.registerForce({nonbondedForce, ForceGroup::NonbondedForce});
+	if (hasNBfix) {
+		omm.registerForce({customNonbonded, ForceGroup::CustomNonbondedForce});
+	}
+	
+	// Add bonds
+	// TODO Force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
+	auto* harmonicBondStretch = new OpenMM::HarmonicBondForce();
 	for (const auto& bond : bonds) {
-		const SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
-		const SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
-
-		// force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
-		harmonicBondStretch->addBond(bond.getParentAtomGlobalIndex(), bond.getChildAtomGlobalIndex(), nominalLengthInNm, stiffnessInKJPerNmSq * 2);
+		const auto& g = bond.globalIndices;
+		harmonicBondStretch->addBond(g[0], g[1], bond.nominalLengthInNm, bond.stiffnessInKJPerNmSq * 2);
 	}
+	omm.registerForce({harmonicBondStretch, ForceGroup::HarmonicBondForce});
 
-	// FORCES: ADD ANGLES (1-2-3)
+	// Add angles
+	// TODO Force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
+	auto* harmonicAngleForce = new OpenMM::HarmonicAngleForce();
 	for (const auto& angle : angles) {
-		const int a1num = angle.getGlobalIndex1();
-		const int a2num = angle.getGlobalIndex2();
-		const int a3num = angle.getGlobalIndex3();
-		const SimTK::Real theta0 = angle.getNominalAngleInDeg() * SimTK::DuMM::Deg2Rad;
-		const SimTK::Real forceKt = angle.getStiffnessInKJPerRadSq();
+		const auto& g = angle.globalIndices;
+		harmonicAngleForce->addAngle(g[0], g[1], g[2], angle.nominalAngleInDeg * SimTK::DuMM::Deg2Rad, angle.stiffnessInKJPerRadSq * 2);
+	}
+	omm.registerForce({harmonicAngleForce, ForceGroup::HarmonicAngleForce});
 
-		// Force constants are expressed for the full quadratic form but OpenMM interprets them as the prefactor of 1/2 k(x-x0)^2, hence the factor of 2 here
-		harmonicAngleForce->addAngle(a1num, a2num, a3num, theta0, forceKt * 2);
+	// Define torsions
+	// Note that OpenMM only supports only periodic torsions by default (AMBER style), so we need to handle improper harmonic torsions differently
+	// For AMBER style torsions, OpenMM does not care if they are proper or improper
+	auto* periodicTorsionForce = new OpenMM::PeriodicTorsionForce();
+	for (const auto& t : properPeriodicTorsions) {
+		const auto& g = t.globalIndices;
+		for (int i = 0; i < t.numTerms; ++i) {
+			const auto& term = t.terms[i];
+			periodicTorsionForce->addTorsion(g[0], g[1], g[2], g[3], term.periodicity, term.phaseDeg * SimTK::DuMM::Deg2Rad, term.amplitudeKJ);
+		}
+	}
+	omm.registerForce({periodicTorsionForce, ForceGroup::PeriodicTorsionForce});
+
+	// Periodic torsions are handles with a custom...
+	if (!harmonicImproperTorsions.empty()) {
+		// "0.5 * k * (theta - theta0)^2"
+		std::stringstream ss;
+		ss << std::setprecision(17) << "k*min(dtheta, 2*" << SimTK::Pi << "-dtheta)^2; dtheta = abs(theta-theta0)";
+
+		auto* improperTorsionForce = new OpenMM::CustomTorsionForce(ss.str());
+		improperTorsionForce->addPerTorsionParameter("k");
+		improperTorsionForce->addPerTorsionParameter("theta0");
+
+		for (const auto& t : harmonicImproperTorsions) {
+			const int a1 = t.globalIndices[0];
+			const int a2 = t.globalIndices[1];
+			const int a3 = t.globalIndices[2];
+			const int a4 = t.globalIndices[3];
+
+			std::vector<double> params = { t.stiffnessInKJPerRadSq, t.nominalAngleInRad }; 
+			improperTorsionForce->addTorsion(a1, a2, a3, a4, params);
+		}
+		omm.registerForce({improperTorsionForce, ForceGroup::ImproperTorsionForce});
 	}
 
-	// Add dihedrals. OpenMM does not distinguish between proper and improper dihedrals.
-	for (const auto& t : torsions) {
-		const int a1 = t.getGlobalIndex1();
-		const int a2 = t.getGlobalIndex2();
-		const int a3 = t.getGlobalIndex3();
-		const int a4 = t.getGlobalIndex4();
+	// Add correction map torsions (CMAPs) force
+	if (!cmapGrids.empty()) {
+		auto* cmapTorsionForce = new OpenMM::CMAPTorsionForce();
+		cmapTorsionForce->setUsesPeriodicBoundaryConditions(false);
 		
-		if (t.getPhaseInDegrees_1() != -1) {
-			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_1(), t.getPhaseInDegrees_1() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_1());
+		for (const auto& grid : cmapGrids) {
+			cmapTorsionForce->addMap(grid.size, grid.energy);
 		}
-		if (t.getPhaseInDegrees_2() != -1) {
-			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_2(), t.getPhaseInDegrees_2() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_2());
+		for (const auto& cmapTorsion : cmapTorsions) {
+			cmapTorsionForce->addTorsion(
+				cmapTorsion.mapIndex,
+				cmapTorsion.a1, cmapTorsion.a2, cmapTorsion.a3, cmapTorsion.a4,
+				cmapTorsion.b1, cmapTorsion.b2, cmapTorsion.b3, cmapTorsion.b4
+			);
 		}
-		if (t.getPhaseInDegrees_3() != -1) {
-			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_3(), t.getPhaseInDegrees_3() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_3());
-		}
-		if (t.getPhaseInDegrees_4() != -1) {
-			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_4(), t.getPhaseInDegrees_4() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_4());
-		}
-		if (t.getPhaseInDegrees_5() != -1) {
-			periodicTorsionForce->addTorsion(a1, a2, a3, a4, t.getPeriodicity_5(), t.getPhaseInDegrees_5() * SimTK::DuMM::Deg2Rad, t.getAmpInKJ_5());
-		}
+		omm.registerForce({cmapTorsionForce, ForceGroup::CMAPTorsion});
 	}
 
-	// Set force groups so that we can recover energy components later 
-	if (omm.testing) {
-		harmonicBondStretch->setForceGroup(omm.groupHarmonicBondStretch);
-		harmonicAngleForce->setForceGroup(omm.groupHarmonicAngleForce);
-		periodicTorsionForce->setForceGroup(omm.groupPeriodicTorsionForce);
-		nonbondedForce->setForceGroup(omm.groupNonbondedForce);
-		thermostat->setForceGroup(omm.groupThermostat);
-		GBSAOBCForce->setForceGroup(omm.groupGBSAOBCForce);
+	// Add Urey-Bradley Potential
+	if (!ureyBradleys.empty()) {
+		auto* ubForce = new OpenMM::HarmonicBondForce();
+		for (const auto& term : ureyBradleys) {
+			ubForce->addBond(term.a1, term.a3, term.nominalLengthInNm, term.stiffnessInKJPerNmSq * 2);
+		}
+		omm.registerForce({ubForce, ForceGroup::UreyBradley});
 	}
-
-	// Add forces to system
-	omm.system->addForce(harmonicBondStretch);
-	omm.system->addForce(harmonicAngleForce);
-	omm.system->addForce(periodicTorsionForce);
-	omm.system->addForce(nonbondedForce);
-	omm.system->addForce(thermostat);
-	omm.system->addForce(GBSAOBCForce);
 
 	// Get the integrator
 	omm.integrator = std::make_unique<OpenMM::VerletIntegrator>(0.0007); // TODO should release?
 		
-    // Get the platform
-	OpenMM::Platform* platform = nullptr;
-
 #if OPENMM_PLATFORM_CPU
-    // if(OpenMM::Platform::getNumPlatforms() == 1)
-    {
-        platform = new OpenMM::CpuPlatform();
-        OpenMM::Platform::registerPlatform(platform);
-    }
+    OpenMM::Platform* platform = new OpenMM::CpuPlatform();
+    OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "CPU";
 
 #elif OPENMM_PLATFORM_CUDA
-    // if(OpenMM::Platform::getNumPlatforms() == 1)
-    {
-        platform = new OpenMM::CudaPlatform();
-        OpenMM::Platform::registerPlatform(platform);
-    }
+    OpenMM::Platform* platform = new OpenMM::CudaPlatform();
+    OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "CUDA";
 
 #elif OPENMM_PLATFORM_OPENCL
-    // if(OpenMM::Platform::getNumPlatforms() == 1)
-    {
-        platform = new OpenMM::OpenCLPlatform();
-        OpenMM::Platform::registerPlatform(platform);
-    }
+    OpenMM::Platform* platform = new OpenMM::OpenCLPlatform();
+    OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "OpenCL";
 #endif
 
@@ -211,7 +345,7 @@ bool OPENMM::initialize(uint32_t seed,
 
 	// Set initial positions
 	for (const auto& atom : atoms) {
-		omm.ommAtomsPositionsCache[atom.getGlobalIndex()] = OpenMM::Vec3(atom.getXInNm(), atom.getYInNm(), atom.getZInNm());
+		omm.ommAtomsPositionsCache[atom.identity.globalIndex] = OpenMM::Vec3(atom.position[0], atom.position[1], atom.position[2]);
 	}
 	omm.context->setPositions(omm.ommAtomsPositionsCache);
 
@@ -220,39 +354,21 @@ bool OPENMM::initialize(uint32_t seed,
 
 OpenMMEnergyComponents OPENMM::getEnergyComponents() {
 	ensureInitialized();
-
 	SimTK_ASSERT_ALWAYS(testing, "OPENMM::getEnergyComponents() can only be called in testing mode.");
 
 	OpenMMEnergyComponents components;
 
 	// Total energy
-	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox);
-	components.totalEnergy = state.getPotentialEnergy();
+	// Intentional value capture: relies on C++17 guaranteed copy elision.
+	const auto state = context->getState(OpenMM::State::Energy, enforcePeriodicBox);
+	components["TotalEnergy"] = state.getPotentialEnergy();
 
-	// Harmonic Bond Force
-	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicBondStretch);
-	components.harmonicBondForce = state.getPotentialEnergy();
-
-	// Harmonic Angle Force
-	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicAngleForce);
-	components.harmonicAngleForce = state.getPotentialEnergy();
-
-	// Periodic Torsion Force
-	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupPeriodicTorsionForce);
-	components.periodicTorsionForce = state.getPotentialEnergy();
-
-	// Nonbonded Force
-	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupNonbondedForce);
-	components.nonbondedForce = state.getPotentialEnergy();
-
-	// Thermostat
-	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupThermostat);
-	components.andersenThermostat = state.getPotentialEnergy();
-
-	// GBSA OBC Force
-	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupGBSAOBCForce);
-	components.gbsaObcForce = state.getPotentialEnergy();
-
+	// Individual forces
+	for (const auto& f : forceRegistry) {
+		const std::string key = to_string(f.group);
+		const auto state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<static_cast<int>(f.group));
+		components[key] = state.getPotentialEnergy();
+	}
 	return components;
 }
 
@@ -285,12 +401,12 @@ void OPENMM::setVelocitiesToTemperature(SimTK::Real temperature, uint32_t seed) 
 
 SimTK::Real OPENMM::getPotentialEnergy() const {
 	ensureInitialized();
-	return pe;
+	return potentialEnergy;
 }
 
 SimTK::Real OPENMM::getKineticEnergy() const {
 	ensureInitialized();
-	return ke;
+	return kineticEnergy;
 }
 
 void OPENMM::setPositions(const std::vector<SimTK::Vec3> &positions) {
@@ -311,112 +427,98 @@ const std::vector<SimTK::Vec3>& OPENMM::getPositions() const {
 	return simbodyAtomsPositionsCache;
 }
 
-void OPENMM::integrateTrajectory(int steps) {
+bool OPENMM::integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtomPositionsInG, int steps) {
 	ensureInitialized();
+	
+	// TODO This loop transforms from SimTK::Vec3 to OpenMM::Vec3
+    // When you have the time and consider that this is worth the effort, you may force OpenMM to accept SimTK::Vec3 directly
+    // 1. Context::setPositions which calls
+    // 2. ContextImpl::setPositions which calls (for CUDA):
+    // 3. CudaUpdateStateDataKernel::setPositions
+	ommAtomsPositionsCache.resize(includedAtomPositionsInG.size());
+	for (size_t i = 0, n = includedAtomPositionsInG.size(); i < n; ++i) {
+        const auto& c = includedAtomPositionsInG[i];
+        ommAtomsPositionsCache[i] = {c[0], c[1], c[2]};
+    }
 
-	integrator->step(steps);
+	// Cache old positions in case we need to restore them later
+	ommAtomsPositionsCacheOld = ommAtomsPositionsCache;
 
-	// Cache the results
-	state = context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
+	// Set the new positions to GPU
+	context->setPositions(ommAtomsPositionsCache);
 
-	// Save the energies
-	pe = state.getPotentialEnergy();
-	ke = state.getKineticEnergy();
-
-	// Save the positions
-	for (std::size_t i = 0; i < simbodyAtomsPositionsCache.size(); ++i) {
-		simbodyAtomsPositionsCache[i] = SimTK::Vec3(
-			state.getPositions()[i][0],
-			state.getPositions()[i][1],
-			state.getPositions()[i][2]
-		);
+	// Try to integrate
+	bool success = true;
+	try {
+		integrator->step(steps);
+	} catch (const std::exception& e) {
+		// // Restore old positions in case of integration failure
+		// restorePositions();
+		success = false;
 	}
 
-	// Save the forces
-	ommForcesCache = state.getForces();
+	// Intentional value capture: relies on C++17 guaranteed copy elision.
+	const auto state = context->getState(OpenMM::State::Positions, enforcePeriodicBox);
+	const auto& pos = state.getPositions();
+	
+	// Get new positions
+	simbodyAtomsPositionsCache.resize(pos.size());
+	for (size_t i = 0, n = pos.size(); i < n; ++i) {
+		const auto& c = pos[i];
+		simbodyAtomsPositionsCache[i] = {c[0], c[1], c[2]};
+	}
+
+	return success;
+}
+
+void OPENMM::restorePositions() {
+	// ensureInitialized();
+	// ommAtomsPositionsCache = ommAtomsPositionsCacheOld;
+	// context->setPositions(ommAtomsPositionsCache);
 }
 
 void OPENMM::getEnergyAndForces(
-        const std::vector<std::size_t>& nax2daix,
-        const std::vector<std::size_t>& nax2iax,
-        const std::vector<std::size_t>& nax2ibx,
-        const SimTK::Vector_<SimTK::Vec3>& includedAtomStation_G,
-        const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
-        SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
-        SimTK::Real &energy)
+	bool positionsAlreadySet,
+    const std::vector<NonBondedMapping>& nonBondedMappings,
+    const SimTK::Vector_<SimTK::Vec3>& includedAtomStation_G,
+    const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
+    SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
+    SimTK::Real &energy)
 {
 	ensureInitialized();
-	SimTK_ASSERT_ALWAYS(nax2iax.size() == nax2ibx.size(),
-		"OPENMM::getEnergyAndForces(): nax2iax and nax2ibx must have the same size.");
-	SimTK_ASSERT_ALWAYS(includedAtomPos_G.size() == numAtoms,
-		"OPENMM::getEnergyAndForces(): includedAtomPos_G size must match number of atoms.");
 
-	// std::cout << "\tOPENMM::getEnergyAndForces(): numAtoms = " << numAtoms << ", nax2iax.size() = " << nax2iax.size() << std::endl;
+	// Set positions in OpenMM context only when requested
+	// This is to prevent setting the positions again after we integrated with OpenMM which would be wasteful
+	if (!positionsAlreadySet) {
+		for (const auto& mapping : nonBondedMappings) {
+			const std::size_t dAIx = mapping.dummAtomIndex;
+			const std::size_t iax = mapping.includedAtomIndex;
+			const SimTK::Vec3& pos_G = includedAtomPos_G[iax];
 
-	// Set positions in OpenMM context
-	for (std::size_t nax = 0; nax < nax2iax.size(); ++nax) {
-		const std::size_t dAIx = nax2daix[nax];
-		const std::size_t iax = nax2iax[nax];
-		const SimTK::Vec3& pos_G = includedAtomPos_G[iax];
-
-		// std::cout << "\tnax " << nax << ": dAIx = " << dAIx << ", iax = " << iax
-		// 	<< ", pos_G = (" << pos_G[0] << ", " << pos_G[1] << ", " << pos_G[2] << ")" << std::endl;
-
-		ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
+			ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
+		}
+		context->setPositions(ommAtomsPositionsCache);
 	}
-	context->setPositions(ommAtomsPositionsCache);
-
-	// bool checkPotentialEnergyManually = true;
-	// if (checkPotentialEnergyManually){
-	// 	const int groupHarmonicBondStretch = 0;
-	// 	const int groupHarmonicAngleForce = 1;
-	// 	const int groupPeriodicTorsionForce = 2;
-	// 	const int groupNonbondedForce = 3;
-	// 	const int groupThermostat = 4;
-	// 	const int groupGBSAOBCForce = 5;
-		
-	// 	// calculate total potential energy manually
-	// 	state = context->getState(OpenMM::State::Energy);
-	// 	std::cout << "Total energy is " << state.getPotentialEnergy() << std::endl;
-
-	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicBondStretch);
-	// 	std::cout << "HarmonicBondForce is " << state.getPotentialEnergy() << std::endl;
-
-	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupHarmonicAngleForce);
-	// 	std::cout << "HarmonicAngleForce is " << state.getPotentialEnergy() << std::endl;
-
-	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupPeriodicTorsionForce);
-	// 	std::cout << "PeriodicTorsionForce is " << state.getPotentialEnergy() << std::endl;
-
-	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupNonbondedForce);
-	// 	std::cout << "NonbondedForce is " << state.getPotentialEnergy() << std::endl;
-
-	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupThermostat);
-	// 	std::cout << "AndersenThermostat is " << state.getPotentialEnergy() << std::endl;
-
-	// 	state = context->getState(OpenMM::State::Energy, enforcePeriodicBox, 1<<groupGBSAOBCForce);
-	// 	std::cout << "GBSAOBCForce is " << state.getPotentialEnergy() << std::endl;
-	// }
-
-	// SimTK_ASSERT_ALWAYS(false, "checkpoint set positions");
-
 
 	// Get state with energy and forces
-	state = context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
-	pe = state.getPotentialEnergy();
-	ommForcesCache = state.getForces();
+	// Intentional value capture: relies on C++17 guaranteed copy elision.
+	const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
 
-	// Return energy
-	energy += pe;
+	potentialEnergy = state.getPotentialEnergy();
+	kineticEnergy = state.getKineticEnergy();
+	const auto& forces = state.getForces();
+
+	// Return only the potential energy for now
+	energy += potentialEnergy;
 
 	// Map forces from atoms to bodies
-    for (std::size_t nax = 0; nax < nax2ibx.size(); ++nax)
+    for (const auto& mapping : nonBondedMappings)
     {
-		const std::size_t dAIx = nax2daix[nax];
-		const std::size_t iax = nax2iax[nax];
-		const std::size_t ibx = nax2ibx[nax];
+		const std::size_t dAIx = mapping.dummAtomIndex;
+		const std::size_t iax = mapping.includedAtomIndex;
+		const std::size_t ibx = mapping.bodyIndex;
 
-    	const SimTK::Vec3 simForce(ommForcesCache[dAIx][0], ommForcesCache[dAIx][1], ommForcesCache[dAIx][2]);
+    	const SimTK::Vec3 simForce(forces[dAIx][0], forces[dAIx][1], forces[dAIx][2]);
     	includedBodyForces_G[ibx] += SimTK::SpatialVec(includedAtomStation_G[iax] % simForce, simForce);
     }
 }
@@ -463,4 +565,10 @@ std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> OPENMM::computePeriodicBoxV
         b -= a * std::round(b[0] / a[0]);
 
     return std::make_tuple(a, b, c);
+}
+
+void OPENMM::registerForce(const ForceRegistration& fr) {
+	forceRegistry.push_back(fr);
+	system->addForce(fr.force);
+	fr.force->setForceGroup(static_cast<int>(fr.group));
 }

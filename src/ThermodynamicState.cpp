@@ -151,6 +151,46 @@ void ThermodynamicState::setWorkOptions(const std::vector<int>& rexWorkOptionsAr
 	this->rexWorkOptions = rexWorkOptionsArg;
 }
 
+void ThermodynamicState::computeNonequilPartitioning() {
+    const auto& distortOpts = getDistortOptions();
+    const auto& worldIxs    = getWorldIndexes();
+
+    size_t nWorlds = worldIxs.size();
+    assert(distortOpts.size() == nWorlds);
+
+    Partitioning part;
+    part.N1_wCnt = -1;
+    part.N2_wCnt = -1;
+
+    // Find first distorted world
+    for (size_t i = 0; i < nWorlds; ++i) {
+        if (distortOpts[i] != 0) {
+            part.N1_wCnt = static_cast<int>(i);
+            break;
+        }
+    }
+
+    if (part.N1_wCnt == -1) {
+        part.nofEquilibriumWorlds = static_cast<int>(nWorlds);
+        part.nofNonequilibriumWorlds = 0;
+        part.N2_wCnt = static_cast<int>(nWorlds) - 1; // fallback to last world
+    } else {
+        part.nofEquilibriumWorlds = part.N1_wCnt;
+        part.nofNonequilibriumWorlds = static_cast<int>(nWorlds) - part.N1_wCnt;
+        part.N2_wCnt = (part.N1_wCnt > 0) ? (part.N1_wCnt - 1) : 0;
+    }
+
+    this->nonequilPartitioning = part;
+}
+
+void ThermodynamicState::printPartitioning(std::ostream& os) const {
+    os << "Partitioning for ThermodynamicState:" << std::endl;
+    os << "  N1_wCnt (first non-equil world): " << nonequilPartitioning.N1_wCnt << std::endl;
+    os << "  N2_wCnt (equilibrium world before N1): " << nonequilPartitioning.N2_wCnt << std::endl;
+    os << "  Nof equilibrium worlds: " << nonequilPartitioning.nofEquilibriumWorlds << std::endl;
+    os << "  Nof nonequilibrium rounds: " << nonequilPartitioning.nofNonequilibriumWorlds << std::endl;
+}
+
 // Set the integrating method
 void ThermodynamicState::setIntegrators(const std::vector<IntegratorType>& rexIntegratorsArg)
 {
@@ -216,7 +256,7 @@ void ThermodynamicState::PrintZMatrixBAT(bool printBATStats) const {
 
 		for(const auto tabValue : zMatrixTable[bati]){
 			if( tabValue >= 0){
-				std::cout << atoms[tabValue].getCompoundAtomIndex() << " ";
+				std::cout << atoms[tabValue].identity.compoundAtomIndex << " ";
 			}else{
 				std::cout << "dummy " ;
 			}
@@ -424,7 +464,6 @@ int ThermodynamicState::findWorld(const int whichWorld)
 */
 bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & worldBMps, const SimTK::Vector & worldPFrs, const SimTK::Vector & worldQs, int worldNofSamples)
 {
-
 	// Usefull vars
 	//SimTK::Real N = worldNofSamples + 1;
 	SimTK::Real N = nofSamples + 1;
@@ -538,22 +577,26 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 
 		}
 
-		if(false && ((whichWorld == 2) || (whichWorld == 3) || (whichWorld == 4))){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
+		if(false 
+			//&& ((whichWorld == 0) || (whichWorld == 3) || (whichWorld == 4))
+		){ // (((((((((((((((((((((((((((((((((((((((((((((((((((((((((( // @@@@@@@@@@@@@
 			int decimal_places = 7;
     		std::cout << std::setw(6 + decimal_places) << std::fixed << std::setprecision(decimal_places);
 			std::cout << std::endl;
 			
-			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldPFrs.size() << " N " << N <<" PFrs: ";
-			for(int mbx = 0; mbx < worldPFrs.size(); mbx++){std::cout <<" " << worldPFrs[mbx];}std::cout << std::endl;
-			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps: ";
-			for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << worldBMps[mbx];}std::cout << std::endl;
+			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldPFrs.size() << " N " << N <<" PFrs: ";
+			// for(int mbx = 0; mbx < worldPFrs.size(); mbx++){std::cout <<" " << worldPFrs[mbx];}std::cout << std::endl;
+			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps: ";
+			// for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << worldBMps[mbx];}std::cout << std::endl;
 
-			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldPFrs.size() << " N " << N <<" PFrs_means: ";
-			for(int mbx = 0; mbx < worldPFrs.size(); mbx++){std::cout <<" " << PFrs_means[wPosInVector][mbx];}std::cout << std::endl;	
+			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldPFrs.size() << " N " << N <<" PFrs_means: ";
+			// for(int mbx = 0; mbx < worldPFrs.size(); mbx++){std::cout <<" " << PFrs_means[wPosInVector][mbx];}std::cout << std::endl;	
 
 			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps_means: ";
-			for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << BMps_means[wPosInVector][mbx];}std::cout << std::endl;			
-			
+			for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << BMps_means[wPosInVector][mbx];}std::cout << std::endl;
+			std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldBMps.size() << " N " << N <<" BMps_diffs: ";
+			for(int mbx = 0; mbx < worldBMps.size(); mbx++){std::cout <<" " << BMps_diffs[wPosInVector][mbx];}std::cout << std::endl;
+
 			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld  << " nq " << worldQs.size() << " N " << N <<" currQs: ";
 			// for(int qIx = 0; qIx < worldQs.size(); qIx++){std::cout <<" " << currQs[wPosInVector][qIx];}std::cout << std::endl;
 			// std::cout << "calcQStats thIx " << myIndex << " wIx " << whichWorld << " nq " << worldQs.size() << " N " << N <<" qs: ";
@@ -570,7 +613,6 @@ bool ThermodynamicState::calcQStats(const int whichWorld, const SimTK::Vector & 
 	} // nofSamples gt 2
 
 	return true;
-	
 }
 
 /*!

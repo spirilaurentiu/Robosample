@@ -899,14 +899,10 @@ private:
     size_type size_;
 };
 
-struct Range {
-	std::size_t begin = std::numeric_limits<std::size_t>::max();
-	std::size_t end = std::numeric_limits<std::size_t>::max();
-};
-
-struct TopologyRange {
-	Range atomRange;
-	Range bondRange;
-	Range angleRange;
-	Range torsionRange;
-};
+template <typename T>
+auto safe_subspan(std::vector<T>& vec, size_t start, size_t end) {
+    if (start >= end || start >= vec.size()) {
+        return Span<T>(); // Return empty span
+    }
+    return Span<T>(&vec[start], end - start);
+}

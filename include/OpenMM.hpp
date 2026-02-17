@@ -1,9 +1,6 @@
 #pragma once
 
 #include "OpenMM.h"
-#include "openmm/Platform.h"
-#include "openmm/System.h"
-#include "openmm/internal/ThreadPool.h"
 
 #if OPENMM_PLATFORM_CPU
     #include "../Molmodel/src/gbsa/cpuObcInterface.h"
@@ -17,19 +14,112 @@
 #include "TopologyElements.hpp"
 #include <fstream>
 
-struct OpenMMEnergyComponents {
-    SimTK::Real totalEnergy = 0.0;
-    SimTK::Real harmonicBondForce = 0.0;
-    SimTK::Real harmonicAngleForce = 0.0;
-    SimTK::Real periodicTorsionForce = 0.0;
-    SimTK::Real nonbondedForce = 0.0;
-    SimTK::Real andersenThermostat = 0.0;
-    SimTK::Real gbsaObcForce = 0.0;
+enum NonbondedMethod : int {
+    NoCutoff,
+    CutoffNonPeriodic,
 };
+
+struct CMAPGrid {
+	std::vector<SimTK::Real> energy;
+	int size;
+};
+
+struct CMAPTorsion {
+	int mapIndex;
+	int a1, a2, a3, a4;
+	int b1, b2, b3, b4;
+};
+
+struct UreyBradley {
+    int a1, a3;
+    SimTK::Real stiffnessInKJPerNmSq;
+    SimTK::Real nominalLengthInNm;
+};
+
+struct Scaling14 {
+    Scaling14() = default;
+    Scaling14(
+        int a1_, int a4_,
+        SimTK::Real chargeProduct_, SimTK::Real epsilon_, SimTK::Real sigma_
+    ) : a1(a1_), a4(a4_),
+        chargeProduct(chargeProduct_), epsilon(epsilon_), sigma(sigma_)
+    {}
+
+    int a1, a4;
+    SimTK::Real chargeProduct, epsilon, sigma;
+};
+
+struct Exclusion {
+    Exclusion() = default;
+    Exclusion(int a1_, int a2_) : a1(a1_), a2(a2_) {}
+
+    int a1;
+    int a2;
+};
+
+enum class ForceGroup : int {
+    HarmonicBondForce = 0,
+    HarmonicAngleForce,
+    PeriodicTorsionForce,
+    ImproperTorsionForce,
+    NonbondedForce,
+    CustomNonbondedForce,
+    Thermostat,
+    CMAPTorsion,
+    GBSAOBC,
+    UreyBradley,
+    Count
+};
+
+static inline std::string to_string(ForceGroup fg) {
+    switch (fg) {
+        case ForceGroup::HarmonicBondForce: return "HarmonicBondForce";
+        case ForceGroup::HarmonicAngleForce: return "HarmonicAngleForce";
+        case ForceGroup::PeriodicTorsionForce: return "PeriodicTorsionForce";
+        case ForceGroup::ImproperTorsionForce: return "ImproperTorsionForce";
+        case ForceGroup::NonbondedForce: return "NonbondedForce";
+        case ForceGroup::CustomNonbondedForce: return "CustomNonbondedForce";
+        case ForceGroup::Thermostat: return "AndersenThermostat";
+        case ForceGroup::CMAPTorsion: return "CMAPTorsionForce";
+        case ForceGroup::GBSAOBC: return "GBSAOBCForce";
+        case ForceGroup::UreyBradley: return "UreyBradleyForce";
+        default: return "UnknownForceGroup";
+    }
+}
+
+struct ForceRegistration {
+    OpenMM::Force* force = nullptr;
+    ForceGroup group = ForceGroup::Count;
+};
+
+using OpenMMEnergyComponents = std::unordered_map<std::string, SimTK::Real>;
 
 class OPENMM {
 public:
-    static bool initialize(uint32_t seed, SimTK::Real sqrtCoulombScale, SimTK::Real vdwGlobalScaleFactor, const std::vector<RoboAtom>& atoms, const std::vector<RoboBondStretch>& bonds, const std::vector<RoboBondBend>& angles, const std::vector<RoboBondTorsion>& torsions, bool testing);
+    static bool initialize(
+        uint32_t seed,
+		const std::vector<RoboAtom>& atoms,
+		const std::vector<RoboBond>& bonds,
+		const std::vector<RoboAngle>& angles,
+		const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
+		const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions,
+		const std::vector<CMAPGrid>& cmapGrids,
+		const std::vector<CMAPTorsion>& cmapTorsions,
+        const std::vector<UreyBradley>& ureyBradleys,
+        bool hasNBfix,
+		int numTypes,
+		const std::vector<SimTK::Real>& acoef,
+		const std::vector<SimTK::Real>& bcoef,
+        const std::vector<Exclusion>& exclusions,
+        const std::vector<Scaling14>& scaling14s,
+        bool useGBSAOBC2,
+        SimTK::Real gbsaSolventDielectric,
+        SimTK::Real gbsaSoluteDielectric,
+        NonbondedMethod nonbondedMethod,
+        SimTK::Real nonbondedCutoffInNm,
+        SimTK::Real thermostatTemperature,
+        SimTK::Real collisionFrequency,
+        bool testing);
 
     OpenMMEnergyComponents getEnergyComponents();
 
@@ -54,51 +144,41 @@ public:
     void setPositions(const std::vector<SimTK::Vec3> &positions);
     const std::vector<SimTK::Vec3>& getPositions() const;
 
-    void integrateTrajectory(int steps);
+    bool integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& positions, int steps);
+    void restorePositions();
 
     void getEnergyAndForces(
-        const std::vector<std::size_t>& nax2daix,
-        const std::vector<std::size_t>& nax2iax,
-        const std::vector<std::size_t>& nax2ibx,
+        bool positionsAlreadySet,
+        const std::vector<NonBondedMapping>& nonBondedMappings,
         const SimTK::Vector_<SimTK::Vec3>& includedAtomStation_G,
         const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
         SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
         SimTK::Real &energy);
 
     std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(
-	double a_length, double b_length, double c_length,
-    double alpha, double beta, double gamma);
+        double a_length, double b_length, double c_length,
+        double alpha, double beta, double gamma);
 
 private:
     OPENMM() = default;
     void destroy();
 
     void ensureInitialized() const {
-        SimTK_ASSERT_ALWAYS(initialized, "OpenMM subsystem not initialized.");
+        SimTK_ASSERT_ALWAYS(initialized, "OPENMM::ensureInitialized(): OpenMM has not initialized.");
     }
+
+    void registerForce(const ForceRegistration& fr);
     
 	std::unique_ptr<OpenMM::Context> context;
 	std::unique_ptr<OpenMM::System> system;
 	std::unique_ptr<OpenMM::Integrator> integrator;
-    
-	OpenMM::State state;
+
+    std::vector<ForceRegistration> forceRegistry;
     
     std::size_t numAtoms = 0;
-    std::vector<OpenMM::Vec3> ommAtomsPositionsCache;
-    std::vector<OpenMM::Vec3> ommForcesCache;
+    std::vector<OpenMM::Vec3> ommAtomsPositionsCache, ommAtomsPositionsCacheOld;
     std::vector<SimTK::Vec3> simbodyAtomsPositionsCache;
-    SimTK::Real pe = 0, ke = 0;
-    
-    SimTK::Real coulomb14Scale = 1/1.2; // From Amber force fields
-	SimTK::Real lj14Scale = 0.5; // From Amber force fields
-    
-    
-    int groupHarmonicBondStretch = 0;
-	int groupHarmonicAngleForce = 1;
-	int groupPeriodicTorsionForce = 2;
-	int groupNonbondedForce = 3;
-	int groupThermostat = 4;
-	int groupGBSAOBCForce = 5;
+    SimTK::Real potentialEnergy = 0, kineticEnergy = 0;
     
     bool testing = false;    
 	bool enforcePeriodicBox = false;

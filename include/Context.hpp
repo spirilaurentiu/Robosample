@@ -22,15 +22,43 @@ enum class RUN_TYPE : int {
 	DEFAULT = 0,
 	REMC,
 	RENEMC,
-	RENE
+	RENE,
+	REBASONTOP
 };
 
-// [begin, last], not [begin, end)
-struct IteratorPair {
-	IteratorPair() = default;
-	
-	std::size_t begin = 0;
-	std::size_t last = 0;
+enum class TopologyRangeType : int {
+	ATOM = 0,
+	BOND,
+	ANGLE,
+	PERIODIC_TORSION,
+	IMPROPER_HARMONIC_TORSION,
+	COUNT
+};
+
+class TopologyRange {
+	// Stores [begin, end) pairs for each type
+    std::array<std::pair<int, int>, (int)TopologyRangeType::COUNT> ranges;
+
+public:
+	TopologyRange(std::vector<int> startCounts) {
+		ranges[(int)TopologyRangeType::ATOM] = { startCounts[0], startCounts[0] };
+		ranges[(int)TopologyRangeType::BOND] = { startCounts[1], startCounts[1] };
+		ranges[(int)TopologyRangeType::ANGLE] = { startCounts[2], startCounts[2] };
+		ranges[(int)TopologyRangeType::PERIODIC_TORSION] = { startCounts[3], startCounts[3] };
+		ranges[(int)TopologyRangeType::IMPROPER_HARMONIC_TORSION] = { startCounts[4], startCounts[4] };
+	}
+
+	void close(std::vector<int> endCounts) {
+		ranges[(int)TopologyRangeType::ATOM].second = endCounts[0];
+		ranges[(int)TopologyRangeType::BOND].second = endCounts[1];
+		ranges[(int)TopologyRangeType::ANGLE].second = endCounts[2];
+		ranges[(int)TopologyRangeType::PERIODIC_TORSION].second = endCounts[3];
+		ranges[(int)TopologyRangeType::IMPROPER_HARMONIC_TORSION].second = endCounts[4];
+	}
+
+	const std::pair<int, int>& getRange(TopologyRangeType type) const {
+		return ranges[(int)type];
+	}
 };
 
 class Context{
@@ -42,13 +70,7 @@ class Context{
 	std::string baseName;
 	bool verbose = false;
 
-	OpenMMEnergyComponents initialOpenMMEnergyComponents;
-
 public:
-
-	OpenMMEnergyComponents getInitialOpenMMEnergyComponents() const {
-		return initialOpenMMEnergyComponents;
-	}
 
 // vector<vector<ATOM>> for each molecule
 	// void createSystem(std::vector<ATOM> atoms, std::vector<BOND> bonds);
@@ -67,28 +89,53 @@ public:
 
 	void setVerbose(bool verbose);
 	void setNumThreads(int threads);
-	void setGBSA(SimTK::Real globalScaleFactor);
+	void setGBSAOptions(bool useGBSAOBC2, SimTK::Real solventDielectric, SimTK::Real soluteDielectric);
 	void setForceFieldScaleFactors(SimTK::Real globalScaleFactor);
 	bool setOutput(const std::string& outDir);
 	
 	void setNofRoundsTillReblock(int nofRoundsTillReblock);
 	void setRequiredNofRounds(int argNofRounds);
 
-	void setNonbonded(int method, SimTK::Real cutoff);
+	void setNonbonded(NonbondedMethod method, SimTK::Real cutoffInNm);
 
-	void loadAmberSystem(const std::vector<int>& inRoots,
-						 const std::vector<RoboAtom>& inAtoms,
-						 const std::vector<RoboBondStretch>& inBonds,
-						 const std::vector<RoboBondBend>& inAngles,
-						 const std::vector<RoboBondTorsion>& inTorsions,
-						 const std::vector<IteratorPair>& atomRanges,
-						 const std::vector<IteratorPair>& bondRanges,
-						 const std::vector<IteratorPair>& angleRanges,
-						 const std::vector<IteratorPair>& torsionRanges);
+	void loadAmberSystem(
+		const std::vector<int>& roots_,
+		const std::vector<RoboAtom>& atoms_,
+		const std::vector<RoboBond>& bonds_,
+		const std::vector<RoboAngle>& angles_,
+		const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions_,
+		const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions_,
+		const std::vector<TopologyRange>& topologyRanges
+	);
+
+	OpenMMEnergyComponents initializeOpenMM(
+		const std::vector<RoboAtom>& atoms,
+		const std::vector<RoboBond>& bonds,
+		const std::vector<RoboAngle>& angles,
+		const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
+		const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions,
+		const std::vector<CMAPGrid>& cmapGrids,
+		const std::vector<CMAPTorsion>& cmapTorsions,
+		const std::vector<UreyBradley>& ureyBradleys,
+		bool hasNBfix,
+		int numTypes,
+		const std::vector<SimTK::Real>& acoef,
+		const std::vector<SimTK::Real>& bcoef,
+		const std::vector<Exclusion>& exclusions,
+        const std::vector<Scaling14>& scaling14s
+	);
 
 	void Initialize();
 
-	void addWorld(bool fixmanTorque, int samplesPerRound, ROOT_MOBILITY rootMobility, const std::vector<BOND_FLEXIBILITY>& flexibilities, bool useOpenMM = true, bool visual = false, SimTK::Real visualizerFrequency = 0);
+	void addWorld(
+		bool fixmanTorque,
+		int samplesPerRound,
+		ROOT_MOBILITY rootMobility,
+		const std::vector<std::vector<BondFlexibility>>& flexibilities,
+		bool useOpenMM = true,
+		bool visual = false,
+		SimTK::Real visualizerFrequency = 0
+	);
 
 	// Add task spaces
 	void addTaskSpacesLS(void);
@@ -97,7 +144,6 @@ public:
 	void addConstraints(void);
 
 	void realizeTopology();
-	void realizePosition();
 
 	void passTopologiesToNewWorld(int newWorldIx);
 
@@ -143,17 +189,11 @@ public:
 		return worlds;
 	}
 
-	// Writeble reference to a samplers advanced state
-	SimTK::State& updAdvancedState(std::size_t whichWorld, std::size_t whichSampler);
-
 	void RotateWorlds();
 	//------------
 
 	// --- Main ---
 	void randomizeWorldIndexes(void);
-	void transferCoordinates_WorldToWorld(int src, int dest);
-
-	void transferCoordinates_ReplicaToWorld(int replicaIx, int destWIx);
 
 	// Relationship BAT - mobod transforms
 	void PrintZMatrixMobods(int wIx, SimTK::State& someState);
@@ -245,11 +285,10 @@ public:
 	void allocateSwapMatrices(void);
 
 	// Add one replica
-	void addReplica(int index);
+	void addReplica();
 
 	// Add one thermodynamic state
 	void addThermodynamicState(
-		int index,
 		SimTK::Real T,
 		const std::vector<AcceptRejectMode>& acceptRejectModes,
 		const std::vector<int>& rexDistortOptions,
@@ -305,13 +344,54 @@ public:
 
 	// Exchanges thermodynamic states between replicas
 	void getMsg_RexDetHeader(std::stringstream& rexDetHeader);
-	void rewindReplica(void);
-	bool attemptREXSwap(int replica_i, int replica_j);
+	void rewindReplica();
+	bool attemptREXSwap(int thermoState_C, int thermoState_H);
 
-	const int getSwapEvery(void);
-	void setSwapEvery(const int& n);
+	int getSwapEvery() const { return swapEvery; }
+	void setSwapEvery(int n) { swapEvery = n; }
 
-	void mixReplicas(int mixi);
+	// Mix replicas
+	void mixAllReplicas(int nSwapAttempts);
+	
+	void prepareExchangePairs(int rexRound, int oddity);
+	void mixReplicas(int mixi, int oddity = 0);
+
+	// ========================================================================
+	// Configuration manipulation functions between worlds and replicas
+	// This can be quite costly since they imply transfer between worlds
+
+	// Load replica's atomLocations into it's front world. Returns world index
+	int restoreReplicaCoordinatesToFrontWorld(int whichReplica);
+
+	// Load replica's atomLocations into it's back world
+    void restoreReplicaCoordinatesToBackWorld(int whichReplica);
+
+	// Stores replica's front world's coordinates into it's atomsLocations
+
+	// This should always be a fully flexible world
+	void storeReplicaCoordinatesFromFrontWorld(int whichReplica);
+
+	// Store work world coordinates into the replica
+	void store_WORK_CoordinatesFromFrontWorld(int replicaIx);
+
+	// Store work world energy into the replica 
+	void store_WORK_ReplicaEnergyFromFrontWorldFull(int replicaIx);
+
+	// ========================================================================
+	// Energy manipulation functions between worlds and replicas
+	// This can be quite costly - energy calculation (O^2)
+
+	// Get ennergy of the back world and store it in replica thisReplica
+	void storeReplicaEnergyFromBackWorld(int thisReplica);
+
+    	// Get ennergy of the front world and store it in replica thisReplica
+	void storeReplicaEnergyFromFrontWorldFull(int thisReplica);
+
+	// Store any WORK Jacobians contribution from back world
+	void store_WORK_JacobianFromBackWorld(int replicaIx);
+
+	// Get Fixman of the back world and store it in replica thisReplica
+    void storeReplicaFixmanFromBackWorld(int replicaIx);
 
 	// Update replicas coordinates from work generated coordinates
 	void set_WORK_CoordinatesAsFinal(int replicaIx);
@@ -357,13 +437,17 @@ public:
 
 	// Run a particular world
 	bool RunWorld(int whichWorld, const std::string& header);
-	void RunReplica(int mixi, int replicaIx);	
+	void RunReplicaWorldRange(int replicaIx, int startWorldCnt, int nofWorldsCounted, bool isNonEquilibrium);	
 	/**	
 	* @brief Main function
 	* @param
 	* @return
 	*/
 	void RunREX(int equilRounds, int prodRounds);
+
+	void transferCoordsFromWorldToWorld(int sourceWorldIndex, int destinationWorldIndex);
+	void transferCoordsFromWorldToReplica(int sourceWorldIndex, int destinationReplicaIndex, bool intoWORK);
+	void transferCoordsFromReplicaToWorld(int sourceReplicaIndex, int destinationWorldIndex);
 
 	void setSubZmatrixBATStatsToSamplers(int thermoIx, int worldCnt);
 
@@ -374,9 +458,6 @@ public:
 	void PrintReplicaMaps(void);
 	void PrintNofAttemptedSwapsMatrix(void);
 	void PrintNofAcceptedSwapsMatrix(void);
-
-	SimTK::Real getPotentialEnergy(std::size_t world, std::size_t sampler) const;
-
 
 	//////////////////////////////////
 	/////     TEST FUNCTIONS     /////
@@ -477,8 +558,8 @@ private:
 	std::vector<std::vector<int>> nofAttemptedSwapsMatrix;
 	std::vector<std::vector<int>> nofAcceptedSwapsMatrix;
 
-	size_t nofReplicas = 0;
-	size_t nofThermodynamicStates = 0;
+	std::size_t nofReplicas = 0;
+	std::size_t nofThermodynamicStates = 0;
 	ReplicaMixingScheme replicaMixingScheme = ReplicaMixingScheme::neighboring;
 
 	int swapFixman = 1;
@@ -501,15 +582,14 @@ private:
 	std::string cinf_prefix = "[INFO] ";
 
 	RUN_TYPE runType = RUN_TYPE::DEFAULT;
-	SimTK::Real tempIni = 0,
-		tempFin = 0;
-
-	// SetupReader setupReader;
+	SimTK::Real tempIni = 0, tempFin = 0;
 
 	std::vector<RoboAtom> atoms;
-	std::vector<RoboBondStretch> bonds;
-	std::vector<RoboBondBend> angles;
-	std::vector<RoboBondTorsion> torsions;
+	std::vector<RoboBond> bonds;
+	std::vector<RoboAngle> angles;
+	std::vector<RoboPeriodicTorsion> properPeriodicTorsions;
+	std::vector<RoboHarmonicImproperTorsion> harmonicImproperTorsions;
+
 	int numMolecules = 0;
 
 	std::vector<Topology> topologies;
@@ -517,10 +597,14 @@ private:
 	
 	uint32_t seed = 0;
 	int numThreads = 0;
-	int nonbondedMethod = 0; // 0 = NoCutoff, 1 = CutoffNonPeriodic, 2 = CutoffPeriodic .. TODO: implement enum
-	SimTK::Real nonbondedCutoff = 1.2; // 1.2 nm, not used by default (no cutoff)
+	NonbondedMethod nonbondedMethod = NonbondedMethod::NoCutoff;
+	SimTK::Real nonbondedCutoffInNm = 1.2; // 1.2 nm, not used by default (no cutoff)
 	SimTK::Real vdwGlobalScaleFactor = 1.0; // Default is 1.0
-	SimTK::Real gbsaGlobalScaleFactor = 0.0; // Default is 0 (vacuum). Use 1 for water
+
+	bool useGBSAOBC2 = false;
+	SimTK::Real solventDielectric = 78.5;
+	SimTK::Real soluteDielectric = 1.0;
+	SimTK::Real gbsaGlobalScaleFactor = 0.0; // Default is 0 (vacuum). Use 1 for implicit solvent (water)
 
 	bool useAmberForceFieldScaleFactors = true;
 	SimTK::Real globalForceFieldScaleFactor = 1.0; // Used in place of Amber scaling (not default)
@@ -531,19 +615,6 @@ private:
 public:
 	/** Implicit membrane mimicked by half-space contacts */
 	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
-
-	std::map<std::string, SimTK::BondMobility::Mobility> mobilityMap = {
-		{ "Free", SimTK::BondMobility::Free },
-		{ "Pin", SimTK::BondMobility::Torsion },
-		{ "Cartesian", SimTK::BondMobility::Translation },
-		{ "Rigid", SimTK::BondMobility::Rigid },
-		{ "Weld", SimTK::BondMobility::Rigid },
-		{ "Slider", SimTK::BondMobility::Slider },
-		{ "AnglePin", SimTK::BondMobility::AnglePin },
-		{ "BendStretch", SimTK::BondMobility::BendStretch },
-		{ "Spherical", SimTK::BondMobility::Spherical },
-		{ "OrthoSpherical", SimTK::BondMobility::OrthoSpherical }
-	};
 
     std::vector<std::string> MobilityStr {
 		"Zero",
@@ -746,8 +817,11 @@ private:
 	// bondMapping[molmodelBondIndex] = gmolmodelBondIndex (normal mapping)
 	std::unordered_map<int, SimTK::Compound::BondIndex> bondMapping;
 
-	// Pairs of replicas to be exchanged
-	std::vector<int> exchangePairs;
+	// Explicit pairs (replica_i, replica_j)
+	std::vector<std::pair<int, int>> exchangePairList;
+
+	// Quick lookup: exchangePairs[i] = j or -1
+    std::vector<int> exchangePairs;
 
 	std::map<std::string, AcceptRejectMode> acceptRejectModes = {
 		{ "EMPTY", AcceptRejectMode::AlwaysAccept },

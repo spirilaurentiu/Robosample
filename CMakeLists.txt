@@ -1,18 +1,44 @@
 cmake_minimum_required(VERSION 3.17)
 
-project(Robosample C CXX)
+# CUDA may be used as a platform for OpenMM
+# Setting it here simplifies the logic even if CUDA is not used as the OpenMM platform
+project(Robosample LANGUAGES C CXX)
 
-# robosample version and date
-SET(ROBOSAMPLE_MAJOR_VERSION 2)
-SET(ROBOSAMPLE_MINOR_VERSION 0)
-SET(ROBOSAMPLE_PATCH_VERSION 0)
-SET(ROBOSAMPLE_COPYRIGHT_YEARS "2021-01")
-SET(ROBOSAMPLE_LIB_NAME "robo_bindings")
+# Check what hardware acceleration the user wants
+set(USE_OPENMM_PLATFORM_CPU 0)
+set(USE_OPENMM_PLATFORM_CUDA 0)
+set(USE_OPENMM_PLATFORM_OPENCL 0)
 
-# underbar separated list of dotted authors, no spaces or commas
-SET(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
+if(OPENMM_PLATFORM MATCHES "CPU")
+    set(USE_OPENMM_PLATFORM_CPU 1)
+elseif(OPENMM_PLATFORM MATCHES "CUDA")
+    set(USE_OPENMM_PLATFORM_CUDA 1)
+elseif(OPENMM_PLATFORM MATCHES "OPENCL")
+    set(USE_OPENMM_PLATFORM_OPENCL 1)
+endif()
 
-# link prerequisites
+# Tell CMake to enable CUDA
+if(USE_OPENMM_PLATFORM_CUDA)
+    enable_language(CUDA)
+    if(NOT CMAKE_CUDA_ARCHITECTURES)
+        message(FATAL_ERROR "CUDA enabled but CMAKE_CUDA_ARCHITECTURES not set")
+    endif()
+endif()
+
+# Robosample version and date
+set(ROBOSAMPLE_MAJOR_VERSION 2)
+set(ROBOSAMPLE_MINOR_VERSION 0)
+set(ROBOSAMPLE_PATCH_VERSION 0)
+set(ROBOSAMPLE_COPYRIGHT_YEARS "2021-01")
+set(ROBOSAMPLE_LIB_NAME "robo_bindings")
+
+# Underbar separated list of dotted authors, no spaces or commas
+set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
+
+# Generate compile_commands.json for tools like clangd and code analysis
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Link prerequisites
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
@@ -43,7 +69,7 @@ include(${CMAKE_SOURCE_DIR}/cmake_modules/OpenMM.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake_modules/Simbody.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake_modules/Molmodel.cmake)
 
-# build the robosample library
+# Build the robosample library
 FILE(GLOB src_c_files ${CMAKE_SOURCE_DIR}/format/src/*.c)
 SET(ROBOSAMPLE_C_SOURCE_FILES ${src_c_files})
 set_source_files_properties(${ROBOSAMPLE_C_SOURCE_FILES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
@@ -80,7 +106,7 @@ set(ROBOSAMPLE_INCLUDE_DIRS
 set(COMMON_FLAGS "-msse4.1 -mavx -Wno-c++17-extensions")
 separate_arguments(COMMON_FLAGS UNIX_COMMAND "${COMMON_FLAGS}")
 
-set(DEBUG_FLAGS "-O0 -g -ggdb -fno-omit-frame-pointer")
+set(DEBUG_FLAGS "-O0 -g -ggdb -fno-omit-frame-pointer") #  -fsanitize=address
 separate_arguments(DEBUG_FLAGS UNIX_COMMAND "${DEBUG_FLAGS}")
 
 set(RELEASE_FLAGS "-O3 -march=native -mtune=native")
@@ -145,14 +171,13 @@ set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES POSITION_INDEPENDENT_COD
 # Apply PGO and BOLT flags conditionally
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${DEBUG_FLAGS})
+    add_compile_definitions(_GLIBCXX_DEBUG)
+    # target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE -fsanitize=address)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS})
-
 elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${RELWITHDEBINFO_FLAGS})
     target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${RELWITHDEBINFO_FLAGS})
-
 elseif(CMAKE_BUILD_TYPE STREQUAL "PGO_Train")
     target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS} ${PGO_TRAIN_FLAGS})
     target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${PGO_TRAIN_FLAGS})

@@ -31,9 +31,6 @@ public:
 	// Reserve memory and set values
 	void set_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
-	// This assumes allocation has been done already
-	void updAtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-
 	// Transfers work coordinates into regular cooordinates
 	void updAtomsLocationsInGround_FromWORK();
 
@@ -81,7 +78,9 @@ public:
 	void PrintCoordinates() const;
 	void Print_WORK_Coordinates() const;
 
-	std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> getCoordinates() const;
+	const std::vector<SimTK::Real>& getX() const { return x; }
+	const std::vector<SimTK::Real>& getY() const { return y; }
+	const std::vector<SimTK::Real>& getZ() const { return z; }
 
 	void PrintRst7(void) const;
 	void WriteRst7(std::string FN) const;
@@ -153,7 +152,6 @@ public:
 	/**@}**/
 
 private:
-
 	int myIndex = 0;
 
 	// Replica configurations
@@ -173,6 +171,7 @@ private:
 	SimTK::Real FixmanPotential; // TODO: turn into a vector for worlds
 	SimTK::Real WORK_FixmanPotential; // TODO: turn into a vector for worlds
 
+	std::vector<SimTK::Real> x, y, z;
 
 	//////////////////////////////////
 	/////      Z Matrix BAT      /////
@@ -186,16 +185,9 @@ private:
 	std::vector<std::vector<int>>& zMatrixTable;
 	std::vector<std::vector<SimTK::Real>> zMatrixBAT;
 	
-
 	//std::vector<SimTK::QIndex> QIxs;
 
 	// BAT
 	int allWorldsNofSamples = 0;
 	int nofSamples = 0;
-		
-
-	//////////////////////////////////
-	/////      Z Matrix BAT      /////
-	//////////////////////////////////
-
 };

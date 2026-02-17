@@ -115,9 +115,9 @@ public:
 	virtual void setAcc(bool);
 
 	/** Propose a move **/
-	virtual bool propose(SimTK::State& someState, bool useNUTS) = 0;
+	// virtual bool propose(SimTK::State& someState, bool useNUTS) = 0;
 	//virtual eval() = 0;
-	virtual void update(SimTK::State& someState) = 0;
+	// virtual void update(SimTK::State& someState) = 0;
 
 	// For debugging purposes
 	void PrintSimbodyStateCache(SimTK::State& someState);

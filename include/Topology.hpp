@@ -33,17 +33,21 @@ public:
 	const Span<RoboAtom> getAtoms() const { return subAtomList; }
 	Span<RoboAtom> updAtoms() { return subAtomList; }
 
-	void setBonds(Span<RoboBondStretch> bonds) { subBondList = bonds; }
-	const Span<RoboBondStretch> getBonds() const { return subBondList; }
-	Span<RoboBondStretch> updBonds() { return subBondList; }
+	void setBonds(Span<RoboBond> bonds) { subBondList = bonds; }
+	const Span<RoboBond> getBonds() const { return subBondList; }
+	Span<RoboBond> updBonds() { return subBondList; }
 
-	void setAngles(Span<RoboBondBend> angles) { subAngleList = angles; }
-	const Span<RoboBondBend> getAngles() const { return subAngleList; }
-	Span<RoboBondBend> updAngles() { return subAngleList; }
+	void setAngles(Span<RoboAngle> angles) { subAngleList = angles; }
+	const Span<RoboAngle> getAngles() const { return subAngleList; }
+	Span<RoboAngle> updAngles() { return subAngleList; }
 
-	void setTorsions(Span<RoboBondTorsion> torsions) { subTorsionList = torsions; }
-	const Span<RoboBondTorsion> getTorsions() const { return subTorsionList; }
-	Span<RoboBondTorsion> updTorsions() { return subTorsionList; }
+	void setPeriodicTorsions(Span<RoboPeriodicTorsion> periodicTorsions) { subPeriodicTorsions = periodicTorsions; }
+	const Span<RoboPeriodicTorsion> getPeriodicTorsions() const { return subPeriodicTorsions; }
+	Span<RoboPeriodicTorsion> updPeriodicTorsions() { return subPeriodicTorsions; }
+
+	void setImproperHarmonicTorsions(Span<RoboHarmonicImproperTorsion> improperHarmonicTorsions) { subImproperHarmonicTorsions = improperHarmonicTorsions; }
+	const Span<RoboHarmonicImproperTorsion> getImproperHarmonicTorsions() const { return subImproperHarmonicTorsions; }
+	Span<RoboHarmonicImproperTorsion> updImproperHarmonicTorsions() { return subImproperHarmonicTorsions; }
 
 	/**	
 	* @brief Get the name of this molecule
@@ -93,7 +97,7 @@ public:
 	 * @param aIx1 Global Atom Index of the other atom in the bond.
 	 * @return Reference to the BondLink object.
 	 */
-	const RoboBondStretch& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
+	const RoboBond& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
 
 	/**
 	 * @brief Get a reference to the bond object in the bond list of this compound using Compound Atom Indices.
@@ -105,7 +109,7 @@ public:
 	 * 
 	 * @return Reference to the BondLink object.
 	 */
-	const RoboBondStretch& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
+	const RoboBond& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
 
 	/**	
 	* @brief Get the bonded neighbor atom in the parent mobilized body.
@@ -176,9 +180,10 @@ public:
 
 private:
 	Span<RoboAtom> subAtomList;
-	Span<RoboBondStretch> subBondList;
-	Span<RoboBondBend> subAngleList;
-	Span<RoboBondTorsion> subTorsionList;
+	Span<RoboBond> subBondList;
+	Span<RoboAngle> subAngleList;
+	Span<RoboPeriodicTorsion> subPeriodicTorsions;
+	Span<RoboHarmonicImproperTorsion> subImproperHarmonicTorsions;
 
 	// Map aIx to its Transform Default top transform
 	std::vector<SimTK::Transform> aIx2TopTransform;

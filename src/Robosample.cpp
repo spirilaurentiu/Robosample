@@ -53,7 +53,7 @@ void testAlanineDipeptide(int seed) {
 	// 	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
 
 	// 	// Fully flexible for OpenMM
-	// 	std::vector<BOND_FLEXIBILITY> allFlexibilities = {
+	// 	std::vector<BondFlexibility> allFlexibilities = {
 	// 		{ 0, 1, BondMobility::Mobility::Translation },
 	// 		{ 1, 2, BondMobility::Mobility::Translation },
 	// 		{ 1, 3, BondMobility::Mobility::Translation },
@@ -121,7 +121,7 @@ void testAlanineDipeptide(int seed) {
 	c.loadAmberSystem("alanine-dipeptide/alanine-dipeptide.prmtop", "alanine-dipeptide/alanine-dipeptide.rst7");
 
 	// Fully flexible for OpenMM
-	std::vector<BOND_FLEXIBILITY> allFlexibilities = {
+	std::vector<BondFlexibility> allFlexibilities = {
 		{ 0, 1, BondMobility::Mobility::Translation },
 		{ 1, 2, BondMobility::Mobility::Translation },
 		{ 1, 3, BondMobility::Mobility::Translation },
@@ -147,13 +147,13 @@ void testAlanineDipeptide(int seed) {
 	c.addWorld(false, 1, ROOT_MOBILITY::WELD, allFlexibilities);
 
 	// Sidechain fleibilities
-	std::vector<BOND_FLEXIBILITY> sidechainFlexibilities = {
+	std::vector<BondFlexibility> sidechainFlexibilities = {
 		{ 8, 10, BondMobility::Mobility::Torsion },
 	};
 	c.addWorld(true, 1, ROOT_MOBILITY::WELD, sidechainFlexibilities);
 
 	// Ramachandran fleibilities
-	std::vector<BOND_FLEXIBILITY> ramachandranFlexibilities = {
+	std::vector<BondFlexibility> ramachandranFlexibilities = {
 		{ 6, 8, BondMobility::Mobility::Torsion },
 		{ 8, 14, BondMobility::Mobility::Torsion },
 	};
@@ -241,7 +241,7 @@ int testContext(int seed)
 	// c.loadAmberSystem("rage.fps.0.prmtop", "rage.fps.0.rst7");
 
 	// World 0 OPENMM
-	std::vector<BOND_FLEXIBILITY> flexibilities_w0 = {
+	std::vector<BondFlexibility> flexibilities_w0 = {
 		{ 3, 1, BondMobility::Mobility::Translation },
 		{ 1, 2, BondMobility::Mobility::Translation },
 		{ 2, 4, BondMobility::Mobility::Translation },
@@ -260,7 +260,7 @@ int testContext(int seed)
 	c.addWorld(false, 1, ROOT_MOBILITY::WELD, flexibilities_w0);
 
 	// World 1
-	std::vector<BOND_FLEXIBILITY> flexibilities_w1 = {
+	std::vector<BondFlexibility> flexibilities_w1 = {
 		{ 3, 1, BondMobility::Mobility::Torsion },
 		{ 1, 2, BondMobility::Mobility::Torsion },
 		{ 2, 4, BondMobility::Mobility::Torsion },
@@ -269,7 +269,7 @@ int testContext(int seed)
 	c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w1);
 
 	// // World 2
-	// std::vector<BOND_FLEXIBILITY> flexibilities_w2 = {
+	// std::vector<BondFlexibility> flexibilities_w2 = {
 	// };
 	// c.addWorld(true, 1, ROOT_MOBILITY::WELD, flexibilities_w2);
 
@@ -536,7 +536,7 @@ int main(int argc, char **argv)
 			std::cerr << "Error: File does not exist: " << flexFileFNs[wIx] << std::endl;
 			return -1;
 		}	
-		std::vector<BOND_FLEXIBILITY> flexibilities = {};
+		std::vector<BondFlexibility> flexibilities = {};
 		context.readFlexibility(flexFileFNs[wIx], flexibilities);
 		context.addWorld(false, samplesPerRound[wIx], rootMobilities[wIx], flexibilities, true, false, 0);
 	}

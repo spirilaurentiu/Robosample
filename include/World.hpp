@@ -49,6 +49,32 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN);
 
 class Context;
 
+template <typename T>
+std::string vecToString(const std::vector<T>& v) {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < v.size(); ++i) {
+        oss << std::scientific
+            << std::showpos
+            << std::setprecision(2)
+            << v[i];
+        if (i + 1 < v.size()) oss << ", ";
+    }
+    oss << "]";
+    return oss.str();
+}
+
+inline std::string atomsToString(const std::vector<std::string>& atoms) {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < atoms.size(); ++i) {
+        oss << atoms[i];
+        if (i + 1 < atoms.size()) oss << ", ";
+    }
+    oss << "]";
+    return oss.str();
+}
+
 //==============================================================================
 //                   CLASS TaskSpace
 //==============================================================================
@@ -123,13 +149,13 @@ enum class ROOT_MOBILITY : int {
 	PIN
 };
 
-struct BOND_FLEXIBILITY {
-	BOND_FLEXIBILITY() = default;
-	BOND_FLEXIBILITY(int i, int j, SimTK::BondMobility::Mobility mobility)
-		: i(i), j(j), mobility(mobility) {}
+struct BondFlexibility {
+	BondFlexibility() = default;
 		
-	int i = -1;
-	int j = -1;
+	int globalIndex1 = -1;
+	int globalIndex2 = -1;
+	std::string uniqueAtomName1;
+	std::string uniqueAtomName2;
 	SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Default;
 };
 
@@ -147,22 +173,25 @@ public:
 
 	explicit World(int worldIndex, Span<Topology> topo, bool testing, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
-	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocaltionsCache() const {
+	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocationsCache() const {
 		return atomTargetLocaltionsCache;
 	}
 
-	void setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities);
-	const std::vector<BOND_FLEXIBILITY>& getFlexibilities() const;
+	void setFlexibilities(const std::vector<BondFlexibility>& flexibilities);
+	const std::vector<BondFlexibility>& getFlexibilities() const;
 
-	//void setRollFlexibilities(const std::vector<std::vector<BOND_FLEXIBILITY>>& argRollFlexibilities);
-	//const std::vector<std::vector<BOND_FLEXIBILITY>>& getRollFlexibilities() const ;
+	//void setRollFlexibilities(const std::vector<std::vector<BondFlexibility>>& argRollFlexibilities);
+	//const std::vector<std::vector<BondFlexibility>>& getRollFlexibilities() const ;
 	void setRollFlexibilities(bool argRollFlexibilities);
 	bool getRollFlexibilities() const ;
 
-	void generateDummParams(const std::vector<RoboAtom>& atoms,
-		const std::vector<RoboBondStretch>& bonds,
-		const std::vector<RoboBondBend>& dummAngles,
-		const std::vector<RoboBondTorsion>& dummTorsions);
+	void generateDummParams(
+		const std::vector<RoboAtom>& atoms,
+		const std::vector<RoboBond>& bonds,
+		const std::vector<RoboAngle>& angles,
+		const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
+		const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions
+	);
 	
 	void modelTopologies();
 
@@ -477,7 +506,7 @@ public:
 	// Get the (potential) energy transfer in the form of work
 	// If any of the Q, U or tau is actively modifyied by the sampler
 	// the Jacobian of that transformation will be included too
-	SimTK::Real getWork(void);
+	SimTK::Real getWork(void) const;
 
 	// Set initial values of X_PF or X_BM
 	void setTransformsMeansToIni(void);
@@ -606,6 +635,10 @@ public:
 	void calcSimbodyBAT_TODEL(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
 	void calcSimbodyBAT(std::vector<std::vector<int>>& ZMatrix, std::vector<SimTK::Real>& BONDLengths, std::vector<SimTK::Real>& ANGLEBends, std::vector<SimTK::Real>& TORSIONAngles);
 
+	void setFlexibilites(const std::vector<std::vector<SimTK::MobilizedBodyIndex>>& flexibilities_UNCHAINED) {
+		this->flexibilities_UNCHAINED = flexibilities_UNCHAINED;
+	}
+
 public:
 
 	// The three S: Study, System and State related.
@@ -634,10 +667,7 @@ public:
 
 	std::vector<std::unique_ptr<BaseSampler>> samplers;
 
-
-
-
-
+	std::vector<std::vector<SimTK::MobilizedBodyIndex>> flexibilities_UNCHAINED;
 
 	SimTK::Vector BMps;
 	SimTK::Vector PFrs;
@@ -942,6 +972,26 @@ public:
 		return cumulativeTorsionDisplacements;
 	}
 
+	const std::vector<SimTK::Real>& getOpenMMCumulativeCartesianDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeCartesianDisplacements called outside testing mode");
+		return openmmCumulativeCartesianDisplacements;
+	}
+
+	const std::vector<SimTK::Real>& getOpenMMCumulativeBondDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeBondDisplacements called outside testing mode");
+		return openmmCumulativeBondDisplacements;
+	}
+
+	const std::vector<SimTK::Real>& getOpenMMCumulativeAngleDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeAngleDisplacements called outside testing mode");
+		return openmmCumulativeAngleDisplacements;
+	}
+
+	const std::vector<SimTK::Real>& getOpenMMCumulativeTorsionDisplacements() const {
+		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeTorsionDisplacements called outside testing mode");
+		return openmmCumulativeTorsionDisplacements;
+	}
+
 	const std::vector<std::pair<bool, SimTK::Real>>& getAcceptanceRMSD() const {
 		SimTK_ASSERT_ALWAYS(testing, "getRMSD called outside testing mode");
 		return acceptanceRMSD;
@@ -967,17 +1017,31 @@ public:
 		return rigidBodyImproperTorsionDriftInRad;
 	}
 
+	bool isOverconstrained();
+
 private:
 
 	bool testing = false;
 
-	void checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
+	void checkCoordinateTransfer(
+		const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets,
+		std::vector<SimTK::Real>& matchAtomTargetLocationsResiduals,
+		SimTK::Real& cumulDiffCartesian,
+		SimTK::Real& cumulDiffBonds,
+		SimTK::Real& cumulDiffAngles,
+		SimTK::Real& cumulDiffDihedrals
+	);
 
 	std::vector<std::vector<SimTK::Real>> matchAtomTargetLocationsResiduals;
 	std::vector<SimTK::Real> cumulativeCartesianDisplacements;
 	std::vector<SimTK::Real> cumulativeBondDisplacements;
 	std::vector<SimTK::Real> cumulativeAngleDisplacements;
 	std::vector<SimTK::Real> cumulativeTorsionDisplacements;
+
+	std::vector<SimTK::Real> openmmCumulativeCartesianDisplacements;
+	std::vector<SimTK::Real> openmmCumulativeBondDisplacements;
+	std::vector<SimTK::Real> openmmCumulativeAngleDisplacements;
+	std::vector<SimTK::Real> openmmCumulativeTorsionDisplacements;
 
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCache;
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCacheOld;
@@ -1017,8 +1081,8 @@ private:
 	Random32 randomEngine;
 	SimTK::String rootMobilizer;
 
-	std::vector<BOND_FLEXIBILITY> flexibilities;
-	std::vector<std::vector<BOND_FLEXIBILITY>> rollFlexibilities;
+	std::vector<BondFlexibility> flexibilities;
+	std::vector<std::vector<BondFlexibility>> rollFlexibilities;
 	bool isRollFlexibilities = false;
 
 	// Default return value for non-existing topology atom, pair

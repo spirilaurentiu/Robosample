@@ -19,24 +19,8 @@ SET(OPENMM_DIRS
     ${CMAKE_SOURCE_DIR}/openmm/serialization
 )
 
-# all openmm platforms come with a function called registerPlatforms
-# each platforms resides in its own shared object and this function initializes that platform when the .so is loaded
-# because we build everything into one file, we can only build one platform at a time while the reference platform is excluded from this list
-# thus, we can only roll with reference + cpu / cuda / opencl
-# cpu will compile and run on any machine so it is a good starting point
-# to change it, run `cmake -DOPENMM_PLATFORM=CUDA`
-# SET(OPENMM_PLATFORM "CPU" CACHE STRING "OpenMM platform: CPU, CUDA or OpenCL.")
-# SET(OPENMM_PLATFORM "CPU")
-SET(OPENMM_PLATFORM "CUDA")
-
-SET(USE_OPENMM_PLATFORM_CPU 0)
-SET(USE_OPENMM_PLATFORM_CUDA 0)
-SET(USE_OPENMM_PLATFORM_OPENCL 0)
-
-
-IF(OPENMM_PLATFORM MATCHES "CPU")
+IF(USE_OPENMM_PLATFORM_CPU)
     SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/cpu)
-    SET(USE_OPENMM_PLATFORM_CPU 1)
 
 ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
     SET(COMMON_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src")
@@ -58,9 +42,8 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
     SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/common)
     SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/common/src)
 
-    IF(OPENMM_PLATFORM MATCHES "CUDA")
+    IF(USE_OPENMM_PLATFORM_CUDA)
         message(STATUS "Building OpenMM CUDA platform")
-        SET(USE_OPENMM_PLATFORM_CUDA 1)
 
         find_package(CUDAToolkit REQUIRED)
         SET(OPENMM_LIBRARIES CUDA::cuda_driver CUDA::cufft)
@@ -91,11 +74,8 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
             ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/cuda/src
             # ${CMAKE_CURRENT_SOURCE_DIR}/openmm/plugins/cudacompiler/src
         )
-    ENDIF(OPENMM_PLATFORM MATCHES "CUDA")
-        
-    IF(OPENMM_PLATFORM MATCHES "OPENCL")
+    ELSEIF(USE_OPENMM_PLATFORM_OPENCL)
         message(STATUS "Building OpenMM OpenCL platform")
-        SET(USE_OPENMM_PLATFORM_OPENCL 1)
 
         find_package(OpenCL REQUIRED)
         SET(OPENMM_LIBRARIES ${OpenCL_LIBRARY})
@@ -119,7 +99,7 @@ ELSEIF(OPENMM_PLATFORM MATCHES "CUDA" OR OPENMM_PLATFORM MATCHES "OPENCL")
 
         SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
         SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src)
-    ENDIF(OPENMM_PLATFORM MATCHES "OPENCL")
+    ENDIF()
 
 ELSE()
     message(ERROR "Unknown OPENMM_PLATFORM type " ${OPENMM_PLATFORM} ". Allowed types are CPU, CUDA or OPENCL")

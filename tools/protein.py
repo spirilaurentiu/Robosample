@@ -266,42 +266,42 @@ class Protein(molecule.Molecule):
         # root_index_prmtop = self.universe.select_atoms(f"resid {root_residue.resid} and name N")[0].index
         root_index_prmtop = self.universe.atoms[0].index
 
-        dihh = molecule.find_dihedrals(self.universe)
-        for d in dihh:
-            atom_0 = d[0].index
-            atom_1 = d[1].index
-            atom_2 = d[2].index
-            atom_3 = d[3].index
+        # dihh = molecule.find_dihedrals(self.universe)
+        # for d in dihh:
+        #     atom_0 = d[0].index
+        #     atom_1 = d[1].index
+        #     atom_2 = d[2].index
+        #     atom_3 = d[3].index
 
-            a0 = parm.atoms[atom_0]
-            a1 = parm.atoms[atom_1]
-            a2 = parm.atoms[atom_2]
-            a3 = parm.atoms[atom_3]
+        #     a0 = parm.atoms[atom_0]
+        #     a1 = parm.atoms[atom_1]
+        #     a2 = parm.atoms[atom_2]
+        #     a3 = parm.atoms[atom_3]
 
-            atom_0_unique_name = self.universe.atoms[atom_0].resname + str(self.universe.atoms[atom_0].resid) + '_' + self.universe.atoms[atom_0].name + '_' + str(self.universe.atoms[atom_0].id)
-            atom_1_unique_name = self.universe.atoms[atom_1].resname + str(self.universe.atoms[atom_1].resid) + '_' + self.universe.atoms[atom_1].name + '_' + str(self.universe.atoms[atom_1].id)
-            atom_2_unique_name = self.universe.atoms[atom_2].resname + str(self.universe.atoms[atom_2].resid) + '_' + self.universe.atoms[atom_2].name + '_' + str(self.universe.atoms[atom_2].id)
-            atom_3_unique_name = self.universe.atoms[atom_3].resname + str(self.universe.atoms[atom_3].resid) + '_' + self.universe.atoms[atom_3].name + '_' + str(self.universe.atoms[atom_3].id)
+        #     atom_0_unique_name = self.universe.atoms[atom_0].resname + str(self.universe.atoms[atom_0].resid) + '_' + self.universe.atoms[atom_0].name + '_' + str(self.universe.atoms[atom_0].id)
+        #     atom_1_unique_name = self.universe.atoms[atom_1].resname + str(self.universe.atoms[atom_1].resid) + '_' + self.universe.atoms[atom_1].name + '_' + str(self.universe.atoms[atom_1].id)
+        #     atom_2_unique_name = self.universe.atoms[atom_2].resname + str(self.universe.atoms[atom_2].resid) + '_' + self.universe.atoms[atom_2].name + '_' + str(self.universe.atoms[atom_2].id)
+        #     atom_3_unique_name = self.universe.atoms[atom_3].resname + str(self.universe.atoms[atom_3].resid) + '_' + self.universe.atoms[atom_3].name + '_' + str(self.universe.atoms[atom_3].id)
 
-            atom_names = (self.universe.atoms[atom_0].name, self.universe.atoms[atom_1].name, self.universe.atoms[atom_2].name, self.universe.atoms[atom_3].name)
+        #     atom_names = (self.universe.atoms[atom_0].name, self.universe.atoms[atom_1].name, self.universe.atoms[atom_2].name, self.universe.atoms[atom_3].name)
 
-            # ix = None
-            # for i, d in enumerate(self.universe.dihedrals):
-            #     dihh_indices = (d.atoms[0].index, d.atoms[1].index, d.atoms[2].index, d.atoms[3].index)
-            #     univ_indices = (atom_0, atom_1, atom_2, atom_3)
-            #     if dihh_indices == univ_indices or dihh_indices == univ_indices[::-1]:
-            #         ix = i
-            #         break
+        #     # ix = None
+        #     # for i, d in enumerate(self.universe.dihedrals):
+        #     #     dihh_indices = (d.atoms[0].index, d.atoms[1].index, d.atoms[2].index, d.atoms[3].index)
+        #     #     univ_indices = (atom_0, atom_1, atom_2, atom_3)
+        #     #     if dihh_indices == univ_indices or dihh_indices == univ_indices[::-1]:
+        #     #         ix = i
+        #     #         break
 
-            print(atom_3_unique_name, atom_2_unique_name, atom_1_unique_name, atom_0_unique_name, "aromaticity:", a0.aromatic, a1.aromatic, a2.aromatic, a3.aromatic)
+        #     print(atom_3_unique_name, atom_2_unique_name, atom_1_unique_name, atom_0_unique_name, "aromaticity:", a0.aromatic, a1.aromatic, a2.aromatic, a3.aromatic)
 
-            # # find the type
-            # for res in PROTEIN_DIHEDRAL_SELECTION:
-            #      for dihedral_type, dihedral_atoms in PROTEIN_DIHEDRAL_SELECTION[res].items():
-            #         if list(atom_names) == dihedral_atoms or list(reversed(atom_names)) == dihedral_atoms:
-            #             print("Found dihedral type:", dihedral_type, "between atoms:", atom_0_unique_name, atom_1_unique_name, atom_2_unique_name, atom_3_unique_name)
+        #     # # find the type
+        #     # for res in PROTEIN_DIHEDRAL_SELECTION:
+        #     #      for dihedral_type, dihedral_atoms in PROTEIN_DIHEDRAL_SELECTION[res].items():
+        #     #         if list(atom_names) == dihedral_atoms or list(reversed(atom_names)) == dihedral_atoms:
+        #     #             print("Found dihedral type:", dihedral_type, "between atoms:", atom_0_unique_name, atom_1_unique_name, atom_2_unique_name, atom_3_unique_name)
 
-        exit()
+        # exit()
 
         # Initialize the undirected molecular graph
         self.graph = nx.Graph()

@@ -1,4 +1,6 @@
 #include "World.hpp"
+#include "OpenMM.hpp"
+#include <cstdlib>
 
 void World::setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets)
 {
@@ -79,19 +81,34 @@ void World::setAtomTargetLocationsToState(const std::vector<SimTK::Compound::Ato
 	integrator->updAdvancedState() = state;
 	
 	if (testing) {
-		checkCoordinateTransfer(atomTargets);
+		std::vector<SimTK::Real> matchAtomTargetLocationsResiduals;
+		SimTK::Real cumulDiffCartesian = 0.0;
+		SimTK::Real cumulDiffBonds = 0.0;
+		SimTK::Real cumulDiffAngles = 0.0;
+		SimTK::Real cumulDiffDihedrals = 0.0;
+
+		checkCoordinateTransfer(atomTargets, matchAtomTargetLocationsResiduals, cumulDiffCartesian, cumulDiffBonds, cumulDiffAngles, cumulDiffDihedrals);
+		cumulativeCartesianDisplacements.push_back(cumulDiffCartesian);
+		cumulativeBondDisplacements.push_back(cumulDiffBonds);
+		cumulativeAngleDisplacements.push_back(cumulDiffAngles);
+		cumulativeTorsionDisplacements.push_back(cumulDiffDihedrals);
 	}
 }
 
-void World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
-
+void World::checkCoordinateTransfer(
+	const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets,
+	std::vector<SimTK::Real>& matchAtomTargetLocationsResiduals,	
+	SimTK::Real& cumulDiffCartesian,
+	SimTK::Real& cumulDiffBonds,
+	SimTK::Real& cumulDiffAngles,
+	SimTK::Real& cumulDiffDihedrals
+) {
 	SimTK_ASSERT_ALWAYS(testing, "Coordinate transfer check should only be performed in testing mode.");
 
 	// Check topology atom target location matching residuals
-	matchAtomTargetLocationsResiduals.push_back(std::vector<SimTK::Real>());
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 		SimTK::Real matchError = topologies[topoIx].getMatchError(atomTargets[topoIx]);
-		matchAtomTargetLocationsResiduals.back().push_back(matchError);
+		matchAtomTargetLocationsResiduals.push_back(matchError);
 	}
 
 	// Collect new atom coordinates
@@ -106,8 +123,6 @@ void World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTarge
 	}
 
 	// Check coordinate transfer in Cartesian coordinates
-	SimTK::Real cumulDiffCartesian = 0.0;
-
 	// Traverse all topologies and check for each atom the computed vs target location
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 		for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topologies[topoIx].getNumAtoms(); ++cAIx) {
@@ -118,18 +133,14 @@ void World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTarge
 			cumulDiffCartesian += diffNorm;
 		}
 	}
-	cumulativeCartesianDisplacements.push_back(cumulDiffCartesian);
+	
 
 	// Do internal coordinates (BAT - Bond-Angle-Torsion) verification
-	SimTK::Real cumulDiffBonds = 0.0;
-	SimTK::Real cumulDiffAngles = 0.0;
-	SimTK::Real cumulDiffDihedrals = 0.0;
-
 	// BAT - bond lengths
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 		for (const auto& bond : topologies[topoIx].getBonds()) {
-			const SimTK::Compound::AtomIndex parentAIx = bond.getParentCompoundAtomIndex();
-			const SimTK::Compound::AtomIndex childAIx = bond.getChildCompoundAtomIndex();
+			const SimTK::Compound::AtomIndex parentAIx = bond.compoundAtomIndices[0];
+			const SimTK::Compound::AtomIndex childAIx = bond.compoundAtomIndices[1];
 
 			const auto& computedParent = newAtomtargets[topoIx][parentAIx];
 			const auto& computedChild = newAtomtargets[topoIx][childAIx];
@@ -143,14 +154,13 @@ void World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTarge
 			cumulDiffBonds += std::abs(targetBondLength - computedBondLength);
 		}
 	}
-	cumulativeBondDisplacements.push_back(cumulDiffBonds);
 
 	// BAT - angles
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 		for (const auto& angle : topologies[topoIx].getAngles()) {
-			const SimTK::Compound::AtomIndex aIx1 = angle.getCompoundAtomIndex1();
-			const SimTK::Compound::AtomIndex aIx2 = angle.getCompoundAtomIndex2();
-			const SimTK::Compound::AtomIndex aIx3 = angle.getCompoundAtomIndex3();
+			const SimTK::Compound::AtomIndex aIx1 = angle.compoundAtomIndices[0];
+			const SimTK::Compound::AtomIndex aIx2 = angle.compoundAtomIndices[1];
+			const SimTK::Compound::AtomIndex aIx3 = angle.compoundAtomIndices[2];
 
 			const auto& computedPos1 = newAtomtargets[topoIx][aIx1];
 			const auto& computedPos2 = newAtomtargets[topoIx][aIx2];
@@ -166,33 +176,49 @@ void World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTarge
 			cumulDiffAngles += std::abs(targetAngle - computedAngle);
 		}
 	}
-	cumulativeAngleDisplacements.push_back(cumulDiffAngles);
 
-	// BAT - dihedrals
+	// Helper for BAT dihedrals
+	auto getDihedralError = [&](const auto& torsion, const auto& topoIx) {
+		// Helper to fetch positions for a set of indices
+		auto getPos = [&](const auto& source, const SimTK::Compound::AtomIndex idx[4]) {
+			return std::array<SimTK::Vec3, 4>{
+				source[idx[0]], source[idx[1]], source[idx[2]], source[idx[3]]
+			};
+		};
+
+		const auto& ids = torsion.compoundAtomIndices;
+		
+		// Calculate computed dihedral
+		SimTK::Real computedDihedral = bDihedral(
+			newAtomtargets[topoIx][ids[0]], 
+			newAtomtargets[topoIx][ids[1]], 
+			newAtomtargets[topoIx][ids[2]], 
+			newAtomtargets[topoIx][ids[3]]
+		);
+
+		// Calculate target dihedral
+		SimTK::Real targetDihedral = bDihedral(
+			atomTargets[topoIx].at(ids[0]), 
+			atomTargets[topoIx].at(ids[1]), 
+			atomTargets[topoIx].at(ids[2]), 
+			atomTargets[topoIx].at(ids[3])
+		);
+
+		return std::abs(targetDihedral - computedDihedral);
+	};
+
+	// BAT dihedrals
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-		for (const auto& torsion : topologies[topoIx].getTorsions()) {
-			const SimTK::Compound::AtomIndex aIx1 = torsion.getCompoundAtomIndex1();
-			const SimTK::Compound::AtomIndex aIx2 = torsion.getCompoundAtomIndex2();
-			const SimTK::Compound::AtomIndex aIx3 = torsion.getCompoundAtomIndex3();
-			const SimTK::Compound::AtomIndex aIx4 = torsion.getCompoundAtomIndex4();
-
-			const auto& computedPos1 = newAtomtargets[topoIx][aIx1];
-			const auto& computedPos2 = newAtomtargets[topoIx][aIx2];
-			const auto& computedPos3 = newAtomtargets[topoIx][aIx3];
-			const auto& computedPos4 = newAtomtargets[topoIx][aIx4];
-
-			const auto& targetPos1 = atomTargets[topoIx].at(aIx1);
-			const auto& targetPos2 = atomTargets[topoIx].at(aIx2);
-			const auto& targetPos3 = atomTargets[topoIx].at(aIx3);
-			const auto& targetPos4 = atomTargets[topoIx].at(aIx4);
-
-			SimTK::Real computedDihedral = bDihedral(computedPos1, computedPos2, computedPos3, computedPos4);
-			SimTK::Real targetDihedral = bDihedral(targetPos1, targetPos2, targetPos3, targetPos4);
-
-			cumulDiffDihedrals += std::abs(targetDihedral - computedDihedral);
+		for (const auto& torsion : topologies[topoIx].getPeriodicTorsions()) {
+			cumulDiffDihedrals += getDihedralError(torsion, topoIx);
 		}
 	}
-	cumulativeTorsionDisplacements.push_back(cumulDiffDihedrals);
+
+	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+		for (const auto& torsion : topologies[topoIx].getImproperHarmonicTorsions()) {
+			cumulDiffDihedrals += getDihedralError(torsion, topoIx);
+		}
+	}
 }
 
 void World::updateFramesFromTopologies()
@@ -202,8 +228,8 @@ void World::updateFramesFromTopologies()
 	// 	for (auto& bond : topology.getBonds()) {
 
 	// 		// Get Molmodel compound atom indices
-	// 		SimTK::Compound::AtomIndex childAIx = topology.getAtoms()[bond.getChildAtomGlobalIndex()].getCompoundAtomIndex();
-	// 		SimTK::Compound::AtomIndex parentAIx = topology.getAtoms()[bond.getParentAtomGlobalIndex()].getCompoundAtomIndex();
+	// 		SimTK::Compound::AtomIndex childAIx = topology.getAtoms()[bond.globalIndices[1]].identity.compoundAtomIndex;
+	// 		SimTK::Compound::AtomIndex parentAIx = topology.getAtoms()[bond.globalIndices[0]].identity.compoundAtomIndex;
 
 	// 		// Get atoms' mobods
 	// 		SimTK::MobilizedBodyIndex childAtomMbx = topology.getAtomMobilizedBodyIndexThroughDumm(childAIx, *forceField);
@@ -353,18 +379,18 @@ void World::updateFramesFromTopologies()
 	// 		// Set mobods X_PFs and X_BMs for atoms
 	// 		SimTK::Transform G_X_T = topology.getTopLevelTransform();
 			
-	// 		if(topology.getAtoms()[bond.getParentAtomGlobalIndex()].isRoot()){
+	// 		if(topology.getAtoms()[bond.globalIndices[0]].connectivity.root){
 	// 			SimTK::Transform T_X_base = topology.getTopTransform(parentAIx);
 	// 			SimTK::Transform G_X_base = G_X_T * T_X_base;
 	// 			parentAtomMobod.setDefaultInboardFrame(G_X_base);
 	// 			parentAtomMobod.setDefaultOutboardFrame(SimTK::Transform());
-	// 			std::cout << "\tBond between " << topology.getAtoms()[bond.getParentAtomGlobalIndex()].getUniqueAtomName() << " and " << topology.getAtoms()[bond.getChildAtomGlobalIndex()].getUniqueAtomName() << ", mobility=" << bond.getBondMobility(ownWorldIndex) << ", setting parent atom mobod frames for mobod index " << int(parentAtomMbx) << std::endl;
-	// 		}else if(topology.getAtoms()[bond.getChildAtomGlobalIndex()].isRoot()){
+	// 			std::cout << "\tBond between " << topology.getAtoms()[bond.globalIndices[0]].identity.uniqueAtomName << " and " << topology.getAtoms()[bond.globalIndices[1]].identity.uniqueAtomName << ", mobility=" << bond.getBondMobility(ownWorldIndex) << ", setting parent atom mobod frames for mobod index " << int(parentAtomMbx) << std::endl;
+	// 		}else if(topology.getAtoms()[bond.globalIndices[1]].connectivity.root){
 	// 			SimTK::Transform T_X_base = topology.getTopTransform(childAIx);
 	// 			SimTK::Transform G_X_base = G_X_T * T_X_base;
 	// 			childAtomMobod.setDefaultInboardFrame(G_X_base);
 	// 			childAtomMobod.setDefaultOutboardFrame(SimTK::Transform());				
-	// 			std::cout << "\tBond between " <<topology.getAtoms()[bond.getParentAtomGlobalIndex()].getUniqueAtomName() << " and " << topology.getAtoms()[bond.getChildAtomGlobalIndex()].getUniqueAtomName() << ", mobility=" << bond.getBondMobility(ownWorldIndex) << ", setting child atom mobod frames for mobod index " << int(childAtomMbx) << std::endl;
+	// 			std::cout << "\tBond between " <<topology.getAtoms()[bond.globalIndices[0]].identity.uniqueAtomName << " and " << topology.getAtoms()[bond.globalIndices[1]].identity.uniqueAtomName << ", mobility=" << bond.getBondMobility(ownWorldIndex) << ", setting child atom mobod frames for mobod index " << int(childAtomMbx) << std::endl;
 	// 		}
 	// 	}
 	// }
@@ -479,8 +505,7 @@ void World::updateFramesFromTopologies()
 
 		const SimTK::Transform& G_X_T = topology.getTopLevelTransform();
 		
-		// TODO bond.parentCAIx
-		if(topology.getAtoms()[bond.parentCAIx].isRoot()){
+		if(topology.getAtoms()[bond.parentCAIx].connectivity.root){
 			const SimTK::Transform& T_X_base = topology.getTopTransform(bond.parentCAIx);
 			const SimTK::Transform G_X_base = G_X_T * T_X_base;
 
@@ -489,7 +514,7 @@ void World::updateFramesFromTopologies()
 			parentAtomMobod.setDefaultOutboardFrame(SimTK::Transform());
 		}
 		
-		if(topology.getAtoms()[bond.childCAIx].isRoot()){
+		if(topology.getAtoms()[bond.childCAIx].connectivity.root){
 			const SimTK::Transform& T_X_base = topology.getTopTransform(bond.childCAIx);
 			const SimTK::Transform G_X_base = G_X_T * T_X_base;
 
@@ -572,10 +597,163 @@ void writePdb(SimTK::PdbStructure pdb, const char *FN)
 }
 
 
-void World::generateDummParams(const std::vector<RoboAtom>& atoms,
-		const std::vector<RoboBondStretch>& bonds,
-		const std::vector<RoboBondBend>& dummAngles,
-		const std::vector<RoboBondTorsion>& dummTorsions)
+
+struct BondStretchKey {
+	SimTK::DuMM::AtomClassIndex atomClassIndex1;
+	SimTK::DuMM::AtomClassIndex atomClassIndex2;
+
+	BondStretchKey(SimTK::DuMM::AtomClassIndex aCIx1, SimTK::DuMM::AtomClassIndex aCIx2) {
+		atomClassIndex1 = std::min(aCIx1, aCIx2);
+		atomClassIndex2 = std::max(aCIx1, aCIx2);
+	}
+
+	bool operator<(const BondStretchKey& other) const {
+		if (atomClassIndex1 != other.atomClassIndex1) {
+			return atomClassIndex1 < other.atomClassIndex1;
+		}
+		return atomClassIndex2 < other.atomClassIndex2;
+	}
+};
+
+struct BondStretchValue {
+	std::array<int, 2> globalAtomIndices;
+    SimTK::Real stiffness;
+    SimTK::Real length;
+
+    bool operator==(const BondStretchValue& other) const {
+		static constexpr double epsilon = 1e-9;
+        return std::abs(stiffness - other.stiffness) < epsilon && std::abs(length - other.length) < epsilon;
+    }
+
+	bool operator!=(const BondStretchValue& other) const {
+		return !(*this == other);
+	}
+};
+
+struct BondBendKey {
+    SimTK::DuMM::AtomClassIndex atomClassIndex1;
+    SimTK::DuMM::AtomClassIndex atomClassIndex2; // center atom, stays fixed
+    SimTK::DuMM::AtomClassIndex atomClassIndex3;
+
+    BondBendKey(SimTK::DuMM::AtomClassIndex a1,
+                SimTK::DuMM::AtomClassIndex a2,
+                SimTK::DuMM::AtomClassIndex a3)
+        : atomClassIndex2(a2)
+    {
+        atomClassIndex1 = std::min(a1, a3);
+        atomClassIndex3 = std::max(a1, a3);
+    }
+
+    bool operator<(const BondBendKey& other) const {
+        if (atomClassIndex1 != other.atomClassIndex1)
+            return atomClassIndex1 < other.atomClassIndex1;
+        if (atomClassIndex2 != other.atomClassIndex2)
+            return atomClassIndex2 < other.atomClassIndex2;
+        return atomClassIndex3 < other.atomClassIndex3;
+    }
+};
+
+struct BondBendValue {
+    std::array<int, 3> globalAtomIndices;
+    SimTK::Real stiffness;
+    SimTK::Real angleDeg;
+
+    bool operator==(const BondBendValue& other) const {
+        static constexpr double epsilon = 1e-9;
+        return std::abs(stiffness - other.stiffness) < epsilon &&
+               std::abs(angleDeg  - other.angleDeg)  < epsilon;
+    }
+
+    bool operator!=(const BondBendValue& other) const {
+        return !(*this == other);
+    }
+};
+
+struct PeriodicTorsionKey {
+	SimTK::DuMM::AtomClassIndex a1, a2, a3, a4;
+
+	PeriodicTorsionKey(SimTK::DuMM::AtomClassIndex i, SimTK::DuMM::AtomClassIndex j, SimTK::DuMM::AtomClassIndex k, SimTK::DuMM::AtomClassIndex l, bool canonicalize) {
+		// We don't canonicalize for improper torsions
+		if (!canonicalize) {
+			a1=i; a2=j; a3=k; a4=l;
+			return;
+		}
+			
+		// canonicalize (i,j,k,l) == (l,k,j,i)
+		if (std::tie(i,j,k,l) <= std::tie(l,k,j,i)) {
+			a1=i; a2=j; a3=k; a4=l;
+		} else {
+			a1=l; a2=k; a3=j; a4=i;
+		}
+	}
+
+	bool operator<(const PeriodicTorsionKey& o) const {
+		return std::tie(a1,a2,a3,a4) < std::tie(o.a1,o.a2,o.a3,o.a4);
+	}
+};
+
+struct PeriodicTorsionValue {
+	// store all 5 AMBER terms exactly as passed to Molmodel
+	std::array<int, 4> globalAtomIndices;
+	std::array<int, 5> periodicity;
+	std::array<double, 5> amplitude;
+	std::array<double, 5> phase;
+	int numTerms;
+
+	bool operator==(const PeriodicTorsionValue& o) const {
+		if (numTerms != o.numTerms) return false;
+
+		static constexpr double eps = 1e-9;
+		for (int i = 0; i < 5; i++) {
+			if (periodicity[i] != o.periodicity[i]) return false;
+			if (std::abs(amplitude[i]-o.amplitude[i]) > eps) return false;
+			if (std::abs(phase[i]-o.phase[i]) > eps) return false;
+		}
+		return true;
+	}
+	bool operator!=(const PeriodicTorsionValue& o) const { return !(*this==o); }
+};
+
+std::string getAtomDescription(const RoboAtom& atom) {
+	return atom.identity.uniqueAtomName +
+		" (atom class: " +atom.identity.atomClassName +
+		", atom class index " + std::to_string(atom.identity.atomClassIndex) +
+		", charged type: " + atom.identity.chargedAtomTypeName + 
+		", charged type index " + std::to_string(atom.identity.chargedAtomTypeIndex) + ")";
+}
+
+
+
+
+class HarmonicImproperTorsionForce : public SimTK::DuMM::CustomBondTorsion {
+public:
+    HarmonicImproperTorsionForce(SimTK::Real forceConstantInKJPerMol, SimTK::Real equilibriumAngleInRadians)
+        : k(forceConstantInKJPerMol),
+          psi0(equilibriumAngleInRadians)
+    {}
+
+    SimTK::Real calcEnergy(SimTK::Real torsionInRadians) const override {
+        const SimTK::Real dpsi = torsionInRadians - psi0;
+        return k * dpsi * dpsi;
+    }
+
+    SimTK::Real calcTorque(SimTK::Real torsionInRadians) const override {
+        const SimTK::Real dpsi = torsionInRadians - psi0;
+        return -2.0 * k * dpsi;
+    }
+
+private:
+    SimTK::Real k;     // kψ in kJ/mol/rad^2
+    SimTK::Real psi0;  // equilibrium angle (rad)
+};
+
+
+void World::generateDummParams(
+	const std::vector<RoboAtom>& atoms,
+	const std::vector<RoboBond>& bonds,
+	const std::vector<RoboAngle>& angles,
+	const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
+	const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions)
 {
 	// Make a counter that checks if the atom class index already exists since Molmodel does not check for and does not allow re-definitions
 	std::vector<bool> atomClassDefined(atoms.size(), false);
@@ -583,156 +761,397 @@ void World::generateDummParams(const std::vector<RoboAtom>& atoms,
 
 	// Define atom classes and charged atom types
 	for (auto& atom : atoms) {
-		if (!atomClassDefined[atom.getAtomClassIndex()]) {
-			atomClassDefined[atom.getAtomClassIndex()] = true;
+		if (!atomClassDefined[atom.identity.atomClassIndex]) {
+			atomClassDefined[atom.identity.atomClassIndex] = true;
 
-			forceField->defineAtomClass(atom.getAtomClassIndex(), atom.getAtomClassName().c_str(), atom.getAtomicNumber(), atom.getNumBondsInvolved(), atom.getVdwRadiusInNm(), atom.getVdwWellDepthInKJ());
+			forceField->defineAtomClass(
+				atom.identity.atomClassIndex,
+				atom.identity.atomClassName.c_str(),
+				atom.elementInfo.atomicNumber,
+				atom.connectivity.numBondsInvolved,
+				atom.physics.vdwRadiusInNm,
+				atom.physics.vdwWellDepthInKJ
+			);
 		}
 
-		if (!chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()]) {
-			chargedAtomTypeDefined[atom.getChargedAtomTypeIndex()] = true;
+		if (!chargedAtomTypeDefined[atom.identity.chargedAtomTypeIndex]) {
+			chargedAtomTypeDefined[atom.identity.chargedAtomTypeIndex] = true;
 
-			forceField->defineChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getChargedAtomTypeName().c_str(), atom.getAtomClassIndex(), atom.getChargeInE());
-			forceField->setBiotypeChargedAtomType(atom.getChargedAtomTypeIndex(), atom.getBiotypeIndex());
+			forceField->defineChargedAtomType(
+				atom.identity.chargedAtomTypeIndex,
+				atom.identity.chargedAtomTypeName.c_str(),
+				atom.identity.atomClassIndex,
+				atom.physics.chargeInE
+			);
+			forceField->setBiotypeChargedAtomType(atom.identity.chargedAtomTypeIndex, atom.biotypeIndex);
 		}
 	}
 
-	// Define bonds
+	// Define bonds parameters using atom classes
 	// DuMM canonicalizes the order of atom class indices internally (smallest first)
 	// DuMM also checks for re-definitions and ignores them if found
-	for (auto& bond : bonds) {
-		const auto aCIx1 = atoms[bond.getParentAtomGlobalIndex()].getAtomClassIndex();
-		const auto aCIx2 = atoms[bond.getChildAtomGlobalIndex()].getAtomClassIndex();
-		SimTK::Real stiffnessInKJPerNmSq = bond.getStiffnessInKJPerNmSq();
-		SimTK::Real nominalLengthInNm = bond.getNominalLengthInNm();
+	// However, it will fail if we try to define a bond with the same atom classes but different parameters
+	std::map<BondStretchKey, BondStretchValue> definedBondStretches;
 
-		forceField->defineBondStretch(aCIx1, aCIx2, stiffnessInKJPerNmSq, nominalLengthInNm);
+	for (auto& bond : bonds) {
+		const auto aCIx1 = atoms[bond.globalIndices[0]].identity.atomClassIndex;
+		const auto aCIx2 = atoms[bond.globalIndices[1]].identity.atomClassIndex;
+
+		const auto key = BondStretchKey(aCIx1, aCIx2);
+		const BondStretchValue newParams{
+			{ atoms[bond.globalIndices[0]].identity.globalIndex, atoms[bond.globalIndices[1]].identity.globalIndex },
+			bond.stiffnessInKJPerNmSq,
+			bond.nominalLengthInNm
+		};
+		
+		const auto it = definedBondStretches.find(key);
+		if (it != definedBondStretches.end()) {
+			const BondStretchValue& existingParams = it->second;
+			if (existingParams != newParams) {
+				std::string message = "Error in World::generateDummParams(): Conflicting bond stretch parameters.\n";
+				message += "Existing paramters defined for atoms:\n";
+				for (const auto i : existingParams.globalAtomIndices)
+					message += "  " + getAtomDescription(atoms[i]) + "\n";
+				message += "  Stiffness: " + std::to_string(existingParams.stiffness) + " kJ/(nm^2 mol), Length: " + std::to_string(existingParams.length) + " nm\n";
+				message += "New parameters defined for atoms:\n";
+				for (const auto i : newParams.globalAtomIndices)
+					message += "  " + getAtomDescription(atoms[i]) + "\n";
+				message += "  Stiffness: " + std::to_string(newParams.stiffness) + " kJ/(nm^2 mol), Length: " + std::to_string(newParams.length) + " nm\n";
+				SimTK_ASSERT_ALWAYS(existingParams == newParams, message.c_str());
+			}
+		} else {
+			definedBondStretches.insert(it, std::make_pair(key, newParams));
+		}
+
+		forceField->defineBondStretch(aCIx1, aCIx2, bond.stiffnessInKJPerNmSq, bond.nominalLengthInNm);
 	}
 
 	// Define angles
 	// DuMM canonicalizes the order of atom class indices internally (smallest first)
 	// DuMM also checks for re-definitions and ignores them if found
-	for (const auto& angle : dummAngles) {
-		const auto aCIx1 = atoms[angle.getGlobalIndex1()].getAtomClassIndex();
-		const auto aCIx2 = atoms[angle.getGlobalIndex2()].getAtomClassIndex();
-		const auto aCIx3 = atoms[angle.getGlobalIndex3()].getAtomClassIndex();
-		SimTK::Real stiffnessInKJPerRadSq = angle.getStiffnessInKJPerRadSq();
-		SimTK::Real nominalAngleInDeg = angle.getNominalAngleInDeg();
-		
-		forceField->defineBondBend(aCIx1, aCIx2, aCIx3, stiffnessInKJPerRadSq, nominalAngleInDeg);
-	}
+	// However, it will fail if we try to define an angle with the same atom classes but different parameters
+	std::map<BondBendKey, BondBendValue> definedBondBends;
 
-	// Define 1 Fourrier terms dihedrals
-	// DuMM canonicalizes the order of atom class indices internally (smallest first)
-	// DuMM also checks for re-definitions and ignores them if found
-	for (const auto& torsion : dummTorsions) {
-		const auto aCIx1 = atoms[torsion.getGlobalIndex1()].getAtomClassIndex();
-		const auto aCIx2 = atoms[torsion.getGlobalIndex2()].getAtomClassIndex();
-		const auto aCIx3 = atoms[torsion.getGlobalIndex3()].getAtomClassIndex();
-		const auto aCIx4 = atoms[torsion.getGlobalIndex4()].getAtomClassIndex();
+	for (const auto& angle : angles) {
+		const auto aCIx1 = atoms[angle.globalIndices[0]].identity.atomClassIndex;
+		const auto aCIx2 = atoms[angle.globalIndices[1]].identity.atomClassIndex;
+		const auto aCIx3 = atoms[angle.globalIndices[2]].identity.atomClassIndex;
 
-		// Determine the number of terms by checking which amplitudes are defined
-		int num_terms = 0;
-		if (torsion.getPeriodicity_1() != -1) num_terms++;
-		if (torsion.getPeriodicity_2() != -1) num_terms++;
-		if (torsion.getPeriodicity_3() != -1) num_terms++;
-		if (torsion.getPeriodicity_4() != -1) num_terms++;
-		if (torsion.getPeriodicity_5() != -1) num_terms++;
+		const BondBendKey key(aCIx1, aCIx2, aCIx3);
+		const BondBendValue newParams{
+			{ atoms[angle.globalIndices[0]].identity.globalIndex, atoms[angle.globalIndices[1]].identity.globalIndex, atoms[angle.globalIndices[2]].identity.globalIndex },
+			angle.stiffnessInKJPerRadSq,
+			angle.nominalAngleInDeg
+		};
 
-		// Define dihedrals
-		if (torsion.isImproper()) {
-
-			SimTK_ASSERT_ALWAYS(num_terms <= 3,
-				"Error in World::generateDummParams: Unsupported number of improper torsion terms (max 3 allowed).");
-
-			switch (num_terms)
-			{
-			case 1: {
-				forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4, torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1());
-				break;
-			}
-
-			case 2: {
-				forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
-					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
-					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2());
-				break;
-			}
-
-			case 3: {
-				forceField->defineAmberImproperTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
-					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
-					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
-					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3());
-				break;
-			}
-
-			default:
-				std::string message = "Unreachable code in World::generateDummParams() for improper torsion between atoms ";
-				message += std::to_string(torsion.getGlobalIndex1()) + ", ";
-				message += std::to_string(torsion.getGlobalIndex2()) + ", ";
-				message += std::to_string(torsion.getGlobalIndex3()) + ", ";
-				message += std::to_string(torsion.getGlobalIndex4()) + " , num_terms=";
-				message += std::to_string(num_terms) + ".";
-				SimTK_ASSERT_ALWAYS(false, message.c_str());
+		const auto it = definedBondBends.find(key);
+		if (it != definedBondBends.end()) {
+			const BondBendValue& existingParams = it->second;
+			if (existingParams != newParams) {
+				std::string message = "Error in World::generateDummParams(): Conflicting bond bend parameters.\n";
+				message += "Existing paramters defined for atoms:\n";
+				for (const auto i : existingParams.globalAtomIndices)
+					message += "  " + getAtomDescription(atoms[i]) + "\n";
+				message += "  Stiffness: " + std::to_string(existingParams.stiffness) + " kJ/(rad^2 mol), Angle: " + std::to_string(existingParams.angleDeg) + " deg\n";
+				message += "New parameters defined for atoms:\n";
+				for (const auto i : newParams.globalAtomIndices)
+					message += "  " + getAtomDescription(atoms[i]) + "\n";
+				message += "  Stiffness: " + std::to_string(newParams.stiffness) + " kJ/(rad^2 mol), Angle: " + std::to_string(newParams.angleDeg) + " deg\n";
+				SimTK_ASSERT_ALWAYS(existingParams == newParams, message.c_str());
 			}
 		} else {
-			SimTK_ASSERT_ALWAYS(num_terms <= 5,
-				"Error in World::generateDummParams: Unsupported number of torsion terms (max 5 allowed).");
+			definedBondBends.insert(it, std::make_pair(key, newParams));
+		}
 
-			switch (num_terms)
-			{
-			case 1: {
-				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
-					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1());
-				break;
+		forceField->defineBondBend(
+			aCIx1, aCIx2, aCIx3,
+			angle.stiffnessInKJPerRadSq,
+			angle.nominalAngleInDeg
+		);
+	}
+
+	// Define AMBER-style proper periodic torsions
+	std::map<PeriodicTorsionKey, PeriodicTorsionValue> definedPeriodicProperTorsions;
+	std::map<PeriodicTorsionKey, PeriodicTorsionValue> definedPeriodicImproperTorsions;
+
+	for (const auto& torsion : properPeriodicTorsions) {
+		const auto aCIx1 = atoms[torsion.globalIndices[0]].identity.atomClassIndex;
+		const auto aCIx2 = atoms[torsion.globalIndices[1]].identity.atomClassIndex;
+		const auto aCIx3 = atoms[torsion.globalIndices[2]].identity.atomClassIndex;
+		const auto aCIx4 = atoms[torsion.globalIndices[3]].identity.atomClassIndex;
+
+		// Dont canonicalize improper torsions
+		const PeriodicTorsionKey key (aCIx1, aCIx2, aCIx3, aCIx4, !torsion.improper);
+		const PeriodicTorsionValue newParams {
+			{ atoms[torsion.globalIndices[0]].identity.globalIndex, atoms[torsion.globalIndices[1]].identity.globalIndex, atoms[torsion.globalIndices[2]].identity.globalIndex, atoms[torsion.globalIndices[3]].identity.globalIndex },
+			{ torsion.terms[0].periodicity, torsion.terms[1].periodicity, torsion.terms[2].periodicity, torsion.terms[3].periodicity, torsion.terms[4].periodicity },
+			{ torsion.terms[0].amplitudeKJ, torsion.terms[1].amplitudeKJ, torsion.terms[2].amplitudeKJ, torsion.terms[3].amplitudeKJ, torsion.terms[4].amplitudeKJ },
+			{ torsion.terms[0].phaseDeg, torsion.terms[1].phaseDeg, torsion.terms[2].phaseDeg, torsion.terms[3].phaseDeg, torsion.terms[4].phaseDeg },
+			torsion.numTerms
+		};
+
+		bool found = false;
+		std::map<PeriodicTorsionKey, PeriodicTorsionValue>::iterator it;
+		if (torsion.improper) {
+			it = definedPeriodicImproperTorsions.find(key);
+			found = definedPeriodicImproperTorsions.end() != it;
+		} else {
+			it = definedPeriodicProperTorsions.find(key);
+			found = definedPeriodicProperTorsions.end() != it;
+		}
+
+		if (found) {
+			const PeriodicTorsionValue& existingParams = it->second;
+			if (existingParams != newParams) {
+				std::string message = "Error in World::generateDummParams(): Conflicting " + std::string(torsion.improper ? "improper" : "proper") + " periodic torsion parameters for atom classes ";
+				message += "Existing parameters defined for atoms:\n";
+				for (const auto i : existingParams.globalAtomIndices) {
+					message += "\t\t" + getAtomDescription(atoms[i]) + "\n";
+				}
+				message += "Existing parameters:\n";
+				for (size_t i = 0; i < existingParams.numTerms; i++) {
+					message += "\t\tTerm " + std::to_string(i) + ": periodicity=" + std::to_string(existingParams.periodicity[i]) +
+							   ", amplitude=" + std::to_string(existingParams.amplitude[i]) +
+							   ", phase=" + std::to_string(existingParams.phase[i]) + "\n";
+				}
+
+				message += "New parameters defined for atoms:\n";
+				for (const auto i : newParams.globalAtomIndices) {
+					message += "\t\t" + getAtomDescription(atoms[i]) + "\n";
+				}
+				message += "New parameters:\n";
+				for (size_t i = 0; i < newParams.numTerms; i++) {
+					message += "\t\tTerm " + std::to_string(i) + ": periodicity=" + std::to_string(newParams.periodicity[i]) +
+							   ", amplitude=" + std::to_string(newParams.amplitude[i]) +
+							   ", phase=" + std::to_string(newParams.phase[i]) + "\n";
+				}
+				SimTK_ASSERT_ALWAYS(existingParams == newParams, message.c_str());
 			}
-
-			case 2: {
-				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
-					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
-					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2());
-				break;
-			}
-
-			case 3: {
-				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
-					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
-					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
-					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3());
-				break;
-			}
-
-			case 4: {
-				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
-					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
-					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
-					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3(),
-					torsion.getPeriodicity_4(), torsion.getAmpInKJ_4(), torsion.getPhaseInDegrees_4());
-				break;
-			}
-
-			case 5: {
-				forceField->defineBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4,
-					torsion.getPeriodicity_1(), torsion.getAmpInKJ_1(), torsion.getPhaseInDegrees_1(),
-					torsion.getPeriodicity_2(), torsion.getAmpInKJ_2(), torsion.getPhaseInDegrees_2(),
-					torsion.getPeriodicity_3(), torsion.getAmpInKJ_3(), torsion.getPhaseInDegrees_3(),
-					torsion.getPeriodicity_4(), torsion.getAmpInKJ_4(), torsion.getPhaseInDegrees_4(),
-					torsion.getPeriodicity_5(), torsion.getAmpInKJ_5(), torsion.getPhaseInDegrees_5());
-				break;
-			}
-
-			default:
-				std::string message = "Unreachable code in World::generateDummParams() for torsion between atoms ";
-				message += std::to_string(torsion.getGlobalIndex1()) + ", ";
-				message += std::to_string(torsion.getGlobalIndex2()) + ", ";
-				message += std::to_string(torsion.getGlobalIndex3()) + ", ";
-				message += std::to_string(torsion.getGlobalIndex4()) + " , num_terms=";
-				message += std::to_string(num_terms) + ".";
-				SimTK_ASSERT_ALWAYS(false, message.c_str());
+		} else {
+			if (torsion.improper) {
+				definedPeriodicImproperTorsions.insert(it, std::make_pair(key, newParams));
+			} else {
+				definedPeriodicProperTorsions.insert(it, std::make_pair(key, newParams));
 			}
 		}
+
+		if (torsion.improper) {
+			switch (torsion.numTerms)
+			{
+			case 1:
+				forceField->defineAmberImproperTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg);
+				break;
+			case 2:
+				forceField->defineAmberImproperTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg,
+					torsion.terms[1].periodicity, torsion.terms[1].amplitudeKJ, torsion.terms[1].phaseDeg);
+				break;
+			case 3:
+				forceField->defineAmberImproperTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg,
+					torsion.terms[1].periodicity, torsion.terms[1].amplitudeKJ, torsion.terms[1].phaseDeg,
+					torsion.terms[2].periodicity, torsion.terms[2].amplitudeKJ, torsion.terms[2].phaseDeg);
+				break;
+
+			default:
+				SimTK_ASSERT_ALWAYS(false, "Error in World::generateDummParams: Improper torsions can only have 1, 2, or 3 terms.");
+				break;
+			}
+		} else {
+			switch (torsion.numTerms)
+			{
+			case 1:
+				forceField->defineBondTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg);
+				break;
+			case 2:
+				forceField->defineBondTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg,
+					torsion.terms[1].periodicity, torsion.terms[1].amplitudeKJ, torsion.terms[1].phaseDeg);
+				break;
+			case 3:
+				forceField->defineBondTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg,
+					torsion.terms[1].periodicity, torsion.terms[1].amplitudeKJ, torsion.terms[1].phaseDeg,
+					torsion.terms[2].periodicity, torsion.terms[2].amplitudeKJ, torsion.terms[2].phaseDeg);
+				break;
+			case 4:
+				forceField->defineBondTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg,
+					torsion.terms[1].periodicity, torsion.terms[1].amplitudeKJ, torsion.terms[1].phaseDeg,
+					torsion.terms[2].periodicity, torsion.terms[2].amplitudeKJ, torsion.terms[2].phaseDeg,
+					torsion.terms[3].periodicity, torsion.terms[3].amplitudeKJ, torsion.terms[3].phaseDeg);
+				break;
+			case 5:
+				forceField->defineBondTorsion(
+					aCIx1, aCIx2, aCIx3, aCIx4,
+					torsion.terms[0].periodicity, torsion.terms[0].amplitudeKJ, torsion.terms[0].phaseDeg,
+					torsion.terms[1].periodicity, torsion.terms[1].amplitudeKJ, torsion.terms[1].phaseDeg,
+					torsion.terms[2].periodicity, torsion.terms[2].amplitudeKJ, torsion.terms[2].phaseDeg,
+					torsion.terms[3].periodicity, torsion.terms[3].amplitudeKJ, torsion.terms[3].phaseDeg,
+					torsion.terms[4].periodicity, torsion.terms[4].amplitudeKJ, torsion.terms[4].phaseDeg);
+				break;
+			
+			default:
+				SimTK_ASSERT_ALWAYS(false, "Error in World::generateDummParams: Proper torsions can only have 1 to 5 terms.");
+				break;
+			}
+			
+		}
 	}
+
+	// Define CHARMM-style improper harmonic torsions
+	for (const auto& torsion : harmonicImproperTorsions) {
+		const auto aCIx1 = atoms[torsion.globalIndices[1]].identity.atomClassIndex;
+		const auto aCIx2 = atoms[torsion.globalIndices[2]].identity.atomClassIndex;
+		const auto aCIx3 = atoms[torsion.globalIndices[3]].identity.atomClassIndex;
+		const auto aCIx4 = atoms[torsion.globalIndices[4]].identity.atomClassIndex;
+
+		forceField->defineCustomBondTorsion(aCIx1, aCIx2, aCIx3, aCIx4, new HarmonicImproperTorsionForce(torsion.stiffnessInKJPerRadSq, torsion.nominalAngleInRad));
+	}
+}
+
+bool World::isOverconstrained() {
+	bool anyInvalid = false;
+
+	const SimTK::State& state = compoundSystem->getDefaultState();
+	compoundSystem->realize(state, SimTK::Stage::Acceleration);
+
+	// Structure to hold mobilized bodies info
+	struct MobilizedBodyInfo {
+		std::vector<std::string> uniqueAtomNames;
+		std::vector<SimTK::Real> q;
+		std::vector<SimTK::Real> u;
+		std::vector<SimTK::Real> qdot;
+		std::vector<SimTK::Real> udot;
+		std::vector<SimTK::Real> qdotdot;
+		bool invalid { false };
+	};
+
+	const int NU = compoundSystem->getMatterSubsystem().getNU(state);
+	const int numBodies = compoundSystem->getMatterSubsystem().getNumBodies();
+	std::vector<MobilizedBodyInfo> mobilizedBodiesInfo(numBodies);
+
+	// Get atom names of each mobilized body
+	std::map<SimTK::MobilizedBodyIndex, std::vector<std::string>> mobodAtoms;
+	for (const auto& t : topologies) {
+		for (const auto& a : t.getAtoms()) {
+			const SimTK::MobilizedBodyIndex mbIx = t.getAtomMobilizedBodyIndexThroughDumm(a.identity.compoundAtomIndex, *forceField);
+			mobilizedBodiesInfo[mbIx].uniqueAtomNames.push_back(a.identity.uniqueAtomName);
+		}
+	}
+
+	for (SimTK::MobilizedBodyIndex mbIx(1); mbIx < numBodies; ++mbIx) {
+		const auto& mobod = compoundSystem->getMatterSubsystem().getMobilizedBody(mbIx);
+		bool invalid = false;
+
+		for (const SimTK::Real q: mobod.getQAsVector(state)) {
+			mobilizedBodiesInfo[mbIx].q.push_back(q);
+			if (std::isnan(q) || std::isinf(q)) invalid = true;
+			if (std::abs(q) > 1e6) invalid = true;
+		};
+		for (const SimTK::Real u: mobod.getUAsVector(state)) {
+			mobilizedBodiesInfo[mbIx].u.push_back(u);
+			if (std::isnan(u) || std::isinf(u)) invalid = true;
+			if (std::abs(u) > 1e6) invalid = true;
+		};
+		for (const SimTK::Real qdot: mobod.getQDotAsVector(state)) {
+			mobilizedBodiesInfo[mbIx].qdot.push_back(qdot);
+			if (std::isnan(qdot) || std::isinf(qdot)) invalid = true;
+			if (std::abs(qdot) > 1e6) invalid = true;
+		};
+		for (const SimTK::Real udot: mobod.getUDotAsVector(state)) {
+			mobilizedBodiesInfo[mbIx].udot.push_back(udot);
+			if (std::isnan(udot) || std::isinf(udot)) invalid = true;
+			if (std::abs(udot) > 1e6) invalid = true;
+		};
+		for (const SimTK::Real qdotdot: mobod.getQDotDotAsVector(state)) {
+			mobilizedBodiesInfo[mbIx].qdotdot.push_back(qdotdot);
+			if (std::isnan(qdotdot) || std::isinf(qdotdot)) invalid = true;
+			if (std::abs(qdotdot) > 1e6) invalid = true;
+		};
+
+		mobilizedBodiesInfo[mbIx].invalid = invalid;
+		anyInvalid = anyInvalid || invalid;
+	}
+
+	// // Stop here if all mobilized bodies are valid
+	// // We don't want to print a huge table if everything is fine
+	// if (!anyInvalid) {
+	// 	return false;
+	// }
+
+	// Print mobilized bodies info
+	struct Row {
+		std::string mbIx, invalid, q, u, qdot, udot, qddot, atoms;
+	};
+
+	std::vector<Row> rows;
+	size_t w_mbIx = 4, w_invalid = 7, w_q = 1, w_u = 1, w_qdot = 1, w_udot = 1, w_qddot = 1, w_atoms = 5;
+
+	for (SimTK::MobilizedBodyIndex mbIx(1); mbIx < numBodies; ++mbIx) {
+		const auto& info = mobilizedBodiesInfo[mbIx];
+
+		Row r;
+		r.mbIx   = std::to_string(mbIx);
+		r.invalid= info.invalid ? "invalid" : "";
+		r.q      = vecToString(info.q);
+		r.u      = vecToString(info.u);
+		r.qdot   = vecToString(info.qdot);
+		r.udot   = vecToString(info.udot);
+		r.qddot  = vecToString(info.qdotdot);
+		r.atoms  = atomsToString(info.uniqueAtomNames);
+
+		w_mbIx  = std::max(w_mbIx,  r.mbIx.size());
+		w_q     = std::max(w_q,     r.q.size());
+		w_u     = std::max(w_u,     r.u.size());
+		w_qdot  = std::max(w_qdot,  r.qdot.size());
+		w_udot  = std::max(w_udot,  r.udot.size());
+		w_qddot = std::max(w_qddot, r.qddot.size());
+		w_atoms = std::max(w_atoms, r.atoms.size());
+
+		rows.push_back(std::move(r));
+	}
+
+	std::cout << std::left
+			<< std::setw(w_mbIx + 2)  << "mbIx"
+			<< std::setw(w_invalid + 2) << "invalid"
+			<< std::setw(w_q + 2)     << "q"
+			<< std::setw(w_u + 2)     << "u"
+			<< std::setw(w_qdot + 2)  << "qdot"
+			<< std::setw(w_udot + 2)  << "udot"
+			<< std::setw(w_qddot + 2) << "qddot"
+			<< "atoms"
+			<< std::endl;
+
+	size_t total_width =
+		w_mbIx + w_q + w_u + w_qdot + w_udot + w_qddot + w_atoms
+		+ 2 * 6;
+
+	std::cout << std::string(total_width, '-') << std::endl;
+
+	for (const auto& r : rows) {
+		std::cout << std::left
+				<< std::setw(w_mbIx + 2)  << r.mbIx
+				<< std::setw(w_invalid + 2) << r.invalid
+				<< std::setw(w_q + 2)     << r.q
+				<< std::setw(w_u + 2)     << r.u
+				<< std::setw(w_qdot + 2)  << r.qdot
+				<< std::setw(w_udot + 2)  << r.udot
+				<< std::setw(w_qddot + 2) << r.qddot
+				<< r.atoms
+				<< std::endl;
+	}
+
+	return false;
 }
 
 
@@ -823,7 +1242,7 @@ World::World(int worldIndex, Span<Topology> topo, bool testing, bool isVisual, S
 		atomTargetLocaltionsCache.emplace_back();
 		numMolecules++;
 		for (const auto& a : t.getAtoms()) {
-			atomTargetLocaltionsCache.back().emplace(std::make_pair(a.getCompoundAtomIndex(), a.getCoordsInNm()));
+			atomTargetLocaltionsCache.back().emplace(std::make_pair(a.identity.compoundAtomIndex, a.position));
 			numAtoms++;
 		}
 	}
@@ -879,12 +1298,12 @@ World::World(int worldIndex, Span<Topology> topo, bool testing, bool isVisual, S
 
 }
 
-void World::setFlexibilities(const std::vector<BOND_FLEXIBILITY>& flexibilities)
+void World::setFlexibilities(const std::vector<BondFlexibility>& flexibilities)
 {
 	this->flexibilities = flexibilities;
 }
 
-const std::vector<BOND_FLEXIBILITY>& World::getFlexibilities() const
+const std::vector<BondFlexibility>& World::getFlexibilities() const
 {
 	return flexibilities;
 }
@@ -908,7 +1327,7 @@ void World::modelTopologies() {
 
 		// Iterate through atoms and get their MobilizedBodyIndeces
 		for (const auto& atom : topology.getAtoms()) {
-			SimTK::Compound::AtomIndex aIx = atom.getCompoundAtomIndex();
+			SimTK::Compound::AtomIndex aIx = atom.identity.compoundAtomIndex;
 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndex(aIx);
 			
 			// Map mbx2aIx contains only atoms at the origin of mobods
@@ -919,21 +1338,20 @@ void World::modelTopologies() {
 
 			// TODO desk_mass_related - i think this is already done in CompoundSystem::modelOneCompound()
 			SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(aIx);
-			SimTK::mdunits::Mass atomMass = atom.getMassInDaltons();
-			forceField->setDuMMAtomMass(dAIx, atomMass);
+			forceField->setDuMMAtomMass(dAIx, atom.physics.massInDaltons);
 		}
 
 		// Cache two types of special bonds: bonds invovling the root atoms and bonds between two rigid bodies
 		for (const auto& bond : topology.getBonds()) {
 			const auto& atoms = topology.getAtoms();
-			const SimTK::Compound::AtomIndex childCAIx = bond.getChildCompoundAtomIndex();
-			const SimTK::Compound::AtomIndex parentCAIx = bond.getParentCompoundAtomIndex();
+			const SimTK::Compound::AtomIndex childCAIx = bond.compoundAtomIndices[1];
+			const SimTK::Compound::AtomIndex parentCAIx = bond.compoundAtomIndices[0];
 			const SimTK::MobilizedBodyIndex childMBIx = topology.getAtomMobilizedBodyIndex(childCAIx);
 			const SimTK::MobilizedBodyIndex parentMBIx = topology.getAtomMobilizedBodyIndex(parentCAIx);
 
 			// Check if one of the atoms is a root atom
 			// This kind of bond can have any mobility or be ring closing
-			if (topology.getAtoms()[bond.getChildCompoundAtomIndex()].isRoot() || topology.getAtoms()[bond.getParentCompoundAtomIndex()].isRoot()) {
+			if (topology.getAtoms()[bond.compoundAtomIndices[1]].connectivity.root || topology.getAtoms()[bond.compoundAtomIndices[0]].connectivity.root) {
 				RootAtomBond rootAtomBond;
 				rootAtomBond.topologyIndex = topoIx;
 				rootAtomBond.childCAIx = childCAIx;
@@ -946,7 +1364,7 @@ void World::modelTopologies() {
 
 			// Now we start looking for bonds between two rigid bodies
 			// TODO can ring closing bonds be between to rigid bodies? i think not
-			if (bond.isRingClosing()) continue;
+			if (bond.ringClosing) continue;
 
 			// We only want flexible bonds
 			if (bond.getBondMobility(ownWorldIndex) == SimTK::BondMobility::Mobility::Rigid) continue;
@@ -957,8 +1375,8 @@ void World::modelTopologies() {
 			rigidBodyAtomBond.mobility = bond.getBondMobility(ownWorldIndex);
 
 			// Save global atom indices
-			rigidBodyAtomBond.childAtomGlobalIndex = bond.getChildAtomGlobalIndex();
-			rigidBodyAtomBond.parentAtomGlobalIndex = bond.getParentAtomGlobalIndex();
+			rigidBodyAtomBond.childAtomGlobalIndex = bond.globalIndices[1];
+			rigidBodyAtomBond.parentAtomGlobalIndex = bond.globalIndices[0];
 	
 			// Save compound atom indices. Note that they are local to each topology
 			rigidBodyAtomBond.childCAIx = childCAIx;
@@ -1030,7 +1448,7 @@ void World::addTaskSpaceLS(void)
 
 	// 		// Guest atoms iteration
 	// 		for (int bAtomIx : bAtomIxs_guest) {
-	// 			SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).getCompoundAtomIndex();
+	// 			SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).identity.compoundAtomIndex;
 	// 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, forceField);
 
 	// 			onBodyB.emplace_back(mbx);
@@ -1069,7 +1487,7 @@ void World::updateTaskSpace(const SimTK::State& someState)
 	// 		int tz = -1;
 	// 		for (int bAtomIx : bAtomIxs_host) {
 	// 			tz++;
-	// 			SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).getCompoundAtomIndex();
+	// 			SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).identity.compoundAtomIndex;
 	// 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, forceField);
 	// 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
@@ -1091,7 +1509,7 @@ void World::updateTaskSpace(const SimTK::State& someState)
 	// 		int tz = -1;
 	// 		for (int bAtomIx : bAtomIxs_guest) {
 	// 			tz++;
-	// 			SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).getCompoundAtomIndex();
+	// 			SimTK::Compound::AtomIndex aIx = (topology.subAtomList[bAtomIx]).identity.compoundAtomIndex;
 	// 			SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(aIx, forceField);
 	// 			SimTK::MobilizedBody& mobod = matter->updMobilizedBody(mbx);
 
@@ -1298,7 +1716,7 @@ void World::addContacts(const std::vector<int>& prmtopIndex, const int topologyI
 
 	// 	// Map from AmberAtomIndex to CompoundAtomIndex 
 	// 	SimTK::Compound::AtomIndex cAIx = (topologies[topologyIx]).
-	// 									subAtomList[prmtopIx].getCompoundAtomIndex();
+	// 									subAtomList[prmtopIx].identity.compoundAtomIndex;
 
 	// 	SimTK::MobilizedBodyIndex
 	// 	mbx = (topologies[topologyIx]).getAtomMobilizedBodyIndexThroughDumm(
@@ -1452,8 +1870,8 @@ void World::setUScaleFactorsToMobods(void)
 	// 	for(const auto& bond : topology.getBonds()){
 	// 		bond.getBondGlobalIndex();
 	// 		topology.getAtomINdex
-	// 		SimTK::Compound::AtomIndex aIx1 = topology.subAtomList[Bond.i].getCompoundAtomIndex();
-	// 		SimTK::Compound::AtomIndex aIx2 = topology.subAtomList[Bond.j].getCompoundAtomIndex();
+	// 		SimTK::Compound::AtomIndex aIx1 = topology.subAtomList[Bond.i].identity.compoundAtomIndex;
+	// 		SimTK::Compound::AtomIndex aIx2 = topology.subAtomList[Bond.j].identity.compoundAtomIndex;
 
 	// 		SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx1, forceField);
 	// 		SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(aIx2, forceField);
@@ -1494,19 +1912,16 @@ SimTK::Real World::getWorkOrHeat(void)
 	for(auto& sampler : this->samplers){
 
 		// Get the potential energy difference
-		retValue += 
-			( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
+		retValue += getSampler(0)->getCurrentEnergy().potential - getSampler(0)->getPreviousEnergy().potential;
 
 		// Get Fixman potential difference
-		retValue +=
-			( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
+		retValue += getSampler(0)->getCurrentEnergy().fixman - getSampler(0)->getPreviousEnergy().fixman;
 
 		/* // Get the Q modifying samplers Jacobians
 		if(sampler->getDistortOpt() < 0){
 			retValue -= 
 				sampler->getDistortJacobianDetLog();
 		} */
-		
 	}
 	
 	return retValue;
@@ -1515,7 +1930,7 @@ SimTK::Real World::getWorkOrHeat(void)
 // Get the (potential) energy transfer in the form of work
 // If any of the Q, U or tau is actively modifyied by the sampler
 // the Jacobian of that transformation will be included too
-SimTK::Real World::getWork(void)
+SimTK::Real World::getWork(void) const
 {
 	// Accumulate in this variable
 	SimTK::Real retValue = 0.0;
@@ -1526,13 +1941,10 @@ SimTK::Real World::getWork(void)
 		if(sampler->getDistortOpt() < 0){
 
 			// Get the potential energy difference
-			retValue += 
-				( getSampler(0)->getNewPE() - getSampler(0)->getOldPE() );
+			retValue += getSampler(0)->getCurrentEnergy().potential - getSampler(0)->getPreviousEnergy().potential;
 
 			// Get Fixman potential difference
-			retValue +=
-				( getSampler(0)->getNewFixman() - getSampler(0)->getOldFixman());
-
+			retValue += getSampler(0)->getCurrentEnergy().fixman - getSampler(0)->getPreviousEnergy().fixman;
 			/* // Get the Jacobians
 			retValue -= 
 				sampler->getDistortJacobianDetLog(); */
@@ -1841,12 +2253,12 @@ void World::setTransformsMeansToMin(AmberReader &amberReader)
 	// 	for (auto& topology : topologies){
 
 	// 		//Atom * gAtom = topology.bAtomList[prm_a_1];
-	// 		bool rinClosing = topology.subBondList[bondIndex].isRingClosing();
+	// 		bool rinClosing = topology.subBondList[bondIndex].ringClosing;
 
-	// 		SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].getCompoundAtomIndex();
+	// 		SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].identity.compoundAtomIndex;
 	// 		SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
 	// 		const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
-	// 		SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].getCompoundAtomIndex();
+	// 		SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].identity.compoundAtomIndex;
 	// 		SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
 	// 		const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
 
@@ -1885,13 +2297,13 @@ void World::setTransformsMeansToMin(AmberReader &amberReader)
 
 	// 	for (auto& topology : topologies){
 
-	// 		SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].getCompoundAtomIndex();
+	// 		SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].identity.compoundAtomIndex;
 	// 		SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
 	// 		const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
-	// 		SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].getCompoundAtomIndex();
+	// 		SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].identity.compoundAtomIndex;
 	// 		SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
 	// 		const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
-	// 		SimTK::Compound::AtomIndex aIx_3 = topology.subAtomList[prm_a_3].getCompoundAtomIndex();
+	// 		SimTK::Compound::AtomIndex aIx_3 = topology.subAtomList[prm_a_3].identity.compoundAtomIndex;
 	// 		SimTK::DuMM::AtomIndex dAIx_3 = topology.getDuMMAtomIndex(aIx_3);
 	// 		const SimTK::MobilizedBodyIndex mbx_3 = forceField->getAtomBody(dAIx_3);
 
@@ -2864,7 +3276,7 @@ World::getGeometricCenterOfSelection(const SimTK::State & state
 // 			if (std::find(atoms.begin(), atoms.end(), amberIx) != atoms.end()){
 // 				// found
 // 				// Get Compound atom index
-// 				auto compoundAtomIndex = atom.getCompoundAtomIndex();
+// 				auto compoundAtomIndex = atom.identity.compoundAtomIndex;
 // 				// Get DuMM atom index
 // 				const SimTK::DuMM::AtomIndex dAIx = topology.getDuMMAtomIndex(compoundAtomIndex);
 // 				// Get Mobilized Body index
@@ -2904,7 +3316,7 @@ void World::PrintAtomsLocations(const std::vector<std::vector<
 {	
 	std::cout << "myAtomsLocations[0]" << std::endl;
 	for(std::size_t j = 0; j < someAtomsLocations[0].size(); j++){
-		int compoundAtomIndex = someAtomsLocations[0][j].first->getCompoundAtomIndex();
+		int compoundAtomIndex = someAtomsLocations[0][j].first->identity.compoundAtomIndex;
 		auto loc = someAtomsLocations[0][j].second;
 
 		printf("%d %.10f %.10f %.10f\n", compoundAtomIndex, loc[0], loc[1], loc[2]);
@@ -3030,15 +3442,8 @@ void World::updateAtomListsFromSimbody(const SimTK::State &state)
 
 		// Iterate through atoms
 		for (auto& atom : topology.updAtoms()) {
-
-			const auto compoundAtomIndex = atom.getCompoundAtomIndex();
-			SimTK::Vec3 location =
-				topology.calcAtomLocationInGroundFrameThroughSimbody(compoundAtomIndex, *forceField, *matter, state);
-
-			atom.setXInNm(location[0]);
-			atom.setYInNm(location[1]);
-			atom.setZInNm(location[2]);
-
+			const auto compoundAtomIndex = atom.identity.compoundAtomIndex;
+			atom.position = topology.calcAtomLocationInGroundFrameThroughSimbody(compoundAtomIndex, *forceField, *matter, state);
 			//std::cout << "updateAtomListsFromCompound (after f_x_m, ix= " << compoundAtomIndex << ") " << atom.getX() << ", " << atom.getY() << ", " << atom.getZ() << std::endl;
 		}
 	}
@@ -3233,16 +3638,16 @@ World::calcMobodToMobodTransforms(
 	// Get mobility (joint type)
 	const auto& atom = topology.getAtom(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	RoboBondStretch bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
+	RoboBond bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	bool anglePin_OR = mobility == SimTK::BondMobility::Mobility::AnglePin ||
 					   mobility == SimTK::BondMobility::Mobility::Slider ||
 					   mobility == SimTK::BondMobility::Mobility::BendStretch;
 	
-	if (anglePin_OR && atom.getNeighborsGlobalIndices().size() == 1) {
+	if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() == 1) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
-	} else if (anglePin_OR && atom.getNeighborsGlobalIndices().size() != 1) {
+	} else if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() != 1) {
 		return std::vector<SimTK::Transform> {P_X_F_anglePin, B_X_M_anglePin};
 	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
 			|| mobility == SimTK::BondMobility::Mobility::Cylinder) {
@@ -3451,7 +3856,7 @@ SimTK::Transform World::calcX_FMTransforms(
 	// Get mobility (joint type)
 	const RoboAtom& atom = topology.getAtom(rootAIx);
 	SimTK::BondMobility::Mobility mobility;
-	RoboBondStretch bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
+	RoboBond bond = topology.getBondByGlobalAtomIndex(topology.getGlobalAtomIndex(rootAIx), topology.getGlobalAtomIndex(chemParentAIx));
 	mobility = bond.getBondMobility(ownWorldIndex);
 
 	// Convenient bool
@@ -3461,10 +3866,10 @@ SimTK::Transform World::calcX_FMTransforms(
 		|| mobility == SimTK::BondMobility::Mobility::BendStretch;
 	
 	// Set X_FM value
-	if (anglePin_OR && atom.getNeighborsGlobalIndices().size() == 1) {
+	if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() == 1) {
 		X_FM = SimTK::Transform();
 		return X_FM;
-	} else if (anglePin_OR && atom.getNeighborsGlobalIndices().size() != 1) {
+	} else if (anglePin_OR && atom.connectivity.neighborsGlobalIndices.size() != 1) {
 		X_FM = SimTK::Transform();
 		return X_FM;
 	} else if (mobility == SimTK::BondMobility::Mobility::Torsion 
@@ -3730,8 +4135,8 @@ bool World::addSampler(SamplerName samplerName,
 
 			// All bonds inside a torsional world should be rigid
 			for (const auto& b : topologies[topoIx].getBonds()) {
-				const SimTK::Compound::AtomIndex childCAIx = b.getChildCompoundAtomIndex();
-				const SimTK::Compound::AtomIndex parentCAIx = b.getParentCompoundAtomIndex();
+				const SimTK::Compound::AtomIndex childCAIx = b.compoundAtomIndices[1];
+				const SimTK::Compound::AtomIndex parentCAIx = b.compoundAtomIndices[0];
 
 				RigidBond rigidBond;
 				rigidBond.topologyIndex = topoIx;
@@ -3740,33 +4145,76 @@ bool World::addSampler(SamplerName samplerName,
 				rigidBonds.push_back(rigidBond);
 			}
 
-			// All angles (bends) inside a torsional world should be rigid
+			// Add angles (bends)
 			for (const auto& angle :topology.getAngles()) {
-				const SimTK::Compound::AtomIndex aIx1 = angle.getCompoundAtomIndex1();
-				const SimTK::Compound::AtomIndex aIx2 = angle.getCompoundAtomIndex2();
-				const SimTK::Compound::AtomIndex aIx3 = angle.getCompoundAtomIndex3();
+				const SimTK::Compound::AtomIndex aIx1 = angle.compoundAtomIndices[0];
+				const SimTK::Compound::AtomIndex aIx2 = angle.compoundAtomIndices[1];
+				const SimTK::Compound::AtomIndex aIx3 = angle.compoundAtomIndices[2];
+				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndex(aIx1);
+				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndex(aIx2);
+				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndex(aIx3);
+
+				// Ignore angles that are not between two atoms in the same mobilized body
+				if (mbx1 != mbx2 || mbx2 != mbx3)
+					continue;
 
 				RigidAngle rigidAngle;
 				rigidAngle.topologyIndex = topoIx;
-				rigidAngle.cAIx1 = aIx1;
-				rigidAngle.cAIx2 = aIx2;
-				rigidAngle.cAIx3 = aIx3;
+				rigidAngle.cAIx1 = angle.compoundAtomIndices[0];
+				rigidAngle.cAIx2 = angle.compoundAtomIndices[1];
+				rigidAngle.cAIx3 = angle.compoundAtomIndices[2];
 				rigidAngles.push_back(rigidAngle);
 			}
 
-			for (const auto& torsion :topology.getTorsions()) {
-				const SimTK::Compound::AtomIndex aIx1 = torsion.getCompoundAtomIndex1();
-				const SimTK::Compound::AtomIndex aIx2 = torsion.getCompoundAtomIndex2();
-				const SimTK::Compound::AtomIndex aIx3 = torsion.getCompoundAtomIndex3();
-				const SimTK::Compound::AtomIndex aIx4 = torsion.getCompoundAtomIndex4();
+			// Process periodic dihedrals - proper and improper
+			for (const auto& torsion :topology.getPeriodicTorsions()) {
+				const SimTK::Compound::AtomIndex aIx1 = torsion.compoundAtomIndices[0];
+				const SimTK::Compound::AtomIndex aIx2 = torsion.compoundAtomIndices[1];
+				const SimTK::Compound::AtomIndex aIx3 = torsion.compoundAtomIndices[2];
+				const SimTK::Compound::AtomIndex aIx4 = torsion.compoundAtomIndices[3];
 				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndex(aIx1);
 				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndex(aIx2);
 				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndex(aIx3);
 				const SimTK::MobilizedBodyIndex mbx4 = topology.getAtomMobilizedBodyIndex(aIx4);
 
-				// topologies[topoIx].updBonds();
+				const auto uniqueAtomName1 = topologies[topoIx].getAtoms()[aIx1].identity.uniqueAtomName;
+				const auto uniqueAtomName2 = topologies[topoIx].getAtoms()[aIx2].identity.uniqueAtomName;
+				const auto uniqueAtomName3 = topologies[topoIx].getAtoms()[aIx3].identity.uniqueAtomName;
+				const auto uniqueAtomName4 = topologies[topoIx].getAtoms()[aIx4].identity.uniqueAtomName;
 
-				// We are inside the same rigid body
+				RigidTorsion rigidTorsion;
+				rigidTorsion.topologyIndex = topoIx;
+				rigidTorsion.cAIx1 = aIx1;
+				rigidTorsion.cAIx2 = aIx2;
+				rigidTorsion.cAIx3 = aIx3;
+				rigidTorsion.cAIx4 = aIx4;
+
+				if (torsion.improper) {
+					// For improper torsions, the center is usually index 2 (Atom K)
+					// The dihedral is rigid if the center and its neighbors are in the same body
+					if (mbx1 == mbx2 && mbx2 == mbx3 && mbx3 == mbx4) {
+						rigidImproperTorsions.push_back(rigidTorsion);
+					}
+				} else {
+					// For proper torsions, the mobile axis is the 2-3 bond.
+					if (mbx2 == mbx3) {
+						rigidProperTorsions.push_back(rigidTorsion);
+					}
+				}
+			}
+
+			// Process improper harmonic torsions
+			for (const auto& torsion :topology.getImproperHarmonicTorsions()) {
+				const SimTK::Compound::AtomIndex aIx1 = torsion.compoundAtomIndices[0];
+				const SimTK::Compound::AtomIndex aIx2 = torsion.compoundAtomIndices[1];
+				const SimTK::Compound::AtomIndex aIx3 = torsion.compoundAtomIndices[2];
+				const SimTK::Compound::AtomIndex aIx4 = torsion.compoundAtomIndices[3];
+				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndex(aIx1);
+				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndex(aIx2);
+				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndex(aIx3);
+				const SimTK::MobilizedBodyIndex mbx4 = topology.getAtomMobilizedBodyIndex(aIx4);
+
+				// Same story as above
 				if (mbx1 == mbx2 && mbx2 == mbx3 && mbx3 == mbx4) {
 					RigidTorsion rigidTorsion;
 					rigidTorsion.topologyIndex = topoIx;
@@ -3774,13 +4222,8 @@ bool World::addSampler(SamplerName samplerName,
 					rigidTorsion.cAIx2 = aIx2;
 					rigidTorsion.cAIx3 = aIx3;
 					rigidTorsion.cAIx4 = aIx4;
-
-					if (torsion.isImproper()) {
-						rigidImproperTorsions.push_back(rigidTorsion);
-					} else {
-						rigidProperTorsions.push_back(rigidTorsion);
-					}
-				} 
+					rigidImproperTorsions.push_back(rigidTorsion);
+				}
 			}
 		}
 	}
@@ -3868,23 +4311,34 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 	}
 
 	// Generate samples
-    if (isRollFlexibilities) {
-        for (int mobIntIx = 1; mobIntIx < matter->getNumBodies(); ++mobIntIx) {
+    if (getSampler(0)->getIntegratorType() != IntegratorType::OMMVV) {
+        for (const auto& flex : flexibilities_UNCHAINED) {
 			// Lock all mobilizers' positions
 			// This effectively freezes all degrees of freedom
             for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
 				mobod.lock(state, SimTK::Motion::Position);
 			}
-			
+
 			// Unlock one mobilizer
 			// This is the only mobilizer that will move during sampling
-            const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-            mobod.unlock(state);
-            
+			for (const auto mobIntIx : flex) {
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+				mobod.unlock(state);
+			}
+			
 			// Sample
-			for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx)
-				validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+			for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+				validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+				if (!validated) {
+					continue;
+				}
+			}
+
+			if (!validated) {
+				std::cout << "\tWorld " << ownWorldIndex << " sample rejected during sampling mobilizer " << std::endl;
+				break;
+			}
 		}
     } else {
         for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx)
@@ -3906,17 +4360,62 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 		}
 	}
 
-	if (testing) {
+	if (testing && updSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {
+		const auto& positions = OPENMM::get().getPositions();
+		std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsFromOpenMM (topologies.size());
+		
+		for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+			for (const auto& atom : topologies[topoIx].getAtoms()) {
+				const SimTK::Vec3 locationFromOpenMM = positions[atom.identity.globalIndex];
+				atomTargetLocationsFromOpenMM[topoIx][atom.identity.compoundAtomIndex] = locationFromOpenMM;
+			}
+		}
+
+		const SimTK::State& state = compoundSystem->realizeTopology();
+		compoundSystem->realize(state, SimTK::Stage::Position);
+
+		// We ignore match residuals for now
+		// They only work if you need to match positions to the Topology list
+		// This is only needed when transfering from one world to another
+		std::vector<SimTK::Real> matchAtomTargetLocationsResiduals;
+		SimTK::Real cumulDiffCartesian = 0.0;
+		SimTK::Real cumulDiffBonds = 0.0;
+		SimTK::Real cumulDiffAngles = 0.0;
+		SimTK::Real cumulDiffDihedrals = 0.0;
+
+		checkCoordinateTransfer(atomTargetLocationsFromOpenMM, matchAtomTargetLocationsResiduals, cumulDiffCartesian, cumulDiffBonds, cumulDiffAngles, cumulDiffDihedrals);
+		openmmCumulativeCartesianDisplacements.push_back(cumulDiffCartesian);
+		openmmCumulativeBondDisplacements.push_back(cumulDiffBonds);
+		openmmCumulativeAngleDisplacements.push_back(cumulDiffAngles);
+		openmmCumulativeTorsionDisplacements.push_back(cumulDiffDihedrals);
+
 		// Calculate RMSD after sampling if the sample is accepted
-		SimTK::Real rmsd = 0.0;
+		SimTK::Real sumSquaredDist = 0.0;
+		for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+			for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
+				const SimTK::Vec3& newLocation = atomTargetLocationsFromOpenMM[topoIx][cAIx];
+				const SimTK::Vec3& oldLocation = atomTargetLocaltionsCacheOld[topoIx][cAIx];
+
+				sumSquaredDist += (newLocation - oldLocation).normSqr();
+			}
+		}
+		SimTK::Real rmsd = std::sqrt(sumSquaredDist / numAtoms);
+		acceptanceRMSD.emplace_back(std::make_pair(validated, rmsd));
+	}
+
+	if (testing && updSampler(0)->getIntegratorType() != IntegratorType::OMMVV) {
+
+		// Calculate RMSD after sampling if the sample is accepted
+		SimTK::Real sumSquaredDist = 0.0;
 		for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 			for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
 				const SimTK::Vec3& newLocation = atomTargetLocaltionsCache[topoIx][cAIx];
 				const SimTK::Vec3& oldLocation = atomTargetLocaltionsCacheOld[topoIx][cAIx];
-				rmsd += (newLocation - oldLocation).norm();
+
+				sumSquaredDist += (newLocation - oldLocation).normSqr();
 			}
 		}
-		rmsd /= numAtoms;
+		SimTK::Real rmsd = std::sqrt(sumSquaredDist / numAtoms);
 		acceptanceRMSD.emplace_back(std::make_pair(validated, rmsd));
 
 		// Bonds inside rigid bodies should not change lengths
@@ -3969,6 +4468,11 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 			const SimTK::Vec3& atom4New = atomTargetLocaltionsCache[rigidProperTorsion.topologyIndex][rigidProperTorsion.cAIx4];
 			const SimTK::Real newDihedral = bDihedral(atom1New, atom2New, atom3New, atom4New);
 
+			const auto uniqueAtomName1 = topologies[rigidProperTorsion.topologyIndex].getAtoms()[rigidProperTorsion.cAIx1].identity.uniqueAtomName;
+			const auto uniqueAtomName2 = topologies[rigidProperTorsion.topologyIndex].getAtoms()[rigidProperTorsion.cAIx2].identity.uniqueAtomName;
+			const auto uniqueAtomName3 = topologies[rigidProperTorsion.topologyIndex].getAtoms()[rigidProperTorsion.cAIx3].identity.uniqueAtomName;
+			const auto uniqueAtomName4 = topologies[rigidProperTorsion.topologyIndex].getAtoms()[rigidProperTorsion.cAIx4].identity.uniqueAtomName;
+			
 			const SimTK::Real d = circularAngleDiffSigned(oldDihedral, newDihedral);
 			rbProperTorsionDrift += d * d;
 		}

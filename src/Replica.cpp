@@ -15,6 +15,28 @@ const std::vector<SimTK::Compound::AtomTargetLocations>& Replica::get_WORK_Atoms
 // Set the coordinates of this replica
 void Replica::setAtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets) {
 	atomsLocations = atomTargets;
+
+	// Allocate memory for coordinate buffers
+	if (x.size() == 0) {
+		for (const auto& topology : atomsLocations) {
+			for (const auto& locations : topology) {
+				x.push_back(0.0);
+				y.push_back(0.0);
+				z.push_back(0.0);
+			}
+		}
+	}
+
+	// Update coordinate buffers
+	int numAtomsInMols = 0;
+	for (const auto& topology : atomsLocations) {
+		for (const auto& locations : topology) {
+			x[locations.first + numAtomsInMols] = locations.second[0];
+			y[locations.first + numAtomsInMols] = locations.second[1];
+			z[locations.first + numAtomsInMols] = locations.second[2];
+		}
+		numAtomsInMols += topology.size();
+	}
 }
 
 // Set the coordinates of this replica
@@ -23,20 +45,30 @@ void Replica::set_WORK_AtomsLocationsInGround(const std::vector<SimTK::Compound:
 	WORK_atomsLocations = atomTargets;
 }
 
-// Update the coordinates of this replica
-void Replica::updAtomsLocationsInGround(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets)
-{
-	atomsLocations = atomTargets;
-}
-
-void Replica::updAtomsLocationsInGround_FromWORK()
-{
-	/* atomsLocations.insert(WORK_atomsLocations.end(),
-		WORK_atomsLocations.begin(),
-		WORK_atomsLocations.end()); */
-
+void Replica::updAtomsLocationsInGround_FromWORK() {
 	atomsLocations = WORK_atomsLocations;
 
+	// Allocate memory for coordinate buffers
+	if (x.size() == 0) {
+		for (const auto& topology : atomsLocations) {
+			for (const auto& locations : topology) {
+				x.push_back(0.0);
+				y.push_back(0.0);
+				z.push_back(0.0);
+			}
+		}
+	}
+
+	// Update coordinate buffers
+	int numAtomsInMols = 0;
+	for (const auto& topology : atomsLocations) {
+		for (const auto& locations : topology) {
+			x[locations.first + numAtomsInMols] = locations.second[0];
+			y[locations.first + numAtomsInMols] = locations.second[1];
+			z[locations.first + numAtomsInMols] = locations.second[2];
+		}
+		numAtomsInMols += topology.size();
+	}
 }
 
 // Update the coordinates of this replica
@@ -152,7 +184,7 @@ void Replica::PrintCoordinates() const
 	// 	for(auto& atomCoordinates : topology) {
 	// 		std::cout
 	// 		//<< (atomCoordinates.first)->inName
-	// 		<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
+	// 		<< (atomCoordinates.first)->identity.compoundAtomIndex << " "
 	// 		<< atomCoordinates.second[0] << " "
 	// 		<< atomCoordinates.second[1] << " "
 	// 		<< atomCoordinates.second[2] << std::endl;
@@ -168,30 +200,13 @@ void Replica::Print_WORK_Coordinates() const
 	// 	for(auto& atomCoordinates : topology) {
 	// 		std::cout
 	// 		//<< (atomCoordinates.first)->inName
-	// 		<< (atomCoordinates.first)->getCompoundAtomIndex() << " "
+	// 		<< (atomCoordinates.first)->identity.compoundAtomIndex << " "
 	// 		<< atomCoordinates.second[0] << " "
 	// 		<< atomCoordinates.second[1] << " "
 	// 		<< atomCoordinates.second[2] << std::endl;
 	// 	}
 	// }
 }
-
-std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> Replica::getCoordinates() const {
-	
-	std::vector<double> x, y, z;
-
-	for (const auto& topology : atomsLocations) {
-		for (const auto& locations : topology) {
-			x.push_back(locations.second[0]);
-			y.push_back(locations.second[1]);
-			z.push_back(locations.second[2]);
-		}
-	}
-
-	return std::make_tuple(x, y, z);
-}
-
-
 
 /**
  * Write coordinates to a rst7 file
@@ -394,8 +409,8 @@ Replica::calcZMatrixBAT_WORK(void)
 	// 	SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
 		
 	// 	// Calculate bond length
-	// 	a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
-	// 	a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
+	// 	a0_cAIx = atoms[row[0]].identity.compoundAtomIndex;
+	// 	a1_cAIx = atoms[row[1]].identity.compoundAtomIndex;
 	// 	SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
 	// 	SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
 
@@ -405,7 +420,7 @@ Replica::calcZMatrixBAT_WORK(void)
 	// 	if(row[2] >= 0){
 
 	// 		SimTK::Compound::AtomIndex a2_cAIx;
-	// 		a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
+	// 		a2_cAIx = atoms[row[2]].identity.compoundAtomIndex;
 	// 		SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
 
 	// 		// Calculate angle
@@ -421,7 +436,7 @@ Replica::calcZMatrixBAT_WORK(void)
 
 	// 		if(row[3] >= 0){
 	// 			SimTK::Compound::AtomIndex
-	// 				a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
+	// 				a3_cAIx = atoms[row[3]].identity.compoundAtomIndex;
 	// 			SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
 
 	// 			bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);
@@ -480,8 +495,8 @@ Replica::calcZMatrixBAT(
 	// 	SimTK::Compound::AtomIndex a0_cAIx, a1_cAIx;
 		
 	// 	// Calculate bond length
-	// 	a0_cAIx = atoms[row[0]].getCompoundAtomIndex();
-	// 	a1_cAIx = atoms[row[1]].getCompoundAtomIndex();
+	// 	a0_cAIx = atoms[row[0]].identity.compoundAtomIndex;
+	// 	a1_cAIx = atoms[row[1]].identity.compoundAtomIndex;
 	// 	SimTK::Vec3 a0loc = findAtomTarget(atomTargets, a0_cAIx);
 	// 	SimTK::Vec3 a1loc = findAtomTarget(atomTargets, a1_cAIx);
 
@@ -491,7 +506,7 @@ Replica::calcZMatrixBAT(
 	// 	if(row[2] >= 0){
 
 	// 		SimTK::Compound::AtomIndex a2_cAIx;
-	// 		a2_cAIx = atoms[row[2]].getCompoundAtomIndex();
+	// 		a2_cAIx = atoms[row[2]].identity.compoundAtomIndex;
 	// 		SimTK::Vec3 a2loc = findAtomTarget(atomTargets, a2_cAIx);
 
 	// 		// Calculate angle
@@ -507,7 +522,7 @@ Replica::calcZMatrixBAT(
 
 	// 		if(row[3] >= 0){
 	// 			SimTK::Compound::AtomIndex
-	// 				a3_cAIx = atoms[row[3]].getCompoundAtomIndex();
+	// 				a3_cAIx = atoms[row[3]].identity.compoundAtomIndex;
 	// 			SimTK::Vec3 a3loc = findAtomTarget(atomTargets, a3_cAIx);
 
 	// 			bondTorsion = bDihedral(a0loc, a1loc, a2loc, a3loc);

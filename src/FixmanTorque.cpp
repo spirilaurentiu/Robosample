@@ -140,7 +140,7 @@ void FixmanTorqueExt::calcForce(const SimTK::State& state, SimTK::Vector_<SimTK:
 		
 		// Get quaternion from root atom
 		//bSpecificAtom *root = &(bAtomList[bSpecificAtomRootIndex]);
-		//SimTK::Compound::AtomIndex aIx = root->getCompoundAtomIndex();
+		//SimTK::Compound::AtomIndex aIx = root->identity.compoundAtomIndex;
 		//SimTK::Transform X = calcAtomFrameInGroundFrame(quatState, aIx);
 		//SimTK::Quaternion quat = (X.R()).convertRotationToQuaternion();
 		////std::cout << "calcLogDetMBATGamma2Contribution quaternion " << quat << std::endl;

@@ -14,54 +14,42 @@
             },
             "envFile": "${workspaceFolder}/.env",
             "args": [
-                "2ala.2ala.test",
-                "data-raw/2ala.2ala.prmtop",
-                "data-raw/2ala.2ala.inpcrd",
+                "2ala.test",
+                "data-raw/2ala.prmtop",
+                "data-raw/2ala.inpcrd",
                 "6000",
                 "0",
-                "1",
+                "100",
                 "1",
             ],
             "cwd": "${workspaceFolder}/build",
         },
+
         {
-            "name": "Python + C++ (.so) Debug (lldb)",
-            "type": "cppdbg", // is this lldb?
+            "name": "Python + C++ (.so) Debug (CodeLLDB)",
+            "type": "lldb",
             "request": "launch",
 
-            // Run python as the main process
             "program": "/home/victor/miniforge3/envs/robo_dev_py312/bin/python3",
             "args": [
                 "${workspaceFolder}/build/roborun.py",
-                "2ala.2ala.test",
-                "${workspaceFolder}/build/data-raw/2ala.2ala.prmtop",
-                "${workspaceFolder}/build/data-raw/2ala.2ala.inpcrd",
+                "2ala.test",
+                "${workspaceFolder}/build/data-raw/2ala.prmtop",
+                "${workspaceFolder}/build/data-raw/2ala.inpcrd",
                 "6000",
                 "0",
-                "1",
-                "1",
+                "100",
+                "1"
             ],
 
-            // Required: stop when .so is loaded, so breakpoints become active
-            "stopOnSharedLibraryLoad": true,
-
-            // Ensure debug symbols are used
-            "env": {
-                "LD_LIBRARY_PATH": "${workspaceFolder}/build",
-                "ROBOSAMPLE_DEBUG": "1"
-            },
-
-            "console": "integratedTerminal",
-            "justMyCode": false,
-
-            // Working directory
             "cwd": "${workspaceFolder}",
 
-            // If Python loads the .so dynamically, lldb will catch it
-            "initCommands": [
-                "settings set target.inline-breakpoint-strategy always",
-                "settings set target.process.stop-on-sharedlibrary-load true"
-            ]
+            "env": {
+                // "LD_PRELOAD": "/usr/lib/llvm-18/lib/clang/18/lib/linux/libclang_rt.asan-x86_64.so",
+                "LD_LIBRARY_PATH": "${workspaceFolder}/build",
+                // "ASAN_OPTIONS": "protect_shadow_gap=0:detect_leaks=0:abort_on_error=0:halt_on_error=1"
+            }
         }
+
     ]
 }
