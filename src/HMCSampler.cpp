@@ -711,7 +711,7 @@ void HMCSampler::perturbPositions(SimTK::State& someState, PositionsPerturbMetho
 
 		// :::::::::::: (2) Scale :::::::::::::::::::::::::::::::::::::::::
 
-		// std::cout << " w " << this->world->getOwnIndex() << " scaleF " << this->QScaleFactor << "\n" << std::flush;
+		//std::cout << " w " << this->world->getOwnIndex() << " scaleF " << this->QScaleFactor << "\n" << std::flush;
 
 		SimTK::Vector &stateQs = someState.updQ();
 
