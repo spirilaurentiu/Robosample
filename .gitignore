@@ -1,6 +1,8 @@
 # compilation stuff
 build
 build_debug
+buildpy
+buildpyvic
 doc/html
 doc/html/*
 
