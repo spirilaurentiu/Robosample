@@ -1,0 +1,4 @@
+channels:
+  - nvidia/label/cuda-12.8.0
+dependencies:
+  - cuda-toolkit

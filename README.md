@@ -1,51 +1,3 @@
-# PERF
-GPU time will not show in perf; use:
-nsys / nvprof for CUDA
-perf only for CPU-side OpenMM / Simbody code
-compile with perf
-
-# reboot resets them
-sudo sysctl -w kernel.kptr_restrict=0
-sudo sysctl -w kernel.perf_event_paranoid=0
-
-
-perf record -F 999 -g -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
-
-
-perf record -g -e L1-dcache-load-misses,L1-dcache-loads --call-graph dwarf -F 999 -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
-
-
-
-
-AbstractIntegrator.cpp std::cout << "internal steps taken: " << internalStepsTaken << std::endl
-
-
-perf list | grep -i cache
-
-
-
-
-perf stat -e \
-    cache-misses,cache-references,\
-    L1-dcache-load-misses,L1-dcache-loads,\
-    l2_cache.all_l2_cache_accesses,l2_cache.all_l2_cache_hits,l2_cache.all_l2_cache_misses,\
-    LLC-load-misses,LLC-loads\
-    -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
-
-
-
-# must be on a single row, no `\`z
-perf stat -e cache-references,cache-misses,L1-dcache-load-misses,L1-dcache-loads,cycles,instructions,branches,faults,migrations \
-          -M all_l2_cache_accesses,all_l2_cache_hits,all_l2_cache_misses,op_cache_fetch_miss_ratio \
-          -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
-
-perf stat -B \
-  -e cycles,instructions,branches,branch-misses \
-  -e L1-dcache-loads,L1-dcache-load-misses \
-  -e LLC-loads,LLC-load-misses \
-  -M op_cache_fetch_miss_ratio \
-  -- python3 roborun.py 1apq_test data-raw/1APQ.prmtop data-raw/1APQ.inpcrd 6000 1 500 100 tdnr "[[]]"
-
 # Robosample: Generalized Coordinates Molecular Simulation Coupled with Gibbs Sampling (GCHMC)
 
 Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed robotics algorithms imlemented in Simbody and molecular modelling facilities in Molmodel to generate Markov Chain Monte Carlo moves coupled with Gibbs sampling able to reproduce the atomistic level detailed distribution of molecular systems.
@@ -54,9 +6,9 @@ Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed
 
 [More about the method.](https://pubmed.ncbi.nlm.nih.gov/28892630/)
 
-## Installing dependencies (for developers)
+## Installing dependencies
 
-### Installing the Nvidia driver
+### Installing the Nvidia driver for native Linux
 The only working driver is `proprietary`, not `open`. Remove the `open` driver and all CUDA Toolkit installations:
 ```bash
 sudo apt --fix-broken install
@@ -66,12 +18,12 @@ sudo rm -rf /usr/local/cuda*
 ```
 
 First, check what the recommended version is for your machine. To my knowledge, the last supported kernel is `6.14` (check with `uname -r`).
-```
+```bash
 ubuntu-drivers devices
 ```
 
 Install the recommended one (`nvidia-smi` will not work before you `sudo reboot`):
-```
+```bash
 sudo apt install nvidia-driver-580
 sudo reboot
 ```
@@ -85,15 +37,27 @@ sudo apt-get update
 sudo apt-get -y install cuda-toolkit-12-8
 ```
 
-At this point, you should have working `nvidia-smi`. However, `nvcc` is not available at the terminal since nothing from the CUDA Toolkit is in `$PATH`.
-It can still be accessed via the absolute path e.g. `/usr/local/cuda/bin/nvcc --version`.
-This is no problem since Robosample CMake configuration references absolute pathways to `/usr/local/cuda/bin/`.
+At this point, you should have working `nvidia-smi`.
 
-### Installing OpenGL (visualizer) and OpenCL (hardware acceleration)
+However, `nvcc` is not available at the terminal since nothing from the CUDA Toolkit is in `$PATH`. It can still be accessed via the absolute path e.g. `/usr/local/cuda/bin/nvcc --version`. This is no problem since Robosample CMake configuration references absolute pathways to `/usr/local/cuda/bin/`.
+
+### [DEPRECATED] Installing OpenGL (visualizer)
 Straightforward installation that does not interfere with CUDA:
 ```bash
 sudo update
-sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-dev libxi-dev ocl-icd-opencl-dev
+sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-dev libxi-dev
+```
+
+### Installing OpenCL for hardware acceleration
+```bash
+sudo update
+sudo apt-get install ocl-icd-opencl-dev
+```
+
+### Other dependencies
+```bash
+sudo apt-get update
+sudo apt-get install git cmake graphviz gfortran libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig fftw2 clang ninja-build linux-tools-common linux-tools-generic linux-tools-`uname -r`
 ```
 
 ### Miniforge
@@ -113,12 +77,12 @@ bash Miniforge3-$(uname)-$(uname -m).sh
 source ~/.bashrc
 ```
 
-### Other dependencies
-Install the dependencies:
+Install `mamba`:
 ```bash
-sudo apt-get update
-sudo apt-get install git cmake graphviz gfortran libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig fftw2 clang ninja-build linux-tools-common linux-tools-generic linux-tools-`uname -r`
+conda install conda-forge::mamba
 ```
+
+
 
 ### CMake
 Minimum `CMake` version is 3.17. It can be tested with:
@@ -154,54 +118,53 @@ If used as intended further into the README, the executable must be run from the
 /home/myuser/ninja
 ```
 
-## Download and compile Robosample
+## Installing Robosample
+
+### Clone Robosample
 ```bash
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
 
 cd openmm
 git checkout master
-cd ../Molmodel
-git checkout singularity
 cd ../Simbody01
 git checkout master
+cd ../Molmodel
+git checkout refactor
 cd ../
 git checkout refactor
 ```
 
-Create the build environment:
+### Create a `mamba` environment:
 ```bash
-mamba env create -f tools/robo_dev_py312.yaml
-conda activate robo_dev_py312
+mamba env create -f tools/robo_py312.yaml
+conda activate robo_py312
 ```
 
+If using `CUDA`, update the environment:
+```bash
+mamba env update -f tools/robo_py312_cuda.yaml
+```
+
+Test that `OpenMM` is installed correctly:
+```bash
+python -m openmm.testInstallation
+```
+
+If something goes wrong, delete this environment using:
+```bash
+conda deactivate
+mamba env remove -n robo_py312
+mamba clean --all
+```
+
+### Compiling Robosample
 OpenMM can use hardware acceleration. Robosample defaults with OpenCL. To set the platform, you can set it via the `cmake` command in the next step:
 * `OPENMM_PLATFORM=CPU` for CPU.
 * `OPENMM_PLATFORM=CUDA` for CUDA.
 * `OPENMM_PLATFORM=OPENCL` for OpenCL.
 
-
-### VS Code setup
-????? File → Preferences → Settings → Open Settings (JSON)
-clangd - we turn off `cpptools` IntelliSense in settings.json
-codelldb - we need lddb? idk
-
-Check: when i run "Open any .cpp file, then":
- - Press Ctrl + Shift + P
- - Run: Developer: Show Running Extensions
-
-
-
-ca sa nu schimbe la niciun calculator kernelul la update, trebuie trecut urmatorul rand in /etc/default/grub :
-
-GRUB_SAVEDEFAULT=true
-GRUB_DEFAULT=saved
-
-astfel, se va pastra ultimul kernel care a mers
-
-
-
-
+Create CMake configuration files. Note that we call `ninja`, not `ninja robosample`.
 ```bash
 mkdir -p build
 cd build
@@ -215,19 +178,17 @@ Assuming that CMake and Ninja have been installed as binaries and not from `apt-
 ~/ninja robosample
 ```
 
-If you want to use Unix Makefiles (please don't):
+If you want to use Unix Makefiles:
 ```bash
 cmake -G "Unix Makefiles" ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=CUDA
 make -j$(nproc)
 ```
 
-## Running from the Python interface
+### Running the program
 ```bash
-conda install -c conda-forge mamba
-mamba env create -f tools/robo_dev_py312.yaml
+cd build/
+python3 roborun.py 2ala_test ./data-raw/2ala.prmtop ./data-raw/2ala.inpcrd 6000 1 1 1
 ```
-
-In order to run the program under VSCode debugger, place breakpoints in `simulate.py` and run with `Python: Current File (Debug Robosample Libraries)`. After it stops, run start `(gdb) Attach to Python`, enter the PID of the `python` instance (usually, it has `-X frozen_modules=OFF` as arguments) and press the `Continue (F5)` button of the VSCode debugger. Look in the `CALL STACK` section on the left side of the screen and press `(gdb) Attach to Python` and it should take you to the breakpoint placed inside a `.cpp` file. For more details, see [this](https://nadiah.org/2020/03/01/example-debug-mixed-python-c-in-visual-studio-code/).
 
 ## LLV-BOLT (Binary Optimization and Layout Tool)
 We have applied [LLVM-BOLT](https://github.com/llvm/llvm-project/tree/main/bolt), improving the execution speed by rearranging code layout based on execution profiles from sampling profilers like `perf`.
@@ -291,57 +252,4 @@ find . -name "*.gcda" -delete
 Run the examples:
 ```bash
 bash pgo.sh
-```
-
-
-
-
-
-
-
-END OF TIME HERE DON'T GO BELOW
-
-
-
-
-
-
-
-
-## Sanitizers (**mandatory**)
-
-We use address and undefined behaviour sanitizers in our debug builds. To get the correct output, run:
-
-```bash
-echo "export ASAN_OPTIONS=detect_odr_violation=0:detect_leaks=0:protect_shadow_gap=0" >> ~/.bashrc
-echo "export UBSAN_OPTIONS=print_stacktrace=1" >> ~/.bashrc
-source ~/.bashrc
-```
-
-Explaination:
-
-* `detect_odr_violation`
-* `detect_leaks=0` - OpenMM has some memory leaks. Set `detect_leaks=1` if you want to see memory all leaks.
-* `protect_shadow_gap=0` - OpenCL and CUDA (which both use the NVIDIA driver) conflict with ASAN, as stated by [here](https://stackoverflow.com/a/68027496/3740613).
-* `print_stacktrace=1`: show which lines trigger the undefined behaviour sanitizer (UBSAN).
-
-## Fun facts
-
-To get the total number of lines in header and source files, execute this from the root directory:
-
-```bash
-find . -name '*.h' -o -name '*.cpp' | xargs wc -l
-```
-
-To see all exported symbols, use:
-
-```bash
-nm -an build/robosample | c++filt
-```
- 
-
-bash
-```
-cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
-ninja robosample
 ```

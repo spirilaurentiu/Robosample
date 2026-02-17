@@ -1,8 +1,7 @@
-name: robo_dev_py312
+name: robo_py312
 channels:
   - dacase
   - omnia
-  - nvidia/label/cuda-12.8.0
   - salilab
   - conda-forge
   - defaults
@@ -11,7 +10,6 @@ dependencies:
   - pip
   - openmm
   - openmmtools
-  - cuda-toolkit
   - scipy
   - astropy
   - networkx
@@ -27,8 +25,6 @@ dependencies:
   - seaborn
   - pandas
   - modeller
-  - MDAnalysis
-  - astropy
   - pymol-open-source
   - pip:
     - rcsbsearchapi
