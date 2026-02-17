@@ -706,9 +706,10 @@ class Context(rb.Context):
         self.cmap_torsions: list[rb.CMAPTorsion] = []
         self.cmap_grids: list[rb.CMAPGrid] = []
         
-        num_cmap_grids = len(self.parm.parm_data['CMAP_RESOLUTION'])
+        cmap_resolution = self.parm.parm_data.get('CMAP_RESOLUTION', [])
+        num_cmap_grids = len(cmap_resolution)
         for i in range(num_cmap_grids):
-            res = self.parm.parm_data['CMAP_RESOLUTION'][i]
+            res = cmap_resolution[i]
 
             key = f'CMAP_PARAMETER_{i+1:02d}'
             cmap = self.parm.parm_data[key]
