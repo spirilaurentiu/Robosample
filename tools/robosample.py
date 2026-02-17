@@ -751,23 +751,24 @@ class Context(rb.Context):
             self.cmap_grids.append(grid)
 
         # Add torsions that need correction from CMAPs
-        for i in range(0, len(self.parm.parm_data['CMAP_INDEX']), 6):
-            map_index = self.parm.parm_data['CMAP_INDEX'][i+5]
+        cmap_index = self.parm.parm_data.get('CMAP_INDEX', [])
+        for i in range(0, len(cmap_index), 6):
+            map_index = cmap_index[i+5]
             if map_index < 1 or map_index > num_cmap_grids:
                 raise ValueError(f"CMAP index out of range: {map_index}, number of CMAP grids: {num_cmap_grids}")
             
             torsion = rb.CMAPTorsion()
             torsion.mapIndex = map_index - 1
 
-            torsion.a1 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+0]-1]
-            torsion.a2 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+1]-1]
-            torsion.a3 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+2]-1]
-            torsion.a4 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+3]-1]
+            torsion.a1 = self.prmtop_to_global_index[cmap_index[i+0]-1]
+            torsion.a2 = self.prmtop_to_global_index[cmap_index[i+1]-1]
+            torsion.a3 = self.prmtop_to_global_index[cmap_index[i+2]-1]
+            torsion.a4 = self.prmtop_to_global_index[cmap_index[i+3]-1]
 
-            torsion.b1 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+1]-1]
-            torsion.b2 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+2]-1]
-            torsion.b3 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+3]-1]
-            torsion.b4 = self.prmtop_to_global_index[self.parm.parm_data['CMAP_INDEX'][i+4]-1]
+            torsion.b1 = self.prmtop_to_global_index[cmap_index[i+1]-1]
+            torsion.b2 = self.prmtop_to_global_index[cmap_index[i+2]-1]
+            torsion.b3 = self.prmtop_to_global_index[cmap_index[i+3]-1]
+            torsion.b4 = self.prmtop_to_global_index[cmap_index[i+4]-1]
 
             self.cmap_torsions.append(torsion)
 
