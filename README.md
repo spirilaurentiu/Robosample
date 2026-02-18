@@ -9,7 +9,9 @@ Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed
 ## Installing dependencies
 
 ### Installing the Nvidia driver for native Linux
+
 The only working driver is `proprietary`, not `open`. Remove the `open` driver and all CUDA Toolkit installations:
+
 ```bash
 sudo apt --fix-broken install
 sudo apt-get purge 'nvidia-*' 'cuda*'
@@ -18,18 +20,22 @@ sudo rm -rf /usr/local/cuda*
 ```
 
 First, check what the recommended version is for your machine. To my knowledge, the last supported kernel is `6.14` (check with `uname -r`).
+
 ```bash
 ubuntu-drivers devices
 ```
 
 Install the recommended one (`nvidia-smi` will not work before you `sudo reboot`):
+
 ```bash
 sudo apt install nvidia-driver-580
 sudo reboot
 ```
 
 ### Installing CUDA Toolkit 12.8
+
 Only this exact version can be used and is hard-coded inside the build files. It is forward compatible with any future CUDA toolkit versions. Download and follow instructions from [here](https://developer.nvidia.com/cuda-12-8-0-download-archive):
+
 ```bash
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
 sudo dpkg -i cuda-keyring_1.1-1_all.deb
@@ -42,7 +48,9 @@ At this point, you should have working `nvidia-smi`.
 However, `nvcc` is not available at the terminal since nothing from the CUDA Toolkit is in `$PATH`. It can still be accessed via the absolute path e.g. `/usr/local/cuda/bin/nvcc --version`. This is no problem since Robosample CMake configuration references absolute pathways to `/usr/local/cuda/bin/`.
 
 ### [DEPRECATED] Installing OpenGL (visualizer)
+
 Straightforward installation that does not interfere with CUDA:
+
 ```bash
 sudo update
 sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-dev libxi-dev
@@ -133,23 +141,27 @@ cd ../
 git checkout refactor
 ```
 
-### Create a `mamba` environment:
+### Create a `mamba` environment
+
 ```bash
 mamba env create -f tools/robo_py312.yaml
 conda activate robo_py312
 ```
 
 If using `CUDA`, update the environment:
+
 ```bash
 mamba env update -f tools/robo_py312_cuda.yaml
 ```
 
 Test that `OpenMM` is installed correctly:
+
 ```bash
 python -m openmm.testInstallation
 ```
 
 If something goes wrong, delete this environment using:
+
 ```bash
 conda deactivate
 mamba env remove -n robo_py312

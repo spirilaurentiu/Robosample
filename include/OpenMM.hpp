@@ -12,7 +12,6 @@
 #endif
 
 #include "TopologyElements.hpp"
-#include <fstream>
 
 enum NonbondedMethod : int {
     NoCutoff,
@@ -134,7 +133,10 @@ public:
 
     static void shutdown() {
         OPENMM& omm = get();
-        omm.destroy();
+
+        omm.integrator.reset();
+        omm.context.reset();
+        omm.system.reset();
         omm.initialized = false;
     }
 
@@ -161,7 +163,6 @@ public:
 
 private:
     OPENMM() = default;
-    void destroy();
 
     void ensureInitialized() const {
         SimTK_ASSERT_ALWAYS(initialized, "OPENMM::ensureInitialized(): OpenMM has not initialized.");

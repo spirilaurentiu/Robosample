@@ -1,6 +1,11 @@
 {
     // Disable Microsoft C/C++ IntelliSense since we will use clangd
     "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.enhancedColorization": "disabled",
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+
+    // Clangd configuration
     "clangd.arguments": [
         "--compile-commands-dir=build",
         "--background-index",

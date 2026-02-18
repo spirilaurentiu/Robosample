@@ -14,9 +14,6 @@ tools/demo/out.*
 tools/__pycache__/
 tools/__pycache__/*
 
-tickets.txt
-.vscode/*
-
 Doxyfile
 Doxyfile.bak
 draw/

@@ -19,7 +19,7 @@
                 "data-raw/2ala.inpcrd",
                 "6000",
                 "0",
-                "10",
+                "1",
                 "1",
             ],
             "cwd": "${workspaceFolder}/build",
@@ -38,7 +38,7 @@
                 "${workspaceFolder}/build/data-raw/2ala.inpcrd",
                 "6000",
                 "0",
-                "10",
+                "1",
                 "1"
             ],
 

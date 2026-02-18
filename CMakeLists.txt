@@ -83,12 +83,6 @@ set(ROBOSAMPLE_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/pcg-cpp/include
 )
 
-
-
-
-
-
-
 # Compiler flags for Debug and Release builds
 set(COMMON_FLAGS "-msse4.1 -mavx -Wno-c++17-extensions")
 separate_arguments(COMMON_FLAGS UNIX_COMMAND "${COMMON_FLAGS}")

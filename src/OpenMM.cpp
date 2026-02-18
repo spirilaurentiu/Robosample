@@ -1,24 +1,5 @@
 #include "OpenMM.hpp"
 
-// #define __PBC__
-
-void OPENMM::destroy() {
-    ensureInitialized();
-
-	// integrator.reset();
-	// context.reset();
-	// system.reset();
-}
-
-void addExclusionsToSet(const std::vector<std::set<int>>& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) {
-    for (int i : bonded12[fromParticle]) {
-        if (i != baseParticle)
-            exclusions.insert(i);
-        if (currentLevel > 0)
-            addExclusionsToSet(bonded12, exclusions, baseParticle, i, currentLevel-1);
-    }
-}
-
 bool OPENMM::initialize(
         uint32_t seed,
 		const std::vector<RoboAtom>& atoms,
