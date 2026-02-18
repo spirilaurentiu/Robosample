@@ -313,17 +313,17 @@ bool OPENMM::initialize(
 	// Get the integrator
 	omm.integrator = std::make_unique<OpenMM::VerletIntegrator>(0.0007); // TODO should release?
 		
-#if OPENMM_PLATFORM_CPU
+#if USE_CPU
     OpenMM::Platform* platform = new OpenMM::CpuPlatform();
     OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "CPU";
 
-#elif OPENMM_PLATFORM_CUDA
+#elif USE_CUDA
     OpenMM::Platform* platform = new OpenMM::CudaPlatform();
     OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "CUDA";
 
-#elif OPENMM_PLATFORM_OPENCL
+#elif USE_OPENCL
     OpenMM::Platform* platform = new OpenMM::OpenCLPlatform();
     OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "OpenCL";

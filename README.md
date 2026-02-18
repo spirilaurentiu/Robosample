@@ -51,7 +51,7 @@ sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-de
 ### Installing OpenCL for hardware acceleration
 ```bash
 sudo update
-sudo apt-get install ocl-icd-opencl-dev
+sudo apt-get install ocl-icd-opencl-dev clinfo
 ```
 
 ### Other dependencies
@@ -81,8 +81,6 @@ Install `mamba`:
 ```bash
 conda install conda-forge::mamba
 ```
-
-
 
 ### CMake
 Minimum `CMake` version is 3.17. It can be tested with:
@@ -158,24 +156,12 @@ mamba env remove -n robo_py312
 mamba clean --all
 ```
 
-### Compiling Robosample
-OpenMM can use hardware acceleration. Robosample defaults with OpenCL. To set the platform, you can set it via the `cmake` command in the next step:
-* `OPENMM_PLATFORM=CPU` for CPU.
-* `OPENMM_PLATFORM=CUDA` for CUDA.
-* `OPENMM_PLATFORM=OPENCL` for OpenCL.
-
-Create CMake configuration files. Note that we call `ninja`, not `ninja robosample`.
+### Configuring Robosample
+You can set the OpenMM hardware acceleration platform using `USE_CPU=ON`, `USE_OPENCL=ON` or `USE_CUDA=ON`.
 ```bash
 mkdir -p build
 cd build
-cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=CUDA
-ninja
-```
-
-Assuming that CMake and Ninja have been installed as binaries and not from `apt-get`:
-```bash
-~/cmake-3.27.7-linux-x86_64/bin/cmake -G Ninja -DCMAKE_MAKE_PROGRAM=/home/myuser/ninja -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++ -D OPENMM_PLATFORM=CUDA
-~/ninja robosample
+cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D USE_CUDA=ON
 ```
 
 If you want to use Unix Makefiles:
@@ -184,10 +170,21 @@ cmake -G "Unix Makefiles" ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=cl
 make -j$(nproc)
 ```
 
+When examining the output of the CMake configuration run, you should see:
+- `Found Python3:` pointing to the `conda` package (inside `~/miniforge3/bin`), not the system-wide Python package. This is needed to ensure that we compile for a certain version of Python specified in the development environment.
+- `Found OpenCL` pointing to the system-wide version (inside `/usr/lib/x86_64-linux-gnu/`), not the `conda` version.
+- `Found CUDAToolkit` and `Check for working CUDA compiler` both pointing to the system-wide version (inside `/usr/local/cuda`), not the `conda` version.
+
+### Compiling Robosample
+Note that we call `ninja`, not `ninja robosample`.
+```bash
+ninja
+```
+
 ### Running the program
 ```bash
 cd build/
-python3 roborun.py 2ala_test ./data-raw/2ala.prmtop ./data-raw/2ala.inpcrd 6000 1 1 1
+python3 roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 1 1 1
 ```
 
 ## LLV-BOLT (Binary Optimization and Layout Tool)

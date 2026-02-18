@@ -4,21 +4,13 @@ cmake_minimum_required(VERSION 3.17)
 # Setting it here simplifies the logic even if CUDA is not used as the OpenMM platform
 project(Robosample LANGUAGES C CXX)
 
-# Check what hardware acceleration the user wants
-set(USE_OPENMM_PLATFORM_CPU 0)
-set(USE_OPENMM_PLATFORM_CUDA 0)
-set(USE_OPENMM_PLATFORM_OPENCL 0)
-
-if(OPENMM_PLATFORM MATCHES "CPU")
-    set(USE_OPENMM_PLATFORM_CPU 1)
-elseif(OPENMM_PLATFORM MATCHES "CUDA")
-    set(USE_OPENMM_PLATFORM_CUDA 1)
-elseif(OPENMM_PLATFORM MATCHES "OPENCL")
-    set(USE_OPENMM_PLATFORM_OPENCL 1)
-endif()
+# Define mutually exclusive hardware acceleration options
+option(USE_CPU    "Enable CPU backend"    OFF)
+option(USE_CUDA   "Enable CUDA backend"   OFF)
+option(USE_OPENCL "Enable OpenCL backend" OFF)
 
 # Tell CMake to enable CUDA
-if(USE_OPENMM_PLATFORM_CUDA)
+if(USE_CUDA)
     enable_language(CUDA)
     if(NOT CMAKE_CUDA_ARCHITECTURES)
         message(FATAL_ERROR "CUDA enabled but CMAKE_CUDA_ARCHITECTURES not set")
@@ -38,32 +30,27 @@ set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 # Generate compile_commands.json for tools like clangd and code analysis
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Ensure the Python extension uses relative RPATH ($ORIGIN)
+# This prevents Conda's lib directory from shadowing system libraries
+set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+set(CMAKE_INSTALL_RPATH "$ORIGIN")
+
 # Link prerequisites
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
-
-SET(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
-if(BUILD_VISUALIZER)
-    set(OpenGL_GL_PREFERENCE LEGACY)
-    find_package(OpenGL REQUIRED)
-    find_package(GLUT REQUIRED)
+# if(BUILD_VISUALIZER)
+#     set(OpenGL_GL_PREFERENCE LEGACY)
+#     find_package(OpenGL REQUIRED)
+#     find_package(GLUT REQUIRED)
 
-    SET(VISUALIZER_LIBRARIES
-        ${OPENGL_LIBRARIES}
-        ${GLUT_LIBRARIES}
-    )
-endif()
-
-SET(LIBRARIES
-    ${BLAS_LIBRARIES}
-    ${LAPACK_LIBRARIES}
-    ${RT_LIBRARY}
-    Threads::Threads
-    ${DL_LIBRARY}
-    ${MATH_LIBRARY}
-)
+#     SET(VISUALIZER_LIBRARIES
+#         ${OPENGL_LIBRARIES}
+#         ${GLUT_LIBRARIES}
+#     )
+# endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake_modules/OpenMM.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake_modules/Simbody.cmake)
@@ -148,8 +135,6 @@ else()
 endif()
 
 # Create the Python module
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-
 add_subdirectory(pybind11)
 pybind11_add_module(${ROBOSAMPLE_LIB_NAME}
     ${CMAKE_SOURCE_DIR}/src/PyBind11.cpp
@@ -158,6 +143,14 @@ pybind11_add_module(${ROBOSAMPLE_LIB_NAME}
 
 # Add preprocessor definitions
 target_compile_definitions(${ROBOSAMPLE_LIB_NAME} PRIVATE MODULE_NAME=${ROBOSAMPLE_LIB_NAME})
+foreach(backend CPU CUDA OPENCL)
+    if(USE_${backend})
+        target_compile_definitions(${ROBOSAMPLE_LIB_NAME} PRIVATE USE_${backend}=1)
+    else()
+        target_compile_definitions(${ROBOSAMPLE_LIB_NAME} PRIVATE USE_${backend}=0)
+    endif()
+endforeach()
+
 
 # Apply common includes
 target_include_directories(${ROBOSAMPLE_LIB_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
@@ -195,27 +188,22 @@ endif()
 
 # Link with external libraries
 target_link_libraries(${ROBOSAMPLE_LIB_NAME}
-    PRIVATE dl m rt
-        ${LIBRARIES}
-        ${OPENMM_LIBRARIES}
+    PRIVATE
+        BLAS::BLAS
+        LAPACK::LAPACK
+        Threads::Threads
 )
 
-# Optional: add compile definitions to specific source files
-set(ROBOSAMPLE_COMPILE_DEFINITIONS
-    OPENMM_PLATFORM_CPU=${USE_OPENMM_PLATFORM_CPU}
-    OPENMM_PLATFORM_CUDA=${USE_OPENMM_PLATFORM_CUDA}
-    OPENMM_PLATFORM_OPENCL=${USE_OPENMM_PLATFORM_OPENCL}
-)
-
-foreach(compile_definition ${ROBOSAMPLE_COMPILE_DEFINITIONS})
-    set_property(SOURCE ${ROBOSAMPLE_C_SOURCE_FILES}
-        APPEND_STRING PROPERTY COMPILE_DEFINITIONS ${compile_definition})
-    set_property(SOURCE ${ROBOSAMPLE_CXX_SOURCE_FILES}
-        APPEND_STRING PROPERTY COMPILE_DEFINITIONS ${compile_definition})
-endforeach()
+if(USE_CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE CUDA::cuda_driver CUDA::cufft)
+elseif(USE_OPENCL)
+    find_package(OpenCL REQUIRED)
+    target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE OpenCL::OpenCL)
+endif()
 
 # Optional: dependency on OpenMM build target
-if(NOT OPENMM_PLATFORM MATCHES "CPU")
+if(NOT USE_CPU)
     add_dependencies(${ROBOSAMPLE_LIB_NAME} ${OPENMM_DEPENDENCIES})
 endif()
 

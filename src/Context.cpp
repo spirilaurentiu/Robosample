@@ -21,7 +21,7 @@ Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t thread
 	this->baseName = baseName_arg + "_" + std::to_string(seed);
 
 	// Alert user of CUDA environment variables
-#if OPENMM_PLATFORM_CUDA
+#if USE_CUDA
 	if (SimTK::Pathname::getEnvironmentVariable("CUDA_ROOT").empty()){
 		std::cerr << cwar_prefix << "CUDA_ROOT not set." << std::endl;
 	} else {

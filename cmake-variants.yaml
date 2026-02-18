@@ -29,16 +29,16 @@ openmmPlatform:
       short: CPU
       long: OpenMM CPU platform
       settings:
-        OPENMM_PLATFORM: CPU
+        USE_CPU: ON
     cuda:
       short: CUDA
       long: OpenMM CUDA platform
       settings:
-        OPENMM_PLATFORM: CUDA
+        USE_CUDA: ON
         CMAKE_CUDA_ARCHITECTURES: native
         CMAKE_CUDA_COMPILER: /usr/local/cuda/bin/nvcc
     opencl:
       short: OpenCL
       long: OpenMM OpenCL platform
       settings:
-        OPENMM_PLATFORM: OPENCL
+        USE_OPENCL: ON
