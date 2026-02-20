@@ -11,8 +11,7 @@
 #include <stack>
 
 /*!
- * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT
- * -->
+ * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT -->
 */
 Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t threads, uint32_t nofRoundsTillReblock, RUN_TYPE runType, uint32_t swapFreq, uint32_t swapFixmanFreq, bool testing)
 {
