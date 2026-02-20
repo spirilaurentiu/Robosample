@@ -6,31 +6,142 @@ Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed
 
 [More about the method.](https://pubmed.ncbi.nlm.nih.gov/28892630/)
 
-## Installing dependencies
+## Check hardware acceleration capabilities
 
-### Installing the Nvidia driver for native Linux
-
-The only working driver is `proprietary`, not `open`. Remove the `open` driver and all CUDA Toolkit installations:
+On native Linux, output should not be empty:
 
 ```bash
-sudo apt --fix-broken install
-sudo apt-get purge 'nvidia-*' 'cuda*'
-sudo apt-get autoremove
-sudo rm -rf /usr/local/cuda*
+lspci | grep -iE "vga|3d"
 ```
 
-First, check what the recommended version is for your machine. To my knowledge, the last supported kernel is `6.14` (check with `uname -r`).
+On Windows, open `Device Manager` and read the GPUs from `Display adapters`. Also, check WSL version (should be 2) in `Powershell`:
 
 ```bash
-ubuntu-drivers devices
+wsl --version
+```
+
+## CUDA
+
+### Native Linux
+
+Check that the driver (if already installed) works correctly:
+
+- Userspace tool works, driver communicates with kernel and GPU is accessible: `nvidia-smi` should output a table showing your GPU name (e.g., RTX 4090) and `Driver Version: 5xx.xx`.
+
+- Userspace tool exists: `command -v nvidia-smi` should point to `/usr/bin/nvidia-smi`. If empty, there is a `$PATH` or package issue.
+
+- Confirm kernel module is active: `cat /proc/driver/nvidia/version` and, if `nvidia-smi` works, matches `nvidia-smi --query-gpu=driver_version --format=csv,noheader`.
+
+- Kernel module is loaded: `lsmod | grep nvidia` which should output `nvidia, nvidia_drm, nvidia_modeset, nvidia_uvm`. If empty, the driver is not loaded.
+
+- Verify module actually exists: `modinfo nvidia | grep filename` and can be inserted manually: `sudo modprobe nvidia`.
+
+- `nouveau`, an open-source reverse-engineered Linux graphics driver for NVIDIA cards, is fully disabled. The following commands should return nothing: `lsmod | grep nouveau`, `cat /etc/modprobe.d/* | grep nouveau` and `lsinitramfs /boot/initrd.img-$(uname -r) | grep nouveau`.
+
+- Kernel module loads successfully: `dmesg | grep -i nvidia`.
+
+- Driver installed for current kernel: `uname -r` and `dkms status | grep nvidia` should match.
+
+- Driver bound to GPU: `lspci -k | grep -A 3 -i nvidia` which should output `Kernel driver in use: nvidia`. If it says `nouveau`, the wrong driver bound to this GPU.
+
+- Secure Boot is disabled: `mokutil --sb-state`. The DKMS-built nvidia.ko module may be blocked from loading unless it is signed and enrolled via MOK. This is one of the most common post-installation failure modes on UEFI systems.
+
+- Driver is actually visible: `lspci | grep -i nvidia`.
+
+Please note that `nvcc` is part of CUDA toolkit, not Nvidia driver, so we do not test for it here.
+
+If any of these tests fail, it means that the driver is incorrectly installed. We begin by checking what drivers we currently have installed:
+
+```bash
+dpkg -l | grep -i nvidia
+```
+
+Remove the old driver:
+
+```bash
+sudo apt purge "*nvidia*"
+sudo apt autoremove
+```
+
+Confirm that we uninstalled everything:
+
+- `lsmod | grep nvidia` should be empty.
+
+- `lspci -k | grep -A3 -i nvidia` should show `nouveau`.
+
+Drivers can be downloaded either manually from the Nnvidia website or automatically by Ubuntu. However, manual downloads don't support DKMS (Dynamic Kernel Module Support), meaning that kernel updates can potentially break the driver installation. `ubuntu-drivers` is safer because it considers Ubuntu version GLIBC and kernel stability, whereas the website just looks at the GPU model. `ubuntu-drivers` uses DKMS, meaning that the driver automatically rebuilds itself when the kernel updates. Note that both methods respect the compatibility matrix.
+
+First, check what the recommended version is for your machine:
+
+```bash
+sudo ubuntu-drivers devices
 ```
 
 Install the recommended one (`nvidia-smi` will not work before you `sudo reboot`):
 
 ```bash
-sudo apt install nvidia-driver-580
+sudo ubuntu-drivers autoinstall
 sudo reboot
 ```
+
+After reboot, check for module load errors:
+
+```bash
+dmesg | grep -i nvidia
+```
+
+Check if the driver communicates with kernel and GPU is accessible:
+
+```bash
+nvidia-smi
+```
+
+The `CUDA Version` in the `nvidia-smi` is the maximum CUDA runtime API version supported by the driver. The driver does not install any CUDA toolkit.
+
+### WSL2
+
+In `Powershell`, confirm that `nvidia-smi` works:
+
+```powershell
+nvidia-smi
+```
+
+If not already done, download and install [normal Windows driver (Game Ready or Studio)](https://www.nvidia.com/Download/index.aspx). **Do not install Linux drivers**. After installation, **reboot Windows**.
+
+Open Linux and check that:
+
+- Windows driver is exposed to WSL: `nvidia-smi` should work and `command -v nvidia-smi` should point to Windows Nvidia driver reflection `/usr/lib/wsl/lib/nvidia-smi`.
+
+- Linux Nvidia driver is not installed: `dpkg -l | grep nvidia` should be empty.
+
+- Confirm kernel module is not activate: `/proc/driver/nvidia/version` and `dkms status | grep nvidia` should be empty.
+
+- No kernel module attempts exist: `lsmod | grep nvidia` should be empty.
+
+- GPU bridge device exists: `ls -l /dev/dxg`.
+
+If any of these tests fail, it means that the driver is incorrectly installed. We begin by checking what drivers we currently have installed:
+
+```bash
+dpkg -l | grep -i nvidia
+```
+
+Remove the old driver:
+
+```bash
+sudo apt purge "*nvidia*"
+sudo apt autoremove
+```
+
+Shutdown WSL from `Powershell` and restart (WSL does not have a real reboot). Upon restart, WSL will re-link the `/usr/lib/wsl/lib` directory from the Windows host.
+
+```powershell
+wsl --shutdown
+```
+
+## OpenCL - vendor based
+
+TODO
 
 ### Installing CUDA Toolkit 12.8
 
@@ -56,28 +167,19 @@ sudo update
 sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-dev libxi-dev
 ```
 
-### Installing OpenCL for hardware acceleration
-```bash
-sudo update
-sudo apt-get install ocl-icd-opencl-dev clinfo
-```
-
-### Other dependencies
-```bash
-sudo apt-get update
-sudo apt-get install git cmake graphviz gfortran libeigen3-dev doxygen subversion libblas-dev liblapack-dev libboost-all-dev swig fftw2 clang ninja-build linux-tools-common linux-tools-generic linux-tools-`uname -r`
-```
-
 ### Miniforge
+
 We will use `miniforge`, a variant of `miniconda` that comes with `mamba` installed (`conda` but with a faster solver).
 To my knowledge, `miniconda` and `miniforge` are theoretically compatible and can run concurrently on the same machine.
 However, uncertainty still looms over this, so we prefer so remove any `miniconda` installations before doing anything else.
+
 ```bash
 conda deactivate
 ~/miniconda3/uninstall.sh
 ```
 
 Download and install `miniforge` from their [GitHub page](https://github.com/conda-forge/miniforge) using:
+
 ```bash
 cd ~
 wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
@@ -86,47 +188,15 @@ source ~/.bashrc
 ```
 
 Install `mamba`:
+
 ```bash
 conda install conda-forge::mamba
-```
-
-### CMake
-Minimum `CMake` version is 3.17. It can be tested with:
-```bash
-cmake --version
-```
-
-To install the correct version, head to the [CMake website](https://cmake.org/download/) and find the `.tar.gz` version for your operating system. The code below is an example for CMake 3.27 under Linux:
-```bash
-cd ~
-wget https://github.com/Kitware/CMake/releases/download/v3.27.7/cmake-3.27.7-linux-x86_64.tar.gz
-tar -xf cmake-3.27.7-linux-x86_64.tar.gz
-rm cmake-3.27.7-linux-x86_64.tar.gz
-```
-
-The executable is located in the `bin` folder:
-```bash
-~/cmake-3.27.7-linux-x86_64/cmake-3.27.7-linux-x86_64/bin/cmake
-```
-
-### Ninja
-There is no required Ninja version. It can also be replaced with Unix Makefiles. If installation from `apt-get` fails, downloading the binaries is recommended. Go to [Ninja website](https://ninja-build.org/) and find the [binary downloads](https://ninja-build.org/). The following is an example for version 1.11.1:
-```bash
-cd ~
-wget https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip
-unzip ninja-linux.zip
-rm ninja-linux.zip
-```
-
-If used as intended further into the README, the executable must be run from the full path:
-
-```bash
-/home/myuser/ninja
 ```
 
 ## Installing Robosample
 
 ### Clone Robosample
+
 ```bash
 git clone --recurse-submodules https://github.com/spirilaurentiu/Robosample.git
 cd Robosample
@@ -143,15 +213,11 @@ git checkout refactor
 
 ### Create a `mamba` environment
 
+The `mamba` environment contains all tools needed to configure and build the project.
+
 ```bash
-mamba env create -f tools/robo_py312.yaml
+mamba env create -f robo_py312.yaml
 conda activate robo_py312
-```
-
-If using `CUDA`, update the environment:
-
-```bash
-mamba env update -f tools/robo_py312_cuda.yaml
 ```
 
 Test that `OpenMM` is installed correctly:
@@ -168,97 +234,78 @@ mamba env remove -n robo_py312
 mamba clean --all
 ```
 
-### Configuring Robosample
-You can set the OpenMM hardware acceleration platform using `USE_CPU=ON`, `USE_OPENCL=ON` or `USE_CUDA=ON`.
+### Building Robosample
+
+The build system is organized into a matrix of Platforms and Build Types. You can combine them using the format `--preset <platform>-<type>`.
+
+Platforms: `cpu`, `opencl`, `cuda`, `reference`.
+
+Build types: `debug`, `release`, `relwithdebinfo`, `pgo-train`, `pgo-use`.
+
+While in `robosample/`:
+
 ```bash
-mkdir -p build
-cd build
-cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D USE_CUDA=ON
+cmake --preset cuda-release
+cmake --build --preset cuda-release
 ```
 
-If you want to use Unix Makefiles:
-```bash
-cmake -G "Unix Makefiles" ../ -D CMAKE_BUILD_TYPE=Release -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=CUDA
-make -j$(nproc)
-```
-
-When examining the output of the CMake configuration run, you should see:
-- `Found Python3:` pointing to the `conda` package (inside `~/miniforge3/bin`), not the system-wide Python package. This is needed to ensure that we compile for a certain version of Python specified in the development environment.
-- `Found OpenCL` pointing to the system-wide version (inside `/usr/lib/x86_64-linux-gnu/`), not the `conda` version.
-- `Found CUDAToolkit` and `Check for working CUDA compiler` both pointing to the system-wide version (inside `/usr/local/cuda`), not the `conda` version.
-
-### Compiling Robosample
-Note that we call `ninja`, not `ninja robosample`.
-```bash
-ninja
-```
+This will automatically install the Python bindings (`.so` file) into `robosample/build/robosample`.
 
 ### Running the program
+
+We provide a series of examples in `robosample/examples`. To rung the program:
+
 ```bash
-cd build/
-python3 roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 1 1 1
+cd build/robosample
+python3 roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 0 10 1
 ```
 
-## LLV-BOLT (Binary Optimization and Layout Tool)
-We have applied [LLVM-BOLT](https://github.com/llvm/llvm-project/tree/main/bolt), improving the execution speed by rearranging code layout based on execution profiles from sampling profilers like `perf`.
-Downlad BOLT and compile it:
-```bash
-cd ~
-git clone https://github.com/llvm/llvm-project.git
-cd llvm-project
-mkdir build
-cd build
-cmake -G Ninja ../llvm -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS="bolt"
-ninja bolt
-```
-
-Add BOLT to `PATH`:
-```bash
-echo "PATH=$(pwd)/bin:$PATH" >> ~/.bashrc
-source ~/.bashrc
-```
-
-Allow instrumentation:
-```bash
-sudo sysctl kernel.perf_event_paranoid=-1
-```
 
 ### Instrumentation
+
 We have discovered that running **only one** simulation round yields the best result. Also, using a larger system seems to be optimal. Perform the necessary changes in the input file and execute:
+
 ```bash
 perf record -e cycles:u -j any,u -a -o perf.data ./robosample.pgo.use inp.aper
 ```
 
 Convert the data into something that can be used by BOLT:
+
 ```bash
 perf2bolt -p perf.data robosample.pgo.use -o perf.fdata
 ```
 
 Optimize the binary:
+
 ```bash
 llvm-bolt robosample.pgo.use -o robosample.pgo.use.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 ```
 
 Compare the binaries:
+
 ```bash
 time ./robosample inp.ala10
 time ./robosample.bolt inp.ala10
 ```
 
 ## PGO (Profile Guided Optimization)
+
 PGO requires us to compile to compile Robosample once, run it a few times and compile it again taking into account the hot code paths.
 First compilation:
+
 ```bash
 cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
 ninja robosample
 ```
 
 Clear output of previous runs:
+
 ```bash
 find . -name "*.gcda" -delete
 ```
 
 Run the examples:
+
 ```bash
 bash pgo.sh
 ```

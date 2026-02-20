@@ -1,0 +1,80 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base-platform",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "ENV{CONDA_PREFIX}",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/python/robosample",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "cpu",
+      "hidden": true,
+      "inherits": "base-platform",
+      "cacheVariables": { "USE_CPU": "ON" }
+    },
+    {
+      "name": "cuda",
+      "hidden": true,
+      "inherits": "base-platform",
+      "cacheVariables": {
+        "USE_CUDA": "ON",
+        "CMAKE_CUDA_ARCHITECTURES": "native"
+      }
+    },
+    {
+      "name": "opencl",
+      "hidden": true,
+      "inherits": "base-platform",
+      "cacheVariables": { "USE_OPENCL": "ON" }
+    },
+
+    { "name": "debug-base", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "release-base", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "relwithdebinfo-base", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+    { "name": "pgo-train-base", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "PGO_Train" } },
+    { "name": "pgo-use-base", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "PGO_Use" } },
+
+    { "name": "cuda-debug", "displayName": "CUDA: Debug", "inherits": ["cuda", "debug-base"] },
+    { "name": "cuda-release", "displayName": "CUDA: Release", "inherits": ["cuda", "release-base"] },
+    { "name": "cuda-relwithdebinfo", "displayName": "CUDA: RelWithDebInfo", "inherits": ["cuda", "relwithdebinfo-base"] },
+    { "name": "cuda-pgo-train", "displayName": "CUDA: PGO Train", "inherits": ["cuda", "pgo-train-base"] },
+    { "name": "cuda-pgo-use", "displayName": "CUDA: PGO Use", "inherits": ["cuda", "pgo-use-base"] },
+
+    { "name": "opencl-debug", "displayName": "OpenCL: Debug", "inherits": ["opencl", "debug-base"] },
+    { "name": "opencl-release", "displayName": "OpenCL: Release", "inherits": ["opencl", "release-base"] },
+    { "name": "opencl-relwithdebinfo", "displayName": "OpenCL: RelWithDebInfo", "inherits": ["opencl", "relwithdebinfo-base"] },
+    { "name": "opencl-pgo-train", "displayName": "OpenCL: PGO Train", "inherits": ["opencl", "pgo-train-base"] },
+    { "name": "opencl-pgo-use", "displayName": "OpenCL: PGO Use", "inherits": ["opencl", "pgo-use-base"] },
+
+    { "name": "cpu-debug", "displayName": "CPU: Debug", "inherits": ["cpu", "debug-base"] },
+    { "name": "cpu-release", "displayName": "CPU: Release", "inherits": ["cpu", "release-base"] }
+  ],
+  "buildPresets": [
+    { "name": "cuda-debug", "configurePreset": "cuda-debug", "displayName": "Build & Install: CUDA Debug", "targets": ["install"], "jobs": 0 },
+    { "name": "cuda-release", "configurePreset": "cuda-release", "displayName": "Build & Install: CUDA Release", "targets": ["install"], "jobs": 0 },
+    { "name": "cuda-relwithdebinfo", "configurePreset": "cuda-relwithdebinfo", "displayName": "Build & Install: CUDA RelWithDebInfo", "targets": ["install"], "jobs": 0 },
+    { "name": "cuda-pgo-train", "configurePreset": "cuda-pgo-train", "displayName": "Build & Install: CUDA PGO Train", "targets": ["install"], "jobs": 0 },
+    { "name": "cuda-pgo-use", "configurePreset": "cuda-pgo-use", "displayName": "Build & Install: CUDA PGO Use", "targets": ["install"], "jobs": 0 },
+
+    { "name": "opencl-debug", "configurePreset": "opencl-debug", "displayName": "Build & Install: OpenCL Debug", "targets": ["install"], "jobs": 0 },
+    { "name": "opencl-release", "configurePreset": "opencl-release", "displayName": "Build & Install: OpenCL Release", "targets": ["install"], "jobs": 0 },
+    { "name": "opencl-relwithdebinfo", "configurePreset": "opencl-relwithdebinfo", "displayName": "Build & Install: OpenCL RelWithDebInfo", "targets": ["install"], "jobs": 0 },
+    { "name": "opencl-pgo-train", "configurePreset": "opencl-pgo-train", "displayName": "Build & Install: OpenCL PGO Train", "targets": ["install"], "jobs": 0 },
+    { "name": "opencl-pgo-use", "configurePreset": "opencl-pgo-use", "displayName": "Build & Install: OpenCL PGO Use", "targets": ["install"], "jobs": 0 },
+
+    { "name": "cpu-debug", "configurePreset": "cpu-debug", "displayName": "Build & Install: CPU Debug", "targets": ["install"], "jobs": 0 },
+    { "name": "cpu-release", "configurePreset": "cpu-release", "displayName": "Build & Install: CPU Release", "targets": ["install"], "jobs": 0 }
+  ]
+}

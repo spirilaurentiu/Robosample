@@ -2,6 +2,8 @@
 
 #include "OpenMM.h"
 
+// #include "../openmm/platforms/reference/include/ReferencePlatform.h"
+
 #if USE_CPU
     #include "../Molmodel/src/gbsa/cpuObcInterface.h"
     #include "../openmm/platforms/cpu/include/CpuPlatform.h"

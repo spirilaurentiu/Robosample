@@ -1,8 +1,11 @@
-# compilation stuff
-build
-build_debug
+# Build artifacts
+build*
+python/robosample/__pycache__/*
 doc/html
 doc/html/*
+
+# Exclude the compiled shared library
+python/robosample/*so
 
 # tools folder
 tools/__pycache__/*

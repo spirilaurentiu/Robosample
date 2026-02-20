@@ -1,13 +1,19 @@
 name: robo_py312
 channels:
-  - dacase
-  - omnia
-  - salilab
+  - dacase # added for ambertools-dac=25
+  - salilab # added for modeller
   - conda-forge
-  - defaults
 dependencies:
   - python=3.12
   - pip
+  - cmake
+  - ninja
+  - clang
+  - llvm
+  - pybind11
+  - ocl-icd
+  - opencl-headers
+  - cuda-toolkit>=12.2
   - openmm
   - openmmtools
   - scipy

@@ -53,9 +53,9 @@ Context::Context(const std::string& baseName_arg, uint32_t seed, uint32_t thread
 	this->swapEvery = swapFreq;
 	this->swapFixman = swapFixmanFreq;
 
-	foutU = std::string(baseName + "_U.bin");
-	foutUDot = std::string(baseName + "_U_dot.bin");
-	foutTorque = std::string(baseName + "_torque.bin");
+	// foutU = std::string(baseName + "_U.bin");
+	// foutUDot = std::string(baseName + "_U_dot.bin");
+	// foutTorque = std::string(baseName + "_torque.bin");
 
 	// Run in testing mode
 	this->testing = testing;

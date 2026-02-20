@@ -9,24 +9,23 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/build",
-                "ROBOSAMPLE_DEBUG": "1"
+                "PYTHONPATH": "${workspaceFolder}/python",
             },
             "envFile": "${workspaceFolder}/.env",
             "args": [
                 "2ala.test",
-                "data-raw/2ala.prmtop",
-                "data-raw/2ala.inpcrd",
+                "${workspaceFolder}/examples/2ala.prmtop",
+                "${workspaceFolder}/examples/2ala.inpcrd",
                 "6000",
                 "0",
                 "1",
                 "1",
             ],
-            "cwd": "${workspaceFolder}/build",
+            "cwd": "${workspaceFolder}",
         },
 
         {
-            "name": "Python + C++ (.so) Debug (CodeLLDB)",
+            "name": "Python + C++ Debug (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
 
