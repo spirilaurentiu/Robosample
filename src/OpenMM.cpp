@@ -299,15 +299,20 @@ bool OPENMM::initialize(
     OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "CPU";
 
-#elif USE_CUDA
-    OpenMM::Platform* platform = new OpenMM::CudaPlatform();
-    OpenMM::Platform::registerPlatform(platform);
-    constexpr auto PLATFORM_NAME = "CUDA";
+#elif USE_REFERENCE
+	OpenMM::Platform* platform = new OpenMM::ReferencePlatform();
+	OpenMM::Platform::registerPlatform(platform);
+	constexpr auto PLATFORM_NAME = "Reference";
 
 #elif USE_OPENCL
     OpenMM::Platform* platform = new OpenMM::OpenCLPlatform();
     OpenMM::Platform::registerPlatform(platform);
     constexpr auto PLATFORM_NAME = "OpenCL";
+
+#elif USE_CUDA
+    OpenMM::Platform* platform = new OpenMM::CudaPlatform();
+    OpenMM::Platform::registerPlatform(platform);
+    constexpr auto PLATFORM_NAME = "CUDA";
 #endif
 
     try {

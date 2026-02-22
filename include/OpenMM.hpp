@@ -2,11 +2,11 @@
 
 #include "OpenMM.h"
 
-// #include "../openmm/platforms/reference/include/ReferencePlatform.h"
-
 #if USE_CPU
     #include "../Molmodel/src/gbsa/cpuObcInterface.h"
     #include "../openmm/platforms/cpu/include/CpuPlatform.h"
+#elif USE_REFERENCE
+    #include "../openmm/platforms/reference/include/ReferencePlatform.h"
 #elif USE_OPENCL
     #include "../openmm/platforms/opencl/include/OpenCLPlatform.h"
 #elif USE_CUDA

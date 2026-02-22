@@ -5,9 +5,10 @@ cmake_minimum_required(VERSION 3.17)
 project(Robosample LANGUAGES C CXX)
 
 # Define mutually exclusive hardware acceleration options
-option(USE_CPU    "Enable CPU backend"    OFF)
-option(USE_CUDA   "Enable CUDA backend"   OFF)
-option(USE_OPENCL "Enable OpenCL backend" OFF)
+option(USE_CPU          "Enable CPU backend"        OFF)
+option(USE_REFERENCE    "Enable Reference backend"  OFF)
+option(USE_OPENCL       "Enable OpenCL backend"     OFF)
+option(USE_CUDA         "Enable CUDA backend"       OFF)
 
 # Tell CMake to enable CUDA
 if(USE_CUDA)
@@ -30,17 +31,11 @@ set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 # Generate compile_commands.json for tools like clangd and code analysis
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# # Ensure the Python extension uses relative RPATH ($ORIGIN)
-# # This prevents Conda's lib directory from shadowing system libraries
-# set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
-# set(CMAKE_INSTALL_RPATH "$ORIGIN")
-
 # Link prerequisites
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-# find_package(pybind11 REQUIRED)
 
 # if(BUILD_VISUALIZER)
 #     set(OpenGL_GL_PREFERENCE LEGACY)
@@ -127,7 +122,7 @@ pybind11_add_module(${ROBOSAMPLE_LIB_NAME} ${ROBOSAMPLE_SOURCE_FILES})
 
 # Add preprocessor definitions
 target_compile_definitions(${ROBOSAMPLE_LIB_NAME} PRIVATE MODULE_NAME=${ROBOSAMPLE_LIB_NAME})
-foreach(backend CPU CUDA OPENCL)
+foreach(backend CPU REFERENCE OPENCL CUDA)
     if(USE_${backend})
         target_compile_definitions(${ROBOSAMPLE_LIB_NAME} PRIVATE USE_${backend}=1)
     else()
@@ -283,7 +278,7 @@ elseif(USE_OPENCL)
 endif()
 
 # Optional: dependency on OpenMM build target
-if(NOT USE_CPU)
+if(USE_CUDA OR USE_OPENCL)
     add_dependencies(${ROBOSAMPLE_LIB_NAME} ${OPENMM_DEPENDENCIES})
 endif()
 

@@ -96,9 +96,7 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
         SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
         SET(OPENMM_INCLUDE_DIRS ${OPENMM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/openmm/platforms/opencl/src)
     ENDIF()
-
-ELSE()
-    message(ERROR "Unknown OPENMM_PLATFORM type " ${OPENMM_PLATFORM} ". Allowed types are CPU, CUDA or OPENCL")
+    
 ENDIF()
 
 # set generated files as generated to avoid warnings about missing headers
