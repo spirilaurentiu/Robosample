@@ -53,7 +53,7 @@ args = parser.parse_args()
 # Temperature replica exchange parameters
 T0 = 300.0
 T_MAX = 1000.0
-NOF_REPLICAS = 10
+NOF_REPLICAS = 5
 R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 
 # Mean first passage time to cross an energy barrier

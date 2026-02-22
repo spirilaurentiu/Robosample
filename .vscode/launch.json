@@ -11,7 +11,6 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python",
             },
-            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "2ala.test",
                 "${workspaceFolder}/examples/2ala.prmtop",
@@ -25,16 +24,15 @@
         },
 
         {
-            "name": "Python + C++ Debug (CodeLLDB)",
+            "name": "Python C++ Debug with CodeLLDB",
             "type": "lldb",
             "request": "launch",
-
-            "program": "/home/victor/miniforge3/envs/robo_dev_py312/bin/python3",
+            "program": "${command:python.interpreterPath}",
             "args": [
-                "${workspaceFolder}/build/roborun.py",
+                "${workspaceFolder}/python/robosample/roborun.py",
                 "2ala.test",
-                "${workspaceFolder}/build/data-raw/2ala.prmtop",
-                "${workspaceFolder}/build/data-raw/2ala.inpcrd",
+                "${workspaceFolder}/examples/2ala.prmtop",
+                "${workspaceFolder}/examples/2ala.inpcrd",
                 "6000",
                 "0",
                 "1",

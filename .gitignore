@@ -7,6 +7,9 @@ doc/html/*
 # Exclude the compiled shared library
 python/robosample/*so
 
+# Exclude profile data
+profile-data
+
 # tools folder
 tools/__pycache__/*
 tools/*.pyc

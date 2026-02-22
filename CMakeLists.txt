@@ -40,7 +40,7 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-find_package(pybind11 REQUIRED)
+# find_package(pybind11 REQUIRED)
 
 # if(BUILD_VISUALIZER)
 #     set(OpenGL_GL_PREFERENCE LEGACY)
@@ -82,52 +82,47 @@ set(ROBOSAMPLE_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/pcg-cpp/include
 )
 
-# Compiler flags for Debug and Release builds
-set(COMMON_FLAGS "-msse4.1 -mavx -Wno-c++17-extensions")
-separate_arguments(COMMON_FLAGS UNIX_COMMAND "${COMMON_FLAGS}")
+# Allow custom build types
+set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo PGO_Train PGO_Use CACHE STRING "" FORCE)
 
-set(DEBUG_FLAGS "-O0 -g -ggdb -fno-omit-frame-pointer") #  -fsanitize=address
-separate_arguments(DEBUG_FLAGS UNIX_COMMAND "${DEBUG_FLAGS}")
-
-set(RELEASE_FLAGS "-O3 -march=native -mtune=native")
-separate_arguments(RELEASE_FLAGS UNIX_COMMAND "${RELEASE_FLAGS}")
-
-set(RELWITHDEBINFO_FLAGS "-O3 -g3 -ggdb3 -fno-lto -fvisibility=default -fno-omit-frame-pointer -march=native -mtune=native")
-separate_arguments(RELWITHDEBINFO_FLAGS UNIX_COMMAND "${RELWITHDEBINFO_FLAGS}")
-
-set(CMAKE_CXX_STANDARD 14)
-
-# Define BOLT flags
-set(BOLT_FLAGS "-Wl,--emit-relocs")
-separate_arguments(BOLT_FLAGS UNIX_COMMAND "${BOLT_FLAGS}")
-
-# Set sanitizer flags (only for Debug build type) FOR TESTS ONLY
-set(SANITIZER_FLAGS "-fsanitize=address,leak,float-divide-by-zero")
-separate_arguments(SANITIZER_FLAGS UNIX_COMMAND "${SANITIZER_FLAGS}")
+# For single-config generators (Ninja, Make)
+if(NOT CMAKE_CONFIGURATION_TYPES)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+      Debug Release RelWithDebInfo PGO_Train PGO_Use)
+endif()
 
 # Profile-guided optimization (PGO) flags for different stages and compilers
-set(PGO_DIR ${CMAKE_BINARY_DIR}/profile-data)
-if(CMAKE_COMPILER_IS_GNUCXX)
-    set(PGO_TRAIN_FLAGS "-fprofile-generate=${PGO_DIR} -fno-reorder-blocks-and-partition")
-    set(PGO_USE_FLAGS "-fprofile-use=${PGO_DIR} -fprofile-correction -fno-reorder-blocks-and-partition")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES Clang)
-    set(PGO_TRAIN_FLAGS "-fprofile-instr-generate=${PGO_DIR}/raw.profraw")
-    set(PGO_USE_FLAGS "-fprofile-instr-use=${PGO_DIR}/data.profdata")
+set(PGO_DATA_ROOT "${CMAKE_SOURCE_DIR}/profile-data")
+file(MAKE_DIRECTORY ${PGO_DATA_ROOT})
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(PGO_TRAIN_FLAGS
+        -fprofile-generate=${PGO_DATA_ROOT}
+        -fprofile-prefix-path=${CMAKE_BINARY_DIR}
+        -fno-reorder-blocks-and-partition
+    )
+    set(PGO_USE_FLAGS
+        -fprofile-use=${PGO_DATA_ROOT}
+        -fprofile-prefix-path=${CMAKE_BINARY_DIR}
+        -fprofile-correction
+        -fno-reorder-blocks-and-partition
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(PGO_TRAIN_FLAGS
+        -fprofile-instr-generate=${PGO_DATA_ROOT}/code.profraw
+    )
+    set(PGO_USE_FLAGS
+        -fprofile-instr-use=${PGO_DATA_ROOT}/code.profdata
+    )
 endif()
 
-separate_arguments(PGO_TRAIN_FLAGS UNIX_COMMAND "${PGO_TRAIN_FLAGS}")
-separate_arguments(PGO_USE_FLAGS UNIX_COMMAND "${PGO_USE_FLAGS} -g")
-
-# Check if we can use IPO (Interprocedural Optimization) aka LTO (Link Time Optimization)
-include(CheckIPOSupported)
-check_ipo_supported(RESULT IPO_SUPPORTED)
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "PGO_Train" OR CMAKE_BUILD_TYPE STREQUAL "PGO_Use")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-else()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
-endif()
+# Disables pybind11's automatic strip post-build command
+set(CMAKE_STRIP "" CACHE FILEPATH "Strip disabled for PGO" FORCE)
 
 # Create the Python module
+add_subdirectory(pybind11)
+# add_library(${ROBOSAMPLE_LIB_NAME} SHARED ${ROBOSAMPLE_SOURCE_FILES})
+# target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE pybind11::module)
 pybind11_add_module(${ROBOSAMPLE_LIB_NAME} ${ROBOSAMPLE_SOURCE_FILES})
 
 # Add preprocessor definitions
@@ -140,33 +135,122 @@ foreach(backend CPU CUDA OPENCL)
     endif()
 endforeach()
 
+# Must come AFTER pybind11_add_module (removes the -s it just added)
+get_target_property(_link_opts ${ROBOSAMPLE_LIB_NAME} LINK_OPTIONS)
+if(_link_opts)
+    list(REMOVE_ITEM _link_opts "-s")
+    set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES LINK_OPTIONS "${_link_opts}")
+endif()
+
+# Enable Interprocedural Optimization (IPO/LTO) only for the final optimized configurations.
+# We deliberately DO NOT enable IPO for PGO_Train.
+# Rationale:
+# - The training build should collect representative execution profiles
+#   without aggressive whole-program transformations.
+# - IPO (LTO) performs cross-TU inlining and function importing, which
+#   alters call graphs and control-flow structure.
+# - If the training binary structure differs significantly from the
+#   PGO_Use binary, profile quality and mapping accuracy may degrade.
+# - Therefore:
+#       PGO_Train  -> instrumentation only
+#       PGO_Use    -> profile use + IPO
+#       Release    -> IPO (no PGO)
+#
+# This mirrors LLVM's recommended PGO workflow:
+#   1. Instrument
+#   2. Run workload
+#   3. Rebuild optimized (PGO + LTO)
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT REASON)
+
+if(NOT IPO_SUPPORTED)
+    message(FATAL_ERROR 
+        "\n"
+        "------------------------------------------------------------------\n"
+        "FATAL: IPO/LTO (Interprocedural Optimization) is required but not supported.\n"
+        "Reason: ${REASON}\n"
+        "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\n"
+        "Path:     ${CMAKE_CXX_COMPILER}\n"
+        "Linker:   ${CMAKE_LINKER}\n"
+        "------------------------------------------------------------------\n"
+        "Common Fixes:\n"
+        "1. Ensure you are using a modern linker (e.g., lld or gold).\n"
+        "2. If using LLVM from Conda, set: -DCMAKE_LINKER=llvm-ld\n"
+        "3. Check if the 'llvm-ar' and 'llvm-ranlib' wrappers are in your PATH.\n"
+    )
+endif()
+
+set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+set_property(TARGET ${ROBOSAMPLE_LIB_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PGO_USE TRUE)
+
+# Set properties for the library target
+set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    CXX_STANDARD 14
+    CXX_VISIBILITY_PRESET default
+    VISIBILITY_INLINES_HIDDEN OFF
+)
 
 # Apply common includes
 target_include_directories(${ROBOSAMPLE_LIB_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
 
-# Set PIE
-set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# Set configuration-specific compile options
+target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
+    -march=x86-64-v3
+    -mtune=generic
+    -Wno-c++17-extensions
 
-# # Apply base build flags
-# target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${BUILD_FLAGS})
+    # Debug
+    $<$<CONFIG:Debug>:
+        -O0
+        -g
+        -fno-omit-frame-pointer
+    >
 
-# Apply PGO and BOLT flags conditionally
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${DEBUG_FLAGS})
-    add_compile_definitions(_GLIBCXX_DEBUG)
-    # target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE -fsanitize=address)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS})
-elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${RELWITHDEBINFO_FLAGS})
-    target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${RELWITHDEBINFO_FLAGS})
-elseif(CMAKE_BUILD_TYPE STREQUAL "PGO_Train")
-    target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS} ${PGO_TRAIN_FLAGS})
-    target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${PGO_TRAIN_FLAGS})
-elseif(CMAKE_BUILD_TYPE STREQUAL "PGO_Use" OR CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${COMMON_FLAGS} ${RELEASE_FLAGS} ${PGO_USE_FLAGS})
-    target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE ${PGO_USE_FLAGS} ${BOLT_FLAGS})
-endif()
+    # Release
+    $<$<CONFIG:Release>:
+        -O3
+    >
+
+    # Release with Debug Info
+    $<$<CONFIG:RelWithDebInfo>:
+        -O3
+        -g3
+        -fno-omit-frame-pointer
+    >
+
+    # PGO Train (GCC)
+    $<$<CONFIG:PGO_Train>:
+        -O3
+        -g
+        -fno-omit-frame-pointer
+        ${PGO_TRAIN_FLAGS}
+    >
+
+    # PGO Use (GCC) - note that this binary will be optimized via LLVM-BOLT (perf)
+    $<$<CONFIG:PGO_Use>:
+        -O3
+        -g
+        -fno-omit-frame-pointer
+        ${PGO_USE_FLAGS}
+    >
+)
+
+# Set configuration-specific link options
+target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
+
+    # PGO Train
+    $<$<CONFIG:PGO_TRAIN>:
+        ${PGO_TRAIN_FLAGS}
+    >
+
+    # PGO Use - emit relocs for BOLT, keep debug info through LTO link
+    $<$<CONFIG:PGO_USE>:
+        ${PGO_USE_FLAGS}
+        -g
+        -Wl,--emit-relocs
+    >
+)
 
 # # Apply sanitizers (Debug only; ASAN cannot link with Python runtime)
 # if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -178,17 +262,24 @@ endif()
 # Link with external libraries
 target_link_libraries(${ROBOSAMPLE_LIB_NAME}
     PRIVATE
-        BLAS::BLAS
-        LAPACK::LAPACK
-        Threads::Threads
+    BLAS::BLAS
+    LAPACK::LAPACK
+    Threads::Threads
 )
 
 if(USE_CUDA)
     find_package(CUDAToolkit REQUIRED)
-    target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE CUDA::cuda_driver CUDA::cufft)
+    target_link_libraries(${ROBOSAMPLE_LIB_NAME}
+        PRIVATE
+        CUDA::cuda_driver 
+        CUDA::cufft
+    )
 elseif(USE_OPENCL)
     find_package(OpenCL REQUIRED)
-    target_link_libraries(${ROBOSAMPLE_LIB_NAME} PRIVATE OpenCL::OpenCL)
+    target_link_libraries(${ROBOSAMPLE_LIB_NAME}
+        PRIVATE
+        OpenCL::OpenCL
+    )
 endif()
 
 # Optional: dependency on OpenMM build target

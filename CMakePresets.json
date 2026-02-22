@@ -5,6 +5,7 @@
     "minor": 21,
     "patch": 0
   },
+
   "configurePresets": [
     {
       "name": "base-platform",
@@ -12,10 +13,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_PREFIX_PATH": "ENV{CONDA_PREFIX}",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/python/robosample",
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++"
+        "CMAKE_PREFIX_PATH": "$env{CONDA_PREFIX}",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/python/robosample"
       }
     },
     {
@@ -37,7 +36,9 @@
       "name": "opencl",
       "hidden": true,
       "inherits": "base-platform",
-      "cacheVariables": { "USE_OPENCL": "ON" }
+      "cacheVariables": {
+        "USE_OPENCL": "ON"
+      }
     },
 
     { "name": "debug-base", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
@@ -61,6 +62,7 @@
     { "name": "cpu-debug", "displayName": "CPU: Debug", "inherits": ["cpu", "debug-base"] },
     { "name": "cpu-release", "displayName": "CPU: Release", "inherits": ["cpu", "release-base"] }
   ],
+
   "buildPresets": [
     { "name": "cuda-debug", "configurePreset": "cuda-debug", "displayName": "Build & Install: CUDA Debug", "targets": ["install"], "jobs": 0 },
     { "name": "cuda-release", "configurePreset": "cuda-release", "displayName": "Build & Install: CUDA Release", "targets": ["install"], "jobs": 0 },

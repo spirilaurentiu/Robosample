@@ -145,7 +145,7 @@ TODO
 
 ### Installing CUDA Toolkit 12.8
 
-Only this exact version can be used and is hard-coded inside the build files. It is forward compatible with any future CUDA toolkit versions. Download and follow instructions from [here](https://developer.nvidia.com/cuda-12-8-0-download-archive):
+We inted to make this the oldest supported version. It is forward compatible with any future CUDA toolkit versions. Download and follow instructions [from here](https://developer.nvidia.com/cuda-12-8-0-download-archive):
 
 ```bash
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
@@ -260,7 +260,6 @@ cd build/robosample
 python3 roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 0 10 1
 ```
 
-
 ### Instrumentation
 
 We have discovered that running **only one** simulation round yields the best result. Also, using a larger system seems to be optimal. Perform the necessary changes in the input file and execute:
@@ -286,26 +285,4 @@ Compare the binaries:
 ```bash
 time ./robosample inp.ala10
 time ./robosample.bolt inp.ala10
-```
-
-## PGO (Profile Guided Optimization)
-
-PGO requires us to compile to compile Robosample once, run it a few times and compile it again taking into account the hot code paths.
-First compilation:
-
-```bash
-cmake -G Ninja ../ -D CMAKE_BUILD_TYPE=PGO_Train -D CMAKE_C_COMPILER=clang -D CMAKE_CXX_COMPILER=clang++ -D OPENMM_PLATFORM=OPENCL
-ninja robosample
-```
-
-Clear output of previous runs:
-
-```bash
-find . -name "*.gcda" -delete
-```
-
-Run the examples:
-
-```bash
-bash pgo.sh
 ```

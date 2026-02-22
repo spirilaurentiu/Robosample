@@ -1,37 +1,47 @@
 name: robo_py312
 channels:
-  - dacase # added for ambertools-dac=25
-  - salilab # added for modeller
   - conda-forge
 dependencies:
-  - python=3.12
-  - pip
+  # Build tools
+  - compilers
   - cmake
   - ninja
-  - clang
-  - llvm
-  - pybind11
+  - pkg-config
+
+  # Python
+  - python=3.12
+  - pip
+
+  # Nvidia and OpenCL
+  - nvidia::cuda-toolkit=12.8
   - ocl-icd
   - opencl-headers
-  - cuda-toolkit>=12.2
+  - clinfo
+
+  # Bioinformatics
   - openmm
   - openmmtools
-  - scipy
-  - astropy
-  - networkx
+  - dacase::ambertools-dac=25
+  - salilab::modeller
+  - rdkit
+  - openbabel
+  - parmed
   - mdtraj
   - mdanalysis
-  - matplotlib
-  - ambertools-dac=25
-  - tqdm
-  - rdkit
-  - parmed
-  - openbabel
   - biopython
-  - seaborn
-  - pandas
-  - modeller
   - pymol-open-source
+
+  # Scientific computing and data analysis
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - seaborn
+  - astropy
+  - networkx
+  - tqdm
+
+  # Pip packages
   - pip:
     - rcsbsearchapi
     - pdb2pqr

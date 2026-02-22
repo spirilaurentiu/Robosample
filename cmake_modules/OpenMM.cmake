@@ -1,3 +1,6 @@
+# Add this near the top of the file, before the IF block
+SET(OPENMM_GENERATED_CXX_FILES)
+
 # get openmm source directories
 SET(OPENMM_INCLUDE_DIRS)
 SET(OPENMM_DIRS
@@ -37,6 +40,7 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
 
     # this command is executed when building, not when running CMakeLists.txt
     ADD_CUSTOM_TARGET(CommonKernels DEPENDS ${COMMON_KERNELS_CPP} ${COMMON_KERNELS_H})
+    SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${COMMON_KERNELS_CPP})
     SET(OPENMM_DEPENDENCIES CommonKernels)
 
     SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/common)
@@ -58,6 +62,7 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
 
         # this command is executed when building, not when running CMakeLists.txt
         ADD_CUSTOM_TARGET(CudaKernels DEPENDS ${CUDA_KERNELS_CPP} ${CUDA_KERNELS_H})
+        SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${CUDA_KERNELS_CPP})
         SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} CudaKernels)
 
         SET(OPENMM_DIRS ${OPENMM_DIRS}
@@ -85,6 +90,7 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
         
         # this command is executed when building, not when running CMakeLists.txt
         ADD_CUSTOM_TARGET(OpenCLKernels DEPENDS ${OPENCL_KERNELS_CPP} ${OPENCL_KERNELS_H})
+        SET(OPENMM_GENERATED_CXX_FILES ${OPENMM_GENERATED_CXX_FILES} ${OPENCL_KERNELS_CPP})
         SET(OPENMM_DEPENDENCIES ${OPENMM_DEPENDENCIES} OpenCLKernels)
 
         SET(OPENMM_DIRS ${OPENMM_DIRS} ${CMAKE_SOURCE_DIR}/openmm/platforms/opencl)
@@ -94,6 +100,9 @@ ELSEIF(USE_CUDA OR USE_OPENCL)
 ELSE()
     message(ERROR "Unknown OPENMM_PLATFORM type " ${OPENMM_PLATFORM} ". Allowed types are CPU, CUDA or OPENCL")
 ENDIF()
+
+# set generated files as generated to avoid warnings about missing headers
+set_source_files_properties(${OPENMM_GENERATED_CXX_FILES} PROPERTIES GENERATED TRUE)
 
 # get openmm include directories
 FOREACH(subdir ${OPENMM_DIRS})
@@ -107,7 +116,7 @@ ENDFOREACH(subdir)
 
 # find source and header files
 SET(OPENMM_SOURCE_C_FILES)
-SET(OPENMM_SOURCE_CXX_FILES)
+SET(OPENMM_SOURCE_CXX_FILES ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_GENERATED_CXX_FILES})
 SET(OPENMM_SOURCE_INCLUDE_FILES)
 
 FOREACH(subdir ${OPENMM_DIRS})
