@@ -53,7 +53,7 @@ args = parser.parse_args()
 # Temperature replica exchange parameters
 T0 = 300.0
 T_MAX = 1000.0
-NOF_REPLICAS = 5
+NOF_REPLICAS = 1
 R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 
 # Mean first passage time to cross an energy barrier
@@ -61,11 +61,11 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.01 # Torsional dymaics time step is 5 fs
-MDSTEPS_TD = 15 # Torsional dynamics block trajectory length 1 ps
+TIMESTEP_TD = 1 # Torsional dymaics time step is 10 fs
+MDSTEPS_TD = 100 # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.0007 # Cartesian time step is 0.7 fs since we don't use contraints (e.g. SHAKE)
-MDSTEPS_CARTESIAN = 357 # Cartesian block trajectory length 250 fs
+MDSTEPS_CARTESIAN = 50 # Cartesian block trajectory length 250 fs
 
 # create robosample context
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)

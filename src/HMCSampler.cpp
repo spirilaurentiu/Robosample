@@ -3605,6 +3605,52 @@ def simulate_hmc_step(e):
 
 */
 
+bool integrate_test(
+	SimTK::State& advanced,
+	const SimTK::System& system,
+	const SimTK::Vector& q0,
+	const SimTK::Vector& u0,
+	const SimTK::Vector& z0,
+	const SimTK::Vector& qdot0,
+	const SimTK::Vector& udot0,
+	const SimTK::Vector& zdot0,
+	const SimTK::Vector& qdotdot0,
+	SimTK::Real timeStep, int numSteps)
+{
+	for (int step = 0; step < numSteps; ++step) {
+		advanced.updTime() = step * timeStep;
+		advanced.updQ() = q0 + timeStep*qdot0 + (timeStep*timeStep/2)*qdotdot0;
+
+		const SimTK::Vector u1_est = u0 + timeStep*udot0;
+		const SimTK::Vector z1_est = z0 + timeStep*zdot0;
+
+		system.realize(advanced, SimTK::Stage::Time);
+		system.prescribeQ(advanced);
+		system.realize(advanced, SimTK::Stage::Position);
+
+		advanced.updU() = u1_est; // u's and z's will change in advanced below
+		advanced.updZ() = z1_est;
+
+		system.realize(advanced, SimTK::Stage::Time);
+		system.prescribeQ(advanced);
+		system.realize(advanced, SimTK::Stage::Position);
+
+		std::cout << "\t[" << step << "/" << numSteps << "] integrate_test() at time: " << advanced.getTime() << std::endl
+        	<< "\t\tq0 " << q0 << std::endl
+        	<< "\t\tu0 " << u0 << std::endl
+        	<< "\t\tz0 " << z0 << std::endl
+        	<< "\t\tqdot0 " << qdot0 << std::endl
+        	<< "\t\tudot0 " << udot0 << std::endl
+        	<< "\t\tzdot0 " << zdot0 << std::endl
+        	<< "\t\tqdotdot0 " << qdotdot0 << std::endl
+        	<< "\t\tu1_est " << u1_est << std::endl
+        	<< "\t\tz1_est " << z1_est << std::endl
+        	<< "\t\tupdQ " << advanced.updQ() << std::endl;
+	}
+
+	return true;
+}
+
 /*!
  * <!--	The main function that generates a sample -->
  TODO get a state from outside, do something with it, add it to advanced state of integrator and return it
@@ -3638,6 +3684,42 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 
 	// Initialize new velocities
 	perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
+
+
+
+
+
+
+
+	if (integratorType != IntegratorType::OMMVV) {
+		int numSteps = 10;
+		integrate_test(
+			state,
+			*system,
+			state.getQ(),
+			state.getU(),
+			state.getZ(),
+			state.getQDot(),
+			state.getUDot(),
+			state.getZDot(),
+			state.getQDotDot(),
+			timestep,
+			numSteps);
+
+		return true;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 
 	// Actual integration using OpenMM or Simbody
 	// Errors during integration are caught and handled internally
@@ -3725,6 +3807,16 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 		previousEnergy.initialized = true;
 	}
 
+	// Print all proposed energy terms for debugging
+	if (true) {
+		std::cout << "\tProposed energies: "
+			<< "PE=" << proposedEnergy.potential << ", "
+			<< "KE=" << proposedEnergy.kinetic << ", "
+			<< "Fixman=" << proposedEnergy.fixman << ", "
+			<< "logSineSqrGamma2=" << proposedEnergy.logSineSqrGamma2 << ", "
+			<< "Total=" << proposedEnergy.total << std::endl;
+	}
+
 	// Perform energy checks
 	acc = integrationSuccessful && proposedEnergy.isValid(currentEnergy, beta, ndofs);
 	if (acc) {
@@ -3738,7 +3830,7 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 			std::cout << "Sample rejected by Metropolis-Hastings criterion." << std::endl;
 		}
 	} else {
-		std::cout << "\tEnergy check failed. Sample rejected." << std::endl;
+		std::cout << "\t[WARNING] Energy check failed. Sample rejected." << std::endl;
 	}
 	
 	if (acc) {

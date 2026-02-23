@@ -1083,11 +1083,11 @@ bool World::isOverconstrained() {
 		anyInvalid = anyInvalid || invalid;
 	}
 
-	// // Stop here if all mobilized bodies are valid
-	// // We don't want to print a huge table if everything is fine
-	// if (!anyInvalid) {
-	// 	return false;
-	// }
+	// Stop here if all mobilized bodies are valid
+	// We don't want to print a huge table if everything is fine
+	if (!anyInvalid) {
+		return false;
+	}
 
 	// Print mobilized bodies info
 	struct Row {
@@ -1151,7 +1151,7 @@ bool World::isOverconstrained() {
 				<< std::endl;
 	}
 
-	return false;
+	return true;
 }
 
 
@@ -4302,48 +4302,55 @@ SimTK::Real World::calcFixman(void)
 
 bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
-	bool validated = true;
-    SimTK::State& state = integrator->updAdvancedState();
-
 	// Store the original atom target locations before sampling
 	if (testing) {
 		atomTargetLocaltionsCacheOld = atomTargetLocaltionsCache;
 	}
 
-	// Generate samples
-    if (getSampler(0)->getIntegratorType() != IntegratorType::OMMVV) {
-        for (const auto& flex : flexibilities_UNCHAINED) {
-			// Lock all mobilizers' positions
-			// This effectively freezes all degrees of freedom
-            for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-				mobod.lock(state, SimTK::Motion::Position);
-			}
-
-			// Unlock one mobilizer
-			// This is the only mobilizer that will move during sampling
-			for (const auto mobIntIx : flex) {
-				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-				mobod.unlock(state);
-			}
-			
-			// Sample
-			for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-				validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
-				if (!validated) {
-					continue;
-				}
-			}
-
-			if (!validated) {
-				std::cout << "\tWorld " << ownWorldIndex << " sample rejected during sampling mobilizer " << std::endl;
-				break;
-			}
+	SimTK::State& state = integrator->updAdvancedState();
+	bool validated = true;
+	
+	for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+		validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose);
+		if (!validated) {
+			continue;
 		}
-    } else {
-        for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx)
-			validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
-    }
+	}
+
+	// // Generate samples
+    // if (getSampler(0)->getIntegratorType() != IntegratorType::OMMVV) {
+    //     for (const auto& flex : flexibilities_UNCHAINED) {
+	// 		// Lock all mobilizers' positions
+	// 		// This effectively freezes all degrees of freedom
+    //         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+	// 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	// 			mobod.lock(state, SimTK::Motion::Position);
+	// 		}
+
+	// 		// Unlock one mobilizer
+	// 		// This is the only mobilizer that will move during sampling
+	// 		for (const auto mobIntIx : flex) {
+	// 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
+	// 			mobod.unlock(state);
+	// 		}
+			
+	// 		// Sample
+	// 		for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+	// 			validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+	// 			if (!validated) {
+	// 				continue;
+	// 			}
+	// 		}
+
+	// 		if (!validated) {
+	// 			std::cout << "\tWorld " << ownWorldIndex << " sample rejected during sampling mobilizer " << std::endl;
+	// 			break;
+	// 		}
+	// 	}
+    // } else {
+    //     for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx)
+	// 		validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+    // }
 
 	// const SimTK::State& acceptedState = integrator->getAdvancedState();
 	compoundSystem->realize(state, SimTK::Stage::Position);

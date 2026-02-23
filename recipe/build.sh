@@ -11,7 +11,7 @@ cmake --build --preset cuda-pgo-train
 
 # Train PGO
 # python3 python/robosample/roborun.py ffar1 examples/ffar1.prmtop examples/ffar1.rst7 6000 0 5 1
-python3 python/robosample/roborun.py 2ala examples/2ala.prmtop examples/2ala.rst7 6000 0 5 1
+python3 python/robosample/roborun.py 2ala examples/2ala.prmtop examples/2ala.rst7 6000 0 100 1
 
 # Use PGO data to build optimized binary
 cmake --preset cuda-pgo-use
@@ -30,7 +30,7 @@ perf record \
     -o "$PERF_DATA" \
     -e cycles:u -j any,u \
     python3 python/robosample/roborun.py \
-    2ala examples/2ala.prmtop examples/2ala.rst7 6000 0 5 1
+    2ala examples/2ala.prmtop examples/2ala.rst7 6000 0 100 1
 
 # Convert perf data
 perf2bolt "$SO_PATH" \

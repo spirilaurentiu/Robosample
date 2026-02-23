@@ -169,9 +169,9 @@ void Context::loadAmberSystem(
 		topology.setBaseAtom(*rootAtom.compoundSingleAtom, SimTK::Transform());
 		topology.convertInboardBondCenterToOutboard();
 
-		std::cout << cinf_prefix << "Set root atom " << rootAtom.identity.uniqueAtomName
-				  << " for molecule " << molIx
-				  << std::endl << std::flush;
+		// std::cout << cinf_prefix << "Set root atom " << rootAtom.identity.uniqueAtomName
+		// 		  << " for molecule " << molIx
+		// 		  << std::endl << std::flush;
 
 		// Add non-ring closing bonds first
 		for(auto& bond : topology.updBonds()) {
@@ -2251,11 +2251,11 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 	if(distortOption == 0) {
 
 		// Generate samples
-		std::cout << "[EQ] World " << whichWorld
-			<< " generating " << numSamples << " samples." << std::endl;
+		// std::cout << "[EQ] World " << whichWorld
+		// 	<< " generating " << numSamples << " samples." << std::endl;
 		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
-		std::cout << "[EQ] World " << whichWorld
-			<< " generated " << numSamples << " samples." << std::endl;
+		// std::cout << "[EQ] World " << whichWorld
+		// 	<< " generated " << numSamples << " samples." << std::endl;
 
 		// size_t wIx = 1; // We want the U and UDot of the torsional dynamics world
 		// if (whichWorld == wIx) {
@@ -2609,9 +2609,14 @@ void Context::RunReplicaWorldRange(int replicaIx, int startWorldCnt, int nofWorl
 		headerToRunWorld += ", " + std::to_string(worldIndex);
 				
 		// Run
-		std::cout << "Running world " << worldIndex << " (distortIx=" << distortIx << ") for replica " << replicaIx << " at thermodynamic state " << thermoIx << std::endl;
+		std::cout << "Running world " << worldIndex <<
+			" withdistortIx=" << distortIx <<
+			" for replica " << replicaIx <<
+			" at thermodynamic state " << thermoIx <<
+			" with temperature=" << thermodynamicStates[thermoIx].getTemperature() << std::endl;
+			
 		bool validated = RunWorld(worldIndex, headerToRunWorld);
-		std::cout << "World " << worldIndex << " validated: " << validated << std::endl;
+		// std::cout << "World " << worldIndex << " validated: " << validated << std::endl;
 
 		// Transfer coordinates
 		const bool isEquilibrium = (distortIx == 0);

@@ -574,7 +574,7 @@ class Context(rb.Context):
 
                         atom1 = self.atoms[self.prmtop_to_global_index[atom1_prmtop]]
                         atom2 = self.atoms[self.prmtop_to_global_index[atom2_prmtop]]
-                        print(f"Backbone dihedral bond between atom {atom1.identity.unique_name} (global index {atom1.identity.global_index}) and atom {atom2.identity.unique_name} (global index {atom2.identity.global_index})")
+                        # print(f"Backbone dihedral bond between atom {atom1.identity.unique_name} (global index {atom1.identity.global_index}) and atom {atom2.identity.unique_name} (global index {atom2.identity.global_index})")
 
                 self.backbone_dihedral_bonds += backbone_dihedral_bonds
 
@@ -946,6 +946,7 @@ class Context(rb.Context):
         flexibilities = []
 
         if bonds_type == 'rama':
+            raise ValueError("not supported lol")
             source = self.backbone_dihedral_bonds
         elif bonds_type == 'non_redundant':
             source = self.non_redundant_bonds
