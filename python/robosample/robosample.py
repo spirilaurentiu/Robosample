@@ -851,7 +851,7 @@ class Context(rb.Context):
             #         # 	print(f"\tFound Discrete2DFunction with {func.getNumValuesX()} x values and {func.getNumValuesY()} y values.")
 
         integrator = mm.VerletIntegrator(0.001 * unit.picoseconds)
-        platform = mm.Platform.getPlatformByName('CUDA')
+        platform = mm.Platform.getPlatformByName('Refactor')
         simulation = app.Simulation(prmtop.topology, system, integrator, platform)
         simulation.context.setPositions(inpcrd.positions)
 
