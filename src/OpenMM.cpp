@@ -1,5 +1,10 @@
 #include "OpenMM.hpp"
 
+#include <chrono>
+#include <vector>
+
+
+
 bool OPENMM::initialize(
         uint32_t seed,
 		const std::vector<RoboAtom>& atoms,
@@ -463,50 +468,70 @@ void OPENMM::restorePositions() {
 	// context->setPositions(ommAtomsPositionsCache);
 }
 
+
+
 void OPENMM::getEnergyAndForces(
-	bool positionsAlreadySet,
+    bool positionsAlreadySet,
     const std::vector<NonBondedMapping>& nonBondedMappings,
     const SimTK::Vector_<SimTK::Vec3>& includedAtomStation_G,
     const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
     SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
     SimTK::Real &energy)
 {
-	ensureInitialized();
+    ensureInitialized();
+    using Clock = std::chrono::high_resolution_clock;
+    
+    // --- BLOCK 1: Set Positions ---
+    auto s1 = Clock::now();
+    if (!positionsAlreadySet) {
+        for (const auto& mapping : nonBondedMappings) {
+            const std::size_t dAIx = mapping.dummAtomIndex;
+            const std::size_t iax = mapping.includedAtomIndex;
+            const SimTK::Vec3& pos_G = includedAtomPos_G[iax];
 
-	// Set positions in OpenMM context only when requested
-	// This is to prevent setting the positions again after we integrated with OpenMM which would be wasteful
-	if (!positionsAlreadySet) {
-		for (const auto& mapping : nonBondedMappings) {
-			const std::size_t dAIx = mapping.dummAtomIndex;
-			const std::size_t iax = mapping.includedAtomIndex;
-			const SimTK::Vec3& pos_G = includedAtomPos_G[iax];
+            ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
+        }
+    }
+    auto e1 = Clock::now();
 
-			ommAtomsPositionsCache[dAIx] = OpenMM::Vec3(pos_G[0], pos_G[1], pos_G[2]);
-		}
-		context->setPositions(ommAtomsPositionsCache);
-	}
+	auto s2 = Clock::now();
+	context->setPositions(ommAtomsPositionsCache);
+	auto e2 = Clock::now();
 
-	// Get state with energy and forces
-	// Intentional value capture: relies on C++17 guaranteed copy elision.
-	const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
+    // --- BLOCK 2: Get State (The likely bottleneck) ---
+    auto s3 = Clock::now();
+    const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
+    auto e3 = Clock::now();
 
-	potentialEnergy = state.getPotentialEnergy();
-	kineticEnergy = state.getKineticEnergy();
-	const auto& forces = state.getForces();
+    // --- BLOCK 3: Energy Extraction ---
+    auto s4 = Clock::now();
+    double potentialEnergy = state.getPotentialEnergy();
+    // energy += potentialEnergy; // Uncomment if you need to update the passed reference
+    auto e4 = Clock::now();
 
-	// Return only the potential energy for now
-	energy += potentialEnergy;
-
-	// Map forces from atoms to bodies
+    // --- BLOCK 4: Force Mapping ---
+    auto s5 = Clock::now();
+    const auto& forces = state.getForces();
     for (const auto& mapping : nonBondedMappings)
     {
-		const std::size_t dAIx = mapping.dummAtomIndex;
-		const std::size_t iax = mapping.includedAtomIndex;
-		const std::size_t ibx = mapping.bodyIndex;
+        const std::size_t dAIx = mapping.dummAtomIndex;
+        const std::size_t iax = mapping.includedAtomIndex;
+        const std::size_t ibx = mapping.bodyIndex;
 
-    	const SimTK::Vec3 simForce(forces[dAIx][0], forces[dAIx][1], forces[dAIx][2]);
-    	includedBodyForces_G[ibx] += SimTK::SpatialVec(includedAtomStation_G[iax] % simForce, simForce);
+        const SimTK::Vec3 simForce(forces[dAIx][0], forces[dAIx][1], forces[dAIx][2]);
+        includedBodyForces_G[ibx] += SimTK::SpatialVec(includedAtomStation_G[iax] % simForce, simForce);
     }
+    auto e5 = Clock::now();
+
+    // --- Accumulate Results ---
+	// --- Accumulate Results ---
+    profile.block1 += std::chrono::duration<double>(e1 - s1).count();
+    profile.block2 += std::chrono::duration<double>(e2 - s2).count();
+    profile.block3 += std::chrono::duration<double>(e3 - s3).count();
+    profile.block4 += std::chrono::duration<double>(e4 - s4).count();
+	profile.block5 += std::chrono::duration<double>(e5 - s5).count();
+	profile.total += std::chrono::duration<double>(e5 - s1).count();
+    profile.counts++;
 }
 
 std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> OPENMM::computePeriodicBoxVectors_Context(

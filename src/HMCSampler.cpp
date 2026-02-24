@@ -3691,23 +3691,23 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 
 
 
-	if (integratorType != IntegratorType::OMMVV) {
-		int numSteps = 10;
-		integrate_test(
-			state,
-			*system,
-			state.getQ(),
-			state.getU(),
-			state.getZ(),
-			state.getQDot(),
-			state.getUDot(),
-			state.getZDot(),
-			state.getQDotDot(),
-			timestep,
-			numSteps);
+	// if (integratorType != IntegratorType::OMMVV) {
+	// 	int numSteps = 10;
+	// 	integrate_test(
+	// 		state,
+	// 		*system,
+	// 		state.getQ(),
+	// 		state.getU(),
+	// 		state.getZ(),
+	// 		state.getQDot(),
+	// 		state.getUDot(),
+	// 		state.getZDot(),
+	// 		state.getQDotDot(),
+	// 		timestep,
+	// 		numSteps);
 
-		return true;
-	}
+	// 	return true;
+	// }
 
 
 
