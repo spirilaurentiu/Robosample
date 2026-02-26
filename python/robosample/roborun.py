@@ -55,7 +55,7 @@ args = parser.parse_args()
 # Temperature replica exchange parameters
 T0 = 300.0
 T_MAX = 1000.0
-NOF_REPLICAS = 1
+NOF_REPLICAS = 20
 R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 
 # Mean first passage time to cross an energy barrier
@@ -73,12 +73,13 @@ MDSTEPS_CARTESIAN = 50 # Cartesian block trajectory length 250 fs
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
 context.initialize_openmm()
 
-# Add cartesian world (will integrate with OpenMM)
-context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# # Add cartesian world (will integrate with OpenMM)
+# context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add torsional world with non-redundant dihedrals
-bonds = context.getDefaultBonds('non_redundant') # [[atom1, atom2, joint_type], [atom3, atom4, joint_type], ...]
-context.addTorsionalWorld(bonds).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
+# sele = context.getDefaultBonds('non_redundant')
+sele = context.selectBonds('resid 0')
+context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
 
 # Add replicas (geometric temperature ladder)
 temperatures = []
@@ -87,15 +88,15 @@ for i in range(NOF_REPLICAS):
 
 context.initialize(temperatures)
 
-# # Run the simulation
-# context.RunREX(args.equil_steps, args.prod_steps)
+# Run the simulation
+context.RunREX(args.equil_steps, args.prod_steps)
 
-# Wrap in a lambda to pass arguments easily
-t = timeit.Timer(lambda: context.RunREX(args.equil_steps, args.prod_steps))
+# # Wrap in a lambda to pass arguments easily
+# t = timeit.Timer(lambda: context.RunREX(args.equil_steps, args.prod_steps))
 
-# Runs the function 10 times and returns total time
-total_time = t.timeit(number=1) 
-print(f"Average time: {total_time / 10:.6f}s")
+# # Runs the function 10 times and returns total time
+# total_time = t.timeit(number=1) 
+# print(f"Average time: {total_time / 10:.6f}s")
 
 # Test the simulation
 TOL = 1e-4

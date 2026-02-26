@@ -2621,7 +2621,8 @@ void Context::RunReplicaWorldRange(int replicaIx, int startWorldCnt, int nofWorl
 
 		// Transfer coordinates
 		const bool isEquilibrium = (distortIx == 0);
-		transferCoordsFromWorldToReplica(worldIndex, replicaIx, isEquilibrium);
+		const bool intoWORK = !isEquilibrium;
+		transferCoordsFromWorldToReplica(worldIndex, replicaIx, intoWORK);
 
 		if (isEquilibrium) {
 			// Calculate Q statistics
@@ -2899,7 +2900,7 @@ void Context::RunREX(int equilRounds, int prodRounds)
 
 		mixReplicas(mixIndex, 0);
 		mixIndex++;
-    	PrintNofAcceptedSwapsMatrix();
+    	// PrintNofAcceptedSwapsMatrix();
 
 		if ((mixIndex + 1) % printFreq == 0) {
 			for (int replicaIx = 0; replicaIx < nofReplicas; replicaIx++) {
@@ -3173,17 +3174,26 @@ void Context::PrintReplicas()
 
 }
 
-void Context::PrintNofAcceptedSwapsMatrix(){
+void Context::PrintNofAcceptedSwapsMatrix() {
+	const std::size_t M = nofAcceptedSwapsMatrix.size();
 
-	size_t M = nofAcceptedSwapsMatrix.size();
-
-	//std::cout << "Number of accepted swaps matrix:\n";
-	for(size_t i = 0; i < M; i++){
-		std::cout << "RSM" ;
-		for(size_t j = 0; j < M; j++){
-			std::cout << ", " << nofAcceptedSwapsMatrix[i][j] ;
+	// Compute maximum width
+	std::size_t maxWidth = 0;
+	for (std::size_t i = 0; i < M; ++i) {
+		for (std::size_t j = 0; j < M; ++j) {
+			std::ostringstream oss;
+			oss << nofAcceptedSwapsMatrix[i][j];
+			maxWidth = std::max(maxWidth, oss.str().size());
 		}
-		std::cout << "\n";
+	}
+
+	// Print aligned matrix
+	for (std::size_t i = 0; i < M; ++i) {
+		std::cout << "RSM";
+		for (std::size_t j = 0; j < M; ++j) {
+			std::cout << " " << std::setw(maxWidth) << nofAcceptedSwapsMatrix[i][j];
+		}
+		std::cout << '\n';
 	}
 }
 

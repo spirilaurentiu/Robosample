@@ -154,7 +154,7 @@ public:
 
 	/** Same as initialize **/
 	virtual void initialize() ;
-	virtual void reinitialize(std::stringstream& samplerOutStream, bool verbose) ;
+	virtual void reinitialize(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose) ;
 
 	/** ===============================
 	 * RANDOM NUMBERS

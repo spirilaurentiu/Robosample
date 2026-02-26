@@ -2,9 +2,8 @@ from dataclasses import dataclass
 from typing import Self, Iterable, Tuple, List, Set, Dict
 from collections import deque, defaultdict
 from enum import IntEnum, unique
-
+import mdtraj as md
 from contextlib import contextmanager
-
 from matplotlib import units
 import parmed as pmd
 from parmed import unit as u
@@ -851,7 +850,7 @@ class Context(rb.Context):
             #         # 	print(f"\tFound Discrete2DFunction with {func.getNumValuesX()} x values and {func.getNumValuesY()} y values.")
 
         integrator = mm.VerletIntegrator(0.001 * unit.picoseconds)
-        platform = mm.Platform.getPlatformByName('Refactor')
+        platform = mm.Platform.getPlatformByName('Reference')
         simulation = app.Simulation(prmtop.topology, system, integrator, platform)
         simulation.context.setPositions(inpcrd.positions)
 
@@ -973,6 +972,36 @@ class Context(rb.Context):
                 flexibilities[-1].append(flex)
 
         return flexibilities
+    
+    def selectBonds(self, query: str, excludeTerminal: bool = True) -> list[rb.BondFlexibility]:
+
+        # Load files and run query
+        traj = md.load(self.inpcrd, top=self.prmtop)
+        sel = traj.topology.select(query)
+        sub_traj = traj.atom_slice(sel)
+
+        # Parse all selected bonds
+        flexibilities = []
+        for bond in sub_traj.topology.bonds:
+            if excludeTerminal:
+                if bond.atom1.n_bonds == 1 or bond.atom2.n_bonds == 1:
+                    continue
+            
+            # Convert from prmtop indices to global indices
+            global_index_1 = self.prmtop_to_global_index[bond.atom1.index]
+            global_index_2 = self.prmtop_to_global_index[bond.atom2.index]
+
+            # Create flexibility
+            flex = rb.BondFlexibility()
+            flex.globalIndex1 = global_index_1
+            flex.globalIndex2 = global_index_2
+            flex.uniqueAtomName1 = self.atoms[global_index_1].identity.unique_name
+            flex.uniqueAtomName2 = self.atoms[global_index_2].identity.unique_name
+            flex.mobility = rb.BondMobility.Torsion
+
+            flexibilities.append(flex)
+
+        return [flexibilities]
     
     def addCartesianWorld(self, samplesPerRound: int = 1) -> World:
         flexibilities = []

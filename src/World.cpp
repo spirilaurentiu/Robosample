@@ -4309,6 +4309,8 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
 	SimTK::State& state = integrator->updAdvancedState();
 	bool validated = true;
+
+	updSampler(0)->reinitialize(state, worldOutStream, verbose);
 	
 	for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
 		validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose);

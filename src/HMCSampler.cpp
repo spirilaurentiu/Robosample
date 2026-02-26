@@ -129,9 +129,71 @@ void HMCSampler::initialize()
  * acception-rejection step. Also realize velocities and initialize
  * the timestepper. -->
  */
-void HMCSampler::reinitialize(std::stringstream& samplerOutStream, bool verbose)
+void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose)
 {
-	SimTK_ASSERT_ALWAYS(false, "HMCSampler::reinitialize() is not implemented yet.");
+	system->realize(state, SimTK::Stage::Position);
+
+	// Copy the original state in case we need to restore it after a rejection
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
+		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+		transformations[mbx - 1] = mobod.getBodyTransform(state);
+	}
+
+	// Set the generalized velocities scale factors
+	loadUScaleFactors(state);
+
+	// Set DuMM temperature : TODO: should propagate 0to OpenMM
+	dumm->setDuMMTemperature(temperature);
+
+	// Transformation Jacobian
+	bendStretchJacobianDetLog = 0.0;
+
+	// Compute proposed energies
+	EnergySnapshot proposedEnergy;
+
+	// This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless of the integrator type
+	// compoundSystem->realize(state, SimTK::Stage::Position);
+	proposedEnergy.potential = forces->getMultibodySystem().calcPotentialEnergy(state);
+
+	// Kinetic energy is handled independently
+	if (integratorType == IntegratorType::OMMVV){
+		proposedEnergy.kinetic = OPENMM::get().getKineticEnergy();
+	}else{
+		system->realize(state, SimTK::Stage::Velocity);
+		proposedEnergy.kinetic = matter->calcKineticEnergy(state);
+	}
+	proposedEnergy.kinetic *= this->unboostKEFactor;
+
+	// Calculate Fixman potential if needed
+	if (useFixman) {
+		if (integratorType == IntegratorType::OMMVV){
+			throw std::runtime_error("Fixman potential calculation not implemented for Cartesian integrators.");
+		}
+
+		proposedEnergy.fixman = calcFixman(state);
+		proposedEnergy.logSineSqrGamma2 = ((Topology*)rootTopology)->calcLogSineSqrGamma2(state);
+	} else {
+		proposedEnergy.fixman = 0.0;
+		proposedEnergy.logSineSqrGamma2 = 0.0;
+	}
+
+	// Get total energy
+	if (useFixman) {
+		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic + proposedEnergy.fixman - (0.5 * RT * proposedEnergy.logSineSqrGamma2);
+	} else {
+		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic;
+	}
+
+	// Initialize energies if not already done
+	if (!currentEnergy.initialized) {
+		currentEnergy = proposedEnergy;
+		currentEnergy.initialized = true;
+	}
+
+	if (!previousEnergy.initialized) {
+		previousEnergy = proposedEnergy;
+		previousEnergy.initialized = true;
+	}
 }
 
 
@@ -3657,20 +3719,6 @@ bool integrate_test(
 */
 bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose)
 {
-	system->realize(state, SimTK::Stage::Position);
-
-	// Copy the original state in case we need to restore it after a rejection
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		transformations[mbx - 1] = mobod.getBodyTransform(state);
-	}
-
-	// Set the generalized velocities scale factors
-	loadUScaleFactors(state);
-
-	// Set DuMM temperature : TODO: should propagate to OpenMM
-	dumm->setDuMMTemperature(temperature);
-	
 	// MBAT work
 	//calcSubMBATDetLog(state); // SCALEQ
 	//studyBATScale(state);
@@ -3684,12 +3732,6 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 
 	// Initialize new velocities
 	perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
-
-
-
-
-
-
 
 	// if (integratorType != IntegratorType::OMMVV) {
 	// 	int numSteps = 10;
@@ -3708,18 +3750,6 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 
 	// 	return true;
 	// }
-
-
-
-
-
-
-
-
-
-
-
-
 
 	// Actual integration using OpenMM or Simbody
 	// Errors during integration are caught and handled internally
@@ -3795,16 +3825,6 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic + proposedEnergy.fixman - (0.5 * RT * proposedEnergy.logSineSqrGamma2);
 	} else {
 		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic;
-	}
-
-	// Initialize energies if not already done
-	if (!currentEnergy.initialized) {
-		currentEnergy = proposedEnergy;
-		currentEnergy.initialized = true;
-	}
-	if (!previousEnergy.initialized) {
-		previousEnergy = proposedEnergy;
-		previousEnergy.initialized = true;
 	}
 
 	// Print all proposed energy terms for debugging

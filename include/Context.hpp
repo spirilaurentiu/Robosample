@@ -20,10 +20,10 @@ enum class ReplicaMixingScheme : int {
 
 enum class RUN_TYPE : int {
 	DEFAULT = 0,
-	REMC,
-	RENEMC,
-	RENE,
-	REBASONTOP
+	REMC, // Replica Exchange Monte Carlo
+	RENEMC, // Replica Exchange Non-Equilibrium Monte Carlo
+	RENE, // Replica Exchange Non-Equilibrium
+	REBASONTOP // Replica
 };
 
 enum class TopologyRangeType : int {
