@@ -5,6 +5,7 @@
 #include "common.h"
 #include "readAmberInput.hpp"
 
+#include <cstddef>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 

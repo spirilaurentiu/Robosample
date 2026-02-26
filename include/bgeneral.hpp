@@ -906,3 +906,36 @@ auto safe_subspan(std::vector<T>& vec, size_t start, size_t end) {
     }
     return Span<T>(&vec[start], end - start);
 }
+
+struct BondFlexibility {
+	BondFlexibility() = default;
+		
+	int globalIndex1 = -1;
+	int globalIndex2 = -1;
+	std::string uniqueAtomName1;
+	std::string uniqueAtomName2;
+	SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Default;
+};
+
+class DSU {
+public:
+    std::vector<std::size_t> parent;
+    
+    DSU(std::size_t n) {
+        parent.resize(n);
+        std::iota(parent.begin(), parent.end(), 0);
+    }
+
+    std::size_t find(std::size_t i) {
+        if (parent[i] == i) return i;
+        return parent[i] = find(parent[i]); // Path compression
+    }
+
+    void unite(std::size_t i, std::size_t j) {
+        std::size_t root_i = find(i);
+        std::size_t root_j = find(j);
+        if (root_i != root_j) {
+            parent[root_i] = root_j;
+        }
+    }
+};

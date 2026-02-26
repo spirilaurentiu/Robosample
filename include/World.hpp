@@ -149,16 +149,6 @@ enum class ROOT_MOBILITY : int {
 	PIN
 };
 
-struct BondFlexibility {
-	BondFlexibility() = default;
-		
-	int globalIndex1 = -1;
-	int globalIndex2 = -1;
-	std::string uniqueAtomName1;
-	std::string uniqueAtomName2;
-	SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Default;
-};
-
 //==============================================================================
 //                   CLASS World
 //==============================================================================

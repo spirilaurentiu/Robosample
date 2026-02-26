@@ -73,8 +73,8 @@ MDSTEPS_CARTESIAN = 50 # Cartesian block trajectory length 250 fs
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
 context.initialize_openmm()
 
-# # Add cartesian world (will integrate with OpenMM)
-# context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# Add cartesian world (will integrate with OpenMM)
+context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add torsional world with non-redundant dihedrals
 bonds = context.getDefaultBonds('non_redundant') # [[atom1, atom2, joint_type], [atom3, atom4, joint_type], ...]

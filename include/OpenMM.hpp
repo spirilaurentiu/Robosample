@@ -1,6 +1,16 @@
 #pragma once
 
+#include <array>
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <vector>
+#include <numeric>
+#include <set>
+#include <algorithm>
+
 #include "OpenMM.h"
+#include "Topology.hpp"
 
 #if USE_CPU
     #include "../Molmodel/src/gbsa/cpuObcInterface.h"
@@ -95,6 +105,20 @@ struct ForceRegistration {
 
 using OpenMMEnergyComponents = std::unordered_map<std::string, SimTK::Real>;
 
+[[nodiscard]] static inline std::pair<std::size_t, std::size_t> canonicalizeBond(std::size_t i, std::size_t j) noexcept {
+    return { std::min(i, j), std::max(i, j) };
+}
+
+[[nodiscard]] static inline std::array<std::size_t, 3> canonicalizeAngle(std::size_t i, std::size_t j, std::size_t k) noexcept {
+    return { std::min(i, k), j, std::max(i, k) };
+}
+
+[[nodiscard]] static inline std::array<std::size_t, 4> canonicalizeTorsion(std::size_t i, std::size_t j, std::size_t k, std::size_t l) noexcept {
+    const std::array<std::size_t, 4> forward{i, j, k, l};
+    const std::array<std::size_t, 4> reverse{l, k, j, i};
+    return (forward < reverse) ? forward : reverse;
+}
+
 class OPENMM {
 public:
     static bool initialize(
@@ -121,6 +145,26 @@ public:
         SimTK::Real thermostatTemperature,
         SimTK::Real collisionFrequency,
         bool testing);
+
+    static bool initialize_test(
+        uint32_t seed,
+		const std::vector<CMAPGrid>& cmapGrids,
+		const std::vector<CMAPTorsion>& cmapTorsions,
+        const std::vector<UreyBradley>& ureyBradleys,
+        bool hasNBfix,
+		int numTypes,
+		const std::vector<SimTK::Real>& acoef,
+		const std::vector<SimTK::Real>& bcoef,
+        const std::vector<std::vector<BondFlexibility>>& flexibilities,
+        const std::vector<Topology>& topologies,
+        bool useGBSAOBC2,
+        SimTK::Real gbsaSolventDielectric,
+        SimTK::Real gbsaSoluteDielectric,
+        NonbondedMethod nonbondedMethod,
+        SimTK::Real nonbondedCutoffInNm,
+        SimTK::Real thermostatTemperature,
+        SimTK::Real collisionFrequency
+    );
 
     OpenMMEnergyComponents getEnergyComponents();
 
@@ -165,6 +209,8 @@ public:
         const SimTK::Vector_<SimTK::Vec3>& includedAtomPos_G,
         SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
         SimTK::Real &energy);
+
+    std::vector<std::size_t> getRigidBodyIndices(std::size_t numAtoms, const Span<RoboBond> bonds, const std::vector<BondFlexibility>& flexibleBonds);
 
     std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(
         double a_length, double b_length, double c_length,
