@@ -302,9 +302,12 @@ def has_nbfix_fast(nb_indices: np.ndarray, num_types: int, acoef: np.ndarray, bc
     return np.any((bad_A | bad_B) & mask)
 
 
-
-
-
+def is_inter_residue(dihedral):
+    r = [dihedral.atom1.residue.idx,
+         dihedral.atom2.residue.idx,
+         dihedral.atom3.residue.idx,
+         dihedral.atom4.residue.idx]
+    return len(set(r)) > 1
 
 class Context(rb.Context):
     SIGMA_SCALE = 2**(-1./6.)
@@ -359,6 +362,48 @@ class Context(rb.Context):
         self.prmtop = prmtop
         self.inpcrd = inpcrd
         self.num_types = self.parm.pointers['NTYPES']
+
+        glycosidic_phi = []
+        glycosidic_psi = []
+        glycosidic_omega = ['O6', 'C6', 'C5', 'C4']
+
+        for x in range(7):
+            glycosidic_phi.append(['O5', 'C1', f'O{x}', f'C{x}'])
+            glycosidic_psi.append([f'C1', f'O{x}', f'C{x}', f'C{x-1}'])
+
+        sele_phi = set()
+        sele_psi = set()
+        sele_omega = set()
+
+        for dihedral in self.parm.dihedrals:
+            a1 = dihedral.atom1
+            a2 = dihedral.atom2
+            a3 = dihedral.atom3
+            a4 = dihedral.atom4
+
+            atom_types = [a1.type, a2.type, a3.type, a4.type]
+            atom_names = [a1.name, a2.name, a3.name, a4.name]
+
+            if a1.residue.idx != a4.residue.idx:
+                if atom_names in glycosidic_phi or list(reversed(atom_names)) in glycosidic_phi:
+                    if a2.residue.idx != a3.residue.idx:
+                        sele_phi.add(dihedral.atom2.idx+1)
+                        sele_phi.add(dihedral.atom3.idx+1)
+                if atom_names in glycosidic_psi or list(reversed(atom_names)) in glycosidic_psi:
+                    sele_psi.add(dihedral.atom2.idx+1)
+                    sele_psi.add(dihedral.atom3.idx+1)
+            else:
+                if atom_names == glycosidic_omega or list(reversed(atom_names)) == glycosidic_omega:
+                    sele_omega.add(dihedral.atom2.idx+1)
+                    sele_omega.add(dihedral.atom3.idx+1)
+
+        query_phi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_phi)
+        query_psi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_psi)
+        query_omega = 'sele id ' + '+'.join(f'{idx}' for idx in sele_omega)
+
+        print(query_phi)
+        print(query_psi)
+        print(query_omega)
 
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision
@@ -1001,7 +1046,7 @@ class Context(rb.Context):
 
             flexibilities.append(flex)
 
-        return [flexibilities]
+        return flexibilities
     
     def addCartesianWorld(self, samplesPerRound: int = 1) -> World:
         flexibilities = []

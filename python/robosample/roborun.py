@@ -78,7 +78,11 @@ context.initialize_openmm()
 
 # Add torsional world with non-redundant dihedrals
 # sele = context.getDefaultBonds('non_redundant')
-sele = context.selectBonds('resid 0')
+sele = [
+	context.selectBonds('resid 0'),
+	context.selectBonds('resid 1')
+]
+
 context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
 
 # Add replicas (geometric temperature ladder)
