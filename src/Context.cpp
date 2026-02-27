@@ -1,4 +1,6 @@
 #include "Context.hpp"
+#include "Compound.h"
+#include "OpenMM.hpp"
 #include "Replica.hpp"
 #include "World.hpp"
 #include "Sampler.hpp"
@@ -375,7 +377,7 @@ void Context::addWorld(
 	bool fixmanTorque,
 	int samplesPerRound,
 	ROOT_MOBILITY rootMobility,
-	const std::vector<std::vector<BondFlexibility>>& flexibilities,
+	const std::vector<std::vector<BondFlexibility>>& rollFlexibilities,
 	bool useOpenMM,
 	bool visual,
 	SimTK::Real visualizerFrequency)
@@ -444,143 +446,305 @@ void Context::addWorld(
 		rootMobilitiesStr.back().push_back("Rigid");
 	}
 
-
-	// Helper to create a normalized bond key (always min-first) e.g., (3,5) and (5,3) both become (3,5)
-	auto make_bond_key = [](int i, int j) {
-		return std::make_pair(std::min(i, j), std::max(i, j));
-	};
-
-	// This is perfectly collision-safe because std::map uses lexicographical comparison, not hashing like std::unordered_map 
-	// Key: {atom_i, atom_j}, Value: {mobility, was_satisfied}
-    struct FlexStatus { SimTK::BondMobility::Mobility mobility; bool satisfied{false}; };
-
-    std::map<std::pair<int, int>, FlexStatus> flex_map;
-	for (const auto& flex_list : flexibilities) {
-        for (const auto& flex : flex_list) {
-            flex_map[make_bond_key(flex.globalIndex1, flex.globalIndex2)] = {flex.mobility, false};
-        }
-    }
-
-	// Apply user bond flexibilities
+	// A robot (molecule) is not stored in a Compound, but in CompoundSystem which builds it from a topology (which inherits from Compound)
+	// We call setBondMobility (which is inherited from Compound) to temporarily set the bond mobility in the topology
+	// Later, when we call CompoundSystem::modelOneCompound, the bond mobilities are read from the topology and used to build the robot accordingly
 	for (auto& topology : topologies) {
-        for (auto& bond : topology.getBonds()) {
-            const int p = bond.globalIndices[0];
-            const int c = bond.globalIndices[1];
-            const auto key = make_bond_key(p, c);
+		for (auto& bond : topology.getBonds()) {
+				const int parentIndex = bond.globalIndices[0];
+				const int childIndex = bond.globalIndices[1];
 
-            SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Mobility::Rigid;
-
-			// Check if user specified flexibility for this bond
-            auto it = flex_map.find(key);
-            if (it != flex_map.end()) {
-                it->second.satisfied = true;
-
-				if (bond.ringClosing && it->second.mobility != SimTK::BondMobility::Rigid) {
-					std::cout << "\tWARNING: Custom bond mobility (" 
-						<< SimTK::BondMobility::getBondMobilityName(it->second.mobility)
-						<< ") cannot be applied to the ring-closing bond between atoms " 
-						<< atoms[p].identity.uniqueAtomName << " (index " << p << ") and "
-						<< atoms[c].identity.uniqueAtomName << " (index " << c << "). "
-						<< "Ring-closing bonds must be 'Rigid'; defaulting to Rigid mobility." 
-						<< std::endl;
-				} else {
-					mobility = it->second.mobility;
-				}
-            }
-
-			// This add a new bond mobibility to the bonds lists
-			// Each bond has precisely one bond mobility per world
-            bond.addBondMobility(mobility);
-
-			// However, this is a trick
-			// A robot (molecule) is not stored in a Compound, but in CompoundSystem which builds it from a topology (which inherits from Compound)
-			// We call setBondMobility (which is inherited from Compound) to temporarily set the bond mobility in the topology
-			// Later, when we call CompoundSystem::modelOneCompound, the bond mobilities are read from the topology and used to build the robot accordingly
-			const SimTK::Compound::AtomName parentAtomName = atoms[p].identity.uniqueAtomName;
-			const SimTK::Compound::AtomName childAtomName = atoms[c].identity.uniqueAtomName;
-			topology.setBondMobility(mobility, parentAtomName, childAtomName);
-            
-			// Print status of bond flexibility setting
-			bool verbose_local = false;
-			if (verbose_local) {
-				const RoboAtom& parentAtom = atoms[p];
-				const RoboAtom& childAtom = atoms[c];
-				std::cout << "Setting bond flexibility for atoms "
-						  << parentAtom.identity.uniqueAtomName << " (BAT index " << p << ") and "
-						  << childAtom.identity.uniqueAtomName << " (BAT index " << c << ") to "
-						  << SimTK::BondMobility::getBondMobilityName(mobility)
-						  << std::endl;
-			}
-        }
-    }
-
-    // Input sanitization: check that all user-specified flexibilities were satisfied
-    for (auto const& entry : flex_map) {
-        const FlexStatus& status = entry.second;
-        
-        if (!status.satisfied) {
-            const std::pair<int, int>& indices = entry.first;
-            std::string error_msg = "Error: User-specified bond flexibility for atoms " + 
-                                	 atoms[indices.first].identity.uniqueAtomName + " (BAT index " + std::to_string(indices.first) + ") and " +
-									 atoms[indices.second].identity.uniqueAtomName + " (BAT index " + std::to_string(indices.second) + ") " +
-									 "was not found in the system.";
-            
-            // Condition set to 'false' so the assert actually triggers when it hits this block
-            SimTK_ASSERT_ALWAYS(false, error_msg.c_str());
-        }
-    }
+				const SimTK::Compound::AtomName parentAtomName = atoms[parentIndex].identity.uniqueAtomName;
+				const SimTK::Compound::AtomName childAtomName = atoms[childIndex].identity.uniqueAtomName;
+				topology.setBondMobility(SimTK::BondMobility::Mobility::OrthoSpherical, parentAtomName, childAtomName);
+				bond.addBondMobility(SimTK::BondMobility::Mobility::OrthoSpherical);
+		}
+	}
 
 	// Let DuMM model this robot
 	worlds.back().modelTopologies();
 	worlds.back().setAtomTargetLocationsToState(atomTargetLocationsCache);
 
-	// Check that this world is not overconstrained
-	if (worlds.back().isOverconstrained()) {
-		const std::string msg = "World " + std::to_string(worldIndexes.back()) + " is overconstrained.";
-		throw std::runtime_error(msg);
-	}
+	const auto numBodies = worlds.back().getCompoundSystem().getMatterSubsystem().getNumBodies();
+	assert(numBodies == atoms.size() + 1); // +1 for the ground
 
-	// Find bodies for roll mobilities
-	std::vector<std::vector<SimTK::MobilizedBodyIndex>> rollFlexibilities;
+	std::vector<std::vector<MobodLock>> mobodLocks;
 
-	for (const auto& flex_list : flexibilities) {
-		rollFlexibilities.emplace_back();
+	for (const auto& roll : rollFlexibilities) {
 
-		for (const auto& flex : flex_list) {
-			const auto aIx1 = atoms[flex.globalIndex1].identity.compoundAtomIndex;
-			const auto aIx2 = atoms[flex.globalIndex2].identity.compoundAtomIndex;
+		// Allocate for this roll flexibility sublist
+		mobodLocks.emplace_back(numBodies);
 
-			// Sanity check
-			const auto topoIx1 = atoms[flex.globalIndex1].identity.moleculeIndex;
-			const auto topoIx2 = atoms[flex.globalIndex2].identity.moleculeIndex;
-			if (topoIx1 != topoIx2) {
-				std::string error_msg = "Error: Atoms " + atoms[flex.globalIndex1].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex1) + ") and " +
-									   atoms[flex.globalIndex2].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex2) + ") " +
-									   "are in different molecules, but a bond flexibility was specified between them.";
-				throw std::runtime_error(error_msg);
-			}
+		// Create fast lookup for this roll flexibility sublist
+		std::map<std::pair<int, int>, SimTK::BondMobility::Mobility> rollFlexMap;
+		for (const auto& flex : roll) {
+			rollFlexMap[canonicalizeBond(flex.globalIndex1, flex.globalIndex2)] = flex.mobility;
+		}
 
-			// Get mobilized bodies
-			const SimTK::MobilizedBodyIndex mbx1 = topologies[topoIx1].getAtomMobilizedBodyIndex(aIx1);
-			const SimTK::MobilizedBodyIndex mbx2 = topologies[topoIx2].getAtomMobilizedBodyIndex(aIx2);
-			if (mbx1 == mbx2) {
-				std::string error_msg = "Error: Atoms " + atoms[flex.globalIndex1].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex1) + ") and " +
-									   atoms[flex.globalIndex2].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex2) + ") " +
-									   "are in the same mobilized body, but a bond flexibility was specified between them.";
-				throw std::runtime_error(error_msg);
-			}
+		for (const auto& topology : topologies) {
+			for (auto& bond : topology.getBonds()) {
+				const SimTK::Compound::AtomIndex childAIx = bond.compoundAtomIndices[1];
+				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(childAIx, worlds.back().getForceField());
 
-			// Assign mobilized bodies
-			const SimTK::MobilizedBodyIndex mbx2Parent = worlds.back().getMatterSubsystem().getMobilizedBody(mbx2).getParentMobilizedBody();
-			if (mbx2Parent == mbx1) {
-				rollFlexibilities.back().push_back(mbx2);
-			} else {
-				rollFlexibilities.back().push_back(mbx1);
+				const auto bondKey = canonicalizeBond(bond.globalIndices[0], bond.globalIndices[1]);
+				const auto it = rollFlexMap.find(bondKey);
+
+				if (it != rollFlexMap.end()) {
+					switch (it->second) {
+						bond.addBondMobility(it->second);
+
+						// Unrestricted bond, permitting changes in stretch, bend, and torsion modes
+						case SimTK::BondMobility::Free:
+							mobodLocks.back()[mbx].lockBond = false;
+							mobodLocks.back()[mbx].lockAngle = false;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Bond has fixed length and angles, but permits rotation about the bond axis
+						case SimTK::BondMobility::Torsion:
+							mobodLocks.back()[mbx].lockBond = false;
+							mobodLocks.back()[mbx].lockAngle = false;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Bond links both atoms to the same rigid unit
+						case SimTK::BondMobility::Rigid:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = true;
+							break;
+
+						// Three rotational dofs. It allows angle flexibility besides torsion
+						case SimTK::BondMobility::BallF:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = false;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Three rotational dofs. It allows angle flexibility besides torsion
+						case SimTK::BondMobility::BallM:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = false;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Torsion plus translation along the bond
+						case SimTK::BondMobility::Cylinder:
+							mobodLocks.back()[mbx].lockBond = false;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Three translational mobilities (Cartesian)
+						case SimTK::BondMobility::Translation:
+							mobodLocks.back()[mbx].lockBond = false;
+							mobodLocks.back()[mbx].lockAngle = false;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Three translational mobilities (Cartesian)
+						case SimTK::BondMobility::FreeLine:
+							mobodLocks.back()[mbx].lockBond = false;
+							mobodLocks.back()[mbx].lockAngle = false;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Two rotational mobilities
+						case SimTK::BondMobility::LineOrientationF:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// Two rotational mobilities
+						case SimTK::BondMobility::LineOrientationM:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = false;
+							break;
+
+						// TODO Cap de bara
+						case SimTK::BondMobility::UniversalM:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = true;
+							break;
+
+						// BAT coordinates
+						case SimTK::BondMobility::Spherical:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = true;
+							break;
+
+						// Rotation perpendicular to bond and bond-1 plane
+						case SimTK::BondMobility::AnglePin:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = true;
+							break;
+
+						// Translation along bond and rotation perpendicular to bond
+						case SimTK::BondMobility::BendStretch:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = true;
+							break;
+
+						// Translation along bond
+						case SimTK::BondMobility::Slider:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = true;
+							break;
+
+						// BAT coordinates
+						case SimTK::BondMobility::OrthoSpherical:
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
+							mobodLocks.back()[mbx].lockTorsion = true;
+							break;
+
+						default:
+							throw std::runtime_error("Unknown bond mobility type for bond between atoms " + std::to_string(bond.globalIndices[0]) + " and " + std::to_string(bond.globalIndices[1]));
+					}
+				} else {
+					// No custom flexibility set, so we default to rigid
+					bond.addBondMobility(SimTK::BondMobility::Rigid);
+					mobodLocks.back()[mbx].lockBond = true;
+					mobodLocks.back()[mbx].lockAngle = true;
+					mobodLocks.back()[mbx].lockTorsion = true;
+				}
 			}
 		}
 	}
 
-	worlds.back().setFlexibilites(rollFlexibilities);
+	worlds.back().setMobodLocks(mobodLocks);
+
+	// // Helper to create a normalized bond key (always min-first) e.g., (3,5) and (5,3) both become (3,5)
+	// auto make_bond_key = [](int i, int j) {
+	// 	return std::make_pair(std::min(i, j), std::max(i, j));
+	// };
+
+	// // This is perfectly collision-safe because std::map uses lexicographical comparison, not hashing like std::unordered_map 
+	// // Key: {atom_i, atom_j}, Value: {mobility, was_satisfied}
+    // struct FlexStatus { SimTK::BondMobility::Mobility mobility; bool satisfied{false}; };
+
+    // std::map<std::pair<int, int>, FlexStatus> flex_map;
+	// for (const auto& flex_list : flexibilities) {
+    //     for (const auto& flex : flex_list) {
+    //         flex_map[make_bond_key(flex.globalIndex1, flex.globalIndex2)] = {flex.mobility, false};
+    //     }
+    // }
+
+	// // Apply user bond flexibilities
+	// for (auto& topology : topologies) {
+    //     for (auto& bond : topology.getBonds()) {
+    //         const int p = bond.globalIndices[0];
+    //         const int c = bond.globalIndices[1];
+    //         const auto key = make_bond_key(p, c);
+
+    //         SimTK::BondMobility::Mobility mobility = SimTK::BondMobility::Mobility::Rigid;
+
+	// 		// Check if user specified flexibility for this bond
+    //         auto it = flex_map.find(key);
+    //         if (it != flex_map.end()) {
+    //             it->second.satisfied = true;
+
+	// 			if (bond.ringClosing && it->second.mobility != SimTK::BondMobility::Rigid) {
+	// 				std::cout << "\tWARNING: Custom bond mobility (" 
+	// 					<< SimTK::BondMobility::getBondMobilityName(it->second.mobility)
+	// 					<< ") cannot be applied to the ring-closing bond between atoms " 
+	// 					<< atoms[p].identity.uniqueAtomName << " (index " << p << ") and "
+	// 					<< atoms[c].identity.uniqueAtomName << " (index " << c << "). "
+	// 					<< "Ring-closing bonds must be 'Rigid'; defaulting to Rigid mobility." 
+	// 					<< std::endl;
+	// 			} else {
+	// 				mobility = it->second.mobility;
+	// 			}
+    //         }
+
+	// 		// This add a new bond mobibility to the bonds lists
+	// 		// Each bond has precisely one bond mobility per world
+    //         bond.addBondMobility(mobility);
+            
+	// 		// Print status of bond flexibility setting
+	// 		bool verbose_local = false;
+	// 		if (verbose_local) {
+	// 			const RoboAtom& parentAtom = atoms[p];
+	// 			const RoboAtom& childAtom = atoms[c];
+	// 			std::cout << "Setting bond flexibility for atoms "
+	// 					  << parentAtom.identity.uniqueAtomName << " (BAT index " << p << ") and "
+	// 					  << childAtom.identity.uniqueAtomName << " (BAT index " << c << ") to "
+	// 					  << SimTK::BondMobility::getBondMobilityName(mobility)
+	// 					  << std::endl;
+	// 		}
+    //     }
+    // }
+
+    // // Input sanitization: check that all user-specified flexibilities were satisfied
+    // for (auto const& entry : flex_map) {
+    //     const FlexStatus& status = entry.second;
+        
+    //     if (!status.satisfied) {
+    //         const std::pair<int, int>& indices = entry.first;
+    //         std::string error_msg = "Error: User-specified bond flexibility for atoms " + 
+    //                             	 atoms[indices.first].identity.uniqueAtomName + " (BAT index " + std::to_string(indices.first) + ") and " +
+	// 								 atoms[indices.second].identity.uniqueAtomName + " (BAT index " + std::to_string(indices.second) + ") " +
+	// 								 "was not found in the system.";
+            
+    //         // Condition set to 'false' so the assert actually triggers when it hits this block
+    //         SimTK_ASSERT_ALWAYS(false, error_msg.c_str());
+    //     }
+    // }
+
+	// // Check that this world is not overconstrained
+	// if (worlds.back().isOverconstrained()) {
+	// 	const std::string msg = "World " + std::to_string(worldIndexes.back()) + " is overconstrained.";
+	// 	throw std::runtime_error(msg);
+	// }
+
+	// // Find bodies for roll mobilities
+	// std::vector<std::vector<SimTK::MobilizedBodyIndex>> rollFlexibilities;
+
+	// for (const auto& flex_list : flexibilities) {
+	// 	rollFlexibilities.emplace_back();
+
+	// 	for (const auto& flex : flex_list) {
+	// 		const auto aIx1 = atoms[flex.globalIndex1].identity.compoundAtomIndex;
+	// 		const auto aIx2 = atoms[flex.globalIndex2].identity.compoundAtomIndex;
+
+	// 		// Sanity check
+	// 		const auto topoIx1 = atoms[flex.globalIndex1].identity.moleculeIndex;
+	// 		const auto topoIx2 = atoms[flex.globalIndex2].identity.moleculeIndex;
+	// 		if (topoIx1 != topoIx2) {
+	// 			std::string error_msg = "Error: Atoms " + atoms[flex.globalIndex1].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex1) + ") and " +
+	// 								   atoms[flex.globalIndex2].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex2) + ") " +
+	// 								   "are in different molecules, but a bond flexibility was specified between them.";
+	// 			throw std::runtime_error(error_msg);
+	// 		}
+
+	// 		// Get mobilized bodies
+	// 		const SimTK::MobilizedBodyIndex mbx1 = topologies[topoIx1].getAtomMobilizedBodyIndex(aIx1);
+	// 		const SimTK::MobilizedBodyIndex mbx2 = topologies[topoIx2].getAtomMobilizedBodyIndex(aIx2);
+	// 		if (mbx1 == mbx2) {
+	// 			std::string error_msg = "Error: Atoms " + atoms[flex.globalIndex1].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex1) + ") and " +
+	// 								   atoms[flex.globalIndex2].identity.uniqueAtomName + " (BAT index " + std::to_string(flex.globalIndex2) + ") " +
+	// 								   "are in the same mobilized body, but a bond flexibility was specified between them.";
+	// 			throw std::runtime_error(error_msg);
+	// 		}
+
+	// 		// Assign mobilized bodies
+	// 		const SimTK::MobilizedBodyIndex mbx2Parent = worlds.back().getMatterSubsystem().getMobilizedBody(mbx2).getParentMobilizedBody();
+	// 		if (mbx2Parent == mbx1) {
+	// 			rollFlexibilities.back().push_back(mbx2);
+	// 		} else {
+	// 			rollFlexibilities.back().push_back(mbx1);
+	// 		}
+	// 	}
+	// }
+
+	// worlds.back().setFlexibilites(rollFlexibilities);
 
 	return;
 }
@@ -3152,7 +3316,6 @@ SimTK::Real Context::calcReplicaWork(int replicaIx)
 	}
 
 	return Work;
-
 }
 
 
@@ -3161,7 +3324,6 @@ SimTK::Real Context::calcReplicaWork(int replicaIx)
 */
 void Context::PrintReplicas()
 {
-
 	for (size_t replicaIx = 0; replicaIx < nofReplicas; replicaIx++){
 		replicas[replicaIx].Print();
 	}
@@ -3171,7 +3333,6 @@ void Context::PrintReplicas()
 	thermoStateIx++){
 		thermodynamicStates[thermoStateIx].Print();
 	}
-
 }
 
 void Context::PrintNofAcceptedSwapsMatrix() {

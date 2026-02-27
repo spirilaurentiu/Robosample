@@ -1,5 +1,6 @@
 #include "World.hpp"
 #include "OpenMM.hpp"
+#include "common.h"
 #include <cstdlib>
 
 void World::setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets)
@@ -1083,11 +1084,11 @@ bool World::isOverconstrained() {
 		anyInvalid = anyInvalid || invalid;
 	}
 
-	// Stop here if all mobilized bodies are valid
-	// We don't want to print a huge table if everything is fine
-	if (!anyInvalid) {
-		return false;
-	}
+	// // Stop here if all mobilized bodies are valid
+	// // We don't want to print a huge table if everything is fine
+	// if (!anyInvalid) {
+	// 	return false;
+	// }
 
 	// Print mobilized bodies info
 	struct Row {
@@ -1151,7 +1152,7 @@ bool World::isOverconstrained() {
 				<< std::endl;
 	}
 
-	return true;
+	return false;
 }
 
 
@@ -4312,29 +4313,99 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
 	updSampler(0)->reinitialize(state, worldOutStream, verbose);
 	
-	for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
-		validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose);
-		if (!validated) {
-			continue;
+
+	// Generate samples
+    if (getSampler(0)->getIntegratorType() != IntegratorType::OMMVV) {
+		// above is rollStep
+        for (const auto& mobodLock : mobodLocks) {
+			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
+				const bool lockBond = mobodLock[mbx].lockBond;
+				const bool lockAngle = mobodLock[mbx].lockAngle;
+				const bool lockTorsion = mobodLock[mbx].lockTorsion;
+
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+				// if (mbx != 5) {
+				// 	mobod.lockDofs(state, true, true, true);
+				// }
+				mobod.lockDofs(state, lockTorsion, lockAngle, lockBond);
+			}	
+
+			compoundSystem->realize(state, SimTK::Stage::Position);
+			
+			// Sample
+			for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+				validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+				if (!validated) {
+					continue;
+				}
+			}
+
+			if (!validated) {
+				std::cout << "\tWorld " << ownWorldIndex << " sample rejected during sampling mobilizer " << std::endl;
+				break;
+			}
+
+			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
+				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+				// if (mbx != 5) {
+				// 	mobod.unlock(state);
+				// }
+				mobod.unlock(state);
+			}	
 		}
-	}
+    } else {
+        for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx)
+			validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
+    }
+
+
+
+	// for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+	// 	validated &= updSampler(0)->sample_iteration(state, worldOutStream, verbose);
+	// 	if (!validated) {
+	// 		continue;
+	// 	}
+	// }
+
+	// SimTK::Assembler assembler(*compoundSystem);
 
 	// // Generate samples
     // if (getSampler(0)->getIntegratorType() != IntegratorType::OMMVV) {
     //     for (const auto& flex : flexibilities_UNCHAINED) {
-	// 		// Lock all mobilizers' positions
-	// 		// This effectively freezes all degrees of freedom
-    //         for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
+			
+	// 		// // This effectively freezes all degrees of freedom
+    //         // for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies() - 10; ++mbx){
+	// 		// 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
+	// 		// 	for (SimTK::MobilizerQIndex qIx(0); qIx < mobod.getNumQ(state); ++qIx) {
+	// 		// 		assembler.lockQ(mbx, qIx);
+
+	// 		// 		mobod.lockAt()
+	// 		// 	}
+	// 		// }
+
+	// 		// // // Unlock what we want to simulate
+	// 		// // for (const auto mbx : flex) {
+	// 		// // 	const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mbx));
+	// 		// // 	assembler.unlockQ(mbx, SimTK::MobilizerQIndex(2));
+	// 		// // }
+
+	// 		// assembler.assemble(state);
+	// 		// compoundSystem->realize(state, SimTK::Stage::Acceleration);
+
+	// 		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
 	// 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	// 			mobod.lock(state, SimTK::Motion::Position);
+	// 			const auto& q = mobod.getQAsVector(state);
+
+	// 			if (mbx != 5) {
+	// 				mobod.lockDofs(state, true, true, true);
+	// 			}
+
+	// 			// if (q.size() > 0) {
+	// 			// 	mobod.lockDofs(state, true, true, mbx != 5);
+	// 			// }
 	// 		}
 
-	// 		// Unlock one mobilizer
-	// 		// This is the only mobilizer that will move during sampling
-	// 		for (const auto mobIntIx : flex) {
-	// 			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(SimTK::MobilizedBodyIndex(mobIntIx));
-	// 			mobod.unlock(state);
-	// 		}
+	// 		compoundSystem->realize(state, SimTK::Stage::Position);
 			
 	// 		// Sample
 	// 		for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
@@ -4348,6 +4419,8 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 	// 			std::cout << "\tWorld " << ownWorldIndex << " sample rejected during sampling mobilizer " << std::endl;
 	// 			break;
 	// 		}
+
+	// 		break;
 	// 	}
     // } else {
     //     for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx)

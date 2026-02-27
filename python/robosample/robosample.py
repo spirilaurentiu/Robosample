@@ -363,47 +363,47 @@ class Context(rb.Context):
         self.inpcrd = inpcrd
         self.num_types = self.parm.pointers['NTYPES']
 
-        glycosidic_phi = []
-        glycosidic_psi = []
-        glycosidic_omega = ['O6', 'C6', 'C5', 'C4']
+        # glycosidic_phi = []
+        # glycosidic_psi = []
+        # glycosidic_omega = ['O6', 'C6', 'C5', 'C4']
 
-        for x in range(7):
-            glycosidic_phi.append(['O5', 'C1', f'O{x}', f'C{x}'])
-            glycosidic_psi.append([f'C1', f'O{x}', f'C{x}', f'C{x-1}'])
+        # for x in range(7):
+        #     glycosidic_phi.append(['O5', 'C1', f'O{x}', f'C{x}'])
+        #     glycosidic_psi.append([f'C1', f'O{x}', f'C{x}', f'C{x-1}'])
 
-        sele_phi = set()
-        sele_psi = set()
-        sele_omega = set()
+        # sele_phi = set()
+        # sele_psi = set()
+        # sele_omega = set()
 
-        for dihedral in self.parm.dihedrals:
-            a1 = dihedral.atom1
-            a2 = dihedral.atom2
-            a3 = dihedral.atom3
-            a4 = dihedral.atom4
+        # for dihedral in self.parm.dihedrals:
+        #     a1 = dihedral.atom1
+        #     a2 = dihedral.atom2
+        #     a3 = dihedral.atom3
+        #     a4 = dihedral.atom4
 
-            atom_types = [a1.type, a2.type, a3.type, a4.type]
-            atom_names = [a1.name, a2.name, a3.name, a4.name]
+        #     atom_types = [a1.type, a2.type, a3.type, a4.type]
+        #     atom_names = [a1.name, a2.name, a3.name, a4.name]
 
-            if a1.residue.idx != a4.residue.idx:
-                if atom_names in glycosidic_phi or list(reversed(atom_names)) in glycosidic_phi:
-                    if a2.residue.idx != a3.residue.idx:
-                        sele_phi.add(dihedral.atom2.idx+1)
-                        sele_phi.add(dihedral.atom3.idx+1)
-                if atom_names in glycosidic_psi or list(reversed(atom_names)) in glycosidic_psi:
-                    sele_psi.add(dihedral.atom2.idx+1)
-                    sele_psi.add(dihedral.atom3.idx+1)
-            else:
-                if atom_names == glycosidic_omega or list(reversed(atom_names)) == glycosidic_omega:
-                    sele_omega.add(dihedral.atom2.idx+1)
-                    sele_omega.add(dihedral.atom3.idx+1)
+        #     if a1.residue.idx != a4.residue.idx:
+        #         if atom_names in glycosidic_phi or list(reversed(atom_names)) in glycosidic_phi:
+        #             if a2.residue.idx != a3.residue.idx:
+        #                 sele_phi.add(dihedral.atom2.idx+1)
+        #                 sele_phi.add(dihedral.atom3.idx+1)
+        #         if atom_names in glycosidic_psi or list(reversed(atom_names)) in glycosidic_psi:
+        #             sele_psi.add(dihedral.atom2.idx+1)
+        #             sele_psi.add(dihedral.atom3.idx+1)
+        #     else:
+        #         if atom_names == glycosidic_omega or list(reversed(atom_names)) == glycosidic_omega:
+        #             sele_omega.add(dihedral.atom2.idx+1)
+        #             sele_omega.add(dihedral.atom3.idx+1)
 
-        query_phi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_phi)
-        query_psi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_psi)
-        query_omega = 'sele id ' + '+'.join(f'{idx}' for idx in sele_omega)
+        # query_phi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_phi)
+        # query_psi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_psi)
+        # query_omega = 'sele id ' + '+'.join(f'{idx}' for idx in sele_omega)
 
-        print(query_phi)
-        print(query_psi)
-        print(query_omega)
+        # print(query_phi)
+        # print(query_psi)
+        # print(query_omega)
 
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision
@@ -597,8 +597,7 @@ class Context(rb.Context):
 
                 # Add non-redundant bonds
                 # We don't convert to global indices and must keep original prmtop ones
-                nrb = [(p1+self.num_atom_offset, p2+self.num_atom_offset) for p1, p2 in molecule_prototypes[prototype_index].non_redundant_bonds]
-                self.non_redundant_bonds += [nrb]
+                self.non_redundant_bonds += [(p1+self.num_atom_offset, p2+self.num_atom_offset) for p1, p2 in molecule_prototypes[prototype_index].non_redundant_bonds]
 
                 # Backbone dihedral bonds
                 # Again, we keep original prmtop indices
@@ -993,7 +992,7 @@ class Context(rb.Context):
             raise ValueError("not supported lol")
             source = self.backbone_dihedral_bonds
         elif bonds_type == 'non_redundant':
-            source = self.non_redundant_bonds
+            source = [self.non_redundant_bonds]
         else:
             raise ValueError(f"Unsupported bonds_type: {bonds_type}")
 

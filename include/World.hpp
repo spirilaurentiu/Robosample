@@ -149,6 +149,12 @@ enum class ROOT_MOBILITY : int {
 	PIN
 };
 
+struct MobodLock {
+	bool lockBond;
+	bool lockAngle;
+	bool lockTorsion;
+};
+
 //==============================================================================
 //                   CLASS World
 //==============================================================================
@@ -165,6 +171,10 @@ public:
 
 	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocationsCache() const {
 		return atomTargetLocaltionsCache;
+	}
+
+	void setMobodLocks(const std::vector<std::vector<MobodLock>>& mobodLocks) {
+		this->mobodLocks = mobodLocks;
 	}
 
 	void setFlexibilities(const std::vector<BondFlexibility>& flexibilities);
@@ -1074,6 +1084,8 @@ private:
 	std::vector<BondFlexibility> flexibilities;
 	std::vector<std::vector<BondFlexibility>> rollFlexibilities;
 	bool isRollFlexibilities = false;
+
+	std::vector<std::vector<MobodLock>> mobodLocks;
 
 	// Default return value for non-existing topology atom, pair
 	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};

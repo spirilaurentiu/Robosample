@@ -55,7 +55,7 @@ args = parser.parse_args()
 # Temperature replica exchange parameters
 T0 = 300.0
 T_MAX = 1000.0
-NOF_REPLICAS = 20
+NOF_REPLICAS = 1
 R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 
 # Mean first passage time to cross an energy barrier
@@ -80,7 +80,7 @@ context.initialize_openmm()
 # sele = context.getDefaultBonds('non_redundant')
 sele = [
 	context.selectBonds('resid 0'),
-	context.selectBonds('resid 1')
+	# context.selectBonds('resid 1')
 ]
 
 context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)

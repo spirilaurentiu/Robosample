@@ -3719,6 +3719,12 @@ bool integrate_test(
 */
 bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose)
 {
+	// matter->invalidateSubsystemTopologyCache();
+	// state = system->realizeTopology();
+	// system->realize(state, SimTK::Stage::Position);
+
+	// world->integrator->updAdvancedState() = state;
+
 	// MBAT work
 	//calcSubMBATDetLog(state); // SCALEQ
 	//studyBATScale(state);

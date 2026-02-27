@@ -257,7 +257,7 @@ We provide a series of examples in `robosample/examples`. To rung the program:
 
 ```bash
 cd build/robosample
-python3 roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 0 10 1
+python3 robosample/roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 0 1 1
 ```
 
 ### Instrumentation
