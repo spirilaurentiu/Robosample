@@ -194,6 +194,9 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
 		previousEnergy = proposedEnergy;
 		previousEnergy.initialized = true;
 	}
+
+	// Initialize new velocities
+	perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
 }
 
 
@@ -3736,8 +3739,7 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 		adaptWorldBlocks(state);
 	}
 
-	// Initialize new velocities
-	perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
+	
 
 	// if (integratorType != IntegratorType::OMMVV) {
 	// 	int numSteps = 10;

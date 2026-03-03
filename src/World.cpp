@@ -1,4 +1,5 @@
 #include "World.hpp"
+#include "Constraint.h"
 #include "OpenMM.hpp"
 #include "common.h"
 #include <cstdlib>
@@ -4317,20 +4318,42 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 	// Generate samples
     if (getSampler(0)->getIntegratorType() != IntegratorType::OMMVV) {
 		// above is rollStep
+
+		std::cout << "numU=" << state.getNU() << ", numQ=" << state.getNQ() << std::endl; 
+
         for (const auto& mobodLock : mobodLocks) {
-			for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
+			for (SimTK::MobilizedBodyIndex mbx(0); mbx < matter->getNumBodies(); ++mbx) {
 				const bool lockBond = mobodLock[mbx].lockBond;
 				const bool lockAngle = mobodLock[mbx].lockAngle;
 				const bool lockTorsion = mobodLock[mbx].lockTorsion;
 
 				const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-				// if (mbx != 5) {
+				// mobod.lockDofs(state, false, false, true);
+
+				// SimTK::Mobiliz
+				// compoundSystem->prescribeQ(state);
+				// SimTK::MobilizedBody::Spherical& sphere = SimTK::MobilizedBody::Spherical::downcast(mobod);
+
+				// SimTK::MobilizedBody::SphericalCoords &sphere = (SimTK::MobilizedBody::SphericalCoords&)matter->updMobilizedBody(mbx);
+				// sphere->set
+				
+				// sphere.setRadialAxis(CoordinateAxis)
+
+				mobod.lock(state);
+				
+				// if (mbx < 10) {
+				// 	// BLOCK all dofs
 				// 	mobod.lockDofs(state, true, true, true);
+				// } else {
+				// 	// Do not block any DOF
+				// 	mobod.lockDofs(state, false, true, true);
 				// }
-				mobod.lockDofs(state, lockTorsion, lockAngle, lockBond);
+				// mobod.lockDofs(state, lockTorsion, lockAngle, lockBond);
 			}	
 
 			compoundSystem->realize(state, SimTK::Stage::Position);
+
+			std::cout << "numU=" << state.getNU() << ", numQ=" << state.getNQ() << std::endl; 
 			
 			// Sample
 			for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {

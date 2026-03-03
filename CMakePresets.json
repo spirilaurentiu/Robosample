@@ -14,7 +14,8 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_PREFIX_PATH": "$env{CONDA_PREFIX}",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/python/robosample"
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/python/robosample",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {

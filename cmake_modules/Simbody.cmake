@@ -27,16 +27,16 @@ ENDIF(BUILD_VISUALIZER)
 SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include
     ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include/simbody
-    ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include/simbody/internal
-    ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include
-    ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody
-    ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody/internal)
-# IF(BUILD_VISUALIZER)
-#     SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
-#         ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include
-#         ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody
-#         ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody/internal)
-# ENDIF(BUILD_VISUALIZER)
+    ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/include/simbody/internal)
+    # ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include
+    # ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody
+    # ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody/internal)
+IF(BUILD_VISUALIZER)
+    SET(SIMBODY_INCLUDE_DIRS ${SIMBODY_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include
+        ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody
+        ${CMAKE_SOURCE_DIR}/Simbody01/Simbody/Visualizer/include/simbody/internal)
+ENDIF(BUILD_VISUALIZER)
 
 # find source and header files
 SET(SIMBODY_SOURCE_C_FILES)

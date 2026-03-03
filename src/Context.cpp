@@ -465,6 +465,8 @@ void Context::addWorld(
 	worlds.back().modelTopologies();
 	worlds.back().setAtomTargetLocationsToState(atomTargetLocationsCache);
 
+	worlds.back().isOverconstrained();
+
 	const auto numBodies = worlds.back().getCompoundSystem().getMatterSubsystem().getNumBodies();
 	assert(numBodies == atoms.size() + 1); // +1 for the ground
 
@@ -482,6 +484,17 @@ void Context::addWorld(
 		}
 
 		for (const auto& topology : topologies) {
+			// Mobod 0 is ground and we ignore it
+			mobodLocks.back()[0].lockBond = true;
+			mobodLocks.back()[0].lockAngle = true;
+			mobodLocks.back()[0].lockTorsion = true;
+
+
+			// Mobod 1 is the first atom (root)
+			mobodLocks.back()[1].lockBond = true;
+			mobodLocks.back()[1].lockAngle = true;
+			mobodLocks.back()[1].lockTorsion = true;
+
 			for (auto& bond : topology.getBonds()) {
 				const SimTK::Compound::AtomIndex childAIx = bond.compoundAtomIndices[1];
 				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(childAIx, worlds.back().getForceField());
@@ -489,9 +502,13 @@ void Context::addWorld(
 				const auto bondKey = canonicalizeBond(bond.globalIndices[0], bond.globalIndices[1]);
 				const auto it = rollFlexMap.find(bondKey);
 
+				std::cout << atoms[bond.globalIndices[1]].identity.uniqueAtomName << " ";
+
 				if (it != rollFlexMap.end()) {
+					bond.addBondMobility(it->second);
+					std::cout << "found " << MobilityStr[it->second] << std::endl;
+
 					switch (it->second) {
-						bond.addBondMobility(it->second);
 
 						// Unrestricted bond, permitting changes in stretch, bend, and torsion modes
 						case SimTK::BondMobility::Free:
@@ -502,8 +519,8 @@ void Context::addWorld(
 
 						// Bond has fixed length and angles, but permits rotation about the bond axis
 						case SimTK::BondMobility::Torsion:
-							mobodLocks.back()[mbx].lockBond = false;
-							mobodLocks.back()[mbx].lockAngle = false;
+							mobodLocks.back()[mbx].lockBond = true;
+							mobodLocks.back()[mbx].lockAngle = true;
 							mobodLocks.back()[mbx].lockTorsion = false;
 							break;
 
@@ -610,6 +627,7 @@ void Context::addWorld(
 					}
 				} else {
 					// No custom flexibility set, so we default to rigid
+					std::cout << "default " << MobilityStr[SimTK::BondMobility::Rigid] << std::endl;
 					bond.addBondMobility(SimTK::BondMobility::Rigid);
 					mobodLocks.back()[mbx].lockBond = true;
 					mobodLocks.back()[mbx].lockAngle = true;

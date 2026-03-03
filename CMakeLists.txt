@@ -28,8 +28,15 @@ set(ROBOSAMPLE_LIB_NAME "robo_bindings")
 # Underbar separated list of dotted authors, no spaces or commas
 set(ROBOSAMPLE_AUTHORS "Laurentiu.Spiridon")
 
-# Generate compile_commands.json for tools like clangd and code analysis
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Create a symlink from build/latest to the current binary directory
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+    add_custom_target(update_compile_commands_symlink ALL
+        COMMAND ${CMAKE_COMMAND} -E create_symlink 
+            ${CMAKE_BINARY_DIR} 
+            ${CMAKE_SOURCE_DIR}/build/latest
+        COMMENT "Updating clangd symlink to ${CMAKE_BINARY_DIR}"
+    )
+endif()
 
 # Link prerequisites
 find_package(BLAS REQUIRED)
