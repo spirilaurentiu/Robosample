@@ -236,6 +236,8 @@ mamba clean --all
 
 ### Building Robosample
 
+If using CUDA, the default architecture is `native` which is not portable. If you build for distribution, go to `CMakePresets.json` and replace `CMAKE_CUDA_ARCHITECTURES` to `70;75;80;86` (Volta, Turing, Ampere (DC) and Ampere (Consumer)).
+
 The build system is organized into a matrix of Platforms and Build Types. You can combine them using the format `--preset <platform>-<type>`.
 
 Platforms: `cpu`, `opencl`, `cuda`, `reference`.
