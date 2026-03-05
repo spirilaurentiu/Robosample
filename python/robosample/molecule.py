@@ -168,7 +168,7 @@ PROTEIN_DIHEDRAL_SELECTION = {
         'chi2': ('CA', 'CB', 'CG', 'CD'),
         'chi3': ('CB', 'CG', 'CD', 'NE'),
         'chi4': ('CG', 'CD', 'NE', 'CZ'),
-        'chi5': ('CD', 'NE', 'CZ', 'NH1'),
+        # 'chi5': ('CD', 'NE', 'CZ', 'NH1'),
     },
 
     # Asparagine

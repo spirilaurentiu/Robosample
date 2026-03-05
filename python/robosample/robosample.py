@@ -25,6 +25,8 @@ from openmm import unit
 import robo_bindings as rb
 import molecule
 
+import amber_dihedral
+
 @unique
 class NonbondedMethod(IntEnum):
     """
@@ -362,48 +364,42 @@ class Context(rb.Context):
         self.prmtop = prmtop
         self.inpcrd = inpcrd
         self.num_types = self.parm.pointers['NTYPES']
+        
+        # classifier = amber_dihedral.DihedralClassifier()
+        # detected = defaultdict(list)
 
-        # glycosidic_phi = []
-        # glycosidic_psi = []
-        # glycosidic_omega = ['O6', 'C6', 'C5', 'C4']
+        # # for each bond search for a potential dihedral definition
+        # # if none, the bond is rigid
+        # # terminality is encoded in the dihedral definition - dihedrals are only between heavy atoms
+        # # standardized ring closing bonds are defined as ???
 
-        # for x in range(7):
-        #     glycosidic_phi.append(['O5', 'C1', f'O{x}', f'C{x}'])
-        #     glycosidic_psi.append([f'C1', f'O{x}', f'C{x}', f'C{x-1}'])
+        # sele = []
 
-        # sele_phi = set()
-        # sele_psi = set()
-        # sele_omega = set()
+        # for dih in self.parm.dihedrals:
+        #     if dih.improper:
+        #         continue 
 
-        # for dihedral in self.parm.dihedrals:
-        #     a1 = dihedral.atom1
-        #     a2 = dihedral.atom2
-        #     a3 = dihedral.atom3
-        #     a4 = dihedral.atom4
+        #     if dih.atom1.element_name == 'H':
+        #         continue
+        #     if dih.atom2.element_name == 'H':
+        #         continue
+        #     if dih.atom3.element_name == 'H':
+        #         continue
+        #     if dih.atom4.element_name == 'H':
+        #         continue
 
-        #     atom_types = [a1.type, a2.type, a3.type, a4.type]
-        #     atom_names = [a1.name, a2.name, a3.name, a4.name]
+        #     atom1_unique_name = dih.atom1.residue.name + str(dih.atom1.residue.idx+1) + '_' + dih.atom1.name + '_' + str(dih.atom1.idx+1)
+        #     atom2_unique_name = dih.atom2.residue.name + str(dih.atom2.residue.idx+1) + '_' + dih.atom2.name + '_' + str(dih.atom2.idx+1)
+        #     atom3_unique_name = dih.atom3.residue.name + str(dih.atom3.residue.idx+1) + '_' + dih.atom3.name + '_' + str(dih.atom3.idx+1)
+        #     atom4_unique_name = dih.atom4.residue.name + str(dih.atom4.residue.idx+1) + '_' + dih.atom4.name + '_' + str(dih.atom4.idx+1)
 
-        #     if a1.residue.idx != a4.residue.idx:
-        #         if atom_names in glycosidic_phi or list(reversed(atom_names)) in glycosidic_phi:
-        #             if a2.residue.idx != a3.residue.idx:
-        #                 sele_phi.add(dihedral.atom2.idx+1)
-        #                 sele_phi.add(dihedral.atom3.idx+1)
-        #         if atom_names in glycosidic_psi or list(reversed(atom_names)) in glycosidic_psi:
-        #             sele_psi.add(dihedral.atom2.idx+1)
-        #             sele_psi.add(dihedral.atom3.idx+1)
-        #     else:
-        #         if atom_names == glycosidic_omega or list(reversed(atom_names)) == glycosidic_omega:
-        #             sele_omega.add(dihedral.atom2.idx+1)
-        #             sele_omega.add(dihedral.atom3.idx+1)
+        #     label = classifier.classify(dih)
+        #     atom_names = (dih.atom1.name, dih.atom2.name, dih.atom3.name, dih.atom4.name)
+        #     print(f"Dihedral {atom1_unique_name} - {atom2_unique_name} - {atom3_unique_name} - {atom4_unique_name} -> {label}")
 
-        # query_phi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_phi)
-        # query_psi = 'sele id ' + '+'.join(f'{idx}' for idx in sele_psi)
-        # query_omega = 'sele id ' + '+'.join(f'{idx}' for idx in sele_omega)
+        # return detected
 
-        # print(query_phi)
-        # print(query_psi)
-        # print(query_omega)
+        # exit()
 
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision
