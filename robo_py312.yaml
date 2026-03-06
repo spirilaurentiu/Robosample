@@ -14,22 +14,22 @@ dependencies:
 
   # Nvidia and OpenCL
   - nvidia::cuda-toolkit=12.8
-  - ocl-icd
-  - opencl-headers
-  - clinfo
+  # - ocl-icd
+  # - opencl-headers
+  # - clinfo
 
   # Bioinformatics
-  - openmm
-  - openmmtools
-  - dacase::ambertools-dac=25
-  - salilab::modeller
-  - rdkit
-  - openbabel
+  # - openmm
+  # - openmmtools
+  # - dacase::ambertools-dac=25
+  # - salilab::modeller
+  # - rdkit
+  # - openbabel
   - parmed
   - mdtraj
-  - mdanalysis
-  - biopython
-  - pymol-open-source
+  # - mdanalysis
+  # - biopython
+  # - pymol-open-source
 
   # Scientific computing and data analysis
   - numpy
