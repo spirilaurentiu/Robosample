@@ -316,6 +316,16 @@ cmake --build --preset cuda-release
 
 This will automatically install the Python bindings (`.so` file) into `robosample/build/robosample`.
 
+### Visual Studio Code support
+
+Robosample was developed with `vscode` and the repository comes with a nubmer of tools tested on it:
+
+- Extensions: Open the extensions tab and type `@recommended`. We recommend using `CodeLLDB` for a better debugging experience and `clangd` for faster code completion (notice that it requries a language server to be installed, so follow their project description).
+
+- Build configurations: type `Left-Ctrl + Shift + P` and run `CMake: Select Configure Preset` and `CMake: Select Build Preset`, then press `F7`. Files will be automatically installed in `python/robosample/`.
+
+- Run configurations for `Python` and `C++` debugging.
+
 ### Running the program
 
 We provide a series of examples in `robosample/examples`. To rung the program:
