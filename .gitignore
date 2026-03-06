@@ -1,30 +1,27 @@
 # Build artifacts
 build*
-python/robosample/__pycache__/*
+python/robosample/__pycache__
 doc/html
-doc/html/*
 
 # Exclude the compiled shared library
-python/robosample/*so
+python/robosample/*.so
 
 # Exclude profile data
 profile-data
 
 # Development artifacts
-*dcd
-*csv
-*cif
-*pdb
+*.dcd
+*.csv
+*.cif
+*.pdb
+robo_py312.yaml
 
 # tools folder
-tools/__pycache__/*
+tools/__pycache__
 tools/*.pyc
-tools/.*.swp
-tools/demo/robots/
-tools/demo/inp.*
-tools/demo/out.*
-tools/__pycache__/
-tools/__pycache__/*
+tools/*.swp
+tools/demo
+tools/genFlex.old
 
 Doxyfile
 Doxyfile.bak
@@ -33,8 +30,8 @@ html/
 latex/
 projman/
 
-draw/*
-html/*
-latex/*
-projman/*
+draw
+html
+latex
+projman
 .qodo

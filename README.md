@@ -141,7 +141,17 @@ wsl --shutdown
 
 ## OpenCL - vendor based
 
-TODO
+OpenCL installation depends on the udnerlying hardware:
+
+- Nvidia GPU: already installed with the divers.
+
+- AMD GPU: TODO
+
+- Intel GPU/CPU: install `sudo apt-get install intel-opencl-icd`
+
+- AMD CPU: TODO
+
+Other dependencies will be installed via `conda` (see below).
 
 ### Installing CUDA Toolkit 12.8
 
@@ -213,17 +223,58 @@ git checkout refactor
 
 ### Create a `mamba` environment
 
-The `mamba` environment contains all tools needed to configure and build the project.
+Update `conda` and install in base `mamba` (a faster reimplementation of the `conda` package manager) and `conda-merge` (a tool for merging `conda` environment files into one file).
+
+```bash
+conda update -n base -c defaults conda
+pip install --upgrade pip
+
+conda install conda-forge::mamba
+pip install conda-merge zstandard
+```
+
+#### CUDA Toolkit
+
+CUDA Toolkit version is dependent on the major GCC version:
+
+| CUDA Toolkit Version | Max Supported GCC Version | Min Supported GCC Version |
+| -------------------- | ------------------------- | ------------------------- |
+| **13.0, 13.1**       | **15**                    | 7.x                       |
+| **12.8, 12.9**       | **14**                    | 6.x                       |
+| **12.4, 12.5, 12.6** | **13.2**                  | 6.x                       |
+| **12.1, 12.2, 12.3** | **12.2**                  | 6.x                       |
+| **12**               | **12.1**                  | 6.x                       |
+| **11.4.1 – 11.8**    | **11**                    | 6.x                       |
+| **11.1 – 11.4.0**    | **10**                    | 6.x                       |
+| **11**               | **9**                     | 6.x                       |
+| **10.1, 10.2**       | **8**                     | 4.8.5                     |
+| **9.2, 10.0**        | **7**                     | 4.8.5                     |
+| **9.0, 9.1**         | **6**                     | 4.8.5                     |
+| **8**                | **5.3**                   | 4.7                       |
+
+#### Generating the right development environment `.yaml` file
+
+The development environment is a combination of `.yaml` files from `envs/`:
+
+- `envs/robo_py312.yaml`
+
+- `envs/cuda*.yaml` with the correct `nvcc` - `gcc` version pair
+
+- `envs/opencl.yaml`
+
+- `envs/util.yaml` for non-essential, but useful packages.
+
+We combine into an environment that contains all tools needed to configure and build the project. The name of the combined environment is the name of the last `.yaml` file in sequence (in our case, `robo_py312.yaml`):
+
+```bash
+conda-merge envs/cuda12.8.yaml envs/util.yaml envs/robo_py312.yaml > robo_py312.yaml
+```
+
+Now we create the environment:
 
 ```bash
 mamba env create -f robo_py312.yaml
 conda activate robo_py312
-```
-
-Test that `OpenMM` is installed correctly:
-
-```bash
-python -m openmm.testInstallation
 ```
 
 If something goes wrong, delete this environment using:
@@ -232,6 +283,18 @@ If something goes wrong, delete this environment using:
 conda deactivate
 mamba env remove -n robo_py312
 mamba clean --all
+```
+
+#### Testing CUDA
+
+```bash
+nvcc --version && nvidia-smi && nvidia-smi topo -m && nvidia-smi -L
+```
+
+#### Testing OpenCL installation
+
+```bash
+python -c "import pyopencl as cl; print(cl.get_platforms())"
 ```
 
 ### Building Robosample

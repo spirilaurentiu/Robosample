@@ -15,7 +15,7 @@ requirements:
     - cmake
     - ninja
     - pkg-config
-    - python=3.12 # requested by boa
+    - python=3.12
     - blas
     - lapack
   host:
@@ -24,31 +24,24 @@ requirements:
     - cmake
     - ninja
     - pkg-config
-    - python=3.12 # requested by boa
+    - python=3.12
     - blas
     - lapack
   run:
-    - python=3.12 # requested by boa
+    - python=3.12
     - blas
     - lapack
     - numpy
     - scipy
     - pandas
     - matplotlib
-    - openmm
-    - openmmtools
     - mdtraj
-    - mdanalysis
     - ambertools
     - parmed
     - rdkit
-#    - openbabel
-    - biopython
-    - seaborn
     - astropy
     - networkx
     - tqdm
-    - modeller
 
 about:
   home: "https://your.repo/url"

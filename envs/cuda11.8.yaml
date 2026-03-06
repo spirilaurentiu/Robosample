@@ -1,0 +1,5 @@
+name: cuda11.8
+dependencies:
+  - conda-forge::gcc_linux-64=11.*
+  - conda-forge::gxx_linux-64=11.*
+  - nvidia::cuda-toolkit=11.8

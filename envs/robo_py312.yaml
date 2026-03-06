@@ -1,0 +1,26 @@
+name: robo_py312
+channels:
+  - conda-forge
+dependencies:
+  # Build tools
+  - cmake
+  - ninja
+  - pkg-config
+
+  # Python
+  - python=3.12
+  - pip
+
+  # Bioinformatics
+  - parmed
+
+  # Scientific computing and data analysis
+  - numpy
+  - scipy
+  - astropy
+  - networkx
+  - tqdm
+
+  # Pip packages
+  - pip:
+    - pybind11-stubgen

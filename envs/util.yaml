@@ -1,0 +1,31 @@
+name: util
+channels:
+  - conda-forge
+dependencies:
+  # Bioinformatics
+  - openmm
+  - openmmtools
+  - dacase::ambertools-dac=25
+  - salilab::modeller
+  - rdkit
+  - openbabel
+  - parmed
+  - mdtraj
+  - mdanalysis
+  - biopython
+  - pymol-open-source
+
+  # Scientific computing and data analysis
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - seaborn
+  - astropy
+  - networkx
+  - tqdm
+
+  # Pip packages
+  - pip:
+    - rcsbsearchapi
+    - pdb2pqr

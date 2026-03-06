@@ -1,0 +1,5 @@
+name: cuda10.1
+dependencies:
+  - conda-forge::gcc_linux-64=8.*
+  - conda-forge::gxx_linux-64=8.*
+  - nvidia::cuda-toolkit=10.1
