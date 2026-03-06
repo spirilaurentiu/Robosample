@@ -43,5 +43,6 @@ dependencies:
 
   # Pip packages
   - pip:
+    - pybind11-stubgen
     - rcsbsearchapi
     - pdb2pqr

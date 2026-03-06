@@ -289,5 +289,12 @@ if(USE_CUDA OR USE_OPENCL)
     add_dependencies(${ROBOSAMPLE_LIB_NAME} ${OPENMM_DEPENDENCIES})
 endif()
 
+# Generate stubs for Python bindings using pybind11-stubgen
+# pybind11-stubgen requires PYTHONPATH to find the built module, so we set it to build/*
+add_custom_command(TARGET ${ROBOSAMPLE_LIB_NAME} POST_BUILD
+    COMMAND PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR} pybind11-stubgen ${ROBOSAMPLE_LIB_NAME} --output-dir ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating python stubs for ${ROBOSAMPLE_LIB_NAME}"
+)
+
 # Install Python bindings (.so)
 install(TARGETS ${ROBOSAMPLE_LIB_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})

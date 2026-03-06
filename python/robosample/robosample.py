@@ -365,41 +365,40 @@ class Context(rb.Context):
         self.inpcrd = inpcrd
         self.num_types = self.parm.pointers['NTYPES']
         
-        # classifier = amber_dihedral.DihedralClassifier()
-        # detected = defaultdict(list)
+        classifier = amber_dihedral.DihedralClassifier()
+        detected = defaultdict(list)
 
-        # # for each bond search for a potential dihedral definition
-        # # if none, the bond is rigid
-        # # terminality is encoded in the dihedral definition - dihedrals are only between heavy atoms
-        # # standardized ring closing bonds are defined as ???
+        # for each bond search for a potential dihedral definition
+        # if none, the bond is rigid
+        # terminality is encoded in the dihedral definition - dihedrals are only between heavy atoms
+        # standardized ring closing bonds are defined as ???
 
-        # sele = []
+        sele = []
 
-        # for dih in self.parm.dihedrals:
-        #     if dih.improper:
-        #         continue 
+        for dih in self.parm.dihedrals:
+            if dih.improper:
+                continue 
 
-        #     if dih.atom1.element_name == 'H':
-        #         continue
-        #     if dih.atom2.element_name == 'H':
-        #         continue
-        #     if dih.atom3.element_name == 'H':
-        #         continue
-        #     if dih.atom4.element_name == 'H':
-        #         continue
+            if dih.atom1.element_name == 'H':
+                continue
+            if dih.atom2.element_name == 'H':
+                continue
+            if dih.atom3.element_name == 'H':
+                continue
+            if dih.atom4.element_name == 'H':
+                continue
 
-        #     atom1_unique_name = dih.atom1.residue.name + str(dih.atom1.residue.idx+1) + '_' + dih.atom1.name + '_' + str(dih.atom1.idx+1)
-        #     atom2_unique_name = dih.atom2.residue.name + str(dih.atom2.residue.idx+1) + '_' + dih.atom2.name + '_' + str(dih.atom2.idx+1)
-        #     atom3_unique_name = dih.atom3.residue.name + str(dih.atom3.residue.idx+1) + '_' + dih.atom3.name + '_' + str(dih.atom3.idx+1)
-        #     atom4_unique_name = dih.atom4.residue.name + str(dih.atom4.residue.idx+1) + '_' + dih.atom4.name + '_' + str(dih.atom4.idx+1)
+            atom1_unique_name = dih.atom1.residue.name + str(dih.atom1.residue.idx+1) + '_' + dih.atom1.name + '_' + str(dih.atom1.idx+1)
+            atom2_unique_name = dih.atom2.residue.name + str(dih.atom2.residue.idx+1) + '_' + dih.atom2.name + '_' + str(dih.atom2.idx+1)
+            atom3_unique_name = dih.atom3.residue.name + str(dih.atom3.residue.idx+1) + '_' + dih.atom3.name + '_' + str(dih.atom3.idx+1)
+            atom4_unique_name = dih.atom4.residue.name + str(dih.atom4.residue.idx+1) + '_' + dih.atom4.name + '_' + str(dih.atom4.idx+1)
 
-        #     label = classifier.classify(dih)
-        #     atom_names = (dih.atom1.name, dih.atom2.name, dih.atom3.name, dih.atom4.name)
-        #     print(f"Dihedral {atom1_unique_name} - {atom2_unique_name} - {atom3_unique_name} - {atom4_unique_name} -> {label}")
+            label = classifier.classify(dih)
+            atom_names = (dih.atom1.name, dih.atom2.name, dih.atom3.name, dih.atom4.name)
+            print(f"Dihedral {atom1_unique_name} - {atom2_unique_name} - {atom3_unique_name} - {atom4_unique_name} -> {label}")
 
-        # return detected
-
-        # exit()
+        exit()
+        return
 
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision

@@ -13,6 +13,7 @@ PROTEIN_BACKBONE = {
     ("O", "C", "N", "CH3") : 'omega', # Carbonyl Oxygen to NME cap
 }
 
+# For pretty images: https://emleddin.github.io/comp-chem-website/AMBERguide-AAs-DNA-RNA.html
 PROTEIN_SIDECHAIN = {
     # N-terminus ACE
     'ACE': {},
