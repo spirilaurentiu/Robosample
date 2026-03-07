@@ -20,10 +20,4 @@
         "${workspaceFolder}/build/",
         "${workspaceFolder}/build/stubs"
     ],
-
-    "cmake.useCMakePresets": "always",
-    "cmake.environment": {
-        "CONDA_PREFIX": "${command:python.interpreterPath}/../.."
-    },
-    "python.terminal.activateEnvInCurrentTerminal": true
 }

@@ -310,6 +310,7 @@ Build types: `debug`, `release`, `relwithdebinfo`, `pgo-train`, `pgo-use`.
 While in `robosample/`:
 
 ```bash
+conda activate robo_py312
 cmake --preset cuda-release
 cmake --build --preset cuda-release
 ```
@@ -318,7 +319,14 @@ This will automatically install the Python bindings (`.so` file) into `robosampl
 
 ### Visual Studio Code support
 
-Robosample was developed with `vscode` and the repository comes with a nubmer of tools tested on it:
+The development `conda` environment must be activate when starting Visual Studio Code:
+
+```bash
+conda activate robo_py312
+code Robosample/
+```
+
+The repository comes with a nubmer of pre-configured settings:
 
 - Extensions: Open the extensions tab and type `@recommended`. We recommend using `CodeLLDB` for a better debugging experience and `clangd` for faster code completion (notice that it requries a language server to be installed, so follow their project description).
 
@@ -333,31 +341,4 @@ We provide a series of examples in `robosample/examples`. To rung the program:
 ```bash
 cd build/robosample
 python3 robosample/roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 0 1 1
-```
-
-### Instrumentation
-
-We have discovered that running **only one** simulation round yields the best result. Also, using a larger system seems to be optimal. Perform the necessary changes in the input file and execute:
-
-```bash
-perf record -e cycles:u -j any,u -a -o perf.data ./robosample.pgo.use inp.aper
-```
-
-Convert the data into something that can be used by BOLT:
-
-```bash
-perf2bolt -p perf.data robosample.pgo.use -o perf.fdata
-```
-
-Optimize the binary:
-
-```bash
-llvm-bolt robosample.pgo.use -o robosample.pgo.use.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
-```
-
-Compare the binaries:
-
-```bash
-time ./robosample inp.ala10
-time ./robosample.bolt inp.ala10
 ```
