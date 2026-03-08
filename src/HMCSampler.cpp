@@ -121,7 +121,6 @@ void HMCSampler::initialize()
 	// Qstds = new std::vector<SimTK::Real>;
 }
 
-
 /*!
  * <!-- Set simulation temperature,
  * velocities to desired temperature, variables that store the configuration
@@ -148,21 +147,21 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
 	// Transformation Jacobian
 	bendStretchJacobianDetLog = 0.0;
 
-	// Compute proposed energies
-	EnergySnapshot proposedEnergy;
+	// Initialize new velocities
+	perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
 
 	// This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless of the integrator type
 	// compoundSystem->realize(state, SimTK::Stage::Position);
-	proposedEnergy.potential = forces->getMultibodySystem().calcPotentialEnergy(state);
+	currentEnergy.potential = forces->getMultibodySystem().calcPotentialEnergy(state);
 
 	// Kinetic energy is handled independently
 	if (integratorType == IntegratorType::OMMVV){
-		proposedEnergy.kinetic = OPENMM::get().getKineticEnergy();
+		currentEnergy.kinetic = OPENMM::get().getKineticEnergy();
 	}else{
 		system->realize(state, SimTK::Stage::Velocity);
-		proposedEnergy.kinetic = matter->calcKineticEnergy(state);
+		currentEnergy.kinetic = matter->calcKineticEnergy(state);
 	}
-	proposedEnergy.kinetic *= this->unboostKEFactor;
+	currentEnergy.kinetic *= this->unboostKEFactor;
 
 	// Calculate Fixman potential if needed
 	if (useFixman) {
@@ -170,37 +169,21 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
 			throw std::runtime_error("Fixman potential calculation not implemented for Cartesian integrators.");
 		}
 
-		proposedEnergy.fixman = calcFixman(state);
-		proposedEnergy.logSineSqrGamma2 = ((Topology*)rootTopology)->calcLogSineSqrGamma2(state);
+		currentEnergy.fixman = calcFixman(state);
+		currentEnergy.logSineSqrGamma2 = ((Topology*)rootTopology)->calcLogSineSqrGamma2(state);
 	} else {
-		proposedEnergy.fixman = 0.0;
-		proposedEnergy.logSineSqrGamma2 = 0.0;
+		currentEnergy.fixman = 0.0;
+		currentEnergy.logSineSqrGamma2 = 0.0;
 	}
 
-	// Get total energy
-	if (useFixman) {
-		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic + proposedEnergy.fixman - (0.5 * RT * proposedEnergy.logSineSqrGamma2);
-	} else {
-		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic;
+	currentEnergy.total = currentEnergy.potential + currentEnergy.kinetic + currentEnergy.fixman - (0.5 * RT * currentEnergy.logSineSqrGamma2);
+
+	if (!currentEnergy.validate(currentEnergy, RT, ndofs)) {
+		throw std::runtime_error("Initial energy is not valid (NaN or Inf). Check your system setup and parameters.");
 	}
 
-	// Initialize energies if not already done
-	if (!currentEnergy.initialized) {
-		currentEnergy = proposedEnergy;
-		currentEnergy.initialized = true;
-	}
-
-	if (!previousEnergy.initialized) {
-		previousEnergy = proposedEnergy;
-		previousEnergy.initialized = true;
-	}
-
-	// Initialize new velocities
-	perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
+	previousEnergy = currentEnergy;
 }
-
-
-
 
 /** ===============================
  * RANDOM NUMBERS
@@ -3526,7 +3509,7 @@ SimTK::Real HMCSampler::MetropolisHastings(
 /** 
  * Chooses whether to accept a sample or not based on a probability 
  **/
-bool HMCSampler::acceptSample(const EnergySnapshot& previousEnergy, const EnergySnapshot& currentEnergy) {
+bool HMCSampler::acceptSample(const EnergySnapshot& proposedEnergy) {
 	// Local vars
 	SimTK::Real hereE_o  = 0.0;
 	SimTK::Real hereE_n  = 0.0;
@@ -3539,21 +3522,21 @@ bool HMCSampler::acceptSample(const EnergySnapshot& previousEnergy, const Energy
 	} else {
 		// Markov-Chain Monte Carlo
 		if (DistortOpt == 0) {
-			hereE_o = previousEnergy.total;
+			hereE_o = proposedEnergy.total;
 			hereE_n = currentEnergy.total;
 			here_lnj = 0.0;
 		} else if (DistortOpt > 0){
 			if(useFixman){
-				hereE_o = previousEnergy.potential + ke_prop_nma6 + previousEnergy.fixman;
+				hereE_o = proposedEnergy.potential + ke_prop_nma6 + proposedEnergy.fixman;
 				hereE_n = currentEnergy.potential + ke_n_nma6    + currentEnergy.fixman;
 				here_lnj = 0.0;
 			} else {
-				hereE_o = previousEnergy.potential + ke_prop_nma6;
+				hereE_o = proposedEnergy.potential + ke_prop_nma6;
 				hereE_n = currentEnergy.potential + ke_n_nma6;
 				here_lnj = 0.0;				
 			}
 		} else if (DistortOpt < 0) {
-			hereE_o = previousEnergy.potential + previousEnergy.fixman;
+			hereE_o = proposedEnergy.potential + proposedEnergy.fixman;
 			hereE_n = currentEnergy.potential + currentEnergy.fixman;
 			here_lnj = getDistortJacobianDetLog();
 		}
@@ -3563,26 +3546,6 @@ bool HMCSampler::acceptSample(const EnergySnapshot& previousEnergy, const Energy
 		return rand_no < prob;
 	}
 }
-
-/**
- * Checks is there are any sudden jumps in potential energy which usually
- * indicate a distortion in the system
-*/
-bool HMCSampler::checkDistortionBasedOnE(SimTK::Real deltaPE)
-{
-
-	// Set an energy limit for the potential energy difference in kT
-	SimTK::Real energyLimit = beta * 100 * ndofs;
-	
-	// Apply
-	if((beta * deltaPE) > energyLimit){
-		return false;
-	}else{
-		return true;
-	}
-
-}
-
 
 /*!
  * <!--	Get printing energy details (before acc-rej step) -->
@@ -3722,11 +3685,12 @@ bool integrate_test(
 */
 bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose)
 {
-	// matter->invalidateSubsystemTopologyCache();
-	// state = system->realizeTopology();
-	// system->realize(state, SimTK::Stage::Position);
+	// Deep copy the old state with all its properties (q, u, z, qdot, udot, zdot, qdotdot) before integration
+	const auto oldState = state;
 
-	// world->integrator->updAdvancedState() = state;
+	EnergySnapshot proposedEnergy;
+	bool integrationSuccessful = true;
+	bool validProposedEnergy = false;
 
 	// MBAT work
 	//calcSubMBATDetLog(state); // SCALEQ
@@ -3738,8 +3702,6 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 	if(shouldAdaptWorldBlocks){
 		adaptWorldBlocks(state);
 	}
-
-	
 
 	// if (integratorType != IntegratorType::OMMVV) {
 	// 	int numSteps = 10;
@@ -3761,9 +3723,9 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 
 	// Actual integration using OpenMM or Simbody
 	// Errors during integration are caught and handled internally
-	bool integrationSuccessful = true;
 	if (integratorType == IntegratorType::OMMVV) {
 		// This only integrates, it does not calculate energies or forces
+		// On failure, it will revert the OpenMM context to before integration, so we don't have to do anything here
 		integrationSuccessful = dumm->integrateTrajectoryWithOpenMM(state, MDStepsPerSample);
 
 		// Update Simbody state with new positions from OpenMM
@@ -3788,98 +3750,85 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 				default:
 					throw std::runtime_error("Integrator type not implemented!");
 			}
-
-			// system->realize(state, SimTK::Stage::Position);
-
-		} catch (...) {
+		} catch (const std::exception& e) {
+			std::cout << "\t[ERROR] Integration failed: " << e.what() << std::endl;
 			integrationSuccessful = false;
 		}
 	}
 
-	// Perturb Q, QDot and QDotDot
-	perturb_Q_QDot_QDotDot(state);
+	if (integrationSuccessful) {
+		// Perturb Q, QDot and QDotDot
+		// This is part of the proposal distribution and is reversible and symmetric
+		// We will evaluate E(integrated_state + perturbation)
+		perturb_Q_QDot_QDotDot(state);
+		
+		// This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless of the integrator type
+		compoundSystem->realize(state, SimTK::Stage::Position);
+		proposedEnergy.potential = forces->getMultibodySystem().calcPotentialEnergy(state);
 
-	// Compute proposed energies
-	EnergySnapshot proposedEnergy;
-
-	// This computes the potential energy, kinetic energy and ridid body forces using OpenMM, regardless of the integrator type
-	// compoundSystem->realize(state, SimTK::Stage::Position);
-	proposedEnergy.potential = forces->getMultibodySystem().calcPotentialEnergy(state);
-
-	// Kinetic energy is handled independently
-	if (integratorType == IntegratorType::OMMVV){
-		proposedEnergy.kinetic = OPENMM::get().getKineticEnergy();
-	}else{
-		system->realize(state, SimTK::Stage::Velocity);
-		proposedEnergy.kinetic = matter->calcKineticEnergy(state);
-	}
-	proposedEnergy.kinetic *= this->unboostKEFactor;
-
-	// Calculate Fixman potential if needed
-	if (useFixman) {
+		// Kinetic energy is handled independently
 		if (integratorType == IntegratorType::OMMVV){
-			throw std::runtime_error("Fixman potential calculation not implemented for Cartesian integrators.");
+			proposedEnergy.kinetic = OPENMM::get().getKineticEnergy();
+		}else{
+			system->realize(state, SimTK::Stage::Velocity);
+			proposedEnergy.kinetic = matter->calcKineticEnergy(state);
 		}
+		proposedEnergy.kinetic *= this->unboostKEFactor;
 
-		proposedEnergy.fixman = calcFixman(state);
-		proposedEnergy.logSineSqrGamma2 = ((Topology*)rootTopology)->calcLogSineSqrGamma2(state);
-	} else {
-		proposedEnergy.fixman = 0.0;
-		proposedEnergy.logSineSqrGamma2 = 0.0;
-	}
+		// Calculate Fixman potential if needed
+		if (useFixman) {
+			if (integratorType == IntegratorType::OMMVV){
+				throw std::runtime_error("Fixman potential calculation not implemented for Cartesian integrators.");
+			}
 
-	// Get total energy
-	if (useFixman) {
-		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic + proposedEnergy.fixman - (0.5 * RT * proposedEnergy.logSineSqrGamma2);
-	} else {
-		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic;
-	}
-
-	// Print all proposed energy terms for debugging
-	if (true) {
-		std::cout << "\tProposed energies: "
-			<< "PE=" << proposedEnergy.potential << ", "
-			<< "KE=" << proposedEnergy.kinetic << ", "
-			<< "Fixman=" << proposedEnergy.fixman << ", "
-			<< "logSineSqrGamma2=" << proposedEnergy.logSineSqrGamma2 << ", "
-			<< "Total=" << proposedEnergy.total << std::endl;
-	}
-
-	// Perform energy checks
-	acc = integrationSuccessful && proposedEnergy.isValid(currentEnergy, beta, ndofs);
-	if (acc) {
-		std::cout << "\tEnergy check passed. ";
-		// Apply Metropolis-Hastings criterion
-		acc = acceptSample(proposedEnergy, previousEnergy);
-
-		if (acc) {
-			std::cout << "Sample accepted." << std::endl;
+			proposedEnergy.fixman = calcFixman(state);
+			proposedEnergy.logSineSqrGamma2 = ((Topology*)rootTopology)->calcLogSineSqrGamma2(state);
 		} else {
-			std::cout << "Sample rejected by Metropolis-Hastings criterion." << std::endl;
+			proposedEnergy.fixman = 0.0;
+			proposedEnergy.logSineSqrGamma2 = 0.0;
 		}
-	} else {
-		std::cout << "\t[WARNING] Energy check failed. Sample rejected." << std::endl;
+
+		proposedEnergy.total = proposedEnergy.potential + proposedEnergy.kinetic + proposedEnergy.fixman - (0.5 * RT * proposedEnergy.logSineSqrGamma2);
+
+		// Print all proposed energy terms for debugging
+		if (true) {
+			std::cout << "\tProposed energies: "
+				<< "PE=" << proposedEnergy.potential << ", "
+				<< "KE=" << proposedEnergy.kinetic << ", "
+				<< "Fixman=" << proposedEnergy.fixman << ", "
+				<< "logSineSqrGamma2=" << proposedEnergy.logSineSqrGamma2 << ", "
+				<< "Total=" << proposedEnergy.total << std::endl;
+		}
+
+		validProposedEnergy = proposedEnergy.validate(currentEnergy, RT, ndofs);
+	}
+
+	// Check if we are good for Metropolis-Hastings step
+	acc = integrationSuccessful && validProposedEnergy;
+	if (acc) {
+		// Apply Metropolis-Hastings criterion
+		acc = acceptSample(proposedEnergy);
+		if (acc) {
+			std::cout << "Metropolis-Hastings: accepted." << std::endl;
+		} else {
+			std::cout << "Metropolis-Hastings: rejected." << std::endl;
+		}
 	}
 	
 	if (acc) {
+		// Advance energies
+		previousEnergy = currentEnergy;
 		currentEnergy = proposedEnergy;
 
 		acceptedSteps++;
 		acceptedStepsBuffer.push_back(1);
 		acceptedStepsBuffer.pop_front();
 	} else {
-		// If we reject, we only need to restore the Simbody state
+		// Restore Simbody state to before integration
+		// OpenMM handles restoring its own state internally on integration failure, so we don't have to do anything
 		// Energies were not assigned to begin with (sampler state holds current/previous energies, proposed energies are in a local variable)
-		// OpenMM does not need to be restored because:
-		// 1. When integrating, DuMM automatically copies its positions to the OpenMM context
-		// 2. When calculating energies, DuMM again automatically copies its positions to the OpenMM context
-		for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx){
-			const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-			mobod.setQToFitTransform(state, transformations[mbx - 1]);
-		}
-
-		state = system->realizeTopology();
-		system->realize(state, SimTK::Stage::Position);
+		state = oldState;
+		system->realize(state, SimTK::Stage::Acceleration);
 
 		acceptedStepsBuffer.push_back(0);
 		acceptedStepsBuffer.pop_front();
@@ -3897,212 +3846,6 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 	numAccepted_period += getAcc();
 
 	return acc;
-
-	// bool shouldAdaptWorldBlocks = false;
-	// bool useNUTS = false;
-
-	// // // I think this should be a hard copy
-	// // // If accepted, we copy back to the main state
-	// // // If rejected, we discard this state
-	// // SimTK::State& state = world->integrator->updAdvancedState();
-	// compoundSystem->realize(state, SimTK::Stage::Position);
-
-	// // Prepare OpenMM if needed
-	// if(integratorType == IntegratorType::OMMVV){
-
-	// 	// Copy positions from DuMM to OpenMM`
-	// 	const SimTK::Vector_<SimTK::Vec3>& DuMMIncludedAtomStationsInG = dumm->getIncludedAtomPositionsInG(state);
-	// 	for(int atomCnt = 0; atomCnt < natoms; atomCnt++){
-	// 		includedAtomPositionsCache[atomCnt] = DuMMIncludedAtomStationsInG[atomCnt];
-	// 	}
-
-	// 	OPENMM::get().setPositions(includedAtomPositionsCache);
-	// }
-
-	// // Calculate old potential energy and forces using OpenMM
-	// // They are needed for a new round of integration with Verlet
-	// pe_o = forces->getMultibodySystem().calcPotentialEnergy(state);
-	// //dumm->CalcFullPotEnergyIncludingRigidBodies(state) // NO OPENMM
-
-	// // TODO root topology only?
-	// if (useFixman) {
-	// 	fix_o = calcFixman(state);
-	// 	logSineSqrGamma2_o = ((Topology *)rootTopology)->calcLogSineSqrGamma2(state);
-	// }
-
-	// // Invalidate new, un-proposed energies
-	// pe_n = SimTK::NaN;
-	// ke_n = SimTK::NaN;
-	// fix_n = 0;
-	// logSineSqrGamma2_n = 0;
-	// etot_n = SimTK::NaN;
-	// bendStretchJacobianDetLog = SimTK::NaN;
-
-	// // Set the generalized velocities scale factors
-	// loadUScaleFactors(state);
-
-	// // Set DuMM temperature : TODO: should propagate to OpenMM
-	// dumm->setDuMMTemperature(temperature);
-
-	// // // Store old configuration
-	// // // Ensure stage Position is realized
-	// // system->realize(state, SimTK::Stage::Position);
-
-	// // MBAT work
-	// //calcSubMBATDetLog(state); // SCALEQ
-	// //studyBATScale(state);
-	// //calcMobodsMBAT(state); // SCALEQ 
-
-	// // Adapt Gibbs blocks (Transformer)
-	// if(shouldAdaptWorldBlocks){
-	// 	adaptWorldBlocks(state);
-	// }
-
-	// // Initialize new velocities
-	// perturbVelocities(state, VelocitiesPerturbMethod::TO_T);
-
-	// // Get proposed kinetic energy
-	// if(integratorType == IntegratorType::OMMVV)
-	// 	ke_o = OPENMM::get().getKineticEnergy();
-	// else
-	// 	ke_o = matter->calcKineticEnergy(state);
-
-	// // Unboost (from guidance to evaluation Hamiltonian)
-	// ke_o *= unboostKEFactor;
-
-	// // Store proposed total energy
-	// etot_o = pe_o + ke_o + fix_o + logSineSqrGamma2_o;
-
-	// // Actual integration
-	// integrateTrajectory(state, useNUTS);
-	// // compoundSystem->realizeTopology();
-
-	// // Perturb Q, QDot and QDotDot
-	// perturb_Q_QDot_QDotDot(state);
-
-	// // Get all new energies after integration
-	// if (!proposeExceptionCaught) {
-	// 	//(world->updMyContext())->calcZMatrixBAT( (*world).getAtomsLocationsInGround( state ) );
-	// 	//world->calcZMatrixBAT( state );
-
-	// 	// Get new potential energy
-	// 	if(integratorType == IntegratorType::OMMVV)
-	// 		pe_n = OPENMM::get().getPotentialEnergy();
-	// 	else
-	// 		pe_n = forces->getMultibodySystem().calcPotentialEnergy(state);
-
-	// 	// Get new Fixman potential
-	// 	if(useFixman){
-	// 		if(this->integratorType == IntegratorType::OMMVV){
-	// 			fix_n = CartesianFixmanPotential();
-	// 		}else{
-	// 			fix_n = calcFixman(state);
-	// 			logSineSqrGamma2_n = ((Topology *)rootTopology)->calcLogSineSqrGamma2(state);
-	// 		}
-	// 	}else{
-	// 		fix_n = 0.0;
-	// 		logSineSqrGamma2_n = 0.0;
-	// 	}
-
-	// 	// Get new kinetic energy
-	// 	if(this->integratorType == IntegratorType::OMMVV){
-	// 		ke_n = OPENMM::get().getKineticEnergy();
-	// 	}else{
-	// 		system->realize(state, SimTK::Stage::Velocity);
-	// 		ke_n = matter->calcKineticEnergy(state);
-	// 	}
-
-	// 	ke_n *= (this->unboostKEFactor); // TODO: Check
-
-	// 	// Get new total energy
-	// 	if(useFixman){
-	// 		etot_n = pe_n + ke_n + fix_n - (0.5 * RT * logSineSqrGamma2_n);
-	// 		etot_o = pe_o + ke_o + fix_o - (0.5 * RT * logSineSqrGamma2_o);
-	// 	}else{
-	// 		etot_n = pe_n + ke_n;
-	// 		etot_o = pe_o + ke_o;
-	// 	}
-		
-	// } else {
-	// 		// Store new energies
-	// 		pe_set = pe_n = SimTK::NaN;
-	// 		ke_set = ke_n = SimTK::NaN;
-	// 		fix_set = fix_n = SimTK::NaN;
-	// 		logSineSqrGamma2_set = logSineSqrGamma2_n = SimTK::NaN;
-
-	// 		// Set final total energies
-	// 		etot_set = etot_n = SimTK::NaN;
-	// }
-
-	// // print new and old energies
-	// std::cout << "PE old: " << pe_o << " PE new: " << pe_n << std::endl;
-	// std::cout << "KE old: " << ke_o << " KE new: " << ke_n << std::endl;
-	// if(useFixman){
-	// 	std::cout << "Fix old: " << fix_o << " Fix new: " << fix_n << std::endl;
-	// 	std::cout << "logSineSqrGamma2 old: " << logSineSqrGamma2_o << " logSineSqrGamma2 new: " << logSineSqrGamma2_n << std::endl;
-	// }
-
-	// // Check if any energies are nan
-	// // or any exception during perturbations or integrations
-	// bool proposalValidation = !proposeExceptionCaught;
-	// if (proposalValidation) {
-	// 	proposalValidation = checkExceptionsAndEnergiesForNAN() && proposalValidation;
-	// }
-
-	// // Check if molecule was distorted during
-	// // perturbations or integrations
-	// if (proposalValidation) {
-	// 	// if(! checkDistortionBasedOnE(pe_n - pe_o)){
-	// 	// std::cout << "[WARNING] Reduced PE GT " << energyLimit << " "
-	// 	// << deltaPE << "." << std::endl;
-	// 	//}
-	// 	proposalValidation = checkDistortionBasedOnE(pe_n - pe_o) && proposalValidation;
-	// }
-
-	// // Metropolis-Hastings acceptance step
-	// bool accept = false;
-	// if (proposalValidation) {
-	// 	accept = acceptSample();
-	// } else {
-	// 	accept = false;
-	// }
-
-	// accept = true; // TEMPORARY OVERRIDE TO ALWAYS ACCEPT
-
-	// // Check if we accepted this sample
-	// if(accept) {
-
-	// 	updateEnergies();
-
-	// 	// Acceptance rate buffer
-	// 	++acceptedSteps;
-	// 	acceptedStepsBuffer.push_back(1);
-	// 	acceptedStepsBuffer.pop_front();
-
-	// } else {
-	// 	SimTK_ASSERT_ALWAYS(false, "HMC::sample_iteration(): rejection not implemented yet!");
-
-	// 	restoreConfiguration(state);
-	// 	restoreEnergies();
-
-	// 	// Update acceptance rate buffer
-	// 	acceptedStepsBuffer.push_back(0);
-	// 	acceptedStepsBuffer.pop_front();
-	// }
-	
-	// setAcc(accept);
-	// storeAdaptiveData(state);			
-
-	// if (verbose) {
-	// 	getMsg_EnergyDetails(samplerOutStream, state, proposalValidation, accept);
-	// }
-
-	// // Increase the sample counter and return
-	// ++nofSamples;
-	// numSamples_period++;
-	// numAccepted_period += getAcc();
-
-	// return getAcc();
 }
 
 /**
@@ -4110,7 +3853,6 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 */
 void HMCSampler::updateQBuffer(const SimTK::State& someState)
 {
-	
 	// g++17 complains if this is auto& or const auto&
 	auto Q = someState.getQ(); 
 	//std::cout << "Q = " << Q << std::endl;
@@ -4121,7 +3863,7 @@ void HMCSampler::updateQBuffer(const SimTK::State& someState)
 void HMCSampler::storeAdaptiveData(SimTK::State& someState)
 {
 	// TODO THIS IS BAD, FIX IT
-	//updateQBuffer(someState);
+	// updateQBuffer(someState);
 	// pushCoordinatesInR(someState);
 	// pushVelocitiesInRdot(someState);
 }

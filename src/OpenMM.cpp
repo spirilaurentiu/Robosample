@@ -881,7 +881,8 @@ bool OPENMM::integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtom
 		integrator->step(steps);
 	} catch (const std::exception& e) {
 		// // Restore old positions in case of integration failure
-		// restorePositions();
+		ommAtomsPositionsCache = ommAtomsPositionsCacheOld;
+		context->setPositions(ommAtomsPositionsCache);
 		success = false;
 	}
 
@@ -898,14 +899,6 @@ bool OPENMM::integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtom
 
 	return success;
 }
-
-void OPENMM::restorePositions() {
-	// ensureInitialized();
-	// ommAtomsPositionsCache = ommAtomsPositionsCacheOld;
-	// context->setPositions(ommAtomsPositionsCache);
-}
-
-
 
 void OPENMM::getEnergyAndForces(
 	bool positionsAlreadySet,

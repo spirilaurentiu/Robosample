@@ -6,44 +6,6 @@ import robo_bindings as rb
 import numpy as np
 import networkx as nx
 
-class GraphTraversalUtils:
-    @staticmethod
-    def validate_bfs_parent_child_edges(graph: nx.Graph, root: Hashable, bfs_edges: Iterable[Tuple[Hashable, Hashable]]) -> None:
-        """
-        Validate that a sequence of edges corresponds to a valid BFS tree
-        traversal starting from a given root.
-
-        This function enforces the invariant that for every edge (u, v):
-        - u has already been visited when the edge is produced
-        - v has not been visited before (i.e., v is discovered via u)
-        - (u, v) is an actual edge in the graph
-
-        Parameters
-        ----------
-        graph : networkx.Graph
-            The graph on which BFS is assumed to have been performed.
-        root : hashable
-            The BFS root node.
-        bfs_edges : iterable of (hashable, hashable)
-            Edges produced by a BFS traversal, typically from
-            ``networkx.bfs_edges``.
-
-        Raises
-        ------
-        ValueError
-            If any edge violates BFS parent-child semantics.
-        """
-        visited = {root}
-
-        for step, (u, v) in enumerate(bfs_edges):
-            if u not in visited:
-                raise ValueError(f"BFS invariant violated at step {step}: parent node {u} has not been visited yet.")
-            if v in visited:
-                raise ValueError(f"BFS invariant violated at step {step}: child node {v} was already visited.")
-            if not graph.has_edge(u, v):
-                raise ValueError(f"BFS invariant violated at step {step}: edge ({u}, {v}) does not exist in graph.")
-            visited.add(v)
-
 
 @dataclass(frozen=True)
 class BondProperties:
@@ -288,7 +250,7 @@ class MoleculeTest:
         #     parent_atom_prmtop_index = row.k.idx
         #     self.non_redundant_bonds.add((parent_atom_prmtop_index, child_atom_prmtop_index))
 
-        # Root is the heaviest terminal atom with the smallest prmtop index
+        # Root is the heaviest terminal atom with the smallest index
         terminal_atoms = [a for a in self.molecule.atoms if len(a.bond_partners) == 1]
         terminal_atoms = self._sort_atoms_by_mass(terminal_atoms)
         root = terminal_atoms[0].idx

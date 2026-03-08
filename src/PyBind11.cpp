@@ -305,10 +305,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("getWorlds", py::overload_cast<>(&Context::getWorlds, py::const_), py::return_value_policy::reference);
 
     py::class_<World>(m, "World")
-        .def("setFlexibilities", &World::setFlexibilities, "Set the flexibilities of the bonds.")
         .def("addSampler", &World::addSampler, "Add a sampler to the world.")
-        .def("setRollFlexibilities", &World::setRollFlexibilities, "Set rolling sequence.")
-        .def("getRollFlexibilities", &World::getRollFlexibilities, "Get rolling sequence.")
         .def("getMatchAtomTargetLocationsResiduals", &World::getMatchAtomTargetLocationsResiduals, "Get residuals from matchAtomTargetLocations during testing.")
         .def("getCumulativeCartesianDisplacements", &World::getCumulativeCartesianDisplacements, "Get cumulative Cartesian displacements.")
         .def("getCumulativeBondDisplacements", &World::getCumulativeBondDisplacements, "Get cumulative bond displacements.")

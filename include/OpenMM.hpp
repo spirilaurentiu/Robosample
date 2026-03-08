@@ -184,13 +184,6 @@ public:
         omm.context.reset();
         omm.system.reset();
         omm.initialized = false;
-
-        std::cout << "Avg Block 1 (Set Cch):   " << omm.profile.block1 / omm.profile.counts << "s (" << omm.profile.block1 / omm.profile.total * 100 << "%)" << std::endl;
-        std::cout << "Avg Block 2 (Set Pos):   " << omm.profile.block2 / omm.profile.counts << "s (" << omm.profile.block2 / omm.profile.total * 100 << "%)" << std::endl;
-        std::cout << "Avg Block 3 (State ):    " << omm.profile.block3 / omm.profile.counts << "s (" << omm.profile.block3 / omm.profile.total * 100 << "%)" << std::endl;
-        std::cout << "Avg Block 4 (Energy):    " << omm.profile.block4 / omm.profile.counts << "s (" << omm.profile.block4 / omm.profile.total * 100 << "%)" << std::endl;
-        std::cout << "Avg Block 5 (Map Force): " << omm.profile.block5 / omm.profile.counts << "s (" << omm.profile.block5 / omm.profile.total * 100 << "%)" << std::endl;
-        std::cout << "Avg Total:               " << omm.profile.total / omm.profile.counts << "s\n";
     }
 
     SimTK::Real getPotentialEnergy() const;
@@ -200,7 +193,6 @@ public:
     const std::vector<SimTK::Vec3>& getPositions() const;
 
     bool integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& positions, int steps);
-    void restorePositions();
 
     void getEnergyAndForces(
         bool positionsAlreadySet,
@@ -239,10 +231,4 @@ private:
     bool testing = false;    
 	bool enforcePeriodicBox = false;
     bool initialized = false;
-
-    // Define a simple struct or global to hold your timing data
-    struct ProfileData {
-        double block1 = 0, block2 = 0, block3 = 0, block4 = 0, block5, total = 0;
-        unsigned long counts = 0;
-    } profile;
 };

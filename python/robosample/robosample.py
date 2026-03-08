@@ -23,9 +23,7 @@ import openmm as mm
 from openmm import unit
 
 import robo_bindings as rb
-import molecule
-
-import amber_dihedral
+from molecule_prototype import MoleculePrototype
 
 @unique
 class NonbondedMethod(IntEnum):
@@ -200,7 +198,7 @@ def parse_prmtop_numpy(prmtop_file):
                 _, flag = line.split(None, 1)
                 flag = flag.strip()
                 flags.append(flag)
-                raw_data[flag] = []
+                raw_data[flag] = [] 
             elif line.startswith('%FORMAT'):
                 fmt_line = line[line.index('(')+1 : line.index(')')]
                 m = FORMAT_RE_PATTERN.search(fmt_line)
@@ -333,14 +331,14 @@ class Context(rb.Context):
                  nonbonded_cutoff_in_nm: float = 1.2,
                  verbose: bool = False,
                  testing: bool = False,
-                 include_omega: bool = False,
-                 include_chi1: bool = True,
-                 include_chi2: bool = True,
-                 include_chi3: bool = True,
-                 include_chi4: bool = True,
-                 include_chi5: bool = True,
-                 want_n_terminus_phi_rigid: bool = False,
-                 want_c_terminus_psi_rigid: bool = False):
+                 rigid_protein_phi: bool = False,
+                 rigid_protein_psi: bool = False,
+                 rigid_protein_omega: bool = True,
+                 rigid_protein_chi1: bool = False,
+                 rigid_protein_chi2: bool = False,
+                 rigid_protein_chi3: bool = False,
+                 rigid_protein_chi4: bool = False,
+                 rigid_protein_chi5: bool = False):
         
         super().__init__(name, seed, threads, nofRoundsTillReblock, runType, replicaSwapFreq, fixmanSwapFreq, testing)
         self.setPdbRestartFreq(pdb_restart_freq)
@@ -364,41 +362,6 @@ class Context(rb.Context):
         self.prmtop = prmtop
         self.inpcrd = inpcrd
         self.num_types = self.parm.pointers['NTYPES']
-        
-        classifier = amber_dihedral.DihedralClassifier()
-        detected = defaultdict(list)
-
-        # for each bond search for a potential dihedral definition
-        # if none, the bond is rigid
-        # terminality is encoded in the dihedral definition - dihedrals are only between heavy atoms
-        # standardized ring closing bonds are defined as ???
-
-        sele = []
-
-        for dih in self.parm.dihedrals:
-            if dih.improper:
-                continue 
-
-            if dih.atom1.element_name == 'H':
-                continue
-            if dih.atom2.element_name == 'H':
-                continue
-            if dih.atom3.element_name == 'H':
-                continue
-            if dih.atom4.element_name == 'H':
-                continue
-
-            atom1_unique_name = dih.atom1.residue.name + str(dih.atom1.residue.idx+1) + '_' + dih.atom1.name + '_' + str(dih.atom1.idx+1)
-            atom2_unique_name = dih.atom2.residue.name + str(dih.atom2.residue.idx+1) + '_' + dih.atom2.name + '_' + str(dih.atom2.idx+1)
-            atom3_unique_name = dih.atom3.residue.name + str(dih.atom3.residue.idx+1) + '_' + dih.atom3.name + '_' + str(dih.atom3.idx+1)
-            atom4_unique_name = dih.atom4.residue.name + str(dih.atom4.residue.idx+1) + '_' + dih.atom4.name + '_' + str(dih.atom4.idx+1)
-
-            label = classifier.classify(dih)
-            atom_names = (dih.atom1.name, dih.atom2.name, dih.atom3.name, dih.atom4.name)
-            print(f"Dihedral {atom1_unique_name} - {atom2_unique_name} - {atom3_unique_name} - {atom4_unique_name} -> {label}")
-
-        exit()
-        return
 
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision
@@ -455,8 +418,8 @@ class Context(rb.Context):
         self.prmtop_to_global_index = {}
 
         # Store non-redundant bonds
-        self.non_redundant_bonds = list[list[tuple[int, int]]]()
-        self.backbone_dihedral_bonds = list[list[tuple[int, int]]]()
+        self.standard_dihedral_bonds = list[list[tuple[int, int]]]()
+        self.macrocycle_dihedral_bonds = list[list[list[tuple[int, int]]]]()
 
         # Split system into unique molecule prototypes and their occurrences
         # Each entry: (prototype_structure, instance_indices)
@@ -466,7 +429,7 @@ class Context(rb.Context):
         parm_prototypes = self.parm.split()
 
         # Parsing atom, bond, angle and torsion definitions is expensive, so we cache for each prototype type
-        molecule_prototypes = [molecule.MoleculeTest(mol_struct) for mol_struct, _ in parm_prototypes]
+        molecule_prototypes = [MoleculePrototype(mol_struct) for mol_struct, _ in parm_prototypes]
 
         # [(instance_index, prototype_index)]
         molecules: list[tuple[int, int]] = []
@@ -590,31 +553,67 @@ class Context(rb.Context):
                         )
                     )
 
-                # Add non-redundant bonds
+                # Add bonds which are the middle bond of a standard dihedral
                 # We don't convert to global indices and must keep original prmtop ones
-                self.non_redundant_bonds += [(p1+self.num_atom_offset, p2+self.num_atom_offset) for p1, p2 in molecule_prototypes[prototype_index].non_redundant_bonds]
+                for (p1, p2, dihedral_type) in molecule_prototypes[prototype_index].bonds:
+                    atom1_prmtop = p1+self.num_atom_offset
+                    if self.parm.atoms[atom1_prmtop].idx != atom1_prmtop:
+                        raise ValueError(f"Standard dihedral bond atom index mismatch: expected {atom1_prmtop}, got {self.parm.atoms[atom1_prmtop].idx}")
+                    atom2_prmtop = p2+self.num_atom_offset
+                    if self.parm.atoms[atom2_prmtop].idx != atom2_prmtop:
+                        raise ValueError(f"Standard dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
+                    
+                    # Skip ring closing bonds
+                    if 'ring' in dihedral_type:
+                        continue
+                    
+                    if dihedral_type == 'protein-phi' and not rigid_protein_phi:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if dihedral_type == 'protein-psi' and not rigid_protein_psi:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if dihedral_type == 'protein-omega' and not rigid_protein_omega:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if dihedral_type == 'protein-chi1' and not rigid_protein_chi1:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if dihedral_type == 'protein-chi2' and not rigid_protein_chi2:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if dihedral_type == 'protein-chi3' and not rigid_protein_chi3:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if dihedral_type == 'protein-chi4' and not rigid_protein_chi4:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
 
-                # Backbone dihedral bonds
-                # Again, we keep original prmtop indices
-                backbone_dihedral_bonds = []
-                for sublist in molecule_prototypes[prototype_index].backbone_dihedral_bonds:
-                    backbone_dihedral_bonds.append([])
+                # Add macrocycle dihedral bonds
+                for macrocycle in molecule_prototypes[prototype_index].macrocycle_bonds:
+                    macrocycle_bonds = list[list[tuple[int, int]]]()
 
-                    for (p1, p2) in sublist:
+                    for (p1, p2, dihedral_type) in macrocycle:
                         atom1_prmtop = p1+self.num_atom_offset
                         if self.parm.atoms[atom1_prmtop].idx != atom1_prmtop:
-                            raise ValueError(f"Backbone dihedral bond atom index mismatch: expected {atom1_prmtop}, got {self.parm.atoms[atom1_prmtop].idx}")
+                            raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom1_prmtop}, got {self.parm.atoms[atom1_prmtop].idx}")
                         atom2_prmtop = p2+self.num_atom_offset
                         if self.parm.atoms[atom2_prmtop].idx != atom2_prmtop:
-                            raise ValueError(f"Backbone dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
+                            raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
                         
-                        backbone_dihedral_bonds[-1].append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-phi' and not rigid_protein_phi:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-psi' and not rigid_protein_psi:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-omega' and not rigid_protein_omega:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-chi1' and not rigid_protein_chi1:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-chi2' and not rigid_protein_chi2:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-chi3' and not rigid_protein_chi3:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-chi4' and not rigid_protein_chi4:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                        if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
+                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
 
-                        atom1 = self.atoms[self.prmtop_to_global_index[atom1_prmtop]]
-                        atom2 = self.atoms[self.prmtop_to_global_index[atom2_prmtop]]
-                        # print(f"Backbone dihedral bond between atom {atom1.identity.unique_name} (global index {atom1.identity.global_index}) and atom {atom2.identity.unique_name} (global index {atom2.identity.global_index})")
-
-                self.backbone_dihedral_bonds += backbone_dihedral_bonds
+                    self.macrocycle_dihedral_bonds.append(macrocycle_bonds)
 
                 # Add angles
                 for angle in molecule_prototypes[prototype_index].angle_params:
@@ -962,7 +961,7 @@ class Context(rb.Context):
     #     return cyclomatic_number
     
     @contextmanager
-    def record_topology(self, molecule: molecule.MoleculeTest) -> Iterable[rb.TopologyRange]:
+    def record_topology(self, molecule: MoleculePrototype) -> Iterable[rb.TopologyRange]:
         start_counts = self._get_current_counts()
         t_range = rb.TopologyRange(start_counts)
 
@@ -986,8 +985,10 @@ class Context(rb.Context):
         if bonds_type == 'rama':
             raise ValueError("not supported lol")
             source = self.backbone_dihedral_bonds
-        elif bonds_type == 'non_redundant':
-            source = [self.non_redundant_bonds]
+        elif bonds_type == 'standard':
+            source = [self.standard_dihedral_bonds]
+        elif bonds_type == 'macrocycle':
+            source = self.macrocycle_dihedral_bonds
         else:
             raise ValueError(f"Unsupported bonds_type: {bonds_type}")
 

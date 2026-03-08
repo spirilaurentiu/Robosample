@@ -6,6 +6,8 @@
  * This is part of Robosample		                                      *
  */
 
+#pragma once
+
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -149,12 +151,6 @@ enum class ROOT_MOBILITY : int {
 	PIN
 };
 
-struct MobodLock {
-	bool lockBond;
-	bool lockAngle;
-	bool lockTorsion;
-};
-
 //==============================================================================
 //                   CLASS World
 //==============================================================================
@@ -173,17 +169,9 @@ public:
 		return atomTargetLocaltionsCache;
 	}
 
-	void setMobodLocks(const std::vector<std::vector<MobodLock>>& mobodLocks) {
+	void setMobodLocks(const std::vector<std::vector<SimTK::MobilizedBodyIndex>>& mobodLocks) {
 		this->mobodLocks = mobodLocks;
 	}
-
-	void setFlexibilities(const std::vector<BondFlexibility>& flexibilities);
-	const std::vector<BondFlexibility>& getFlexibilities() const;
-
-	//void setRollFlexibilities(const std::vector<std::vector<BondFlexibility>>& argRollFlexibilities);
-	//const std::vector<std::vector<BondFlexibility>>& getRollFlexibilities() const ;
-	void setRollFlexibilities(bool argRollFlexibilities);
-	bool getRollFlexibilities() const ;
 
 	void generateDummParams(
 		const std::vector<RoboAtom>& atoms,
@@ -944,9 +932,6 @@ public:
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
-    bool getIsRollFlexibilities() const {return isRollFlexibilities;};
-    void setIsRollFlexibilities(bool value) {isRollFlexibilities = value;};
-
 	const std::vector<std::vector<SimTK::Real>>& getMatchAtomTargetLocationsResiduals() const {
 		SimTK_ASSERT_ALWAYS(testing, "getMatchAtomTargetLocationsResiduals called outside testing mode");
 		return matchAtomTargetLocationsResiduals;
@@ -1017,7 +1002,7 @@ public:
 		return rigidBodyImproperTorsionDriftInRad;
 	}
 
-	bool isOverconstrained();
+	bool isOverconstrained(const SimTK::State& state, std::ostream& out) const;
 
 private:
 
@@ -1081,11 +1066,7 @@ private:
 	Random32 randomEngine;
 	SimTK::String rootMobilizer;
 
-	std::vector<BondFlexibility> flexibilities;
-	std::vector<std::vector<BondFlexibility>> rollFlexibilities;
-	bool isRollFlexibilities = false;
-
-	std::vector<std::vector<MobodLock>> mobodLocks;
+	std::vector<std::vector<SimTK::MobilizedBodyIndex>> mobodLocks;
 
 	// Default return value for non-existing topology atom, pair
 	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};

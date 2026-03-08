@@ -1,5 +1,4 @@
-#ifndef __HAMMONTECARLOSAMPLER_HPP__
-#define __HAMMONTECARLOSAMPLER_HPP__
+#pragma once
 
 /* -------------------------------------------------------------------------- *
  *                               Robosampling                                 *
@@ -65,6 +64,7 @@ One iteration must include:
 
 //#include "Context.hpp"
 #include "Sampler.hpp"
+#include "EnergySnapshot.hpp"
 #include "TaskSpace.hpp"
 #include "OpenMM.hpp"
 #include <thread>
@@ -83,39 +83,6 @@ class Context;
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
 	const char *dirname, const char *prefix, int midlength,
 	const char *sufix, double aTime);
-
-struct EnergySnapshot {
-    SimTK::Real potential = 0.0;
-    SimTK::Real kinetic = 0.0;
-    SimTK::Real total = 0.0;
-    SimTK::Real fixman = 0.0;
-    SimTK::Real logSineSqrGamma2 = 0.0;
-	bool initialized = false;
-
-    bool isValid(const EnergySnapshot& currentEnergy, SimTK::Real beta, std::size_t ndofs) const {
-		// Check if any of the energy components is NaN or infinite
-        bool physicallyValid = 
-			std::isfinite(potential) && 
-            std::isfinite(kinetic) && 
-            std::isfinite(total) && 
-            std::isfinite(fixman) && 
-            std::isfinite(logSineSqrGamma2);
-
-		if (!physicallyValid) {
-			return false;
-		}
-
-		// Calculate potential energy difference between the proposed and current state
-		// Recall that beta = 1/(kT), so this is in units of kT
-		const SimTK::Real deltaPE = potential - currentEnergy.potential;
-		const SimTK::Real energyChangeInKT = std::abs(beta * deltaPE);
-
-		// Compare against a heuristic limit (e.g., 100 kT per degree of freedom)
-		const SimTK::Real maxAllowableShift = 100.0 * static_cast<SimTK::Real>(ndofs);
-
-		return energyChangeInKT <= maxAllowableShift;
-	}
-};
 
 /** A Generalized Coordiantes Hamiltonian Monte Carlo sampler as described in
 J Chem Theory Comput. 2017 Oct 10;13(10):4649-4659. In short it consists
@@ -340,7 +307,7 @@ public:
 	//virtual bool accRejStep(SimTK::State& someState);
 
 	/** Chooses whether to accept a sample or not based on a probability **/
-	bool acceptSample(const EnergySnapshot& previousEnergy, const EnergySnapshot& currentEnergy);
+	bool acceptSample(const EnergySnapshot& previousEnergy);
 
 	/*
 	* Get Joint type by examining hinge matrix H_FM
@@ -386,12 +353,6 @@ public:
 	void perturb_Q_QDot_QDotDot(SimTK::State& someState);
 
 	void printDrilling(SimTK::State& someState);
-	
-	/**
-	 * Checks is there are any sudden jumps in potential energy which usually
-	 * indicate a distortion in the system
-	*/
-	bool checkDistortionBasedOnE(SimTK::Real deltaPE);
 
 	virtual bool sample_iteration(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose);
 
@@ -717,5 +678,3 @@ protected:
 	// DELETE
 	SimTK::Real debug_rand_no = 0.0;
 };
-
-#endif // __HAMMONTECARLOSAMPLER_HPP__
