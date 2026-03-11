@@ -1,6 +1,3 @@
-/**@file
-Implementation of Topology class. **/
-
 #include "Topology.hpp"
 
 Topology::Topology(const SimTK::Compound::Name& name, SimTK::CompoundSystem::CompoundIndex compoundIndex, int rootGlobalAtomIx) :
@@ -72,7 +69,6 @@ const RoboAtom& Topology::getAtom(SimTK::Compound::AtomIndex cAIx) const {
     // This should never trigger, but just in case
     SimTK_ASSERT_ALWAYS(false, "Topology::getAtom(): Atom with specified Compound::AtomIndex not found.");
 }
-
 
 /** **/
 const RoboBond& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const

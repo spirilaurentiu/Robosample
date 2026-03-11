@@ -170,8 +170,8 @@ context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDST
 # 	context.selectBonds('resid 0'),
 # 	# context.selectBonds('resid 1')
 # ]
-# sele = context.getDefaultBonds('standard')
-# context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
+sele = context.getDefaultBonds('standard')
+context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
 
 # for flex in context.getDefaultBonds('macrocycle'):
 # 	context.addTorsionalWorld([flex]).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)

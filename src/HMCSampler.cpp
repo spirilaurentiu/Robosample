@@ -1543,7 +1543,9 @@ void HMCSampler::setVelocitiesToNMA(SimTK::State& someState)
 
 double dot(const SimTK::Vector& a, const SimTK::Vector& b) {
     // Ensure the vectors have matching dimensions
-    if (a.size() != b.size()) return 0.0; 
+    if (a.size() != b.size()) {
+		throw std::invalid_argument("Vectors must be of the same size for dot product.");
+	}
 
     // &a[0] provides the pointer to the start of the underlying data
     return std::inner_product(&a[0], &a[0] + a.size(), &b[0], 0.0);
@@ -3875,8 +3877,8 @@ bool HMCSampler::sample_iteration(SimTK::State& state, std::stringstream& sample
 			integrationSuccessful = dumm->integrateTrajectoryWithOpenMM(state, cartesianRandomSteps(randomEngine), 0.002);
 			break;
 		case IntegratorType::VERLET:
-			// timeStepper->stepTo(state.getTime() + timestep * MDStepsPerSample);
-			depthNUTS = integrateNUTS(state);
+			timeStepper->stepTo(state.getTime() + timestep * MDStepsPerSample);
+			// depthNUTS = integrateNUTS(state);
 			break;
 		case IntegratorType::BOUND_WALK:
 			integrateTrajectory_Bounded(state);

@@ -122,7 +122,7 @@ public:
 private:
     void registerForce(OpenMM::Force* force) {
         forces.push_back(force);
-        force->setForceGroup(fg);
+        // force->setForceGroup(fg);
     }
 
     int fg = -1;

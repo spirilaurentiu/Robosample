@@ -539,6 +539,8 @@ bool OPENMM::initialize(
 		for (const auto& force : omm.forceGroups.back().getForces()) {
 			omm.system->addForce(force);
 		}
+
+		break;
 	}
 
 	// Create the integrator
@@ -643,7 +645,7 @@ bool OPENMM::integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtom
 	// Try to integrate
 	bool success = true;
 	try {
-		integrator->setIntegrationForceGroups(1 << activeForceGroupIndex);
+		// integrator->setIntegrationForceGroups(1 << activeForceGroupIndex);
 		integrator->step(steps);
 	} catch (const std::exception& e) {
 		// // Restore old positions in case of integration failure
@@ -653,7 +655,8 @@ bool OPENMM::integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtom
 	}
 
 	// Intentional value capture: relies on C++17 guaranteed copy elision.
-	const auto state = context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Velocities, enforcePeriodicBox, 1 << activeForceGroupIndex);
+	// , 1 << activeForceGroupIndex
+	const auto state = context->getState(OpenMM::State::Positions | OpenMM::State::Energy | OpenMM::State::Velocities, enforcePeriodicBox);
 	const auto& pos = state.getPositions();
 	const auto& velocities = state.getVelocities();
 
@@ -661,7 +664,7 @@ bool OPENMM::integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtom
 	potentialEnergy = state.getPotentialEnergy();
 	kineticEnergy = state.getKineticEnergy();
 
-	std::cout << "\tIntegrated " << steps << " steps " << " at " << timeStepInPicoseconds << " ps with force group " << activeForceGroupIndex << ". Potential energy: " << state.getPotentialEnergy() << " kJ/mol, Kinetic energy: " << state.getKineticEnergy() << " kJ/mol" << std::endl;
+	// std::cout << "\tIntegrated " << steps << " steps " << " at " << timeStepInPicoseconds << " ps with force group " << activeForceGroupIndex << ". Potential energy: " << state.getPotentialEnergy() << " kJ/mol, Kinetic energy: " << state.getKineticEnergy() << " kJ/mol" << std::endl;
 	
 	// Get new positions
 	simbodyAtomsPositionsCache.resize(pos.size());
@@ -700,7 +703,8 @@ void OPENMM::getEnergyAndForces(
 	// Intentional value capture: relies on C++17 guaranteed copy elision
 	// OpenMM already evaluates the potential energy internally in most kernels (the energy reduction is cheap once forces are computed)
 	// In that case retrieving the energy is essentially free.
-	const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox, 1 << activeForceGroupIndex);
+	// , 1 << activeForceGroupIndex
+	const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Forces, enforcePeriodicBox);
 
 	// auto start = std::chrono::high_resolution_clock::now();
 

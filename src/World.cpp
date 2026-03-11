@@ -4464,67 +4464,67 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 
 	if (getSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {
 		
-		if (!tuned) {
-			std::cout << "[OpenMM tune]: Estimating decorrelation time across coordinates to set random step parameters for the OMMVV sampler..." << std::endl;
+		// if (!tuned) {
+		// 	std::cout << "[OpenMM tune]: Estimating decorrelation time across coordinates to set random step parameters for the OMMVV sampler..." << std::endl;
 
-			// const SimTK::Real tau = findDecorrelationTime(state, 10'000, 100'000, 0.002);
-			// int minSteps = std::round(5 * tau);
-			// int maxSteps = std::round(10 * tau);
+		// 	// const SimTK::Real tau = findDecorrelationTime(state, 10'000, 100'000, 0.002);
+		// 	// int minSteps = std::round(5 * tau);
+		// 	// int maxSteps = std::round(10 * tau);
 
-			int minSteps = 242;
-			int maxSteps = 484;
+		// 	int minSteps = 242;
+		// 	int maxSteps = 484;
 
-			samplers[0]->setCartesianRandomSteps(minSteps, maxSteps);
+		// 	samplers[0]->setCartesianRandomSteps(minSteps, maxSteps);
 
-			// std::cout << "[OpenMM tune]: Estimated max autocorrelation time (tau) across coordinates: " << tau << " steps\n";
-			std::cout << "[OpenMM tune]: L_min: " << minSteps << " steps" << std::endl;
-			std::cout << "[OpenMM tune]: L_max: " << maxSteps << " steps" << std::endl;
+		// 	// std::cout << "[OpenMM tune]: Estimated max autocorrelation time (tau) across coordinates: " << tau << " steps\n";
+		// 	std::cout << "[OpenMM tune]: L_min: " << minSteps << " steps" << std::endl;
+		// 	std::cout << "[OpenMM tune]: L_max: " << maxSteps << " steps" << std::endl;
 
-			// const qualifier prevents us from reusing the same positions vector, so we need to copy it here
-			std::vector<SimTK::Vec3> positions(numAtoms);
-			for (const auto& pos : OPENMM::get().getPositions()) {
-				positions.push_back(pos);
-			}
-			const bool resetPositions = false;
+		// 	// const qualifier prevents us from reusing the same positions vector, so we need to copy it here
+		// 	std::vector<SimTK::Vec3> positions(numAtoms);
+		// 	for (const auto& pos : OPENMM::get().getPositions()) {
+		// 		positions.push_back(pos);
+		// 	}
+		// 	const bool resetPositions = false;
 
-			std::uniform_real_distribution<SimTK::Real> uniformRealDistribution(0.0, 1.0);
+		// 	std::uniform_real_distribution<SimTK::Real> uniformRealDistribution(0.0, 1.0);
 
-			while (true) {
-				const int numAttempts = 50;
-				int numAccepted = 0;
-				std::uniform_int_distribution<> uniformIntDistribution(minSteps, maxSteps);
+		// 	while (true) {
+		// 		const int numAttempts = 50;
+		// 		int numAccepted = 0;
+		// 		std::uniform_int_distribution<> uniformIntDistribution(minSteps, maxSteps);
 
-				for (int i = 0; i < numAttempts; i++) {
-					const SimTK::Real oldE = OPENMM::get().getPotentialEnergy() + OPENMM::get().getKineticEnergy();
-					OPENMM::get().integrateTrajectory(positions, positions, resetPositions, uniformIntDistribution(randomEngine), 0.002);
-					const SimTK::Real newE = OPENMM::get().getPotentialEnergy() + OPENMM::get().getKineticEnergy();
-					const SimTK::Real deltaE = newE - oldE;
-					const SimTK::Real beta = 1.0 / (temperature * SimTK_BOLTZMANN_CONSTANT_MD);
-					const SimTK::Real metropolisCriterion = (deltaE < 0) ? 1.0 : std::exp(-1.0 * beta * deltaE);
+		// 		for (int i = 0; i < numAttempts; i++) {
+		// 			const SimTK::Real oldE = OPENMM::get().getPotentialEnergy() + OPENMM::get().getKineticEnergy();
+		// 			OPENMM::get().integrateTrajectory(positions, positions, resetPositions, uniformIntDistribution(randomEngine), 0.002);
+		// 			const SimTK::Real newE = OPENMM::get().getPotentialEnergy() + OPENMM::get().getKineticEnergy();
+		// 			const SimTK::Real deltaE = newE - oldE;
+		// 			const SimTK::Real beta = 1.0 / (temperature * SimTK_BOLTZMANN_CONSTANT_MD);
+		// 			const SimTK::Real metropolisCriterion = (deltaE < 0) ? 1.0 : std::exp(-1.0 * beta * deltaE);
 					
-					const SimTK::Real randomReal = uniformRealDistribution(randomEngine);
-					const bool accepted = (randomReal < metropolisCriterion);
-					if (accepted) {
-						numAccepted++;
-					}
-				}
+		// 			const SimTK::Real randomReal = uniformRealDistribution(randomEngine);
+		// 			const bool accepted = (randomReal < metropolisCriterion);
+		// 			if (accepted) {
+		// 				numAccepted++;
+		// 			}
+		// 		}
 
-				const SimTK::Real acceptanceRate = static_cast<SimTK::Real>(numAccepted) / static_cast<SimTK::Real>(numAttempts);
-				std::cout << "[OpenMM tune]: Acceptance rate: " << acceptanceRate << " | L_min: " << minSteps << " | L_max: " << maxSteps << std::endl;
+		// 		const SimTK::Real acceptanceRate = static_cast<SimTK::Real>(numAccepted) / static_cast<SimTK::Real>(numAttempts);
+		// 		std::cout << "[OpenMM tune]: Acceptance rate: " << acceptanceRate << " | L_min: " << minSteps << " | L_max: " << maxSteps << std::endl;
 				
-				if (acceptanceRate > 0.8) {
-					minSteps = std::round(minSteps * 1.2);
-					maxSteps = std::round(maxSteps * 1.2);
-				}
-				if (acceptanceRate < 0.35) {
-					minSteps = std::round(minSteps * 0.8);
-					maxSteps = std::round(maxSteps * 0.8);
-				}
+		// 		if (acceptanceRate > 0.8) {
+		// 			minSteps = std::round(minSteps * 1.2);
+		// 			maxSteps = std::round(maxSteps * 1.2);
+		// 		}
+		// 		if (acceptanceRate < 0.35) {
+		// 			minSteps = std::round(minSteps * 0.8);
+		// 			maxSteps = std::round(maxSteps * 0.8);
+		// 		}
 
-			}
+		// 	}
 
-			tuned = true;
-		}
+		// 	tuned = true;
+		// }
 
 		// OpenMM does cartesian integration, so no locking here
 		for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
