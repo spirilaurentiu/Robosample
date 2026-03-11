@@ -335,10 +335,10 @@ class Context(rb.Context):
                  rigid_protein_psi: bool = False,
                  rigid_protein_omega: bool = True,
                  rigid_protein_chi1: bool = False,
-                 rigid_protein_chi2: bool = False,
-                 rigid_protein_chi3: bool = False,
-                 rigid_protein_chi4: bool = False,
-                 rigid_protein_chi5: bool = False):
+                 rigid_protein_chi2: bool = True,
+                 rigid_protein_chi3: bool = True,
+                 rigid_protein_chi4: bool = True,
+                 rigid_protein_chi5: bool = True):
         
         super().__init__(name, seed, threads, nofRoundsTillReblock, runType, replicaSwapFreq, fixmanSwapFreq, testing)
         self.setPdbRestartFreq(pdb_restart_freq)
@@ -410,6 +410,7 @@ class Context(rb.Context):
         self.bond_bends: list[rb.RoboAngle] = []
         self.proper_periodic_torsions: list[rb.RoboPeriodicTorsion] = []
         self.improper_harmonic_torsions: list[rb.RoboHarmonicImproperTorsion] = []
+        self.z_matrix = list[tuple[int, int, int, int]]()
         self.num_atom_offset = 0
         self.num_residues_offset = 0
 
@@ -553,9 +554,20 @@ class Context(rb.Context):
                         )
                     )
 
+                import mdtraj as md
+                traj = md.load(self.inpcrd, top=self.prmtop)
+                ss = md.compute_dssp(traj)
+                
+                # # Convert parmed to mdtraj for DSSP secondary structure assignment to determine which dihedral bonds are rotatable
+                # top = molecule_prototypes[prototype_index].molecule.topology
+                # xyz = molecule_prototypes[prototype_index].molecule.coordinates / 10.0
+
+                # traj = md.Trajectory(xyz=[xyz], topology=top)
+                # ss = md.compute_dssp(traj)
+
                 # Add bonds which are the middle bond of a standard dihedral
                 # We don't convert to global indices and must keep original prmtop ones
-                for (p1, p2, dihedral_type) in molecule_prototypes[prototype_index].bonds:
+                for (p1, p2, dihedral_type, resid) in molecule_prototypes[prototype_index].bonds:
                     atom1_prmtop = p1+self.num_atom_offset
                     if self.parm.atoms[atom1_prmtop].idx != atom1_prmtop:
                         raise ValueError(f"Standard dihedral bond atom index mismatch: expected {atom1_prmtop}, got {self.parm.atoms[atom1_prmtop].idx}")
@@ -563,10 +575,14 @@ class Context(rb.Context):
                     if self.parm.atoms[atom2_prmtop].idx != atom2_prmtop:
                         raise ValueError(f"Standard dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
                     
-                    # Skip ring closing bonds
+                    # Mandatory
                     if 'ring' in dihedral_type:
                         continue
-                    
+
+                    if ss[0][resid] != 'C':
+                        continue
+
+                    # Optional
                     if dihedral_type == 'protein-phi' and not rigid_protein_phi:
                         self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
                     if dihedral_type == 'protein-psi' and not rigid_protein_psi:
@@ -584,36 +600,41 @@ class Context(rb.Context):
                     if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
                         self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
 
-                # Add macrocycle dihedral bonds
-                for macrocycle in molecule_prototypes[prototype_index].macrocycle_bonds:
-                    macrocycle_bonds = list[list[tuple[int, int]]]()
+                # # Add macrocycle dihedral bonds
+                # for macrocycle in molecule_prototypes[prototype_index].macrocycle_bonds:
+                #     macrocycle_bonds = list[list[tuple[int, int]]]()
 
-                    for (p1, p2, dihedral_type) in macrocycle:
-                        atom1_prmtop = p1+self.num_atom_offset
-                        if self.parm.atoms[atom1_prmtop].idx != atom1_prmtop:
-                            raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom1_prmtop}, got {self.parm.atoms[atom1_prmtop].idx}")
-                        atom2_prmtop = p2+self.num_atom_offset
-                        if self.parm.atoms[atom2_prmtop].idx != atom2_prmtop:
-                            raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
+                #     for (p1, p2, dihedral_type, resid) in macrocycle:
+                #         atom1_prmtop = p1+self.num_atom_offset
+                #         if self.parm.atoms[atom1_prmtop].idx != atom1_prmtop:
+                #             raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom1_prmtop}, got {self.parm.atoms[atom1_prmtop].idx}")
+                #         atom2_prmtop = p2+self.num_atom_offset
+                #         if self.parm.atoms[atom2_prmtop].idx != atom2_prmtop:
+                #             raise ValueError(f"Macrocycle dihedral bond atom index mismatch: expected {atom2_prmtop}, got {self.parm.atoms[atom2_prmtop].idx}")
                         
-                        if dihedral_type == 'protein-phi' and not rigid_protein_phi:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
-                        if dihedral_type == 'protein-psi' and not rigid_protein_psi:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
-                        if dihedral_type == 'protein-omega' and not rigid_protein_omega:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
-                        if dihedral_type == 'protein-chi1' and not rigid_protein_chi1:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
-                        if dihedral_type == 'protein-chi2' and not rigid_protein_chi2:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
-                        if dihedral_type == 'protein-chi3' and not rigid_protein_chi3:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
-                        if dihedral_type == 'protein-chi4' and not rigid_protein_chi4:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
-                        if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
-                            macrocycle_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         # Mandatory
+                #         if 'ring' in dihedral_type:
+                #             continue
 
-                    self.macrocycle_dihedral_bonds.append(macrocycle_bonds)
+                #         # Optional
+                #         if dihedral_type == 'protein-phi' and not rigid_protein_phi:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         if dihedral_type == 'protein-psi' and not rigid_protein_psi:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         if dihedral_type == 'protein-omega' and not rigid_protein_omega:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         if dihedral_type == 'protein-chi1' and not rigid_protein_chi1:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         if dihedral_type == 'protein-chi2' and not rigid_protein_chi2:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         if dihedral_type == 'protein-chi3' and not rigid_protein_chi3:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         if dihedral_type == 'protein-chi4' and not rigid_protein_chi4:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                #         if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
+                #             self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+
+                #     self.macrocycle_dihedral_bonds.append(macrocycle_bonds)
 
                 # Add angles
                 for angle in molecule_prototypes[prototype_index].angle_params:
@@ -650,6 +671,23 @@ class Context(rb.Context):
                             molecule_index=instance_index,
                         )
                     )
+
+                # Add Z matrix atom indices for this molecule
+                for row in molecule_prototypes[prototype_index].z_matrix:
+                    global_indices = (
+                        self.prmtop_to_global_index[row.i_global_atom_index+self.num_atom_offset],
+                        self.prmtop_to_global_index[row.j_global_atom_index+self.num_atom_offset] if row.j_global_atom_index is not None else -1,
+                        self.prmtop_to_global_index[row.k_global_atom_index+self.num_atom_offset] if row.k_global_atom_index is not None else -1,
+                        self.prmtop_to_global_index[row.l_global_atom_index+self.num_atom_offset] if row.l_global_atom_index is not None else -1,
+                    )
+                    compound_atom_indices = (
+                        row.i_compound_atom_index,
+                        row.j_compound_atom_index if row.j_compound_atom_index is not None else -1,
+                        row.k_compound_atom_index if row.k_compound_atom_index is not None else -1,
+                        row.l_compound_atom_index if row.l_compound_atom_index is not None else -1,
+                    )
+                    row = rb.ZMatrixRow(global_indices=global_indices, compound_atom_indices=compound_atom_indices, molecule_index=instance_index)
+                    self.z_matrix.append(row)
 
         self.scaling14s = list[rb.Scaling14]()
         excluded = set()
@@ -821,145 +859,6 @@ class Context(rb.Context):
 
         print(f"Loaded system with {len(self.atoms)} atoms, {len(self.bond_stretches)} bonds, {len(self.bond_bends)} angles, {len(self.proper_periodic_torsions)} proper torsions, {len(self.improper_harmonic_torsions)} improper torsions, {len(self.cmap_torsions)} CMAP torsions, and {len(self.urey_bradleys)} Urey-Bradley terms.")
 
-    def initialize_openmm(self):
-        robosample_energies = super().initialize_openmm(
-            self.atoms,
-            self.bond_stretches,
-            self.bond_bends,
-            self.proper_periodic_torsions,
-            self.improper_harmonic_torsions,
-            self.cmap_grids,
-            self.cmap_torsions,
-            self.urey_bradleys,
-            self.has_nbfix,
-            self.num_types,
-            self.acoef,
-            self.bcoef,
-            self.exclusions,
-            self.scaling14s
-        )
-
-        native_energies = self._get_native_openmm_energies()
-        self._verify_openmm_energies(native_energies, robosample_energies)
-
-    def _get_native_openmm_energies(self):
-        prmtop = app.AmberPrmtopFile(self.prmtop)
-        inpcrd = app.AmberInpcrdFile(self.inpcrd)
-
-        system = prmtop.createSystem(
-            nonbondedMethod=app.CutoffNonPeriodic,
-            nonbondedCutoff=1.2,
-            constraints=None,
-            implicitSolvent=app.OBC2,
-            removeCMMotion=False
-        )
-
-        # Add Andersen Thermostat
-        thermostat = mm.AndersenThermostat(300 * unit.kelvin, 1.0 / unit.picosecond)
-        system.addForce(thermostat)
-
-        # Assign each force to a separate group (0, 1, 2, etc.)
-        # This must be done before creating the Simulation
-        dict_forces = {}
-        for i, force in enumerate(system.getForces()):
-            force.setForceGroup(i)
-            dict_forces[force.getName()] = i
-
-            # if isinstance(force, mm.NonbondedForce):
-            #     print(f"NonbondedForce uses ReactionFieldDielectric: {force.getReactionFieldDielectric()}")
-            #     print(f"NonbondedForce uses dispersion correction: {force.getUseDispersionCorrection()}")
-            #     print(f"NonbondedForce uses switching function: {force.getUseSwitchingFunction()}")
-
-            # if isinstance(force, mm.CustomNonbondedForce):
-            #     # print tabulated nonbonded force details
-            #     print("CustomNonbondedForce details:")
-            #     print(f"\tEnergy expression: {force.getEnergyFunction()}")
-            #     print(f"\tNumber of particles: {force.getNumParticles()}")
-            #     print(f"\tUses periodic boundary conditions: {force.usesPeriodicBoundaryConditions()}")
-
-            #     print(f"CustomNonbondedForce uses dispersion correction: {force.getUseLongRangeCorrection()}")
-            #     print(f"CustomNonbondedForce uses switching function: {force.getUseSwitchingFunction()}")
-
-            #     for i in range(force.getNumTabulatedFunctions()):
-            #         func = force.getTabulatedFunction(i)
-            #         print('\tFound TabulatedFunction:', func, force.getTabulatedFunctionName(i))
-            #         print(dir(func))
-            #         # if isinstance(func, mm.Discrete2DFunction):
-            #         # 	print(f"\tFound Discrete2DFunction with {func.getNumValuesX()} x values and {func.getNumValuesY()} y values.")
-
-        integrator = mm.VerletIntegrator(0.001 * unit.picoseconds)
-        platform = mm.Platform.getPlatformByName('Reference')
-        simulation = app.Simulation(prmtop.topology, system, integrator, platform)
-        simulation.context.setPositions(inpcrd.positions)
-
-        # Get total energy first
-        state = simulation.context.getState(getEnergy=True)
-        total_energy = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
-
-        # Assign values to each force group
-        force_groups = {
-            'TotalEnergy': total_energy,
-        }
-
-        # Get individual components by force group
-        for name, group_id in dict_forces.items():
-            state = simulation.context.getState(getEnergy=True, groups={group_id})
-            component_energy = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
-            force_groups[name] = component_energy
-
-        return force_groups
-    
-    def _verify_openmm_energies(self, native_energies, robo_energies, tolerance=1e-1):
-        """
-        Compares energy components between two dictionaries.
-        """
-        # Create a union of all keys present in both dicts
-        all_keys = sorted(set(native_energies.keys()) | set(robo_energies.keys()))
-
-        # check for nan
-        
-        mismatches = []
-        header = f"{'Force Component':<25} {'Native (kJ/mol)':>20} {'Robosample (kJ/mol)':>20} {'Δ':>12}"
-        
-        print(header)
-        print("-" * len(header))
-
-        for key in all_keys:
-            # Get values, defaulting to None if missing
-            v_native = native_energies.get(key)
-            v_robo = robo_energies.get(key)
-
-            # Handle cases where a key is missing from one of the dicts
-            if v_native is None or v_robo is None:
-                status = "MISSING"
-                delta_str = "N/A"
-                mismatches.append(f"Key '{key}' is missing from {'Robosample' if v_robo is None else 'Native'}")
-            else:
-                if np.isnan(v_native) or np.isnan(v_robo):
-                    status = "NaN"
-                    delta_str = "NaN"
-                    mismatches.append(f"Key '{key}' has NaN value in {'Robosample' if np.isnan(v_robo) else 'Native'}")
-                    print(f"{key:<25} {v_native:>20} {v_robo:>20} {delta_str:>12}")
-                    continue
-                delta = abs(v_native - v_robo)
-                delta_str = f"{delta:.3e}"
-                status = f"{v_robo:>20.6f}"
-                if delta >= tolerance:
-                    mismatches.append(f"{key}: Δ={delta:.3e}")
-            print(f"{key:<25} {str(v_native if v_native is not None else 'N/A'):>20} {status:>20} {delta_str:>12}")
-        print("-" * len(header))
-
-        if mismatches:
-            print("Mismatch detected.")
-            raise AssertionError("\n".join(mismatches))
-
-    # def get_cyclomatic_number(self, G: nx.Graph) -> int:
-    #     num_nodes = G.number_of_nodes()
-    #     num_edges = G.number_of_edges()
-    #     num_components = nx.number_connected_components(G)
-    #     cyclomatic_number = num_edges - num_nodes + num_components
-    #     return cyclomatic_number
-    
     @contextmanager
     def record_topology(self, molecule: MoleculePrototype) -> Iterable[rb.TopologyRange]:
         start_counts = self._get_current_counts()
@@ -1105,7 +1004,8 @@ class Context(rb.Context):
             self.bond_bends,
             self.proper_periodic_torsions,
             self.improper_harmonic_torsions,
-            self.topology_ranges
+            self.topology_ranges,
+            self.z_matrix
         )
         
         # Extract thermodynamics state info from all samplers
@@ -1136,7 +1036,6 @@ class Context(rb.Context):
             boost_md_steps.append(s.boostMDSteps)
 
         # Add worlds
-        # PyBind11 does not allow this binding to use keyword arguments (i.e flexibilities=flex), so we have to pass all arguments in order
         # This applies to all calls to robo_bindings functions
         for world in self.worlds:
             print("Adding world with the following parameters: ",
@@ -1149,14 +1048,30 @@ class Context(rb.Context):
                   f"visualizerFrequency={world.visualizerFrequency}")
             super().addWorld(world.fixmanTorque, world.samplesPerRound, world.rootMobility, world.flexibilities, world.useOpenMM, world.visual, world.visualizerFrequency)
 
-        print("Added worlds to context.")
+        # Initialize OpenMM
+        # It will also check for world overcontraining and throw an error if that's the case
+        # This must be called before adding samplers since they want to calculate energies when initializing
+        super().initialize_openmm(
+            self.atoms,
+            self.bond_stretches,
+            self.bond_bends,
+            self.proper_periodic_torsions,
+            self.improper_harmonic_torsions,
+            self.cmap_grids,
+            self.cmap_torsions,
+            self.urey_bradleys,
+            self.has_nbfix,
+            self.num_types,
+            self.acoef,
+            self.bcoef,
+            self.exclusions,
+            self.scaling14s
+        )
 
         # Add samplers
         for i, w in enumerate(self.worlds):
             s = w.samplers[0]
             super().getWorld(i).addSampler(s.samplerName, s.integratorType, s.thermostatName, s.useFixmanPotential)
-
-        print("Initializing context with the following parameters:")
 
         # Add replicas and thermodynamic states
         for temp in replicaTemperatures:
@@ -1165,20 +1080,6 @@ class Context(rb.Context):
 
         # Initialize the context
         super().Initialize()
-
-    # @staticmethod
-    # def get_atom_class(a: pmd.Atom) -> str:
-    #     return f"{a.type}_{a.residue.name}_{a.name}"
-
-    # @staticmethod
-    # def get_charged_atom_type_name(a: pmd.Atom) -> str:
-    #     return a.type + ':' + str(len(a.bond_partners)) + ':' + str(a.charge)
-    
-    #     # # This is how Molmodel does it in TinkerAmber99.cpp
-    #     # return a.residue.name + '_' + a.name
-
-    #     # # This will always work
-    #     # return a.name + ':' + str(len(a.bond_partners)) + ':' + str(a.charge) + ':' + str(a.idx)
 
     def generate_synthetic_atom_classes(self):
         # Signatures store the "parameter environment" of each atom
@@ -1236,12 +1137,4 @@ class Context(rb.Context):
             atom_to_class_name[atom] = unique_sig_to_name[sig]
 
         return atom_to_class_name
-    
-    # def generate_synthetic_charged_atom_types(self):
-    #     signatures = defaultdict(lambda: {"type": None, "mass": None, "charge": None})
-
-    #     for atom in self.parm.atoms:
-    #         signatures[atom]["type"] = atom.type
-    #         signatures[atom]["mass"] = atom.mass
-
     

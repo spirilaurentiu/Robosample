@@ -7,8 +7,6 @@ from openmm import app
 import openmm as mm
 from openmm import unit
 
-import timeit
-
 # python3 roborun.py 2but ../examples/2but.prmtop ../examples/2but.rst7 6000 0 10 1
 
 # python3 roborun.py 2ala_test ./data-raw/2ala.prmtop ./data-raw/2ala.inpcrd 6000 1 1 1
@@ -49,8 +47,100 @@ parser.add_argument('equil_steps', type=int, help='The number of equilibration s
 parser.add_argument('prod_steps', type=int, help='The number of production steps.')
 parser.add_argument('write_freq', type=int, help='CSV and DCD write frequency.')
 
+import MDAnalysis as mda
+from MDAnalysis.analysis.dihedrals import Ramachandran
+from MDAnalysis.analysis.bat import BAT
+import matplotlib.pyplot as plt
+
+# def calculate_l(dcd):
+# 	u = mda.Universe(args.prmtop, dcd)
+# 	selection = u.select_atoms('protein')
+
+# 	# Build BAT representation
+# 	bat = BAT(selection)
+# 	bat.run()
+
+# 	coords = bat.results.bat  # shape: (n_frames, n_internal_coords)
+
+# 	# reference frame
+# 	ref = coords[0]
+
+# 	# RMSD in internal coordinate space
+# 	diff = coords - ref
+# 	rmsd = np.sqrt(np.mean(diff**2, axis=1))
+
+# 	# autocorrelation function
+# 	rmsd_centered = rmsd - np.mean(rmsd)
+# 	acf = np.correlate(rmsd_centered, rmsd_centered, mode='full')
+# 	acf = acf[acf.size // 2:]
+# 	acf /= acf[0]
+
+# 	# Integrated autocorrelation time
+# 	# Stop at first zero crossing to avoid noise in the tail
+# 	cutoff = np.argmax(acf < 0) or len(acf)
+# 	tau = 1 + 2 * np.sum(acf[1:cutoff])
+# 	L = tau / 2
+
+# 	return L
+
+# def get_native_openmm_energy():
+# 	prmtop = app.AmberPrmtopFile(args.prmtop)
+# 	inpcrd = app.AmberInpcrdFile(args.inpcrd)
+
+# 	system = prmtop.createSystem(
+# 		nonbondedMethod=app.CutoffNonPeriodic,
+# 		nonbondedCutoff=1.2,
+# 		constraints=None,
+# 		implicitSolvent=app.OBC2,
+# 		removeCMMotion=False
+# 	)
+
+# 	thermostat = mm.AndersenThermostat(300 * unit.kelvin, 1.0 / unit.picosecond)
+# 	system.addForce(thermostat)
+
+# 	integrator = mm.VerletIntegrator(0.001 * unit.picoseconds)
+# 	platform = mm.Platform.getPlatformByName('CUDA')
+# 	simulation = app.Simulation(prmtop.topology, system, integrator, platform)
+
+# 	simulation.context.setPositions(inpcrd.positions)
+# 	simulation.step(1000)
+# 	equil_positions = simulation.context.getState(getPositions=True).getPositions()
+
+# 	for L in [5, 10, 20, 50, 100, 200]:
+# 		variances = []
+# 		for trial in range(10):  # 50 independent short runs
+# 			system = prmtop.createSystem(
+# 				nonbondedMethod=app.CutoffNonPeriodic,
+# 				nonbondedCutoff=1.2,
+# 				constraints=None,
+# 				implicitSolvent=app.OBC2,
+# 				removeCMMotion=False
+# 			)
+
+# 			thermostat = mm.AndersenThermostat(300 * unit.kelvin, 1.0 / unit.picosecond)
+# 			system.addForce(thermostat)
+
+# 			integrator = mm.VerletIntegrator(0.001 * unit.picoseconds)
+# 			platform = mm.Platform.getPlatformByName('CUDA')
+# 			simulation = app.Simulation(prmtop.topology, system, integrator, platform)
+# 			simulation.context.setPositions(equil_positions)
+
+# 			simulation.reporters.append(app.DCDReporter(f'{args.name}_openmm.dcd', 1))
+# 			simulation.step(L)
+
+# 			variances.append(calculate_l(f'{args.name}_openmm.dcd'))
+# 		print(f"L={L}: mean_var={np.mean(variances):.4f}")
+
+# 	exit()
+
+# 	# Get total energy first
+# 	state = simulation.context.getState(getEnergy=True)
+# 	return state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+
 # Parse the arguments
 args = parser.parse_args()
+
+# get_native_openmm_energy()
 
 # Temperature replica exchange parameters
 T0 = 300.0
@@ -63,29 +153,28 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 6 kcal/mol - tens to hundreds of picoseconds (moderate barrier, ~10KbT)
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
-TIMESTEP_TD = 0.01 # Torsional dymaics time step is 10 fs
+TIMESTEP_TD = 0.015 # Torsional dymaics time step is 10 fs
 MDSTEPS_TD = 100 # Torsional dynamics block trajectory length 1 ps
 
-TIMESTEP_CARTESIAN = 0.001 # Cartesian time step is 0.7 fs since we don't use contraints (e.g. SHAKE)
-MDSTEPS_CARTESIAN = 100 # Cartesian block trajectory length 250 fs
+TIMESTEP_CARTESIAN = 0.001
+MDSTEPS_CARTESIAN = 15
 
 # create robosample context
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
-context.initialize_openmm()
 
 # Add cartesian world (will integrate with OpenMM)
 context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add torsional world with non-redundant dihedrals
-sele = context.getDefaultBonds('standard')
 # sele = [
 # 	context.selectBonds('resid 0'),
 # 	# context.selectBonds('resid 1')
 # ]
-context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
+# sele = context.getDefaultBonds('standard')
+# context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
 
-for flex in context.getDefaultBonds('macrocycle'):
-	context.addTorsionalWorld([flex]).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# for flex in context.getDefaultBonds('macrocycle'):
+# 	context.addTorsionalWorld([flex]).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add replicas (geometric temperature ladder)
 temperatures = []
@@ -94,15 +183,18 @@ for i in range(NOF_REPLICAS):
 
 context.initialize(temperatures)
 
+# print(context.calculate_openmm_energy(0))
+# print(context.calculate_openmm_energy(1))
+
+# # Test OpenMM energies
+# robosample_openmm = context.calculate_openmm_energy(1)
+# native_openmm = get_native_openmm_energy()
+# if robosample_openmm != native_openmm:
+# 	message = f"OpenMM energy calculated by Robosample ({robosample_openmm}) does not match native OpenMM energy ({native_openmm})."
+# 	raise RuntimeError(message)
+
 # Run the simulation
 context.RunREX(args.equil_steps, args.prod_steps)
-
-# # Wrap in a lambda to pass arguments easily
-# t = timeit.Timer(lambda: context.RunREX(args.equil_steps, args.prod_steps))
-
-# # Runs the function 10 times and returns total time
-# total_time = t.timeit(number=1) 
-# print(f"Average time: {total_time / 10:.6f}s")
 
 # Test the simulation
 TOL = 1e-4

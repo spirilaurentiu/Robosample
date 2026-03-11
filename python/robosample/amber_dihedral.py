@@ -58,6 +58,7 @@ PROTEIN_SIDECHAIN = {
     # IUPAC defines only chi1 (heavy atoms). HG rotation is a torsion, not a chi angle
     'CYS': {
         'chi1': ('N', 'CA', 'CB', 'SG'),
+        'disulfide': ('CB', 'SG', 'SG', 'CB'),
     },
 
     # Cystine (Disulfide-bonded, neutral)

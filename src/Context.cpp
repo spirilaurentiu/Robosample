@@ -104,7 +104,8 @@ void Context::loadAmberSystem(
 	const std::vector<RoboAngle>& angles_,
 	const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions_,
 	const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions_,
-	const std::vector<TopologyRange>& topologyRanges)
+	const std::vector<TopologyRange>& topologyRanges,
+	const ZMatrix& _zMatrix)
 {
 	// Copy the data
 	roots = roots_;
@@ -112,7 +113,8 @@ void Context::loadAmberSystem(
 	bonds = bonds_;
 	angles = angles_;
 	properPeriodicTorsions = properPeriodicTorsions_;
-	harmonicImproperTorsions = harmonicImproperTorsions_;\
+	harmonicImproperTorsions = harmonicImproperTorsions_;
+	zMatrix = _zMatrix;
 
 	numMolecules = roots.size();
 
@@ -301,7 +303,7 @@ void Context::loadAmberSystem(
 	}
 }
 
-OpenMMEnergyComponents Context::initializeOpenMM(
+void Context::initializeOpenMM(
 	const std::vector<RoboAtom>& atoms,
 	const std::vector<RoboBond>& bonds,
 	const std::vector<RoboAngle>& angles,
@@ -317,8 +319,27 @@ OpenMMEnergyComponents Context::initializeOpenMM(
 	const std::vector<Exclusion>& exclusions,
     const std::vector<Scaling14>& scaling14s)
 {
+	if (worlds.empty()) {
+		throw std::runtime_error("Cannot initialize OpenMM without any world. Please call addWorld() first.");
+	}
+
+	// Build the rigid bodies list for each world
+	std::vector<std::vector<int>> worldsRigidBodies;
+
+	for (const auto& world : worlds) {
+		worldsRigidBodies.emplace_back(atoms.size());
+
+		for (const auto& topology : topologies) {
+			for (const auto& atom : topology.getAtoms()) {
+				const SimTK::MobilizedBodyIndex mbx = topology.getAtomMobilizedBodyIndexThroughDumm(atom.identity.compoundAtomIndex, world.getForceField());
+				worldsRigidBodies.back()[atom.identity.globalIndex] = int(mbx);
+			}
+		}
+	}
+	
 	OPENMM::initialize(
 		seed,
+		worldsRigidBodies,
 		atoms,
 		bonds,
 		angles,
@@ -339,11 +360,36 @@ OpenMMEnergyComponents Context::initializeOpenMM(
 		nonbondedMethod,
 		nonbondedCutoffInNm,
 		300.0, // thermostatTemperature
-		1.0, // collisionFrequency
-		testing
+		1.0 // collisionFrequency
 	);
+
+	// Check if the worlds are overconstrained
+	for (const auto& world : worlds) {
+		const auto& state = world.getIntegrator().getAdvancedState();
+
+		// Realize will calculate the forces and potential energy using OpenMM
+		OPENMM::get().setActiveForceGroup(world.getOwnIndex());
+		world.getCompoundSystem().realize(state, SimTK::Stage::Acceleration);
 	
-	return OPENMM::get().getEnergyComponents();
+		if (world.isOverconstrained(state, std::cout)) {
+			const std::string msg = "World " + std::to_string(worldIndexes.back()) + " is overconstrained.";
+			throw std::runtime_error(msg);
+		}
+	}
+}
+
+SimTK::Real Context::calculatePotentialEnergy(int worldIndex) {
+	if (worlds.empty()) {
+		throw std::runtime_error("Cannot calculate OpenMM energy without any world. Please call addWorld() first.");
+	}
+
+	// OPENMM::get().setActiveForceGroup(worldIndex);
+	auto& state = worlds[worldIndex].updIntegrator().updAdvancedState();
+	std::stringstream nullStream;
+	bool verbose = false;
+
+	worlds[worldIndex].updSampler(0)->reinitialize(state, nullStream, verbose);
+	return worlds[worldIndex].getSampler(worldIndex)->currentEnergy.potential;
 }
 
 /*! <!--  --> */
@@ -386,7 +432,7 @@ void Context::addWorld(
 	// Create new world and add its index
 	worldIndexes.push_back(worldIndexes.size());
 	Span<Topology> t {topologies};
-	worlds.emplace_back(worldIndexes.back(), t, testing, visual, visualizerFrequency);
+	worlds.emplace_back(worldIndexes.back(), t, testing, zMatrix, visual, visualizerFrequency);
 
 	// Set force field scale factor.
 	if (useAmberForceFieldScaleFactors) {
@@ -526,24 +572,13 @@ void Context::addWorld(
                                 	 atoms[indices.first].identity.uniqueAtomName + " (BAT index " + std::to_string(indices.first) + ") and " +
 									 atoms[indices.second].identity.uniqueAtomName + " (BAT index " + std::to_string(indices.second) + ") " +
 									 "was not found in the system.";
-            
-            // Condition set to 'false' so the assert actually triggers when it hits this block
-            SimTK_ASSERT_ALWAYS(false, error_msg.c_str());
+            throw std::runtime_error(error_msg);
         }
     }
 
 	// Let DuMM model this robot
 	worlds.back().modelTopologies();
 	worlds.back().setAtomTargetLocationsToState(atomTargetLocationsCache);
-
-	// Check that this world is not overconstrained
-	const auto& state = worlds.back().getIntegrator().getAdvancedState();
-	worlds.back().getCompoundSystem().realize(state, SimTK::Stage::Acceleration);
-
-	if (worlds.back().isOverconstrained(state, std::cout)) {
-		const std::string msg = "World " + std::to_string(worldIndexes.back()) + " is overconstrained.";
-		throw std::runtime_error(msg);
-	}
 
 	// Find bodies for roll mobilities
 	std::vector<std::vector<SimTK::MobilizedBodyIndex>> mobodLocks;
@@ -2590,6 +2625,9 @@ void Context::RunReplicaWorldRange(int replicaIx, int startWorldCnt, int nofWorl
 	// Loop through all worlds within the thermodynamic schedule
 	// This is an index into the thermodynamic state’s world list
 	for(const int worldScheduleIndex : thermoState.updWorldIndexes()) {
+
+		// Tell OpenMM what force group to use
+		OPENMM::get().setActiveForceGroup(worldScheduleIndex);
 
 		// Get the physical world object in the simulation
 		const int worldIndex = thermoWorldIxs[worldScheduleIndex];

@@ -9,8 +9,8 @@
 #include <set>
 #include <algorithm>
 
+#include "Force.h"
 #include "OpenMM.h"
-#include "Topology.hpp"
 
 #if USE_CPU
     #include "../Molmodel/src/gbsa/cpuObcInterface.h"
@@ -68,42 +68,9 @@ struct Exclusion {
     int a2;
 };
 
-enum class ForceGroup : int {
-    HarmonicBondForce = 0,
-    HarmonicAngleForce,
-    PeriodicTorsionForce,
-    ImproperTorsionForce,
-    NonbondedForce,
-    CustomNonbondedForce,
-    Thermostat,
-    CMAPTorsion,
-    GBSAOBC,
-    UreyBradley,
-    Count
-};
-
-static inline std::string to_string(ForceGroup fg) {
-    switch (fg) {
-        case ForceGroup::HarmonicBondForce: return "HarmonicBondForce";
-        case ForceGroup::HarmonicAngleForce: return "HarmonicAngleForce";
-        case ForceGroup::PeriodicTorsionForce: return "PeriodicTorsionForce";
-        case ForceGroup::ImproperTorsionForce: return "ImproperTorsionForce";
-        case ForceGroup::NonbondedForce: return "NonbondedForce";
-        case ForceGroup::CustomNonbondedForce: return "CustomNonbondedForce";
-        case ForceGroup::Thermostat: return "AndersenThermostat";
-        case ForceGroup::CMAPTorsion: return "CMAPTorsionForce";
-        case ForceGroup::GBSAOBC: return "GBSAOBCForce";
-        case ForceGroup::UreyBradley: return "UreyBradleyForce";
-        default: return "UnknownForceGroup";
-    }
-}
-
-struct ForceRegistration {
-    OpenMM::Force* force = nullptr;
-    ForceGroup group = ForceGroup::Count;
-};
-
-using OpenMMEnergyComponents = std::unordered_map<std::string, SimTK::Real>;
+using CanonicalBond = std::pair<std::size_t, std::size_t>;
+using CanonicalAngle = std::array<std::size_t, 3>;
+using CanonicalTorsion = std::array<std::size_t, 4>;
 
 [[nodiscard]] static inline std::pair<std::size_t, std::size_t> canonicalizeBond(std::size_t i, std::size_t j) noexcept {
     return { std::min(i, j), std::max(i, j) };
@@ -119,10 +86,54 @@ using OpenMMEnergyComponents = std::unordered_map<std::string, SimTK::Real>;
     return (forward < reverse) ? forward : reverse;
 }
 
+class ForceGroup {
+public:
+    void initialize(
+        int forceGroupIndex,
+        const std::vector<int>& rigidBodies,
+        uint32_t seed,
+		const std::vector<RoboAtom>& atoms,
+		const std::vector<RoboBond>& bonds,
+		const std::vector<RoboAngle>& angles,
+		const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions,
+		const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions,
+		const std::vector<CMAPGrid>& cmapGrids,
+		const std::vector<CMAPTorsion>& cmapTorsions,
+        const std::vector<UreyBradley>& ureyBradleys,
+		bool hasNBfix,
+		int numTypes,
+		const std::vector<SimTK::Real>& acoef,
+		const std::vector<SimTK::Real>& bcoef,
+		const std::vector<Exclusion>& exclusions,
+        const std::vector<Scaling14>& scaling14s,
+        bool useGBSAOBC2,
+        SimTK::Real gbsaSolventDielectric,
+        SimTK::Real gbsaSoluteDielectric,
+        NonbondedMethod nonbondedMethod,
+        SimTK::Real nonbondedCutoffInNm,
+        SimTK::Real thermostatTemperature,
+        SimTK::Real collisionFrequency
+    );
+
+    const std::vector<OpenMM::Force*>& getForces() const {
+        return forces;
+    }
+
+private:
+    void registerForce(OpenMM::Force* force) {
+        forces.push_back(force);
+        force->setForceGroup(fg);
+    }
+
+    int fg = -1;
+    std::vector<OpenMM::Force*> forces;
+};
+
 class OPENMM {
 public:
     static bool initialize(
         uint32_t seed,
+        const std::vector<std::vector<int>>& worlds,
 		const std::vector<RoboAtom>& atoms,
 		const std::vector<RoboBond>& bonds,
 		const std::vector<RoboAngle>& angles,
@@ -143,33 +154,14 @@ public:
         NonbondedMethod nonbondedMethod,
         SimTK::Real nonbondedCutoffInNm,
         SimTK::Real thermostatTemperature,
-        SimTK::Real collisionFrequency,
-        bool testing);
-
-    static bool initialize_test(
-        uint32_t seed,
-		const std::vector<CMAPGrid>& cmapGrids,
-		const std::vector<CMAPTorsion>& cmapTorsions,
-        const std::vector<UreyBradley>& ureyBradleys,
-        bool hasNBfix,
-		int numTypes,
-		const std::vector<SimTK::Real>& acoef,
-		const std::vector<SimTK::Real>& bcoef,
-        const std::vector<std::vector<BondFlexibility>>& flexibilities,
-        const std::vector<Topology>& topologies,
-        bool useGBSAOBC2,
-        SimTK::Real gbsaSolventDielectric,
-        SimTK::Real gbsaSoluteDielectric,
-        NonbondedMethod nonbondedMethod,
-        SimTK::Real nonbondedCutoffInNm,
-        SimTK::Real thermostatTemperature,
         SimTK::Real collisionFrequency
     );
 
-    OpenMMEnergyComponents getEnergyComponents();
+    void setActiveForceGroup(int forceGroupIndex) {
+        ensureInitialized();
+        activeForceGroupIndex = forceGroupIndex;
+    }
 
-    SimTK::Real getPotentialEnergy(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-    
     void setVelocitiesToTemperature(SimTK::Real temperature, uint32_t seed);
 
     static OPENMM& get() {
@@ -189,10 +181,41 @@ public:
     SimTK::Real getPotentialEnergy() const;
     SimTK::Real getKineticEnergy() const;
 
-    void setPositions(const std::vector<SimTK::Vec3> &positions);
+    void setPositions(const std::vector<SimTK::Vec3>& positions);
     const std::vector<SimTK::Vec3>& getPositions() const;
 
-    bool integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& positions, int steps);
+    bool integrateTrajectory(const SimTK::Vector_<SimTK::Vec3>& includedAtomPositionsInG, int steps, SimTK::Real timeStepInPicoseconds);
+
+    void integrateTrajectory(const std::vector<SimTK::Vec3>& inPositions, std::vector<SimTK::Vec3>& outPositions, bool resetPositions, int steps, SimTK::Real timeStepInPicoseconds) {
+        ensureInitialized();
+        
+        // Convert SimTK::Vec3 to OpenMM::Vec3
+        if (resetPositions) {
+            for (std::size_t i = 0; i < inPositions.size(); ++i) {
+                const SimTK::Vec3& coords = inPositions[i];
+                ommAtomsPositionsCache[i] = OpenMM::Vec3(coords[0], coords[1], coords[2]);
+            }
+
+            // Set positions in OpenMM context
+            context->setPositions(ommAtomsPositionsCache);
+        }
+
+        // Integrate
+        integrator->setIntegrationForceGroups(1 << activeForceGroupIndex);
+		integrator->step(steps);
+
+        // Return new positions
+        const auto state = context->getState(OpenMM::State::Energy | OpenMM::State::Positions, enforcePeriodicBox, 1 << activeForceGroupIndex);
+        const auto& pos = state.getPositions();
+        outPositions.resize(pos.size());
+        for (size_t i = 0, n = pos.size(); i < n; ++i) {
+            const auto& c = pos[i];
+            outPositions[i] = {c[0], c[1], c[2]};
+        }
+
+        potentialEnergy = state.getPotentialEnergy();
+        kineticEnergy = state.getKineticEnergy();
+    }
 
     void getEnergyAndForces(
         bool positionsAlreadySet,
@@ -202,8 +225,6 @@ public:
         SimTK::Vector_<SimTK::SpatialVec>& includedBodyForces_G,
         SimTK::Real &energy);
 
-    std::vector<std::size_t> getRigidBodyIndices(std::size_t numAtoms, const Span<RoboBond> bonds, const std::vector<BondFlexibility>& flexibleBonds);
-
     std::tuple<OpenMM::Vec3, OpenMM::Vec3, OpenMM::Vec3> computePeriodicBoxVectors_Context(
         double a_length, double b_length, double c_length,
         double alpha, double beta, double gamma);
@@ -212,23 +233,22 @@ private:
     OPENMM() = default;
 
     void ensureInitialized() const {
-        SimTK_ASSERT_ALWAYS(initialized, "OPENMM::ensureInitialized(): OpenMM has not initialized.");
+        if (!initialized) {
+            throw std::runtime_error("OPENMM subsystem not initialized. Call OPENMM::initialize() before using any other functions.");
+        }
     }
 
-    void registerForce(const ForceRegistration& fr);
-    
 	std::unique_ptr<OpenMM::Context> context;
 	std::unique_ptr<OpenMM::System> system;
 	std::unique_ptr<OpenMM::Integrator> integrator;
-
-    std::vector<ForceRegistration> forceRegistry;
+    std::vector<ForceGroup> forceGroups;
     
     std::size_t numAtoms = 0;
     std::vector<OpenMM::Vec3> ommAtomsPositionsCache, ommAtomsPositionsCacheOld;
     std::vector<SimTK::Vec3> simbodyAtomsPositionsCache;
     SimTK::Real potentialEnergy = 0, kineticEnergy = 0;
     
-    bool testing = false;    
 	bool enforcePeriodicBox = false;
     bool initialized = false;
+    int activeForceGroupIndex = -1;
 };

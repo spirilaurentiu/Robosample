@@ -3,6 +3,7 @@
 #include "Robo.hpp"
 #include "Sampler.hpp"
 #include "SetupReader.hpp"
+#include "TopologyElements.hpp"
 #include "World.hpp"
 #include "ThermodynamicState.hpp"
 #include "Replica.hpp"
@@ -105,10 +106,11 @@ public:
 		const std::vector<RoboAngle>& angles_,
 		const std::vector<RoboPeriodicTorsion>& properPeriodicTorsions_,
 		const std::vector<RoboHarmonicImproperTorsion>& harmonicImproperTorsions_,
-		const std::vector<TopologyRange>& topologyRanges
+		const std::vector<TopologyRange>& topologyRanges,
+		const ZMatrix& _zMatrix
 	);
 
-	OpenMMEnergyComponents initializeOpenMM(
+	void initializeOpenMM(
 		const std::vector<RoboAtom>& atoms,
 		const std::vector<RoboBond>& bonds,
 		const std::vector<RoboAngle>& angles,
@@ -124,6 +126,7 @@ public:
 		const std::vector<Exclusion>& exclusions,
         const std::vector<Scaling14>& scaling14s
 	);
+	SimTK::Real calculatePotentialEnergy(int worldIndex);
 
 	void Initialize();
 
@@ -686,6 +689,8 @@ public:
 
 
 private:
+
+	ZMatrix zMatrix;
 
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCache;
 

@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "Context.hpp"
+#include "TopologyElements.hpp"
 
 namespace py = pybind11;
 
@@ -207,7 +208,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<RoboPeriodicTorsion>(m, "RoboPeriodicTorsion")
         .def(
-            py::init< std::array<int, 4>, std::array<int, 4>, int, bool, std::vector<RoboPeriodicTorsionTerm>>(),
+            py::init<std::array<int, 4>, std::array<int, 4>, int, bool, std::vector<RoboPeriodicTorsionTerm>>(),
             py::arg("global_indices"),
             py::arg("compound_atom_indices"),
             py::arg("molecule_index"),
@@ -217,13 +218,24 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<RoboHarmonicImproperTorsion>(m, "RoboHarmonicImproperTorsion")
         .def(
-            py::init< std::array<int, 4>, std::array<int, 4>, int, SimTK::Real, SimTK::Real>(),
+            py::init<std::array<int, 4>, std::array<int, 4>, int, SimTK::Real, SimTK::Real>(),
             py::arg("global_indices"),
             py::arg("compound_atom_indices"),
             py::arg("molecule_index"),
             py::arg("stiffness_in_kj_per_rad_sq"),
             py::arg("nominal_angle_in_rad")    
         );
+
+    py::class_<ZMatrixRow>(m, "ZMatrixRow")
+        .def(
+            py::init<std::array<int, 4>, std::array<int, 4>, int>(),
+            py::arg("global_indices"),
+            py::arg("compound_atom_indices"),
+            py::arg("molecule_index")
+        )
+        .def_readwrite("global_indices", &ZMatrixRow::globalIndices)
+        .def_readwrite("compound_atom_indices", &ZMatrixRow::compoundAtomIndices)
+        .def_readwrite("molecule_index", &ZMatrixRow::moleculeIndex);
 
     py::class_<CMAPGrid>(m, "CMAPGrid")
         .def(py::init<>())
@@ -297,6 +309,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("setGBSAOptions", &Context::setGBSAOptions, "Set GBSA-OBC2 options.")
         .def("loadAmberSystem", &Context::loadAmberSystem, "Load an AMBER system.")
         .def("initialize_openmm", &Context::initializeOpenMM, "Load an OpenMM system from components.")
+        .def("calculate_openmm_energy", &Context::calculatePotentialEnergy, py::arg("worldIndex"), "Calculate the OpenMM energy of the current state for a specific world index.")
         .def("addWorld", &Context::addWorld, "Add an empty world.")
 
         // Binds the const version of getWorld

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "TrivalentAtomTetra.hpp"
 #include "TopologyElements.hpp"
-#include "server.hpp"
+#include "OpenMM.hpp"
+#include <cstddef>
+#include <unordered_map>
 
 using CompoundAtomIndexPair = std::pair<SimTK::Compound::AtomIndex, SimTK::Compound::AtomIndex>;
 
@@ -33,11 +34,54 @@ public:
 	const Span<RoboAtom> getAtoms() const { return subAtomList; }
 	Span<RoboAtom> updAtoms() { return subAtomList; }
 
-	void setBonds(Span<RoboBond> bonds) { subBondList = bonds; }
+	void setBonds(Span<RoboBond> bonds) {
+		subBondList = bonds;
+
+		for (std::size_t i = 0; i < subBondList.size(); ++i) {
+			const auto& bond = subBondList[i];
+			const auto canonicalBond = canonicalizeBond(bond.compoundAtomIndices[0], bond.compoundAtomIndices[1]);
+			const auto cAIx0 = canonicalBond.first;
+			const auto cAIx1 = canonicalBond.second;
+
+			const std::string name = subAtomList[cAIx0].identity.uniqueAtomName + "-" + subAtomList[cAIx1].identity.uniqueAtomName;
+			atomName2bond[name] = i;
+		}
+	}
+	const RoboBond& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const {
+		const auto canonicalBond = canonicalizeBond(cAIx0, cAIx1);
+		const auto name = subAtomList[canonicalBond.first].identity.uniqueAtomName + "-" + subAtomList[canonicalBond.second].identity.uniqueAtomName;
+		const auto bondIt = atomName2bond.find(name);
+		if (bondIt == atomName2bond.end()) {
+			throw std::runtime_error("No bond found between atoms with Compound Atom Indices " + std::to_string(cAIx0) + " and " + std::to_string(cAIx1));
+		}
+		return subBondList[bondIt->second];
+	}
 	const Span<RoboBond> getBonds() const { return subBondList; }
 	Span<RoboBond> updBonds() { return subBondList; }
 
-	void setAngles(Span<RoboAngle> angles) { subAngleList = angles; }
+	void setAngles(Span<RoboAngle> angles) {
+		subAngleList = angles;
+
+		for (std::size_t i = 0; i < subAngleList.size(); ++i) {
+			const auto& angle = subAngleList[i];
+			const auto canonicalAngle = canonicalizeAngle(angle.compoundAtomIndices[0], angle.compoundAtomIndices[1], angle.compoundAtomIndices[2]);
+			const auto cAIx0 = canonicalAngle[0];
+			const auto cAIx1 = canonicalAngle[1];
+			const auto cAIx2 = canonicalAngle[2];
+
+			const std::string name = subAtomList[cAIx0].identity.uniqueAtomName + "-" + subAtomList[cAIx1].identity.uniqueAtomName + "-" + subAtomList[cAIx2].identity.uniqueAtomName;
+			atomName2angle[name] = i;
+		}
+	}
+	const RoboAngle& getAngleByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1, SimTK::Compound::AtomIndex cAIx2) const {
+		const auto canonicalAngle = canonicalizeAngle(cAIx0, cAIx1, cAIx2);
+		const auto name = subAtomList[canonicalAngle[0]].identity.uniqueAtomName + "-" + subAtomList[canonicalAngle[1]].identity.uniqueAtomName + "-" + subAtomList[canonicalAngle[2]].identity.uniqueAtomName;
+		const auto angleIt = atomName2angle.find(name);
+		if (angleIt == atomName2angle.end()) {
+			throw std::runtime_error("No angle found between atoms with Compound Atom Indices " + std::to_string(cAIx0) + ", " + std::to_string(cAIx1) + " and " + std::to_string(cAIx2));
+		}
+		return subAngleList[angleIt->second];
+	}
 	const Span<RoboAngle> getAngles() const { return subAngleList; }
 	Span<RoboAngle> updAngles() { return subAngleList; }
 
@@ -98,18 +142,6 @@ public:
 	 * @return Reference to the BondLink object.
 	 */
 	const RoboBond& getBondByGlobalAtomIndex(int aIx0, int aIx1) const;
-
-	/**
-	 * @brief Get a reference to the bond object in the bond list of this compound using Compound Atom Indices.
-	 * 
-	 * This is not the global atom index but the local Compound Atom Index.
-	 * 
-	 * @param cAIx0 Compound Atom Index of one atom in the bond.
-	 * @param cAIx1 Compound Atom Index of the other atom in the bond.
-	 * 
-	 * @return Reference to the BondLink object.
-	 */
-	const RoboBond& getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const;
 
 	/**	
 	* @brief Get the bonded neighbor atom in the parent mobilized body.
@@ -184,6 +216,8 @@ private:
 	Span<RoboAngle> subAngleList;
 	Span<RoboPeriodicTorsion> subPeriodicTorsions;
 	Span<RoboHarmonicImproperTorsion> subImproperHarmonicTorsions;
+
+	std::unordered_map<std::string, std::size_t> atomName2bond, atomName2angle;
 
 	// Map aIx to its Transform Default top transform
 	std::vector<SimTK::Transform> aIx2TopTransform;

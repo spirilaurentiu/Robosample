@@ -80,6 +80,15 @@ class Topology;
 class IState;
 class Context;
 
+struct Node {
+    SimTK::Vector q_minus, q_plus;
+    SimTK::Vector p_minus, p_plus;
+    SimTK::Vector q_proposal, p_proposal;
+
+    int n_valid{0};
+    bool stop{false};
+};
+
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
 	const char *dirname, const char *prefix, int midlength,
 	const char *sufix, double aTime);
@@ -260,6 +269,9 @@ public:
 	/** Apply the L operator **/
 	virtual void integrateTrajectory(SimTK::State& someState, bool useNUTS);
 	void integrateVariableTrajectory(SimTK::State& someState);
+
+	Node buildTree(SimTK::State& state, int depth, int direction);
+	int integrateNUTS(SimTK::State& someState);
 
 	/** Integrate trajectory one step at a time to compute quantities instantly **/
 	virtual void integrateTrajectoryOneStepAtATime(SimTK::State& someState);
@@ -564,6 +576,10 @@ public:
 	void setThermodynamicState( int thisThermoStateIx ){this->thermoStateIx = thisThermoStateIx;}
 	# pragma endregion REBAS_TEST
 
+	void setCartesianRandomSteps(int minSteps, int maxSteps) {
+		cartesianRandomSteps = std::uniform_int_distribution<>(minSteps, maxSteps);
+	}
+
 protected:
 
 	# pragma region REBAS_TEST
@@ -677,4 +693,6 @@ protected:
 
 	// DELETE
 	SimTK::Real debug_rand_no = 0.0;
+
+	std::uniform_int_distribution<> cartesianRandomSteps { 250, 2500 };
 };

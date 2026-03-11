@@ -1,6 +1,6 @@
 import parmed as pmd
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Iterable, Tuple, Set, FrozenSet, Optional, Dict, Hashable
 import robo_bindings as rb
 import numpy as np
@@ -69,6 +69,17 @@ class HarmonicImproperTorsionParams:
     stiffness_in_kj_per_rad_sq: float
     nominal_angle_in_rad: float
 
+@dataclass(slots=True)
+class ZMatrixRowAtomGroups:
+    i_global_atom_index: int | None = field(default=None)
+    j_global_atom_index: int | None = field(default=None)
+    k_global_atom_index: int | None = field(default=None)
+    l_global_atom_index: int | None = field(default=None)
+    
+    i_compound_atom_index: int | None = field(default=None)
+    j_compound_atom_index: int | None = field(default=None)
+    k_compound_atom_index: int | None = field(default=None)
+    l_compound_atom_index: int | None = field(default=None)
 
 
 class MoleculePrototype:
@@ -86,19 +97,22 @@ class MoleculePrototype:
         root = terminal_atoms[0].idx
 
         # Find (parent, child) bonds in BFS order starting from root
-        self.bonds = self._build_bonds_bfs(root)
+        self.acyclic_graph, self.bonds = self._build_bonds_bfs(root)
 
         # Create a mapping between the original indices and the BFS-explored indices
         # Again, Molmodel adds atoms via Molmodel via bondAtom(idx1, idx2)
         # Essentially, we create a mapping between the order in which atoms were added to  and their original indices
         self.nodes = [root]
-        for parent_local_index, child_local_index, dihedral_type in self.bonds:
+        for parent_local_index, child_local_index, dihedral_type, resid in self.bonds:
             if not 'ring' in dihedral_type:
                 self.nodes.append(child_local_index)
 
         self.local_to_compound_atom_index_map = {}
         for compound_atom_index, prmtop_index in enumerate(self.nodes):
             self.local_to_compound_atom_index_map[prmtop_index] = compound_atom_index
+
+        # Generate Z matrix atom indices
+        self.z_matrix = self._build_z_matrix()
 
         # Build atom parameters
         self.atom_params: list[AtomParams] = []
@@ -108,7 +122,7 @@ class MoleculePrototype:
             a = self.molecule.atoms[local_index]
             self.atom_params.append(AtomParams(
                 local_index=local_index,
-                compound_atom_index=self.local_to_compound_atom_index(local_index),
+                compound_atom_index=self._local_to_compound_atom_index(local_index),
                 element_name=a.element_name,
                 element_symbol=a.element_name, # TODO
                 atomic_number=a.atomic_number,
@@ -132,7 +146,7 @@ class MoleculePrototype:
 
         # Build bond parameters
         self.bond_params: List[BondParams] = []
-        for parent_local_index, child_local_index, dihedral_type in self.bonds:
+        for parent_local_index, child_local_index, dihedral_type, resid in self.bonds:
             bond = bond_lookup.get(frozenset((parent_local_index, child_local_index)))
             
             if bond is None:
@@ -144,8 +158,8 @@ class MoleculePrototype:
                     child_local_index
                 ),
                 compound_atom_indices=(
-                    self.local_to_compound_atom_index(parent_local_index),
-                    self.local_to_compound_atom_index(child_local_index)
+                    self._local_to_compound_atom_index(parent_local_index),
+                    self._local_to_compound_atom_index(child_local_index)
                 ),
                 stiffness_in_kj_per_nm_sq=bond.type.uk.value_in_unit(pmd.unit.kilojoule_per_mole / pmd.unit.nanometer**2),
                 nominal_length_in_nm=bond.type.ureq.value_in_unit(pmd.unit.nanometer),
@@ -162,9 +176,9 @@ class MoleculePrototype:
                     angle.atom3.idx
                 ),
                 compound_atom_indices=(
-                    self.local_to_compound_atom_index(angle.atom1.idx),
-                    self.local_to_compound_atom_index(angle.atom2.idx),
-                    self.local_to_compound_atom_index(angle.atom3.idx)
+                    self._local_to_compound_atom_index(angle.atom1.idx),
+                    self._local_to_compound_atom_index(angle.atom2.idx),
+                    self._local_to_compound_atom_index(angle.atom3.idx)
                 ),
                 stiffness_in_kj_per_rad_sq=angle.type.uk.value_in_unit(pmd.unit.kilojoule_per_mole / pmd.unit.radian**2),
                 nominal_angle_in_deg=angle.type.utheteq.value_in_unit(pmd.unit.degree)
@@ -226,10 +240,10 @@ class MoleculePrototype:
                     atom4_local_index
                 ),
                 compound_atom_indices=(
-                    self.local_to_compound_atom_index(atom1_local_index),
-                    self.local_to_compound_atom_index(atom2_local_index),
-                    self.local_to_compound_atom_index(atom3_local_index),
-                    self.local_to_compound_atom_index(atom4_local_index)
+                    self._local_to_compound_atom_index(atom1_local_index),
+                    self._local_to_compound_atom_index(atom2_local_index),
+                    self._local_to_compound_atom_index(atom3_local_index),
+                    self._local_to_compound_atom_index(atom4_local_index)
                 ),
                 is_improper=value["improper"],
                 terms=value["terms"]
@@ -247,16 +261,16 @@ class MoleculePrototype:
                     imp.atom4.idx
                 ),
                 compound_atom_indices=(
-                    self.local_to_compound_atom_index(imp.atom1.idx),
-                    self.local_to_compound_atom_index(imp.atom2.idx),
-                    self.local_to_compound_atom_index(imp.atom3.idx),
-                    self.local_to_compound_atom_index(imp.atom4.idx)
+                    self._local_to_compound_atom_index(imp.atom1.idx),
+                    self._local_to_compound_atom_index(imp.atom2.idx),
+                    self._local_to_compound_atom_index(imp.atom3.idx),
+                    self._local_to_compound_atom_index(imp.atom4.idx)
                 ),
                 stiffness_in_kj_per_rad_sq=imp.type.upsi_k.value_in_unit(pmd.unit.kilojoule_per_mole / pmd.unit.radian**2),
                 nominal_angle_in_rad=imp.type.upsi_eq.value_in_unit(pmd.unit.radian)
             ))
 
-    def local_to_compound_atom_index(self, local_index: int) -> int:
+    def _local_to_compound_atom_index(self, local_index: int) -> int:
         """
         Map an Amber prmtop atom index [a, b] to the internal compound representation atom index [0, n-1] where n is the number of atoms in the compound.
 
@@ -354,7 +368,7 @@ class MoleculePrototype:
             # Non-standardized dihedral are None and we treat as non-ring-closing for now
             dihedral_type = self._get_standardized_dihedral_type(parent, child)
 
-            if 'ring' in dihedral_type:
+            if 'ring' in dihedral_type or 'disulfide' in dihedral_type:
                 # Check rigid bond constraints
                 for idx in (parent_idx, child_idx):
                     if rigid_bonds_involved.get(idx, 0) >= 1:
@@ -424,13 +438,14 @@ class MoleculePrototype:
             raise ValueError("Graph disconnected after ring closure removal.")
 
         # Generate BFS order for non-ring-closing bonds
+        bond_to_resid = {frozenset((b.atom1.idx, b.atom2.idx)): b.atom1.residue.idx for b in self.molecule.bonds}
         edges_with_flags = [
-            (u, v, self._get_standardized_dihedral_type(self.molecule[u], self.molecule[v]))
+            (u, v, self._get_standardized_dihedral_type(self.molecule[u], self.molecule[v]), bond_to_resid.get(frozenset((u, v)), -1))
             for u, v in nx.bfs_edges(acyclic_graph, source=root)
         ]
 
         # Append ring-closing bonds (order irrelevant)
-        edges_with_flags += [(u, v, 'ring-closing') for u, v in ring_closing_bonds]
+        edges_with_flags += [(u, v, 'ring-closing', bond_to_resid.get(frozenset((u, v)), -1)) for u, v in ring_closing_bonds]
 
         # Make sure we have all bonds accounted for
         if len(edges_with_flags) != len(self.molecule.bonds):
@@ -440,7 +455,7 @@ class MoleculePrototype:
         # We need to validate parents have already been visited and children have not been visited yet
         GraphTraversalUtils.validate_bfs_parent_child_edges(acyclic_graph, root, edges_with_flags)
 
-        return edges_with_flags
+        return acyclic_graph, edges_with_flags
     
     @staticmethod
     def _sort_atoms_by_mass(atoms: list[pmd.Atom]) -> list[pmd.Atom]:
@@ -530,3 +545,193 @@ class MoleculePrototype:
                 forbidden_edges.add(frozenset((a1.idx, a2.idx)))
 
         return forbidden_edges
+    
+    def _build_z_matrix(self) -> list[ZMatrixRowAtomGroups]:
+        """
+        Construct a Z-matrix (BAT-style internal coordinate tree) from an MDAnalysis Universe molecule.
+        Cycles are handled by explicitly excluding ring-closing bonds, turning the molecular graph into a spanning tree.
+        This function expects that the molecular graph is acyclic (a forest) after removing the pre-defined ring-closing bonds.
+        Here, we try to select root atoms that are heavy and non-terminal to improve numerical stability:
+        1. The first atom is chosen as the heaviest terminal atom.
+        2. The second atom is the its bonded neighbor.
+        3. The third atom is the heaviest non-terminal bonded neighbor of the second atom that is not part of a ring-closing bond and is not collinear with the first two atoms.
+
+        The result is torsional spanning tree while explicitly removing redundant ring closing bonds.
+
+        Parameters
+        ----------
+        ag_o : list of MDAnalysis Atoms
+            List to sort
+        reverse : bool
+            Atoms will be in descending order
+
+        Returns
+        -------
+        ag_n : list of Atoms
+            an ordered, loop-free internal coordinate definition
+        """
+
+        # The molecular graph must be acyclic for the Z-matrix to be built correctly
+        # This is ensured by removing ring-closing bonds beforehand (see above)
+        # Basically, we check here that our ring closing bond detection worked correctly and we did not miss any cycles
+        # A forest is a graph with no undirected cycles
+        if not nx.is_forest(self.acyclic_graph):
+            raise ValueError("Molecule contains cycles; cannot build Z-matrix.")
+        
+        # Build the Z matrix
+        z_matrix: list[ZMatrixRowAtomGroups] = []
+        
+        # We begin by excluding degenerate cases with 1, 2, or 3 atoms
+        if len(self.molecule.atoms) == 0:
+            raise ValueError("Molecule contains no atoms; cannot build Z-matrix.")
+        
+        if len(self.molecule.atoms) == 1:
+            initial_atom = self.molecule.atoms[0]
+            z_matrix.append(ZMatrixRowAtomGroups(
+                i_global_atom_index=initial_atom.idx,
+                i_compound_atom_index=self._local_to_compound_atom_index(initial_atom.idx)))
+            return z_matrix
+        
+        if len(self.molecule.atoms) == 2:
+            initial_atom = self.molecule.atoms[0]
+            z_matrix.append(ZMatrixRowAtomGroups(
+                i_global_atom_index=initial_atom.idx,
+                i_compound_atom_index=self._local_to_compound_atom_index(initial_atom.idx)))
+            
+            second_atom = self.molecule.atoms[1]
+            z_matrix.append(ZMatrixRowAtomGroups(
+                i_global_atom_index=second_atom.idx,
+                i_compound_atom_index=self._local_to_compound_atom_index(second_atom.idx),
+                j_global_atom_index=initial_atom.idx,
+                j_compound_atom_index=self._local_to_compound_atom_index(initial_atom.idx)))
+            
+            return z_matrix
+        
+        # We select the initial atom from terminal atoms (atoms with only one bond)
+        # TODO Macrocycles with substituents may give terminals that lie on side chains, producing pathological Z-matrices.
+        # TODO Root selection must be graph-theoretic, not terminal-based. Use: degree-1 atoms if they exist, otherwise fall back to highest-degree or highest-mass atom not in a ring closure set.
+        terminal_atoms = [a for a in self.molecule.atoms if len(a.bonds) == 1]
+        terminal_atoms = self._sort_atoms_by_mass(terminal_atoms)
+
+        # Select the heaviest root atom from the heaviest terminal atoms
+        initial_atom = terminal_atoms[0]
+        z_matrix.append(ZMatrixRowAtomGroups(
+            i_global_atom_index=initial_atom.idx,
+            i_compound_atom_index=self._local_to_compound_atom_index(initial_atom.idx)))
+
+        # The next atom in the root is bonded to the initial atom
+        # Since the initial atom is a terminal atom, there is only one bonded atom
+        second_atom = initial_atom.bond_partners[0]
+        z_matrix.append(ZMatrixRowAtomGroups(
+            i_global_atom_index=second_atom.idx,
+            i_compound_atom_index=self._local_to_compound_atom_index(second_atom.idx),
+            j_global_atom_index=initial_atom.idx,
+            j_compound_atom_index=self._local_to_compound_atom_index(initial_atom.idx)))
+
+        # The last atom in the root is the heaviest atom bonded to the second atom
+        # If there are more than three atoms, then the last atom cannot be a terminal atom
+        # Moreover, the three atoms must not be collinear
+        if len(self.molecule.atoms) != 3:
+            third_atom_candidates = []
+            for a in self._tree_neighbors(second_atom):
+                if (a != initial_atom) and (a not in terminal_atoms): # and not self._are_collinear(initial_atom.position, second_atom.position, a.position)
+                    third_atom_candidates.append(a)
+            third_atom = self._sort_atoms_by_mass(third_atom_candidates)[0]
+        else:
+            third_atom_candidates = []
+            for a in self._tree_neighbors(second_atom):
+                if a != initial_atom:
+                    third_atom_candidates.append(a)
+            third_atom = self._sort_atoms_by_mass(third_atom_candidates)[0]
+
+        third_atom = self._sort_atoms_by_mass(third_atom_candidates)[0]
+        z_matrix.append(ZMatrixRowAtomGroups(
+            i_global_atom_index=third_atom.idx,
+            i_compound_atom_index=self._local_to_compound_atom_index(third_atom.idx),
+            j_global_atom_index=second_atom.idx,
+            j_compound_atom_index=self._local_to_compound_atom_index(second_atom.idx),
+            k_global_atom_index=initial_atom.idx,
+            k_compound_atom_index=self._local_to_compound_atom_index(initial_atom.idx)))
+
+        # Root triplet
+        root = [initial_atom, second_atom, third_atom]
+
+        for i, j, k, l in self._find_torsions(root):
+            z_matrix.append(ZMatrixRowAtomGroups(
+                i_global_atom_index=i.idx,
+                i_compound_atom_index=self._local_to_compound_atom_index(i.idx),
+                j_global_atom_index=j.idx,
+                j_compound_atom_index=self._local_to_compound_atom_index(j.idx),
+                k_global_atom_index=k.idx,
+                k_compound_atom_index=self._local_to_compound_atom_index(k.idx),
+                l_global_atom_index=l.idx,
+                l_compound_atom_index=self._local_to_compound_atom_index(l.idx)
+            ))
+
+        return z_matrix
+    
+    def _tree_neighbors(self, atom: pmd.Atom) -> list[pmd.Atom]:
+        """
+        Builds the list atoms bonded to the given atom, excluding those involved in ring-closing bonds.
+
+        Parameters
+        ----------
+        atom : MDAnalysis Atom
+            The atom for which to find tree neighbors.
+
+        Returns
+        -------
+        neighbors : list of MDAnalysis Atom
+            List of bonded atoms not involved in ring-closing bonds.        
+        """
+        return [a for a in atom.bond_partners if 'ring' not in self._get_standardized_dihedral_type(atom, a)]
+    
+    def _find_torsions(self, root: list[pmd.Atom]) -> list[tuple[pmd.Atom, pmd.Atom, pmd.Atom, pmd.Atom]]:
+        """
+        Constructs a list of torsion angles.
+
+        Returns
+        -------
+        torsions : list of AtomGroup
+            list of AtomGroup objects that define torsion angles
+        """
+        torsions: list[tuple[pmd.Atom, pmd.Atom, pmd.Atom, pmd.Atom]] = []
+        selected_atoms = list(root)
+        selected_atoms_set = set([root[0].idx, root[1].idx, root[2].idx])
+
+        # Build tree neighbors
+        tree_adj: dict[int, list[pmd.Atom]] = {
+            # atom.idx: self._sort_atoms_by_mass([a for a in atom.bond_partners if not self.is_ring_closing(atom, a)]) for atom in self.molecule.atoms
+            atom.idx: self._sort_atoms_by_mass([a for a in atom.bond_partners]) for atom in self.molecule.atoms
+        }
+
+        while len(selected_atoms) < len(self.molecule.atoms):
+            torsionAdded = False
+            for a1 in selected_atoms:
+                # Find a0, which is a new atom connected to the selected atom
+                a0_list = [a for a in tree_adj[a1.idx] if a.idx not in selected_atoms_set]
+                for a0 in a0_list:
+                    # Find a2, which is connected to a1, is not a terminal atom and has been selected
+                    a2_list = [a for a in tree_adj[a1.idx] if (a != a0) and len(a.bond_partners) > 1 and (a.idx in selected_atoms_set)]
+                    for a2 in a2_list:
+                        # Find a3, which is connected to a2, has been selected, and is not a1
+                        a3_list = [a for a in tree_adj[a2.idx] if (a != a1) and (a.idx in selected_atoms_set)]
+                        for a3 in a3_list:
+                            # Add the torsion to the list of torsions
+                            torsions.append((a0, a1, a2, a3))
+
+                            # Add the new atom to selected_atoms which extends the loop
+                            selected_atoms.append(a0)
+                            selected_atoms_set.add(a0.idx)
+                            torsionAdded = True
+                            break
+                        break
+
+            if torsionAdded is False:
+                print("Selected atoms:")
+                print([a.idx + 1 for a in selected_atoms])
+                print("Torsions found:")
+                print([list(t.indices + 1) for t in torsions])
+                raise ValueError("Additional torsions not found.")
+
+        return torsions

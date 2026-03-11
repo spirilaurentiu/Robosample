@@ -1,9 +1,13 @@
 #include "World.hpp"
+#include "Constants.h"
 #include "Constraint.h"
 #include "OpenMM.hpp"
+#include "Sampler.hpp"
+#include "TopologyElements.hpp"
 #include "common.h"
 #include <cstdlib>
 #include <ostream>
+#include <random>
 
 void World::setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets)
 {
@@ -533,7 +537,7 @@ void World::updateFramesFromTopologies()
 void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
 		 const char *dirname, const char *prefix, int midlength, const char *sufix)
 {
-  double mult = 10000*advanced.getTime(); // pico to femto
+  SimTK::Real mult = 10000*advanced.getTime(); // pico to femto
   SimTK::PdbStructure  pdb(advanced, c);
   std::stringstream sstream;
   sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
@@ -548,7 +552,7 @@ void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
 		 const char *dirname, const char *prefix, int midlength, const char *sufix)
 {
-  double mult = 10000*advanced.getTime(); // pico to femto
+  SimTK::Real mult = 10000*advanced.getTime(); // pico to femto
   SimTK::PdbStructure  pdb(advanced, c);
   std::stringstream sstream;
   sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
@@ -561,9 +565,9 @@ void writePdb(SimTK::Compound& c, SimTK::State& advanced,
 }
 
 void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix, double aTime)
+		 const char *dirname, const char *prefix, int midlength, const char *sufix, SimTK::Real aTime)
 {
-  double mult = 10000*aTime; // pico to femto
+  SimTK::Real mult = 10000*aTime; // pico to femto
   SimTK::PdbStructure  pdb(advanced, c);
   std::stringstream sstream;
   sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
@@ -576,9 +580,9 @@ void writePdb(const SimTK::Compound& c, SimTK::State& advanced,
 }
 
 void writePdb(SimTK::Compound& c, SimTK::State& advanced,
-		 const char *dirname, const char *prefix, int midlength, const char *sufix, double aTime)
+		 const char *dirname, const char *prefix, int midlength, const char *sufix, SimTK::Real aTime)
 {
-  double mult = 10000*aTime; // pico to femto
+  SimTK::Real mult = 10000*aTime; // pico to femto
   SimTK::PdbStructure  pdb(advanced, c);
   std::stringstream sstream;
   sstream<<dirname<<"/"<<prefix<<decimal_prefix(mult, std::pow(10, midlength))<<int(mult)<<sufix<<".pdb";
@@ -624,7 +628,7 @@ struct BondStretchValue {
     SimTK::Real length;
 
     bool operator==(const BondStretchValue& other) const {
-		static constexpr double epsilon = 1e-9;
+		static constexpr SimTK::Real epsilon = 1e-9;
         return std::abs(stiffness - other.stiffness) < epsilon && std::abs(length - other.length) < epsilon;
     }
 
@@ -662,7 +666,7 @@ struct BondBendValue {
     SimTK::Real angleDeg;
 
     bool operator==(const BondBendValue& other) const {
-        static constexpr double epsilon = 1e-9;
+        static constexpr SimTK::Real epsilon = 1e-9;
         return std::abs(stiffness - other.stiffness) < epsilon &&
                std::abs(angleDeg  - other.angleDeg)  < epsilon;
     }
@@ -699,14 +703,14 @@ struct PeriodicTorsionValue {
 	// store all 5 AMBER terms exactly as passed to Molmodel
 	std::array<int, 4> globalAtomIndices;
 	std::array<int, 5> periodicity;
-	std::array<double, 5> amplitude;
-	std::array<double, 5> phase;
+	std::array<SimTK::Real, 5> amplitude;
+	std::array<SimTK::Real, 5> phase;
 	int numTerms;
 
 	bool operator==(const PeriodicTorsionValue& o) const {
 		if (numTerms != o.numTerms) return false;
 
-		static constexpr double eps = 1e-9;
+		static constexpr SimTK::Real eps = 1e-9;
 		for (int i = 0; i < 5; i++) {
 			if (periodicity[i] != o.periodicity[i]) return false;
 			if (std::abs(amplitude[i]-o.amplitude[i]) > eps) return false;
@@ -1225,10 +1229,11 @@ StationTaskLaurentiu::StationTaskLaurentiu(void)
  *	  - SimbodyMatterSubsystem, GeneralForceSubsystem, DecorationSubsystem,
  *		Visualizer, Visualizer::Reporter, DuMMForceFieldSubsystem,
  *  - Integrator with a TimeStepper on top **/
-World::World(int worldIndex, Span<Topology> topo, bool testing, bool isVisual, SimTK::Real visualizerFrequency) :
+World::World(int worldIndex, Span<Topology> topo, bool testing, const ZMatrix& _zMatrix, bool isVisual, SimTK::Real visualizerFrequency) :
 	ownWorldIndex(worldIndex),
 	topologies(topo),
-	testing(testing)
+	testing(testing),
+	zMatrix(_zMatrix)
 {
 	compoundSystem = std::make_unique<SimTK::CompoundSystem>();
 	matter = std::make_unique<SimTK::SimbodyMatterSubsystem>(*compoundSystem);
@@ -4254,26 +4259,6 @@ Topology& World::updTopology(std::size_t moleculeNumber){
 	return topologies[moleculeNumber];
 }
 
-// DOESN'T WORK WITH OPENMM
-SimTK::Real World::calcFullPotentialEnergyIncludingRigidBodies(void)
-{
-	SimTK::State& currentAdvancedState = integrator->updAdvancedState();
-	updateAtomListsFromSimbody(currentAdvancedState);
-
-	// Set old potential energy of the new world via DuMM !!!
-	return forceField->CalcFullPotEnergyIncludingRigidBodies(currentAdvancedState);// DOESN'T WORK WITH OPENMM
-}
-
-// 
-SimTK::Real World::calcPotentialEnergy(void)
-{
-	SimTK::State& currentAdvancedState = integrator->updAdvancedState();
-	updateAtomListsFromSimbody(currentAdvancedState);
-
-	// Set old potential energy of the new world via DuMM !!!
-	return forces->getMultibodySystem().calcPotentialEnergy(currentAdvancedState);
-}
-
 // Calculate Fixman potential
 SimTK::Real World::calcFixman(void)
 {
@@ -4281,6 +4266,188 @@ SimTK::Real World::calcFixman(void)
     updateAtomListsFromSimbody(currentAdvancedState); // for det(MBAT)
 	SimTK::Real Fixman = updSampler(0)->calcFixman(currentAdvancedState);
 	return Fixman;
+}
+
+SimTK::Real World::findDecorrelationTime(const SimTK::State& state, int equilSteps, int tuneSteps, SimTK::Real timestep) {
+
+	std::vector<SimTK::Vec3> initialPositions(numAtoms), positions(numAtoms);
+	
+	// Set initial positions
+	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+		for (const auto& atom : topologies[topoIx].getAtoms()) {
+			const SimTK::Vec3 location = atomTargetLocaltionsCache[topoIx][atom.identity.compoundAtomIndex];
+			initialPositions[atom.identity.globalIndex] = location;
+		}
+	}
+
+	// Run some steps to equilibrate and get initial positions
+	if (equilSteps < 1) {
+		throw std::invalid_argument("World::tuneOpenMM(): equilSteps must be at least 1");
+	}
+	OPENMM::get().integrateTrajectory(initialPositions, positions, true, equilSteps, timestep);
+
+	// Allocate memory
+	const int numRows = zMatrix.get().size() - 1;
+	const int numAngles = zMatrix.get().size() - 2;
+	const int numCoords = numRows + numAngles;
+
+	std::vector<std::vector<SimTK::Real>> coordinates(numCoords);
+	coordinates.resize(numCoords);
+	for (auto& ts : coordinates) {
+		ts.reserve(tuneSteps);
+	}
+
+	// Run the trajectory and collect coordinate time series
+	for (int i = 0; i < tuneSteps; i++) {
+		OPENMM::get().integrateTrajectory(positions, positions, false, 1, timestep);
+
+		int coordinateIndex = 0;
+
+		for (const auto& row : zMatrix.get()) {
+			if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1) {
+				const SimTK::Vec3& pos1 = positions[row.globalIndices[0]];
+				const SimTK::Vec3& pos2 = positions[row.globalIndices[1]];
+				SimTK::Real bondLength = (pos1 - pos2).norm();
+
+				coordinates[coordinateIndex].push_back(bondLength);
+				coordinateIndex++;
+			}
+
+			if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1 && row.globalIndices[2] != -1) {
+				const SimTK::Vec3& pos1 = positions[row.globalIndices[0]];
+				const SimTK::Vec3& pos2 = positions[row.globalIndices[1]];
+				const SimTK::Vec3& pos3 = positions[row.globalIndices[2]];
+				SimTK::Real angleInRad = bAngle(pos1, pos2, pos3);
+
+				coordinates[coordinateIndex].push_back(angleInRad);
+				coordinateIndex++;
+			}
+		}
+	}
+
+	// Save scale
+	std::vector<SimTK::Real> scale;
+	scale.reserve(numCoords);
+
+	for (const auto& row : zMatrix.get()) {
+		if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1) {
+			const auto& bond = topologies[row.moleculeIndex].getBondByCompoundAtomIndex(row.compoundAtomIndices[0], row.compoundAtomIndices[1]);
+			scale.push_back(std::sqrt(bond.stiffnessInKJPerNmSq));
+		}
+
+		if (row.globalIndices[0] != -1 && row.globalIndices[1] != -1 && row.globalIndices[2] != -1) {
+			const auto& angle = topologies[row.moleculeIndex].getAngleByCompoundAtomIndex(row.compoundAtomIndices[0], row.compoundAtomIndices[1], row.compoundAtomIndices[2]);
+			scale.push_back(std::sqrt(angle.stiffnessInKJPerRadSq));
+		}
+	}
+
+	// Standardize each coordinate time series to have mean 0 and stddev 1 for better numerical stability in ACF calculation
+	optimizeCoordinates(coordinates, scale);
+
+	// Find maximum decorrelation time
+	SimTK::Real tauMax = 0.0;
+	for (const auto& ts : coordinates) {
+		SimTK::Real tau = integratedAutocorrelation(ts);
+		if (tau > tauMax) tauMax = tau;
+	}
+
+	return tauMax;
+}
+
+void World::optimizeCoordinates(std::vector<std::vector<SimTK::Real>>& coordinates, const std::vector<SimTK::Real>& scale) const {
+    for (size_t coordIdx = 0; coordIdx < coordinates.size(); ++coordIdx) {
+        auto& ts = coordinates[coordIdx];
+        const size_t N = ts.size();
+        if (N < 2) continue;
+
+        const SimTK::Real n_f = static_cast<SimTK::Real>(N);
+
+        // Recompute index sums using closed-form equations
+        const SimTK::Real sumX = n_f * (n_f - 1.0) * 0.5;
+        const SimTK::Real sumXX = n_f * (n_f - 1.0) * (2.0 * n_f - 1.0) / 6.0;
+        const SimTK::Real det = n_f * sumXX - sumX * sumX;
+
+        // Pass 1: Compute sumY and sumXY for linear regression
+        SimTK::Real sumY = 0.0;
+        SimTK::Real sumXY = 0.0;
+        
+        #pragma omp simd reduction(+:sumY, sumXY)
+        for (size_t i = 0; i < N; ++i) {
+            sumY += ts[i];
+            sumXY += static_cast<SimTK::Real>(i) * ts[i];
+        }
+
+        // Calculate regression coefficients
+        const SimTK::Real slope = (n_f * sumXY - sumX * sumY) / det;
+        const SimTK::Real intercept = (sumY - slope * sumX) / n_f;
+        const SimTK::Real k = scale[coordIdx];
+
+        // Pass 2: Apply detrending + scaling AND compute new variance in one go
+        // Mathematically: ts_new = (ts_old - (intercept + slope*i)) * k
+        // We need the mean of ts_new to standardize. 
+        // Note: Detrending technically makes the mean 0 automatically.
+        
+        SimTK::Real m2 = 0.0; // sum of squares for variance
+        #pragma omp simd reduction(+:m2)
+        for (size_t i = 0; i < N; ++i) {
+            SimTK::Real val = (ts[i] - (intercept + slope * i)) * k;
+            ts[i] = val;
+            m2 += val * val; 
+        }
+
+        // Final Pass: Standardize (Mean is 0 due to detrending)
+        SimTK::Real stddev = std::sqrt(m2 / n_f);
+        if (stddev > 1e-12) {
+            SimTK::Real invStd = 1.0 / stddev;
+            #pragma omp simd
+            for (size_t i = 0; i < N; ++i) {
+                ts[i] *= invStd;
+            }
+        }
+    }
+}
+
+SimTK::Real World::integratedAutocorrelation(const std::vector<SimTK::Real>& x, int maxLag) const {
+    const size_t N = x.size();
+    if (N < 2) return 0.0;
+
+    if (maxLag < 0) maxLag = std::min<int>(1000, static_cast<int>(N / 2));
+
+    SimTK::Real mean = std::accumulate(x.begin(), x.end(), 0.0) / N;
+
+    // Pre-center data for SIMD
+    // This allows the inner loop to be a simple multiply-accumulate
+    std::vector<SimTK::Real> centered(N);
+    SimTK::Real var_sum = 0.0;
+    
+    #pragma omp simd reduction(+:var_sum)
+    for (size_t i = 0; i < N; ++i) {
+        centered[i] = x[i] - mean;
+        var_sum += centered[i] * centered[i];
+    }
+
+    SimTK::Real var = var_sum / N;
+    if (var < 1e-15) return 0.0;
+
+    // Compute autocorrelation
+    SimTK::Real tau = 0.5;
+    
+    for (int lag = 1; lag <= maxLag; ++lag) {
+        SimTK::Real c = 0.0;
+        const SimTK::Real* p_base = centered.data();
+        const SimTK::Real* p_shift = centered.data() + lag;
+        const size_t limit = N - lag;
+
+        // Hinting to the compiler to vectorize this dot product
+        #pragma omp simd reduction(+:c)
+        for (size_t i = 0; i < limit; ++i) {
+            c += p_base[i] * p_shift[i];
+        }
+        
+        tau += (c / N) / var;
+    }
+
+    return tau;
 }
 
 bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
@@ -4296,8 +4463,72 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 	updSampler(0)->reinitialize(state, worldOutStream, verbose);
 
 	if (getSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {
+		
+		if (!tuned) {
+			std::cout << "[OpenMM tune]: Estimating decorrelation time across coordinates to set random step parameters for the OMMVV sampler..." << std::endl;
+
+			// const SimTK::Real tau = findDecorrelationTime(state, 10'000, 100'000, 0.002);
+			// int minSteps = std::round(5 * tau);
+			// int maxSteps = std::round(10 * tau);
+
+			int minSteps = 242;
+			int maxSteps = 484;
+
+			samplers[0]->setCartesianRandomSteps(minSteps, maxSteps);
+
+			// std::cout << "[OpenMM tune]: Estimated max autocorrelation time (tau) across coordinates: " << tau << " steps\n";
+			std::cout << "[OpenMM tune]: L_min: " << minSteps << " steps" << std::endl;
+			std::cout << "[OpenMM tune]: L_max: " << maxSteps << " steps" << std::endl;
+
+			// const qualifier prevents us from reusing the same positions vector, so we need to copy it here
+			std::vector<SimTK::Vec3> positions(numAtoms);
+			for (const auto& pos : OPENMM::get().getPositions()) {
+				positions.push_back(pos);
+			}
+			const bool resetPositions = false;
+
+			std::uniform_real_distribution<SimTK::Real> uniformRealDistribution(0.0, 1.0);
+
+			while (true) {
+				const int numAttempts = 50;
+				int numAccepted = 0;
+				std::uniform_int_distribution<> uniformIntDistribution(minSteps, maxSteps);
+
+				for (int i = 0; i < numAttempts; i++) {
+					const SimTK::Real oldE = OPENMM::get().getPotentialEnergy() + OPENMM::get().getKineticEnergy();
+					OPENMM::get().integrateTrajectory(positions, positions, resetPositions, uniformIntDistribution(randomEngine), 0.002);
+					const SimTK::Real newE = OPENMM::get().getPotentialEnergy() + OPENMM::get().getKineticEnergy();
+					const SimTK::Real deltaE = newE - oldE;
+					const SimTK::Real beta = 1.0 / (temperature * SimTK_BOLTZMANN_CONSTANT_MD);
+					const SimTK::Real metropolisCriterion = (deltaE < 0) ? 1.0 : std::exp(-1.0 * beta * deltaE);
+					
+					const SimTK::Real randomReal = uniformRealDistribution(randomEngine);
+					const bool accepted = (randomReal < metropolisCriterion);
+					if (accepted) {
+						numAccepted++;
+					}
+				}
+
+				const SimTK::Real acceptanceRate = static_cast<SimTK::Real>(numAccepted) / static_cast<SimTK::Real>(numAttempts);
+				std::cout << "[OpenMM tune]: Acceptance rate: " << acceptanceRate << " | L_min: " << minSteps << " | L_max: " << maxSteps << std::endl;
+				
+				if (acceptanceRate > 0.8) {
+					minSteps = std::round(minSteps * 1.2);
+					maxSteps = std::round(maxSteps * 1.2);
+				}
+				if (acceptanceRate < 0.35) {
+					minSteps = std::round(minSteps * 0.8);
+					maxSteps = std::round(maxSteps * 0.8);
+				}
+
+			}
+
+			tuned = true;
+		}
+
 		// OpenMM does cartesian integration, so no locking here
 		for (int sampleIx = 0; sampleIx < howManySamplesPerRound; ++sampleIx) {
+			// TODO do we reinitialize() here?
 			validated = updSampler(0)->sample_iteration(state, worldOutStream, verbose) && validated;
 		}
 	} else {
@@ -4563,27 +4794,27 @@ const SimTK::String& World::getRootMobility() const {
 /*!
  * <!-- Drill -->
 */
-const std::vector<std::vector<double>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
+const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_bon(){return forceField->getEnergies_drl_bon();}
 /*!
  * <!-- Drill -->
 */
-const std::vector<std::vector<double>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
+const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_ang(){return forceField->getEnergies_drl_ang();}
 /*!
  * <!-- Drill -->
 */
-const std::vector<std::vector<double>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
+const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_tor(){return forceField->getEnergies_drl_tor();}
 /*!
  * <!-- Drill -->
 */
-const std::vector<std::vector<double>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
+const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_n14(){return forceField->getEnergies_drl_n14();}
 /*!
  * <!-- Drill -->
 */
-const std::vector<std::vector<double>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
+const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_vdw(){return forceField->getEnergies_drl_vdw();}
 /*!
  * <!-- Drill -->
 */
-const std::vector<std::vector<double>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
+const std::vector<std::vector<SimTK::Real>>& World::getEnergies_drl_cou(){return forceField->getEnergies_drl_cou();}
 /*!
  * <!-- Drill -->
 */
@@ -4618,7 +4849,7 @@ void World::printDrilling(void)
 	// 		<< std::endl;
 	// }
 
-	const std::vector<std::vector<double>>& drl_bon_Energies = forceField->getEnergies_drl_bon();
+	const std::vector<std::vector<SimTK::Real>>& drl_bon_Energies = forceField->getEnergies_drl_bon();
 	printf("drl World::newFunction\n");
 	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
 		printf("drl World bonE");
@@ -4627,7 +4858,7 @@ void World::printDrilling(void)
 		}
 		printf("\n");
 	}
-	const std::vector<std::vector<double>>& drl_ang_Energies = forceField->getEnergies_drl_ang();
+	const std::vector<std::vector<SimTK::Real>>& drl_ang_Energies = forceField->getEnergies_drl_ang();
 	printf("drl World::newFunction\n");
 	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
 		printf("drl World angE");
@@ -4636,7 +4867,7 @@ void World::printDrilling(void)
 		}
 		printf("\n");
 	}        
-	const std::vector<std::vector<double>>& drl_tor_Energies = forceField->getEnergies_drl_tor();
+	const std::vector<std::vector<SimTK::Real>>& drl_tor_Energies = forceField->getEnergies_drl_tor();
 	printf("drl World::newFunction\n");
 	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
 		printf("drl World torE");
@@ -4645,7 +4876,7 @@ void World::printDrilling(void)
 		}
 		printf("\n");
 	}
-	const std::vector<std::vector<double>>& drl_n14_Energies = forceField->getEnergies_drl_n14();
+	const std::vector<std::vector<SimTK::Real>>& drl_n14_Energies = forceField->getEnergies_drl_n14();
 	printf("drl World::newFunction\n");
 	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
 		printf("drl World n14E");
@@ -4654,7 +4885,7 @@ void World::printDrilling(void)
 		}
 		printf("\n");
 	}             
-	const std::vector<std::vector<double>>& drl_vdw_Energies = forceField->getEnergies_drl_vdw();
+	const std::vector<std::vector<SimTK::Real>>& drl_vdw_Energies = forceField->getEnergies_drl_vdw();
 	printf("drl World::newFunction\n");
 	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
 		printf("drl World vdwE");
@@ -4663,7 +4894,7 @@ void World::printDrilling(void)
 		}
 		printf("\n");
 	}             
-	const std::vector<std::vector<double>>& drl_cou_Energies = forceField->getEnergies_drl_cou();
+	const std::vector<std::vector<SimTK::Real>>& drl_cou_Energies = forceField->getEnergies_drl_cou();
 	printf("drl World::newFunction\n");
 	for (int fIx = 0; fIx < forceField->getNumNonbondAtoms(); ++fIx){
 		printf("drl World couE");

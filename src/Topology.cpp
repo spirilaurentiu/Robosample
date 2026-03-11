@@ -89,20 +89,6 @@ const RoboBond& Topology::getBondByGlobalAtomIndex(int aIx0, int aIx1) const
 	SimTK_ASSERT_ALWAYS(false, "Topology::getBondByGlobalAtomIndex(): No bond with specified atom indices found.");
 }
 
-const RoboBond& Topology::getBondByCompoundAtomIndex(SimTK::Compound::AtomIndex cAIx0, SimTK::Compound::AtomIndex cAIx1) const {
-	CompoundAtomIndexPair pair = canonical(cAIx0, cAIx1);
-
-	// auto it = std::lower_bound(aIxPair2Bonds.begin(), aIxPair2Bonds.end(), std::make_pair(pair, 0));
-	// if (it != aIxPair2Bonds.end() && it->first == pair) {
-	// 	int bondIndex = it->second;
-	// 	return subBondList[bondIndex];
-	// }
-
-	// This should never trigger, but just in case
-	SimTK_ASSERT_ALWAYS(false, "Topology::getBondByCompoundAtomIndex(): No bond with specified Compound::AtomIndices found.");
-	return subBondList[0]; // to silence compiler warning
-}
-
 void Topology::loadIndicesMaps()
 {
 	// // print spans

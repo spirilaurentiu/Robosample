@@ -4,6 +4,7 @@
 #include "Robo.hpp"
 #include "Simbody.h"
 #include "Molmodel.h"
+#include <array>
 
 struct RoboAtomPhysics {
     SimTK::Real chargeInE = SimTK::NaN;
@@ -146,7 +147,6 @@ struct RoboAtom {
     void createSingleAtom();
 };
 
-
 struct RoboBond {
     std::vector<SimTK::BondMobility::Mobility> mobilities;
     std::array<SimTK::Compound::AtomIndex, 2> compoundAtomIndices;
@@ -253,7 +253,6 @@ struct RoboPeriodicTorsion {
                 SimTK::Compound::AtomIndex(compoundAtomIndices_[i]);
         }
     }
-
 };
 
 struct RoboHarmonicImproperTorsion {
@@ -282,3 +281,31 @@ struct RoboHarmonicImproperTorsion {
     }
 };
 
+struct ZMatrixRow {
+    std::array<int, 4> globalIndices { -1, -1, -1, -1 };
+    std::array<SimTK::Compound::AtomIndex, 4> compoundAtomIndices;
+    int moleculeIndex = -1;
+
+    ZMatrixRow(
+        std::array<int,4> globalIndices_,
+        std::array<int,4> compoundAtomIndices_,
+        int moleculeIndex_
+    )
+        : globalIndices(globalIndices_),
+          moleculeIndex(moleculeIndex_)
+    {
+        compoundAtomIndices[0] = SimTK::Compound::AtomIndex(compoundAtomIndices_[0]);
+
+        if (compoundAtomIndices_[1] != -1) {
+            compoundAtomIndices[1] = SimTK::Compound::AtomIndex(compoundAtomIndices_[1]);
+        }
+        if (compoundAtomIndices_[2] != -1) {
+            compoundAtomIndices[2] = SimTK::Compound::AtomIndex(compoundAtomIndices_[2]);
+        }
+        if (compoundAtomIndices_[3] != -1) {
+            compoundAtomIndices[3] = SimTK::Compound::AtomIndex(compoundAtomIndices_[3]);
+        }
+    }
+};
+
+using ZMatrix = std::vector<ZMatrixRow>;

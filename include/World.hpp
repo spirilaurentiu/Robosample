@@ -6,6 +6,8 @@
  * This is part of Robosample		                                      *
  */
 
+#include "TopologyElements.hpp"
+#include <functional>
 #pragma once
 
 #include <iostream>
@@ -163,7 +165,7 @@ public:
 	void setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 	void updateFramesFromTopologies();
 
-	explicit World(int worldIndex, Span<Topology> topo, bool testing, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
+	explicit World(int worldIndex, Span<Topology> topo, bool testing, const ZMatrix& _zMatrix, bool isVisual=true, SimTK::Real visualizerFrequency = 0.0015);
 
 	const std::vector<SimTK::Compound::AtomTargetLocations>& getAtomTargetLocationsCache() const {
 		return atomTargetLocaltionsCache;
@@ -444,17 +446,11 @@ public:
 	bool isUsingFixmanTorque() const;
 	//...............
 
-	// DOESN'T WORK WITH OPENMM
-	SimTK::Real calcFullPotentialEnergyIncludingRigidBodies(void);
-	SimTK::Real calcPotentialEnergy(void);
-
 	// Calculate Fixman potential
 	SimTK::Real calcFixman();
 
 	/** Generate a number of samples **/
 	bool generateSamples(int howMany, std::stringstream& worldOutStream, const std::string& header, bool verbose);
-
-	//...............
 
 	//...................
 	// --- Statistics ---
@@ -1005,6 +1001,10 @@ public:
 	bool isOverconstrained(const SimTK::State& state, std::ostream& out) const;
 
 private:
+	SimTK::Real findDecorrelationTime(const SimTK::State& state, int equilSteps, int tuneSteps, SimTK::Real timestep);
+	void optimizeCoordinates(std::vector<std::vector<double>>& coordinates, const std::vector<double>& scale) const;
+	SimTK::Real integratedAutocorrelation(const std::vector<SimTK::Real>& x, int maxLag = -1) const;
+	bool tuned = false;
 
 	bool testing = false;
 
@@ -1070,4 +1070,6 @@ private:
 
 	// Default return value for non-existing topology atom, pair
 	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
+
+	std::reference_wrapper<const ZMatrix> zMatrix;
 };
