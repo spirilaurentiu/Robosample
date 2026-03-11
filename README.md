@@ -339,6 +339,7 @@ The repository comes with a nubmer of pre-configured settings:
 We provide a series of examples in `robosample/examples`. To rung the program:
 
 ```bash
-cd build/robosample
-python3 robosample/roborun.py 2ala ../examples/2ala.prmtop ../examples/2ala.inpcrd 6000 0 1 1
+mkdir simulation/
+cd simulation/
+python3 ../python/robosample/roborun.py ala-dipeptide ../examples/ala-dipeptide.prmtop ../examples/ala-dipeptide.rst7 6000 0 1 1
 ```

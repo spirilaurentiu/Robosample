@@ -3,9 +3,6 @@ import argparse
 # import rdkit
 import robosample
 import numpy as np
-from openmm import app
-import openmm as mm
-from openmm import unit
 
 # python3 roborun.py 2but ../examples/2but.prmtop ../examples/2but.rst7 6000 0 10 1
 

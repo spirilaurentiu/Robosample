@@ -18,10 +18,6 @@ from MDAnalysis.core.universe import Merge
 import scipy.stats as stats
 from scipy import linalg
 
-from openmm import app
-import openmm as mm
-from openmm import unit
-
 import robo_bindings as rb
 from molecule_prototype import MoleculePrototype
 

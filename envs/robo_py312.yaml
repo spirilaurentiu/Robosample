@@ -13,6 +13,8 @@ dependencies:
 
   # Bioinformatics
   - parmed
+  - mdtraj
+  - mdanalysis
 
   # Scientific computing and data analysis
   - numpy
