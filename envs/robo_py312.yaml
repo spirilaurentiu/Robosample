@@ -6,12 +6,22 @@ dependencies:
   - cmake
   - ninja
   - pkg-config
+  - conda-forge::gcc_linux-64
+  - conda-forge::gxx_linux-64
 
   # Python
   - python=3.12
   - pip
 
+  # Hardware acceleration (CUDA is installed separately)
+  - ocl-icd
+  - ocl-icd-system
+  - opencl-headers
+  - clinfo
+  - rocm-core
+
   # Bioinformatics
+  - openmm
   - parmed
   - mdtraj
   - mdanalysis
@@ -25,4 +35,5 @@ dependencies:
 
   # Pip packages
   - pip:
+    - pytest
     - pybind11-stubgen

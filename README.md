@@ -256,11 +256,9 @@ CUDA Toolkit version is dependent on the major GCC version:
 
 The development environment is a combination of `.yaml` files from `envs/`:
 
-- `envs/robo_py312.yaml`
+- `envs/robo_py312.yaml` (mandatory)
 
-- `envs/cuda*.yaml` with the correct `nvcc` - `gcc` version pair
-
-- `envs/opencl.yaml`
+- `envs/cuda*.yaml` with the correct CUDA Toolkit/compiler version pair.
 
 - `envs/util.yaml` for non-essential, but useful packages.
 
@@ -283,18 +281,6 @@ If something goes wrong, delete this environment using:
 conda deactivate
 mamba env remove -n robo_py312
 mamba clean --all
-```
-
-#### Testing CUDA
-
-```bash
-nvcc --version && nvidia-smi && nvidia-smi topo -m && nvidia-smi -L
-```
-
-#### Testing OpenCL installation
-
-```bash
-python -c "import pyopencl as cl; print(cl.get_platforms())"
 ```
 
 ### Building Robosample

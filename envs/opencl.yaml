@@ -1,7 +1,0 @@
-name: opencl
-dependencies:
-  - conda-forge::pyopencl
-  - conda-forge::ocl-icd
-  - conda-forge::opencl-headers
-  - conda-forge::clinfo
-  - conda-forge::pocl
