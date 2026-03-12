@@ -20,4 +20,9 @@
         "${workspaceFolder}/build/",
         "${workspaceFolder}/build/stubs"
     ],
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
 }
