@@ -598,14 +598,9 @@ protected:
 	std::vector<SimTK::Real>* Qdiffs = nullptr;
 	std::vector<SimTK::Real>* Qvars = nullptr;
 
-
 	int equilNofRounds = 0;
 
-	//bool NAN_TO_INF(SimTK::Real& someNumber);
-
 	// BEGIN MCSampler
-	std::vector<SimTK::Transform> transformations;
-
 	SimTK::Real detmbat_set = 0.0,
 	    detmbat_o = 0.0,
 	    detmbat_n = 0.0;

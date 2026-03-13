@@ -16,6 +16,13 @@ profile-data
 *.pdb
 robo_py312.yaml
 
+# Tests
+.pytest_cache
+tests/__pycache__
+tests/*.pyc
+tests/*.swp
+tests/*.so
+
 # tools folder
 tools/__pycache__
 tools/*.pyc

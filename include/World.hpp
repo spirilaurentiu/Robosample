@@ -928,6 +928,71 @@ public:
 	/////      Z Matrix BAT      /////
 	//////////////////////////////////
 
+	void addTestRigidBond(int globalIndex1, int globalIndex2) {
+		testRigidBonds.push_back({globalIndex1, globalIndex2});
+	}
+
+	void addTestNonRigidBond(int globalIndex1, int globalIndex2) {
+		testNonRigidBonds.push_back({globalIndex1, globalIndex2});
+	}
+
+	void addTestRigidAngle(int globalIndex1, int globalIndex2, int globalIndex3) {
+		testRigidAngles.push_back({globalIndex1, globalIndex2, globalIndex3});
+	}
+
+	void addTestNonRigidAngle(int globalIndex1, int globalIndex2, int globalIndex3) {
+		testNonRigidAngles.push_back({globalIndex1, globalIndex2, globalIndex3});
+	}
+
+	void addTestRigidPeriodicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testRigidPeriodicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	}
+
+	void addTestNonRigidPeriodicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testNonRigidPeriodicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	}
+
+	void addTestRigidHarmonicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testRigidHarmonicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	}
+
+	void addTestNonRigidHarmonicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testNonRigidHarmonicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	}
+
+	const std::vector<std::array<int, 2>>& getTestRigidBonds() const {
+		return testRigidBonds;
+	}
+
+	const std::vector<std::array<int, 2>>& getTestNonRigidBonds() const {
+		return testNonRigidBonds;
+	}
+
+	const std::vector<std::array<int, 3>>& getTestRigidAngles() const {
+		return testRigidAngles;
+	}
+
+	const std::vector<std::array<int, 3>>& getTestNonRigidAngles() const {
+		return testNonRigidAngles;
+	}
+
+	const std::vector<std::array<int, 4>>& getTestRigidPeriodicTorsions() const {
+		return testRigidPeriodicTorsions;
+	}
+
+	const std::vector<std::array<int, 4>>& getTestNonRigidPeriodicTorsions() const {
+		return testNonRigidPeriodicTorsions;
+	}
+
+	const std::vector<std::array<int, 4>>& getTestRigidHarmonicTorsions() const {
+		return testRigidHarmonicTorsions;
+	}
+
+	const std::vector<std::array<int, 4>>& getTestNonRigidHarmonicTorsions() const {
+		return testNonRigidHarmonicTorsions;
+	}
+	
+
 	const std::vector<std::vector<SimTK::Real>>& getMatchAtomTargetLocationsResiduals() const {
 		SimTK_ASSERT_ALWAYS(testing, "getMatchAtomTargetLocationsResiduals called outside testing mode");
 		return matchAtomTargetLocationsResiduals;
@@ -1072,4 +1137,8 @@ private:
 	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
 
 	std::reference_wrapper<const ZMatrix> zMatrix;
+
+	std::vector<std::array<int, 2>> testRigidBonds, testNonRigidBonds;
+	std::vector<std::array<int, 3>> testRigidAngles, testNonRigidAngles;
+	std::vector<std::array<int, 4>> testRigidPeriodicTorsions, testNonRigidPeriodicTorsions, testRigidHarmonicTorsions, testNonRigidHarmonicTorsions;
 };

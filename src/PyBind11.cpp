@@ -298,6 +298,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
+        .def("getAtomName", &Context::getAtomName, py::arg("globalAtomIndex"), "Get the unique atom name for a given global atom index.")
         .def("addReplica", &Context::addReplica, "Add an empty replica to the context.")
         .def("addThermodynamicState", &Context::addThermodynamicState, "Add an empty themodynamic state to the context.")
         .def("Initialize", py::overload_cast<>(&Context::Initialize), "Initializes the context after all worlds and replicas have been set.")
@@ -319,6 +320,16 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<World>(m, "World")
         .def("addSampler", &World::addSampler, "Add a sampler to the world.")
+
+        .def("getTestRigidBonds", &World::getTestRigidBonds, "Get test rigid bonds.")
+        .def("getTestNonRigidBonds", &World::getTestNonRigidBonds, "Get test non-rigid bonds.")
+        .def("getTestRigidAngles", &World::getTestRigidAngles, "Get test rigid angles.")
+        .def("getTestNonRigidAngles", &World::getTestNonRigidAngles, "Get test non-rigid angles.")
+        .def("getTestRigidPeriodicTorsions", &World::getTestRigidPeriodicTorsions, "Get test rigid periodic torsions.")
+        .def("getTestNonRigidPeriodicTorsions", &World::getTestNonRigidPeriodicTorsions, "Get test non-rigid periodic torsions.")
+        .def("getTestRigidHarmonicTorsions", &World::getTestRigidHarmonicTorsions, "Get test rigid harmonic torsions.")
+        .def("getTestNonRigidHarmonicTorsions", &World::getTestNonRigidHarmonicTorsions, "Get test non-rigid harmonic torsions.")
+        
         .def("getMatchAtomTargetLocationsResiduals", &World::getMatchAtomTargetLocationsResiduals, "Get residuals from matchAtomTargetLocations during testing.")
         .def("getCumulativeCartesianDisplacements", &World::getCumulativeCartesianDisplacements, "Get cumulative Cartesian displacements.")
         .def("getCumulativeBondDisplacements", &World::getCumulativeBondDisplacements, "Get cumulative bond displacements.")

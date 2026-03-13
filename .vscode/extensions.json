@@ -8,7 +8,8 @@
         "ms-python.vscode-pylance",
         "ms-python.debugpy",
         "ms-python.python-envs",
-        "davidanson.vscode-markdownlint"
+        "davidanson.vscode-markdownlint",
+        "repreng.csv"
     ],
     "unwantedRecommendations": [
         "ms-vscode.cpptools",

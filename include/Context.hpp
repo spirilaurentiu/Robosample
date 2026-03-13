@@ -128,6 +128,10 @@ public:
 	);
 	SimTK::Real calculatePotentialEnergy(int worldIndex);
 
+	const std::string& getAtomName(std::size_t globalAtomIndex) const {
+		return atoms[globalAtomIndex].identity.uniqueAtomName;
+	}
+
 	void Initialize();
 
 	void addWorld(

@@ -59,9 +59,6 @@ HMCSampler::HMCSampler(World &argWorld,
 		natoms += topology.getNumAtoms();
 	}
 
-	// We skip the ground body
-	transformations.resize(matter->getNumBodies() - 1);
-
 	acceptedStepsBuffer.resize(acceptedStepsBufferSize, 0);
 
 	// BAT statistics initialization
@@ -134,12 +131,6 @@ void HMCSampler::initialize()
 void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOutStream, bool verbose)
 {
 	system->realize(state, SimTK::Stage::Position);
-
-	// Copy the original state in case we need to restore it after a rejection
-	for (SimTK::MobilizedBodyIndex mbx(1); mbx < matter->getNumBodies(); ++mbx) {
-		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-		transformations[mbx - 1] = mobod.getBodyTransform(state);
-	}
 
 	// Set the generalized velocities scale factors
 	loadUScaleFactors(state);
