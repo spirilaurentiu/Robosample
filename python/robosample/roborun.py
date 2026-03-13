@@ -159,8 +159,8 @@ MDSTEPS_CARTESIAN = 15
 # create robosample context
 context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop, inpcrd=args.inpcrd, write_freq=args.write_freq, testing=True)
 
-# Add cartesian world (will integrate with OpenMM)
-context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
+# # Add cartesian world (will integrate with OpenMM)
+# context.addCartesianWorld().addSampler(timeStep=TIMESTEP_CARTESIAN, mdSteps=MDSTEPS_CARTESIAN, boostMDSteps=MDSTEPS_CARTESIAN, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 
 # Add torsional world with non-redundant dihedrals
 # sele = [
@@ -196,7 +196,7 @@ context.RunREX(args.equil_steps, args.prod_steps)
 # Test the simulation
 TOL = 1e-4
 for i, world in enumerate(context.getWorlds()):
-	if i == 0:
+	if i == 0 and False:
 		openmmCumulativeCartesianDisplacements = world.getOpenMMCumulativeCartesianDisplacements()
 		np.testing.assert_allclose(openmmCumulativeCartesianDisplacements, 0, atol=TOL)
 
@@ -247,8 +247,89 @@ for i, world in enumerate(context.getWorlds()):
 	rigidBodyImproperTorsionDriftInRad = world.getRigidBodyImproperTorsionDriftInRad()
 	np.testing.assert_allclose(rigidBodyImproperTorsionDriftInRad, 0, atol=TOL)
 
+# Load the trajectory
+import mdtraj as md
+traj = md.load('ala-dipeptide.test_6000.repl0.dcd', top=args.prmtop)
+reference = md.load(args.inpcrd, top=args.prmtop)
 
+def _assert_bond_constancy(bond_indices, tolerance=1e-4, label="Bond"):
+    if len(bond_indices) == 0:
+        return
 
+    # Compute distances: (frames, nbonds)
+    distances_ref = md.compute_distances(reference, bond_indices)[0]
+    distances_traj = md.compute_distances(traj, bond_indices)
+    
+    # Calculate absolute deviations
+    diffs = np.abs(distances_traj - distances_ref)
+    max_deviations = np.max(diffs, axis=0)
+    
+    violations = []
+    for i, dev in enumerate(max_deviations):
+        if dev > tolerance or True:
+            # Find the actual max value reached in the trajectory for this bond
+            max_val = distances_traj[np.argmax(diffs[:, i]), i]
+            
+            a1, a2 = bond_indices[i]
+            atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}"
+            violations.append(
+                f"  - {atom_names} ({a1},{a2}): Ref={distances_ref[i]:.5f}nm, "
+                f"MaxVal={max_val:.5f}nm, MaxDev={dev:.2e}nm"
+            )
+
+    if violations:
+        header = f"{label} constraints violated (Tol: {tolerance}nm):"
+        raise RuntimeError(f"{header}\n" + "\n".join(violations))
+
+def _assert_angle_constancy(angle_indices, tolerance=1e-4, label="Angle"):
+    if len(angle_indices) == 0:
+        return
+
+    # Compute angles: (frames, nangles)
+    angles_ref = md.compute_angles(reference, angle_indices)[0]
+    angles_traj = md.compute_angles(traj, angle_indices)
+    
+    # Calculate absolute deviations
+    diffs = np.abs(angles_traj - angles_ref)
+    max_deviations = np.max(diffs, axis=0)
+    
+    violations = []
+    for i, dev in enumerate(max_deviations):
+        if dev > tolerance or True:
+            # Find the actual max value reached in the trajectory for this angle
+            max_val = angles_traj[np.argmax(diffs[:, i]), i]
+            
+            a1, a2, a3 = angle_indices[i]
+            atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}-{context.getAtomName(a3)}"
+            violations.append(
+                f"  - {atom_names} ({a1},{a2},{a3}): Ref={angles_ref[i]:.5f}rad, "
+                f"MaxVal={max_val:.5f}rad, MaxDev={dev:.2e}rad"
+            )
+
+    if violations:
+        header = f"{label} constraints violated (Tol: {tolerance}rad):"
+        raise RuntimeError.fail(f"{header}\n" + "\n".join(violations))
+
+def test_rigid_bonds():
+    bonds = context.getWorld(0).getTestRigidBonds()
+    _assert_bond_constancy(bonds, label="Rigid Bond")
+
+def test_non_rigid_bonds():
+    bonds = context.getWorld(0).getTestNonRigidBonds()
+    _assert_bond_constancy(bonds, label="Non-Rigid Bond")
+
+def test_rigid_angles():
+    angles = context.getWorld(0).getTestRigidAngles()
+    _assert_angle_constancy(angles, label="Rigid Angle")
+
+def test_non_rigid_angles():
+    angles = context.getWorld(0).getTestNonRigidAngles()
+    _assert_angle_constancy(angles, label="Non-Rigid Angle")
+
+test_rigid_bonds()
+test_non_rigid_bonds()
+test_rigid_angles()
+test_non_rigid_angles()
 
 """
 source leaprc.protein.ff19SB

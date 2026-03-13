@@ -6,8 +6,11 @@
  * This is part of Robosample		                                      *
  */
 
+#include "Constraint.h"
 #include "TopologyElements.hpp"
+#include "common.h"
 #include <functional>
+#include <unordered_map>
 #pragma once
 
 #include <iostream>
@@ -501,9 +504,6 @@ public:
 	// Set initial values of X_PF or X_BM
 	void setTransformsMeans(const std::vector<SimTK::Real>& givenX_PF,
 		const std::vector<SimTK::Real>& givenX_BM);
-
-	// Set X_PF and X_BM related values
-	void setTransformsMeansToMin(AmberReader &amberReader);
 
 	// Get X_PF and X_BM related values
 	void getTransformsStatistics(SimTK::State& someState);

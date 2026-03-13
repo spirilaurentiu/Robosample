@@ -1,5 +1,4 @@
 #include "World.hpp"
-#include "Constants.h"
 #include "Constraint.h"
 #include "OpenMM.hpp"
 #include "Sampler.hpp"
@@ -7,7 +6,6 @@
 #include "common.h"
 #include <cstdlib>
 #include <ostream>
-#include <random>
 
 void World::setAtomTargetLocationsToState(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets)
 {
@@ -2081,7 +2079,6 @@ SimTK::Transform& World::getReorientTransformInAnotherBody(
 	const SimTK::Transform &reorientAB,
 	SimTK::Transform& X_FMprim)
 {
-
 	SimTK::Transform X_MB = ~(ofBodyB.getOutboardFrame(someState));
 	SimTK::Transform X_FM = ofBodyB.getMobilizerTransform(someState);
 	SimTK::Transform X_AB = 
@@ -2114,7 +2111,6 @@ const std::vector<SimTK::Real>& givenX_BM)
 		i += 1;
 		xbm = givenX_BM[i];
 	}
-
 }
 
 /**
@@ -2166,9 +2162,7 @@ void World::setTransformsMeansToIni(void)
 			<< angleMean * (180 / SimTK::Pi) << " "
 			<< "angle " << int(mbx) - 1 << " " << angle * (180 / SimTK::Pi) << " "
 			<< std::endl; */
-
 	}
-
 }
 
 /*
@@ -2221,101 +2215,6 @@ void World::setTransformsMeansToCurrent(SimTK::State& someState)
 
 	}
 
-}
-
-/**
- * Set bonds values
-*/
-void World::setTransformsMeansToMin(AmberReader &amberReader)
-{
-	// const SimTK::State& defaultState = matter->getSystem().getDefaultState();
-
-	// // Set bonds and angles values
-	// for(int bondIndex = 0; bondIndex < amberReader.getNumberBonds(); bondIndex++){
-
-	// 	int prm_a_1 = amberReader.getBondsAtomsIndex1(bondIndex);
-	// 	int prm_a_2 = amberReader.getBondsAtomsIndex2(bondIndex);
-		
-	// 	//std::cout << "setTransformsStatisticsToMin atomIxs " << a_1 << " " << a_2 << " ";
-
-	// 	for (auto& topology : topologies){
-
-	// 		//Atom * gAtom = topology.bAtomList[prm_a_1];
-	// 		bool rinClosing = topology.subBondList[bondIndex].ringClosing;
-
-	// 		SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].identity.compoundAtomIndex;
-	// 		SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
-	// 		const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
-	// 		SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].identity.compoundAtomIndex;
-	// 		SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
-	// 		const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
-
-	// 		const SimTK::MobilizedBodyIndex mbx = mbx_2;
-
-	// 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	// 		const SimTK::Transform& X_PF = mobod.getInboardFrame(defaultState);
-	// 		const SimTK::Transform& X_BM = mobod.getOutboardFrame(defaultState);
-
-	// 		std::cout << "bond redundancy " << prm_a_1 << " " << prm_a_2 << " " 
-	// 			<< int(mbx_1) << " " <<  int(mbx_2)  << std::endl;
-
-	// 		if(rinClosing){
-	// 			std::cout << "ring closing\n";
-	// 		}
-	// 		else if((int(mbx_2) == 1)){
-	// 			normX_BMp_means[int(mbx) - 1] = X_BM.p().norm();
-				
-	// 		}else{
-	// 			normX_BMp_means[int(mbx) - 1] =
-	// 				amberReader.getBondsEqval(bondIndex) / 10.0; // Ang to nano
-	// 		}
-
-	// 		//if(mobod.getNumQ(defaultState) == 2){}else{}
-	// 		//std::cout << " mbx " << int(mbx) << " normX_BMMean[" << int(mbx) - 1 << "]= " << normX_BMp_means[int(mbx) - 1] << std::endl;
-
-	// 	}
-	// }	
-
-	// // Set angles values
-	// for(int angleIndex = 0; angleIndex < amberReader.getNumberAngles(); angleIndex++){
-
-	// 	int prm_a_1 = amberReader.getAnglesAtomsIndex1(angleIndex);
-	// 	int prm_a_2 = amberReader.getAnglesAtomsIndex2(angleIndex);
-	// 	int prm_a_3 = amberReader.getAnglesAtomsIndex3(angleIndex);
-
-	// 	for (auto& topology : topologies){
-
-	// 		SimTK::Compound::AtomIndex aIx_1 = topology.subAtomList[prm_a_1].identity.compoundAtomIndex;
-	// 		SimTK::DuMM::AtomIndex dAIx_1 = topology.getDuMMAtomIndex(aIx_1);
-	// 		const SimTK::MobilizedBodyIndex mbx_1 = forceField->getAtomBody(dAIx_1);
-	// 		SimTK::Compound::AtomIndex aIx_2 = topology.subAtomList[prm_a_2].identity.compoundAtomIndex;
-	// 		SimTK::DuMM::AtomIndex dAIx_2 = topology.getDuMMAtomIndex(aIx_2);
-	// 		const SimTK::MobilizedBodyIndex mbx_2 = forceField->getAtomBody(dAIx_2);
-	// 		SimTK::Compound::AtomIndex aIx_3 = topology.subAtomList[prm_a_3].identity.compoundAtomIndex;
-	// 		SimTK::DuMM::AtomIndex dAIx_3 = topology.getDuMMAtomIndex(aIx_3);
-	// 		const SimTK::MobilizedBodyIndex mbx_3 = forceField->getAtomBody(dAIx_3);
-
-	// 		const SimTK::MobilizedBodyIndex mbx = mbx_3;
-
-	// 		const SimTK::MobilizedBody& mobod = matter->getMobilizedBody(mbx);
-	// 		const SimTK::Transform& X_PF = mobod.getInboardFrame(defaultState);
-	// 		const SimTK::Transform& X_BM = mobod.getOutboardFrame(defaultState);
-
-	// 		std::cout << "angle redundancy " << prm_a_1 << " " << prm_a_2 << " " << prm_a_3 << " "
-	// 							<< int(mbx_1) << " " <<  int(mbx_2) << " " <<  int(mbx_3) << std::endl;
-
-	// 		if( (int(mbx_3) == 1) ){
-	// 			acosX_PF00_means[int(mbx) - 1] =
-	// 				std::acos(X_PF.R()(0)(0));
-	// 		}else{
-	// 			acosX_PF00_means[int(mbx) - 1] =
-	// 				amberReader.getAnglesEqval(angleIndex);
-	// 		}
-				
-	// 		//if(mobod.getNumQ(defaultState) == 2){}else{}
-
-	// 	}
-	// }	
 }
 
 /**
@@ -4452,15 +4351,22 @@ SimTK::Real World::integratedAutocorrelation(const std::vector<SimTK::Real>& x, 
 
 bool World::generateSamples(int howManySamplesPerRound, std::stringstream& worldOutStream, const std::string& header, bool verbose)
 {
+	SimTK::State& state = integrator->updAdvancedState();
+	updSampler(0)->reinitialize(state, worldOutStream, verbose);
+
 	// Store the original atom target locations before sampling
 	if (testing) {
-		atomTargetLocaltionsCacheOld = atomTargetLocaltionsCache;
+		atomTargetLocaltionsCacheOld.resize(topologies.size());
+
+		for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+			for (SimTK::Compound::AtomIndex cAIx = SimTK::Compound::AtomIndex(0); cAIx < topologies[topoIx].getAtoms().size(); cAIx++) {
+				const SimTK::Vec3 location = topologies[topoIx].calcAtomLocationInGroundFrameThroughSimbody(cAIx, *forceField, *matter, state);
+				atomTargetLocaltionsCacheOld[topoIx][cAIx] = location;
+			}
+		}
 	}
 
-	SimTK::State& state = integrator->updAdvancedState();
 	bool validated = true;
-
-	updSampler(0)->reinitialize(state, worldOutStream, verbose);
 
 	if (getSampler(0)->getIntegratorType() == IntegratorType::OMMVV) {
 		

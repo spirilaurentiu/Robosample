@@ -1,13 +1,7 @@
-#ifndef __ROBO_HPP
-#define __ROBO_HPP
+#pragma once
 
 #include "Simbody.h"
 #include "Molmodel.h"
-
-//#include <Eigen/Dense>
-//#include <Eigen/Eigenvalues>
-//#include <Eigen/LU>
-//#include <Eigen/QR>
 
 #include <algorithm>
 #include <string>
@@ -101,8 +95,6 @@
 #include <unordered_set>
 
 #include "bgeneral.hpp"
-#include "readAmberInput.hpp"
-#include "SetupReader.hpp"
 #include "trim.hpp"
 #include "pcg_random.hpp"
 
@@ -123,5 +115,3 @@
 // #ifndef __DRILLING__
 // #define __DRILLING__
 // #endif
-
-#endif // __ROBO_HPP

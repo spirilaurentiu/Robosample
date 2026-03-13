@@ -5,14 +5,10 @@
 #include "World.hpp"
 #include "Sampler.hpp"
 #include "common.h"
-#include "readAmberInput.hpp"
-
 #include <cstddef>
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
-
-#include <stack>
 
 /*!
  * <!-- Constructor: sets temperatures, random engine and checks for CUDA_ROOT -->
@@ -3498,55 +3494,6 @@ void Context::PrintSamplerDataToLog(std::size_t whichWorld, std::size_t whichSam
 		<< fix_n << " ";
 }
 
-// Print geometric parameters during simulation
-void Context::PrintGeometry(SetupReader& setupReader, std::size_t whichWorld)
-{
-	if(setupReader.get("GEOMETRY")[0] == "TRUE"){
-		// Get distances indeces
-		std::vector<int> distanceIx(setupReader.get("DISTANCE").size());
-		for(unsigned int i = 0; i < setupReader.get("DISTANCE").size(); i++){
-			distanceIx.emplace_back(atoi(setupReader.get("DISTANCE")[i].c_str()));
-		}
-
-		// Get distances
-		for(size_t ai = 0; ai < (setupReader.get("DISTANCE").size() / 2); ai++){
-			/*
-			std::cout << std::setprecision(4)
-			<< Distance(whichWorld, 0, 0,
-				distanceIx[2*ai + 0], distanceIx[2*ai + 1]) << " ";
-			*/
-			printf("%.2f ", Distance(whichWorld, 0, 0,
-				 distanceIx[2*ai + 0], distanceIx[2*ai + 1]));
-
-		}
-
-		// Get dihedrals indeces
-		std::vector<int> dihedralIx(setupReader.get("DIHEDRAL").size());
-		for(unsigned int i = 0; i < setupReader.get("DIHEDRAL").size(); i++){
-			dihedralIx.emplace_back(atoi(setupReader.get("DIHEDRAL")[i].c_str()));
-		}
-		// Get dihedrals
-		for(size_t ai = 0; ai < (setupReader.get("DIHEDRAL").size() / 4); ai++){
-			/*
-			std::cout << std::setprecision(4)
-			<< Dihedral(whichWorld, 0, 0,
-				dihedralIx[4*ai + 0], dihedralIx[4*ai + 1],
-				dihedralIx[4*ai + 2], dihedralIx[4*ai + 3]) << " ";
-			*/
-
-			printf("%.2f ", Dihedral(whichWorld, 0, 0,
-				dihedralIx[4*ai + 0], dihedralIx[4*ai + 1],
-				dihedralIx[4*ai + 2], dihedralIx[4*ai + 3]));
-
-		}
-		//std::cout << std::endl;
-		printf("\n");
-	}else{
-		//std::cout << std::endl;
-		printf("\n");
-	}
-}
-
 void Context::PrintGeometryToLog(std::size_t whichWorld, std::size_t whichSampler)
 {
 	PrintDistancesToLog(whichWorld, whichSampler);
@@ -3928,92 +3875,91 @@ void Context::areAllDuMMsTheSame(void)
 
 
 
-// Teodor's membrane
+// // Teodor's membrane
+// /** Implicit membrane mimicked by half-space contacts */
+// void Context::addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader){
+// 	// Before adding the membrane, we add the contacts and join them
+// 	// to the appropiate Contact Cliques
 
-/** Implicit membrane mimicked by half-space contacts */
-void Context::addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader){
-	// // Before adding the membrane, we add the contacts and join them
-	// // to the appropiate Contact Cliques
+// 	// Each of the flags are formatted as such:
+// 	// CONTACTS_X  int1 int2 , int3 int4 int5
+// 	// X is one of {0,1,2,3}, the ints are atom indices (0-Based)
+// 	// and the comma separates the topologies. In the example given
+// 	// the contacts are set on atoms int1, int2 for topology 0,
+// 	// and on atoms int3, int4 and int5 for topology 1.
+// 	// If the user wishes to skip a topology, then they'd 
+// 	// input "-1" as the only atom index.
 
-	// // Each of the flags are formatted as such:
-	// // CONTACTS_X  int1 int2 , int3 int4 int5
-	// // X is one of {0,1,2,3}, the ints are atom indices (0-Based)
-	// // and the comma separates the topologies. In the example given
-	// // the contacts are set on atoms int1, int2 for topology 0,
-	// // and on atoms int3, int4 and int5 for topology 1.
-	// // If the user wishes to skip a topology, then they'd 
-	// // input "-1" as the only atom index.
-
-	// std::vector<std::vector<std::vector<int>>> cliqueAtomIxs;
+// 	std::vector<std::vector<std::vector<int>>> cliqueAtomIxs;
 
 	
-	// for (int contactCliqueIx = 0; contactCliqueIx < 4; contactCliqueIx++){
+// 	for (int contactCliqueIx = 0; contactCliqueIx < 4; contactCliqueIx++){
 
-	// 	// Empty vector of prmtop atom indexes
-	// 	cliqueAtomIxs.push_back({});
-	// 	cliqueAtomIxs[contactCliqueIx].push_back({});
+// 		// Empty vector of prmtop atom indexes
+// 		cliqueAtomIxs.push_back({});
+// 		cliqueAtomIxs[contactCliqueIx].push_back({});
 
-	// 	// Get values for this contactCliqueIx
-	// 	std::string contactClique_key = "CONTACTS_";
-	// 	contactClique_key.append( std::to_string(contactCliqueIx) );
-	// 	const std::vector<std::string>& contactClique_vals = setupReader.get(contactClique_key);
+// 		// Get values for this contactCliqueIx
+// 		std::string contactClique_key = "CONTACTS_";
+// 		contactClique_key.append( std::to_string(contactCliqueIx) );
+// 		const std::vector<std::string>& contactClique_vals = setupReader.get(contactClique_key);
 		
-	// 	int cur_topology = 0;
-	// 	if (contactClique_vals.size() > 2) {
+// 		int cur_topology = 0;
+// 		if (contactClique_vals.size() > 2) {
 
-	// 		// Get atom indexes for this clique
-	// 		for (const auto& value : contactClique_vals){
+// 			// Get atom indexes for this clique
+// 			for (const auto& value : contactClique_vals){
 				
-	// 			if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
-	// 				cliqueAtomIxs[contactCliqueIx].push_back({});
-	// 				cur_topology++;
-	// 			}
-	// 			else {
-	// 				cliqueAtomIxs[contactCliqueIx][cur_topology].push_back(std::stoi(value));
-	// 			}
-	// 		}
+// 				if (value == ",") { //TODO: This does not account for 'int1,'. Fix this.
+// 					cliqueAtomIxs[contactCliqueIx].push_back({});
+// 					cur_topology++;
+// 				}
+// 				else {
+// 					cliqueAtomIxs[contactCliqueIx][cur_topology].push_back(std::stoi(value));
+// 				}
+// 			}
 
-	// 		// Check
-	// 		if(cur_topology != topologies.size()){
-	// 			std::cout << "[WARNING] " 
-	// 				<< "Number of topologies in CONTACT_ keys don't match the actual number of topologies\n";
-	// 		}
+// 			// Check
+// 			if(cur_topology != topologies.size()){
+// 				std::cout << "[WARNING] " 
+// 					<< "Number of topologies in CONTACT_ keys don't match the actual number of topologies\n";
+// 			}
 
-	// 		// Add contact atom indexes for all worlds
-	// 		for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-	// 			for (int topologyIx = 0;topologyIx < cliqueAtomIxs[contactCliqueIx].size(); topologyIx++){
+// 			// Add contact atom indexes for all worlds
+// 			for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+// 				for (int topologyIx = 0;topologyIx < cliqueAtomIxs[contactCliqueIx].size(); topologyIx++){
 					
-	// 				worlds[worldIx].addContacts(
-	// 						cliqueAtomIxs[contactCliqueIx][topologyIx],
-	// 						topologyIx,
-	// 						SimTK::ContactCliqueId(contactCliqueIx));
-	// 			}
-	// 		}
-	// 	}
-	// }
+// 					worlds[worldIx].addContacts(
+// 							cliqueAtomIxs[contactCliqueIx][topologyIx],
+// 							topologyIx,
+// 							SimTK::ContactCliqueId(contactCliqueIx));
+// 				}
+// 			}
+// 		}
+// 	}
 
-	// // Add membrane to all worlds.
-	// for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-	// 	worlds[worldIx].addMembrane(memZWidth);
-	// }
+// 	// Add membrane to all worlds.
+// 	for(unsigned int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
+// 		worlds[worldIx].addMembrane(memZWidth);
+// 	}
 
-	// // Print
-	// std::cout << "\n########## MEMBRANE STATS ##########\n";
-	// std::cout << "Atom cliques are: \n";
-	// for (int contactClique=0; contactClique<4; contactClique++){
-	// 	for (const auto& topologyIx : cliqueAtomIxs[contactClique]) {
-	// 	for (int atomIx : topologyIx) {
-	// 		std::cout << atomIx << " ";
-	// 	}
-	// 	std::cout << " / ";
-	// }
-	// std::cout << std::endl;
-	// }
-	// std::cout << "########## MEMBRANE STATS ##########\n\n";
+// 	// Print
+// 	std::cout << "\n########## MEMBRANE STATS ##########\n";
+// 	std::cout << "Atom cliques are: \n";
+// 	for (int contactClique=0; contactClique<4; contactClique++){
+// 		for (const auto& topologyIx : cliqueAtomIxs[contactClique]) {
+// 		for (int atomIx : topologyIx) {
+// 			std::cout << atomIx << " ";
+// 		}
+// 		std::cout << " / ";
+// 	}
+// 	std::cout << std::endl;
+// 	}
+// 	std::cout << "########## MEMBRANE STATS ##########\n\n";
 
-	// // TODO: Do we need this here (looks like World's buissiness)
-	// realizeTopology();
-}
+// 	// TODO: Do we need this here (looks like World's buissiness)
+// 	realizeTopology();
+// }
 
 void Context::setNumThreads(int threads) {
 	if (threads < 0) {

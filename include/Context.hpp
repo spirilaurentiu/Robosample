@@ -2,12 +2,10 @@
 
 #include "Robo.hpp"
 #include "Sampler.hpp"
-#include "SetupReader.hpp"
 #include "TopologyElements.hpp"
 #include "World.hpp"
 #include "ThermodynamicState.hpp"
 #include "Replica.hpp"
-#include "SetupReader.hpp"
 #include "TrajectoryObject.hpp"
 #include "OpenMM.hpp"
 
@@ -233,7 +231,6 @@ public:
 
 	// Print Simbody related information
 	void PrintSimbodyMobods(void);
-	void PrintGeometry(SetupReader&, std::size_t whichWorld);
 	void PrintFreeE2EDist(std::size_t whichWorld, int whichCompound);
 
 	void PrintGeometryToLog(std::size_t whichWorld, std::size_t whichSampler);
@@ -505,7 +502,6 @@ private:
 	std::vector<int> TopologyIXs;
 	std::vector<std::vector<int>> AmberAtomIXs;
 	std::vector<World> worlds;
-	std::vector<AmberReader> amberReader;
 
 	std::vector<int> worldIndexes;
 	std::vector<std::vector<std::string>> rootMobilitiesStr;
@@ -620,8 +616,8 @@ private:
 	Random32 randomEngine;
 
 public:
-	/** Implicit membrane mimicked by half-space contacts */
-	void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
+	// /** Implicit membrane mimicked by half-space contacts */
+	// void addContactImplicitMembrane(const float memZWidth, const SetupReader& setupReader);
 
     std::vector<std::string> MobilityStr {
 		"Zero",
@@ -693,12 +689,9 @@ public:
 
 
 private:
-
 	ZMatrix zMatrix;
 
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocationsCache;
-
-	std::vector<std::string> inpcrdFNs;
 
     /** @name Z Matrix and BAT functions
 	*/
