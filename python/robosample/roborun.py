@@ -266,9 +266,13 @@ def _assert_bond_constancy(bond_indices, tolerance=1e-4, label="Bond"):
     
     violations = []
     for i, dev in enumerate(max_deviations):
-        if dev > tolerance or True:
+        if dev > tolerance:
             # Find the actual max value reached in the trajectory for this bond
             max_val = distances_traj[np.argmax(diffs[:, i]), i]
+
+            import matplotlib.pyplot as plt
+            plt.plot(distances_traj[:, i], label=f"Bond {i}")
+            plt.show()
             
             a1, a2 = bond_indices[i]
             atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}"
@@ -295,7 +299,7 @@ def _assert_angle_constancy(angle_indices, tolerance=1e-4, label="Angle"):
     
     violations = []
     for i, dev in enumerate(max_deviations):
-        if dev > tolerance or True:
+        if dev > tolerance:
             # Find the actual max value reached in the trajectory for this angle
             max_val = angles_traj[np.argmax(diffs[:, i]), i]
             
