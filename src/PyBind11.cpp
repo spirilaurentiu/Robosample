@@ -298,7 +298,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
-        .def("getAtomName", &Context::getAtomName, py::arg("globalAtomIndex"), "Get the unique atom name for a given global atom index.")
+        .def("getAtomNameByPrmtopIndex", &Context::getAtomNameByPrmtopIndex, py::arg("prmtopIndex"), "Get the unique atom name for a given prmtop index.")
         .def("addReplica", &Context::addReplica, "Add an empty replica to the context.")
         .def("addThermodynamicState", &Context::addThermodynamicState, "Add an empty themodynamic state to the context.")
         .def("Initialize", py::overload_cast<>(&Context::Initialize), "Initializes the context after all worlds and replicas have been set.")
@@ -323,12 +323,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
         .def("getTestRigidBonds", &World::getTestRigidBonds, "Get test rigid bonds.")
         .def("getTestNonRigidBonds", &World::getTestNonRigidBonds, "Get test non-rigid bonds.")
+        .def("isBondRingClosing", &World::isBondRingClosing, "Check if a bond is ring-closing.")
         .def("getTestRigidAngles", &World::getTestRigidAngles, "Get test rigid angles.")
         .def("getTestNonRigidAngles", &World::getTestNonRigidAngles, "Get test non-rigid angles.")
-        .def("getTestRigidPeriodicTorsions", &World::getTestRigidPeriodicTorsions, "Get test rigid periodic torsions.")
-        .def("getTestNonRigidPeriodicTorsions", &World::getTestNonRigidPeriodicTorsions, "Get test non-rigid periodic torsions.")
-        .def("getTestRigidHarmonicTorsions", &World::getTestRigidHarmonicTorsions, "Get test rigid harmonic torsions.")
-        .def("getTestNonRigidHarmonicTorsions", &World::getTestNonRigidHarmonicTorsions, "Get test non-rigid harmonic torsions.")
+        .def("getTestRigidProperTorsions", &World::getTestRigidProperTorsions, "Get test rigid proper torsions.")
+        .def("getTestNonRigidProperTorsions", &World::getTestNonRigidProperTorsions, "Get test non-rigid proper torsions.")
+        .def("getTestRigidImproperTorsions", &World::getTestRigidImproperTorsions, "Get test rigid improper torsions.")
+        .def("getTestNonRigidImproperTorsions", &World::getTestNonRigidImproperTorsions, "Get test non-rigid improper torsions.")
         
         .def("getMatchAtomTargetLocationsResiduals", &World::getMatchAtomTargetLocationsResiduals, "Get residuals from matchAtomTargetLocations during testing.")
         .def("getCumulativeCartesianDisplacements", &World::getCumulativeCartesianDisplacements, "Get cumulative Cartesian displacements.")
@@ -339,9 +340,5 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("getOpenMMCumulativeBondDisplacements", &World::getOpenMMCumulativeBondDisplacements, "Get cumulative bond displacements between OpenMM and SimTK during testing.")
         .def("getOpenMMCumulativeAngleDisplacements", &World::getOpenMMCumulativeAngleDisplacements, "Get cumulative angle displacements between OpenMM and SimTK during testing.")
         .def("getOpenMMCumulativeTorsionDisplacements", &World::getOpenMMCumulativeTorsionDisplacements, "Get cumulative torsion displacements between OpenMM and SimTK during testing.")
-        .def("getAcceptanceRMSD", &World::getAcceptanceRMSD, "Get RMSD values for accepted/rejected moves during testing.")
-        .def("getRigidBodyBondRMSDInNm", &World::getRigidBodyBondRMSDInNm, "Get rigid body bond RMSD in nm during testing.")
-        .def("getRigidBodyAngleDriftInRad", &World::getRigidBodyAngleDriftInRad, "Get rigid body angle drift in rad during testing.")
-        .def("getRigidBodyProperTorsionDriftInRad", &World::getRigidBodyProperTorsionDriftInRad, "Get rigid body proper torsion drift in rad during testing.")
-        .def("getRigidBodyImproperTorsionDriftInRad", &World::getRigidBodyImproperTorsionDriftInRad, "Get rigid body improper torsion drift in rad during testing.");
+        .def("getAcceptanceRMSD", &World::getAcceptanceRMSD, "Get RMSD values for accepted/rejected moves during testing.");
 }

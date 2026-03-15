@@ -1695,8 +1695,6 @@ int HMCSampler::integrateNUTS(SimTK::State& state) {
 */
 void HMCSampler::integrateTrajectory(SimTK::State& someState, bool useNUTS)
 {
-	// // someState = compoundSystem->realizeTopology();
-
 	// // // Adapt timestep
 	// // if(shouldAdaptTimestep){
 	// // 	adaptTimestep(someState);

@@ -1,4 +1,5 @@
 #include "Topology.hpp"
+#include "Compound.h"
 
 Topology::Topology(const SimTK::Compound::Name& name, SimTK::CompoundSystem::CompoundIndex compoundIndex, int rootGlobalAtomIx) :
 	SimTK::Compound(name),
@@ -234,17 +235,6 @@ SimTK::Vec3 Topology::calcAtomLocationInGroundFrameThroughSimbody(SimTK::Compoun
 }
 
 SimTK::Transform Topology::matchAtomTargetLocations(const SimTK::Compound::AtomTargetLocations& atomTargets) {
-	
-	// for (const auto& bond : subBondList) {
-	// 	const SimTK::Compound::AtomIndex parentCAIx = bond.getParentCompoundAtomIndex();
-	// 	const SimTK::Compound::AtomIndex childCAIx = bond.getChildCompoundAtomIndex();
-	// 	const SimTK::Compound::BondIndex compoundBondIx = bond.getCompoundBondIndex();
-		
-	// 	// Calculate new bond length in nm
-	// 	SimTK::Real newBondLength = (atomTargets.at(childCAIx) - atomTargets.at(parentCAIx)).norm();
-	// 	updBondLength(compoundBondIx, newBondLength);
-	// }
-		
 	matchDefaultBondLengths(atomTargets);
 	matchDefaultAtomChirality(atomTargets, 0.01, flipAllChirality);
 	matchDefaultBondAngles(atomTargets);

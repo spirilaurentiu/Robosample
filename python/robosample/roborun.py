@@ -1,6 +1,4 @@
 import argparse
-
-# import rdkit
 import robosample
 import numpy as np
 
@@ -48,91 +46,6 @@ import MDAnalysis as mda
 from MDAnalysis.analysis.dihedrals import Ramachandran
 from MDAnalysis.analysis.bat import BAT
 import matplotlib.pyplot as plt
-
-# def calculate_l(dcd):
-# 	u = mda.Universe(args.prmtop, dcd)
-# 	selection = u.select_atoms('protein')
-
-# 	# Build BAT representation
-# 	bat = BAT(selection)
-# 	bat.run()
-
-# 	coords = bat.results.bat  # shape: (n_frames, n_internal_coords)
-
-# 	# reference frame
-# 	ref = coords[0]
-
-# 	# RMSD in internal coordinate space
-# 	diff = coords - ref
-# 	rmsd = np.sqrt(np.mean(diff**2, axis=1))
-
-# 	# autocorrelation function
-# 	rmsd_centered = rmsd - np.mean(rmsd)
-# 	acf = np.correlate(rmsd_centered, rmsd_centered, mode='full')
-# 	acf = acf[acf.size // 2:]
-# 	acf /= acf[0]
-
-# 	# Integrated autocorrelation time
-# 	# Stop at first zero crossing to avoid noise in the tail
-# 	cutoff = np.argmax(acf < 0) or len(acf)
-# 	tau = 1 + 2 * np.sum(acf[1:cutoff])
-# 	L = tau / 2
-
-# 	return L
-
-# def get_native_openmm_energy():
-# 	prmtop = app.AmberPrmtopFile(args.prmtop)
-# 	inpcrd = app.AmberInpcrdFile(args.inpcrd)
-
-# 	system = prmtop.createSystem(
-# 		nonbondedMethod=app.CutoffNonPeriodic,
-# 		nonbondedCutoff=1.2,
-# 		constraints=None,
-# 		implicitSolvent=app.OBC2,
-# 		removeCMMotion=False
-# 	)
-
-# 	thermostat = mm.AndersenThermostat(300 * unit.kelvin, 1.0 / unit.picosecond)
-# 	system.addForce(thermostat)
-
-# 	integrator = mm.VerletIntegrator(0.001 * unit.picoseconds)
-# 	platform = mm.Platform.getPlatformByName('CUDA')
-# 	simulation = app.Simulation(prmtop.topology, system, integrator, platform)
-
-# 	simulation.context.setPositions(inpcrd.positions)
-# 	simulation.step(1000)
-# 	equil_positions = simulation.context.getState(getPositions=True).getPositions()
-
-# 	for L in [5, 10, 20, 50, 100, 200]:
-# 		variances = []
-# 		for trial in range(10):  # 50 independent short runs
-# 			system = prmtop.createSystem(
-# 				nonbondedMethod=app.CutoffNonPeriodic,
-# 				nonbondedCutoff=1.2,
-# 				constraints=None,
-# 				implicitSolvent=app.OBC2,
-# 				removeCMMotion=False
-# 			)
-
-# 			thermostat = mm.AndersenThermostat(300 * unit.kelvin, 1.0 / unit.picosecond)
-# 			system.addForce(thermostat)
-
-# 			integrator = mm.VerletIntegrator(0.001 * unit.picoseconds)
-# 			platform = mm.Platform.getPlatformByName('CUDA')
-# 			simulation = app.Simulation(prmtop.topology, system, integrator, platform)
-# 			simulation.context.setPositions(equil_positions)
-
-# 			simulation.reporters.append(app.DCDReporter(f'{args.name}_openmm.dcd', 1))
-# 			simulation.step(L)
-
-# 			variances.append(calculate_l(f'{args.name}_openmm.dcd'))
-# 		print(f"L={L}: mean_var={np.mean(variances):.4f}")
-
-# 	exit()
-
-# 	# Get total energy first
-# 	state = simulation.context.getState(getEnergy=True)
-# 	return state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
 
 # Parse the arguments
 args = parser.parse_args()
@@ -233,20 +146,6 @@ for i, world in enumerate(context.getWorlds()):
 			if rmsd > TOL:
 				raise RuntimeError(f"RMSD for rejected move is too large ({rmsd}): the molecule moved too much.")
 
-	# Bond lengths inside rigid bodies should not change values
-	# The world is not perfect however and we need to allow a high margin (up to 1 nm RMSD for the entire molecule)
-	rigidBodyBondRMSDInNm = world.getRigidBodyBondRMSDInNm()
-	np.testing.assert_allclose(rigidBodyBondRMSDInNm, 0, atol=TOL)
-
-	rigidBodyAngleDriftInRad = world.getRigidBodyAngleDriftInRad()
-	np.testing.assert_allclose(rigidBodyAngleDriftInRad, 0, atol=1)
-
-	rigidBodyProperTorsionDriftInRad = world.getRigidBodyProperTorsionDriftInRad()
-	np.testing.assert_allclose(rigidBodyProperTorsionDriftInRad, 0, atol=TOL)
-
-	rigidBodyImproperTorsionDriftInRad = world.getRigidBodyImproperTorsionDriftInRad()
-	np.testing.assert_allclose(rigidBodyImproperTorsionDriftInRad, 0, atol=TOL)
-
 # Load the trajectory
 import mdtraj as md
 traj = md.load('ala-dipeptide.test_6000.repl0.dcd', top=args.prmtop)
@@ -257,8 +156,8 @@ def _assert_bond_constancy(bond_indices, tolerance=1e-4, label="Bond"):
         return
 
     # Compute distances: (frames, nbonds)
-    distances_ref = md.compute_distances(reference, bond_indices)[0]
-    distances_traj = md.compute_distances(traj, bond_indices)
+    distances_ref = md.compute_distances(reference, bond_indices, periodic=False)[0]
+    distances_traj = md.compute_distances(traj, bond_indices, periodic=False)
     
     # Calculate absolute deviations
     diffs = np.abs(distances_traj - distances_ref)
@@ -270,9 +169,8 @@ def _assert_bond_constancy(bond_indices, tolerance=1e-4, label="Bond"):
             # Find the actual max value reached in the trajectory for this bond
             max_val = distances_traj[np.argmax(diffs[:, i]), i]
 
-            import matplotlib.pyplot as plt
-            plt.plot(distances_traj[:, i], label=f"Bond {i}")
-            plt.show()
+            # plt.plot(distances_traj[:, i], label=f"Bond {i}")
+            # plt.show()
             
             a1, a2 = bond_indices[i]
             atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}"

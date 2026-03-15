@@ -582,10 +582,14 @@ void Context::addWorld(
 				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[0], worlds.back().getForceField());
 				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[1], worlds.back().getForceField());
 
+				const int prmtopIndex1 = topology.getAtoms()[bond.compoundAtomIndices[0]].identity.prmtopIndex;
+				const int prmtopIndex2 = topology.getAtoms()[bond.compoundAtomIndices[1]].identity.prmtopIndex;
+
+				worlds.back().markRingClosingBond(prmtopIndex1, prmtopIndex2, bond.ringClosing);
 				if (mbx1 == mbx2) {
-					worlds.back().addTestRigidBond(bond.globalIndices[0], bond.globalIndices[1]);
+					worlds.back().addTestRigidBond(prmtopIndex1, prmtopIndex2);
 				} else {
-					worlds.back().addTestNonRigidBond(bond.globalIndices[0], bond.globalIndices[1]);
+					worlds.back().addTestNonRigidBond(prmtopIndex1, prmtopIndex2);
 				}
 			}
 
@@ -594,10 +598,14 @@ void Context::addWorld(
 				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(angle.compoundAtomIndices[1], worlds.back().getForceField());
 				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndexThroughDumm(angle.compoundAtomIndices[2], worlds.back().getForceField());
 
+				const int prmtopIndex1 = topology.getAtoms()[angle.compoundAtomIndices[0]].identity.prmtopIndex;
+				const int prmtopIndex2 = topology.getAtoms()[angle.compoundAtomIndices[1]].identity.prmtopIndex;
+				const int prmtopIndex3 = topology.getAtoms()[angle.compoundAtomIndices[2]].identity.prmtopIndex;
+
 				if (mbx1 == mbx2 && mbx2 == mbx3) {
-					worlds.back().addTestRigidAngle(angle.globalIndices[0], angle.globalIndices[1], angle.globalIndices[2]);
+					worlds.back().addTestRigidAngle(prmtopIndex1, prmtopIndex2, prmtopIndex3);
 				} else {
-					worlds.back().addTestNonRigidAngle(angle.globalIndices[0], angle.globalIndices[1], angle.globalIndices[2]);
+					worlds.back().addTestNonRigidAngle(prmtopIndex1, prmtopIndex2, prmtopIndex3);
 				}
 			}
 
@@ -607,17 +615,22 @@ void Context::addWorld(
 				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[2], worlds.back().getForceField());
 				const SimTK::MobilizedBodyIndex mbx4 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[3], worlds.back().getForceField());
 
+				const int prmtopIndex1 = topology.getAtoms()[torsion.compoundAtomIndices[0]].identity.prmtopIndex;
+				const int prmtopIndex2 = topology.getAtoms()[torsion.compoundAtomIndices[1]].identity.prmtopIndex;
+				const int prmtopIndex3 = topology.getAtoms()[torsion.compoundAtomIndices[2]].identity.prmtopIndex;
+				const int prmtopIndex4 = topology.getAtoms()[torsion.compoundAtomIndices[3]].identity.prmtopIndex;
+
 				if (torsion.improper) {
 					if (mbx1 == mbx2 && mbx2 == mbx3 && mbx3 == mbx4) {
-						worlds.back().addTestRigidPeriodicTorsion(torsion.globalIndices[0], torsion.globalIndices[1], torsion.globalIndices[2], torsion.globalIndices[3]);
+						worlds.back().addTestRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
 					} else {
-						worlds.back().addTestNonRigidPeriodicTorsion(torsion.globalIndices[0], torsion.globalIndices[1], torsion.globalIndices[2], torsion.globalIndices[3]);
+						worlds.back().addTestNonRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
 					}
 				} else {
 					if (mbx2 == mbx3) {
-						worlds.back().addTestRigidPeriodicTorsion(torsion.globalIndices[0], torsion.globalIndices[1], torsion.globalIndices[2], torsion.globalIndices[3]);
+						worlds.back().addTestRigidProperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
 					} else {
-						worlds.back().addTestNonRigidPeriodicTorsion(torsion.globalIndices[0], torsion.globalIndices[1], torsion.globalIndices[2], torsion.globalIndices[3]);
+						worlds.back().addTestNonRigidProperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
 					}
 				}
 			}
@@ -628,10 +641,15 @@ void Context::addWorld(
 				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[2], worlds.back().getForceField());
 				const SimTK::MobilizedBodyIndex mbx4 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[3], worlds.back().getForceField());
 
+				const int prmtopIndex1 = topology.getAtoms()[torsion.compoundAtomIndices[0]].identity.prmtopIndex;
+				const int prmtopIndex2 = topology.getAtoms()[torsion.compoundAtomIndices[1]].identity.prmtopIndex;
+				const int prmtopIndex3 = topology.getAtoms()[torsion.compoundAtomIndices[2]].identity.prmtopIndex;
+				const int prmtopIndex4 = topology.getAtoms()[torsion.compoundAtomIndices[3]].identity.prmtopIndex;
+
 				if (mbx1 == mbx2 && mbx2 == mbx3 && mbx3 == mbx4) {
-					worlds.back().addTestRigidHarmonicTorsion(torsion.globalIndices[0], torsion.globalIndices[1], torsion.globalIndices[2], torsion.globalIndices[3]);
+					worlds.back().addTestRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
 				} else {
-					worlds.back().addTestNonRigidHarmonicTorsion(torsion.globalIndices[0], torsion.globalIndices[1], torsion.globalIndices[2], torsion.globalIndices[3]);
+					worlds.back().addTestNonRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
 				}
 			}
 		}
@@ -3820,60 +3838,7 @@ SimTK::Real Context::Distance(
 		dumm, matter, state);
 
 	return (a1pos - a2pos).norm();
-
 }
-
-// Realize Topology Stage for all the Worlds
-void Context::realizeTopology() {
-	for(auto& world : worlds) {
-		world.updCompoundSystem().realizeTopology();
-	}
-
-}
-
-/**
- *  Pass compounds to the new world
- */
-void Context::areAllDuMMsTheSame(void)
-{
-
-	// std::cout << "=== areAllDuMMsTheSame ===\n";
-
-	// // All molecules
-	// for(std::size_t molIx = 0; molIx < numMolecules; molIx++){
-
-	// 	// All Compound atoms
-	// 	for(std::size_t k = 0; k < topologies[molIx].getNumAtoms(); k++){
-
-	// 		// Get atom index
-	// 		SimTK::Compound::AtomIndex aIx =
-	// 			(topologies[molIx].subAtomList[k]).identity.compoundAtomIndex;
-
-	// 		std::cout << aIx << " ";
-
-	// 		// All worlds
-	// 		for(int worldIx = 0; worldIx < getNofWorlds(); worldIx++){
-
-	// 			// Get mobod
-	// 			SimTK::MobilizedBodyIndex mbx =
-	// 				topologies[molIx].getAtomMobilizedBodyIndexThroughDumm(aIx,
-	// 				*(worlds[worldIx].forceField) );
-
-	// 			SimTK::DuMM::AtomIndex dAIx = topologies[molIx].getDuMMAtomIndex(aIx);
-
-	// 			std::cout << dAIx << " ";	
-	// 		}
-	// 		std::cout << std::endl;
-
-	// 	}
-
-	// 	// TODO Restante DANGER
-    //     //c.setTopLevelTransform(compoundTransform * c.getTopLevelTransform());
-	// }
-}
-
-
-
 
 // // Teodor's membrane
 // /** Implicit membrane mimicked by half-space contacts */

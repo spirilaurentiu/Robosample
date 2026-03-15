@@ -517,34 +517,6 @@ SimTK::Real bAngle(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK
  */
 SimTK::Real bDihedral(const SimTK::Vec3& pos0, const SimTK::Vec3& pos1, const SimTK::Vec3& pos2, const SimTK::Vec3& pos3);
 
-/**
- * @brief Compute the signed minimal difference between two angles on the circle.
- *
- * This function returns the geodesic (shortest-arc) angular difference
- * between angles @p a and @p b, correctly accounting for periodicity.
- * The result is wrapped to the interval (-pi, pi].
- *
- * Mathematically:
- *   d = wrap_{(-pi,pi]}(b - a)
- *
- * Implementation uses the identity:
- *   atan2(sin(d), cos(d))
- * which is numerically stable and avoids branch logic.
- *
- * @param a Reference angle (radians)
- * @param b Comparison angle (radians)
- * @return Signed angular difference (radians), in (-pi, pi]
- *
- * Notes:
- * - The magnitude |d| is the physically meaningful angular error.
- * - The sign indicates direction of rotation from a to b.
- * - Suitable for RMS angular drift, constraint drift, and kinematic validation.
- */
-inline SimTK::Real circularAngleDiffSigned(SimTK::Real a, SimTK::Real b) {
-    SimTK::Real d = b - a;
-    return std::atan2(std::sin(d), std::cos(d));
-}
-
 /** Magnitude (norm) of a vector of reals **/
 SimTK::Real magnitude(std::vector<SimTK::Real>& V);
 SimTK::Real magSq(std::vector<SimTK::Real>& V);

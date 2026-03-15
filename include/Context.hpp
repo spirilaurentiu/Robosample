@@ -126,8 +126,13 @@ public:
 	);
 	SimTK::Real calculatePotentialEnergy(int worldIndex);
 
-	const std::string& getAtomName(std::size_t globalAtomIndex) const {
-		return atoms[globalAtomIndex].identity.uniqueAtomName;
+	const std::string& getAtomNameByPrmtopIndex(int prmtopIndex) const {
+		for (const auto& atom : atoms) {
+			if (atom.identity.prmtopIndex == prmtopIndex) {
+				return atom.identity.uniqueAtomName;
+			}
+		}
+		throw std::runtime_error("Atom with specified prmtop index not found.");
 	}
 
 	void Initialize();
@@ -147,8 +152,6 @@ public:
 
 	/** Add constraints */
 	void addConstraints(void);
-
-	void realizeTopology();
 
 	void passTopologiesToNewWorld(int newWorldIx);
 
@@ -462,11 +465,6 @@ public:
 	void PrintReplicaMaps(void);
 	void PrintNofAttemptedSwapsMatrix(void);
 	void PrintNofAcceptedSwapsMatrix(void);
-
-	//////////////////////////////////
-	/////     TEST FUNCTIONS     /////
-	//////////////////////////////////
-	void areAllDuMMsTheSame(void);
 
 	// Transformers
 	void Print_TRANSFORMERS_Work(void);

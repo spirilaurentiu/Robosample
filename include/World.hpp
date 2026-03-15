@@ -7,6 +7,7 @@
  */
 
 #include "Constraint.h"
+#include "OpenMM.hpp"
 #include "TopologyElements.hpp"
 #include "common.h"
 #include <functional>
@@ -936,6 +937,11 @@ public:
 		testNonRigidBonds.push_back({globalIndex1, globalIndex2});
 	}
 
+	void markRingClosingBond(int prmtopIndex1, int prmtopIndex2, bool isRingClosing) {
+		const auto key = canonicalizeBond(prmtopIndex1, prmtopIndex2);
+		bondIsRingClosing[key] = isRingClosing;
+	}
+
 	void addTestRigidAngle(int globalIndex1, int globalIndex2, int globalIndex3) {
 		testRigidAngles.push_back({globalIndex1, globalIndex2, globalIndex3});
 	}
@@ -944,24 +950,30 @@ public:
 		testNonRigidAngles.push_back({globalIndex1, globalIndex2, globalIndex3});
 	}
 
-	void addTestRigidPeriodicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testRigidPeriodicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	void addTestRigidProperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testRigidProperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
 	}
 
-	void addTestNonRigidPeriodicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testNonRigidPeriodicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	void addTestNonRigidProperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testNonRigidProperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
 	}
 
-	void addTestRigidHarmonicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testRigidHarmonicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	void addTestRigidImproperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testRigidImproperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
 	}
 
-	void addTestNonRigidHarmonicTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testNonRigidHarmonicTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
+	void addTestNonRigidImproperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
+		testNonRigidImproperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
 	}
 
 	const std::vector<std::array<int, 2>>& getTestRigidBonds() const {
 		return testRigidBonds;
+	}
+
+	bool isBondRingClosing(int globalIndex1, int globalIndex2) const {
+		const auto key = canonicalizeBond(globalIndex1, globalIndex2);
+		auto it = bondIsRingClosing.find(key);
+		return it != bondIsRingClosing.end() && it->second;
 	}
 
 	const std::vector<std::array<int, 2>>& getTestNonRigidBonds() const {
@@ -976,20 +988,20 @@ public:
 		return testNonRigidAngles;
 	}
 
-	const std::vector<std::array<int, 4>>& getTestRigidPeriodicTorsions() const {
-		return testRigidPeriodicTorsions;
+	const std::vector<std::array<int, 4>>& getTestRigidProperTorsions() const {
+		return testRigidProperTorsions;
 	}
 
-	const std::vector<std::array<int, 4>>& getTestNonRigidPeriodicTorsions() const {
-		return testNonRigidPeriodicTorsions;
+	const std::vector<std::array<int, 4>>& getTestNonRigidProperTorsions() const {
+		return testNonRigidProperTorsions;
 	}
 
-	const std::vector<std::array<int, 4>>& getTestRigidHarmonicTorsions() const {
-		return testRigidHarmonicTorsions;
+	const std::vector<std::array<int, 4>>& getTestRigidImproperTorsions() const {
+		return testRigidImproperTorsions;
 	}
 
-	const std::vector<std::array<int, 4>>& getTestNonRigidHarmonicTorsions() const {
-		return testNonRigidHarmonicTorsions;
+	const std::vector<std::array<int, 4>>& getTestNonRigidImproperTorsions() const {
+		return testNonRigidImproperTorsions;
 	}
 	
 
@@ -1043,26 +1055,6 @@ public:
 		return acceptanceRMSD;
 	}
 
-	const std::vector<SimTK::Real>& getRigidBodyBondRMSDInNm() const {
-		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyBondRMSDInNm called outside testing mode");
-		return rigidBodyBondRMSDInNm;
-	}
-
-	const std::vector<SimTK::Real>& getRigidBodyAngleDriftInRad() const {
-		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyAngleDriftInRad called outside testing mode");
-		return rigidBodyAngleDriftInRad;
-	}
-
-	const std::vector<SimTK::Real>& getRigidBodyProperTorsionDriftInRad() const {
-		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyProperTorsionDriftInRad called outside testing mode");
-		return rigidBodyProperTorsionDriftInRad;
-	}
-
-	const std::vector<SimTK::Real>& getRigidBodyImproperTorsionDriftInRad() const {
-		SimTK_ASSERT_ALWAYS(testing, "getRigidBodyImproperTorsionDriftInRad called outside testing mode");
-		return rigidBodyImproperTorsionDriftInRad;
-	}
-
 	bool isOverconstrained(const SimTK::State& state, std::ostream& out) const;
 
 private:
@@ -1098,13 +1090,8 @@ private:
 	std::vector<std::pair<bool, SimTK::Real>> acceptanceRMSD;
 
 	std::vector<RigidBond> rigidBonds;
-	std::vector<SimTK::Real> rigidBodyBondRMSDInNm;
-
 	std::vector<RigidAngle> rigidAngles;
-	std::vector<SimTK::Real> rigidBodyAngleDriftInRad;
-
 	std::vector<RigidTorsion> rigidProperTorsions, rigidImproperTorsions;
-	std::vector<SimTK::Real> rigidBodyProperTorsionDriftInRad, rigidBodyImproperTorsionDriftInRad;
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	// topology index and atom index
@@ -1138,7 +1125,9 @@ private:
 
 	std::reference_wrapper<const ZMatrix> zMatrix;
 
+	std::map<std::pair<int, int>, bool> bondIsRingClosing;
 	std::vector<std::array<int, 2>> testRigidBonds, testNonRigidBonds;
 	std::vector<std::array<int, 3>> testRigidAngles, testNonRigidAngles;
-	std::vector<std::array<int, 4>> testRigidPeriodicTorsions, testNonRigidPeriodicTorsions, testRigidHarmonicTorsions, testNonRigidHarmonicTorsions;
+	std::vector<std::array<int, 4>> testRigidProperTorsions, testNonRigidProperTorsions;
+	std::vector<std::array<int, 4>> testRigidImproperTorsions, testNonRigidImproperTorsions;
 };
