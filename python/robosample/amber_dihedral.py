@@ -21,12 +21,13 @@ PROTEIN_SIDECHAIN = {
     # C-terminus NME
     'NME': {},
 
-    # Alanine does not have any side chain dihedrals since its definition requires four heavy atoms
-    'ALA': {},
+    # Alanine
+    'ALA': {
+        'chi1': ('N', 'CA', 'CB', 'HB1'),
+    },
 
-    # Arginine (ARG) has a terminal large, resonance-stabilized, planar structure with a diffuse positive charge guanidinium group
-    # CZ is connected to two nitrogen atoms (NH1, NH2) which are connected to two hydrogens each (HH11, HH12 and HH21, HH22)
-    # The actual guanidinium group is (HH11, HH12, NH1), CZ, (HH21, HH22, NH2) and chi5 allows rotation of this entire group around the NE-CZ bond
+    # Arginine as a terminal large, resonance-stabilized, planar structure with a diffuse positive charge guanidinium group
+    # I.e CZ connected to to two nitrogen atoms (NH1, NH2) which are connected to two hydrogens each (HH11, HH12 and HH21, HH22)
     'ARG': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
@@ -35,19 +36,20 @@ PROTEIN_SIDECHAIN = {
         'chi5': ('CD', 'NE', 'CZ', 'NH1'),
     },
 
-    # Asparagine (ASN)
+    # Asparagine
     'ASN': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
-        'chi2': ('CA', 'CB', 'CG', 'OD1'),
+        'chi2': ('CA', 'CB', 'CG', 'ND2'),
+        'chi3': ('CB', 'CG', 'ND2', 'HD21'),
     },
 
-    # Aspartate (deprotonated, -1)
+    # Aspartate has a terminal rigid planar carboxylate group: one carbon (CG) connected to two oxygens (OD1, OD2)
+    # It can be unprotonated (ASP, charge -1) or protonated (ASH, charge 0) in which there is one hydrogen atom connected to one of the oxygens
+    # We treat the terminus as rigid, similar to ARG
     'ASP': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'OD1'),
     },
-
-    # Aspartic Acid (protonated, neutral)
     'ASH': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'OD1'),
@@ -55,46 +57,34 @@ PROTEIN_SIDECHAIN = {
 
     # Cysteine (CYS) has a terminal thiol group (HG connected to SG)
     # If HG is lost, it can become CYX and form disulfide bonds or CYM and coordinate metals
-    # IUPAC defines only chi1 (heavy atoms). HG rotation is a torsion, not a chi angle
     'CYS': {
         'chi1': ('N', 'CA', 'CB', 'SG'),
-        'disulfide': ('CB', 'SG', 'SG', 'CB'),
+        'chi2': ('CA', 'CB', 'SG', 'HG'),
     },
-
-    # Cystine (Disulfide-bonded, neutral)
-    # When bonded, the SG-SG bond creates a chi2 angle reaching into the partner residue
     'CYX': {
         'chi1': ('N', 'CA', 'CB', 'SG'),
     },
-
-    # Deprotonated Cysteine (Anionic or Metal-coordinated)
-    # Metal coordination (e.g., Zn2+, Fe-S clusters) creates a rigid geometry, 
-    # but it is usually modeled as an external coordinate constraint, not a side-chain chi.
     'CYM': {
+        # TODO check if metal coordination induces rigid dihedrals
         'chi1': ('N', 'CA', 'CB', 'SG'),
     },
 
-    # Glutamine (GLN)
-    # chi3 is defined by OE1 per IUPAC convention for amide groups.
-    # Note: chi4 (hydrogen rotation) is omitted as per heavy-atom standards.
+    # Glutamine
     'GLN': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
-        'chi3': ('CB', 'CG', 'CD', 'OE1'),
+        'chi3': ('CB', 'CG', 'CD', 'NE2'),
+        'chi4': ('CG', 'CD', 'NE2', 'HE21'),
     },
 
-    # Glutamate (Deprotonated, -1)
-    # chi3 is defined by OE1 per IUPAC convention for carboxylate symmetry.
+    # Glutamate has a terminal rigid planar carboxylate group: one carbon (CD) connected to two oxygens (OE1, OE2)
+    # It can be unprotonated (GLU, charge -1) or protonated (GLH, charge 0) in which there is one hydrogen atom connected to one of the oxygens
+    # We treat the terminus as rigid, similar to ARG
     'GLU': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
         'chi3': ('CB', 'CG', 'CD', 'OE1'),
     },
-
-    # Glutamic Acid (Protonated, neutral)
-    # We treat the heavy-atom chi3 as the terminal dihedral.
-    # Note: Does not include the rotation of the hydroxyl proton (HO-C-C-C).
-    # Conventionally, OE1 is the carbonyl oxygen.
     'GLH': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
@@ -105,6 +95,7 @@ PROTEIN_SIDECHAIN = {
     'GLY': {},
 
     # Imidazole (HID/HIE/HIP) is aromatic and essentially planar
+    # TODO does it matter from a kinematic point of view where we place the ring closing bond?
     'HIP': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'ND1'),
@@ -121,42 +112,46 @@ PROTEIN_SIDECHAIN = {
         'ring_closing_1': ('CG', 'ND1', 'CE1', 'NE2'),
     },
 
-    # Isoleucine (ILE) is branched at CB and has a chiral center at the C3 (beta) position.
+    # Isoleucine
     'ILE': {
         'chi1': ('N', 'CA', 'CB', 'CG1'),
-        'chi2': ('CA', 'CB', 'CG1', 'CD1'),
+        'chi2.1': ('CA', 'CB', 'CG1', 'CD1'),
+        'chi2.2': ('CA', 'CB', 'CG2', 'HG21'),
+        'chi3': ('CB', 'CG1', 'CD1', 'HD11'),
     },
 
-    # Leucine (LEU)  is branched at the CG (gamma) carbon.
+    # Leucine
     'LEU': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD1'),
+        'chi3.1': ('CB', 'CG', 'CD1', 'HD11'),
+        'chi3.2': ('CB', 'CG', 'CD2', 'HD21'),
     },
 
-    # Lysine (LYS, protonated, charge +1)
-    # chi1-chi4 follow the heavy-atom chain to the terminal nitrogen.
-    # IUPAC/PDB standards do not define chi5 (hydrogen rotation).
+    # Lysine has a long flexible side chain ending in a positively charged amino group (NZ connected to HZ1, HZ2, HZ3)
+    # If one of the hydrogens is lost, it can become LYN (neutral)
+    # This does not affect the chi angles
     'LYS': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
         'chi3': ('CB', 'CG', 'CD', 'CE'),
         'chi4': ('CG', 'CD', 'CE', 'NZ'),
+        'chi5': ('CD', 'CE', 'NZ', 'HZ1'),
     },
-
-    # Lysine (LYN, deprotonated, neutral)
-    # Heavy-atom dihedrals remain the same as the protonated state.
     'LYN': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
         'chi3': ('CB', 'CG', 'CD', 'CE'),
         'chi4': ('CG', 'CD', 'CE', 'NZ'),
+        'chi5': ('CD', 'CE', 'NZ', 'HZ1'),
     },
 
-    # Methionine (MET) features a thioether linkage. 
+    # Methionine
     'MET': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'SD'),
         'chi3': ('CB', 'CG', 'SD', 'CE'),
+        'chi4': ('CG', 'SD', 'CE', 'HE1'),
     },
 
     # Phenylalanine
@@ -166,28 +161,31 @@ PROTEIN_SIDECHAIN = {
         'ring_closing_1': ('CG', 'CD1', 'CE1', 'CZ'), # Same as TYR
     },
 
-    # In proline, there are 5 chi angles
+    # In prooline, there are 5 chi angles
     # Chi1 and Chi2 are the most important for puckering
     # Chi5 is equivalent to phi
     # Chi4 is defined as ring closing
     'PRO': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
+        'chi3': ('CB', 'CG', 'CD', 'N'),
         'ring_closing_1': ('CG', 'CD', 'N', 'CA'),
     },
 
-    # Serine (SER)
+    # Serine
     'SER': {
         'chi1': ('N', 'CA', 'CB', 'OG'),
+        'chi2': ('CA', 'CB', 'OG', 'HG'),
     },
 
-    # Threonine (THR) is branched at CB and has a chiral center at the C3 (beta) position.
+    # Threonine
     'THR': {
         'chi1': ('N', 'CA', 'CB', 'OG1'),
+        'chi2.1': ('CA', 'CB', 'OG1', 'HG1'),
+        'chi2.2': ('CA', 'CB', 'CG2', 'HG21'),
     },
 
-    # Tryptophan (TRP)
-    # The side chain is a rigid, planar bicyclic indole group.
+    # Tryptophan's side chain is a bicyclic structure called the indole group, which is composed of two fused rings: benzene and pyrrole
     'TRP': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD1'),
@@ -195,18 +193,20 @@ PROTEIN_SIDECHAIN = {
         'ring_closing_2': ('CE2', 'CZ2', 'CH2', 'CZ3'), # Benzene ring
     },
 
-    # Tyrosine (TYR)
-    # The side chain is a rigid, planar aromatic ring with a hydroxyl group.
+    # Tyrosine
     'TYR': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD1'),
+        'chi3': ('CE1', 'CZ', 'OH', 'HH'),
         'ring_closing_1': ('CG', 'CD1', 'CE1', 'CZ'), # Same as PHE
     },
 
-    # Valine (VAL) is branched at the CB (beta) carbon with two methyl groups.
+    # Valine
     'VAL': {
         'chi1': ('N', 'CA', 'CB', 'CG1'),
-    },
+        'chi2.1': ('CA', 'CB', 'CG1', 'HG11'),
+        'chi2.2': ('CA', 'CB', 'CG2', 'HG21'),
+    }
 }
 
 GLYCAN_PROTEIN_LINKAGE = {

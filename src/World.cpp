@@ -116,7 +116,9 @@ CoordinateTransferError World::checkCoordinateTransfer(const std::vector<SimTK::
 
 	// Collect new atom coordinates
 	std::vector<std::vector<SimTK::Vec3>> newAtomtargets(topologies.size());
-	const SimTK::State& state = compoundSystem->getDefaultState();
+
+	const SimTK::State& state = integrator->updAdvancedState();
+	compoundSystem->realize(state, SimTK::Stage::Position);
 
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 		for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topologies[topoIx].getNumAtoms(); ++cAIx) {

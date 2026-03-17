@@ -329,12 +329,12 @@ class Context(rb.Context):
                  testing: bool = False,
                  rigid_protein_phi: bool = False,
                  rigid_protein_psi: bool = False,
-                 rigid_protein_omega: bool = True,
+                 rigid_protein_omega: bool = False,
                  rigid_protein_chi1: bool = False,
-                 rigid_protein_chi2: bool = True,
-                 rigid_protein_chi3: bool = True,
-                 rigid_protein_chi4: bool = True,
-                 rigid_protein_chi5: bool = True):
+                 rigid_protein_chi2: bool = False,
+                 rigid_protein_chi3: bool = False,
+                 rigid_protein_chi4: bool = False,
+                 rigid_protein_chi5: bool = False):
         
         super().__init__(name, seed, threads, nofRoundsTillReblock, runType, replicaSwapFreq, fixmanSwapFreq, testing)
         self.setPdbRestartFreq(pdb_restart_freq)
@@ -594,6 +594,8 @@ class Context(rb.Context):
                     if dihedral_type == 'protein-chi4' and not rigid_protein_chi4:
                         self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
                     if dihedral_type == 'protein-chi5' and not rigid_protein_chi5:
+                        self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
+                    if 'mandatory' in dihedral_type:
                         self.standard_dihedral_bonds.append((atom1_prmtop, atom2_prmtop))
 
                 # # Add macrocycle dihedral bonds
