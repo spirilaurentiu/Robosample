@@ -83,6 +83,15 @@ inline std::string atomsToString(const std::vector<std::string>& atoms) {
     return oss.str();
 }
 
+struct CoordinateTransferError {
+	std::vector<SimTK::Real> matchResiduals;
+	SimTK::Real cartesian {0}, cartesianMax {0};
+	SimTK::Real bonds {0}, bondsMax {0};
+    SimTK::Real angles {0}, anglesMax {0};
+    SimTK::Real properDihedrals {0}, properDihedralsMax {0};
+	SimTK::Real improperDihedrals {0}, improperDihedralsMax {0};
+};
+
 //==============================================================================
 //                   CLASS TaskSpace
 //==============================================================================
@@ -1003,51 +1012,13 @@ public:
 	const std::vector<std::array<int, 4>>& getTestNonRigidImproperTorsions() const {
 		return testNonRigidImproperTorsions;
 	}
-	
 
-	const std::vector<std::vector<SimTK::Real>>& getMatchAtomTargetLocationsResiduals() const {
-		SimTK_ASSERT_ALWAYS(testing, "getMatchAtomTargetLocationsResiduals called outside testing mode");
-		return matchAtomTargetLocationsResiduals;
-	}
+	const std::vector<CoordinateTransferError>& getCoordinateTransferErrors() const {
+		if (!testing) {
+			throw std::runtime_error("getCoordinateTransferErrors() called outside testing mode");
+		}
 
-	const std::vector<SimTK::Real>& getCumulativeCartesianDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getCumulativeCartesianDisplacements called outside testing mode");
-		return cumulativeCartesianDisplacements;
-	}
-
-	const std::vector<SimTK::Real>& getCumulativeBondDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getCumulativeBondDisplacements called outside testing mode");
-		return cumulativeBondDisplacements;
-	}
-
-	const std::vector<SimTK::Real>& getCumulativeAngleDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getCumulativeAngleDisplacements called outside testing mode");
-		return cumulativeAngleDisplacements;
-	}
-
-	const std::vector<SimTK::Real>& getCumulativeTorsionDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getCumulativeTorsionDisplacements called outside testing mode");
-		return cumulativeTorsionDisplacements;
-	}
-
-	const std::vector<SimTK::Real>& getOpenMMCumulativeCartesianDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeCartesianDisplacements called outside testing mode");
-		return openmmCumulativeCartesianDisplacements;
-	}
-
-	const std::vector<SimTK::Real>& getOpenMMCumulativeBondDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeBondDisplacements called outside testing mode");
-		return openmmCumulativeBondDisplacements;
-	}
-
-	const std::vector<SimTK::Real>& getOpenMMCumulativeAngleDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeAngleDisplacements called outside testing mode");
-		return openmmCumulativeAngleDisplacements;
-	}
-
-	const std::vector<SimTK::Real>& getOpenMMCumulativeTorsionDisplacements() const {
-		SimTK_ASSERT_ALWAYS(testing, "getOpenMMCumulativeTorsionDisplacements called outside testing mode");
-		return openmmCumulativeTorsionDisplacements;
+		return coordinateTransferErrors;
 	}
 
 	const std::vector<std::pair<bool, SimTK::Real>>& getAcceptanceRMSD() const {
@@ -1065,25 +1036,10 @@ private:
 
 	bool testing = false;
 
-	void checkCoordinateTransfer(
-		const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets,
-		std::vector<SimTK::Real>& matchAtomTargetLocationsResiduals,
-		SimTK::Real& cumulDiffCartesian,
-		SimTK::Real& cumulDiffBonds,
-		SimTK::Real& cumulDiffAngles,
-		SimTK::Real& cumulDiffDihedrals
-	);
+	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 
 	std::vector<std::vector<SimTK::Real>> matchAtomTargetLocationsResiduals;
-	std::vector<SimTK::Real> cumulativeCartesianDisplacements;
-	std::vector<SimTK::Real> cumulativeBondDisplacements;
-	std::vector<SimTK::Real> cumulativeAngleDisplacements;
-	std::vector<SimTK::Real> cumulativeTorsionDisplacements;
-
-	std::vector<SimTK::Real> openmmCumulativeCartesianDisplacements;
-	std::vector<SimTK::Real> openmmCumulativeBondDisplacements;
-	std::vector<SimTK::Real> openmmCumulativeAngleDisplacements;
-	std::vector<SimTK::Real> openmmCumulativeTorsionDisplacements;
+	std::vector<CoordinateTransferError> coordinateTransferErrors;
 
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCache;
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCacheOld;

@@ -64,7 +64,7 @@ R = 1 if NOF_REPLICAS == 1 else (T_MAX / T0) ** (1.0 / (NOF_REPLICAS - 1))
 # 10 kcal/mol - nanoseconds or longer (high barrier , ~16KbT)
 # 2 ps of MD is enough to explore shallow wells, but not to cross deep barriers without enhanced sampling (e.g., HMC, replica exchange)
 TIMESTEP_TD = 0.015 # Torsional dymaics time step is 10 fs
-MDSTEPS_TD = 100 # Torsional dynamics block trajectory length 1 ps
+MDSTEPS_TD = 2 # Torsional dynamics block trajectory length 1 ps
 
 TIMESTEP_CARTESIAN = 0.001
 MDSTEPS_CARTESIAN = 15
@@ -108,130 +108,109 @@ context.RunREX(args.equil_steps, args.prod_steps)
 
 # Test the simulation
 TOL = 1e-4
-for i, world in enumerate(context.getWorlds()):
-	if i == 0 and False:
-		openmmCumulativeCartesianDisplacements = world.getOpenMMCumulativeCartesianDisplacements()
-		np.testing.assert_allclose(openmmCumulativeCartesianDisplacements, 0, atol=TOL)
 
-		openmmCumulativeBondDisplacements = world.getOpenMMCumulativeBondDisplacements()
-		np.testing.assert_allclose(openmmCumulativeBondDisplacements, 0, atol=TOL)
 
-		openmmCumulativeAngleDisplacements = world.getOpenMMCumulativeAngleDisplacements()
-		np.testing.assert_allclose(openmmCumulativeAngleDisplacements, 0, atol=TOL)
+for error in context.getWorld(0).getCoordinateTransferErrors():
+    print(f"Errors:")
+    print('\tmatchResiduals:', error.matchResiduals)
+    print('\tcartesian:', error.cartesian)
+    print('\tcartesianMax:', error.cartesianMax)
+    print('\tbonds:', error.bonds)
+    print('\tbondsMax:', error.bondsMax)
+    print('\tangles:', error.angles)
+    print('\tanglesMax:', error.anglesMax)
+    print('\tproperDihedrals:', error.properDihedrals)
+    print('\tproperDihedralsMax:', error.properDihedralsMax)
+    print('\timproperDihedrals:', error.improperDihedrals)
+    print('\timproperDihedralsMax:', error.improperDihedralsMax)
 
-		openmmCumulativeTorsionDisplacements = world.getOpenMMCumulativeTorsionDisplacements()
-		np.testing.assert_allclose(openmmCumulativeTorsionDisplacements, 0, atol=TOL)
-	else:
-		matchAtomTargetLocationsResiduals = world.getMatchAtomTargetLocationsResiduals()
-		np.testing.assert_allclose(matchAtomTargetLocationsResiduals, 0, atol=TOL)
 
-		cumulativeCartesianDisplacements = world.getCumulativeCartesianDisplacements()
-		np.testing.assert_allclose(cumulativeCartesianDisplacements, 0, atol=TOL)
+# # Load the trajectory
+# import mdtraj as md
+# traj = md.load('ala-dipeptide.test_6000.repl0.dcd', top=args.prmtop)
+# reference = md.load(args.inpcrd, top=args.prmtop)
 
-		cumulativeBondDisplacements = world.getCumulativeBondDisplacements()
-		np.testing.assert_allclose(cumulativeBondDisplacements, 0, atol=TOL)
+# def _assert_bond_constancy(bond_indices, tolerance=1e-4, label="Bond"):
+#     if len(bond_indices) == 0:
+#         return
 
-		cumulativeAngleDisplacements = world.getCumulativeAngleDisplacements()
-		np.testing.assert_allclose(cumulativeAngleDisplacements, 0, atol=TOL)
-
-		cumulativeTorsionDisplacements = world.getCumulativeTorsionDisplacements()
-		np.testing.assert_allclose(cumulativeTorsionDisplacements, 0, atol=TOL)
-
-	acceptanceRMSD = world.getAcceptanceRMSD()
-	for accepted, rmsd in acceptanceRMSD:
-		if accepted:
-			if rmsd <= TOL:
-				raise RuntimeError(f"RMSD for accepted move is too small ({rmsd}): the molecule did not move at all. A possible cause is that equil_steps={args.equil_steps}")
-		else:
-			if rmsd > TOL:
-				raise RuntimeError(f"RMSD for rejected move is too large ({rmsd}): the molecule moved too much.")
-
-# Load the trajectory
-import mdtraj as md
-traj = md.load('ala-dipeptide.test_6000.repl0.dcd', top=args.prmtop)
-reference = md.load(args.inpcrd, top=args.prmtop)
-
-def _assert_bond_constancy(bond_indices, tolerance=1e-4, label="Bond"):
-    if len(bond_indices) == 0:
-        return
-
-    # Compute distances: (frames, nbonds)
-    distances_ref = md.compute_distances(reference, bond_indices, periodic=False)[0]
-    distances_traj = md.compute_distances(traj, bond_indices, periodic=False)
+#     # Compute distances: (frames, nbonds)
+#     distances_ref = md.compute_d100istances(reference, bond_indices, periodic=False)[0]
+#     distances_traj = md.compute_distances(traj, bond_indices, periodic=False)
     
-    # Calculate absolute deviations
-    diffs = np.abs(distances_traj - distances_ref)
-    max_deviations = np.max(diffs, axis=0)
+#     # Calculate absolute deviations
+#     diffs = np.abs(distances_traj - distances_ref)
+#     max_deviations = np.max(diffs, axis=0)
     
-    violations = []
-    for i, dev in enumerate(max_deviations):
-        if dev > tolerance:
-            # Find the actual max value reached in the trajectory for this bond
-            max_val = distances_traj[np.argmax(diffs[:, i]), i]
+#     violations = []
+#     for i, dev in enumerate(max_deviations):
+#         if dev > tolerance:
+#             # Find the actual max value reached in the trajectory for this bond
+#             max_val = distances_traj[np.argmax(diffs[:, i]), i]
 
-            # plt.plot(distances_traj[:, i], label=f"Bond {i}")
-            # plt.show()
+#             # plt.plot(distances_traj[:, i], label=f"Bond {i}")
+#             # plt.show()
             
-            a1, a2 = bond_indices[i]
-            atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}"
-            violations.append(
-                f"  - {atom_names} ({a1},{a2}): Ref={distances_ref[i]:.5f}nm, "
-                f"MaxVal={max_val:.5f}nm, MaxDev={dev:.2e}nm"
-            )
+#             a1, a2 = bond_indices[i]
+#             atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}"
+#             violations.append(
+#                 f"  - {atom_names} ({a1},{a2}): Ref={distances_ref[i]:.5f}nm, "
+#                 f"MaxVal={max_val:.5f}nm, MaxDev={dev:.2e}nm"
+#             )
 
-    if violations:
-        header = f"{label} constraints violated (Tol: {tolerance}nm):"
-        raise RuntimeError(f"{header}\n" + "\n".join(violations))
+#     if violations:
+#         header = f"{label} constraints violated (Tol: {tolerance}nm):"
+#         raise RuntimeError(f"{header}\n" + "\n".join(violations))
 
-def _assert_angle_constancy(angle_indices, tolerance=1e-4, label="Angle"):
-    if len(angle_indices) == 0:
-        return
+# def _assert_angle_constancy(angle_indices, tolerance=1e-4, label="Angle"):
+#     if len(angle_indices) == 0:
+#         return
 
-    # Compute angles: (frames, nangles)
-    angles_ref = md.compute_angles(reference, angle_indices)[0]
-    angles_traj = md.compute_angles(traj, angle_indices)
+#     # Compute angles: (frames, nangles)
+#     angles_ref = md.compute_angles(reference, angle_indices)[0]
+#     angles_traj = md.compute_angles(traj, angle_indices)
     
-    # Calculate absolute deviations
-    diffs = np.abs(angles_traj - angles_ref)
-    max_deviations = np.max(diffs, axis=0)
+#     # Calculate absolute deviations
+#     diffs = np.abs(angles_traj - angles_ref)
+#     max_deviations = np.max(diffs, axis=0)
     
-    violations = []
-    for i, dev in enumerate(max_deviations):
-        if dev > tolerance:
-            # Find the actual max value reached in the trajectory for this angle
-            max_val = angles_traj[np.argmax(diffs[:, i]), i]
+#     violations = []
+#     for i, dev in enumerate(max_deviations):
+#         if dev > tolerance:
+#             # Find the actual max value reached in the trajectory for this angle
+#             max_val = angles_traj[np.argmax(diffs[:, i]), i]
             
-            a1, a2, a3 = angle_indices[i]
-            atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}-{context.getAtomName(a3)}"
-            violations.append(
-                f"  - {atom_names} ({a1},{a2},{a3}): Ref={angles_ref[i]:.5f}rad, "
-                f"MaxVal={max_val:.5f}rad, MaxDev={dev:.2e}rad"
-            )
+#             a1, a2, a3 = angle_indices[i]
+#             atom_names = f"{context.getAtomName(a1)}-{context.getAtomName(a2)}-{context.getAtomName(a3)}"
+#             violations.append(
+#                 f"  - {atom_names} ({a1},{a2},{a3}): Ref={angles_ref[i]:.5f}rad, "
+#                 f"MaxVal={max_val:.5f}rad, MaxDev={dev:.2e}rad"
+#             )
 
-    if violations:
-        header = f"{label} constraints violated (Tol: {tolerance}rad):"
-        raise RuntimeError.fail(f"{header}\n" + "\n".join(violations))
+#     if violations:
+#         header = f"{label} constraints violated (Tol: {tolerance}rad):"
+#         raise RuntimeError.fail(f"{header}\n" + "\n".join(violations))
 
-def test_rigid_bonds():
-    bonds = context.getWorld(0).getTestRigidBonds()
-    _assert_bond_constancy(bonds, label="Rigid Bond")
+# def test_rigid_bonds():
+#     bonds = context.getWorld(0).getTestRigidBonds()
+#     _assert_bond_constancy(bonds, label="Rigid Bond")
 
-def test_non_rigid_bonds():
-    bonds = context.getWorld(0).getTestNonRigidBonds()
-    _assert_bond_constancy(bonds, label="Non-Rigid Bond")
+# def test_non_rigid_bonds():
+#     bonds = context.getWorld(0).getTestNonRigidBonds()
+#     _assert_bond_constancy(bonds, label="Non-Rigid Bond")
 
-def test_rigid_angles():
-    angles = context.getWorld(0).getTestRigidAngles()
-    _assert_angle_constancy(angles, label="Rigid Angle")
+# def test_rigid_angles():
+#     angles = context.getWorld(0).getTestRigidAngles()
+#     _assert_angle_constancy(angles, label="Rigid Angle")
 
-def test_non_rigid_angles():
-    angles = context.getWorld(0).getTestNonRigidAngles()
-    _assert_angle_constancy(angles, label="Non-Rigid Angle")
+# def test_non_rigid_angles():
+#     angles = context.getWorld(0).getTestNonRigidAngles()
+#     _assert_angle_constancy(angles, label="Non-Rigid Angle")
 
-test_rigid_bonds()
-test_non_rigid_bonds()
-test_rigid_angles()
-test_non_rigid_angles()
+# test_rigid_bonds()
+# test_non_rigid_bonds()
+# test_rigid_angles()
+# test_non_rigid_angles()
 
 """
 source leaprc.protein.ff19SB

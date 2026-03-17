@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 #include "Context.hpp"
 #include "TopologyElements.hpp"
+#include "World.hpp"
 
 namespace py = pybind11;
 
@@ -296,6 +297,19 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def(py::init<std::vector<int>>(), py::arg("startCounts"))
         .def("close", &TopologyRange::close, py::arg("endCounts"));
 
+    py::class_<CoordinateTransferError>(m, "CoordinateTransferError")
+        .def_readwrite("matchResiduals", &CoordinateTransferError::matchResiduals)
+        .def_readwrite("cartesian", &CoordinateTransferError::cartesian)
+        .def_readwrite("cartesianMax", &CoordinateTransferError::cartesianMax)
+        .def_readwrite("bonds", &CoordinateTransferError::bonds)
+        .def_readwrite("bondsMax", &CoordinateTransferError::bondsMax)
+        .def_readwrite("angles", &CoordinateTransferError::angles)
+        .def_readwrite("anglesMax", &CoordinateTransferError::anglesMax)
+        .def_readwrite("properDihedrals", &CoordinateTransferError::properDihedrals)
+        .def_readwrite("properDihedralsMax", &CoordinateTransferError::properDihedralsMax)
+        .def_readwrite("improperDihedrals", &CoordinateTransferError::improperDihedrals)
+        .def_readwrite("improperDihedralsMax", &CoordinateTransferError::improperDihedralsMax);
+
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
         .def("getAtomNameByPrmtopIndex", &Context::getAtomNameByPrmtopIndex, py::arg("prmtopIndex"), "Get the unique atom name for a given prmtop index.")
@@ -330,15 +344,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("getTestNonRigidProperTorsions", &World::getTestNonRigidProperTorsions, "Get test non-rigid proper torsions.")
         .def("getTestRigidImproperTorsions", &World::getTestRigidImproperTorsions, "Get test rigid improper torsions.")
         .def("getTestNonRigidImproperTorsions", &World::getTestNonRigidImproperTorsions, "Get test non-rigid improper torsions.")
-        
-        .def("getMatchAtomTargetLocationsResiduals", &World::getMatchAtomTargetLocationsResiduals, "Get residuals from matchAtomTargetLocations during testing.")
-        .def("getCumulativeCartesianDisplacements", &World::getCumulativeCartesianDisplacements, "Get cumulative Cartesian displacements.")
-        .def("getCumulativeBondDisplacements", &World::getCumulativeBondDisplacements, "Get cumulative bond displacements.")
-        .def("getCumulativeAngleDisplacements", &World::getCumulativeAngleDisplacements, "Get cumulative angle displacements.")
-        .def("getCumulativeTorsionDisplacements", &World::getCumulativeTorsionDisplacements, "Get cumulative torsion displacements.")
-        .def("getOpenMMCumulativeCartesianDisplacements", &World::getOpenMMCumulativeCartesianDisplacements, "Get cumulative Cartesian displacements between OpenMM and SimTK during testing.")
-        .def("getOpenMMCumulativeBondDisplacements", &World::getOpenMMCumulativeBondDisplacements, "Get cumulative bond displacements between OpenMM and SimTK during testing.")
-        .def("getOpenMMCumulativeAngleDisplacements", &World::getOpenMMCumulativeAngleDisplacements, "Get cumulative angle displacements between OpenMM and SimTK during testing.")
-        .def("getOpenMMCumulativeTorsionDisplacements", &World::getOpenMMCumulativeTorsionDisplacements, "Get cumulative torsion displacements between OpenMM and SimTK during testing.")
+        .def("getCoordinateTransferErrors", &World::getCoordinateTransferErrors, "")
         .def("getAcceptanceRMSD", &World::getAcceptanceRMSD, "Get RMSD values for accepted/rejected moves during testing.");
 }

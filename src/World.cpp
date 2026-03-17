@@ -4,6 +4,7 @@
 #include "Sampler.hpp"
 #include "TopologyElements.hpp"
 #include "common.h"
+#include <algorithm>
 #include <cstdlib>
 #include <ostream>
 
@@ -86,34 +87,31 @@ void World::setAtomTargetLocationsToState(const std::vector<SimTK::Compound::Ato
 	integrator->updAdvancedState() = state;
 	
 	if (testing) {
-		std::vector<SimTK::Real> matchAtomTargetLocationsResiduals;
-		SimTK::Real cumulDiffCartesian = 0.0;
-		SimTK::Real cumulDiffBonds = 0.0;
-		SimTK::Real cumulDiffAngles = 0.0;
-		SimTK::Real cumulDiffDihedrals = 0.0;
-
-		checkCoordinateTransfer(atomTargets, matchAtomTargetLocationsResiduals, cumulDiffCartesian, cumulDiffBonds, cumulDiffAngles, cumulDiffDihedrals);
-		cumulativeCartesianDisplacements.push_back(cumulDiffCartesian);
-		cumulativeBondDisplacements.push_back(cumulDiffBonds);
-		cumulativeAngleDisplacements.push_back(cumulDiffAngles);
-		cumulativeTorsionDisplacements.push_back(cumulDiffDihedrals);
+		coordinateTransferErrors.push_back(checkCoordinateTransfer(atomTargets));
 	}
 }
 
-void World::checkCoordinateTransfer(
-	const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets,
-	std::vector<SimTK::Real>& matchAtomTargetLocationsResiduals,	
-	SimTK::Real& cumulDiffCartesian,
-	SimTK::Real& cumulDiffBonds,
-	SimTK::Real& cumulDiffAngles,
-	SimTK::Real& cumulDiffDihedrals
-) {
-	SimTK_ASSERT_ALWAYS(testing, "Coordinate transfer check should only be performed in testing mode.");
+CoordinateTransferError World::checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets)
+{
+	if (!testing) {
+		throw std::runtime_error("Coordinate transfer check should only be performed in testing mode.");
+	}
+
+	auto wrapAngle = [](SimTK::Real x) {
+        return std::atan2(std::sin(x), std::cos(x));
+    };
+
+	CoordinateTransferError error;
+	int numAtoms = 0,
+		numBonds = 0,
+		numAngles = 0,
+		numPropers = 0,
+		numImpropers = 0;
 
 	// Check topology atom target location matching residuals
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
 		SimTK::Real matchError = topologies[topoIx].getMatchError(atomTargets[topoIx]);
-		matchAtomTargetLocationsResiduals.push_back(matchError);
+		error.matchResiduals.push_back(matchError);
 	}
 
 	// Collect new atom coordinates
@@ -127,22 +125,22 @@ void World::checkCoordinateTransfer(
 		}
 	}
 
-	// Check coordinate transfer in Cartesian coordinates
-	// Traverse all topologies and check for each atom the computed vs target location
+	// Run through all molecules
 	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+
+		// Check per-atom cartesian displacements
 		for (SimTK::Compound::AtomIndex cAIx(0); cAIx < topologies[topoIx].getNumAtoms(); ++cAIx) {
 			const auto& computedLoc = newAtomtargets[topoIx][cAIx];
 			const auto& targetLoc = atomTargets[topoIx].at(cAIx);
 
 			const SimTK::Real diffNorm = (targetLoc - computedLoc).norm();
-			cumulDiffCartesian += diffNorm;
-		}
-	}
-	
+			error.cartesian += diffNorm;
+			error.cartesianMax = std::max(error.cartesianMax, diffNorm);
 
-	// Do internal coordinates (BAT - Bond-Angle-Torsion) verification
-	// BAT - bond lengths
-	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+			numAtoms++;
+		}
+
+		// BAT check - bond
 		for (const auto& bond : topologies[topoIx].getBonds()) {
 			const SimTK::Compound::AtomIndex parentAIx = bond.compoundAtomIndices[0];
 			const SimTK::Compound::AtomIndex childAIx = bond.compoundAtomIndices[1];
@@ -156,12 +154,14 @@ void World::checkCoordinateTransfer(
 			const SimTK::Real computedBondLength = (computedChild - computedParent).norm();
 			const SimTK::Real targetBondLength = (targetChild - targetParent).norm();
 
-			cumulDiffBonds += std::abs(targetBondLength - computedBondLength);
-		}
-	}
+			const SimTK::Real diffBondLength = std::abs(targetBondLength - computedBondLength);
+			error.bonds += diffBondLength;
+			error.bondsMax = std::max(error.bondsMax, diffBondLength);
 
-	// BAT - angles
-	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+			numBonds++;
+		}
+
+		// BAT check - angle
 		for (const auto& angle : topologies[topoIx].getAngles()) {
 			const SimTK::Compound::AtomIndex aIx1 = angle.compoundAtomIndices[0];
 			const SimTK::Compound::AtomIndex aIx2 = angle.compoundAtomIndices[1];
@@ -178,52 +178,78 @@ void World::checkCoordinateTransfer(
 			SimTK::Real computedAngle = bAngle(computedPos1, computedPos2, computedPos3);
 			SimTK::Real targetAngle = bAngle(targetPos1, targetPos2, targetPos3);
 
-			cumulDiffAngles += std::abs(targetAngle - computedAngle);
+			const SimTK::Real diffAngle = std::abs(wrapAngle(targetAngle - computedAngle));
+			error.angles += diffAngle;
+			error.anglesMax = std::max(error.anglesMax, diffAngle);
+
+			numAngles++;
 		}
-	}
 
-	// Helper for BAT dihedrals
-	auto getDihedralError = [&](const auto& torsion, const auto& topoIx) {
-		// Helper to fetch positions for a set of indices
-		auto getPos = [&](const auto& source, const SimTK::Compound::AtomIndex idx[4]) {
-			return std::array<SimTK::Vec3, 4>{
-				source[idx[0]], source[idx[1]], source[idx[2]], source[idx[3]]
-			};
-		};
-
-		const auto& ids = torsion.compoundAtomIndices;
-		
-		// Calculate computed dihedral
-		SimTK::Real computedDihedral = bDihedral(
-			newAtomtargets[topoIx][ids[0]], 
-			newAtomtargets[topoIx][ids[1]], 
-			newAtomtargets[topoIx][ids[2]], 
-			newAtomtargets[topoIx][ids[3]]
-		);
-
-		// Calculate target dihedral
-		SimTK::Real targetDihedral = bDihedral(
-			atomTargets[topoIx].at(ids[0]), 
-			atomTargets[topoIx].at(ids[1]), 
-			atomTargets[topoIx].at(ids[2]), 
-			atomTargets[topoIx].at(ids[3])
-		);
-
-		return std::abs(targetDihedral - computedDihedral);
-	};
-
-	// BAT dihedrals
-	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
+		// BAT chekck -	dihedrals
 		for (const auto& torsion : topologies[topoIx].getPeriodicTorsions()) {
-			cumulDiffDihedrals += getDihedralError(torsion, topoIx);
+			const auto& ids = torsion.compoundAtomIndices;
+		
+			// Calculate computed dihedral
+			SimTK::Real computedDihedral = bDihedral(
+				newAtomtargets[topoIx][ids[0]], 
+				newAtomtargets[topoIx][ids[1]], 
+				newAtomtargets[topoIx][ids[2]], 
+				newAtomtargets[topoIx][ids[3]]
+			);
+
+			// Calculate target dihedral
+			SimTK::Real targetDihedral = bDihedral(
+				atomTargets[topoIx].at(ids[0]), 
+				atomTargets[topoIx].at(ids[1]), 
+				atomTargets[topoIx].at(ids[2]), 
+				atomTargets[topoIx].at(ids[3])
+			);
+
+			const SimTK::Real diffDihedral = std::abs(wrapAngle(targetDihedral - computedDihedral));
+			if (torsion.improper) {
+				error.improperDihedrals += diffDihedral;
+				error.improperDihedralsMax = std::max(error.improperDihedralsMax, diffDihedral);
+				numImpropers++;
+			} else {
+				error.properDihedrals += diffDihedral;
+				error.properDihedralsMax = std::max(error.properDihedralsMax, diffDihedral);
+				numPropers++;
+			}
+		}
+
+		for (const auto& torsion : topologies[topoIx].getImproperHarmonicTorsions()) {
+			const auto& ids = torsion.compoundAtomIndices;
+		
+			// Calculate computed dihedral
+			SimTK::Real computedDihedral = bDihedral(
+				newAtomtargets[topoIx][ids[0]], 
+				newAtomtargets[topoIx][ids[1]], 
+				newAtomtargets[topoIx][ids[2]], 
+				newAtomtargets[topoIx][ids[3]]
+			);
+
+			// Calculate target dihedral
+			SimTK::Real targetDihedral = bDihedral(
+				atomTargets[topoIx].at(ids[0]), 
+				atomTargets[topoIx].at(ids[1]), 
+				atomTargets[topoIx].at(ids[2]), 
+				atomTargets[topoIx].at(ids[3])
+			);
+
+			const SimTK::Real diffDihedral = std::abs(wrapAngle(targetDihedral - computedDihedral));
+			error.improperDihedrals += diffDihedral;
+			error.improperDihedralsMax = std::max(error.improperDihedralsMax, diffDihedral);
+			numImpropers++;
 		}
 	}
 
-	for (std::size_t topoIx = 0; topoIx < topologies.size(); topoIx++) {
-		for (const auto& torsion : topologies[topoIx].getImproperHarmonicTorsions()) {
-			cumulDiffDihedrals += getDihedralError(torsion, topoIx);
-		}
-	}
+	if (numAtoms) error.cartesian /= numAtoms;
+	if (numBonds) error.bonds /= numBonds;
+	if (numAngles) error.angles /= numAngles;
+	if (numPropers) error.properDihedrals /= numPropers;
+	if (numImpropers) error.improperDihedrals /= numImpropers;
+
+	return error;
 }
 
 void World::updateFramesFromTopologies()
@@ -4332,17 +4358,7 @@ bool World::generateSamples(int howManySamplesPerRound, std::stringstream& world
 		// We ignore match residuals for now
 		// They only work if you need to match positions to the Topology list
 		// This is only needed when transfering from one world to another
-		std::vector<SimTK::Real> matchAtomTargetLocationsResiduals;
-		SimTK::Real cumulDiffCartesian = 0.0;
-		SimTK::Real cumulDiffBonds = 0.0;
-		SimTK::Real cumulDiffAngles = 0.0;
-		SimTK::Real cumulDiffDihedrals = 0.0;
-
-		checkCoordinateTransfer(atomTargetLocationsFromOpenMM, matchAtomTargetLocationsResiduals, cumulDiffCartesian, cumulDiffBonds, cumulDiffAngles, cumulDiffDihedrals);
-		openmmCumulativeCartesianDisplacements.push_back(cumulDiffCartesian);
-		openmmCumulativeBondDisplacements.push_back(cumulDiffBonds);
-		openmmCumulativeAngleDisplacements.push_back(cumulDiffAngles);
-		openmmCumulativeTorsionDisplacements.push_back(cumulDiffDihedrals);
+		coordinateTransferErrors.push_back(checkCoordinateTransfer(atomTargetLocationsFromOpenMM));
 
 		// Calculate RMSD after sampling if the sample is accepted
 		SimTK::Real sumSquaredDist = 0.0;

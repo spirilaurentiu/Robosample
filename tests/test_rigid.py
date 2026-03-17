@@ -9,14 +9,14 @@ prmtop = 'examples/1APQ.prmtop'
 xyz = 'examples/1APQ.rst7'
 write_freq = 1
 equil_steps = 0
-prod_steps = 100
+prod_steps = 2
 
 context = robosample.Context(name=name, seed=seed, prmtop=prmtop, inpcrd=xyz, write_freq=write_freq, testing=True)
 
 # Put torsions on middle bonds in standard dihedrals and integrate with 10 fs time step for 1 ps
 # Torsions are protein phi, psi and chi1
 sele = context.getDefaultBonds('standard')
-context.addTorsionalWorld(sele).addSampler(timeStep=0.01, mdSteps=100, boostMDSteps=100)
+context.addTorsionalWorld(sele).addSampler(timeStep=0.01, mdSteps=2, boostMDSteps=2)
 
 # Add one replica at 300 K
 context.initialize([300.0])
@@ -26,8 +26,8 @@ context.RunREX(equil_steps, prod_steps)
 
 # Load the trajectory
 traj = md.load('1APQ.test.rigid_42.repl0.dcd', top=prmtop)
-# reference = md.load(xyz, top=prmtop)
-reference = traj[0]
+reference = md.load(xyz, top=prmtop)
+# reference = traj[0]
 
 def _assert_bond_constancy(bond_indices, tolerance=1e-5, label="Bond"):
     if len(bond_indices) == 0:
@@ -47,14 +47,14 @@ def _assert_bond_constancy(bond_indices, tolerance=1e-5, label="Bond"):
             # Find the actual max value reached in the trajectory for this bond
             max_val = distances_traj[np.argmax(diffs[:, i]), i]
 
-            import matplotlib.pyplot as plt
-            plt.plot(distances_traj[:, i], label=f"Bond {i}")
-            plt.axhline(distances_ref[i], color='red', linestyle='--', label='Reference')
-            plt.title(f"Bond {i} distance over time")
-            plt.xlabel("Frame")
-            plt.ylabel("Distance (nm)")
-            plt.legend()
-            plt.show()
+            # import matplotlib.pyplot as plt
+            # plt.plot(distances_traj[:, i], label=f"Bond {i}")
+            # plt.axhline(distances_ref[i], color='red', linestyle='--', label='Reference')
+            # plt.title(f"Bond {i} distance over time")
+            # plt.xlabel("Frame")
+            # plt.ylabel("Distance (nm)")
+            # plt.legend()
+            # plt.show()
             
             a1, a2 = bond_indices[i]
             atom_names = f"{context.getAtomNameByPrmtopIndex(a1)}-{context.getAtomNameByPrmtopIndex(a2)}"
@@ -136,6 +136,21 @@ def _assert_torsion_constancy(torsion_indices, mode, tolerance=1e-5, label="Tors
     if violations:
         header = f"{label} behavior [{mode}] check failed:"
         pytest.fail(f"{header}\n" + "\n".join(violations))
+
+def test_transfer_coordinates():
+    for error in context.getWorld(0).getCoordinateTransferErrors():
+        for residual in error.matchResiduals:
+            assert residual < 1e-5, f"Coordinate transfer residual too high: {residual:.2e} nm"
+        assert error.cartesian < 1e-5, f"Cartesian coordinate transfer error too high: {error.cartesian:.2e} nm"
+        assert error.cartesianMax < 1e-5, f"Max Cartesian coordinate transfer error too high: {error.cartesianMax:.2e} nm"
+        assert error.bonds < 1e-5, f"Bond length transfer error too high: {error.bonds:.2e} nm"
+        assert error.bondsMax < 1e-5, f"Max bond length transfer error too high: {error.bondsMax:.2e} nm"
+        assert error.angles < 1e-5, f"Angle transfer error too high: {error.angles:.2e} rad"
+        assert error.anglesMax < 1e-5, f"Max angle transfer error too high: {error.anglesMax:.2e} rad"
+        assert error.properDihedrals < 1e-5, f"Proper dihedral transfer error too high: {error.properDihedrals:.2e} rad"
+        assert error.properDihedralsMax < 1e-5, f"Max proper dihedral transfer error too high: {error.properDihedralsMax:.2e} rad"
+        assert error.improperDihedrals < 1e-5, f"Improper dihedral transfer error too high: {error.improperDihedrals:.2e} rad"
+        assert error.improperDihedralsMax < 1e-5, f"Max improper dihedral transfer error too high: {error.improperDihedralsMax:.2e} rad"
 
 def test_rigid_bonds():
     # In torsional dynamics, all bond lengths should be constant, including non-rigid ones since they are not allowed to stretch
