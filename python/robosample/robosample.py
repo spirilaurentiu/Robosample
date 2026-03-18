@@ -20,6 +20,7 @@ from scipy import linalg
 
 import robo_bindings as rb
 from molecule_prototype import MoleculePrototype
+import prmtop_reader
 
 @unique
 class NonbondedMethod(IntEnum):
@@ -46,68 +47,6 @@ class NonbondedMethod(IntEnum):
     Interactions beyond the cutoff distance are ignored.
     Coulomb interactions closer than the cutoff distance are modified using the reaction field method.
     """
-
-# @dataclass
-# class AtomDefinition(rb.RoboAtomDefinition):
-#     globalIndex : int
-#     parentAtomGlobalIndex : int
-#     molecule_index : int
-#     residueIndex : int
-#     atomClassIndex : int
-#     chargedAtomTypeIndex : int
-#     atomName : str
-#     residueName : str
-#     atomClassName : str
-#     chargedAtomName : str
-#     neighborsGlobalIndices : list[int]
-#     bondsInvolvedGlobalIndex : list[int]
-#     availableBonds : int
-#     root : bool
-#     atomicNumber : int
-#     charge : float
-#     mass : float
-#     vdwRadiusInNm : float
-#     vdwWellDepthInKJ : float
-#     x : float
-#     y : float
-#     z : float
-
-#     def __init__(self, globalIndex : int, molIx : int, atomicNumber : int, charge : float, mass : float, vdw : float, lj : float, resName : str, resIx : int, x : float, y : float, z : float, name : str, root : bool):
-#         self.globalIndex = globalIndex
-#         moleculeIx = molIx
-#         self.atomicNumber = atomicNumber
-#         self.charge = charge
-#         self.mass = mass
-#         self.vdw = vdw
-#         self.lj = lj
-#         self.resName = resName
-#         self.resIx = resIx
-#         self.x = x
-#         self.y = y
-#         self.z = z
-#         self.name = name
-#         self.root = root
-#         super().__init__(globalIndex, molIx, atomicNumber, charge, mass, vdw, lj, resName, resIx, x, y, z, name, root)
-
-# @dataclass
-# class Bond(rb.BondLink):
-#     parentAtomGlobalIndex : int
-#     childAtomGlobalIndex : int
-#     bondGlobalIndex : int
-#     molecule_index : int
-#     ringClosing : bool
-#     forceK : float
-#     forceEquil : float
-
-#     def __init__(self, parentAtomGlobalIndex : int, childAtomGlobalIndex : int, bondGlobalIndex : int, molecule_index : int, ringClosing : bool, forceK : float, forceEquil : float):
-#         self.parentAtomGlobalIndex = parentAtomGlobalIndex
-#         self.childAtomGlobalIndex = childAtomGlobalIndex
-#         self.bondGlobalIndex = bondGlobalIndex
-#         self.molecule_index = molecule_index
-#         self.ringClosing = ringClosing
-#         self.forceK = forceK
-#         self.forceEquil = forceEquil
-#         super().__init__(parentAtomGlobalIndex, childAtomGlobalIndex, bondGlobalIndex, molecule_index, ringClosing, forceK, forceEquil)
 
 @dataclass
 class Sampler:
@@ -166,144 +105,6 @@ class World:
                     flow=flow)
         self.samplers.append(s)
         return self
-    
-
-
-
-import re
-import numpy as np
-
-def parse_prmtop_numpy(prmtop_file):
-    FORMAT_RE_PATTERN = re.compile(r"(\d+)\(?([a-zA-Z]+)(\d+)\.?(\d*)\)?")
-
-    flags = []
-    raw_data = {}
-    raw_format = {}
-    prmtop_version = None
-
-    with open(prmtop_file, 'r') as f:
-        lines = [line.rstrip('\n') for line in f]
-
-    for line in lines:
-        if not line:
-            continue
-        if line.startswith('%'):
-            if line.startswith('%VERSION'):
-                _, prmtop_version = line.split(None, 1)
-            elif line.startswith('%FLAG'):
-                _, flag = line.split(None, 1)
-                flag = flag.strip()
-                flags.append(flag)
-                raw_data[flag] = [] 
-            elif line.startswith('%FORMAT'):
-                fmt_line = line[line.index('(')+1 : line.index(')')]
-                m = FORMAT_RE_PATTERN.search(fmt_line)
-                if m:
-                    raw_format[flags[-1]] = (fmt_line, int(m.group(1)), m.group(2),int(m.group(3)), m.group(4))
-                else:
-                    raw_format[flags[-1]] = (fmt_line, 1, 'a', 80, '')
-            continue
-
-        # Non-comment, non-flag lines -> data
-        flag = flags[-1]
-        fmt, num_items, item_type, i_length, item_prec = raw_format[flag]
-
-        if flag == 'TITLE' and not raw_data[flag]:
-            raw_data[flag] = [line]
-            continue
-
-        # Vectorized chunking
-        arr = np.frombuffer(line.encode('utf-8'), dtype='S1')
-        n_chunks = len(arr) // i_length + (len(arr) % i_length > 0)
-        chunks = [arr[i*i_length:(i+1)*i_length].tobytes().decode('utf-8') for i in range(n_chunks)]
-        items = [c.strip() for c in chunks if c.strip()]
-
-        # Convert according to type
-        if item_type.upper() == 'A':
-            raw_data[flag].extend(items)
-        elif item_type.upper() == 'I':
-            raw_data[flag].extend(np.array(items, dtype=np.int64))
-        elif item_type.upper() in ('E', 'F', 'D'):
-            # Fortran-style floats, parse as float64
-            raw_data[flag].extend(np.array([float(x.replace('D', 'E')) for x in items], dtype=np.float64))
-        else:
-            # fallback as string
-            raw_data[flag].extend(items)
-
-    # Convert numeric lists to np.array for consistency
-    for flag in raw_data:
-        if isinstance(raw_data[flag], list) and raw_data[flag]:
-            first_item = raw_data[flag][0]
-            if isinstance(first_item, (int, np.integer)):
-                raw_data[flag] = np.array(raw_data[flag], dtype=np.int64)
-            elif isinstance(first_item, (float, np.floating)):
-                raw_data[flag] = np.array(raw_data[flag], dtype=np.float64)
-
-    # Per AMBER prmtop convention, atomic charges are stored multiplied by 18.2223
-    # We divide to recover physical charges in units of the proton/electron charge.
-    raw_data['CHARGE'] /= 18.2223
-
-    chamber_style = 'CTITLE' in flags
-    return {
-        'version': prmtop_version,
-        'flags': flags,
-        'raw_data': raw_data,
-        'raw_format': raw_format,
-        'chamber': chamber_style
-    }
-
-def has_nbfix_fast(nb_indices: np.ndarray, num_types: int, acoef: np.ndarray, bcoef: np.ndarray) -> bool:
-    nb_indices = (
-        np.array(nb_indices)
-        .reshape(num_types, num_types) - 1
-    )
-
-    diag_idx = nb_indices.diagonal()
-    A_ii = acoef[diag_idx]
-    B_ii = bcoef[diag_idx]
-
-    with np.errstate(divide='ignore', invalid='ignore'):
-        rmin = (2 * A_ii / B_ii) ** (1/6)
-        ei = 0.25 * B_ii**2 / A_ii
-
-    ri = np.where(np.isfinite(rmin), rmin / 2.0, 0.0)
-    ei = np.where(np.isfinite(ei), ei, 0.0)
-
-    expected_R = ri[:, None] + ri[None, :]
-    expected_E = np.sqrt(ei[:, None] * ei[None, :])
-
-    mask = nb_indices >= 0
-
-    actual_A = np.zeros((num_types, num_types))
-    actual_B = np.zeros((num_types, num_types))
-    actual_A[mask] = acoef[nb_indices[mask]]
-    actual_B[mask] = bcoef[nb_indices[mask]]
-
-    zero_mask = (actual_A == 0) | (actual_B == 0)
-    bad_zero = zero_mask & (
-        (actual_A != 0) |
-        (actual_B != 0) |
-        ((expected_E != 0) & (expected_R != 0))
-    )
-
-    if np.any(bad_zero & mask):
-        return True
-
-    calc_A = expected_E * expected_R**12
-    calc_B = 2 * expected_E * expected_R**6
-
-    bad_A = np.abs((actual_A - calc_A) / actual_A) > 1e-6
-    bad_B = np.abs((actual_B - calc_B) / actual_B) > 1e-6
-
-    return np.any((bad_A | bad_B) & mask)
-
-
-def is_inter_residue(dihedral):
-    r = [dihedral.atom1.residue.idx,
-         dihedral.atom2.residue.idx,
-         dihedral.atom3.residue.idx,
-         dihedral.atom4.residue.idx]
-    return len(set(r)) > 1
 
 class Context(rb.Context):
     SIGMA_SCALE = 2**(-1./6.)
@@ -362,14 +163,13 @@ class Context(rb.Context):
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision
         # prmtop holds more that 16, so this function will lose a few digits (fewer than parmed)
-        parm_file = parse_prmtop_numpy(prmtop)
+        parm_file = prmtop_reader.parse_prmtop_numpy(prmtop)
         parm_data = parm_file['raw_data']
 
         # Nonbonded fix (NBFIX) is a technique that replaces standard Lennard-Jones (LJ) interaction parameters (epsilon and sigma) between specific atom pairs
         # This overrides default combination rules to fix overbinding artifacts, particularly between cations/anions and protein/lipid functional groups
         # It is commonly used in CHARMM force fields to improve hydration and binding accuracy
-        # self.has_nbfix = self.has_nbfix_fast()
-        self.has_nbfix = has_nbfix_fast(parm_data['NONBONDED_PARM_INDEX'], self.num_types, parm_data['LENNARD_JONES_ACOEF'], parm_data['LENNARD_JONES_BCOEF'])
+        self.has_nbfix = prmtop_reader.has_nbfix_fast(parm_data['NONBONDED_PARM_INDEX'], self.num_types, parm_data['LENNARD_JONES_ACOEF'], parm_data['LENNARD_JONES_BCOEF'])
 
         ene_conv = pmd.unit.kilocalories_per_mole.conversion_factor_to(pmd.unit.kilojoules_per_mole)
         length_conv = pmd.unit.angstroms.conversion_factor_to(pmd.unit.nanometers)
@@ -550,16 +350,18 @@ class Context(rb.Context):
                         )
                     )
 
-                import mdtraj as md
-                traj = md.load(self.inpcrd, top=self.prmtop)
-                ss = md.compute_dssp(traj)
-                
-                # # Convert parmed to mdtraj for DSSP secondary structure assignment to determine which dihedral bonds are rotatable
-                # top = molecule_prototypes[prototype_index].molecule.topology
-                # xyz = molecule_prototypes[prototype_index].molecule.coordinates / 10.0
-
-                # traj = md.Trajectory(xyz=[xyz], topology=top)
+                # import mdtraj as md
+                # traj = md.load(self.inpcrd, top=self.prmtop)
                 # ss = md.compute_dssp(traj)
+                
+
+
+                # # # # # Convert parmed to mdtraj for DSSP secondary structure assignment to determine which dihedral bonds are rotatable
+                # # # # top = molecule_prototypes[prototype_index].molecule.topology
+                # # # # xyz = molecule_prototypes[prototype_index].molecule.coordinates / 10.0
+
+                # # # # traj = md.Trajectory(xyz=[xyz], topology=top)
+                # # # # ss = md.compute_dssp(traj)
 
                 # Add bonds which are the middle bond of a standard dihedral
                 # We don't convert to global indices and must keep original prmtop ones
@@ -575,8 +377,8 @@ class Context(rb.Context):
                     if 'ring' in dihedral_type:
                         continue
 
-                    if ss[0][resid] != 'C':
-                        continue
+                    # if ss[0][resid] != 'C':
+                    #     continue
 
                     # Optional
                     if dihedral_type == 'protein-phi' and not rigid_protein_phi:
@@ -1046,9 +848,7 @@ class Context(rb.Context):
                   f"visualizerFrequency={world.visualizerFrequency}")
             super().addWorld(world.fixmanTorque, world.samplesPerRound, world.rootMobility, world.flexibilities, world.useOpenMM, world.visual, world.visualizerFrequency)
 
-        # Initialize OpenMM
-        # It will also check for world overcontraining and throw an error if that's the case
-        # This must be called before adding samplers since they want to calculate energies when initializing
+        # OpenMM must be initialized before adding samplers since they want to calculate energies when initializing
         super().initialize_openmm(
             self.atoms,
             self.bond_stretches,
@@ -1076,8 +876,8 @@ class Context(rb.Context):
             super().addReplica()
             super().addThermodynamicState(temp, accept_reject_modes, distort_options, distort_args, flow, work, integrators, worldIndexes, timesteps, mdsteps)
 
-        # Initialize the context
-        super().Initialize()
+        # if not super().validate_context():
+        #     raise ValueError("Context validation failed after initialization. Please check the system setup and parameters.")
 
     def generate_synthetic_atom_classes(self):
         # Signatures store the "parameter environment" of each atom

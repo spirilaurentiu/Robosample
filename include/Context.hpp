@@ -135,7 +135,7 @@ public:
 		throw std::runtime_error("Atom with specified prmtop index not found.");
 	}
 
-	void Initialize();
+	bool validateContext();
 
 	void addWorld(
 		bool fixmanTorque,

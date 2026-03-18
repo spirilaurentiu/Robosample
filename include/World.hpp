@@ -11,16 +11,12 @@
 #include "TopologyElements.hpp"
 #include "common.h"
 #include <functional>
-#include <unordered_map>
-#pragma once
 
 #include <iostream>
 #include <iomanip>
-#include <fstream>
 #include <sstream>
 #include <unistd.h>
 #include <time.h>
-#include <thread>
 #include <array>
 #include <math.h>
 
@@ -33,7 +29,6 @@
 #define BaseSampler HMCSampler
 #endif
 
-#include "server.hpp"
 #include "Topology.hpp"
 #include "HMCSampler.hpp"
 #include "ConformationalSearch.hpp"
@@ -145,6 +140,7 @@ struct RigidBond {
 	std::size_t topologyIndex = 0;
 	SimTK::Compound::AtomIndex childCAIx;
 	SimTK::Compound::AtomIndex parentCAIx;
+	bool ringClosing = false;
 };
 
 struct RigidAngle {
@@ -164,6 +160,152 @@ enum class ROOT_MOBILITY : int {
 	FREE_LINE,
 	BALL,
 	PIN
+};
+
+struct BondStretchKey {
+	SimTK::DuMM::AtomClassIndex atomClassIndex1;
+	SimTK::DuMM::AtomClassIndex atomClassIndex2;
+
+	BondStretchKey(SimTK::DuMM::AtomClassIndex aCIx1, SimTK::DuMM::AtomClassIndex aCIx2) {
+		atomClassIndex1 = std::min(aCIx1, aCIx2);
+		atomClassIndex2 = std::max(aCIx1, aCIx2);
+	}
+
+	bool operator<(const BondStretchKey& other) const {
+		if (atomClassIndex1 != other.atomClassIndex1) {
+			return atomClassIndex1 < other.atomClassIndex1;
+		}
+		return atomClassIndex2 < other.atomClassIndex2;
+	}
+};
+
+struct BondStretchValue {
+	std::array<int, 2> globalAtomIndices;
+    SimTK::Real stiffness;
+    SimTK::Real length;
+
+    bool operator==(const BondStretchValue& other) const {
+		static constexpr SimTK::Real epsilon = 1e-9;
+        return std::abs(stiffness - other.stiffness) < epsilon && std::abs(length - other.length) < epsilon;
+    }
+
+	bool operator!=(const BondStretchValue& other) const {
+		return !(*this == other);
+	}
+};
+
+struct BondBendKey {
+    SimTK::DuMM::AtomClassIndex atomClassIndex1;
+    SimTK::DuMM::AtomClassIndex atomClassIndex2; // center atom, stays fixed
+    SimTK::DuMM::AtomClassIndex atomClassIndex3;
+
+    BondBendKey(SimTK::DuMM::AtomClassIndex a1,
+                SimTK::DuMM::AtomClassIndex a2,
+                SimTK::DuMM::AtomClassIndex a3)
+        : atomClassIndex2(a2)
+    {
+        atomClassIndex1 = std::min(a1, a3);
+        atomClassIndex3 = std::max(a1, a3);
+    }
+
+    bool operator<(const BondBendKey& other) const {
+        if (atomClassIndex1 != other.atomClassIndex1)
+            return atomClassIndex1 < other.atomClassIndex1;
+        if (atomClassIndex2 != other.atomClassIndex2)
+            return atomClassIndex2 < other.atomClassIndex2;
+        return atomClassIndex3 < other.atomClassIndex3;
+    }
+};
+
+struct BondBendValue {
+    std::array<int, 3> globalAtomIndices;
+    SimTK::Real stiffness;
+    SimTK::Real angleDeg;
+
+    bool operator==(const BondBendValue& other) const {
+        static constexpr SimTK::Real epsilon = 1e-9;
+        return std::abs(stiffness - other.stiffness) < epsilon &&
+               std::abs(angleDeg  - other.angleDeg)  < epsilon;
+    }
+
+    bool operator!=(const BondBendValue& other) const {
+        return !(*this == other);
+    }
+};
+
+struct PeriodicTorsionKey {
+	SimTK::DuMM::AtomClassIndex a1, a2, a3, a4;
+
+	PeriodicTorsionKey(SimTK::DuMM::AtomClassIndex i, SimTK::DuMM::AtomClassIndex j, SimTK::DuMM::AtomClassIndex k, SimTK::DuMM::AtomClassIndex l, bool canonicalize) {
+		// We don't canonicalize for improper torsions
+		if (!canonicalize) {
+			a1=i; a2=j; a3=k; a4=l;
+			return;
+		}
+			
+		// canonicalize (i,j,k,l) == (l,k,j,i)
+		if (std::tie(i,j,k,l) <= std::tie(l,k,j,i)) {
+			a1=i; a2=j; a3=k; a4=l;
+		} else {
+			a1=l; a2=k; a3=j; a4=i;
+		}
+	}
+
+	bool operator<(const PeriodicTorsionKey& o) const {
+		return std::tie(a1,a2,a3,a4) < std::tie(o.a1,o.a2,o.a3,o.a4);
+	}
+};
+
+struct PeriodicTorsionValue {
+	// store all 5 AMBER terms exactly as passed to Molmodel
+	std::array<int, 4> globalAtomIndices;
+	std::array<int, 5> periodicity;
+	std::array<SimTK::Real, 5> amplitude;
+	std::array<SimTK::Real, 5> phase;
+	int numTerms;
+
+	bool operator==(const PeriodicTorsionValue& o) const {
+		if (numTerms != o.numTerms) return false;
+
+		static constexpr SimTK::Real eps = 1e-9;
+		for (int i = 0; i < 5; i++) {
+			if (periodicity[i] != o.periodicity[i]) return false;
+			if (std::abs(amplitude[i]-o.amplitude[i]) > eps) return false;
+			if (std::abs(phase[i]-o.phase[i]) > eps) return false;
+		}
+		return true;
+	}
+	bool operator!=(const PeriodicTorsionValue& o) const { return !(*this==o); }
+};
+
+inline std::string getAtomDescription(const RoboAtom& atom) {
+	return atom.identity.uniqueAtomName +
+		" (atom class: " +atom.identity.atomClassName +
+		", atom class index " + std::to_string(atom.identity.atomClassIndex) +
+		", charged type: " + atom.identity.chargedAtomTypeName + 
+		", charged type index " + std::to_string(atom.identity.chargedAtomTypeIndex) + ")";
+}
+
+class HarmonicImproperTorsionForce : public SimTK::DuMM::CustomBondTorsion {
+public:
+    HarmonicImproperTorsionForce(SimTK::Real forceConstantInKJPerMol, SimTK::Real equilibriumAngleInRadians)
+        : k(forceConstantInKJPerMol),
+          psi0(equilibriumAngleInRadians)
+    {}
+
+    SimTK::Real calcEnergy(SimTK::Real torsionInRadians) const override {
+        const SimTK::Real dpsi = torsionInRadians - psi0;
+        return k * dpsi * dpsi;
+    }
+
+    SimTK::Real calcTorque(SimTK::Real torsionInRadians) const override {
+        const SimTK::Real dpsi = torsionInRadians - psi0;
+        return -2.0 * k * dpsi;
+    }
+
+private:
+    SimTK::Real k;     // kψ in kJ/mol/rad^2
+    SimTK::Real psi0;  // equilibrium angle (rad)
 };
 
 //==============================================================================
@@ -1026,7 +1168,9 @@ public:
 		return acceptanceRMSD;
 	}
 
-	bool isOverconstrained(const SimTK::State& state, std::ostream& out) const;
+	bool isOverconstrained() const;
+	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
+	bool hasRigidBodyViolations(SimTK::Real tolerance);
 
 private:
 	SimTK::Real findDecorrelationTime(const SimTK::State& state, int equilSteps, int tuneSteps, SimTK::Real timestep);
@@ -1036,18 +1180,12 @@ private:
 
 	bool testing = false;
 
-	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-
 	std::vector<std::vector<SimTK::Real>> matchAtomTargetLocationsResiduals;
 	std::vector<CoordinateTransferError> coordinateTransferErrors;
 
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCache;
 	std::vector<SimTK::Compound::AtomTargetLocations> atomTargetLocaltionsCacheOld;
 	std::vector<std::pair<bool, SimTK::Real>> acceptanceRMSD;
-
-	std::vector<RigidBond> rigidBonds;
-	std::vector<RigidAngle> rigidAngles;
-	std::vector<RigidTorsion> rigidProperTorsions, rigidImproperTorsions;
 
 	// Map mbx2aIx contains only atoms at the origin of mobods
 	// topology index and atom index

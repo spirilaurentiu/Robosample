@@ -12,13 +12,14 @@
         "--clang-tidy"
     ],
     "python.autoComplete.extraPaths": [
-        "./",
-        "${workspaceFolder}/build/",
-        "${workspaceFolder}/build/stubs",
+        "${workspaceFolder}/python/",
+        "${workspaceFolder}/python/robosample",
+        "${workspaceFolder}/python/robosample/stubs",
     ],
     "python.analysis.extraPaths": [
-        "${workspaceFolder}/build/",
-        "${workspaceFolder}/build/stubs"
+        "${workspaceFolder}/python/",
+        "${workspaceFolder}/python/robosample",
+        "${workspaceFolder}/python/robosample/stubs",
     ],
     "python.testing.pytestArgs": [
         "tests"

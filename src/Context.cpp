@@ -1,7 +1,9 @@
 #include "Context.hpp"
 #include "Compound.h"
+#include "Constants.h"
 #include "OpenMM.hpp"
 #include "Replica.hpp"
+#include "Stage.h"
 #include "World.hpp"
 #include "Sampler.hpp"
 #include "common.h"
@@ -358,20 +360,6 @@ void Context::initializeOpenMM(
 		300.0, // thermostatTemperature
 		1.0 // collisionFrequency
 	);
-
-	// Check if the worlds are overconstrained
-	for (const auto& world : worlds) {
-		const auto& state = world.getIntegrator().getAdvancedState();
-
-		// Realize will calculate the forces and potential energy using OpenMM
-		OPENMM::get().setActiveForceGroup(world.getOwnIndex());
-		world.getCompoundSystem().realize(state, SimTK::Stage::Acceleration);
-	
-		if (world.isOverconstrained(state, std::cout)) {
-			const std::string msg = "World " + std::to_string(worldIndexes.back()) + " is overconstrained.";
-			throw std::runtime_error(msg);
-		}
-	}
 }
 
 SimTK::Real Context::calculatePotentialEnergy(int worldIndex) {
@@ -389,7 +377,73 @@ SimTK::Real Context::calculatePotentialEnergy(int worldIndex) {
 }
 
 /*! <!--  --> */
-void Context::Initialize() {
+bool Context::validateContext() {
+	constexpr SimTK::Real TOLERANCE = 1e-7;
+	bool valid = true;
+
+	for (auto& world : worlds) {
+		if (world.isOverconstrained()) {
+			valid = false;
+			continue;
+		};
+
+		world.setAtomTargetLocationsToState(atomTargetLocationsCache);
+		const auto errors = world.checkCoordinateTransfer(atomTargetLocationsCache);
+
+		for (const auto& residual : errors.matchResiduals) {
+			if (residual > TOLERANCE) {
+				std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Match residual " << residual << " exceeds tolerance." << std::endl;
+				valid = false;
+			}
+		}
+		if (errors.cartesian > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian residual " << errors.cartesian << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.cartesianMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian max residual " << errors.cartesianMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.bonds > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond residual " << errors.bonds << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.bondsMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond max residual " << errors.bondsMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.angles > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle residual " << errors.angles << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.anglesMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle max residual " << errors.anglesMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.properDihedrals > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral residual " << errors.properDihedrals << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.properDihedralsMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral max residual " << errors.properDihedralsMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.improperDihedrals > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral residual " << errors.improperDihedrals << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.improperDihedralsMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral max residual " << errors.improperDihedralsMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+
+		if (world.hasRigidBodyViolations(TOLERANCE)) {
+			valid = false;
+			continue;
+		}
+	}
+
+	return valid;
 
 	// // Initialize the Z matrix
 	// int firstWIx = 0;
@@ -2367,7 +2421,9 @@ bool Context::RunWorld(int whichWorld, const std::string& header)
 		// Generate samples
 		// std::cout << "[EQ] World " << whichWorld
 		// 	<< " generating " << numSamples << " samples." << std::endl;
+
 		validated = worlds[whichWorld].generateSamples(numSamples, worldOutStream, header, verbose);
+
 		// std::cout << "[EQ] World " << whichWorld
 		// 	<< " generated " << numSamples << " samples." << std::endl;
 
@@ -2806,11 +2862,9 @@ void Context::writeLog(int mixi, int replicaIx) {
                 << fix_n << ","
 				<< timestep << ","
 				<< mdstep << ","
-				<< acc << std::endl;
+				<< acc << std::endl; 
 	}
 }
-
-std::stringstream worldOutStream_TEST;
 
 /*!
  * <!-- Run replica exchange protocol -->
