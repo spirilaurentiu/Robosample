@@ -726,6 +726,35 @@ void World::generateDummParams(
 	}
 }
 
+template <typename T>
+struct RobustStats {
+    SimTK::Real median;
+    SimTK::Real mad; // Median Absolute Deviation
+};
+
+template <typename T>
+RobustStats<T> calculateRobustStats(std::vector<T> data) {
+    if (data.empty()) return {0.0, 0.0};
+
+    std::sort(data.begin(), data.end());
+    size_t n = data.size();
+    SimTK::Real median = (n % 2 == 0)
+        ? (static_cast<SimTK::Real>(data[n/2 - 1]) + static_cast<SimTK::Real>(data[n/2])) / 2.0
+        : static_cast<SimTK::Real>(data[n/2]);
+
+    std::vector<SimTK::Real> absDevs;
+    absDevs.reserve(n);
+    for (const auto& val : data)
+        absDevs.push_back(std::abs(static_cast<SimTK::Real>(val) - median));
+
+    std::sort(absDevs.begin(), absDevs.end());
+    SimTK::Real mad = (n % 2 == 0)
+        ? (absDevs[n/2 - 1] + absDevs[n/2]) / 2.0
+        : absDevs[n/2];
+
+    return {median, mad};
+}
+
 bool World::isOverconstrained() const {
 
 	std::cout << "[INFO] Checking for overconstraints in world " << ownWorldIndex << ":" << std::endl;
@@ -761,6 +790,31 @@ bool World::isOverconstrained() const {
 		}
 	}
 
+	// Caulcate means and stdev
+	std::vector<SimTK::Real> qs, us, qdots, udots, qdotdots;
+	for (SimTK::MobilizedBodyIndex mbx(1); mbx < numBodies; ++mbx) {
+		const auto& mobod = compoundSystem->getMatterSubsystem().getMobilizedBody(mbx);
+		for (const SimTK::Real q : mobod.getQAsVector(state)) qs.push_back(q);
+		for (const SimTK::Real u : mobod.getUAsVector(state)) us.push_back(u);
+		for (const SimTK::Real qdot : mobod.getQDotAsVector(state)) qdots.push_back(qdot);
+		for (const SimTK::Real udot : mobod.getUDotAsVector(state)) udots.push_back(udot);
+		for (const SimTK::Real qdotdot : mobod.getQDotDotAsVector(state)) qdotdots.push_back(qdotdot);
+	}
+
+	auto [medQ, madQ] = calculateRobustStats(qs);
+	auto [medU, madU] = calculateRobustStats(us);
+	auto [medQDot, madQDot] = calculateRobustStats(qdots);
+	auto [medUDot, madUDot] = calculateRobustStats(udots);
+	auto [medQDotDot, madQDotDot] = calculateRobustStats(qdotdots);
+
+	auto isOutlier = [](SimTK::Real val, SimTK::Real median, SimTK::Real mad) {
+		if (std::isnan(val) || std::isinf(val)) return true;
+		constexpr SimTK::Real k = 3.5;
+		constexpr SimTK::Real madScale = 1.4826;
+		SimTK::Real threshold = std::max(k * madScale * mad, 1e-4);
+		return std::abs(val - median) > threshold;
+	};
+
 	bool anyInvalid = false;
 	for (SimTK::MobilizedBodyIndex mbIx(1); mbIx < numBodies; ++mbIx) {
 		const auto& mobod = compoundSystem->getMatterSubsystem().getMobilizedBody(mbIx);
@@ -768,28 +822,23 @@ bool World::isOverconstrained() const {
 
 		for (const SimTK::Real q: mobod.getQAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].q.push_back(q);
-			if (std::isnan(q) || std::isinf(q)) invalid = true;
-			if (std::abs(q) > 1e6) invalid = true;
+			if (isOutlier(q, medQ, madQ)) invalid = true;
 		};
 		for (const SimTK::Real u: mobod.getUAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].u.push_back(u);
-			if (std::isnan(u) || std::isinf(u)) invalid = true;
-			if (std::abs(u) > 1e6) invalid = true;
+			if (isOutlier(u, medU, madU)) invalid = true;
 		};
 		for (const SimTK::Real qdot: mobod.getQDotAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].qdot.push_back(qdot);
-			if (std::isnan(qdot) || std::isinf(qdot)) invalid = true;
-			if (std::abs(qdot) > 1e6) invalid = true;
+			if (isOutlier(qdot, medQDot, madQDot)) invalid = true;
 		};
 		for (const SimTK::Real udot: mobod.getUDotAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].udot.push_back(udot);
-			if (std::isnan(udot) || std::isinf(udot)) invalid = true;
-			if (std::abs(udot) > 1e6) invalid = true;
+			if (isOutlier(udot, medUDot, madUDot)) invalid = true;
 		};
 		for (const SimTK::Real qdotdot: mobod.getQDotDotAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].qdotdot.push_back(qdotdot);
-			if (std::isnan(qdotdot) || std::isinf(qdotdot)) invalid = true;
-			if (std::abs(qdotdot) > 1e6) invalid = true;
+			if (isOutlier(qdotdot, medQDotDot, madQDotDot)) invalid = true;
 		};
 
 		mobilizedBodiesInfo[mbIx].invalid = invalid;

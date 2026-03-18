@@ -876,8 +876,8 @@ class Context(rb.Context):
             super().addReplica()
             super().addThermodynamicState(temp, accept_reject_modes, distort_options, distort_args, flow, work, integrators, worldIndexes, timesteps, mdsteps)
 
-        # if not super().validate_context():
-        #     raise ValueError("Context validation failed after initialization. Please check the system setup and parameters.")
+        if not super().validate_context():
+            raise ValueError("Context validation failed after initialization. Please check the system setup and parameters.")
 
     def generate_synthetic_atom_classes(self):
         # Signatures store the "parameter environment" of each atom

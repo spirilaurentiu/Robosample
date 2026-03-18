@@ -92,7 +92,6 @@ for i in range(NOF_REPLICAS):
     temperatures.append(T0 * (R ** i))
 
 context.initialize(temperatures)
-exit()
 
 # print(context.calculate_openmm_energy(0))
 # print(context.calculate_openmm_energy(1))
