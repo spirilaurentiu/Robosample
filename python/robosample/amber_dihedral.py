@@ -64,7 +64,7 @@ PROTEIN_SIDECHAIN = {
     # When bonded, the SG-SG bond creates a chi2 angle reaching into the partner residue
     'CYX': {
         'chi1': ('N', 'CA', 'CB', 'SG'),
-        'ring_closing': ('CB', 'SG', 'SG', 'CB'),
+        'ring_closing': ('CB', 'SG', 'SG', 'CB'), # disulfide bridge
     },
 
     # Deprotonated Cysteine (Anionic or Metal-coordinated)
@@ -159,15 +159,29 @@ PROTEIN_SIDECHAIN = {
         'chi3': ('CB', 'CG', 'SD', 'CE'),
     },
 
-    # Phenylalanine
+    # Phenylalanine (PHE)
     'PHE': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD1'),
         'ring_closing_1': ('CG', 'CD1', 'CE1', 'CZ'), # Same as TYR
     },
 
-    # Handle proline separately
-    'PRO': {},
+    # Proline (PRO)
+    'PRO': {
+        'chi1': ('N', 'CA', 'CB', 'CG'),
+        'chi2': ('CA', 'CB', 'CG', 'CD'),
+
+        # These dihedrals are unique to proline, they will not be picked up via other residues
+        # I list them them here for completeness
+        # 'chi3': ('CB', 'CG', 'CD', 'N'),
+        'ring_closing': ('CG', 'CD', 'N', 'CA'),
+
+        # Topologies intentionally skip dihedrals that traverse the ring closure bond
+        # Including it would create a dihedral that is linearly dependent on others already defined in the ring
+        # Thus, this is absent and will never be detected
+        # I include it here for completeness and to prove the point
+        # 'pro-chi5': ('CD', 'N', 'CA', 'C'),
+    },
 
     # Serine (SER)
     'SER': {
@@ -357,32 +371,6 @@ class DihedralClassifier:
         # We check both the forward and reverse order of the atoms to account for different orientations
         atoms = [dihedral.atom1, dihedral.atom2, dihedral.atom3, dihedral.atom4]
 
-        # Special check for proline
-        PROLINE_RING = {
-            ('N', 'CA', 'CB', 'CG'): "pro-chi1",
-            ('CA', 'CB', 'CG', 'CD'): "pro-chi2",
-            ('CB', 'CG', 'CD', 'N'): 'pro-chi3',
-            ('CG', 'CD', 'N', 'CA'): 'pro-chi4',
-
-            # Topologies intentionally skip dihedrals that traverse the ring closure bond
-            # Including it would create a dihedral that is linearly dependent on others already defined in the ring
-            # Thus, this is absent and will never be detected
-            # I include it here for completeness and to prove the point
-            ('CD', 'N', 'CA', 'C'): 'pro-chi5',
-        }
-
-        # Check that residue name is PRO for all atoms
-        if all(atom.residue.name == 'PRO' for atom in atoms):
-            label = PROLINE_RING.get(_extract_atom_names(atoms))
-            if not label:
-                atoms = list(reversed(atoms))
-                label = PROLINE_RING.get(_extract_atom_names(atoms))
-            if label:
-                if label == 'pro-chi3':
-                    return 'ring_closing_1'
-                return label
-
-        # Non-proline
         label = self.protein_dihedral_definitions.get(_extract_atom_names(atoms))
         if not label:
             atoms = list(reversed(atoms))
@@ -393,10 +381,6 @@ class DihedralClassifier:
 
         # Phi: C(i-1) N(i) CA(i) C(i)
         if label == 'phi':
-            is_proline_phi = (atoms[1].residue.name == 'PRO' and atoms[2].residue.name == 'PRO' and atoms[3].residue.name == 'PRO')
-            if is_proline_phi:
-                label = 'pro-phi'
-            
             if resids[0] == i-1 and resids[1] == i and resids[2] == i and resids[3] == i:
                 return label
             else:

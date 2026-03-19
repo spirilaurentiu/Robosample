@@ -922,7 +922,7 @@ bool World::isOverconstrained() const {
 		
 		// Look up dihedral type between this body and its parent
 		auto it = dihedralTypes.find(std::make_pair(mbIx, parentIx));
-		r.dihedral   = (it != dihedralTypes.end()) ? it->second : "N/A";
+		r.dihedral   = (it != dihedralTypes.end()) ? it->second : "ground";
 
 		r.invalid    = info.invalid ? "invalid" : "";
 		r.q          = vecToString(info.q);
