@@ -1171,7 +1171,6 @@ public:
 		return acceptanceRMSD;
 	}
 
-	bool hasValidRingClosingBonds() const;
 	bool isOverconstrained() const;
 	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 	bool hasRigidBodyViolations(SimTK::Real tolerance);

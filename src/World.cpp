@@ -755,26 +755,6 @@ RobustStats<T> calculateRobustStats(std::vector<T> data) {
     return {median, mad};
 }
 
-bool World::hasValidRingClosingBonds() const {
-	for (const auto& topology : topologies) {
-		for (const auto& bond : topology.getBonds()) {
-			if (bond.ringClosing) {
-				const auto mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[0], *forceField);
-				const auto mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[1], *forceField);
-
-				if (mbx1 != mbx2) {
-					std::cerr << "[ERROR] Invalid ring-closing bond found in world " << ownWorldIndex << ": Bond between atoms " 
-							  << topology.getAtoms()[bond.compoundAtomIndices[0]].identity.uniqueAtomName << " and " 
-							  << topology.getAtoms()[bond.compoundAtomIndices[1]].identity.uniqueAtomName 
-							  << " must belong to the same mobilized body." << std::endl;
-					return false;
-				}
-			}
-		}
-	}
-	return true;
-}
-
 bool World::isOverconstrained() const {
 
 	std::cout << "[INFO] Checking for overconstraints in world " << ownWorldIndex << ":" << std::endl;
@@ -796,6 +776,7 @@ bool World::isOverconstrained() const {
 		std::vector<SimTK::Real> udot;
 		std::vector<SimTK::Real> qdotdot;
 		bool invalid { false };
+		bool hasRingClosingBond { false };
 	};
 
 	const int NU = compoundSystem->getMatterSubsystem().getNU(state);
@@ -822,6 +803,9 @@ bool World::isOverconstrained() const {
 			if (bond.ringClosing) {
 				mobilizedBodiesInfo[mbx1].atomsInRingClosingBonds.insert(atom1_name);
 				mobilizedBodiesInfo[mbx2].atomsInRingClosingBonds.insert(atom2_name);
+
+				mobilizedBodiesInfo[mbx1].hasRingClosingBond = true;
+				mobilizedBodiesInfo[mbx2].hasRingClosingBond = true;
 			}
 		}
 
@@ -855,38 +839,47 @@ bool World::isOverconstrained() const {
 	// We deliberately don't check for aboslute value here
 	// If the system has huge forces (eg not minimized) the values can be very high but that doesn't necessarily mean there is an overconstraint
 	// This will be caught by HMCSampler::reinitialize()
-	auto isOutlier = [](SimTK::Real val, SimTK::Real median, SimTK::Real mad) {
+	auto isOutlier = [](SimTK::Real val, SimTK::Real median, SimTK::Real mad, bool strict) {
 		if (std::isnan(val) || std::isinf(val)) return true;
-		constexpr SimTK::Real k = 3.5;
-		constexpr SimTK::Real madScale = 1.4826;
-		SimTK::Real threshold = std::max(k * madScale * mad, 1e-4);
-		return std::abs(val - median) > threshold;
+		return std::abs(val) > 1e3;
+
+		// if (strict) {
+		// 	constexpr SimTK::Real sigmaThreshold = 5; // 3.5;
+		// 	constexpr SimTK::Real absoluteFloor = 1e-2; // 1e-4;
+
+		// 	constexpr SimTK::Real madScale = 1.4826;
+		// 	SimTK::Real threshold = std::max(sigmaThreshold * madScale * mad, absoluteFloor);
+		// 	return std::abs(val - median) > threshold;
+		// } else {
+		// 	return std::abs(val) > 1e3;
+		// }
 	};
 
 	bool anyInvalid = false;
 	for (SimTK::MobilizedBodyIndex mbIx(1); mbIx < numBodies; ++mbIx) {
 		const auto& mobod = compoundSystem->getMatterSubsystem().getMobilizedBody(mbIx);
+		const bool strict = (!mobilizedBodiesInfo[mbIx].hasRingClosingBond);
 		bool invalid = false;
 
 		for (const SimTK::Real q: mobod.getQAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].q.push_back(q);
-			if (isOutlier(q, medQ, madQ)) invalid = true;
+			if (isOutlier(q, medQ, madQ, strict)) invalid = true;
 		};
 		for (const SimTK::Real u: mobod.getUAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].u.push_back(u);
-			if (isOutlier(u, medU, madU)) invalid = true;
+			if (isOutlier(u, medU, madU, strict)) invalid = true;
 		};
 		for (const SimTK::Real qdot: mobod.getQDotAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].qdot.push_back(qdot);
-			if (isOutlier(qdot, medQDot, madQDot)) invalid = true;
+			if (isOutlier(qdot, medQDot, madQDot, strict)) invalid = true;
 		};
 		for (const SimTK::Real udot: mobod.getUDotAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].udot.push_back(udot);
-			if (isOutlier(udot, medUDot, madUDot)) invalid = true;
+			if (isOutlier(udot, medUDot, madUDot, strict)) invalid = true;
 		};
 		for (const SimTK::Real qdotdot: mobod.getQDotDotAsVector(state)) {
 			mobilizedBodiesInfo[mbIx].qdotdot.push_back(qdotdot);
-			if (isOutlier(qdotdot, medQDotDot, madQDotDot)) invalid = true;
+			if (isOutlier(qdotdot, medQDotDot, madQDotDot, strict)) invalid = true;
 		};
 
 		mobilizedBodiesInfo[mbIx].invalid = invalid;

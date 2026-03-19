@@ -370,7 +370,6 @@ class DihedralClassifier:
         # Check if the dihedral matches any of the defined protein dihedrals (backbone or side chain)
         # We check both the forward and reverse order of the atoms to account for different orientations
         atoms = [dihedral.atom1, dihedral.atom2, dihedral.atom3, dihedral.atom4]
-
         label = self.protein_dihedral_definitions.get(_extract_atom_names(atoms))
         if not label:
             atoms = list(reversed(atoms))
