@@ -42,7 +42,5 @@ def is_rigid_bond(parent_atom: pmd.Atom, child_atom: pmd.Atom) -> bool:
 		return True
 	if is_multiple_like(a1_type, a2_type):
 		return True
-	if parent_atom.name == 'SG' and child_atom.name == 'SG':
-		return True
 
 	return False

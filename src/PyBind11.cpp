@@ -167,13 +167,14 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("position", &RoboAtom::position);
 
     py::class_<RoboBond>(m, "RoboBond")
-        .def(py::init<std::array<int, 2>, std::array<int, 2>, SimTK::Real, SimTK::Real, int, bool>(),
+        .def(py::init<std::array<int, 2>, std::array<int, 2>, SimTK::Real, SimTK::Real, int, bool, const std::string&>(),
             py::arg("global_indices"),
             py::arg("compound_atom_indices"),
             py::arg("stiffness_in_kj_per_nm_sq"),
             py::arg("nominal_length_in_nm"),
             py::arg("molecule_index"),
-            py::arg("ring_closing")
+            py::arg("ring_closing"),
+            py::arg("dihedral_type")
         )
         .def_readwrite("global_indices", &RoboBond::globalIndices)
         .def_readwrite("compound_atom_indices", &RoboBond::compoundAtomIndices)
@@ -181,6 +182,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("ring_closing", &RoboBond::ringClosing)
         .def_readwrite("stiffness_in_kj_per_nm_sq", &RoboBond::stiffnessInKJPerNmSq)
         .def_readwrite("nominal_length_in_nm", &RoboBond::nominalLengthInNm)
+        .def_readwrite("dihedral_type", &RoboBond::dihedralType)
         ;
 
     py::class_<RoboAngle>(m, "RoboAngle")

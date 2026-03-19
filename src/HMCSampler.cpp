@@ -172,7 +172,7 @@ void HMCSampler::reinitialize(SimTK::State& state, std::stringstream& samplerOut
 	currentEnergy.total = currentEnergy.potential + currentEnergy.kinetic + currentEnergy.fixman - (0.5 * RT * currentEnergy.logSineSqrGamma2);
 
 	if (!currentEnergy.validate(currentEnergy, RT, ndofs)) {
-		throw std::runtime_error("HMCSampler::reinitialize(): Initial energy is not valid (NaN or Inf). Check your system setup and parameters.");
+		throw std::runtime_error("HMCSampler::reinitialize(): Initial energy is not valid. Have you minimized your system?");
 	}
 
 	previousEnergy = currentEnergy;

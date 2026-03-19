@@ -755,6 +755,26 @@ RobustStats<T> calculateRobustStats(std::vector<T> data) {
     return {median, mad};
 }
 
+bool World::hasValidRingClosingBonds() const {
+	for (const auto& topology : topologies) {
+		for (const auto& bond : topology.getBonds()) {
+			if (bond.ringClosing) {
+				const auto mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[0], *forceField);
+				const auto mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[1], *forceField);
+
+				if (mbx1 != mbx2) {
+					std::cerr << "[ERROR] Invalid ring-closing bond found in world " << ownWorldIndex << ": Bond between atoms " 
+							  << topology.getAtoms()[bond.compoundAtomIndices[0]].identity.uniqueAtomName << " and " 
+							  << topology.getAtoms()[bond.compoundAtomIndices[1]].identity.uniqueAtomName 
+							  << " must belong to the same mobilized body." << std::endl;
+					return false;
+				}
+			}
+		}
+	}
+	return true;
+}
+
 bool World::isOverconstrained() const {
 
 	std::cout << "[INFO] Checking for overconstraints in world " << ownWorldIndex << ":" << std::endl;
@@ -768,7 +788,8 @@ bool World::isOverconstrained() const {
 
 	// Structure to hold mobilized bodies info
 	struct MobilizedBodyInfo {
-		std::vector<std::string> uniqueAtomNames;
+		std::unordered_set<std::string> atoms;
+		std::unordered_set<std::string> atomsInRingClosingBonds;
 		std::vector<SimTK::Real> q;
 		std::vector<SimTK::Real> u;
 		std::vector<SimTK::Real> qdot;
@@ -780,13 +801,37 @@ bool World::isOverconstrained() const {
 	const int NU = compoundSystem->getMatterSubsystem().getNU(state);
 	const int numBodies = compoundSystem->getMatterSubsystem().getNumBodies();
 	std::vector<MobilizedBodyInfo> mobilizedBodiesInfo(numBodies);
+	std::map<std::pair<SimTK::MobilizedBodyIndex, SimTK::MobilizedBodyIndex>, std::string> dihedralTypes;
 
 	// Get atom names of each mobilized body
-	std::map<SimTK::MobilizedBodyIndex, std::vector<std::string>> mobodAtoms;
-	for (const auto& t : topologies) {
-		for (const auto& a : t.getAtoms()) {
-			const SimTK::MobilizedBodyIndex mbIx = t.getAtomMobilizedBodyIndexThroughDumm(a.identity.compoundAtomIndex, *forceField);
-			mobilizedBodiesInfo[mbIx].uniqueAtomNames.push_back(a.identity.uniqueAtomName);
+	for (const auto& topology : topologies) {
+		for (const auto& bond : topology.getBonds()) {
+			const auto mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[0], *forceField);
+			const auto mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[1], *forceField);
+
+			const auto& atom1_name = topology.getAtoms()[bond.compoundAtomIndices[0]].identity.uniqueAtomName;
+			const auto& atom2_name = topology.getAtoms()[bond.compoundAtomIndices[1]].identity.uniqueAtomName;
+
+			// Save dihedral type
+			if (mbx1 != mbx2) {
+				dihedralTypes[std::make_pair(mbx1, mbx2)] = bond.dihedralType;
+				dihedralTypes[std::make_pair(mbx2, mbx1)] = bond.dihedralType;
+			}
+
+			// Save atoms involved in ring-closing bonds
+			if (bond.ringClosing) {
+				mobilizedBodiesInfo[mbx1].atomsInRingClosingBonds.insert(atom1_name);
+				mobilizedBodiesInfo[mbx2].atomsInRingClosingBonds.insert(atom2_name);
+			}
+		}
+
+		for (const auto& atom : topology.getAtoms()) {
+			const auto mbIx = topology.getAtomMobilizedBodyIndexThroughDumm(atom.identity.compoundAtomIndex, *forceField);
+        	const auto& name = atom.identity.uniqueAtomName;
+
+			if (mobilizedBodiesInfo[mbIx].atomsInRingClosingBonds.find(name) == mobilizedBodiesInfo[mbIx].atomsInRingClosingBonds.end()) {
+				mobilizedBodiesInfo[mbIx].atoms.insert(name);
+			}
 		}
 	}
 
@@ -807,6 +852,9 @@ bool World::isOverconstrained() const {
 	auto [medUDot, madUDot] = calculateRobustStats(udots);
 	auto [medQDotDot, madQDotDot] = calculateRobustStats(qdotdots);
 
+	// We deliberately don't check for aboslute value here
+	// If the system has huge forces (eg not minimized) the values can be very high but that doesn't necessarily mean there is an overconstraint
+	// This will be caught by HMCSampler::reinitialize()
 	auto isOutlier = [](SimTK::Real val, SimTK::Real median, SimTK::Real mad) {
 		if (std::isnan(val) || std::isinf(val)) return true;
 		constexpr SimTK::Real k = 3.5;
@@ -845,76 +893,102 @@ bool World::isOverconstrained() const {
 		anyInvalid = anyInvalid || invalid;
 	}
 
-	// Stop here if all mobilized bodies are valid
-	// We don't want to print a huge table if everything is fine
-	if (!anyInvalid) {
-		std::cout << "\tNo overconstraints detected." << std::endl;
-		return false;
-	}
+	// // Stop here if all mobilized bodies are valid
+	// // We don't want to print a huge table if everything is fine
+	// if (!anyInvalid) {
+	// 	std::cout << "\tNo overconstraints detected." << std::endl;
+	// 	return false;
+	// }
 
 	// Print mobilized bodies info
 	struct Row {
-		std::string mbIx, invalid, q, u, qdot, udot, qddot, atoms;
+		std::string mbx, parent_mbx, dihedral, invalid, q, u, qdot, udot, qddot, atoms, ring_atoms;
 	};
 
 	std::vector<Row> rows;
-	size_t w_mbIx = 4, w_invalid = 7, w_q = 1, w_u = 1, w_qdot = 1, w_udot = 1, w_qddot = 1, w_atoms = 5;
+	// Initialize widths
+	size_t w_mbIx = 4, w_parent = 10, w_dihedral = 13, w_invalid = 7, 
+		w_q = 1, w_u = 1, w_qdot = 1, w_udot = 1, w_qddot = 1, 
+		w_atoms = 5, w_ring = 10;
 
 	for (SimTK::MobilizedBodyIndex mbIx(1); mbIx < numBodies; ++mbIx) {
+		const auto& mobod = matter->getMobilizedBody(mbIx);
 		const auto& info = mobilizedBodiesInfo[mbIx];
+		const auto parentIx = mobod.getParentMobilizedBody().getMobilizedBodyIndex();
 
 		Row r;
-		r.mbIx   = std::to_string(mbIx);
-		r.invalid= info.invalid ? "invalid" : "";
-		r.q      = vecToString(info.q);
-		r.u      = vecToString(info.u);
-		r.qdot   = vecToString(info.qdot);
-		r.udot   = vecToString(info.udot);
-		r.qddot  = vecToString(info.qdotdot);
-		r.atoms  = atomsToString(info.uniqueAtomNames);
+		r.mbx        = std::to_string(mbIx);
+		r.parent_mbx = std::to_string(parentIx);
+		
+		// Look up dihedral type between this body and its parent
+		auto it = dihedralTypes.find(std::make_pair(mbIx, parentIx));
+		r.dihedral   = (it != dihedralTypes.end()) ? it->second : "N/A";
 
-		w_mbIx  = std::max(w_mbIx,  r.mbIx.size());
-		w_q     = std::max(w_q,     r.q.size());
-		w_u     = std::max(w_u,     r.u.size());
-		w_qdot  = std::max(w_qdot,  r.qdot.size());
-		w_udot  = std::max(w_udot,  r.udot.size());
-		w_qddot = std::max(w_qddot, r.qddot.size());
-		w_atoms = std::max(w_atoms, r.atoms.size());
+		r.invalid    = info.invalid ? "invalid" : "";
+		r.q          = vecToString(info.q);
+		r.u          = vecToString(info.u);
+		r.qdot       = vecToString(info.qdot);
+		r.udot       = vecToString(info.udot);
+		r.qddot      = vecToString(info.qdotdot);
+		r.atoms      = atomsToString(info.atoms);
+		// New column for ring closing atoms
+		r.ring_atoms = atomsToString(info.atomsInRingClosingBonds);
+
+		// Update widths
+		w_mbIx     = std::max(w_mbIx,     r.mbx.size());
+		w_parent   = std::max(w_parent,   r.parent_mbx.size());
+		w_dihedral = std::max(w_dihedral, r.dihedral.size());
+		w_q        = std::max(w_q,        r.q.size());
+		w_u        = std::max(w_u,        r.u.size());
+		w_qdot     = std::max(w_qdot,     r.qdot.size());
+		w_udot     = std::max(w_udot,     r.udot.size());
+		w_qddot    = std::max(w_qddot,    r.qddot.size());
+		w_atoms    = std::max(w_atoms,    r.atoms.size());
+		w_ring     = std::max(w_ring,     r.ring_atoms.size());
 
 		rows.push_back(std::move(r));
 	}
 
+	// Print Header
 	std::cerr << std::left
-			<< std::setw(w_mbIx + 2)  << "mbIx"
-			<< std::setw(w_invalid + 2) << "invalid"
-			<< std::setw(w_q + 2)     << "q"
-			<< std::setw(w_u + 2)     << "u"
-			<< std::setw(w_qdot + 2)  << "qdot"
-			<< std::setw(w_udot + 2)  << "udot"
-			<< std::setw(w_qddot + 2) << "qddot"
-			<< "atoms"
+			<< std::setw(w_mbIx + 2)     << "mbx"
+			<< std::setw(w_parent + 2)   << "parent"
+			<< std::setw(w_dihedral + 2) << "dihedral"
+			<< std::setw(w_invalid + 2)  << "invalid"
+			<< std::setw(w_q + 2)        << "q"
+			<< std::setw(w_u + 2)        << "u"
+			<< std::setw(w_qdot + 2)     << "qdot"
+			<< std::setw(w_udot + 2)     << "udot"
+			<< std::setw(w_qddot + 2)    << "qddot"
+			<< std::setw(w_atoms + 2)    << "atoms"
+			<< "ring_atoms"
 			<< std::endl;
 
-	size_t total_width =
-		w_mbIx + w_q + w_u + w_qdot + w_udot + w_qddot + w_atoms
-		+ 2 * 6;
+	// Recalculate total width for the separator line (10 columns with padding)
+	size_t total_width = w_mbIx + w_parent + w_dihedral + w_invalid + w_q + w_u + 
+						w_qdot + w_udot + w_qddot + w_atoms + w_ring + (2 * 10);
 
 	std::cerr << std::string(total_width, '-') << std::endl;
 
+	// Print Rows
 	for (const auto& r : rows) {
 		std::cerr << std::left
-				<< std::setw(w_mbIx + 2)  << r.mbIx
-				<< std::setw(w_invalid + 2) << r.invalid
-				<< std::setw(w_q + 2)     << r.q
-				<< std::setw(w_u + 2)     << r.u
-				<< std::setw(w_qdot + 2)  << r.qdot
-				<< std::setw(w_udot + 2)  << r.udot
-				<< std::setw(w_qddot + 2) << r.qddot
-				<< r.atoms
+				<< std::setw(w_mbIx + 2)     << r.mbx
+				<< std::setw(w_parent + 2)   << r.parent_mbx
+				<< std::setw(w_dihedral + 2) << r.dihedral
+				<< std::setw(w_invalid + 2)  << r.invalid
+				<< std::setw(w_q + 2)        << r.q
+				<< std::setw(w_u + 2)        << r.u
+				<< std::setw(w_qdot + 2)     << r.qdot
+				<< std::setw(w_udot + 2)     << r.udot
+				<< std::setw(w_qddot + 2)    << r.qddot
+				<< std::setw(w_atoms + 2)    << r.atoms
+				<< r.ring_atoms
 				<< std::endl;
 	}
 
-	return true;
+	// return true;
+	return false;
 }
 
 bool World::hasRigidBodyViolations(SimTK::Real tolerance) {

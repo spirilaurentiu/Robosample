@@ -19,6 +19,7 @@
 #include <time.h>
 #include <array>
 #include <math.h>
+#include <unordered_set>
 
 #include "Simbody.h"
 #include "Molmodel.h"
@@ -67,12 +68,14 @@ std::string vecToString(const std::vector<T>& v) {
     return oss.str();
 }
 
-inline std::string atomsToString(const std::vector<std::string>& atoms) {
+inline std::string atomsToString(const std::unordered_set<std::string>& atoms) {
     std::ostringstream oss;
     oss << "[";
-    for (size_t i = 0; i < atoms.size(); ++i) {
-        oss << atoms[i];
+    size_t i = 0;
+    for (const auto& atom : atoms) {
+        oss << atom;
         if (i + 1 < atoms.size()) oss << ", ";
+        ++i;
     }
     oss << "]";
     return oss.str();
@@ -1168,6 +1171,7 @@ public:
 		return acceptanceRMSD;
 	}
 
+	bool hasValidRingClosingBonds() const;
 	bool isOverconstrained() const;
 	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 	bool hasRigidBodyViolations(SimTK::Real tolerance);

@@ -150,6 +150,7 @@ struct RoboAtom {
 struct RoboBond {
     std::vector<SimTK::BondMobility::Mobility> mobilities;
     std::array<SimTK::Compound::AtomIndex, 2> compoundAtomIndices;
+    std::string dihedralType;
 
     std::array<int, 2> globalIndices = { -1, -1 };
     SimTK::Real stiffnessInKJPerNmSq = 0.0;
@@ -164,13 +165,15 @@ struct RoboBond {
         SimTK::Real stiffnessInKJPerNmSq_,
         SimTK::Real nominalLengthInNm_,
         int moleculeIndex_,
-        bool ringClosing_
+        bool ringClosing_,
+        const std::string& dihedralType_
     )
         : globalIndices(globalIndices_),
           stiffnessInKJPerNmSq(stiffnessInKJPerNmSq_),
           nominalLengthInNm(nominalLengthInNm_),
           moleculeIndex(moleculeIndex_),
-          ringClosing(ringClosing_)
+          ringClosing(ringClosing_),
+          dihedralType(dihedralType_)
     {
         compoundAtomIndices[0] = SimTK::Compound::AtomIndex(compoundAtomIndices_[0]);
         compoundAtomIndices[1] = SimTK::Compound::AtomIndex(compoundAtomIndices_[1]);

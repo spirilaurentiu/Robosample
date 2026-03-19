@@ -41,6 +41,7 @@ class BondParams:
     stiffness_in_kj_per_nm_sq: float
     nominal_length_in_nm: float
     is_ring_closing: bool
+    dihedral_type: str
 
 @dataclass(slots=True)
 class AngleParams:
@@ -163,7 +164,8 @@ class MoleculePrototype:
                 ),
                 stiffness_in_kj_per_nm_sq=bond.type.uk.value_in_unit(pmd.unit.kilojoule_per_mole / pmd.unit.nanometer**2),
                 nominal_length_in_nm=bond.type.ureq.value_in_unit(pmd.unit.nanometer),
-                is_ring_closing=('ring' in dihedral_type)
+                is_ring_closing=('ring' in dihedral_type),
+                dihedral_type=dihedral_type
             ))
 
         # Build angle parameters
@@ -349,99 +351,64 @@ class MoleculePrototype:
         List of tuples:
             (parent_local_index, child_local_index, is_ring_closing)
         """
-        # Acyclic graph
-        acyclic_graph = nx.Graph()
-        acyclic_graph.add_nodes_from(atom.idx for atom in self.molecule.atoms)
+        graph = nx.Graph()
+        for bond in self.molecule.bonds:
+            graph.add_edge(bond.atom1.idx, bond.atom2.idx)
 
-        # Count how many rigid bonds each atom is involved in to enforce the constraint that no atom can be involved in more than one rigid bond
-        rigid_bonds_involved: Dict[int, int] = {}
+        # Count how many ring closing bonds each atom is involved in to enforce the constraint that no atom can be involved in more than one ring closing bond
+        ring_closing_bonds_involved: Dict[int, int] = {}
 
         # Set of ring-closing bonds for quick lookup
         ring_closing_bonds: Set[Tuple[int, int]] = set()
 
-        # First pass: identify standardized ring-closing dihedrals
-        for bond in self.molecule.bonds:
-            parent, child = bond.atom2, bond.atom1
-            parent_idx, child_idx = parent.idx, child.idx
+        while True:
+            cycles = nx.cycle_basis(graph)
+            if not cycles:
+                break
 
-            # Check if this is the middle bond of a standardized dihedral
-            # Non-standardized dihedral are None and we treat as non-ring-closing for now
-            dihedral_type = self._get_standardized_dihedral_type(parent, child)
+            cycle = cycles[0]
+            removed = False
 
-            if 'ring' in dihedral_type or 'disulfide' in dihedral_type:
-                # Check rigid bond constraints
-                for idx in (parent_idx, child_idx):
-                    if rigid_bonds_involved.get(idx, 0) >= 1:
-                        raise ValueError(f"Atom {idx} involved in multiple rigid bonds.")
-                    rigid_bonds_involved[idx] = rigid_bonds_involved.get(idx, 0) + 1
-                ring_closing_bonds.add((parent_idx, child_idx))
-            else:
-                acyclic_graph.add_edge(parent_idx, child_idx)
+            for i in range(len(cycle)):
+                u, v = cycle[i], cycle[(i + 1) % len(cycle)]
+                parent, child = self.molecule[u], self.molecule[v]
+                parent_idx, child_idx = parent.idx, child.idx
 
-        # Compute forbidden bonds and distances
-        forbidden_edges = self._find_forbidden_bonds(forbidden_atom_type_pairs)
-        forbidden_nodes = GraphTraversalUtils.bond_edges_to_nodes(forbidden_edges)
-        forbidden_atom_dist = (GraphTraversalUtils.nodes_to_distances(acyclic_graph, forbidden_nodes) if forbidden_nodes else {})
+                dihedral_type = self._get_standardized_dihedral_type(parent, child)
 
-        # Handle residual cycles
-        for cycle in sorted(nx.cycle_basis(acyclic_graph), key=len):
-            candidate_bonds: List[BondProperties] = []
-            n = len(cycle)
-            for i in range(n):
-                u, v = cycle[i], cycle[(i + 1) % n]
-                if frozenset((u, v)) in forbidden_edges:
-                    continue
+                if dihedral_type is not None and 'ring' in dihedral_type:
+                    for idx in (parent_idx, child_idx):
+                        if ring_closing_bonds_involved.get(idx, 0) >= 1:
+                            raise ValueError(f"Atom {idx} involved in multiple rigid bonds.")
+                        ring_closing_bonds_involved[idx] = ring_closing_bonds_involved.get(idx, 0) + 1
 
-                atom_u, atom_v = self.molecule[u], self.molecule[v]
-                degree_sum = acyclic_graph.degree[u] + acyclic_graph.degree[v]
-                is_rigid = is_rigid_bond(atom_u, atom_v)
-
-                forbidden_distance = max(
-                    forbidden_atom_dist.get(u, 0),
-                    forbidden_atom_dist.get(v, 0)
-                ) if forbidden_atom_dist else None
-
-                candidate_bonds.append(BondProperties(u, v, is_rigid, forbidden_distance, degree_sum))
-
-            # Sort bonds: rigid first, farthest from forbidden atoms, lowest degree sum
-            candidate_bonds.sort(
-                key=lambda b: (
-                    not b.is_rigid,
-                    -(b.sg_sg_bond_distance or -1),
-                    b.sum_of_degrees
-                )
-            )
-
-            # Pick first eligible bond
-            for bond in candidate_bonds:
-                u, v = bond.parent_atom_prmtop_index, bond.child_atom_prmtop_index
-                if (u, v) not in ring_closing_bonds and (v, u) not in ring_closing_bonds:
+                    ring_closing_bonds.add((parent_idx, child_idx))
+                    graph.remove_edge(u, v)
+                    removed = True
                     break
-            else:
-                continue  # no bond eligible
 
-            # Check rigid bond constraints
-            for idx in (u, v):
-                if rigid_bonds_involved.get(idx, 0) >= 1:
-                    raise ValueError(f"Atom {idx} involved in multiple rigid bonds.")
-                rigid_bonds_involved[idx] = rigid_bonds_involved.get(idx, 0) + 1
+                if is_rigid_bond(parent, child):
+                    ring_closing_bonds.add((parent_idx, child_idx))
+                    graph.remove_edge(u, v)
+                    removed = True
+                    break
 
-            acyclic_graph.remove_edge(u, v)
-            ring_closing_bonds.add((u, v))
-
+            if not removed:
+                raise RuntimeError("Cycle detected but no removable edge found.")
+        
         # Validation
-        if acyclic_graph.number_of_nodes() != len(self.molecule.atoms):
+        if graph.number_of_nodes() != len(self.molecule.atoms):
             raise ValueError("Graph contains unknown nodes.")
-        if not nx.is_forest(acyclic_graph):
+        if not nx.is_forest(graph):
             raise ValueError("Graph contains residual cycles.")
-        if not nx.is_connected(acyclic_graph):
+        if not nx.is_connected(graph):
             raise ValueError("Graph disconnected after ring closure removal.")
 
         # Generate BFS order for non-ring-closing bonds
         bond_to_resid = {frozenset((b.atom1.idx, b.atom2.idx)): b.atom1.residue.idx for b in self.molecule.bonds}
         edges_with_flags = [
             (u, v, self._get_standardized_dihedral_type(self.molecule[u], self.molecule[v]), bond_to_resid.get(frozenset((u, v)), -1))
-            for u, v in nx.bfs_edges(acyclic_graph, source=root)
+            for u, v in nx.bfs_edges(graph, source=root)
         ]
 
         # Append ring-closing bonds (order irrelevant)
@@ -453,9 +420,119 @@ class MoleculePrototype:
         
         # We are implicitly constructing a spanning tree used to define internal coordinates
         # We need to validate parents have already been visited and children have not been visited yet
-        GraphTraversalUtils.validate_bfs_parent_child_edges(acyclic_graph, root, edges_with_flags)
+        GraphTraversalUtils.validate_bfs_parent_child_edges(graph, root, edges_with_flags)
 
-        return acyclic_graph, edges_with_flags
+        return graph, edges_with_flags
+    
+
+
+        # # Acyclic graph
+        # acyclic_graph = nx.Graph()
+        # acyclic_graph.add_nodes_from(atom.idx for atom in self.molecule.atoms) 
+
+        # # Count how many ring closing bonds each atom is involved in to enforce the constraint that no atom can be involved in more than one ring closing bond
+        # ring_closing_bonds_involved: Dict[int, int] = {}
+
+        # # Set of ring-closing bonds for quick lookup
+        # ring_closing_bonds: Set[Tuple[int, int]] = set()
+
+        # # First pass: identify standardized ring-closing dihedrals
+        # for bond in self.molecule.bonds:
+        #     parent, child = bond.atom2, bond.atom1
+        #     parent_idx, child_idx = parent.idx, child.idx
+
+        #     # Check if this is the middle bond of a standardized dihedral
+        #     # Non-standardized dihedral are None and we treat as non-ring-closing for now
+        #     dihedral_type = self._get_standardized_dihedral_type(parent, child)
+
+        #     if 'ring' in dihedral_type:
+        #         # Check rigid bond constraints
+        #         for idx in (parent_idx, child_idx):
+        #             if ring_closing_bonds_involved.get(idx, 0) >= 1:
+        #                 raise ValueError(f"Atom {idx} involved in multiple rigid bonds.")
+        #             ring_closing_bonds_involved[idx] = ring_closing_bonds_involved.get(idx, 0) + 1
+        #         ring_closing_bonds.add((parent_idx, child_idx))
+        #     else:
+        #         acyclic_graph.add_edge(parent_idx, child_idx)
+
+        # # Compute forbidden bonds and distances
+        # forbidden_edges = self._find_forbidden_bonds(forbidden_atom_type_pairs)
+        # forbidden_nodes = GraphTraversalUtils.bond_edges_to_nodes(forbidden_edges)
+        # forbidden_atom_dist = (GraphTraversalUtils.nodes_to_distances(acyclic_graph, forbidden_nodes) if forbidden_nodes else {})
+
+        # # Handle residual cycles
+        # for cycle in sorted(nx.cycle_basis(acyclic_graph), key=len):
+        #     candidate_bonds: List[BondProperties] = []
+        #     n = len(cycle)
+        #     for i in range(n):
+        #         u, v = cycle[i], cycle[(i + 1) % n]
+        #         if frozenset((u, v)) in forbidden_edges:
+        #             continue
+
+        #         atom_u, atom_v = self.molecule[u], self.molecule[v]
+        #         degree_sum = acyclic_graph.degree[u] + acyclic_graph.degree[v]
+        #         is_rigid = is_rigid_bond(atom_u, atom_v)
+
+        #         forbidden_distance = max(
+        #             forbidden_atom_dist.get(u, 0),
+        #             forbidden_atom_dist.get(v, 0)
+        #         ) if forbidden_atom_dist else None
+
+        #         candidate_bonds.append(BondProperties(u, v, is_rigid, forbidden_distance, degree_sum))
+
+        #     # Sort bonds: rigid first, farthest from forbidden atoms, lowest degree sum
+        #     candidate_bonds.sort(
+        #         key=lambda b: (
+        #             not b.is_rigid,
+        #             -(b.sg_sg_bond_distance or -1),
+        #             b.sum_of_degrees
+        #         )
+        #     )
+
+        #     # Pick first eligible bond
+        #     for bond in candidate_bonds:
+        #         u, v = bond.parent_atom_prmtop_index, bond.child_atom_prmtop_index
+        #         if (u, v) not in ring_closing_bonds and (v, u) not in ring_closing_bonds:
+        #             break
+        #     else:
+        #         continue  # no bond eligible
+
+        #     # Check rigid bond constraints
+        #     for idx in (u, v):
+        #         if ring_closing_bonds_involved.get(idx, 0) >= 1:
+        #             raise ValueError(f"Atom {idx} involved in multiple rigid bonds.")
+        #         ring_closing_bonds_involved[idx] = ring_closing_bonds_involved.get(idx, 0) + 1
+
+        #     acyclic_graph.remove_edge(u, v)
+        #     ring_closing_bonds.add((u, v))
+
+        # # Validation
+        # if acyclic_graph.number_of_nodes() != len(self.molecule.atoms):
+        #     raise ValueError("Graph contains unknown nodes.")
+        # if not nx.is_forest(acyclic_graph):
+        #     raise ValueError("Graph contains residual cycles.")
+        # if not nx.is_connected(acyclic_graph):
+        #     raise ValueError("Graph disconnected after ring closure removal.")
+
+        # # Generate BFS order for non-ring-closing bonds
+        # bond_to_resid = {frozenset((b.atom1.idx, b.atom2.idx)): b.atom1.residue.idx for b in self.molecule.bonds}
+        # edges_with_flags = [
+        #     (u, v, self._get_standardized_dihedral_type(self.molecule[u], self.molecule[v]), bond_to_resid.get(frozenset((u, v)), -1))
+        #     for u, v in nx.bfs_edges(acyclic_graph, source=root)
+        # ]
+
+        # # Append ring-closing bonds (order irrelevant)
+        # edges_with_flags += [(u, v, 'ring-closing', bond_to_resid.get(frozenset((u, v)), -1)) for u, v in ring_closing_bonds]
+
+        # # Make sure we have all bonds accounted for
+        # if len(edges_with_flags) != len(self.molecule.bonds):
+        #     raise ValueError("Mismatch in number of bonds after processing.")
+        
+        # # We are implicitly constructing a spanning tree used to define internal coordinates
+        # # We need to validate parents have already been visited and children have not been visited yet
+        # GraphTraversalUtils.validate_bfs_parent_child_edges(acyclic_graph, root, edges_with_flags)
+
+        # return acyclic_graph, edges_with_flags
     
     @staticmethod
     def _sort_atoms_by_mass(atoms: list[pmd.Atom]) -> list[pmd.Atom]:

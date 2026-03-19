@@ -130,7 +130,7 @@ class Context(rb.Context):
                  testing: bool = False,
                  rigid_protein_phi: bool = False,
                  rigid_protein_psi: bool = False,
-                 rigid_protein_omega: bool = False,
+                 rigid_protein_omega: bool = True,
                  rigid_protein_chi1: bool = False,
                  rigid_protein_chi2: bool = False,
                  rigid_protein_chi3: bool = False,
@@ -347,6 +347,7 @@ class Context(rb.Context):
                             nominal_length_in_nm=bond.nominal_length_in_nm,
                             molecule_index=instance_index,
                             ring_closing=bond.is_ring_closing,
+                            dihedral_type=bond.dihedral_type
                         )
                     )
 
@@ -379,6 +380,9 @@ class Context(rb.Context):
 
                     # if ss[0][resid] != 'C':
                     #     continue
+
+                    if 'pro-' in dihedral_type:
+                        continue
 
                     # Optional
                     if dihedral_type == 'protein-phi' and not rigid_protein_phi:
@@ -877,7 +881,7 @@ class Context(rb.Context):
             super().addThermodynamicState(temp, accept_reject_modes, distort_options, distort_args, flow, work, integrators, worldIndexes, timesteps, mdsteps)
 
         if not super().validate_context():
-            raise ValueError("Context validation failed after initialization. Please check the system setup and parameters.")
+            raise ValueError("Invalid context.")
 
     def generate_synthetic_atom_classes(self):
         # Signatures store the "parameter environment" of each atom

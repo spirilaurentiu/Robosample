@@ -382,6 +382,12 @@ bool Context::validateContext() {
 	bool valid = true;
 
 	for (auto& world : worlds) {
+		// if (!world.hasValidRingClosingBonds()) {
+		// 	std::cerr << "[ERROR] World " << world.getOwnIndex() << " has invalid ring closing bonds." << std::endl;
+		// 	valid = false;
+		// 	continue;
+		// }
+
 		if (world.isOverconstrained()) {
 			valid = false;
 			continue;

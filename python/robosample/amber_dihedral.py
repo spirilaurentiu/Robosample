@@ -21,13 +21,12 @@ PROTEIN_SIDECHAIN = {
     # C-terminus NME
     'NME': {},
 
-    # Alanine
-    'ALA': {
-        'chi1': ('N', 'CA', 'CB', 'HB1'),
-    },
+    # Alanine does not have any side chain dihedrals since its definition requires four heavy atoms
+    'ALA': {},
 
-    # Arginine as a terminal large, resonance-stabilized, planar structure with a diffuse positive charge guanidinium group
-    # I.e CZ connected to to two nitrogen atoms (NH1, NH2) which are connected to two hydrogens each (HH11, HH12 and HH21, HH22)
+    # Arginine (ARG) has a terminal large, resonance-stabilized, planar structure with a diffuse positive charge guanidinium group
+    # CZ is connected to two nitrogen atoms (NH1, NH2) which are connected to two hydrogens each (HH11, HH12 and HH21, HH22)
+    # The actual guanidinium group is (HH11, HH12, NH1), CZ, (HH21, HH22, NH2) and chi5 allows rotation of this entire group around the NE-CZ bond
     'ARG': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
@@ -36,20 +35,19 @@ PROTEIN_SIDECHAIN = {
         'chi5': ('CD', 'NE', 'CZ', 'NH1'),
     },
 
-    # Asparagine
+    # Asparagine (ASN)
     'ASN': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
-        'chi2': ('CA', 'CB', 'CG', 'ND2'),
-        'chi3': ('CB', 'CG', 'ND2', 'HD21'),
+        'chi2': ('CA', 'CB', 'CG', 'OD1'),
     },
 
-    # Aspartate has a terminal rigid planar carboxylate group: one carbon (CG) connected to two oxygens (OD1, OD2)
-    # It can be unprotonated (ASP, charge -1) or protonated (ASH, charge 0) in which there is one hydrogen atom connected to one of the oxygens
-    # We treat the terminus as rigid, similar to ARG
+    # Aspartate (deprotonated, -1)
     'ASP': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'OD1'),
     },
+
+    # Aspartic Acid (protonated, neutral)
     'ASH': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'OD1'),
@@ -57,34 +55,46 @@ PROTEIN_SIDECHAIN = {
 
     # Cysteine (CYS) has a terminal thiol group (HG connected to SG)
     # If HG is lost, it can become CYX and form disulfide bonds or CYM and coordinate metals
+    # IUPAC defines only chi1 (heavy atoms). HG rotation is a torsion, not a chi angle
     'CYS': {
-        'chi1': ('N', 'CA', 'CB', 'SG'),
-        'chi2': ('CA', 'CB', 'SG', 'HG'),
-    },
-    'CYX': {
-        'chi1': ('N', 'CA', 'CB', 'SG'),
-    },
-    'CYM': {
-        # TODO check if metal coordination induces rigid dihedrals
         'chi1': ('N', 'CA', 'CB', 'SG'),
     },
 
-    # Glutamine
+    # Cystine (Disulfide-bonded, neutral)
+    # When bonded, the SG-SG bond creates a chi2 angle reaching into the partner residue
+    'CYX': {
+        'chi1': ('N', 'CA', 'CB', 'SG'),
+        'ring_closing': ('CB', 'SG', 'SG', 'CB'),
+    },
+
+    # Deprotonated Cysteine (Anionic or Metal-coordinated)
+    # Metal coordination (e.g., Zn2+, Fe-S clusters) creates a rigid geometry, 
+    # but it is usually modeled as an external coordinate constraint, not a side-chain chi.
+    'CYM': {
+        'chi1': ('N', 'CA', 'CB', 'SG'),
+    },
+
+    # Glutamine (GLN)
+    # chi3 is defined by OE1 per IUPAC convention for amide groups.
+    # Note: chi4 (hydrogen rotation) is omitted as per heavy-atom standards.
     'GLN': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
-        'chi3': ('CB', 'CG', 'CD', 'NE2'),
-        'chi4': ('CG', 'CD', 'NE2', 'HE21'),
+        'chi3': ('CB', 'CG', 'CD', 'OE1'),
     },
 
-    # Glutamate has a terminal rigid planar carboxylate group: one carbon (CD) connected to two oxygens (OE1, OE2)
-    # It can be unprotonated (GLU, charge -1) or protonated (GLH, charge 0) in which there is one hydrogen atom connected to one of the oxygens
-    # We treat the terminus as rigid, similar to ARG
+    # Glutamate (Deprotonated, -1)
+    # chi3 is defined by OE1 per IUPAC convention for carboxylate symmetry.
     'GLU': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
         'chi3': ('CB', 'CG', 'CD', 'OE1'),
     },
+
+    # Glutamic Acid (Protonated, neutral)
+    # We treat the heavy-atom chi3 as the terminal dihedral.
+    # Note: Does not include the rotation of the hydroxyl proton (HO-C-C-C).
+    # Conventionally, OE1 is the carbonyl oxygen.
     'GLH': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
@@ -95,7 +105,6 @@ PROTEIN_SIDECHAIN = {
     'GLY': {},
 
     # Imidazole (HID/HIE/HIP) is aromatic and essentially planar
-    # TODO does it matter from a kinematic point of view where we place the ring closing bond?
     'HIP': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'ND1'),
@@ -112,46 +121,42 @@ PROTEIN_SIDECHAIN = {
         'ring_closing_1': ('CG', 'ND1', 'CE1', 'NE2'),
     },
 
-    # Isoleucine
+    # Isoleucine (ILE) is branched at CB and has a chiral center at the C3 (beta) position.
     'ILE': {
         'chi1': ('N', 'CA', 'CB', 'CG1'),
-        'chi2.1': ('CA', 'CB', 'CG1', 'CD1'),
-        'chi2.2': ('CA', 'CB', 'CG2', 'HG21'),
-        'chi3': ('CB', 'CG1', 'CD1', 'HD11'),
+        'chi2': ('CA', 'CB', 'CG1', 'CD1'),
     },
 
-    # Leucine
+    # Leucine (LEU)  is branched at the CG (gamma) carbon.
     'LEU': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD1'),
-        'chi3.1': ('CB', 'CG', 'CD1', 'HD11'),
-        'chi3.2': ('CB', 'CG', 'CD2', 'HD21'),
     },
 
-    # Lysine has a long flexible side chain ending in a positively charged amino group (NZ connected to HZ1, HZ2, HZ3)
-    # If one of the hydrogens is lost, it can become LYN (neutral)
-    # This does not affect the chi angles
+    # Lysine (LYS, protonated, charge +1)
+    # chi1-chi4 follow the heavy-atom chain to the terminal nitrogen.
+    # IUPAC/PDB standards do not define chi5 (hydrogen rotation).
     'LYS': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
         'chi3': ('CB', 'CG', 'CD', 'CE'),
         'chi4': ('CG', 'CD', 'CE', 'NZ'),
-        'chi5': ('CD', 'CE', 'NZ', 'HZ1'),
     },
+
+    # Lysine (LYN, deprotonated, neutral)
+    # Heavy-atom dihedrals remain the same as the protonated state.
     'LYN': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD'),
         'chi3': ('CB', 'CG', 'CD', 'CE'),
         'chi4': ('CG', 'CD', 'CE', 'NZ'),
-        'chi5': ('CD', 'CE', 'NZ', 'HZ1'),
     },
 
-    # Methionine
+    # Methionine (MET) features a thioether linkage. 
     'MET': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'SD'),
         'chi3': ('CB', 'CG', 'SD', 'CE'),
-        'chi4': ('CG', 'SD', 'CE', 'HE1'),
     },
 
     # Phenylalanine
@@ -161,31 +166,21 @@ PROTEIN_SIDECHAIN = {
         'ring_closing_1': ('CG', 'CD1', 'CE1', 'CZ'), # Same as TYR
     },
 
-    # In prooline, there are 5 chi angles
-    # Chi1 and Chi2 are the most important for puckering
-    # Chi5 is equivalent to phi
-    # Chi4 is defined as ring closing
-    'PRO': {
-        'chi1': ('N', 'CA', 'CB', 'CG'),
-        'chi2': ('CA', 'CB', 'CG', 'CD'),
-        'chi3': ('CB', 'CG', 'CD', 'N'),
-        'ring_closing_1': ('CG', 'CD', 'N', 'CA'),
-    },
+    # Handle proline separately
+    'PRO': {},
 
-    # Serine
+    # Serine (SER)
     'SER': {
         'chi1': ('N', 'CA', 'CB', 'OG'),
-        'chi2': ('CA', 'CB', 'OG', 'HG'),
     },
 
-    # Threonine
+    # Threonine (THR) is branched at CB and has a chiral center at the C3 (beta) position.
     'THR': {
         'chi1': ('N', 'CA', 'CB', 'OG1'),
-        'chi2.1': ('CA', 'CB', 'OG1', 'HG1'),
-        'chi2.2': ('CA', 'CB', 'CG2', 'HG21'),
     },
 
-    # Tryptophan's side chain is a bicyclic structure called the indole group, which is composed of two fused rings: benzene and pyrrole
+    # Tryptophan (TRP)
+    # The side chain is a rigid, planar bicyclic indole group.
     'TRP': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD1'),
@@ -193,20 +188,18 @@ PROTEIN_SIDECHAIN = {
         'ring_closing_2': ('CE2', 'CZ2', 'CH2', 'CZ3'), # Benzene ring
     },
 
-    # Tyrosine
+    # Tyrosine (TYR)
+    # The side chain is a rigid, planar aromatic ring with a hydroxyl group.
     'TYR': {
         'chi1': ('N', 'CA', 'CB', 'CG'),
         'chi2': ('CA', 'CB', 'CG', 'CD1'),
-        'chi3': ('CE1', 'CZ', 'OH', 'HH'),
         'ring_closing_1': ('CG', 'CD1', 'CE1', 'CZ'), # Same as PHE
     },
 
-    # Valine
+    # Valine (VAL) is branched at the CB (beta) carbon with two methyl groups.
     'VAL': {
         'chi1': ('N', 'CA', 'CB', 'CG1'),
-        'chi2.1': ('CA', 'CB', 'CG1', 'HG11'),
-        'chi2.2': ('CA', 'CB', 'CG2', 'HG21'),
-    }
+    },
 }
 
 GLYCAN_PROTEIN_LINKAGE = {
@@ -363,6 +356,33 @@ class DihedralClassifier:
         # Check if the dihedral matches any of the defined protein dihedrals (backbone or side chain)
         # We check both the forward and reverse order of the atoms to account for different orientations
         atoms = [dihedral.atom1, dihedral.atom2, dihedral.atom3, dihedral.atom4]
+
+        # Special check for proline
+        PROLINE_RING = {
+            ('N', 'CA', 'CB', 'CG'): "pro-chi1",
+            ('CA', 'CB', 'CG', 'CD'): "pro-chi2",
+            ('CB', 'CG', 'CD', 'N'): 'pro-chi3',
+            ('CG', 'CD', 'N', 'CA'): 'pro-chi4',
+
+            # Topologies intentionally skip dihedrals that traverse the ring closure bond
+            # Including it would create a dihedral that is linearly dependent on others already defined in the ring
+            # Thus, this is absent and will never be detected
+            # I include it here for completeness and to prove the point
+            ('CD', 'N', 'CA', 'C'): 'pro-chi5',
+        }
+
+        # Check that residue name is PRO for all atoms
+        if all(atom.residue.name == 'PRO' for atom in atoms):
+            label = PROLINE_RING.get(_extract_atom_names(atoms))
+            if not label:
+                atoms = list(reversed(atoms))
+                label = PROLINE_RING.get(_extract_atom_names(atoms))
+            if label:
+                if label == 'pro-chi3':
+                    return 'ring_closing_1'
+                return label
+
+        # Non-proline
         label = self.protein_dihedral_definitions.get(_extract_atom_names(atoms))
         if not label:
             atoms = list(reversed(atoms))
@@ -373,6 +393,10 @@ class DihedralClassifier:
 
         # Phi: C(i-1) N(i) CA(i) C(i)
         if label == 'phi':
+            is_proline_phi = (atoms[1].residue.name == 'PRO' and atoms[2].residue.name == 'PRO' and atoms[3].residue.name == 'PRO')
+            if is_proline_phi:
+                label = 'pro-phi'
+            
             if resids[0] == i-1 and resids[1] == i and resids[2] == i and resids[3] == i:
                 return label
             else:
