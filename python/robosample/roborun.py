@@ -83,6 +83,21 @@ context = robosample.Context(name=args.name, seed=args.seed, prmtop=args.prmtop,
 sele = context.getDefaultBonds('standard')
 context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD)
 
+
+
+
+# Add one replica at 300 K
+context.initialize([300.0])
+
+for num_steps in [1, 2, 4, 8]:
+    time_step = 0.001 # 1 fs
+    violations = robosample.robo_bindings.RigidBodyViolations()
+    context.getWorld(0).has_rigid_body_violations(time_step, num_steps, violations)
+
+    print(violations)
+
+
+
 # for flex in context.getDefaultBonds('macrocycle'):
 # 	context.addTorsionalWorld([flex]).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS_TD, boostMDSteps=MDSTEPS_TD, acceptRejectMode=robosample.rb.AcceptRejectMode.AlwaysAccept)
 

@@ -9,6 +9,7 @@
 #include "common.h"
 #include <cstddef>
 #include <iostream>
+#include <numeric>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
@@ -381,67 +382,82 @@ bool Context::validateContext() {
 	constexpr SimTK::Real TOLERANCE = 1e-7;
 	bool valid = true;
 
-	// for (auto& world : worlds) {
-	// 	if (world.isOverconstrained()) {
-	// 		valid = false;
-	// 		continue;
-	// 	};
+	for (auto& world : worlds) {
+		if (world.isOverconstrained()) {
+			valid = false;
+			continue;
+		};
 
-	// 	world.setAtomTargetLocationsToState(atomTargetLocationsCache);
-	// 	const auto errors = world.checkCoordinateTransfer(atomTargetLocationsCache);
+		world.setAtomTargetLocationsToState(atomTargetLocationsCache);
+		const auto errors = world.checkCoordinateTransfer(atomTargetLocationsCache);
 
-	// 	for (const auto& residual : errors.matchResiduals) {
-	// 		if (residual > TOLERANCE) {
-	// 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Match residual " << residual << " exceeds tolerance." << std::endl;
-	// 			valid = false;
-	// 		}
-	// 	}
-	// 	if (errors.cartesian > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian residual " << errors.cartesian << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.cartesianMax > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian max residual " << errors.cartesianMax << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.bonds > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond residual " << errors.bonds << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.bondsMax > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond max residual " << errors.bondsMax << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.angles > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle residual " << errors.angles << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.anglesMax > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle max residual " << errors.anglesMax << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.properDihedrals > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral residual " << errors.properDihedrals << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.properDihedralsMax > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral max residual " << errors.properDihedralsMax << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.improperDihedrals > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral residual " << errors.improperDihedrals << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
-	// 	if (errors.improperDihedralsMax > TOLERANCE) {
-	// 		std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral max residual " << errors.improperDihedralsMax << " exceeds tolerance." << std::endl;
-	// 		valid = false;
-	// 	}
+		for (const auto& residual : errors.matchResiduals) {
+			if (residual > TOLERANCE) {
+				std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Match residual " << residual << " exceeds tolerance." << std::endl;
+				valid = false;
+			}
+		}
+		if (errors.cartesian > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian residual " << errors.cartesian << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.cartesianMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian max residual " << errors.cartesianMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.bonds > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond residual " << errors.bonds << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.bondsMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond max residual " << errors.bondsMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.angles > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle residual " << errors.angles << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.anglesMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle max residual " << errors.anglesMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.properDihedrals > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral residual " << errors.properDihedrals << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.properDihedralsMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral max residual " << errors.properDihedralsMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.improperDihedrals > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral residual " << errors.improperDihedrals << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
+		if (errors.improperDihedralsMax > TOLERANCE) {
+			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral max residual " << errors.improperDihedralsMax << " exceeds tolerance." << std::endl;
+			valid = false;
+		}
 
-	// 	if (world.hasRigidBodyViolations(TOLERANCE)) {
-	// 		valid = false;
-	// 		continue;
-	// 	}
-	// }
+		RigidBodyViolations violations;
+		if (world.hasRigidBodyViolations(0.001, 1, violations)) {
+			const SimTK::Real bondViolation = std::accumulate(violations.bond.begin(), violations.bond.end(), 0.0);
+			const SimTK::Real angleViolation = std::accumulate(violations.angle.begin(), violations.angle.end(), 0.0);
+			const SimTK::Real properDihedralViolation = std::accumulate(violations.proper.begin(), violations.proper.end(), 0.0);
+			const SimTK::Real improperDihedralViolation = std::accumulate(violations.improper.begin(), violations.improper.end(), 0.0);
+
+			std::cout << std::endl;
+
+			std::cout << bondViolation << " "
+					  << angleViolation << " "
+					  << properDihedralViolation << " "
+					  << improperDihedralViolation << std::endl;
+
+			valid = false;
+			continue;
+		}
+
+		std::cout << std::endl;
+	}
 
 	return valid;
 

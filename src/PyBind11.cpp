@@ -312,6 +312,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("improperDihedrals", &CoordinateTransferError::improperDihedrals)
         .def_readwrite("improperDihedralsMax", &CoordinateTransferError::improperDihedralsMax);
 
+    py::class_<RigidBodyViolations>(m, "RigidBodyViolations")
+        .def(py::init<>())
+        .def_readwrite("bond", &RigidBodyViolations::bond)
+        .def_readwrite("angle", &RigidBodyViolations::angle)
+        .def_readwrite("proper", &RigidBodyViolations::proper)
+        .def_readwrite("improper", &RigidBodyViolations::improper);
+
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
         .def("getAtomNameByPrmtopIndex", &Context::getAtomNameByPrmtopIndex, py::arg("prmtopIndex"), "Get the unique atom name for a given prmtop index.")
@@ -347,5 +354,13 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("getTestRigidImproperTorsions", &World::getTestRigidImproperTorsions, "Get test rigid improper torsions.")
         .def("getTestNonRigidImproperTorsions", &World::getTestNonRigidImproperTorsions, "Get test non-rigid improper torsions.")
         .def("getCoordinateTransferErrors", &World::getCoordinateTransferErrors, "")
-        .def("getAcceptanceRMSD", &World::getAcceptanceRMSD, "Get RMSD values for accepted/rejected moves during testing.");
+        .def("getAcceptanceRMSD", &World::getAcceptanceRMSD, "Get RMSD values for accepted/rejected moves during testing.")
+        .def("has_rigid_body_violations", 
+            [](World& self, SimTK::Real timeStep, int numSteps, RigidBodyViolations& violations) {
+                return self.hasRigidBodyViolations(timeStep, numSteps, violations);
+            }, 
+            py::arg("time_step"),
+            py::arg("num_steps"), 
+            py::arg("violations"),
+            "Checks for rigid body violations and populates the violations object.");
 }
