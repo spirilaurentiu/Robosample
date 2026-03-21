@@ -1,32 +1,25 @@
 # Build artifacts
 build*
-python/robosample/__pycache__
 doc/html
-
-# Exclude the compiled shared library
-python/robosample/*.so
 
 # Exclude profile data
 profile-data
 
 # Development artifacts
+robo_py312.yaml
 *.dcd
 *.csv
 *.cif
 *.pdb
-robo_py312.yaml
 
-# Tests
+# Python stuff
 .pytest_cache
-tests/__pycache__
-tests/*.pyc
-tests/*.swp
-tests/*.so
+**/__pycache__/
+**/*.pyc
+**/*.swp
+**/*.so
 
 # tools folder
-tools/__pycache__
-tools/*.pyc
-tools/*.swp
 tools/demo
 tools/genFlex.old
 
@@ -36,9 +29,4 @@ draw/
 html/
 latex/
 projman/
-
-draw
-html
-latex
-projman
 .qodo
