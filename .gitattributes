@@ -1,3 +1,9 @@
-*.prmtop linguist-vendored
-*.rst7 linguist-vendored
-*.inpcrd linguist-vendored
+# Treat these as data/documentation so they don't count as code
+*.prmtop linguist-generated=true
+*.rst7    linguist-generated=true
+*.inpcrd  linguist-generated=true
+
+# Or, explicitly tell GitHub to ignore them for stats
+*.prmtop linguist-detectable=false
+*.rst7    linguist-detectable=false
+*.inpcrd  linguist-detectable=false
