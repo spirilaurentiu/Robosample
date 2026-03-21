@@ -90,6 +90,10 @@ struct CoordinateTransferError {
 	SimTK::Real improperDihedrals {0}, improperDihedralsMax {0};
 };
 
+struct RigidBodyViolations {
+	std::vector<SimTK::Real> bond, angle, proper, improper;
+};
+
 //==============================================================================
 //                   CLASS TaskSpace
 //==============================================================================
@@ -1173,7 +1177,7 @@ public:
 
 	bool isOverconstrained() const;
 	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-	bool hasRigidBodyViolations(SimTK::Real tolerance);
+	bool hasRigidBodyViolations(SimTK::Real timeStep, int numSteps, RigidBodyViolations& violations);
 
 private:
 	SimTK::Real findDecorrelationTime(const SimTK::State& state, int equilSteps, int tuneSteps, SimTK::Real timestep);

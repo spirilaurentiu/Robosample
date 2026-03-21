@@ -984,7 +984,7 @@ bool World::isOverconstrained() const {
 	return false;
 }
 
-bool World::hasRigidBodyViolations(SimTK::Real tolerance) {
+bool World::hasRigidBodyViolations(SimTK::Real timeStep, int numSteps, RigidBodyViolations& violations) {
 	if (samplers.empty()) {
 		throw std::runtime_error("World::hasRigidBodyViolations() requires at least one sampler to be defined.");
 	}
@@ -1107,8 +1107,8 @@ bool World::hasRigidBodyViolations(SimTK::Real tolerance) {
 	// Distortions come from how the integrator handles rigid bodies, so we don't aim for something super realistic
 	setTemperature(300);
 	setBoostTemperature(300);
-	samplers[0]->setMDStepsPerSample(1);
-	samplers[0]->setBoostMDSteps(1);
+	samplers[0]->setMDStepsPerSample(8);
+	samplers[0]->setBoostMDSteps(8);
 	samplers[0]->setTimestep(0.001, false);
 	samplers[0]->setAcceptRejectMode(AcceptRejectMode::AlwaysAccept);
 
@@ -1137,6 +1137,8 @@ bool World::hasRigidBodyViolations(SimTK::Real tolerance) {
 			atomTargetLocaltionsCache[topoIx][cAIx] = location;
 		}
 	}
+
+	const auto tolerance = 0.1;
 	
 	// Begin
 	std::cout << "[INFO] Checking for rigid body violations in world " << getOwnIndex() << ":" << std::endl;
@@ -1178,6 +1180,7 @@ bool World::hasRigidBodyViolations(SimTK::Real tolerance) {
 
 			std::cerr << "\t[ERROR] Bond between " << atom1Name << " - " << atom2Name
 				<< " changed length from " << oldDistance * 10 << " A to " << newDistance * 10 << " A (ring closing: " << ringClosing << ")." << std::endl;
+			violations.bond.push_back(diff);
 			hasViolations = true;
 		}
 	}
@@ -1204,6 +1207,7 @@ bool World::hasRigidBodyViolations(SimTK::Real tolerance) {
 
 			std::cerr << "\t[ERROR] Angle between " << atom1Name << " - " << atom2Name << " - " << atom3Name
 				<< " changed from " << oldAngle * SimTK_RADIAN_TO_DEGREE << " deg to " << newAngle * SimTK_RADIAN_TO_DEGREE << " deg." << std::endl;
+			violations.angle.push_back(diff);
 			hasViolations = true;
 		}
 	}
@@ -1233,6 +1237,7 @@ bool World::hasRigidBodyViolations(SimTK::Real tolerance) {
 
 			std::cerr << "\t[ERROR] Proper torsion between " << atom1Name << " - " << atom2Name << " - " << atom3Name << " - " << atom4Name
 				<< " changed from " << oldDihedral * SimTK_RADIAN_TO_DEGREE << " deg to " << newDihedral * SimTK_RADIAN_TO_DEGREE << " deg." << std::endl;
+			violations.proper.push_back(diff);
 			hasViolations = true;
 		}
 	}
@@ -1261,6 +1266,7 @@ bool World::hasRigidBodyViolations(SimTK::Real tolerance) {
 
 			std::cerr << "\t[INFO] Improper torsion between " << atom1Name << " - " << atom2Name << " - " << atom3Name << " - " << atom4Name
 				<< " changed from " << oldDihedral * SimTK_RADIAN_TO_DEGREE << " deg to " << newDihedral * SimTK_RADIAN_TO_DEGREE << " deg." << std::endl;
+			violations.improper.push_back(diff);
 			hasViolations = true;
 		}
 	}
