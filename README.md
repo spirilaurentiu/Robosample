@@ -203,6 +203,15 @@ Install `mamba`:
 conda install conda-forge::mamba
 ```
 
+## Other prerequisites
+
+Install `github-linguist`:
+
+```bash
+sudo apt update
+sudo apt install ruby-github-linguist
+```
+
 ## Installing Robosample
 
 ### Clone Robosample

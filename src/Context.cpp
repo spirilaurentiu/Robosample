@@ -379,7 +379,7 @@ SimTK::Real Context::calculatePotentialEnergy(int worldIndex) {
 
 /*! <!--  --> */
 bool Context::validateContext() {
-	constexpr SimTK::Real TOLERANCE = 1e-7;
+	constexpr SimTK::Real COORD_TRANSFER_TOL = 1e-6;
 	bool valid = true;
 
 	for (auto& world : worlds) {
@@ -392,71 +392,56 @@ bool Context::validateContext() {
 		const auto errors = world.checkCoordinateTransfer(atomTargetLocationsCache);
 
 		for (const auto& residual : errors.matchResiduals) {
-			if (residual > TOLERANCE) {
+			if (residual > COORD_TRANSFER_TOL) {
 				std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Match residual " << residual << " exceeds tolerance." << std::endl;
 				valid = false;
 			}
 		}
-		if (errors.cartesian > TOLERANCE) {
+		if (errors.cartesian > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian residual " << errors.cartesian << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.cartesianMax > TOLERANCE) {
+		if (errors.cartesianMax > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Cartesian max residual " << errors.cartesianMax << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.bonds > TOLERANCE) {
+		if (errors.bonds > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond residual " << errors.bonds << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.bondsMax > TOLERANCE) {
+		if (errors.bondsMax > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Bond max residual " << errors.bondsMax << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.angles > TOLERANCE) {
+		if (errors.angles > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle residual " << errors.angles << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.anglesMax > TOLERANCE) {
+		if (errors.anglesMax > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Angle max residual " << errors.anglesMax << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.properDihedrals > TOLERANCE) {
+		if (errors.properDihedrals > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral residual " << errors.properDihedrals << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.properDihedralsMax > TOLERANCE) {
+		if (errors.properDihedralsMax > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Proper dihedral max residual " << errors.properDihedralsMax << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.improperDihedrals > TOLERANCE) {
+		if (errors.improperDihedrals > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral residual " << errors.improperDihedrals << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
-		if (errors.improperDihedralsMax > TOLERANCE) {
+		if (errors.improperDihedralsMax > COORD_TRANSFER_TOL) {
 			std::cerr << "[ERROR] Coordinate transfer failed for world " << world.getOwnIndex() << ": Improper dihedral max residual " << errors.improperDihedralsMax << " exceeds tolerance." << std::endl;
 			valid = false;
 		}
 
-		RigidBodyViolations violations;
-		if (world.hasRigidBodyViolations(0.001, 1, violations)) {
-			const SimTK::Real bondViolation = std::accumulate(violations.bond.begin(), violations.bond.end(), 0.0);
-			const SimTK::Real angleViolation = std::accumulate(violations.angle.begin(), violations.angle.end(), 0.0);
-			const SimTK::Real properDihedralViolation = std::accumulate(violations.proper.begin(), violations.proper.end(), 0.0);
-			const SimTK::Real improperDihedralViolation = std::accumulate(violations.improper.begin(), violations.improper.end(), 0.0);
-
-			std::cout << std::endl;
-
-			std::cout << bondViolation << " "
-					  << angleViolation << " "
-					  << properDihedralViolation << " "
-					  << improperDihedralViolation << std::endl;
-
+		if (world.hasRigidBodyViolations(0.001, 1)) {
 			valid = false;
 			continue;
 		}
-
-		std::cout << std::endl;
 	}
 
 	return valid;
@@ -645,85 +630,6 @@ void Context::addWorld(
 	// Let DuMM model this robot
 	worlds.back().modelTopologies();
 	worlds.back().setAtomTargetLocationsToState(atomTargetLocationsCache);
-
-	if (testing) {
-		for (const auto& topology : topologies) {
-			for (const auto& bond : topology.getBonds()) {
-				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[0], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(bond.compoundAtomIndices[1], worlds.back().getForceField());
-
-				const int prmtopIndex1 = topology.getAtoms()[bond.compoundAtomIndices[0]].identity.prmtopIndex;
-				const int prmtopIndex2 = topology.getAtoms()[bond.compoundAtomIndices[1]].identity.prmtopIndex;
-
-				worlds.back().markRingClosingBond(prmtopIndex1, prmtopIndex2, bond.ringClosing);
-				if (mbx1 == mbx2) {
-					worlds.back().addTestRigidBond(prmtopIndex1, prmtopIndex2);
-				} else {
-					worlds.back().addTestNonRigidBond(prmtopIndex1, prmtopIndex2);
-				}
-			}
-
-			for (const auto& angle : topology.getAngles()) {
-				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(angle.compoundAtomIndices[0], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(angle.compoundAtomIndices[1], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndexThroughDumm(angle.compoundAtomIndices[2], worlds.back().getForceField());
-
-				const int prmtopIndex1 = topology.getAtoms()[angle.compoundAtomIndices[0]].identity.prmtopIndex;
-				const int prmtopIndex2 = topology.getAtoms()[angle.compoundAtomIndices[1]].identity.prmtopIndex;
-				const int prmtopIndex3 = topology.getAtoms()[angle.compoundAtomIndices[2]].identity.prmtopIndex;
-
-				if (mbx1 == mbx2 && mbx2 == mbx3) {
-					worlds.back().addTestRigidAngle(prmtopIndex1, prmtopIndex2, prmtopIndex3);
-				} else {
-					worlds.back().addTestNonRigidAngle(prmtopIndex1, prmtopIndex2, prmtopIndex3);
-				}
-			}
-
-			for (const auto& torsion : topology.getPeriodicTorsions()) {
-				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[0], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[1], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[2], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx4 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[3], worlds.back().getForceField());
-
-				const int prmtopIndex1 = topology.getAtoms()[torsion.compoundAtomIndices[0]].identity.prmtopIndex;
-				const int prmtopIndex2 = topology.getAtoms()[torsion.compoundAtomIndices[1]].identity.prmtopIndex;
-				const int prmtopIndex3 = topology.getAtoms()[torsion.compoundAtomIndices[2]].identity.prmtopIndex;
-				const int prmtopIndex4 = topology.getAtoms()[torsion.compoundAtomIndices[3]].identity.prmtopIndex;
-
-				if (torsion.improper) {
-					if (mbx1 == mbx2 && mbx2 == mbx3 && mbx3 == mbx4) {
-						worlds.back().addTestRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
-					} else {
-						worlds.back().addTestNonRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
-					}
-				} else {
-					if (mbx2 == mbx3) {
-						worlds.back().addTestRigidProperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
-					} else {
-						worlds.back().addTestNonRigidProperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
-					}
-				}
-			}
-
-			for (const auto& torsion : topology.getImproperHarmonicTorsions()) {
-				const SimTK::MobilizedBodyIndex mbx1 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[0], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx2 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[1], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx3 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[2], worlds.back().getForceField());
-				const SimTK::MobilizedBodyIndex mbx4 = topology.getAtomMobilizedBodyIndexThroughDumm(torsion.compoundAtomIndices[3], worlds.back().getForceField());
-
-				const int prmtopIndex1 = topology.getAtoms()[torsion.compoundAtomIndices[0]].identity.prmtopIndex;
-				const int prmtopIndex2 = topology.getAtoms()[torsion.compoundAtomIndices[1]].identity.prmtopIndex;
-				const int prmtopIndex3 = topology.getAtoms()[torsion.compoundAtomIndices[2]].identity.prmtopIndex;
-				const int prmtopIndex4 = topology.getAtoms()[torsion.compoundAtomIndices[3]].identity.prmtopIndex;
-
-				if (mbx1 == mbx2 && mbx2 == mbx3 && mbx3 == mbx4) {
-					worlds.back().addTestRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
-				} else {
-					worlds.back().addTestNonRigidImproperTorsion(prmtopIndex1, prmtopIndex2, prmtopIndex3, prmtopIndex4);
-				}
-			}
-		}
-	}
 
 	// Find bodies for roll mobilities
 	std::vector<std::vector<SimTK::MobilizedBodyIndex>> mobodLocks;

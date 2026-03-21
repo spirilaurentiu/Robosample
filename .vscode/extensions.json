@@ -9,7 +9,8 @@
         "ms-python.debugpy",
         "ms-python.python-envs",
         "davidanson.vscode-markdownlint",
-        "repreng.csv"
+        "repreng.csv",
+        "tamasfe.even-better-toml"
     ],
     "unwantedRecommendations": [
         "ms-vscode.cpptools",

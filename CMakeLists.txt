@@ -298,27 +298,4 @@ add_custom_command(TARGET ${ROBOSAMPLE_LIB_NAME} POST_BUILD
 
 # Install binaries and stubs
 install(TARGETS ${ROBOSAMPLE_LIB_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})
-# install(FILES "${CMAKE_CURRENT_BINARY_DIR}/stubs/${ROBOSAMPLE_LIB_NAME}.pyi" DESTINATION ${CMAKE_INSTALL_PREFIX})
-
-
-# # 1. Define where the stubs will live
-# set(STUB_FILE "${CMAKE_CURRENT_BINARY_DIR}/${ROBOSAMPLE_LIB_NAME}-stubs/__init__.pyi")
-
-# # 2. Update your custom command to explicitly list the output file 
-# # This helps CMake understand the file dependency
-# add_custom_command(OUTPUT ${STUB_FILE}
-#     COMMAND PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR} 
-#             pybind11-stubgen ${ROBOSAMPLE_LIB_NAME} 
-#             --output-dir ${CMAKE_CURRENT_BINARY_DIR}
-#     DEPENDS ${ROBOSAMPLE_LIB_NAME}
-#     COMMENT "Generating python stubs for ${ROBOSAMPLE_LIB_NAME}"
-# )
-
-# # 3. Create a custom target so the stubs are actually built
-# add_custom_target(generate_stubs ALL DEPENDS ${STUB_FILE})
-
-# # 4. Install the .pyi file
-# # Usually, stubs are placed in the same directory as the .so file
-# install(FILES ${STUB_FILE} 
-#         DESTINATION ${CMAKE_INSTALL_PREFIX}
-#         RENAME ${ROBOSAMPLE_LIB_NAME}.pyi)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${ROBOSAMPLE_LIB_NAME}.pyi" DESTINATION ${CMAKE_INSTALL_PREFIX})

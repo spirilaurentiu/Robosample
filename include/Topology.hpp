@@ -52,7 +52,9 @@ public:
 		const auto name = subAtomList[canonicalBond.first].identity.uniqueAtomName + "-" + subAtomList[canonicalBond.second].identity.uniqueAtomName;
 		const auto bondIt = atomName2bond.find(name);
 		if (bondIt == atomName2bond.end()) {
-			throw std::runtime_error("No bond found between atoms with Compound Atom Indices " + std::to_string(cAIx0) + " and " + std::to_string(cAIx1));
+			const auto& atom1Name = subAtomList[cAIx0].identity.uniqueAtomName;
+			const auto& atom2Name = subAtomList[cAIx1].identity.uniqueAtomName;
+			throw std::runtime_error("No bond found between " + atom1Name + " and " + atom2Name);
 		}
 		return subBondList[bondIt->second];
 	}
@@ -78,7 +80,10 @@ public:
 		const auto name = subAtomList[canonicalAngle[0]].identity.uniqueAtomName + "-" + subAtomList[canonicalAngle[1]].identity.uniqueAtomName + "-" + subAtomList[canonicalAngle[2]].identity.uniqueAtomName;
 		const auto angleIt = atomName2angle.find(name);
 		if (angleIt == atomName2angle.end()) {
-			throw std::runtime_error("No angle found between atoms with Compound Atom Indices " + std::to_string(cAIx0) + ", " + std::to_string(cAIx1) + " and " + std::to_string(cAIx2));
+			const auto& atom1Name = subAtomList[cAIx0].identity.uniqueAtomName;
+			const auto& atom2Name = subAtomList[cAIx1].identity.uniqueAtomName;
+			const auto& atom3Name = subAtomList[cAIx2].identity.uniqueAtomName;
+			throw std::runtime_error("No angle found between " + atom1Name + ", " + atom2Name + " and " + atom3Name);
 		}
 		return subAngleList[angleIt->second];
 	}

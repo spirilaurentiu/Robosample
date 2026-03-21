@@ -1,26 +1,15 @@
 from dataclasses import dataclass
 from typing import Self, Iterable, Tuple, List, Set, Dict
-from collections import deque, defaultdict
+from collections import defaultdict
 from enum import IntEnum, unique
 import mdtraj as md
 from contextlib import contextmanager
-from matplotlib import units
 import parmed as pmd
-from parmed import unit as u
 import numpy as np
-import networkx as nx
-import astropy.stats.circstats as circstats
-import scipy.cluster.hierarchy as sch
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import MDAnalysis as mda
-from MDAnalysis.analysis import dihedrals
-from MDAnalysis.core.universe import Merge
-import scipy.stats as stats
-from scipy import linalg
 
-import robo_bindings as rb
-from molecule_prototype import MoleculePrototype
-import prmtop_reader
+from . import robo_bindings as rb
+from .molecule_prototype import MoleculePrototype
+from .prmtop_reader import has_nbfix_fast, parse_prmtop_numpy
 
 @unique
 class NonbondedMethod(IntEnum):
@@ -163,13 +152,13 @@ class Context(rb.Context):
         # parmed does nasty rounding when loading and loses some precision that adds up to a few kj
         # prmtop files hold more decimal places than can be stored via Python float64 (IEEE 754 double) has ~16 decimal digits of precision
         # prmtop holds more that 16, so this function will lose a few digits (fewer than parmed)
-        parm_file = prmtop_reader.parse_prmtop_numpy(prmtop)
+        parm_file = parse_prmtop_numpy(prmtop)
         parm_data = parm_file['raw_data']
 
         # Nonbonded fix (NBFIX) is a technique that replaces standard Lennard-Jones (LJ) interaction parameters (epsilon and sigma) between specific atom pairs
         # This overrides default combination rules to fix overbinding artifacts, particularly between cations/anions and protein/lipid functional groups
         # It is commonly used in CHARMM force fields to improve hydration and binding accuracy
-        self.has_nbfix = prmtop_reader.has_nbfix_fast(parm_data['NONBONDED_PARM_INDEX'], self.num_types, parm_data['LENNARD_JONES_ACOEF'], parm_data['LENNARD_JONES_BCOEF'])
+        self.has_nbfix = has_nbfix_fast(parm_data['NONBONDED_PARM_INDEX'], self.num_types, parm_data['LENNARD_JONES_ACOEF'], parm_data['LENNARD_JONES_BCOEF'])
 
         ene_conv = pmd.unit.kilocalories_per_mole.conversion_factor_to(pmd.unit.kilojoules_per_mole)
         length_conv = pmd.unit.angstroms.conversion_factor_to(pmd.unit.nanometers)
@@ -880,8 +869,8 @@ class Context(rb.Context):
             super().addReplica()
             super().addThermodynamicState(temp, accept_reject_modes, distort_options, distort_args, flow, work, integrators, worldIndexes, timesteps, mdsteps)
 
-        # if not super().validate_context():
-        #     raise ValueError("Invalid context.")
+        if not super().validate_context():
+            raise ValueError("Invalid context.")
 
     def generate_synthetic_atom_classes(self):
         # Signatures store the "parameter environment" of each atom

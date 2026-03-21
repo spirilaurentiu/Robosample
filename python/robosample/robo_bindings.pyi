@@ -4,7 +4,7 @@ Robosample bindings
 from __future__ import annotations
 import collections.abc
 import typing
-__all__: list[str] = ['AcceptRejectMode', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'Context', 'Exclusion', 'IntegratorType', 'NonbondedMethod', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'World']
+__all__: list[str] = ['AcceptRejectMode', 'AtomClassIndex', 'BondFlexibility', 'BondMobility', 'CMAPGrid', 'CMAPTorsion', 'ChargedAtomTypeIndex', 'CompoundAtomIndex', 'Context', 'CoordinateTransferError', 'Exclusion', 'IntegratorType', 'NonbondedMethod', 'RoboAngle', 'RoboAtom', 'RoboAtomConnectivity', 'RoboAtomElement', 'RoboAtomIdentity', 'RoboAtomPhysics', 'RoboBond', 'RoboHarmonicImproperTorsion', 'RoboPeriodicTorsion', 'RoboPeriodicTorsionTerm', 'RootMobility', 'RunType', 'SamplerName', 'Scaling14', 'ThermostatName', 'TopologyRange', 'TopologyRangeType', 'UreyBradley', 'Vec3', 'World', 'ZMatrixRow']
 class AcceptRejectMode:
     """
     Members:
@@ -49,6 +49,13 @@ class AcceptRejectMode:
         ...
     @property
     def value(self) -> int:
+        ...
+class AtomClassIndex:
+    def __init__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    def __repr__(self) -> str:
         ...
 class BondFlexibility:
     mobility: BondMobility
@@ -233,11 +240,21 @@ class CMAPTorsion:
     @mapIndex.setter
     def mapIndex(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
+class ChargedAtomTypeIndex:
+    def __init__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
+class CompoundAtomIndex:
+    def __init__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    def __repr__(self) -> str:
+        ...
 class Context:
-    def Initialize(self) -> None:
-        """
-        Initializes the context after all worlds and replicas have been set.
-        """
     def RunREX(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Run replica exchange.
@@ -256,15 +273,23 @@ class Context:
         """
         Add an empty world.
         """
+    def calculate_openmm_energy(self, worldIndex: typing.SupportsInt | typing.SupportsIndex) -> float:
+        """
+        Calculate the OpenMM energy of the current state for a specific world index.
+        """
+    def getAtomNameByPrmtopIndex(self, prmtopIndex: typing.SupportsInt | typing.SupportsIndex) -> str:
+        """
+        Get the unique atom name for a given prmtop index.
+        """
     def getWorld(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> World:
         ...
     def getWorlds(self) -> list[World]:
         ...
-    def initialize_openmm(self, arg0: collections.abc.Sequence[RoboAtom], arg1: collections.abc.Sequence[RoboBond], arg2: collections.abc.Sequence[RoboAngle], arg3: collections.abc.Sequence[RoboPeriodicTorsion], arg4: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg5: collections.abc.Sequence[CMAPGrid], arg6: collections.abc.Sequence[CMAPTorsion], arg7: collections.abc.Sequence[UreyBradley], arg8: bool, arg9: typing.SupportsInt | typing.SupportsIndex, arg10: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg11: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg12: collections.abc.Sequence[Exclusion], arg13: collections.abc.Sequence[Scaling14]) -> dict[str, float]:
+    def initialize_openmm(self, arg0: collections.abc.Sequence[RoboAtom], arg1: collections.abc.Sequence[RoboBond], arg2: collections.abc.Sequence[RoboAngle], arg3: collections.abc.Sequence[RoboPeriodicTorsion], arg4: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg5: collections.abc.Sequence[CMAPGrid], arg6: collections.abc.Sequence[CMAPTorsion], arg7: collections.abc.Sequence[UreyBradley], arg8: bool, arg9: typing.SupportsInt | typing.SupportsIndex, arg10: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg11: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], arg12: collections.abc.Sequence[Exclusion], arg13: collections.abc.Sequence[Scaling14]) -> None:
         """
         Load an OpenMM system from components.
         """
-    def loadAmberSystem(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg1: collections.abc.Sequence[RoboAtom], arg2: collections.abc.Sequence[RoboBond], arg3: collections.abc.Sequence[RoboAngle], arg4: collections.abc.Sequence[RoboPeriodicTorsion], arg5: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg6: collections.abc.Sequence[TopologyRange]) -> None:
+    def loadAmberSystem(self, arg0: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], arg1: collections.abc.Sequence[RoboAtom], arg2: collections.abc.Sequence[RoboBond], arg3: collections.abc.Sequence[RoboAngle], arg4: collections.abc.Sequence[RoboPeriodicTorsion], arg5: collections.abc.Sequence[RoboHarmonicImproperTorsion], arg6: collections.abc.Sequence[TopologyRange], arg7: collections.abc.Sequence[ZMatrixRow]) -> None:
         """
         Load an AMBER system.
         """
@@ -288,6 +313,77 @@ class Context:
         """
         Control if you want extraneous output to cout.
         """
+    def validate_context(self) -> bool:
+        """
+        Validates all worlds and replicas in the context.
+        """
+class CoordinateTransferError:
+    @property
+    def angles(self) -> float:
+        ...
+    @angles.setter
+    def angles(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def anglesMax(self) -> float:
+        ...
+    @anglesMax.setter
+    def anglesMax(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def bonds(self) -> float:
+        ...
+    @bonds.setter
+    def bonds(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def bondsMax(self) -> float:
+        ...
+    @bondsMax.setter
+    def bondsMax(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def cartesian(self) -> float:
+        ...
+    @cartesian.setter
+    def cartesian(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def cartesianMax(self) -> float:
+        ...
+    @cartesianMax.setter
+    def cartesianMax(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def improperDihedrals(self) -> float:
+        ...
+    @improperDihedrals.setter
+    def improperDihedrals(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def improperDihedralsMax(self) -> float:
+        ...
+    @improperDihedralsMax.setter
+    def improperDihedralsMax(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def matchResiduals(self) -> list[float]:
+        ...
+    @matchResiduals.setter
+    def matchResiduals(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    @property
+    def properDihedrals(self) -> float:
+        ...
+    @properDihedrals.setter
+    def properDihedrals(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def properDihedralsMax(self) -> float:
+        ...
+    @properDihedralsMax.setter
+    def properDihedralsMax(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class Exclusion:
     @typing.overload
     def __init__(self) -> None:
@@ -446,10 +542,10 @@ class RoboAngle:
     def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], molecule_index: typing.SupportsInt | typing.SupportsIndex, stiffness_in_kj_per_rad_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_angle_in_deg: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
-    def compound_atom_indices(self) -> typing.Annotated[list[...], "FixedSize(3)"]:
+    def compound_atom_indices(self) -> typing.Annotated[list[CompoundAtomIndex], "FixedSize(3)"]:
         ...
     @compound_atom_indices.setter
-    def compound_atom_indices(self, arg0: typing.Annotated[collections.abc.Sequence[...], "FixedSize(3)"]) -> None:
+    def compound_atom_indices(self, arg0: typing.Annotated[collections.abc.Sequence[CompoundAtomIndex], "FixedSize(3)"]) -> None:
         ...
     @property
     def global_indices(self) -> typing.Annotated[list[int], "FixedSize(3)"]:
@@ -480,16 +576,9 @@ class RoboAtom:
     element_info: RoboAtomElement
     identity: RoboAtomIdentity
     physics: RoboAtomPhysics
+    position: Vec3
     def __init__(self, identity: RoboAtomIdentity, element_info: RoboAtomElement, physics: RoboAtomPhysics, connectivity: RoboAtomConnectivity, position: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         ...
-    @property
-    def position(self) -> ...:
-        ...
-    @position.setter
-    def position(*args, **kwargs):
-        """
-        (self: robo_bindings.RoboAtom, arg0: SimTK::Vec<3, double, 1>) -> None
-        """
 class RoboAtomConnectivity:
     root: bool
     def __init__(self, neighbors_global_indices: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], root: bool) -> None:
@@ -512,11 +601,11 @@ class RoboAtomElement:
     def atomicNumber(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
 class RoboAtomIdentity:
-    atom_class_index: ...
+    atom_class_index: AtomClassIndex
     atom_class_name: str
-    charged_atom_type_index: ...
+    charged_atom_type_index: ChargedAtomTypeIndex
     charged_atom_type_name: str
-    compound_atom_index: ...
+    compound_atom_index: CompoundAtomIndex
     residue_name: str
     unique_name: str
     def __init__(self, unique_name: str, residue_name: str, atom_class_name: str, charged_atom_type_name: str, global_index: typing.SupportsInt | typing.SupportsIndex, prmtop_index: typing.SupportsInt | typing.SupportsIndex, molecule_index: typing.SupportsInt | typing.SupportsIndex, residue_index: typing.SupportsInt | typing.SupportsIndex, nonbonded_index: typing.SupportsInt | typing.SupportsIndex, compound_atom_index: typing.SupportsInt | typing.SupportsIndex, atom_class_index: typing.SupportsInt | typing.SupportsIndex, charged_atom_type_index: typing.SupportsInt | typing.SupportsIndex) -> None:
@@ -597,14 +686,15 @@ class RoboAtomPhysics:
     def vdw_well_depth_kj(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class RoboBond:
+    dihedral_type: str
     ring_closing: bool
-    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], stiffness_in_kj_per_nm_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_length_in_nm: typing.SupportsFloat | typing.SupportsIndex, molecule_index: typing.SupportsInt | typing.SupportsIndex, ring_closing: bool) -> None:
+    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], stiffness_in_kj_per_nm_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_length_in_nm: typing.SupportsFloat | typing.SupportsIndex, molecule_index: typing.SupportsInt | typing.SupportsIndex, ring_closing: bool, dihedral_type: str) -> None:
         ...
     @property
-    def compound_atom_indices(self) -> typing.Annotated[list[...], "FixedSize(2)"]:
+    def compound_atom_indices(self) -> typing.Annotated[list[CompoundAtomIndex], "FixedSize(2)"]:
         ...
     @compound_atom_indices.setter
-    def compound_atom_indices(self, arg0: typing.Annotated[collections.abc.Sequence[...], "FixedSize(2)"]) -> None:
+    def compound_atom_indices(self, arg0: typing.Annotated[collections.abc.Sequence[CompoundAtomIndex], "FixedSize(2)"]) -> None:
         ...
     @property
     def global_indices(self) -> typing.Annotated[list[int], "FixedSize(2)"]:
@@ -993,76 +1083,49 @@ class UreyBradley:
     @stiffness_in_kj_per_nm_sq.setter
     def stiffness_in_kj_per_nm_sq(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+class Vec3:
+    def __getitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> float:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex, arg2: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def __setitem__(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class World:
     def addSampler(self, arg0: SamplerName, arg1: IntegratorType, arg2: ThermostatName, arg3: bool) -> bool:
         """
         Add a sampler to the world.
         """
-    def getAcceptanceRMSD(self) -> list[tuple[bool, float]]:
+    def has_rigid_body_violations(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, numSteps: typing.SupportsInt | typing.SupportsIndex) -> bool:
         """
-        Get RMSD values for accepted/rejected moves during testing.
+        Checks for rigid body violations.
         """
-    def getCumulativeAngleDisplacements(self) -> list[float]:
-        """
-        Get cumulative angle displacements.
-        """
-    def getCumulativeBondDisplacements(self) -> list[float]:
-        """
-        Get cumulative bond displacements.
-        """
-    def getCumulativeCartesianDisplacements(self) -> list[float]:
-        """
-        Get cumulative Cartesian displacements.
-        """
-    def getCumulativeTorsionDisplacements(self) -> list[float]:
-        """
-        Get cumulative torsion displacements.
-        """
-    def getMatchAtomTargetLocationsResiduals(self) -> list[list[float]]:
-        """
-        Get residuals from matchAtomTargetLocations during testing.
-        """
-    def getOpenMMCumulativeAngleDisplacements(self) -> list[float]:
-        """
-        Get cumulative angle displacements between OpenMM and SimTK during testing.
-        """
-    def getOpenMMCumulativeBondDisplacements(self) -> list[float]:
-        """
-        Get cumulative bond displacements between OpenMM and SimTK during testing.
-        """
-    def getOpenMMCumulativeCartesianDisplacements(self) -> list[float]:
-        """
-        Get cumulative Cartesian displacements between OpenMM and SimTK during testing.
-        """
-    def getOpenMMCumulativeTorsionDisplacements(self) -> list[float]:
-        """
-        Get cumulative torsion displacements between OpenMM and SimTK during testing.
-        """
-    def getRigidBodyAngleDriftInRad(self) -> list[float]:
-        """
-        Get rigid body angle drift in rad during testing.
-        """
-    def getRigidBodyBondRMSDInNm(self) -> list[float]:
-        """
-        Get rigid body bond RMSD in nm during testing.
-        """
-    def getRigidBodyImproperTorsionDriftInRad(self) -> list[float]:
-        """
-        Get rigid body improper torsion drift in rad during testing.
-        """
-    def getRigidBodyProperTorsionDriftInRad(self) -> list[float]:
-        """
-        Get rigid body proper torsion drift in rad during testing.
-        """
-    def getRollFlexibilities(self) -> bool:
-        """
-        Get rolling sequence.
-        """
-    def setFlexibilities(self, arg0: collections.abc.Sequence[BondFlexibility]) -> None:
-        """
-        Set the flexibilities of the bonds.
-        """
-    def setRollFlexibilities(self, arg0: bool) -> None:
-        """
-        Set rolling sequence.
-        """
+class ZMatrixRow:
+    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], molecule_index: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def compound_atom_indices(self) -> typing.Annotated[list[CompoundAtomIndex], "FixedSize(4)"]:
+        ...
+    @compound_atom_indices.setter
+    def compound_atom_indices(self, arg0: typing.Annotated[collections.abc.Sequence[CompoundAtomIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def global_indices(self) -> typing.Annotated[list[int], "FixedSize(4)"]:
+        ...
+    @global_indices.setter
+    def global_indices(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def molecule_index(self) -> int:
+        ...
+    @molecule_index.setter
+    def molecule_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...

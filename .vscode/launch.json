@@ -48,6 +48,9 @@
             "type": "lldb",
             "request": "launch",
             "program": "${command:python.interpreterPath}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/python",
+            },
             "args": [
                 "${workspaceFolder}/python/robosample/roborun.py",
                 "1APQ.test",
@@ -58,14 +61,11 @@
                 "10",
                 "1"
             ],
-
             "cwd": "${workspaceFolder}",
-
-            "env": {
-                // "LD_PRELOAD": "/usr/lib/llvm-18/lib/clang/18/lib/linux/libclang_rt.asan-x86_64.so",
-                "LD_LIBRARY_PATH": "${workspaceFolder}/build",
-                // "ASAN_OPTIONS": "protect_shadow_gap=0:detect_leaks=0:abort_on_error=0:halt_on_error=1"
-            }
+            // "env": {
+            //     "LD_LIBRARY_PATH": "${workspaceFolder}/build",
+            //     // "ASAN_OPTIONS": "protect_shadow_gap=0:detect_leaks=0:abort_on_error=0:halt_on_error=1"
+            // }
         }
 
     ]

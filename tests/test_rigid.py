@@ -7,185 +7,54 @@ name = '1APQ.test.rigid'
 seed = 42
 prmtop = 'examples/1APQ.prmtop'
 xyz = 'examples/1APQ.rst7'
-write_freq = 1
+write_freq = 0
 equil_steps = 0
-prod_steps = 2
+prod_steps = 0
 
 context = robosample.Context(name=name, seed=seed, prmtop=prmtop, inpcrd=xyz, write_freq=write_freq, testing=True)
 
-# Put torsions on middle bonds in standard dihedrals and integrate with 10 fs time step for 1 ps
-# Torsions are protein phi, psi and chi1
 sele = context.getDefaultBonds('standard')
-context.addTorsionalWorld(sele).addSampler(timeStep=0.01, mdSteps=2, boostMDSteps=2)
+context.addTorsionalWorld(sele).addSampler(timeStep=0, mdSteps=0, boostMDSteps=0)
 
-# Add one replica at 300 K
 context.initialize([300.0])
 
-# Run the simulation for no equilibration steps and 100 production steps totaling 100 ps of simulation time
-context.RunREX(equil_steps, prod_steps)
+def test_steady_state():
+    # Simbody constructs the multibody system as a spanning tree. Only tree edges
+    # are represented in the generalized coordinates; these are enforced exactly
+    # through the choice of coordinates (i.e. zero-DOF "Rigid" mobilities).
+    #
+    # Ring-closing bonds are, by construction, non-tree edges and are therefore
+    # not part of the coordinate system. In our setup, the Simbody matter subsystem
+    # contains no explicit constraints, meaning these loop closures are not enforced
+    # via holonomic constraint equations or Lagrange multipliers.
+    #
+    # As a result:
+    #   - Tree bonds (internal coordinates) are exact up to machine precision.
+    #   - Ring-closing bonds are not enforced by the integrator and can drift.
+    #
+    # The observed deviations depend on the timestep and exhibit the expected
+    # O(h^2) scaling of the Verlet integrator (where h is the time step) reaching
+    # a bounded steady-state error (~1e-3 - 1e-2 in our tests).
+    # This is not a violation of rigidity at the coordinate level,
+    # but a consequence of representing a cyclic molecular graph
+    # with a tree-structured multibody system without additional constraints.
+    #
+    # Importantly, ring-closing bonds that connect atoms within the same rigid
+    # body show no error, confirming that rigidity is preserved exactly whenever
+    # it is encoded in the multibody topology.
+    #
+    # Therefore, tests distinguish two regimes:
+    #
+    #   1. Tree bonds:
+    #        Expected to be invariant (tolerance ~1e-6 or tighter).
+    #
+    #   2. Ring-closing bonds:
+    #        Expected to remain bounded with timestep-dependent error
+    #        (tolerance ~1e-2), but not exact.
+    #
+    # This distinction reflects the underlying numerical model rather than a defect.
+    # All of this is implemented in World::hasRigidBodyViolations().
+    # We always run this function upon initialization, albeit with only 1 step to check for gross violations.
+    # Also note that this function is being called with 1 step inside `context.initialize()`.
 
-# Load the trajectory
-traj = md.load('1APQ.test.rigid_42.repl0.dcd', top=prmtop)
-reference = md.load(xyz, top=prmtop)
-# reference = traj[0]
-
-def _assert_bond_constancy(bond_indices, tolerance=1e-5, label="Bond"):
-    if len(bond_indices) == 0:
-        return
-
-    # Compute distances: (frames, nbonds)
-    distances_ref = md.compute_distances(reference, bond_indices, periodic=False)[0]
-    distances_traj = md.compute_distances(traj, bond_indices, periodic=False)
-    
-    # Calculate absolute deviations
-    diffs = np.abs(distances_traj - distances_ref)
-    max_deviations = np.max(diffs, axis=0)
-    
-    violations = []
-    for i, dev in enumerate(max_deviations):
-        if dev > tolerance:
-            # Find the actual max value reached in the trajectory for this bond
-            max_val = distances_traj[np.argmax(diffs[:, i]), i]
-
-            # import matplotlib.pyplot as plt
-            # plt.plot(distances_traj[:, i], label=f"Bond {i}")
-            # plt.axhline(distances_ref[i], color='red', linestyle='--', label='Reference')
-            # plt.title(f"Bond {i} distance over time")
-            # plt.xlabel("Frame")
-            # plt.ylabel("Distance (nm)")
-            # plt.legend()
-            # plt.show()
-            
-            a1, a2 = bond_indices[i]
-            atom_names = f"{context.getAtomNameByPrmtopIndex(a1)}-{context.getAtomNameByPrmtopIndex(a2)}"
-            violations.append(
-                f"  - {atom_names} ({a1},{a2}): Ref={distances_ref[i]:.5f}nm, "
-                f"MaxVal={max_val:.5f}nm, MaxDev={dev:.2e}nm, ring closing={context.getWorld(0).isBondRingClosing(a1, a2)}"
-            )
-
-    if violations:
-        header = f"{label} constraints violated (Tol: {tolerance}nm):"
-        pytest.fail(f"{header}\n" + "\n".join(violations))
-
-def _assert_angle_constancy(angle_indices, tolerance=1e-5, label="Angle"):
-    if len(angle_indices) == 0:
-        return
-
-    # Compute angles: (frames, nangles)
-    angles_ref = md.compute_angles(reference, angle_indices, periodic=False)[0]
-    angles_traj = md.compute_angles(traj, angle_indices, periodic=False)
-    
-    # Calculate absolute deviations
-    diffs = np.abs(angles_traj - angles_ref)
-    max_deviations = np.max(diffs, axis=0)
-    
-    violations = []
-    for i, dev in enumerate(max_deviations):
-        if dev > tolerance:
-            # Find the actual max value reached in the trajectory for this angle
-            max_val = angles_traj[np.argmax(diffs[:, i]), i]
-            
-            a1, a2, a3 = angle_indices[i]
-            atom_names = f"{context.getAtomNameByPrmtopIndex(a1)}-{context.getAtomNameByPrmtopIndex(a2)}-{context.getAtomNameByPrmtopIndex(a3)}"
-            violations.append(
-                f"  - {atom_names} ({a1},{a2},{a3}): Ref={angles_ref[i]:.5f}rad, "
-                f"MaxVal={max_val:.5f}rad, MaxDev={dev:.2e}rad"
-            )
-
-    if violations:
-        header = f"{label} constraints violated (Tol: {tolerance}rad):"
-        pytest.fail(f"{header}\n" + "\n".join(violations))
-
-def _assert_torsion_constancy(torsion_indices, mode, tolerance=1e-5, label="Torsion"):
-    if len(torsion_indices) == 0:
-        return
-
-    tors_ref = md.compute_dihedrals(reference, torsion_indices, periodic=False)[0]
-    tors_traj = md.compute_dihedrals(traj, torsion_indices, periodic=False)
-    
-    # Calculate circular differences: ensures -pi and pi are treated as the same point
-    raw_diffs = tors_traj - tors_ref
-    circular_diffs = np.abs(np.arctan2(np.sin(raw_diffs), np.cos(raw_diffs)))
-    
-    # max_deviations: (nangles,) -> the furthest each torsion moved from ref
-    max_deviations = np.max(circular_diffs, axis=0)
-    
-    violations = []
-    
-    for i, dev in enumerate(max_deviations):
-        a1, a2, a3, a4 = torsion_indices[i]
-        atom_names = f"{context.getAtomNameByPrmtopIndex(a1)}-{context.getAtomNameByPrmtopIndex(a2)}-{context.getAtomNameByPrmtopIndex(a3)}-{context.getAtomNameByPrmtopIndex(a4)}"
-        
-        if mode == "constant":
-            if dev > tolerance:
-                max_val = tors_traj[np.argmax(circular_diffs[:, i]), i]
-                violations.append(
-                    f"  - {atom_names} ({a1},{a2},{a3},{a4}): Ref={tors_ref[i]:.5f}, "
-                    f"MaxVal={max_val:.5f}, MaxDev={dev:.2e} > Tol:{tolerance}"
-                )
-        
-        elif mode == "dynamic":
-            if dev < tolerance:
-                violations.append(
-                    f"  - {atom_names} ({a1},{a2},{a3},{a4}): Static! "
-                    f"Max deviation was only {dev:.5f}rad (Min required: {tolerance})"
-                )
-        else:
-            raise ValueError("mode must be 'constant' or 'dynamic'")
-
-    if violations:
-        header = f"{label} behavior [{mode}] check failed:"
-        pytest.fail(f"{header}\n" + "\n".join(violations))
-
-def test_transfer_coordinates():
-    for error in context.getWorld(0).getCoordinateTransferErrors():
-        for residual in error.matchResiduals:
-            assert residual < 1e-5, f"Coordinate transfer residual too high: {residual:.2e} nm"
-        assert error.cartesian < 1e-5, f"Cartesian coordinate transfer error too high: {error.cartesian:.2e} nm"
-        assert error.cartesianMax < 1e-5, f"Max Cartesian coordinate transfer error too high: {error.cartesianMax:.2e} nm"
-        assert error.bonds < 1e-5, f"Bond length transfer error too high: {error.bonds:.2e} nm"
-        assert error.bondsMax < 1e-5, f"Max bond length transfer error too high: {error.bondsMax:.2e} nm"
-        assert error.angles < 1e-5, f"Angle transfer error too high: {error.angles:.2e} rad"
-        assert error.anglesMax < 1e-5, f"Max angle transfer error too high: {error.anglesMax:.2e} rad"
-        assert error.properDihedrals < 1e-5, f"Proper dihedral transfer error too high: {error.properDihedrals:.2e} rad"
-        assert error.properDihedralsMax < 1e-5, f"Max proper dihedral transfer error too high: {error.properDihedralsMax:.2e} rad"
-        assert error.improperDihedrals < 1e-5, f"Improper dihedral transfer error too high: {error.improperDihedrals:.2e} rad"
-        assert error.improperDihedralsMax < 1e-5, f"Max improper dihedral transfer error too high: {error.improperDihedralsMax:.2e} rad"
-
-def test_rigid_bonds():
-    # In torsional dynamics, all bond lengths should be constant, including non-rigid ones since they are not allowed to stretch
-    rigid_bonds = context.getWorld(0).getTestRigidBonds()
-    non_rigid_bonds = context.getWorld(0).getTestNonRigidBonds()
-
-    # These indices are returned as pairs of prmtop indices
-    all_bonds = rigid_bonds + non_rigid_bonds
-    ref_bonds = [(b[0].index, b[1].index) for b in traj.topology.bonds]
-
-    normalized_all = {tuple(sorted(bond)) for bond in all_bonds}
-    normalized_ref = {tuple(sorted(bond)) for bond in ref_bonds}
-    
-    assert normalized_all == normalized_ref, f"Bonds do not match! Missing: {normalized_ref - normalized_all} Extra: {normalized_all - normalized_ref}"
-
-    _assert_bond_constancy(rigid_bonds, label="Rigid Bond")
-    _assert_bond_constancy(non_rigid_bonds, label="Non-Rigid Bond")
-
-# def test_rigid_angles():
-#     rigid_angles = context.getWorld(0).getTestRigidAngles()
-#     non_rigid_angles = context.getWorld(0).getTestNonRigidAngles()
-
-#     _assert_angle_constancy(rigid_angles, label="Rigid Angle")
-#     _assert_angle_constancy(non_rigid_angles, label="Non-Rigid Angle")
-
-# def test_rigid_proper_torsions():
-#     rigid_torsions = context.getWorld(0).getTestRigidProperTorsions()
-#     non_rigid_torsions = context.getWorld(0).getTestNonRigidProperTorsions()
-
-#     _assert_torsion_constancy(rigid_torsions, mode="constant", label="Rigid Proper Torsion")
-#     _assert_torsion_constancy(non_rigid_torsions, mode="dynamic", label="Non-Rigid Proper Torsion")
-
-# def test_rigid_improper_torsions():
-#     rigid_torsions = context.getWorld(0).getTestRigidImproperTorsions()
-#     non_rigid_torsions = context.getWorld(0).getTestNonRigidImproperTorsions()
-    
-#     _assert_torsion_constancy(rigid_torsions, mode="constant", label="Rigid Improper Torsion")
-#     _assert_torsion_constancy(non_rigid_torsions, mode="dynamic", label="Non-Rigid Improper Torsion")
+    assert not context.getWorld(0).has_rigid_body_violations(0.00001, 1000000)

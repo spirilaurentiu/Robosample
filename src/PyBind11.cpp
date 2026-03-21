@@ -10,6 +10,46 @@ namespace py = pybind11;
 PYBIND11_MODULE(MODULE_NAME, m) {
     m.doc() = "Robosample bindings";
 
+    py::class_<SimTK::DuMM::AtomClassIndex>(m, "AtomClassIndex")
+        .def(py::init<int>())
+        .def("__int__", [](const SimTK::DuMM::AtomClassIndex& i) { return int(i); })
+        .def("__repr__", [](const SimTK::DuMM::AtomClassIndex& i) { 
+            return "AtomClassIndex(" + std::to_string(int(i)) + ")"; 
+        });
+
+    py::class_<SimTK::DuMM::ChargedAtomTypeIndex>(m, "ChargedAtomTypeIndex")
+        .def(py::init<int>())
+        .def("__int__", [](const SimTK::DuMM::ChargedAtomTypeIndex& i) { return int(i); })
+        .def("__repr__", [](const SimTK::DuMM::ChargedAtomTypeIndex& i) { 
+            return "ChargedAtomTypeIndex(" + std::to_string(int(i)) + ")"; 
+        });
+
+    py::class_<SimTK::Compound::AtomIndex>(m, "CompoundAtomIndex")
+        .def(py::init<int>())
+        .def("__int__", [](const SimTK::Compound::AtomIndex& i) { return int(i); })
+        .def("__repr__", [](const SimTK::Compound::AtomIndex& i) { 
+            return "CompoundAtomIndex(" + std::to_string(int(i)) + ")"; 
+        });
+
+    py::class_<SimTK::Vec3>(m, "Vec3")
+        .def(py::init<>())
+        .def(py::init<SimTK::Real, SimTK::Real, SimTK::Real>())
+        .def(py::init([](std::vector<SimTK::Real> v) {
+            if (v.size() != 3) throw py::value_error("Vec3 must have 3 elements");
+            return new SimTK::Vec3(v[0], v[1], v[2]);
+        }))
+        .def("__getitem__", [](const SimTK::Vec3& v, int i) {
+            if (i < 0 || i >= 3) throw py::index_error();
+            return v[i];
+        })
+        .def("__setitem__", [](SimTK::Vec3& v, int i, SimTK::Real val) {
+            if (i < 0 || i >= 3) throw py::index_error();
+            v[i] = val;
+        })
+        .def("__repr__", [](const SimTK::Vec3& v) {
+            return "Vec3(" + std::to_string(v[0]) + ", " + std::to_string(v[1]) + ", " + std::to_string(v[2]) + ")";
+        });
+
     py::enum_<NonbondedMethod>(m, "NonbondedMethod")
         .value("NoCutoff", NonbondedMethod::NoCutoff)
         .value("CutoffNonPeriodic", NonbondedMethod::CutoffNonPeriodic);
@@ -312,13 +352,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("improperDihedrals", &CoordinateTransferError::improperDihedrals)
         .def_readwrite("improperDihedralsMax", &CoordinateTransferError::improperDihedralsMax);
 
-    py::class_<RigidBodyViolations>(m, "RigidBodyViolations")
-        .def(py::init<>())
-        .def_readwrite("bond", &RigidBodyViolations::bond)
-        .def_readwrite("angle", &RigidBodyViolations::angle)
-        .def_readwrite("proper", &RigidBodyViolations::proper)
-        .def_readwrite("improper", &RigidBodyViolations::improper);
-
     py::class_<Context>(m, "Context")
         .def(py::init<const std::string&, uint32_t, uint32_t, uint32_t, RUN_TYPE, uint32_t, uint32_t, bool>())
         .def("getAtomNameByPrmtopIndex", &Context::getAtomNameByPrmtopIndex, py::arg("prmtopIndex"), "Get the unique atom name for a given prmtop index.")
@@ -343,24 +376,5 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<World>(m, "World")
         .def("addSampler", &World::addSampler, "Add a sampler to the world.")
-
-        .def("getTestRigidBonds", &World::getTestRigidBonds, "Get test rigid bonds.")
-        .def("getTestNonRigidBonds", &World::getTestNonRigidBonds, "Get test non-rigid bonds.")
-        .def("isBondRingClosing", &World::isBondRingClosing, "Check if a bond is ring-closing.")
-        .def("getTestRigidAngles", &World::getTestRigidAngles, "Get test rigid angles.")
-        .def("getTestNonRigidAngles", &World::getTestNonRigidAngles, "Get test non-rigid angles.")
-        .def("getTestRigidProperTorsions", &World::getTestRigidProperTorsions, "Get test rigid proper torsions.")
-        .def("getTestNonRigidProperTorsions", &World::getTestNonRigidProperTorsions, "Get test non-rigid proper torsions.")
-        .def("getTestRigidImproperTorsions", &World::getTestRigidImproperTorsions, "Get test rigid improper torsions.")
-        .def("getTestNonRigidImproperTorsions", &World::getTestNonRigidImproperTorsions, "Get test non-rigid improper torsions.")
-        .def("getCoordinateTransferErrors", &World::getCoordinateTransferErrors, "")
-        .def("getAcceptanceRMSD", &World::getAcceptanceRMSD, "Get RMSD values for accepted/rejected moves during testing.")
-        .def("has_rigid_body_violations", 
-            [](World& self, SimTK::Real timeStep, int numSteps, RigidBodyViolations& violations) {
-                return self.hasRigidBodyViolations(timeStep, numSteps, violations);
-            }, 
-            py::arg("time_step"),
-            py::arg("num_steps"), 
-            py::arg("violations"),
-            "Checks for rigid body violations and populates the violations object.");
+        .def("has_rigid_body_violations", &World::hasRigidBodyViolations, py::arg("timeStep"), py::arg("numSteps"), "Checks for rigid body violations.");
 }

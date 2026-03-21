@@ -86,16 +86,38 @@ context.addTorsionalWorld(sele).addSampler(timeStep=TIMESTEP_TD, mdSteps=MDSTEPS
 
 
 
-# Add one replica at 300 K
-context.initialize([300.0])
+# # Add one replica at 300 K
+# context.initialize([300.0])
 
-for num_steps in [1, 2, 4, 8]:
-    time_step = 0.001 # 1 fs
-    violations = robosample.robo_bindings.RigidBodyViolations()
-    context.getWorld(0).has_rigid_body_violations(time_step, num_steps, violations)
+# import numpy as np
 
-    print(violations)
+# mean_bond_violations = {}
+# mean_angle_violations = {}
+# mean_proper_violations = {}
+# mean_improper_violations = {}
 
+# for num_steps in [1, 2, 4, 8]:
+#     if num_steps == 1:
+#         time_step = 0.01 # 1 fs
+#         num_steps *= 1000
+#     else:
+#         time_step = 0.001
+#     violations = robosample.rb.RigidBodyViolations()
+#     context.getWorld(0).has_rigid_body_violations(time_step, num_steps, violations)
+
+#     mean_bond_violations[num_steps] = np.mean(violations.bond)
+#     mean_angle_violations[num_steps] = np.mean(violations.angle)
+#     mean_proper_violations[num_steps] = np.mean(violations.proper)
+#     mean_improper_violations[num_steps] = np.mean(violations.improper)
+
+# # Compute ratio 2:1, 4:1, 8:1
+# for num_steps in [2, 4, 8]:
+#     assert round(mean_bond_violations[num_steps] / mean_bond_violations[num_steps//2]) == 2
+#     assert round(mean_angle_violations[num_steps] / mean_angle_violations[num_steps//2]) == 2
+#     assert round(mean_proper_violations[num_steps] / mean_proper_violations[num_steps//2]) == 2
+#     assert round(mean_improper_violations[num_steps] / mean_improper_violations[num_steps//2]) == 2
+
+# exit()
 
 
 # for flex in context.getDefaultBonds('macrocycle'):

@@ -90,10 +90,6 @@ struct CoordinateTransferError {
 	SimTK::Real improperDihedrals {0}, improperDihedralsMax {0};
 };
 
-struct RigidBodyViolations {
-	std::vector<SimTK::Real> bond, angle, proper, improper;
-};
-
 //==============================================================================
 //                   CLASS TaskSpace
 //==============================================================================
@@ -153,11 +149,13 @@ struct RigidBond {
 struct RigidAngle {
 	std::size_t topologyIndex = 0;
 	SimTK::Compound::AtomIndex cAIx1, cAIx2, cAIx3;
+	bool ringClosing = false;
 };
 
 struct RigidTorsion {
 	std::size_t topologyIndex = 0;
 	SimTK::Compound::AtomIndex cAIx1, cAIx2, cAIx3, cAIx4;
+	bool ringClosing = false;
 };
 
 enum class ROOT_MOBILITY : int {
@@ -1073,111 +1071,15 @@ public:
 	*/
 	void printDrilling(void);
 
-	//////////////////////////////////
-	/////      Z Matrix BAT      /////
-	//////////////////////////////////
-
 	//std::vector<std::vector<int>>& zMatrixTable;
 	//std::vector<std::vector<SimTK::Real>>& zMatrixBAT;
 
 	//setZMatrixBATValue(size_t rowIndex, size_t colIndex, SimTK::Real value);
 	//void calcZMatrixBAT(SimTK::State& someState);
 
-	//////////////////////////////////
-	/////      Z Matrix BAT      /////
-	//////////////////////////////////
-
-	void addTestRigidBond(int globalIndex1, int globalIndex2) {
-		testRigidBonds.push_back({globalIndex1, globalIndex2});
-	}
-
-	void addTestNonRigidBond(int globalIndex1, int globalIndex2) {
-		testNonRigidBonds.push_back({globalIndex1, globalIndex2});
-	}
-
-	void markRingClosingBond(int prmtopIndex1, int prmtopIndex2, bool isRingClosing) {
-		const auto key = canonicalizeBond(prmtopIndex1, prmtopIndex2);
-		bondIsRingClosing[key] = isRingClosing;
-	}
-
-	void addTestRigidAngle(int globalIndex1, int globalIndex2, int globalIndex3) {
-		testRigidAngles.push_back({globalIndex1, globalIndex2, globalIndex3});
-	}
-
-	void addTestNonRigidAngle(int globalIndex1, int globalIndex2, int globalIndex3) {
-		testNonRigidAngles.push_back({globalIndex1, globalIndex2, globalIndex3});
-	}
-
-	void addTestRigidProperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testRigidProperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
-	}
-
-	void addTestNonRigidProperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testNonRigidProperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
-	}
-
-	void addTestRigidImproperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testRigidImproperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
-	}
-
-	void addTestNonRigidImproperTorsion(int globalIndex1, int globalIndex2, int globalIndex3, int globalIndex4) {
-		testNonRigidImproperTorsions.push_back({globalIndex1, globalIndex2, globalIndex3, globalIndex4});
-	}
-
-	const std::vector<std::array<int, 2>>& getTestRigidBonds() const {
-		return testRigidBonds;
-	}
-
-	bool isBondRingClosing(int globalIndex1, int globalIndex2) const {
-		const auto key = canonicalizeBond(globalIndex1, globalIndex2);
-		auto it = bondIsRingClosing.find(key);
-		return it != bondIsRingClosing.end() && it->second;
-	}
-
-	const std::vector<std::array<int, 2>>& getTestNonRigidBonds() const {
-		return testNonRigidBonds;
-	}
-
-	const std::vector<std::array<int, 3>>& getTestRigidAngles() const {
-		return testRigidAngles;
-	}
-
-	const std::vector<std::array<int, 3>>& getTestNonRigidAngles() const {
-		return testNonRigidAngles;
-	}
-
-	const std::vector<std::array<int, 4>>& getTestRigidProperTorsions() const {
-		return testRigidProperTorsions;
-	}
-
-	const std::vector<std::array<int, 4>>& getTestNonRigidProperTorsions() const {
-		return testNonRigidProperTorsions;
-	}
-
-	const std::vector<std::array<int, 4>>& getTestRigidImproperTorsions() const {
-		return testRigidImproperTorsions;
-	}
-
-	const std::vector<std::array<int, 4>>& getTestNonRigidImproperTorsions() const {
-		return testNonRigidImproperTorsions;
-	}
-
-	const std::vector<CoordinateTransferError>& getCoordinateTransferErrors() const {
-		if (!testing) {
-			throw std::runtime_error("getCoordinateTransferErrors() called outside testing mode");
-		}
-
-		return coordinateTransferErrors;
-	}
-
-	const std::vector<std::pair<bool, SimTK::Real>>& getAcceptanceRMSD() const {
-		SimTK_ASSERT_ALWAYS(testing, "getRMSD called outside testing mode");
-		return acceptanceRMSD;
-	}
-
 	bool isOverconstrained() const;
 	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
-	bool hasRigidBodyViolations(SimTK::Real timeStep, int numSteps, RigidBodyViolations& violations);
+	bool hasRigidBodyViolations(SimTK::Real timeStep, int numSteps);
 
 private:
 	SimTK::Real findDecorrelationTime(const SimTK::State& state, int equilSteps, int tuneSteps, SimTK::Real timestep);
@@ -1225,10 +1127,4 @@ private:
 	std::pair<int, SimTK::Compound::AtomIndex> errorTopoAtomPair{-1, SimTK::Compound::AtomIndex(SimTK::InvalidIndex)};
 
 	std::reference_wrapper<const ZMatrix> zMatrix;
-
-	std::map<std::pair<int, int>, bool> bondIsRingClosing;
-	std::vector<std::array<int, 2>> testRigidBonds, testNonRigidBonds;
-	std::vector<std::array<int, 3>> testRigidAngles, testNonRigidAngles;
-	std::vector<std::array<int, 4>> testRigidProperTorsions, testNonRigidProperTorsions;
-	std::vector<std::array<int, 4>> testRigidImproperTorsions, testNonRigidImproperTorsions;
 };

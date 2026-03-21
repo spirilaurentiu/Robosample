@@ -1,5 +1,9 @@
+# Exclude input files
 *.prmtop linguist-language=Text linguist-vendored=true linguist-detectable=false
 *.rst7 linguist-language=Text linguist-vendored=true linguist-detectable=false
 *.inpcrd linguist-language=Text linguist-vendored=true linguist-detectable=false
 *.flex linguist-language=Text linguist-vendored=true linguist-detectable=false
+
+# Exclude Jupyter notebooks since they contains images, data, tables etc blowing up the total language fraction unrealistically
+# This is a wont-fix: https://github.com/github-linguist/linguist/issues/3496
 *.ipynb linguist-vendored=true linguist-detectable=false

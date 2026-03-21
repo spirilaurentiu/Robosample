@@ -2,12 +2,13 @@ import parmed as pmd
 from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Iterable, Tuple, Set, FrozenSet, Optional, Dict, Hashable
-import robo_bindings as rb
 import numpy as np
 import networkx as nx
-from graph_utils import GraphTraversalUtils
-from amber_dihedral import DihedralClassifier
-from bond_util import is_rigid_bond
+
+from . import robo_bindings as rb
+from .graph_utils import GraphTraversalUtils
+from .amber_dihedral import DihedralClassifier
+from .bond_util import is_rigid_bond
 
 @dataclass(frozen=True)
 class BondProperties:
