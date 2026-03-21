@@ -1,4 +1,5 @@
-*.prmtop linguist-language=Text linguist-detectable=false
-*.rst7   linguist-language=Text linguist-detectable=false
-*.inpcrd linguist-language=Text linguist-detectable=false
-*.flex   linguist-language=Text linguist-detectable=false
+*.prmtop linguist-language=Text linguist-vendored=true linguist-detectable=false
+*.rst7 linguist-language=Text linguist-vendored=true linguist-detectable=false
+*.inpcrd linguist-language=Text linguist-vendored=true linguist-detectable=false
+*.flex linguist-language=Text linguist-vendored=true linguist-detectable=false
+*.ipynb linguist-vendored=true linguist-detectable=false
