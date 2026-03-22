@@ -193,7 +193,7 @@ class Context(rb.Context):
         self.atoms: list[rb.RoboAtom] = []
         self.bond_stretches: list[rb.RoboBond] = []
         self.bond_bends: list[rb.RoboAngle] = []
-        self.proper_periodic_torsions: list[rb.RoboPeriodicTorsion] = []
+        self.periodic_torsions: list[rb.RoboPeriodicTorsion] = []
         self.improper_harmonic_torsions: list[rb.RoboHarmonicImproperTorsion] = []
         self.z_matrix = list[tuple[int, int, int, int]]()
         self.num_atom_offset = 0
@@ -331,6 +331,7 @@ class Context(rb.Context):
                     self.bond_stretches.append(
                         rb.RoboBond(
                             global_indices=tuple(self.prmtop_to_global_index[p] for p in prmtop_indices),
+                            prmtop_indices=tuple(prmtop_indices),
                             compound_atom_indices=bond.compound_atom_indices,
                             stiffness_in_kj_per_nm_sq=bond.stiffness_in_kj_per_nm_sq,
                             nominal_length_in_nm=bond.nominal_length_in_nm,
@@ -431,9 +432,16 @@ class Context(rb.Context):
 
                 # Add angles
                 for angle in molecule_prototypes[prototype_index].angle_params:
+                    prmtop_indices = [l+self.num_atom_offset for l in angle.local_indices]
+                    for prmtop_index in prmtop_indices:
+                        atom = self.parm.atoms[prmtop_index]
+                        if atom.idx != prmtop_index:
+                            raise ValueError(f"Bond atom index mismatch: expected {prmtop_index}, got {atom.idx}")
+                        
                     self.bond_bends.append(
                         rb.RoboAngle(
                             global_indices=tuple(self.prmtop_to_global_index[l+self.num_atom_offset] for l in angle.local_indices),
+                            prmtop_indices=tuple(prmtop_indices),
                             compound_atom_indices=angle.compound_atom_indices,
                             stiffness_in_kj_per_rad_sq=angle.stiffness_in_kj_per_rad_sq,
                             nominal_angle_in_deg=angle.nominal_angle_in_deg,
@@ -443,9 +451,16 @@ class Context(rb.Context):
 
                 # Add periodic torsions
                 for periodic_torsion in molecule_prototypes[prototype_index].periodic_torsion_params:
-                    self.proper_periodic_torsions.append(
+                    prmtop_indices = [l+self.num_atom_offset for l in periodic_torsion.local_indices]
+                    for prmtop_index in prmtop_indices:
+                        atom = self.parm.atoms[prmtop_index]
+                        if atom.idx != prmtop_index:
+                            raise ValueError(f"Bond atom index mismatch: expected {prmtop_index}, got {atom.idx}")
+                        
+                    self.periodic_torsions.append(
                         rb.RoboPeriodicTorsion(
                             global_indices=tuple(self.prmtop_to_global_index[l+self.num_atom_offset] for l in periodic_torsion.local_indices),
+                            prmtop_indices=tuple(prmtop_indices),
                             compound_atom_indices=periodic_torsion.compound_atom_indices,
                             molecule_index=instance_index,
                             improper=periodic_torsion.is_improper,
@@ -455,9 +470,16 @@ class Context(rb.Context):
 
                 # Add harmonic improper torsions
                 for harmonic_improper_torsion in molecule_prototypes[prototype_index].improper_harmonic_torsion_terms:
+                    prmtop_indices = [l+self.num_atom_offset for l in harmonic_improper_torsion.local_indices]
+                    for prmtop_index in prmtop_indices:
+                        atom = self.parm.atoms[prmtop_index]
+                        if atom.idx != prmtop_index:
+                            raise ValueError(f"Bond atom index mismatch: expected {prmtop_index}, got {atom.idx}")
+                        
                     self.improper_harmonic_torsions.append(
                         rb.RoboHarmonicImproperTorsion(
                             global_indices=tuple(self.prmtop_to_global_index[l+self.num_atom_offset] for l in harmonic_improper_torsion.local_indices),
+                            prmtop_indices=tuple(prmtop_indices),
                             compound_atom_indices=harmonic_improper_torsion.compound_atom_indices,
                             stiffness_in_kj_per_rad_sq=harmonic_improper_torsion.stiffness_in_kj_per_rad_sq,
                             nominal_angle_in_rad=harmonic_improper_torsion.nominal_angle_in_rad,
@@ -650,7 +672,7 @@ class Context(rb.Context):
             ub.nominal_length_in_nm = ub_eq[ub_terms[i+2]-1] / 10
             self.urey_bradleys.append(ub)
 
-        print(f"Loaded system with {len(self.atoms)} atoms, {len(self.bond_stretches)} bonds, {len(self.bond_bends)} angles, {len(self.proper_periodic_torsions)} proper torsions, {len(self.improper_harmonic_torsions)} improper torsions, {len(self.cmap_torsions)} CMAP torsions, and {len(self.urey_bradleys)} Urey-Bradley terms.")
+        print(f"Loaded system with {len(self.atoms)} atoms, {len(self.bond_stretches)} bonds, {len(self.bond_bends)} angles, {len(self.periodic_torsions)} proper torsions, {len(self.improper_harmonic_torsions)} improper torsions, {len(self.cmap_torsions)} CMAP torsions, and {len(self.urey_bradleys)} Urey-Bradley terms.")
 
     @contextmanager
     def record_topology(self, molecule: MoleculePrototype) -> Iterable[rb.TopologyRange]:
@@ -668,7 +690,7 @@ class Context(rb.Context):
         return (len(self.atoms),
                 len(self.bond_stretches),
                 len(self.bond_bends),
-                len(self.proper_periodic_torsions),
+                len(self.periodic_torsions),
                 len(self.improper_harmonic_torsions))
 
     def getDefaultBonds(self, bonds_type) -> list[rb.BondFlexibility]:
@@ -795,7 +817,7 @@ class Context(rb.Context):
             self.atoms,
             self.bond_stretches,
             self.bond_bends,
-            self.proper_periodic_torsions,
+            self.periodic_torsions,
             self.improper_harmonic_torsions,
             self.topology_ranges,
             self.z_matrix
@@ -846,7 +868,7 @@ class Context(rb.Context):
             self.atoms,
             self.bond_stretches,
             self.bond_bends,
-            self.proper_periodic_torsions,
+            self.periodic_torsions,
             self.improper_harmonic_torsions,
             self.cmap_grids,
             self.cmap_torsions,

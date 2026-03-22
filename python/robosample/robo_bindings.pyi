@@ -539,7 +539,7 @@ class NonbondedMethod:
     def value(self) -> int:
         ...
 class RoboAngle:
-    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], molecule_index: typing.SupportsInt | typing.SupportsIndex, stiffness_in_kj_per_rad_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_angle_in_deg: typing.SupportsFloat | typing.SupportsIndex) -> None:
+    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], prmtop_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], molecule_index: typing.SupportsInt | typing.SupportsIndex, stiffness_in_kj_per_rad_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_angle_in_deg: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def compound_atom_indices(self) -> typing.Annotated[list[CompoundAtomIndex], "FixedSize(3)"]:
@@ -564,6 +564,12 @@ class RoboAngle:
         ...
     @nominal_angle_in_deg.setter
     def nominal_angle_in_deg(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def prmtop_indices(self) -> typing.Annotated[list[int], "FixedSize(3)"]:
+        ...
+    @prmtop_indices.setter
+    def prmtop_indices(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         ...
     @property
     def stiffness_in_kj_per_rad_sq(self) -> float:
@@ -688,7 +694,7 @@ class RoboAtomPhysics:
 class RoboBond:
     dihedral_type: str
     ring_closing: bool
-    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], stiffness_in_kj_per_nm_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_length_in_nm: typing.SupportsFloat | typing.SupportsIndex, molecule_index: typing.SupportsInt | typing.SupportsIndex, ring_closing: bool, dihedral_type: str) -> None:
+    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], prmtop_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], stiffness_in_kj_per_nm_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_length_in_nm: typing.SupportsFloat | typing.SupportsIndex, molecule_index: typing.SupportsInt | typing.SupportsIndex, ring_closing: bool, dihedral_type: str) -> None:
         ...
     @property
     def compound_atom_indices(self) -> typing.Annotated[list[CompoundAtomIndex], "FixedSize(2)"]:
@@ -715,16 +721,89 @@ class RoboBond:
     def nominal_length_in_nm(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
+    def prmtop_indices(self) -> typing.Annotated[list[int], "FixedSize(2)"]:
+        ...
+    @prmtop_indices.setter
+    def prmtop_indices(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
+        ...
+    @property
     def stiffness_in_kj_per_nm_sq(self) -> float:
         ...
     @stiffness_in_kj_per_nm_sq.setter
     def stiffness_in_kj_per_nm_sq(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class RoboHarmonicImproperTorsion:
-    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], molecule_index: typing.SupportsInt | typing.SupportsIndex, stiffness_in_kj_per_rad_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_angle_in_rad: typing.SupportsFloat | typing.SupportsIndex) -> None:
+    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], prmtop_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], molecule_index: typing.SupportsInt | typing.SupportsIndex, stiffness_in_kj_per_rad_sq: typing.SupportsFloat | typing.SupportsIndex, nominal_angle_in_rad: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def compound_atom_indices(self) -> typing.Annotated[list[CompoundAtomIndex], "FixedSize(4)"]:
+        ...
+    @compound_atom_indices.setter
+    def compound_atom_indices(self, arg0: typing.Annotated[collections.abc.Sequence[CompoundAtomIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def global_indices(self) -> typing.Annotated[list[int], "FixedSize(4)"]:
+        ...
+    @global_indices.setter
+    def global_indices(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def molecule_index(self) -> int:
+        ...
+    @molecule_index.setter
+    def molecule_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def nominal_angle_in_rad(self) -> float:
+        ...
+    @nominal_angle_in_rad.setter
+    def nominal_angle_in_rad(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def prmtop_indices(self) -> typing.Annotated[list[int], "FixedSize(4)"]:
+        ...
+    @prmtop_indices.setter
+    def prmtop_indices(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def stiffness_in_kj_per_rad_sq(self) -> float:
+        ...
+    @stiffness_in_kj_per_rad_sq.setter
+    def stiffness_in_kj_per_rad_sq(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class RoboPeriodicTorsion:
-    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], molecule_index: typing.SupportsInt | typing.SupportsIndex, improper: bool, terms: collections.abc.Sequence[RoboPeriodicTorsionTerm]) -> None:
+    improper: bool
+    def __init__(self, global_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], prmtop_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], compound_atom_indices: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"], molecule_index: typing.SupportsInt | typing.SupportsIndex, improper: bool, terms: collections.abc.Sequence[RoboPeriodicTorsionTerm]) -> None:
+        ...
+    @property
+    def compound_atom_indices(self) -> typing.Annotated[list[CompoundAtomIndex], "FixedSize(4)"]:
+        ...
+    @compound_atom_indices.setter
+    def compound_atom_indices(self, arg0: typing.Annotated[collections.abc.Sequence[CompoundAtomIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def global_indices(self) -> typing.Annotated[list[int], "FixedSize(4)"]:
+        ...
+    @global_indices.setter
+    def global_indices(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def molecule_index(self) -> int:
+        ...
+    @molecule_index.setter
+    def molecule_index(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def prmtop_indices(self) -> typing.Annotated[list[int], "FixedSize(4)"]:
+        ...
+    @prmtop_indices.setter
+    def prmtop_indices(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(4)"]) -> None:
+        ...
+    @property
+    def terms(self) -> typing.Annotated[list[RoboPeriodicTorsionTerm], "FixedSize(5)"]:
+        ...
+    @terms.setter
+    def terms(self, arg0: typing.Annotated[collections.abc.Sequence[RoboPeriodicTorsionTerm], "FixedSize(5)"]) -> None:
         ...
 class RoboPeriodicTorsionTerm:
     def __init__(self, amplitude_kj: typing.SupportsFloat | typing.SupportsIndex, phase_deg: typing.SupportsFloat | typing.SupportsIndex, periodicity: typing.SupportsInt | typing.SupportsIndex) -> None:
@@ -1103,6 +1182,10 @@ class World:
     def addSampler(self, arg0: SamplerName, arg1: IntegratorType, arg2: ThermostatName, arg3: bool) -> bool:
         """
         Add a sampler to the world.
+        """
+    def get_coordinate_transfer_errors(self) -> list[CoordinateTransferError]:
+        """
+        Get the coordinate transfer errors for all samplers in the world.
         """
     def has_rigid_body_violations(self, timeStep: typing.SupportsFloat | typing.SupportsIndex, numSteps: typing.SupportsInt | typing.SupportsIndex) -> bool:
         """

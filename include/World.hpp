@@ -1081,6 +1081,10 @@ public:
 	CoordinateTransferError checkCoordinateTransfer(const std::vector<SimTK::Compound::AtomTargetLocations>& atomTargets);
 	bool hasRigidBodyViolations(SimTK::Real timeStep, int numSteps);
 
+	const std::vector<CoordinateTransferError>& getCoordinateTransferErrors() const {
+		return coordinateTransferErrors;
+	}
+
 private:
 	SimTK::Real findDecorrelationTime(const SimTK::State& state, int equilSteps, int tuneSteps, SimTK::Real timestep);
 	void optimizeCoordinates(std::vector<std::vector<double>>& coordinates, const std::vector<double>& scale) const;

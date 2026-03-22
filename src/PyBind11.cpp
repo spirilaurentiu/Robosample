@@ -207,8 +207,9 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def_readwrite("position", &RoboAtom::position);
 
     py::class_<RoboBond>(m, "RoboBond")
-        .def(py::init<std::array<int, 2>, std::array<int, 2>, SimTK::Real, SimTK::Real, int, bool, const std::string&>(),
+        .def(py::init<std::array<int, 2>, std::array<int, 2>, std::array<int, 2>, SimTK::Real, SimTK::Real, int, bool, const std::string&>(),
             py::arg("global_indices"),
+            py::arg("prmtop_indices"),
             py::arg("compound_atom_indices"),
             py::arg("stiffness_in_kj_per_nm_sq"),
             py::arg("nominal_length_in_nm"),
@@ -217,6 +218,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
             py::arg("dihedral_type")
         )
         .def_readwrite("global_indices", &RoboBond::globalIndices)
+        .def_readwrite("prmtop_indices", &RoboBond::prmtopIndices)
         .def_readwrite("compound_atom_indices", &RoboBond::compoundAtomIndices)
         .def_readwrite("molecule_index", &RoboBond::moleculeIndex)
         .def_readwrite("ring_closing", &RoboBond::ringClosing)
@@ -226,14 +228,16 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         ;
 
     py::class_<RoboAngle>(m, "RoboAngle")
-        .def(py::init<std::array<int, 3>, std::array<int, 3>, int, SimTK::Real, SimTK::Real>(),
+        .def(py::init<std::array<int, 3>, std::array<int, 3>, std::array<int, 3>, int, SimTK::Real, SimTK::Real>(),
             py::arg("global_indices"),
+            py::arg("prmtop_indices"),
             py::arg("compound_atom_indices"),
             py::arg("molecule_index"),
             py::arg("stiffness_in_kj_per_rad_sq"),
             py::arg("nominal_angle_in_deg")
         )
         .def_readwrite("global_indices", &RoboAngle::globalIndices)
+        .def_readwrite("prmtop_indices", &RoboAngle::prmtopIndices)
         .def_readwrite("compound_atom_indices", &RoboAngle::compoundAtomIndices)
         .def_readwrite("molecule_index", &RoboAngle::moleculeIndex)
         .def_readwrite("stiffness_in_kj_per_rad_sq", &RoboAngle::stiffnessInKJPerRadSq)
@@ -251,23 +255,37 @@ PYBIND11_MODULE(MODULE_NAME, m) {
 
     py::class_<RoboPeriodicTorsion>(m, "RoboPeriodicTorsion")
         .def(
-            py::init<std::array<int, 4>, std::array<int, 4>, int, bool, std::vector<RoboPeriodicTorsionTerm>>(),
+            py::init<std::array<int, 4>, std::array<int, 4>, std::array<int, 4>, int, bool, std::vector<RoboPeriodicTorsionTerm>>(),
             py::arg("global_indices"),
+            py::arg("prmtop_indices"),
             py::arg("compound_atom_indices"),
             py::arg("molecule_index"),
             py::arg("improper"),
             py::arg("terms")    
-        );
+        )
+        .def_readwrite("terms", &RoboPeriodicTorsion::terms)
+        .def_readwrite("global_indices", &RoboPeriodicTorsion::globalIndices)
+        .def_readwrite("prmtop_indices", &RoboPeriodicTorsion::prmtopIndices)
+        .def_readwrite("compound_atom_indices", &RoboPeriodicTorsion::compoundAtomIndices)
+        .def_readwrite("molecule_index", &RoboPeriodicTorsion::moleculeIndex)
+        .def_readwrite("improper", &RoboPeriodicTorsion::improper);
 
     py::class_<RoboHarmonicImproperTorsion>(m, "RoboHarmonicImproperTorsion")
         .def(
-            py::init<std::array<int, 4>, std::array<int, 4>, int, SimTK::Real, SimTK::Real>(),
+            py::init<std::array<int, 4>, std::array<int, 4>, std::array<int, 4>, int, SimTK::Real, SimTK::Real>(),
             py::arg("global_indices"),
+            py::arg("prmtop_indices"),
             py::arg("compound_atom_indices"),
             py::arg("molecule_index"),
             py::arg("stiffness_in_kj_per_rad_sq"),
             py::arg("nominal_angle_in_rad")    
-        );
+        )
+        .def_readwrite("global_indices", &RoboHarmonicImproperTorsion::globalIndices)
+        .def_readwrite("prmtop_indices", &RoboHarmonicImproperTorsion::prmtopIndices)
+        .def_readwrite("compound_atom_indices", &RoboHarmonicImproperTorsion::compoundAtomIndices)
+        .def_readwrite("molecule_index", &RoboHarmonicImproperTorsion::moleculeIndex)
+        .def_readwrite("stiffness_in_kj_per_rad_sq", &RoboHarmonicImproperTorsion::stiffnessInKJPerRadSq)
+        .def_readwrite("nominal_angle_in_rad", &RoboHarmonicImproperTorsion::nominalAngleInRad);
 
     py::class_<ZMatrixRow>(m, "ZMatrixRow")
         .def(
@@ -368,13 +386,11 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         .def("initialize_openmm", &Context::initializeOpenMM, "Load an OpenMM system from components.")
         .def("calculate_openmm_energy", &Context::calculatePotentialEnergy, py::arg("worldIndex"), "Calculate the OpenMM energy of the current state for a specific world index.")
         .def("addWorld", &Context::addWorld, "Add an empty world.")
-
-        // Binds the const version of getWorld
-        // For non-const version: def("getWorld", py::overload_cast<std::size_t>(&Context::getWorld), py::return_value_policy::reference)
         .def("getWorld", py::overload_cast<std::size_t>(&Context::getWorld, py::const_), py::return_value_policy::reference)
         .def("getWorlds", py::overload_cast<>(&Context::getWorlds, py::const_), py::return_value_policy::reference);
 
     py::class_<World>(m, "World")
         .def("addSampler", &World::addSampler, "Add a sampler to the world.")
+        .def("get_coordinate_transfer_errors", &World::getCoordinateTransferErrors, "Get the coordinate transfer errors for all samplers in the world.")
         .def("has_rigid_body_violations", &World::hasRigidBodyViolations, py::arg("timeStep"), py::arg("numSteps"), "Checks for rigid body violations.");
 }
