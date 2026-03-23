@@ -1,10 +1,25 @@
 # Robosample: Generalized Coordinates Molecular Simulation Coupled with Gibbs Sampling (GCHMC)
 
-Robosample is a C++ library based on Simbody and Molmodel, which uses high-speed robotics algorithms imlemented in Simbody and molecular modelling facilities in Molmodel to generate Markov Chain Monte Carlo moves coupled with Gibbs sampling able to reproduce the atomistic level detailed distribution of molecular systems.
+![codecov](coverage.svg)
 
-![Docking with Robosample](drug.gif)
+Robosample uses Simbody and Molmodel to perform efficient GCHMC sampling on macromolecules via reduced-coordinate robotics algorithms, featuring OpenMM GPU support and a dedicated Python/Conda ecosystem for seamless research integration.
 
-[More about the method.](https://pubmed.ncbi.nlm.nih.gov/28892630/)
+![Docking with Robosample](proteins.png)
+
+## Publications
+
+### Main Publication
+
+If you use **Robosample** in your research, please cite:
+
+> Spiridon, L., Șulea, T. A., Minh, D. D., & Petrescu, A. J. (2020). **Robosample: A rigid-body molecular simulation program based on robot mechanics.** *Biochimica et Biophysica Acta (BBA)-General Subjects*, 1864(8), 129616. [![DOI](https://img.shields.io/badge/DOI-10.1016/j.bbagen.2020.129616-blue.svg)](https://doi.org/10.1016/j.bbagen.2020.129616)
+
+### Related Theory & Applications
+
+The following publications describe the underlying algorithms or demonstrate applications of the software:
+
+> Spiridon, L., & Minh, D. D. (2017). **Hamiltonian Monte Carlo with constrained molecular dynamics as Gibbs sampling.** *Journal of Chemical Theory and Computation*, 13(10), 4649-4659. [![DOI](https://img.shields.io/badge/DOI-10.1021/acs.jctc.7b00570-orange.svg)](https://doi.org/10.1021/acs.jctc.7b00570)
+> Manoliu, L. C. E., Martin, E. C., Milac, A. L., & Spiridon, L. (2021). **Effective Use of Empirical Data for Virtual Screening against APJR GPCR Receptor.** *Molecules*, 26(16), 4894. [![DOI](https://img.shields.io/badge/DOI-10.3390/molecules26164894-green.svg)](https://doi.org/10.3390/molecules26164894)
 
 ## Check hardware acceleration capabilities
 
@@ -153,30 +168,6 @@ OpenCL installation depends on the udnerlying hardware:
 
 Other dependencies will be installed via `conda` (see below).
 
-### Installing CUDA Toolkit 12.8
-
-We inted to make this the oldest supported version. It is forward compatible with any future CUDA toolkit versions. Download and follow instructions [from here](https://developer.nvidia.com/cuda-12-8-0-download-archive):
-
-```bash
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
-sudo dpkg -i cuda-keyring_1.1-1_all.deb
-sudo apt-get update
-sudo apt-get -y install cuda-toolkit-12-8
-```
-
-At this point, you should have working `nvidia-smi`.
-
-However, `nvcc` is not available at the terminal since nothing from the CUDA Toolkit is in `$PATH`. It can still be accessed via the absolute path e.g. `/usr/local/cuda/bin/nvcc --version`. This is no problem since Robosample CMake configuration references absolute pathways to `/usr/local/cuda/bin/`.
-
-### [DEPRECATED] Installing OpenGL (visualizer)
-
-Straightforward installation that does not interfere with CUDA:
-
-```bash
-sudo update
-sudo apt-get install libglfw3-dev freeglut3-dev libglew-dev libxmu-dev libxmu-dev libxi-dev
-```
-
 ### Miniforge
 
 We will use `miniforge`, a variant of `miniconda` that comes with `mamba` installed (`conda` but with a faster solver).
@@ -228,6 +219,18 @@ cd ../Molmodel
 git checkout refactor
 cd ../
 git checkout refactor
+```
+
+Install the `pre-commit` hook that will run tests before pushing to remote:
+
+```bash
+pre-commit install
+```
+
+Finally, perform a local install of the package. This doesn't install anything, it just creates an editable between the virtual environment and the source code, so changes are reflected immediately:
+
+```bash
+pip install -e .
 ```
 
 ### Create a `mamba` environment
@@ -310,6 +313,12 @@ cmake --preset cuda-release
 cmake --build --preset cuda-release
 ```
 
+### Test installation
+
+```bash
+python -m robosample.test_installation
+```
+
 This will automatically install the Python bindings (`.so` file) into `robosample/build/robosample`.
 
 ### Visual Studio Code support
@@ -329,7 +338,25 @@ The repository comes with a nubmer of pre-configured settings:
 
 - Run configurations for `Python` and `C++` debugging.
 
-### Running the program
+To select a build type, press `Ctrl + Shift + P`, then `CMake: Select configure preset` and compile using `F7`.
+
+To run, select a configuration. We allow for both Python and C++ debugging.
+
+To run tests, press `Ctrl + Shift + P`, then `Tasks: Run tasks` and then `Run tests and coverage` which will run `nox` (see below).
+
+Git pushes to `remote` are guarded by these tests and you cannot push unless all tests pass. However, test results can be ignored via `git commit -no-verify`.
+
+### Testing via CLI
+
+Although most of Robosample is written in C++, testing is done via the Python interface (`tests/`):
+
+```bash
+nox -s tests
+```
+
+Coverage is available for the Python and the C++ library (only for `Debug` or `RelWithDebInfo`). This command will also create the code coverage badge.
+
+### Running the program via CLI
 
 We provide a series of examples in `robosample/examples`. To rung the program:
 
@@ -337,4 +364,12 @@ We provide a series of examples in `robosample/examples`. To rung the program:
 mkdir simulation/
 cd simulation/
 python3 ../python/robosample/roborun.py ala-dipeptide ../examples/ala-dipeptide.prmtop ../examples/ala-dipeptide.rst7 6000 0 1 1
+```
+
+### GitHub linguist
+
+Too see coding language stats, run:
+
+```bash
+github-linguist --breakdown | head
 ```

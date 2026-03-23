@@ -26,4 +26,10 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+
+    "coverage-gutters.xmlname": "coverage.xml",
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.showGutterCoverage": true,
+    "coverage-gutters.showCustomCoverage": true,
+    "coverage-gutters.manualCompile": false
 }

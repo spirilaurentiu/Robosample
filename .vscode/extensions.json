@@ -10,7 +10,8 @@
         "ms-python.python-envs",
         "davidanson.vscode-markdownlint",
         "repreng.csv",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "ryanluker.vscode-coverage-gutters"
     ],
     "unwantedRecommendations": [
         "ms-vscode.cpptools",

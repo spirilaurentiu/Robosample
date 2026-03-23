@@ -1,3 +1,10 @@
+[project]
+name = "robosample"
+version = "0.0.0"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["python"]
+
+[tool.setuptools.packages.find]
+where = ["python"]

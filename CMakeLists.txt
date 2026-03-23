@@ -67,6 +67,10 @@ set_source_files_properties(${ROBOSAMPLE_C_SOURCE_FILES} PROPERTIES SKIP_PRECOMP
 FILE(GLOB src_cxx_files ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/format/src/*.cpp)
 SET(ROBOSAMPLE_CXX_SOURCE_FILES ${src_cxx_files})
 
+# Include headers (.h and .hpp)
+file(GLOB include_files ${CMAKE_SOURCE_DIR}/include/*.h* ${CMAKE_SOURCE_DIR}/format/inc/*.h* ${CMAKE_SOURCE_DIR}/format/inc/mdtraj/*.h*)
+set(ROBOSAMPLE_HEADER_FILES ${include_files})
+
 set(ROBOSAMPLE_SOURCE_FILES
     ${OPENMM_SOURCE_C_FILES} ${OPENMM_SOURCE_CXX_FILES} ${OPENMM_SOURCE_INCLUDE_FILES}
     ${SIMBODY_SOURCE_C_FILES} ${SIMBODY_SOURCE_CXX_FILES} ${SIMBODY_SOURCE_INCLUDE_FILES}
@@ -196,6 +200,13 @@ set_target_properties(${ROBOSAMPLE_LIB_NAME} PROPERTIES
 # Apply common includes
 target_include_directories(${ROBOSAMPLE_LIB_NAME} PRIVATE ${ROBOSAMPLE_INCLUDE_DIRS})
 
+# Coverage
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    set_source_files_properties(${ROBOSAMPLE_HEADER_FILES} PROPERTIES COMPILE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
+    set_source_files_properties(${ROBOSAMPLE_C_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
+    set_source_files_properties(${ROBOSAMPLE_CXX_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
+endif()
+
 # Set configuration-specific compile options
 target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
     -march=x86-64-v3
@@ -240,6 +251,21 @@ target_compile_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
 
 # Set configuration-specific link options
 target_link_options(${ROBOSAMPLE_LIB_NAME} PRIVATE
+
+    # Debug
+    $<$<CONFIG:Debug>:
+        $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:--coverage>
+    >
+
+    # Release
+    $<$<CONFIG:Release>:
+        # No extra flags
+    >
+
+    # Release with Debug Info
+    $<$<CONFIG:RelWithDebInfo>:
+        $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:--coverage>
+    >
 
     # PGO Train
     $<$<CONFIG:PGO_TRAIN>:

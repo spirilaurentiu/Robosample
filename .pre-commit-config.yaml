@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: tests
+        name: Run tests and coverage
+        entry: nox -s tests
+        language: system
+        pass_filenames: false

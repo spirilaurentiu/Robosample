@@ -1,0 +1,11 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run tests and coverage",
+            "type": "shell",
+            "command": "nox -s tests",
+            "group": "test"
+        }
+    ]
+}

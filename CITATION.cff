@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Spiridon"
+    given-names: "Laurentiu"
+  - family-names: "Șulea"
+    given-names: "Teodor Asvadur"
+  - family-names: "Minh"
+    given-names: "David DL"
+  - family-names: "Petrescu"
+    given-names: "Andrei-Jose"
+title: "Robosample: A rigid-body molecular simulation program based on robot mechanics"
+version: "0.0.0"
+doi: "10.1016/j.bbagen.2020.129616"
+date-released: 2020-08-01
+url: "https://github.com/yourusername/robosample"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Spiridon"
+      given-names: "Laurentiu"
+    - family-names: "Șulea"
+      given-names: "Teodor Asvadur"
+    - family-names: "Minh"
+      given-names: "David DL"
+    - family-names: "Petrescu"
+      given-names: "Andrei-Jose"
+  doi: "10.1016/j.bbagen.2020.129616"
+  journal: "Biochimica et Biophysica Acta (BBA) - General Subjects"
+  month: 8
+  start: 129616
+  title: "Robosample: A rigid-body molecular simulation program based on robot mechanics"
+  issue: 8
+  volume: 1864
+  year: 2020

@@ -35,5 +35,12 @@ dependencies:
 
   # Pip packages
   - pip:
-    - pytest
     - pybind11-stubgen
+    - pytest
+    - pytest-cov
+    - gcovr
+    - coverage
+    - anybadge
+    - nox
+    - pre-commit
+    - scikit-build-core
